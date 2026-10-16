@@ -1,0 +1,19 @@
+# .gitignore — files git should never save or upload.
+# Why it exists: keeps downloaded packages, build output, and secret settings out of the repository.
+
+# Packages downloaded by `npm install` (anyone can re-download them)
+node_modules/
+
+# Build output from `npm run build` (re-created on every build)
+dist/
+dist-preview/
+
+# Your real Supabase settings — never commit these.
+# Ignore every .env file except the empty template.
+.env
+.env.*
+!.env.example
+
+# Editor / OS clutter
+.DS_Store
+*.log

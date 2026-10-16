@@ -1,0 +1,1263 @@
+/*
+  app.css — all the styles for the dashboard, grouped by screen/component.
+  Why it exists: plain CSS keeps the look in one place. Values come from tokens.css.
+
+  Screen-size rules used below (guidelines 1.3 and 2.5):
+    Phone          (max-width: 639.98px)                 → bottom bar, menu as bottom sheet
+    Tablet         (min-width: 640px)                    → 72px rail with labels
+    PC             (min-width: 1024px) and (pointer: fine) → 52px icon rail with hover label
+    Touch screens  (pointer: coarse)                     → bigger controls, 44px tap areas
+  "pointer: coarse" means the main input is a finger — true on an iPad even when it's wide.
+*/
+
+/* ===== Base ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box; /* width includes padding and border: easier to reason about */
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--text-14);
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%; /* stop phones from enlarging text on their own */
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1,
+h2,
+h3 {
+  font-size: inherit;
+  font-weight: 500; /* only 400 and 500 are allowed */
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent; /* no blue flash box on phones; we draw our own states */
+}
+
+img {
+  display: block;
+}
+
+/* The HTML `hidden` attribute must always win, even over display: flex below. */
+[hidden] {
+  display: none !important;
+}
+
+/* Focus ring (guidelines 4): 2px school blue on whatever the keyboard has selected. Never removed. */
+:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+/* Text only screen readers can hear. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ===== App frame ===== */
+.app-root {
+  height: 100vh; /* fallback for older browsers */
+  height: 100dvh; /* "dynamic" height: correct on phones whose toolbars slide in and out */
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-banner {
+  flex: none;
+  padding: var(--space-4) var(--space-12);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+  text-align: center;
+}
+
+.app-screen {
+  flex: 1;
+  min-height: 0; /* lets the inner area scroll instead of growing past the screen */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sign-in, lock, and setup screens: content centered, scrolls if the screen is short. */
+.center-screen {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  padding: var(--space-24) var(--space-16);
+}
+
+.center-screen > * {
+  margin: auto; /* centers both ways, but never cuts off the top when it must scroll */
+}
+
+/* ===== Buttons and fields ===== */
+.btn {
+  position: relative; /* anchor for the invisible touch area below */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  height: var(--control-height);
+  padding: 0 var(--space-16);
+  border: 1px solid var(--color-border-control); /* 3:1 control border (v0.26) */
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--text-13);
+}
+
+.btn-primary {
+  border-color: var(--color-blue);
+  background: var(--color-blue);
+  color: var(--color-on-blue);
+}
+
+.btn-primary:active {
+  border-color: var(--color-blue-hover);
+  background: var(--color-blue-hover);
+}
+
+.btn:disabled {
+  cursor: progress;
+}
+
+/* Full width — ONLY for the single submit button of a phone form (guidelines 2.1). */
+.btn-block {
+  width: 100%;
+}
+
+/* An icon-only button, e.g. the back arrow on a phone page. 44px tap area, icon 20px. */
+.icon-button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-size);
+  height: var(--tap-size);
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text);
+}
+
+.link-button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-blue);
+  font-size: var(--text-13);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-12);
+}
+
+.field label {
+  font-size: var(--text-12);
+  color: var(--color-text-secondary);
+}
+
+.input {
+  width: 100%;
+  height: var(--control-height);
+  padding: 0 var(--space-12);
+  border: 1px solid var(--color-border-control); /* 3:1 control border (v0.26) */
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  font-size: var(--text-13);
+}
+
+.input::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.input:focus-visible {
+  border-color: var(--color-blue);
+}
+
+/* Last field before the buttons: no extra space under it (the buttons add their own). */
+.field.field--last {
+  margin-bottom: 0;
+}
+
+/* Gray hint under a field, e.g. "At least 12 characters". */
+.field-hint {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* The amber message box (Notice.jsx) */
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  padding: var(--space-8);
+  border-radius: var(--radius-tag);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+  text-align: left;
+}
+
+.notice-icon {
+  flex: none;
+  margin-top: 1px; /* lines the icon up with the first line of text */
+}
+
+.logo {
+  flex: none;
+  object-fit: contain; /* keeps the logo's shape inside its square */
+}
+
+/* ===== Sign-in ===== */
+.signin-card {
+  width: 320px;
+  max-width: 100%;
+  padding: var(--space-24);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.signin-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: var(--space-24);
+  text-align: center;
+}
+
+.signin-title {
+  margin-top: var(--space-12);
+  font-size: var(--text-16);
+  font-weight: 500;
+}
+
+.signin-subtitle {
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.signin-card .notice {
+  margin-bottom: var(--space-12);
+}
+
+.signin-actions {
+  margin-top: var(--space-16);
+}
+
+.notice + .signin-actions {
+  margin-top: 0; /* the message box already gives the space */
+}
+
+.signin-forgot {
+  margin-top: var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* ===== Lock screen ===== */
+.lock-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 320px;
+  max-width: 100%;
+  padding: var(--space-32) var(--space-24) var(--space-24);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  text-align: center;
+}
+
+.lock-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-16);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.lock-name {
+  margin-top: var(--space-8);
+  font-size: var(--text-16);
+  font-weight: 500;
+  overflow-wrap: anywhere; /* a very long name wraps instead of widening the screen */
+}
+
+.lock-prompt {
+  margin: var(--space-16) 0 var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.lock-card .notice {
+  max-width: 300px;
+  margin-bottom: var(--space-16);
+}
+
+.pin-dots {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-12);
+}
+
+/* ===== PIN entry (PinEntry.jsx) — shared by the lock screen, Set your PIN and Change PIN ===== */
+.pin-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* The real PIN box is invisible (see PinEntry.jsx), so when it has keyboard focus the
+   focus ring is drawn around the dots instead — guidelines section 4: the ring is never removed. */
+.pin-entry:has(.pin-input:focus) .pin-dots {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 6px;
+  border-radius: 8px;
+}
+
+.pin-dot {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--color-border-control); /* 3:1 control border (v0.26) */
+  border-radius: 50%;
+}
+
+.pin-dot.is-filled {
+  border-color: var(--color-blue);
+  background: var(--color-blue);
+}
+
+.pin-hint {
+  margin-top: var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* On-screen keypad: keys drawn 36px tall; the 8px gaps give each a 44px tap area (decided v0.16). */
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 64px);
+  justify-content: center;
+  gap: var(--space-8);
+  margin-top: var(--space-16);
+}
+
+.keypad-key {
+  position: relative;
+  height: 36px;
+  padding: 0; /* remove the browser's default button padding */
+  border: 1px solid var(--color-border-control); /* 3:1 control border (v0.26) */
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  font-size: var(--text-16);
+}
+
+.keypad-key::after {
+  content: '';
+  position: absolute;
+  inset: -4px; /* invisible: stretches the tap area 4px into each 8px gap → 44px, no overlap */
+}
+
+.keypad-key:active {
+  background: var(--color-surface);
+}
+
+.keypad-key[aria-disabled='true'] {
+  cursor: progress;
+}
+
+.keypad-key--del {
+  font-size: var(--text-14);
+}
+
+.lock-signout {
+  margin-top: var(--space-24);
+}
+
+/* ===== Set your PIN (SetPinScreen.jsx) — same card as the lock screen ===== */
+.setpin-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 320px;
+  max-width: 100%;
+  padding: var(--space-32) var(--space-24) var(--space-24);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  text-align: center;
+}
+
+.setpin-name {
+  margin-top: var(--space-8);
+  font-size: var(--text-16);
+  font-weight: 500;
+  overflow-wrap: anywhere; /* a very long name wraps instead of widening the screen */
+}
+
+.setpin-email {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  overflow-wrap: anywhere;
+}
+
+.setpin-title {
+  margin-top: var(--space-16);
+  font-size: var(--text-16);
+}
+
+.setpin-sub {
+  margin-top: var(--space-4); /* tight pairing with the title */
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* "Step 1 of 2" — also used inside the Change PIN dialog */
+.step-label {
+  margin-top: var(--space-16);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.setpin-prompt {
+  margin-top: var(--space-4);
+  font-size: var(--text-13);
+}
+
+/* Focused only so screen readers announce the step (keypad layout); not a control, no ring. */
+.setpin-prompt:focus {
+  outline: none;
+}
+
+.setpin-hint {
+  margin-top: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* Space before the dots, whether or not the hint is showing */
+.setpin-card .pin-entry {
+  margin-top: var(--space-12);
+}
+
+.setpin-card .notice {
+  max-width: 300px;
+  margin-top: var(--space-12);
+}
+
+/* "Back" and "Not you? Sign out" side by side */
+.setpin-links {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-24);
+  margin-top: var(--space-16);
+}
+
+/* ===== Shell (signed-in frame) ===== */
+.shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.shell-main {
+  flex: 1;
+  min-width: 0; /* allows this column to shrink on narrow screens (no sideways scroll) */
+  display: flex;
+  flex-direction: column;
+}
+
+.shell-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ===== Rail (left navigation) — hidden on phones ===== */
+.rail {
+  display: none;
+}
+
+/* Tablet (and any touch screen 640px+): 72px rail, labels always under the icons */
+@media (min-width: 640px) {
+  .rail {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+    width: var(--rail-width-labeled);
+    padding: var(--space-8) 0;
+    border-right: 1px solid var(--color-border);
+  }
+
+  .rail-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    width: 64px;
+    min-height: 56px;
+    padding: var(--space-4) 0;
+    border: none;
+    border-radius: var(--radius-control);
+    background: none;
+    color: var(--color-text-secondary);
+  }
+
+  .rail-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4) var(--space-12);
+    border-radius: var(--radius-control);
+  }
+
+  .rail-item.is-current {
+    color: var(--color-blue);
+  }
+
+  .rail-item.is-current .rail-icon {
+    background: var(--color-blue-tint);
+  }
+
+  .rail-label {
+    font-size: var(--text-12);
+    line-height: 1.3;
+  }
+}
+
+/* PC (wide AND mouse): 52px icon-only rail; label bubble on hover and keyboard focus */
+@media (min-width: 1024px) and (pointer: fine) {
+  .rail {
+    gap: var(--space-8);
+    width: var(--rail-width);
+    padding: var(--space-12) 0;
+  }
+
+  .rail-item {
+    width: 36px;
+    height: 36px;
+    min-height: 0;
+    padding: 0;
+    gap: 0;
+  }
+
+  .rail-icon {
+    padding: 0;
+  }
+
+  .rail-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .rail-item.is-current {
+    background: var(--color-blue-tint);
+  }
+
+  .rail-item.is-current .rail-icon {
+    background: none;
+  }
+
+  .rail-item:hover:not(.is-current) {
+    background: var(--color-surface); /* light gray highlight; the current item keeps its tint */
+  }
+
+  /* The dark label bubble, to the right of the icon. No fade: it appears instantly. */
+  .rail-label {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: calc(100% + var(--space-8));
+    transform: translateY(-50%);
+    z-index: 30;
+    padding: var(--space-4) var(--space-8);
+    border-radius: var(--radius-tag);
+    background: var(--color-tooltip-bg);
+    color: var(--color-on-blue);
+    font-size: var(--text-13);
+    line-height: 1.5;
+    white-space: nowrap;
+    pointer-events: none; /* the bubble never blocks clicks */
+  }
+
+  /* Small triangle on the bubble's left edge, pointing at the icon */
+  .rail-label::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 100%;
+    transform: translateY(-50%);
+    border: 5px solid transparent;
+    border-right-color: var(--color-tooltip-bg);
+  }
+
+  .rail-item:hover .rail-label,
+  .rail-item:focus-visible .rail-label {
+    display: block;
+  }
+}
+
+/* ===== Bottom bar (phones only) ===== */
+.bottombar {
+  display: flex;
+  flex: none;
+  justify-content: space-around;
+  padding: var(--space-4) 0 calc(var(--space-8) + env(safe-area-inset-bottom)); /* clears the iPhone home bar */
+  border-top: 1px solid var(--color-border);
+}
+
+.bottombar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4); /* icon-to-label gap */
+  min-width: 64px;
+  min-height: 48px;
+  padding: 0; /* remove the browser's default button padding */
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bottombar-item.is-current {
+  color: var(--color-blue);
+}
+
+@media (min-width: 640px) {
+  .bottombar {
+    display: none;
+  }
+}
+
+/* ===== Top bar ===== */
+.topbar {
+  position: relative; /* the account dropdown is positioned against this bar */
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-8);
+  height: var(--topbar-height);
+  padding: 0 var(--space-12);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.topbar-spacer {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ===== Location switcher ===== */
+.loc {
+  display: flex;
+  flex: none;
+  height: var(--control-height);
+  border: 1px solid var(--color-border-control); /* 3:1 control border (v0.26); dividers inside stay light */
+  border-radius: var(--radius-control);
+}
+
+.loc-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-12);
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  white-space: nowrap;
+}
+
+.loc-option + .loc-option {
+  border-left: 1px solid var(--color-border);
+}
+
+/* Round the outer corners (7px = the 8px outline minus its 1px border) */
+.loc-option:first-child {
+  border-radius: 7px 0 0 7px;
+}
+
+.loc-option:last-child {
+  border-radius: 0 7px 7px 0;
+}
+
+.loc-option.is-active {
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+}
+
+.loc-option:focus-visible {
+  z-index: 1; /* keep the focus ring on top of the neighbouring option */
+}
+
+/* ===== Account menu ===== */
+.avatar-button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+}
+
+.avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-border-control); /* the initials button is a control: 3:1 border (v0.26) */
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-12);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.avatar--open {
+  outline: 2px solid var(--color-blue); /* ring while the menu is open */
+  outline-offset: 2px;
+}
+
+.avatar--large {
+  width: 56px;
+  height: 56px;
+  border: none;
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+  font-size: var(--text-20);
+}
+
+.account-backdrop {
+  display: none; /* only used on phones */
+}
+
+/* PC / tablet: dropdown under the initials, right-aligned with them */
+.account-panel {
+  position: absolute;
+  top: calc(100% + var(--space-4));
+  right: var(--space-12);
+  z-index: 20;
+  width: 248px;
+  padding: var(--space-4) 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); /* the one place a subtle shadow is allowed */
+}
+
+.account-grab {
+  display: none; /* the little handle only shows on the phone sheet */
+}
+
+.account-who {
+  margin-bottom: var(--space-4);
+  padding: var(--space-8) var(--space-12);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.account-name {
+  font-size: var(--text-13);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.account-meta {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  overflow-wrap: anywhere; /* long emails wrap instead of overflowing */
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  height: var(--control-height);
+  padding: 0 var(--space-12);
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font-size: var(--text-13);
+  text-align: left;
+}
+
+.menu-item:focus-visible {
+  background: var(--color-surface);
+}
+
+/* Drawn just inside the row so the panel edge can never cut the ring off */
+.menu-item:focus-visible {
+  outline-offset: -2px;
+}
+
+.menu-icon {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.menu-value {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* Worcester / Shrewsbury under "This device": text lines up with the row label above */
+.menu-subitem {
+  padding-left: 36px; /* 12px edge + 16px icon + 8px gap */
+}
+
+.menu-check {
+  flex: none;
+  margin-left: auto;
+  color: var(--color-blue);
+}
+
+.menu-separator {
+  margin: var(--space-4) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+/* ===== Account dialogs (AccountDialog.jsx: Change PIN, Change password) ===== */
+/* PC / tablet: a box in the middle of a dimmed page. */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+  background: var(--color-backdrop);
+}
+
+.dialog {
+  width: 360px;
+  max-width: 100%;
+  max-height: 100%;
+  overflow-y: auto; /* a short screen scrolls inside the box instead of cutting it off */
+  padding: var(--space-24);
+  border-radius: 12px; /* as in the approved mockup — a recorded exception to the radius tokens */
+  background: var(--color-bg);
+}
+
+/* The dialog box / phone page can hold focus between steps; it isn't a control, so no ring. */
+.dialog:focus,
+.dialog-page:focus {
+  outline: none;
+}
+
+.dialog-title {
+  margin-bottom: var(--space-4);
+  font-size: var(--text-16);
+}
+
+/* Change password has no step line, so its title needs the space itself. */
+.dialog-form {
+  margin-top: var(--space-12);
+}
+
+/* "Step 1 of 3" under the title */
+.dialog-step {
+  margin-bottom: var(--space-16);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* "Confirm it's you" / "Choose a 4-digit PIN" */
+.dialog-step-heading {
+  font-size: var(--text-14);
+}
+
+/* Focused only so screen readers announce the step (keypad layout); not a control, no ring. */
+.dialog-step-heading:focus {
+  outline: none;
+}
+
+.dialog-step-sub {
+  margin: var(--space-4) 0 var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.dialog-step-hint {
+  margin-top: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.dialog-pin .notice {
+  margin-top: var(--space-12);
+}
+
+.dialog-pin .pin-entry {
+  margin-top: var(--space-12);
+}
+
+.dialog-form-error {
+  margin-top: var(--space-12);
+}
+
+/* Cancel + primary (or Back + Cancel), right-aligned */
+.dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-8);
+  margin-top: var(--space-16);
+}
+
+/* "Back" next to Cancel gets some room so the two are clearly separate */
+.dialog-actions .link-button {
+  margin-right: var(--space-8);
+}
+
+/* Phone: a full-screen page with a back arrow (covers the whole app, like a new screen). */
+.dialog-page {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+
+.dialog-page-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-4);
+  height: var(--topbar-height);
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dialog-page-title {
+  font-size: var(--text-16);
+}
+
+.dialog-page-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-16) var(--space-16) calc(var(--space-16) + env(safe-area-inset-bottom));
+}
+
+.dialog-page-body .dialog-form {
+  margin-top: 0;
+}
+
+.dialog-page-submit {
+  margin-top: var(--space-16);
+}
+
+/* ===== Toast (Toast.jsx) — bottom-right on PC and tablet ===== */
+.toast-region {
+  position: fixed;
+  right: var(--space-24);
+  bottom: var(--space-24);
+  z-index: 50;
+  pointer-events: none; /* never blocks clicks on what's underneath */
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--color-toast-bg);
+  color: var(--color-on-blue); /* white */
+  font-size: var(--text-13);
+}
+
+.toast-icon {
+  flex: none;
+}
+
+/* ===== Home ===== */
+.home {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: var(--space-24);
+}
+
+.welcome {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding-bottom: var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.welcome-title {
+  font-size: var(--text-20);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.welcome-sub {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.home-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-24);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+  text-align: center;
+}
+
+/* ===== Setup-needed message (developers only) ===== */
+.setup-card {
+  max-width: 480px;
+  padding: var(--space-24);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.setup-title {
+  margin-bottom: var(--space-8);
+  font-size: var(--text-16);
+}
+
+.setup-card p + p {
+  margin-top: var(--space-8);
+}
+
+/* ===== Hover highlights — only on devices that can really hover (a mouse) =====
+   On touch screens a "hover" style sticks after a tap, so these stay out of there. */
+@media (hover: hover) {
+  .btn:hover,
+  .keypad-key:hover,
+  .menu-item:hover,
+  .icon-button:hover {
+    background: var(--color-surface);
+  }
+
+  .btn-primary:hover {
+    border-color: var(--color-blue-hover);
+    background: var(--color-blue-hover);
+  }
+
+  .link-button:hover {
+    text-decoration: underline;
+  }
+
+  .loc-option:hover:not(.is-active) {
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+}
+
+/* ===== Touch screens: bigger controls, 44px tap areas (guidelines 2.5) ===== */
+@media (pointer: coarse) {
+  .btn {
+    height: var(--control-height-touch);
+  }
+
+  .btn::after {
+    content: '';
+    position: absolute;
+    inset: -4px 0; /* invisible: 36px button + 2 × 4px = 44px tap height */
+  }
+
+  .input {
+    height: var(--control-height-touch);
+    font-size: var(--text-16); /* 16px stops iPhones/iPads zooming in when the field is tapped */
+  }
+
+  .link-button {
+    min-height: var(--tap-size);
+    padding: 0 var(--space-8);
+  }
+
+  .loc {
+    height: var(--control-height-touch);
+  }
+
+  /* At least 44px wide too, so the short "Both" option is a full-size tap target */
+  .loc-option {
+    min-width: var(--tap-size);
+    justify-content: center;
+  }
+
+  .loc-option::after {
+    content: '';
+    position: absolute;
+    inset: -5px 0; /* invisible: 34px inside + 2 × 5px = 44px tap height */
+  }
+
+  .avatar-button {
+    width: var(--tap-size);
+    height: var(--tap-size);
+  }
+
+  .menu-item {
+    height: var(--tap-size);
+  }
+
+  .signin-card {
+    width: 360px;
+  }
+
+  /* A little tighter so the keypad fits in the dialog on a tablet */
+  .dialog-step {
+    margin-bottom: var(--space-12);
+  }
+}
+
+/* ===== Phones (narrower than 640px) ===== */
+@media (max-width: 639.98px) {
+  .input {
+    height: var(--control-height-touch);
+    font-size: var(--text-16);
+  }
+
+  /* Sign-in: no card outline, the one full-width submit button is allowed here */
+  .signin-card {
+    width: 100%;
+    max-width: 400px;
+    padding: 0 var(--space-8);
+    border: none;
+  }
+
+  .signin-button {
+    width: 100%;
+  }
+
+  .signin-forgot {
+    text-align: center;
+  }
+
+  .lock-card,
+  .setpin-card {
+    padding: 0;
+    border: none;
+  }
+
+  /* Toast: bottom-center, just above the bottom navigation bar */
+  .toast-region {
+    right: var(--space-16);
+    bottom: calc(var(--bottombar-height) + var(--space-8) + env(safe-area-inset-bottom));
+    left: var(--space-16);
+    display: flex;
+    justify-content: center;
+  }
+
+  .home {
+    padding: var(--space-16);
+  }
+
+  .loc-option {
+    padding: 0 var(--space-8); /* keeps the top bar inside a 320px-wide phone */
+  }
+
+  /* Account menu becomes a sheet sliding up from the bottom over a dimmed page */
+  .account-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 19;
+    background: var(--color-backdrop);
+  }
+
+  .account-panel {
+    position: fixed;
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: var(--space-8) 0 calc(var(--space-16) + env(safe-area-inset-bottom));
+    border: none;
+    border-radius: 16px 16px 0 0;
+    box-shadow: none;
+    overscroll-behavior: contain; /* a drag on the sheet never scrolls or refreshes the page behind */
+  }
+
+  .account-grab {
+    display: block;
+    width: 36px;
+    height: 4px;
+    margin: var(--space-4) auto var(--space-8);
+    border-radius: 2px;
+    background: var(--color-border-strong);
+  }
+
+  .account-who {
+    padding: var(--space-8) var(--space-16) var(--space-12);
+  }
+
+  .menu-item {
+    padding: 0 var(--space-16);
+  }
+
+  .menu-subitem {
+    padding-left: 40px; /* 16px edge + 16px icon + 8px gap */
+  }
+}
+
+/* Phone sheet: after a short swipe down (not far enough to close), it slides back up.
+   No slide while the finger is still dragging it (.is-dragging), and none at all for people
+   who have asked their device for less motion (prefers-reduced-motion). */
+@media (max-width: 639.98px) and (prefers-reduced-motion: no-preference) {
+  .account-panel {
+    transition: transform 150ms ease-out;
+  }
+
+  .account-panel.is-dragging {
+    transition: none;
+  }
+}

@@ -1,0 +1,55 @@
+/*
+  tokens.css — the design "tokens": every color, size and spacing value from the guidelines.
+  Why it exists: app.css uses these names (e.g. var(--color-blue)) instead of raw values,
+  so a rule change in the guidelines means changing ONE line here.
+*/
+:root {
+  /* Colors (guidelines section 7) */
+  --color-bg: #ffffff; /* page and panels */
+  --color-surface: #f7f7f5; /* light gray: hover highlights, avatar */
+  --color-border: #e5e5e2; /* hairline dividers (decorative) */
+  --color-border-strong: #cfcfca; /* menu/sheet outlines, the sheet's grab handle */
+  --color-border-control: #8F8F8A; /* outlines of things you click or type into: fields, buttons,
+                                      PIN dots, keypad keys, location switcher, initials button.
+                                      3.25:1 on white — the 3:1 accessibility minimum (decided v0.26) */
+  --color-text: #1f1f1f; /* body text */
+  --color-text-secondary: #6b6b6b; /* labels, hints */
+  --color-blue: #003595; /* school blue: primary button, selected, focus ring */
+  --color-blue-hover: #002a77; /* primary button hover/pressed */
+  --color-blue-tint: #e6ebf4; /* current section, active location */
+  --color-warning-text: #633806; /* amber: errors and warnings (never red) */
+  --color-warning-bg: #faeeda;
+  --color-tooltip-bg: #1f1f1f; /* dark label bubble on the PC rail */
+  --color-on-blue: #ffffff; /* text on a blue button */
+  --color-backdrop: rgba(0, 0, 0, 0.35); /* dims the page behind the phone menu sheet and dialogs */
+  --color-toast-bg: #1f1f1f; /* the dark "done" toast (white text) */
+
+  /* Font: the device's own system font (one sans-serif family) */
+  --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* The ONLY text sizes allowed (minimum 12px) */
+  --text-20: 20px; /* page title */
+  --text-16: 16px; /* section heading */
+  --text-14: 14px; /* body */
+  --text-13: 13px; /* rows, buttons */
+  --text-12: 12px; /* labels, captions */
+
+  /* Spacing grid (4px base) */
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+
+  /* Shape and sizes */
+  --radius-control: 8px; /* buttons, fields, cards */
+  --radius-tag: 6px; /* small tags, the amber message box, the label bubble */
+  --control-height: 32px; /* buttons and fields with a mouse */
+  --control-height-touch: 36px; /* buttons and fields on touch screens / phones */
+  --tap-size: 44px; /* minimum finger tap area */
+  --topbar-height: 48px;
+  --rail-width: 52px; /* PC, icons only */
+  --rail-width-labeled: 72px; /* tablet, labels under icons */
+  --bottombar-height: 60px; /* phone bottom bar: 4px + 48px item + 8px (plus the iPhone home-bar space) */
+}

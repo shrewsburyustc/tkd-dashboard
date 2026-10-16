@@ -1,0 +1,492 @@
+// App.jsx — the "brain" of the dashboard: decides which screen is showing.
+// Why it exists: the app is always in exactly one of five states (the `phase`):
+//   'loading'   → checking for a saved sign-in (shows nothing for a split second)
+//   'signedOut' → SignIn screen
+//   'setPin'    → Set your PIN (right after a password sign-in when the account has no PIN)
+//   'home'      → the dashboard (Shell + Home), maybe with an account dialog on top
+//   'locked'    → LockScreen (the dashboard stays in memory, hidden, behind it)
+// Every screen change goes through the small functions below, so the rules (7-day password
+// check, access check, per-account idle lock, the database lock) live in one readable place.
+//
+// The database lock (migration 0002): besides the lock screen, the database keeps its own
+// "unlocked / locked" record for this sign-in. We ask it on load and sign-in (touch_session),
+// keep it fresh while someone is active (useSessionHeartbeat), tell it whenever the lock screen
+// shows (lock_session — sent again after reconnecting if it failed), and a right PIN unlocks it
+// (verify_pin / set_my_pin do that on their side).
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { supabase, isPreview } from './lib/supabase.js';
+import { isPasswordTooOld } from './lib/session.js';
+import { classifySignInError } from './lib/authErrors.js';
+import { getIdleLimitMs, markActivityNow, setLockedFlag, shouldBeLocked, useIdleLock } from './lib/useIdleLock.js';
+import { lockSession, touchSession } from './lib/serverLock.js';
+import { useSessionHeartbeat } from './lib/useSessionHeartbeat.js';
+import { loadDeviceLocation, saveDeviceLocation } from './lib/device.js';
+import PreviewBanner from './components/PreviewBanner.jsx';
+import Shell from './components/Shell.jsx';
+import Toast from './components/Toast.jsx';
+import SignIn from './screens/SignIn.jsx';
+import Home from './screens/Home.jsx';
+import LockScreen from './screens/LockScreen.jsx';
+import SetPinScreen from './screens/SetPinScreen.jsx';
+import ChangePinDialog from './screens/ChangePinDialog.jsx';
+import ChangePasswordDialog from './screens/ChangePasswordDialog.jsx';
+
+// Messages shown on the sign-in screen after the App signs someone out.
+const NOTICES = {
+  passwordAgain: 'For security, sign in with your password again.',
+  noAccess: "This account doesn't have dashboard access. Ask an admin.",
+  unlockWithPassword: 'Sign in with your password to unlock.',
+  loadFailed: "Couldn't load your account. Check the connection and try again.",
+  // No PIN = no lock screen: going idle (or Lock now) signs out instead (decided v0.26).
+  idleNoPin: 'Signed out after being idle. Set a PIN to unlock faster.',
+  // set_my_pin wants a password sign-in in the last 10 minutes.
+  setPinPassword: 'Sign in with your password again to set your PIN.',
+};
+
+// The browser tab title for each phase.
+const PAGE_TITLES = {
+  loading: 'U.S. Taekwondo Center',
+  signedOut: 'Sign in · U.S. Taekwondo Center',
+  setPin: 'Set your PIN · U.S. Taekwondo Center',
+  home: 'Home · U.S. Taekwondo Center',
+  locked: 'Locked · U.S. Taekwondo Center',
+};
+
+// Toast texts (guidelines 8: 5 seconds, bottom-right — bottom-center on phones — no Undo for these).
+const TOASTS = {
+  pinSet: 'PIN set',
+  pinChanged: 'PIN changed',
+  passwordChanged: 'Password changed',
+};
+
+// If telling the database "lock this sign-in" fails (offline), try again this often until it works.
+const LOCK_RETRY_EVERY_MS = 30 * 1000;
+
+// Asks the database "who am I?". Returns the staff row, or null if there isn't one.
+// The row now also has idle_lock_minutes and is_shared (migration 0002).
+async function fetchProfile() {
+  const { data, error } = await supabase.rpc('get_my_profile');
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data; // the function returns 0 or 1 rows
+  return row ?? null;
+}
+
+// Removes Supabase's saved sign-in from this browser. Supabase stores it in localStorage
+// under a key like "sb-<project id>-auth-token". Only used when a normal sign-out fails
+// (usually because the device is offline).
+function clearSavedSupabaseSession() {
+  try {
+    for (const key of Object.keys(window.localStorage)) {
+      if (key.startsWith('sb-') && key.endsWith('-auth-token')) window.localStorage.removeItem(key);
+    }
+  } catch {
+    // Storage can be blocked (e.g. private browsing). Nothing more we can do here.
+  }
+}
+
+export default function App() {
+  const [phase, setPhase] = useState('loading');
+  const [profile, setProfile] = useState(null); // the signed-in staff row
+  const [notice, setNotice] = useState(null); // { id, text } for the sign-in screen
+  const [deviceLocation, setDeviceLocation] = useState(loadDeviceLocation); // this device's default
+  const [location, setLocation] = useState(loadDeviceLocation); // the switcher's current value
+  const [section, setSection] = useState('home'); // which section is open (only Home exists)
+  const [accountDialog, setAccountDialog] = useState(null); // null | 'changePin' | 'changePassword'
+  const [toast, setToast] = useState(null); // { id, text } or null
+
+  // Focus memory for the lock screen (see "Locking and unlocking" below).
+  // `phaseRef` is a copy of `phase` that can be read instantly inside callbacks.
+  // `focusBeforeLockRef` is null when there's nothing to restore, or { element } when the
+  // screen locked — element is whatever had keyboard focus at that moment (or null).
+  // Set your PIN uses it too: { element: null } = "focus the initials button when Home shows".
+  const phaseRef = useRef(phase);
+  const focusBeforeLockRef = useRef(null);
+  // Same idea for the profile: showLock (below) needs the newest one without being re-created.
+  const profileRef = useRef(profile);
+
+  const showToast = useCallback((text) => setToast({ id: Date.now(), text }), []);
+
+  // ----- Signing out (used by the menu, the lock screen, and the rules below) -----
+  const signOut = useCallback(async (noticeText = null) => {
+    // A new id each time makes the SignIn screen start fresh (see `key` below).
+    setNotice(noticeText ? { id: Date.now(), text: noticeText } : null);
+    setProfile(null);
+    setAccountDialog(null);
+    setPhase('signedOut');
+    // scope: 'local' = sign out THIS device only. Staff often have the dashboard open on
+    // several devices (front desk PC, mat-side tablet); signing out here leaves those alone.
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
+    // If the device is offline, Supabase can't confirm the sign-out and keeps the saved
+    // sign-in. Remove it by hand so a reload can't bring the session back.
+    if (error) clearSavedSupabaseSession();
+    // Cleared AFTER signing out so other open tabs don't briefly unlock first.
+    setLockedFlag(false);
+  }, []);
+
+  // ----- Entering the dashboard with a session (on page load, or right after sign-in) -----
+  // isStale() lets a caller say "ignore the result, things have moved on".
+  const enterWithSession = useCallback(
+    async (session, isStale = () => false) => {
+      // Rule: password must have been typed in the last 7 days.
+      if (isPasswordTooOld(session)) {
+        if (!isStale()) await signOut(NOTICES.passwordAgain);
+        return;
+      }
+
+      let row;
+      try {
+        row = await fetchProfile();
+      } catch {
+        if (isStale()) return;
+        // Keep the saved session (a reload will try again), but show why we're stuck.
+        setNotice({ id: Date.now(), text: NOTICES.loadFailed });
+        setPhase('signedOut');
+        return;
+      }
+      if (isStale()) return;
+
+      // Rule: must have an active staff row.
+      if (!row || !row.active) {
+        await signOut(NOTICES.noAccess);
+        return;
+      }
+
+      // Ask the database lock about this sign-in. A brand-new password sign-in starts unlocked;
+      // a session older than its idle time starts locked. ('error' = offline: the screen's own
+      // checks below still decide.)
+      const serverState = await touchSession();
+      if (isStale()) return;
+      if (serverState === 'password_required') {
+        await signOut(NOTICES.passwordAgain);
+        return;
+      }
+
+      setProfile(row);
+      // Rule: a reload or a new tab can't skip the lock — and neither can the database's lock.
+      const mustLock = serverState === 'locked' || shouldBeLocked(getIdleLimitMs(row));
+      if (mustLock && !row.has_pin) {
+        // No PIN means no lock screen: sign out instead (decided v0.26).
+        await signOut(NOTICES.idleNoPin);
+      } else if (mustLock) {
+        // The database is told too (lock_session) as soon as the lock screen shows — see
+        // "Tell the database" below. That matters when only THIS device knew it should lock
+        // (saved locked flag, or idle too long) and the database still thought it was unlocked.
+        setLockedFlag(true);
+        focusBeforeLockRef.current = { element: null }; // nothing was focused yet: unlock → initials
+        setPhase('locked');
+      } else if (!row.has_pin) {
+        setPhase('setPin'); // Set your PIN comes before Home, and can't be skipped
+      } else {
+        setPhase('home');
+      }
+    },
+    [signOut],
+  );
+
+  // ----- On first load: is someone already signed in on this device? -----
+  useEffect(() => {
+    let stale = false; // becomes true if this effect is cleaned up before it finishes
+
+    async function start() {
+      let result;
+      try {
+        result = await supabase.auth.getSession(); // reads the saved sign-in (refreshes it if needed)
+      } catch {
+        result = { data: null, error: { name: 'AuthRetryableFetchError' } };
+      }
+      if (stale) return;
+      const session = result.data?.session ?? null;
+      if (!session) {
+        // Only a network failure gets a message. (An expired or revoked sign-in just shows
+        // the normal sign-in screen — there's nothing to fix but signing in.)
+        if (result.error?.name === 'AuthRetryableFetchError') {
+          setNotice({ id: Date.now(), text: NOTICES.loadFailed });
+        }
+        setPhase('signedOut');
+        return;
+      }
+      await enterWithSession(session, () => stale);
+    }
+    start();
+
+    // If the sign-in ends somewhere else (another tab signed out, session revoked), follow it.
+    // Supabase asks us not to call other Supabase functions directly inside this callback.
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setProfile(null);
+        setAccountDialog(null);
+        setPhase('signedOut');
+      }
+      // Rule: password every 7 days — also for a tab left open for days. Supabase refreshes
+      // the sign-in about once an hour; each time, re-check the password age.
+      if (event === 'TOKEN_REFRESHED' && session && isPasswordTooOld(session)) {
+        // setTimeout(..., 0) runs signOut just AFTER this callback finishes, because signOut
+        // calls Supabase (calling it from inside the callback can freeze the sign-in system).
+        setTimeout(() => signOut(NOTICES.passwordAgain), 0);
+      }
+    });
+
+    return () => {
+      stale = true;
+      data.subscription.unsubscribe();
+    };
+  }, [enterWithSession, signOut]);
+
+  // ----- Sign-in screen hands us the email + password -----
+  const handleSignIn = useCallback(
+    async (email, password) => {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error || !data?.session) return { error: classifySignInError(error) };
+
+      setLockedFlag(false); // a fresh password sign-in always starts unlocked
+      markActivityNow();
+      setLocation(loadDeviceLocation()); // each sign-in opens on this device's default
+      setNotice(null);
+      await enterWithSession(data.session);
+      return { ok: true };
+    },
+    [enterWithSession],
+  );
+
+  // ----- Set your PIN -----
+  // result: 'set' (saved) or 'alreadySet' (the database says a PIN already exists).
+  const handlePinSet = useCallback(
+    (result) => {
+      setProfile((current) => (current ? { ...current, has_pin: true } : current));
+      markActivityNow(); // they were just typing: don't let it count as idle time
+      // The Set PIN card is about to disappear (and focus with it): put keyboard focus on the
+      // initials button once Home shows, the same place a closed account dialog sends it.
+      focusBeforeLockRef.current = { element: null };
+      setPhase('home');
+      if (result === 'set') showToast(TOASTS.pinSet);
+    },
+    [showToast],
+  );
+
+  // ----- Locking and unlocking -----
+  // Keep the refs in step with the newest values (read by showLock below).
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
+
+  // Called whenever the saved "locked" flag turns on (idle, Lock now, another tab, or the
+  // database said this session is locked).
+  const showLock = useCallback(() => {
+    if (phaseRef.current !== 'home') return; // only an open dashboard can lock
+    // No PIN = no lock screen: sign out instead (decided v0.26).
+    if (!profileRef.current?.has_pin) {
+      signOut(NOTICES.idleNoPin);
+      return;
+    }
+    // Remember what had keyboard focus (e.g. a button) so it can get focus back after unlocking.
+    // Done BEFORE the dashboard is hidden — once hidden, the browser drops focus to the page.
+    focusBeforeLockRef.current = { element: document.activeElement };
+    setAccountDialog(null); // an open Change PIN / Change password closes (nothing is saved)
+    // (The database is told by the "Tell the database" effect below, once the lock screen shows.)
+    // The functional form setPhase(current => ...) means "only change it if we're where we expect".
+    setPhase((current) => (current === 'home' ? 'locked' : current));
+  }, [signOut]);
+  const showHome = useCallback(() => setPhase((current) => (current === 'locked' ? 'home' : current)), []);
+
+  useIdleLock({ phase, idleLimitMs: getIdleLimitMs(profile), onLock: showLock, onUnlock: showHome });
+
+  // While the dashboard is open: tell the database "still here" (at most once a minute).
+  useSessionHeartbeat({
+    active: phase === 'home',
+    onLocked: () => setLockedFlag(true), // the database already locked us: lock the screen too
+    onPasswordRequired: () => signOut(NOTICES.passwordAgain),
+  });
+
+  const lockNow = useCallback(() => setLockedFlag(true), []); // the idle hook hears this and locks
+
+  const handleUnlocked = useCallback(async () => {
+    // Rule: password every 7 days. The tab may have sat on the lock screen past the 7 days, so
+    // check again before showing Home. (The database's PIN check already looks at this too;
+    // this is the screen-side copy of the same rule.)
+    let session = null;
+    try {
+      const { data } = await supabase.auth.getSession();
+      session = data?.session ?? null;
+    } catch {
+      // Couldn't read the sign-in: leave the decision to the database's check above.
+    }
+    if (session && isPasswordTooOld(session)) {
+      await signOut(NOTICES.passwordAgain);
+      return;
+    }
+    // (verify_pin's 'ok' already unlocked this sign-in on the database side.)
+    markActivityNow(); // count the unlock as activity so it doesn't re-lock straight away
+    setLockedFlag(false); // the idle hook hears this and shows Home
+  }, [signOut]);
+
+  // After unlocking, give keyboard focus back to where it was before the lock. If that
+  // control is gone (e.g. the "Lock now" menu item — the menu has closed), use the initials.
+  useEffect(() => {
+    if (phase === 'signedOut') focusBeforeLockRef.current = null; // nothing to restore any more
+    if (phase !== 'home' || focusBeforeLockRef.current === null) return;
+    const { element } = focusBeforeLockRef.current;
+    focusBeforeLockRef.current = null;
+    // isConnected = "is this element still on the page?" The page body itself doesn't count.
+    if (element && element !== document.body && element.isConnected) {
+      element.focus();
+    } else {
+      // The initials (account menu) button in the top bar; looked up by its class name.
+      document.querySelector('.avatar-button')?.focus();
+    }
+  }, [phase]);
+
+  // Each time the lock screen appears, re-read the profile (e.g. an admin just reset this
+  // person's PIN, or switched their account off).
+  useEffect(() => {
+    if (phase !== 'locked') return undefined;
+    let stale = false;
+    fetchProfile()
+      .then((row) => {
+        if (stale) return;
+        if (!row || !row.active) signOut(NOTICES.noAccess);
+        else if (!row.has_pin) signOut(NOTICES.idleNoPin); // PIN removed: no lock screen without one
+        else setProfile(row);
+      })
+      .catch(() => {
+        // Offline: keep the profile we already have; the PIN check will report the problem.
+      });
+    return () => {
+      stale = true;
+    };
+  }, [phase, signOut]);
+
+  // Tell the database: each time the lock screen appears, lock this sign-in on the server too
+  // (lock_session). One place for every way of locking: idle, Lock now, another tab, the
+  // heartbeat, or a page load that opens on the lock screen. The screen is already locked and
+  // never waits for this. If the call fails (offline), try again as soon as the browser says it's
+  // back online ('online' event), and every 30 seconds meanwhile, until it works once.
+  useEffect(() => {
+    if (phase !== 'locked') return undefined;
+    let done = false; // true once the database has it, or the lock screen has closed
+    let sending = false; // a call is already on its way: don't send a second one on top
+    let timer = null;
+
+    function stop() {
+      done = true;
+      window.removeEventListener('online', send);
+      window.clearInterval(timer);
+    }
+
+    async function send() {
+      if (done || sending) return;
+      sending = true;
+      const ok = await lockSession();
+      sending = false;
+      if (ok) stop();
+    }
+
+    window.addEventListener('online', send);
+    timer = window.setInterval(send, LOCK_RETRY_EVERY_MS);
+    send();
+    return stop; // unlocked or signed out: no more tries (a right PIN has unlocked the server)
+  }, [phase]);
+
+  // A toast belongs to the open dashboard: drop it if the screen locks or signs out.
+  useEffect(() => {
+    if (phase !== 'home') setToast(null);
+  }, [phase]);
+
+  // ----- Account dialogs (from the account menu) -----
+  // name: 'changePin' | 'changePassword'. An old toast is dropped so it can't float over the
+  // dialog (on a phone the dialog is a full page and the toast would hang in mid-air).
+  const openAccountDialog = useCallback((name) => {
+    setToast(null);
+    setAccountDialog(name);
+  }, []);
+  const closeAccountDialog = useCallback(() => setAccountDialog(null), []);
+
+  const handlePinChanged = useCallback(() => {
+    setAccountDialog(null);
+    setProfile((current) => (current ? { ...current, has_pin: true } : current));
+    showToast(TOASTS.pinChanged);
+  }, [showToast]);
+
+  const handlePasswordChanged = useCallback(() => {
+    setAccountDialog(null);
+    showToast(TOASTS.passwordChanged);
+  }, [showToast]);
+
+  // ----- Location -----
+  const handleDeviceLocationChange = useCallback((newLocation) => {
+    saveDeviceLocation(newLocation); // remembered by this device
+    setDeviceLocation(newLocation);
+    setLocation(newLocation); // and the switcher moves to it
+  }, []);
+
+  // Keep the browser tab title in step with the screen.
+  useEffect(() => {
+    document.title = PAGE_TITLES[phase];
+  }, [phase]);
+
+  // ----- Drawing -----
+  const isSignedIn = (phase === 'home' || phase === 'locked') && profile !== null;
+  const dialogOpen = phase === 'home' && profile !== null && accountDialog !== null;
+
+  return (
+    <div className="app-root">
+      {isPreview && <PreviewBanner />}
+      <div className="app-screen">
+        {phase === 'signedOut' && (
+          // `key` = a new notice id makes React start a fresh SignIn (cleared fields and messages).
+          <SignIn key={notice?.id ?? 'none'} notice={notice?.text ?? null} onSignIn={handleSignIn} />
+        )}
+
+        {phase === 'setPin' && profile !== null && (
+          <SetPinScreen
+            profile={profile}
+            onDone={handlePinSet}
+            onPasswordRequired={() => signOut(NOTICES.setPinPassword)}
+            onSignOut={() => signOut()}
+          />
+        )}
+
+        {isSignedIn && (
+          <Shell
+            hidden={phase === 'locked'}
+            inert={dialogOpen}
+            currentSection={section}
+            onNavigate={setSection}
+            location={location}
+            onLocationChange={setLocation}
+            profile={profile}
+            deviceLocation={deviceLocation}
+            onDeviceLocationChange={handleDeviceLocationChange}
+            onLockNow={lockNow}
+            onChangePin={() => openAccountDialog('changePin')}
+            onSetPin={() => setPhase('setPin')}
+            onChangePassword={() => openAccountDialog('changePassword')}
+            onSignOut={() => signOut()}
+          >
+            {section === 'home' && <Home location={location} />}
+          </Shell>
+        )}
+
+        {dialogOpen && accountDialog === 'changePin' && (
+          <ChangePinDialog profile={profile} onCancel={closeAccountDialog} onChanged={handlePinChanged} />
+        )}
+        {dialogOpen && accountDialog === 'changePassword' && (
+          <ChangePasswordDialog profile={profile} onCancel={closeAccountDialog} onChanged={handlePasswordChanged} />
+        )}
+
+        {phase === 'locked' && profile !== null && (
+          <LockScreen
+            profile={profile}
+            onUnlock={handleUnlocked}
+            onPasswordRequired={() => signOut(NOTICES.unlockWithPassword)}
+            onSignOut={() => signOut()}
+          />
+        )}
+      </div>
+
+      <Toast toast={toast} onDismiss={() => setToast(null)} />
+    </div>
+  );
+}
