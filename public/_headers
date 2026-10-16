@@ -1,0 +1,12 @@
+# _headers — extra security instructions Cloudflare Pages sends with every page.
+# Why it exists: tells browsers how to treat the dashboard safely.
+#   X-Frame-Options / frame-ancestors: never show this site inside another website
+#     (blocks "clickjacking" — a fake page hiding our sign-in under its own buttons).
+#   Referrer-Policy: when a link leads elsewhere, only share our site name, not full addresses.
+#   Permissions-Policy: the dashboard never needs the camera, microphone or location.
+/*
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  X-Content-Type-Options: nosniff
