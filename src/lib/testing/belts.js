@@ -1,16 +1,17 @@
 // belts.js — what each rank's belt looks like, and the rules for a valid belt.
 // Why it exists: every rank gets a small belt picture (rulebook v0.64/v0.65), drawn by the screens
 // from five values stored with the rank. The screens, the preview backend (mockTesting.js) and
-// — once Jeffrey approves the look — the database all use the SAME rules, kept here.
-// (Preview first: the database columns are planned but not built yet. Contract 0003 §5.8.)
+// the database (migration 0003's belt checks) all use the SAME rules, kept here. Contract 0003 §5.8.
 //
-// The five values (JavaScript name → planned database column):
+// The five values (JavaScript name → database column):
 //   beltPattern        → belt_pattern           'solid' | 'stripe' | 'half'
 //   beltColor          → belt_color             the main color (for 'half': the TOP half)
 //   beltColor2         → belt_color_2           'stripe': the middle-stripe color; 'half': the BOTTOM
 //                                               half; 'solid': always null
 //   beltEndStripes     → belt_end_stripes       0–3 short stripes near the end (e.g. Bo Dan stripes)
-//   beltEndStripeColor → belt_end_stripe_color  their color (usually yellow); required when > 0
+//   beltEndStripeColor → belt_end_stripe_color  their color (usually yellow); ALWAYS set, even
+//                                               with 0 end stripes (so "no color" and "yellow"
+//                                               can never count as two different belts)
 // Colors are keys from one fixed list (BELT_COLORS), never free text, so a belt can't be
 // misspelled and the screens know how to draw every color.
 
@@ -68,7 +69,7 @@ export function sameBelt(a, b) {
 //   'missingColor2'       a stripe/half belt has no second color
 //   'sameColors'          a stripe/half belt uses the same color twice (it would look solid)
 //   'badEndStripes'       end stripes isn't a whole number 0–3
-//   'missingEndStripeColor' end stripes > 0 but no color for them
+//   'missingEndStripeColor' no end-stripe color (needed even with 0 end stripes)
 //   'badEndStripeColor'   the end-stripe color isn't one of BELT_COLORS
 export function validateBelt(belt) {
   if (!belt || !BELT_PATTERNS.includes(belt.beltPattern)) return 'badPattern';
@@ -84,8 +85,8 @@ export function validateBelt(belt) {
   const stripes = belt.beltEndStripes;
   if (!Number.isInteger(stripes) || stripes < 0 || stripes > BELT_END_STRIPES_MAX) return 'badEndStripes';
   const stripeColor = belt.beltEndStripeColor ?? null;
-  if (stripes > 0 && stripeColor === null) return 'missingEndStripeColor';
-  if (stripeColor !== null && !COLOR_KEYS.has(stripeColor)) return 'badEndStripeColor';
+  if (stripeColor === null) return 'missingEndStripeColor';
+  if (!COLOR_KEYS.has(stripeColor)) return 'badEndStripeColor';
   return null;
 }
 

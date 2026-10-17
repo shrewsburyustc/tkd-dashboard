@@ -124,7 +124,7 @@ check('belts: colors, rules, words', () => {
   assert.deepEqual({ ...PLAIN_WHITE_BELT }, B('solid', 'white'));
   // Valid belts.
   for (const ok of [B('solid', 'white'), B('stripe', 'blue', 'white'), B('half', 'red', 'black'), B('stripe', 'black', 'white', 3),
-    B('solid', 'black', null, 2, 'red'), B('solid', 'white', null, 0, null), B('half', 'black', 'red', 1)]) {
+    B('solid', 'black', null, 2, 'red'), B('solid', 'white', null, 0, 'red'), B('half', 'black', 'red', 1)]) {
     assert.equal(validateBelt(ok), null, JSON.stringify(ok));
   }
   // Each problem code.
@@ -142,6 +142,7 @@ check('belts: colors, rules, words', () => {
   assert.equal(validateBelt(B('half', 'red', 'red')), 'sameColors');
   for (const n of [-1, 4, 1.5, null, '2']) assert.equal(validateBelt(B('solid', 'white', null, n)), 'badEndStripes', String(n));
   assert.equal(validateBelt(B('solid', 'white', null, 1, null)), 'missingEndStripeColor');
+  assert.equal(validateBelt(B('solid', 'white', null, 0, null)), 'missingEndStripeColor'); // always required
   assert.equal(validateBelt(B('solid', 'white', null, 1, 'gold')), 'badEndStripeColor');
   assert.equal(validateBelt(B('solid', 'white', null, 0, 'gold')), 'badEndStripeColor');
   // Plain English (the examples from the rulebook request).
@@ -782,7 +783,7 @@ check('mock: T10d — final award None (v0.62)', () => {
   backend.reset();
 });
 
-check('mock: belts (v0.64, preview first)', () => {
+check('mock: belts (v0.64; same rules as the database)', () => {
   backend.reset();
   const ga = schoolClasses('worcester')[2];
   // Stored and readable (the desk can read the belt columns too).
@@ -801,6 +802,7 @@ check('mock: belts (v0.64, preview first)', () => {
     { p_belt_pattern: 'stripe', p_belt_color_2: 'gold' },
     { p_belt_end_stripes: 4 }, { p_belt_end_stripes: -1 }, { p_belt_end_stripes: null },
     { p_belt_end_stripes: 1, p_belt_end_stripe_color: null }, { p_belt_end_stripe_color: 'gold' },
+    { p_belt_end_stripe_color: null }, // no color even with 0 end stripes
   ];
   for (const bad of badBelts) {
     assert.equal(statusOf('testing_add_rank', { ...addArgs, ...PLAIN_BELT_ARGS, ...bad }), 'invalid', JSON.stringify(bad));

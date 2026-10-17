@@ -39,7 +39,7 @@ Builder D imports C's modules by the exact names in §5. Builder C must not impo
 
 - Everything in schema `public`, names prefixed `testing_` (tables/functions) or `change_log` (audit). Owner: `postgres` (the SQL Editor role).
 - The file is **one transaction** (`begin;` … `commit;`) and **safe to re-run**: `create table if not exists` (constraints inside the `create table`), `create or replace function`, `drop trigger if exists` + `create trigger`, `drop policy if exists` + `create policy`, the circular FK via `alter table … drop constraint if exists …` + `add constraint …`, `insert … on conflict do nothing`.
-- **Upgrade over an earlier copy of 0003** (pre-v0.62): after the `create table`, `alter table public.testing_classes add column if not exists final_award_none …`, then `drop constraint if exists` + `add constraint testing_classes_final_award_none_ck`; before the RPCs, `drop function if exists public.testing_add_class(text, text, uuid)` and `public.testing_update_class(uuid, integer, text, uuid)` so no old overload stays callable. The PGlite runner proves it: earlier copy (`supabase/tests/pglite/fixtures/0003_before_v062.sql`, git blob of commit 1c5d03c) + seed, then today's 0003, all rows kept, fingerprints equal a fresh install, all tests pass. *(amended v0.62, security re-check)*
+- **Upgrade over an earlier copy of 0003** (pre-v0.62): after the `create table`, `alter table public.testing_classes add column if not exists final_award_none …`, then `drop constraint if exists` + `add constraint testing_classes_final_award_none_ck`; before the RPCs, `drop function if exists public.testing_add_class(text, text, uuid)` and `public.testing_update_class(uuid, integer, text, uuid)` so no old overload stays callable. The PGlite runner proves it: earlier copy (`supabase/tests/pglite/fixtures/0003_before_v062.sql`, git blob of commit 1c5d03c) + seed, then today's 0003, all rows kept, fingerprints equal a fresh install, all tests pass. *(amended v0.62, security re-check)* The same fixture predates the belts, so it also proves the belt upgrade (§1.4: five columns + `testing_ranks_belt_check` added, old 6-/7-argument rank RPCs removed, existing ranks plain white). *(DB added in step A)*
 - Every function: `set search_path = ''` and fully qualified names (`public.x`, `auth.uid()`, `pg_catalog` built-ins need no prefix). Every function gets an explicit `revoke execute … from public, anon, authenticated` and, only for the 8 RPCs, `grant execute … to authenticated`.
 - `is_admin()` is never a gate on its own; RPCs check `has_data_access()` **first**, then `is_admin()`.
 - No write grants and no write policies for any client role. All writes go through the 8 security-definer RPCs.
@@ -92,6 +92,11 @@ Table constraints / indexes:
 | `day_cents` | `integer not null` | `testing_ranks_day_cents_check` (same rule) |
 | `private_cents` | `integer not null` | `testing_ranks_private_cents_check` (same rule) |
 | `sparring_gear` | `boolean not null default false` | |
+| `belt_pattern` | `text not null default 'solid'` | `testing_ranks_belt_check` (below) *(amended v0.64/v0.65; DB added in step A)* |
+| `belt_color` | `text not null default 'white'` | same |
+| `belt_color_2` | `text null` | same (null exactly when solid) |
+| `belt_end_stripes` | `integer not null default 0` | same |
+| `belt_end_stripe_color` | `text not null default 'yellow'` | same — **NOT NULL even with 0 end stripes** (decision, step A; §5.8) |
 | `version` | `integer not null default 1` | `testing_ranks_version_check check (version >= 1)` |
 | `created_at`, `updated_at`, `created_by`, `updated_by`, `created_by_name`, `updated_by_name` | as in classes | |
 
@@ -102,6 +107,11 @@ Table constraints / indexes:
 | `testing_ranks_class_lower_name_idx` | `create unique index … on public.testing_ranks (class_id, lower(name))` |
 | `testing_ranks_id_location_key` | `unique (id, location_code)` (non-deferrable — FK target for final awards) |
 | `testing_ranks_location_idx` | `create index … on public.testing_ranks (location_code)` |
+| `testing_ranks_belt_check` | `check (public.testing_belt_is_valid(belt_pattern, belt_color, belt_color_2, belt_end_stripes, belt_end_stripe_color))` *(amended v0.64/v0.65; DB added in step A)* |
+
+**Belt rule** — helper `public.testing_belt_is_valid(p_pattern text, p_color text, p_color_2 text, p_end_stripes integer, p_end_stripe_color text) returns boolean`, `language sql immutable set search_path = ''`, execute revoked from `public, anon, authenticated, service_role`; never returns null (`coalesce(…, false)`). True exactly when `validateBelt` (§5.8) returns `null`: pattern in (`solid`, `stripe`, `half`); `belt_color` one of the 9 keys (`white, yellow, orange, green, blue, purple, red, brown, black`, lower case); solid ⇒ `belt_color_2` null; stripe/half ⇒ `belt_color_2` one of the keys and `<> belt_color`; `belt_end_stripes` between 0 and 3; `belt_end_stripe_color` one of the keys (never null). Used by the table check and by step 3 of `testing_add_rank` / `testing_update_rank`. The defaults (plain white, 0 end stripes, yellow) let the upgrade add the columns to a table that already has rows. *(amended v0.64/v0.65; DB added in step A)*
+
+**Upgrade (belts):** after the `create table`, `alter table public.testing_ranks add column if not exists …` for the five columns (same types/defaults), then `drop constraint if exists` + `add constraint testing_ranks_belt_check`. Existing ranks get a plain white belt; adding columns runs no row triggers (no history rows, no version change). Before the RPCs, `drop function if exists public.testing_add_rank(uuid, text, integer, integer, integer, boolean)` and `public.testing_update_rank(uuid, integer, text, integer, integer, integer, boolean)`. *(DB added in step A)*
 
 "Testing for" is **never stored**. It is derived: a rank tests for the next rank in its class; the last rank tests for the class's final award.
 
@@ -145,7 +155,7 @@ Exact JS (Builder C, `names.js`): `/[ \t\n\r\f\v ]+/g` → `' '`, then strip le
 
 **Versions** (stale protection; enforced by the before-write triggers, §1.6):
 - Insert: `version = 1` (whatever was supplied); the trigger also sets `created_at = updated_at = now()`, `created_by = updated_by = auth.uid()` and both `*_by_name` to the actor name (supplied values are ignored). *(amended after security review)*
-- Update that changes a **content column** → `version = old.version + 1`, `updated_at = now()`, `updated_by = auth.uid()`, `updated_by_name = actor name`. Content columns: classes `name`, `final_award_rank_id`, `final_award_none` *(amended v0.62)*; ranks `name`, `early_cents`, `day_cents`, `private_cents`, `sparring_gear`.
+- Update that changes a **content column** → `version = old.version + 1`, `updated_at = now()`, `updated_by = auth.uid()`, `updated_by_name = actor name`. Content columns: classes `name`, `final_award_rank_id`, `final_award_none` *(amended v0.62)*; ranks `name`, `early_cents`, `day_cents`, `private_cents`, `sparring_gear`, `belt_pattern`, `belt_color`, `belt_color_2`, `belt_end_stripes`, `belt_end_stripe_color` (compared with `is distinct from`, so `belt_color_2` null ↔ a color counts) *(belts: amended v0.64/v0.65; DB added in step A)*.
 - Update that changes only `position` (or nothing) → `version`, `updated_at`, `updated_by`, `updated_by_name` stay exactly as before (any supplied values are overwritten with the old ones). A reorder never bumps a version.
 - `created_at`, `created_by`, `created_by_name` never change after insert.
 - An FK `set null` of `final_award_rank_id` (its rank was deleted) is a content change → that class's version goes up by 1.
@@ -169,7 +179,7 @@ Exact JS (Builder C, `names.js`): `/[ \t\n\r\f\v ]+/g` → `' '`, then strip le
 
 Actor name helper — `public.change_log_actor_name() returns text`, `stable security definer`: `coalesce((select s.full_name from public.staff s where s.id = auth.uid()), nullif(current_setting('tkd.actor_label', true), ''), 'Database admin')`. Used for `created_by_name`/`updated_by_name` and `change_log.actor_name`. (Needed because staff can read only their own staff row.)
 
-`change_log_write()` and `change_log_actor_name()` are `security definer`; the two `before_write` functions, `change_log_refuse_change()` and `testing_refuse_truncate()` are invoker functions. All have `set search_path = ''` and execute revoked from `public, anon, authenticated, service_role`. *(amended after security review)* Extra internal helpers are allowed only if named `testing_*` and following the same rules (built: `testing_cents_is_valid(integer)`, `testing_ids_are_valid(uuid[])`). Tables that `change_log_write()` is attached to must have a uuid `id` column. 0003 creates **18** functions. *(amended after security review)*
+`change_log_write()` and `change_log_actor_name()` are `security definer`; the two `before_write` functions, `change_log_refuse_change()` and `testing_refuse_truncate()` are invoker functions. All have `set search_path = ''` and execute revoked from `public, anon, authenticated, service_role`. *(amended after security review)* Extra internal helpers are allowed only if named `testing_*` and following the same rules (built: `testing_cents_is_valid(integer)`, `testing_ids_are_valid(uuid[])`, `testing_belt_is_valid(text, text, text, integer, text)` *(step A)*). Tables that `change_log_write()` is attached to must have a uuid `id` column. 0003 creates **19** functions. *(amended after security review; 18 → 19 in step A)*
 
 ### 1.7 `public.change_log` (dashboard-wide audit)
 
@@ -212,9 +222,10 @@ grant select (id, location_code, name, position, final_award_rank_id, final_awar
               created_at, updated_at, created_by_name, updated_by_name)
   on public.testing_classes to authenticated;
 grant select (id, class_id, location_code, name, position, early_cents, day_cents, private_cents,
-              sparring_gear, version, created_at, updated_at, created_by_name, updated_by_name)
+              sparring_gear, belt_pattern, belt_color, belt_color_2, belt_end_stripes,   -- belt_*: amended v0.64/v0.65; DB added in step A
+              belt_end_stripe_color, version, created_at, updated_at, created_by_name, updated_by_name)
   on public.testing_ranks to authenticated;
--- created_by / updated_by (uuids) are NOT granted. change_log: nothing at all.
+-- created_by / updated_by (uuids) are NOT granted. change_log: nothing at all. Nothing to anon.
 
 -- policies (drop policy if exists first):
 create policy locations_select_with_access       on public.locations       for select to authenticated using ((select public.has_data_access()));
@@ -225,6 +236,8 @@ create policy testing_ranks_select_with_access   on public.testing_ranks   for s
 revoke execute on function public.testing_add_class(text, text, uuid, boolean) from public, anon, authenticated, service_role;   -- signature amended v0.62
 grant  execute on function public.testing_add_class(text, text, uuid, boolean) to authenticated;
 -- … same pair for the other 7 (exact signatures in §2) …
+-- rank RPCs (amended v0.64/v0.65; DB added in step A): testing_add_rank(uuid, text, integer, integer, integer, boolean, text, text, text, integer, text)
+--   and testing_update_rank(uuid, integer, text, integer, integer, integer, boolean, text, text, text, integer, text)
 -- for every helper / trigger function: revoke execute … from public, anon, authenticated, service_role; (no grant)
 -- service_role (the secret key, never used by the app) gets nothing on any 0003 object (amended after security review)
 ```
@@ -319,26 +332,30 @@ The two arrays are what the confirmation dialog stated ("… and its 18 ranks? G
 
 Ok: `{"status":"ok","removed_rank_count":<int>,"classes_lost_award":[{"id":"<uuid>","name":"<text>"}, …]}` (array ordered by class position; `[]` if none).
 
-### 2.6 `testing_add_rank(p_class_id uuid, p_name text, p_early_cents integer, p_day_cents integer, p_private_cents integer, p_sparring_gear boolean)` — action `add_rank`
+### 2.6 `testing_add_rank(p_class_id uuid, p_name text, p_early_cents integer, p_day_cents integer, p_private_cents integer, p_sparring_gear boolean, p_belt_pattern text, p_belt_color text, p_belt_color_2 text, p_belt_end_stripes integer, p_belt_end_stripe_color text)` — action `add_rank` *(belt arguments: amended v0.64/v0.65; DB added in step A)*
+
+No defaults (`pronargdefaults = 0`): the client always sends all eleven arguments. The old 6-argument version is dropped (§1.4 upgrade).
 
 | # | Check | Status |
 |---|---|---|
-| 3 | class id null; name invalid; any price null/out of range/not whole dollars; sparring null | `invalid` |
+| 3 | class id null; name invalid; any price null/out of range/not whole dollars; sparring null; `not testing_belt_is_valid(p_belt_*)` (any `validateBelt` problem, §5.8) *(step A)* | `invalid` |
 | 4 | find the class's school (missing → `not_found`); lock school; lock class `for no key update` (re-check → `not_found`) *(amended after security review)* | `not_found` |
 | 7 | another rank in the class with same lower(name) | `duplicate_name` |
-| 8 | insert at `position = coalesce(max+1, 0)`, `location_code` = the class's | `ok` |
+| 8 | insert at `position = coalesce(max+1, 0)`, `location_code` = the class's, the five belt columns as sent | `ok` |
 
-Ok: `{"status":"ok","id":"<uuid>","version":1,"position":<int>}`. Copying prices from the last rank is a **client-side default** only.
+Ok: `{"status":"ok","id":"<uuid>","version":1,"position":<int>}` (no belt values in the result; the client already has them). Copying prices and the belt from the last rank is a **client-side default** only.
 
-### 2.7 `testing_update_rank(p_rank_id uuid, p_expected_version integer, p_name text, p_early_cents integer, p_day_cents integer, p_private_cents integer, p_sparring_gear boolean)` — action `update_rank`
+### 2.7 `testing_update_rank(p_rank_id uuid, p_expected_version integer, p_name text, p_early_cents integer, p_day_cents integer, p_private_cents integer, p_sparring_gear boolean, p_belt_pattern text, p_belt_color text, p_belt_color_2 text, p_belt_end_stripes integer, p_belt_end_stripe_color text)` — action `update_rank` *(belt arguments: amended v0.64/v0.65; DB added in step A)*
+
+No defaults (`pronargdefaults = 0`). The old 7-argument version is dropped (§1.4 upgrade).
 
 | # | Check | Status |
 |---|---|---|
-| 3 | id/version null; name/price/sparring invalid | `invalid` |
+| 3 | id/version null; name/price/sparring invalid; belt invalid (`testing_belt_is_valid`) — so a bad belt is `invalid` even for a missing rank or a wrong version *(step A)* | `invalid` |
 | 4 | read the rank's class and school (missing → `not_found`); lock school *(amended after security review)*; lock class `for no key update`; lock rank `for update` (gone → `not_found`) | |
 | 5 | `version <> p_expected_version` | `stale` |
 | 7 | other rank in same class with same lower(name) | `duplicate_name` |
-| 8 | update (unchanged → no bump, no log) | `ok` |
+| 8 | update name, prices, sparring and the five belt columns (all unchanged → no bump, no log; a belt-only change → version +1 and a log row with only the changed columns) | `ok` |
 
 Ok: `{"status":"ok","id":"<uuid>","version":<int>}`
 
@@ -403,16 +420,20 @@ Sessions used: `A1` admin fresh + unlocked · `A2` server-locked (unlocked_until
 | T22 | D1 can read `created_by_name` and `updated_by_name` |
 | T23 | consecutive add_rank → positions 0,1,2…; add_class appends at the end of its school |
 | T24 | `0002_tests.sql` and `verify_pin_tests.sql` still pass after 0003 (run separately) |
-| C1 | catalog — for each table 0003 creates: `has_table_privilege(anon, t, p)` false for `SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN`; the same for `service_role` and PUBLIC, and no column rights for them *(amended after security review)*; authenticated: table-level all false (column `final_award_none` included in the granted list *(amended v0.62)*); `has_column_privilege(authenticated, t, c, 'SELECT')` true exactly for the granted columns of §1.8 and false for `created_by`, `updated_by`; `has_any_column_privilege(authenticated, 'public.change_log', 'SELECT')` false |
+| T25 | belts *(DB added in step A)*: every rank RPC call in the file passes the five belt arguments. 25a–c valid belts accepted and stored exactly (stripe black/white + 2 yellow end stripes, read back by A1 = authenticated can select the five columns; half red/black; solid brown + 3 red end stripes). 25d each broken belt → `invalid` from add_rank **and** update_rank, nothing written (snapshot): bad / null pattern, bad / capitalised / null color, bad second color, solid with a second color, stripe or half without one, stripe or half with the same two colors, end stripes 4 / −1 / null, end stripe color null with 0 and with 2 stripes, bad / empty end stripe color. 25e a bad belt is `invalid` before lookups: missing class, missing rank, wrong version. 25f belt-only changes bump the version (end stripes; second color; stripe → solid with `belt_color_2` → null; end stripe color with 0 stripes), the same belt again doesn't (no log row), reorder changes no version; log rows hold only the changed columns, the add_rank row holds the full belt. 25g as postgres: a bad belt → `check_violation` `testing_ranks_belt_check`, null end stripe color → `not_null_violation`; an insert without belt values gets a plain white belt. 25h anon can't select the belt columns (42501). The T5–T6b "broken input" calls pass nulls for all five belt arguments (access still checked first). |
+| C1 | catalog — for each table 0003 creates: `has_table_privilege(anon, t, p)` false for `SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN`; the same for `service_role` and PUBLIC, and no column rights for them *(amended after security review)*; authenticated: table-level all false (column `final_award_none` included in the granted list *(amended v0.62)*; the five `belt_*` rank columns too *(step A)*); `has_column_privilege(authenticated, t, c, 'SELECT')` true exactly for the granted columns of §1.8 and false for `created_by`, `updated_by`; `has_any_column_privilege(authenticated, 'public.change_log', 'SELECT')` false |
 | C2 | `has_sequence_privilege(r, 'public.change_log_id_seq', 'USAGE')`, `'SELECT'`, `'UPDATE'` false for anon, authenticated, service_role, PUBLIC *(amended after security review)* |
 | C3 | every function named `testing\_%` or `change\_log\_%`: anon and service_role *(amended after security review)* can't execute; authenticated can execute **exactly** the 8 RPCs; no `proacl` entry grants execute to PUBLIC (`=X/`) |
-| C3f | `pronargdefaults` = 0 for `testing_add_class` and `testing_update_class`, = 1 for `testing_delete_class` *(amended v0.62, security re-check)* |
+| C3d | at least the **19** functions of 0003 exist; C3e exactly one function per RPC name (no old overloads) *(19: step A)* |
+| C3f | `pronargdefaults` = 0 for `testing_add_class`, `testing_update_class`, `testing_add_rank` and `testing_update_rank` *(rank RPCs: step A)*, = 1 for `testing_delete_class` *(amended v0.62, security re-check)* |
+| C3g | `pg_get_function_identity_arguments` of `testing_add_rank` / `testing_update_rank` equal the §2.6 / §2.7 signatures exactly (belt arguments last) *(step A)* |
 | C4 | `relrowsecurity` true for locations, testing_classes, testing_ranks, change_log |
 | C5 | every `prosecdef` function in schema `public` has `search_path=""` in `proconfig` |
-| C6 | position uniques: `condeferrable = true`, `condeferred = false`; every constraint/index name in §1.3–1.4 exists (incl. `testing_classes_final_award_none_ck` *(amended v0.62)*) |
+| C6 | position uniques: `condeferrable = true`, `condeferred = false`; every constraint/index name in §1.3–1.4 exists (incl. `testing_classes_final_award_none_ck` *(amended v0.62)* and `testing_ranks_belt_check` *(step A)*) |
 | C7 | `testing_classes_final_award_fk`: `confdeltype = 'n'`, `confdelsetcols` = {final_award_rank_id}; `testing_ranks_class_fk`: `confdeltype = 'c'` |
 | C8 | the 8 triggers of §1.6 exist, run the right function and are enabled (`tgenabled = 'O'`) *(amended after security review)* |
 | C9 | exactly one SELECT policy to authenticated using `has_data_access()` on each of the 3 data tables; none on change_log; no write policies (added by Builder A) |
+| C10 | the five `belt_*` columns have exactly the §1.4 types, nullability (only `belt_color_2` nullable) and defaults; `testing_ranks_belt_check` is a validated check calling `testing_belt_is_valid` on all five columns *(step A)* |
 
 **PGlite** (`supabase/tests/pglite/`): own `package.json` pinning an exact `@electric-sql/pglite` version that bundles PostgreSQL 17 (app dependencies unchanged; its `node_modules` is git-ignored). `stubs.sql` creates what Supabase provides: roles `anon`, `authenticated`; schema `auth` with `auth.uid()`/`auth.jwt()` reading `request.jwt.claims`, `auth.users`, `auth.sessions (id uuid primary key, user_id uuid)`; `extensions` schema + pgcrypto. `run.mjs` applies 0001 → 0002 → 0003, inserts an admin and a desk staff row, substitutes the UID placeholders, then runs `verify_pin_tests.sql`, `0002_tests.sql`, `0003_tests.sql` (expect each "PASSED" row), then applies 0003 a **second time** (re-run safety) and prints the fingerprints from `0003_fingerprints.sql`.
 
@@ -463,11 +484,13 @@ Hard errors (no SQL written): a target (class by name, rank by name within it; n
 | Group D | None — last rank doesn't promote *(amended v0.62; was Not set — "Deputy 1" doesn't exist)* |
 | Teen/Adult | None — last rank doesn't promote *(amended v0.62; was Not set)* |
 
-**Review table** (stdout): first an **ADJUSTMENTS (approved)** section *(amended v0.62)* — the adjustments file and its sha256, then per adjustment: target, change (old → new) and reason (or "none" when no file is given); then per class — position, name, rank count, final award (+ which class), "None — last rank doesn't promote", or "Not set — <reason>"; per rank — position, name, early/day/private in dollars, sparring Yes/No, old nextRank, warning. Every cell changed by an adjustment is marked ` *`.
+**Review table** (stdout): first an **ADJUSTMENTS (approved)** section *(amended v0.62)* — the adjustments file and its sha256, then per adjustment: target, change (old → new) and reason (or "none" when no file is given); then per class — position, name, rank count, final award (+ which class), "None — last rank doesn't promote", or "Not set — <reason>"; per rank — position, name, early/day/private in dollars, sparring Yes/No, old nextRank, warning. Every cell changed by an adjustment is marked ` *`. *(amended v0.64/v0.65; seed belts in step A)* Each rank row also has a **Belt** column in plain English (`describeBelt`, §5.8).
+
+**Belts** *(amended v0.64/v0.65; seed belts in step A)*: the old system has no belt data, so `make_seed.mjs` has a belt map `RANK_BELTS` keyed by **exact rank name**, with the values of §6.3 (end-stripe color `yellow` everywhere); any rank name missing from the map is a **hard error** (no SQL written). A fixture export (`"fixture": true`) uses `FIXTURE_RANK_ALIASES`, so a made-up fixture name borrows the belt of the real rank in the same position. Every generated rank insert writes all five `belt_*` columns. The input sha256 in the header and review table is computed with CRLF counted as LF (the same hash on either line-ending style).
 
 **Output SQL**: header comment (what, generated from `<input file>` sha256 `<hash>` at `<time>`, "do not edit by hand", how to apply). Then:
 - `begin;` → `select set_config('tkd.actor_label', 'Initial copy from the old system', true);` `select set_config('tkd.action', 'seed', true);` `select set_config('tkd.batch_id', '<one uuid per file>', true);`
-- One `do $seed$ … $seed$;` block **per school** (`worcester`, then `shrewsbury`), same list for both: if the school already has any class → `raise notice '<School> already has classes — skipped.'` and do nothing; else insert classes (positions 0..6, `final_award_rank_id` null, `final_award_none` true for None classes and false otherwise *(amended v0.62)*), insert ranks (dense positions, cents — adjusted where approved, sparring), then set each class's `final_award_rank_id` (None and Not set classes get no update). A security review added: each block first runs `perform 1 from public.locations where code = '<school>' for no key update;` so two simultaneous runs can't both seed. All ids are literal uuids generated by the script (different per school).
+- One `do $seed$ … $seed$;` block **per school** (`worcester`, then `shrewsbury`), same list for both: if the school already has any class → `raise notice '<School> already has classes — skipped.'` and do nothing; else insert classes (positions 0..6, `final_award_rank_id` null, `final_award_none` true for None classes and false otherwise *(amended v0.62)*), insert ranks (dense positions, cents — adjusted where approved, sparring, the five `belt_*` values *(step A)*), then set each class's `final_award_rank_id` (None and Not set classes get no update). A security review added: each block first runs `perform 1 from public.locations where code = '<school>' for no key update;` so two simultaneous runs can't both seed. All ids are literal uuids generated by the script (different per school).
 - The header also names the adjustments file, its sha256 and each applied adjustment *(amended v0.62)*.
 - Reset the three settings to `''`; `commit;`; then a check `select location_code, count(*) … group by 1` for classes and ranks.
 - Names are single-quoted with `'` doubled. The script asserts the final text contains no `delete`/`drop` (case-insensitive) before writing.
@@ -493,7 +516,7 @@ Reads (exact column lists; never `*`):
 
 ```js
 const CLASS_COLUMNS = 'id, location_code, name, position, final_award_rank_id, final_award_none, version, created_at, updated_at, created_by_name, updated_by_name';  // final_award_none: amended v0.62
-const RANK_COLUMNS  = 'id, class_id, location_code, name, position, early_cents, day_cents, private_cents, sparring_gear, belt_pattern, belt_color, belt_color_2, belt_end_stripes, belt_end_stripe_color, version, created_at, updated_at, created_by_name, updated_by_name';  // belt_*: amended v0.64 — preview first; DB pending
+const RANK_COLUMNS  = 'id, class_id, location_code, name, position, early_cents, day_cents, private_cents, sparring_gear, belt_pattern, belt_color, belt_color_2, belt_end_stripes, belt_end_stripe_color, version, created_at, updated_at, created_by_name, updated_by_name';  // belt_*: amended v0.64; DB added in step A
 // in parallel (Promise.all):
 supabase.from('testing_classes').select(CLASS_COLUMNS).eq('location_code', code).order('position', { ascending: true });
 supabase.from('testing_ranks').select(RANK_COLUMNS).eq('location_code', code).order('position', { ascending: true });
@@ -507,7 +530,7 @@ Client shapes (camelCase):
 ```js
 // TestingRank
 { id, classId, locationCode, name, position, earlyCents, dayCents, privateCents, sparringGear,
-  beltPattern, beltColor, beltColor2, beltEndStripes, beltEndStripeColor,   // amended v0.64 — preview first; DB pending (§5.8)
+  beltPattern, beltColor, beltColor2, beltEndStripes, beltEndStripeColor,   // amended v0.64; DB added in step A (§5.8)
   version, createdAt, updatedAt, createdByName, updatedByName }
 // TestingClass (raw, as loaded) — ranks sorted by position
 { id, locationCode, name, position, finalAwardRankId /* string|null */, finalAwardNone /* boolean, amended v0.62 */, version,
@@ -525,8 +548,8 @@ Exports (all `async`, **never throw** — every failure becomes `{ status: 'erro
 | `updateClass({ classId, expectedVersion, name, finalAwardRankId, finalAwardNone })` *(amended v0.62)* — **no defaults**: leaving either out fails with `error` (PGRST202), never silently changes the award | `testing_update_class` `{ p_class_id, p_expected_version, p_name, p_final_award_rank_id, p_final_award_none }` | `{ status:'ok', id, version, finalAwardNone }` |
 | `reorderClasses({ locationCode, expectedIds, newIds })` | `testing_reorder_classes` `{ p_location_code, p_expected_ids, p_new_ids }` | `{ status:'ok' }` |
 | `deleteClass({ classId, expectedVersion, expectedRankIds, expectedLostAwardClassIds, onlyIfEmpty = false })` | `testing_delete_class` `{ p_class_id, p_expected_version, p_expected_rank_ids, p_expected_lost_award_class_ids, p_only_if_empty }` | `{ status:'ok', removedRankCount, classesLostAward:[{id,name}] }` |
-| `addRank({ classId, name, earlyCents, dayCents, privateCents, sparringGear, beltPattern, beltColor, beltColor2, beltEndStripes, beltEndStripeColor })` *(amended v0.64 — preview first; DB pending)* | `testing_add_rank` `{ p_class_id, p_name, p_early_cents, p_day_cents, p_private_cents, p_sparring_gear, p_belt_pattern, p_belt_color, p_belt_color_2, p_belt_end_stripes, p_belt_end_stripe_color }` (belt values always sent, no defaults; a missing one → `error` PGRST202) | `{ status:'ok', id, version, position }` |
-| `updateRank({ rankId, expectedVersion, name, earlyCents, dayCents, privateCents, sparringGear, beltPattern, beltColor, beltColor2, beltEndStripes, beltEndStripeColor })` *(amended v0.64 — preview first; DB pending)* | `testing_update_rank` `{ p_rank_id, p_expected_version, p_name, p_early_cents, p_day_cents, p_private_cents, p_sparring_gear, p_belt_* (same five) }` | `{ status:'ok', id, version }` |
+| `addRank({ classId, name, earlyCents, dayCents, privateCents, sparringGear, beltPattern, beltColor, beltColor2, beltEndStripes, beltEndStripeColor })` *(amended v0.64; DB added in step A)* | `testing_add_rank` `{ p_class_id, p_name, p_early_cents, p_day_cents, p_private_cents, p_sparring_gear, p_belt_pattern, p_belt_color, p_belt_color_2, p_belt_end_stripes, p_belt_end_stripe_color }` (belt values always sent, no defaults; a missing one → `error` PGRST202) | `{ status:'ok', id, version, position }` |
+| `updateRank({ rankId, expectedVersion, name, earlyCents, dayCents, privateCents, sparringGear, beltPattern, beltColor, beltColor2, beltEndStripes, beltEndStripeColor })` *(amended v0.64; DB added in step A)* | `testing_update_rank` `{ p_rank_id, p_expected_version, p_name, p_early_cents, p_day_cents, p_private_cents, p_sparring_gear, p_belt_* (same five) }` | `{ status:'ok', id, version }` |
 | `reorderRanks({ classId, expectedIds, newIds })` | `testing_reorder_ranks` `{ p_class_id, p_expected_ids, p_new_ids }` | `{ status:'ok' }` |
 | `deleteRank({ rankId, expectedVersion, expectedClassVersion, expectedRankIds, expectedLostAwardClassIds })` | `testing_delete_rank` `{ p_rank_id, p_expected_version, p_expected_class_version, p_expected_rank_ids, p_expected_lost_award_class_ids }` | `{ status:'ok', classesLostAward, classFinalAwardNowOn }` |
 
@@ -546,7 +569,7 @@ Non-ok results: `{ status }` with status one of `no_access | not_allowed | not_f
 //   isLast,                                      // last rank of its class
 //   testingFor: { rankId, name } | null,         // next rank; for the last rank the final award; null if last and award None or not set
 //   finalAwardState: 'set' | 'none' | 'notSet' | null,  // only on the last rank; null on every other rank ('none' amended v0.62)
-//   nextBelt: Belt | null }                      // belt of the rank in testingFor (next rank / final award); null when testingFor is null — amended v0.64, preview first
+//   nextBelt: Belt | null }                      // belt of the rank in testingFor (next rank / final award); null when testingFor is null — amended v0.64 (approved v0.67)
 ```
 Example: Group A [Yellow, Orange, Green, High Green], award Blue → Yellow→{Orange}, … High Green → `{ isLast:true, testingFor:{rankId:<Blue>, name:'Blue'}, finalAwardState:'set' }`. Award id pointing at a rank not in the list → `'notSet'`. Group D (None) → Deputy `{ isLast:true, testingFor:null, finalAwardState:'none' }` *(amended v0.62)*. `finalAwardNone` true wins over a rank id (the database never stores both).
 
@@ -599,11 +622,13 @@ t.setLocalClasses(updater)  // optimistic edit: updater(rawClasses) => rawClasse
 
 `node src/lib/testing/checks.mjs` — plain `assert` checks of `names.js`, `money.js`, `rankOrder.js` (all examples in this contract, incl. the delete descriptions of §7.4) and the mock backend core (§6) running the DB test scenarios T5–T18b (incl. T10d *(amended v0.62)*) that don't need sessions. Prints `ALL TESTING LIB CHECKS PASSED`.
 
-### 5.8 `src/lib/testing/belts.js` *(amended v0.64 — preview first; DB pending)*
+### 5.8 `src/lib/testing/belts.js` *(amended v0.64; DB added in step A)*
 
-Belt picture per rank (rulebook v0.64/v0.65). Built in the data layer and preview mock first; Builder A adds the database columns/arguments after Jeffrey approves the look. **Until then `RANK_COLUMNS` and the rank RPCs work only in preview mode** (the real database would answer 42703 / PGRST202).
+Belt picture per rank (rulebook v0.64/v0.65). Built in the data layer and preview mock first; Builder A added the database columns, rule and arguments in step A (§1.4, §1.8, §2.6, §2.7), after Jeffrey approved the look (v0.67). **Until migration 0003 with the belts is live, `RANK_COLUMNS` and the rank RPCs work only in preview mode** (a database without them would answer 42703 / PGRST202).
 
-`Belt = { beltPattern, beltColor, beltColor2, beltEndStripes, beltEndStripeColor }` — planned columns `belt_pattern text`, `belt_color text`, `belt_color_2 text null`, `belt_end_stripes integer`, `belt_end_stripe_color text` (default `'yellow'`).
+`Belt = { beltPattern, beltColor, beltColor2, beltEndStripes, beltEndStripeColor }` — database columns (§1.4) `belt_pattern text not null default 'solid'`, `belt_color text not null default 'white'`, `belt_color_2 text null`, `belt_end_stripes integer not null default 0`, `belt_end_stripe_color text not null default 'yellow'`.
+
+**Decision (step A):** `belt_end_stripe_color` is **NOT NULL, always one of the colors, default `'yellow'`** — even with 0 end stripes. `validateBelt` returns `'missingEndStripeColor'` for null in every case (it used to allow null with 0 end stripes). Reason: with null allowed, "no color" and "yellow" with 0 end stripes would be two different stored values for the same-looking belt (needless version bumps, two spellings of one belt). DB, mock and screens agree; the screens always send a color.
 
 | Export | Behavior |
 |---|---|
@@ -611,13 +636,13 @@ Belt picture per rank (rulebook v0.64/v0.65). Built in the data layer and previe
 | `BELT_PATTERNS` | `['solid', 'stripe', 'half']` |
 | `BELT_END_STRIPES_MAX = 3`, `DEFAULT_END_STRIPE_COLOR = 'yellow'` | |
 | `PLAIN_WHITE_BELT` | frozen `{ 'solid', 'white', null, 0, 'yellow' }` |
-| `validateBelt(belt)` | `null` if valid, else (first failing, in this order) `'badPattern'` (not solid/stripe/half) · `'badColor'` (main or second color not a key) · `'color2NotAllowed'` (solid with a second color) · `'missingColor2'` (stripe/half without one) · `'sameColors'` (stripe/half, second = main) · `'badEndStripes'` (not an integer 0–3) · `'missingEndStripeColor'` (end stripes > 0, color null) · `'badEndStripeColor'` (not a key; null is allowed only with 0 end stripes) |
+| `validateBelt(belt)` | `null` if valid, else (first failing, in this order) `'badPattern'` (not solid/stripe/half) · `'badColor'` (main or second color not a key) · `'color2NotAllowed'` (solid with a second color) · `'missingColor2'` (stripe/half without one) · `'sameColors'` (stripe/half, second = main) · `'badEndStripes'` (not an integer 0–3) · `'missingEndStripeColor'` (color null — with any number of end stripes, incl. 0; amended step A) · `'badEndStripeColor'` (not a key; null is no longer allowed, see the decision above) |
 | `describeBelt(belt)` | plain English or `null` if invalid: solid `Plain white` (with end stripes: `Black with 3 red end stripes`) · stripe `Blue with a white middle stripe` (+ ` and 2 yellow end stripes` / ` and 1 yellow end stripe`) · half `Top half red, bottom half black` (+ `, with 1 yellow end stripe`) |
 | `defaultBeltFor(cls)` | copy of the class's last rank's belt (by position); plain white solid when the class is empty or that belt is invalid/missing — Add rank's starting belt |
 | `beltOf(rank)` | just the five belt fields (new object) |
 | `sameBelt(a, b)` | the five fields equal — for Edit rank's "unchanged" check (name, prices, sparring **and** belt) |
 
-Mock (§6.2) and, later, the database refuse an invalid belt with `invalid` (argument check, step 3). Belt columns are rank **content columns** (a belt-only change bumps the version; the same belt again doesn't).
+Mock (§6.2) and the database (§2.6/§2.7 step 3, `testing_belt_is_valid`; table rule `testing_ranks_belt_check`) refuse an invalid belt with `invalid` (argument check, step 3). Belt columns are rank **content columns** (a belt-only change bumps the version; the same belt again doesn't).
 
 ---
 
@@ -626,14 +651,14 @@ Mock (§6.2) and, later, the database refuse an invalid belt with `invalid` (arg
 ### 6.1 Structure
 
 - `src/lib/mockTesting.js` exports a **pure core** (no `window` access at import time): `createTestingBackend({ loadStore, saveStore, now, newId })` with `select(table, columns, filters, orders, ctx)` and `rpc(name, args, ctx)`, plus `defaultTestingData()`. `ctx = { signedIn, hasDataAccess, isAdmin, actorName }`.
-- `src/lib/mockClient.js` wires it in: `supabase.from(table)` returns a thenable builder supporting `.select(cols).eq(col, val).order(col, { ascending })` (order may be chained); `rpc('has_data_access')`; the 8 `testing_*` RPCs. Store in localStorage key **`tkd.preview.testing`** (`{ schema: 3, classes: [...snake_case rows incl. final_award_none], ranks: [...rows incl. the five belt_* columns] }`; missing/corrupt, an invalid stored belt, or saved by an older build (schema 1 no `final_award_none`, schema 2 no belts) → default data *(amended v0.62; schema 3 amended v0.64 — preview first; DB pending)*).
+- `src/lib/mockClient.js` wires it in: `supabase.from(table)` returns a thenable builder supporting `.select(cols).eq(col, val).order(col, { ascending })` (order may be chained); `rpc('has_data_access')`; the 8 `testing_*` RPCs. Store in localStorage key **`tkd.preview.testing`** (`{ schema: 3, classes: [...snake_case rows incl. final_award_none], ranks: [...rows incl. the five belt_* columns] }`; missing/corrupt, an invalid stored belt, or saved by an older build (schema 1 no `final_award_none`, schema 2 no belts) → default data *(amended v0.62; schema 3 amended v0.64; DB added in step A)*).
 - `ctx.hasDataAccess` = signed in AND password within 7 days AND session id AND not PIN-locked AND `unlockedUntil > now` (the existing session state). `ctx.isAdmin` = role `'admin'` from the preview staff state (new field `role`, default `'admin'`) AND password fresh. `get_my_profile` returns that role.
 
 ### 6.2 Behavior (same as §1–2)
 
 - Same check order, same statuses, same ok payloads (snake_case), same name/price/position/version rules (import `names.js` / `money.js`), same set-vs-ordered comparisons, same lost-award reporting, same `version` rules (position-only changes don't bump; set-null bumps the class).
 - *(amended v0.62)* `testing_add_class` / `testing_update_class` take `p_final_award_none` with **no defaults** on either final-award argument (missing → PGRST202 error, like the real API); `p_final_award_none` null, or true together with a rank id → `invalid` (step 3, before `not_found`/`stale`); ok answers include `final_award_none`; `final_award_none` is a content column (each state change bumps the version, the same state again doesn't). `final_award_none` is readable (granted column).
-- *(amended v0.64 — preview first; DB pending)* `testing_add_rank` / `testing_update_rank` take `p_belt_pattern text, p_belt_color text, p_belt_color_2 text, p_belt_end_stripes integer, p_belt_end_stripe_color text` with **no defaults** (missing → PGRST202); any `validateBelt` problem → `invalid` (step 3); the five `belt_*` columns are granted (readable) rank content columns. The real database gets the same rules when Builder A catches up.
+- *(amended v0.64; DB added in step A)* `testing_add_rank` / `testing_update_rank` take `p_belt_pattern text, p_belt_color text, p_belt_color_2 text, p_belt_end_stripes integer, p_belt_end_stripe_color text` with **no defaults** (missing → PGRST202); any `validateBelt` problem → `invalid` (step 3); the five `belt_*` columns are granted (readable) rank content columns. The real database has the same rules (DB added in step A: §1.4, §1.8, §2.6, §2.7).
 - Response envelope: `{ data, error: null }`. Not signed in: reads → `{ data: null, error: { code:'42501', message:'permission denied for table <t>' } }`; RPCs → same with `function <name>`. `has_data_access` false → reads return `[]` (RLS), RPCs return `{status:'no_access'}`.
 - `select('*')`, or any column not granted in §1.8 → `{ data:null, error:{ code:'42501', message:'permission denied for table <t>' } }`. `change_log` and `locations` writes don't exist in the mock; `from('locations')` returns the 2 rows.
 - Delay ~200 ms per call (existing `FAKE_DELAY_MS / 2`); `setTestingDelay(ms)` overrides it.
@@ -643,7 +668,7 @@ Mock (§6.2) and, later, the database refuse an invalid belt with `invalid` (arg
 
 The preview uses the **real** list from `supabase/manual/0003s_export_from_old_system.json` (7 classes, 42 ranks, real prices; written into `mockTesting.js` in short form) with the approved adjustments of §4 applied — no placeholders.
 
-Belts *(amended v0.64 — preview first; DB pending)* (both schools; Teen/Adult = the kids' rank of the same name): LT White solid white · LT Yellow / LT Green / LT Blue / LT Red / LT Black stripe white + that color · White, Yellow, Orange, Green, Blue, Purple, Red, Brown solid · High Green / High Blue / High Red / High Brown stripe that color + white · Red / Black half red (top) + black (bottom) · Bo Dan stripe black + white · Bo Dan - 1/2/3 Big Stripe stripe black + white with 1/2/3 yellow end stripes · Deputy stripe black + yellow. End-stripe color `yellow` on every rank.
+Belts *(amended v0.64; DB added in step A)* (both schools; Teen/Adult = the kids' rank of the same name): LT White solid white · LT Yellow / LT Green / LT Blue / LT Red / LT Black stripe white + that color · White, Yellow, Orange, Green, Blue, Purple, Red, Brown solid · High Green / High Blue / High Red / High Brown stripe that color + white · Red / Black half red (top) + black (bottom) · Bo Dan stripe black + white · Bo Dan - 1/2/3 Big Stripe stripe black + white with 1/2/3 yellow end stripes · Deputy stripe black + yellow. End-stripe color `yellow` on every rank.
 
 | Pos | Class | Ranks (in order) | Early / Testing day / Private | Sparring | Final award |
 |---|---|---|---|---|---|
@@ -951,5 +976,6 @@ Functional checks (no screenshot): `N` opens Add class on PC; `N` does nothing i
 15. **A dismissed failed reorder** keeps its Not saved tag until the next reload, which shows the server order.
 16. **Preview data**: White, Group C, Group D and Teen/Adult prices and most of their rank names are placeholders (marked) until the real export.
 17. Undo of a refused/failed Undo is not offered; only the latest toast's Undo exists.
+18. **Belt end-stripe color** (step A): NOT NULL, one of the 9 colors, default `'yellow'`, even with 0 end stripes (§5.8). One table rule `testing_ranks_belt_check` through the helper `testing_belt_is_valid` (the same helper answers `invalid` in the rank RPCs), so the rule exists once in SQL, like the name rule. An end-stripe color equal to the color it sits on is **allowed** by `validateBelt`, the mock and the database; only the screens warn and gray out Save (§7.4).
 
 Open for Jeffrey (not decided here): "Deputy" → "Deputy 1" naming (seed leaves Group D Not set); the export query is run by Claude read-only after this build, with his review of the printed table before any write.

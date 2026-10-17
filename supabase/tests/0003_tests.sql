@@ -5,7 +5,7 @@
 --   A manual test script for migrations/0003_testing_classes_ranks.sql:
 --   who can read Classes and ranks (only unlocked staff sessions), who can
 --   change them (only admins, only through the 8 testing_* functions),
---   every rule those functions enforce (names, prices, order, final
+--   every rule those functions enforce (names, prices, belts, order, final
 --   awards, "someone else changed it" = stale), the history table
 --   (change_log), and a catalog section that checks the permissions on
 --   EVERY object 0003 creates, not just a few samples.
@@ -149,6 +149,8 @@ declare
   v_r_blue uuid; v_r_hblue uuid; v_r_pg uuid; v_r_s1blue uuid;
   v_r_w4a uuid; v_r_w4b uuid; v_r_w4c uuid; v_r_w5a uuid;
   v_r_w6a uuid; v_r_w6b uuid; v_r_w6c uuid; v_r_w6d uuid;
+  v_b uuid; v_rb uuid; v_rb2 uuid;   -- test 25 (belts)
+  v_belt record;
 
   -- catalog checks
   v_tbl  text;
@@ -245,6 +247,9 @@ begin
   begin perform 1 from public.testing_classes; raise exception 'TEST FAILED: 3b anon could read testing_classes'; exception when insufficient_privilege then null; end;
   begin perform 1 from public.testing_ranks;   raise exception 'TEST FAILED: 3c anon could read testing_ranks';   exception when insufficient_privilege then null; end;
   begin perform 1 from public.change_log;      raise exception 'TEST FAILED: 3d anon could read change_log';      exception when insufficient_privilege then null; end;
+  -- 25h. not even the belt columns on their own (added in step A)
+  begin perform r.belt_pattern, r.belt_color, r.belt_color_2, r.belt_end_stripes, r.belt_end_stripe_color from public.testing_ranks r;
+        raise exception 'TEST FAILED: 25h anon could read the belt columns'; exception when insufficient_privilege then null; end;
   begin perform public.testing_add_class('worcester', v_tag || ' anon', null, false);
         raise exception 'TEST FAILED: 3e anon could call testing_add_class';       exception when insufficient_privilege then null; end;
   begin perform public.testing_update_class(gen_random_uuid(), 1, 'x', null, false);
@@ -253,9 +258,9 @@ begin
         raise exception 'TEST FAILED: 3g anon could call testing_reorder_classes'; exception when insufficient_privilege then null; end;
   begin perform public.testing_delete_class(gen_random_uuid(), 1, '{}', '{}', false);
         raise exception 'TEST FAILED: 3h anon could call testing_delete_class';    exception when insufficient_privilege then null; end;
-  begin perform public.testing_add_rank(gen_random_uuid(), 'x', 0, 0, 0, false);
+  begin perform public.testing_add_rank(gen_random_uuid(), 'x', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow');
         raise exception 'TEST FAILED: 3i anon could call testing_add_rank';        exception when insufficient_privilege then null; end;
-  begin perform public.testing_update_rank(gen_random_uuid(), 1, 'x', 0, 0, 0, false);
+  begin perform public.testing_update_rank(gen_random_uuid(), 1, 'x', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow');
         raise exception 'TEST FAILED: 3j anon could call testing_update_rank';     exception when insufficient_privilege then null; end;
   begin perform public.testing_reorder_ranks(gen_random_uuid(), '{}', '{}');
         raise exception 'TEST FAILED: 3k anon could call testing_reorder_ranks';   exception when insufficient_privilege then null; end;
@@ -360,17 +365,17 @@ begin
   end if;
 
   -- 7b / 23. three ranks -> positions 0, 1, 2, version 1
-  v_r := public.testing_add_rank(v_w1, 'Yellow', 6500, 7500, 8500, false);
+  v_r := public.testing_add_rank(v_w1, 'Yellow', 6500, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r ->> 'status' is distinct from 'ok' or (v_r ->> 'position')::int <> 0 or (v_r ->> 'version')::int <> 1 then
     raise exception 'TEST FAILED: 23a first add_rank expected ok position 0 version 1, got %', v_r;
   end if;
   v_r_yellow := (v_r ->> 'id')::uuid;
-  v_r := public.testing_add_rank(v_w1, 'Orange', 6500, 7500, 8500, false);
+  v_r := public.testing_add_rank(v_w1, 'Orange', 6500, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r ->> 'status' is distinct from 'ok' or (v_r ->> 'position')::int <> 1 then
     raise exception 'TEST FAILED: 23b second add_rank expected ok position 1, got %', v_r;
   end if;
   v_r_orange := (v_r ->> 'id')::uuid;
-  v_r := public.testing_add_rank(v_w1, 'Green', 6500, 7500, 8500, false);
+  v_r := public.testing_add_rank(v_w1, 'Green', 6500, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r ->> 'status' is distinct from 'ok' or (v_r ->> 'position')::int <> 2 then
     raise exception 'TEST FAILED: 23c third add_rank expected ok position 2, got %', v_r;
   end if;
@@ -380,7 +385,7 @@ begin
   end if;
 
   -- 7c. update a rank -> version 2
-  v_r := public.testing_update_rank(v_r_green, 1, 'Green belt', 7000, 8000, 9000, true);
+  v_r := public.testing_update_rank(v_r_green, 1, 'Green belt', 7000, 8000, 9000, true, 'solid', 'white', null, 0, 'yellow');
   if v_r ->> 'status' is distinct from 'ok' or (v_r ->> 'version')::int is distinct from 2
      or (v_r ->> 'id')::uuid is distinct from v_r_green then
     raise exception 'TEST FAILED: 7c update_rank expected ok version 2, got %', v_r;
@@ -449,11 +454,11 @@ begin
   select coalesce(max(id), 0) into v_mark from public.change_log;
   set local role authenticated;
   perform set_config('request.jwt.claims', v_c_a1, true);
-  v_r := public.testing_update_rank(v_r_green, 2, 'Green belt', 7000, 8000, 9000, true);
+  v_r := public.testing_update_rank(v_r_green, 2, 'Green belt', 7000, 8000, 9000, true, 'solid', 'white', null, 0, 'yellow');
   if v_r ->> 'status' is distinct from 'ok' or (v_r ->> 'version')::int is distinct from 2 then
     raise exception 'TEST FAILED: 7d no-op update_rank expected ok version 2, got %', v_r;
   end if;
-  v_r := public.testing_update_rank(v_r_green, 2, '  Green' || chr(160) || '  belt ', 7000, 8000, 9000, true);
+  v_r := public.testing_update_rank(v_r_green, 2, '  Green' || chr(160) || '  belt ', 7000, 8000, 9000, true, 'solid', 'white', null, 0, 'yellow');
   if v_r ->> 'status' is distinct from 'ok' or (v_r ->> 'version')::int is distinct from 2 then
     raise exception 'TEST FAILED: 7e no-op update_rank (spaces) expected ok version 2, got %', v_r;
   end if;
@@ -464,8 +469,8 @@ begin
     raise exception 'TEST FAILED: 23d second add_class expected position %, got %', v_w_count + 1, v_r;
   end if;
   v_w2 := (v_r ->> 'id')::uuid;
-  v_r_blue  := (public.testing_add_rank(v_w2, 'Blue', 7000, 8000, 9500, true) ->> 'id')::uuid;
-  v_r_hblue := (public.testing_add_rank(v_w2, 'High Blue', 7000, 8000, 9500, true) ->> 'id')::uuid;
+  v_r_blue  := (public.testing_add_rank(v_w2, 'Blue', 7000, 8000, 9500, true, 'solid', 'white', null, 0, 'yellow') ->> 'id')::uuid;
+  v_r_hblue := (public.testing_add_rank(v_w2, 'High Blue', 7000, 8000, 9500, true, 'solid', 'white', null, 0, 'yellow') ->> 'id')::uuid;
   if v_r_blue is null or v_r_hblue is null then raise exception 'TEST FAILED: 7f adding Beta''s ranks failed'; end if;
 
   -- no-op class update (same name, still no award) -> version stays 1
@@ -569,7 +574,7 @@ begin
     raise exception 'TEST FAILED: 8b-1 same class name in the other school expected ok at position %, got %', v_s_count, v_r;
   end if;
   v_s1 := (v_r ->> 'id')::uuid;
-  v_r := public.testing_add_rank(v_s1, 'Blue', 7000, 8000, 9500, true);
+  v_r := public.testing_add_rank(v_s1, 'Blue', 7000, 8000, 9500, true, 'solid', 'white', null, 0, 'yellow');
   if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: 8b-2 same rank name in another class expected ok, got %', v_r; end if;
   v_r_s1blue := (v_r ->> 'id')::uuid;
   if coalesce(current_setting('tkd.action', true), '') <> '' or coalesce(current_setting('tkd.batch_id', true), '') <> '' then
@@ -673,8 +678,8 @@ begin
       public.testing_update_class(v_w1, 4, v_tag || ' nope', null, false) ->> 'status',
       public.testing_reorder_classes('worcester', v_ids2, v_ids2) ->> 'status',
       public.testing_delete_class(v_w2, 1, array[v_r_blue, v_r_hblue], array[v_w1], false) ->> 'status',
-      public.testing_add_rank(v_w1, 'nope', 0, 0, 0, false) ->> 'status',
-      public.testing_update_rank(v_r_yellow, 1, 'nope', 0, 0, 0, false) ->> 'status',
+      public.testing_add_rank(v_w1, 'nope', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow') ->> 'status',
+      public.testing_update_rank(v_r_yellow, 1, 'nope', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow') ->> 'status',
       public.testing_reorder_ranks(v_w1, array[v_r_green, v_r_yellow, v_r_orange], array[v_r_yellow, v_r_green, v_r_orange]) ->> 'status',
       public.testing_delete_rank(v_r_yellow, 1, 4, array[v_r_green, v_r_yellow, v_r_orange], '{}') ->> 'status',
       -- 2. broken input
@@ -682,8 +687,8 @@ begin
       public.testing_update_class(null, null, '', null, null) ->> 'status',
       public.testing_reorder_classes(null, null, null) ->> 'status',
       public.testing_delete_class(null, null, null, null, null) ->> 'status',
-      public.testing_add_rank(null, '', -1, -1, -1, null) ->> 'status',
-      public.testing_update_rank(null, null, '', -1, -1, -1, null) ->> 'status',
+      public.testing_add_rank(null, '', -1, -1, -1, null, null, null, null, null, null) ->> 'status',
+      public.testing_update_rank(null, null, '', -1, -1, -1, null, null, null, null, null, null) ->> 'status',
       public.testing_reorder_ranks(null, null, null) ->> 'status',
       public.testing_delete_rank(null, null, null, null, null) ->> 'status',
       -- 3. ids that exist nowhere
@@ -691,8 +696,8 @@ begin
       public.testing_update_class(v_rand, 1, v_tag || ' nope 2', null, false) ->> 'status',
       public.testing_reorder_classes('worcester', array[v_rand], array[v_rand]) ->> 'status',
       public.testing_delete_class(v_rand, 1, '{}', '{}', false) ->> 'status',
-      public.testing_add_rank(v_rand, 'nope', 0, 0, 0, false) ->> 'status',
-      public.testing_update_rank(v_rand, 1, 'nope', 0, 0, 0, false) ->> 'status',
+      public.testing_add_rank(v_rand, 'nope', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow') ->> 'status',
+      public.testing_update_rank(v_rand, 1, 'nope', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow') ->> 'status',
       public.testing_reorder_ranks(v_rand, '{}', '{}') ->> 'status',
       public.testing_delete_rank(v_rand, 1, 1, array[v_rand], '{}') ->> 'status'
     ];
@@ -715,14 +720,14 @@ begin
   v_r := public.testing_add_class('worcester', v_tag || ' Gamma', null, false);
   if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: 8 setup add Gamma, got %', v_r; end if;
   v_w3 := (v_r ->> 'id')::uuid;
-  v_r := public.testing_add_rank(v_w3, 'Green', 6500, 7500, 8500, false);
+  v_r := public.testing_add_rank(v_w3, 'Green', 6500, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: 8 setup add Green, got %', v_r; end if;
-  v_r := public.testing_add_rank(v_w3, 'High Green', 6500, 7500, 8500, false);
+  v_r := public.testing_add_rank(v_w3, 'High Green', 6500, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: 8 setup add High Green, got %', v_r; end if;
 
   foreach v_txt in array array['green', ' GREEN ', 'Green' || chr(160), E'\tgreen\n',
                                'high  green', 'HIGH' || chr(160) || 'GREEN', E'High\tGreen', '  high green  '] loop
-    v_r := public.testing_add_rank(v_w3, v_txt, 6500, 7500, 8500, false);
+    v_r := public.testing_add_rank(v_w3, v_txt, 6500, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow');
     if v_r is distinct from '{"status": "duplicate_name"}'::jsonb then
       raise exception 'TEST FAILED: 8a rank "%" expected {"status":"duplicate_name"}, got %', v_txt, v_r;
     end if;
@@ -736,12 +741,12 @@ begin
   -- renaming to an existing name
   v_r := public.testing_update_class(v_w2, 1, lower(v_tag) || ' ALPHA', null, false);
   if v_r is distinct from '{"status": "duplicate_name"}'::jsonb then raise exception 'TEST FAILED: 8c update_class to an existing name expected duplicate_name, got %', v_r; end if;
-  v_r := public.testing_update_rank(v_r_orange, 1, 'YELLOW', 6500, 7500, 8500, false);
+  v_r := public.testing_update_rank(v_r_orange, 1, 'YELLOW', 6500, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r is distinct from '{"status": "duplicate_name"}'::jsonb then raise exception 'TEST FAILED: 8d update_rank to an existing name expected duplicate_name, got %', v_r; end if;
   -- changing only the capital letters of your OWN name is fine
-  v_r := public.testing_update_rank(v_r_orange, 1, 'ORANGE', 6500, 7500, 8500, false);
+  v_r := public.testing_update_rank(v_r_orange, 1, 'ORANGE', 6500, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r ->> 'status' is distinct from 'ok' or (v_r ->> 'version')::int <> 2 then raise exception 'TEST FAILED: 8e own name in capitals expected ok version 2, got %', v_r; end if;
-  v_r := public.testing_update_rank(v_r_orange, 2, 'Orange', 6500, 7500, 8500, false);
+  v_r := public.testing_update_rank(v_r_orange, 2, 'Orange', 6500, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r ->> 'status' is distinct from 'ok' or (v_r ->> 'version')::int <> 3 then raise exception 'TEST FAILED: 8f rename back expected ok version 3, got %', v_r; end if;
 
   -- -------------------------------------------------------------------
@@ -755,7 +760,7 @@ begin
                                'Zero' || chr(8203) || 'width', 'Mark' || chr(8207), chr(8234) || 'Embed',
                                'RTL' || chr(8238) || 'override', 'Word' || chr(8288) || 'joiner', 'Plus' || chr(8292),
                                chr(8294) || 'Isolate', 'Pop' || chr(8297), chr(65279) || 'BOM'] loop
-    v_r := public.testing_add_rank(v_w3, v_txt, 6500, 7500, 8500, false);
+    v_r := public.testing_add_rank(v_w3, v_txt, 6500, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow');
     if v_r is distinct from '{"status": "invalid"}'::jsonb then
       raise exception 'TEST FAILED: 9a rank name "%" (% characters) expected {"status":"invalid"}, got %', v_txt, char_length(v_txt), v_r;
     end if;
@@ -764,30 +769,30 @@ begin
       raise exception 'TEST FAILED: 9b class name "%" expected invalid, got %', v_txt, v_r;
     end if;
   end loop;
-  v_r := public.testing_add_rank(v_w3, null, 6500, 7500, 8500, false);
+  v_r := public.testing_add_rank(v_w3, null, 6500, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 9c null rank name expected invalid, got %', v_r; end if;
   v_r := public.testing_add_class('worcester', null, null, false);
   if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 9d null class name expected invalid, got %', v_r; end if;
-  v_r := public.testing_update_rank(v_r_orange, 3, '', 6500, 7500, 8500, false);
+  v_r := public.testing_update_rank(v_r_orange, 3, '', 6500, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 9e update_rank empty name expected invalid, got %', v_r; end if;
   v_r := public.testing_update_class(v_w3, 1, '   ', null, false);
   if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 9f update_class blank name expected invalid, got %', v_r; end if;
 
   -- exactly 60 characters is fine (also 60 two-byte characters)
-  v_r := public.testing_add_rank(v_w3, rpad(v_tag || ' L', 60, 'x'), 6500, 7500, 8500, false);
+  v_r := public.testing_add_rank(v_w3, rpad(v_tag || ' L', 60, 'x'), 6500, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: 9g 60-character name expected ok, got %', v_r; end if;
-  v_r := public.testing_add_rank(v_w3, repeat(chr(233), 60), 6500, 7500, 8500, false);
+  v_r := public.testing_add_rank(v_w3, repeat(chr(233), 60), 6500, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: 9h 60 x chr(233) (e with an accent) expected ok (characters, not bytes), got %', v_r; end if;
 
   -- characters just outside those ranges are fine (a real hyphen, U+2010)
-  v_r := public.testing_add_rank(v_w3, 'Hy' || chr(8208) || 'phen', 6500, 7500, 8500, false);
+  v_r := public.testing_add_rank(v_w3, 'Hy' || chr(8208) || 'phen', 6500, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: 9h2 a name with a hyphen (U+2010) expected ok, got %', v_r; end if;
 
   -- runs of spaces / tabs / line breaks / no-break spaces become one space
   v_r := public.testing_add_class('worcester', v_tag || ' Group   E', null, false);
   if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: 9i "Group   E" expected ok, got %', v_r; end if;
   v_w7 := (v_r ->> 'id')::uuid;
-  v_r := public.testing_add_rank(v_w3, '  Tab' || E'\t' || 'and' || chr(160) || chr(160) || 'nbsp' || E'\n' || 'end  ', 6500, 7500, 8500, false);
+  v_r := public.testing_add_rank(v_w3, '  Tab' || E'\t' || 'and' || chr(160) || chr(160) || 'nbsp' || E'\n' || 'end  ', 6500, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: 9j tab/no-break-space name expected ok, got %', v_r; end if;
   select r.name into v_txt from public.testing_ranks r where r.id = (v_r ->> 'id')::uuid;
   if v_txt is distinct from 'Tab and nbsp end' then raise exception 'TEST FAILED: 9k expected stored name "Tab and nbsp end", got "%"', v_txt; end if;
@@ -795,27 +800,27 @@ begin
   if v_txt is distinct from v_tag || ' Group E' then raise exception 'TEST FAILED: 9l expected stored class name "% Group E", got "%"', v_tag, v_txt; end if;
 
   -- prices: whole dollars $0 - $1,000, all three required; sparring required
-  v_r := public.testing_add_rank(v_w3, 'Price low',   -100, 7500, 8500, false);
+  v_r := public.testing_add_rank(v_w3, 'Price low',   -100, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 9m early -100 expected invalid, got %', v_r; end if;
-  v_r := public.testing_add_rank(v_w3, 'Price high',  6500, 100100, 8500, false);
+  v_r := public.testing_add_rank(v_w3, 'Price high',  6500, 100100, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 9n day 100100 expected invalid, got %', v_r; end if;
-  v_r := public.testing_add_rank(v_w3, 'Price cents', 6500, 7500, 6550, false);
+  v_r := public.testing_add_rank(v_w3, 'Price cents', 6500, 7500, 6550, false, 'solid', 'white', null, 0, 'yellow');
   if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 9o private 6550 expected invalid, got %', v_r; end if;
-  v_r := public.testing_add_rank(v_w3, 'Price null',  null, 7500, 8500, false);
+  v_r := public.testing_add_rank(v_w3, 'Price null',  null, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 9p early null expected invalid, got %', v_r; end if;
-  v_r := public.testing_add_rank(v_w3, 'Price null2', 6500, null, 8500, false);
+  v_r := public.testing_add_rank(v_w3, 'Price null2', 6500, null, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 9q day null expected invalid, got %', v_r; end if;
-  v_r := public.testing_add_rank(v_w3, 'Price null3', 6500, 7500, null, false);
+  v_r := public.testing_add_rank(v_w3, 'Price null3', 6500, 7500, null, false, 'solid', 'white', null, 0, 'yellow');
   if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 9r private null expected invalid, got %', v_r; end if;
-  v_r := public.testing_add_rank(v_w3, 'Sparring null', 6500, 7500, 8500, null);
+  v_r := public.testing_add_rank(v_w3, 'Sparring null', 6500, 7500, 8500, null, 'solid', 'white', null, 0, 'yellow');
   if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 9s sparring null expected invalid, got %', v_r; end if;
-  v_r := public.testing_update_rank(v_r_orange, 3, 'Orange', 6500, 7550, 8500, false);
+  v_r := public.testing_update_rank(v_r_orange, 3, 'Orange', 6500, 7550, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 9t update_rank 7550 expected invalid, got %', v_r; end if;
-  v_r := public.testing_update_rank(v_r_orange, 3, 'Orange', 6500, 7500, 8500, null);
+  v_r := public.testing_update_rank(v_r_orange, 3, 'Orange', 6500, 7500, 8500, null, 'solid', 'white', null, 0, 'yellow');
   if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 9u update_rank sparring null expected invalid, got %', v_r; end if;
-  v_r := public.testing_add_rank(v_w3, 'Free', 0, 0, 0, false);
+  v_r := public.testing_add_rank(v_w3, 'Free', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow');
   if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: 9v $0 prices expected ok, got %', v_r; end if;
-  v_r := public.testing_add_rank(v_w3, 'Top', 100000, 100000, 100000, true);
+  v_r := public.testing_add_rank(v_w3, 'Top', 100000, 100000, 100000, true, 'solid', 'white', null, 0, 'yellow');
   if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: 9w $1,000 prices expected ok, got %', v_r; end if;
 
   -- other bad input
@@ -823,12 +828,198 @@ begin
   if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 9x unknown school expected invalid, got %', v_r; end if;
   v_r := public.testing_add_class(null, v_tag || ' Nowhere', null, false);
   if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 9y null school expected invalid, got %', v_r; end if;
-  v_r := public.testing_add_rank(null, 'No class', 0, 0, 0, false);
+  v_r := public.testing_add_rank(null, 'No class', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow');
   if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 9z null class expected invalid, got %', v_r; end if;
   v_r := public.testing_update_class(v_w3, null, v_tag || ' Gamma', null, false);
   if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 9za null expected_version expected invalid, got %', v_r; end if;
-  v_r := public.testing_update_rank(null, 1, 'x', 0, 0, 0, false);
+  v_r := public.testing_update_rank(null, 1, 'x', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow');
   if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 9zb null rank id expected invalid, got %', v_r; end if;
+
+  -- -------------------------------------------------------------------
+  -- Test 25: belts (rulebook v0.64/v0.65; added in step A). The same
+  --          rules as validateBelt in the app's belts.js:
+  --   25a-c valid belts are accepted and stored exactly as sent
+  --   25d   every kind of broken belt -> invalid (add and update), and
+  --         nothing is written
+  --   25e   a bad belt is invalid BEFORE the rank is looked up (gone
+  --         rank, wrong version: still invalid, not not_found / stale)
+  --   25f   a belt-only change is a content change (new version, history
+  --         row with only the changed columns); the same belt again isn't
+  --   25g   as postgres: a bad belt is refused by the table rule; a row
+  --         written without belt values gets a plain white belt
+  -- (Test 25h, anon can't read the belt columns, is with test 3 below;
+  --  the exact column grants are in catalog check C1.)
+  -- -------------------------------------------------------------------
+  v_r := public.testing_add_class('worcester', v_tag || ' Belts', null, false);
+  if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: 25 setup add class, got %', v_r; end if;
+  v_b := (v_r ->> 'id')::uuid;
+
+  -- 25a. black with a white middle stripe and 2 yellow end stripes
+  v_r := public.testing_add_rank(v_b, 'Belt stripe', 0, 0, 0, true, 'stripe', 'black', 'white', 2, 'yellow');
+  if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: 25a stripe belt with end stripes expected ok, got %', v_r; end if;
+  v_rb := (v_r ->> 'id')::uuid;
+  -- read back as A1 (authenticated): proves the five columns are readable
+  select count(*) into v_n from public.testing_ranks r
+   where r.id = v_rb and r.belt_pattern = 'stripe' and r.belt_color = 'black' and r.belt_color_2 = 'white'
+     and r.belt_end_stripes = 2 and r.belt_end_stripe_color = 'yellow';
+  if v_n <> 1 then raise exception 'TEST FAILED: 25a stored belt differs from what was sent'; end if;
+  -- 25b. top half red, bottom half black
+  v_r := public.testing_add_rank(v_b, 'Belt half', 0, 0, 0, true, 'half', 'red', 'black', 0, 'yellow');
+  if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: 25b half belt expected ok, got %', v_r; end if;
+  v_rb2 := (v_r ->> 'id')::uuid;
+  select count(*) into v_n from public.testing_ranks r
+   where r.id = v_rb2 and r.belt_pattern = 'half' and r.belt_color = 'red' and r.belt_color_2 = 'black'
+     and r.belt_end_stripes = 0 and r.belt_end_stripe_color = 'yellow';
+  if v_n <> 1 then raise exception 'TEST FAILED: 25b stored half belt differs from what was sent'; end if;
+  -- 25c. the limits that are still fine: solid with 3 end stripes in another color
+  v_r := public.testing_add_rank(v_b, 'Belt solid 3', 0, 0, 0, true, 'solid', 'brown', null, 3, 'red');
+  if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: 25c solid belt with 3 red end stripes expected ok, got %', v_r; end if;
+
+  -- 25d. broken belts -> invalid, for add_rank AND update_rank; nothing changes
+  reset role;
+  execute v_snap_sql into v_snap;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  for v_belt in
+    select * from (values
+      ('bad pattern',                  'stripes'::text, 'black'::text, 'white'::text, 0::integer, 'yellow'::text),
+      ('null pattern',                 null,            'white',       null,          0,          'yellow'),
+      ('bad color',                    'solid',         'pink',        null,          0,          'yellow'),
+      ('color in capitals',            'solid',         'White',       null,          0,          'yellow'),
+      ('null color',                   'solid',         null,          null,          0,          'yellow'),
+      ('bad second color',             'stripe',        'black',       'pink',        0,          'yellow'),
+      ('solid with a second color',    'solid',         'white',       'yellow',      0,          'yellow'),
+      ('stripe without second color',  'stripe',        'white',       null,          0,          'yellow'),
+      ('half without second color',    'half',          'red',         null,          0,          'yellow'),
+      ('stripe, same colors',          'stripe',        'black',       'black',       0,          'yellow'),
+      ('half, same colors',            'half',          'red',         'red',         0,          'yellow'),
+      ('4 end stripes',                'solid',         'white',       null,          4,          'yellow'),
+      ('-1 end stripes',               'solid',         'white',       null,          -1,         'yellow'),
+      ('null end stripes',             'solid',         'white',       null,          null,       'yellow'),
+      ('null end stripe color, 0',     'solid',         'white',       null,          0,          null),
+      ('null end stripe color, 2',     'stripe',        'black',       'white',       2,          null),
+      ('bad end stripe color',         'solid',         'white',       null,          1,          'gold'),
+      ('empty end stripe color',       'solid',         'white',       null,          0,          '')
+    ) as x(label, pattern, color, color_2, end_stripes, end_stripe_color)
+  loop
+    v_r := public.testing_add_rank(v_b, 'Bad belt', 0, 0, 0, true,
+                                   v_belt.pattern, v_belt.color, v_belt.color_2, v_belt.end_stripes, v_belt.end_stripe_color);
+    if v_r is distinct from '{"status": "invalid"}'::jsonb then
+      raise exception 'TEST FAILED: 25d add_rank with belt "%" expected {"status":"invalid"}, got %', v_belt.label, v_r;
+    end if;
+    v_r := public.testing_update_rank(v_rb, 1, 'Belt stripe', 0, 0, 0, true,
+                                      v_belt.pattern, v_belt.color, v_belt.color_2, v_belt.end_stripes, v_belt.end_stripe_color);
+    if v_r is distinct from '{"status": "invalid"}'::jsonb then
+      raise exception 'TEST FAILED: 25d update_rank with belt "%" expected {"status":"invalid"}, got %', v_belt.label, v_r;
+    end if;
+  end loop;
+
+  -- 25e. a bad belt is caught with the other input, before any lookup
+  v_r := public.testing_add_rank(v_rand, 'Bad belt', 0, 0, 0, true, 'solid', 'white', 'black', 0, 'yellow');
+  if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 25e add_rank, missing class + bad belt expected invalid, got %', v_r; end if;
+  v_r := public.testing_update_rank(v_rand, 1, 'Bad belt', 0, 0, 0, true, 'solid', 'white', 'black', 0, 'yellow');
+  if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 25e update_rank, missing rank + bad belt expected invalid, got %', v_r; end if;
+  v_r := public.testing_update_rank(v_rb, 99, 'Belt stripe', 0, 0, 0, true, 'solid', 'white', 'black', 0, 'yellow');
+  if v_r is distinct from '{"status": "invalid"}'::jsonb then raise exception 'TEST FAILED: 25e update_rank, wrong version + bad belt expected invalid, got %', v_r; end if;
+  reset role;
+  execute v_snap_sql into v_snap2;
+  if v_snap2 is distinct from v_snap then raise exception 'TEST FAILED: 25d/e refused belts changed data or wrote history'; end if;
+
+  -- 25f. version rule: belt columns are content columns
+  select coalesce(max(id), 0) into v_mark from public.change_log;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  -- only the end stripes change (2 -> 3) -> version 2
+  v_r := public.testing_update_rank(v_rb, 1, 'Belt stripe', 0, 0, 0, true, 'stripe', 'black', 'white', 3, 'yellow');
+  if v_r ->> 'status' is distinct from 'ok' or (v_r ->> 'version')::int is distinct from 2 then
+    raise exception 'TEST FAILED: 25f belt-only change (end stripes) expected ok version 2, got %', v_r;
+  end if;
+  -- the same belt again -> ok, still version 2, no history row
+  v_r := public.testing_update_rank(v_rb, 2, 'Belt stripe', 0, 0, 0, true, 'stripe', 'black', 'white', 3, 'yellow');
+  if v_r ->> 'status' is distinct from 'ok' or (v_r ->> 'version')::int is distinct from 2 then
+    raise exception 'TEST FAILED: 25f same belt again expected ok version 2, got %', v_r;
+  end if;
+  -- only the second color changes (white -> yellow) -> version 3
+  v_r := public.testing_update_rank(v_rb, 2, 'Belt stripe', 0, 0, 0, true, 'stripe', 'black', 'yellow', 3, 'yellow');
+  if v_r ->> 'status' is distinct from 'ok' or (v_r ->> 'version')::int is distinct from 3 then
+    raise exception 'TEST FAILED: 25f belt-only change (second color) expected ok version 3, got %', v_r;
+  end if;
+  -- stripe -> solid (second color becomes NULL) -> version 4
+  v_r := public.testing_update_rank(v_rb, 3, 'Belt stripe', 0, 0, 0, true, 'solid', 'black', null, 3, 'yellow');
+  if v_r ->> 'status' is distinct from 'ok' or (v_r ->> 'version')::int is distinct from 4 then
+    raise exception 'TEST FAILED: 25f stripe -> solid expected ok version 4, got %', v_r;
+  end if;
+  -- only the end stripe color, with 0 end stripes, still counts -> version 5 / 6
+  v_r := public.testing_update_rank(v_rb, 4, 'Belt stripe', 0, 0, 0, true, 'solid', 'black', null, 0, 'yellow');
+  v_r := public.testing_update_rank(v_rb, 5, 'Belt stripe', 0, 0, 0, true, 'solid', 'black', null, 0, 'red');
+  if v_r ->> 'status' is distinct from 'ok' or (v_r ->> 'version')::int is distinct from 6 then
+    raise exception 'TEST FAILED: 25f end stripe color change with 0 end stripes expected ok version 6, got %', v_r;
+  end if;
+  -- a reorder never changes a belt or a version (only positions move)
+  v_r := public.testing_reorder_ranks(v_b, array(select r.id from public.testing_ranks r where r.class_id = v_b order by r.position),
+                                     array(select r.id from public.testing_ranks r where r.class_id = v_b order by r.position desc));
+  if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: 25f reorder belt ranks, got %', v_r; end if;
+  set constraints all immediate;
+  reset role;
+  if (select r.version from public.testing_ranks r where r.id = v_rb) <> 6
+     or (select r.version from public.testing_ranks r where r.id = v_rb2) <> 1 then
+    raise exception 'TEST FAILED: 25f reorder changed a belt rank''s version';
+  end if;
+  -- history: 5 update rows for v_rb (no row for the repeat), each holding
+  -- only what changed. The first one: only belt_end_stripes (+ version,
+  -- updated_at), never the name or prices.
+  select count(*) into v_n from public.change_log l
+   where l.id > v_mark and l.record_id = v_rb and l.op = 'update' and l.action = 'update_rank';
+  if v_n <> 5 then raise exception 'TEST FAILED: 25f expected 5 update_rank history rows for the belt rank, got %', v_n; end if;
+  select count(*) into v_n from public.change_log l
+   where l.id = (select min(id) from public.change_log where id > v_mark and record_id = v_rb)
+     and l.before ->> 'belt_end_stripes' = '2' and l.after ->> 'belt_end_stripes' = '3'
+     and (l.after ->> 'version')::int = 2
+     and not (l.after ?| array['name', 'early_cents', 'day_cents', 'private_cents', 'sparring_gear',
+                               'belt_pattern', 'belt_color', 'belt_color_2', 'belt_end_stripe_color']);
+  if v_n <> 1 then raise exception 'TEST FAILED: 25f the end-stripes history row should hold only the changed columns'; end if;
+  select count(*) into v_n from public.change_log l
+   where l.id > v_mark and l.record_id = v_rb and l.op = 'update'
+     and l.before ->> 'belt_pattern' = 'stripe' and l.after ->> 'belt_pattern' = 'solid'
+     and l.before ->> 'belt_color_2' = 'yellow' and l.after -> 'belt_color_2' = 'null'::jsonb;
+  if v_n <> 1 then raise exception 'TEST FAILED: 25f the stripe -> solid history row should show belt_color_2 becoming null'; end if;
+  -- the add_rank history row holds the full belt
+  if not exists (select 1 from public.change_log l
+                  where l.record_id = v_rb2 and l.op = 'insert' and l.action = 'add_rank'
+                    and l.after ->> 'belt_pattern' = 'half' and l.after ->> 'belt_color' = 'red'
+                    and l.after ->> 'belt_color_2' = 'black' and l.after ->> 'belt_end_stripes' = '0'
+                    and l.after ->> 'belt_end_stripe_color' = 'yellow') then
+    raise exception 'TEST FAILED: 25f add_rank history row should hold the five belt values';
+  end if;
+
+  -- 25g. as postgres (the SQL Editor): the table rule refuses a bad belt...
+  begin
+    update public.testing_ranks set belt_color_2 = 'black' where id = v_rb;   -- solid with a second color
+    raise exception 'TEST FAILED: 25g a solid belt with a second color was stored';
+  exception when check_violation then
+    get stacked diagnostics v_txt = constraint_name;
+    if v_txt is distinct from 'testing_ranks_belt_check' then raise exception 'TEST FAILED: 25g expected testing_ranks_belt_check, got %', v_txt; end if;
+  end;
+  begin
+    update public.testing_ranks set belt_end_stripe_color = null where id = v_rb;
+    raise exception 'TEST FAILED: 25g a NULL end stripe color was stored';
+  exception when not_null_violation then null;
+  end;
+  begin
+    update public.testing_ranks set belt_end_stripes = 4 where id = v_rb;
+    raise exception 'TEST FAILED: 25g 4 end stripes were stored';
+  exception when check_violation then null;
+  end;
+  -- ...and a row written without belt values gets a plain white belt
+  insert into public.testing_ranks (class_id, location_code, name, position, early_cents, day_cents, private_cents)
+  values (v_b, 'worcester', 'Belt default', 3, 0, 0, 0)
+  returning id into v_rb2;
+  select count(*) into v_n from public.testing_ranks r
+   where r.id = v_rb2 and r.belt_pattern = 'solid' and r.belt_color = 'white' and r.belt_color_2 is null
+     and r.belt_end_stripes = 0 and r.belt_end_stripe_color = 'yellow';
+  if v_n <> 1 then raise exception 'TEST FAILED: 25g a rank written without belt values should get a plain white belt'; end if;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
 
   -- -------------------------------------------------------------------
   -- Test 10: the final award must be in the SAME school
@@ -963,11 +1154,11 @@ begin
   set local role authenticated;
   perform set_config('request.jwt.claims', v_c_a1, true);
   v_m  := (public.testing_add_class('worcester', v_tag || ' Mu', null, false) ->> 'id')::uuid;
-  v_m1 := (public.testing_add_rank(v_m, 'Mu 1', 0, 0, 0, false) ->> 'id')::uuid;
-  v_m2 := (public.testing_add_rank(v_m, 'Mu 2', 0, 0, 0, false) ->> 'id')::uuid;
-  v_m3 := (public.testing_add_rank(v_m, 'Mu 3', 0, 0, 0, false) ->> 'id')::uuid;
-  v_n1r1 := (public.testing_add_rank(v_n1, 'None 1', 0, 0, 0, false) ->> 'id')::uuid;
-  v_n1r2 := (public.testing_add_rank(v_n1, 'None 2', 0, 0, 0, false) ->> 'id')::uuid;
+  v_m1 := (public.testing_add_rank(v_m, 'Mu 1', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow') ->> 'id')::uuid;
+  v_m2 := (public.testing_add_rank(v_m, 'Mu 2', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow') ->> 'id')::uuid;
+  v_m3 := (public.testing_add_rank(v_m, 'Mu 3', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow') ->> 'id')::uuid;
+  v_n1r1 := (public.testing_add_rank(v_n1, 'None 1', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow') ->> 'id')::uuid;
+  v_n1r2 := (public.testing_add_rank(v_n1, 'None 2', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow') ->> 'id')::uuid;
   v_r := public.testing_update_class(v_n1, 5, v_tag || ' None A', v_m3, false);
   if v_r ->> 'status' is distinct from 'ok' or (v_r ->> 'version')::int <> 6 then raise exception 'TEST FAILED: 10d-s setup award M3, got %', v_r; end if;
   v_r := public.testing_update_class(v_n1, 6, v_tag || ' None A', null, true);
@@ -1071,7 +1262,7 @@ begin
   v_n  := (select r.version from public.testing_ranks r where r.id = v_r_yellow);
   set local role authenticated;
   perform set_config('request.jwt.claims', v_c_a1, true);
-  v_r := public.testing_update_rank(v_r_yellow, 2, 'Yellow 2', 6500, 7500, 8500, false);
+  v_r := public.testing_update_rank(v_r_yellow, 2, 'Yellow 2', 6500, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow');
   if v_r is distinct from '{"status": "stale"}'::jsonb then raise exception 'TEST FAILED: 13a update_rank wrong version expected stale, got %', v_r; end if;
   v_r := public.testing_update_class(v_w1, 3, v_tag || ' Alpha 2', null, false);
   if v_r is distinct from '{"status": "stale"}'::jsonb then raise exception 'TEST FAILED: 13c update_class wrong version expected stale, got %', v_r; end if;
@@ -1091,9 +1282,9 @@ begin
   if v_r is distinct from '{"status": "not_found"}'::jsonb then raise exception 'TEST FAILED: 13f update_class missing class expected not_found, got %', v_r; end if;
   v_r := public.testing_delete_class(gen_random_uuid(), 1, '{}', '{}', false);
   if v_r is distinct from '{"status": "not_found"}'::jsonb then raise exception 'TEST FAILED: 13g delete_class missing class expected not_found, got %', v_r; end if;
-  v_r := public.testing_add_rank(gen_random_uuid(), 'Lost', 0, 0, 0, false);
+  v_r := public.testing_add_rank(gen_random_uuid(), 'Lost', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow');
   if v_r is distinct from '{"status": "not_found"}'::jsonb then raise exception 'TEST FAILED: 13h add_rank missing class expected not_found, got %', v_r; end if;
-  v_r := public.testing_update_rank(gen_random_uuid(), 1, 'Lost', 0, 0, 0, false);
+  v_r := public.testing_update_rank(gen_random_uuid(), 1, 'Lost', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow');
   if v_r is distinct from '{"status": "not_found"}'::jsonb then raise exception 'TEST FAILED: 13i update_rank missing rank expected not_found, got %', v_r; end if;
   v_r := public.testing_reorder_ranks(gen_random_uuid(), '{}', '{}');
   if v_r is distinct from '{"status": "not_found"}'::jsonb then raise exception 'TEST FAILED: 13j reorder_ranks missing class expected not_found, got %', v_r; end if;
@@ -1297,11 +1488,11 @@ begin
   set local role authenticated;
   perform set_config('request.jwt.claims', v_c_a1, true);
   v_w4 := (public.testing_add_class('worcester', v_tag || ' Delta', null, false) ->> 'id')::uuid;
-  v_r_w4a := (public.testing_add_rank(v_w4, 'Delta 1', 0, 0, 0, false) ->> 'id')::uuid;
-  v_r_w4b := (public.testing_add_rank(v_w4, 'Delta 2', 0, 0, 0, false) ->> 'id')::uuid;
-  v_r_w4c := (public.testing_add_rank(v_w4, 'Delta 3', 0, 0, 0, false) ->> 'id')::uuid;
+  v_r_w4a := (public.testing_add_rank(v_w4, 'Delta 1', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow') ->> 'id')::uuid;
+  v_r_w4b := (public.testing_add_rank(v_w4, 'Delta 2', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow') ->> 'id')::uuid;
+  v_r_w4c := (public.testing_add_rank(v_w4, 'Delta 3', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow') ->> 'id')::uuid;
   v_w5 := (public.testing_add_class('worcester', v_tag || ' Epsilon', v_r_w4b, false) ->> 'id')::uuid;
-  v_r_w5a := (public.testing_add_rank(v_w5, 'Epsilon 1', 0, 0, 0, false) ->> 'id')::uuid;
+  v_r_w5a := (public.testing_add_rank(v_w5, 'Epsilon 1', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow') ->> 'id')::uuid;
   v_r := public.testing_update_class(v_w1, 5, v_tag || ' Alpha', v_r_w4c, false);
   if v_r ->> 'status' is distinct from 'ok' or v_w4 is null or v_w5 is null or v_r_w4c is null or v_r_w5a is null then
     raise exception 'TEST FAILED: 17 setup failed (%)', v_r;
@@ -1394,9 +1585,9 @@ begin
   --           stated changed meanwhile, nothing is deleted (stale)
   -- Uses "Labelled" (v_w6, made in test 21b): give it 3 ranks.
   -- -------------------------------------------------------------------
-  v_r_w6a := (public.testing_add_rank(v_w6, 'Six A', 0, 0, 0, false) ->> 'id')::uuid;
-  v_r_w6b := (public.testing_add_rank(v_w6, 'Six B', 0, 0, 0, false) ->> 'id')::uuid;
-  v_r_w6c := (public.testing_add_rank(v_w6, 'Six C', 0, 0, 0, false) ->> 'id')::uuid;
+  v_r_w6a := (public.testing_add_rank(v_w6, 'Six A', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow') ->> 'id')::uuid;
+  v_r_w6b := (public.testing_add_rank(v_w6, 'Six B', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow') ->> 'id')::uuid;
+  v_r_w6c := (public.testing_add_rank(v_w6, 'Six C', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow') ->> 'id')::uuid;
   if v_r_w6c is null then raise exception 'TEST FAILED: 18b setup failed'; end if;
   reset role;
   execute v_snap_sql into v_snap;
@@ -1427,7 +1618,7 @@ begin
 
   -- (d) a rank was added to the class after the class-delete dialog opened
   v_ids := array[v_r_w6a, v_r_w6b, v_r_w6c];
-  v_r_w6d := (public.testing_add_rank(v_w6, 'Six D', 0, 0, 0, false) ->> 'id')::uuid;
+  v_r_w6d := (public.testing_add_rank(v_w6, 'Six D', 0, 0, 0, false, 'solid', 'white', null, 0, 'yellow') ->> 'id')::uuid;
   v_r := public.testing_delete_class(v_w6, 2, v_ids, array[v_w5], false);
   if v_r is distinct from '{"status": "stale"}'::jsonb then raise exception 'TEST FAILED: 18b-d delete_class after a rank was added expected stale, got %', v_r; end if;
 
@@ -1524,7 +1715,10 @@ begin
     'testing_classes.updated_at', 'testing_classes.created_by_name', 'testing_classes.updated_by_name',
     'testing_ranks.id', 'testing_ranks.class_id', 'testing_ranks.location_code', 'testing_ranks.name',
     'testing_ranks.position', 'testing_ranks.early_cents', 'testing_ranks.day_cents', 'testing_ranks.private_cents',
-    'testing_ranks.sparring_gear', 'testing_ranks.version', 'testing_ranks.created_at', 'testing_ranks.updated_at',
+    'testing_ranks.sparring_gear',
+    'testing_ranks.belt_pattern', 'testing_ranks.belt_color', 'testing_ranks.belt_color_2',   -- belts: added in step A
+    'testing_ranks.belt_end_stripes', 'testing_ranks.belt_end_stripe_color',
+    'testing_ranks.version', 'testing_ranks.created_at', 'testing_ranks.updated_at',
     'testing_ranks.created_by_name', 'testing_ranks.updated_by_name'];
   foreach v_tbl in array array['locations', 'testing_classes', 'testing_ranks', 'change_log'] loop
     foreach v_priv in array array['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER', 'MAINTAIN'] loop
@@ -1615,18 +1809,53 @@ begin
       raise exception 'TEST FAILED: C5b % security definer is %, not as designed', v_fn.oid::regprocedure, v_fn.prosecdef;
     end if;
   end loop;
-  if v_n < 18 then raise exception 'TEST FAILED: C3d expected at least the 18 functions of 0003, found %', v_n; end if;
+  if v_n < 19 then raise exception 'TEST FAILED: C3d expected at least the 19 functions of 0003, found %', v_n; end if;
   select count(*) into v_n from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = any (v_list);
   if v_n <> 8 then raise exception 'TEST FAILED: C3e expected exactly 8 app functions (no extra versions), found %', v_n; end if;
-  -- C3f. no argument defaults on the two class functions (the app always
-  --      sends every argument); delete_class has exactly one
-  --      (p_only_if_empty default false) (amended v0.62, security re-check)
+  -- C3f. no argument defaults on the two class functions and the two
+  --      rank functions (the app always sends every argument, including
+  --      the five belt values); delete_class has exactly one
+  --      (p_only_if_empty default false) (amended v0.62, security re-check;
+  --      rank functions: added in step A)
   select string_agg(p.proname || '=' || p.pronargdefaults, ', ' order by p.proname) into v_txt
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-   where n.nspname = 'public' and p.proname in ('testing_add_class', 'testing_update_class', 'testing_delete_class');
-  if v_txt is distinct from 'testing_add_class=0, testing_delete_class=1, testing_update_class=0' then
-    raise exception 'TEST FAILED: C3f argument defaults expected add_class=0, delete_class=1, update_class=0, got %', v_txt;
+   where n.nspname = 'public'
+     and p.proname in ('testing_add_class', 'testing_update_class', 'testing_delete_class',
+                       'testing_add_rank', 'testing_update_rank');
+  if v_txt is distinct from 'testing_add_class=0, testing_add_rank=0, testing_delete_class=1, testing_update_class=0, testing_update_rank=0' then
+    raise exception 'TEST FAILED: C3f argument defaults expected add_class=0, add_rank=0, delete_class=1, update_class=0, update_rank=0, got %', v_txt;
+  end if;
+  -- C3g. the rank functions take exactly these arguments (the belt ones
+  --      last), so the app's p_belt_* names find them (added in step A)
+  select string_agg(p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')', '; ' order by p.proname) into v_txt
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname in ('testing_add_rank', 'testing_update_rank');
+  if v_txt is distinct from
+       'testing_add_rank(p_class_id uuid, p_name text, p_early_cents integer, p_day_cents integer, p_private_cents integer, p_sparring_gear boolean, '
+       || 'p_belt_pattern text, p_belt_color text, p_belt_color_2 text, p_belt_end_stripes integer, p_belt_end_stripe_color text); '
+       || 'testing_update_rank(p_rank_id uuid, p_expected_version integer, p_name text, p_early_cents integer, p_day_cents integer, p_private_cents integer, p_sparring_gear boolean, '
+       || 'p_belt_pattern text, p_belt_color text, p_belt_color_2 text, p_belt_end_stripes integer, p_belt_end_stripe_color text)' then
+    raise exception 'TEST FAILED: C3g rank function arguments are %', v_txt;
+  end if;
+  -- C3h. the belt rule's helper is owned by the same role as the two rank
+  --      functions, and that role can run it. Why: the table's belt rule
+  --      calls the helper as whoever does the write - through the rank
+  --      functions that is their owner (they run as their owner). Nobody
+  --      else may run the helper, so a different owner would make every
+  --      rank save fail. (A superuser passes privilege checks anyway, so the
+  --      same-owner part is what really guards this.)
+  select count(distinct p.proowner) into v_n
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname in ('testing_add_rank', 'testing_update_rank', 'testing_belt_is_valid');
+  if v_n <> 1 then
+    raise exception 'TEST FAILED: C3h the rank functions and testing_belt_is_valid have % different owners, expected 1', v_n;
+  end if;
+  select p.proowner::regrole::text into v_txt
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'testing_add_rank';
+  if not has_function_privilege(v_txt, 'public.testing_belt_is_valid(text, text, text, integer, text)', 'EXECUTE') then
+    raise exception 'TEST FAILED: C3h % (owner of the rank functions) cannot run testing_belt_is_valid', v_txt;
   end if;
 
   -- C4. row level security is on for all four tables
@@ -1663,7 +1892,7 @@ begin
       'testing_ranks_pkey', 'testing_ranks_name_check', 'testing_ranks_position_check',
       'testing_ranks_early_cents_check', 'testing_ranks_day_cents_check', 'testing_ranks_private_cents_check',
       'testing_ranks_version_check', 'testing_ranks_class_fk', 'testing_ranks_class_position_key',
-      'testing_ranks_id_location_key',
+      'testing_ranks_id_location_key', 'testing_ranks_belt_check',
       'change_log_pkey', 'change_log_op_check']) as x(name)
    where not exists (select 1 from pg_constraint c
                        join pg_namespace n on n.oid = c.connamespace
@@ -1744,6 +1973,25 @@ begin
   select count(*) into v_n from pg_policies p
    where p.schemaname = 'public' and p.tablename in ('locations', 'testing_classes', 'testing_ranks', 'change_log');
   if v_n <> 3 then raise exception 'TEST FAILED: C9b expected no other rules on the 4 tables, found % in total', v_n; end if;
+
+  -- C10. the five belt columns: types, NOT NULL and defaults (a plain
+  --      white belt; belt_color_2 the only one that may be NULL), and the
+  --      belt rule is a real (validated) check (added in step A)
+  select string_agg(c.column_name || ' ' || c.data_type || ' ' || c.is_nullable || ' ' || coalesce(c.column_default, '-'),
+                    '; ' order by c.column_name) into v_txt
+    from information_schema.columns c
+   where c.table_schema = 'public' and c.table_name = 'testing_ranks' and c.column_name like 'belt\_%';
+  if v_txt is distinct from
+       'belt_color text NO ''white''::text; belt_color_2 text YES -; belt_end_stripe_color text NO ''yellow''::text; '
+       || 'belt_end_stripes integer NO 0; belt_pattern text NO ''solid''::text' then
+    raise exception 'TEST FAILED: C10a belt columns are %', v_txt;
+  end if;
+  if not exists (select 1 from pg_constraint c
+                  where c.conname = 'testing_ranks_belt_check' and c.contype = 'c' and c.convalidated
+                    and c.conrelid = 'public.testing_ranks'::regclass
+                    and pg_get_constraintdef(c.oid) like '%testing_belt_is_valid(belt_pattern, belt_color, belt_color_2, belt_end_stripes, belt_end_stripe_color)%') then
+    raise exception 'TEST FAILED: C10b testing_ranks_belt_check missing or not checking all five belt columns';
+  end if;
 
   reset role;
 end;

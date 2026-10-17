@@ -10,7 +10,8 @@
 --   The first real data section: Testing -> Classes and ranks. Each school
 --   (Worcester, Shrewsbury) has its own list of testing classes (Little
 --   Tiger, White, Group A ...), and each class has an ordered list of ranks
---   (belts) with three testing prices and a "sparring gear" flag. Admins
+--   (belts) with three testing prices, a "sparring gear" flag and the
+--   look of its belt (for the small belt picture, rulebook v0.64). Admins
 --   change the lists; every staff member can read them while their session
 --   is unlocked. Every change is recorded in a history table (who, when,
 --   what), as the guidelines require (section 5).
@@ -19,6 +20,7 @@
 --   1. public.locations        - the two schools (a small lookup list)
 --   2. public.testing_classes  - testing classes, per school, in order
 --   3. public.testing_ranks    - ranks inside each class, in order, with prices
+--                                and a belt (pattern + colors, section 2e)
 --   4. public.change_log       - append-only history of every change, for the
 --                                whole dashboard (this section is the first
 --                                user of it)
@@ -34,7 +36,8 @@
 --        testing_reorder_ranks, testing_delete_rank
 --      + internal helpers the app cannot call (testing_normalize_name,
 --        testing_name_is_valid, testing_cents_is_valid,
---        testing_ids_are_valid, change_log_actor_name, and the trigger
+--        testing_ids_are_valid, testing_belt_is_valid,
+--        change_log_actor_name, and the trigger
 --        functions, including testing_refuse_truncate).
 --
 -- HOW TO RUN IT
@@ -63,7 +66,7 @@
 --   * "position" = order in a list, always 0, 1, 2 ... with no gaps
 --     ("dense"). The server renumbers; the app never picks a number.
 --   * "version" = a counter on each class and rank that goes up by 1 on
---     every real content change (name, prices, final award ...). The app
+--     every real content change (name, prices, belt, final award ...). The app
 --     sends the version it last saw; if it differs, someone else changed
 --     the record in between and the change is refused as "stale" instead
 --     of silently overwriting their work. Re-ordering does NOT change it.
@@ -204,6 +207,53 @@ $$;
 
 revoke execute on function public.testing_ids_are_valid(uuid[]) from public, anon, authenticated, service_role;
 
+-- 2e. testing_belt_is_valid(pattern, color, color_2, end_stripes, end_stripe_color)
+-- Every rank has a belt, drawn as a small picture by the app (rulebook
+-- v0.64/v0.65). It is stored as five values; the app's belts.js
+-- (validateBelt) checks exactly the same rules:
+--   * pattern: 'solid' (one color), 'stripe' (a middle stripe of a second
+--     color) or 'half' (top half one color, bottom half another)
+--   * color: the main color (for 'half': the TOP half)
+--   * color_2: 'stripe' = the middle stripe's color, 'half' = the BOTTOM
+--     half. Required for those two and must differ from the main color
+--     (otherwise the belt would just look solid). 'solid' = always NULL.
+--   * end_stripes: 0 to 3 short stripes near the end (e.g. Bo Dan stripes)
+--   * end_stripe_color: their color. ALWAYS required, even with 0 end
+--     stripes (usually yellow), so "no color" and "yellow" can never count
+--     as two different belts. (decided in step A: NOT NULL, default yellow)
+-- Colors are words from one fixed list, never free text, so a belt can't
+-- be misspelled and the app knows how to draw every color.
+-- true = a valid belt. Any NULL where a value is needed -> false (never NULL).
+-- Used by the table rule below AND by the two rank functions, so they can
+-- answer "invalid" before touching any row (like 2c for prices).
+create or replace function public.testing_belt_is_valid(
+  p_pattern          text,
+  p_color            text,
+  p_color_2          text,
+  p_end_stripes      integer,
+  p_end_stripe_color text
+)
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $$
+  select coalesce(
+           p_pattern in ('solid', 'stripe', 'half')
+           and p_color = any (k.colors)
+           and case when p_pattern = 'solid'
+                    then p_color_2 is null
+                    else p_color_2 = any (k.colors) and p_color_2 <> p_color
+               end
+           and p_end_stripes between 0 and 3
+           and p_end_stripe_color = any (k.colors),
+         false)
+    from (select array['white', 'yellow', 'orange', 'green', 'blue',
+                       'purple', 'red', 'brown', 'black'] as colors) as k;
+$$;
+
+revoke execute on function public.testing_belt_is_valid(text, text, text, integer, text) from public, anon, authenticated, service_role;
+
 
 -- ---------------------------------------------------------------------
 -- 3. public.testing_classes
@@ -289,6 +339,11 @@ comment on column public.testing_classes.version is
 --     the rank's school always equals its class's school. "on delete
 --     cascade" = deleting a class deletes its ranks with it.
 --   * prices in cents, whole dollars $0 - $1,000 (see section 2c).
+--   * the belt: five belt_* columns, one rule (testing_ranks_belt_check,
+--     see section 2e). The defaults are a plain white belt, so a row
+--     written without them (or a row that existed before the belt columns
+--     were added) is still a valid belt. The app always sends all five.
+--     (amended v0.64/v0.65; added in step A)
 -- ---------------------------------------------------------------------
 create table if not exists public.testing_ranks (
   id              uuid        not null default gen_random_uuid(),
@@ -300,6 +355,11 @@ create table if not exists public.testing_ranks (
   day_cents       integer     not null,          -- paid on testing day
   private_cents   integer     not null,          -- private testing
   sparring_gear   boolean     not null default false,
+  belt_pattern          text    not null default 'solid',   -- solid / stripe / half
+  belt_color            text    not null default 'white',   -- main color (half: top)
+  belt_color_2          text    null,                       -- stripe / bottom half; NULL for solid
+  belt_end_stripes      integer not null default 0,         -- 0-3 stripes near the end
+  belt_end_stripe_color text    not null default 'yellow',  -- always set, even with 0 stripes
   version         integer     not null default 1,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now(),
@@ -319,6 +379,9 @@ create table if not exists public.testing_ranks (
   constraint testing_ranks_private_cents_check
     check (private_cents between 0 and 100000 and private_cents % 100 = 0),
   constraint testing_ranks_version_check check (version >= 1),
+  constraint testing_ranks_belt_check
+    check (public.testing_belt_is_valid(belt_pattern, belt_color, belt_color_2,
+                                        belt_end_stripes, belt_end_stripe_color)),
   constraint testing_ranks_class_fk
     foreign key (class_id, location_code)
     references public.testing_classes (id, location_code)
@@ -337,8 +400,37 @@ create unique index if not exists testing_ranks_class_lower_name_idx
 create index if not exists testing_ranks_location_idx
   on public.testing_ranks (location_code);
 
+-- Upgrading a database that already has an EARLIER copy of 0003 (from
+-- before the belts, rulebook v0.64): "create table if not exists" above
+-- skipped the table, so add the five belt columns and their rule here.
+-- Existing ranks get the defaults (a plain white belt) until an admin
+-- picks their real belt. Adding a column does not run the row triggers,
+-- so this writes no history rows and changes no versions. On a fresh
+-- database these lines change nothing (the columns exist; the rule is
+-- replaced by an identical one). (amended v0.64/v0.65; added in step A)
+alter table public.testing_ranks
+  add column if not exists belt_pattern text not null default 'solid',
+  add column if not exists belt_color text not null default 'white',
+  add column if not exists belt_color_2 text null,
+  add column if not exists belt_end_stripes integer not null default 0,
+  add column if not exists belt_end_stripe_color text not null default 'yellow';
+alter table public.testing_ranks
+  drop constraint if exists testing_ranks_belt_check;
+alter table public.testing_ranks
+  add constraint testing_ranks_belt_check
+  check (public.testing_belt_is_valid(belt_pattern, belt_color, belt_color_2,
+                                      belt_end_stripes, belt_end_stripe_color));
+
 comment on table public.testing_ranks is
-  'Ranks inside each testing class, in order (position 0..n-1), with prices in cents. Written only through the testing_* functions.';
+  'Ranks inside each testing class, in order (position 0..n-1), with prices in cents and a belt. Written only through the testing_* functions.';
+comment on column public.testing_ranks.belt_pattern is
+  'Belt picture: solid, stripe (a middle stripe in belt_color_2) or half (top belt_color, bottom belt_color_2). Rules: testing_belt_is_valid.';
+comment on column public.testing_ranks.belt_color_2 is
+  'Middle stripe (stripe) or bottom half (half); never the same as belt_color. NULL exactly when belt_pattern is solid.';
+comment on column public.testing_ranks.belt_end_stripe_color is
+  'Color of the 0-3 end stripes. Always set (usually yellow), even with 0 end stripes.';
+comment on column public.testing_ranks.version is
+  'Goes up by 1 on every content change (name, prices, sparring gear, belt). Used to refuse stale saves. Re-ordering does not change it.';
 
 
 -- ---------------------------------------------------------------------
@@ -512,7 +604,10 @@ revoke execute on function public.testing_classes_before_write() from public, an
 
 -- 6c. testing_ranks_before_write() - BEFORE INSERT OR UPDATE on ranks
 -- Same bookkeeping as 6b. Content columns: name, the three prices,
--- sparring_gear. id, class_id and location_code can never change (a rank
+-- sparring_gear and the five belt_* columns (a belt-only change is a real
+-- change: new version; the same belt again is not). (belt: amended
+-- v0.64/v0.65; added in step A)
+-- id, class_id and location_code can never change (a rank
 -- never moves to another class or school).
 create or replace function public.testing_ranks_before_write()
 returns trigger
@@ -548,7 +643,12 @@ begin
      or new.early_cents is distinct from old.early_cents
      or new.day_cents is distinct from old.day_cents
      or new.private_cents is distinct from old.private_cents
-     or new.sparring_gear is distinct from old.sparring_gear then
+     or new.sparring_gear is distinct from old.sparring_gear
+     or new.belt_pattern is distinct from old.belt_pattern
+     or new.belt_color is distinct from old.belt_color
+     or new.belt_color_2 is distinct from old.belt_color_2
+     or new.belt_end_stripes is distinct from old.belt_end_stripes
+     or new.belt_end_stripe_color is distinct from old.belt_end_stripe_color then
     new.version         := old.version + 1;
     new.updated_at      := now();
     new.updated_by      := auth.uid();
@@ -760,8 +860,9 @@ grant select (id, location_code, name, position, final_award_rank_id, final_awar
               created_at, updated_at, created_by_name, updated_by_name)
   on public.testing_classes to authenticated;
 grant select (id, class_id, location_code, name, position, early_cents, day_cents, private_cents,
-              sparring_gear, version, created_at, updated_at, created_by_name, updated_by_name)
-  on public.testing_ranks to authenticated;
+              sparring_gear, belt_pattern, belt_color, belt_color_2, belt_end_stripes,
+              belt_end_stripe_color, version, created_at, updated_at, created_by_name, updated_by_name)
+  on public.testing_ranks to authenticated;   -- belt_*: amended v0.64/v0.65; added in step A
 -- created_by / updated_by (login ids) are NOT granted. change_log: nothing at all.
 
 -- Read rules. "(select ...)" = run the check once per query, not per row.
@@ -832,14 +933,19 @@ create policy testing_ranks_select_with_access
 --     (amended after security review: one lock order for all writes)
 -- ---------------------------------------------------------------------
 
--- 8-pre. Remove the EARLIER versions of two functions (before v0.62 they
--- had one argument less). Postgres tells functions apart by their argument
+-- 8-pre. Remove the EARLIER versions of four functions (the two class
+-- functions had one argument less before v0.62, the two rank functions
+-- five less before the belts). Postgres tells functions apart by their argument
 -- types, so "create or replace" below would ADD a second version next to
 -- the old one instead of replacing it - and the old one would stay
 -- callable by the app. On a fresh database these lines do nothing.
 -- (amended v0.62, security re-check)
 drop function if exists public.testing_add_class(text, text, uuid);
 drop function if exists public.testing_update_class(uuid, integer, text, uuid);
+-- Same for the two rank functions: before the belts (rulebook v0.64) they
+-- had five arguments less. (amended v0.64/v0.65; added in step A)
+drop function if exists public.testing_add_rank(uuid, text, integer, integer, integer, boolean);
+drop function if exists public.testing_update_rank(uuid, integer, text, integer, integer, integer, boolean);
 
 -- 8a. testing_add_class(p_location_code, p_name, p_final_award_rank_id,
 --                       p_final_award_none)
@@ -1337,18 +1443,28 @@ revoke execute on function public.testing_delete_class(uuid, integer, uuid[], uu
 grant  execute on function public.testing_delete_class(uuid, integer, uuid[], uuid[], boolean) to authenticated;
 
 -- 8e. testing_add_rank(p_class_id, p_name, p_early_cents, p_day_cents,
---                      p_private_cents, p_sparring_gear)
--- Adds a rank at the END of a class. All three prices and the sparring
--- flag are required (copying them from the last rank is something the
--- app's dialog does as a starting value, not the database).
+--                      p_private_cents, p_sparring_gear, p_belt_pattern,
+--                      p_belt_color, p_belt_color_2, p_belt_end_stripes,
+--                      p_belt_end_stripe_color)
+-- Adds a rank at the END of a class. All three prices, the sparring
+-- flag and the belt are required (copying them from the last rank is
+-- something the app's dialog does as a starting value, not the database).
+-- The five belt arguments have no defaults: the app always sends them; a
+-- belt that breaks a rule in 2e -> invalid. (belt: amended v0.64/v0.65;
+-- added in step A)
 -- Ok: {"status":"ok","id":...,"version":1,"position":n}
 create or replace function public.testing_add_rank(
-  p_class_id      uuid,
-  p_name          text,
-  p_early_cents   integer,
-  p_day_cents     integer,
-  p_private_cents integer,
-  p_sparring_gear boolean
+  p_class_id              uuid,
+  p_name                  text,
+  p_early_cents           integer,
+  p_day_cents             integer,
+  p_private_cents         integer,
+  p_sparring_gear         boolean,
+  p_belt_pattern          text,
+  p_belt_color            text,
+  p_belt_color_2          text,
+  p_belt_end_stripes      integer,
+  p_belt_end_stripe_color text
 )
 returns jsonb
 language plpgsql
@@ -1379,7 +1495,9 @@ begin
        or not public.testing_cents_is_valid(p_early_cents)
        or not public.testing_cents_is_valid(p_day_cents)
        or not public.testing_cents_is_valid(p_private_cents)
-       or p_sparring_gear is null then
+       or p_sparring_gear is null
+       or not public.testing_belt_is_valid(p_belt_pattern, p_belt_color, p_belt_color_2,
+                                           p_belt_end_stripes, p_belt_end_stripe_color) then
       return jsonb_build_object('status', 'invalid');
     end if;
 
@@ -1417,9 +1535,11 @@ begin
      where r.class_id = p_class_id;
 
     insert into public.testing_ranks
-      (class_id, location_code, name, position, early_cents, day_cents, private_cents, sparring_gear)
+      (class_id, location_code, name, position, early_cents, day_cents, private_cents, sparring_gear,
+       belt_pattern, belt_color, belt_color_2, belt_end_stripes, belt_end_stripe_color)
     values
-      (p_class_id, v_loc, v_name, v_position, p_early_cents, p_day_cents, p_private_cents, p_sparring_gear)
+      (p_class_id, v_loc, v_name, v_position, p_early_cents, p_day_cents, p_private_cents, p_sparring_gear,
+       p_belt_pattern, p_belt_color, p_belt_color_2, p_belt_end_stripes, p_belt_end_stripe_color)
     returning id, version into v_id, v_version;
 
     perform set_config('tkd.action', '', true);
@@ -1443,21 +1563,33 @@ begin
 end;
 $$;
 
-revoke execute on function public.testing_add_rank(uuid, text, integer, integer, integer, boolean) from public, anon, authenticated, service_role;
-grant  execute on function public.testing_add_rank(uuid, text, integer, integer, integer, boolean) to authenticated;
+revoke execute on function public.testing_add_rank(uuid, text, integer, integer, integer, boolean, text, text, text, integer, text) from public, anon, authenticated, service_role;
+grant  execute on function public.testing_add_rank(uuid, text, integer, integer, integer, boolean, text, text, text, integer, text) to authenticated;
 
 -- 8f. testing_update_rank(p_rank_id, p_expected_version, p_name, p_early_cents,
---                         p_day_cents, p_private_cents, p_sparring_gear)
--- Changes a rank's name, prices and sparring flag. Saving unchanged values
--- writes nothing. Ok: {"status":"ok","id":...,"version":<current version>}
+--                         p_day_cents, p_private_cents, p_sparring_gear,
+--                         p_belt_pattern, p_belt_color, p_belt_color_2,
+--                         p_belt_end_stripes, p_belt_end_stripe_color)
+-- Changes a rank's name, prices, sparring flag and belt. The five belt
+-- arguments have no defaults (always sent); a bad belt -> invalid, checked
+-- with the other input BEFORE the rank is looked up (so a bad belt is
+-- invalid even for a rank that is gone or a stale version). (belt:
+-- amended v0.64/v0.65; added in step A)
+-- Saving unchanged values writes nothing (no new version, no history row).
+-- Ok: {"status":"ok","id":...,"version":<current version>}
 create or replace function public.testing_update_rank(
-  p_rank_id          uuid,
-  p_expected_version integer,
-  p_name             text,
-  p_early_cents      integer,
-  p_day_cents        integer,
-  p_private_cents    integer,
-  p_sparring_gear    boolean
+  p_rank_id               uuid,
+  p_expected_version      integer,
+  p_name                  text,
+  p_early_cents           integer,
+  p_day_cents             integer,
+  p_private_cents         integer,
+  p_sparring_gear         boolean,
+  p_belt_pattern          text,
+  p_belt_color            text,
+  p_belt_color_2          text,
+  p_belt_end_stripes      integer,
+  p_belt_end_stripe_color text
 )
 returns jsonb
 language plpgsql
@@ -1489,7 +1621,9 @@ begin
        or not public.testing_cents_is_valid(p_early_cents)
        or not public.testing_cents_is_valid(p_day_cents)
        or not public.testing_cents_is_valid(p_private_cents)
-       or p_sparring_gear is null then
+       or p_sparring_gear is null
+       or not public.testing_belt_is_valid(p_belt_pattern, p_belt_color, p_belt_color_2,
+                                           p_belt_end_stripes, p_belt_end_stripe_color) then
       return jsonb_build_object('status', 'invalid');
     end if;
 
@@ -1536,17 +1670,27 @@ begin
     perform set_config('tkd.batch_id', gen_random_uuid()::text, true);
 
     update public.testing_ranks r
-       set name          = v_name,
-           early_cents   = p_early_cents,
-           day_cents     = p_day_cents,
-           private_cents = p_private_cents,
-           sparring_gear = p_sparring_gear
+       set name                  = v_name,
+           early_cents           = p_early_cents,
+           day_cents             = p_day_cents,
+           private_cents         = p_private_cents,
+           sparring_gear         = p_sparring_gear,
+           belt_pattern          = p_belt_pattern,
+           belt_color            = p_belt_color,
+           belt_color_2          = p_belt_color_2,
+           belt_end_stripes      = p_belt_end_stripes,
+           belt_end_stripe_color = p_belt_end_stripe_color
      where r.id = p_rank_id
        and (r.name is distinct from v_name
             or r.early_cents is distinct from p_early_cents
             or r.day_cents is distinct from p_day_cents
             or r.private_cents is distinct from p_private_cents
-            or r.sparring_gear is distinct from p_sparring_gear)
+            or r.sparring_gear is distinct from p_sparring_gear
+            or r.belt_pattern is distinct from p_belt_pattern
+            or r.belt_color is distinct from p_belt_color
+            or r.belt_color_2 is distinct from p_belt_color_2
+            or r.belt_end_stripes is distinct from p_belt_end_stripes
+            or r.belt_end_stripe_color is distinct from p_belt_end_stripe_color)
     returning r.version into v_new_version;   -- no row updated -> NULL
 
     perform set_config('tkd.action', '', true);
@@ -1572,8 +1716,8 @@ begin
 end;
 $$;
 
-revoke execute on function public.testing_update_rank(uuid, integer, text, integer, integer, integer, boolean) from public, anon, authenticated, service_role;
-grant  execute on function public.testing_update_rank(uuid, integer, text, integer, integer, integer, boolean) to authenticated;
+revoke execute on function public.testing_update_rank(uuid, integer, text, integer, integer, integer, boolean, text, text, text, integer, text) from public, anon, authenticated, service_role;
+grant  execute on function public.testing_update_rank(uuid, integer, text, integer, integer, integer, boolean, text, text, text, integer, text) to authenticated;
 
 -- 8g. testing_reorder_ranks(p_class_id, p_expected_ids, p_new_ids)
 -- Same as 8c, for the ranks of one class. A rank can never move to another

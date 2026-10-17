@@ -38,7 +38,11 @@
 // THE FIXTURE (fixtures/0003_before_v062.sql)
 //   An exact copy of 0003 as it was before rulebook v0.62 added "final
 //   award None" (git commit 1c5d03c; same git blob id e36492b1). It is
-//   kept as a file so the runner works without git. Never edit it. When a
+//   kept as a file so the runner works without git. It also predates the
+//   belts (rulebook v0.64), so the same check proves the five belt_*
+//   columns, their rule and the new rank-function arguments upgrade an
+//   older copy cleanly (existing ranks get a plain white belt; the old
+//   6- and 7-argument rank functions are removed). Never edit it. When a
 //   later change to 0003 needs the same check again, add that version's
 //   copy next to it.
 //
@@ -259,15 +263,21 @@ async function main() {
       await run(up, '[upgrade] seed with the earlier schema', builtInSeedSql({ withNone: false }));
       const upBefore = await one(up, snapshotSql);
       if (await run(up, '[upgrade] apply today\'s 0003 over it', read('migrations', '0003_testing_classes_ranks.sql'))) {
-        // upBefore was taken before final_award_none existed, so the new
-        // column is left out here and checked on its own just below
+        // upBefore was taken before final_award_none and the five belt_*
+        // columns existed, so the new columns are left out here and
+        // checked on their own just below
         const keptRows = await one(up, `select md5(coalesce((select string_agg((to_jsonb(c) - 'final_award_none')::text, ',' order by c.id) from public.testing_classes c), '')
-                          || coalesce((select string_agg(to_jsonb(r)::text, ',' order by r.id) from public.testing_ranks r), '')
+                          || coalesce((select string_agg((to_jsonb(r) - array['belt_pattern', 'belt_color', 'belt_color_2', 'belt_end_stripes', 'belt_end_stripe_color'])::text, ',' order by r.id) from public.testing_ranks r), '')
                           || (select string_agg(code || name, ',' order by code) from public.locations)
                           || (select count(*) from public.change_log)::text)`);
         record('[upgrade] every class, rank, location and history row kept', keptRows === upBefore);
         record('[upgrade] existing classes start as Not set (final_award_none false)',
           (await one(up, 'select count(*)::int from public.testing_classes where final_award_none')) === 0);
+        record('[upgrade] existing ranks start with a plain white belt (belt columns added)',
+          (await one(up, `select count(*)::int from public.testing_ranks
+                           where not (belt_pattern = 'solid' and belt_color = 'white' and belt_color_2 is null
+                                      and belt_end_stripes = 0 and belt_end_stripe_color = 'yellow')`)) === 0
+          && (await one(up, 'select count(*)::int from public.testing_ranks')) === 84);
         const upPrints = await fingerprints(up);
         record('[upgrade] fingerprints identical to a fresh install', JSON.stringify(upPrints) === JSON.stringify(after), `${upPrints.length} functions`);
         await runTestFile(up, '[upgrade] 0003_tests.sql', '0003_tests.sql', 'ALL 0003 TESTS PASSED');

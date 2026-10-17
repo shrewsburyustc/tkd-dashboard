@@ -1,6 +1,6 @@
 # Color Belt Testing — status and next steps
 
-**Updated:** 2026-10-17 (Color Belt worktree session, branch `color-belt`; belt look approved v0.67, narrow-phone rows v0.68 + v0.69)
+**Updated:** 2026-10-17 (Color Belt worktree session, branch `color-belt`; belt look approved v0.67, narrow-phone rows v0.68 + v0.69, step A — belts into 0003 + seed — done)
 **Rulebook at handoff:** v0.65 · **Contract:** `docs/Dashboard Docs/Build contracts/CONTRACT-0003.md` · **Plan:** `TKD-Testing-Phase1-Build-Plan.md` (this folder) · **Old system inventory:** `TKD-ColorBelt-Inventory.md` (this folder)
 
 > Read `CLAUDE.md` (repo root) first. This file says where Color Belt phase 1 stands and what comes next. Keep it current.
@@ -9,9 +9,9 @@
 
 ## 1. Where things stand (one paragraph)
 
-Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, ranks, prices, final awards, belt pictures; staff view only). It is **fully built and reviewed in preview mode** and its files are **committed locally** (checkpoint `811b812` on `main`; Color Belt work continues on branch `color-belt`). Nothing is pushed, and **migration 0003 has not been applied anywhere** (the live site and live database are unchanged — Home only). The last thing built was **belt graphics + the belt picker** (rulebook v0.64/v0.65) — Jeffrey **approved the look in the preview on 2026-10-17 (rulebook v0.67)**; belts still exist **only in the preview (fake database)** — the database part (step A) is next.
+Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, ranks, prices, final awards, belt pictures; staff view only). It is **fully built and reviewed in preview mode** and its files are **committed locally** (checkpoint `811b812` on `main`; Color Belt work continues on branch `color-belt`). Nothing is pushed, and **migration 0003 has not been applied anywhere** (the live site and live database are unchanged — Home only). The last thing built was **belt graphics + the belt picker** (rulebook v0.64/v0.65) — Jeffrey **approved the look in the preview on 2026-10-17 (rulebook v0.67)**; step A (belts into migration 0003 and the seed) is **done and reviewed** on branch `color-belt` — still not applied anywhere. Next is CP3 (database, with his OK at each step).
 
-**⚠ Don't push.** The screens now ask the database for `belt_*` columns and send `p_belt_*` arguments that migration 0003 doesn't have yet. Against the real database Testing would fail (`42703` / `PGRST202`). It only works in preview mode until step A below is done and 0003 is live.
+**⚠ Don't push.** The screens read `belt_*` columns and send `p_belt_*` arguments that exist only in the **new** 0003 (step A). The live database has no 0003 yet; against it Testing would fail (`42703` / `PGRST202`). Apply 0003 (CP3) and the seed (CP4) before any deploy (CP6) — the old 6/7-argument rank functions are gone, so app and database must change together.
 
 ## 2. Waiting on Jeffrey right now
 
@@ -20,11 +20,12 @@ Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, 
 
 ## 3. Next steps, in order (each needs his OK where marked)
 
-**A. Belts into the database** (after the look is approved)
-- Builder A: add to `supabase/migrations/0003_testing_classes_ranks.sql` the rank columns `belt_pattern text`, `belt_color text`, `belt_color_2 text null`, `belt_end_stripes integer`, `belt_end_stripe_color text` (planned default `'yellow'`), checks matching `validateBelt` in `src/lib/testing/belts.js` (contract §5.8), column-level select grants, version bump on belt change (belt columns are content columns), and the five `p_belt_*` arguments on `testing_add_rank` / `testing_update_rank` — **always sent, no defaults**. Re-run safety: the file must still upgrade an older copy (it drops old function signatures; fixture `supabase/tests/pglite/fixtures/0003_before_v062.sql`). Update `0003_tests.sql` (invalid-belt → `invalid`, grants, version rule), catalog checks, `0003_fingerprints.sql`, CONTRACT-0003 (remove "preview first; DB pending" notes as each piece lands), SETUP §10. All PGlite steps must pass (`supabase/tests/pglite`, last run 32/32 before belts).
-- **Open DB detail to settle while building:** the screens/mock allow `belt_end_stripe_color` = null when end stripes = 0 (`validateBelt` allows it), but the contract only says "default `'yellow'`" (nullability undecided). Screens always send a color. Pick one and make DB, mock and contract agree.
-- Builder B: add belts to the seed. `supabase/manual/make_seed.mjs` → belt per rank exactly as the "Belts" line in contract §6.3 (same values as `src/lib/mockTesting.js`): LT White solid white · LT Yellow/Green/Blue/Red/Black = stripe white + that color · White, Yellow, Orange, Green, Blue, Purple, Red, Brown solid · High Green/Blue/Red/Brown = stripe that color + white · Red / Black = half red (top) + black · Bo Dan = stripe black + white · Bo Dan - 1/2/3 Big Stripe = same + 1/2/3 yellow end stripes · Deputy = stripe black + yellow. End-stripe color yellow everywhere. Teen/Adult ranks = kids' rank of the same name. Regenerate `0003s_seed_classes_and_ranks.sql` + review table.
-- Then a **security review** (DB) and a **design review** by separate agents; fix; re-review.
+**A. Belts into the database** — **done 2026-10-17** (reviewed; not applied anywhere):
+- Migration 0003: five `belt_*` rank columns (defaults = plain white belt, so the file still upgrades an older copy with rows), one rule `testing_ranks_belt_check` using the new helper `public.testing_belt_is_valid` (same accept/refuse set as `validateBelt`; nobody can call it directly), column select grants, belt = content column (version bump), `testing_add_rank` / `testing_update_rank` take the five `p_belt_*` arguments last with no defaults (old 6/7-argument versions dropped). 19 functions now.
+- **Decided:** `belt_end_stripe_color` is NOT NULL, default `'yellow'`, required even with 0 end stripes — DB, `validateBelt`, mock and contract agree (contract §5.8, resolution #18).
+- Tests: `0003_tests.sql` test 25 (belts) + catalog checks C3g, C3h (rank functions and the helper share one owner — PGlite runs as superuser and would hide a privilege problem), C10. PGlite: **33/33** with the built-in seed and with `--fixture-seed`. Fingerprints changed for `testing_add_rank`, `testing_update_rank`, `testing_ranks_before_write`, and the new helper — CP3 step 3 compares against a fresh `node run.mjs` output.
+- Seed: `make_seed.mjs` belt map `RANK_BELTS` (unknown rank name → hard error), belts validated with `belts.js`; regenerated `0003s_seed_classes_and_ranks.sql`, fixture seed, and `0003s_review_table.txt` (new plain-English Belt column — check it at CP4). All 84 seeded rank rows equal the preview's belts.
+- Reviews: security (no Critical/High/Medium; Low items fixed) and consistency (DB / mock / seed / contract agree; stale comments fixed).
 
 **B. Commit** — **done:** checkpoint commit `811b812` (+ `599edd1`, PGlite lockfile) on local `main`. From now on Color Belt commits go on branch `color-belt` and reach `main` through the Main session. **No push.**
 

@@ -26,8 +26,8 @@ const SERVER_STATUSES = new Set(TESTING_STATUSES.filter((s) => s !== 'error'));
 // The columns we're allowed to read. The database refuses select('*') on purpose (some columns
 // are hidden from the app), so every read lists its columns.
 const CLASS_COLUMNS = 'id, location_code, name, position, final_award_rank_id, final_award_none, version, created_at, updated_at, created_by_name, updated_by_name';
-// The five belt_* columns are new in v0.64 (preview first: the real database adds them after
-// Jeffrey approves the belt look — until then this read only works in preview mode).
+// The five belt_* columns are new in v0.64. Against the real database this read works only
+// once migration 0003 with the belts is live (until then: preview mode only).
 const RANK_COLUMNS = 'id, class_id, location_code, name, position, early_cents, day_cents, private_cents, sparring_gear, belt_pattern, belt_color, belt_color_2, belt_end_stripes, belt_end_stripe_color, version, created_at, updated_at, created_by_name, updated_by_name';
 
 const KNOWN_LOCATIONS = new Set(['worcester', 'shrewsbury']);
@@ -214,7 +214,7 @@ export async function deleteClass({ classId, expectedVersion, expectedRankIds, e
   );
 }
 
-// The five belt values travel as the planned database arguments p_belt_*; all are always
+// The five belt values travel as the database arguments p_belt_* (migration 0003); all are always
 // sent (no defaults — a forgotten value fails instead of drawing the wrong belt).
 const beltArgs = ({ beltPattern, beltColor, beltColor2, beltEndStripes, beltEndStripeColor }) => ({
   p_belt_pattern: beltPattern,

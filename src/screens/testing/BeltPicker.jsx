@@ -1,4 +1,4 @@
-// BeltPicker.jsx — the "Belt" section of Add rank / Edit rank (decided v0.65, preview first).
+// BeltPicker.jsx — the "Belt" section of Add rank / Edit rank (decided v0.65, approved v0.67).
 // Why it exists: every rank shows a small belt picture (v0.64). Admins build that picture from
 // a few parts instead of choosing from a fixed list, so new belts can be added later:
 //   - Pattern: Solid · Middle stripe · Half and half (a "segmented control": one choice of three)

@@ -44,7 +44,7 @@ const LOCATION_ROWS = [
 // doesn't carry the whole export. Both schools get the same list.
 // Each rank: [name, early $, testing day $, private $, sparring gear needed?, belt picture]
 //   belt(pattern, color, color2, endStripes) — see testing/belts.js. Belts were added in v0.64
-//   (preview first; Jeffrey approves the look before the database gets them).
+//   (look approved v0.67; the database has the same columns in migration 0003).
 // finalAward: [class name, rank name] — what the seed works out (contract 0003 §4) —
 //   or 'none' (None: the last rank doesn't promote, on purpose), or null (Not set).
 // A belt in the store's column names. Kids' "LT" belts are white with a colored middle stripe,
@@ -222,7 +222,7 @@ const RPC_ARGS = {
     ['p_class_id', 'uuid'], ['p_expected_version', 'int'], ['p_expected_rank_ids', 'uuid[]'],
     ['p_expected_lost_award_class_ids', 'uuid[]'], ['p_only_if_empty', 'bool', true],
   ],
-  // v0.64 (preview first — the planned database arguments): the five p_belt_* values, no defaults.
+  // v0.64 (the same arguments as the database, migration 0003): the five p_belt_* values, no defaults.
   testing_add_rank: [
     ['p_class_id', 'uuid'], ['p_name', 'text'], ['p_early_cents', 'int'], ['p_day_cents', 'int'],
     ['p_private_cents', 'int'], ['p_sparring_gear', 'bool'], ...BELT_ARGS,

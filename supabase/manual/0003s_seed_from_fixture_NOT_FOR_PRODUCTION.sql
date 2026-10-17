@@ -11,7 +11,7 @@ do $$ begin raise exception 'FIXTURE seed — not for production'; end $$;
 --
 --   Generated from: supabase/manual/0003s_export_fixture.json
 --   Input sha256:   d909eb0f1bb5978c46bba76f6e9e0249eadefdb3cf533544e8d6e51bfdb09326
---   Generated at:   2026-10-17T03:12:35.580Z
+--   Generated at:   2026-10-17T20:47:05.001Z
 --   Source:         FIXTURE — made-up copy of the preview data (contract 0003 §6.3), not the old system
 --   Exported at:    2026-10-16T20:00:00Z
 --   ** FIXTURE (made-up test data) — the first line above refuses to run. **
@@ -58,6 +58,12 @@ do $$ begin raise exception 'FIXTURE seed — not for production'; end $$;
 --   * final_award_none = true means "None": the class's last rank does
 --     not promote, on purpose (e.g. Deputy is practice for Dan testing).
 --     false with no rank = "Not set" (still to be decided).
+--   * Belts (the five belt_* columns of each rank): belt_pattern is
+--     solid, stripe or half; belt_color is the main color (half: the top
+--     half); belt_color_2 is the middle stripe (stripe) or the bottom half
+--     (half), null for solid; belt_end_stripes is 0-3 short stripes near
+--     the end, in belt_end_stripe_color (yellow). The belts come from
+--     RANK_BELTS in make_seed.mjs (contract 0003 §6.3).
 -- =====================================================================
 
 begin;
@@ -65,7 +71,7 @@ begin;
 -- Tags read by the change-history trigger (true = only for this transaction).
 select set_config('tkd.actor_label', 'Initial copy from the old system', true);
 select set_config('tkd.action', 'seed', true);
-select set_config('tkd.batch_id', '6d4b0872-c4e6-467f-b758-e0070c27770d', true);
+select set_config('tkd.batch_id', 'da3ea669-55c3-424b-86b2-03dc4c89f899', true);
 
 -- ---------------------------------------------------------------------
 -- Worcester
@@ -87,71 +93,73 @@ begin
   -- Classes (positions 0, 1, 2 … in belt order).
   -- final_award_none = true for "None" classes (no rank is ever linked to them).
   insert into public.testing_classes (id, location_code, name, position, final_award_rank_id, final_award_none) values
-    ('8011f8f0-4d4e-4bce-bb3a-4d76673d8eea', 'worcester', 'Little Tiger', 0, null, false),
-    ('e28ca02b-c427-46c8-bede-742b9f3d6096', 'worcester', 'White', 1, null, false),
-    ('689a58b9-e4c6-4d20-928d-ba5ffb921f8b', 'worcester', 'Group A', 2, null, false),
-    ('519316c8-e3dc-48cb-9eec-97033a6d54c1', 'worcester', 'Group B', 3, null, false),
-    ('4c262f03-aca8-4321-9a7b-cae703d195ff', 'worcester', 'Group C', 4, null, false),
-    ('5f68ae55-18c2-428e-8a17-a9853ccc5705', 'worcester', 'Group D', 5, null, true),
-    ('221e4ffe-e4ad-40a9-944d-e7a2ef59eb7f', 'worcester', 'Teen/Adult', 6, null, true);
+    ('27f97eb7-a734-4f81-8ead-1cc59f78a1dd', 'worcester', 'Little Tiger', 0, null, false),
+    ('fda4b8d4-1735-4431-8332-5202179ab92f', 'worcester', 'White', 1, null, false),
+    ('75fe2268-8664-4575-8f6e-1b409d4db3d3', 'worcester', 'Group A', 2, null, false),
+    ('e97d043b-6e1a-4fcd-bd96-7d855a4796a7', 'worcester', 'Group B', 3, null, false),
+    ('a7c70ebe-ded5-4ad5-897a-2deff3e226c4', 'worcester', 'Group C', 4, null, false),
+    ('aff4405d-ff43-43d6-ba44-85af4078141d', 'worcester', 'Group D', 5, null, true),
+    ('5342b5d5-d8fd-4bca-9035-9b5f1b406dda', 'worcester', 'Teen/Adult', 6, null, true);
 
-  -- Ranks (positions 0, 1, 2 … inside each class; prices in cents).
+  -- Ranks (positions 0, 1, 2 … inside each class; prices in cents;
+  -- then the belt: pattern, color, color 2, end stripes, end-stripe color).
   insert into public.testing_ranks
-    (id, class_id, location_code, name, position, early_cents, day_cents, private_cents, sparring_gear) values
-    ('955f5a9f-ba6c-4ece-a395-0b5efebab813', '8011f8f0-4d4e-4bce-bb3a-4d76673d8eea', 'worcester', 'LT White', 0, 5000, 6000, 7000, false),
-    ('b3775f56-bc54-4f29-a0ca-c11b1da0dad7', '8011f8f0-4d4e-4bce-bb3a-4d76673d8eea', 'worcester', 'LT Yellow', 1, 5000, 6000, 7000, false),
-    ('cfcbb4cf-7697-45de-88bd-b4e6ad695971', '8011f8f0-4d4e-4bce-bb3a-4d76673d8eea', 'worcester', 'LT Green', 2, 5000, 6000, 7000, false),
-    ('caa089cf-59a8-4816-bc80-9e8f03284a24', '8011f8f0-4d4e-4bce-bb3a-4d76673d8eea', 'worcester', 'LT Blue', 3, 5000, 6000, 7000, false),
-    ('9afd9d4e-9d28-43ae-bc86-bbb6a9eb8eba', '8011f8f0-4d4e-4bce-bb3a-4d76673d8eea', 'worcester', 'LT Red', 4, 5000, 6000, 7000, false),
-    ('7596f53d-7b61-4e4c-8489-25702ea3c6ba', '8011f8f0-4d4e-4bce-bb3a-4d76673d8eea', 'worcester', 'LT Black', 5, 5000, 6000, 7000, false),
-    ('e4b5883f-faf9-47f1-93bd-e142a9feadec', 'e28ca02b-c427-46c8-bede-742b9f3d6096', 'worcester', 'White', 0, 6500, 7500, 8500, false),
-    ('a205df52-3a71-4b02-bebc-dedc9e6cf75c', '689a58b9-e4c6-4d20-928d-ba5ffb921f8b', 'worcester', 'Yellow', 0, 6500, 7500, 8500, false),
-    ('6864fc0e-2757-419d-8a3c-9caac7e6fdb7', '689a58b9-e4c6-4d20-928d-ba5ffb921f8b', 'worcester', 'Orange', 1, 6500, 7500, 8500, false),
-    ('65b95e90-c45d-4e0a-94ff-ebc81bd8bcf5', '689a58b9-e4c6-4d20-928d-ba5ffb921f8b', 'worcester', 'Green', 2, 6500, 7500, 8500, false),
-    ('da8d678e-dd92-4bd6-aa72-73e38d664d71', '689a58b9-e4c6-4d20-928d-ba5ffb921f8b', 'worcester', 'High Green', 3, 6500, 7500, 8500, false),
-    ('c1e7b337-f404-4d97-a112-a838cc6ddd1f', '519316c8-e3dc-48cb-9eec-97033a6d54c1', 'worcester', 'Blue', 0, 7000, 8000, 9500, true),
-    ('fd81d59f-6b4d-4cae-8f9a-18a0fdc3732e', '519316c8-e3dc-48cb-9eec-97033a6d54c1', 'worcester', 'High Blue', 1, 7000, 8000, 9500, true),
-    ('955fb093-bb66-4c38-802d-d8611b3cfb44', '519316c8-e3dc-48cb-9eec-97033a6d54c1', 'worcester', 'Purple', 2, 7000, 8000, 9500, true),
-    ('c4a6adc1-a837-4fd1-9353-98dc7a1e23d7', '519316c8-e3dc-48cb-9eec-97033a6d54c1', 'worcester', 'Red', 3, 7000, 8000, 9500, true),
-    ('2e420a53-7faa-499b-b93c-6d017e846a21', '4c262f03-aca8-4321-9a7b-cae703d195ff', 'worcester', 'High Red', 0, 7500, 8500, 10000, true),
-    ('c84009ec-836e-4d95-b0cf-53aa85282d58', '4c262f03-aca8-4321-9a7b-cae703d195ff', 'worcester', 'Group C rank 2', 1, 7500, 8500, 10000, true),
-    ('9cce762c-93f7-450d-84dc-bb771e2ceda7', '4c262f03-aca8-4321-9a7b-cae703d195ff', 'worcester', 'Group C rank 3', 2, 7500, 8500, 10000, true),
-    ('5b868ff6-8e55-44b0-8a56-fadbe8cc7eae', '4c262f03-aca8-4321-9a7b-cae703d195ff', 'worcester', 'Group C rank 4', 3, 7500, 8500, 10000, true),
-    ('8ee41b56-3a41-4807-9413-7eb78ea66d6d', '5f68ae55-18c2-428e-8a17-a9853ccc5705', 'worcester', 'Bo Dan', 0, 8000, 9000, 11000, true),
-    ('a90798ee-8d17-4b6c-b129-80a9b7a73c75', '5f68ae55-18c2-428e-8a17-a9853ccc5705', 'worcester', 'Group D rank 2', 1, 8000, 9000, 11000, true),
-    ('bff85261-f248-405c-9083-7c2a41ec9c54', '5f68ae55-18c2-428e-8a17-a9853ccc5705', 'worcester', 'Group D rank 3', 2, 8000, 9000, 11000, true),
-    ('33d787a0-bb8d-4a27-9985-e91817bb2e6c', '5f68ae55-18c2-428e-8a17-a9853ccc5705', 'worcester', 'Group D rank 4', 3, 8000, 9000, 11000, true),
-    ('d79b6c7b-9894-488c-883e-8863a69fe9a4', '5f68ae55-18c2-428e-8a17-a9853ccc5705', 'worcester', 'Group D rank 5', 4, 8000, 9000, 11000, true),
-    ('179c7d8a-7249-4b87-a8ca-63e0ccd43dac', '221e4ffe-e4ad-40a9-944d-e7a2ef59eb7f', 'worcester', 'Teen/Adult rank 1', 0, 7500, 8500, 10000, true),
-    ('2de83598-4e0b-4cf0-9347-dbab5aea819e', '221e4ffe-e4ad-40a9-944d-e7a2ef59eb7f', 'worcester', 'Teen/Adult rank 2', 1, 7500, 8500, 10000, true),
-    ('0c0f26c5-d7b2-4b1b-9530-0d539b0b5e02', '221e4ffe-e4ad-40a9-944d-e7a2ef59eb7f', 'worcester', 'Teen/Adult rank 3', 2, 7500, 8500, 10000, true),
-    ('f442cd94-83ca-4d85-aaf3-962881110e72', '221e4ffe-e4ad-40a9-944d-e7a2ef59eb7f', 'worcester', 'Teen/Adult rank 4', 3, 7500, 8500, 10000, true),
-    ('89c734fd-6400-40d9-ab52-3ac398093315', '221e4ffe-e4ad-40a9-944d-e7a2ef59eb7f', 'worcester', 'Teen/Adult rank 5', 4, 7500, 8500, 9000, true),
-    ('ca50af6b-2ca7-49e6-89e9-380f8631537b', '221e4ffe-e4ad-40a9-944d-e7a2ef59eb7f', 'worcester', 'Teen/Adult rank 6', 5, 7500, 8500, 10000, true),
-    ('c3a14b50-c45a-4c50-a404-3311c9760b51', '221e4ffe-e4ad-40a9-944d-e7a2ef59eb7f', 'worcester', 'Teen/Adult rank 7', 6, 7500, 8500, 10000, true),
-    ('c4ac20e2-edf5-41e3-89e5-71ee6a99fc2f', '221e4ffe-e4ad-40a9-944d-e7a2ef59eb7f', 'worcester', 'Teen/Adult rank 8', 7, 7500, 8500, 10000, true),
-    ('e3199319-1279-4614-81f0-a11929821822', '221e4ffe-e4ad-40a9-944d-e7a2ef59eb7f', 'worcester', 'Teen/Adult rank 9', 8, 7500, 8500, 10000, true),
-    ('c66ae95b-b8c5-4220-9dd4-0f4701c68688', '221e4ffe-e4ad-40a9-944d-e7a2ef59eb7f', 'worcester', 'Teen/Adult rank 10', 9, 7500, 8500, 10000, true),
-    ('22454445-1d3f-42ac-9503-9998624436e0', '221e4ffe-e4ad-40a9-944d-e7a2ef59eb7f', 'worcester', 'Teen/Adult rank 11', 10, 7500, 8500, 10000, true),
-    ('12e2afa1-0944-4973-b850-9fc11a20ff7a', '221e4ffe-e4ad-40a9-944d-e7a2ef59eb7f', 'worcester', 'Teen/Adult rank 12', 11, 7500, 8500, 10000, true),
-    ('8a47a1f1-38b7-4fd6-bfb3-e6a54cfb80f0', '221e4ffe-e4ad-40a9-944d-e7a2ef59eb7f', 'worcester', 'Teen/Adult rank 13', 12, 7500, 8500, 10000, true),
-    ('01c9d3ea-9b60-41a1-8376-75e14d41bfa0', '221e4ffe-e4ad-40a9-944d-e7a2ef59eb7f', 'worcester', 'Teen/Adult rank 14', 13, 7500, 8500, 10000, true),
-    ('5fa99624-6ac7-496a-97b9-b15285e21178', '221e4ffe-e4ad-40a9-944d-e7a2ef59eb7f', 'worcester', 'Teen/Adult rank 15', 14, 7500, 8500, 10000, true),
-    ('f26e7c56-be8a-4808-92ef-bea596762cf6', '221e4ffe-e4ad-40a9-944d-e7a2ef59eb7f', 'worcester', 'Teen/Adult rank 16', 15, 7500, 8500, 10000, true),
-    ('4731708a-10c3-49e1-9db8-1a2ba97d986d', '221e4ffe-e4ad-40a9-944d-e7a2ef59eb7f', 'worcester', 'Teen/Adult rank 17', 16, 7500, 8500, 10000, true),
-    ('04ac163a-1e26-496c-9e92-e53ffc9675cc', '221e4ffe-e4ad-40a9-944d-e7a2ef59eb7f', 'worcester', 'Teen/Adult rank 18', 17, 7500, 8500, 10000, true);
+    (id, class_id, location_code, name, position, early_cents, day_cents, private_cents, sparring_gear,
+     belt_pattern, belt_color, belt_color_2, belt_end_stripes, belt_end_stripe_color) values
+    ('f2a990b3-ddd0-40ce-90ae-17ee32f96413', '27f97eb7-a734-4f81-8ead-1cc59f78a1dd', 'worcester', 'LT White', 0, 5000, 6000, 7000, false, 'solid', 'white', null, 0, 'yellow'),
+    ('acac920c-acf9-4f75-becb-8a5721255de3', '27f97eb7-a734-4f81-8ead-1cc59f78a1dd', 'worcester', 'LT Yellow', 1, 5000, 6000, 7000, false, 'stripe', 'white', 'yellow', 0, 'yellow'),
+    ('a1e832c0-688e-4970-8e74-98a64b8ebb0c', '27f97eb7-a734-4f81-8ead-1cc59f78a1dd', 'worcester', 'LT Green', 2, 5000, 6000, 7000, false, 'stripe', 'white', 'green', 0, 'yellow'),
+    ('2f86e254-a848-4d03-8493-caa06eecb760', '27f97eb7-a734-4f81-8ead-1cc59f78a1dd', 'worcester', 'LT Blue', 3, 5000, 6000, 7000, false, 'stripe', 'white', 'blue', 0, 'yellow'),
+    ('9aeb0f84-34ca-465d-9528-a34a6131f568', '27f97eb7-a734-4f81-8ead-1cc59f78a1dd', 'worcester', 'LT Red', 4, 5000, 6000, 7000, false, 'stripe', 'white', 'red', 0, 'yellow'),
+    ('48933125-6fcb-4a23-be66-5a064ee6e596', '27f97eb7-a734-4f81-8ead-1cc59f78a1dd', 'worcester', 'LT Black', 5, 5000, 6000, 7000, false, 'stripe', 'white', 'black', 0, 'yellow'),
+    ('21065c8d-5175-4f40-854b-cfc97eb65264', 'fda4b8d4-1735-4431-8332-5202179ab92f', 'worcester', 'White', 0, 6500, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow'),
+    ('90c0a62f-d66e-460b-8773-158eb69ce221', '75fe2268-8664-4575-8f6e-1b409d4db3d3', 'worcester', 'Yellow', 0, 6500, 7500, 8500, false, 'solid', 'yellow', null, 0, 'yellow'),
+    ('b9ac8d32-a543-4023-a404-a3e7c8358fd4', '75fe2268-8664-4575-8f6e-1b409d4db3d3', 'worcester', 'Orange', 1, 6500, 7500, 8500, false, 'solid', 'orange', null, 0, 'yellow'),
+    ('b7873361-497a-4b21-ad3b-1da35f7db00e', '75fe2268-8664-4575-8f6e-1b409d4db3d3', 'worcester', 'Green', 2, 6500, 7500, 8500, false, 'solid', 'green', null, 0, 'yellow'),
+    ('d7b57d8f-9ad8-4c7b-aa94-b81894eeea41', '75fe2268-8664-4575-8f6e-1b409d4db3d3', 'worcester', 'High Green', 3, 6500, 7500, 8500, false, 'stripe', 'green', 'white', 0, 'yellow'),
+    ('2e5be557-a5b0-481e-bf50-cae6a3bc7a38', 'e97d043b-6e1a-4fcd-bd96-7d855a4796a7', 'worcester', 'Blue', 0, 7000, 8000, 9500, true, 'solid', 'blue', null, 0, 'yellow'),
+    ('b772384a-d2f9-4bee-b03a-32788b82a65a', 'e97d043b-6e1a-4fcd-bd96-7d855a4796a7', 'worcester', 'High Blue', 1, 7000, 8000, 9500, true, 'stripe', 'blue', 'white', 0, 'yellow'),
+    ('8486a660-1d6a-4e0b-97f0-a71fc81fa5d7', 'e97d043b-6e1a-4fcd-bd96-7d855a4796a7', 'worcester', 'Purple', 2, 7000, 8000, 9500, true, 'solid', 'purple', null, 0, 'yellow'),
+    ('7698edc8-af6e-4556-b3d2-7bc9b15be560', 'e97d043b-6e1a-4fcd-bd96-7d855a4796a7', 'worcester', 'Red', 3, 7000, 8000, 9500, true, 'solid', 'red', null, 0, 'yellow'),
+    ('99a985d0-910c-4302-9a81-0aa4bed2ed67', 'a7c70ebe-ded5-4ad5-897a-2deff3e226c4', 'worcester', 'High Red', 0, 7500, 8500, 10000, true, 'stripe', 'red', 'white', 0, 'yellow'),
+    ('e4e57996-536f-4c02-9f43-0b03df7f13ae', 'a7c70ebe-ded5-4ad5-897a-2deff3e226c4', 'worcester', 'Group C rank 2', 1, 7500, 8500, 10000, true, 'solid', 'brown', null, 0, 'yellow'),
+    ('ba6d660a-6aa6-4db6-9812-fa0479bb58e0', 'a7c70ebe-ded5-4ad5-897a-2deff3e226c4', 'worcester', 'Group C rank 3', 2, 7500, 8500, 10000, true, 'stripe', 'brown', 'white', 0, 'yellow'),
+    ('ad8e8730-e702-47d3-a456-e3fb3eacb5e9', 'a7c70ebe-ded5-4ad5-897a-2deff3e226c4', 'worcester', 'Group C rank 4', 3, 7500, 8500, 10000, true, 'half', 'red', 'black', 0, 'yellow'),
+    ('ddecf288-6031-4e8f-b4cd-58fdaf78e36e', 'aff4405d-ff43-43d6-ba44-85af4078141d', 'worcester', 'Bo Dan', 0, 8000, 9000, 11000, true, 'stripe', 'black', 'white', 0, 'yellow'),
+    ('d81b8f16-1722-4b2c-951e-c89db106b871', 'aff4405d-ff43-43d6-ba44-85af4078141d', 'worcester', 'Group D rank 2', 1, 8000, 9000, 11000, true, 'stripe', 'black', 'white', 1, 'yellow'),
+    ('bdae7f31-3fda-416b-84fd-0fdc0cad9c11', 'aff4405d-ff43-43d6-ba44-85af4078141d', 'worcester', 'Group D rank 3', 2, 8000, 9000, 11000, true, 'stripe', 'black', 'white', 2, 'yellow'),
+    ('c6050cfd-cf08-4175-80f1-49963415abe6', 'aff4405d-ff43-43d6-ba44-85af4078141d', 'worcester', 'Group D rank 4', 3, 8000, 9000, 11000, true, 'stripe', 'black', 'white', 3, 'yellow'),
+    ('fd438fe5-95b1-4954-923c-c44406bea918', 'aff4405d-ff43-43d6-ba44-85af4078141d', 'worcester', 'Group D rank 5', 4, 8000, 9000, 11000, true, 'stripe', 'black', 'yellow', 0, 'yellow'),
+    ('cc7004c6-d19f-447f-96a9-6af7ced73dc1', '5342b5d5-d8fd-4bca-9035-9b5f1b406dda', 'worcester', 'Teen/Adult rank 1', 0, 7500, 8500, 10000, true, 'solid', 'white', null, 0, 'yellow'),
+    ('32f45425-3278-4c3f-b44b-3d9635e3198c', '5342b5d5-d8fd-4bca-9035-9b5f1b406dda', 'worcester', 'Teen/Adult rank 2', 1, 7500, 8500, 10000, true, 'solid', 'yellow', null, 0, 'yellow'),
+    ('2b3b9821-c9cb-4ed2-ac9f-6e36d6133a67', '5342b5d5-d8fd-4bca-9035-9b5f1b406dda', 'worcester', 'Teen/Adult rank 3', 2, 7500, 8500, 10000, true, 'solid', 'orange', null, 0, 'yellow'),
+    ('65264663-952c-4bd4-9073-c2f20cf85969', '5342b5d5-d8fd-4bca-9035-9b5f1b406dda', 'worcester', 'Teen/Adult rank 4', 3, 7500, 8500, 10000, true, 'solid', 'green', null, 0, 'yellow'),
+    ('d713bac8-caba-4d12-8246-2e0956c3f20e', '5342b5d5-d8fd-4bca-9035-9b5f1b406dda', 'worcester', 'Teen/Adult rank 5', 4, 7500, 8500, 9000, true, 'stripe', 'green', 'white', 0, 'yellow'),
+    ('1df7de46-d109-47af-a756-986e2ff389da', '5342b5d5-d8fd-4bca-9035-9b5f1b406dda', 'worcester', 'Teen/Adult rank 6', 5, 7500, 8500, 10000, true, 'solid', 'blue', null, 0, 'yellow'),
+    ('6c9b7b39-1b4b-4920-903d-f743eb20c272', '5342b5d5-d8fd-4bca-9035-9b5f1b406dda', 'worcester', 'Teen/Adult rank 7', 6, 7500, 8500, 10000, true, 'stripe', 'blue', 'white', 0, 'yellow'),
+    ('37b2d42f-077f-40be-86f0-41e5fb62d683', '5342b5d5-d8fd-4bca-9035-9b5f1b406dda', 'worcester', 'Teen/Adult rank 8', 7, 7500, 8500, 10000, true, 'solid', 'purple', null, 0, 'yellow'),
+    ('dc8a28e9-a735-4724-bdd3-d62ec7275dfd', '5342b5d5-d8fd-4bca-9035-9b5f1b406dda', 'worcester', 'Teen/Adult rank 9', 8, 7500, 8500, 10000, true, 'solid', 'red', null, 0, 'yellow'),
+    ('b397a511-85a8-47ab-985f-d2a7eaeb23da', '5342b5d5-d8fd-4bca-9035-9b5f1b406dda', 'worcester', 'Teen/Adult rank 10', 9, 7500, 8500, 10000, true, 'stripe', 'red', 'white', 0, 'yellow'),
+    ('a7f24380-f677-49eb-a2de-ce18f2ed0476', '5342b5d5-d8fd-4bca-9035-9b5f1b406dda', 'worcester', 'Teen/Adult rank 11', 10, 7500, 8500, 10000, true, 'solid', 'brown', null, 0, 'yellow'),
+    ('86f1d95f-daab-4755-899b-3c323f2afff6', '5342b5d5-d8fd-4bca-9035-9b5f1b406dda', 'worcester', 'Teen/Adult rank 12', 11, 7500, 8500, 10000, true, 'stripe', 'brown', 'white', 0, 'yellow'),
+    ('a67c4a0c-0e50-428b-bd3f-1b765284f43d', '5342b5d5-d8fd-4bca-9035-9b5f1b406dda', 'worcester', 'Teen/Adult rank 13', 12, 7500, 8500, 10000, true, 'half', 'red', 'black', 0, 'yellow'),
+    ('b84734f8-e8dc-41b3-8260-7f22374ab44a', '5342b5d5-d8fd-4bca-9035-9b5f1b406dda', 'worcester', 'Teen/Adult rank 14', 13, 7500, 8500, 10000, true, 'stripe', 'black', 'white', 0, 'yellow'),
+    ('19b0e616-9d86-4513-b816-f303f23ee43f', '5342b5d5-d8fd-4bca-9035-9b5f1b406dda', 'worcester', 'Teen/Adult rank 15', 14, 7500, 8500, 10000, true, 'stripe', 'black', 'white', 1, 'yellow'),
+    ('f49e5e85-6a29-4d4f-94ae-1e49628ea051', '5342b5d5-d8fd-4bca-9035-9b5f1b406dda', 'worcester', 'Teen/Adult rank 16', 15, 7500, 8500, 10000, true, 'stripe', 'black', 'white', 2, 'yellow'),
+    ('c19537a9-1d53-414b-b292-c9954b5d4861', '5342b5d5-d8fd-4bca-9035-9b5f1b406dda', 'worcester', 'Teen/Adult rank 17', 16, 7500, 8500, 10000, true, 'stripe', 'black', 'white', 3, 'yellow'),
+    ('a0da2b0f-bc88-407e-b283-9bf0a25c7320', '5342b5d5-d8fd-4bca-9035-9b5f1b406dda', 'worcester', 'Teen/Adult rank 18', 17, 7500, 8500, 10000, true, 'stripe', 'black', 'yellow', 0, 'yellow');
 
   -- Final awards. None (set above): Group D, Teen/Adult.
   -- Little Tiger -> Yellow (Group A)
-  update public.testing_classes set final_award_rank_id = 'a205df52-3a71-4b02-bebc-dedc9e6cf75c' where id = '8011f8f0-4d4e-4bce-bb3a-4d76673d8eea';
+  update public.testing_classes set final_award_rank_id = '90c0a62f-d66e-460b-8773-158eb69ce221' where id = '27f97eb7-a734-4f81-8ead-1cc59f78a1dd';
   -- White -> Yellow (Group A)
-  update public.testing_classes set final_award_rank_id = 'a205df52-3a71-4b02-bebc-dedc9e6cf75c' where id = 'e28ca02b-c427-46c8-bede-742b9f3d6096';
+  update public.testing_classes set final_award_rank_id = '90c0a62f-d66e-460b-8773-158eb69ce221' where id = 'fda4b8d4-1735-4431-8332-5202179ab92f';
   -- Group A -> Blue (Group B)
-  update public.testing_classes set final_award_rank_id = 'c1e7b337-f404-4d97-a112-a838cc6ddd1f' where id = '689a58b9-e4c6-4d20-928d-ba5ffb921f8b';
+  update public.testing_classes set final_award_rank_id = '2e5be557-a5b0-481e-bf50-cae6a3bc7a38' where id = '75fe2268-8664-4575-8f6e-1b409d4db3d3';
   -- Group B -> High Red (Group C)
-  update public.testing_classes set final_award_rank_id = '2e420a53-7faa-499b-b93c-6d017e846a21' where id = '519316c8-e3dc-48cb-9eec-97033a6d54c1';
+  update public.testing_classes set final_award_rank_id = '99a985d0-910c-4302-9a81-0aa4bed2ed67' where id = 'e97d043b-6e1a-4fcd-bd96-7d855a4796a7';
   -- Group C -> Bo Dan (Group D)
-  update public.testing_classes set final_award_rank_id = '8ee41b56-3a41-4807-9413-7eb78ea66d6d' where id = '4c262f03-aca8-4321-9a7b-cae703d195ff';
+  update public.testing_classes set final_award_rank_id = 'ddecf288-6031-4e8f-b4cd-58fdaf78e36e' where id = 'a7c70ebe-ded5-4ad5-897a-2deff3e226c4';
 end
 $seed$;
 
@@ -175,71 +183,73 @@ begin
   -- Classes (positions 0, 1, 2 … in belt order).
   -- final_award_none = true for "None" classes (no rank is ever linked to them).
   insert into public.testing_classes (id, location_code, name, position, final_award_rank_id, final_award_none) values
-    ('e50c3d6b-513e-4640-a099-8fd560e00eb0', 'shrewsbury', 'Little Tiger', 0, null, false),
-    ('10ea0f09-c19f-48f6-9675-98bb097b15f6', 'shrewsbury', 'White', 1, null, false),
-    ('18d3ebdb-e565-4df4-a404-1461526d83b5', 'shrewsbury', 'Group A', 2, null, false),
-    ('4d58fd0a-75b4-4986-a231-c5c93b6b6d4c', 'shrewsbury', 'Group B', 3, null, false),
-    ('a6a4c686-4c6f-4799-9c6e-36408aacbe54', 'shrewsbury', 'Group C', 4, null, false),
-    ('a8febba8-b095-4c24-9564-a5810ec5aa5b', 'shrewsbury', 'Group D', 5, null, true),
-    ('15f562cf-42b2-407a-aacd-159db14df290', 'shrewsbury', 'Teen/Adult', 6, null, true);
+    ('5e888977-6522-4f83-bd9d-90d994c040ce', 'shrewsbury', 'Little Tiger', 0, null, false),
+    ('9c90f12f-cf75-4fc2-b00a-ffd88c516abf', 'shrewsbury', 'White', 1, null, false),
+    ('08787325-a0bf-4467-9af2-662f9af98d83', 'shrewsbury', 'Group A', 2, null, false),
+    ('0250f924-90d1-4a95-8986-b55c70b8a1b0', 'shrewsbury', 'Group B', 3, null, false),
+    ('d575bba4-3888-4b98-929c-d94ee0ef6acf', 'shrewsbury', 'Group C', 4, null, false),
+    ('49e1ad6a-d7ec-44b1-9e6d-fa2771296671', 'shrewsbury', 'Group D', 5, null, true),
+    ('b8b85f28-ad1a-4e71-93d9-230acd807220', 'shrewsbury', 'Teen/Adult', 6, null, true);
 
-  -- Ranks (positions 0, 1, 2 … inside each class; prices in cents).
+  -- Ranks (positions 0, 1, 2 … inside each class; prices in cents;
+  -- then the belt: pattern, color, color 2, end stripes, end-stripe color).
   insert into public.testing_ranks
-    (id, class_id, location_code, name, position, early_cents, day_cents, private_cents, sparring_gear) values
-    ('7d936343-cecf-42b0-8504-8acacbec8adb', 'e50c3d6b-513e-4640-a099-8fd560e00eb0', 'shrewsbury', 'LT White', 0, 5000, 6000, 7000, false),
-    ('f3d14d6a-2655-4254-b881-4f0095f8c678', 'e50c3d6b-513e-4640-a099-8fd560e00eb0', 'shrewsbury', 'LT Yellow', 1, 5000, 6000, 7000, false),
-    ('890ce2cf-2729-4bc6-8f0d-b9fff3aee122', 'e50c3d6b-513e-4640-a099-8fd560e00eb0', 'shrewsbury', 'LT Green', 2, 5000, 6000, 7000, false),
-    ('396b310d-dd78-42bb-bd24-b8af17f6c5cb', 'e50c3d6b-513e-4640-a099-8fd560e00eb0', 'shrewsbury', 'LT Blue', 3, 5000, 6000, 7000, false),
-    ('8baa5074-fe39-4ef1-ba07-252189552269', 'e50c3d6b-513e-4640-a099-8fd560e00eb0', 'shrewsbury', 'LT Red', 4, 5000, 6000, 7000, false),
-    ('2180ad90-37d6-40c8-9ff8-291af80cd840', 'e50c3d6b-513e-4640-a099-8fd560e00eb0', 'shrewsbury', 'LT Black', 5, 5000, 6000, 7000, false),
-    ('34fbd7c1-f5e4-42f9-80dc-c8515940f009', '10ea0f09-c19f-48f6-9675-98bb097b15f6', 'shrewsbury', 'White', 0, 6500, 7500, 8500, false),
-    ('62bd2805-2bfe-43bc-8259-bb97583e6111', '18d3ebdb-e565-4df4-a404-1461526d83b5', 'shrewsbury', 'Yellow', 0, 6500, 7500, 8500, false),
-    ('4deb39d1-c417-4de6-8e17-38e3d4360c44', '18d3ebdb-e565-4df4-a404-1461526d83b5', 'shrewsbury', 'Orange', 1, 6500, 7500, 8500, false),
-    ('ba4e2a0d-76f8-4f72-be59-4470dd3b0c4d', '18d3ebdb-e565-4df4-a404-1461526d83b5', 'shrewsbury', 'Green', 2, 6500, 7500, 8500, false),
-    ('86e8b099-543d-4414-890d-7c614b932b60', '18d3ebdb-e565-4df4-a404-1461526d83b5', 'shrewsbury', 'High Green', 3, 6500, 7500, 8500, false),
-    ('ed14ff7c-ba1b-4876-a3d4-4932dfb922e1', '4d58fd0a-75b4-4986-a231-c5c93b6b6d4c', 'shrewsbury', 'Blue', 0, 7000, 8000, 9500, true),
-    ('e0bc82ce-f5f0-428b-83d6-86b1e1b53aad', '4d58fd0a-75b4-4986-a231-c5c93b6b6d4c', 'shrewsbury', 'High Blue', 1, 7000, 8000, 9500, true),
-    ('01061496-4319-4ea0-81a6-0a012c42cdae', '4d58fd0a-75b4-4986-a231-c5c93b6b6d4c', 'shrewsbury', 'Purple', 2, 7000, 8000, 9500, true),
-    ('b5c7672f-7e6f-4168-9f96-478786f17015', '4d58fd0a-75b4-4986-a231-c5c93b6b6d4c', 'shrewsbury', 'Red', 3, 7000, 8000, 9500, true),
-    ('7559fa45-e083-47f4-803c-5887df6e5cd0', 'a6a4c686-4c6f-4799-9c6e-36408aacbe54', 'shrewsbury', 'High Red', 0, 7500, 8500, 10000, true),
-    ('6ba1244c-61a3-4299-a7a5-9b0d4774c6be', 'a6a4c686-4c6f-4799-9c6e-36408aacbe54', 'shrewsbury', 'Group C rank 2', 1, 7500, 8500, 10000, true),
-    ('c9968110-0b15-46c1-be66-206ead904e91', 'a6a4c686-4c6f-4799-9c6e-36408aacbe54', 'shrewsbury', 'Group C rank 3', 2, 7500, 8500, 10000, true),
-    ('fb9a4c94-38ea-4b81-b0df-4d0a92cc4193', 'a6a4c686-4c6f-4799-9c6e-36408aacbe54', 'shrewsbury', 'Group C rank 4', 3, 7500, 8500, 10000, true),
-    ('a96c328b-0ffa-4540-9396-f84e82d94709', 'a8febba8-b095-4c24-9564-a5810ec5aa5b', 'shrewsbury', 'Bo Dan', 0, 8000, 9000, 11000, true),
-    ('ca578f60-f41a-4405-a2f3-d8ba85f59485', 'a8febba8-b095-4c24-9564-a5810ec5aa5b', 'shrewsbury', 'Group D rank 2', 1, 8000, 9000, 11000, true),
-    ('80a4e994-8611-4a70-b334-d6a421fb1c12', 'a8febba8-b095-4c24-9564-a5810ec5aa5b', 'shrewsbury', 'Group D rank 3', 2, 8000, 9000, 11000, true),
-    ('52fb6be0-adbe-4627-98b0-18ad4241892a', 'a8febba8-b095-4c24-9564-a5810ec5aa5b', 'shrewsbury', 'Group D rank 4', 3, 8000, 9000, 11000, true),
-    ('dde1b77d-bf3c-4c1a-b7ac-c9bb2b0d248a', 'a8febba8-b095-4c24-9564-a5810ec5aa5b', 'shrewsbury', 'Group D rank 5', 4, 8000, 9000, 11000, true),
-    ('8a750807-aeb4-4bad-96bc-88744807324d', '15f562cf-42b2-407a-aacd-159db14df290', 'shrewsbury', 'Teen/Adult rank 1', 0, 7500, 8500, 10000, true),
-    ('ca8cb325-cedc-4f3c-ad27-4bfb103f9781', '15f562cf-42b2-407a-aacd-159db14df290', 'shrewsbury', 'Teen/Adult rank 2', 1, 7500, 8500, 10000, true),
-    ('59af2a91-1700-4a34-8d29-4f7dec050973', '15f562cf-42b2-407a-aacd-159db14df290', 'shrewsbury', 'Teen/Adult rank 3', 2, 7500, 8500, 10000, true),
-    ('ba722eef-d104-4062-924b-a5ac3f94523f', '15f562cf-42b2-407a-aacd-159db14df290', 'shrewsbury', 'Teen/Adult rank 4', 3, 7500, 8500, 10000, true),
-    ('6219fc4a-8d23-4cbe-b1da-d02b4788dffb', '15f562cf-42b2-407a-aacd-159db14df290', 'shrewsbury', 'Teen/Adult rank 5', 4, 7500, 8500, 9000, true),
-    ('0032b25e-ad02-4c8e-babb-47a4daa5738f', '15f562cf-42b2-407a-aacd-159db14df290', 'shrewsbury', 'Teen/Adult rank 6', 5, 7500, 8500, 10000, true),
-    ('7310dd60-da3c-476f-bd45-18243b0d778f', '15f562cf-42b2-407a-aacd-159db14df290', 'shrewsbury', 'Teen/Adult rank 7', 6, 7500, 8500, 10000, true),
-    ('0fd088cf-f98e-48ba-a9b4-ebb98a02d8c8', '15f562cf-42b2-407a-aacd-159db14df290', 'shrewsbury', 'Teen/Adult rank 8', 7, 7500, 8500, 10000, true),
-    ('ba424442-76ad-4c09-89ce-4f36f651e807', '15f562cf-42b2-407a-aacd-159db14df290', 'shrewsbury', 'Teen/Adult rank 9', 8, 7500, 8500, 10000, true),
-    ('d58586e5-75a4-4d39-b6d0-74bcd9f19f6a', '15f562cf-42b2-407a-aacd-159db14df290', 'shrewsbury', 'Teen/Adult rank 10', 9, 7500, 8500, 10000, true),
-    ('48172c13-82c7-42d5-ba7a-23416471f178', '15f562cf-42b2-407a-aacd-159db14df290', 'shrewsbury', 'Teen/Adult rank 11', 10, 7500, 8500, 10000, true),
-    ('f97961d5-89cc-43d2-b1c1-3437c31c47cc', '15f562cf-42b2-407a-aacd-159db14df290', 'shrewsbury', 'Teen/Adult rank 12', 11, 7500, 8500, 10000, true),
-    ('697e0f45-c587-4c50-be75-ed94fd75fcef', '15f562cf-42b2-407a-aacd-159db14df290', 'shrewsbury', 'Teen/Adult rank 13', 12, 7500, 8500, 10000, true),
-    ('c04ee52a-2210-4650-a163-a621ed9036a0', '15f562cf-42b2-407a-aacd-159db14df290', 'shrewsbury', 'Teen/Adult rank 14', 13, 7500, 8500, 10000, true),
-    ('719b37b2-f25c-48c8-99e5-4ac5fe44c416', '15f562cf-42b2-407a-aacd-159db14df290', 'shrewsbury', 'Teen/Adult rank 15', 14, 7500, 8500, 10000, true),
-    ('d3b4bc27-4136-4df4-a3d9-97381d58cfa9', '15f562cf-42b2-407a-aacd-159db14df290', 'shrewsbury', 'Teen/Adult rank 16', 15, 7500, 8500, 10000, true),
-    ('0bf604a9-df9b-4f3e-b7d2-7855965ca1db', '15f562cf-42b2-407a-aacd-159db14df290', 'shrewsbury', 'Teen/Adult rank 17', 16, 7500, 8500, 10000, true),
-    ('fa9a2b97-07ff-4f09-87ed-30c50f19c857', '15f562cf-42b2-407a-aacd-159db14df290', 'shrewsbury', 'Teen/Adult rank 18', 17, 7500, 8500, 10000, true);
+    (id, class_id, location_code, name, position, early_cents, day_cents, private_cents, sparring_gear,
+     belt_pattern, belt_color, belt_color_2, belt_end_stripes, belt_end_stripe_color) values
+    ('ff1d809a-fabc-4bbe-80e0-6d9f5604d164', '5e888977-6522-4f83-bd9d-90d994c040ce', 'shrewsbury', 'LT White', 0, 5000, 6000, 7000, false, 'solid', 'white', null, 0, 'yellow'),
+    ('24558c22-6e2d-487d-bdf4-8a66a6f2d87d', '5e888977-6522-4f83-bd9d-90d994c040ce', 'shrewsbury', 'LT Yellow', 1, 5000, 6000, 7000, false, 'stripe', 'white', 'yellow', 0, 'yellow'),
+    ('0ef921b7-af8e-4339-825c-f02340f1349b', '5e888977-6522-4f83-bd9d-90d994c040ce', 'shrewsbury', 'LT Green', 2, 5000, 6000, 7000, false, 'stripe', 'white', 'green', 0, 'yellow'),
+    ('800a7e08-e856-4abc-87fa-3a3f578734f3', '5e888977-6522-4f83-bd9d-90d994c040ce', 'shrewsbury', 'LT Blue', 3, 5000, 6000, 7000, false, 'stripe', 'white', 'blue', 0, 'yellow'),
+    ('506a41d5-d5fa-4578-b79f-646e011ad436', '5e888977-6522-4f83-bd9d-90d994c040ce', 'shrewsbury', 'LT Red', 4, 5000, 6000, 7000, false, 'stripe', 'white', 'red', 0, 'yellow'),
+    ('1acf00d9-8362-49f3-9658-a77632f48353', '5e888977-6522-4f83-bd9d-90d994c040ce', 'shrewsbury', 'LT Black', 5, 5000, 6000, 7000, false, 'stripe', 'white', 'black', 0, 'yellow'),
+    ('3b302f75-191b-46d5-9476-76e658e7add4', '9c90f12f-cf75-4fc2-b00a-ffd88c516abf', 'shrewsbury', 'White', 0, 6500, 7500, 8500, false, 'solid', 'white', null, 0, 'yellow'),
+    ('6fd31e25-55bc-4c8b-8960-191a79e49862', '08787325-a0bf-4467-9af2-662f9af98d83', 'shrewsbury', 'Yellow', 0, 6500, 7500, 8500, false, 'solid', 'yellow', null, 0, 'yellow'),
+    ('6c969577-4528-4d40-b259-a2735a1609b7', '08787325-a0bf-4467-9af2-662f9af98d83', 'shrewsbury', 'Orange', 1, 6500, 7500, 8500, false, 'solid', 'orange', null, 0, 'yellow'),
+    ('ffa3864f-f6ac-4dc8-b161-65ed0634ed2e', '08787325-a0bf-4467-9af2-662f9af98d83', 'shrewsbury', 'Green', 2, 6500, 7500, 8500, false, 'solid', 'green', null, 0, 'yellow'),
+    ('5eb8e6f1-16f1-408d-96a4-4c0e3fbb60ac', '08787325-a0bf-4467-9af2-662f9af98d83', 'shrewsbury', 'High Green', 3, 6500, 7500, 8500, false, 'stripe', 'green', 'white', 0, 'yellow'),
+    ('cf4f7bf8-9c16-4cee-b4c2-33ce1a7c2fb8', '0250f924-90d1-4a95-8986-b55c70b8a1b0', 'shrewsbury', 'Blue', 0, 7000, 8000, 9500, true, 'solid', 'blue', null, 0, 'yellow'),
+    ('7765c9de-745f-4007-9503-3eea6bbbe5a0', '0250f924-90d1-4a95-8986-b55c70b8a1b0', 'shrewsbury', 'High Blue', 1, 7000, 8000, 9500, true, 'stripe', 'blue', 'white', 0, 'yellow'),
+    ('232e8931-6670-4a43-abaa-c981dc033722', '0250f924-90d1-4a95-8986-b55c70b8a1b0', 'shrewsbury', 'Purple', 2, 7000, 8000, 9500, true, 'solid', 'purple', null, 0, 'yellow'),
+    ('4bd0e2c4-fbd4-4bb8-bce9-5c3eea74f985', '0250f924-90d1-4a95-8986-b55c70b8a1b0', 'shrewsbury', 'Red', 3, 7000, 8000, 9500, true, 'solid', 'red', null, 0, 'yellow'),
+    ('b26e3335-3657-401f-947d-4dd49c38a788', 'd575bba4-3888-4b98-929c-d94ee0ef6acf', 'shrewsbury', 'High Red', 0, 7500, 8500, 10000, true, 'stripe', 'red', 'white', 0, 'yellow'),
+    ('1efe9fe9-52af-4a5b-93ab-ccc9bfc3a895', 'd575bba4-3888-4b98-929c-d94ee0ef6acf', 'shrewsbury', 'Group C rank 2', 1, 7500, 8500, 10000, true, 'solid', 'brown', null, 0, 'yellow'),
+    ('18bddad6-72ef-4185-b7dd-ca7bff3cc5b1', 'd575bba4-3888-4b98-929c-d94ee0ef6acf', 'shrewsbury', 'Group C rank 3', 2, 7500, 8500, 10000, true, 'stripe', 'brown', 'white', 0, 'yellow'),
+    ('fc4f786a-7497-404d-af91-b7dcbd90c725', 'd575bba4-3888-4b98-929c-d94ee0ef6acf', 'shrewsbury', 'Group C rank 4', 3, 7500, 8500, 10000, true, 'half', 'red', 'black', 0, 'yellow'),
+    ('15c2e28e-edf3-4033-b68a-ccb27cae5c25', '49e1ad6a-d7ec-44b1-9e6d-fa2771296671', 'shrewsbury', 'Bo Dan', 0, 8000, 9000, 11000, true, 'stripe', 'black', 'white', 0, 'yellow'),
+    ('70625770-2879-4f81-9ff2-d7ea9007efdd', '49e1ad6a-d7ec-44b1-9e6d-fa2771296671', 'shrewsbury', 'Group D rank 2', 1, 8000, 9000, 11000, true, 'stripe', 'black', 'white', 1, 'yellow'),
+    ('94c7b14d-7dca-4fe4-8938-d853cc4154d0', '49e1ad6a-d7ec-44b1-9e6d-fa2771296671', 'shrewsbury', 'Group D rank 3', 2, 8000, 9000, 11000, true, 'stripe', 'black', 'white', 2, 'yellow'),
+    ('18f25b48-084c-4475-8fcc-a69d5df6fd85', '49e1ad6a-d7ec-44b1-9e6d-fa2771296671', 'shrewsbury', 'Group D rank 4', 3, 8000, 9000, 11000, true, 'stripe', 'black', 'white', 3, 'yellow'),
+    ('a86c105d-9791-4fc7-98b5-ef493afe2b22', '49e1ad6a-d7ec-44b1-9e6d-fa2771296671', 'shrewsbury', 'Group D rank 5', 4, 8000, 9000, 11000, true, 'stripe', 'black', 'yellow', 0, 'yellow'),
+    ('0b19291d-1769-4258-9e00-fa6c8be9a36c', 'b8b85f28-ad1a-4e71-93d9-230acd807220', 'shrewsbury', 'Teen/Adult rank 1', 0, 7500, 8500, 10000, true, 'solid', 'white', null, 0, 'yellow'),
+    ('1b4bc63a-cfc0-450b-8ce7-75130500a24c', 'b8b85f28-ad1a-4e71-93d9-230acd807220', 'shrewsbury', 'Teen/Adult rank 2', 1, 7500, 8500, 10000, true, 'solid', 'yellow', null, 0, 'yellow'),
+    ('498b14df-d54e-4b48-a6e8-a089945cdc90', 'b8b85f28-ad1a-4e71-93d9-230acd807220', 'shrewsbury', 'Teen/Adult rank 3', 2, 7500, 8500, 10000, true, 'solid', 'orange', null, 0, 'yellow'),
+    ('29f1c92a-5135-4a3f-8abf-0a3765bb253b', 'b8b85f28-ad1a-4e71-93d9-230acd807220', 'shrewsbury', 'Teen/Adult rank 4', 3, 7500, 8500, 10000, true, 'solid', 'green', null, 0, 'yellow'),
+    ('06f45a01-cd25-4a9b-ba90-cc477b540b22', 'b8b85f28-ad1a-4e71-93d9-230acd807220', 'shrewsbury', 'Teen/Adult rank 5', 4, 7500, 8500, 9000, true, 'stripe', 'green', 'white', 0, 'yellow'),
+    ('e93b6f5e-51f5-49de-9490-6552fedc2ff2', 'b8b85f28-ad1a-4e71-93d9-230acd807220', 'shrewsbury', 'Teen/Adult rank 6', 5, 7500, 8500, 10000, true, 'solid', 'blue', null, 0, 'yellow'),
+    ('3abc94a1-13a6-4ba5-ab32-bd201c454fa7', 'b8b85f28-ad1a-4e71-93d9-230acd807220', 'shrewsbury', 'Teen/Adult rank 7', 6, 7500, 8500, 10000, true, 'stripe', 'blue', 'white', 0, 'yellow'),
+    ('0f563cc1-8a10-42d3-852e-ed0637061d91', 'b8b85f28-ad1a-4e71-93d9-230acd807220', 'shrewsbury', 'Teen/Adult rank 8', 7, 7500, 8500, 10000, true, 'solid', 'purple', null, 0, 'yellow'),
+    ('29c79ef6-5548-4753-928f-f2afb0e4e67a', 'b8b85f28-ad1a-4e71-93d9-230acd807220', 'shrewsbury', 'Teen/Adult rank 9', 8, 7500, 8500, 10000, true, 'solid', 'red', null, 0, 'yellow'),
+    ('c28c2751-49d7-4581-9dff-1285c4899819', 'b8b85f28-ad1a-4e71-93d9-230acd807220', 'shrewsbury', 'Teen/Adult rank 10', 9, 7500, 8500, 10000, true, 'stripe', 'red', 'white', 0, 'yellow'),
+    ('ef00a255-b450-446c-a552-b3847d52336c', 'b8b85f28-ad1a-4e71-93d9-230acd807220', 'shrewsbury', 'Teen/Adult rank 11', 10, 7500, 8500, 10000, true, 'solid', 'brown', null, 0, 'yellow'),
+    ('eaf8e777-5b0d-45ff-bc80-d87fd95e4f9f', 'b8b85f28-ad1a-4e71-93d9-230acd807220', 'shrewsbury', 'Teen/Adult rank 12', 11, 7500, 8500, 10000, true, 'stripe', 'brown', 'white', 0, 'yellow'),
+    ('2030db90-e9c0-46fd-9beb-3e5b5f155d43', 'b8b85f28-ad1a-4e71-93d9-230acd807220', 'shrewsbury', 'Teen/Adult rank 13', 12, 7500, 8500, 10000, true, 'half', 'red', 'black', 0, 'yellow'),
+    ('17666829-ef55-4528-9e86-ce8567db4ab7', 'b8b85f28-ad1a-4e71-93d9-230acd807220', 'shrewsbury', 'Teen/Adult rank 14', 13, 7500, 8500, 10000, true, 'stripe', 'black', 'white', 0, 'yellow'),
+    ('6505ae76-92d1-4d4c-8d4a-e24cbe183a6f', 'b8b85f28-ad1a-4e71-93d9-230acd807220', 'shrewsbury', 'Teen/Adult rank 15', 14, 7500, 8500, 10000, true, 'stripe', 'black', 'white', 1, 'yellow'),
+    ('eea65faf-a681-4268-aa7c-8b20c3735113', 'b8b85f28-ad1a-4e71-93d9-230acd807220', 'shrewsbury', 'Teen/Adult rank 16', 15, 7500, 8500, 10000, true, 'stripe', 'black', 'white', 2, 'yellow'),
+    ('347c7f88-c7c0-4dbb-9394-fcb007c3db1f', 'b8b85f28-ad1a-4e71-93d9-230acd807220', 'shrewsbury', 'Teen/Adult rank 17', 16, 7500, 8500, 10000, true, 'stripe', 'black', 'white', 3, 'yellow'),
+    ('0ebe1d49-2f80-4fc1-b80c-845ea2f6f562', 'b8b85f28-ad1a-4e71-93d9-230acd807220', 'shrewsbury', 'Teen/Adult rank 18', 17, 7500, 8500, 10000, true, 'stripe', 'black', 'yellow', 0, 'yellow');
 
   -- Final awards. None (set above): Group D, Teen/Adult.
   -- Little Tiger -> Yellow (Group A)
-  update public.testing_classes set final_award_rank_id = '62bd2805-2bfe-43bc-8259-bb97583e6111' where id = 'e50c3d6b-513e-4640-a099-8fd560e00eb0';
+  update public.testing_classes set final_award_rank_id = '6fd31e25-55bc-4c8b-8960-191a79e49862' where id = '5e888977-6522-4f83-bd9d-90d994c040ce';
   -- White -> Yellow (Group A)
-  update public.testing_classes set final_award_rank_id = '62bd2805-2bfe-43bc-8259-bb97583e6111' where id = '10ea0f09-c19f-48f6-9675-98bb097b15f6';
+  update public.testing_classes set final_award_rank_id = '6fd31e25-55bc-4c8b-8960-191a79e49862' where id = '9c90f12f-cf75-4fc2-b00a-ffd88c516abf';
   -- Group A -> Blue (Group B)
-  update public.testing_classes set final_award_rank_id = 'ed14ff7c-ba1b-4876-a3d4-4932dfb922e1' where id = '18d3ebdb-e565-4df4-a404-1461526d83b5';
+  update public.testing_classes set final_award_rank_id = 'cf4f7bf8-9c16-4cee-b4c2-33ce1a7c2fb8' where id = '08787325-a0bf-4467-9af2-662f9af98d83';
   -- Group B -> High Red (Group C)
-  update public.testing_classes set final_award_rank_id = '7559fa45-e083-47f4-803c-5887df6e5cd0' where id = '4d58fd0a-75b4-4986-a231-c5c93b6b6d4c';
+  update public.testing_classes set final_award_rank_id = 'b26e3335-3657-401f-947d-4dd49c38a788' where id = '0250f924-90d1-4a95-8986-b55c70b8a1b0';
   -- Group C -> Bo Dan (Group D)
-  update public.testing_classes set final_award_rank_id = 'a96c328b-0ffa-4540-9396-f84e82d94709' where id = 'a6a4c686-4c6f-4799-9c6e-36408aacbe54';
+  update public.testing_classes set final_award_rank_id = '15c2e28e-edf3-4033-b68a-ccb27cae5c25' where id = 'd575bba4-3888-4b98-929c-d94ee0ef6acf';
 end
 $seed$;
 

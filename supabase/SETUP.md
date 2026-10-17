@@ -321,10 +321,11 @@ select count(*) from auth.sessions;
 ## 10. Migration 0003: Testing → Classes and ranks
 
 **What it does** (`supabase/migrations/0003_testing_classes_ranks.sql`):
-- **Four new tables:** `locations` (the two schools), `testing_classes`, `testing_ranks` (prices in cents, sparring gear), and `change_log`, an **append-only history** of every change for the whole dashboard (who, when, which app action, old and new values).
+- **Four new tables:** `locations` (the two schools), `testing_classes`, `testing_ranks` (prices in cents, sparring gear, and the rank's **belt**: five `belt_*` columns, see below), and `change_log`, an **append-only history** of every change for the whole dashboard (who, when, which app action, old and new values).
 - **Reading:** any active staff member whose session is **unlocked** (`has_data_access()` from 0002) can read classes and ranks for both schools. A locked, PIN-locked, signed-out, magic-link or 8-day-old session sees nothing. Nobody in the app can read `change_log`, or the login ids in `created_by` / `updated_by`. The `service_role` (secret key) gets **nothing** on these tables and functions either, because the app never uses it.
 - **Changing:** only admins, and only through 8 database functions (`testing_add_class`, `testing_update_class`, `testing_reorder_classes`, `testing_delete_class`, `testing_add_rank`, `testing_update_rank`, `testing_reorder_ranks`, `testing_delete_rank`). Nobody can write to the tables directly. Each function checks the session first, then the admin role, then the input, then that nothing changed since the screen loaded ("stale").
 - **Final award, three states** (v0.62): a **rank** (what students get after the class's last rank), **None** (the last rank doesn't promote, on purpose, e.g. Group D and Teen/Adult whose last rank is Dan-testing practice), or **Not set** (not decided yet; the app shows an amber reminder). The database refuses "a rank and None" at the same time.
+- **Belts** (v0.64/v0.65): each rank stores what its belt looks like, for the small belt picture: `belt_pattern` (`solid`, `stripe` = a middle stripe, `half` = top/bottom halves), `belt_color`, `belt_color_2` (the stripe or bottom half; empty for solid, never the same as `belt_color`), `belt_end_stripes` (0–3) and `belt_end_stripe_color` (always set, default `yellow`, even with 0 end stripes). Colors come from a fixed list of 9 (white, yellow, orange, green, blue, purple, red, brown, black). One table rule (`testing_ranks_belt_check`, using the helper `testing_belt_is_valid`) refuses any other belt, and the two rank functions answer `invalid` for one — the same rules as the app's `belts.js`. Ranks that existed before the belt columns get a plain white belt. Changing only the belt counts as a change (new version, history row).
 - **Automatic bookkeeping** (triggers): version numbers, "Last changed by", the history rows, and the rules that a class can't change school, a rank can't change class, and a final award can't be one of the class's own ranks. The class and rank tables also refuse `TRUNCATE` (emptying a table in one go), because that would skip the history.
 - **One change at a time per school:** every change function locks its school first, so two admins saving at the same moment simply take turns (no "deadlocks").
 
@@ -346,7 +347,7 @@ select count(*) from auth.sessions;
 Claude runs these and reports the results. None of them change anything.
 1. `select version();` must say **PostgreSQL 15 or newer** (production is 17). The final-award rule `on delete set null (final_award_rank_id)` needs 15+.
 2. **List tables:** `locations`, `testing_classes`, `testing_ranks`, `change_log` exist, each with RLS enabled.
-3. **Fingerprints:** run `supabase/tests/0003_fingerprints.sql`. It lists all 18 functions with their arguments, code fingerprint (md5), security-definer flag, settings, owner and who may call them. Every line must match exactly what `supabase/tests/pglite/run.mjs` printed for the tested copy. A match means production has exactly the code and call rights that passed the tests.
+3. **Fingerprints:** run `supabase/tests/0003_fingerprints.sql`. It lists all 19 functions with their arguments, code fingerprint (md5), security-definer flag, settings, owner and who may call them. Every line must match exactly what `supabase/tests/pglite/run.mjs` printed for the tested copy. A match means production has exactly the code and call rights that passed the tests.
 4. **Security advisor** (`get_advisors`, security). These notices are **expected**, by design:
    - "RLS enabled, no policy" (INFO) on `public.change_log`: nobody in the app may read it.
    - "Security definer function executable by authenticated" (or similar) for the 8 `testing_*` app functions: they are the only way to write, and each checks access and admin role itself. The same applies to the 0001/0002 functions the app calls.
@@ -364,7 +365,7 @@ The test creates its own classes named `zz test …` and rolls them back, so it 
 
 ### 10d. The seed: copying the classes and ranks in (later, separate OK)
 
-The real list (7 classes, 42 ranks per school) is copied from the old Color Belt project with `supabase/manual/0003s_seed_classes_and_ranks.sql`. It is generated by `make_seed.mjs`. **Don't run it as part of 0003.** It needs its own OK, after you've checked the review table Claude shows you (names, order, prices, sparring, final awards).
+The real list (7 classes, 42 ranks per school) is copied from the old Color Belt project with `supabase/manual/0003s_seed_classes_and_ranks.sql`. It is generated by `make_seed.mjs`. **Don't run it as part of 0003.** It needs its own OK, after you've checked the review table Claude shows you (names, order, prices, sparring, final awards, and each rank's belt in plain English).
 - Run it the same way (SQL Editor, whole file). It skips any school that already has classes, so running it twice adds nothing.
 - Afterwards, run `0003_tests.sql` again (10c).
 - In the history its rows show as action `seed` by "Initial copy from the old system".
@@ -384,8 +385,8 @@ drop function if exists public.testing_add_class(text, text, uuid, boolean);
 drop function if exists public.testing_update_class(uuid, integer, text, uuid, boolean);
 drop function if exists public.testing_reorder_classes(text, uuid[], uuid[]);
 drop function if exists public.testing_delete_class(uuid, integer, uuid[], uuid[], boolean);
-drop function if exists public.testing_add_rank(uuid, text, integer, integer, integer, boolean);
-drop function if exists public.testing_update_rank(uuid, integer, text, integer, integer, integer, boolean);
+drop function if exists public.testing_add_rank(uuid, text, integer, integer, integer, boolean, text, text, text, integer, text);
+drop function if exists public.testing_update_rank(uuid, integer, text, integer, integer, integer, boolean, text, text, text, integer, text);
 drop function if exists public.testing_reorder_ranks(uuid, uuid[], uuid[]);
 drop function if exists public.testing_delete_rank(uuid, integer, integer, uuid[], uuid[]);
 
@@ -400,6 +401,7 @@ drop function if exists public.testing_normalize_name(text);
 drop function if exists public.testing_name_is_valid(text);
 drop function if exists public.testing_cents_is_valid(integer);
 drop function if exists public.testing_ids_are_valid(uuid[]);
+drop function if exists public.testing_belt_is_valid(text, text, text, integer, text);
 drop function if exists public.testing_refuse_truncate();
 
 -- the schools lookup

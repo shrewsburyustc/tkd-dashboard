@@ -37,7 +37,8 @@
 //   number of cents, negative, over $1,000 or not whole dollars; an invalid
 //   name; duplicate class names (ignoring capital letters) or duplicate rank
 //   names inside one class; a name containing "de" + "lete" or "dr" + "op"
-//   (the Supabase connection cancels any SQL containing those words).
+//   (the Supabase connection cancels any SQL containing those words); a rank
+//   name with no belt in RANK_BELTS, or a belt that breaks the belt rules.
 //   Warnings (shown in the table, SQL still written): a name that had extra
 //   spaces cleaned up; a rank whose old "next rank" isn't the rank after it.
 //
@@ -62,12 +63,27 @@
 //   the export's, so fixture changes can't leak into the real seed.
 //   The review table lists them under ADJUSTMENTS (approved) and marks each
 //   changed cell with " *".
+//
+// BELTS (amended v0.64 — contract 0003 §6.3, the "Belts" line)
+//   The old system has no belt pictures, so the export has no belt data.
+//   Each rank's belt comes from ONE map in this file (RANK_BELTS, below),
+//   looked up by the rank's cleaned-up name — the same belts the preview
+//   uses (src/lib/mockTesting.js). A rank name that is NOT in the map is a
+//   hard error (the real export decides the names; a new or renamed rank
+//   must get its belt added here on purpose, never a silent default).
+//   Every belt is checked with validateBelt from src/lib/testing/belts.js —
+//   the same rules the screens, the preview and the database use. The
+//   review table shows each belt in plain English (describeBelt) so it can
+//   be checked by eye. A FIXTURE export also uses FIXTURE_RANK_ALIASES (its
+//   made-up names like "Group C rank 2" borrow a real rank's belt).
 // =====================================================================
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+// The app's own belt rules (a plain file in this repo, not an npm package).
+import { validateBelt, describeBelt, DEFAULT_END_STRIPE_COLOR } from '../../src/lib/testing/belts.js';
 
 // ---------------------------------------------------------------------
 // Constants
@@ -89,6 +105,93 @@ const SCHOOLS = [
 // matters is that the SQL OUTPUT never contains them.
 const FORBIDDEN_WORDS = ['de' + 'lete', 'dr' + 'op'];
 const FORBIDDEN_RE = new RegExp(FORBIDDEN_WORDS.join('|'), 'i');
+
+// ---------------------------------------------------------------------
+// Belts — THE one place that says which belt each rank gets
+// (contract 0003 §6.3 "Belts" line; same values as src/lib/mockTesting.js).
+// ---------------------------------------------------------------------
+
+/**
+ * One belt in belts.js form. pattern: 'solid' | 'stripe' | 'half';
+ * color = the main color ('half': the TOP half); color2 = the middle stripe
+ * ('stripe') or the BOTTOM half ('half'), null for 'solid'; endStripes =
+ * 0–3 short stripes near the end. The end-stripe color is always yellow.
+ */
+function belt(pattern, color, color2 = null, endStripes = 0) {
+  return Object.freeze({
+    beltPattern: pattern,
+    beltColor: color,
+    beltColor2: color2,
+    beltEndStripes: endStripes,
+    beltEndStripeColor: DEFAULT_END_STRIPE_COLOR, // 'yellow'
+  });
+}
+
+// Rank name (after spaces are cleaned up; exact spelling) -> belt.
+// Both schools get the same belts, and a rank name means the same belt in
+// every class (Teen/Adult's "Blue" is the kids' "Blue").
+//   LT ...   = white with a colored middle stripe (LT White is plain white)
+//   High ... = the color with a white middle stripe
+//   Bo Dan   = black with a white middle stripe; "N Big Stripe" adds N
+//              yellow end stripes
+const RANK_BELTS = Object.freeze({
+  'LT White': belt('solid', 'white'),
+  'LT Yellow': belt('stripe', 'white', 'yellow'),
+  'LT Green': belt('stripe', 'white', 'green'),
+  'LT Blue': belt('stripe', 'white', 'blue'),
+  'LT Red': belt('stripe', 'white', 'red'),
+  'LT Black': belt('stripe', 'white', 'black'),
+  'White': belt('solid', 'white'),
+  'Yellow': belt('solid', 'yellow'),
+  'Orange': belt('solid', 'orange'),
+  'Green': belt('solid', 'green'),
+  'High Green': belt('stripe', 'green', 'white'),
+  'Blue': belt('solid', 'blue'),
+  'High Blue': belt('stripe', 'blue', 'white'),
+  'Purple': belt('solid', 'purple'),
+  'Red': belt('solid', 'red'),
+  'High Red': belt('stripe', 'red', 'white'),
+  'Brown': belt('solid', 'brown'),
+  'High Brown': belt('stripe', 'brown', 'white'),
+  'Red / Black': belt('half', 'red', 'black'), // top half red, bottom half black
+  'Bo Dan': belt('stripe', 'black', 'white'),
+  'Bo Dan - 1 Big Stripe': belt('stripe', 'black', 'white', 1),
+  'Bo Dan - 2 Big Stripe': belt('stripe', 'black', 'white', 2),
+  'Bo Dan - 3 Big Stripe': belt('stripe', 'black', 'white', 3),
+  'Deputy': belt('stripe', 'black', 'yellow'),
+});
+
+// FIXTURE ONLY ("fixture": true). The fixture export uses made-up names for
+// some ranks; each borrows the belt of the real rank in the same place, so
+// the fixture seed has the same belts as the real one. Never used for a
+// real export (there, an unknown name must stop the script).
+const FIXTURE_RANK_ALIASES = Object.freeze({
+  'Group C rank 2': 'Brown',
+  'Group C rank 3': 'High Brown',
+  'Group C rank 4': 'Red / Black',
+  'Group D rank 2': 'Bo Dan - 1 Big Stripe',
+  'Group D rank 3': 'Bo Dan - 2 Big Stripe',
+  'Group D rank 4': 'Bo Dan - 3 Big Stripe',
+  'Group D rank 5': 'Deputy',
+  'Teen/Adult rank 1': 'White',
+  'Teen/Adult rank 2': 'Yellow',
+  'Teen/Adult rank 3': 'Orange',
+  'Teen/Adult rank 4': 'Green',
+  'Teen/Adult rank 5': 'High Green',
+  'Teen/Adult rank 6': 'Blue',
+  'Teen/Adult rank 7': 'High Blue',
+  'Teen/Adult rank 8': 'Purple',
+  'Teen/Adult rank 9': 'Red',
+  'Teen/Adult rank 10': 'High Red',
+  'Teen/Adult rank 11': 'Brown',
+  'Teen/Adult rank 12': 'High Brown',
+  'Teen/Adult rank 13': 'Red / Black',
+  'Teen/Adult rank 14': 'Bo Dan',
+  'Teen/Adult rank 15': 'Bo Dan - 1 Big Stripe',
+  'Teen/Adult rank 16': 'Bo Dan - 2 Big Stripe',
+  'Teen/Adult rank 17': 'Bo Dan - 3 Big Stripe',
+  'Teen/Adult rank 18': 'Deputy',
+});
 
 // ---------------------------------------------------------------------
 // Name rules — an exact copy of contract §1.5 (same as the database's
@@ -164,6 +267,15 @@ function textTable(header, rows, indent = '  ') {
   const line = (r) => indent + r.map((c, i) => pad(c, widths[i])).join('  ').trimEnd();
   const rule = indent + widths.map((w) => '-'.repeat(w)).join('  ');
   return [line(header), rule, ...rows.map(line)].join('\n');
+}
+
+/**
+ * sha256 of a file, with Windows line endings (CR LF) counted as plain LF —
+ * so the same file gives the same fingerprint on every computer, however
+ * git checked it out (git stores these files with LF).
+ */
+function fileSha256(buffer) {
+  return createHash('sha256').update(buffer.toString('utf8').replace(/\r\n/g, '\n')).digest('hex');
 }
 
 function fail(message) {
@@ -343,6 +455,42 @@ function validateExport(data, opts) {
   }
 
   return { classes, errors, warnings };
+}
+
+// ---------------------------------------------------------------------
+// 2b. Give every rank its belt (rules in "BELTS" at the top of this file).
+//     Sets rank.belt; returns a list of hard errors (a name with no belt,
+//     or a belt that breaks the belts.js rules).
+// ---------------------------------------------------------------------
+function assignBelts(data, classes) {
+  const errors = [];
+  for (const c of classes) {
+    for (const r of c.ranks) {
+      r.belt = null;
+      if (!r.name) continue; // a bad name is already a hard error
+      let key = r.name;
+      if (data.fixture === true && Object.hasOwn(FIXTURE_RANK_ALIASES, key)) key = FIXTURE_RANK_ALIASES[key];
+      if (!Object.hasOwn(RANK_BELTS, key)) {
+        errors.push(`${c.name} > ${show(r.name)}: no belt for this rank name — add it to RANK_BELTS in make_seed.mjs (contract 0003 §6.3)`);
+        continue;
+      }
+      const b = RANK_BELTS[key];
+      const problem = validateBelt(b);
+      if (problem !== null) {
+        errors.push(`${c.name} > ${show(r.name)}: its belt breaks the belt rules (${problem}) — fix RANK_BELTS in make_seed.mjs`);
+        continue;
+      }
+      r.belt = b;
+    }
+  }
+  return errors;
+}
+
+/** SQL values for the five belt columns, in the insert's column order. */
+function beltSql(b) {
+  return `${sqlText(b.beltPattern)}, ${sqlText(b.beltColor)}, ` +
+    `${b.beltColor2 === null ? 'null' : sqlText(b.beltColor2)}, ` +
+    `${b.beltEndStripes}, ${sqlText(b.beltEndStripeColor)}`;
 }
 
 // ---------------------------------------------------------------------
@@ -547,11 +695,12 @@ function reviewTable(data, classes, generalWarnings, meta) {
       out.push('  (no ranks)');
     } else {
       out.push(textTable(
-        ['Pos', 'Old pos', 'Rank', 'Early', 'Test day', 'Private', 'Sparring', 'Old next rank', 'Warning'],
+        ['Pos', 'Old pos', 'Rank', 'Early', 'Test day', 'Private', 'Sparring', 'Belt', 'Old next rank', 'Warning'],
         c.ranks.map((r, ri) => [
           String(ri), String(r.oldPosition), r.name || show(r.rawName),
           price(r, 'earlyCents'), price(r, 'dayCents'), price(r, 'privateCents'),
           r.sparringGear === true ? 'Yes' : r.sparringGear === false ? 'No' : show(r.sparringGear),
+          r.belt ? describeBelt(r.belt) : '(NO BELT — see errors)',
           typeof r.nextRank === 'string' ? r.nextRank : '(none)',
           r.warnings.join('; '),
         ]),
@@ -638,6 +787,12 @@ function buildSql(data, classes, meta) {
     '--   * final_award_none = true means "None": the class\'s last rank does',
     '--     not promote, on purpose (e.g. Deputy is practice for Dan testing).',
     '--     false with no rank = "Not set" (still to be decided).',
+    '--   * Belts (the five belt_* columns of each rank): belt_pattern is',
+    '--     solid, stripe or half; belt_color is the main color (half: the top',
+    '--     half); belt_color_2 is the middle stripe (stripe) or the bottom half',
+    '--     (half), null for solid; belt_end_stripes is 0-3 short stripes near',
+    '--     the end, in belt_end_stripe_color (yellow). The belts come from',
+    '--     RANK_BELTS in make_seed.mjs (contract 0003 §6.3).',
     '-- =====================================================================',
     '',
     'begin;',
@@ -686,15 +841,17 @@ function buildSql(data, classes, meta) {
       c.ranks.forEach((r, ri) => {
         rankRows.push(
           `    ('${rankIds[i][ri]}', '${classIds[i]}', ${loc}, ${sqlText(r.name)}, ${ri}, ` +
-          `${r.earlyCents}, ${r.dayCents}, ${r.privateCents}, ${r.sparringGear})`,
+          `${r.earlyCents}, ${r.dayCents}, ${r.privateCents}, ${r.sparringGear}, ${beltSql(r.belt)})`,
         );
       });
     });
     if (rankRows.length > 0) {
       L.push(
-        '  -- Ranks (positions 0, 1, 2 … inside each class; prices in cents).',
+        '  -- Ranks (positions 0, 1, 2 … inside each class; prices in cents;',
+        '  -- then the belt: pattern, color, color 2, end stripes, end-stripe color).',
         '  insert into public.testing_ranks',
-        '    (id, class_id, location_code, name, position, early_cents, day_cents, private_cents, sparring_gear) values',
+        '    (id, class_id, location_code, name, position, early_cents, day_cents, private_cents, sparring_gear,',
+        '     belt_pattern, belt_color, belt_color_2, belt_end_stripes, belt_end_stripe_color) values',
         rankRows.join(',\n') + ';',
         '',
       );
@@ -776,7 +933,7 @@ function main() {
   const meta = {
     inputLabel: label(opts.input),
     outLabel: path.basename(outPath),
-    sha256: createHash('sha256').update(raw).digest('hex'),
+    sha256: fileSha256(raw),
     generatedAt: new Date().toISOString(),
     batchId: randomUUID(), // one per file
     adjustLabel: null, // set below when adjustments are used
@@ -792,6 +949,7 @@ function main() {
   }
 
   const { classes, errors, warnings } = validateExport(data, opts);
+  errors.push(...assignBelts(data, classes)); // every rank needs a known, valid belt
   resolveFinalAwards(classes);
 
   // Approved adjustments: only applied to an export that passed every check.
@@ -805,7 +963,7 @@ function main() {
       fail(`can't read adjustments ${opts.adjustments}: ${e.message}`);
     }
     meta.adjustLabel = label(opts.adjustments);
-    meta.adjustSha256 = createHash('sha256').update(adjRaw).digest('hex');
+    meta.adjustSha256 = fileSha256(adjRaw);
     if (errors.length === 0) {
       const result = applyAdjustments(adj, data, classes);
       meta.adjustments = result.list;
