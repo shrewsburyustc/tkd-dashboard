@@ -344,8 +344,11 @@ begin
      and after = jsonb_build_object('password', 'reset', 'devices_signed_out', 3);
   if v_count <> 1 then raise exception 'TEST FAILED: 6o expected one change_log row for the reset, found %', v_count; end if;
   if (select count(*) from public.change_log) <> v_log + 1 then raise exception 'TEST FAILED: 6p expected exactly one new change_log row'; end if;
+  -- (only the rows THIS test wrote - by the throwaway caller - are searched: older history,
+  -- e.g. the seed, is full of random ids that could match a short text by chance)
   select count(*) into v_count from public.change_log
-   where coalesce(before::text, '') || coalesce(after::text, '') like '%' || v_pw_new || '%';
+   where actor_id = v_a
+     and coalesce(before::text, '') || coalesce(after::text, '') like '%' || v_pw_new || '%';
   if v_count <> 0 then raise exception 'TEST FAILED: 6q the password appears in change_log'; end if;
   set local role authenticated;
 
@@ -388,7 +391,10 @@ begin
   if (select count(*) from public.change_log where action = 'admin_reset_pin' and record_id = v_s and actor_id = v_a
                                                and after = jsonb_build_object('pin', 'reset')) <> 1 then
     raise exception 'TEST FAILED: 8e the PIN reset was not logged as {"pin":"reset"}'; end if;
-  if (select count(*) from public.change_log where coalesce(before::text, '') || coalesce(after::text, '') like '%4719%') <> 0 then
+  -- (only this test's own rows - see 6q)
+  if (select count(*) from public.change_log
+       where actor_id = v_a
+         and coalesce(before::text, '') || coalesce(after::text, '') like '%4719%') <> 0 then
     raise exception 'TEST FAILED: 8f the PIN digits appear in change_log'; end if;
   set local role authenticated;
   -- the new PIN works on the unlocked device, not on the PIN-locked one

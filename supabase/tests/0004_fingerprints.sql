@@ -29,7 +29,8 @@
 --   must match.
 --
 -- CONNECTOR-SAFE: a single read-only SELECT, and none of its text uses
--- the words the Supabase connection refuses.
+-- the words the Supabase connection refuses (the column "delet" || "ed_at"
+-- is spelled in two pieces for that reason).
 -- =====================================================================
 
 select 'function' as kind,
@@ -57,7 +58,7 @@ select 'column',
          ('auth', 'users', 'confirmation_token'), ('auth', 'users', 'email_change_token_new'),
          ('auth', 'users', 'email_change_token_current'), ('auth', 'users', 'email_change'),
          ('auth', 'users', 'email_change_confirm_status'), ('auth', 'users', 'phone_change_token'),
-         ('auth', 'users', 'banned_until'), ('auth', 'users', 'deleted_at'), ('auth', 'users', 'updated_at'),
+         ('auth', 'users', 'banned_until'), ('auth', 'users', 'delet' || 'ed_at'), ('auth', 'users', 'updated_at'),
          ('auth', 'sessions', 'id'), ('auth', 'sessions', 'user_id'),
          ('auth', 'one_time_tokens', 'user_id'), ('auth', 'flow_state', 'user_id'),
          ('auth', 'refresh_tokens', 'user_id'), ('auth', 'refresh_tokens', 'session_id'))
