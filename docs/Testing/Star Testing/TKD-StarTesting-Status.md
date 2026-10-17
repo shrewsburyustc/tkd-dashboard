@@ -1,7 +1,7 @@
 # Star Testing — status and next steps
 
 **Updated:** 2026-10-17 (Star testing worktree session — Events tab design approved, v0.74)
-**Rulebook at this update:** v0.74 (Star testing rows: v0.58–v0.61, v0.63, v0.66–v0.74) · **Inventory of the old prototype:** `TKD-StarTesting-Inventory.md` (this folder) · **Mockups:** `TKD-StarTesting-Rubrics-Mockups.html` (this folder)
+**Rulebook at this update:** v0.82 (Star testing rows: v0.58–v0.61, v0.63, v0.66–v0.82) · **Inventory of the old prototype:** `TKD-StarTesting-Inventory.md` (this folder) · **Mockups:** `TKD-StarTesting-Rubrics-Mockups.html` (this folder)
 
 > Read `CLAUDE.md` (repo root) first. This file says where Star testing stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -13,7 +13,7 @@ Star testing (the stars between Dan ranks: 1st Dan up to 4 stars, 2nd up to 3, 3
 
 ## 2. Waiting on Jeffrey right now
 
-Nothing blocking. Next design step: the **public registration form** (section 3B.2), one question at a time with visuals.
+**Registration form Question 8:** showing fees (standard / same day), the deadline and the rubric on the form. Also open: is the next step after the top star Dan testing? Did the paper application ask for anything else? Check-on-leaving timing (rule 8 exception).
 
 ## 3. Next steps, in order
 
@@ -21,7 +21,7 @@ Nothing blocking. Next design step: the **public registration form** (section 3B
 
 **B. Design the remaining Star testing screens** (decision v0.61: design everything first, then build). Each: one decision at a time with visuals → mockups at PC / tablet / phone → separate reviewer agent → screen-by-screen pass with Jeffrey → record in the rulebook.
 1. Events tab + Add / Edit event — **DONE, approved 2026-10-17 (v0.74)**, questions in `TKD-StarTesting-Events-Questions.html`: (1) registration open/close — **done v0.67**; (2) who can add/edit and open/close — **done v0.68**; (3) event fields — **done v0.69**; (4) status tags — **done v0.70**; (5) upcoming / past — **done v0.71**; (6) registration link + QR — **done v0.72**; (7) deleting — **done v0.73**. Then full mockups at PC / tablet / phone (must include the staff ⋯ menu with "Open registration" grayed out after the closing date, v0.68; and propose what Start time / Where show for the very first event, when there is no last event to copy, v0.69; and confirm the v0.72 proposals: random code in the link, old `pages.dev` address kept working after the domain move, staff can copy the link, Print flyer + its contents).
-2. Public registration form (no login; uses the shared public-form path v0.33, most likely built first by Color Belt phase 2): full name, date of birth (custom calendar), email for results, school, current Dan, star progression, Cash or Check. **Gender dropped.** No phone, attendance or assistant counts.
+2. Public registration form — **in progress**, questions in `TKD-StarTesting-Form-Questions.html`: (1) one or several — **done v0.75 (C: one per form + family total)**; (2) one page or steps — **done v0.76 (B: details, then check and send)**; (3) who fills it in — **done v0.77 (A: neutral wording, no parent name)**; (4) duplicates — **done v0.79 (D: accept, flag "Possible duplicate" for staff)**; (5) fields — **done v0.80 (first + last name; no School field: one link per school; errors approved; Square later)**; (5b) two school links — **done v0.81 (B side by side; one flyer per school; no school box or cross link on the form; form leads with the event)**; (6) Dan and stars — **done v0.82 (B: Current Dan, then stars now)**; (7) date of birth — **done v0.75 (calendar)**; (8) fees, deadline and rubric shown; (9) acknowledgment / signature + privacy note; (10) after sending; (11) not-open / closed / past links; (12) spam check; (13) look of public pages (shared with Color Belt). Known so far: no login, uses the shared public-form path v0.33 (most likely built first by Color Belt phase 2); full name, date of birth (custom calendar), email for results, school, current Dan, star progression, Cash or Check; **gender dropped**; no phone, attendance or assistant counts.
 3. Event → **Candidates** tab (roster: grouped Shrewsbury first then Worcester, lowest star first then A–Z; payments; school correction; edit / remove a candidate — the prototype had neither)
 4. Event → **Grading** tab (no horizontal scroll — new layout needed; D shown amber not red; Classes attended + Assistant classes entered by staff; landscape paper grading sheet)
 5. Event → **Results** tab (scores, make-ups, portrait Final Scoring printout, CSV, **results emails from the dashboard**)
@@ -34,7 +34,7 @@ Nothing blocking. Next design step: the **public registration form** (section 3B
 
 ## 4. Open questions (ask one at a time, with visuals, when the related screen is designed)
 
-- **Make-ups** (from Jeffrey: make-ups are unfinished candidates and **do not pay again**): at the next event are they graded only on their D categories? How do they register for the next event? What happens to a candidate **below 245 with no D** (prototype says "make-up" but there is nothing to re-test)?
+- **Make-ups — answered v0.78:** only D categories are re-tested (passed ones kept); staff add make-ups to the next event (not the form); below 245 with no D = make-up of the lowest categories, no fee. **Still open:** which categories count as "lowest" (decide with Grading / Results).
 - Roster default when a device is set to one school: Star testing works on Both, but a Worcester device opens on Worcester — show all candidates by default on testing day?
 - Who can see a candidate's date of birth and email (detail view only; Admin vs Staff) — rule 5 privacy.
 - **Email service** for results (the dashboard has none yet; may cost money; every message to families needs a confirmation dialog, rule 1.4).
@@ -52,6 +52,14 @@ Nothing blocking. Next design step: the **public registration form** (section 3B
 | v0.60 | Star testing home tabs **Events** + **Rubrics and prices**; each event opens its own page with **Candidates · Grading · Results** tabs. |
 | v0.61 | **Design every Star screen first, then build in 6 phases.** **Each event keeps its own copy** of rubrics, grade scale, assistant table, star limits and prices from creation. Rubrics and prices: **Admin edits, Staff view only** (enforced in the database). **Everything changeable with live totals** (categories add/rename/re-credit/reorder/delete, pass mark, star limit, grade values, assistant table, fees); exactly one "from class count" category per Dan. **70-credit total shown, not required** (amber note + reminder). |
 | v0.63 | **Drag to reorder works on every device** by the grip only (dashboard-wide, changes v0.43; affects Color Belt phase 1 too). Move up/down in ⋯ stays everywhere. |
+| v0.82 | **Dan and stars:** Current Dan buttons, then Stars the candidate has now (only allowed numbers), hint with the Dan's limit, confirming line "Testing for 1st Dan · 1 star → 2 stars". |
+| v0.81 | **Two school links:** dialog shows both side by side (Copy / Print per school), ⋯ has Copy Worcester / Shrewsbury link, one flyer per school. Form: no school box, no cross-school link; top leads with event title, date, time. **Events mockups screens 8, 11, 12 need updating** to match. |
+| v0.80 | **Form fields:** First / Last name, Date of birth, Testing for + fee, Email for results, Paying by (bottom). **School comes from the link: one registration link per school** (changes v0.72; Events dialog / flyer / ⋯ need two). Staff can correct details on the Candidates tab. Square payments later. Error wording approved. One Registration switch covers both links; "Register another" no longer refills the school (changes v0.75). To confirm: check-on-leaving timing (rule 8 exception); paper-application extras. |
+| v0.79 | **Duplicates:** accepted, both flagged "Possible duplicate" for staff on the Candidates tab; the public form never says who is registered. |
+| v0.78 | **Make-up rules (facts):** only D categories re-tested; staff add make-ups to the next event, not the form; below 245 with no D = make-up of the lowest categories, no fee (which ones: Grading / Results). |
+| v0.77 | **Registration form wording:** one neutral wording for everyone ("Candidate's full name", "Email for results … A parent's email is fine."); no parent name on the form. |
+| v0.76 | **Registration form: two steps** — Details, then Check and send (summary with the event and age on testing day; Back to edit). To confirm: families can't change it after sending. |
+| v0.75 | **Registration form:** one candidate per form, Register another refills email / school / payment, "Registered on this visit" list with family total; **date of birth from a calendar**. To confirm with the mockups: visit list kept in the browser only; quick jump to the birth year. |
 | v0.74 | **Events tab mockups approved** (14 screens). Your changes: event page date/time line 14px dark (button under it on phones). Confirmed: first event starts empty, dropdowns, closing date follows testing date, unique names, past events editable, random-code link, old address kept, staff copy, Print flyer. |
 | v0.73 | **Deleting:** admins can delete **any** event (permanent; confirmation names candidates, payments and grades; "Keep event" / red "Delete event"). **No cancelled state.** Risk flagged and accepted. |
 | v0.72 | **Registration link** button on the event page (dialog: QR code, link, Copy link) + **Copy registration link** in ⋯; icons `ti-copy`, `ti-qrcode` added to the map. Proposals still to confirm: random-code link, old address kept, staff copy, Print flyer. |
@@ -73,10 +81,11 @@ Facts from Jeffrey (2026-10-16): rubrics and prices are current; same-day fee = 
 - `TKD-StarTesting-Inventory.md` — inventory of the old prototype, Jeffrey's answers (§0), domain rules, gaps vs the rulebook.
 - `TKD-StarTesting-Rubrics-Mockups.html` — Rubrics and prices mockups, 12 screens at PC / tablet / phone, with "Details for approval". **Approved 2026-10-17 (v0.66).**
 - `TKD-StarTesting-Events-Mockups.html` — Events tab mockups, 14 screens at PC / tablet / phone, with details. **Approved 2026-10-17 (v0.74).** Still open: sorted column header look (dashboard-wide).
+- `TKD-StarTesting-Form-Questions.html` — registration form design questions, one at a time, with option sketches (phone + PC).
 - `TKD-StarTesting-Events-Questions.html` — Events tab design questions, one at a time, with option sketches (PC + phone); answered questions stay with their answer. Built from the Rubrics mockup's stylesheet.
 - `Old prototype/` — `star-testing.html` (prototype), `STAR-TESTING.md` (notes), `STAR-TESTING-HANDOFF.md` (full spec: rubrics as data, scoring code, test cases, defects not to repeat). Feature reference only — its stack (Workers + D1, shared password) is superseded by the dashboard's.
 
-**Shared files the Star session has edited:** `docs/Dashboard Docs/TKD-Dashboard-Design-Guidelines.md` (Star 10b rows + changelog v0.58–v0.61, v0.63, v0.66–v0.74 incl. icon map rows; v0.43 row note). Also earlier (committed in `4dc7ad4`): docs reorganisation, `docs/README.md`, root `README.md` doc paths, handoff paths.
+**Shared files the Star session has edited:** `docs/Dashboard Docs/TKD-Dashboard-Design-Guidelines.md` (Star 10b rows + changelog v0.58–v0.61, v0.63, v0.66–v0.82 incl. icon map rows; v0.43 row note). Also earlier (committed in `4dc7ad4`): docs reorganisation, `docs/README.md`, root `README.md` doc paths, handoff paths.
 
 **Reading copies** in the claude.ai project "Taekwondo Management System": inventory, guidelines (may lag the repo).
 
