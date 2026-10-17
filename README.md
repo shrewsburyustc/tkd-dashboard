@@ -2,9 +2,9 @@
 
 The staff dashboard for Jae H. Jeong's U.S. Taekwondo Center (Worcester and Shrewsbury, MA).
 
-So far it has the basics: **sign in**, an empty **Home** page, the **app frame** (rail, top bar, phone bottom bar), the **location switcher**, the **account menu**, the **lock screen** (per-account idle lock, 4-digit PIN), and the **account screens**: **Set your PIN**, **Change PIN** and **Change password**. Sections such as Color Belt testing get added one at a time later.
+So far it has the basics: **sign in**, an empty **Home** page, the **app frame** (rail, top bar, phone bottom bar), the **location switcher**, the **account menu**, the **lock screen** (per-account idle lock, 4-digit PIN), and the **account screens**: **Set your PIN**, **Change PIN** and **Change password**. The first real section is **Testing → Classes and ranks** (color belt testing, phase 1): each school's classes, their ranks in belt order, and the three prices for each rank. Other sections get added one at a time later.
 
-The design rules live in `docs/Dashboard Docs/TKD-Dashboard-Design-Guidelines.md`. The approved look is in `docs/Dashboard Docs/TKD-Home-Mockups.html` and `docs/Dashboard Docs/TKD-Account-Screens-Mockups.html`. The build contracts (what the database and the app agree on) are `docs/BUILD-CONTRACT.md` and `docs/CONTRACT-0002.md`.
+The design rules live in `docs/Dashboard Docs/TKD-Dashboard-Design-Guidelines.md`. The approved look is in `docs/Dashboard Docs/TKD-Home-Mockups.html`, `docs/Dashboard Docs/TKD-Account-Screens-Mockups.html` and `docs/Testing/Color Belt Testing/TKD-Testing-Classes-Ranks-Mockups.html`. The build contracts (what the database and the app agree on) are `docs/Dashboard Docs/Build contracts/BUILD-CONTRACT.md`, `CONTRACT-0002.md` and `CONTRACT-0003.md` (Testing → Classes and ranks).
 
 ---
 
@@ -37,6 +37,13 @@ Open the address it prints (usually http://localhost:5173). An amber strip at th
   - `__tkdPreview.setShared(true)`: pretends this is the shared front-desk account. Reload: the menu no longer has Change PIN or Change password. `setShared(false)` undoes it.
   - `__tkdPreview.setPasswordAgeMinutes(11)`: pretends you typed your password 11 minutes ago. Saving a PIN on **Set your PIN** then signs you out with "Sign in with your password again to set your PIN." (the database only accepts a new PIN within 10 minutes of typing the password).
   - `__tkdPreview.setPasswordAgeDays(8)`: pretends you typed your password 8 days ago. Reload the page to see the 7-day rule sign you out.
+  - **Testing helpers** (each one answers with a short sentence saying what it did; the fake Testing data is saved in the browser under `tkd.preview.testing`):
+    - `__tkdPreview.setRole('staff')`: makes the preview account view-only (Staff). **Reload** to see the staff view; `setRole('admin')` switches back.
+    - `__tkdPreview.failNextSave()`: the next Testing change fails as if the Wi-Fi dropped (try it before a Move up to see the amber "Not saved" tag and the Retry banner).
+    - `__tkdPreview.simulateOtherAdminEdit()`: pretends another admin just changed everything, so an open dialog, a delete confirmation or an Undo becomes "stale".
+    - `__tkdPreview.clearSchool('Shrewsbury')`: removes that school's classes, to see the empty state.
+    - `__tkdPreview.resetTesting()`: puts the default classes and ranks back (both schools).
+    - `__tkdPreview.setTestingDelay(3000)`: slows every Testing call down to 3 seconds (to see the gray loading skeleton). `setTestingDelay(200)` is the normal speed.
 
 **Walk through every new screen in preview:**
 1. In the console run `__tkdPreview.setHasPin(false)`, then sign in → **Set your PIN**. Try `1111` (too easy), then a PIN, then a different one (they don't match), then the same PIN twice → Home with a "PIN set" toast.
@@ -44,6 +51,7 @@ Open the address it prints (usually http://localhost:5173). An amber strip at th
 3. Initials menu → **Change password** → current `preview`, new password twice (12+ characters) → "Password changed" toast.
 4. Initials menu → **Lock now** → unlock with your new PIN.
 5. Make the browser window narrower than 640px (or use the browser's phone view, F12 → device toolbar) to see the phone versions: full-screen pages with a back arrow.
+6. Click **Testing** in the rail (bottom bar on a phone) → **Classes and ranks**. Open a class, click a rank to edit its prices, add a rank or a class, drag a grip (PC) or use ⋯ → Move up / Move down, delete a rank. Each change shows a toast; changes you can take back have **Undo**. Switch the location switcher to **Both** to see the choose-a-school message.
 
 ### Option B: the real thing (with Supabase)
 
@@ -83,6 +91,19 @@ src/main.jsx          Starting point: loads the styles and draws <App />.
 src/App.jsx           The "brain": decides which screen shows (sign-in, home, or lock) and enforces the rules.
 
 src/screens/          Whole screens.
+  Testing.jsx         The Testing section: page header, tab bar, "View only" line, or the Both message.
+  testing/            Testing → Classes and ranks (contract 0003):
+    ClassesRanksTab.jsx   The "brain" of the tab: loads the list, opens dialogs/menus, saves, Undo.
+    ClassBlock.jsx        One class line (+ its ranks when open).
+    RankRows.jsx          The ranks of an open class: table on PC/tablet, two-line rows on phones.
+    RankDialog.jsx        Edit rank / Add rank / view-only rank.
+    ClassDialog.jsx       Add class / Edit class.
+    FinalAwardSelect.jsx  The "Final award after this class" dropdown (keyboard + screen reader).
+    BeltPicker.jsx        The Belt section of the rank dialog (pattern, colors, end stripes).
+    DeleteDialog.jsx      The red "Delete …?" confirmation.
+    BlockedOnBoth.jsx     "Testing is kept separate for each school…" with Worcester / Shrewsbury.
+    TestingSkeleton.jsx   Gray bars while a school's list loads the first time.
+    text.js               Every sentence these screens show (contract 0003 §7).
   SignIn.jsx          Email + password.
   SetPinScreen.jsx    "Set your PIN" — required after a password sign-in when the account has no PIN.
   Home.jsx            Welcome header + "Nothing on Home yet…" line.
@@ -95,7 +116,7 @@ src/components/       Smaller building blocks used by the screens.
   Shell.jsx           The frame around signed-in pages (rail + top bar + content + bottom bar).
   Rail.jsx            Left navigation on PC/tablet.
   BottomBar.jsx       Bottom navigation on phones.
-  navItems.js         The list of sections (just Home). Both nav bars read it.
+  navItems.js         The list of sections (Home, Testing). Both nav bars read it.
   TopBar.jsx          The 48px bar: location switcher + initials button.
   LocationSwitcher.jsx  Worcester | Shrewsbury | Both.
   AccountMenu.jsx     The initials button and its menu (dropdown on PC/tablet, bottom sheet on phone).
@@ -104,7 +125,12 @@ src/components/       Smaller building blocks used by the screens.
   Notice.jsx          The amber message box with the warning triangle.
   PinEntry.jsx        PIN dots + on-screen keypad + hidden PIN box (lock screen, Set PIN, Change PIN).
   AccountDialog.jsx   The frame for Change PIN / Change password: dialog on PC/tablet, full page on phone.
-  Toast.jsx           The 5-second "done" message ("PIN set", "PIN changed", "Password changed").
+  Belt.jsx            The small belt picture (SVG) next to rank names.
+  IconButton.jsx      A 28px icon button with its tooltip (every icon-only button uses it).
+  Dialog.jsx          The frame for the Testing dialogs (unsaved-changes guard, delete confirmation).
+  RowMenu.jsx         The ⋯ menu of a row: dropdown on PC/tablet, bottom sheet on phones.
+  ErrorBanner.jsx     The amber "didn't save" bar with Retry; never closes by itself.
+  Toast.jsx           The 5-second message ("PIN set", "Rank saved · Undo"); pauses while pointed at.
   PreviewBanner.jsx   The "Preview mode" strip.
 
 src/lib/              Logic with no screens of its own.
@@ -124,10 +150,18 @@ src/lib/              Logic with no screens of its own.
   dates.js            The greeting and date text.
   storage.js          Safe localStorage helpers (never crash if storage is blocked).
   useMediaQuery.js    Lets code ask "is this a touch screen / narrow screen?".
+  useShortcutN.js     The N key = "Add class" on the PC (not while typing or with something open).
+  useRowArrowNav.js   ↑ ↓ move between list rows, Enter opens one (guidelines 3.6).
+  useReorderDrag.js   Drag a row by its grip to reorder it (PC mouse only).
+  money.js            Prices: cents ↔ "$65", and checking what was typed (whole dollars, $0–$1,000).
+  mockTesting.js      The fake Testing database for preview mode (same rules as the real one).
+  testing/            Testing data layer: api.js (database calls), rankOrder.js ("Testing for",
+                      reorder, delete sentences), names.js (name rules), useClassesRanks.js (loading).
 
 src/styles/
   tokens.css          Every color, size and spacing value from the guidelines, by name.
   app.css             All the styles, grouped by screen. Phone/tablet/PC/touch rules are at the bottom.
+  testing.css         The styles for Testing → Classes and ranks.
 ```
 
 ---
@@ -169,6 +203,19 @@ src/styles/
 - The shared front-desk account doesn't show Change PIN or Change password. Only an admin changes those (see `supabase/SETUP.md`).
 - On PC and tablet these open as a dialog (Esc or Cancel closes it). On phones they open as a full page with a back arrow.
 - Success shows a toast for 5 seconds: "PIN set", "PIN changed", or "Password changed".
+
+## Testing → Classes and ranks
+
+- **Each school has its own list.** The page follows the location switcher. On **Both** it shows no data at all (not even a request to the database), only the choose-a-school message with Worcester and Shrewsbury buttons.
+- **Admins change, staff look.** Staff (including the shared desk account) see every class, rank and price with a "View only" line and no edit buttons; on touch screens each rank has a **View** button. The database enforces this too (only admins can call the change functions).
+- **Belts (preview first, v0.64/v0.65):** every rank shows a small belt picture next to its name and next to its Testing for name. Admins build each belt in the rank dialog's **Belt** section (pattern, colors, end stripes, live preview). The belt colors live in `src/styles/tokens.css` (`--belt-*`).
+- **Reordering (v0.63):** admins drag the grip on every device — mouse, finger or pen. A finger anywhere else on a row scrolls the page. ⋯ → Move up / Move down still works everywhere.
+- **Testing for** is never typed: a rank tests for the next rank in its class, and the last rank tests for the class's **final award** (set in Edit class). If no final award is set, the last rank shows an amber reminder.
+- **Saving:** dialogs wait for the database. Reordering shows the new order at once; if it doesn't save, the row gets an amber "Not saved" tag and a banner offers Retry.
+- **Undo** (5-second toast) for edits, adds and reorders. **Deleting is permanent**: a confirmation says exactly what will happen, and there is no Undo.
+- **Someone else changed it:** every change sends what the screen last saw. If another admin changed the same thing meanwhile, nothing is overwritten; the screen says so and reloads.
+- **Keyboard (PC):** `N` = Add class (not while typing or with something open). ↑ ↓ move between rank rows, Enter opens one. In a ⋯ menu, ↑ ↓ and Enter; Move up / Move down are the keyboard way to reorder.
+- **Locking:** if the screen locks while a Testing dialog is open, the dialog disappears with the lock and comes back after the PIN, with everything still typed in.
 
 ## Security notes
 

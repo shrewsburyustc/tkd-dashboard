@@ -1,0 +1,427 @@
+{
+ "source": "USTC Color Belt Staging (mfqcchrapunngwwvxzwu)",
+ "exportedAt": "2026-10-16T19:20:00Z",
+ "fixture": false,
+ "classes": [
+  {
+   "name": "Little Tiger",
+   "position": 0,
+   "ranks": [
+    {
+     "name": "LT White",
+     "position": 0,
+     "earlyCents": 5000,
+     "dayCents": 6000,
+     "privateCents": 7000,
+     "sparringGear": false,
+     "nextRank": "LT Yellow"
+    },
+    {
+     "name": "LT Yellow",
+     "position": 1,
+     "earlyCents": 5000,
+     "dayCents": 6000,
+     "privateCents": 7000,
+     "sparringGear": false,
+     "nextRank": "LT Green"
+    },
+    {
+     "name": "LT Green",
+     "position": 2,
+     "earlyCents": 5000,
+     "dayCents": 6000,
+     "privateCents": 7000,
+     "sparringGear": false,
+     "nextRank": "LT Blue"
+    },
+    {
+     "name": "LT Blue",
+     "position": 3,
+     "earlyCents": 5000,
+     "dayCents": 6000,
+     "privateCents": 7000,
+     "sparringGear": false,
+     "nextRank": "LT Red"
+    },
+    {
+     "name": "LT Red",
+     "position": 4,
+     "earlyCents": 5000,
+     "dayCents": 6000,
+     "privateCents": 7000,
+     "sparringGear": false,
+     "nextRank": "LT Black"
+    },
+    {
+     "name": "LT Black",
+     "position": 5,
+     "earlyCents": 5000,
+     "dayCents": 6000,
+     "privateCents": 7000,
+     "sparringGear": false,
+     "nextRank": "Yellow"
+    }
+   ]
+  },
+  {
+   "name": "White",
+   "position": 1,
+   "ranks": [
+    {
+     "name": "White",
+     "position": 0,
+     "earlyCents": 6500,
+     "dayCents": 7500,
+     "privateCents": 8500,
+     "sparringGear": false,
+     "nextRank": "Yellow"
+    }
+   ]
+  },
+  {
+   "name": "Group A",
+   "position": 2,
+   "ranks": [
+    {
+     "name": "Yellow",
+     "position": 0,
+     "earlyCents": 6500,
+     "dayCents": 7500,
+     "privateCents": 8500,
+     "sparringGear": false,
+     "nextRank": "Orange"
+    },
+    {
+     "name": "Orange",
+     "position": 1,
+     "earlyCents": 6500,
+     "dayCents": 7500,
+     "privateCents": 8500,
+     "sparringGear": false,
+     "nextRank": "Green"
+    },
+    {
+     "name": "Green",
+     "position": 2,
+     "earlyCents": 6500,
+     "dayCents": 7500,
+     "privateCents": 8500,
+     "sparringGear": false,
+     "nextRank": "High Green"
+    },
+    {
+     "name": "High Green",
+     "position": 3,
+     "earlyCents": 6500,
+     "dayCents": 7500,
+     "privateCents": 8500,
+     "sparringGear": false,
+     "nextRank": "Blue"
+    }
+   ]
+  },
+  {
+   "name": "Group B",
+   "position": 3,
+   "ranks": [
+    {
+     "name": "Blue",
+     "position": 0,
+     "earlyCents": 7000,
+     "dayCents": 8000,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "High Blue"
+    },
+    {
+     "name": "High Blue",
+     "position": 1,
+     "earlyCents": 7000,
+     "dayCents": 8000,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "Purple"
+    },
+    {
+     "name": "Purple",
+     "position": 2,
+     "earlyCents": 7000,
+     "dayCents": 8000,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "Red"
+    },
+    {
+     "name": "Red",
+     "position": 3,
+     "earlyCents": 7000,
+     "dayCents": 8000,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "High Red"
+    }
+   ]
+  },
+  {
+   "name": "Group C",
+   "position": 4,
+   "ranks": [
+    {
+     "name": "High Red",
+     "position": 0,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "Brown"
+    },
+    {
+     "name": "Brown",
+     "position": 1,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "High Brown"
+    },
+    {
+     "name": "High Brown",
+     "position": 2,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "Red / Black"
+    },
+    {
+     "name": "Red / Black",
+     "position": 3,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "Bo Dan"
+    }
+   ]
+  },
+  {
+   "name": "Group D",
+   "position": 5,
+   "ranks": [
+    {
+     "name": "Bo Dan",
+     "position": 0,
+     "earlyCents": 10000,
+     "dayCents": 11000,
+     "privateCents": 12000,
+     "sparringGear": true,
+     "nextRank": "Bo Dan - 1 Big Stripe"
+    },
+    {
+     "name": "Bo Dan - 1 Big Stripe",
+     "position": 1,
+     "earlyCents": 10000,
+     "dayCents": 11000,
+     "privateCents": 12000,
+     "sparringGear": true,
+     "nextRank": "Bo Dan - 2 Big Stripe"
+    },
+    {
+     "name": "Bo Dan - 2 Big Stripe",
+     "position": 2,
+     "earlyCents": 10000,
+     "dayCents": 11000,
+     "privateCents": 12000,
+     "sparringGear": true,
+     "nextRank": "Bo Dan - 3 Big Stripe"
+    },
+    {
+     "name": "Bo Dan - 3 Big Stripe",
+     "position": 3,
+     "earlyCents": 12000,
+     "dayCents": 13000,
+     "privateCents": 15000,
+     "sparringGear": true,
+     "nextRank": "Deputy"
+    },
+    {
+     "name": "Deputy",
+     "position": 4,
+     "earlyCents": 1000,
+     "dayCents": 1000,
+     "privateCents": 1000,
+     "sparringGear": true,
+     "nextRank": "Deputy 1"
+    }
+   ]
+  },
+  {
+   "name": "Teen/Adult",
+   "position": 6,
+   "ranks": [
+    {
+     "name": "White",
+     "position": 0,
+     "earlyCents": 6500,
+     "dayCents": 7500,
+     "privateCents": 8500,
+     "sparringGear": false,
+     "nextRank": "Yellow"
+    },
+    {
+     "name": "Yellow",
+     "position": 1,
+     "earlyCents": 6500,
+     "dayCents": 7500,
+     "privateCents": 8500,
+     "sparringGear": false,
+     "nextRank": "Orange"
+    },
+    {
+     "name": "Orange",
+     "position": 2,
+     "earlyCents": 6500,
+     "dayCents": 7500,
+     "privateCents": 8500,
+     "sparringGear": false,
+     "nextRank": "Green"
+    },
+    {
+     "name": "Green",
+     "position": 3,
+     "earlyCents": 6500,
+     "dayCents": 7500,
+     "privateCents": 8500,
+     "sparringGear": false,
+     "nextRank": "High Green"
+    },
+    {
+     "name": "High Green",
+     "position": 4,
+     "earlyCents": 6500,
+     "dayCents": 7500,
+     "privateCents": 9500,
+     "sparringGear": false,
+     "nextRank": "Blue"
+    },
+    {
+     "name": "Blue",
+     "position": 5,
+     "earlyCents": 7000,
+     "dayCents": 8000,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "High Blue"
+    },
+    {
+     "name": "High Blue",
+     "position": 6,
+     "earlyCents": 7000,
+     "dayCents": 8000,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "Purple"
+    },
+    {
+     "name": "Purple",
+     "position": 7,
+     "earlyCents": 7000,
+     "dayCents": 8000,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "Red"
+    },
+    {
+     "name": "Red",
+     "position": 8,
+     "earlyCents": 7000,
+     "dayCents": 8000,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "High Red"
+    },
+    {
+     "name": "High Red",
+     "position": 9,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "Brown"
+    },
+    {
+     "name": "Brown",
+     "position": 10,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "High Brown"
+    },
+    {
+     "name": "High Brown",
+     "position": 11,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "Red / Black"
+    },
+    {
+     "name": "Red / Black",
+     "position": 12,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "Bo Dan"
+    },
+    {
+     "name": "Bo Dan",
+     "position": 13,
+     "earlyCents": 10000,
+     "dayCents": 11000,
+     "privateCents": 12000,
+     "sparringGear": true,
+     "nextRank": "Bo Dan - 1 Big Stripe"
+    },
+    {
+     "name": "Bo Dan - 1 Big Stripe",
+     "position": 14,
+     "earlyCents": 10000,
+     "dayCents": 11000,
+     "privateCents": 12000,
+     "sparringGear": true,
+     "nextRank": "Bo Dan - 2 Big Stripe"
+    },
+    {
+     "name": "Bo Dan - 2 Big Stripe",
+     "position": 15,
+     "earlyCents": 10000,
+     "dayCents": 11000,
+     "privateCents": 12000,
+     "sparringGear": true,
+     "nextRank": "Bo Dan - 3 Big Stripe"
+    },
+    {
+     "name": "Bo Dan - 3 Big Stripe",
+     "position": 16,
+     "earlyCents": 12000,
+     "dayCents": 13000,
+     "privateCents": 15000,
+     "sparringGear": true,
+     "nextRank": "Deputy"
+    },
+    {
+     "name": "Deputy",
+     "position": 17,
+     "earlyCents": 1000,
+     "dayCents": 1000,
+     "privateCents": 1000,
+     "sparringGear": true,
+     "nextRank": "Deputy 1"
+    }
+   ]
+  }
+ ]
+}

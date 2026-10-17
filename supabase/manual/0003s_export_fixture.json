@@ -1,0 +1,427 @@
+{
+ "source": "FIXTURE — made-up copy of the preview data (contract 0003 §6.3), not the old system",
+ "exportedAt": "2026-10-16T20:00:00Z",
+ "fixture": true,
+ "classes": [
+  {
+   "name": "Little Tiger",
+   "position": 10,
+   "ranks": [
+    {
+     "name": "LT White",
+     "position": 10,
+     "earlyCents": 5000,
+     "dayCents": 6000,
+     "privateCents": 7000,
+     "sparringGear": false,
+     "nextRank": "LT Yellow"
+    },
+    {
+     "name": "LT Yellow",
+     "position": 20,
+     "earlyCents": 5000,
+     "dayCents": 6000,
+     "privateCents": 7000,
+     "sparringGear": false,
+     "nextRank": "LT Green"
+    },
+    {
+     "name": "LT Green",
+     "position": 30,
+     "earlyCents": 5000,
+     "dayCents": 6000,
+     "privateCents": 7000,
+     "sparringGear": false,
+     "nextRank": "LT Blue"
+    },
+    {
+     "name": "LT Blue",
+     "position": 40,
+     "earlyCents": 5000,
+     "dayCents": 6000,
+     "privateCents": 7000,
+     "sparringGear": false,
+     "nextRank": "LT Red"
+    },
+    {
+     "name": "LT Red",
+     "position": 50,
+     "earlyCents": 5000,
+     "dayCents": 6000,
+     "privateCents": 7000,
+     "sparringGear": false,
+     "nextRank": "LT Black"
+    },
+    {
+     "name": "LT Black",
+     "position": 60,
+     "earlyCents": 5000,
+     "dayCents": 6000,
+     "privateCents": 7000,
+     "sparringGear": false,
+     "nextRank": "Yellow"
+    }
+   ]
+  },
+  {
+   "name": "White",
+   "position": 20,
+   "ranks": [
+    {
+     "name": "White",
+     "position": 10,
+     "earlyCents": 6500,
+     "dayCents": 7500,
+     "privateCents": 8500,
+     "sparringGear": false,
+     "nextRank": "Yellow"
+    }
+   ]
+  },
+  {
+   "name": "Group A",
+   "position": 30,
+   "ranks": [
+    {
+     "name": "Yellow",
+     "position": 10,
+     "earlyCents": 6500,
+     "dayCents": 7500,
+     "privateCents": 8500,
+     "sparringGear": false,
+     "nextRank": "Orange"
+    },
+    {
+     "name": "Orange",
+     "position": 20,
+     "earlyCents": 6500,
+     "dayCents": 7500,
+     "privateCents": 8500,
+     "sparringGear": false,
+     "nextRank": "Green"
+    },
+    {
+     "name": "Green",
+     "position": 30,
+     "earlyCents": 6500,
+     "dayCents": 7500,
+     "privateCents": 8500,
+     "sparringGear": false,
+     "nextRank": "High Green"
+    },
+    {
+     "name": "High Green",
+     "position": 40,
+     "earlyCents": 6500,
+     "dayCents": 7500,
+     "privateCents": 8500,
+     "sparringGear": false,
+     "nextRank": "Blue"
+    }
+   ]
+  },
+  {
+   "name": "Group B",
+   "position": 40,
+   "ranks": [
+    {
+     "name": "Blue",
+     "position": 10,
+     "earlyCents": 7000,
+     "dayCents": 8000,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "High Blue"
+    },
+    {
+     "name": "High Blue",
+     "position": 20,
+     "earlyCents": 7000,
+     "dayCents": 8000,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "Purple"
+    },
+    {
+     "name": "Purple",
+     "position": 30,
+     "earlyCents": 7000,
+     "dayCents": 8000,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "Red"
+    },
+    {
+     "name": "Red",
+     "position": 40,
+     "earlyCents": 7000,
+     "dayCents": 8000,
+     "privateCents": 9500,
+     "sparringGear": true,
+     "nextRank": "High Red"
+    }
+   ]
+  },
+  {
+   "name": "Group C",
+   "position": 50,
+   "ranks": [
+    {
+     "name": "High Red",
+     "position": 10,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Group C rank 2"
+    },
+    {
+     "name": "Group C rank 2",
+     "position": 20,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Group C rank 3"
+    },
+    {
+     "name": "Group C rank 3",
+     "position": 30,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Group C rank 4"
+    },
+    {
+     "name": "Group C rank 4",
+     "position": 40,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Bo Dan"
+    }
+   ]
+  },
+  {
+   "name": "Group D",
+   "position": 60,
+   "ranks": [
+    {
+     "name": "Bo Dan",
+     "position": 10,
+     "earlyCents": 8000,
+     "dayCents": 9000,
+     "privateCents": 11000,
+     "sparringGear": true,
+     "nextRank": "Group D rank 2"
+    },
+    {
+     "name": "Group D rank 2",
+     "position": 20,
+     "earlyCents": 8000,
+     "dayCents": 9000,
+     "privateCents": 11000,
+     "sparringGear": true,
+     "nextRank": "Group D rank 3"
+    },
+    {
+     "name": "Group D rank 3",
+     "position": 30,
+     "earlyCents": 8000,
+     "dayCents": 9000,
+     "privateCents": 11000,
+     "sparringGear": true,
+     "nextRank": "Group D rank 4"
+    },
+    {
+     "name": "Group D rank 4",
+     "position": 40,
+     "earlyCents": 8000,
+     "dayCents": 9000,
+     "privateCents": 11000,
+     "sparringGear": true,
+     "nextRank": "Group D rank 5"
+    },
+    {
+     "name": "Group D rank 5",
+     "position": 50,
+     "earlyCents": 8000,
+     "dayCents": 9000,
+     "privateCents": 11000,
+     "sparringGear": true,
+     "nextRank": "Deputy 1"
+    }
+   ]
+  },
+  {
+   "name": "Teen/Adult",
+   "position": 70,
+   "ranks": [
+    {
+     "name": "Teen/Adult rank 1",
+     "position": 10,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Teen/Adult rank 2"
+    },
+    {
+     "name": "Teen/Adult rank 2",
+     "position": 20,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Teen/Adult rank 3"
+    },
+    {
+     "name": "Teen/Adult rank 3",
+     "position": 30,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Teen/Adult rank 4"
+    },
+    {
+     "name": "Teen/Adult rank 4",
+     "position": 40,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Teen/Adult rank 5"
+    },
+    {
+     "name": "Teen/Adult rank 5",
+     "position": 50,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Teen/Adult rank 6"
+    },
+    {
+     "name": "Teen/Adult rank 6",
+     "position": 60,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Teen/Adult rank 7"
+    },
+    {
+     "name": "Teen/Adult rank 7",
+     "position": 70,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Teen/Adult rank 8"
+    },
+    {
+     "name": "Teen/Adult rank 8",
+     "position": 80,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Teen/Adult rank 9"
+    },
+    {
+     "name": "Teen/Adult rank 9",
+     "position": 90,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Teen/Adult rank 10"
+    },
+    {
+     "name": "Teen/Adult rank 10",
+     "position": 100,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Teen/Adult rank 11"
+    },
+    {
+     "name": "Teen/Adult rank 11",
+     "position": 110,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Teen/Adult rank 12"
+    },
+    {
+     "name": "Teen/Adult rank 12",
+     "position": 120,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Teen/Adult rank 13"
+    },
+    {
+     "name": "Teen/Adult rank 13",
+     "position": 130,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Teen/Adult rank 14"
+    },
+    {
+     "name": "Teen/Adult rank 14",
+     "position": 140,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Teen/Adult rank 15"
+    },
+    {
+     "name": "Teen/Adult rank 15",
+     "position": 150,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Teen/Adult rank 16"
+    },
+    {
+     "name": "Teen/Adult rank 16",
+     "position": 160,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Teen/Adult rank 17"
+    },
+    {
+     "name": "Teen/Adult rank 17",
+     "position": 170,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": "Teen/Adult rank 18"
+    },
+    {
+     "name": "Teen/Adult rank 18",
+     "position": 180,
+     "earlyCents": 7500,
+     "dayCents": 8500,
+     "privateCents": 10000,
+     "sparringGear": true,
+     "nextRank": null
+    }
+   ]
+  }
+ ]
+}

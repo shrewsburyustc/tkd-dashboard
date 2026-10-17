@@ -6,6 +6,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/tokens.css';
 import './styles/app.css';
+import './styles/testing.css'; // Testing → Classes and ranks (contract 0003)
 import App from './App.jsx';
 import SetupNeeded from './screens/SetupNeeded.jsx';
 import { isMissingConfig, isSecretKey } from './lib/supabase.js';

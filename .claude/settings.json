@@ -1,0 +1,1 @@
+{ "worktree": { "baseRef": "head" }, "permissions": { "ask": ["Bash(git push *)", "PowerShell(git push *)"] } }

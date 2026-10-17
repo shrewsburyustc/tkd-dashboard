@@ -1,0 +1,13 @@
+{
+  "name": "tkd-dashboard-db-tests",
+  "private": true,
+  "description": "Runs the Supabase migrations and SQL test files in PGlite (PostgreSQL 17 inside Node). Test tool only; not part of the app.",
+  "type": "module",
+  "scripts": {
+    "test": "node run.mjs",
+    "test:fixture-seed": "node run.mjs --fixture-seed"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.4.6"
+  }
+}

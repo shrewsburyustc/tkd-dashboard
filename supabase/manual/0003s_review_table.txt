@@ -1,0 +1,99 @@
+SEED REVIEW — classes and ranks copied into BOTH schools (Worcester and Shrewsbury)
+Input:    supabase/manual/0003s_export_from_old_system.json
+Source:   USTC Color Belt Staging (mfqcchrapunngwwvxzwu)
+Exported: 2026-10-16T19:20:00Z
+sha256:   4d99164b58130d619feff7358ab72cfa29ad3d50773caeb5ac69350b0ba81e51
+
+ADJUSTMENTS (approved) — supabase/manual/0003s_adjustments.json (sha256 20f9ab19d257ae5a94a5b262c7a89bf6f3d49cc0101c400d38f5d750abe359b8)
+  #  Target                             Change                                                            Reason
+  -  ---------------------------------  ----------------------------------------------------------------  ----------------------------------------------------------------------------
+  1  Teen/Adult > High Green > private  $95 -> $85                                                        Teen/Adult matches the kids' classes one to one (Jeffrey, 2026-10-16, v0.62)
+  2  Group D > final award              Not set — "Deputy 1" not found in any later class -> None         Deputy is practice for Dan testing, not a promotion (v0.62)
+  3  Teen/Adult > final award           Not set — "Deputy 1" not found (no class after this one) -> None  Deputy is practice for Dan testing, not a promotion (v0.62)
+  Cells marked "*" below were changed by these adjustments; the export file itself is unchanged.
+
+CLASSES (belt order)
+  Pos  Old pos  Class         Ranks  Final award                         Warning
+  ---  -------  ------------  -----  ----------------------------------  -------
+  0    0        Little Tiger  6      Yellow (Group A)
+  1    1        White         1      Yellow (Group A)
+  2    2        Group A       4      Blue (Group B)
+  3    3        Group B       4      High Red (Group C)
+  4    4        Group C       4      Bo Dan (Group D)
+  5    5        Group D       5      None — last rank doesn't promote *
+  6    6        Teen/Adult    18     None — last rank doesn't promote *
+
+CLASS 0 — Little Tiger — 6 ranks — final award: Yellow (Group A)
+  Pos  Old pos  Rank       Early  Test day  Private  Sparring  Old next rank  Warning
+  ---  -------  ---------  -----  --------  -------  --------  -------------  -------
+  0    0        LT White   $50    $60       $70      No        LT Yellow
+  1    1        LT Yellow  $50    $60       $70      No        LT Green
+  2    2        LT Green   $50    $60       $70      No        LT Blue
+  3    3        LT Blue    $50    $60       $70      No        LT Red
+  4    4        LT Red     $50    $60       $70      No        LT Black
+  5    5        LT Black   $50    $60       $70      No        Yellow
+
+CLASS 1 — White — 1 rank — final award: Yellow (Group A)
+  Pos  Old pos  Rank   Early  Test day  Private  Sparring  Old next rank  Warning
+  ---  -------  -----  -----  --------  -------  --------  -------------  -------
+  0    0        White  $65    $75       $85      No        Yellow
+
+CLASS 2 — Group A — 4 ranks — final award: Blue (Group B)
+  Pos  Old pos  Rank        Early  Test day  Private  Sparring  Old next rank  Warning
+  ---  -------  ----------  -----  --------  -------  --------  -------------  -------
+  0    0        Yellow      $65    $75       $85      No        Orange
+  1    1        Orange      $65    $75       $85      No        Green
+  2    2        Green       $65    $75       $85      No        High Green
+  3    3        High Green  $65    $75       $85      No        Blue
+
+CLASS 3 — Group B — 4 ranks — final award: High Red (Group C)
+  Pos  Old pos  Rank       Early  Test day  Private  Sparring  Old next rank  Warning
+  ---  -------  ---------  -----  --------  -------  --------  -------------  -------
+  0    0        Blue       $70    $80       $95      Yes       High Blue
+  1    1        High Blue  $70    $80       $95      Yes       Purple
+  2    2        Purple     $70    $80       $95      Yes       Red
+  3    3        Red        $70    $80       $95      Yes       High Red
+
+CLASS 4 — Group C — 4 ranks — final award: Bo Dan (Group D)
+  Pos  Old pos  Rank         Early  Test day  Private  Sparring  Old next rank  Warning
+  ---  -------  -----------  -----  --------  -------  --------  -------------  -------
+  0    0        High Red     $75    $85       $95      Yes       Brown
+  1    1        Brown        $75    $85       $95      Yes       High Brown
+  2    2        High Brown   $75    $85       $95      Yes       Red / Black
+  3    3        Red / Black  $75    $85       $95      Yes       Bo Dan
+
+CLASS 5 — Group D — 5 ranks — final award: None — last rank doesn't promote *
+  Pos  Old pos  Rank                   Early  Test day  Private  Sparring  Old next rank          Warning
+  ---  -------  ---------------------  -----  --------  -------  --------  ---------------------  -------
+  0    0        Bo Dan                 $100   $110      $120     Yes       Bo Dan - 1 Big Stripe
+  1    1        Bo Dan - 1 Big Stripe  $100   $110      $120     Yes       Bo Dan - 2 Big Stripe
+  2    2        Bo Dan - 2 Big Stripe  $100   $110      $120     Yes       Bo Dan - 3 Big Stripe
+  3    3        Bo Dan - 3 Big Stripe  $120   $130      $150     Yes       Deputy
+  4    4        Deputy                 $10    $10       $10      Yes       Deputy 1
+
+CLASS 6 — Teen/Adult — 18 ranks — final award: None — last rank doesn't promote *
+  Pos  Old pos  Rank                   Early  Test day  Private  Sparring  Old next rank          Warning
+  ---  -------  ---------------------  -----  --------  -------  --------  ---------------------  -------
+  0    0        White                  $65    $75       $85      No        Yellow
+  1    1        Yellow                 $65    $75       $85      No        Orange
+  2    2        Orange                 $65    $75       $85      No        Green
+  3    3        Green                  $65    $75       $85      No        High Green
+  4    4        High Green             $65    $75       $85 *    No        Blue
+  5    5        Blue                   $70    $80       $95      Yes       High Blue
+  6    6        High Blue              $70    $80       $95      Yes       Purple
+  7    7        Purple                 $70    $80       $95      Yes       Red
+  8    8        Red                    $70    $80       $95      Yes       High Red
+  9    9        High Red               $75    $85       $95      Yes       Brown
+  10   10       Brown                  $75    $85       $95      Yes       High Brown
+  11   11       High Brown             $75    $85       $95      Yes       Red / Black
+  12   12       Red / Black            $75    $85       $95      Yes       Bo Dan
+  13   13       Bo Dan                 $100   $110      $120     Yes       Bo Dan - 1 Big Stripe
+  14   14       Bo Dan - 1 Big Stripe  $100   $110      $120     Yes       Bo Dan - 2 Big Stripe
+  15   15       Bo Dan - 2 Big Stripe  $100   $110      $120     Yes       Bo Dan - 3 Big Stripe
+  16   16       Bo Dan - 3 Big Stripe  $120   $130      $150     Yes       Deputy
+  17   17       Deputy                 $10    $10       $10      Yes       Deputy 1
+
+TOTAL: 7 classes, 42 ranks per school (x2 schools = 14 classes, 84 ranks)
+Warnings: 0
+
+SQL written: supabase/manual/0003s_seed_classes_and_ranks.sql

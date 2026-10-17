@@ -3,7 +3,7 @@
 //   'loading'   → checking for a saved sign-in (shows nothing for a split second)
 //   'signedOut' → SignIn screen
 //   'setPin'    → Set your PIN (right after a password sign-in when the account has no PIN)
-//   'home'      → the dashboard (Shell + Home), maybe with an account dialog on top
+//   'home'      → the dashboard (Shell + the open section: Home or Testing), maybe with a dialog on top
 //   'locked'    → LockScreen (the dashboard stays in memory, hidden, behind it)
 // Every screen change goes through the small functions below, so the rules (7-day password
 // check, access check, per-account idle lock, the database lock) live in one readable place.
@@ -26,6 +26,7 @@ import Shell from './components/Shell.jsx';
 import Toast from './components/Toast.jsx';
 import SignIn from './screens/SignIn.jsx';
 import Home from './screens/Home.jsx';
+import Testing from './screens/Testing.jsx';
 import LockScreen from './screens/LockScreen.jsx';
 import SetPinScreen from './screens/SetPinScreen.jsx';
 import ChangePinDialog from './screens/ChangePinDialog.jsx';
@@ -50,6 +51,12 @@ const PAGE_TITLES = {
   setPin: 'Set your PIN · U.S. Taekwondo Center',
   home: 'Home · U.S. Taekwondo Center',
   locked: 'Locked · U.S. Taekwondo Center',
+};
+
+// While the dashboard is open ('home' phase) the title names the open section instead.
+const SECTION_TITLES = {
+  home: 'Home · U.S. Taekwondo Center',
+  testing: 'Testing · U.S. Taekwondo Center',
 };
 
 // Toast texts (guidelines 8: 5 seconds, bottom-right — bottom-center on phones — no Undo for these).
@@ -90,9 +97,10 @@ export default function App() {
   const [notice, setNotice] = useState(null); // { id, text } for the sign-in screen
   const [deviceLocation, setDeviceLocation] = useState(loadDeviceLocation); // this device's default
   const [location, setLocation] = useState(loadDeviceLocation); // the switcher's current value
-  const [section, setSection] = useState('home'); // which section is open (only Home exists)
+  const [section, setSection] = useState('home'); // which section is open: 'home' | 'testing'
   const [accountDialog, setAccountDialog] = useState(null); // null | 'changePin' | 'changePassword'
-  const [toast, setToast] = useState(null); // { id, text } or null
+  const [testingModalOpen, setTestingModalOpen] = useState(false); // a Testing dialog is showing
+  const [toast, setToast] = useState(null); // { id, text, action, icon } or null
 
   // Focus memory for the lock screen (see "Locking and unlocking" below).
   // `phaseRef` is a copy of `phase` that can be read instantly inside callbacks.
@@ -104,7 +112,14 @@ export default function App() {
   // Same idea for the profile: showLock (below) needs the newest one without being re-created.
   const profileRef = useRef(profile);
 
-  const showToast = useCallback((text) => setToast({ id: Date.now(), text }), []);
+  // showToast(text) for account toasts (check icon, no Undo).
+  // showToast(text, { action: { label: 'Undo', onAction }, icon: false }) for Testing toasts.
+  // A new toast replaces the old one, so only the newest Undo ever exists.
+  const showToast = useCallback(
+    (text, { action = null, icon = true } = {}) => setToast({ id: Date.now(), text, action, icon }),
+    [],
+  );
+  const clearToast = useCallback(() => setToast(null), []);
 
   // ----- Signing out (used by the menu, the lock screen, and the rules below) -----
   const signOut = useCallback(async (noticeText = null) => {
@@ -415,20 +430,53 @@ export default function App() {
   }, [showToast]);
 
   // ----- Location -----
-  const handleDeviceLocationChange = useCallback((newLocation) => {
-    saveDeviceLocation(newLocation); // remembered by this device
-    setDeviceLocation(newLocation);
-    setLocation(newLocation); // and the switcher moves to it
+  // A toast (and its Undo) belongs to the school it was made in: changing school drops it.
+  const changeLocation = useCallback((newLocation) => {
+    setToast(null);
+    setLocation(newLocation);
   }, []);
 
-  // Keep the browser tab title in step with the screen.
+  const handleDeviceLocationChange = useCallback(
+    (newLocation) => {
+      saveDeviceLocation(newLocation); // remembered by this device
+      setDeviceLocation(newLocation);
+      changeLocation(newLocation); // and the switcher moves to it
+    },
+    [changeLocation],
+  );
+
+  // ----- Sections (rail / bottom bar) -----
+  // Same idea: a toast belongs to the section it was made in.
+  const navigate = useCallback((id) => {
+    setToast(null);
+    setSection(id);
+  }, []);
+
+  // ----- Testing helpers -----
+  // Re-read "who am I?" — e.g. the database said "not allowed", so this person may no longer be
+  // an admin. Offline: keep the profile we have.
+  const refreshProfile = useCallback(async () => {
+    try {
+      const row = await fetchProfile();
+      if (row && row.active) setProfile(row);
+    } catch {
+      // ignore — see above
+    }
+  }, []);
+
+  // The database refused data because this sign-in is locked on its side: lock the screen too.
+  const handleNoAccess = useCallback(() => setLockedFlag(true), []);
+
+  // Keep the browser tab title in step with the screen (and, on the dashboard, the section).
   useEffect(() => {
-    document.title = PAGE_TITLES[phase];
-  }, [phase]);
+    document.title = phase === 'home' ? SECTION_TITLES[section] : PAGE_TITLES[phase];
+  }, [phase, section]);
 
   // ----- Drawing -----
   const isSignedIn = (phase === 'home' || phase === 'locked') && profile !== null;
   const dialogOpen = phase === 'home' && profile !== null && accountDialog !== null;
+  // The page behind a dialog can't be clicked or reached with Tab (account or Testing dialog).
+  const shellInert = dialogOpen || (phase === 'home' && testingModalOpen);
 
   return (
     <div className="app-root">
@@ -451,11 +499,11 @@ export default function App() {
         {isSignedIn && (
           <Shell
             hidden={phase === 'locked'}
-            inert={dialogOpen}
+            inert={shellInert}
             currentSection={section}
-            onNavigate={setSection}
+            onNavigate={navigate}
             location={location}
-            onLocationChange={setLocation}
+            onLocationChange={changeLocation}
             profile={profile}
             deviceLocation={deviceLocation}
             onDeviceLocationChange={handleDeviceLocationChange}
@@ -466,6 +514,20 @@ export default function App() {
             onSignOut={() => signOut()}
           >
             {section === 'home' && <Home location={location} />}
+            {section === 'testing' && (
+              <Testing
+                location={location}
+                onLocationChange={changeLocation}
+                // For showing or hiding controls only — the database decides what may change.
+                isAdmin={profile.role === 'admin'}
+                screenLocked={phase === 'locked'}
+                onNoAccess={handleNoAccess}
+                onRefreshProfile={refreshProfile}
+                showToast={showToast}
+                clearToast={clearToast}
+                onModalOpenChange={setTestingModalOpen}
+              />
+            )}
           </Shell>
         )}
 

@@ -17,3 +17,7 @@ dist-preview/
 # Editor / OS clutter
 .DS_Store
 *.log
+
+# Claude Code: worktree copies of this project and personal (per-computer) Claude settings
+.claude/worktrees/
+.claude/settings.local.json
