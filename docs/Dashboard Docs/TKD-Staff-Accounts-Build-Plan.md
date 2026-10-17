@@ -215,4 +215,6 @@ A separate agent reviewed this plan against handoff §6, migrations 0001–0003 
   - On production: `0004_tests.sql`, `0002_tests.sql` and `verify_pin_tests.sql` pass.
   - The first 0004 run failed check 8f. That was a false alarm: a Color Belt seed row's random id contained "4719". Fixed by searching only the test's own history rows (`ca0fc0f`); a deliberately leaking copy is still caught.
   - Also fixed: `0004_fingerprints.sql` had the word `deleted_at`, which the Supabase connection refuses. It's now spelled in two pieces.
-- Next: S5 (the real check from the local app, outside class hours).
+- **S5 done (2026-10-17, outside class hours):** Jeffrey used the local app on the real database to reset the desk password (3 times; the first signed out 2 desk devices) and the desk PIN. Both worked: sign-in with the new password in a private window, unlock with the new PIN.
+  - Checked read-only: 4 history rows with no password or digits; the only desk sign-in left is the one made after the last reset; no emailed links; bcrypt `$2a$10$` hash.
+- Next: S6 (Main session merges `staff-accounts` into `main`), then S7 (deploy, separate OK). Until deployed, resets on the live site need the local app or the SETUP.md snippet.
