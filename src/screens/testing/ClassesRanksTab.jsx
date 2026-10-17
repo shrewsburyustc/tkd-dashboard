@@ -53,7 +53,7 @@ import {
 } from '../../lib/testing/rankOrder.js';
 import { useClassesRanks } from '../../lib/testing/useClassesRanks.js';
 import { PLAIN_WHITE_BELT, beltOf, defaultBeltFor, validateBelt } from '../../lib/testing/belts.js';
-import { PC_QUERY, PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../lib/useMediaQuery.js';
+import { NARROW_PHONE_QUERY, PC_QUERY, PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../lib/useMediaQuery.js';
 import { useReorderDrag } from '../../lib/useReorderDrag.js';
 import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
 import { useShortcutN } from '../../lib/useShortcutN.js';
@@ -127,8 +127,9 @@ export default function ClassesRanksTab({
   const isPc = useMediaQuery(PC_QUERY);
   const isTouch = useMediaQuery(TOUCH_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
+  const isNarrowPhone = useMediaQuery(NARROW_PHONE_QUERY); // under 360px: no Edit pencil on rank rows (v0.68)
   // Grips (drag to reorder) for admins on EVERY device (v0.63); staff never see them.
-  const layout = { isPhone, isTouch, isWide, isPc, hasGrip: isAdmin };
+  const layout = { isPhone, isNarrowPhone, isTouch, isWide, isPc, hasGrip: isAdmin };
 
   // ----- State -----
   const [openBySchool, setOpenBySchool] = useState(() => Object.fromEntries(openClassesBySchool));

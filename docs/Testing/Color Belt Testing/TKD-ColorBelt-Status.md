@@ -1,6 +1,6 @@
 # Color Belt Testing — status and next steps
 
-**Updated:** 2026-10-17 (handoff from the claude.ai chat to Claude Code)
+**Updated:** 2026-10-17 (Color Belt worktree session, branch `color-belt`; belt look approved v0.67, narrow-phone rows v0.68)
 **Rulebook at handoff:** v0.65 · **Contract:** `docs/Dashboard Docs/Build contracts/CONTRACT-0003.md` · **Plan:** `TKD-Testing-Phase1-Build-Plan.md` (this folder) · **Old system inventory:** `TKD-ColorBelt-Inventory.md` (this folder)
 
 > Read `CLAUDE.md` (repo root) first. This file says where Color Belt phase 1 stands and what comes next. Keep it current.
@@ -9,14 +9,14 @@
 
 ## 1. Where things stand (one paragraph)
 
-Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, ranks, prices, final awards, belt pictures; staff view only). It is **fully built and reviewed in preview mode** and its files are in this repo, **uncommitted**. Nothing is pushed, and **migration 0003 has not been applied anywhere** (the live site and live database are unchanged — Home only). The last thing built was **belt graphics + the belt picker** (rulebook v0.64/v0.65) — these exist **only in the preview (fake database)** so far; the database part waits for Jeffrey to approve the look in the preview.
+Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, ranks, prices, final awards, belt pictures; staff view only). It is **fully built and reviewed in preview mode** and its files are **committed locally** (checkpoint `811b812` on `main`; Color Belt work continues on branch `color-belt`). Nothing is pushed, and **migration 0003 has not been applied anywhere** (the live site and live database are unchanged — Home only). The last thing built was **belt graphics + the belt picker** (rulebook v0.64/v0.65) — Jeffrey **approved the look in the preview on 2026-10-17 (rulebook v0.67)**; belts still exist **only in the preview (fake database)** — the database part (step A) is next.
 
 **⚠ Don't push.** The screens now ask the database for `belt_*` columns and send `p_belt_*` arguments that migration 0003 doesn't have yet. Against the real database Testing would fail (`42703` / `PGRST202`). It only works in preview mode until step A below is done and 0003 is live.
 
 ## 2. Waiting on Jeffrey right now
 
-1. **Approve the belt look** in the preview (`Start preview.bat` → password `preview`, PIN `2580` → Testing). What he was asked to look at: belts beside rank and Testing-for names (LT, High belts, Red / Black half-and-half, Bo Dan 1–3 Big Stripes, Deputy); Edit rank on High Green (PC dialog is two columns, belt on the right); Add rank in Group B (starts with Red's belt → switch to Half and half + black); finger-drag by the grip on tablet/phone; staff view via `__tkdPreview.setRole('staff')` + reload. Preview data was reset to the default list (storage schema v3). **When he approves, record it in the rulebook** (new version: update the v0.64/v0.65 rows — they end "Mockups to be approved before building" — plus a changelog line).
-2. **Optional phone question:** at 320 px wide, a rank row has grip + Edit + ⋯ and long names ("Bo Dan - 1 Big Stripe") wrap, making rows tall. Option: under 360 px only, drop the Edit icon (tapping the row already opens Edit). Fine at 390 px. Not decided — ask once, record the answer in the rulebook.
+1. ~~Approve the belt look in the preview.~~ **Done 2026-10-17** — approved by Jeffrey, recorded in the rulebook as v0.67 (v0.65 row updated, new 10b row, changelog line).
+2. ~~Optional phone question~~ **Decided 2026-10-17 (rulebook v0.68) and built:** under 360 px wide, rank rows drop the Edit pencil (tap the row to edit); 320 px Bo Dan rows went from 159 px to 84 px tall. Open follow-up: under 360 px nothing on a rank row is labeled "Edit" for screen readers — option: an "Edit rank" item in the ⋯ menu at that width (needs his OK).
 
 ## 3. Next steps, in order (each needs his OK where marked)
 
@@ -26,7 +26,7 @@ Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, 
 - Builder B: add belts to the seed. `supabase/manual/make_seed.mjs` → belt per rank exactly as the "Belts" line in contract §6.3 (same values as `src/lib/mockTesting.js`): LT White solid white · LT Yellow/Green/Blue/Red/Black = stripe white + that color · White, Yellow, Orange, Green, Blue, Purple, Red, Brown solid · High Green/Blue/Red/Brown = stripe that color + white · Red / Black = half red (top) + black · Bo Dan = stripe black + white · Bo Dan - 1/2/3 Big Stripe = same + 1/2/3 yellow end stripes · Deputy = stripe black + yellow. End-stripe color yellow everywhere. Teen/Adult ranks = kids' rank of the same name. Regenerate `0003s_seed_classes_and_ranks.sql` + review table.
 - Then a **security review** (DB) and a **design review** by separate agents; fix; re-review.
 
-**B. Commit** — done during the worktree setup (CLAUDE.md "Parallel sessions"): the Main session makes one local checkpoint commit of everything (Color Belt phase 1 + the Star testing session's uncommitted work). From then on Color Belt commits go on branch `color-belt` and reach `main` through the Main session. **No push.** (When this is done, replace this paragraph with the commit id.)
+**B. Commit** — **done:** checkpoint commit `811b812` (+ `599edd1`, PGlite lockfile) on local `main`. From now on Color Belt commits go on branch `color-belt` and reach `main` through the Main session. **No push.**
 
 **C. CP3 — database, with his OK at each step** (production Supabase SQL Editor, pasted by Jeffrey)
 1. Run `supabase/tests/verify_pin_tests.sql` and `supabase/tests/0002_tests.sql` (both roll back; replace UID placeholders per their headers) → both print PASSED. Also confirm `select count(*) from auth.sessions;` returns a number, and that 5 wrong PINs on a test device removes that session (still-open handoff §8 items).
@@ -50,7 +50,7 @@ v0.32 full rebuild in the dashboard · v0.33 public form via Pages Function · v
 
 Real data: 7 classes / 42 ranks per school. Final awards: Little Tiger → Yellow (Group A), White → Yellow, Group A → Blue, Group B → High Red, Group C → Bo Dan, Group D → None, Teen/Adult → None.
 
-## 5. Files (all in the repo, uncommitted)
+## 5. Files (committed in `811b812`)
 
 - **Database:** `supabase/migrations/0003_testing_classes_ranks.sql` (tables `locations`, `testing_classes`, `testing_ranks`, append-only `change_log`; 8 RPCs `testing_add_class / update_class / reorder_classes / delete_class / add_rank / update_rank / reorder_ranks / delete_rank`; statuses ok / no_access / not_allowed / not_found / stale / duplicate_name / invalid / not_empty), `supabase/tests/0003_tests.sql`, `0003_fingerprints.sql`, `supabase/tests/pglite/*`, `supabase/SETUP.md` §10.
 - **Seed:** `supabase/manual/make_seed.mjs`, `0003s_export_from_old_system.json` (read-only export), `0003s_adjustments.json` (approved v0.62 changes; `--no-adjustments` only with a loud warning), `0003s_export_query.sql`, `0003s_review_table.txt`, `0003s_seed_classes_and_ranks.sql`, fixtures (`*_fixture*`, `..._NOT_FOR_PRODUCTION.sql`).
@@ -61,6 +61,7 @@ Real data: 7 classes / 42 ranks per school. Final awards: Little Tiger → Yello
 
 - Rulebook edits: compute insert positions **after** replacements (an early script garbled two changelog lines); always re-read first — the Star session edits it too; keep CRLF.
 - After copying/writing files, verify them (an earlier copy wrote a stale file).
+- Worktree previews ignored every edit: `vite.config.js` watch-ignored `**/.claude/worktrees/**`, which matches a worktree's own path. Fixed on `color-belt` 2026-10-17 (ignore only this folder's own `.claude/worktrees/`); other worktrees get it when they merge `main`. Until then: restart their preview to see edits. Stopping a background `npm run dev` can leave its `node` child holding the port — find it by command line and stop it.
 - Git on this PC: an interrupted `git status` from another environment once left `.git/index.lock` — if git says a lock file exists and no git is running, the empty lock file can be removed.
 - Supabase connector cancels SQL containing `delete`/`drop` (even in comments) → Jeffrey pastes in SQL Editor.
 - Invisible/control characters in names are refused (DB, `names.js`, `make_seed.mjs`) — keep the three in sync.

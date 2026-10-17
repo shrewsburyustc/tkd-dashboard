@@ -11,6 +11,10 @@ export const KEYPAD_QUERY = '(pointer: coarse), (max-width: 1023.98px)';
 // Phone width — the same breakpoint as the phone rules in app.css.
 export const PHONE_QUERY = '(max-width: 639.98px)';
 
+// A very narrow phone (under 360px, e.g. 320px). Testing's rank rows drop their Edit pencil here
+// so long names fit (v0.68); tapping the row still opens Edit.
+export const NARROW_PHONE_QUERY = '(max-width: 359.98px)';
+
 // A PC: wide screen AND a mouse. Only here: drag grips, the N shortcut (guidelines 3.6).
 export const PC_QUERY = '(min-width: 1024px) and (pointer: fine)';
 

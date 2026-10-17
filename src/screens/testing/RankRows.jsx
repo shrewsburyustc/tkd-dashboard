@@ -13,6 +13,8 @@
 // Row actions (guidelines 8 + v0.43, v0.63):
 //   - admin, every device: the grip (drag to reorder) on the left — a 16px icon with a 44×44
 //     touch area on touch screens — and Edit + ⋯ on the right
+//   - phones under 360px wide: ⋯ only, no Edit pencil (v0.68) — long names like
+//     "Bo Dan - 1 Big Stripe" need the room; tapping the row opens Edit
 //   - touch: Edit + ⋯ are 28px icons with a 44px tap area
 //   - staff on touch: an outline "View" button; staff with a mouse: none (click the row)
 // Clicking anywhere else on a row opens it, too. One tag per row at most, in this order:
@@ -126,16 +128,19 @@ function rowTag(rank, notSaved) {
 }
 
 // The right-hand actions of a row. tabIndex: 0 only on the active row (see the top of the file).
-function RowActions({ rank, isAdmin, isTouch, menuOpen, tabIndex, onEdit, onMore, onView }) {
+// showEdit: false on phones under 360px wide (v0.68).
+function RowActions({ rank, isAdmin, isTouch, menuOpen, tabIndex, onEdit, onMore, onView, showEdit = true }) {
   if (isAdmin) {
     return (
       <span className="acts">
-        <IconButton
-          label={T.editRankLabel(rank.name)}
-          Icon={IconEdit}
-          tabIndex={tabIndex}
-          onClick={(event) => onEdit(rank, event.currentTarget)}
-        />
+        {showEdit && (
+          <IconButton
+            label={T.editRankLabel(rank.name)}
+            Icon={IconEdit}
+            tabIndex={tabIndex}
+            onClick={(event) => onEdit(rank, event.currentTarget)}
+          />
+        )}
         <IconButton
           label={T.moreFor(rank.name)}
           Icon={IconDots}
@@ -339,6 +344,7 @@ function PhoneRow({ rank, cls, ctx, lifted = false }) {
             rank={rank}
             isAdmin={isAdmin}
             isTouch={layout.isTouch}
+            showEdit={!layout.isNarrowPhone}
             menuOpen={menuFor === rank.id}
             tabIndex={tabIndex}
             onEdit={handlers.onEditRank}
