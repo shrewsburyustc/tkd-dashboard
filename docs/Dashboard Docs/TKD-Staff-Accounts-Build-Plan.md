@@ -207,7 +207,7 @@ A separate agent reviewed this plan against handoff §6, migrations 0001–0003 
 - **S2 done (2026-10-17):** the Staff accounts page, the Reset password / Reset PIN dialogs, the account menu's Admin group, the App wiring, the preview fake data (`mockStaff.js`), `staff.css`, and one new token (`--color-success-text`).
   - `npm run build` and `npm run build:preview-mode` pass. Clicked through in the preview at 1280 and 320.
   - Independent design review: no must-fix. Fixed: the field and Generate/Copy are locked while saving; the PIN focus ring only shows while the PIN box has focus; the unsaved note sits above the buttons on step 1; password managers are told to ignore the field; emails break after the "@"; the phone "Admin" label is indented; a screen-reader hint on rows; a smaller font under 360px.
-  - Open for Jeffrey: (a) the extra PC line "Type the 4 digits on your keyboard." (as in Change PIN; not in the mockup); (b) browser Back doesn't return from Staff accounts (no section uses history today; the mockup's "or browser Back" wording was wrong); (c) the shared dialog re-centres when a note appears.
+  - Open points decided 2026-10-17: (a) the extra PIN line is removed (v0.78); (b) browser Back should work dashboard-wide, to be designed separately (v0.79); (c) Dialog.jsx dialogs sit near the top instead of centred (v0.80, changes the shared frame Testing uses too).
 - **S3 done (2026-10-17):** Jeffrey tried it in the preview: OK.
 - **S4 done (2026-10-17, Jeffrey's OK):** 0004 pasted into the SQL Editor ("Success").
   - All 25 lines of `0004_fingerprints.sql` match the tested copy.

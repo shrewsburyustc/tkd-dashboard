@@ -737,6 +737,14 @@ html.is-reordering * {
   border-radius: var(--radius-dialog);
 }
 
+/* Dialog.jsx boxes sit near the top, not in the middle (v0.80): a message appearing inside only
+   pushes what's below it down. 10% of the screen height, at least 16px and at most 96px; the
+   box can still use the rest of the height and scrolls inside when it's taller. */
+.dialog-backdrop--top {
+  align-items: flex-start;
+  padding-top: max(var(--space-16), min(10vh, 96px));
+}
+
 .tdialog--detail {
   width: 440px;
 }

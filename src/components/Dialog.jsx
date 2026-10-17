@@ -13,6 +13,10 @@
 //     on every device, phones included.
 // Where focus goes after closing is decided by the screen (contract 0003 §8.5), not here.
 //
+// PC / tablet position (decided v0.80): the box sits a fixed distance from the TOP of the screen
+// instead of in the middle, so when a message appears inside it ("Unsaved changes…") only what's
+// below the message moves down — the buttons above don't jump away from the pointer.
+//
 // Phones: the full-screen page adds an entry to the browser's history while it's open, so the
 // phone's own Back button (or the browser's) does the same as the back arrow on the page —
 // including the unsaved-changes guard — instead of leaving the dashboard.
@@ -157,7 +161,7 @@ export default function Dialog({
   return createPortal(
     // The dimmed backdrop. A click on it (not on the box) asks to close.
     <div
-      className="dialog-backdrop"
+      className="dialog-backdrop dialog-backdrop--top"
       onMouseDown={(event) => {
         // Keep focus where it is: a click on the dim area shouldn't drop focus to the page.
         if (event.target === event.currentTarget) event.preventDefault();

@@ -196,7 +196,6 @@ export default function ResetPinDialog({ account, adminEmail, isPhone, onCancel,
                   }
                 }}
               />
-              <p className="pin-hint">{T.TYPE_DIGITS}</p>
             </>
           )}
 

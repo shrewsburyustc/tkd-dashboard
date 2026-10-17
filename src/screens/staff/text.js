@@ -69,7 +69,6 @@ export function pinHandover(name, isShared) {
   return isShared ? 'This is the shared front-desk PIN. Tell the desk staff the new one.' : `Tell ${name} the new PIN.`;
 }
 export const PIN_FAILED = "Couldn't reset the PIN. Nothing was changed. Try again.";
-export const TYPE_DIGITS = 'Type the 4 digits on your keyboard.';
 
 // Unsaved changes (v0.46 / v0.56)
 export const UNSAVED = 'Unsaved changes. Save or cancel first.';
