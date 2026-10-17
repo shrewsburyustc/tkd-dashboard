@@ -208,4 +208,5 @@ A separate agent reviewed this plan against handoff §6, migrations 0001–0003 
   - `npm run build` and `npm run build:preview-mode` pass. Clicked through in the preview at 1280 and 320.
   - Independent design review: no must-fix. Fixed: the field and Generate/Copy are locked while saving; the PIN focus ring only shows while the PIN box has focus; the unsaved note sits above the buttons on step 1; password managers are told to ignore the field; emails break after the "@"; the phone "Admin" label is indented; a screen-reader hint on rows; a smaller font under 360px.
   - Open for Jeffrey: (a) the extra PC line "Type the 4 digits on your keyboard." (as in Change PIN; not in the mockup); (b) browser Back doesn't return from Staff accounts (no section uses history today; the mockup's "or browser Back" wording was wrong); (c) the shared dialog re-centres when a note appears.
-- Next: S3 (Jeffrey tries it in the preview).
+- **S3 done (2026-10-17):** Jeffrey tried it in the preview: OK.
+- Next: S4 (apply 0004 to production; needs its own OK).
