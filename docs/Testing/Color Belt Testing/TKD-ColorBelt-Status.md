@@ -9,9 +9,9 @@
 
 ## 1. Where things stand (one paragraph)
 
-Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, ranks, prices, final awards, belt pictures; staff view only). It is **fully built and reviewed in preview mode** and its files are **committed locally** (checkpoint `811b812` on `main`; Color Belt work continues on branch `color-belt`). Nothing is pushed, and **migration 0003 has not been applied anywhere** (the live site and live database are unchanged — Home only). The last thing built was **belt graphics + the belt picker** (rulebook v0.64/v0.65) — Jeffrey **approved the look in the preview on 2026-10-17 (rulebook v0.67)**; step A (belts into migration 0003 and the seed) is **done and reviewed** on branch `color-belt` — still not applied anywhere. Next is CP3 (database, with his OK at each step).
+Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, ranks, prices, final awards, belt pictures; staff view only). It is **fully built and reviewed in preview mode** and its files are **committed locally** (checkpoint `811b812` on `main`; Color Belt work continues on branch `color-belt`). Nothing is pushed. **Migration 0003 is live in the production database since 2026-10-17 (CP3 done)** — tables are empty until the seed (CP4); the live site is unchanged (Home only). The last thing built was **belt graphics + the belt picker** (rulebook v0.64/v0.65) — Jeffrey **approved the look in the preview on 2026-10-17 (rulebook v0.67)**; step A (belts into migration 0003 and the seed) is **done and reviewed** on branch `color-belt` — applied in CP3. Next is CP4 (seed, after he checks the review table).
 
-**⚠ Don't push.** The screens read `belt_*` columns and send `p_belt_*` arguments that exist only in the **new** 0003 (step A). The live database has no 0003 yet; against it Testing would fail (`42703` / `PGRST202`). Apply 0003 (CP3) and the seed (CP4) before any deploy (CP6) — the old 6/7-argument rank functions are gone, so app and database must change together.
+**⚠ Don't push yet.** 0003 is live, but its Testing tables are empty until the seed (CP4), and CP5 (real-database check on this PC) comes before any deploy (CP6).
 
 ## 2. Waiting on Jeffrey right now
 
@@ -29,11 +29,11 @@ Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, 
 
 **B. Commit** — **done:** checkpoint commit `811b812` (+ `599edd1`, PGlite lockfile) on local `main`. From now on Color Belt commits go on branch `color-belt` and reach `main` through the Main session. **No push.**
 
-**C. CP3 — database, with his OK at each step** (production Supabase SQL Editor, pasted by Jeffrey)
-1. Run `supabase/tests/verify_pin_tests.sql` and `supabase/tests/0002_tests.sql` (both roll back; replace UID placeholders per their headers) → both print PASSED. Also confirm `select count(*) from auth.sessions;` returns a number, and that 5 wrong PINs on a test device removes that session (still-open handoff §8 items).
-2. OK → paste `0003_testing_classes_ranks.sql`.
-3. Read-only connector checks: `select version()` (≥15), list tables, `0003_fingerprints.sql` output must match what `run.mjs` printed, `get_advisors` (security).
-4. Run `0003_tests.sql` → `ALL 0003 TESTS PASSED`.
+**C. CP3 — database** — **done 2026-10-17** (production Supabase SQL Editor, pasted by Jeffrey)
+1. **2026-10-17: both PASSED** in production (`verify_pin_tests.sql` with the admin UID; `0002_tests.sql` with admin + desk UIDs). `select count(*) from auth.sessions;` returned 3; 5 wrong PINs in a private window signed that window out and the count went back to 3. **Step 1 complete.** Original step: Run `supabase/tests/verify_pin_tests.sql` and `supabase/tests/0002_tests.sql` (both roll back; replace UID placeholders per their headers) → both print PASSED. Also confirm `select count(*) from auth.sessions;` returns a number, and that 5 wrong PINs on a test device removes that session (still-open handoff §8 items).
+2. **Done:** Jeffrey pasted `0003_testing_classes_ranks.sql` (commit c91f77b) → "Success. No rows returned".
+3. **Done (connector, read-only):** Postgres 17.11; `locations` 2 rows, classes/ranks 0; RLS on all 4 tables; anon has no table grants; belt columns as designed; **all 19 function fingerprints identical to `node run.mjs`**; security advisor: nothing new — the 8 testing RPCs are the intended "authenticated can run security definer" list (helpers not exposed), `change_log` "RLS, no policy" is intended, leaked-password protection was already flagged before 0003.
+4. **Done:** `0003_tests.sql` (admin + desk UIDs) → `ALL 0003 TESTS PASSED`.
 
 **D. CP4 — seed**, with his OK after he checks the review table: paste `supabase/manual/0003s_seed_classes_and_ranks.sql`; check 7 classes / 42 ranks per school; run `0003_tests.sql` again.
 
