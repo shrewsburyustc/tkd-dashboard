@@ -1,7 +1,7 @@
 # Star Testing — status and next steps
 
-**Updated:** 2026-10-17 (Star testing design session — Rubrics and prices design approved)
-**Rulebook at this update:** v0.66 (Star testing rows: v0.58–v0.61, v0.63, v0.66) · **Inventory of the old prototype:** `TKD-StarTesting-Inventory.md` (this folder) · **Mockups:** `TKD-StarTesting-Rubrics-Mockups.html` (this folder)
+**Updated:** 2026-10-17 (Star testing worktree session — Events tab Questions 1–2 answered, v0.67–v0.68)
+**Rulebook at this update:** v0.68 (Star testing rows: v0.58–v0.61, v0.63, v0.66–v0.68) · **Inventory of the old prototype:** `TKD-StarTesting-Inventory.md` (this folder) · **Mockups:** `TKD-StarTesting-Rubrics-Mockups.html` (this folder)
 
 > Read `CLAUDE.md` (repo root) first. This file says where Star testing stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -9,18 +9,18 @@
 
 ## 1. Where things stand (one paragraph)
 
-Star testing (the stars between Dan ranks: 1st Dan up to 4 stars, 2nd up to 3, 3rd up to 5) is in the **design stage only**. Nothing is built: no database tables, no screens, no migration. The old prototype (`Old prototype/`, never used, no real data) is the feature reference only. Decided so far: where Star testing lives (inside Testing, next to Color belt testing), how its pages are organised, the order of work, and the rules for the **Rubrics and prices** tab (build phase 1). The **Rubrics and prices mockup (12 screens) is approved** (2026-10-17, after a screen-by-screen pass; recorded as v0.66). Next is designing the Events tab. Star testing work is **uncommitted** in the main folder (this folder's files + Star rows in the rulebook); per `CLAUDE.md` the Main session's checkpoint commit includes it, then Star work moves to its own worktree on branch `star-testing`. Nothing pushed.
+Star testing (the stars between Dan ranks: 1st Dan up to 4 stars, 2nd up to 3, 3rd up to 5) is in the **design stage only**. Nothing is built: no database tables, no screens, no migration. The old prototype (`Old prototype/`, never used, no real data) is the feature reference only. Decided so far: where Star testing lives (inside Testing, next to Color belt testing), how its pages are organised, the order of work, and the rules for the **Rubrics and prices** tab (build phase 1). The **Rubrics and prices mockup (12 screens) is approved** (2026-10-17, after a screen-by-screen pass; recorded as v0.66). The Events tab is being designed one question at a time (`TKD-StarTesting-Events-Questions.html`): **Questions 1–2 answered** (registration switch + optional closing date, v0.67; roles, v0.68). Star work now happens in its own worktree on branch `star-testing` (set up 2026-10-17, level with `main` at 599edd1). Nothing pushed.
 
 ## 2. Waiting on Jeffrey right now
 
-Nothing blocking. Next design decision to put to him: the **Events tab** (section 3B.1), one question at a time with visuals.
+Nothing blocking. Next: **Events tab Question 3**, what an event holds besides name and date (start time, building, a note for families, a per-Dan limit), to be drawn as options in `TKD-StarTesting-Events-Questions.html`.
 
 ## 3. Next steps, in order
 
 **A. Phase 1 design (Rubrics and prices) — DONE**, approved 2026-10-17 (v0.66).
 
 **B. Design the remaining Star testing screens** (decision v0.61: design everything first, then build). Each: one decision at a time with visuals → mockups at PC / tablet / phone → separate reviewer agent → screen-by-screen pass with Jeffrey → record in the rulebook.
-1. Events tab + Add / Edit event (name, date, both schools, registration open/closed, family link + QR; event copies rubrics and prices at creation — v0.61)
+1. Events tab + Add / Edit event — **in progress**, questions in `TKD-StarTesting-Events-Questions.html`: (1) registration open/close — **done v0.67**; (2) who can add/edit and open/close — **done v0.68**; (3) other event fields (time, building, note, per-Dan limit — prototype had 100); (4) status tags through an event's life + upcoming/past split; (5) family link + QR placement; (6) delete/cancel an event. Then full mockups at PC / tablet / phone.
 2. Public registration form (no login; uses the shared public-form path v0.33, most likely built first by Color Belt phase 2): full name, date of birth (custom calendar), email for results, school, current Dan, star progression, Cash or Check. **Gender dropped.** No phone, attendance or assistant counts.
 3. Event → **Candidates** tab (roster: grouped Shrewsbury first then Worcester, lowest star first then A–Z; payments; school correction; edit / remove a candidate — the prototype had neither)
 4. Event → **Grading** tab (no horizontal scroll — new layout needed; D shown amber not red; Classes attended + Assistant classes entered by staff; landscape paper grading sheet)
@@ -52,6 +52,8 @@ Nothing blocking. Next design decision to put to him: the **Events tab** (sectio
 | v0.60 | Star testing home tabs **Events** + **Rubrics and prices**; each event opens its own page with **Candidates · Grading · Results** tabs. |
 | v0.61 | **Design every Star screen first, then build in 6 phases.** **Each event keeps its own copy** of rubrics, grade scale, assistant table, star limits and prices from creation. Rubrics and prices: **Admin edits, Staff view only** (enforced in the database). **Everything changeable with live totals** (categories add/rename/re-credit/reorder/delete, pass mark, star limit, grade values, assistant table, fees); exactly one "from class count" category per Dan. **70-credit total shown, not required** (amber note + reminder). |
 | v0.63 | **Drag to reorder works on every device** by the grip only (dashboard-wide, changes v0.43; affects Color Belt phase 1 too). Move up/down in ⋯ stays everywhere. |
+| v0.68 | **Events roles:** admins add/edit events and open or close registration any time; **staff close any time, reopen only before the closing date** (after it: grayed out, "Ask an admin to reopen."); enforced in the database. |
+| v0.67 | **Registration** switch (Open / Closed; new events start Closed) **plus an optional automatic closing date** (starts ticked, 7 days before testing, 11:59 PM Massachusetts time; never reopens; reopening after it removes the date); ⋯ Close / Open registration with Undo; closing date shown openly (exception to rule 8). Label "Registration", not "Family registration" (Jeffrey). |
 | v0.66 | **Rubrics and prices mockups approved** (12 screens, all 20 details). **Age for the assistant-class scale counts on the testing day.** **Grade values and assistant-class minimums must go down in order** (Save gray until fixed). |
 
 Facts from Jeffrey (2026-10-16): rubrics and prices are current; same-day fee = **paying** on testing day; DOB required (scoring depends on age); email required (results); classes attended kept; gender dropped; private star testing exists; the prototype was never used — the goal is a complete, more detailed product.
@@ -64,9 +66,10 @@ Facts from Jeffrey (2026-10-16): rubrics and prices are current; same-day fee = 
 - `TKD-StarTesting-Status.md` — this file.
 - `TKD-StarTesting-Inventory.md` — inventory of the old prototype, Jeffrey's answers (§0), domain rules, gaps vs the rulebook.
 - `TKD-StarTesting-Rubrics-Mockups.html` — Rubrics and prices mockups, 12 screens at PC / tablet / phone, with "Details for approval". **Approved 2026-10-17 (v0.66).**
+- `TKD-StarTesting-Events-Questions.html` — Events tab design questions, one at a time, with option sketches (PC + phone); answered questions stay with their answer. Built from the Rubrics mockup's stylesheet.
 - `Old prototype/` — `star-testing.html` (prototype), `STAR-TESTING.md` (notes), `STAR-TESTING-HANDOFF.md` (full spec: rubrics as data, scoring code, test cases, defects not to repeat). Feature reference only — its stack (Workers + D1, shared password) is superseded by the dashboard's.
 
-**Shared files the Star session has edited:** `docs/Dashboard Docs/TKD-Dashboard-Design-Guidelines.md` (Star 10b rows + changelog v0.58–v0.61, v0.63, v0.66; v0.43 row note). Also earlier (committed in `4dc7ad4`): docs reorganisation, `docs/README.md`, root `README.md` doc paths, handoff paths.
+**Shared files the Star session has edited:** `docs/Dashboard Docs/TKD-Dashboard-Design-Guidelines.md` (Star 10b rows + changelog v0.58–v0.61, v0.63, v0.66–v0.68; v0.43 row note). Also earlier (committed in `4dc7ad4`): docs reorganisation, `docs/README.md`, root `README.md` doc paths, handoff paths.
 
 **Reading copies** in the claude.ai project "Taekwondo Management System": inventory, guidelines (may lag the repo).
 

@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Star events questions</title>
+<style>
+
+:root{--control-border:#8F8F8A;--page:#EFEFEC;--bg:#FFFFFF;--surface:#F7F7F5;--border:#E5E5E2;--border-strong:#CFCFCA;--text:#1F1F1F;--text2:#6B6B6B;--blue:#003595;--blue-hover:#002A77;--blue-tint:#E6EBF4;--red:#A32D2D;--red-tint:#FCEBEB;--ok:#3B6D11;--ok-tint:#EAF3DE;--warn:#633806;--warn-tint:#FAEEDA}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1340px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:20px;font-weight:500;margin:0 0 4px}
+h2{font-size:16px;font-weight:500;margin:48px 0 4px;padding-top:16px;border-top:1px solid var(--border-strong)}
+h4{font-size:13px;font-weight:500;margin:32px 0 4px}
+.lead{color:var(--text2);font-size:13px;margin:0 0 12px}
+.banner{background:var(--warn-tint);color:var(--warn);padding:8px 12px;border-radius:8px;font-size:13px;display:flex;gap:8px;align-items:flex-start}
+/* explanation block (P1) */
+.explain{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:8px 0 16px;font-size:13px}
+.explain h3{font-size:13px;font-weight:500;margin:8px 0 2px}.explain h3:first-child{margin-top:0}
+.explain ul,.explain ol{margin:0;padding-left:20px}.explain li{margin:2px 0}
+.explain .prop{color:var(--warn)}
+b{font-weight:500}
+/* device frames */
+.cap{font-size:12px;color:var(--text2);margin:16px 0 6px;display:flex;align-items:center;gap:6px}
+.cap i{font-size:16px}
+.scroller{overflow-x:auto;padding-bottom:4px}
+.dev{background:var(--bg);border:1px solid var(--border-strong);overflow:hidden;position:relative;flex:none}
+.dev-pc{width:1282px;height:600px;border-radius:10px}
+.dev-tab{width:832px;height:560px;border-radius:18px;border-width:6px;border-color:#2B2B2B}
+.dev-ph{width:402px;height:700px;border-radius:28px;border-width:6px;border-color:#2B2B2B}
+.pair{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+/* app shell (as approved in the Home / Account files) */
+.app{display:flex;height:100%;background:var(--bg)}
+.app-col{flex:1;min-width:0;display:flex;flex-direction:column}
+.content{flex:1;min-height:0;padding:24px;display:flex;flex-direction:column;overflow:hidden}
+.ph-shell{height:100%;display:flex;flex-direction:column}
+.ph-shell .content{padding:16px}
+.rail{width:52px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;flex:none}
+.rail a{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;color:var(--text2)}
+.rail a i{font-size:18px}
+.rail a.on{background:var(--blue-tint);color:var(--blue)}
+.rail-t{width:72px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;flex:none}
+.rail-t a{display:flex;flex-direction:column;align-items:center;justify-content:center;width:64px;min-height:56px;border-radius:8px;color:var(--text2);font-size:12px;gap:2px}
+.rail-t a i{font-size:20px}
+.rail-t a.on{color:var(--blue)}.rail-t a.on i{background:var(--blue-tint);border-radius:8px;padding:4px 10px}
+.topbar{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 12px;flex:none}
+.topbar .grow{flex:1}
+.loc{display:flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;font-size:12px;height:32px}
+.loc span{display:flex;align-items:center;gap:4px;padding:0 12px;color:var(--text2)}
+.loc span.on{background:var(--blue-tint);color:var(--blue)}
+.loc span+span{border-left:1px solid var(--border)}
+.touch .loc{height:36px}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--surface);border:1px solid var(--control-border);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--text);flex:none}
+.tap{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.phbar{border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:4px 0 10px;flex:none;background:var(--bg)}
+.phbar a{display:flex;flex-direction:column;align-items:center;min-width:64px;min-height:48px;justify-content:center;font-size:12px;color:var(--text2);gap:2px}
+.phbar a i{font-size:20px}.phbar a.on{color:var(--blue)}
+/* controls */
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.field label,.lbl{font-size:12px;color:var(--text2)}
+.input{height:32px;border:1px solid var(--control-border);border-radius:8px;padding:0 12px;display:flex;align-items:center;font-size:13px;color:var(--text);background:var(--bg)}
+.input.focus{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}.input.bad.focus{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn)}
+.input .pre{color:var(--text2);margin-right:4px}
+.input.money{width:120px}
+.input.select{justify-content:space-between}.input.select i{font-size:16px;color:var(--text2)}
+.touch .input{height:36px;font-size:14px}
+.caret{display:inline-block;width:1px;height:16px;background:var(--text);margin-left:1px}
+.btn{height:32px;padding:0 16px;border-radius:8px;font-size:13px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--control-border);background:var(--bg);color:var(--text);flex:none;white-space:nowrap}
+.btn i{font-size:16px}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn-primary.dis{background:var(--surface);border-color:var(--border-strong);color:#8A8A85}
+.btn-sm{height:28px;padding:0 12px}
+.btn-full{width:100%}
+.touch .btn{height:36px}
+.touch .btn-sm{height:36px;padding:0 12px}
+.err{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--warn);background:var(--warn-tint);padding:8px;border-radius:6px}
+.hint{font-size:12px;color:var(--text2)}
+/* dialogs */
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:5}
+.dialog{background:var(--bg);border-radius:12px;width:360px;max-width:calc(100% - 32px);padding:24px;position:relative}
+.dialog h3{font-size:16px;font-weight:500;margin:0 0 4px}
+.dialog .sub{font-size:13px;color:var(--text2);margin:0 0 16px}
+.dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+/* detail view (v0.46): centered dialog showing every field */
+.dialog-detail{width:440px}
+.dialog-detail .meta{margin-top:12px}
+.prices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.prices .input.money{width:100%}
+.fullscreen{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;z-index:5}
+.fullscreen .head{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 4px;font-size:16px;font-weight:500;flex:none}
+.fullscreen .fbody{padding:16px;flex:1;overflow:hidden}
+/* menus */
+.menu{position:absolute;background:var(--bg);border:1px solid var(--border-strong);border-radius:8px;padding:4px 0;width:200px;z-index:5;text-align:left}
+.menu .it{display:flex;align-items:center;gap:8px;padding:0 12px;height:32px;font-size:13px;color:var(--text);white-space:nowrap}
+.touch .menu .it{height:44px}
+.menu .it i{font-size:16px;color:var(--text2)}
+.menu .it.hov{background:var(--surface)}
+.menu .it.sel{background:var(--blue-tint);color:var(--blue)}
+.menu .it.dis{color:#A3A39E}.menu .it.dis i{color:#B8B8B3}
+.menu .it.red,.menu .it.red i{color:var(--red)}
+.menu .it.red.hov{background:var(--red-tint)}
+.menu .sep{border-top:1px solid var(--border);margin:4px 0}
+.menu .grp{font-size:12px;color:var(--text2);padding:8px 12px 4px}
+.sheet-wrap{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;z-index:5}
+.sheet{background:var(--bg);width:100%;border-radius:16px 16px 0 0;padding:8px 0 16px}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--border-strong);margin:4px auto 8px}
+.sheet .stitle{padding:4px 16px 8px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.sheet .stitle b{display:block;font-size:14px}.sheet .stitle span{font-size:12px;color:var(--text2)}
+.sheet .menu{position:static;width:auto;border:none;box-shadow:none;border-radius:0;padding:0}
+.sheet .menu .it{padding:0 16px}
+.sheet .menu .it.cancel{justify-content:center;color:var(--text);font-weight:500}
+.tag{font-size:12px;line-height:16px;padding:2px 8px;border-radius:6px;background:var(--surface);color:var(--text2);border:1px solid var(--border);white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.tag-warn{background:var(--warn-tint);color:var(--warn);border-color:#F2D9B0}
+.tag i{font-size:12px}
+.callout{position:absolute;background:var(--warn-tint);color:var(--warn);border:1px dashed #EF9F27;font-size:12px;padding:4px 8px;border-radius:6px;z-index:7;white-space:nowrap}
+/* ---------- new for Testing ---------- */
+.phead{display:flex;align-items:center;gap:12px;margin-bottom:8px;flex:none}
+.phead .grow{flex:1}
+.ptitle{font-size:20px;font-weight:500;line-height:1.3}
+.psub{font-size:12px;color:var(--text2)}
+.tabs{display:flex;gap:24px;border-bottom:1px solid var(--border);margin-bottom:16px;flex:none}
+.tabs span{height:40px;display:flex;align-items:center;font-size:13px;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs span.on{color:var(--blue);border-bottom-color:var(--blue);font-weight:500}
+.touch .tabs span{height:44px}
+.ph-shell .tabs{gap:0}.ph-shell .tabs span{flex:1;justify-content:center}
+.more-tog{display:inline-flex;align-items:center;gap:4px;height:28px;font-size:13px;color:var(--text2)}
+.more-tog i{font-size:16px}
+.touch .more-tog{min-height:44px}
+.crow.cgap{opacity:.35}
+.crow.clift{background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.10);border:1px solid var(--border-strong);border-radius:8px;margin:4px -4px 4px 8px;position:relative;z-index:2}
+.viewonly{font-size:13px;color:var(--text2);margin:-4px 0 12px;flex:none}
+/* failed-save banner (rule 3.5) */
+.errbar{display:flex;align-items:center;gap:8px;background:var(--warn-tint);color:var(--warn);border-radius:8px;padding:4px 4px 4px 12px;font-size:13px;margin:-4px 0 12px;flex:none}
+.errbar>i{font-size:16px}
+.errbar .grow{flex:1}
+.errbar .btn{border-color:var(--control-border)}
+.touch .errbar{flex-wrap:wrap;padding:8px 4px 4px 12px}
+/* icon buttons: 28px visible square; on touch the outer box is a 44x44 invisible tap area */
+.ib{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;color:var(--text2);flex:none}
+.ib .ibv{width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center}
+.ib i{font-size:16px}
+.ib.hov .ibv{background:var(--surface);color:var(--text)}
+.touch .ib{width:44px;height:44px}
+/* class list */
+.clist{border:1px solid var(--border);border-radius:8px;flex:none}
+.crow{display:flex;align-items:center;gap:8px;height:40px;padding:0 4px 0 8px;font-size:13px;border-top:1px solid var(--border)}
+.clist>.crow:first-child{border-top:none}
+.touch .crow{height:48px;padding:0;gap:4px}
+.crow .nm{font-weight:500}
+.crow .cnt{font-size:12px;color:var(--text2)}
+.crow .grow{flex:1}
+.acts{display:flex;align-items:center;gap:4px;justify-content:flex-end;position:relative}
+.touch .acts{gap:0}
+/* rank table */
+.rhead,.rrow{display:grid;align-items:center;column-gap:12px;border-top:1px solid var(--border)}
+.rhead{height:32px;background:var(--surface);font-size:12px;color:var(--text2)}
+.rrow{min-height:40px;font-size:13px;position:relative;padding-top:4px;padding-bottom:4px}
+.touch .rrow{min-height:48px}
+.g-pc{grid-template-columns:24px minmax(0,1fr) minmax(0,1.6fr) 64px 88px 64px 104px 64px;padding:0 4px 0 40px}
+.g-st{grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) 64px 88px 64px 104px;padding:0 16px 0 44px}
+.g-tab{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 64px 96px 88px;padding:0 0 0 48px}
+.g-tst{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 64px 96px 72px;padding:0 8px 0 48px}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.rk{display:flex;align-items:center;gap:8px;min-width:0}
+.grip{display:inline-flex;align-items:center;justify-content:center;width:24px;height:28px;color:var(--text2);border-radius:8px}
+.grip i{font-size:16px}
+.grip.hov{background:var(--border);color:var(--text)}
+.rrow.sel{background:var(--blue-tint)}
+.rrow.hovrow{background:var(--surface)}
+.rrow.lift{background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.10);z-index:2;margin:4px -4px 4px 32px;padding-left:8px;border:1px solid var(--border-strong);border-radius:8px}
+.rrow.gap{opacity:.35}
+.dropline{height:0;border-top:2px solid var(--blue);margin:-1px 0 -1px 40px;position:relative;z-index:3}
+.addrow{display:flex;align-items:center;gap:12px;padding:8px 8px 8px 76px;border-top:1px solid var(--border)}
+.addrow .grow{flex:1}
+.touch .addrow{padding:4px 4px 4px 48px}
+.emptyrow{display:flex;align-items:center;gap:12px;padding:12px 16px 12px 76px;border-top:1px solid var(--border);font-size:13px;color:var(--text2);flex-wrap:wrap}
+.touch .emptyrow{padding-left:48px}
+/* phone stacked rank rows */
+.prow{display:flex;align-items:center;gap:0;min-height:56px;padding:4px 0 4px 16px;border-top:1px solid var(--border)}
+.prow .grow{flex:1;min-width:0}
+.prow .l1{font-size:13px;font-weight:500;display:flex;align-items:center;column-gap:8px;row-gap:2px;flex-wrap:wrap}
+.prow .l2{font-size:12px;color:var(--text2)}
+.prow .l2 span{white-space:nowrap}
+.prow.sel{background:var(--blue-tint)}
+.prow>.tapbox{margin-right:8px}
+.grp-lbl{font-size:12px;color:var(--text2);margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--border)}
+.ro{font-size:13px;margin-bottom:12px}
+.ro .lbl{display:block}
+.ro .sec{color:var(--text2)}
+.meta{font-size:12px;color:var(--text2);margin-top:16px}
+/* checkbox (CSS tick: ti-check is reserved for Save) */
+.cbrow{display:flex;align-items:center;gap:8px;min-height:32px;font-size:13px}
+.touch .cbrow{min-height:44px}
+.cb{width:16px;height:16px;border:1px solid var(--control-border);border-radius:4px;display:inline-block;position:relative;flex:none;background:var(--bg)}
+.cb.on{background:var(--blue);border-color:var(--blue)}
+.cb.on::after{content:"";position:absolute;left:4px;top:1px;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.cb.dis{background:var(--surface);border-color:var(--border-strong)}
+/* toast (Undo) */
+.toast{position:absolute;right:16px;bottom:16px;background:#1F1F1F;color:#fff;border-radius:8px;display:flex;align-items:center;gap:8px;padding:0 4px 0 12px;font-size:13px;z-index:6;min-height:40px;white-space:nowrap}
+.toast .undo{display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 8px;color:#fff;font-weight:500;border-left:1px solid #4A4A4A;flex:none}
+.toast .undo i{font-size:16px}
+.touch .toast{min-height:44px}
+.touch .toast .undo{height:44px}
+.toast.ph{left:50%;right:auto;transform:translateX(-50%);bottom:76px}
+.toast.ph.wide{width:calc(100% - 32px);white-space:normal;line-height:1.4;padding:4px 4px 4px 12px}
+.toast.ph.wide>span:first-child{flex:1}
+/* blocked (Both) */
+.blocked{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;color:var(--text2);font-size:13px;padding:24px}
+.blocked .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+/* top-of-file boxes */
+.okbox{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:16px 0;font-size:13px}
+.okbox h3{font-size:14px;font-weight:500;margin:0 0 4px}
+.okbox ol{margin:0;padding-left:20px}.okbox li{margin:4px 0}
+.toc{font-size:13px;margin:8px 0 0;columns:2}
+.toc a{color:var(--blue);text-decoration:none}
+/* phone: class names and rank rows start at the 16px gutter */
+.touch .ph-shell .crow{padding-left:16px}
+.ctog{display:flex;align-items:center;gap:8px;flex:1;min-width:0;min-height:48px}
+.ctog i{font-size:16px;color:var(--text2)}
+/* compact outline button (staff View): 28px with a mouse, 36px on touch, 44px tap box */
+.tapbox{display:inline-flex;align-items:center;justify-content:center;flex:none}
+.touch .tapbox{min-height:44px;min-width:44px}
+.touch .btn.c28{height:36px}
+/* final award problems shown in the Testing for cell */
+.tfwarn{color:var(--warn);font-size:12px;display:inline-flex;gap:4px;align-items:flex-start;line-height:1.4}
+.tfwarn i{font-size:16px;line-height:1}
+.prow .l1 .tfwarn{font-weight:400}
+/* dropdown list with scroll cue */
+.menu.scroll{overflow:hidden;padding-right:12px}
+.menu .sbar{position:absolute;right:4px;top:6px;width:4px;height:64px;border-radius:2px;background:var(--border-strong)}
+.touch .ph-shell .addrow,.touch .ph-shell .emptyrow{padding-left:16px}
+code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
+/* ---------- Tabler outline icons, inlined as masks so the file opens offline ---------- */
+.ti{display:inline-flex;align-items:center;justify-content:center;font-style:normal;line-height:1;flex:none;vertical-align:-0.125em}
+.ti::before{content:"";display:block;width:1em;height:1em;background-color:currentColor;-webkit-mask:var(--i) center/contain no-repeat;mask:var(--i) center/contain no-repeat}
+.ti-home{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M5 12l-2 0l9 -9l9 9l-2 0%22 /%3E%3Cpath d=%22M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7%22 /%3E%3Cpath d=%22M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6%22 /%3E%3C/svg%3E")}
+.ti-certificate{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M15 15m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0%22 /%3E%3Cpath d=%22M13 17.5v4.5l2 -1.5l2 1.5v-4.5%22 /%3E%3Cpath d=%22M10 19h-5a2 2 0 0 1 -2 -2v-10c0 -1.1 .9 -2 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -1 1.73%22 /%3E%3Cpath d=%22M6 9l12 0%22 /%3E%3Cpath d=%22M6 12l3 0%22 /%3E%3Cpath d=%22M6 15l2 0%22 /%3E%3C/svg%3E")}
+.ti-map-pin{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0%22 /%3E%3Cpath d=%22M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z%22 /%3E%3C/svg%3E")}
+.ti-arrow-left{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M5 12l14 0%22 /%3E%3Cpath d=%22M5 12l6 6%22 /%3E%3Cpath d=%22M5 12l6 -6%22 /%3E%3C/svg%3E")}
+.ti-chevron-down{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M6 9l6 6l6 -6%22 /%3E%3C/svg%3E")}
+.ti-chevron-up{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M6 15l6 -6l6 6%22 /%3E%3C/svg%3E")}
+.ti-dots{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M19 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3C/svg%3E")}
+.ti-edit{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1%22 /%3E%3Cpath d=%22M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z%22 /%3E%3Cpath d=%22M16 5l3 3%22 /%3E%3C/svg%3E")}
+.ti-trash{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M4 7l16 0%22 /%3E%3Cpath d=%22M10 11l0 6%22 /%3E%3Cpath d=%22M14 11l0 6%22 /%3E%3Cpath d=%22M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12%22 /%3E%3Cpath d=%22M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3%22 /%3E%3C/svg%3E")}
+.ti-plus{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M12 5l0 14%22 /%3E%3Cpath d=%22M5 12l14 0%22 /%3E%3C/svg%3E")}
+.ti-grip-vertical{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M9 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M9 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M9 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M15 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M15 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M15 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3C/svg%3E")}
+.ti-arrow-up{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M12 5l0 14%22 /%3E%3Cpath d=%22M18 11l-6 -6%22 /%3E%3Cpath d=%22M6 11l6 -6%22 /%3E%3C/svg%3E")}
+.ti-arrow-down{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M12 5l0 14%22 /%3E%3Cpath d=%22M18 13l-6 6%22 /%3E%3Cpath d=%22M6 13l6 6%22 /%3E%3C/svg%3E")}
+.ti-check{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M5 12l5 5l10 -10%22 /%3E%3C/svg%3E")}
+.ti-alert-triangle{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M12 9v4%22 /%3E%3Cpath d=%22M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z%22 /%3E%3Cpath d=%22M12 16h.01%22 /%3E%3C/svg%3E")}
+.ti-arrow-back-up{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M9 14l-4 -4l4 -4%22 /%3E%3Cpath d=%22M5 10h11a4 4 0 1 1 0 8h-1%22 /%3E%3C/svg%3E")}
+.ti-refresh{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4%22 /%3E%3Cpath d=%22M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4%22 /%3E%3C/svg%3E")}
+.ti-x{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M18 6l-12 12%22 /%3E%3Cpath d=%22M6 6l12 12%22 /%3E%3C/svg%3E")}
+/* ---------- frames that grow with their content ---------- */
+.dev.auto{height:auto}
+.dev.auto .app{height:auto;min-height:600px}
+.dev.auto .ph-shell{height:auto}
+.dev.auto .content{overflow:visible}
+.intro{font-size:14px;margin:16px 0 0;max-width:860px}
+.cap{flex-wrap:wrap}
+/* ---------- Star testing: page header ---------- */
+.back{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--blue);text-decoration:none;height:24px;margin-bottom:2px}
+.back i{font-size:16px}
+.touch .back{min-height:44px;margin:-10px 0 -8px}
+.viewonly+.viewonly{margin-top:-8px}
+/* ---------- Dan blocks ---------- */
+.crow.dhx{height:auto;min-height:40px;padding-top:4px;padding-bottom:4px}
+.touch .crow.dhx{min-height:48px;padding-top:2px;padding-bottom:2px}
+.dsum{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;flex:1;min-width:0}
+.crow.dh{height:auto;min-height:56px;padding-top:6px;padding-bottom:6px}
+.crow.dh .l1{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px}
+.crow.dh .l2{display:block;font-size:12px;color:var(--text2);line-height:1.4}
+.crow.dh .grow{min-width:0}
+.g-pc{grid-template-columns:24px minmax(0,1fr) 88px 88px 64px;padding:0 4px 0 8px}
+.g-pcs{grid-template-columns:minmax(0,1fr) 88px 88px;padding:0 16px 0 44px}
+.g-tab{grid-template-columns:minmax(0,1fr) 96px 88px 88px;padding:0 0 0 48px}
+.g-tabs{grid-template-columns:minmax(0,1fr) 96px 88px;padding:0 16px 0 48px}
+.rk{flex-wrap:wrap;row-gap:2px}
+.addrow{padding:8px 4px 8px 44px}
+.addrow.ro-add{padding-top:10px;padding-bottom:10px;padding-right:16px}
+.touch .addrow{padding:4px 16px 4px 48px}
+.touch .addrow.ro-add{padding-top:12px;padding-bottom:12px}
+.tot{font-size:12px;color:var(--text2);white-space:nowrap}
+.prow.ro-row{padding-right:16px;min-height:48px}
+/* ---------- grade scale / assistant table / fees ---------- */
+.blk{border:1px solid var(--border);border-radius:8px;margin-top:24px;flex:none}
+.bhead{display:flex;align-items:center;gap:8px;height:40px;padding:0 4px 0 12px}
+.touch .bhead{height:48px;padding:0 0 0 16px}
+.bhead .nm{font-size:13px;font-weight:500}
+.bbody{padding:12px;border-top:1px solid var(--border)}
+.touch .bbody{padding:12px 16px}
+.gscale{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--border);border-radius:8px;max-width:448px;overflow:hidden}
+.gscale div{display:flex;flex-direction:column;align-items:center;padding:4px 0;font-size:13px;font-variant-numeric:tabular-nums}
+.gscale div+div{border-left:1px solid var(--border)}
+.gscale b{font-weight:500}
+.gscale span{color:var(--text2);font-size:12px}
+.bline{font-size:13px;margin:8px 0 0}
+.bline.sec{color:var(--text2);font-size:12px;margin-top:4px}
+.bsub{font-size:12px;color:var(--text2);padding:0 12px 8px;margin-top:-4px}
+.touch .bsub{padding:0 16px 8px}
+.thead,.trow{display:grid;align-items:center;column-gap:12px;border-top:1px solid var(--border)}
+.thead{height:32px;background:var(--surface);font-size:12px;color:var(--text2)}
+.trow{min-height:36px;font-size:13px}
+.touch .trow{min-height:44px}
+.trow b{font-weight:500}
+.trow.sel,.prow.sel{background:var(--blue-tint)}
+.g-as{grid-template-columns:72px 200px minmax(0,1fr);padding:0 12px}
+.touch .g-as{padding:0 16px}
+.g-asp{grid-template-columns:48px minmax(0,1fr) minmax(0,1fr);padding:0 16px}
+.g-fee{grid-template-columns:minmax(0,1fr) 104px 104px 104px 64px;padding:0 4px 0 12px}
+.g-fees{grid-template-columns:minmax(0,1fr) 104px 104px 104px;padding:0 16px 0 12px}
+.g-feet{grid-template-columns:minmax(0,1fr) 88px 88px 88px 52px;padding:0 0 0 16px}
+.g-feets{grid-template-columns:minmax(0,1fr) 88px 88px 88px;padding:0 16px}
+.bfoot{font-size:12px;color:var(--text2);padding:8px 12px;border-top:1px solid var(--border)}
+.touch .bfoot{padding:10px 16px}
+/* ---------- dialogs ---------- */
+.input.num-in{width:140px}
+.input .suf{color:var(--text2);margin-left:auto;padding-left:8px;font-size:12px}
+.preview{background:var(--surface);border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:4px}
+.preview div+div{margin-top:2px}
+.ggrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));column-gap:12px}
+.ggrid .input.num-in,.agrid .input.num-in{width:100%}
+.agrid{display:grid;grid-template-columns:48px minmax(0,1fr) minmax(0,1fr);column-gap:12px;align-items:center;margin-bottom:8px}
+.agrid.ahead{font-size:12px;color:var(--text2);margin-bottom:4px}
+.ag{font-size:13px;font-weight:500}
+.rov{font-size:13px;color:var(--text2);padding-left:12px}
+.lnk{color:var(--blue);text-decoration:underline;font-size:12px;display:inline-flex;align-items:center;min-height:24px}
+.touch .lnk{min-height:44px;margin:-10px 0 -12px}
+.fbody .err+.meta,.dialog .err+.meta{margin-top:12px}
+/* ---------- menus: disabled item with its reason ---------- */
+.menu .it.two{height:auto;min-height:32px;padding:8px 12px;align-items:flex-start;white-space:normal}
+.touch .menu .it.two{min-height:44px}
+.menu .it.two i{margin-top:2px}
+.menu .it .t{display:block}
+.menu .it .why{display:block;font-size:12px;color:var(--text2);line-height:1.4;margin-top:2px}
+.pair>div{min-width:0;max-width:100%}
+.bhead .grow{flex:1}
+.touch .ph-shell .crow.dh.ro-dh{padding-right:16px}
+.addrow{flex-wrap:wrap;row-gap:4px}
+.addrow .tot{margin-left:auto}
+/* ---------- revision 2 ---------- */
+.menu{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.sheet .menu{box-shadow:none}
+.tip{position:absolute;top:34px;right:0;background:#1F1F1F;color:#fff;font-size:13px;line-height:1.4;padding:4px 8px;border-radius:6px;white-space:nowrap;z-index:6}
+.rrow.g-pc.lift{margin:4px -4px 4px 4px;padding-left:4px}
+.dropline{margin:-1px 0 -1px 8px}
+.ctog .tag i{font-size:12px;color:inherit}
+.crow.dh .l1 .ti-chevron-up,.crow.dh .l1 .ti-chevron-down{font-size:16px;color:var(--text2)}
+.gerr{grid-column:1/-1;margin:-4px 0 12px}
+.input.bad{border-color:var(--warn)}
+.okbox .q{margin:12px 0 0;font-size:13px}
+.okbox .shell-h{margin-top:16px}
+.okbox ul{margin:0;padding-left:20px}
+/* ---------- revision 3: tablet drag ---------- */
+.g-tab{grid-template-columns:36px minmax(0,1fr) 96px 88px 88px;padding:0}
+.touch .grip{width:44px;height:44px;margin-left:-4px;position:relative}
+.rrow.g-tab.lift{margin:4px -4px 4px 4px;padding-left:0}
+.finger{position:absolute;left:8px;top:8px;width:28px;height:28px;border-radius:50%;background:rgba(31,31,31,.14);border:1px solid rgba(31,31,31,.35)}
+/* ---------- revision 4: phone drag ---------- */
+.prow.hasgrip{padding-left:2px}
+.prow>.grip{margin:0 2px 0 0}
+.aerr{margin:-4px 0 8px}
+
+/* ---------- new for the Events questions ---------- */
+.g-ev{grid-template-columns:minmax(0,1.6fr) 150px 110px 190px 64px;padding:0 4px 0 16px}
+.g-ev .acts{gap:4px}
+.evlist{border:1px solid var(--border);border-radius:8px;flex:none}
+.evlist>.rhead{border-top:none;border-radius:8px 8px 0 0}
+.tag-ok{background:var(--ok-tint);color:var(--ok);border-color:#CFE3B6}
+.seg{display:inline-flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;font-size:13px;height:32px;align-self:flex-start}
+.seg span{display:flex;align-items:center;padding:0 16px;color:var(--text2)}
+.seg span.on{background:var(--blue-tint);color:var(--blue);font-weight:500}
+.seg span+span{border-left:1px solid var(--control-border)}
+.touch .seg{height:36px}
+.q{outline:2px dashed #EF9F27;outline-offset:6px;border-radius:4px}
+.qlbl{font-size:12px;color:var(--warn);margin:-2px 0 8px}
+.opt{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:8px 0 16px;font-size:13px}
+.opt h3{font-size:13px;font-weight:500;margin:8px 0 2px}.opt h3:first-child{margin-top:0}
+.opt ul{margin:0;padding-left:20px}.opt li{margin:2px 0}
+.rec{border-color:var(--blue)}
+.rec-tag{display:inline-block;font-size:12px;color:var(--blue);background:var(--blue-tint);border-radius:6px;padding:2px 8px;margin-left:8px;font-weight:400;vertical-align:1px}
+.cbline{display:flex;align-items:center;gap:8px;font-size:13px;margin:12px 0 4px}
+.touch .cbline{min-height:44px;margin:4px 0 0}
+.indent{margin-left:24px}
+.intro{font-size:14px;max-width:900px}
+table.plan{border-collapse:collapse;font-size:13px;margin:8px 0}
+table.plan td,table.plan th{border-top:1px solid var(--border);padding:6px 12px 6px 0;text-align:left;vertical-align:top}
+table.plan th{font-weight:500;color:var(--text2);font-size:12px}
+.ti-chevron-right{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M9 6l6 6l-6 6%22/%3E%3C/svg%3E")}
+
+</style>
+</head>
+<body>
+<main>
+<h1>Star testing · Events tab — design questions</h1>
+
+<p class="lead">Jae H. Jeong's U.S. Taekwondo Center · Star testing · guidelines v0.68 · October 17, 2026 · One question at a time. Answered questions stay in this file with their answer.</p>
+
+<div class="banner"><i class="ti ti-alert-triangle"></i><div><b>Design only — not a working app.</b> Event names, dates and counts are examples. These are option sketches for one decision (PC and phone only); the full Events tab mockups (PC, tablet, phone, every state, touch dialogs) come after the questions are answered. <span class="prop">Amber text = proposed, not decided.</span></div></div>
+
+<p class="intro">The <b>Events</b> tab is the first tab of Star testing: every star testing event, upcoming and past, with “+ Add event” in the page header. Clicking an event opens its own page (Candidates · Grading · Results). Already decided and drawn this way: joint event, works on Both (v0.58); columns name, date, candidate count and one status tag (v0.60); each event copies the rubrics and prices when it is created (v0.61); the add button sits in the page header (v0.45).</p>
+
+<div class="okbox"><h3>Questions for the Events tab, in order</h3><table class="plan"><tr><th>#</th><th>Question</th><th>Status</th></tr><tr><td>1</td><td>How registration opens and closes</td><td><b>Answered:</b> C, labelled “Registration” (v0.67)</td></tr><tr><td>2</td><td>Who can add and edit events, and who can open or close registration (Admin only, or Staff too — e.g. the desk letting a late family in)</td><td><b>Answered:</b> C (v0.68)</td></tr><tr><td>3</td><td>What an event holds besides name and date (start time? which school's building? a note for families? a limit on candidates per Dan — the prototype had 100?)</td><td>Later</td></tr><tr><td>4</td><td>The status tags through an event's life (e.g. Registration closed → Testing today → Results sent) and how upcoming and past events are split</td><td>Later</td></tr><tr><td>5</td><td>Where the family link and QR code live (event page, ⋯ menu, printable sheet)</td><td>Later</td></tr><tr><td>6</td><td>Deleting or cancelling an event (and what happens to its candidates)</td><td>Later</td></tr></table><p class="hint" style="margin:4px 0 0">Not Events-tab questions, noted for later screens: what the family sees on a closed link (public form design) and whether staff can add a walk-in candidate themselves (Candidates tab).</p></div>
+
+<h2 id="q1">Question 1 — How does registration open and close?</h2>
+
+<div class="okbox" style="border-color:var(--ok)"><h3>Answered 2026-10-17: Option C, with the label shortened to “Registration”</h3><p style="margin:4px 0 0">Recorded in the rulebook as v0.67, including the details drawn and described under Option C: new events start Closed; the closing date starts ticked at 7 days before testing; it never reopens anything; reopening after the date removes it; ⋯ Close / Open registration with Undo; the date is shown openly (exception to rule 8). The Option C drawing below shows the new label.</p></div>
+
+<p class="lead">Families register with the event's link (no login, v0.33). The dashboard needs a rule for when that link accepts sign-ups. <span class="prop">Proposed, decided with the public form: a closed link shows a short page such as “Registration for Winter 2027 Star Testing is closed. Please ask the front desk.”, and staff can add a walk-in candidate themselves from the Candidates tab.</span></p>
+
+<h3 id="q1a" style="font-size:16px;font-weight:500;margin:40px 0 4px">Option A — A switch you flip</h3><div class="opt"><h3>What it does</h3><ul>
+<li>Each event has one <b>Open | Closed</b> switch in Add event / Edit event. New events start <b>Closed</b>, so the family link never works before you're ready.</li>
+<li>You open it when you hand out the link, and close it yourself when sign-ups should stop.</li><li><b>Quick open / close without the dialog:</b> the event's ⋯ menu has <b>Close registration</b> (or <b>Open registration</b>). It happens at once with a 5-second Undo toast (rule 1.4: reversible, so no confirmation). Drawn open on the phone frame. Edit event shows the same switch.</li>
+<li>Events list tag: <b>Registration open</b> (green) or <b>Registration closed</b> (gray).</li></ul>
+<h3>Good</h3><ul><li>Simplest to understand: what the switch says is what families get.</li><li>Close early or reopen for a late family in two taps (⋯ → Open registration).</li></ul>
+<h3>Bad</h3><ul><li>Depends on someone remembering to close it. A forgotten switch means families keep signing up after the cut-off, possibly the night before testing.</li>
+<li>No deadline is known to the dashboard, so the family form can't show one.</li></ul></div><p class="cap">PC · mouse · 1280px · admin adding the Winter event, not saved yet (dashed box = the part this question is about)</p><div class="scroller"><div class="dev dev-pc"><div class="app"><nav class="rail" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i></a><a class="on" aria-label="Testing" aria-current="page"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">JB</span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Star testing</div></div><span class="grow"></span><span class="btn btn-primary"><i class="ti ti-plus"></i>Add event</span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Events</span><span role="tab">Rubrics and prices</span></div><div class="evlist"><div class="rhead g-ev"><span>Event</span><span>Testing date</span><span class="num">Candidates</span><span>Status</span><span></span></div><div class="rrow g-ev"><span class="rk"><b>Fall 2026 Star Testing</b></span><span>Sat, Nov 14, 2026</span><span class="num">23</span><span><span class="tag tag-ok">Registration open</span></span><span class="acts"><span class="ib" role="button" aria-label="Edit Fall 2026 Star Testing"><span class="ibv"><i class="ti ti-edit"></i></span></span><span class="ib" role="button" aria-label="More actions for Fall 2026 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div></div></div></div></div><div class="overlay"><div class="dialog dialog-detail" role="dialog" aria-label="Add event"><h3>Add event</h3><p class="sub">Both schools test together. Rubrics and prices are copied from the Rubrics and prices tab when you save.</p><div class="field"><label>Event name</label><div class="input">Winter 2027 Star Testing</div></div><div class="field"><label>Testing date</label><div class="input">Sat, Feb 13, 2027</div></div><div class="q"><div class="field" style="margin-bottom:0"><label>Registration</label><div class="seg" role="radiogroup" aria-label="Registration"><span>Open</span><span class="on">Closed</span></div><div class="hint">While Open, families can register with this event's link. You open and close it yourself.</div></div></div><div class="actions" style="margin-top:24px"><span class="btn">Cancel</span><span class="btn btn-primary"><i class="ti ti-check"></i>Save</span></div></div></div></div></div><p class="cap">Phone · touch · 390px · the Events list after both events are saved · ⋯ menu open on Fall 2026 · tag wording is a placeholder until Question 4</p><div class="scroller"><div class="dev dev-ph touch"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">JB</span></span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Star testing</div></div><span class="grow"></span><span class="btn btn-primary"><i class="ti ti-plus"></i>Add event</span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Events</span><span role="tab">Rubrics and prices</span></div><div class="clist" style="position:relative"><div class="prow"><div class="grow"><div class="l1"><span>Fall 2026 Star Testing</span></div><div class="l2"><span>Sat, Nov 14, 2026</span>&thinsp;·&thinsp;<span>23 candidates</span></div><div style="margin-top:4px"><span class="tag tag-ok">Registration open</span></div></div><span class="ib" role="button" aria-label="More actions for Fall 2026 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Winter 2027 Star Testing</span></div><div class="l2"><span>Sat, Feb 13, 2027</span>&thinsp;·&thinsp;<span>0 candidates</span></div><div style="margin-top:4px"><span class="tag">Registration closed</span></div></div><span class="ib" role="button" aria-label="More actions for Winter 2027 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></div></div></div><nav class="phbar" aria-label="Sections"><a><i class="ti ti-home"></i>Home</a><a class="on" aria-current="page"><i class="ti ti-certificate"></i>Testing</a></nav></div><div class="menu" style="right:24px;top:236px;width:230px"><div class="it">Close registration</div><div class="it">Edit event</div></div></div></div>
+
+<h3 id="q1b" style="font-size:16px;font-weight:500;margin:40px 0 4px">Option B — Automatic opening and closing dates</h3><div class="opt"><h3>What it does</h3><ul>
+<li>No switch. Each event has two dates: <b>Registration opens</b> and <b>Registration closes</b>. The link opens at the start of the first day and closes at the end of the second (11:59 PM, Massachusetts time), all by itself.</li>
+<li>Events list tag: <b>Opens Jan 4</b> (gray) before the window, <b>Open until Nov 7</b> (green) during it, <b>Registration closed</b> (gray) after.</li>
+<li>Both dates must be on or before the testing date, and opening before closing (“The closing date must be on or before the testing date.”).</li></ul>
+<h3>Good</h3><ul><li>Fully automatic: set it once when the event is created and nobody has to remember anything.</li><li>You can set an event up months early; the link stays shut until the opening date.</li><li>The family form can show the deadline (“Register by Sat, Feb 6”).</li></ul>
+<h3>Bad</h3><ul><li>Exceptions are roundabout: to close early you move the closing date to today; to let one late family in you move it forward, then remember to move it back.</li>
+<li>Two dates to fill in on every event, even when you just want “open now”.</li></ul></div><p class="cap">PC · mouse · 1280px · admin adding the Winter event, not saved yet (dashed box = the part this question is about)</p><div class="scroller"><div class="dev dev-pc"><div class="app"><nav class="rail" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i></a><a class="on" aria-label="Testing" aria-current="page"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">JB</span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Star testing</div></div><span class="grow"></span><span class="btn btn-primary"><i class="ti ti-plus"></i>Add event</span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Events</span><span role="tab">Rubrics and prices</span></div><div class="evlist"><div class="rhead g-ev"><span>Event</span><span>Testing date</span><span class="num">Candidates</span><span>Status</span><span></span></div><div class="rrow g-ev"><span class="rk"><b>Fall 2026 Star Testing</b></span><span>Sat, Nov 14, 2026</span><span class="num">23</span><span><span class="tag tag-ok">Open until Nov 7</span></span><span class="acts"><span class="ib" role="button" aria-label="Edit Fall 2026 Star Testing"><span class="ibv"><i class="ti ti-edit"></i></span></span><span class="ib" role="button" aria-label="More actions for Fall 2026 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div></div></div></div></div><div class="overlay"><div class="dialog dialog-detail" role="dialog" aria-label="Add event"><h3>Add event</h3><p class="sub">Both schools test together. Rubrics and prices are copied from the Rubrics and prices tab when you save.</p><div class="field"><label>Event name</label><div class="input">Winter 2027 Star Testing</div></div><div class="field"><label>Testing date</label><div class="input">Sat, Feb 13, 2027</div></div><div class="q"><div class="field" style="margin-bottom:12px"><label>Registration opens</label><div class="input">Mon, Jan 4, 2027</div></div><div class="field" style="margin-bottom:0"><label>Registration closes</label><div class="input">Sat, Feb 6, 2027</div><div class="hint">Families can register from the start of the first day to the end of the second (11:59 PM, Massachusetts time).</div></div></div><div class="actions" style="margin-top:24px"><span class="btn">Cancel</span><span class="btn btn-primary"><i class="ti ti-check"></i>Save</span></div></div></div></div></div><p class="cap">Phone · touch · 390px · the Events list after both events are saved · tag wording is a placeholder until Question 4</p><div class="scroller"><div class="dev dev-ph touch"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">JB</span></span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Star testing</div></div><span class="grow"></span><span class="btn btn-primary"><i class="ti ti-plus"></i>Add event</span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Events</span><span role="tab">Rubrics and prices</span></div><div class="clist" style="position:relative"><div class="prow"><div class="grow"><div class="l1"><span>Fall 2026 Star Testing</span></div><div class="l2"><span>Sat, Nov 14, 2026</span>&thinsp;·&thinsp;<span>23 candidates</span></div><div style="margin-top:4px"><span class="tag tag-ok">Open until Nov 7</span></div></div><span class="ib" role="button" aria-label="More actions for Fall 2026 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Winter 2027 Star Testing</span></div><div class="l2"><span>Sat, Feb 13, 2027</span>&thinsp;·&thinsp;<span>0 candidates</span></div><div style="margin-top:4px"><span class="tag">Opens Jan 4</span></div></div><span class="ib" role="button" aria-label="More actions for Winter 2027 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></div></div></div><nav class="phbar" aria-label="Sections"><a><i class="ti ti-home"></i>Home</a><a class="on" aria-current="page"><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div>
+
+<h3 id="q1c" style="font-size:16px;font-weight:500;margin:40px 0 4px">Option C — A switch plus an optional closing date<span class="rec-tag">Recommended</span></h3><div class="opt rec"><h3>What it does</h3><ul>
+<li>The <b>Open | Closed</b> switch from Option A, <b>plus an optional closing date</b> (“Close automatically at the end of …”). New events start <b>Closed</b>.</li>
+<li><span class="prop">Proposed defaults:</span> the box starts <b>ticked</b>, with the date set to <b>7 days before the testing date</b>. Change the date or untick it freely; unticked, the event behaves exactly like Option A.</li>
+<li>When the date passes, registration closes by itself (end of that day, 11:59 PM Massachusetts time) and the change log records it (“Closed automatically at the end of Feb 6”). The date never reopens anything.</li>
+<li><b>Reopening after the date has passed</b> removes the date (otherwise it would close again at once). The toast says so: “Registration open. The automatic closing date was removed. · Undo”.</li>
+<li>The date must be on or before the testing date (“The closing date must be on or before the testing date.”).</li><li><b>Quick open / close without the dialog:</b> the event's ⋯ menu has <b>Close registration</b> (or <b>Open registration</b>). It happens at once with a 5-second Undo toast (rule 1.4: reversible, so no confirmation). Drawn open on the phone frame. Edit event shows the same switch.</li>
+<li>Events list tag: <b>Open until Nov 7</b> (green) when a date is set, <b>Registration open</b> when not, <b>Registration closed</b> (gray).</li></ul>
+<h3>Good</h3><ul><li>Set an event up early and keep it quiet (starts Closed).</li><li>The deadline enforces itself and can be shown to families, yet closing early or reopening for a late family is still two taps.</li></ul>
+<h3>Bad</h3><ul><li>Two controls instead of one: slightly more to explain to staff.</li>
+<li>Opening is never automatic: someone opens it by hand when the link goes out (that's the trade against Option B).</li>
+<li>Small extra build work: the website checks the date whenever a family opens the link. Nothing needs to run overnight.</li></ul>
+<h3>Note</h3><ul><li>Rule 8 puts optional fields under “More details”. The closing date is shown openly here on purpose, because it's on by default; if you choose C, that's recorded as a deliberate exception.</li></ul></div><p class="cap">PC · mouse · 1280px · admin adding the Winter event, not saved yet (dashed box = the part this question is about)</p><div class="scroller"><div class="dev dev-pc"><div class="app"><nav class="rail" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i></a><a class="on" aria-label="Testing" aria-current="page"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">JB</span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Star testing</div></div><span class="grow"></span><span class="btn btn-primary"><i class="ti ti-plus"></i>Add event</span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Events</span><span role="tab">Rubrics and prices</span></div><div class="evlist"><div class="rhead g-ev"><span>Event</span><span>Testing date</span><span class="num">Candidates</span><span>Status</span><span></span></div><div class="rrow g-ev"><span class="rk"><b>Fall 2026 Star Testing</b></span><span>Sat, Nov 14, 2026</span><span class="num">23</span><span><span class="tag tag-ok">Open until Nov 7</span></span><span class="acts"><span class="ib" role="button" aria-label="Edit Fall 2026 Star Testing"><span class="ibv"><i class="ti ti-edit"></i></span></span><span class="ib" role="button" aria-label="More actions for Fall 2026 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div></div></div></div></div><div class="overlay"><div class="dialog dialog-detail" role="dialog" aria-label="Add event"><h3>Add event</h3><p class="sub">Both schools test together. Rubrics and prices are copied from the Rubrics and prices tab when you save.</p><div class="field"><label>Event name</label><div class="input">Winter 2027 Star Testing</div></div><div class="field"><label>Testing date</label><div class="input">Sat, Feb 13, 2027</div></div><div class="q"><div class="field" style="margin-bottom:0"><label>Registration</label><div class="seg" role="radiogroup" aria-label="Registration"><span>Open</span><span class="on">Closed</span></div><div class="cbline"><span class="cb on"></span>Close automatically at the end of</div><div class="input indent">Sat, Feb 6, 2027</div><div class="hint indent" style="margin-top:4px">11:59 PM, Massachusetts time. You can open or close it yourself at any time; the date only closes it, it never reopens it.</div></div></div><div class="actions" style="margin-top:24px"><span class="btn">Cancel</span><span class="btn btn-primary"><i class="ti ti-check"></i>Save</span></div></div></div></div></div><p class="cap">Phone · touch · 390px · the Events list after both events are saved · ⋯ menu open on Fall 2026 · tag wording is a placeholder until Question 4</p><div class="scroller"><div class="dev dev-ph touch"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">JB</span></span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Star testing</div></div><span class="grow"></span><span class="btn btn-primary"><i class="ti ti-plus"></i>Add event</span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Events</span><span role="tab">Rubrics and prices</span></div><div class="clist" style="position:relative"><div class="prow"><div class="grow"><div class="l1"><span>Fall 2026 Star Testing</span></div><div class="l2"><span>Sat, Nov 14, 2026</span>&thinsp;·&thinsp;<span>23 candidates</span></div><div style="margin-top:4px"><span class="tag tag-ok">Open until Nov 7</span></div></div><span class="ib" role="button" aria-label="More actions for Fall 2026 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Winter 2027 Star Testing</span></div><div class="l2"><span>Sat, Feb 13, 2027</span>&thinsp;·&thinsp;<span>0 candidates</span></div><div style="margin-top:4px"><span class="tag">Registration closed</span></div></div><span class="ib" role="button" aria-label="More actions for Winter 2027 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></div></div></div><nav class="phbar" aria-label="Sections"><a><i class="ti ti-home"></i>Home</a><a class="on" aria-current="page"><i class="ti ti-certificate"></i>Testing</a></nav></div><div class="menu" style="right:24px;top:236px;width:230px"><div class="it">Close registration</div><div class="it">Edit event</div></div></div></div>
+
+<div class="okbox"><h3>Recommendation: Option C</h3><p style="margin:4px 0 0">Star testing happens a few times a year, so the cost of opening by hand once per event is small, while a deadline that enforces itself matters more (a forgotten switch, Option A's weakness, is the likeliest real mistake). C also keeps the everyday exceptions, closing early or letting one late family in, to two taps; with B they mean editing dates. <b>Choose B instead</b> if you want to set events up far ahead and never touch them again. <b>Choose A</b> if you want the dialog as simple as possible and trust whoever runs the event to close it.</p></div>
+
+<p class="hint">Blue count: the Events page uses 5 blue elements (Testing rail icon, Both, ← Testing, Add event, Events tab). Inside the dialog the page behind is dimmed, so the dialog's Save, selected switch and checkbox are counted on their own. Any future blue on the list (for example a “Copy family link” link) would go over the limit and needs another look.</p>
+
+<h2 id="q2">Question 2 — Who can add and edit events, and open or close registration?</h2>
+
+<div class="okbox" style="border-color:var(--ok)"><h3>Answered 2026-10-17: Option C</h3><p style="margin:4px 0 0">Admins add and edit events and open or close registration any time. Staff can close registration any time and reopen it only before the closing date; after it, “Open registration” is grayed out with “The closing date has passed. Ask an admin to reopen.” Enforced in the database. Recorded in the rulebook as v0.68.</p></div>
+
+<p class="lead">The dashboard has two account levels, <b>Admin</b> and <b>Staff</b> (v0.15); the shared front-desk account is Staff (v0.27). For Rubrics and prices you chose Admin edits, Staff view only (v0.61). This question is the same choice for events. Below, every frame is what a <b>Staff</b> account sees; the admin view is Question 1's.</p>
+
+<h3 id="q2a" style="font-size:16px;font-weight:500;margin:40px 0 4px">Option A — Admin only; staff view</h3><div class="opt"><h3>What it does</h3><ul>
+<li><b>Admins</b> add events, edit them, and open or close registration. <b>Staff</b> (including the shared front-desk account) see the Events list read-only: no “+ Add event”, no Edit icon, no ⋯ menu, and a gray line “View only. Ask an admin to add or change events.” Phone rows show a chevron instead (the row opens the event).</li></ul>
+<h3>Good</h3><ul><li>Same rule as Rubrics and prices (v0.61): one simple rule for the whole Star testing setup.</li><li>Nobody at the desk can change an event by accident.</li></ul>
+<h3>Bad</h3><ul><li>A late family at the desk, or closing registration early, needs an admin to be reached (the desk account can't do it). The desk can still add the candidate by hand if the Candidates tab allows staff to (decided later).</li></ul></div><p class="cap">PC · mouse · 1280px · signed in as the front-desk account (role Staff)</p><div class="scroller"><div class="dev dev-pc"><div class="app"><nav class="rail" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i></a><a class="on" aria-label="Testing" aria-current="page"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Star testing</div></div><span class="grow"></span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Events</span><span role="tab">Rubrics and prices</span></div><div class="viewonly">View only. Ask an admin to add or change events.</div><div class="evlist"><div class="rhead g-ev"><span>Event</span><span>Testing date</span><span class="num">Candidates</span><span>Status</span><span></span></div><div class="rrow g-ev"><span class="rk"><b>Fall 2026 Star Testing</b></span><span>Sat, Nov 14, 2026</span><span class="num">23</span><span><span class="tag tag-ok">Open until Nov 7</span></span><span class="acts"></span></div><div class="rrow g-ev"><span class="rk"><b>Winter 2027 Star Testing</b></span><span>Sat, Feb 13, 2027</span><span class="num">0</span><span><span class="tag">Registration closed</span></span><span class="acts"></span></div></div></div></div></div></div></div><p class="cap">Phone · touch · 390px · same staff account</p><div class="scroller"><div class="dev dev-ph touch"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Star testing</div></div><span class="grow"></span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Events</span><span role="tab">Rubrics and prices</span></div><div class="viewonly">View only. Ask an admin to add or change events.</div><div class="clist"><div class="prow"><div class="grow"><div class="l1"><span>Fall 2026 Star Testing</span></div><div class="l2"><span>Sat, Nov 14, 2026</span>&thinsp;·&thinsp;<span>23 candidates</span></div><div style="margin-top:4px"><span class="tag tag-ok">Open until Nov 7</span></div></div></div><div class="prow"><div class="grow"><div class="l1"><span>Winter 2027 Star Testing</span></div><div class="l2"><span>Sat, Feb 13, 2027</span>&thinsp;·&thinsp;<span>0 candidates</span></div><div style="margin-top:4px"><span class="tag">Registration closed</span></div></div></div></div></div><nav class="phbar" aria-label="Sections"><a><i class="ti ti-home"></i>Home</a><a class="on" aria-current="page"><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div>
+
+<h3 id="q2b" style="font-size:16px;font-weight:500;margin:40px 0 4px">Option B — Admin adds and edits; staff can open or close registration<span class="rec-tag">Recommended</span></h3><div class="opt rec"><h3>What it does</h3><ul>
+<li><b>Admins</b> add and edit events. <b>Staff</b> get one thing: the ⋯ menu with <b>Close registration / Open registration</b> (instant, 5-second Undo, logged — as “Staff” for the desk account, v0.27). No “+ Add event”, no Edit icon. Gray line: “Ask an admin to add or change events.”</li>
+<li>If staff reopen after the closing date has passed, the date is removed (v0.67) — staff can do that, and it's in the change log.</li></ul>
+<h3>Good</h3><ul><li>The everyday exception (let a late family in, or stop sign-ups early) is handled at the desk in two taps.</li><li>Event name and date stay admin-only.</li></ul>
+<h3>Bad</h3><ul><li>Staff can override the admin's deadline: reopening after the closing date removes that date (v0.67).</li><li>Anyone at the desk can reopen registration; on the shared account you'd only see “Staff” in the log, not who.</li><li>A rule with an exception: slightly more to explain, and one more database rule to build and test.</li></ul></div><p class="cap">PC · mouse · 1280px · signed in as the front-desk account (role Staff) · ⋯ menu open on Fall 2026</p><div class="scroller"><div class="dev dev-pc"><div class="app"><nav class="rail" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i></a><a class="on" aria-label="Testing" aria-current="page"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Star testing</div></div><span class="grow"></span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Events</span><span role="tab">Rubrics and prices</span></div><div class="viewonly">Staff can open or close registration from ⋯. Ask an admin to add or change events.</div><div class="evlist"><div class="rhead g-ev"><span>Event</span><span>Testing date</span><span class="num">Candidates</span><span>Status</span><span></span></div><div class="rrow g-ev"><span class="rk"><b>Fall 2026 Star Testing</b></span><span>Sat, Nov 14, 2026</span><span class="num">23</span><span><span class="tag tag-ok">Open until Nov 7</span></span><span class="acts"><span class="ib" role="button" aria-label="More actions for Fall 2026 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-ev"><span class="rk"><b>Winter 2027 Star Testing</b></span><span>Sat, Feb 13, 2027</span><span class="num">0</span><span><span class="tag">Registration closed</span></span><span class="acts"><span class="ib" role="button" aria-label="More actions for Winter 2027 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div></div></div></div></div><div class="menu" style="right:24px;top:274px;width:220px"><div class="it">Close registration</div></div></div></div><p class="cap">Phone · touch · 390px · same staff account · ⋯ menu open on Fall 2026</p><div class="scroller"><div class="dev dev-ph touch"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Star testing</div></div><span class="grow"></span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Events</span><span role="tab">Rubrics and prices</span></div><div class="viewonly">Staff can open or close registration from ⋯. Ask an admin to add or change events.</div><div class="clist"><div class="prow"><div class="grow"><div class="l1"><span>Fall 2026 Star Testing</span></div><div class="l2"><span>Sat, Nov 14, 2026</span>&thinsp;·&thinsp;<span>23 candidates</span></div><div style="margin-top:4px"><span class="tag tag-ok">Open until Nov 7</span></div></div><span class="ib" role="button" aria-label="More actions for Fall 2026 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Winter 2027 Star Testing</span></div><div class="l2"><span>Sat, Feb 13, 2027</span>&thinsp;·&thinsp;<span>0 candidates</span></div><div style="margin-top:4px"><span class="tag">Registration closed</span></div></div><span class="ib" role="button" aria-label="More actions for Winter 2027 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></div></div></div><nav class="phbar" aria-label="Sections"><a><i class="ti ti-home"></i>Home</a><a class="on" aria-current="page"><i class="ti ti-certificate"></i>Testing</a></nav></div><div class="menu" style="right:24px;top:262px;width:230px"><div class="it">Close registration</div></div></div></div>
+
+<h3 id="q2c" style="font-size:16px;font-weight:500;margin:40px 0 4px">Option C — Like B, but staff can only reopen before the closing date</h3><div class="opt"><h3>What it does</h3><ul>
+<li>Same as B, with one limit: staff can <b>close</b> registration any time, but can <b>reopen</b> it only while the closing date hasn't passed. After the date, ⋯ shows “Open registration” grayed out with the reason under it: “The closing date has passed. Ask an admin to reopen.”</li>
+<li>No closing date set → staff can open and close freely, as in B.</li></ul>
+<h3>Good</h3><ul><li>The admin's deadline can't be undone at the desk; staff can still stop sign-ups early.</li></ul>
+<h3>Bad</h3><ul><li>The late-family-after-the-deadline case, the main reason for B, still needs an admin.</li><li>The most rules to explain: what staff can do depends on the date.</li></ul></div><p class="cap">PC · mouse · 1280px · signed in as the front-desk account (role Staff) · ⋯ menu open on Fall 2026</p><div class="scroller"><div class="dev dev-pc"><div class="app"><nav class="rail" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i></a><a class="on" aria-label="Testing" aria-current="page"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Star testing</div></div><span class="grow"></span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Events</span><span role="tab">Rubrics and prices</span></div><div class="viewonly">Staff can open or close registration from ⋯ until the closing date. Ask an admin to add or change events.</div><div class="evlist"><div class="rhead g-ev"><span>Event</span><span>Testing date</span><span class="num">Candidates</span><span>Status</span><span></span></div><div class="rrow g-ev"><span class="rk"><b>Fall 2026 Star Testing</b></span><span>Sat, Nov 14, 2026</span><span class="num">23</span><span><span class="tag tag-ok">Open until Nov 7</span></span><span class="acts"><span class="ib" role="button" aria-label="More actions for Fall 2026 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-ev"><span class="rk"><b>Winter 2027 Star Testing</b></span><span>Sat, Feb 13, 2027</span><span class="num">0</span><span><span class="tag">Registration closed</span></span><span class="acts"><span class="ib" role="button" aria-label="More actions for Winter 2027 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div></div></div></div></div><div class="menu" style="right:24px;top:274px;width:220px"><div class="it">Close registration</div></div></div></div><p class="cap">Phone · touch · 390px · same staff account · ⋯ menu open on Fall 2026</p><div class="scroller"><div class="dev dev-ph touch"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Star testing</div></div><span class="grow"></span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Events</span><span role="tab">Rubrics and prices</span></div><div class="viewonly">Staff can open or close registration from ⋯ until the closing date. Ask an admin to add or change events.</div><div class="clist"><div class="prow"><div class="grow"><div class="l1"><span>Fall 2026 Star Testing</span></div><div class="l2"><span>Sat, Nov 14, 2026</span>&thinsp;·&thinsp;<span>23 candidates</span></div><div style="margin-top:4px"><span class="tag tag-ok">Open until Nov 7</span></div></div><span class="ib" role="button" aria-label="More actions for Fall 2026 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Winter 2027 Star Testing</span></div><div class="l2"><span>Sat, Feb 13, 2027</span>&thinsp;·&thinsp;<span>0 candidates</span></div><div style="margin-top:4px"><span class="tag">Registration closed</span></div></div><span class="ib" role="button" aria-label="More actions for Winter 2027 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></div></div></div><nav class="phbar" aria-label="Sections"><a><i class="ti ti-home"></i>Home</a><a class="on" aria-current="page"><i class="ti ti-certificate"></i>Testing</a></nav></div><div class="menu" style="right:24px;top:262px;width:230px"><div class="it">Close registration</div></div></div></div>
+
+<h3 id="q2d" style="font-size:16px;font-weight:500;margin:40px 0 4px">Option D — Staff add and edit events too</h3><div class="opt"><h3>What it does</h3><ul>
+<li><b>Staff and admins</b> can both add events, edit them (name, date, closing date) and open or close registration. Staff screens look exactly like the admin's. (Deleting is Question 6, so it may still be admin only.)</li></ul>
+<h3>Good</h3><ul><li>No bottleneck: whoever runs the event can set it up.</li><li>Simplest screens: one version for everyone.</li></ul>
+<h3>Bad</h3><ul><li>Anyone at the shared desk could rename an event, move its date, or create a stray event; the log shows only “Staff”.</li><li>Different from Rubrics and prices (admin only), so Star testing would have two rules.</li></ul></div><p class="cap">PC · mouse · 1280px · signed in as the front-desk account (role Staff) · ⋯ menu open on Fall 2026</p><div class="scroller"><div class="dev dev-pc"><div class="app"><nav class="rail" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i></a><a class="on" aria-label="Testing" aria-current="page"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Star testing</div></div><span class="grow"></span><span class="btn btn-primary"><i class="ti ti-plus"></i>Add event</span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Events</span><span role="tab">Rubrics and prices</span></div><div class="evlist"><div class="rhead g-ev"><span>Event</span><span>Testing date</span><span class="num">Candidates</span><span>Status</span><span></span></div><div class="rrow g-ev"><span class="rk"><b>Fall 2026 Star Testing</b></span><span>Sat, Nov 14, 2026</span><span class="num">23</span><span><span class="tag tag-ok">Open until Nov 7</span></span><span class="acts"><span class="ib" role="button" aria-label="Edit Fall 2026 Star Testing"><span class="ibv"><i class="ti ti-edit"></i></span></span><span class="ib" role="button" aria-label="More actions for Fall 2026 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-ev"><span class="rk"><b>Winter 2027 Star Testing</b></span><span>Sat, Feb 13, 2027</span><span class="num">0</span><span><span class="tag">Registration closed</span></span><span class="acts"><span class="ib" role="button" aria-label="Edit Winter 2027 Star Testing"><span class="ibv"><i class="ti ti-edit"></i></span></span><span class="ib" role="button" aria-label="More actions for Winter 2027 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div></div></div></div></div><div class="menu" style="right:24px;top:244px;width:220px"><div class="it">Close registration</div></div></div></div><p class="cap">Phone · touch · 390px · same staff account · ⋯ menu open on Fall 2026</p><div class="scroller"><div class="dev dev-ph touch"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Star testing</div></div><span class="grow"></span><span class="btn btn-primary"><i class="ti ti-plus"></i>Add event</span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Events</span><span role="tab">Rubrics and prices</span></div><div class="clist"><div class="prow"><div class="grow"><div class="l1"><span>Fall 2026 Star Testing</span></div><div class="l2"><span>Sat, Nov 14, 2026</span>&thinsp;·&thinsp;<span>23 candidates</span></div><div style="margin-top:4px"><span class="tag tag-ok">Open until Nov 7</span></div></div><span class="ib" role="button" aria-label="More actions for Fall 2026 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Winter 2027 Star Testing</span></div><div class="l2"><span>Sat, Feb 13, 2027</span>&thinsp;·&thinsp;<span>0 candidates</span></div><div style="margin-top:4px"><span class="tag">Registration closed</span></div></div><span class="ib" role="button" aria-label="More actions for Winter 2027 Star Testing"><span class="ibv"><i class="ti ti-dots"></i></span></span></div></div></div><nav class="phbar" aria-label="Sections"><a><i class="ti ti-home"></i>Home</a><a class="on" aria-current="page"><i class="ti ti-certificate"></i>Testing</a></nav></div><div class="menu" style="right:24px;top:236px;width:230px"><div class="it">Close registration</div></div></div></div>
+
+<div class="okbox"><h3>Recommendation: Option B</h3><p style="margin:4px 0 0">The one thing the desk realistically needs on testing week is to let a late family in or stop sign-ups, and B gives exactly that while keeping the event itself (name, date, deadline) with admins, matching Rubrics and prices. <b>Choose A</b> if you'd rather every change to an event go through an admin. <b>Choose C</b> if a deadline an admin set should never be undone at the desk. <b>Choose D</b> only once staff have personal logins, so the log shows who did what.</p></div>
+</main>
+<script>
+(function(){
+  function fit(){
+    var list=document.querySelectorAll('.scroller');
+    for(var k=0;k<list.length;k++){
+      var s=list[k], d=s.firstElementChild; if(!d) continue;
+      d.style.zoom=''; var w=d.offsetWidth, a=s.clientWidth;
+      if(a<w && a/w>=0.6){ d.style.zoom=(a/w).toFixed(4); }
+    }
+  }
+  window.addEventListener('resize',fit); fit();
+})();
+</script>
+</body>
+</html>
