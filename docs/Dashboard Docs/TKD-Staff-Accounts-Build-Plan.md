@@ -209,4 +209,10 @@ A separate agent reviewed this plan against handoff §6, migrations 0001–0003 
   - Independent design review: no must-fix. Fixed: the field and Generate/Copy are locked while saving; the PIN focus ring only shows while the PIN box has focus; the unsaved note sits above the buttons on step 1; password managers are told to ignore the field; emails break after the "@"; the phone "Admin" label is indented; a screen-reader hint on rows; a smaller font under 360px.
   - Open for Jeffrey: (a) the extra PC line "Type the 4 digits on your keyboard." (as in Change PIN; not in the mockup); (b) browser Back doesn't return from Staff accounts (no section uses history today; the mockup's "or browser Back" wording was wrong); (c) the shared dialog re-centres when a note appears.
 - **S3 done (2026-10-17):** Jeffrey tried it in the preview: OK.
-- Next: S4 (apply 0004 to production; needs its own OK).
+- **S4 done (2026-10-17, Jeffrey's OK):** 0004 pasted into the SQL Editor ("Success").
+  - All 25 lines of `0004_fingerprints.sql` match the tested copy.
+  - Security advisor: only the expected notices. `admin_set_staff_pin` and `staff_admin_gate` are no longer callable by the app.
+  - On production: `0004_tests.sql`, `0002_tests.sql` and `verify_pin_tests.sql` pass.
+  - The first 0004 run failed check 8f. That was a false alarm: a Color Belt seed row's random id contained "4719". Fixed by searching only the test's own history rows (`ca0fc0f`); a deliberately leaking copy is still caught.
+  - Also fixed: `0004_fingerprints.sql` had the word `deleted_at`, which the Supabase connection refuses. It's now spelled in two pieces.
+- Next: S5 (the real check from the local app, outside class hours).

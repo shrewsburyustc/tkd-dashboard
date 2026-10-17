@@ -446,6 +446,8 @@ commit;
 
 **Before you start:** 0001–0003 are applied, and their tests pass.
 
+**Status:** applied to production 2026-10-17; 11b checks and 11c tests passed. The screens are not deployed yet (branch `staff-accounts`), so 11d uses the local app.
+
 ### 11a. Apply 0004 (you, in the SQL Editor)
 
 1. Copy **the whole file** `supabase/migrations/0004_staff_accounts.sql`.
