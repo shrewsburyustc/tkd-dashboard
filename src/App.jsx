@@ -3,7 +3,8 @@
 //   'loading'   → checking for a saved sign-in (shows nothing for a split second)
 //   'signedOut' → SignIn screen
 //   'setPin'    → Set your PIN (right after a password sign-in when the account has no PIN)
-//   'home'      → the dashboard (Shell + the open section: Home or Testing), maybe with a dialog on top
+//   'home'      → the dashboard (Shell + the open page: Home, Testing, or — admins, from the account
+//                 menu — Staff accounts), maybe with a dialog on top
 //   'locked'    → LockScreen (the dashboard stays in memory, hidden, behind it)
 // Every screen change goes through the small functions below, so the rules (7-day password
 // check, access check, per-account idle lock, the database lock) live in one readable place.
@@ -27,6 +28,7 @@ import Toast from './components/Toast.jsx';
 import SignIn from './screens/SignIn.jsx';
 import Home from './screens/Home.jsx';
 import Testing from './screens/Testing.jsx';
+import StaffAccounts from './screens/StaffAccounts.jsx';
 import LockScreen from './screens/LockScreen.jsx';
 import SetPinScreen from './screens/SetPinScreen.jsx';
 import ChangePinDialog from './screens/ChangePinDialog.jsx';
@@ -57,6 +59,7 @@ const PAGE_TITLES = {
 const SECTION_TITLES = {
   home: 'Home · U.S. Taekwondo Center',
   testing: 'Testing · U.S. Taekwondo Center',
+  staffAccounts: 'Staff accounts · U.S. Taekwondo Center',
 };
 
 // Toast texts (guidelines 8: 5 seconds, bottom-right — bottom-center on phones — no Undo for these).
@@ -97,9 +100,12 @@ export default function App() {
   const [notice, setNotice] = useState(null); // { id, text } for the sign-in screen
   const [deviceLocation, setDeviceLocation] = useState(loadDeviceLocation); // this device's default
   const [location, setLocation] = useState(loadDeviceLocation); // the switcher's current value
-  const [section, setSection] = useState('home'); // which section is open: 'home' | 'testing'
+  // Which page is open: 'home' | 'testing' | 'staffAccounts'. Staff accounts isn't a rail section
+  // (it opens from the account menu), so no rail item is highlighted while it shows (v0.76).
+  const [section, setSection] = useState('home');
   const [accountDialog, setAccountDialog] = useState(null); // null | 'changePin' | 'changePassword'
   const [testingModalOpen, setTestingModalOpen] = useState(false); // a Testing dialog is showing
+  const [staffModalOpen, setStaffModalOpen] = useState(false); // a Staff accounts dialog is showing
   const [toast, setToast] = useState(null); // { id, text, action, icon } or null
 
   // Focus memory for the lock screen (see "Locking and unlocking" below).
@@ -476,7 +482,7 @@ export default function App() {
   const isSignedIn = (phase === 'home' || phase === 'locked') && profile !== null;
   const dialogOpen = phase === 'home' && profile !== null && accountDialog !== null;
   // The page behind a dialog can't be clicked or reached with Tab (account or Testing dialog).
-  const shellInert = dialogOpen || (phase === 'home' && testingModalOpen);
+  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || staffModalOpen));
 
   return (
     <div className="app-root">
@@ -511,6 +517,7 @@ export default function App() {
             onChangePin={() => openAccountDialog('changePin')}
             onSetPin={() => setPhase('setPin')}
             onChangePassword={() => openAccountDialog('changePassword')}
+            onStaffAccounts={() => navigate('staffAccounts')}
             onSignOut={() => signOut()}
           >
             {section === 'home' && <Home location={location} />}
@@ -526,6 +533,15 @@ export default function App() {
                 showToast={showToast}
                 clearToast={clearToast}
                 onModalOpenChange={setTestingModalOpen}
+              />
+            )}
+            {section === 'staffAccounts' && (
+              <StaffAccounts
+                profile={profile}
+                screenLocked={phase === 'locked'}
+                showToast={showToast}
+                onModalOpenChange={setStaffModalOpen}
+                onRefreshProfile={refreshProfile}
               />
             )}
           </Shell>

@@ -28,6 +28,7 @@
   --color-delete-bg: #fcebeb; /* pale red behind a delete menu item on hover */
   --color-tag-warn-border: #f2d9b0; /* outline of an amber tag such as "Not saved" */
   --color-disabled-text: #8a8a85; /* text on an unavailable (gray) button or menu item */
+  --color-success-text: #3b6d11; /* green "good" text, e.g. Staff accounts' "Long enough" (guidelines 7) */
 
   /* Belt colors (Belt.jsx, decided v0.64): the REAL colors of the school's belts. Pictures of
      belts only — never used for buttons or messages. Red is allowed here: a recorded exception
