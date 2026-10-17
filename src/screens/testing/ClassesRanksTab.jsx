@@ -21,7 +21,7 @@
 //     overwritten; the person is told and the list reloads.
 //   - Admin vs staff only changes what is SHOWN here — the database enforces who may change what.
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { IconArrowDown, IconArrowUp, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconArrowDown, IconArrowUp, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../../lib/device.js';
@@ -802,6 +802,8 @@ export default function ClassesRanksTab({
         subtitle: T.rankSheetLine(cls.name, rank),
         label: T.moreFor(rank.name),
         items: [
+          // Under 360px the row has no pencil (v0.68), so Edit is offered here instead (v0.69).
+          ...(isNarrowPhone ? [{ key: 'edit', label: T.EDIT_RANK, Icon: IconEdit, onSelect: () => openRank(rank, menu.anchor) }] : []),
           { key: 'up', label: T.MOVE_UP, Icon: IconArrowUp, disabled: busy || index === 0, onSelect: () => moveRank(rank, -1) },
           { key: 'down', label: T.MOVE_DOWN, Icon: IconArrowDown, disabled: busy || index === cls.ranks.length - 1, onSelect: () => moveRank(rank, 1) },
           { key: 'delete', label: T.DELETE_RANK, Icon: IconTrash, danger: true, separatorBefore: true, disabled: busy, onSelect: () => startDelete('rank', rank.id, menu.anchor) },

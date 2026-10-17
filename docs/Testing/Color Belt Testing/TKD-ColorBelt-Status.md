@@ -1,6 +1,6 @@
 # Color Belt Testing — status and next steps
 
-**Updated:** 2026-10-17 (Color Belt worktree session, branch `color-belt`; belt look approved v0.67, narrow-phone rows v0.68)
+**Updated:** 2026-10-17 (Color Belt worktree session, branch `color-belt`; belt look approved v0.67, narrow-phone rows v0.68 + v0.69)
 **Rulebook at handoff:** v0.65 · **Contract:** `docs/Dashboard Docs/Build contracts/CONTRACT-0003.md` · **Plan:** `TKD-Testing-Phase1-Build-Plan.md` (this folder) · **Old system inventory:** `TKD-ColorBelt-Inventory.md` (this folder)
 
 > Read `CLAUDE.md` (repo root) first. This file says where Color Belt phase 1 stands and what comes next. Keep it current.
@@ -16,7 +16,7 @@ Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, 
 ## 2. Waiting on Jeffrey right now
 
 1. ~~Approve the belt look in the preview.~~ **Done 2026-10-17** — approved by Jeffrey, recorded in the rulebook as v0.67 (v0.65 row updated, new 10b row, changelog line).
-2. ~~Optional phone question~~ **Decided 2026-10-17 (rulebook v0.68) and built:** under 360 px wide, rank rows drop the Edit pencil (tap the row to edit); 320 px Bo Dan rows went from 159 px to 84 px tall. Open follow-up: under 360 px nothing on a rank row is labeled "Edit" for screen readers — option: an "Edit rank" item in the ⋯ menu at that width (needs his OK).
+2. ~~Optional phone question~~ **Decided 2026-10-17 (rulebook v0.68) and built:** under 360 px wide, rank rows drop the Edit pencil (tap the row to edit); 320 px Bo Dan rows went from 159 px to 84 px tall. Follow-up **decided and built (v0.69):** under 360 px the rank ⋯ menu starts with "Edit rank", so screen readers can find Edit.
 
 ## 3. Next steps, in order (each needs his OK where marked)
 

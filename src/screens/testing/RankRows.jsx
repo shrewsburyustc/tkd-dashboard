@@ -14,7 +14,8 @@
 //   - admin, every device: the grip (drag to reorder) on the left — a 16px icon with a 44×44
 //     touch area on touch screens — and Edit + ⋯ on the right
 //   - phones under 360px wide: ⋯ only, no Edit pencil (v0.68) — long names like
-//     "Bo Dan - 1 Big Stripe" need the room; tapping the row opens Edit
+//     "Bo Dan - 1 Big Stripe" need the room; tapping the row opens Edit, and the ⋯ menu
+//     starts with "Edit rank" at that width (v0.69, so screen readers can find it)
 //   - touch: Edit + ⋯ are 28px icons with a 44px tap area
 //   - staff on touch: an outline "View" button; staff with a mouse: none (click the row)
 // Clicking anywhere else on a row opens it, too. One tag per row at most, in this order:
