@@ -9,9 +9,9 @@
 
 ## 1. Where things stand (one paragraph)
 
-Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, ranks, prices, final awards, belt pictures; staff view only). It is **fully built and reviewed in preview mode** and its files are **committed locally** (checkpoint `811b812` on `main`; Color Belt work continues on branch `color-belt`). Nothing is pushed. **Migration 0003 is live in the production database since 2026-10-17 (CP3 done)** — tables are empty until the seed (CP4); the live site is unchanged (Home only). The last thing built was **belt graphics + the belt picker** (rulebook v0.64/v0.65) — Jeffrey **approved the look in the preview on 2026-10-17 (rulebook v0.67)**; step A (belts into migration 0003 and the seed) is **done and reviewed** on branch `color-belt` — applied in CP3. Next is CP4 (seed, after he checks the review table).
+Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, ranks, prices, final awards, belt pictures; staff view only). It is **fully built and reviewed in preview mode** and its files are **committed locally** (checkpoint `811b812` on `main`; Color Belt work continues on branch `color-belt`). Nothing is pushed. **Migration 0003 is live in the production database since 2026-10-17 (CP3 done)** — seeded 2026-10-17 (CP4 done: 7 classes / 42 ranks per school); the live site is unchanged (Home only). The last thing built was **belt graphics + the belt picker** (rulebook v0.64/v0.65) — Jeffrey **approved the look in the preview on 2026-10-17 (rulebook v0.67)**; step A (belts into migration 0003 and the seed) is **done and reviewed** on branch `color-belt` — applied in CP3. CP4 (seed) done too. Next is CP5 (real-database check on this PC).
 
-**⚠ Don't push yet.** 0003 is live, but its Testing tables are empty until the seed (CP4), and CP5 (real-database check on this PC) comes before any deploy (CP6).
+**⚠ Don't push yet.** 0003 and the seed are live; CP5 (real-database check on this PC) comes before any deploy (CP6, his OK).
 
 ## 2. Waiting on Jeffrey right now
 
@@ -35,7 +35,7 @@ Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, 
 3. **Done (connector, read-only):** Postgres 17.11; `locations` 2 rows, classes/ranks 0; RLS on all 4 tables; anon has no table grants; belt columns as designed; **all 19 function fingerprints identical to `node run.mjs`**; security advisor: nothing new — the 8 testing RPCs are the intended "authenticated can run security definer" list (helpers not exposed), `change_log` "RLS, no policy" is intended, leaked-password protection was already flagged before 0003.
 4. **Done:** `0003_tests.sql` (admin + desk UIDs) → `ALL 0003 TESTS PASSED`.
 
-**D. CP4 — seed**, with his OK after he checks the review table: paste `supabase/manual/0003s_seed_classes_and_ranks.sql`; check 7 classes / 42 ranks per school; run `0003_tests.sql` again.
+**D. CP4 — seed** — **done 2026-10-17:** Jeffrey checked the review table and pasted `0003s_seed_classes_and_ranks.sql` → 7 classes / 42 ranks per school. Connector check: final awards, all 84 belts and prices match the review table (Teen/Adult High Green private $85); change_log 84 rank + 24 class rows tagged `seed`. `0003_tests.sql` again → ALL 0003 TESTS PASSED, data unchanged afterwards (14 classes, 84 ranks, 108 log rows).
 
 **E. CP5 — real-database check locally** (`Start dashboard.bat`): sign in as admin and as the desk account, both schools, edit/undo, staff view.
 
