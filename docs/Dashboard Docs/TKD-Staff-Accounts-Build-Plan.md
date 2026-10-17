@@ -190,3 +190,18 @@ A separate agent reviewed this plan against handoff §6, migrations 0001–0003 
 9. Production test safety and no-trigger check; S5 outside class hours.
 10. Deleted or banned logins refused.
 11. Fingerprint check that `public.staff` has no change-log trigger.
+
+---
+
+## 8. Progress
+
+- **S1 done (2026-10-17):** `0004_staff_accounts.sql`, `0004_tests.sql`, `0004_fingerprints.sql`, PGlite stubs and runner, 0002 Test 12 adjusted (and it now fails if the revoke is ever lost), SETUP.md section 11.
+  - PGlite: **43 passed, 0 failed**, including re-running 0004 and the upgrade path. Three deliberately broken copies of 0004 were each caught by the tests.
+  - Independent security review, re-checked after the fixes: verdict **safe to apply**. Fixed:
+    - mutual-reset race: both staff rows are locked in id order (`for no key update`), then the caller is checked again;
+    - a lost revoke is now detected by 0002 Test 12;
+    - the triggers on all five Auth tables are fingerprinted;
+    - the test snapshot is wider (all 8 test logins, session ids).
+  - Production checked read-only: there are no triggers on the Auth tables, and flow_state's challenge columns are optional.
+  - **Not applied to production.** That's S4 and needs its own OK.
+- Next: S2 (front end + preview).
