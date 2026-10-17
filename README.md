@@ -4,7 +4,7 @@ The staff dashboard for Jae H. Jeong's U.S. Taekwondo Center (Worcester and Shre
 
 So far it has the basics: **sign in**, an empty **Home** page, the **app frame** (rail, top bar, phone bottom bar), the **location switcher**, the **account menu**, the **lock screen** (per-account idle lock, 4-digit PIN), and the **account screens**: **Set your PIN**, **Change PIN** and **Change password**. Sections such as Color Belt testing get added one at a time later.
 
-The design rules live in `docs/TKD-Dashboard-Design-Guidelines.md`. The approved look is in `docs/TKD-Home-Mockups.html` and `docs/TKD-Account-Screens-Mockups.html`. The build contracts (what the database and the app agree on) are `docs/BUILD-CONTRACT.md` and `docs/CONTRACT-0002.md`.
+The design rules live in `docs/Dashboard Docs/TKD-Dashboard-Design-Guidelines.md`. The approved look is in `docs/Dashboard Docs/TKD-Home-Mockups.html` and `docs/Dashboard Docs/TKD-Account-Screens-Mockups.html`. The build contracts (what the database and the app agree on) are `docs/BUILD-CONTRACT.md` and `docs/CONTRACT-0002.md`.
 
 ---
 
@@ -77,7 +77,7 @@ package.json          The project's name, its commands (scripts), and the exact 
 .gitignore            Files git must never save (node_modules, dist, .env.local).
 public/logo.png       The school logo, served as-is.
 supabase/             The database side (tables, security rules, PIN functions). Has its own SETUP.md.
-docs/                 Design guidelines, the approved mockups, and the build contracts.
+docs/                 All design docs (master copy): Dashboard Docs/ (guidelines, handoff, mockups, build contracts), Testing/ (Color Belt, Star Testing). See docs/README.md.
 
 src/main.jsx          Starting point: loads the styles and draws <App />.
 src/App.jsx           The "brain": decides which screen shows (sign-in, home, or lock) and enforces the rules.

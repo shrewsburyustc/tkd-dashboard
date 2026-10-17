@@ -1,0 +1,2241 @@
+<title>Star Testing Floor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --paper:#F2F4F7;
+  --surface:#FFFFFF;
+  --surface-2:#F8FAFC;
+  --ink:#0F1826;
+  --ink-2:#41506A;
+  --ink-3:#5B6A82;
+  --line:#D8DEE8;
+  --line-2:#EBEFF5;
+  --navy:#1F4E78;
+  --navy-lift:#2E6BA0;
+  --gold:#8A6208;
+  --gold-fill:#FBF1D8;
+  --pass:#1A6B47;
+  --pass-fill:#E4F2EB;
+  --warn:#9A5A05;
+  --warn-fill:#FBEEDA;
+  --fail:#A32B22;
+  --fail-fill:#FBE7E5;
+  --shadow:0 1px 2px rgba(15,24,38,.06), 0 8px 24px -12px rgba(15,24,38,.18);
+  --radius:6px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0C121C;
+    --surface:#141C2A;
+    --surface-2:#1B2534;
+    --ink:#E9EEF6;
+    --ink-2:#A9B6C9;
+    --ink-3:#7C8AA1;
+    --line:#2A374A;
+    --line-2:#222E3F;
+    --navy:#7FB0DC;
+    --navy-lift:#A5CBEC;
+    --gold:#D9A93F;
+    --gold-fill:#33290F;
+    --pass:#63C79B;
+    --pass-fill:#122E23;
+    --warn:#D9A055;
+    --warn-fill:#33240F;
+    --fail:#EC8A80;
+    --fail-fill:#331816;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0C121C;
+  --surface:#141C2A;
+  --surface-2:#1B2534;
+  --ink:#E9EEF6;
+  --ink-2:#A9B6C9;
+  --ink-3:#7C8AA1;
+  --line:#2A374A;
+  --line-2:#222E3F;
+  --navy:#7FB0DC;
+  --navy-lift:#A5CBEC;
+  --gold:#D9A93F;
+  --gold-fill:#33290F;
+  --pass:#63C79B;
+  --pass-fill:#122E23;
+  --warn:#D9A055;
+  --warn-fill:#33240F;
+  --fail:#EC8A80;
+  --fail-fill:#331816;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.7);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Barlow",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.disp{font-family:"Barlow Condensed","Barlow",sans-serif; font-weight:600; letter-spacing:.01em; text-wrap:balance; margin:0}
+.num{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums}
+button{font:inherit; color:inherit; cursor:pointer}
+input,select,textarea{font:inherit; color:inherit}
+:focus-visible{outline:2px solid var(--navy-lift); outline-offset:2px; border-radius:3px}
+
+/* ---------- shell ---------- */
+.shell{display:grid; grid-template-columns:232px 1fr; min-height:100vh}
+.rail{
+  background:var(--surface); border-right:1px solid var(--line);
+  display:flex; flex-direction:column; gap:2px; padding:18px 12px 14px;
+  position:sticky; top:0; height:100vh; overflow-y:auto;
+}
+.brand{padding:0 8px 16px; border-bottom:1px solid var(--line-2); margin-bottom:12px}
+.brand .logo{
+  display:block; width:72px; height:auto; margin:0 auto 10px;
+  /* The crest is drawn on white; on a dark ground it needs its own disc. */
+  background:#fff; border-radius:50%; padding:3px;
+}
+.brand .mark{
+  font-family:"Barlow Condensed",sans-serif; font-weight:700; font-size:18.5px;
+  letter-spacing:.02em; line-height:1.08; color:var(--ink); text-align:center;
+}
+.brand .sub{
+  font-size:10.5px; text-transform:uppercase; letter-spacing:.13em; text-align:center;
+  color:var(--gold); margin-top:6px; font-weight:600;
+}
+.stagelabel{
+  font-size:10px; text-transform:uppercase; letter-spacing:.14em; color:var(--ink-3);
+  padding:10px 8px 6px; font-weight:600;
+}
+.navbtn{
+  display:grid; grid-template-columns:22px 1fr; align-items:center; gap:9px;
+  background:none; border:0; text-align:left; padding:9px 8px; border-radius:var(--radius);
+  color:var(--ink-2); width:100%; transition:background .12s,color .12s;
+}
+.navbtn .step{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600;
+  color:var(--ink-3); text-align:center;
+}
+.navbtn .lbl{font-family:"Barlow Condensed",sans-serif; font-size:16px; font-weight:600; letter-spacing:.015em}
+.navbtn:hover{background:var(--surface-2); color:var(--ink)}
+.navbtn[aria-current="true"]{background:var(--navy); color:#fff}
+.navbtn[aria-current="true"] .step{color:rgba(255,255,255,.7)}
+:root[data-theme="dark"] .navbtn[aria-current="true"],
+:root:not([data-theme="light"]) .navbtn[aria-current="true"]{color:#0C121C}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]) .navbtn[aria-current="true"]{color:#fff}}
+.railfoot{margin-top:auto; padding:12px 8px 0; border-top:1px solid var(--line-2); display:flex; flex-direction:column; gap:7px}
+.minibtn{
+  background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius);
+  padding:6px 9px; font-size:12px; color:var(--ink-2); text-align:left;
+}
+.minibtn:hover{border-color:var(--navy); color:var(--ink)}
+
+.main{padding:24px 30px 72px; max-width:1240px; min-width:0}
+.pagehead{display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom:6px}
+.pagehead h1{font-size:29px; line-height:1.1}
+.eyebrow{
+  font-size:10.5px; text-transform:uppercase; letter-spacing:.15em; font-weight:600;
+  color:var(--gold); margin-bottom:5px;
+}
+.lede{color:var(--ink-2); max-width:64ch; margin:8px 0 22px; font-size:14.5px}
+.view[hidden]{display:none}
+
+/* ---------- demo banner ---------- */
+.demobar{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  background:var(--gold-fill); border:1px solid color-mix(in srgb, var(--gold) 34%, transparent);
+  border-radius:var(--radius); padding:9px 13px; margin-bottom:20px; font-size:13px; color:var(--ink-2);
+}
+.demobar strong{color:var(--ink); font-weight:600}
+
+/* ---------- panels ---------- */
+.panel{background:var(--surface); border:1px solid var(--line); border-radius:8px; box-shadow:var(--shadow)}
+.panel + .panel{margin-top:18px}
+.panel-hd{
+  display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+  padding:13px 16px; border-bottom:1px solid var(--line-2);
+}
+.panel-hd h2{font-size:17px; letter-spacing:.02em}
+.panel-bd{padding:16px}
+.panel-note{font-size:12.5px; color:var(--ink-3)}
+
+/* ---------- forms ---------- */
+.grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(215px,1fr)); gap:14px}
+.field{display:flex; flex-direction:column; gap:5px; min-width:0}
+/* .field sets display:flex, which out-ranks the UA [hidden] rule. Without
+   this the school question still renders when the event says not to ask. */
+.field[hidden]{display:none}
+.field label{
+  font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; font-weight:600; color:var(--ink-3);
+}
+.field input,.field select,.field textarea{
+  background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius);
+  padding:8px 10px; width:100%; min-width:0;
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--navy); background:var(--surface)}
+.field .hint{font-size:12px; color:var(--ink-3)}
+.field.bad input,.field.bad select{border-color:var(--fail)}
+.err{font-size:12px; color:var(--fail); min-height:0}
+
+/* ---------- event setup ---------- */
+.locset{border:1px solid var(--line); border-radius:var(--radius); padding:11px 13px 13px; margin:16px 0 0}
+.locset legend{
+  font-size:10.5px; text-transform:uppercase; letter-spacing:.12em; font-weight:600;
+  color:var(--ink-3); padding:0 5px;
+}
+.locopt{display:flex; align-items:center; gap:9px; padding:6px 2px; cursor:pointer}
+.locopt input{width:17px; height:17px; accent-color:var(--navy); flex:none}
+.locopt span{font-size:14.5px}
+.eventbar{
+  display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-bottom:16px;
+  font-size:13px; color:var(--ink-2);
+}
+.eventbar .nm{font-family:"Barlow Condensed",sans-serif; font-weight:600; font-size:16px; color:var(--ink)}
+.eventbar .dot{color:var(--line)}
+.effect{display:flex; flex-direction:column; gap:11px}
+.effect div{
+  display:grid; grid-template-columns:20px 1fr; gap:9px; font-size:13.5px;
+  color:var(--ink-2); align-items:start;
+}
+.effect .ic{
+  font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--gold);
+  text-align:center; line-height:1.45;
+}
+.effect b{color:var(--ink); font-weight:600}
+
+/* ---------- birthday calendar ---------- */
+.datefield{position:relative}
+.datebtn{
+  display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%;
+  background:var(--surface-2); border:1px solid var(--line); border-radius:var(--radius);
+  padding:8px 10px; text-align:left; color:var(--ink);
+}
+.datebtn .calico{color:var(--ink-3); flex:none}
+.datebtn:hover{border-color:var(--navy)} .datebtn:hover .calico{color:var(--navy)}
+.datebtn[aria-expanded="true"]{border-color:var(--navy); background:var(--surface)}
+.datefield.bad .datebtn{border-color:var(--fail)}
+.datebtn.unset{color:var(--ink-3)}
+.calpop{
+  position:absolute; top:calc(100% - 16px); left:0; z-index:40; width:290px; max-width:92vw;
+  background:var(--surface); border:1px solid var(--line); border-radius:8px;
+  box-shadow:0 16px 44px -14px rgba(0,0,0,.42); padding:11px;
+}
+.calpop[hidden]{display:none}
+.calhd{display:grid; grid-template-columns:30px 1fr 1fr 30px; gap:5px; align-items:center; margin-bottom:9px}
+.calhd select{
+  background:var(--surface-2); border:1px solid var(--line); border-radius:4px;
+  padding:5px 4px; font-size:13px; width:100%; min-width:0;
+}
+.calnav{
+  background:var(--surface-2); border:1px solid var(--line); border-radius:4px;
+  height:29px; display:grid; place-items:center; color:var(--ink-2); font-size:14px; padding:0;
+}
+.calnav:hover{border-color:var(--navy); color:var(--ink)}
+.caldow{display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:3px}
+.caldow span{
+  text-align:center; font-size:10px; font-weight:600; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--ink-3);
+}
+.calgrid{display:grid; grid-template-columns:repeat(7,1fr); gap:2px}
+.calday{
+  background:none; border:1px solid transparent; border-radius:4px; height:33px;
+  font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink-2); padding:0;
+}
+.calday:hover:not(:disabled){background:var(--surface-2); border-color:var(--line); color:var(--ink)}
+.calday:disabled{cursor:default}
+.calday.blank{color:transparent}
+/* A future date is dimmed but still readable — a blank cell reads as a bug. */
+.calday:disabled:not(.blank){color:var(--ink-3); opacity:.42}
+.calday.sel{background:var(--navy); border-color:var(--navy); color:var(--surface); font-weight:600}
+:root[data-theme="dark"] .calday.sel,:root:not([data-theme="light"]) .calday.sel{color:#0C121C}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]) .calday.sel{color:#fff}}
+.calft{
+  display:flex; justify-content:space-between; align-items:center; gap:8px;
+  margin-top:9px; padding-top:8px; border-top:1px solid var(--line-2);
+  font-size:12px; color:var(--ink-3);
+}
+
+.btn{
+  background:var(--navy); color:#fff; border:1px solid var(--navy);
+  border-radius:var(--radius); padding:9px 16px; font-weight:600;
+  font-family:"Barlow Condensed",sans-serif; font-size:15.5px; letter-spacing:.03em;
+  text-transform:uppercase; transition:filter .12s;
+}
+/* :not(.ghost) matters: without it these out-rank .btn.ghost on specificity
+   and paint a transparent button with the solid button's text colour. */
+:root[data-theme="dark"] .btn:not(.ghost),:root:not([data-theme="light"]) .btn:not(.ghost){color:#0C121C}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]) .btn:not(.ghost){color:#fff}}
+.btn:hover{filter:brightness(1.12)}
+.btn.ghost{background:transparent; color:var(--ink-2); border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--navy); color:var(--ink); filter:none}
+.btn.sm{padding:6px 11px; font-size:13.5px}
+.btnrow{display:flex; gap:9px; flex-wrap:wrap; align-items:center}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex; gap:4px; flex-wrap:wrap}
+.tab{
+  background:transparent; border:1px solid transparent; border-radius:var(--radius);
+  padding:6px 13px; font-family:"Barlow Condensed",sans-serif; font-size:15.5px;
+  font-weight:600; letter-spacing:.02em; color:var(--ink-3);
+}
+.tab:hover{color:var(--ink); background:var(--surface-2)}
+.tab[aria-current="true"]{background:var(--surface-2); border-color:var(--line); color:var(--ink)}
+.tab .cnt{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-3); margin-left:5px}
+
+/* ---------- tables ---------- */
+.tablewrap{overflow:auto; max-height:min(72vh,760px); border-radius:var(--radius)}
+table{border-collapse:collapse; width:100%; font-size:13.5px}
+th,td{text-align:left; padding:8px 11px; border-bottom:1px solid var(--line-2); white-space:nowrap}
+thead th{
+  font-family:"Barlow Condensed",sans-serif; font-size:11.5px; text-transform:uppercase;
+  letter-spacing:.1em; color:var(--ink-3); font-weight:600;
+  background:var(--surface-2); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:2;
+}
+tbody tr:hover{background:var(--surface-2)}
+.schoolrow td{background:var(--surface-2); color:var(--navy); font-family:"Barlow Condensed",sans-serif; font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; border-top:2px solid var(--line); padding:7px 11px}
+td.name{white-space:normal; min-width:150px; font-weight:500}
+.rownum{color:var(--ink-3); font-family:"IBM Plex Mono",monospace; font-size:12px; width:34px}
+.empty{padding:34px 16px; text-align:center; color:var(--ink-3); font-size:13.5px}
+
+/* ---------- stars & chips ---------- */
+.stars{color:var(--gold); letter-spacing:.06em; font-size:13px}
+.stars .off{color:var(--line)}
+.pill{
+  display:inline-flex; align-items:center; gap:5px; border-radius:100px; padding:2px 9px;
+  font-size:11.5px; font-weight:600; border:1px solid transparent; white-space:nowrap;
+}
+.pill.pass{background:var(--pass-fill); color:var(--pass); border-color:color-mix(in srgb,var(--pass) 30%,transparent)}
+.pill.warn{background:var(--warn-fill); color:var(--warn); border-color:color-mix(in srgb,var(--warn) 30%,transparent)}
+.pill.fail{background:var(--fail-fill); color:var(--fail); border-color:color-mix(in srgb,var(--fail) 32%,transparent)}
+.pill.mute{background:var(--surface-2); color:var(--ink-3); border-color:var(--line)}
+
+/* ---------- grade dropdowns ---------- */
+.gselect{
+  width:68px; height:32px; border:1px solid var(--line); background:var(--surface);
+  border-radius:4px; padding:4px 6px; font-family:"IBM Plex Mono",monospace;
+  font-size:12px; font-weight:600; color:var(--ink); cursor:pointer;
+}
+.gselect:hover,.gselect:focus{border-color:var(--navy)}
+.gselect.d{border-color:var(--fail); color:var(--fail); background:var(--fail-fill)}
+.gselect option[value="D"]{color:var(--fail)}
+.gcell{display:flex; align-items:center; gap:6px; flex-wrap:nowrap}
+.gpts{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-3); width:32px; text-align:right}
+
+/* grading grid: sticky candidate column */
+.gradegrid th.stick,.gradegrid td.stick{
+  position:sticky; left:0; background:var(--surface); z-index:1; border-right:1px solid var(--line);
+}
+.gradegrid thead th.stick{background:var(--surface-2); z-index:3}
+.gradegrid tbody tr:hover td.stick{background:var(--surface-2)}
+.gradegrid th.cat{white-space:normal; min-width:112px; max-width:132px; vertical-align:bottom}
+.gradegrid th.rec{white-space:normal; min-width:112px; max-width:132px; vertical-align:bottom; background:var(--gold-fill)}
+.gradegrid td.reccell{background:color-mix(in srgb,var(--gold-fill) 55%, transparent)}
+.recinput{
+  width:62px; background:var(--surface); border:1px solid var(--line);
+  border-radius:4px; padding:6px 8px; font-family:"IBM Plex Mono",monospace;
+  font-size:13px; text-align:center;
+}
+.recinput:focus{border-color:var(--navy)}
+.gradegrid th.cat .cr,.gradegrid th.rec .cr{
+  display:block; font-family:"IBM Plex Mono",monospace; font-size:10.5px;
+  color:var(--gold); letter-spacing:0; text-transform:none; margin-top:3px;
+}
+.gradegrid td{vertical-align:middle}
+.subtotal{font-family:"IBM Plex Mono",monospace; font-weight:600}
+
+/* ---------- score readout ---------- */
+.scorebar{display:flex; align-items:baseline; gap:9px}
+.scorebar .big{font-family:"IBM Plex Mono",monospace; font-size:19px; font-weight:600}
+.scorebar .of{font-size:12px; color:var(--ink-3); font-family:"IBM Plex Mono",monospace}
+.meter{height:5px; background:var(--line-2); border-radius:3px; overflow:hidden; min-width:96px; margin-top:5px; position:relative}
+.meter i{display:block; height:100%; background:var(--navy); border-radius:3px}
+.meter i.ok{background:var(--pass)}
+.meter i.no{background:var(--warn)}
+.meter .mark{position:absolute; top:-2px; bottom:-2px; width:1.5px; background:var(--ink-2); opacity:.55}
+
+/* ---------- rubric card ---------- */
+.rubric{border:1px solid var(--line); border-radius:var(--radius); overflow:hidden}
+.rubric-hd{
+  background:var(--surface-2); padding:9px 12px; border-bottom:1px solid var(--line);
+  display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;
+}
+.rubric-hd .t{font-family:"Barlow Condensed",sans-serif; font-weight:600; font-size:15.5px}
+.rubric ol{list-style:none; margin:0; padding:0}
+.rubric li{
+  display:flex; justify-content:space-between; gap:12px; padding:6px 12px;
+  border-bottom:1px solid var(--line-2); font-size:13.5px;
+}
+.rubric li:last-child{border-bottom:0}
+.rubric li .cr{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-3); white-space:nowrap}
+.rubric-ft{
+  background:var(--surface-2); border-top:1px solid var(--line); padding:8px 12px;
+  display:flex; justify-content:space-between; font-size:12.5px; color:var(--ink-2);
+  font-family:"IBM Plex Mono",monospace;
+}
+.scale{display:flex; gap:4px; flex-wrap:wrap; margin-top:10px}
+.scale span{
+  font-family:"IBM Plex Mono",monospace; font-size:11.5px; border:1px solid var(--line);
+  border-radius:4px; padding:3px 7px; color:var(--ink-2); background:var(--surface-2);
+}
+.scale span b{color:var(--ink); font-weight:600}
+
+/* ---------- two-col layout ---------- */
+.split{display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:18px; align-items:start}
+
+/* ---------- modal ---------- */
+.scrim{
+  position:fixed; inset:0; background:rgba(10,16,26,.55); display:grid; place-items:center;
+  padding:22px; z-index:50; backdrop-filter:blur(2px);
+}
+.scrim[hidden]{display:none}
+.modal{
+  background:var(--surface); border:1px solid var(--line); border-radius:9px;
+  max-width:620px; width:100%; max-height:86vh; display:flex; flex-direction:column;
+  box-shadow:0 20px 60px -18px rgba(0,0,0,.5);
+}
+.modal-hd{padding:14px 17px; border-bottom:1px solid var(--line-2); display:flex; justify-content:space-between; align-items:center; gap:12px}
+.modal-hd h3{font-size:18px}
+.modal-bd{padding:17px; overflow-y:auto}
+.modal-ft{padding:13px 17px; border-top:1px solid var(--line-2); display:flex; justify-content:flex-end; gap:9px; flex-wrap:wrap}
+.x{background:none; border:0; color:var(--ink-3); font-size:19px; line-height:1; padding:3px 7px; border-radius:4px}
+.x:hover{color:var(--ink); background:var(--surface-2)}
+.mailmeta{font-size:12.5px; color:var(--ink-3); margin-bottom:11px; display:grid; gap:2px}
+.mailmeta b{color:var(--ink-2); font-weight:600}
+pre.mailbody{
+  background:var(--surface-2); border:1px solid var(--line-2); border-radius:var(--radius);
+  padding:13px; font-family:"IBM Plex Mono",monospace; font-size:12.5px; line-height:1.62;
+  white-space:pre-wrap; margin:0; color:var(--ink-2); overflow-x:auto;
+}
+
+/* ---------- toast ---------- */
+.toast{
+  position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(12px);
+  background:var(--ink); color:var(--paper); padding:10px 18px; border-radius:100px;
+  font-size:13.5px; font-weight:500; opacity:0; pointer-events:none;
+  transition:opacity .18s, transform .18s; z-index:80; box-shadow:0 8px 28px -8px rgba(0,0,0,.5);
+  max-width:88vw; text-align:center;
+}
+.toast.on{opacity:1; transform:translateX(-50%) translateY(0)}
+
+/* ---------- misc ---------- */
+.kv{display:grid; grid-template-columns:auto 1fr; gap:5px 14px; font-size:13.5px}
+.kv dt{color:var(--ink-3); font-size:11px; text-transform:uppercase; letter-spacing:.11em; font-weight:600; padding-top:2px}
+.kv dd{margin:0}
+.mk{font-size:12.5px; color:var(--warn); white-space:normal; max-width:280px; display:block}
+.tag{
+  font-family:"IBM Plex Mono",monospace; font-size:9.5px; text-transform:uppercase;
+  letter-spacing:.09em; border-radius:3px; padding:1px 4px; border:1px solid var(--line);
+  color:var(--ink-3); background:var(--surface-2); white-space:nowrap;
+}
+.tag.auto{color:var(--gold); border-color:color-mix(in srgb,var(--gold) 36%,transparent); background:var(--gold-fill)}
+.printgrades{display:none}
+
+/* Phone: an examiner needs all seven chips and the points in one screen. */
+@media (max-width:700px){
+  .gradegrid th.stick,.gradegrid td.stick{min-width:106px; max-width:118px}
+  .gradegrid td.name{min-width:106px}
+  .gradegrid th.cat{min-width:124px}
+  .gradegrid th.rec{min-width:150px}
+  .recinput{width:100%}
+  .gcell{flex-direction:column; align-items:stretch; gap:4px}
+  .gselect{width:100%; height:40px}
+  .gpts{width:auto; text-align:center}
+  th,td{padding:8px 6px}
+}
+
+@media (max-width:880px){
+  .shell{grid-template-columns:1fr}
+  .rail{position:static; height:auto; flex-direction:row; flex-wrap:wrap; align-items:center; gap:6px; padding:12px}
+  .brand{
+    border-bottom:0; border-right:1px solid var(--line-2); margin:0 6px 0 0; padding:0 14px 0 4px;
+    display:grid; grid-template-columns:auto 1fr; align-items:center; gap:2px 9px;
+  }
+  .brand .logo{width:34px; margin:0; grid-row:span 2}
+  .brand .mark{font-size:15px; text-align:left; align-self:end}
+  .brand .mark br{display:none}
+  .brand .sub{margin:0; text-align:left; align-self:start; font-size:9.5px}
+  .stagelabel{display:none}
+  .navbtn{width:auto; grid-template-columns:auto auto; padding:7px 11px}
+  .railfoot{margin:0 0 0 auto; border-top:0; padding:0; flex-direction:row}
+  .main{padding:18px 15px 60px}
+  .split{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important; animation:none!important}}
+@media print{
+  .shell,.scrim,.toast{display:none!important}
+  .printgrades{display:block!important; color:#111; font-family:Arial,sans-serif}
+  body{background:#fff}
+  .paper-head{display:flex; justify-content:space-between; align-items:flex-end; gap:18px; border-bottom:2px solid #1F4E78; padding-bottom:5px; margin-bottom:7px}
+  .paper-school{font-size:12px; font-weight:700}
+  .paper-title{font-size:18px; font-weight:700; margin-top:1px}
+  .paper-event{text-align:right; font-size:9px; line-height:1.35}
+  .paper-table{width:100%; border-collapse:collapse; table-layout:fixed; font-size:9px}
+  .paper-table thead{display:table-header-group}
+  .paper-table tr{break-inside:avoid; page-break-inside:avoid}
+  .paper-table th,.paper-table td{border:1px solid #555; padding:3px; white-space:normal}
+  .paper-table th{background:#e9eef4; font-weight:700; text-align:center}
+  .paper-table .paper-student{width:1.75in; text-align:left; vertical-align:bottom; padding:5px}
+  .paper-table th.paper-subject{height:1.28in; width:.43in; padding:3px 1px; vertical-align:bottom}
+  .paper-subject-label{display:block; writing-mode:vertical-rl; transform:rotate(180deg); margin:auto; line-height:1.05; font-size:7.5px}
+  .paper-credit{display:block; margin-top:3px; font-size:7px; color:#444}
+  .paper-table td{height:.31in}
+  .paper-name{font-size:9.5px; font-weight:700; line-height:1.1}
+  .paper-meta{font-size:7px; color:#444; line-height:1.1; margin-top:2px}
+  .paper-mark{background:#fff}
+  .paper-school-block + .paper-school-block{break-before:page; page-break-before:always}
+  .paper-school-section{font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; padding:4px 6px; background:#dfe8f1; border:1px solid #555; border-bottom:0}
+  .paper-rules{display:flex; justify-content:space-between; gap:16px; border-top:1px solid #999; margin-top:6px; padding-top:4px; font-size:7.5px}
+  .paper-final-page{font-size:10px}
+  .paper-final-summary{font-size:9px; color:#444; text-align:right; margin:2px 0 8px}
+  .paper-final-school + .paper-final-school{margin-top:12px}
+  .paper-final-table{width:100%; border-collapse:collapse; table-layout:fixed}
+  .paper-final-table thead{display:table-header-group}
+  .paper-final-table tr{break-inside:avoid; page-break-inside:avoid}
+  .paper-final-table th,.paper-final-table td{border:1px solid #777; padding:6px 7px; vertical-align:middle; white-space:normal; overflow-wrap:anywhere}
+  .paper-final-table th{background:#eef2f6; color:#172231; font-size:8.5px; letter-spacing:.04em; text-align:left; text-transform:uppercase}
+  .paper-final-table td{height:.34in; font-size:9.5px}
+  .paper-final-table th:nth-child(1){width:34%}
+  .paper-final-table th:nth-child(2){width:17%}
+  .paper-final-table th:nth-child(3){width:16%; text-align:center}
+  .paper-final-table th:nth-child(4){width:33%}
+  .paper-final-table td:nth-child(2){font-weight:700; white-space:nowrap}
+  .paper-final-table td:nth-child(3){font-variant-numeric:tabular-nums; text-align:center}
+  .paper-final-status{font-weight:700; text-transform:uppercase}
+  .paper-final-status.pass{color:#176c45}
+  .paper-final-status.incomplete{color:#8c5b00}
+  .paper-final-status.makeup{color:#a22b2b}
+  .paper-final-note{color:#444; font-size:8px; line-height:1.3; margin-top:2px; white-space:normal; overflow-wrap:anywhere; word-break:normal}
+  .paper-final-footer{display:flex; justify-content:space-between; gap:16px; border-top:1px solid #999; margin-top:12px; padding-top:5px; color:#444; font-size:8px}
+}
+</style>
+<style id="printPageMode">@page{size:letter landscape; margin:.3in}</style>
+
+<div class="shell">
+  <nav class="rail">
+    <div class="brand">
+      <img class="logo" src="data:image/png;base64,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zZ07lw4cOEAWi4UYY8Q5J0mSaPXq1QERnO/l/3mampqUTz75REtPTycA5x0Ox21+1oj/j3ZZCxcutDHGXhNFseXGGyfTsaPHPP4WJy8vj/bt20dnTp+hqMgoYyFl2UQA6O233w5YgH8VQCUlJZSZ2SbAhXXs2JFqamqIiKiyspK6du1iAIIxRna7nbKzsykzM5OmTJli8BhN06iuro46deoUcD7nnPbv308//PADATCsEwBaunRpAAH3WaKKigpat25dgAxQVFTkmT59Onm1rS979eoV9z8RRAwAZ4whNTW1HYB1GRkZtHjxYvKG44bFmTt3LmVkZFBUVBTl5eXRRx99TIwxkmWZJEm3BpmZmUZU86+AyPek19fXU79+/XVgShIBjMLCwujgwYNERFRQUEBpaWnGwnPOA3hM3759yeVyGX93+/btZDabDQABoLT0dKqpraW33347AKghISF05MiRgGv3eDxERPTyyy+TKIo0bdo0OnnypL8soPz444+Kl6AfjYiI6O9XTcD+R7gszjni4uImAiiYPHkyFRQUKD7RT1VVmj9/vrFoF7WZJ6impoZSU1O9EZMc4B78I6u/CyDf+bfffofXsukACgoKoj179hAR0ZEjR30RkQEg/+saOGBgAG955ZVXDLLsu77p06cTERnE2mTSwd+zZ09qbm4OEB+JiHbs2EEhISHG34iLi6OjR44apJ6ItJKSEmXa1GkkSVKtLMsPERH7726NOADs379fslqtM0VRdD3//POk6HdN81+EFStWkCAIJEmSoc1ERkZSUVGR8RQLgkiiKBPAqF27dlRWVvYvcqGL514EkL6w/gDav38/ORyOAIuSlZVFzzzzDD344IM0b94847obGxupX79+f3BfK1eupLNnzxrRnu/v3H///QbwfRJAY2MjDRgwIEA2cDiC6PDhw/7ipuYTI+fNm0cOh4MYY/OHDRsW5U8P/tuB58UXX7SLojjfbrfT+++/r/kUZN8C+KIZIqIbb7zRuNk+k//MM89QfX09eckkiaLsBdG/jQsZALrDCyBJB6TD4aDdu3cTEdGuXbvIYrEGLPyNN954WU1p+/btZLPZiDFmcJz4+Hiqrq6muXPnGsDyucGffvwpAEBERG+88YZh7XyAHTJkCLndbiovr6Dx48fTrFmzqLi42PgYK1asUGNiYgjA7mHDhrX/76Zg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" alt="Jae H. Jeong's U.S. Taekwondo Center" width="72" height="70">
+      <div class="mark">Jae H. Jeong's<br>U.S. Taekwondo Center</div>
+      <div class="sub">Star Testing</div>
+    </div>
+    <div class="stagelabel">The cycle</div>
+    <button class="navbtn" data-view="event"><span class="step">0</span><span class="lbl">Testing Event</span></button>
+    <button class="navbtn" data-view="register"><span class="step">1</span><span class="lbl">Register</span></button>
+    <button class="navbtn" data-view="roster"><span class="step">2</span><span class="lbl">Master Roster</span></button>
+    <button class="navbtn" data-view="grade"><span class="step">3</span><span class="lbl">Grading Sheet</span></button>
+    <button class="navbtn" data-view="results"><span class="step">4</span><span class="lbl">Final Scores</span></button>
+    <div class="stagelabel">Reference</div>
+    <button class="navbtn" data-view="rubrics"><span class="step">§</span><span class="lbl">Rubrics &amp; Rules</span></button>
+    <div class="railfoot">
+      <button class="minibtn" id="btnTheme">Switch theme</button>
+      <button class="minibtn" id="btnReset">Reset demo data</button>
+    </div>
+  </nav>
+
+  <main class="main">
+    <div class="demobar">
+      <strong>Prototype.</strong>
+      <span>Candidates below are made up. Nothing is emailed and nothing leaves this browser — data is kept on this device only.</span>
+    </div>
+
+    <!-- ============ EVENT SETUP ============ -->
+    <section class="view" id="view-event" hidden>
+      <div class="pagehead">
+        <div>
+          <div class="eyebrow">Stage 0 · Before registration opens</div>
+          <h1>Testing Event</h1>
+        </div>
+      </div>
+      <p class="lede">Set up once, before the link goes out. Everything downstream follows from this — most importantly whether candidates are asked which school they train at.</p>
+
+      <div class="split">
+        <div class="panel">
+          <div class="panel-hd"><h2>Event details</h2></div>
+          <div class="panel-bd">
+            <div class="grid2">
+              <div class="field"><label for="e-name">Event name</label><input id="e-name" placeholder="Fall 2026 Star Testing"></div>
+              <div class="field"><label for="e-date">Testing date</label><input id="e-date" type="date"></div>
+            </div>
+
+            <fieldset class="locset">
+              <legend>Which schools are testing at this event?</legend>
+              <label class="locopt"><input type="checkbox" class="e-loc" value="Shrewsbury"> <span>Shrewsbury</span></label>
+              <label class="locopt"><input type="checkbox" class="e-loc" value="Worcester"> <span>Worcester</span></label>
+            </fieldset>
+
+            <fieldset class="locset">
+              <legend>The school question</legend>
+              <label class="locopt"><input type="checkbox" id="e-ask"> <span>Ask each candidate which school they train at</span></label>
+              <p class="panel-note" id="askNote" style="margin:4px 0 0"></p>
+            </fieldset>
+            <div class="err" id="eventErr" role="alert"></div>
+            <div class="btnrow" style="margin-top:14px">
+              <button class="btn" type="button" id="btnSaveEvent">Save event</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-hd"><h2>What this changes</h2></div>
+          <div class="panel-bd" id="eventEffect"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ REGISTER ============ -->
+    <section class="view" id="view-register" hidden>
+      <div class="pagehead">
+        <div>
+          <div class="eyebrow">Stage 1 · Candidate-facing</div>
+          <h1>Register for Star Testing</h1>
+        </div>
+      </div>
+      <p class="lede">This is the page a candidate reaches from a QR code or link. They pick their Dan, the rubric they will be graded against appears underneath, and submitting drops them straight onto the Master Roster.</p>
+
+      <div class="split">
+        <div class="panel">
+          <div class="panel-hd"><h2>Application</h2><span class="panel-note">Name, date of birth, email and Dan are required</span></div>
+          <div class="panel-bd">
+            <form id="regForm" novalidate>
+              <div class="grid2">
+                <div class="field"><label for="f-name">Full name</label><input id="f-name" name="name" autocomplete="name"></div>
+                <div class="field datefield"><label for="f-dob">Date of birth</label>
+                  <button type="button" id="f-dob" class="datebtn" aria-haspopup="dialog" aria-expanded="false">
+                    <span id="dobText">Pick your birthday</span>
+                    <svg class="calico" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">
+                      <rect x="2.5" y="4" width="15" height="13.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                      <path d="M2.5 8h15" stroke="currentColor" stroke-width="1.5"/>
+                      <path d="M6.5 2.5v3M13.5 2.5v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                  </button>
+                  <div class="calpop" id="calPop" role="dialog" aria-label="Choose a date of birth" hidden></div>
+                  <span class="hint" id="ageOut">Age fills in automatically</span>
+                </div>
+                <div class="field"><label for="f-gender">Gender</label>
+                  <select id="f-gender" name="gender"><option value="">—</option><option>Male</option><option>Female</option></select>
+                </div>
+                <div class="field"><label for="f-email">Email for results</label><input id="f-email" name="email" type="email" placeholder="parent@example.com"></div>
+                <div class="field" id="schoolField"><label for="f-school">Which school do you train at?</label>
+                  <select id="f-school" name="school"><option value="">—</option></select>
+                </div>
+                <div class="field"><label for="f-dan">Current Dan</label>
+                  <select id="f-dan" name="dan"><option value="">—</option><option>1st Dan</option><option>2nd Dan</option><option>3rd Dan</option></select>
+                </div>
+                <div class="field"><label for="f-from">Star progression</label>
+                  <select id="f-from" name="starsFrom" disabled><option value="">Choose a Dan first</option></select>
+                </div>
+                <div class="field"><label for="f-pay">Paying by</label>
+                  <select id="f-pay" name="pay"><option>Cash</option><option>Check</option></select>
+                  <span class="hint" id="feeOut">Pay at the front desk before testing day</span>
+                </div>
+              </div>
+              <div class="err" id="regErr" role="alert"></div>
+              <div class="btnrow" style="margin-top:15px">
+                <button class="btn" type="submit">Submit application</button>
+                <button class="btn ghost sm" type="button" id="btnFill">Fill with an example</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-hd"><h2>What you'll be graded on</h2></div>
+          <div class="panel-bd" id="regRubric"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ROSTER ============ -->
+    <section class="view" id="view-roster" hidden>
+      <div class="pagehead">
+        <div>
+          <div class="eyebrow">Stage 2 · Staff</div>
+          <h1>Master Roster</h1>
+        </div>
+        <div class="btnrow">
+          <button class="btn ghost sm" id="btnCsv">Download CSV</button>
+        </div>
+      </div>
+      <p class="lede">One tab per Dan, each sorted from the lowest rank up — candidates with no stars first, then 1 star, then 2. Capacity is 100 per Dan. Click a payment pill to mark the fee received, or a school pill to move a candidate.</p>
+      <div class="panel">
+        <div class="panel-hd">
+          <div class="tabs" id="rosterTabs"></div>
+          <div class="tabs" id="rosterFilter"></div>
+          <span class="panel-note" id="rosterCount"></span>
+        </div>
+        <div class="tablewrap"><table id="rosterTable"></table></div>
+      </div>
+    </section>
+
+    <!-- ============ GRADE ============ -->
+    <section class="view" id="view-grade" hidden>
+      <div class="pagehead">
+        <div>
+          <div class="eyebrow">Stage 3 · Testing day</div>
+          <h1>Grading Sheet</h1>
+        </div>
+        <div class="btnrow">
+          <button class="btn ghost sm" id="btnPrint">Print blank grading sheets</button>
+        </div>
+      </div>
+      <p class="lede">Choose a grade from A+ through D for each judged category. The two gold columns at the far right come off the school's own records — candidates never enter these. Enter the exact assistant-class count once, and the Assistant Instructor grade is calculated automatically. A <strong>D</strong> in any category means a make-up, even when the total passes.</p>
+      <div class="panel">
+        <div class="panel-hd">
+          <div class="tabs" id="gradeTabs"></div>
+          <div class="scale" id="gradeScale"></div>
+        </div>
+        <div class="tablewrap"><table class="gradegrid" id="gradeTable"></table></div>
+      </div>
+    </section>
+
+    <!-- ============ RESULTS ============ -->
+    <section class="view" id="view-results" hidden>
+      <div class="pagehead">
+        <div>
+          <div class="eyebrow">Stage 4 · After the test</div>
+          <h1>Final Scores</h1>
+        </div>
+        <div class="btnrow">
+          <button class="btn ghost sm" id="btnPrintResults">Print final scores</button>
+          <button class="btn ghost sm" id="btnMailAll">Email everyone graded</button>
+        </div>
+      </div>
+      <p class="lede">Passing is <strong>245 of a possible 315</strong> — the same mark for every Dan. A candidate passes only if they reach 245 <em>and</em> took no D. Anything short is listed as a make-up for the next testing.</p>
+      <div class="panel">
+        <div class="panel-hd">
+          <div class="tabs" id="resultTabs"></div>
+          <span class="panel-note" id="resultSummary"></span>
+        </div>
+        <div class="tablewrap"><table id="resultTable"></table></div>
+      </div>
+    </section>
+
+    <!-- ============ RUBRICS ============ -->
+    <section class="view" id="view-rubrics" hidden>
+      <div class="pagehead">
+        <div>
+          <div class="eyebrow">Reference</div>
+          <h1>Rubrics &amp; Rules</h1>
+        </div>
+      </div>
+      <p class="lede">Taken from the 2024 star testing applications. Every Dan carries 70 credits, so the maximum is 315 and the pass mark of 245 is a B+ average across the board.</p>
+      <div class="panel">
+        <div class="panel-bd">
+          <div class="grid2" id="allRubrics" style="align-items:start"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hd"><h2>Assistant Class grade</h2><span class="panel-note">Classes taught convert to the Assistant Instructor letter</span></div>
+        <div class="panel-bd">
+          <div class="tablewrap"><table id="assistTable"></table></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hd"><h2>Testing fee</h2></div>
+        <div class="panel-bd">
+          <div class="tablewrap"><table id="feeTable"></table></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="scrim" id="scrim" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-hd"><h3 id="modalTitle">Results email</h3><button class="x" id="modalX" aria-label="Close">&times;</button></div>
+    <div class="modal-bd" id="modalBd"></div>
+    <div class="modal-ft" id="modalFt"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="printgrades" id="printGrades" aria-hidden="true"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   RUBRICS — from the 2024 star testing applications.
+   Every Dan must total 70 credits (max 315, pass 245).
+   ============================================================ */
+var RUBRICS = {
+  "1st Dan": [
+    {n:"White–Deputy Curriculum", c:15},
+    {n:"Go-Ryo Poomse",           c:10},
+    {n:"Advanced Motion",         c:5},
+    {n:"Advance Sa-Bang Chuck",   c:5},
+    {n:"Step Sa-Bang Chuck",      c:5},
+    {n:"Two Step Sparring",       c:5},
+    {n:"Breaking",                c:5},
+    {n:"Appreciation Letters",    c:5},
+    {n:"Assistant Instructor",    c:5, auto:true},
+    {n:"Knowledge",               c:5},
+    {n:"Korean Terminology",      c:5}
+  ],
+  "2nd Dan": [
+    {n:"White–Deputy Curriculum", c:10},
+    {n:"Geum-Kang Poomse",        c:5},
+    {n:"Instructor Sa-Bang-Chuk", c:5},
+    {n:"Go-Ryo Poomse",           c:5},
+    {n:"Advanced Motion",         c:5},
+    {n:"Advance Sa-Bang Chuck",   c:5},
+    {n:"Step Sa-Bang Chuck",      c:5},
+    {n:"Two Step Sparring",       c:5},
+    {n:"Breaking",                c:5},
+    {n:"Appreciation Letters",    c:5},
+    {n:"Assistant Instructor",    c:5, auto:true},
+    {n:"Knowledge",               c:5},
+    {n:"Korean Terminology",      c:5}
+  ],
+  "3rd Dan": [
+    {n:"White–Deputy Curriculum",     c:20},
+    {n:"1st & 2nd Dan Curriculum",    c:10},
+    {n:"Tae Baek Poomsae",            c:5},
+    {n:"3rd Dan Sa-Bang Chuck",       c:5},
+    {n:"Creative Poomsae",            c:5},
+    {n:"Breaking",                    c:5},
+    {n:"Appreciation Letters",        c:5},
+    {n:"Assistant Instructor",        c:5, auto:true},
+    {n:"Knowledge",                   c:5},
+    {n:"Korean Terminology",          c:5}
+  ]
+};
+var DANS = ["1st Dan","2nd Dan","3rd Dan"];
+var STAR_LIMITS = {"1st Dan":4, "2nd Dan":3, "3rd Dan":5};
+var GRADES = [
+  {k:"A+", v:4.5}, {k:"A", v:4.0}, {k:"B+", v:3.5}, {k:"B", v:3.0},
+  {k:"C+", v:2.5}, {k:"C", v:2.0}, {k:"D", v:0.0}
+];
+var GVAL = {};
+GRADES.forEach(function(g){ GVAL[g.k] = g.v; });
+
+var PASS_MARK = 245;
+var ROSTER_CAP = 100;
+var FEES = {
+  "1st Dan":{normal:140, sameDay:150, priv:160},
+  "2nd Dan":{normal:150, sameDay:160, priv:170},
+  "3rd Dan":{normal:160, sameDay:170, priv:180}
+};
+/* Assistant Class table: classes taught -> letter. Split at age 13. */
+var ASSIST = {
+  child:[{g:"A+",min:15},{g:"A",min:14},{g:"B+",min:13},{g:"B",min:12},{g:"C+",min:11},{g:"C",min:10}],
+  adult:[{g:"A+",min:20},{g:"A",min:18},{g:"B+",min:16},{g:"B",min:14},{g:"C+",min:12},{g:"C",min:10}]
+};
+var ASSIST_LABEL = {
+  child:["15 or more","14","13","12","11","10","under 10"],
+  adult:["20 or more","19 or 18","17 or 16","15 or 14","13 or 12","11 or 10","under 10"]
+};
+
+function creditTotal(dan){
+  return RUBRICS[dan].reduce(function(s,c){ return s + c.c; }, 0);
+}
+function maxScore(dan){ return creditTotal(dan) * 4.5; }
+
+/* ============================================================
+   SCORING
+   ============================================================ */
+function assistLetter(age, taught){
+  /* Unknown age falls to the harder 13-and-up scale rather than silently
+     handing an adult the children's thresholds. */
+  var band = (age === null || age === undefined || age >= 13) ? ASSIST.adult : ASSIST.child;
+  for(var i=0;i<band.length;i++){ if(taught >= band[i].min) return band[i].g; }
+  return "D";
+}
+/* Age is derived from the stored date of birth where we have one, so a
+   candidate who crosses 13 between cycles moves onto the adult scale. */
+function ageOf(c){
+  if(c.dob){ var a = ageFrom(c.dob); if(a !== null) return a; }
+  return (c.age === undefined ? null : c.age);
+}
+/* Assistant Instructor is always derived from the exact class count. It has
+   no separate grade control and cannot be manually overridden. */
+function effectiveGrade(cand, cat){
+  if(cat.auto){
+    if(cand.assist === null || cand.assist === undefined || cand.assist === "") return "";
+    return assistLetter(ageOf(cand), cand.assist);
+  }
+  var g = cand.grades[cat.n];
+  if(g) return g;
+  return "";
+}
+function score(cand){
+  var cats = RUBRICS[cand.dan], total = 0, graded = 0, tapped = 0, makeups = [];
+  cats.forEach(function(cat){
+    if(!cat.auto && cand.grades[cat.n]) tapped++;
+    var g = effectiveGrade(cand, cat);
+    if(!g) return;
+    graded++;
+    total += cat.c * GVAL[g];
+    if(g === "D") makeups.push(cat.n);
+  });
+  var complete = graded === cats.length;
+  return {
+    total: total,
+    max: maxScore(cand.dan),
+    graded: graded,
+    /* tapped counts only what an examiner actually entered. Without it the
+       auto category makes every untouched candidate look part-graded, and
+       shows their class-attendance points as if it were an exam score. */
+    tapped: tapped,
+    of: cats.length,
+    complete: complete,
+    makeups: makeups,
+    belowMark: total < PASS_MARK,
+    passed: complete && total >= PASS_MARK && makeups.length === 0
+  };
+}
+/* Never returns a bare category name: a row exported at 247.5 with only
+   "Advanced Motion" in the result column reads as a pass to anyone sorting
+   the spreadsheet. */
+function resultText(s){
+  if(!s.complete) return "";
+  var parts = [];
+  if(s.belowMark) parts.push("below " + PASS_MARK);
+  if(s.makeups.length) parts.push("D in " + s.makeups.join(", "));
+  return parts.length ? ("MAKE-UP REQUIRED — " + parts.join("; ")) : "PASS!";
+}
+
+/* ============================================================
+   DATA — demo candidates, kept on this device only.
+   ============================================================ */
+var STORE_KEY = "ustc-star-testing-demo-v1";
+var SCHOOLS = ["Shrewsbury","Worcester"];
+/* The event decides whether school is a question at all. Colour belt testing
+   runs at one location, so the candidate is never asked; star and Dan testing
+   put both locations in one room, so staff need to tell the two apart. */
+var DEFAULT_EVENT = { name:"Fall 2026 Star Testing", date:"2026-10-18", locations:["Shrewsbury","Worcester"], askSchool:true };
+var state = {
+  candidates: [], view: "roster",
+  rosterDan:"1st Dan", gradeDan:"1st Dan", resultDan:"1st Dan",
+  rosterSchool:"All",
+  event: null
+};
+function multiSchool(){ return state.event.locations.length > 1; }
+/* Whether the candidate is asked is a separate decision from how many schools
+   are testing: staff can run a two-location event and still assign the school
+   themselves on the roster. One location can never ask — there is no choice. */
+function asksSchool(){ return multiSchool() && state.event.askSchool !== false; }
+
+function mk(name, dan, from, age, classes, assist, grades, opts){
+  opts = opts || {};
+  return {
+    id: "c" + (mk._i = (mk._i || 0) + 1),
+    name:name, dan:dan, starsFrom:from, age:age,
+    gender: opts.gender || "Male",
+    email: opts.email || (name.toLowerCase().replace(/[^a-z]+/g,".") + "@example.com"),
+    school: opts.school || "Worcester",
+    payMethod: (mk._i % 2) ? "Check" : "Cash",
+    paid: mk._i % 3 !== 0,
+    classes:classes, assist:assist, grades:grades || {}, sent:false
+  };
+}
+function full(dan, pattern){
+  var g = {};
+  RUBRICS[dan].forEach(function(cat,i){ if(!cat.auto) g[cat.n] = pattern[i % pattern.length]; });
+  return g;
+}
+function seed(){
+  var A = ["A+","A","A+","A","B+","A","A+","A","A","B+","A+","A","A"];
+  var B = ["B+","A","B","B+","B+","A","B","B+","B","B+","B+","B","B+"];
+  var C = ["B","C+","B+","C","B","C+","B","B+","C+","B","B","C+","B"];
+  var D = ["A","B+","D","A","B+","A","B+","A","A","B+","A","A","B+"];
+  return [
+    mk("Amara Whitfield",   "1st Dan", 0, 11, 41, 15, full("1st Dan", A)),
+    mk("Devin Okafor",      "1st Dan", 0, 14, 38, 19, full("1st Dan", B)),
+    mk("Rosa Mendes",       "1st Dan", 1, 10, 44, 14, full("1st Dan", D), {gender:"Female", school:"Shrewsbury"}),
+    mk("Tobias Lindqvist",  "1st Dan", 1, 33, 29, 21, full("1st Dan", C)),
+    mk("Priya Raman",       "1st Dan", 2, 12, 47, 15, {}, {gender:"Female"}),
+    mk("Colin Barrett",     "1st Dan", 2, 16, 36, 11, {}, {school:"Shrewsbury"}),
+    mk("Hana Sato",         "2nd Dan", 0, 15, 40, 20, full("2nd Dan", A), {gender:"Female"}),
+    mk("Marcus Delacroix",  "2nd Dan", 1, 27, 33, 17, full("2nd Dan", B), {school:"Shrewsbury"}),
+    mk("Ines Ferreira",     "2nd Dan", 2, 13, 45, 12, full("2nd Dan", C), {gender:"Female"}),
+    mk("Jonah Adeyemi",     "2nd Dan", 2, 19, 31, 18, {}),
+    mk("Elena Vasquez",     "3rd Dan", 0, 22, 39, 20, full("3rd Dan", A), {gender:"Female", school:"Shrewsbury"}),
+    mk("Ruben Castellanos", "3rd Dan", 1, 41, 35, 16, full("3rd Dan", B)),
+    mk("Aoife Brennan",     "3rd Dan", 2, 17, 28, 13, {}, {gender:"Female"})
+  ];
+}
+function load(){
+  state.candidates = seed();
+  state.event = JSON.parse(JSON.stringify(DEFAULT_EVENT));
+  try{
+    var raw = localStorage.getItem(STORE_KEY);
+    if(raw){
+      var d = JSON.parse(raw);
+      /* Before the event existed this key held a bare candidates array. Without
+         this, an older roster reads as empty and the next save overwrites it. */
+      if(Array.isArray(d)) d = {candidates:d};
+      if(d && d.candidates && d.candidates.length) state.candidates = d.candidates;
+      if(d && d.event && d.event.locations && d.event.locations.length) state.event = d.event;
+    }
+  }catch(e){ /* private window or storage blocked — demo data is fine */ }
+  /* Keep the two-school order consistent even when loading older saved data. */
+  state.event.locations = SCHOOLS.filter(function(s){ return state.event.locations.indexOf(s) >= 0; });
+}
+function save(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify({candidates:state.candidates, event:state.event})); }
+  catch(e){ /* not fatal: the page keeps working from memory this session */ }
+}
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function $(s, r){ return (r||document).querySelector(s); }
+function el(tag, cls, txt){
+  var n = document.createElement(tag);
+  if(cls) n.className = cls;
+  if(txt !== undefined && txt !== null) n.textContent = txt;
+  return n;
+}
+function starPips(from, max){
+  max = max || 3;
+  var w = el("span","stars");
+  for(var i=1;i<=max;i++){
+    var s = el("span", i<=from ? "" : "off", "★");
+    w.appendChild(s);
+  }
+  return w;
+}
+function fmt(n){ return Number(n).toFixed(1).replace(/\.0$/,""); }
+function ageFrom(dob){
+  if(!dob) return null;
+  var d = new Date(dob + "T00:00:00");
+  if(isNaN(d)) return null;
+  var t = new Date(), a = t.getFullYear() - d.getFullYear();
+  var m = t.getMonth() - d.getMonth();
+  if(m < 0 || (m === 0 && t.getDate() < d.getDate())) a--;
+  return (a >= 0 && a < 120) ? a : null;
+}
+var toastT;
+function toast(msg){
+  var t = $("#toast");
+  t.textContent = msg; t.classList.add("on");
+  clearTimeout(toastT);
+  toastT = setTimeout(function(){ t.classList.remove("on"); }, 2600);
+}
+function byDan(dan){
+  return state.candidates
+    .filter(function(c){ return c.dan === dan; })
+    .sort(function(a,b){
+      if(multiSchool() && a.school !== b.school){
+        return SCHOOLS.indexOf(a.school) - SCHOOLS.indexOf(b.school); // Shrewsbury first
+      }
+      if(a.starsFrom !== b.starsFrom) return a.starsFrom - b.starsFrom;  // lowest rank first
+      return a.name.localeCompare(b.name);
+    });
+}
+function schoolHeader(label, colSpan){
+  var row = el("tr","schoolrow"), cell = el("td",null,label);
+  cell.colSpan = colSpan; row.appendChild(cell);
+  return row;
+}
+function tabs(host, active, onPick, counts){
+  host.textContent = "";
+  DANS.forEach(function(d){
+    var b = el("button","tab");
+    /* aria-current, not aria-selected: aria-selected is dropped on a plain
+       button, so the active Dan was never announced. */
+    b.setAttribute("aria-current", String(d === active));
+    b.appendChild(document.createTextNode(d));
+    if(counts){ b.appendChild(el("span","cnt", String(byDan(d).length))); }
+    b.addEventListener("click", function(){ onPick(d); });
+    host.appendChild(b);
+  });
+}
+function head(tr, cols){
+  cols.forEach(function(c){
+    tr.appendChild(el("th", c.cls || null, c.t));
+  });
+}
+
+/* ============================================================
+   VIEW: TESTING EVENT
+   ============================================================ */
+function prettyEventDate(iso){
+  if(!iso) return "date not set";
+  var p = iso.split("-");
+  return MONTHS[parseInt(p[1],10) - 1] + " " + parseInt(p[2],10) + ", " + p[0];
+}
+function eventBar(){
+  var ev = state.event;
+  var w = el("div","eventbar");
+  w.appendChild(el("span","nm", ev.name || "Untitled event"));
+  w.appendChild(el("span","dot","·"));
+  w.appendChild(el("span", null, prettyEventDate(ev.date)));
+  w.appendChild(el("span","dot","·"));
+  w.appendChild(el("span","pill " + (multiSchool() ? "warn" : "mute"),
+    multiSchool() ? ev.locations.join(" + ") : ev.locations[0]));
+  return w;
+}
+/* What the form currently says, which is NOT what is saved until Save is
+   pressed. Every preview reads from here so the panel can show an
+   uncommitted choice without writing it to state. */
+function eventForm(){
+  var locs = [];
+  Array.prototype.forEach.call(document.querySelectorAll(".e-loc"), function(cb){
+    if(cb.checked) locs.push(cb.value);
+  });
+  return { locs: locs, ask: locs.length > 1 && $("#e-ask").checked };
+}
+function renderEffect(){
+  var f = eventForm(), locs = f.locs, host = $("#eventEffect");
+  var ask = $("#e-ask");
+  ask.disabled = locs.length < 2;
+  /* Re-checking a location must restore the committed answer, not latch off. */
+  if(locs.length < 2) ask.checked = false;
+  $("#askNote").textContent = locs.length > 1
+    ? "Off means staff set each candidate's school on the roster instead."
+    : (locs.length === 1
+        ? "Only one school is testing, so there is nothing to ask. Everyone is recorded as " + locs[0] + "."
+        : "Pick at least one school above.");
+
+  host.textContent = "";
+  var box = el("div","effect");
+  function row(ic, html){
+    var d = el("div");
+    d.appendChild(el("span","ic", ic));
+    var s = el("span"); s.innerHTML = html; d.appendChild(s);
+    box.appendChild(d);
+  }
+  if(!locs.length){
+    row("!", "No school is selected, so this event has nobody to test.");
+  } else if(f.ask){
+    row("?", "Registration <b>asks each candidate which school they train at</b> and will not accept a blank answer.");
+    row("▤", "The roster, grading sheet and export all carry the school, and the roster gets a <b>" + locs.join(" / ") + "</b> filter.");
+  } else if(locs.length > 1){
+    row("✎", "Registration <b>does not ask</b>. New candidates land as <b>" + locs[0] + "</b>, and staff correct it by clicking the school on the roster.");
+    row("▤", "The roster, grading sheet and export still carry the school, and the roster still gets a filter.");
+  } else {
+    row("1", "One location, so registration <b>does not ask</b> — every candidate is recorded as <b>" + locs[0] + "</b> automatically.");
+    row("▤", "The school column is hidden everywhere, because every row would say the same thing.");
+  }
+  row("★", "Fees, rubrics and the 245 pass mark do not change with location.");
+  host.appendChild(box);
+
+  /* Count against the schools on the event, not every school that exists. */
+  var counts = {};
+  locs.forEach(function(s){ counts[s] = 0; });
+  state.candidates.forEach(function(c){ if(counts[c.school] !== undefined) counts[c.school]++; });
+  var note = el("p","panel-note");
+  note.style.marginTop = "14px";
+  note.textContent = locs.length
+    ? ("Registered so far — " + locs.map(function(s){ return s + ": " + counts[s]; }).join(" · ") + ".")
+    : "Nothing to count until a school is selected.";
+  host.appendChild(note);
+
+  var dirty = el("p","panel-note");
+  dirty.style.cssText = "margin-top:8px;color:var(--warn)";
+  dirty.textContent = "Not saved yet — press Save event to apply.";
+  dirty.hidden = !formDiffers();
+  host.appendChild(dirty);
+}
+function formDiffers(){
+  var f = eventForm(), ev = state.event;
+  return f.locs.join("|") !== ev.locations.join("|")
+      || f.ask !== asksSchool()
+      || $("#e-name").value.trim() !== (ev.name || "")
+      || $("#e-date").value !== (ev.date || "");
+}
+function renderEvent(){
+  var ev = state.event;
+  $("#e-name").value = ev.name || "";
+  $("#e-date").value = ev.date || "";
+  Array.prototype.forEach.call(document.querySelectorAll(".e-loc"), function(cb){
+    cb.checked = ev.locations.indexOf(cb.value) >= 0;
+  });
+  $("#e-ask").checked = asksSchool();
+  renderEffect();
+}
+function wireEvent(){
+  $("#btnSaveEvent").addEventListener("click", function(){
+    var locs = [];
+    Array.prototype.forEach.call(document.querySelectorAll(".e-loc"), function(cb){
+      if(cb.checked) locs.push(cb.value);
+    });
+    if(!locs.length){
+      $("#eventErr").textContent = "Pick at least one school. An event with no location has nobody to test.";
+      return;
+    }
+    /* Narrowing to one school would orphan anyone already registered from the
+       other one, so say so rather than silently mislabelling them. */
+    var orphans = state.candidates.filter(function(c){ return locs.indexOf(c.school) < 0; });
+    if(orphans.length){
+      $("#eventErr").textContent = orphans.length + " candidate" + (orphans.length === 1 ? " is" : "s are") +
+        " already registered from a school you just removed (" + orphans.map(function(c){ return c.name; }).slice(0,3).join(", ") +
+        (orphans.length > 3 ? "…" : "") + "). Remove them first, or keep that school on the event.";
+      return;
+    }
+    $("#eventErr").textContent = "";
+    state.event.name = $("#e-name").value.trim();
+    state.event.date = $("#e-date").value;
+    state.event.locations = locs;
+    state.event.askSchool = $("#e-ask").checked;
+    if(!multiSchool()){
+      state.rosterSchool = "All";
+      /* One location: nobody can be from anywhere else. */
+      state.candidates.forEach(function(c){ c.school = locs[0]; });
+    }
+    save();
+    renderEvent();
+    toast(asksSchool() ? "Event saved — candidates will be asked which school."
+                       : "Event saved — candidates are not asked; staff set the school.");
+  });
+  /* Every control previews only. Save is the single committer, so nothing is
+     written — or lost — while someone is still deciding. */
+  ["#e-ask","#e-name","#e-date"].forEach(function(sel){
+    $(sel).addEventListener("change", renderEffect);
+    $(sel).addEventListener("input", renderEffect);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll(".e-loc"), function(cb){
+    cb.addEventListener("change", function(){
+      var n = document.querySelectorAll(".e-loc:checked").length;
+      /* Re-checking a second school restores the committed answer rather than
+         leaving the box latched off from when it was disabled. */
+      if(n > 1 && $("#e-ask").disabled) $("#e-ask").checked = state.event.askSchool !== false;
+      renderEffect();
+    });
+  });
+}
+
+/* ============================================================
+   VIEW: REGISTER
+   ============================================================ */
+function renderRegRubric(){
+  var dan = $("#f-dan").value;
+  var host = $("#regRubric");
+  host.textContent = "";
+  if(!dan){
+    host.appendChild(el("p","panel-note","Pick your current Dan and the rubric for that rank appears here."));
+    return;
+  }
+  host.appendChild(rubricCard(dan));
+  var sc = el("div","scale");
+  GRADES.forEach(function(g){
+    var s = el("span");
+    s.appendChild(el("b", null, g.k));
+    s.appendChild(document.createTextNode(" " + g.v.toFixed(1)));
+    sc.appendChild(s);
+  });
+  host.appendChild(sc);
+  var fee = FEES[dan];
+  var p = el("p","panel-note","Testing fee $" + fee.normal + " · same day $" + fee.sameDay + " · private $" + fee.priv + ".");
+  p.style.marginTop = "10px";
+  host.appendChild(p);
+}
+function rubricCard(dan){
+  var card = el("div","rubric");
+  var hd = el("div","rubric-hd");
+  hd.appendChild(el("span","t", dan));
+  hd.appendChild(el("span","cr num", creditTotal(dan) + " credits · max " + maxScore(dan)));
+  card.appendChild(hd);
+  var ol = el("ol");
+  RUBRICS[dan].forEach(function(cat){
+    var li = el("li");
+    li.appendChild(el("span", null, cat.n));
+    li.appendChild(el("span","cr","credit " + cat.c));
+    ol.appendChild(li);
+  });
+  card.appendChild(ol);
+  var ft = el("div","rubric-ft");
+  ft.appendChild(el("span", null, "Pass " + PASS_MARK));
+  ft.appendChild(el("span", null, "Max " + maxScore(dan)));
+  card.appendChild(ft);
+  return card;
+}
+/* ---------- birthday calendar ----------
+   A native <input type="date"> makes you page back thirteen years one month
+   at a time. This has month and year dropdowns so a birthday is three clicks. */
+var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+var DOW = ["S","M","T","W","T","F","S"];
+var dobValue = "";               // ISO yyyy-mm-dd, "" when unset
+var calCursor = null;            // {y, m} month currently drawn
+
+function pad2(n){ return (n < 10 ? "0" : "") + n; }
+function prettyDate(iso){
+  if(!iso) return "";
+  var p = iso.split("-");
+  return MONTHS[parseInt(p[1],10) - 1] + " " + parseInt(p[2],10) + ", " + p[0];
+}
+function setDob(iso){
+  dobValue = iso || "";
+  var btn = $("#f-dob"), txt = $("#dobText");
+  txt.textContent = dobValue ? prettyDate(dobValue) : "Pick your birthday";
+  btn.classList.toggle("unset", !dobValue);
+  var a = ageFrom(dobValue);
+  $("#ageOut").textContent = a === null ? "Age fills in automatically" : ("Age " + a);
+}
+function openCal(){
+  var pop = $("#calPop");
+  var start = dobValue ? {y:+dobValue.slice(0,4), m:+dobValue.slice(5,7) - 1}
+                       : {y:new Date().getFullYear() - 12, m:0};
+  calCursor = start;
+  drawCal();
+  pop.hidden = false;
+  $("#f-dob").setAttribute("aria-expanded","true");
+  var sel = pop.querySelector(".calday.sel") || pop.querySelector("select");
+  if(sel) sel.focus();
+}
+function closeCal(back){
+  $("#calPop").hidden = true;
+  $("#f-dob").setAttribute("aria-expanded","false");
+  if(back) $("#f-dob").focus();
+}
+function drawCal(){
+  var pop = $("#calPop"); pop.textContent = "";
+  var thisYear = new Date().getFullYear();
+
+  var hd = el("div","calhd");
+  var prev = el("button","calnav","‹"); prev.type = "button"; prev.setAttribute("aria-label","Previous month");
+  var next = el("button","calnav","›"); next.type = "button"; next.setAttribute("aria-label","Next month");
+  prev.addEventListener("click", function(){ step(-1); });
+  next.addEventListener("click", function(){ step(1); });
+
+  var msel = document.createElement("select");
+  msel.setAttribute("aria-label","Month");
+  MONTHS.forEach(function(nm, i){
+    var o = document.createElement("option"); o.value = i; o.textContent = nm;
+    if(i === calCursor.m) o.selected = true;
+    msel.appendChild(o);
+  });
+  msel.addEventListener("change", function(){ calCursor.m = +msel.value; drawCal(); });
+
+  var ysel = document.createElement("select");
+  ysel.setAttribute("aria-label","Year");
+  for(var y = thisYear; y >= thisYear - 90; y--){
+    var o2 = document.createElement("option"); o2.value = y; o2.textContent = y;
+    if(y === calCursor.y) o2.selected = true;
+    ysel.appendChild(o2);
+  }
+  ysel.addEventListener("change", function(){ calCursor.y = +ysel.value; drawCal(); });
+
+  hd.appendChild(prev); hd.appendChild(msel); hd.appendChild(ysel); hd.appendChild(next);
+  pop.appendChild(hd);
+
+  var dow = el("div","caldow");
+  DOW.forEach(function(d){ dow.appendChild(el("span", null, d)); });
+  pop.appendChild(dow);
+
+  var grid = el("div","calgrid");
+  var first = new Date(calCursor.y, calCursor.m, 1).getDay();
+  var days = new Date(calCursor.y, calCursor.m + 1, 0).getDate();
+  /* Local date, not toISOString() — in New York the UTC date rolls over at
+     8pm, which would make tomorrow selectable and then fail validation. */
+  var _t = new Date();
+  var todayIso = _t.getFullYear() + "-" + pad2(_t.getMonth() + 1) + "-" + pad2(_t.getDate());
+  for(var i = 0; i < first; i++){
+    var blank = el("button","calday blank",""); blank.type = "button"; blank.disabled = true;
+    blank.tabIndex = -1; grid.appendChild(blank);
+  }
+  for(var d2 = 1; d2 <= days; d2++){
+    (function(day){
+      var iso = calCursor.y + "-" + pad2(calCursor.m + 1) + "-" + pad2(day);
+      var b = el("button","calday" + (iso === dobValue ? " sel" : ""), String(day));
+      b.type = "button";
+      b.setAttribute("aria-label", prettyDate(iso));
+      if(iso > todayIso){ b.disabled = true; b.tabIndex = -1; }
+      b.addEventListener("click", function(){ setDob(iso); closeCal(true); });
+      grid.appendChild(b);
+    })(d2);
+  }
+  pop.appendChild(grid);
+
+  var ft = el("div","calft");
+  ft.appendChild(el("span", null, dobValue ? prettyDate(dobValue) : "No date chosen"));
+  var clr = el("button","btn ghost sm","Clear"); clr.type = "button";
+  clr.addEventListener("click", function(){ setDob(""); drawCal(); });
+  ft.appendChild(clr);
+  pop.appendChild(ft);
+
+  function step(n){
+    var m = calCursor.m + n, y = calCursor.y;
+    if(m < 0){ m = 11; y--; } else if(m > 11){ m = 0; y++; }
+    calCursor = {y:y, m:m}; drawCal();
+  }
+}
+
+/* The school question exists only when the event says it should. */
+function syncSchoolField(){
+  var f = $("#schoolField"), sel = $("#f-school");
+  f.hidden = !asksSchool();
+  var keep = sel.value;
+  sel.textContent = "";
+  var blank = document.createElement("option");
+  blank.value = ""; blank.textContent = "—";
+  sel.appendChild(blank);
+  state.event.locations.forEach(function(s){
+    var o = document.createElement("option");
+    o.value = s; o.textContent = s;
+    sel.appendChild(o);
+  });
+  sel.value = (state.event.locations.indexOf(keep) >= 0) ? keep : "";
+}
+
+/* Show only the valid star progressions for the selected Dan, in ascending
+   order from the candidate's current star to the next one. */
+function syncStarProgressions(){
+  var dan = $("#f-dan").value, select = $("#f-from"), keep = select.value;
+  select.textContent = "";
+  if(!dan){
+    var prompt = document.createElement("option");
+    prompt.value = ""; prompt.textContent = "Choose a Dan first";
+    select.appendChild(prompt); select.disabled = true;
+    return;
+  }
+  var limit = STAR_LIMITS[dan];
+  for(var from = 0; from < limit; from++){
+    var option = document.createElement("option");
+    option.value = String(from);
+    option.textContent = from + " to " + (from + 1) + " star" + (from + 1 === 1 ? "" : "s");
+    select.appendChild(option);
+  }
+  select.disabled = false;
+  select.value = (+keep < limit && keep !== "") ? keep : "0";
+}
+
+function wireRegister(){
+  var dan = $("#f-dan"), pay = $("#f-pay");
+
+  setDob("");
+  syncStarProgressions();
+  $("#f-dob").addEventListener("click", function(){
+    if($("#calPop").hidden) openCal(); else closeCal(true);
+  });
+  document.addEventListener("click", function(e){
+    if($("#calPop").hidden) return;
+    /* drawCal() empties the popover, so by the time a ‹ / › or Clear click
+       reaches document the button is detached and walking up from it finds
+       nothing. composedPath() is captured at dispatch, so it still holds the
+       real ancestors — without this, changing month closed the calendar. */
+    var path = e.composedPath ? e.composedPath() : [e.target];
+    var inside = path.some(function(n){
+      return n && n.classList && n.classList.contains("datefield");
+    });
+    if(!inside) closeCal(false);
+  });
+  document.addEventListener("keydown", function(e){
+    if(e.key === "Escape" && !$("#calPop").hidden) closeCal(true);
+  });
+
+  dan.addEventListener("change", function(){ syncStarProgressions(); renderRegRubric(); feeHint(); });
+  pay.addEventListener("change", feeHint);
+  function feeHint(){
+    var d = dan.value;
+    if(!d){ $("#feeOut").textContent = "Pay at the front desk before testing day"; return; }
+    $("#feeOut").textContent = pay.value + " — $" + FEES[d].normal + " due at the front desk";
+  }
+
+  $("#btnFill").addEventListener("click", function(){
+    $("#f-name").value = "Sam Okonkwo";
+    setDob("2011-04-18");
+    $("#f-gender").value = "Male";
+    $("#f-email").value = "sam.okonkwo@example.com";
+    $("#f-dan").value = "2nd Dan";
+    syncStarProgressions();
+    $("#f-from").value = "1";
+    $("#f-pay").value = "Check";
+    renderRegRubric(); feeHint();
+  });
+
+  $("#regForm").addEventListener("submit", function(ev){
+    ev.preventDefault();
+    var errs = [], f = ev.target;
+    [["f-name","a name"],["f-email","an email address"],["f-dan","a Dan"]].forEach(function(p){
+      var node = $("#" + p[0]);
+      var bad = !node.value.trim();
+      node.parentNode.classList.toggle("bad", bad);
+      if(bad) errs.push(p[1]);
+    });
+    var age = ageFrom(dobValue);
+    var badDob = !dobValue || age === null;
+    $("#f-dob").parentNode.classList.toggle("bad", badDob);
+    if(badDob) errs.push("a date of birth");
+
+    var badSchool = asksSchool() && !$("#f-school").value;
+    $("#schoolField").classList.toggle("bad", badSchool);
+    if(badSchool) errs.push("which school you train at");
+
+    if(errs.length){
+      $("#regErr").textContent = "Still needed: " + errs.join(", ") + ".";
+      return;
+    }
+    var d = $("#f-dan").value;
+    if(byDan(d).length >= ROSTER_CAP){
+      $("#regErr").textContent = "The " + d + " roster is full at " + ROSTER_CAP + " candidates. Ask an instructor to open another testing.";
+      return;
+    }
+    $("#regErr").textContent = "";
+    var c = {
+      id: "c" + Date.now(),
+      name: $("#f-name").value.trim(),
+      dan: d,
+      starsFrom: parseInt($("#f-from").value, 10),
+      /* Keep the DOB, not just today's age — the assistant scale splits at 13
+         and a candidate registered at 12 would otherwise stay a child forever. */
+      dob: dobValue,
+      age: age,
+      gender: $("#f-gender").value || "—",
+      email: $("#f-email").value.trim(),
+      /* Not asked = the event's only school, or its first as a placeholder
+         staff correct on the roster. Never blank. */
+      school: asksSchool() ? $("#f-school").value : state.event.locations[0],
+      payMethod: $("#f-pay").value,
+      paid: false,
+      /* Attendance and assistant classes come off the school's records on the
+         grading sheet, not from the candidate — they don't have these numbers. */
+      classes: null,
+      assist: null,
+      grades: {}, sent:false
+    };
+    state.candidates.push(c);
+    save();
+    f.reset();
+    setDob("");
+    syncSchoolField();
+    syncStarProgressions();
+    $("#feeOut").textContent = "Pay at the front desk before testing day";
+    renderRegRubric();
+    state.rosterDan = d;
+    toast(c.name + " added to the " + d + " roster.");
+    go("roster");
+  });
+}
+
+/* ============================================================
+   VIEW: ROSTER
+   ============================================================ */
+function renderRoster(){
+  var host = $("#view-roster");
+  var oldBar = host.querySelector(".eventbar");
+  if(oldBar) oldBar.remove();
+  host.insertBefore(eventBar(), host.querySelector(".panel"));
+
+  tabs($("#rosterTabs"), state.rosterDan, function(d){ state.rosterDan = d; renderRoster(); }, true);
+
+  var all = byDan(state.rosterDan);
+  var showSchool = multiSchool();
+  if(showSchool && state.rosterSchool !== "All" && state.event.locations.indexOf(state.rosterSchool) < 0){
+    state.rosterSchool = "All";
+  }
+  var list = (showSchool && state.rosterSchool !== "All")
+    ? all.filter(function(c){ return c.school === state.rosterSchool; })
+    : all;
+
+  var filt = $("#rosterFilter");
+  filt.textContent = "";
+  if(showSchool){
+    ["All"].concat(state.event.locations).forEach(function(s){
+      var b = el("button","tab", s === "All" ? "Both schools" : s);
+      b.type = "button";
+      b.setAttribute("aria-current", String(s === state.rosterSchool));
+      var n = (s === "All") ? all.length : all.filter(function(c){ return c.school === s; }).length;
+      b.appendChild(el("span","cnt", String(n)));
+      b.addEventListener("click", function(){ state.rosterSchool = s; renderRoster(); });
+      filt.appendChild(b);
+    });
+  }
+  $("#rosterCount").textContent = all.length + " of " + ROSTER_CAP + " places used";
+
+  var t = $("#rosterTable");
+  t.textContent = "";
+  var cols = [{t:"#",cls:"rownum"},{t:"Candidate"},{t:"Age"},{t:"Stars"}];
+  if(showSchool) cols.push({t:"School"});
+  cols = cols.concat([{t:"Classes"},{t:"Fee"},{t:"Payment"},{t:"Email"},{t:"Status"}]);
+  var thead = el("thead"), tr = el("tr");
+  head(tr, cols);
+  thead.appendChild(tr); t.appendChild(thead);
+
+  var tb = el("tbody");
+  if(!list.length){
+    var er = el("tr"), ed = el("td","empty", all.length
+      ? ("No " + state.rosterDan + " candidates from " + state.rosterSchool + ".")
+      : ("No one has registered for " + state.rosterDan + " yet."));
+    ed.colSpan = cols.length; er.appendChild(ed); tb.appendChild(er);
+  }
+  list.forEach(function(c, i){
+    if(showSchool && state.rosterSchool === "All" && (i === 0 || list[i - 1].school !== c.school)){
+      tb.appendChild(schoolHeader(c.school, cols.length));
+    }
+    var s = score(c), r = el("tr");
+    r.appendChild(el("td","rownum", String(i+1)));
+
+    var nd = el("td","name", c.name);
+    r.appendChild(nd);
+
+    var cAge = ageOf(c);
+    r.appendChild(el("td","num", cAge === null ? "—" : String(cAge)));
+
+    var st = el("td");
+    st.appendChild(starPips(c.starsFrom, STAR_LIMITS[c.dan]));
+    st.appendChild(document.createTextNode(" → " + (c.starsFrom + 1)));
+    r.appendChild(st);
+
+    if(showSchool){
+      var sd = el("td");
+      /* Staff can always correct a school — a candidate who picked wrong, or
+         one registered while the question was switched off. */
+      var sb = el("button","pill mute", c.school);
+      sb.type = "button"; sb.style.cursor = "pointer";
+      sb.title = "Click to switch school";
+      sb.addEventListener("click", function(){
+        var locs = state.event.locations;
+        c.school = locs[(locs.indexOf(c.school) + 1) % locs.length];
+        save(); renderRoster();
+        toast(c.name + " moved to " + c.school + ".");
+      });
+      sd.appendChild(sb);
+      r.appendChild(sd);
+    }
+
+    /* Entered on the grading sheet from school records, shown here read-only. */
+    var cl = el("td","num", c.classes ? String(c.classes) : "—");
+    if(!c.classes) cl.style.color = "var(--ink-3)";
+    cl.title = "Recorded on the grading sheet";
+    r.appendChild(cl);
+
+    r.appendChild(el("td","num", "$" + FEES[c.dan].normal));
+
+    var pd = el("td");
+    var pb = el("button","pill " + (c.paid ? "pass" : "warn"), c.payMethod + (c.paid ? " · paid" : " · due"));
+    pb.type = "button";
+    pb.title = "Click to mark " + (c.paid ? "unpaid" : "paid");
+    pb.style.cursor = "pointer";
+    pb.addEventListener("click", function(){
+      c.paid = !c.paid; save(); renderRoster();
+      toast(c.name + " marked " + (c.paid ? "paid" : "unpaid") + " (" + c.payMethod + ").");
+    });
+    pd.appendChild(pb);
+    r.appendChild(pd);
+
+    r.appendChild(el("td", null, c.email));
+
+    var stat = el("td");
+    if(s.tapped === 0) stat.appendChild(pill("mute","Not graded"));
+    else if(!s.complete) stat.appendChild(pill("warn", s.graded + " of " + s.of + " graded"));
+    else if(s.passed) stat.appendChild(pill("pass","Pass"));
+    else stat.appendChild(pill("fail","Make-up"));
+    r.appendChild(stat);
+
+    tb.appendChild(r);
+  });
+  t.appendChild(tb);
+}
+function pill(kind, txt){ return el("span","pill " + kind, txt); }
+
+/* ============================================================
+   VIEW: GRADING SHEET
+   ============================================================ */
+/* Rebuilding the grid collapses its scroller, which would throw the examiner
+   back to the first column on every entry. Keep their place, and put focus
+   back where it was. */
+function regrade(focusSel){
+  var w = $("#gradeTable").parentNode;
+  var x = w.scrollLeft, y = w.scrollTop, py = window.scrollY;
+  renderGrade();
+  var nw = $("#gradeTable").parentNode;
+  nw.scrollLeft = x; nw.scrollTop = y; window.scrollTo(0, py);
+  if(focusSel){
+    var n = document.querySelector(focusSel);
+    if(n){ n.focus(); if(n.select) n.select(); }
+  }
+}
+
+/* One school-record number (attendance or assistant classes) plus the thing
+   it decides, so the grader can see the consequence of what they typed. */
+function recCell(c, key, badge){
+  var td = el("td","reccell");
+  var wrap = el("div","gcell");
+  var inp = document.createElement("input");
+  inp.type = "number"; inp.min = "0"; inp.className = "recinput";
+  inp.value = (c[key] === null || c[key] === undefined || c[key] === "") ? "" : String(c[key]);
+  inp.placeholder = "—";
+  inp.dataset.rec = c.id + "|" + key;
+  inp.setAttribute("aria-label", c.name + " — " + (key === "classes" ? "classes attended" : "assistant classes taught"));
+  inp.addEventListener("change", function(){
+    c[key] = inp.value.trim() === "" ? null : Math.max(0, parseInt(inp.value, 10) || 0);
+    save();
+    regrade('[data-rec="' + inp.dataset.rec + '"]');
+  });
+  wrap.appendChild(inp);
+  var b = badge();
+  if(b) wrap.appendChild(el("span", b.cls, b.txt));
+  td.appendChild(wrap);
+  return td;
+}
+
+function renderGrade(){
+  tabs($("#gradeTabs"), state.gradeDan, function(d){ state.gradeDan = d; renderGrade(); }, true);
+
+  var sc = $("#gradeScale"); sc.textContent = "";
+  GRADES.forEach(function(g){
+    var s = el("span");
+    s.appendChild(el("b", null, g.k));
+    s.appendChild(document.createTextNode(" " + g.v.toFixed(1)));
+    sc.appendChild(s);
+  });
+
+  var dan = state.gradeDan, cats = RUBRICS[dan], gradeCats = cats.filter(function(cat){ return !cat.auto; }), list = byDan(dan);
+  var t = $("#gradeTable"); t.textContent = "";
+
+  var thead = el("thead"), tr = el("tr");
+  var th0 = el("th","stick","Candidate"); tr.appendChild(th0);
+
+  gradeCats.forEach(function(cat){
+    var th = el("th","cat");
+    th.appendChild(document.createTextNode(cat.n));
+    th.appendChild(el("span","cr","credit " + cat.c + " · max " + fmt(cat.c * 4.5)));
+    tr.appendChild(th);
+  });
+
+  /* School records sit after the graded categories: they are looked up, not
+     judged, so they are the last thing filled in on the sheet. */
+  var thA = el("th","rec");
+  thA.appendChild(document.createTextNode("Classes attended"));
+  thA.appendChild(el("span","cr","from school records"));
+  tr.appendChild(thA);
+
+  var thB = el("th","rec");
+  thB.appendChild(document.createTextNode("Assistant classes"));
+  thB.appendChild(el("span","cr","from school records · sets the grade"));
+  tr.appendChild(thB);
+
+  tr.appendChild(el("th", null, "Total"));
+  thead.appendChild(tr); t.appendChild(thead);
+
+  var tb = el("tbody");
+  if(!list.length){
+    var er = el("tr"), ed = el("td","empty","No " + dan + " candidates registered.");
+    ed.colSpan = gradeCats.length + 4; er.appendChild(ed); tb.appendChild(er);
+  }
+  list.forEach(function(c, candidateIndex){
+    if(multiSchool() && (candidateIndex === 0 || list[candidateIndex - 1].school !== c.school)){
+      tb.appendChild(schoolHeader(c.school, gradeCats.length + 4));
+    }
+    var r = el("tr");
+    r.dataset.id = c.id;
+
+    var nd = el("td","stick name");
+    nd.appendChild(document.createTextNode(c.name));
+    var meta = el("div");
+    meta.style.cssText = "font-size:11.5px;color:var(--ink-3);margin-top:2px";
+    meta.textContent = "age " + (ageOf(c) === null ? "—" : ageOf(c)) + " · " + c.starsFrom + "★ → " + (c.starsFrom + 1) + "★"
+      + (multiSchool() ? " · " + c.school : "");
+    nd.appendChild(meta);
+    r.appendChild(nd);
+
+    gradeCats.forEach(function(cat){
+      var td = el("td");
+      var wrap = el("div","gcell");
+      var select = el("select","gselect");
+      select.setAttribute("aria-label", c.name + " — " + cat.n + " grade");
+      select.dataset.grade = c.id + "|" + cat.n;
+      var blank = document.createElement("option");
+      blank.value = "";
+      blank.textContent = "—";
+      select.appendChild(blank);
+      GRADES.forEach(function(g){
+        var option = document.createElement("option");
+        option.value = g.k;
+        option.textContent = g.k;
+        select.appendChild(option);
+      });
+      select.value = c.grades[cat.n] || "";
+      select.classList.toggle("d", effectiveGrade(c, cat) === "D");
+      select.addEventListener("change", function(){
+        if(select.value) c.grades[cat.n] = select.value;
+        else delete c.grades[cat.n];
+        save();
+        regrade('[data-grade="' + select.dataset.grade.replace(/"/g,'\\"') + '"]');
+      });
+      wrap.appendChild(select);
+      var g = effectiveGrade(c, cat);
+      var pts = el("span","gpts", g ? fmt(cat.c * GVAL[g]) : "—");
+      wrap.appendChild(pts);
+      td.appendChild(wrap);
+      r.appendChild(td);
+    });
+
+    r.appendChild(recCell(c, "classes", function(){
+      return c.classes ? null : {cls:"tag", txt:"not entered"};
+    }));
+    r.appendChild(recCell(c, "assist", function(){
+      if(c.assist === null || c.assist === undefined || c.assist === "") return {cls:"tag", txt:"enter exact number"};
+      var cat = RUBRICS[c.dan].filter(function(item){ return item.auto; })[0];
+      var grade = assistLetter(ageOf(c), c.assist);
+      return {cls:"tag auto", txt:"grade " + grade + " · " + fmt(cat.c * GVAL[grade]) + " pts"};
+    }));
+
+    var s = score(c);
+    var tot = el("td");
+    var bar = el("div","scorebar");
+    bar.appendChild(el("span","big subtotal", fmt(s.total)));
+    bar.appendChild(el("span","of","/ " + s.max));
+    tot.appendChild(bar);
+    var m = el("div","meter");
+    var fill = el("i", s.complete ? (s.passed ? "ok" : "no") : "");
+    fill.style.width = Math.min(100, (s.total / s.max) * 100) + "%";
+    m.appendChild(fill);
+    var mark = el("span","mark");
+    mark.style.left = ((PASS_MARK / s.max) * 100) + "%";
+    mark.title = "Pass mark " + PASS_MARK;
+    m.appendChild(mark);
+    tot.appendChild(m);
+    var sub = el("div");
+    sub.style.cssText = "font-size:11px;color:var(--ink-3);margin-top:3px";
+    sub.textContent = s.graded + " of " + s.of + " graded";
+    tot.appendChild(sub);
+    r.appendChild(tot);
+
+    tb.appendChild(r);
+  });
+  t.appendChild(tb);
+}
+
+/* A dedicated paper alternative for testing day. Student names run down the
+   left column, subjects run across the top, and every grade cell is blank. */
+function buildPrintGrades(){
+  var host = $("#printGrades"), dan = state.gradeDan, list = byDan(dan);
+  host.textContent = "";
+  if(!list.length) return false;
+
+  var cats = RUBRICS[dan].filter(function(cat){ return !cat.auto; });
+  var schools = multiSchool()
+    ? SCHOOLS.filter(function(s){ return state.event.locations.indexOf(s) >= 0; })
+    : state.event.locations.slice();
+
+  schools.forEach(function(school){
+    var schoolList = multiSchool() ? list.filter(function(c){ return c.school === school; }) : list;
+    if(!schoolList.length) return;
+    var block = el("section","paper-school-block");
+
+    var hd = el("div","paper-head");
+    var left = el("div");
+    left.appendChild(el("div","paper-school","Jae H. Jeong's U.S. Taekwondo Center"));
+    left.appendChild(el("div","paper-title",dan + " Star Testing — Blank Grading Roster"));
+    var right = el("div","paper-event");
+    right.appendChild(el("div",null,state.event.name || "Star Testing"));
+    right.appendChild(el("div",null,prettyEventDate(state.event.date)));
+    right.appendChild(el("div",null,schoolList.length + " candidate" + (schoolList.length === 1 ? "" : "s")));
+    hd.appendChild(left); hd.appendChild(right); block.appendChild(hd);
+    block.appendChild(el("div","paper-school-section",school));
+
+    var table = el("table","paper-table");
+    var thead = el("thead"), hr = el("tr");
+    hr.appendChild(el("th","paper-student","Student name"));
+    cats.forEach(function(cat){
+      var th = el("th","paper-subject");
+      th.appendChild(el("span","paper-subject-label",cat.n));
+      th.appendChild(el("span","paper-credit","credit " + cat.c));
+      hr.appendChild(th);
+    });
+    thead.appendChild(hr); table.appendChild(thead);
+
+    var tbody = el("tbody");
+    schoolList.forEach(function(c, index){
+      var row = el("tr");
+      var student = el("td","paper-student");
+      student.appendChild(el("div","paper-name",(index + 1) + ". " + c.name));
+      student.appendChild(el("div","paper-meta",c.starsFrom + "★ to " + (c.starsFrom + 1) + "★"));
+      row.appendChild(student);
+      cats.forEach(function(){ row.appendChild(el("td","paper-mark")); });
+      tbody.appendChild(row);
+    });
+    table.appendChild(tbody); block.appendChild(table);
+
+    var rules = el("div","paper-rules");
+    rules.appendChild(el("span",null,"Grade scale: A+ 4.5 · A 4.0 · B+ 3.5 · B 3.0 · C+ 2.5 · C 2.0 · D 0"));
+    rules.appendChild(el("span",null,"Pass 245 · Any D requires a make-up"));
+    block.appendChild(rules); host.appendChild(block);
+  });
+  return true;
+}
+
+/* A concise portrait results sheet. It prints every candidate in the selected
+   Dan and states why a result is unfinished or needs a make-up. */
+function buildPrintResults(){
+  var host = $("#printGrades"), dan = state.resultDan, list = byDan(dan);
+  host.textContent = "";
+  if(!list.length) return false;
+
+  var done = list.filter(function(c){ return score(c).complete; });
+  var passed = done.filter(function(c){ return score(c).passed; });
+  var page = el("section","paper-final-page");
+  var hd = el("div","paper-head");
+  var left = el("div");
+  left.appendChild(el("div","paper-school","Jae H. Jeong's U.S. Taekwondo Center"));
+  left.appendChild(el("div","paper-title","Star Testing — Final Scoring Sheet"));
+  var right = el("div","paper-event");
+  right.appendChild(el("div",null,state.event.name || "Star Testing"));
+  right.appendChild(el("div",null,prettyEventDate(state.event.date)));
+  right.appendChild(el("div",null,dan));
+  hd.appendChild(left); hd.appendChild(right); page.appendChild(hd);
+  page.appendChild(el("div","paper-final-summary",
+    list.length + " students · " + done.length + " complete · " +
+    (list.length - done.length) + " incomplete · " + (done.length - passed.length) + " make-ups"));
+
+  var schools = multiSchool()
+    ? SCHOOLS.filter(function(s){ return state.event.locations.indexOf(s) >= 0; })
+    : state.event.locations.slice();
+
+  schools.forEach(function(school){
+    var schoolList = multiSchool() ? list.filter(function(c){ return c.school === school; }) : list;
+    if(!schoolList.length) return;
+    var section = el("section","paper-final-school");
+    section.appendChild(el("div","paper-school-section",school));
+    var table = el("table","paper-final-table");
+    var thead = el("thead"), hr = el("tr");
+    head(hr,[{t:"Student name"},{t:"Stars"},{t:"Score"},{t:"Result / note"}]);
+    thead.appendChild(hr); table.appendChild(thead);
+    var tbody = el("tbody");
+
+    schoolList.forEach(function(c){
+      var s = score(c), row = el("tr");
+      row.appendChild(el("td","paper-name",c.name));
+      row.appendChild(el("td",null,c.starsFrom + " ★ → " + (c.starsFrom + 1) + " ★"));
+      row.appendChild(el("td",null,s.complete ? (fmt(s.total) + " / " + s.max) : (s.tapped ? (fmt(s.total) + " so far") : "—")));
+      var result = el("td");
+      if(!s.complete){
+        result.appendChild(el("div","paper-final-status incomplete",s.tapped ? "Incomplete" : "Not graded"));
+        result.appendChild(el("div","paper-final-note",s.tapped ? ((s.of - s.graded) + " categories not graded") : "No categories completed"));
+      } else if(s.passed){
+        result.appendChild(el("div","paper-final-status pass","Pass"));
+      } else {
+        result.appendChild(el("div","paper-final-status makeup","Make-up required"));
+        if(s.belowMark) result.appendChild(el("div","paper-final-note","Below the " + PASS_MARK + " pass mark"));
+        if(s.makeups.length) result.appendChild(el("div","paper-final-note","D in: " + s.makeups.join(", ")));
+      }
+      row.appendChild(result); tbody.appendChild(row);
+    });
+    table.appendChild(tbody); section.appendChild(table); page.appendChild(section);
+  });
+
+  var footer = el("div","paper-final-footer");
+  footer.appendChild(el("span",null,"Pass mark: " + PASS_MARK));
+  footer.appendChild(el("span",null,"Any D requires a make-up, regardless of total score."));
+  page.appendChild(footer); host.appendChild(page);
+  return true;
+}
+
+function setPrintPage(orientation){
+  $("#printPageMode").textContent = "@page{size:letter " + orientation + "; margin:.3in}";
+}
+
+/* ============================================================
+   VIEW: FINAL SCORES
+   ============================================================ */
+function renderResults(){
+  tabs($("#resultTabs"), state.resultDan, function(d){ state.resultDan = d; renderResults(); }, true);
+  var list = byDan(state.resultDan);
+  var done = list.filter(function(c){ return score(c).complete; });
+  var passed = done.filter(function(c){ return score(c).passed; });
+  $("#resultSummary").textContent = done.length + " fully graded · " + passed.length + " passing · " + (done.length - passed.length) + " with make-ups";
+
+  var t = $("#resultTable"); t.textContent = "";
+  var thead = el("thead"), tr = el("tr");
+  head(tr, [{t:"#",cls:"rownum"},{t:"Candidate"},{t:"Stars"},{t:"Final score"},{t:"Result / make-ups"},{t:"Email"}]);
+  thead.appendChild(tr); t.appendChild(thead);
+
+  var tb = el("tbody");
+  if(!list.length){
+    var er = el("tr"), ed = el("td","empty","No " + state.resultDan + " candidates yet.");
+    ed.colSpan = 6; er.appendChild(ed); tb.appendChild(er);
+  }
+  list.forEach(function(c, i){
+    if(multiSchool() && (i === 0 || list[i - 1].school !== c.school)){
+      tb.appendChild(schoolHeader(c.school, 6));
+    }
+    var s = score(c), r = el("tr");
+    r.appendChild(el("td","rownum", String(i+1)));
+
+    r.appendChild(el("td","name", c.name));
+
+    var st = el("td");
+    st.appendChild(starPips(c.starsFrom, STAR_LIMITS[c.dan]));
+    st.appendChild(document.createTextNode(" → " + (c.starsFrom + 1)));
+    r.appendChild(st);
+
+    var sd = el("td","num");
+    sd.textContent = s.complete ? fmt(s.total) : (s.tapped ? fmt(s.total) + " so far" : "—");
+    if(s.complete && s.belowMark) sd.style.color = "var(--fail)";
+    r.appendChild(sd);
+
+    var rd = el("td");
+    if(!s.complete){
+      rd.appendChild(pill("mute", s.tapped ? ("Incomplete — " + (s.of - s.graded) + " left") : "Not graded"));
+    } else if(s.passed){
+      rd.appendChild(pill("pass","PASS!"));
+    } else {
+      rd.appendChild(pill("fail","Make-up required"));
+      var why = [];
+      if(s.belowMark) why.push("below " + PASS_MARK);
+      if(s.makeups.length) why.push("D in " + s.makeups.join(", "));
+      rd.appendChild(el("span","mk", why.join("; ")));
+    }
+    r.appendChild(rd);
+
+    var ed2 = el("td");
+    if(s.complete){
+      var b = el("button","btn ghost sm", c.sent ? "Sent · view" : "Preview & send");
+      b.addEventListener("click", function(){ openMail(c); });
+      ed2.appendChild(b);
+    } else {
+      ed2.appendChild(el("span","panel-note","—"));
+    }
+    r.appendChild(ed2);
+
+    tb.appendChild(r);
+  });
+  t.appendChild(tb);
+}
+
+/* ---------- results email ---------- */
+function mailBody(c){
+  var s = score(c), L = [];
+  L.push("Dear " + c.name + ",", "");
+  L.push("Here are your Star Testing results for " + c.dan + ", testing from " + c.starsFrom + " to " + (c.starsFrom + 1) + " star" + (c.starsFrom + 1 === 1 ? "" : "s") + ".", "");
+  L.push("Total score: " + fmt(s.total) + " out of " + s.max);
+  L.push("Passing score: " + PASS_MARK);
+  L.push("Result: " + (s.passed ? "PASS" : "Make-up required"), "");
+  if(s.passed){
+    L.push("Congratulations — you passed every category. Thank you for the effort you put into your training.");
+  } else {
+    if(s.belowMark){
+      L.push("Your total is below the passing score of " + PASS_MARK + ".");
+      L.push("");
+    } else if(s.makeups.length){
+      /* Without this the parent reads 247.5 against a pass mark of 245 and a
+         "Make-up required" verdict, and assumes the school made a mistake. */
+      L.push("Your total of " + fmt(s.total) + " is at or above the passing score of " + PASS_MARK + ". However, a grade of D in any category requires a make-up before the star is awarded.");
+      L.push("");
+    }
+    if(s.makeups.length){
+      L.push("The following must be made up at the next star testing:");
+      s.makeups.forEach(function(m){ L.push("   - " + m); });
+      L.push("");
+      L.push("Everything you already passed is kept. You only need to make up the categories listed above.");
+    }
+  }
+  L.push("", "If you have any questions about your score, please speak with your instructor.", "");
+  L.push("Jae H. Jeong's U.S. Taekwondo Center");
+  return L.join("\n");
+}
+function openMail(c){
+  var s = score(c);
+  $("#modalTitle").textContent = "Results email — " + c.name;
+  var bd = $("#modalBd"); bd.textContent = "";
+
+  var meta = el("div","mailmeta");
+  meta.appendChild(mrow("To", c.email));
+  meta.appendChild(mrow("Subject", "Your " + c.dan + " Star Testing Results"));
+  bd.appendChild(meta);
+
+  var pre = el("pre","mailbody", mailBody(c));
+  bd.appendChild(pre);
+
+  var ft = $("#modalFt"); ft.textContent = "";
+  var cancel = el("button","btn ghost", "Close");
+  cancel.addEventListener("click", closeModal);
+  var send = el("button","btn", c.sent ? "Send again" : "Send to " + c.name.split(" ")[0]);
+  send.addEventListener("click", function(){
+    c.sent = true; save(); closeModal(); renderResults();
+    toast("Prototype only — no email was actually sent to " + c.email + ".");
+  });
+  ft.appendChild(cancel); ft.appendChild(send);
+
+  openModal();
+  send.focus();
+}
+function mrow(k, v){
+  var d = document.createElement("div");
+  d.appendChild(el("b", null, k + ": "));
+  d.appendChild(document.createTextNode(v));
+  return d;
+}
+var lastFocus = null;
+function openModal(){
+  lastFocus = document.activeElement;
+  $("#scrim").hidden = false;
+}
+function closeModal(){
+  $("#scrim").hidden = true;
+  if(lastFocus && document.contains(lastFocus)) lastFocus.focus();
+  lastFocus = null;
+}
+
+/* ============================================================
+   VIEW: RUBRICS
+   ============================================================ */
+function renderRubrics(){
+  var host = $("#allRubrics"); host.textContent = "";
+  DANS.forEach(function(d){ host.appendChild(rubricCard(d)); });
+
+  var at = $("#assistTable"); at.textContent = "";
+  var th = el("thead"), tr = el("tr");
+  head(tr, [{t:"Grade"},{t:"12 and under"},{t:"13 and up"},{t:"Points at credit 5"}]);
+  th.appendChild(tr); at.appendChild(th);
+  var tb = el("tbody");
+  GRADES.forEach(function(g, i){
+    var r = el("tr");
+    r.appendChild(el("td", null, g.k));
+    r.appendChild(el("td","num", ASSIST_LABEL.child[i]));
+    r.appendChild(el("td","num", ASSIST_LABEL.adult[i]));
+    r.appendChild(el("td","num", fmt(5 * g.v)));
+    tb.appendChild(r);
+  });
+  at.appendChild(tb);
+
+  var ft = $("#feeTable"); ft.textContent = "";
+  var th2 = el("thead"), tr2 = el("tr");
+  head(tr2, [{t:"Dan"},{t:"Standard"},{t:"Same day"},{t:"Private"},{t:"Credits"},{t:"Max score"},{t:"Pass"}]);
+  th2.appendChild(tr2); ft.appendChild(th2);
+  var tb2 = el("tbody");
+  DANS.forEach(function(d){
+    var f = FEES[d], r = el("tr");
+    r.appendChild(el("td", null, d));
+    r.appendChild(el("td","num","$" + f.normal));
+    r.appendChild(el("td","num","$" + f.sameDay));
+    r.appendChild(el("td","num","$" + f.priv));
+    r.appendChild(el("td","num", String(creditTotal(d))));
+    r.appendChild(el("td","num", String(maxScore(d))));
+    r.appendChild(el("td","num", String(PASS_MARK)));
+    tb2.appendChild(r);
+  });
+  ft.appendChild(tb2);
+}
+
+/* ============================================================
+   NAV + BOOT
+   ============================================================ */
+var RENDER = {
+  event:renderEvent,
+  register:function(){ syncSchoolField(); syncStarProgressions(); renderRegRubric(); },
+  roster:renderRoster, grade:renderGrade, results:renderResults, rubrics:renderRubrics
+};
+function go(v){
+  state.view = v;
+  ["event","register","roster","grade","results","rubrics"].forEach(function(k){
+    $("#view-" + k).hidden = (k !== v);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll(".navbtn"), function(b){
+    b.setAttribute("aria-current", String(b.dataset.view === v));
+  });
+  RENDER[v]();
+  window.scrollTo(0, 0);
+}
+
+function csv(){
+  /* Only carry School when the event has more than one — a column where every
+     row says the same thing is noise. */
+  var withSchool = multiSchool();
+  var rows = [["Dan","Name","Age","Gender","Stars from","Stars to"]
+    .concat(withSchool ? ["School"] : [])
+    .concat(["Email","Fee","Payment","Paid","Classes attended","Assistant classes","Assistant grade","Score","Max","Result"])];
+  DANS.forEach(function(d){
+    byDan(d).forEach(function(c){
+      var s = score(c);
+      rows.push([c.dan, c.name, ageOf(c), c.gender, c.starsFrom, c.starsFrom + 1]
+        .concat(withSchool ? [c.school] : [])
+        .concat([c.email, FEES[c.dan].normal, c.payMethod, c.paid ? "Yes" : "No",
+                 c.classes, c.assist, effectiveGrade(c, RUBRICS[c.dan].filter(function(item){ return item.auto; })[0]),
+                 s.complete ? fmt(s.total) : "", s.max, resultText(s)]));
+    });
+  });
+  return rows.map(function(r){
+    return r.map(function(v){
+      v = String(v == null ? "" : v);
+      return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v;
+    }).join(",");
+  }).join("\n");
+}
+
+function boot(){
+  load();
+
+  Array.prototype.forEach.call(document.querySelectorAll(".navbtn"), function(b){
+    b.addEventListener("click", function(){ go(b.dataset.view); });
+  });
+  wireEvent();
+  wireRegister();
+
+  try{
+    var savedTheme = localStorage.getItem(STORE_KEY + "-theme");
+    if(savedTheme === "dark" || savedTheme === "light") document.documentElement.setAttribute("data-theme", savedTheme);
+  }catch(e){ /* storage blocked — follow the system preference */ }
+
+  $("#btnTheme").addEventListener("click", function(){
+    var cur = document.documentElement.getAttribute("data-theme");
+    var isDark = cur ? cur === "dark"
+                     : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var next = isDark ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    try{ localStorage.setItem(STORE_KEY + "-theme", next); }catch(e){ /* not fatal */ }
+  });
+
+  $("#btnReset").addEventListener("click", function(){
+    state.candidates = seed();
+    state.event = JSON.parse(JSON.stringify(DEFAULT_EVENT));
+    state.rosterSchool = "All";
+    save(); RENDER[state.view]();
+    toast("Demo candidates and event settings restored.");
+  });
+
+  $("#btnCsv").addEventListener("click", function(){
+    var bd = $("#modalBd"); bd.textContent = "";
+    $("#modalTitle").textContent = "Roster export";
+    bd.appendChild(el("p","panel-note","Downloads are blocked inside this preview, so the file is shown here to copy. The real system would save it straight to your computer."));
+    var pre = el("pre","mailbody", csv());
+    pre.style.marginTop = "11px";
+    bd.appendChild(pre);
+    var ft = $("#modalFt"); ft.textContent = "";
+    var close = el("button","btn", "Close");
+    close.addEventListener("click", closeModal);
+    ft.appendChild(close);
+    openModal();
+    close.focus();
+  });
+
+  $("#btnPrint").addEventListener("click", function(){
+    if(!buildPrintGrades()){
+      toast("No " + state.gradeDan + " candidates are available to print.");
+      return;
+    }
+    setPrintPage("landscape");
+    window.print();
+  });
+
+  $("#btnPrintResults").addEventListener("click", function(){
+    if(!buildPrintResults()){
+      toast("No " + state.resultDan + " candidates are available to print.");
+      return;
+    }
+    setPrintPage("portrait");
+    window.print();
+  });
+
+  $("#btnMailAll").addEventListener("click", function(){
+    var list = byDan(state.resultDan).filter(function(c){ return score(c).complete; });
+    if(!list.length){ toast("No one in " + state.resultDan + " is fully graded yet."); return; }
+    list.forEach(function(c){ c.sent = true; });
+    save(); renderResults();
+    toast("Prototype only — " + list.length + " emails were not actually sent.");
+  });
+
+  $("#modalX").addEventListener("click", closeModal);
+  $("#scrim").addEventListener("click", function(e){ if(e.target === $("#scrim")) closeModal(); });
+  document.addEventListener("keydown", function(e){
+    if($("#scrim").hidden) return;
+    if(e.key === "Escape"){ closeModal(); return; }
+    if(e.key !== "Tab") return;
+    var f = $("#scrim").querySelectorAll("button, [href], input, textarea, select");
+    if(!f.length) return;
+    var first = f[0], last = f[f.length - 1];
+    if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+  });
+
+  go("roster");
+}
+boot();
+</script>

@@ -1,8 +1,8 @@
 # Contract for migration 0002 + account screens build
 
 Shared by the database builder and the app builder. Follow exactly so the halves fit.
-Rulebook: `docs/TKD-Dashboard-Design-Guidelines.md` (v0.28 — sections 5 and 10b are the source of truth).
-Approved screens: `docs/TKD-Account-Screens-Mockups.html` (Set your PIN, Change PIN, Change password) and `docs/TKD-Home-Mockups.html`.
+Rulebook: `docs/Dashboard Docs/TKD-Dashboard-Design-Guidelines.md` (v0.28 — sections 5 and 10b are the source of truth).
+Approved screens: `docs/Dashboard Docs/TKD-Account-Screens-Mockups.html` (Set your PIN, Change PIN, Change password) and `docs/Dashboard Docs/TKD-Home-Mockups.html`.
 Existing code: `supabase/migrations/0001_staff_and_pin.sql` (applied to production, DO NOT edit it), `src/` (React 19 + Vite, plain JS).
 Audience: Jeffrey is learning IT — every file has a header comment (what + why); non-obvious lines get short plain-English comments. Readable over clever.
 
