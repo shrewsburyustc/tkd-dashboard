@@ -58,7 +58,7 @@ import { useShortcutN } from '../../../lib/useShortcutN.js';
 import ChoiceGroup from '../events/ChoiceGroup.jsx';
 import ConfirmDeleteDialog from '../events/ConfirmDeleteDialog.jsx';
 import { NoIcon } from '../events/EventsTab.jsx';
-import { useLiveLoad } from '../events/useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../events/useLiveLoad.js';
 import CompareDialog from './CompareDialog.jsx';
 import { EditPaymentDialog, PayingByDialog, checkEditPayment, isEditPaymentDirty, isPayingByDirty } from './PaymentDialogs.jsx';
 import RegistrationLinkDialog from './RegistrationLinkDialog.jsx';
@@ -122,7 +122,7 @@ export default function EventPage({
   clearToast,
   onModalOpenChange,
 }) {
-  const live = useLiveLoad({ key: eventId, enabled: !screenLocked, load: loadEvent });
+  const live = useLiveLoad({ key: eventId, enabled: !screenLocked, load: loadEvent, refreshMs: LIVE_REFRESH_MS });
   const data = live.data;
   const event = data?.event ?? null;
   const classes = data?.classes ?? [];
@@ -253,6 +253,22 @@ export default function EventPage({
   useEffect(() => {
     onModalOpenChange(modalShown);
   }, [modalShown, onModalOpenChange]);
+  // The event was deleted elsewhere (found by the 15-second refresh or a tab return): close any
+  // open dialog or menu, or they'd stay "open" without being drawn and keep the rest of the
+  // dashboard (Back link, side menu) blocked.
+  useEffect(() => {
+    if (live.status !== 'notFound') return;
+    setDialog(null);
+    setMenu(null);
+  }, [live.status]);
+  // The student whose ⋯ menu is open was deleted on another device: close the menu and put
+  // focus back on something that still exists.
+  const menuRowGone = menu !== null && !roster.some((r) => r.id === menu.id);
+  useEffect(() => {
+    if (!menuRowGone) return;
+    setMenu(null);
+    if (!document.activeElement || document.activeElement === document.body) document.querySelector('.ev-back')?.focus();
+  }, [menuRowGone]);
   useEffect(() => () => onModalOpenChange(false), [onModalOpenChange]);
 
   // ===== Derived data =====
@@ -794,8 +810,10 @@ export default function EventPage({
   }
 
   // ===== The ⋯ menu (Star v0.110: staff see only what they can do) =====
+  // The menu keeps a copy of the row as it was when it opened, so a background refresh (another
+  // device marking the student paid, say) can't swap its items under the pointer.
   function openMenu(row, anchor) {
-    setMenu((current) => (current && current.id === row.id ? null : { id: row.id, anchor }));
+    setMenu((current) => (current && current.id === row.id ? null : { id: row.id, anchor, row }));
   }
   function closeMenu(reason) {
     const current = menu;
@@ -804,7 +822,7 @@ export default function EventPage({
   }
   function menuContent() {
     if (!menu) return null;
-    const row = roster.find((r) => r.id === menu.id);
+    const row = menu.row ?? roster.find((r) => r.id === menu.id);
     if (!row) return null;
     const name = T.studentLabel(row);
     const anchor = menu.anchor;
