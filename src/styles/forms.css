@@ -461,10 +461,51 @@
   font-size: var(--text-13);
 }
 
-.ftoggle input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--color-blue);
+/* On/off settings are drawn as switches (Jeffrey, F5 difference 7). They are real checkboxes
+   with role="switch", so the keyboard (Space) and screen readers work as usual. */
+.ftoggle input[role='switch'] {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  margin: 0;
+  border: 1px solid var(--color-border-control);
+  border-radius: 10px;
+  background: var(--color-surface);
+  cursor: pointer;
+  appearance: none;
+}
+
+.ftoggle input[role='switch']::after {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-border-control);
+  content: '';
+}
+
+.ftoggle input[role='switch']:checked {
+  border-color: var(--color-blue);
+  background: var(--color-blue);
+}
+
+.ftoggle input[role='switch']:checked::after {
+  left: 18px;
+  background: var(--color-on-blue);
+}
+
+.ftoggle input[role='switch']:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+.ftoggle input[role='switch']:disabled {
+  border-color: var(--color-border-strong);
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .foptions {
@@ -730,8 +771,13 @@
 
 .ftslot-right {
   flex: none;
-  color: var(--color-warning-text);
+  color: var(--color-text-secondary);
   font-size: var(--text-12);
+}
+
+.ftslot-right.is-last {
+  color: var(--color-warning-text);
+  font-weight: 500;
 }
 
 .fside-back {
@@ -928,9 +974,9 @@
     min-height: var(--tap-size);
   }
 
-  .ftoggle input {
-    width: 22px;
-    height: 22px;
+  /* a 44px tap area around the switch */
+  .ftoggle {
+    cursor: pointer;
   }
 
   .fchoice {

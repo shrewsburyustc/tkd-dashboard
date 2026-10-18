@@ -141,6 +141,7 @@ export const SHOW_IF_QUESTION = 'Question';
 export const SHOW_IF_ANSWER = 'Answer is';
 export const NO_EARLIER_CHOICE = 'Add a "One choice" or "Dropdown" question above this one first.';
 export const WAIVER_TEXT = 'Waiver text';
+export const WAIVER_ALWAYS = 'Always shown: everyone who sends this form signs the waiver.';
 export const WAIVER_TEXT_HINT = 'Your school\'s own wording. Families tick "I have read and agree to the waiver" and sign.';
 export const WAIVER_EMPTY = 'A waiver needs its wording before the form can be published.';
 export const LABEL_PROBLEM = { empty: 'A label is needed.', tooLong: 'Keep it to 120 characters or fewer.', badCharacter: 'It has a character that can\'t be used. Retype it.' };

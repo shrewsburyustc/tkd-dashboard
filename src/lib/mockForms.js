@@ -141,7 +141,7 @@ export function checkAnswers(fields, answers, children, signature) {
   let hasWaiver = false;
   for (const f of fields) {
     if (['heading', 'step', 'children', 'booking'].includes(f.type)) continue;
-    const visible = !f.show_if || JSON.stringify(answers[f.show_if.field]) === JSON.stringify(f.show_if.value);
+    const visible = f.type === 'waiver' || f.show_if == null || JSON.stringify(answers[f.show_if.field]) === JSON.stringify(f.show_if.value);
     let v = answers[f.id];
     if (v === null) v = undefined;
     if (!visible) {

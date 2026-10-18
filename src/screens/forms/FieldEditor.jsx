@@ -17,7 +17,8 @@ export default function FieldEditor({ field, fields, readOnly, idBase, onChange,
   const index = fields.findIndex((f) => f.id === field.id);
   const earlier = fields.slice(0, index).filter((f) => ['choice', 'dropdown'].includes(f.type));
   const target = field.show_if ? fields.find((f) => f.id === field.show_if.field) : null;
-  const canShowIf = !locked && !['step'].includes(field.type);
+  // The waiver is always shown — everyone who sends a form with a waiver signs it (F5 difference 8).
+  const canShowIf = !locked && !['step', 'waiver'].includes(field.type);
   const canRequire = !locked && !['heading', 'step', 'booking', 'waiver'].includes(field.type);
   const options = field.options ?? [];
   const badOptions = CHOICE_TYPES.includes(field.type)
@@ -110,6 +111,7 @@ export default function FieldEditor({ field, fields, readOnly, idBase, onChange,
           <p id={`${id}-text-hint`} className="field-hint">
             {T.WAIVER_TEXT_HINT}
           </p>
+          <p className="field-hint">{T.WAIVER_ALWAYS}</p>
           {!(field.text ?? '').trim() && <Notice>{T.WAIVER_EMPTY}</Notice>}
           {(field.text ?? '').trim() && longTextProblem(field.text, WAIVER_MAX) && <Notice>{T.THANK_YOU_BAD}</Notice>}
         </div>

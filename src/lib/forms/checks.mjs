@@ -41,6 +41,10 @@ group('fields: refusals match forms_fields_are_valid', () => {
   assert.equal(fieldsProblem([...base, pick, shown]), null);
   assert.equal(fieldsProblem([...base, shown, pick]).code, 'showIf');
   assert.equal(fieldsProblem([...base, pick, { ...shown, show_if: { field: 'kids', value: 'Maybe' } }]).code, 'showIf');
+  // the waiver is never "show only if" (F5 difference 8)
+  const waiver = { id: 'waiver', type: 'waiver', label: 'Waiver', required: true, text: 'Our wording.' };
+  assert.equal(fieldsProblem([...base, pick, waiver]), null);
+  assert.equal(fieldsProblem([...base, pick, { ...waiver, show_if: { field: 'kids', value: 'Yes' } }]).code, 'showIf');
   assert.equal(isVisible(shown, { kids: 'Yes' }), true);
   assert.equal(isVisible(shown, { kids: 'No' }), false);
 });

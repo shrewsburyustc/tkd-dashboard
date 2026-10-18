@@ -156,7 +156,9 @@ export function fieldsProblem(fields) {
     if (f.type === 'waiver' && (typeof f.text !== 'string' || [...f.text].length > WAIVER_MAX || (f.text !== '' && longTextProblem(f.text, WAIVER_MAX)))) {
       return { fieldId: f.id, code: 'waiver' };
     }
-    if (f.show_if) {
+    // show_if: missing / null, or a plain object (like the database); never on the waiver (v0.172)
+    if (f.show_if != null && (f.type === 'waiver' || typeof f.show_if !== 'object' || Array.isArray(f.show_if))) return { fieldId: f.id, code: 'showIf' };
+    if (f.show_if != null) {
       const target = seen.get(f.show_if.field);
       if (!target || !['choice', 'dropdown'].includes(target.type) || !(target.options ?? []).includes(f.show_if.value)) {
         return { fieldId: f.id, code: 'showIf' };

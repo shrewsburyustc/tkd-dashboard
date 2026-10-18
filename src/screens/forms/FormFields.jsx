@@ -199,11 +199,12 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
             }
             const chosen = values.bookings[i] ?? '';
             const name = `${idBase}-book-${i}`;
-            const slot = (key, text, right) => (
+            // Every time shows its spots left (Jeffrey, F5 difference 9); the last spot is amber.
+            const slot = (key, text, spots) => (
               <label key={key || 'none'} className={`ftslot${chosen === key ? ' is-on' : ''}`}>
                 <input type="radio" name={name} value={key} checked={chosen === key} disabled={readOnly} onChange={() => onBooking(i, key)} />
                 <span className="ftslot-text">{text}</span>
-                {right && <span className="ftslot-right">{right}</span>}
+                {spots != null && <span className={`ftslot-right${spots === 1 ? ' is-last' : ''}`}>{T.spotsLeft(spots)}</span>}
               </label>
             );
             return (
@@ -213,7 +214,7 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
                   <div key={g.label} role="group" aria-label={g.label}>
                     <p className="ftday">{g.label}</p>
                     {g.times.map((t) =>
-                      slot(timeKey(t), `${formatDate(t.date, { year: false })} · ${formatTime(parseTime(t.start), true)} · ${t.className}`, t.spotsLeft === 1 ? T.spotsLeft(1) : null),
+                      slot(timeKey(t), `${formatDate(t.date, { year: false })} · ${formatTime(parseTime(t.start), true)} · ${t.className}`, t.spotsLeft),
                     )}
                   </div>
                 ))}

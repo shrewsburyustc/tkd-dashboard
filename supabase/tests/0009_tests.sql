@@ -184,6 +184,14 @@ begin
                    jsonb_build_object('id', 'other', 'type', 'short_text', 'label', 'What else?', 'required', true,
                                       'show_if', jsonb_build_object('field', 'interest', 'value', 'Other')));
   if not public.forms_fields_publishable(v_fields) then raise exception 'TEST FAILED: 1f the test form should be publishable'; end if;
+  -- the waiver is never "show only if" (Jeffrey, F5 difference 8): same list, with and without the rule
+  v_r := v_blank || jsonb_build_array(
+           jsonb_build_object('id', 'spar', 'type', 'choice', 'label', 'Sparring?', 'options', jsonb_build_array('Yes', 'No')),
+           jsonb_build_object('id', 'waiver', 'type', 'waiver', 'label', 'Waiver', 'required', true, 'text', 'Our wording.'));
+  if not public.forms_fields_publishable(v_r)
+     or public.forms_fields_are_valid(jsonb_set(v_r, '{5,show_if}', jsonb_build_object('field', 'spar', 'value', 'Yes'))) then
+    raise exception 'TEST FAILED: 1h a waiver must not be hidden by "show only if"';
+  end if;
   if public.forms_settings_are_valid('{"thank_you":"x","alert_email":"nope","confirm_email":true,"add_to_calendar":true}') then
     raise exception 'TEST FAILED: 1g a bad alert email should be refused';
   end if;

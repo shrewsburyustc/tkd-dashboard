@@ -204,7 +204,8 @@ revoke execute on function public.forms_slug_ok(text) from public, anon, authent
 --     heading, step, waiver (at most 1), booking (at most 1)
 --   * label 1-120 characters (Testing's name rules), help 0-200
 --   * show_if: null, or { "field": <an EARLIER choice or dropdown>, "value":
---     one of its options }
+--     one of its options }. Never on the waiver: everyone who sends a form
+--     with a waiver signs it (Jeffrey, F5 difference 8, rulebook v0.147)
 --   * waiver "text": 0-5000 characters (may be empty in a draft; see 1g)
 create or replace function public.forms_fields_are_valid(p_fields jsonb)
 returns boolean
@@ -286,7 +287,8 @@ begin
     -- show only if
     v_si := v_f -> 'show_if';
     if v_si is not null and jsonb_typeof(v_si) <> 'null' then
-      if jsonb_typeof(v_si) <> 'object'
+      if v_type = 'waiver'
+         or jsonb_typeof(v_si) <> 'object'
          or not (v_seen ? (v_si ->> 'field'))
          or (v_seen ->> (v_si ->> 'field')) not in ('choice', 'dropdown')
          or jsonb_typeof(v_si -> 'value') <> 'string'
@@ -1034,7 +1036,8 @@ begin
     v_type := v_f ->> 'type';
     continue when v_type in ('heading', 'step', 'children', 'booking');
     v_si := v_f -> 'show_if';
-    v_visible := v_si is null or jsonb_typeof(v_si) = 'null'
+    -- a waiver is always visible (v0.172), even if a show_if ever slipped past the table check
+    v_visible := v_type = 'waiver' or v_si is null or jsonb_typeof(v_si) = 'null'
                  or (p_answers -> (v_si ->> 'field')) = (v_si -> 'value');
     v_val := p_answers -> v_id;
     if v_val is not null and jsonb_typeof(v_val) = 'null' then v_val := null; end if;
