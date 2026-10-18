@@ -1,4 +1,4 @@
-# Staff accounts build plan — Reset password + Reset PIN (DRAFT, security-reviewed)
+# Staff accounts build plan — Reset password + Reset PIN (done, live 2026-10-17)
 
 **Branch:** `staff-accounts` · **Date:** 2026-10-17 · **Implements:** rulebook v0.70–v0.76 · **Approved design:** `TKD-Staff-Accounts-Mockups.html` (v0.76) · **Decisions:** `TKD-Staff-Accounts-Questions.html`
 
@@ -217,4 +217,10 @@ A separate agent reviewed this plan against handoff §6, migrations 0001–0003 
   - Also fixed: `0004_fingerprints.sql` had the word `deleted_at`, which the Supabase connection refuses. It's now spelled in two pieces.
 - **S5 done (2026-10-17, outside class hours):** Jeffrey used the local app on the real database to reset the desk password (3 times; the first signed out 2 desk devices) and the desk PIN. Both worked: sign-in with the new password in a private window, unlock with the new PIN.
   - Checked read-only: 4 history rows with no password or digits; the only desk sign-in left is the one made after the last reset; no emailed links; bcrypt `$2a$10$` hash.
-- Next: S6 (Main session merges `staff-accounts` into `main`), then S7 (deploy, separate OK). Until deployed, resets on the live site need the local app or the SETUP.md snippet.
+- **After S5, before the deploy (2026-10-17):** Jeffrey's three points were done and reviewed:
+  - the extra PIN line was removed (v0.78);
+  - dialogs sit near the top with messages under the buttons, account dialogs included (v0.80–v0.82);
+  - browser Back / Forward between pages was designed and built (v0.83).
+- **S6 done (2026-10-17):** the Main session merged `staff-accounts` into `main` (fast-forward to `1aa30cf`).
+- **S7 done (2026-10-17, Jeffrey's OK):** `main` pushed; Cloudflare Pages deployed it. The live build was checked: it contains Staff accounts and `admin_reset_password`. Rulebook v0.84.
+- **Finished.** Next, when personal logins arrive: add / disable / edit accounts (v0.70).

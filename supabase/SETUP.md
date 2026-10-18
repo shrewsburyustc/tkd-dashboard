@@ -446,7 +446,7 @@ commit;
 
 **Before you start:** 0001–0003 are applied, and their tests pass.
 
-**Status:** applied to production 2026-10-17; 11b checks and 11c tests passed. The screens are not deployed yet (branch `staff-accounts`), so 11d uses the local app.
+**Status:** applied to production 2026-10-17; 11b checks and 11c tests passed. The screens are **live** since 2026-10-17 (rulebook v0.84): use **Staff accounts** on the live site. 11d was done with the local app before the deploy.
 
 ### 11a. Apply 0004 (you, in the SQL Editor)
 
