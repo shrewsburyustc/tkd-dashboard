@@ -53,7 +53,9 @@ Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, 
 - **Q2 decided (Jeffrey, 2026-10-17): C — tap buttons:** the 7 classes as buttons; tapping one shows that class's belts as buttons with belt pictures (Teen/Adult's 18 wrap); "Testing for", start time and fee follow. Same style as Star's Dan/stars buttons.
 - **Q3 decided (Jeffrey, 2026-10-17): A — a start and end time per class** on Add/Edit event ("Classes testing": tick box + start → end per class; unticked = not testing at this event; same times test together; copied from the last event). Families see "Group A tests at 5:00 – 6:00 PM"; the roster groups by time. Page: `TKD-ColorBelt-Phase2-Events-Questions.html`.
 - Fact (Jeffrey, 2026-10-17): the 3-stripes rule applies to **every student in every class** (3 stripes on one side of the belt before testing).
-- **Q4 (how the form asks for the 3 stripes): asked, waiting** (form questions page).
+- **Q4 decided (Jeffrey, 2026-10-17): A — a required tick box right under the belt choice** on step 1: "The student has 3 stripes on one side of their belt. Students need 3 stripes to test." Continue without it → amber "Tick the box to confirm 3 stripes. Not sure? Ask your instructor before registering." Staff roster can show it was confirmed.
+- Private testing stays out of the regular event form (phase 5).
+- **Q5 (contact details on the form): next.**
 
 **Later phases** (each: design → mockups at 3 sizes → approve → build → reviews → OK): 2 Events + public family registration form (Cloudflare Pages Function path, v0.33) · 3 Registrations and payments · 4 Testing roster (grading) · 5 Private testing. Also pending his OK: aligning the account dialogs' phone Back gesture with the Testing dialogs.
 
