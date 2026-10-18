@@ -115,21 +115,19 @@ Behavior notes: roster reloads on location change / unlock / visibility / after 
 
 ---
 
-## 6. Questions for Jeffrey before building (one at a time, with visuals where it's a screen choice)
+## 6. Answers from Jeffrey (2026-10-17) — these change the plan above
 
-1. **Street addresses** of both schools (needed — not a choice).
-2. **Which event goes first on the new system,** and do the November events keep running on the old system until CP5 is done? (Recommendation: yes; switch with the first event after CP5, and keep the old system read-only for October's records.)
-3. **Signature kept how long?** The drawn signature is stored with the registration (needed to show the family agreed to the non-refundable fee). Proposal: kept as long as the registration, deleted with it; a retention rule for all testing records is decided later (handoff open item).
-4. **Cloudflare account access** for CP2 (Turnstile + Hyperdrive need the school's Cloudflare login).
-5. **Adjusting prices for one event:** rulebook v0.36 says an event "can adjust" its copied prices — in phase 2, or later? (Recommendation: later; phase 2 copies the prices and staff can change the amount when recording a payment.)
-6. **Paid, exactly:** is a partial payment "Paid"? What happens when a paid student's belt (and so fee) changes afterwards? (Recommendation: Paid = paid in full; a belt change on a paid student shows "Paid · $5 due" in amber.)
-7. **Star changed after our approval** — align Color Belt? (a) Add student moves into the event page header, left of Registration link (Star v0.101, page-header button rule v0.45); (b) no Check number in Record payment (Star v0.102). (Recommendation: align both, so the two testing types work the same way.)
-8. **Delete permanently removes payment records** — accepted for Color Belt as for Star (v0.95)? (Withdraw keeps them.)
-9. **Same web address for families?** The public form runs on `tkd-dashboard.pages.dev/register/…`, the same address as the staff dashboard (protected by a strict CSP on that page). A separate address is possible later with the school's own domain. (Recommendation: same address now.)
+1. **School addresses:** not given in chat. New small piece in phase 2: **Settings → Schools** (admin page from the account menu, like Staff accounts) where admins enter each school's street, city, state, ZIP; empty = family pages and the flyer show just the school name. Approved mockups: `docs/Dashboard Docs/TKD-Settings-Schools-Mockups.html` (S1–S3). Database: address columns on `public.locations` + an admin-only `settings_update_school_address` function (logged). Replaces §1.4.
+2. **Switch-over:** every event already in the old system finishes there; the **first event created after launch** is the first on the new system; afterwards the old system is read-only for past records and retired later.
+3. **Signatures:** deleted automatically **90 days after the testing date**; the registration keeps "Signed on the form, <date>". Clean-up runs inside database functions that are already called (no scheduled job); tested.
+4. **Cloudflare access:** left until the CP2a setup step.
+5. **No per-event prices.** Prices are set only in Classes and ranks; creating an event copies the prices listed there at that moment. Rulebook v0.36's "can adjust them for that event" is dropped (recorded with the phase 2 rulebook entries).
+6. **Paid = one click, in full.** The roster button **Mark paid** records a full payment at once — amount = the event's early price before the testing day, the testing-day price on it (America/New_York); method = what the family chose (changed first with ⋯ → Change how they'll pay); 5-second Undo. **The Record payment dialog (R5) is dropped**, so there is no amount field, date field or check number; no partial payments and no "$ due" states; a belt corrected after paying leaves the payment as it is. Admins keep Edit / Undo payment in ⋯. §1.2 `testing_record_payment` becomes `testing_mark_paid(p_registration_id, p_expected_version)` (amount and date decided in the database). Mockup: `Phase 2 images/ColorBelt-mark-paid.png`.
+7. **Add student** is a blue primary button in the **event page header**, left of Registration link (rule v0.45, like Star v0.101; N opens it on PC).
+8. **Delete permanently** is allowed for a paid student (admin only) after a warning that names the payment; the payment rows are deleted with the registration (logged in change_log). Withdraw keeps them.
+9. **Same site:** `tkd-dashboard.pages.dev/register/<code>` with the strict CSP of §8; move to the school's own domain later.
 
-Settled without a question: the top rank of a class whose final award is None (e.g. Deputy) can still register — it shows "No new rank" as Testing for (v0.62, practice testing); no typed-name signature fallback (Star v0.89).
-
----
+Settled without a question: the top rank of a class whose final award is None (e.g. Deputy) can still register — Testing for shows "No new rank" (v0.62); no typed-name signature fallback (Star v0.89).
 
 ## 7. Risks (and what the plan does about them)
 
