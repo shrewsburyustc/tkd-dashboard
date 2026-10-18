@@ -11,8 +11,8 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Schedule-Build-Plan.md`.
 | S0 Bring main in, renumber the rulebook | Done (`3cf3cc0`) |
 | S1 Migration 0005 + tests + security review | Done (`4482a88`); PGlite 54/54 |
 | S2 Screens + preview + design review | Done; independent design review findings fixed |
-| S3 Jeffrey tries the preview | Waiting |
-| S4 Jeffrey pastes 0005 into the SQL Editor, then read-only checks | Waiting |
+| S3 Jeffrey tries the preview | Done 2026-10-17 — approved (rulebook v0.89) |
+| S4 Jeffrey pastes 0005 into the SQL Editor, then read-only checks | Next |
 | S5 Real check with Worcester's real times | Waiting |
 | S6 Commit + merge (Main session) | Waiting |
 | S7 Push = live | Needs a separate OK |
@@ -79,7 +79,7 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Schedule-Build-Plan.md`.
 - Migration 0005 (not live yet) now has `schedule_slot_classes`, and the PGlite suite still passes 54/54.
 - The screens, preview database and checks are updated (13 groups pass).
 
-## Known small compromises (for Jeffrey's OK at S3)
+## Known small compromises (accepted by Jeffrey at S3, 2026-10-17, v0.89)
 
 - **320px phones:** the 7 day buttons are about 38px wide (a 44px width can't fit 7 across); they are 44px tall to tap.
 - **Touch:** the color swatches' tap areas are 40px wide so all 8 fit one row.
