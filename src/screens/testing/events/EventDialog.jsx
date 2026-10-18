@@ -22,9 +22,10 @@ import { NOTE_MAX, isIsoDate, validateClassTimes } from '../../../lib/testing/ev
 import ChoiceGroup from './ChoiceGroup.jsx';
 import * as T from '../text.js';
 
-// The times offered in each list: every 15 minutes from 6:00 AM to 10:00 PM.
+// The times offered in each list: every 5 minutes from 6:00 AM to 10:00 PM (classes can start
+// at times like 6:50; the database accepts any minute).
 const TIME_CHOICES = [];
-for (let minutes = 6 * 60; minutes <= 22 * 60; minutes += 15) {
+for (let minutes = 6 * 60; minutes <= 22 * 60; minutes += 5) {
   TIME_CHOICES.push(`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`);
 }
 
