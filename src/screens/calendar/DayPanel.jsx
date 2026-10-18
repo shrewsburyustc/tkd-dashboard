@@ -8,15 +8,16 @@
 //   - Color Belt / Star testing events, read from Testing (changed there, v0.143 answer 1)
 //   - every class that day in its color; cancelled ones stay listed, crossed out
 //     (on Both: each school's classes under its own heading)
-// Free-class bookings join this panel with Forms (step 3).
+//   - free classes booked through Forms (child's first name, class, time, form); one whose class
+//     no longer runs then is amber: "Class cancelled — call the family" (v0.145 answer 6)
 //
 // Props:
 //   date, today, info (buildDay result), schoolLabel, both, typeColor,
 //   isAdmin, onOpenEvent(event, element), onOpenClosure(closure, element)
-import { IconAlertTriangle, IconCertificate, IconChevronRight } from '@tabler/icons-react';
+import { IconAlertTriangle, IconCertificate, IconChevronRight, IconUserPlus } from '@tabler/icons-react';
 import { colorOf } from '../../lib/schedule/colors.js';
 import { eventTimeOn } from '../../lib/calendar/days.js';
-import { formatRange } from '../../lib/schedule/time.js';
+import { formatRange, formatTime, parseTime } from '../../lib/schedule/time.js';
 import { schoolLetters } from './MonthGrid.jsx';
 import * as T from './text.js';
 
@@ -100,6 +101,25 @@ export default function DayPanel({ date, today, info, schoolLabel, both, typeCol
                 <span className="cpanel-name">
                   {both && <b className="cchip-letters">{schoolLetters(t.locationCode)}</b>}
                   {t.title}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {info.bookings.length > 0 && (
+        <>
+          <h3 className="cpanel-head">{T.FREE_CLASSES}</h3>
+          <ul className="cpanel-list">
+            {info.bookings.map((b) => (
+              <li key={b.id} className={`cpanel-row cpanel-free${b.classRunning ? '' : ' is-warn'}`} title={T.FREE_FROM(b.formName)}>
+                <span className="cpanel-time">{formatTime(parseTime(b.start), true)}</span>
+                {b.classRunning ? <IconUserPlus size={16} aria-hidden="true" className="cpanel-icon" /> : <IconAlertTriangle size={16} aria-hidden="true" className="cpanel-icon" />}
+                <span className="cpanel-name">
+                  {both && <b className="cchip-letters">{T.SCHOOL_LETTER[b.locationCode]}</b>}
+                  {T.freeLine(b)}
+                  {!b.classRunning && <span className="cpanel-free-warn">{T.CLASS_GONE}</span>}
                 </span>
               </li>
             ))}

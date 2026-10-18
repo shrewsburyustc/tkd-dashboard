@@ -31,6 +31,11 @@
 //   __tkdPreview.simulateOtherAdminEditCalendar()  "another admin" changes every event, closure and type
 //   __tkdPreview.clearCalendar()                   no events or closures (types stay)
 //   __tkdPreview.resetCalendar()                   back to the sample events and closures
+// Forms helpers (mockForms.js; setRole and setTestingDelay apply too):
+//   __tkdPreview.failNextFormsSave()               the next Forms save fails like a dropped connection
+//   __tkdPreview.simulateOtherAdminEditForms()     "another admin" changes every form (open builders go stale)
+//   __tkdPreview.clearForms()                      no forms, sign-ups or bookings (empty state)
+//   __tkdPreview.resetForms()                      back to the sample forms and sign-ups
 // Staff accounts helpers (account menu → Admin → Staff accounts; mockStaff.js):
 //   __tkdPreview.failNextSave()           also makes the next Reset password / Reset PIN fail
 //   __tkdPreview.resetStaffAccounts()     the fake desk is signed in on 3 devices again
@@ -43,6 +48,7 @@ import { createTestingBackend, TESTING_RPC_NAMES } from './mockTesting.js';
 import { createStaffBackend, STAFF_RPC_NAMES } from './mockStaff.js';
 import { createScheduleBackend, SCHEDULE_RPC_NAMES } from './mockSchedule.js';
 import { createCalendarBackend, CALENDAR_RPC_NAMES } from './mockCalendar.js';
+import { createFormsBackend, FORMS_RPC_NAMES } from './mockForms.js';
 
 const SESSION_KEY = 'tkd.preview.session'; // the fake "signed in" session
 const STAFF_STATE_KEY = 'tkd.preview.staffState'; // fake staff row: PIN, shared flag
@@ -53,6 +59,7 @@ const TESTING_DELAY_KEY = 'tkd.preview.testingDelay'; // setTestingDelay(ms), ke
 const STAFF_ACCOUNTS_KEY = 'tkd.preview.staffAccounts'; // fake Staff accounts (mockStaff.js)
 const SCHEDULE_KEY = 'tkd.preview.schedule'; // fake Schedule tables (mockSchedule.js)
 const CALENDAR_KEY = 'tkd.preview.calendar'; // fake Calendar tables (mockCalendar.js)
+const FORMS_KEY = 'tkd.preview.forms'; // fake Forms tables (mockForms.js)
 
 const PREVIEW_PASSWORD = 'preview';
 const PREVIEW_PIN = '2580'; // not too easy: 1234 is refused by the weak-PIN rule now
@@ -440,6 +447,19 @@ export function createMockClient() {
     today: () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date()),
   });
 
+  // ----- Forms (mockForms.js) -----
+  // Its free-class times come from the fake Schedule and Calendar above, like the real functions.
+  const forms = createFormsBackend({
+    loadStore: () => JSON.parse(readStorage(FORMS_KEY)),
+    saveStore: (store) => writeStorage(FORMS_KEY, JSON.stringify(store)),
+    now: () => Date.now(),
+    newId: newUuid,
+    getSchedule: () => schedule.snapshot(),
+    getCalendar: () => calendar.snapshot(),
+    getClasses: () => testing.snapshot().classes.map((c) => ({ id: c.id, location_code: c.location_code, name: c.name })),
+    today: () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date()),
+  });
+
   // The fake network time for Testing calls (setTestingDelay saves it so it survives a reload).
   function testingDelay() {
     const saved = readStorage(TESTING_DELAY_KEY);
@@ -494,6 +514,7 @@ export function createMockClient() {
           }
           if (table.startsWith('schedule_')) return schedule.select(table, query.columns, query.filters, query.orders, testingContext());
           if (table.startsWith('calendar_')) return calendar.select(table, query.columns, query.filters, query.orders, testingContext());
+          if (table === 'forms' || table.startsWith('form_')) return forms.select(table, query.columns, query.filters, query.orders, testingContext());
           return testing.select(table, query.columns, query.filters, query.orders, testingContext());
         };
         return run().then(resolve, reject);
@@ -533,6 +554,10 @@ export function createMockClient() {
     if (CALENDAR_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
       return calendar.rpc(name, args, testingContext());
+    }
+    if (FORMS_RPC_NAMES.includes(name)) {
+      await wait(testingDelay());
+      return forms.rpc(name, args, testingContext());
     }
     if (name === 'has_data_access' || TESTING_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
@@ -640,6 +665,22 @@ export function createMockClient() {
     resetCalendar() {
       calendar.reset();
       return 'The Calendar is back to the sample events and closures. Reload or change month to see them.';
+    },
+    failNextFormsSave() {
+      forms.failNextSave();
+      return 'The next Forms save will fail like a dropped connection and change nothing.';
+    },
+    simulateOtherAdminEditForms() {
+      forms.simulateOtherAdminEdit();
+      return 'Another admin changed every form. An open builder is now out of date.';
+    },
+    clearForms() {
+      forms.clear();
+      return 'Every form, sign-up and free-class booking is removed. Reload to see the empty Forms list.';
+    },
+    resetForms() {
+      forms.reset();
+      return 'Forms are back to the sample forms and sign-ups. Reload to see them.';
     },
     resetTesting() {
       testing.reset();

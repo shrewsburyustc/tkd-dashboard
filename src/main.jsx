@@ -10,6 +10,7 @@ import './styles/testing.css'; // Testing → Classes and ranks (contract 0003)
 import './styles/staff.css'; // Staff accounts (rulebook v0.70–v0.76)
 import './styles/schedule.css'; // Schedule (rulebook v0.137)
 import './styles/calendar.css'; // Calendar (rulebook v0.138)
+import './styles/forms.css'; // Forms (rulebook v0.139)
 import App from './App.jsx';
 import SetupNeeded from './screens/SetupNeeded.jsx';
 import { isMissingConfig, isSecretKey } from './lib/supabase.js';

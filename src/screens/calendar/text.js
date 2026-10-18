@@ -69,8 +69,18 @@ export function dayLabel(date, info, isToday) {
     else if (info.cancelledCount > 0) bits.push(`${info.cancelledCount} of ${classCount(info.classCount)} cancelled`);
     else bits.push(classCount(info.classCount));
   }
+  if (info.bookingCount) bits.push(info.bookingProblems ? `${freeCount(info.bookingCount)}, ${info.bookingProblems} on a cancelled class` : freeCount(info.bookingCount));
   return bits.join(', ');
 }
+
+export const freeCount = (n) => (n === 1 ? '1 free class' : `${n} free classes`);
+export const freeChip = (n, problems) => (problems ? `${freeCount(n)} · ${problems === n ? 'class cancelled' : `${problems} cancelled`}` : freeCount(n));
+export const FREE_CLASSES = 'Free classes';
+export const freeLine = (b) => `${b.childFirstName} · ${b.className}`;
+export const FREE_FROM = (form) => `Booked with ${form}`;
+export const CLASS_GONE = 'Class cancelled — call the family';
+export const freeBadge = (n) => (n === 1 ? '1 free-class booking' : `${n} free-class bookings`);
+export const closureBookings = (n) => `${n === 1 ? '1 free-class booking is' : `${n} free-class bookings are`} on these classes — you'll need to call ${n === 1 ? 'the family' : 'the families'}.`;
 
 // ----- Day panel -----
 export const todayLine = (school) => `Today · ${school}`;

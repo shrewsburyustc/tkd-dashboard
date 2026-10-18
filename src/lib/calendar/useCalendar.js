@@ -7,7 +7,9 @@
 //   const c = useCalendar({ codes: ['worcester'], from, to, enabled });
 //   c.status   'loading' | 'ready' | 'error' (first load failed) | 'noAccess'
 //   c.data     { today, schools: [{ code, versions, slots, classes, colors }], types, events,
-//                closures, closureClasses (Map), testingEvents } once 'ready' (else null)
+//                closures, closureClasses (Map), testingEvents, bookings } once 'ready' (else null)
+//   bookings = free-class bookings from Forms (v0.145 answer 6). If they can't be read (e.g. the
+//   Forms tables aren't in the database yet) the Calendar still shows, without them.
 //   c.reload() quiet reload; resolves 'ok' | 'error' | 'noAccess'
 //
 // Reloads by itself when the schools or dates change, the screen unlocks, and the browser tab
@@ -15,6 +17,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadSchedule } from '../schedule/api.js';
 import { loadCalendar, loadTestingEvents } from './api.js';
+import { bookingsBetween } from '../forms/api.js';
 
 export function useCalendar({ codes, from, to, enabled }) {
   const key = `${codes.join('+')}`;
@@ -32,9 +35,10 @@ export function useCalendar({ codes, from, to, enabled }) {
     const seq = ++seqRef.current;
     setState((prev) => (prev.key === k ? (prev.data ? prev : { ...prev, status: 'loading' }) : { key: k, data: null, status: 'loading' }));
     const run = async () => {
-      const [calendar, testing, ...schedules] = await Promise.all([
+      const [calendar, testing, bookings, ...schedules] = await Promise.all([
         loadCalendar({ from: a, to: b }),
         loadTestingEvents({ from: a, to: b }),
+        bookingsBetween({ locationCode: null, from: a, to: b }),
         ...list.map((code) => loadSchedule(code)),
       ]);
       if (seq !== seqRef.current) return latestRef.current; // a newer request took over
@@ -60,6 +64,7 @@ export function useCalendar({ codes, from, to, enabled }) {
           closures: calendar.closures,
           closureClasses: calendar.closureClasses,
           testingEvents: testing.events,
+          bookings: bookings.status === 'ok' ? bookings.bookings : [],
         };
         setState({ key: k, data, status: 'ready' });
         return 'ok';

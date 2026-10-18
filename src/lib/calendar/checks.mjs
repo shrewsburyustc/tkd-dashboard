@@ -226,5 +226,20 @@ group('mock: event types (duplicate, recolor, reorder, delete + move)', () => {
   assert.equal(del.moved, 1);
 });
 
+group('days: free-class bookings (Forms, v0.145 answer 6)', () => {
+  // Friday 2026-12-18 runs White at 17:00 (slot n1). One booking on it, one on a time that isn't
+  // a class any more (classRunning false → amber), one cancelled (not shown), one at the other school.
+  const b = (id, extra) => ({ id, locationCode: 'worcester', classId: W.white, className: 'White', date: '2026-12-18', start: '17:00', end: '17:45',
+    childFirstName: 'Maya', formName: 'Free class', status: 'booked', classRunning: true, ...extra });
+  const bookings = [b('b1'), b('b2', { start: '18:00', classRunning: false }), b('b3', { status: 'cancelled' }), b('b4', { locationCode: 'shrewsbury' })];
+  const day = buildDay('2026-12-18', ctx({ bookings }));
+  assert.equal(day.bookingCount, 2);
+  assert.equal(day.bookingProblems, 1);
+  assert.deepEqual(day.bookings.map((x) => x.id), ['b1', 'b2']);
+  assert.equal(day.schools[0].classes.find((c) => c.slot.id === 'n1').bookings, 1);
+  assert.equal(buildDay('2026-12-19', ctx({ bookings })).bookingCount, 0);
+  assert.equal(buildDay('2026-12-18', ctx()).bookingCount, 0); // no Forms yet → none
+});
+
 console.log(`${groups} groups of checks ran.`);
 console.log('ALL CALENDAR LIB CHECKS PASSED');

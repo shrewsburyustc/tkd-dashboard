@@ -86,6 +86,8 @@ export function recordMatches(record, slot, code) {
 //   ctx.closures       [{ id, locationCode, startsOn, endsOn, reason, wholeDay, version }]
 //   ctx.closureClasses Map closureId → [{ locationCode, weekday, start, end, classIds, classNames, slotId }]
 //   ctx.testingEvents  [{ id, locationCode, title, date, start }] — read from Testing (v0.143 answer 1)
+//   ctx.bookings       [{ id, locationCode, classId, className, date, start 'HH:MM', end, childFirstName,
+//                        formName, status, classRunning }] — free classes from Forms (v0.145 answer 6)
 // Returns {
 //   date, weekday,
 //   schools:  [{ code, name, classes: [{ slot, name, colorKeys, cancelled }] }]   (by start time)
@@ -93,7 +95,10 @@ export function recordMatches(record, slot, code) {
 //   testing:  [testing event]
 //   closures: [{ closure, cancelledCount, orphans: [record] }]
 //   scheduleStarts: [{ code, name }]   a schedule (not the very first one) starts that day
+//   bookings: [booking]  this day's free classes (booked, shown schools), by time
+//   bookingCount, bookingProblems (how many are on a class that no longer runs then)
 //   classCount, cancelledCount
+//   (each class also has bookings: how many free classes are booked on it)
 // }
 export function buildDay(date, ctx) {
   const weekday = weekdayOf(date);
@@ -104,10 +109,12 @@ export function buildDay(date, ctx) {
     const mine = closures.filter((c) => forSchool(c, school.code));
     const closedAllDay = mine.some((c) => c.wholeDay);
     const records = mine.filter((c) => !c.wholeDay).flatMap((c) => ctx.closureClasses.get(c.id) ?? []);
+    const booked = (ctx.bookings ?? []).filter((b) => b.date === date && b.status === 'booked' && b.locationCode === school.code);
     const classes = [...slots]
       .sort((a, b) => a.start - b.start || a.end - b.end)
       .map((slot) => ({
         slot,
+        bookings: booked.filter((b) => b.classId && slot.classIds.includes(b.classId) && toMinutes(b.start) === slot.start).length,
         name: slot.classIds.map((id) => school.classNames.get(id) ?? '').join(' + '),
         colorKeys: slot.classIds.map((id) => school.colors[id]),
         cancelled: closedAllDay || records.some((r) => recordMatches(r, slot, school.code)),
@@ -150,10 +157,17 @@ export function buildDay(date, ctx) {
     });
   }
 
+  const bookings = (ctx.bookings ?? [])
+    .filter((b) => b.date === date && b.status === 'booked' && codes.has(b.locationCode))
+    .sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.className.localeCompare(b.className)));
+
   return {
     date,
     weekday,
     schools: schools.map(({ code, name, classes }) => ({ code, name, classes })),
+    bookings,
+    bookingCount: bookings.length,
+    bookingProblems: bookings.filter((b) => !b.classRunning).length,
     events,
     testing: (ctx.testingEvents ?? []).filter((t) => t.date === date && relevant(t)),
     closures: closureInfo.filter((c) => relevant(c.closure)),
@@ -162,6 +176,9 @@ export function buildDay(date, ctx) {
     cancelledCount: schools.reduce((n, s) => n + s.classes.filter((c) => c.cancelled).length, 0),
   };
 }
+
+// 'HH:MM' → minutes after midnight.
+const toMinutes = (text) => Number(text.slice(0, 2)) * 60 + Number(text.slice(3, 5));
 
 // 1-based number of days from a to b (a = b → 1).
 function daysOf(a, b) {

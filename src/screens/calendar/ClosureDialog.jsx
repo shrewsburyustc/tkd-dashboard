@@ -6,7 +6,9 @@
 //   tick.
 // Edit has Remove (instant, with Undo). If the schedule changed after the closure was saved, the
 // classes that are no longer on it are listed (they are dropped when you save, v0.143 answer 2).
-// Cancelled classes can't be booked for a free class (step 3, Forms).
+// Cancelled classes can't be booked for a free class (Forms). Free classes already booked on the
+// classes it cancels stay booked and turn amber; the dialog warns that the families need a call
+// (v0.145 answer 6).
 import { IconCheck, IconTrash } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
@@ -58,7 +60,7 @@ const NOTES = {
 };
 const PHONE_DISCARD_NOTES = ['UNSAVED', 'STALE_DIALOG', 'NOT_ALLOWED'];
 
-export default function ClosureDialog({ state, dayClasses, orphans, isPhone, onChange, onTouch, onSave, onRemove, onCancel, onRequestClose }) {
+export default function ClosureDialog({ state, dayClasses, orphans, bookingCount = 0, isPhone, onChange, onTouch, onSave, onRemove, onCancel, onRequestClose }) {
   const view = state.mode === 'view';
   const isAdd = state.mode === 'add';
   const check = checkClosureForm(state, dayClasses);
@@ -213,6 +215,11 @@ export default function ClosureDialog({ state, dayClasses, orphans, isPhone, onC
             </div>
           )}
           {check.someError && <Notice>{check.someError}</Notice>}
+          {bookingCount > 0 && state.mode !== 'view' && (
+            <div className="csome-orphans">
+              <Notice>{T.closureBookings(bookingCount)}</Notice>
+            </div>
+          )}
           {orphans.length > 0 && (
             <div className="csome-orphans">
               <Notice>

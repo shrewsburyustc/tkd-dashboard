@@ -12,10 +12,10 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Forms-Build-Plan.md` (ap
 |---|---|
 | F0 Plan + questions Q1–Q7 | Done 2026-10-18 (v0.145) |
 | F2 Migration 0009 + tests + security review | Done 2026-10-18; PGlite 78/78 |
-| F4 Staff screens + Calendar bookings + preview data; design review | Next |
+| F4 Staff screens + Calendar bookings + preview data; design review | Done 2026-10-18 (preview only); 9 differences wait for Jeffrey in F5 |
 | F1 Merge main (after Color Belt phase 2 is merged — the Main session merges when Jeffrey asks) | Waiting |
 | F3 Public page + Cloudflare function; security review | Waiting for F1 |
-| F5 Jeffrey tries it in preview | Waiting |
+| F5 Jeffrey tries it in preview (and decides the F4 differences below) | Next |
 | F6 Live setup (0009 after 0007 / 0008; two-connection race test; registrar password; Cloudflare settings) | Waiting |
 | F7 Go live, with Prospects (step 4) | Needs a separate OK |
 
@@ -69,3 +69,29 @@ No High findings. Fixed:
    - The school alert can go to the front-desk Gmail address.
    - Until a sender exists, the app's email switches say "Emails start once the school's sending address is set up."
    - Decided before F3.
+
+## What F4 added (2026-10-18, preview only — nothing live, nothing pushed)
+
+- **Forms section** (rail item "Forms", ti-clipboard-text, after Calendar; address `#forms`; the phone bar now has 5 buttons):
+  - list (Form · Status · This month · Type; W/S letters on Both; Share; ⋯ Edit, Fill in, Duplicate, Close / Open again, Delete — only without sign-ups);
+  - New form (name + 4 template cards; asks the school on Both);
+  - builder: PC three panels, tablet "+ Add field", phone list + full-screen editor + ⋯ Move up / Move down / Delete; saves as you go (draft), Publish, "Accepting sign-ups";
+  - booking settings with their own Save and "Changes here go live right away";
+  - Share (link; QR and kiosk say they arrive with F3), Fill in (steps, children, a time per child as cards, waiver + drawn signature, Sent screen), Preview;
+  - staff: no building; row → read-only Preview; Fill in and Share.
+- **Calendar:** "N free classes" chip (amber "· class cancelled" when a booked class no longer runs), phone dot, day panel "Free classes" list with amber "Class cancelled — call the family", week-view badge, closure dialog warning "N free-class bookings are on these classes — you'll need to call…". If the Forms functions aren't in the database yet, the Calendar shows without bookings.
+- **Code:** `src/lib/forms/` (fields.js rules = 0009's checks, api.js, useForms.js, checks.mjs — 8 groups pass), `src/lib/mockForms.js` (fake 0009 with the same answers), `src/screens/Forms.jsx`, `src/screens/forms/*`, `src/styles/forms.css`. Calendar checks gained a bookings group (11 groups pass). `npm run build` and `build:preview-mode` pass.
+- **Shared files touched:** `src/App.jsx`, `src/components/navItems.js`, `src/lib/mockClient.js`.
+- **Design review (separate agent):** 1 High (the phone ⋯ menu crashed the app — fixed), 5 Medium (time picker as cards, keyboard way back to Form settings, focus on the first field, link "not live until F3" note, amber chip says why — all fixed), 8 Low (6 fixed; the tablet "+ Add field" menu opening over the rail and the staff phone ⋯ sheet are left as they are).
+
+## Differences from the approved mockup — for Jeffrey to decide in F5
+
+1. Field types are added by **click** (after the chosen field); dragging a type from the palette into the form isn't built. Fields are moved by their grip.
+2. **Booking settings have their own Save button** (they go live right away, v0.146); the rest saves as you go.
+3. The waiver has **no "Checkbox wording" or "Signature required"** setting: the wording is "I have read and agree to the waiver" and a signature is always needed (the database stores only the waiver text).
+4. **QR code and kiosk** are notes until step F3; the link can be copied but works only after F3 (the dialog says so).
+5. **Staff:** clicking a row opens a read-only Preview; on a phone, staff reach Fill in through a ⋯ sheet (the mockup says "no ⋯" for staff).
+6. The **form name** can also be changed in Form settings.
+7. **Switches are checkboxes** (the same control used elsewhere in the app).
+8. A **required waiver can be made "Show only if…"** — allowed by the database; confirm that's fine.
+9. Fill in shows **"1 spot left" only on the last spot**, like the mockup; "No time yet — we'll call to set one up" is offered as the last choice.

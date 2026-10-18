@@ -902,3 +902,37 @@ button.cchip--btn:focus-visible {
   flex-direction: column;
   gap: 0;
 }
+
+/* ----- Free-class bookings from Forms (v0.145 answer 6) ----- */
+.cchip--free {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+}
+
+.cchip--free.is-warn {
+  border-color: var(--color-tag-warn-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.cpanel-free.is-warn {
+  border-radius: var(--radius-tag);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.cpanel-free-warn {
+  display: block;
+  font-size: var(--text-12);
+  font-weight: 500;
+}
+
+.cweek-free {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: var(--space-4);
+  font-size: var(--text-12);
+  font-weight: 600;
+}

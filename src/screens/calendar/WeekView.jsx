@@ -6,11 +6,12 @@
 //   - classes in their colors; cancelled ones crossed out on amber stripes; a whole closed day
 //     is striped amber
 //   - timed one-day events in their type's color with a thicker left edge
+//   - a class with free-class bookings shows ti-user-plus and how many (Forms)
 // Clicking an event or a closure opens it (edit for admins, view for staff). Class boxes are
 // not buttons here — classes are changed in the Schedule.
 //
 // Props: dates (7), today, infoFor, typeColor, both, onOpenEvent, onOpenClosure
-import { IconAlertTriangle, IconCalendarEvent, IconCertificate } from '@tabler/icons-react';
+import { IconAlertTriangle, IconCalendarEvent, IconCertificate, IconUserPlus } from '@tabler/icons-react';
 import { colorOf } from '../../lib/schedule/colors.js';
 import { eventTimeOn } from '../../lib/calendar/days.js';
 import { formatRange, hourLabel } from '../../lib/schedule/time.js';
@@ -155,13 +156,19 @@ export default function WeekView({ dates, today, infoFor, typeColor, both, onOpe
                   const tall = (item.end - item.start) * PX_PER_MIN >= 34;
                   if (item.kind === 'class') {
                     const first = colorOf(item.c.colorKeys[0]);
-                    const label = `${both ? `${T.SCHOOL_NAME[item.code]}: ` : ''}${item.c.name}, ${formatRange(item.start, item.end, true)}${item.c.cancelled ? `, ${T.CANCELLED}` : ''}`;
+                    const label = `${both ? `${T.SCHOOL_NAME[item.code]}: ` : ''}${item.c.name}, ${formatRange(item.start, item.end, true)}${item.c.cancelled ? `, ${T.CANCELLED}` : ''}${item.c.bookings ? `, ${T.freeBadge(item.c.bookings)}` : ''}`;
                     return (
                       <div key={item.id} role="listitem" className="sslot-wrap" style={{ ...style, '--slot-fill': splitFill(item.c.colorKeys), '--slot-edge': first.edge, '--slot-text': first.text }}>
                         <div className={`sslot${item.c.cancelled ? ' is-cancelled' : ''}`} role="img" aria-label={label} title={label}>
                           <span className="sslot-name">
                             {both && <b className="cchip-letters">{T.SCHOOL_LETTER[item.code]}</b>}
                             {item.c.name}
+                            {item.c.bookings > 0 && (
+                              <span className="cweek-free" aria-hidden="true">
+                                <IconUserPlus size={12} />
+                                {item.c.bookings}
+                              </span>
+                            )}
                           </span>
                           {tall && <span className="sslot-time">{formatRange(item.start, item.end)}</span>}
                         </div>

@@ -15,6 +15,8 @@ function dotsFor(info, typeColor) {
   if (info.closures.length) dots.push({ key: 'closed', color: AMBER });
   for (const e of info.events) dots.push({ key: e.event.id, color: typeColor(e.event.typeId).edge });
   for (const t of info.testing) dots.push({ key: t.id, color: colorOf('purple').edge });
+  // free classes booked through Forms (amber when one is on a cancelled class)
+  if (info.bookingCount) dots.push({ key: 'free', color: info.bookingProblems ? AMBER : 'var(--color-blue)' });
   return dots.slice(0, 3);
 }
 

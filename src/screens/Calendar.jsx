@@ -107,6 +107,7 @@ export default function Calendar({ location, isAdmin, screenLocked, onNoAccess, 
       closures: loaded?.closures ?? [],
       closureClasses: loaded?.closureClasses ?? new Map(),
       testingEvents: loaded?.testingEvents ?? [],
+      bookings: loaded?.bookings ?? [],
     };
     return (codes) => ({ ...base, schools: allSchools.filter((s) => codes.includes(s.code)) });
   }, [loaded, allSchools]);
@@ -367,6 +368,18 @@ export default function Calendar({ location, isAdmin, screenLocked, onNoAccess, 
     const codes = d.values.school === 'both' ? ALL_CODES : [d.values.school];
     if (!d.values.startsOn) return codes.map((code) => ({ code, name: T.SCHOOL_NAME[code], classes: [] }));
     return buildDay(d.values.startsOn, ref.current.ctxFor(codes)).schools;
+  }
+  // How many free-class bookings sit on the classes this closure cancels (the dialog warns:
+  // someone has to call those families, v0.145 answer 6).
+  function closureBookingCount(d) {
+    const v = d.values;
+    if (!v.startsOn || !v.endsOn || v.endsOn < v.startsOn) return 0;
+    const codes = v.school === 'both' ? ALL_CODES : [v.school];
+    const bookings = (ref.current.loaded?.bookings ?? []).filter((b) => b.status === 'booked' && codes.includes(b.locationCode));
+    if (v.wholeDay) return bookings.filter((b) => b.date >= v.startsOn && b.date <= v.endsOn).length;
+    const day = buildDay(v.startsOn, ref.current.ctxFor(codes));
+    const ticked = day.schools.flatMap((s) => s.classes.filter((c) => v.slotIds.includes(c.slot.id)).map((c) => ({ code: s.code, slot: c.slot })));
+    return bookings.filter((b) => b.date === v.startsOn && ticked.some((t) => t.code === b.locationCode && t.slot.classIds.includes(b.classId) && toTimeText(t.slot.start) === b.start)).length;
   }
   function closureOrphans(d) {
     if (d.mode === 'add' || !d.snapshot || d.snapshot.wholeDay) return [];
@@ -675,6 +688,7 @@ export default function Calendar({ location, isAdmin, screenLocked, onNoAccess, 
           state={dialog}
           dayClasses={closureDayClasses(dialog)}
           orphans={closureOrphans(dialog)}
+          bookingCount={closureBookingCount(dialog)}
           onSave={saveClosure}
           onRemove={removeClosureFromDialog}
           {...common}

@@ -5,6 +5,7 @@
 //   - the day a planned schedule starts (dashed chip)
 //   - events in their type's color; Color Belt / Star testing events (purple, ti-certificate)
 //   - "4 classes" in gray (crossed out when the whole day is closed)
+//   - "2 free classes" (ti-user-plus) booked through Forms; amber when one is on a cancelled class
 // Busy days show "+N more" instead of growing. Days of the months before and after are grayed.
 // On Both, each chip starts with W or S (W S for both schools) and class counts add up.
 // The chips are drawn for the eye; the button's label reads the same summary out loud.
@@ -17,7 +18,7 @@
 //   typeColor   (typeId) => color record (schedule/colors.js)
 //   both        true on "Both" (school letters)
 //   onPick      (date, element) => void
-import { IconAlertTriangle, IconCalendarEvent, IconCertificate } from '@tabler/icons-react';
+import { IconAlertTriangle, IconCalendarEvent, IconCertificate, IconUserPlus } from '@tabler/icons-react';
 import { colorOf } from '../../lib/schedule/colors.js';
 import * as T from './text.js';
 
@@ -107,6 +108,12 @@ export default function MonthGrid({ weeks, month, today, selected, infoFor, type
                         {info.cancelledCount > 0 && info.cancelledCount < info.classCount && (
 <s className="cchip-cancelled">{T.someCancelled(info.cancelledCount)}</s>
                         )}
+                      </span>
+                    )}
+                    {info.bookingCount > 0 && (
+                      <span className={`cchip cchip--free${info.bookingProblems ? ' is-warn' : ''}`}>
+                        {info.bookingProblems ? <IconAlertTriangle size={12} aria-hidden="true" /> : <IconUserPlus size={12} aria-hidden="true" />}
+                        <span className="cchip-text">{T.freeChip(info.bookingCount, info.bookingProblems)}</span>
                       </span>
                     )}
                   </span>
