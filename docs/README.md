@@ -17,7 +17,7 @@ School management dashboard for Jae H. Jeong's U.S. Taekwondo Center (Worcester 
 | `Dashboard Docs/TKD-Dashboard-Mockups.html` | Style reference only (colors, sizes, rail hover). Made before v0.9 — section names and layout are placeholders. |
 | `Testing/Color Belt Testing/` | Color Belt: inventory of the old system, approved phase 1 mockups (Classes and ranks), phase 1 build plan. |
 | `Testing/Star Testing/` | Star testing: inventory of the old prototype; `Old prototype/` holds the never-used prototype and its notes (feature reference only). |
-| `Prospects/` | New students: approved Schedule mockups (`TKD-Class-Schedule-Mockups.html`, rev 2) and Calendar mockups (`TKD-Calendar-Mockups.html`, rev 1), Oct 17, 2026. Forms and the prospects list come next, one at a time. |
+| `Prospects/` | New students: approved Schedule mockups (`TKD-Class-Schedule-Mockups.html`, rev 2) Calendar mockups (`TKD-Calendar-Mockups.html`, rev 1) and Forms mockups (`TKD-Forms-Mockups.html`, rev 1), Oct 17, 2026. The prospects list comes next. |
 | `Dashboard Docs/Build contracts/` | Build contracts for Home (`BUILD-CONTRACT.md`) and migration 0002 (`CONTRACT-0002.md`). |
 | `README.md` | This file. |
 
@@ -63,5 +63,6 @@ The school logo used for brand colors lives in `U.S.T.C Projects\Logos\Logo.png`
 
 - **Schedule** (mockups approved Oct 17, 2026 — not approved to build): first step of the new-students work (Schedule → Calendar → Forms → Prospects list). Built after Color Belt phase 1 is merged, because schedule classes come from Classes and ranks.
 - **Calendar** (mockups approved Oct 17, 2026 — not approved to build): Month view (default) and Week view; classes, closures, events colored by event type, and free-class bookings once Forms exist.
+- **Forms** (mockups approved Oct 17, 2026 — not approved to build): in-app three-panel form builder, public forms in short steps with free-class booking, link / QR / front-desk kiosk, confirmation and school emails.
 
 Sections are added only when Jeffrey says so, one at a time.
