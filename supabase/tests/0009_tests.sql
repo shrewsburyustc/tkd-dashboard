@@ -88,7 +88,8 @@ declare
   v_helper_fns text[] := array['forms_bad_text', 'forms_long_text_ok', 'forms_date_ok', 'forms_submission_answer', 'forms_phone_ok', 'forms_email_ok', 'forms_signature_ok',
                                'forms_slug_ok', 'forms_fields_are_valid', 'forms_fields_publishable', 'forms_settings_are_valid',
                                'forms_template', 'forms_before_write', 'forms_submissions_log', 'forms_refuse_truncate',
-                               'forms_slots_on', 'forms_spot_limit', 'forms_times', 'forms_check_answers', 'forms_submit_core'];
+                               'forms_slots_on', 'forms_spot_limit', 'forms_times', 'forms_check_answers', 'forms_submit_core',
+                               'forms_purge_old_signatures'];
 begin
   -- -------------------------------------------------------------------
   -- Setup (as postgres)
@@ -400,6 +401,14 @@ begin
     raise exception 'TEST FAILED: 7e a sign-up must never change';
   exception when check_violation then null;
   end;
+  begin
+    update public.form_submissions set signature = null, parent_name = 'Changed' where id = v_sub1;
+    raise exception 'TEST FAILED: 7e2 removing the signature must not let anything else change';
+  exception when check_violation then null;
+  end;
+  if (select signed_at from public.form_submissions where id = v_sub1) is null then
+    raise exception 'TEST FAILED: 7f a signed sign-up keeps "Signed on" (signed_at)';
+  end if;
 
   -- -------------------------------------------------------------------
   -- Test 8: the last spot, the shared limit, closures
@@ -554,6 +563,35 @@ begin
      or public.forms_public_email_result(v_slug || '-2', v_key1, 'family', false) ->> 'status' <> 'not_found'
      or public.forms_public_email_result(v_slug, v_key1, 'sms', false) ->> 'status' <> 'invalid' then
     raise exception 'TEST FAILED: 10i email results only for that form''s own sign-up';
+  end if;
+
+  -- -------------------------------------------------------------------
+  -- Test 11: signatures are deleted 90 days after the free class (Jeffrey,
+  -- 2026-10-18); the sign-up keeps "Signed on"
+  -- -------------------------------------------------------------------
+  -- move this sign-up's free class 91 days into the past (as postgres, test only)
+  alter table public.class_bookings disable trigger class_bookings_before_write;
+  alter table public.class_bookings disable trigger class_bookings_log;
+  update public.class_bookings set on_date = v_today - 91 where submission_id = v_sub1;
+  alter table public.class_bookings enable trigger class_bookings_before_write;
+  alter table public.class_bookings enable trigger class_bookings_log;
+  select max(id) into v_mark from public.change_log;
+  v_n := public.forms_purge_old_signatures();
+  if v_n < 1
+     or (select signature from public.form_submissions where id = v_sub1) is not null
+     or (select signed_at from public.form_submissions where id = v_sub1) is null then
+    raise exception 'TEST FAILED: 11a the picture should be gone 90 days after the class, "Signed on" kept (purged %, dates %, signed %)',
+      v_n, (select string_agg(on_date::text, ',') from public.class_bookings where submission_id = v_sub1),
+      (select signed_at from public.form_submissions where id = v_sub1);
+  end if;
+  if not exists (select 1 from public.change_log l where l.id > v_mark and l.record_id = v_sub1
+                  and l.action = 'forms_purge_signatures' and l.actor_name = 'Signature clean-up'
+                  and l.before ->> 'signature' = 'on file' and l.after ->> 'signature' is null) then
+    raise exception 'TEST FAILED: 11b the clean-up is in the history (without the picture)';
+  end if;
+  -- a sign-up whose class is still to come keeps its picture
+  if (select count(*) from public.form_submissions where form_id = v_f1 and signature is not null) <> 1 then
+    raise exception 'TEST FAILED: 11c only old signatures are removed';
   end if;
 
   -- -------------------------------------------------------------------

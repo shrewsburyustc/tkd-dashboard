@@ -57,8 +57,15 @@ No High findings. Fixed:
 - **L7:** a signature must be at least 200 characters.
 - **Note:** closure records are also matched on the closure's school.
 
-## Open points for Jeffrey (later, one at a time)
+## Decided after F2 (Jeffrey, 2026-10-18, rulebook v0.146)
 
-1. **How long signatures are kept.** Color Belt deletes them 90 days after testing. Forms currently keeps them with the sign-up. The 2-year clean-up comes with Prospects (step 4), and it must also remove the history copies.
-2. **Booking settings take effect straight away** on a Live form, without Publish (spot limits and which classes). The field list still needs Publish.
-3. **The email service** (v0.145 answer 2) is chosen before F3.
+1. **Signatures:**
+   - the picture is deleted 90 days after the free class, or after signing if no class was booked;
+   - the sign-up keeps "Signed on" (`signed_at`);
+   - this is built in 0009 (`forms_purge_old_signatures`), runs inside the Send, Fill in and signature-read functions, and is tested (11a–c). PGlite 78/78.
+2. **Booking settings take effect right away** (already built that way). The screen must say "Changes here go live right away".
+3. **Email sender: open.**
+   - Jeffrey checks whether the school owns a web address. Options: its own address + Resend, or launch without emails.
+   - The school alert can go to the front-desk Gmail address.
+   - Until a sender exists, the app's email switches say "Emails start once the school's sending address is set up."
+   - Decided before F3.

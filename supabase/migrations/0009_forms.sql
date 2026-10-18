@@ -40,7 +40,10 @@
 --   UNLOCKED staff can read them (has_data_access()). The signature
 --   column is granted to nobody: it is read one at a time through
 --   forms_submission_signature(), and the history (change_log) stores
---   "on file" instead of the picture. Deleting non-joined prospects after
+--   "on file" instead of the picture. The picture itself is DELETED 90 days
+--   after the free class (or after signing, without a free class); the
+--   sign-up keeps "Signed on <date>" (signed_at) - Jeffrey, 2026-10-18,
+--   like Color Belt's family form. Deleting non-joined prospects after
 --   2 years comes with step 4 (Prospects) - and must also remove the
 --   copies in change_log.
 --
@@ -503,6 +506,7 @@ create table if not exists public.form_submissions (
   parent_email      text        not null,
   children          jsonb       not null,
   signature         text        null,
+  signed_at         timestamptz null,
   entered_by        text        null,
   source            text        not null,
   submission_key    uuid        not null,
@@ -520,12 +524,14 @@ create table if not exists public.form_submissions (
   constraint form_submissions_key unique (form_id, submission_key),
   constraint form_submissions_source_check check (source in ('public', 'kiosk', 'staff')),
   constraint form_submissions_signature_check check (signature is null or public.forms_signature_ok(signature)),
+  constraint form_submissions_signed_check check (signature is null or signed_at is not null),
   constraint form_submissions_size_check check (octet_length(answers::text) <= 20000 and octet_length(children::text) <= 2000),
   constraint form_submissions_version_check check (version >= 1)
 );
 
 create index if not exists form_submissions_form_idx on public.form_submissions (form_id, created_at);
 create index if not exists form_submissions_key_idx on public.form_submissions (submission_key);
+create index if not exists form_submissions_signature_idx on public.form_submissions (created_at) where signature is not null;
 
 -- 2e. class_booking_slots - one row per class time (school, class, date,
 -- start) that has ever been booked. It is the row that gets LOCKED, so
@@ -677,6 +683,16 @@ begin
   end if;
 
   if tg_table_name = 'form_submissions' then
+    -- the ONE change ever allowed: the 90-day clean-up removing the picture
+    if old.signature is not null and new.signature is null
+       and (to_jsonb(new) - array['signature', 'version', 'updated_at', 'updated_by', 'updated_by_name'])
+           = (to_jsonb(old) - array['signature', 'version', 'updated_at', 'updated_by', 'updated_by_name']) then
+      new.version         := old.version + 1;
+      new.updated_at      := now();
+      new.updated_by      := auth.uid();
+      new.updated_by_name := public.change_log_actor_name();
+      return new;
+    end if;
     raise exception using errcode = '23514', constraint = 'form_submissions_immutable',
       message = 'form_submissions: a sign-up is never changed';
   end if;
@@ -722,20 +738,26 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_row jsonb;
+  v_old jsonb;
+  v_new jsonb;
 begin
-  v_row := case when tg_op = 'DELETE' then to_jsonb(old) else to_jsonb(new) end;
-  v_row := (v_row - 'signature')
-           || jsonb_build_object('signature', case when v_row ->> 'signature' is null then null else 'on file' end);
+  -- the signature is never copied: "on file" or null instead
+  if tg_op <> 'INSERT' then
+    v_old := (to_jsonb(old) - 'signature')
+             || jsonb_build_object('signature', case when old.signature is null then null else 'on file' end);
+  end if;
+  if tg_op <> 'DELETE' then
+    v_new := (to_jsonb(new) - 'signature')
+             || jsonb_build_object('signature', case when new.signature is null then null else 'on file' end);
+  end if;
   insert into public.change_log
     (actor_id, actor_name, session_id, batch_id, action, table_name, record_id, location_code, op, before, after)
   values
     (auth.uid(), public.change_log_actor_name(), public.current_session_id(),
      nullif(current_setting('tkd.batch_id', true), '')::uuid,
      coalesce(nullif(current_setting('tkd.action', true), ''), 'manual'),
-     tg_table_name, (v_row ->> 'id')::uuid, v_row ->> 'location_code', lower(tg_op),
-     case when tg_op = 'DELETE' then v_row else null end,
-     case when tg_op = 'DELETE' then null else v_row end);
+     tg_table_name, (coalesce(v_new, v_old) ->> 'id')::uuid, coalesce(v_new, v_old) ->> 'location_code', lower(tg_op),
+     v_old, v_new);
   return null;
 end;
 $$;
@@ -811,7 +833,7 @@ grant select (id, form_id, location_code, class_id, default_limit, days_ahead, m
 grant select (id, form_id, location_code, class_id, weekday, starts_at, spot_limit, version)
   on public.form_booking_limits to authenticated;
 grant select (id, form_id, location_code, published_version, fields, answers, parent_name, parent_phone, parent_email,
-              children, entered_by, source, created_at, created_by_name)
+              children, signed_at, entered_by, source, created_at, created_by_name)
   on public.form_submissions to authenticated;
 -- (form_submissions.signature and submission_key are NOT granted.)
 
@@ -1188,14 +1210,14 @@ begin
   begin
   insert into public.form_submissions
     (form_id, location_code, published_version, fields, answers, parent_name, parent_phone, parent_email,
-     children, signature, entered_by, source, submission_key)
+     children, signature, signed_at, entered_by, source, submission_key)
   values
     (v_form.id, v_form.location_code, v_form.published_version, v_form.published, p_answers,
      public.testing_normalize_name(p_answers ->> 'parent_name'), btrim(p_answers ->> 'parent_phone'), btrim(p_answers ->> 'parent_email'),
      (select jsonb_agg(jsonb_build_object('first_name', public.testing_normalize_name(c ->> 'first_name'), 'age', (c ->> 'age')::integer)
                        order by ord)
         from jsonb_array_elements(p_children) with ordinality as t(c, ord)),
-     p_signature, p_entered_by, p_source, p_submission_key)
+     p_signature, case when p_signature is null then null else now() end, p_entered_by, p_source, p_submission_key)
   returning id into v_id;
   exception when unique_violation then
     -- the same Send arrived twice at the same moment: the first one wins
@@ -1236,6 +1258,41 @@ $$;
 
 revoke execute on function public.forms_submit_core(uuid, uuid, integer, jsonb, jsonb, jsonb, text, text, text) from public, anon, authenticated, service_role;
 
+
+-- 6c. forms_purge_old_signatures() - removes the signature PICTURE of
+-- every sign-up whose free class was more than 90 days ago (the latest
+-- booked date), or that was signed more than 90 days ago without a free
+-- class (Jeffrey, 2026-10-18). The sign-up keeps signed_at ("Signed on
+-- <date>"). No pg_cron needed: it runs inside the functions that are
+-- already called (the public Send, staff Fill in, reading a signature),
+-- like Color Belt's 0005. Logged as "Signature clean-up".
+create or replace function public.forms_purge_old_signatures()
+returns integer
+language plpgsql
+volatile
+security invoker
+set search_path = ''
+as $$
+declare
+  v_n integer;
+  v_label text := current_setting('tkd.actor_label', true);
+  v_action text := current_setting('tkd.action', true);
+begin
+  perform set_config('tkd.actor_label', 'Signature clean-up', true);
+  perform set_config('tkd.action', 'forms_purge_signatures', true);
+  update public.form_submissions s
+     set signature = null
+   where s.signature is not null
+     and coalesce((select max(b.on_date) from public.class_bookings b where b.submission_id = s.id),
+                  (s.signed_at at time zone 'America/New_York')::date) + 90 < public.schedule_today();
+  get diagnostics v_n = row_count;
+  perform set_config('tkd.actor_label', coalesce(v_label, ''), true);
+  perform set_config('tkd.action', coalesce(v_action, ''), true);
+  return v_n;
+end;
+$$;
+
+revoke execute on function public.forms_purge_old_signatures() from public, anon, authenticated, service_role;
 
 -- ---------------------------------------------------------------------
 -- 7. Staff functions (security definer; the usual pattern: has_data_access
@@ -1636,6 +1693,7 @@ declare
 begin
   if public.has_data_access() is not true then return jsonb_build_object('status', 'no_access'); end if;
   if p_form_id is null or p_submission_key is null then return jsonb_build_object('status', 'invalid'); end if;
+  perform public.forms_purge_old_signatures();
   begin
     perform set_config('tkd.action', 'forms_staff_submit', true);
     v_result := public.forms_submit_core(p_form_id, p_submission_key, p_published_version, p_answers, p_children,
@@ -1734,11 +1792,13 @@ declare
 begin
   if public.has_data_access() is not true then return jsonb_build_object('status', 'no_access'); end if;
   if p_submission_id is null then return jsonb_build_object('status', 'invalid'); end if;
+  perform public.forms_purge_old_signatures();   -- an old picture is never shown
   select s.signature, s.location_code into v_sig, v_loc from public.form_submissions s where s.id = p_submission_id;
   if not found then return jsonb_build_object('status', 'not_found'); end if;
   insert into public.form_signature_views (submission_id, location_code, viewer_id, viewer_name, session_id)
   values (p_submission_id, v_loc, auth.uid(), public.change_log_actor_name(), public.current_session_id());
-  return jsonb_build_object('status', 'ok', 'signature', v_sig);
+  return jsonb_build_object('status', 'ok', 'signature', v_sig,
+                            'signed_at', (select s.signed_at from public.form_submissions s where s.id = p_submission_id));
 end;
 $$;
 
@@ -1969,6 +2029,8 @@ begin
 
   insert into public.forms_public_attempts (client_key, form_id, kiosk, outcome)
   values (coalesce(left(p_client_key, 200), ''), v_form_id, v_kiosk, coalesce(v_result ->> 'status', 'invalid'));
+
+  perform public.forms_purge_old_signatures();
 
   if v_result ->> 'status' = 'time_taken' and v_form_id is not null then
     v_result := v_result || jsonb_build_object('times', coalesce((
