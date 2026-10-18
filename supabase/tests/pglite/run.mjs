@@ -22,9 +22,10 @@
 //       privileges (which 0001 removed), so the 0003 checks prove that
 //       0003's OWN revokes lock everything down, not just 0001's defaults
 //    6. 0003_testing_classes_ranks.sql, then 0004_staff_accounts.sql,
-//       then 0007_schedule.sql, then 0008_calendar.sql, then 0009_forms.sql
+//       then 0007_schedule.sql, then 0008_calendar.sql, then 0009_forms.sql,
+//       then 0010_prospects.sql
 //    7. tests: verify_pin_tests.sql, 0002_tests.sql, 0003_tests.sql,
-//       0004_tests.sql, 0007_tests.sql, 0008_tests.sql, 0009_tests.sql
+//       0004_tests.sql, 0007_tests.sql, 0008_tests.sql, 0009_tests.sql, 0010_tests.sql
 //    8. a seed (7 classes / 42 ranks per school) - built in, or with
 //       --fixture-seed Builder B's generated fixture seed file - then
 //       0003_tests.sql again (the tests must pass before AND after seeding)
@@ -42,6 +43,8 @@
 //       and 0008_tests.sql (and 0007_tests.sql still passes after it)
 //   9e. 0009 applied a SECOND time: same idea with 0009_fingerprints.sql
 //       and 0009_tests.sql
+//   9f. 0010 applied a SECOND time: same idea with 0010_fingerprints.sql
+//       and 0010_tests.sql (and 0009 re-run must not undo 0010)
 //   10. UPGRADE check, on a second fresh database: steps 1-5, then the
 //       EARLIER copy of 0003 (fixtures/0003_before_v062.sql), a seed, then
 //       today's 0003 over it. Every row must survive, the fingerprints
@@ -234,6 +237,7 @@ async function main() {
   if (!(await run(db, 'apply 0007_schedule.sql', read('migrations', '0007_schedule.sql')))) return finish();
   if (!(await run(db, 'apply 0008_calendar.sql', read('migrations', '0008_calendar.sql')))) return finish();
   if (!(await run(db, 'apply 0009_forms.sql', read('migrations', '0009_forms.sql')))) return finish();
+  if (!(await run(db, 'apply 0010_prospects.sql', read('migrations', '0010_prospects.sql')))) return finish();
 
   // 7. tests on the empty (unseeded) database
   await runTestFile(db, 'verify_pin_tests.sql', 'verify_pin_tests.sql', 'ALL PIN TESTS PASSED');
@@ -243,6 +247,7 @@ async function main() {
   await runTestFile(db, '0007_tests.sql (before seed)', '0007_tests.sql', 'ALL 0007 TESTS PASSED');
   await runTestFile(db, '0008_tests.sql (before seed)', '0008_tests.sql', 'ALL 0008 TESTS PASSED');
   await runTestFile(db, '0009_tests.sql (before seed)', '0009_tests.sql', 'ALL 0009 TESTS PASSED');
+  await runTestFile(db, '0010_tests.sql (before seed)', '0010_tests.sql', 'ALL 0010 TESTS PASSED');
 
   // 8. seed, then the 0003 tests again
   let seedSql;
@@ -260,6 +265,7 @@ async function main() {
   await runTestFile(db, '0007_tests.sql (after seed)', '0007_tests.sql', 'ALL 0007 TESTS PASSED');
   await runTestFile(db, '0008_tests.sql (after seed)', '0008_tests.sql', 'ALL 0008 TESTS PASSED');
   await runTestFile(db, '0009_tests.sql (after seed)', '0009_tests.sql', 'ALL 0009 TESTS PASSED');
+  await runTestFile(db, '0010_tests.sql (after seed)', '0010_tests.sql', 'ALL 0010 TESTS PASSED');
 
   // 9. re-run safety
   const before = await fingerprints(db);
@@ -325,6 +331,22 @@ async function main() {
   record('0009 fingerprints identical before/after re-run', JSON.stringify(before9) === JSON.stringify(after9), `${after9.length} rows`);
   await runTestFile(db, '0009_tests.sql (after re-run)', '0009_tests.sql', 'ALL 0009 TESTS PASSED');
   await runTestFile(db, '0008_tests.sql (after 0009 re-run)', '0008_tests.sql', 'ALL 0008 TESTS PASSED');
+  await runTestFile(db, '0010_tests.sql (after 0009 re-run)', '0010_tests.sql', 'ALL 0010 TESTS PASSED');
+
+  // 9f. 0010 re-run safety
+  const prospectsSnapshotSql = `select md5(coalesce((select string_agg(to_jsonb(s)::text, ',' order by s.id) from public.prospect_statuses s), '')
+                          || coalesce((select string_agg(to_jsonb(p)::text, ',' order by p.id) from public.prospects p), '')
+                          || (select count(*) from public.change_log)::text)`;
+  const prospectsBefore = await one(db, prospectsSnapshotSql);
+  const before10 = await fingerprints(db, '0010_fingerprints.sql');
+  await run(db, 'apply 0010 a SECOND time (re-run safety)', read('migrations', '0010_prospects.sql'));
+  record('0010 re-run kept every status, prospect and the history unchanged', prospectsBefore === (await one(db, prospectsSnapshotSql)));
+  const after10 = await fingerprints(db, '0010_fingerprints.sql');
+  record('0010 fingerprints identical before/after re-run', JSON.stringify(before10) === JSON.stringify(after10), `${after10.length} rows`);
+  record('0010 seeded 7 statuses per school, once',
+    (await one(db, "select count(*)::int from public.prospect_statuses where builtin is not null or name = 'Contacted'")) === 14);
+  await runTestFile(db, '0010_tests.sql (after re-run)', '0010_tests.sql', 'ALL 0010 TESTS PASSED');
+  await runTestFile(db, '0009_tests.sql (after 0010 re-run)', '0009_tests.sql', 'ALL 0009 TESTS PASSED');
 
   // 10. upgrade check: earlier 0003 + data, then today's 0003 over it
   console.log('\nUpgrade check (earlier 0003 -> today\'s 0003):');
@@ -369,9 +391,27 @@ async function main() {
               record('[upgrade] 0008 fingerprints identical to a fresh install', JSON.stringify(up8) === JSON.stringify(after8), `${up8.length} rows`);
               await runTestFile(up, '[upgrade] 0008_tests.sql', '0008_tests.sql', 'ALL 0008 TESTS PASSED');
               if (await run(up, '[upgrade] apply 0009 on top', read('migrations', '0009_forms.sql'))) {
-                const up9 = await fingerprints(up, '0009_fingerprints.sql');
-                record('[upgrade] 0009 fingerprints identical to a fresh install', JSON.stringify(up9) === JSON.stringify(after9), `${up9.length} rows`);
                 await runTestFile(up, '[upgrade] 0009_tests.sql', '0009_tests.sql', 'ALL 0009 TESTS PASSED');
+                // 0009 live first, with a sign-up, then 0010: the backfill makes its prospects
+                await run(up, '[upgrade] a sign-up saved before 0010 (as postgres)', `
+                  insert into public.forms (location_code, name, slug, kind, status, draft, published, published_version, settings)
+                  values ('worcester', 'zz upgrade', 'zz-upgrade-form', 'blank', 'live', public.forms_template('blank'), public.forms_template('blank'), 1,
+                          '{"thank_you":"","alert_email":null,"confirm_email":false,"add_to_calendar":false}');
+                  insert into public.form_submissions (form_id, location_code, published_version, fields, answers, parent_name, parent_phone, parent_email,
+                                                       children, source, submission_key)
+                  select f.id, 'worcester', 1, f.published, '{}', 'Up Grade', '5085550000', 'up@example.com',
+                         '[{"first_name":"Una","age":6},{"first_name":"Ned","age":8}]', 'staff', gen_random_uuid()
+                    from public.forms f where f.slug = 'zz-upgrade-form';`);
+                if (await run(up, '[upgrade] apply 0010 on top', read('migrations', '0010_prospects.sql'))) {
+                  record('[upgrade] 0010 made prospects for the earlier sign-up (2 children)',
+                    (await one(up, "select count(*)::int from public.prospects p join public.form_submissions s on s.id = p.submission_id where s.parent_name = 'Up Grade'")) === 2);
+                  // (0009's fingerprints include the triggers 0010 adds to its tables, so they are compared after 0010)
+                  const up9 = await fingerprints(up, '0009_fingerprints.sql');
+                  record('[upgrade] 0009 fingerprints identical to a fresh install', JSON.stringify(up9) === JSON.stringify(after9), `${up9.length} rows`);
+                  const up10 = await fingerprints(up, '0010_fingerprints.sql');
+                  record('[upgrade] 0010 fingerprints identical to a fresh install', JSON.stringify(up10) === JSON.stringify(after10), `${up10.length} rows`);
+                  await runTestFile(up, '[upgrade] 0010_tests.sql', '0010_tests.sql', 'ALL 0010 TESTS PASSED');
+                }
               }
             }
           }
@@ -390,6 +430,8 @@ async function main() {
   for (const line of after8) console.log('  ' + line);
   console.log('\n0009 fingerprints (kind  item  detail):');
   for (const line of after9) console.log('  ' + line);
+  console.log('\n0010 fingerprints (kind  item  detail):');
+  for (const line of after10) console.log('  ' + line);
 
   return finish();
 }
