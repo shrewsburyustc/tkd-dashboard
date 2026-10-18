@@ -4,7 +4,8 @@
 // It copies the small part of the Supabase client the app uses — auth.signInWithPassword /
 // getSession / onAuthStateChange / signOut / updateUser, rpc, and from(table).select().eq().order()
 // — and follows the same rules as the real database (migrations 0001 + 0002 + 0003).
-// Testing → Classes and ranks lives in its own file, mockTesting.js; this file plugs it in.
+// Testing → Classes and ranks lives in its own file, mockTesting.js; Events, the roster with
+// payments and Settings → Schools live in mockTestingEvents.js (phase 2); this file plugs both in.
 //
 // Try it:  any email + password "preview" signs in as Jeffrey Berg (admin). PIN is 2580.
 // Test helpers in the browser console (F12 → Console):
@@ -21,6 +22,13 @@
 //   __tkdPreview.clearSchool('Shrewsbury') remove that school's classes (to see the empty state)
 //   __tkdPreview.resetTesting()           back to the default classes and ranks
 //   __tkdPreview.setTestingDelay(3000)    slow Testing calls down (e.g. to see the skeleton)
+// Events / roster / family form helpers (phase 2, contract 0005 §4.5 / §5):
+//   __tkdPreview.setToday('2026-11-20')   pretend it's another day in school time (null = real date)
+//                                         — event states, prices and Mark paid follow it
+//   __tkdPreview.setPublicRegistration(false) the family form's kill switch ("not open" everywhere)
+//   __tkdPreview.forceVerifyFailed(true)  the next family-form Send fails the human check
+//   __tkdPreview.forceRateLimited(true)   family-form Sends answer "too many tries" until set false
+//   (failNextSave, simulateOtherAdminEdit and resetTesting cover the events and roster too)
 // Staff accounts helpers (account menu → Admin → Staff accounts; mockStaff.js):
 //   __tkdPreview.failNextSave()           also makes the next Reset password / Reset PIN fail
 //   __tkdPreview.resetStaffAccounts()     the fake desk is signed in on 3 devices again
@@ -30,6 +38,8 @@ import { setLockedFlag } from './useIdleLock.js';
 import { readStorage, writeStorage, removeStorage } from './storage.js';
 import { isFourDigits, isPinTooEasy } from './pinRules.js';
 import { createTestingBackend, TESTING_RPC_NAMES } from './mockTesting.js';
+import { createEventsBackend, EVENT_RPC_NAMES, EVENT_RESTRICTED_RPC_NAMES, EVENT_TABLES } from './mockTestingEvents.js';
+import { previewToday, publicPreviewHelpers } from './testing/publicApi.preview.js';
 import { createStaffBackend, STAFF_RPC_NAMES } from './mockStaff.js';
 
 const SESSION_KEY = 'tkd.preview.session'; // the fake "signed in" session
@@ -186,6 +196,7 @@ function testingContext() {
     hasDataAccess: hasDataAccess(session),
     isAdmin: Boolean(session) && loadStaffState().role === 'admin' && passwordIsFresh(session),
     actorName: FAKE_STAFF.full_name,
+    userId: FAKE_STAFF.id, // auth.uid() — the 10-second Undo of a payment checks it (phase 2)
   };
 }
 
@@ -402,6 +413,18 @@ export function createMockClient() {
     newId: newUuid,
   });
 
+  // ----- Events, roster with payments, Settings → Schools (mockTestingEvents.js) -----
+  // Same store as Classes and ranks (the event copies classes from it).
+  const events = createEventsBackend({
+    readBase: () => testing.snapshot(),
+    saveStore: (store) => writeStorage(TESTING_KEY, JSON.stringify(store)),
+    now: () => Date.now(),
+    today: previewToday, // the real school date, or the one set with setToday
+    newId: newUuid,
+  });
+  // failNextSave arms this; the next Testing or Events save then fails (whichever comes first).
+  let failNextTesting = false;
+
   // The fake network time for Testing calls (setTestingDelay saves it so it survives a reload).
   function testingDelay() {
     const saved = readStorage(TESTING_DELAY_KEY);
@@ -426,6 +449,10 @@ export function createMockClient() {
         query.filters.push({ col, value });
         return builder;
       },
+      in(col, values) {
+        query.filters.push({ col, value: values, op: 'in' });
+        return builder;
+      },
       order(col, { ascending = true } = {}) {
         query.orders.push({ col, ascending });
         return builder;
@@ -441,6 +468,8 @@ export function createMockClient() {
           if (query.write) {
             return { data: null, error: { code: '42501', message: `permission denied for table ${table}`, details: null, hint: null }, status: 403 };
           }
+          // Phase 2 tables (and locations, which gained the address columns) → mockTestingEvents.js.
+          if (EVENT_TABLES.includes(table)) return events.select(table, query.columns, query.filters, query.orders, testingContext());
           return testing.select(table, query.columns, query.filters, query.orders, testingContext());
         };
         return run().then(resolve, reject);
@@ -473,8 +502,20 @@ export function createMockClient() {
       await wait(FAKE_DELAY_MS);
       return staffAccounts.rpc(name, args, staffContext());
     }
+    if (EVENT_RPC_NAMES.includes(name) || EVENT_RESTRICTED_RPC_NAMES.includes(name)) {
+      await wait(testingDelay());
+      if (failNextTesting && EVENT_RPC_NAMES.includes(name)) {
+        failNextTesting = false;
+        events.failNextSave();
+      }
+      return events.rpc(name, args, testingContext());
+    }
     if (name === 'has_data_access' || TESTING_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
+      if (failNextTesting && TESTING_RPC_NAMES.includes(name)) {
+        failNextTesting = false;
+        testing.failNextSave();
+      }
       return testing.rpc(name, args, testingContext());
     }
     await wait(FAKE_DELAY_MS / 2);
@@ -532,7 +573,7 @@ export function createMockClient() {
       return `The preview account is now ${role === 'admin' ? 'an admin' : 'staff (view only)'}. Reload the page to see it.`;
     },
     failNextSave() {
-      testing.failNextSave();
+      failNextTesting = true;
       staffAccounts.failNext();
       return 'The next Testing save (and the next Reset password / Reset PIN) will fail like a dropped connection and change nothing.';
     },
@@ -542,7 +583,8 @@ export function createMockClient() {
     },
     simulateOtherAdminEdit() {
       testing.simulateOtherAdminEdit();
-      return 'Another admin changed every class and rank and swapped two ranks. Open dialogs and Undo are now out of date.';
+      events.simulateOtherAdminEdit();
+      return 'Another admin changed every class, rank, event, student and school address, and swapped two ranks. Open dialogs and Undo are now out of date.';
     },
     clearSchool(school) {
       if (!testing.clearSchool(school)) return "Use clearSchool('Worcester') or clearSchool('Shrewsbury').";
@@ -550,7 +592,8 @@ export function createMockClient() {
     },
     resetTesting() {
       testing.reset();
-      return 'Testing is back to the default classes and ranks. Reload or switch schools to see them.';
+      events.reset();
+      return 'Testing is back to the default classes and ranks, the November Children Testing event with its students, and empty school addresses. Reload to see them.';
     },
     setTestingDelay(ms) {
       const value = Number(ms);
@@ -558,6 +601,8 @@ export function createMockClient() {
       writeStorage(TESTING_DELAY_KEY, String(value));
       return `Each Testing call now takes ${value} ms, even after a reload. setTestingDelay(${TESTING_DELAY_MS}) is the normal speed.`;
     },
+    // ----- Events / family form helpers (publicApi.preview.js) -----
+    ...publicPreviewHelpers(),
   };
 
   return { auth, rpc, from };

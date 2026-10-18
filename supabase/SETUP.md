@@ -507,6 +507,257 @@ commit;
 
 ---
 
+## 12. Migration 0005: Color Belt phase 2 (events, family form, payments, school addresses)
+
+**What it does** (`supabase/migrations/0005_testing_events.sql`, contract `docs/Dashboard Docs/Build contracts/CONTRACT-0005.md` §1):
+- **Events:** `testing_events` (one school, one testing day, the Open / Closed switch, an optional automatic closing date, a random 8-character link code), and the event's own **copy** of the classes and ranks it tests (`testing_event_classes`, `testing_event_ranks`): names, belts, prices and final award are copied when a class is added, and later changes in Classes and ranks never change the event.
+- **Registrations:** `testing_registrations` (names, belt, paying by, the 3-stripes tick, a `CB-` reference, the drawn signature for form entries) and **append-only** `testing_payments` (a mistake is fixed by a reversal row; rows are never changed). The drawn signature can **never** be read by the app, is **never** copied into `change_log` (the history shows "on file"), and is removed automatically **90 days after the testing date**.
+- **The family form:** a new restricted login, **`testing_registrar`**, used only by the Cloudflare Function (through Hyperdrive). It can run exactly two functions (`testing_public_event`, `testing_public_register`) and nothing else: no table, no other function, can't create anything, isn't part of any role, and Supabase's API can't switch into it. Every call is counted for a rate limit in `testing_public_attempts` (a hashed key, never a raw IP).
+- **School addresses:** four columns on `locations` (street, city, state, ZIP), changed by admins in **Settings → Schools** (`settings_update_school_address`).
+- **15 staff functions** (the only way to write), the roster view `testing_roster`, and the same security rules as 0003: RLS with `has_data_access()`, column rights only, nothing for `anon`, every change in `change_log`.
+
+**The order** (build plan §5): **CP2a** Cloudflare part 1 (12a) → **CP3** database (12b–12f) → **CP2b** Cloudflare part 2 (12g) → CP4 local check → **CP5** deploy with the switch **off**, then the TEST event (12h). Each step needs Jeffrey's OK. **Nothing secret goes into chat, git, `.env.local` or a screenshot** (handoff §6).
+
+### 12a. CP2a — Cloudflare part 1 (you, in the Cloudflare dashboard)
+
+0. **Before you copy any secret in this section (12a, 12d, 12g): turn off Windows clipboard history.** Windows **Settings → System → Clipboard**: switch **Clipboard history** off and **Sync across your devices** off. (Otherwise every secret you copy is kept in the Win+V list, and with sync on it's also sent to your other devices.) If you'd rather keep history on, then when this section is done, same page → **Clear clipboard data** → **Clear**.
+1. **Turnstile** (the "are you human" check). Cloudflare → **Turnstile** → **Add widget**: name `TKD family form`, hostname `tkd-dashboard.pages.dev`, widget mode **Managed**. Save. It shows a **Site Key** (public, fine to see) and a **Secret Key** (secret).
+2. **The client-key secret** (makes the hashed rate-limit key; never stored in the database). On your PC, in PowerShell, this puts 32 random bytes on the clipboard without showing them:
+   ```powershell
+   node -e "require('child_process').execSync('clip', { input: require('crypto').randomBytes(32).toString('base64url') })"
+   ```
+3. Cloudflare → **Workers & Pages** → `tkd-dashboard` → **Settings** → **Variables and Secrets** → **Production** only (leave **Preview** empty, so branch preview sites can never reach the database). Add:
+
+   | Name | Type | Value |
+   |---|---|---|
+   | `TURNSTILE_SITE_KEY` | Text | the Site Key |
+   | `TURNSTILE_SECRET` | **Secret** | the Secret Key (paste, save) |
+   | `CLIENT_KEY_SECRET` | **Secret** | paste from step 2 |
+   | `PUBLIC_REGISTRATION` | Text | `off` |
+   | `PUBLIC_ORIGIN` | Text | `https://tkd-dashboard.pages.dev` |
+
+   Then copy something harmless so the secret leaves the clipboard.
+4. Same project → **Settings** → **Runtime**: **Compatibility date** = a fixed date (today's is fine). The Function's database driver needs Node.js support: with a date of **2026-08-04 or later** Cloudflare turns it on by default and the **Compatibility flags** box can stay empty; with an older date, add `nodejs_compat` there. (Done 2026-10-18: date 2026-10-16, no flag.)
+5. **Rate limiting (optional)** — limits guessing link codes. A WAF rate-limiting rule **can't** be attached to a `pages.dev` address (those rules belong to a domain you own), so instead: same project → **Settings** → **Bindings** → **Add**. If the list offers **Rate limiting** (Cloudflare's Workers Rate Limiting binding) for this Pages project, add it for **Production** only:
+
+   | Setting | Value |
+   |---|---|
+   | Variable name | `RATE_LIMITER` |
+   | Namespace id | `1001` (any positive whole number not used by another rate limiter in your account) |
+   | Limit | `60` |
+   | Period | `60` seconds |
+
+   The Function uses `env.RATE_LIMITER` **only if it's there**, so skipping this breaks nothing.
+   **If the list doesn't offer it:** skip this step. The leftover risk is accepted for now (open item b): link codes are 8 random characters, and the database still counts every call per hashed key (`testing_public_attempts`) and refuses too many registrations. When the school has its own domain, add a WAF rate-limiting rule then (Cloudflare → that domain → **Security** → **WAF** → **Rate limiting rules**: URI path starts with `/api/register/`, per IP, 10 requests per 10 seconds, **Block**).
+6. Changes to variables take effect on the **next deployment** (nothing is deployed yet, so nothing changes now).
+
+### 12b. CP3 — before you apply 0005
+
+In the **SQL Editor**, run these in production and check each passes (sections 9, 10c, 11c): `verify_pin_tests.sql`, `0002_tests.sql`, `0003_tests.sql`, `0004_tests.sql`.
+`0003_tests.sql` passes before **and** after 0005: its catalog checks look only at the columns and functions 0003 itself makes (by name), so 0005's new read rights on `locations` and new `testing_*` functions don't count against it. 0005's own tests check those.
+
+### 12c. Apply 0005 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0005_testing_events.sql`.
+2. **SQL Editor → New query**, paste, **Run**.
+3. Supabase will warn about **destructive operations**. That's expected: the words are inside rules (`on delete cascade`), inside functions that run later (an admin removing an event or a student; old rate-limit rows being cleaned up) and in `… if exists` lines that make re-running safe. **Nothing is removed now.** Confirm.
+4. "Success. No rows returned." It's one transaction: on any error nothing is kept. Copy the error to Claude.
+
+**Running it again is safe** (it never changes the role's password or attributes). **Never re-run 0003 after this:** that would take away 0005's read rights on `locations` — if it ever happens, run 0005 again.
+
+### 12d. Set the `testing_registrar` password (you, on your PC + SQL Editor)
+
+**Clipboard history off first** (12a step 0). The real password must **never** be typed into the SQL Editor (it would sit in the query history and the database logs). Instead your PC makes a random password and its **SCRAM verifier** (a one-way scramble Postgres stores and checks logins against). Only the verifier goes into the SQL Editor; the password goes into your password manager and, in 12g, into Hyperdrive.
+
+1. Make a file **outside the repo**, e.g. `C:\Users\jberg\Documents\make-scram.mjs`, with exactly this:
+   ```js
+   // Makes a random password for testing_registrar and its SCRAM-SHA-256 verifier.
+   // The password goes to the clipboard (never shown); only the verifier is printed.
+   import { randomBytes, pbkdf2Sync, createHmac, createHash } from 'node:crypto';
+   import { execSync } from 'node:child_process';
+   const password = randomBytes(32).toString('base64url');   // 43 letters, digits, - and _
+   const salt = randomBytes(16);
+   const salted = pbkdf2Sync(password, salt, 4096, 32, 'sha256');
+   const clientKey = createHmac('sha256', salted).update('Client Key').digest();
+   const storedKey = createHash('sha256').update(clientKey).digest();
+   const serverKey = createHmac('sha256', salted).update('Server Key').digest();
+   execSync('clip', { input: password });
+   console.log(`alter role testing_registrar password 'SCRAM-SHA-256$4096:${salt.toString('base64')}$${storedKey.toString('base64')}:${serverKey.toString('base64')}';`);
+   ```
+   (Checked by Claude: for the same password and salt it gives exactly what PostgreSQL itself stores.)
+2. In PowerShell: `node C:\Users\jberg\Documents\make-scram.mjs`. The password is now on the clipboard: **save it in your password manager** as "TKD testing_registrar (Hyperdrive)". The terminal shows one `alter role … password 'SCRAM-SHA-256$4096:…';` line.
+3. Copy that line into a **new** SQL Editor query and **Run**. Then **delete that snippet** in the SQL Editor (handoff §6), copy something harmless, and delete `make-scram.mjs`.
+4. If the password ever leaks: run the script again (new password + verifier), update Hyperdrive (12g), and the old one stops working.
+
+### 12e. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0005_fingerprints.sql`. Every line must match what `supabase/tests/pglite/run.mjs` printed for the tested copy: the 45 functions (code, settings, owner, who may call them), the `testing_registrar` row (attributes, settings, memberships), the view, each table's rights, and every trigger. **One expected difference:** on Supabase the role row shows `members=postgres` (PostgreSQL 16+ automatically makes the role that created a login an administrator of it; that gives the registrar nothing). In PGlite it's empty.
+2. `0003_fingerprints.sql` and `0004_fingerprints.sql`: their 0003 / 0004 lines must be **unchanged**. (0003's list now also shows the new `testing_*` functions — expected.)
+3. **Security advisor:** expected notices — "RLS enabled, no policy" on `testing_public_attempts` (INFO; nobody in the app may read it) and "security definer function executable by authenticated" for the 15 staff functions (each checks access and role itself). Anything else about 0005 is a real problem.
+
+### 12f. Run the 0005 tests (you, in the SQL Editor)
+
+1. Open `supabase/tests/0005_tests.sql`, replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>` (**Authentication → Users**), paste the whole file, **Run**. Supabase may warn about destructive operations (the test removes its own test rows and checks some removals are refused). Everything is rolled back. Confirm.
+2. Expected: one row, **ALL 0005 TESTS PASSED**. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved. Run `rollback;` once on its own, then tell Claude.
+3. Then run `0002_tests.sql`, `verify_pin_tests.sql`, `0003_tests.sql` and `0004_tests.sql` again — 0005 must not have broken them.
+4. The test makes its own `zz test …` classes and events, so it works before **and** after real events exist. Run it again after the TEST event in 12h.
+
+### 12g. CP2b — Cloudflare part 2: Hyperdrive (you, after 12d)
+
+Hyperdrive is Cloudflare's connector from the Function to the database.
+1. Supabase → **Connect** → **Session pooler**: note the host (`aws-0-<region>.pooler.supabase.com`) and port **5432**. (The Free plan's direct address is IPv6-only, so the pooler is used.)
+2. Cloudflare → **Storage & Databases** → **Hyperdrive** → **Create configuration**: name `tkd-registrar`; host = the pooler host; port `5432`; database `postgres`; user **`testing_registrar.eozkfbdfxqlcbpewhach`**; password = from your password manager.
+   - **Caching: Disabled.** (Otherwise "register" could be answered from a cache without writing, and "closed" could show "open" for a minute — plan §8 Must 1.)
+   - **Origin connection limit: 5 or less** if the field is offered (the role allows at most 5 connections; more would be refused by the database). If your plan doesn't offer the field, tell Claude.
+   - **TLS / SSL:** if the form offers an **SSL mode** with a **CA certificate**, choose **`verify-full`** and give it Supabase's CA certificate: Supabase → **Project Settings** → **Database** → **SSL Configuration** → **Download certificate** (a `.crt` file; it's public, not a secret). `verify-full` checks that the other end really is your Supabase database before the password is sent. If the form doesn't offer it, leave the default (`require`: the connection is always encrypted, and Cloudflare checks the server's certificate against the usual public certificate authorities) and tell Claude — it can also be set later with Cloudflare's `wrangler` tool (`wrangler cert upload certificate-authority`, then the config's `--sslmode verify-full`). If `verify-full` makes the connection fail (TLS handshake / cert validation error in 12h), switch back to the default and tell Claude.
+3. `tkd-dashboard` → **Settings** → **Bindings** → **Add** → **Hyperdrive**: variable name `HYPERDRIVE`, configuration `tkd-registrar`, environment **Production only**. Preview gets no binding.
+4. Like the variables, the binding takes effect with the next deployment.
+
+**Done 2026-10-18 — what the dashboard actually looked like:**
+- Supabase **Connect**: pick **Session pooler** (the panel opens on Direct connection). Host `aws-0-us-east-1.pooler.supabase.com`, port 5432.
+- Cloudflare: **Storage & databases → Postgres & MySQL (Hyperdrive) → Connect database → Connect to public database** (not "Create PlanetScale database"). Enter the details under **Manual entry (advanced)** and keep the **Connection String** box empty — Cloudflare writes the password into that box in plain text (once it reached a screenshot, so the password was replaced). Chrome may autofill an unrelated saved password into the Password box: clear it first. The password is saved in Google Password Manager under the made-up site `tkd-registrar.example.com` so Chrome never autofills it anywhere.
+- **Server certificates → Verify full** offers only certificates already uploaded to the account (uploading a new one needs `wrangler`). The existing `ustc-color-belt-staging-supabase-ca` (from the old system) is Supabase's shared CA and works — the test connection passed. **Don't delete that certificate when the old system is retired**: `tkd-registrar` uses it too.
+- Created with **origin connection limit 20**; lowered to **5** in the config's Settings (5 is Hyperdrive's minimum and the role's connlimit; it's a soft limit, so in rare network trouble an extra connection is refused and the family sees "try again").
+- Checked through the Cloudflare connection: caching disabled, sslmode verify-full, limit 5. Binding `HYPERDRIVE` → `tkd-registrar` on Production; no deployment was triggered.
+
+### 12h. CP5 — after the deploy (each with Jeffrey's OK)
+
+1. Deploy with `PUBLIC_REGISTRATION=off`. Open a made-up link `https://tkd-dashboard.pages.dev/register/abcdefgh`: it must say registration isn't open.
+2. In the app, create a **TEST** event; set `PUBLIC_REGISTRATION=on` (Production variable) and **redeploy** (Deployments → latest → **Retry deployment**); register once from a phone with the TEST event's link.
+3. Check: the student is on the roster; `change_log` has the row by "Family form"; Hyperdrive → `tkd-registrar` → **Metrics**: queries show as **not cached**.
+4. Delete the TEST event in the app. Run `0005_tests.sql` again (12f). Only then create the first real event; its link goes to families after Jeffrey has tried it once.
+5. Enter both schools' addresses in **Settings → Schools**.
+
+### 12i. Kill switch and rollback (any time)
+
+In an emergency do all three, **in this order** (step 1 works in seconds; the others take longer or only stop new connections):
+
+1. **Database off switch (instant):** in the SQL Editor, run
+   ```sql
+   revoke execute on function public.testing_public_event(text) from testing_registrar;
+   revoke execute on function public.testing_public_register(text, text, uuid, text, text, uuid, text, boolean, text, text) from testing_registrar;
+   ```
+   From the next call on, both functions are refused for the family form's login — **even on connections Hyperdrive already has open** (the right is checked on every call). The Function then gets an error on every call and the family page shows its error message; nothing is written.
+   **To turn it back on:** re-run the whole 0005 file (it grants these two back), or run just:
+   ```sql
+   grant execute on function public.testing_public_event(text) to testing_registrar;
+   grant execute on function public.testing_public_register(text, text, uuid, text, text, uuid, text, boolean, text, text) to testing_registrar;
+   ```
+   **Note:** because re-running 0005 grants them back, re-run 0005 during an emergency only if you then repeat this step 1.
+   **While the off switch is in force,** `supabase/tests/0005_tests.sql` (check T2a) and `supabase/tests/0005_fingerprints.sql` fail — that is expected, and they pass again once you grant the two rights back.
+2. **Stop the family form:** set `PUBLIC_REGISTRATION=off` and **Retry deployment** (variables only apply to a new deployment; takes a minute or two). Every link then says "not open" without touching the database.
+3. **Lock the login:** in the SQL Editor, `alter role testing_registrar nologin;` (re-running 0005 does **not** turn it back on; `alter role testing_registrar login;` does). This stops **new** connections only; connections already open end when Hyperdrive recycles them (step 1 has already made them useless). To end them now: `select pg_terminate_backend(pid) from pg_stat_activity where usename = 'testing_registrar';` (if Supabase says permission denied, that's fine).
+
+**Previous site version:** Cloudflare Pages → **Deployments** → the previous one → **Rollback to this deployment**.
+
+No data needs undoing for these: registrations already made stay. Only if Jeffrey decides to remove phase 2 completely, put the app back to a version without Events **first**, then run this in the SQL Editor (one transaction; tested in PGlite: afterwards the database is exactly as after 0004, and `0003_tests.sql` passes again). **This deletes every event, registration, payment and school address.** Supabase's destructive-operations warning is real this time.
+
+```sql
+-- Undo migration 0005. change_log (the history) is KEPT.
+begin;
+
+-- the roster view, then the functions (the ones that name a 0005 table
+-- in their arguments or result must go before the tables)
+drop view if exists public.testing_roster;
+drop function if exists public.testing_public_register(text, text, uuid, text, text, uuid, text, boolean, text, text);
+drop function if exists public.testing_public_register_core(text, text, uuid, text, text, uuid, text, boolean, text, text);
+drop function if exists public.testing_public_event(text);
+drop function if exists public.settings_update_school_address(text, integer, text, text, text, text);
+drop function if exists public.testing_add_event(text, text, date, jsonb, boolean, date, text);
+drop function if exists public.testing_update_event(uuid, integer, text, date, jsonb, date, text);
+drop function if exists public.testing_set_registration(uuid, integer, boolean);
+drop function if exists public.testing_delete_event(uuid, integer, integer, integer);
+drop function if exists public.testing_add_student(uuid, text, text, uuid, boolean, text);
+drop function if exists public.testing_update_student(uuid, integer, text, text, uuid);
+drop function if exists public.testing_change_paying_by(uuid, integer, text);
+drop function if exists public.testing_mark_paid(uuid, integer);
+drop function if exists public.testing_undo_payment(uuid);
+drop function if exists public.testing_edit_payment(uuid, text, integer, date);
+drop function if exists public.testing_resolve_duplicate(uuid, integer, uuid, integer, boolean);
+drop function if exists public.testing_withdraw_student(uuid, integer);
+drop function if exists public.testing_restore_student(uuid, integer);
+drop function if exists public.testing_delete_student(uuid, integer, uuid[]);
+drop function if exists public.testing_lock_payment(uuid);
+drop function if exists public.testing_lock_registration(uuid);
+drop function if exists public.testing_public_answer(uuid);
+drop function if exists public.testing_copy_class_into_event(uuid, uuid, time, time);
+drop function if exists public.testing_check_classes_for_event(text, uuid[]);
+drop function if exists public.testing_recheck_pointing_at(uuid);
+drop function if exists public.testing_recheck_duplicate(uuid);
+drop function if exists public.testing_find_duplicate(uuid, uuid, text, text);
+drop function if exists public.testing_purge_old_signatures();
+drop function if exists public.testing_location_address(text);
+drop function if exists public.testing_rank_testing_for(uuid);
+drop function if exists public.testing_event_state(public.testing_events, date);
+
+-- the six tables (their triggers, rules and indexes go with them), then
+-- the reference counter
+drop table if exists public.testing_payments, public.testing_registrations, public.testing_event_ranks,
+                     public.testing_event_classes, public.testing_events, public.testing_public_attempts;
+drop sequence if exists public.testing_registration_ref_seq;
+
+-- public.locations back to how 0003 made it (the addresses are lost)
+drop trigger if exists locations_before_write on public.locations;
+drop trigger if exists locations_log on public.locations;
+alter table public.locations
+  drop constraint if exists locations_id_key,
+  drop constraint if exists locations_address_street_check,
+  drop constraint if exists locations_address_city_check,
+  drop constraint if exists locations_address_state_check,
+  drop constraint if exists locations_address_zip_check,
+  drop constraint if exists locations_address_all_or_none_check,
+  drop constraint if exists locations_version_check;
+alter table public.locations
+  drop column if exists id,
+  drop column if exists address_street,
+  drop column if exists address_city,
+  drop column if exists address_state,
+  drop column if exists address_zip,
+  drop column if exists version,
+  drop column if exists updated_at,
+  drop column if exists updated_by,
+  drop column if exists updated_by_name;
+
+-- the trigger functions and rule helpers (nothing uses them any more)
+drop function if exists public.testing_locations_before_write();
+drop function if exists public.testing_events_before_write();
+drop function if exists public.testing_event_copies_before_write();
+drop function if exists public.testing_registrations_before_write();
+drop function if exists public.testing_registrations_log();
+drop function if exists public.testing_payments_guard();
+drop function if exists public.testing_classes_arg_is_valid(jsonb);
+drop function if exists public.testing_new_public_code();
+drop function if exists public.testing_fee_cents(integer, integer, date, date);
+drop function if exists public.testing_today();
+drop function if exists public.testing_school_date(timestamptz);
+drop function if exists public.testing_signature_is_valid(text);
+drop function if exists public.testing_note_is_valid(text);
+drop function if exists public.testing_normalize_note(text);
+drop function if exists public.testing_line_is_valid(text, integer);
+
+-- the family form's login
+revoke usage on schema public from testing_registrar;
+drop role if exists testing_registrar;
+
+commit;
+```
+
+**Then the Cloudflare side** (you, in the Cloudflare dashboard, after the SQL above):
+1. `tkd-dashboard` → **Settings** → **Bindings**: remove the **`HYPERDRIVE`** binding (and **`RATE_LIMITER`**, if you added it in 12a step 5).
+2. **Storage & Databases** → **Hyperdrive** → `tkd-registrar` → **Settings** → **Delete** the configuration (it holds the registrar's password). If you uploaded Supabase's CA certificate for it (12g), remove that too.
+3. `tkd-dashboard` → **Settings** → **Variables and Secrets** → Production: delete **`TURNSTILE_SECRET`** and **`CLIENT_KEY_SECRET`** (and `TURNSTILE_SITE_KEY`, `PUBLIC_REGISTRATION`, `PUBLIC_ORIGIN`, which nothing uses any more).
+4. **Turnstile** → `TKD family form` → **Delete** the widget.
+5. **Retry deployment** so the site runs without them.
+6. In your password manager, delete the entry "TKD testing_registrar (Hyperdrive)" (the login no longer exists).
+
+**Why:**
+- **A separate login with two functions** (rulebook v0.33): the family page never talks to Supabase and the Function never holds the `anon` or secret key; even with the registrar's password, someone could only read an event's public page or register a student, with every rule checked again in the database.
+- **Production-only bindings and the kill switch:** branch preview sites can never reach the database, and the form can be switched off without touching it.
+- **SCRAM verifier made on your PC:** the real password never appears in Supabase's history or logs.
+- **Signatures:** never readable by the app, never in the history, removed after 90 days (plan answer 3) — the registration keeps "Signed on the form, <date>".
+
+---
+
 ## Admin: change the front-desk PIN or password
 
 The front desk (`shrewsburyustc@gmail.com`) is a **shared account**, so the app hides Change PIN and Change password for it. Only an admin changes them, here in Supabase, until the Staff accounts screen exists.

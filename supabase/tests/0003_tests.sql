@@ -14,6 +14,10 @@
 --   system (the "seed"): it makes its own test classes with unusual names
 --   ("zz test 1a2b3c4d ...") and checks positions relative to what is
 --   already there. Run it both times.
+--   It also passes after 0005: its catalog checks look only at the
+--   columns and functions 0003 itself makes (by name), so 0005's new
+--   ones (school addresses on locations, testing_* event functions)
+--   don't count against it - 0005_tests.sql checks those.
 --
 -- IS IT SAFE?
 --   Yes. Everything happens inside one transaction that ends with
@@ -135,6 +139,7 @@ declare
   v_ids2   uuid[];
   v_i      integer;
   v_list   text[];
+  v_names  text[];
   v_labels text[];
   v_rand   uuid := gen_random_uuid();   -- an id that exists nowhere
 
@@ -1738,6 +1743,11 @@ begin
       end if;
     end loop;
   end loop;
+  -- Only the columns 0003 made: on locations that is code and name (0005
+  -- later adds id, the address, version and updated_* there, with their
+  -- own read rights - 0005_tests.sql checks those). The other three
+  -- tables are 0003's alone, so every column of theirs is checked. This
+  -- way C1c passes before AND after 0005.
   for v_tbl, v_col in
     select c.relname::text, a.attname::text
       from pg_attribute a
@@ -1745,6 +1755,7 @@ begin
       join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'public'
        and c.relname in ('locations', 'testing_classes', 'testing_ranks', 'change_log')
+       and (c.relname <> 'locations' or a.attname in ('code', 'name'))
        and a.attnum > 0 and not a.attisdropped
   loop
     if has_column_privilege('authenticated', 'public.' || v_tbl, v_col, 'SELECT')
@@ -1753,6 +1764,16 @@ begin
         v_tbl, v_col, has_column_privilege('authenticated', 'public.' || v_tbl, v_col, 'SELECT'), (v_tbl || '.' || v_col = any (v_list));
     end if;
   end loop;
+  -- every column in the list really exists (so C1c can't pass by
+  -- skipping a column that is missing)
+  select string_agg(x.col, ', ') into v_txt
+    from unnest(v_list) as x(col)
+   where not exists (select 1 from pg_attribute a
+                       join pg_class c on c.oid = a.attrelid
+                       join pg_namespace n on n.oid = c.relnamespace
+                      where n.nspname = 'public' and c.relname || '.' || a.attname = x.col
+                        and a.attnum > 0 and not a.attisdropped);
+  if v_txt is not null then raise exception 'TEST FAILED: C1c listed column(s) missing: %', v_txt; end if;
   if has_any_column_privilege('authenticated', 'public.change_log', 'SELECT') then
     raise exception 'TEST FAILED: C1d authenticated can read some column of change_log';
   end if;
@@ -1778,15 +1799,22 @@ begin
   --     8 app functions;
   --     no function executable by PUBLIC (=X in its rights list; an
   --     empty list means the built-in default, which includes PUBLIC)
+  --     Checked: exactly the 19 functions 0003 makes, by name (0005 later
+  --     adds more testing_* functions - 0005_tests.sql checks those - so
+  --     this passes before AND after 0005).
   v_list := array['testing_add_class', 'testing_update_class', 'testing_reorder_classes', 'testing_delete_class',
                   'testing_add_rank', 'testing_update_rank', 'testing_reorder_ranks', 'testing_delete_rank'];
+  v_names := v_list || array['testing_normalize_name', 'testing_name_is_valid', 'testing_cents_is_valid',
+                             'testing_ids_are_valid', 'testing_belt_is_valid', 'change_log_actor_name',
+                             'testing_classes_before_write', 'testing_ranks_before_write', 'change_log_write',
+                             'change_log_refuse_change', 'testing_refuse_truncate'];
   v_n := 0;
   for v_fn in
     select p.oid, p.proname::text as name, p.proacl, p.proowner, p.prosecdef, p.proconfig
       from pg_proc p
       join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public'
-       and (p.proname like 'testing\_%' or p.proname like 'change\_log\_%')
+       and p.proname = any (v_names)
   loop
     v_n := v_n + 1;
     if has_function_privilege('anon', v_fn.oid, 'EXECUTE') or has_function_privilege('service_role', v_fn.oid, 'EXECUTE') then
@@ -1809,7 +1837,12 @@ begin
       raise exception 'TEST FAILED: C5b % security definer is %, not as designed', v_fn.oid::regprocedure, v_fn.prosecdef;
     end if;
   end loop;
-  if v_n < 19 then raise exception 'TEST FAILED: C3d expected at least the 19 functions of 0003, found %', v_n; end if;
+  if v_n <> 19 then raise exception 'TEST FAILED: C3d expected exactly the 19 functions of 0003 (one version each), found %', v_n; end if;
+  -- and no OTHER change_log_* function (the history's functions are 0003's alone)
+  select string_agg(p.oid::regprocedure::text, ', ') into v_txt
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname like 'change\_log\_%' and not (p.proname = any (v_names));
+  if v_txt is not null then raise exception 'TEST FAILED: C3d unexpected change_log function(s): %', v_txt; end if;
   select count(*) into v_n from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = any (v_list);
   if v_n <> 8 then raise exception 'TEST FAILED: C3e expected exactly 8 app functions (no extra versions), found %', v_n; end if;

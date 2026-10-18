@@ -217,6 +217,14 @@ src/styles/
 - **Keyboard (PC):** `N` = Add class (not while typing or with something open). ↑ ↓ move between rank rows, Enter opens one. In a ⋯ menu, ↑ ↓ and Enter; Move up / Move down are the keyboard way to reorder.
 - **Locking:** if the screen locks while a Testing dialog is open, the dialog disappears with the lock and comes back after the PIN, with everything still typed in.
 
+## Testing → Events and the event page (phase 2)
+
+- **Events tab** (left of Classes and ranks): the school's testing events on an **Upcoming / Past** switch, one status tag each (Not open yet, Open until …, Registration closed, Testing today, Finished). Admins add and edit events (**Add event**, `N` on the PC): name, testing date, **Classes testing** with a start and end time per class (copied from the last event), Registration Open / Closed and an automatic closing date. Prices are copied from Classes and ranks when the event is saved. The ⋯ menu has Copy registration link, Close / Open registration (5-second Undo; staff can't reopen after the closing date) and, for admins, Delete event.
+- **Event page** (`#testing/event/<id>`, so browser Back returns to the list): summary cards (click Paid / Not paid to filter), the possible-duplicate box with a side-by-side compare, a class switch, and the roster of that class in belt order. **Mark paid** records a full payment in one click (early price before the testing day, testing-day price on it) with Undo. ⋯ has Change how they'll pay and Edit details; admins also get Edit payment, Undo payment, Withdraw / Restore and Delete permanently. **Add student** (blue, page header, `N` on the PC) adds walk-ins. **Registration link** shows the QR code, Copy link and Print flyer.
+- **Settings** (account menu → Admin → Settings, admins only, `#settings`): each school's street address, used on the family pages and the flyer.
+- Code: `src/screens/testing/events/` (list, Add / Edit event), `src/screens/testing/event/` (event page and its dialogs), `src/screens/Settings.jsx` + `src/screens/settings/`; styles `src/styles/testing-events.css` and `settings.css`. All words are in `src/screens/testing/text.js` and `src/screens/settings/text.js`.
+- Preview: the fake data has November Children Testing (Worcester) with students, one possible duplicate and one withdrawn student. `__tkdPreview.setToday('2026-11-20')` pretends another date (e.g. the testing day).
+
 ## Security notes
 
 - The anon (publishable) key in `.env.local` is safe in the browser, because row-level security in the database decides what each signed-in person can read.

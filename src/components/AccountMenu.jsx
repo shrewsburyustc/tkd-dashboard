@@ -2,9 +2,9 @@
 // Why it exists: it's where staff see who is signed in, lock the screen, change their PIN or
 // password, set this device's default location, and sign out. Order (contract 0002, item 7):
 //   who-line · Lock now · Change PIN (or "Set PIN" if none yet) · Change password · This device
-//   · [admins only: separator · "Admin" label · Staff accounts (v0.15 / v0.70)] · separator · Sign out
-// The Admin group is shown to admins only; the database refuses non-admins anyway (0004).
-// Settings (also under Admin in guidelines §6) isn't shown: it doesn't exist yet (rule P7).
+//   · [admins only: separator · "Admin" label · Staff accounts (v0.15 / v0.70) · Settings (v0.135)]
+//   · separator · Sign out
+// The Admin group is shown to admins only; the database refuses non-admins anyway (0004, 0005).
 // The shared front-desk account (profile.is_shared) doesn't get Change PIN / Change password:
 // only an admin changes the desk PIN and password (decided v0.28).
 //   - PC and tablet: a 248px dropdown under the initials, right-aligned.
@@ -15,7 +15,7 @@
 // Esc, Tab, clicking outside, or choosing an item closes it and focus returns to the initials.
 // Phone sheet only: dragging the sheet down with a finger more than 60px closes it too.
 import { useEffect, useId, useRef, useState } from 'react';
-import { IconCheck, IconKey, IconLock, IconLogout, IconMapPin, IconPassword, IconUserCog } from '@tabler/icons-react';
+import { IconCheck, IconKey, IconLock, IconLogout, IconMapPin, IconPassword, IconSettings, IconUserCog } from '@tabler/icons-react';
 import Avatar from './Avatar.jsx';
 import { LOCATIONS } from '../lib/device.js';
 import { PHONE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
@@ -33,6 +33,7 @@ export default function AccountMenu({
   onSetPin,
   onChangePassword,
   onStaffAccounts,
+  onSettings,
   onSignOut,
   isScreenLocked,
 }) {
@@ -321,6 +322,17 @@ export default function AccountMenu({
                       {/* ti-user-cog = Staff accounts (admin), guidelines 2.4 */}
                       <IconUserCog size={16} aria-hidden="true" className="menu-icon" />
                       <span>Staff accounts</span>
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      tabIndex={-1}
+                      className="menu-item"
+                      onClick={() => choose(onSettings)}
+                    >
+                      {/* ti-settings = Settings (admin), guidelines 2.4 / v0.135 */}
+                      <IconSettings size={16} aria-hidden="true" className="menu-icon" />
+                      <span>Settings</span>
                     </button>
                   </div>
                 </>

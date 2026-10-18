@@ -264,3 +264,458 @@ export const TOAST_RANK_ORDER = 'Rank order saved';
 export const TOAST_CLASS_ORDER = 'Class order saved';
 export const TOAST_UNDONE = 'Undone';
 export const deletedToast = (name) => `${name} deleted`;
+
+// =====================================================================================
+// Phase 2 — Events, the event page (Students roster with payments). Contract 0005 §6,
+// approved mockups TKD-ColorBelt-Events-Mockups.html (E1–E14) and
+// TKD-ColorBelt-Roster-Mockups.html (R1–R8) with the later changes (Mark paid, Add student
+// in the page header). The data layer (src/lib/testing/eventsApi.js, eventRules.js) only
+// returns codes; every word the staff see is here.
+// =====================================================================================
+
+// ----- Dates and times (all shown in Massachusetts time) -----
+// A date from the database is "YYYY-MM-DD" with no time. new Date(y, m - 1, d) makes it a
+// date on THIS computer's calendar, so it never shifts a day because of time zones.
+function parseDay(iso) {
+  if (typeof iso !== 'string') return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!match) return null;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+const dayText = (iso, options) => parseDay(iso)?.toLocaleDateString('en-US', options) ?? '';
+
+// "Fri, Nov 20, 2026"
+export const shortDate = (iso) => dayText(iso, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+// "Fri, Nov 13"
+export const weekdayMonthDay = (iso) => dayText(iso, { weekday: 'short', month: 'short', day: 'numeric' });
+// "Nov 13"
+export const monthDay = (iso) => dayText(iso, { month: 'short', day: 'numeric' });
+// "Friday, November 20, 2026" (the flyer)
+export const longDate = (iso) => dayText(iso, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+// "Friday, November 13" (the flyer's "Register by")
+export const longWeekdayMonthDay = (iso) => dayText(iso, { weekday: 'long', month: 'long', day: 'numeric' });
+// "Oct 1, 2026"
+export const monthDayYear = (iso) => dayText(iso, { month: 'short', day: 'numeric', year: 'numeric' });
+
+// A moment in time (a timestamp) shown in Massachusetts time.
+const SCHOOL_TZ = 'America/New_York';
+// "Nov 1" — from a timestamp ("2026-11-01T22:05:00Z")
+export function stampDay(stamp) {
+  if (!stamp) return '';
+  const date = new Date(stamp);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', { timeZone: SCHOOL_TZ, month: 'short', day: 'numeric' });
+}
+// "Nov 1, 6:05 PM"
+export function stampDayTime(stamp) {
+  if (!stamp) return '';
+  const date = new Date(stamp);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('en-US', { timeZone: SCHOOL_TZ, month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+// "16:00" (or "16:00:00") → "4:00 PM"
+export function timeLabel(hhmm) {
+  const match = /^(\d{1,2}):(\d{2})/.exec(hhmm ?? '');
+  if (!match) return '';
+  const hours = Number(match[1]);
+  const suffix = hours < 12 ? 'AM' : 'PM';
+  const twelve = hours % 12 === 0 ? 12 : hours % 12;
+  return `${twelve}:${match[2]} ${suffix}`;
+}
+
+// ----- Money -----
+// 6500 → "$65" (whole dollars; the same style as Classes and ranks)
+export function dollars(cents) {
+  if (typeof cents !== 'number' || !Number.isFinite(cents)) return '';
+  const value = cents / 100;
+  return `$${value.toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: Number.isInteger(value) ? 0 : 2 })}`;
+}
+
+// ----- Paying by -----
+export const PAYING_BY = { cash: 'Cash', check: 'Check', card: 'Card' };
+export const payingByText = (code) => PAYING_BY[code] ?? '';
+// lower case, inside a sentence: "$65 check"
+export const payingByLower = (code) => payingByText(code).toLowerCase();
+
+// ----- Testing page tabs -----
+export const TAB_EVENTS = 'Events';
+
+// ----- E1–E3: the Events list -----
+export const ADD_EVENT = 'Add event';
+export const UPCOMING = 'Upcoming';
+export const PAST = 'Past';
+export const EVENTS_SWITCH_LABEL = 'Upcoming or past events';
+export const COL_EVENT = 'Event';
+export const COL_TESTING_DATE = 'Testing date';
+export const COL_STUDENTS = 'Students';
+export const COL_STATUS = 'Status';
+export const sortBy = (column) => `Sort by ${column}`;
+export const ACTIONS_COL = 'Actions';
+export const NO_EVENTS_ADMIN = 'No color belt testing events yet.';
+export const NO_EVENTS_STAFF = 'No color belt testing events yet. An admin adds them.';
+export const NO_UPCOMING = 'No upcoming events.';
+export const NO_PAST = 'No past events.';
+export const LOADING_EVENTS = 'Loading events';
+export const STAFF_EVENTS_LINE =
+  'Staff can open or close registration from ⋯ until the closing date. Ask an admin to add or change events.';
+// Phone row, line 2: "Fri, Nov 20, 2026 · 23 students"
+export const studentsCount = (n) => (n === 1 ? '1 student' : `${n} students`);
+export const eventPhoneLine = (dateIso, count) => `${shortDate(dateIso)} · ${studentsCount(count)}`;
+export const editEventLabel = (name) => `Edit ${name}`;
+export const openEventLabel = (name) => `Open ${name}`;
+
+// One tag per event (Star v0.88). `tag` is { code, date } from eventRules.stateTag.
+export function eventTagText(tag) {
+  switch (tag?.code) {
+    case 'finished':
+      return 'Finished';
+    case 'testing_today':
+      return 'Testing today';
+    case 'open_until':
+      return `Open until ${monthDay(tag.date)}`;
+    case 'open':
+      return 'Registration open';
+    case 'closed':
+      return 'Registration closed';
+    case 'not_open_yet':
+      return 'Not open yet';
+    default:
+      return '';
+  }
+}
+
+// ----- E8–E10: the event ⋯ menu -----
+export const COPY_REGISTRATION_LINK = 'Copy registration link';
+export const CLOSE_REGISTRATION = 'Close registration';
+export const OPEN_REGISTRATION = 'Open registration';
+export const EDIT_EVENT = 'Edit event';
+export const DELETE_EVENT = 'Delete event';
+export const REOPEN_NEEDS_ADMIN = 'The closing date has passed. Ask an admin to reopen.';
+export const eventMenuSub = (event) => shortDate(event.testingDate);
+
+export const TOAST_REGISTRATION_CLOSED = 'Registration closed';
+export const TOAST_REGISTRATION_OPEN = 'Registration open';
+export const TOAST_REGISTRATION_OPEN_DATE_REMOVED = 'Registration open. The automatic closing date was removed.';
+export const TOAST_LINK_COPIED = 'Link copied';
+export const COPY_FAILED = "Couldn't copy the link. Open Registration link on the event page and copy it from there.";
+
+// E14: a switch change that didn't reach the database
+export const registrationNotClosed = (name) => `Registration for ${name} wasn't closed. Check the connection and try again.`;
+export const registrationNotOpened = (name) => `Registration for ${name} wasn't opened. Check the connection and try again.`;
+export const REGISTRATION_FINISHED = 'This testing has finished, so registration can no longer change.';
+export const REGISTRATION_NEEDS_ADMIN = "The closing date has passed. Ask an admin to reopen. Registration wasn't opened.";
+export const EVENTS_NOT_ALLOWED = "Only an admin can do that. Your change wasn't saved.";
+export const LOAD_EVENTS_FAILED = "Couldn't load events. Check the connection, then retry.";
+
+// ----- E4–E7: Add / Edit event -----
+export const ADD_EVENT_TITLE = 'Add event';
+export const EDIT_EVENT_TITLE = 'Edit event';
+export const addEventSub = (school) => `${school} school. Prices are copied from Classes and ranks when you save.`;
+export const editEventSub = (createdIso) =>
+  `Prices were copied from Classes and ranks when this event was created (${monthDayYear(createdIso)}).`;
+export const EVENT_NAME = 'Event name';
+export const TESTING_DATE = 'Testing date';
+export const CLASSES_TESTING = 'Classes testing';
+export const TIME_TO = 'to';
+export const NOT_TESTING_HERE = 'Not testing at this event';
+export const CLASSES_TESTING_HINT = "Untick a class that doesn't test at this event. Classes with the same times test together.";
+export const FIRST_EVENT_HINT =
+  'Every class starts ticked with no times; set each one. Later events copy the classes and times from the last event.';
+export const copiedFromEvent = (name) => `Classes and times copied from ${name}. Change if needed.`;
+export const NO_TIME = 'Time'; // the empty choice in a time list
+export const startTimeLabel = (className) => `${className} start time`;
+export const endTimeLabel = (className) => `${className} end time`;
+export const testsAtEventLabel = (className) => `${className} tests at this event`;
+export const REGISTRATION = 'Registration';
+export const REG_OPEN = 'Open';
+export const REG_CLOSED = 'Closed';
+export const CLOSE_AUTOMATICALLY = 'Close automatically at the end of';
+// The tick's name for screen readers: the visible words alone stop mid-sentence (E4–E7).
+export const CLOSE_AUTOMATICALLY_LABEL = 'Close automatically at the end of the closing date';
+export const CLOSING_DATE_LABEL = 'Closing date';
+export const CLOSE_AUTOMATICALLY_HINT = '11:59 PM, Massachusetts time. You can open or close registration yourself at any time.';
+export const NOTE_FOR_FAMILIES = 'Note for families (optional)';
+export const NOTE_HINT = 'Shown on the registration form.';
+export const NO_CLASSES_YET = 'This school has no classes yet. Add them in Classes and ranks first.';
+
+// Field messages (amber, under the field)
+export const ENTER_EVENT_NAME = 'Enter an event name.';
+export const eventNameProblem = (problem) =>
+  problem === 'empty' ? ENTER_EVENT_NAME : (NAME_PROBLEMS[problem] ?? null);
+export const duplicateEvent = (name) => `There’s already an event called ${name}. Try another name.`;
+export const ENTER_TESTING_DATE = 'Enter the testing date.';
+export const TESTING_DATE_PAST = "The testing date can't be in the past.";
+export const END_AFTER_START = 'The end time must be after the start time.';
+export const SET_BOTH_TIMES = 'Set a start and an end time.';
+export const TICK_ONE_CLASS = 'Tick at least one class.';
+export const CLOSING_AFTER_TESTING = 'The closing date must be on or before the testing date.';
+export const CLOSING_IN_PAST = "The closing date can't be in the past.";
+export const ENTER_CLOSING_DATE = 'Enter the closing date, or untick the box.';
+export const NOTE_TOO_LONG = 'Use 600 characters or fewer.';
+export const finalAwardNotSet = (className) => `Set a final award for ${className} in Classes and ranks first.`;
+export const EVENT_NOT_EMPTY =
+  'A class you unticked has students registered. Tick it again, or move its students to another class first.';
+export const EVENT_NOT_ALLOWED = "Only an admin can add or change events. Your change wasn't saved.";
+
+export const TOAST_EVENT_ADDED = 'Event added';
+export const TOAST_EVENT_SAVED = 'Event saved';
+
+// ----- E13: Delete event -----
+export const deleteEventTitle = (name) => `Delete ${name}?`;
+// The count is the same number as the list's Students column (active students); removed ones
+// (withdrawn or duplicate copies) are mentioned separately, and the money is every payment
+// recorded for the event, removed students' included.
+// e.g. "Its 15 students (plus 1 removed), their registrations and $410 of payments are deleted
+// too. This can't be undone." (No grades: Color Belt has no grading until phase 3.)
+export function deleteEventBody({ activeCount, removedCount, paymentCents }) {
+  const tail = "This can't be undone.";
+  let who = null;
+  if (activeCount > 0) who = `${studentsCount(activeCount)}${removedCount > 0 ? ` (plus ${removedCount} removed)` : ''}`;
+  else if (removedCount > 0) who = removedCount === 1 ? '1 removed student' : `${removedCount} removed students`;
+  if (who === null) return tail;
+  const regs = activeCount + removedCount === 1 ? 'their registration' : 'their registrations';
+  if (paymentCents > 0) return `Its ${who}, ${regs} and ${dollars(paymentCents)} of payments are deleted too. ${tail}`;
+  return `Its ${who} and ${regs} are deleted too. ${tail}`;
+}
+export const KEEP_EVENT = 'Keep event';
+
+// ----- R1: the event page -----
+export const BACK_TO_COLOR_BELT = 'Color belt testing';
+export const TAB_STUDENTS = 'Students';
+export const REGISTRATION_LINK = 'Registration link';
+export const ADD_STUDENT = 'Add student';
+export const LOADING_EVENT = 'Loading the event';
+export const LOAD_EVENT_FAILED = "Couldn't load this event. Check the connection, then retry.";
+export const EVENT_GONE = 'This testing event was deleted, or the link is wrong.';
+export const schoolName = (school) => `${school} school`;
+
+// The summary line's last part, e.g. "registration open until Nov 13"
+export function registrationPhrase(state, event) {
+  switch (state) {
+    case 'finished':
+      return 'finished';
+    case 'open':
+      return event.autoCloseOn ? `registration open until ${monthDay(event.autoCloseOn)}` : 'registration open';
+    case 'not_open_yet':
+      return 'registration not open yet';
+    default:
+      return 'registration closed';
+  }
+}
+// "Fri, Nov 20, 2026 · Worcester school · 14 students · registration open until Nov 13"
+export const eventSummary = (event, school, count, state) =>
+  `${shortDate(event.testingDate)} · ${schoolName(school)} · ${studentsCount(count)} · ${registrationPhrase(state, event)}`;
+
+// Summary cards (Star v0.115)
+export const CARD_STUDENTS = 'Students · all classes';
+export const CARD_PAID = 'Paid';
+export const CARD_NOT_PAID = 'Not paid';
+export const CARD_PAYMENTS = 'Payments recorded';
+// R8: the small gray line under Payments recorded when removed students' payments are in it.
+export const includesRemoved = (cents) => `includes ${dollars(cents)} from removed students`;
+export const SHOWING_PAID = 'Showing paid only';
+export const SHOWING_NOT_PAID = 'Showing not paid only';
+export const SHOW_ALL = 'Show all';
+export const CLASS_SWITCH_LABEL = 'Class';
+
+// The class line: "Group A · 5:00 – 6:00 PM", "4 students", one gear tag
+export const classLineTitle = (className, timeText) => (timeText ? `${className} · ${timeText}` : className);
+export const NO_SPARRING_GEAR = 'No sparring gear';
+export const SPARRING_GEAR = 'Sparring gear';
+export const sparringFrom = (rankName) => `Sparring gear from ${rankName}`;
+
+// Roster table
+export const COL_STUDENT = 'Student';
+export const COL_PAYING_BY = 'Paying by';
+export const COL_PAYMENT = 'Payment';
+export const COL_PAID_ON = 'Paid on';
+export const registeredOn = (stamp) => `Registered ${stampDay(stamp)}`;
+export const addedOn = (stamp) => `Added ${stampDay(stamp)}`;
+export const TAG_PAID = 'Paid';
+export const TAG_NOT_PAID = 'Not paid';
+export const TAG_POSSIBLE_DUPLICATE = 'Possible duplicate';
+export const TAG_REMOVED = 'Removed';
+export const TAG_DUPLICATE_COPY = 'Duplicate copy';
+export const NO_NEW_RANK = 'No new rank';
+export const MARK_PAID = 'Mark paid';
+export const markPaidLabel = (name) => `Mark ${name} paid`;
+export const reviewDuplicateLabel = (name) => `Possible duplicate: review ${name}`;
+export const paidOnPhone = (method, stamp) => `${payingByText(method)} · paid ${monthDay(stamp)}`;
+export const EMPTY_CLASS_ROSTER = 'No students in this class yet.';
+export const NO_STUDENTS_FILTERED_PAID = 'No paid students in this class.';
+export const NO_STUDENTS_FILTERED_NOT_PAID = 'Everyone in this class has paid.';
+export const NO_CLASSES_IN_EVENT = 'This event has no classes.';
+export const removedGroup = (n) => `Removed · ${n}`;
+export const NOT_IN_COUNTS = 'Not in the counts';
+export const removedBy = (stamp, name) => (name ? `removed ${stampDay(stamp)} by ${name}` : `removed ${stampDay(stamp)}`);
+export const studentLabel = (row) => `${row.firstName} ${row.lastName}`;
+
+// Possible duplicate box (R7)
+export function duplicateBoxLine(count) {
+  return count === 1 ? '1 possible duplicate' : `${count} possible duplicates`;
+}
+export const registeredTwice = (name, className) => `${name} (${className}) is registered twice`;
+export const REVIEW = 'Review';
+
+// ⋯ menu on a student (R8, plan answers 6 and 8)
+export const CHANGE_PAYING_BY = 'Change how they’ll pay';
+export const EDIT_DETAILS = 'Edit details';
+export const EDIT_PAYMENT = 'Edit payment';
+export const UNDO_PAYMENT = 'Undo payment';
+export const WITHDRAW = 'Withdraw';
+export const RESTORE = 'Restore';
+export const DELETE_PERMANENTLY = 'Delete permanently';
+export const REVIEW_DUPLICATE = 'Review possible duplicate';
+export const moreForStudent = (name) => `More actions for ${name}`;
+
+// Toasts
+export const markedPaidToast = (name, cents, method) => `${name} marked paid · ${dollars(cents)} ${payingByLower(method)}`;
+export const withdrawnToast = (name) => `${name} withdrawn`;
+export const restoredToast = (name) => `${name} restored`;
+export const studentAddedToast = (name) => `${name} added`;
+export const TOAST_CHANGES_SAVED = 'Changes saved';
+export const TOAST_PAYMENT_SAVED = 'Payment saved';
+export const paymentUndoneToast = (name) => `Payment undone for ${name}`;
+export const duplicateRemovedToast = (name) => `${name}’s extra copy moved to Removed`;
+export const TOAST_KEPT_BOTH = 'Kept both registrations';
+
+// Banners for row actions that didn't work
+export const ROSTER_STALE = "Someone else changed this just now. Your change wasn't saved.";
+export const ROSTER_NOT_ALLOWED = "Only an admin can do that. Your change wasn't saved.";
+export const alreadyPaid = (name) => `${name} is already marked paid.`;
+export const isWithdrawn = (name) => `${name} was withdrawn. An admin can restore them first.`;
+export const markPaidFailed = (name) => `${name} wasn't marked paid. Check the connection and try again.`;
+export const UNDO_PAYMENT_TOO_LATE = 'Too late to undo here. Ask an admin to undo the payment.';
+// Staff Undo of "keep this one" after the database's 10-second window (R7)
+export const UNDO_DUPLICATE_TOO_LATE = 'Too late to undo here. Ask an admin to restore the copy from Removed.';
+export const actionFailed = "That didn't save. Check the connection, then retry.";
+export const EVENT_FINISHED_ADD = "This testing has finished, so students can't be added any more.";
+
+// R4: Add student
+export const ADD_STUDENT_TITLE = 'Add student';
+export const addStudentSub = (eventName, school) => `${eventName} · ${schoolName(school)}`;
+export const FIRST_NAME = 'First name';
+export const LAST_NAME = 'Last name';
+export const CLASS = 'Class';
+export const CURRENT_BELT = 'Current belt';
+export const THREE_STRIPES = 'Has 3 stripes on one side of their belt';
+export const PAYING_BY_LABEL = 'Paying by';
+export const ADD_STUDENT_HINT =
+  'For walk-ins or families who couldn’t use the form. Works after registration has closed, including on the testing day.';
+export const ENTER_FIRST_NAME = 'Enter a first name.';
+export const ENTER_LAST_NAME = 'Enter a last name.';
+export const studentNameProblem = (problem, which) =>
+  problem === 'empty' ? (which === 'first' ? ENTER_FIRST_NAME : ENTER_LAST_NAME) : (NAME_PROBLEMS[problem] ?? null);
+export const PICK_CLASS_FIRST = 'Choose the class first.';
+export const PICK_CLASS = 'Choose a class.';
+export const PICK_BELT = 'Choose the current belt.';
+export const PICK_PAYING_BY = 'Choose how they’ll pay.';
+export const NEEDS_THREE_STRIPES = 'Every student needs 3 stripes on one side of their belt to test.';
+// "$65 ($75 on the testing day)" before the testing day; "$75" on it or after.
+export function feeText(earlyCents, dayCents, onOrAfterTestingDay) {
+  if (onOrAfterTestingDay || earlyCents === dayCents) return dollars(dayCents);
+  return `${dollars(earlyCents)} (${dollars(dayCents)} on the testing day)`;
+}
+// "Testing for Orange → Green · Group A, 5:00 – 6:00 PM · $65 ($75 on the testing day)"
+export const testingForLine = (fromName, toName, className, timeText, fee) =>
+  `Testing for ${fromName} → ${toName} · ${className}${timeText ? `, ${timeText}` : ''} · ${fee}`;
+
+// R6: detail summary + Edit details
+export const DETAIL_CLASS_TIME = 'Class and time';
+export const DETAIL_TESTING_FOR = 'Testing for';
+export const DETAIL_STRIPES = '3 stripes';
+export const DETAIL_REGISTERED = 'Registered';
+export const DETAIL_PAYING_BY = 'Paying by';
+export const DETAIL_PAYMENT = 'Payment';
+export const DETAIL_SIGNED = 'Signed by';
+export const DETAIL_REMOVED = 'Removed';
+export const STRIPES_FORM = 'Confirmed on the form';
+export const STRIPES_DESK = 'Confirmed at the desk';
+export const STRIPES_NO = 'Not confirmed';
+export const SOURCE_FORM = 'family form';
+export const SOURCE_DESK = 'added at the desk';
+// The reference part is drawn separately (StudentDialog) so "CB-3102" never breaks across lines.
+export const registeredDetail = (stamp, source) => [stampDayTime(stamp), source === 'form' ? SOURCE_FORM : SOURCE_DESK].join(' · ');
+export const REFERENCE_WORD = 'reference';
+export const SIGNED_FORM = 'Parent or guardian, on the form';
+export const signatureDeleted = (stamp) => `Signed on the form, ${stampDay(stamp)} (the signature is deleted 90 days after testing)`;
+export const NOT_SIGNED_DESK = 'Not signed here (added at the desk)';
+export const paidDetail = (cents, method, paidOn) => `${dollars(cents)} ${payingByLower(method)} · paid ${monthDay(paidOn)}`;
+export const removedDetail = (stamp, name, reason) =>
+  `${reason === 'duplicate_copy' ? 'Duplicate copy, removed' : 'Withdrawn'} ${stampDay(stamp)}${name ? ` by ${name}` : ''}`;
+export const EDIT_DETAILS_TITLE = 'Edit details';
+export const editDetailsSub = (name, eventName) => `${name} · ${eventName}`;
+export const nowTestingFor = (fromName, toName) => `Now testing for ${fromName} → ${toName}.`;
+export const feeStays = (fee) => `The fee stays ${fee}.`;
+export const feeNow = (fee) => `The fee is now ${fee}.`;
+export const PAYMENT_STAYS = 'The payment already recorded stays as it is.';
+export const PAYMENT_NOT_HERE = 'Payment is changed with Mark paid or ⋯, not here.';
+
+// R7: compare
+export const compareTitle = (name) => `${name} is registered twice`;
+export const COMPARE_SUB = 'Same name in the same class. Differences are highlighted.';
+export const FIRST_REGISTRATION = 'First registration';
+export const SECOND_REGISTRATION = 'Second registration';
+export const COMPARE_REFERENCE = 'Reference';
+export const KEEP_THIS_ONE = 'Keep this one';
+export const keepThisOneLabel = (which) => `Keep the ${which.toLowerCase()}`;
+// The same note for staff and admins (R7): staff get the 5-second Undo too.
+export const COMPARE_NOTE =
+  'Keeping one moves the other to Removed as “Duplicate copy” (Undo for 5 seconds; admins can Restore). Both are logged.';
+export const KEEP_BOTH = 'Not the same person — keep both';
+export const DIFFERENT = 'different'; // read by screen readers after a highlighted value
+export const NO_REFERENCE = '—';
+
+// Change how they'll pay
+export const CHANGE_PAYING_BY_TITLE = 'Change how they’ll pay';
+export const changePayingBySub = (name) => `${name} · not paid yet`;
+export const ALREADY_PAID_DIALOG = 'Already marked paid. Close this and use ⋯ → Edit payment instead.';
+
+// Edit payment (admins). The R5 dialog was dropped (plan answer 6); this small dialog is only
+// for correcting a recorded payment: Paid by, Amount, Date paid (no check number, v0.120).
+export const EDIT_PAYMENT_TITLE = 'Edit payment';
+export const editPaymentSub = (name) => name;
+export const PAID_BY = 'Paid by';
+export const AMOUNT = 'Amount';
+export const DATE_PAID = 'Date paid';
+export const ENTER_DATE_PAID = 'Enter the date paid.';
+export const AMOUNT_ZERO = 'Enter more than $0. To remove the payment, use ⋯ → Undo payment.';
+export const EDIT_PAYMENT_HINT = 'The old payment is kept in the history and replaced by this one.';
+
+// Delete permanently (admins; plan answer 8: allowed for a paid student, naming the payment)
+export const deleteStudentTitle = (name) => `Delete ${name} permanently?`;
+export function deleteStudentBody(eventName, payment) {
+  if (!payment) return `The registration is deleted from ${eventName}. This can’t be undone.`;
+  return `The registration and the ${dollars(payment.cents)} ${payingByLower(payment.method)} payment recorded on ${monthDay(
+    payment.paidOn,
+  )} are deleted from ${eventName}. The payment won’t show in Payments recorded any more. This can’t be undone.`;
+}
+export const DELETE_STUDENT_HINT = 'To keep the record, use Withdraw instead.';
+export const KEEP_STUDENT = 'Keep student';
+
+// R2: Registration link dialog
+export const REGISTRATION_LINK_TITLE = 'Registration link';
+export function linkDialogLine(state, event) {
+  switch (state) {
+    case 'open':
+      return event.autoCloseOn
+        ? `Registration is open until ${weekdayMonthDay(event.autoCloseOn)}. Families choose their class and belt on the form.`
+        : 'Registration is open. Families choose their class and belt on the form.';
+    case 'not_open_yet':
+      return "Registration isn't open yet. The link starts working once registration is opened.";
+    case 'finished':
+      return 'This testing has finished. The link tells families registration is over.';
+    default:
+      return 'Registration is closed. The link tells families registration is closed.';
+  }
+}
+export const COPY_LINK = 'Copy link';
+export const PRINT_FLYER = 'Print flyer';
+export const qrAlt = (link) => `QR code for ${link}`;
+
+// R3: the flyer (letter size, black and white)
+export const FLYER_SCHOOL = "Jae H. Jeong's U.S. Taekwondo Center";
+export const flyerLocation = (school, address) => (address ? `Location: ${schoolName(school)}, ${address}` : `Location: ${schoolName(school)}`);
+export const flyerRegisterBy = (iso) => `Register by ${longWeekdayMonthDay(iso)}`;
+export const flyerScan = (shortLink) => `Scan the code, or go to ${shortLink}`;

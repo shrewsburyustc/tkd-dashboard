@@ -32,6 +32,13 @@ create role anon          nologin noinherit;
 create role authenticated nologin noinherit;
 create role service_role  nologin noinherit bypassrls;
 
+-- "authenticator" is the login Supabase's API (PostgREST) signs in with;
+-- it then switches into anon / authenticated / service_role per request.
+-- Added for 0005: its tests prove the API can never switch into the
+-- family form's login (testing_registrar).
+create role authenticator login noinherit;
+grant anon, authenticated, service_role to authenticator;
+
 -- Supabase lets the API roles use the public schema.
 grant usage on schema public to anon, authenticated, service_role;
 

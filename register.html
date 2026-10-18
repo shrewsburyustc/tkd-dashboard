@@ -1,0 +1,24 @@
+<!doctype html>
+<!--
+  register.html — the public family registration page (/register/<code>).
+  Why it exists: families open a link or QR code from the school to register a student for a
+  color belt testing (contract 0005 §4.1). It is a second page in the same Vite build as the
+  staff dashboard (index.html) but shares none of its code; React draws the form inside the
+  empty <div id="root"> below, starting from src/register/main.jsx.
+  public/_redirects serves this page for every /register/<code> address, and public/_headers
+  gives it a strict security policy.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <title>Color belt testing registration</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/register/main.jsx"></script>
+  </body>
+</html>

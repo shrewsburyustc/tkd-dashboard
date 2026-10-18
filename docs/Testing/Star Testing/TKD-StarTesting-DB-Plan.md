@@ -1,7 +1,7 @@
 # Star testing — database plan (migration 0006)
 
 **Status:** DRAFT 2026-10-18 for Jeffrey's questions; security-reviewed once (fixes applied). Nothing here is decided until it is recorded in the rulebook. Nothing is applied to Supabase without Jeffrey's OK for that paste.
-**Built from:** rulebook v0.154 (every Star row v0.58–v0.154), the Star status file, the approved Star mockups, handoff §6 (security rules) and the real migrations 0001–0005 (0005 is read from the `color-belt` branch, where it is live in production but not merged into `main` yet).
+**Built from:** rulebook v0.155 (every Star row v0.58–v0.155), the Star status file, the approved Star mockups, handoff §6 (security rules) and the real migrations 0001–0005 (0005 is read from the `color-belt` branch, where it is live in production but not merged into `main` yet).
 **Sources in plain words:** "rule" = handoff §6 or the rulebook; "0005" = Color Belt phase 2's migration, already live.
 
 ---
@@ -18,7 +18,7 @@ Store everything the approved Star screens show: the shared rubrics and prices; 
 4. **0005's public form path** (Pages Function → restricted login `testing_registrar` → one database function) is the pattern Star must follow (v0.33). 0005's test T2a fails if that login can run anything except Color Belt's two functions.
 5. **Lock order (proposed, reviewer to check):** every existing write locks the school's row first. A Star event covers both schools, so every Star write locks in one order: **event → candidate → payment or grade**. Admin rubric edits lock the template rows in Dan order, so "add event" can never copy a half-saved template.
 
-## 3. Shape: separate `star_…` tables (decided v0.155, Q-D1); table and column details are still proposals
+## 3. Shape: separate `star_…` tables (decided v0.156, Q-D1); table and column details are still proposals
 
 All new objects start with `star_`. Each table has the house columns (plus `revoke … from public, anon, authenticated, service_role` before any grant): `id uuid`, `version`, `created_at/updated_at`, `created_by/updated_by` (never readable), `created_by_name/updated_by_name`, a `*_before_write` trigger, a `*_no_truncate` trigger and a `change_log` trigger.
 
@@ -30,15 +30,15 @@ All new objects start with `star_`. Each table has the house columns (plus `revo
 | `star_assistant_table` | age split and the minimum classes per grade, child and 13+ | v0.61, v0.66 |
 | `star_events` | name (unique), testing date, start time, Where (information), registration open / auto-close date / first opened, note, two public codes (one per school) | v0.85–v0.92, v0.98 |
 | `star_event_dans`, `star_event_categories`, `star_event_grades`, `star_event_assistant` | the event's own copy, taken when the event is created, never changed later | v0.61 |
-| `star_candidates` | one person in one event: names, DOB, email, school, Dan, stars from, paying by, source (form/desk), reference `ST-####` (form only), status (active/withdrawn), duplicate state, make-up link, private day and time, classes attended, assistant classes | v0.98–v0.117, v0.147–v0.151 |
+| `star_candidates` | one person in one event: names, DOB, email, school, Dan, stars from, paying by, source (form/desk), reference `ST-####` (form only), status (active/withdrawn), duplicate state, make-up link, private day and time, classes attended, assistant classes | v0.98–v0.117, v0.148–v0.152 |
 | `star_candidate_signatures` | the form's drawn signature, acknowledgement and its wording version (never granted to any role; Star's own purge runs from Star functions, the period is Q-D5) | v0.102, v0.107 |
 | `star_makeup_subjects` | for a make-up candidate: which subjects are retested; for a below-245 result: which subjects an admin chose | v0.96, v0.111, v0.129, v0.130 |
-| `star_payments` | append-only: method used, amount, date, who; undo/edit = a reversal row (as 0005). A guard trigger refuses update, and refuses delete except inside a cascade (`pg_trigger_depth() > 1` or the `delete_candidate` / `delete_event` tags) | v0.109, v0.110, v0.151 |
+| `star_payments` | append-only: method used, amount, date, who; undo/edit = a reversal row (as 0005). A guard trigger refuses update, and refuses delete except inside a cascade (`pg_trigger_depth() > 1` or the `delete_candidate` / `delete_event` tags) | v0.109, v0.110, v0.152 |
 | `star_grades` | one judged grade per candidate × event subject, who and when | v0.124, v0.125, v0.139 |
 | `star_result_emails` | Mark as sent: who, when, the result it was for | v0.141 |
 | `star_downloads` | CSV downloads: who, when, which event, which Dan | v0.144 |
 
-**Worked out, never stored:** event status tag and Upcoming/Past (v0.88, v0.89); stars to (= from + 1); expected fee (standard / same day / private); Paid / Not paid / overpaid (v0.151); Assistant Instructor grade (from the count and age, v0.126); totals and results (Q-R1); the make-up list (v0.111); the Home "Today" card (v0.153).
+**Worked out, never stored:** event status tag and Upcoming/Past (v0.88, v0.89); stars to (= from + 1); expected fee (standard / same day / private); Paid / Not paid / overpaid (v0.152); Assistant Instructor grade (from the count and age, v0.126); totals and results (Q-R1); the make-up list (v0.111); the Home "Today" card (v0.154).
 
 **Logging DOB and email:** `star_candidates` gets its own log trigger (like 0005's `testing_registrations_log`) that writes DOB and email as "on file", never their values, until Q-D17 is answered. A test proves `change_log` never contains a DOB or an email.
 
@@ -77,7 +77,7 @@ Structure first, then details. Each will be shown with a picture and options.
 
 | # | Question | Why it matters | Left open by |
 |---|---|---|---|
-| Q-D1 ✓ | **Answered v0.155: separate `star_…` tables (A).** Was: separate Star tables, or share Color Belt's events table? | Decides the whole shape; Color Belt's table is one school per event and already live | v0.60, v0.131, 0005 |
+| Q-D1 ✓ | **Answered v0.156: separate `star_…` tables (A).** Was: separate Star tables, or share Color Belt's events table? | Decides the whole shape; Color Belt's table is one school per event and already live | v0.60, v0.131, 0005 |
 | Q-R1 | **Results worked out every time, or saved?** | v0.139 (results stay open) points to worked out | v0.138, v0.139 |
 | Q-D4 | **Family form login:** reuse Color Belt's restricted login, or a second one for Star? | Reusing means editing one Color Belt test; a second login is a setup step for Jeffrey | v0.33, v0.105, 0005 T2a |
 | Q-D2 | **Who can see DOB and email:** staff and admins, or admins only? | Decides the detail function's role check | status §4, v0.110, v0.112 |
@@ -86,9 +86,9 @@ Structure first, then details. Each will be shown with a picture and options.
 | Q-D7 | **Make-ups across events:** copy the earlier grades into the new event, or read them from the earlier event? | Rubric copies can differ between events | v0.61, v0.129 |
 | Q-D11 | **Changing a candidate's Dan or stars after grading:** clear the grades, keep them, or block the change? | Grades belong to one Dan's subjects | v0.112 |
 | Q-D10 | **Two people entering the same grade:** last one wins, or "changed by someone else"? | Paper typed in while a tablet grades | v0.122 |
-| Q-D12 | **Overpaid:** how is it cleared (refund recorded as a reversal, or a "settled" mark)? | Needed for the payment rows | v0.151 |
+| Q-D12 | **Overpaid:** how is it cleared (refund recorded as a reversal, or a "settled" mark)? | Needed for the payment rows | v0.152 |
 | Q-D13 | **Fee after the testing day and discounts:** what fills in, and does a smaller amount count as Paid? | Needed for "Paid / Not paid" | v0.109, v0.110 |
-| Q-D18 | **Private testers' age:** counted on the testing day or the private day? Can the private day be earlier? | Assistant Instructor grade uses age | v0.66, v0.147 |
+| Q-D18 | **Private testers' age:** counted on the testing day or the private day? Can the private day be earlier? | Assistant Instructor grade uses age | v0.66, v0.148 |
 | Q-D17 | **DOB and email in the change log:** masked like signatures, or kept for History? | Privacy | v0.110, v0.112 |
 | Q-D6 | **Result changes after Mark as sent:** back to "Not sent yet"? | Shape of `star_result_emails` | v0.141 |
 | Q-D14 | **Dans fixed at 1st–3rd,** or can admins add a 4th Dan later? | Check rule vs a Dan table | status §4 |

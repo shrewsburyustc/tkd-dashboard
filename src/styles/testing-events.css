@@ -1,0 +1,1090 @@
+/*
+  testing-events.css — the styles for Color Belt testing phase 2: the Events tab, Add / Edit
+  event, the event page (Students roster with payments) and its dialogs, the registration link
+  dialog and the printed flyer (contract 0005 §6, mockups E1–E14 and R1–R8).
+  Why it exists: testing.css holds phase 1 (Classes and ranks) and the pieces both phases share
+  (.phead, .ttabs, .ttag, .clist, .tdialog, .errbar, .segmented …). This file adds only what
+  phase 2 needs, with the same tokens (tokens.css) and the 4px spacing grid. Class names start
+  with "ev-" so they never clash with phase 1.
+
+  Screen-size rules used below (same as testing.css):
+    Phone          (max-width: 639.98px)
+    PC             (min-width: 1024px)            → every column
+    Touch screens  (pointer: coarse)              → 48px rows, 44px tap areas
+*/
+
+/* ===== Shared small pieces ===== */
+
+/* The Testing tabs became buttons in phase 2 (Events · Classes and ranks): drawn exactly like
+   phase 1's tab, without a button's own border and background. */
+.ttabs button.ttab {
+  padding: 0;
+  border-width: 0 0 2px;
+  border-style: solid;
+  border-color: transparent;
+  border-radius: 0;
+  background: none;
+  font-family: inherit;
+}
+
+.ttabs button.ttab.is-current {
+  border-bottom-color: var(--color-blue);
+}
+
+/* A green tag ("Open until Nov 13", "Paid") — guidelines 7 Success colors */
+.ttag--ok {
+  border-color: #cfe3b8;
+  background: #eaf3de;
+  color: var(--color-success-text);
+}
+
+/* A menu item without an icon keeps its words lined up with the ones that have one */
+.ev-noicon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+}
+
+/* A grayed menu item with its reason under it ("The closing date has passed. Ask an admin to reopen.") */
+.ev-menu-two {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: normal;
+}
+
+.ev-menu-reason {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  line-height: 1.4;
+}
+
+.tmenu-item:has(.ev-menu-two) {
+  height: auto;
+  min-height: 32px;
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-4);
+}
+
+.ev-confirm-hint {
+  margin-top: var(--space-8);
+}
+
+/* "Pick one" buttons (ChoiceGroup.jsx) */
+.ev-segmented {
+  max-width: 100%;
+}
+
+.ev-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.ev-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 32px;
+  padding: 0 var(--space-12);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--text-13);
+}
+
+.ev-chip.is-checked {
+  border-color: var(--color-blue);
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+  font-weight: 500;
+  box-shadow: inset 0 0 0 1px var(--color-blue); /* a 2px edge: the choice is clear without color alone */
+}
+
+/* "Yellow → Orange" with the belt pictures */
+.ev-tf {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-4);
+  row-gap: 2px;
+  min-width: 0;
+}
+
+.ev-tf .belt {
+  margin-right: 2px;
+}
+
+.ev-tf-none {
+  color: var(--color-text-secondary);
+}
+
+/* ===== Events tab (E1–E3) ===== */
+
+/* Upcoming / Past switch: the selected side is GRAY, not blue (Star v0.89) */
+.ev-side {
+  margin-bottom: var(--space-12);
+}
+
+.ev-side .segment.is-checked {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.ev-side .segment {
+  min-width: 96px;
+  text-align: left;
+}
+
+.ev-side-count {
+  margin-left: var(--space-16);
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.ev-list {
+  border-radius: var(--radius-control);
+}
+
+.ev-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 128px 72px 160px 64px;
+  align-items: center;
+  column-gap: var(--space-12);
+  min-height: 40px;
+  padding: 0 var(--space-8) 0 var(--space-12);
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+/* A line between rows (and under the header row) */
+.ev-list [role='rowgroup'] > * + *,
+.ev-roster [role='rowgroup'] > * + * {
+  border-top: 1px solid var(--color-border);
+}
+
+.ev-head,
+.ev-shead {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ev-head {
+  min-height: 32px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  cursor: default;
+}
+
+.ev-row.is-selected {
+  background: var(--color-blue-tint);
+}
+
+.ev-row:focus-visible,
+.ev-srow:focus-visible,
+.st-row:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+.ev-name {
+  min-width: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.ev-row .num {
+  text-align: right;
+}
+
+.ev-row .acts {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Sortable column headers (rule 8): plain words that are buttons */
+.ev-sort {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+}
+
+.ev-th[aria-sort='ascending'] .ev-sort,
+.ev-th[aria-sort='descending'] .ev-sort {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.ev-th.num {
+  text-align: right;
+}
+
+/* Phone rows: name, "date · students", tag — ⋯ on the right */
+.ev-row.is-phone {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-4) var(--space-8) var(--space-16);
+}
+
+.ev-phone-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ev-phone-tag {
+  margin-top: var(--space-4);
+}
+
+.ev-empty {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+/* ===== Add / Edit event (E4–E7) ===== */
+.ev-two {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-12);
+}
+
+.ev-classes {
+  padding: var(--space-4) var(--space-12) var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.ev-crow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--space-8);
+  min-height: 40px;
+}
+
+.ev-crow + .ev-crow {
+  border-top: 1px solid var(--color-border);
+}
+
+.ev-crow-name {
+  min-width: 0;
+}
+
+.ev-crow-name span {
+  overflow-wrap: anywhere;
+}
+
+.ev-crow.is-off .ev-crow-name span {
+  color: var(--color-text-secondary);
+}
+
+.ev-crow-times {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.ev-crow-to,
+.ev-crow-off {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.ev-crow-off {
+  text-align: right;
+}
+
+.ev-crow-error {
+  grid-column: 1 / -1;
+  padding-bottom: var(--space-8);
+}
+
+.ev-time {
+  width: 112px;
+  padding-right: var(--space-4);
+  font-family: inherit; /* a select doesn't take the page font by itself (it showed Arial) */
+}
+
+.ev-classes-hint {
+  margin-top: var(--space-4);
+}
+
+.ev-closing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-left: 24px; /* lines up with the words of the tick above */
+}
+
+.ev-closing .input {
+  max-width: 240px;
+}
+
+.ev-note {
+  height: auto;
+  min-height: 72px;
+  padding: var(--space-8) var(--space-12);
+  font-family: inherit;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+/* ===== Event page (R1) ===== */
+.ev-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  align-self: flex-start;
+  min-height: 28px;
+  margin-bottom: var(--space-4);
+}
+
+.ev-phead {
+  align-items: flex-start;
+}
+
+.ev-summary {
+  color: var(--color-text);
+  font-size: var(--text-13);
+}
+
+.ev-head-buttons {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+/* The four summary cards (Star v0.115) */
+.ev-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-12);
+  margin-bottom: var(--space-12);
+}
+
+.ev-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: left;
+}
+
+.ev-card--button {
+  cursor: pointer;
+}
+
+/* The card whose filter is on: blue edge (Star's proposal "selected card blue") */
+.ev-card.is-selected {
+  border-color: var(--color-blue);
+  box-shadow: inset 0 0 0 1px var(--color-blue);
+}
+
+.ev-card-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.ev-card-value {
+  font-size: var(--text-20);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+/* Payments recorded: "includes $65 from removed students" under the number (R8) */
+.ev-card-note {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.ev-filter-line {
+  margin: calc(-1 * var(--space-4)) 0 var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* The amber "possible duplicate" box (Star v0.114) */
+.ev-dupbox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-tag-warn-border);
+  border-radius: var(--radius-control);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--text-13);
+}
+
+.ev-dupbox-icon {
+  flex: none;
+  margin-top: 6px;
+}
+
+.ev-dupbox-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.ev-dupbox-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+}
+
+.ev-dupbox-line strong {
+  font-weight: 500;
+}
+
+/* Class switch: the selected class is GRAY (like Upcoming / Past), not blue */
+.ev-class-switch {
+  margin-bottom: var(--space-12);
+}
+
+.ev-class-switch .segmented {
+  flex-wrap: wrap;
+}
+
+.ev-class-switch .segment {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.ev-class-switch .segment.is-checked {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.ev-cs-count {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.ev-classline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-12);
+  margin-bottom: var(--space-12);
+  font-size: var(--text-13);
+}
+
+.ev-classline strong {
+  font-weight: 500;
+}
+
+/* ===== The roster (R1, R7, R8) ===== */
+.ev-roster {
+  border-radius: var(--radius-control);
+}
+
+.ev-srow {
+  display: grid;
+  /* Tablet: Student · Testing for · Paying by · Payment · actions */
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.5fr) 72px 132px 152px;
+  align-items: center;
+  column-gap: var(--space-12);
+  min-height: 40px;
+  padding: var(--space-4) var(--space-8) var(--space-4) var(--space-12);
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+/* PC: + Paid on */
+.ev-roster.is-wide .ev-srow {
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.5fr) 72px 140px 64px 152px;
+}
+
+.ev-shead {
+  min-height: 32px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  cursor: default;
+}
+
+.ev-srow.is-selected {
+  background: var(--color-blue-tint);
+}
+
+.ev-scell {
+  min-width: 0;
+}
+
+.ev-sname-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-8);
+}
+
+.ev-sname {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.ev-ssub {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.ev-srow .acts {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
+}
+
+.ev-markpaid {
+  white-space: nowrap;
+}
+
+/* Keeps the tags lined up when a row has no ⋯ (staff on a removed row) */
+.ev-more-spacer {
+  display: inline-block;
+  flex: none;
+  width: 28px;
+}
+
+/* The amber "Possible duplicate" tag is a button that opens the compare dialog */
+.ev-tag-button {
+  position: relative;
+  cursor: pointer;
+}
+
+.ev-srow.is-removed .ev-sname,
+.ev-srow.is-removed .ev-scell {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.ev-roster-empty {
+  margin: 0;
+  padding: var(--space-24) var(--space-16);
+}
+
+/* "Removed · 1   Not in the counts" */
+.ev-removed-head {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--space-12);
+  background: var(--color-bg);
+}
+
+.ev-removed-head > span {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-12);
+}
+
+.ev-removed-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 28px;
+  padding: 0 var(--space-4);
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text);
+  font-size: var(--text-13);
+}
+
+.ev-removed-title {
+  font-weight: 500;
+}
+
+.ev-removed-note {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* Phone rows: stacked lines, ⋯ on the right */
+.ev-srow.is-phone {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-4) var(--space-8) var(--space-12);
+}
+
+.ev-srow-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ev-sline-tag {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  margin-top: var(--space-4);
+}
+
+/* ===== Student dialogs (R4, R6) ===== */
+.ev-sum {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-13);
+}
+
+.ev-sum-row {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: var(--space-12);
+  padding: var(--space-8) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.ev-sum-row:first-child {
+  border-top: none;
+}
+
+.ev-sum-row dt {
+  color: var(--color-text-secondary);
+}
+
+.ev-sum-row dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ev-sum-row.is-diff dd,
+.ev-cmp td.is-diff {
+  background: var(--color-warning-bg);
+}
+
+/* Edit details: the class and belt part is boxed, so the "Now testing for" line belongs to it */
+.ev-belt-box {
+  padding: var(--space-8) var(--space-12) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.ev-belt-label {
+  margin-top: var(--space-8);
+}
+
+.ev-testing-line {
+  margin-top: var(--space-4);
+  color: var(--color-text);
+  font-size: var(--text-13);
+}
+
+.ev-changed-line {
+  margin-top: var(--space-8);
+  padding: var(--space-8);
+  border-radius: var(--radius-tag);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--text-13);
+}
+
+.ev-money {
+  max-width: 160px;
+}
+
+.ev-date {
+  max-width: 240px;
+}
+
+/* ===== Compare (R7) ===== */
+.ev-cmp {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-13);
+}
+
+.ev-cmp th,
+.ev-cmp td {
+  padding: var(--space-8);
+  border-top: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.ev-cmp thead th {
+  border-top: none;
+  font-weight: 500;
+}
+
+.ev-cmp tbody th {
+  width: 112px;
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.ev-cmp-keep td {
+  border-top: none;
+}
+
+.ev-cmp-card {
+  margin-bottom: var(--space-16);
+  padding: var(--space-8) var(--space-12) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.ev-cmp-head {
+  margin-bottom: var(--space-4);
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.ev-cmp-note {
+  margin-top: var(--space-12);
+}
+
+.ev-cmp-actions {
+  flex-wrap: wrap;
+}
+
+/* ===== Registration link (R2) ===== */
+.ev-link-event {
+  margin-bottom: var(--space-12);
+}
+
+.ev-link-line {
+  margin-bottom: var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.ev-link-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-16);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  text-align: center;
+}
+
+.ev-link-school {
+  font-size: var(--text-14);
+  font-weight: 500;
+}
+
+.ev-link-qr {
+  width: 128px;
+  height: 128px;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+}
+
+.ev-link-url {
+  max-width: 100%;
+  padding: var(--space-4) var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-tag);
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: var(--text-12);
+  overflow-wrap: anywhere;
+}
+
+.ev-link-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-8);
+}
+
+/* ===== The flyer (R3): only on paper ===== */
+.flyer-print {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: letter;
+    margin: 0.75in;
+  }
+
+  /* Only the flyer is printed; the dashboard and the dialog are hidden. */
+  body > *:not(.flyer-print) {
+    display: none !important;
+  }
+
+  .flyer-print {
+    display: block;
+  }
+
+  .flyer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12pt;
+    color: #000;
+    font-family: var(--font-family);
+    text-align: center;
+  }
+
+  .flyer .logo {
+    filter: grayscale(1); /* black and white page */
+  }
+
+  .flyer-school {
+    font-size: 16pt;
+  }
+
+  .flyer-title {
+    margin-top: 12pt;
+    font-size: 28pt;
+    font-weight: 500;
+  }
+
+  .flyer-date {
+    font-size: 18pt;
+  }
+
+  .flyer-line {
+    font-size: 14pt;
+  }
+
+  .flyer-strong {
+    font-weight: 500;
+  }
+
+  .flyer-qr {
+    width: 3in;
+    height: 3in;
+    margin: 12pt 0;
+  }
+}
+
+/* ===== Hover — mouse only ===== */
+@media (hover: hover) {
+  .ev-row:not(.ev-head):not(.is-selected):hover,
+  .ev-srow:not(.ev-shead):not(.is-selected):hover,
+  .ev-card--button:not(.is-selected):hover {
+    background: var(--color-surface);
+  }
+
+  .ev-card--button:not(.is-selected):hover {
+    border-color: var(--color-border-strong);
+  }
+
+  .ev-sort:hover,
+  .ev-removed-toggle:hover {
+    color: var(--color-text);
+  }
+}
+
+/* ===== Touch screens: 48px rows, 44px tap areas (guidelines 2.5) ===== */
+@media (pointer: coarse) {
+  .ev-row,
+  .ev-srow {
+    min-height: 48px;
+  }
+
+  .ev-head,
+  .ev-shead {
+    min-height: 36px;
+  }
+
+  .ev-chip {
+    min-height: var(--tap-size);
+  }
+
+  .ev-time {
+    height: var(--control-height-touch);
+    font-size: var(--text-16); /* 16px stops iPads zooming into the field */
+  }
+
+  .ev-back,
+  .ev-removed-toggle,
+  .ev-sort {
+    min-height: var(--tap-size);
+  }
+
+  .ev-crow {
+    min-height: 48px;
+  }
+
+  .ev-more-spacer {
+    width: var(--tap-size);
+  }
+
+  /* Small buttons stay drawn small but get a 44px tap area */
+  .ev-tag-button::after {
+    content: '';
+    position: absolute;
+    inset: -14px -4px;
+  }
+
+  .ev-dupbox-review {
+    height: var(--control-height-touch);
+  }
+}
+
+/* ===== Tablet widths ===== */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .ev-row {
+    grid-template-columns: minmax(0, 1fr) 120px 64px 148px auto;
+    column-gap: var(--space-8);
+  }
+
+  .ev-srow {
+    column-gap: var(--space-8);
+  }
+
+  .ev-cards {
+    gap: var(--space-8);
+  }
+}
+
+/* Touch tablets: the ⋯ and pencil are 44px, so the actions column is wider */
+@media (pointer: coarse) and (min-width: 640px) {
+  .ev-srow {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.5fr) 56px 124px 160px;
+  }
+
+  .ev-roster.is-wide .ev-srow {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.5fr) 56px 124px 56px 160px;
+  }
+}
+
+/* ===== Phones (narrower than 640px) ===== */
+@media (max-width: 639.98px) {
+  .ev-phead {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-8);
+  }
+
+  .ev-head-buttons .btn {
+    height: var(--control-height-touch);
+  }
+
+  .ev-two {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  /* Add / Edit event on phones: the class name on its own line, the two times under it */
+  .ev-crow,
+  .ev-crow.is-phone {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--space-4);
+    padding: var(--space-4) 0 var(--space-8);
+  }
+
+  .ev-crow-times {
+    margin-left: 24px;
+  }
+
+  .ev-crow-off {
+    margin-left: 24px;
+    text-align: left;
+  }
+
+  .ev-time {
+    width: auto;
+    min-width: 0;
+    flex: 1;
+    height: var(--control-height-touch);
+    font-size: var(--text-16);
+  }
+
+  .ev-closing {
+    margin-left: 0;
+  }
+
+  .ev-closing .input,
+  .ev-date {
+    max-width: none;
+    height: var(--control-height-touch);
+    font-size: var(--text-16);
+  }
+
+  /* Cards two by two */
+  .ev-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-8);
+  }
+
+  /* Class switch: a grid of 3 per row; long names wrap inside their box */
+  .ev-class-switch .segmented {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .ev-class-switch .segment {
+    justify-content: space-between;
+    min-height: var(--tap-size);
+    height: auto;
+    padding: var(--space-4) var(--space-8);
+    border-radius: 0;
+    white-space: normal;
+    text-align: left;
+    gap: var(--space-4);
+  }
+
+  .ev-class-switch .segment + .segment {
+    border-left: none;
+  }
+
+  .ev-class-switch .segment:not(:nth-child(3n + 1)) {
+    border-left: 1px solid var(--color-border);
+  }
+
+  .ev-class-switch .segment:nth-child(n + 4) {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .ev-cs-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .ev-side .segment {
+    min-width: 0;
+  }
+
+  .ev-sum-row {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+
+  .ev-link-card {
+    padding: var(--space-12);
+  }
+
+  .ev-money {
+    max-width: none;
+  }
+}

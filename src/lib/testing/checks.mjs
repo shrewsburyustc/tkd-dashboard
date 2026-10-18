@@ -1,4 +1,6 @@
 // checks.mjs — automatic checks for the Testing data layer. Run:  node src/lib/testing/checks.mjs
+// (Phase 2 added: eventRules.js, qr.js, the events preview database and the family page's preview
+// API — contract 0005 §5. Those groups are at the end.)
 // Why it exists: names.js, money.js, rankOrder.js and the preview database (mockTesting.js) carry
 // rules that must match the real database exactly. These plain `assert` checks run in a few
 // milliseconds without a browser or a database, and print ALL TESTING LIB CHECKS PASSED.
@@ -18,6 +20,16 @@ import {
   BELT_COLORS, BELT_PATTERNS, BELT_END_STRIPES_MAX, DEFAULT_END_STRIPE_COLOR, PLAIN_WHITE_BELT,
   validateBelt, describeBelt, defaultBeltFor, beltOf, sameBelt,
 } from './belts.js';
+import {
+  todayInSchoolTime, addDays, defaultAutoCloseOn, isIsoDate, eventState, EVENT_STATES, stateTag, publicStateFor,
+  registrationSwitch, testingFor, feeFor, isPaid, classTimeLabel, shortTime, timeToMinutes, validateClassTimes,
+  signatureIsValid, noteIsValid, normalizeNote, registrationUrl, SIGNATURE_PREFIX, SIGNATURE_MAX_LENGTH, NOTE_MAX, ACK_VERSION,
+  FORM_PAYING_BY, UNDO_WINDOW_MS, eventCounts,
+} from './eventRules.js';
+import { registrationLink, qrSvgDataUrl } from './qr.js';
+import {
+  createEventsBackend, defaultEventsData, EVENT_RPC_NAMES, EVENT_RESTRICTED_RPC_NAMES, EVENT_ADMIN_ONLY_RPCS, DEFAULT_EVENT_ID, DEFAULT_PUBLIC_CODE,
+} from '../mockTestingEvents.js';
 
 let count = 0;
 function check(label, fn) {
@@ -1048,7 +1060,7 @@ check('mock: preview helpers and storage', () => {
   memory = { ...defaultTestingData(), schema: 2 }; // saved by the v0.62 build (no belts)
   assert.equal(memory.schema, 2);
   assert.equal(rankRow(classRanks(schoolClasses('worcester')[0].id)[0].id).belt_pattern, 'solid');
-  assert.equal(db().schema, 3);
+  assert.equal(db().schema, 4); // v0.64 → 4 in phase 2 (contract 0005)
   const damaged = defaultTestingData();
   damaged.ranks[0].belt_color_2 = 'black'; // solid with a second color: not a valid belt
   memory = damaged;
@@ -1061,6 +1073,919 @@ check('mock: preview helpers and storage', () => {
   memory = null;
   assert.equal(schoolClasses('worcester').length, 7);
 });
+
+// ======================= eventRules.js (phase 2, contract 0005 §1.3–§1.6) =======================
+// The same table of cases the database tests use (0005_tests.sql step 4): Massachusetts time
+// (America/New_York) at the minute boundaries of the closing date and the testing date.
+
+check('eventRules: school date at the minute boundaries (America/New_York)', () => {
+  const cases = [
+    ['2026-11-14T04:59:59Z', '2026-11-13'], // Nov 13, 11:59:59 PM EST
+    ['2026-11-14T05:00:00Z', '2026-11-14'], // Nov 14, 12:00:00 AM EST
+    ['2026-11-21T04:59:59Z', '2026-11-20'], // the testing day, 11:59:59 PM
+    ['2026-11-21T05:00:00Z', '2026-11-21'], // the day after: finished
+    ['2026-07-01T03:59:59Z', '2026-06-30'], // summer time (EDT, UTC−4)
+    ['2026-07-01T04:00:00Z', '2026-07-01'],
+    ['2026-11-01T05:59:59Z', '2026-11-01'], // 1:59:59 AM EST on the night the clocks go back
+    ['2027-03-14T06:59:59Z', '2027-03-14'], // 2:59:59 AM EDT, clocks went forward at 2 AM
+    ['2026-12-31T23:59:59Z', '2026-12-31'],
+    ['2027-01-01T04:59:59Z', '2026-12-31'],
+  ];
+  for (const [instant, date] of cases) {
+    assert.equal(todayInSchoolTime(new Date(instant)), date, instant);
+    assert.equal(todayInSchoolTime(Date.parse(instant)), date, `${instant} as ms`);
+  }
+  assert.match(todayInSchoolTime(), /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(addDays('2026-11-20', -7), '2026-11-13');
+  assert.equal(addDays('2026-03-01', -1), '2026-02-28');
+  assert.equal(addDays('2028-03-01', -1), '2028-02-29');
+  assert.equal(addDays('2026-12-31', 1), '2027-01-01');
+  assert.equal(addDays('2026-11-20', -90), '2026-08-22');
+  assert.equal(defaultAutoCloseOn('2026-11-20'), '2026-11-13');
+  assert.equal(defaultAutoCloseOn('nope'), null);
+  assert.equal(isIsoDate('2026-02-30'), false);
+  assert.equal(isIsoDate('2026-2-3'), false);
+  assert.equal(isIsoDate('2028-02-29'), true);
+  assert.equal(isIsoDate(null), false);
+});
+
+check('eventRules: event state machine, order and boundaries', () => {
+  const ev = (over = {}) => ({ testingDate: '2026-11-20', registrationOpen: true, autoCloseOn: '2026-11-13', firstOpenedAt: '2026-10-30T14:00:00Z', ...over });
+  const at = (instant) => todayInSchoolTime(new Date(instant));
+  // [event, today, state]
+  const cases = [
+    [ev(), '2026-10-17', 'open'],
+    [ev(), at('2026-11-14T04:59:59Z'), 'open'], // 11:59:59 PM on the closing date: still open
+    [ev(), at('2026-11-14T05:00:00Z'), 'closed_by_date'], // 12:00:00 AM the next day: closed
+    [ev(), '2026-11-20', 'closed_by_date'],
+    [ev({ autoCloseOn: null }), at('2026-11-21T04:59:59Z'), 'open'], // testing day until midnight (v0.88)
+    [ev({ autoCloseOn: '2026-11-20' }), '2026-11-20', 'open'], // closing on the testing day itself
+    [ev({ autoCloseOn: null }), at('2026-11-21T05:00:00Z'), 'finished'],
+    [ev(), '2026-11-21', 'finished'], // finished wins over everything
+    [ev({ registrationOpen: false, firstOpenedAt: null }), '2026-11-21', 'finished'],
+    [ev({ registrationOpen: false, firstOpenedAt: null }), '2026-10-17', 'not_open_yet'],
+    [ev({ registrationOpen: false, firstOpenedAt: null }), '2026-11-15', 'not_open_yet'], // date passed without opening
+    [ev({ registrationOpen: false }), '2026-10-17', 'closed'], // closed by hand
+    [ev({ registrationOpen: false }), '2026-11-15', 'closed'],
+    [ev({ registrationOpen: false, autoCloseOn: null }), '2026-11-20', 'closed'],
+  ];
+  cases.forEach(([event, today, state], i) => assert.equal(eventState(event, today), state, `case ${i}`));
+  // The database spelling works too (the preview store uses it).
+  assert.equal(eventState({ testing_date: '2026-11-20', registration_open: true, auto_close_on: '2026-11-13', first_opened_at: 'x' }, '2026-11-14'), 'closed_by_date');
+  assert.deepEqual(EVENT_STATES, ['finished', 'open', 'closed_by_date', 'not_open_yet', 'closed']);
+});
+
+check('eventRules: staff tags and public statuses', () => {
+  const e = { testingDate: '2026-11-20', autoCloseOn: '2026-11-13' };
+  assert.deepEqual(stateTag('finished', e, '2026-11-21'), { code: 'finished' });
+  assert.deepEqual(stateTag('open', e, '2026-11-20'), { code: 'testing_today' }); // whatever the state
+  assert.deepEqual(stateTag('closed_by_date', e, '2026-11-20'), { code: 'testing_today' });
+  assert.deepEqual(stateTag('not_open_yet', e, '2026-11-20'), { code: 'testing_today' });
+  assert.deepEqual(stateTag('open', e, '2026-11-01'), { code: 'open_until', date: '2026-11-13' });
+  assert.deepEqual(stateTag('open', { ...e, autoCloseOn: null }, '2026-11-01'), { code: 'open' });
+  assert.deepEqual(stateTag('closed_by_date', e, '2026-11-15'), { code: 'closed' });
+  assert.deepEqual(stateTag('closed', e, '2026-11-01'), { code: 'closed' });
+  assert.deepEqual(stateTag('not_open_yet', e, '2026-11-01'), { code: 'not_open_yet' });
+  assert.deepEqual(publicStateFor('open', e), { state: 'open', closedOn: null });
+  assert.deepEqual(publicStateFor('not_open_yet', e), { state: 'not_open', closedOn: null }); // F11
+  assert.deepEqual(publicStateFor('closed_by_date', e), { state: 'closed', closedOn: '2026-11-13' }); // F12
+  assert.deepEqual(publicStateFor('closed', e), { state: 'closed', closedOn: null }); // F13
+  assert.deepEqual(publicStateFor('finished', e), { state: 'finished', closedOn: null }); // F14
+});
+
+check('eventRules: the registration switch (who may open / close)', () => {
+  const e = { testingDate: '2026-11-20', registrationOpen: true, autoCloseOn: '2026-11-13', firstOpenedAt: 'x' };
+  const sw = (event, open, isAdmin, today) => registrationSwitch({ event, open, isAdmin, today });
+  // Closing: staff and admins, any time before finished.
+  assert.deepEqual(sw(e, false, false, '2026-11-20'), { status: 'ok', clearsAutoClose: false });
+  assert.deepEqual(sw(e, false, false, '2026-11-21'), { status: 'finished' });
+  // Opening before / on the closing date: anyone.
+  const closed = { ...e, registrationOpen: false };
+  assert.deepEqual(sw(closed, true, false, '2026-11-13'), { status: 'ok', clearsAutoClose: false });
+  assert.deepEqual(sw({ ...closed, autoCloseOn: null }, true, false, '2026-11-20'), { status: 'ok', clearsAutoClose: false });
+  // After the closing date: admins only, and it clears the closing date.
+  assert.deepEqual(sw(closed, true, false, '2026-11-14'), { status: 'not_allowed' });
+  assert.deepEqual(sw(closed, true, true, '2026-11-14'), { status: 'ok', clearsAutoClose: true });
+  assert.deepEqual(sw(e, true, false, '2026-11-14'), { status: 'not_allowed' }); // from closed_by_date
+  assert.deepEqual(sw({ ...closed, firstOpenedAt: null }, true, true, '2026-11-15'), { status: 'ok', clearsAutoClose: true });
+  assert.deepEqual(sw(closed, true, true, '2026-11-21'), { status: 'finished' }); // nothing once finished
+});
+
+check('eventRules: testing for, fee by date, paid', () => {
+  const belt = (color) => ({ beltPattern: 'solid', beltColor: color, beltColor2: null, beltEndStripes: 0, beltEndStripeColor: 'yellow' });
+  const a = {
+    id: 'A', finalAwardKind: 'rank', finalAwardName: 'Blue', faBeltPattern: 'solid', faBeltColor: 'blue', faBeltColor2: null, faBeltEndStripes: 0, faBeltEndStripeColor: 'yellow',
+    ranks: [{ id: 'g', name: 'Green', position: 2, ...belt('green') }, { id: 'y', name: 'Yellow', position: 0, ...belt('yellow') }, { id: 'o', name: 'Orange', position: 1, ...belt('orange') }],
+  };
+  const d = { id: 'D', finalAwardKind: 'none', ranks: [{ id: 'dep', name: 'Deputy', position: 0, ...belt('black') }] };
+  assert.deepEqual(testingFor([a, d], { id: 'y' }), { name: 'Orange', ...belt('orange') }); // next by position
+  assert.deepEqual(testingFor([a, d], { id: 'o' }), { name: 'Green', ...belt('green') });
+  assert.deepEqual(testingFor([a, d], { id: 'g' }), { name: 'Blue', ...belt('blue') }); // last → final award copy
+  assert.equal(testingFor([a, d], { id: 'dep' }), null); // None → "No new rank"
+  assert.equal(testingFor([a], { id: 'nope' }), null);
+  // snake_case copy (the preview store)
+  const snake = { final_award_kind: 'rank', final_award_name: 'Blue', fa_belt_pattern: 'solid', fa_belt_color: 'blue', fa_belt_color_2: null, fa_belt_end_stripes: 0, fa_belt_end_stripe_color: 'yellow', ranks: [{ id: 'x', name: 'High Green', position: 0, belt_pattern: 'stripe', belt_color: 'green', belt_color_2: 'white', belt_end_stripes: 0, belt_end_stripe_color: 'yellow' }] };
+  assert.deepEqual(testingFor([snake], { id: 'x' }), { name: 'Blue', ...belt('blue') });
+  // Fee: early before the testing day, testing-day price on it (and after).
+  const rank = { earlyCents: 6500, dayCents: 7500 };
+  assert.equal(feeFor(rank, '2026-11-19', '2026-11-20'), 6500);
+  assert.equal(feeFor(rank, '2026-11-20', '2026-11-20'), 7500);
+  assert.equal(feeFor(rank, '2026-11-21', '2026-11-20'), 7500);
+  assert.equal(feeFor({ early_cents: 5000, day_cents: 6000 }, '2026-01-01', '2026-11-20'), 5000);
+  // At the minute boundary: 11:59:59 PM the day before vs 12:00:00 AM on the day.
+  assert.equal(feeFor(rank, todayInSchoolTime(new Date('2026-11-20T04:59:59Z')), '2026-11-20'), 6500);
+  assert.equal(feeFor(rank, todayInSchoolTime(new Date('2026-11-20T05:00:00Z')), '2026-11-20'), 7500);
+  assert.equal(isPaid(6500), true);
+  assert.equal(isPaid(0), false); // paid then undone: net 0
+  assert.equal(isPaid(null), false);
+  assert.equal(isPaid(-6500), false);
+});
+
+check('eventRules: class times, signature, note, link', () => {
+  assert.equal(classTimeLabel('17:00', '18:00'), '5:00 – 6:00 PM');
+  assert.equal(classTimeLabel('16:00:00', '17:00:00'), '4:00 – 5:00 PM');
+  assert.equal(classTimeLabel('11:30', '12:30'), '11:30 AM – 12:30 PM');
+  assert.equal(classTimeLabel('09:05', '10:00'), '9:05 – 10:00 AM');
+  assert.equal(classTimeLabel('00:00', '00:30'), '12:00 – 12:30 AM');
+  assert.equal(classTimeLabel('12:00', '13:15'), '12:00 – 1:15 PM');
+  assert.equal(classTimeLabel('25:00', '26:00'), '');
+  assert.equal(shortTime('17:00:00'), '17:00');
+  assert.equal(shortTime('7:00'), null);
+  assert.equal(timeToMinutes('23:59'), 1439);
+  assert.equal(timeToMinutes('24:00'), null);
+  assert.deepEqual(validateClassTimes([
+    { startTime: '16:00', endTime: '17:00' },
+    { startTime: '19:00', endTime: '18:30' }, // E6
+    { startTime: '19:00', endTime: '19:00' },
+    { startTime: '', endTime: '17:00' },
+    { startTime: '16:00', endTime: null },
+    { startTime: '4pm', endTime: '5pm' },
+    { start_time: '16:00:00', end_time: '17:00:00' },
+  ]), [null, 'endNotAfterStart', 'endNotAfterStart', 'missingStart', 'missingEnd', 'badTime', null]);
+  const sig = `${SIGNATURE_PREFIX}iVBORw0KGgo=`;
+  assert.equal(signatureIsValid(sig), true);
+  assert.equal(signatureIsValid('data:image/jpeg;base64,iVBORw0KGgo='), false);
+  assert.equal(signatureIsValid(`${SIGNATURE_PREFIX}<svg onload=x>`), false);
+  assert.equal(signatureIsValid(`${SIGNATURE_PREFIX}${'A'.repeat(SIGNATURE_MAX_LENGTH - SIGNATURE_PREFIX.length)}`), true);
+  assert.equal(signatureIsValid(`${SIGNATURE_PREFIX}${'A'.repeat(SIGNATURE_MAX_LENGTH - SIGNATURE_PREFIX.length + 1)}`), false);
+  assert.equal(signatureIsValid(SIGNATURE_PREFIX), false);
+  assert.equal(noteIsValid(null), true);
+  assert.equal(noteIsValid('x'.repeat(NOTE_MAX)), true);
+  assert.equal(noteIsValid('x'.repeat(NOTE_MAX + 1)), false);
+  assert.equal(noteIsValid(` \n${'x'.repeat(NOTE_MAX)}\r\n `), true); // tidied first
+  assert.equal(noteIsValid('a\u200bb'), false);
+  assert.equal(noteIsValid('line 1\n\tline 2'), true);
+  assert.equal(normalizeNote('  Bring water.\r\nArrive early. \n'), 'Bring water.\nArrive early.');
+  assert.equal(normalizeNote(' \t\r\n '), null);
+  assert.equal(registrationUrl('p4w9tdkm'), 'https://tkd-dashboard.pages.dev/register/p4w9tdkm');
+  assert.equal(ACK_VERSION, 'cb-2026-10-17');
+  assert.deepEqual(FORM_PAYING_BY, ['cash', 'check']);
+  assert.equal(UNDO_WINDOW_MS, 10000);
+});
+
+// ======================= qr.js =======================
+
+check('qr: link and QR picture', () => {
+  assert.equal(registrationLink('p4w9tdkm'), 'https://tkd-dashboard.pages.dev/register/p4w9tdkm');
+  assert.equal(registrationLink('../evil'), '');
+  assert.equal(registrationLink(null), '');
+  const url = qrSvgDataUrl('p4w9tdkm');
+  assert.ok(url.startsWith('data:image/svg+xml;charset=utf-8,'));
+  const svg = decodeURIComponent(url.slice(url.indexOf(',') + 1));
+  assert.ok(svg.startsWith('<svg') && svg.includes('</svg>'));
+  assert.ok(!/script|onload|href/i.test(svg)); // only shapes
+  assert.equal(qrSvgDataUrl('BAD CODE'), '');
+});
+
+// ======================= mockTestingEvents.js (the phase 2 preview database) =======================
+
+let evClock = Date.parse('2026-10-17T16:00:00Z');
+let evToday = '2026-10-17';
+let evMemory = null;
+const evIds = () => randomUUID();
+const evTesting = createTestingBackend({ loadStore: () => evMemory, saveStore: (s) => { evMemory = JSON.parse(JSON.stringify(s)); }, now: () => evClock, newId: evIds });
+const ev = createEventsBackend({
+  readBase: () => evTesting.snapshot(),
+  saveStore: (s) => { evMemory = JSON.parse(JSON.stringify(s)); },
+  now: () => evClock,
+  today: () => evToday,
+  newId: evIds,
+});
+const E_ADMIN = { signedIn: true, hasDataAccess: true, isAdmin: true, actorName: 'Jeffrey Berg', userId: '00000000-0000-4000-8000-000000000001' };
+const E_DESK = { signedIn: true, hasDataAccess: true, isAdmin: false, actorName: 'Staff', userId: '00000000-0000-4000-8000-0000000000d1' };
+const E_DESK2 = { ...E_DESK, actorName: 'Other desk', userId: '00000000-0000-4000-8000-0000000000d2' };
+const E_LOCKED = { signedIn: true, hasDataAccess: false, isAdmin: true, actorName: 'Jeffrey Berg', userId: E_ADMIN.userId };
+const E_ANON = { signedIn: false, hasDataAccess: false, isAdmin: false };
+const evCall = (name, args, ctx = E_ADMIN) => {
+  const res = ev.rpc(name, args, ctx);
+  assert.equal(res.error, null, `${name}: ${res.error?.message}`);
+  return res.data;
+};
+const evStatus = (name, args, ctx) => evCall(name, args, ctx).status;
+// Classes and ranks functions (phase 1) on the same store.
+const tCall = (name, args) => {
+  const res = evTesting.rpc(name, args, E_ADMIN);
+  assert.equal(res.data?.status, 'ok', `${name}: ${res.error?.message ?? res.data?.status}`);
+  return res.data;
+};
+const evDb = () => ev.snapshot();
+const evReset = () => { evMemory = null; evClock = Date.parse('2026-10-17T16:00:00Z'); evToday = '2026-10-17'; };
+const regBy = (ref) => evDb().registrations.find((r) => r.reference === ref);
+const rosterOf = (eventId, ctx = E_ADMIN) => ev.select('testing_roster', 'id, reference, first_name, status, duplicate_state, duplicate_of, paid, paid_cents, paid_on, paid_method, last_payment_id, version, signed, class_name', [{ col: 'event_id', value: eventId }], [], ctx).data;
+const eventRow = (id = DEFAULT_EVENT_ID) => evDb().events.find((e) => e.id === id);
+const worcesterClass = (name) => evDb().classes.find((c) => c.location_code === 'worcester' && c.name === name);
+const eventRankByName = (className, rankName, eventId = DEFAULT_EVENT_ID) => {
+  const d = evDb();
+  const ec = d.event_classes.find((c) => c.event_id === eventId && c.class_name === className);
+  return d.event_ranks.find((r) => r.event_class_id === ec.id && r.name === rankName);
+};
+const SIG = `${SIGNATURE_PREFIX}iVBORw0KGgo=`;
+const classesArgFor = (names, start = '17:00', end = '18:00') => names.map((n) => ({ class_id: worcesterClass(n).id, start_time: start, end_time: end }));
+
+check('events mock: default preview data (contract 0005 §5)', () => {
+  evReset();
+  const d = evDb();
+  assert.equal(d.schema, 4);
+  assert.equal(d.events.length, 1);
+  const e = d.events[0];
+  assert.equal(e.name, 'November Children Testing');
+  assert.equal(e.location_code, 'worcester');
+  assert.equal(e.testing_date, '2026-11-20');
+  assert.equal(new Date('2026-11-20T12:00:00Z').getUTCDay(), 5); // a Friday
+  assert.equal(eventState(e, evToday), 'open');
+  assert.match(e.public_code, /^[abcdefghjkmnpqrstuvwxyz23456789]{8}$/);
+  const classes = d.event_classes.filter((c) => c.event_id === e.id).sort((a, b) => a.position - b.position);
+  assert.deepEqual(classes.map((c) => [c.class_name, classTimeLabel(c.start_time, c.end_time)]), [
+    ['Little Tiger', '4:00 – 5:00 PM'], ['White', '4:00 – 5:00 PM'], ['Group A', '5:00 – 6:00 PM'],
+    ['Group B', '6:00 – 7:00 PM'], ['Group C', '7:00 – 8:00 PM'], ['Group D', '7:00 – 8:00 PM'],
+  ]);
+  const roster = rosterOf(e.id);
+  const active = roster.filter((r) => r.status === 'active' && r.duplicate_state !== 'possible');
+  assert.equal(active.length, 14);
+  const perClass = {};
+  for (const r of active) perClass[r.class_name] = (perClass[r.class_name] ?? 0) + 1;
+  assert.deepEqual(perClass, { 'Little Tiger': 3, White: 1, 'Group A': 4, 'Group B': 3, 'Group C': 2, 'Group D': 1 });
+  assert.equal(roster.filter((r) => r.paid).length, 6);
+  assert.equal(roster.reduce((t, r) => t + r.paid_cents, 0), 41000); // $410
+  assert.equal(roster.filter((r) => r.duplicate_state === 'possible').length, 1);
+  assert.equal(roster.filter((r) => r.status === 'withdrawn').length, 1);
+  const zoe = roster.find((r) => r.reference === 'CB-3112');
+  assert.equal(zoe.first_name, 'Zoe');
+  assert.equal(zoe.signed, true);
+  const mia2 = regBy('CB-3109');
+  assert.equal(mia2.duplicate_of, regBy('CB-3107').id);
+  // Testing for, as R1 shows: Mia Yellow → Orange, Ethan Green → High Green; LT → Group A Yellow.
+  const copy = d.event_classes.filter((c) => c.event_id === e.id).map((c) => ({ ...c, ranks: d.event_ranks.filter((r) => r.event_class_id === c.id) }));
+  assert.equal(testingFor(copy, eventRankByName('Group A', 'Yellow')).name, 'Orange');
+  assert.equal(testingFor(copy, eventRankByName('Group A', 'Green')).name, 'High Green');
+  assert.equal(testingFor(copy, eventRankByName('Little Tiger', 'LT Black')).name, 'Yellow');
+  assert.equal(testingFor(copy, eventRankByName('Group D', 'Deputy')), null);
+  assert.equal(testingFor(copy, eventRankByName('Group A', 'High Green')).name, 'Blue');
+  // School addresses start empty.
+  assert.ok(d.locations.every((l) => l.address_street === null && l.version === 1));
+  // Classes and ranks are still the phase 1 default list.
+  assert.equal(d.classes.filter((c) => c.location_code === 'worcester').length, 7);
+});
+
+check('events mock: default data dates are in the past and in order', () => {
+  // Dates count back from "today": registered and paid 1-8 days ago, the event made before that.
+  const schoolDay = (iso) => todayInSchoolTime(new Date(iso));
+  for (const today of ['2026-10-17', '2026-07-01', '2026-11-19', '2026-11-20']) {
+    const d = defaultEventsData({ today });
+    const e = d.events[0];
+    assert.equal(e.testing_date, '2026-11-20', today);
+    assert.equal(e.auto_close_on, '2026-11-13');
+    assert.ok(schoolDay(e.created_at) < today && schoolDay(e.first_opened_at) < today, today);
+    for (const r of d.registrations) {
+      const day = schoolDay(r.registered_at);
+      assert.ok(day >= addDays(today, -8) && day <= addDays(today, -1), `${today} ${r.reference} ${day}`);
+      assert.ok(e.created_at < r.registered_at, `${r.reference} registered before the event was made`);
+      if (r.withdrawn_at) assert.ok(r.registered_at < r.withdrawn_at && schoolDay(r.withdrawn_at) < today);
+    }
+    for (const p of d.payments) {
+      const reg = d.registrations.find((r) => r.id === p.registration_id);
+      assert.ok(p.paid_on < today && p.paid_on >= schoolDay(reg.registered_at), `${today} ${reg.reference} paid ${p.paid_on}`);
+      assert.ok(reg.registered_at < p.recorded_at && schoolDay(p.recorded_at) === p.paid_on);
+    }
+    assert.equal(d.payments.reduce((t, p) => t + p.amount_cents, 0), 41000); // early prices: $410
+  }
+  // Summer clock (UTC-4) and winter clock (UTC-5) both give the right school time.
+  const summer = defaultEventsData({ today: '2026-07-10' }).registrations.find((r) => r.reference === 'CB-3101');
+  assert.equal(summer.registered_at, '2026-07-02T21:20:00.000Z'); // 5:20 PM EDT
+  const winter = defaultEventsData({ today: '2026-11-10' }).registrations.find((r) => r.reference === 'CB-3101');
+  assert.equal(winter.registered_at, '2026-11-02T22:20:00.000Z'); // 5:20 PM EST
+  // After Nov 20 2026 the event moves to 30 days ahead.
+  const late = defaultEventsData({ today: '2026-12-05' }).events[0];
+  assert.deepEqual([late.testing_date, late.auto_close_on], ['2027-01-04', '2026-12-28']);
+  // The backend counts back from the pretend date, but never from a date later than its clock.
+  evReset();
+  assert.equal(todayInSchoolTime(new Date(evDb().registrations[0].registered_at)), addDays(evToday, -8));
+  evToday = '2026-11-25'; // pretend later than the clock (Oct 17): still counts back from Oct 17
+  assert.equal(evDb().events[0].testing_date, '2026-11-20');
+  assert.ok(evDb().payments.every((p) => p.recorded_at < new Date(evClock).toISOString()));
+  evReset();
+});
+
+check('eventRules: eventCounts for the Events list and Delete event', () => {
+  const rows = [
+    { status: 'active', paid_cents: 6500 }, { status: 'active', paid_cents: 0 }, { status: 'active', paid_cents: null },
+    { status: 'withdrawn', paid_cents: 7000 }, { status: 'withdrawn', paid_cents: 0 },
+  ];
+  assert.deepEqual(eventCounts(rows), { activeCount: 3, withdrawnCount: 2, registrationCount: 5, paymentTotalCents: 13500, removedPaymentCents: 7000 });
+  assert.deepEqual(eventCounts([]), { activeCount: 0, withdrawnCount: 0, registrationCount: 0, paymentTotalCents: 0, removedPaymentCents: 0 });
+  // On the default data the totals are exactly what Delete event expects.
+  evReset();
+  const c = eventCounts(rosterOf(DEFAULT_EVENT_ID));
+  assert.deepEqual(c, { activeCount: 15, withdrawnCount: 1, registrationCount: 16, paymentTotalCents: 41000, removedPaymentCents: 0 });
+  const e = eventRow();
+  assert.equal(evStatus('testing_delete_event', { p_event_id: e.id, p_expected_version: e.version, p_expected_registration_count: c.activeCount, p_expected_payment_total_cents: c.paymentTotalCents }), 'stale');
+  assert.equal(evStatus('testing_delete_event', { p_event_id: e.id, p_expected_version: e.version, p_expected_registration_count: c.registrationCount, p_expected_payment_total_cents: c.paymentTotalCents }), 'ok');
+  evReset();
+});
+
+check('events mock: reads and column permissions', () => {
+  evReset();
+  const sel = (table, cols, ctx = E_ADMIN, filters = []) => ev.select(table, cols, filters, [], ctx);
+  assert.equal(sel('testing_events', 'id, name, public_code').error, null);
+  assert.equal(sel('testing_events', 'id, name', E_DESK).data.length, 1); // staff can read
+  for (const [table, col] of [['testing_registrations', 'signature'], ['testing_registrations', 'submission_id'], ['testing_registrations', 'created_by'],
+    ['testing_payments', 'recorded_by'], ['testing_events', 'updated_by'], ['testing_public_attempts', 'id'], ['locations', 'updated_by'], ['testing_roster', '*']]) {
+    assert.equal(sel(table, `id, ${col}`).error?.code ?? sel(table, col).error?.code, '42501', `${table}.${col}`);
+  }
+  assert.equal(sel('testing_roster', 'signature').error.code, '42703'); // the view has no signature at all
+  const view = sel('testing_roster', 'reference, class_name, start_time, rank_name, belt_color, early_cents, paid_cents', E_ADMIN, [{ col: 'reference', value: 'CB-3112' }]).data[0];
+  assert.deepEqual(view, { reference: 'CB-3112', class_name: 'Group A', start_time: '17:00:00', rank_name: 'Yellow', belt_color: 'yellow', early_cents: 6500, paid_cents: 0 });
+  assert.equal(sel('testing_events', 'nope').error.code, '42703');
+  assert.equal(sel('testing_events', 'id', E_LOCKED).data.length, 0); // RLS hides rows
+  assert.equal(sel('testing_events', 'id', E_ANON).error.code, '42501');
+  assert.equal(sel('locations', 'code, name, id, address_street, address_city, address_state, address_zip, version').data.length, 2);
+  // "in" filter
+  const ids = evDb().registrations.slice(0, 3).map((r) => r.id);
+  assert.equal(ev.select('testing_registrations', 'id', [{ col: 'id', value: ids, op: 'in' }], [], E_ADMIN).data.length, 3);
+  // The public functions and helpers are not for signed-in staff.
+  for (const name of EVENT_RESTRICTED_RPC_NAMES) assert.equal(ev.rpc(name, {}, E_ADMIN).error.code, '42501', name);
+  assert.equal(ev.rpc('testing_nope', {}, E_ADMIN).error.code, 'PGRST202');
+  assert.equal(ev.rpc('testing_mark_paid', { p_registration_id: 'x', p_expected_version: 1 }, E_ADMIN).error.code, '22P02');
+  assert.equal(ev.rpc('testing_mark_paid', { p_registration_id: regBy('CB-3112').id }, E_ADMIN).error.code, 'PGRST202'); // missing argument
+});
+
+check('events mock: who may call each function (A / S splits)', () => {
+  evReset();
+  const anyId = '00000000-0000-4000-8000-00000000abcd';
+  const sample = {
+    testing_add_event: { p_location_code: 'worcester', p_name: 'X', p_testing_date: '2026-12-01', p_classes: [], p_registration_open: false, p_auto_close_on: null, p_note: null },
+    testing_update_event: { p_event_id: anyId, p_expected_version: 1, p_name: 'X', p_testing_date: '2026-12-01', p_classes: [], p_auto_close_on: null, p_note: null },
+    testing_set_registration: { p_event_id: anyId, p_expected_version: 1, p_open: false },
+    testing_delete_event: { p_event_id: anyId, p_expected_version: 1, p_expected_registration_count: 0, p_expected_payment_total_cents: 0 },
+    testing_add_student: { p_event_id: anyId, p_first: 'A', p_last: 'B', p_event_rank_id: anyId, p_stripes: true, p_paying_by: 'cash' },
+    testing_update_student: { p_registration_id: anyId, p_expected_version: 1, p_first: 'A', p_last: 'B', p_event_rank_id: anyId },
+    testing_change_paying_by: { p_registration_id: anyId, p_expected_version: 1, p_paying_by: 'cash' },
+    testing_mark_paid: { p_registration_id: anyId, p_expected_version: 1 },
+    testing_undo_payment: { p_payment_id: anyId },
+    testing_edit_payment: { p_payment_id: anyId, p_method: 'cash', p_amount_cents: 100, p_paid_on: '2026-10-17' },
+    testing_resolve_duplicate: { p_keep_id: anyId, p_keep_version: 1, p_other_id: '00000000-0000-4000-8000-00000000abce', p_other_version: 1, p_keep_both: true },
+    testing_withdraw_student: { p_registration_id: anyId, p_expected_version: 1 },
+    testing_restore_student: { p_registration_id: anyId, p_expected_version: 1 },
+    testing_delete_student: { p_registration_id: anyId, p_expected_version: 1, p_expected_payment_ids: [] },
+    settings_update_school_address: { p_code: 'nowhere', p_expected_version: 1, p_street: null, p_city: null, p_state: null, p_zip: null },
+  };
+  assert.deepEqual(Object.keys(sample).sort(), [...EVENT_RPC_NAMES].sort());
+  // testing_restore_student checks who inside (staff: their own "keep one" for 10 seconds).
+  const adminOnly = ['testing_add_event', 'testing_update_event', 'testing_delete_event', 'testing_edit_payment', 'testing_withdraw_student', 'testing_delete_student', 'settings_update_school_address'];
+  assert.deepEqual([...EVENT_ADMIN_ONLY_RPCS].sort(), [...adminOnly].sort());
+  const before = JSON.stringify(evDb());
+  for (const name of EVENT_RPC_NAMES) {
+    assert.equal(ev.rpc(name, sample[name], E_ANON).error.code, '42501', `${name} anon`);
+    assert.equal(evStatus(name, sample[name], E_LOCKED), 'no_access', `${name} locked`); // has_data_access first
+    const desk = evStatus(name, sample[name], E_DESK);
+    if (adminOnly.includes(name)) assert.equal(desk, 'not_allowed', `${name} staff`);
+    else assert.notEqual(desk, 'not_allowed', `${name} staff`);
+    assert.notEqual(evStatus(name, sample[name], E_ADMIN), 'not_allowed', `${name} admin`);
+  }
+  assert.equal(JSON.stringify(evDb()), before); // nothing was written by refusals
+  // failNextSave: a dropped connection, nothing changes.
+  ev.failNextSave();
+  const res = ev.rpc('testing_mark_paid', { p_registration_id: regBy('CB-3112').id, p_expected_version: regBy('CB-3112').version }, E_DESK);
+  assert.equal(res.data, null);
+  assert.ok(res.error);
+  assert.equal(regBy('CB-3112').version, 1);
+});
+
+check('events mock: Add / Edit / Delete event and the copy rule', () => {
+  evReset();
+  const add = (over = {}) => evCall('testing_add_event', {
+    p_location_code: 'worcester', p_name: 'January Children Testing', p_testing_date: '2027-01-22',
+    p_classes: classesArgFor(['Group A', 'Group B']), p_registration_open: false, p_auto_close_on: '2027-01-15', p_note: null, ...over,
+  });
+  // Argument rules.
+  assert.equal(add({ p_testing_date: '2026-10-16' }).status, 'invalid'); // in the past
+  assert.equal(add({ p_auto_close_on: '2027-01-23' }).status, 'invalid'); // after the testing date
+  assert.equal(add({ p_auto_close_on: '2026-10-16' }).status, 'invalid'); // before today
+  assert.equal(add({ p_classes: [] }).status, 'invalid');
+  assert.equal(add({ p_classes: Array.from({ length: 51 }, () => ({ class_id: randomUUID(), start_time: '17:00', end_time: '18:00' })) }).status, 'invalid');
+  assert.equal(add({ p_classes: [{ class_id: worcesterClass('Group A').id, start_time: '18:00', end_time: '17:30' }] }).status, 'invalid');
+  assert.equal(add({ p_classes: [...classesArgFor(['Group A']), ...classesArgFor(['Group A'])] }).status, 'invalid');
+  assert.equal(add({ p_note: 'x'.repeat(601) }).status, 'invalid');
+  assert.equal(add({ p_location_code: 'both' }).status, 'invalid');
+  assert.equal(add({ p_name: '   ' }).status, 'invalid');
+  const shrewsburyA = evDb().classes.find((c) => c.location_code === 'shrewsbury' && c.name === 'Group A');
+  assert.equal(add({ p_classes: [{ class_id: shrewsburyA.id, start_time: '17:00', end_time: '18:00' }] }).status, 'invalid'); // other school
+  assert.equal(add({ p_classes: [{ class_id: '00000000-0000-4000-8000-00000000dead', start_time: '17:00', end_time: '18:00' }] }).status, 'stale'); // deleted class
+  assert.equal(add({ p_name: ' november  children testing ' }).status, 'duplicate_name');
+  // Not set final award → refused, with the class name.
+  const ta = worcesterClass('Teen/Adult');
+  tCall('testing_update_class', { p_class_id: ta.id, p_expected_version: ta.version, p_name: ta.name, p_final_award_rank_id: null, p_final_award_none: false });
+  assert.deepEqual(add({ p_classes: classesArgFor(['Group A', 'Teen/Adult']) }), { status: 'final_award_not_set', class_name: 'Teen/Adult' });
+  assert.equal(evDb().events.length, 1);
+  // A good one, closed: Not open yet. Auto close null is accepted.
+  const ok = add({ p_auto_close_on: null, p_note: '  Bring water.\r\n' });
+  assert.equal(ok.status, 'ok');
+  assert.equal(ok.version, 1);
+  assert.match(ok.public_code, /^[abcdefghjkmnpqrstuvwxyz23456789]{8}$/);
+  const jan = eventRow(ok.id);
+  assert.equal(jan.first_opened_at, null);
+  assert.equal(eventState(jan, evToday), 'not_open_yet');
+  assert.equal(jan.note, 'Bring water.');
+  // Copy rule: later price / name changes in Classes and ranks don't touch the event copy.
+  const yellow = evDb().ranks.find((r) => r.class_id === worcesterClass('Group A').id && r.name === 'Yellow');
+  tCall('testing_update_rank', {
+    p_rank_id: yellow.id, p_expected_version: yellow.version, p_name: 'Gold', p_early_cents: 9900, p_day_cents: 9900, p_private_cents: 9900, p_sparring_gear: true,
+    p_belt_pattern: 'solid', p_belt_color: 'yellow', p_belt_color_2: null, p_belt_end_stripes: 0, p_belt_end_stripe_color: 'yellow',
+  });
+  const copied = eventRankByName('Group A', 'Yellow', ok.id);
+  assert.equal(copied.early_cents, 6500);
+  assert.equal(copied.rank_id, yellow.id);
+  assert.equal(eventRankByName('Group A', 'Yellow').early_cents, 6500); // the default event too
+  // Edit: add Group C later (copied now), times changed, Group B removed (empty).
+  const upd = (over = {}) => evCall('testing_update_event', {
+    p_event_id: ok.id, p_expected_version: eventRow(ok.id).version, p_name: 'January Children Testing', p_testing_date: '2027-01-22',
+    p_classes: [...classesArgFor(['Group A'], '16:00', '17:00'), ...classesArgFor(['Group C'], '18:00', '19:00')], p_auto_close_on: null, p_note: null, ...over,
+  });
+  assert.equal(upd({ p_expected_version: 99 }).status, 'stale');
+  assert.equal(upd({ p_event_id: '00000000-0000-4000-8000-00000000dead' }).status, 'not_found');
+  assert.equal(upd({ p_name: 'November Children Testing' }).status, 'duplicate_name');
+  const u = upd();
+  assert.equal(u.status, 'ok');
+  assert.equal(u.version, 2);
+  const janClasses = evDb().event_classes.filter((c) => c.event_id === ok.id);
+  assert.deepEqual(janClasses.map((c) => c.class_name).sort(), ['Group A', 'Group C']);
+  assert.equal(janClasses.find((c) => c.class_name === 'Group A').start_time, '16:00:00');
+  assert.equal(eventRankByName('Group A', 'Gold', ok.id), undefined); // Group A kept its old copy
+  // Nothing changed → version stays.
+  assert.equal(upd().version, 2);
+  // Unticking a class with registrations (even withdrawn) → not_empty.
+  const noB = classesArgFor(['Little Tiger', 'White', 'Group A', 'Group C', 'Group D']);
+  const nov = eventRow();
+  assert.equal(evStatus('testing_update_event', { p_event_id: nov.id, p_expected_version: nov.version, p_name: nov.name, p_testing_date: nov.testing_date, p_classes: noB, p_auto_close_on: nov.auto_close_on, p_note: null }), 'not_empty');
+  // Editing a finished event may keep its past date, not move to another past date.
+  evToday = '2026-12-01';
+  const keep = { p_event_id: nov.id, p_expected_version: nov.version, p_name: 'November Kids', p_testing_date: '2026-11-20', p_classes: classesArgFor(['Little Tiger', 'White', 'Group A', 'Group B', 'Group C', 'Group D']), p_auto_close_on: '2026-11-13', p_note: null };
+  // (times changed to 17–18 for all: allowed)
+  assert.equal(evStatus('testing_update_event', { ...keep, p_testing_date: '2026-11-21' }), 'invalid');
+  assert.equal(evStatus('testing_update_event', { ...keep, p_auto_close_on: '2026-11-14' }), 'invalid'); // a changed closing date in the past
+  assert.equal(evStatus('testing_update_event', keep), 'ok');
+  evToday = '2026-10-17';
+  // Delete: the counts must be what the dialog showed (all registrations, net payments).
+  const regs = evDb().registrations.filter((r) => r.event_id === nov.id);
+  const del = (count, total) => evStatus('testing_delete_event', { p_event_id: nov.id, p_expected_version: eventRow().version, p_expected_registration_count: count, p_expected_payment_total_cents: total });
+  assert.equal(regs.length, 16); // incl. the withdrawn one and the duplicate copy
+  assert.equal(del(14, 41000), 'stale');
+  assert.equal(del(16, 0), 'stale');
+  assert.equal(evStatus('testing_delete_event', { p_event_id: nov.id, p_expected_version: 1, p_expected_registration_count: 16, p_expected_payment_total_cents: 41000 }), 'stale'); // old version
+  assert.equal(del(16, 41000), 'ok');
+  const after = evDb();
+  assert.equal(after.events.length, 1);
+  assert.equal(after.registrations.length, 0);
+  assert.equal(after.payments.length, 0);
+  assert.equal(after.event_classes.filter((c) => c.event_id === nov.id).length, 0);
+});
+
+check('events mock: the registration switch per role', () => {
+  evReset();
+  const sw = (open, ctx, version = eventRow().version) => evCall('testing_set_registration', { p_event_id: DEFAULT_EVENT_ID, p_expected_version: version, p_open: open }, ctx);
+  const closed = sw(false, E_DESK); // staff may close
+  assert.equal(closed.status, 'ok');
+  assert.equal(closed.state, 'closed');
+  assert.equal(sw(true, E_DESK, 1).status, 'stale');
+  assert.deepEqual(sw(true, E_DESK), { status: 'ok', version: 3, state: 'open' }); // before the closing date: staff may open
+  sw(false, E_DESK);
+  evToday = '2026-11-14'; // the closing date has passed
+  assert.equal(sw(true, E_DESK).status, 'not_allowed');
+  const reopened = sw(true, E_ADMIN);
+  assert.equal(reopened.status, 'ok');
+  assert.equal(reopened.state, 'open');
+  assert.equal(eventRow().auto_close_on, null); // the automatic closing date was removed (E9)
+  evToday = '2026-11-21';
+  assert.equal(sw(false, E_ADMIN).status, 'finished');
+  assert.equal(sw(true, E_ADMIN).status, 'finished');
+  // first_opened_at is set the first time it opens.
+  evToday = '2026-10-17';
+  const made = evCall('testing_add_event', { p_location_code: 'worcester', p_name: 'Spring', p_testing_date: '2027-03-01', p_classes: classesArgFor(['Group A']), p_registration_open: false, p_auto_close_on: '2027-02-20', p_note: null });
+  assert.equal(eventRow(made.id).first_opened_at, null);
+  evCall('testing_set_registration', { p_event_id: made.id, p_expected_version: 1, p_open: true }, E_DESK);
+  assert.equal(eventRow(made.id).first_opened_at, new Date(evClock).toISOString());
+  const opened = evCall('testing_add_event', { p_location_code: 'worcester', p_name: 'Summer', p_testing_date: '2027-06-01', p_classes: classesArgFor(['Group A']), p_registration_open: true, p_auto_close_on: null, p_note: null });
+  assert.notEqual(eventRow(opened.id).first_opened_at, null);
+});
+
+check('events mock: students, Mark paid, Undo window, Edit payment', () => {
+  evReset();
+  const yellow = eventRankByName('Group A', 'Yellow');
+  // Add student (staff): rules, then a walk-in.
+  const addS = (over = {}, ctx = E_DESK) => evCall('testing_add_student', { p_event_id: DEFAULT_EVENT_ID, p_first: 'Sam', p_last: 'Ortiz', p_event_rank_id: yellow.id, p_stripes: true, p_paying_by: 'card', ...over }, ctx);
+  assert.equal(addS({ p_stripes: false }).status, 'invalid');
+  assert.equal(addS({ p_paying_by: 'venmo' }).status, 'invalid');
+  assert.equal(addS({ p_first: '' }).status, 'invalid');
+  assert.equal(addS({ p_event_id: '00000000-0000-4000-8000-00000000dead' }).status, 'not_found');
+  assert.equal(addS({ p_event_rank_id: evDb().ranks[0].id }).status, 'invalid'); // not a rank of this event
+  const walkIn = addS({ p_first: '  Sam  ', p_last: 'Ortiz' });
+  assert.equal(walkIn.status, 'ok');
+  assert.equal(walkIn.reference, 'CB-3117');
+  assert.equal(walkIn.version, 1);
+  const sam = evDb().registrations.find((r) => r.id === walkIn.id);
+  assert.equal(sam.first_name, 'Sam');
+  assert.equal(sam.source, 'staff');
+  assert.equal(sam.signature, null);
+  // Mark paid before the testing day: the early price, method = how they'll pay.
+  const paid = evCall('testing_mark_paid', { p_registration_id: sam.id, p_expected_version: 1 }, E_DESK);
+  assert.deepEqual({ ...paid, payment_id: 'x' }, { status: 'ok', payment_id: 'x', amount_cents: 6500, method: 'card', version: 2 });
+  assert.equal(evStatus('testing_mark_paid', { p_registration_id: sam.id, p_expected_version: 1 }, E_DESK), 'stale'); // double click
+  assert.equal(evStatus('testing_mark_paid', { p_registration_id: sam.id, p_expected_version: 2 }, E_DESK), 'already_paid');
+  assert.equal(evStatus('testing_change_paying_by', { p_registration_id: sam.id, p_expected_version: 2, p_paying_by: 'cash' }, E_DESK), 'already_paid');
+  const row = rosterOf(DEFAULT_EVENT_ID).find((r) => r.id === sam.id);
+  assert.deepEqual([row.paid, row.paid_cents, row.paid_on, row.paid_method, row.last_payment_id], [true, 6500, '2026-10-17', 'card', paid.payment_id]);
+  // Undo: another desk can't; the same desk can within 10 seconds; not after.
+  assert.equal(evStatus('testing_undo_payment', { p_payment_id: paid.payment_id }, E_DESK2), 'not_allowed');
+  evClock += 9999;
+  const undone = evCall('testing_undo_payment', { p_payment_id: paid.payment_id }, E_DESK);
+  assert.deepEqual(undone, { status: 'ok', version: 3 });
+  assert.equal(evStatus('testing_undo_payment', { p_payment_id: paid.payment_id }, E_ADMIN), 'stale'); // already undone
+  const reversal = evDb().payments.find((p) => p.reverses_payment_id === paid.payment_id);
+  assert.equal(reversal.amount_cents, -6500);
+  assert.equal(evStatus('testing_undo_payment', { p_payment_id: reversal.id }, E_ADMIN), 'invalid'); // a reversal can't be reversed
+  assert.equal(evStatus('testing_undo_payment', { p_payment_id: reversal.id }, E_DESK2), 'not_allowed'); // who is checked first
+  assert.equal(rosterOf(DEFAULT_EVENT_ID).find((r) => r.id === sam.id).paid, false);
+  // Change how they'll pay, then pay again; 10 s later only an admin may undo.
+  assert.equal(evCall('testing_change_paying_by', { p_registration_id: sam.id, p_expected_version: 3, p_paying_by: 'cash' }, E_DESK).version, 4);
+  const again = evCall('testing_mark_paid', { p_registration_id: sam.id, p_expected_version: 4 }, E_DESK);
+  assert.equal(again.method, 'cash');
+  evClock += 10000;
+  assert.equal(evStatus('testing_undo_payment', { p_payment_id: again.payment_id }, E_DESK), 'not_allowed');
+  // Edit payment (admin): reversal + new payment.
+  const edited = evCall('testing_edit_payment', { p_payment_id: again.payment_id, p_method: 'check', p_amount_cents: 7500, p_paid_on: '2026-10-16' });
+  assert.equal(edited.status, 'ok');
+  assert.equal(evStatus('testing_edit_payment', { p_payment_id: again.payment_id, p_method: 'check', p_amount_cents: 7500, p_paid_on: '2026-10-16' }), 'stale');
+  assert.equal(evStatus('testing_edit_payment', { p_payment_id: edited.payment_id, p_method: 'check', p_amount_cents: 0, p_paid_on: '2026-10-16' }), 'invalid');
+  assert.equal(evStatus('testing_edit_payment', { p_payment_id: edited.payment_id, p_method: 'check', p_amount_cents: 7500, p_paid_on: '2026-10-18' }), 'invalid'); // not in the future
+  assert.equal(evStatus('testing_edit_payment', { p_payment_id: edited.payment_id, p_method: 'check', p_amount_cents: 100001, p_paid_on: '2026-10-16' }), 'invalid');
+  const r2 = rosterOf(DEFAULT_EVENT_ID).find((r) => r.id === sam.id);
+  assert.deepEqual([r2.paid_cents, r2.paid_method, r2.paid_on, r2.last_payment_id], [7500, 'check', '2026-10-16', edited.payment_id]);
+  assert.equal(evStatus('testing_undo_payment', { p_payment_id: edited.payment_id }, E_ADMIN), 'ok'); // admins: any time
+  // On the testing day: the testing-day price. Mark paid works even once finished.
+  evToday = '2026-11-20';
+  const zoe = regBy('CB-3112');
+  assert.equal(evCall('testing_mark_paid', { p_registration_id: zoe.id, p_expected_version: zoe.version }, E_DESK).amount_cents, 7500);
+  evToday = '2026-11-21';
+  const sam2 = regBy('CB-3110');
+  assert.equal(evCall('testing_mark_paid', { p_registration_id: sam2.id, p_expected_version: sam2.version }, E_DESK).amount_cents, 7500);
+  assert.equal(addS().status, 'finished'); // no new students once finished
+  // Withdrawn students can't be paid or change how they pay.
+  const leo = regBy('CB-3116');
+  assert.equal(evStatus('testing_mark_paid', { p_registration_id: leo.id, p_expected_version: leo.version }, E_DESK), 'withdrawn');
+  assert.equal(evStatus('testing_change_paying_by', { p_registration_id: leo.id, p_expected_version: leo.version, p_paying_by: 'card' }, E_DESK), 'withdrawn');
+});
+
+check('events mock: edit details, duplicates, withdraw / restore, delete student', () => {
+  evReset();
+  const mia1 = regBy('CB-3107');
+  const mia2 = regBy('CB-3109');
+  // Keep both → both kept_both, not flagged again by an edit.
+  const both = evCall('testing_resolve_duplicate', { p_keep_id: mia1.id, p_keep_version: mia1.version, p_other_id: mia2.id, p_other_version: mia2.version, p_keep_both: true }, E_DESK);
+  assert.equal(both.status, 'ok');
+  assert.deepEqual([regBy('CB-3107').duplicate_state, regBy('CB-3109').duplicate_state], ['kept_both', 'kept_both']);
+  const m2 = regBy('CB-3109');
+  evCall('testing_update_student', { p_registration_id: m2.id, p_expected_version: m2.version, p_first: 'Mia', p_last: 'Lopez', p_event_rank_id: eventRankByName('Group A', 'Orange').id }, E_DESK);
+  assert.equal(regBy('CB-3109').duplicate_state, 'kept_both');
+  evReset();
+  // Keep one → the other is withdrawn as "Duplicate copy" (staff may do this one).
+  const a = regBy('CB-3107');
+  const b = regBy('CB-3109');
+  assert.equal(evStatus('testing_resolve_duplicate', { p_keep_id: a.id, p_keep_version: 99, p_other_id: b.id, p_other_version: b.version, p_keep_both: false }, E_DESK), 'stale');
+  assert.equal(evStatus('testing_resolve_duplicate', { p_keep_id: a.id, p_keep_version: a.version, p_other_id: regBy('CB-3112').id, p_other_version: 1, p_keep_both: false }, E_DESK), 'stale'); // not a pair (any more)
+  assert.equal(evStatus('testing_resolve_duplicate', { p_keep_id: a.id, p_keep_version: a.version, p_other_id: b.id, p_other_version: b.version, p_keep_both: false }, E_DESK), 'ok');
+  const gone = regBy('CB-3109');
+  assert.deepEqual([gone.status, gone.withdrawn_reason, gone.withdrawn_by_name, gone.withdrawn_by, gone.duplicate_state], ['withdrawn', 'duplicate_copy', 'Staff', E_DESK.userId, 'none']);
+  assert.equal(regBy('CB-3107').duplicate_state, 'none');
+  // Restore: staff may undo their OWN "keep one" for less than 10 seconds; then admins only.
+  const restore = (ctx, version = gone.version) => evStatus('testing_restore_student', { p_registration_id: gone.id, p_expected_version: version }, ctx);
+  assert.equal(restore(E_DESK2), 'not_allowed'); // someone else's
+  assert.equal(restore(E_DESK, 99), 'stale'); // who is checked first, then the version
+  evClock += UNDO_WINDOW_MS; // exactly 10 seconds later: too late
+  assert.equal(restore(E_DESK), 'not_allowed');
+  evClock -= 1;
+  assert.equal(restore(E_DESK2), 'not_allowed');
+  assert.equal(restore(E_DESK), 'ok'); // 9.999 seconds: the toast's Undo
+  const back = regBy('CB-3109');
+  assert.deepEqual([back.status, back.withdrawn_reason, back.withdrawn_at, back.withdrawn_by, back.withdrawn_by_name, back.duplicate_state], ['active', null, null, null, null, 'possible']);
+  assert.equal(evStatus('testing_restore_student', { p_registration_id: gone.id, p_expected_version: back.version }, E_DESK), 'not_allowed'); // active: staff
+  // Keep one again, then the admin restores it (any time) → flagged again.
+  const a2 = regBy('CB-3107');
+  assert.equal(evStatus('testing_resolve_duplicate', { p_keep_id: a2.id, p_keep_version: a2.version, p_other_id: back.id, p_other_version: back.version, p_keep_both: false }, E_DESK), 'ok');
+  const gone2 = regBy('CB-3109');
+  evClock += 60 * 1000;
+  assert.equal(evStatus('testing_restore_student', { p_registration_id: gone2.id, p_expected_version: gone2.version }, E_DESK), 'not_allowed');
+  assert.equal(evStatus('testing_restore_student', { p_registration_id: gone2.id, p_expected_version: gone2.version }), 'ok');
+  assert.equal(regBy('CB-3109').duplicate_state, 'possible');
+  assert.equal(regBy('CB-3109').duplicate_of, regBy('CB-3107').id);
+  assert.equal(evStatus('testing_restore_student', { p_registration_id: gone.id, p_expected_version: regBy('CB-3109').version }), 'invalid'); // already active
+  // Withdraw the original → the copy goes back to none.
+  const orig = regBy('CB-3107');
+  assert.equal(evStatus('testing_withdraw_student', { p_registration_id: orig.id, p_expected_version: orig.version }), 'ok');
+  assert.equal(regBy('CB-3107').withdrawn_by, E_ADMIN.userId);
+  assert.equal(regBy('CB-3109').duplicate_state, 'none');
+  // An admin's Withdraw is never staff-restorable, even at once (reason 'withdrawn', not theirs).
+  assert.equal(evStatus('testing_restore_student', { p_registration_id: orig.id, p_expected_version: regBy('CB-3107').version }, E_DESK), 'not_allowed');
+  const leoNow = regBy('CB-3116'); // withdrawn in the default data by the admin
+  assert.equal(leoNow.withdrawn_by, E_ADMIN.userId);
+  assert.equal(evStatus('testing_restore_student', { p_registration_id: leoNow.id, p_expected_version: leoNow.version }, E_DESK), 'not_allowed');
+  assert.equal(regBy('CB-3107').paid_cents, undefined); // (the table has no payment columns)
+  assert.equal(rosterOf(DEFAULT_EVENT_ID).find((r) => r.reference === 'CB-3107').paid, true); // Withdraw keeps payments
+  assert.equal(evStatus('testing_withdraw_student', { p_registration_id: orig.id, p_expected_version: regBy('CB-3107').version }), 'withdrawn');
+  // Edit details: renaming someone to match another active student flags them.
+  const zoe = regBy('CB-3112');
+  const upd = evCall('testing_update_student', { p_registration_id: zoe.id, p_expected_version: zoe.version, p_first: 'sam', p_last: ' DIAZ', p_event_rank_id: eventRankByName('Group B', 'Blue').id }, E_DESK);
+  assert.equal(upd.status, 'ok');
+  assert.equal(regBy('CB-3112').duplicate_state, 'possible');
+  assert.equal(regBy('CB-3112').duplicate_of, regBy('CB-3110').id);
+  assert.equal(regBy('CB-3110').duplicate_state, 'none');
+  assert.equal(evStatus('testing_update_student', { p_registration_id: zoe.id, p_expected_version: upd.version, p_first: 'Zoe', p_last: 'Park', p_event_rank_id: evDb().ranks[0].id }, E_DESK), 'invalid'); // rank of another event
+  // A new registration with the same name is flagged (staff add).
+  const added = evCall('testing_add_student', { p_event_id: DEFAULT_EVENT_ID, p_first: 'Ethan', p_last: 'Wu', p_event_rank_id: eventRankByName('Group A', 'Green').id, p_stripes: true, p_paying_by: 'cash' }, E_DESK);
+  const ethan2 = evDb().registrations.find((r) => r.id === added.id);
+  assert.equal(ethan2.duplicate_state, 'possible');
+  assert.equal(ethan2.duplicate_of, regBy('CB-3111').id);
+  // Delete permanently (admin): the payment ids must match what the warning named.
+  const ethan = regBy('CB-3111');
+  const payIds = evDb().payments.filter((p) => p.registration_id === ethan.id).map((p) => p.id);
+  assert.equal(payIds.length, 1);
+  assert.equal(evStatus('testing_delete_student', { p_registration_id: ethan.id, p_expected_version: ethan.version, p_expected_payment_ids: [] }), 'stale');
+  assert.equal(evStatus('testing_delete_student', { p_registration_id: ethan.id, p_expected_version: ethan.version, p_expected_payment_ids: payIds }, E_DESK), 'not_allowed');
+  assert.equal(evStatus('testing_delete_student', { p_registration_id: ethan.id, p_expected_version: ethan.version, p_expected_payment_ids: payIds }), 'ok');
+  assert.equal(regBy('CB-3111'), undefined);
+  assert.equal(evDb().payments.filter((p) => p.registration_id === ethan.id).length, 0); // cascaded
+  assert.equal(evDb().registrations.find((r) => r.id === added.id).duplicate_state, 'none'); // its twin is gone
+});
+
+check('events mock: Restore re-checks the partner, so both sides show "possible duplicate" again', () => {
+  evReset();
+  const pairOf = () => ({ a: regBy('CB-3107'), b: regBy('CB-3109') });
+  // The default data: Mia CB-3109 is a possible duplicate of Mia CB-3107.
+  assert.equal(pairOf().b.duplicate_of, pairOf().a.id);
+  // Withdraw the original → the copy goes back to none.
+  assert.equal(evStatus('testing_withdraw_student', { p_registration_id: pairOf().a.id, p_expected_version: pairOf().a.version }), 'ok');
+  assert.equal(pairOf().b.duplicate_state, 'none');
+  // Restore the original → BOTH are "possible" again, each pointing at the other.
+  assert.equal(evStatus('testing_restore_student', { p_registration_id: pairOf().a.id, p_expected_version: pairOf().a.version }), 'ok');
+  let { a, b } = pairOf();
+  assert.deepEqual([a.duplicate_state, a.duplicate_of], ['possible', b.id]);
+  assert.deepEqual([b.duplicate_state, b.duplicate_of], ['possible', a.id]);
+  const roster = rosterOf(DEFAULT_EVENT_ID);
+  assert.equal(roster.find((r) => r.reference === 'CB-3107').duplicate_state, 'possible');
+  assert.equal(roster.find((r) => r.reference === 'CB-3109').duplicate_state, 'possible');
+  // Keep one (staff) removes the copy and clears the original; the staff Undo (Restore within
+  // 10 s) flags both sides again.
+  assert.equal(evStatus('testing_resolve_duplicate', { p_keep_id: a.id, p_keep_version: a.version, p_other_id: b.id, p_other_version: b.version, p_keep_both: false }, E_DESK), 'ok');
+  ({ a, b } = pairOf());
+  assert.equal(b.status, 'withdrawn');
+  assert.equal(a.duplicate_state, 'none');
+  assert.equal(evStatus('testing_restore_student', { p_registration_id: b.id, p_expected_version: b.version }, E_DESK), 'ok');
+  ({ a, b } = pairOf());
+  assert.deepEqual([b.duplicate_state, b.duplicate_of], ['possible', a.id]);
+  assert.deepEqual([a.duplicate_state, a.duplicate_of], ['possible', b.id]);
+  // Restoring someone with no same-name partner changes nobody else.
+  const leo = regBy('CB-3116');
+  const othersBefore = evDb().registrations.filter((r) => r.id !== leo.id).map((r) => `${r.id}:${r.version}`);
+  assert.equal(evStatus('testing_restore_student', { p_registration_id: leo.id, p_expected_version: leo.version }), 'ok');
+  assert.equal(regBy('CB-3116').duplicate_state, 'none');
+  assert.deepEqual(evDb().registrations.filter((r) => r.id !== leo.id).map((r) => `${r.id}:${r.version}`), othersBefore);
+});
+
+check('events mock: Settings → Schools address', () => {
+  evReset();
+  const save = (over = {}, ctx = E_ADMIN) => evCall('settings_update_school_address', { p_code: 'worcester', p_expected_version: 1, p_street: ' 12 Main St ', p_city: 'Worcester', p_state: 'MA', p_zip: '01608', ...over }, ctx);
+  assert.equal(save({}, E_DESK).status, 'not_allowed');
+  assert.equal(save({ p_zip: null }).status, 'invalid'); // all four or none
+  assert.equal(save({ p_state: 'ma' }).status, 'invalid');
+  assert.equal(save({ p_zip: '1608' }).status, 'invalid');
+  assert.equal(save({ p_zip: '01608-12' }).status, 'invalid');
+  assert.equal(save({ p_street: 'x'.repeat(101) }).status, 'invalid');
+  assert.equal(save({ p_city: 'x'.repeat(61) }).status, 'invalid');
+  assert.equal(save({ p_street: '12 Main\u200b St' }).status, 'invalid'); // invisible character
+  assert.equal(save({ p_street: `  ${'x'.repeat(50)}    ${'y'.repeat(49)} ` }).status, 'ok'); // 100 after tidying
+  evReset();
+  assert.equal(save({ p_code: 'both' }).status, 'not_found');
+  assert.equal(save({ p_expected_version: 7 }).status, 'stale');
+  assert.deepEqual(save({ p_zip: '01608-1234' }), { status: 'ok', version: 2 });
+  const w = evDb().locations.find((l) => l.code === 'worcester');
+  assert.deepEqual([w.address_street, w.address_city, w.address_state, w.address_zip], ['12 Main St', 'Worcester', 'MA', '01608-1234']);
+  assert.deepEqual(save({ p_expected_version: 2, p_street: '12   Main St', p_zip: ' 01608-1234 ' }), { status: 'ok', version: 2 }); // tidies to the same
+  assert.deepEqual(save({ p_expected_version: 2, p_zip: '01608-1234' }), { status: 'ok', version: 2 }); // no change → same version
+  assert.deepEqual(save({ p_expected_version: 2, p_street: '  ', p_city: null, p_state: null, p_zip: '' }), { status: 'ok', version: 3 }); // cleared
+  assert.equal(evDb().locations.find((l) => l.code === 'worcester').address_street, null);
+});
+
+check('events mock: family form (testing_public_event / testing_public_register)', () => {
+  evReset();
+  const code = eventRow().public_code;
+  const pe = ev.publicEvent(code);
+  assert.equal(pe.status, 'ok');
+  assert.deepEqual([pe.state, pe.closed_on], ['open', null]);
+  assert.deepEqual(Object.keys(pe).sort(), ['classes', 'closed_on', 'event', 'state', 'status']);
+  assert.deepEqual(pe.event, { name: 'November Children Testing', testing_date: '2026-11-20', note: null, school_name: 'Worcester', address: null, auto_close_on: '2026-11-13' });
+  assert.equal(pe.classes.length, 6);
+  const groupA = pe.classes.find((c) => c.class_name === 'Group A');
+  assert.deepEqual([groupA.start_time, groupA.end_time], ['17:00', '18:00']); // like the database: 'HH:MM'
+  assert.deepEqual(groupA.ranks.map((r) => r.name), ['Yellow', 'Orange', 'Green', 'High Green']);
+  assert.deepEqual(groupA.ranks[0].testing_for, { name: 'Orange', belt_pattern: 'solid', belt_color: 'orange', belt_color_2: null, belt_end_stripes: 0, belt_end_stripe_color: 'yellow' });
+  assert.equal(pe.classes.find((c) => c.class_name === 'Group D').ranks.at(-1).testing_for, null); // Deputy: No new rank
+  assert.ok(!JSON.stringify(pe).includes('CB-')); // no registrations, no counts
+  assert.ok(!JSON.stringify(pe).includes(DEFAULT_EVENT_ID)); // no event id
+  assert.deepEqual(ev.publicEvent('zzzzzzzz'), { status: 'not_found' });
+  const yellowId = groupA.ranks[0].event_rank_id;
+  const send = (over = {}, opts) => ev.publicRegister({
+    code, clientKey: 'k1', submissionId: randomUUID(), first: 'Ivy', last: 'Stone', eventRankId: yellowId, payingBy: 'check', stripes: true,
+    signature: SIG, ackVersion: ACK_VERSION, ...over,
+  }, opts);
+  // Every refusal.
+  assert.equal(send({ code: 'zzzzzzzz' }).status, 'not_found');
+  assert.equal(send({ payingBy: 'card' }).status, 'invalid'); // families: cash or check
+  assert.equal(send({ stripes: false }).status, 'invalid');
+  assert.equal(send({ signature: 'data:image/svg+xml;base64,AAAA' }).status, 'invalid');
+  assert.equal(send({ signature: `${SIGNATURE_PREFIX}${'A'.repeat(70000)}` }).status, 'invalid');
+  assert.equal(send({ ackVersion: 'old' }).status, 'invalid');
+  assert.equal(send({ first: '' }).status, 'invalid');
+  assert.equal(send({ submissionId: null }).status, 'invalid');
+  assert.equal(send({ clientKey: '' }).status, 'invalid');
+  assert.equal(send({ eventRankId: evDb().ranks[0].id }).status, 'invalid'); // a rank of no event / another event
+  // OK, then the same submission again → the same answer, no second registration.
+  const sid = randomUUID();
+  const first = send({ submissionId: sid, first: ' Ivy ', last: 'Stone' });
+  assert.equal(first.status, 'ok');
+  assert.deepEqual(Object.keys(first).sort(), ['address', 'class_name', 'day_cents', 'early_cents', 'end_time', 'first_name', 'last_name', 'paying_by', 'reference', 'school_name', 'start_time', 'status', 'testing_date', 'testing_for'].sort());
+  assert.deepEqual([first.reference, first.first_name, first.class_name, first.early_cents, first.day_cents, first.testing_for.name], ['CB-3117', 'Ivy', 'Group A', 6500, 7500, 'Orange']);
+  const count = evDb().registrations.length;
+  assert.deepEqual(send({ submissionId: sid }), first);
+  assert.equal(evDb().registrations.length, count);
+  const ivy = regBy('CB-3117');
+  assert.deepEqual([ivy.source, ivy.created_by_name, ivy.signature, ivy.ack_version, ivy.duplicate_state], ['form', 'Family form', SIG, ACK_VERSION, 'none']);
+  // A duplicate is flagged silently.
+  const dup = send({ first: 'zoe', last: 'park' });
+  assert.equal(dup.status, 'ok');
+  assert.equal(regBy(dup.reference).duplicate_state, 'possible');
+  // Closed while filling in (F10) / closed by date (F12) / not open (F11) / finished (F14).
+  evToday = '2026-11-14';
+  assert.deepEqual(send(), { status: 'closed', closed_on: '2026-11-13' });
+  assert.deepEqual([ev.publicEvent(code).state, ev.publicEvent(code).closed_on], ['closed', '2026-11-13']);
+  assert.deepEqual(send({ submissionId: sid }), first); // a retry of one that got through still answers ok
+  evToday = '2026-10-17';
+  evCall('testing_set_registration', { p_event_id: DEFAULT_EVENT_ID, p_expected_version: eventRow().version, p_open: false }, E_DESK);
+  assert.deepEqual(send(), { status: 'closed', closed_on: null }); // F13
+  const spring = evCall('testing_add_event', { p_location_code: 'worcester', p_name: 'Spring', p_testing_date: '2027-03-01', p_classes: classesArgFor(['Group A']), p_registration_open: false, p_auto_close_on: null, p_note: null });
+  assert.equal(send({ code: spring.public_code }).status, 'not_open');
+  assert.equal(send({ code: spring.public_code, submissionId: sid }).status, 'invalid'); // that submission belongs to another event
+  evToday = '2026-11-21';
+  assert.equal(send().status, 'finished');
+  assert.equal(ev.publicEvent(code).state, 'finished');
+  // Rate limit: more than 20 tries per connection per hour (every try counts, refusals too).
+  evReset();
+  for (let i = 0; i < 20; i += 1) assert.notEqual(send({ clientKey: 'k9', first: '' }).status, 'rate_limited');
+  assert.equal(send({ clientKey: 'k9' }).status, 'rate_limited');
+  assert.equal(send({ clientKey: 'other' }).status, 'ok');
+  assert.equal(evDb().public_attempts.length, 22);
+  assert.equal(evDb().public_attempts.at(-2).outcome, 'rate_limited');
+  evClock += 60 * 60 * 1000; // an hour later
+  assert.equal(send({ clientKey: 'k9' }).status, 'ok');
+  evClock += 3 * 24 * 60 * 60 * 1000; // old rows are removed after 2 days
+  send({ clientKey: 'k9', first: '' });
+  assert.equal(evDb().public_attempts.length, 1);
+  assert.equal(send({ clientKey: 'zz' }, { forceRateLimited: true }).status, 'rate_limited'); // preview helper
+});
+
+check('events mock: signatures are removed 90 days after the testing date', () => {
+  evReset();
+  const zoe = regBy('CB-3112');
+  const before = { version: zoe.version, updated_at: zoe.updated_at };
+  evToday = '2027-02-18'; // Nov 20 + 90 days: not yet
+  const mia = regBy('CB-3109');
+  evCall('testing_mark_paid', { p_registration_id: mia.id, p_expected_version: mia.version }, E_DESK);
+  assert.ok(regBy('CB-3112').signature.startsWith(SIGNATURE_PREFIX)); // still kept
+  evToday = '2027-02-19'; // 91 days after: the next Mark paid / Add event / family form cleans up
+  const sam = regBy('CB-3110');
+  evCall('testing_mark_paid', { p_registration_id: sam.id, p_expected_version: sam.version }, E_DESK);
+  const z = regBy('CB-3112');
+  assert.equal(z.signature, null);
+  assert.equal(z.signature_deleted_at, new Date(evClock).toISOString());
+  assert.deepEqual({ version: z.version, updated_at: z.updated_at }, before); // no version bump
+  assert.equal(rosterOf(DEFAULT_EVENT_ID).find((r) => r.reference === 'CB-3112').signed, true); // "Signed on the form" stays
+  assert.ok(evDb().registrations.every((r) => r.signature === null));
+});
+
+check('events mock: helpers and store migration', () => {
+  evReset();
+  ev.simulateOtherAdminEdit();
+  assert.equal(eventRow().version, 2);
+  assert.equal(eventRow().updated_by_name, 'Other Admin');
+  assert.equal(evStatus('testing_set_registration', { p_event_id: DEFAULT_EVENT_ID, p_expected_version: 1, p_open: false }, E_DESK), 'stale');
+  ev.reset();
+  assert.equal(eventRow().version, 1);
+  // A store saved by the phase 1 build (schema 3, no events) → default data for both parts.
+  evMemory = { ...defaultTestingData(), schema: 3 };
+  assert.equal(evDb().schema, 4);
+  assert.equal(evDb().events.length, 1);
+  // A schema 4 store with a damaged events part keeps its classes, gets the default events.
+  const kept = { ...defaultTestingData() };
+  kept.classes[0].name = 'Tiny Tigers';
+  evMemory = { ...kept, events: 'broken' };
+  assert.equal(evDb().classes[0].name, 'Tiny Tigers');
+  assert.equal(evDb().events[0].name, 'November Children Testing');
+  // Classes and ranks writes keep the events part.
+  evReset();
+  evStatus('testing_mark_paid', { p_registration_id: regBy('CB-3112').id, p_expected_version: 1 }, E_DESK);
+  const cls = worcesterClass('Group A');
+  evTesting.rpc('testing_update_class', { p_class_id: cls.id, p_expected_version: cls.version, p_name: 'Group A1', p_final_award_rank_id: cls.final_award_rank_id, p_final_award_none: false }, E_ADMIN);
+  assert.equal(evDb().classes.find((c) => c.id === cls.id).name, 'Group A1');
+  assert.equal(rosterOf(DEFAULT_EVENT_ID).find((r) => r.reference === 'CB-3112').paid, true);
+  assert.equal(evDb().event_classes.find((c) => c.class_id === cls.id).class_name, 'Group A'); // the copy keeps its name
+});
+
+// ======================= publicApi.preview.js (the family page in preview mode) =======================
+
+// It runs in the browser; here a tiny fake window (localStorage + crypto) stands in.
+const fakeStorage = new Map();
+globalThis.window = {
+  localStorage: {
+    getItem: (k) => (fakeStorage.has(k) ? fakeStorage.get(k) : null),
+    setItem: (k, v) => fakeStorage.set(k, String(v)),
+    removeItem: (k) => fakeStorage.delete(k),
+  },
+  crypto: { randomUUID },
+};
+const previewApi = await import('./publicApi.preview.js');
+const helpers = previewApi.publicPreviewHelpers();
+previewApi.setFakeDelay(0); // no pretend network time in the checks
+
+await (async () => {
+  const label = 'public preview API: same JSON and rules as the Function';
+  try {
+    helpers.setToday('2026-10-17');
+    const code = DEFAULT_PUBLIC_CODE;
+    const got = await previewApi.getEvent(code.toUpperCase());
+    assert.equal(typeof globalThis.window.__tkdPreview.setToday, 'function'); // installed on first use
+    assert.equal(got.status, 'ok');
+    assert.deepEqual(Object.keys(got).sort(), ['classes', 'closed_on', 'event', 'state', 'status', 'turnstile_site_key']);
+    assert.equal(got.state, 'open');
+    assert.deepEqual(await previewApi.getEvent('zzzzzzzz'), { status: 'not_found' });
+    assert.deepEqual(await previewApi.getEvent('../x'), { status: 'not_found' });
+    const rankId = got.classes[2].ranks[1].event_rank_id; // Group A, Orange
+    const t0 = Date.now();
+    const body = (over = {}) => ({
+      submission_id: randomUUID(), first_name: 'Ivy', last_name: 'Stone', event_rank_id: rankId, paying_by: 'cash', stripes: true,
+      signature: SIG, ack_version: ACK_VERSION, website: '', started_at: t0 - 60000, sent_at: t0, turnstile_token: '', ...over,
+    });
+    assert.deepEqual(await previewApi.register(code, body({ website: 'http://spam' })), { status: 'bad_request' }); // honeypot
+    assert.deepEqual(await previewApi.register(code, body({ started_at: t0 - 1000 })), { status: 'bad_request' }); // too fast
+    assert.deepEqual(await previewApi.register(code, body({ signature: 'A'.repeat(110 * 1024) })), { status: 'bad_request' }); // > 100 KB
+    assert.deepEqual(await previewApi.register(code, body({ stripes: 'yes' })), { status: 'bad_request' });
+    assert.deepEqual(await previewApi.register(code, body({ stripes: false })), { status: 'invalid' });
+    helpers.forceVerifyFailed(true);
+    assert.deepEqual(await previewApi.register(code, body()), { status: 'verify_failed' });
+    const ok = await previewApi.register(code, body()); // only the next one failed
+    assert.equal(ok.status, 'ok');
+    assert.equal(ok.testing_for.name, 'Green');
+    assert.equal(ok.reference, 'CB-3117');
+    helpers.forceRateLimited(true);
+    assert.deepEqual(await previewApi.register(code, body()), { status: 'rate_limited' });
+    helpers.forceRateLimited(false);
+    // The staff preview (same store) sees the registration.
+    const store = JSON.parse(fakeStorage.get('tkd.preview.testing'));
+    assert.equal(store.registrations.find((r) => r.reference === 'CB-3117').first_name, 'Ivy');
+    helpers.setToday('2026-11-14');
+    assert.deepEqual(await previewApi.register(code, body()), { status: 'closed', closed_on: '2026-11-13' });
+    assert.equal((await previewApi.getEvent(code)).state, 'closed');
+    helpers.setToday(null);
+    assert.equal(previewApi.previewToday(), todayInSchoolTime());
+    assert.match(helpers.setToday('nope'), /Use a date/);
+    helpers.setPublicRegistration(false);
+    assert.deepEqual(await previewApi.getEvent(code), { status: 'not_open' }); // the kill switch
+    assert.deepEqual(await previewApi.register(code, body()), { status: 'not_open' });
+    helpers.setPublicRegistration(true);
+    assert.equal((await previewApi.getEvent(code)).status, 'ok');
+    count += 1;
+  } catch (error) {
+    console.error(`FAILED: ${label}`);
+    throw error;
+  }
+})();
 
 console.log(`${count} groups of checks ran.`);
 console.log('ALL TESTING LIB CHECKS PASSED');

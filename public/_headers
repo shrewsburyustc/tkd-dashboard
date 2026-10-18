@@ -10,3 +10,33 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
   X-Content-Type-Options: nosniff
+
+# The public family registration page (contract 0005 §4.4). A strict Content-Security-Policy
+# (CSP): the browser may only load this site's own files, plus Cloudflare Turnstile (the
+# "are you human?" check) from challenges.cloudflare.com. Nothing else can run, be framed or
+# be sent anywhere — even if someone managed to slip text into the page.
+#   default-src 'self'          anything not listed: only from this site
+#   script-src  + challenges…    Turnstile's script
+#   frame-src   challenges…      Turnstile's small "Verify you are human" box (an iframe)
+#   connect-src 'self'           the page may only talk to /api/register/… on this site
+#   img-src 'self' data:         the logo, and the drawn signature / belt pictures made in the page
+#   style-src 'unsafe-inline'    small inline styles (React sets some) — styles can't run code
+#   frame-ancestors 'none'       never inside another website
+#   base-uri / form-action       links and forms can't be pointed somewhere else
+# These pages ALSO match the /* rule above, so they get two CSP headers. Browsers apply both
+# (a thing must pass every policy), so the result is this strict one — the /* line only adds
+# the frame-ancestors rule this one already has.
+/register
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+
+/register.html
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+
+/register/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+
+# Answers from the registration Function must never be stored by browsers or proxies.
+# (Cloudflare doesn't apply this file to Function answers, so the Function also sets this
+# header itself — functions/_lib/http.js. This line is the backup the contract asks for.)
+/api/*
+  Cache-Control: no-store
