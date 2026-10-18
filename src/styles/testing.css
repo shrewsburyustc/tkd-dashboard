@@ -765,9 +765,20 @@ html.is-reordering * {
   gap: var(--space-32);
 }
 
-/* The Cancel / Save row stays pinned to the bottom of the dialog while the middle scrolls, so
-   it's never below the fold on a short screen (e.g. a 1366×768 laptop). */
-.tdialog .dialog-actions {
+/* The Cancel / Save row (with any note under it, v0.81, inside .dialog-footer) stays pinned to
+   the bottom of the dialog while the middle scrolls, so it's never below the fold on a short
+   screen (e.g. a 1366×768 laptop). */
+.tdialog .dialog-footer > .dialog-actions {
+  margin: 0;
+}
+
+.tdialog .dialog-footer > .tdialog-note {
+  margin-top: var(--space-8);
+}
+
+.tdialog .dialog-footer,
+.tdialog > .dialog-actions,
+.tdialog form > .dialog-actions {
   position: sticky;
   bottom: calc(-1 * var(--space-24)); /* the dialog's own bottom padding */
   z-index: 2;
@@ -778,7 +789,9 @@ html.is-reordering * {
 }
 
 .tdialog--confirm .dialog-actions,
-.tdialog--small .dialog-actions {
+.tdialog--small .dialog-footer,
+.tdialog--small > .dialog-actions,
+.tdialog--small form > .dialog-actions {
   position: static;
   margin: var(--space-16) 0 0;
   padding: 0;
@@ -789,7 +802,9 @@ html.is-reordering * {
    like the big ones above, so it never ends up below the visible part (e.g. Reset PIN with the
    keypad at 820×600). */
 @media (max-height: 699.98px) {
-  .tdialog--small .dialog-actions {
+  .tdialog--small .dialog-footer,
+  .tdialog--small > .dialog-actions,
+  .tdialog--small form > .dialog-actions {
     position: sticky;
     margin: var(--space-16) calc(-1 * var(--space-24)) calc(-1 * var(--space-24));
     padding: var(--space-12) var(--space-24) var(--space-24);
@@ -797,15 +812,9 @@ html.is-reordering * {
   }
 }
 
-/* PC / tablet (v0.81): a note comes right AFTER the Cancel / Save row, so the buttons never move
-   when it appears. The pinned row then ends at the note instead of at the box's bottom edge. */
-.tdialog .dialog-actions:has(+ .tdialog-note) {
-  margin-bottom: 0;
-  padding-bottom: var(--space-12);
-}
-
-.tdialog .dialog-actions + .tdialog-note {
-  margin-top: var(--space-4);
+/* DeleteDialog (never pinned): its note comes right after Cancel / Delete (v0.81) */
+.tdialog--confirm .dialog-actions + .tdialog-note {
+  margin-top: var(--space-8);
 }
 
 /* A message scrolled into view (Dialog.jsx) stops above the pinned Cancel / Save row, not

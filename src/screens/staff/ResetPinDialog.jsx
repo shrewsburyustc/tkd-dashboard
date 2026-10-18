@@ -214,17 +214,21 @@ export default function ResetPinDialog({ account, adminEmail, isPhone, onCancel,
           {isPhone ? (
             <div className="dialog-page-submit">{resetButton}</div>
           ) : (
-            <div className="dialog-actions">
-              <button type="button" className="link-button" onClick={() => goToStep1()}>
-                {T.BACK}
-              </button>
-              <button type="button" className="btn" onClick={onCancel}>
-                {T.CANCEL}
-              </button>
-              {resetButton}
+            <div className="dialog-footer">
+              {/* PC / tablet (v0.81): buttons and, under them, the note share one bottom area, so the
+                  buttons never move and, on a short screen, both stay pinned in view. */}
+              <div className="dialog-actions">
+                <button type="button" className="link-button" onClick={() => goToStep1()}>
+                  {T.BACK}
+                </button>
+                <button type="button" className="btn" onClick={onCancel}>
+                  {T.CANCEL}
+                </button>
+                {resetButton}
+              </div>
+              {stepTwoNote}
             </div>
           )}
-          {!isPhone && stepTwoNote}
         </div>
       )}
     </Dialog>

@@ -81,7 +81,9 @@ export default function Dialog({
           if (!(node instanceof Element)) continue;
           const notice = node.matches('.notice') ? node : node.querySelector('.notice');
           if (notice) {
-            notice.scrollIntoView({ block: 'nearest' });
+            // A note in the pinned bottom area (.dialog-footer, v0.81) is already in view:
+            // scrolling would only push the fields the person is working on out of sight.
+            if (!notice.closest('.dialog-footer')) notice.scrollIntoView({ block: 'nearest' });
             return;
           }
         }

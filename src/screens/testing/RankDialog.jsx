@@ -439,14 +439,18 @@ export default function RankDialog({
         {isPhone ? (
           <div className="dialog-page-submit">{saveButton}</div>
         ) : (
-          <div className="dialog-actions">
-            <button type="button" className="btn" onClick={onCancel}>
-              {T.CANCEL}
-            </button>
-            {saveButton}
+          <div className="dialog-footer">
+            {/* PC / tablet (v0.81): buttons and, under them, the note share one bottom area, so the
+                buttons never move and, on a short screen, both stay pinned in view. */}
+            <div className="dialog-actions">
+              <button type="button" className="btn" onClick={onCancel}>
+                {T.CANCEL}
+              </button>
+              {saveButton}
+            </div>
+            {noteBlock}
           </div>
         )}
-        {!isPhone && noteBlock}
       </form>
     </Dialog>
   );

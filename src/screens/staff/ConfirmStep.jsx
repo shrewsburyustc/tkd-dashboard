@@ -120,15 +120,18 @@ export function ConfirmStep({ idBase, adminEmail, isPhone, message, note = null,
       {isPhone ? (
         <div className="dialog-page-submit">{continueButton}</div>
       ) : (
-        <div className="dialog-actions">
-          <button type="button" className="btn" onClick={onCancel}>
-            {T.CANCEL}
-          </button>
-          {continueButton}
+        <div className="dialog-footer">
+          {/* PC / tablet (v0.81): buttons and, under them, the note share one bottom area, so the
+              buttons never move and, on a short screen, both stay pinned in view. */}
+          <div className="dialog-actions">
+            <button type="button" className="btn" onClick={onCancel}>
+              {T.CANCEL}
+            </button>
+            {continueButton}
+          </div>
+          {note}
         </div>
       )}
-      {/* PC / tablet: under the buttons, so they never move (v0.81) */}
-      {!isPhone && note}
     </form>
   );
 }
