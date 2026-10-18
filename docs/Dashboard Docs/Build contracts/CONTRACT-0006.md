@@ -1,5 +1,7 @@
 # Contract 0006 — Star testing database (migration `0006_star_testing.sql`)
 
+**Status: APPROVED by Jeffrey 2026-10-18 (rulebook v0.174).** Build and test locally only; nothing is applied to Supabase without his OK for that paste.
+
 The single source of truth for **Builder A — database**, who turns it into `supabase/migrations/0006_star_testing.sql`, `supabase/tests/0006_tests.sql`, `supabase/tests/0006_fingerprints.sql`, the PGlite step 12 and `supabase/SETUP.md` §13. Follow it exactly so the later parts (Star's Pages Function, data layer, preview mock, screens) fit. If something here is impossible or contradicts the sources below, **stop and report it** — do not improvise. Items marked **OPEN — ask Jeffrey** (§12) are not decided; the builder uses the working assumption written next to each one and changes nothing else about it.
 
 | Source (in this order of authority) | |
