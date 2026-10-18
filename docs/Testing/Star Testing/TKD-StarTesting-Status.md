@@ -28,7 +28,7 @@ Nothing blocking. **All 13 registration form questions answered (v0.93–v0.106)
 6. Private star testing
 7. Decide what (if anything) Star testing adds to Home
 
-**C. Plan the database once, from all approved designs** (one migration; takes the next free number after Color Belt's — `0003` is Color Belt). Follow `TKD-Dashboard-Handoff.md` §6 security rules; PGlite tests; security + design reviews by separate agents.
+**C. Plan the database once, from all approved designs** (one migration: **`0006`** — decided by Jeffrey 2026-10-17. Taken already: `0003` Color Belt phase 1, `0004` Staff accounts (live), `0005` Color Belt phase 2 (`0005_testing_events.sql`, CONTRACT-0005; it builds first). If another migration lands first, take the next free number and tell the Main session). Follow `TKD-Dashboard-Handoff.md` §6 security rules; PGlite tests; security + design reviews by separate agents.
 
 **D. Build in 6 phases** (v0.61), each with reviews and Jeffrey's OK: (1) Rubrics and prices · (2) Events + public registration form · (3) Candidates and payments · (4) Grading incl. paper sheet · (5) Results, printouts and email · (6) Private star testing. Only one build runs at a time (Color Belt is building now).
 
