@@ -1,7 +1,7 @@
 # TKD Dashboard — Design Guidelines
 
 **School:** Jae H. Jeong's U.S. Taekwondo Center (U.S.T.C.) — Worcester and Shrewsbury, MA
-**Version:** 0.59 (draft) · **Last updated:** 2026-10-16
+**Version:** 0.60 (draft) · **Last updated:** 2026-10-17
 **Status:** Design outline only. Nothing in this document authorizes building or deploying.
 
 > **How to use this file:** Upload it at the start of any chat about the dashboard. Every screen, component, or feature built for the dashboard must follow the rules below. If a request conflicts with a rule, flag the conflict before building. Rules marked **(provisional)** depend on an open decision in section 10.
@@ -101,6 +101,7 @@ Section icons are added to this table only when that section is added (rule P7).
 | Home | `ti-home` |
 | Testing (rail icon; decided v0.39) — also marks **Color belt testing** on the Testing choice page and menu (v0.59) | `ti-certificate` |
 | Star testing (Testing choice page and menu; decided v0.59) | `ti-star` |
+| Schedule (rail icon; decided v0.60) | `ti-clock` |
 | More (phone bottom bar, once needed) | `ti-menu-2` |
 
 **Actions**
@@ -123,6 +124,10 @@ Section icons are added to this table only when that section is added (rule P7).
 | Filter | `ti-filter` |
 | Sort | `ti-arrows-sort` |
 | Print | `ti-printer` |
+| Plan a schedule change (decided v0.60) | `ti-calendar-plus` |
+| Date field / change start date (decided v0.60) | `ti-calendar` |
+| Planned schedule note (decided v0.60) | `ti-calendar-event` |
+| Past schedules (decided v0.60) | `ti-history` |
 | Export | `ti-download` |
 | Retry | `ti-refresh` |
 | Notifications | `ti-bell` |
@@ -401,6 +406,7 @@ To be decided one at a time, each with visual options (rule P3):
 | Save button state (decided v0.57) | In edit dialogs, **Save is blue whenever the form is valid**, including when nothing has changed yet; Save on an unchanged form just closes the dialog (no save, no toast). Save is gray only while it can't be used (e.g. no name yet, or a field has an error). Dashboard-wide. |
 | Star testing (decided v0.58) | **Star testing is added to the Testing section** (Jeffrey, 2026-10-16; rule P7). Clicking Testing lets staff **choose which testing to view: Color belt testing or Star testing** (how the choice looks is still to be decided, with visuals). Star testing events are **joint — both schools test together in one room**, so Star testing **works on Both** (all candidates, each showing their school); Worcester / Shrewsbury filter the candidates of the same event. The one-school rule and the Both block (v0.34, v0.35) and per-school prices (v0.36) apply to **Color belt testing only**. **Star rubrics and prices are the same for both schools** and must be changeable later from a screen (never hard-coded). Feature reference: the old prototype in `Testing\Star Testing` (inventory `TKD-StarTesting-Inventory.md`). Design only — nothing built. |
 | Testing chooser (decided v0.59) | Hybrid of a choice page and a hover menu. **Click/tap the Testing icon** (every device) → the **Testing choice page**: one row per testing type (Color belt testing `ti-certificate`, Star testing `ti-star`, each with `ti-chevron-right`), each row showing its next event ("Next: Nov 14 · both schools") once that testing has events — no filler line before then. **Hover (mouse devices only, CSS `hover: hover`)** → after 150ms a dark menu opens beside the icon in place of the plain label bubble: "Testing" heading, then the testing types; the current one is highlighted; clicking a name goes straight there. The menu closes ~300ms after the pointer leaves both icon and menu. **Keyboard:** focus on the icon opens the menu, ↓ moves into it, Enter on the icon opens the choice page, Esc closes. Touch devices never see the menu (a tap always opens the choice page). Inside a testing type, a **"← Testing"** back link (`ti-arrow-left`) sits above the page title on every device. **Rule for later sections:** any rail section with sub-pages uses this same pattern. The chooser, menu and back link appear only once a second testing type is built (no placeholder, rule P7 / v0.50) — Color belt phase 1 ships unchanged. Recorded exception to 2.3 (the Testing label grows into a menu). |
+| New students and Schedule (decided v0.60) | **Scope (Jeffrey, 2026-10-17; rule P7):** the dashboard starts handling **new students (prospects) only**. Current students stay on physical cards; no student records, attendance or billing yet. Build order, each with its own mockups and approval: **(1) Schedule → (2) Calendar → (3) Forms (in-app builder + public forms) → (4) Prospects list.** Forms: full drag-and-drop builder (any field type, reorder, sections, conditional logic); walk-ins can use a front-desk tablet kiosk, a QR code on their own phone, or staff entry; booking forms offer only the class times the admin picks from the schedule, each with a free-class spot limit (full or closed dates disappear). Admins edit forms and the schedule; staff view and work the prospects list (enforced in the database). **Schedule (mockup `docs/Prospects/TKD-Class-Schedule-Mockups.html` rev 2, approved):** its own rail section (`ti-clock`, after Testing). A schedule class **is a group from Testing → Classes and ranks** (no second list), so the schedule is built after Color belt phase 1 is merged. The schedule repeats every week until changed; admins may plan **any number of future schedules**, each with a start date (copy of the one before it, or blank); editing the current schedule takes effect at once; deleting a planned schedule asks to confirm; past schedules are kept read-only. Look: **calendar week view with times down the left and box height = class length**, every hour from the first class to the last shown (scrolls if needed), all 7 days; phone shows **one day at a time** with Mon–Sun buttons. Add time slot can pick several days at once; removing a slot is instant with Undo; overlapping classes get an amber note but still save. **Class colors:** the admin picks each class's color in the time slot dialog from 8 soft colors (gray, yellow, orange, green, teal, sky, purple, pink; dark text on a pale fill); it applies to every slot of that class; **red is never offered**; new classes start gray. Recorded exception to section 7: these pale class colors are labels, not status colors. On Both, the two schools show one above the other. Staff see it view-only. |
 | Approved 2026-10-16 (v0.26) | (1) **No PIN set:** when the 45-minute lock (or Lock now) happens to someone without a PIN, there is no lock screen — they are signed out to the sign-in screen with an amber note "Signed out after 45 minutes idle. Set a PIN to unlock faster." (2) **This device:** clicking it expands a Worcester / Shrewsbury choice inside the account menu; one click saves and closes (reversible, so no Save step). Sets the device's default school only; the top switcher still offers Both. (3) **Borders:** control borders use `#8F8F8A` (3:1); dividers stay `#E5E5E2`. Items (1) and (3) are coded with the Set PIN build. |
 
 ## 11. Changelog
@@ -466,3 +472,4 @@ To be decided one at a time, each with visual options (rule P3):
 | 0.57 | 2026-10-16 | Save is blue whenever the form is valid; unchanged Save just closes; gray only when unusable (10b). |
 | 0.58 | 2026-10-16 | Star testing added inside Testing: choose Color belt or Star testing; Star testing is joint (works on Both); star rubrics/prices shared by both schools and editable later; v0.34–v0.36 apply to Color belt only (9, 10b). |
 | 0.59 | 2026-10-16 | Testing chooser: click → choice page, mouse hover → menu, back link inside each testing type; appears only once Star testing is built. Icons added: `ti-star`, `ti-chevron-right` (2.4, 10b). |
+| 0.60 | 2026-10-17 | New students (prospects) scope and build order; Schedule section approved: calendar week view (times on the side, box height = length), any number of planned future schedules, class colors (no red), phone one day at a time. Icons added: `ti-clock`, `ti-calendar-plus`, `ti-calendar`, `ti-calendar-event`, `ti-history` (2.4, 10b). |

@@ -17,6 +17,7 @@ School management dashboard for Jae H. Jeong's U.S. Taekwondo Center (Worcester 
 | `Dashboard Docs/TKD-Dashboard-Mockups.html` | Style reference only (colors, sizes, rail hover). Made before v0.9 — section names and layout are placeholders. |
 | `Testing/Color Belt Testing/` | Color Belt: inventory of the old system, approved phase 1 mockups (Classes and ranks), phase 1 build plan. |
 | `Testing/Star Testing/` | Star testing: inventory of the old prototype; `Old prototype/` holds the never-used prototype and its notes (feature reference only). |
+| `Prospects/` | New students: approved Schedule mockups (`TKD-Class-Schedule-Mockups.html`, rev 2, Oct 17, 2026). Calendar, forms and prospects list come next, one at a time. |
 | `Dashboard Docs/Build contracts/` | Build contracts for Home (`BUILD-CONTRACT.md`) and migration 0002 (`CONTRACT-0002.md`). |
 | `README.md` | This file. |
 
@@ -59,5 +60,7 @@ The school logo used for brand colors lives in `U.S.T.C Projects\Logos\Logo.png`
 - **Home** (mockups approved Oct 15, 2026 — not approved to build): "today at a glance" style. Welcome header (logo, greeting, date, location). Starts empty with a one-line message; items are added only as other sections are built.
 
 - **Color Belt testing** (next, not designed yet): the existing Color Belt project merges into the dashboard after Home is built; its separate Supabase project is then retired.
+
+- **Schedule** (mockups approved Oct 17, 2026 — not approved to build): first step of the new-students work (Schedule → Calendar → Forms → Prospects list). Built after Color Belt phase 1 is merged, because schedule classes come from Classes and ranks.
 
 Sections are added only when Jeffrey says so, one at a time.
