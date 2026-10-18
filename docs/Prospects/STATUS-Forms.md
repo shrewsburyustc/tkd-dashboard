@@ -15,7 +15,7 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Forms-Build-Plan.md` (ap
 | F4 Staff screens + Calendar bookings + preview data; design review | Done 2026-10-18 (preview only); 9 differences wait for Jeffrey in F5 |
 | F1 Merge main (after Color Belt phase 2 is merged — the Main session merges when Jeffrey asks) | Waiting |
 | F3 Public page + Cloudflare function; security review | Waiting for F1 |
-| F5 Jeffrey tries it in preview (and decides the F4 differences below) | Differences decided 2026-10-18 (v0.172); 7 and 8 built; trying the preview continues |
+| F5 Jeffrey tries it in preview (and decides the F4 differences below) | Done 2026-10-18: differences decided (v0.172), Jeffrey tried the forms and Fill in — fine. Sign-ups show nowhere yet except Calendar bookings: that is Prospects (step 4) |
 | F6 Live setup (0009 after 0007 / 0008; two-connection race test; registrar password; Cloudflare settings) | Waiting |
 | F7 Go live, with Prospects (step 4) | Needs a separate OK |
 
