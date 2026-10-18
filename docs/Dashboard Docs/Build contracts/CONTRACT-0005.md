@@ -215,4 +215,4 @@ Security review of A + B together (the public path is the focus: registrar proof
 ## 9. Before building starts
 1. Main merges `staff-accounts` and `star-testing`; this branch merges `main`.
 2. The orchestrator records phase 2 in the rulebook (decisions Q1–Q9, plan answers 1–9, Settings → Schools, v0.36 change) and updates this contract's references if numbers moved.
-3. Jeffrey OKs: the two new dependencies (§4.6); the `rate_limited` and `verify_failed` wordings (§4.2 — not in the approved mockups); and **registering on the testing day itself** while registration is open (§1.3 state 2 — follows Star v0.70 "closes at the end of the testing day"; families on the day see the testing-day price).
+3. Jeffrey OKs: the two new dependencies (§4.6); the `rate_limited` and `verify_failed` wordings (§4.2 — not in the approved mockups); and ~~registering on the testing day~~ **confirmed by Jeffrey 2026-10-17: families can register on the testing day itself until the end of the day, at the testing-day price** (§1.3 state 2).
