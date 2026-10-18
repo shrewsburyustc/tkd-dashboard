@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Staff accounts mockups</title>
+<!-- TKD-Staff-Accounts-Mockups.html — mockups for approval (rule P1/P6): the first part of
+     Staff accounts (Reset password + Reset PIN), as decided in v0.70–v0.75 (questions file
+     TKD-Staff-Accounts-Questions.html). Every screen at PC 1280, tablet 820 (touch), phone 390 (touch).
+     Design only: nothing here is built. The small script at the bottom only stamps the same app
+     shell (rail, top bar, page) into each device frame so the shell isn't copied 20 times. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root{--control-border:#8F8F8A;--page:#EFEFEC;--bg:#FFFFFF;--surface:#F7F7F5;--border:#E5E5E2;--border-strong:#CFCFCA;--text:#1F1F1F;--text2:#6B6B6B;--blue:#003595;--blue-tint:#E6EBF4;--red:#A32D2D;--ok:#3B6D11;--ok-tint:#EAF3DE;--warn:#633806;--warn-tint:#FAEEDA;--toast:#1F1F1F}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1340px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:20px;font-weight:500;margin:0 0 4px}
+h2{font-size:16px;font-weight:500;margin:48px 0 4px;padding-top:16px;border-top:1px solid var(--border-strong)}
+b{font-weight:500}
+code{font-size:12px}
+.lead{color:var(--text2);font-size:13px;margin:0 0 12px}
+.banner{background:var(--warn-tint);color:var(--warn);padding:8px 12px;border-radius:8px;font-size:13px;display:flex;gap:8px;align-items:flex-start}
+.explain{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:8px 0 16px;font-size:13px}
+.explain h3{font-size:13px;font-weight:500;margin:8px 0 2px}.explain h3:first-child{margin-top:0}
+.explain ul,.explain ol{margin:0;padding-left:20px}.explain li{margin:2px 0}
+/* device frames */
+.cap{font-size:12px;color:var(--text2);margin:16px 0 6px;display:flex;align-items:center;gap:6px}
+.cap i{font-size:16px}
+.scroller{overflow-x:auto;padding-bottom:4px}
+.dev{background:var(--bg);border:1px solid var(--border-strong);overflow:hidden;position:relative;flex:none}
+.dev-pc{width:1282px;height:600px;border-radius:10px}
+.dev-tab{width:832px;height:600px;border-radius:18px;border-width:6px;border-color:#2B2B2B}
+.dev-ph{width:402px;height:720px;border-radius:28px;border-width:6px;border-color:#2B2B2B}
+.pair{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+/* app shell (as approved in the Home / Account / Testing files) */
+.app{display:flex;height:100%;background:var(--bg)}
+.app-col{flex:1;min-width:0;display:flex;flex-direction:column}
+.content{flex:1;min-height:0;padding:24px;display:flex;flex-direction:column;overflow:hidden}
+.ph-shell{height:100%;display:flex;flex-direction:column}
+.ph-shell .content{padding:16px}
+.rail{width:52px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;flex:none}
+.rail a{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;color:var(--text2)}
+.rail a i{font-size:18px}
+.rail-t{width:72px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;flex:none}
+.rail-t a{display:flex;flex-direction:column;align-items:center;justify-content:center;width:64px;min-height:56px;border-radius:8px;color:var(--text2);font-size:12px;gap:2px}
+.rail-t a i{font-size:20px}
+.topbar{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 12px;flex:none}
+.topbar .grow{flex:1}
+.loc{display:flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;font-size:12px;height:32px}
+.loc span{display:flex;align-items:center;gap:4px;padding:0 12px;color:var(--text2)}
+.loc span.on{background:var(--blue-tint);color:var(--blue)}
+.loc span+span{border-left:1px solid var(--border)}
+.touch .loc{height:36px}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--surface);border:1px solid var(--control-border);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--text);flex:none}
+.avatar.open{outline:2px solid var(--blue);outline-offset:2px}
+.tap{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.phbar{border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:4px 0 10px;flex:none;background:var(--bg)}
+.phbar a{display:flex;flex-direction:column;align-items:center;min-width:64px;min-height:48px;justify-content:center;font-size:12px;color:var(--text2);gap:2px}
+.phbar a i{font-size:20px}
+/* page */
+.ptitle{font-size:20px;font-weight:500;line-height:1.3}
+.psub{font-size:13px;color:var(--text2);margin:2px 0 16px}
+.list{border:1px solid var(--border);border-radius:8px;flex:none;max-width:880px}
+.row{display:flex;align-items:center;gap:12px;height:40px;padding:0 4px 0 12px;font-size:13px;border-top:1px solid var(--border)}
+.list>.row:first-child{border-top:none}
+.row .nm{font-weight:500;min-width:140px}
+.row .em{color:var(--text2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .you{color:var(--text2);font-size:12px}
+.row.hov{background:var(--surface)}
+.row.sel{background:var(--blue-tint)}
+.touch .row{height:56px;padding:0 0 0 12px}
+.ph-shell .row{height:auto;min-height:60px;padding:8px 0 8px 12px;align-items:center}
+.ph-shell .row .stack{flex:1;min-width:0;display:flex;flex-direction:column}
+.ph-shell .row .nm{min-width:0}
+.ph-shell .row .em{flex:none;white-space:normal;overflow-wrap:anywhere}
+.tag{font-size:12px;line-height:16px;padding:2px 8px;border-radius:6px;background:var(--surface);color:var(--text2);border:1px solid var(--border);white-space:nowrap;display:inline-flex;align-items:center;gap:4px;flex:none}
+.ib{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;color:var(--text2);flex:none;border-radius:8px}
+.ib i{font-size:16px}
+.ib.hov{background:var(--surface);color:var(--text)}
+.ib.spacer{visibility:hidden}
+.touch .ib{width:44px;height:44px}
+/* controls */
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.field label{font-size:12px;color:var(--text2)}
+.input{height:32px;border:1px solid var(--control-border);border-radius:8px;padding:0 10px;display:flex;align-items:center;font-size:13px;color:var(--text);background:var(--bg);gap:6px}
+.input .val{flex:1;font-size:14px;color:var(--text)}
+.input .dots{flex:1;letter-spacing:2px;color:var(--text)}
+.input.focus{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+.input.bad{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn)}
+.input.pin{width:120px}
+.touch .input{height:36px;font-size:14px}
+.caret{display:inline-block;width:1px;height:16px;background:var(--text);margin-left:1px;vertical-align:middle}
+.btn{height:32px;padding:0 16px;border-radius:8px;font-size:13px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--control-border);background:var(--bg);color:var(--text);flex:none;white-space:nowrap}
+.btn i{font-size:16px}
+.btn-sm{height:28px;padding:0 10px}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-primary.dis{background:var(--surface);border-color:var(--border-strong);color:#8A8A85}
+.btn-full{width:100%}
+.touch .btn,.touch .btn-sm{height:36px}
+.link{color:var(--blue);font-size:13px}
+.hint{font-size:12px;color:var(--text2)}
+.err{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--warn);background:var(--warn-tint);padding:8px;border-radius:6px}
+.err i{font-size:16px}
+.strong-ok{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--ok)}
+.strong-ok i{font-size:14px}
+/* PIN keypad (as approved, v0.16) */
+.keypad{display:grid;grid-template-columns:repeat(3,64px);gap:8px;justify-content:center}
+.keypad span{height:36px;border:1px solid var(--control-border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.keypad span.blank{border:none}
+.pinshow{display:flex;gap:8px;justify-content:center;margin:4px 0 12px}
+.pinshow span{width:36px;height:36px;border:1px solid var(--control-border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.pinshow span.cur{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+/* dialogs */
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:5}
+.dialog{background:var(--bg);border-radius:12px;width:360px;max-width:calc(100% - 32px);padding:24px;position:relative}
+.dialog h3{font-size:16px;font-weight:500;margin:0 0 2px}
+.dialog .sub{font-size:13px;color:var(--text2);margin:2px 0 12px}
+.dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;align-items:center}
+.fullscreen{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;z-index:5}
+.fullscreen .head{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 4px;font-size:16px;font-weight:500;flex:none}
+.fullscreen .fbody{padding:16px;flex:1;overflow:hidden}
+.who-line{display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:8px;padding:8px 12px;margin:4px 0 12px;font-size:13px}
+.who-line .avatar{background:var(--bg)}
+.who-line span.e{color:var(--text2);overflow-wrap:anywhere;min-width:0}
+/* menus */
+.menu{position:absolute;background:var(--bg);border:1px solid var(--border-strong);border-radius:8px;padding:4px 0;width:248px;box-shadow:0 4px 16px rgba(0,0,0,.08);z-index:5}
+.menu .who{padding:8px 12px 10px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.menu .who b{display:block;font-size:13px}.menu .who span{font-size:12px;color:var(--text2)}
+.menu .it{display:flex;align-items:center;gap:8px;padding:0 12px;height:32px;font-size:13px;color:var(--text);white-space:nowrap}
+.touch .menu .it{height:44px}
+.menu .it i{font-size:16px;color:var(--text2)}
+.menu .it .v{margin-left:auto;font-size:12px;color:var(--text2)}
+.menu .it.hov{background:var(--surface)}
+.menu .sep{border-top:1px solid var(--border);margin:4px 0}
+.menu .grp{font-size:12px;color:var(--text2);padding:6px 12px 2px}
+.sheet-wrap{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;z-index:5}
+.sheet{background:var(--bg);width:100%;border-radius:16px 16px 0 0;padding:8px 0 16px}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--border-strong);margin:4px auto 8px}
+.sheet .stitle{padding:4px 16px 8px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.sheet .stitle b{display:block;font-size:14px}.sheet .stitle span{font-size:12px;color:var(--text2)}
+.sheet .menu{position:static;width:auto;border:none;box-shadow:none;border-radius:0;padding:0}
+.sheet .menu .it{padding:0 16px}
+/* toast (near-black, v0.49) */
+.toast{position:absolute;right:24px;bottom:24px;background:var(--toast);color:#fff;border-radius:8px;padding:12px 16px;font-size:13px;display:flex;gap:8px;align-items:center;z-index:6;max-width:420px}
+.toast i{font-size:16px}
+.ph-toast{left:16px;right:16px;bottom:76px;max-width:none}
+.tip{position:absolute;background:#1F1F1F;color:#fff;font-size:13px;padding:5px 10px;border-radius:6px;white-space:nowrap;z-index:6}
+.callout{position:absolute;background:var(--warn-tint);color:var(--warn);border:1px dashed #EF9F27;font-size:12px;padding:4px 8px;border-radius:6px;z-index:7;max-width:260px}
+.details{counter-reset:d}
+.details li{margin:4px 0}
+</style>
+</head>
+<body>
+<main>
+<h1>Staff accounts — Reset password and Reset PIN · mockups for approval</h1>
+<p class="lead">Jae H. Jeong's U.S. Taekwondo Center · guidelines v0.75 · October 17, 2026 · decisions v0.70–v0.75 (questions file <code>TKD-Staff-Accounts-Questions.html</code>)</p>
+<div class="banner"><i class="ti ti-alert-triangle"></i><div><b>Approved 2026-10-17 (v0.76), design only — not a working app.</b> Nothing here is built or deployed. Each screen is shown at PC (1280px, mouse), tablet (820px, touch) and phone (390px, touch). Dashed amber notes are review callouts, not part of the design. Example accounts: <b>Main Admin</b> (jberg412@gmail.com, you), <b>Grandmaster</b> (second admin, v0.23 — drawn as an example), <b>Staff</b> (shared front desk).</div></div>
+
+<div class="explain">
+<h3>What this part of Staff accounts does</h3>
+<ul>
+<li>Lets an admin fix the two things people forget: the <b>password</b> (signs in) and the <b>PIN</b> (unlocks the lock screen). Nothing else yet — adding, disabling and editing accounts wait for personal logins (v0.70).</li>
+<li>Replaces the SETUP.md SQL snippets for the desk password and PIN. Those stay in SETUP.md as an emergency backup only.</li>
+</ul>
+<h3>How an admin uses it (≤ 3 clicks to the dialog, rule 3.1)</h3>
+<ol>
+<li>Initials circle → <b>Staff accounts</b> (under "Admin").</li>
+<li>Find the person → <code>⋯</code> (or click/tap anywhere on the row) → <b>Reset password</b> or <b>Reset PIN</b>.</li>
+<li>Step 1: type <b>your own</b> password (v0.74). Step 2: the new password (type it or <b>Generate</b>, then <b>Copy</b>) or the new 4-digit PIN. Done: a 5-second toast says what happened.</li>
+<li>Tell the person the new password / PIN in person. For the desk: type the new password once on each desk device (they were all signed out, v0.72), then the desk PIN.</li>
+</ol>
+</div>
+
+<!-- =================================================================== 1 -->
+<h2>1. Account menu → Staff accounts (admins only)</h2>
+<p class="lead">The approved account menu (v0.15) gains its "Admin" group. It shows only for admins; staff and the shared desk account never see it.</p>
+<div class="explain"><ul>
+<li>Order: who-line, Lock now, Change PIN, Change password, This device, then a divider, the gray "Admin" label and <b>Staff accounts</b> (<code>ti-user-cog</code>), then a divider and Sign out.</li>
+<li><b>Settings</b> (also listed under Admin in §6) is not shown — it doesn't exist yet (P7, no placeholders).</li>
+<li>Phone: the same items in the bottom sheet (as approved).</li>
+</ul></div>
+<p class="cap"><i class="ti ti-device-desktop"></i> PC · mouse · 1280px · menu open, pointer on Staff accounts</p>
+<div class="scroller" data-shell="pc" data-page="home"><div class="menu" style="right:12px;top:48px">
+  <div class="who"><b>Main Admin</b><span>jberg412@gmail.com · Admin</span></div>
+  <div class="it"><i class="ti ti-lock"></i>Lock now</div>
+  <div class="it"><i class="ti ti-key"></i>Change PIN</div>
+  <div class="it"><i class="ti ti-password"></i>Change password</div>
+  <div class="it"><i class="ti ti-map-pin"></i>This device<span class="v">Shrewsbury</span></div>
+  <div class="sep"></div><div class="grp">Admin</div>
+  <div class="it hov"><i class="ti ti-user-cog"></i>Staff accounts</div>
+  <div class="sep"></div>
+  <div class="it"><i class="ti ti-logout"></i>Sign out</div>
+</div></div>
+<div class="pair">
+<div><p class="cap"><i class="ti ti-device-tablet"></i> Tablet · touch · 820px · menu open</p>
+<div class="scroller" data-shell="tab" data-page="home"><div class="menu" style="right:12px;top:48px">
+  <div class="who"><b>Main Admin</b><span>jberg412@gmail.com · Admin</span></div>
+  <div class="it"><i class="ti ti-lock"></i>Lock now</div>
+  <div class="it"><i class="ti ti-key"></i>Change PIN</div>
+  <div class="it"><i class="ti ti-password"></i>Change password</div>
+  <div class="it"><i class="ti ti-map-pin"></i>This device<span class="v">Shrewsbury</span></div>
+  <div class="sep"></div><div class="grp">Admin</div>
+  <div class="it"><i class="ti ti-user-cog"></i>Staff accounts</div>
+  <div class="sep"></div>
+  <div class="it"><i class="ti ti-logout"></i>Sign out</div>
+</div></div></div>
+<div><p class="cap"><i class="ti ti-device-mobile"></i> Phone · touch · 390px · bottom sheet</p>
+<div class="scroller" data-shell="ph" data-page="home"><div class="sheet-wrap"><div class="sheet"><div class="grab"></div>
+  <div class="stitle"><b>Main Admin</b><span>jberg412@gmail.com · Admin</span></div>
+  <div class="menu">
+  <div class="it"><i class="ti ti-lock"></i>Lock now</div>
+  <div class="it"><i class="ti ti-key"></i>Change PIN</div>
+  <div class="it"><i class="ti ti-password"></i>Change password</div>
+  <div class="it"><i class="ti ti-map-pin"></i>This device<span class="v">Shrewsbury</span></div>
+  <div class="sep"></div><div class="grp">Admin</div>
+  <div class="it"><i class="ti ti-user-cog"></i>Staff accounts</div>
+  <div class="sep"></div>
+  <div class="it"><i class="ti ti-logout"></i>Sign out</div></div>
+</div></div></div></div>
+</div>
+
+<!-- =================================================================== 2 -->
+<h2>2. Staff accounts page</h2>
+<p class="lead">A page (not a rail section): opened from the account menu. Lists every dashboard account.</p>
+<div class="explain"><ul>
+<li><b>Title</b> "Staff accounts", gray line under it: "Reset a password or PIN when someone forgets it." No page-header button (nothing to add yet, v0.70).</li>
+<li><b>Each row:</b> name → email → one tag (<b>Admin</b>, <b>Staff</b> or <b>Shared</b>; Shared wins for the desk, rule 8 one tag) → <code>⋯</code>. Sorted: admins, then staff, then shared, each A–Z. Only name, email and role — no PIN or password details are ever shown (nobody can see them; they're one-way hashes).</li>
+<li><b>Your own row</b> shows "(you)" and has no <code>⋯</code>: you change your own password and PIN from your account menu (v0.71). An invisible spacer keeps the tags lined up.</li>
+<li><b>Click or tap anywhere on a row</b> opens the same <code>⋯</code> menu (there is no detail view yet — <span style="color:var(--warn)">exception to rule 8, for your OK</span>). ↑ ↓ + Enter work on PC (v0.52); Enter opens the menu. Your own row isn't clickable and ↑ ↓ skip it.</li>
+<li><b>Location switcher</b> stays in the top bar but doesn't change this list: accounts belong to both schools (<span style="color:var(--warn)">exception to rule 3.3, for your OK</span>).</li>
+<li><b>Rail:</b> no section is highlighted — Staff accounts isn't a rail section. Leaving: click Home / Testing in the rail (or browser Back).</li>
+<li><b>Loading:</b> gray placeholder rows (rule 3.4). <b>Failed to load:</b> amber banner "Couldn't load staff accounts. Check the connection." + Retry (rule 3.5). <b>Opened by a non-admin</b> (typed address): the page shows "Only admins can see Staff accounts." — the database refuses the list anyway.</li>
+</ul></div>
+<p class="cap"><i class="ti ti-device-desktop"></i> PC · mouse · 1280px · pointer on the Staff row's ⋯ (tooltip)</p>
+<div class="scroller" data-shell="pc" data-page="list" data-hover="staff"></div>
+<div class="pair">
+<div><p class="cap"><i class="ti ti-device-tablet"></i> Tablet · touch · 820px</p><div class="scroller" data-shell="tab" data-page="list"></div></div>
+<div><p class="cap"><i class="ti ti-device-mobile"></i> Phone · touch · 390px · rows stack name over email</p><div class="scroller" data-shell="ph" data-page="list"></div></div>
+</div>
+
+<!-- =================================================================== 3 -->
+<h2>3. The row's ⋯ menu</h2>
+<div class="explain"><ul>
+<li>Two items: <b>Reset password</b> (<code>ti-password</code>) and <b>Reset PIN</b> (<code>ti-key</code>). PC/tablet: small menu under the <code>⋯</code>. Phone: bottom sheet titled with the person's name and email, so it's clear whose password is about to change.</li>
+<li>No red: neither action deletes anything (rule 7).</li>
+</ul></div>
+<p class="cap"><i class="ti ti-device-desktop"></i> PC · mouse · 1280px · Staff row's ⋯ open</p>
+<div class="scroller" data-shell="pc" data-page="list" data-sel="staff"><div class="menu" style="width:200px">
+  <div class="it hov"><i class="ti ti-password"></i>Reset password</div>
+  <div class="it"><i class="ti ti-key"></i>Reset PIN</div>
+</div></div>
+<div class="pair">
+<div><p class="cap"><i class="ti ti-device-tablet"></i> Tablet · touch · 820px</p>
+<div class="scroller" data-shell="tab" data-page="list" data-sel="staff"><div class="menu" style="width:220px">
+  <div class="it"><i class="ti ti-password"></i>Reset password</div>
+  <div class="it"><i class="ti ti-key"></i>Reset PIN</div>
+</div></div></div>
+<div><p class="cap"><i class="ti ti-device-mobile"></i> Phone · touch · 390px · bottom sheet</p>
+<div class="scroller" data-shell="ph" data-page="list"><div class="sheet-wrap"><div class="sheet"><div class="grab"></div>
+  <div class="stitle"><b>Staff</b><span>shrewsburyustc@gmail.com · Shared front desk</span></div>
+  <div class="menu"><div class="it"><i class="ti ti-password"></i>Reset password</div><div class="it"><i class="ti ti-key"></i>Reset PIN</div></div>
+</div></div></div></div>
+</div>
+
+<!-- =================================================================== 4 -->
+<h2>4. Reset password — step 1: your password</h2>
+<div class="explain"><ul>
+<li>Title "Reset password", then a who-line (initials, name, email) for the person being reset — it stays on both steps so nobody resets the wrong account.</li>
+<li>"Step 1 of 2" · heading "Confirm it's you" · "Enter the password you sign in with." (same words as Change PIN) · field <b>Your password</b> (dots; focused). Cancel + <b>Continue</b> (gray until something is typed; Enter = Continue).</li>
+<li>Checked the same way as Change PIN (signs you in again with it; v0.28). That also gives the database the "password within 10 minutes" it requires (v0.74).</li>
+<li><b>Wrong password:</b> field clears, amber "That password doesn't match. Try again." (shown on the phone). Too many tries: Supabase's own limit — amber "Too many tries. Wait a few minutes and try again."</li>
+<li>PC/tablet: dialog with Cancel (no X), Esc cancels. Phone: full screen, back arrow = Cancel on step 1, single full-width Continue.</li>
+</ul></div>
+<p class="cap"><i class="ti ti-device-desktop"></i> PC · mouse · 1280px</p>
+<div class="scroller" data-shell="pc" data-page="list"><div class="overlay"><div class="dialog" role="dialog" aria-label="Reset password">
+  <h3>Reset password</h3>
+  <div class="who-line"><span class="avatar">S</span><b>Staff</b><span class="e">shrewsburyustc@gmail.com</span></div>
+  <div class="hint">Step 1 of 2</div>
+  <div style="font-size:14px;font-weight:500">Confirm it's you</div><p class="sub">Enter the password you sign in with.</p>
+  <div class="field" style="margin-bottom:0"><label>Your password</label><div class="input focus"><span class="dots">••••••••</span><span class="caret"></span></div></div>
+  <div class="actions"><span class="btn">Cancel</span><span class="btn btn-primary">Continue</span></div>
+</div></div></div>
+<div class="pair">
+<div><p class="cap"><i class="ti ti-device-tablet"></i> Tablet · touch · 820px</p>
+<div class="scroller" data-shell="tab" data-page="list"><div class="overlay"><div class="dialog" role="dialog" aria-label="Reset password">
+  <h3>Reset password</h3>
+  <div class="who-line"><span class="avatar">S</span><b>Staff</b><span class="e">shrewsburyustc@gmail.com</span></div>
+  <div class="hint">Step 1 of 2</div>
+  <div style="font-size:14px;font-weight:500">Confirm it's you</div><p class="sub">Enter the password you sign in with.</p>
+  <div class="field" style="margin-bottom:0"><label>Your password</label><div class="input focus"><span class="caret"></span></div></div>
+  <div class="actions"><span class="btn">Cancel</span><span class="btn btn-primary dis">Continue</span></div>
+</div></div></div></div>
+<div><p class="cap"><i class="ti ti-device-mobile"></i> Phone · touch · 390px · wrong password</p>
+<div class="scroller" data-shell="ph" data-page="list"><div class="fullscreen" role="dialog" aria-label="Reset password">
+  <div class="head"><span class="tap" aria-label="Back"><i class="ti ti-arrow-left" style="font-size:20px"></i></span>Reset password</div>
+  <div class="fbody">
+    <div class="who-line"><span class="avatar">S</span><b>Staff</b><span class="e">shrewsburyustc@gmail.com</span></div>
+    <div class="hint">Step 1 of 2</div>
+    <div style="font-size:14px;font-weight:500">Confirm it's you</div><p style="font-size:13px;color:var(--text2);margin:2px 0 12px">Enter the password you sign in with.</p>
+    <div class="field" style="margin-bottom:0"><label>Your password</label><div class="input bad focus"><span class="caret"></span></div>
+    <div class="err" style="margin-top:4px"><i class="ti ti-alert-triangle"></i><span>That password doesn't match. Try again.</span></div></div>
+    <div style="margin-top:24px"><span class="btn btn-primary btn-full dis">Continue</span></div>
+  </div>
+</div></div></div>
+</div>
+
+<!-- =================================================================== 5 -->
+<h2>5. Reset password — step 2: the new password</h2>
+<div class="explain"><ul>
+<li>"Step 2 of 2" · "Choose a new password for Staff." · one field <b>New password</b>, shown <b>in plain text</b> (v0.73), in the normal font (rule 7: one font family). Generated passwords are lowercase words only, so there is no l/1 or O/0 to confuse.</li>
+<li>Under the field: <b>Generate</b> (<code>ti-wand</code>) fills in 4 easy words joined by dashes (e.g. <code>plum-ladder-quiet-river</code>, 20+ characters); press again for another. <b>Copy</b> (<code>ti-copy</code>) copies the field; the button reads "Copied" for 2 seconds (same icon). Both are plain outline buttons.</li>
+<li>Typed passwords: a live count under the field, "12 characters minimum (8 so far)" in gray; it turns into green text "Long enough" at 12 (words, not color alone). <b>Reset password</b> (blue) stays gray until 12+.</li>
+<li>Gray line above the buttons: <b>"Staff will be signed out on every device. Save the new password before you continue — it won't be shown again."</b> For the shared desk it ends with "Type the new password on each desk device."</li>
+<li>"Back" text link (next to Cancel) returns to step 1; phone back arrow does the same on step 2.</li>
+<li><b>Unsaved changes (v0.46 / v0.56):</b> once step 2 has a password in the field, Esc, a click outside the dialog or the phone back arrow keep the dialog open with the amber note "Unsaved changes. Save or cancel first." (phone: plus a "Discard changes" link). Only Cancel / Discard closes it, so a password already copied into the password manager is never silently thrown away. Same for Reset PIN once a digit is in.</li>
+<li><b>Can't reach the server / it fails:</b> the dialog stays open with the password still in the field and an amber "Couldn't reset the password. Nothing was changed. Try again." (+ Retry = the same button). Never silent (rule 3.5).</li>
+<li><b>Password is the same as the person's current one?</b> Not checked — the database can't tell without trying it; harmless.</li>
+</ul></div>
+<p class="cap"><i class="ti ti-device-desktop"></i> PC · mouse · 1280px · after pressing Generate</p>
+<div class="scroller" data-shell="pc" data-page="list"><div class="overlay"><div class="dialog" role="dialog" aria-label="Reset password">
+  <h3>Reset password</h3>
+  <div class="who-line"><span class="avatar">S</span><b>Staff</b><span class="e">shrewsburyustc@gmail.com</span></div>
+  <div class="hint">Step 2 of 2</div>
+  <p class="sub">Choose a new password for Staff.</p>
+  <div class="field" style="margin-bottom:8px"><label>New password</label><div class="input focus"><span class="val">plum-ladder-quiet-river</span></div>
+    <div class="strong-ok">Long enough</div></div>
+  <div style="display:flex;gap:8px"><span class="btn btn-sm"><i class="ti ti-wand"></i>Generate</span><span class="btn btn-sm"><i class="ti ti-copy"></i>Copy</span></div>
+  <div class="hint" style="margin-top:16px">Staff will be signed out on every device. Save the new password before you continue — it won't be shown again. Type the new password on each desk device.</div>
+  <div class="actions"><span class="tap" style="min-height:32px"><span class="link">Back</span></span><span class="btn">Cancel</span><span class="btn btn-primary">Reset password</span></div>
+</div></div></div>
+<div class="pair">
+<div><p class="cap"><i class="ti ti-device-tablet"></i> Tablet · touch · 820px · typed, too short</p>
+<div class="scroller" data-shell="tab" data-page="list"><div class="overlay"><div class="dialog" role="dialog" aria-label="Reset password">
+  <h3>Reset password</h3>
+  <div class="who-line"><span class="avatar">S</span><b>Staff</b><span class="e">shrewsburyustc@gmail.com</span></div>
+  <div class="hint">Step 2 of 2</div>
+  <p class="sub">Choose a new password for Staff.</p>
+  <div class="field" style="margin-bottom:8px"><label>New password</label><div class="input focus"><span class="val">desk2026<span class="caret"></span></span></div>
+    <div class="hint">12 characters minimum (8 so far)</div></div>
+  <div style="display:flex;gap:8px"><span class="btn btn-sm"><i class="ti ti-wand"></i>Generate</span><span class="btn btn-sm"><i class="ti ti-copy"></i>Copy</span></div>
+  <div class="hint" style="margin-top:16px">Staff will be signed out on every device. Save the new password before you continue — it won't be shown again. Type the new password on each desk device.</div>
+  <div class="actions"><span class="tap"><span class="link">Back</span></span><span class="btn">Cancel</span><span class="btn btn-primary dis">Reset password</span></div>
+</div></div></div></div>
+<div><p class="cap"><i class="ti ti-device-mobile"></i> Phone · touch · 390px · after Copy, server error</p>
+<div class="scroller" data-shell="ph" data-page="list"><div class="fullscreen" role="dialog" aria-label="Reset password">
+  <div class="head"><span class="tap" aria-label="Back"><i class="ti ti-arrow-left" style="font-size:20px"></i></span>Reset password</div>
+  <div class="fbody">
+    <div class="who-line"><span class="avatar">S</span><b>Staff</b><span class="e">shrewsburyustc@gmail.com</span></div>
+    <div class="hint">Step 2 of 2</div>
+    <p style="font-size:13px;color:var(--text2);margin:2px 0 12px">Choose a new password for Staff.</p>
+    <div class="field" style="margin-bottom:8px"><label>New password</label><div class="input"><span class="val">plum-ladder-quiet-river</span></div><div class="strong-ok">Long enough</div></div>
+    <div style="display:flex;gap:8px"><span class="btn btn-sm"><i class="ti ti-wand"></i>Generate</span><span class="btn btn-sm"><i class="ti ti-copy"></i>Copied</span></div>
+    <div class="hint" style="margin-top:16px">Staff will be signed out on every device. Save the new password before you continue — it won't be shown again. Type the new password on each desk device.</div>
+    <div class="err" style="margin-top:12px"><i class="ti ti-alert-triangle"></i><span>Couldn't reset the password. Nothing was changed. Try again.</span></div>
+    <div style="margin-top:16px"><span class="btn btn-primary btn-full">Reset password</span></div>
+  </div>
+</div></div></div>
+</div>
+
+<!-- =================================================================== 6 -->
+<h2>6. Reset password — done</h2>
+<div class="explain"><ul>
+<li>The dialog closes; a 5-second toast (no Undo — a reset can't be undone, and the confirmation is the two-step dialog): <b>"Password reset for Staff. Signed out on 3 devices."</b> (1 → "Signed out on 1 device."; 0 → just "Password reset for Staff."). PC/tablet bottom-right, phone bottom-center above the bottom bar (v0.29).</li>
+<li>Behind the scenes (v0.71/v0.72, one all-or-nothing step): new bcrypt hash saved, emailed sign-in links cancelled, the person signed out everywhere, change-log line "Main Admin reset the password for Staff" (never the password).</li>
+<li>The signed-out desk devices show the sign-in screen within about a minute.</li>
+</ul></div>
+<p class="cap"><i class="ti ti-device-desktop"></i> PC · mouse · 1280px</p>
+<div class="scroller" data-shell="pc" data-page="list"><div class="toast" role="status">Password reset for Staff. Signed out on 3 devices.</div></div>
+<div class="pair">
+<div><p class="cap"><i class="ti ti-device-tablet"></i> Tablet · touch · 820px</p><div class="scroller" data-shell="tab" data-page="list"><div class="toast" role="status">Password reset for Staff. Signed out on 3 devices.</div></div></div>
+<div><p class="cap"><i class="ti ti-device-mobile"></i> Phone · touch · 390px</p><div class="scroller" data-shell="ph" data-page="list"><div class="toast ph-toast" role="status">Password reset for Staff. Signed out on 3 devices.</div></div></div>
+</div>
+
+<!-- =================================================================== 7 -->
+<h2>7. Reset PIN</h2>
+<div class="explain"><ul>
+<li>Same two steps: step 1 <b>your password</b> (identical to screen 4, not drawn again), step 2 the new PIN (v0.75).</li>
+<li>Step 2: "Choose a new 4-digit PIN for Staff." and the hint "Not all the same (1111) and not a straight run (1234)." The digits are <b>shown</b>, not dots (the admin is choosing it for someone else and has to read it out). PC: the same 4 boxes, typed from the keyboard (Backspace removes the last digit). Tablet/phone: the same boxes plus the approved keypad (36px keys, 44px tap areas; Del removes the last digit).</li>
+<li>No auto-save on the 4th digit (unlike Change PIN): the admin checks the digits, then presses <b>Reset PIN</b>. Gray until 4 digits.</li>
+<li>Too easy: the 4 digits stay, amber "That PIN is too easy to guess. Choose another." (shown on the phone), Reset PIN gray.</li>
+<li>Shared desk: gray line "This is the shared front-desk PIN. Tell the desk staff the new one." Personal accounts: "Tell Grandmaster the new PIN."</li>
+<li>Done: toast <b>"PIN reset for Staff. Works on every device now."</b> Nobody is signed out. A device that hit 5 wrong PINs stays locked and needs the password (0002 rule) — not mentioned in the toast; it's in SETUP.md.</li>
+</ul></div>
+<p class="cap"><i class="ti ti-device-desktop"></i> PC · mouse · 1280px · 4 digits typed</p>
+<div class="scroller" data-shell="pc" data-page="list"><div class="overlay"><div class="dialog" role="dialog" aria-label="Reset PIN">
+  <h3>Reset PIN</h3>
+  <div class="who-line"><span class="avatar">S</span><b>Staff</b><span class="e">shrewsburyustc@gmail.com</span></div>
+  <div class="hint">Step 2 of 2</div>
+  <p class="sub" style="margin-bottom:2px">Choose a new 4-digit PIN for Staff.</p>
+  <div class="hint" style="margin-bottom:8px">Not all the same (1111) and not a straight run (1234).</div>
+  <div class="pinshow" role="img" aria-label="New PIN: 4 7 1 9"><span>4</span><span>7</span><span>1</span><span>9</span></div>
+  <div class="hint" style="margin-top:16px">This is the shared front-desk PIN. Tell the desk staff the new one.</div>
+  <div class="actions"><span class="tap" style="min-height:32px"><span class="link">Back</span></span><span class="btn">Cancel</span><span class="btn btn-primary">Reset PIN</span></div>
+</div></div></div>
+<div class="pair">
+<div><p class="cap"><i class="ti ti-device-tablet"></i> Tablet · touch · 820px · keypad, 2 digits in</p>
+<div class="scroller" data-shell="tab" data-page="list"><div class="overlay"><div class="dialog" role="dialog" aria-label="Reset PIN">
+  <h3>Reset PIN</h3>
+  <div class="who-line"><span class="avatar">S</span><b>Staff</b><span class="e">shrewsburyustc@gmail.com</span></div>
+  <div class="hint">Step 2 of 2</div>
+  <p class="sub" style="margin-bottom:2px">Choose a new 4-digit PIN for Staff.</p>
+  <div class="hint">Not all the same (1111) and not a straight run (1234).</div>
+  <div class="pinshow" aria-label="New PIN: 4 7, 2 of 4 digits"><span>4</span><span>7</span><span class="cur"></span><span></span></div>
+  <div class="keypad"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span class="blank"></span><span>0</span><span style="font-size:14px">Del</span></div>
+  <div class="hint" style="margin-top:12px">This is the shared front-desk PIN. Tell the desk staff the new one.</div>
+  <div class="actions" style="margin-top:8px"><span class="tap"><span class="link">Back</span></span><span class="btn">Cancel</span><span class="btn btn-primary dis">Reset PIN</span></div>
+</div></div></div></div>
+<div><p class="cap"><i class="ti ti-device-mobile"></i> Phone · touch · 390px · too easy</p>
+<div class="scroller" data-shell="ph" data-page="list"><div class="fullscreen" role="dialog" aria-label="Reset PIN">
+  <div class="head"><span class="tap" aria-label="Back"><i class="ti ti-arrow-left" style="font-size:20px"></i></span>Reset PIN</div>
+  <div class="fbody">
+    <div class="who-line"><span class="avatar">S</span><b>Staff</b><span class="e">shrewsburyustc@gmail.com</span></div>
+    <div class="hint">Step 2 of 2</div>
+    <p style="font-size:13px;color:var(--text2);margin:2px 0 2px">Choose a new 4-digit PIN for Staff.</p>
+    <div class="hint">Not all the same (1111) and not a straight run (1234).</div>
+    <div class="pinshow"><span>1</span><span>2</span><span>3</span><span>4</span></div>
+    <div class="err" style="margin-bottom:12px"><i class="ti ti-alert-triangle"></i><span>That PIN is too easy to guess. Choose another.</span></div>
+    <div class="keypad"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span class="blank"></span><span>0</span><span style="font-size:14px">Del</span></div>
+    <div class="hint" style="margin-top:12px">This is the shared front-desk PIN. Tell the desk staff the new one.</div>
+    <div style="margin-top:12px"><span class="btn btn-primary btn-full dis">Reset PIN</span></div>
+  </div>
+</div></div></div>
+</div>
+
+<!-- =================================================================== 8 -->
+<h2>8. Other states</h2>
+<div class="explain"><ul>
+<li><b>Staff and the shared desk</b> never see the "Admin" group (v0.15). The desk menu is unchanged from today: Lock now, This device, Sign out (it has no Change PIN / Change password, v0.28). A personal staff account would also see Change PIN / Change password.</li>
+<li><b>Loading</b> (rule 3.4): three gray placeholder rows under the title, within 1 second.</li>
+<li><b>Couldn't load</b> (rule 3.5): amber banner "Couldn't load staff accounts. Check the connection." with Retry (<code>ti-refresh</code>); it never closes by itself.</li>
+<li><b>A non-admin who types the page address:</b> only the line "Only admins can see Staff accounts." (no list). The database refuses the list anyway (v0.71).</li>
+</ul></div>
+<p class="cap"><i class="ti ti-device-desktop"></i> PC · mouse · 1280px · couldn't load</p>
+<div class="scroller" data-shell="pc" data-page="loaderr"></div>
+<div class="pair">
+<div><p class="cap"><i class="ti ti-device-tablet"></i> Tablet · touch · 820px · loading</p><div class="scroller" data-shell="tab" data-page="loading"></div>
+<p class="cap"><i class="ti ti-device-tablet"></i> Tablet · touch · 820px · desk account's menu (no Admin group)</p>
+<div class="scroller" data-shell="tab" data-page="home" data-who="S"><div class="menu" style="right:12px;top:48px">
+  <div class="who"><b>Staff</b><span>shrewsburyustc@gmail.com · Staff</span></div>
+  <div class="it"><i class="ti ti-lock"></i>Lock now</div>
+  <div class="it"><i class="ti ti-map-pin"></i>This device<span class="v">Shrewsbury</span></div>
+  <div class="sep"></div>
+  <div class="it"><i class="ti ti-logout"></i>Sign out</div>
+</div></div></div>
+<div><p class="cap"><i class="ti ti-device-mobile"></i> Phone · touch · 390px · couldn't load</p><div class="scroller" data-shell="ph" data-page="loaderr"></div></div>
+</div>
+
+<!-- =================================================================== 9 -->
+<h2>9. Details to approve</h2>
+<div class="explain"><ol class="details">
+<li>Staff accounts is a <b>page</b> opened from the account menu (no rail icon, no rail item highlighted).</li>
+<li>Rows: name · email · one tag (Admin / Staff / Shared) · <code>⋯</code>; your own row says "(you)" and has no <code>⋯</code>.</li>
+<li><b>Exception to rule 8:</b> clicking/tapping a row opens its <code>⋯</code> menu (no detail view yet); your own row isn't clickable.</li>
+<li><b>Exception to rule 3.3:</b> the location switcher stays visible but doesn't filter accounts (they belong to both schools).</li>
+<li>A who-line for the person being reset on both steps of both dialogs.</li>
+<li>New password shown in plain text (normal font); Generate (<code>ti-wand</code>) = 4 easy words joined by dashes; Copy (<code>ti-copy</code>) shows "Copied" for 2 seconds.</li>
+<li>Live "12 characters minimum (N so far)" → green "Long enough"; Reset password gray until 12.</li>
+<li>Warning line before saving: signed out everywhere, save it first, it won't be shown again (+ desk line).</li>
+<li>Success toasts: "Password reset for Staff. Signed out on 3 devices." / "PIN reset for Staff. Works on every device now." — 5 seconds, no Undo.</li>
+<li>Reset PIN digits are shown (not dots) and need a press on <b>Reset PIN</b> (no auto-save on the 4th digit).</li>
+<li>Unsaved-changes guard on step 2 (Esc / outside / back arrow keep it open; phone "Discard changes").</li>
+<li>Failure keeps the dialog open with what was typed and an amber "Couldn't reset … Nothing was changed. Try again."</li>
+<li>Icons added to the map in v0.73: <code>ti-wand</code> (Generate), <code>ti-copy</code> (Copy / Copied). No <code>ti-check</code> outside save/done; toasts have no icon (as approved).</li>
+</ol></div>
+</main>
+
+<script>
+// Stamps the app shell into each [data-shell] block: device frame, rail / bottom bar, top bar,
+// and either the empty Home or the Staff accounts list. The block's own HTML (menus, dialogs,
+// toasts) is placed on top. Mockup helper only — not app code.
+const ACCOUNTS = [
+  { id: 'me', name: 'Main Admin', email: 'jberg412@gmail.com', tag: 'Admin', you: true },
+  { id: 'gm', name: 'Grandmaster', email: 'grandmaster@example.com', tag: 'Admin' },
+  { id: 'staff', name: 'Staff', email: 'shrewsburyustc@gmail.com', tag: 'Shared' },
+];
+function listHtml(kind, opts) {
+  const rows = ACCOUNTS.map(a => {
+    const cls = 'row' + (opts.sel === a.id ? ' sel' : '');
+    const dots = a.you ? '<span class="ib spacer"></span>'
+      : `<span class="ib${opts.hover === a.id ? ' hov' : ''}" aria-label="More actions for ${a.name}"><i class="ti ti-dots"></i></span>`;
+    const you = a.you ? ' <span class="you">(you)</span>' : '';
+    if (kind === 'ph') {
+      return `<div class="${cls}"><div class="stack"><span class="nm">${a.name}${you}</span><span class="em">${a.email}</span></div><span class="tag">${a.tag}</span>${dots}</div>`;
+    }
+    return `<div class="${cls}"><span class="nm">${a.name}${you}</span><span class="em">${a.email}</span><span class="tag">${a.tag}</span>${dots}</div>`;
+  }).join('');
+  const tip = opts.hover ? '<div class="tip">More actions for Staff</div>' : '';
+  return `<div class="ptitle">Staff accounts</div><div class="psub">Reset a password or PIN when someone forgets it.</div><div class="list">${rows}</div>${tip}`;
+}
+const HOME = `<div style="display:flex;align-items:center;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--border)"><span style="width:40px;height:40px;border-radius:50%;background:var(--surface);border:1px solid var(--border)"></span><div><div class="ptitle">Good morning</div><div class="hint">Saturday, October 17 · Shrewsbury</div></div></div><div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:13px">Nothing on Home yet. Items appear here as sections are added.</div>`;
+const LOC = '<div class="loc"><span>Worcester</span><span class="on"><i class="ti ti-map-pin"></i>Shrewsbury</span><span>Both</span></div>';
+document.querySelectorAll('[data-shell]').forEach(el => {
+  const kind = el.dataset.shell, page = el.dataset.page;
+  const opts = { hover: el.dataset.hover, sel: el.dataset.sel };
+  const head = '<div class="ptitle">Staff accounts</div><div class="psub">Reset a password or PIN when someone forgets it.</div>';
+  const ph = '<div class="row"><span style="height:12px;width:120px;border-radius:6px;background:var(--surface)"></span><span style="height:12px;width:180px;border-radius:6px;background:var(--surface)"></span></div>';
+  const bodies = {
+    list: () => listHtml(kind, opts),
+    loading: () => head + '<div class="list" aria-busy="true">' + ph + ph + ph + '</div>',
+    loaderr: () => head + '<div class="err" style="align-items:center;font-size:13px;max-width:880px;padding:4px 4px 4px 12px"><i class="ti ti-alert-triangle"></i><span style="flex:1">Couldn&rsquo;t load staff accounts. Check the connection.</span><span class="btn btn-sm"><i class="ti ti-refresh"></i>Retry</span></div>',
+    home: () => HOME,
+  };
+  const body = bodies[page]();
+  const homeOn = page === 'home';
+  const menuOpen = el.querySelector('.menu .who, .stitle b') && page === 'home';
+  const av = `<span class="${kind === 'pc' ? '' : 'tap'}"><span class="avatar${menuOpen ? ' open' : ''}" aria-label="Account menu">${el.dataset.who || 'MA'}</span></span>`;
+  const overlay = el.innerHTML;
+  let shell;
+  if (kind === 'ph') {
+    shell = `<div class="dev dev-ph touch"><div class="ph-shell"><div class="topbar">${LOC}<span class="grow"></span>${av}</div><div class="content">${body}</div><div class="phbar"><a${homeOn ? ' style="color:var(--blue)"' : ''}><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></div></div>${overlay}</div>`;
+  } else {
+    const rail = kind === 'pc'
+      ? `<nav class="rail"><a${homeOn ? ' style="background:var(--blue-tint);color:var(--blue)"' : ''}><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a></nav>`
+      : `<nav class="rail-t"><a${homeOn ? ' style="color:var(--blue)"' : ''}><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></nav>`;
+    shell = `<div class="dev ${kind === 'pc' ? 'dev-pc' : 'dev-tab touch'}"><div class="app">${rail}<div class="app-col"><div class="topbar"><span class="grow"></span>${LOC}${av}</div><div class="content">${body}</div></div></div>${overlay}</div>`;
+  }
+  el.innerHTML = shell;
+  // Line the row menu / tooltip up with the ⋯ button they belong to.
+  const dev = el.querySelector('.dev');
+  const anchor = el.querySelector('.row.sel .ib, .ib.hov');
+  if (anchor) {
+    const d = dev.getBoundingClientRect(), a = anchor.getBoundingClientRect();
+    const menu = el.querySelector(':scope .dev > .menu');
+    if (menu) { menu.style.left = 'auto'; menu.style.right = (d.right - a.right) + 'px'; menu.style.top = (a.bottom - d.top + 4) + 'px'; }
+    const tip = el.querySelector('.tip');
+    if (tip) { tip.style.left = (a.right - d.left + 8) + 'px'; tip.style.top = (a.top - d.top + 1) + 'px'; }
+  }
+});
+</script>
+</body>
+</html>

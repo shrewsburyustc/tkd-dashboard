@@ -1015,8 +1015,40 @@ img {
   font-size: var(--text-13);
 }
 
+/* The toast itself takes the pointer (so hovering it pauses the 5 seconds, and Undo works). */
+.toast {
+  pointer-events: auto;
+}
+
 .toast-icon {
   flex: none;
+}
+
+/* With an Undo button: text · thin divider · Undo (approved Testing mockup) */
+.toast--action {
+  min-height: 40px;
+  padding: 0 var(--space-4) 0 var(--space-12);
+}
+
+.toast-undo {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-4);
+  height: 32px;
+  padding: 0 var(--space-8);
+  border: none;
+  border-left: 1px solid var(--color-toast-divider);
+  background: none;
+  color: var(--color-on-blue); /* white */
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+/* A white ring: the usual blue one would hardly show on the near-black toast */
+.toast-undo:focus-visible {
+  outline-color: var(--color-on-blue);
+  outline-offset: -2px;
 }
 
 /* ===== Home ===== */
@@ -1146,6 +1178,14 @@ img {
     height: var(--tap-size);
   }
 
+  .toast--action {
+    min-height: var(--tap-size);
+  }
+
+  .toast-undo {
+    height: var(--tap-size);
+  }
+
   .signin-card {
     width: 360px;
   }
@@ -1192,6 +1232,16 @@ img {
     left: var(--space-16);
     display: flex;
     justify-content: center;
+  }
+
+  /* A long toast wraps instead of running off a narrow phone */
+  .toast {
+    max-width: 100%;
+  }
+
+  .toast-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .home {

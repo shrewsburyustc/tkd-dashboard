@@ -2,8 +2,9 @@
 // Why it exists: so anyone can click through every screen — sign-in, Set your PIN, Home, the
 // account menu, Change PIN, Change password, the lock screen — without a Supabase database.
 // It copies the small part of the Supabase client the app uses — auth.signInWithPassword /
-// getSession / onAuthStateChange / signOut / updateUser and rpc — and follows the same rules as
-// the real database functions (migrations 0001 + 0002).
+// getSession / onAuthStateChange / signOut / updateUser, rpc, and from(table).select().eq().order()
+// — and follows the same rules as the real database (migrations 0001 + 0002 + 0003).
+// Testing → Classes and ranks lives in its own file, mockTesting.js; this file plugs it in.
 //
 // Try it:  any email + password "preview" signs in as Jeffrey Berg (admin). PIN is 2580.
 // Test helpers in the browser console (F12 → Console):
@@ -13,15 +14,31 @@
 //   __tkdPreview.setPasswordAgeDays(8)    pretend the password was typed 8 days ago (then reload)
 //   __tkdPreview.setPasswordAgeMinutes(11) pretend the password was typed 11 minutes ago
 //                                         (Set PIN then needs the password again)
+// Testing helpers:
+//   __tkdPreview.setRole('staff')         view-only account ('admin' to switch back; then reload)
+//   __tkdPreview.failNextSave()           the next Testing save fails like a dropped connection
+//   __tkdPreview.simulateOtherAdminEdit() "another admin" changes everything (open dialogs go stale)
+//   __tkdPreview.clearSchool('Shrewsbury') remove that school's classes (to see the empty state)
+//   __tkdPreview.resetTesting()           back to the default classes and ranks
+//   __tkdPreview.setTestingDelay(3000)    slow Testing calls down (e.g. to see the skeleton)
+// Staff accounts helpers (account menu → Admin → Staff accounts; mockStaff.js):
+//   __tkdPreview.failNextSave()           also makes the next Reset password / Reset PIN fail
+//   __tkdPreview.resetStaffAccounts()     the fake desk is signed in on 3 devices again
+//   __tkdPreview.setPasswordAgeMinutes(11) → a reset asks for "Confirm it's you" again
 import { getLastPasswordSignIn, PASSWORD_MAX_AGE_MS, decodeJwtPayload } from './session.js';
 import { setLockedFlag } from './useIdleLock.js';
 import { readStorage, writeStorage, removeStorage } from './storage.js';
 import { isFourDigits, isPinTooEasy } from './pinRules.js';
+import { createTestingBackend, TESTING_RPC_NAMES } from './mockTesting.js';
+import { createStaffBackend, STAFF_RPC_NAMES } from './mockStaff.js';
 
 const SESSION_KEY = 'tkd.preview.session'; // the fake "signed in" session
 const STAFF_STATE_KEY = 'tkd.preview.staffState'; // fake staff row: PIN, shared flag
 const SESSION_STATE_KEY = 'tkd.preview.sessionState'; // fake per-session rows: PIN tries, unlocked-until
 const OLD_PIN_STATE_KEY = 'tkd.preview.pinState'; // used by the first build; cleaned up below
+const TESTING_KEY = 'tkd.preview.testing'; // fake Testing tables (classes + ranks)
+const TESTING_DELAY_KEY = 'tkd.preview.testingDelay'; // setTestingDelay(ms), kept across reloads
+const STAFF_ACCOUNTS_KEY = 'tkd.preview.staffAccounts'; // fake Staff accounts (mockStaff.js)
 
 const PREVIEW_PASSWORD = 'preview';
 const PREVIEW_PIN = '2580'; // not too easy: 1234 is refused by the weak-PIN rule now
@@ -30,6 +47,7 @@ const MINUTE_MS = 60 * 1000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
 const SET_PIN_PASSWORD_WINDOW_MS = 10 * MINUTE_MS; // set_my_pin wants a password sign-in this recent
 const FAKE_DELAY_MS = 400; // pretend the network takes a moment, so "Signing in…" is visible
+const TESTING_DELAY_MS = FAKE_DELAY_MS / 2; // each Testing read/save takes ~200 ms
 
 const FAKE_STAFF = {
   id: '00000000-0000-4000-8000-000000000001',
@@ -46,6 +64,14 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 function newSessionId() {
   if (window.crypto?.randomUUID) return window.crypto.randomUUID();
   return `preview-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+// A random id in the real uuid format (the fake Testing tables check the format like the
+// database does, so the fallback must look right too).
+function newUuid() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  const hex = () => Math.floor(Math.random() * 16).toString(16);
+  return 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, hex);
 }
 
 // ----- Fake token + session -----
@@ -97,15 +123,16 @@ function sessionIdOf(session) {
 
 // ----- Fake staff row (what the database keeps in public.staff) -----
 // pin: the PIN itself (the real database only keeps a scrambled copy — this is only a preview).
+// role: 'admin' or 'staff' (setRole helper). Saved states from before Testing have no role → admin.
 
 function loadStaffState() {
   try {
     const saved = JSON.parse(readStorage(STAFF_STATE_KEY));
-    if (saved) return saved;
+    if (saved) return { ...saved, role: saved.role === 'staff' ? 'staff' : 'admin' };
   } catch {
     // fall through to the default below
   }
-  return { pin: PREVIEW_PIN, isShared: false };
+  return { pin: PREVIEW_PIN, isShared: false, role: 'admin' };
 }
 
 function saveStaffState(state) {
@@ -142,6 +169,26 @@ function idleMs() {
   return FAKE_STAFF.idle_lock_minutes * MINUTE_MS;
 }
 
+// Like the database's has_data_access() (0002): signed in, password within 7 days, a session
+// id, not PIN-locked, and this session unlocked right now.
+function hasDataAccess(session) {
+  const sessionId = sessionIdOf(session);
+  if (!session || !sessionId || !passwordIsFresh(session)) return false;
+  const state = loadSessionState(sessionId);
+  return !state.lockedAt && state.unlockedUntil !== null && state.unlockedUntil > Date.now();
+}
+
+// Who is asking, for the fake Testing tables (mockTesting.js). is_admin() also needs a fresh password.
+function testingContext() {
+  const session = loadSession();
+  return {
+    signedIn: Boolean(session),
+    hasDataAccess: hasDataAccess(session),
+    isAdmin: Boolean(session) && loadStaffState().role === 'admin' && passwordIsFresh(session),
+    actorName: FAKE_STAFF.full_name,
+  };
+}
+
 const answer = (value) => ({ data: value, error: null, status: 200 });
 const NOT_SIGNED_IN = { data: null, error: { message: 'Not signed in' }, status: 401 };
 
@@ -154,6 +201,7 @@ function getMyProfile() {
   const sessionState = loadSessionState(sessionIdOf(session));
   const row = {
     ...FAKE_STAFF,
+    role: staff.role,
     has_pin: staff.pin !== null,
     pin_locked: Boolean(sessionState.lockedAt),
     password_fresh: passwordIsFresh(session),
@@ -345,7 +393,90 @@ export function createMockClient() {
     },
   };
 
+  // ----- Testing → Classes and ranks (mockTesting.js) -----
+
+  const testing = createTestingBackend({
+    loadStore: () => JSON.parse(readStorage(TESTING_KEY)), // missing/damaged → default data
+    saveStore: (store) => writeStorage(TESTING_KEY, JSON.stringify(store)),
+    now: () => Date.now(),
+    newId: newUuid,
+  });
+
+  // The fake network time for Testing calls (setTestingDelay saves it so it survives a reload).
+  function testingDelay() {
+    const saved = readStorage(TESTING_DELAY_KEY);
+    const ms = Number(saved);
+    return saved !== null && Number.isFinite(ms) && ms >= 0 ? ms : TESTING_DELAY_MS;
+  }
+
+  // supabase.from(table) — the app can only READ tables (like the real permissions).
+  // Usage: await supabase.from('testing_ranks').select('id, name').eq('location_code', 'worcester').order('position')
+  function from(table) {
+    const query = { columns: '*', filters: [], orders: [], write: false };
+    const refuseWrite = () => {
+      query.write = true; // writing straight to a table is refused (no write permission)
+      return builder;
+    };
+    const builder = {
+      select(columns = '*') {
+        query.columns = columns;
+        return builder;
+      },
+      eq(col, value) {
+        query.filters.push({ col, value });
+        return builder;
+      },
+      order(col, { ascending = true } = {}) {
+        query.orders.push({ col, ascending });
+        return builder;
+      },
+      insert: refuseWrite,
+      update: refuseWrite,
+      upsert: refuseWrite,
+      delete: refuseWrite,
+      // "await builder" runs the query — that's what makes it a "thenable", like the real one.
+      then(resolve, reject) {
+        const run = async () => {
+          await wait(testingDelay());
+          if (query.write) {
+            return { data: null, error: { code: '42501', message: `permission denied for table ${table}`, details: null, hint: null }, status: 403 };
+          }
+          return testing.select(table, query.columns, query.filters, query.orders, testingContext());
+        };
+        return run().then(resolve, reject);
+      },
+    };
+    return builder;
+  }
+
+  // ----- Staff accounts (mockStaff.js) -----
+
+  const staffAccounts = createStaffBackend({
+    loadStore: () => JSON.parse(readStorage(STAFF_ACCOUNTS_KEY)),
+    saveStore: (rows) => writeStorage(STAFF_ACCOUNTS_KEY, JSON.stringify(rows)),
+    me: () => ({ id: FAKE_STAFF.id, full_name: FAKE_STAFF.full_name, email: FAKE_STAFF.email, role: loadStaffState().role }),
+  });
+
+  // Who is asking, for mockStaff.js: like testingContext, plus 0004's 10-minute password rule.
+  function staffContext() {
+    const session = loadSession();
+    const last = session ? getLastPasswordSignIn(session) : null;
+    return {
+      ...testingContext(),
+      passwordWithin10Minutes: last !== null && Date.now() - last <= SET_PIN_PASSWORD_WINDOW_MS,
+      isShared: Boolean(loadStaffState().isShared),
+    };
+  }
+
   async function rpc(name, args = {}) {
+    if (STAFF_RPC_NAMES.includes(name)) {
+      await wait(FAKE_DELAY_MS);
+      return staffAccounts.rpc(name, args, staffContext());
+    }
+    if (name === 'has_data_access' || TESTING_RPC_NAMES.includes(name)) {
+      await wait(testingDelay());
+      return testing.rpc(name, args, testingContext());
+    }
     await wait(FAKE_DELAY_MS / 2);
     if (name === 'get_my_profile') return getMyProfile();
     if (name === 'touch_session') return touchSession();
@@ -392,7 +523,42 @@ export function createMockClient() {
       if (!pretendPasswordAge(Number(minutes) * MINUTE_MS)) return 'Sign in first.';
       return `Password now looks ${minutes} minute(s) old. Saving a new PIN after 10 minutes needs the password again.`;
     },
+    // ----- Testing helpers -----
+    setRole(role) {
+      if (role !== 'admin' && role !== 'staff') return "Use setRole('admin') or setRole('staff').";
+      const staff = loadStaffState();
+      staff.role = role;
+      saveStaffState(staff);
+      return `The preview account is now ${role === 'admin' ? 'an admin' : 'staff (view only)'}. Reload the page to see it.`;
+    },
+    failNextSave() {
+      testing.failNextSave();
+      staffAccounts.failNext();
+      return 'The next Testing save (and the next Reset password / Reset PIN) will fail like a dropped connection and change nothing.';
+    },
+    resetStaffAccounts() {
+      staffAccounts.reset();
+      return 'Staff accounts are back to the defaults (the desk is signed in on 3 devices). Reload the page to see them.';
+    },
+    simulateOtherAdminEdit() {
+      testing.simulateOtherAdminEdit();
+      return 'Another admin changed every class and rank and swapped two ranks. Open dialogs and Undo are now out of date.';
+    },
+    clearSchool(school) {
+      if (!testing.clearSchool(school)) return "Use clearSchool('Worcester') or clearSchool('Shrewsbury').";
+      return `Removed every class and rank at ${school}. Reload or switch schools to see the empty state.`;
+    },
+    resetTesting() {
+      testing.reset();
+      return 'Testing is back to the default classes and ranks. Reload or switch schools to see them.';
+    },
+    setTestingDelay(ms) {
+      const value = Number(ms);
+      if (!Number.isFinite(value) || value < 0) return 'Use a number of milliseconds, e.g. setTestingDelay(3000).';
+      writeStorage(TESTING_DELAY_KEY, String(value));
+      return `Each Testing call now takes ${value} ms, even after a reload. setTestingDelay(${TESTING_DELAY_MS}) is the normal speed.`;
+    },
   };
 
-  return { auth, rpc };
+  return { auth, rpc, from };
 }

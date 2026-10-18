@@ -93,6 +93,7 @@ declare
   v_shared  boolean;
   v_role    text;
   v_pin     text;
+  v_owner_only boolean;   -- true once 0004 took admin_set_staff_pin away from the app (test 12)
 begin
   -- -------------------------------------------------------------------
   -- Setup (as the admin "postgres" role the SQL Editor uses)
@@ -505,7 +506,29 @@ begin
 
   -- -------------------------------------------------------------------
   -- Test 12: admin_set_staff_pin
+  --   Since migration 0004 the app (role authenticated) may no longer call
+  --   it - admins reset PINs with admin_reset_pin instead (rulebook v0.74;
+  --   tested in 0004_tests.sql). So: once 0004 is applied, first check the
+  --   app is refused, then run the rest of this test as the function's
+  --   owner with the same pretend login token. The function's own rules
+  --   (admin only, not yourself, unlocked, weak PINs, locked devices stay
+  --   locked) are still tested either way.
   -- -------------------------------------------------------------------
+  v_owner_only := not has_function_privilege('authenticated', 'public.admin_set_staff_pin(uuid, text)', 'execute');
+  if not v_owner_only and to_regprocedure('public.admin_reset_pin(uuid, text)') is not null then
+    raise exception 'TEST FAILED: 12y 0004 is applied but the app may call admin_set_staff_pin again (0001 or 0002 was re-run?) - run 0004 again';
+  end if;
+  if v_owner_only then
+    perform set_config('request.jwt.claims',
+      jsonb_build_object('sub', v_admin, 'role', 'authenticated', 'session_id', v_a10, 'amr', v_amr_1m)::text, true);
+    begin
+      perform public.admin_set_staff_pin(v_desk, '8642');
+      raise exception 'TEST FAILED: 12z after 0004 the app (authenticated) was still allowed to call admin_set_staff_pin';
+    exception
+      when insufficient_privilege then null;   -- good: no execute right
+    end;
+    reset role;
+  end if;
   perform set_config('request.jwt.claims',
     jsonb_build_object('sub', v_admin, 'role', 'authenticated', 'session_id', v_a10, 'amr', v_amr_1m)::text, true);
   if not public.has_data_access() then raise exception 'TEST SETUP: a10 should have data access before test 12'; end if;
@@ -534,14 +557,14 @@ begin
   reset role;
   insert into public.pin_attempts (session_id, staff_id, failed, locked_at) values (v_dx, v_desk, 5, now());
   insert into public.pin_attempts (session_id, staff_id, failed) values (v_d1, v_desk, 2);
-  set local role authenticated;
+  if not v_owner_only then set local role authenticated; end if;
   perform public.admin_set_staff_pin(v_desk, '8642');
   reset role;
   select count(*) into v_count from public.pin_attempts where session_id = v_d1;
   if v_count <> 0 then raise exception 'TEST FAILED: 12c1 admin reset must clear the desk''s wrong-PIN counts'; end if;
   select count(*) into v_count from public.pin_attempts where session_id = v_dx and locked_at is not null;
   if v_count <> 1 then raise exception 'TEST FAILED: 12c2 admin reset must keep a PIN-locked desk device locked'; end if;
-  set local role authenticated;
+  if not v_owner_only then set local role authenticated; end if;
   perform set_config('request.jwt.claims',
     jsonb_build_object('sub', v_desk, 'role', 'authenticated', 'session_id', v_d2, 'amr', v_amr_1m)::text, true);
   v_result := public.verify_pin('8642');
@@ -582,6 +605,8 @@ begin
   exception
     when insufficient_privilege then null;
   end;
+
+  set local role authenticated;   -- (back to "the browser" for the next tests)
 
   -- -------------------------------------------------------------------
   -- Test 13: is_admin() needs a password sign-in within 7 days

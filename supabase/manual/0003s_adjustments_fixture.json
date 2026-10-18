@@ -1,0 +1,29 @@
+{
+ "about": "FIXTURE adjustments (made-up test data) for 0003s_export_fixture.json. They mirror the real 0003s_adjustments.json so the fixture seed exercises a price adjustment and final award None. Not for production.",
+ "fixture": true,
+ "adjustments": [
+  {
+   "kind": "price",
+   "class": "Teen/Adult",
+   "rank": "Teen/Adult rank 5",
+   "field": "privateCents",
+   "from": 10000,
+   "to": 9000,
+   "reason": "FIXTURE: exercises a price adjustment"
+  },
+  {
+   "kind": "finalAward",
+   "class": "Group D",
+   "from": "Deputy 1",
+   "to": "none",
+   "reason": "FIXTURE: mirrors the real Group D None (v0.62)"
+  },
+  {
+   "kind": "finalAward",
+   "class": "Teen/Adult",
+   "from": null,
+   "to": "none",
+   "reason": "FIXTURE: mirrors the real Teen/Adult None (v0.62)"
+  }
+ ]
+}

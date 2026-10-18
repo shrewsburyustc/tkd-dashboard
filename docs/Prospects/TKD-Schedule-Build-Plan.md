@@ -1,6 +1,6 @@
 # Schedule — build plan (DRAFT for review)
 
-Branch `claude/prospect-form-system-cd893d` · 2026-10-17 · implements the Schedule decisions (this branch's rulebook v0.60; renumbered after main's v0.83 at merge) · approved mockup `docs/Prospects/TKD-Class-Schedule-Mockups.html` rev 2 · **nothing is built until Jeffrey says OK.**
+Branch `claude/prospect-form-system-cd893d` · 2026-10-17 · implements the Schedule decisions (rulebook v0.84; numbered v0.60 before main was brought in) · approved mockup `docs/Prospects/TKD-Class-Schedule-Mockups.html` rev 2 · **nothing is built until Jeffrey says OK.**
 
 ## 0. What gets built
 
@@ -23,7 +23,7 @@ This branch started from an old main. Main now has:
 - new dialog rules
 - rulebook v0.83
 
-So the first step is to **bring main into this branch**. On this branch only, the four new-students rulebook rows (v0.60–v0.63) are renumbered after main's highest version, and their "decided v0.6x" notes in the icon map are updated to match. Main itself is not touched.
+So the first step is to **bring main into this branch**. On this branch only, the four new-students rulebook rows (first numbered v0.60–v0.63) are renumbered after main's highest version (now v0.84–v0.87), and their "decided" notes in the icon map are updated to match. Main itself is not touched.
 
 ## 2. Database — migration `0005_schedule.sql`
 
@@ -191,3 +191,4 @@ The app reads the tables directly (through RLS). One small function, `schedule_t
 ## 8. Progress log
 
 - 2026-10-17 — Draft written. Q1–Q3 answered by Jeffrey.
+- 2026-10-17 — S0: main brought into this branch (Jeffrey ran the merge in the terminal); the rulebook conflict was resolved, giving v0.87 = main v0.83 + new students v0.84–v0.87.

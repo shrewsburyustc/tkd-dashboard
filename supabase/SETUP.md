@@ -318,9 +318,200 @@ select count(*) from auth.sessions;
 
 ---
 
+## 10. Migration 0003: Testing → Classes and ranks
+
+**What it does** (`supabase/migrations/0003_testing_classes_ranks.sql`):
+- **Four new tables:** `locations` (the two schools), `testing_classes`, `testing_ranks` (prices in cents, sparring gear, and the rank's **belt**: five `belt_*` columns, see below), and `change_log`, an **append-only history** of every change for the whole dashboard (who, when, which app action, old and new values).
+- **Reading:** any active staff member whose session is **unlocked** (`has_data_access()` from 0002) can read classes and ranks for both schools. A locked, PIN-locked, signed-out, magic-link or 8-day-old session sees nothing. Nobody in the app can read `change_log`, or the login ids in `created_by` / `updated_by`. The `service_role` (secret key) gets **nothing** on these tables and functions either, because the app never uses it.
+- **Changing:** only admins, and only through 8 database functions (`testing_add_class`, `testing_update_class`, `testing_reorder_classes`, `testing_delete_class`, `testing_add_rank`, `testing_update_rank`, `testing_reorder_ranks`, `testing_delete_rank`). Nobody can write to the tables directly. Each function checks the session first, then the admin role, then the input, then that nothing changed since the screen loaded ("stale").
+- **Final award, three states** (v0.62): a **rank** (what students get after the class's last rank), **None** (the last rank doesn't promote, on purpose, e.g. Group D and Teen/Adult whose last rank is Dan-testing practice), or **Not set** (not decided yet; the app shows an amber reminder). The database refuses "a rank and None" at the same time.
+- **Belts** (v0.64/v0.65): each rank stores what its belt looks like, for the small belt picture: `belt_pattern` (`solid`, `stripe` = a middle stripe, `half` = top/bottom halves), `belt_color`, `belt_color_2` (the stripe or bottom half; empty for solid, never the same as `belt_color`), `belt_end_stripes` (0–3) and `belt_end_stripe_color` (always set, default `yellow`, even with 0 end stripes). Colors come from a fixed list of 9 (white, yellow, orange, green, blue, purple, red, brown, black). One table rule (`testing_ranks_belt_check`, using the helper `testing_belt_is_valid`) refuses any other belt, and the two rank functions answer `invalid` for one — the same rules as the app's `belts.js`. Ranks that existed before the belt columns get a plain white belt. Changing only the belt counts as a change (new version, history row).
+- **Automatic bookkeeping** (triggers): version numbers, "Last changed by", the history rows, and the rules that a class can't change school, a rank can't change class, and a final award can't be one of the class's own ranks. The class and rank tables also refuse `TRUNCATE` (emptying a table in one go), because that would skip the history.
+- **One change at a time per school:** every change function locks its school first, so two admins saving at the same moment simply take turns (no "deadlocks").
+
+**Before you start:** the 0002 open items in the handoff are done. `verify_pin_tests.sql` and `0002_tests.sql` both pass in production (section 9, step 4).
+
+### 10a. Apply 0003 (you, in the SQL Editor)
+
+1. Open `supabase/migrations/0003_testing_classes_ranks.sql` and copy **the whole file**.
+2. In Supabase, go to **SQL Editor**, then **New query**. Paste it and click **Run**.
+3. Supabase will warn that the query has **destructive operations**. That's expected. The words *delete* and *drop* are inside rules (`on delete cascade`), inside the two delete functions (they only run later, when an admin deletes something in the app), and in `drop … if exists` lines that make re-running safe. **Nothing is deleted now.** Confirm.
+4. You should see "Success. No rows returned." The file is one transaction (`begin;` … `commit;`). If you see any error, nothing was kept. Copy the error to Claude.
+
+**Running it again** is safe **only until a later migration (0004 or later) changes any of these tables, functions or rules.** After that, re-running this old file would put the old versions back. Never re-run it then.
+
+**Why the SQL Editor and not Claude's connection:** the connection cancels any SQL containing the words *delete* or *drop*, and almost every part of 0003 contains one of them. So the connection is only used for the read-only checks below.
+
+### 10b. Read-only checks (Claude runs these through the connection)
+
+Claude runs these and reports the results. None of them change anything.
+1. `select version();` must say **PostgreSQL 15 or newer** (production is 17). The final-award rule `on delete set null (final_award_rank_id)` needs 15+.
+2. **List tables:** `locations`, `testing_classes`, `testing_ranks`, `change_log` exist, each with RLS enabled.
+3. **Fingerprints:** run `supabase/tests/0003_fingerprints.sql`. It lists all 19 functions with their arguments, code fingerprint (md5), security-definer flag, settings, owner and who may call them. Every line must match exactly what `supabase/tests/pglite/run.mjs` printed for the tested copy. A match means production has exactly the code and call rights that passed the tests.
+4. **Security advisor** (`get_advisors`, security). These notices are **expected**, by design:
+   - "RLS enabled, no policy" (INFO) on `public.change_log`: nobody in the app may read it.
+   - "Security definer function executable by authenticated" (or similar) for the 8 `testing_*` app functions: they are the only way to write, and each checks access and admin role itself. The same applies to the 0001/0002 functions the app calls.
+
+   Anything else about the 0003 tables or functions (for example, a table without RLS, or a function without a fixed `search_path`) is a real problem. Claude reports it before anything else happens.
+
+### 10c. Run the 0003 tests (you, in the SQL Editor)
+
+1. Open `supabase/tests/0003_tests.sql`. Replace `<paste-admin-UID-here>` with your UID and `<paste-desk-UID-here>` with the front desk's UID (**Authentication → Users**).
+2. Paste the whole file into a new query and click **Run**. Supabase may warn about destructive operations, because the test checks that deletes are **refused**. Everything is rolled back. Confirm.
+3. Expected: one row, **ALL 0003 TESTS PASSED**. If it fails, you get an error starting with `TEST FAILED:` (or `TEST SETUP:`). Nothing is saved either way. Run `rollback;` on its own once, then tell Claude.
+4. Then run `0002_tests.sql` and `verify_pin_tests.sql` again (section 9, step 4). 0003 must not have broken them.
+
+The test creates its own classes named `zz test …` and rolls them back, so it works **before and after** the seed. Run it both times.
+
+### 10d. The seed: copying the classes and ranks in (later, separate OK)
+
+The real list (7 classes, 42 ranks per school) is copied from the old Color Belt project with `supabase/manual/0003s_seed_classes_and_ranks.sql`. It is generated by `make_seed.mjs`. **Don't run it as part of 0003.** It needs its own OK, after you've checked the review table Claude shows you (names, order, prices, sparring, final awards, and each rank's belt in plain English).
+- Run it the same way (SQL Editor, whole file). It skips any school that already has classes, so running it twice adds nothing.
+- Afterwards, run `0003_tests.sql` again (10c).
+- In the history its rows show as action `seed` by "Initial copy from the old system".
+
+### 10e. Undo 0003 (only if something is badly wrong)
+
+> **This deletes every testing class and rank** (including anything typed in since). Put the app back to the version without the Testing section **first**, so nothing calls these functions. Then run this in the SQL Editor. It is one transaction (all or nothing). Supabase will warn about destructive operations. This time that is real.
+
+```sql
+-- Undo migration 0003: removes the Testing tables, functions and triggers.
+-- change_log (the history) is KEPT, with its append-only protection,
+-- unless Jeffrey decides otherwise (see the optional part below).
+begin;
+
+-- the 8 app functions
+drop function if exists public.testing_add_class(text, text, uuid, boolean);
+drop function if exists public.testing_update_class(uuid, integer, text, uuid, boolean);
+drop function if exists public.testing_reorder_classes(text, uuid[], uuid[]);
+drop function if exists public.testing_delete_class(uuid, integer, uuid[], uuid[], boolean);
+drop function if exists public.testing_add_rank(uuid, text, integer, integer, integer, boolean, text, text, text, integer, text);
+drop function if exists public.testing_update_rank(uuid, integer, text, integer, integer, integer, boolean, text, text, text, integer, text);
+drop function if exists public.testing_reorder_ranks(uuid, uuid[], uuid[]);
+drop function if exists public.testing_delete_rank(uuid, integer, integer, uuid[], uuid[]);
+
+-- the two tables (one statement, because they point at each other);
+-- their triggers, rules and indexes go with them
+drop table if exists public.testing_ranks, public.testing_classes;
+
+-- helpers and trigger functions only the testing tables used
+drop function if exists public.testing_classes_before_write();
+drop function if exists public.testing_ranks_before_write();
+drop function if exists public.testing_normalize_name(text);
+drop function if exists public.testing_name_is_valid(text);
+drop function if exists public.testing_cents_is_valid(integer);
+drop function if exists public.testing_ids_are_valid(uuid[]);
+drop function if exists public.testing_belt_is_valid(text, text, text, integer, text);
+drop function if exists public.testing_refuse_truncate();
+
+-- the schools lookup
+drop table if exists public.locations;
+
+commit;
+```
+
+**Optional, only if Jeffrey says so:** also remove the history and its functions. Every recorded change is lost.
+
+```sql
+begin;
+drop table if exists public.change_log;
+drop function if exists public.change_log_write();
+drop function if exists public.change_log_actor_name();
+drop function if exists public.change_log_refuse_change();
+commit;
+```
+
+**Why:**
+- **Only through functions:** with no direct writes, every change passes the same checks: unlocked session, admin, valid name and price, not stale. And every change lands in the history with who made it (guidelines section 5).
+- **`has_data_access()` first, then `is_admin()`:** an admin's locked or magic-link session gets "no access" before its role is even looked at. `is_admin()` is never a gate on its own (0002 rule). The tests prove the order with the front desk's locked session.
+- **Stale protection:** two admins on two devices can't silently overwrite each other. The second save is refused and the screen reloads. Delete confirmations are protected too: if the class or rank changed after the dialog opened, nothing is deleted.
+- **The history can't be edited:** updates, deletes and truncate are refused, even from the SQL Editor, unless someone deliberately removes that protection (the database owner can switch the trigger off). Later sections must leave sensitive columns (PIN hashes, medical notes) out of it.
+
+---
+
+## 11. Migration 0004: Staff accounts (reset password / PIN)
+
+**What it does** (`supabase/migrations/0004_staff_accounts.sql`, rulebook v0.70–v0.76):
+- **`admin_list_staff()`** returns the Staff accounts list: name, email, role, shared or not, and "is this me". It never returns PINs, password data or sign-in details. Admins only, unlocked session.
+- **`admin_reset_password(staff_id, new_password)`** sets a new password for **someone else**. In one all-or-nothing step it:
+  - saves the password as a bcrypt hash in `auth.users`, the same way Supabase Auth does;
+  - cancels every emailed or texted link (password reset, magic link, email change, confirmation);
+  - **signs the person out on every device**;
+  - writes one history row (`change_log`): who reset whose password, and how many devices were signed out. **Never the password.**
+
+  It refuses: non-admins; a locked, PIN-locked, signed-out or 8-day-old session; an admin whose **password sign-in was more than 10 minutes ago** (the app's "Confirm it's you" step handles that); your own account; inactive, deleted or banned logins; passwords under 12 characters or over 72 bytes.
+- **`admin_reset_pin(staff_id, pin)`** sets a new 4-digit PIN for someone else, with the same checks plus the weak-PIN rule. It clears their wrong-PIN counts, but a device that hit 5 wrong PINs **stays locked**. Nobody is signed out.
+- **`admin_set_staff_pin`** (from 0002) **can no longer be called by the app.** `admin_reset_pin` replaces it, and has the 10-minute rule. Its code is unchanged.
+- **No secret key:** these functions run as the database owner, which is allowed to change Supabase Auth's tables (checked 2026-10-17). If Supabase ever changes those tables, a reset fails with an error and **changes nothing**. The fingerprint check below spots it first.
+
+**Before you start:** 0001–0003 are applied, and their tests pass.
+
+**Status:** applied to production 2026-10-17; 11b checks and 11c tests passed. The screens are not deployed yet (branch `staff-accounts`), so 11d uses the local app.
+
+### 11a. Apply 0004 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0004_staff_accounts.sql`.
+2. **SQL Editor → New query**, paste, **Run**.
+3. Supabase will warn about **destructive operations**. That's expected: the word *delete* is inside the reset function (it removes sign-ins and emailed links later, only when an admin resets a password). **Nothing is deleted now.** Confirm.
+4. You should see "Success. No rows returned." It's one transaction: on any error nothing is kept. Copy the error to Claude.
+
+**Running it again is safe.** You **must** run it again if 0001 or 0002 is ever re-run, because those would give `admin_set_staff_pin` back to the app. `0002_tests.sql` and `0004_tests.sql` both fail until you do.
+
+### 11b. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0004_fingerprints.sql`. Every line must match what `supabase/tests/pglite/run.mjs` printed for the tested copy:
+   - the 5 functions, with code fingerprint, settings, owner and call rights;
+   - the Supabase Auth columns 0004 relies on;
+   - the triggers: only `staff_set_updated_at`, and **none** on the Auth tables.
+2. **Security advisor:** "security definer function executable by authenticated" for `admin_list_staff`, `admin_reset_password` and `admin_reset_pin` is **expected**. They are how the app calls them, and each one checks access itself. Anything else about 0004 is a real problem.
+3. **No triggers** on `auth.users`, `auth.sessions`, `auth.refresh_tokens`, `auth.one_time_tokens` or `auth.flow_state` (part of the fingerprints). The tests in 11c add throwaway rows to those tables, so this is checked before you run them.
+
+### 11c. Run the 0004 tests (you, in the SQL Editor)
+
+1. Paste the whole `supabase/tests/0004_tests.sql` into a new query and click **Run**. **No UIDs to fill in**: it makes its own throwaway logins (`zz-test-…@example.com`) and never touches the real accounts. Supabase may warn about destructive operations. Everything is rolled back. Confirm.
+2. Expected: one row, **ALL 0004 TESTS PASSED**. A failure shows `TEST FAILED:` / `TEST SETUP:`. Nothing is saved either way. Run `rollback;` once on its own, then tell Claude.
+3. Then run `0002_tests.sql` and `verify_pin_tests.sql` again (section 9, step 4). Test 12 in 0002 now checks that the app can't call `admin_set_staff_pin`.
+
+### 11d. The real check (you, with the local app on the real database)
+
+Do this **outside class hours**: resetting the desk password signs every desk device out.
+1. `Start dashboard.bat`, then sign in as yourself.
+2. Initials → **Staff accounts** → Staff → ⋯ → **Reset password**: your password, then **Generate**, **Copy**, save it in the password manager, then **Reset password**. The toast says how many desk devices were signed out.
+3. On a desk device, within about a minute it shows the sign-in screen. The new password works there, and the old one doesn't.
+4. Same for **Reset PIN**: the new desk PIN works on the desk device right away.
+5. Clipboard: the copied password stays on the clipboard until something else is copied. Copy something harmless afterwards.
+
+### 11e. Undo 0004 (only if something is badly wrong)
+
+Put the app back to a version without Staff accounts **first**. Then:
+
+```sql
+-- Undo migration 0004. Passwords and PINs already reset stay as they are.
+begin;
+drop function if exists public.admin_list_staff();
+drop function if exists public.admin_reset_password(uuid, text);
+drop function if exists public.admin_reset_pin(uuid, text);
+drop function if exists public.staff_admin_gate();
+-- Give admin_set_staff_pin back to the app ONLY together with removing the
+-- functions above (0002's state). Leave this line out if nothing calls it.
+grant execute on function public.admin_set_staff_pin(uuid, text) to authenticated;
+commit;
+```
+
+**Why:**
+- **No secret key, ever** (handoff §6): the alternative, a server function holding the full-power key, was rejected in v0.71.
+- **Your password first + 10 minutes:** an admin screen left unlocked can't be used to take over another account, including the other admin's (v0.74).
+- **Signs out everywhere and cancels links:** a reset usually means someone shouldn't have the old password. Without this, they'd keep access for up to 7 days (v0.72).
+- **Supabase extras skipped:** no "password changed" email, and no leaked-password check (Pro plan only, off today). Accepted in v0.71.
+- **Sign-in providers:** the reset closes email sign-ins only. Keep **Authentication → Sign In / Providers** on **email only**. Don't turn on Google or others without a new decision.
+
+---
+
 ## Admin: change the front-desk PIN or password
 
 The front desk (`shrewsburyustc@gmail.com`) is a **shared account**, so the app hides Change PIN and Change password for it. Only an admin changes them, here in Supabase, until the Staff accounts screen exists.
+
+> **Once 0004 and the Staff accounts screen are live, use Staff accounts instead** (initials → Admin → Staff accounts; section 11). The snippets below stay as an **emergency backup** only, for when the app can't be used.
 
 ### Change the desk's PIN
 
@@ -501,5 +692,5 @@ These were looked at and accepted. They're written down so nobody mistakes them 
 1. **Authentication → URL Configuration:** set **Site URL** and **Redirect URLs** to the dashboard's real address (for now the `.pages.dev` address). The default is `localhost`.
 2. **After upgrading to Pro:** turn on **Leaked password protection** (3b) and set **time-boxed sessions** to **7 days** (Authentication → Sessions), so Supabase itself also ends sessions after 7 days.
 3. **Check that 5 wrong PINs really ends the session:** on the real project, sign in on a test device, enter 5 wrong PINs, then in **SQL Editor** run `select id, user_id, created_at from auth.sessions order by created_at desc limit 5;` — the session from that device should be gone. Tell Claude if it is still there.
-4. **Hard gate before the first data section (e.g. Color Belt):** migration `0002` must make the lock screen real on the server (the database refuses a locked or PIN-locked session, not just the browser). See `docs/TKD-Dashboard-Design-Guidelines.md` section 10b. Do not add student data until this is in: both parts applied (section 9), `select count(*) from auth.sessions;` works, both test files pass, and every data table's security rule uses `(select public.has_data_access())`.
+4. **Hard gate before the first data section (e.g. Color Belt):** migration `0002` must make the lock screen real on the server (the database refuses a locked or PIN-locked session, not just the browser). See `docs/Dashboard Docs/TKD-Dashboard-Design-Guidelines.md` section 10b. Do not add student data until this is in: both parts applied (section 9), `select count(*) from auth.sessions;` works, both test files pass, and every data table's security rule uses `(select public.has_data_access())`.
 

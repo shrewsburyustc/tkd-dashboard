@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reset password questions</title>
+<!-- TKD-Staff-Accounts-Questions.html — the decisions needed before the admin "Reset password"
+     (Staff accounts) can be mocked up. One question at a time (rule P3); each option is drawn,
+     described with pros/cons, and one is recommended. Answers are recorded in the rulebook. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root{--control-border:#8F8F8A;--page:#EFEFEC;--bg:#FFFFFF;--surface:#F7F7F5;--border:#E5E5E2;--border-strong:#CFCFCA;--text:#1F1F1F;--text2:#6B6B6B;--blue:#003595;--blue-tint:#E6EBF4;--red:#A32D2D;--ok:#3B6D11;--ok-tint:#EAF3DE;--warn:#633806;--warn-tint:#FAEEDA}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:20px;font-weight:500;margin:0 0 4px}
+h2{font-size:16px;font-weight:500;margin:48px 0 4px;padding-top:16px;border-top:1px solid var(--border-strong)}
+b{font-weight:500}
+.lead{color:var(--text2);font-size:13px;margin:0 0 12px}
+.box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:8px 0 16px;font-size:13px}
+.box h3{font-size:13px;font-weight:500;margin:8px 0 2px}.box h3:first-child{margin-top:0}
+.box ul{margin:0;padding-left:20px}.box li{margin:2px 0}
+.status{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:2px 8px;border-radius:6px;background:var(--warn-tint);color:var(--warn)}
+.status.done{background:var(--ok-tint);color:var(--ok)}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:12px}
+.opt{background:var(--bg);border:1px solid var(--border-strong);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.opt.rec{border:2px solid var(--blue)}
+.opt h4{margin:0;font-size:14px;font-weight:500;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rtag{font-size:12px;font-weight:400;color:var(--blue);background:var(--blue-tint);border-radius:6px;padding:0 8px}
+.opt p{margin:0;font-size:13px}
+.opt ul{margin:0;padding-left:18px;font-size:13px}
+.pro{color:var(--ok)}.con{color:var(--warn)}
+/* small drawings */
+.sk{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px}
+.sk .row{display:flex;align-items:center;gap:8px;height:36px;border-top:1px solid var(--border);padding:0 4px;background:var(--bg)}
+.sk .row:first-child{border-top:none}
+.sk .list{border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.sk .grow{flex:1}
+.sk .muted{color:var(--text2)}
+.sk .tag{font-size:12px;padding:0 6px;border-radius:6px;background:var(--surface);border:1px solid var(--border);color:var(--text2)}
+.sk .ib{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;color:var(--text2)}
+.sk .ib i{font-size:16px}
+.sk .btnp{height:28px;padding:0 12px;border-radius:8px;background:var(--blue);color:#fff;display:inline-flex;align-items:center;gap:6px}
+.sk .btn{height:28px;padding:0 12px;border-radius:8px;border:1px solid var(--control-border);display:inline-flex;align-items:center;gap:6px;background:var(--bg)}
+.sk .field{margin:6px 0}
+.sk .field .l{color:var(--text2)}
+.sk .input{height:30px;border:1px solid var(--control-border);border-radius:8px;padding:0 10px;display:flex;align-items:center;background:var(--bg);gap:6px}
+.sk .input .grow{font-family:ui-monospace,Consolas,monospace;letter-spacing:.5px}
+.sk .dlg{background:var(--bg);border-radius:12px;padding:12px 14px;border:1px solid var(--border-strong)}
+.sk .dlg .t{font-size:14px;font-weight:500}
+.sk .acts{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+.sk .note{background:var(--warn-tint);color:var(--warn);border-radius:6px;padding:6px 8px;margin-top:6px}
+.sk .ok{background:var(--ok-tint);color:var(--ok);border-radius:6px;padding:6px 8px;margin-top:6px}
+.sk .hidden{opacity:.35;text-decoration:line-through}
+.flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.flow .n{background:var(--bg);border:1px solid var(--control-border);border-radius:8px;padding:6px 8px;text-align:center;min-width:90px}
+.flow .n.key{border-color:var(--warn);background:var(--warn-tint);color:var(--warn)}
+.flow i.ti-arrow-right{color:var(--text2)}
+</style>
+</head>
+<body>
+<main>
+<h1>Admin "Reset password" — questions before the mockups</h1>
+<p class="lead">All five answered 2026-10-17 by Jeffrey · each answer goes into the rulebook (10b row + changelog). Nothing is built until the mockups are approved and you OK the build.</p>
+
+<div class="box">
+<h3>Why this is needed now</h3>
+<ul>
+<li>The rulebook (v0.16, §5) says: no self-service reset link; the sign-in screen says "Forgot password? Ask an admin to reset it."; admins reset it from <b>Staff accounts</b> (§6, account menu → Admin).</li>
+<li><b>Staff accounts doesn't exist yet</b> (v0.28: "designed when personal logins arrive"). So today "ask an admin" means the admin pastes the SQL snippet in <code>supabase/SETUP.md</code> ("Change the desk's password", Option 2). That works but is error-prone: a typo in the UID, the password sitting in the SQL Editor's history, no change-log entry.</li>
+<li>The front-desk account (shared, v0.27/v0.28) can't change its own password in the app, so <b>every</b> desk password problem lands on an admin.</li>
+</ul>
+<h3>Already fixed by earlier decisions (not questions)</h3>
+<ul>
+<li>Minimum <b>12 characters</b> (v0.28, Supabase setting) — the reset enforces the same rule.</li>
+<li>Admins only, and only from an <b>unlocked, recent</b> admin session (<code>is_admin() and has_data_access()</code>, handoff §6).</li>
+<li>An admin <b>can't reset their own</b> password here — they use Change password (it asks for the current one). Same rule as <code>admin_set_staff_pin</code>.</li>
+<li>An admin <b>can</b> reset the other admin (Jeffrey ↔ grandmaster), so one admin who forgets is never locked out (v0.23).</li>
+<li>Every reset is written to the change log (who, when, whose password) — <b>never the password itself</b>.</li>
+<li>Icon map (§2.4) already has <code>ti-user-cog</code> (Staff accounts), <code>ti-password</code> (password), <code>ti-key</code> (PIN).</li>
+</ul>
+</div>
+
+<!-- ============================================================ Q1 -->
+<h2>Question 1 — How much of Staff accounts do we build now? <span class="status done"><i class="ti ti-check"></i> Answered: B — Reset password + Reset PIN (v0.70)</span></h2>
+<p class="lead">Staff accounts will eventually do: add, disable, edit email, reset password, reset PIN (§6). The question is how much of that comes in this first step.</p>
+<div class="opts">
+  <div class="opt">
+    <h4>A. Reset password only</h4>
+    <div class="sk"><div class="list">
+      <div class="row"><b>Main Admin</b><span class="muted">jberg412@…</span><span class="grow"></span><span class="tag">Admin</span><span class="ib"><i class="ti ti-password"></i></span></div>
+      <div class="row"><b>Staff</b><span class="muted">shrewsburyustc@…</span><span class="grow"></span><span class="tag">Shared</span><span class="ib"><i class="ti ti-password"></i></span></div>
+    </div></div>
+    <p>Staff accounts page = a list of accounts, each with one action: Reset password.</p>
+    <ul><li class="pro">Smallest build; fixes exactly today's problem.</li>
+    <li class="con">The desk PIN still needs the SQL snippet — and it's the same kind of problem (shared account, can't change its own PIN). The database function for it (<code>admin_set_staff_pin</code>) already exists and is unused.</li></ul>
+  </div>
+  <div class="opt rec">
+    <h4>B. Reset password + Reset PIN <span class="rtag">Recommended</span></h4>
+    <div class="sk"><div class="list">
+      <div class="row"><b>Main Admin</b><span class="muted">jberg412@…</span><span class="grow"></span><span class="tag">Admin</span><span class="ib"><i class="ti ti-dots"></i></span></div>
+      <div class="row"><b>Staff</b><span class="muted">shrewsburyustc@…</span><span class="grow"></span><span class="tag">Shared</span><span class="ib"><i class="ti ti-dots"></i></span></div>
+    </div>
+    <div class="dlg" style="margin-top:8px;width:200px"><div><i class="ti ti-password"></i> Reset password</div><div><i class="ti ti-key"></i> Reset PIN</div></div></div>
+    <p>Same list; the row's ⋯ menu has <b>Reset password</b> and <b>Reset PIN</b>. Add / disable / edit email wait for personal logins (v0.28 stays true for those).</p>
+    <ul><li class="pro">Ends both SQL snippets for the desk — the two things an admin actually has to do today.</li>
+    <li class="pro">Reset PIN's database side is already built and tested (0002); it only needs the screen.</li>
+    <li class="pro">The page and row layout are the ones the full screen will use, so nothing is thrown away later.</li>
+    <li class="con">A little more to design and review than A (one more dialog).</li></ul>
+  </div>
+  <div class="opt">
+    <h4>C. Full Staff accounts now</h4>
+    <div class="sk"><div class="list">
+      <div class="row"><b>Main Admin</b><span class="grow"></span><span class="tag">Admin</span><span class="ib"><i class="ti ti-edit"></i></span><span class="ib"><i class="ti ti-dots"></i></span></div>
+      <div class="row"><b>Staff</b><span class="grow"></span><span class="tag">Shared</span><span class="ib"><i class="ti ti-edit"></i></span><span class="ib"><i class="ti ti-dots"></i></span></div>
+    </div><div style="margin-top:8px"><span class="btnp"><i class="ti ti-plus"></i> Add account</span></div></div>
+    <p>Add account, edit name/email/role, disable, reset password, reset PIN — all now.</p>
+    <ul><li class="pro">Done once; no more Supabase-dashboard account work.</li>
+    <li class="con">Much bigger: creating logins and changing login emails touch more of Supabase Auth (email confirmation, duplicates, identities) and need their own design questions.</li>
+    <li class="con">No one to add yet — personal logins wait for the school domain (v0.27). Builds features nobody can use (against P7's spirit).</li></ul>
+  </div>
+</div>
+
+<!-- ============================================================ Q2 -->
+<h2>Question 2 — Where does the "set someone else's password" code run? <span class="status done"><i class="ti ti-check"></i> Answered: A — database function (v0.71)</span></h2>
+<p class="lead">The browser app can't do it: setting another user's password is an Auth "admin" power, and the key that grants it (<code>service_role</code> / secret key) must never be in the app (handoff §6). So something on a server must do it. I checked the live project (read-only): the database's owner role <b>is</b> allowed to update <code>auth.users</code> and delete from <code>auth.sessions</code> / <code>auth.one_time_tokens</code> — the same thing the SETUP snippet does today.</p>
+<div class="opts">
+  <div class="opt rec">
+    <h4>A. A database function (security definer) <span class="rtag">Recommended</span></h4>
+    <div class="sk"><div class="flow"><span class="n">App<br><span class="muted">admin's own login</span></span><i class="ti ti-arrow-right"></i><span class="n">admin_reset_password()<br><span class="muted">in Postgres</span></span><i class="ti ti-arrow-right"></i><span class="n">auth.users<br><span class="muted">new bcrypt hash</span></span></div></div>
+    <p>A new function in migration <b>0004</b>, same pattern as <code>admin_set_staff_pin</code>: checks admin + unlocked + recent password, refuses your own account and anything under 12 characters, stores the password as a bcrypt hash (exactly what Supabase Auth does), signs the person out and cancels emailed links — all in one all-or-nothing step — and writes the change log.</p>
+    <ul><li class="pro">No secret key anywhere. Nothing new to deploy or keep secret.</li>
+    <li class="pro">One place for the security rule, tested with the existing PGlite tests like 0002/0003.</li>
+    <li class="pro">Works in local preview (fake database) and on the real one the same way.</li>
+    <li class="con">Writes Supabase's own Auth tables directly. Supabase documents those tables as theirs and they "may change". If Supabase renames a column or stops allowing it, the function fails with an error (it can't silently half-work: one statement, all or nothing). The fix then is option B.</li>
+    <li class="con">Supabase's own password extras (leaked-password check — Pro plan only, not on yet; "password changed" email) don't run for this path.</li></ul>
+  </div>
+  <div class="opt">
+    <h4>B. Cloudflare Pages Function with the secret key</h4>
+    <div class="sk"><div class="flow"><span class="n">App</span><i class="ti ti-arrow-right"></i><span class="n">/api/reset<br><span class="muted">Cloudflare</span></span><i class="ti ti-arrow-right"></i><span class="n key"><i class="ti ti-key"></i> secret key</span><i class="ti ti-arrow-right"></i><span class="n">Supabase Auth API</span></div></div>
+    <p>A small server function in the dashboard's Cloudflare project. It checks the caller is an admin (by asking the database with the caller's own login), then calls Supabase's official admin API with the secret key stored as a Cloudflare secret.</p>
+    <ul><li class="pro">Uses Supabase's supported API — won't break if Auth's tables change.</li>
+    <li class="con">The full-power secret key lives in Cloudflare. If that function has a bug, the key can do <b>anything</b> to the database. v0.33 rejected this for the public form for that reason.</li>
+    <li class="con">The admin API doesn't sign the person out everywhere by itself — needs extra calls. Two pieces to keep in sync (function + database check). Can't be tried in local preview without extra setup.</li></ul>
+  </div>
+  <div class="opt">
+    <h4>C. Supabase Edge Function</h4>
+    <div class="sk"><div class="flow"><span class="n">App</span><i class="ti ti-arrow-right"></i><span class="n">Edge Function<br><span class="muted">Supabase</span></span><i class="ti ti-arrow-right"></i><span class="n key"><i class="ti ti-key"></i> secret key</span></div></div>
+    <p>Same as B but hosted by Supabase.</p>
+    <ul><li class="pro">Key stays inside Supabase.</li>
+    <li class="con">Still the full-power key in code; a second deploy target with its own tooling. Rejected for the same reasons in v0.33.</li></ul>
+  </div>
+</div>
+
+<!-- ============================================================ Q3 -->
+<h2>Question 3 — What else happens when a password is reset? <span class="status done"><i class="ti ti-check"></i> Answered: A — sign out + cancel links (v0.72)</span></h2>
+<div class="opts">
+  <div class="opt rec">
+    <h4>A. Sign out everywhere + cancel emailed links <span class="rtag">Recommended</span></h4>
+    <div class="sk"><div class="ok"><i class="ti ti-check"></i> Password reset for Staff. Signed out on 3 devices.</div></div>
+    <p>Same as the SETUP snippet: new password set, any password-reset / magic-link email already sent stops working, and every device signed in as that person goes back to the sign-in screen (within about a minute; the database refuses them at once).</p>
+    <ul><li class="pro">A reset is usually "someone shouldn't have this password" — this is the only version that actually locks them out.</li>
+    <li class="pro">Matches the rulebook's Change password (v0.28: it signs out other devices).</li>
+    <li class="con">For the desk: every desk device needs the new password typed in once (and the PIN after). Say so in the confirmation.</li></ul>
+  </div>
+  <div class="opt">
+    <h4>B. Just change the password</h4>
+    <div class="sk"><div class="ok"><i class="ti ti-check"></i> Password reset for Staff.</div></div>
+    <p>Devices already signed in stay signed in (until their 7-day password rule).</p>
+    <ul><li class="pro">No interruption at the desk.</li>
+    <li class="con">Someone who knew the old password and is signed in somewhere keeps access for up to 7 days. Emailed links keep working.</li></ul>
+  </div>
+</div>
+
+<!-- ============================================================ Q4 -->
+<h2>Question 4 — How is the new password chosen and handed over? <span class="status done"><i class="ti ti-check"></i> Answered: B — type or Generate, with Copy (v0.73)</span></h2>
+<div class="opts">
+  <div class="opt">
+    <h4>A. Admin types it</h4>
+    <div class="sk"><div class="dlg"><div class="t">Reset password — Staff</div>
+      <div class="field"><div class="l">New password</div><div class="input"><span class="grow">••••••••••••</span><i class="ti ti-eye"></i></div></div>
+      <div class="field"><div class="l">Confirm new password</div><div class="input"><span class="grow">••••••••••••</span></div></div>
+      <div class="acts"><span class="btn">Cancel</span><span class="btnp">Reset password</span></div></div></div>
+    <p>Two fields, like Change password. Admin tells the person in person.</p>
+    <ul><li class="pro">Familiar; matches the approved account dialogs.</li>
+    <li class="con">People type weak "Welcome2026!"-style passwords. The admin knows it forever (fine for the desk, less fine for a personal login).</li></ul>
+  </div>
+  <div class="opt rec">
+    <h4>B. Admin types it, or presses Generate <span class="rtag">Recommended</span></h4>
+    <div class="sk"><div class="dlg"><div class="t">Reset password — Staff</div>
+      <div class="field"><div class="l">New password</div><div class="input"><span class="grow">plum-ladder-quiet-76</span><i class="ti ti-eye-off"></i></div></div>
+      <div style="display:flex;gap:8px"><span class="btn"><i class="ti ti-refresh"></i> Generate</span><span class="btn"><i class="ti ti-copy"></i> Copy</span></div>
+      <div class="acts"><span class="btn">Cancel</span><span class="btnp">Reset password</span></div></div></div>
+    <p>One field shown in plain text (the admin is choosing it for someone else, so no confirm field). <b>Generate</b> fills in an easy-to-read 4-word password (20+ characters). <b>Copy</b> puts it on the clipboard for the password manager. After saving, it's never shown again.</p>
+    <ul><li class="pro">Strong passwords by default, still allows a typed one.</li>
+    <li class="pro">Easy to read out loud or write on the desk's sealed card.</li>
+    <li class="con">Visible on screen while the dialog is open (someone behind the admin could read it). The admin chooses where they do this.</li>
+    <li class="con">Needs 2 new icons in the map: <code>ti-copy</code>, and <code>ti-refresh</code> would get a second meaning — so Generate would use <code>ti-wand</code> instead (rule 2.3: one meaning per icon). Decided in the mockup.</li></ul>
+  </div>
+  <div class="opt">
+    <h4>C. Temporary password, must change at next sign-in</h4>
+    <div class="sk"><div class="dlg"><div class="t">Choose a new password</div><div class="muted">An admin reset your password. Choose your own to continue.</div>
+      <div class="field"><div class="l">New password</div><div class="input"><span class="grow"></span></div></div></div></div>
+    <p>Admin sets a one-time password; on sign-in the person must pick their own before anything else.</p>
+    <ul><li class="pro">Best practice for personal logins: the admin never knows the final password.</li>
+    <li class="con">Doesn't fit the desk: the shared account isn't allowed to choose its own password (v0.28). Only useful once personal logins exist — and adds a new screen. Can be added then.</li></ul>
+  </div>
+</div>
+
+<!-- ============================================================ Q5 -->
+<h2>Question 5 — Does the admin re-enter their own password first? <span class="status done"><i class="ti ti-check"></i> Answered: A — your password first (v0.74)</span></h2>
+<div class="opts">
+  <div class="opt rec">
+    <h4>A. Yes, "Your password" first <span class="rtag">Recommended</span></h4>
+    <div class="sk"><div class="dlg"><div class="t">Reset password — Staff</div><div class="muted">First, enter your own password.</div>
+      <div class="field"><div class="l">Your password</div><div class="input"><span class="grow">••••••••••••</span></div></div>
+      <div class="acts"><span class="btn">Cancel</span><span class="btnp">Next</span></div></div></div>
+    <p>Same as Change PIN (v0.28): step 1 asks for the admin's password, step 2 is the new password. The database also requires a password sign-in within the last 10 minutes (as <code>set_my_pin</code> does).</p>
+    <ul><li class="pro">An admin screen left unlocked for a minute can't be used to take over another account — including the other admin's.</li>
+    <li class="con">One extra field each time (rare task, so small cost).</li></ul>
+  </div>
+  <div class="opt">
+    <h4>B. No — an unlocked admin session is enough</h4>
+    <div class="sk"><div class="dlg"><div class="t">Reset password — Staff</div>
+      <div class="field"><div class="l">New password</div><div class="input"><span class="grow">plum-ladder-quiet-76</span></div></div>
+      <div class="acts"><span class="btn">Cancel</span><span class="btnp">Reset password</span></div></div></div>
+    <ul><li class="pro">One step faster.</li>
+    <li class="con">Anyone at an unlocked admin screen could reset the other admin's password and sign in as them. The 45-minute idle lock is the only protection.</li></ul>
+  </div>
+</div>
+
+<h2>Question 6 — What does "Reset PIN" do? <span class="status done"><i class="ti ti-check"></i> Answered: B — admin sets the new PIN (v0.75)</span></h2>
+<p class="lead">Came up while planning the mockups: v0.28 said an admin reset clears the PIN (the person picks a new one at next sign-in), but <code>admin_set_staff_pin</code> and the SETUP snippet set a specific PIN.</p>
+<div class="opts">
+  <div class="opt"><h4>A. Clear it; they choose their own</h4><p>Matches v0.28. Desk devices already signed in have no PIN, so the next lock signs them out; the first person in picks the desk PIN.</p></div>
+  <div class="opt rec"><h4>B. Admin sets the new PIN <span class="rtag">Chosen</span></h4><p>Admin types the 4 digits (weak PINs refused) and tells them. Works on every device at once; no one is signed out. Uses the existing <code>admin_set_staff_pin</code>.</p></div>
+  <div class="opt"><h4>C. Both: shared B, personal A</h4><p>Two flows; no personal logins yet. Can be added later.</p></div>
+</div>
+
+<h2>After the answers</h2>
+<div class="box"><ul>
+<li>Mockups at PC (1280), tablet (820, touch) and phone (390, touch): account menu → Staff accounts page, the list, the ⋯ menu, each dialog, success toast, errors (wrong own password, too short, connection), and the staff (non-admin) view (no Admin group in the menu).</li>
+<li>Rulebook: one 10b row + changelog line per answer; Staff accounts row (v0.28 "Not built yet") updated.</li>
+<li>Then a build plan (migration 0004, tests, screen), its own OK, security + design reviews by separate agents. Production SQL and any push each need their own OK.</li>
+</ul></div>
+</main>
+</body>
+</html>

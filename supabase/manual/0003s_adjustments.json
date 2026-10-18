@@ -1,0 +1,29 @@
+{
+ "about": "Changes Jeffrey approved on top of the old-system export (rulebook v0.62). The export file stays an exact record of the old system; make_seed.mjs applies these after checking it. Each 'from' must equal the export value or the script stops.",
+ "fixture": false,
+ "adjustments": [
+  {
+   "kind": "price",
+   "class": "Teen/Adult",
+   "rank": "High Green",
+   "field": "privateCents",
+   "from": 9500,
+   "to": 8500,
+   "reason": "Teen/Adult matches the kids' classes one to one (Jeffrey, 2026-10-16, v0.62)"
+  },
+  {
+   "kind": "finalAward",
+   "class": "Group D",
+   "from": "Deputy 1",
+   "to": "none",
+   "reason": "Deputy is practice for Dan testing, not a promotion (v0.62)"
+  },
+  {
+   "kind": "finalAward",
+   "class": "Teen/Adult",
+   "from": "Deputy 1",
+   "to": "none",
+   "reason": "Deputy is practice for Dan testing, not a promotion (v0.62)"
+  }
+ ]
+}

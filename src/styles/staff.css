@@ -1,0 +1,271 @@
+/*
+  staff.css — the styles for Staff accounts (StaffAccounts.jsx and screens/staff/), as in the
+  approved mockup docs/Dashboard Docs/TKD-Staff-Accounts-Mockups.html (v0.76).
+  Why it exists: the page reuses the shared pieces from testing.css (page header .phead/.ptitle,
+  the bordered list .clist, tags .ttag, icon buttons .tib, the row menu, the amber banner and the
+  Testing dialog frame); this file adds only what's new. Every value comes from tokens.css or the
+  4px grid.
+
+  Screen-size rules (same as app.css / testing.css):
+    Phone          (max-width: 639.98px)
+    Touch screens  (pointer: coarse)  → taller rows, 44px tap areas
+*/
+
+/* ===== Account menu: the gray "Admin" label above Staff accounts (admins only) ===== */
+.menu-group-label {
+  padding: var(--space-4) var(--space-12) var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* ===== Page ===== */
+.staffaccounts {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  /* Bottom: room for the toast (40px, 24px from the edge) + 16px, so it never covers a row */
+  padding: var(--space-24) var(--space-24) calc(40px + var(--space-24) + var(--space-16));
+}
+
+/* "Reset a password or PIN when someone forgets it." under the title */
+.sa-sub {
+  margin: calc(-1 * var(--space-4)) 0 var(--space-16);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.sa-empty {
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.staffaccounts .errbar {
+  max-width: 880px;
+  margin-bottom: var(--space-12);
+}
+
+/* ===== The list: name · email · tag · ⋯ ===== */
+.sa-list {
+  max-width: 880px;
+}
+
+.sa-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-height: 40px;
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-12);
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+.sa-row + .sa-row {
+  border-top: 1px solid var(--color-border);
+}
+
+/* Your own row: nothing to open */
+.sa-row.is-me {
+  cursor: default;
+}
+
+/* Arrow-key focus on a row: the 2px blue ring, drawn inside the row (as Classes and ranks) */
+.sa-row:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+/* The row whose menu or dialog is open (blue "selected" tint) */
+.sa-row.is-selected {
+  background: var(--color-blue-tint);
+}
+
+/* PC: name and email side by side */
+.sa-main {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.sa-name {
+  flex: none;
+  min-width: 140px;
+  font-weight: 500;
+}
+
+.sa-you {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+}
+
+.sa-email {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Same width as the ⋯ button, so the tags line up on your own row too */
+.sa-dots-spacer {
+  flex: none;
+  width: 28px;
+  height: 28px;
+}
+
+/* ===== Dialogs ===== */
+/* The person being reset: initials, name, email (stays on both steps) */
+.sa-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+  margin: var(--space-4) 0 var(--space-12);
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-size: var(--text-13);
+}
+
+.sa-who .avatar {
+  background: var(--color-bg);
+}
+
+.sa-who-name {
+  font-weight: 500;
+}
+
+.sa-who-email {
+  min-width: 0;
+  color: var(--color-text-secondary);
+  overflow-wrap: break-word; /* breaks after the "@" first (EmailText) */
+}
+
+/* Step 2 of Reset password: the new-password field sits close to Generate / Copy */
+.sa-field-tight {
+  margin-bottom: var(--space-8);
+}
+
+/* "Long enough" — green words (not color alone: the words say it) */
+.field-hint.sa-ok {
+  color: var(--color-success-text);
+}
+
+.sa-gen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+/* "Staff will be signed out on every device…" / "This is the shared front-desk PIN…" */
+.sa-warning {
+  margin-top: var(--space-16);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  line-height: 1.5;
+}
+
+/* Reset PIN: the prompt is a heading for screen readers but looks like the other step lines */
+.sa-pin-prompt {
+  margin-bottom: 0;
+  font-weight: 400;
+}
+
+.sa-pin-prompt:focus {
+  outline: none;
+}
+
+/* The 4 digit boxes (digits shown, v0.75) */
+.sa-pinboxes {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-8);
+  margin: var(--space-12) 0;
+}
+
+.sa-pinbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  font-size: var(--text-16);
+  font-variant-numeric: tabular-nums;
+}
+
+/* PC: the focus ring round the 4 boxes while the hidden PIN box has keyboard focus */
+.sa-pinboxes.is-focused {
+  border-radius: var(--radius-control);
+  outline: 2px solid var(--color-blue);
+  outline-offset: var(--space-4);
+}
+
+/* The box the next digit goes into (PC: only while the hidden PIN box has focus) */
+.sa-pinbox.is-current {
+  border-color: var(--color-blue);
+  box-shadow: 0 0 0 1px var(--color-blue);
+}
+
+.tdialog .keypad,
+.tdialog-page .keypad {
+  margin-top: var(--space-4);
+}
+
+/* ===== Touch screens ===== */
+@media (pointer: coarse) {
+  .sa-row {
+    min-height: 56px;
+    padding-right: 0;
+  }
+
+  .sa-dots-spacer {
+    width: var(--tap-size);
+    height: var(--tap-size);
+  }
+}
+
+/* ===== Phone ===== */
+@media (max-width: 639.98px) {
+  .staffaccounts {
+    padding: var(--space-16) var(--space-16) calc(44px + var(--space-8) + var(--space-16));
+  }
+
+  /* Name over email; the email wraps instead of being cut off (it tells accounts apart) */
+  .sa-main {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+  }
+
+  .sa-name {
+    min-width: 0;
+  }
+
+  .sa-email {
+    overflow: visible;
+    white-space: normal;
+    overflow-wrap: break-word; /* breaks after the "@" first (EmailText) */
+  }
+
+  /* The phone sheet's rows start 16px in: the "Admin" label lines up with them */
+  .menu-group-label {
+    padding-inline: var(--space-16);
+  }
+}
+
+/* Very narrow phones: the longest generated password (35 characters) still fits the field */
+@media (max-width: 359.98px) {
+  .sa-pw-input {
+    font-size: var(--text-13);
+  }
+
+  .sa-row {
+    min-height: 60px;
+    padding-top: var(--space-8);
+    padding-bottom: var(--space-8);
+  }
+}
