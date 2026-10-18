@@ -65,7 +65,7 @@ Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, 
 - **Still needed from Jeffrey:** both schools' street addresses (for "Location:" on family pages; same need as Star).
 - **Open, decide with the Calendar session:** whether Color Belt events appear on the central Calendar automatically.
 - **Full phase 2 mockups built 2026-10-17** (commit ded70c1): `TKD-ColorBelt-Events-Mockups.html` (E1–E14), `TKD-ColorBelt-Roster-Mockups.html` (R1–R8), `TKD-ColorBelt-Form-Mockups.html` (F1–F15), images in `Phase 2 images/`.
-- **Approval:** Events E1–E14 **approved by Jeffrey 2026-10-17**. Event page / roster R1–R8: sent. Form F1–F15: next.
+- **Approval:** Events E1–E14 **approved by Jeffrey 2026-10-17**. Event page / roster R1–R8 **approved 2026-10-17**. Form F1–F15: sent.
 - Presentation note: show each question as rendered mockup images (PNG, amber outline on what's asked), not sketches or HTML files alone.
 
 **Later phases** (each: design → mockups at 3 sizes → approve → build → reviews → OK): 2 Events + public family registration form (Cloudflare Pages Function path, v0.33) **+ per-class roster with payments** (merged in 2026-10-17, Q8) · 3 Testing roster (grading) · 4 Private testing. (Was: 3 Registrations and payments · 4 Grading · 5 Private testing; rulebook v0.37 to be updated when phase 2 decisions are recorded.) Also pending his OK: aligning the account dialogs' phone Back gesture with the Testing dialogs.
