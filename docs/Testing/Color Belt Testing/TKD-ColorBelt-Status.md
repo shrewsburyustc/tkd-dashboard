@@ -9,9 +9,9 @@
 
 ## 1. Where things stand (one paragraph)
 
-Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, ranks, prices, final awards, belt pictures; staff view only). It is **fully built and reviewed in preview mode** and its files are **committed locally** (checkpoint `811b812` on `main`; Color Belt work continues on branch `color-belt`). Nothing is pushed. **Migration 0003 is live in the production database since 2026-10-17 (CP3 done)** — seeded 2026-10-17 (CP4 done: 7 classes / 42 ranks per school); the live site is unchanged (Home only). The last thing built was **belt graphics + the belt picker** (rulebook v0.64/v0.65) — Jeffrey **approved the look in the preview on 2026-10-17 (rulebook v0.67)**; step A (belts into migration 0003 and the seed) is **done and reviewed** on branch `color-belt` — applied in CP3. CP4 (seed) done too. Next is CP5 (real-database check on this PC).
+Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, ranks, prices, final awards, belt pictures; staff view only). It is **fully built and reviewed in preview mode** and its files are **committed locally** (checkpoint `811b812` on `main`; Color Belt work continues on branch `color-belt`). Nothing is pushed. **Migration 0003 is live in the production database since 2026-10-17 (CP3 done)** — seeded 2026-10-17 (CP4 done: 7 classes / 42 ranks per school); the live site now has Testing. The last thing built was **belt graphics + the belt picker** (rulebook v0.64/v0.65) — Jeffrey **approved the look in the preview on 2026-10-17 (rulebook v0.67)**; step A (belts into migration 0003 and the seed) is **done and reviewed** on branch `color-belt` — applied in CP3. CP4 (seed), CP5 (real-database check) and CP6 (deploy) are done too — **phase 1 is live on https://tkd-dashboard.pages.dev** since 2026-10-17. Only housekeeping (G) is left.
 
-**⚠ Don't push yet.** 0003 and the seed are live; CP5 (real-database check on this PC) comes before any deploy (CP6, his OK).
+**Live.** `main` (incl. Color Belt through c91f77b) was pushed and deployed on 2026-10-17 together with Staff accounts and the browser Back work (origin/main 1aa30cf). From now on Color Belt changes reach the site only through a reviewed merge + Jeffrey's OK to push.
 
 ## 2. Waiting on Jeffrey right now
 
@@ -37,9 +37,9 @@ Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, 
 
 **D. CP4 — seed** — **done 2026-10-17:** Jeffrey checked the review table and pasted `0003s_seed_classes_and_ranks.sql` → 7 classes / 42 ranks per school. Connector check: final awards, all 84 belts and prices match the review table (Teen/Adult High Green private $85); change_log 84 rank + 24 class rows tagged `seed`. `0003_tests.sql` again → ALL 0003 TESTS PASSED, data unchanged afterwards (14 classes, 84 ranks, 108 log rows).
 
-**E. CP5 — real-database check locally** (`Start dashboard.bat`): sign in as admin and as the desk account, both schools, edit/undo, staff view.
+**E. CP5 — real-database check** — **done 2026-10-17:** admin on this PC against the real database (http://localhost:5180): both schools show 7 classes with belts; drag + Undo worked and was logged (4 `reorder_ranks` rows, order back to the original). Front desk (view only): checked on the live site after its password was reset through the new Staff accounts screen — classes/belts visible, no Add class, grips, pencils or ⋯ menus, ranks open read-only.
 
-**F. CP6 — OK to push** (= deploy). Only after 0003 + seed are live.
+**F. CP6 — deploy** — **done 2026-10-17:** pushed with `main` (origin/main 1aa30cf), after 0003 + seed were live.
 
 **G. Housekeeping:** rulebook 10b "phase 1 live" row + changelog; `TKD-Dashboard-Handoff.md` is stale (written at v0.30) — refresh it; `docs/README.md` sections list; fix `Start preview.bat` PIN text (1234 → 2580) if he wants; claude.ai project copies of changed `.md` docs. Before staff rely on it daily: handoff §8 items (Supabase Pro — Free projects pause after 7 days unused; grandmaster as second admin; bookmark + set This device per building) — his decisions.
 
