@@ -21,11 +21,16 @@
 //   __tkdPreview.clearSchool('Shrewsbury') remove that school's classes (to see the empty state)
 //   __tkdPreview.resetTesting()           back to the default classes and ranks
 //   __tkdPreview.setTestingDelay(3000)    slow Testing calls down (e.g. to see the skeleton)
+// Staff accounts helpers (account menu → Admin → Staff accounts; mockStaff.js):
+//   __tkdPreview.failNextSave()           also makes the next Reset password / Reset PIN fail
+//   __tkdPreview.resetStaffAccounts()     the fake desk is signed in on 3 devices again
+//   __tkdPreview.setPasswordAgeMinutes(11) → a reset asks for "Confirm it's you" again
 import { getLastPasswordSignIn, PASSWORD_MAX_AGE_MS, decodeJwtPayload } from './session.js';
 import { setLockedFlag } from './useIdleLock.js';
 import { readStorage, writeStorage, removeStorage } from './storage.js';
 import { isFourDigits, isPinTooEasy } from './pinRules.js';
 import { createTestingBackend, TESTING_RPC_NAMES } from './mockTesting.js';
+import { createStaffBackend, STAFF_RPC_NAMES } from './mockStaff.js';
 
 const SESSION_KEY = 'tkd.preview.session'; // the fake "signed in" session
 const STAFF_STATE_KEY = 'tkd.preview.staffState'; // fake staff row: PIN, shared flag
@@ -33,6 +38,7 @@ const SESSION_STATE_KEY = 'tkd.preview.sessionState'; // fake per-session rows: 
 const OLD_PIN_STATE_KEY = 'tkd.preview.pinState'; // used by the first build; cleaned up below
 const TESTING_KEY = 'tkd.preview.testing'; // fake Testing tables (classes + ranks)
 const TESTING_DELAY_KEY = 'tkd.preview.testingDelay'; // setTestingDelay(ms), kept across reloads
+const STAFF_ACCOUNTS_KEY = 'tkd.preview.staffAccounts'; // fake Staff accounts (mockStaff.js)
 
 const PREVIEW_PASSWORD = 'preview';
 const PREVIEW_PIN = '2580'; // not too easy: 1234 is refused by the weak-PIN rule now
@@ -443,7 +449,30 @@ export function createMockClient() {
     return builder;
   }
 
+  // ----- Staff accounts (mockStaff.js) -----
+
+  const staffAccounts = createStaffBackend({
+    loadStore: () => JSON.parse(readStorage(STAFF_ACCOUNTS_KEY)),
+    saveStore: (rows) => writeStorage(STAFF_ACCOUNTS_KEY, JSON.stringify(rows)),
+    me: () => ({ id: FAKE_STAFF.id, full_name: FAKE_STAFF.full_name, email: FAKE_STAFF.email, role: loadStaffState().role }),
+  });
+
+  // Who is asking, for mockStaff.js: like testingContext, plus 0004's 10-minute password rule.
+  function staffContext() {
+    const session = loadSession();
+    const last = session ? getLastPasswordSignIn(session) : null;
+    return {
+      ...testingContext(),
+      passwordWithin10Minutes: last !== null && Date.now() - last <= SET_PIN_PASSWORD_WINDOW_MS,
+      isShared: Boolean(loadStaffState().isShared),
+    };
+  }
+
   async function rpc(name, args = {}) {
+    if (STAFF_RPC_NAMES.includes(name)) {
+      await wait(FAKE_DELAY_MS);
+      return staffAccounts.rpc(name, args, staffContext());
+    }
     if (name === 'has_data_access' || TESTING_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
       return testing.rpc(name, args, testingContext());
@@ -504,7 +533,12 @@ export function createMockClient() {
     },
     failNextSave() {
       testing.failNextSave();
-      return 'The next Testing save will fail like a dropped connection and change nothing.';
+      staffAccounts.failNext();
+      return 'The next Testing save (and the next Reset password / Reset PIN) will fail like a dropped connection and change nothing.';
+    },
+    resetStaffAccounts() {
+      staffAccounts.reset();
+      return 'Staff accounts are back to the defaults (the desk is signed in on 3 devices). Reload the page to see them.';
     },
     simulateOtherAdminEdit() {
       testing.simulateOtherAdminEdit();

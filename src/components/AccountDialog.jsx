@@ -15,8 +15,13 @@
 //   children    the screen's content
 //
 // The page behind it is made "inert" by the App (no clicks, no Tab) while it's open.
+//
+// Browser Back (v0.83): while open, the dialog adds a step to the browser's history, so the
+// browser's (or phone's) Back cancels it — like Esc — instead of leaving the page behind it.
+// Same way Dialog.jsx does it.
 import { useEffect, useId, useRef } from 'react';
 import { IconArrowLeft } from '@tabler/icons-react';
+import { dialogStep } from '../lib/backButton.js';
 
 // Everything a person can Tab to. (A disabled button or a tabIndex="-1" element can't be.)
 const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
@@ -44,6 +49,30 @@ export default function AccountDialog({ title, fullScreen, onCancel, onBack, chi
       document.querySelector('.avatar-button')?.focus();
     };
   }, []);
+
+  // While open: the browser's Back cancels (see the header). A token unique to this opening lets
+  // us remove only our OWN history step when the dialog closes some other way.
+  const titleKey = titleId;
+  useEffect(() => {
+    const token = `${titleKey}-${Date.now()}-${Math.random()}`;
+    const marker = { tkdDialog: token };
+    if (window.history.state?.tkdDialog) window.history.replaceState(marker, '');
+    else window.history.pushState(marker, '');
+    const release = dialogStep(token); // App.jsx: this step is in use (backButton.js)
+    function handleBack() {
+      onCancelRef.current(); // Back used up our step; cancelling closes the dialog
+    }
+    window.addEventListener('popstate', handleBack);
+    return () => {
+      release();
+      window.removeEventListener('popstate', handleBack);
+      // Closed some other way (Cancel, saved, lock…): remove our step, a moment later and only
+      // if it's still on top.
+      window.setTimeout(() => {
+        if (window.history.state?.tkdDialog === token) window.history.back();
+      }, 0);
+    };
+  }, [titleKey]);
 
   // While open: Esc cancels; Tab / Shift+Tab wrap around inside the dialog.
   useEffect(() => {
@@ -101,8 +130,9 @@ export default function AccountDialog({ title, fullScreen, onCancel, onBack, chi
 
   return (
     // The dimmed backdrop. Clicking it does nothing on purpose: Cancel is the one way out,
-    // so a stray click can't throw away what was typed.
-    <div className="dialog-backdrop">
+    // so a stray click can't throw away what was typed. "--top": the box sits near the top of the
+    // screen, like every other dialog (v0.82; the class lives in testing.css with v0.80).
+    <div className="dialog-backdrop dialog-backdrop--top">
       <div ref={boxRef} className="dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
         <h2 id={titleId} className="dialog-title">
           {title}

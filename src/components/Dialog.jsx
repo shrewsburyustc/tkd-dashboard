@@ -13,9 +13,13 @@
 //     on every device, phones included.
 // Where focus goes after closing is decided by the screen (contract 0003 §8.5), not here.
 //
-// Phones: the full-screen page adds an entry to the browser's history while it's open, so the
-// phone's own Back button (or the browser's) does the same as the back arrow on the page —
-// including the unsaved-changes guard — instead of leaving the dashboard.
+// PC / tablet position (decided v0.80): the box sits a fixed distance from the TOP of the screen
+// instead of in the middle, so when a message appears inside it ("Unsaved changes…") only what's
+// below the message moves down — the buttons above don't jump away from the pointer.
+//
+// Every device (v0.83; phones since v0.56): an open dialog adds an entry to the browser's
+// history, so the browser's Back button (or the phone's) does the same as Esc / the back arrow —
+// including the unsaved-changes guard — instead of leaving the page behind it.
 //
 // AccountDialog.jsx (Change PIN / Change password) is a separate, older frame and stays as it is.
 //
@@ -35,6 +39,7 @@ import { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { IconArrowLeft } from '@tabler/icons-react';
 import { BACK } from '../screens/testing/text.js';
+import { dialogStep } from '../lib/backButton.js';
 
 // Everything a person can Tab to. (A disabled button or a tabIndex="-1" element can't be.)
 const FOCUSABLE =
@@ -64,14 +69,38 @@ export default function Dialog({
     }
   }, []);
 
-  // ----- Phone Back button (history) -----
+  // A message that appears inside the box ("Unsaved changes…", "Couldn't save…") may land below
+  // the visible part on a short screen, behind the pinned Cancel / Save row. Scroll it into view
+  // (testing.css gives it room above that row). "MutationObserver" = a browser helper that
+  // reports when elements are added inside the box.
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box || typeof MutationObserver === 'undefined') return undefined;
+    const observer = new MutationObserver((changes) => {
+      for (const change of changes) {
+        for (const node of change.addedNodes) {
+          if (!(node instanceof Element)) continue;
+          const notice = node.matches('.notice') ? node : node.querySelector('.notice');
+          if (notice) {
+            // A note in the pinned bottom area (.dialog-footer, v0.81) is already in view:
+            // scrolling would only push the fields the person is working on out of sight.
+            if (!notice.closest('.dialog-footer')) notice.scrollIntoView({ block: 'nearest' });
+            return;
+          }
+        }
+      }
+    });
+    observer.observe(box, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
+  // ----- Browser / phone Back button (history) -----
   // Newest onRequestClose in a ref, for the 'popstate' listener below.
   const onRequestCloseRef = useRef(onRequestClose);
   useEffect(() => {
     onRequestCloseRef.current = onRequestClose;
   });
   useEffect(() => {
-    if (!asPage) return undefined;
     // A token unique to this opening, so we only ever remove our OWN entry later.
     const token = `${titleId}-${Date.now()}-${Math.random()}`;
     const marker = { tkdDialog: token };
@@ -79,6 +108,7 @@ export default function Dialog({
     // is still on top — e.g. it closed a moment ago — reuse it instead of stacking another.)
     if (window.history.state?.tkdDialog) window.history.replaceState(marker, '');
     else window.history.pushState(marker, '');
+    const release = dialogStep(token); // App.jsx: this step is in use (backButton.js)
 
     function handleBack() {
       // The Back button just used up our entry. Put it back (the dialog may stay open with
@@ -88,6 +118,7 @@ export default function Dialog({
     }
     window.addEventListener('popstate', handleBack);
     return () => {
+      release();
       window.removeEventListener('popstate', handleBack);
       // Closed some other way (Save, back arrow, lock…): remove our entry so the next Back
       // press doesn't land on an empty step. Done a moment later, and only if our entry is
@@ -96,7 +127,7 @@ export default function Dialog({
         if (window.history.state?.tkdDialog === token) window.history.back();
       }, 0);
     };
-  }, [asPage, titleId]);
+  }, [titleId]);
 
   // Esc asks to close; Tab / Shift+Tab wrap around inside the dialog.
   function handleKeyDown(event) {
@@ -157,7 +188,7 @@ export default function Dialog({
   return createPortal(
     // The dimmed backdrop. A click on it (not on the box) asks to close.
     <div
-      className="dialog-backdrop"
+      className="dialog-backdrop dialog-backdrop--top"
       onMouseDown={(event) => {
         // Keep focus where it is: a click on the dim area shouldn't drop focus to the page.
         if (event.target === event.currentTarget) event.preventDefault();

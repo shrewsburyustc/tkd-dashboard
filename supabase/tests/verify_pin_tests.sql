@@ -338,6 +338,8 @@ begin
   --                on themselves (that would let them clear their own PIN
   --                lock). Admins change their own PIN with set_my_pin.
   --   (Setting ANOTHER person's PIN is tested in tests/0002_tests.sql.)
+  --   After migration 0004 the app may not call admin_set_staff_pin at all,
+  --   which is refused with the same error code, so this test still passes.
   -- -------------------------------------------------------------------
   v_is_admin := public.is_admin();
   begin

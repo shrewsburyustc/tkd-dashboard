@@ -4,7 +4,7 @@
 //
 // `hidden` is true while the lock screen is showing. The shell stays in memory (so you land
 // back exactly where you were after unlocking) but is removed from view and from the Tab order.
-// `inert` is true while an account dialog (Change PIN / Change password) is open: the page stays
+// `inert` is true while a dialog (account, Testing or Staff accounts) is open: the page stays
 // visible behind the dimmed backdrop, but can't be clicked or reached with Tab.
 import Rail from './Rail.jsx';
 import TopBar from './TopBar.jsx';
@@ -24,6 +24,7 @@ export default function Shell({
   onChangePin,
   onSetPin,
   onChangePassword,
+  onStaffAccounts,
   onSignOut,
   children,
 }) {
@@ -41,6 +42,7 @@ export default function Shell({
           onChangePin={onChangePin}
           onSetPin={onSetPin}
           onChangePassword={onChangePassword}
+          onStaffAccounts={onStaffAccounts}
           onSignOut={onSignOut}
           isScreenLocked={hidden}
         />

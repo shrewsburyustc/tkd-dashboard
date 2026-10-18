@@ -59,15 +59,68 @@ create schema if not exists auth;
 grant usage on schema auth to anon, authenticated, service_role;
 
 -- One row per login. Only the columns our migrations and tests touch.
+-- The password and token columns were added for 0004 (Staff accounts:
+-- reset password). Names, types, NULL rules and defaults copy production
+-- (read 2026-10-17), so a test that passes here behaves the same there.
 create table auth.users (
-  id    uuid primary key,
-  email text
+  id                          uuid primary key,
+  email                       varchar,
+  encrypted_password          varchar,
+  confirmation_token          varchar,
+  recovery_token              varchar,
+  email_change_token_new      varchar,
+  email_change                varchar,
+  phone_change_token          varchar default '',
+  email_change_token_current  varchar default '',
+  email_change_confirm_status smallint default 0
+    constraint users_email_change_confirm_status_check check (email_change_confirm_status between 0 and 2),
+  reauthentication_token      varchar default '',
+  banned_until                timestamptz,
+  deleted_at                  timestamptz,
+  updated_at                  timestamptz
 );
 
 -- One row per sign-in session (device). 0002's session_exists() checks it.
+-- Like production, removing a login removes its sessions.
 create table auth.sessions (
   id      uuid primary key,
-  user_id uuid not null
+  user_id uuid not null references auth.users (id) on delete cascade
+);
+
+-- Refresh tokens: what a device uses to get a new login token every hour.
+-- Like production: user_id is TEXT (varchar), and removing a session
+-- removes its refresh tokens (on delete cascade).
+create table auth.refresh_tokens (
+  id         bigserial primary key,
+  token      varchar,
+  user_id    varchar,
+  revoked    boolean,
+  session_id uuid references auth.sessions (id) on delete cascade
+);
+
+-- Emailed / texted links (password reset, magic link, email change ...),
+-- Supabase's newer store for them. Same enum values as production.
+create type auth.one_time_token_type as enum (
+  'confirmation_token', 'reauthentication_token', 'recovery_token',
+  'email_change_token_new', 'email_change_token_current', 'phone_change_token');
+create table auth.one_time_tokens (
+  id         uuid primary key,
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  token_type auth.one_time_token_type not null,
+  token_hash text not null,
+  relates_to text not null,
+  created_at timestamp not null default now(),
+  updated_at timestamp not null default now()
+);
+
+-- Half-finished sign-in codes (PKCE "flow state"). Production has more
+-- columns; these are the required ones plus what 0004 uses.
+create table auth.flow_state (
+  id                    uuid primary key,
+  user_id               uuid,
+  auth_code             text,
+  provider_type         text not null,
+  authentication_method text not null
 );
 
 -- auth.uid(): the signed-in user's id ("sub" in the login token), or NULL.

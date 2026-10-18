@@ -429,9 +429,89 @@ commit;
 
 ---
 
+## 11. Migration 0004: Staff accounts (reset password / PIN)
+
+**What it does** (`supabase/migrations/0004_staff_accounts.sql`, rulebook v0.70–v0.76):
+- **`admin_list_staff()`** returns the Staff accounts list: name, email, role, shared or not, and "is this me". It never returns PINs, password data or sign-in details. Admins only, unlocked session.
+- **`admin_reset_password(staff_id, new_password)`** sets a new password for **someone else**. In one all-or-nothing step it:
+  - saves the password as a bcrypt hash in `auth.users`, the same way Supabase Auth does;
+  - cancels every emailed or texted link (password reset, magic link, email change, confirmation);
+  - **signs the person out on every device**;
+  - writes one history row (`change_log`): who reset whose password, and how many devices were signed out. **Never the password.**
+
+  It refuses: non-admins; a locked, PIN-locked, signed-out or 8-day-old session; an admin whose **password sign-in was more than 10 minutes ago** (the app's "Confirm it's you" step handles that); your own account; inactive, deleted or banned logins; passwords under 12 characters or over 72 bytes.
+- **`admin_reset_pin(staff_id, pin)`** sets a new 4-digit PIN for someone else, with the same checks plus the weak-PIN rule. It clears their wrong-PIN counts, but a device that hit 5 wrong PINs **stays locked**. Nobody is signed out.
+- **`admin_set_staff_pin`** (from 0002) **can no longer be called by the app.** `admin_reset_pin` replaces it, and has the 10-minute rule. Its code is unchanged.
+- **No secret key:** these functions run as the database owner, which is allowed to change Supabase Auth's tables (checked 2026-10-17). If Supabase ever changes those tables, a reset fails with an error and **changes nothing**. The fingerprint check below spots it first.
+
+**Before you start:** 0001–0003 are applied, and their tests pass.
+
+**Status:** applied to production 2026-10-17; 11b checks and 11c tests passed. The screens are not deployed yet (branch `staff-accounts`), so 11d uses the local app.
+
+### 11a. Apply 0004 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0004_staff_accounts.sql`.
+2. **SQL Editor → New query**, paste, **Run**.
+3. Supabase will warn about **destructive operations**. That's expected: the word *delete* is inside the reset function (it removes sign-ins and emailed links later, only when an admin resets a password). **Nothing is deleted now.** Confirm.
+4. You should see "Success. No rows returned." It's one transaction: on any error nothing is kept. Copy the error to Claude.
+
+**Running it again is safe.** You **must** run it again if 0001 or 0002 is ever re-run, because those would give `admin_set_staff_pin` back to the app. `0002_tests.sql` and `0004_tests.sql` both fail until you do.
+
+### 11b. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0004_fingerprints.sql`. Every line must match what `supabase/tests/pglite/run.mjs` printed for the tested copy:
+   - the 5 functions, with code fingerprint, settings, owner and call rights;
+   - the Supabase Auth columns 0004 relies on;
+   - the triggers: only `staff_set_updated_at`, and **none** on the Auth tables.
+2. **Security advisor:** "security definer function executable by authenticated" for `admin_list_staff`, `admin_reset_password` and `admin_reset_pin` is **expected**. They are how the app calls them, and each one checks access itself. Anything else about 0004 is a real problem.
+3. **No triggers** on `auth.users`, `auth.sessions`, `auth.refresh_tokens`, `auth.one_time_tokens` or `auth.flow_state` (part of the fingerprints). The tests in 11c add throwaway rows to those tables, so this is checked before you run them.
+
+### 11c. Run the 0004 tests (you, in the SQL Editor)
+
+1. Paste the whole `supabase/tests/0004_tests.sql` into a new query and click **Run**. **No UIDs to fill in**: it makes its own throwaway logins (`zz-test-…@example.com`) and never touches the real accounts. Supabase may warn about destructive operations. Everything is rolled back. Confirm.
+2. Expected: one row, **ALL 0004 TESTS PASSED**. A failure shows `TEST FAILED:` / `TEST SETUP:`. Nothing is saved either way. Run `rollback;` once on its own, then tell Claude.
+3. Then run `0002_tests.sql` and `verify_pin_tests.sql` again (section 9, step 4). Test 12 in 0002 now checks that the app can't call `admin_set_staff_pin`.
+
+### 11d. The real check (you, with the local app on the real database)
+
+Do this **outside class hours**: resetting the desk password signs every desk device out.
+1. `Start dashboard.bat`, then sign in as yourself.
+2. Initials → **Staff accounts** → Staff → ⋯ → **Reset password**: your password, then **Generate**, **Copy**, save it in the password manager, then **Reset password**. The toast says how many desk devices were signed out.
+3. On a desk device, within about a minute it shows the sign-in screen. The new password works there, and the old one doesn't.
+4. Same for **Reset PIN**: the new desk PIN works on the desk device right away.
+5. Clipboard: the copied password stays on the clipboard until something else is copied. Copy something harmless afterwards.
+
+### 11e. Undo 0004 (only if something is badly wrong)
+
+Put the app back to a version without Staff accounts **first**. Then:
+
+```sql
+-- Undo migration 0004. Passwords and PINs already reset stay as they are.
+begin;
+drop function if exists public.admin_list_staff();
+drop function if exists public.admin_reset_password(uuid, text);
+drop function if exists public.admin_reset_pin(uuid, text);
+drop function if exists public.staff_admin_gate();
+-- Give admin_set_staff_pin back to the app ONLY together with removing the
+-- functions above (0002's state). Leave this line out if nothing calls it.
+grant execute on function public.admin_set_staff_pin(uuid, text) to authenticated;
+commit;
+```
+
+**Why:**
+- **No secret key, ever** (handoff §6): the alternative, a server function holding the full-power key, was rejected in v0.71.
+- **Your password first + 10 minutes:** an admin screen left unlocked can't be used to take over another account, including the other admin's (v0.74).
+- **Signs out everywhere and cancels links:** a reset usually means someone shouldn't have the old password. Without this, they'd keep access for up to 7 days (v0.72).
+- **Supabase extras skipped:** no "password changed" email, and no leaked-password check (Pro plan only, off today). Accepted in v0.71.
+- **Sign-in providers:** the reset closes email sign-ins only. Keep **Authentication → Sign In / Providers** on **email only**. Don't turn on Google or others without a new decision.
+
+---
+
 ## Admin: change the front-desk PIN or password
 
 The front desk (`shrewsburyustc@gmail.com`) is a **shared account**, so the app hides Change PIN and Change password for it. Only an admin changes them, here in Supabase, until the Staff accounts screen exists.
+
+> **Once 0004 and the Staff accounts screen are live, use Staff accounts instead** (initials → Admin → Staff accounts; section 11). The snippets below stay as an **emergency backup** only, for when the app can't be used.
 
 ### Change the desk's PIN
 

@@ -3,8 +3,12 @@
 //   'loading'   → checking for a saved sign-in (shows nothing for a split second)
 //   'signedOut' → SignIn screen
 //   'setPin'    → Set your PIN (right after a password sign-in when the account has no PIN)
-//   'home'      → the dashboard (Shell + the open section: Home or Testing), maybe with a dialog on top
+//   'home'      → the dashboard (Shell + the open page: Home, Testing, or — admins, from the account
+//                 menu — Staff accounts), maybe with a dialog on top
 //   'locked'    → LockScreen (the dashboard stays in memory, hidden, behind it)
+// Pages have their own address ("#testing", "#staff-accounts"; rulebook v0.83) so the browser's
+// Back / Forward, reload and bookmarks work per page — see "Browser Back / Forward" below.
+//
 // Every screen change goes through the small functions below, so the rules (7-day password
 // check, access check, per-account idle lock, the database lock) live in one readable place.
 //
@@ -21,12 +25,15 @@ import { getIdleLimitMs, markActivityNow, setLockedFlag, shouldBeLocked, useIdle
 import { lockSession, touchSession } from './lib/serverLock.js';
 import { useSessionHeartbeat } from './lib/useSessionHeartbeat.js';
 import { loadDeviceLocation, saveDeviceLocation } from './lib/device.js';
+import { addressFor, addressIsUnknown, pageFromAddress } from './lib/pageAddress.js';
+import { backIsClaimed, isLeftoverDialogStep } from './lib/backButton.js';
 import PreviewBanner from './components/PreviewBanner.jsx';
 import Shell from './components/Shell.jsx';
 import Toast from './components/Toast.jsx';
 import SignIn from './screens/SignIn.jsx';
 import Home from './screens/Home.jsx';
 import Testing from './screens/Testing.jsx';
+import StaffAccounts from './screens/StaffAccounts.jsx';
 import LockScreen from './screens/LockScreen.jsx';
 import SetPinScreen from './screens/SetPinScreen.jsx';
 import ChangePinDialog from './screens/ChangePinDialog.jsx';
@@ -57,6 +64,7 @@ const PAGE_TITLES = {
 const SECTION_TITLES = {
   home: 'Home · U.S. Taekwondo Center',
   testing: 'Testing · U.S. Taekwondo Center',
+  staffAccounts: 'Staff accounts · U.S. Taekwondo Center',
 };
 
 // Toast texts (guidelines 8: 5 seconds, bottom-right — bottom-center on phones — no Undo for these).
@@ -97,9 +105,14 @@ export default function App() {
   const [notice, setNotice] = useState(null); // { id, text } for the sign-in screen
   const [deviceLocation, setDeviceLocation] = useState(loadDeviceLocation); // this device's default
   const [location, setLocation] = useState(loadDeviceLocation); // the switcher's current value
-  const [section, setSection] = useState('home'); // which section is open: 'home' | 'testing'
+  // Which page is open: 'home' | 'testing' | 'staffAccounts'. Staff accounts isn't a rail section
+  // (it opens from the account menu), so no rail item is highlighted while it shows (v0.76).
+  // It starts from the address in the browser bar (v0.83): a reload, a bookmark or a link to
+  // ".../#testing" opens Testing once the person is signed in and unlocked.
+  const [section, setSection] = useState(pageFromAddress);
   const [accountDialog, setAccountDialog] = useState(null); // null | 'changePin' | 'changePassword'
   const [testingModalOpen, setTestingModalOpen] = useState(false); // a Testing dialog is showing
+  const [staffModalOpen, setStaffModalOpen] = useState(false); // a Staff accounts dialog is showing
   const [toast, setToast] = useState(null); // { id, text, action, icon } or null
 
   // Focus memory for the lock screen (see "Locking and unlocking" below).
@@ -108,6 +121,10 @@ export default function App() {
   // screen locked — element is whatever had keyboard focus at that moment (or null).
   // Set your PIN uses it too: { element: null } = "focus the initials button when Home shows".
   const phaseRef = useRef(phase);
+  const sectionRef = useRef(section); // same idea, for the Back / Forward listener below
+  // true while signOut() below is signing this tab out itself, so the SIGNED_OUT event that
+  // Supabase sends back doesn't treat it as "signed out somewhere else" (which resets the address).
+  const signingOutHereRef = useRef(false);
   const focusBeforeLockRef = useRef(null);
   // Same idea for the profile: showLock (below) needs the newest one without being re-created.
   const profileRef = useRef(profile);
@@ -123,14 +140,25 @@ export default function App() {
 
   // ----- Signing out (used by the menu, the lock screen, and the rules below) -----
   const signOut = useCallback(async (noticeText = null) => {
+    // Signing out on purpose (the menu's Sign out, "Not you? Sign out" — no notice) or because the
+    // account has no access: the address goes back to Home, so the next person at this device
+    // starts on Home and Back can't bring the previous person's page back (v0.83). An automatic
+    // sign-out (7-day password rule, idle without a PIN …) keeps the address: after signing in
+    // again the person lands where they were.
+    if (noticeText === null || noticeText === NOTICES.noAccess) {
+      window.history.replaceState(null, '', addressFor('home'));
+      setSection('home');
+    }
     // A new id each time makes the SignIn screen start fresh (see `key` below).
     setNotice(noticeText ? { id: Date.now(), text: noticeText } : null);
     setProfile(null);
     setAccountDialog(null);
     setPhase('signedOut');
+    signingOutHereRef.current = true;
     // scope: 'local' = sign out THIS device only. Staff often have the dashboard open on
     // several devices (front desk PC, mat-side tablet); signing out here leaves those alone.
     const { error } = await supabase.auth.signOut({ scope: 'local' });
+    signingOutHereRef.current = false;
     // If the device is offline, Supabase can't confirm the sign-out and keeps the saved
     // sign-in. Remove it by hand so a reload can't bring the session back.
     if (error) clearSavedSupabaseSession();
@@ -228,6 +256,12 @@ export default function App() {
     // Supabase asks us not to call other Supabase functions directly inside this callback.
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
+        // Signed out somewhere else (e.g. another tab): same as Sign out here — back to Home.
+        // (Our own signOut() above decides the address itself, e.g. the 7-day rule keeps it.)
+        if (!signingOutHereRef.current) {
+          window.history.replaceState(null, '', addressFor('home'));
+          setSection('home');
+        }
         setProfile(null);
         setAccountDialog(null);
         setPhase('signedOut');
@@ -447,9 +481,71 @@ export default function App() {
 
   // ----- Sections (rail / bottom bar) -----
   // Same idea: a toast belongs to the section it was made in.
+  // Each change of page is a step in the browser's history (v0.83), so Back / Forward walk
+  // through the pages. Clicking the page you're already on adds nothing.
   const navigate = useCallback((id) => {
     setToast(null);
+    // { tkdPage: true } marks the step as "added by the dashboard while signed in" (see below).
+    if (id !== sectionRef.current) window.history.pushState({ tkdPage: true }, '', addressFor(id));
     setSection(id);
+  }, []);
+
+  // ----- Browser Back / Forward (rulebook v0.83) -----
+  // 'popstate' = the browser moved to another step of its history (Back, Forward, or an address
+  // typed by hand). Read the page from the new address and follow it — except:
+  //   - same page as now: nothing to do (e.g. the step an open dialog added, Dialog.jsx);
+  //   - locked: nothing may change behind the lock screen, so put the current page's address
+  //     back and stay put;
+  //   - not in the dashboard (sign-in, Set your PIN): Back onto a step the dashboard added while
+  //     someone was signed in ({ tkdPage: true }) is refused — the address is tidied to Home, so
+  //     nobody can return to the previous person's page. A link or address typed by hand (no
+  //     marker) is kept: after signing in, that page opens.
+  useEffect(() => {
+    sectionRef.current = section;
+  }, [section]);
+  // Once someone is in the dashboard, the step they're on counts as "added while signed in" too —
+  // also when they arrived by a bookmark or a link — so Back on a later sign-in screen can't
+  // return to it (see below).
+  useEffect(() => {
+    if (phase === 'home' && !window.history.state?.tkdPage && !window.history.state?.tkdDialog) {
+      window.history.replaceState({ ...(window.history.state ?? {}), tkdPage: true }, '');
+    }
+  }, [phase, section]);
+  useEffect(() => {
+    // An address we don't know (e.g. "#xyz") shows Home; tidy the bar to match.
+    if (addressIsUnknown()) window.history.replaceState(null, '', addressFor('home'));
+    // A reload while a dialog was open lands on that dialog's step; no dialog is open now, so it
+    // becomes a plain page step (otherwise Forward could get stuck on it).
+    if (window.history.state?.tkdDialog) window.history.replaceState({ tkdPage: true }, '');
+    function handlePopState() {
+      // Forward landed on the step of a dialog that's already closed: step off it again, so
+      // nobody needs an extra Back for nothing.
+      if (isLeftoverDialogStep(window.history.state)) {
+        window.history.back();
+        return;
+      }
+      const target = pageFromAddress();
+      if (addressIsUnknown()) window.history.replaceState(null, '', addressFor(target));
+      if (target === sectionRef.current) return;
+      // The account menu is open: Back closes it (AccountMenu.jsx) and the page stays.
+      if (backIsClaimed()) {
+        window.history.pushState({ tkdPage: true }, '', addressFor(sectionRef.current));
+        return;
+      }
+      if (phaseRef.current === 'home') {
+        setToast(null);
+        setSection(target);
+      } else if (phaseRef.current === 'locked') {
+        window.history.pushState({ tkdPage: true }, '', addressFor(sectionRef.current));
+      } else if (window.history.state?.tkdPage) {
+        window.history.replaceState(null, '', addressFor('home'));
+        setSection('home');
+      } else {
+        setSection(target); // a link or typed address: opens after signing in
+      }
+    }
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   // ----- Testing helpers -----
@@ -476,7 +572,7 @@ export default function App() {
   const isSignedIn = (phase === 'home' || phase === 'locked') && profile !== null;
   const dialogOpen = phase === 'home' && profile !== null && accountDialog !== null;
   // The page behind a dialog can't be clicked or reached with Tab (account or Testing dialog).
-  const shellInert = dialogOpen || (phase === 'home' && testingModalOpen);
+  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || staffModalOpen));
 
   return (
     <div className="app-root">
@@ -511,6 +607,7 @@ export default function App() {
             onChangePin={() => openAccountDialog('changePin')}
             onSetPin={() => setPhase('setPin')}
             onChangePassword={() => openAccountDialog('changePassword')}
+            onStaffAccounts={() => navigate('staffAccounts')}
             onSignOut={() => signOut()}
           >
             {section === 'home' && <Home location={location} />}
@@ -526,6 +623,15 @@ export default function App() {
                 showToast={showToast}
                 clearToast={clearToast}
                 onModalOpenChange={setTestingModalOpen}
+              />
+            )}
+            {section === 'staffAccounts' && (
+              <StaffAccounts
+                profile={profile}
+                screenLocked={phase === 'locked'}
+                showToast={showToast}
+                onModalOpenChange={setStaffModalOpen}
+                onRefreshProfile={refreshProfile}
               />
             )}
           </Shell>
