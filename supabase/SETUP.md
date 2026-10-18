@@ -537,7 +537,7 @@ commit;
    | `PUBLIC_ORIGIN` | Text | `https://tkd-dashboard.pages.dev` |
 
    Then copy something harmless so the secret leaves the clipboard.
-4. Same project → **Settings** → **Runtime**: **Compatibility date** = a fixed date (today's is fine), **Compatibility flags** = `nodejs_compat` (the Function's database driver needs it).
+4. Same project → **Settings** → **Runtime**: **Compatibility date** = a fixed date (today's is fine). The Function's database driver needs Node.js support: with a date of **2026-08-04 or later** Cloudflare turns it on by default and the **Compatibility flags** box can stay empty; with an older date, add `nodejs_compat` there. (Done 2026-10-18: date 2026-10-16, no flag.)
 5. **Rate limiting (optional)** — limits guessing link codes. A WAF rate-limiting rule **can't** be attached to a `pages.dev` address (those rules belong to a domain you own), so instead: same project → **Settings** → **Bindings** → **Add**. If the list offers **Rate limiting** (Cloudflare's Workers Rate Limiting binding) for this Pages project, add it for **Production** only:
 
    | Setting | Value |
