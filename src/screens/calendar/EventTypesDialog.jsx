@@ -3,14 +3,19 @@
 // (recoloring a type recolors all its events). Types are shared by both schools. Five come ready
 // (Testing, Tournament, Camp, Meeting, Party); any can be renamed, recolored or deleted.
 // One dialog with four steps (state.step):
-//   'list'   — every type with its color; click one to edit it; arrows change the order; "+ Add type"
+//   'list'   — every type with its color; click one to edit it; reorder by dragging the grip
+//              or with ⋯ → Move up / Move down, like Testing's lists (Jeffrey, C3); "+ Add type"
 //   'add'    — Name + Color
 //   'edit'   — Name + Color, "Used by 3 events", Delete
 //   'delete' — the confirmation: if events use the type, it says how many and asks which type
 //              they move to (Delete is permanent — no Undo)
-import { IconArrowDown, IconArrowLeft, IconArrowUp, IconCheck, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
+import { useState } from 'react';
+import { IconArrowDown, IconArrowLeft, IconArrowUp, IconCheck, IconDots, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
+import RowMenu from '../../components/RowMenu.jsx';
+import { useReorderDrag } from '../../lib/useReorderDrag.js';
+import { Grip } from '../testing/RankRows.jsx';
 import { CLASS_COLORS, colorOf } from '../../lib/schedule/colors.js';
 import { cleanText, MAX_TYPES, textProblem, TYPE_NAME_MAX } from '../../lib/calendar/rules.js';
 import * as T from './text.js';
@@ -38,8 +43,14 @@ const NOTES = {
   DELETE_FAILED: T.DELETE_FAILED,
 };
 
-export default function EventTypesDialog({ state, types, isPhone, onStep, onChange, onTouch, onSave, onDelete, onMove, onCancel, onRequestClose }) {
+export default function EventTypesDialog({ state, types, isPhone, onStep, onChange, onTouch, onSave, onDelete, onReorder, onCancel, onRequestClose }) {
   const idBase = `types-dialog-${state.key}`;
+  const [menu, setMenu] = useState(null); // { anchor, type, index } — a row's ⋯ menu
+  // Drag a row by its grip (mouse, finger or pen), as in Testing (v0.43 / v0.63).
+  const drag = useReorderDrag({
+    enabled: state.step === 'list' && !state.saving && menu === null,
+    onDrop: (group, id, toIndex) => onReorder(types.find((t) => t.id === id), toIndex),
+  });
   const type = types.find((t) => t.id === state.typeId) ?? null;
   const noteBlock = state.note && NOTES[state.note] && (
     <div className="tdialog-note">
@@ -58,22 +69,31 @@ export default function EventTypesDialog({ state, types, isPhone, onStep, onChan
           <ul className="ctypes">
             {types.map((t, i) => {
               const c = colorOf(t.color);
-              return (
-                <li key={t.id} className="ctypes-item">
+              const lifted = drag.state?.id === t.id;
+              return [
+                drag.state && drag.state.gap === i && <li key="gap" className="ctypes-gap" aria-hidden="true" />,
+                <li key={t.id} className={`ctypes-item${lifted ? ' is-lifted' : ''}`} data-drag-group="types" data-drag-id={t.id}>
+                  <Grip label={T.dragType(t.name)} gripProps={drag.gripProps('types', t.id)} />
                   <button type="button" className="ctypes-row" data-type={t.id} data-autofocus={i === 0 ? true : undefined} aria-label={T.editTypeLabel(t.name)} onClick={() => onStep('edit', t)}>
                     <i className="cpanel-swatch" style={{ background: c.fill, borderColor: c.edge }} aria-hidden="true" />
                     <span className="ctypes-name">{t.name}</span>
-                    <IconEdit size={16} aria-hidden="true" />
                   </button>
-                  <button type="button" className="icon-button ctypes-move" data-move={`${t.id}:-1`} aria-label={T.MOVE_UP(t.name)} disabled={i === 0 || state.saving} onClick={() => onMove(t, -1)}>
-                    <IconArrowUp size={16} aria-hidden="true" />
+                  <button
+                    type="button"
+                    className="icon-button"
+                    data-type-more={t.id}
+                    aria-label={T.typeMore(t.name)}
+                    aria-haspopup="menu"
+                    aria-expanded={menu?.type.id === t.id ? 'true' : 'false'}
+                    disabled={state.saving}
+                    onClick={(e) => setMenu(menu ? null : { anchor: e.currentTarget, type: t, index: i })}
+                  >
+                    <IconDots size={20} aria-hidden="true" />
                   </button>
-                  <button type="button" className="icon-button ctypes-move" data-move={`${t.id}:1`} aria-label={T.MOVE_DOWN(t.name)} disabled={i === types.length - 1 || state.saving} onClick={() => onMove(t, 1)}>
-                    <IconArrowDown size={16} aria-hidden="true" />
-                  </button>
-                </li>
-              );
+                </li>,
+              ];
             })}
+            {drag.state && drag.state.gap === types.length && <li className="ctypes-gap" aria-hidden="true" />}
           </ul>
         )}
         {types.length < MAX_TYPES && (
@@ -90,6 +110,26 @@ export default function EventTypesDialog({ state, types, isPhone, onStep, onChan
             </button>
           </div>
         )}
+        {menu && (
+          <RowMenu
+            anchor={menu.anchor}
+            isSheet={isPhone}
+            title={menu.type.name}
+            subtitle={T.EVENT_TYPES}
+            label={T.typeMore(menu.type.name)}
+            items={[
+              { key: 'edit', label: T.EDIT, Icon: IconEdit, onSelect: () => onStep('edit', menu.type) },
+              { key: 'up', label: T.MOVE_UP_ITEM, Icon: IconArrowUp, disabled: menu.index === 0, onSelect: () => onReorder(menu.type, menu.index - 1) },
+              { key: 'down', label: T.MOVE_DOWN_ITEM, Icon: IconArrowDown, disabled: menu.index === types.length - 1, onSelect: () => onReorder(menu.type, menu.index + 1) },
+              { key: 'delete', label: T.DELETE_TYPE, Icon: IconTrash, danger: true, separatorBefore: true, onSelect: () => onStep('delete', menu.type) },
+            ]}
+            onClose={(reason) => {
+              const anchor = menu.anchor;
+              setMenu(null);
+              if (reason === 'escape' || reason === 'tab') anchor?.focus();
+            }}
+          />
+        )}
       </Dialog>
     );
   }
@@ -97,13 +137,15 @@ export default function EventTypesDialog({ state, types, isPhone, onStep, onChan
   // ----- Delete (confirmation) -----
   if (state.step === 'delete') {
     const others = types.filter((t) => t.id !== state.typeId);
+    const loading = state.count === null;
     const count = state.count ?? 0;
     const blockedLast = count > 0 && others.length === 0;
-    const canDelete = !state.saving && !blockedLast && (count === 0 || Boolean(state.moveTo));
+    const canDelete = !state.saving && !loading && !blockedLast && (count === 0 || Boolean(state.moveTo));
+    const back = () => onStep(state.deleteFrom ?? 'edit', type);
     return (
-      <Dialog title={T.deleteTypeTitle(type?.name ?? '')} variant="confirm" describedBy={`${idBase}-del`} onRequestClose={() => onStep('edit', type)}>
+      <Dialog title={T.deleteTypeTitle(type?.name ?? '')} variant="confirm" describedBy={`${idBase}-del`} onRequestClose={back}>
         <p id={`${idBase}-del`} className="tdialog-sub tdialog-body">
-          {blockedLast ? T.LAST_TYPE_IN_USE : T.deleteTypeBody(type?.name ?? '', count)}
+          {loading ? T.CHECKING : blockedLast ? T.LAST_TYPE_IN_USE : T.deleteTypeBody(type?.name ?? '', count)}
         </p>
         {count > 0 && !blockedLast && (
           <div className="field">
@@ -119,7 +161,7 @@ export default function EventTypesDialog({ state, types, isPhone, onStep, onChan
           </div>
         )}
         <div className="dialog-actions">
-          <button type="button" className="btn" data-autofocus onClick={() => onStep('edit', type)}>
+          <button type="button" className="btn" data-autofocus onClick={back}>
             {T.CANCEL}
           </button>
           {!blockedLast && (
@@ -191,7 +233,7 @@ export default function EventTypesDialog({ state, types, isPhone, onStep, onChan
             <div className="dialog-page-submit">{saveButton}</div>
             {!isAdd && (
               <div className="sdialog-remove-row">
-                <button type="button" className="btn sdialog-remove" disabled={state.saving} onClick={() => onStep('delete', type)}>
+                <button type="button" className="btn sdialog-remove" disabled={state.saving} onClick={() => onStep('delete', type, 'edit')}>
                   <IconTrash size={16} aria-hidden="true" />
                   {T.DELETE}
                 </button>
@@ -207,7 +249,7 @@ export default function EventTypesDialog({ state, types, isPhone, onStep, onChan
                   {T.EVENT_TYPES}
                 </button>
               ) : (
-                <button type="button" className="btn sdialog-remove" disabled={state.saving} onClick={() => onStep('delete', type)}>
+                <button type="button" className="btn sdialog-remove" disabled={state.saving} onClick={() => onStep('delete', type, 'edit')}>
                   <IconTrash size={16} aria-hidden="true" />
                   {T.DELETE}
                 </button>

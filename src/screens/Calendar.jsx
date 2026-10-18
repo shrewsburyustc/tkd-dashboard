@@ -427,7 +427,7 @@ export default function Calendar({ location, isAdmin, screenLocked, onNoAccess, 
   }
 
   // ----- Event types -----
-  async function typesStepTo(stepName, type) {
+  async function typesStepTo(stepName, type, from = 'list') {
     const d = dialogRef.current;
     if (!d || d.saving) return;
     if (stepName === 'list') {
@@ -440,7 +440,14 @@ export default function Calendar({ location, isAdmin, screenLocked, onNoAccess, 
       return;
     }
     if (stepName === 'delete') {
-      patchDialog({ step: 'delete', moveTo: null, note: null });
+      // From the edit step the count is known; from the list (⋯ → Delete type) it is looked up.
+      if (from === 'edit' && d.typeId === type.id && d.count !== null) {
+        patchDialog({ step: 'delete', deleteFrom: 'edit', moveTo: null, note: null });
+        return;
+      }
+      patchDialog({ step: 'delete', deleteFrom: from, typeId: type.id, snapshot: type, count: null, moveTo: null, note: null });
+      const r = await countEventsForType(type.id);
+      if (r.status === 'ok') setDialog((cur) => (cur && cur.type === 'types' && cur.typeId === type.id ? { ...cur, count: r.count } : cur));
       return;
     }
     // 'edit': show the type and look up how many events use it
@@ -478,21 +485,21 @@ export default function Calendar({ location, isAdmin, screenLocked, onNoAccess, 
     showToast(d.step === 'add' ? T.TOAST_TYPE_ADDED : T.TOAST_TYPE_SAVED, { icon: false });
   }
 
-  // Move a type one place up or down (list order only; move it back to undo).
-  async function moveType(type, delta) {
+  // Move a type to a new place in the list (drag, or ⋯ → Move up / Move down). Order only:
+  // move it back to undo.
+  async function reorderType(type, toIndex) {
     const list = ref.current.types;
-    const i = list.findIndex((t) => t.id === type.id);
-    const j = i + delta;
-    if (i < 0 || j < 0 || j >= list.length || !beginWrite()) return;
+    const from = list.findIndex((t) => t.id === type?.id);
+    if (from < 0 || toIndex < 0 || toIndex >= list.length || toIndex === from || !beginWrite()) return;
     const ids = list.map((t) => t.id);
-    const next = [...ids];
-    [next[i], next[j]] = [next[j], next[i]];
+    const next = ids.filter((id) => id !== type.id);
+    next.splice(toIndex, 0, type.id);
     const result = await reorderTypes({ expectedIds: ids, newIds: next });
     endWrite(result.status);
     if (result.status === 'no_access') onNoAccess();
     else if (result.status !== 'ok') patchDialog({ note: result.status === 'stale' ? 'STALE_DIALOG' : 'SAVE_FAILED' });
     await reloadQuiet();
-    window.requestAnimationFrame(() => document.querySelector(`[data-move="${type.id}:${delta}"]`)?.focus());
+    window.requestAnimationFrame(() => document.querySelector(`[data-type-more="${type.id}"]`)?.focus());
   }
 
   async function confirmDeleteType() {
@@ -682,12 +689,12 @@ export default function Calendar({ location, isAdmin, screenLocked, onNoAccess, 
           onStep={typesStepTo}
           onSave={saveType}
           onDelete={confirmDeleteType}
-          onMove={moveType}
+          onReorder={reorderType}
           {...common}
           onRequestClose={() => {
             const d = dialogRef.current;
             // Esc / Back goes one step back (delete -> edit -> list), then closes.
-            if (d?.step === 'delete') typesStepTo('edit', d.snapshot);
+            if (d?.step === 'delete') typesStepTo(d.deleteFrom ?? 'edit', d.snapshot);
             else if ((d?.step === 'edit' || d?.step === 'add') && !isTypeFormDirty(d)) typesStepTo('list');
             else requestClose();
           }}

@@ -1,8 +1,9 @@
 // ClosureDialog.jsx — "Add closure", "Edit closure" and the staff's read-only view (mockup screens 4, 5).
 // Why it exists: close whole days, or just some classes on one day:
-//   Reason (shown on the calendar), From / To (one day or up to 31 days), What's cancelled:
+//   Reason (shown on the calendar), From / To (one day or up to 31 days), School (Worcester,
+//   Shrewsbury or Both — above the classes, C3), What's cancelled:
 //   All classes, or Some classes (single day only) — that day's classes from the Schedule, to
-//   tick — and School (Worcester, Shrewsbury or Both).
+//   tick.
 // Edit has Remove (instant, with Undo). If the schedule changed after the closure was saved, the
 // classes that are no longer on it are listed (they are dropped when you save, v0.143 answer 2).
 // Cancelled classes can't be booked for a free class (step 3, Forms).
@@ -166,6 +167,10 @@ export default function ClosureDialog({ state, dayClasses, orphans, isPhone, onC
         </div>
         {check.dateError && <Notice>{check.dateError}</Notice>}
 
+        {/* School first (Jeffrey, C3 difference 1): it decides which classes are listed below,
+            so picking it never moves the switch itself. */}
+        <SchoolPicker idBase={idBase} value={v.school} disabled={readOnly} onChange={(school) => onChange({ school })} />
+
         <fieldset className="field cfieldset">
           <legend className="field-label">{T.WHATS_CANCELLED}</legend>
           <label className="sday-check cbox">
@@ -216,8 +221,6 @@ export default function ClosureDialog({ state, dayClasses, orphans, isPhone, onC
             </div>
           )}
         </fieldset>
-
-        <SchoolPicker idBase={idBase} value={v.school} disabled={readOnly} onChange={(school) => onChange({ school })} />
 
         {isPhone && noteBlock}
         {isPhone ? (

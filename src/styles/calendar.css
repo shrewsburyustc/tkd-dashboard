@@ -854,21 +854,28 @@ button.cchip--btn:focus-visible {
   grid-template-columns: 56px minmax(0, 1fr);
 }
 
-/* Event types: reorder arrows next to each row. */
+/* Event types: grip (drag) | name | ⋯ — like Testing's rows (Jeffrey, C3). */
 .ctypes-item {
   display: flex;
   align-items: center;
-  padding-right: var(--space-4);
+  padding: 0 var(--space-4);
 }
 
 .ctypes-item .ctypes-row {
   flex: 1;
   min-width: 0;
+  padding-left: var(--space-4);
 }
 
-.ctypes-move:disabled {
-  color: var(--color-disabled-text);
-  cursor: default;
+.ctypes-item.is-lifted {
+  opacity: 0.45;
+}
+
+/* Where the dragged row will land: a 2px blue line. */
+.ctypes-gap {
+  height: 2px;
+  margin: -1px 0;
+  background: var(--color-blue);
 }
 
 @media (pointer: coarse) {
