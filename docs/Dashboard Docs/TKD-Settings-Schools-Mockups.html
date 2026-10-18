@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Staff accounts mockups</title>
+<!-- TKD-Staff-Accounts-Mockups.html — mockups for approval (rule P1/P6): the first part of
+     Staff accounts (Reset password + Reset PIN), as decided in v0.70–v0.75 (questions file
+     TKD-Staff-Accounts-Questions.html). Every screen at PC 1280, tablet 820 (touch), phone 390 (touch).
+     Design only: nothing here is built. The small script at the bottom only stamps the same app
+     shell (rail, top bar, page) into each device frame so the shell isn't copied 20 times. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root{--control-border:#8F8F8A;--page:#EFEFEC;--bg:#FFFFFF;--surface:#F7F7F5;--border:#E5E5E2;--border-strong:#CFCFCA;--text:#1F1F1F;--text2:#6B6B6B;--blue:#003595;--blue-tint:#E6EBF4;--red:#A32D2D;--ok:#3B6D11;--ok-tint:#EAF3DE;--warn:#633806;--warn-tint:#FAEEDA;--toast:#1F1F1F}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1340px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:20px;font-weight:500;margin:0 0 4px}
+h2{font-size:16px;font-weight:500;margin:48px 0 4px;padding-top:16px;border-top:1px solid var(--border-strong)}
+b{font-weight:500}
+code{font-size:12px}
+.lead{color:var(--text2);font-size:13px;margin:0 0 12px}
+.banner{background:var(--warn-tint);color:var(--warn);padding:8px 12px;border-radius:8px;font-size:13px;display:flex;gap:8px;align-items:flex-start}
+.explain{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:8px 0 16px;font-size:13px}
+.explain h3{font-size:13px;font-weight:500;margin:8px 0 2px}.explain h3:first-child{margin-top:0}
+.explain ul,.explain ol{margin:0;padding-left:20px}.explain li{margin:2px 0}
+/* device frames */
+.cap{font-size:12px;color:var(--text2);margin:16px 0 6px;display:flex;align-items:center;gap:6px}
+.cap i{font-size:16px}
+.scroller{overflow-x:auto;padding-bottom:4px}
+.dev{background:var(--bg);border:1px solid var(--border-strong);overflow:hidden;position:relative;flex:none}
+.dev-pc{width:1282px;height:600px;border-radius:10px}
+.dev-tab{width:832px;height:600px;border-radius:18px;border-width:6px;border-color:#2B2B2B}
+.dev-ph{width:402px;height:720px;border-radius:28px;border-width:6px;border-color:#2B2B2B}
+.pair{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+/* app shell (as approved in the Home / Account / Testing files) */
+.app{display:flex;height:100%;background:var(--bg)}
+.app-col{flex:1;min-width:0;display:flex;flex-direction:column}
+.content{flex:1;min-height:0;padding:24px;display:flex;flex-direction:column;overflow:hidden}
+.ph-shell{height:100%;display:flex;flex-direction:column}
+.ph-shell .content{padding:16px}
+.rail{width:52px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;flex:none}
+.rail a{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;color:var(--text2)}
+.rail a i{font-size:18px}
+.rail-t{width:72px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;flex:none}
+.rail-t a{display:flex;flex-direction:column;align-items:center;justify-content:center;width:64px;min-height:56px;border-radius:8px;color:var(--text2);font-size:12px;gap:2px}
+.rail-t a i{font-size:20px}
+.topbar{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 12px;flex:none}
+.topbar .grow{flex:1}
+.loc{display:flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;font-size:12px;height:32px}
+.loc span{display:flex;align-items:center;gap:4px;padding:0 12px;color:var(--text2)}
+.loc span.on{background:var(--blue-tint);color:var(--blue)}
+.loc span+span{border-left:1px solid var(--border)}
+.touch .loc{height:36px}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--surface);border:1px solid var(--control-border);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--text);flex:none}
+.avatar.open{outline:2px solid var(--blue);outline-offset:2px}
+.tap{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.phbar{border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:4px 0 10px;flex:none;background:var(--bg)}
+.phbar a{display:flex;flex-direction:column;align-items:center;min-width:64px;min-height:48px;justify-content:center;font-size:12px;color:var(--text2);gap:2px}
+.phbar a i{font-size:20px}
+/* page */
+.ptitle{font-size:20px;font-weight:500;line-height:1.3}
+.psub{font-size:13px;color:var(--text2);margin:2px 0 16px}
+.list{border:1px solid var(--border);border-radius:8px;flex:none;max-width:880px}
+.row{display:flex;align-items:center;gap:12px;height:40px;padding:0 4px 0 12px;font-size:13px;border-top:1px solid var(--border)}
+.list>.row:first-child{border-top:none}
+.row .nm{font-weight:500;min-width:140px}
+.row .em{color:var(--text2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .you{color:var(--text2);font-size:12px}
+.row.hov{background:var(--surface)}
+.row.sel{background:var(--blue-tint)}
+.touch .row{height:56px;padding:0 0 0 12px}
+.ph-shell .row{height:auto;min-height:60px;padding:8px 0 8px 12px;align-items:center}
+.ph-shell .row .stack{flex:1;min-width:0;display:flex;flex-direction:column}
+.ph-shell .row .nm{min-width:0}
+.ph-shell .row .em{flex:none;white-space:normal;overflow-wrap:anywhere}
+.tag{font-size:12px;line-height:16px;padding:2px 8px;border-radius:6px;background:var(--surface);color:var(--text2);border:1px solid var(--border);white-space:nowrap;display:inline-flex;align-items:center;gap:4px;flex:none}
+.ib{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;color:var(--text2);flex:none;border-radius:8px}
+.ib i{font-size:16px}
+.ib.hov{background:var(--surface);color:var(--text)}
+.ib.spacer{visibility:hidden}
+.touch .ib{width:44px;height:44px}
+/* controls */
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.field label{font-size:12px;color:var(--text2)}
+.input{height:32px;border:1px solid var(--control-border);border-radius:8px;padding:0 10px;display:flex;align-items:center;font-size:13px;color:var(--text);background:var(--bg);gap:6px}
+.input .val{flex:1;font-size:14px;color:var(--text)}
+.input .dots{flex:1;letter-spacing:2px;color:var(--text)}
+.input.focus{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+.input.bad{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn)}
+.input.pin{width:120px}
+.touch .input{height:36px;font-size:14px}
+.caret{display:inline-block;width:1px;height:16px;background:var(--text);margin-left:1px;vertical-align:middle}
+.btn{height:32px;padding:0 16px;border-radius:8px;font-size:13px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--control-border);background:var(--bg);color:var(--text);flex:none;white-space:nowrap}
+.btn i{font-size:16px}
+.btn-sm{height:28px;padding:0 10px}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-primary.dis{background:var(--surface);border-color:var(--border-strong);color:#8A8A85}
+.btn-full{width:100%}
+.touch .btn,.touch .btn-sm{height:36px}
+.link{color:var(--blue);font-size:13px}
+.hint{font-size:12px;color:var(--text2)}
+.err{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--warn);background:var(--warn-tint);padding:8px;border-radius:6px}
+.err i{font-size:16px}
+.strong-ok{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--ok)}
+.strong-ok i{font-size:14px}
+/* PIN keypad (as approved, v0.16) */
+.keypad{display:grid;grid-template-columns:repeat(3,64px);gap:8px;justify-content:center}
+.keypad span{height:36px;border:1px solid var(--control-border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.keypad span.blank{border:none}
+.pinshow{display:flex;gap:8px;justify-content:center;margin:4px 0 12px}
+.pinshow span{width:36px;height:36px;border:1px solid var(--control-border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.pinshow span.cur{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+/* dialogs */
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:5}
+.dialog{background:var(--bg);border-radius:12px;width:360px;max-width:calc(100% - 32px);padding:24px;position:relative}
+.dialog h3{font-size:16px;font-weight:500;margin:0 0 2px}
+.dialog .sub{font-size:13px;color:var(--text2);margin:2px 0 12px}
+.dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;align-items:center}
+.fullscreen{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;z-index:5}
+.fullscreen .head{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 4px;font-size:16px;font-weight:500;flex:none}
+.fullscreen .fbody{padding:16px;flex:1;overflow:hidden}
+.who-line{display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:8px;padding:8px 12px;margin:4px 0 12px;font-size:13px}
+.who-line .avatar{background:var(--bg)}
+.who-line span.e{color:var(--text2);overflow-wrap:anywhere;min-width:0}
+/* menus */
+.menu{position:absolute;background:var(--bg);border:1px solid var(--border-strong);border-radius:8px;padding:4px 0;width:248px;box-shadow:0 4px 16px rgba(0,0,0,.08);z-index:5}
+.menu .who{padding:8px 12px 10px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.menu .who b{display:block;font-size:13px}.menu .who span{font-size:12px;color:var(--text2)}
+.menu .it{display:flex;align-items:center;gap:8px;padding:0 12px;height:32px;font-size:13px;color:var(--text);white-space:nowrap}
+.touch .menu .it{height:44px}
+.menu .it i{font-size:16px;color:var(--text2)}
+.menu .it .v{margin-left:auto;font-size:12px;color:var(--text2)}
+.menu .it.hov{background:var(--surface)}
+.menu .sep{border-top:1px solid var(--border);margin:4px 0}
+.menu .grp{font-size:12px;color:var(--text2);padding:6px 12px 2px}
+.sheet-wrap{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;z-index:5}
+.sheet{background:var(--bg);width:100%;border-radius:16px 16px 0 0;padding:8px 0 16px}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--border-strong);margin:4px auto 8px}
+.sheet .stitle{padding:4px 16px 8px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.sheet .stitle b{display:block;font-size:14px}.sheet .stitle span{font-size:12px;color:var(--text2)}
+.sheet .menu{position:static;width:auto;border:none;box-shadow:none;border-radius:0;padding:0}
+.sheet .menu .it{padding:0 16px}
+/* toast (near-black, v0.49) */
+.toast{position:absolute;right:24px;bottom:24px;background:var(--toast);color:#fff;border-radius:8px;padding:12px 16px;font-size:13px;display:flex;gap:8px;align-items:center;z-index:6;max-width:420px}
+.toast i{font-size:16px}
+.ph-toast{left:16px;right:16px;bottom:76px;max-width:none}
+.tip{position:absolute;background:#1F1F1F;color:#fff;font-size:13px;padding:5px 10px;border-radius:6px;white-space:nowrap;z-index:6}
+.callout{position:absolute;background:var(--warn-tint);color:var(--warn);border:1px dashed #EF9F27;font-size:12px;padding:4px 8px;border-radius:6px;z-index:7;max-width:260px}
+.details{counter-reset:d}
+.details li{margin:4px 0}
+</style>
+</head>
+<body>
+<main>
+<h1>Settings → Schools — mockups</h1>
+<p class="lead">Jae H. Jeong's U.S. Taekwondo Center · October 17, 2026 · for approval · built on the approved Staff accounts mockups (same shell). Addresses shown are made-up examples. Amber outlines = what's new.</p>
+<h2 id="S1">S1. Account menu → Settings (admins only)</h2><p class="lead">Settings sits under Admin next to Staff accounts (rulebook: admins get Staff accounts and Settings). Icon ti-settings.</p><p class="cap">PC · mouse · 1280px · menu open</p><div class="scroller" data-shell="pc" data-page="home"><div class="menu" style="right:12px;top:48px"><div class="who"><b>Main Admin</b><span>jberg412@gmail.com · Admin</span></div>
+  <div class="it"><i class="ti ti-lock"></i>Lock now</div><div class="it"><i class="ti ti-key"></i>Change PIN</div><div class="it"><i class="ti ti-password"></i>Change password</div>
+  <div class="it"><i class="ti ti-map-pin"></i>This device<span class="v">Shrewsbury</span></div>
+  <div class="sep"></div><div class="grp">Admin</div>
+  <div class="it"><i class="ti ti-user-cog"></i>Staff accounts</div>
+  <div class="it hov" style="outline:3px solid #E8A33D;outline-offset:3px;border-radius:8px"><i class="ti ti-settings"></i>Settings</div>
+  <div class="sep"></div><div class="it"><i class="ti ti-logout"></i>Sign out</div></div></div><p class="cap">Phone · touch · 390px · bottom sheet</p><div class="scroller" data-shell="ph" data-page="home"><div class="sheet-wrap"><div class="sheet"><div class="grab"></div><div class="stitle"><b>Main Admin</b><span>jberg412@gmail.com · Admin</span></div><div class="menu">
+  <div class="it"><i class="ti ti-lock"></i>Lock now</div><div class="it"><i class="ti ti-key"></i>Change PIN</div><div class="it"><i class="ti ti-password"></i>Change password</div>
+  <div class="it"><i class="ti ti-map-pin"></i>This device<span class="v">Shrewsbury</span></div>
+  <div class="sep"></div><div class="grp">Admin</div>
+  <div class="it"><i class="ti ti-user-cog"></i>Staff accounts</div>
+  <div class="it" style="outline:3px solid #E8A33D;outline-offset:3px;border-radius:8px"><i class="ti ti-settings"></i>Settings</div>
+  <div class="sep"></div><div class="it"><i class="ti ti-logout"></i>Sign out</div></div></div></div></div>
+<h2 id="S2">S2. Settings page — Schools</h2><p class="lead">A page like Staff accounts. Phase 2 has one part: the two schools and their addresses. (Later: Classes and ranks may move here, and keyboard shortcuts on/off.)</p><p class="cap">PC · mouse · 1280px</p><div class="scroller" data-shell="pc" data-page="settings"></div><p class="cap">Tablet · touch · 820px</p><div class="scroller" data-shell="tab" data-page="settings"></div><p class="cap">Phone · touch · 390px</p><div class="scroller" data-shell="ph" data-page="settings"></div><p class="cap">PC · mouse · 1280px · before any address is entered</p><div class="scroller" data-shell="pc" data-page="settings" data-empty="all"></div>
+<h2 id="S3">S3. Edit a school’s address</h2><p class="lead">Pencil (or a click on the row) opens the dialog; Save shows “Address saved”. Changes are logged. Empty address = family pages and the flyer show just the school name.</p><p class="cap">PC · mouse · 1280px</p><div class="scroller" data-shell="pc" data-page="settings"><div class="overlay"><div class="dialog" role="dialog" aria-label="Edit Worcester school"><h3>Worcester school</h3><p class="sub">Address</p><div class="field"><label>Street address</label><div class="input">100 Example Street</div></div>
+  <div style="display:grid;grid-template-columns:1fr 80px 120px;gap:12px"><div class="field"><label>City</label><div class="input">Worcester</div></div><div class="field"><label>State</label><div class="input">MA</div></div><div class="field"><label>ZIP code</label><div class="input">01600</div></div></div>
+  <div class="hint">Shown to families on registration pages and printed flyers, e.g. “Location: Worcester school, 100 Example Street, Worcester, MA 01600”.</div><div class="actions"><span class="btn">Cancel</span><span class="btn btn-primary">Save</span></div></div></div></div><p class="cap">Phone · touch · 390px · full screen</p><div class="scroller" data-shell="ph" data-page="settings"><div class="fullscreen" role="dialog" aria-label="Edit Worcester school"><div class="head"><span class="tap" aria-label="Back"><i class="ti ti-arrow-left" style="font-size:20px"></i></span>Worcester school</div><div class="fbody"><div class="field"><label>Street address</label><div class="input">100 Example Street</div></div>
+  <div style="display:grid;grid-template-columns:1fr;gap:12px"><div class="field"><label>City</label><div class="input">Worcester</div></div><div class="field"><label>State</label><div class="input">MA</div></div><div class="field"><label>ZIP code</label><div class="input">01600</div></div></div>
+  <div class="hint">Shown to families on registration pages and printed flyers, e.g. “Location: Worcester school, 100 Example Street, Worcester, MA 01600”.</div><div style="margin-top:24px"><span class="btn btn-primary" style="width:100%;justify-content:center">Save</span></div></div></div></div>
+</main>
+<script>
+// Stamps the app shell into each [data-shell] block: device frame, rail / bottom bar, top bar,
+// and either the empty Home or the Staff accounts list. The block's own HTML (menus, dialogs,
+// toasts) is placed on top. Mockup helper only — not app code.
+const ACCOUNTS = [
+  { id: 'me', name: 'Main Admin', email: 'jberg412@gmail.com', tag: 'Admin', you: true },
+  { id: 'gm', name: 'Grandmaster', email: 'grandmaster@example.com', tag: 'Admin' },
+  { id: 'staff', name: 'Staff', email: 'shrewsburyustc@gmail.com', tag: 'Shared' },
+];
+function listHtml(kind, opts) {
+  const rows = ACCOUNTS.map(a => {
+    const cls = 'row' + (opts.sel === a.id ? ' sel' : '');
+    const dots = a.you ? '<span class="ib spacer"></span>'
+      : `<span class="ib${opts.hover === a.id ? ' hov' : ''}" aria-label="More actions for ${a.name}"><i class="ti ti-dots"></i></span>`;
+    const you = a.you ? ' <span class="you">(you)</span>' : '';
+    if (kind === 'ph') {
+      return `<div class="${cls}"><div class="stack"><span class="nm">${a.name}${you}</span><span class="em">${a.email}</span></div><span class="tag">${a.tag}</span>${dots}</div>`;
+    }
+    return `<div class="${cls}"><span class="nm">${a.name}${you}</span><span class="em">${a.email}</span><span class="tag">${a.tag}</span>${dots}</div>`;
+  }).join('');
+  const tip = opts.hover ? '<div class="tip">More actions for Staff</div>' : '';
+  return `<div class="ptitle">Staff accounts</div><div class="psub">Reset a password or PIN when someone forgets it.</div><div class="list">${rows}</div>${tip}`;
+}
+
+function settingsHtml(kind, opts) {
+  const SCH = [
+    { n: 'Worcester school', a: opts.empty === 'all' ? '' : '100 Example Street, Worcester, MA 01600' },
+    { n: 'Shrewsbury school', a: opts.empty ? '' : '200 Sample Road, Shrewsbury, MA 01500' },
+  ];
+  const rows = SCH.map(x => {
+    const addr = x.a ? '<span class="em">' + x.a + '</span>' : '<span class="em" style="color:var(--warn)">No address yet. Family pages show only the school name.</span>';
+    const ed = '<span class="ib" aria-label="Edit ' + x.n + '"><i class="ti ti-edit"></i></span>';
+    return kind === 'ph'
+      ? '<div class="row"><div class="stack"><span class="nm">' + x.n + '</span>' + addr + '</div>' + ed + '</div>'
+      : '<div class="row"><span class="nm">' + x.n + '</span>' + addr + '<span></span>' + ed + '</div>';
+  }).join('');
+  return '<div class="ptitle">Settings</div><div class="psub">Details for the whole school. Admins only.</div>'
+    + '<div style="font-size:14px;font-weight:500;margin:20px 0 4px">Schools</div><div class="hint" style="margin-bottom:8px">Each school\'s address is shown to families on registration pages and printed flyers.</div>'
+    + '<div class="list" style="outline:3px solid #E8A33D;outline-offset:3px;border-radius:8px">' + rows + '</div>';
+}
+const HOME = `<div style="display:flex;align-items:center;gap:12px;padding-bottom:16px;border-bottom:1px solid var(--border)"><span style="width:40px;height:40px;border-radius:50%;background:var(--surface);border:1px solid var(--border)"></span><div><div class="ptitle">Good morning</div><div class="hint">Saturday, October 17 · Shrewsbury</div></div></div><div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:13px">Nothing on Home yet. Items appear here as sections are added.</div>`;
+const LOC = '<div class="loc"><span>Worcester</span><span class="on"><i class="ti ti-map-pin"></i>Shrewsbury</span><span>Both</span></div>';
+document.querySelectorAll('[data-shell]').forEach(el => {
+  const kind = el.dataset.shell, page = el.dataset.page;
+  const opts = { hover: el.dataset.hover, sel: el.dataset.sel, empty: el.dataset.empty };
+  const head = '<div class="ptitle">Staff accounts</div><div class="psub">Reset a password or PIN when someone forgets it.</div>';
+  const ph = '<div class="row"><span style="height:12px;width:120px;border-radius:6px;background:var(--surface)"></span><span style="height:12px;width:180px;border-radius:6px;background:var(--surface)"></span></div>';
+  const bodies = {
+    list: () => listHtml(kind, opts),
+    loading: () => head + '<div class="list" aria-busy="true">' + ph + ph + ph + '</div>',
+    loaderr: () => head + '<div class="err" style="align-items:center;font-size:13px;max-width:880px;padding:4px 4px 4px 12px"><i class="ti ti-alert-triangle"></i><span style="flex:1">Couldn&rsquo;t load staff accounts. Check the connection.</span><span class="btn btn-sm"><i class="ti ti-refresh"></i>Retry</span></div>',
+    home: () => HOME,
+    settings: () => settingsHtml(kind, opts),
+  };
+  const body = bodies[page]();
+  const homeOn = page === 'home';
+  const menuOpen = el.querySelector('.menu .who, .stitle b') && page === 'home';
+  const av = `<span class="${kind === 'pc' ? '' : 'tap'}"><span class="avatar${menuOpen ? ' open' : ''}" aria-label="Account menu">${el.dataset.who || 'MA'}</span></span>`;
+  const overlay = el.innerHTML;
+  let shell;
+  if (kind === 'ph') {
+    shell = `<div class="dev dev-ph touch"><div class="ph-shell"><div class="topbar">${LOC}<span class="grow"></span>${av}</div><div class="content">${body}</div><div class="phbar"><a${homeOn ? ' style="color:var(--blue)"' : ''}><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></div></div>${overlay}</div>`;
+  } else {
+    const rail = kind === 'pc'
+      ? `<nav class="rail"><a${homeOn ? ' style="background:var(--blue-tint);color:var(--blue)"' : ''}><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a></nav>`
+      : `<nav class="rail-t"><a${homeOn ? ' style="color:var(--blue)"' : ''}><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></nav>`;
+    shell = `<div class="dev ${kind === 'pc' ? 'dev-pc' : 'dev-tab touch'}"><div class="app">${rail}<div class="app-col"><div class="topbar"><span class="grow"></span>${LOC}${av}</div><div class="content">${body}</div></div></div>${overlay}</div>`;
+  }
+  el.innerHTML = shell;
+  // Line the row menu / tooltip up with the ⋯ button they belong to.
+  const dev = el.querySelector('.dev');
+  const anchor = el.querySelector('.row.sel .ib, .ib.hov');
+  if (anchor) {
+    const d = dev.getBoundingClientRect(), a = anchor.getBoundingClientRect();
+    const menu = el.querySelector(':scope .dev > .menu');
+    if (menu) { menu.style.left = 'auto'; menu.style.right = (d.right - a.right) + 'px'; menu.style.top = (a.bottom - d.top + 4) + 'px'; }
+    const tip = el.querySelector('.tip');
+    if (tip) { tip.style.left = (a.right - d.left + 8) + 'px'; tip.style.top = (a.top - d.top + 1) + 'px'; }
+  }
+});
+</script>
+</body>
+</html>
