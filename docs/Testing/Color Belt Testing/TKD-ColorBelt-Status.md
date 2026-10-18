@@ -51,7 +51,8 @@ Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, 
 - **Form changes asked by Jeffrey (2026-10-17), drawn on the questions page:** no "your class's start time is shown below" line in the event header; an official **Testing fee** box (large amount, "pay at the front desk by <day before testing>") with the **testing-day price as an amber warning** ("$X if paid on the testing day. Pay by … to save $Y."); the family total on the confirmation page as an official "Total due" with the same warning. Star's form uses the old fee box (Star v0.83) — propose the same change there so families see one look.
 - Fee box + official total: **approved by Jeffrey 2026-10-17.**
 - **Q2 decided (Jeffrey, 2026-10-17): C — tap buttons:** the 7 classes as buttons; tapping one shows that class's belts as buttons with belt pictures (Teen/Adult's 18 wrap); "Testing for", start time and fee follow. Same style as Star's Dan/stars buttons.
-- **Q3 (class times on an event): asked, waiting** — on the new page `TKD-ColorBelt-Phase2-Events-Questions.html` (staff-side Events questions; built from Star's approved Add event screens).
+- **Q3 decided (Jeffrey, 2026-10-17): A — a start and end time per class** on Add/Edit event ("Classes testing": tick box + start → end per class; unticked = not testing at this event; same times test together; copied from the last event). Families see "Group A tests at 5:00 – 6:00 PM"; the roster groups by time. Page: `TKD-ColorBelt-Phase2-Events-Questions.html`.
+- **Q4 (the "3 stripes to register" rule): next.**
 
 **Later phases** (each: design → mockups at 3 sizes → approve → build → reviews → OK): 2 Events + public family registration form (Cloudflare Pages Function path, v0.33) · 3 Registrations and payments · 4 Testing roster (grading) · 5 Private testing. Also pending his OK: aligning the account dialogs' phone Back gesture with the Testing dialogs.
 
