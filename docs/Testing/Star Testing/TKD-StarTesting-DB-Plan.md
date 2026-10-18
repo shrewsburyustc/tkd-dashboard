@@ -1,6 +1,6 @@
 # Star testing — database plan (migration 0006)
 
-**Status:** DRAFT 2026-10-18. All 15 database questions answered (rulebook v0.156, v0.158–v0.171). Security-reviewed twice (fixes applied). §8 lists proposed defaults still waiting for Jeffrey's OK. Nothing is applied to Supabase without Jeffrey's OK for that paste.
+**Status:** DRAFT 2026-10-18. All 15 database questions answered (rulebook v0.156, v0.158–v0.171). Security-reviewed twice (fixes applied). §8's ten defaults OK'd (v0.172). Next: `CONTRACT-0006.md`. Nothing is applied to Supabase without Jeffrey's OK for that paste.
 **Built from:** rulebook v0.155 (every Star row v0.58–v0.155), the Star status file, the approved Star mockups, handoff §6 (security rules) and the real migrations 0001–0005 (0005 is read from the `color-belt` branch, where it is live in production but not merged into `main` yet).
 **Sources in plain words:** "rule" = handoff §6 or the rulebook; "0005" = Color Belt phase 2's migration, already live.
 
@@ -98,7 +98,7 @@ Structure first, then details. Each will be shown with a picture and options.
 | Q-D14 ✓ | **Answered v0.171: Dans in their own small list, three now, no Add Dan button (B).** Was: Dans fixed at 1st–3rd, or can admins add a 4th Dan later? | Check rule vs a Dan table | status §4 |
 | — | Smaller items: see §8 (proposed defaults, for Jeffrey's OK) | | |
 
-## 8. Smaller items — proposed defaults (for Jeffrey's OK; not decided)
+## 8. Smaller items — OK'd by Jeffrey 2026-10-18 (v0.172)
 
 | # | Item | Proposed default | Why |
 |---|---|---|---|
