@@ -9,35 +9,35 @@ A new **Prospects** section (rail icon `ti-address-book`, after Forms, address `
 - **Pipeline bar** of stage counts (New, Contacted, Booked, Came, Joined — Joined green) above the **list**. Click a stage to filter, click again for all. **No-show** and **Not interested** are chips beside the bar (side exits).
 - Opens on the amber **"Follow up today"** chip: follow-ups due today or overdue (overdue dates amber), new sign-ups, and "Did … come?" questions (see 0c).
 - **Search** by child, parent or phone. Columns **Child · Parent · Free class · Follow up · Status**. Siblings (same sign-up) are linked. **Each school stays separate:** on Both, Worcester's section then Shrewsbury's, each with its own bar.
-- **Rail badge:** a dark count of sign-ups nobody has opened yet (see **Q3**).
+- **Rail badge:** a dark count of sign-ups **you** haven't opened yet — counted per person (Q3 answer).
 - **Side panel** (tablet upright: under the list; phone: full screen):
   - **Call / Text / Email** open the device's own apps (`tel:`, `sms:`, `mailto:`); on a PC Call shows the number large with Copy. The dashboard sends nothing.
   - **Status** menu (stages, then side exits). Joined asks the date joined (default today).
   - **Follow-up date** (`ti-clock-hour-4`).
-  - **Free class:** date, time, class; amber **"Class cancelled — call the family"** when the class no longer runs (v0.145 answer 6); booking or changing a time here — see **Q2**.
+  - **Free class:** date, time, class; amber **"Class cancelled — call the family"** when the class no longer runs (v0.145 answer 6); **Book a free class / Change time / Cancel booking** here (Q2 answer).
   - **Check in** (`ti-user-check`) on the class day → Came, with Undo. After the class has ended without a check-in: **"Did … come?" Came / No-show** (`ti-user-x`); No-show sets a call-back for tomorrow.
   - **Siblings** (tap to switch).
   - **Notes and calls:** a note + one-tap follow-up (Tomorrow, In 3 days, Next week, Pick a date, No follow-up), saved with who and when; notes can't be edited. Status changes, check-ins and bookings show in the same timeline.
   - **Form and answers:** the source form, every answer (as the form was when they signed up), "Entered by …" for staff entries, and the **waiver**: the signature picture while it is kept, then **"Signed on <date>"** (v0.146: deleted 90 days after the free class). Every look at a signature is recorded.
 - **"+ Add prospect"** asks which Live form (of this school) and opens **Fill in** (already built in Forms).
-- **Edit statuses** (admins **and staff**, v0.140): rename, reorder (drag grip or ⋯ Move up / down), add (stage or side exit). **Deleting** a custom status asks where its people move; who may delete is **Q5**. Statuses are shared by both schools or per school: **Q7**. The built-in six (New, Booked, Came, Joined, No-show, Not interested) can be renamed but not deleted — the app uses them. "Contacted" is an ordinary status that starts in the list.
+- **Edit statuses** (admins **and staff**, v0.140): rename, reorder (drag grip or ⋯ Move up / down), add (stage or side exit). **Deleting** a custom status is **admins only** (Q5) and asks where its people move. **Each school has its own status list** (Q7); the six built-ins exist in both. The built-in six (New, Booked, Came, Joined, No-show, Not interested) can be renamed but not deleted — the app uses them. "Contacted" is an ordinary status that starts in the list.
 - **Delete a prospect:** admins only, with a confirmation.
 - **Calendar:** the day panel's free classes get the **Check in** button and link to the prospect.
 - **Phone bottom bar** (six sections): Home, Calendar, Prospects, **More** (`ti-menu-2`: Testing, Schedule, Forms). PC and tablet rails show all six.
 
-**Not in this step:** sending texts or emails from the dashboard, a Students section, attendance beyond the free class, merging duplicate families (see **Q4**), the public form page (Forms F3).
+**Not in this step:** sending texts or emails from the dashboard, a Students section, attendance beyond the free class, merging or flagging duplicate families (Q4: not flagged), the public form page (Forms F3).
 
 ### 0a. Status rules the app keeps
 - A sign-up with a booked free class starts **Booked**, without one **New** — per child.
 - **Check in** → Came. "Did they come?" No-show → No-show + follow-up tomorrow.
-- **Joined** is never deleted automatically. **Not interested** is deleted after 2 years (v0.140; the wider rule is **Q1**).
+- **Joined** is never deleted automatically. **Every family that isn't Joined** is deleted 2 years after the family's last activity (Q1 answer).
 - Every status change, note, check-in, booking change and delete is logged (`change_log`, with who and when).
 
 ### 0b. Privacy (handoff §6, rulebook §5)
 - Records are about minors. The **list** shows only the child's first name (+ the parent's last initial when two children share a first name), the parent's name, the free class, the follow-up date and the status — never the phone, email, age, answers or waiver.
 - The **panel** shows contact details and answers to signed-in, unlocked staff (`has_data_access()`), like every other screen.
 - The list comes from **one security-definer function** that returns only the list columns — the screen never reads `form_submissions` directly for the list. **Search by phone** matches digits only, needs at least 4 digits, and never returns the number.
-- Whether staff (not only admins) see the answers and the waiver picture in the panel is **Q6**.
+- **Staff see the answers and the waiver picture** in the panel (Q6); every look at a signature is recorded.
 - Deleting after 2 years removes the prospect, its notes and timeline; the **sign-up** (answers, bookings, signature views) goes when the family's **last** child is removed, so siblings never lose their data (see **Q1**). Their **copies in the history** (`change_log`) are removed too — see 2c.
 
 ### 0c. "Did … come?"
@@ -56,7 +56,7 @@ No scheduler. The question is worked out when the list loads: a free class that 
 
 | Table | Holds |
 |---|---|
-| `prospect_statuses` | name (1–40), kind `stage` / `exit`, position, color (the 8 class colors — never red), `builtin` key (`new`, `booked`, `came`, `joined`, `no_show`, `not_interested`, or null). Seeded once with the 7 starting statuses. Shared or per school: **Q7**. |
+| `prospect_statuses` | name (1–40), kind `stage` / `exit`, position, color (the 8 class colors — never red), `builtin` key (`new`, `booked`, `came`, `joined`, `no_show`, `not_interested`, or null). Seeded once with the 7 starting statuses. **Per school** (Q7): each school has its own rows, seeded with the 7 starting statuses. |
 | `prospects` | one per child: school, sign-up id + child number (unique), child first name and age (copied from the sign-up), status, follow-up date, joined date, `first_opened_at` / by (badge), last activity time, version. |
 | `prospect_notes` | note text (1–1000), follow-up chosen, who and when. Never changed. |
 | `prospect_activity` | the panel timeline: status changes, check-ins, booking changes — kind, from/to, who, when. No personal details beyond the prospect id. |
@@ -65,7 +65,7 @@ No scheduler. The question is worked out when the list loads: a free class that 
 - **Automatically** (already implied by v0.140: "a sign-up without a booking starts New"): an **AFTER INSERT trigger on `form_submissions`** makes one prospect per child (New); a trigger on `class_bookings` sets Booked when a child's free class is booked and back to New when it is cancelled (only from New / Booked — never over a status staff chose). Public Send, kiosk and staff Fill in all work this way, without changing 0009.
 - **Backfill:** 0010 makes prospects for sign-ups saved before it ran (0009 may be live first).
 
-### 2b. Free-class bookings from the panel (if Q2 = yes)
+### 2b. Free-class bookings from the panel (Q2: yes)
 - 0009 allows **one booking row per child** (`unique (submission_id, child_index)`). Change time and Book again **update that row in place**: lock the old and the new class time in a fixed order, re-count the shared spot limit (0009 `forms_times`), then update; "Cancel booking" sets it to cancelled (spot freed). No second row, no change to 0009's rule.
 - Check-ins are stored on the **prospect** (`checked_in_at`, by) with the booking they were for. `forms_bookings_between` (Calendar) gets a companion `prospects_bookings_between` that also returns the prospect id, status and checked-in state. Undo puts the previous status back only if nothing changed since (version check).
 
@@ -99,7 +99,11 @@ No scheduler. The question is worked out when the list loads: a free class that 
 | P5 | Live setup: 0007–0010 pasted by Jeffrey, checks, then Forms F3 | Each with Jeffrey's OK |
 | P6 | Go live: Forms + Prospects together | Separate OK; push only when Jeffrey says |
 
-## 5. Questions for Jeffrey (one at a time)
+## 5. Questions for Jeffrey — answered 2026-10-18 (rulebook v0.191)
+
+Answers: **Q1 B** (every non-Joined family after 2 quiet years, per family) · **Q2 A** (book / change / cancel from the panel) · **Q3 B** (badge per person) · **Q4 B** (no duplicate flag) · **Q5 A** (only admins delete a status) · **Q6 A** (staff see answers and waiver picture) · **Q7 B** (status list per school).
+
+As asked:
 
 - **Q1.** The 2-year clean-up: only "Not interested" (as decided), or **every family that isn't Joined, 2 years after the family's last activity** (a note, a status change, a booking or check-in — not just opening the panel)? Recommended: the second; Joined is kept with no end date. Either way a family's sign-up goes only with its last child.
 - **Q2.** Can staff **book, change or cancel the free-class time** from the prospect panel (same open times and spot limits as the form)? Recommended: yes.
@@ -112,3 +116,4 @@ No scheduler. The question is worked out when the list loads: a free class that 
 ## 6. Progress log
 - 2026-10-18 — Plan drafted (P0). Reviewed by a separate agent: 4 High (history can't be deleted without a 0003 exception; per-child prospects vs per-family sign-ups; the one-booking-per-child rule; changing 0009) and 6 Medium findings — all written into sections 0–2; questions now Q1–Q7.
 - 2026-10-18 — **Jeffrey approved the plan and mockup revision 3 (screen 10).** Next: questions Q1–Q7, one at a time.
+- 2026-10-18 — **Q1–Q7 answered** (rulebook v0.191). Mockup rev 3's "Same phone as …" line is dropped (Q4). Next: P1 (merge main) and P2 (migration 0010) — each on Jeffrey's OK.
