@@ -21,9 +21,10 @@
 //    5. "hostile defaults": puts back Supabase's grant-everything default
 //       privileges (which 0001 removed), so the 0003 checks prove that
 //       0003's OWN revokes lock everything down, not just 0001's defaults
-//    6. 0003_testing_classes_ranks.sql, then 0004_staff_accounts.sql
+//    6. 0003_testing_classes_ranks.sql, then 0004_staff_accounts.sql,
+//       then 0005_schedule.sql
 //    7. tests: verify_pin_tests.sql, 0002_tests.sql, 0003_tests.sql,
-//       0004_tests.sql
+//       0004_tests.sql, 0005_tests.sql
 //    8. a seed (7 classes / 42 ranks per school) - built in, or with
 //       --fixture-seed Builder B's generated fixture seed file - then
 //       0003_tests.sql again (the tests must pass before AND after seeding)
@@ -34,6 +35,9 @@
 //   9b. 0004 applied a SECOND time: its fingerprints
 //       (0004_fingerprints.sql) must be the same before and after, and
 //       0004_tests.sql / 0002_tests.sql must pass again
+//   9c. 0005 applied a SECOND time: its fingerprints
+//       (0005_fingerprints.sql) must be the same before and after, and
+//       0005_tests.sql must pass again (also after 0003's re-run)
 //   10. UPGRADE check, on a second fresh database: steps 1-5, then the
 //       EARLIER copy of 0003 (fixtures/0003_before_v062.sql), a seed, then
 //       today's 0003 over it. Every row must survive, the fingerprints
@@ -223,12 +227,14 @@ async function main() {
   // 6. apply 0003
   if (!(await run(db, 'apply 0003_testing_classes_ranks.sql', read('migrations', '0003_testing_classes_ranks.sql')))) return finish();
   if (!(await run(db, 'apply 0004_staff_accounts.sql', read('migrations', '0004_staff_accounts.sql')))) return finish();
+  if (!(await run(db, 'apply 0005_schedule.sql', read('migrations', '0005_schedule.sql')))) return finish();
 
   // 7. tests on the empty (unseeded) database
   await runTestFile(db, 'verify_pin_tests.sql', 'verify_pin_tests.sql', 'ALL PIN TESTS PASSED');
   await runTestFile(db, '0002_tests.sql', '0002_tests.sql', 'ALL 0002 TESTS PASSED');
   await runTestFile(db, '0003_tests.sql (before seed)', '0003_tests.sql', 'ALL 0003 TESTS PASSED');
   await runTestFile(db, '0004_tests.sql', '0004_tests.sql', 'ALL 0004 TESTS PASSED');
+  await runTestFile(db, '0005_tests.sql (before seed)', '0005_tests.sql', 'ALL 0005 TESTS PASSED');
 
   // 8. seed, then the 0003 tests again
   let seedSql;
@@ -243,6 +249,7 @@ async function main() {
   const rankCount = await one(db, 'select count(*)::int from public.testing_ranks');
   record('seed row counts (14 classes, 84 ranks)', classCount === 14 && rankCount === 84, `${classCount} classes, ${rankCount} ranks`);
   await runTestFile(db, '0003_tests.sql (after seed)', '0003_tests.sql', 'ALL 0003 TESTS PASSED');
+  await runTestFile(db, '0005_tests.sql (after seed)', '0005_tests.sql', 'ALL 0005 TESTS PASSED');
 
   // 9. re-run safety
   const before = await fingerprints(db);
@@ -259,6 +266,7 @@ async function main() {
   await runTestFile(db, '0003_tests.sql (after re-run)', '0003_tests.sql', 'ALL 0003 TESTS PASSED');
   await runTestFile(db, '0002_tests.sql (after re-run)', '0002_tests.sql', 'ALL 0002 TESTS PASSED');
   await runTestFile(db, 'verify_pin_tests.sql (after re-run)', 'verify_pin_tests.sql', 'ALL PIN TESTS PASSED');
+  await runTestFile(db, '0005_tests.sql (after 0003 re-run)', '0005_tests.sql', 'ALL 0005 TESTS PASSED');
 
   // 9b. 0004 re-run safety
   const before4 = await fingerprints(db, '0004_fingerprints.sql');
@@ -267,6 +275,14 @@ async function main() {
   record('0004 fingerprints identical before/after re-run', JSON.stringify(before4) === JSON.stringify(after4), `${after4.length} rows`);
   await runTestFile(db, '0004_tests.sql (after re-run)', '0004_tests.sql', 'ALL 0004 TESTS PASSED');
   await runTestFile(db, '0002_tests.sql (after 0004 re-run)', '0002_tests.sql', 'ALL 0002 TESTS PASSED');
+
+  // 9c. 0005 re-run safety
+  const before5 = await fingerprints(db, '0005_fingerprints.sql');
+  await run(db, 'apply 0005 a SECOND time (re-run safety)', read('migrations', '0005_schedule.sql'));
+  const after5 = await fingerprints(db, '0005_fingerprints.sql');
+  record('0005 fingerprints identical before/after re-run', JSON.stringify(before5) === JSON.stringify(after5), `${after5.length} rows`);
+  await runTestFile(db, '0005_tests.sql (after re-run)', '0005_tests.sql', 'ALL 0005 TESTS PASSED');
+  await runTestFile(db, '0003_tests.sql (after 0005 re-run)', '0003_tests.sql', 'ALL 0003 TESTS PASSED');
 
   // 10. upgrade check: earlier 0003 + data, then today's 0003 over it
   console.log('\nUpgrade check (earlier 0003 -> today\'s 0003):');
@@ -302,6 +318,11 @@ async function main() {
           record('[upgrade] 0004 fingerprints identical to a fresh install', JSON.stringify(up4) === JSON.stringify(after4), `${up4.length} rows`);
           await runTestFile(up, '[upgrade] 0004_tests.sql', '0004_tests.sql', 'ALL 0004 TESTS PASSED');
           await runTestFile(up, '[upgrade] 0002_tests.sql (after 0004)', '0002_tests.sql', 'ALL 0002 TESTS PASSED');
+          if (await run(up, '[upgrade] apply 0005 on top', read('migrations', '0005_schedule.sql'))) {
+            const up5 = await fingerprints(up, '0005_fingerprints.sql');
+            record('[upgrade] 0005 fingerprints identical to a fresh install', JSON.stringify(up5) === JSON.stringify(after5), `${up5.length} rows`);
+            await runTestFile(up, '[upgrade] 0005_tests.sql', '0005_tests.sql', 'ALL 0005 TESTS PASSED');
+          }
         }
       }
     }
@@ -311,6 +332,8 @@ async function main() {
   for (const line of after) console.log('  ' + line);
   console.log('\n0004 fingerprints (kind  item  detail):');
   for (const line of after4) console.log('  ' + line);
+  console.log('\n0005 fingerprints (kind  item  detail):');
+  for (const line of after5) console.log('  ' + line);
 
   return finish();
 }

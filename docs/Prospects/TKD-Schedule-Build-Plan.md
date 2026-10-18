@@ -90,7 +90,7 @@ So the first step is to **bring main into this branch**. On this branch only, th
 | `schedule_update_version(p_version_id, p_expected_version, p_name, p_starts_on)` | Rename or change the start date (planned only). |
 | `schedule_delete_version(p_version_id, p_expected_version, p_expected_slot_count)` | Planned schedules only; the confirmation shows how many slots will go. |
 | `schedule_set_class_color(p_class_id, p_color)` | Set a class's color. |
-| `testing_delete_class` (replaced) | Same as 0003, plus it returns `schedule_slot_count` and the affected schedules so the delete dialog can name them, and it takes `p_expected_slot_count` so the confirmation can't go stale. Testing's `DeleteDialog.jsx` and `text.js` get one extra sentence. |
+| ~~`testing_delete_class` (replaced)~~ | **Changed during S1:** Testing's delete function is left exactly as it is. The database removes a deleted class's time slots and color automatically (`on delete cascade`), and each removal is still written to change_log, tagged `delete_class`. In S2, Testing's delete dialog counts the slots first and adds the sentence. Same result for Jeffrey; Testing's live code is untouched. |
 
 **Rules every function enforces:**
 - Past schedules are read-only and return `not_allowed`.
@@ -99,7 +99,7 @@ So the first step is to **bring main into this branch**. On this branch only, th
 
 **Status codes:** `ok`, `no_access`, `not_allowed`, `invalid`, `not_found`, `stale`, `duplicate_date`.
 
-**First schedule:** a school with no versions gets its first one automatically when the first slot is added. It's named "Current" and starts today.
+**First schedule:** a school with no versions gets its first one automatically when the first slot is added. It has no name (the app shows "Current schedule") and starts today.
 
 ### 2d. Read helper
 
@@ -186,9 +186,21 @@ The app reads the tables directly (through RLS). One small function, `schedule_t
 
 - **Merge size:** main moved a lot (20+ commits). Catching up may hit conflicts in shared files; these are fixed on this branch only.
 - **Time zone:** "today" must be Massachusetts time on both the app and the database, or the switch to a new schedule could happen at the wrong hour. `schedule_today()` and tests cover this.
-- **Testing changes:** Q1 (a) replaces Testing's delete function (from 0003) inside 0005, so 0003's tests are re-run against the new version and new tests cover the slot count.
+- **Testing changes:** none in the database (see the note in 2c). In S2, Testing's delete dialog gets one extra read (the slot count) and one sentence. If slots are added between that count and the delete, the dialog's number could be low by those slots; they are still removed and logged.
 
 ## 8. Progress log
 
 - 2026-10-17 — Draft written. Q1–Q3 answered by Jeffrey.
 - 2026-10-17 — S0: main brought into this branch (Jeffrey ran the merge in the terminal); the rulebook conflict was resolved, giving v0.87 = main v0.83 + new students v0.84–v0.87.
+- 2026-10-17 — S1: `0005_schedule.sql`, `0005_tests.sql` and `0005_fingerprints.sql` written, and `run.mjs` runs them (before and after seed, after re-runs, on the upgrade path). 54/54 checks pass; a deliberately broken rule was caught. Independent security review: no High findings.
+- **Fixed after the review:**
+  - The Medium finding (tests for every shut-out session type on all three tables).
+  - "Today" now uses the wall clock (the midnight race).
+  - The two helpers now run as security invoker, with a note on why `schedule_today()` is open to any signed-in session.
+  - The fingerprints now cover constraints, policies and function kinds (62 rows).
+  - Tests added: batch-id and tag clearing, and staff reading versions and colors.
+- **Accepted as designed:**
+  - Deleting a class in Testing also removes its slots from past schedules. The history keeps them (decision Q1).
+  - The slot count in Testing's dialog isn't re-checked on the server.
+  - Class colors have no "someone else changed it" check (last save wins; both are logged).
+- 54/54 checks pass.
