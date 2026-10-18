@@ -329,6 +329,8 @@ code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
 .cacts{display:flex;gap:8px;margin-bottom:12px}
 .psec{font-size:12px;color:var(--text2);margin:12px 0 4px}
 .kv{display:flex;align-items:center;gap:8px;min-height:32px;border-top:1px solid var(--border);font-size:13px}
+.r3{outline:2px solid #EF9F27;outline-offset:2px;border-radius:6px}
+.cwarn{display:flex;gap:6px;align-items:flex-start;background:var(--warn-tint);color:var(--warn);border-radius:6px;padding:6px 8px;font-size:12px;margin:4px 0 8px}
 .touch .kv{min-height:44px}
 .kv .k{width:88px;flex:none;font-size:12px;color:var(--text2)}
 .kv .v{flex:1;min-width:0}
@@ -362,7 +364,7 @@ code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
 <body>
 <main>
 <h1>Prospects — mockups for approval</h1>
-<p class="lead">Jae H. Jeong's U.S. Taekwondo Center · New students, step 4: prospects list · guidelines v0.139 · October 17, 2026 · revision 2 (your 13 details applied)</p>
+<p class="lead">Jae H. Jeong's U.S. Taekwondo Center · New students, step 4: prospects list · guidelines v0.139 · October 17, 2026 · revision 2 (your 13 details applied) · <b>revision 3 (Oct 18): screen 10 adds what the Forms work changed</b></p>
 <div class="banner"><i class="ti ti-alert-triangle"></i><div><b>Design only — not a working app.</b> Nothing here is built or deployed. Screens are shown at PC (1024×800), tablet held upright (768×1024) and phone (375px). <b>All names and numbers are made-up samples.</b> "Today" is pretended to be Monday, January 11, 2027.</div></div>
 
 <div class="okbox">
@@ -443,6 +445,26 @@ function avaPanel(o={}){return `<h4>Ava R., 10</h4><div class="who">Kim Ruiz (mo
  <div class="logi">Left voicemail, will try again Monday.<div class="m">Jan 10 · Front Desk</div></div>
  <div class="logi">Signed up online, booked Mon 4:00.<div class="m">Jan 8 · from the form</div></div>
  <div class="psec">Form answers and waiver</div><div class="kv"><span class="v">7 answers · waiver signed Jan 8</span><i class="ti ti-chevron-right"></i></div>`;}
+
+function panel3(o={}){return `<h4>Max R., 7</h4><div class="who">Kim Ruiz (mom) · from "Free class — Instagram" · Jan 8</div>
+ <div class="cacts"><button class="btn btn-sm"><i class="ti ti-phone"></i>Call</button><button class="btn btn-sm"><i class="ti ti-message"></i>Text</button><button class="btn btn-sm"><i class="ti ti-mail"></i>Email</button></div>
+ <div class="kv"><span class="k">Status</span><span class="v"><span class="st">Booked</span></span><i class="ti ti-chevron-down"></i></div>
+ <div class="kv"><span class="k">Follow up</span><span class="v">—</span><i class="ti ti-clock-hour-4"></i></div>
+ <div class="r3"><div class="kv"><span class="k">Free class</span><span class="v">Mon Jan 11 · 5:00 · Group A</span></div>
+ <div class="cwarn"><i class="ti ti-alert-triangle"></i><span>Class cancelled (Snow storm) — call the family</span></div>
+ <div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn btn-sm"><i class="ti ti-calendar-event"></i>Change time</button><button class="btn btn-sm">Cancel booking</button></div></div>
+ <div class="kv"><span class="k">Phone</span><span class="v">(508) 555-0177</span></div>
+ <div class="kv"><span class="k">Sibling</span><span class="v">Ava R., 10 · Contacted</span><i class="ti ti-chevron-right"></i></div>
+ ${o.dup?`<div class="kv r3"><span class="k">Also</span><span class="v"><i class="ti ti-link"></i> Same phone as Leo R., 6 · Walk-in, Dec 2</span><i class="ti ti-chevron-right"></i></div>`:''}
+ <div class="psec">Notes and calls</div><div class="addnote">Add a note…</div>
+ <div class="logi">Class cancelled by the closure "Snow storm" — booking kept.<div class="m">Jan 10 · Calendar</div></div>
+ <div class="psec">Form answers and waiver</div><div class="kv r3"><span class="v">7 answers · waiver <b style="font-weight:500">signed Jan 8</b> · picture kept until Apr 11</span><i class="ti ti-chevron-right"></i></div>`;}
+function noTime(){return `<h4>Leo R., 6</h4><div class="who">Kim Ruiz (mom) · from "Walk-in" · Dec 2 · Entered by Front Desk</div>
+ <div class="cacts"><button class="btn btn-sm"><i class="ti ti-phone"></i>Call</button><button class="btn btn-sm"><i class="ti ti-message"></i>Text</button><button class="btn btn-sm"><i class="ti ti-mail"></i>Email</button></div>
+ <div class="kv"><span class="k">Status</span><span class="v"><span class="st">New</span></span><i class="ti ti-chevron-down"></i></div>
+ <div class="r3"><div class="kv"><span class="k">Free class</span><span class="v">No time yet — call to set one up</span></div>
+ <div style="margin:4px 0 8px"><button class="btn btn-sm btn-primary"><i class="ti ti-calendar-plus"></i>Book a free class</button></div></div>
+ <div class="psec">Form answers and waiver</div><div class="kv r3"><span class="v">4 answers · waiver <b style="font-weight:500">signed Dec 2</b> · picture kept until Mar 2, then "Signed on Dec 2"</span><i class="ti ti-chevron-right"></i></div>`;}
 function main(dev,o={}){const sel=o.stage, list=sel?P[sel]:P.today;
  if(dev==='ph') return head({ph:1})+`<div class="tiles">${STAGES.map(([n,c])=>`<div class="tile${sel===n?' on':''}"><b>${c}</b><span>${n}</span></div>`).join('')}<div class="tile${sel?'':' due'}"><b>3</b><span>Today</span></div></div>${list.map(r=>`<div class="pcard"><div class="g"><div class="l1">${r[0]} · ${r[1]}</div><div class="l2">${r[2]}${r[3]!=='—'?' · '+r[3]:''}</div></div><span class="st ${r[5]}">${r[4]}</span></div>`).join('')}`;
  if(dev==='tab') return head()+pipe(sel)+chips(sel?'':'today','tab')+`<div class="pbody" style="flex-direction:column">${rows(list,{sel:o.sel})}${o.panel?`<div class="ppanel" style="width:auto;flex:1">${o.panel}</div>`:''}</div>`;
@@ -488,7 +510,16 @@ function screens(){return [
 <div class="explain"><h3>What it does</h3><ul><li>Click the green "Joined" stage to see everyone who joined, newest first, with when they came and when they joined.</li><li>Joined prospects are never deleted automatically. When a Students section is built, they can be moved over.</li></ul></div>
 <div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',main('pc',{stage:'Joined'}))}</div>`
 ,
-`<h2 id="s9">9. Switcher on Both</h2><p class="lead">Each school keeps its own prospects. On Both they're shown one after the other, never mixed.</p><div class="explain"><h3>What it does</h3><ul><li>A Worcester section (its own pipeline bar, chips and list), then a Shrewsbury section below it. Scroll to see the second school.</li><li>Opening someone opens the side panel as usual. "+ Add prospect" asks which school first.</li></ul></div><div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',head()+`<div class="schoolh"><i class="ti ti-map-pin"></i>Worcester</div>`+pipe()+chips('today','tab')+'<div class="pbody" style="flex:none">'+rows(P.today)+'</div>'+`<div class="schoolh" style="margin-top:20px"><i class="ti ti-map-pin"></i>Shrewsbury</div><div class="pipe">${[['New',1],['Contacted',0],['Booked',2],['Came',1],['Joined',3]].map(([n,c])=>`<div class="stg${n==='Joined'?' j':''}"><div class="n">${c}</div><div class="l">${n}</div><div class="bar" style="width:${c*22}%"></div></div>`).join('')}</div>`,{loc:'Both'})}</div>`
+`<h2 id="s9">9. Switcher on Both</h2><p class="lead">Each school keeps its own prospects. On Both they're shown one after the other, never mixed.</p><div class="explain"><h3>What it does</h3><ul><li>A Worcester section (its own pipeline bar, chips and list), then a Shrewsbury section below it. Scroll to see the second school.</li><li>Opening someone opens the side panel as usual. "+ Add prospect" asks which school first.</li></ul></div><div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',head()+`<div class="schoolh"><i class="ti ti-map-pin"></i>Worcester</div>`+pipe()+chips('today','tab')+'<div class="pbody" style="flex:none">'+rows(P.today)+'</div>'+`<div class="schoolh" style="margin-top:20px"><i class="ti ti-map-pin"></i>Shrewsbury</div><div class="pipe">${[['New',1],['Contacted',0],['Booked',2],['Came',1],['Joined',3]].map(([n,c])=>`<div class="stg${n==='Joined'?' j':''}"><div class="n">${c}</div><div class="l">${n}</div><div class="bar" style="width:${c*22}%"></div></div>`).join('')}</div>`,{loc:'Both'})}</div>`,
+`<h2 id="s10">10. Revision 3 — what the Forms work changed (outlined in amber)</h2><p class="lead">Small additions to the side panel, from decisions made while building Forms (rulebook v0.145, v0.146, v0.172). Everything else above stays as approved.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li><b>Cancelled class:</b> a booked free class whose class was cancelled later (a closure or a Schedule change) stays booked and shows amber "Class cancelled — call the family" (v0.145 answer 6). The timeline says what cancelled it.</li>
+<li><span class="prop">proposed (Q2)</span> <b>Book / Change time / Cancel booking</b> from the panel, using the same open times and spot limits as the form. A family that chose "No time yet" gets <b>Book a free class</b>.</li>
+<li><b>Waiver:</b> the signature picture is kept until 90 days after the free class, then deleted; the panel then shows "signed on &lt;date&gt;" (v0.146).</li>
+<li><span class="prop">proposed (Q4)</span> <b>Same family twice:</b> a line "Same phone as Leo R." (<code>ti-link</code>, not a warning) links to the other prospect. Nothing is merged.</li><li><b>Cancel booking</b> frees the spot and shows a toast with Undo (it is not a delete, so it is not red).</li><li>Tablet sample: Leo, a walk-in with no time yet, gets <b>Book a free class</b>.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · Max's free class was cancelled by the snow storm</div><div class="scroller">${frame('pc',main('pc',{stage:'Booked',sel:1,panel:panel3({dup:1})}))}</div>
+<div class="cap"><i class="ti ti-device-tablet"></i>Tablet · a walk-in who picked "No time yet"</div><div class="scroller">${frame('tab',main('tab',{panel:noTime()+'<div class="psec">Notes and calls</div><div class="addnote">Add a note…</div>'}))}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone · full-screen panel</div><div class="scroller">${frame('ph','',{overlay:`<div class="fullscreen touch"><div class="head"><span class="tap"><i class="ti ti-arrow-left"></i></span>Max R., 7</div><div class="fbody"><div class="ppanel" style="width:auto;border:none;padding:0">${panel3()}</div></div></div>`})}</div>`
 ].join('');}
 document.getElementById('screens').innerHTML=screens();
 </script>
