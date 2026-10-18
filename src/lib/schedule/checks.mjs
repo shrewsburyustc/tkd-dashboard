@@ -104,7 +104,7 @@ const classes = [
   { id: randomUUID(), location_code: 'shrewsbury', name: 'White', position: 0 },
 ];
 const [W1, W2, S1] = classes.map((c) => c.id);
-let store = { schema: 1, versions: [], slots: [], colors: [] };
+let store = { schema: 2, versions: [], slots: [], colors: [] };
 const backend = createScheduleBackend({
   loadStore: () => store,
   saveStore: (s) => {
@@ -119,7 +119,7 @@ const staff = { signedIn: true, hasDataAccess: true, isAdmin: false, actorName: 
 const locked = { signedIn: true, hasDataAccess: false, isAdmin: true, actorName: 'Admin' };
 const call = (name, args, ctx = admin) => backend.rpc(name, args, ctx).data;
 const add = (args, ctx) =>
-  call('schedule_add_slots', { p_location_code: 'worcester', p_version_id: null, p_class_id: W1, p_weekdays: [1, 3], p_starts_at: '16:00', p_ends_at: '16:45', ...args }, ctx);
+  call('schedule_add_slots', { p_location_code: 'worcester', p_version_id: null, p_class_ids: [W1], p_weekdays: [1, 3], p_starts_at: '16:00', p_ends_at: '16:45', ...args }, ctx);
 
 let currentId;
 let slotId;
@@ -149,26 +149,29 @@ group('mock: first schedule, input rules, overlaps', () => {
     { p_weekdays: [] },
     { p_weekdays: [8] },
     { p_weekdays: [2, 2] },
-    { p_class_id: S1 },
+    { p_class_ids: [S1] },
+    { p_class_ids: [] },
+    { p_class_ids: [W1, W1] },
+    { p_class_ids: [W1, S1] },
   ]) {
     assert.equal(add({ p_version_id: currentId, ...bad }).status, 'invalid', JSON.stringify(bad));
   }
-  assert.equal(add({ p_version_id: currentId, p_class_id: randomUUID() }).status, 'stale');
-  const o = add({ p_version_id: currentId, p_class_id: W2, p_weekdays: [1], p_starts_at: '16:30', p_ends_at: '17:15' });
+  assert.equal(add({ p_version_id: currentId, p_class_ids: [randomUUID()] }).status, 'stale');
+  const o = add({ p_version_id: currentId, p_class_ids: [W2], p_weekdays: [1], p_starts_at: '16:30', p_ends_at: '17:15' });
   assert.equal(o.status, 'ok');
   assert.equal(o.overlaps.length, 1);
   assert.equal(o.overlaps[0].class_name, 'White');
 });
 
 group('mock: edit, stale, remove', () => {
-  assert.equal(call('schedule_update_slot', { p_slot_id: slotId, p_expected_version: 9, p_class_id: W1, p_weekday: 1, p_starts_at: '16:00', p_ends_at: '16:50' }).status, 'stale');
-  const same = call('schedule_update_slot', { p_slot_id: slotId, p_expected_version: 1, p_class_id: W1, p_weekday: 1, p_starts_at: '16:00', p_ends_at: '16:45' });
+  assert.equal(call('schedule_update_slot', { p_slot_id: slotId, p_expected_version: 9, p_class_ids: [W1], p_weekday: 1, p_starts_at: '16:00', p_ends_at: '16:50' }).status, 'stale');
+  const same = call('schedule_update_slot', { p_slot_id: slotId, p_expected_version: 1, p_class_ids: [W1], p_weekday: 1, p_starts_at: '16:00', p_ends_at: '16:45' });
   assert.equal(same.version, 1); // unchanged → same version
-  const changed = call('schedule_update_slot', { p_slot_id: slotId, p_expected_version: 1, p_class_id: W2, p_weekday: 1, p_starts_at: '16:00', p_ends_at: '16:50' });
+  const changed = call('schedule_update_slot', { p_slot_id: slotId, p_expected_version: 1, p_class_ids: [W2], p_weekday: 1, p_starts_at: '16:00', p_ends_at: '16:50' });
   assert.equal(changed.version, 2);
   const removed = call('schedule_remove_slot', { p_slot_id: slotId, p_expected_version: 2 });
   assert.equal(removed.status, 'ok');
-  assert.deepEqual(removed.removed, { version_id: currentId, class_id: W2, weekday: 1, starts_at: '16:00', ends_at: '16:50' });
+  assert.deepEqual(removed.removed, { version_id: currentId, class_ids: [W2], weekday: 1, starts_at: '16:00', ends_at: '16:50' });
   assert.equal(call('schedule_remove_slot', { p_slot_id: slotId, p_expected_version: 2 }).status, 'not_found');
 });
 
@@ -193,10 +196,24 @@ group('mock: planning, moving and deleting schedules', () => {
 group('mock: past schedules are read-only', () => {
   const pastId = randomUUID();
   store.versions.push({ id: pastId, location_code: 'worcester', name: null, starts_on: '2026-01-05', version: 1 });
-  store.slots.push({ id: randomUUID(), version_id: pastId, location_code: 'worcester', class_id: W1, weekday: 4, starts_at: '18:00:00', ends_at: '18:45:00', version: 1 });
+  store.slots.push({ id: randomUUID(), version_id: pastId, location_code: 'worcester', class_ids: [W1], weekday: 4, starts_at: '18:00:00', ends_at: '18:45:00', version: 1 });
   const pastSlot = store.slots[store.slots.length - 1].id;
   assert.equal(add({ p_version_id: pastId }).status, 'not_allowed');
   assert.equal(call('schedule_remove_slot', { p_slot_id: pastSlot, p_expected_version: 1 }).status, 'not_allowed');
+});
+
+group('mock: combined classes (v0.88)', () => {
+  const r = add({ p_version_id: currentId, p_class_ids: [W2, W1], p_weekdays: [2], p_starts_at: '07:00', p_ends_at: '07:45' });
+  assert.equal(r.status, 'ok');
+  const id = r.slots[0].id;
+  const rows = backend.select('schedule_slot_classes', 'slot_id, class_id, position', [{ col: 'slot_id', value: id }], [], admin).data;
+  assert.deepEqual(rows.map((x) => x.class_id), [W2, W1]);
+  const o = add({ p_version_id: currentId, p_class_ids: [W1], p_weekdays: [2], p_starts_at: '07:30', p_ends_at: '08:00' });
+  assert.equal(o.overlaps[0].class_name, 'Group A + White');
+  const changed = call('schedule_update_slot', { p_slot_id: id, p_expected_version: 1, p_class_ids: [W1], p_weekday: 2, p_starts_at: '07:00', p_ends_at: '07:45' });
+  assert.equal(changed.version, 2); // only the classes changed: still a new version
+  assert.equal(call('schedule_update_slot', { p_slot_id: id, p_expected_version: 1, p_class_ids: [W1, W2], p_weekday: 2, p_starts_at: '07:00', p_ends_at: '07:45' }).status, 'stale');
+  assert.equal(backend.select('schedule_slots', 'class_ids', [], [], admin).error.code, '42501'); // not readable
 });
 
 group('mock: colors, and a deleted class takes its slots with it', () => {
@@ -204,9 +221,14 @@ group('mock: colors, and a deleted class takes its slots with it', () => {
   assert.equal(call('schedule_set_class_color', { p_class_id: W1, p_color: 'teal' }).version, 1);
   assert.equal(call('schedule_set_class_color', { p_class_id: W1, p_color: 'teal' }).version, 1);
   assert.equal(call('schedule_set_class_color', { p_class_id: W1, p_color: 'purple' }).version, 2);
+  const before = backend.select('schedule_slots', 'id', [], [], admin).data.length;
   classes.splice(0, 1); // "delete" White in Testing
-  const rows = backend.select('schedule_slots', 'id, class_id', [], [], admin).data;
+  const rows = backend.select('schedule_slot_classes', 'slot_id, class_id', [], [], admin).data;
   assert.ok(rows.every((r) => r.class_id !== W1));
+  // slots that were ONLY White are gone; the others keep their other classes
+  const slots = backend.select('schedule_slots', 'id', [], [], admin).data;
+  assert.ok(slots.length < before);
+  assert.ok(slots.every((s) => rows.some((r) => r.slot_id === s.id)));
   assert.deepEqual(backend.select('schedule_class_colors', 'class_id', [], [], admin).data, []);
 });
 

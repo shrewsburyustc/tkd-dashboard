@@ -25,7 +25,9 @@ const KNOWN_LOCATIONS = new Set(['worcester', 'shrewsbury']);
 
 // The columns the app may read (the database refuses select('*') on purpose).
 const VERSION_COLUMNS = 'id, location_code, name, starts_on, version, created_at, updated_at, created_by_name, updated_by_name';
-const SLOT_COLUMNS = 'id, version_id, location_code, class_id, weekday, starts_at, ends_at, version, updated_at, updated_by_name';
+const SLOT_COLUMNS = 'id, version_id, location_code, weekday, starts_at, ends_at, version, updated_at, updated_by_name';
+// Which class(es) each slot is for — one, or several taught together (v0.88).
+const SLOT_CLASS_COLUMNS = 'slot_id, class_id, position';
 const COLOR_COLUMNS = 'id, class_id, location_code, color, version';
 const CLASS_COLUMNS = 'id, name, position';
 
@@ -45,11 +47,11 @@ function toVersion(row) {
   };
 }
 
-function toSlot(row) {
+function toSlot(row, classIds) {
   return {
     id: row.id,
     versionId: row.version_id,
-    classId: row.class_id,
+    classIds, // in the order the admin ticked them
     weekday: row.weekday,
     start: parseTime(row.starts_at),
     end: parseTime(row.ends_at),
@@ -67,28 +69,37 @@ export async function loadSchedule(locationCode) {
   try {
     if (!KNOWN_LOCATIONS.has(locationCode)) return failure(new Error(`Unknown school: ${locationCode}`));
     if (!supabase) return failure(new Error('No connection is set up'));
-    const [versionRes, slotRes, colorRes, classRes, todayRes, accessRes] = await Promise.all([
+    const [versionRes, slotRes, slotClassRes, colorRes, classRes, todayRes, accessRes] = await Promise.all([
       supabase.from('schedule_versions').select(VERSION_COLUMNS).eq('location_code', locationCode).order('starts_on', { ascending: true }),
       supabase.from('schedule_slots').select(SLOT_COLUMNS).eq('location_code', locationCode).order('starts_at', { ascending: true }),
+      supabase.from('schedule_slot_classes').select(SLOT_CLASS_COLUMNS).eq('location_code', locationCode).order('position', { ascending: true }),
       supabase.from('schedule_class_colors').select(COLOR_COLUMNS).eq('location_code', locationCode),
       supabase.from('testing_classes').select(CLASS_COLUMNS).eq('location_code', locationCode).order('position', { ascending: true }),
       supabase.rpc('schedule_today'),
       supabase.rpc('has_data_access'),
     ]);
     if (!accessRes?.error && accessRes?.data === false) return { status: 'no_access' };
-    for (const res of [accessRes, versionRes, slotRes, colorRes, classRes, todayRes]) {
+    for (const res of [accessRes, versionRes, slotRes, slotClassRes, colorRes, classRes, todayRes]) {
       if (res?.error) return failure(res.error);
     }
     if (accessRes?.data !== true) return unexpected('has_data_access');
-    if (![versionRes, slotRes, colorRes, classRes].every((r) => Array.isArray(r?.data))) return unexpected('the schedule tables');
+    if (![versionRes, slotRes, slotClassRes, colorRes, classRes].every((r) => Array.isArray(r?.data))) return unexpected('the schedule tables');
     if (typeof todayRes?.data !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(todayRes.data)) return unexpected('schedule_today');
 
     const colors = Object.fromEntries(colorRes.data.map((row) => [row.class_id, row.color]));
+    const classesBySlot = new Map();
+    for (const row of [...slotClassRes.data].sort((a, b) => a.position - b.position)) {
+      if (!classesBySlot.has(row.slot_id)) classesBySlot.set(row.slot_id, []);
+      classesBySlot.get(row.slot_id).push(row.class_id);
+    }
     return {
       status: 'ok',
       today: todayRes.data,
       versions: versionRes.data.map(toVersion),
-      slots: slotRes.data.map(toSlot).filter((s) => s.start !== null && s.end !== null),
+      // (A slot with no class rows — e.g. caught between two reads while a class was deleted — is left out.)
+      slots: slotRes.data
+        .map((row) => toSlot(row, classesBySlot.get(row.id) ?? []))
+        .filter((s) => s.start !== null && s.end !== null && s.classIds.length > 0),
       classes: classRes.data.map((row) => ({ id: row.id, name: row.name, position: row.position })),
       colors,
     };
@@ -97,14 +108,14 @@ export async function loadSchedule(locationCode) {
   }
 }
 
-// How many time slots a class has on any schedule (Testing's delete dialog says so, Q1).
+// How many time slots a class is in, on any schedule (Testing's delete dialog says so, Q1).
 // Returns { status:'ok', count } — or the usual failure statuses.
 export async function countSlotsForClass(classId) {
   try {
     if (!supabase) return failure(new Error('No connection is set up'));
-    const res = await supabase.from('schedule_slots').select('id').eq('class_id', classId);
+    const res = await supabase.from('schedule_slot_classes').select('slot_id').eq('class_id', classId);
     if (res?.error) return failure(res.error);
-    if (!Array.isArray(res?.data)) return unexpected('schedule_slots');
+    if (!Array.isArray(res?.data)) return unexpected('schedule_slot_classes');
     return { status: 'ok', count: res.data.length };
   } catch (error) {
     return failure(error);
@@ -133,20 +144,22 @@ const readOverlaps = (list) =>
     ? list.map((o) => ({
         slotId: o.slot_id,
         weekday: o.weekday,
-        className: o.class_name,
+        classIds: o.class_ids ?? [],
+        className: o.class_name, // "White + Little Tiger" for a combined slot
         start: parseTime(o.starts_at),
         end: parseTime(o.ends_at),
       }))
     : null;
 
 // versionId null = the school's FIRST schedule (made by the database, starting today).
-export async function addSlots({ locationCode, versionId, classId, weekdays, start, end }) {
+// classIds: one class, or several taught together (v0.88).
+export async function addSlots({ locationCode, versionId, classIds, weekdays, start, end }) {
   return callRpc(
     'schedule_add_slots',
     {
       p_location_code: locationCode,
       p_version_id: versionId,
-      p_class_id: classId,
+      p_class_ids: classIds,
       p_weekdays: weekdays,
       p_starts_at: toTimeText(start),
       p_ends_at: toTimeText(end),
@@ -159,13 +172,13 @@ export async function addSlots({ locationCode, versionId, classId, weekdays, sta
   );
 }
 
-export async function updateSlot({ slotId, expectedVersion, classId, weekday, start, end }) {
+export async function updateSlot({ slotId, expectedVersion, classIds, weekday, start, end }) {
   return callRpc(
     'schedule_update_slot',
     {
       p_slot_id: slotId,
       p_expected_version: expectedVersion,
-      p_class_id: classId,
+      p_class_ids: classIds,
       p_weekday: weekday,
       p_starts_at: toTimeText(start),
       p_ends_at: toTimeText(end),
@@ -174,15 +187,15 @@ export async function updateSlot({ slotId, expectedVersion, classId, weekday, st
   );
 }
 
-// Returns what was removed (for Undo): { versionId, classId, weekday, start, end }.
+// Returns what was removed (for Undo): { versionId, classIds, weekday, start, end }.
 export async function removeSlot({ slotId, expectedVersion }) {
   return callRpc('schedule_remove_slot', { p_slot_id: slotId, p_expected_version: expectedVersion }, (d) => {
     const r = d.removed;
-    if (!r || !isText(r.version_id) || !isText(r.class_id) || !isInt(r.weekday)) return null;
+    if (!r || !isText(r.version_id) || !Array.isArray(r.class_ids) || !r.class_ids.every(isText) || !isInt(r.weekday)) return null;
     const start = parseTime(r.starts_at);
     const end = parseTime(r.ends_at);
     if (start === null || end === null) return null;
-    return { removed: { versionId: r.version_id, classId: r.class_id, weekday: r.weekday, start, end } };
+    return { removed: { versionId: r.version_id, classIds: r.class_ids, weekday: r.weekday, start, end } };
   });
 }
 

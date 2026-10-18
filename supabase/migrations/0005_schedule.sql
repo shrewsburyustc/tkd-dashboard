@@ -21,6 +21,9 @@
 --                                     ("Current", "Winter", ...), with the
 --                                     date it starts
 --   2. public.schedule_slots        - the time slots inside a schedule
+--   2b. public.schedule_slot_classes - which class(es) each time slot is for:
+--                                     one, or several taught together
+--                                     ("White + Little Tiger", v0.88)
 --   3. public.schedule_class_colors - the color of each class on the
 --                                     schedule (kept apart from Testing's
 --                                     tables so Testing doesn't change)
@@ -38,14 +41,16 @@
 --      + internal helpers the app cannot call (schedule_before_write,
 --        schedule_refuse_truncate, schedule_time_is_valid,
 --        schedule_name_is_valid, schedule_weekdays_are_valid,
+--        schedule_class_ids_are_valid, schedule_slot_classes_cleanup,
 --        schedule_version_state, schedule_overlaps)
 --
 -- WHAT IT DOES NOT CHANGE
 --   Testing's tables and functions (0003) are not touched. When an admin
 --   deletes a class in Testing, its time slots and its color go with it
---   automatically ("on delete cascade" below) and each removed row is
---   still written to change_log, tagged with Testing's 'delete_class'
---   action. The Testing delete dialog counts the slots first (front end)
+--   automatically ("on delete cascade" below; a combined slot just loses
+--   that class, and a slot left with no class is removed) and each
+--   removed row is still written to change_log, tagged with Testing's
+--   'delete_class' action. The Testing delete dialog counts the slots first (front end)
 --   so it can say what will be removed (decision Q1, build plan section 6).
 --
 -- HOW TO RUN IT
@@ -79,6 +84,18 @@
 -- =====================================================================
 
 begin;
+
+-- Guard (security re-check, v0.88): an EARLIER trial copy of this file had schedule_slots.class_id
+-- (one class per slot). "create table if not exists" below would keep that old shape, so stop
+-- here with a clear message instead of half-working. 0005 was never applied to production.
+do $$
+begin
+  if exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'schedule_slots' and column_name = 'class_id') then
+    raise exception 'schedule_slots still has the old class_id column from a trial copy of 0005. Ask Claude before going on.';
+  end if;
+end;
+$$;
 
 
 -- ---------------------------------------------------------------------
@@ -138,6 +155,22 @@ as $$
 $$;
 
 revoke execute on function public.schedule_weekdays_are_valid(smallint[]) from public, anon, authenticated, service_role;
+
+-- 1d. schedule_class_ids_are_valid(ids)
+-- The class(es) of a time slot: 1 to 10 ids, none empty, none twice.
+create or replace function public.schedule_class_ids_are_valid(p_ids uuid[])
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $$
+  select p_ids is not null
+     and cardinality(p_ids) between 1 and 10
+     and array_position(p_ids, null) is null
+     and (select count(distinct x) from unnest(p_ids) as t(x)) = cardinality(p_ids);
+$$;
+
+revoke execute on function public.schedule_class_ids_are_valid(uuid[]) from public, anon, authenticated, service_role;
 
 
 -- ---------------------------------------------------------------------
@@ -201,23 +234,28 @@ comment on table public.schedule_versions is
 
 -- ---------------------------------------------------------------------
 -- 4. public.schedule_slots
--- One class group, one weekday, start and end time, inside one schedule.
+-- One weekday, start and end time, inside one schedule. WHICH class(es)
+-- it is for lives in schedule_slot_classes (4b) - one class, or several
+-- taught together (v0.88).
 --   * (version_id, location_code) -> schedule_versions: removing a
 --     planned schedule removes its slots.
---   * (class_id, location_code) -> testing_classes (0003): the class must
---     be in the same school; deleting the class in Testing removes its
---     slots (decision Q1).
---   * overlaps are allowed (two mats); the app warns, the database
---     doesn't block.
+--   * class_set: the slot's class ids, in order, joined (kept by the
+--     functions in section 9 and the cleanup trigger 6a2). Not readable by the app; it exists so that
+--     changing only the classes still counts as a change of the slot:
+--     its version goes up and another admin's open dialog becomes stale.
+--   * (id, location_code) unique: lets slot classes point at "this slot
+--     IN THIS SCHOOL".
+--   * overlaps between DIFFERENT slots are allowed (two mats); the app
+--     warns, the database doesn't block.
 -- ---------------------------------------------------------------------
 create table if not exists public.schedule_slots (
   id              uuid        not null default gen_random_uuid(),
   version_id      uuid        not null,
   location_code   text        not null,
-  class_id        uuid        not null,
   weekday         smallint    not null,
   starts_at       time        not null,
   ends_at         time        not null,
+  class_set       text        not null default '',
   version         integer     not null default 1,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now(),
@@ -230,19 +268,59 @@ create table if not exists public.schedule_slots (
   constraint schedule_slots_version_fk
     foreign key (version_id, location_code)
     references public.schedule_versions (id, location_code) on delete cascade,
-  constraint schedule_slots_class_fk
-    foreign key (class_id, location_code)
-    references public.testing_classes (id, location_code) on delete cascade,
   constraint schedule_slots_weekday_check check (weekday between 1 and 7),
   constraint schedule_slots_time_check check (coalesce(public.schedule_time_is_valid(starts_at, ends_at), false)),
-  constraint schedule_slots_version_check check (version >= 1)
+  constraint schedule_slots_version_check check (version >= 1),
+  constraint schedule_slots_id_location_key unique (id, location_code)
 );
 
 create index if not exists schedule_slots_version_idx on public.schedule_slots (version_id, weekday, starts_at);
-create index if not exists schedule_slots_class_idx   on public.schedule_slots (class_id);
 
 comment on table public.schedule_slots is
-  'Time slots of a schedule: class group + weekday (1 Mon .. 7 Sun) + start/end. Written only through the schedule_* functions.';
+  'Time slots of a schedule: weekday (1 Mon .. 7 Sun) + start/end. Their class(es) are in schedule_slot_classes. Written only through the schedule_* functions.';
+
+
+-- ---------------------------------------------------------------------
+-- 4b. public.schedule_slot_classes
+-- The class(es) of each time slot, in the order the admin ticked them
+-- (position 0, 1 ...). One row = "this class is taught in this slot".
+--   * (slot_id, location_code) -> schedule_slots: removing a slot
+--     removes its rows.
+--   * (class_id, location_code) -> testing_classes (0003): the class must
+--     be in the same school; deleting the class in Testing removes its
+--     rows (decision Q1). A slot left with NO class is then removed too
+--     (trigger 6a2).
+-- ---------------------------------------------------------------------
+create table if not exists public.schedule_slot_classes (
+  id              uuid        not null default gen_random_uuid(),
+  slot_id         uuid        not null,
+  location_code   text        not null,
+  class_id        uuid        not null,
+  position        smallint    not null,
+  version         integer     not null default 1,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now(),
+  created_by      uuid        null,
+  updated_by      uuid        null,
+  created_by_name text        not null,
+  updated_by_name text        not null,
+
+  constraint schedule_slot_classes_pkey primary key (id),
+  constraint schedule_slot_classes_slot_fk
+    foreign key (slot_id, location_code)
+    references public.schedule_slots (id, location_code) on delete cascade,
+  constraint schedule_slot_classes_class_fk
+    foreign key (class_id, location_code)
+    references public.testing_classes (id, location_code) on delete cascade,
+  constraint schedule_slot_classes_slot_class_key unique (slot_id, class_id),
+  constraint schedule_slot_classes_position_check check (position between 0 and 9),
+  constraint schedule_slot_classes_version_check check (version >= 1)
+);
+
+create index if not exists schedule_slot_classes_class_idx on public.schedule_slot_classes (class_id);
+
+comment on table public.schedule_slot_classes is
+  'Which class(es) each time slot is for: one, or several taught together. Written only through the schedule_* functions.';
 
 
 -- ---------------------------------------------------------------------
@@ -282,7 +360,7 @@ comment on table public.schedule_class_colors is
 -- 6. Triggers
 -- ---------------------------------------------------------------------
 
--- 6a. schedule_before_write() - BEFORE INSERT OR UPDATE on all three
+-- 6a. schedule_before_write() - BEFORE INSERT OR UPDATE on all four
 -- tables. Same bookkeeping as 0003's triggers:
 --   insert: version 1; created/updated stamps = now + who
 --   update: id, location_code (and a slot's version_id, a color's
@@ -315,7 +393,10 @@ begin
      or (tg_table_name = 'schedule_slots'
          and (to_jsonb(new) ->> 'version_id') is distinct from (to_jsonb(old) ->> 'version_id'))
      or (tg_table_name = 'schedule_class_colors'
-         and (to_jsonb(new) ->> 'class_id') is distinct from (to_jsonb(old) ->> 'class_id')) then
+         and (to_jsonb(new) ->> 'class_id') is distinct from (to_jsonb(old) ->> 'class_id'))
+     or (tg_table_name = 'schedule_slot_classes'
+         and ((to_jsonb(new) ->> 'slot_id') is distinct from (to_jsonb(old) ->> 'slot_id')
+              or (to_jsonb(new) ->> 'class_id') is distinct from (to_jsonb(old) ->> 'class_id'))) then
     raise exception using
       errcode    = '23514',
       constraint = tg_table_name || '_immutable',
@@ -343,6 +424,33 @@ end;
 $$;
 
 revoke execute on function public.schedule_before_write() from public, anon, authenticated, service_role;
+
+-- 6a2. schedule_slot_classes_cleanup() - AFTER DELETE on slot classes.
+-- When a slot's LAST class goes (e.g. that class was deleted in Testing),
+-- the slot itself is removed: a time slot always has at least one class.
+-- When other classes remain, the slot's class_set is refreshed (so its
+-- version goes up and open dialogs become stale). When the slot itself
+-- is being removed, it is already gone and this finds nothing to do.
+-- Everything is logged like any other change (change_log).
+create or replace function public.schedule_slot_classes_cleanup()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if exists (select 1 from public.schedule_slot_classes c where c.slot_id = old.slot_id) then
+    update public.schedule_slots s
+       set class_set = (select string_agg(c.class_id::text, ',' order by c.position)
+                          from public.schedule_slot_classes c where c.slot_id = old.slot_id)
+     where s.id = old.slot_id;
+  else
+    delete from public.schedule_slots s where s.id = old.slot_id;
+  end if;
+  return null;
+end;
+$$;
+
+revoke execute on function public.schedule_slot_classes_cleanup() from public, anon, authenticated, service_role;
 
 -- 6b. schedule_refuse_truncate() - TRUNCATE would skip the history.
 create or replace function public.schedule_refuse_truncate()
@@ -388,6 +496,26 @@ create trigger schedule_class_colors_log
   after insert or update or delete on public.schedule_class_colors
   for each row execute function public.change_log_write();
 
+drop trigger if exists schedule_slot_classes_before_write on public.schedule_slot_classes;
+create trigger schedule_slot_classes_before_write
+  before insert or update on public.schedule_slot_classes
+  for each row execute function public.schedule_before_write();
+
+drop trigger if exists schedule_slot_classes_log on public.schedule_slot_classes;
+create trigger schedule_slot_classes_log
+  after insert or update or delete on public.schedule_slot_classes
+  for each row execute function public.change_log_write();
+
+drop trigger if exists schedule_slot_classes_cleanup on public.schedule_slot_classes;
+create trigger schedule_slot_classes_cleanup
+  after delete on public.schedule_slot_classes
+  for each row execute function public.schedule_slot_classes_cleanup();
+
+drop trigger if exists schedule_slot_classes_no_truncate on public.schedule_slot_classes;
+create trigger schedule_slot_classes_no_truncate
+  before truncate on public.schedule_slot_classes
+  for each statement execute function public.schedule_refuse_truncate();
+
 drop trigger if exists schedule_versions_no_truncate on public.schedule_versions;
 create trigger schedule_versions_no_truncate
   before truncate on public.schedule_versions
@@ -413,20 +541,25 @@ create trigger schedule_class_colors_no_truncate
 alter table public.schedule_versions     enable row level security;
 alter table public.schedule_slots        enable row level security;
 alter table public.schedule_class_colors enable row level security;
+alter table public.schedule_slot_classes enable row level security;
 
-revoke all on table public.schedule_versions, public.schedule_slots, public.schedule_class_colors
+revoke all on table public.schedule_versions, public.schedule_slots, public.schedule_class_colors,
+                    public.schedule_slot_classes
   from public, anon, authenticated, service_role;
 
 grant select (id, location_code, name, starts_on, version,
               created_at, updated_at, created_by_name, updated_by_name)
   on public.schedule_versions to authenticated;
-grant select (id, version_id, location_code, class_id, weekday, starts_at, ends_at, version,
+grant select (id, version_id, location_code, weekday, starts_at, ends_at, version,
               created_at, updated_at, created_by_name, updated_by_name)
   on public.schedule_slots to authenticated;
 grant select (id, class_id, location_code, color, version,
               created_at, updated_at, created_by_name, updated_by_name)
   on public.schedule_class_colors to authenticated;
--- created_by / updated_by (login ids) are NOT granted.
+grant select (id, slot_id, location_code, class_id, position, version,
+              created_at, updated_at, created_by_name, updated_by_name)
+  on public.schedule_slot_classes to authenticated;
+-- created_by / updated_by (login ids) and schedule_slots.class_set are NOT granted.
 
 drop policy if exists schedule_versions_select_with_access on public.schedule_versions;
 create policy schedule_versions_select_with_access
@@ -436,6 +569,11 @@ create policy schedule_versions_select_with_access
 drop policy if exists schedule_slots_select_with_access on public.schedule_slots;
 create policy schedule_slots_select_with_access
   on public.schedule_slots for select to authenticated
+  using ((select public.has_data_access()));
+
+drop policy if exists schedule_slot_classes_select_with_access on public.schedule_slot_classes;
+create policy schedule_slot_classes_select_with_access
+  on public.schedule_slot_classes for select to authenticated
   using ((select public.has_data_access()));
 
 drop policy if exists schedule_class_colors_select_with_access on public.schedule_class_colors;
@@ -494,11 +632,16 @@ security invoker
 set search_path = ''
 as $$
   select coalesce(jsonb_agg(jsonb_build_object(
-           'slot_id', s.id, 'weekday', s.weekday, 'class_id', s.class_id, 'class_name', c.name,
+           'slot_id', s.id, 'weekday', s.weekday,
+           'class_ids', (select coalesce(jsonb_agg(sc.class_id order by sc.position), '[]'::jsonb)
+                           from public.schedule_slot_classes sc where sc.slot_id = s.id),
+           'class_name', (select coalesce(string_agg(c.name, ' + ' order by sc.position), '')
+                            from public.schedule_slot_classes sc
+                            join public.testing_classes c on c.id = sc.class_id
+                           where sc.slot_id = s.id),
            'starts_at', to_char(s.starts_at, 'HH24:MI'), 'ends_at', to_char(s.ends_at, 'HH24:MI'))
            order by s.weekday, s.starts_at), '[]'::jsonb)
     from public.schedule_slots s
-    join public.testing_classes c on c.id = s.class_id
    where s.version_id = p_version_id
      and s.weekday = any (p_weekdays)
      and s.id is distinct from p_skip_slot
@@ -507,6 +650,52 @@ as $$
 $$;
 
 revoke execute on function public.schedule_overlaps(uuid, smallint[], time, time, uuid) from public, anon, authenticated, service_role;
+
+-- 8-c. schedule_lock_classes(ids, school) -> 'ok' | 'stale' | 'invalid'
+-- Locks the classes "for key share" (none can be deleted until the
+-- calling function has finished; in id order, so two calls never wait on
+-- each other in a circle) and checks them: one that no longer exists ->
+-- stale; one from the other school -> invalid.
+create or replace function public.schedule_lock_classes(p_ids uuid[], p_location_code text)
+returns text
+language plpgsql
+volatile
+security invoker
+set search_path = ''
+as $$
+declare
+  v_found integer;
+  v_other integer;
+begin
+  perform 1 from public.testing_classes c where c.id = any (p_ids) order by c.id for key share;
+  select count(*), count(*) filter (where c.location_code <> p_location_code)
+    into v_found, v_other
+    from public.testing_classes c
+   where c.id = any (p_ids);
+  if v_found < cardinality(p_ids) then
+    return 'stale';
+  end if;
+  if v_other > 0 then
+    return 'invalid';
+  end if;
+  return 'ok';
+end;
+$$;
+
+revoke execute on function public.schedule_lock_classes(uuid[], text) from public, anon, authenticated, service_role;
+
+-- 8-d. schedule_class_set(ids) - the joined form kept in schedule_slots.class_set, IN THE
+-- ORDER GIVEN: changing only the order is a change too (its version goes up; security re-check).
+create or replace function public.schedule_class_set(p_ids uuid[])
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  select coalesce(array_to_string(p_ids, ','), '');
+$$;
+
+revoke execute on function public.schedule_class_set(uuid[]) from public, anon, authenticated, service_role;
 
 
 -- ---------------------------------------------------------------------
@@ -530,18 +719,21 @@ revoke execute on function public.schedule_overlaps(uuid, smallint[], time, time
 --       deadlock / serialization / lock not available -> stale
 -- ---------------------------------------------------------------------
 
--- 9a. schedule_add_slots(p_location_code, p_version_id, p_class_id,
+-- 9a. schedule_add_slots(p_location_code, p_version_id, p_class_ids,
 --                        p_weekdays, p_starts_at, p_ends_at)
--- Adds one time slot per ticked day. p_version_id = which schedule; NULL
--- only for a school that has no schedule yet: then its first one is made
--- automatically, starting today (the app shows it as "Current schedule").
--- Past schedules can't be changed (not_allowed).
+-- Adds one time slot per ticked day, each for the given class(es) - one
+-- class, or several taught together (v0.88). p_version_id = which
+-- schedule; NULL only for a school that has no schedule yet: then its
+-- first one is made automatically, starting today (the app shows it as
+-- "Current schedule"). Past schedules can't be changed (not_allowed).
 -- Ok: {"status":"ok","version_id":...,"slots":[{"id","weekday","version"}...],
 --      "overlaps":[...]}
+-- (The earlier one-class version of this function is removed first.)
+drop function if exists public.schedule_add_slots(text, uuid, uuid, smallint[], time, time);
 create or replace function public.schedule_add_slots(
   p_location_code text,
   p_version_id    uuid,
-  p_class_id      uuid,
+  p_class_ids     uuid[],
   p_weekdays      smallint[],
   p_starts_at     time,
   p_ends_at       time
@@ -554,10 +746,12 @@ set search_path = ''
 as $$
 declare
   v_version_id uuid := p_version_id;
-  v_class_loc  text;
+  v_check      text;
   v_overlaps   jsonb;
-  v_slots      jsonb;
-  v_constraint text;
+  v_slots      jsonb := '[]'::jsonb;
+  v_day        smallint;
+  v_slot_id    uuid;
+  v_slot_ver   integer;
 begin
   begin
     if public.has_data_access() is not true then
@@ -569,7 +763,7 @@ begin
 
     if p_location_code is null
        or not exists (select 1 from public.locations l where l.code = p_location_code)
-       or p_class_id is null
+       or not public.schedule_class_ids_are_valid(p_class_ids)
        or not public.schedule_weekdays_are_valid(p_weekdays)
        or not public.schedule_time_is_valid(p_starts_at, p_ends_at) then
       return jsonb_build_object('status', 'invalid');
@@ -577,17 +771,9 @@ begin
 
     perform 1 from public.locations l where l.code = p_location_code for no key update;
 
-    -- the class: gone -> stale; other school -> invalid. "for key share"
-    -- stops it being deleted until this call has finished.
-    select c.location_code into v_class_loc
-      from public.testing_classes c
-     where c.id = p_class_id
-       for key share;
-    if not found then
-      return jsonb_build_object('status', 'stale');
-    end if;
-    if v_class_loc <> p_location_code then
-      return jsonb_build_object('status', 'invalid');
+    v_check := public.schedule_lock_classes(p_class_ids, p_location_code);
+    if v_check <> 'ok' then
+      return jsonb_build_object('status', v_check);
     end if;
 
     if v_version_id is null then
@@ -620,15 +806,15 @@ begin
     -- overlaps with what was already there (before adding)
     v_overlaps := public.schedule_overlaps(v_version_id, p_weekdays, p_starts_at, p_ends_at, null);
 
-    with ins as (
-      insert into public.schedule_slots (version_id, location_code, class_id, weekday, starts_at, ends_at)
-      select v_version_id, p_location_code, p_class_id, d, p_starts_at, p_ends_at
-        from unnest(p_weekdays) as x(d)
-      returning id, weekday, version
-    )
-    select jsonb_agg(jsonb_build_object('id', id, 'weekday', weekday, 'version', version) order by weekday)
-      into v_slots
-      from ins;
+    for v_day in select d from unnest(p_weekdays) as x(d) order by d loop
+      insert into public.schedule_slots (version_id, location_code, weekday, starts_at, ends_at, class_set)
+      values (v_version_id, p_location_code, v_day, p_starts_at, p_ends_at, public.schedule_class_set(p_class_ids))
+      returning id, version into v_slot_id, v_slot_ver;
+      insert into public.schedule_slot_classes (slot_id, location_code, class_id, position)
+      select v_slot_id, p_location_code, c.id, (c.ord - 1)::smallint
+        from unnest(p_class_ids) with ordinality as c(id, ord);
+      v_slots := v_slots || jsonb_build_array(jsonb_build_object('id', v_slot_id, 'weekday', v_day, 'version', v_slot_ver));
+    end loop;
 
     perform set_config('tkd.action', '', true);
     perform set_config('tkd.batch_id', '', true);
@@ -648,18 +834,19 @@ begin
 end;
 $$;
 
-revoke execute on function public.schedule_add_slots(text, uuid, uuid, smallint[], time, time) from public, anon, authenticated, service_role;
-grant  execute on function public.schedule_add_slots(text, uuid, uuid, smallint[], time, time) to authenticated;
+revoke execute on function public.schedule_add_slots(text, uuid, uuid[], smallint[], time, time) from public, anon, authenticated, service_role;
+grant  execute on function public.schedule_add_slots(text, uuid, uuid[], smallint[], time, time) to authenticated;
 
--- 9b. schedule_update_slot(p_slot_id, p_expected_version, p_class_id,
+-- 9b. schedule_update_slot(p_slot_id, p_expected_version, p_class_ids,
 --                          p_weekday, p_starts_at, p_ends_at)
--- Changes one time slot (class, day, times). Not in a past schedule.
--- Saving unchanged values writes nothing.
+-- Changes one time slot: its class(es), day and times. Not in a past
+-- schedule. Saving unchanged values writes nothing.
 -- Ok: {"status":"ok","id":...,"version":n,"overlaps":[...]}
+drop function if exists public.schedule_update_slot(uuid, integer, uuid, smallint, time, time);
 create or replace function public.schedule_update_slot(
   p_slot_id          uuid,
   p_expected_version integer,
-  p_class_id         uuid,
+  p_class_ids        uuid[],
   p_weekday          smallint,
   p_starts_at        time,
   p_ends_at          time
@@ -674,7 +861,7 @@ declare
   v_loc         text;
   v_version_id  uuid;
   v_version     integer;
-  v_class_loc   text;
+  v_check       text;
   v_new_version integer;
   v_overlaps    jsonb;
 begin
@@ -688,7 +875,7 @@ begin
 
     if p_slot_id is null
        or p_expected_version is null
-       or p_class_id is null
+       or not public.schedule_class_ids_are_valid(p_class_ids)
        or p_weekday is null
        or p_weekday not between 1 and 7
        or not public.schedule_time_is_valid(p_starts_at, p_ends_at) then
@@ -716,15 +903,9 @@ begin
       return jsonb_build_object('status', 'not_allowed');
     end if;
 
-    select c.location_code into v_class_loc
-      from public.testing_classes c
-     where c.id = p_class_id
-       for key share;
-    if not found then
-      return jsonb_build_object('status', 'stale');
-    end if;
-    if v_class_loc <> v_loc then
-      return jsonb_build_object('status', 'invalid');
+    v_check := public.schedule_lock_classes(p_class_ids, v_loc);
+    if v_check <> 'ok' then
+      return jsonb_build_object('status', v_check);
     end if;
 
     v_overlaps := public.schedule_overlaps(v_version_id, array[p_weekday], p_starts_at, p_ends_at, p_slot_id);
@@ -732,23 +913,44 @@ begin
     perform set_config('tkd.action', 'schedule_update_slot', true);
     perform set_config('tkd.batch_id', gen_random_uuid()::text, true);
 
+    -- the slot itself (class_set changes when the classes do, so the
+    -- version goes up then too)
     update public.schedule_slots s
-       set class_id  = p_class_id,
-           weekday   = p_weekday,
+       set weekday   = p_weekday,
            starts_at = p_starts_at,
-           ends_at   = p_ends_at
+           ends_at   = p_ends_at,
+           class_set = public.schedule_class_set(p_class_ids)
      where s.id = p_slot_id
-       and (s.class_id is distinct from p_class_id
-            or s.weekday is distinct from p_weekday
+       and (s.weekday is distinct from p_weekday
             or s.starts_at is distinct from p_starts_at
-            or s.ends_at is distinct from p_ends_at)
+            or s.ends_at is distinct from p_ends_at
+            or s.class_set is distinct from public.schedule_class_set(p_class_ids))
     returning s.version into v_new_version;
+
+    -- its classes: add the new ones first (so the slot is never empty),
+    -- then remove the ones no longer ticked, then put them in order.
+    insert into public.schedule_slot_classes (slot_id, location_code, class_id, position)
+    select p_slot_id, v_loc, c.id, (9 - (c.ord - 1))::smallint
+      from unnest(p_class_ids) with ordinality as c(id, ord)
+     where not exists (select 1 from public.schedule_slot_classes x where x.slot_id = p_slot_id and x.class_id = c.id);
+    delete from public.schedule_slot_classes x
+     where x.slot_id = p_slot_id and not (x.class_id = any (p_class_ids));
+    update public.schedule_slot_classes x
+       set position = (c.ord - 1)::smallint
+      from unnest(p_class_ids) with ordinality as c(id, ord)
+     where x.slot_id = p_slot_id and x.class_id = c.id and x.position <> c.ord - 1;
+    -- (removing old classes above lets the cleanup trigger refresh class_set
+    -- in between; put the final, ordered list back - a no-op if unchanged)
+    update public.schedule_slots s
+       set class_set = public.schedule_class_set(p_class_ids)
+     where s.id = p_slot_id and s.class_set is distinct from public.schedule_class_set(p_class_ids);
+    select s.version into v_new_version from public.schedule_slots s where s.id = p_slot_id;
 
     perform set_config('tkd.action', '', true);
     perform set_config('tkd.batch_id', '', true);
 
     return jsonb_build_object('status', 'ok', 'id', p_slot_id,
-                              'version', coalesce(v_new_version, v_version),
+                              'version', v_new_version,
                               'overlaps', v_overlaps);
   exception
     when unique_violation then
@@ -763,13 +965,13 @@ begin
 end;
 $$;
 
-revoke execute on function public.schedule_update_slot(uuid, integer, uuid, smallint, time, time) from public, anon, authenticated, service_role;
-grant  execute on function public.schedule_update_slot(uuid, integer, uuid, smallint, time, time) to authenticated;
+revoke execute on function public.schedule_update_slot(uuid, integer, uuid[], smallint, time, time) from public, anon, authenticated, service_role;
+grant  execute on function public.schedule_update_slot(uuid, integer, uuid[], smallint, time, time) to authenticated;
 
 -- 9c. schedule_remove_slot(p_slot_id, p_expected_version)
 -- Removes one time slot (not from a past schedule). Returns what it was,
 -- so the app's Undo can add it back with schedule_add_slots.
--- Ok: {"status":"ok","removed":{"version_id","class_id","weekday","starts_at","ends_at"}}
+-- Ok: {"status":"ok","removed":{"version_id","class_ids":[...],"weekday","starts_at","ends_at"}}
 create or replace function public.schedule_remove_slot(
   p_slot_id          uuid,
   p_expected_version integer
@@ -781,8 +983,9 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_loc  text;
-  v_slot record;
+  v_loc     text;
+  v_slot    record;
+  v_classes jsonb;
 begin
   begin
     if public.has_data_access() is not true then
@@ -803,7 +1006,7 @@ begin
 
     perform 1 from public.locations l where l.code = v_loc for no key update;
 
-    select s.version_id, s.class_id, s.weekday, s.starts_at, s.ends_at, s.version
+    select s.version_id, s.weekday, s.starts_at, s.ends_at, s.version
       into v_slot
       from public.schedule_slots s
      where s.id = p_slot_id
@@ -818,16 +1021,21 @@ begin
       return jsonb_build_object('status', 'not_allowed');
     end if;
 
+    select coalesce(jsonb_agg(sc.class_id order by sc.position), '[]'::jsonb)
+      into v_classes
+      from public.schedule_slot_classes sc
+     where sc.slot_id = p_slot_id;
+
     perform set_config('tkd.action', 'schedule_remove_slot', true);
     perform set_config('tkd.batch_id', gen_random_uuid()::text, true);
 
-    delete from public.schedule_slots s where s.id = p_slot_id;
+    delete from public.schedule_slots s where s.id = p_slot_id;   -- its classes follow (cascade)
 
     perform set_config('tkd.action', '', true);
     perform set_config('tkd.batch_id', '', true);
 
     return jsonb_build_object('status', 'ok', 'removed', jsonb_build_object(
-      'version_id', v_slot.version_id, 'class_id', v_slot.class_id, 'weekday', v_slot.weekday,
+      'version_id', v_slot.version_id, 'class_ids', v_classes, 'weekday', v_slot.weekday,
       'starts_at', to_char(v_slot.starts_at, 'HH24:MI'), 'ends_at', to_char(v_slot.ends_at, 'HH24:MI')));
   exception
     when unique_violation then
@@ -869,6 +1077,8 @@ declare
   v_version    integer;
   v_source     uuid;
   v_count      integer := 0;
+  v_old        record;
+  v_new_slot   uuid;
   v_constraint text;
 begin
   begin
@@ -912,11 +1122,24 @@ begin
        order by v.starts_on desc
        limit 1;
       if v_source is not null then
-        insert into public.schedule_slots (version_id, location_code, class_id, weekday, starts_at, ends_at)
-        select v_id, s.location_code, s.class_id, s.weekday, s.starts_at, s.ends_at
-          from public.schedule_slots s
-         where s.version_id = v_source;
-        get diagnostics v_count = row_count;
+        -- each slot, then its class(es) under the new slot
+        for v_old in
+          select s.id, s.weekday, s.starts_at, s.ends_at, s.class_set
+            from public.schedule_slots s
+           where s.version_id = v_source
+           order by s.weekday, s.starts_at, s.id
+        loop
+          insert into public.schedule_slots (version_id, location_code, weekday, starts_at, ends_at, class_set)
+          values (v_id, p_location_code, v_old.weekday, v_old.starts_at, v_old.ends_at,
+                  (select coalesce(string_agg(sc.class_id::text, ',' order by sc.position), '')
+                     from public.schedule_slot_classes sc where sc.slot_id = v_old.id))
+          returning id into v_new_slot;
+          insert into public.schedule_slot_classes (slot_id, location_code, class_id, position)
+          select v_new_slot, p_location_code, sc.class_id, sc.position
+            from public.schedule_slot_classes sc
+           where sc.slot_id = v_old.id;
+          v_count := v_count + 1;
+        end loop;
       end if;
     end if;
 

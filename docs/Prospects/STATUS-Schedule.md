@@ -73,6 +73,12 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Schedule-Build-Plan.md`.
 - The color group has an accessible name.
 - Testing's sentence says the count covers every schedule.
 
+## Combined classes (rulebook v0.88, added 2026-10-17)
+
+- A time slot can hold one or more classes taught together. For example, Saturday 9:30 in preview is "White + Little Tiger".
+- Migration 0005 (not live yet) now has `schedule_slot_classes`, and the PGlite suite still passes 54/54.
+- The screens, preview database and checks are updated (13 groups pass).
+
 ## Known small compromises (for Jeffrey's OK at S3)
 
 - **320px phones:** the 7 day buttons are about 38px wide (a 44px width can't fit 7 across); they are 44px tall to tap.

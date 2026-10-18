@@ -54,6 +54,9 @@ export const EDIT_SLOT_TITLE = 'Edit time slot';
 export const VIEW_SLOT_TITLE = 'Time slot';
 export const slotSubtitle = (school, versionLabel) => `${school} · ${versionLabel}`;
 export const CLASS = 'Class';
+export const CLASSES = 'Class (tick more than one if they are taught together)';
+export const together = (names) => `Taught together: ${names.join(' + ')}`;
+export const colorFor = (name) => `Color · ${name}`;
 export const CLASS_HINT = 'From Testing → Classes and ranks';
 export const CHOOSE_CLASS = 'Choose a class';
 export const COLOR = 'Color';
@@ -72,7 +75,7 @@ export const CLOSE = 'Close';
 export const BACK = 'Back';
 export const UNDO = 'Undo';
 
-export const PICK_CLASS = 'Choose a class.';
+export const PICK_CLASS = 'Tick at least one class.';
 export const PICK_DAY = 'Tick at least one day.';
 const TIME_PROBLEMS = {
   missing: 'Enter both times.',

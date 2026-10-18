@@ -10,30 +10,36 @@
 //   backend.select('schedule_slots', 'id, …', [{ col, value }], [{ col, ascending }], ctx)
 //   backend.rpc('schedule_add_slots', { p_… }, ctx)     ctx = { signedIn, hasDataAccess, isAdmin, actorName }
 //
-// Deleting a class in Testing removes its slots and color in the real database ("on delete
-// cascade"). Here the two fake databases are separate, so the same thing happens on every read
-// and write: rows whose class no longer exists are dropped.
+// A slot is for one class or several taught together (v0.88): the store keeps them as the slot's
+// class_ids list; the app reads them as rows of schedule_slot_classes, like the real table.
+// Deleting a class in Testing removes it from its slots and drops its color in the real database
+// ("on delete cascade"; a slot left with no class goes too). Here the two fake databases are
+// separate, so the same thing happens on every read and write.
 import { parseTime, timeProblem, toTimeText } from './schedule/time.js';
 import { COLOR_KEYS } from './schedule/colors.js';
 import { classifyVersions, addDays, weekdayOf } from './schedule/versions.js';
 import { nameProblem, normalizeName } from './testing/names.js';
 
-export const SCHEDULE_STORE_SCHEMA = 1;
+// 2 — combined classes (v0.88): a slot keeps class_ids (a list) instead of class_id.
+export const SCHEDULE_STORE_SCHEMA = 2;
 const LOCATION_CODES = ['worcester', 'shrewsbury'];
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 const GRANTED_COLUMNS = {
   schedule_versions: ['id', 'location_code', 'name', 'starts_on', 'version', 'created_at', 'updated_at', 'created_by_name', 'updated_by_name'],
-  schedule_slots: ['id', 'version_id', 'location_code', 'class_id', 'weekday', 'starts_at', 'ends_at', 'version', 'created_at', 'updated_at', 'created_by_name', 'updated_by_name'],
+  schedule_slots: ['id', 'version_id', 'location_code', 'weekday', 'starts_at', 'ends_at', 'version', 'created_at', 'updated_at', 'created_by_name', 'updated_by_name'],
+  schedule_slot_classes: ['id', 'slot_id', 'location_code', 'class_id', 'position', 'version', 'created_at', 'updated_at', 'created_by_name', 'updated_by_name'],
   schedule_class_colors: ['id', 'class_id', 'location_code', 'color', 'version', 'created_at', 'updated_at', 'created_by_name', 'updated_by_name'],
 };
 const TABLE_KEY = { schedule_versions: 'versions', schedule_slots: 'slots', schedule_class_colors: 'colors' };
+// Columns that exist but the app may not read (like the real grants).
+const HIDDEN = ['created_by', 'updated_by', 'class_set', 'class_ids', 'class_key'];
 
 // ----- Argument lists (name, type) — the real API finds a function by its argument names -----
 const RPC_ARGS = {
-  schedule_add_slots: [['p_location_code', 'text'], ['p_version_id', 'uuid'], ['p_class_id', 'uuid'], ['p_weekdays', 'int[]'], ['p_starts_at', 'time'], ['p_ends_at', 'time']],
-  schedule_update_slot: [['p_slot_id', 'uuid'], ['p_expected_version', 'int'], ['p_class_id', 'uuid'], ['p_weekday', 'int'], ['p_starts_at', 'time'], ['p_ends_at', 'time']],
+  schedule_add_slots: [['p_location_code', 'text'], ['p_version_id', 'uuid'], ['p_class_ids', 'uuid[]'], ['p_weekdays', 'int[]'], ['p_starts_at', 'time'], ['p_ends_at', 'time']],
+  schedule_update_slot: [['p_slot_id', 'uuid'], ['p_expected_version', 'int'], ['p_class_ids', 'uuid[]'], ['p_weekday', 'int'], ['p_starts_at', 'time'], ['p_ends_at', 'time']],
   schedule_remove_slot: [['p_slot_id', 'uuid'], ['p_expected_version', 'int']],
   schedule_plan_version: [['p_location_code', 'text'], ['p_name', 'text'], ['p_starts_on', 'date'], ['p_copy', 'bool']],
   schedule_update_version: [['p_version_id', 'uuid'], ['p_expected_version', 'int'], ['p_name', 'text'], ['p_starts_on', 'date']],
@@ -63,6 +69,9 @@ function toDbType(value, type) {
     case 'int':
       if (Number.isInteger(value)) return value;
       throw bad();
+    case 'uuid[]':
+      if (!Array.isArray(value)) throw bad();
+      return value.map((v) => (v === null ? null : toDbType(v, 'uuid')));
     case 'int[]':
       if (!Array.isArray(value)) throw bad();
       return value.map((v) => (v === null ? null : toDbType(v, 'int')));
@@ -98,6 +107,11 @@ const st = (status) => ({ status });
 const minutesOf = (text) => (text === null ? null : parseTime(text));
 
 // The real schedule_weekdays_are_valid: 1-7 items, each 1..7, none twice.
+// The real schedule_class_ids_are_valid: 1-10 ids, none empty, none twice.
+function classIdsValid(ids) {
+  return Array.isArray(ids) && ids.length >= 1 && ids.length <= 10 && !ids.includes(null) && new Set(ids).size === ids.length;
+}
+
 function weekdaysValid(days) {
   return Array.isArray(days) && days.length >= 1 && days.length <= 7 && days.every((d) => Number.isInteger(d) && d >= 1 && d <= 7)
     && new Set(days).size === days.length;
@@ -118,7 +132,7 @@ const SAMPLE_WEEK = [
   // [class name, weekdays, start, end]
   ['Little Tiger', [2, 4], '16:00', '16:30'],
   ['White', [1, 3], '16:00', '16:45'],
-  ['White', [6], '09:30', '10:15'],
+  [['White', 'Little Tiger'], [6], '09:30', '10:15'], // taught together (combined slot, v0.88)
   ['Group A', [1, 3], '17:00', '17:45'],
   ['Group A', [6], '10:15', '11:00'],
   ['Group B', [2, 4], '17:00', '17:45'],
@@ -142,15 +156,16 @@ export function defaultScheduleData({ classes, today, newId, stamp, actorName = 
     const current = book({ id: newId(), location_code: code, name: null, starts_on: currentStart });
     const winter = book({ id: newId(), location_code: code, name: 'Winter', starts_on: winterStart });
     db.versions.push(current, winter);
-    for (const [name, days, start, end] of SAMPLE_WEEK) {
-      const cls = byName.get(name);
-      if (!cls) continue;
+    for (const [names, days, start, end] of SAMPLE_WEEK) {
+      const ids = [names].flat().map((n) => byName.get(n)?.id).filter(Boolean);
+      if (ids.length === 0) continue;
+      const name = [names].flat()[0];
       for (const weekday of days) {
         for (const version of [current, winter]) {
           // Winter: White moves 30 minutes earlier on weekdays (so the two differ visibly).
           const shift = version === winter && name === 'White' && weekday !== 6 ? -30 : 0;
           db.slots.push(book({
-            id: newId(), version_id: version.id, location_code: code, class_id: cls.id, weekday,
+            id: newId(), version_id: version.id, location_code: code, class_ids: ids, weekday,
             starts_at: `${toTimeText(parseTime(start) + shift)}:00`, ends_at: `${toTimeText(parseTime(end) + shift)}:00`,
           }));
         }
@@ -188,7 +203,8 @@ export function createScheduleBackend({ loadStore, saveStore, now = () => Date.n
       ? clone(store)
       : defaultScheduleData({ classes, today: today(), newId, stamp: stamp() });
     const classIds = new Set(classes.map((c) => c.id));
-    db.slots = db.slots.filter((s) => classIds.has(s.class_id));
+    for (const slot of db.slots) slot.class_ids = slot.class_ids.filter((id) => classIds.has(id));
+    db.slots = db.slots.filter((s) => s.class_ids.length > 0); // a slot with no class left goes
     db.colors = db.colors.filter((c) => classIds.has(c.class_id));
     if (!isUsableStore(store)) saveStore?.(db); // keep the generated ids stable
     return db;
@@ -225,9 +241,17 @@ export function createScheduleBackend({ loadStore, saveStore, now = () => Date.n
         && minutesOf(s.starts_at) < end && minutesOf(s.ends_at) > start)
       .sort((a, b) => a.weekday - b.weekday || minutesOf(a.starts_at) - minutesOf(b.starts_at))
       .map((s) => ({
-        slot_id: s.id, weekday: s.weekday, class_id: s.class_id, class_name: classById(s.class_id)?.name ?? '',
+        slot_id: s.id, weekday: s.weekday, class_ids: [...s.class_ids],
+        class_name: s.class_ids.map((id) => classById(id)?.name ?? '').join(' + '),
         starts_at: s.starts_at.slice(0, 5), ends_at: s.ends_at.slice(0, 5),
       }));
+  // 'ok' | 'stale' (a class no longer exists) | 'invalid' (one is from the other school)
+  const checkClasses = (ids, code) => {
+    const found = ids.map(classById);
+    if (found.some((c) => !c)) return 'stale';
+    if (found.some((c) => c.location_code !== code)) return 'invalid';
+    return 'ok';
+  };
   const timesOk = (a, b) => {
     const start = minutesOf(a);
     const end = minutesOf(b);
@@ -238,10 +262,9 @@ export function createScheduleBackend({ loadStore, saveStore, now = () => Date.n
   const handlers = {
     schedule_add_slots(db, a, ctx) {
       const t = timesOk(a.p_starts_at, a.p_ends_at);
-      if (!LOCATION_CODES.includes(a.p_location_code) || a.p_class_id === null || !weekdaysValid(a.p_weekdays) || !t.ok) return st('invalid');
-      const cls = classById(a.p_class_id);
-      if (!cls) return st('stale');
-      if (cls.location_code !== a.p_location_code) return st('invalid');
+      if (!LOCATION_CODES.includes(a.p_location_code) || !classIdsValid(a.p_class_ids) || !weekdaysValid(a.p_weekdays) || !t.ok) return st('invalid');
+      const check = checkClasses(a.p_class_ids, a.p_location_code);
+      if (check !== 'ok') return st(check);
       let versionId = a.p_version_id;
       if (versionId === null) {
         if (db.versions.some((v) => v.location_code === a.p_location_code)) return st('stale');
@@ -254,7 +277,7 @@ export function createScheduleBackend({ loadStore, saveStore, now = () => Date.n
       const overlaps = overlapsIn(db, versionId, a.p_weekdays, t.start, t.end, null);
       const slots = [...a.p_weekdays].sort((x, y) => x - y).map((weekday) => {
         const row = insertRow(db.slots, {
-          id: newId(), version_id: versionId, location_code: a.p_location_code, class_id: a.p_class_id, weekday,
+          id: newId(), version_id: versionId, location_code: a.p_location_code, class_ids: [...a.p_class_ids], weekday,
           starts_at: `${toTimeText(t.start)}:00`, ends_at: `${toTimeText(t.end)}:00`,
         }, ctx);
         return { id: row.id, weekday, version: row.version };
@@ -264,18 +287,20 @@ export function createScheduleBackend({ loadStore, saveStore, now = () => Date.n
 
     schedule_update_slot(db, a, ctx) {
       const t = timesOk(a.p_starts_at, a.p_ends_at);
-      if (a.p_slot_id === null || a.p_expected_version === null || a.p_class_id === null || a.p_weekday === null
+      if (a.p_slot_id === null || a.p_expected_version === null || !classIdsValid(a.p_class_ids) || a.p_weekday === null
         || a.p_weekday < 1 || a.p_weekday > 7 || !t.ok) return st('invalid');
       const slot = db.slots.find((s) => s.id === a.p_slot_id);
       if (!slot) return st('not_found');
       if (slot.version !== a.p_expected_version) return st('stale');
       const version = db.versions.find((v) => v.id === slot.version_id);
       if (stateOf(db, version) === 'past') return st('not_allowed');
-      const cls = classById(a.p_class_id);
-      if (!cls) return st('stale');
-      if (cls.location_code !== slot.location_code) return st('invalid');
+      const check = checkClasses(a.p_class_ids, slot.location_code);
+      if (check !== 'ok') return st(check);
       const overlaps = overlapsIn(db, slot.version_id, [a.p_weekday], t.start, t.end, slot.id);
-      updateRow(slot, { class_id: a.p_class_id, weekday: a.p_weekday, starts_at: `${toTimeText(t.start)}:00`, ends_at: `${toTimeText(t.end)}:00` }, ctx);
+      // The class list, in order, counts as content (like the real class_set column): a change bumps the version.
+      slot.class_key = slot.class_key ?? slot.class_ids.join(',');
+      slot.class_ids = [...a.p_class_ids];
+      updateRow(slot, { class_key: a.p_class_ids.join(','), weekday: a.p_weekday, starts_at: `${toTimeText(t.start)}:00`, ends_at: `${toTimeText(t.end)}:00` }, ctx);
       return { status: 'ok', id: slot.id, version: slot.version, overlaps };
     },
 
@@ -288,7 +313,7 @@ export function createScheduleBackend({ loadStore, saveStore, now = () => Date.n
       db.slots = db.slots.filter((s) => s.id !== slot.id);
       return {
         status: 'ok',
-        removed: { version_id: slot.version_id, class_id: slot.class_id, weekday: slot.weekday, starts_at: slot.starts_at.slice(0, 5), ends_at: slot.ends_at.slice(0, 5) },
+        removed: { version_id: slot.version_id, class_ids: [...slot.class_ids], weekday: slot.weekday, starts_at: slot.starts_at.slice(0, 5), ends_at: slot.ends_at.slice(0, 5) },
       };
     },
 
@@ -306,7 +331,7 @@ export function createScheduleBackend({ loadStore, saveStore, now = () => Date.n
         source = school.filter((v) => v.starts_on < a.p_starts_on).sort((x, y) => (x.starts_on < y.starts_on ? 1 : -1))[0] ?? null;
         if (source) {
           for (const s of db.slots.filter((x) => x.version_id === source.id)) {
-            insertRow(db.slots, { id: newId(), version_id: row.id, location_code: s.location_code, class_id: s.class_id, weekday: s.weekday, starts_at: s.starts_at, ends_at: s.ends_at }, ctx);
+            insertRow(db.slots, { id: newId(), version_id: row.id, location_code: s.location_code, class_ids: [...s.class_ids], weekday: s.weekday, starts_at: s.starts_at, ends_at: s.ends_at }, ctx);
             count += 1;
           }
         }
@@ -366,11 +391,21 @@ export function createScheduleBackend({ loadStore, saveStore, now = () => Date.n
     if (!ctx.signedIn) return denied(`table ${table}`);
     const wanted = String(columns ?? '*').split(',').map((c) => c.trim()).filter(Boolean);
     for (const col of [...wanted, ...filters.map((f) => f.col), ...orders.map((o) => o.col)]) {
-      if (col === '*' || col === 'created_by' || col === 'updated_by') return denied(`table ${table}`);
+      if (col === '*' || HIDDEN.includes(col)) return denied(`table ${table}`);
       if (!granted.includes(col)) return fail('42703', `column ${table}.${col} does not exist`, 400);
     }
     if (!ctx.hasDataAccess) return ok([]); // row-level security hides every row
-    let rows = read()[TABLE_KEY[table]];
+    const db = read();
+    let rows =
+      table === 'schedule_slot_classes'
+        ? db.slots.flatMap((slot) =>
+            slot.class_ids.map((classId, position) => ({
+              id: `${slot.id}-${position}`, slot_id: slot.id, location_code: slot.location_code, class_id: classId, position,
+              version: 1, created_at: slot.created_at, updated_at: slot.updated_at,
+              created_by_name: slot.created_by_name, updated_by_name: slot.updated_by_name,
+            })),
+          )
+        : db[TABLE_KEY[table]];
     rows = rows.filter((row) => filters.every((f) => String(row[f.col]) === String(f.value)));
     rows = [...rows].sort((x, y) => {
       for (const { col, ascending = true } of orders) {

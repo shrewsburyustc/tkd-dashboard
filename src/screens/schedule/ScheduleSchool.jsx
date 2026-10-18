@@ -158,8 +158,11 @@ export default function ScheduleSchool({
       if (!d || d.saving) return d;
       const note = d.note && !BLOCKING_NOTES.includes(d.note) ? null : d.note;
       const values = { ...d.values, ...patch };
-      // Picking another class shows THAT class's color (color belongs to the class).
-      if (what === 'class' && d.type === 'slot') values.color = ref.current.loaded?.colors[patch.classId] ?? DEFAULT_COLOR;
+      // A newly ticked class shows ITS saved color (color belongs to the class).
+      if (what === 'class' && d.type === 'slot') {
+        const saved = ref.current.loaded?.colors ?? {};
+        values.colors = Object.fromEntries(patch.classIds.map((id) => [id, d.values.colors[id] ?? saved[id] ?? DEFAULT_COLOR]));
+      }
       return { ...d, values, note };
     });
   }
@@ -167,14 +170,14 @@ export default function ScheduleSchool({
 
   function openAddSlot(opener) {
     if (!editable || !loaded) return;
-    const values = { classId: null, color: DEFAULT_COLOR, days: [], start: '', end: '' };
+    const values = { classIds: [], colors: {}, days: [], start: '', end: '' };
     openDialog({ type: 'slot', mode: 'add', values, initial: values, versionId: shown?.id ?? null, opener });
   }
   function openEditSlot(slot, opener) {
     if (!editable) return;
     const values = {
-      classId: slot.classId,
-      color: loaded.colors[slot.classId] ?? DEFAULT_COLOR,
+      classIds: [...slot.classIds],
+      colors: Object.fromEntries(slot.classIds.map((id) => [id, loaded.colors[id] ?? DEFAULT_COLOR])),
       day: slot.weekday,
       start: toTimeText(slot.start),
       end: toTimeText(slot.end),
@@ -246,18 +249,20 @@ export default function ScheduleSchool({
     const p = check.payload;
     const result =
       d.mode === 'add'
-        ? await addSlots({ locationCode, versionId: d.versionId, classId: p.classId, weekdays: p.days, start: p.start, end: p.end })
-        : await updateSlot({ slotId: d.slotId, expectedVersion: d.snapshot.version, classId: p.classId, weekday: p.days[0], start: p.start, end: p.end });
+        ? await addSlots({ locationCode, versionId: d.versionId, classIds: p.classIds, weekdays: p.days, start: p.start, end: p.end })
+        : await updateSlot({ slotId: d.slotId, expectedVersion: d.snapshot.version, classIds: p.classIds, weekday: p.days[0], start: p.start, end: p.end });
     if (result.status !== 'ok') {
       endWrite(result.status);
       handleDialogProblem(result.status);
       return;
     }
+    // Then each class whose color was changed in the dialog (color belongs to the class).
     let colorFailed = false;
-    const savedColor = ref.current.loaded?.colors[p.classId] ?? DEFAULT_COLOR;
-    if (p.color !== savedColor) {
-      const colorResult = await setClassColor({ classId: p.classId, color: p.color });
-      colorFailed = colorResult.status !== 'ok';
+    for (const classId of p.classIds) {
+      const chosen = p.colors[classId] ?? DEFAULT_COLOR;
+      if (chosen === (ref.current.loaded?.colors[classId] ?? DEFAULT_COLOR)) continue;
+      const colorResult = await setClassColor({ classId, color: chosen });
+      if (colorResult.status !== 'ok') colorFailed = true;
     }
     endWrite('ok');
     setDialog(null);
@@ -280,7 +285,7 @@ export default function ScheduleSchool({
           label: T.UNDO,
           onAction: () =>
             runUndo(() =>
-              updateSlot({ slotId: d.slotId, expectedVersion: savedVersion, classId: before.classId, weekday: before.weekday, start: before.start, end: before.end }),
+              updateSlot({ slotId: d.slotId, expectedVersion: savedVersion, classIds: before.classIds, weekday: before.weekday, start: before.start, end: before.end }),
             ),
         },
       });
@@ -313,11 +318,11 @@ export default function ScheduleSchool({
     setDialog(null);
     reloadQuiet();
     const r = result.removed;
-    showToast(T.toastSlotRemoved(r.weekday, classNames.get(r.classId) ?? '', formatTime(r.start)), {
+    showToast(T.toastSlotRemoved(r.weekday, r.classIds.map((id) => classNames.get(id) ?? '').join(' + '), formatTime(r.start)), {
       icon: false,
       action: {
         label: T.UNDO,
-        onAction: () => runUndo(() => addSlots({ locationCode, versionId: r.versionId, classId: r.classId, weekdays: [r.weekday], start: r.start, end: r.end })),
+        onAction: () => runUndo(() => addSlots({ locationCode, versionId: r.versionId, classIds: r.classIds, weekdays: [r.weekday], start: r.start, end: r.end })),
       },
     });
     focusBack(null, `[data-add-slot="${locationCode}"], [data-version-picker="${locationCode}"]`);

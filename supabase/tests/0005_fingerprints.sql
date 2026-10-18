@@ -7,7 +7,7 @@
 --     function - each schedule_* function: body_md5 of its code without
 --                comments and spaces, security definer, settings (must say
 --                search_path=""), owner, and who may call it
---     table    - each schedule table: RLS on/off and its grants
+--     table    - each schedule table (incl. schedule_slot_classes, v0.88): RLS on/off and its grants
 --     trigger  - every trigger on the three schedule tables
 --     constraint    - every table rule: keys, foreign keys (incl. "on
 --                     delete cascade" to Testing), checks, unique rules
@@ -52,14 +52,14 @@ select 'table',
   from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public'
-   and c.relname in ('schedule_versions', 'schedule_slots', 'schedule_class_colors')
+   and c.relname in ('schedule_versions', 'schedule_slots', 'schedule_class_colors', 'schedule_slot_classes')
 union all
 select 'trigger',
        t.tgrelid::regclass::text || '.' || t.tgname,
        pg_get_triggerdef(t.oid)
   from pg_trigger t
  where t.tgrelid in ('public.schedule_versions'::regclass, 'public.schedule_slots'::regclass,
-                     'public.schedule_class_colors'::regclass)
+                     'public.schedule_class_colors'::regclass, 'public.schedule_slot_classes'::regclass)
    and not t.tgisinternal
 union all
 select 'constraint',
@@ -67,14 +67,14 @@ select 'constraint',
        k.contype::text || ' ' || pg_get_constraintdef(k.oid)
   from pg_constraint k
  where k.conrelid in ('public.schedule_versions'::regclass, 'public.schedule_slots'::regclass,
-                      'public.schedule_class_colors'::regclass)
+                      'public.schedule_class_colors'::regclass, 'public.schedule_slot_classes'::regclass)
 union all
 select 'policy',
        p.tablename || '.' || p.policyname,
        p.cmd || ' roles=' || p.roles::text || ' using=' || coalesce(p.qual, '') || ' check=' || coalesce(p.with_check, '')
   from pg_policies p
  where p.schemaname = 'public'
-   and p.tablename in ('schedule_versions', 'schedule_slots', 'schedule_class_colors')
+   and p.tablename in ('schedule_versions', 'schedule_slots', 'schedule_class_colors', 'schedule_slot_classes')
 union all
 select 'function-kind',
        p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')',

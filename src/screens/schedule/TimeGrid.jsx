@@ -10,7 +10,8 @@
 //
 // Props:
 //   days        [1..7] to show (one for the phone)
-//   slots       the shown schedule's slots { id, weekday, start, end, classId }
+//   slots       the shown schedule's slots { id, weekday, start, end, classIds }
+//               (several classes taught together share ONE box: "White + Little Tiger", v0.88)
 //   classNames  Map classId → name;  colors  { classId: colorKey }
 //   pxPerMin    vertical scale (CSS pixels per minute)
 //   showDayHeads  true for the week (the phone has its own day buttons)
@@ -89,15 +90,23 @@ export default function TimeGrid({ days, slots, classNames, colors, pxPerMin, sh
                 <span key={`m${m}`} className="sgrid-line sgrid-line--half" style={{ top: (m - from) * pxPerMin }} aria-hidden="true" />
               ))}
               {placed.map(({ slot, lane, lanes }) => {
-                const color = colorOf(colors[slot.classId]);
-                const name = classNames.get(slot.classId) ?? '';
+                const slotColors = slot.classIds.map((id) => colorOf(colors[id]));
+                const color = slotColors[0];
+                const name = slot.classIds.map((id) => classNames.get(id) ?? '').join(' + ');
+                // A combined slot shows each class's color side by side (sharp split, no blend).
+                const fill =
+                  slotColors.length === 1
+                    ? color.fill
+                    : `linear-gradient(90deg, ${slotColors
+                        .map((c, i) => `${c.fill} ${(i * 100) / slotColors.length}% ${((i + 1) * 100) / slotColors.length}%`)
+                        .join(', ')})`;
                 const boxHeight = (slot.end - slot.start) * pxPerMin;
                 const style = {
                   top: (slot.start - from) * pxPerMin,
                   height: boxHeight,
                   left: `calc(${(lane / lanes) * 100}% + 2px)`,
                   width: `calc(${100 / lanes}% - 4px)`,
-                  '--slot-fill': color.fill,
+                  '--slot-fill': fill,
                   '--slot-edge': color.edge,
                   '--slot-text': color.text,
                 };

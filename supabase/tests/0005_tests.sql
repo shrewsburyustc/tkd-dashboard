@@ -176,9 +176,9 @@ begin
   begin perform 1 from public.schedule_slots;        raise exception 'TEST FAILED: 2b anon read schedule_slots';        exception when insufficient_privilege then null; end;
   begin perform 1 from public.schedule_class_colors; raise exception 'TEST FAILED: 2c anon read schedule_class_colors'; exception when insufficient_privilege then null; end;
   begin perform public.schedule_today();             raise exception 'TEST FAILED: 2d anon called schedule_today';      exception when insufficient_privilege then null; end;
-  begin perform public.schedule_add_slots('worcester', null, v_cw1, '{1}', '16:00', '16:45');
+  begin perform public.schedule_add_slots('worcester', null, array[v_cw1], '{1}', '16:00', '16:45');
         raise exception 'TEST FAILED: 2e anon called schedule_add_slots'; exception when insufficient_privilege then null; end;
-  begin perform public.schedule_update_slot(v_rand, 1, v_cw1, 1::smallint, '16:00', '16:45');
+  begin perform public.schedule_update_slot(v_rand, 1, array[v_cw1], 1::smallint, '16:00', '16:45');
         raise exception 'TEST FAILED: 2f anon called schedule_update_slot'; exception when insufficient_privilege then null; end;
   begin perform public.schedule_remove_slot(v_rand, 1);
         raise exception 'TEST FAILED: 2g anon called schedule_remove_slot'; exception when insufficient_privilege then null; end;
@@ -200,8 +200,8 @@ begin
   perform set_config('request.jwt.claims', v_c_a1, true);
   begin insert into public.schedule_versions (location_code, starts_on) values ('worcester', v_today + 99);
         raise exception 'TEST FAILED: 3a admin inserted a schedule directly'; exception when insufficient_privilege then null; end;
-  begin insert into public.schedule_slots (version_id, location_code, class_id, weekday, starts_at, ends_at)
-        values (v_rand, 'worcester', v_cw1, 1, '16:00', '16:45');
+  begin insert into public.schedule_slots (version_id, location_code, weekday, starts_at, ends_at)
+        values (v_rand, 'worcester', 1, '16:00', '16:45');
         raise exception 'TEST FAILED: 3b admin inserted a slot directly'; exception when insufficient_privilege then null; end;
   begin update public.schedule_slots set weekday = 2;
         raise exception 'TEST FAILED: 3c admin updated slots directly'; exception when insufficient_privilege then null; end;
@@ -229,7 +229,7 @@ begin
   perform set_config('request.jwt.claims', v_c_a1, true);
   select count(*) into v_n from public.schedule_versions where location_code = 'worcester';
   if v_n = 0 then
-    v_r := public.schedule_add_slots('worcester', null, v_cw1, '{1,3}', '16:00', '16:45');
+    v_r := public.schedule_add_slots('worcester', null, array[v_cw1], '{1,3}', '16:00', '16:45');
     if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: 4a first add: %', v_r; end if;
     v_cur := (v_r ->> 'version_id')::uuid;
     if jsonb_array_length(v_r -> 'slots') <> 2 then raise exception 'TEST FAILED: 4b expected 2 slots (Mon, Wed): %', v_r; end if;
@@ -245,45 +245,45 @@ begin
      where v.location_code = 'worcester' and v.starts_on <= v_today
      order by v.starts_on desc limit 1;
     if v_cur is null then raise exception 'TEST SETUP: Worcester has schedules but none is current'; end if;
-    v_r := public.schedule_add_slots('worcester', v_cur, v_cw1, '{1,3}', '16:00', '16:45');
+    v_r := public.schedule_add_slots('worcester', v_cur, array[v_cw1], '{1,3}', '16:00', '16:45');
     if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: 4a add to current: %', v_r; end if;
   end if;
   v_sl1 := (v_r -> 'slots' -> 0 ->> 'id')::uuid;   -- Monday 16:00
   v_sl1_v := (v_r -> 'slots' -> 0 ->> 'version')::integer;
-  v_r := public.schedule_add_slots('worcester', null, v_cw1, '{2}', '16:00', '16:45');
+  v_r := public.schedule_add_slots('worcester', null, array[v_cw1], '{2}', '16:00', '16:45');
   if v_r ->> 'status' <> 'stale' then raise exception 'TEST FAILED: 4e NULL version with a schedule present: %', v_r; end if;
 
   -- -------------------------------------------------------------------
   -- Test 5: input rules for adding
   -- -------------------------------------------------------------------
   v_txt := '';
-  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, v_cw1, '{1}', '16:00', '16:00') ->> 'status') || ',';  -- ends = starts
-  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, v_cw1, '{1}', '17:00', '16:00') ->> 'status') || ',';  -- ends before
-  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, v_cw1, '{1}', '16:03', '16:45') ->> 'status') || ',';  -- not 5-min
-  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, v_cw1, '{1}', '16:00', '16:10') ->> 'status') || ',';  -- < 15 min
-  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, v_cw1, '{1}', '10:00', '14:05') ->> 'status') || ',';  -- > 4 h
-  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, v_cw1, '{1}', '16:00:30', '16:45') ->> 'status') || ','; -- seconds
-  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, v_cw1, '{}', '16:00', '16:45') ->> 'status') || ',';   -- no day
-  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, v_cw1, '{0}', '16:00', '16:45') ->> 'status') || ',';  -- day 0
-  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, v_cw1, '{8}', '16:00', '16:45') ->> 'status') || ',';  -- day 8
-  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, v_cw1, '{2,2}', '16:00', '16:45') ->> 'status') || ','; -- twice
-  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, v_cw1, null, '16:00', '16:45') ->> 'status') || ',';
-  v_txt := v_txt || (public.schedule_add_slots('nowhere', v_cur, v_cw1, '{1}', '16:00', '16:45') ->> 'status') || ',';
-  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, v_cs1, '{1}', '16:00', '16:45') ->> 'status');         -- other school's class
+  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, array[v_cw1], '{1}', '16:00', '16:00') ->> 'status') || ',';  -- ends = starts
+  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, array[v_cw1], '{1}', '17:00', '16:00') ->> 'status') || ',';  -- ends before
+  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, array[v_cw1], '{1}', '16:03', '16:45') ->> 'status') || ',';  -- not 5-min
+  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, array[v_cw1], '{1}', '16:00', '16:10') ->> 'status') || ',';  -- < 15 min
+  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, array[v_cw1], '{1}', '10:00', '14:05') ->> 'status') || ',';  -- > 4 h
+  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, array[v_cw1], '{1}', '16:00:30', '16:45') ->> 'status') || ','; -- seconds
+  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, array[v_cw1], '{}', '16:00', '16:45') ->> 'status') || ',';   -- no day
+  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, array[v_cw1], '{0}', '16:00', '16:45') ->> 'status') || ',';  -- day 0
+  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, array[v_cw1], '{8}', '16:00', '16:45') ->> 'status') || ',';  -- day 8
+  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, array[v_cw1], '{2,2}', '16:00', '16:45') ->> 'status') || ','; -- twice
+  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, array[v_cw1], null, '16:00', '16:45') ->> 'status') || ',';
+  v_txt := v_txt || (public.schedule_add_slots('nowhere', v_cur, array[v_cw1], '{1}', '16:00', '16:45') ->> 'status') || ',';
+  v_txt := v_txt || (public.schedule_add_slots('worcester', v_cur, array[v_cs1], '{1}', '16:00', '16:45') ->> 'status');         -- other school's class
   if v_txt <> 'invalid,invalid,invalid,invalid,invalid,invalid,invalid,invalid,invalid,invalid,invalid,invalid,invalid' then
     raise exception 'TEST FAILED: 5a input rules gave %', v_txt;
   end if;
-  v_r := public.schedule_add_slots('worcester', v_cur, v_rand, '{1}', '16:00', '16:45');
+  v_r := public.schedule_add_slots('worcester', v_cur, array[v_rand], '{1}', '16:00', '16:45');
   if v_r ->> 'status' <> 'stale' then raise exception 'TEST FAILED: 5b class that doesn''t exist: %', v_r; end if;
-  v_r := public.schedule_add_slots('shrewsbury', v_cur, v_cs1, '{1}', '16:00', '16:45');
+  v_r := public.schedule_add_slots('shrewsbury', v_cur, array[v_cs1], '{1}', '16:00', '16:45');
   if v_r ->> 'status' <> 'not_found' then raise exception 'TEST FAILED: 5c Worcester schedule used for Shrewsbury: %', v_r; end if;
-  v_r := public.schedule_add_slots('worcester', v_rand, v_cw1, '{1}', '16:00', '16:45');
+  v_r := public.schedule_add_slots('worcester', v_rand, array[v_cw1], '{1}', '16:00', '16:45');
   if v_r ->> 'status' <> 'not_found' then raise exception 'TEST FAILED: 5d schedule that doesn''t exist: %', v_r; end if;
 
   -- -------------------------------------------------------------------
   -- Test 6: overlaps are reported (and still saved)
   -- -------------------------------------------------------------------
-  v_r := public.schedule_add_slots('worcester', v_cur, v_cw2, '{1,5}', '16:30', '17:15');
+  v_r := public.schedule_add_slots('worcester', v_cur, array[v_cw2], '{1,5}', '16:30', '17:15');
   if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: 6a overlapping add: %', v_r; end if;
   if jsonb_array_length(v_r -> 'overlaps') < 1
      or not exists (select 1 from jsonb_array_elements(v_r -> 'overlaps') o
@@ -291,10 +291,10 @@ begin
     raise exception 'TEST FAILED: 6b overlap with Monday 16:00 % not reported: %', v_tag, v_r;
   end if;
   v_sl2 := (select (x ->> 'id')::uuid from jsonb_array_elements(v_r -> 'slots') x where (x ->> 'weekday')::int = 5);
-  v_r := public.schedule_add_slots('worcester', v_cur, v_cw2, '{2}', '16:45', '17:30');   -- touching, not overlapping
+  v_r := public.schedule_add_slots('worcester', v_cur, array[v_cw2], '{2}', '16:45', '17:30');   -- touching, not overlapping
   if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: 6c add Tue: %', v_r; end if;
   v_sl3 := (v_r -> 'slots' -> 0 ->> 'id')::uuid;
-  v_r := public.schedule_add_slots('worcester', v_cur, v_cw1, '{2}', '16:00', '16:45');
+  v_r := public.schedule_add_slots('worcester', v_cur, array[v_cw1], '{2}', '16:00', '16:45');
   if v_r ->> 'status' <> 'ok' or exists (select 1 from jsonb_array_elements(v_r -> 'overlaps') o where (o ->> 'slot_id')::uuid = v_sl3) then
     raise exception 'TEST FAILED: 6d back-to-back classes are not an overlap: %', v_r;
   end if;
@@ -309,8 +309,8 @@ begin
     raise exception 'TEST FAILED: 7a2 front desk can''t read schedules';
   end if;
   v_txt := concat_ws(',',
-    public.schedule_add_slots('worcester', v_cur, v_cw1, '{6}', '10:00', '10:45') ->> 'status',
-    public.schedule_update_slot(v_sl1, v_sl1_v, v_cw1, 1::smallint, '16:00', '16:50') ->> 'status',
+    public.schedule_add_slots('worcester', v_cur, array[v_cw1], '{6}', '10:00', '10:45') ->> 'status',
+    public.schedule_update_slot(v_sl1, v_sl1_v, array[v_cw1], 1::smallint, '16:00', '16:50') ->> 'status',
     public.schedule_remove_slot(v_sl1, v_sl1_v) ->> 'status',
     public.schedule_plan_version('worcester', null, v_today + 30, true) ->> 'status',
     public.schedule_update_version(v_cur, 1, null, v_today + 30) ->> 'status',
@@ -330,8 +330,8 @@ begin
       raise exception 'TEST FAILED: 7c shut-out session % (A2..A7) can read schedule data', v_i;
     end if;
     v_txt := concat_ws(',',
-      public.schedule_add_slots('worcester', v_cur, v_cw1, '{6}', '10:00', '10:45') ->> 'status',
-      public.schedule_update_slot(v_sl1, v_sl1_v, v_cw1, 1::smallint, '16:00', '16:50') ->> 'status',
+      public.schedule_add_slots('worcester', v_cur, array[v_cw1], '{6}', '10:00', '10:45') ->> 'status',
+      public.schedule_update_slot(v_sl1, v_sl1_v, array[v_cw1], 1::smallint, '16:00', '16:50') ->> 'status',
       public.schedule_remove_slot(v_sl1, v_sl1_v) ->> 'status',
       public.schedule_plan_version('worcester', null, v_today + 30, true) ->> 'status',
       public.schedule_update_version(v_cur, 1, null, v_today + 30) ->> 'status',
@@ -346,15 +346,15 @@ begin
   -- -------------------------------------------------------------------
   -- Test 8: editing a slot
   -- -------------------------------------------------------------------
-  v_r := public.schedule_update_slot(v_sl1, v_sl1_v + 5, v_cw1, 1::smallint, '16:00', '16:50');
+  v_r := public.schedule_update_slot(v_sl1, v_sl1_v + 5, array[v_cw1], 1::smallint, '16:00', '16:50');
   if v_r ->> 'status' <> 'stale' then raise exception 'TEST FAILED: 8a old version should be stale: %', v_r; end if;
-  v_r := public.schedule_update_slot(v_sl1, v_sl1_v, v_cs1, 1::smallint, '16:00', '16:50');
+  v_r := public.schedule_update_slot(v_sl1, v_sl1_v, array[v_cs1], 1::smallint, '16:00', '16:50');
   if v_r ->> 'status' <> 'invalid' then raise exception 'TEST FAILED: 8b other school''s class: %', v_r; end if;
-  v_r := public.schedule_update_slot(v_sl1, v_sl1_v, v_cw1, 9::smallint, '16:00', '16:50');
+  v_r := public.schedule_update_slot(v_sl1, v_sl1_v, array[v_cw1], 9::smallint, '16:00', '16:50');
   if v_r ->> 'status' <> 'invalid' then raise exception 'TEST FAILED: 8c day 9: %', v_r; end if;
-  v_r := public.schedule_update_slot(v_rand, 1, v_cw1, 1::smallint, '16:00', '16:50');
+  v_r := public.schedule_update_slot(v_rand, 1, array[v_cw1], 1::smallint, '16:00', '16:50');
   if v_r ->> 'status' <> 'not_found' then raise exception 'TEST FAILED: 8d no such slot: %', v_r; end if;
-  v_r := public.schedule_update_slot(v_sl1, v_sl1_v, v_cw1, 1::smallint, '16:00', '16:45');   -- unchanged
+  v_r := public.schedule_update_slot(v_sl1, v_sl1_v, array[v_cw1], 1::smallint, '16:00', '16:45');   -- unchanged
   if v_r ->> 'status' <> 'ok' or (v_r ->> 'version')::int <> v_sl1_v then
     raise exception 'TEST FAILED: 8e unchanged save should keep the version: %', v_r;
   end if;
@@ -362,7 +362,7 @@ begin
   select max(id) into v_mark from public.change_log;
   set local role authenticated;
   perform set_config('request.jwt.claims', v_c_a1, true);
-  v_r := public.schedule_update_slot(v_sl1, v_sl1_v, v_cw2, 1::smallint, '16:00', '16:50');
+  v_r := public.schedule_update_slot(v_sl1, v_sl1_v, array[v_cw2], 1::smallint, '16:00', '16:50');
   if v_r ->> 'status' <> 'ok' or (v_r ->> 'version')::int <> v_sl1_v + 1 then
     raise exception 'TEST FAILED: 8f real change should bump the version: %', v_r;
   end if;
@@ -411,7 +411,7 @@ begin
   end if;
   v_blank := (v_r ->> 'id')::uuid;
   -- add one slot only to Winter, then plan after Winter: copies Winter (n+1)
-  v_r := public.schedule_add_slots('worcester', v_plan, v_cw1, '{7}', '09:00', '09:45');
+  v_r := public.schedule_add_slots('worcester', v_plan, array[v_cw1], '{7}', '09:00', '09:45');
   if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: 9h add to planned: %', v_r; end if;
   v_r := public.schedule_plan_version('worcester', null, v_today + 50, true);
   if v_r ->> 'status' <> 'ok' or (v_r ->> 'copied_from')::uuid is distinct from v_plan or (v_r ->> 'slot_count')::int <> v_n + 1 then
@@ -456,13 +456,15 @@ begin
      where v.location_code = 'worcester' and v.starts_on < (select starts_on from public.schedule_versions where id = v_cur)
      order by v.starts_on desc limit 1;
   end if;
-  insert into public.schedule_slots (version_id, location_code, class_id, weekday, starts_at, ends_at)
-  values (v_past, 'worcester', v_cw1, 4, '18:00', '18:45') returning id into v_past_slot;
+  insert into public.schedule_slots (version_id, location_code, weekday, starts_at, ends_at)
+  values (v_past, 'worcester', 4, '18:00', '18:45') returning id into v_past_slot;
+  insert into public.schedule_slot_classes (slot_id, location_code, class_id, position)
+  values (v_past_slot, 'worcester', v_cw1, 0);
   set local role authenticated;
   perform set_config('request.jwt.claims', v_c_a1, true);
   v_txt := concat_ws(',',
-    public.schedule_add_slots('worcester', v_past, v_cw1, '{4}', '19:00', '19:45') ->> 'status',
-    public.schedule_update_slot(v_past_slot, 1, v_cw1, 4::smallint, '18:00', '18:50') ->> 'status',
+    public.schedule_add_slots('worcester', v_past, array[v_cw1], '{4}', '19:00', '19:45') ->> 'status',
+    public.schedule_update_slot(v_past_slot, 1, array[v_cw1], 4::smallint, '18:00', '18:50') ->> 'status',
     public.schedule_remove_slot(v_past_slot, 1) ->> 'status',
     public.schedule_update_version(v_past, (select version from public.schedule_versions where id = v_past), 'x', v_today + 80) ->> 'status',
     public.schedule_delete_version(v_past, (select version from public.schedule_versions where id = v_past), 1) ->> 'status');
@@ -477,7 +479,7 @@ begin
   if v_r ->> 'status' <> 'stale' then raise exception 'TEST FAILED: 12a stale remove: %', v_r; end if;
   v_r := public.schedule_remove_slot(v_sl1, v_sl1_v);
   if v_r ->> 'status' <> 'ok'
-     or (v_r -> 'removed' ->> 'class_id')::uuid <> v_cw2
+     or v_r -> 'removed' -> 'class_ids' <> jsonb_build_array(v_cw2)
      or (v_r -> 'removed' ->> 'weekday')::int <> 1
      or v_r -> 'removed' ->> 'starts_at' <> '16:00'
      or v_r -> 'removed' ->> 'ends_at' <> '16:50' then
@@ -546,7 +548,7 @@ begin
   -- Test 14: deleting a class in Testing removes its slots and color,
   --          and the history says so (decision Q1)
   -- -------------------------------------------------------------------
-  select count(*) into v_n from public.schedule_slots where class_id = v_cw1;
+  select count(*) into v_n from public.schedule_slot_classes where class_id = v_cw1;
   if v_n < 2 then raise exception 'TEST SETUP: expected w1 to have slots, has %', v_n; end if;
   reset role;
   select max(id) into v_mark from public.change_log;
@@ -555,11 +557,14 @@ begin
   v_r := public.testing_delete_class(v_cw1, 1, '{}', '{}', false);
   if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: 14a Testing delete class: %', v_r; end if;
   reset role;
-  if exists (select 1 from public.schedule_slots where class_id = v_cw1) then raise exception 'TEST FAILED: 14b slots of a deleted class remain'; end if;
+  if exists (select 1 from public.schedule_slot_classes where class_id = v_cw1) then raise exception 'TEST FAILED: 14b the deleted class is still on slots'; end if;
+  if exists (select 1 from public.schedule_slots s where not exists (select 1 from public.schedule_slot_classes c where c.slot_id = s.id)) then
+    raise exception 'TEST FAILED: 14b2 a slot was left with no class';
+  end if;
   if exists (select 1 from public.schedule_class_colors where class_id = v_cw1) then raise exception 'TEST FAILED: 14c color of a deleted class remains'; end if;
   select count(*) into v_n2 from public.change_log
-   where id > v_mark and table_name = 'schedule_slots' and op = 'delete' and action = 'delete_class';
-  if v_n2 <> v_n then raise exception 'TEST FAILED: 14d % slot removals should be in change_log as delete_class, found %', v_n, v_n2; end if;
+   where id > v_mark and table_name = 'schedule_slot_classes' and op = 'delete' and action = 'delete_class';
+  if v_n2 <> v_n then raise exception 'TEST FAILED: 14d % slot-class removals should be in change_log as delete_class, found %', v_n, v_n2; end if;
   if not exists (select 1 from public.change_log where id > v_mark and table_name = 'schedule_class_colors'
                     and op = 'delete' and action = 'delete_class') then
     raise exception 'TEST FAILED: 14e color removal not in change_log';
@@ -569,7 +574,7 @@ begin
   -- Test 15: every write is tagged in change_log with who did it
   -- -------------------------------------------------------------------
   if exists (select 1 from public.change_log c
-              where c.table_name in ('schedule_versions', 'schedule_slots', 'schedule_class_colors')
+              where c.table_name in ('schedule_versions', 'schedule_slots', 'schedule_class_colors', 'schedule_slot_classes')
                 and c.actor_id = v_admin
                 and c.occurred_at >= now()
                 and c.action = 'manual') then
@@ -613,13 +618,125 @@ begin
     raise exception 'TEST FAILED: 16c a slot moved to another schedule';
   exception when check_violation then null;
   end;
-  begin truncate public.schedule_slots;        raise exception 'TEST FAILED: 16d truncate allowed'; exception when raise_exception then null; end;
+  begin truncate public.schedule_slots cascade; raise exception 'TEST FAILED: 16d truncate allowed'; exception when raise_exception then null; end;
+  begin truncate public.schedule_slot_classes;  raise exception 'TEST FAILED: 16f truncate allowed'; exception when raise_exception then null; end;
   begin truncate public.schedule_versions cascade; raise exception 'TEST FAILED: 16e truncate allowed'; exception when raise_exception then null; end;
+
+  -- -------------------------------------------------------------------
+  -- Test 17: combined classes (several classes in ONE time slot, v0.88)
+  -- -------------------------------------------------------------------
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_txt := concat_ws(',',
+    public.schedule_add_slots('worcester', v_cur, '{}'::uuid[], '{2}', '07:00', '07:45') ->> 'status',              -- no class
+    public.schedule_add_slots('worcester', v_cur, array[v_cw2, v_cw2], '{2}', '07:00', '07:45') ->> 'status',       -- twice
+    public.schedule_add_slots('worcester', v_cur, array[v_cw2, null], '{2}', '07:00', '07:45') ->> 'status',        -- empty id
+    public.schedule_add_slots('worcester', v_cur, array[v_cw2, v_cs1], '{2}', '07:00', '07:45') ->> 'status',       -- other school
+    public.schedule_add_slots('worcester', v_cur, array[v_cw2, v_rand], '{2}', '07:00', '07:45') ->> 'status');     -- gone
+  if v_txt <> 'invalid,invalid,invalid,invalid,stale' then raise exception 'TEST FAILED: 17a class list rules gave %', v_txt; end if;
+  -- a third Worcester class, then "w2 + w3" together on Tue and Thu
+  v_cw1 := (public.testing_add_class('worcester', v_tag || ' w3', null, false) ->> 'id')::uuid;   -- (w1 was deleted in 14)
+  v_r := public.schedule_add_slots('worcester', v_cur, array[v_cw2, v_cw1], '{2,4}', '07:00', '07:45');
+  if v_r ->> 'status' <> 'ok' or jsonb_array_length(v_r -> 'slots') <> 2 then raise exception 'TEST FAILED: 17b combined add: %', v_r; end if;
+  v_sl1 := (v_r -> 'slots' -> 0 ->> 'id')::uuid;
+  v_sl1_v := (v_r -> 'slots' -> 0 ->> 'version')::int;
+  if (select array_agg(class_id order by position) from public.schedule_slot_classes where slot_id = v_sl1) <> array[v_cw2, v_cw1] then
+    raise exception 'TEST FAILED: 17c both classes should be on the slot, in the order ticked';
+  end if;
+  -- an overlap with it names both classes
+  v_r := public.schedule_add_slots('worcester', v_cur, array[v_cw2], '{2}', '07:30', '08:00');
+  if not exists (select 1 from jsonb_array_elements(v_r -> 'overlaps') o
+                  where o ->> 'class_name' = v_tag || ' w2 + ' || v_tag || ' w3' and jsonb_array_length(o -> 'class_ids') = 2) then
+    raise exception 'TEST FAILED: 17d overlap should name "w2 + w3": %', v_r;
+  end if;
+  -- changing ONLY the classes is a change: new version, and the old version is stale
+  v_r := public.schedule_update_slot(v_sl1, v_sl1_v, array[v_cw1], 2::smallint, '07:00', '07:45');
+  if v_r ->> 'status' <> 'ok' or (v_r ->> 'version')::int <> v_sl1_v + 1 then raise exception 'TEST FAILED: 17e class-only change: %', v_r; end if;
+  if (select array_agg(class_id) from public.schedule_slot_classes where slot_id = v_sl1) <> array[v_cw1] then
+    raise exception 'TEST FAILED: 17f the slot should now have only w3';
+  end if;
+  v_r := public.schedule_update_slot(v_sl1, v_sl1_v, array[v_cw2, v_cw1], 2::smallint, '07:00', '07:45');
+  if v_r ->> 'status' <> 'stale' then raise exception 'TEST FAILED: 17g old version after a class change: %', v_r; end if;
+  v_r := public.schedule_update_slot(v_sl1, v_sl1_v + 1, array[v_cw1, v_cw2], 2::smallint, '07:00', '07:45');
+  if v_r ->> 'status' <> 'ok' or (select array_agg(class_id order by position) from public.schedule_slot_classes where slot_id = v_sl1) <> array[v_cw1, v_cw2] then
+    raise exception 'TEST FAILED: 17h back to two classes, in the new order: %', v_r;
+  end if;
+  v_sl1_v := (v_r ->> 'version')::int;
+  -- changing ONLY the order is a change too (security re-check)
+  v_r := public.schedule_update_slot(v_sl1, v_sl1_v, array[v_cw2, v_cw1], 2::smallint, '07:00', '07:45');
+  if v_r ->> 'status' <> 'ok' or (v_r ->> 'version')::int <> v_sl1_v + 1 then raise exception 'TEST FAILED: 17h2 order-only change: %', v_r; end if;
+  if (public.schedule_update_slot(v_sl1, v_sl1_v, array[v_cw1, v_cw2], 2::smallint, '07:00', '07:45') ->> 'status') <> 'stale' then
+    raise exception 'TEST FAILED: 17h3 the old version should be stale after an order-only change';
+  end if;
+  v_sl1_v := v_sl1_v + 1;
+  -- editing with a bad class list is refused like adding
+  v_txt := concat_ws(',',
+    public.schedule_update_slot(v_sl1, v_sl1_v, '{}'::uuid[], 2::smallint, '07:00', '07:45') ->> 'status',
+    public.schedule_update_slot(v_sl1, v_sl1_v, array[v_cw1, v_cw1], 2::smallint, '07:00', '07:45') ->> 'status',
+    public.schedule_update_slot(v_sl1, v_sl1_v, array[v_cw1, v_cs1], 2::smallint, '07:00', '07:45') ->> 'status',
+    public.schedule_update_slot(v_sl1, v_sl1_v, array[v_cw1, v_rand], 2::smallint, '07:00', '07:45') ->> 'status',
+    public.schedule_update_slot(v_sl1, v_sl1_v, array[v_cw1, gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), gen_random_uuid(),
+                                                 gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), gen_random_uuid()],
+                                2::smallint, '07:00', '07:45') ->> 'status');
+  if v_txt <> 'invalid,invalid,invalid,stale,invalid' then raise exception 'TEST FAILED: 17h4 update class list rules gave %', v_txt; end if;
+  -- put the order back for the steps below
+  if (public.schedule_update_slot(v_sl1, v_sl1_v, array[v_cw1, v_cw2], 2::smallint, '07:00', '07:45') ->> 'status') <> 'ok' then
+    raise exception 'TEST FAILED: 17h5 restoring the order';
+  end if;
+  v_sl1_v := v_sl1_v + 1;
+  -- removing returns every class (for Undo)
+  v_r := public.schedule_remove_slot(v_sl1, v_sl1_v);
+  if v_r ->> 'status' <> 'ok' or v_r -> 'removed' -> 'class_ids' <> jsonb_build_array(v_cw1, v_cw2) then
+    raise exception 'TEST FAILED: 17i remove should return both classes: %', v_r;
+  end if;
+  if exists (select 1 from public.schedule_slot_classes where slot_id = v_sl1) then raise exception 'TEST FAILED: 17j its class rows remain'; end if;
+  -- planning a change copies combined slots WITH their classes
+  select s.id into v_sl2 from public.schedule_slots s
+   where s.version_id = v_cur and s.weekday = 4 and s.starts_at = '07:00';
+  v_r := public.schedule_plan_version('worcester', 'Combined copy', v_today + 2, true);   -- the schedule just before it is the current one
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: 17k plan: %', v_r; end if;
+  if not exists (select 1 from public.schedule_slots s
+                  where s.version_id = (v_r ->> 'id')::uuid and s.weekday = 4 and s.starts_at = '07:00'
+                    and (select array_agg(c.class_id order by c.position) from public.schedule_slot_classes c where c.slot_id = s.id) = array[v_cw2, v_cw1]) then
+    raise exception 'TEST FAILED: 17l the copied Thursday slot should keep "w2 + w3"';
+  end if;
+  -- deleting ONE class of a combined slot keeps the slot with the other class;
+  -- deleting its LAST class removes the slot
+  v_r := public.testing_delete_class(v_cw1, 1, '{}', '{}', false);
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: 17m delete w3: %', v_r; end if;
+  if (select array_agg(class_id) from public.schedule_slot_classes where slot_id = v_sl2) <> array[v_cw2] then
+    raise exception 'TEST FAILED: 17n the combined slot should keep w2';
+  end if;
+  reset role;
+  if (select class_set from public.schedule_slots where id = v_sl2) <> v_cw2::text then
+    raise exception 'TEST FAILED: 17n2 the slot''s class_set should now be only w2';
+  end if;
+  select max(id) into v_mark from public.change_log;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_r := public.testing_delete_class(v_cw2, (select version from public.testing_classes where id = v_cw2), '{}', '{}', false);
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: 17o delete w2: %', v_r; end if;
+  if exists (select 1 from public.schedule_slots where id = v_sl2) then raise exception 'TEST FAILED: 17p a slot with no class left should be gone'; end if;
+  reset role;
+  if not exists (select 1 from public.change_log
+                  where id > v_mark and table_name = 'schedule_slots' and record_id = v_sl2 and op = 'delete' and action = 'delete_class') then
+    raise exception 'TEST FAILED: 17p2 the emptied slot''s removal should be in change_log as delete_class';
+  end if;
+  if to_regprocedure('public.schedule_add_slots(text,uuid,uuid,smallint[],time,time)') is not null
+     or to_regprocedure('public.schedule_update_slot(uuid,integer,uuid,smallint,time,time)') is not null then
+    raise exception 'TEST FAILED: 17s an old one-class function is still there';
+  end if;
+  if exists (select 1 from public.schedule_slots s where not exists (select 1 from public.schedule_slot_classes c where c.slot_id = s.id)) then
+    raise exception 'TEST FAILED: 17q some slot has no class';
+  end if;
+  if has_column_privilege('authenticated', 'public.schedule_slots', 'class_set', 'select') then
+    raise exception 'TEST FAILED: 17r class_set should not be readable by the app';
+  end if;
 
   -- -------------------------------------------------------------------
   -- Catalog: permissions on everything 0005 created
   -- -------------------------------------------------------------------
-  foreach v_tbl in array array['schedule_versions', 'schedule_slots', 'schedule_class_colors'] loop
+  foreach v_tbl in array array['schedule_versions', 'schedule_slots', 'schedule_class_colors', 'schedule_slot_classes'] loop
     if not (select c.relrowsecurity from pg_class c where c.oid = ('public.' || v_tbl)::regclass) then
       raise exception 'TEST FAILED: C1 RLS is off on %', v_tbl;
     end if;
@@ -632,6 +749,7 @@ begin
        or has_table_privilege('authenticated', 'public.' || v_tbl, 'delete')
        or has_table_privilege('authenticated', 'public.' || v_tbl, 'truncate')
        or has_any_column_privilege('anon', 'public.' || v_tbl, 'select')
+       or has_any_column_privilege('service_role', 'public.' || v_tbl, 'select')
        or has_column_privilege('authenticated', 'public.' || v_tbl, 'created_by', 'select')
        or has_column_privilege('authenticated', 'public.' || v_tbl, 'updated_by', 'select') then
       raise exception 'TEST FAILED: C2 wrong grants on %', v_tbl;
@@ -668,8 +786,8 @@ begin
     end if;
   end loop;
   if (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-       where n.nspname = 'public' and p.proname like 'schedule\_%') <> 15 then
-    raise exception 'TEST FAILED: C9 expected 15 schedule_* functions, found %',
+       where n.nspname = 'public' and p.proname like 'schedule\_%') <> 19 then
+    raise exception 'TEST FAILED: C9 expected 19 schedule_* functions, found %',
       (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
         where n.nspname = 'public' and p.proname like 'schedule\_%');
   end if;
