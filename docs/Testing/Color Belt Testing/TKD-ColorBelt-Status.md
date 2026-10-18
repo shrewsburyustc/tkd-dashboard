@@ -55,7 +55,8 @@ Phase 1 = **Testing → Classes and ranks** (admins edit each school's Classes, 
 - Fact (Jeffrey, 2026-10-17): the 3-stripes rule applies to **every student in every class** (3 stripes on one side of the belt before testing).
 - **Q4 decided (Jeffrey, 2026-10-17): A — a required tick box right under the belt choice** on step 1: "The student has 3 stripes on one side of their belt. Students need 3 stripes to test." Continue without it → amber "Tick the box to confirm 3 stripes. Not sure? Ask your instructor before registering." Staff roster can show it was confirmed.
 - Private testing stays out of the regular event form (phase 5).
-- **Q5 (contact details on the form): next.**
+- **Q5 decided (Jeffrey, 2026-10-17): no email, no phone, no date of birth — names only** (like the old Color Belt form). The reference number is shown on screen only. (Differs from Star v0.80, which asks "Email for results".)
+- Presentation note: show each question as rendered mockup images (PNG, amber outline on what's asked), not sketches or HTML files alone.
 
 **Later phases** (each: design → mockups at 3 sizes → approve → build → reviews → OK): 2 Events + public family registration form (Cloudflare Pages Function path, v0.33) · 3 Registrations and payments · 4 Testing roster (grading) · 5 Private testing. Also pending his OK: aligning the account dialogs' phone Back gesture with the Testing dialogs.
 
