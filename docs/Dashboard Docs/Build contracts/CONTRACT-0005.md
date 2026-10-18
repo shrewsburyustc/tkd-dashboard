@@ -213,6 +213,6 @@ Fake database + fake Turnstile: kill switch, wrong origin, wrong type, oversized
 Security review of A + B together (the public path is the focus: registrar proofs, Function checks, CSP, secrets) and design review of D + B against every approved screen at 1280×800, 820×1180 touch, 390×844 touch, 320 wide; fix; re-review.
 
 ## 9. Before building starts
-1. Main merges `staff-accounts` and `star-testing`; this branch merges `main`.
-2. The orchestrator records phase 2 in the rulebook (decisions Q1–Q9, plan answers 1–9, Settings → Schools, v0.36 change) and updates this contract's references if numbers moved.
+1. ~~Main merges `staff-accounts` and `star-testing`; this branch merges `main`~~ **done 2026-10-17** (main e2d793e).
+2. ~~Record phase 2 in the rulebook~~ **done 2026-10-17: rulebook v0.131–v0.136** (on top of v0.130 after the merges; Star references here were renumbered by the Main session).
 3. Jeffrey OKs: ~~the two new dependencies~~ **approved by Jeffrey 2026-10-17: `postgres` (Postgres.js) and `qrcode-generator`, exact pinned versions** (§4.6); ~~the `rate_limited` and `verify_failed` wordings~~ **both wordings approved by Jeffrey 2026-10-17** (§4.2); and ~~registering on the testing day~~ **confirmed by Jeffrey 2026-10-17: families can register on the testing day itself until the end of the day, at the testing-day price** (§1.3 state 2).
