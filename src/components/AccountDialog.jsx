@@ -101,8 +101,9 @@ export default function AccountDialog({ title, fullScreen, onCancel, onBack, chi
 
   return (
     // The dimmed backdrop. Clicking it does nothing on purpose: Cancel is the one way out,
-    // so a stray click can't throw away what was typed.
-    <div className="dialog-backdrop">
+    // so a stray click can't throw away what was typed. "--top": the box sits near the top of the
+    // screen, like every other dialog (v0.82; the class lives in testing.css with v0.80).
+    <div className="dialog-backdrop dialog-backdrop--top">
       <div ref={boxRef} className="dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
         <h2 id={titleId} className="dialog-title">
           {title}
