@@ -8,7 +8,7 @@
 
 ## 1. What this migration must do (in one paragraph)
 
-Store everything the approved Star screens show: the shared rubrics and prices; events with their own copy of those; two family links per event; candidates (from the form or the desk), their payments, make-ups and private testings; grades and class counts; who marked a result email as sent; a log line for each CSV download. Results are worked out from the grades every time they are shown (decided v0.157). Every rule from handoff §6 applies: RLS on every table, `revoke … from public, anon, authenticated, service_role` on every Star table, sequence, view and function (then only the needed grants), nothing for `anon` or `service_role`, writes only through security-definer functions that check `has_data_access()` first, every change in `change_log`, DOB / email / payments / signatures kept out of lists and logs.
+Store everything the approved Star screens show: the shared rubrics and prices; events with their own copy of those; two family links per event; candidates (from the form or the desk), their payments, make-ups and private testings; grades and class counts; who marked a result email as sent; a log line for each CSV download. Results are worked out from the grades every time they are shown (decided v0.158). Every rule from handoff §6 applies: RLS on every table, `revoke … from public, anon, authenticated, service_role` on every Star table, sequence, view and function (then only the needed grants), nothing for `anon` or `service_role`, writes only through security-definer functions that check `has_data_access()` first, every change in `change_log`, DOB / email / payments / signatures kept out of lists and logs.
 
 ## 2. Facts that shape the plan (from the research)
 
@@ -31,18 +31,18 @@ All new objects start with `star_`. Each table has the house columns (plus `revo
 | `star_events` | name (unique), testing date, start time, Where (information), registration open / auto-close date / first opened, note, two public codes (one per school) | v0.85–v0.92, v0.98 |
 | `star_event_dans`, `star_event_categories`, `star_event_grades`, `star_event_assistant` | the event's own copy, taken when the event is created, never changed later | v0.61 |
 | `star_candidates` | one person in one event: names, DOB, email, school, Dan, stars from, paying by, source (form/desk), reference `ST-####` (form only), status (active/withdrawn), duplicate state, make-up link, private day and time, classes attended, assistant classes | v0.98–v0.117, v0.148–v0.152 |
-| `star_candidate_signatures` | the form's drawn signature, acknowledgement and its wording version (never granted to any role; Star's own purge runs from Star functions: deleted 90 days after the testing day, v0.161) | v0.102, v0.107 |
+| `star_candidate_signatures` | the form's drawn signature, acknowledgement and its wording version (never granted to any role; Star's own purge runs from Star functions: deleted 90 days after the testing day, v0.162) | v0.102, v0.107 |
 | `star_makeup_subjects` | for a make-up candidate: which subjects are retested; for a below-245 result: which subjects an admin chose | v0.96, v0.111, v0.129, v0.130 |
 | `star_payments` | append-only: method used, amount, date, who; undo/edit = a reversal row (as 0005). A guard trigger refuses update, and refuses delete except inside a cascade (`pg_trigger_depth() > 1` or the `delete_candidate` / `delete_event` tags) | v0.109, v0.110, v0.152 |
 | `star_grades` | one judged grade per candidate × event subject, who and when | v0.124, v0.125, v0.139 |
 | `star_result_emails` | Mark as sent: who, when (whether it also saves the result it was for: to confirm, Q-D6) | v0.141 |
 | `star_downloads` | CSV downloads: who, when, which event, which Dan | v0.144 |
 
-**Worked out, never stored:** event status tag and Upcoming/Past (v0.88, v0.89); stars to (= from + 1); expected fee (standard / same day / private); Paid / Not paid / overpaid (v0.152); Assistant Instructor grade (from the count and age, v0.126); totals and results (decided v0.157: one function works them out every time); the make-up list (v0.111); the Home "Today" card (v0.154).
+**Worked out, never stored:** event status tag and Upcoming/Past (v0.88, v0.89); stars to (= from + 1); expected fee (standard / same day / private); Paid / Not paid / overpaid (v0.152); Assistant Instructor grade (from the count and age, v0.126); totals and results (decided v0.158: one function works them out every time); the make-up list (v0.111); the Home "Today" card (v0.154).
 
 **Logging DOB and email:** `star_candidates` gets its own log trigger (like 0005's `testing_registrations_log`) that writes DOB and email as "on file", never their values, until Q-D17 is answered. A test proves `change_log` never contains a DOB or an email.
 
-**Shared from 0005, read only:** `locations` (school names and street addresses for "Location:" on family pages), `testing_today()` (Massachusetts date), the name and signature checks. 0006 runs no `revoke` or `grant` on `locations`, `testing_public_attempts`, `testing_registrar` or any other 0005 object (that would undo 0005's grants). Star has its own login (v0.158), created with the same settings as `testing_registrar`: no inherit, 5-connection limit, the same timeouts, empty search path, no password in the file.
+**Shared from 0005, read only:** `locations` (school names and street addresses for "Location:" on family pages), `testing_today()` (Massachusetts date), the name and signature checks. 0006 runs no `revoke` or `grant` on `locations`, `testing_public_attempts`, `testing_registrar` or any other 0005 object (that would undo 0005's grants). Star has its own login (v0.159), created with the same settings as `testing_registrar`: no inherit, 5-connection limit, the same timeouts, empty search path, no password in the file.
 
 ## 4. Functions (the only way to write)
 
@@ -56,18 +56,18 @@ Each: `security definer`, `set search_path = ''`, full names, checks in the hous
 | Payments | S: record payment, undo within the toast (own, recent); A: edit / undo later |
 | Grading | S: set grade (or clear), set class counts; A: choose make-up subjects for below 245 |
 | Results | S: mark email as sent / undo; A: CSV download — checks `has_data_access()` first, then `is_admin()`, writes the log row before returning the rows, in the same call (a refused call writes nothing) |
-| Public (family form) | read the event by code (returns only the event box, its prices and rubric, the school name and address — never counts or other candidates); register (login: its own restricted login, proposed `star_registrar`, decided v0.158). Rate limit reuses `testing_public_attempts` (20 per hour per key, 200 per event); `submission_id` unique so a retry returns the same answer; the answer is identical whether or not the person looks like a duplicate; public codes are unique across Star and Color Belt (or Star gets its own route and Function) |
+| Public (family form) | read the event by code (returns only the event box, its prices and rubric, the school name and address — never counts or other candidates); register (login: its own restricted login, proposed `star_registrar`, decided v0.159). Rate limit reuses `testing_public_attempts` (20 per hour per key, 200 per event); `submission_id` unique so a retry returns the same answer; the answer is identical whether or not the person looks like a duplicate; public codes are unique across Star and Color Belt (or Star gets its own route and Function) |
 
-Reads for the screens use column-level select grants and `security_invoker` views. **`date_of_birth`, `email_for_results` and `signature` are never granted to any role** (like `signature` in 0005): leaving them out of a view would not protect them. They are read only through one security-definer detail function (one candidate by id, `has_data_access()` first, staff and admins, v0.159; the mat-side tablet hides them in the app only, v0.160 — the database does not tell devices apart) and the admin CSV function (rule 5).
+Reads for the screens use column-level select grants and `security_invoker` views. **`date_of_birth`, `email_for_results` and `signature` are never granted to any role** (like `signature` in 0005): leaving them out of a view would not protect them. They are read only through one security-definer detail function (one candidate by id, `has_data_access()` first, staff and admins, v0.160; the mat-side tablet hides them in the app only, v0.161 — the database does not tell devices apart) and the admin CSV function (rule 5).
 
 ## 5. Tests (copy 0005's shape)
 
-`supabase/tests/0006_tests.sql` (one transaction, ends in `rollback`), `0006_fingerprints.sql` (read-only, no forbidden words), and a new step in the PGlite runner that applies 0001–0006, runs **every** earlier test file again, re-applies 0006 and prints fingerprints. Checks by name only, so 0003–0005 tests keep passing. Star has its own login (v0.158), so 0005's test **T2a** and `testing_registrar` are left exactly as they are; 0006's tests prove `star_registrar` can run only Star's two public functions. A `CONTRACT-0006.md` before any SQL, as for 0003 and 0005.
+`supabase/tests/0006_tests.sql` (one transaction, ends in `rollback`), `0006_fingerprints.sql` (read-only, no forbidden words), and a new step in the PGlite runner that applies 0001–0006, runs **every** earlier test file again, re-applies 0006 and prints fingerprints. Checks by name only, so 0003–0005 tests keep passing. Star has its own login (v0.159), so 0005's test **T2a** and `testing_registrar` are left exactly as they are; 0006's tests prove `star_registrar` can run only Star's two public functions. A `CONTRACT-0006.md` before any SQL, as for 0003 and 0005.
 
 ## 6. Order of work after the questions
 
 1. ✓ Done 2026-10-18: `main` (with Color Belt's 0005) merged into `star-testing` (353a050), so 0006 is written against the real 0005.
-2. Jeffrey's one-time setup for the Star form login (v0.158): set `star_registrar`'s password in the Supabase SQL Editor and add a second Hyperdrive connection in Cloudflare (step-by-step notes in SETUP).
+2. Jeffrey's one-time setup for the Star form login (v0.159): set `star_registrar`'s password in the Supabase SQL Editor and add a second Hyperdrive connection in Cloudflare (step-by-step notes in SETUP).
 3. Write `CONTRACT-0006.md` → security review (separate agent) → Jeffrey's OK.
 4. Write the SQL + tests → PGlite passes → security review → Jeffrey's OK → Jeffrey pastes it in the Supabase SQL Editor → fingerprints, advisor and tests.
 5. Build the screens in the 6 phases (v0.61), one at a time.
@@ -79,11 +79,11 @@ Structure first, then details. Each will be shown with a picture and options.
 | # | Question | Why it matters | Left open by |
 |---|---|---|---|
 | Q-D1 ✓ | **Answered v0.156: separate `star_…` tables (A).** Was: separate Star tables, or share Color Belt's events table? | Decides the whole shape; Color Belt's table is one school per event and already live | v0.60, v0.131, 0005 |
-| Q-R1 ✓ | **Answered v0.157: worked out every time (A).** Was: results worked out every time, or saved? | v0.139 (results stay open) points to worked out | v0.138, v0.139 |
-| Q-D4 ✓ | **Answered v0.158: a second login just for Star (B).** Was: reuse Color Belt's restricted login, or a second one for Star? | Reusing means editing one Color Belt test; a second login is a setup step for Jeffrey | v0.33, v0.105, 0005 T2a |
-| Q-D2 ✓ | **Answered v0.159: staff and admins, detail view only (A).** Was: who can see DOB and email? | Decides the detail function's role check | status §4, v0.110, v0.112 |
-| Q-D9 ✓ | **Answered v0.160: a setting in the app (A), not enforced by the database (flagged, Jeffrey's call).** Was: mat-side tablet: the database can't tell the tablet from the desk PC. Separate tablet account, or the tablet only uses Grading? | DOB, email and payments must stay off the tablet (v0.108, v0.110) | v0.108, v0.122 |
-| Q-D5 ✓ | **Answered v0.161: like Color Belt (A) — signatures 90 days; DOB, email and records kept.** Was: how long is data kept? Signatures (Color Belt: 90 days); DOB and email of past candidates (the make-up list and CSV need older events, so this conflicts); old events | Privacy of minors | v0.102, v0.136 |
+| Q-R1 ✓ | **Answered v0.158: worked out every time (A).** Was: results worked out every time, or saved? | v0.139 (results stay open) points to worked out | v0.138, v0.139 |
+| Q-D4 ✓ | **Answered v0.159: a second login just for Star (B).** Was: reuse Color Belt's restricted login, or a second one for Star? | Reusing means editing one Color Belt test; a second login is a setup step for Jeffrey | v0.33, v0.105, 0005 T2a |
+| Q-D2 ✓ | **Answered v0.160: staff and admins, detail view only (A).** Was: who can see DOB and email? | Decides the detail function's role check | status §4, v0.110, v0.112 |
+| Q-D9 ✓ | **Answered v0.161: a setting in the app (A), not enforced by the database (flagged, Jeffrey's call).** Was: mat-side tablet: the database can't tell the tablet from the desk PC. Separate tablet account, or the tablet only uses Grading? | DOB, email and payments must stay off the tablet (v0.108, v0.110) | v0.108, v0.122 |
+| Q-D5 ✓ | **Answered v0.162: like Color Belt (A) — signatures 90 days; DOB, email and records kept.** Was: how long is data kept? Signatures (Color Belt: 90 days); DOB and email of past candidates (the make-up list and CSV need older events, so this conflicts); old events | Privacy of minors | v0.102, v0.136 |
 | Q-D7 | **Make-ups across events:** copy the earlier grades into the new event, or read them from the earlier event? | Rubric copies can differ between events | v0.61, v0.129 |
 | Q-D11 | **Changing a candidate's Dan or stars after grading:** clear the grades, keep them, or block the change? | Grades belong to one Dan's subjects | v0.112 |
 | Q-D10 | **Two people entering the same grade:** last one wins, or "changed by someone else"? | Paper typed in while a tablet grades | v0.122 |

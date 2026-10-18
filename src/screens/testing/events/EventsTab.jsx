@@ -34,7 +34,7 @@ import { useShortcutN } from '../../../lib/useShortcutN.js';
 import ChoiceGroup from './ChoiceGroup.jsx';
 import ConfirmDeleteDialog from './ConfirmDeleteDialog.jsx';
 import EventDialog, { checkEventForm, isEventFormDirty } from './EventDialog.jsx';
-import { useLiveLoad } from './useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from './useLiveLoad.js';
 import * as T from '../text.js';
 
 // Upcoming / Past, per school, kept while the page is open (like phase 1's open classes).
@@ -82,7 +82,7 @@ export default function EventsTab({
   onOpenEvent,
 }) {
   const locationCode = LOCATION_CODE[school];
-  const live = useLiveLoad({ key: locationCode, enabled: !screenLocked, load: loadEvents });
+  const live = useLiveLoad({ key: locationCode, enabled: !screenLocked, load: loadEvents, refreshMs: LIVE_REFRESH_MS });
   const events = live.data?.events ?? [];
   const today = live.data?.today ?? schoolToday();
 
