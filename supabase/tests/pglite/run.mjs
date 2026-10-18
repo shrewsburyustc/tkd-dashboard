@@ -22,9 +22,9 @@
 //       privileges (which 0001 removed), so the 0003 checks prove that
 //       0003's OWN revokes lock everything down, not just 0001's defaults
 //    6. 0003_testing_classes_ranks.sql, then 0004_staff_accounts.sql,
-//       then 0007_schedule.sql
+//       then 0007_schedule.sql, then 0008_calendar.sql
 //    7. tests: verify_pin_tests.sql, 0002_tests.sql, 0003_tests.sql,
-//       0004_tests.sql, 0007_tests.sql
+//       0004_tests.sql, 0007_tests.sql, 0008_tests.sql
 //    8. a seed (7 classes / 42 ranks per school) - built in, or with
 //       --fixture-seed Builder B's generated fixture seed file - then
 //       0003_tests.sql again (the tests must pass before AND after seeding)
@@ -38,6 +38,8 @@
 //   9c. 0007 applied a SECOND time: its fingerprints
 //       (0007_fingerprints.sql) must be the same before and after, and
 //       0007_tests.sql must pass again (also after 0003's re-run)
+//   9d. 0008 applied a SECOND time: same idea with 0008_fingerprints.sql
+//       and 0008_tests.sql (and 0007_tests.sql still passes after it)
 //   10. UPGRADE check, on a second fresh database: steps 1-5, then the
 //       EARLIER copy of 0003 (fixtures/0003_before_v062.sql), a seed, then
 //       today's 0003 over it. Every row must survive, the fingerprints
@@ -228,6 +230,7 @@ async function main() {
   if (!(await run(db, 'apply 0003_testing_classes_ranks.sql', read('migrations', '0003_testing_classes_ranks.sql')))) return finish();
   if (!(await run(db, 'apply 0004_staff_accounts.sql', read('migrations', '0004_staff_accounts.sql')))) return finish();
   if (!(await run(db, 'apply 0007_schedule.sql', read('migrations', '0007_schedule.sql')))) return finish();
+  if (!(await run(db, 'apply 0008_calendar.sql', read('migrations', '0008_calendar.sql')))) return finish();
 
   // 7. tests on the empty (unseeded) database
   await runTestFile(db, 'verify_pin_tests.sql', 'verify_pin_tests.sql', 'ALL PIN TESTS PASSED');
@@ -235,6 +238,7 @@ async function main() {
   await runTestFile(db, '0003_tests.sql (before seed)', '0003_tests.sql', 'ALL 0003 TESTS PASSED');
   await runTestFile(db, '0004_tests.sql', '0004_tests.sql', 'ALL 0004 TESTS PASSED');
   await runTestFile(db, '0007_tests.sql (before seed)', '0007_tests.sql', 'ALL 0007 TESTS PASSED');
+  await runTestFile(db, '0008_tests.sql (before seed)', '0008_tests.sql', 'ALL 0008 TESTS PASSED');
 
   // 8. seed, then the 0003 tests again
   let seedSql;
@@ -250,6 +254,7 @@ async function main() {
   record('seed row counts (14 classes, 84 ranks)', classCount === 14 && rankCount === 84, `${classCount} classes, ${rankCount} ranks`);
   await runTestFile(db, '0003_tests.sql (after seed)', '0003_tests.sql', 'ALL 0003 TESTS PASSED');
   await runTestFile(db, '0007_tests.sql (after seed)', '0007_tests.sql', 'ALL 0007 TESTS PASSED');
+  await runTestFile(db, '0008_tests.sql (after seed)', '0008_tests.sql', 'ALL 0008 TESTS PASSED');
 
   // 9. re-run safety
   const before = await fingerprints(db);
@@ -283,6 +288,25 @@ async function main() {
   record('0007 fingerprints identical before/after re-run', JSON.stringify(before7) === JSON.stringify(after7), `${after7.length} rows`);
   await runTestFile(db, '0007_tests.sql (after re-run)', '0007_tests.sql', 'ALL 0007 TESTS PASSED');
   await runTestFile(db, '0003_tests.sql (after 0007 re-run)', '0003_tests.sql', 'ALL 0003 TESTS PASSED');
+  await runTestFile(db, '0008_tests.sql (after 0007 re-run)', '0008_tests.sql', 'ALL 0008 TESTS PASSED');
+
+  // 9d. 0008 re-run safety
+  const typeCount = await one(db, 'select count(*)::int from public.calendar_event_types');
+  const calendarSnapshotSql = `select md5(coalesce((select string_agg(to_jsonb(t)::text, ',' order by t.id) from public.calendar_event_types t), '')
+                          || coalesce((select string_agg(to_jsonb(e)::text, ',' order by e.id) from public.calendar_events e), '')
+                          || coalesce((select string_agg(to_jsonb(c)::text, ',' order by c.id) from public.calendar_closures c), '')
+                          || coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.calendar_closure_classes x), '')
+                          || (select count(*) from public.change_log)::text)`;
+  const calendarBefore = await one(db, calendarSnapshotSql);
+  const before8 = await fingerprints(db, '0008_fingerprints.sql');
+  await run(db, 'apply 0008 a SECOND time (re-run safety)', read('migrations', '0008_calendar.sql'));
+  record('0008 re-run kept every calendar row and the history unchanged', calendarBefore === (await one(db, calendarSnapshotSql)));
+  const after8 = await fingerprints(db, '0008_fingerprints.sql');
+  record('0008 fingerprints identical before/after re-run', JSON.stringify(before8) === JSON.stringify(after8), `${after8.length} rows`);
+  record('0008 re-run added no second set of event types (5)',
+    typeCount === 5 && (await one(db, 'select count(*)::int from public.calendar_event_types')) === 5);
+  await runTestFile(db, '0008_tests.sql (after re-run)', '0008_tests.sql', 'ALL 0008 TESTS PASSED');
+  await runTestFile(db, '0007_tests.sql (after 0008 re-run)', '0007_tests.sql', 'ALL 0007 TESTS PASSED');
 
   // 10. upgrade check: earlier 0003 + data, then today's 0003 over it
   console.log('\nUpgrade check (earlier 0003 -> today\'s 0003):');
@@ -322,6 +346,11 @@ async function main() {
             const up7 = await fingerprints(up, '0007_fingerprints.sql');
             record('[upgrade] 0007 fingerprints identical to a fresh install', JSON.stringify(up7) === JSON.stringify(after7), `${up7.length} rows`);
             await runTestFile(up, '[upgrade] 0007_tests.sql', '0007_tests.sql', 'ALL 0007 TESTS PASSED');
+            if (await run(up, '[upgrade] apply 0008 on top', read('migrations', '0008_calendar.sql'))) {
+              const up8 = await fingerprints(up, '0008_fingerprints.sql');
+              record('[upgrade] 0008 fingerprints identical to a fresh install', JSON.stringify(up8) === JSON.stringify(after8), `${up8.length} rows`);
+              await runTestFile(up, '[upgrade] 0008_tests.sql', '0008_tests.sql', 'ALL 0008 TESTS PASSED');
+            }
           }
         }
       }
@@ -334,6 +363,8 @@ async function main() {
   for (const line of after4) console.log('  ' + line);
   console.log('\n0007 fingerprints (kind  item  detail):');
   for (const line of after7) console.log('  ' + line);
+  console.log('\n0008 fingerprints (kind  item  detail):');
+  for (const line of after8) console.log('  ' + line);
 
   return finish();
 }
