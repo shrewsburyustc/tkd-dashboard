@@ -3,8 +3,9 @@
 **School:** Jae H. Jeong's U.S. Taekwondo Center (U.S.T.C.), Worcester and Shrewsbury, MA
 **Written:** 2026-10-16, end of the Home + setup session
 **Rulebook:** `TKD-Dashboard-Design-Guidelines.md` (v0.30) — the source of truth. Read sections 0 (process), 5 (privacy/access) and 10b (build plan) first.
+**Color Belt parts updated:** 2026-10-17 (phase 1 live — §1, §8, §9). The rest of this file is still as written at v0.30; where it differs, the current rulebook and `CLAUDE.md` (repo root) win.
 
-> Paste or attach this file at the start of the new chat. Then say what you want to build (next: Color Belt testing).
+> Paste or attach this file at the start of the new chat. Then say what you want to build (Color Belt phase 1 is live — its status and next steps are in §9).
 >
 > Where the guidelines or README seem to conflict, the 10b rows marked v0.29/v0.30 and the changelog win.
 
@@ -14,7 +15,7 @@
 
 - **Live:** https://tkd-dashboard.pages.dev — sign-in, empty Home ("today at a glance", starts empty), app shell, location switcher, account menu, lock screen with PIN, Set PIN / Change PIN / Change password.
 - **No student data yet.** Home stays empty until a section feeds it.
-- **Next section:** Color Belt testing — merge the existing "USTC Color Belt Staging" project into the dashboard, then retire that separate Supabase project.
+- **Color Belt testing — phase 1 live (2026-10-17):** Testing → Classes and ranks — admins edit each school's classes, ranks, testing prices, final awards and belt pictures; staff view only. Migration 0003 + seed (7 classes / 42 ranks per school) are in production. Next Color Belt phase: Events + the public family registration form. The old "USTC Color Belt Staging" project stays read-only and in real use until the new section replaces it; then it is retired. Details: §9.
 
 ## 2. Where everything lives
 
@@ -76,9 +77,9 @@ Migration `0002` is live: the database itself refuses data to a locked, PIN-lock
 
 ## 8. Open items
 
-**REQUIRED before Color Belt stores any student data**
-- [ ] Run `supabase/tests/verify_pin_tests.sql` and `supabase/tests/0002_tests.sql` in the production SQL Editor (both roll back; replace the UID placeholders as their headers say). Both must print their PASSED line.
-- [ ] Confirm `select count(*) from auth.sessions;` returns a number, and that 5 wrong PINs on a test device removes that session from `auth.sessions`.
+**REQUIRED before Color Belt stores any student data** — **done 2026-10-17** (before migration 0003 was applied)
+- [x] `supabase/tests/verify_pin_tests.sql` and `supabase/tests/0002_tests.sql` in the production SQL Editor (admin + desk UIDs) — both PASSED.
+- [x] `select count(*) from auth.sessions;` returned a number (3); 5 wrong PINs in a private window signed that window out and the count went back to 3.
 
 **Before staff rely on it daily**
 - [ ] **Upgrade Supabase to Pro** (~$25/mo once Color Belt staging is retired; ~$35/mo while both projects exist). Free projects **pause after 7 days without use** — the dashboard would go down over a school vacation. On Pro also: turn on leaked-password protection; set time-boxed sessions to 7 days.
@@ -95,10 +96,12 @@ Migration `0002` is live: the database itself refuses data to a locked, PIN-lock
 - A borrowed *unlocked* session within 10 minutes of a password sign-in can set a new PIN.
 - Anyone who knows the shared desk password could change it through the API (the menu hides it, but that's UI-only) — and doing so signs out the other desk computers.
 
-## 9. Color Belt — starting point for the next chat
+## 9. Color Belt — status and next steps
 
-- Existing project: Supabase "USTC Color Belt Staging" (`mfqcchrapunngwwvxzwu`, same org). Its tables, code location and current use need to be inventoried first (read-only).
-- Context: colour belt testing registration went online for the first time in October 2026; from now on all students register online; students need 3 stripes on one side of their belt to register. Colour belt testing runs at one location.
-- **Decide early (its own question, with visuals):** online registration is a public, not-signed-in path, which conflicts with "nothing to `anon`". Options include a narrow insert-only server function or keeping the public form separate from the dashboard. Never grant `anon` table access to copy the old staging project.
-- Process: inventory the existing project → brainstorm the section one question at a time with visuals → mockups at 3 sizes → approval → migration (with the section 6 rules) + screens → reviews → his OK → push.
-- Decide what (if anything) Color Belt puts on Home, and the section's rail icon (add to the icon map, guidelines 2.4).
+- **Start here:** `docs/Testing/Color Belt Testing/TKD-ColorBelt-Status.md` (kept current by the Color Belt session; branch `color-belt` in Claude Code). Build contract: `docs/Dashboard Docs/Build contracts/CONTRACT-0003.md`. Old system inventory: `TKD-ColorBelt-Inventory.md` (same folder).
+- **Phase 1 — Testing → Classes and ranks: LIVE 2026-10-17.** Admins add / edit / reorder (drag by the grip on every device, or Move up / down) / delete classes and ranks per school, with three testing prices (early / testing day / private), sparring gear, each class's final award (or **None**) and a **belt picture** per rank (pattern, colors, end stripes); every change is instant with Undo and logged in `change_log`. Staff (incl. the desk account) view only. Rail icon `ti-certificate` (v0.39); nothing on Home yet (v0.54).
+- **Database:** migration `0003_testing_classes_ranks.sql` (tables `locations`, `testing_classes`, `testing_ranks`, append-only `change_log`; 8 app functions + helpers, 19 functions in all) and the seed `supabase/manual/0003s_seed_classes_and_ranks.sql` (from the old system's export + the approved v0.62 adjustments) are applied in production and verified (fingerprints, security advisor, `0003_tests.sql` passed before and after the seed). Local test runner: `supabase/tests/pglite` (`node run.mjs`).
+- **Decided for the later phases** (rulebook 10b): full rebuild inside the dashboard (v0.32); the public family registration form goes through a Cloudflare Pages Function — never `anon` table access (v0.33); one school per event (v0.34); "Both" is blocked in Color Belt testing (v0.35; Star testing works on Both, v0.58); classes and prices per school (v0.36).
+- **Next phases** (each: design → mockups at 3 sizes → his OK → build → security + design reviews → his OK to push): 2 Events + public registration form · 3 Registrations and payments · 4 Testing roster (grading) · 5 Private testing.
+- **Planned, not decided yet:** once the central Calendar and the Schedule (built in their own session) are done, **Classes and ranks move out of Testing into a school-wide Settings area** — Calendar, Schedule and Testing all use the same ranks. Open points are listed in the status file.
+- Context (unchanged): colour belt testing registration went online for the first time in October 2026; from now on all students register online; students need 3 stripes on one side of their belt to register.
