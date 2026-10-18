@@ -19,6 +19,7 @@ import { IconCheck, IconKey, IconLock, IconLogout, IconMapPin, IconPassword, Ico
 import Avatar from './Avatar.jsx';
 import { LOCATIONS } from '../lib/device.js';
 import { PHONE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
+import { claimBack } from '../lib/backButton.js';
 
 const ITEM_SELECTOR = '[role="menuitem"], [role="menuitemradio"]';
 const SWIPE_CLOSE_PX = 60; // drag the sheet down further than this and it closes
@@ -50,16 +51,20 @@ export default function AccountMenu({
   const dragStartYRef = useRef(null); // finger's starting height on screen; null = not dragging
   const dragDistanceRef = useRef(0); // same as dragDistance, but readable instantly
 
-  // The browser's Back while the menu is open closes it (v0.83); the page change itself is
-  // handled by App.jsx.
+  // The browser's Back while the menu is open closes the menu and nothing else (v0.83):
+  // claimBack tells App.jsx to keep the page where it is.
   useEffect(() => {
     if (!open) return undefined;
     function handleBack() {
       setOpen(false);
       setChoosingDevice(false);
     }
+    const release = claimBack(handleBack);
     window.addEventListener('popstate', handleBack);
-    return () => window.removeEventListener('popstate', handleBack);
+    return () => {
+      release();
+      window.removeEventListener('popstate', handleBack);
+    };
   }, [open]);
 
   function close() {

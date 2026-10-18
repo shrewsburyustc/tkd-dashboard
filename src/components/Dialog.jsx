@@ -39,6 +39,7 @@ import { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { IconArrowLeft } from '@tabler/icons-react';
 import { BACK } from '../screens/testing/text.js';
+import { dialogStep } from '../lib/backButton.js';
 
 // Everything a person can Tab to. (A disabled button or a tabIndex="-1" element can't be.)
 const FOCUSABLE =
@@ -107,6 +108,7 @@ export default function Dialog({
     // is still on top — e.g. it closed a moment ago — reuse it instead of stacking another.)
     if (window.history.state?.tkdDialog) window.history.replaceState(marker, '');
     else window.history.pushState(marker, '');
+    const release = dialogStep(token); // App.jsx: this step is in use (backButton.js)
 
     function handleBack() {
       // The Back button just used up our entry. Put it back (the dialog may stay open with
@@ -116,6 +118,7 @@ export default function Dialog({
     }
     window.addEventListener('popstate', handleBack);
     return () => {
+      release();
       window.removeEventListener('popstate', handleBack);
       // Closed some other way (Save, back arrow, lock…): remove our entry so the next Back
       // press doesn't land on an empty step. Done a moment later, and only if our entry is

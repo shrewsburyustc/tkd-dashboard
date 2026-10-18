@@ -21,6 +21,7 @@
 // Same way Dialog.jsx does it.
 import { useEffect, useId, useRef } from 'react';
 import { IconArrowLeft } from '@tabler/icons-react';
+import { dialogStep } from '../lib/backButton.js';
 
 // Everything a person can Tab to. (A disabled button or a tabIndex="-1" element can't be.)
 const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
@@ -57,11 +58,13 @@ export default function AccountDialog({ title, fullScreen, onCancel, onBack, chi
     const marker = { tkdDialog: token };
     if (window.history.state?.tkdDialog) window.history.replaceState(marker, '');
     else window.history.pushState(marker, '');
+    const release = dialogStep(token); // App.jsx: this step is in use (backButton.js)
     function handleBack() {
       onCancelRef.current(); // Back used up our step; cancelling closes the dialog
     }
     window.addEventListener('popstate', handleBack);
     return () => {
+      release();
       window.removeEventListener('popstate', handleBack);
       // Closed some other way (Cancel, saved, lock…): remove our step, a moment later and only
       // if it's still on top.

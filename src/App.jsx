@@ -26,6 +26,7 @@ import { lockSession, touchSession } from './lib/serverLock.js';
 import { useSessionHeartbeat } from './lib/useSessionHeartbeat.js';
 import { loadDeviceLocation, saveDeviceLocation } from './lib/device.js';
 import { addressFor, addressIsUnknown, pageFromAddress } from './lib/pageAddress.js';
+import { backIsClaimed, isLeftoverDialogStep } from './lib/backButton.js';
 import PreviewBanner from './components/PreviewBanner.jsx';
 import Shell from './components/Shell.jsx';
 import Toast from './components/Toast.jsx';
@@ -121,6 +122,9 @@ export default function App() {
   // Set your PIN uses it too: { element: null } = "focus the initials button when Home shows".
   const phaseRef = useRef(phase);
   const sectionRef = useRef(section); // same idea, for the Back / Forward listener below
+  // true while signOut() below is signing this tab out itself, so the SIGNED_OUT event that
+  // Supabase sends back doesn't treat it as "signed out somewhere else" (which resets the address).
+  const signingOutHereRef = useRef(false);
   const focusBeforeLockRef = useRef(null);
   // Same idea for the profile: showLock (below) needs the newest one without being re-created.
   const profileRef = useRef(profile);
@@ -150,9 +154,11 @@ export default function App() {
     setProfile(null);
     setAccountDialog(null);
     setPhase('signedOut');
+    signingOutHereRef.current = true;
     // scope: 'local' = sign out THIS device only. Staff often have the dashboard open on
     // several devices (front desk PC, mat-side tablet); signing out here leaves those alone.
     const { error } = await supabase.auth.signOut({ scope: 'local' });
+    signingOutHereRef.current = false;
     // If the device is offline, Supabase can't confirm the sign-out and keeps the saved
     // sign-in. Remove it by hand so a reload can't bring the session back.
     if (error) clearSavedSupabaseSession();
@@ -251,8 +257,11 @@ export default function App() {
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
         // Signed out somewhere else (e.g. another tab): same as Sign out here — back to Home.
-        window.history.replaceState(null, '', addressFor('home'));
-        setSection('home');
+        // (Our own signOut() above decides the address itself, e.g. the 7-day rule keeps it.)
+        if (!signingOutHereRef.current) {
+          window.history.replaceState(null, '', addressFor('home'));
+          setSection('home');
+        }
         setProfile(null);
         setAccountDialog(null);
         setPhase('signedOut');
@@ -494,13 +503,32 @@ export default function App() {
   useEffect(() => {
     sectionRef.current = section;
   }, [section]);
+  // Once someone is in the dashboard, the step they're on counts as "added while signed in" too —
+  // also when they arrived by a bookmark or a link — so Back on a later sign-in screen can't
+  // return to it (see below).
+  useEffect(() => {
+    if (phase === 'home' && !window.history.state?.tkdPage && !window.history.state?.tkdDialog) {
+      window.history.replaceState({ ...(window.history.state ?? {}), tkdPage: true }, '');
+    }
+  }, [phase, section]);
   useEffect(() => {
     // An address we don't know (e.g. "#xyz") shows Home; tidy the bar to match.
     if (addressIsUnknown()) window.history.replaceState(null, '', addressFor('home'));
     function handlePopState() {
+      // Forward landed on the step of a dialog that's already closed: step off it again, so
+      // nobody needs an extra Back for nothing.
+      if (isLeftoverDialogStep(window.history.state)) {
+        window.history.back();
+        return;
+      }
       const target = pageFromAddress();
       if (addressIsUnknown()) window.history.replaceState(null, '', addressFor(target));
       if (target === sectionRef.current) return;
+      // The account menu is open: Back closes it (AccountMenu.jsx) and the page stays.
+      if (backIsClaimed()) {
+        window.history.pushState({ tkdPage: true }, '', addressFor(sectionRef.current));
+        return;
+      }
       if (phaseRef.current === 'home') {
         setToast(null);
         setSection(target);
