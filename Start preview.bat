@@ -15,7 +15,7 @@ if not exist node_modules (
 )
 echo.
 echo Starting the preview. Your browser will open by itself.
-echo Sign in with any email and the password: preview     PIN: 1234
+echo Sign in with any email and the password: preview     PIN: 2580
 echo To stop the preview, close this window.
 echo.
 call npm run dev:preview-mode -- --open
