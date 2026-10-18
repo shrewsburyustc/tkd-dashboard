@@ -514,6 +514,9 @@ export default function App() {
   useEffect(() => {
     // An address we don't know (e.g. "#xyz") shows Home; tidy the bar to match.
     if (addressIsUnknown()) window.history.replaceState(null, '', addressFor('home'));
+    // A reload while a dialog was open lands on that dialog's step; no dialog is open now, so it
+    // becomes a plain page step (otherwise Forward could get stuck on it).
+    if (window.history.state?.tkdDialog) window.history.replaceState({ tkdPage: true }, '');
     function handlePopState() {
       // Forward landed on the step of a dialog that's already closed: step off it again, so
       // nobody needs an extra Back for nothing.
