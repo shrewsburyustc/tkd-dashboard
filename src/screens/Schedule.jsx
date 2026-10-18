@@ -1,10 +1,10 @@
-// Schedule.jsx — the Schedule section (rail icon ti-clock, "Schedule"; rulebook v0.84).
+// Schedule.jsx — the Schedule section (rail icon ti-clock, "Schedule"; rulebook v0.137).
 // Why it exists: each school's weekly classes, shown like a calendar (times down the side, box
 // height = class length), with planned future schedules. This file draws the frame:
 //   - one school: the page header ("Schedule", the school, Plan a change, + Add time slot) and
 //     that school's schedule (schedule/ScheduleSchool.jsx does the rest)
 //   - "Both": the two schools one above the other, each with its own heading and schedule picker
-//     (decided v0.84 — schedules are never mixed into one grid). The page header keeps ONE
+//     (decided v0.137 — schedules are never mixed into one grid). The page header keeps ONE
 //     "Plan a change" and ONE blue "+ Add time slot"; they first ask which school (mockup
 //     screen 8), then that school opens its dialog.
 //   - for staff, the line "View only. Ask an admin to make changes."

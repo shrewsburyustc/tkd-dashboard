@@ -1,10 +1,10 @@
 /*
-  schedule.css — the look of the Schedule section (rulebook v0.84, approved mockup rev 2).
+  schedule.css — the look of the Schedule section (rulebook v0.137, approved mockup rev 2).
   Why it exists: the calendar-style grid (times down the side, box height = class length), the
   class color boxes, the color swatches and day choices in the dialog, and the phone's Mon–Sun
   buttons. Page header, dialogs, buttons, fields, notes and banners reuse app.css / testing.css.
   Colors come from tokens.css, except the 8 class colors, which each box receives from
-  schedule/colors.js as --slot-fill / --slot-edge / --slot-text (a recorded exception, v0.84).
+  schedule/colors.js as --slot-fill / --slot-edge / --slot-text (a recorded exception, v0.137).
 */
 
 /* The page: same padding as Testing (bottom: room for the toast). */
@@ -409,7 +409,7 @@ button.sslot {
   }
 }
 
-/* Combined classes (v0.88): the class checkboxes in the time slot dialog. */
+/* Combined classes (v0.141): the class checkboxes in the time slot dialog. */
 .sclasses {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

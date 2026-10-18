@@ -1,6 +1,6 @@
 # Schedule — build plan (DRAFT for review)
 
-Branch `claude/prospect-form-system-cd893d` · 2026-10-17 · implements the Schedule decisions (rulebook v0.84; numbered v0.60 before main was brought in) · approved mockup `docs/Prospects/TKD-Class-Schedule-Mockups.html` rev 2 · **nothing is built until Jeffrey says OK.**
+Branch `claude/prospect-form-system-cd893d` · 2026-10-17 · implements the Schedule decisions (rulebook v0.137; numbered v0.60, then v0.84, before main was brought in again) · approved mockup `docs/Prospects/TKD-Class-Schedule-Mockups.html` rev 2 · **nothing is built until Jeffrey says OK.**
 
 ## 0. What gets built
 
@@ -25,9 +25,9 @@ This branch started from an old main. Main now has:
 
 So the first step is to **bring main into this branch**. On this branch only, the four new-students rulebook rows (first numbered v0.60–v0.63) are renumbered after main's highest version (now v0.84–v0.87), and their "decided" notes in the icon map are updated to match. Main itself is not touched.
 
-## 2. Database — migration `0005_schedule.sql`
+## 2. Database — migration `0007_schedule.sql`
 
-0005 is the next free number. Star testing may claim it, so check at merge time and renumber if needed.
+0005 was the next free number when this plan was written; at the second main merge it turned out 0005 is Color Belt phase 2 and 0006 is Star testing, so the Schedule migration is now **0007**.
 
 ### 2a. Tables
 
@@ -107,7 +107,7 @@ The app reads the tables directly (through RLS). One small function, `schedule_t
 
 ## 3. Tests
 
-**`supabase/tests/0005_tests.sql`** follows the style of 0003. It checks:
+**`supabase/tests/0007_tests.sql`** follows the style of 0003. It checks:
 - locked, stale and signed-out sessions can't read or write;
 - staff can read but can't write;
 - admin writes work, with version conflicts (`stale`) and school mismatches;
@@ -117,7 +117,7 @@ The app reads the tables directly (through RLS). One small function, `schedule_t
 - every write lands in the change log.
 
 **Also:**
-- `0005_fingerprints.sql` is added.
+- `0007_fingerprints.sql` is added.
 - `pglite/run.mjs` gets the new steps: apply twice, identical fingerprints.
 - `src/lib/schedule/checks.mjs` holds plain checks for the time rules, "which schedule is current", and the preview fake database.
 
@@ -168,10 +168,10 @@ The app reads the tables directly (through RLS). One small function, `schedule_t
 | Step | What | Gate |
 |---|---|---|
 | S0 | Bring main into this branch; renumber rulebook rows | Jeffrey's OK (this plan) |
-| S1 | Migration 0005 + tests + fingerprints; independent security review | Tests green |
+| S1 | Migration 0007 + tests + fingerprints; independent security review | Tests green |
 | S2 | Front end + preview mock; design review at 1280×800, 820×1180, 390×844, 320 | Builds green, review fixes done |
 | S3 | **Jeffrey tries it in preview mode** (fake data, nothing live) | Jeffrey's OK |
-| S4 | Jeffrey pastes 0005 into the Supabase SQL Editor; read-only checks (fingerprints, security advisor, tests) | Jeffrey's OK |
+| S4 | Jeffrey pastes 0007 into the Supabase SQL Editor; read-only checks (fingerprints, security advisor, tests) | Jeffrey's OK |
 | S5 | Real check on the live database with Worcester's real times | Jeffrey's OK |
 | S6 | Commit; the Main session merges | — |
 | S7 | Push (goes live) | **Separate OK from Jeffrey** |
@@ -192,6 +192,7 @@ The app reads the tables directly (through RLS). One small function, `schedule_t
 
 - 2026-10-17 — Draft written. Q1–Q3 answered by Jeffrey.
 - 2026-10-17 — S0: main brought into this branch (Jeffrey ran the merge in the terminal); the rulebook conflict was resolved, giving v0.87 = main v0.83 + new students v0.84–v0.87.
+- 2026-10-17 — main brought in again (Star testing, Staff accounts, Color Belt). New-students rulebook rows renumbered v0.84–v0.89 → v0.137–v0.142 (main is at v0.130; Color Belt has v0.131–v0.136 waiting). Migration 0005 → **0007** (0005 = Color Belt phase 2, 0006 = Star testing).
 - 2026-10-17 — S1: `0005_schedule.sql`, `0005_tests.sql` and `0005_fingerprints.sql` written, and `run.mjs` runs them (before and after seed, after re-runs, on the upgrade path). 54/54 checks pass; a deliberately broken rule was caught. Independent security review: no High findings.
 - **Fixed after the review:**
   - The Medium finding (tests for every shut-out session type on all three tables).

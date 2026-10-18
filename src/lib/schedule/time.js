@@ -5,7 +5,7 @@
 // A time is kept as "minutes after midnight" (16:30 → 990). The database sends '16:30:00'.
 // Weekdays are numbers 1 = Monday … 7 = Sunday (like the database, ISO).
 //
-// Rules for a time slot (migration 0005, schedule_time_is_valid):
+// Rules for a time slot (migration 0007, schedule_time_is_valid):
 //   - on 5-minute steps (4:00, 4:05 …)
 //   - ends after it starts
 //   - lasts 15 minutes to 4 hours
@@ -76,7 +76,7 @@ export function findOverlaps(slots, weekdays, start, end, skipId = null) {
 }
 
 // The hours shown down the side of the week: every hour from the first class's hour to the
-// last class's end, rounded out to whole hours (decided v0.84: "show every hour").
+// last class's end, rounded out to whole hours (decided v0.137: "show every hour").
 // With no slots: 4 pm to 8 pm, so an empty grid still looks like a week.
 export function hourRange(slots) {
   if (slots.length === 0) return { from: 16 * 60, to: 20 * 60 };

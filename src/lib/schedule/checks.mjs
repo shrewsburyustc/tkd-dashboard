@@ -1,6 +1,6 @@
 // checks.mjs — plain checks for the Schedule's rule files and its preview database.
 // Why it exists: the rules (times, current / planned / past schedules, colors) and the fake
-// database must agree with migration 0005. These checks run in Node without a browser:
+// database must agree with migration 0007. These checks run in Node without a browser:
 //   node src/lib/schedule/checks.mjs
 // Prints "ALL SCHEDULE LIB CHECKS PASSED", or stops at the first failed check.
 import assert from 'node:assert/strict';
@@ -96,7 +96,7 @@ group('colors: 8 soft colors, never red', () => {
   assert.equal(colorOf('teal').key, 'teal');
 });
 
-// ----- The preview database follows migration 0005 -----
+// ----- The preview database follows migration 0007 -----
 const TODAY = '2026-10-17';
 const classes = [
   { id: randomUUID(), location_code: 'worcester', name: 'White', position: 0 },
@@ -202,7 +202,7 @@ group('mock: past schedules are read-only', () => {
   assert.equal(call('schedule_remove_slot', { p_slot_id: pastSlot, p_expected_version: 1 }).status, 'not_allowed');
 });
 
-group('mock: combined classes (v0.88)', () => {
+group('mock: combined classes (v0.141)', () => {
   const r = add({ p_version_id: currentId, p_class_ids: [W2, W1], p_weekdays: [2], p_starts_at: '07:00', p_ends_at: '07:45' });
   assert.equal(r.status, 'ok');
   const id = r.slots[0].id;

@@ -1,13 +1,13 @@
 -- =====================================================================
--- 0005_fingerprints.sql  (read-only - changes nothing)
+-- 0007_fingerprints.sql  (read-only - changes nothing)
 -- ---------------------------------------------------------------------
 -- WHAT THIS FILE IS
---   One query listing everything migration 0005 (Schedule) made, so the
+--   One query listing everything migration 0007 (Schedule) made, so the
 --   tested copy and production can be compared line by line:
 --     function - each schedule_* function: body_md5 of its code without
 --                comments and spaces, security definer, settings (must say
 --                search_path=""), owner, and who may call it
---     table    - each schedule table (incl. schedule_slot_classes, v0.88): RLS on/off and its grants
+--     table    - each schedule table (incl. schedule_slot_classes, v0.141): RLS on/off and its grants
 --     trigger  - every trigger on the three schedule tables
 --     constraint    - every table rule: keys, foreign keys (incl. "on
 --                     delete cascade" to Testing), checks, unique rules
@@ -17,7 +17,7 @@
 --
 -- WHY
 --   Same idea as 0003/0004_fingerprints.sql: run.mjs prints this for the
---   tested copy; after Jeffrey pastes 0005 into the SQL Editor, Claude
+--   tested copy; after Jeffrey pastes 0007 into the SQL Editor, Claude
 --   runs this on production through the read-only connection and every
 --   line must match.
 --

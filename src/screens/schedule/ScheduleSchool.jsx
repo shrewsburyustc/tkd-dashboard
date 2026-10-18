@@ -1,5 +1,5 @@
 // ScheduleSchool.jsx — one school's schedule and everything you can do with it.
-// Why it exists: approved mockup screens 1–8 (rulebook v0.84). This is the "brain" of the
+// Why it exists: approved mockup screens 1–8 (rulebook v0.137). This is the "brain" of the
 // Schedule section, like ClassesRanksTab is for Testing. It:
 //   - loads the school's schedules, slots, colors and classes (useSchedule; quiet reloads)
 //   - shows ONE schedule at a time: Current by default, any planned or past one from the dropdown
@@ -8,7 +8,7 @@
 //   - sends every change to the database (src/lib/schedule/api.js) and reacts to the answer
 //   - offers Undo for reversible changes (add, edit, remove a slot; plan, edit a planned
 //     schedule); deleting a planned schedule is permanent and asks first (rule 1.4)
-// On "Both" the Schedule page draws this twice (Worcester above Shrewsbury, decided v0.84).
+// On "Both" the Schedule page draws this twice (Worcester above Shrewsbury, decided v0.137).
 //
 // Rules worth knowing (same as Testing):
 //   - ONE change at a time; dialog saves WAIT for the database.
@@ -471,7 +471,7 @@ export default function ScheduleSchool({
       <div className="sactions">
         {hasAnything && !isPhone && (
           <button type="button" className="btn" onClick={(e) => openPlan(e.currentTarget)}>
-            {/* ti-calendar-plus = plan a schedule change (v0.84) */}
+            {/* ti-calendar-plus = plan a schedule change (v0.137) */}
             <IconCalendarPlus size={16} aria-hidden="true" />
             {T.PLAN_A_CHANGE}
           </button>

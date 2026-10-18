@@ -1,6 +1,6 @@
 // api.js — every call the Schedule screen makes to the database, in one place.
 // Why it exists: the screen shouldn't need to know table names, column lists or argument names
-// of the database functions (migration 0005). It calls friendly functions here and always gets
+// of the database functions (migration 0007). It calls friendly functions here and always gets
 // back a plain object with a `status`:
 //   'ok'             it worked (plus the result fields)
 //   'no_access'      this sign-in can't see data right now (locked, password too old …)
@@ -26,7 +26,7 @@ const KNOWN_LOCATIONS = new Set(['worcester', 'shrewsbury']);
 // The columns the app may read (the database refuses select('*') on purpose).
 const VERSION_COLUMNS = 'id, location_code, name, starts_on, version, created_at, updated_at, created_by_name, updated_by_name';
 const SLOT_COLUMNS = 'id, version_id, location_code, weekday, starts_at, ends_at, version, updated_at, updated_by_name';
-// Which class(es) each slot is for — one, or several taught together (v0.88).
+// Which class(es) each slot is for — one, or several taught together (v0.141).
 const SLOT_CLASS_COLUMNS = 'slot_id, class_id, position';
 const COLOR_COLUMNS = 'id, class_id, location_code, color, version';
 const CLASS_COLUMNS = 'id, name, position';
@@ -152,7 +152,7 @@ const readOverlaps = (list) =>
     : null;
 
 // versionId null = the school's FIRST schedule (made by the database, starting today).
-// classIds: one class, or several taught together (v0.88).
+// classIds: one class, or several taught together (v0.141).
 export async function addSlots({ locationCode, versionId, classIds, weekdays, start, end }) {
   return callRpc(
     'schedule_add_slots',

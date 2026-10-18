@@ -1,12 +1,12 @@
 -- =====================================================================
--- 0005_schedule.sql
+-- 0007_schedule.sql
 -- ---------------------------------------------------------------------
 -- WHAT THIS FILE IS
 --   The fifth database migration for the TKD staff dashboard. It runs
 --   after 0001-0004 (all live) and does not change anything they made.
 --
 -- WHY IT EXISTS
---   The Schedule section (rulebook v0.84, approved mockup
+--   The Schedule section (rulebook v0.137, approved mockup
 --   docs/Prospects/TKD-Class-Schedule-Mockups.html rev 2): each school's
 --   weekly classes. A time slot is one class group from Testing -> Classes
 --   and ranks (White belt, Group A ...) on one weekday, from a start time to
@@ -23,7 +23,7 @@
 --   2. public.schedule_slots        - the time slots inside a schedule
 --   2b. public.schedule_slot_classes - which class(es) each time slot is for:
 --                                     one, or several taught together
---                                     ("White + Little Tiger", v0.88)
+--                                     ("White + Little Tiger", v0.141)
 --   3. public.schedule_class_colors - the color of each class on the
 --                                     schedule (kept apart from Testing's
 --                                     tables so Testing doesn't change)
@@ -85,14 +85,14 @@
 
 begin;
 
--- Guard (security re-check, v0.88): an EARLIER trial copy of this file had schedule_slots.class_id
+-- Guard (security re-check, v0.141): an EARLIER trial copy of this file had schedule_slots.class_id
 -- (one class per slot). "create table if not exists" below would keep that old shape, so stop
--- here with a clear message instead of half-working. 0005 was never applied to production.
+-- here with a clear message instead of half-working. 0007 was never applied to production.
 do $$
 begin
   if exists (select 1 from information_schema.columns
               where table_schema = 'public' and table_name = 'schedule_slots' and column_name = 'class_id') then
-    raise exception 'schedule_slots still has the old class_id column from a trial copy of 0005. Ask Claude before going on.';
+    raise exception 'schedule_slots still has the old class_id column from a trial copy of 0007. Ask Claude before going on.';
   end if;
 end;
 $$;
@@ -236,7 +236,7 @@ comment on table public.schedule_versions is
 -- 4. public.schedule_slots
 -- One weekday, start and end time, inside one schedule. WHICH class(es)
 -- it is for lives in schedule_slot_classes (4b) - one class, or several
--- taught together (v0.88).
+-- taught together (v0.141).
 --   * (version_id, location_code) -> schedule_versions: removing a
 --     planned schedule removes its slots.
 --   * class_set: the slot's class ids, in order, joined (kept by the
@@ -722,7 +722,7 @@ revoke execute on function public.schedule_class_set(uuid[]) from public, anon, 
 -- 9a. schedule_add_slots(p_location_code, p_version_id, p_class_ids,
 --                        p_weekdays, p_starts_at, p_ends_at)
 -- Adds one time slot per ticked day, each for the given class(es) - one
--- class, or several taught together (v0.88). p_version_id = which
+-- class, or several taught together (v0.141). p_version_id = which
 -- schedule; NULL only for a school that has no schedule yet: then its
 -- first one is made automatically, starting today (the app shows it as
 -- "Current schedule"). Past schedules can't be changed (not_allowed).
@@ -1436,4 +1436,4 @@ grant  execute on function public.schedule_set_class_color(uuid, text) to authen
 
 commit;
 
--- End of 0005_schedule.sql
+-- End of 0007_schedule.sql

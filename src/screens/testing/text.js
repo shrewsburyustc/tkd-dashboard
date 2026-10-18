@@ -203,7 +203,7 @@ export function rankDeleteText(d) {
 }
 
 // From describeClassDelete(...) → { title, body }
-// Added with the Schedule (rulebook v0.84, decision Q1): deleting a class also removes its
+// Added with the Schedule (rulebook v0.137, decision Q1): deleting a class also removes its
 // schedule time slots, so the confirmation says how many.
 export function scheduleSlotsSentence(n) {
   if (!n) return '';

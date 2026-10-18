@@ -1,6 +1,6 @@
 // text.js — every word the Schedule screens show, in one place.
 // Why it exists: same as Testing's text.js — one spot to check the wording against the approved
-// mockup (docs/Prospects/TKD-Class-Schedule-Mockups.html, rulebook v0.84) and to change it later.
+// mockup (docs/Prospects/TKD-Class-Schedule-Mockups.html, rulebook v0.137) and to change it later.
 // The data layer only returns codes ('stale', 'step' …); this file turns them into plain English.
 import { formatDate } from '../../lib/schedule/versions.js';
 import { formatRange } from '../../lib/schedule/time.js';
@@ -86,7 +86,7 @@ const TIME_PROBLEMS = {
 };
 export const timeProblemText = (problem) => TIME_PROBLEMS[problem] ?? null;
 
-// The amber "it still saves" note (decided v0.84: overlaps are allowed — two mats).
+// The amber "it still saves" note (decided v0.137: overlaps are allowed — two mats).
 // Names every class it overlaps: "Overlaps Group A (5:00–5:45) and Group B (5:00–5:45) on Mon."
 export function overlapNote(list) {
   const seen = new Set();

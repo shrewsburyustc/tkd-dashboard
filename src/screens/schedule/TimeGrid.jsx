@@ -1,9 +1,9 @@
 // TimeGrid.jsx — the calendar-style schedule: times down the left side, one column per day,
-// and each class a box whose HEIGHT is its length (approved mockup rev 2, rulebook v0.84).
+// and each class a box whose HEIGHT is its length (approved mockup rev 2, rulebook v0.137).
 // Why it exists: PC and tablet show the whole week (7 columns); the phone shows one day at a
 // time (1 column) — both are this same grid with a different list of days.
 //
-// Every hour from the first class to the last is shown ("show every hour", v0.84). Two classes
+// Every hour from the first class to the last is shown ("show every hour", v0.137). Two classes
 // at the same time on the same day (two mats) sit side by side in that day's column.
 // Boxes are buttons for admins (open Edit) and plain boxes for staff (view only, mockup screen 7).
 // Each box shows the class name AND its time, so color is never the only cue.
@@ -11,7 +11,7 @@
 // Props:
 //   days        [1..7] to show (one for the phone)
 //   slots       the shown schedule's slots { id, weekday, start, end, classIds }
-//               (several classes taught together share ONE box: "White + Little Tiger", v0.88)
+//               (several classes taught together share ONE box: "White + Little Tiger", v0.141)
 //   classNames  Map classId → name;  colors  { classId: colorKey }
 //   pxPerMin    vertical scale (CSS pixels per minute)
 //   showDayHeads  true for the week (the phone has its own day buttons)

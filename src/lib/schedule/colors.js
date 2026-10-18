@@ -1,7 +1,7 @@
-// colors.js — the 8 class colors on the Schedule (rulebook v0.84).
+// colors.js — the 8 class colors on the Schedule (rulebook v0.137).
 // Why it exists: an admin picks each class's color; the week grid, the phone day view and the
 // swatches in the dialog all draw from this one list. Red is NEVER offered — red means delete
-// (guidelines 7). These soft colors are labels, not status colors (recorded exception, v0.84).
+// (guidelines 7). These soft colors are labels, not status colors (recorded exception, v0.137).
 // Every box also shows the class NAME, so color is never the only cue (accessibility).
 //
 // Each color: a pale fill, a darker edge, and dark text that reads well on the fill (4.5:1+).

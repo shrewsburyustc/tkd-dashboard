@@ -1,16 +1,16 @@
 -- =====================================================================
--- 0005_tests.sql
+-- 0007_tests.sql
 -- ---------------------------------------------------------------------
 -- WHAT THIS FILE IS
---   A manual test script for migrations/0005_schedule.sql (Schedule):
+--   A manual test script for migrations/0007_schedule.sql (Schedule):
 --   who can read schedules (only unlocked staff sessions), who can change
 --   them (only admins, only through the 7 schedule_* functions), every rule
 --   those functions enforce (times, days, schools, current / planned /
 --   past schedules, "someone else changed it" = stale), what happens when
 --   a class is deleted in Testing, the history (change_log), and a
---   catalog section that checks the permissions on EVERY object 0005
+--   catalog section that checks the permissions on EVERY object 0007
 --   creates.
---   Run it in the Supabase SQL Editor AFTER 0005 is applied. It works on
+--   Run it in the Supabase SQL Editor AFTER 0007 is applied. It works on
 --   an empty schedule and on a filled one (it makes its own test classes
 --   named "zz test ...").
 --
@@ -37,7 +37,7 @@
 --   the UIDs of an ACTIVE admin and the ACTIVE front-desk account.
 --
 -- HOW TO READ THE RESULT
---   Passed: one row "ALL 0005 TESTS PASSED".
+--   Passed: one row "ALL 0007 TESTS PASSED".
 --   Failed: an error starting with "TEST FAILED:" or "TEST SETUP:".
 --   Nothing is saved either way. If it failed, run   rollback;   once.
 -- =====================================================================
@@ -109,7 +109,7 @@ begin
     raise exception 'TEST SETUP: no ACTIVE role-staff row with id %. Paste the front-desk UID into v_desk.', v_desk;
   end if;
   if to_regclass('public.schedule_slots') is null then
-    raise exception 'TEST SETUP: public.schedule_slots is missing (is 0005 applied?)';
+    raise exception 'TEST SETUP: public.schedule_slots is missing (is 0007 applied?)';
   end if;
 
   perform set_config('request.jwt.claims', '', true);
@@ -623,7 +623,7 @@ begin
   begin truncate public.schedule_versions cascade; raise exception 'TEST FAILED: 16e truncate allowed'; exception when raise_exception then null; end;
 
   -- -------------------------------------------------------------------
-  -- Test 17: combined classes (several classes in ONE time slot, v0.88)
+  -- Test 17: combined classes (several classes in ONE time slot, v0.141)
   -- -------------------------------------------------------------------
   set local role authenticated;
   perform set_config('request.jwt.claims', v_c_a1, true);
@@ -734,7 +734,7 @@ begin
   end if;
 
   -- -------------------------------------------------------------------
-  -- Catalog: permissions on everything 0005 created
+  -- Catalog: permissions on everything 0007 created
   -- -------------------------------------------------------------------
   foreach v_tbl in array array['schedule_versions', 'schedule_slots', 'schedule_class_colors', 'schedule_slot_classes'] loop
     if not (select c.relrowsecurity from pg_class c where c.oid = ('public.' || v_tbl)::regclass) then
@@ -794,6 +794,6 @@ begin
 end;
 $$;
 
-select 'ALL 0005 TESTS PASSED' as result;
+select 'ALL 0007 TESTS PASSED' as result;
 
 rollback;

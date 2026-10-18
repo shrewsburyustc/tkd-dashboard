@@ -1,8 +1,8 @@
 // SlotDialog.jsx — "Add time slot" and "Edit time slot" (approved mockup screens 2 and 3).
 // Why it exists: one form for both. Add can tick several days at once (one slot per day,
-// v0.84); Edit changes one slot and has Remove (instant, with Undo — no confirmation).
+// v0.137); Edit changes one slot and has Remove (instant, with Undo — no confirmation).
 //   Class  — this school's classes from Testing → Classes and ranks: tick ONE, or several that
-//            are taught together ("White + Little Tiger", v0.88)
+//            are taught together ("White + Little Tiger", v0.141)
 //   Color  — belongs to each CLASS (one row per ticked class): changing it recolors every slot
 //            of that class
 //   Days / Day, Starts, Ends — checked as you type (5-minute steps, 15 min – 4 h)
