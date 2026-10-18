@@ -1,7 +1,7 @@
 # Star Testing — status and next steps
 
 **Updated:** 2026-10-17 (Star testing worktree session — Events tab design approved, v0.74)
-**Rulebook at this update:** v0.89 (Star testing rows: v0.58–v0.61, v0.63, v0.66–v0.89) · **Inventory of the old prototype:** `TKD-StarTesting-Inventory.md` (this folder) · **Mockups:** `TKD-StarTesting-Rubrics-Mockups.html` (this folder)
+**Rulebook at this update:** v0.91 (Star testing rows: v0.58–v0.61, v0.63, v0.66–v0.91) · **Inventory of the old prototype:** `TKD-StarTesting-Inventory.md` (this folder) · **Mockups:** `TKD-StarTesting-Rubrics-Mockups.html` (this folder)
 
 > Read `CLAUDE.md` (repo root) first. This file says where Star testing stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -13,7 +13,7 @@ Star testing (the stars between Dan ranks: 1st Dan up to 4 stars, 2nd up to 3, 3
 
 ## 2. Waiting on Jeffrey right now
 
-Nothing blocking. **All 13 registration form questions answered (v0.75–v0.88).** **Registration form design approved 2026-10-17 (v0.89)**, with the Events updates for one link per school. **Needed from Jeffrey:** both schools' full street addresses (for "Location:" on family pages). Next design step: the event's **Candidates** tab (section 3B.3).
+Nothing blocking. **All 13 registration form questions answered (v0.75–v0.88).** **Registration form design approved 2026-10-17 (v0.89)**, with the Events updates for one link per school. **Needed from Jeffrey:** both schools' full street addresses (for "Location:" on family pages). **Candidates Question 2:** what staff vs admins can do (record payments, edit, remove), and who sees date of birth and email. Still open from Q1: default view on a one-school device.
 
 ## 3. Next steps, in order
 
@@ -52,6 +52,8 @@ Nothing blocking. **All 13 registration form questions answered (v0.75–v0.88).
 | v0.60 | Star testing home tabs **Events** + **Rubrics and prices**; each event opens its own page with **Candidates · Grading · Results** tabs. |
 | v0.61 | **Design every Star screen first, then build in 6 phases.** **Each event keeps its own copy** of rubrics, grade scale, assistant table, star limits and prices from creation. Rubrics and prices: **Admin edits, Staff view only** (enforced in the database). **Everything changeable with live totals** (categories add/rename/re-credit/reorder/delete, pass mark, star limit, grade values, assistant table, fees); exactly one "from class count" category per Dan. **70-credit total shown, not required** (amber note + reminder). |
 | v0.63 | **Drag to reorder works on every device** by the grip only (dashboard-wide, changes v0.43; affects Color Belt phase 1 too). Move up/down in ⋯ stays everywhere. |
+| v0.91 | **Payments:** Record payment button on unpaid rows; staff record the method actually used (Cash / Check / Card); registered date next to the name. Dialog (Paid by, amount from event prices, date, check number) and ⋯ items (Change how they'll pay / Edit payment / Undo payment) confirmed. |
+| v0.90 | **Candidates tab:** Dan switch; full roster with date registered, payment method, paid, paid date (rule 5 exception for this staff list; never on Grading / mat-side). |
 | v0.89 | **Registration form mockups approved** (13 screens) + Events updates for two links. Changes: "Location: <school>, <full address>" on family pages, "both schools together" removed (needs school addresses); What happens next as labelled lines; no typed signature fallback (rule 4 exception); errors on leaving a field (rule 8 exception). |
 | v0.88 | **Public page look:** white header strip with the logo; on phones 44px buttons and 16px field text (recorded exceptions). Shared with Color Belt's form. |
 | v0.87 | **Spam check:** invisible checks + Cloudflare Turnstile (small box only when unsure). Shared registration path, so it applies to Color Belt's form too unless changed there. |
@@ -88,12 +90,13 @@ Facts from Jeffrey (2026-10-16): rubrics and prices are current; same-day fee = 
 - `TKD-StarTesting-Inventory.md` — inventory of the old prototype, Jeffrey's answers (§0), domain rules, gaps vs the rulebook.
 - `TKD-StarTesting-Rubrics-Mockups.html` — Rubrics and prices mockups, 12 screens at PC / tablet / phone, with "Details for approval". **Approved 2026-10-17 (v0.66).**
 - `TKD-StarTesting-Events-Mockups.html` — Events tab mockups, 14 screens at PC / tablet / phone, with details. **Approved 2026-10-17 (v0.74).** Still open: sorted column header look (dashboard-wide).
+- `TKD-StarTesting-Candidates-Questions.html` — Candidates tab design questions, one at a time (PC + phone sketches).
 - `TKD-StarTesting-Form-Mockups.html` — registration form mockups, 13 screens at PC (browser) / tablet / phone, with details (amber = still to confirm). **Approved 2026-10-17 (v0.89).**
 - `TKD-StarTesting-Form-Questions.html` — registration form design questions, one at a time, with option sketches (phone + PC).
 - `TKD-StarTesting-Events-Questions.html` — Events tab design questions, one at a time, with option sketches (PC + phone); answered questions stay with their answer. Built from the Rubrics mockup's stylesheet.
 - `Old prototype/` — `star-testing.html` (prototype), `STAR-TESTING.md` (notes), `STAR-TESTING-HANDOFF.md` (full spec: rubrics as data, scoring code, test cases, defects not to repeat). Feature reference only — its stack (Workers + D1, shared password) is superseded by the dashboard's.
 
-**Shared files the Star session has edited:** `docs/Dashboard Docs/TKD-Dashboard-Design-Guidelines.md` (Star 10b rows + changelog v0.58–v0.61, v0.63, v0.66–v0.89 incl. icon map rows; v0.43 row note). Also earlier (committed in `4dc7ad4`): docs reorganisation, `docs/README.md`, root `README.md` doc paths, handoff paths.
+**Shared files the Star session has edited:** `docs/Dashboard Docs/TKD-Dashboard-Design-Guidelines.md` (Star 10b rows + changelog v0.58–v0.61, v0.63, v0.66–v0.91 incl. icon map rows; v0.43 row note). Also earlier (committed in `4dc7ad4`): docs reorganisation, `docs/README.md`, root `README.md` doc paths, handoff paths.
 
 **Reading copies** in the claude.ai project "Taekwondo Management System": inventory, guidelines (may lag the repo).
 

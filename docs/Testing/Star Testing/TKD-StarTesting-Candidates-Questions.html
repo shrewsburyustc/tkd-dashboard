@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Star candidates questions</title>
+<style>
+
+:root{--control-border:#8F8F8A;--page:#EFEFEC;--bg:#FFFFFF;--surface:#F7F7F5;--border:#E5E5E2;--border-strong:#CFCFCA;--text:#1F1F1F;--text2:#6B6B6B;--blue:#003595;--blue-hover:#002A77;--blue-tint:#E6EBF4;--red:#A32D2D;--red-tint:#FCEBEB;--ok:#3B6D11;--ok-tint:#EAF3DE;--warn:#633806;--warn-tint:#FAEEDA}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1340px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:20px;font-weight:500;margin:0 0 4px}
+h2{font-size:16px;font-weight:500;margin:48px 0 4px;padding-top:16px;border-top:1px solid var(--border-strong)}
+h4{font-size:13px;font-weight:500;margin:32px 0 4px}
+.lead{color:var(--text2);font-size:13px;margin:0 0 12px}
+.banner{background:var(--warn-tint);color:var(--warn);padding:8px 12px;border-radius:8px;font-size:13px;display:flex;gap:8px;align-items:flex-start}
+/* explanation block (P1) */
+.explain{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:8px 0 16px;font-size:13px}
+.explain h3{font-size:13px;font-weight:500;margin:8px 0 2px}.explain h3:first-child{margin-top:0}
+.explain ul,.explain ol{margin:0;padding-left:20px}.explain li{margin:2px 0}
+.explain .prop{color:var(--warn)}
+b{font-weight:500}
+/* device frames */
+.cap{font-size:12px;color:var(--text2);margin:16px 0 6px;display:flex;align-items:center;gap:6px}
+.cap i{font-size:16px}
+.scroller{overflow-x:auto;padding-bottom:4px}
+.dev{background:var(--bg);border:1px solid var(--border-strong);overflow:hidden;position:relative;flex:none}
+.dev-pc{width:1282px;height:600px;border-radius:10px}
+.dev-tab{width:832px;height:560px;border-radius:18px;border-width:6px;border-color:#2B2B2B}
+.dev-ph{width:402px;height:700px;border-radius:28px;border-width:6px;border-color:#2B2B2B}
+.pair{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+/* app shell (as approved in the Home / Account files) */
+.app{display:flex;height:100%;background:var(--bg)}
+.app-col{flex:1;min-width:0;display:flex;flex-direction:column}
+.content{flex:1;min-height:0;padding:24px;display:flex;flex-direction:column;overflow:hidden}
+.ph-shell{height:100%;display:flex;flex-direction:column}
+.ph-shell .content{padding:16px}
+.rail{width:52px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;flex:none}
+.rail a{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;color:var(--text2)}
+.rail a i{font-size:18px}
+.rail a.on{background:var(--blue-tint);color:var(--blue)}
+.rail-t{width:72px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;flex:none}
+.rail-t a{display:flex;flex-direction:column;align-items:center;justify-content:center;width:64px;min-height:56px;border-radius:8px;color:var(--text2);font-size:12px;gap:2px}
+.rail-t a i{font-size:20px}
+.rail-t a.on{color:var(--blue)}.rail-t a.on i{background:var(--blue-tint);border-radius:8px;padding:4px 10px}
+.topbar{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 12px;flex:none}
+.topbar .grow{flex:1}
+.loc{display:flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;font-size:12px;height:32px}
+.loc span{display:flex;align-items:center;gap:4px;padding:0 12px;color:var(--text2)}
+.loc span.on{background:var(--blue-tint);color:var(--blue)}
+.loc span+span{border-left:1px solid var(--border)}
+.touch .loc{height:36px}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--surface);border:1px solid var(--control-border);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--text);flex:none}
+.tap{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.phbar{border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:4px 0 10px;flex:none;background:var(--bg)}
+.phbar a{display:flex;flex-direction:column;align-items:center;min-width:64px;min-height:48px;justify-content:center;font-size:12px;color:var(--text2);gap:2px}
+.phbar a i{font-size:20px}.phbar a.on{color:var(--blue)}
+/* controls */
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.field label,.lbl{font-size:12px;color:var(--text2)}
+.input{height:32px;border:1px solid var(--control-border);border-radius:8px;padding:0 12px;display:flex;align-items:center;font-size:13px;color:var(--text);background:var(--bg)}
+.input.focus{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}.input.bad.focus{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn)}
+.input .pre{color:var(--text2);margin-right:4px}
+.input.money{width:120px}
+.input.select{justify-content:space-between}.input.select i{font-size:16px;color:var(--text2)}
+.touch .input{height:36px;font-size:14px}
+.caret{display:inline-block;width:1px;height:16px;background:var(--text);margin-left:1px}
+.btn{height:32px;padding:0 16px;border-radius:8px;font-size:13px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--control-border);background:var(--bg);color:var(--text);flex:none;white-space:nowrap}
+.btn i{font-size:16px}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn-primary.dis{background:var(--surface);border-color:var(--border-strong);color:#8A8A85}
+.btn-sm{height:28px;padding:0 12px}
+.btn-full{width:100%}
+.touch .btn{height:36px}
+.touch .btn-sm{height:36px;padding:0 12px}
+.err{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--warn);background:var(--warn-tint);padding:8px;border-radius:6px}
+.hint{font-size:12px;color:var(--text2)}
+/* dialogs */
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:5}
+.dialog{background:var(--bg);border-radius:12px;width:360px;max-width:calc(100% - 32px);padding:24px;position:relative}
+.dialog h3{font-size:16px;font-weight:500;margin:0 0 4px}
+.dialog .sub{font-size:13px;color:var(--text2);margin:0 0 16px}
+.dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+/* detail view (v0.46): centered dialog showing every field */
+.dialog-detail{width:440px}
+.dialog-detail .meta{margin-top:12px}
+.prices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.prices .input.money{width:100%}
+.fullscreen{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;z-index:5}
+.fullscreen .head{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 4px;font-size:16px;font-weight:500;flex:none}
+.fullscreen .fbody{padding:16px;flex:1;overflow:hidden}
+/* menus */
+.menu{position:absolute;background:var(--bg);border:1px solid var(--border-strong);border-radius:8px;padding:4px 0;width:200px;z-index:5;text-align:left}
+.menu .it{display:flex;align-items:center;gap:8px;padding:0 12px;height:32px;font-size:13px;color:var(--text);white-space:nowrap}
+.touch .menu .it{height:44px}
+.menu .it i{font-size:16px;color:var(--text2)}
+.menu .it.hov{background:var(--surface)}
+.menu .it.sel{background:var(--blue-tint);color:var(--blue)}
+.menu .it.dis{color:#A3A39E}.menu .it.dis i{color:#B8B8B3}
+.menu .it.red,.menu .it.red i{color:var(--red)}
+.menu .it.red.hov{background:var(--red-tint)}
+.menu .sep{border-top:1px solid var(--border);margin:4px 0}
+.menu .grp{font-size:12px;color:var(--text2);padding:8px 12px 4px}
+.sheet-wrap{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;z-index:5}
+.sheet{background:var(--bg);width:100%;border-radius:16px 16px 0 0;padding:8px 0 16px}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--border-strong);margin:4px auto 8px}
+.sheet .stitle{padding:4px 16px 8px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.sheet .stitle b{display:block;font-size:14px}.sheet .stitle span{font-size:12px;color:var(--text2)}
+.sheet .menu{position:static;width:auto;border:none;box-shadow:none;border-radius:0;padding:0}
+.sheet .menu .it{padding:0 16px}
+.sheet .menu .it.cancel{justify-content:center;color:var(--text);font-weight:500}
+.tag{font-size:12px;line-height:16px;padding:2px 8px;border-radius:6px;background:var(--surface);color:var(--text2);border:1px solid var(--border);white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.tag-warn{background:var(--warn-tint);color:var(--warn);border-color:#F2D9B0}
+.tag i{font-size:12px}
+.callout{position:absolute;background:var(--warn-tint);color:var(--warn);border:1px dashed #EF9F27;font-size:12px;padding:4px 8px;border-radius:6px;z-index:7;white-space:nowrap}
+/* ---------- new for Testing ---------- */
+.phead{display:flex;align-items:center;gap:12px;margin-bottom:8px;flex:none}
+.phead .grow{flex:1}
+.ptitle{font-size:20px;font-weight:500;line-height:1.3}
+.psub{font-size:12px;color:var(--text2)}
+.tabs{display:flex;gap:24px;border-bottom:1px solid var(--border);margin-bottom:16px;flex:none}
+.tabs span{height:40px;display:flex;align-items:center;font-size:13px;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs span.on{color:var(--blue);border-bottom-color:var(--blue);font-weight:500}
+.touch .tabs span{height:44px}
+.ph-shell .tabs{gap:0}.ph-shell .tabs span{flex:1;justify-content:center}
+.more-tog{display:inline-flex;align-items:center;gap:4px;height:28px;font-size:13px;color:var(--text2)}
+.more-tog i{font-size:16px}
+.touch .more-tog{min-height:44px}
+.crow.cgap{opacity:.35}
+.crow.clift{background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.10);border:1px solid var(--border-strong);border-radius:8px;margin:4px -4px 4px 8px;position:relative;z-index:2}
+.viewonly{font-size:13px;color:var(--text2);margin:-4px 0 12px;flex:none}
+/* failed-save banner (rule 3.5) */
+.errbar{display:flex;align-items:center;gap:8px;background:var(--warn-tint);color:var(--warn);border-radius:8px;padding:4px 4px 4px 12px;font-size:13px;margin:-4px 0 12px;flex:none}
+.errbar>i{font-size:16px}
+.errbar .grow{flex:1}
+.errbar .btn{border-color:var(--control-border)}
+.touch .errbar{flex-wrap:wrap;padding:8px 4px 4px 12px}
+/* icon buttons: 28px visible square; on touch the outer box is a 44x44 invisible tap area */
+.ib{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;color:var(--text2);flex:none}
+.ib .ibv{width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center}
+.ib i{font-size:16px}
+.ib.hov .ibv{background:var(--surface);color:var(--text)}
+.touch .ib{width:44px;height:44px}
+/* class list */
+.clist{border:1px solid var(--border);border-radius:8px;flex:none}
+.crow{display:flex;align-items:center;gap:8px;height:40px;padding:0 4px 0 8px;font-size:13px;border-top:1px solid var(--border)}
+.clist>.crow:first-child{border-top:none}
+.touch .crow{height:48px;padding:0;gap:4px}
+.crow .nm{font-weight:500}
+.crow .cnt{font-size:12px;color:var(--text2)}
+.crow .grow{flex:1}
+.acts{display:flex;align-items:center;gap:4px;justify-content:flex-end;position:relative}
+.touch .acts{gap:0}
+/* rank table */
+.rhead,.rrow{display:grid;align-items:center;column-gap:12px;border-top:1px solid var(--border)}
+.rhead{height:32px;background:var(--surface);font-size:12px;color:var(--text2)}
+.rrow{min-height:40px;font-size:13px;position:relative;padding-top:4px;padding-bottom:4px}
+.touch .rrow{min-height:48px}
+.g-pc{grid-template-columns:24px minmax(0,1fr) minmax(0,1.6fr) 64px 88px 64px 104px 64px;padding:0 4px 0 40px}
+.g-st{grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) 64px 88px 64px 104px;padding:0 16px 0 44px}
+.g-tab{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 64px 96px 88px;padding:0 0 0 48px}
+.g-tst{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 64px 96px 72px;padding:0 8px 0 48px}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.rk{display:flex;align-items:center;gap:8px;min-width:0}
+.grip{display:inline-flex;align-items:center;justify-content:center;width:24px;height:28px;color:var(--text2);border-radius:8px}
+.grip i{font-size:16px}
+.grip.hov{background:var(--border);color:var(--text)}
+.rrow.sel{background:var(--blue-tint)}
+.rrow.hovrow{background:var(--surface)}
+.rrow.lift{background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.10);z-index:2;margin:4px -4px 4px 32px;padding-left:8px;border:1px solid var(--border-strong);border-radius:8px}
+.rrow.gap{opacity:.35}
+.dropline{height:0;border-top:2px solid var(--blue);margin:-1px 0 -1px 40px;position:relative;z-index:3}
+.addrow{display:flex;align-items:center;gap:12px;padding:8px 8px 8px 76px;border-top:1px solid var(--border)}
+.addrow .grow{flex:1}
+.touch .addrow{padding:4px 4px 4px 48px}
+.emptyrow{display:flex;align-items:center;gap:12px;padding:12px 16px 12px 76px;border-top:1px solid var(--border);font-size:13px;color:var(--text2);flex-wrap:wrap}
+.touch .emptyrow{padding-left:48px}
+/* phone stacked rank rows */
+.prow{display:flex;align-items:center;gap:0;min-height:56px;padding:4px 0 4px 16px;border-top:1px solid var(--border)}
+.prow .grow{flex:1;min-width:0}
+.prow .l1{font-size:13px;font-weight:500;display:flex;align-items:center;column-gap:8px;row-gap:2px;flex-wrap:wrap}
+.prow .l2{font-size:12px;color:var(--text2)}
+.prow .l2 span{white-space:nowrap}
+.prow.sel{background:var(--blue-tint)}
+.prow>.tapbox{margin-right:8px}
+.grp-lbl{font-size:12px;color:var(--text2);margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--border)}
+.ro{font-size:13px;margin-bottom:12px}
+.ro .lbl{display:block}
+.ro .sec{color:var(--text2)}
+.meta{font-size:12px;color:var(--text2);margin-top:16px}
+/* checkbox (CSS tick: ti-check is reserved for Save) */
+.cbrow{display:flex;align-items:center;gap:8px;min-height:32px;font-size:13px}
+.touch .cbrow{min-height:44px}
+.cb{width:16px;height:16px;border:1px solid var(--control-border);border-radius:4px;display:inline-block;position:relative;flex:none;background:var(--bg)}
+.cb.on{background:var(--blue);border-color:var(--blue)}
+.cb.on::after{content:"";position:absolute;left:4px;top:1px;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.cb.dis{background:var(--surface);border-color:var(--border-strong)}
+/* toast (Undo) */
+.toast{position:absolute;right:16px;bottom:16px;background:#1F1F1F;color:#fff;border-radius:8px;display:flex;align-items:center;gap:8px;padding:0 4px 0 12px;font-size:13px;z-index:6;min-height:40px;white-space:nowrap}
+.toast .undo{display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 8px;color:#fff;font-weight:500;border-left:1px solid #4A4A4A;flex:none}
+.toast .undo i{font-size:16px}
+.touch .toast{min-height:44px}
+.touch .toast .undo{height:44px}
+.toast.ph{left:50%;right:auto;transform:translateX(-50%);bottom:76px}
+.toast.ph.wide{width:calc(100% - 32px);white-space:normal;line-height:1.4;padding:4px 4px 4px 12px}
+.toast.ph.wide>span:first-child{flex:1}
+/* blocked (Both) */
+.blocked{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;color:var(--text2);font-size:13px;padding:24px}
+.blocked .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+/* top-of-file boxes */
+.okbox{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:16px 0;font-size:13px}
+.okbox h3{font-size:14px;font-weight:500;margin:0 0 4px}
+.okbox ol{margin:0;padding-left:20px}.okbox li{margin:4px 0}
+.toc{font-size:13px;margin:8px 0 0;columns:2}
+.toc a{color:var(--blue);text-decoration:none}
+/* phone: class names and rank rows start at the 16px gutter */
+.touch .ph-shell .crow{padding-left:16px}
+.ctog{display:flex;align-items:center;gap:8px;flex:1;min-width:0;min-height:48px}
+.ctog i{font-size:16px;color:var(--text2)}
+/* compact outline button (staff View): 28px with a mouse, 36px on touch, 44px tap box */
+.tapbox{display:inline-flex;align-items:center;justify-content:center;flex:none}
+.touch .tapbox{min-height:44px;min-width:44px}
+.touch .btn.c28{height:36px}
+/* final award problems shown in the Testing for cell */
+.tfwarn{color:var(--warn);font-size:12px;display:inline-flex;gap:4px;align-items:flex-start;line-height:1.4}
+.tfwarn i{font-size:16px;line-height:1}
+.prow .l1 .tfwarn{font-weight:400}
+/* dropdown list with scroll cue */
+.menu.scroll{overflow:hidden;padding-right:12px}
+.menu .sbar{position:absolute;right:4px;top:6px;width:4px;height:64px;border-radius:2px;background:var(--border-strong)}
+.touch .ph-shell .addrow,.touch .ph-shell .emptyrow{padding-left:16px}
+code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
+/* ---------- Tabler outline icons, inlined as masks so the file opens offline ---------- */
+.ti{display:inline-flex;align-items:center;justify-content:center;font-style:normal;line-height:1;flex:none;vertical-align:-0.125em}
+.ti::before{content:"";display:block;width:1em;height:1em;background-color:currentColor;-webkit-mask:var(--i) center/contain no-repeat;mask:var(--i) center/contain no-repeat}
+.ti-home{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M5 12l-2 0l9 -9l9 9l-2 0%22 /%3E%3Cpath d=%22M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7%22 /%3E%3Cpath d=%22M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6%22 /%3E%3C/svg%3E")}
+.ti-certificate{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M15 15m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0%22 /%3E%3Cpath d=%22M13 17.5v4.5l2 -1.5l2 1.5v-4.5%22 /%3E%3Cpath d=%22M10 19h-5a2 2 0 0 1 -2 -2v-10c0 -1.1 .9 -2 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -1 1.73%22 /%3E%3Cpath d=%22M6 9l12 0%22 /%3E%3Cpath d=%22M6 12l3 0%22 /%3E%3Cpath d=%22M6 15l2 0%22 /%3E%3C/svg%3E")}
+.ti-map-pin{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0%22 /%3E%3Cpath d=%22M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z%22 /%3E%3C/svg%3E")}
+.ti-arrow-left{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M5 12l14 0%22 /%3E%3Cpath d=%22M5 12l6 6%22 /%3E%3Cpath d=%22M5 12l6 -6%22 /%3E%3C/svg%3E")}
+.ti-chevron-down{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M6 9l6 6l6 -6%22 /%3E%3C/svg%3E")}
+.ti-chevron-up{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M6 15l6 -6l6 6%22 /%3E%3C/svg%3E")}
+.ti-dots{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M19 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3C/svg%3E")}
+.ti-edit{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1%22 /%3E%3Cpath d=%22M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z%22 /%3E%3Cpath d=%22M16 5l3 3%22 /%3E%3C/svg%3E")}
+.ti-trash{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M4 7l16 0%22 /%3E%3Cpath d=%22M10 11l0 6%22 /%3E%3Cpath d=%22M14 11l0 6%22 /%3E%3Cpath d=%22M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12%22 /%3E%3Cpath d=%22M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3%22 /%3E%3C/svg%3E")}
+.ti-plus{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M12 5l0 14%22 /%3E%3Cpath d=%22M5 12l14 0%22 /%3E%3C/svg%3E")}
+.ti-grip-vertical{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M9 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M9 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M9 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M15 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M15 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M15 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3C/svg%3E")}
+.ti-arrow-up{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M12 5l0 14%22 /%3E%3Cpath d=%22M18 11l-6 -6%22 /%3E%3Cpath d=%22M6 11l6 -6%22 /%3E%3C/svg%3E")}
+.ti-arrow-down{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M12 5l0 14%22 /%3E%3Cpath d=%22M18 13l-6 6%22 /%3E%3Cpath d=%22M6 13l6 6%22 /%3E%3C/svg%3E")}
+.ti-check{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M5 12l5 5l10 -10%22 /%3E%3C/svg%3E")}
+.ti-alert-triangle{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M12 9v4%22 /%3E%3Cpath d=%22M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z%22 /%3E%3Cpath d=%22M12 16h.01%22 /%3E%3C/svg%3E")}
+.ti-arrow-back-up{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M9 14l-4 -4l4 -4%22 /%3E%3Cpath d=%22M5 10h11a4 4 0 1 1 0 8h-1%22 /%3E%3C/svg%3E")}
+.ti-refresh{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4%22 /%3E%3Cpath d=%22M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4%22 /%3E%3C/svg%3E")}
+.ti-x{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M18 6l-12 12%22 /%3E%3Cpath d=%22M6 6l12 12%22 /%3E%3C/svg%3E")}
+/* ---------- frames that grow with their content ---------- */
+.dev.auto{height:auto}
+.dev.auto .app{height:auto;min-height:600px}
+.dev.auto .ph-shell{height:auto}
+.dev.auto .content{overflow:visible}
+.intro{font-size:14px;margin:16px 0 0;max-width:860px}
+.cap{flex-wrap:wrap}
+/* ---------- Star testing: page header ---------- */
+.back{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--blue);text-decoration:none;height:24px;margin-bottom:2px}
+.back i{font-size:16px}
+.touch .back{min-height:44px;margin:-10px 0 -8px}
+.viewonly+.viewonly{margin-top:-8px}
+/* ---------- Dan blocks ---------- */
+.crow.dhx{height:auto;min-height:40px;padding-top:4px;padding-bottom:4px}
+.touch .crow.dhx{min-height:48px;padding-top:2px;padding-bottom:2px}
+.dsum{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;flex:1;min-width:0}
+.crow.dh{height:auto;min-height:56px;padding-top:6px;padding-bottom:6px}
+.crow.dh .l1{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px}
+.crow.dh .l2{display:block;font-size:12px;color:var(--text2);line-height:1.4}
+.crow.dh .grow{min-width:0}
+.g-pc{grid-template-columns:24px minmax(0,1fr) 88px 88px 64px;padding:0 4px 0 8px}
+.g-pcs{grid-template-columns:minmax(0,1fr) 88px 88px;padding:0 16px 0 44px}
+.g-tab{grid-template-columns:minmax(0,1fr) 96px 88px 88px;padding:0 0 0 48px}
+.g-tabs{grid-template-columns:minmax(0,1fr) 96px 88px;padding:0 16px 0 48px}
+.rk{flex-wrap:wrap;row-gap:2px}
+.addrow{padding:8px 4px 8px 44px}
+.addrow.ro-add{padding-top:10px;padding-bottom:10px;padding-right:16px}
+.touch .addrow{padding:4px 16px 4px 48px}
+.touch .addrow.ro-add{padding-top:12px;padding-bottom:12px}
+.tot{font-size:12px;color:var(--text2);white-space:nowrap}
+.prow.ro-row{padding-right:16px;min-height:48px}
+/* ---------- grade scale / assistant table / fees ---------- */
+.blk{border:1px solid var(--border);border-radius:8px;margin-top:24px;flex:none}
+.bhead{display:flex;align-items:center;gap:8px;height:40px;padding:0 4px 0 12px}
+.touch .bhead{height:48px;padding:0 0 0 16px}
+.bhead .nm{font-size:13px;font-weight:500}
+.bbody{padding:12px;border-top:1px solid var(--border)}
+.touch .bbody{padding:12px 16px}
+.gscale{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--border);border-radius:8px;max-width:448px;overflow:hidden}
+.gscale div{display:flex;flex-direction:column;align-items:center;padding:4px 0;font-size:13px;font-variant-numeric:tabular-nums}
+.gscale div+div{border-left:1px solid var(--border)}
+.gscale b{font-weight:500}
+.gscale span{color:var(--text2);font-size:12px}
+.bline{font-size:13px;margin:8px 0 0}
+.bline.sec{color:var(--text2);font-size:12px;margin-top:4px}
+.bsub{font-size:12px;color:var(--text2);padding:0 12px 8px;margin-top:-4px}
+.touch .bsub{padding:0 16px 8px}
+.thead,.trow{display:grid;align-items:center;column-gap:12px;border-top:1px solid var(--border)}
+.thead{height:32px;background:var(--surface);font-size:12px;color:var(--text2)}
+.trow{min-height:36px;font-size:13px}
+.touch .trow{min-height:44px}
+.trow b{font-weight:500}
+.trow.sel,.prow.sel{background:var(--blue-tint)}
+.g-as{grid-template-columns:72px 200px minmax(0,1fr);padding:0 12px}
+.touch .g-as{padding:0 16px}
+.g-asp{grid-template-columns:48px minmax(0,1fr) minmax(0,1fr);padding:0 16px}
+.g-fee{grid-template-columns:minmax(0,1fr) 104px 104px 104px 64px;padding:0 4px 0 12px}
+.g-fees{grid-template-columns:minmax(0,1fr) 104px 104px 104px;padding:0 16px 0 12px}
+.g-feet{grid-template-columns:minmax(0,1fr) 88px 88px 88px 52px;padding:0 0 0 16px}
+.g-feets{grid-template-columns:minmax(0,1fr) 88px 88px 88px;padding:0 16px}
+.bfoot{font-size:12px;color:var(--text2);padding:8px 12px;border-top:1px solid var(--border)}
+.touch .bfoot{padding:10px 16px}
+/* ---------- dialogs ---------- */
+.input.num-in{width:140px}
+.input .suf{color:var(--text2);margin-left:auto;padding-left:8px;font-size:12px}
+.preview{background:var(--surface);border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:4px}
+.preview div+div{margin-top:2px}
+.ggrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));column-gap:12px}
+.ggrid .input.num-in,.agrid .input.num-in{width:100%}
+.agrid{display:grid;grid-template-columns:48px minmax(0,1fr) minmax(0,1fr);column-gap:12px;align-items:center;margin-bottom:8px}
+.agrid.ahead{font-size:12px;color:var(--text2);margin-bottom:4px}
+.ag{font-size:13px;font-weight:500}
+.rov{font-size:13px;color:var(--text2);padding-left:12px}
+.lnk{color:var(--blue);text-decoration:underline;font-size:12px;display:inline-flex;align-items:center;min-height:24px}
+.touch .lnk{min-height:44px;margin:-10px 0 -12px}
+.fbody .err+.meta,.dialog .err+.meta{margin-top:12px}
+/* ---------- menus: disabled item with its reason ---------- */
+.menu .it.two{height:auto;min-height:32px;padding:8px 12px;align-items:flex-start;white-space:normal}
+.touch .menu .it.two{min-height:44px}
+.menu .it.two i{margin-top:2px}
+.menu .it .t{display:block}
+.menu .it .why{display:block;font-size:12px;color:var(--text2);line-height:1.4;margin-top:2px}
+.pair>div{min-width:0;max-width:100%}
+.bhead .grow{flex:1}
+.touch .ph-shell .crow.dh.ro-dh{padding-right:16px}
+.addrow{flex-wrap:wrap;row-gap:4px}
+.addrow .tot{margin-left:auto}
+/* ---------- revision 2 ---------- */
+.menu{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.sheet .menu{box-shadow:none}
+.tip{position:absolute;top:34px;right:0;background:#1F1F1F;color:#fff;font-size:13px;line-height:1.4;padding:4px 8px;border-radius:6px;white-space:nowrap;z-index:6}
+.rrow.g-pc.lift{margin:4px -4px 4px 4px;padding-left:4px}
+.dropline{margin:-1px 0 -1px 8px}
+.ctog .tag i{font-size:12px;color:inherit}
+.crow.dh .l1 .ti-chevron-up,.crow.dh .l1 .ti-chevron-down{font-size:16px;color:var(--text2)}
+.gerr{grid-column:1/-1;margin:-4px 0 12px}
+.input.bad{border-color:var(--warn)}
+.okbox .q{margin:12px 0 0;font-size:13px}
+.okbox .shell-h{margin-top:16px}
+.okbox ul{margin:0;padding-left:20px}
+/* ---------- revision 3: tablet drag ---------- */
+.g-tab{grid-template-columns:36px minmax(0,1fr) 96px 88px 88px;padding:0}
+.touch .grip{width:44px;height:44px;margin-left:-4px;position:relative}
+.rrow.g-tab.lift{margin:4px -4px 4px 4px;padding-left:0}
+.finger{position:absolute;left:8px;top:8px;width:28px;height:28px;border-radius:50%;background:rgba(31,31,31,.14);border:1px solid rgba(31,31,31,.35)}
+/* ---------- revision 4: phone drag ---------- */
+.prow.hasgrip{padding-left:2px}
+.prow>.grip{margin:0 2px 0 0}
+.aerr{margin:-4px 0 8px}
+
+/* ---------- Events tab (Star testing) ---------- */
+.g-ev{grid-template-columns:minmax(0,1.6fr) 150px 100px 190px 64px;padding:0 4px 0 16px}
+.g-evt{grid-template-columns:minmax(0,1fr) 124px 84px 150px 88px;padding:0 0 0 16px}
+.g-evs{grid-template-columns:minmax(0,1.6fr) 150px 100px 190px 32px;padding:0 4px 0 16px}
+.evlist{border:1px solid var(--border);border-radius:8px;flex:none}
+.evlist>.rhead{border-top:none;border-radius:8px 8px 0 0}
+.rrow .nm{font-weight:500}
+.tag-ok{background:var(--ok-tint);color:var(--ok);border-color:#CFE3B6}
+.seg{display:inline-flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;font-size:13px;height:32px;align-self:flex-start;flex:none}
+.seg span{display:flex;align-items:center;padding:0 16px;color:var(--text2)}
+.seg span.on{background:var(--blue-tint);color:var(--blue);font-weight:500}
+.seg span+span{border-left:1px solid var(--control-border)}
+.touch .seg{height:36px}
+.seg.neutral span.on{background:var(--surface);color:var(--text)}
+.seg .ct{color:var(--text2);font-weight:400;margin-left:8px}
+.segbar{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex:none}
+.cbline{display:flex;align-items:center;gap:8px;font-size:13px;margin:12px 0 4px}
+.touch .cbline{min-height:44px;margin:4px 0 0}
+.indent{margin-left:24px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ta{min-height:64px;height:auto;align-items:flex-start;padding:6px 12px;line-height:1.4}
+.opt-lbl{font-weight:400;color:var(--text2)}
+.ferr{display:flex;gap:4px;align-items:flex-start;font-size:12px;color:var(--warn);margin-top:2px}
+.ferr i{font-size:14px;margin-top:1px}
+.input.bad{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn)}
+.menu .it.two{height:auto;min-height:32px;padding:8px 12px;align-items:flex-start;white-space:normal}
+.touch .menu .it.two{min-height:44px}
+.menu .it.two i{margin-top:2px}
+.menu .it .t{display:block}
+.it .why{display:block;font-size:12px;color:var(--text2);line-height:1.4;margin-top:2px}
+.btn-danger i{color:#fff}
+.placeholder{border:1px dashed var(--border-strong);border-radius:8px;padding:24px;color:var(--text2);font-size:13px;text-align:center;flex:none}
+.qr{display:grid;grid-template-columns:repeat(25,1fr);width:var(--qs,152px);height:var(--qs,152px);background:#fff;padding:8px;border:1px solid var(--border);border-radius:8px}
+.qr i{display:block;background:#1F1F1F}.qr b{display:block}
+.qrwrap{display:flex;justify-content:center;margin:8px 0 12px}
+.url{font-size:13px;color:var(--text);font-family:ui-monospace,Consolas,monospace;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dlg-row{display:flex;gap:8px;flex-wrap:wrap}
+.lk{border:1px solid var(--border);border-radius:8px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.lk .sch{font-size:15px;font-weight:500}
+.lkrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dev-ph .lkrow{grid-template-columns:1fr}
+.dev-ph .fullscreen .fbody{overflow:auto}
+.esum{font-size:14px;color:var(--text);line-height:1.4;margin-top:2px}
+.dev-ph .url{white-space:normal;word-break:break-all}
+.empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:48px 16px;color:var(--text2);font-size:13px;text-align:center;border:1px solid var(--border);border-radius:8px;flex:none}
+.ddlist{position:absolute;background:var(--bg);border:1px solid var(--border-strong);border-radius:8px;padding:4px 0;z-index:6}
+.paper{width:612px;height:792px;background:#fff;border:1px solid var(--border-strong);box-shadow:0 1px 3px rgba(0,0,0,.08);padding:56px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;font-size:14px;color:#1F1F1F}
+.paper h1{font-size:28px;font-weight:500;margin:8px 0 0}
+.paper .big{font-size:18px}
+.paper .note{font-size:14px;color:#3a3a3a;max-width:440px;line-height:1.5}
+.paper .crest{width:72px;height:72px;border-radius:50%;border:2px solid #1F1F1F;display:flex;align-items:center;justify-content:center;font-size:11px;color:#6B6B6B}
+.okbox ol.det li{margin:6px 0}
+.prop{color:var(--warn)}
+.intro{font-size:14px;max-width:900px}
+code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
+.ti-copy{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M7 7m0 2.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667z%22/%3E%3Cpath d=%22M4.012 16.737a2.005 2.005 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1%22/%3E%3C/svg%3E")}
+.ti-qrcode{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z%22/%3E%3Cpath d=%22M7 17l0 .01%22/%3E%3Cpath d=%22M14 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z%22/%3E%3Cpath d=%22M7 7l0 .01%22/%3E%3Cpath d=%22M4 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z%22/%3E%3Cpath d=%22M17 7l0 .01%22/%3E%3Cpath d=%22M14 14l3 0%22/%3E%3Cpath d=%22M20 14l0 .01%22/%3E%3Cpath d=%22M14 14l0 3%22/%3E%3Cpath d=%22M14 20l3 0%22/%3E%3Cpath d=%22M17 17l3 0%22/%3E%3Cpath d=%22M20 17l0 3%22/%3E%3C/svg%3E")}
+.ti-printer{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2%22/%3E%3Cpath d=%22M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4%22/%3E%3Cpath d=%22M7 13m0 2a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2z%22/%3E%3C/svg%3E")}
+
+.g-cd{grid-template-columns:minmax(0,1.4fr) 140px minmax(0,1.2fr) 40px;padding:0 4px 0 16px}
+.g-cdf{grid-template-columns:minmax(0,1.4fr) 110px 140px minmax(0,1.2fr) 40px;padding:0 4px 0 16px}
+.secrow{display:flex;align-items:center;gap:8px;min-height:36px;padding:0 16px;font-size:13px;font-weight:500;background:var(--bg);border-top:1px solid var(--border)}
+.secrow .ct{font-weight:400;color:var(--text2)}
+.sub2{min-height:28px;font-size:12px;color:var(--text2);font-weight:400}
+.q{outline:2px dashed #EF9F27;outline-offset:4px;border-radius:6px}
+.opt{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:8px 0 16px;font-size:13px}
+.opt h3{font-size:13px;font-weight:500;margin:8px 0 2px}.opt h3:first-child{margin-top:0}
+.opt ul{margin:0;padding-left:20px}.opt li{margin:2px 0}
+.rec{border-color:var(--blue)}
+.rec-tag{display:inline-block;font-size:12px;color:var(--blue);background:var(--blue-tint);border-radius:6px;padding:2px 8px;margin-left:8px;font-weight:400;vertical-align:1px}
+table.plan{border-collapse:collapse;font-size:13px;margin:8px 0}
+table.plan td,table.plan th{border-top:1px solid var(--border);padding:6px 12px 6px 0;text-align:left;vertical-align:top}
+table.plan th{font-weight:500;color:var(--text2);font-size:12px}
+.dev-ph .seg span{padding:0 10px}
+.dev-ph .seg .ct{margin-left:6px}
+.srch{display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--control-border);border-radius:8px;padding:0 10px;font-size:13px;color:var(--text2);width:260px;margin-bottom:12px}
+.touch .srch{height:36px;width:100%}
+.ti-search{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0%22/%3E%3Cpath d=%22M21 21l-6 -6%22/%3E%3C/svg%3E")}
+
+.g-ro{grid-template-columns:minmax(0,1.3fr) 150px 110px 90px 110px 100px 40px;padding:0 4px 0 16px}
+.g-rot{grid-template-columns:minmax(0,1.2fr) 120px 72px 96px 84px 44px;padding:0 0 0 16px}
+.tag-ok{background:var(--ok-tint);color:var(--ok);border-color:#CFE3B6}
+
+.g-r2{grid-template-columns:minmax(0,1.5fr) 150px 90px 100px 90px 190px;padding:0 4px 0 16px}
+.g-r2t{grid-template-columns:minmax(0,1.3fr) 118px 70px 90px 168px;padding:0 0 0 16px}
+.regd{font-weight:400;color:var(--text2);font-size:12px;margin-left:8px;white-space:nowrap}
+.rowbtns{display:flex;align-items:center;gap:4px;justify-content:flex-end}
+
+</style>
+</head>
+<body>
+<main>
+<h1>Star testing · Candidates tab — design questions</h1>
+
+<p class="lead">Jae H. Jeong's U.S. Taekwondo Center · Star testing · guidelines v0.90 · October 17, 2026 · One question at a time. Answered questions stay in this file with their answer.</p>
+
+<div class="banner"><i class="ti ti-alert-triangle"></i><div><b>Design only — not a working app.</b> Names are examples. Option sketches for one decision at a time (PC and phone); full mockups come after the questions. <span class="prop">Amber = proposed, not decided.</span></div></div>
+
+<p class="intro">The <b>Candidates</b> tab is the first tab of an event page (v0.60): everyone registered for that star testing, from both schools (v0.58; the top-bar switcher filters Worcester / Shrewsbury). Already decided: the school comes from the registration link and staff can correct it (v0.80); duplicates come in flagged “Possible duplicate” (v0.79); each registration has a reference number staff can see (v0.85); make-ups are added by staff and don’t pay again (v0.78); list views never show date of birth, address, medical or billing details (rule 5).</p>
+
+<div class="okbox"><h3>Questions for the Candidates tab, in order</h3><table class="plan"><tr><th>#</th><th>Question</th><th>Status</th></tr><tr><td>1</td><td>How the list is organized</td><td><b>Answered:</b> B, Dan switch; full roster with payment details (v0.90)</td></tr><tr><td>2</td><td>What staff vs admins can do here (record payments, edit, remove), and who sees date of birth and email in the detail view (rule 5, decision 10.5)</td><td>Next</td></tr><tr><td>3</td><td>What each row shows</td><td><b>Mostly answered</b> with Q1 (v0.90): registered date, payment method, paid, paid date; layout drawn below to confirm</td></tr><tr><td>4</td><td>Recording payments (cash / check, early or same-day price, check number?)</td><td>Later</td></tr><tr><td>5</td><td>Staff adding a candidate (walk-ins, make-ups)</td><td>Later</td></tr><tr><td>6</td><td>The candidate detail view and editing (incl. correcting the school)</td><td>Later</td></tr><tr><td>7</td><td>Removing a candidate</td><td>Later</td></tr><tr><td>8</td><td>Resolving “Possible duplicate”</td><td>Later</td></tr><tr><td>9</td><td>Counts or a summary at the top</td><td>Later</td></tr><tr><td>10</td><td>How make-up candidates show</td><td>Later</td></tr></table></div>
+
+<h2 id="q1">Question 1 — How is the candidate list organized?</h2>
+
+<div class="okbox" style="border-color:var(--ok)"><h3>Answered 2026-10-17: Option B, as a full roster</h3><p style="margin:4px 0 0">Dan switch; each row also shows the date registered, how they’ll pay, whether they’ve paid and when (Jeffrey). Payment details in this staff list are a recorded exception to rule 5 — never on Grading or mat-side screens. Recorded as v0.90.</p></div>
+
+<p class="lead">Seven example candidates across the three Dans and both schools. Rows show only name, school and progression here; what else a row shows is Question 2. The top-bar Worcester / Shrewsbury / Both switcher filters the list in every option (v0.58).</p>
+
+<h3 id="q1a" style="font-size:16px;font-weight:500;margin:40px 0 4px">Option A — One list, a heading per Dan<span class="rec-tag">Recommended</span></h3><div class="opt rec"><h3>What it does</h3><ul><li>One list with a heading per Dan (“1st Dan · 4”). Inside each: lowest star first, then A–Z by last name; the school shows on every row (no school sub-groups — the switcher already filters by school).</li></ul>
+<h3>Good</h3><ul><li>Everything on one page; easy to scan by Dan, which is how testing is run.</li><li>Works the same on every device.</li></ul>
+<h3>Bad</h3><ul><li>A long page when many candidates register.</li></ul></div><p class="cap">PC · mouse · 1280px · Both selected</p><div class="scroller"><div class="dev dev-pc" style="height:700px"><div class="app"><nav class="rail" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i></a><a class="on" aria-label="Testing" aria-current="page"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">JB</span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Star testing</a><div class="ptitle">Fall 2026 Star Testing</div><div class="esum">Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 7 candidates</div></div><span class="grow"></span><span class="btn"><i class="ti ti-qrcode"></i>Registration link</span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Candidates</span><span role="tab">Grading</span><span role="tab">Results</span></div><div class="q"><div class="evlist"><div class="rhead g-cd" style="border-top:none"><span>Candidate</span><span>School</span><span>Testing for</span><span></span></div><div class="secrow">1st Dan <span class="ct">· 4</span></div><div class="rrow g-cd"><span class="rk nm">Noah Chen</span><span>Worcester</span><span>0 stars → 1 star</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Noah Chen"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-cd"><span class="rk nm">Mia Patel</span><span>Shrewsbury</span><span>0 stars → 1 star</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Mia Patel"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-cd"><span class="rk nm">Alex Kim</span><span>Shrewsbury</span><span>1 star → 2 stars</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Alex Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-cd"><span class="rk nm">Ethan Lopez</span><span>Worcester</span><span>2 stars → 3 stars</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Ethan Lopez"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="secrow">2nd Dan <span class="ct">· 2</span></div><div class="rrow g-cd"><span class="rk nm">Jordan Kim</span><span>Shrewsbury</span><span>0 stars → 1 star</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Jordan Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-cd"><span class="rk nm">Ava Rossi</span><span>Worcester</span><span>1 star → 2 stars</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Ava Rossi"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="secrow">3rd Dan <span class="ct">· 1</span></div><div class="rrow g-cd"><span class="rk nm">Liam Walsh</span><span>Shrewsbury</span><span>3 stars → 4 stars</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Liam Walsh"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div></div></div></div></div></div></div></div><p class="cap">Phone · touch · 390px</p><div class="scroller"><div class="dev dev-ph touch" style="height:1100px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">JB</span></span></div><div class="content"><div class="phead" style="display:block"><a class="back" role="link"><i class="ti ti-arrow-left"></i>Star testing</a><div class="ptitle">Fall 2026 Star Testing</div><div class="esum">Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 7 candidates</div><div style="margin-top:8px"><span class="btn"><i class="ti ti-qrcode"></i>Registration link</span></div></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Candidates</span><span role="tab">Grading</span><span role="tab">Results</span></div><div class="q"><div class="clist"><div class="secrow">1st Dan <span class="ct">· 4</span></div><div class="prow"><div class="grow"><div class="l1"><span>Noah Chen</span></div><div class="l2">Worcester · 0 stars → 1 star</div></div><span class="ib " role="button" aria-label="More actions for Noah Chen"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Mia Patel</span></div><div class="l2">Shrewsbury · 0 stars → 1 star</div></div><span class="ib " role="button" aria-label="More actions for Mia Patel"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Alex Kim</span></div><div class="l2">Shrewsbury · 1 star → 2 stars</div></div><span class="ib " role="button" aria-label="More actions for Alex Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Ethan Lopez</span></div><div class="l2">Worcester · 2 stars → 3 stars</div></div><span class="ib " role="button" aria-label="More actions for Ethan Lopez"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="secrow">2nd Dan <span class="ct">· 2</span></div><div class="prow"><div class="grow"><div class="l1"><span>Jordan Kim</span></div><div class="l2">Shrewsbury · 0 stars → 1 star</div></div><span class="ib " role="button" aria-label="More actions for Jordan Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Ava Rossi</span></div><div class="l2">Worcester · 1 star → 2 stars</div></div><span class="ib " role="button" aria-label="More actions for Ava Rossi"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="secrow">3rd Dan <span class="ct">· 1</span></div><div class="prow"><div class="grow"><div class="l1"><span>Liam Walsh</span></div><div class="l2">Shrewsbury · 3 stars → 4 stars</div></div><span class="ib " role="button" aria-label="More actions for Liam Walsh"><span class="ibv"><i class="ti ti-dots"></i></span></span></div></div></div></div><nav class="phbar" aria-label="Sections"><a><i class="ti ti-home"></i>Home</a><a class="on" aria-current="page"><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div>
+
+<h3 id="q1b" style="font-size:16px;font-weight:500;margin:40px 0 4px">Option B — A Dan switch, one Dan at a time</h3><div class="opt"><h3>What it does</h3><ul><li>A <b>1st Dan | 2nd Dan | 3rd Dan</b> switch with counts (like the prototype’s Dan tabs, drawn gray as v0.71); one Dan at a time, grouped Shrewsbury then Worcester, lowest star first, then A–Z.</li></ul>
+<h3>Good</h3><ul><li>Short lists; matches the old prototype.</li></ul>
+<h3>Bad</h3><ul><li>Finding a person means knowing their Dan first; one more control.</li></ul></div><p class="cap">PC · mouse · 1280px · Both selected</p><div class="scroller"><div class="dev dev-pc" style="height:700px"><div class="app"><nav class="rail" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i></a><a class="on" aria-label="Testing" aria-current="page"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">JB</span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Star testing</a><div class="ptitle">Fall 2026 Star Testing</div><div class="esum">Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 7 candidates</div></div><span class="grow"></span><span class="btn"><i class="ti ti-qrcode"></i>Registration link</span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Candidates</span><span role="tab">Grading</span><span role="tab">Results</span></div><div class="q"><div class="segbar"><div class="seg neutral" role="radiogroup" aria-label="Dan"><span class="on">1st Dan<span class="ct">4</span></span><span>2nd Dan<span class="ct">2</span></span><span>3rd Dan<span class="ct">1</span></span></div></div><div class="evlist"><div class="rhead g-cd" style="border-top:none"><span>Candidate</span><span>School</span><span>Testing for</span><span></span></div><div class="secrow sub2">Shrewsbury</div><div class="rrow g-cd"><span class="rk nm">Mia Patel</span><span>Shrewsbury</span><span>0 stars → 1 star</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Mia Patel"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-cd"><span class="rk nm">Alex Kim</span><span>Shrewsbury</span><span>1 star → 2 stars</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Alex Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="secrow sub2">Worcester</div><div class="rrow g-cd"><span class="rk nm">Noah Chen</span><span>Worcester</span><span>0 stars → 1 star</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Noah Chen"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-cd"><span class="rk nm">Ethan Lopez</span><span>Worcester</span><span>2 stars → 3 stars</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Ethan Lopez"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div></div></div></div></div></div></div></div><p class="cap">Phone · touch · 390px</p><div class="scroller"><div class="dev dev-ph touch" style="height:1100px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">JB</span></span></div><div class="content"><div class="phead" style="display:block"><a class="back" role="link"><i class="ti ti-arrow-left"></i>Star testing</a><div class="ptitle">Fall 2026 Star Testing</div><div class="esum">Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 7 candidates</div><div style="margin-top:8px"><span class="btn"><i class="ti ti-qrcode"></i>Registration link</span></div></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Candidates</span><span role="tab">Grading</span><span role="tab">Results</span></div><div class="q"><div class="segbar"><div class="seg neutral" role="radiogroup" aria-label="Dan"><span class="on">1st Dan<span class="ct">4</span></span><span>2nd Dan<span class="ct">2</span></span><span>3rd Dan<span class="ct">1</span></span></div></div><div class="clist"><div class="secrow sub2">Shrewsbury</div><div class="prow"><div class="grow"><div class="l1"><span>Mia Patel</span></div><div class="l2">Shrewsbury · 0 stars → 1 star</div></div><span class="ib " role="button" aria-label="More actions for Mia Patel"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Alex Kim</span></div><div class="l2">Shrewsbury · 1 star → 2 stars</div></div><span class="ib " role="button" aria-label="More actions for Alex Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="secrow sub2">Worcester</div><div class="prow"><div class="grow"><div class="l1"><span>Noah Chen</span></div><div class="l2">Worcester · 0 stars → 1 star</div></div><span class="ib " role="button" aria-label="More actions for Noah Chen"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Ethan Lopez</span></div><div class="l2">Worcester · 2 stars → 3 stars</div></div><span class="ib " role="button" aria-label="More actions for Ethan Lopez"><span class="ibv"><i class="ti ti-dots"></i></span></span></div></div></div></div><nav class="phbar" aria-label="Sections"><a><i class="ti ti-home"></i>Home</a><a class="on" aria-current="page"><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div>
+
+<h3 id="q1c" style="font-size:16px;font-weight:500;margin:40px 0 4px">Option C — One flat list A–Z with search</h3><div class="opt"><h3>What it does</h3><ul><li>One flat list, A–Z by last name, with a Dan column and a <b>search box</b>; column headers sort.</li></ul>
+<h3>Good</h3><ul><li>Fastest for “find this family” at the desk.</li></ul>
+<h3>Bad</h3><ul><li>Dans mixed together; harder to see who is testing for what. Needs a search icon (<code>ti-search</code>, already in the icon map).</li></ul></div><p class="cap">PC · mouse · 1280px · Both selected</p><div class="scroller"><div class="dev dev-pc" style="height:700px"><div class="app"><nav class="rail" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i></a><a class="on" aria-label="Testing" aria-current="page"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">JB</span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Star testing</a><div class="ptitle">Fall 2026 Star Testing</div><div class="esum">Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 7 candidates</div></div><span class="grow"></span><span class="btn"><i class="ti ti-qrcode"></i>Registration link</span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Candidates</span><span role="tab">Grading</span><span role="tab">Results</span></div><div class="q"><div class="srch"><i class="ti ti-search"></i>Search candidates</div><div class="evlist"><div class="rhead g-cdf" style="border-top:none"><span>Candidate ↑</span><span>Dan</span><span>School</span><span>Testing for</span><span></span></div><div class="rrow g-cdf"><span class="rk nm">Noah Chen</span><span>1st Dan</span><span>Worcester</span><span>0 stars → 1 star</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Noah Chen"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-cdf"><span class="rk nm">Alex Kim</span><span>1st Dan</span><span>Shrewsbury</span><span>1 star → 2 stars</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Alex Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-cdf"><span class="rk nm">Jordan Kim</span><span>2nd Dan</span><span>Shrewsbury</span><span>0 stars → 1 star</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Jordan Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-cdf"><span class="rk nm">Ethan Lopez</span><span>1st Dan</span><span>Worcester</span><span>2 stars → 3 stars</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Ethan Lopez"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-cdf"><span class="rk nm">Mia Patel</span><span>1st Dan</span><span>Shrewsbury</span><span>0 stars → 1 star</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Mia Patel"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-cdf"><span class="rk nm">Ava Rossi</span><span>2nd Dan</span><span>Worcester</span><span>1 star → 2 stars</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Ava Rossi"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-cdf"><span class="rk nm">Liam Walsh</span><span>3rd Dan</span><span>Shrewsbury</span><span>3 stars → 4 stars</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Liam Walsh"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div></div></div></div></div></div></div></div><p class="cap">Phone · touch · 390px</p><div class="scroller"><div class="dev dev-ph touch" style="height:1100px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">JB</span></span></div><div class="content"><div class="phead" style="display:block"><a class="back" role="link"><i class="ti ti-arrow-left"></i>Star testing</a><div class="ptitle">Fall 2026 Star Testing</div><div class="esum">Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 7 candidates</div><div style="margin-top:8px"><span class="btn"><i class="ti ti-qrcode"></i>Registration link</span></div></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Candidates</span><span role="tab">Grading</span><span role="tab">Results</span></div><div class="q"><div class="srch"><i class="ti ti-search"></i>Search candidates</div><div class="clist"><div class="prow"><div class="grow"><div class="l1"><span>Noah Chen</span></div><div class="l2">1st Dan · Worcester · 0 stars → 1 star</div></div><span class="ib " role="button" aria-label="More actions for Noah Chen"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Alex Kim</span></div><div class="l2">1st Dan · Shrewsbury · 1 star → 2 stars</div></div><span class="ib " role="button" aria-label="More actions for Alex Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Jordan Kim</span></div><div class="l2">2nd Dan · Shrewsbury · 0 stars → 1 star</div></div><span class="ib " role="button" aria-label="More actions for Jordan Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Ethan Lopez</span></div><div class="l2">1st Dan · Worcester · 2 stars → 3 stars</div></div><span class="ib " role="button" aria-label="More actions for Ethan Lopez"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Mia Patel</span></div><div class="l2">1st Dan · Shrewsbury · 0 stars → 1 star</div></div><span class="ib " role="button" aria-label="More actions for Mia Patel"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Ava Rossi</span></div><div class="l2">2nd Dan · Worcester · 1 star → 2 stars</div></div><span class="ib " role="button" aria-label="More actions for Ava Rossi"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Liam Walsh</span></div><div class="l2">3rd Dan · Shrewsbury · 3 stars → 4 stars</div></div><span class="ib " role="button" aria-label="More actions for Liam Walsh"><span class="ibv"><i class="ti ti-dots"></i></span></span></div></div></div></div><nav class="phbar" aria-label="Sections"><a><i class="ti ti-home"></i>Home</a><a class="on" aria-current="page"><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div>
+
+<h3 id="q1d" style="font-size:16px;font-weight:500;margin:40px 0 4px">Option D — Like A, with Shrewsbury and Worcester inside each Dan</h3><div class="opt"><h3>What it does</h3><ul><li>A’s Dan headings, and inside each Dan a <b>Shrewsbury</b> then <b>Worcester</b> sub-heading (the prototype’s grouping; status file B.3), lowest star first, then A–Z by last name.</li></ul>
+<h3>Good</h3><ul><li>Each school’s staff find their own students quickly; matches how the prototype printed.</li></ul>
+<h3>Bad</h3><ul><li>More headings; with the switcher on one school the sub-headings add nothing.</li></ul></div><p class="cap">PC · mouse · 1280px · Both selected</p><div class="scroller"><div class="dev dev-pc" style="height:700px"><div class="app"><nav class="rail" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i></a><a class="on" aria-label="Testing" aria-current="page"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">JB</span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Star testing</a><div class="ptitle">Fall 2026 Star Testing</div><div class="esum">Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 7 candidates</div></div><span class="grow"></span><span class="btn"><i class="ti ti-qrcode"></i>Registration link</span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Candidates</span><span role="tab">Grading</span><span role="tab">Results</span></div><div class="q"><div class="evlist"><div class="rhead g-cd" style="border-top:none"><span>Candidate</span><span>School</span><span>Testing for</span><span></span></div><div class="secrow">1st Dan <span class="ct">· 4</span></div><div class="secrow sub2">Shrewsbury</div><div class="rrow g-cd"><span class="rk nm">Mia Patel</span><span>Shrewsbury</span><span>0 stars → 1 star</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Mia Patel"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-cd"><span class="rk nm">Alex Kim</span><span>Shrewsbury</span><span>1 star → 2 stars</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Alex Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="secrow sub2">Worcester</div><div class="rrow g-cd"><span class="rk nm">Noah Chen</span><span>Worcester</span><span>0 stars → 1 star</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Noah Chen"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-cd"><span class="rk nm">Ethan Lopez</span><span>Worcester</span><span>2 stars → 3 stars</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Ethan Lopez"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="secrow">2nd Dan <span class="ct">· 2</span></div><div class="secrow sub2">Shrewsbury</div><div class="rrow g-cd"><span class="rk nm">Jordan Kim</span><span>Shrewsbury</span><span>0 stars → 1 star</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Jordan Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="secrow sub2">Worcester</div><div class="rrow g-cd"><span class="rk nm">Ava Rossi</span><span>Worcester</span><span>1 star → 2 stars</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Ava Rossi"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="secrow">3rd Dan <span class="ct">· 1</span></div><div class="secrow sub2">Shrewsbury</div><div class="rrow g-cd"><span class="rk nm">Liam Walsh</span><span>Shrewsbury</span><span>3 stars → 4 stars</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Liam Walsh"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div></div></div></div></div></div></div></div><p class="cap">Phone · touch · 390px</p><div class="scroller"><div class="dev dev-ph touch" style="height:1100px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">JB</span></span></div><div class="content"><div class="phead" style="display:block"><a class="back" role="link"><i class="ti ti-arrow-left"></i>Star testing</a><div class="ptitle">Fall 2026 Star Testing</div><div class="esum">Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 7 candidates</div><div style="margin-top:8px"><span class="btn"><i class="ti ti-qrcode"></i>Registration link</span></div></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Candidates</span><span role="tab">Grading</span><span role="tab">Results</span></div><div class="q"><div class="clist"><div class="secrow">1st Dan <span class="ct">· 4</span></div><div class="secrow sub2">Shrewsbury</div><div class="prow"><div class="grow"><div class="l1"><span>Mia Patel</span></div><div class="l2">Shrewsbury · 0 stars → 1 star</div></div><span class="ib " role="button" aria-label="More actions for Mia Patel"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Alex Kim</span></div><div class="l2">Shrewsbury · 1 star → 2 stars</div></div><span class="ib " role="button" aria-label="More actions for Alex Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="secrow sub2">Worcester</div><div class="prow"><div class="grow"><div class="l1"><span>Noah Chen</span></div><div class="l2">Worcester · 0 stars → 1 star</div></div><span class="ib " role="button" aria-label="More actions for Noah Chen"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Ethan Lopez</span></div><div class="l2">Worcester · 2 stars → 3 stars</div></div><span class="ib " role="button" aria-label="More actions for Ethan Lopez"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="secrow">2nd Dan <span class="ct">· 2</span></div><div class="secrow sub2">Shrewsbury</div><div class="prow"><div class="grow"><div class="l1"><span>Jordan Kim</span></div><div class="l2">Shrewsbury · 0 stars → 1 star</div></div><span class="ib " role="button" aria-label="More actions for Jordan Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="secrow sub2">Worcester</div><div class="prow"><div class="grow"><div class="l1"><span>Ava Rossi</span></div><div class="l2">Worcester · 1 star → 2 stars</div></div><span class="ib " role="button" aria-label="More actions for Ava Rossi"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="secrow">3rd Dan <span class="ct">· 1</span></div><div class="secrow sub2">Shrewsbury</div><div class="prow"><div class="grow"><div class="l1"><span>Liam Walsh</span></div><div class="l2">Shrewsbury · 3 stars → 4 stars</div></div><span class="ib " role="button" aria-label="More actions for Liam Walsh"><span class="ibv"><i class="ti ti-dots"></i></span></span></div></div></div></div><nav class="phbar" aria-label="Sections"><a><i class="ti ti-home"></i>Home</a><a class="on" aria-current="page"><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div>
+
+<div class="okbox"><h3>Recommendation: Option A</h3><p style="margin:4px 0 0">Testing runs Dan by Dan, and an event has usually a few dozen candidates, so one page with Dan headings is easy to scan and to print from. <b>Choose D</b> to keep the prototype’s school grouping inside each Dan. <b>Choose C</b> if finding one family quickly matters most (a list search can also be added to A later; it filters this event only, unlike the top-bar search of rule 3.2). <b>Choose B</b> to match the prototype’s Dan tabs.</p><p style="margin:8px 0 0"><b>Also answer:</b> a device set to one school (e.g. the Worcester tablet) opens with the top bar on Worcester, so the list shows only Worcester candidates. <span class="prop">Proposed: keep that (rule 3.3), with a line above the list “Showing Worcester candidates only · Show both schools” so nobody thinks candidates are missing.</span></p></div>
+
+<h2 id="q1r">Full roster — first draft (superseded by the next section)</h2>
+
+<p class="lead">From your answer to Question 1 (v0.90): the Dan switch, and for each candidate the date registered, how they’ll pay, whether they’ve paid and when. Example data, 1st Dan selected. How a payment is recorded is Question 4.</p>
+
+<div class="opt"><h3>What it does</h3><ul><li><b>PC columns:</b> Candidate · Testing for · Registered · Paying by · Payment (one tag: green <b>Paid</b> or gray <b>Not paid</b>) · Paid on · ⋯ — grouped Shrewsbury then Worcester, lowest star first, then A–Z.</li><li><b>Tablet</b> drops the Registered column to fit (rule 1.3; still in the detail view). <b>Phone</b> shows stacked rows: name; progression and registered date; payment method and when paid; the tag.</li><li><span class="prop">Proposed: “Not paid” is gray, not amber — not having paid before testing day is normal, not a problem. One tag per row (rule 8): a “Possible duplicate” (v0.79) would show as an amber tag instead and win, as amber outranks green and gray.</span></li><li>Payment details here are the recorded rule 5 exception (v0.90): never on the Grading tab or mat-side screens.</li></ul></div>
+
+<p class="cap">PC · mouse · 1280px · Both selected</p><div class="scroller"><div class="dev dev-pc" style="height:640px"><div class="app"><nav class="rail" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i></a><a class="on" aria-label="Testing" aria-current="page"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">JB</span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Star testing</a><div class="ptitle">Fall 2026 Star Testing</div><div class="esum">Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 7 candidates</div></div><span class="grow"></span><span class="btn"><i class="ti ti-qrcode"></i>Registration link</span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Candidates</span><span role="tab">Grading</span><span role="tab">Results</span></div><div class="q"><div class="segbar"><div class="seg neutral" role="radiogroup" aria-label="Dan"><span class="on">1st Dan<span class="ct">4</span></span><span>2nd Dan<span class="ct">2</span></span><span>3rd Dan<span class="ct">1</span></span></div></div><div class="evlist"><div class="rhead g-ro" style="border-top:none"><span>Candidate</span><span>Testing for</span><span>Registered</span><span>Paying by</span><span>Payment</span><span>Paid on</span><span></span></div><div class="secrow sub2">Shrewsbury</div><div class="rrow g-ro"><span class="rk nm">Mia Patel</span><span>0 stars → 1 star</span><span>Oct 12</span><span>Cash</span><span><span class="tag tag-ok">Paid</span></span><span>Oct 15</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Mia Patel"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-ro"><span class="rk nm">Alex Kim</span><span>1 star → 2 stars</span><span>Oct 17</span><span>Cash</span><span><span class="tag">Not paid</span></span><span><span style="color:var(--text2)">—</span></span><span class="acts"><span class="ib " role="button" aria-label="More actions for Alex Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="secrow sub2">Worcester</div><div class="rrow g-ro"><span class="rk nm">Noah Chen</span><span>0 stars → 1 star</span><span>Oct 13</span><span>Check</span><span><span class="tag tag-ok">Paid</span></span><span>Oct 13</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Noah Chen"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-ro"><span class="rk nm">Ethan Lopez</span><span>2 stars → 3 stars</span><span>Oct 16</span><span>Check</span><span><span class="tag">Not paid</span></span><span><span style="color:var(--text2)">—</span></span><span class="acts"><span class="ib " role="button" aria-label="More actions for Ethan Lopez"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div></div></div></div></div></div></div></div>
+
+<p class="cap">Tablet · touch · 820px</p><div class="scroller"><div class="dev dev-tab touch" style="height:700px"><div class="app"><nav class="rail-t" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i>Home</a><a class="on" aria-label="Testing" aria-current="page"><i class="ti ti-certificate"></i>Testing</a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">JB</span></span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Star testing</a><div class="ptitle">Fall 2026 Star Testing</div><div class="esum">Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 7 candidates</div></div><span class="grow"></span><span class="btn"><i class="ti ti-qrcode"></i>Registration link</span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Candidates</span><span role="tab">Grading</span><span role="tab">Results</span></div><div class="q"><div class="segbar"><div class="seg neutral" role="radiogroup" aria-label="Dan"><span class="on">1st Dan<span class="ct">4</span></span><span>2nd Dan<span class="ct">2</span></span><span>3rd Dan<span class="ct">1</span></span></div></div><div class="evlist"><div class="rhead g-rot" style="border-top:none"><span>Candidate</span><span>Testing for</span><span>Paying by</span><span>Payment</span><span>Paid on</span><span></span></div><div class="secrow sub2">Shrewsbury</div><div class="rrow g-rot"><span class="rk nm">Mia Patel</span><span>0 stars → 1 star</span><span>Cash</span><span><span class="tag tag-ok">Paid</span></span><span>Oct 15</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Mia Patel"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-rot"><span class="rk nm">Alex Kim</span><span>1 star → 2 stars</span><span>Cash</span><span><span class="tag">Not paid</span></span><span><span style="color:var(--text2)">—</span></span><span class="acts"><span class="ib " role="button" aria-label="More actions for Alex Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="secrow sub2">Worcester</div><div class="rrow g-rot"><span class="rk nm">Noah Chen</span><span>0 stars → 1 star</span><span>Check</span><span><span class="tag tag-ok">Paid</span></span><span>Oct 13</span><span class="acts"><span class="ib " role="button" aria-label="More actions for Noah Chen"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div><div class="rrow g-rot"><span class="rk nm">Ethan Lopez</span><span>2 stars → 3 stars</span><span>Check</span><span><span class="tag">Not paid</span></span><span><span style="color:var(--text2)">—</span></span><span class="acts"><span class="ib " role="button" aria-label="More actions for Ethan Lopez"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></div></div></div></div></div></div></div></div>
+
+<p class="cap">Phone · touch · 390px</p><div class="scroller"><div class="dev dev-ph touch" style="height:1100px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">JB</span></span></div><div class="content"><div class="phead" style="display:block"><a class="back" role="link"><i class="ti ti-arrow-left"></i>Star testing</a><div class="ptitle">Fall 2026 Star Testing</div><div class="esum">Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 7 candidates</div><div style="margin-top:8px"><span class="btn"><i class="ti ti-qrcode"></i>Registration link</span></div></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Candidates</span><span role="tab">Grading</span><span role="tab">Results</span></div><div class="q"><div class="segbar"><div class="seg neutral" role="radiogroup" aria-label="Dan"><span class="on">1st Dan<span class="ct">4</span></span><span>2nd Dan<span class="ct">2</span></span><span>3rd Dan<span class="ct">1</span></span></div></div><div class="clist"><div class="secrow sub2">Shrewsbury</div><div class="prow"><div class="grow"><div class="l1"><span>Mia Patel</span></div><div class="l2">0 stars → 1 star · Registered Oct 12</div><div class="l2">Cash · paid Oct 15</div><div style="margin-top:4px"><span class="tag tag-ok">Paid</span></div></div><span class="ib " role="button" aria-label="More actions for Mia Patel"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Alex Kim</span></div><div class="l2">1 star → 2 stars · Registered Oct 17</div><div class="l2">Cash · not paid yet</div><div style="margin-top:4px"><span class="tag">Not paid</span></div></div><span class="ib " role="button" aria-label="More actions for Alex Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="secrow sub2">Worcester</div><div class="prow"><div class="grow"><div class="l1"><span>Noah Chen</span></div><div class="l2">0 stars → 1 star · Registered Oct 13</div><div class="l2">Check · paid Oct 13</div><div style="margin-top:4px"><span class="tag tag-ok">Paid</span></div></div><span class="ib " role="button" aria-label="More actions for Noah Chen"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Ethan Lopez</span></div><div class="l2">2 stars → 3 stars · Registered Oct 16</div><div class="l2">Check · not paid yet</div><div style="margin-top:4px"><span class="tag">Not paid</span></div></div><span class="ib " role="button" aria-label="More actions for Ethan Lopez"><span class="ibv"><i class="ti ti-dots"></i></span></span></div></div></div></div><nav class="phbar" aria-label="Sections"><a><i class="ti ti-home"></i>Home</a><a class="on" aria-current="page"><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div>
+
+<h2 id="q1p">Updated roster and Record payment</h2>
+
+<div class="okbox" style="border-color:var(--ok)"><h3>Confirmed 2026-10-17</h3><p style="margin:4px 0 0">Roster, Record payment dialog and the ⋯ payment items, as drawn. Recorded in v0.91.</p></div>
+
+<p class="lead">From your three changes (v0.91): a <b>Record payment</b> button on unpaid rows, the registered date next to the name, and staff choosing how it was actually paid. Example: Alex Kim registered “Cash” but pays by check.</p>
+
+<div class="opt"><h3>What it does</h3><ul><li>Unpaid rows show an outline <b>Record payment</b> button beside ⋯; paid rows show only ⋯. The name is followed by “Registered Oct 17” in gray.</li><li><span class="prop">Proposed dialog:</span> <b>Paid by</b> Cash | Check | Card (starts on the form’s choice, with “They chose Cash on the form.”); <b>Amount</b> filled in from the event’s prices ($140 before the testing day, $150 on it; editable); <b>Date paid</b> = today; <b>Check number</b> (optional) appears only for Check. Save → the row turns <b>Paid</b> with the method actually used and the date, and a 5-second “Payment recorded · Undo” toast (rule 1.4).</li><li><span class="prop">Proposed:</span> ⋯ also holds “Change how they’ll pay” for before payment, and “Undo payment” / “Edit payment” after (mistakes happen after the 5-second toast).</li><li><span class="prop">Card</span> is for a card payment taken at the desk; families still choose only Cash or Check on the form until Square is added (v0.80).</li></ul></div>
+
+<p class="cap">PC · mouse · 1280px · roster</p><div class="scroller"><div class="dev dev-pc" style="height:600px"><div class="app"><nav class="rail" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i></a><a class="on" aria-label="Testing" aria-current="page"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">JB</span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Star testing</a><div class="ptitle">Fall 2026 Star Testing</div><div class="esum">Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 7 candidates</div></div><span class="grow"></span><span class="btn"><i class="ti ti-qrcode"></i>Registration link</span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Candidates</span><span role="tab">Grading</span><span role="tab">Results</span></div><div class="q"><div class="segbar"><div class="seg neutral" role="radiogroup" aria-label="Dan"><span class="on">1st Dan<span class="ct">4</span></span><span>2nd Dan<span class="ct">2</span></span><span>3rd Dan<span class="ct">1</span></span></div></div><div class="evlist"><div class="rhead g-r2" style="border-top:none"><span>Candidate</span><span>Testing for</span><span>Paying by</span><span>Payment</span><span>Paid on</span><span></span></div><div class="secrow sub2">Shrewsbury</div><div class="rrow g-r2"><span class="rk"><span class="nm">Mia Patel</span><span class="regd">Registered Oct 12</span></span><span>0 stars → 1 star</span><span>Cash</span><span><span class="tag tag-ok">Paid</span></span><span>Oct 15</span><span class="acts"><span class="rowbtns"><span class="ib " role="button" aria-label="More actions for Mia Patel"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></span></div><div class="rrow g-r2"><span class="rk"><span class="nm">Alex Kim</span><span class="regd">Registered Oct 17</span></span><span>1 star → 2 stars</span><span>Cash</span><span><span class="tag">Not paid</span></span><span><span style="color:var(--text2)">—</span></span><span class="acts"><span class="rowbtns"><span class="btn btn-sm">Record payment</span><span class="ib " role="button" aria-label="More actions for Alex Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></span></div><div class="secrow sub2">Worcester</div><div class="rrow g-r2"><span class="rk"><span class="nm">Noah Chen</span><span class="regd">Registered Oct 13</span></span><span>0 stars → 1 star</span><span>Check</span><span><span class="tag tag-ok">Paid</span></span><span>Oct 13</span><span class="acts"><span class="rowbtns"><span class="ib " role="button" aria-label="More actions for Noah Chen"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></span></div><div class="rrow g-r2"><span class="rk"><span class="nm">Ethan Lopez</span><span class="regd">Registered Oct 16</span></span><span>2 stars → 3 stars</span><span>Check</span><span><span class="tag">Not paid</span></span><span><span style="color:var(--text2)">—</span></span><span class="acts"><span class="rowbtns"><span class="btn btn-sm">Record payment</span><span class="ib " role="button" aria-label="More actions for Ethan Lopez"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></span></div></div></div></div></div></div></div></div>
+
+<p class="cap">PC · mouse · 1280px · Record payment for Alex Kim, switched to Check</p><div class="scroller"><div class="dev dev-pc" style="height:700px"><div class="app"><nav class="rail" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i></a><a class="on" aria-label="Testing" aria-current="page"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">JB</span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Star testing</a><div class="ptitle">Fall 2026 Star Testing</div><div class="esum">Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 7 candidates</div></div><span class="grow"></span><span class="btn"><i class="ti ti-qrcode"></i>Registration link</span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Candidates</span><span role="tab">Grading</span><span role="tab">Results</span></div><div class="segbar"><div class="seg neutral" role="radiogroup" aria-label="Dan"><span class="on">1st Dan<span class="ct">4</span></span><span>2nd Dan<span class="ct">2</span></span><span>3rd Dan<span class="ct">1</span></span></div></div><div class="evlist"><div class="rhead g-r2" style="border-top:none"><span>Candidate</span><span>Testing for</span><span>Paying by</span><span>Payment</span><span>Paid on</span><span></span></div><div class="secrow sub2">Shrewsbury</div><div class="rrow g-r2"><span class="rk"><span class="nm">Mia Patel</span><span class="regd">Registered Oct 12</span></span><span>0 stars → 1 star</span><span>Cash</span><span><span class="tag tag-ok">Paid</span></span><span>Oct 15</span><span class="acts"><span class="rowbtns"><span class="ib " role="button" aria-label="More actions for Mia Patel"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></span></div><div class="rrow g-r2"><span class="rk"><span class="nm">Alex Kim</span><span class="regd">Registered Oct 17</span></span><span>1 star → 2 stars</span><span>Cash</span><span><span class="tag">Not paid</span></span><span><span style="color:var(--text2)">—</span></span><span class="acts"><span class="rowbtns"><span class="btn btn-sm">Record payment</span><span class="ib " role="button" aria-label="More actions for Alex Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></span></div><div class="secrow sub2">Worcester</div><div class="rrow g-r2"><span class="rk"><span class="nm">Noah Chen</span><span class="regd">Registered Oct 13</span></span><span>0 stars → 1 star</span><span>Check</span><span><span class="tag tag-ok">Paid</span></span><span>Oct 13</span><span class="acts"><span class="rowbtns"><span class="ib " role="button" aria-label="More actions for Noah Chen"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></span></div><div class="rrow g-r2"><span class="rk"><span class="nm">Ethan Lopez</span><span class="regd">Registered Oct 16</span></span><span>2 stars → 3 stars</span><span>Check</span><span><span class="tag">Not paid</span></span><span><span style="color:var(--text2)">—</span></span><span class="acts"><span class="rowbtns"><span class="btn btn-sm">Record payment</span><span class="ib " role="button" aria-label="More actions for Ethan Lopez"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></span></div></div></div></div></div><div class="overlay"><div class="dialog dialog-detail" role="dialog" aria-label="Record payment"><h3>Record payment</h3><p class="sub">Alex Kim · 1st Dan · 1 star → 2 stars · Shrewsbury</p><div class="field"><label>Paid by</label><div class="seg" role="radiogroup" aria-label="Paid by"><span>Cash</span><span class="on">Check</span><span>Card</span></div><div class="hint">They chose Cash on the form. Change it if they paid another way.</div></div><div class="two"><div class="field"><label>Amount</label><div class="input ">$140</div><div class="hint">Price before the testing day. On the testing day it fills in $150.</div></div><div class="field"><label>Date paid</label><div class="input ">Sat, Oct 17, 2026</div></div></div><div class="field"><label>Check number</label><div class="input ">1042</div><div class="hint">Optional.</div></div><div class="actions"><span class="btn">Cancel</span><span class="btn btn-primary"><i class="ti ti-check"></i>Save</span></div></div></div></div></div>
+
+<p class="cap">PC · mouse · 1280px · after Save</p><div class="scroller"><div class="dev dev-pc" style="height:600px"><div class="app"><nav class="rail" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i></a><a class="on" aria-label="Testing" aria-current="page"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">JB</span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Star testing</a><div class="ptitle">Fall 2026 Star Testing</div><div class="esum">Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 7 candidates</div></div><span class="grow"></span><span class="btn"><i class="ti ti-qrcode"></i>Registration link</span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Candidates</span><span role="tab">Grading</span><span role="tab">Results</span></div><div class="segbar"><div class="seg neutral" role="radiogroup" aria-label="Dan"><span class="on">1st Dan<span class="ct">4</span></span><span>2nd Dan<span class="ct">2</span></span><span>3rd Dan<span class="ct">1</span></span></div></div><div class="evlist"><div class="rhead g-r2" style="border-top:none"><span>Candidate</span><span>Testing for</span><span>Paying by</span><span>Payment</span><span>Paid on</span><span></span></div><div class="secrow sub2">Shrewsbury</div><div class="rrow g-r2"><span class="rk"><span class="nm">Mia Patel</span><span class="regd">Registered Oct 12</span></span><span>0 stars → 1 star</span><span>Cash</span><span><span class="tag tag-ok">Paid</span></span><span>Oct 15</span><span class="acts"><span class="rowbtns"><span class="ib " role="button" aria-label="More actions for Mia Patel"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></span></div><div class="rrow g-r2"><span class="rk"><span class="nm">Alex Kim</span><span class="regd">Registered Oct 17</span></span><span>1 star → 2 stars</span><span>Check</span><span><span class="tag tag-ok">Paid</span></span><span>Oct 17</span><span class="acts"><span class="rowbtns"><span class="ib " role="button" aria-label="More actions for Alex Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></span></div><div class="secrow sub2">Worcester</div><div class="rrow g-r2"><span class="rk"><span class="nm">Noah Chen</span><span class="regd">Registered Oct 13</span></span><span>0 stars → 1 star</span><span>Check</span><span><span class="tag tag-ok">Paid</span></span><span>Oct 13</span><span class="acts"><span class="rowbtns"><span class="ib " role="button" aria-label="More actions for Noah Chen"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></span></div><div class="rrow g-r2"><span class="rk"><span class="nm">Ethan Lopez</span><span class="regd">Registered Oct 16</span></span><span>2 stars → 3 stars</span><span>Check</span><span><span class="tag">Not paid</span></span><span><span style="color:var(--text2)">—</span></span><span class="acts"><span class="rowbtns"><span class="btn btn-sm">Record payment</span><span class="ib " role="button" aria-label="More actions for Ethan Lopez"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></span></div></div></div></div></div><div class="toast" role="status"><span>Payment recorded</span><span class="undo"><i class="ti ti-arrow-back-up"></i>Undo</span></div></div></div>
+
+<p class="cap">Tablet · touch · 820px · roster</p><div class="scroller"><div class="dev dev-tab touch" style="height:700px"><div class="app"><nav class="rail-t" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i>Home</a><a class="on" aria-label="Testing" aria-current="page"><i class="ti ti-certificate"></i>Testing</a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">JB</span></span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Star testing</a><div class="ptitle">Fall 2026 Star Testing</div><div class="esum">Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 7 candidates</div></div><span class="grow"></span><span class="btn"><i class="ti ti-qrcode"></i>Registration link</span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Candidates</span><span role="tab">Grading</span><span role="tab">Results</span></div><div class="q"><div class="segbar"><div class="seg neutral" role="radiogroup" aria-label="Dan"><span class="on">1st Dan<span class="ct">4</span></span><span>2nd Dan<span class="ct">2</span></span><span>3rd Dan<span class="ct">1</span></span></div></div><div class="evlist"><div class="rhead g-r2t" style="border-top:none"><span>Candidate</span><span>Testing for</span><span>Paying by</span><span>Payment</span><span></span></div><div class="secrow sub2">Shrewsbury</div><div class="rrow g-r2t"><span class="rk"><span class="nm">Mia Patel</span><span class="regd">Registered Oct 12</span></span><span>0 stars → 1 star</span><span>Cash</span><span><span class="tag tag-ok">Paid</span></span><span class="acts"><span class="rowbtns"><span class="ib " role="button" aria-label="More actions for Mia Patel"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></span></div><div class="rrow g-r2t"><span class="rk"><span class="nm">Alex Kim</span><span class="regd">Registered Oct 17</span></span><span>1 star → 2 stars</span><span>Cash</span><span><span class="tag">Not paid</span></span><span class="acts"><span class="rowbtns"><span class="btn btn-sm">Record payment</span><span class="ib " role="button" aria-label="More actions for Alex Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></span></div><div class="secrow sub2">Worcester</div><div class="rrow g-r2t"><span class="rk"><span class="nm">Noah Chen</span><span class="regd">Registered Oct 13</span></span><span>0 stars → 1 star</span><span>Check</span><span><span class="tag tag-ok">Paid</span></span><span class="acts"><span class="rowbtns"><span class="ib " role="button" aria-label="More actions for Noah Chen"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></span></div><div class="rrow g-r2t"><span class="rk"><span class="nm">Ethan Lopez</span><span class="regd">Registered Oct 16</span></span><span>2 stars → 3 stars</span><span>Check</span><span><span class="tag">Not paid</span></span><span class="acts"><span class="rowbtns"><span class="btn btn-sm">Record payment</span><span class="ib " role="button" aria-label="More actions for Ethan Lopez"><span class="ibv"><i class="ti ti-dots"></i></span></span></span></span></div></div></div></div></div></div></div></div>
+
+<p class="cap">Phone · touch · 390px · roster</p><div class="scroller"><div class="dev dev-ph touch" style="height:1200px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">JB</span></span></div><div class="content"><div class="phead" style="display:block"><a class="back" role="link"><i class="ti ti-arrow-left"></i>Star testing</a><div class="ptitle">Fall 2026 Star Testing</div><div class="esum">Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 7 candidates</div><div style="margin-top:8px"><span class="btn"><i class="ti ti-qrcode"></i>Registration link</span></div></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Candidates</span><span role="tab">Grading</span><span role="tab">Results</span></div><div class="q"><div class="segbar"><div class="seg neutral" role="radiogroup" aria-label="Dan"><span class="on">1st Dan<span class="ct">4</span></span><span>2nd Dan<span class="ct">2</span></span><span>3rd Dan<span class="ct">1</span></span></div></div><div class="clist"><div class="secrow sub2">Shrewsbury</div><div class="prow"><div class="grow"><div class="l1"><span>Mia Patel</span><span class="regd">Registered Oct 12</span></div><div class="l2">0 stars → 1 star · Cash · paid Oct 15</div><div style="margin-top:6px;display:flex;gap:8px;align-items:center"><span class="tag tag-ok">Paid</span></div></div><span class="ib " role="button" aria-label="More actions for Mia Patel"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Alex Kim</span><span class="regd">Registered Oct 17</span></div><div class="l2">1 star → 2 stars · Cash</div><div style="margin-top:6px;display:flex;gap:8px;align-items:center"><span class="tag">Not paid</span><span class="btn btn-sm">Record payment</span></div></div><span class="ib " role="button" aria-label="More actions for Alex Kim"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="secrow sub2">Worcester</div><div class="prow"><div class="grow"><div class="l1"><span>Noah Chen</span><span class="regd">Registered Oct 13</span></div><div class="l2">0 stars → 1 star · Check · paid Oct 13</div><div style="margin-top:6px;display:flex;gap:8px;align-items:center"><span class="tag tag-ok">Paid</span></div></div><span class="ib " role="button" aria-label="More actions for Noah Chen"><span class="ibv"><i class="ti ti-dots"></i></span></span></div><div class="prow"><div class="grow"><div class="l1"><span>Ethan Lopez</span><span class="regd">Registered Oct 16</span></div><div class="l2">2 stars → 3 stars · Check</div><div style="margin-top:6px;display:flex;gap:8px;align-items:center"><span class="tag">Not paid</span><span class="btn btn-sm">Record payment</span></div></div><span class="ib " role="button" aria-label="More actions for Ethan Lopez"><span class="ibv"><i class="ti ti-dots"></i></span></span></div></div></div></div><nav class="phbar" aria-label="Sections"><a><i class="ti ti-home"></i>Home</a><a class="on" aria-current="page"><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div>
+
+<p class="cap">Phone · touch · 390px · Record payment, full screen</p><div class="scroller"><div class="dev dev-ph touch" style="height:700px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">JB</span></span></div><div class="content"></div><nav class="phbar" aria-label="Sections"><a><i class="ti ti-home"></i>Home</a><a class="on" aria-current="page"><i class="ti ti-certificate"></i>Testing</a></nav></div><div class="fullscreen" role="dialog" aria-label="Record payment"><div class="head"><span class="tap" role="button" aria-label="Back"><i class="ti ti-arrow-left" style="font-size:20px"></i></span>Record payment</div><div class="fbody"><div class="psub" style="margin-bottom:12px">Alex Kim · 1st Dan · 1 star → 2 stars · Shrewsbury</div><div class="field"><label>Paid by</label><div class="seg" role="radiogroup" aria-label="Paid by"><span>Cash</span><span class="on">Check</span><span>Card</span></div><div class="hint">They chose Cash on the form. Change it if they paid another way.</div></div><div><div class="field"><label>Amount</label><div class="input ">$140</div><div class="hint">Price before the testing day. On the testing day it fills in $150.</div></div><div class="field"><label>Date paid</label><div class="input ">Sat, Oct 17, 2026</div></div></div><div class="field"><label>Check number</label><div class="input ">1042</div><div class="hint">Optional.</div></div><div style="margin-top:24px"><span class="btn btn-primary btn-full"><i class="ti ti-check"></i>Save</span></div></div></div></div></div>
+</main>
+<script>
+(function(){
+  function fit(){
+    var list=document.querySelectorAll('.scroller');
+    for(var k=0;k<list.length;k++){
+      var s=list[k], d=s.firstElementChild; if(!d) continue;
+      d.style.zoom=''; var w=d.offsetWidth, a=s.clientWidth;
+      if(a<w && a/w>=0.6){ d.style.zoom=(a/w).toFixed(4); }
+    }
+  }
+  window.addEventListener('resize',fit); fit();
+})();
+</script>
+</body>
+</html>
