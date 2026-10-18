@@ -162,7 +162,7 @@ RLS enabled on every new table; `revoke all … from public, anon, authenticated
 | `closed` + `closed_on` (DB) | F12 (date) / F13 (null); on Send: F10 |
 | `finished` (DB) | F14 |
 | `verify_failed` (Function: Turnstile failed / wrong hostname / wrong action) | F6 message "We couldn't check this browser. Try again, or ask at the front desk." (Star s8) |
-| `rate_limited` (DB) | F9-style banner "Too many tries from this connection. Please wait a few minutes, or ask at the front desk." — **wording to confirm with Jeffrey** |
+| `rate_limited` (DB) | F9-style banner "Too many tries from this connection. Please wait a few minutes, or ask at the front desk." — approved 2026-10-17 |
 | `invalid` (DB) / `bad_request` (Function: origin, type, size, honeypot, too fast) / `unavailable` (Function: database unreachable) / network error | F9 "Your registration wasn't sent. Check your internet connection and try again. Nothing you entered is lost." |
 - Bindings / variables (Production only): `HYPERDRIVE`, `TURNSTILE_SECRET`, `CLIENT_KEY_SECRET`, `PUBLIC_REGISTRATION` (`on`/`off`, default off), `PUBLIC_ORIGIN`, `TURNSTILE_SITE_KEY` (public). Missing binding → fail closed (`not_open`). Configured in the **Cloudflare dashboard** (no `wrangler.toml` in phase 2).
 - Driver: `postgres` (Postgres.js), exact pinned version, `nodejs_compat`; one client per request, `prepare: false` (Hyperdrive transaction pooling), closed with `context.waitUntil`.
@@ -215,4 +215,4 @@ Security review of A + B together (the public path is the focus: registrar proof
 ## 9. Before building starts
 1. Main merges `staff-accounts` and `star-testing`; this branch merges `main`.
 2. The orchestrator records phase 2 in the rulebook (decisions Q1–Q9, plan answers 1–9, Settings → Schools, v0.36 change) and updates this contract's references if numbers moved.
-3. Jeffrey OKs: the two new dependencies (§4.6); the `rate_limited` and `verify_failed` wordings (§4.2 — not in the approved mockups); and ~~registering on the testing day~~ **confirmed by Jeffrey 2026-10-17: families can register on the testing day itself until the end of the day, at the testing-day price** (§1.3 state 2).
+3. Jeffrey OKs: the two new dependencies (§4.6); ~~the `rate_limited` and `verify_failed` wordings~~ **both wordings approved by Jeffrey 2026-10-17** (§4.2); and ~~registering on the testing day~~ **confirmed by Jeffrey 2026-10-17: families can register on the testing day itself until the end of the day, at the testing-day price** (§1.3 state 2).
