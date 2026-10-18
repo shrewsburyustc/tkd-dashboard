@@ -17,9 +17,9 @@
 // instead of in the middle, so when a message appears inside it ("Unsaved changes…") only what's
 // below the message moves down — the buttons above don't jump away from the pointer.
 //
-// Phones: the full-screen page adds an entry to the browser's history while it's open, so the
-// phone's own Back button (or the browser's) does the same as the back arrow on the page —
-// including the unsaved-changes guard — instead of leaving the dashboard.
+// Every device (v0.83; phones since v0.56): an open dialog adds an entry to the browser's
+// history, so the browser's Back button (or the phone's) does the same as Esc / the back arrow —
+// including the unsaved-changes guard — instead of leaving the page behind it.
 //
 // AccountDialog.jsx (Change PIN / Change password) is a separate, older frame and stays as it is.
 //
@@ -93,14 +93,13 @@ export default function Dialog({
     return () => observer.disconnect();
   }, []);
 
-  // ----- Phone Back button (history) -----
+  // ----- Browser / phone Back button (history) -----
   // Newest onRequestClose in a ref, for the 'popstate' listener below.
   const onRequestCloseRef = useRef(onRequestClose);
   useEffect(() => {
     onRequestCloseRef.current = onRequestClose;
   });
   useEffect(() => {
-    if (!asPage) return undefined;
     // A token unique to this opening, so we only ever remove our OWN entry later.
     const token = `${titleId}-${Date.now()}-${Math.random()}`;
     const marker = { tkdDialog: token };
@@ -125,7 +124,7 @@ export default function Dialog({
         if (window.history.state?.tkdDialog === token) window.history.back();
       }, 0);
     };
-  }, [asPage, titleId]);
+  }, [titleId]);
 
   // Esc asks to close; Tab / Shift+Tab wrap around inside the dialog.
   function handleKeyDown(event) {

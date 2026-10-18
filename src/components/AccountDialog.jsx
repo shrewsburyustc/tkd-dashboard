@@ -15,6 +15,10 @@
 //   children    the screen's content
 //
 // The page behind it is made "inert" by the App (no clicks, no Tab) while it's open.
+//
+// Browser Back (v0.83): while open, the dialog adds a step to the browser's history, so the
+// browser's (or phone's) Back cancels it — like Esc — instead of leaving the page behind it.
+// Same way Dialog.jsx does it.
 import { useEffect, useId, useRef } from 'react';
 import { IconArrowLeft } from '@tabler/icons-react';
 
@@ -44,6 +48,28 @@ export default function AccountDialog({ title, fullScreen, onCancel, onBack, chi
       document.querySelector('.avatar-button')?.focus();
     };
   }, []);
+
+  // While open: the browser's Back cancels (see the header). A token unique to this opening lets
+  // us remove only our OWN history step when the dialog closes some other way.
+  const titleKey = titleId;
+  useEffect(() => {
+    const token = `${titleKey}-${Date.now()}-${Math.random()}`;
+    const marker = { tkdDialog: token };
+    if (window.history.state?.tkdDialog) window.history.replaceState(marker, '');
+    else window.history.pushState(marker, '');
+    function handleBack() {
+      onCancelRef.current(); // Back used up our step; cancelling closes the dialog
+    }
+    window.addEventListener('popstate', handleBack);
+    return () => {
+      window.removeEventListener('popstate', handleBack);
+      // Closed some other way (Cancel, saved, lock…): remove our step, a moment later and only
+      // if it's still on top.
+      window.setTimeout(() => {
+        if (window.history.state?.tkdDialog === token) window.history.back();
+      }, 0);
+    };
+  }, [titleKey]);
 
   // While open: Esc cancels; Tab / Shift+Tab wrap around inside the dialog.
   useEffect(() => {

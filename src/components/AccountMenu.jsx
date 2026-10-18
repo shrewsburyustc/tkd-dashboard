@@ -50,6 +50,18 @@ export default function AccountMenu({
   const dragStartYRef = useRef(null); // finger's starting height on screen; null = not dragging
   const dragDistanceRef = useRef(0); // same as dragDistance, but readable instantly
 
+  // The browser's Back while the menu is open closes it (v0.83); the page change itself is
+  // handled by App.jsx.
+  useEffect(() => {
+    if (!open) return undefined;
+    function handleBack() {
+      setOpen(false);
+      setChoosingDevice(false);
+    }
+    window.addEventListener('popstate', handleBack);
+    return () => window.removeEventListener('popstate', handleBack);
+  }, [open]);
+
   function close() {
     setOpen(false);
     setChoosingDevice(false);
