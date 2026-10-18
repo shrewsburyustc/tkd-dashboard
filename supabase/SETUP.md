@@ -613,6 +613,13 @@ Hyperdrive is Cloudflare's connector from the Function to the database.
 3. `tkd-dashboard` → **Settings** → **Bindings** → **Add** → **Hyperdrive**: variable name `HYPERDRIVE`, configuration `tkd-registrar`, environment **Production only**. Preview gets no binding.
 4. Like the variables, the binding takes effect with the next deployment.
 
+**Done 2026-10-18 — what the dashboard actually looked like:**
+- Supabase **Connect**: pick **Session pooler** (the panel opens on Direct connection). Host `aws-0-us-east-1.pooler.supabase.com`, port 5432.
+- Cloudflare: **Storage & databases → Postgres & MySQL (Hyperdrive) → Connect database → Connect to public database** (not "Create PlanetScale database"). Enter the details under **Manual entry (advanced)** and keep the **Connection String** box empty — Cloudflare writes the password into that box in plain text (once it reached a screenshot, so the password was replaced). Chrome may autofill an unrelated saved password into the Password box: clear it first. The password is saved in Google Password Manager under the made-up site `tkd-registrar.example.com` so Chrome never autofills it anywhere.
+- **Server certificates → Verify full** offers only certificates already uploaded to the account (uploading a new one needs `wrangler`). The existing `ustc-color-belt-staging-supabase-ca` (from the old system) is Supabase's shared CA and works — the test connection passed. **Don't delete that certificate when the old system is retired**: `tkd-registrar` uses it too.
+- Created with **origin connection limit 20**; lowered to **5** in the config's Settings (5 is Hyperdrive's minimum and the role's connlimit; it's a soft limit, so in rare network trouble an extra connection is refused and the family sees "try again").
+- Checked through the Cloudflare connection: caching disabled, sslmode verify-full, limit 5. Binding `HYPERDRIVE` → `tkd-registrar` on Production; no deployment was triggered.
+
 ### 12h. CP5 — after the deploy (each with Jeffrey's OK)
 
 1. Deploy with `PUBLIC_REGISTRATION=off`. Open a made-up link `https://tkd-dashboard.pages.dev/register/abcdefgh`: it must say registration isn't open.
