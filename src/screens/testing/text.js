@@ -203,12 +203,22 @@ export function rankDeleteText(d) {
 }
 
 // From describeClassDelete(...) → { title, body }
-export function classDeleteText(d) {
+// Added with the Schedule (rulebook v0.84, decision Q1): deleting a class also removes its
+// schedule time slots, so the confirmation says how many.
+export function scheduleSlotsSentence(n) {
+  if (!n) return '';
+  // The count covers every schedule (current, planned and past), not only the week on screen.
+  return n === 1
+    ? "It's also removed from the schedule: 1 time slot, counting every schedule."
+    : `It's also removed from the schedule: ${n} time slots, counting every schedule.`;
+}
+
+export function classDeleteText(d, scheduleSlotCount = 0) {
   let title;
   if (d.rankCount === 0) title = `Delete ${d.className}?`;
   else if (d.rankCount === 1) title = `Delete ${d.className} and its 1 rank?`;
   else title = `Delete ${d.className} and its ${d.rankCount} ranks?`;
-  return { title, body: sentence(lostAwardSentence(d.lostAwardClasses), DELETE_TAIL) };
+  return { title, body: sentence(lostAwardSentence(d.lostAwardClasses), scheduleSlotsSentence(scheduleSlotCount), DELETE_TAIL) };
 }
 
 // ----- 7.5 Field errors -----

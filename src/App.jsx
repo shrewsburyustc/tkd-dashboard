@@ -33,6 +33,7 @@ import Toast from './components/Toast.jsx';
 import SignIn from './screens/SignIn.jsx';
 import Home from './screens/Home.jsx';
 import Testing from './screens/Testing.jsx';
+import Schedule from './screens/Schedule.jsx';
 import StaffAccounts from './screens/StaffAccounts.jsx';
 import LockScreen from './screens/LockScreen.jsx';
 import SetPinScreen from './screens/SetPinScreen.jsx';
@@ -64,6 +65,7 @@ const PAGE_TITLES = {
 const SECTION_TITLES = {
   home: 'Home · U.S. Taekwondo Center',
   testing: 'Testing · U.S. Taekwondo Center',
+  schedule: 'Schedule · U.S. Taekwondo Center',
   staffAccounts: 'Staff accounts · U.S. Taekwondo Center',
 };
 
@@ -105,13 +107,14 @@ export default function App() {
   const [notice, setNotice] = useState(null); // { id, text } for the sign-in screen
   const [deviceLocation, setDeviceLocation] = useState(loadDeviceLocation); // this device's default
   const [location, setLocation] = useState(loadDeviceLocation); // the switcher's current value
-  // Which page is open: 'home' | 'testing' | 'staffAccounts'. Staff accounts isn't a rail section
+  // Which page is open: 'home' | 'testing' | 'schedule' | 'staffAccounts'. Staff accounts isn't a rail section
   // (it opens from the account menu), so no rail item is highlighted while it shows (v0.76).
   // It starts from the address in the browser bar (v0.83): a reload, a bookmark or a link to
   // ".../#testing" opens Testing once the person is signed in and unlocked.
   const [section, setSection] = useState(pageFromAddress);
   const [accountDialog, setAccountDialog] = useState(null); // null | 'changePin' | 'changePassword'
   const [testingModalOpen, setTestingModalOpen] = useState(false); // a Testing dialog is showing
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false); // a Schedule dialog is showing
   const [staffModalOpen, setStaffModalOpen] = useState(false); // a Staff accounts dialog is showing
   const [toast, setToast] = useState(null); // { id, text, action, icon } or null
 
@@ -572,7 +575,7 @@ export default function App() {
   const isSignedIn = (phase === 'home' || phase === 'locked') && profile !== null;
   const dialogOpen = phase === 'home' && profile !== null && accountDialog !== null;
   // The page behind a dialog can't be clicked or reached with Tab (account or Testing dialog).
-  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || staffModalOpen));
+  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || scheduleModalOpen || staffModalOpen));
 
   return (
     <div className="app-root">
@@ -623,6 +626,19 @@ export default function App() {
                 showToast={showToast}
                 clearToast={clearToast}
                 onModalOpenChange={setTestingModalOpen}
+              />
+            )}
+            {section === 'schedule' && (
+              <Schedule
+                location={location}
+                // For showing or hiding controls only — the database decides what may change.
+                isAdmin={profile.role === 'admin'}
+                screenLocked={phase === 'locked'}
+                onNoAccess={handleNoAccess}
+                onRefreshProfile={refreshProfile}
+                showToast={showToast}
+                clearToast={clearToast}
+                onModalOpenChange={setScheduleModalOpen}
               />
             )}
             {section === 'staffAccounts' && (

@@ -21,6 +21,11 @@
 //   __tkdPreview.clearSchool('Shrewsbury') remove that school's classes (to see the empty state)
 //   __tkdPreview.resetTesting()           back to the default classes and ranks
 //   __tkdPreview.setTestingDelay(3000)    slow Testing calls down (e.g. to see the skeleton)
+// Schedule helpers (mockSchedule.js; setRole and setTestingDelay apply too):
+//   __tkdPreview.failNextScheduleSave()            the next Schedule save fails like a dropped connection
+//   __tkdPreview.simulateOtherAdminEditSchedule()  "another admin" changes every schedule row
+//   __tkdPreview.clearSchedule('Shrewsbury')       remove that school's schedules (empty state)
+//   __tkdPreview.resetSchedule()                   back to the sample week
 // Staff accounts helpers (account menu → Admin → Staff accounts; mockStaff.js):
 //   __tkdPreview.failNextSave()           also makes the next Reset password / Reset PIN fail
 //   __tkdPreview.resetStaffAccounts()     the fake desk is signed in on 3 devices again
@@ -31,6 +36,7 @@ import { readStorage, writeStorage, removeStorage } from './storage.js';
 import { isFourDigits, isPinTooEasy } from './pinRules.js';
 import { createTestingBackend, TESTING_RPC_NAMES } from './mockTesting.js';
 import { createStaffBackend, STAFF_RPC_NAMES } from './mockStaff.js';
+import { createScheduleBackend, SCHEDULE_RPC_NAMES } from './mockSchedule.js';
 
 const SESSION_KEY = 'tkd.preview.session'; // the fake "signed in" session
 const STAFF_STATE_KEY = 'tkd.preview.staffState'; // fake staff row: PIN, shared flag
@@ -39,6 +45,7 @@ const OLD_PIN_STATE_KEY = 'tkd.preview.pinState'; // used by the first build; cl
 const TESTING_KEY = 'tkd.preview.testing'; // fake Testing tables (classes + ranks)
 const TESTING_DELAY_KEY = 'tkd.preview.testingDelay'; // setTestingDelay(ms), kept across reloads
 const STAFF_ACCOUNTS_KEY = 'tkd.preview.staffAccounts'; // fake Staff accounts (mockStaff.js)
+const SCHEDULE_KEY = 'tkd.preview.schedule'; // fake Schedule tables (mockSchedule.js)
 
 const PREVIEW_PASSWORD = 'preview';
 const PREVIEW_PIN = '2580'; // not too easy: 1234 is refused by the weak-PIN rule now
@@ -402,6 +409,18 @@ export function createMockClient() {
     newId: newUuid,
   });
 
+  // ----- Schedule (mockSchedule.js) -----
+  // Its classes come from the fake Testing tables above, like the real foreign key.
+  const schedule = createScheduleBackend({
+    loadStore: () => JSON.parse(readStorage(SCHEDULE_KEY)),
+    saveStore: (store) => writeStorage(SCHEDULE_KEY, JSON.stringify(store)),
+    now: () => Date.now(),
+    newId: newUuid,
+    getClasses: () => testing.snapshot().classes.map((c) => ({ id: c.id, location_code: c.location_code, name: c.name, position: c.position })),
+    // Today in Massachusetts, 'YYYY-MM-DD' (the "en-CA" format happens to be exactly that).
+    today: () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date()),
+  });
+
   // The fake network time for Testing calls (setTestingDelay saves it so it survives a reload).
   function testingDelay() {
     const saved = readStorage(TESTING_DELAY_KEY);
@@ -441,6 +460,7 @@ export function createMockClient() {
           if (query.write) {
             return { data: null, error: { code: '42501', message: `permission denied for table ${table}`, details: null, hint: null }, status: 403 };
           }
+          if (table.startsWith('schedule_')) return schedule.select(table, query.columns, query.filters, query.orders, testingContext());
           return testing.select(table, query.columns, query.filters, query.orders, testingContext());
         };
         return run().then(resolve, reject);
@@ -472,6 +492,10 @@ export function createMockClient() {
     if (STAFF_RPC_NAMES.includes(name)) {
       await wait(FAKE_DELAY_MS);
       return staffAccounts.rpc(name, args, staffContext());
+    }
+    if (SCHEDULE_RPC_NAMES.includes(name)) {
+      await wait(testingDelay());
+      return schedule.rpc(name, args, testingContext());
     }
     if (name === 'has_data_access' || TESTING_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
@@ -547,6 +571,22 @@ export function createMockClient() {
     clearSchool(school) {
       if (!testing.clearSchool(school)) return "Use clearSchool('Worcester') or clearSchool('Shrewsbury').";
       return `Removed every class and rank at ${school}. Reload or switch schools to see the empty state.`;
+    },
+    failNextScheduleSave() {
+      schedule.failNextSave();
+      return 'The next Schedule save will fail like a dropped connection and change nothing.';
+    },
+    simulateOtherAdminEditSchedule() {
+      schedule.simulateOtherAdminEdit();
+      return 'Another admin changed every schedule row. Open dialogs and Undo are now out of date.';
+    },
+    clearSchedule(school) {
+      if (!schedule.clearSchool(school)) return "Use clearSchedule('Worcester') or clearSchedule('Shrewsbury').";
+      return `${school}'s schedules are removed. Reload or switch schools to see the empty Schedule.`;
+    },
+    resetSchedule() {
+      schedule.reset();
+      return 'Schedule is back to the sample week. Reload or switch schools to see it.';
     },
     resetTesting() {
       testing.reset();
