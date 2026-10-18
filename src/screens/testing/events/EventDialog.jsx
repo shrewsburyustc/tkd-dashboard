@@ -305,13 +305,19 @@ export default function EventDialog({
               readOnly={readOnly}
               value={values.testingDate}
               aria-invalid={check.dateError ? true : undefined}
-              aria-describedby={check.dateError ? `${idBase}-date-error` : undefined}
+              aria-describedby={check.dateError ? `${idBase}-date-error` : isIsoDate(values.testingDate) ? `${idBase}-date-day` : undefined}
               onChange={(event) => {
                 onChange({ testingDate: event.target.value });
                 onTouch('testingDate');
               }}
             />
             {check.dateError && <Notice id={`${idBase}-date-error`}>{check.dateError}</Notice>}
+            {/* The day written out, so a wrong weekday is easy to spot (CP1 item 6). */}
+            {!check.dateError && isIsoDate(values.testingDate) && (
+              <p id={`${idBase}-date-day`} className="field-hint">
+                {T.longDate(values.testingDate)}
+              </p>
+            )}
           </div>
         </div>
 
@@ -389,6 +395,12 @@ export default function EventDialog({
               {check.closingError && <Notice id={`${idBase}-closing-error`}>{check.closingError}</Notice>}
               {!check.closingError && (
                 <p id={`${idBase}-closing-hint`} className="field-hint">
+                  {isIsoDate(values.closingDate) && (
+                    <>
+                      {T.longDate(values.closingDate)}
+                      <br />
+                    </>
+                  )}
                   {T.CLOSE_AUTOMATICALLY_HINT}
                 </p>
               )}

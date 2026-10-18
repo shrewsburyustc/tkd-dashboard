@@ -23,6 +23,7 @@ import {
   IconArrowBackUp,
   IconArrowLeft,
   IconCash,
+  IconCashEdit,
   IconCheck,
   IconClock,
   IconEdit,
@@ -818,7 +819,7 @@ export default function EventPage({
       if (!row.paid) items.push({ key: 'paying', label: T.CHANGE_PAYING_BY, Icon: NoIcon, onSelect: () => openPayingBy(row, anchor) });
       if (row.duplicateState === 'possible') items.push({ key: 'review', label: T.REVIEW_DUPLICATE, Icon: IconAlertTriangle, onSelect: () => openCompareFor(row, anchor) });
       if (isAdmin && row.paid) {
-        items.push({ key: 'editpay', label: T.EDIT_PAYMENT, Icon: NoIcon, separatorBefore: groupStart(), onSelect: () => openEditPayment(row, anchor) });
+        items.push({ key: 'editpay', label: T.EDIT_PAYMENT, Icon: IconCashEdit, separatorBefore: groupStart(), onSelect: () => openEditPayment(row, anchor) });
         items.push({ key: 'undopay', label: T.UNDO_PAYMENT, Icon: IconArrowBackUp, disabled: busy, onSelect: () => doUndoPayment(row) });
       }
     }
