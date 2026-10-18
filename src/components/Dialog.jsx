@@ -68,6 +68,29 @@ export default function Dialog({
     }
   }, []);
 
+  // A message that appears inside the box ("Unsaved changes…", "Couldn't save…") may land below
+  // the visible part on a short screen, behind the pinned Cancel / Save row. Scroll it into view
+  // (testing.css gives it room above that row). "MutationObserver" = a browser helper that
+  // reports when elements are added inside the box.
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box || typeof MutationObserver === 'undefined') return undefined;
+    const observer = new MutationObserver((changes) => {
+      for (const change of changes) {
+        for (const node of change.addedNodes) {
+          if (!(node instanceof Element)) continue;
+          const notice = node.matches('.notice') ? node : node.querySelector('.notice');
+          if (notice) {
+            notice.scrollIntoView({ block: 'nearest' });
+            return;
+          }
+        }
+      }
+    });
+    observer.observe(box, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
   // ----- Phone Back button (history) -----
   // Newest onRequestClose in a ref, for the 'popstate' listener below.
   const onRequestCloseRef = useRef(onRequestClose);

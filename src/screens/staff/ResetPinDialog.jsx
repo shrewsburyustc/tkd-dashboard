@@ -174,29 +174,27 @@ export default function ResetPinDialog({ account, adminEmail, isPhone, onCancel,
           {showKeypad ? (
             <Keypad labelledBy={`${idBase}-prompt`} busy={saving} onDigit={pin.addDigit} onDelete={pin.removeDigit} />
           ) : (
-            <>
-              {/* A real text box (digits are shown anyway), kept out of sight: the boxes above draw it. */}
-              <input
-                ref={pin.inputRef}
-                type="text"
-                inputMode="numeric"
-                autoComplete="off"
-                maxLength={PIN_LENGTH}
-                className="visually-hidden"
-                aria-labelledby={`${idBase}-prompt`}
-                aria-describedby={`${idBase}-hint`}
-                value={digits}
-                onChange={pin.handleInputChange}
-                onFocus={() => setInputFocused(true)}
-                onBlur={() => setInputFocused(false)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault();
-                    save();
-                  }
-                }}
-              />
-            </>
+            // A real text box (digits are shown anyway), kept out of sight: the boxes above draw it.
+            <input
+              ref={pin.inputRef}
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={PIN_LENGTH}
+              className="visually-hidden"
+              aria-labelledby={`${idBase}-prompt`}
+              aria-describedby={`${idBase}-hint`}
+              value={digits}
+              onChange={pin.handleInputChange}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  save();
+                }
+              }}
+            />
           )}
 
           <p className="sa-warning">{T.pinHandover(account.fullName, account.isShared)}</p>
