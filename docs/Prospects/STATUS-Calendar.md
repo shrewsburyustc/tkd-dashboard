@@ -8,8 +8,8 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Calendar-Build-Plan.md` 
 |---|---|
 | C0 Plan + questions Q1–Q4 | Done 2026-10-17 (v0.143) |
 | C1 Migration 0008 + tests + security review | Done 2026-10-18; PGlite 67/67 |
-| C2 Screens + preview data + design review | Next |
-| C3 Jeffrey tries the preview | Waiting |
+| C2 Screens + preview data + design review | Done 2026-10-18 |
+| C3 Jeffrey tries the preview | Next |
 | C4 Jeffrey pastes 0008 (after 0005–0007 are live), then read-only checks | Waiting |
 | C5 Real check: one real closure and one real event | Waiting |
 | C6 Commit + merge (Main session) | Waiting |
@@ -38,3 +38,51 @@ Accepted as notes, to handle in C2 or later:
 - An event moved to another school is logged under its new school. A history screen should also look at the "before" school.
 - Notes go into the history in full, so the dialog must show "Don't put student details here".
 - The text checks use the same list of blocked characters as Testing.
+
+## What C2 added (2026-10-18)
+
+- **Screens:** `src/screens/Calendar.jsx` plus these files in `src/screens/calendar/`:
+  - `MonthGrid`, `PhoneMonth`, `DayPanel`, `WeekView`
+  - `EventDialog`, `ClosureDialog`, `EventTypesDialog`
+  - `text.js`
+
+  Styles are in `src/styles/calendar.css`.
+- **Data:** `src/lib/calendar/` has `rules.js`, `days.js`, `api.js`, `useCalendar.js` and `checks.mjs` (10 groups pass).
+- **Preview database:** `src/lib/mockCalendar.js`. It includes sample events, a holiday, an evening storm closure and the 5 types, plus `__tkdPreview.failNextCalendarSave()`, `simulateOtherAdminEditCalendar()`, `clearCalendar()` and `resetCalendar()`.
+- **Shared files touched:**
+  - `navItems.js` (Calendar after Schedule)
+  - `pageAddress.js` (`#calendar`)
+  - `App.jsx`, `main.jsx`, `mockClient.js` (adds `lte` / `gte` / `in` reads)
+  - `schedule/TimeGrid.jsx` (`layoutDay` exported)
+- **Testing events (v0.143 answer 1):** `loadTestingEvents()` returns nothing until 0005 and 0006 exist. Then it reads them, and clicking one should open Testing.
+
+## Design review (2026-10-18)
+
+No High findings. Fixed:
+- The Closure icon is now `ti-calendar-off`.
+- Day boxes show "4 classes" with "2 cancelled" crossed out below.
+- The screen-reader day label now includes cancellations and schedule starts.
+- Event types can be reordered with up/down arrows.
+- Focus no longer gets lost after backing out of Delete type.
+- In the Week view, the closed hours are striped.
+- The School switch is now its natural width.
+- Edit uses `ti-edit`.
+- Fewer screen-reader announcements.
+- All-day date fields fill the row at 320.
+- Esc steps back inside Event types.
+- Staff view dialogs hide the typing hints.
+- Week-view chips have 44px tap areas.
+- Also fixed in testing:
+  - the Week view now opens on the chosen day's week;
+  - the Delete button stays gray until a "Move to" type is picked;
+  - the notes box uses the page font;
+  - a style name no longer clashes with Testing's.
+
+## For Jeffrey at C3 (differences from the mockup)
+
+1. **Closure dialog:** choosing School → Both adds the other school's classes above the School field, so the switch moves down. Option: put School above "What's cancelled".
+2. **Some-classes closure chips** show only the reason ("Snow storm"); whole-day ones say "Closed · reason".
+3. **Some-classes closures** also appear in the Week view's All day row.
+4. **The Add/Edit closure and event dialogs** have no school line under the title (the School switch shows it).
+5. **Event type order** is changed with up/down arrows instead of a drag grip and ⋯ menu.
+6. **`ti-calendar-event`** now also means "Add → Event"; `IconPalette` is used for ⋯ → Event types. Both icons go into the icon map once approved.

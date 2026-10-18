@@ -5,6 +5,7 @@
 //   Home            tkd-dashboard.pages.dev/
 //   Testing         tkd-dashboard.pages.dev/#testing
 //   Schedule        tkd-dashboard.pages.dev/#schedule
+//   Calendar        tkd-dashboard.pages.dev/#calendar
 //   Staff accounts  tkd-dashboard.pages.dev/#staff-accounts
 // The "#…" part (the "hash") is never sent to the server — it only lives in the browser — so the
 // hosting needs no change. App.jsx adds a history step each time the page changes
@@ -14,6 +15,7 @@ const HASH_BY_PAGE = {
   home: '',
   testing: '#testing',
   schedule: '#schedule',
+  calendar: '#calendar',
   staffAccounts: '#staff-accounts',
 };
 const PAGE_BY_HASH = Object.fromEntries(Object.entries(HASH_BY_PAGE).map(([page, hash]) => [hash, page]));

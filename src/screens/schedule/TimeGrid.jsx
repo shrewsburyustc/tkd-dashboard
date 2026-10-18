@@ -23,7 +23,8 @@ import { DAY_SHORT, slotLabel } from './text.js';
 
 // Places overlapping slots of one day side by side: each gets a lane and the number of lanes in
 // its group. (A "group" = slots that overlap each other, directly or through a chain.)
-function layoutDay(daySlots) {
+// Also used by the Calendar's week view (any items with start / end).
+export function layoutDay(daySlots) {
   const sorted = [...daySlots].sort((a, b) => a.start - b.start || a.end - b.end);
   const placed = [];
   let group = [];

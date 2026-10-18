@@ -26,6 +26,11 @@
 //   __tkdPreview.simulateOtherAdminEditSchedule()  "another admin" changes every schedule row
 //   __tkdPreview.clearSchedule('Shrewsbury')       remove that school's schedules (empty state)
 //   __tkdPreview.resetSchedule()                   back to the sample week
+// Calendar helpers (mockCalendar.js; setRole and setTestingDelay apply too):
+//   __tkdPreview.failNextCalendarSave()            the next Calendar save fails like a dropped connection
+//   __tkdPreview.simulateOtherAdminEditCalendar()  "another admin" changes every event, closure and type
+//   __tkdPreview.clearCalendar()                   no events or closures (types stay)
+//   __tkdPreview.resetCalendar()                   back to the sample events and closures
 // Staff accounts helpers (account menu → Admin → Staff accounts; mockStaff.js):
 //   __tkdPreview.failNextSave()           also makes the next Reset password / Reset PIN fail
 //   __tkdPreview.resetStaffAccounts()     the fake desk is signed in on 3 devices again
@@ -37,6 +42,7 @@ import { isFourDigits, isPinTooEasy } from './pinRules.js';
 import { createTestingBackend, TESTING_RPC_NAMES } from './mockTesting.js';
 import { createStaffBackend, STAFF_RPC_NAMES } from './mockStaff.js';
 import { createScheduleBackend, SCHEDULE_RPC_NAMES } from './mockSchedule.js';
+import { createCalendarBackend, CALENDAR_RPC_NAMES } from './mockCalendar.js';
 
 const SESSION_KEY = 'tkd.preview.session'; // the fake "signed in" session
 const STAFF_STATE_KEY = 'tkd.preview.staffState'; // fake staff row: PIN, shared flag
@@ -46,6 +52,7 @@ const TESTING_KEY = 'tkd.preview.testing'; // fake Testing tables (classes + ran
 const TESTING_DELAY_KEY = 'tkd.preview.testingDelay'; // setTestingDelay(ms), kept across reloads
 const STAFF_ACCOUNTS_KEY = 'tkd.preview.staffAccounts'; // fake Staff accounts (mockStaff.js)
 const SCHEDULE_KEY = 'tkd.preview.schedule'; // fake Schedule tables (mockSchedule.js)
+const CALENDAR_KEY = 'tkd.preview.calendar'; // fake Calendar tables (mockCalendar.js)
 
 const PREVIEW_PASSWORD = 'preview';
 const PREVIEW_PIN = '2580'; // not too easy: 1234 is refused by the weak-PIN rule now
@@ -421,6 +428,18 @@ export function createMockClient() {
     today: () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date()),
   });
 
+  // ----- Calendar (mockCalendar.js) -----
+  // Its "some classes" closures look at the fake Schedule above, like the real function does.
+  const calendar = createCalendarBackend({
+    loadStore: () => JSON.parse(readStorage(CALENDAR_KEY)),
+    saveStore: (store) => writeStorage(CALENDAR_KEY, JSON.stringify(store)),
+    now: () => Date.now(),
+    newId: newUuid,
+    getSchedule: () => schedule.snapshot(),
+    getClasses: () => testing.snapshot().classes.map((c) => ({ id: c.id, location_code: c.location_code, name: c.name })),
+    today: () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date()),
+  });
+
   // The fake network time for Testing calls (setTestingDelay saves it so it survives a reload).
   function testingDelay() {
     const saved = readStorage(TESTING_DELAY_KEY);
@@ -445,6 +464,19 @@ export function createMockClient() {
         query.filters.push({ col, value });
         return builder;
       },
+      // (lte / gte / in: used by the Calendar's date-range reads, mockCalendar.js)
+      lte(col, value) {
+        query.filters.push({ col, value, op: 'lte' });
+        return builder;
+      },
+      gte(col, value) {
+        query.filters.push({ col, value, op: 'gte' });
+        return builder;
+      },
+      in(col, value) {
+        query.filters.push({ col, value, op: 'in' });
+        return builder;
+      },
       order(col, { ascending = true } = {}) {
         query.orders.push({ col, ascending });
         return builder;
@@ -461,6 +493,7 @@ export function createMockClient() {
             return { data: null, error: { code: '42501', message: `permission denied for table ${table}`, details: null, hint: null }, status: 403 };
           }
           if (table.startsWith('schedule_')) return schedule.select(table, query.columns, query.filters, query.orders, testingContext());
+          if (table.startsWith('calendar_')) return calendar.select(table, query.columns, query.filters, query.orders, testingContext());
           return testing.select(table, query.columns, query.filters, query.orders, testingContext());
         };
         return run().then(resolve, reject);
@@ -496,6 +529,10 @@ export function createMockClient() {
     if (SCHEDULE_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
       return schedule.rpc(name, args, testingContext());
+    }
+    if (CALENDAR_RPC_NAMES.includes(name)) {
+      await wait(testingDelay());
+      return calendar.rpc(name, args, testingContext());
     }
     if (name === 'has_data_access' || TESTING_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
@@ -587,6 +624,22 @@ export function createMockClient() {
     resetSchedule() {
       schedule.reset();
       return 'Schedule is back to the sample week. Reload or switch schools to see it.';
+    },
+    failNextCalendarSave() {
+      calendar.failNextSave();
+      return 'The next Calendar save will fail like a dropped connection and change nothing.';
+    },
+    simulateOtherAdminEditCalendar() {
+      calendar.simulateOtherAdminEdit();
+      return 'Another admin changed every event, closure and event type. Open dialogs and Undo are now out of date.';
+    },
+    clearCalendar() {
+      calendar.clear();
+      return 'Every event and closure is removed (event types stay). Reload or change month to see it.';
+    },
+    resetCalendar() {
+      calendar.reset();
+      return 'The Calendar is back to the sample events and closures. Reload or change month to see them.';
     },
     resetTesting() {
       testing.reset();
