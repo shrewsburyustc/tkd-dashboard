@@ -5,8 +5,8 @@ The single source of truth for **Builder A — database**, who turns it into `su
 | Source (in this order of authority) | |
 |---|---|
 | This contract | wins for 0006 |
-| Database plan `docs/Testing/Star Testing/TKD-StarTesting-DB-Plan.md` (all 15 questions answered; §8 small items OK'd) | final, rulebook v0.156, v0.158–v0.172 |
-| Rulebook `docs/Dashboard Docs/TKD-Dashboard-Design-Guidelines.md`: every Star row v0.58–v0.172 (v0.147 and v0.157 are Color Belt rows — ignored here), §5 privacy. The newest row wins. | v0.172 |
+| Database plan `docs/Testing/Star Testing/TKD-StarTesting-DB-Plan.md` (all 15 questions answered; §8 small items OK'd) | final, rulebook v0.156, v0.158–v0.173 |
+| Rulebook `docs/Dashboard Docs/TKD-Dashboard-Design-Guidelines.md`: every Star row v0.58–v0.173 (v0.147 and v0.157 are Color Belt rows — ignored here), §5 privacy. The newest row wins. | v0.172 |
 | Approved Star mockups (`TKD-StarTesting-*-Mockups.html`: Rubrics, Events, Form, Candidates, Grading, Results, Private, Home) | wording and layout |
 | Old prototype `docs/Testing/Star Testing/Old prototype/STAR-TESTING-HANDOFF.md` §2–§5, Appendix A and B | seed values and scoring test cases only |
 | Handoff `docs/Dashboard Docs/TKD-Dashboard-Handoff.md` §6 (security rules, non-negotiable) | |
@@ -440,7 +440,7 @@ As 0005 15c: clears `request.jwt.claims` / `request.jwt.claim.sub`; removes `tes
 **Ok answer** (`star_public_answer(candidate_id)`): `{status:'ok', reference, first_name, last_name, dan, dan_label, stars_from, stars_to, standard_cents, same_day_cents, paying_by, event_name, testing_date, start_time, school_name, where:{name, address|null}}` — **identical whether or not the person looks like a duplicate** (v0.97); no DOB, email or signature echoed.
 
 ### 8.4 Route and Function (interface for the later public-path builder; not built in this step)
-Star gets **its own page route and Pages Function** (proposed `/star/<code>` and `functions/api/star/[code].js` — OPEN-2), the same checks as Color Belt's (CONTRACT-0005 §4.2: kill switch `STAR_PUBLIC_REGISTRATION` default off, Origin, JSON, ≤ 100 KB, honeypot, too-fast, Turnstile with action `star_register`, HMAC client key, typed parameters, `prepare: false`, no error text leaked), connecting through a **second Hyperdrive config** (caching **disabled**, origin connection limit ≤ 5) bound as `HYPERDRIVE_STAR` with the `star_registrar` login.
+Star gets **its own page route and Pages Function** (`/star/<code>` and `functions/api/star/[code].js` — OPEN-2), the same checks as Color Belt's (CONTRACT-0005 §4.2: kill switch `STAR_PUBLIC_REGISTRATION` default off, Origin, JSON, ≤ 100 KB, honeypot, too-fast, Turnstile with action `star_register`, HMAC client key, typed parameters, `prepare: false`, no error text leaked), connecting through a **second Hyperdrive config** (caching **disabled**, origin connection limit ≤ 5) bound as `HYPERDRIVE_STAR` with the `star_registrar` login.
 
 ### 8.5 Jeffrey's one-time setup (SETUP §13, step by step, after the 0006 paste)
 1. Clipboard history off (as SETUP §12a step 0).
@@ -589,9 +589,9 @@ After step 11 (0005), on the main database: print the 0003, 0004 and 0005 finger
 - **The signature purge and the registrar's 5-second timeout:** 0005 purges at the end of every family registration. **Star chose not to purge from the public register path at all**, so a long purge can never time out a family's Send. The purge runs from staff calls only (`star_add_event`, `star_add_candidate`, `star_record_payment`, `star_home_today`, `star_makeup_list`), where staff use on any normal day is enough for the 90-day rule.
 - **`star_candidate_detail` reads aren't logged.** Staff and admins may see DOB and email in the detail view (v0.160); who opened which detail is not recorded (the same for `star_view_signature` and `star_candidate_history`).
 
-## 12. OPEN — ask Jeffrey (not decided by any source; the builder uses the working assumption)
+## 12. Former OPEN items — all decided by Jeffrey 2026-10-18 (rulebook v0.173): every working assumption below is now the rule; OPEN-23 he answered himself (No)
 
-| # | Question (source) | Working assumption in this contract |
+| # | Question (source) | Decision (v0.173) |
 |---|---|---|
 | OPEN-1 | v0.85 / v0.88 say the automatic close is "recorded in the change log" ("Closed automatically at the end of Feb 6"), but the state is worked out, never stored, and nothing runs overnight (0005 doesn't log it either) | **Not logged**; the History / Edit event screens can show a worked-out line instead |
 | OPEN-2 | The Star form's web address and Pages Function route (v0.159 "still to confirm") | `/star/<code>` and `functions/api/star/[code].js` (no database effect) |
