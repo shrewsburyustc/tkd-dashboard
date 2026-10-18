@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calendar Mockups</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root{--control-border:#8F8F8A;--page:#EFEFEC;--bg:#FFFFFF;--surface:#F7F7F5;--border:#E5E5E2;--border-strong:#CFCFCA;--text:#1F1F1F;--text2:#6B6B6B;--blue:#003595;--blue-hover:#002A77;--blue-tint:#E6EBF4;--red:#A32D2D;--red-tint:#FCEBEB;--ok:#3B6D11;--ok-tint:#EAF3DE;--warn:#633806;--warn-tint:#FAEEDA}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:20px;font-weight:500;margin:0 0 4px}
+h2{font-size:16px;font-weight:500;margin:48px 0 4px;padding-top:16px;border-top:1px solid var(--border-strong)}
+h4{font-size:13px;font-weight:500;margin:32px 0 4px}
+.lead{color:var(--text2);font-size:13px;margin:0 0 12px}
+.banner{background:var(--warn-tint);color:var(--warn);padding:8px 12px;border-radius:8px;font-size:13px;display:flex;gap:8px;align-items:flex-start}
+/* explanation block (P1) */
+.explain{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:8px 0 16px;font-size:13px}
+.explain h3{font-size:13px;font-weight:500;margin:8px 0 2px}.explain h3:first-child{margin-top:0}
+.explain ul,.explain ol{margin:0;padding-left:20px}.explain li{margin:2px 0}
+.explain .prop{color:var(--warn)}
+b{font-weight:500}
+/* device frames */
+.cap{font-size:12px;color:var(--text2);margin:16px 0 6px;display:flex;align-items:center;gap:6px}
+.cap i{font-size:16px}
+.scroller{overflow-x:auto;padding-bottom:4px}
+.dev{background:var(--bg);border:1px solid var(--border-strong);overflow:hidden;position:relative;flex:none}
+.dev-pc{width:1024px;height:600px;border-radius:10px}
+.dev-tab{width:768px;height:560px;border-radius:18px;border-width:6px;border-color:#2B2B2B}
+.dev-ph{width:375px;height:700px;border-radius:28px;border-width:6px;border-color:#2B2B2B}
+.pair{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+/* app shell (as approved in the Home / Account files) */
+.app{display:flex;height:100%;background:var(--bg)}
+.app-col{flex:1;min-width:0;display:flex;flex-direction:column}
+.content{flex:1;min-height:0;padding:24px;display:flex;flex-direction:column;overflow:hidden}
+.ph-shell{height:100%;display:flex;flex-direction:column}
+.ph-shell .content{padding:16px}
+.rail{width:52px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;flex:none}
+.rail a{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;color:var(--text2)}
+.rail a i{font-size:18px}
+.rail a.on{background:var(--blue-tint);color:var(--blue)}
+.rail-t{width:72px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;flex:none}
+.rail-t a{display:flex;flex-direction:column;align-items:center;justify-content:center;width:64px;min-height:56px;border-radius:8px;color:var(--text2);font-size:12px;gap:2px}
+.rail-t a i{font-size:20px}
+.rail-t a.on{color:var(--blue)}.rail-t a.on i{background:var(--blue-tint);border-radius:8px;padding:4px 10px}
+.topbar{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 12px;flex:none}
+.topbar .grow{flex:1}
+.loc{display:flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;font-size:12px;height:32px}
+.loc span{display:flex;align-items:center;gap:4px;padding:0 12px;color:var(--text2)}
+.loc span.on{background:var(--blue-tint);color:var(--blue)}
+.loc span+span{border-left:1px solid var(--border)}
+.touch .loc{height:36px}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--surface);border:1px solid var(--control-border);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--text);flex:none}
+.tap{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.phbar{border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:4px 0 10px;flex:none;background:var(--bg)}
+.phbar a{display:flex;flex-direction:column;align-items:center;min-width:64px;min-height:48px;justify-content:center;font-size:12px;color:var(--text2);gap:2px}
+.phbar a i{font-size:20px}.phbar a.on{color:var(--blue)}
+/* controls */
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.field label,.lbl{font-size:12px;color:var(--text2)}
+.input{height:32px;border:1px solid var(--control-border);border-radius:8px;padding:0 12px;display:flex;align-items:center;font-size:13px;color:var(--text);background:var(--bg)}
+.input.focus{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+.input .pre{color:var(--text2);margin-right:4px}
+.input.money{width:120px}
+.input.select{justify-content:space-between}.input.select i{font-size:16px;color:var(--text2)}
+.touch .input{height:36px;font-size:14px}
+.caret{display:inline-block;width:1px;height:16px;background:var(--text);margin-left:1px}
+.btn{height:32px;padding:0 16px;border-radius:8px;font-size:13px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--control-border);background:var(--bg);color:var(--text);flex:none;white-space:nowrap}
+.btn i{font-size:16px}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn-primary.dis{background:var(--surface);border-color:var(--border-strong);color:#8A8A85}
+.btn-sm{height:28px;padding:0 12px}
+.btn-full{width:100%}
+.touch .btn{height:36px}
+.touch .btn-sm{height:36px;padding:0 12px}
+.err{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--warn);background:var(--warn-tint);padding:8px;border-radius:6px}
+.hint{font-size:12px;color:var(--text2)}
+/* dialogs */
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:5}
+.dialog{background:var(--bg);border-radius:12px;width:360px;max-width:calc(100% - 32px);padding:24px;position:relative}
+.dialog h3{font-size:16px;font-weight:500;margin:0 0 4px}
+.dialog .sub{font-size:13px;color:var(--text2);margin:0 0 16px}
+.dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+/* detail view (v0.46): centered dialog showing every field */
+.dialog-detail{width:440px}
+.dialog-detail .meta{margin-top:12px}
+.prices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.prices .input.money{width:100%}
+.fullscreen{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;z-index:5}
+.fullscreen .head{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 4px;font-size:16px;font-weight:500;flex:none}
+.fullscreen .fbody{padding:16px;flex:1;overflow:hidden}
+/* menus */
+.menu{position:absolute;background:var(--bg);border:1px solid var(--border-strong);border-radius:8px;padding:4px 0;width:200px;box-shadow:0 4px 16px rgba(0,0,0,.08);z-index:5;text-align:left}
+.menu .it{display:flex;align-items:center;gap:8px;padding:0 12px;height:32px;font-size:13px;color:var(--text);white-space:nowrap}
+.touch .menu .it{height:44px}
+.menu .it i{font-size:16px;color:var(--text2)}
+.menu .it.hov{background:var(--surface)}
+.menu .it.sel{background:var(--blue-tint);color:var(--blue)}
+.menu .it.dis{color:#A3A39E}.menu .it.dis i{color:#B8B8B3}
+.menu .it.red,.menu .it.red i{color:var(--red)}
+.menu .it.red.hov{background:var(--red-tint)}
+.menu .sep{border-top:1px solid var(--border);margin:4px 0}
+.menu .grp{font-size:12px;color:var(--text2);padding:8px 12px 4px}
+.sheet-wrap{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;z-index:5}
+.sheet{background:var(--bg);width:100%;border-radius:16px 16px 0 0;padding:8px 0 16px}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--border-strong);margin:4px auto 8px}
+.sheet .stitle{padding:4px 16px 8px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.sheet .stitle b{display:block;font-size:14px}.sheet .stitle span{font-size:12px;color:var(--text2)}
+.sheet .menu{position:static;width:auto;border:none;box-shadow:none;border-radius:0;padding:0}
+.sheet .menu .it{padding:0 16px}
+.sheet .menu .it.cancel{justify-content:center;color:var(--text);font-weight:500}
+.tag{font-size:12px;line-height:16px;padding:2px 8px;border-radius:6px;background:var(--surface);color:var(--text2);border:1px solid var(--border);white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.tag-warn{background:var(--warn-tint);color:var(--warn);border-color:#F2D9B0}
+.tag i{font-size:12px}
+.callout{position:absolute;background:var(--warn-tint);color:var(--warn);border:1px dashed #EF9F27;font-size:12px;padding:4px 8px;border-radius:6px;z-index:7;white-space:nowrap}
+/* ---------- new for Testing ---------- */
+.phead{display:flex;align-items:center;gap:12px;margin-bottom:8px;flex:none}
+.phead .grow{flex:1}
+.ptitle{font-size:20px;font-weight:500;line-height:1.3}
+.psub{font-size:12px;color:var(--text2)}
+.tabs{display:flex;gap:24px;border-bottom:1px solid var(--border);margin-bottom:16px;flex:none}
+.tabs span{height:40px;display:flex;align-items:center;font-size:13px;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs span.on{color:var(--blue);border-bottom-color:var(--blue);font-weight:500}
+.touch .tabs span{height:44px}
+.ph-shell .tabs{gap:0}.ph-shell .tabs span{flex:1;justify-content:center}
+.more-tog{display:inline-flex;align-items:center;gap:4px;height:28px;font-size:13px;color:var(--text2)}
+.more-tog i{font-size:16px}
+.touch .more-tog{min-height:44px}
+.crow.cgap{opacity:.35}
+.crow.clift{background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.10);border:1px solid var(--border-strong);border-radius:8px;margin:4px -4px 4px 8px;position:relative;z-index:2}
+.viewonly{font-size:13px;color:var(--text2);margin:-4px 0 12px;flex:none}
+/* failed-save banner (rule 3.5) */
+.errbar{display:flex;align-items:center;gap:8px;background:var(--warn-tint);color:var(--warn);border-radius:8px;padding:4px 4px 4px 12px;font-size:13px;margin:-4px 0 12px;flex:none}
+.errbar>i{font-size:16px}
+.errbar .grow{flex:1}
+.errbar .btn{border-color:var(--control-border)}
+.touch .errbar{flex-wrap:wrap;padding:8px 4px 4px 12px}
+/* icon buttons: 28px visible square; on touch the outer box is a 44x44 invisible tap area */
+.ib{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;color:var(--text2);flex:none}
+.ib .ibv{width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center}
+.ib i{font-size:16px}
+.ib.hov .ibv{background:var(--surface);color:var(--text)}
+.touch .ib{width:44px;height:44px}
+/* class list */
+.clist{border:1px solid var(--border);border-radius:8px;flex:none}
+.crow{display:flex;align-items:center;gap:8px;height:40px;padding:0 4px 0 8px;font-size:13px;border-top:1px solid var(--border)}
+.clist>.crow:first-child{border-top:none}
+.touch .crow{height:48px;padding:0;gap:4px}
+.crow .nm{font-weight:500}
+.crow .cnt{font-size:12px;color:var(--text2)}
+.crow .grow{flex:1}
+.acts{display:flex;align-items:center;gap:4px;justify-content:flex-end;position:relative}
+.touch .acts{gap:0}
+/* rank table */
+.rhead,.rrow{display:grid;align-items:center;column-gap:12px;border-top:1px solid var(--border)}
+.rhead{height:32px;background:var(--surface);font-size:12px;color:var(--text2)}
+.rrow{min-height:40px;font-size:13px;position:relative;padding-top:4px;padding-bottom:4px}
+.touch .rrow{min-height:48px}
+.g-pc{grid-template-columns:24px minmax(0,1fr) minmax(0,1.6fr) 64px 88px 64px 104px 64px;padding:0 4px 0 40px}
+.g-st{grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) 64px 88px 64px 104px;padding:0 16px 0 44px}
+.g-tab{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 64px 96px 88px;padding:0 0 0 48px}
+.g-tst{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 64px 96px 72px;padding:0 8px 0 48px}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.rk{display:flex;align-items:center;gap:8px;min-width:0}
+.grip{display:inline-flex;align-items:center;justify-content:center;width:24px;height:28px;color:var(--text2);border-radius:8px}
+.grip i{font-size:16px}
+.grip.hov{background:var(--border);color:var(--text)}
+.rrow.sel{background:var(--blue-tint)}
+.rrow.hovrow{background:var(--surface)}
+.rrow.lift{background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.10);z-index:2;margin:4px -4px 4px 32px;padding-left:8px;border:1px solid var(--border-strong);border-radius:8px}
+.rrow.gap{opacity:.35}
+.dropline{height:0;border-top:2px solid var(--blue);margin:-1px 0 -1px 40px;position:relative;z-index:3}
+.addrow{display:flex;align-items:center;gap:12px;padding:8px 8px 8px 76px;border-top:1px solid var(--border)}
+.addrow .grow{flex:1}
+.touch .addrow{padding:4px 4px 4px 48px}
+.emptyrow{display:flex;align-items:center;gap:12px;padding:12px 16px 12px 76px;border-top:1px solid var(--border);font-size:13px;color:var(--text2);flex-wrap:wrap}
+.touch .emptyrow{padding-left:48px}
+/* phone stacked rank rows */
+.prow{display:flex;align-items:center;gap:0;min-height:56px;padding:4px 0 4px 16px;border-top:1px solid var(--border)}
+.prow .grow{flex:1;min-width:0}
+.prow .l1{font-size:13px;font-weight:500;display:flex;align-items:center;column-gap:8px;row-gap:2px;flex-wrap:wrap}
+.prow .l2{font-size:12px;color:var(--text2)}
+.prow .l2 span{white-space:nowrap}
+.prow.sel{background:var(--blue-tint)}
+.prow>.tapbox{margin-right:8px}
+.grp-lbl{font-size:12px;color:var(--text2);margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--border)}
+.ro{font-size:13px;margin-bottom:12px}
+.ro .lbl{display:block}
+.ro .sec{color:var(--text2)}
+.meta{font-size:12px;color:var(--text2);margin-top:16px}
+/* checkbox (CSS tick: ti-check is reserved for Save) */
+.cbrow{display:flex;align-items:center;gap:8px;min-height:32px;font-size:13px}
+.touch .cbrow{min-height:44px}
+.cb{width:16px;height:16px;border:1px solid var(--control-border);border-radius:4px;display:inline-block;position:relative;flex:none;background:var(--bg)}
+.cb.on{background:var(--blue);border-color:var(--blue)}
+.cb.on::after{content:"";position:absolute;left:4px;top:1px;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.cb.dis{background:var(--surface);border-color:var(--border-strong)}
+/* toast (Undo) */
+.toast{position:absolute;right:16px;bottom:16px;background:#1F1F1F;color:#fff;border-radius:8px;display:flex;align-items:center;gap:8px;padding:0 4px 0 12px;font-size:13px;z-index:6;min-height:40px;white-space:nowrap}
+.toast .undo{display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 8px;color:#fff;font-weight:500;border-left:1px solid #4A4A4A;flex:none}
+.toast .undo i{font-size:16px}
+.touch .toast{min-height:44px}
+.touch .toast .undo{height:44px}
+.toast.ph{left:50%;right:auto;transform:translateX(-50%);bottom:76px}
+.toast.ph.wide{width:calc(100% - 32px);white-space:normal;line-height:1.4;padding:4px 4px 4px 12px}
+.toast.ph.wide>span:first-child{flex:1}
+/* blocked (Both) */
+.blocked{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;color:var(--text2);font-size:13px;padding:24px}
+.blocked .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+/* top-of-file boxes */
+.okbox{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:16px 0;font-size:13px}
+.okbox h3{font-size:14px;font-weight:500;margin:0 0 4px}
+.okbox ol{margin:0;padding-left:20px}.okbox li{margin:4px 0}
+.toc{font-size:13px;margin:8px 0 0;columns:2}
+.toc a{color:var(--blue);text-decoration:none}
+/* phone: class names and rank rows start at the 16px gutter */
+.touch .ph-shell .crow{padding-left:16px}
+.ctog{display:flex;align-items:center;gap:8px;flex:1;min-width:0;min-height:48px}
+.ctog i{font-size:16px;color:var(--text2)}
+/* compact outline button (staff View): 28px with a mouse, 36px on touch, 44px tap box */
+.tapbox{display:inline-flex;align-items:center;justify-content:center;flex:none}
+.touch .tapbox{min-height:44px;min-width:44px}
+.touch .btn.c28{height:36px}
+/* final award problems shown in the Testing for cell */
+.tfwarn{color:var(--warn);font-size:12px;display:inline-flex;gap:4px;align-items:flex-start;line-height:1.4}
+.tfwarn i{font-size:16px;line-height:1}
+.prow .l1 .tfwarn{font-weight:400}
+/* dropdown list with scroll cue */
+.menu.scroll{overflow:hidden;padding-right:12px}
+.menu .sbar{position:absolute;right:4px;top:6px;width:4px;height:64px;border-radius:2px;background:var(--border-strong)}
+.touch .ph-shell .addrow,.touch .ph-shell .emptyrow{padding-left:16px}
+code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
+/* ---------- new for Schedule ---------- */
+/* frames at real screen heights so the whole day fits: PC 1024x800, tablet portrait 768x1024 */
+
+.wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;flex:none}
+.dayh{font-size:12px;color:var(--text2);padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:2px}
+.dcol{display:flex;flex-direction:column;gap:6px;min-width:0}
+.slot{border:1px solid var(--border);border-radius:8px;padding:6px 8px;background:var(--bg);min-width:0}
+.slot .t{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot .c{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot.hov{background:var(--surface);border-color:var(--border-strong)}
+.slot.sel{background:var(--blue-tint);border-color:var(--blue)}
+.touch .slot{min-height:44px}
+.none{font-size:12px;color:var(--text2);padding:6px 0}
+.vrow{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex:none;position:relative}
+.vrow .input.select{width:340px}
+.ph-shell .vrow .input.select{width:auto;flex:1;min-width:0}
+.ph-shell .vrow .input.select span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.infobar{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;margin:-4px 0 16px;flex:none}
+.infobar>i{font-size:16px;color:var(--text2)}
+.infobar .grow{flex:1}
+.pday{font-size:12px;color:var(--text2);padding:12px 0 4px}
+.prow2{display:flex;align-items:center;min-height:52px;border-top:1px solid var(--border);gap:12px}
+.prow2 .tm{font-size:12px;color:var(--text2);width:84px;flex:none}
+.prow2 .cl{font-size:13px;font-weight:500;flex:1}
+.prow2 i{font-size:16px;color:var(--text2)}
+.daypick{display:flex;flex-wrap:wrap;gap:4px 12px}
+.times{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.schoolh{font-size:13px;font-weight:500;margin:4px 0 8px;display:flex;align-items:center;gap:8px}
+.scrollhint{flex:1;min-height:0;overflow:hidden}
+/* time-on-the-side week view: box height = class length */
+.tg{display:grid;grid-template-columns:48px repeat(7,minmax(0,1fr));flex:none}
+.tg .dh{font-size:12px;color:var(--text2);text-align:center;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.tg.one{grid-template-columns:48px minmax(0,1fr)}
+.tcol{position:relative;border-left:1px solid var(--border)}
+.hl{position:absolute;left:0;right:0;border-top:1px solid var(--border)}
+.hl.half{border-top-style:dotted}
+.ax{position:relative}
+.ax span{position:absolute;right:6px;font-size:12px;color:var(--text2);transform:translateY(-50%);white-space:nowrap;background:var(--bg);padding:0 2px}
+.blk{position:absolute;left:3px;right:3px;border:1px solid var(--border-strong);background:var(--surface);border-radius:6px;padding:2px 6px;overflow:hidden;line-height:1.3}
+.blk .c{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blk .t{font-size:12px;color:var(--text2);white-space:nowrap}
+.blk.hov{background:#EDEDEA}
+.blk.sel{background:var(--blue-tint);border-color:var(--blue)}
+.tgwrap{flex:1;min-height:0;overflow:hidden;position:relative}
+.dpick{display:flex;gap:4px;margin-bottom:12px;flex:none}
+.dpick span{flex:1;height:36px;border:1px solid var(--control-border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text2)}
+.sw{display:flex;flex-wrap:wrap;gap:8px}
+.sw span{width:28px;height:28px;border-radius:50%;border:1px solid rgba(0,0,0,.18);position:relative}
+.touch .sw span{width:36px;height:36px}
+.sw span.on{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--text)}
+.dpick span.on{background:var(--blue-tint);border-color:var(--blue);color:var(--blue);font-weight:500}
+/* ---------- new for Calendar ---------- */
+.dev-pc{height:800px}.dev-tab{height:1024px}
+.chead{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex:none;flex-wrap:wrap;position:relative}
+.chead .grow{flex:1}
+.mname{font-size:16px;font-weight:500;min-width:150px}
+.seg{display:flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;font-size:13px;height:32px}
+.seg span{display:flex;align-items:center;padding:0 12px;color:var(--text2)}
+.seg span.on{background:var(--blue-tint);color:var(--blue)}
+.seg span+span{border-left:1px solid var(--border)}
+.touch .seg{height:36px}
+.cbody{flex:1;min-height:0;display:flex;gap:16px}
+.month{flex:1;min-width:0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:24px;grid-auto-rows:1fr;border-left:1px solid var(--border);border-top:1px solid var(--border)}
+.month>div{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:4px;min-width:0;overflow:hidden;font-size:12px}
+.month .wd{font-size:12px;color:var(--text2);text-align:center;padding:4px 0}
+.month .dn{font-size:12px;color:var(--text2);display:inline-flex;width:22px;height:22px;align-items:center;justify-content:center;border-radius:50%}
+.month .out .dn{color:#B4B2A9}
+.month .today .dn{background:var(--blue);color:#fff}
+.month .pick{background:var(--blue-tint)}
+.chip{display:flex;align-items:flex-start;gap:4px;border-radius:4px;padding:1px 4px;margin-top:2px;font-size:12px;line-height:16px;overflow:hidden}
+.chip span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.chip i{margin-top:2px}
+.chip i{font-size:12px;flex:none}
+.chip span{overflow:hidden;text-overflow:ellipsis}
+.chip.cls{background:var(--surface);color:var(--text2)}
+.chip.cls.x{text-decoration:line-through}
+.chip.closed{background:var(--warn-tint);color:var(--warn)}
+.chip.book{background:var(--bg);border:1px solid var(--border-strong);color:var(--text)}
+.chip.sched{border:1px dashed var(--border-strong);color:var(--text2)}
+.panel{width:260px;flex:none;border:1px solid var(--border);border-radius:8px;padding:12px 16px;overflow:hidden}
+.panel h4{font-size:16px;font-weight:500;margin:0}
+.panel .sub2{font-size:12px;color:var(--text2);margin:0 0 8px}
+.psec{font-size:12px;color:var(--text2);margin:12px 0 4px}
+.pitem{display:flex;align-items:center;gap:8px;min-height:36px;border-top:1px solid var(--border);font-size:13px}
+.touch .pitem{min-height:44px}
+.pitem .tm{font-size:12px;color:var(--text2);width:64px;flex:none}
+.pitem .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pitem.x .nm,.pitem.x .tm{text-decoration:line-through;color:var(--text2)}
+.pitem>i{font-size:16px;color:var(--text2)}
+.cdot{width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.15);flex:none}
+.cnote{display:flex;gap:8px;align-items:flex-start;background:var(--warn-tint);color:var(--warn);border-radius:6px;padding:8px;font-size:13px;margin:4px 0 8px}
+.cnote i{font-size:16px}
+/* tablet: month on top, chosen day underneath */
+.stack{flex-direction:column}
+.stack .month{flex:none;height:520px}
+.stack .panel{width:auto;flex:1}
+/* phone: small month */
+.mini{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));text-align:center;row-gap:2px;flex:none;margin-bottom:8px}
+.mini .wd{font-size:12px;color:var(--text2);padding:2px 0}
+.mini .d{display:flex;flex-direction:column;align-items:center;min-height:44px;justify-content:center;font-size:13px}
+.mini .d b{font-weight:400;width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:50%}
+.mini .d.today b{background:var(--blue);color:#fff}
+.mini .d.pick b{background:var(--blue-tint);color:var(--blue);font-weight:500}
+.mini .d.out{color:#B4B2A9}
+.mini .dots{display:flex;gap:2px;height:6px}
+.mini .dots i{width:5px;height:5px;border-radius:50%;display:block}
+.ph-shell .panel{border:none;padding:0;width:auto;flex:1}
+/* week view */
+.wkv{flex:1;min-height:0;overflow:hidden}
+.wkv .tg .dh b{display:block;font-size:13px;font-weight:500;color:var(--text)}
+.wkv .tg .dh.today b{color:#fff;background:var(--blue);border-radius:50%;width:24px;height:24px;line-height:24px;margin:0 auto}
+.allday{display:grid;grid-template-columns:48px repeat(7,minmax(0,1fr));border-bottom:1px solid var(--border);min-height:28px;align-items:center;font-size:12px;color:var(--text2)}
+.allday>div{padding:2px 3px;min-width:0}
+.tcol.closedband::before{content:"";position:absolute;left:0;right:0;top:var(--ct);height:var(--ch);background:repeating-linear-gradient(135deg,#FAEEDA 0 6px,#FFF7EA 6px 12px);z-index:0}
+.blk{z-index:1}
+.blk.x{opacity:.55}.blk.x .c{text-decoration:line-through}
+.blk .bk{position:absolute;top:2px;right:2px;display:inline-flex;align-items:center;gap:2px;font-size:12px;line-height:16px;background:#fff;border:1px solid var(--border-strong);border-radius:4px;padding:0 3px;color:var(--text)}
+.blk .bk i{font-size:12px}
+.evblk{border-style:solid;border-width:1px 1px 1px 4px}
+/* type list */
+.trow{display:flex;align-items:center;gap:8px;height:40px;border-top:1px solid var(--border);font-size:13px}
+.trow .grow{flex:1}
+.textarea{height:64px;border:1px solid var(--control-border);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--text2)}
+</style>
+</head>
+<body>
+<main>
+<h1>Calendar — mockups for approval</h1>
+<p class="lead">Jae H. Jeong's U.S. Taekwondo Center · New students, step 2: calendar · guidelines v0.60 · October 17, 2026 · revision 1</p>
+<div class="banner"><i class="ti ti-alert-triangle"></i><div><b>Design only — not a working app.</b> Nothing here is built or deployed. Screens are shown at PC (1024×800), tablet held upright (768×1024), and phone (375px). <b>Dates, events and names are made-up samples</b>; "today" is pretended to be Monday, January 11, 2027. Classes come from the approved Schedule (the Winter schedule starts Jan 4).</div></div>
+
+<div class="okbox">
+<h3>Decided in chat (written into the rulebook once you approve)</h3>
+<ol>
+<li>The Calendar shows <b>regular classes</b> (from Schedule), <b>closures</b>, <b>school events</b> and <b>free-class bookings</b> (bookings appear once step 3, Forms, is built).</li>
+<li><b>Closures</b> can close a whole day or only some classes. Cancelled classes stay visible, <b>crossed out</b>.</li>
+<li><b>Events</b> can run several days, have start and end times (or be all day), belong to one school or both, and have notes.</li>
+<li><b>Event colors come from event types</b> — admins set up types (Testing, Tournament…) and pick each type's color.</li>
+<li>Opens in <b>Month view</b>; each day box shows a <b>summary</b> (events, closures and bookings written out; classes as a count). Week view is one click away.</li>
+<li>Clicking a day opens it in a <b>side panel</b> on PC. Phone: <b>small month with dots, chosen day listed underneath</b>.</li>
+<li><b>Admins add and edit</b>; staff view only.</li>
+</ol>
+</div>
+
+<div class="okbox">
+<h3>Still needs your OK — details I added</h3>
+<ol>
+<li>Rail icon <code>ti-calendar-month</code>, label "Calendar", after Schedule. (<code>ti-calendar</code> is already used for date fields.)</li>
+<li>One blue <b>"+ Add"</b> button opens a small menu: <b>Event</b> or <b>Closure</b>.</li>
+<li><b>Closures are amber</b> with an icon (they are a warning: classes are cancelled). In Week view the closed hours are striped amber.</li>
+<li><b>Free-class bookings</b> show as a white outlined chip with <code>ti-user-plus</code> ("2 free classes"); in the side panel each one lists the name, time and class.</li>
+<li>A dashed chip marks the day a <b>planned schedule starts</b> ("Winter schedule starts").</li>
+<li>The side panel shows <b>today</b> until you click another day; clicking an event or closure there opens it for editing.</li>
+<li><b>Tablet held upright:</b> month on top, chosen day underneath (a side panel would squeeze the month too much).</li>
+<li>Month view shows the weeks of that month only; days from the next/previous month are grayed.</li>
+<li>Removing an event or closure is <b>instant with Undo</b>. Deleting an event type that's in use asks to confirm.</li>
+<li><b>Event types</b> are managed from <code>⋯</code> → "Event types", using the same 8 colors as classes (no red).</li>
+<li>Week view has an <b>"All day"</b> row on top for all-day and multi-day events.</li>
+<li>On <b>Both</b>, each chip gets a small school letter (<b>W</b> or <b>S</b>), and class counts add up both schools.</li>
+</ol>
+</div>
+
+<div class="okbox">
+<h3>Screens in this file</h3>
+<div class="toc">
+<div><a href="#s1">1. Month view — Admin</a></div>
+<div><a href="#s2">2. Week view</a></div>
+<div><a href="#s3">3. Add an event</a></div>
+<div><a href="#s4">4. Add a closure</a></div>
+<div><a href="#s5">5. A closed day</a></div>
+<div><a href="#s6">6. Event types</a></div>
+<div><a href="#s7">7. Staff view (view only)</a></div>
+<div><a href="#s8">8. Switcher on Both</a></div>
+</div>
+</div>
+
+<div id="screens"></div>
+</main>
+<script>
+const PAL={gray:['#F7F7F5','#CFCFCA','#1F1F1F'],yellow:['#FBF3CF','#D9BC4A','#4F4105'],orange:['#FBE9D4','#E0A866','#5A3410'],green:['#E7F2D8','#9CC26A','#2F4A0C'],teal:['#DFF3EC','#7FC6AE','#074536'],sky:['#E2EFFA','#8DB9E2','#0C3F72'],purple:['#EEEDFE','#ABA5EA','#3C3489'],pink:['#FBE8EF','#E39CB6','#6E2140']};
+const CLR={'White belt':'gray','Group A':'yellow','Group B':'green','Group C':'sky','Teen and adult':'purple'};
+const TYPES=[['Testing','purple'],['Tournament','sky'],['Camp','teal'],['Meeting','orange'],['Party','pink']];
+const TC=Object.fromEntries(TYPES);
+const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+/* Winter schedule (starts Jan 4, 2027) */
+const WK={Mon:[['4:00–4:45','White belt'],['5:15–6:00','Group A'],['6:00–6:45','Group B'],['6:45–7:30','Teen and adult']],Tue:[['4:30–5:15','Group C'],['5:15–6:00','White belt'],['6:00–6:45','Group A']],Wed:[['4:00–4:45','White belt'],['5:15–6:00','Group A'],['6:00–6:45','Group B'],['6:45–7:30','Teen and adult']],Thu:[['4:30–5:15','Group C'],['5:15–6:00','White belt'],['6:00–6:45','Group A']],Fri:[['5:00–5:45','Group B'],['5:45–6:30','White belt']],Sat:[['9:30–10:15','White belt'],['10:15–11:00','Group A'],['11:00–11:45','Group B']],Sun:[]};
+const DOW=d=>DAYS[(new Date(2027,0,d).getDay()+6)%7];
+/* Things on the January 2027 calendar */
+const EV={
+ 1:[['closed','Closed · New Year\'s Day']],
+ 4:[['sched','Winter schedule starts']],
+ 9:[['ev','Color belt testing','Testing','1:00–4:00 pm']],
+ 11:[['ev','Parent meeting','Meeting','7:30–8:30 pm'],['book','2 free classes']],
+ 13:[['book','1 free class']],
+ 15:[['closed','Evening closed · storm']],
+ 18:[['closed','Closed · MLK Day']],
+ 22:[['ev','Winter camp (1 of 3)','Camp']],23:[['ev','Winter camp (2 of 3)','Camp']],24:[['ev','Winter camp (3 of 3)','Camp']],
+ 30:[['ev','Spring tournament','Tournament']]
+};
+const ICON={closed:'ti-alert-triangle',sched:'ti-calendar-event',book:'ti-user-plus'};
+function chip([k,t,type],o={}){const L=o.both?`<b style="font-weight:500">${o.both}</b> `:'';
+ if(k==='ev'){const p=PAL[TC[type]];return `<div class="chip" style="background:${p[0]};color:${p[2]}">${L}<span>${t}</span></div>`}
+ return `<div class="chip ${k==='closed'?'closed':k==='book'?'book':'sched'}"><i class="ti ${ICON[k]}"></i>${L}<span>${t}</span></div>`;}
+function nCls(d){const n=WK[DOW(d)].length;return n;}
+function month(o={}){let h=DAYS.map(d=>`<div class="wd">${d}</div>`).join('');
+ const lead=[28,29,30,31]; lead.forEach(d=>h+=`<div class="out"><span class="dn">${d}</span></div>`);
+ for(let d=1;d<=31;d++){const ev=(EV[d]||[]); const closedAll=ev.some(e=>e[0]==='closed'&&e[1].startsWith('Closed'));const part=ev.some(e=>e[0]==='closed'&&!e[1].startsWith('Closed'));
+  const n=nCls(d); let c=ev.map(e=>chip(e,{both:o.both?(e[0]==='ev'&&e[2]==='Tournament'?'W S':'W'):''})).join('');
+  if(o.both&&d===16) c+=chip(['ev','Belt ceremony','Party'],{both:'S'});
+  if(n) c+=`<div class="chip cls${closedAll||part?' x':''}">${o.both?(n+2)+' classes':n+' class'+(n>1?'es':'')}${part?' cancelled':''}</div>`;
+  h+=`<div class="${d===11?'today':''}${d===(o.pick||11)?' pick':''}"><span class="dn">${d}</span>${c}</div>`;}
+ return `<div class="month">${h}</div>`;}
+function mini(o={}){let h=DAYS.map(d=>`<div class="wd">${d[0]}</div>`).join('');
+ [28,29,30,31].forEach(d=>h+=`<div class="d out"><b>${d}</b><span class="dots"></span></div>`);
+ for(let d=1;d<=31;d++){const ev=EV[d]||[];const dots=ev.map(e=>e[0]==='ev'?PAL[TC[e[2]]][1]:e[0]==='closed'?'#EF9F27':e[0]==='book'?'#6B6B6B':'#B4B2A9');
+  h+=`<div class="d${d===11?' today':''}${d===(o.pick||11)&&d!==11?' pick':''}"><b>${d}</b><span class="dots">${dots.map(c=>`<i style="background:${c}"></i>`).join('')}</span></div>`;}
+ return `<div class="mini">${h}</div>`;}
+function clsItems(d,o={}){return WK[DOW(d)].map(([t,c])=>{const x=o.cancel&&o.cancel.includes(c+t);const p=PAL[CLR[c]];return `<div class="pitem${x?' x':''}"><span class="cdot" style="background:${p[0]};border-color:${p[1]}"></span><span class="tm">${t}</span><span class="nm">${c}</span></div>`}).join('');}
+function panel11(o={}){return `<h4>Monday, January 11</h4><p class="sub2">Today · Worcester</p>
+ <div class="psec">Events</div><div class="pitem"><span class="cdot" style="background:${PAL.orange[0]};border-color:${PAL.orange[1]}"></span><span class="tm">7:30 pm</span><span class="nm">Parent meeting</span>${o.staff?'':'<i class="ti ti-chevron-right"></i>'}</div>
+ <div class="psec">Free classes</div><div class="pitem"><i class="ti ti-user-plus"></i><span class="tm">4:00</span><span class="nm">Ava M. · White belt</span></div><div class="pitem"><i class="ti ti-user-plus"></i><span class="tm">5:15</span><span class="nm">Noah K. · White belt</span></div>
+ <div class="psec">Classes</div>${clsItems(11)}`;}
+function head(dev,o={}){const view=`<div class="seg"><span class="${o.week?'':'on'}">Month</span><span class="${o.week?'on':''}">Week</span></div>`;
+ const nav=`<span class="ib"><span class="ibv"><i class="ti ti-chevron-left"></i></span></span><span class="ib"><span class="ibv"><i class="ti ti-chevron-right"></i></span></span>`;
+ const add=o.staff?'':`<button class="btn btn-primary"><i class="ti ti-plus"></i>Add</button>`;
+ const more=o.staff?'':`<span class="ib"><span class="ibv"><i class="ti ti-dots"></i></span></span>`;
+ if(dev==='ph') return `<div class="phead"><div class="ptitle">Calendar</div><div class="grow"></div>${more}${add}</div><div class="chead"><span class="mname">${o.label||'January 2027'}</span><div class="grow"></div>${nav}<button class="btn btn-sm">Today</button></div>`;
+ return `<div class="phead"><div class="ptitle">Calendar</div><div class="grow"></div>${more}${add}</div><div class="chead">${nav}<span class="mname">${o.label||'January 2027'}</span><button class="btn btn-sm">Today</button><div class="grow"></div>${view}${o.extra||''}</div>`;}
+function loc(on){return `<div class="loc">${['Worcester','Shrewsbury','Both'].map(x=>`<span class="${x===on?'on':''}">${x===on?'<i class="ti ti-map-pin"></i>':''}${x}</span>`).join('')}</div>`;}
+const RAILI=[['ti-home','Home'],['ti-certificate','Testing'],['ti-clock','Schedule'],['ti-calendar-month','Calendar']];
+function frame(dev,content,o={}){const L=o.loc||'Worcester',av=o.av||'JB';
+ if(dev==='pc') return `<div class="dev dev-pc"><div class="app"><div class="rail">${RAILI.map(([i,n])=>`<a class="${n==='Calendar'?'on':''}"><i class="ti ${i}"></i></a>`).join('')}</div><div class="app-col"><div class="topbar"><div class="grow"></div>${loc(L)}<span class="avatar">${av}</span></div><div class="content">${content}</div></div></div>${o.overlay||''}</div>`;
+ if(dev==='tab') return `<div class="dev dev-tab touch"><div class="app"><div class="rail-t">${RAILI.map(([i,n])=>`<a class="${n==='Calendar'?'on':''}"><i class="ti ${i}"></i>${n}</a>`).join('')}</div><div class="app-col"><div class="topbar"><div class="grow"></div>${loc(L)}<span class="tap"><span class="avatar">${av}</span></span></div><div class="content">${content}</div></div></div>${o.overlay||''}</div>`;
+ return `<div class="dev dev-ph touch"><div class="ph-shell"><div class="topbar">${loc(L)}<div class="grow"></div><span class="tap"><span class="avatar">${av}</span></span></div><div class="content">${content}</div><div class="phbar">${RAILI.map(([i,n])=>`<a class="${n==='Calendar'?'on':''}"><i class="ti ${i}"></i>${n}</a>`).join('')}</div></div>${o.overlay||''}</div>`;}
+/* week view (Mon Jan 11 – Sun Jan 17) */
+function mins(x){let [h,m]=x.split(':').map(Number); if(h<9) h+=12; return h*60+m;}
+function span(t){const [a,b]=t.replace(' pm','').split('–'); return [mins(a),mins(b)];}
+function lbl(m){let h=Math.floor(m/60); const ap=h>=12?'pm':'am'; h=h%12||12; return h+' '+ap;}
+function week(S){const lo=9*60,hi=21*60;const dates=[11,12,13,14,15,16,17];
+ let h=`<div class="tg"><div></div>${DAYS.map((d,i)=>`<div class="dh${dates[i]===11?' today':''}">${d}<b>${dates[i]}</b></div>`).join('')}</div>`;
+ h+=`<div class="allday"><div>All day</div><div></div><div></div><div></div><div></div><div></div><div>${chip(['ev','Testing sign-up closes','Testing'])}</div><div></div></div>`;
+ h+=`<div class="tg"><div style="padding-top:8px"><div class="ax" style="height:${(hi-lo)*S}px">`;for(let m=lo;m<=hi;m+=60)h+=`<span style="top:${(m-lo)*S}px">${lbl(m)}</span>`;h+='</div></div>';
+ dates.forEach((dt,i)=>{const d=DAYS[i];const closed=dt===15;let inner='';for(let m=lo;m<=hi;m+=30)inner+=`<div class="hl${m%60?' half':''}" style="top:${(m-lo)*S}px"></div>`;
+  WK[d].forEach(([t,c])=>{const [a,b]=span(t);const p=PAL[CLR[c]];const x=closed&&a>=16*60;const bk=(dt===11&&(c==='White belt'||c==='Group A'))?`<span class="bk"><i class="ti ti-user-plus"></i>1</span>`:(dt===13&&c==='White belt')?`<span class="bk"><i class="ti ti-user-plus"></i>1</span>`:'';
+   inner+=`<div class="blk${x?' x':''}" style="top:${(a-lo)*S}px;height:${(b-a)*S}px;background:${p[0]};border-color:${p[1]}"><div class="c" style="color:${p[2]}">${c}</div>${(b-a)*S>=48?`<div class="t" style="color:${p[2]}">${t}</div>`:''}${bk}</div>`;});
+  if(dt===11){const p=PAL.orange;const a=19*60+30,b=20*60+30;inner+=`<div class="blk evblk" style="top:${(a-lo)*S}px;height:${(b-a)*S}px;background:${p[0]};border-color:${p[1]}"><div class="c" style="color:${p[2]}">Parent meeting</div><div class="t" style="color:${p[2]}">7:30–8:30</div></div>`;}
+  h+=`<div class="tcol${closed?' closedband':''}" style="padding-top:8px;${closed?`--ct:${8+(16*60-lo)*S}px;--ch:${(4*60)*S}px`:''}"><div style="position:relative;height:${(hi-lo)*S}px">${inner}</div></div>`;});
+ return `<div class="wkv">${h}</div></div>`;}
+function sw(on){return `<div class="sw">${Object.keys(PAL).map(k=>`<span class="${k===on?'on':''}" style="background:${PAL[k][0]};border-color:${PAL[k][1]}"></span>`).join('')}</div>`;}
+const evForm=(ph)=>`<div class="field"><label>Title</label><div class="input focus">Parent meeting<span class="caret"></span></div></div>
+<div class="field"><label>Type</label><div class="input select"><span style="display:flex;align-items:center;gap:8px"><span class="cdot" style="background:${PAL.orange[0]};border-color:${PAL.orange[1]}"></span>Meeting</span><i class="ti ti-chevron-down"></i></div></div>
+<span class="cbrow"><span class="cb"></span>All day</span>
+<div class="times"><div class="field"><label>Starts</label><div class="input select"><span>Mon, Jan 11 · 7:30 PM</span><i class="ti ti-calendar"></i></div></div><div class="field"><label>Ends</label><div class="input select"><span>Mon, Jan 11 · 8:30 PM</span><i class="ti ti-calendar"></i></div></div></div>
+<div class="field"><label>School</label><div class="seg" style="width:max-content"><span class="on">Worcester</span><span>Shrewsbury</span><span>Both</span></div></div>
+<span class="more-tog"><i class="ti ti-chevron-down"></i>More details (notes)</span>`;
+const clForm=(ph)=>`<div class="field"><label>Reason</label><div class="input focus">Snow storm<span class="caret"></span></div><span class="hint">Shown on the calendar, e.g. "Snow storm", "Thanksgiving"</span></div>
+<div class="times"><div class="field"><label>From</label><div class="input select"><span>Fri, Jan 15</span><i class="ti ti-calendar"></i></div></div><div class="field"><label>To</label><div class="input select"><span>Fri, Jan 15</span><i class="ti ti-calendar"></i></div></div></div>
+<div class="field"><label>What's cancelled</label><span class="cbrow"><span class="cb" style="border-radius:50%"></span>All classes</span><span class="cbrow"><span class="cb on" style="border-radius:50%"></span>Some classes</span></div>
+<div style="padding-left:24px;margin:-8px 0 12px">${WK.Fri.map(([t,c],i)=>`<span class="cbrow"><span class="cb on"></span>${t} ${c}</span>`).join('')}<span class="hint">Fri, Jan 15 · these 2 are cancelled</span></div>
+<div class="field"><label>School</label><div class="seg" style="width:max-content"><span class="on">Worcester</span><span>Shrewsbury</span><span>Both</span></div></div>`;
+
+function screens(){return [
+`<h2 id="s1">1. Month view — Admin</h2><p class="lead">The whole month, with today's details on the side.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li>Calendar is a new rail item. It follows the school switcher.</li>
+<li>Each day box shows events (in their type's color), closures (amber), free-class bookings, and how many classes run that day.</li>
+<li>Click a day → the side panel shows everything on it: events, free classes (who, when, which class), and every class in its color.</li>
+<li>‹ › move by month; "Today" jumps back. Month / Week switches the view.</li>
+<li>Tablet (upright): month on top, the chosen day underneath. Phone: small month with colored dots; tap a day to list it below.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',head('pc')+`<div class="cbody">${month()}<div class="panel">${panel11()}</div></div>`)}</div>
+<div class="cap"><i class="ti ti-device-tablet"></i>Tablet</div><div class="scroller">${frame('tab',head('tab')+`<div class="cbody stack">${month()}<div class="panel">${panel11()}</div></div>`)}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone</div><div class="scroller">${frame('ph',head('ph')+mini()+`<div class="panel">${panel11()}</div>`)}</div>`,
+
+`<h2 id="s2">2. Week view</h2><p class="lead">The same look as the Schedule, but with real dates, events, closures and bookings.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li>Times down the left, box height = length. Classes keep their colors; events use their type's color with a thicker left edge.</li>
+<li>A small <code>ti-user-plus</code> badge on a class shows how many free-class bookings it has.</li>
+<li>Closed hours are striped amber and the cancelled classes are crossed out (Friday evening).</li>
+<li>All-day and multi-day events sit in the "All day" row at the top.</li>
+<li>Phone has no week view — the chosen-day list is the phone's day view.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',head('pc',{week:1,label:'Jan 11 – 17, 2027'})+week(0.6))}</div>
+<div class="cap"><i class="ti ti-device-tablet"></i>Tablet</div><div class="scroller">${frame('tab',head('tab',{week:1,label:'Jan 11 – 17'})+week(0.95))}</div>`,
+
+`<h2 id="s3">3. Add an event</h2><p class="lead">"+ Add" → Event.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li><b>Type</b> sets the color (types are set up in screen 6).</li>
+<li>Untick "All day" to set times. Pick a later end date for a multi-day event.</li>
+<li><b>School</b>: Worcester, Shrewsbury, or Both. Starts with the school shown in the switcher.</li>
+<li>Notes sit under "More details". Save is gray until there's a title, type and dates.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · the Add menu, then the dialog</div><div class="scroller">${frame('pc',head('pc')+`<div class="cbody">${month()}<div class="panel">${panel11()}</div></div>`,{overlay:`<div class="menu" style="top:132px;right:24px;width:180px"><div class="it hov"><i class="ti ti-calendar-event"></i>Event</div><div class="it"><i class="ti ti-calendar-off"></i>Closure</div></div>`})}</div>
+<div class="scroller" style="margin-top:12px">${frame('pc',head('pc')+`<div class="cbody">${month()}<div class="panel">${panel11()}</div></div>`,{overlay:`<div class="overlay"><div class="dialog dialog-detail"><h3>Add event</h3><p class="sub">Worcester</p>${evForm()}<div class="actions"><button class="btn">Cancel</button><button class="btn btn-primary"><i class="ti ti-check"></i>Save</button></div></div></div>`})}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone · full screen</div><div class="scroller">${frame('ph','',{overlay:`<div class="fullscreen touch"><div class="head"><span class="tap"><i class="ti ti-arrow-left"></i></span>Add event</div><div class="fbody">${evForm(1)}<div style="height:12px"></div><button class="btn btn-primary btn-full"><i class="ti ti-check"></i>Save</button></div></div>`})}</div>`,
+
+`<h2 id="s4">4. Add a closure</h2><p class="lead">"+ Add" → Closure. Close whole days, or just some classes.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li><b>From / To</b>: one day or a range (e.g. a vacation week).</li>
+<li><b>All classes</b> closes the whole day. <b>Some classes</b> lists that day's classes to tick (only for a single day).</li>
+<li>Cancelled classes can't be booked for a free class (step 3).</li>
+<li>Later, with step 3: if anyone booked a free class on a closed day, a note lists them so staff can call.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',head('pc')+`<div class="cbody">${month({pick:15})}<div class="panel">${panel11()}</div></div>`,{overlay:`<div class="overlay"><div class="dialog dialog-detail"><h3>Add closure</h3><p class="sub">Worcester</p>${clForm()}<div class="actions"><button class="btn">Cancel</button><button class="btn btn-primary"><i class="ti ti-check"></i>Save</button></div></div></div>`})}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone · full screen</div><div class="scroller">${frame('ph','',{overlay:`<div class="fullscreen touch"><div class="head"><span class="tap"><i class="ti ti-arrow-left"></i></span>Add closure</div><div class="fbody">${clForm(1)}<button class="btn btn-primary btn-full"><i class="ti ti-check"></i>Save</button></div></div>`})}</div>`,
+
+`<h2 id="s5">5. A closed day</h2><p class="lead">Friday, January 15: evening classes cancelled for a storm.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li>The amber note at the top of the day says what's closed and why; click it to edit or remove the closure.</li>
+<li>Cancelled classes stay in the list, crossed out. Removing a closure is instant with Undo.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',head('pc')+`<div class="cbody">${month({pick:15})}<div class="panel"><h4>Friday, January 15</h4><p class="sub2">Worcester</p><div class="cnote"><i class="ti ti-alert-triangle"></i><span style="flex:1">Closed 4:00 pm on · Snow storm<br><span style="font-size:12px">2 classes cancelled</span></span><i class="ti ti-chevron-right"></i></div><div class="psec">Classes</div>${clsItems(15,{cancel:WK.Fri.map(([t,c])=>c+t)})}</div></div>`)}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone</div><div class="scroller">${frame('ph',head('ph')+mini({pick:15})+`<div class="panel"><h4>Friday, January 15</h4><div class="cnote"><i class="ti ti-alert-triangle"></i><span style="flex:1">Closed 4:00 pm on · Snow storm</span><i class="ti ti-chevron-right"></i></div>${clsItems(15,{cancel:WK.Fri.map(([t,c])=>c+t)})}</div>`)}</div>`,
+
+`<h2 id="s6">6. Event types</h2><p class="lead"><code>⋯</code> → Event types. Each type has a name and a color.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li>Add, rename or recolor types. Changing a type's color recolors all its events.</li>
+<li>Delete a type: if events use it, a confirmation names how many and asks which type they move to.</li>
+<li>Types are shared by both schools.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',head('pc')+`<div class="cbody">${month()}<div class="panel">${panel11()}</div></div>`,{overlay:`<div class="overlay"><div class="dialog dialog-detail"><h3>Event types</h3><p class="sub">Colors used on the calendar</p>${TYPES.map(([n,c])=>`<div class="trow"><span class="cdot" style="width:16px;height:16px;background:${PAL[c][0]};border-color:${PAL[c][1]}"></span><span class="grow">${n}</span><span class="ib"><span class="ibv"><i class="ti ti-edit"></i></span></span><span class="ib"><span class="ibv"><i class="ti ti-dots"></i></span></span></div>`).join('')}<div class="trow"><button class="btn btn-sm"><i class="ti ti-plus"></i>Add type</button></div><div class="actions"><button class="btn">Close</button></div></div></div>`})}</div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · editing a type</div><div class="scroller">${frame('pc',head('pc')+`<div class="cbody">${month()}<div class="panel">${panel11()}</div></div>`,{overlay:`<div class="overlay"><div class="dialog"><h3>Edit event type</h3><p class="sub">Used by 3 events</p><div class="field"><label>Name</label><div class="input focus">Tournament<span class="caret"></span></div></div><div class="field"><label>Color</label>${sw('sky')}</div><div class="actions"><button class="btn">Cancel</button><button class="btn btn-primary"><i class="ti ti-check"></i>Save</button></div></div></div>`})}</div>`,
+
+`<h2 id="s7">7. Staff view (view only)</h2><p class="lead">Same calendar, no way to change it.</p>
+<div class="explain"><h3>What it does</h3><ul><li>No "+ Add" and no <code>⋯</code>. Staff can still switch Month/Week, move between months and open days.</li><li>Clicking an event shows its details (read-only).</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',head('pc',{staff:1})+`<div class="viewonly">View only — ask an admin to make changes.</div><div class="cbody">${month()}<div class="panel">${panel11({staff:1})}</div></div>`,{av:'FD'})}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone</div><div class="scroller">${frame('ph',head('ph',{staff:1})+mini()+`<div class="panel">${panel11({staff:1})}</div>`,{av:'FD'})}</div>`,
+
+`<h2 id="s8">8. Switcher on Both</h2><p class="lead">Both schools on one calendar.</p>
+<div class="explain"><h3>What it does</h3><ul><li>Each chip starts with <b>W</b> (Worcester) or <b>S</b> (Shrewsbury); events for both show <b>W S</b>.</li><li>Class counts add both schools. The side panel lists each school's classes under its own heading.</li><li>Adding an event or closure asks which school (or Both).</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',head('pc')+`<div class="cbody">${month({both:1})}<div class="panel"><h4>Monday, January 11</h4><p class="sub2">Today · Both schools</p><div class="psec">Events</div><div class="pitem"><span class="cdot" style="background:${PAL.orange[0]};border-color:${PAL.orange[1]}"></span><span class="tm">7:30 pm</span><span class="nm"><b style="font-weight:500">W</b> Parent meeting</span></div><div class="psec">Worcester classes</div>${clsItems(11)}<div class="psec">Shrewsbury classes</div><div class="pitem"><span class="cdot" style="background:${PAL.gray[0]};border-color:${PAL.gray[1]}"></span><span class="tm">5:00–5:45</span><span class="nm">White belt</span></div></div></div>`,{loc:'Both'})}</div>`
+].join('');}
+document.getElementById('screens').innerHTML=screens();
+</script>
+</body>
+</html>

@@ -309,7 +309,7 @@ code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
 <h3>Still needs your OK — details I added</h3>
 <ol>
 <li>Rail icon <code>ti-clock</code>, label "Schedule" (Calendar will get <code>ti-calendar</code> later).</li>
-<li>One schedule is shown at a time. A dropdown at the top picks <b>Current</b> or a <b>planned</b> one ("Winter · starts Jan 5, 2027").</li>
+<li>One schedule is shown at a time. A dropdown at the top picks <b>Current</b> or a <b>planned</b> one ("Winter · starts Jan 4, 2027").</li>
 <li><b>Editing the current schedule takes effect right away.</b> For a change that starts later, use "Plan a change".</li>
 <li>A new planned schedule <b>starts as a copy</b> of whichever schedule runs just before its start date (or blank, if you pick that).</li>
 <li><b>Adding a time slot can pick several days at once</b> (e.g. Mon and Wed at 4:30) — it makes one slot per day.</li>
@@ -418,7 +418,7 @@ function vrow(dev, label, o={}){
   return `<div class="vrow"><div class="input select"><span>${label}</span><i class="ti ti-chevron-down"></i></div>${more}${sub}${o.menu||''}</div>`;
 }
 const CUR='Current schedule · since Sep 2, 2026';
-const WIN='Planned: Winter · starts Jan 5, 2027';
+const WIN='Planned: Winter · starts Jan 4, 2027';
 
 function dialogAdd(dev){
   const t = dev==='pc'?'':'';
@@ -486,12 +486,12 @@ function screens(){ return [
 <li>You can plan as many as you like — each takes over on its own start date and runs until the next one.</li></ul></div>
 <div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc', head('pc')+vrow('pc',CUR,{sub:'2 changes planned'})+grid(WEEK), {overlay:`<div class="overlay"><div class="dialog dialog-detail"><h3>Plan a schedule change</h3><p class="sub">Worcester</p>
 <div class="field"><label>Name (optional)</label><div class="input focus">Winter<span class="caret"></span></div></div>
-<div class="field"><label>Starts on</label><div class="input select"><span>Mon, Jan 5, 2027</span><i class="ti ti-calendar"></i></div></div>
+<div class="field"><label>Starts on</label><div class="input select"><span>Mon, Jan 4, 2027</span><i class="ti ti-calendar"></i></div></div>
 <div class="field"><label>Start from</label><span class="cbrow"><span class="cb on" style="border-radius:50%"></span>Copy of Current schedule (13 time slots)</span><span class="cbrow"><span class="cb" style="border-radius:50%"></span>Blank</span></div>
 <div class="actions"><button class="btn">Cancel</button><button class="btn btn-primary"><i class="ti ti-check"></i>Save</button></div></div></div>`})}</div>
 <div class="cap"><i class="ti ti-device-mobile"></i>Phone · full screen</div><div class="scroller">${frame('ph','',{overlay:`<div class="fullscreen touch"><div class="head"><span class="tap"><i class="ti ti-arrow-left"></i></span>Plan a schedule change</div><div class="fbody">
 <div class="field"><label>Name (optional)</label><div class="input">Winter</div></div>
-<div class="field"><label>Starts on</label><div class="input select"><span>Mon, Jan 5, 2027</span><i class="ti ti-calendar"></i></div></div>
+<div class="field"><label>Starts on</label><div class="input select"><span>Mon, Jan 4, 2027</span><i class="ti ti-calendar"></i></div></div>
 <div class="field"><label>Start from</label><span class="cbrow"><span class="cb on" style="border-radius:50%"></span>Copy of Current schedule</span><span class="cbrow"><span class="cb" style="border-radius:50%"></span>Blank</span></div>
 <div style="height:8px"></div><button class="btn btn-primary btn-full"><i class="ti ti-check"></i>Save</button></div></div>`})}</div>`,
 
@@ -502,10 +502,10 @@ function screens(){ return [
 <li>A gray bar says when the planned schedule starts. Edit its time slots exactly like screen 2–3.</li>
 <li><code>⋯</code> next to the dropdown: <b>Change start date</b>, <b>Rename</b>, <b>Delete planned schedule</b> (asks to confirm — this can't be undone).</li>
 <li>On its start date it becomes Current automatically. The old one is kept as history (not editable).</li></ul></div>
-<div class="cap"><i class="ti ti-device-desktop"></i>PC · dropdown open</div><div class="scroller">${frame('pc', head('pc')+vrow('pc',CUR,{sub:'2 changes planned', menu:`<div class="menu" style="top:36px;left:0;width:340px"><div class="it sel">Current schedule · since Sep 2, 2026</div><div class="grp">Planned</div><div class="it hov">Winter · starts Jan 5, 2027</div><div class="it">Summer · starts Jun 21, 2027</div><div class="sep"></div><div class="it"><i class="ti ti-history"></i>Past schedules</div></div>`})+grid(WEEK))}</div>
-<div class="cap"><i class="ti ti-device-desktop"></i>PC · Winter selected, <code>⋯</code> menu open</div><div class="scroller">${frame('pc', head('pc')+vrow('pc',WIN,{planned:1, menu:`<div class="menu" style="top:36px;left:348px;width:220px"><div class="it"><i class="ti ti-calendar"></i>Change start date</div><div class="it"><i class="ti ti-edit"></i>Rename</div><div class="sep"></div><div class="it red hov"><i class="ti ti-trash"></i>Delete planned schedule</div></div>`})+`<div class="infobar"><i class="ti ti-calendar-event"></i><span class="grow">Starts <b>Mon, Jan 5, 2027</b>. Until then, Current schedule is used.</span></div>`+grid(WINTER))}</div>
-<div class="cap"><i class="ti ti-device-tablet"></i>Tablet · delete confirmation</div><div class="scroller">${frame('tab', head('tab')+vrow('tab',WIN,{planned:1})+`<div class="infobar"><i class="ti ti-calendar-event"></i><span class="grow">Starts <b>Jan 5, 2027</b>.</span></div>`+grid(WINTER,{S:1.1}), {overlay:`<div class="overlay"><div class="dialog"><h3>Delete the Winter schedule?</h3><p class="sub">Its 14 time slots are deleted for good. Current schedule keeps running past Jan 5, 2027. This can't be undone.</p><div class="actions"><button class="btn">Cancel</button><button class="btn btn-danger"><i class="ti ti-trash"></i>Delete</button></div></div></div>`})}</div>
-<div class="cap"><i class="ti ti-device-mobile"></i>Phone · Winter selected</div><div class="scroller">${frame('ph', head('ph')+vrow('ph','Winter · starts Jan 5, 2027',{planned:1})+`<div class="infobar"><i class="ti ti-calendar-event"></i><span class="grow">Starts <b>Jan 5, 2027</b>.</span></div>`+dayView(WINTER,'Mon'))}</div>`,
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · dropdown open</div><div class="scroller">${frame('pc', head('pc')+vrow('pc',CUR,{sub:'2 changes planned', menu:`<div class="menu" style="top:36px;left:0;width:340px"><div class="it sel">Current schedule · since Sep 2, 2026</div><div class="grp">Planned</div><div class="it hov">Winter · starts Jan 4, 2027</div><div class="it">Summer · starts Jun 21, 2027</div><div class="sep"></div><div class="it"><i class="ti ti-history"></i>Past schedules</div></div>`})+grid(WEEK))}</div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · Winter selected, <code>⋯</code> menu open</div><div class="scroller">${frame('pc', head('pc')+vrow('pc',WIN,{planned:1, menu:`<div class="menu" style="top:36px;left:348px;width:220px"><div class="it"><i class="ti ti-calendar"></i>Change start date</div><div class="it"><i class="ti ti-edit"></i>Rename</div><div class="sep"></div><div class="it red hov"><i class="ti ti-trash"></i>Delete planned schedule</div></div>`})+`<div class="infobar"><i class="ti ti-calendar-event"></i><span class="grow">Starts <b>Mon, Jan 4, 2027</b>. Until then, Current schedule is used.</span></div>`+grid(WINTER))}</div>
+<div class="cap"><i class="ti ti-device-tablet"></i>Tablet · delete confirmation</div><div class="scroller">${frame('tab', head('tab')+vrow('tab',WIN,{planned:1})+`<div class="infobar"><i class="ti ti-calendar-event"></i><span class="grow">Starts <b>Jan 4, 2027</b>.</span></div>`+grid(WINTER,{S:1.1}), {overlay:`<div class="overlay"><div class="dialog"><h3>Delete the Winter schedule?</h3><p class="sub">Its 14 time slots are deleted for good. Current schedule keeps running past Jan 4, 2027. This can't be undone.</p><div class="actions"><button class="btn">Cancel</button><button class="btn btn-danger"><i class="ti ti-trash"></i>Delete</button></div></div></div>`})}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone · Winter selected</div><div class="scroller">${frame('ph', head('ph')+vrow('ph','Winter · starts Jan 4, 2027',{planned:1})+`<div class="infobar"><i class="ti ti-calendar-event"></i><span class="grow">Starts <b>Jan 4, 2027</b>.</span></div>`+dayView(WINTER,'Mon'))}</div>`,
 
 /* 6 */
 `<h2 id="s6">6. Empty schedule</h2><p class="lead">What a school sees before any classes are added.</p>
