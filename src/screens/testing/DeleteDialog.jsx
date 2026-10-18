@@ -20,11 +20,6 @@ export default function DeleteDialog({ title, body, failed, deleting, onDelete, 
       <p id={bodyId} className="tdialog-sub tdialog-body">
         {body}
       </p>
-      {failed && (
-        <div className="tdialog-note">
-          <Notice>{DELETE_FAILED}</Notice>
-        </div>
-      )}
       <div className="dialog-actions">
         {/* Focus starts on Cancel: the safe choice for a permanent action. */}
         <button type="button" className="btn" data-autofocus onClick={onCancel}>
@@ -43,6 +38,12 @@ export default function DeleteDialog({ title, body, failed, deleting, onDelete, 
           {DELETE}
         </button>
       </div>
+      {/* Under the buttons (v0.81), so Cancel / Delete never move when it appears. */}
+      {failed && (
+        <div className="tdialog-note">
+          <Notice>{DELETE_FAILED}</Notice>
+        </div>
+      )}
     </Dialog>
   );
 }

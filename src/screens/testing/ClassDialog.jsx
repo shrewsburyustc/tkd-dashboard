@@ -95,6 +95,24 @@ export default function ClassDialog({
     </button>
   );
 
+  // The note (unsaved / stale / failed …). Phones: above the Save button; PC / tablet: under
+  // the Cancel / Save row, so the buttons never move when it appears (v0.81).
+  const noteBlock = state.note && (
+    <div className="tdialog-note">
+      <Notice>
+        {isPhone && state.note === 'STALE_DIALOG' ? T.STALE_DIALOG_PHONE : NOTES[state.note]}
+        {/* Phone only (v0.56): the page has no Cancel button, so these notes offer the way
+            out themselves (Save is unavailable after "stale" / "not allowed").
+            Closes without saving, like Cancel. */}
+        {isPhone && PHONE_DISCARD_NOTES.includes(state.note) && (
+          <button type="button" className="note-action" onClick={onCancel}>
+            {T.DISCARD_CHANGES}
+          </button>
+        )}
+      </Notice>
+    </div>
+  );
+
   return (
     <Dialog title={isAdd ? T.ADD_CLASS_TITLE : T.EDIT_CLASS} fullScreen={isPhone} onRequestClose={onRequestClose}>
       <p className="tdialog-sub">{isAdd ? T.addClassSubtitle(school) : T.classAtSchool(record?.name ?? '', school)}</p>
@@ -153,21 +171,7 @@ export default function ClassDialog({
           </div>
         </div>
 
-        {state.note && (
-          <div className="tdialog-note">
-            <Notice>
-              {isPhone && state.note === 'STALE_DIALOG' ? T.STALE_DIALOG_PHONE : NOTES[state.note]}
-              {/* Phone only (v0.56): the page has no Cancel button, so these notes offer the way
-                  out themselves (Save is unavailable after "stale" / "not allowed").
-                  Closes without saving, like Cancel. */}
-              {isPhone && PHONE_DISCARD_NOTES.includes(state.note) && (
-                <button type="button" className="note-action" onClick={onCancel}>
-                  {T.DISCARD_CHANGES}
-                </button>
-              )}
-            </Notice>
-          </div>
-        )}
+        {isPhone && noteBlock}
 
         {isPhone ? (
           <div className="dialog-page-submit">{saveButton}</div>
@@ -179,6 +183,7 @@ export default function ClassDialog({
             {saveButton}
           </div>
         )}
+        {!isPhone && noteBlock}
       </form>
     </Dialog>
   );

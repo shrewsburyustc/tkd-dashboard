@@ -115,7 +115,7 @@ export function ConfirmStep({ idBase, adminEmail, isPhone, message, note = null,
         {error && <Notice id={`${idBase}-own-error`}>{T.OWN_PASSWORD_ERRORS[error]}</Notice>}
       </div>
 
-      {note}
+      {isPhone && note}
 
       {isPhone ? (
         <div className="dialog-page-submit">{continueButton}</div>
@@ -127,6 +127,8 @@ export function ConfirmStep({ idBase, adminEmail, isPhone, message, note = null,
           {continueButton}
         </div>
       )}
+      {/* PC / tablet: under the buttons, so they never move (v0.81) */}
+      {!isPhone && note}
     </form>
   );
 }

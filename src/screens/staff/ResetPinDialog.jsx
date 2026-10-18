@@ -111,6 +111,16 @@ export default function ResetPinDialog({ account, adminEmail, isPhone, onCancel,
     </div>
   );
 
+  // Step 2's note. Phones: above the Reset button; PC / tablet: under the buttons (v0.81).
+  const stepTwoNote =
+    note === 'FAILED' ? (
+      <div className="tdialog-note">
+        <Notice>{T.PIN_FAILED}</Notice>
+      </div>
+    ) : note === 'UNSAVED' ? (
+      unsavedNote
+    ) : null;
+
   return (
     <Dialog title={T.RESET_PIN} fullScreen={isPhone} onRequestClose={requestClose}>
       <WhoLine account={account} />
@@ -199,12 +209,7 @@ export default function ResetPinDialog({ account, adminEmail, isPhone, onCancel,
 
           <p className="sa-warning">{T.pinHandover(account.fullName, account.isShared)}</p>
 
-          {note === 'FAILED' && (
-            <div className="tdialog-note">
-              <Notice>{T.PIN_FAILED}</Notice>
-            </div>
-          )}
-          {note === 'UNSAVED' && unsavedNote}
+          {isPhone && stepTwoNote}
 
           {isPhone ? (
             <div className="dialog-page-submit">{resetButton}</div>
@@ -219,6 +224,7 @@ export default function ResetPinDialog({ account, adminEmail, isPhone, onCancel,
               {resetButton}
             </div>
           )}
+          {!isPhone && stepTwoNote}
         </div>
       )}
     </Dialog>

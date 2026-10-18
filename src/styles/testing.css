@@ -797,6 +797,17 @@ html.is-reordering * {
   }
 }
 
+/* PC / tablet (v0.81): a note comes right AFTER the Cancel / Save row, so the buttons never move
+   when it appears. The pinned row then ends at the note instead of at the box's bottom edge. */
+.tdialog .dialog-actions:has(+ .tdialog-note) {
+  margin-bottom: 0;
+  padding-bottom: var(--space-12);
+}
+
+.tdialog .dialog-actions + .tdialog-note {
+  margin-top: var(--space-4);
+}
+
 /* A message scrolled into view (Dialog.jsx) stops above the pinned Cancel / Save row, not
    behind it */
 .tdialog .notice,

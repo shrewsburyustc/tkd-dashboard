@@ -169,6 +169,22 @@ export default function ResetPasswordDialog({ account, adminEmail, isPhone, onCa
     </button>
   );
 
+  // Step 2's note. Phones: above the Reset button; PC / tablet: under the buttons, so they never
+  // move when it appears (v0.81).
+  const stepTwoNote = note && note !== 'TOO_LONG' && (
+    <div className="tdialog-note">
+      <Notice>
+        {NOTES[note]}
+        {/* Phone only (v0.56): the page has no Cancel button, so the note offers the way out. */}
+        {isPhone && note === 'UNSAVED' && (
+          <button type="button" className="note-action" onClick={onCancel}>
+            {T.DISCARD_CHANGES}
+          </button>
+        )}
+      </Notice>
+    </div>
+  );
+
   return (
     <Dialog title={T.RESET_PASSWORD} fullScreen={isPhone} onRequestClose={requestClose}>
       <WhoLine account={account} />
@@ -246,19 +262,7 @@ export default function ResetPasswordDialog({ account, adminEmail, isPhone, onCa
 
           <p className="sa-warning">{T.passwordWarning(account.fullName, account.isShared)}</p>
 
-          {note && note !== 'TOO_LONG' && (
-            <div className="tdialog-note">
-              <Notice>
-                {NOTES[note]}
-                {/* Phone only (v0.56): the page has no Cancel button, so the note offers the way out. */}
-                {isPhone && note === 'UNSAVED' && (
-                  <button type="button" className="note-action" onClick={onCancel}>
-                    {T.DISCARD_CHANGES}
-                  </button>
-                )}
-              </Notice>
-            </div>
-          )}
+          {isPhone && stepTwoNote}
 
           {isPhone ? (
             <div className="dialog-page-submit">{resetButton}</div>
@@ -273,6 +277,7 @@ export default function ResetPasswordDialog({ account, adminEmail, isPhone, onCa
               {resetButton}
             </div>
           )}
+          {!isPhone && stepTwoNote}
         </form>
       )}
     </Dialog>
