@@ -1,0 +1,8 @@
+# _redirects — address rules Cloudflare Pages applies before serving a file.
+# Why it exists: every family link looks like /register/<code> (one per event), but there is
+# only ONE page, register.html. The line below serves that page for every such address while
+# the address bar keeps the code (status 200 = "rewrite", not a visible redirect); the page
+# then reads the code from the address.
+# It points at /register (not /register.html) on purpose: Pages turns /register.html into
+# /register by itself ("pretty URLs"), and pointing at the .html name can cause a redirect loop.
+/register/*  /register  200
