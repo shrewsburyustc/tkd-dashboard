@@ -1,7 +1,7 @@
 # Finance — status and plan
 
 **Updated:** 2026-10-18 (Finance worktree session, branch `finance`)
-**Rulebook at this update:** v0.203 (Finance rows: v0.193–v0.203) · **Questions:** `TKD-Finance-DailyReport-Questions.html` (this folder), images in `images/`
+**Rulebook at this update:** v0.207 (Finance rows: v0.193–v0.203, v0.207) · **Questions:** `TKD-Finance-DailyReport-Questions.html` (this folder), images in `images/`
 
 > Read `CLAUDE.md` (repo root) first. This file says where Finance stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -56,3 +56,20 @@ Full mockups at PC / tablet / phone → separate design reviewer agent → scree
 | v0.201 | **Q8 (A): `ti-report-money`**, last on the rail, under More on phones. Risk: looks like Forms' clipboard. Total card needs another icon (proposed `ti-sum`). |
 | v0.202 | **Q9 (C): Home reminder** “Today's drawer isn't closed yet” from a set time on days with payments, no amounts; admins see earlier unclosed days. Reminder time is a setting in Finance (Q10). |
 | v0.203 | **Q10 (B): Finance → Settings** (admins only): reminder On / Off + a time or Off per weekday per school; Copy Monday to weekdays. |
+
+## 6. Screen-by-screen pass (mockups D1–D14)
+
+- **D1 approved** 2026-10-18 incl. proposals: checks counted by How many + Total; Expected line shown under each count; Total card icon `ti-sum`; Close the day gray until all three are filled; new icon-map rows as listed.
+- **D2 approved** incl. proposal: a note is needed for any amount short or over (even cents).
+- **D3 approved** incl. proposals: Undo of a close for 10 seconds (then “Ask an admin to reopen the day”); a payment recorded on a closed day marks it Changed after closing.
+- **D4 approved** incl. proposals: staff mis-click undos within 10 seconds are not shown; a payment moved to another date shows on the new day, with “Moved to <date>” struck through on the old day; Added after closing tag.
+- **D5 approved** incl. proposals: no-payment days listed (gray); Back to the day returns where you came from; today's row says “Today · open” until closed; amber line counts unclosed days this month.
+- **D6 approved** incl. proposals: on Both, arrows / calendar / History still work (History adds a School column); Print and Export hidden on Both; staff on Both see the same boxes for today; boxes in switcher order (Worcester, Shrewsbury).
+- **D7 approved** incl. proposals: file name <School>-<from>-to-<to>.csv; From / To are browser date fields with the weekday written under each (as v0.147).
+- **D8 approved** incl. proposals: long days continue on page 2 with the header repeated; corrections print as on screen.
+- **D9 approved** incl. proposals: times in 15-minute steps (Off, 11:00 AM–11:00 PM); saves on change with a 5-second Undo, logged; phones one school at a time with a switch; Copy each school's Monday to Tue–Fri; Off grays the times.
+- **D10 approved** incl. proposals: on Both, one reminder line per school; the admin's earlier-days line counts the last 30 days; whole line is a 44px link.
+- **D11 approved** incl. proposal: no Close the day and no Home reminder on days with no payments (“No payments recorded today. Nothing to close.”).
+- **D12 approved** incl. proposals: clicking a payment row opens a view-only detail (payment facts + history of changes, Open in Testing); no DOB or private details.
+- **D13 approved** incl. proposals: a failed close keeps everything typed, Not saved tag, error inside the box above the button (exception to rule 3.5's banner, this box only), button becomes “Retry close the day”; wording “Couldn’t close the day. Nothing you typed is lost. Check the connection and try again.”
+- **D14 approved.** **All 14 screens approved 2026-10-18 (v0.207).** Next: the rule-5 question, then the build plan + contract.
