@@ -1,7 +1,7 @@
 # Black Belt testing — status
 
 **Updated:** 2026-10-18 (Black Belt worktree session, branch `black-belt`)
-**Rulebook at this update:** v0.213 (Black Belt rows: v0.204, v0.205, v0.209–v0.213; numbers 0.176–0.203 and 0.206–0.208 belong to other branches)
+**Rulebook at this update:** v0.216 (Black Belt rows: v0.204, v0.205, v0.209–v0.213, v0.216; numbers 0.176–0.203 0.206–0.208 and 0.214–0.215 belong to other branches)
 
 > Read `CLAUDE.md` (repo root) first. This file says where Black Belt testing stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -13,7 +13,7 @@
 
 - Research is done (inventory files in `Inventory/`).
 - **The plan is approved** (v0.204): `TKD-BlackBelt-Plan.md`. Two reviewer agents checked it first (§4).
-- **Black Belt is built now**, not queued behind other sections (v0.205; B1 withdrawn). B2 (where it lives) follows rule v0.59: the third row of the Testing chooser, with Star's page layout (v0.60). B3 answered (v0.209): a cycle holds a **list of testing days**, each with the parts graded that day. B4 answered (v0.210): roles same as Star. B5 answered (v0.211): form fields like Star's. B6 answered (v0.212): open form, staff check. B7 answered (v0.213): waiver kept a set number of years. Question B8 (after sending; where the requirements live) is asked.
+- **Black Belt is built now**, not queued behind other sections (v0.205; B1 withdrawn). B2 (where it lives) follows rule v0.59: the third row of the Testing chooser, with Star's page layout (v0.60). B3 answered (v0.209): a cycle holds a **list of testing days**, each with the parts graded that day. B4 answered (v0.210): roles same as Star. B5 answered (v0.211): form fields like Star's. B6 answered (v0.212): open form, staff check. B7 answered (v0.213): waiver kept a set number of years. B8 answered (v0.216): requirements in a compact full-screen panel; confirmation page replaces the email. **Registration questions done.** Question B9 (plans and prices) is asked.
 - Nothing is built and there is no migration. The branch includes main up to `5ccb355` (Star 0006 live).
 
 ## 2. Files
@@ -33,7 +33,7 @@
 ## 3. Next steps
 
 1. Jeffrey checks the urgent live-system items (plan §2): the live Sheet before Oct 24, and the `updateInfo` stopgap.
-2. **Question B8 (after sending; requirements): waiting on Jeffrey.** Then B9, B10, and so on, one at a time; each part is built as soon as its design is approved.
+2. **Question B9 (plans and prices): waiting on Jeffrey.** Then B10, B11, and so on, one at a time; each part is built as soon as its design is approved.
 3. With Jeffrey's OK, send the Finance session a note (plan §7).
 4. **Jeffrey asks the school's insurer** how many years signed waivers must be kept (v0.213 setting).
 5. Make the printable rules sheet for Master Jeong (part A) in parallel.
@@ -79,3 +79,4 @@ All the items below were applied to the plan.
 | v0.211 | **B5 (A): form fields like Star's**: first + last name for the belt, DOB, Dan, Kukkiwon yes/no, payment plan with amounts, one email for results; school from the link; no sex, phone or parent name (sex only if Kukkiwon needs it). |
 | v0.212 | **B6 (A): open form**, registrations count at once, staff check the list; closes at the end of the application date; late families added by staff, or an admin reopens. |
 | v0.213 | **B7 (A): waiver step** (versioned text, I agree, signer's name, signature; parent signs for under-18s on the first testing day); **signed waivers kept a set number of years** (admin setting, number from the insurer), then deleted automatically; admins only open signatures. |
+| v0.216 | **B8 (compact A): requirements panel** from one line on the form (parts → subjects → scoring, from the cycle's rubric); confirmation page with what to pay, testing days, Kukkiwon steps, reference, print; old Worker page can be switched off later. |
