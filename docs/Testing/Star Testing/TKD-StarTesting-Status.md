@@ -1,6 +1,6 @@
 # Star Testing — status and next steps
 
-**Updated:** 2026-10-18 (Star testing worktree session — 0006 built and tested locally, v0.175)
+**Updated:** 2026-10-18 (Star testing worktree session — 0006 live; phase 1 plan and mockups approved, v0.177; next: build phase 1)
 **Rulebook at this update:** v0.177 (Star testing rows: v0.58–v0.61, v0.63, v0.66–v0.130, v0.137–v0.146, v0.148–v0.156, v0.158–v0.177; v0.147 and v0.157 are Color Belt's) · **Inventory of the old prototype:** `TKD-StarTesting-Inventory.md` (this folder) · **Mockups:** `TKD-StarTesting-Rubrics-Mockups.html`, `TKD-StarTesting-Events-Mockups.html`, `TKD-StarTesting-Form-Mockups.html`, `TKD-StarTesting-Candidates-Mockups.html`, `TKD-StarTesting-Grading-Mockups.html`, `TKD-StarTesting-Results-Mockups.html`, `TKD-StarTesting-Private-Mockups.html`, `TKD-StarTesting-Home-Mockups.html` (this folder)
 
 > Read `CLAUDE.md` (repo root) first. This file says where Star testing stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
