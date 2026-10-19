@@ -1,10 +1,17 @@
-// CloseDayBox.jsx — the "Close the day" box of the Daily report (mockups D1, D2, D13; v0.194, v0.207, v0.209).
+// CloseDayBox.jsx — the "Close the day" dialog of the Daily report (mockups D1, D2, D13; v0.194, v0.207,
+// v0.209; moved into a dialog by v0.800).
 // Why it exists: at the end of the day staff count the drawer and type three things — the cash
 // in the drawer, the checks (how many + their total) and the card machine's total. The box
 // shows what the dashboard EXPECTS under each count, and as they type, each count gets a tag:
 // Matches (green, no icon) or Short / Over $X (amber, with the warning icon and words). When
 // anything is short or over a note is required. "Close the day" (the page's one blue button)
 // stays gray until all three counts are filled in.
+//
+// v0.800: the counting is no longer on the report itself. "Close the day…" (an outline button in
+// the date row; phones: the ⋯ sheet) opens this dialog — centered on PC / tablet (12px corners),
+// a full page with a back arrow on phones (Dialog.jsx). Closing it before the day is closed
+// (Cancel, Esc, the back arrow) never asks "Unsaved changes": what was typed is simply kept as a
+// draft for this school and day, and is back when the dialog opens again (DayReport.jsx).
 //
 // The tags here are only a preview worked out in the browser (financeRules.closeResults); the
 // database checks everything again when the day is closed and has the last word.
@@ -13,8 +20,10 @@
 // When more cash went out than came in, the cash line asks "Cash taken out of the drawer"
 // instead (a positive number, sent to the database as a minus amount).
 //
-// If saving fails (D13) the box keeps everything typed, shows a Not saved tag and the error
-// INSIDE the box right above the button, and the button becomes "Retry close the day".
+// If saving fails (D13) the dialog keeps everything typed, shows a Not saved tag and the error
+// INSIDE the dialog right above the button, and the button becomes "Retry close the day".
+// If someone else changed the day meanwhile ('stale'), an amber line says so inside the dialog
+// while the day reloads, so the Expected lines are fresh before closing again.
 //
 // Props:
 //   draft          { cash, count, checks, card, note, tried, failed } — what is typed (strings)
@@ -25,8 +34,11 @@
 //   saving         true while the close is on its way
 //   isPhone        full-width button (the single submit button of a phone form, rule 2.1)
 //   onCloseDay     () => void
+//   onCancel       () => void — Cancel / Esc / back arrow (the draft is kept)
+//   notice         an amber line to show inside the dialog (e.g. "Someone else changed this…"), or null
 import { useId } from 'react';
-import { IconAlertTriangle, IconCashRegister, IconLockCheck, IconRefresh } from '@tabler/icons-react';
+import { IconAlertTriangle, IconLockCheck, IconRefresh } from '@tabler/icons-react';
+import Dialog from '../../components/Dialog.jsx';
 import { closeResults, compareCount, anyDifference } from '../../lib/finance/financeRules.js';
 import { parseCount, parseMoney } from './format.js';
 import * as T from './text.js';
@@ -100,7 +112,7 @@ function checksTag(r) {
 }
 
 // One money field with a "$" in front (the same look as Testing's price fields).
-function MoneyField({ id, value, onChange, invalid, describedBy, className = '' }) {
+function MoneyField({ id, value, onChange, invalid, describedBy, className = '', autoFocus = false }) {
   return (
     <span className={`money fin-money ${className}`.trim()}>
       <span className="money-prefix" aria-hidden="true">
@@ -114,6 +126,7 @@ function MoneyField({ id, value, onChange, invalid, describedBy, className = '' 
         autoComplete="off"
         placeholder="0.00"
         value={value}
+        data-autofocus={autoFocus ? true : undefined}
         aria-invalid={invalid ? 'true' : undefined}
         aria-describedby={describedBy}
         onChange={(event) => onChange(event.target.value)}
@@ -122,7 +135,7 @@ function MoneyField({ id, value, onChange, invalid, describedBy, className = '' 
   );
 }
 
-export default function CloseDayBox({ draft, onDraftChange, expected, totals, refunds, isToday, saving, isPhone, onCloseDay }) {
+export default function CloseDayBox({ draft, onDraftChange, expected, totals, refunds, isToday, saving, isPhone, onCloseDay, onCancel, notice }) {
   const id = useId();
   const check = checkDraft(draft, expected);
   const results = check.results;
@@ -164,18 +177,21 @@ export default function CloseDayBox({ draft, onDraftChange, expected, totals, re
     ) : null;
 
   return (
-    <section className="fin-box" aria-labelledby={`${id}-title`}>
-      <h2 id={`${id}-title`} className="fin-box-title">
-        <IconCashRegister size={18} aria-hidden="true" className="fin-box-icon" />
-        {T.CLOSE_TITLE}
-        {draft.failed && (
-          <span className="ttag ttag--warn">
-            <IconAlertTriangle size={14} aria-hidden="true" />
-            {T.NOT_SAVED}
-          </span>
-        )}
-      </h2>
+    <Dialog title={T.CLOSE_TITLE} size="medium" fullScreen={isPhone} onRequestClose={onCancel}>
+      <div className="fin-close-dialog">
+      {draft.failed && (
+        <span className="ttag ttag--warn fin-close-notsaved">
+          <IconAlertTriangle size={14} aria-hidden="true" />
+          {T.NOT_SAVED}
+        </span>
+      )}
       <p className="fin-hint fin-box-hint">{isToday ? T.CLOSE_HINT : T.CLOSE_HINT_OTHER_DAY}</p>
+      {notice && (
+        <div className="notice" role="alert">
+          <IconAlertTriangle size={16} aria-hidden="true" className="notice-icon" />
+          <span>{notice}</span>
+        </div>
+      )}
 
       {/* Cash */}
       <div className="fin-crow">
@@ -188,6 +204,7 @@ export default function CloseDayBox({ draft, onDraftChange, expected, totals, re
         <div className="fin-crow-field">
           <MoneyField
             id={`${id}-cash`}
+            autoFocus
             value={draft.cash}
             invalid={Boolean(showError('cash'))}
             describedBy={`${id}-cash-exp${showError('cash') ? ` ${id}-cash-err` : ''}`}
@@ -303,10 +320,21 @@ export default function CloseDayBox({ draft, onDraftChange, expected, totals, re
         </p>
       )}
 
-      <div className="fin-boxfoot">
+      <p id={`${id}-foot`} className="fin-hint fin-close-foot">
+        {!ready ? T.FILL_ALL_FIRST : draft.failed ? '' : T.SAVES_WITH_NAME}
+      </p>
+      </div>
+      {/* Cancel keeps the draft; Close the day is the dialog's one blue button. Phones: the back
+          arrow is the way out, and the one submit button is full width (rule 2.1). */}
+      <div className="dialog-actions">
+        {!isPhone && (
+          <button type="button" className="btn" onClick={onCancel}>
+            {T.CANCEL}
+          </button>
+        )}
         <button
           type="button"
-          className={`btn btn-primary fin-close-btn${ready ? '' : ' is-unavailable'}${isPhone ? ' fin-close-btn--phone' : ''}`}
+          className={`btn btn-primary fin-close-btn${ready ? '' : ' is-unavailable'}${isPhone ? ' btn-block' : ''}`}
           aria-disabled={!ready || saving ? 'true' : undefined}
           aria-describedby={`${id}-foot`}
           data-close-day
@@ -317,10 +345,7 @@ export default function CloseDayBox({ draft, onDraftChange, expected, totals, re
           {draft.failed ? <IconRefresh size={16} aria-hidden="true" /> : <IconLockCheck size={16} aria-hidden="true" />}
           {draft.failed ? T.RETRY_CLOSE : T.CLOSE_BUTTON}
         </button>
-        <span id={`${id}-foot`} className="fin-hint">
-          {!ready ? T.FILL_ALL_FIRST : draft.failed ? '' : T.SAVES_WITH_NAME}
-        </span>
       </div>
-    </section>
+    </Dialog>
   );
 }

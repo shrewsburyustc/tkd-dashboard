@@ -8,6 +8,9 @@
 //   admins — any day: ‹ › arrows, a calendar, Today, History, Print, Export…, Reopen day
 // On Both: one summary box per school instead (BothSummary.jsx, D6); no Print or Export there.
 // Phones: the buttons of the date row sit under ⋯ (a sheet from the bottom, D14).
+// Close the day (v0.800): an outline "Close the day…" button in the date row (phones: in the ⋯
+// sheet), only on a day with counted payments that isn't closed, opens the counting dialog
+// (CloseDayBox.jsx). The report shows the Day closed summary once the day is closed.
 //
 // Loading (like the Testing event page, v0.157): a gray skeleton only the first time; the day
 // reloads quietly when the school or the day changes, when the screen unlocks, when the browser
@@ -22,6 +25,7 @@ import {
   IconCalendar,
   IconCalendarEvent,
   IconCash,
+  IconCashRegister,
   IconChevronLeft,
   IconChevronRight,
   IconCreditCard,
@@ -56,12 +60,16 @@ import ExportDialog from './ExportDialog.jsx';
 import PaymentDetailDialog from './PaymentDetailDialog.jsx';
 import PaymentsList, { cardSub, groupAnchorId } from './PaymentsList.jsx';
 import PrintPage from './PrintPage.jsx';
+import { financeState } from './financeState.js';
 import { addDays, dayLong, dayLongNoYear, dayShort, dayShortYear, money } from './format.js';
 import * as T from './text.js';
 
-// What people typed in Close the day, per school and day, kept while the dashboard is open — so
-// switching school or tab, a failed save (D13) or an Undo never loses it.
+// What people typed in Close the day, per school and day, kept in memory while the dashboard is
+// open — so closing the dialog early, switching school or tab, or a failed save (D13) never loses
+// it. A reload starts empty. After a successful close the draft moves to closedDrafts, and the
+// toast's Undo puts it back (so a typo can be fixed and the day closed again).
 const drafts = new Map();
+const closedDrafts = new Map();
 const EMPTY_DRAFT = { cash: '', count: '', checks: '', card: '', note: '', tried: false, failed: false };
 
 // This device's refund layout ('own' | 'in'), re-read when it changes (deviceFinance.js).
@@ -203,6 +211,9 @@ export default function DayReport({
   const [exporting, setExporting] = useState(false);
   const [printing, setPrinting] = useState(null); // { printedAt } while the page prints
   const [menu, setMenu] = useState(null); // the phone ⋯ sheet: { anchor }
+  const [closeOpen, setCloseOpen] = useState(false); // the Close the day dialog
+  const [closeNotice, setCloseNotice] = useState(null); // amber line inside that dialog
+  const closeButtonRef = useRef(null); // "Close the day…" (PC / tablet)
   // The control that opened a dialog or the ⋯ sheet (a payment row, Export…, ⋯): keyboard focus
   // goes back to it when that closes, so keyboard and screen-reader users don't lose their place.
   const openerRef = useRef(null);
@@ -225,8 +236,8 @@ export default function DayReport({
 
   // Tell the App when a dialog is open (the page behind becomes inert).
   useEffect(() => {
-    onModalOpenChange(Boolean(detail || exporting));
-  }, [detail, exporting, onModalOpenChange]);
+    onModalOpenChange(Boolean(detail || exporting || closeOpen));
+  }, [detail, exporting, closeOpen, onModalOpenChange]);
   useEffect(() => () => onModalOpenChange(false), [onModalOpenChange]);
   // The lock screen closes menus and dialogs (nothing typed in them is lost: they hold nothing).
   useEffect(() => {
@@ -234,8 +245,42 @@ export default function DayReport({
       setMenu(null);
       setDetail(null);
       setExporting(false);
+      setCloseOpen(false); // the typed counts stay as a draft
     }
   }, [screenLocked]);
+
+  // ----- Can this day be closed now? (v0.800: only then is "Close the day…" shown) -----
+  const closing = !isBoth && data?.closing && (data.closing.kind ?? 'close') === 'close' ? data.closing : null;
+  const countedSomething = !isBoth && (data?.totals?.count ?? 0) + (data?.refunds?.count ?? 0) > 0;
+  const canCloseNow = Boolean(!isBoth && data && !closing && countedSomething && data.can_close !== false && live.status === 'ready');
+
+  function openClose(opener) {
+    openerRef.current = opener;
+    setCloseNotice(null);
+    clearToast();
+    setCloseOpen(true);
+  }
+  // Cancel / Esc / back arrow: nothing is asked — the typed counts simply stay as the draft.
+  function cancelClose() {
+    setCloseOpen(false);
+    setCloseNotice(null);
+    focusOpener();
+  }
+  // The day can't be closed any more (someone closed it, or its payments were undone): the
+  // dialog goes away by itself; the banner on the page says why.
+  useEffect(() => {
+    if (closeOpen && live.status === 'ready' && !canCloseNow) setCloseOpen(false);
+  }, [closeOpen, canCloseNow, live.status]);
+  // Home's "Close the day" link (v0.800): open the dialog once today's report is here.
+  useEffect(() => {
+    if (!financeState.openClose || live.status !== 'ready' || isBoth) return;
+    financeState.openClose = false;
+    if (canCloseNow && isToday) {
+      // Focus comes back to the button that would have opened it (⋯ on phones).
+      openClose(isPhone ? document.querySelector('.fin-more') : closeButtonRef.current);
+    }
+    // (openClose only sets state; it is safe to leave out of the list)
+  }, [live.status, canCloseNow, isBoth, isToday, isPhone]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ----- Print (D8): draw the page, print, remove it again -----
   useEffect(() => {
@@ -292,13 +337,14 @@ export default function DayReport({
       changeDraft({ tried: true }, forKey);
       // Put the cursor where the problem is: the note, or the first field with an error.
       window.requestAnimationFrame(() => {
-        const target = !check.valid ? document.querySelector('.fin-box [aria-invalid="true"]') : document.querySelector('[data-close-note]');
+        const target = !check.valid ? document.querySelector('.fin-close-dialog [aria-invalid="true"]') : document.querySelector('[data-close-note]');
         target?.focus();
       });
       return;
     }
     setSaving(true);
     setBanner(null);
+    setCloseNotice(null);
     clearToast();
     const answer = await financeCloseDay({
       locationCode: code,
@@ -312,10 +358,19 @@ export default function DayReport({
     });
     setSaving(false);
     if (answer.status === 'ok') {
-      changeDraft({ failed: false, tried: false }, forKey);
+      // The draft is done with; kept aside only for the toast's Undo.
+      closedDrafts.set(forKey, { ...current, failed: false, tried: false });
+      drafts.delete(forKey);
+      setDraftVersion((n) => n + 1);
+      setCloseOpen(false);
+      // The "Close the day…" button is gone now (the day is closed): focus goes to the Day closed
+      // summary instead (or ⋯ on phones).
+      openerRef.current = isPhone ? document.querySelector('.fin-more') : null;
+      if (!isPhone) window.setTimeout(() => document.querySelector('[data-day-closed]')?.focus(), 300);
+      else focusOpener();
       const closingId = answer.closing_id;
       showToast(isToday ? T.DRAWER_CLOSED : T.drawerClosedOn(day), {
-        action: { label: T.UNDO, onAction: () => undoClose(closingId) },
+        action: { label: T.UNDO, onAction: () => undoClose(closingId, forKey) },
       });
       live.reload();
       return;
@@ -330,13 +385,30 @@ export default function DayReport({
       changeDraft({ failed: true }, forKey);
       return;
     }
+    if (answer.status === 'stale') {
+      // Someone changed the day meanwhile: say so inside the dialog and reload, so the Expected
+      // lines are fresh. Everything typed stays.
+      setCloseNotice(T.STALE);
+      live.reload();
+      return;
+    }
+    // Anything else (already closed, nothing to close, not allowed …): the dialog closes and the
+    // page's amber banner explains; the draft is kept.
+    setCloseOpen(false);
+    focusOpener();
     handleProblem(answer, T.CLOSE_FAILED, null);
   }
 
   // The toast's Undo (10 seconds for the person who closed, enforced by the database).
-  async function undoClose(closingId) {
+  async function undoClose(closingId, forKey) {
     const answer = await financeUndoClose({ closingId });
     if (answer.status === 'ok') {
+      // The day is open again: the counts come back as the draft (the button reappears).
+      if (closedDrafts.has(forKey)) {
+        drafts.set(forKey, closedDrafts.get(forKey));
+        closedDrafts.delete(forKey);
+        setDraftVersion((n) => n + 1);
+      }
       showToast(T.CLOSE_UNDONE, { icon: false });
       live.reload();
       return;
@@ -398,6 +470,9 @@ export default function DayReport({
   if (isAdmin) menuItems.push({ key: 'history', label: T.HISTORY, Icon: IconHistory, onSelect: onOpenHistory });
   if (canPrint) menuItems.push({ key: 'print', label: T.PRINT, Icon: IconPrinter, onSelect: () => setPrinting({ printedAt: new Date() }) });
   // (Export from the sheet: focus comes back to the ⋯ button afterwards.)
+  if (canCloseNow) {
+    menuItems.push({ key: 'close', label: T.CLOSE_OPEN_BUTTON, Icon: IconCashRegister, onSelect: () => openClose(menu?.anchor ?? null) });
+  }
   if (isAdmin && !isBoth) menuItems.push({ key: 'export', label: T.EXPORT, Icon: IconDownload, onSelect: () => setExporting(true) });
   if (hasRefunds) {
     menuItems.push({
@@ -458,9 +533,15 @@ export default function DayReport({
       <span className="fin-grow" />
       {/* The right-hand actions stay together: when the row is too narrow (tablet) they move to
           the next line as one group, still on the right — never one button alone. */}
-      {!isPhone && (hasRefunds || canPrint || (isAdmin && !isBoth)) && (
+      {!isPhone && (hasRefunds || canPrint || canCloseNow || (isAdmin && !isBoth)) && (
         <span className="fin-dayrow-actions">
           {hasRefunds && <RefundSwitch layout={layout} onChange={setLayout} />}
+          {canCloseNow && (
+            <button ref={closeButtonRef} type="button" className="btn" data-open-close onClick={(event) => openClose(event.currentTarget)}>
+              <IconCashRegister size={16} aria-hidden="true" />
+              {T.CLOSE_OPEN_BUTTON}
+            </button>
+          )}
           {canPrint && (
             <button type="button" className="btn" onClick={() => setPrinting({ printedAt: new Date() })}>
               <IconPrinter size={16} aria-hidden="true" />
@@ -517,8 +598,6 @@ export default function DayReport({
     body = <BothSummary data={data} onOpenSchool={(name) => onLocationChange(name)} />;
   } else {
     const items = data.items ?? [];
-    const closing = data.closing && (data.closing.kind ?? 'close') === 'close' ? data.closing : null;
-    const countedSomething = (data.totals?.count ?? 0) + (data.refunds?.count ?? 0) > 0;
     const groupsShown = new Set(groupItems(items, layout).map((g) => g.key));
     let box = null;
     if (closing) {
@@ -530,20 +609,6 @@ export default function DayReport({
           <p className="fin-empty-line">{isToday ? T.NO_PAYMENTS_TODAY : T.NO_PAYMENTS_DAY}</p>
           <p className="fin-hint">{T.NOTHING_TO_CLOSE}</p>
         </div>
-      );
-    } else if (data.can_close !== false) {
-      box = (
-        <CloseDayBox
-          draft={draft}
-          onDraftChange={(patch) => changeDraft(patch)}
-          expected={expectedValues(data.totals, data.refunds)}
-          totals={data.totals}
-          refunds={data.refunds}
-          isToday={isToday}
-          saving={saving}
-          isPhone={isPhone}
-          onCloseDay={closeDay}
-        />
       );
     }
     body = (
@@ -613,6 +678,21 @@ export default function DayReport({
             focusOpener();
             showToast(T.EXPORT_DONE, { icon: true });
           }}
+        />
+      )}
+      {closeOpen && data && !isBoth && (
+        <CloseDayBox
+          draft={draft}
+          onDraftChange={(patch) => changeDraft(patch)}
+          expected={expectedValues(data.totals, data.refunds)}
+          totals={data.totals}
+          refunds={data.refunds}
+          isToday={isToday}
+          saving={saving}
+          isPhone={isPhone}
+          notice={closeNotice}
+          onCloseDay={closeDay}
+          onCancel={cancelClose}
         />
       )}
       {printing && data && !isBoth && (

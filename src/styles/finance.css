@@ -383,6 +383,27 @@
   margin-top: var(--space-12);
 }
 
+/* The Close the day dialog (v0.800) */
+.fin-close-dialog .fin-close-notsaved {
+  margin-bottom: var(--space-8);
+}
+
+.fin-close-dialog .notice {
+  margin: var(--space-4) 0 var(--space-8);
+}
+
+.fin-close-foot {
+  margin-top: var(--space-12);
+}
+
+[data-day-closed]:focus {
+  outline: none;
+}
+
+[data-day-closed]:focus-visible {
+  outline: 2px solid var(--color-blue);
+}
+
 /* Close the day stays gray until all three counts are filled in (v0.207) */
 .fin-close-btn.is-unavailable {
   border-color: var(--color-border-strong);

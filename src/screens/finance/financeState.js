@@ -8,11 +8,15 @@
 export const financeState = {
   day: null,
   month: null,
+  openClose: false,
 };
 
 // Home → "Close the day": show today. Home → "Open History": show the month of the first unclosed day.
-export function showToday() {
+//   openClose  true = open the Close the day dialog as soon as today's report has loaded (v0.800:
+//              Home's "Close the day" link opens the report AND the dialog)
+export function showToday({ openClose = false } = {}) {
   financeState.day = null;
+  financeState.openClose = openClose;
 }
 
 export function showMonthOf(day) {

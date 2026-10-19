@@ -89,7 +89,9 @@ export function changedLine(closing, items) {
 export default function ClosedBox({ closing, items, isAdmin, reopening, onReopen }) {
   const tag = closedTag(closing);
   return (
-    <section className="fin-box" aria-label={T.DAY_CLOSED}>
+    // tabIndex -1 + data-day-closed: focus lands here right after closing the day (the button that
+    // opened the dialog is gone by then).
+    <section className="fin-box" aria-label={T.DAY_CLOSED} tabIndex={-1} data-day-closed>
       <h2 className="fin-box-title">
         <IconLockCheck size={18} aria-hidden="true" className="fin-box-icon" />
         {T.DAY_CLOSED}

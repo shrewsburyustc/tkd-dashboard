@@ -702,7 +702,7 @@ export default function App() {
   // unclosed day.
   const openFinanceReport = useCallback(
     (school) => {
-      showToday();
+      showToday({ openClose: true }); // v0.800: the report AND the Close the day dialog
       if (school && school !== location) changeLocation(school);
       navigate('finance', null, { tab: 'report' });
     },

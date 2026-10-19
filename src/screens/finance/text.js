@@ -51,6 +51,7 @@ export const jumpToGroup = (label) => `Show the ${label} payments`; // NOT IN MO
 
 // ----- Close the day box (D1, D2, D3, D13, #q12) -----
 export const CLOSE_TITLE = 'Close the day';
+export const CLOSE_OPEN_BUTTON = 'Close the day…'; // the outline button that opens the dialog (v0.800)
 export const CLOSE_HINT = 'Count the drawer and type what you find. The dashboard compares it with today’s payments.';
 // An earlier day an admin closes: "today’s" would be wrong. NOT IN MOCKUPS — for CP1
 export const CLOSE_HINT_OTHER_DAY = 'Count the drawer and type what you find. The dashboard compares it with this day’s payments.';
