@@ -17,6 +17,7 @@ School management dashboard for Jae H. Jeong's U.S. Taekwondo Center (Worcester 
 | `Dashboard Docs/TKD-Dashboard-Mockups.html` | Style reference only (colors, sizes, rail hover). Made before v0.9 — section names and layout are placeholders. |
 | `Testing/Color Belt Testing/` | Color Belt: **status file (`TKD-ColorBelt-Status.md` — start here)**, inventory of the old system, approved phase 1 mockups (Classes and ranks) and belt mockups, phase 1 build plan. |
 | `Testing/Star Testing/` | Star testing: inventory of the old prototype; `Old prototype/` holds the never-used prototype and its notes (feature reference only). |
+| `Testing/Black Belt Testing/` | Black Belt (Dan) testing: **status file (`TKD-BlackBelt-Status.md` — start here)**, the approved plan (`TKD-BlackBelt-Plan.md`), and `Inventory/` (the old Apps Script, spreadsheet and public registration page, read-only research). |
 | `Dashboard Docs/Build contracts/` | Build contracts for Home (`BUILD-CONTRACT.md`), migration 0002 (`CONTRACT-0002.md`) and Color Belt phase 1 / migration 0003 (`CONTRACT-0003.md`). |
 | `README.md` | This file. |
 
