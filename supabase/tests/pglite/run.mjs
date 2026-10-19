@@ -58,6 +58,29 @@
 //         d. 0005 applied a SECOND time: nothing changed or lost, the
 //            fingerprints (0005_fingerprints.sql) identical, tests pass
 //            (0005's and 0003's)
+//   12. 0006 (Star testing) on the main database, after step 11
+//       (contract CONTRACT-0006.md section 9.3):
+//         a. 0006_fingerprints.sql must not contain the words the Supabase
+//            connection refuses (so Claude can run it on production)
+//         b. the 0003 / 0004 / 0005 fingerprints are taken, 0006 is
+//            applied, and they must be IDENTICAL afterwards (0006 changed
+//            none of their objects)
+//         c. 0006_tests.sql, then every earlier test file again - all must
+//            still pass unchanged
+//         d. "live" checks as the Star form's login: SET ROLE
+//            star_registrar, then every table read, the counter, a write,
+//            staff functions, helpers, Color Belt's public functions and
+//            CREATE must be refused, and star_public_event must work; and
+//            testing_registrar can't run Star's public functions
+//         e. a Star TEST event seeded here: two family registrations made
+//            AS star_registrar, one desk candidate with grades and a
+//            payment; then 0006_tests.sql and 0005_tests.sql again
+//         f. 0006 applied a SECOND time: nothing changed or lost, the
+//            fingerprints (0006_fingerprints.sql) identical, tests pass
+//         g. on the upgrade database: 0006 on top (fingerprints equal a
+//            fresh install, tests pass); then one seeded subject renamed
+//            and one removed, 0006 applied again: the seed never brings
+//            them back or adds a duplicate
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -338,6 +361,10 @@ async function main() {
   console.log('\nMigration 0005 (events, family form, payments):');
   const after5 = await step11(db, upgradeDb);
 
+  // 12. Star testing (0006)
+  console.log('\nMigration 0006 (Star testing):');
+  const after6 = after5 ? await step12(db, upgradeDb) : null;
+
   console.log('\nFunction fingerprints (name  arguments  body_md5  security_definer  settings  owner  execute_rights):');
   for (const line of after) console.log('  ' + line);
   console.log('\n0004 fingerprints (kind  item  detail):');
@@ -345,6 +372,10 @@ async function main() {
   if (after5) {
     console.log('\n0005 fingerprints (kind  item  detail):');
     for (const line of after5) console.log('  ' + line);
+  }
+  if (after6) {
+    console.log('\n0006 fingerprints (kind  item  detail):');
+    for (const line of after6) console.log('  ' + line);
   }
 
   return finish();
@@ -525,6 +556,258 @@ async function step11(db, upgradeDb) {
     }
   }
   return after5;
+}
+
+// ---------------------------------------------------------------------
+// Step 12: Star testing (0006)
+// ---------------------------------------------------------------------
+
+// The Star form's confirmation wording version (contract OPEN-3).
+const STAR_ACK_VERSION = 'st-2026-10-18';
+
+// The 0006 tables (16) - used for the "re-running changed nothing" md5.
+const STAR_TABLES = [
+  'star_dan_settings', 'star_categories', 'star_grade_values', 'star_assistant_table', 'star_events',
+  'star_event_dans', 'star_event_categories', 'star_event_grades', 'star_event_assistant', 'star_candidates',
+  'star_candidate_signatures', 'star_makeup_subjects', 'star_payments', 'star_grades', 'star_result_emails',
+  'star_downloads'];
+
+// Everything 0006 stores, plus the history's row count, as one md5.
+const snapshot6Sql = `select md5(${STAR_TABLES.map((t) =>
+  `coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.${t} x), '')`).join(' || ')}
+  || (select count(*) from public.change_log)::text)`;
+
+// 12d. Acting AS the Star family form's login. Each statement must be
+// refused (permission denied), then star_public_event must work. Last,
+// Color Belt's login can't run Star's public functions.
+async function starRegistrarLiveChecks(db) {
+  const refused = [
+    ...STAR_TABLES.map((t) => [`read ${t}`, `select 1 from public.${t} limit 1`]),
+    ['read star_roster', 'select 1 from public.star_roster limit 1'],
+    ['read testing_public_attempts', 'select 1 from public.testing_public_attempts limit 1'],
+    ['read change_log', 'select 1 from public.change_log limit 1'],
+    ['read staff', 'select 1 from public.staff limit 1'],
+    ['read locations', 'select 1 from public.locations limit 1'],
+    ['read auth.users', 'select 1 from auth.users limit 1'],
+    ['use the reference counter', "select nextval('public.star_candidate_ref_seq')"],
+    ['write star_candidates', 'update public.star_candidates set first_name = first_name'],
+    ['write star_payments', "insert into public.star_payments (candidate_id, kind, amount_cents, method, paid_on, recorded_by_name) values (gen_random_uuid(), 'payment', 1, 'cash', current_date, 'x')"],
+    ['call a staff function', 'select public.star_record_payment(gen_random_uuid(), 1, \'cash\', 100, current_date)'],
+    ['call a staff read function', 'select public.star_candidate_detail(gen_random_uuid())'],
+    ['call has_data_access', 'select public.has_data_access()'],
+    ['call a helper', 'select public.star_purge_old_signatures()'],
+    ['call the register core directly', `select public.star_public_register_core('abcdefgh', 'k', gen_random_uuid(), 'a', 'b', current_date - 4000, 'a@b.co', 1, 0, 'cash', true, '${TEST_SIGNATURE}', '${STAR_ACK_VERSION}')`],
+    ['call testing_public_event', "select public.testing_public_event('abcdefgh')"],
+    ['call testing_public_register', `select public.testing_public_register('abcdefgh', 'k', gen_random_uuid(), 'a', 'b', gen_random_uuid(), 'cash', true, '${TEST_SIGNATURE}', '${ACK_VERSION}')`],
+    ['create a table in public', 'create table public.zz_star_registrar_probe (x integer)'],
+    ['create a schema', 'create schema zz_star_registrar_probe'],
+  ];
+  let allRefused = true;
+  const leaks = [];
+  for (const [label, sql] of refused) {
+    try {
+      await db.exec('set role star_registrar;');
+      await db.exec(sql);
+      allRefused = false;
+      leaks.push(label);
+    } catch (error) {
+      if (!/permission denied|must be a member|not allowed/i.test(error.message)) {
+        allRefused = false;
+        leaks.push(`${label} (unexpected error: ${error.message})`);
+      }
+    } finally {
+      await db.exec('reset role;').catch(() => {});
+    }
+  }
+  record('[star registrar] every table, the counter, writes, staff functions, helpers, Color Belt\'s form and CREATE refused',
+    allRefused, leaks.join('; '));
+  try {
+    await db.exec('set role star_registrar;');
+    const r = await db.query("select public.star_public_event('zzzzzzzz') as r");
+    record('[star registrar] can call star_public_event', r.rows[0].r?.status === 'not_found', JSON.stringify(r.rows[0].r));
+  } catch (error) {
+    record('[star registrar] can call star_public_event', false, error.message);
+  } finally {
+    await db.exec('reset role;').catch(() => {});
+  }
+  const crossed = [];
+  for (const sql of ["select public.star_public_event('zzzzzzzz')",
+    `select public.star_public_register('zzzzzzzz', 'k', gen_random_uuid(), 'a', 'b', current_date - 4000, 'a@b.co', 1, 0, 'cash', true, '${TEST_SIGNATURE}', '${STAR_ACK_VERSION}')`]) {
+    try {
+      await db.exec('set role testing_registrar;');
+      await db.exec(sql);
+      crossed.push(sql.slice(7, 40));
+    } catch (error) {
+      if (!/permission denied/i.test(error.message)) crossed.push(`${sql.slice(7, 40)} (${error.message})`);
+    } finally {
+      await db.exec('reset role;').catch(() => {});
+    }
+  }
+  record('[star registrar] testing_registrar can\'t run Star\'s public functions', crossed.length === 0, crossed.join('; '));
+}
+
+// 12e. The seeded Star TEST event: written as the SQL Editor would
+// (postgres, labelled; the copy taken with the migration's own helper),
+// then two families register AS star_registrar, and one desk candidate
+// gets grades and a payment.
+async function seedStarTestEvent(db) {
+  const ok = await run(db, '[star event] seed a Star test event (both schools, open)', `
+    begin;
+    select set_config('request.jwt.claims', '', true);
+    select set_config('tkd.actor_label', 'PGlite test event', true);
+    select set_config('tkd.action', 'pglite_seed', true);
+    select set_config('tkd.batch_id', gen_random_uuid()::text, true);
+    insert into public.star_events (name, testing_date, start_time, where_code, registration_open, first_opened_at,
+                                    public_code_worcester, public_code_shrewsbury, note, created_by_name, updated_by_name)
+    values ('PGlite Star Testing', public.testing_today() + 30, '10:00', 'worcester', true, now(),
+            '${STAR_CODE_W}', '${STAR_CODE_S}', 'Arrive 15 minutes early.', '', '');
+    select public.star_copy_template_into_event(e.id) from public.star_events e where e.public_code_worcester = '${STAR_CODE_W}';
+    select set_config('tkd.actor_label', '', true);
+    select set_config('tkd.action', '', true);
+    select set_config('tkd.batch_id', '', true);
+    commit;`);
+  if (!ok) return false;
+  let registered = 0;
+  for (const [code, first, last] of [[STAR_CODE_W, 'Pat', 'Lee'], [STAR_CODE_S, 'Kim', 'Ray']]) {
+    try {
+      await db.exec('set role star_registrar;');
+      const r = await db.query(
+        `select public.star_public_register($1, $2, gen_random_uuid(), $3, $4, current_date - 4000, $5, 1, 0, 'cash', true, $6, $7) as r`,
+        [code, 'pglite-star-client-key', first, last, `${first.toLowerCase()}@example.com`, TEST_SIGNATURE, STAR_ACK_VERSION]);
+      if (r.rows[0].r?.status === 'ok') registered += 1;
+      else record(`[star event] register ${first} ${last} as star_registrar`, false, JSON.stringify(r.rows[0].r));
+    } catch (error) {
+      record(`[star event] register ${first} ${last} as star_registrar`, false, error.message);
+    } finally {
+      await db.exec('reset role;').catch(() => {});
+    }
+  }
+  record('[star event] two family registrations made AS star_registrar', registered === 2, `${registered} ok`);
+  await run(db, '[star event] a desk candidate with grades and a payment', `
+    begin;
+    select set_config('tkd.actor_label', 'PGlite test event', true);
+    select set_config('tkd.action', 'pglite_seed', true);
+    insert into public.star_candidates (event_id, first_name, last_name, date_of_birth, email_for_results, location_code,
+                                        dan, stars_from, paying_by, source, assistant_classes, created_by_name, updated_by_name)
+    select e.id, 'Sam', 'Ortiz', null, 'sam@example.com', 'shrewsbury', 1, 0, 'card', 'desk', 18, '', ''
+      from public.star_events e where e.public_code_worcester = '${STAR_CODE_W}';
+    insert into public.star_grades (candidate_id, event_category_id, grade, created_by_name, updated_by_name)
+    select c.id, k.id, 'A', '', ''
+      from public.star_candidates c
+      join public.star_event_categories k on k.event_id = c.event_id and k.dan = c.dan and not k.from_class_count
+     where c.first_name = 'Sam' and c.last_name = 'Ortiz';
+    insert into public.star_payments (candidate_id, kind, amount_cents, method, paid_on, recorded_by_name)
+    select c.id, 'payment', 14000, 'card', public.testing_today(), 'PGlite test event'
+      from public.star_candidates c where c.first_name = 'Sam' and c.last_name = 'Ortiz';
+    select set_config('tkd.actor_label', '', true);
+    select set_config('tkd.action', '', true);
+    commit;`);
+  const counts = await db.query(`select (select count(*)::int from public.star_candidates) as candidates,
+      (select count(*)::int from public.star_candidate_signatures where signature is not null) as signatures,
+      (select count(*)::int from public.star_grades) as grades,
+      (select count(*)::int from public.star_payments) as payments,
+      (select count(*)::int from public.change_log where coalesce(before::text, '') || coalesce(after::text, '') like '%data:image%') as pictures`);
+  const c = counts.rows[0];
+  record('[star event] 3 candidates, 2 signatures, 10 grades, 1 payment, no picture in change_log',
+    c.candidates === 3 && c.signatures === 2 && c.grades === 10 && c.payments === 1 && c.pictures === 0, JSON.stringify(c));
+  return true;
+}
+
+// The 0003 + 0004 + 0005 fingerprints together (12b: 0006 must not change them).
+async function earlierFingerprints(db) {
+  return [
+    ...(await fingerprints(db, '0003_fingerprints.sql')),
+    ...(await fingerprints(db, '0004_fingerprints.sql')),
+    ...(await fingerprints(db, '0005_fingerprints.sql')),
+  ];
+}
+
+// Every test file, in the order run.mjs uses (12c).
+async function allTestFiles(db, label) {
+  await runTestFile(db, `0006_tests.sql (${label})`, '0006_tests.sql', 'ALL 0006 TESTS PASSED');
+  await runTestFile(db, `verify_pin_tests.sql (${label})`, 'verify_pin_tests.sql', 'ALL PIN TESTS PASSED');
+  await runTestFile(db, `0002_tests.sql (${label})`, '0002_tests.sql', 'ALL 0002 TESTS PASSED');
+  await runTestFile(db, `0003_tests.sql (${label})`, '0003_tests.sql', 'ALL 0003 TESTS PASSED');
+  await runTestFile(db, `0004_tests.sql (${label})`, '0004_tests.sql', 'ALL 0004 TESTS PASSED');
+  await runTestFile(db, `0005_tests.sql (${label})`, '0005_tests.sql', 'ALL 0005 TESTS PASSED');
+}
+
+// Two link codes for the seeded Star event (8 characters from the
+// public-code alphabet, different from 0005's test code).
+const STAR_CODE_W = 'pgst2345';
+const STAR_CODE_S = 'pgst6789';
+
+// Step 12 on the main database (and 0006 on top of the upgrade database).
+// Returns 0006's fingerprints (or null if 0006 could not be applied).
+async function step12(db, upgradeDb) {
+  // 12a. the fingerprints file must stay runnable through the connector
+  const printsText = read('tests', '0006_fingerprints.sql');
+  record('0006_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)', !/delete|drop/i.test(printsText));
+
+  // 12b. apply 0006; the earlier migrations' fingerprints don't move
+  const earlierBefore = await earlierFingerprints(db);
+  if (!(await run(db, 'apply 0006_star_testing.sql', read('migrations', '0006_star_testing.sql')))) return null;
+  const earlierAfter = await earlierFingerprints(db);
+  record('0003 / 0004 / 0005 fingerprints identical before/after 0006',
+    JSON.stringify(earlierBefore) === JSON.stringify(earlierAfter), `${earlierAfter.length} rows`);
+
+  // 12c. every test file
+  await allTestFiles(db, 'after 0006');
+
+  // 12d. live checks as the Star form's login
+  await starRegistrarLiveChecks(db);
+
+  // 12e. a seeded Star event, then the 0006 and 0005 tests again
+  if (await seedStarTestEvent(db)) {
+    await runTestFile(db, '0006_tests.sql (with the Star test event)', '0006_tests.sql', 'ALL 0006 TESTS PASSED');
+    await runTestFile(db, '0005_tests.sql (with the Star test event)', '0005_tests.sql', 'ALL 0005 TESTS PASSED');
+  }
+
+  // 12f. re-run safety
+  const before6 = await fingerprints(db, '0006_fingerprints.sql');
+  const data6Before = await one(db, snapshot6Sql);
+  await run(db, 'apply 0006 a SECOND time (re-run safety)', read('migrations', '0006_star_testing.sql'));
+  const data6After = await one(db, snapshot6Sql);
+  record('0006 re-run kept every row unchanged (16 Star tables, change_log)', data6Before === data6After);
+  const after6 = await fingerprints(db, '0006_fingerprints.sql');
+  record('0006 fingerprints identical before/after re-run', JSON.stringify(before6) === JSON.stringify(after6), `${after6.length} rows`);
+  record('0003 / 0004 / 0005 fingerprints still identical after the 0006 re-run',
+    JSON.stringify(earlierBefore) === JSON.stringify(await earlierFingerprints(db)));
+  await runTestFile(db, '0006_tests.sql (after re-run)', '0006_tests.sql', 'ALL 0006 TESTS PASSED');
+  await runTestFile(db, '0005_tests.sql (after 0006 re-run)', '0005_tests.sql', 'ALL 0005 TESTS PASSED');
+  await starRegistrarLiveChecks(db);
+
+  // 12g. the upgrade database: 0006 on top, then the seed's "never
+  // overwrite" rule with a renamed and a removed seeded subject
+  if (upgradeDb) {
+    if (await run(upgradeDb, '[upgrade] apply 0006 on top', read('migrations', '0006_star_testing.sql'))) {
+      const up6 = await fingerprints(upgradeDb, '0006_fingerprints.sql');
+      record('[upgrade] 0006 fingerprints identical to a fresh install', JSON.stringify(up6) === JSON.stringify(after6), `${up6.length} rows`);
+      await runTestFile(upgradeDb, '[upgrade] 0006_tests.sql', '0006_tests.sql', 'ALL 0006 TESTS PASSED');
+      await runTestFile(upgradeDb, '[upgrade] 0005_tests.sql (after 0006)', '0005_tests.sql', 'ALL 0005 TESTS PASSED');
+      await runTestFile(upgradeDb, '[upgrade] 0003_tests.sql (after 0006)', '0003_tests.sql', 'ALL 0003 TESTS PASSED');
+      const changed = await run(upgradeDb, '[upgrade] rename one seeded subject and remove another (as an admin would)', `
+        begin;
+        update public.star_categories set name = 'Knowledge (renamed)' where dan = 1 and name = 'Knowledge';
+        delete from public.star_categories where dan = 2 and name = 'Breaking';
+        commit;`);
+      if (changed) {
+        const seedState = `select (select count(*)::int from public.star_categories) as n,
+            (select count(*)::int from public.star_categories where name = 'Knowledge') as knowledge1,
+            (select count(*)::int from public.star_categories where dan = 2 and name = 'Breaking') as breaking2,
+            (select count(*)::int from public.change_log where action = 'star_seed') as seed_rows`;
+        const before = (await upgradeDb.query(seedState)).rows[0];
+        await run(upgradeDb, '[upgrade] apply 0006 again after the subject changes', read('migrations', '0006_star_testing.sql'));
+        const afterRun = (await upgradeDb.query(seedState)).rows[0];
+        record('[upgrade] the seed never re-adds a renamed or removed subject, nor duplicates one',
+          JSON.stringify(before) === JSON.stringify(afterRun) && afterRun.n === 33 && afterRun.knowledge1 === 2
+            && afterRun.breaking2 === 0 && afterRun.seed_rows === 45,
+          `before ${JSON.stringify(before)}, after ${JSON.stringify(afterRun)}`);
+        await runTestFile(upgradeDb, '[upgrade] 0006_tests.sql (after the second apply)', '0006_tests.sql', 'ALL 0006 TESTS PASSED');
+      }
+    }
+  }
+  return after6;
 }
 
 function finish() {

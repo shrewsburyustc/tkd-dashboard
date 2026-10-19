@@ -758,6 +758,214 @@ commit;
 
 ---
 
+## 13. Migration 0006: Star testing (rubrics, events, family form, grading, results)
+
+**What it does** (`supabase/migrations/0006_star_testing.sql`, contract `docs/Dashboard Docs/Build contracts/CONTRACT-0006.md`):
+- **Rubrics and prices** (the template every new event copies): each Dan's pass mark, highest star and three fees (`star_dan_settings`), its subjects and credits (`star_categories`, with Assistant Instructor worked out from the class count), the 7 grade values (`star_grade_values`) and the Assistant Instructor table (`star_assistant_table`). Seeded with today's values (1st/2nd/3rd Dan, 70 credits each, pass mark 245, A+ = 4.5 … D = 0.0); the seed never overwrites what an admin changed.
+- **Events** (`star_events`): one testing day for both schools, the Open / Closed switch, an automatic closing date, and **two** family links (one per school; the link sets the candidate's school). Each event takes its own **copy** of the rubrics when it is created; later rubric changes never change it.
+- **Candidates** (`star_candidates`), the family form's **signatures** (`star_candidate_signatures` — nobody in the app can read this table), make-up subjects, **append-only payments and refunds** (`star_payments`; the total can never go below zero), **grades**, "Mark as sent" (`star_result_emails`) and the results-CSV download log (`star_downloads`).
+- The **result** (passed / make-up / not finished …) is always worked out from the grades by one database rule, never stored.
+- **Date of birth and the results email** are never readable through the app's normal rights — only through the one-candidate detail and the admin CSV. Both are in the history in full (decided v0.169).
+- A new restricted login **`star_registrar`** for the Star family form: exactly two functions (`star_public_event`, `star_public_register`), no table, can't create anything, the same settings as `testing_registrar`. The two logins can't run each other's functions.
+- **37 staff functions** (the only way to write), the roster view `star_roster`, and the same security rules as 0003/0005: RLS with `has_data_access()`, column rights only, nothing for `anon` or `service_role`, every change in `change_log`.
+- 0006 changes **nothing** that 0001–0005 made.
+- **Known and accepted:** `star_registrar`, like `testing_registrar`, can create *temporary* tables (PostgreSQL gives every role the TEMP right on the database by default; it is not revoked). They live only in its own session's private temp schema and vanish with it; every Star function uses full `public.` names with `search_path = ''`, so nothing ever looks there.
+
+**Nothing secret goes into chat, git, `.env.local` or a screenshot** (handoff §6). Each step below needs Jeffrey's OK.
+
+### 13a. Before you apply 0006
+
+1. Jeffrey's OK for this paste. The PGlite run passed (`cd supabase/tests/pglite && node run.mjs` → `… passed, 0 failed.`, exit code 0) and the security review is done.
+2. Claude checks read-only (through the connection) that **no `star_` object exists yet**: no table, view, sequence or function whose name starts with `star_`, and no role `star_registrar`.
+
+### 13b. Apply 0006 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0006_star_testing.sql`.
+2. **SQL Editor → New query**, paste, **Run**.
+3. Supabase will warn about **destructive operations**. That's expected: the words appear inside rules (`on delete cascade`), inside functions that run later (an admin removing an event, a candidate or a subject; old rate-limit rows being cleaned up) and in `… if exists` lines that make re-running safe. **Nothing is removed now.** Confirm.
+4. "Success." It's one transaction: on any error nothing is kept. Copy the error to Claude. (A few small result grids may show — the seed sets its "who wrote this" label with `select set_config(…)`. That's fine.)
+
+**Running it again is safe** (the seed never overwrites, and the role's attributes and password are never touched).
+
+### 13c. Read-only checks (Claude runs these through the connection)
+
+1. `select version()` (PostgreSQL 17) and the list of new tables (16 `star_*` tables, the view `star_roster`, the sequence `star_candidate_ref_seq`).
+2. **Fingerprints:** `supabase/tests/0006_fingerprints.sql`. Every line must match what `supabase/tests/pglite/run.mjs` printed for the tested copy (71 functions, the `star_registrar` row, the view, 18 table rows, 52 triggers). **One expected difference:** on Supabase the role row shows `members=postgres` (PostgreSQL 16+ makes the role that created a login an administrator of it; that gives the registrar nothing). In PGlite it's empty. The file is a single read-only SELECT and contains neither of the words the connection refuses (run.mjs checks that).
+3. `0005_fingerprints.sql`, `0004_fingerprints.sql`, `0003_fingerprints.sql`: **unchanged** from their production records (0006 touches none of their objects).
+4. **Security advisor:** expected notices — "RLS enabled, no policy" on `star_candidate_signatures` and `star_downloads` (INFO; nobody in the app may read them) and "security definer function executable by authenticated" for the 37 staff functions (each checks access and role itself). Anything else about a `star_` object is a real problem.
+
+### 13d. Run the tests (you, in the SQL Editor)
+
+1. Open `supabase/tests/0006_tests.sql`, replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>` (**Authentication → Users**), paste the whole file, **Run**. Supabase may warn about destructive operations (the test sets the rubrics to known values, removes its own test rows and checks some removals are refused). Everything is rolled back. Confirm.
+2. Expected: one row, **ALL 0006 TESTS PASSED**. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved. Run `rollback;` once on its own, then tell Claude.
+3. Then run `0005_tests.sql` again → **ALL 0005 TESTS PASSED** (and, if you like, `0003_tests.sql`, `0004_tests.sql`, `0002_tests.sql`, `verify_pin_tests.sql` — 0006 must not have broken them).
+4. Put the two placeholders back afterwards (don't save the file with the UIDs in it).
+5. The test makes its own `zz test …` events and candidates, so it works before **and** after real Star events exist.
+
+### 13e. Set the `star_registrar` password (you, on your PC + SQL Editor)
+
+Same method as 12d, with its **own** script and its **own** password — never the Color Belt one.
+
+0. **Clipboard history off** first (12a step 0): Windows **Settings → System → Clipboard** → Clipboard history off, Sync across your devices off.
+1. Make a file **outside the repo**, e.g. `C:\Users\jberg\Documents\make-scram-star.mjs`, with exactly this (the role name `star_registrar` is written in; there is no password in it — it makes a new random one each time):
+   ```js
+   // Makes a random password for star_registrar and its SCRAM-SHA-256 verifier.
+   // The password goes to the clipboard (never shown); only the verifier is printed.
+   import { randomBytes, pbkdf2Sync, createHmac, createHash } from 'node:crypto';
+   import { execSync } from 'node:child_process';
+   const role = 'star_registrar';
+   const password = randomBytes(32).toString('base64url');   // 43 letters, digits, - and _
+   const salt = randomBytes(16);
+   const salted = pbkdf2Sync(password, salt, 4096, 32, 'sha256');
+   const clientKey = createHmac('sha256', salted).update('Client Key').digest();
+   const storedKey = createHash('sha256').update(clientKey).digest();
+   const serverKey = createHmac('sha256', salted).update('Server Key').digest();
+   execSync('clip', { input: password });
+   console.log(`alter role ${role} password 'SCRAM-SHA-256$4096:${salt.toString('base64')}$${storedKey.toString('base64')}:${serverKey.toString('base64')}';`);
+   ```
+   (The same SCRAM code as 12d, which Claude checked against what PostgreSQL itself stores; only the role name differs.)
+2. In PowerShell: `node C:\Users\jberg\Documents\make-scram-star.mjs`. The password is now on the clipboard: **save it in your password manager as a NEW entry**, "Supabase star_registrar (Hyperdrive)" — not the Color Belt entry.
+3. **Check the printed line says `alter role star_registrar password 'SCRAM-SHA-256$4096:…';`** — `star_registrar`, **not** `testing_registrar`. If it names any other role, stop and tell Claude.
+4. Copy only that line into a **new** SQL Editor query and **Run**. Then **delete that snippet** in the SQL Editor (handoff §6), copy something harmless, and **delete `make-scram-star.mjs`**.
+5. If the password ever leaks: run the script again (new password + verifier), update the Hyperdrive config (13f), and the old one stops working.
+
+### 13f. Hyperdrive for the Star form (later — when the Star Function is built, with Jeffrey's OK)
+
+Not part of the 0006 paste. When the Star family form's Pages Function (`functions/api/star/[code].js`, page `/star/<code>`) is built:
+1. Cloudflare → **Hyperdrive** → a **second** configuration `tkd-star-registrar`: the same Session pooler host and port as 12g, database `postgres`, user **`star_registrar.eozkfbdfxqlcbpewhach`**, password from the "Supabase star_registrar (Hyperdrive)" entry. **Caching: Disabled.** **Origin connection limit: 5 or less.** TLS as 12g (Verify full with the existing Supabase CA certificate).
+2. `tkd-dashboard` → **Settings** → **Bindings** → **Add** → **Hyperdrive**: variable name `HYPERDRIVE_STAR`, configuration `tkd-star-registrar`, **Production only**.
+3. The Star Function has its own kill switch, the Production variable `STAR_PUBLIC_REGISTRATION` (default `off`).
+
+### 13g. Off switch (any time)
+
+In this order (step 1 works in seconds):
+1. **Database off switch (instant):** in the SQL Editor, run
+   ```sql
+   revoke execute on function public.star_public_event(text) from star_registrar;
+   revoke execute on function public.star_public_register(text, text, uuid, text, text, date, text, integer, integer, text, boolean, text, text) from star_registrar;
+   ```
+   From the next call on, both are refused for the Star form's login, even on connections Hyperdrive already has open. **To turn it back on:** re-run the whole 0006 file, or `grant execute on function …` the same two lines `to star_registrar`. While it is off, `0006_tests.sql` (T2a) and `0006_fingerprints.sql` fail — expected.
+2. **Stop the Star form:** set `STAR_PUBLIC_REGISTRATION=off` (Production) and **Retry deployment**.
+3. **Lock the login:** `alter role star_registrar nologin;` (re-running 0006 does **not** turn it back on; `alter role star_registrar login;` does).
+
+Color Belt's form (12i) is not affected by any of these, and Color Belt's off switch doesn't affect Star.
+
+### 13h. Undo 0006 (only if something is badly wrong, before real Star data exists)
+
+Only if Jeffrey decides to remove Star testing completely: put the app back to a version without the Star screens **first**, then run this in the SQL Editor (one transaction; tested in PGlite: afterwards no `star_` object or role is left, and `0005_tests.sql` and `0003_tests.sql` pass again). **This deletes every Star rubric change, event, candidate, payment and grade.** Supabase's destructive-operations warning is real this time.
+
+**What stays:** the `change_log` rows Star wrote (the history is append-only — including any dates of birth and emails, S10), and Star's rows in `testing_public_attempts`, which age out within 2 days. Nothing from 0001–0005 is touched.
+
+```sql
+-- Undo migration 0006. change_log (the history) is KEPT.
+begin;
+
+-- the family form's two functions first (the instant off switch), then the view
+revoke execute on function public.star_public_event(text) from star_registrar;
+revoke execute on function public.star_public_register(text, text, uuid, text, text, date, text, integer, integer, text, boolean, text, text) from star_registrar;
+drop view if exists public.star_roster;
+
+-- the functions (those naming a 0006 table in their arguments or result
+-- must go before the tables)
+drop function if exists public.star_public_register(text, text, uuid, text, text, date, text, integer, integer, text, boolean, text, text);
+drop function if exists public.star_public_register_core(text, text, uuid, text, text, date, text, integer, integer, text, boolean, text, text);
+drop function if exists public.star_public_event(text);
+drop function if exists public.star_home_today();
+drop function if exists public.star_makeup_list(uuid);
+drop function if exists public.star_event_results(uuid, integer);
+drop function if exists public.star_age_groups(uuid);
+drop function if exists public.star_view_signature(uuid);
+drop function if exists public.star_candidate_history(uuid);
+drop function if exists public.star_candidate_detail(uuid);
+drop function if exists public.star_results_csv(uuid, integer);
+drop function if exists public.star_undo_result_sent(uuid);
+drop function if exists public.star_mark_result_sent(uuid, text);
+drop function if exists public.star_set_makeup_subjects(uuid, uuid[], uuid[]);
+drop function if exists public.star_set_count(uuid, text, integer);
+drop function if exists public.star_set_grade(uuid, uuid, text);
+drop function if exists public.star_record_refund(uuid, integer, text, integer, date);
+drop function if exists public.star_edit_payment(uuid, text, integer, date);
+drop function if exists public.star_undo_payment(uuid);
+drop function if exists public.star_record_payment(uuid, integer, text, integer, date);
+drop function if exists public.star_delete_candidate(uuid, integer, uuid[]);
+drop function if exists public.star_restore_candidate(uuid, integer);
+drop function if exists public.star_withdraw_candidate(uuid, integer);
+drop function if exists public.star_set_private(uuid, integer, date, time);
+drop function if exists public.star_resolve_duplicate(uuid, integer, uuid, integer, boolean);
+drop function if exists public.star_change_paying_by(uuid, integer, text);
+drop function if exists public.star_update_candidate(uuid, integer, text, text, date, text, text, integer, integer, integer);
+drop function if exists public.star_add_makeup(uuid, uuid);
+drop function if exists public.star_add_candidate(uuid, text, text, date, text, text, integer, integer, text);
+drop function if exists public.star_delete_event(uuid, integer, integer, integer);
+drop function if exists public.star_set_registration(uuid, integer, boolean);
+drop function if exists public.star_update_event(uuid, integer, text, date, time, text, date, text);
+drop function if exists public.star_add_event(text, date, time, text, boolean, date, text);
+drop function if exists public.star_update_assistant_table(integer, integer, integer[], integer[]);
+drop function if exists public.star_update_grade_values(integer[], numeric[]);
+drop function if exists public.star_delete_category(uuid, integer);
+drop function if exists public.star_reorder_categories(integer, uuid[], uuid[]);
+drop function if exists public.star_update_category(uuid, integer, text, integer);
+drop function if exists public.star_add_category(integer, text, integer);
+drop function if exists public.star_update_dan_settings(integer, integer, numeric, integer, integer, integer, integer);
+drop function if exists public.star_history_strip(jsonb);
+drop function if exists public.star_public_answer(uuid);
+drop function if exists public.star_copy_template_into_event(uuid);
+drop function if exists public.star_lock_payment(uuid);
+drop function if exists public.star_lock_candidate(uuid);
+drop function if exists public.star_recheck_pointing_at(uuid);
+drop function if exists public.star_recheck_duplicate(uuid);
+drop function if exists public.star_find_duplicate(uuid, uuid, text, text, date);
+drop function if exists public.star_purge_old_signatures();
+drop function if exists public.star_sent_state(uuid, jsonb);
+drop function if exists public.star_candidate_result(uuid);
+drop function if exists public.star_assistant_grade(uuid, text, integer);
+drop function if exists public.star_age_group_of(date, date, integer);
+drop function if exists public.star_expected_fee_cents(uuid);
+drop function if exists public.star_fee_kind(uuid);
+drop function if exists public.star_net_paid_cents(uuid);
+drop function if exists public.star_event_state(public.star_events, date);
+drop function if exists public.star_ids_are_valid(uuid[]);
+
+-- the 16 tables (their triggers, rules and indexes go with them), then
+-- the reference counter
+drop table if exists public.star_downloads, public.star_result_emails, public.star_grades, public.star_payments,
+                     public.star_makeup_subjects, public.star_candidate_signatures, public.star_candidates,
+                     public.star_event_assistant, public.star_event_grades, public.star_event_categories,
+                     public.star_event_dans, public.star_events, public.star_assistant_table, public.star_grade_values,
+                     public.star_categories, public.star_dan_settings;
+drop sequence if exists public.star_candidate_ref_seq;
+
+-- the trigger functions and the two rule helpers the tables used
+drop function if exists public.star_before_write();
+drop function if exists public.star_events_rules();
+drop function if exists public.star_event_copies_before_write();
+drop function if exists public.star_candidates_rules();
+drop function if exists public.star_candidate_signatures_rules();
+drop function if exists public.star_candidate_signatures_log();
+drop function if exists public.star_makeup_subjects_rules();
+drop function if exists public.star_payments_guard();
+drop function if exists public.star_grades_rules();
+drop function if exists public.star_result_emails_guard();
+drop function if exists public.star_downloads_guard();
+drop function if exists public.star_email_is_valid(text);
+drop function if exists public.star_start_time_is_valid(time);
+
+-- the Star form's login
+revoke usage on schema public from star_registrar;
+drop role if exists star_registrar;
+
+commit;
+```
+
+**Then the Cloudflare side** (only if 13f was done): remove the `HYPERDRIVE_STAR` binding, delete the `tkd-star-registrar` Hyperdrive configuration, delete the `STAR_PUBLIC_REGISTRATION` variable, **Retry deployment**, and delete the "Supabase star_registrar (Hyperdrive)" password-manager entry.
+
+**Why:**
+- **Its own login and its own password:** a leak of one form's password can't reach the other form's functions; each can be switched off on its own.
+- **Never readable, only through two functions:** dates of birth, emails and signatures are about minors (rulebook §5); leaving them out of a view wouldn't protect them, not granting them does.
+- **The result is worked out, never stored:** the Grading grid, Results, the CSV and Mark as sent always agree.
+
+---
+
 ## Admin: change the front-desk PIN or password
 
 The front desk (`shrewsburyustc@gmail.com`) is a **shared account**, so the app hides Change PIN and Change password for it. Only an admin changes them, here in Supabase, until the Staff accounts screen exists.

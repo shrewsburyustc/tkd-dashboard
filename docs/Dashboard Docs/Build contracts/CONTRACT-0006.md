@@ -589,6 +589,7 @@ After step 11 (0005), on the main database: print the 0003, 0004 and 0005 finger
 
 - **`ST-####` references are sequential**, so a reference shows roughly how many Star registrations there have been. Same as Color Belt's `CB-####` (0005); there is no public lookup by reference.
 - **The signature purge and the registrar's 5-second timeout:** 0005 purges at the end of every family registration. **Star chose not to purge from the public register path at all**, so a long purge can never time out a family's Send. The purge runs from staff calls only (`star_add_event`, `star_add_candidate`, `star_record_payment`, `star_home_today`, `star_makeup_list`), where staff use on any normal day is enough for the 90-day rule.
+- **`star_registrar` can make temporary tables**, like `testing_registrar`: PostgreSQL gives PUBLIC the TEMP right on the database, and it isn't revoked (that would change a database-wide default). Harmless: they live in the session's private temp schema, every Star function uses fully qualified names with `search_path = ''`, and no function ever looks in the temp schema. (Security review, low item.)
 - **`star_candidate_detail` reads aren't logged.** Staff and admins may see DOB and email in the detail view (v0.160); who opened which detail is not recorded (the same for `star_view_signature` and `star_candidate_history`).
 
 ## 12. Former OPEN items — all decided by Jeffrey 2026-10-18 (rulebook v0.173): every working assumption below is now the rule; OPEN-23 he answered himself (No)
