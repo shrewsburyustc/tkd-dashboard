@@ -1217,6 +1217,16 @@ body.is-card-dragging * {
   color: var(--color-text-secondary);
 }
 
+/* "History · 6 changes": opens the automatic changes (v0.255) */
+.phistory-btn {
+  width: 100%;
+  margin-top: var(--space-4);
+}
+
+.phistory-label {
+  font-weight: 500;
+}
+
 .plog-text {
   white-space: pre-wrap;
 }

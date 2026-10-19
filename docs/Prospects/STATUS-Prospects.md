@@ -71,3 +71,5 @@ The list as it was asked:
 - Rulebook: this branch's rows were renumbered **v0.233-v0.247** (Jeffrey chose B: renumber now, past the highest on any branch, 0.232). See the 0.247 changelog line for the old to new list.
 - PGlite 210/210, including step 14: 0007 -> 0008 -> 0009 -> 0012 on a database built in the live order (0001-0006 + 0010), re-run safety, and the same fingerprints as a minimal database.
 - **Paste order for the live database:** 0007, 0008, 0009, 0012 — each followed by its fingerprints file, the security advisor and its tests file.
+
+- 2026-10-19 (v0.255, Jeffrey option A): the panel keeps typed notes visible and puts the automatic changes in a closed "History · n changes" dropdown. Built in preview, checked at 1280 / 820 touch / 390 / 320. **Rulebook numbers clash again:** the camps branch took v0.230–v0.237 after this branch was renumbered to v0.233–v0.247 (overlap v0.233–v0.237).

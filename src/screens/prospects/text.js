@@ -171,7 +171,9 @@ export const SIGNATURE = 'Signature';
 export const SIGNATURE_GONE = 'The picture was deleted 90 days after the free class. The waiver was signed on the date above.';
 export const LOADING_PANEL = 'Loading…';
 
-// timeline
+// timeline: typed notes always show; the automatic changes open from "History" (v0.255)
+export const HISTORY = 'History';
+export const historyLine = (n) => `History · ${n === 1 ? '1 change' : `${n} changes`}`;
 export function activityText(a) {
   const d = a.detail ?? {};
   switch (a.kind) {

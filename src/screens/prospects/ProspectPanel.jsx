@@ -10,7 +10,9 @@
 //     choices Tomorrow / In 3 days / Next week / Pick a date / No follow-up (P4 difference 3)
 //   - Free class: the time, amber "Class cancelled — call the family" when it no longer runs,
 //     Book a free class / Change time / Cancel booking (v0.244 answer 2)
-//   - Siblings (same sign-up), Notes and calls (a note + one-tap follow-up), the timeline
+//   - Siblings (same sign-up), Notes and calls (a note + one-tap follow-up); the notes people
+//     typed always show, the automatic changes (status, follow-up, booking, sign-up) sit in a
+//     closed "History · 6 changes" dropdown (v0.255)
 //   - Form answers and waiver: every answer as the form was, and the signature picture while it
 //     is kept (each look recorded), then "signed on <date>" (v0.242)
 // PC: a column beside the list; tablet upright: under the list; phone: a full-screen page
@@ -61,6 +63,7 @@ export default function ProspectPanel({
   const [statusMenu, setStatusMenu] = useState(null); // the ⋯-style menu under the status tag
   const [followOpen, setFollowOpen] = useState(false); // the quick follow-up choices
   const [followPick, setFollowPick] = useState('');
+  const [historyOpen, setHistoryOpen] = useState(false); // the automatic changes start closed (v0.255)
   const status = statusById.get(p.statusId);
   const builtin = status?.builtin ?? null;
   const b = p.booking;
@@ -363,17 +366,34 @@ export default function ProspectPanel({
           </div>
         </>
       )}
-      <ul className="plog">
-        {[...p.notes.map((n) => ({ key: `n${n.id}`, at: n.createdAt, text: n.body, who: n.createdByName, note: true })),
-          ...p.activity.map((a, i) => ({ key: `a${i}`, at: a.createdAt, text: T.activityText(a), who: a.createdByName, note: false }))]
-          .sort((x, y) => (x.at < y.at ? 1 : -1))
-          .map((x) => (
-            <li key={x.key} className={`plog-item${x.note ? ' is-note' : ''}`}>
-              <span className="plog-text">{x.text}</span>
-              <span className="plog-meta">{T.whenLine(x.at, x.who)}</span>
+      {p.notes.length > 0 && (
+        <ul className="plog">
+          {[...p.notes].sort((x, y) => (x.createdAt < y.createdAt ? 1 : -1)).map((n) => (
+            <li key={n.id} className="plog-item is-note">
+              <span className="plog-text">{n.body}</span>
+              <span className="plog-meta">{T.whenLine(n.createdAt, n.createdByName)}</span>
             </li>
           ))}
-      </ul>
+        </ul>
+      )}
+      {p.activity.length > 0 && (
+        <>
+          <button type="button" className="pkv pkv-btn phistory-btn" aria-expanded={historyOpen} aria-controls={`${idBase}-history`} onClick={() => setHistoryOpen((x) => !x)}>
+            <span className="pkv-v phistory-label">{T.historyLine(p.activity.length)}</span>
+            {historyOpen ? <IconChevronDown size={16} aria-hidden="true" /> : <IconChevronRight size={16} aria-hidden="true" />}
+          </button>
+          {historyOpen && (
+            <ul className="plog" id={`${idBase}-history`} aria-label={T.HISTORY}>
+              {[...p.activity].sort((x, y) => (x.createdAt < y.createdAt ? 1 : -1)).map((a, i) => (
+                <li key={i} className="plog-item">
+                  <span className="plog-text">{T.activityText(a)}</span>
+                  <span className="plog-meta">{T.whenLine(a.createdAt, a.createdByName)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
 
       <h3 className="psec">{T.FORM_AND_WAIVER}</h3>
       <button type="button" className="pkv pkv-btn" aria-expanded={openAnswers} onClick={() => setOpenAnswers((x) => !x)}>
