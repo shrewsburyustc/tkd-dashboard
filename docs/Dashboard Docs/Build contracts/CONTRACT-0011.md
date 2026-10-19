@@ -1,6 +1,6 @@
 # Contract 0011 — Finance: Daily report, close the day, History, Export, reminder settings (DRAFT)
 
-**Status:** draft written with the build plan, 2026-10-18; **security review applied** the same day (4 must-fix + 5 should-fix: closing-items snapshot for Changed after closing, every middle day of a moved chain, chains built from whole histories, refunds vs the drawer [Q1], fingerprint stale check, closings guard + lock mode, CSV quoting and formula guard, stronger privacy tests, payment-detail rules). **Not final** until Jeffrey OKs the plan (CP0) and answers its §6 questions; items marked **[Q1]**–**[Q4]** change with those answers.
+**Status:** draft written with the build plan, 2026-10-18; **security review applied** the same day (4 must-fix + 5 should-fix: closing-items snapshot for Changed after closing, every middle day of a moved chain, chains built from whole histories, refunds vs the drawer [Q1], fingerprint stale check, closings guard + lock mode, CSV quoting and formula guard, stronger privacy tests, payment-detail rules). **Not final** until Jeffrey OKs the plan (CP0) and answers its §6 questions; items marked **[Q2]**–**[Q4]** change with those answers (Q1 refunds: decided v0.209).
 
 The single source of truth for three builders: **A database**, **B data layer + preview mock**, **C screens**. Follow it exactly so the parts fit. If something here is impossible or contradicts the sources below, **stop and report it** — do not improvise.
 
@@ -53,7 +53,7 @@ B returns **codes, never words**; C owns all wording (from the mockups).
 | `day date not null` | ≤ today when written |
 | `kind text not null` | `close` · `undo` (the closer within 10 s) · `reopen` (admin) |
 | `reverses_closing_id uuid null unique` | FK → this table; required for `undo` / `reopen` (the `close` it ends), null for `close` |
-| `cash_counted_cents, checks_counted, checks_counted_cents, card_counted_cents integer null` | required (≥ 0, ≤ 10 000 000 / checks ≤ 500) for `close`, null otherwise |
+| `cash_counted_cents, checks_counted, checks_counted_cents, card_counted_cents integer null` | required for `close`, null otherwise; ≥ 0 (cash may be negative down to −10 000 000 only when expected cash < 0, v0.209); ≤ 10 000 000; checks ≤ 500 |
 | `expected_count, expected_cash_cents, expected_checks, expected_checks_cents, expected_card_cents integer null` | the server's figures at closing time (snapshot), `close` only |
 | `note text null` | ≤ 500, trimmed; required on `close` when any of the three parts is short or over |
 | `recorded_at timestamptz not null default now()` · `recorded_by uuid null` (never returned) · `recorded_by_name text not null` | |
@@ -78,7 +78,7 @@ Internal set-returning helper (**not** security definer — only definer functio
 | `time` | `recorded_at` of the row shown, school time |
 | `first_name, last_name` | registration / candidate |
 | `what, event_date, is_private` | `color_belt` / `star`, the event's testing date; Star private: `star_candidates.private_on` not null |
-| `kind` | `payment` · `refund` **[Q1]** |
+| `kind` | `payment` · `refund` (Star only) |
 | `method, amount_cents` | of the row shown (refunds negative) |
 | `state` | `counted` · `undone` · `edited` · `moved_out` · `moved_in` · `hidden` |
 | `was_amount_cents, was_method` | for `edited` / `moved_in`: the chain's first row |
@@ -87,7 +87,7 @@ Internal set-returning helper (**not** security definer — only definer functio
 | `recorded_by_name` | of the row shown |
 
 **Chain rules** (same for both sources, mirrored exactly by `financeRules.js` and tested with one shared case table):
-1. A chain starts at a `payment` (or `refund` **[Q1]**) row that is **not** the new row of an edit.
+1. A chain starts at a `payment` or `refund` row that is **not** the new row of an edit.
 2. **Edit** = a `reversal` R of row X **and** a `payment` N for the same registration / candidate with `N.recorded_at = R.recorded_at` **and** `N.recorded_by = R.recorded_by` (both written in one transaction by `testing_edit_payment` / `star_edit_payment`). The chain continues at N. A method-only edit is an edit like any other.
 3. A `reversal` without such an N ends the chain as **undone**. (Reversals never point at reversals — 0005 / 0006 guards. Star refunds can't be edited; a refund's reversal makes the refund **undone**.)
 4. Final state: chain ends at a live row F (not reversed) → if F is the first row: `counted` on F.paid_on; else `edited` on F.paid_on (shown as `moved_in` when F.paid_on ≠ first.paid_on). **Every other distinct `paid_on` in the chain** (the first row's and any middle edit's) gets a `moved_out` item ("Moved to <F.paid_on>"), so no day loses an item silently. Chain ends undone → `undone` on first.paid_on, and every other distinct `paid_on` of the chain gets an `undone` item too; **but** the whole chain is `hidden` when it has no edit, R.recorded_by = first.recorded_by and R.recorded_at − first.recorded_at ≤ 10 s (hidden items are dropped from every output).
@@ -112,7 +112,7 @@ Internal set-returning helper (**not** security definer — only definer functio
 | `finance_copy_monday(p_expected_version int)` | A | each school's Monday → Tue–Fri | `{status, version}` |
 
 **Expected values** (for `close` and the results): cash = sum of counted cash items; checks = number of counted check **payments** and their sum; card = sum of counted card items. Results: `matches` when equal to the cent, else `short` (counted < expected) or `over`.
-**[Q1] Refunds and the drawer — open, must be settled before building:** a cash refund is money paid **out**, so a day can expect less cash than came in, or even a negative amount (a refund-only day), which a count can never match. Proposed: the box shows **Cash in** (payments) and **Cash paid out** (refunds) separately and the cash line expects *in − out*, allowed to be negative only as "expected"; a refund-only day is closable; a check refund (a check the school writes) never changes the checks in the drawer. Finalised with Jeffrey's answer.
+**Refunds and the drawer (decided v0.209):** cash expected = counted cash **payments** − counted cash **refunds** (may be negative); checks expected = counted check **payments** only (number and sum — a check refund is the school's own check, never in the drawer); card = counted card payments. When cash expected < 0 the screen asks “Cash taken out of the drawer” (a positive number) and sends it as a negative `p_cash_cents`; the function then accepts a negative cash count (≥ −10 000 000), otherwise counts are ≥ 0. A day with only refunds is closable; `nothing_to_close` only when there is no counted item at all. `finance_day` also returns `refunds:{count, cents, cash_cents, check_cents}` and `totals` gain `in_cents` (payments) and `net_cents` (payments + refunds); card / cash / check card values per layout are computed in `financeRules.js` (`cardsFor(totals, layout)`), never in the database. The layout switch is a browser setting (`tkd.device.refundLayout` = `own` \| `in`, default `own`), no database part.
 
 **Fingerprint:** `finance_day` returns `fingerprint` = md5 of the sorted shown items' `row_id|amount_cents|method|state`. `finance_close_day` takes `p_expected_fingerprint text` (replacing count + total) and answers `stale` when it differs — so a method-only edit between loading and closing is caught.
 
@@ -128,7 +128,7 @@ RLS on every new table (no policies needed: no app access); `revoke all` on tabl
 
 ## 2. Database tests — `0011_tests.sql` + PGlite (prints `ALL 0011 TESTS PASSED`; runs before and after sample data)
 1. Role gates for every function (anon none; authenticated only §1.4; staff vs admin; staff another day → `not_allowed`); locked / PIN-locked / signed-out / magic-link / 8-day sessions → `no_access`.
-2. Chain rules on **both** sources: plain, undone, hidden (same person ≤ 10 s; other person or > 10 s → undone), edited once / twice, method-only edit, edited to another date (moved_out + moved_in), **edited across three dates (middle day gets moved_out)**, **moved then undone (both days show undone)**, undo after edit, Star refund and undo of a refund **[Q1]**, school of a Star item = candidate's school, private Star line; **range building: payment Oct 1 undone Oct 20 → undone on the Oct 1 report and in an Oct 1–15 export**.
+2. Chain rules on **both** sources: plain, undone, hidden (same person ≤ 10 s; other person or > 10 s → undone), edited once / twice, method-only edit, edited to another date (moved_out + moved_in), **edited across three dates (middle day gets moved_out)**, **moved then undone (both days show undone)**, undo after edit, Star refund and undo of a refund, school of a Star item = candidate's school, private Star line; **range building: payment Oct 1 undone Oct 20 → undone on the Oct 1 report and in an Oct 1–15 export**.
 3. Totals and expected values by method; withdrawn students still count.
 4. Close: matches / short / over to the cent, `note_required`, `nothing_to_close` (incl. a day with only undone payments **[Q4]**), `stale` (a payment added, and a **method-only edit**, between load and close), `already_closed`, double click; expected snapshot + closing items stored; guard refuses an undo / reopen for another school or day and a second open close.
 5. Undo close: closer < 10 s ok; ≥ 10 s or another login → `too_late`; reopen admins only, `not_closed`, `stale`; close again after reopen.
@@ -142,7 +142,7 @@ RLS on every new table (no policies needed: no app access); `revoke all` on tabl
 ## 3. Data layer + mock (Builder B)
 - `financeRules.js` (pure, node-importable): `compareCount(expected, counted)` → `{result, diffCents}`; `chainItems(rows)` (the §1.3 rules over raw rows — used by the mock; `checks.mjs` runs the same case table as the SQL tests); `toCsv(rows)`: RFC 4180 quoting (cells with a comma, quote or line break are wrapped in quotes, quotes doubled), CRLF line ends, and the formula guard **on text cells only** (names, event names, notes, recorded-by: a leading `=`, `+`, `-`, `@`, tab or carriage return gets a leading `'`); amount cells stay plain numbers like `-35.00` (names come from the public family form, so they are untrusted); `schoolNow(date)`, `isReminderDue(times, now, …)`.
 - `financeApi.js`: one function per §1.4 function (camelCase in / out); statuses passed through as codes.
-- `mockFinance.js`: every §1.4 function with the same rules and statuses, reading the Color Belt preview store (`tkd.preview.testing`) and its own sample Star rows (incl. one refund **[Q1]**, one edit, one 10-second undo); its own store key `tkd.preview.finance` for closings / settings / exports. Console helpers on `window.__tkdPreview`: `setToday`, `setNow('HH:MM')`, `failNextSave`, `setRole`, `resetFinance`.
+- `mockFinance.js`: every §1.4 function with the same rules and statuses, reading the Color Belt preview store (`tkd.preview.testing`) and its own sample Star rows (incl. a cash refund, a check refund, a refund-only day, one edit, one 10-second undo); its own store key `tkd.preview.finance` for closings / settings / exports. Console helpers on `window.__tkdPreview`: `setToday`, `setNow('HH:MM')`, `failNextSave`, `setRole`, `resetFinance`.
 
 ## 4. Screens (Builder C) — exactly D1–D14 and the approved proposals (v0.207)
 - `#finance` (Daily report), `#finance/history`, `#finance/settings` (admins only; staff → `#finance`). Rail item last, `ti-report-money`; phones: under More.

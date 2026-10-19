@@ -36,7 +36,7 @@ Both tables are append-only. Corrections are `reversal` rows. Facts the report r
 - Undone (the chain ends in a reversal) → struck through on its original day with **Undone** and "Undone by <name> · <date> · not counted".
 - Undone by the **same person within 10 seconds** of recording it → not shown at all.
 - Recorded after the day was closed → **Added after closing**.
-- **Refunds → see §6 Q1 (open: not in the approved screens).**
+- **Refunds (decided v0.209):** shown on their own date. Two layouts with a per-device switch on the report: **Own group** (Refunds group, cards show money in) or **In groups** (inside Cash / Check with a Refund tag, cards net). Close the day expects cash in − cash refunded; check refunds don't touch the drawer; a refund-only day asks “Cash taken out of the drawer”.
 
 **Totals** count only what is true now. **School date** is always `America/New_York` (as 0005).
 
@@ -102,7 +102,7 @@ Rollback: Finance only reads payments, so turning it off is a code rollback (pre
 ---
 
 ## 6. Questions for Jeffrey (one at a time, with pictures, before the contract is final)
-1. **Star refunds on the Daily report.** Not in the approved screens. Money handed back is real money out of the drawer, and on a day with more refunds than cash payments the drawer would be *expected* to hold less than nothing, which no count can match. Proposed: Close the day shows **Cash in** and **Cash paid out** separately; a refund shows on **its own date** in its method's group with a **Refund** tag and a minus amount, lowers that group's total and what Close the day expects. A check refund (a check the school writes) doesn't change the number of checks in the drawer. *(Picture to come.)*
+1. ~~**Star refunds on the Daily report.**~~ **Decided v0.209: both layouts, switch on the report, remembered per device.** Not in the approved screens. Money handed back is real money out of the drawer, and on a day with more refunds than cash payments the drawer would be *expected* to hold less than nothing, which no count can match. Proposed: Close the day shows **Cash in** and **Cash paid out** separately; a refund shows on **its own date** in its method's group with a **Refund** tag and a minus amount, lowers that group's total and what Close the day expects. A check refund (a check the school writes) doesn't change the number of checks in the drawer. *(Picture to come.)*
 2. **Mat-side device switch** as its own step after this build (proposed), because it changes the Testing rosters too.
 3. **Reminder times start Off** until an admin sets them after launch (proposed). The alternative is guessed defaults.
 4. **Small defaults** to OK as a batch: export range at most one year · History goes back to the first payment ever recorded · the card machine total is compared with card payments recorded by hand (no Square yet) · CSV formula guard · a day with only undone payments counts as "no payments".

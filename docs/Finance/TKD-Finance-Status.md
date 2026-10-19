@@ -1,7 +1,7 @@
 # Finance — status and plan
 
 **Updated:** 2026-10-18 (Finance worktree session, branch `finance`)
-**Rulebook at this update:** v0.208 (Finance rows: v0.193–v0.203, v0.207–v0.208) · **Questions:** `TKD-Finance-DailyReport-Questions.html` (this folder), images in `images/`
+**Rulebook at this update:** v0.209 (Finance rows: v0.193–v0.203, v0.207–v0.209) · **Questions:** `TKD-Finance-DailyReport-Questions.html` (this folder), images in `images/`
 
 > Read `CLAUDE.md` (repo root) first. This file says where Finance stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -81,3 +81,6 @@ Full mockups at PC / tablet / phone → separate design reviewer agent → scree
 Build plan + contract (like `TKD-Testing-Phase2-Build-Plan.md` / `CONTRACT-0005.md`): tables (day closings, reminder settings, export log), read functions over `testing_payments` (+ Star's once built), roles, migration number (next free), PGlite tests, security reviewer. Then build in the preview with checkpoints. Nothing built or deployed without Jeffrey's OK.
 
 **2026-10-18:** build plan `TKD-Finance-Build-Plan.md` + draft `CONTRACT-0011.md` written and security-reviewed (fixes applied). Migration **0011** (0010 is used by both Prospects and Color Belt phase 3 — Main session to resolve). Found: **Star refunds** (0006, live) aren't in the approved screens → plan §6 Q1, asked next with a picture. Waiting on: CP0 OK, plan §6 Q1–Q4, OK to merge `main` into `finance` (step 0).
+- Plan §6 Q1 (refunds) picture sent: `images/Finance-Q12-refunds.png` (`#q12`): A inside the Cash / Check group · B own Refunds group, cards show money in (recommended). Both: refund-only day asks “Cash taken out of the drawer”.
+- Refunds answer (Jeffrey): **both layouts, switchable** (Own group / In groups); Close the day the same in both. Follow-up sent: where the switch lives (`images/Finance-Q13-refund-toggle.png`, `#q13`): A Finance → Settings for everyone (recommended) · B switch on the report per device.
+- **Refund switch: B (v0.209)** — on the Daily report next to Print (phones under ⋯), each device remembers; default Own group (proposed); Print / Export follow the screen (proposed). Plan §6 Q1 done. Next: plan §6 Q2 (Mat-side switch as its own step).
