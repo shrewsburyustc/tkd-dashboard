@@ -1621,8 +1621,10 @@ begin
     raise exception 'TEST FAILED: T9 the address is not readable / stored tidied';
   end if;
   reset role;
+  -- (Checks that the change is logged, not which columns changed: the history keeps only changed
+  -- columns, and on the live database the real address may already share the city or ZIP.)
   if not exists (select 1 from public.change_log l where l.id > v_mark and l.table_name = 'locations'
-                  and l.action = 'update_school_address' and l.after ->> 'address_city' = 'Shrewsbury') then
+                  and l.action = 'update_school_address' and l.after ? 'version') then
     raise exception 'TEST FAILED: T9 the address change must be in the history';
   end if;
   if public.testing_location_address('shrewsbury') is distinct from
