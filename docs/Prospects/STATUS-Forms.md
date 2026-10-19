@@ -64,7 +64,7 @@ No High findings. Fixed:
    - the sign-up keeps "Signed on" (`signed_at`);
    - this is built in 0009 (`forms_purge_old_signatures`), runs inside the Send, Fill in and signature-read functions, and is tested (11a–c). PGlite 78/78.
 2. **Booking settings take effect right away** (already built that way). The screen must say "Changes here go live right away".
-3. **Email sender: open.**
+3. **Email sender: decided 2026-10-19 (v0.601): launch WITHOUT emails** (no school web address yet); later: a Cloudflare web address + Resend. (Was: open.)
    - Jeffrey checks whether the school owns a web address. Options: its own address + Resend, or launch without emails.
    - The school alert can go to the front-desk Gmail address.
    - Until a sender exists, the app's email switches say "Emails start once the school's sending address is set up."
