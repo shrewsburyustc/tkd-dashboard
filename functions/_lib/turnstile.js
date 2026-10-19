@@ -4,6 +4,9 @@
 // token proves nothing until OUR server shows it to Cloudflare together with the secret key
 // ("siteverify"). We also check that the token was made on our own site (hostname) and for the
 // registration form (action "register"), so a token from some other page can't be reused here.
+// The camp sign-up form (contract 0013 §4.4) uses the same check with its own action,
+// "camp_signup", passed as expectedAction — so a Color Belt token can't be used for a camp
+// sign-up and the other way round. Color Belt passes nothing and keeps "register".
 // Plan §8: success, hostname = production host, action = register, remoteip.
 
 export const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
@@ -17,7 +20,9 @@ export const TURNSTILE_ACTION = 'register';
 //   token         what the page sent as turnstile_token
 //   ip            the visitor's IP (Cloudflare uses it as one more signal; never stored)
 //   expectedHost  e.g. "tkd-dashboard.pages.dev" (taken from PUBLIC_ORIGIN)
-export async function verifyTurnstile({ fetchImpl, secret, token, ip, expectedHost }) {
+//   expectedAction  optional: the action the page named when it asked for the token. Default
+//                 "register" (the Color Belt form, unchanged); the camp form passes "camp_signup".
+export async function verifyTurnstile({ fetchImpl, secret, token, ip, expectedHost, expectedAction = TURNSTILE_ACTION }) {
   // Tokens are at most 2048 characters (Cloudflare's documented limit).
   if (typeof token !== 'string' || token.length === 0 || token.length > 2048) return false;
   try {
@@ -31,7 +36,7 @@ export async function verifyTurnstile({ fetchImpl, secret, token, ip, expectedHo
     return (
       result?.success === true &&
       result.hostname === expectedHost &&
-      result.action === TURNSTILE_ACTION
+      result.action === expectedAction
     );
   } catch {
     return false;

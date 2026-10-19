@@ -1054,6 +1054,261 @@ Tested in PGlite on every run (`run.mjs` step 13g, both steps exactly as written
 
 ---
 
+## 15. Migration 0013: Camps (camps, templates, family sign-up form, check-in, payments)
+
+**Status: not applied yet.** (The section number is final only at the merge into `main`.)
+
+**What it does** (`supabase/migrations/0013_camps.sql`, contract `docs/Dashboard Docs/Build contracts/CONTRACT-0013.md` §1):
+- **Camps** (`camps`): held at one school, optionally **for both schools**; 1–10 days (`camp_days`, any dates); daily hours; sign-up opening / closing dates, an early-price date and a **Close sign-up** switch; the ages the family form accepts; a description and a waiver; a random 8-character link code (`/camp/<code>`, never changes).
+- **Prices:** a small grid (`camp_prices`: one row per number of days, member / non-member × early / regular) and up to 10 **extras** (`camp_extras`: once or per day, optionally "not for all-days campers"). A camper's prices are written at sign-up and are **never** changed by a later price edit; only a change to that camper's own days, member box or extras in Edit details prices the whole camper again at the current prices (rulebook v0.700).
+- **Templates** (`camp_templates`): everything except dates and campers, shared by both schools.
+- **Sign-ups and campers:** `camp_signups` (one family form send: parent and emergency contact with phones, a `CP-` reference, early / regular fixed by the sign-up date, the drawn signature, a copy of the waiver) and `camp_campers` (1–3 children per sign-up), with `camp_camper_days` (the days they come, with the **check-in** time and who) and `camp_camper_extras` (the extras chosen, with their price at the time). **Append-only** `camp_payments` (a mistake is fixed by a reversal row).
+- **Phones** are readable only through `camp_camper_detail` (staff and admins, v0.700). The **signature** and the **waiver copy** can never be read by the app, are never copied into `change_log` (the history shows "on file"), and the signature is removed automatically **3 years after the camp's last day**.
+- **The family form:** a new restricted login, **`camps_registrar`**, used only by the Camps Cloudflare Function through its own Hyperdrive config. It can run exactly two functions (`camp_public_camp`, `camp_public_signup`) and nothing else. Every call is counted in Camps' **own** ledger `camp_public_attempts` (a hashed key, never a raw IP; 30 tries per hour per key; Color Belt's `testing_public_attempts` is never used).
+- **18 staff functions + `camp_camper_detail`** (the only way to write), the roster view `camp_roster`, and the same security rules as 0003 / 0005: RLS with `has_data_access()`, column rights only, nothing for `anon` or `service_role`, every change in `change_log` (actions `camp_…`).
+- 0013 changes **nothing** that 0001–0012 made. It uses a few of 0003's and 0005's helpers (school date, name / price / signature rules, the link-code maker, the history writer).
+
+**The order** (build plan §8): **CP2** Cloudflare variable (15a) → **CP3** database (15b–15f) → **CP4** Hyperdrive (15g) → **CP5** staff side on the real database + the test sign-up (15h) → **CP6** deploy (15i). **Each step needs Jeffrey's OK. Nothing secret goes into chat, git, `.env.local` or a screenshot** (handoff §6).
+
+### 15a. CP2 — Cloudflare variable (you, in the Cloudflare dashboard)
+
+`tkd-dashboard` → **Settings** → **Variables and Secrets** → **Production** only: add `CAMPS_REGISTRATION` = `off` (Text). Leave **Preview** empty. Turnstile, `CLIENT_KEY_SECRET` and `PUBLIC_ORIGIN` from 12a are reused. Variables take effect on the next deployment.
+
+### 15b. CP3 — before you apply 0013
+
+1. In the **SQL Editor**, run the tests already on production and check each passes: `verify_pin_tests.sql`, `0002_tests.sql`, `0003_tests.sql`, `0004_tests.sql`, `0005_tests.sql`, `0006_tests.sql`, `0010_tests.sql` (replace the UID placeholders as in 12f; put them back afterwards).
+2. Claude checks read-only (through the connection) that **no camp object exists yet**: no table, view, sequence or function whose name starts with `camp` in schema `public`, and no role `camps_registrar`:
+   ```sql
+   select 'relation' as kind, c.relname as name from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and (c.relname = 'camps' or c.relname like 'camp\_%')
+   union all
+   select 'function', p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and (p.proname like 'camp\_%' or p.proname like 'camps\_%')
+   union all
+   select 'role', r.rolname from pg_roles r where r.rolname = 'camps_registrar';
+   ```
+   Expected: no rows.
+
+### 15c. Apply 0013 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0013_camps.sql`.
+2. **SQL Editor → New query**, paste, **Run**.
+3. Supabase will warn about **destructive operations**. That's expected: the words are inside rules (`on delete cascade`), inside functions that run later (an admin removing a camp, a camper, a template, a camp day or an extra; old rate-limit rows being cleaned up) and in `… if exists` lines that make re-running safe. **Nothing is removed now.** Confirm.
+4. "Success. No rows returned." It's one transaction: on any error nothing is kept. Copy the error to Claude.
+
+**Running it again is safe** (tested in PGlite: a second run changes no row and no fingerprint; the role's attributes and password are never touched).
+
+### 15d. Set the `camps_registrar` password (you, on your PC + SQL Editor)
+
+Same method as 12d / 13e, with its **own** script and its **own** password — never the Color Belt or Star one.
+
+0. **Clipboard history off** first (12a step 0): Windows **Settings → System → Clipboard** → Clipboard history off, Sync across your devices off.
+1. Make a file **outside the repo**, e.g. `C:\Users\jberg\Documents\make-scram-camps.mjs`, with exactly this (the role name `camps_registrar` is written in; there is no password in it — it makes a new random one each time):
+   ```js
+   // Makes a random password for camps_registrar and its SCRAM-SHA-256 verifier.
+   // The password goes to the clipboard (never shown); only the verifier is printed.
+   import { randomBytes, pbkdf2Sync, createHmac, createHash } from 'node:crypto';
+   import { execSync } from 'node:child_process';
+   const role = 'camps_registrar';
+   const password = randomBytes(32).toString('base64url');   // 43 letters, digits, - and _
+   const salt = randomBytes(16);
+   const salted = pbkdf2Sync(password, salt, 4096, 32, 'sha256');
+   const clientKey = createHmac('sha256', salted).update('Client Key').digest();
+   const storedKey = createHash('sha256').update(clientKey).digest();
+   const serverKey = createHmac('sha256', salted).update('Server Key').digest();
+   execSync('clip', { input: password });
+   console.log(`alter role ${role} password 'SCRAM-SHA-256$4096:${salt.toString('base64')}$${storedKey.toString('base64')}:${serverKey.toString('base64')}';`);
+   ```
+   (The same SCRAM code as 12d, which Claude checked against what PostgreSQL itself stores; only the role name differs.)
+2. In PowerShell: `node C:\Users\jberg\Documents\make-scram-camps.mjs`. The password is now on the clipboard: **save it in your password manager as a NEW entry**, "Supabase camps_registrar (Hyperdrive)".
+3. **Check the printed line says `alter role camps_registrar password 'SCRAM-SHA-256$4096:…';`** — `camps_registrar`, **not** `testing_registrar` or `star_registrar`. If it names any other role, stop and tell Claude.
+4. Copy only that line into a **new** SQL Editor query and **Run**. Then **delete that snippet** in the SQL Editor (handoff §6), copy something harmless, and **delete `make-scram-camps.mjs`**.
+5. If the password ever leaks: run the script again (new password + verifier), update the Hyperdrive config (15g), and the old one stops working.
+
+### 15e. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0013_fingerprints.sql`. Every line must match what `supabase/tests/pglite/run.mjs` printed for the tested copy: 111 rows — the 65 functions (code, settings, owner, who may call them), the `camps_registrar` row, the view, the 14 table / counter rows and the 30 triggers. **One expected difference:** on Supabase the role row shows `members=postgres` (PostgreSQL 16+ makes the role that created a login an administrator of it; that gives the registrar nothing). In PGlite it's empty. The file is a single read-only SELECT and contains neither of the words the connection refuses (run.mjs checks that).
+2. `0003_fingerprints.sql`, `0004_fingerprints.sql`, `0005_fingerprints.sql`, `0006_fingerprints.sql`, `0010_fingerprints.sql`: **unchanged** from their production records (0013 touches none of their objects; run.mjs checks the same).
+3. **Security advisor:** expected notices — "RLS enabled, no policy" on `camp_public_attempts` (INFO; nobody in the app may read it) and "security definer function executable by authenticated" for the 18 staff functions and `camp_camper_detail` (each checks access and role itself). Anything else about a `camp` object is a real problem.
+
+### 15f. Run the tests (you, in the SQL Editor)
+
+1. Open `supabase/tests/0013_tests.sql`, replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>` (**Authentication → Users**), copy the whole file **as UTF-8** (it contains a few non-English characters such as "§"), paste, **Run**. Supabase may warn about destructive operations (the test removes its own test rows, adds and removes a test-only table rule, and checks some removals are refused). Everything is rolled back. Confirm. (The test-only rule briefly locks `camp_campers` until the test ends — run it when nobody is using the camp pages, as before real use.)
+2. Expected: one row, **ALL 0013 TESTS PASSED**. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved. Run `rollback;` once on its own, then tell Claude.
+3. Then run the earlier tests again — `0010_tests.sql`, `0006_tests.sql`, `0005_tests.sql`, `0004_tests.sql`, `0003_tests.sql`, `0002_tests.sql`, `verify_pin_tests.sql` — 0013 must not have broken them.
+4. Put the placeholders back afterwards (don't save the file with the UIDs in it).
+5. The test makes its own `zz test …` camps, so it works before **and** after real camps exist.
+
+### 15g. CP4 — Hyperdrive for the camp form (you, with Jeffrey's OK)
+
+1. Cloudflare → **Storage & databases → Postgres & MySQL (Hyperdrive) → Connect database → Connect to public database**: name **`tkd-camps-registrar`**; the same Session pooler host and port as 12g (`aws-0-us-east-1.pooler.supabase.com`, 5432); database `postgres`; user **`camps_registrar.eozkfbdfxqlcbpewhach`**; password from the "Supabase camps_registrar (Hyperdrive)" entry. Use **Manual entry** and keep the Connection String box empty (12g "what the dashboard looked like").
+   - **Caching: Disabled.**
+   - **Server certificates → Verify full** with the existing Supabase CA certificate (as 12g).
+   - **Origin connection limit: 5 or less** (the role allows at most 5).
+2. `tkd-dashboard` → **Settings** → **Bindings** → **Add** → **Hyperdrive**: variable name **`HYPERDRIVE_CAMPS`**, configuration `tkd-camps-registrar`, **Production only**.
+3. Check the Free plan's pooler connection budget with Claude (this adds up to 5 connections; the role's limit can be lowered to 3 with `alter role camps_registrar connection limit 3;`).
+
+### 15h. CP5 — the staff side on the real database, and a test sign-up (each with Jeffrey's OK)
+
+Run `Start dashboard.bat` and sign in as the admin. Create a **TEST** camp (Add camp, Edit, Save as template, Use template, Registration link + QR + Download, Close / Reopen). Then, because the family page isn't deployed yet, make the sign-up **in the SQL Editor** — it calls the real function (never inserts directly):
+
+```sql
+-- 1. the TEST camp's days (copy the ids)
+select d.id, d.day from public.camp_days d
+  join public.camps c on c.id = d.camp_id
+ where c.public_code = '<TEST camp code>' order by d.day;
+-- 2. sign up two test children. Run once with 0 as the last value: the answer is
+--    {"status":"price_changed","new_total_cents":…}. Run again with that number.
+select public.camp_public_signup(
+  '<TEST camp code>', 'cp5-test', gen_random_uuid(),
+  '[{"first_name":"Test","last_name":"One","age":8,"member":true,"day_ids":["<day id>"],"extras":[]},
+    {"first_name":"Test","last_name":"Two","age":10,"member":false,"day_ids":["<day id>"],"extras":[]}]'::jsonb,
+  'Test Parent', '5085550100', 'Parent', 'Test Contact', '5085550101', 'Friend',
+  'cash', true, 'data:image/png;base64,iVBORw0KGgo=', 'camp-2026-10-18',
+  (select md5(c.waiver_text) from public.camps c where c.public_code = '<TEST camp code>'),
+  0);
+```
+- The ages must be inside the TEST camp's age range (otherwise the answer is `camp_changed`).
+- A second run with `"Test","One"` again makes a **possible duplicate**.
+- The attempt rows (in `camp_public_attempts`) count toward the `cp5-test` key only (30 per hour).
+- The SQL Editor's own role runs the function exactly as `camps_registrar` would (it always runs as its owner).
+
+Then in the app: Check in + Undo (today), Mark paid + Undo, Edit details add a day → Owes → Mark paid $X, admin Edit / Undo payment, the possible duplicate → Keep this one / Restore, Withdraw / Restore, Delete camper, **Delete camp**. Claude then checks read-only: every step is in `change_log` (actions `camp_…`, the sign-up by "Family form", no `data:image` anywhere), the attempt rows say `ok` / `price_changed`, and **zero rows** are left for the TEST camp.
+
+### 15i. CP6 — after the deploy (each with Jeffrey's OK)
+
+1. Deploy with `CAMPS_REGISTRATION=off`. Live checks: the dashboard works; `https://tkd-dashboard.pages.dev/camp/abcdefgh` shows the page with the strict CSP; `/api/camp/abcdefgh` answers `not_open`.
+2. **Phone path:** open the TEST camp; set `CAMPS_REGISTRATION=on` (Production) and **Retry deployment**; Jeffrey signs up from his phone, and several times in a row from the desk tablet; sign-ups show on the camp page within 15 seconds; check one child in; Hyperdrive → `tkd-camps-registrar` → **Metrics**: queries **not cached**.
+3. Delete the TEST camp in the app; Claude checks read-only that zero camp rows are left for it. Only then create the first real camp.
+
+### 15j. Off switch (any time)
+
+In this order (step 1 works in seconds):
+1. **Database off switch (instant):** in the SQL Editor, run
+   ```sql
+   revoke execute on function public.camp_public_camp(text) from camps_registrar;
+   revoke execute on function public.camp_public_signup(text, text, uuid, jsonb, text, text, text, text, text, text, text, boolean, text, text, text, integer) from camps_registrar;
+   ```
+   From the next call on, both are refused for the camp form's login, even on connections Hyperdrive already has open. **To turn it back on:** re-run the whole 0013 file, or
+   ```sql
+   grant execute on function public.camp_public_camp(text) to camps_registrar;
+   grant execute on function public.camp_public_signup(text, text, uuid, jsonb, text, text, text, text, text, text, text, boolean, text, text, text, integer) to camps_registrar;
+   ```
+   While it is off, `0013_tests.sql` (T2a) and `0013_fingerprints.sql` fail — expected.
+2. **Stop the camp form:** set `CAMPS_REGISTRATION=off` (Production) and **Retry deployment**. Every camp link then says "not open" without touching the database.
+3. **Lock the login:** `alter role camps_registrar nologin;` (re-running 0013 does **not** turn it back on; `alter role camps_registrar login;` does).
+
+Color Belt's form (12i) and Star's (13g) are not affected by any of these, and their off switches don't affect Camps. **Previous site version:** Cloudflare Pages → **Deployments** → the previous one → **Rollback to this deployment**.
+
+### 15k. Undo 0013 (only if something is badly wrong, before real camp data exists)
+
+Only if Jeffrey decides to remove Camps completely: put the app back to a version without the Camps screens and the camp page **first**, then run this in the SQL Editor (one transaction; tested in PGlite on every run: afterwards no camp object or role is left, the earlier fingerprints equal a database that never had 0013, and the earlier tests pass). **This deletes every camp, template, sign-up, camper, check-in and payment.** Supabase's destructive-operations warning is real this time.
+
+**What stays:** the `change_log` rows Camps wrote (the history is append-only — including the phones, v0.700). Nothing from 0001–0012 is touched.
+
+```sql
+-- Undo migration 0013. change_log (the history) is KEPT.
+begin;
+
+-- the family form's two functions first (the instant off switch), then the view
+revoke execute on function public.camp_public_camp(text) from camps_registrar;
+revoke execute on function public.camp_public_signup(text, text, uuid, jsonb, text, text, text, text, text, text, text, boolean, text, text, text, integer) from camps_registrar;
+drop view if exists public.camp_roster;
+
+-- the functions (the two that name a 0013 table in their result must go
+-- before the tables)
+drop function if exists public.camp_public_camp(text);
+drop function if exists public.camp_public_signup_core(text, text, uuid, jsonb, text, text, text, text, text, text, text, boolean, text, text, text, integer);
+drop function if exists public.camp_public_signup(text, text, uuid, jsonb, text, text, text, text, text, text, text, boolean, text, text, text, integer);
+drop function if exists public.camp_lock_camper(uuid);
+drop function if exists public.camp_lock_payment(uuid);
+drop function if exists public.camp_first_day(uuid);
+drop function if exists public.camp_last_day(uuid);
+drop function if exists public.camp_day_count(uuid);
+drop function if exists public.camp_signup_state(uuid, date);
+drop function if exists public.camp_base_cents(uuid, integer, boolean, text);
+drop function if exists public.camp_camper_total_cents(uuid);
+drop function if exists public.camp_camper_paid_cents(uuid);
+drop function if exists public.camp_purge_old_signatures();
+drop function if exists public.camp_find_duplicate(uuid, uuid, text, text);
+drop function if exists public.camp_recheck_duplicate(uuid);
+drop function if exists public.camp_recheck_pointing_at(uuid);
+drop function if exists public.camp_public_camp_answer(uuid);
+drop function if exists public.camp_public_signup_answer(uuid);
+drop function if exists public.camp_add_parts(uuid, jsonb, jsonb);
+drop function if exists public.camp_tidy_extras(jsonb);
+drop function if exists public.camp_tidy_prices(jsonb);
+drop function if exists public.camp_setup_args_are_valid(text, boolean, text, date[], time, time, date, date, date, integer, integer, jsonb, jsonb, boolean, text, text);
+drop function if exists public.camp_extra_rows(jsonb);
+drop function if exists public.camp_camper_extras_are_ok(uuid, uuid[], jsonb);
+drop function if exists public.camp_extras_cents_now(jsonb);
+drop function if exists public.camp_add_camp(text, boolean, text, date[], time, time, date, date, date, integer, integer, jsonb, jsonb, text, text);
+drop function if exists public.camp_update_camp(uuid, integer, text, boolean, text, date[], time, time, date, date, date, integer, integer, jsonb, jsonb, text, text);
+drop function if exists public.camp_set_signup(uuid, integer, boolean);
+drop function if exists public.camp_delete_camp(uuid, integer, integer, integer);
+drop function if exists public.camp_save_template(uuid, text);
+drop function if exists public.camp_update_template(uuid, integer, text, text, boolean, integer, time, time, integer, integer, integer, integer, integer, jsonb, jsonb, text, text);
+drop function if exists public.camp_delete_template(uuid, integer);
+drop function if exists public.camp_update_details(uuid, integer, integer, text, text, integer, boolean, uuid[], jsonb, text, text, text, text, text, text);
+drop function if exists public.camp_change_paying_by(uuid, integer, text);
+drop function if exists public.camp_mark_paid(uuid, integer);
+drop function if exists public.camp_undo_payment(uuid);
+drop function if exists public.camp_edit_payment(uuid, text, integer, date);
+drop function if exists public.camp_resolve_duplicate(uuid, integer, uuid, integer, boolean);
+drop function if exists public.camp_withdraw_camper(uuid, integer);
+drop function if exists public.camp_restore_camper(uuid, integer);
+drop function if exists public.camp_delete_camper(uuid, integer, uuid[]);
+drop function if exists public.camp_check_in(uuid, uuid);
+drop function if exists public.camp_undo_check_in(uuid, uuid);
+drop function if exists public.camp_camper_detail(uuid);
+
+-- the 11 tables (their triggers, rules and indexes go with them), then the
+-- reference counter
+drop table if exists public.camp_payments, public.camp_camper_extras, public.camp_camper_days, public.camp_campers,
+                     public.camp_signups, public.camp_templates, public.camp_extras, public.camp_prices, public.camp_days,
+                     public.camps, public.camp_public_attempts;
+drop sequence if exists public.camp_signup_ref_seq;
+
+-- the trigger functions and the rule helpers the tables used
+drop function if exists public.camp_text_is_valid(text, integer);
+drop function if exists public.camp_days_arg_is_valid(date[]);
+drop function if exists public.camp_uuid_text_is_valid(text);
+drop function if exists public.camp_int_text_is_valid(jsonb, integer, integer);
+drop function if exists public.camp_time_is_valid(time);
+drop function if exists public.camp_prices_arg_is_valid(jsonb, integer);
+drop function if exists public.camp_extras_arg_is_valid(jsonb, boolean);
+drop function if exists public.camp_uuid_list_is_valid(jsonb, integer, integer);
+drop function if exists public.camp_camper_extras_arg_is_valid(jsonb);
+drop function if exists public.camp_children_arg_is_valid(jsonb);
+drop function if exists public.camp_template_setup_is_valid(integer, jsonb, jsonb);
+drop function if exists public.camp_price_kind(date, date);
+drop function if exists public.camps_before_write();
+drop function if exists public.camp_templates_before_write();
+drop function if exists public.camp_parts_before_write();
+drop function if exists public.camp_signups_before_write();
+drop function if exists public.camp_campers_before_write();
+drop function if exists public.camp_camper_days_before_write();
+drop function if exists public.camp_camper_extras_before_write();
+drop function if exists public.camp_payments_guard();
+drop function if exists public.camp_signups_log();
+
+-- the camp form's login
+revoke usage on schema public from camps_registrar;
+drop role if exists camps_registrar;
+
+commit;
+```
+
+**Then the Cloudflare side** (only if 15a / 15g were done): remove the `HYPERDRIVE_CAMPS` binding, delete the `tkd-camps-registrar` Hyperdrive configuration, delete the `CAMPS_REGISTRATION` variable, **Retry deployment**, and delete the "Supabase camps_registrar (Hyperdrive)" password-manager entry.
+
+**Why:**
+- **Its own login, password, Hyperdrive config and off switch:** a leak of one form's password can't reach another form's functions; each form can be stopped on its own.
+- **Its own rate-limit ledger:** the desk tablet's camp sign-ups never use up Color Belt's tries (and the other way round).
+- **Phones only through one function, signatures never:** the records are mostly about minors (rulebook §5); leaving columns out of a view wouldn't protect them, not granting them does.
+- **Prices as snapshots:** a price edit during an open sign-up never changes what a family was shown; the form refuses a send whose total changed (`price_changed`).
+
+---
+
 ## Admin: change the front-desk PIN or password
 
 The front desk (`shrewsburyustc@gmail.com`) is a **shared account**, so the app hides Change PIN and Change password for it. Only an admin changes them, here in Supabase, until the Staff accounts screen exists.

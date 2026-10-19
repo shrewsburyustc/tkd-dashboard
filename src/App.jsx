@@ -36,6 +36,7 @@ import Toast from './components/Toast.jsx';
 import SignIn from './screens/SignIn.jsx';
 import Home from './screens/Home.jsx';
 import Testing from './screens/Testing.jsx';
+import Camps from './screens/Camps.jsx';
 import StaffAccounts from './screens/StaffAccounts.jsx';
 import Settings from './screens/Settings.jsx';
 import LockScreen from './screens/LockScreen.jsx';
@@ -68,6 +69,7 @@ const PAGE_TITLES = {
 const SECTION_TITLES = {
   home: 'Home · U.S. Taekwondo Center',
   testing: 'Testing · U.S. Taekwondo Center',
+  camps: 'Camps · U.S. Taekwondo Center',
   staffAccounts: 'Staff accounts · U.S. Taekwondo Center',
   settings: 'Settings · U.S. Taekwondo Center',
 };
@@ -89,27 +91,54 @@ const TOASTS = {
 const EVENT_HASH = /^#testing\/event\/([A-Za-z0-9-]{1,64})(\/grading)?$/;
 const SETTINGS_HASH = '#settings';
 
-// The page (and event, and its tab) the address bar points at: { section, eventId, eventTab }.
+// ----- Camps addresses (contract 0013 §6.1) -----
+// Camps reuses the same two route values as Testing, so Back / Forward work the same way:
+//   eventId  = the open camp's id (null on the list)
+//   eventTab = on the list 'camps' | 'templates'; on a camp page 'default' | 'checkin' |
+//              'payments' | 'attendance' ('default' = Check in during camp week, else Payments)
+//   #camps                          the Camps tab
+//   #camps/templates                the Templates tab (admins)
+//   #camps/camp/<id>                a camp's page, on its default tab
+//   #camps/camp/<id>/checkin | /payments | /attendance   the same page on that tab
+const CAMPS_HASH = /^#camps(?:\/templates|\/camp\/([A-Za-z0-9-]{1,64})(?:\/(checkin|payments|attendance))?)?$/;
+
+// The page (and event or camp, and its tab) the address bar points at: { section, eventId, eventTab }.
 function routeFromAddress() {
   const hash = window.location.hash;
   if (hash === SETTINGS_HASH) return { section: 'settings', eventId: null, eventTab: 'students' };
   const match = EVENT_HASH.exec(hash);
   if (match) return { section: 'testing', eventId: match[1], eventTab: match[2] ? 'grading' : 'students' };
+  const camp = CAMPS_HASH.exec(hash);
+  if (camp) {
+    if (camp[1]) return { section: 'camps', eventId: camp[1], eventTab: camp[2] ?? 'default' };
+    return { section: 'camps', eventId: null, eventTab: hash === '#camps/templates' ? 'templates' : 'camps' };
+  }
   return { section: pageFromAddress(), eventId: null, eventTab: 'students' };
 }
 
 // true when the address bar shows something no page knows (it is then tidied to Home).
 function routeIsUnknown() {
   const hash = window.location.hash;
-  return addressIsUnknown() && hash !== SETTINGS_HASH && !EVENT_HASH.test(hash);
+  return addressIsUnknown() && hash !== SETTINGS_HASH && !EVENT_HASH.test(hash) && !CAMPS_HASH.test(hash);
 }
 
-// The address for a page (and, on Testing, an open event and its tab).
+// The address for a page (and, on Testing, an open event and its tab; on Camps, a camp or a tab).
 function addressForRoute(section, eventId = null, eventTab = 'students') {
   const base = `${window.location.pathname}${window.location.search}`;
   if (section === 'settings') return `${base}${SETTINGS_HASH}`;
   if (section === 'testing' && eventId) return `${base}#testing/event/${eventId}${eventTab === 'grading' ? '/grading' : ''}`;
+  if (section === 'camps' && eventId) {
+    const suffix = ['checkin', 'payments', 'attendance'].includes(eventTab) ? `/${eventTab}` : '';
+    return `${base}#camps/camp/${eventId}${suffix}`;
+  }
+  if (section === 'camps' && eventTab === 'templates') return `${base}#camps/templates`;
   return addressFor(section);
+}
+
+// The tab a Camps route starts on when none was given (navigate's default is Testing's 'students').
+function campsTab(eventId, tab) {
+  if (eventId) return ['checkin', 'payments', 'attendance'].includes(tab) ? tab : 'default';
+  return tab === 'templates' ? 'templates' : 'camps';
 }
 
 // If telling the database "lock this sign-in" fails (offline), try again this often until it works.
@@ -154,6 +183,7 @@ export default function App() {
   const [eventTab, setEventTab] = useState(() => routeFromAddress().eventTab);
   const [accountDialog, setAccountDialog] = useState(null); // null | 'changePin' | 'changePassword'
   const [testingModalOpen, setTestingModalOpen] = useState(false); // a Testing dialog is showing
+  const [campsModalOpen, setCampsModalOpen] = useState(false); // a Camps dialog is showing
   const [staffModalOpen, setStaffModalOpen] = useState(false); // a Staff accounts dialog is showing
   const [settingsModalOpen, setSettingsModalOpen] = useState(false); // a Settings dialog is showing
   const [toast, setToast] = useState(null); // { id, text, action, icon } or null
@@ -538,10 +568,13 @@ export default function App() {
   // replace: true swaps the current step instead of adding one (used when an event page closes by
   // itself because the event belongs to the other school — Back then doesn't bring it back).
   // tab: the event page's tab ('students' unless said otherwise — opening an event lands on Students).
-  const navigate = useCallback((id, nextEventId = null, { replace = false, tab = 'students' } = {}) => {
+  // On Camps, `nextEventId` is the camp whose page opens and `tab` the list tab or the camp's tab.
+  const navigate = useCallback((id, nextEventId = null, { replace = false, tab: askedTab = 'students' } = {}) => {
     setToast(null);
-    const changed =
-      id !== sectionRef.current || nextEventId !== eventIdRef.current || (nextEventId !== null && tab !== eventTabRef.current);
+    const tab = id === 'camps' ? campsTab(nextEventId, askedTab) : askedTab;
+    // On Camps the tab is part of the address on the list too (#camps vs #camps/templates).
+    const tabMatters = nextEventId !== null || id === 'camps';
+    const changed = id !== sectionRef.current || nextEventId !== eventIdRef.current || (tabMatters && tab !== eventTabRef.current);
     // { tkdPage: true } marks the step as "added by the dashboard while signed in" (see below).
     if (changed && replace) window.history.replaceState({ tkdPage: true }, '', addressForRoute(id, nextEventId, tab));
     else if (changed) window.history.pushState({ tkdPage: true }, '', addressForRoute(id, nextEventId, tab));
@@ -576,6 +609,18 @@ export default function App() {
   const changeEventTab = useCallback((tab) => {
     if (eventIdRef.current) window.history.replaceState(window.history.state, '', addressForRoute('testing', eventIdRef.current, tab));
     setEventTab(tab);
+  }, []);
+
+  // The Camps section's ways in and out (Camps.jsx → CampsTab / CampPage).
+  const openCamp = useCallback((id) => navigate('camps', id, { tab: 'default' }), [navigate]);
+  // { replace: true } = the page closes itself (the camp is for the other school, or was deleted).
+  const closeCamp = useCallback((options) => navigate('camps', null, { ...options, tab: 'camps' }), [navigate]);
+  // Camps | Templates, and Check in | Payments | Attendance: the same page, so no new history step
+  // (Back still leaves the page; a reload keeps the tab).
+  const changeCampTab = useCallback((tab) => {
+    const next = campsTab(eventIdRef.current, tab);
+    window.history.replaceState(window.history.state, '', addressForRoute('camps', eventIdRef.current, next));
+    setEventTab(next);
   }, []);
 
   // ----- Browser Back / Forward (rulebook v0.83) -----
@@ -619,7 +664,8 @@ export default function App() {
       if (routeIsUnknown()) window.history.replaceState(null, '', addressFor(target));
       if (target === sectionRef.current && route.eventId === eventIdRef.current) {
         // Same page; only the tab may differ (an address typed by hand): switch it, never asked.
-        if (route.eventId && route.eventTab !== eventTabRef.current && phaseRef.current === 'home') setEventTab(route.eventTab);
+        // (Camps: also Camps ↔ Templates on the list.)
+        if ((route.eventId || target === 'camps') && route.eventTab !== eventTabRef.current && phaseRef.current === 'home') setEventTab(route.eventTab);
         return;
       }
       const here = addressForRoute(sectionRef.current, eventIdRef.current, eventTabRef.current);
@@ -680,7 +726,7 @@ export default function App() {
   const isSignedIn = (phase === 'home' || phase === 'locked') && profile !== null;
   const dialogOpen = phase === 'home' && profile !== null && accountDialog !== null;
   // The page behind a dialog can't be clicked or reached with Tab (account or Testing dialog).
-  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || staffModalOpen || settingsModalOpen));
+  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || campsModalOpen || staffModalOpen || settingsModalOpen));
 
   return (
     <div className="app-root">
@@ -743,6 +789,24 @@ export default function App() {
                 showToast={showToast}
                 clearToast={clearToast}
                 onModalOpenChange={setTestingModalOpen}
+              />
+            )}
+            {section === 'camps' && (
+              <Camps
+                location={location}
+                // For showing or hiding controls only — the database decides what may change.
+                isAdmin={profile.role === 'admin'}
+                campId={eventId}
+                campTab={eventTab}
+                onCampTab={changeCampTab}
+                onOpenCamp={openCamp}
+                onCloseCamp={closeCamp}
+                screenLocked={phase === 'locked'}
+                onNoAccess={handleNoAccess}
+                onRefreshProfile={refreshProfile}
+                showToast={showToast}
+                clearToast={clearToast}
+                onModalOpenChange={setCampsModalOpen}
               />
             )}
             {section === 'staffAccounts' && (

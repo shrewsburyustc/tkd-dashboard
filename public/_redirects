@@ -6,3 +6,7 @@
 # It points at /register (not /register.html) on purpose: Pages turns /register.html into
 # /register by itself ("pretty URLs"), and pointing at the .html name can cause a redirect loop.
 /register/*  /register  200
+
+# The camp sign-up page works the same way (contract 0013 §4.1): every /camp/<code> address
+# serves the ONE camp page, camp.html (Pages calls it /camp), and the page reads the code.
+/camp/*  /camp  200

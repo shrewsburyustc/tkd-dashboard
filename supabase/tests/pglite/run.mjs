@@ -104,6 +104,12 @@
 //            the 0005 fingerprints must equal step 11's (= a database that
 //            never had 0010), change_log must have one undo_0010 row per
 //            removed result, and 0005_tests.sql / 0003_tests.sql pass.
+//   14. 0013 (Camps), on its OWN fresh database (stepCamps; the main one
+//       ends step 13 with the 0010 down-script, so it no longer looks like
+//       production): 0001-0006 + 0010 as on production, then 0013, its
+//       tests and every earlier test file, live checks AS camps_registrar,
+//       a seeded TEST camp, a second apply (re-run safety), and last the
+//       "Undo 0013" script of SETUP.md - see stepCamps below.
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -396,6 +402,9 @@ async function main() {
     after10 = await step13(db, upgradeHas0005 ? upgradeDb : null, after5);
   }
 
+  // 14. Camps (0013), on its own fresh database
+  const after13 = await stepCamps();
+
   console.log('\nFunction fingerprints (name  arguments  body_md5  security_definer  settings  owner  execute_rights):');
   for (const line of after) console.log('  ' + line);
   console.log('\n0004 fingerprints (kind  item  detail):');
@@ -411,6 +420,10 @@ async function main() {
   if (after10) {
     console.log('\n0010 fingerprints (kind  item  detail):');
     for (const line of after10) console.log('  ' + line);
+  }
+  if (after13) {
+    console.log('\n0013 fingerprints (kind  item  detail):');
+    for (const line of after13) console.log('  ' + line);
   }
 
   return finish();
@@ -951,6 +964,278 @@ async function step12(db, upgradeDb) {
     }
   }
   return after6;
+}
+
+// ---------------------------------------------------------------------
+// Step 14: Camps (0013) - contract CONTRACT-0013.md section 2.2
+// ---------------------------------------------------------------------
+// The main database can't be used for this step: step 13g ends with the
+// 0010 down-script, so it no longer looks like production. stepCamps
+// therefore builds its OWN fresh database in production's order
+// (0001-0006, then 0010) and puts 0013 on top:
+//   a. 0013_fingerprints.sql must not contain the words the Supabase
+//      connection refuses
+//   b. the 0003 / 0004 / 0005 / 0006 / 0010 fingerprints are taken, 0013
+//      is applied, and they must be IDENTICAL afterwards (0013 changed
+//      none of their objects)
+//   c. 0013_tests.sql, then every earlier test file again
+//   d. "live" checks AS camps_registrar: every table, the counter, a
+//      write, staff functions, helpers, the other forms' functions and
+//      CREATE refused; camp_public_camp works; testing_registrar and
+//      star_registrar can't run the camp functions
+//   e. a TEST camp seeded here, two family sign-ups made AS
+//      camps_registrar, one check-in and one payment; then 0013_tests.sql
+//      again (before AND after a camp exists)
+//   f. 0013 applied a SECOND time: no row changed, the fingerprints
+//      identical, 0013_tests.sql and the 0005 / 0006 / 0010 tests pass
+//   g. LAST: the "Undo 0013" script of SETUP.md (read from SETUP.md, so
+//      the tested text is the documented text): afterwards no camp object
+//      or camps_registrar is left, the earlier fingerprints equal step b's
+//      (a database that never had 0013), and the earlier tests pass
+// Returns 0013's fingerprints (printed at the end), or null.
+async function stepCamps() {
+  const L = '[camps] ';
+  const CAMP_ACK_VERSION = 'camp-2026-10-18';
+  const CAMP_CODE = 'pgcp2345';   // 8 characters from the public-code alphabet
+  const CAMP_TABLES = ['camps', 'camp_days', 'camp_prices', 'camp_extras', 'camp_templates', 'camp_signups',
+    'camp_campers', 'camp_camper_days', 'camp_camper_extras', 'camp_payments', 'camp_public_attempts'];
+  // everything 0013 stores, plus the history's row count, as one md5
+  const snapshotSql = `select md5(${CAMP_TABLES.map((t) =>
+    `coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.${t} x), '')`).join(' || ')}
+    || (select count(*) from public.change_log)::text)`;
+  const earlier = async (cdb) => [
+    ...(await fingerprints(cdb, '0003_fingerprints.sql')),
+    ...(await fingerprints(cdb, '0004_fingerprints.sql')),
+    ...(await fingerprints(cdb, '0005_fingerprints.sql')),
+    ...(await fingerprints(cdb, '0006_fingerprints.sql')),
+    ...(await fingerprints(cdb, '0010_fingerprints.sql')),
+  ];
+  const earlierTests = async (cdb, label) => {
+    await runTestFile(cdb, `${L}0010_tests.sql (${label})`, '0010_tests.sql', 'ALL 0010 TESTS PASSED');
+    await runTestFile(cdb, `${L}0006_tests.sql (${label})`, '0006_tests.sql', 'ALL 0006 TESTS PASSED');
+    await runTestFile(cdb, `${L}0005_tests.sql (${label})`, '0005_tests.sql', 'ALL 0005 TESTS PASSED');
+  };
+  const campTests = (cdb, label) => runTestFile(cdb, `${L}0013_tests.sql (${label})`, '0013_tests.sql', 'ALL 0013 TESTS PASSED');
+
+  // d. acting AS the camp form's login. Each statement must be refused
+  // (permission denied), then camp_public_camp must work.
+  const liveChecks = async (cdb) => {
+    const refused = [
+      ...CAMP_TABLES.map((t) => [`read ${t}`, `select 1 from public.${t} limit 1`]),
+      ['read camp_roster', 'select 1 from public.camp_roster limit 1'],
+      ['read testing_public_attempts', 'select 1 from public.testing_public_attempts limit 1'],
+      ['read change_log', 'select 1 from public.change_log limit 1'],
+      ['read staff', 'select 1 from public.staff limit 1'],
+      ['read locations', 'select 1 from public.locations limit 1'],
+      ['read auth.users', 'select 1 from auth.users limit 1'],
+      ['use the reference counter', "select nextval('public.camp_signup_ref_seq')"],
+      ['write camp_campers', 'update public.camp_campers set first_name = first_name'],
+      ['write camp_payments', "insert into public.camp_payments (camper_id, kind, amount_cents, method, paid_on, recorded_by_name) values (gen_random_uuid(), 'payment', 1, 'cash', current_date, 'x')"],
+      ['write camp_public_attempts', "insert into public.camp_public_attempts (client_key, outcome) values ('k', 'ok')"],
+      ['call a staff function', 'select public.camp_mark_paid(gen_random_uuid(), 1)'],
+      ['call the detail function', 'select public.camp_camper_detail(gen_random_uuid())'],
+      ['call has_data_access', 'select public.has_data_access()'],
+      ['call a helper', 'select public.camp_purge_old_signatures()'],
+      ['call the sign-up core directly', `select public.camp_public_signup_core('${CAMP_CODE}', 'k', gen_random_uuid(), '[]'::jsonb, 'a', '5085550100', 'b', 'c', '5085550101', 'd', 'cash', true, '${TEST_SIGNATURE}', '${CAMP_ACK_VERSION}', 'x', 0)`],
+      ['call testing_public_event', "select public.testing_public_event('abcdefgh')"],
+      ['call star_public_event', "select public.star_public_event('abcdefgh')"],
+      ['create a table in public', 'create table public.zz_camps_registrar_probe (x integer)'],
+      ['create a schema', 'create schema zz_camps_registrar_probe'],
+    ];
+    let allRefused = true;
+    const leaks = [];
+    for (const [label, sql] of refused) {
+      try {
+        await cdb.exec('set role camps_registrar;');
+        await cdb.exec(sql);
+        allRefused = false;
+        leaks.push(label);
+      } catch (error) {
+        if (!/permission denied|must be a member|not allowed/i.test(error.message)) {
+          allRefused = false;
+          leaks.push(`${label} (unexpected error: ${error.message})`);
+        }
+      } finally {
+        await cdb.exec('reset role;').catch(() => {});
+      }
+    }
+    record(`${L}[camps registrar] every table, the counter, writes, staff functions, helpers, the other forms and CREATE refused`,
+      allRefused, leaks.join('; '));
+    try {
+      await cdb.exec('set role camps_registrar;');
+      const r = await cdb.query("select public.camp_public_camp('zzzzzzzz') as r");
+      record(`${L}[camps registrar] can call camp_public_camp`, r.rows[0].r?.status === 'not_found', JSON.stringify(r.rows[0].r));
+    } catch (error) {
+      record(`${L}[camps registrar] can call camp_public_camp`, false, error.message);
+    } finally {
+      await cdb.exec('reset role;').catch(() => {});
+    }
+    const crossed = [];
+    for (const role of ['testing_registrar', 'star_registrar']) {
+      for (const sql of ["select public.camp_public_camp('zzzzzzzz')",
+        `select public.camp_public_signup('zzzzzzzz', 'k', gen_random_uuid(), '[]'::jsonb, 'a', '5085550100', 'b', 'c', '5085550101', 'd', 'cash', true, '${TEST_SIGNATURE}', '${CAMP_ACK_VERSION}', 'x', 0)`]) {
+        try {
+          await cdb.exec(`set role ${role};`);
+          await cdb.exec(sql);
+          crossed.push(`${role}: ${sql.slice(7, 40)}`);
+        } catch (error) {
+          if (!/permission denied/i.test(error.message)) crossed.push(`${role}: ${sql.slice(7, 40)} (${error.message})`);
+        } finally {
+          await cdb.exec('reset role;').catch(() => {});
+        }
+      }
+    }
+    record(`${L}[camps registrar] testing_registrar and star_registrar can't run the camp functions`, crossed.length === 0, crossed.join('; '));
+  };
+
+  // e. the seeded TEST camp: written as the SQL Editor would (postgres,
+  // labelled), then two families sign up AS camps_registrar, then one
+  // check-in and one payment (written directly, labelled)
+  const seedCamp = async (cdb) => {
+    const ok = await run(cdb, `${L}seed a TEST camp (Worcester, 2 days, open)`, `
+      begin;
+      select set_config('request.jwt.claims', '', true);
+      select set_config('tkd.actor_label', 'PGlite test camp', true);
+      select set_config('tkd.action', 'seed', true);
+      select set_config('tkd.batch_id', gen_random_uuid()::text, true);
+      insert into public.camps (location_code, both_schools, name, start_time, end_time, signup_opens_on, signup_closes_on,
+                                early_until, min_age, max_age, description, waiver_text, public_code, created_by_name, updated_by_name)
+      values ('worcester', false, 'PGlite Vacation Camp', '09:00', '15:00', public.testing_today() - 1, public.testing_today() + 1,
+              public.testing_today() + 1, 5, 12, 'Bring a lunch.', 'I agree to the camp rules.', '${CAMP_CODE}', '', '');
+      insert into public.camp_days (camp_id, day)
+      select c.id, public.testing_today() + x from public.camps c, generate_series(0, 1) as x where c.public_code = '${CAMP_CODE}';
+      insert into public.camp_prices (camp_id, day_count, member_early_cents, member_regular_cents, nonmember_early_cents, nonmember_regular_cents)
+      select c.id, k, 7500 * k, 8000 * k, 8500 * k, 9000 * k from public.camps c, generate_series(1, 2) as k where c.public_code = '${CAMP_CODE}';
+      insert into public.camp_extras (camp_id, name, price_cents, per, not_for_all_days, sort)
+      select c.id, 'Early drop-off', 1500, 'day', false, 0 from public.camps c where c.public_code = '${CAMP_CODE}';
+      select set_config('tkd.actor_label', '', true);
+      select set_config('tkd.action', '', true);
+      select set_config('tkd.batch_id', '', true);
+      commit;`);
+    if (!ok) return false;
+    const ids = (await cdb.query(`select (select array_agg(d.id::text order by d.day) from public.camp_days d where d.camp_id = c.id) as days,
+        (select e.id::text from public.camp_extras e where e.camp_id = c.id) as extra,
+        md5(c.waiver_text) as waiver from public.camps c where c.public_code = '${CAMP_CODE}'`)).rows[0];
+    let signedUp = 0;
+    // Pat: 2 days member early $150 + drop-off on day 1 $15; Kim and Sam
+    // Ray: 1 day non-member early $85 each
+    const families = [
+      [[{ first_name: 'Pat', last_name: 'Lee', age: 8, member: true, day_ids: ids.days, extras: [{ extra_id: ids.extra, day_ids: [ids.days[0]] }] }], 16500],
+      [[{ first_name: 'Kim', last_name: 'Ray', age: 9, member: false, day_ids: [ids.days[0]], extras: [] },
+        { first_name: 'Sam', last_name: 'Ray', age: 6, member: false, day_ids: [ids.days[1]], extras: [] }], 17000],
+    ];
+    for (const [children, total] of families) {
+      try {
+        await cdb.exec('set role camps_registrar;');
+        const r = await cdb.query(
+          `select public.camp_public_signup($1, $2, gen_random_uuid(), $3::jsonb, 'Test Parent', '5085550100', 'Parent',
+                  'Test Contact', '5085550101', 'Friend', 'cash', true, $4, $5, $6, $7) as r`,
+          [CAMP_CODE, 'pglite-camp-client-key', JSON.stringify(children), TEST_SIGNATURE, CAMP_ACK_VERSION, ids.waiver, total]);
+        if (r.rows[0].r?.status === 'ok') signedUp += 1;
+        else record(`${L}sign up ${children[0].first_name} as camps_registrar`, false, JSON.stringify(r.rows[0].r));
+      } catch (error) {
+        record(`${L}sign up ${children[0].first_name} as camps_registrar`, false, error.message);
+      } finally {
+        await cdb.exec('reset role;').catch(() => {});
+      }
+    }
+    record(`${L}two family sign-ups (3 children) made AS camps_registrar`, signedUp === 2, `${signedUp} ok`);
+    await run(cdb, `${L}one check-in and one payment for the TEST camp`, `
+      begin;
+      select set_config('tkd.actor_label', 'PGlite test camp', true);
+      select set_config('tkd.action', 'seed', true);
+      update public.camp_camper_days cd set checked_in_at = now(), checked_in_by_name = 'PGlite test camp'
+        from public.camp_campers c, public.camp_days d
+       where c.id = cd.camper_id and d.id = cd.day_id and c.first_name = 'Pat' and d.day = public.testing_today();
+      insert into public.camp_payments (camper_id, kind, amount_cents, method, paid_on, recorded_by_name)
+      select c.id, 'payment', 16500, 'cash', public.testing_today(), 'PGlite test camp' from public.camp_campers c where c.first_name = 'Pat';
+      select set_config('tkd.actor_label', '', true);
+      select set_config('tkd.action', '', true);
+      commit;`);
+    const c = (await cdb.query(`select (select count(*)::int from public.camp_campers) as campers,
+        (select count(*)::int from public.camp_signups where signature is not null) as signatures,
+        (select count(*)::int from public.camp_camper_days where checked_in_at is not null) as checked_in,
+        (select count(*)::int from public.camp_payments) as payments,
+        (select count(*)::int from public.camp_public_attempts) as attempts,
+        (select count(*)::int from public.change_log where coalesce(before::text, '') || coalesce(after::text, '') like '%data:image%') as pictures`)).rows[0];
+    record(`${L}3 campers, 2 signatures, 1 check-in, 1 payment, 2 attempt rows, no picture in change_log`,
+      c.campers === 3 && c.signatures === 2 && c.checked_in === 1 && c.payments === 1 && c.attempts === 2 && c.pictures === 0,
+      JSON.stringify(c));
+    return true;
+  };
+
+  // the fresh database, in production's order
+  console.log('\nMigration 0013 (Camps), on its own fresh database:');
+  const cdb = await buildBase(L);
+  if (!cdb) return null;
+  for (const file of ['0003_testing_classes_ranks.sql', '0004_staff_accounts.sql', '0005_testing_events.sql',
+    '0006_star_testing.sql', '0010_testing_results.sql']) {
+    if (!(await run(cdb, `${L}apply ${file}`, read('migrations', file)))) return null;
+  }
+
+  // a. connector-safe fingerprints file
+  record(`${L}0013_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)`,
+    !/delete|drop/i.test(read('tests', '0013_fingerprints.sql')));
+
+  // b. apply 0013; the earlier fingerprints don't move
+  const earlierBefore = await earlier(cdb);
+  if (!(await run(cdb, `${L}apply 0013_camps.sql`, read('migrations', '0013_camps.sql')))) return null;
+  record(`${L}0003 / 0004 / 0005 / 0006 / 0010 fingerprints identical before/after 0013`,
+    JSON.stringify(earlierBefore) === JSON.stringify(await earlier(cdb)), `${earlierBefore.length} rows`);
+
+  // c. the tests
+  await campTests(cdb, 'no camp yet');
+  await earlierTests(cdb, 'after 0013');
+  await runTestFile(cdb, `${L}0004_tests.sql (after 0013)`, '0004_tests.sql', 'ALL 0004 TESTS PASSED');
+  await runTestFile(cdb, `${L}0003_tests.sql (after 0013)`, '0003_tests.sql', 'ALL 0003 TESTS PASSED');
+  await runTestFile(cdb, `${L}0002_tests.sql (after 0013)`, '0002_tests.sql', 'ALL 0002 TESTS PASSED');
+  await runTestFile(cdb, `${L}verify_pin_tests.sql (after 0013)`, 'verify_pin_tests.sql', 'ALL PIN TESTS PASSED');
+
+  // d. live checks as the camp form's login
+  await liveChecks(cdb);
+
+  // e. a seeded TEST camp, then the tests again
+  if (await seedCamp(cdb)) await campTests(cdb, 'with the TEST camp');
+
+  // f. re-run safety
+  const before13 = await fingerprints(cdb, '0013_fingerprints.sql');
+  const dataBefore = await one(cdb, snapshotSql);
+  await run(cdb, `${L}apply 0013 a SECOND time (re-run safety)`, read('migrations', '0013_camps.sql'));
+  record(`${L}0013 re-run kept every row unchanged (11 camp tables, change_log)`, dataBefore === (await one(cdb, snapshotSql)));
+  const after13 = await fingerprints(cdb, '0013_fingerprints.sql');
+  record(`${L}0013 fingerprints identical before/after re-run`, JSON.stringify(before13) === JSON.stringify(after13), `${after13.length} rows`);
+  record(`${L}earlier fingerprints still identical after the 0013 re-run`,
+    JSON.stringify(earlierBefore) === JSON.stringify(await earlier(cdb)));
+  await campTests(cdb, 'after re-run');
+  await earlierTests(cdb, 'after the 0013 re-run');
+  await liveChecks(cdb);
+
+  // g. the Undo 0013 script, exactly as SETUP.md has it (the first sql
+  // block after its "### ... Undo 0013" heading)
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### [0-9]+[a-z]?\. Undo 0013/m);
+  const block = at < 0 ? null : setup.slice(at).match(/```sql\n([\s\S]*?)```/);
+  if (!block) {
+    record(`${L}[undo 0013] find the script in SETUP.md`, false, 'no sql block after a "### .. Undo 0013" heading');
+  } else if (await run(cdb, `${L}[undo 0013] the SQL block of SETUP.md`, block[1])) {
+    const left = (await cdb.query(`select string_agg(x, ', ') as left from (
+        select 'relation ' || c.relname as x from pg_class c join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = 'public' and (c.relname = 'camps' or c.relname like 'camp\\_%')
+        union all
+        select 'function ' || p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+         where n.nspname = 'public' and (p.proname like 'camp\\_%' or p.proname like 'camps\\_%')
+        union all
+        select 'type ' || t.typname from pg_type t join pg_namespace n on n.oid = t.typnamespace
+         where n.nspname = 'public' and (t.typname = 'camps' or t.typname like 'camp\\_%')
+        union all
+        select 'role ' || r.rolname from pg_roles r where r.rolname = 'camps_registrar') as q`)).rows[0].left;
+    record(`${L}[undo 0013] no camp object and no camps_registrar left`, left === null, left ?? '');
+    record(`${L}[undo 0013] earlier fingerprints equal a database that never had 0013`,
+      JSON.stringify(earlierBefore) === JSON.stringify(await earlier(cdb)));
+    await earlierTests(cdb, 'after Undo 0013');
+    await runTestFile(cdb, `${L}0003_tests.sql (after Undo 0013)`, '0003_tests.sql', 'ALL 0003 TESTS PASSED');
+  }
+  return after13;
 }
 
 function finish() {

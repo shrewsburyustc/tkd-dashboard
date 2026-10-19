@@ -11,6 +11,8 @@
 // register.html (the public family registration form, /register/<code>). On Cloudflare,
 // public/_redirects serves register.html for every /register/<code> address; on this PC the
 // small plugin below does the same for `npm run dev`, `dev:preview-mode` and `vite preview`.
+// A third page, camp.html (the public camp sign-up form, /camp/<code>, contract 0013 §4.1),
+// works exactly the same way.
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
@@ -23,13 +25,16 @@ import react from '@vitejs/plugin-react';
 // preview inside a worktree ignore every edit (it kept showing the code from when it started).
 const worktreesDir = fileURLToPath(new URL('./.claude/worktrees/', import.meta.url)).replace(/\\/g, '/').toLowerCase();
 
-// /register, /register/ and /register/<code> (with or without ?query) → register.html,
-// like public/_redirects does on Cloudflare. Everything else is left alone.
+// /register, /register/ and /register/<code> (with or without ?query) → register.html, and
+// /camp, /camp/ and /camp/<code> → camp.html, like public/_redirects does on Cloudflare.
+// Everything else is left alone.
 function registerPageRewrite() {
   const rewrite = (req, _res, next) => {
     const [path, query] = (req.url ?? '').split('?');
     if (path === '/register' || path.startsWith('/register/')) {
       req.url = '/register.html' + (query !== undefined ? `?${query}` : '');
+    } else if (path === '/camp' || path.startsWith('/camp/')) {
+      req.url = '/camp.html' + (query !== undefined ? `?${query}` : '');
     }
     next();
   };
@@ -48,10 +53,11 @@ export default defineConfig({
   plugins: [react(), registerPageRewrite()],
   build: {
     rollupOptions: {
-      // The two pages of the build.
+      // The three pages of the build.
       input: {
         main: resolve(fileURLToPath(new URL('.', import.meta.url)), 'index.html'),
         register: resolve(fileURLToPath(new URL('.', import.meta.url)), 'register.html'),
+        camp: resolve(fileURLToPath(new URL('.', import.meta.url)), 'camp.html'),
       },
     },
   },
@@ -60,7 +66,7 @@ export default defineConfig({
     watch: { ignored: (path) => path.replace(/\\/g, '/').toLowerCase().startsWith(worktreesDir) },
   },
   optimizeDeps: {
-    // Only look for the app's libraries starting from our own two pages.
-    entries: ['index.html', 'register.html'],
+    // Only look for the app's libraries starting from our own three pages.
+    entries: ['index.html', 'register.html', 'camp.html'],
   },
 });

@@ -35,6 +35,18 @@
 /register/*
   Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
 
+# The public camp sign-up page (contract 0013 §4.5): exactly the same strict policy as the
+# registration page above — this site's own files plus Cloudflare Turnstile, nothing else. Here
+# connect-src 'self' means the page may only talk to /api/camp/… on this site.
+/camp
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+
+/camp.html
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+
+/camp/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+
 # Answers from the registration Function must never be stored by browsers or proxies.
 # (Cloudflare doesn't apply this file to Function answers, so the Function also sets this
 # header itself — functions/_lib/http.js. This line is the backup the contract asks for.)

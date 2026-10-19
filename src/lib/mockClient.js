@@ -38,6 +38,17 @@
 //   __tkdPreview.failNextSave()           also makes the next Reset password / Reset PIN fail
 //   __tkdPreview.resetStaffAccounts()     the fake desk is signed in on 3 devices again
 //   __tkdPreview.setPasswordAgeMinutes(11) → a reset asks for "Confirm it's you" again
+// Camps helpers (contract 0013 §5.4; mockCamps.js + camps/publicApi.preview.js; data in
+// localStorage 'tkd.preview.camps'; setRole, failNextSave, failSavesUntilRetry, reconnect,
+// setTestingDelay, setToday and simulateOtherAdminEdit cover Camps too):
+//   __tkdPreview.resetCamps()             back to the default camps, campers and templates
+//   __tkdPreview.campWeek()               today = Wed, Apr 21, 2027 (April Vacation Camp week),
+//                                         camps reset + reload — to see Check in
+//   __tkdPreview.setCampsRegistration(false) the camp form's kill switch
+//   __tkdPreview.simulateFamilySignup()   a sign-up as if from a phone (first open camp; or pass a
+//                                         code, and { duplicateOf: 'Ava Thompson' } for a duplicate)
+//   __tkdPreview.forcePriceChanged(true)  the next camp Send answers price_changed (+$5)
+//   __tkdPreview.forceCampChanged(true)   the next camp Send answers camp_changed
 import { getLastPasswordSignIn, PASSWORD_MAX_AGE_MS, decodeJwtPayload } from './session.js';
 import { setLockedFlag } from './useIdleLock.js';
 import { readStorage, writeStorage, removeStorage } from './storage.js';
@@ -46,6 +57,8 @@ import { createTestingBackend, TESTING_RPC_NAMES } from './mockTesting.js';
 import { createEventsBackend, EVENT_RPC_NAMES, EVENT_RESTRICTED_RPC_NAMES, EVENT_TABLES } from './mockTestingEvents.js';
 import { previewToday, publicPreviewHelpers } from './testing/publicApi.preview.js';
 import { createStaffBackend, STAFF_RPC_NAMES } from './mockStaff.js';
+import { createCampsBackend, CAMP_RPC_NAMES, CAMP_RESTRICTED_RPC_NAMES, CAMP_READ_RPC_NAMES, CAMP_TABLES } from './mockCamps.js';
+import { publicCampHelpers } from './camps/publicApi.preview.js';
 
 const SESSION_KEY = 'tkd.preview.session'; // the fake "signed in" session
 const STAFF_STATE_KEY = 'tkd.preview.staffState'; // fake staff row: PIN, shared flag
@@ -54,6 +67,7 @@ const OLD_PIN_STATE_KEY = 'tkd.preview.pinState'; // used by the first build; cl
 const TESTING_KEY = 'tkd.preview.testing'; // fake Testing tables (classes + ranks)
 const TESTING_DELAY_KEY = 'tkd.preview.testingDelay'; // setTestingDelay(ms), kept across reloads
 const STAFF_ACCOUNTS_KEY = 'tkd.preview.staffAccounts'; // fake Staff accounts (mockStaff.js)
+const CAMPS_KEY = 'tkd.preview.camps'; // fake Camps tables (mockCamps.js)
 
 const PREVIEW_PASSWORD = 'preview';
 const PREVIEW_PIN = '2580'; // not too easy: 1234 is refused by the weak-PIN rule now
@@ -427,6 +441,15 @@ export function createMockClient() {
     today: previewToday, // the real school date, or the one set with setToday
     newId: newUuid,
   });
+  // ----- Camps (mockCamps.js) — its own store; the schools' names / addresses come from Testing -----
+  const camps = createCampsBackend({
+    loadStore: () => JSON.parse(readStorage(CAMPS_KEY)), // missing/damaged → default data
+    saveStore: (store) => writeStorage(CAMPS_KEY, JSON.stringify(store)),
+    now: () => Date.now(),
+    today: previewToday,
+    newId: newUuid,
+    locations: () => events.snapshot().locations,
+  });
   // failNextSave arms this; the next Testing or Events save then fails (whichever comes first).
   let failNextTesting = false;
   // failSavesUntilRetry turns this on and reconnect turns it off: while on, every Events save
@@ -477,6 +500,7 @@ export function createMockClient() {
             return { data: null, error: { code: '42501', message: `permission denied for table ${table}`, details: null, hint: null }, status: 403 };
           }
           // Phase 2 tables (and locations, which gained the address columns) → mockTestingEvents.js.
+          if (CAMP_TABLES.includes(table)) return camps.select(table, query.columns, query.filters, query.orders, testingContext());
           if (EVENT_TABLES.includes(table)) return events.select(table, query.columns, query.filters, query.orders, testingContext());
           return testing.select(table, query.columns, query.filters, query.orders, testingContext());
         };
@@ -509,6 +533,18 @@ export function createMockClient() {
     if (STAFF_RPC_NAMES.includes(name)) {
       await wait(FAKE_DELAY_MS);
       return staffAccounts.rpc(name, args, staffContext());
+    }
+    if (CAMP_RPC_NAMES.includes(name) || CAMP_RESTRICTED_RPC_NAMES.includes(name)) {
+      await wait(testingDelay());
+      const isSave = CAMP_RPC_NAMES.includes(name) && !CAMP_READ_RPC_NAMES.includes(name);
+      if (eventSavesOffline && isSave) {
+        return { data: null, error: { message: 'Failed to fetch (preview: failSavesUntilRetry)' }, status: 0 };
+      }
+      if (failNextTesting && isSave) {
+        failNextTesting = false;
+        camps.failNextSave();
+      }
+      return camps.rpc(name, args, testingContext());
     }
     if (EVENT_RPC_NAMES.includes(name) || EVENT_RESTRICTED_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
@@ -587,7 +623,7 @@ export function createMockClient() {
     failNextSave() {
       failNextTesting = true;
       staffAccounts.failNext();
-      return 'The next Testing save (and the next Reset password / Reset PIN) will fail like a dropped connection and change nothing.';
+      return 'The next Testing or Camps save (and the next Reset password / Reset PIN) will fail like a dropped connection and change nothing.';
     },
     resetStaffAccounts() {
       staffAccounts.reset();
@@ -596,7 +632,8 @@ export function createMockClient() {
     simulateOtherAdminEdit() {
       testing.simulateOtherAdminEdit();
       events.simulateOtherAdminEdit();
-      return 'Another admin changed every class, rank, event, student and school address, and swapped two ranks. Open dialogs and Undo are now out of date.';
+      camps.simulateOtherAdminEdit();
+      return 'Another admin changed every class, rank, event, student, school address, camp, camper and template, and swapped two ranks. Open dialogs and Undo are now out of date.';
     },
     clearSchool(school) {
       if (!testing.clearSchool(school)) return "Use clearSchool('Worcester') or clearSchool('Shrewsbury').";
@@ -626,6 +663,8 @@ export function createMockClient() {
     },
     // ----- Events / family form helpers (publicApi.preview.js) -----
     ...publicPreviewHelpers(),
+    // ----- Camps helpers (camps/publicApi.preview.js) -----
+    ...publicCampHelpers(),
   };
 
   return { auth, rpc, from };

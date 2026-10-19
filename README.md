@@ -225,6 +225,14 @@ src/styles/
 - Code: `src/screens/testing/events/` (list, Add / Edit event), `src/screens/testing/event/` (event page and its dialogs), `src/screens/Settings.jsx` + `src/screens/settings/`; styles `src/styles/testing-events.css` and `settings.css`. All words are in `src/screens/testing/text.js` and `src/screens/settings/text.js`.
 - Preview: the fake data has November Children Testing (Worcester) with students, one possible duplicate and one withdrawn student. `__tkdPreview.setToday('2026-11-20')` pretends another date (e.g. the testing day).
 
+## Camps (staff screens, contract 0013)
+
+- **Camps** (rail icon after Testing, `#camps`): the chosen school's camps plus the both-schools camps on an **Upcoming / Past** switch (on **Both**: every camp with a School column). One tag each: Open until … (green), Not open yet, Closed, Camp today, Done. Admins add and edit camps (**Add camp**, `N` on the PC) in one dialog with folded sections (1 Camp: name, school, days on a calendar · 2 Times · 3 Prices: one row per number of days · 4 Extras · 5 Family form: ages, description, waiver); a section with a problem turns amber. ⋯ has Close / Reopen sign-up (5-second Undo; staff can't reopen after the closing date), Print roster and, for admins, Save as template and Delete camp. Staff see the line "Ask an admin to add or change camps." and no Templates tab.
+- **Templates** (admins, `#camps/templates`): Use opens Add camp filled in from the template; ⋯ has Edit template and Delete template.
+- **Camp page** (`#camps/camp/<id>`, plus `/checkin`, `/payments`, `/attendance`): **Registration link** (QR code, Copy link, Download QR code) and three tabs. **Check in** (opens here during camp week): a day switch, "9 of 15 here", Find a camper, Not here yet with one Check in button each (5-second Undo), Here with the time. **Payments**: "13 paid · 5 to collect · $1,040", the possible-duplicate box, To collect (Mark paid / Mark paid $X) then Paid, and Removed. **Attendance**: the week grid with "Came X of Y". Every name opens Camper detail (the only place phones show) with Edit details, which re-prices the camper at the camp's current prices when days, member or extras change.
+- Code: `src/screens/Camps.jsx`, `src/screens/camps/` (list, templates, Add / Edit camp in `CampDialog.jsx` + `sections/`, the camp page and its tabs and dialogs); styles `src/styles/camps.css`. All words are in `src/screens/camps/text.js`. Data comes only through `src/lib/camps/campsApi.js` and `campRules.js`.
+- Preview: `__tkdPreview.campWeek()` pretends it is Wed, Apr 21, 2027 (April Vacation Camp week) to see Check in; `__tkdPreview.resetCamps()` puts the default camps back; `setToday(null)` returns to the real date.
+
 ## Security notes
 
 - The anon (publishable) key in `.env.local` is safe in the browser, because row-level security in the database decides what each signed-in person can read.
