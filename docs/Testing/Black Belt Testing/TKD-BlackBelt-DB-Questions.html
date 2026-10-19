@@ -119,6 +119,13 @@ b{font-weight:600}
 .det .ln{display:flex;justify-content:space-between;padding:4px 8px;border-bottom:1px solid var(--border)}
 .det .ln span:first-child{color:var(--text2)}
 .det .rm{color:#A32D2D;font-style:italic}
+
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.dcard{background:#fff;border:1px solid var(--border-strong);border-radius:10px;padding:12px 14px}
+.dcard h3{margin:0 0 6px;font-size:15px;font-weight:600}
+.dl{display:grid;grid-template-columns:40px 1fr;gap:4px 8px;font-size:12.5px;padding:6px 0;border-top:1px solid var(--border)}
+.dl .n{color:var(--text2);font-weight:600}
+.dl .eg{grid-column:2;color:var(--text2);font-size:11.5px}
 </style>
 </head>
 <body>
@@ -449,6 +456,17 @@ b{font-weight:600}
 
 </div>
 <p class="foot"><b>Same in B and C:</b> the date of birth and email are also hidden in the change log (shown as "changed"), otherwise the log would keep the old values forever. <b>In every option:</b> date of birth and email are never in lists or on the grading tablet (§5), only in one candidate's detail on desk devices.</p>
+</section>
+
+<section id="defaults">
+<h1>Black Belt · Database plan: the smaller defaults to OK together</h1>
+<p class="lead">These follow from screens you already approved or from Star's and Color Belt's rules, so they're grouped for <b>one OK</b> instead of one question each. Anything you want changed, name its number (e.g. "S5: keep date of birth optional at the desk").</p>
+<div class="dgrid">
+<div class="dcard"><h3>Money</h3><div class="dl"><span class="n">S1</span><span>A payment pays the items ticked in <b>For</b> first; anything extra goes to the earliest unpaid item, and only then counts as overpaid.</span><div class="eg">This is what makes "Late · $110 Kukkiwon since Mar 27" possible.</div></div><div class="dl"><span class="n">S2</span><span>Four kinds of money lines: <b>payment</b>, <b>refund</b> (never more than what's been paid), <b>undo</b>, and <b>returned check</b>. No new payment on a withdrawn candidate (refunds still OK). Editing a payment is refused while a refund is active. A returned-check mark that was undone can't be marked again (undo and re-record instead).</span></div><div class="dl"><span class="n">S3</span><span>Limit per payment: <b>$5,000</b>. Prices are whole dollars, $1–$5,000.</span><div class="eg">Fits a 4th Dan paid in full with Kukkiwon ($2,870); catches an extra zero.</div></div><div class="dl"><span class="n">S4</span><span>A late family (desk or online): due dates already passed count as <b>due the day they registered</b>. A Kukkiwon fee added late is due that day (gray), Late from the next day.</span></div><div class="dl"><span class="n">S8</span><span>Changing a candidate's Dan: staff before any payment, <b>admins only after</b> (the price changes).</span></div></div>
+<div class="dcard"><h3>Registration and candidates</h3><div class="dl"><span class="n">S5</span><span>At the desk, date of birth and email are <b>required</b>, same as the form.</span><div class="eg">Grading needs the age; Star allowed it blank.</div></div><div class="dl"><span class="n">S7</span><span>Possible duplicate = same cycle, same first + last name and same date of birth. "Keep this one" withdraws the other copy (restorable).</span></div><div class="dl"><span class="n">S9</span><span>The first Add cycle starts from the Fall 2026 schedule from the Sheet; Fall 2026 itself is not a cycle in the dashboard.</span></div><div class="dl"><span class="n">S10</span><span>No link to Color Belt / Star students yet; added when a Students section exists.</span></div><div class="dl"><span class="n">S14</span><span>Reference numbers <b>BB-5001</b> upward, one counter for form and desk, never reused.</span></div><div class="dl"><span class="n">S15</span><span>Delete cycle is refused once there is any payment <b>or any waiver signed online</b>.</span></div></div>
+<div class="dcard"><h3>Privacy and waivers</h3><div class="dl"><span class="n">S11</span><span>The change log hides date of birth, email and signer names ("changed" / "on file"), so the deletions are real.</span></div><div class="dl"><span class="n">S12</span><span><b>Nothing is deleted until the insurer's numbers are entered.</b> Then: whole years, between 3 and 20, changed only with the "this will delete X waivers now" confirm, and logged.</span></div><div class="dl"><span class="n">S13</span><span>Deletions run by themselves in the background when staff open Black Belt; never during a family's registration.</span></div><div class="dl"><span class="n">S18</span><span>Only admins can open a signature, one candidate at a time. Paper waivers show "Signed on paper · date · version · ticked by"; the paper stays in the testing folder.</span></div></div>
+<div class="dcard"><h3>Finance and the rest</h3><div class="dl"><span class="n">S6</span><span>Black Belt has its own tables; each cycle's prices are stored as checked rows, locked once the cycle is saved (v0.902).</span></div><div class="dl"><span class="n">S17</span><span>Finance's report can read only: the payment lines, the school and cycle saved on them, and the candidate's first and last name. <b>Never</b> date of birth, email, notes or waivers.</span></div><div class="dl"><span class="n">S19</span><span>Reuses Color Belt's date and name helpers; its own checks for amounts and emails.</span></div><div class="dl"><span class="n">S20</span><span>Printing receipts and downloading QR codes aren't logged; the QR code is made in the browser.</span></div></div>
+</div>
 </section>
 </main>
 </body>
