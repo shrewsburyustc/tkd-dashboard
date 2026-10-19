@@ -149,7 +149,7 @@ RLS on every new table (no policies needed: no app access); `revoke all` on tabl
 ## 4. Screens (Builder C) — exactly D1–D14 and the approved proposals (v0.207)
 - `#finance` (Daily report), `#finance/history`, `#finance/settings` (admins only; staff → `#finance`). Rail item last, `ti-report-money`; phones: under More.
 - Reload on location change, unlock, tab visible again, and after every write (like the event page, v0.157 pattern); `stale` → amber "Someone else changed this just now" + reload.
-- Close the day: gray until all three counts are filled; Expected line under each; results update as staff type (client-side preview with `compareCount`; the server decides on Save); `note_required` → D2; failure → D13 (error inside the box, "Retry close the day"); success → D3 toast "Today's drawer is closed." with Undo until `can_undo_until`.
+- Close the day (**v0.800: in a dialog** opened by a “Close the day…” outline button next to Print — phones under ⋯ — shown on an open day with counted payments; typed counts kept as a draft until reload; the Day closed summary stays on the report): gray until all three counts are filled; Expected line under each; results update as staff type (client-side preview with `compareCount`; the server decides on Save); `note_required` → D2; failure → D13 (error inside the box, "Retry close the day"); success → D3 toast "Today's drawer is closed." with Undo until `can_undo_until`.
 - Print: print stylesheet producing D8 (portrait letter, header repeated on page 2).
 - Export: dialog D7; `toCsv`; file name `<School>-<from>-to-<to>.csv`.
 - Home: reminder lines from `finance_home()` (D10), whole line a link ≥ 44px on touch; on Both one line per school.
