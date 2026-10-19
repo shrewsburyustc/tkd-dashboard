@@ -3,7 +3,9 @@
 // family page (src/register/) must all agree on things like "is registration open today?",
 // "what is this student testing for?" and "how much do they pay today?". The real database
 // (migration 0005) has the same rules in SQL; checks.mjs tests this file against the same table
-// of cases the SQL tests use (contract 0005 §1.3–§1.6, §5).
+// of cases the SQL tests use (contract 0005 §1.3–§1.6, §5). Phase 4 (private testing, migration
+// 0014, contract 0014 §1.2–§1.3, §4.1) added the private day / time rules and the money rule
+// (priceFor, amountDue) at the end of this file.
 //
 // It is PURE: no React, no database, no browser — so Node can import it, and the public page
 // can use it without pulling in any dashboard code.
@@ -229,12 +231,16 @@ export function testingFor(eventClasses, rank) {
 }
 
 // The fee for a rank, paid on `dateIso`: the early price before the testing day, the
-// testing-day price on it (and after it). Private price isn't used in phase 2.
+// testing-day price on it (and after it). This is the price of a REGULAR student; a private
+// student pays the rank's private price instead (priceFor below, phase 4).
 export function feeFor(rank, dateIso, testingDateIso) {
   return dateIso < testingDateIso ? pick(rank, 'earlyCents', 'early_cents') : pick(rank, 'dayCents', 'day_cents');
 }
 
-// Paid = more than nothing recorded (net of reversals). No partial payments exist (§1.6).
+// Paid = more than nothing recorded (net of reversals). Since phase 4 a "Paid" student may still
+// owe money: a private student who paid the regular price and then went private owes the
+// difference (a top-up), and one who goes Back to the testing day after a part payment counts
+// as Paid with that part only — accepted on purpose (contract 0014 §1.3, review L2).
 export function isPaid(paidCents) {
   return typeof paidCents === 'number' && paidCents > 0;
 }
@@ -327,4 +333,159 @@ export function noteIsValid(note) {
 // The registration link for an event's public code (always the production address).
 export function registrationUrl(code) {
   return `${PUBLIC_ORIGIN}/register/${code}`;
+}
+
+// ----- Private testing (phase 4, migration 0014, contract 0014 §1, §4.1) -----
+// A student is "private" when their registration has its own testing day and start time
+// (private_date / private_time). They are graded on THEIR day, on their own page, and pay the
+// rank's private price. The database has the same rules in SQL (testing_private_time_is_valid,
+// testing_amount_due, testing_set_private …); checks.mjs tests this part against the contract's
+// worked examples M1–M14.
+//
+// Words used:
+//   own day     the private day when the student is private, else the event's testing day
+//   net paid    the sum of the student's payments, reversals counted negative (paid_cents)
+//   due         what Mark paid would record right now (0 = nothing to collect)
+
+// The start times a private testing may have: 6:00 AM to 10:00 PM in 5-minute steps, both ends
+// included (the same list as Add event's class times, v0.157). 16 hours × 12 + 1 = 193 choices,
+// written '06:00', '06:05', … '22:00'.
+export const PRIVATE_TIME_CHOICES = (() => {
+  const list = [];
+  for (let minutes = 6 * 60; minutes <= 22 * 60; minutes += 5) {
+    list.push(`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`);
+  }
+  return list;
+})();
+const PRIVATE_TIME_SET = new Set(PRIVATE_TIME_CHOICES);
+
+// Is this a start time the database accepts for a private testing? 'HH:MM' or 'HH:MM:SS' with
+// seconds 00, and one of the 193 choices above. ('16:03', '22:05', '16:00:30' → false.)
+export function privateTimeIsValid(text) {
+  const m = typeof text === 'string' ? /^(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(text) : null;
+  if (!m) return false;
+  if (m[3] !== undefined && m[3] !== '00') return false;
+  return PRIVATE_TIME_SET.has(`${m[1]}:${m[2]}`);
+}
+
+// The latest private day allowed: the testing day plus one year, as Postgres counts it
+// (date + interval '1 year'): Feb 29 becomes Feb 28 of the next year. Not a date → null.
+export function privateDayLimit(testingDate) {
+  if (!isIsoDate(testingDate)) return null;
+  const [y, m, d] = testingDate.split('-');
+  const next = `${Number(y) + 1}-${m}-${d}`;
+  return isIsoDate(next) ? next : `${Number(y) + 1}-${m}-28`; // only Feb 29 can fail
+}
+
+// What's wrong with a private day the desk typed, as a code (text.js has the words):
+//   null      fine (today counts, at any time of day — only the day is checked)
+//   'missing' not a 'YYYY-MM-DD' date (empty, half typed)
+//   'past'    before today
+//   'tooFar'  more than a year after the testing day
+export function privateDayProblem(day, today, testingDate) {
+  if (!isIsoDate(day)) return 'missing';
+  if (day < today) return 'past';
+  const limit = privateDayLimit(testingDate);
+  if (limit !== null && day > limit) return 'tooFar';
+  return null;
+}
+
+// Is this roster row (app or database spelling) a private testing?
+export function isPrivate(row) {
+  return isIsoDate(pick(row, 'privateDate', 'private_date'));
+}
+
+// The day this student is graded on: their private day, else the event's testing day.
+// Use it with gradingRules.gradingWindow(today, gradingDay(row, testingDate)).
+export function gradingDay(row, testingDate) {
+  return isPrivate(row) ? pick(row, 'privateDate', 'private_date') : testingDate;
+}
+
+// The price of a student: the rank's private price when they test privately, else the regular
+// fee by TODAY's date (the day they pay: early before the testing day, testing-day price on or
+// after it — Q1, v0.254 (1)). rank = the event's copy of the student's current rank.
+export function priceFor({ rank, privateDate, today, testingDate }) {
+  if (isIsoDate(privateDate)) return pick(rank, 'privateCents', 'private_cents');
+  return feeFor(rank, today, testingDate);
+}
+
+// What Mark paid records now (contract 0014 §1.3 — the same rule as the database's
+// testing_amount_due). Always a whole number of cents, 0 or more:
+//   private      → the private price minus what's already paid (a top-up), never below 0
+//   not private  → 0 once anything is paid (a regular student is never re-priced, v0.136),
+//                  else the regular fee by today's date
+// paidCents = the student's net paid (payments minus reversals).
+export function amountDue({ rank, privateDate, paidCents, today, testingDate }) {
+  const net = Number.isInteger(paidCents) ? paidCents : 0;
+  const price = priceFor({ rank, privateDate, today, testingDate });
+  const cents = Number.isInteger(price) ? price : 0;
+  if (isIsoDate(privateDate)) return Math.max(cents - Math.max(net, 0), 0);
+  return net > 0 ? 0 : Math.max(cents, 0);
+}
+
+// Paid, but still owes more (the amber "Paid $65 · $20 more to collect" line, P4).
+export function owesMore(row) {
+  return row?.paid === true && row.amountDueCents > 0;
+}
+
+// Does the row show Mark paid? Active and something to collect — also next to a Paid tag
+// while a top-up is owed (P4). A $0 price never shows it (nothing to collect).
+export function showMarkPaid(row) {
+  return row?.status === 'active' && row.amountDueCents > 0;
+}
+
+// May the desk change how they'll pay? Not paid yet, or paid but still owing (Q3).
+export function canChangePayingBy(row) {
+  return row?.status === 'active' && (row.paid !== true || row.amountDueCents > 0);
+}
+
+// The private group of a roster row's ⋯ menu (P2, P5). row: an app roster row (status,
+// isPrivate, graded, result). For the private paths only a RESULT counts as graded (Q5): a note
+// alone never blocks Change or Back.
+//   canSet     not private; not graded on the testing day, or only a No show (it gets cleared)
+//   canChange  private; no result yet, or a private No show (a new day clears it, H2)
+//   canBack    private; no result; staff only until the testing day (admins any time, H1)
+//   canGrade   private (their own grading page)
+export function privateMenu(row, { today, testingDate, isAdmin } = {}) {
+  const active = row?.status === 'active';
+  const result = row?.result ?? null;
+  const priv = row?.isPrivate === true;
+  return {
+    canSet: active && !priv && (row?.graded !== true || result === 'no_show'),
+    canChange: active && priv && (result === null || result === 'no_show'),
+    canBack: active && priv && result === null && (isAdmin === true || today <= testingDate),
+    canGrade: active && priv,
+  };
+}
+
+// A student's live payments: their 'payment' rows that no reversal points at, oldest first
+// (by recordedAt). Used for the top-up wording ("$65 cash Nov 2 + $20 card Nov 12").
+// payments = loadEvent's list (app spelling; database spelling works too).
+export function livePayments(payments, registrationId) {
+  const list = Array.isArray(payments) ? payments : [];
+  const reversed = new Set(list.map((p) => pick(p, 'reversesPaymentId', 'reverses_payment_id')).filter((id) => id));
+  return list
+    .filter((p) => pick(p, 'registrationId', 'registration_id') === registrationId && p.kind === 'payment' && !reversed.has(p.id))
+    .sort((a, b) => {
+      const x = pick(a, 'recordedAt', 'recorded_at') ?? '';
+      const y = pick(b, 'recordedAt', 'recorded_at') ?? '';
+      return x < y ? -1 : x > y ? 1 : 0;
+    });
+}
+
+// The Events tab's "Private testings" list (P8): only ACTIVE private students with no result
+// yet (a note alone keeps them on it, Q5); past days stay until graded (v0.228). Sorted by day,
+// then time, then last name and first name (ignoring capitals).
+// rows: [{ status, privateDate, privateTime, result, firstName, lastName, … }] → a new array.
+const byName = (a, b) => String(a ?? '').localeCompare(String(b ?? ''), undefined, { sensitivity: 'accent' });
+export function privateTestingsList(rows) {
+  return (Array.isArray(rows) ? rows : [])
+    .filter((r) => r?.status === 'active' && isPrivate(r) && (r.result ?? null) === null)
+    .sort((a, b) => {
+      if (a.privateDate !== b.privateDate) return a.privateDate < b.privateDate ? -1 : 1;
+      const ta = a.privateTime ?? '';
+      const tb = b.privateTime ?? '';
+      if (ta !== tb) return ta < tb ? -1 : 1;
+      return byName(a.lastName, b.lastName) || byName(a.firstName, b.firstName);
+    });
 }

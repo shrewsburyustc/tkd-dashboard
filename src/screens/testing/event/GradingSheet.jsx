@@ -16,6 +16,8 @@
 //   - the footer "Type the results into the Grading tab the same day." on every page
 // Never printed: payments, the Not paid tag, notes, recorded results (the boxes stay blank so
 // the sheet is a clean backup), any grader's name. Black on white, letter size, no belt pictures.
+// Phase 4 (P6): private students aren't on it — EventPage passes only the students who test on
+// the testing day; a private student has their own one-student sheet (PrivateSheet.jsx).
 //
 // A long class continues on a new page with the same header ("…, page 2"). Pages are split here
 // in JavaScript (SHEET_ROWS_PER_PAGE rows each) so the page number can be printed.

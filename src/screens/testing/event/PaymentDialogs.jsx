@@ -9,6 +9,9 @@
 //                     payment, §1.6). No check number (v0.120).
 // Both are small centered dialogs (full screen on phones) with Cancel / Save. The values live in
 // EventPage (`state`), like every other dialog, so a screen lock never loses them.
+// Phase 4 (contract 0014 §5.8, plan M7): EventPage may pass its own `subtitle` — "Ava Chen · $20
+// more to collect" while a private student owes more, or "Ava Chen · $65 cash Nov 2 + $20 card
+// Nov 12 — editing the $20" when Edit payment opens on a student with two payments.
 import { IconCheck } from '@tabler/icons-react';
 import Dialog from '../../../components/Dialog.jsx';
 import Notice from '../../../components/Notice.jsx';
@@ -78,12 +81,12 @@ export function isPayingByDirty(state) {
   return state.values.payingBy !== state.initial.payingBy;
 }
 
-export function PayingByDialog({ state, name, isPhone, onChange, onSave, onCancel, onRequestClose }) {
+export function PayingByDialog({ state, name, subtitle = null, isPhone, onChange, onSave, onCancel, onRequestClose }) {
   const idBase = `paying-dialog-${state.key}`;
   const canSave = !state.saving && !state.blocked;
   return (
     <Dialog title={T.CHANGE_PAYING_BY_TITLE} fullScreen={isPhone} onRequestClose={onRequestClose}>
-      <p className="tdialog-sub">{T.changePayingBySub(name)}</p>
+      <p className="tdialog-sub">{subtitle ?? T.changePayingBySub(name)}</p>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -139,13 +142,13 @@ export function checkEditPayment(state) {
   };
 }
 
-export function EditPaymentDialog({ state, name, isPhone, onChange, onTouch, onSave, onCancel, onRequestClose }) {
+export function EditPaymentDialog({ state, name, subtitle = null, isPhone, onChange, onTouch, onSave, onCancel, onRequestClose }) {
   const idBase = `payment-dialog-${state.key}`;
   const check = checkEditPayment(state);
   const readOnly = state.saving;
   return (
     <Dialog title={T.EDIT_PAYMENT_TITLE} fullScreen={isPhone} onRequestClose={onRequestClose}>
-      <p className="tdialog-sub">{T.editPaymentSub(name)}</p>
+      <p className="tdialog-sub">{subtitle ?? T.editPaymentSub(name)}</p>
       <form
         onSubmit={(event) => {
           event.preventDefault();

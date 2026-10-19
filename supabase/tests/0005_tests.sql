@@ -1706,6 +1706,8 @@ begin
     'testing_registrations.withdrawn_at', 'testing_registrations.withdrawn_by_name', 'testing_registrations.duplicate_state',
     'testing_registrations.duplicate_of', 'testing_registrations.version', 'testing_registrations.created_at',
     'testing_registrations.updated_at', 'testing_registrations.created_by_name', 'testing_registrations.updated_by_name',
+    -- (0014: present only once 0014 is applied; C3 loops over existing columns, so the list works before and after)
+    'testing_registrations.private_date', 'testing_registrations.private_time',
     'testing_payments.id', 'testing_payments.registration_id', 'testing_payments.kind', 'testing_payments.amount_cents',
     'testing_payments.method', 'testing_payments.paid_on', 'testing_payments.recorded_at', 'testing_payments.recorded_by_name',
     'testing_payments.reverses_payment_id'];

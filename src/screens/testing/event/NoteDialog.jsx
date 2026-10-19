@@ -46,7 +46,8 @@ export function isNoteDirty(state) {
   return state.values.text !== state.initial.text;
 }
 
-export default function NoteDialog({ state, name, subtitle, savedNote, isPhone, onChange, onSave, onCancel, onRequestClose }) {
+// hint (phase 4): the gray line under the field — the private page passes its own wording.
+export default function NoteDialog({ state, name, subtitle, savedNote, hint = T.GRADING_NOTE_HINT, isPhone, onChange, onSave, onCancel, onRequestClose }) {
   const idBase = `note-dialog-${state.key}`;
   // Opening on an existing note: the cursor starts at its end, ready to add to it. (Dialog.jsx
   // has already put focus in the text box: a child's effect runs before its parent's.)
@@ -113,7 +114,7 @@ export default function NoteDialog({ state, name, subtitle, savedNote, isPhone, 
           />
           <div className="gr-note-under">
             <p id={`${idBase}-hint`} className="field-hint">
-              {T.GRADING_NOTE_HINT}
+              {hint}
             </p>
             <span className="gr-note-counter" aria-hidden="true">
               {T.noteCounter(check.length)}

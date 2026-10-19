@@ -16,6 +16,11 @@
 //   showPageBanner(text)  the event page's amber banner (for the answers that aren't retried)
 //   isReadOnly      true when this person can't change results now (before the day; staff after it)
 //   screenLocked    true while the lock screen shows (no retries then)
+//   isNowPrivate(id) phase 4 (contract 0014 §5.2, review L8): true when that student now tests
+//                   privately (EventPage answers from its full roster). Such a row leaves this
+//                   engine: its unsaved tap is dropped with the banner "… now tests privately …"
+//                   and the OTHER rows' unsaved taps are kept (never dropAll for it). The private
+//                   page's own engine passes a function that always answers false.
 //
 // The "overlay": for every row with a tap that the screen shows instead of the loaded value,
 //   { result, state: 'saving' | 'unsaved' | 'retrying' | 'saved', sentResult, wanted,
@@ -33,7 +38,17 @@ const RELOAD_AFTER_SAVES_MS = 500;
 
 let nextToken = 1;
 
-export function useGradingSaves({ roster, classes, loadedAt, reload, onNoAccess, showPageBanner, isReadOnly, screenLocked }) {
+export function useGradingSaves({
+  roster,
+  classes,
+  loadedAt,
+  reload,
+  onNoAccess,
+  showPageBanner,
+  isReadOnly,
+  screenLocked,
+  isNowPrivate = () => false,
+}) {
   // The overlay lives in a ref (so the async answers always see the newest one); `tick` only
   // makes React draw again after a change.
   const overlayRef = useRef({}); // { [registrationId]: entry }
@@ -46,9 +61,9 @@ export function useGradingSaves({ roster, classes, loadedAt, reload, onNoAccess,
   const reloadTimerRef = useRef(null);
 
   // The newest props, for the async code below.
-  const propsRef = useRef({ roster, classes, reload, onNoAccess, showPageBanner });
+  const propsRef = useRef({ roster, classes, reload, onNoAccess, showPageBanner, isNowPrivate });
   useLayoutEffect(() => {
-    propsRef.current = { roster, classes, reload, onNoAccess, showPageBanner };
+    propsRef.current = { roster, classes, reload, onNoAccess, showPageBanner, isNowPrivate };
   });
 
   // ----- Small helpers -----
@@ -63,9 +78,13 @@ export function useGradingSaves({ roster, classes, loadedAt, reload, onNoAccess,
   function dropAll() {
     overlayRef.current = {};
   }
+  // The student's name: from the roster, else the name kept with the tap (a row that just left).
   function nameOf(id) {
     const row = propsRef.current.roster.find((r) => r.id === id);
-    return row ? T.studentLabel(row) : '';
+    return row ? T.studentLabel(row) : (overlayRef.current[id]?.name ?? '');
+  }
+  function inRoster(id) {
+    return propsRef.current.roster.some((r) => r.id === id);
   }
   // The polite live region: cleared first, so the same word twice is announced twice.
   const announce = useCallback((text) => {
@@ -133,7 +152,14 @@ export function useGradingSaves({ roster, classes, loadedAt, reload, onNoAccess,
       return;
     }
     // Answers that are never retried: the screen goes back to the database's own values.
-    if (status === 'finished' || status === 'not_open') {
+    // Phase 4 (L8): a row that now tests privately (or left this list) loses only its own tap —
+    // the other rows' unsaved taps stay and keep retrying.
+    if ((status === 'finished' || status === 'not_open') && (p.isNowPrivate(id) || !inRoster(id))) {
+      const name = nameOf(id);
+      const moved = p.isNowPrivate(id);
+      dropEntry(id);
+      p.showPageBanner(moved ? T.movedToPrivate(name) : status === 'finished' ? T.TOO_LATE_RESULTS : T.GRADING_NOT_OPEN);
+    } else if (status === 'finished' || status === 'not_open') {
       dropAll();
       p.showPageBanner(status === 'finished' ? T.TOO_LATE_RESULTS : T.GRADING_NOT_OPEN);
     } else if (status === 'withdrawn') {
@@ -157,7 +183,16 @@ export function useGradingSaves({ roster, classes, loadedAt, reload, onNoAccess,
     if (current) {
       setEntry(row.id, { ...current, result: value, wanted: value, state: current.inFlight ? current.state : 'saving' });
     } else {
-      setEntry(row.id, { result: value, wanted: value, state: 'saving', sentResult: null, answeredAt: null, inFlight: false, token: nextToken++ });
+      setEntry(row.id, {
+        result: value,
+        wanted: value,
+        state: 'saving',
+        sentResult: null,
+        answeredAt: null,
+        inFlight: false,
+        token: nextToken++,
+        name: T.studentLabel(row), // kept for the banner if the row leaves this list
+      });
     }
     redraw();
     send(row.id);
@@ -167,7 +202,7 @@ export function useGradingSaves({ roster, classes, loadedAt, reload, onNoAccess,
   function retryAll() {
     if (noAccessRef.current) return;
     for (const [id, entry] of Object.entries(overlayRef.current)) {
-      if (entry.state === 'unsaved' && !entry.inFlight) send(id, true);
+      if (entry.state === 'unsaved' && !entry.inFlight && inRoster(id)) send(id, true);
     }
   }
   const retryRef = useRef(retryAll);
@@ -177,9 +212,10 @@ export function useGradingSaves({ roster, classes, loadedAt, reload, onNoAccess,
 
   // ----- Counting -----
   const entries = overlayRef.current;
-  const unsavedIds = Object.keys(entries).filter((id) => entries[id].state === 'unsaved' || entries[id].state === 'retrying');
-  const unsavedCount = unsavedIds.length;
   const rowById = new Map(roster.map((r) => [r.id, r]));
+  // A row that already left this list isn't counted (its entry is dropped just after this draw).
+  const unsavedIds = Object.keys(entries).filter((id) => rowById.has(id) && (entries[id].state === 'unsaved' || entries[id].state === 'retrying'));
+  const unsavedCount = unsavedIds.length;
   const unsavedSet = new Set(unsavedIds);
   // Class ids with unsaved rows, in class switch order.
   const unsavedClassIds = classes.map((c) => c.id).filter((cid) => roster.some((r) => r.eventClassId === cid && unsavedSet.has(r.id)));
@@ -247,15 +283,23 @@ export function useGradingSaves({ roster, classes, loadedAt, reload, onNoAccess,
     }
   }, [loadedAt, redraw]);
 
-  // Rows that left the active roster (withdrawn, deleted elsewhere) lose their entry.
+  // Rows that left the active roster (withdrawn, deleted elsewhere) lose their entry. Phase 4:
+  // a row that left because it now tests privately, with a tap not yet saved, says so in the
+  // page banner (contract 0014 §5.2) — its tap is dropped, never retried here.
   const rosterKey = roster.map((r) => r.id).join('|');
   useEffect(() => {
     const ids = new Set(rosterKey.split('|'));
     const gone = Object.keys(overlayRef.current).filter((id) => !ids.has(id));
     if (gone.length === 0) return;
     const next = { ...overlayRef.current };
-    for (const id of gone) delete next[id];
+    let movedName = null;
+    for (const id of gone) {
+      const entry = next[id];
+      if (entry.state !== 'saved' && propsRef.current.isNowPrivate(id)) movedName = entry.name ?? '';
+      delete next[id];
+    }
     overlayRef.current = next;
+    if (movedName !== null) propsRef.current.showPageBanner(T.movedToPrivate(movedName));
     redraw();
   }, [rosterKey, redraw]);
 

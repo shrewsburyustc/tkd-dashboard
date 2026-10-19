@@ -25,11 +25,26 @@
 // the class choice are shared by both tabs. Result taps save by themselves (useGradingSaves.js);
 // while a result is "Not saved", leaving the page asks first (the leave guard, §4.9: App.jsx asks
 // this page before it navigates away) and closing the browser tab shows the browser's question.
+//
+// Phase 4 (contract 0014 §5, mockups P1–P9 + P3b, rulebook v0.225–v0.228, v0.254) adds private
+// testing: a student who can't make the testing day gets their own day and time.
+//   - ⋯ → Set private testing / Change private day or time (PrivateDialog.jsx), Back to the
+//     testing day (one write, toast with Undo), Grade private testing (the private page)
+//   - Add student's "Tests privately" tick (StudentDialog.jsx)
+//   - the Students tab shows the Private line, the amber "… more to collect" line and
+//     "1 owes more" under the Paid card; Mark paid collects what is still due
+//   - the Grading tab and its printed sheet leave private students out
+//   - the private grading page (PrivateGradingPage.jsx), address
+//     #testing/event/<id>/private/<registration id>: drawn by THIS page (the event's data and
+//     dialogs are shared), with a second save engine for that one student. The leave guard
+//     counts both engines' unsaved results.
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import {
   IconAlertTriangle,
   IconArrowBackUp,
   IconArrowLeft,
+  IconCalendar,
+  IconCalendarEvent,
   IconCash,
   IconCashEdit,
   IconCheck,
@@ -37,6 +52,7 @@ import {
   IconEdit,
   IconPlus,
   IconQrcode,
+  IconSchool,
   IconTrash,
   IconUserMinus,
   IconUsers,
@@ -47,10 +63,12 @@ import RowMenu from '../../../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../../../lib/device.js';
 import { centsToInputText } from '../../../lib/money.js';
 import { loadSchools } from '../../../lib/settings/schoolsApi.js';
-import { classTimeLabel } from '../../../lib/testing/eventRules.js';
+import { canChangePayingBy, classTimeLabel, gradingDay, livePayments, privateMenu } from '../../../lib/testing/eventRules.js';
 import {
+  addPrivateStudent,
   addStudent,
   changePayingBy,
+  clearPrivate,
   deleteStudent,
   editPayment,
   loadEvent,
@@ -58,6 +76,7 @@ import {
   markPaid,
   resolveDuplicate,
   restoreStudent,
+  setPrivate,
   undoPayment,
   updateStudent,
   withdrawStudent,
@@ -82,6 +101,9 @@ import GradingSheet from './GradingSheet.jsx';
 import GradingTab, { groupGearTags } from './GradingTab.jsx';
 import NoteDialog, { checkNote, isNoteDirty } from './NoteDialog.jsx';
 import { EditPaymentDialog, PayingByDialog, checkEditPayment, isEditPaymentDirty, isPayingByDirty } from './PaymentDialogs.jsx';
+import PrivateDialog, { checkPrivateDialog, isPrivateDirty } from './PrivateDialog.jsx';
+import PrivateGradingPage from './PrivateGradingPage.jsx';
+import PrivateSheet from './PrivateSheet.jsx';
 import RegistrationLinkDialog from './RegistrationLinkDialog.jsx';
 import RosterRows from './RosterRows.jsx';
 import StudentDialog, { checkStudentForm, isStudentFormDirty } from './StudentDialog.jsx';
@@ -96,7 +118,7 @@ const removedOpenByEvent = new Map();
 // happens once, after that the person's own class choice is kept.
 const gradingClassPicked = new Set();
 
-const BLOCKING_NOTES = ['STALE_DIALOG', 'NOT_ALLOWED', 'FINISHED', 'ALREADY_PAID', 'STUDENT_LOCKED'];
+const BLOCKING_NOTES = ['STALE_DIALOG', 'NOT_ALLOWED', 'FINISHED', 'ALREADY_PAID', 'STUDENT_LOCKED', 'PRIVATE_HAS_RESULT', 'PRIVATE_GRADED'];
 const TABS = ['students', 'grading'];
 
 const find = (selector) => document.querySelector(selector);
@@ -128,6 +150,12 @@ function activePaymentOf(payments, registrationId) {
   return live[live.length - 1] ?? null;
 }
 
+// A student's live payments as text parts ({ cents, method, paidOn }), oldest first — for the
+// top-up wording (Edit payment, the detail view, Delete permanently; plan M7).
+function paymentPartsOf(payments, registrationId) {
+  return livePayments(payments, registrationId).map((p) => ({ cents: p.amountCents, method: p.method, paidOn: p.paidOn }));
+}
+
 
 export default function EventPage({
   eventId,
@@ -140,9 +168,12 @@ export default function EventPage({
   showToast,
   clearToast,
   onModalOpenChange,
-  eventTab, // 'students' | 'grading' (from the address, App.jsx)
+  eventTab, // 'students' | 'grading' | 'private' (from the address, App.jsx)
   onEventTab, // (tab) => void — switches the tab (App.jsx updates the address without a new step)
   onLeaveGuardChange, // (fn | null) => void — App.jsx asks fn before leaving this page (§4.9)
+  privateId = null, // phase 4: the registration whose private grading page is open, else null
+  onOpenPrivate, // (eventId, registrationId) => void — opens the private grading page
+  onClosePrivate, // () => void — the private page's back link (to this event's Students tab)
 }) {
   const live = useLiveLoad({ key: eventId, enabled: !screenLocked, load: loadEvent, refreshMs: LIVE_REFRESH_MS });
   const data = live.data;
@@ -175,10 +206,12 @@ export default function EventPage({
   const [busy, setBusy] = useState(false);
   const [notSavedId, setNotSavedId] = useState(null);
   const [schools, setSchools] = useState(null); // for the flyer's address
-  const [printing, setPrinting] = useState(null); // { printedAt, opener } while the grading sheet prints
+  const [printing, setPrinting] = useState(null); // { printedAt, opener, kind: 'grading' | 'private' } while a sheet prints
   // The open tab comes from the address (App.jsx); a local copy only if no App is listening.
   const [localTab, setLocalTab] = useState('students');
   const tab = TABS.includes(eventTab) ? eventTab : localTab;
+  // Phase 4: the private grading page of one student replaces the tabs while it is open.
+  const isPrivatePage = eventTab === 'private' && Boolean(privateId);
   const baseId = useId();
   const tabIds = { tab: (key) => `${baseId}-tab-${key}`, panel: (key) => `${baseId}-panel-${key}` };
   const busyRef = useRef(false);
@@ -358,12 +391,19 @@ export default function EventPage({
   }
 
   // ===== Grading (phase 3) =====
-  // Every active student, in class switch order, then roster order (belt, last, first name).
+  // Every active student who tests on the testing day (phase 4: private students are graded on
+  // their own page — §5.2), in class switch order, then roster order (belt, last, first name).
   const classPosition = new Map(classes.map((c, index) => [c.id, index]));
-  const gradingRows = [...active].sort(
-    (a, b) => (classPosition.get(a.eventClassId) ?? 0) - (classPosition.get(b.eventClassId) ?? 0) || order(a, b),
-  );
+  const gradingRows = active
+    .filter((r) => !r.isPrivate)
+    .sort((a, b) => (classPosition.get(a.eventClassId) ?? 0) - (classPosition.get(b.eventClassId) ?? 0) || order(a, b));
   const dayWindow = event ? gradingWindow(today, event.testingDate) : 'before';
+  // Before / on / after a student's OWN day (phase 4: the private day for a private student) —
+  // the phase 3 belt lock of Edit details follows it (§1.2).
+  const ownDayWindow = (row) => (event ? gradingWindow(today, gradingDay(row, event.testingDate)) : 'before');
+  // L8: a row that now tests privately leaves the Grading tab's engine without dropping the
+  // other rows' unsaved taps. Answered from the FULL roster.
+  const isNowPrivate = (id) => roster.some((r) => r.id === id && r.isPrivate);
   const grading = useGradingSaves({
     roster: gradingRows,
     classes,
@@ -373,7 +413,28 @@ export default function EventPage({
     showPageBanner: (text) => setBanner({ text }),
     isReadOnly: !canChangeResults(dayWindow, isAdmin),
     screenLocked,
+    isNowPrivate,
   });
+
+  // ===== The private grading page (phase 4, §5.9) =====
+  // pageRow: the roster row of the open private page (any status, for the "gone" messages);
+  // privateRow: the same row only while it is active and private — the one row its engine saves.
+  const pageRow = isPrivatePage ? (roster.find((r) => r.id === privateId) ?? null) : null;
+  const privateRow = pageRow && pageRow.status === 'active' && pageRow.isPrivate ? pageRow : null;
+  const privateGrading = useGradingSaves({
+    roster: privateRow ? [privateRow] : [],
+    classes,
+    loadedAt: data?.startedAt ?? null,
+    reload: () => reloadQuiet(),
+    onNoAccess,
+    showPageBanner: (text) => setBanner({ text }),
+    isReadOnly: privateRow ? !canChangeResults(gradingWindow(today, privateRow.privateDate), isAdmin) : true,
+    screenLocked,
+    // This engine's own row IS private: "now tests privately" never applies here.
+    isNowPrivate: () => false,
+  });
+  // The note dialog and the leave dialog work for both engines.
+  const engineFor = (which) => (which === 'private' ? privateGrading : grading);
 
   // On the testing day, the first time Grading shows for this event, open the class that is on
   // right now (or the next one) — v0.184. Other days: the class chosen on Students.
@@ -412,10 +473,11 @@ export default function EventPage({
   // App.jsx calls this before it navigates away. false = nothing unsaved, go ahead. true = the
   // "N results aren't saved" dialog is open; it calls proceed() itself on "Leave anyway".
   const guardRef = useRef(null);
+  // Phase 4: the private page's engine counts too (its unsaved result is listed after the others).
   guardRef.current = (proceed) => {
-    if (grading.unsavedCount === 0) return false;
+    if (grading.unsavedCount + privateGrading.unsavedCount === 0) return false;
     if (dialogRef.current?.type === 'leave') return true; // already asking
-    const list = grading.unsavedRows();
+    const list = [...grading.unsavedRows(), ...privateGrading.unsavedRows()];
     const groups = [];
     for (const item of list) {
       const last = groups[groups.length - 1];
@@ -435,7 +497,7 @@ export default function EventPage({
 
   // Closing or reloading the browser tab while something is unsaved: the browser asks its own
   // "Leave site?" question (its words can't be changed).
-  const hasUnsaved = grading.unsavedCount > 0;
+  const hasUnsaved = grading.unsavedCount + privateGrading.unsavedCount > 0;
   useEffect(() => {
     if (!hasUnsaved) return undefined;
     function handleBeforeUnload(unloadEvent) {
@@ -451,7 +513,7 @@ export default function EventPage({
     if (!printing) return undefined;
     const done = () => {
       setPrinting(null);
-      focusLater(() => printing.opener, () => find('.gr-print'));
+      focusLater(() => printing.opener, () => find(printing.kind === 'private' ? '.pg-print' : '.gr-print'));
     };
     window.addEventListener('afterprint', done);
     // Wait one frame so the sheet is on the page before the print window opens.
@@ -486,7 +548,18 @@ export default function EventPage({
   function openAdd(opener) {
     // A finished event: admins may still add a student (v0.191); staff don't see the button.
     if (!event || (event.state === 'finished' && !isAdmin)) return;
-    const values = { firstName: '', lastName: '', classId: selected?.id ?? null, rankId: null, stripes: false, payingBy: 'cash' };
+    const values = {
+      firstName: '',
+      lastName: '',
+      classId: selected?.id ?? null,
+      rankId: null,
+      stripes: false,
+      payingBy: 'cash',
+      // Phase 4 (P3b): "Tests privately" is off by default
+      privately: false,
+      privateDay: '',
+      privateTime: '',
+    };
     openDialog({ type: 'student', mode: 'add', values, initial: values, opener });
   }
   function openView(row, opener) {
@@ -533,11 +606,20 @@ export default function EventPage({
     }
   }
 
+  // ----- Phase 4: Set private testing / Change private day or time (P3) -----
+  function openPrivateDialog(row, opener) {
+    const mode = row.isPrivate ? 'change' : 'set';
+    // Change opens with the saved day and time filled in.
+    const values = { day: row.isPrivate ? (row.privateDate ?? '') : '', time: row.isPrivate ? (row.privateTime ?? '') : '' };
+    openDialog({ type: 'private', mode, rowId: row.id, snapshot: row, values, initial: values, pastDay: null, opener });
+  }
+
   // ----- Grading: the note dialog (G2) -----
-  function openNote(row, opener) {
-    const saved = grading.view(row).note;
+  // engine: 'day' (the Grading tab) or 'private' (the private grading page, phase 4)
+  function openNote(row, opener, engine = 'day') {
+    const saved = engineFor(engine).view(row).note;
     const values = { text: saved ?? '' };
-    openDialog({ type: 'note', rowId: row.id, snapshot: row, values, initial: values, opener });
+    openDialog({ type: 'note', engine, rowId: row.id, snapshot: row, values, initial: values, opener });
   }
 
   function focusAfterClose(d) {
@@ -552,6 +634,8 @@ export default function EventPage({
     else if (d.type === 'student' && d.mode === 'add') focusLater(() => d.opener, addStudentEl);
     else if (d.type === 'compare') focusLater(() => d.opener, () => rowEl(d.firstId));
     else if (d.type === 'delete') focusLater(() => moreEl(d.rowId), () => d.opener);
+    // Set / Change private testing: back to the row's ⋯ (§5.5)
+    else if (d.type === 'private') focusLater(() => moreEl(d.rowId), () => rowEl(d.rowId));
     else focusLater(() => d.opener, () => rowEl(d.rowId));
   }
   function cancelDialog() {
@@ -570,6 +654,7 @@ export default function EventPage({
     if (d.type === 'paying') return isPayingByDirty(d);
     if (d.type === 'payment') return isEditPaymentDirty(d);
     if (d.type === 'note') return isNoteDirty(d);
+    if (d.type === 'private') return isPrivateDirty(d);
     return false;
   }
   function requestClose() {
@@ -610,7 +695,7 @@ export default function EventPage({
     const d = dialogRef.current;
     if (!d || d.saving) return;
     const record = d.mode === 'edit' ? (roster.find((r) => r.id === d.rowId) ?? d.snapshot) : null;
-    const check = checkStudentForm(d, d.snapshot ?? record);
+    const check = checkStudentForm(d, d.snapshot ?? record, { today, testingDate: event.testingDate });
     if (!canSave || !check.canSave) {
       patchDialog({ triedSave: true });
       return;
@@ -625,8 +710,17 @@ export default function EventPage({
     const name = `${p.firstName} ${p.lastName}`;
     const newClassId = rankById.get(p.eventRankId)?.eventClassId ?? d.values.classId;
     if (d.mode === 'add') {
-      const result = await addStudent({ eventId, firstName: p.firstName, lastName: p.lastName, eventRankId: p.eventRankId, stripes: true, payingBy: p.payingBy });
+      const base = { eventId, firstName: p.firstName, lastName: p.lastName, eventRankId: p.eventRankId, stripes: true, payingBy: p.payingBy };
+      // Phase 4 (P3b): "Tests privately" ticked → added already private, in one write.
+      const result = p.privateDate
+        ? await addPrivateStudent({ ...base, privateDate: p.privateDate, privateTime: p.privateTime })
+        : await addStudent(base);
       endWrite(result.status);
+      if (result.status === 'past_day') {
+        // The database's today says that day has passed: shown under the Day field.
+        patchDialog({ saving: false, pastDay: p.privateDate });
+        return;
+      }
       if (result.status !== 'ok') {
         handleDialogProblem(result.status);
         return;
@@ -653,8 +747,9 @@ export default function EventPage({
       if (Boolean(fresh.graded) !== Boolean(d.graded?.graded)) {
         endWrite('ok');
         const graded = { graded: Boolean(fresh.graded), result: fresh.result ?? null, note: fresh.note ?? null };
-        // Staff after the testing day: the choices lock — put the saved class and belt back.
-        const locks = graded.graded && dayWindow === 'after' && !isAdmin;
+        // Staff after the student's own day (phase 4: a private student's private day): the
+        // choices lock — put the saved class and belt back.
+        const locks = graded.graded && ownDayWindow(snap) === 'after' && !isAdmin;
         setDialog((current) =>
           current
             ? { ...current, saving: false, graded, values: locks ? { ...current.values, classId: current.initial.classId, rankId: current.initial.rankId } : current.values }
@@ -762,15 +857,63 @@ export default function EventPage({
     focusLater(() => d.opener, () => rowEl(d.rowId), reloaded);
   }
 
+  // ----- Save: Set / Change private testing (phase 4, §5.5, §5.11) -----
+  async function savePrivate(canSave) {
+    const d = dialogRef.current;
+    if (!d || d.saving || d.type !== 'private') return;
+    if (!canSave || !checkPrivateDialog(d, { today, testingDate: event.testingDate }).canSave) {
+      patchDialog({ triedSave: true });
+      return;
+    }
+    if (!beginWrite()) return;
+    patchDialog({ saving: true, note: null });
+    const result = await setPrivate({
+      registrationId: d.rowId,
+      expectedVersion: d.snapshot.version,
+      privateDate: d.values.day,
+      privateTime: d.values.time,
+    });
+    endWrite(result.status);
+    const status = result.status;
+    if (status === 'ok') {
+      // No toast (approved P3): the row's Private line is the confirmation.
+      setDialog(null);
+      const reloaded = reloadQuiet();
+      focusLater(() => moreEl(d.rowId), () => rowEl(d.rowId), reloaded);
+    } else if (status === 'past_day') {
+      patchDialog({ saving: false, pastDay: d.values.day });
+    } else if (status === 'has_result' || status === 'graded') {
+      patchDialog({ saving: false, note: status === 'has_result' ? 'PRIVATE_HAS_RESULT' : 'PRIVATE_GRADED', blocked: true });
+      reloadQuiet();
+    } else if (status === 'stale' || status === 'not_found') {
+      patchDialog({ saving: false, note: 'STALE_DIALOG', blocked: true });
+      reloadQuiet();
+    } else if (status === 'withdrawn') {
+      setDialog(null);
+      setBanner({ text: T.isWithdrawn(T.studentLabel(d.snapshot)) });
+      reloadQuiet();
+      focusAfterClose(d);
+    } else if (status === 'no_access') {
+      patchDialog({ saving: false });
+      onNoAccess();
+    } else if (status === 'invalid') {
+      patchDialog({ saving: false, note: 'INVALID_DIALOG' });
+    } else {
+      patchDialog({ saving: false, note: 'SAVE_FAILED' });
+    }
+  }
+
   // ----- Save: the grading note (G2, contract 0010 §4.5) -----
   // Not part of the one-change-at-a-time lock: grading never waits for the desk's changes.
+  // Phase 4: d.engine says which save engine — the Grading tab's or the private page's.
   async function saveNote() {
     const d = dialogRef.current;
     if (!d || d.saving || d.type !== 'note') return;
+    const engine = engineFor(d.engine);
     const row = active.find((r) => r.id === d.rowId) ?? d.snapshot;
-    if (!checkNote(d, grading.view(row).note).canSave) return;
+    if (!checkNote(d, engine.view(row).note).canSave) return;
     patchDialog({ saving: true, note: null });
-    const status = await grading.saveNote(row, d.values.text);
+    const status = await engine.saveNote(row, d.values.text);
     if (status === 'ok') {
       setDialog(null);
       focusAfterClose(d);
@@ -780,7 +923,9 @@ export default function EventPage({
       patchDialog({ saving: false, note: 'NOTE_BAD_CHARACTER' });
     } else if (status === 'finished' || status === 'not_open') {
       setDialog(null);
-      setBanner({ text: status === 'finished' ? T.TOO_LATE_RESULTS : T.GRADING_NOT_OPEN });
+      // L8: on the Grading tab, a student who now tests privately is graded on their own page.
+      const moved = d.engine !== 'private' && isNowPrivate(d.rowId);
+      setBanner({ text: moved ? T.movedToPrivate(T.studentLabel(row)) : status === 'finished' ? T.TOO_LATE_RESULTS : T.GRADING_NOT_OPEN });
       const reloaded = reloadQuiet();
       focusLater(() => find(`[data-note-btn="${d.rowId}"]`), () => document.getElementById(tabIds.tab('grading')), reloaded);
     } else if (status === 'withdrawn' || status === 'not_found') {
@@ -825,6 +970,7 @@ export default function EventPage({
   // ===== Undo =====
   // options.notAllowedText: what to say if the database refuses the Undo for this person (e.g. a
   // staff member's payment Undo after the 10-second window).
+  // options.textFor(status): a message of its own for other refusals (null = the usual one).
   async function runUndo(call, focus = null, options = {}) {
     if (!beginWrite()) return;
     const result = await call();
@@ -842,6 +988,10 @@ export default function EventPage({
       onRefreshProfile();
     } else if (status === 'error') {
       setBanner({ kind: 'undo', text: T.UNDO_FAILED, retry: () => runUndo(call, focus, options) });
+    } else if (options.textFor?.(status)) {
+      // A message of its own for this refusal (phase 4: the Undo of Back to the testing day).
+      setBanner({ text: options.textFor(status) });
+      reloadQuiet();
     } else {
       setBanner({ text: T.UNDO_STALE });
       reloadQuiet();
@@ -892,6 +1042,61 @@ export default function EventPage({
         onAction: () => runUndo(() => undoPayment({ paymentId }), { find: () => rowEl(row.id) }, { notAllowedText: T.UNDO_PAYMENT_TOO_LATE }),
       },
     });
+  }
+
+  // ===== Back to the testing day (phase 4, §5.4: no dialog, one write, toast with Undo) =====
+  async function doBack(row) {
+    if (!beginWrite()) return;
+    const result = await clearPrivate({ registrationId: row.id, expectedVersion: row.version });
+    endWrite(result.status);
+    const status = result.status;
+    const name = T.studentLabel(row);
+    if (status === 'ok') {
+      setNotSavedId(null);
+      setBanner((current) => (current?.kind === 'row' ? null : current));
+      const reloaded = reloadQuiet();
+      // Undo = set the old day and time again, with the version clearPrivate just returned (L12).
+      const newVersion = result.version;
+      showToast(T.backToTestingDayToast(name), {
+        icon: false,
+        action: {
+          label: T.UNDO,
+          onAction: () =>
+            runUndo(
+              () => setPrivate({ registrationId: row.id, expectedVersion: newVersion, privateDate: row.privateDate, privateTime: row.privateTime }),
+              { find: () => rowEl(row.id) },
+              {
+                textFor: (code) => {
+                  if (code === 'past_day') return T.UNDO_PRIVATE_PAST;
+                  if (code === 'withdrawn') return T.isWithdrawn(name);
+                  return null; // stale, has_result, graded, not_found → "Couldn’t undo …"
+                },
+              },
+            ),
+        },
+      });
+      focusLater(() => rowEl(row.id), addStudentEl, reloaded);
+    } else if (status === 'graded') {
+      setBanner({ text: T.PRIVATE_BACK_GRADED });
+      reloadQuiet();
+    } else if (status === 'not_allowed') {
+      // H1: after the testing day only an admin can send a student back.
+      setBanner({ text: T.PRIVATE_BACK_ADMIN_ONLY });
+      onRefreshProfile();
+      reloadQuiet();
+    } else if (status === 'withdrawn') {
+      setBanner({ text: T.isWithdrawn(name) });
+      reloadQuiet();
+    } else if (status === 'no_access') {
+      onNoAccess();
+    } else if (status === 'error') {
+      setNotSavedId(row.id);
+      setBanner({ kind: 'row', text: T.backFailed(name), retry: () => doBack(row) });
+    } else {
+      // stale, not_found, invalid
+      setBanner({ text: T.ROSTER_STALE });
+      reloadQuiet();
+    }
   }
 
   // ===== Withdraw / Restore (admins, Star v0.113) =====
@@ -954,6 +1159,11 @@ export default function EventPage({
     }
     const mine = fresh.payments.filter((p) => p.registrationId === row.id);
     const counted = activePaymentOf(fresh.payments, row.id);
+    // Phase 4 (M7): after a top-up there can be two live payments — the warning names all of them.
+    const parts = paymentPartsOf(fresh.payments, row.id);
+    let paymentInfo = null;
+    if (parts.length > 1) paymentInfo = { parts };
+    else if (counted) paymentInfo = { cents: counted.amountCents, method: counted.method, paidOn: counted.paidOn };
     const name = T.studentLabel(freshRow);
     openDialog({
       type: 'delete',
@@ -962,7 +1172,7 @@ export default function EventPage({
       title: T.deleteStudentTitle(name),
       body: T.deleteStudentBody(
         fresh.event.name,
-        counted ? { cents: counted.amountCents, method: counted.method, paidOn: counted.paidOn } : null,
+        paymentInfo,
         // Phase 3 (G8): the warning names the testing result (or the grading note) too.
         freshRow.graded ? { result: freshRow.result ?? null, resultAt: freshRow.resultAt ?? null, hasNote: freshRow.note !== null && freshRow.note !== undefined } : null,
         freshRow.firstName,
@@ -1108,11 +1318,36 @@ export default function EventPage({
     // they'll pay, Review possible duplicate — Edit payment, Undo payment — Withdraw / Restore,
     // Delete permanently. Items that don't apply are left out; the rest keep their order. A
     // divider starts each later group, but never the menu itself.
+    // Phase 4 (§5.4, P2 / P5): the private group comes right after the first group, for all staff.
     const groupStart = () => items.length > 0;
     if (row.status === 'active') {
       items.push({ key: 'edit', label: T.EDIT_DETAILS, Icon: IconEdit, onSelect: () => openEdit(row, anchor) });
-      if (!row.paid) items.push({ key: 'paying', label: T.CHANGE_PAYING_BY, Icon: NoIcon, onSelect: () => openPayingBy(row, anchor) });
+      // Q3: also while a private student who paid still owes more
+      if (canChangePayingBy(row)) items.push({ key: 'paying', label: T.CHANGE_PAYING_BY, Icon: NoIcon, onSelect: () => openPayingBy(row, anchor) });
       if (row.duplicateState === 'possible') items.push({ key: 'review', label: T.REVIEW_DUPLICATE, Icon: IconAlertTriangle, onSelect: () => openCompareFor(row, anchor) });
+      // Back is hidden once a result exists, and for staff after the testing day (H1).
+      const can = privateMenu(row, { today, testingDate: event.testingDate, isAdmin });
+      const privateItems = [];
+      if (can.canSet) {
+        // ti-calendar = set / change the private day
+        privateItems.push({ key: 'setprivate', label: T.SET_PRIVATE, Icon: IconCalendar, onSelect: () => openPrivateDialog(row, anchor) });
+      } else {
+        if (can.canChange) privateItems.push({ key: 'changeprivate', label: T.CHANGE_PRIVATE, Icon: IconCalendar, onSelect: () => openPrivateDialog(row, anchor) });
+        // ti-calendar-event = back to the testing day
+        // (ev-menu-wide: the dropdown grows a little to the left so this longer item fits on one line)
+        if (can.canBack) {
+          privateItems.push({
+            key: 'back',
+            label: <span className="ev-menu-wide">{T.backToTestingDay(event.testingDate)}</span>,
+            Icon: IconCalendarEvent,
+            disabled: busy,
+            onSelect: () => doBack(row),
+          });
+        }
+        // ti-school = grade (as Star)
+        if (can.canGrade) privateItems.push({ key: 'grade', label: T.GRADE_PRIVATE, Icon: IconSchool, onSelect: () => onOpenPrivate?.(eventId, row.id) });
+      }
+      privateItems.forEach((item, index) => items.push(index === 0 ? { ...item, separatorBefore: groupStart() } : item));
       if (isAdmin && row.paid) {
         items.push({ key: 'editpay', label: T.EDIT_PAYMENT, Icon: IconCashEdit, separatorBefore: groupStart(), onSelect: () => openEditPayment(row, anchor) });
         items.push({ key: 'undopay', label: T.UNDO_PAYMENT, Icon: IconArrowBackUp, disabled: busy, onSelect: () => doUndoPayment(row) });
@@ -1141,7 +1376,8 @@ export default function EventPage({
     },
   });
   // On a finished event only admins see Add student (v0.191, v0.192).
-  const addShown = live.status === 'ready' && event !== null && (event.state !== 'finished' || isAdmin);
+  // The private page has no event header: no Add student there, and N does nothing (§5.2).
+  const addShown = live.status === 'ready' && event !== null && (event.state !== 'finished' || isAdmin) && !isPrivatePage;
   useShortcutN({
     enabled: addShown && dialog === null && menu === null && !screenLocked && !busy,
     onPress: () => openAdd(addStudentEl()),
@@ -1205,7 +1441,8 @@ export default function EventPage({
 
   const cards = [
     { key: null, label: T.CARD_STUDENTS, Icon: IconUsers, value: active.length },
-    { key: 'paid', label: T.CARD_PAID, Icon: IconCheck, value: paidCount },
+    // Phase 4 (P4): "1 owes more" in amber under the Paid number while a private student owes more.
+    { key: 'paid', label: T.CARD_PAID, Icon: IconCheck, value: paidCount, warn: event.owesMoreCount > 0 ? T.owesMoreCount(event.owesMoreCount) : null },
     { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconClock, value: active.length - paidCount },
     { key: 'money', label: T.CARD_PAYMENTS, Icon: IconCash, value: T.dollars(paymentsTotal) },
   ];
@@ -1249,7 +1486,8 @@ export default function EventPage({
           record={dialog.mode === 'edit' ? dialog.snapshot : record}
           canEdit={record?.status === 'active'}
           graded={dialog.graded ?? null}
-          beltLocked={dialog.mode === 'edit' && Boolean(dialog.graded?.graded) && dayWindow === 'after' && !isAdmin}
+          beltLocked={dialog.mode === 'edit' && Boolean(dialog.graded?.graded) && ownDayWindow(dialog.snapshot) === 'after' && !isAdmin}
+          paymentParts={record ? paymentPartsOf(payments, record.id) : []}
           onTouch={touch}
           onSave={saveStudent}
           onEdit={() => record && openEdit(record, dialog.opener, true)}
@@ -1257,9 +1495,43 @@ export default function EventPage({
         />
       );
     } else if (dialog.type === 'paying') {
-      dialogElement = <PayingByDialog key={dialog.key} state={dialog} name={T.studentLabel(dialog.snapshot)} onSave={savePayingBy} {...common} />;
+      const name = T.studentLabel(dialog.snapshot);
+      // Phase 4 (Q3): a paid private student who still owes more — "Ava Chen · $20 more to collect".
+      const owing = dialog.snapshot.paid && dialog.snapshot.amountDueCents > 0;
+      dialogElement = (
+        <PayingByDialog
+          key={dialog.key}
+          state={dialog}
+          name={name}
+          subtitle={owing ? T.changePayingBySubOwed(name, dialog.snapshot.amountDueCents) : null}
+          onSave={savePayingBy}
+          {...common}
+        />
+      );
     } else if (dialog.type === 'payment') {
-      dialogElement = <EditPaymentDialog key={dialog.key} state={dialog} name={T.studentLabel(dialog.snapshot)} onTouch={touch} onSave={savePayment} {...common} />;
+      const name = T.studentLabel(dialog.snapshot);
+      // Phase 4 (M7): two or more payments → name them all and which one is being edited.
+      const parts = paymentPartsOf(payments, dialog.rowId);
+      const editing = payments.find((p) => p.id === dialog.paymentId);
+      const subtitle = parts.length > 1 && editing ? T.editPaymentSubTopUp(name, parts, editing.amountCents) : null;
+      dialogElement = <EditPaymentDialog key={dialog.key} state={dialog} name={name} subtitle={subtitle} onTouch={touch} onSave={savePayment} {...common} />;
+    } else if (dialog.type === 'private') {
+      const row = record ?? dialog.snapshot;
+      const rank = rankById.get(dialog.snapshot.eventRankId);
+      dialogElement = (
+        <PrivateDialog
+          key={dialog.key}
+          state={dialog}
+          record={dialog.snapshot}
+          rank={rank}
+          className={classById.get(row.eventClassId)?.className ?? ''}
+          event={event}
+          today={today}
+          onTouch={touch}
+          onSave={savePrivate}
+          {...common}
+        />
+      );
     } else if (dialog.type === 'compare') {
       const first = roster.find((r) => r.id === dialog.firstId) ?? dialog.pair.first;
       const second = roster.find((r) => r.id === dialog.secondId) ?? dialog.pair.second;
@@ -1300,7 +1572,7 @@ export default function EventPage({
       );
     } else if (dialog.type === 'note') {
       const row = active.find((r) => r.id === dialog.rowId) ?? dialog.snapshot;
-      const shown = grading.view(row);
+      const shown = engineFor(dialog.engine).view(row);
       const rank = rankById.get(row.eventRankId);
       const subtitle = T.noteSub(
         classById.get(row.eventClassId)?.className ?? '',
@@ -1315,6 +1587,7 @@ export default function EventPage({
           name={T.studentLabel(row)}
           subtitle={subtitle}
           savedNote={shown.note}
+          hint={dialog.engine === 'private' ? T.PRIVATE_NOTE_HINT : T.GRADING_NOTE_HINT}
           onSave={saveNote}
           {...common}
         />
@@ -1338,6 +1611,44 @@ export default function EventPage({
         </Dialog>
       );
     }
+  }
+
+  // ----- Phase 4: the private grading page (P7, P9) instead of the header and tabs -----
+  if (isPrivatePage) {
+    const banners = (
+      <>
+        {privateGrading.banner && (
+          <ErrorBanner text={privateGrading.banner.text} onRetry={() => privateGrading.retryAll()} onDismiss={() => privateGrading.dismissBanner()} />
+        )}
+        {grading.banner && <ErrorBanner text={grading.banner.text} onRetry={() => grading.retryAll()} onDismiss={() => grading.dismissBanner()} />}
+        {banner && (
+          <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />
+        )}
+      </>
+    );
+    const sheetRank = privateRow ? rankById.get(privateRow.eventRankId) : null;
+    return (
+      <>
+        <PrivateGradingPage
+          event={event}
+          school={school}
+          classes={classes}
+          row={pageRow}
+          today={today}
+          isAdmin={isAdmin}
+          layout={layout}
+          grading={privateGrading}
+          banners={banners}
+          onBack={() => onClosePrivate?.()}
+          onOpenNote={(row, opener) => openNote(row, opener, 'private')}
+          onPrint={(opener) => setPrinting({ printedAt: new Date(), opener, kind: 'private' })}
+        />
+        {printing?.kind === 'private' && privateRow && (
+          <PrivateSheet event={event} school={school} row={privateRow} rank={sheetRank} printedAt={printing.printedAt} />
+        )}
+        {dialogElement}
+      </>
+    );
   }
 
   const content = menu && !screenLocked ? menuContent() : null;
@@ -1401,7 +1712,7 @@ export default function EventPage({
           onClassSel={(id) => setClassSel(id)}
           grading={grading}
           onOpenNote={openNote}
-          onPrint={(opener) => setPrinting({ printedAt: new Date(), opener })}
+          onPrint={(opener) => setPrinting({ printedAt: new Date(), opener, kind: 'grading' })}
           panelId={tabIds.panel('grading')}
           tabId={tabIds.tab('grading')}
         />
@@ -1419,6 +1730,7 @@ export default function EventPage({
                     {card.label}
                   </span>
                   <span className="ev-card-value">{card.value}</span>
+                  {card.warn && <span className="ev-card-note ev-card-warn">{card.warn}</span>}
                 </>
               );
               if (card.key === 'money') {
@@ -1526,7 +1838,7 @@ export default function EventPage({
         </div>
       )}
 
-      {printing && <GradingSheet event={event} school={school} classes={classes} rows={gradingRows} printedAt={printing.printedAt} />}
+      {printing?.kind === 'grading' && <GradingSheet event={event} school={school} classes={classes} rows={gradingRows} printedAt={printing.printedAt} />}
       {content && (
         <RowMenu anchor={menu.anchor} isSheet={isPhone} title={content.title} subtitle={content.subtitle} label={content.label} items={content.items} onClose={closeMenu} />
       )}

@@ -695,20 +695,26 @@ export const EDIT_PAYMENT_HINT = 'The old payment is kept in the history and rep
 export const deleteStudentTitle = (name) => `Delete ${name} permanently?`;
 // graded (phase 3, G8) = { result, resultAt, hasNote }, or null when the student has no result
 // and no grading note. firstName is used only when graded ("Sam’s registration …").
+// Phase 4 (plan M7): after a private top-up a student can have two or more live payments; then
+// payment = { parts: [{ cents, method, paidOn }, …] } and every one is named (paymentsList).
 export function deleteStudentBody(eventName, payment, graded = null, firstName = '') {
+  const several = Boolean(payment?.parts && payment.parts.length > 1);
+  const paidPhrase = () =>
+    several ? paymentsList(payment.parts) : `the ${dollars(payment.cents)} ${payingByLower(payment.method)} payment recorded on ${monthDay(payment.paidOn)}`;
   if (graded) {
     // "the testing result (Not passed, Nov 20)" — or "the grading note" when only a note exists.
     const what = graded.result ? `the testing result (${resultTagText(graded.result)}, ${stampDay(graded.resultAt)})` : 'the grading note';
     if (payment) {
-      const paid = `the ${dollars(payment.cents)} ${payingByLower(payment.method)} payment recorded on ${monthDay(payment.paidOn)}`;
-      return `${firstName}’s registration, ${paid} and ${what} are deleted. They won’t show in Payments recorded or on the Grading tab any more. This can’t be undone.`;
+      return `${firstName}’s registration, ${paidPhrase()} and ${what} are deleted. They won’t show in Payments recorded or on the Grading tab any more. This can’t be undone.`;
     }
     return `${firstName}’s registration and ${what} are deleted. They won’t show on the Grading tab any more. This can’t be undone.`; // CP1
   }
   if (!payment) return `The registration is deleted from ${eventName}. This can’t be undone.`;
-  return `The registration and the ${dollars(payment.cents)} ${payingByLower(payment.method)} payment recorded on ${monthDay(
-    payment.paidOn,
-  )} are deleted from ${eventName}. The payment won’t show in Payments recorded any more. This can’t be undone.`;
+  if (several) {
+    // CP1: the plural of the sentence below
+    return `The registration and ${paidPhrase()} are deleted from ${eventName}. The payments won’t show in Payments recorded any more. This can’t be undone.`;
+  }
+  return `The registration and ${paidPhrase()} are deleted from ${eventName}. The payment won’t show in Payments recorded any more. This can’t be undone.`;
 }
 export const DELETE_STUDENT_HINT = 'To keep the record, use Withdraw instead.';
 export const KEEP_STUDENT = 'Keep student';
@@ -817,6 +823,8 @@ export const noteSub = (className, fromName, toName, resultText) =>
 export const NOT_RECORDED_YET = 'Not recorded yet'; // CP1
 export const NOTE_FIELD_LABEL = 'Note'; // CP1
 export const GRADING_NOTE_HINT = 'Shows on the Grading tab, also on the mat. Write only what a parent could read.';
+// Phase 4: the note dialog opened from a private grading page
+export const PRIVATE_NOTE_HINT = 'Shows on their private testing page, also on the mat. Write only what a parent could read.'; // CP1
 export const noteCounter = (n) => `${n} / 200`;
 export const NOTE_SAVE_FAILED = 'Couldn’t save the note. Check the connection, then try again.';
 export const NOTE_BAD_CHARACTER = 'That note has a character that can’t be used. Remove it.'; // CP1
@@ -888,3 +896,139 @@ export const STAY_ON_PAGE = 'Stay on this page';
 // v0.194: the compare dialog for staff after the testing day (in place of COMPARE_NOTE)
 export const KEEP_ONE_ADMIN_ONLY = 'The testing day is over. Only an admin can keep one registration and remove the other now.'; // CP1
 export const LEAVE_ANYWAY = 'Leave anyway';
+
+// =====================================================================================
+// Phase 4 — private testing (contract 0014 §5.12, approved mockups P1–P9 + P3b in
+// TKD-ColorBelt-Private-Mockups.html, rulebook v0.225–v0.228 and v0.254). A private student
+// stays in the event but tests on their own day and time, at the rank's private price.
+// Lines marked "// CP1" are not in the mockups; they follow the same pattern and are shown to
+// Jeffrey at the CP1 walkthrough. Every new sentence uses the typographic apostrophe (’).
+// =====================================================================================
+
+// One recorded payment as text: "$65 cash Nov 2". p = { cents, method, paidOn }
+const paymentPart = (p) => `${dollars(p.cents)} ${payingByLower(p.method)} ${monthDay(p.paidOn)}`;
+
+// ----- Students tab (P1, P4, P9) -----
+export const TAG_PRIVATE = 'Private';
+// "Tue, Dec 1 · 4:00 PM · $85"
+export const privateLine = (dateIso, hhmm, cents) => `${weekdayMonthDay(dateIso)} · ${timeLabel(hhmm)} · ${dollars(cents)}`;
+// The amber line of a private student who paid less than the private price: "Paid $65 · $20 more to collect"
+export const owedLine = (paidCents, dueCents) => `Paid ${dollars(paidCents)} · ${dollars(dueCents)} more to collect`;
+// Under the Paid card: "1 owes more" / "2 owe more"
+export const owesMoreCount = (n) => (n === 1 ? '1 owes more' : `${n} owe more`); // CP1 (the plural)
+
+// ----- The ⋯ menu (P2, P5) -----
+export const SET_PRIVATE = 'Set private testing';
+export const SET_PRIVATE_TITLE = SET_PRIVATE;
+export const CHANGE_PRIVATE = 'Change private day or time';
+export const CHANGE_PRIVATE_TITLE = CHANGE_PRIVATE;
+// "Back to the testing day (Fri, Nov 20)"
+export const backToTestingDay = (dateIso) => `Back to the testing day (${weekdayMonthDay(dateIso)})`;
+export const GRADE_PRIVATE = 'Grade private testing';
+export const backToTestingDayToast = (name) => `${name} back to the testing day`;
+
+// ----- Set / Change private testing dialog (P3) and Add student's "Tests privately" (P3b) -----
+// "Ava Chen · Group A · Yellow → Orange"
+export const privateDialogSub = (name, className, fromName, toName) => [name, className, `${fromName} → ${toName}`].filter(Boolean).join(' · ');
+export const PRIVATE_DAY = 'Day';
+export const PRIVATE_TIME = 'Time';
+// "$65 → $85 private price" (the same price twice: "$85 private price" — CP1)
+export const privatePriceChange = (fromCents, toCents) =>
+  fromCents === toCents ? `${dollars(toCents)} private price` : `${dollars(fromCents)} → ${dollars(toCents)} private price`;
+// The hint's first sentence, and the whole hint
+export const privatePriceSource = (rankName) => `The private price for ${rankName} in Classes and ranks.`;
+export const privatePriceHint = (rankName, cents) => `${privatePriceSource(rankName)} Mark paid charges ${dollars(cents)}.`;
+// Already paid (these replace the hint's second sentence)
+export const privatePaidMore = (paidCents, dueCents) => `Paid ${dollars(paidCents)} · ${dollars(dueCents)} more to collect after saving`;
+export const privatePaidEnough = (paidCents) => `Already paid ${dollars(paidCents)}. Nothing more to collect.`; // CP1
+// Adapted from the mockup ("On her day she …"): the app never assumes a student's gender.
+export const privateStaysLine = (firstName) =>
+  `${firstName} stays in this event. On their day they’re graded on their own page, not on the Grading tab.`;
+// The amber notice before Save when a No show will be cleared (L6: its note goes with it)
+export const clearsNoShow = (firstName, dateIso, hasNote) =>
+  `${firstName} was marked No show on the testing day (${weekdayMonthDay(dateIso)}). Setting a private testing clears ${
+    hasNote ? 'the No show and its note' : 'that result' // with a note: CP1
+  }. The change is logged.`;
+export const clearsPrivateNoShow = (firstName, dateIso, hasNote) =>
+  `${firstName} was marked No show at the private testing (${weekdayMonthDay(dateIso)}). Saving a new day clears ${
+    hasNote ? 'the No show and its note' : 'that result'
+  }. The change is logged.`; // CP1
+export const PRIVATE_DAY_PAST = 'The private day can’t be in the past.';
+export const PICK_PRIVATE_DAY = 'Enter the private day.'; // CP1
+export const PICK_PRIVATE_TIME = 'Choose a time.'; // CP1
+export const PRIVATE_DAY_TOO_FAR = 'Pick a day within a year of the testing day.'; // CP1
+export const TESTS_PRIVATELY = 'Tests privately';
+export const testsPrivatelyHint = (dateIso) => `Can’t make the testing day, ${weekdayMonthDay(dateIso)}.`;
+// Dialog notes after the database refused (CP1)
+export const PRIVATE_HAS_RESULT =
+  'This student already has a result or note from the testing day, so they can’t be set private. An admin can clear it on the Grading tab first.';
+export const PRIVATE_GRADED =
+  'This private testing is already graded, so the day can’t change. An admin can clear the result on the private testing page first.';
+
+// ----- Banners (CP1) -----
+export const PRIVATE_BACK_GRADED = 'This private testing is already graded, so they can’t go back to the testing day.';
+export const PRIVATE_BACK_ADMIN_ONLY = 'The testing day is over. Only an admin can send a student back to the testing day now.';
+export const backFailed = (name) => `${name} wasn’t moved back to the testing day. Check the connection and try again.`;
+export const UNDO_PRIVATE_PAST = 'Couldn’t undo: that private day has passed. Use ⋯ → Set private testing to pick a new day.';
+export const movedToPrivate = (name) =>
+  `${name} now tests privately, so this result wasn’t saved here. Grade them on their private testing page.`;
+
+// ----- The private grading page (P7, P9) -----
+export const privatePageTitle = (name) => `Private testing · ${name}`;
+// "Tue, Dec 1, 2026 · 4:00 PM · Worcester school"
+export const privatePageSub = (dateIso, hhmm, school) => `${shortDate(dateIso)} · ${timeLabel(hhmm)} · ${schoolName(school)}`;
+export const PRINT = 'Print';
+export const DETAIL_EVENT = 'Event';
+export const DETAIL_PRIVATE_DAY = 'Private day';
+export const DETAIL_TIME = 'Time';
+export const DETAIL_CLASS = 'Class';
+// "November Children Testing · Fri, Nov 20, 2026"
+export const eventOnDate = (name, dateIso) => `${name} · ${shortDate(dateIso)}`;
+export const privateGradingOpensLine = (dateIso) => `Grading opens on the private testing day, ${longWeekdayMonthDay(dateIso)}.`;
+export const PRIVATE_OVER_STAFF = 'The private testing day is over. Only an admin can change the result or note now.';
+export const PRIVATE_OVER_ADMIN = 'The private testing day is over. Staff can’t change the result now; as an admin, you can.';
+export const PRIVATE_PAGE_GONE = 'This private testing isn’t in this event any more.'; // CP1
+export const notPrivateAnyMore = (name) => `${name} tests on the testing day again. Grade them on the Grading tab.`; // CP1
+
+// The one-student printed sheet (P7)
+export const privateSheetTitle = (eventName) => `${eventName} — private testing`;
+// "Tue, Dec 1, 2026 · 4:00 PM · Worcester school · printed Mon, Nov 30, 3:05 PM"
+export const privateSheetHeader = (dateIso, hhmm, school, printedAt) =>
+  `${shortDate(dateIso)} · ${timeLabel(hhmm)} · ${schoolName(school)} · printed ${printedStamp(printedAt)}`;
+export const privateSheetFooter = (firstName) => `Type the result into ${firstName}’s private testing page the same day.`;
+
+// ----- Events tab: the Private testings list (P8) -----
+export const PRIVATE_TESTINGS = 'Private testings';
+// The count part is drawn in gray (P8), so it is its own piece too.
+export const privateTestingsCount = (n) => ` · ${n}`;
+export const privateTestingsHeading = (n) => `${PRIVATE_TESTINGS}${privateTestingsCount(n)}`;
+export const COL_DAY = 'Day';
+export const COL_TIME = 'Time';
+export const COL_CLASS = 'Class';
+export const OPEN = 'Open';
+export const openPrivateLabel = (name) => `Open ${name}’s private testing`; // CP1 (screen readers)
+// Phone row, line 2: "Tue, Dec 1 · 4:00 PM · Group A"
+export const privateListPhoneLine = (dateIso, hhmm, className) => [weekdayMonthDay(dateIso), timeLabel(hhmm), className].filter(Boolean).join(' · ');
+
+// ----- Edit details, the detail view, the payment dialogs -----
+// Edit details of a paid private student moved to a pricier rank (v0.254): "Price $85 → $95 · $10 more to collect"
+export const repriceLine = (fromCents, toCents, dueCents) => `Price ${dollars(fromCents)} → ${dollars(toCents)} · ${dollars(dueCents)} more to collect`;
+export const beltChangeClearsPrivate = (firstName, resultText) =>
+  `Changing the belt clears ${firstName}’s result (${resultText}). Record it again on their private testing page.`; // CP1
+export const beltChangeClearsNotePrivate = (firstName) =>
+  `Changing the belt clears ${firstName}’s grading note. Record it again on their private testing page.`; // CP1
+export const DETAIL_PRIVATE = 'Private testing'; // CP1
+// "$65 cash · paid Nov 2 · $20 more to collect"
+export const paidDetailOwed = (paidCents, method, paidOn, dueCents) =>
+  `${dollars(paidCents)} ${payingByLower(method)} · paid ${monthDay(paidOn)} · ${dollars(dueCents)} more to collect`; // CP1
+// "$85 · $65 cash Nov 2 + $20 cash Nov 12" — parts = [{ cents, method, paidOn }]
+export const paidDetailParts = (totalCents, parts) => `${dollars(totalCents)} · ${parts.map(paymentPart).join(' + ')}`; // CP1
+// The same, still owing: "$75 · $65 cash Nov 2 + $10 cash Nov 12 · $10 more to collect"
+export const paidDetailPartsOwed = (totalCents, parts, dueCents) => `${paidDetailParts(totalCents, parts)} · ${dollars(dueCents)} more to collect`; // CP1
+// Edit payment after a top-up (plan M7): "Ava Chen · $65 cash Nov 2 + $20 card Nov 12 — editing the $20"
+export const editPaymentSubTopUp = (name, parts, editingCents) =>
+  `${name} · ${parts.map(paymentPart).join(' + ')} — editing the ${dollars(editingCents)}`;
+// Change how they'll pay while a private student owes more (Q3): "Ava Chen · $20 more to collect"
+export const changePayingBySubOwed = (name, dueCents) => `${name} · ${dollars(dueCents)} more to collect`; // CP1
+// Delete permanently with two or more payments: "the 2 payments ($65 cash Nov 2, $20 cash Nov 12)"
+export const paymentsList = (parts) => `the ${parts.length} payments (${parts.map(paymentPart).join(', ')})`; // CP1

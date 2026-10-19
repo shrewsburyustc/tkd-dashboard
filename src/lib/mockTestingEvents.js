@@ -30,13 +30,27 @@
 // and the grading locks in five phase 2 functions (update_student, resolve_duplicate,
 // restore_student, add_student, update_event — see each one). A store saved before phase 3 has
 // no `results`; it simply gets an empty list (its events and students are kept).
+//
+// Phase 4 (private testing, migration 0014, contract 0014 §2, §4.3) adds two registration keys,
+// private_date ('YYYY-MM-DD' or null) and private_time ('16:00:00' or null) — readable from
+// testing_registrations but NOT from the testing_roster view (unchanged on purpose) — the three
+// functions testing_set_private, testing_clear_private and testing_add_private_student, and
+// the changes of 0014 §2.5 in nine existing functions: Mark paid records what is DUE
+// (amountDueOf below = the database's testing_amount_due), Change how they'll pay is allowed
+// while a top-up is owed, grading counts from the student's OWN day (private day, else the
+// testing day), the keep-one / restore locks also count from the private day, Edit event's
+// "has results" ignores private students' results, and the 90-day signature clean-up waits for
+// the later of the two days. A store saved before phase 4 simply reads both keys as null.
+// The preview also keeps a small history list `change_log` (the newest 500 rows) for the phase 4
+// writes and Mark paid — the action names and one batch id per call, like the database's
+// change_log — so checks.mjs can test them. The app can't read it (like the real one).
 import { normalizeName, nameProblem, nameKey } from './testing/names.js';
 import { RESULTS, normalizeGradingNote, gradingNoteProblem } from './testing/gradingRules.js';
 import { defaultTestingData } from './mockTesting.js';
 import {
   eventState, registrationSwitch, publicStateFor, feeFor, timeToMinutes, isIsoDate, addDays, signatureIsValid,
   noteIsValid, normalizeNote, shortTime, todayInSchoolTime, defaultAutoCloseOn, SCHOOL_TIME_ZONE, PAYING_BY, FORM_PAYING_BY, ACK_VERSION, UNDO_WINDOW_MS, SIGNATURE_KEEP_DAYS, MAX_PAYMENT_CENTS,
-  testingFor,
+  testingFor, privateTimeIsValid, privateDayLimit,
 } from './testing/eventRules.js';
 
 const LOCATION_CODES = ['worcester', 'shrewsbury'];
@@ -191,6 +205,7 @@ export function defaultEventsData({ today = todayInSchoolTime(new Date()) } = {}
       signed_at: fromForm ? at : null, signature_deleted_at: null, ack_version: fromForm ? ACK_VERSION : null,
       registered_at: at, status: 'active', withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null, withdrawn_by_name: null,
       duplicate_state: 'none', duplicate_of: null,
+      private_date: null, private_time: null, // phase 4: tests on the testing day
       ...stamps(at, fromForm ? 'Family form' : 'Staff'),
     };
     if (extra.withdrawn) {
@@ -258,7 +273,8 @@ const GRANTED = {
   testing_events: EVENT_COLS,
   testing_event_classes: EVENT_CLASS_COLS,
   testing_event_ranks: EVENT_RANK_COLS,
-  testing_registrations: REG_COLS,
+  // Phase 4: the private day and time can be read here (0014 §2.2) — not from the roster view.
+  testing_registrations: [...REG_COLS, 'private_date', 'private_time'],
   testing_payments: PAYMENT_COLS,
   testing_roster: ROSTER_COLS,
   testing_public_attempts: [], // no client grants at all
@@ -298,6 +314,10 @@ const RPC_ARGS = {
   // Phase 3 (0010 §1.5), staff and admins.
   testing_set_result: [ID('p_registration_id'), ['p_result', 'text']],
   testing_set_result_note: [ID('p_registration_id'), ['p_note', 'text']],
+  // Phase 4 (0014 §2.4), staff and admins.
+  testing_set_private: [ID('p_registration_id'), ['p_expected_version', 'int'], ['p_private_date', 'date'], ['p_private_time', 'time']],
+  testing_clear_private: [ID('p_registration_id'), ['p_expected_version', 'int']],
+  testing_add_private_student: [ID('p_event_id'), ['p_first', 'text'], ['p_last', 'text'], ID('p_event_rank_id'), ['p_stripes', 'bool'], ['p_paying_by', 'text'], ['p_private_date', 'date'], ['p_private_time', 'time']],
 };
 // Who may call (§1.8): A = admins only, S = staff and admins. testing_restore_student is not in
 // this list: staff may undo their OWN "keep one" for 10 seconds, so it checks who inside (14o).
@@ -308,7 +328,12 @@ const ADMIN_ONLY = new Set([
 export const EVENT_RPC_NAMES = Object.keys(RPC_ARGS);
 // Functions that exist but that a signed-in staff member may NOT call (only testing_registrar, or
 // nobody): the app gets "permission denied", like the real database.
-export const EVENT_RESTRICTED_RPC_NAMES = ['testing_public_event', 'testing_public_register', 'testing_purge_old_signatures', 'testing_event_state'];
+// (Phase 4: the two internal helpers testing_amount_due and testing_private_time_is_valid are
+// granted to nobody.)
+export const EVENT_RESTRICTED_RPC_NAMES = [
+  'testing_public_event', 'testing_public_register', 'testing_purge_old_signatures', 'testing_event_state',
+  'testing_amount_due', 'testing_private_time_is_valid',
+];
 export { ADMIN_ONLY as EVENT_ADMIN_ONLY_RPCS };
 
 class DbError extends Error {
@@ -345,6 +370,13 @@ function toDbType(value, type) {
     case 'date':
       if (isIsoDate(value)) return value;
       throw new DbError('22007', `invalid input syntax for type date: "${value}"`);
+    case 'time': {
+      // '16:00' or '16:00:30' → '16:00:00' / '16:00:30' (the database's time format). Whether
+      // the time is ALLOWED (6 AM–10 PM, 5-minute steps) is the function's own check.
+      const m = typeof value === 'string' ? /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/.exec(value) : null;
+      if (m) return `${m[1]}:${m[2]}:${m[3] ?? '00'}`;
+      throw new DbError('22007', `invalid input syntax for type time: "${value}"`);
+    }
     case 'jsonb':
       return JSON.parse(JSON.stringify(value)); // any JSON value; checked by the function itself
     case 'uuid[]':
@@ -433,6 +465,13 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
     // A store saved before phase 3 has no grading results yet: an empty list, NOT "damaged"
     // (so the events and students someone made in preview are kept).
     if (!Array.isArray(store.results)) store.results = [];
+    // Phase 4: registrations saved before it have no private keys — they read as null (tests on
+    // the testing day), NOT as damaged data. The history list starts empty.
+    for (const reg of store.registrations) {
+      if (reg.private_date === undefined) reg.private_date = null;
+      if (reg.private_time === undefined) reg.private_time = null;
+    }
+    if (!Array.isArray(store.change_log)) store.change_log = [];
     return store;
   }
   const write = (db) => saveStore?.(db);
@@ -482,6 +521,38 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
   const isGradedReg = (db, regId) => resultOf(db, regId) !== null;
   // "After the testing day" for a registration's event (today > testing_date).
   const afterTestingDay = (db, reg) => today() > findEvent(db, reg.event_id).testing_date;
+  // ----- Private testing (phase 4) -----
+  // The student's own day: coalesce(private_date, testing_date).
+  const ownDay = (db, reg) => reg.private_date ?? findEvent(db, reg.event_id).testing_date;
+  // "After the private day" (only for a private student).
+  const afterPrivateDay = (reg) => reg.private_date !== null && today() > reg.private_date;
+  // Phase 4: "has a result" for the private paths = a row with a result (a note alone doesn't count).
+  const hasResultValue = (db, regId) => (resultOf(db, regId)?.result ?? null) !== null;
+  // The preview's copy of testing_amount_due (0014 §2.3), written out step by step like the SQL
+  // (checks.mjs compares it with eventRules.amountDue after every step):
+  //   private      → private_cents − greatest(net, 0)
+  //   net > 0      → 0 (a regular student is never re-priced after paying)
+  //   otherwise    → testing_fee_cents(early, day, today, testing_date)
+  // and never below 0.
+  function amountDueOf(db, reg) {
+    const rank = rankRow(db, reg.event_rank_id);
+    const event = findEvent(db, reg.event_id);
+    const net = sum(paymentsOf(db, reg.id).map((p) => p.amount_cents));
+    let due;
+    if (reg.private_date !== null) due = rank.private_cents - Math.max(net, 0);
+    else if (net > 0) due = 0;
+    else due = today() < event.testing_date ? rank.early_cents : rank.day_cents;
+    return Math.max(due, 0);
+  }
+  // One history row per change (0014's tkd.action + tkd.batch_id). Keeps the newest 500 rows so
+  // the preview store stays small.
+  const LOG_KEEP = 500;
+  function logChange(db, batchId, action, tableName, op, rowId, ctx) {
+    db.change_log.push({ table_name: tableName, op, row_id: rowId, action, batch_id: batchId, actor_name: ctx.actorName, at: stamp() });
+    if (db.change_log.length > LOG_KEEP) db.change_log.splice(0, db.change_log.length - LOG_KEEP);
+  }
+  // The private day / time in an answer: '2026-12-01' and '16:00' (to_char … 'HH24:MI'), or null.
+  const answerTime = (t) => (t === null ? null : t.slice(0, 5));
   // Removes the result rows of registrations that are deleted (the database's ON DELETE CASCADE).
   const dropResultsOf = (db, regIds) => {
     db.results = db.results.filter((r) => !regIds.has(r.registration_id));
@@ -494,9 +565,10 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
     if (!reg) return st('not_found');
     if (reg.status === 'withdrawn') return st('withdrawn');
     const t = today();
-    const testingDate = findEvent(db, reg.event_id).testing_date;
-    if (t < testingDate) return st('not_open'); // admins too
-    if (t > testingDate && !ctx.isAdmin) return st('finished');
+    // Phase 4: counted from the student's OWN day (the private day when private).
+    const day = ownDay(db, reg);
+    if (t < day) return st('not_open'); // admins too
+    if (t > day && !ctx.isAdmin) return st('finished');
     return null;
   }
 
@@ -577,14 +649,17 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
   }
 
   // ----- The 90-day signature clean-up (plan answer 3) -----
-  // Signatures of events whose testing date is more than 90 days ago are removed. It changes
+  // Signatures are removed more than 90 days after the LATER of the testing date and the
+  // student's private day (phase 4: greatest() ignores a missing private day). It changes
   // neither the version nor "last changed" (the database's before-write trigger skips it).
   function purgeOldSignatures(db) {
     const cutoff = addDays(today(), -SIGNATURE_KEEP_DAYS);
-    const oldEvents = new Set(db.events.filter((e) => e.testing_date < cutoff).map((e) => e.id));
+    const testingDateOf = new Map(db.events.map((e) => [e.id, e.testing_date]));
     const at = stamp();
     for (const reg of db.registrations) {
-      if (oldEvents.has(reg.event_id) && reg.signature !== null) {
+      const testingDate = testingDateOf.get(reg.event_id);
+      const lastDay = reg.private_date !== null && reg.private_date > testingDate ? reg.private_date : testingDate;
+      if (lastDay < cutoff && reg.signature !== null) {
         reg.signature = null;
         reg.signature_deleted_at = at;
       }
@@ -666,9 +741,12 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       if (event.version !== a.p_expected_version) return st('stale');
       // Phase 3: once any student of this event (active or withdrawn) has a result or a note,
       // the date can't move (the results belong to that day).
+      // Phase 4 (M3): a private student's RESULT doesn't count (it belongs to their own day); a
+      // private note-only row still counts (that student can go Back to the testing day).
       if (a.p_testing_date !== event.testing_date) {
-        const regIds = new Set(db.registrations.filter((r) => r.event_id === event.id).map((r) => r.id));
-        if (db.results.some((r) => regIds.has(r.registration_id))) return st('has_results');
+        const regsOfEvent = new Map(db.registrations.filter((r) => r.event_id === event.id).map((r) => [r.id, r]));
+        const counts = (x) => regsOfEvent.has(x.registration_id) && (regsOfEvent.get(x.registration_id).private_date === null || x.result === null);
+        if (db.results.some(counts)) return st('has_results');
       }
       // A past event may keep its date; a NEW date must be today or later.
       if (a.p_testing_date !== event.testing_date && a.p_testing_date < t) return st('invalid');
@@ -754,7 +832,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
         stripes_confirmed: true, source: 'staff', reference: nextReference(db), submission_id: null, signature: null,
         signed_at: null, signature_deleted_at: null, ack_version: null, registered_at: at, status: 'active',
         withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null, withdrawn_by_name: null,
-        ...duplicateFlagsFor(db, event.id, a.p_first, a.p_last),
+        ...duplicateFlagsFor(db, event.id, a.p_first, a.p_last), private_date: null, private_time: null,
       }, ctx);
       return { status: 'ok', id: reg.id, reference: reg.reference, version: reg.version };
     },
@@ -767,20 +845,25 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       if (!rankInEvent(db, a.p_event_rank_id, reg.event_id)) return st('invalid');
       // Phase 3: a belt (and so class) change of a graded student clears their result; after
       // the testing day only an admin may do that. Name-only edits never touch the result.
+      // Phase 4: "after the day" = after the student's OWN day (the private day when private).
       const rankChanged = a.p_event_rank_id !== reg.event_rank_id;
       const graded = isGradedReg(db, reg.id);
-      if (rankChanged && graded && afterTestingDay(db, reg) && !ctx.isAdmin) return st('not_allowed');
+      if (rankChanged && graded && today() > ownDay(db, reg) && !ctx.isAdmin) return st('not_allowed');
       const before = reg.version;
       updateRow(reg, { first_name: normalizeName(a.p_first), last_name: normalizeName(a.p_last), event_rank_id: a.p_event_rank_id }, ctx);
       if (reg.version !== before) {
         recheckDuplicate(db, reg, ctx);
         recheckPointingAt(db, reg.id, ctx);
       }
+      const answer = { status: 'ok', version: reg.version };
       if (rankChanged && graded) {
         db.results = db.results.filter((r) => r.registration_id !== reg.id); // the 'clear_result' step
-        return { status: 'ok', version: reg.version, result_cleared: true }; // the key only when true
+        answer.result_cleared = true; // the key only when true
       }
-      return { status: 'ok', version: reg.version };
+      // Phase 4 (Q2): a private student is re-priced by the new rank — the answer says what is
+      // due now. A regular student's answer stays exactly as before (no extra key).
+      if (reg.private_date !== null) answer.amount_due_cents = amountDueOf(db, reg);
+      return answer;
     },
 
     testing_change_paying_by(db, a, ctx) {
@@ -789,7 +872,9 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       if (!reg) return st('not_found');
       if (reg.version !== a.p_expected_version) return st('stale');
       if (reg.status === 'withdrawn') return st('withdrawn');
-      if (paymentSummary(db, reg.id).paid) return st('already_paid');
+      // Phase 4 (Q3): still allowed while a private student owes a top-up. Earlier payments keep
+      // their own method.
+      if (paymentSummary(db, reg.id).paid && amountDueOf(db, reg) === 0) return st('already_paid');
       updateRow(reg, { paying_by: a.p_paying_by }, ctx);
       return { status: 'ok', version: reg.version };
     },
@@ -800,18 +885,20 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       if (!reg) return st('not_found');
       if (reg.version !== a.p_expected_version) return st('stale');
       if (reg.status === 'withdrawn') return st('withdrawn');
-      if (paymentSummary(db, reg.id).paid) return st('already_paid');
-      const event = findEvent(db, reg.event_id);
+      // Phase 4: the database records what is DUE (testing_amount_due): the regular fee by today
+      // (early before the testing day, testing-day price on it), the private price, or just the
+      // difference still owed. Nothing due (also a $0 price) → already_paid, nothing inserted.
+      const amount = amountDueOf(db, reg);
+      if (amount <= 0) return st('already_paid');
+      if (amount > MAX_PAYMENT_CENTS) return st('invalid'); // the payments table's own limit
       const t = today();
-      // The database decides: early price before the testing day, testing-day price on it.
-      const amount = feeFor(rankRow(db, reg.event_rank_id), t, event.testing_date);
-      if (!(amount > 0 && amount <= MAX_PAYMENT_CENTS)) return st('invalid'); // a $0 rank can't be "paid"
       const payment = {
         id: newId(), registration_id: reg.id, kind: 'payment', amount_cents: amount, method: reg.paying_by,
         paid_on: t, recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName, reverses_payment_id: null,
       };
       db.payments.push(payment);
       updateRow(reg, {}, ctx, true); // a double click with the old version now gets 'stale'
+      logChange(db, newId(), 'mark_paid', 'testing_payments', 'insert', payment.id, ctx);
       purgeOldSignatures(db); // the last step (§1.5)
       return { status: 'ok', payment_id: payment.id, amount_cents: amount, method: payment.method, version: reg.version };
     },
@@ -866,7 +953,9 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       // Phase 3 (v0.194 point 3): after the testing day "keep one" is for admins only — for every
       // student, graded or not (it removes a registration once results may exist). Keep both stays
       // open to staff.
-      if (!a.p_keep_both && afterTestingDay(db, keep) && !ctx.isAdmin) return st('not_allowed');
+      // Phase 4 (H3): also after the PRIVATE day of the one being withdrawn (a private day can
+      // be before the testing day).
+      if (!a.p_keep_both && (afterTestingDay(db, keep) || afterPrivateDay(other)) && !ctx.isAdmin) return st('not_allowed');
       if (a.p_keep_both) {
         updateRow(keep, { duplicate_state: 'kept_both', duplicate_of: other.id }, ctx);
         updateRow(other, { duplicate_state: 'kept_both', duplicate_of: keep.id }, ctx);
@@ -906,7 +995,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       const ownKeepOne = reg.status === 'withdrawn' && reg.withdrawn_reason === 'duplicate_copy'
         && ctx.userId !== null && reg.withdrawn_by === ctx.userId
         && now() - Date.parse(reg.withdrawn_at) < UNDO_WINDOW_MS
-        && !(isGradedReg(db, reg.id) && afterTestingDay(db, reg));
+        && !(isGradedReg(db, reg.id) && (afterTestingDay(db, reg) || afterPrivateDay(reg))); // phase 4 (H3): or after their private day
       if (!ctx.isAdmin && !ownKeepOne) return st('not_allowed');
       if (reg.version !== a.p_expected_version) return st('stale');
       if (reg.status !== 'withdrawn') return st('invalid'); // nothing to restore
@@ -980,6 +1069,97 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       const refusal = gradingRefusal(db, reg, ctx);
       if (refusal) return refusal;
       return writeResult(db, reg.id, { result: resultOf(db, reg.id)?.result ?? null, note }, ctx);
+    },
+
+    // ----- Private testing (phase 4, contract 0014 §2.4) — the database's check order -----
+
+    // Set private testing (first time) or change the private day / time.
+    testing_set_private(db, a, ctx) {
+      if ([a.p_registration_id, a.p_expected_version, a.p_private_date, a.p_private_time].includes(null)) return st('invalid');
+      if (!privateTimeIsValid(a.p_private_time)) return st('invalid'); // 6 AM–10 PM, 5-minute steps
+      const reg = findReg(db, a.p_registration_id);
+      if (!reg) return st('not_found');
+      if (reg.version !== a.p_expected_version) return st('stale');
+      if (reg.status === 'withdrawn') return st('withdrawn');
+      const testingDate = findEvent(db, reg.event_id).testing_date;
+      if (a.p_private_date < today()) return st('past_day');
+      if (a.p_private_date > privateDayLimit(testingDate)) return st('invalid'); // more than a year after
+      const res = resultOf(db, reg.id);
+      const wasPrivate = reg.private_date !== null;
+      let removes = false;
+      if (!wasPrivate) {
+        // Not private yet: only a testing-day No show may be there (it is cleared with its note).
+        if (res && res.result === 'no_show') removes = true;
+        else if (res) return st('has_result'); // Pass, Not passed, or a note only
+      } else if (res && res.result === 'no_show') {
+        removes = true; // a private No show gets a new day (H2)
+      } else if (res && res.result !== null) {
+        return st('graded'); // a private Pass / Not passed
+      } // else: no row, or a note only — kept
+      const unchanged = wasPrivate && reg.private_date === a.p_private_date && reg.private_time === a.p_private_time;
+      let cleared = false;
+      if (!unchanged) {
+        // The same day and time again writes and removes nothing (no version bump).
+        const batchId = newId();
+        updateRow(reg, { private_date: a.p_private_date, private_time: a.p_private_time }, ctx);
+        logChange(db, batchId, wasPrivate ? 'change_private' : 'set_private', 'testing_registrations', 'update', reg.id, ctx);
+        if (removes) {
+          db.results = db.results.filter((r) => r.registration_id !== reg.id);
+          logChange(db, batchId, 'clear_result', 'testing_results', 'delete', reg.id, ctx);
+          cleared = true;
+        }
+      }
+      return {
+        status: 'ok', version: reg.version, private_date: reg.private_date, private_time: answerTime(reg.private_time),
+        amount_due_cents: amountDueOf(db, reg), result_cleared: cleared,
+      };
+    },
+
+    // Back to the testing day.
+    testing_clear_private(db, a, ctx) {
+      if (a.p_registration_id === null || a.p_expected_version === null) return st('invalid');
+      const reg = findReg(db, a.p_registration_id);
+      if (!reg) return st('not_found');
+      if (reg.version !== a.p_expected_version) return st('stale');
+      if (reg.status === 'withdrawn') return st('withdrawn');
+      if (reg.private_date !== null) {
+        // A private result (Pass, Not passed or No show) locks Back; a note alone doesn't (Q5).
+        if (hasResultValue(db, reg.id)) return st('graded');
+        // H1: after the testing day only an admin may send a student back.
+        if (afterTestingDay(db, reg) && !ctx.isAdmin) return st('not_allowed');
+        updateRow(reg, { private_date: null, private_time: null }, ctx);
+        logChange(db, newId(), 'clear_private', 'testing_registrations', 'update', reg.id, ctx);
+      } // not private: nothing to do, answer ok (0014 §10 point 7). The note row (if any) stays.
+      return { status: 'ok', version: reg.version, amount_due_cents: amountDueOf(db, reg) };
+    },
+
+    // Add student with "Tests privately" ticked: testing_add_student's checks + the private day.
+    testing_add_private_student(db, a, ctx) {
+      if (a.p_event_id === null || !nameIsValid(a.p_first) || !nameIsValid(a.p_last) || a.p_event_rank_id === null) return st('invalid');
+      if (a.p_stripes !== true || !PAYING_BY.includes(a.p_paying_by)) return st('invalid');
+      if (a.p_private_date === null || a.p_private_time === null || !privateTimeIsValid(a.p_private_time)) return st('invalid');
+      const event = findEvent(db, a.p_event_id);
+      if (!event) return st('not_found');
+      if (eventState(event, today()) === 'finished' && !ctx.isAdmin) return st('finished');
+      if (!rankInEvent(db, a.p_event_rank_id, event.id)) return st('invalid');
+      if (a.p_private_date < today()) return st('past_day');
+      if (a.p_private_date > privateDayLimit(event.testing_date)) return st('invalid');
+      const at = stamp();
+      // One new row with the private day already in it (version 1, one history row).
+      const reg = insertRow(db.registrations, {
+        id: newId(), event_id: event.id, event_rank_id: a.p_event_rank_id,
+        first_name: normalizeName(a.p_first), last_name: normalizeName(a.p_last), paying_by: a.p_paying_by,
+        stripes_confirmed: true, source: 'staff', reference: nextReference(db), submission_id: null, signature: null,
+        signed_at: null, signature_deleted_at: null, ack_version: null, registered_at: at, status: 'active',
+        withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null, withdrawn_by_name: null,
+        ...duplicateFlagsFor(db, event.id, a.p_first, a.p_last),
+        private_date: a.p_private_date, private_time: a.p_private_time,
+      }, ctx);
+      logChange(db, newId(), 'add_student', 'testing_registrations', 'insert', reg.id, ctx);
+      return {
+        status: 'ok', id: reg.id, reference: reg.reference, version: reg.version,
+        private_date: reg.private_date, private_time: answerTime(reg.private_time), amount_due_cents: amountDueOf(db, reg),
+      };
     },
   };
 
@@ -1089,6 +1269,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
         signature: args.signature, signed_at: at, signature_deleted_at: null, ack_version: args.ackVersion, registered_at: at,
         status: 'active', withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null, withdrawn_by_name: null,
         ...duplicateFlagsFor(db, event.id, args.first, args.last), // flagged silently — the family isn't told
+        private_date: null, private_time: null, // never private from the form
       }, ctx);
       return registeredAnswer(db, reg);
     })();
@@ -1165,7 +1346,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
     return ok(rows.map((row) => Object.fromEntries(wanted.map((col) => [col, row[col] ?? null]))));
   }
 
-  // supabase.rpc(name, args) for the staff functions (15 from phase 2, 2 from phase 3).
+  // supabase.rpc(name, args) for the staff functions (15 from phase 2, 2 from phase 3, 3 from phase 4).
   function rpc(name, args = {}, ctx = {}) {
     if (EVENT_RESTRICTED_RPC_NAMES.includes(name)) {
       if (!ctx.signedIn) return denied(`function ${name}`);
@@ -1217,8 +1398,16 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
   function reset() {
     const db = read();
     Object.assign(db, defaultEventsData({ today: dataToday() }));
+    db.change_log = []; // phase 4: the preview history starts again too
     write(db);
   }
 
-  return { select, rpc, publicEvent, publicRegister, failNextSave, simulateOtherAdminEdit, reset, snapshot: read };
+  // checks.mjs only: the preview's testing_amount_due for one registration (null = no such row).
+  function amountDueFor(registrationId) {
+    const db = read();
+    const reg = findReg(db, registrationId);
+    return reg ? amountDueOf(db, reg) : null;
+  }
+
+  return { select, rpc, publicEvent, publicRegister, failNextSave, simulateOtherAdminEdit, reset, snapshot: read, amountDueFor };
 }
