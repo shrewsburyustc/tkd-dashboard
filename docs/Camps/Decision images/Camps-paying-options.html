@@ -1,0 +1,114 @@
+<!doctype html>
+<!--
+  Camps-paying-options.html — decision picture for Camps question 5: how payments are recorded on a camp roster.
+  Why it exists: Jeffrey picks by looking (rule P3). Option A matches Color Belt's one-click Mark paid
+  (decided 2026-10-17). The PNG next to it is a screenshot of this page.
+-->
+<html lang="en"><head><meta charset="utf-8"><title>Camps — paying options</title>
+<style>
+  :root{--bg:#fff;--surface:#f7f7f5;--border:#e5e5e2;--ctl:#8f8f8a;--text:#1f1f1f;--muted:#6b6b6b;
+    --blue:#003595;--tint:#e6ebf4;--amber:#c98a1b;--ok:#3b6d11;--okbg:#eaf3de;--wbg:#faeeda;--wt:#633806}
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:#efeee9;font:14px/1.45 "Segoe UI",system-ui,sans-serif;color:var(--text);width:1320px}
+  h1{font-size:20px;font-weight:500;margin:0 0 4px}
+  .lead{color:var(--muted);margin:0 0 20px;max-width:1040px}
+  .opt{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:24px}
+  .opt h2{font-size:16px;font-weight:500;margin:0 0 2px}
+  .rec{display:inline-block;font-size:12px;background:var(--okbg);color:var(--ok);border-radius:6px;padding:1px 8px;margin-left:8px;vertical-align:2px}
+  .sub{color:var(--muted);margin:0 0 16px;font-size:13px}
+  .cols{display:grid;grid-template-columns:1.5fr 1fr;gap:24px;align-items:start}
+  .panel{border:1px solid var(--border);border-radius:12px;padding:16px;position:relative}
+  .t{font-size:16px;font-weight:500;display:flex;justify-content:space-between;align-items:center}
+  .h{font-size:12px;color:var(--muted);margin-bottom:12px}
+  .btn{background:var(--blue);color:#fff;border-radius:8px;font-size:13px;padding:5px 12px}
+  .btn2{border:1px solid var(--ctl);border-radius:8px;font-size:12px;padding:3px 10px;color:var(--text);white-space:nowrap}
+  .amber{outline:3px solid var(--amber);outline-offset:4px;border-radius:8px}
+  .note{font-size:12px;color:#7a4f00;margin:10px 0 0;font-weight:500}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{background:var(--surface);color:var(--muted);font-weight:400;font-size:12px;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+  td{padding:0 8px;height:38px;border-bottom:1px solid var(--border)}
+  td.n,th.n{text-align:right}
+  .tag{font-size:12px;border-radius:6px;padding:1px 8px;background:var(--okbg);color:var(--ok);white-space:nowrap}
+  .tag.w{background:var(--wbg);color:var(--wt)}
+  .muted{color:var(--muted)}
+  .ico{color:var(--muted)}
+  .toast{background:#1f1f1f;color:#fff;border-radius:8px;padding:8px 12px;font-size:13px;display:flex;gap:14px;align-items:center;width:fit-content;margin-top:14px}
+  .toast b{font-weight:500;border-left:1px solid #4a4a4a;padding-left:12px}
+  label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+  .f{height:32px;border:1px solid var(--ctl);border-radius:8px;padding:0 10px;display:flex;align-items:center;font-size:13px}
+  .seg{display:inline-flex;border:1px solid var(--ctl);border-radius:8px;overflow:hidden;font-size:12px}
+  .seg span{padding:5px 10px;border-right:1px solid var(--border)}.seg span:last-child{border:0}.seg .on{background:var(--tint);color:var(--blue)}
+  .pc{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:16px;font-size:13px}
+  .pc h3{font-size:13px;font-weight:500;margin:0 0 4px}
+  .pc ul{margin:0;padding-left:18px}
+  .sum{display:flex;justify-content:space-between;font-size:13px;padding:4px 0}
+</style></head><body>
+
+<h1>Camps — question 5: how is paying recorded?</h1>
+<p class="lead">Example: April Vacation Camp roster. Payment happens at the desk (cash, check or card terminal) in both options. Amber = where the options differ.</p>
+
+<!-- ============ OPTION A ============ -->
+<div class="opt">
+  <h2>A. One click: Mark paid records the full total <span class="rec">Recommended</span></h2>
+  <p class="sub">Same as Color Belt (your call there: "When we click pay, it's paid"). <b>Mark paid</b> records the whole amount owed, with how the family paid; 5-second Undo. If a day or extra is added after paying, the row shows <b>Owes $X</b> and Mark paid records just the difference.</p>
+  <div class="cols">
+    <div class="panel">
+      <div class="t">April Vacation Camp <span class="btn">+ Add camper</span></div><div class="h">Mon, Apr 20 – Fri, Apr 24 · Worcester</div>
+      <div class="amber">
+      <table>
+        <tr><th>Camper</th><th>Days</th><th class="n">Total</th><th>Status</th><th></th></tr>
+        <tr><td>Mia Rossi</td><td>Tue, Thu</td><td class="n">$166</td><td><span class="tag w">Not paid</span></td><td class="n"><span class="btn2">$ Mark paid</span> <span class="ico">⋯</span></td></tr>
+        <tr><td>Leo Kim</td><td>Full week</td><td class="n">$275</td><td><span class="tag">Paid</span></td><td class="n"><span class="ico">⋯</span></td></tr>
+        <tr><td>Ava Thompson</td><td>Mon–Wed</td><td class="n">$210</td><td><span class="tag w">Owes $15</span></td><td class="n"><span class="btn2">$ Mark paid</span> <span class="ico">⋯</span></td></tr>
+      </table>
+      </div>
+      <div class="toast">Mia Rossi marked paid · $166 cash <b>Undo</b></div>
+      <p class="note">Ava paid $195, then early drop-off was added → "Owes $15". One click settles it.</p>
+    </div>
+    <div class="panel">
+      <div class="t" style="font-size:14px">⋯ menu (admin)</div>
+      <div class="h">For the rare odd case</div>
+      <div style="font-size:13px;line-height:2">Change how they'll pay<br>Edit payment<br>Undo payment</div>
+      <p class="note">No amounts to type at the desk. Payment method is what the family chose on the form (changeable).</p>
+    </div>
+  </div>
+  <div class="pc">
+    <div><h3>Pros</h3><ul><li>Fastest at the desk: one click, no typing.</li><li>Works the same as Color Belt — staff learn it once; code is reused.</li><li>Added days/extras later are still handled (Owes $X).</li></ul></div>
+    <div><h3>Cons</h3><ul><li>No deposits or "pay half now" — a family pays the whole amount owed at once.</li><li>A discount or a different amount needs an admin's Edit payment.</li></ul></div>
+  </div>
+</div>
+
+<!-- ============ OPTION B ============ -->
+<div class="opt">
+  <h2>B. Record payment: type any amount (part payments allowed)</h2>
+  <p class="sub">Each payment is entered in a small dialog: amount + method. The roster shows what's still due. Allows deposits, paying week by week, or a family paying for siblings in pieces.</p>
+  <div class="cols">
+    <div class="panel">
+      <div class="t">April Vacation Camp <span class="btn">+ Add camper</span></div><div class="h">Mon, Apr 20 – Fri, Apr 24 · Worcester</div>
+      <div class="amber">
+      <table>
+        <tr><th>Camper</th><th>Days</th><th class="n">Total</th><th class="n">Paid</th><th>Status</th><th></th></tr>
+        <tr><td>Mia Rossi</td><td>Tue, Thu</td><td class="n">$166</td><td class="n">$0</td><td><span class="tag w">Not paid</span></td><td class="n"><span class="btn2">$ Record payment</span></td></tr>
+        <tr><td>Leo Kim</td><td>Full week</td><td class="n">$275</td><td class="n">$275</td><td><span class="tag">Paid</span></td><td class="n"><span class="ico">⋯</span></td></tr>
+        <tr><td>Ava Thompson</td><td>Mon–Wed</td><td class="n">$210</td><td class="n">$100</td><td><span class="tag w">$110 due</span></td><td class="n"><span class="btn2">$ Record payment</span></td></tr>
+      </table>
+      </div>
+      <p class="note">An extra "Paid" column and "$ due" states on every row.</p>
+    </div>
+    <div class="panel amber">
+      <div class="t" style="font-size:16px">Record payment — Ava Thompson</div>
+      <div class="sum muted"><span>Total</span><span>$210</span></div>
+      <div class="sum muted"><span>Paid so far</span><span>$100</span></div>
+      <label>Amount</label><div class="f">$110</div>
+      <label>How</label><div class="seg"><span class="on">Cash</span><span>Check</span><span>Card</span><span>Other</span></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px"><span class="btn2" style="font-size:13px;padding:4px 12px">Cancel</span><span class="btn">Save</span></div>
+      <p class="note">A dialog and typing for every payment.</p>
+    </div>
+  </div>
+  <div class="pc">
+    <div><h3>Pros</h3><ul><li>Handles deposits and pay-in-parts.</li><li>Any amount can be recorded (discounts, odd cases) without an admin.</li></ul></div>
+    <div><h3>Cons</h3><ul><li>Slower at the desk: a dialog and typing each time; typing mistakes possible.</li><li>Different from Color Belt — two payment habits for staff, less code reused.</li><li>More states to show and test (Paid / $ due / overpaid).</li></ul></div>
+  </div>
+</div>
+
+</body></html>
