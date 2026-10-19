@@ -82,6 +82,9 @@ export function createProspectsPart({ newId, stamp, today, nowLocal, times, slot
         status_id: statusOf(db, sub.location_code, 'new'), follow_up_on: null, joined_on: null, checked_in_at: null, checked_in_by_name: null,
         last_activity_at: stamp(),
       }, ctx);
+      // like the real trigger: the prospect is made the moment the form is sent (the preview's
+      // sample sign-ups are dated days ago, so copy that date)
+      p.created_at = sub.created_at;
       log(db, p, 'created', { source: sub.source, entered_by: sub.entered_by }, ctx, sub.created_at);
     });
   }

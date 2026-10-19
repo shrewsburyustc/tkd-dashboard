@@ -60,6 +60,64 @@ export const joinedLine = (d) => `Joined ${shortDate(d).slice(4)}`;
 export const cameLine = (b) => `Came ${shortDate(b.date).slice(4)}`;
 export const openLabel = (name, unopened = false) => `Open ${name}${unopened ? ', new — not opened yet' : ''}`;
 
+// ----- Progress track (v0.214) -----
+export const COL_PROGRESS = 'Progress';
+export const STEP_SIGNED = 'Signed up';
+export const STEP_BOOKED = 'Class booked';
+export const STEP_CAME = 'Came';
+export const STEP_JOINED = 'Joined';
+export const TODAY_WORD = 'today';
+export const TOMORROW_WORD = 'tomorrow';
+export const inNDays = (n) => `in ${n} days`;
+export const NEEDS_CLASS = 'Needs a class';
+export const needsClassLine = (d) => `Signed up ${shortDate(d).slice(4)} · needs a class`;
+export const classShort = (b) => `Class ${freeClassLine(b)}`;
+export const classTodayLine = (b) => `Class today · ${formatTime(parseTime(b.start))}`;
+export const CLASS_GONE_CARD = 'Class cancelled — call';
+export const noShowLine = (d) => `No-show ${shortDate(d).slice(4)} · call back`;
+export const NO_SHOW_CALL = 'No-show · call back';
+export const cameAskLine = (d) => `Came ${shortDate(d).slice(4)} · ask to join`;
+export const ASK_TO_JOIN = 'Came · ask to join';
+export const followCard = (text) => (text === 'Today' ? 'Call today' : `Call · ${text}`);
+export const NEXT = 'Next:';
+export const NEXT_BOOK = 'Book a free class';
+export const nextCheckIn = (name, b) => `Check in on ${shortDate(b.date)} when ${name} arrives`;
+export const nextCheckInToday = (name, b) => `Check in when ${name} arrives (today ${formatTime(parseTime(b.start), true)})`;
+export const nextAskCame = (name) => `Mark whether ${name} came`;
+export const NEXT_ASK_JOIN = 'Ask the family to join';
+export const NEXT_CLASS_GONE = 'Call the family — the class was cancelled';
+export const NEXT_NO_SHOW = 'Call back and book a new class';
+export const PROGRESS_LABEL = 'Progress';
+export const doneWords = (names) => `${names.join(', ')} done`;
+export const nextWords = (name) => `next: ${name}`;
+export const stoppedWords = (name) => `stopped at ${name}`;
+export const STEP_STATE = { done: ', done', next: ', next', stopped: ', stopped', off: ', stopped', todo: ', not yet' };
+
+// ----- List / Board switch and the Board (v0.214) -----
+export const VIEW = 'View';
+export const VIEW_LIST = 'List';
+export const VIEW_BOARD = 'Board';
+export const BOARD_LABEL = (school) => `${PAGE_TITLE} board${school ? ` · ${school}` : ''}`;
+export const childrenCount = (n) => (n === 1 ? '1 child' : `${n} children`);
+export const NOBODY_COLUMN = 'Nobody here';
+export const searchShowing = (n, total, text) => `Showing ${n} of ${childrenCount(total)} · matching “${text}”`;
+export const SHOW_EVERYONE = 'Show everyone';
+export const showingColumn = (name, n) => `Showing ${name}, ${childrenCount(n)}`;
+export const stageJump = (name, n) => `${name}: ${childrenCount(n)} — go to the column`;
+export const SWIPE_HINT = 'Swipe, or tap a stage above, for the next column';
+export const SCROLL_HINT = 'Scroll sideways for more stages';
+export const DRAG_HINT = 'Drag a card to another stage, or open it and change the status.';
+export const DRAG_HINT_TOUCH = 'Press and hold a card, then drag it to another stage.';
+export const NEW_WORD = 'new';
+export const MOVED = (name, to) => `${name} moved to ${to}.`;
+
+// ----- "Came" when a card is dropped on Came -----
+export const cameTitle = (name) => `Did ${name} come to the free class?`;
+export const NO_CLASS_BOOKED = 'No free class is booked. Came is saved as the status.';
+export const cameAheadTitle = (name) => `${name}'s free class is still ahead`;
+export const cameAhead = (name, b) => `${name}'s free class is ${classLine(b)}. Check in on that day, when ${name} arrives.`;
+export const MARK_CAME = 'Came';
+
 // ----- Panel -----
 export const BACK = 'Back';
 export const CLOSE_PANEL = 'Close';

@@ -11,7 +11,7 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Prospects-Build-Plan.md`
 | P2 Migration 0010 + tests + security review | Done 2026-10-18; PGlite 93/93 |
 | P3 Screens + preview database + design review | Done 2026-10-18 (preview only); 8 differences wait for Jeffrey in P4 |
 | P4 Jeffrey tries the preview (and decides the P3 differences below) | Differences decided 2026-10-18 (v0.206); 2, 3, 5 and 8 built |
-| P4b Board view + drag + progress track (mockup screens 11–13) | Decided 2026-10-18 (v0.214): both views, drag on every device, track in List + panel only. Build waits for Jeffrey's OK |
+| P4b Board view + drag + progress track (mockup screens 11–13) | Decided 2026-10-18 (v0.214). Built in preview + design review (no High; plain bugs fixed); 5 differences decided (v0.221) and built. Committed locally 2026-10-18, not pushed |
 | P5 Live setup (0007–0010, then Forms F3) | Waiting |
 | P6 Go live with Forms | Needs a separate OK |
 | — 0003 history exception | **Proposal only** (`PROPOSAL-0003-history-cleanup.md`), for the Color Belt session; Prospects must not go live before it's decided |
@@ -55,3 +55,11 @@ The list as it was asked:
 6. The blue **dot** marks new sign-ups you haven't opened (the same ones the badge counts).
 7. **Edit statuses** is under the page's ⋯ menu.
 8. **Change time** uses the calendar-event icon (rev 3), which elsewhere means "event"; and the rail's hover bubble says "Prospects" while a screen reader hears "Prospects, 3 new".
+
+## Board build (P4b, 2026-10-18, preview only — not committed yet)
+
+- New: `src/screens/prospects/Board.jsx`, `useCardDrag.js`, `Progress.jsx`, `progress.js`, `progress.checks.mjs` (passes). Changed: `Prospects.jsx`, `ProspectList.jsx` (Progress column replaces Free class), `ProspectPanel.jsx` (big track), `PipelineBar.jsx` (List / Board switch, drop spots), `Dialogs.jsx` (CameDialog), `text.js`, `prospects.css`, `mockProspects.js` (prospect date = sign-up date), shared `src/App.jsx` (passes `staffId` so the view is remembered per person).
+- No database change. The List / Board choice is in localStorage `tkd.prospects.view.<staff id>`.
+- Design review fixes: Massachusetts date for sign-ups, a Came drop before the class only says when to check in, per-person view memory, 44px switch taps, no countdown for a cancelled class, drag vs swipe, Undo busy guard, Esc click, school switch mid-drag, Board columns as groups, words in text.js, tablet "Scroll sideways" hint.
+- Found while building (not changed): migration 0010's backfill gives already-sent sign-ups a prospect `created_at` of the day 0010 is applied, so those children would show "Signed up <that day>". Fix = set `created_at` from the submission in the backfill — needs Jeffrey's OK (0010 isn't live yet).
+- Differences decided (Jeffrey, 2026-10-18, v0.221): B gray switch; C the Board always shows everyone (Follow up today only in the List; search shows a "Showing n of m" line); D phone follow-up line only when the track's line isn't amber; E stay on the column + green flash on the new stage; F phones hide empty side-exit chips. All built.

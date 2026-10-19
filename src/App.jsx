@@ -697,6 +697,7 @@ export default function App() {
             {section === 'prospects' && (
               <Prospects
                 location={location}
+                staffId={profile.id}
                 // For showing or hiding controls only — the database decides what may change.
                 isAdmin={profile.role === 'admin'}
                 screenLocked={phase === 'locked'}

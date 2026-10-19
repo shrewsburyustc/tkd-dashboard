@@ -6,6 +6,10 @@
 //   - the stage bar + chips + search (PipelineBar), the list (ProspectList), opening on
 //     "Follow up today" (follow-ups due today or overdue, new sign-ups, "Did … come?", and free
 //     classes whose class was cancelled)
+//   - List or Board (v0.214): the switch next to the chips; each person's choice is remembered on
+//     this device (the List the first time). The Board (Board.jsx) shows one column per stage;
+//     cards drag to another column (useCardDrag.js) — New / Contacted save at once, Booked, Came
+//     and Joined open their dialog first and Cancel leaves the card where it was
 //   - the side panel (ProspectPanel): beside the list on a PC, under it on a tablet, full screen
 //     on a phone
 //   - "+ Add prospect" (which form → Fill in, shared with Forms), Edit statuses, Book / Change /
@@ -17,7 +21,8 @@ import Dialog from '../components/Dialog.jsx';
 import ErrorBanner from '../components/ErrorBanner.jsx';
 import RowMenu from '../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../lib/device.js';
-import { PC_QUERY, PHONE_QUERY, WIDE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
+import { PC_QUERY, PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
+import { readStorage, writeStorage } from '../lib/storage.js';
 import { useShortcutN } from '../lib/useShortcutN.js';
 import { addDays } from '../lib/schedule/versions.js';
 import { loadForms } from '../lib/forms/api.js';
@@ -29,12 +34,17 @@ import {
 import { useFillIn } from './forms/useFillIn.js';
 import PipelineBar from './prospects/PipelineBar.jsx';
 import ProspectList from './prospects/ProspectList.jsx';
+import Board from './prospects/Board.jsx';
+import { useCardDrag } from './prospects/useCardDrag.js';
 import ProspectPanel from './prospects/ProspectPanel.jsx';
 import StatusesDialog, { checkStatusForm, isStatusFormDirty } from './prospects/StatusesDialog.jsx';
-import { AddProspectDialog, BookTimeDialog, DeleteDialog, JoinedDialog, timeKey } from './prospects/Dialogs.jsx';
+import { AddProspectDialog, BookTimeDialog, CameDialog, DeleteDialog, JoinedDialog, timeKey } from './prospects/Dialogs.jsx';
 import * as T from './prospects/text.js';
 
 const ALL_CODES = ['worcester', 'shrewsbury'];
+// 'list' | 'board', remembered per person on this device (v0.214) — the front-desk PC is shared
+const viewKey = (staffId) => `tkd.prospects.view.${staffId ?? 'anyone'}`;
+const savedView = (staffId) => (readStorage(viewKey(staffId)) === 'board' ? 'board' : 'list');
 const localToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
 const emptyNote = () => ({ body: '', when: 'tomorrow', picked: null });
 const usable = (el) => (el && el.isConnected && el.getClientRects().length > 0 ? el : null);
@@ -50,10 +60,11 @@ function isDueToday(p, builtin, today) {
     || Boolean(p.booking && p.booking.status === 'booked' && !p.booking.classRunning);
 }
 
-export default function Prospects({ location, isAdmin, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange, onBadgeRefresh }) {
+export default function Prospects({ location, staffId, isAdmin, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange, onBadgeRefresh }) {
   const isPhone = useMediaQuery(PHONE_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const isPc = useMediaQuery(PC_QUERY);
+  const isTouch = useMediaQuery(TOUCH_QUERY);
   const both = location === 'Both';
   const codes = useMemo(() => (both ? ALL_CODES : [LOCATION_CODE[location]]), [both, location]);
   const pros = useProspects({ codes, enabled: !screenLocked });
@@ -61,6 +72,8 @@ export default function Prospects({ location, isAdmin, screenLocked, onNoAccess,
   const today = data?.today ?? localToday();
 
   const [filters, setFilters] = useState({}); // code -> { kind: 'today' | 'all' | 'status', id }
+  const [view, setViewState] = useState(() => savedView(staffId));
+  const [boardCols, setBoardCols] = useState({}); // phone Board: code -> the stage shown
   const [search, setSearch] = useState('');
   const [found, setFound] = useState(null); // code -> Set of ids, while searching
   const [selected, setSelected] = useState(null); // { id, code, opener }
@@ -73,7 +86,7 @@ export default function Prospects({ location, isAdmin, screenLocked, onNoAccess,
   const [busy, setBusy] = useState(false);
   const ref = useRef({});
   useLayoutEffect(() => {
-    ref.current = { selected, detail, dialog, data };
+    ref.current = { selected, detail, dialog, data, busy };
   });
 
   useEffect(() => {
@@ -186,7 +199,7 @@ export default function Prospects({ location, isAdmin, screenLocked, onNoAccess,
   async function afterWrite(result, toastText, undo) {
     setBusy(false);
     if (result.status === 'ok') {
-      await Promise.all([pros.reload(), loadDetail(ref.current.selected?.id ?? result.id)]);
+      await Promise.all([pros.reload(), ref.current.selected ? loadDetail(ref.current.selected.id) : null]);
       if (toastText) showToast(toastText, undo ? { icon: false, action: { label: T.UNDO, onAction: undo } } : {});
       return true;
     }
@@ -217,13 +230,13 @@ export default function Prospects({ location, isAdmin, screenLocked, onNoAccess,
     afterWrite(r, T.STATUS_SAVED(st?.name ?? ''));
   }
   async function saveJoined() {
-    const d = ref.current.detail;
     const g = ref.current.dialog;
+    const d = g?.prospect ?? ref.current.detail;
     if (!d || !g) return;
     setDialog({ ...g, saving: true });
     const r = await setStatus({ id: d.id, expectedVersion: d.version, statusId: g.statusId, joinedOn: g.date });
     setDialog(null);
-    afterWrite(r, T.STATUS_SAVED(T.JOINED_TITLE));
+    if ((await afterWrite(r, T.STATUS_SAVED(T.JOINED_TITLE))) && g.dropCode) flashStage(g.dropCode, g.statusId);
   }
   async function changeFollowUp(date) {
     const d = ref.current.detail;
@@ -241,30 +254,30 @@ export default function Prospects({ location, isAdmin, screenLocked, onNoAccess,
       setNoteWarning(false);
     }
   }
-  async function doCheckIn(came, afterClass) {
-    const d = ref.current.detail;
+  async function doCheckIn(came, afterClass, target = null) {
+    const d = target ?? ref.current.detail;
     if (!d || busy) return;
     setBusy(true);
     const r = await checkIn({ id: d.id, expectedVersion: d.version, came, afterClass });
-    afterWrite(r, came ? T.CHECKED_IN(d.childFirstName) : T.MARKED_NOSHOW(d.childFirstName), async () => {
+    return afterWrite(r, came ? T.CHECKED_IN(d.childFirstName) : T.MARKED_NOSHOW(d.childFirstName), async () => {
       const u = await undoCheckIn({ id: d.id, expectedVersion: r.version, previousStatusId: r.previousStatusId, previousFollowUpOn: r.previousFollowUpOn });
       afterWrite(u);
     });
   }
 
   // ----- Book / change / cancel a free class -----
-  async function openBook() {
-    const d = ref.current.detail;
+  async function openBook(target = null, dropCode = null) {
+    const d = target ?? ref.current.detail;
     if (!d) return;
     const change = Boolean(d.booking && d.booking.status === 'booked');
-    setDialog({ type: 'book', key: Date.now(), name: d.childFirstName, change, times: null, pick: null, saving: false, note: null });
+    setDialog({ type: 'book', key: Date.now(), prospect: d, dropCode, name: d.childFirstName, change, times: null, pick: null, saving: false, note: null });
     const res = await openTimesFor({ id: d.id, from: today, to: addDays(today, 60) });
     setDialog((g) => (g && g.type === 'book' ? { ...g, times: res.status === 'ok' ? res.times : 'error' } : g));
     if (res.status === 'no_access') onNoAccess();
   }
   async function saveBook() {
-    const d = ref.current.detail;
     const g = ref.current.dialog;
+    const d = g?.prospect ?? ref.current.detail;
     if (!d || !g || !g.pick) return;
     const t = g.times.find((x) => timeKey(x) === g.pick);
     setDialog({ ...g, saving: true, note: null });
@@ -281,7 +294,10 @@ export default function Prospects({ location, isAdmin, screenLocked, onNoAccess,
       return;
     }
     setDialog(null);
-    afterWrite(r, T.BOOKED(d.childFirstName));
+    if ((await afterWrite(r, T.BOOKED(d.childFirstName))) && g.dropCode) {
+      const booked = schools.find((x) => x.code === g.dropCode)?.statuses.find((s) => s.builtin === 'booked');
+      if (booked) flashStage(g.dropCode, booked.id);
+    }
   }
   async function doCancelBooking() {
     const d = ref.current.detail;
@@ -294,6 +310,104 @@ export default function Prospects({ location, isAdmin, screenLocked, onNoAccess,
       afterWrite(again.status === 'time_taken' ? { status: 'stale' } : again);
     });
   }
+
+  // ----- The Board: List / Board, and dropping a card on another stage (v0.214) -----
+  function setView(next, code = null, filter = null) {
+    writeStorage(viewKey(staffId), next);
+    setViewState(next);
+    // each view starts on its own filter: the List on "Follow up today", the Board on everyone
+    setFilters(code && filter ? { [code]: filter } : {});
+    setSearch('');
+  }
+  function goToStage(code, statusId) {
+    if (isPhone) {
+      setBoardCols((x) => ({ ...x, [code]: statusId }));
+      return;
+    }
+    const col = document.querySelector(`[data-prospects-school="${code}"] [data-board-col="${statusId}"]`);
+    col?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    col?.querySelector('.pbcol-head')?.focus({ preventScroll: true });
+  }
+  // After a drop is saved, the stage the card went to glows green for a moment (difference E):
+  // the Board stays on its column, so this shows where the card landed.
+  function flashStage(code, statusId) {
+    window.requestAnimationFrame(() => {
+      document.querySelectorAll(`[data-prospects-school="${code}"] [data-drop-status="${statusId}"]:is(.ptile, .pstage)`).forEach((el) => {
+        el.classList.remove('is-flash');
+        void el.offsetWidth; // restart the glow if it is already running
+        el.classList.add('is-flash');
+        window.setTimeout(() => el.classList.remove('is-flash'), 1500);
+      });
+    });
+  }
+  // The full prospect for a dialog (the list doesn't carry everything the dialogs need)
+  async function fetchProspect(id) {
+    setBusy(true);
+    const res = await getProspect(id);
+    setBusy(false);
+    if (res.status === 'ok') return res.prospect;
+    if (res.status === 'no_access') onNoAccess();
+    else {
+      setBanner({ text: res.status === 'not_found' ? T.STALE : T.SAVE_FAILED });
+      pros.reload();
+    }
+    return null;
+  }
+  async function dropCard(p, code, statusId) {
+    const school = schools.find((x) => x.code === code);
+    const to = school?.statusById.get(statusId);
+    const from = school?.statusById.get(p.statusId);
+    if (!to || busy || statusId === p.statusId) return;
+    clearToast();
+    const booked = Boolean(p.booking && p.booking.status === 'booked');
+    if (to.builtin === 'booked' && !booked) {
+      const d = await fetchProspect(p.id);
+      if (d) openBook(d, code);
+      return;
+    }
+    if (to.builtin === 'came') {
+      const d = await fetchProspect(p.id);
+      // a class still ahead can't be checked in yet: the dialog says when, with only Cancel
+      const ahead = Boolean(d?.booking && d.booking.status === 'booked' && d.booking.classRunning && !d.checkedInAt && d.booking.date > today);
+      if (d) setDialog({ type: 'came', key: Date.now(), prospect: d, statusId, askCame: p.askCame, ahead, dropCode: code, saving: false, note: null });
+      return;
+    }
+    if (to.builtin === 'joined') {
+      const d = await fetchProspect(p.id);
+      if (d) setDialog({ type: 'joined', key: Date.now(), prospect: d, name: d.childFirstName, statusId, date: today, dropCode: code, saving: false, note: null });
+      return;
+    }
+    setBusy(true);
+    const r = await setStatus({ id: p.id, expectedVersion: p.version, statusId, joinedOn: null });
+    if (r.status === 'ok') flashStage(code, statusId);
+    afterWrite(r, T.MOVED(p.childFirstName, to.name), async () => {
+      if (ref.current.busy) return;
+      setBusy(true);
+      const u = await setStatus({ id: p.id, expectedVersion: r.version, statusId: p.statusId, joinedOn: from?.builtin === 'joined' ? p.joinedOn : null });
+      afterWrite(u);
+    });
+  }
+  // "Came": check the child in when there is a class to check in to, otherwise save the status
+  async function saveCame() {
+    const g = ref.current.dialog;
+    if (!g) return;
+    const d = g.prospect;
+    const b = d.booking;
+    const canCheckIn = Boolean(b && b.status === 'booked' && b.classRunning && !d.checkedInAt) && (g.askCame || b.date === today);
+    if (canCheckIn) {
+      setDialog(null);
+      if (await doCheckIn(true, Boolean(g.askCame), d)) flashStage(g.dropCode, g.statusId);
+      return;
+    }
+    // no class to check in to: save Came as the status (a class still ahead never gets here —
+    // CameDialog only offers Cancel then)
+    setDialog({ ...g, saving: true });
+    setBusy(true);
+    const r = await setStatus({ id: d.id, expectedVersion: d.version, statusId: g.statusId, joinedOn: null });
+    setDialog(null);
+    if (await afterWrite(r, T.MOVED(d.childFirstName, T.STEP_CAME))) flashStage(g.dropCode, g.statusId);
+  }
+  const drag = useCardDrag({ enabled: view === 'board' && !busy && !dialog && !screenLocked && !fill.isOpen, resetKey: location, onDrop: dropCard });
 
   // ----- Delete (admins) -----
   async function confirmDelete() {
@@ -385,6 +499,7 @@ export default function Prospects({ location, isAdmin, screenLocked, onNoAccess,
   useShortcutN({ enabled: !dialog && !selected && !screenLocked && pros.status === 'ready' && !fill.isOpen, onPress: () => openAdd(document.querySelector('[data-prospects-add]')) });
 
   // ===== What is on screen =====
+  const stagesOf = (school) => school.statuses.filter((s) => s.kind === 'stage');
   const panelFor = (school) => {
     if (!selected || selected.code !== school.code) return null;
     if (!detail) return <div className="ppanel ppanel--loading" aria-busy="true">{T.LOADING_PANEL}</div>;
@@ -411,8 +526,8 @@ export default function Prospects({ location, isAdmin, screenLocked, onNoAccess,
         onSaveNote={saveNote}
         onStatus={changeStatus}
         onFollowUp={changeFollowUp}
-        onCheckIn={doCheckIn}
-        onBook={openBook}
+        onCheckIn={(came, afterClass) => doCheckIn(came, afterClass)}
+        onBook={() => openBook()}
         onCancelBooking={doCancelBooking}
         onOpenSibling={(id, opener) => openProspect({ id, openedByMe: true }, school.code, opener)}
         onDelete={() => setDialog({ type: 'delete', key: Date.now(), name: detail.childFirstName, siblings: detail.siblings.length > 0, saving: false, note: null })}
@@ -438,16 +553,19 @@ export default function Prospects({ location, isAdmin, screenLocked, onNoAccess,
     body = null;
   } else {
     body = schools.map((school) => {
-      const filter = filters[school.code] ?? { kind: 'today' };
+      const board = view === 'board';
+      // the Board always shows everyone (difference C); only search narrows it
+      const filter = board ? { kind: 'all' } : filters[school.code] ?? { kind: 'today' };
       const searching = found !== null;
       let items = school.all;
       if (searching) items = items.filter((p) => found[school.code]?.has(p.id));
       else if (filter.kind === 'today') items = school.due;
-      else if (filter.kind === 'status') items = items.filter((p) => p.statusId === filter.id);
+      else if (filter.kind === 'status' && !board) items = items.filter((p) => p.statusId === filter.id);
+      const onBoard = (p) => school.statusById.get(p.statusId)?.kind === 'stage';
       const emptyText = school.all.length === 0 ? T.NO_PROSPECTS : searching ? T.NO_MATCH : filter.kind === 'today' ? T.NOBODY_TODAY : T.NOBODY;
       const panel = !isPhone ? panelFor(school) : null;
       return (
-        <section key={school.code} className="psection" aria-label={both ? school.name : undefined}>
+        <section key={school.code} className="psection" data-prospects-school={school.code} aria-label={both ? school.name : undefined}>
           {both && (
             <h2 className="pschool">
               <IconMapPin size={16} aria-hidden="true" />
@@ -456,6 +574,11 @@ export default function Prospects({ location, isAdmin, screenLocked, onNoAccess,
           )}
           <PipelineBar
             idBase={`prospects-${school.code}`}
+            code={school.code}
+            view={view}
+            onView={(v) => v !== view && setView(v)}
+            boardColumn={boardCols[school.code] ?? stagesOf(school)[0]?.id}
+            onStage={(id) => goToStage(school.code, id)}
             stages={school.statuses.filter((s) => s.kind === 'stage')}
             exits={school.statuses.filter((s) => s.kind === 'exit')}
             counts={school.counts}
@@ -465,24 +588,50 @@ export default function Prospects({ location, isAdmin, screenLocked, onNoAccess,
             search={search}
             showSearch={!both}
             onFilter={(f) => {
+              // on the Board, a side exit (No-show, Not interested) shows those children in the List
+              if (board && f.kind === 'status') {
+                setView('list', school.code, f);
+                return;
+              }
               setSearch('');
               setFilters((x) => ({ ...x, [school.code]: f }));
             }}
             onSearch={setSearch}
           />
           <div className={`pbody${panel && isWide ? ' pbody--side' : ''}`}>
-            <ProspectList
-              items={items}
-              label={both ? `${T.PAGE_TITLE} · ${school.name}` : T.PAGE_TITLE}
-              statusById={school.statusById}
-              initials={school.initials}
-              today={today}
-              selectedId={selected?.id}
-              narrow={Boolean(panel) && isWide}
-              isPhone={isPhone}
-              emptyText={emptyText}
-              onOpen={(p, opener) => openProspect(p, school.code, opener)}
-            />
+            {board ? (
+              <Board
+                code={school.code}
+                label={T.BOARD_LABEL(both ? school.name : '')}
+                headingLevel={both ? 3 : 2}
+                stages={stagesOf(school)}
+                items={items}
+                statusById={school.statusById}
+                initials={school.initials}
+                today={today}
+                selectedId={selected?.id}
+                isPhone={isPhone}
+                isTouch={isTouch}
+                column={boardCols[school.code]}
+                onColumn={(id) => setBoardCols((x) => ({ ...x, [school.code]: id }))}
+                drag={drag}
+                searchNote={searching ? { shown: items.filter(onBoard).length, total: school.all.filter(onBoard).length, text: search.trim(), onClear: () => setSearch('') } : null}
+                onOpen={(p, opener) => openProspect(p, school.code, opener)}
+              />
+            ) : (
+              <ProspectList
+                items={items}
+                label={both ? `${T.PAGE_TITLE} · ${school.name}` : T.PAGE_TITLE}
+                statusById={school.statusById}
+                initials={school.initials}
+                today={today}
+                selectedId={selected?.id}
+                narrow={Boolean(panel) && isWide}
+                isPhone={isPhone}
+                emptyText={emptyText}
+                onOpen={(p, opener) => openProspect(p, school.code, opener)}
+              />
+            )}
             {panel}
           </div>
         </section>
@@ -510,6 +659,8 @@ export default function Prospects({ location, isAdmin, screenLocked, onNoAccess,
           }}
         />
       );
+    } else if (dialog.type === 'came') {
+      dialogElement = <CameDialog state={dialog} isPhone={isPhone} onSave={saveCame} onCancel={() => !dialog.saving && setDialog(null)} />;
     } else if (dialog.type === 'delete') {
       dialogElement = <DeleteDialog state={dialog} onConfirm={confirmDelete} onCancel={() => !dialog.saving && setDialog(null)} />;
     } else if (dialog.type === 'statuses' && statusSchool) {

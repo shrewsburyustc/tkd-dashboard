@@ -3,6 +3,8 @@
 //   - Call / Text / Email open the device's own apps (nothing is sent by the dashboard); on a PC,
 //     Call shows the number large with Copy
 //   - Check in on the free-class day, or "Did … come?" Came / No-show after the class
+//   - The big progress track at the top: Signed up → Class booked → Came → Joined with dates,
+//     and a "Next:" line (v0.214)
 //   - Status: the colored tag with a chevron opens a menu (stages, then side exits; P4 difference 2)
 //   - Follow up: the date as words ("Today", "Overdue · Oct 16") with a clock; click for the quick
 //     choices Tomorrow / In 3 days / Next week / Pick a date / No follow-up (P4 difference 3)
@@ -25,6 +27,8 @@ import { addDays } from '../../lib/schedule/versions.js';
 import { longTextProblem } from '../../lib/forms/fields.js';
 import { loadSignature } from '../../lib/forms/api.js';
 import { StatusTag } from './ProspectList.jsx';
+import { BigTrack } from './Progress.jsx';
+import { localDay, progressOf } from './progress.js';
 import * as T from './text.js';
 
 const telOf = (phone) => `tel:${String(phone).replace(/[^0-9+]/g, '')}`;
@@ -103,9 +107,10 @@ export default function ProspectPanel({
         )}
       </div>
       <p className="ppanel-who">
-        {p.parentName} · {T.fromForm(p.formName, p.signedUpAt.slice(0, 10))}
+        {p.parentName} · {T.fromForm(p.formName, localDay(p.signedUpAt))}
         {p.enteredBy && ` · ${T.enteredBy(p.enteredBy)}`}
       </p>
+      <BigTrack progress={progressOf({ ...p, askCame: Boolean(askCame) }, status, today)} />
 
       <div className="pcontact">
         {isPc ? (

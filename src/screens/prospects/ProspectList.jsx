@@ -1,14 +1,18 @@
-// ProspectList.jsx — the list of prospects (mockup screens 1, 2, 8).
-// Why it exists: one row per child: Child · Parent · Free class · Follow up · Status.
-//   - PC: a table-like list; with the side panel open, only Child · Parent · Status fit.
+// ProspectList.jsx — the list of prospects (mockup screens 1, 2, 8, 11).
+// Why it exists: one row per child: Child · Parent · Progress · Follow up · Status.
+//   - Progress (v0.214): the small track (Signed up → Class booked → Came → Joined) plus one line
+//     saying where the child is or what's next ("Signed up Oct 18 · needs a class").
+//   - PC: a table-like list; with the side panel open, only Child · Progress · Status fit.
 //   - Tablet: the full list (the panel is below it).
-//   - Phone: cards (child · parent, then free class · follow-up) with the status tag.
+//   - Phone: cards (child · parent, then the track and its line) with the status tag; an amber
+//     "Follow up · Today" line under it when due, unless the track's line is already amber.
 // Never a phone number, email, age or answer here (rulebook section 5; the list function doesn't
 // even return them). Overdue / today follow-ups, "Did … come?" and a cancelled class are amber,
-// always with words. In the Joined view the free-class and follow-up columns say when they came
-// and joined.
+// always with words.
 import { IconAlertTriangle } from '@tabler/icons-react';
 import { colorOf } from '../../lib/schedule/colors.js';
+import { progressOf } from './progress.js';
+import { Track } from './Progress.jsx';
 import * as T from './text.js';
 
 export function StatusTag({ status }) {
@@ -21,20 +25,11 @@ export function StatusTag({ status }) {
   );
 }
 
-// What the Free class and Follow up columns say for one prospect.
-export function rowCells(p, statusById, today) {
+// What the Follow up column says for one prospect (the Progress column says the rest).
+export function followCell(p, statusById, today) {
   const builtin = statusById.get(p.statusId)?.builtin;
-  let free = { text: T.NONE, warn: false };
-  if (p.booking && p.booking.status === 'booked') {
-    free = p.booking.classRunning ? { text: T.freeClassLine(p.booking), warn: false } : { text: `${T.freeClassLine(p.booking)} · ${T.CLASS_GONE_SHORT}`, warn: true };
-  }
-  let follow = T.followUpText(p.followUpOn, today) ?? { text: builtin === 'new' ? T.NEW_SIGNUP : T.NONE, warn: false };
-  if (p.askCame) follow = { text: T.askCame(p.childFirstName), warn: true };
-  if (builtin === 'joined') {
-    free = { text: p.booking ? T.cameLine(p.booking) : T.NONE, warn: false };
-    follow = { text: p.joinedOn ? T.joinedLine(p.joinedOn) : T.NONE, warn: false };
-  }
-  return { free, follow };
+  if (builtin === 'joined') return { text: T.NONE, warn: false };
+  return T.followUpText(p.followUpOn, today) ?? { text: builtin === 'new' ? T.NEW_SIGNUP : T.NONE, warn: false };
 }
 
 function Cell({ value, className = '' }) {
@@ -47,7 +42,7 @@ function Cell({ value, className = '' }) {
 }
 
 // The blue dot = a new sign-up you haven't opened (what the rail badge counts: New / Booked).
-const isUnopened = (p, statusById) => !p.openedByMe && ['new', 'booked'].includes(statusById.get(p.statusId)?.builtin ?? '');
+export const isUnopened = (p, statusById) => !p.openedByMe && ['new', 'booked'].includes(statusById.get(p.statusId)?.builtin ?? '');
 
 export default function ProspectList({ items, label, statusById, initials, today, selectedId, narrow, isPhone, emptyText, onOpen }) {
   if (items.length === 0) return <p className="tempty pempty">{emptyText}</p>;
@@ -56,7 +51,8 @@ export default function ProspectList({ items, label, statusById, initials, today
     return (
       <ul className="pcards" aria-label={label}>
         {items.map((p) => {
-          const { free, follow } = rowCells(p, statusById, today);
+          const follow = followCell(p, statusById, today);
+          const progress = progressOf(p, statusById.get(p.statusId), today);
           const name = T.childLabel(p, initials.get(p.id));
           return (
             <li key={p.id}>
@@ -67,20 +63,15 @@ export default function ProspectList({ items, label, statusById, initials, today
                     {name} · {p.parentName}
                   </span>
                   <span className="pcard-l2">
-                    <span className={free.warn ? 'is-warn' : undefined}>
-                      {free.warn && <IconAlertTriangle size={16} aria-hidden="true" className="plist-warn" />}
-                      {free.text}
-                    </span>
-                    {follow.text !== T.NONE && (
-                      <>
-                        {' · '}
-                        <span className={follow.warn ? 'is-warn' : undefined}>
-                          {follow.warn && <IconAlertTriangle size={16} aria-hidden="true" className="plist-warn" />}
-                          {follow.text}
-                        </span>
-                      </>
-                    )}
+                    <Track progress={progress} />
                   </span>
+                  {/* a due follow-up, unless the line above is already amber (difference D) */}
+                  {follow.warn && progress.line.tone !== 'warn' && (
+                    <span className="pcard-l2 is-warn">
+                      <IconAlertTriangle size={16} aria-hidden="true" className="plist-warn" />
+                      {T.FOLLOW_UP} · {follow.text}
+                    </span>
+                  )}
                 </span>
                 <StatusTag status={statusById.get(p.statusId)} />
               </button>
@@ -95,13 +86,12 @@ export default function ProspectList({ items, label, statusById, initials, today
     <div className={`plist${narrow ? ' plist--narrow' : ''}`} role="table" aria-label={label}>
       <div className="plist-row plist-head" role="row">
         <span role="columnheader">{T.COL_CHILD}</span>
-        <span role="columnheader">{T.COL_PARENT}</span>
-        {!narrow && <span role="columnheader">{T.COL_FREE}</span>}
+        {!narrow && <span role="columnheader">{T.COL_PARENT}</span>}
+        <span role="columnheader">{T.COL_PROGRESS}</span>
         {!narrow && <span role="columnheader">{T.COL_FOLLOW}</span>}
         <span role="columnheader">{T.COL_STATUS}</span>
       </div>
       {items.map((p) => {
-        const { free, follow } = rowCells(p, statusById, today);
         const name = T.childLabel(p, initials.get(p.id));
         return (
           <div key={p.id} role="row" className={`plist-row${selectedId === p.id ? ' is-selected' : ''}`}>
@@ -111,9 +101,11 @@ export default function ProspectList({ items, label, statusById, initials, today
                 {name}
               </button>
             </span>
-            <span role="cell">{p.parentName}</span>
-            {!narrow && <Cell value={free} />}
-            {!narrow && <Cell value={follow} />}
+            {!narrow && <span role="cell">{p.parentName}</span>}
+            <span role="cell" className="plist-progress">
+              <Track progress={progressOf(p, statusById.get(p.statusId), today)} />
+            </span>
+            {!narrow && <Cell value={followCell(p, statusById, today)} />}
             <span role="cell">
               <StatusTag status={statusById.get(p.statusId)} />
             </span>

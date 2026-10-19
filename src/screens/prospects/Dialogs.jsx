@@ -3,10 +3,11 @@
 //   BookTimeDialog    Book a free class / Change time (v0.191 answer 2): the open times of the
 //                     school's Live booking forms, grouped by week, as cards (like Fill in)
 //   JoinedDialog      choosing Joined asks the date joined (default today, v0.140)
+//   CameDialog        a Board card dropped on Came asks "Did … come?" first (v0.214)
 //   AddProspectDialog "+ Add prospect" asks which Live form to fill in for the family (v0.140)
 //   DeleteDialog      delete a prospect — admins only, with a confirmation
 // The values being typed live in Prospects.jsx (so a lock while one is open loses nothing).
-import { IconCheck, IconClipboardText, IconTrash } from '@tabler/icons-react';
+import { IconCheck, IconClipboardText, IconTrash, IconUserCheck } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
 import { weekStart } from '../../lib/calendar/days.js';
@@ -103,6 +104,32 @@ export function JoinedDialog({ state, today, isPhone, onChange, onSave, onCancel
           <IconCheck size={16} aria-hidden="true" />
           {state.saving ? T.SAVING : T.SAVE}
         </button>
+      </Footer>
+    </Dialog>
+  );
+}
+
+// A Board card dropped on Came (v0.214): "Did Ava come to the free class?" — Came checks the
+// child in (on the class day, or after it) or, with no class to check in to, saves Came as the status.
+export function CameDialog({ state, isPhone, onSave, onCancel }) {
+  const b = state.prospect.booking;
+  return (
+    <Dialog title={state.ahead ? T.cameAheadTitle(state.prospect.childFirstName) : T.cameTitle(state.prospect.childFirstName)} size="small" fullScreen={isPhone} onRequestClose={onCancel}>
+      <p className="tdialog-sub">{state.ahead ? T.cameAhead(state.prospect.childFirstName, b) : b && b.status === 'booked' ? T.classLine(b) : T.NO_CLASS_BOOKED}</p>
+      {state.note && <Notice>{NOTES[state.note] ?? state.note}</Notice>}
+      <Footer isPhone={isPhone} onCancel={onCancel}>
+        {state.ahead ? (
+          isPhone && (
+            <button type="button" className="btn btn-block" data-autofocus onClick={onCancel}>
+              {T.CANCEL}
+            </button>
+          )
+        ) : (
+          <button type="button" className={`btn btn-primary${isPhone ? ' btn-block' : ''}${state.saving ? ' is-unavailable' : ''}`} aria-disabled={state.saving ? 'true' : undefined} data-autofocus onClick={() => !state.saving && onSave()}>
+            <IconUserCheck size={16} aria-hidden="true" />
+            {state.saving ? T.SAVING : T.MARK_CAME}
+          </button>
+        )}
       </Footer>
     </Dialog>
   );
