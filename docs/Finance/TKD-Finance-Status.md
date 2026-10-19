@@ -1,7 +1,7 @@
 # Finance — status and plan
 
 **Updated:** 2026-10-18 (Finance worktree session, branch `finance`)
-**Rulebook at this update:** v0.207 (Finance rows: v0.193–v0.203, v0.207) · **Questions:** `TKD-Finance-DailyReport-Questions.html` (this folder), images in `images/`
+**Rulebook at this update:** v0.208 (Finance rows: v0.193–v0.203, v0.207–v0.208) · **Questions:** `TKD-Finance-DailyReport-Questions.html` (this folder), images in `images/`
 
 > Read `CLAUDE.md` (repo root) first. This file says where Finance stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -73,3 +73,9 @@ Full mockups at PC / tablet / phone → separate design reviewer agent → scree
 - **D12 approved** incl. proposals: clicking a payment row opens a view-only detail (payment facts + history of changes, Open in Testing); no DOB or private details.
 - **D13 approved** incl. proposals: a failed close keeps everything typed, Not saved tag, error inside the box above the button (exception to rule 3.5's banner, this box only), button becomes “Retry close the day”; wording “Couldn’t close the day. Nothing you typed is lost. Check the connection and try again.”
 - **D14 approved.** **All 14 screens approved 2026-10-18 (v0.207).** Next: the rule-5 question, then the build plan + contract.
+- Rule-5 question (Q11) sent: A exception only · B exception + per-device “Mat-side device” switch (recommended). Picture: `images/Finance-Q11-rule5.png` (`#q11`).
+- **Q11 answered (v0.208, B):** rule-5 exception for staff devices + per-device **Mat-side device** switch (account menu → This device) hiding Finance, the reminder link and Testing roster payment details. **Touches Testing screens** — coordinate with the Color Belt and Star sessions. To confirm: admins only can turn it off.
+
+## 7. Next
+
+Build plan + contract (like `TKD-Testing-Phase2-Build-Plan.md` / `CONTRACT-0005.md`): tables (day closings, reminder settings, export log), read functions over `testing_payments` (+ Star's once built), roles, migration number (next free), PGlite tests, security reviewer. Then build in the preview with checkpoints. Nothing built or deployed without Jeffrey's OK.
