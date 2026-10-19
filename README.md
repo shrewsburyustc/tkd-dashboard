@@ -225,6 +225,17 @@ src/styles/
 - Code: `src/screens/testing/events/` (list, Add / Edit event), `src/screens/testing/event/` (event page and its dialogs), `src/screens/Settings.jsx` + `src/screens/settings/`; styles `src/styles/testing-events.css` and `settings.css`. All words are in `src/screens/testing/text.js` and `src/screens/settings/text.js`.
 - Preview: the fake data has November Children Testing (Worcester) with students, one possible duplicate and one withdrawn student. `__tkdPreview.setToday('2026-11-20')` pretends another date (e.g. the testing day).
 
+## Finance → Daily report (contract 0011)
+
+- **Daily report** (`#finance`, rail icon last; on a phone in the bottom bar): one school's payments for one day, grouped **Cash, Check, Card** with the four totals on top. Corrections stay on the payment's original day (Undone struck through, Edited with "Was $70.00", Moved, Added after closing). Click a row for its detail and history (view only; **Open in Testing**).
+- **Close the day:** type the cash in the drawer, the checks (how many + total) and the card machine total. Each count shows Matches or Short / Over as you type; a short or over needs a note. The button stays gray until all three are filled. A failed save keeps everything typed and offers **Retry close the day**. After closing: a toast with Undo, and the box becomes the **Day closed** summary (admins: **Reopen day**).
+- **Staff see today only.** Admins get ‹ › arrows, a calendar, Today, **History** (`#finance/history`, a month of days with one tag each), **Print** (a letter page with a "Counted by" line) and **Export…** (a CSV file of a date range, each download logged). On **Both**: one summary box per school.
+- **Refunds** (Star testing): a "Refunds: Own group | In groups" switch next to Print, shown only on days with refunds; each device remembers its choice.
+- **Settings** (`#finance/settings`, admins only): the close-the-day reminder On / Off and a time per weekday per school. **Home** shows "Today's drawer isn't closed yet" from that time on days with payments.
+- **Hide payments** (account menu → under This device): hides Finance and the Home reminder link on this device and shows a gray "Payments hidden" chip in the top bar (tap it to show payments again).
+- Code: `src/screens/Finance.jsx`, `src/screens/finance/` (all words in `text.js`), styles `src/styles/finance.css`; data `src/lib/finance/`; fake database `src/lib/mockFinance.js`.
+- Preview: switch to **Shrewsbury** for the sample Star payments (refunds, an edit, a moved payment, closed days in History). `__tkdPreview.setNow('19:30')` pretends the school clock for the Home reminder; `__tkdPreview.resetFinance()` puts the sample back; `failNextSave()` makes the next Close the day fail.
+
 ## Security notes
 
 - The anon (publishable) key in `.env.local` is safe in the browser, because row-level security in the database decides what each signed-in person can read.

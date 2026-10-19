@@ -974,5 +974,45 @@ if (location.hash === '#q14') {
     </section>`).join('');
 }
 </script>
+
+<script>
+// ---------- Question 15: keep Close the day out of the way until closing ----------
+// Jeffrey (2026-10-19): staff check the report all day; Close the day is only needed at the end.
+if (location.hash === '#q15') {
+  document.getElementById('qtitle').innerHTML = 'Finance → Daily report · Question 15: where Close the day lives';
+  document.getElementById('qlead').innerHTML = 'During the day staff check the report often; <b>Close the day</b> is only needed at closing. Three ways to keep it out of the way. Shown: staff, Shrewsbury, 3:00 PM (left) and at closing (right). Amber marks Close the day.';
+  const cardsS = `<div class="cards"><div class="card"><div class="l"><i class="ti ti-sum"></i>Total</div><div class="n">$665.00</div></div><div class="card"><div class="l"><i class="ti ti-cash"></i>Cash</div><div class="n">$320.00</div></div><div class="card"><div class="l"><i class="ti ti-receipt"></i>Check</div><div class="n">$210.00</div></div><div class="card"><div class="l"><i class="ti ti-credit-card"></i>Card</div><div class="n">$135.00</div></div></div>`;
+  const listS = `<table><thead><tr><th>Time</th><th>Student</th><th class="r">Amount</th></tr></thead><tbody><tr><td colspan="3" style="background:var(--surface);font-weight:500;font-size:12px">Cash · 4 payments · $320.00</td></tr>${PAY.filter(p => p[4] === 'Cash').slice(0, 3).map(p => `<tr><td class="sub">${p[0]}</td><td>${p[1]}</td><td class="r">${$(p[5])}</td></tr>`).join('')}</tbody></table><div class="more">… then Check and Card</div>`;
+  const box = `<div class="box q" style="margin-bottom:12px"><h4><i class="ti ti-cash-register"></i>Close the day</h4><div class="crow"><span class="k">Cash counted<div class="hint">Expected $320.00</div></span><span class="input">$300.00</span><span class="tag warn"><i class="ti ti-alert-triangle"></i>Short $20.00</span></div><div class="crow"><span class="k">Checks<div class="hint">Expected 2, $210.00</div></span><span class="input">2 · $210.00</span><span class="tag ok">Matches</span></div><div class="boxfoot"><span class="btn btn-primary"><i class="ti ti-lock-check"></i>Close the day</span></div></div>`;
+  const bar = (txt) => `<div class="box q" style="margin-bottom:12px;padding:10px 12px;display:flex;align-items:center;gap:8px"><i class="ti ti-cash-register"></i><b style="font-size:14px">Close the day</b><span class="tag neutral">Not closed yet</span><span class="grow"></span><span class="hint">${txt}</span><i class="ti ti-chevron-down"></i></div>`;
+  const shell = (tabs, body, extra = '') => `<div class="dev dev-pc" style="width:620px;position:relative"><div class="app" style="min-height:430px"><nav class="rail"><a><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a><a class="on"><i class="ti ti-report-money"></i></a></nav>
+    <div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc"><span class="on">Shrewsbury</span><span>Both</span></div><span class="avatar">S</span></div><div class="content"><h1 class="ptitle">Finance</h1><div class="tabs">${tabs}</div>${body}</div></div></div>${extra}</div>`;
+  const T1 = '<span class="on">Daily report</span>';
+  const day = (btn) => `<div class="dayrow"><span class="day">Today · Saturday, October 24</span><span class="grow"></span>${btn || ''}<span class="btn"><i class="ti ti-printer"></i>Print</span></div>`;
+
+  const Q15 = [
+    ['A', 'Folded bar on the report; opens at closing', true,
+      `<h3>What it does</h3><ul><li>During the day Close the day is <b>one folded line</b> (“Close the day · Not closed yet ›”) between the totals and the list.</li><li>Tap it to open the counting box. It <b>opens by itself after the reminder time</b> (Settings) and stays open once someone starts typing.</li><li>The Cash / Check / Card list stays right under it while counting.</li></ul>
+       <h3>Pros</h3><ul><li>Report stays clean all day; one tap at closing.</li><li>Counting sits next to the list it’s checked against (why you grouped by method, Q3).</li><li>Smallest change to the approved screens.</li></ul>
+       <h3>Cons</h3><ul><li>Still one line on the report during the day.</li></ul>`,
+      `<div style="display:flex;gap:16px;flex-wrap:wrap"><div><div class="cap">3:00 PM — folded</div>${shell(T1, day() + cardsS + bar('Opens at closing') + listS)}</div><div><div class="cap">Closing — open</div>${shell(T1, day() + cardsS + box + listS)}</div></div>`],
+    ['B', 'Its own tab: “Close the day”', false,
+      `<h3>What it does</h3><ul><li>Finance gets a tab <b>Close the day</b> next to Daily report (staff see it; admins also Settings). The report tab has no counting box at all.</li><li>The tab shows the expected figures, the counting box and the Cash / Check lists again (so counting can be checked).</li></ul>
+       <h3>Pros</h3><ul><li>Report tab completely clean.</li><li>Clear place to go at closing.</li></ul>
+       <h3>Cons</h3><ul><li>The lists appear on two tabs (or, without them, counting can’t be traced to a payment).</li><li>One more tab to build and learn; the Day closed summary needs a home on the report too.</li></ul>`,
+      `<div style="display:flex;gap:16px;flex-wrap:wrap"><div><div class="cap">Daily report tab</div>${shell(T1 + '<span>Close the day</span>', day() + cardsS + listS)}</div><div><div class="cap">Close the day tab</div>${shell('<span>Daily report</span><span class="on q">Close the day</span>', day() + box + listS)}</div></div>`],
+    ['C', 'A “Close the day…” button that opens a dialog', false,
+      `<h3>What it does</h3><ul><li>The report has a <b>Close the day…</b> button next to Print. It opens the counting box in a dialog over the report (full screen on phones).</li></ul>
+       <h3>Pros</h3><ul><li>Report clean; nothing on screen until needed.</li></ul>
+       <h3>Cons</h3><ul><li>The dialog covers the list, so a short can’t be traced while counting.</li><li>Typed counts are lost if the dialog is closed by mistake (unless saved as a draft).</li></ul>`,
+      `<div style="display:flex;gap:16px;flex-wrap:wrap"><div><div class="cap">3:00 PM</div>${shell(T1, day('<span class="q" style="display:inline-flex;padding:2px"><span class="btn"><i class="ti ti-cash-register"></i>Close the day…</span></span>') + cardsS + listS)}</div><div><div class="cap">Closing — dialog</div>${shell(T1, day('<span class="btn"><i class="ti ti-cash-register"></i>Close the day…</span>') + cardsS + listS, `<div style="position:absolute;inset:0;background:rgba(0,0,0,.35)"></div><div style="position:absolute;left:60px;right:30px;top:120px;background:#fff;border-radius:12px;padding:12px">${box}</div>`)}</div></div>`],
+  ];
+  document.getElementById('opts').innerHTML = Q15.map(([k, title, rec, ex, html]) => `
+    <section class="${rec ? 'rec' : ''}">
+      <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+      <div class="explain" style="max-width:1280px;margin-bottom:12px">${ex}</div>${html}
+    </section>`).join('');
+}
+</script>
 </body>
 </html>

@@ -98,12 +98,31 @@
 //         f. the upgrade database: 0010 on top of its 0005; its 0010
 //            fingerprints must equal the main database's (fresh =
 //            upgrade); 0010_tests.sql and 0005_tests.sql pass there
-//         g. LAST, on the main database (nothing runs on it afterwards):
-//            the down-script of SETUP section 14e, both steps exactly as
-//            written there (re-run 0005, then the SQL block). Afterwards
-//            the 0005 fingerprints must equal step 11's (= a database that
-//            never had 0010), change_log must have one undo_0010 row per
-//            removed result, and 0005_tests.sql / 0003_tests.sql pass.
+//         g. LAST, on the main database (nothing runs on it afterwards;
+//            it runs after step 14): the down-script of SETUP section
+//            14e, both steps exactly as written there (re-run 0005, then
+//            the SQL block). Afterwards the 0005 fingerprints must equal
+//            step 11's (= a database that never had 0010), change_log must
+//            have one undo_0010 row per removed result, and 0005_tests.sql
+//            / 0003_tests.sql pass.
+//   14. 0011 (Finance) after steps 11-13f (contract CONTRACT-0011.md
+//       section 2: the tests run before AND after sample payments):
+//         a. 0011_fingerprints.sql must not contain the words the Supabase
+//            connection refuses (so Claude can run it on production)
+//         b. BEFORE sample data: 0011 on the upgrade database (it has
+//            0005, 0006 and 0010 but no payment at all); 0011_tests.sql
+//         c. the main database: the 0003 / 0004 / 0005 / 0006 / 0010
+//            fingerprints are taken, 0011 is applied, and they must be
+//            IDENTICAL afterwards (0011 changes none of their objects)
+//         d. AFTER sample data: the main database already has a Color Belt
+//            and a Star payment from steps 11c / 12e; a few more are added
+//            on both sources (a payment yesterday, a refund today), then
+//            0011_tests.sql and every earlier test file
+//         e. 0011 applied a SECOND time: the 5 finance tables and the
+//            history count unchanged, the fingerprints identical, tests
+//            pass
+//         f. fresh = upgrade: the upgrade database's 0011 fingerprints
+//            equal the main database's
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -396,6 +415,22 @@ async function main() {
     after10 = await step13(db, upgradeHas0005 ? upgradeDb : null, after5);
   }
 
+  // 14. Finance (0011), after 0010 and before 13g (the 0010 down-script,
+  // which must stay the last thing on the main database).
+  let after11 = null;
+  if (after6 && after10) {
+    console.log('\nMigration 0011 (Finance):');
+    after11 = await step14(db, upgradeHas0005 ? upgradeDb : null);
+  } else {
+    record('0011 (Finance)', false, 'skipped: 0006 or 0010 could not be applied (see the lines above)');
+  }
+
+  // 13g. the down-script (SETUP section 14e), LAST
+  if (after5 && after10) {
+    console.log('\nUndo 0010 (SETUP section 14e), last:');
+    await downScriptCheck(db, after5);
+  }
+
   console.log('\nFunction fingerprints (name  arguments  body_md5  security_definer  settings  owner  execute_rights):');
   for (const line of after) console.log('  ' + line);
   console.log('\n0004 fingerprints (kind  item  detail):');
@@ -411,6 +446,10 @@ async function main() {
   if (after10) {
     console.log('\n0010 fingerprints (kind  item  detail):');
     for (const line of after10) console.log('  ' + line);
+  }
+  if (after11) {
+    console.log('\n0011 fingerprints (kind  item  detail):');
+    for (const line of after11) console.log('  ' + line);
   }
 
   return finish();
@@ -666,8 +705,7 @@ async function step13(db, upgradeDb, after5) {
     record('[upgrade] 0010 on top of the upgrade database', false, 'the upgrade database has no 0005 (see the lines above)');
   }
 
-  // g. the down-script (SETUP section 14e), last
-  await downScriptCheck(db, after5);
+  // g. the down-script (SETUP section 14e) runs from main(), after step 14
   return after10;
 }
 
@@ -951,6 +989,115 @@ async function step12(db, upgradeDb) {
     }
   }
   return after6;
+}
+
+// ---------------------------------------------------------------------
+// Step 14: Finance (0011)
+// ---------------------------------------------------------------------
+
+// The 5 Finance tables + the history's row count, as one md5 ("re-running
+// 0011 changed nothing").
+const FINANCE_TABLES = ['finance_day_closings', 'finance_day_closing_items', 'finance_settings',
+  'finance_reminder_times', 'finance_exports'];
+const snapshot11Sql = `select md5(${FINANCE_TABLES.map((t) =>
+  `coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.${t} x), '')`).join(' || ')}
+  || (select count(*) from public.change_log)::text)`;
+
+// Every earlier migration's fingerprints together (14c: 0011 must not
+// change them).
+async function before11Fingerprints(db) {
+  return [
+    ...(await fingerprints(db, '0003_fingerprints.sql')),
+    ...(await fingerprints(db, '0004_fingerprints.sql')),
+    ...(await fingerprints(db, '0005_fingerprints.sql')),
+    ...(await fingerprints(db, '0006_fingerprints.sql')),
+    ...(await fingerprints(db, '0010_fingerprints.sql')),
+  ];
+}
+
+// 14d. More sample payments on BOTH sources (written as the SQL Editor
+// would, labelled): Pat Lee (Color Belt, Worcester) paid cash yesterday;
+// Kim Ray (Star, Shrewsbury) paid cash yesterday and got a cash refund
+// today. Together with 11c / 12e the two schools now have payments today
+// and yesterday, and a refund.
+async function seedFinanceSamples(db) {
+  await run(db, '[0011] sample payments on both sources (yesterday + a refund today)', `
+    begin;
+    select set_config('request.jwt.claims', '', true);
+    select set_config('tkd.actor_label', 'PGlite test event', true);
+    select set_config('tkd.action', 'pglite_seed', true);
+    insert into public.testing_payments (registration_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by_name)
+    select r.id, 'payment', 6500, 'cash', public.testing_today() - 1, now() - interval '1 day', 'PGlite test event'
+      from public.testing_registrations r where r.first_name = 'Pat' and r.last_name = 'Lee';
+    insert into public.star_payments (candidate_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by_name)
+    select c.id, 'payment', 14000, 'cash', public.testing_today() - 1, now() - interval '1 day', 'PGlite test event'
+      from public.star_candidates c where c.first_name = 'Kim' and c.last_name = 'Ray';
+    insert into public.star_payments (candidate_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by_name)
+    select c.id, 'refund', -1000, 'cash', public.testing_today(), now() - interval '1 hour', 'PGlite test event'
+      from public.star_candidates c where c.first_name = 'Kim' and c.last_name = 'Ray';
+    select set_config('tkd.actor_label', '', true);
+    select set_config('tkd.action', '', true);
+    commit;`);
+  const counts = await db.query(`select
+      (select count(*)::int from public.testing_payments) as color_belt,
+      (select count(*)::int from public.star_payments) as star,
+      (select count(*)::int from public.finance_money_rows(null, public.testing_today() - 1, public.testing_today())) as items`);
+  const c = counts.rows[0];
+  record('[0011] samples: 2 Color Belt + 3 Star payment rows, 5 report items', c.color_belt === 2 && c.star === 3 && c.items === 5,
+    JSON.stringify(c));
+}
+
+async function step14(db, upgradeDb) {
+  // 14a. the fingerprints file must stay runnable through the connector
+  const printsText = read('tests', '0011_fingerprints.sql');
+  record('0011_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)', !/delete|drop/i.test(printsText));
+
+  // 14b. BEFORE sample data, on the upgrade database (no payments there)
+  let upPrints = null;
+  if (upgradeDb) {
+    const pays = await one(upgradeDb, 'select (select count(*) from public.testing_payments) + (select count(*) from public.star_payments)');
+    record('[upgrade] no payment exists yet (0011 tests "before sample data")', Number(pays) === 0, `${pays} rows`);
+    if (await run(upgradeDb, '[upgrade] apply 0011_finance.sql', read('migrations', '0011_finance.sql'))) {
+      await runTestFile(upgradeDb, '[upgrade] 0011_tests.sql (before sample data)', '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+      upPrints = await fingerprints(upgradeDb, '0011_fingerprints.sql');
+    }
+  } else {
+    record('[upgrade] 0011 before sample data', false, 'the upgrade database has no 0005 (see the lines above)');
+  }
+
+  // 14c. the main database: earlier fingerprints don't move
+  const earlierBefore = await before11Fingerprints(db);
+  if (!(await run(db, 'apply 0011_finance.sql', read('migrations', '0011_finance.sql')))) return null;
+  record('0003 / 0004 / 0005 / 0006 / 0010 fingerprints identical before/after 0011',
+    JSON.stringify(earlierBefore) === JSON.stringify(await before11Fingerprints(db)), `${earlierBefore.length} rows`);
+  const seeded = await db.query(`select (select count(*)::int from public.finance_settings) as settings,
+      (select count(*)::int from public.finance_reminder_times where remind_at is null) as times_off,
+      (select count(*)::int from public.change_log where action = 'finance_seed') as seed_rows`);
+  record('[0011] seed: 1 settings row, 14 reminder times all Off, 15 history rows',
+    JSON.stringify(seeded.rows[0]) === JSON.stringify({ settings: 1, times_off: 14, seed_rows: 15 }), JSON.stringify(seeded.rows[0]));
+
+  // 14d. AFTER sample data (steps 11c / 12e + more here)
+  await seedFinanceSamples(db);
+  await runTestFile(db, '0011_tests.sql (after sample data)', '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+  await runTestFile(db, '0010_tests.sql (after 0011)', '0010_tests.sql', 'ALL 0010 TESTS PASSED');
+  await allTestFiles(db, 'after 0011');
+
+  // 14e. re-run safety
+  const before11 = await fingerprints(db, '0011_fingerprints.sql');
+  const data11Before = await one(db, snapshot11Sql);
+  await run(db, 'apply 0011 a SECOND time (re-run safety)', read('migrations', '0011_finance.sql'));
+  const data11After = await one(db, snapshot11Sql);
+  record('0011 re-run kept every row unchanged (5 finance tables, change_log)', data11Before === data11After);
+  const after11 = await fingerprints(db, '0011_fingerprints.sql');
+  record('0011 fingerprints identical before/after re-run', JSON.stringify(before11) === JSON.stringify(after11), `${after11.length} rows`);
+  await runTestFile(db, '0011_tests.sql (after re-run)', '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+
+  // 14f. fresh = upgrade
+  if (upPrints) {
+    record('[upgrade] 0011 fingerprints identical to the main database', JSON.stringify(upPrints) === JSON.stringify(after11),
+      `${upPrints.length} rows`);
+  }
+  return after11;
 }
 
 function finish() {
