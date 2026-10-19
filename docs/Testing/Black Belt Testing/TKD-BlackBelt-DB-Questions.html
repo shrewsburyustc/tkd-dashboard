@@ -104,6 +104,12 @@ b{font-weight:600}
 .phone .banner{background:var(--warn-tint);color:var(--warn);border-radius:6px;padding:6px;font-size:11.5px;margin-top:6px}
 .pair2{display:flex;gap:14px;align-items:flex-start}
 .after{flex:1;font-size:12.5px}
+
+.wline{background:#fff;border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;font-size:12.5px;margin-top:6px}
+.wline .k{color:var(--text2);font-size:11.5px}
+.gone{color:#A32D2D;text-decoration:line-through}
+.keep{color:var(--ok)}
+.sig{font-family:'Segoe Script','Brush Script MT',cursive;font-size:16px}
 </style>
 </head>
 <body>
@@ -368,6 +374,42 @@ b{font-weight:600}
 
 </div>
 <p class="foot"><b>Same in every option:</b> each signed waiver stores its exact version; admins change the text on Rubric and prices, which makes a new version (v0.213); registrations already sent keep their version.</p>
+</section>
+
+<section id="qb6">
+<h1>Black Belt · Database question 6 of 7: what is removed when a signed waiver's keeping time ends</h1>
+<p class="lead">Signed waivers are kept for a set time (v0.213 / v0.900): until the <b>later</b> of the last testing day + N1 years and the candidate's 18th birthday + N2 years (both numbers from the insurer). On that date the dashboard removes it <b>automatically</b>. The question is <b>how much</b> is removed. Example: Alex Kim (born 2012), signed by his parent Jordan Kim. <span class="ambtxt">Amber</span> = what's left afterwards, in the candidate detail.</p>
+<div class="opts">
+
+<div class="opt rec">
+<div class="ot"><span class="letter">A</span>The signature and the signer's name<span class="rec-tag">Recommended</span></div>
+<div class="step">Before (any time until the deletion date)</div>
+<div class="wline"><div class="k">Waiver</div>Signed by <b>Jordan Kim (parent)</b> · Mar 10, 2027 · version 2027-1 · <span class="sig">J. Kim</span> (View signature)</div>
+<div class="step">After the deletion date</div>
+<div class="wline amb"><div class="k">Waiver</div>Signed on Mar 10, 2027 · version 2027-1 · <i>signature and signer's name deleted on Mar 4, 2033 after the keeping time</i></div>
+<div class="exp" style="margin-top:8px"><b>Removed:</b> <span class="gone">the drawn signature</span>, <span class="gone">"Jordan Kim"</span> (also hidden in the change log).<br><b>Kept:</b> <span class="keep">that a waiver was signed, when, and which version</span>.<br><b>Pros:</b> the personal parts go; the school can still show a waiver existed.<br><b>Cons:</b> none important.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">B</span>The whole waiver record</div>
+<div class="step">Before (any time until the deletion date)</div>
+<div class="wline"><div class="k">Waiver</div>Signed by <b>Jordan Kim (parent)</b> · Mar 10, 2027 · version 2027-1 · <span class="sig">J. Kim</span> (View signature)</div>
+<div class="step">After the deletion date</div>
+<div class="wline amb"><div class="k">Waiver</div><i>(nothing shown)</i></div>
+<div class="exp" style="margin-top:8px"><b>Removed:</b> <span class="gone">everything about the waiver</span>.<br><b>Pros:</b> nothing at all is left.<br><b>Cons:</b> the dashboard can no longer say a waiver was ever signed; an old candidate looks like they registered without one.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">C</span>The signature only (Star's way)</div>
+<div class="step">Before (any time until the deletion date)</div>
+<div class="wline"><div class="k">Waiver</div>Signed by <b>Jordan Kim (parent)</b> · Mar 10, 2027 · version 2027-1 · <span class="sig">J. Kim</span> (View signature)</div>
+<div class="step">After the deletion date</div>
+<div class="wline amb"><div class="k">Waiver</div>Signed by <b>Jordan Kim (parent)</b> · Mar 10, 2027 · version 2027-1 · <i>signature deleted</i></div>
+<div class="exp" style="margin-top:8px"><b>Removed:</b> <span class="gone">the drawn signature</span> only.<br><b>Pros:</b> simplest; same as Star.<br><b>Cons:</b> the parent's name stays forever, though the signature it belonged to is gone.</div>
+</div>
+
+</div>
+<p class="foot"><b>Same in every option:</b> removal happens by itself on the date, with nothing to click; changing the number of years warns first ("this will delete X signed waivers now", floor 3 years); payments, Dan and results are never removed by this. Whether the candidate's date of birth and email are removed too is the next question (7).</p>
 </section>
 </main>
 </body>
