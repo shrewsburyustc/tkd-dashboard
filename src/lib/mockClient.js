@@ -31,9 +31,15 @@
 //   __tkdPreview.forceVerifyFailed(true)  the next family-form Send fails the human check
 //   __tkdPreview.forceRateLimited(true)   family-form Sends answer "too many tries" until set false
 //   (failNextSave, simulateOtherAdminEdit and resetTesting cover the events and roster too)
+// Grading helpers (phase 3, contract 0010 §3.4; setToday and failNextSave() cover grading too):
+//   __tkdPreview.failSavesUntilRetry()    from now on EVERY Events save fails like a dropped
+//                                         Wi-Fi connection (reads still work) — "Not saved"
+//   __tkdPreview.reconnect()              saves work again, and the browser's "online" event
+//                                         fires, so unsaved results save by themselves
 // Star testing (Rubrics and prices, mockStarTesting.js):
 //   simulateOtherAdminEdit() and resetTesting() cover Star's rubrics and prices too; setRole and
-//   setTestingDelay work the same; failNextSave('star') targets Star (see above).
+//   setTestingDelay work the same; failNextSave('star') targets Star (see above). The grading
+//   helpers above (failSavesUntilRetry / reconnect) touch Color Belt's Events saves only.
 // Staff accounts helpers (account menu → Admin → Staff accounts; mockStaff.js):
 //   __tkdPreview.failNextSave()           also makes the next Reset password / Reset PIN fail
 //   __tkdPreview.resetStaffAccounts()     the fake desk is signed in on 3 devices again
@@ -430,6 +436,9 @@ export function createMockClient() {
   });
   // failNextSave arms this; the next Testing or Events save then fails (whichever comes first).
   let failNextTesting = false;
+  // failSavesUntilRetry turns this on and reconnect turns it off: while on, every Events save
+  // fails like a dropped connection. Kept in memory only (a reload brings the "connection" back).
+  let eventSavesOffline = false;
 
   // ----- Star testing → Rubrics and prices (mockStarTesting.js) -----
   // Its own store (STAR_STORE_KEY), apart from Color Belt's. failNextSave('star') arms its own flag.
@@ -521,6 +530,10 @@ export function createMockClient() {
     }
     if (EVENT_RPC_NAMES.includes(name) || EVENT_RESTRICTED_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
+      if (eventSavesOffline && EVENT_RPC_NAMES.includes(name)) {
+        // Like a dropped connection: no answer from the database, nothing changes.
+        return { data: null, error: { message: 'Failed to fetch (preview: failSavesUntilRetry)' }, status: 0 };
+      }
       if (failNextTesting && EVENT_RPC_NAMES.includes(name)) {
         failNextTesting = false;
         events.failNextSave();
@@ -631,6 +644,17 @@ export function createMockClient() {
       if (!Number.isFinite(value) || value < 0) return 'Use a number of milliseconds, e.g. setTestingDelay(3000).';
       writeStorage(TESTING_DELAY_KEY, String(value));
       return `Each Testing call now takes ${value} ms, even after a reload. setTestingDelay(${TESTING_DELAY_MS}) is the normal speed.`;
+    },
+    // ----- Grading helpers (phase 3) -----
+    failSavesUntilRetry() {
+      eventSavesOffline = true;
+      return 'Every Testing save now fails like a dropped Wi-Fi connection. Run __tkdPreview.reconnect() to bring it back.';
+    },
+    reconnect() {
+      eventSavesOffline = false;
+      // The page's automatic retry listens for the browser's "online" event; fire it now.
+      window.dispatchEvent(new Event('online'));
+      return 'Saves work again. Unsaved results save by themselves now (or press Retry).';
     },
     // ----- Events / family form helpers (publicApi.preview.js) -----
     ...publicPreviewHelpers(),

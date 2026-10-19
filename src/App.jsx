@@ -9,8 +9,12 @@
 // Pages have their own address ("#testing", "#staff-accounts"; rulebook v0.83) so the browser's
 // Back / Forward, reload and bookmarks work per page — see "Browser Back / Forward" below.
 // Phase 2 adds two: a testing event's page ("#testing/event/<id>") and Settings ("#settings").
+// Phase 3 adds the event page's Grading tab ("#testing/event/<id>/grading") and the leave guard:
+// while grading results are "Not saved", leaving the event page asks first (contract 0010 §4.9).
 // Star testing (v0.177, behind the build switch in lib/features.js) splits Testing into pages of
-// its own: the chooser, Color Belt and Star testing. Every address lives in lib/pageAddress.js.
+// its own: the chooser, Color Belt and Star testing (with the switch on, a Color Belt event lives at
+// "#testing/color-belt/event/<id>" and its Grading tab at ".../grading"). Every address lives in
+// lib/pageAddress.js.
 //
 // Every screen change goes through the small functions below, so the rules (7-day password
 // check, access check, per-account idle lock, the database lock) live in one readable place.
@@ -28,7 +32,7 @@ import { getIdleLimitMs, markActivityNow, setLockedFlag, shouldBeLocked, useIdle
 import { lockSession, touchSession } from './lib/serverLock.js';
 import { useSessionHeartbeat } from './lib/useSessionHeartbeat.js';
 import { loadDeviceLocation, saveDeviceLocation } from './lib/device.js';
-import { addressFor, addressForRoute, correctedAddress, DEFAULT_TESTING_PAGE, routeFromAddress, routeIsUnknown, sameRoute } from './lib/pageAddress.js';
+import { addressFor, addressForRoute, correctedAddress, DEFAULT_TESTING_PAGE, routeFromAddress, routeIsUnknown, samePage, sameRoute } from './lib/pageAddress.js';
 import { STAR_TESTING_ON } from './lib/features.js';
 import { backIsClaimed, isLeftoverDialogStep } from './lib/backButton.js';
 import PreviewBanner from './components/PreviewBanner.jsx';
@@ -86,8 +90,9 @@ const TOASTS = {
 };
 
 // ----- Page addresses -----
-// lib/pageAddress.js reads and writes every address (Home, Testing and its pages, Staff accounts,
-// Settings). A "route" is { section, testingPage, eventId } — see the top of that file.
+// lib/pageAddress.js reads and writes every address (Home, Testing and its pages, a Color Belt
+// event and its Grading tab, Staff accounts, Settings). A "route" is
+// { section, testingPage, eventId, eventTab } — see the top of that file.
 
 // If telling the database "lock this sign-in" fails (offline), try again this often until it works.
 const LOCK_RETRY_EVERY_MS = 30 * 1000;
@@ -130,6 +135,8 @@ export default function App() {
   const [testingPage, setTestingPage] = useState(() => routeFromAddress().testingPage);
   // The open Color Belt event (#testing/color-belt/event/<id>), or null for the Color Belt tabs.
   const [eventId, setEventId] = useState(() => routeFromAddress().eventId);
+  // The event page's tab: 'students' | 'grading' (phase 3).
+  const [eventTab, setEventTab] = useState(() => routeFromAddress().eventTab);
   const [accountDialog, setAccountDialog] = useState(null); // null | 'changePin' | 'changePassword'
   const [testingModalOpen, setTestingModalOpen] = useState(false); // a Testing dialog is showing
   const [staffModalOpen, setStaffModalOpen] = useState(false); // a Staff accounts dialog is showing
@@ -145,6 +152,11 @@ export default function App() {
   const sectionRef = useRef(section); // same idea, for the Back / Forward listener below
   const testingPageRef = useRef(testingPage);
   const eventIdRef = useRef(eventId);
+  const eventTabRef = useRef(eventTab);
+  // The leave guard (contract 0010 §4.9): the open event page puts a function here while it is
+  // open. fn(proceed) answers false = "nothing unsaved, go ahead", or true = "I asked the person
+  // first" — the page then calls proceed() itself if they choose Leave anyway.
+  const leaveGuardRef = useRef(null);
   // true while signOut() below is signing this tab out itself, so the SIGNED_OUT event that
   // Supabase sends back doesn't treat it as "signed out somewhere else" (which resets the address).
   const signingOutHereRef = useRef(false);
@@ -514,31 +526,78 @@ export default function App() {
   //   testingPage: on Testing, which page: 'chooser' | 'colorBelt' | 'star'. Left out = Testing's
   //                default — the chooser while the Star testing switch is on, Color Belt while off.
   //   eventId:     on Color Belt, the event whose page opens (null = the Color Belt tabs).
+  //   eventTab:    the event page's tab, 'students' | 'grading' ('students' unless said otherwise —
+  //                opening an event lands on Students; contract 0010 §4.1). `tab` is the same thing.
   //   replace:     true swaps the current step instead of adding one (used when an event page
   //                closes by itself because the event belongs to the other school — Back then
   //                doesn't bring it back).
-  const navigate = useCallback((id, { testingPage: nextPage = null, eventId: nextEventId = null, replace = false } = {}) => {
-    setToast(null);
-    const next = {
-      section: id,
-      // Switch off: Testing has only the Color Belt page, whatever was asked for.
-      testingPage: id === 'testing' ? (STAR_TESTING_ON ? (nextPage ?? DEFAULT_TESTING_PAGE) : 'colorBelt') : null,
-      eventId: id === 'testing' ? nextEventId : null,
-    };
-    const here = { section: sectionRef.current, testingPage: testingPageRef.current, eventId: eventIdRef.current };
-    const changed = !sameRoute(next, here);
-    // { tkdPage: true } marks the step as "added by the dashboard while signed in" (see below).
-    if (changed && replace) window.history.replaceState({ tkdPage: true }, '', addressForRoute(next));
-    else if (changed) window.history.pushState({ tkdPage: true }, '', addressForRoute(next));
-    setSection(next.section);
-    setTestingPage(next.testingPage);
-    setEventId(next.eventId);
+  const navigate = useCallback(
+    (id, { testingPage: nextPage = null, eventId: nextEventId = null, eventTab: nextTab, tab, replace = false } = {}) => {
+      setToast(null);
+      const nextEvent = id === 'testing' ? nextEventId : null;
+      const next = {
+        section: id,
+        // Switch off: Testing has only the Color Belt page, whatever was asked for.
+        testingPage: id === 'testing' ? (STAR_TESTING_ON ? (nextPage ?? DEFAULT_TESTING_PAGE) : 'colorBelt') : null,
+        eventId: nextEvent,
+        // The tab only means something while an event is open; otherwise it is always 'students'.
+        eventTab: nextEvent && (nextTab ?? tab) === 'grading' ? 'grading' : 'students',
+      };
+      const here = {
+        section: sectionRef.current,
+        testingPage: testingPageRef.current,
+        eventId: eventIdRef.current,
+        eventTab: eventTabRef.current,
+      };
+      const changed = !sameRoute(next, here);
+      // { tkdPage: true } marks the step as "added by the dashboard while signed in" (see below).
+      if (changed && replace) window.history.replaceState({ tkdPage: true }, '', addressForRoute(next));
+      else if (changed) window.history.pushState({ tkdPage: true }, '', addressForRoute(next));
+      setSection(next.section);
+      setTestingPage(next.testingPage);
+      setEventId(next.eventId);
+      setEventTab(next.eventTab);
+    },
+    [],
+  );
+
+  // ----- The leave guard (contract 0010 §4.9) -----
+  const setLeaveGuard = useCallback((fn) => {
+    leaveGuardRef.current = fn;
   }, []);
+  // Runs `action` now, unless the open event page has grading results that aren't saved: then it
+  // asks first ("2 results aren't saved") and runs the action only on "Leave anyway".
+  // Only for steps the PERSON starts; automatic sign-outs and the screen lock are never asked.
+  const guarded = useCallback((action) => {
+    const fn = leaveGuardRef.current;
+    if (fn && fn(action)) return;
+    action();
+  }, []);
+
   // The event page's ways in and out (Testing.jsx → EventsTab / EventPage).
   const openEvent = useCallback((id) => navigate('testing', { testingPage: 'colorBelt', eventId: id }), [navigate]);
-  const closeEvent = useCallback((options) => navigate('testing', { ...options, testingPage: 'colorBelt' }), [navigate]);
-  // Moving between Testing's own pages: the chooser's rows, "← Testing", the rail's hover menu.
-  const openTestingPage = useCallback((page) => navigate('testing', { testingPage: page }), [navigate]);
+  // { replace: true } = the page closes itself (its event belongs to the other school, after a
+  // school change that was already guarded) — not asked again.
+  const closeEvent = useCallback(
+    (options) => {
+      const go = () => navigate('testing', { ...options, testingPage: 'colorBelt', eventId: null });
+      if (options?.replace) go();
+      else guarded(go);
+    },
+    [navigate, guarded],
+  );
+  // Students ↔ Grading: the same page, so never guarded, and no new history step (Back still
+  // leaves the event page; a reload keeps the tab).
+  const changeEventTab = useCallback((tab) => {
+    if (eventIdRef.current) {
+      const route = { section: 'testing', testingPage: 'colorBelt', eventId: eventIdRef.current, eventTab: tab };
+      window.history.replaceState(window.history.state, '', addressForRoute(route));
+    }
+    setEventTab(tab);
+  }, []);
+  // Moving between Testing's own pages: the chooser's rows, "← Testing", Star's back link. Guarded
+  // like every other way off a Color Belt event page (the guard is only set while one is open).
+  const openTestingPage = useCallback((page) => guarded(() => navigate('testing', { testingPage: page })), [navigate, guarded]);
 
   // ----- Browser Back / Forward (rulebook v0.83) -----
   // 'popstate' = the browser moved to another step of its history (Back, Forward, or an address
@@ -554,7 +613,8 @@ export default function App() {
     sectionRef.current = section;
     testingPageRef.current = testingPage;
     eventIdRef.current = eventId;
-  }, [section, testingPage, eventId]);
+    eventTabRef.current = eventTab;
+  }, [section, testingPage, eventId, eventTab]);
   // Once someone is in the dashboard, the step they're on counts as "added while signed in" too —
   // also when they arrived by a bookmark or a link — so Back on a later sign-in screen can't
   // return to it (see below).
@@ -585,8 +645,17 @@ export default function App() {
       if (routeIsUnknown()) window.history.replaceState(null, '', addressFor(target));
       const fixed = correctedAddress(); // an old address typed by hand: corrected in place
       if (fixed) window.history.replaceState(window.history.state, '', fixed);
-      const current = { section: sectionRef.current, testingPage: testingPageRef.current, eventId: eventIdRef.current };
-      if (sameRoute(route, current)) return;
+      const current = {
+        section: sectionRef.current,
+        testingPage: testingPageRef.current,
+        eventId: eventIdRef.current,
+        eventTab: eventTabRef.current,
+      };
+      if (samePage(route, current)) {
+        // Same page; only the event tab may differ (an address typed by hand): switch it, never asked.
+        if (route.eventId && route.eventTab !== eventTabRef.current && phaseRef.current === 'home') setEventTab(route.eventTab);
+        return;
+      }
       const here = addressForRoute(current);
       // The account menu is open: Back closes it (AccountMenu.jsx) and the page stays.
       if (backIsClaimed()) {
@@ -594,10 +663,18 @@ export default function App() {
         return;
       }
       if (phaseRef.current === 'home') {
+        // Leaving an event page with unsaved grading results: ask first, and put the current
+        // address back (contract 0010 §4.9). "Leave anyway" goes where Back / Forward pointed.
+        const fn = leaveGuardRef.current;
+        if (fn && fn(() => navigate(target, route))) {
+          window.history.pushState({ tkdPage: true }, '', here);
+          return;
+        }
         setToast(null);
         setSection(target);
         setTestingPage(route.testingPage);
         setEventId(route.eventId);
+        setEventTab(route.eventTab);
       } else if (phaseRef.current === 'locked') {
         window.history.pushState({ tkdPage: true }, '', here);
       } else if (window.history.state?.tkdPage) {
@@ -609,11 +686,12 @@ export default function App() {
         setSection(target); // a link or typed address: opens after signing in
         setTestingPage(route.testingPage);
         setEventId(route.eventId);
+        setEventTab(route.eventTab);
       }
     }
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [navigate]);
 
   // ----- Testing helpers -----
   // Re-read "who am I?" — e.g. the database said "not allowed", so this person may no longer be
@@ -666,19 +744,25 @@ export default function App() {
             inert={shellInert}
             currentSection={section}
             currentTestingPage={section === 'testing' ? testingPage : null}
-            onNavigate={navigate}
+            // The person's own ways off the event page are guarded (contract 0010 §4.9) — the
+            // rail's icons, the bottom bar and the Testing hover menu's items (which pass options).
+            onNavigate={(id, options) => guarded(() => navigate(id, options))}
             location={location}
-            onLocationChange={changeLocation}
+            onLocationChange={(next) => guarded(() => changeLocation(next))}
             profile={profile}
             deviceLocation={deviceLocation}
-            onDeviceLocationChange={handleDeviceLocationChange}
+            onDeviceLocationChange={(next) => {
+              // Asked only when it moves the switcher to another school.
+              if (next === location) handleDeviceLocationChange(next);
+              else guarded(() => handleDeviceLocationChange(next));
+            }}
             onLockNow={lockNow}
             onChangePin={() => openAccountDialog('changePin')}
             onSetPin={() => setPhase('setPin')}
             onChangePassword={() => openAccountDialog('changePassword')}
-            onStaffAccounts={() => navigate('staffAccounts')}
-            onSettings={() => navigate('settings')}
-            onSignOut={() => signOut()}
+            onStaffAccounts={() => guarded(() => navigate('staffAccounts'))}
+            onSettings={() => guarded(() => navigate('settings'))}
+            onSignOut={() => guarded(() => signOut())}
           >
             {section === 'home' && <Home location={location} />}
             {section === 'testing' && (
@@ -690,6 +774,9 @@ export default function App() {
                 testingPage={testingPage}
                 onOpenTestingPage={openTestingPage}
                 eventId={eventId}
+                eventTab={eventTab}
+                onEventTab={changeEventTab}
+                onLeaveGuardChange={setLeaveGuard}
                 onOpenEvent={openEvent}
                 onCloseEvent={closeEvent}
                 screenLocked={phase === 'locked'}

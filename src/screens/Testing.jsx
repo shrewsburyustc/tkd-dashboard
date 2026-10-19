@@ -11,7 +11,8 @@
 //     admin to make changes." (v0.40)
 //   - when the location switcher is on Both: no tabs and no data, just the choose-a-school
 //     message (decided v0.35) — and NO request is sent to the database
-//   - when an event is open (address #testing/event/<id>): that event's page instead
+//   - when an event is open (address #testing/event/<id>, or .../grading for its Grading tab):
+//     that event's page instead (with the switch on: #testing/color-belt/event/<id>…)
 // Everything inside a tab lives in testing/events/EventsTab.jsx and testing/ClassesRanksTab.jsx;
 // the event page in testing/event/EventPage.jsx.
 //
@@ -32,6 +33,8 @@
 //   eventId            the open event's id, or null for the tabs
 //   onOpenEvent(id)    open an event's page (App.jsx adds a browser history step)
 //   onCloseEvent()     back to the Events tab
+//   eventTab, onEventTab, onLeaveGuardChange   the event page's tab and leave guard (phase 3;
+//                      passed on to EventPage untouched)
 //   screenLocked       true while the lock screen shows (dialogs and menus are hidden, no requests)
 //   onNoAccess         the database refused data because this sign-in is locked: lock the screen
 //   onRefreshProfile   re-read "who am I?" (e.g. after the database said "not allowed")
