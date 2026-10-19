@@ -8,6 +8,8 @@
 //   Phone:                   stacked: name + registered, testing for, "Cash · paid Nov 3",
 //                            then the tag and Mark paid, with ⋯ on the right
 // One tag per row (rule 8): Possible duplicate (amber) > Paid (green) > Not paid (gray).
+// Phase 3 (v0.191): a student an admin added after the testing day gets a gray line
+// "Added Nov 21 by Jeffrey Berg (admin)" under the name.
 // Withdrawn students sit in a "Removed" group at the bottom, "Not in the counts" (Star v0.113).
 import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp, IconDots } from '@tabler/icons-react';
 import IconButton from '../../../components/IconButton.jsx';
@@ -60,6 +62,11 @@ function StudentRow({ row, ctx }) {
   const open = ctx.menuFor === row.id;
   const selected = open || ctx.selectedId === row.id;
   const tag = ctx.notSavedId === row.id ? <NotSavedTag /> : <PaymentTag row={row} onReview={handlers.onReview} />;
+  // Phase 3 (plan Q1, v0.191): a student an admin added after the testing day gets a gray line
+  // "Added Nov 21 by Jeffrey Berg (admin)" under the name, on Students and on Grading.
+  const addedAfter = row.addedAfterDay ? (
+    <span className="ev-ssub ev-added-after">{T.addedAfterDayLine(row.addedAfterDay.date, row.addedAfterDay.byName)}</span>
+  ) : null;
   const subline = removed ? T.removedBy(row.withdrawnAt, row.withdrawnByName) : row.source === 'form' ? T.registeredOn(row.registeredAt) : T.addedOn(row.registeredAt);
 
   const markPaid = showMarkPaid ? (
@@ -112,6 +119,7 @@ function StudentRow({ row, ctx }) {
           <span className="ev-sname-line">
             <span className="ev-sname">{name}</span>
             <span className="ev-ssub">{subline}</span>
+            {addedAfter}
           </span>
           <span className="ev-sline">
             <TestingForCell rank={rank} />
@@ -134,6 +142,7 @@ function StudentRow({ row, ctx }) {
       <span className="ev-scell ev-sname-line" role="cell">
         <span className="ev-sname">{name}</span>
         <span className="ev-ssub">{subline}</span>
+        {addedAfter}
       </span>
       <span className="ev-scell" role="cell">
         <TestingForCell rank={rank} />

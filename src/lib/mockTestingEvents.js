@@ -23,7 +23,15 @@
 //   next_reference (the CB- number sequence). Column names are the database's (snake_case).
 // When those are missing or damaged (e.g. data saved by the phase 1 build) they are replaced by
 // the default preview data below; Classes and ranks are kept.
+//
+// Phase 3 (Grading, migration 0010, contract 0010 §3.3) adds the list `results` (the table
+// testing_results: one row per graded student — registration_id, result, note, updated_at,
+// updated_by, updated_by_name), the functions testing_set_result and testing_set_result_note,
+// and the grading locks in five phase 2 functions (update_student, resolve_duplicate,
+// restore_student, add_student, update_event — see each one). A store saved before phase 3 has
+// no `results`; it simply gets an empty list (its events and students are kept).
 import { normalizeName, nameProblem, nameKey } from './testing/names.js';
+import { RESULTS, normalizeGradingNote, gradingNoteProblem } from './testing/gradingRules.js';
 import { defaultTestingData } from './mockTesting.js';
 import {
   eventState, registrationSwitch, publicStateFor, feeFor, timeToMinutes, isIsoDate, addDays, signatureIsValid,
@@ -211,6 +219,7 @@ export function defaultEventsData({ today = todayInSchoolTime(new Date()) } = {}
   return {
     locations, events: [event], event_classes: eventClasses, event_ranks: eventRanks,
     registrations, payments, public_attempts: [], next_reference: REFERENCE_START + DEFAULT_STUDENTS.length, next_attempt_id: 1,
+    results: [], // phase 3: nobody is graded yet
   };
 }
 
@@ -237,6 +246,8 @@ const EVENT_RANK_COLS = ['id', 'event_class_id', 'rank_id', 'name', 'position', 
 // Registrations: everything except the signature, the form's submission id and who-as-an-id.
 const REG_COLS = ['id', 'event_id', 'event_rank_id', 'first_name', 'last_name', 'paying_by', 'stripes_confirmed', 'source', 'reference', 'signed_at', 'signature_deleted_at', 'ack_version', 'registered_at', 'status', 'withdrawn_reason', 'withdrawn_at', 'withdrawn_by_name', 'duplicate_state', 'duplicate_of', 'version', 'created_at', 'created_by_name', 'updated_at', 'updated_by_name'];
 const PAYMENT_COLS = ['id', 'registration_id', 'kind', 'amount_cents', 'method', 'paid_on', 'recorded_at', 'recorded_by_name', 'reverses_payment_id'];
+// Grading results (phase 3, 0010 §1.4): everything except who-as-an-id (updated_by).
+const RESULT_COLS = ['registration_id', 'result', 'note', 'updated_at', 'updated_by_name'];
 // The view (0005 section 10): registration columns + the class and belt from the event copy + payments.
 const ROSTER_COLS = [...REG_COLS, 'signed', 'event_class_id', 'class_id', 'class_name', 'class_position', 'start_time', 'end_time',
   'rank_id', 'rank_name', 'rank_position', ...BELT_KEYS, 'early_cents', 'day_cents', 'sparring_gear',
@@ -251,6 +262,7 @@ const GRANTED = {
   testing_payments: PAYMENT_COLS,
   testing_roster: ROSTER_COLS,
   testing_public_attempts: [], // no client grants at all
+  testing_results: RESULT_COLS,
 };
 const HIDDEN = {
   locations: ['updated_at', 'updated_by', 'updated_by_name'],
@@ -261,6 +273,7 @@ const HIDDEN = {
   testing_payments: ['recorded_by'],
   testing_roster: [],
   testing_public_attempts: ['id', 'client_key', 'event_id', 'at', 'outcome'],
+  testing_results: ['updated_by'],
 };
 export const EVENT_TABLES = Object.keys(GRANTED);
 
@@ -282,6 +295,9 @@ const RPC_ARGS = {
   testing_restore_student: [ID('p_registration_id'), ['p_expected_version', 'int']],
   testing_delete_student: [ID('p_registration_id'), ['p_expected_version', 'int'], ['p_expected_payment_ids', 'uuid[]']],
   settings_update_school_address: [['p_code', 'text'], ['p_expected_version', 'int'], ['p_street', 'text'], ['p_city', 'text'], ['p_state', 'text'], ['p_zip', 'text']],
+  // Phase 3 (0010 §1.5), staff and admins.
+  testing_set_result: [ID('p_registration_id'), ['p_result', 'text']],
+  testing_set_result_note: [ID('p_registration_id'), ['p_note', 'text']],
 };
 // Who may call (§1.8): A = admins only, S = staff and admins. testing_restore_student is not in
 // this list: staff may undo their OWN "keep one" for 10 seconds, so it checks who inside (14o).
@@ -414,6 +430,9 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       store = defaultTestingData();
     }
     if (!eventsPartIsUsable(store)) Object.assign(store, defaultEventsData({ today: dataToday() }));
+    // A store saved before phase 3 has no grading results yet: an empty list, NOT "damaged"
+    // (so the events and students someone made in preview are kept).
+    if (!Array.isArray(store.results)) store.results = [];
     return store;
   }
   const write = (db) => saveStore?.(db);
@@ -457,6 +476,53 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
   const paymentsOf = (db, regId) => db.payments.filter((p) => p.registration_id === regId);
   const isReversed = (db, paymentId) => db.payments.some((p) => p.reverses_payment_id === paymentId);
   const location = (db, code) => db.locations.find((l) => l.code === code) ?? null;
+  // ----- Grading (phase 3) -----
+  // A student's result row (null = not graded), and "is anything saved for them?".
+  const resultOf = (db, regId) => db.results.find((r) => r.registration_id === regId) ?? null;
+  const isGradedReg = (db, regId) => resultOf(db, regId) !== null;
+  // "After the testing day" for a registration's event (today > testing_date).
+  const afterTestingDay = (db, reg) => today() > findEvent(db, reg.event_id).testing_date;
+  // Removes the result rows of registrations that are deleted (the database's ON DELETE CASCADE).
+  const dropResultsOf = (db, regIds) => {
+    db.results = db.results.filter((r) => !regIds.has(r.registration_id));
+  };
+
+  // The shared steps 3–5 of testing_set_result / testing_set_result_note (0010 §1.5):
+  // not_found → withdrawn → the date rule (before the day: nobody; after it: admins only).
+  // Returns a refusal answer, or null when the change may go ahead.
+  function gradingRefusal(db, reg, ctx) {
+    if (!reg) return st('not_found');
+    if (reg.status === 'withdrawn') return st('withdrawn');
+    const t = today();
+    const testingDate = findEvent(db, reg.event_id).testing_date;
+    if (t < testingDate) return st('not_open'); // admins too
+    if (t > testingDate && !ctx.isAdmin) return st('finished');
+    return null;
+  }
+
+  // Step 7: writes the wanted pair { result, note } for one registration, the way the database
+  // does: the same as now → nothing is written; both empty → the row is removed; otherwise the
+  // row is changed or added (with the "last changed" stamps). Returns the ok answer with what is
+  // stored now (all null when no row is left).
+  function writeResult(db, regId, wanted, ctx) {
+    const row = resultOf(db, regId);
+    const current = { result: row?.result ?? null, note: row?.note ?? null };
+    const stamps = { updated_at: stamp(), updated_by: ctx.userId ?? null, updated_by_name: ctx.actorName };
+    if (current.result === wanted.result && current.note === wanted.note) {
+      // nothing changed: nothing is written (no new history row, no new stamp)
+    } else if (wanted.result === null && wanted.note === null) {
+      db.results = db.results.filter((r) => r.registration_id !== regId);
+    } else if (row) {
+      Object.assign(row, wanted, stamps);
+    } else {
+      db.results.push({ registration_id: regId, ...wanted, ...stamps });
+    }
+    const saved = resultOf(db, regId);
+    return {
+      status: 'ok', result: saved?.result ?? null, note: saved?.note ?? null,
+      updated_at: saved?.updated_at ?? null, updated_by_name: saved?.updated_by_name ?? null,
+    };
+  }
 
   // The payment summary the roster view shows for one registration.
   function paymentSummary(db, regId) {
@@ -598,6 +664,12 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       const event = findEvent(db, a.p_event_id);
       if (!event) return st('not_found');
       if (event.version !== a.p_expected_version) return st('stale');
+      // Phase 3: once any student of this event (active or withdrawn) has a result or a note,
+      // the date can't move (the results belong to that day).
+      if (a.p_testing_date !== event.testing_date) {
+        const regIds = new Set(db.registrations.filter((r) => r.event_id === event.id).map((r) => r.id));
+        if (db.results.some((r) => regIds.has(r.registration_id))) return st('has_results');
+      }
       // A past event may keep its date; a NEW date must be today or later.
       if (a.p_testing_date !== event.testing_date && a.p_testing_date < t) return st('invalid');
       if (a.p_auto_close_on !== null) {
@@ -658,6 +730,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       const total = sum(db.payments.filter((p) => regIds.has(p.registration_id)).map((p) => p.amount_cents)); // net of reversals
       if (regIds.size !== a.p_expected_registration_count || total !== a.p_expected_payment_total_cents) return st('stale');
       const classIds = new Set(classesOfEvent(db, event.id).map((c) => c.id));
+      dropResultsOf(db, regIds); // cascades (phase 3)
       db.payments = db.payments.filter((p) => !regIds.has(p.registration_id));
       db.registrations = db.registrations.filter((r) => r.event_id !== event.id);
       db.event_ranks = db.event_ranks.filter((r) => !classIds.has(r.event_class_id));
@@ -671,7 +744,8 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       if (a.p_stripes !== true || !PAYING_BY.includes(a.p_paying_by)) return st('invalid');
       const event = findEvent(db, a.p_event_id);
       if (!event) return st('not_found');
-      if (eventState(event, today()) === 'finished') return st('finished');
+      // After the testing day only an admin may still add a student (v0.191).
+      if (eventState(event, today()) === 'finished' && !ctx.isAdmin) return st('finished');
       if (!rankInEvent(db, a.p_event_rank_id, event.id)) return st('invalid');
       const at = stamp();
       const reg = insertRow(db.registrations, {
@@ -691,11 +765,20 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       if (!reg) return st('not_found');
       if (reg.version !== a.p_expected_version) return st('stale');
       if (!rankInEvent(db, a.p_event_rank_id, reg.event_id)) return st('invalid');
+      // Phase 3: a belt (and so class) change of a graded student clears their result; after
+      // the testing day only an admin may do that. Name-only edits never touch the result.
+      const rankChanged = a.p_event_rank_id !== reg.event_rank_id;
+      const graded = isGradedReg(db, reg.id);
+      if (rankChanged && graded && afterTestingDay(db, reg) && !ctx.isAdmin) return st('not_allowed');
       const before = reg.version;
       updateRow(reg, { first_name: normalizeName(a.p_first), last_name: normalizeName(a.p_last), event_rank_id: a.p_event_rank_id }, ctx);
       if (reg.version !== before) {
         recheckDuplicate(db, reg, ctx);
         recheckPointingAt(db, reg.id, ctx);
+      }
+      if (rankChanged && graded) {
+        db.results = db.results.filter((r) => r.registration_id !== reg.id); // the 'clear_result' step
+        return { status: 'ok', version: reg.version, result_cleared: true }; // the key only when true
       }
       return { status: 'ok', version: reg.version };
     },
@@ -780,6 +863,9 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
         || (keep.duplicate_state === 'possible' && keep.duplicate_of === other.id);
       // Withdrawn meanwhile, or not a flagged pair any more: the compare dialog is out of date.
       if (keep.status !== 'active' || other.status !== 'active' || !isPair) return st('stale');
+      // Phase 3: after the testing day staff may not remove a graded copy with "keep one" (it
+      // would be a way round "only an admin can change a graded student now").
+      if (!a.p_keep_both && isGradedReg(db, other.id) && afterTestingDay(db, keep) && !ctx.isAdmin) return st('not_allowed');
       if (a.p_keep_both) {
         updateRow(keep, { duplicate_state: 'kept_both', duplicate_of: other.id }, ctx);
         updateRow(other, { duplicate_state: 'kept_both', duplicate_of: keep.id }, ctx);
@@ -815,9 +901,11 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       if (!reg) return st('not_found');
       // Staff: only the copy they themselves removed with "keep one", less than 10 seconds ago
       // (the toast's Undo). Admins: any time. Checked before the version, like the payment Undo.
+      // Phase 3: not for a graded student after the testing day (then admins only).
       const ownKeepOne = reg.status === 'withdrawn' && reg.withdrawn_reason === 'duplicate_copy'
         && ctx.userId !== null && reg.withdrawn_by === ctx.userId
-        && now() - Date.parse(reg.withdrawn_at) < UNDO_WINDOW_MS;
+        && now() - Date.parse(reg.withdrawn_at) < UNDO_WINDOW_MS
+        && !(isGradedReg(db, reg.id) && afterTestingDay(db, reg));
       if (!ctx.isAdmin && !ownKeepOne) return st('not_allowed');
       if (reg.version !== a.p_expected_version) return st('stale');
       if (reg.status !== 'withdrawn') return st('invalid'); // nothing to restore
@@ -841,6 +929,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       // Every payment row of this student (payments and reversals) must be what the warning named.
       if (!sameSet(paymentsOf(db, reg.id).map((p) => p.id), a.p_expected_payment_ids)) return st('stale');
       const pointing = db.registrations.filter((r) => r.duplicate_of === reg.id).sort((x, y) => (x.id < y.id ? -1 : 1));
+      dropResultsOf(db, new Set([reg.id])); // cascades (phase 3)
       db.payments = db.payments.filter((p) => p.registration_id !== reg.id); // cascades
       db.registrations = db.registrations.filter((r) => r.id !== reg.id);
       for (const r of pointing) {
@@ -866,6 +955,30 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       // Only a change to an address part raises the version (§1.2).
       updateRow(school, { address_street: street, address_city: city, address_state: state, address_zip: zip }, ctx);
       return { status: 'ok', version: school.version };
+    },
+
+    // ----- Grading (phase 3, contract 0010 §1.5) — the same check order as the database -----
+    // (no_access is checked first, in rpc below). No expected version: the last change wins,
+    // and a result never changes a registration's or event's version.
+
+    testing_set_result(db, a, ctx) {
+      if (a.p_registration_id === null) return st('invalid');
+      if (a.p_result !== null && !RESULTS.includes(a.p_result)) return st('invalid'); // e.g. 'passed'
+      const reg = findReg(db, a.p_registration_id);
+      const refusal = gradingRefusal(db, reg, ctx);
+      if (refusal) return refusal;
+      return writeResult(db, reg.id, { result: a.p_result, note: resultOf(db, reg.id)?.note ?? null }, ctx);
+    },
+
+    testing_set_result_note(db, a, ctx) {
+      if (a.p_registration_id === null) return st('invalid');
+      // Tidied to one line; blank = clear the note. Then 1–200 characters, nothing invisible.
+      const note = normalizeGradingNote(a.p_note);
+      if (note !== null && gradingNoteProblem(note) !== null) return st('invalid');
+      const reg = findReg(db, a.p_registration_id);
+      const refusal = gradingRefusal(db, reg, ctx);
+      if (refusal) return refusal;
+      return writeResult(db, reg.id, { result: resultOf(db, reg.id)?.result ?? null, note }, ctx);
     },
   };
 
@@ -1003,6 +1116,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       case 'testing_event_ranks': return db.event_ranks;
       case 'testing_registrations': return db.registrations;
       case 'testing_payments': return db.payments;
+      case 'testing_results': return db.results;
       case 'testing_roster':
         return db.registrations.map((reg) => {
           const rank = rankRow(db, reg.event_rank_id);
@@ -1050,7 +1164,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
     return ok(rows.map((row) => Object.fromEntries(wanted.map((col) => [col, row[col] ?? null]))));
   }
 
-  // supabase.rpc(name, args) for the 15 staff functions.
+  // supabase.rpc(name, args) for the staff functions (15 from phase 2, 2 from phase 3).
   function rpc(name, args = {}, ctx = {}) {
     if (EVENT_RESTRICTED_RPC_NAMES.includes(name)) {
       if (!ctx.signedIn) return denied(`function ${name}`);

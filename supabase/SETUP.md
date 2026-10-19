@@ -758,6 +758,92 @@ commit;
 
 ---
 
+## 13. Migration 0010: Color Belt grading (results on the Grading tab)
+
+**What it does** (`supabase/migrations/0010_testing_results.sql`, contract `docs/Dashboard Docs/Build contracts/CONTRACT-0010.md` §1):
+- **Results:** a new table `testing_results`, one row per graded student: a result (**Pass** `pass`, **Not passed** `not_passed`, **No show** `no_show`) and/or a one-line note of up to 200 characters, plus when and by whom it was last changed. Clearing both removes the row. It is a separate table on purpose: a grader's tap never changes the registration's version, so the desk's Mark paid / Edit details never get "someone else changed this" because of grading (rulebook v0.187: the last change wins).
+- **Two staff functions** (the only way to write): `testing_set_result` and `testing_set_result_note`. **Before the testing day** nobody can record anything (`not_open`); **on the testing day** staff and admins can; **after it** only admins (staff get `finished`) — rulebook v0.186, decided by the database's own clock in school time (America/New_York).
+- **Five 0005 functions replaced** (same names and arguments, so the live phase 2 screens keep working until phase 3 is deployed): Edit details clears a student's result when their belt changes, and after the testing day only an admin may change a graded student's belt; staff can't "keep one" of a possible duplicate (or Undo it) when that removes a graded student after the testing day; **admins can add a student after the testing day** (v0.191); and an event's date **can't change once it has results** (new status `has_results`).
+- **Same security rules as 0005:** RLS with `has_data_access()`, read rights on five columns only (never `updated_by`, a login id), no direct writes for anyone in the app, nothing for `anon` or the family form's login, every change in `change_log` (actions `set_result`, `set_result_note`, `clear_result`; removing a student or an event logs its result's removal under `delete_student` / `delete_event`).
+
+**The order** (build plan §5): **CP2** database (13a–13c, Jeffrey's OK) → **CP3** real check from the local app (13d) → **CP4** deploy (Jeffrey's OK). The live site keeps working between CP2 and CP4 (it doesn't read results yet).
+
+### 13a. Apply 0010 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0010_testing_results.sql`.
+2. **SQL Editor → New query**, paste, **Run**.
+3. Supabase will warn about **destructive operations**. That's expected: the words are inside a rule (`on delete cascade`: removing a student removes their result), inside functions that run later (clearing a result removes its row; a belt change clears a result) and in `drop … if exists` lines that make re-running safe. **Nothing is removed now.** Confirm.
+4. "Success. No rows returned." It's one transaction: on any error nothing is kept. Copy the error to Claude.
+
+**Running it again is safe** (tested: a second run changes no row and no fingerprint). **Never re-run 0005 on its own after this** — see 13e.
+
+### 13b. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0010_fingerprints.sql`. Every line must match what `supabase/tests/pglite/run.mjs` printed for the tested copy: 18 rows — the 9 functions (2 new, 2 trigger functions, 5 replaced: code, settings, owner, who may call them), the table (RLS, rights per column, its read rule), its 3 triggers and its 5 rules.
+2. `0005_fingerprints.sql`: **only** the lines of the five replaced functions (`testing_update_student`, `testing_resolve_duplicate`, `testing_restore_student`, `testing_add_student`, `testing_update_event`) differ from before — expected; their new code is checked in step 1. Every other 0005 line is unchanged. `0003_fingerprints.sql` and `0004_fingerprints.sql`: unchanged.
+3. **Security advisor:** the only new expected notice is "security definer function executable by authenticated" for `testing_set_result` and `testing_set_result_note` (each checks access itself, then the testing-day rule). Anything else about `testing_results` (for example RLS off, or a function without a fixed `search_path`) is a real problem.
+
+### 13c. Run the tests (you, in the SQL Editor)
+
+1. Open `supabase/tests/0010_tests.sql`, replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>` (**Authentication → Users**), paste the whole file, **Run**. Supabase may warn about destructive operations (the test removes its own test students and events and checks some changes are refused). Everything is rolled back. Confirm.
+2. Expected: one row, **ALL 0010 TESTS PASSED**. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved. Run `rollback;` once on its own, then tell Claude.
+3. Then run `0005_tests.sql`, `0004_tests.sql`, `0003_tests.sql`, `0002_tests.sql` and `verify_pin_tests.sql` again — 0010 must not have broken them.
+4. The test makes its own `zz test …` classes and events (dated tomorrow, today and yesterday), so it works before **and** after real events exist.
+
+### 13d. CP3 — the real check (you, with the local app on the real database; Claude watches)
+
+Run `Start dashboard.bat`, sign in as the admin.
+1. Create a **TEST** event dated **today** (any school, one or two classes) and add **two** students.
+2. On the **Grading** tab: give one **Pass**, the other **No show**; tap Pass again to clear it; add a note to one, then clear it; **Print grading sheet** (print preview is enough).
+3. The admin after-the-day rule needs a TEST event whose date is **yesterday**. The app can't make one: an event can't be created in the past, **Edit event refuses a date before today** (`invalid`, phase 2 rule), and once an event has a result its date can't move at all (`has_results`). So, either:
+   - **(a) wait a day:** create a **second TEST event dated today**, add one student, grade **nothing**, and leave it until tomorrow; then grade that student as the admin (works) and check the desk account sees the read-only view; or
+   - **(b) move it in the SQL Editor** (a direct write to production — only with Jeffrey's OK): create the second TEST event dated today with one student, grade nothing, then run `update public.testing_events set testing_date = public.testing_today() - 1 where name = '<the TEST event's exact name>';` and check it said `UPDATE 1`. Then grade as the admin and check the desk's read-only view as in (a).
+4. **Delete both TEST events** (Events → ⋯ → Delete event).
+5. Claude checks through the connection (read-only): the history has the `set_result` / `set_result_note` rows with the right names, the removals under `delete_event`, and no `testing_results` row is left for the TEST events.
+
+### 13e. Undo and re-run warnings (only with Jeffrey's OK)
+
+**Re-running 0005 after 0010** puts back the phase 2 versions of the five replaced functions, **without the grading locks** (0005's header says so too). If 0005 is ever re-run, run **0010 again straight after it**. (And if the family-form off switch of 12i is in force, repeat 12i step 1 after re-running 0005, because 0005 grants the two public functions back.)
+
+**Rollback without touching data:** put the previous site version back (Cloudflare Pages → Deployments → **Rollback**). 0010 can stay: the phase 2 screens don't read results.
+
+**Removing 0010 completely** (only if Jeffrey decides so). First put the app back to a version **without Grading**. Then two steps, **in this order** (so the live phase 2 site keeps working the whole time):
+
+1. **Re-run the whole 0005 file** (12c). That puts back the phase 2 versions of the five replaced functions, which don't read `testing_results` at all, so nothing breaks when the table goes in step 2. (Repeat 12i step 1 afterwards if the family-form off switch is in force — re-running 0005 grants the two public functions back.)
+2. Run this in the SQL Editor (one transaction). **This deletes every result and note.** Each removed result is first logged in `change_log` (action `undo_0010`), and the history keeps all its earlier rows too. Supabase's destructive-operations warning is real this time.
+
+```sql
+-- Undo migration 0010 (step 2; run AFTER re-running 0005). change_log is KEPT.
+begin;
+
+-- remove the results row by row first, so every removal is in the history
+select set_config('tkd.action', 'undo_0010', true);
+select set_config('tkd.batch_id', gen_random_uuid()::text, true);
+delete from public.testing_results;
+select set_config('tkd.action', '', true);
+select set_config('tkd.batch_id', '', true);
+
+-- the table (its triggers, rules and read rule go with it)
+drop table if exists public.testing_results;
+
+-- the two staff functions and the two trigger functions
+drop function if exists public.testing_set_result(uuid, text);
+drop function if exists public.testing_set_result_note(uuid, text);
+drop function if exists public.testing_results_log();
+drop function if exists public.testing_results_before_write();
+
+commit;
+```
+
+Tested in PGlite on every run (`run.mjs` step 12g, both steps exactly as written here): afterwards `0005_fingerprints.sql` equals a database that never had 0010, `change_log` has one `undo_0010` row per removed result, and `0005_tests.sql` and `0003_tests.sql` pass.
+
+**Why:**
+- **A separate results table:** grading never makes the desk's screen "stale", and the results can be locked down on their own (no `updated_by`, nothing for the family form).
+- **The date rule in the database:** a device with a wrong clock, or an old browser tab, can't record results before the testing day or (for staff) after it.
+- **The locks on Edit details, keep one and Undo:** after the testing day staff can't take a graded student off the Grading tab or change what they tested for; an admin can.
+
+---
+
 ## Admin: change the front-desk PIN or password
 
 The front desk (`shrewsburyustc@gmail.com`) is a **shared account**, so the app hides Change PIN and Change password for it. Only an admin changes them, here in Supabase, until the Staff accounts screen exists.

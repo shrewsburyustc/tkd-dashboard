@@ -17,7 +17,13 @@
 // Every change goes to the database (src/lib/testing/eventsApi.js) and the page reloads after it.
 // Reversible changes get a 5-second Undo toast; Delete permanently asks first (rule 1.4).
 // Staff and admins see different ⋯ items (Star v0.110); the database enforces the same rules.
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+//
+// Phase 3 (contract 0010 §4, mockups G1–G8, rulebook v0.180–v0.192) adds a second tab, Grading
+// (GradingTab.jsx): address #testing/event/<id>/grading. The header buttons, the page banner and
+// the class choice are shared by both tabs. Result taps save by themselves (useGradingSaves.js);
+// while a result is "Not saved", leaving the page asks first (the leave guard, §4.9: App.jsx asks
+// this page before it navigates away) and closing the browser tab shows the browser's question.
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import {
   IconAlertTriangle,
   IconArrowBackUp,
@@ -33,6 +39,7 @@ import {
   IconUserMinus,
   IconUsers,
 } from '@tabler/icons-react';
+import Dialog from '../../../components/Dialog.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../../../lib/device.js';
@@ -45,6 +52,7 @@ import {
   deleteStudent,
   editPayment,
   loadEvent,
+  loadResult,
   markPaid,
   resolveDuplicate,
   restoreStudent,
@@ -52,6 +60,7 @@ import {
   updateStudent,
   withdrawStudent,
 } from '../../../lib/testing/eventsApi.js';
+import { canChangeResults, defaultGradingClassId, gradingWindow, schoolMinutesNow } from '../../../lib/testing/gradingRules.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
@@ -60,18 +69,26 @@ import ConfirmDeleteDialog from '../events/ConfirmDeleteDialog.jsx';
 import { NoIcon } from '../events/EventsTab.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../events/useLiveLoad.js';
 import CompareDialog from './CompareDialog.jsx';
+import GradingSheet from './GradingSheet.jsx';
+import GradingTab from './GradingTab.jsx';
+import NoteDialog, { checkNote, isNoteDirty } from './NoteDialog.jsx';
 import { EditPaymentDialog, PayingByDialog, checkEditPayment, isEditPaymentDirty, isPayingByDirty } from './PaymentDialogs.jsx';
 import RegistrationLinkDialog from './RegistrationLinkDialog.jsx';
 import RosterRows from './RosterRows.jsx';
 import StudentDialog, { checkStudentForm, isStudentFormDirty } from './StudentDialog.jsx';
+import { useGradingSaves } from './useGradingSaves.js';
 import * as T from '../text.js';
 
 // The class chosen on each event's page, kept while the page is open.
 const classByEvent = new Map();
 // The Removed group open or closed, per event (open by default, as drawn in R8).
 const removedOpenByEvent = new Map();
+// Events whose Grading tab already picked "the class on now" on the testing day (v0.184): it
+// happens once, after that the person's own class choice is kept.
+const gradingClassPicked = new Set();
 
-const BLOCKING_NOTES = ['STALE_DIALOG', 'NOT_ALLOWED', 'FINISHED', 'ALREADY_PAID'];
+const BLOCKING_NOTES = ['STALE_DIALOG', 'NOT_ALLOWED', 'FINISHED', 'ALREADY_PAID', 'STUDENT_LOCKED'];
+const TABS = ['students', 'grading'];
 
 const find = (selector) => document.querySelector(selector);
 const rowEl = (id) => find(`[data-nav-row="${id}"]`);
@@ -121,6 +138,9 @@ export default function EventPage({
   showToast,
   clearToast,
   onModalOpenChange,
+  eventTab, // 'students' | 'grading' (from the address, App.jsx)
+  onEventTab, // (tab) => void — switches the tab (App.jsx updates the address without a new step)
+  onLeaveGuardChange, // (fn | null) => void — App.jsx asks fn before leaving this page (§4.9)
 }) {
   const live = useLiveLoad({ key: eventId, enabled: !screenLocked, load: loadEvent, refreshMs: LIVE_REFRESH_MS });
   const data = live.data;
@@ -153,6 +173,12 @@ export default function EventPage({
   const [busy, setBusy] = useState(false);
   const [notSavedId, setNotSavedId] = useState(null);
   const [schools, setSchools] = useState(null); // for the flyer's address
+  const [printing, setPrinting] = useState(null); // { printedAt, opener } while the grading sheet prints
+  // The open tab comes from the address (App.jsx); a local copy only if no App is listening.
+  const [localTab, setLocalTab] = useState('students');
+  const tab = TABS.includes(eventTab) ? eventTab : localTab;
+  const baseId = useId();
+  const tabIds = { tab: (key) => `${baseId}-tab-${key}`, panel: (key) => `${baseId}-panel-${key}` };
   const busyRef = useRef(false);
   const dialogRef = useRef(dialog);
   useLayoutEffect(() => {
@@ -308,6 +334,112 @@ export default function EventPage({
     pairs.push({ first, second });
   }
 
+  // ===== Grading (phase 3) =====
+  // Every active student, in class switch order, then roster order (belt, last, first name).
+  const classPosition = new Map(classes.map((c, index) => [c.id, index]));
+  const gradingRows = [...active].sort(
+    (a, b) => (classPosition.get(a.eventClassId) ?? 0) - (classPosition.get(b.eventClassId) ?? 0) || order(a, b),
+  );
+  const dayWindow = event ? gradingWindow(today, event.testingDate) : 'before';
+  const grading = useGradingSaves({
+    roster: gradingRows,
+    classes,
+    loadedAt: data?.startedAt ?? null,
+    reload: () => reloadQuiet(),
+    onNoAccess,
+    showPageBanner: (text) => setBanner({ text }),
+    isReadOnly: !canChangeResults(dayWindow, isAdmin),
+    screenLocked,
+  });
+
+  // On the testing day, the first time Grading shows for this event, open the class that is on
+  // right now (or the next one) — v0.184. Other days: the class chosen on Students.
+  useEffect(() => {
+    if (tab !== 'grading' || !event || dayWindow !== 'day' || classes.length === 0 || gradingClassPicked.has(eventId)) return;
+    gradingClassPicked.add(eventId);
+    const id = defaultGradingClassId(classes, schoolMinutesNow());
+    if (id) {
+      classByEvent.set(eventId, id);
+      setClassSelState(id);
+    }
+  }, [tab, event, dayWindow, classes, eventId]);
+
+  // ----- Tabs: Students | Grading -----
+  function switchTab(next) {
+    if (next === tab) return;
+    setMenu(null);
+    if (onEventTab) onEventTab(next);
+    else setLocalTab(next);
+  }
+  // ← → (and Home / End) move between the two tabs and switch at once, like the Testing tabs.
+  function handleTabKeyDown(keyEvent) {
+    const index = TABS.indexOf(tab);
+    let next = null;
+    if (keyEvent.key === 'ArrowRight') next = TABS[(index + 1) % TABS.length];
+    else if (keyEvent.key === 'ArrowLeft') next = TABS[(index - 1 + TABS.length) % TABS.length];
+    else if (keyEvent.key === 'Home') next = TABS[0];
+    else if (keyEvent.key === 'End') next = TABS[TABS.length - 1];
+    if (!next) return;
+    keyEvent.preventDefault();
+    switchTab(next);
+    document.getElementById(tabIds.tab(next))?.focus();
+  }
+
+  // ----- Leaving the page while results are Not saved (v0.192, contract 0010 §4.9) -----
+  // App.jsx calls this before it navigates away. false = nothing unsaved, go ahead. true = the
+  // "N results aren't saved" dialog is open; it calls proceed() itself on "Leave anyway".
+  const guardRef = useRef(null);
+  guardRef.current = (proceed) => {
+    if (grading.unsavedCount === 0) return false;
+    if (dialogRef.current?.type === 'leave') return true; // already asking
+    const list = grading.unsavedRows();
+    const groups = [];
+    for (const item of list) {
+      const last = groups[groups.length - 1];
+      if (last && last.classId === item.classId) last.names.push(item.name);
+      else groups.push({ classId: item.classId, className: item.className, names: [item.name] });
+    }
+    const opener = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
+    openDialog({ type: 'leave', proceed, count: list.length, body: T.leaveBody(groups), firstId: list[0]?.id ?? null, opener });
+    return true;
+  };
+  const leaveGuard = useCallback((proceed) => guardRef.current(proceed), []);
+  useEffect(() => {
+    if (!onLeaveGuardChange) return undefined;
+    onLeaveGuardChange(leaveGuard);
+    return () => onLeaveGuardChange(null);
+  }, [onLeaveGuardChange, leaveGuard]);
+
+  // Closing or reloading the browser tab while something is unsaved: the browser asks its own
+  // "Leave site?" question (its words can't be changed).
+  const hasUnsaved = grading.unsavedCount > 0;
+  useEffect(() => {
+    if (!hasUnsaved) return undefined;
+    function handleBeforeUnload(unloadEvent) {
+      unloadEvent.preventDefault();
+      unloadEvent.returnValue = '';
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsaved]);
+
+  // ----- Print grading sheet (G6): draw the sheet, print, remove it again -----
+  useEffect(() => {
+    if (!printing) return undefined;
+    const done = () => {
+      setPrinting(null);
+      focusLater(() => printing.opener, () => find('.gr-print'));
+    };
+    window.addEventListener('afterprint', done);
+    // Wait one frame so the sheet is on the page before the print window opens.
+    const frame = window.requestAnimationFrame(() => window.print());
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('afterprint', done);
+    };
+    // (Only a new print matters here; focusLater is a plain function of this component.)
+  }, [printing]);
+
   // ===== Dialogs =====
   function openDialog(next) {
     clearToast();
@@ -329,7 +461,8 @@ export default function EventPage({
   }
 
   function openAdd(opener) {
-    if (!event || event.state === 'finished') return;
+    // A finished event: admins may still add a student (v0.191); staff don't see the button.
+    if (!event || (event.state === 'finished' && !isAdmin)) return;
     const values = { firstName: '', lastName: '', classId: selected?.id ?? null, rankId: null, stripes: false, payingBy: 'cash' };
     openDialog({ type: 'student', mode: 'add', values, initial: values, opener });
   }
@@ -341,7 +474,10 @@ export default function EventPage({
   }
   function openEdit(row, opener, fromView = false) {
     const values = editValuesFor(row);
-    const next = { type: 'student', mode: 'edit', rowId: row.id, snapshot: row, values, initial: values, fromView };
+    // graded: what the dialog shows about the student's result (re-read just before a belt
+    // change is saved, contract 0010 §4.7).
+    const graded = { graded: Boolean(row.graded), result: row.result ?? null, note: row.note ?? null };
+    const next = { type: 'student', mode: 'edit', rowId: row.id, snapshot: row, values, initial: values, fromView, graded };
     if (fromView) {
       // Same dialog, turned into fields (Star v0.112): keep its key so it doesn't re-open.
       setDialog((current) => ({ ...current, ...next, touched: {}, triedSave: false, note: null, blocked: false }));
@@ -374,8 +510,22 @@ export default function EventPage({
     }
   }
 
+  // ----- Grading: the note dialog (G2) -----
+  function openNote(row, opener) {
+    const saved = grading.view(row).note;
+    const values = { text: saved ?? '' };
+    openDialog({ type: 'note', rowId: row.id, snapshot: row, values, initial: values, opener });
+  }
+
   function focusAfterClose(d) {
-    if (d.type === 'link') focusLater(() => d.opener, linkEl);
+    if (d.type === 'note') focusLater(() => find(`[data-note-btn="${d.rowId}"]`), () => d.opener ?? document.getElementById(tabIds.tab('grading')));
+    else if (d.type === 'leave') {
+      // Stay: back where the person was, else the first Not saved row's chosen result button.
+      focusLater(
+        () => d.opener,
+        () => find(`[data-result-btn="${d.firstId}"][aria-pressed="true"]`) ?? find(`[data-result-btn="${d.firstId}"]`),
+      );
+    } else if (d.type === 'link') focusLater(() => d.opener, linkEl);
     else if (d.type === 'student' && d.mode === 'add') focusLater(() => d.opener, addStudentEl);
     else if (d.type === 'compare') focusLater(() => d.opener, () => rowEl(d.firstId));
     else if (d.type === 'delete') focusLater(() => moreEl(d.rowId), () => d.opener);
@@ -396,6 +546,7 @@ export default function EventPage({
     if (d.type === 'student' && d.mode !== 'view') return isStudentFormDirty(d);
     if (d.type === 'paying') return isPayingByDirty(d);
     if (d.type === 'payment') return isEditPaymentDirty(d);
+    if (d.type === 'note') return isNoteDirty(d);
     return false;
   }
   function requestClose() {
@@ -466,6 +617,29 @@ export default function EventPage({
       return;
     }
     const snap = d.snapshot;
+    // Phase 3 (contract 0010 §4.7): a belt or class change clears a recorded result. Read the
+    // student's result again first; if it changed since the dialog opened (a grader tapped just
+    // now), show the new state and let the person read it and press Save again.
+    if (p.eventRankId !== snap.eventRankId) {
+      const fresh = await loadResult(d.rowId);
+      if (fresh.status !== 'ok') {
+        endWrite('error');
+        patchDialog({ saving: false, note: 'SAVE_FAILED' });
+        return;
+      }
+      if (Boolean(fresh.graded) !== Boolean(d.graded?.graded)) {
+        endWrite('ok');
+        const graded = { graded: Boolean(fresh.graded), result: fresh.result ?? null, note: fresh.note ?? null };
+        // Staff after the testing day: the choices lock — put the saved class and belt back.
+        const locks = graded.graded && dayWindow === 'after' && !isAdmin;
+        setDialog((current) =>
+          current
+            ? { ...current, saving: false, graded, values: locks ? { ...current.values, classId: current.initial.classId, rankId: current.initial.rankId } : current.values }
+            : current,
+        );
+        return;
+      }
+    }
     const result = await updateStudent({
       registrationId: d.rowId,
       expectedVersion: snap.version,
@@ -474,6 +648,12 @@ export default function EventPage({
       eventRankId: p.eventRankId,
     });
     endWrite(result.status);
+    if (result.status === 'not_allowed') {
+      // The student is graded and the testing day is over: only an admin can change their belt.
+      patchDialog({ saving: false, note: 'STUDENT_LOCKED', blocked: true });
+      reloadQuiet();
+      return;
+    }
     if (result.status !== 'ok') {
       handleDialogProblem(result.status);
       return;
@@ -482,6 +662,12 @@ export default function EventPage({
     if (newClassId && newClassId !== selected?.id) setClassSel(newClassId); // follow the student to their new class
     const reloaded = reloadQuiet();
     const savedVersion = result.version;
+    if (result.resultCleared) {
+      // The belt change cleared the student's result: no Undo (it couldn't bring the result back).
+      showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+      focusLater(() => rowEl(d.rowId), () => d.opener, reloaded);
+      return;
+    }
     showToast(T.TOAST_CHANGES_SAVED, {
       icon: false,
       action: {
@@ -551,6 +737,66 @@ export default function EventPage({
     const reloaded = reloadQuiet();
     showToast(T.TOAST_PAYMENT_SAVED, { icon: false });
     focusLater(() => d.opener, () => rowEl(d.rowId), reloaded);
+  }
+
+  // ----- Save: the grading note (G2, contract 0010 §4.5) -----
+  // Not part of the one-change-at-a-time lock: grading never waits for the desk's changes.
+  async function saveNote() {
+    const d = dialogRef.current;
+    if (!d || d.saving || d.type !== 'note') return;
+    const row = active.find((r) => r.id === d.rowId) ?? d.snapshot;
+    if (!checkNote(d, grading.view(row).note).canSave) return;
+    patchDialog({ saving: true, note: null });
+    const status = await grading.saveNote(row, d.values.text);
+    if (status === 'ok') {
+      setDialog(null);
+      focusAfterClose(d);
+    } else if (status === 'error' || status === 'stale') {
+      patchDialog({ saving: false, note: 'NOTE_SAVE_FAILED' });
+    } else if (status === 'invalid') {
+      patchDialog({ saving: false, note: 'NOTE_BAD_CHARACTER' });
+    } else if (status === 'finished' || status === 'not_open') {
+      setDialog(null);
+      setBanner({ text: status === 'finished' ? T.TOO_LATE_RESULTS : T.GRADING_NOT_OPEN });
+      const reloaded = reloadQuiet();
+      focusLater(() => find(`[data-note-btn="${d.rowId}"]`), () => document.getElementById(tabIds.tab('grading')), reloaded);
+    } else if (status === 'withdrawn' || status === 'not_found') {
+      patchDialog({ saving: false, note: 'STALE_DIALOG', blocked: true });
+      reloadQuiet();
+    } else if (status === 'no_access') {
+      patchDialog({ saving: false });
+      onNoAccess();
+    } else {
+      patchDialog({ saving: false, note: 'NOTE_SAVE_FAILED' });
+    }
+  }
+
+  // ----- The leave dialog's two answers (§4.9) -----
+  function stayOnPage() {
+    cancelDialog();
+  }
+  function leaveAnyway() {
+    const d = dialogRef.current;
+    if (!d || d.type !== 'leave') return;
+    setDialog(null);
+    // The dialog added a step to the browser's history (Dialog.jsx) and removes it as it closes.
+    // Wait for that, so the next page's step lands in the right place, then leave.
+    const proceed = d.proceed;
+    window.setTimeout(() => {
+      if (!window.history.state?.tkdDialog) {
+        proceed();
+        return;
+      }
+      let done = false;
+      const go = () => {
+        if (done) return;
+        done = true;
+        window.removeEventListener('popstate', go);
+        proceed();
+      };
+      window.addEventListener('popstate', go);
+      window.setTimeout(go, 400); // in case the step was already gone
+    }, 0);
   }
 
   // ===== Undo =====
@@ -691,7 +937,13 @@ export default function EventPage({
       rowId: row.id,
       name,
       title: T.deleteStudentTitle(name),
-      body: T.deleteStudentBody(fresh.event.name, counted ? { cents: counted.amountCents, method: counted.method, paidOn: counted.paidOn } : null),
+      body: T.deleteStudentBody(
+        fresh.event.name,
+        counted ? { cents: counted.amountCents, method: counted.method, paidOn: counted.paidOn } : null,
+        // Phase 3 (G8): the warning names the testing result (or the grading note) too.
+        freshRow.graded ? { result: freshRow.result ?? null, resultAt: freshRow.resultAt ?? null, hasNote: freshRow.note !== null && freshRow.note !== undefined } : null,
+        freshRow.firstName,
+      ),
       args: { registrationId: row.id, expectedVersion: freshRow.version, expectedPaymentIds: mine.map((p) => p.id) },
       index: rows.findIndex((r) => r.id === row.id),
       opener: anchor,
@@ -748,8 +1000,9 @@ export default function EventPage({
     }
     setDialog(null);
     if (result.status !== 'ok') {
+      // not_allowed (phase 3): the copy is graded and the testing day is over — admins only.
       if (result.status === 'no_access') onNoAccess();
-      else setBanner({ text: result.status === 'not_allowed' ? T.ROSTER_NOT_ALLOWED : T.ROSTER_STALE });
+      else setBanner({ text: result.status === 'not_allowed' ? T.STUDENT_LOCKED : T.ROSTER_STALE });
       reloadQuiet();
       return;
     }
@@ -863,7 +1116,8 @@ export default function EventPage({
       if (row) openView(row, rowEl(id));
     },
   });
-  const addShown = live.status === 'ready' && event !== null && event.state !== 'finished';
+  // On a finished event only admins see Add student (v0.191, v0.192).
+  const addShown = live.status === 'ready' && event !== null && (event.state !== 'finished' || isAdmin);
   useShortcutN({
     enabled: addShown && dialog === null && menu === null && !screenLocked && !busy,
     onPress: () => openAdd(addStudentEl()),
@@ -970,6 +1224,8 @@ export default function EventPage({
           today={today}
           record={dialog.mode === 'edit' ? dialog.snapshot : record}
           canEdit={record?.status === 'active'}
+          graded={dialog.graded ?? null}
+          beltLocked={dialog.mode === 'edit' && Boolean(dialog.graded?.graded) && dayWindow === 'after' && !isAdmin}
           onTouch={touch}
           onSave={saveStudent}
           onEdit={() => record && openEdit(record, dialog.opener, true)}
@@ -1015,6 +1271,45 @@ export default function EventPage({
           onCancel={cancelDialog}
         />
       );
+    } else if (dialog.type === 'note') {
+      const row = active.find((r) => r.id === dialog.rowId) ?? dialog.snapshot;
+      const shown = grading.view(row);
+      const rank = rankById.get(row.eventRankId);
+      const subtitle = T.noteSub(
+        classById.get(row.eventClassId)?.className ?? '',
+        rank?.name ?? '',
+        rank?.testingFor?.name ?? T.NO_NEW_RANK,
+        shown.result ? T.resultButtonText(shown.result) : T.NOT_RECORDED_YET,
+      );
+      dialogElement = (
+        <NoteDialog
+          key={dialog.key}
+          state={dialog}
+          name={T.studentLabel(row)}
+          subtitle={subtitle}
+          savedNote={shown.note}
+          onSave={saveNote}
+          {...common}
+        />
+      );
+    } else if (dialog.type === 'leave') {
+      // v0.192 (approved image P3, option B): the same small box on every device. Nothing is
+      // deleted, so no red: "Stay on this page" is the blue default (Enter, Esc, backdrop, Back).
+      dialogElement = (
+        <Dialog key={dialog.key} title={T.leaveTitle(dialog.count)} variant="confirm" describedBy={`${baseId}-leave-body`} onRequestClose={stayOnPage}>
+          <p id={`${baseId}-leave-body`} className="tdialog-sub tdialog-body">
+            {dialog.body}
+          </p>
+          <div className="dialog-actions">
+            <button type="button" className="btn" onClick={leaveAnyway}>
+              {T.LEAVE_ANYWAY}
+            </button>
+            <button type="button" className="btn btn-primary" data-autofocus onClick={stayOnPage}>
+              {T.STAY_ON_PAGE}
+            </button>
+          </div>
+        </Dialog>
+      );
     }
   }
 
@@ -1036,124 +1331,166 @@ export default function EventPage({
           {linkButton}
         </div>
       </div>
-      <div className="ttabs" role="tablist" aria-label={event.name}>
-        <span className="ttab is-current" role="tab" aria-selected="true" tabIndex={-1}>
-          {T.TAB_STUDENTS}
-        </span>
-      </div>
-
-      {banner && (
-        <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />
-      )}
-
-      {/* Summary cards (Star v0.115): clicking Paid / Not paid filters the roster. */}
-      <div className="ev-cards">
-        {cards.map((card) => {
-          const isFilter = card.key === 'paid' || card.key === 'notPaid';
-          const pressed = isFilter && filter === card.key;
-          const inner = (
-            <>
-              <span className="ev-card-label">
-                <card.Icon size={16} aria-hidden="true" />
-                {card.label}
-              </span>
-              <span className="ev-card-value">{card.value}</span>
-            </>
-          );
-          if (card.key === 'money') {
-            return (
-              <div key="money" className="ev-card">
-                {inner}
-                {removedPayments > 0 && <span className="ev-card-note">{T.includesRemoved(removedPayments)}</span>}
-              </div>
-            );
-          }
+      {/* Students | Grading (phase 3): real tabs — one Tab stop (the current tab), ← → Home End. */}
+      <div className={`ttabs ev-tabs${isPhone ? ' is-phone' : ''}`} role="tablist" aria-label={event.name} onKeyDown={handleTabKeyDown}>
+        {TABS.map((key) => {
+          const current = key === tab;
           return (
             <button
-              key={card.key ?? 'all'}
+              key={key}
+              id={tabIds.tab(key)}
               type="button"
-              className={`ev-card ev-card--button${pressed ? ' is-selected' : ''}`}
-              aria-pressed={isFilter ? (pressed ? 'true' : 'false') : undefined}
-              onClick={() => setFilter(isFilter && filter !== card.key ? card.key : null)}
+              className={`ttab${current ? ' is-current' : ''}`}
+              role="tab"
+              aria-selected={current ? 'true' : 'false'}
+              aria-controls={tabIds.panel(key)}
+              tabIndex={current ? 0 : -1}
+              onClick={() => switchTab(key)}
             >
-              {inner}
+              {key === 'students' ? T.TAB_STUDENTS : T.TAB_GRADING}
             </button>
           );
         })}
       </div>
-      {filter && (
-        <p className="ev-filter-line">
-          {filter === 'paid' ? T.SHOWING_PAID : T.SHOWING_NOT_PAID} ·{' '}
-          <button type="button" className="link-button" onClick={() => setFilter(null)}>
-            {T.SHOW_ALL}
-          </button>
-        </p>
+
+      {/* G5: results that didn't save — on both tabs, until they save (they retry by themselves,
+          v0.192) or the person closes it. */}
+      {grading.banner && (
+        <ErrorBanner text={grading.banner.text} onRetry={() => grading.retryAll()} onDismiss={() => grading.dismissBanner()} />
+      )}
+      {banner && (
+        <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />
       )}
 
-      {/* Possible duplicates (Star v0.114): one line per pair, with Review. */}
-      {pairs.length > 0 && (
-        <div className="ev-dupbox" role="status">
-          <IconAlertTriangle size={16} aria-hidden="true" className="ev-dupbox-icon" />
-          <div className="ev-dupbox-lines">
-            {pairs.map((pair, index) => (
-              <p key={pair.first.id} className="ev-dupbox-line">
-                {index === 0 && <strong>{T.duplicateBoxLine(pairs.length)}</strong>}
-                {index === 0 && ' · '}
-                {T.registeredTwice(T.studentLabel(pair.first), classById.get(pair.first.eventClassId)?.className ?? '')}
-                <button type="button" className="btn btn-sm ev-dupbox-review" onClick={(clickEvent) => openCompare(pair, clickEvent.currentTarget)}>
-                  {T.REVIEW}
+      {tab === 'grading' ? (
+        <GradingTab
+          event={event}
+          classes={classes}
+          rows={gradingRows}
+          today={today}
+          isAdmin={isAdmin}
+          layout={layout}
+          classSel={selected?.id ?? null}
+          onClassSel={(id) => setClassSel(id)}
+          grading={grading}
+          onOpenNote={openNote}
+          onPrint={(opener) => setPrinting({ printedAt: new Date(), opener })}
+          panelId={tabIds.panel('grading')}
+          tabId={tabIds.tab('grading')}
+        />
+      ) : (
+        <div id={tabIds.panel('students')} role="tabpanel" aria-labelledby={tabIds.tab('students')}>
+          {/* Summary cards (Star v0.115): clicking Paid / Not paid filters the roster. */}
+          <div className="ev-cards">
+            {cards.map((card) => {
+              const isFilter = card.key === 'paid' || card.key === 'notPaid';
+              const pressed = isFilter && filter === card.key;
+              const inner = (
+                <>
+                  <span className="ev-card-label">
+                    <card.Icon size={16} aria-hidden="true" />
+                    {card.label}
+                  </span>
+                  <span className="ev-card-value">{card.value}</span>
+                </>
+              );
+              if (card.key === 'money') {
+                return (
+                  <div key="money" className="ev-card">
+                    {inner}
+                    {removedPayments > 0 && <span className="ev-card-note">{T.includesRemoved(removedPayments)}</span>}
+                  </div>
+                );
+              }
+              return (
+                <button
+                  key={card.key ?? 'all'}
+                  type="button"
+                  className={`ev-card ev-card--button${pressed ? ' is-selected' : ''}`}
+                  aria-pressed={isFilter ? (pressed ? 'true' : 'false') : undefined}
+                  onClick={() => setFilter(isFilter && filter !== card.key ? card.key : null)}
+                >
+                  {inner}
                 </button>
-              </p>
-            ))}
+              );
+            })}
           </div>
+          {filter && (
+            <p className="ev-filter-line">
+              {filter === 'paid' ? T.SHOWING_PAID : T.SHOWING_NOT_PAID} ·{' '}
+              <button type="button" className="link-button" onClick={() => setFilter(null)}>
+                {T.SHOW_ALL}
+              </button>
+            </p>
+          )}
+
+          {/* Possible duplicates (Star v0.114): one line per pair, with Review. */}
+          {pairs.length > 0 && (
+            <div className="ev-dupbox" role="status">
+              <IconAlertTriangle size={16} aria-hidden="true" className="ev-dupbox-icon" />
+              <div className="ev-dupbox-lines">
+                {pairs.map((pair, index) => (
+                  <p key={pair.first.id} className="ev-dupbox-line">
+                    {index === 0 && <strong>{T.duplicateBoxLine(pairs.length)}</strong>}
+                    {index === 0 && ' · '}
+                    {T.registeredTwice(T.studentLabel(pair.first), classById.get(pair.first.eventClassId)?.className ?? '')}
+                    <button type="button" className="btn btn-sm ev-dupbox-review" onClick={(clickEvent) => openCompare(pair, clickEvent.currentTarget)}>
+                      {T.REVIEW}
+                    </button>
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {classes.length === 0 ? (
+            <p className="tempty">{T.NO_CLASSES_IN_EVENT}</p>
+          ) : (
+            <>
+              <span id={classLabelId} className="visually-hidden">
+                {T.CLASS_SWITCH_LABEL}
+              </span>
+              <div className="ev-class-switch">
+                <ChoiceGroup
+                  labelId={classLabelId}
+                  value={selected?.id ?? null}
+                  onChange={(id) => {
+                    setClassSel(id);
+                    setMenu(null);
+                  }}
+                  options={classes.map((c) => ({
+                    key: c.id,
+                    label: `${c.className} ${countByClass.get(c.id) ?? 0}`,
+                    content: (
+                      <>
+                        <span className="ev-cs-name">{c.className}</span>
+                        <span className="ev-cs-count">{countByClass.get(c.id) ?? 0}</span>
+                      </>
+                    ),
+                  }))}
+                />
+              </div>
+              {selected && (
+                <p className="ev-classline">
+                  <strong>{T.classLineTitle(selected.className, time)}</strong>
+                  <span>{T.studentsCount(selectedCount)}</span>
+                  <span className="ttag">{gearText(selected)}</span>
+                </p>
+              )}
+              <RosterRows
+                rows={rows}
+                removedRows={removedRows}
+                removedOpen={removedOpen}
+                onToggleRemoved={() => setRemovedOpen(!removedOpen)}
+                emptyText={emptyText}
+                ctx={ctx}
+              />
+            </>
+          )}
         </div>
       )}
 
-      {classes.length === 0 ? (
-        <p className="tempty">{T.NO_CLASSES_IN_EVENT}</p>
-      ) : (
-        <>
-          <span id={classLabelId} className="visually-hidden">
-            {T.CLASS_SWITCH_LABEL}
-          </span>
-          <div className="ev-class-switch">
-            <ChoiceGroup
-              labelId={classLabelId}
-              value={selected?.id ?? null}
-              onChange={(id) => {
-                setClassSel(id);
-                setMenu(null);
-              }}
-              options={classes.map((c) => ({
-                key: c.id,
-                label: `${c.className} ${countByClass.get(c.id) ?? 0}`,
-                content: (
-                  <>
-                    <span className="ev-cs-name">{c.className}</span>
-                    <span className="ev-cs-count">{countByClass.get(c.id) ?? 0}</span>
-                  </>
-                ),
-              }))}
-            />
-          </div>
-          {selected && (
-            <p className="ev-classline">
-              <strong>{T.classLineTitle(selected.className, time)}</strong>
-              <span>{T.studentsCount(selectedCount)}</span>
-              <span className="ttag">{gearText(selected)}</span>
-            </p>
-          )}
-          <RosterRows
-            rows={rows}
-            removedRows={removedRows}
-            removedOpen={removedOpen}
-            onToggleRemoved={() => setRemovedOpen(!removedOpen)}
-            emptyText={emptyText}
-            ctx={ctx}
-          />
-        </>
-      )}
-
+      {printing && <GradingSheet event={event} school={school} classes={classes} rows={gradingRows} printedAt={printing.printedAt} />}
       {content && (
         <RowMenu anchor={menu.anchor} isSheet={isPhone} title={content.title} subtitle={content.subtitle} label={content.label} items={content.items} onClose={closeMenu} />
       )}

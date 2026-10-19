@@ -20,15 +20,17 @@
 //   invalid    true to tell screen readers the group has a problem
 //   describedBy  id of a message under the group
 //   autoFocus  true: a dialog opening puts keyboard focus on the chosen button (Dialog.jsx data-autofocus)
+//   disabled   true: shown but can't be used (phase 3: Edit details of a graded student, staff after
+//              the testing day) — screen readers hear "dimmed", Tab skips it, clicks and keys do nothing
 import { useRef } from 'react';
 
-export default function ChoiceGroup({ labelId, options, value, onChange, variant = 'segmented', readOnly = false, invalid = false, describedBy, autoFocus = false }) {
+export default function ChoiceGroup({ labelId, options, value, onChange, variant = 'segmented', readOnly = false, invalid = false, describedBy, autoFocus = false, disabled = false }) {
   const buttonsRef = useRef([]);
   const current = options.findIndex((option) => option.key === value);
   const tabStop = current === -1 ? 0 : current;
 
   function choose(index) {
-    if (readOnly) return;
+    if (readOnly || disabled) return;
     const option = options[index];
     if (option && option.key !== value) onChange(option.key);
   }
@@ -37,6 +39,7 @@ export default function ChoiceGroup({ labelId, options, value, onChange, variant
     const forward = event.key === 'ArrowRight' || event.key === 'ArrowDown';
     const back = event.key === 'ArrowLeft' || event.key === 'ArrowUp';
     if (!forward && !back) return;
+    if (disabled) return;
     event.preventDefault();
     const from = buttonsRef.current.indexOf(document.activeElement);
     const start = from === -1 ? tabStop : from;
@@ -52,6 +55,7 @@ export default function ChoiceGroup({ labelId, options, value, onChange, variant
       aria-labelledby={labelId}
       aria-invalid={invalid ? 'true' : undefined}
       aria-describedby={describedBy}
+      aria-disabled={disabled ? 'true' : undefined}
       onKeyDown={handleKeyDown}
     >
       {options.map((option, index) => {
@@ -66,8 +70,9 @@ export default function ChoiceGroup({ labelId, options, value, onChange, variant
             role="radio"
             aria-checked={checked ? 'true' : 'false'}
             aria-label={option.content ? option.label : undefined}
-            tabIndex={index === tabStop ? 0 : -1}
-            data-autofocus={autoFocus && index === tabStop ? true : undefined}
+            aria-disabled={disabled ? 'true' : undefined}
+            tabIndex={!disabled && index === tabStop ? 0 : -1}
+            data-autofocus={autoFocus && !disabled && index === tabStop ? true : undefined}
             className={`${variant === 'chips' ? 'ev-chip' : 'segment'}${checked ? ' is-checked' : ''}`}
             onClick={() => choose(index)}
           >
