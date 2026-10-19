@@ -33,7 +33,7 @@ import {
 import { centsToCsvNumber } from './finance/csv.js';
 import { addDays, isIsoDate, normalizeNote, SCHOOL_TIME_ZONE } from './testing/eventRules.js';
 
-const STORE_FORMAT = 1; // bump when the store's shape changes (old stores are then replaced)
+const STORE_FORMAT = 2; // bump when the store's shape changes (old stores are then replaced)
 const SCHOOLS = ['worcester', 'shrewsbury']; // switcher order: Worcester, Shrewsbury
 const SCHOOL_NAMES = { worcester: 'Worcester', shrewsbury: 'Shrewsbury' };
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -180,6 +180,21 @@ const STAR_CANDIDATES = [
   [9, 'Nora', 'Bell', 'shrewsbury', null],
   [10, 'Kai', 'Moreno', 'worcester', 10], // a private testing day → "Star testing · private <date>"
   [11, 'Ivy', 'Chen', 'shrewsbury', null],
+  // More families for the two refund-heavy days (T−7 Shrewsbury, T−8 Worcester), added for the
+  // CP1 walkthrough (Jeffrey asked for several days with lots of refunds).
+  [12, 'Owen', 'Brooks', 'shrewsbury', null],
+  [13, 'Maya', 'Singh', 'shrewsbury', null],
+  [14, 'Lucas', 'Grant', 'shrewsbury', null],
+  [15, 'Chloe', 'Ward', 'shrewsbury', null],
+  [16, 'Ethan', 'Nguyen', 'shrewsbury', null],
+  [17, 'Ruby', 'Hart', 'shrewsbury', null],
+  [18, 'Jonah', 'Price', 'shrewsbury', null],
+  [19, 'Ava', 'Kowalski', 'shrewsbury', null],
+  [20, 'Sam', 'Ortiz', 'worcester', null],
+  [21, 'Lily', 'Novak', 'worcester', null],
+  [22, 'Theo', 'Baker', 'worcester', null],
+  [23, 'Emma', 'Russo', 'worcester', null],
+  [24, 'Noah', 'Fischer', 'worcester', null],
 ];
 // [n, candidate n, kind, cents, method, paid_on (days from T), recorded [days from T, school clock], who, reverses n]
 const STAR_PAYMENTS = [
@@ -203,6 +218,35 @@ const STAR_PAYMENTS = [
   [18, 9, 'reversal', -14000, 'cash', 0, [0, '10:15:00'], ADMIN, 17], // undone today by an admin
   [19, 10, 'payment', 14000, 'check', -2, [-2, '17:00:00'], DESK, null], // Worcester (candidate's school)
   [20, 11, 'payment', 14000, 'card', -6, [-6, '18:00:00'], DESK, null],
+  // T−7, Shrewsbury: a busy day with LOTS of refunds — 8 payments ($1,120) and 6 refunds
+  // ($445: cash $20, $35, $50, $140 and two by check, $140 and $60).
+  [21, 12, 'payment', 14000, 'cash', -7, [-7, '10:05:00'], DESK, null],
+  [22, 13, 'payment', 14000, 'cash', -7, [-7, '10:20:00'], DESK, null],
+  [23, 14, 'payment', 14000, 'cash', -7, [-7, '10:45:00'], DESK, null],
+  [24, 15, 'payment', 14000, 'cash', -7, [-7, '11:10:00'], DESK, null],
+  [25, 16, 'payment', 14000, 'check', -7, [-7, '11:30:00'], DESK, null],
+  [26, 17, 'payment', 14000, 'check', -7, [-7, '12:15:00'], DESK, null],
+  [27, 18, 'payment', 14000, 'card', -7, [-7, '13:00:00'], DESK, null],
+  [28, 19, 'payment', 14000, 'card', -7, [-7, '13:40:00'], DESK, null],
+  [29, 12, 'refund', -2000, 'cash', -7, [-7, '15:05:00'], ADMIN, null], // overpaid $20
+  [30, 13, 'refund', -3500, 'cash', -7, [-7, '15:20:00'], ADMIN, null],
+  [31, 14, 'refund', -5000, 'cash', -7, [-7, '15:40:00'], ADMIN, null],
+  [32, 15, 'refund', -14000, 'cash', -7, [-7, '16:10:00'], ADMIN, null], // full refund, cash
+  [33, 16, 'refund', -14000, 'check', -7, [-7, '16:30:00'], ADMIN, null], // full refund by the school's check
+  [34, 17, 'refund', -6000, 'check', -7, [-7, '17:00:00'], ADMIN, null],
+  // T−8, Worcester: 5 payments ($700) and 5 refunds, one of them undone later the same day
+  // (shows struck through as "Undone"); counted refunds $275.
+  [35, 20, 'payment', 14000, 'cash', -8, [-8, '09:50:00'], DESK, null],
+  [36, 21, 'payment', 14000, 'cash', -8, [-8, '10:30:00'], DESK, null],
+  [37, 22, 'payment', 14000, 'check', -8, [-8, '11:15:00'], DESK, null],
+  [38, 23, 'payment', 14000, 'cash', -8, [-8, '12:00:00'], DESK, null],
+  [39, 24, 'payment', 14000, 'card', -8, [-8, '12:45:00'], DESK, null],
+  [40, 20, 'refund', -2500, 'cash', -8, [-8, '14:00:00'], ADMIN, null],
+  [41, 21, 'refund', -4000, 'cash', -8, [-8, '14:20:00'], ADMIN, null],
+  [42, 22, 'refund', -14000, 'check', -8, [-8, '14:45:00'], ADMIN, null],
+  [43, 23, 'refund', -7000, 'cash', -8, [-8, '15:30:00'], ADMIN, null],
+  [44, 24, 'refund', -3000, 'cash', -8, [-8, '15:50:00'], ADMIN, null], // recorded by mistake …
+  [45, 24, 'reversal', 3000, 'cash', -8, [-8, '16:30:00'], ADMIN, 44], //   … and undone 40 minutes later
 ];
 // Earlier Shrewsbury days that start closed (History shows Over, Closed, Short, Changed after closing):
 // [days from T, closed at, counted { cash, checks, checksCents, card } or 'expected', note]

@@ -690,11 +690,12 @@ check('mock: Home reminder (Off by default), admin earlier days, settings versio
   call('finance_reopen_day', { p_location_code: 'shrewsbury', p_day: T, p_expected_closing_id: closed.closing.id });
   assert.deepEqual(call('finance_home', {}, STAFF_CTX).today, ['shrewsbury']);
   const home = call('finance_home', {});
-  // Open earlier days now: Worcester T−2 (Kai) and T−1 (the edited card payment), Shrewsbury T−1
-  // (T−2's refunds were closed above; T−3…T−6 are the sample closings).
+  // Open earlier days now: Worcester T−8 (the refund-heavy day), T−2 (Kai) and T−1 (the edited
+  // card payment); Shrewsbury T−7 (the refund-heavy day) and T−1 (T−2's refunds were closed above;
+  // T−3…T−6 are the sample closings).
   assert.deepEqual(home.earlier, {
-    count: 3, first_day: addDays(T, -2),
-    by_school: { worcester: { count: 2, first_day: addDays(T, -2) }, shrewsbury: { count: 1, first_day: addDays(T, -1) } },
+    count: 5, first_day: addDays(T, -8),
+    by_school: { worcester: { count: 3, first_day: addDays(T, -8) }, shrewsbury: { count: 2, first_day: addDays(T, -7) } },
   });
   assert.equal(finance.setNow('nope'), false);
   finance.setNow(null);
@@ -728,7 +729,7 @@ check('mock: earlier = by_school {} when nothing is open; never in the future at
   assert.equal(after.closing.changed_after, false);
   // Staff get no `earlier`; an admin with every earlier day closed or empty gets the empty shape.
   assert.equal(fresh.rpc('finance_home', {}, STAFF_CTX).data.earlier, null);
-  for (const n of [-1, -2]) {
+  for (const n of [-1, -2, -7]) { // −7: the refund-heavy Shrewsbury day
     const day = fresh.rpc('finance_day', dayArgs('shrewsbury', addDays(T, n)), ADMIN_CTX).data;
     const ex = expectedValues(day.totals, day.refunds);
     assert.equal(fresh.rpc('finance_close_day', {
@@ -736,8 +737,16 @@ check('mock: earlier = by_school {} when nothing is open; never in the future at
       p_cash_cents: ex.cashCents, p_checks_count: ex.checksCount, p_checks_cents: ex.checksCents, p_card_cents: ex.cardCents, p_note: null,
     }, ADMIN_CTX).data.status, 'ok');
   }
-  const partial = fresh.rpc('finance_home', {}, ADMIN_CTX).data.earlier; // Worcester T−2 (Kai) is still open
-  assert.deepEqual(partial, { count: 1, first_day: addDays(T, -2), by_school: { worcester: { count: 1, first_day: addDays(T, -2) } } });
+  const partial = fresh.rpc('finance_home', {}, ADMIN_CTX).data.earlier; // Worcester T−8 (refunds) and T−2 (Kai) are still open
+  assert.deepEqual(partial, { count: 2, first_day: addDays(T, -8), by_school: { worcester: { count: 2, first_day: addDays(T, -8) } } });
+  // Close Worcester's refund-heavy day T−8 with exactly what's expected (cash in − cash refunded).
+  const t8 = fresh.rpc('finance_day', dayArgs('worcester', addDays(T, -8)), ADMIN_CTX).data;
+  const ex8 = expectedValues(t8.totals, t8.refunds);
+  assert.equal(ex8.cashCents, 42000 - 13500); // 3 cash payments − 3 counted cash refunds (the $30 one was undone)
+  assert.equal(fresh.rpc('finance_close_day', {
+    p_location_code: 'worcester', p_day: addDays(T, -8), p_expected_fingerprint: t8.fingerprint,
+    p_cash_cents: ex8.cashCents, p_checks_count: ex8.checksCount, p_checks_cents: ex8.checksCents, p_card_cents: ex8.cardCents, p_note: null,
+  }, ADMIN_CTX).data.status, 'ok');
   const kai = fresh.rpc('finance_day', dayArgs('worcester', addDays(T, -2)), ADMIN_CTX).data;
   fresh.rpc('finance_close_day', {
     p_location_code: 'worcester', p_day: addDays(T, -2), p_expected_fingerprint: kai.fingerprint,
