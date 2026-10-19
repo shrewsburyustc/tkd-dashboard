@@ -15,7 +15,7 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Schedule-Build-Plan.md`.
 | S2 Screens + preview + design review | Done; independent design review findings fixed |
 | S3 Jeffrey tries the preview | Done 2026-10-17 — approved (rulebook v0.238) |
 | S4 Jeffrey pastes 0007 into the SQL Editor, then read-only checks | Done 2026-10-19: fingerprints match (82 rows), advisor expected-only, ALL 0007 TESTS PASSED |
-| S5 Real check with Worcester's real times | In progress 2026-10-19: Worcester's 20 real slots entered on the live database (app run locally from this branch, port 5180). They were saved as AM (browser time box starts on AM) and fixed with a one-time SQL (20 slots +12 h, action `fix_am_to_pm`, checked read-only). New slots now start at 4:00–4:40 PM (v0.600). Still to do: Shrewsbury, one closure, one event |
+| S5 Real check with Worcester's real times | In progress 2026-10-19: Worcester's 20 real slots entered on the live database (app run locally from this branch, port 5180). They were saved as AM (browser time box starts on AM) and fixed with a one-time SQL (20 slots +12 h, action `fix_am_to_pm`, checked read-only). New slots now start at 4:00–4:40 PM (v0.600). Worcester checked and correct. Shrewsbury deferred to go-live (Jeffrey, 2026-10-19) |
 | S6 Commit + merge (Main session) | Waiting |
 | S7 Push = live | Needs a separate OK |
 

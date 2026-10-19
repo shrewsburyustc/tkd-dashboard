@@ -11,7 +11,7 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Calendar-Build-Plan.md` 
 | C2 Screens + preview data + design review | Done 2026-10-18 |
 | C3 Jeffrey tries the preview | Done 2026-10-18 — six mockup differences decided (rulebook v0.240) |
 | C4 Jeffrey pastes 0008 (after 0005–0007 are live), then read-only checks | Done 2026-10-19: fingerprints match (99 rows), advisor expected-only, ALL 0008 TESTS PASSED |
-| C5 Real check: one real closure and one real event | Waiting |
+| C5 Real check: one real closure and one real event | Deferred to go-live (Jeffrey, 2026-10-19): closures and events are entered then |
 | C6 Commit + merge (Main session) | Waiting |
 | C7 Push = live | Needs a separate OK |
 
