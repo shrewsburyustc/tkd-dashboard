@@ -188,7 +188,7 @@ Structure first, then money, then waivers and privacy. Each will be shown with a
 - **Recommendation:** A.
 - **Touches:** v0.210, v0.900 (Cycles 2, Candidates 3).
 
-### Q-B5 · The waiver changes while a family is filling in the form
+### Q-B5 · The waiver changes while a family is filling in the form — **answered v0.905: A**
 
 - **The question:** an admin saves waiver version 2027-2 while a family has 2027-1 on screen. When they press Send, what happens?
 - **Why it matters:** the signed record must say exactly which text they agreed to.
