@@ -1,7 +1,7 @@
 # Black Belt testing — status
 
 **Updated:** 2026-10-18 (Black Belt worktree session, branch `black-belt`)
-**Rulebook at this update:** v0.300 on main (merged). **Black Belt's number block is 0.900–0.999** (v0.300); next row 0.900. Older Black Belt rows: v0.204, v0.205, v0.209–v0.213, v0.216–v0.220, v0.224 (0.209 and 0.216 clash with Finance and move into 0.9xx at merge if Finance merges first).
+**Rulebook at this update:** v0.300 on main (merged). **Black Belt's number block is 0.900–0.999** (v0.300); used so far: 0.900–0.901. Older Black Belt rows: v0.204, v0.205, v0.209–v0.213, v0.216–v0.220, v0.224 (0.209 and 0.216 clash with Finance and move into 0.9xx at merge if Finance merges first).
 
 > Read `CLAUDE.md` (repo root) first. This file says where Black Belt testing stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -120,3 +120,4 @@ All the items below were applied to the plan.
 | v0.220 | **B12 (A): one printable receipt** per candidate with the full payment history, totals and balance; email later. |
 | v0.224 | **Changes v0.219:** unpaid registrants stay gray "Next $X by [date]" (Paying on schedule) until the first due date passes, then red Not paid. |
 | v0.900 | **Mockups approved**: cycles (8), family form (9), Candidates/payments (9), all amber proposals, plus Download QR code at any time (Jeffrey). First row of Black Belt's 0.900–0.999 block. |
+| v0.901 | **DB Q-B1 (B):** a requirements sheet per cycle (Fall 2026 numbers, no editor) feeds the form panel until grading; the rubric is built in spring after Master Jeong's answers and the sheet dropped. |

@@ -144,7 +144,7 @@ Reads never return `date_of_birth`, `email_for_results`, the signature or the si
 
 Structure first, then money, then waivers and privacy. Each will be shown with a picture and the options drawn side by side.
 
-### Q-B1 · Where the requirements panel gets its content until grading is built
+### Q-B1 · Where the requirements panel gets its content until grading is built — **answered v0.901: B** (sheet now, rubric in spring)
 
 - **The question:** the family form's "What [Dan] is tested on" panel (v0.216) must work in February, but the real rubric tables wait for Master Jeong's answers. What feeds the panel until then?
 - **Why it matters:** if we build rubric tables now and his answers change the shape (child/adult pass marks, age tables, extra points), we rebuild them; if we don't, the panel needs another source for a few months.
