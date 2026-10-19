@@ -117,3 +117,36 @@ export function addedAfterDay(row, testingDate) {
   const date = todayInSchoolTime(new Date(ms));
   return date > testingDate ? { date, byName: row.createdByName ?? null } : null;
 }
+
+// Testing groups (v0.193): classes with the SAME start AND end time on an event test together
+// (v0.133), so the Grading tab grades them together — one choice in its class switch, one
+// printed page. classes = the event's classes in switch order (position); a class without both
+// times stays on its own.
+// → [{ id, classIds: [...], classes: [...] }] in the order of each group's first class;
+//   id = the first class's id (so a class choice shared with the Students tab finds its group).
+export function testingGroups(classes) {
+  if (!Array.isArray(classes)) return [];
+  const ordered = [...classes].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  const groups = [];
+  const byTime = new Map(); // 'start-end' → group
+  for (const cls of ordered) {
+    const start = timeToMinutes(cls.startTime);
+    const end = timeToMinutes(cls.endTime);
+    const key = start !== null && end !== null ? `${start}-${end}` : null;
+    const existing = key !== null ? byTime.get(key) : undefined;
+    if (existing) {
+      existing.classIds.push(cls.id);
+      existing.classes.push(cls);
+      continue;
+    }
+    const group = { id: cls.id, classIds: [cls.id], classes: [cls] };
+    groups.push(group);
+    if (key !== null) byTime.set(key, group);
+  }
+  return groups;
+}
+
+// The testing group a class belongs to (null when the class isn't in the list).
+export function groupOfClass(groups, classId) {
+  return groups.find((g) => g.classIds.includes(classId)) ?? null;
+}

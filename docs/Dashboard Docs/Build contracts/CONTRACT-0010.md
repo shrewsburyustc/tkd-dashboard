@@ -425,6 +425,7 @@ From the approved mockups (G1–G8, plan Q1):
 
 ### 8c. During the build
 (none yet — the orchestrator records them here, with the review rounds)
+- **CP1 (rulebook v0.194 point 3), Builder A:** `testing_resolve_duplicate` — after the testing day, keep one (`p_keep_both` false) is **admin-only for every student**, graded or not (staff → `not_allowed`); this replaces §1.6's "graded copy" condition (which becomes a special case). Same arguments, same check order, date still read after the event lock. Keep both stays allowed for staff after the day (it withdraws nobody). Tests R10 / R11 updated.
 
 ## 9. Open points
 

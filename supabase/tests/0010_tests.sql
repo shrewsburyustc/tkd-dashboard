@@ -127,7 +127,7 @@ declare
   v_sb1 uuid;
   v_s0 uuid; v_sd1 uuid; v_sv uuid; v_sn uuid; v_sl uuid; v_sh uuid; v_sh2 uuid;
   v_s9a uuid; v_s9b uuid; v_sdw uuid; v_s12 uuid; v_sdel uuid;
-  v_g4 uuid; v_u4 uuid;
+  v_g4 uuid; v_u4 uuid; v_p5 uuid; v_q5 uuid;
   v_sa1 uuid; v_sa2 uuid; v_sa3 uuid;
   v_g1 uuid; v_u1 uuid; v_g2 uuid; v_u2 uuid; v_g3 uuid; v_u3 uuid;
   v_walk uuid;
@@ -261,6 +261,8 @@ begin
   v_sdel := (public.testing_add_student(v_eday, 'Del', 'Student', v_day_yellow, true, 'cash') ->> 'id')::uuid;
   v_g4   := (public.testing_add_student(v_eday, 'Pia', 'Four', v_day_yellow, true, 'cash') ->> 'id')::uuid;
   v_u4   := (public.testing_add_student(v_eday, 'Una', 'Four', v_day_yellow, true, 'cash') ->> 'id')::uuid;
+  v_p5   := (public.testing_add_student(v_eday, 'Pam', 'Five', v_day_yellow, true, 'cash') ->> 'id')::uuid;
+  v_q5   := (public.testing_add_student(v_eday, 'Quin', 'Five', v_day_yellow, true, 'cash') ->> 'id')::uuid;
   v_sa1  := (public.testing_add_student(v_eafter, 'Abe', 'After', v_after_yellow, true, 'cash') ->> 'id')::uuid;
   v_sa2  := (public.testing_add_student(v_eafter, 'Ada', 'Graded', v_after_yellow, true, 'cash') ->> 'id')::uuid;
   v_sa3  := (public.testing_add_student(v_eafter, 'Ari', 'Ungraded', v_after_yellow, true, 'cash') ->> 'id')::uuid;
@@ -276,7 +278,7 @@ begin
   reset role;
   if v_sb1 is null or v_s0 is null or v_sd1 is null or v_sv is null or v_sn is null or v_sl is null or v_sh is null
      or v_sh2 is null or v_s9a is null or v_s9b is null or v_sdw is null or v_s12 is null or v_sdel is null
-     or v_g4 is null or v_u4 is null or v_sa1 is null or v_sa2 is null or v_sa3 is null or v_g1 is null
+     or v_g4 is null or v_u4 is null or v_p5 is null or v_q5 is null or v_sa1 is null or v_sa2 is null or v_sa3 is null or v_g1 is null
      or v_u1 is null or v_g2 is null or v_u2 is null or v_g3 is null or v_u3 is null or v_su1 is null
      or v_sx1 is null or v_sx2 is null then
     raise exception 'TEST SETUP: could not add the test students';
@@ -905,12 +907,20 @@ begin
   if v_r is distinct from jsonb_build_object('status', 'not_allowed') then
     raise exception 'TEST FAILED: R10 staff keep-one withdrawing a graded student after the day expected not_allowed, got %', v_r;
   end if;
-  -- staff keep-one that withdraws the UNgraded copy -> ok
+  -- staff keep-one that withdraws the UNgraded copy -> also not_allowed
+  -- (v0.194: after the testing day keep one is admin-only for everyone)
+  v_r := public.testing_resolve_duplicate(v_g1, v_v2, v_u1, v_v, false);
+  if v_r is distinct from jsonb_build_object('status', 'not_allowed') then
+    raise exception 'TEST FAILED: R10 staff keep-one withdrawing an UNgraded student after the day expected not_allowed, got %', v_r;
+  end if;
+  -- the same keep-one by an admin -> ok
+  perform set_config('request.jwt.claims', v_c_a1, true);
   v_r := public.testing_resolve_duplicate(v_g1, v_v2, v_u1, v_v, false);
   if v_r is distinct from jsonb_build_object('status', 'ok') then
-    raise exception 'TEST FAILED: R10 staff keep-one withdrawing the ungraded student expected ok, got %', v_r;
+    raise exception 'TEST FAILED: R10 admin keep-one withdrawing the ungraded student after the day expected ok, got %', v_r;
   end if;
-  -- staff keep both -> ok
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  -- staff keep both after the day -> ok (it withdraws nobody)
   select r.version into v_v from public.testing_registrations r where r.id = v_u2;
   select r.version into v_v2 from public.testing_registrations r where r.id = v_g2;
   v_r := public.testing_resolve_duplicate(v_u2, v_v, v_g2, v_v2, true);
@@ -950,23 +960,37 @@ begin
                   and r.withdrawn_reason = 'duplicate_copy' and r.withdrawn_by = v_desk) then
     raise exception 'TEST FAILED: R10 the graded copy must be withdrawn as duplicate_copy by the desk';
   end if;
+  -- on the testing day: staff keep-one of an UNgraded copy -> ok (p5)
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  select r.version into v_v from public.testing_registrations r where r.id = v_p5;
+  v_r := public.testing_update_student(v_p5, v_v, 'Quin', 'Five', v_day_yellow);
+  select r.version into v_v from public.testing_registrations r where r.id = v_q5;
+  select r.version into v_v2 from public.testing_registrations r where r.id = v_p5;
+  v_r := public.testing_resolve_duplicate(v_q5, v_v, v_p5, v_v2, false);
+  if v_r is distinct from jsonb_build_object('status', 'ok') then
+    raise exception 'TEST FAILED: R10 staff keep-one of an ungraded copy ON the testing day expected ok, got %', v_r;
+  end if;
+  reset role;
+  if not exists (select 1 from public.testing_registrations r where r.id = v_p5 and r.status = 'withdrawn' and r.withdrawn_by = v_desk) then
+    raise exception 'TEST FAILED: R10 the ungraded copy must be withdrawn by the desk';
+  end if;
 
   -- ===================================================================
   -- R11. Restore (the staff 10-second Undo; admins)
   -- ===================================================================
-  set local role authenticated;
-  perform set_config('request.jwt.claims', v_c_d1, true);
-  -- ungraded, after the day, the desk's own keep-one -> ok
-  select r.version into v_v from public.testing_registrations r where r.id = v_u1;
-  v_r := public.testing_restore_student(v_u1, v_v);
-  if v_r ->> 'status' is distinct from 'ok' then
-    raise exception 'TEST FAILED: R11 staff Undo of an ungraded keep-one after the day expected ok, got %', v_r;
-  end if;
-  reset role;
-  -- graded, after the day (g4's event moved to yesterday for this check)
+  -- the desk's own keep-ones were done on the testing day (p5 ungraded,
+  -- g4 graded); the event is moved to yesterday for the "after" checks
   update public.testing_events set testing_date = v_today - 1 where id = v_eday;
   set local role authenticated;
   perform set_config('request.jwt.claims', v_c_d1, true);
+  -- ungraded, after the day -> ok
+  select r.version into v_v from public.testing_registrations r where r.id = v_p5;
+  v_r := public.testing_restore_student(v_p5, v_v);
+  if v_r ->> 'status' is distinct from 'ok' then
+    raise exception 'TEST FAILED: R11 staff Undo of an ungraded keep-one after the day expected ok, got %', v_r;
+  end if;
+  -- graded, after the day -> not_allowed
   select r.version into v_v from public.testing_registrations r where r.id = v_g4;
   v_r := public.testing_restore_student(v_g4, v_v);
   if v_r is distinct from jsonb_build_object('status', 'not_allowed') then

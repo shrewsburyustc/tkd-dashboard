@@ -863,9 +863,10 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
         || (keep.duplicate_state === 'possible' && keep.duplicate_of === other.id);
       // Withdrawn meanwhile, or not a flagged pair any more: the compare dialog is out of date.
       if (keep.status !== 'active' || other.status !== 'active' || !isPair) return st('stale');
-      // Phase 3: after the testing day staff may not remove a graded copy with "keep one" (it
-      // would be a way round "only an admin can change a graded student now").
-      if (!a.p_keep_both && isGradedReg(db, other.id) && afterTestingDay(db, keep) && !ctx.isAdmin) return st('not_allowed');
+      // Phase 3 (v0.194 point 3): after the testing day "keep one" is for admins only — for every
+      // student, graded or not (it removes a registration once results may exist). Keep both stays
+      // open to staff.
+      if (!a.p_keep_both && afterTestingDay(db, keep) && !ctx.isAdmin) return st('not_allowed');
       if (a.p_keep_both) {
         updateRow(keep, { duplicate_state: 'kept_both', duplicate_of: other.id }, ctx);
         updateRow(other, { duplicate_state: 'kept_both', duplicate_of: keep.id }, ctx);

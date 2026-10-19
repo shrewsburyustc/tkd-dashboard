@@ -853,6 +853,24 @@ export const EVENT_HAS_RESULTS = 'This event already has testing results, so its
 // Plan Q1: a student an admin added after the testing day — "Added Nov 21 by Jeffrey Berg (admin)"
 export const addedAfterDayLine = (dateIso, name) => `Added ${monthDay(dateIso)}${name ? ` by ${name}` : ''} (admin)`;
 
+// v0.193: classes that test together (same start and end time) are one testing group on Grading.
+// The class switch: "Group B + C" when every name starts with the same word ("Group"), so it is
+// said once; otherwise the full names, "White + Little Tiger".
+export function groupChoiceLabel(names) {
+  if (names.length <= 1) return names.join('');
+  const words = names.map((n) => n.split(' '));
+  const first = words[0][0];
+  const shared = words.every((w) => w.length > 1 && w[0] === first);
+  if (shared) return `${first} ${words.map((w) => w.slice(1).join(' ')).join(' + ')}`;
+  return names.join(' + ');
+}
+// The class line and the printed sheet: "Group B + Group C"
+export const groupFullName = (names) => names.join(' + ');
+// The small heading above each class of a group: "Group B · 3 students"
+export const groupClassHeading = (className, count) => `${className} · ${studentsCount(count)}`;
+// A group whose classes need different sparring gear: one tag per class, "Group B: Sparring gear"
+export const classGearTag = (className, gearText) => `${className}: ${gearText}`;
+
 // v0.192: leaving the event page while results are Not saved
 export const leaveTitle = (n) => (n === 1 ? '1 result isn’t saved' : `${n} results aren’t saved`);
 // "Zoe Park and Sam Diaz" / "Ava Chen, Leo Brown and Nora Kim"
@@ -867,4 +885,6 @@ export function leaveBody(groups) {
   return `${who} ${total === 1 ? 'wasn’t' : 'weren’t'} saved because the connection dropped. If you leave now, they’re lost. Stay, and they’ll save when the Wi-Fi is back.`;
 }
 export const STAY_ON_PAGE = 'Stay on this page';
+// v0.194: the compare dialog for staff after the testing day (in place of COMPARE_NOTE)
+export const KEEP_ONE_ADMIN_ONLY = 'The testing day is over. Only an admin can keep one registration and remove the other now.'; // CP1
 export const LEAVE_ANYWAY = 'Leave anyway';

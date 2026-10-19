@@ -38,8 +38,8 @@
 --                                   change a graded student's belt; the
 --                                   answer gets "result_cleared": true
 --                                   ONLY when a result was cleared
---        testing_resolve_duplicate  staff can't "keep one" by withdrawing a
---                                   graded student after the testing day
+--        testing_resolve_duplicate  after the testing day "keep one" is
+--                                   admin-only (any student; v0.194)
 --        testing_restore_student    staff's 10-second Undo: the same rule
 --        testing_add_student        admins may add a student after the
 --                                   testing day (rulebook v0.191)
@@ -687,10 +687,11 @@ grant  execute on function public.testing_update_student(uuid, integer, text, te
 -- Both must be active registrations of the same event, and one must be
 -- marked "possible duplicate" of the other (else stale: the box changed).
 -- Ok: {"status":"ok"}
--- 0010 (grading): after the testing day, staff can't "keep one" when the
--- copy being withdrawn is GRADED (not_allowed) - otherwise renaming a
--- graded student to match someone, then keeping the other, would take a
--- graded student off the Grading tab. Admins can; keep both is unchanged.
+-- 0010 (grading, rulebook v0.194): after the testing day, "keep one" is
+-- ADMIN-ONLY for every student, graded or not (staff -> not_allowed).
+-- Otherwise renaming a graded student to match someone, then keeping the
+-- other, would take a graded student off the Grading tab. On the testing
+-- day and before it nothing changes; keep both is unchanged (staff too).
 create or replace function public.testing_resolve_duplicate(
   p_keep_id       uuid,
   p_keep_version  integer,
@@ -756,10 +757,11 @@ begin
                or (v_other.duplicate_state = 'possible' and v_other.duplicate_of = p_keep_id)) then
       return jsonb_build_object('status', 'stale');
     end if;
-    -- 0010: staff can't withdraw a graded copy after the testing day
-    -- (its registration is already locked above)
+    -- 0010 (rulebook v0.194): after the testing day, "keep one" is for
+    -- admins only - for every student, graded or not (so a graded student
+    -- can never be taken off the Grading tab this way). Keep both
+    -- withdraws nobody and stays allowed for staff.
     if p_keep_both is false
-       and exists (select 1 from public.testing_results x where x.registration_id = p_other_id)
        and public.testing_today() > v_testing_date
        and public.is_admin() is not true then
       return jsonb_build_object('status', 'not_allowed');

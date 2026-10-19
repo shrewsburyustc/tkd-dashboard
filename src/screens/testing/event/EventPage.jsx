@@ -1000,9 +1000,10 @@ export default function EventPage({
     }
     setDialog(null);
     if (result.status !== 'ok') {
-      // not_allowed (phase 3): the copy is graded and the testing day is over — admins only.
+      // not_allowed (v0.194): the testing day is over — keeping one is admin-only now.
       if (result.status === 'no_access') onNoAccess();
-      else setBanner({ text: result.status === 'not_allowed' ? T.STUDENT_LOCKED : T.ROSTER_STALE });
+      else setBanner({ text: result.status === 'not_allowed' ? T.ROSTER_NOT_ALLOWED : T.ROSTER_STALE });
+      if (result.status === 'not_allowed') onRefreshProfile();
       reloadQuiet();
       return;
     }
@@ -1248,6 +1249,9 @@ export default function EventPage({
           isPhone={isPhone}
           saving={dialog.saving}
           failed={dialog.failed}
+          // v0.194: after the testing day "keep one" is admin-only, so staff don't see it
+          // (the same way staff don't see Add student on a finished event).
+          canKeepOne={isAdmin || dayWindow !== 'after'}
           onKeep={keepOne}
           onKeepBoth={keepBoth}
           onClose={cancelDialog}

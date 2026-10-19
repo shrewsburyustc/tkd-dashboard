@@ -30,7 +30,7 @@ import {
 import { registrationLink, qrSvgDataUrl } from './qr.js';
 import {
   RESULTS, GRADING_NOTE_MAX, normalizeGradingNote, gradingNoteProblem, gradingWindow, canChangeResults, isGraded,
-  resultCounts, schoolMinutesNow, defaultGradingClassId, addedAfterDay,
+  resultCounts, schoolMinutesNow, defaultGradingClassId, addedAfterDay, testingGroups, groupOfClass,
 } from './gradingRules.js';
 import {
   createEventsBackend, defaultEventsData, EVENT_RPC_NAMES, EVENT_RESTRICTED_RPC_NAMES, EVENT_ADMIN_ONLY_RPCS, DEFAULT_EVENT_ID, DEFAULT_PUBLIC_CODE,
@@ -2014,6 +2014,27 @@ check('gradingRules: school clock and the default class on the testing day', () 
   assert.equal(defaultGradingClassId(null, at('17:00')), null);
 });
 
+check('gradingRules: testing groups — same start AND end time test together (v0.193)', () => {
+  const classes = [
+    { id: 'lt', position: 0, startTime: '16:00', endTime: '16:45' },
+    { id: 'w', position: 1, startTime: '16:00', endTime: '17:00' }, // same start, other end → own group
+    { id: 'a', position: 2, startTime: '17:00', endTime: '18:00' },
+    { id: 'c', position: 4, startTime: '18:00', endTime: '19:00' },
+    { id: 'b', position: 3, startTime: '18:00:00', endTime: '19:00:00' }, // seconds from the database
+    { id: 'd', position: 5, startTime: null, endTime: null }, // no times → on its own
+    { id: 'e', position: 6, startTime: null, endTime: null },
+  ];
+  const groups = testingGroups(classes);
+  assert.deepEqual(groups.map((g) => g.classIds), [['lt'], ['w'], ['a'], ['b', 'c'], ['d'], ['e']]);
+  assert.deepEqual(groups.map((g) => g.id), ['lt', 'w', 'a', 'b', 'd', 'e']); // id = first class
+  assert.equal(groupOfClass(groups, 'c').id, 'b');
+  assert.equal(groupOfClass(groups, 'zz'), null);
+  assert.deepEqual(testingGroups([]), []);
+  assert.deepEqual(testingGroups(null), []);
+  // The testing-day default lands inside the right group (it returns the group's first class).
+  assert.equal(groupOfClass(groups, defaultGradingClassId(classes, timeToMinutes('18:30'))).id, 'b');
+});
+
 // ======================= the grading part of the preview database (0010 §1, §3.3) =======================
 // Replays of the database tests R3–R6 and R9–R15 that need no real sign-in sessions.
 
@@ -2168,7 +2189,7 @@ check('grading mock: Edit details clears a result on a belt change; staff locked
   assert.equal(resultFor('CB-3110'), null);
 });
 
-check('grading mock: rename → possible duplicate → keep one is locked for staff after the day (R10)', () => {
+check('grading mock: after the day, keep one is admin-only for every student (R10, v0.194)', () => {
   // A graded student renamed to match another becomes a possible duplicate.
   const renamedPair = () => {
     gradingStart('2026-11-21');
@@ -2182,8 +2203,13 @@ check('grading mock: rename → possible duplicate → keep one is locked for st
   assert.equal(JSON.stringify(evDb()), before);
   assert.equal(resolvePair('CB-3110', 'CB-3112', true, E_DESK), 'ok'); // keep both: unchanged rule
   renamedPair();
-  assert.equal(resolvePair('CB-3112', 'CB-3110', false, E_DESK), 'ok'); // removes the UNgraded one
-  assert.equal(regBy('CB-3110').status, 'withdrawn');
+  assert.equal(resolvePair('CB-3112', 'CB-3110', false, E_DESK), 'not_allowed'); // the UNgraded one too (v0.194)
+  assert.equal(regBy('CB-3110').status, 'active');
+  // A pair where nobody is graded: staff still can't keep one after the day; keep both is fine.
+  gradingStart('2026-11-21');
+  assert.equal(resultFor('CB-3109'), null);
+  assert.equal(resolvePair('CB-3107', 'CB-3109', false, E_DESK), 'not_allowed');
+  assert.equal(resolvePair('CB-3107', 'CB-3109', false, E_ADMIN), 'ok');
   renamedPair();
   assert.equal(resolvePair('CB-3110', 'CB-3112', false, E_ADMIN), 'ok'); // admins may
   assert.equal(regBy('CB-3112').status, 'withdrawn');
@@ -2203,8 +2229,8 @@ check('grading mock: the staff 10-second Undo of keep one, and admin restore (R1
   assert.equal(restoreReg('CB-3109', E_DESK), 'not_allowed');
   evToday = GRADING_DAY;
   assert.equal(restoreReg('CB-3109', E_DESK), 'ok'); // on the day it's fine
-  // Ungraded copy after the day → the staff Undo works.
-  gradingStart('2026-11-21');
+  // Ungraded copy removed on the day → the staff Undo works.
+  gradingStart();
   assert.equal(resolvePair('CB-3107', 'CB-3109', false, E_DESK), 'ok');
   assert.equal(restoreReg('CB-3109', E_DESK), 'ok');
   // An admin restores a graded withdrawn student → the kept result reads again.

@@ -19,11 +19,17 @@
 //
 // A long class continues on a new page with the same header ("…, page 2"). Pages are split here
 // in JavaScript (SHEET_ROWS_PER_PAGE rows each) so the page number can be printed.
+//
+// Classes that test together (v0.193: same start AND end time) share their pages: one testing
+// group per page ("Group B + Group C · 6:00 – 7:00 PM · 5 students"), with a small heading row
+// per class ("Group B · 3 students") and each class's two "Added on the day" rows after its
+// students. An empty class inside a group is left out.
 import { createPortal } from 'react-dom';
 import { classTimeLabel } from '../../../lib/testing/eventRules.js';
+import { testingGroups } from '../../../lib/testing/gradingRules.js';
 import * as T from '../text.js';
 
-// Rows per printed page (the two "Added on the day" rows count). Checked in the browser's print
+// Rows per printed page (the "Added on the day" rows and class headings count). Checked in the browser's print
 // preview: 16 rows + header + footer fit a letter page with the 0.75in margins of
 // testing-events.css (@page).
 export const SHEET_ROWS_PER_PAGE = 16;
@@ -54,22 +60,35 @@ function Ticks() {
 export default function GradingSheet({ event, school, classes, rows, printedAt }) {
   const rankById = new Map(classes.flatMap((c) => c.ranks.map((r) => [r.id, r])));
   const pages = [];
-  for (const cls of classes) {
-    const students = rows.filter((r) => r.eventClassId === cls.id);
-    if (students.length === 0) continue; // only classes with students (v0.189)
-    const lines = [...students.map((s) => ({ key: s.id, student: s })), ...Array.from({ length: BLANK_ROWS }, (_, i) => ({ key: `blank-${i}`, student: null }))];
+  for (const group of testingGroups(classes)) {
+    // Only classes with students (v0.189); a group shows a heading per class (v0.193).
+    const withStudents = group.classes.filter((cls) => rows.some((r) => r.eventClassId === cls.id));
+    if (withStudents.length === 0) continue;
+    const isGroup = withStudents.length > 1;
+    const lines = [];
+    let count = 0;
+    for (const cls of withStudents) {
+      const students = rows.filter((r) => r.eventClassId === cls.id);
+      count += students.length;
+      if (isGroup) lines.push({ key: `head-${cls.id}`, heading: T.groupClassHeading(cls.className, students.length) });
+      for (const student of students) lines.push({ key: student.id, student });
+      for (let i = 0; i < BLANK_ROWS; i += 1) lines.push({ key: `blank-${cls.id}-${i}`, student: null });
+    }
+    const name = T.groupFullName(withStudents.map((c) => c.className));
+    const first = withStudents[0];
+    const time = classTimeLabel(first.startTime, first.endTime);
     for (let start = 0, page = 1; start < lines.length; start += SHEET_ROWS_PER_PAGE, page += 1) {
-      pages.push({ key: `${cls.id}-${page}`, cls, page, count: students.length, lines: lines.slice(start, start + SHEET_ROWS_PER_PAGE) });
+      pages.push({ key: `${group.id}-${page}`, name, time, page, count, lines: lines.slice(start, start + SHEET_ROWS_PER_PAGE) });
     }
   }
 
   return createPortal(
     <div className="grading-print">
-      {pages.map(({ key, cls, page, count, lines }) => (
+      {pages.map(({ key, name, time, page, count, lines }) => (
         <section key={key} className="gs-page">
           <h1 className="gs-title">{T.sheetTitle(event.name)}</h1>
-          <p className="gs-head">{T.sheetHeaderLine(event.testingDate, school, printedAt, cls.className, page)}</p>
-          <p className="gs-class">{T.sheetClassLine(cls.className, classTimeLabel(cls.startTime, cls.endTime), count)}</p>
+          <p className="gs-head">{T.sheetHeaderLine(event.testingDate, school, printedAt, name, page)}</p>
+          <p className="gs-class">{T.sheetClassLine(name, time, count)}</p>
           <table className="gs-table">
             {/* Fixed column widths, so the tick boxes line up on every page */}
             <colgroup>
@@ -87,7 +106,16 @@ export default function GradingSheet({ event, school, classes, rows, printedAt }
               </tr>
             </thead>
             <tbody>
-              {lines.map(({ key: lineKey, student }) => {
+              {lines.map(({ key: lineKey, student, heading }) => {
+                if (heading) {
+                  return (
+                    <tr key={lineKey}>
+                      <td className="gs-subhead" colSpan={4}>
+                        {heading}
+                      </td>
+                    </tr>
+                  );
+                }
                 if (!student) {
                   return (
                     <tr key={lineKey} className="gs-blank">
