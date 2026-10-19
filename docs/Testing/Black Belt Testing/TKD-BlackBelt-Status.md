@@ -34,7 +34,7 @@
 ## 3. Next steps
 
 1. Jeffrey checks the urgent live-system items (plan §2): the live Sheet before Oct 24, and the `updateInfo` stopgap.
-2. **Mockups approved (v0.900, 2026-10-19).** **Next:** the database plan for cycles, registration and payments (its own questions, like Star's Q-D list) → build contract → security reviewer → build in the preview (B1 cycles + prices + public form, B2 candidates + payments). Grading questions B13–B18 once Master Jeong answers part A.
+2. **Mockups approved (v0.900, 2026-10-19).** **Database plan drafted and security-reviewed** (`TKD-BlackBelt-DB-Plan.md`, proposed migration 0016, to reserve with Main before SQL); its 7 questions (Q-B1…Q-B7) are asked one at a time (`TKD-BlackBelt-DB-Questions.html`), then the §8 defaults together. **Then:** the database plan for cycles, registration and payments (its own questions, like Star's Q-D list) → build contract → security reviewer → build in the preview (B1 cycles + prices + public form, B2 candidates + payments). Grading questions B13–B18 once Master Jeong answers part A.
 3. **Finance note sent** 2026-10-18 with Jeffrey's OK (`Finance-note-draft.md`; two questions for Jeffrey in it: Black Belt money in the school's Daily report at all? bounced checks on closed days?).
 4. **Jeffrey asks the school's insurer** how many years signed waivers must be kept (v0.213 setting).
 5. Jeffrey hands Master Jeong the printable rules sheet (part A) and brings back the answers.
