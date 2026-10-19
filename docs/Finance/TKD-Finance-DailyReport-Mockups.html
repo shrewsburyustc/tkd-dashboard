@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily report mockups</title>
+<!--
+  Finance → Daily report: full mockups (rule P1 / P6), built from Jeffrey's answers
+  to the 10 design questions (rulebook v0.193–v0.203).
+  Every screen is drawn at PC 1280 wide, tablet 820 wide (touch: labeled rail, 36px
+  controls, 44px rows) and phone 390 wide (touch, bottom bar). Frames grow to show the
+  whole page; the dashed gray line marks the bottom of the real screen.
+  Amber dashed outline = what this screen is about. Amber text = proposals to confirm.
+  Open with #D1 … #D13 at the end of the address to see one screen alone.
+  Sample data only: made-up students, Shrewsbury, Saturday Oct 24, 2026.
+  Self-contained (icons inlined) so it opens offline.
+-->
+<style>
+:root{--control-border:#8F8F8A;--page:#EFEFEC;--bg:#FFFFFF;--surface:#F7F7F5;--border:#E5E5E2;--border-strong:#CFCFCA;--text:#1F1F1F;--text2:#6B6B6B;--blue:#003595;--blue-tint:#E6EBF4;--ok:#3B6D11;--ok-tint:#EAF3DE;--warn:#633806;--warn-tint:#FAEEDA;--warn-border:#F2D9B0;--amber:#EF9F27;--toast:#1F1F1F;--backdrop:rgba(0,0,0,.35)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1360px;margin:0 auto;padding:24px 16px 48px}
+h1.doc{font-size:20px;font-weight:500;margin:0 0 4px}
+h2.scr{font-size:18px;font-weight:500;margin:40px 0 8px;padding-top:16px;border-top:1px solid var(--border-strong)}
+h2.scr:first-of-type{margin-top:16px}
+b{font-weight:500}
+.lead{color:var(--text2);font-size:14px;margin:0 0 12px;max-width:1100px}
+.explain{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:16px;max-width:1280px}
+.explain h3{font-size:13px;font-weight:500;margin:8px 0 2px}.explain h3:first-child{margin-top:0}
+.explain ul{margin:0;padding-left:18px}.explain li{margin:2px 0}
+.prop{color:var(--warn)}
+.cap{font-size:12px;color:var(--text2);margin:0 0 6px}
+.row2{display:flex;gap:24px;align-items:flex-start;margin-top:24px}
+/* device frames: fixed width, height grows; .fold marks the real screen bottom */
+.dev{background:var(--bg);border:1px solid var(--border-strong);position:relative;flex:none;overflow:hidden}
+.d-pc{width:1282px;border-radius:10px}
+.d-tab{width:832px;border-radius:18px;border:6px solid #2B2B2B}
+.d-ph{width:402px;border-radius:28px;border:6px solid #2B2B2B}
+.fold{position:absolute;left:0;right:0;border-top:2px dashed #B5B5B0;z-index:5;pointer-events:none}
+.fold span{position:absolute;right:8px;top:-18px;font-size:11px;color:#8A8A85;background:var(--bg);padding:0 4px}
+/* app shell */
+.app{display:flex;background:var(--bg);min-height:inherit}
+.app-col{flex:1;min-width:0;display:flex;flex-direction:column;position:relative}
+.rail{width:52px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;flex:none}
+.rail a{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;color:var(--text2)}
+.rail a i{font-size:18px}.rail a.on{background:var(--blue-tint);color:var(--blue)}
+.rail-t{width:72px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;flex:none}
+.rail-t a{display:flex;flex-direction:column;align-items:center;justify-content:center;width:64px;min-height:56px;border-radius:8px;color:var(--text2);font-size:12px;gap:2px}
+.rail-t a i{font-size:20px}.rail-t a.on{color:var(--blue)}.rail-t a.on i{background:var(--blue-tint);border-radius:8px;padding:4px 10px;box-sizing:content-box}
+.topbar{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 12px;flex:none}
+.grow{flex:1}
+.loc{display:flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;font-size:12px;height:32px}
+.touch .loc{height:36px}
+.loc span{display:flex;align-items:center;gap:4px;padding:0 12px;color:var(--text2)}
+.loc span.on{background:var(--blue-tint);color:var(--blue)}
+.loc span+span{border-left:1px solid var(--border)}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--surface);border:1px solid var(--control-border);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex:none}
+.content{padding:24px;flex:1}
+.d-ph .content{padding:16px}
+.phshell{display:flex;flex-direction:column;min-height:inherit}
+.phbar{border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:4px 0 10px;background:var(--bg);flex:none}
+.phbar a{display:flex;flex-direction:column;align-items:center;min-width:64px;min-height:48px;justify-content:center;font-size:12px;color:var(--text2);gap:2px}
+.phbar a i{font-size:20px}.phbar a.on{color:var(--blue)}
+/* page header + tabs (as Testing: .ptitle, .ttabs) */
+.ptitle{font-size:20px;font-weight:500;margin:0 0 8px}
+.ttabs{display:flex;gap:24px;border-bottom:1px solid var(--border);margin-bottom:16px}
+.ttab{height:40px;display:flex;align-items:center;font-size:13px;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px}
+.touch .ttab{height:44px}
+.ttab.on{color:var(--blue);border-bottom-color:var(--blue);font-weight:500}
+/* controls */
+.btn{height:32px;padding:0 14px;border-radius:8px;font-size:13px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--control-border);background:var(--bg);color:var(--text);white-space:nowrap;flex:none}
+.btn i{font-size:16px}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.touch .btn{height:36px}
+.ibtn{width:32px;height:32px;border:1px solid var(--control-border);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:var(--text)}
+.ibtn i{font-size:16px}
+.touch .ibtn{width:36px;height:36px}
+.ibtn.plain{border-color:transparent}
+.input{height:32px;border:1px solid var(--control-border);border-radius:8px;padding:0 10px;display:inline-flex;align-items:center;font-size:13px;background:var(--bg);color:var(--text)}
+.touch .input{height:36px;font-size:14px}
+.input.ph{color:#8A8A85}
+.input.focus{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+.input.bad{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn)}
+.caret{display:inline-block;width:1px;height:16px;background:var(--text);margin-left:1px}
+textarea.input,.ta{height:auto;min-height:56px;align-items:flex-start;padding:6px 10px}
+.hint{font-size:12px;color:var(--text2)}
+.err{display:flex;gap:6px;align-items:flex-start;font-size:12px;color:var(--warn);margin-top:4px}
+.err i{font-size:14px;margin-top:2px}
+.lbl{font-size:12px;color:var(--text2);margin-bottom:4px}
+/* day row */
+.dayrow{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.day{font-size:16px;font-weight:500}
+.chip{font-size:12px;border:1px solid var(--control-border);border-radius:8px;padding:0 10px;height:32px;display:inline-flex;align-items:center}
+.touch .chip{height:36px}
+/* metric cards (rule 8) */
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.d-ph .cards{grid-template-columns:1fr 1fr;gap:8px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.card .l{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px}
+.card .l i{font-size:16px}
+.card .n{font-size:20px;font-weight:500;line-height:1.3}
+.card .s{font-size:12px;color:var(--text2)}
+/* tags */
+.tag{font-size:12px;border-radius:6px;padding:1px 8px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.tag i{font-size:14px}
+.tag.ok{background:var(--ok-tint);color:var(--ok)}
+.tag.warn{background:var(--warn-tint);color:var(--warn);border:1px solid var(--warn-border)}
+.tag.neutral{background:var(--surface);color:var(--text2);border:1px solid var(--border)}
+/* close-the-day box */
+.box{border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px}
+.d-ph .box{padding:12px}
+.box h4{font-size:16px;font-weight:500;margin:0 0 4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.box h4 i{font-size:18px;color:var(--text2)}
+.crow{display:grid;grid-template-columns:200px 130px 1fr;gap:12px;align-items:center;padding:6px 0;font-size:13px}
+.crow .exp{font-size:12px;color:var(--text2)}
+.d-ph .crow{grid-template-columns:1fr auto;gap:4px 8px}
+.d-ph .crow .k{grid-column:1/-1}
+.boxfoot{display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+/* payments table / cards */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-weight:500;font-size:12px;color:var(--text2);text-align:left;background:var(--surface);padding:0 8px;height:32px;border-bottom:1px solid var(--border)}
+td{padding:0 8px;border-bottom:1px solid var(--border);height:40px}
+.touch td{height:48px}
+td.r,th.r{text-align:right}
+.sub{color:var(--text2)}
+.small{font-size:12px}
+tr.grp td{background:var(--bg);font-weight:500;height:36px;border-bottom:1px solid var(--border-strong);padding-top:12px}
+.strike{text-decoration:line-through;color:var(--text2)}
+.pc{border-bottom:1px solid var(--border);padding:8px 0;min-height:44px;font-size:13px;display:flex;justify-content:space-between;gap:8px}
+.pc .r{text-align:right;white-space:nowrap}
+.pgrp{font-size:13px;font-weight:500;padding:12px 0 6px;border-bottom:1px solid var(--border-strong)}
+.pgrp span{font-weight:400;color:var(--text2)}
+/* the part this screen is about */
+.q{outline:3px dashed var(--amber);outline-offset:4px;border-radius:6px}
+/* toast (rule 8): bottom-right on PC/tablet, bottom-center above the bar on phones */
+.toast{position:absolute;background:var(--toast);color:#fff;border-radius:8px;padding:8px 12px;font-size:13px;display:flex;align-items:center;gap:10px;z-index:6}
+.toast .div{width:1px;align-self:stretch;background:#4A4A4A}
+.toast u{text-decoration:none;font-weight:500}
+/* banner */
+.banner{background:var(--warn-tint);color:var(--warn);border:1px solid var(--warn-border);border-radius:8px;padding:8px 12px;font-size:13px;display:flex;gap:8px;align-items:center;margin-bottom:16px}
+.banner i{font-size:16px}
+/* dialog */
+.dim{position:absolute;inset:0;background:var(--backdrop);z-index:7}
+.dlg{position:absolute;background:var(--bg);border-radius:12px;z-index:8;padding:20px 24px;box-shadow:0 8px 24px rgba(0,0,0,.15)}
+.dlg h3{font-size:16px;font-weight:500;margin:0;display:flex;align-items:center;gap:8px}
+.dlgfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.drow{display:grid;grid-template-columns:130px 1fr;gap:8px;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border)}
+.drow .k{color:var(--text2)}
+/* switch */
+.sw{display:inline-flex;align-items:center;gap:8px;font-size:13px}
+.sw .t{width:36px;height:20px;border-radius:10px;background:var(--blue);position:relative}
+.sw .t::after{content:"";position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:#fff}
+/* history list */
+.hrow td{cursor:pointer}
+/*ICONS*/
+.ti{display:inline-flex;align-items:center;justify-content:center;font-style:normal;line-height:1;flex:none;vertical-align:-0.125em}
+.ti::before{content:"";display:block;width:1em;height:1em;background-color:currentColor;-webkit-mask:var(--i) center/contain no-repeat;mask:var(--i) center/contain no-repeat}
+.ti-address-book{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M20 6v12a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2%22 /%3E %3Cpath d=%22M10 16h6%22 /%3E %3Cpath d=%22M11 11a2 2 0 1 0 4 0a2 2 0 1 0 -4 0%22 /%3E %3Cpath d=%22M4 8h3%22 /%3E %3Cpath d=%22M4 12h3%22 /%3E %3Cpath d=%22M4 16h3%22 /%3E %3C/svg%3E")}
+.ti-alert-triangle{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M12 9v4%22 /%3E %3Cpath d=%22M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0%22 /%3E %3Cpath d=%22M12 16h.01%22 /%3E %3C/svg%3E")}
+.ti-arrow-left{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M5 12l14 0%22 /%3E %3Cpath d=%22M5 12l6 6%22 /%3E %3Cpath d=%22M5 12l6 -6%22 /%3E %3C/svg%3E")}
+.ti-calendar{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12%22 /%3E %3Cpath d=%22M16 3v4%22 /%3E %3Cpath d=%22M8 3v4%22 /%3E %3Cpath d=%22M4 11h16%22 /%3E %3Cpath d=%22M11 15h1%22 /%3E %3Cpath d=%22M12 15v3%22 /%3E %3C/svg%3E")}
+.ti-calendar-event{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12%22 /%3E %3Cpath d=%22M16 3l0 4%22 /%3E %3Cpath d=%22M8 3l0 4%22 /%3E %3Cpath d=%22M4 11l16 0%22 /%3E %3Cpath d=%22M8 15h2v2h-2l0 -2%22 /%3E %3C/svg%3E")}
+.ti-calendar-month{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12%22 /%3E %3Cpath d=%22M16 3v4%22 /%3E %3Cpath d=%22M8 3v4%22 /%3E %3Cpath d=%22M4 11h16%22 /%3E %3Cpath d=%22M8 14v4%22 /%3E %3Cpath d=%22M12 14v4%22 /%3E %3Cpath d=%22M16 14v4%22 /%3E %3C/svg%3E")}
+.ti-cash{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M7 15h-3a1 1 0 0 1 -1 -1v-8a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v3%22 /%3E %3Cpath d=%22M7 10a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v8a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1l0 -8%22 /%3E %3Cpath d=%22M12 14a2 2 0 1 0 4 0a2 2 0 0 0 -4 0%22 /%3E %3C/svg%3E")}
+.ti-cash-register{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M21 15h-2.5c-.398 0 -.779 .158 -1.061 .439c-.281 .281 -.439 .663 -.439 1.061c0 .398 .158 .779 .439 1.061c.281 .281 .663 .439 1.061 .439h1c.398 0 .779 .158 1.061 .439c.281 .281 .439 .663 .439 1.061c0 .398 -.158 .779 -.439 1.061c-.281 .281 -.663 .439 -1.061 .439h-2.5%22 /%3E %3Cpath d=%22M19 21v1m0 -8v1%22 /%3E %3Cpath d=%22M13 21h-7c-.53 0 -1.039 -.211 -1.414 -.586c-.375 -.375 -.586 -.884 -.586 -1.414v-10c0 -.53 .211 -1.039 .586 -1.414c.375 -.375 .884 -.586 1.414 -.586h2m12 3.12v-1.12c0 -.53 -.211 -1.039 -.586 -1.414c-.375 -.375 -.884 -.586 -1.414 -.586h-2%22 /%3E %3Cpath d=%22M16 10v-6c0 -.53 -.211 -1.039 -.586 -1.414c-.375 -.375 -.884 -.586 -1.414 -.586h-4c-.53 0 -1.039 .211 -1.414 .586c-.375 .375 -.586 .884 -.586 1.414v6m8 0h-8m8 0h1m-9 0h-1%22 /%3E %3Cpath d=%22M8 14v.01%22 /%3E %3Cpath d=%22M8 17v.01%22 /%3E %3Cpath d=%22M12 13.99v.01%22 /%3E %3Cpath d=%22M12 17v.01%22 /%3E %3C/svg%3E")}
+.ti-certificate{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M12 15a3 3 0 1 0 6 0a3 3 0 1 0 -6 0%22 /%3E %3Cpath d=%22M13 17.5v4.5l2 -1.5l2 1.5v-4.5%22 /%3E %3Cpath d=%22M10 19h-5a2 2 0 0 1 -2 -2v-10c0 -1.1 .9 -2 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -1 1.73%22 /%3E %3Cpath d=%22M6 9l12 0%22 /%3E %3Cpath d=%22M6 12l3 0%22 /%3E %3Cpath d=%22M6 15l2 0%22 /%3E %3C/svg%3E")}
+.ti-check{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M5 12l5 5l10 -10%22 /%3E %3C/svg%3E")}
+.ti-chevron-down{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M6 9l6 6l6 -6%22 /%3E %3C/svg%3E")}
+.ti-chevron-left{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M15 6l-6 6l6 6%22 /%3E %3C/svg%3E")}
+.ti-chevron-right{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M9 6l6 6l-6 6%22 /%3E %3C/svg%3E")}
+.ti-clipboard-text{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2%22 /%3E %3Cpath d=%22M9 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2%22 /%3E %3Cpath d=%22M9 12h6%22 /%3E %3Cpath d=%22M9 16h6%22 /%3E %3C/svg%3E")}
+.ti-clock{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0%22 /%3E %3Cpath d=%22M12 7v5l3 3%22 /%3E %3C/svg%3E")}
+.ti-credit-card{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M3 8a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3l0 -8%22 /%3E %3Cpath d=%22M3 10l18 0%22 /%3E %3Cpath d=%22M7 15l.01 0%22 /%3E %3Cpath d=%22M11 15l2 0%22 /%3E %3C/svg%3E")}
+.ti-dots{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M4 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E %3Cpath d=%22M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E %3Cpath d=%22M18 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E %3C/svg%3E")}
+.ti-download{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2%22 /%3E %3Cpath d=%22M7 11l5 5l5 -5%22 /%3E %3Cpath d=%22M12 4l0 12%22 /%3E %3C/svg%3E")}
+.ti-history{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M12 8l0 4l2 2%22 /%3E %3Cpath d=%22M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5%22 /%3E %3C/svg%3E")}
+.ti-home{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M5 12l-2 0l9 -9l9 9l-2 0%22 /%3E %3Cpath d=%22M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7%22 /%3E %3Cpath d=%22M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6%22 /%3E %3C/svg%3E")}
+.ti-lock{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6%22 /%3E %3Cpath d=%22M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0%22 /%3E %3Cpath d=%22M8 11v-4a4 4 0 1 1 8 0v4%22 /%3E %3C/svg%3E")}
+.ti-lock-check{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M11.5 21h-4.5a2 2 0 0 1 -2 -2v-6a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v.5%22 /%3E %3Cpath d=%22M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0%22 /%3E %3Cpath d=%22M8 11v-4a4 4 0 1 1 8 0v4%22 /%3E %3Cpath d=%22M15 19l2 2l4 -4%22 /%3E %3C/svg%3E")}
+.ti-lock-open{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2l0 -6%22 /%3E %3Cpath d=%22M11 16a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E %3Cpath d=%22M8 11v-5a4 4 0 0 1 8 0%22 /%3E %3C/svg%3E")}
+.ti-map-pin{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0%22 /%3E %3Cpath d=%22M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0%22 /%3E %3C/svg%3E")}
+.ti-menu-2{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M4 6l16 0%22 /%3E %3Cpath d=%22M4 12l16 0%22 /%3E %3Cpath d=%22M4 18l16 0%22 /%3E %3C/svg%3E")}
+.ti-printer{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2%22 /%3E %3Cpath d=%22M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4%22 /%3E %3Cpath d=%22M7 15a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2l0 -4%22 /%3E %3C/svg%3E")}
+.ti-receipt{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2m4 -14h6m-6 4h6m-2 4h2%22 /%3E %3C/svg%3E")}
+.ti-refresh{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4%22 /%3E %3Cpath d=%22M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4%22 /%3E %3C/svg%3E")}
+.ti-report-money{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2%22 /%3E %3Cpath d=%22M9 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2%22 /%3E %3Cpath d=%22M14 11h-2.5a1.5 1.5 0 0 0 0 3h1a1.5 1.5 0 0 1 0 3h-2.5%22 /%3E %3Cpath d=%22M12 17v1m0 -8v1%22 /%3E %3C/svg%3E")}
+.ti-sum{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M18 16v2a1 1 0 0 1 -1 1h-11l6 -7l-6 -7h11a1 1 0 0 1 1 1v2%22 /%3E %3C/svg%3E")}
+.ti-x{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M18 6l-12 12%22 /%3E %3Cpath d=%22M6 6l12 12%22 /%3E %3C/svg%3E")}
+/*END-ICONS*/
+</style>
+</head>
+<body>
+<main>
+<h1 class="doc">Finance → Daily report · full mockups (14 screens)</h1>
+<p class="lead">Built from your answers (rulebook v0.193–v0.203). Each screen is shown at PC (1280), tablet (820, touch) and phone (390, touch). The dashed gray line is the bottom of the real screen; below it you scroll. <b>Amber outline</b> = what this screen is about. <span class="prop">Amber text</span> = a proposal for you to confirm. Sample day: Shrewsbury, Saturday Oct 24, 2026, 8 payments, $665.</p>
+<div id="screens"></div>
+</main>
+
+<script>
+// ===== Sample data =====
+// [time, student, testing type, event date, method, amount, recorded by]
+const PAY = [
+  ['10:04 AM','Mia Chen','Color belt testing','Oct 29','Cash',65,'Staff'],
+  ['10:21 AM','Lucas Patel','Color belt testing','Oct 29','Check',70,'Staff'],
+  ['10:40 AM','Ava Rossi','Star testing','Nov 14','Check',140,'Staff'],
+  ['11:15 AM','Noah Kim','Color belt testing','Oct 29','Card',65,'Jeffrey'],
+  ['11:32 AM','Emma Silva','Color belt testing','Oct 29','Cash',50,'Staff'],
+  ['12:05 PM','Liam Walsh','Star testing','Nov 14','Cash',140,'Staff'],
+  ['12:30 PM','Sofia Nguyen','Color belt testing','Oct 29','Card',70,'Staff'],
+  ['1:10 PM','Ethan Brooks','Color belt testing','Oct 29','Cash',65,'Jeffrey'],
+];
+const money = (n) => (n < 0 ? '−$' : '$') + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const METHODS = ['Cash', 'Check', 'Card'];
+const H = { pc: 800, tab: 1180, ph: 844 }; // real screen heights
+
+// ===== Shell =====
+// role: 'staff' | 'admin'; tabs shown: staff → Daily report only; admin → Daily report + Settings.
+function shell(d, o) {
+  const { role = 'staff', loc = 'Shrewsbury', tab = 'report', body = '', overlay = '', section = 'finance' } = o;
+  const av = role === 'admin' ? 'JB' : 'S';
+  // Rail once the other branches merge (v0.54, v0.137–v0.140); Finance last (v0.201).
+  const nav = [['home', 'Home', 'home'], ['certificate', 'Testing', 'testing'], ['clock', 'Schedule', 'schedule'], ['calendar-month', 'Calendar', 'calendar'], ['clipboard-text', 'Forms', 'forms'], ['address-book', 'Prospects', 'prospects'], ['report-money', 'Finance', 'finance']];
+  const locs = d === 'ph' ? [['Worcester', 'Worc.'], ['Shrewsbury', 'Shrew.'], ['Both', 'Both']] : [['Worcester', 'Worcester'], ['Shrewsbury', 'Shrewsbury'], ['Both', 'Both']];
+  const locHtml = `<div class="loc">${locs.map(([k, l], i) => `<span class="${k === loc ? 'on' : ''}">${i === 0 && d !== 'ph' ? '<i class="ti ti-map-pin"></i>' : ''}${l}</span>`).join('')}</div>`;
+  const tabs = section !== 'finance' ? '' : `<h1 class="ptitle">Finance</h1><div class="ttabs"><span class="ttab ${tab === 'report' ? 'on' : ''}">Daily report</span>${role === 'admin' ? `<span class="ttab ${tab === 'settings' ? 'on' : ''}">Settings</span>` : ''}</div>`;
+  const page = tabs + body;
+  if (d === 'ph') {
+    // Phone bar once the other branches merge (v0.140): Home, Calendar, Prospects, More.
+    // Testing, Schedule, Forms and Finance live under More (v0.201), so More is lit on Finance.
+    const phNav = [['home', 'Home', 'home'], ['calendar-month', 'Calendar', 'calendar'], ['address-book', 'Prospects', 'prospects'], ['menu-2', 'More', 'finance']];
+    return `<div class="phshell" style="min-height:${H.ph - 12}px"><div class="topbar">${locHtml}<span class="grow"></span><span class="avatar">${av}</span></div>
+      <div class="content" style="position:relative">${page}</div>
+      <div class="phbar">${phNav.map(([i, l, id]) => `<a class="${id === section ? 'on' : ''}"><i class="ti ti-${i}"></i>${l}</a>`).join('')}</div>${overlay}</div>`;
+  }
+  const rail = d === 'pc'
+    ? `<nav class="rail">${nav.map(([i, l, id]) => `<a class="${id === section ? 'on' : ''}"><i class="ti ti-${i}"></i></a>`).join('')}</nav>`
+    : `<nav class="rail-t">${nav.map(([i, l, id]) => `<a class="${id === section ? 'on' : ''}"><i class="ti ti-${i}"></i>${l}</a>`).join('')}</nav>`;
+  return `<div class="app" style="min-height:${H[d] - (d === 'pc' ? 2 : 12)}px">${rail}<div class="app-col"><div class="topbar"><span class="grow"></span>${locHtml}<span class="avatar">${av}</span></div><div class="content">${page}</div>${overlay}</div></div>`;
+}
+
+// ===== Parts =====
+const touch = (d) => d !== 'pc';
+
+// Day row. staff: today only (v0.195). admin: arrows, calendar, Today, History, Print, Export (v0.197, v0.200).
+function dayRow(d, o = {}) {
+  const { role = 'staff', date = 'Saturday, October 24, 2026', short = 'Sat, Oct 24', today = true, q = '' } = o;
+  if (role === 'staff') {
+    return `<div class="dayrow ${q === 'day' ? 'q' : ''}"><span class="day">Today · ${d === 'ph' ? short : date.replace(', 2026', '')}</span>${d === 'ph' ? '' : '<span class="hint">Staff see today only. Ask an admin for other days.</span>'}<span class="grow"></span>${d === 'ph' ? '<span class="ibtn plain" aria-label="More actions"><i class="ti ti-dots"></i></span>' : '<span class="btn"><i class="ti ti-printer"></i>Print</span>'}</div>${d === 'ph' ? '<div class="hint" style="margin:-8px 0 12px">Staff see today only. Ask an admin for other days.</div>' : ''}`;
+  }
+  // The next-day arrow is unavailable on today (no future days).
+  const nextCls = today ? 'style="color:#8A8A85;border-color:#CFCFCA" aria-disabled="true"' : '';
+  if (d === 'ph') {
+    return `<div class="dayrow ${q === 'day' ? 'q' : ''}"><span class="ibtn"><i class="ti ti-chevron-left"></i></span><span class="day">${short}</span><span class="ibtn" ${nextCls}><i class="ti ti-chevron-right"></i></span><span class="ibtn"><i class="ti ti-calendar"></i></span><span class="grow"></span><span class="ibtn plain" aria-label="More actions"><i class="ti ti-dots"></i></span></div>`;
+  }
+  return `<div class="dayrow ${q === 'day' ? 'q' : ''}"><span class="ibtn" aria-label="Previous day"><i class="ti ti-chevron-left"></i></span><span class="day">${d === 'tab' ? short + ', 2026' : date}</span><span class="ibtn" aria-label="Next day" ${nextCls}><i class="ti ti-chevron-right"></i></span><span class="ibtn" aria-label="Pick a date"><i class="ti ti-calendar"></i></span>${today ? '' : '<span class="chip">Today</span>'}<span class="btn"><i class="ti ti-history"></i>History</span><span class="grow"></span><span class="btn"><i class="ti ti-printer"></i>Print</span><span class="btn"><i class="ti ti-download"></i>Export…</span></div>`;
+}
+
+function cards(t = { total: 665, n: 8, cash: 320, nc: 4, check: 210, nk: 2, card: 135, nd: 2 }) {
+  const p = (n) => `${n} payment${n === 1 ? '' : 's'}`;
+  return `<div class="cards">
+    <div class="card"><div class="l"><i class="ti ti-sum"></i>Total</div><div class="n">${money(t.total)}</div><div class="s">${p(t.n)}</div></div>
+    <div class="card"><div class="l"><i class="ti ti-cash"></i>Cash</div><div class="n">${money(t.cash)}</div><div class="s">${p(t.nc)}</div></div>
+    <div class="card"><div class="l"><i class="ti ti-receipt"></i>Check</div><div class="n">${money(t.check)}</div><div class="s">${p(t.nk)}</div></div>
+    <div class="card"><div class="l"><i class="ti ti-credit-card"></i>Card</div><div class="n">${money(t.card)}</div><div class="s">${p(t.nd)}</div></div></div>`;
+}
+
+// Close the day box. state: 'empty' | 'filled' | 'closed' | 'unsaved'
+// Icons: ti-cash-register = the Close the day box; ti-lock-check = closed day / Close the day;
+// ti-lock-open = Reopen day (ti-lock stays "Lock now / locked screen", §2.4).
+function closeBox(d, state, o = {}) {
+  const ph = d === 'ph';
+  const row = (k, field, tag, exp) => `<div class="crow"><span class="k">${k}${exp ? `<div class="exp">${exp}</div>` : ''}</span>${field}<span>${tag || ''}</span></div>`;
+  const inp = (v, w, cls = '') => `<span class="input ${cls}" style="width:${w}px">${v}</span>`;
+  const ok = '<span class="tag ok">Matches</span>';
+  if (state === 'closed') {
+    const changed = o.changed;
+    return `<div class="box ${o.q === 1 ? 'q' : ''}"><h4><i class="ti ti-lock-check"></i>Day closed<span class="grow"></span>${changed ? '<span class="tag warn"><i class="ti ti-alert-triangle"></i>Changed after closing</span>' : '<span class="tag warn"><i class="ti ti-alert-triangle"></i>Cash short $20.00</span>'}</h4>
+      <div style="font-size:13px">Closed by ${o.by || 'Staff'} at 1:42 PM · Cash counted $300.00 (short $20.00) · Checks 2, $210.00 · Card machine $135.00</div>
+      <div style="font-size:13px;margin-top:4px">Note: “Gave $20 change from the drawer to a parent.”</div>
+      ${changed ? '<div class="banner" style="margin:12px 0 0"><i class="ti ti-alert-triangle"></i><span>3 payments changed after closing: 1 added on Sat at 4:05 PM, 2 corrected on Mon, Oct 26 by Jeffrey. The totals above no longer match this count.</span></div>' : ''}
+      ${o.reopen ? `<div class="boxfoot"><span class="btn ${o.q === 'reopen' ? 'q' : ''}"><i class="ti ti-lock-open"></i>Reopen day</span><span class="hint">Reopening is logged. This count stays in the history.</span></div>` : ''}</div>`;
+  }
+  const f = state === 'filled' || state === 'unsaved';
+  const checks = `<span style="display:inline-flex;gap:8px"><span><div class="lbl">How many</div>${f ? inp('2', 64) : inp('', 64, 'ph')}</span><span><div class="lbl">Total</div>${f ? inp('$210.00', 110) : inp('$0.00', 110, 'ph')}</span></span>`;
+  const disabled = state === 'empty' ? 'style="background:#F7F7F5;border-color:#CFCFCA;color:#8A8A85' + (ph ? ';width:100%' : '') + '"' : (ph ? 'style="width:100%"' : '');
+  const btnIcon = state === 'unsaved' ? 'ti-refresh' : 'ti-lock-check';
+  const btnText = state === 'unsaved' ? 'Retry close the day' : 'Close the day';
+  return `<div class="box ${o.q ? 'q' : ''}"><h4><i class="ti ti-cash-register"></i>Close the day${state === 'unsaved' ? '<span class="tag warn"><i class="ti ti-alert-triangle"></i>Not saved</span>' : ''}</h4>
+    <div class="hint" style="margin-bottom:8px">Count the drawer and type what you find. The dashboard compares it with today’s payments.</div>
+    ${row('Cash counted in the drawer', f ? inp('$300.00', 130) : inp('$0.00', 130, 'ph'), f ? '<span class="tag warn"><i class="ti ti-alert-triangle"></i>Short $20.00</span>' : '', 'Expected $320.00')}
+    ${row('Checks in the drawer', checks, f ? ok : '', 'Expected 2 checks, $210.00')}
+    ${row('Card machine total', f ? inp('$135.00', 130) : inp('$0.00', 130, 'ph'), f ? ok : '', 'Expected $135.00 · from the machine’s day report')}
+    ${f ? `<div style="margin-top:8px"><div class="lbl">Note <span class="prop">(needed when anything is short or over)</span></div><div class="input ta ${o.noteErr ? 'bad focus' : ''}" style="width:${ph ? '100%' : '520px'};min-height:56px">${o.noteErr ? '<span class="caret"></span>' : 'Gave $20 change from the drawer to a parent.'}</div>${o.noteErr ? '<div class="err"><i class="ti ti-alert-triangle"></i>Cash is short $20.00. Add a note saying what happened.</div>' : ''}</div>` : ''}
+    ${state === 'unsaved' ? '<div class="err q" style="margin-top:12px;font-size:13px"><i class="ti ti-alert-triangle"></i>Couldn’t close the day. Nothing you typed is lost. Check the connection and try again.</div>' : ''}
+    <div class="boxfoot"><span class="btn btn-primary" ${disabled}><i class="ti ${btnIcon}"></i>${btnText}</span><span class="hint">${state === 'empty' ? 'Fill in all three counts first.' : state === 'unsaved' ? '' : 'Saves the count with your name.'}</span></div></div>`;
+}
+
+// Payments list grouped Cash / Check / Card (v0.196). opts.corr = show corrections (v0.199); opts.school = Both column (unused on Both: v0.198)
+function list(d, opts = {}) {
+  let rows = PAY.map(p => ({ t: p[0], name: p[1], what: p[2], ev: p[3], m: p[4], amt: p[5], by: p[6] }));
+  if (opts.corr) {
+    rows = rows.map(r => r.name === 'Mia Chen' ? { ...r, undone: 'Undone by Jeffrey · Mon, Oct 26 · not counted' }
+      : r.name === 'Lucas Patel' ? { ...r, amt: 65, edited: 'Was $70.00 · edited by Jeffrey · Mon, Oct 26' } : r);
+  }
+  if (opts.corr) rows.push({ t: '4:05 PM', name: 'Owen Price', what: 'Color belt testing', ev: 'Oct 29', m: 'Cash', amt: 65, by: 'Staff', late: 'Recorded at 4:05 PM, after the day was closed' });
+  const counted = (r) => !r.undone;
+  const groups = METHODS.map(m => ({ m, rows: rows.filter(r => r.m === m) })).filter(g => g.rows.length);
+  const head = (g) => { const c = g.rows.filter(counted); return `${g.m} <span>· ${c.length} payment${c.length === 1 ? '' : 's'} · ${money(c.reduce((t, r) => t + r.amt, 0))}</span>`; };
+  const tagFor = (r) => r.undone ? ' <span class="tag neutral">Undone</span>' : r.edited ? ' <span class="tag neutral">Edited</span>' : r.late ? ' <span class="tag neutral">Added after closing</span>' : '';
+  const noteFor = (r) => r.undone || r.edited || r.late ? `<div class="sub small">${r.undone || r.edited || r.late}</div>` : '';
+  const q = (r) => opts.corr && (r.undone || r.edited || r.late) ? 'q' : '';
+  if (d === 'ph') {
+    return groups.map(g => `<div class="pgrp">${head(g)}</div>` + g.rows.map(r => `<div class="pc ${q(r)}"><div><span class="${r.undone ? 'strike' : ''}">${r.name}</span>${tagFor(r)}<div class="sub small">${r.what} · ${r.ev}</div><div class="sub small">${r.t} · ${r.by}</div>${noteFor(r)}</div><div class="r"><span class="${r.undone ? 'strike' : ''}">${money(r.amt)}</span></div></div>`).join('')).join('');
+  }
+  if (d === 'tab') {
+    return `<table><thead><tr><th style="width:90px">Time</th><th>Student</th><th class="r">Amount</th></tr></thead><tbody>${groups.map(g => `<tr class="grp"><td colspan="3">${head(g).replace('<span>', '<span class="sub" style="font-weight:400">')}</td></tr>` + g.rows.map(r => `<tr class="${q(r)}"><td class="sub">${r.t}</td><td><span class="${r.undone ? 'strike' : ''}">${r.name}</span>${tagFor(r)}<div class="sub small">${r.what} · ${r.ev} · ${r.by}</div>${noteFor(r)}</td><td class="r"><span class="${r.undone ? 'strike' : ''}">${money(r.amt)}</span></td></tr>`).join('')).join('')}</tbody></table>`;
+  }
+  return `<table><thead><tr><th style="width:96px">Time</th><th>Student</th><th>For</th><th class="r" style="width:110px">Amount</th><th style="width:130px">Recorded by</th></tr></thead><tbody>${groups.map(g => `<tr class="grp"><td colspan="5">${head(g).replace('<span>', '<span class="sub" style="font-weight:400">')}</td></tr>` + g.rows.map(r => `<tr class="${q(r)}"><td class="sub">${r.t}</td><td><span class="${r.undone ? 'strike' : ''}">${r.name}</span>${tagFor(r)}${noteFor(r)}</td><td>${r.what} <span class="sub">· ${r.ev}</span></td><td class="r"><span class="${r.undone ? 'strike' : ''}">${money(r.amt)}</span></td><td class="sub">${r.by}</td></tr>`).join('')).join('')}</tbody></table>`;
+}
+
+function toast(d, text, undo = 'Undo') {
+  const pos = d === 'ph' ? `left:16px;right:16px;top:${H.ph - 12 - 64 - 52}px;justify-content:space-between` : `right:24px;top:${H[d] - (d === 'pc' ? 2 : 12) - 64}px`;
+  return `<div class="toast q" style="${pos}"><i class="ti ti-check"></i><span>${text}</span><span class="div"></span><u>${undo}</u></div>`;
+}
+
+// ===== Screens =====
+const SCREENS = [];
+const S = (id, title, explain, render) => SCREENS.push({ id, title, explain, render });
+
+S('D1', 'Staff · today, before closing', `
+  <h3>What it shows</h3><ul><li>Staff (incl. the shared desk account) see <b>today only</b> (v0.195): no arrows, calendar, History or Export. Print is there (phones: under ⋯).</li>
+  <li>Four totals: Total, Cash, Check, Card, each with its number of payments. Clicking Cash / Check / Card jumps to that group (rule 8). <span class="prop">The Total card uses <code>ti-sum</code>, since <code>ti-report-money</code> now means Finance (v0.201).</span></li>
+  <li><b>Close the day</b> box (v0.194): three counts to type, each with what the dashboard expects. The button is the screen’s one primary action.</li>
+  <li>Payments grouped <b>Cash, Check, Card</b>, each with its count and total (v0.196). Tablet drops the For and Recorded by columns into a second line; phone uses stacked cards.</li></ul>
+  <h3>Proposals to confirm</h3><ul class="prop"><li>Checks are counted by <b>How many</b> and <b>Total</b>. If only one part is off, its tag says which (e.g. “Total short $5.00”).</li><li>Close the day stays gray until all three counts are filled in.</li><li>New icons for the §2.4 map: <code>ti-report-money</code> Finance · <code>ti-sum</code> Total · <code>ti-cash</code> Cash · <code>ti-receipt</code> Check · <code>ti-credit-card</code> Card · <code>ti-cash-register</code> Close the day box · <code>ti-lock-check</code> Close the day / Day closed · <code>ti-lock-open</code> Reopen day. Shared with the Prospects branch: <code>ti-history</code> (past records) and ‹ › (previous / next day, week or month). Success tags (Matches, Closed) carry no icon, since <code>ti-check</code> means save / done only.</li><li>The “Expected …” line shows under each count. (Seeing it first can make people type what’s expected instead of counting. The other choice is to show it only after typing.)</li></ul>`,
+  (d) => shell(d, { body: dayRow(d) + cards() + closeBox(d, 'empty', { q: 1 }) + list(d) }));
+
+S('D2', 'Staff · counting: cash short, note needed', `
+  <h3>What it shows</h3><ul><li>As staff type, each count shows <b>Matches</b> (green) or <b>Short $X</b> / <b>Over $X</b> (amber, with an icon and words, never color alone).</li>
+  <li>When anything is short or over, a <b>Note</b> is needed. Pressing Close the day without one keeps the box open with the amber message under the note.</li></ul>
+  <h3>Proposals to confirm</h3><ul class="prop"><li>A note is needed for any amount short or over, even a few cents.</li></ul>`,
+  (d) => shell(d, { body: dayRow(d) + cards() + closeBox(d, 'filled', { q: 1, noteErr: true }) + list(d) }));
+
+S('D3', 'Staff · day closed (toast with Undo)', `
+  <h3>What it shows</h3><ul><li>After Close the day, the box turns into a summary: who closed it and when, the counts, any short / over and the note. The tag shows the most important result (warning before success, rule 8).</li>
+  <li>A toast confirms it with <b>Undo</b>. Staff can’t reopen after that. An admin can (v0.195).</li><li>The Home reminder (v0.202) goes away.</li></ul>
+  <h3>Proposals to confirm</h3><ul class="prop"><li>Undo works for <b>10 seconds</b> for the person who closed it, the same as staff payment Undo (v0.147). After that: “Too late to undo here. Ask an admin to reopen the day.”</li><li>If a payment is recorded on a closed day (e.g. a family pays late that evening), the day gets “Changed after closing”, the same as v0.199.</li></ul>`,
+  (d) => shell(d, { body: dayRow(d) + cards() + closeBox(d, 'closed', { q: 1 }) + list(d), overlay: toast(d, 'Today’s drawer is closed.') }));
+
+S('D4', 'Admin · an earlier day: corrections and Reopen', `
+  <h3>What it shows</h3><ul><li>Admins move day to day with <b>‹ ›</b>, the <b>calendar</b>, and <b>Today</b> (shown only when not on today). Also History, Print and Export (v0.197, v0.200).</li>
+  <li>Corrections on the payment’s <b>original day</b> (v0.199): Mia Chen <b>struck through</b> with an Undone tag, not counted; Lucas Patel with an <b>Edited</b> tag and “Was $70.00”. Totals count what’s true now ($660).</li><li><b>Owen Price</b> paid at 4:05 PM, after the day was closed at 1:42 PM: the row says <b>Added after closing</b> (v0.194).</li>
+  <li>The day was closed before the corrections, so it shows <b>Changed after closing</b> and an amber line explaining why the totals no longer match the count.</li>
+  <li><b>Reopen day</b> (admins only) clears the closed state so the day can be counted again. The old count stays in the history.</li></ul>
+  <h3>Proposals to confirm</h3><ul class="prop"><li>A staff mis-click that was undone within its 10 seconds is <b>not shown</b> at all (it never really happened).</li><li>An edit that moves a payment to another date shows on the new day, with “Moved to Mon, Oct 26” struck through on the old day.</li></ul>`,
+  (d) => shell(d, { role: 'admin', body: dayRow(d, { role: 'admin', today: false, date: 'Saturday, October 24, 2026' }) + cards({ total: 660, n: 8, cash: 320, nc: 4, check: 205, nk: 2, card: 135, nd: 2 }) + closeBox(d, 'closed', { changed: true, reopen: true, q: 'reopen' }) + list(d, { corr: true }) }));
+
+// History rows: day, total, closed by, tag
+const DAYS = [
+  ['Mon, Oct 26', 140, '—', ['neutral', 'Today · open']],
+  ['Sun, Oct 25', 0, '—', ['neutral', 'No payments']],
+  ['Sat, Oct 24', 660, 'Staff · 1:42 PM', ['warn', 'Changed after closing']],
+  ['Fri, Oct 23', 420, 'Staff · 8:40 PM', ['ok', 'Closed']],
+  ['Thu, Oct 22', 135, 'Staff · 8:51 PM', ['warn', 'Cash short $20.00']],
+  ['Wed, Oct 21', 0, '—', ['neutral', 'No payments']],
+  ['Tue, Oct 20', 280, '—', ['warn', 'Not closed']],
+  ['Mon, Oct 19', 70, 'Jeffrey · 9:02 PM', ['warn', 'Cash over $5.00']],
+];
+const tagH = ([k, t]) => `<span class="tag ${k}">${k === 'warn' ? '<i class="ti ti-alert-triangle"></i>' : ''}${t}</span>`;
+function history(d) {
+  const top = `<div class="dayrow"><span class="${d === 'ph' ? 'ibtn' : 'btn'}"><i class="ti ti-arrow-left"></i>${d === 'ph' ? '' : 'Back to the day'}</span><span class="day">History</span><span class="grow"></span><span class="ibtn"><i class="ti ti-chevron-left"></i></span><b style="font-size:13px">October 2026</b><span class="ibtn"><i class="ti ti-chevron-right"></i></span></div>
+    <div class="banner"><i class="ti ti-alert-triangle"></i><span>1 day this month wasn’t closed: Tue, Oct 20.</span></div>`;
+  if (d === 'ph') return top + `<div class="q" style="padding:2px">${DAYS.map(r => `<div class="pc"><div>${r[0]}<div class="sub small">${r[2] === '—' ? '' : 'Closed by ' + r[2]}</div></div><div class="r">${money(r[1])}<div>${tagH(r[3])}</div></div></div>`).join('')}</div>`;
+  return top + `<div class="q" style="padding:2px"><table><thead><tr><th>Day</th><th class="r">Total</th>${d === 'pc' ? '<th>Closed by</th>' : ''}<th>Status</th><th style="width:40px"></th></tr></thead><tbody>${DAYS.map(r => `<tr class="hrow"><td>${r[0]}${d === 'tab' && r[2] !== '—' ? `<div class="sub small">Closed by ${r[2]}</div>` : ''}</td><td class="r">${money(r[1])}</td>${d === 'pc' ? `<td class="sub">${r[2]}</td>` : ''}<td>${tagH(r[3])}</td><td class="r sub"><i class="ti ti-chevron-right"></i></td></tr>`).join('')}</tbody></table></div><div class="hint" style="margin-top:8px">Click a day to open its report. Newest first.</div>`;
+}
+S('D5', 'Admin · History', `
+  <h3>What it shows</h3><ul><li><b>History</b> lists one month’s days, newest first: day, total, who closed it and when, and one tag (warnings first: Changed after closing · Cash short / over · Not closed; then Closed; then No payments). Clicking a row opens that day (v0.197).</li>
+  <li>An amber line at the top counts days that weren’t closed this month.</li></ul>
+  <h3>Proposals to confirm</h3><ul class="prop"><li>Days with no payments are listed (gray) so the month has no gaps. They need no closing.</li><li>Back to the day returns to the day you came from.</li><li>Today’s row, until closed, shows “Today · open” rather than Not closed.</li></ul>`,
+  (d) => shell(d, { role: 'admin', body: history(d) }));
+
+function bothView(d) {
+  const sc = (name, tot, n, cash, chk, card, tag) => `<div class="box" style="margin:0"><h4><i class="ti ti-map-pin"></i>${name}<span class="grow"></span>${tag}</h4>
+    <div style="font-size:20px;font-weight:500;margin-top:4px">${tot} <span class="hint" style="font-weight:400">${n} payments</span></div>
+    <div style="font-size:13px;margin:4px 0 12px">Cash ${cash} · Check ${chk} · Card ${card}</div><span class="btn">Open ${name}<i class="ti ti-chevron-right"></i></span></div>`;
+  return dayRow(d, { role: 'admin', today: true }).replace(/<span class="btn"><i class="ti ti-printer"><\/i>Print<\/span><span class="btn"><i class="ti ti-download"><\/i>Export…<\/span>/, '') +
+    `<div class="q" style="display:grid;grid-template-columns:${d === 'ph' ? '1fr' : '1fr 1fr'};gap:12px;padding:2px">${sc('Worcester', '$275.00', 3, '$70.00', '$65.00', '$140.00', '<span class="tag ok">Closed</span>')}${sc('Shrewsbury', '$665.00', 8, '$320.00', '$210.00', '$135.00', '<span class="tag neutral">Not closed yet</span>')}</div>
+    <div style="font-size:13px;margin-top:12px">Both schools together: <b>$940.00</b> · 11 payments</div>
+    <div class="hint" style="margin-top:4px">Each school closes its own drawer. Open a school to see its payments and close its day.</div>`;
+}
+S('D6', 'Admin · Both', `
+  <h3>What it shows</h3><ul><li>On <b>Both</b>: one box per school (total, payments, cash · check · card, Closed / Not closed yet) and the combined total. No payment list and no Close the day here (v0.198).</li>
+  <li><b>Open Shrewsbury</b> switches the top bar to Shrewsbury and shows its full report.</li><li>Star testing payments count for the candidate’s school.</li></ul>
+  <h3>Proposals to confirm</h3><ul class="prop"><li>Arrows, calendar and History still work on Both (admins). History on Both lists both schools’ days with a School column.</li><li>Print and Export are hidden on Both: open a school first.</li><li>Staff on Both see the same boxes for today.</li></ul>`,
+  (d) => shell(d, { role: 'admin', loc: 'Both', body: bothView(d) }));
+
+function exportDlg(d) {
+  const ph = d === 'ph';
+  const style = ph ? `left:0;right:0;top:0;bottom:0;border-radius:0;padding:16px` : `left:50%;top:120px;transform:translateX(-50%);width:440px`;
+  return `<div class="dim"></div><div class="dlg q" style="${style}">
+    <h3>${ph ? '<i class="ti ti-arrow-left"></i>' : ''}Export payments<span class="grow"></span>${ph ? '' : '<i class="ti ti-x"></i>'}</h3>
+    <div class="hint" style="margin:4px 0 12px">Downloads a CSV file (opens in Excel or Google Sheets). It holds students’ names and amounts, so each download is logged.</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap"><div><div class="lbl">From</div><span class="input" style="width:150px">Oct 1, 2026</span></div><div><div class="lbl">To</div><span class="input" style="width:150px">Oct 31, 2026</span></div></div>
+    <div style="margin-top:12px"><div class="lbl">School</div><div style="font-size:13px">Shrewsbury <span class="hint">(from the top bar)</span></div></div>
+    <div style="margin-top:12px;font-size:13px">142 payments · $9,450.00 · 2 corrections marked</div>
+    <div class="dlgfoot" style="${ph ? 'flex-direction:column-reverse' : ''}">${ph ? '' : '<span class="btn">Cancel</span>'}<span class="btn btn-primary" style="${ph ? 'width:100%' : ''}"><i class="ti ti-download"></i>Download CSV</span></div></div>`;
+}
+S('D7', 'Admin · Export…', `
+  <h3>What it shows</h3><ul><li><b>Export…</b> (admins) opens a dialog (phones: full screen with a back arrow): From and To (default: this month), the school from the top bar, the count and total, then <b>Download CSV</b> (v0.200).</li>
+  <li>One row per payment: date, school, time, student, for, event date, paid by, amount, recorded by, status (corrections marked).</li></ul>
+  <h3>Proposals to confirm</h3><ul class="prop"><li>The file name says the school and the dates, e.g. <code>Shrewsbury-2026-10-01-to-2026-10-31.csv</code>.</li><li>From and To use the browser’s date fields, with the weekday written under each date (as Color Belt events, v0.147).</li></ul>`,
+  (d) => shell(d, { role: 'admin', body: dayRow(d, { role: 'admin' }) + cards() + closeBox(d, 'closed', {}) + list(d), overlay: exportDlg(d) }));
+
+function paper() {
+  const g = METHODS.map(m => { const r = PAY.filter(p => p[4] === m); return `<div style="font-weight:500;border-bottom:1px solid #999;margin-top:10px">${m} · ${r.length} payments · ${money(r.reduce((t, p) => t + p[5], 0))}</div>` + r.map(p => `<div style="display:flex;gap:12px;padding:2px 0;border-bottom:1px solid #eee"><span style="width:64px">${p[0]}</span><span style="flex:1">${p[1]}</span><span style="width:190px">${p[2]} · ${p[3]}</span><span style="width:70px;text-align:right">${money(p[5])}</span><span style="width:60px">${p[6]}</span></div>`).join(''); }).join('');
+  return `<div class="dev q" style="width:816px;min-height:1056px;border-radius:2px;padding:56px 64px;font-size:12px;line-height:1.5;color:#000">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:18px">Daily report · Shrewsbury</b><b style="font-size:14px">Saturday, October 24, 2026</b></div>
+    <div style="color:#444">Jae H. Jeong’s U.S. Taekwondo Center · printed Oct 24, 2026, 1:45 PM by Staff</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);border:1px solid #000;margin:16px 0"><div style="padding:8px">Total<br><b style="font-size:16px">$665.00</b><br>8 payments</div><div style="padding:8px;border-left:1px solid #000">Cash<br><b style="font-size:16px">$320.00</b><br>4 payments</div><div style="padding:8px;border-left:1px solid #000">Check<br><b style="font-size:16px">$210.00</b><br>2 payments</div><div style="padding:8px;border-left:1px solid #000">Card<br><b style="font-size:16px">$135.00</b><br>2 payments</div></div>
+    <div><b>Day closed</b> by Staff at 1:42 PM. Cash counted $300.00 (short $20.00) · Checks 2, $210.00 (matches) · Card machine $135.00 (matches)</div>
+    <div>Note: “Gave $20 change from the drawer to a parent.”</div>
+    ${g}
+    <div style="margin-top:40px;display:flex;gap:48px"><span>Counted by: ______________________</span><span>Date: ____________</span></div></div>`;
+}
+S('D8', 'Printed page', `
+  <h3>What it shows</h3><ul><li><b>Print</b> makes one letter-size page (portrait): school, date, who printed it and when, the four totals, the Close the day count and note, the Cash / Check / Card groups, and a <b>Counted by</b> line to sign (v0.200). Black and white.</li>
+  <li>Staff print today; admins any day. If the day isn’t closed yet, the count line says “Not closed yet”.</li></ul>
+  <h3>Proposals to confirm</h3><ul class="prop"><li>A long day continues on a second page with the header repeated.</li><li>Corrections print as on screen (struck through / “was $70.00”).</li></ul>`,
+  null);
+
+function settings(d) {
+  const DAYSET = [['Monday', '7:30 PM', '8:00 PM'], ['Tuesday', '7:30 PM', '8:00 PM'], ['Wednesday', '7:30 PM', '8:00 PM'], ['Thursday', '7:30 PM', '8:00 PM'], ['Friday', '7:00 PM', '7:30 PM'], ['Saturday', '1:00 PM', '1:30 PM'], ['Sunday', 'Off', 'Off']];
+  const t = (v) => `<span class="input" style="width:${d === 'ph' ? 120 : 120}px;justify-content:space-between">${v}<i class="ti ti-chevron-down sub" style="font-size:14px"></i></span>`;
+  const head = `<h4 style="font-size:16px;font-weight:500;margin:0 0 4px">Close-the-day reminder</h4><div class="hint" style="margin-bottom:12px;max-width:560px">From this time, Home shows “Today’s drawer isn’t closed yet” on days the school took payments, until the day is closed.</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><span class="sw"><span class="t"></span>On</span></div>`;
+  const body = d === 'ph'
+    ? `<div class="segm" style="display:flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;width:max-content;margin-bottom:8px;font-size:13px"><span style="padding:8px 14px;background:var(--surface);font-weight:500">Shrewsbury</span><span style="padding:8px 14px;border-left:1px solid var(--border);color:var(--text2)">Worcester</span></div>${DAYSET.map(r => `<div class="pc" style="align-items:center"><span>${r[0]}</span>${t(r[1])}</div>`).join('')}`
+    : `<table style="max-width:560px"><thead><tr><th>Day</th><th>Shrewsbury</th><th>Worcester</th></tr></thead><tbody>${DAYSET.map(r => `<tr><td>${r[0]}</td><td>${t(r[1])}</td><td>${t(r[2])}</td></tr>`).join('')}</tbody></table>`;
+  return `<div class="q" style="padding:4px">${head}${body}<div style="margin-top:12px"><span class="btn">Copy each school’s Monday to Tue–Fri</span></div></div>
+    <div class="hint" style="margin-top:12px">Each change saves at once with a 5-second Undo, and is logged. Only admins see this tab.</div>`;
+}
+S('D9', 'Admin · Settings tab', `
+  <h3>What it shows</h3><ul><li>Finance’s second tab, <b>Settings</b>, only for admins (v0.203). Staff don’t see the tab.</li>
+  <li><b>Close-the-day reminder</b>: On / Off, and a time or <b>Off</b> for each day of the week, per school. <b>Copy each school’s Monday to Tue–Fri</b> fills the weekdays for both schools (phones: for the school shown).</li><li>With the reminder <b>Off</b>, the times stay but are grayed out.</li>
+  <li>Each time is a dropdown: Off, then every 15 minutes from 11:00 AM to 11:00 PM.</li></ul>
+  <h3>Proposals to confirm</h3><ul class="prop"><li>Times in 15-minute steps.</li><li>Saves on change with Undo (no Save button), like Settings → Schools edits being logged.</li><li>Phones show one school at a time with a Shrewsbury / Worcester switch (gray selected side, as v0.89).</li></ul>`,
+  (d) => shell(d, { role: 'admin', tab: 'settings', body: settings(d) }));
+
+function home(d, role) {
+  const logo = `<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px"><span style="width:${d === 'ph' ? 40 : 48}px;height:${d === 'ph' ? 40 : 48}px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text2)">logo</span><div><div style="font-size:20px;font-weight:500">Good evening</div><div class="hint" style="font-size:13px">Saturday, October 24, 2026 · Shrewsbury</div></div></div>`;
+  const line = (txt, link) => `<div class="banner" style="margin-bottom:8px;max-width:620px;min-height:44px;cursor:pointer" role="link"><i class="ti ti-alert-triangle"></i><span class="grow">${txt}</span><span style="text-decoration:underline;white-space:nowrap">${link}</span><i class="ti ti-chevron-right"></i></div>`;
+  return logo + `<div class="q" style="padding:2px;max-width:640px">${line('Today’s drawer isn’t closed yet.', 'Close the day')}${role === 'admin' ? line('1 earlier day wasn’t closed: Tue, Oct 20.', 'Open History') : ''}</div>`;
+}
+S('D10', 'Home · close-the-day reminder', `
+  <h3>What it shows</h3><ul><li>From the reminder time set in Settings (Saturday: 1:00 PM at Shrewsbury), on a day with payments that isn’t closed yet, Home shows an amber line: “Today’s drawer isn’t closed yet. <b>Close the day</b> ›”. It opens the Daily report. <b>No amounts</b>, so it is fine on the mat-side tablet (v0.202).</li>
+  <li>Admins also see earlier days that weren’t closed, linking to History. PC and tablet show the <b>staff</b> view; the phone shows the <b>admin</b> view.</li>
+  <li>The whole line is one link, at least 44px tall on touch screens.</li><li>The “Nothing on Home yet” line goes away while a reminder shows.</li></ul>
+  <h3>Proposals to confirm</h3><ul class="prop"><li>On Both, one line per school (“Shrewsbury’s drawer isn’t closed yet”).</li><li>The admin line counts unclosed days in the last 30 days only.</li></ul>`,
+  (d) => shell(d, { role: d === 'ph' ? 'admin' : 'staff', section: 'home', body: home(d, d === 'ph' ? 'admin' : 'staff') }));
+
+S('D11', 'No payments today', `
+  <h3>What it shows</h3><ul><li>A day with no payments: the totals show $0.00 and one line explains it. There’s nothing to close, so the Close the day box is replaced by “Nothing to close.” and no reminder shows on Home.</li>
+  <li>In History that day shows the gray <b>No payments</b> tag.</li></ul>
+  <h3>Proposals to confirm</h3><ul class="prop"><li>No Close the day on a day with no payments (the drawer wasn’t used for testing money). If the school wants a daily count anyway, the box can stay.</li></ul>`,
+  (d) => shell(d, { body: dayRow(d) + cards({ total: 0, n: 0, cash: 0, nc: 0, check: 0, nk: 0, card: 0, nd: 0 }) + `<div class="box q" style="text-align:${d === 'ph' ? 'left' : 'center'}"><div style="font-size:14px">No payments recorded today.</div><div class="hint">Nothing to close. Payments recorded in Testing appear here.</div></div>` }));
+
+function detail(d) {
+  const ph = d === 'ph';
+  const style = ph ? 'left:0;right:0;top:0;bottom:0;border-radius:0;padding:16px' : 'left:50%;top:90px;transform:translateX(-50%);width:520px';
+  const r = (k, v) => `<div class="drow"><span class="k">${k}</span><span>${v}</span></div>`;
+  return `<div class="dim"></div><div class="dlg q" style="${style}"><h3>${ph ? '<i class="ti ti-arrow-left"></i>' : ''}Lucas Patel · payment<span class="grow"></span>${ph ? '' : '<i class="ti ti-x"></i>'}</h3>
+    <div style="margin:12px 0">${r('For', 'Color belt testing · Thu, Oct 29 (Shrewsbury)')}${r('Paid by', 'Check')}${r('Amount', '$65.00 <span class="tag neutral">Edited</span>')}${r('Date paid', 'Sat, Oct 24, 2026')}${r('Recorded', 'Sat, Oct 24, 10:21 AM by Staff')}</div>
+    <div class="lbl">History</div><div style="font-size:13px"><div>Mon, Oct 26, 9:07 AM · Jeffrey changed the amount $70.00 → $65.00</div><div>Sat, Oct 24, 10:21 AM · Staff recorded $70.00 by check</div></div>
+    <div class="hint" style="margin-top:12px">Payments are changed on the event’s page in Testing, not here.</div>
+    <div class="dlgfoot" style="${ph ? 'flex-direction:column-reverse' : ''}"><span class="btn" style="${ph ? 'width:100%' : ''}">Open in Testing<i class="ti ti-chevron-right"></i></span>${ph ? '' : '<span class="btn">Close</span>'}</div></div>`;
+}
+S('D12', 'A payment’s details (click a row)', `
+  <h3>What it shows</h3><ul><li>Clicking a payment row opens a view-only detail (rule 6: centered dialog, full screen on phones): what it was for, how paid, amount, date paid, who recorded it and when, and its history of changes.</li>
+  <li>The report is read-only. <b>Open in Testing</b> goes to the event’s roster, where payments are recorded and changed.</li></ul>
+  <h3>Proposals to confirm</h3><ul class="prop"><li>Rows open this view at all (rule 8 says rows open a detail view). The other choice is rows that open nothing.</li><li>No date of birth or other private details here, only payment facts (rule 5).</li></ul>`,
+  (d) => shell(d, { role: 'admin', body: dayRow(d, { role: 'admin', today: false }) + cards({ total: 660, n: 8, cash: 320, nc: 4, check: 205, nk: 2, card: 135, nd: 2 }) + list(d, { corr: true }), overlay: detail(d) }));
+
+S('D13', 'Close the day didn’t save', `
+  <h3>What it shows</h3><ul><li>If saving fails (e.g. Wi-Fi drops), the box stays as typed with an amber <b>Not saved</b> tag. The error sits <b>inside the box, right above the button</b>, so it is in view on a phone too, and stays until the save works (rule 3.5).</li><li>The button becomes <b>Retry close the day</b>: one button for the action (rule 1.1), not a second Retry in a banner.</li></ul>
+  <h3>Proposals to confirm</h3><ul class="prop"><li>Wording: “Couldn’t close the day. Nothing you typed is lost. Check the connection and try again.”</li><li>This places the error in the box instead of a top banner (a small exception to rule 3.5’s banner, for this box only).</li></ul>`,
+  (d) => shell(d, { body: dayRow(d) + cards() + closeBox(d, 'unsaved', {}) + list(d) }));
+
+function phMenu(items, label) {
+  const sheet = `<div class="dim" style="bottom:auto;height:832px"></div><div class="dlg q" style="left:0;right:0;top:${832 - 36 - 48 * items.length}px;border-radius:12px 12px 0 0;padding:8px 16px 16px">
+    <div style="width:36px;height:4px;border-radius:2px;background:#CFCFCA;margin:0 auto 8px"></div>
+    ${items.map(([i, t]) => `<div style="display:flex;align-items:center;gap:12px;min-height:48px;font-size:14px;border-bottom:1px solid var(--border)"><i class="ti ti-${i}" style="font-size:18px;color:var(--text2)"></i>${t}</div>`).join('')}</div>`;
+  return sheet;
+}
+S('D14', 'Phones · the ⋯ menu', `
+  <h3>What it shows</h3><ul><li>On phones the date row has no room for buttons, so they sit under <b>⋯</b> (a sheet from the bottom, like the phone More menu). Same features as PC (rule 1.3).</li>
+  <li><b>Staff:</b> Print. <b>Admin:</b> Today (when not on today), History, Print, Export…. <b>Admin on Both:</b> History only (Print and Export need one school, v0.198).</li></ul>`,
+  'phones');
+
+// ===== Render =====
+function frame(d, html, who) {
+  const cls = { pc: 'd-pc', tab: 'd-tab touch', ph: 'd-ph touch' }[d];
+  const cap = (who ? who + ' · ' : '') + { pc: 'PC · 1280 wide, mouse', tab: 'Tablet · 820 wide, touch', ph: 'Phone · 390 wide, touch' }[d];
+  const foldTop = H[d] - (d === 'pc' ? 2 : 12);
+  return `<div><div class="cap">${cap}</div><div class="dev ${cls}" style="min-height:${H[d]}px">${html}<div class="fold" style="top:${foldTop}px"><span>screen bottom</span></div></div></div>`;
+}
+const only = location.hash.replace('#', '');
+document.getElementById('screens').innerHTML = SCREENS.filter(s => !only || s.id === only).map(s => `
+  <section id="${s.id}"><h2 class="scr">${s.id} · ${s.title}</h2><div class="explain">${s.explain}</div>
+  ${s.render === 'phones' ? `<div class="row2">${frame('ph', shell('ph', { body: dayRow('ph') + cards(), overlay: phMenu([['printer', 'Print']]) }), 'Staff')}${frame('ph', shell('ph', { role: 'admin', body: dayRow('ph', { role: 'admin', today: false }) + cards(), overlay: phMenu([['calendar-event', 'Today'], ['history', 'History'], ['printer', 'Print'], ['download', 'Export…']]) }), 'Admin')}${frame('ph', shell('ph', { role: 'admin', loc: 'Both', body: bothView('ph') , overlay: phMenu([['history', 'History']]) }), 'Admin on Both')}</div>`
+    : s.render ? `${frame('pc', s.render('pc'))}<div class="row2">${frame('tab', s.render('tab'))}${frame('ph', s.render('ph'))}</div>` : paper()}
+  </section>`).join('');
+if (only) document.querySelector('h1.doc').style.display = document.querySelector('.lead').style.display = 'none';
+// Icons used by name (for the icon inliner): ti-home ti-certificate ti-clock ti-calendar-month ti-clipboard-text ti-address-book ti-menu-2 ti-calendar-event ti-sum ti-cash ti-receipt ti-credit-card ti-lock ti-lock-open ti-lock-check ti-cash-register ti-history ti-download ti-printer ti-dots ti-arrow-left ti-x ti-refresh ti-chevron-down
+</script>
+</body>
+</html>
