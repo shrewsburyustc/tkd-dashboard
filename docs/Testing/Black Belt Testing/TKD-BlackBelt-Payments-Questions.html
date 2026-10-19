@@ -492,6 +492,17 @@ code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
 .pcard b{font-weight:600}.pcard .input.money{width:100%}
 .plan{display:grid;grid-template-columns:1fr auto 20px;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}
 .plan i{color:var(--text2)}
+#b10{border-top:1px solid var(--border-strong);margin-top:24px;padding-top:16px}
+.rrowx{display:grid;grid-template-columns:110px 150px 1fr auto;gap:10px;align-items:center;font-size:13px;background:#fff;border:1px solid var(--border-strong);border-radius:8px;padding:10px 12px;margin-top:12px}
+.rrowx b{font-weight:500}.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag-blue{background:var(--blue-tint);color:var(--blue);border-color:#C5D0E6}
+.rep{font-size:12.5px;margin-top:10px;background:var(--surface);border-radius:8px;padding:8px 10px}
+.rep b{font-weight:600}
+.payl{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:8px 0;border-bottom:1px solid var(--border)}
+.payl b{font-weight:600}.payl.held span{color:var(--blue)}.payl.due span{color:var(--text2)}.payl.due b{color:var(--text2);font-weight:400}
+.seg{display:flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;height:32px;font-size:13px}
+.seg span{flex:1;display:flex;align-items:center;justify-content:center}.seg span.on{background:var(--blue-tint);color:var(--blue)}
+.seg span+span{border-left:1px solid var(--border)}
 </style>
 </head>
 <body>
@@ -609,6 +620,101 @@ code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
 
 </div>
 <p class="qfoot"><b>Same in every option:</b> prices are copied into each cycle when it's created; an admin can change a cycle's own prices only until someone has paid (then recorded amounts never change); the Kukkiwon fee is optional per candidate and added to payment 1; the form shows the real amounts and due dates (B5).</p>
+</section>
+</main>
+<main class="qmain">
+<section id="b10">
+<h1 class="qh">Black Belt · Question B10: recording post-dated checks</h1>
+<p class="qlead">On a payment plan, a family hands in <b>all their checks at once</b> by the first due date: here Alex Kim's three checks on Mar 27, two of them dated <b>Apr 24</b> and <b>May 29</b> (they can't be deposited yet). The question is <b>how staff record them</b>, which also decides how they show on the roster and in <b>Finance's Daily report</b> (which counts by payment date, and its drawer count counts the checks in the drawer). Staff record payments with the 5-second Undo; admins fix them later (B4). <span class="ambtxt">Amber</span> = what differs.</p>
+<div class="qopts">
+
+<!-- A -->
+<div class="qopt rec">
+<div class="qot"><span class="letter">A</span>Record all three now; each counts on the date written on it<span class="rec-tag">Recommended</span></div>
+<div class="qexp"><b>What it does:</b> staff record each check when it's handed in, with its <b>check date</b> (and check number, optional). A check dated in the future shows as <b>Held</b> until that date, then counts as paid on that date by itself. The Daily report counts it <b>on its check date</b>, the day it can be deposited, not on the day it was handed in.<br>
+<b>Pros:</b> nothing to remember later; the roster shows exactly what's in hand and what's held; each day's report matches what can go to the bank; a bounced check is found against a known check.<br>
+<b>Cons:</b> one more field (check date) in the dialog; the drawer count must leave out held checks (they're kept aside); different from Color Belt and Star, where every payment counts the day it's recorded.</div>
+<div class="pair">
+<div><p class="cap">PC · Record payment, then the roster row</p>
+<div class="dialog dialog-detail bbdlg"><h3>Record payment · Alex Kim</h3><p class="sub">1st Dan · 3 payments plan · Kukkiwon certificate</p>
+<div class="b3col"><div class="field"><label>Amount</label><div class="input money"><span class="pre">$</span>290</div></div><div class="field"><label>Method</label><div class="seg"><span>Cash</span><span class="on">Check</span><span>Card</span></div></div><div class="field"><label>For</label><div class="input select">Payment 2<i class="ti ti-chevron-down"></i></div></div></div>
+<div class="amb"><div class="b2col"><div class="field"><label>Check date (written on the check)</label><div class="input">Sat, Apr 24, 2027</div></div><div class="field"><label>Check no. (optional)</label><div class="input">1043</div></div></div>
+<div class="hint">Dated later than today: kept as <b>Held</b> and counted as paid on Apr 24.</div></div>
+<div class="actions"><span class="btn">Cancel</span><span class="btn btn-primary"><i class="ti ti-check"></i>Record</span></div></div>
+<div class="rrowx"><b>Kim, Alex</b><span>1st Dan · 3 payments</span><span class="amb2 tags"><span class="tag tag-ok">Paid $390</span> <span class="tag tag-blue">2 checks held · $580</span></span><span class="hint">Balance $0</span></div>
+<div class="rep amb2">Daily report: <b>Mar 27</b> check $290 + check $100 · <b>Apr 24</b> check $290 · <b>May 29</b> check $290</div>
+</div>
+<div><p class="cap">Phone · the candidate's payments</p>
+<div class="dev dev-ph touch" style="height:470px"><div class="ph-shell"><div class="content">
+<div class="ptitle" style="font-size:17px">Kim, Alex · payments</div><div class="hint">3 payments plan · $970 with Kukkiwon</div>
+<div class="amb">
+<div class="payl"><span>Mar 27 · Payment 1 · check 1041</span><b>$290</b></div>
+<div class="payl"><span>Mar 27 · Kukkiwon · check 1042</span><b>$100</b></div>
+<div class="payl held"><span>Held until Apr 24 · Payment 2 · check 1043</span><b>$290</b></div>
+<div class="payl held"><span>Held until May 29 · Payment 3 · check 1044</span><b>$290</b></div>
+</div>
+<div class="hint">Paid $390 · held $580 · balance $0</div>
+</div></div></div></div>
+</div>
+</div>
+
+<!-- B -->
+<div class="qopt">
+<div class="qot"><span class="letter">B</span>Record all three now; all count today</div>
+<div class="qexp"><b>What it does:</b> exactly like Color Belt and Star: each check counts as paid <b>the day it's recorded</b>. The date written on the check isn't recorded (or only in a note).<br>
+<b>Pros:</b> simplest; one rule for every testing type; the roster shows "Paid in full" right away.<br>
+<b>Cons:</b> the Daily report says $970 came in on Mar 27, but only $390 can be deposited that day, so the totals don't match the bank; nothing reminds anyone when a held check can be deposited; a bounce weeks later lands on a day that's already closed.</div>
+<div class="pair">
+<div><p class="cap">PC · Record payment, then the roster row</p>
+<div class="dialog dialog-detail bbdlg"><h3>Record payment · Alex Kim</h3><p class="sub">1st Dan · 3 payments plan · Kukkiwon certificate</p>
+<div class="b3col"><div class="field"><label>Amount</label><div class="input money"><span class="pre">$</span>290</div></div><div class="field"><label>Method</label><div class="seg"><span>Cash</span><span class="on">Check</span><span>Card</span></div></div><div class="field"><label>For</label><div class="input select">Payment 2<i class="ti ti-chevron-down"></i></div></div></div>
+<div class="field amb"><label>Note (optional)</label><div class="input">post-dated Apr 24</div></div>
+<div class="actions"><span class="btn">Cancel</span><span class="btn btn-primary"><i class="ti ti-check"></i>Record</span></div></div>
+<div class="rrowx"><b>Kim, Alex</b><span>1st Dan · 3 payments</span><span class="amb2 tags"><span class="tag tag-ok">Paid in full $970</span></span><span class="hint">Balance $0</span></div>
+<div class="rep amb2">Daily report: <b>Mar 27</b> check $290 + $100 + $290 + $290 = $970</div>
+</div>
+<div><p class="cap">Phone · the candidate's payments</p>
+<div class="dev dev-ph touch" style="height:470px"><div class="ph-shell"><div class="content">
+<div class="ptitle" style="font-size:17px">Kim, Alex · payments</div><div class="hint">3 payments plan · $970 with Kukkiwon</div>
+<div class="amb">
+<div class="payl"><span>Mar 27 · Payment 1 · check</span><b>$290</b></div>
+<div class="payl"><span>Mar 27 · Kukkiwon · check</span><b>$100</b></div>
+<div class="payl"><span>Mar 27 · Payment 2 · check · "post-dated Apr 24"</span><b>$290</b></div>
+<div class="payl"><span>Mar 27 · Payment 3 · check · "post-dated May 29"</span><b>$290</b></div>
+</div>
+<div class="hint">Paid $970 · balance $0</div>
+</div></div></div></div>
+</div>
+</div>
+
+<!-- C -->
+<div class="qopt">
+<div class="qot"><span class="letter">C</span>Record each check only on its date</div>
+<div class="qexp"><b>What it does:</b> on Mar 27 staff record only today's checks. The later checks sit in an envelope; on Apr 24 and May 29 someone records each one. The roster shows the expected schedule meanwhile.<br>
+<b>Pros:</b> the dashboard only ever holds money that's really in hand; no new field.<br>
+<b>Cons:</b> someone must remember to record ~40 checks on each date; a forgotten check shows the family as late when they already paid; nothing in the dashboard says the school is holding their check.</div>
+<div class="pair">
+<div><p class="cap">PC · the roster row on Mar 27, then on Apr 25 if forgotten</p>
+<div class="rrowx"><b>Kim, Alex</b><span>1st Dan · 3 payments</span><span class="tags"><span class="tag tag-ok">Paid $390</span> <span class="tag">Next $290 by Apr 24</span></span><span class="hint">Balance $580</span></div>
+<div class="rrowx amb2"><b>Kim, Alex</b><span>1st Dan · 3 payments</span><span class="tags"><span class="tag tag-warn">Payment 2 late</span></span><span class="hint">…though the check is in the envelope</span></div>
+<div class="rep amb2">Daily report: <b>Mar 27</b> $390 · <b>Apr 24</b> $290 <i>only if someone records it that day</i></div>
+</div>
+<div><p class="cap">Phone · the candidate's payments</p>
+<div class="dev dev-ph touch" style="height:470px"><div class="ph-shell"><div class="content">
+<div class="ptitle" style="font-size:17px">Kim, Alex · payments</div><div class="hint">3 payments plan · $970 with Kukkiwon</div>
+<div class="amb">
+<div class="payl"><span>Mar 27 · Payment 1 · check</span><b>$290</b></div>
+<div class="payl"><span>Mar 27 · Kukkiwon · check</span><b>$100</b></div>
+<div class="payl due"><span>Due Apr 24 · Payment 2</span><b>$290</b></div>
+<div class="payl due"><span>Due May 29 · Payment 3</span><b>$290</b></div>
+</div>
+<div class="hint">Paid $390 · balance $580</div>
+</div></div></div></div>
+</div>
+</div>
+
+</div>
+<p class="qfoot"><b>Same in every option:</b> cash and card count the day they're recorded; Undo within 5 seconds, then admins edit / undo / refund (B4); a bounced (returned) check is its own record by an admin, and the balance comes back; payments never show on grading screens. Whether Black Belt money appears in the school's Daily report at all (checks are made out to Master Jeong) is checked with the Finance session after this answer.</p>
 </section>
 </main>
 </body>
