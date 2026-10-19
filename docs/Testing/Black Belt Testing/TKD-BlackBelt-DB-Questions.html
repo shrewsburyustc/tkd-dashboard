@@ -39,6 +39,29 @@ b{font-weight:600}
 .mini .r{display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:3px 0}
 .foot{font-size:13px;color:var(--text2);margin-top:14px}
 .ambtxt{outline:3px solid var(--amber);outline-offset:1px;border-radius:3px;padding:0 3px}
+
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.col{background:var(--bg);border:1px solid var(--border-strong);border-radius:10px;padding:14px}
+.col.rec{border:2px solid var(--blue)}
+.step{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--text2);margin:14px 0 6px}
+.tbls{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tb{border:1px solid #C9CFE0;border-radius:6px;overflow:hidden;font-size:11.5px;background:#fff}
+.tb .h{background:#EEF0F6;color:#2B3A67;font-weight:600;padding:4px 8px;font-size:12px}
+.tb table{width:100%;border-collapse:collapse}
+.tb td,.tb th{border-top:1px solid var(--border);padding:3px 6px;text-align:left}
+.tb th{color:var(--text2);font-weight:500;background:var(--surface)}
+.link{font-size:11px;color:var(--blue);padding:2px 8px 6px}
+.doc{border:1px solid #C9CFE0;border-radius:6px;background:#fff;padding:10px 12px;font-size:12px;line-height:1.55}
+.doc .tag{display:inline-block;font-size:11px;background:#EEF0F6;color:#2B3A67;border-radius:4px;padding:0 6px;margin-bottom:6px}
+.doc .ind{padding-left:14px}.doc .ind2{padding-left:28px;color:var(--text2)}
+.panelx{border:1px solid var(--border-strong);border-radius:8px;background:#fff;padding:8px 12px;font-size:12.5px}
+.panelx .r{display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:4px 0}
+.panelx .hh{font-weight:600}
+.same{font-size:12px;color:var(--ok);font-weight:600;margin-top:4px}
+.grade{border:1px dashed var(--border-strong);border-radius:8px;padding:8px 10px;font-size:12.5px}
+.grade.yes{border-color:#9DBE7A;background:var(--ok-tint)}
+.grade.no{border-color:#E9C2C2;background:var(--bad-tint)}
+.amb{outline:3px solid var(--amber);outline-offset:3px;border-radius:6px}
 </style>
 </head>
 <body>
@@ -89,6 +112,51 @@ b{font-weight:600}
 <p class="foot"><b>Same in every option:</b> grading itself (scores, results, make-ups) comes in the next migration, after Master Jeong's answers; the numbers families see in February are the Fall 2026 ones unless he changes them first.</p>
 </section>
 
+
+<section id="qb1-explain">
+<h1>Database question 1, explained: the rubric vs the requirements sheet</h1>
+<p class="lead">Both hold the <b>same numbers</b> and families see the <b>same panel</b>. The difference is <b>how the numbers are stored</b> (row 1) and therefore <b>what grading can do with them later</b> (row 3). <span class="ambtxt">Amber</span> = the part that's different. Example: 1st Dan, Physical, Push-up.</p>
+<div class="vs">
+
+<div class="col">
+<div class="ot"><span class="letter">A</span>The rubric (build now)</div>
+<div class="step">1 · What's stored in the database</div>
+<div class="amb"><div class="tbls">
+<div class="tb"><div class="h">Parts</div><table><tr><th>Part</th><th>Max</th></tr><tr><td>Physical</td><td>80</td></tr><tr><td>Technical</td><td>44</td></tr><tr><td>Curriculum</td><td>135</td></tr></table></div>
+<div class="tb"><div class="h">Subjects</div><table><tr><th>Subject</th><th>Part</th><th>Credits</th></tr><tr><td>Push-up</td><td>Physical</td><td>2</td></tr><tr><td>Sit-up</td><td>Physical</td><td>2</td></tr><tr><td>Free sparring</td><td>Technical</td><td>3</td></tr></table></div>
+<div class="tb"><div class="h">Scoring cut-offs</div><table><tr><th>Subject</th><th>Age</th><th>A+</th><th>A</th><th>…</th></tr><tr><td>Push-up</td><td>≤8</td><td>20</td><td>18</td><td>…</td></tr><tr><td>Push-up</td><td>9–12</td><td>36</td><td>30</td><td>…</td></tr><tr><td>Push-up</td><td>13+</td><td>50</td><td>40</td><td>…</td></tr></table></div>
+<div class="tb"><div class="h">Pass marks</div><table><tr><th>Dan</th><th>Child</th><th>Adult</th></tr><tr><td>1st</td><td>275</td><td>293</td></tr><tr><td>2nd</td><td>261</td><td>261</td></tr></table><div class="link">…plus grade points, extra points</div></div>
+</div>
+<div class="exp" style="margin-top:8px">Many small tables, linked to each other. <b>Every number is its own entry</b>, so the dashboard can calculate with it.</div></div>
+<div class="step">2 · What families see on the form (February)</div>
+<div class="panelx"><div class="r hh"><span>1 · Physical</span><span>80 pts</span></div><div class="r"><span>Push-up (1 min)</span><span>2 credits</span></div><div class="r" style="color:var(--text2)"><span>13 and over: A+ 50 · A 40 · B+ 30 · B 25 · C 20</span><span></span></div></div><div class="same">✓ identical panel</div>
+<div class="step">3 · What grading can do with it (spring)</div>
+<div class="grade yes">Grades attach straight to these entries ("Alex · Push-up · 42 → A"), and the dashboard adds up totals and decides pass / make-up.<br><b>But:</b> these tables are designed <b>now</b>, before Master Jeong answers. If his answers change how scoring works (child/adult, the B points, extra points), they're rebuilt.</div>
+</div>
+
+<div class="col rec">
+<div class="ot"><span class="letter">B</span>The requirements sheet (for now)<span class="rec-tag">Recommended</span></div>
+<div class="step">1 · What's stored in the database</div>
+<div class="amb"><div class="doc"><span class="tag">Spring 2027 · requirements sheet · 1st Dan</span>
+<div><b>1 · Physical</b> — up to 80 points</div>
+<div class="ind">Push-up (1 min) — 2 credits</div>
+<div class="ind2">8 and under: A+ 20 · A 18 · B+ 16 · B 14 · C 12</div>
+<div class="ind2">9–12: A+ 36 · A 30 · B+ 25 · B 20 · C 15</div>
+<div class="ind2">13 and over: A+ 50 · A 40 · B+ 30 · B 25 · C 20</div>
+<div class="ind">Sit-up (20 sec) — 2 credits …</div>
+<div><b>2 · Technical</b> — Free sparring 3 credits …</div>
+<div><b>To pass:</b> 275 (children) / 293 (adults), no D</div>
+</div>
+<div class="exp" style="margin-top:8px"><b>One document</b> saved with the cycle, like a handout typed into the database. Good for showing; nothing is calculated from it.</div></div>
+<div class="step">2 · What families see on the form (February)</div>
+<div class="panelx"><div class="r hh"><span>1 · Physical</span><span>80 pts</span></div><div class="r"><span>Push-up (1 min)</span><span>2 credits</span></div><div class="r" style="color:var(--text2)"><span>13 and over: A+ 50 · A 40 · B+ 30 · B 25 · C 20</span><span></span></div></div><div class="same">✓ identical panel</div>
+<div class="step">3 · What grading can do with it (spring)</div>
+<div class="grade no">Nothing: grading can't calculate from a handout. So in spring, <b>after</b> Master Jeong's answers, the real rubric tables (left) are built <b>once</b>, the panel switches to them, and this sheet is deleted.<br><b>Until then:</b> if a number changes, I write a small update and you paste it into Supabase (the sheet has no edit screen).</div>
+</div>
+
+</div>
+<p class="foot"><b>The decision in one line:</b> build the scoring tables now, before the rules are confirmed (A), or show families a handout copy now and build the scoring tables once, after the rules are confirmed (B).</p>
+</section>
 </main>
 </body>
 </html>
