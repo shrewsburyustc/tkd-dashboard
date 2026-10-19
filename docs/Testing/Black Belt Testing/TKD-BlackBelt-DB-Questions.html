@@ -77,6 +77,17 @@ b{font-weight:600}
 .grid .in{border:1px solid #8F8F8A;border-radius:5px;padding:2px 5px;background:#fff}
 .gl{font-size:12px;font-weight:600;margin:8px 0 4px}
 .arrowd{text-align:center;color:var(--text2);font-size:12px;margin:6px 0}
+
+.story{display:flex;gap:10px;margin:0 0 14px;flex-wrap:wrap}
+.st{flex:1;min-width:220px;background:#fff;border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;font-size:12.5px}
+.st .lab{display:block;font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px}
+.rep{border:1px solid var(--border-strong);border-radius:8px;background:#fff;font-size:12px;margin-top:6px}
+.rep .hd{display:flex;justify-content:space-between;background:var(--surface);padding:5px 8px;font-weight:600;border-bottom:1px solid var(--border)}
+.rep .ln{display:flex;justify-content:space-between;padding:4px 8px;border-bottom:1px solid var(--border)}
+.tg{font-size:11px;border-radius:999px;padding:0 7px;border:1px solid}
+.tg.ok{background:var(--ok-tint);color:var(--ok);border-color:#CFE2B8}
+.tg.wa{background:var(--warn-tint);color:var(--warn);border-color:#F2D9B0}
+.strike{text-decoration:line-through;color:var(--text2)}
 </style>
 </head>
 <body>
@@ -217,6 +228,49 @@ b{font-weight:600}
 
 </div>
 <p class="foot"><b>Same in every option:</b> once anyone has paid, a cycle's prices can't change (v0.217); changing a single family's plan stays as approved (screen 23).</p>
+</section>
+
+<section id="qb3">
+<h1>Black Belt · Database question 3 of 7: what each payment remembers, for the Daily report</h1>
+<p class="lead">Finance's <b>Daily report</b> totals each school's money per day, and a day can be <b>closed</b> (cash counted, v0.194). The question: when staff <b>fix a candidate's school later</b>, does money already recorded stay with the school it was paid at, or move? It depends on whether each payment row <b>remembers</b> the school (and the cycle's name) <b>as it was when paid</b>, or looks them up fresh each time. <span class="ambtxt">Amber</span> = what the report shows afterwards.</p>
+<div class="story">
+<div class="st"><span class="lab">Sat, Mar 27</span>Alex Kim registered through the <b>Shrewsbury</b> link and pays <b>$390</b> at the Shrewsbury desk.</div>
+<div class="st"><span class="lab">Sat, Mar 27, evening</span>Shrewsbury <b>closes the day</b>: $390 counted, matches.</div>
+<div class="st"><span class="lab">Fri, Apr 2</span>Staff notice Alex actually trains at <b>Worcester</b> and fix his school.</div>
+</div>
+<div class="opts">
+
+<div class="opt rec">
+<div class="ot"><span class="letter">A</span>Remember school and cycle name<span class="rec-tag">Recommended</span></div>
+<div class="exp" style="margin-bottom:6px">Each payment row keeps <b>"Shrewsbury · Spring 2027"</b> as it was when paid.</div>
+<div class="amb">
+<div class="rep"><div class="hd"><span>Shrewsbury · Sat, Mar 27</span><span class="tg ok">Closed</span></div><div class="ln"><span>Alex Kim · Black Belt · Spring 2027 · Payment 1 + Kukkiwon</span><span>$390</span></div><div class="ln"><span>Total</span><span>$390</span></div></div>
+<div class="rep"><div class="hd"><span>Worcester · Sat, Mar 27</span><span class="tg ok">Closed</span></div><div class="ln"><span style="color:var(--text2)">nothing from Alex</span><span></span></div></div>
+</div>
+<div class="exp" style="margin-top:8px"><b>After the fix:</b> Mar 27 stays exactly as it was counted. Alex's <b>next</b> payments count for Worcester.<br><b>Pros:</b> a closed day never changes because of a correction; matches the note already sent to Finance.<br><b>Cons:</b> old money doesn't follow the fix; if it really should, an admin undoes and re-records it.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">B</span>Remember the school only</div>
+<div class="exp" style="margin-bottom:6px">The row keeps the school; the cycle's <b>name</b> is looked up fresh.</div>
+<div class="amb">
+<div class="rep"><div class="hd"><span>Shrewsbury · Sat, Mar 27</span><span class="tg ok">Closed</span></div><div class="ln"><span>Alex Kim · Black Belt · <b>Spring 2027 (renamed later)</b> · Payment 1 + Kukkiwon</span><span>$390</span></div></div>
+</div>
+<div class="exp" style="margin-top:8px"><b>After the fix:</b> same as A for the school. But if the cycle is renamed later, every old report line shows the new name.<br><b>Pros:</b> a renamed cycle reads the same everywhere.<br><b>Cons:</b> old printed reports and the screen can disagree; differs from the Finance note.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">C</span>Remember neither (Star's way)</div>
+<div class="exp" style="margin-bottom:6px">The row looks up the candidate's school every time.</div>
+<div class="amb">
+<div class="rep"><div class="hd"><span>Shrewsbury · Sat, Mar 27</span><span class="tg wa">Changed after closing</span></div><div class="ln"><span class="strike">Alex Kim · $390</span><span class="strike">$390</span></div><div class="ln"><span>Total</span><span>$0 (counted $390)</span></div></div>
+<div class="rep"><div class="hd"><span>Worcester · Sat, Mar 27</span><span class="tg wa">Changed after closing</span></div><div class="ln"><span>Alex Kim · $390</span><span>$390</span></div></div>
+</div>
+<div class="exp" style="margin-top:8px"><b>After the fix:</b> the $390 <b>moves</b> to Worcester's Mar 27, though it was counted in Shrewsbury's drawer. Both closed days are flagged.<br><b>Pros:</b> fewest things stored.<br><b>Cons:</b> closed days change after the fact; reports stop matching the cash that was counted.</div>
+</div>
+
+</div>
+<p class="foot"><b>Same in every option:</b> fixing a candidate's school is allowed (staff, v0.210); undos, refunds and returned checks belong to the same school as the payment they correct, so one family's money never splits between two reports.</p>
 </section>
 </main>
 </body>

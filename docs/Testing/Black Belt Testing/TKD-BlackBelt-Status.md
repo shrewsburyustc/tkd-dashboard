@@ -72,6 +72,8 @@
 
 **All 26 screens approved 2026-10-19** (rulebook v0.900).
 
+**Redraw for v0.902 approved 2026-10-19:** Add cycle with the Prices and payment due dates section (filled in from the previous cycle; + Add plan asks name + number of payments, then amounts and due dates in the grid), Edit cycle with prices read-only (due dates still editable), Rubric and prices with the waiver only.
+
 ## 4. Reviewer check of the plan (2026-10-18)
 
 There were two reviewers:
