@@ -1,7 +1,7 @@
 # Black Belt testing — status
 
 **Updated:** 2026-10-18 (Black Belt worktree session, branch `black-belt`)
-**Rulebook at this update:** v0.224 (Black Belt rows: v0.204, v0.205, v0.209–v0.213, v0.216–v0.220, v0.224; numbers 0.176–0.203 0.206–0.208 and 0.214–0.215 and 0.221–0.223 belong to other branches)
+**Rulebook at this update:** v0.300 on main (merged). **Black Belt's number block is 0.900–0.999** (v0.300); next row 0.900. Older Black Belt rows: v0.204, v0.205, v0.209–v0.213, v0.216–v0.220, v0.224 (0.209 and 0.216 clash with Finance and move into 0.9xx at merge if Finance merges first).
 
 > Read `CLAUDE.md` (repo root) first. This file says where Black Belt testing stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
