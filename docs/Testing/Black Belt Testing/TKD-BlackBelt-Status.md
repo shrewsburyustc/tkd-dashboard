@@ -1,7 +1,7 @@
 # Black Belt testing — status
 
 **Updated:** 2026-10-18 (Black Belt worktree session, branch `black-belt`)
-**Rulebook at this update:** v0.211 (Black Belt rows: v0.204, v0.205, v0.209–v0.211; numbers 0.176–0.203 and 0.206–0.208 belong to other branches)
+**Rulebook at this update:** v0.212 (Black Belt rows: v0.204, v0.205, v0.209–v0.212; numbers 0.176–0.203 and 0.206–0.208 belong to other branches)
 
 > Read `CLAUDE.md` (repo root) first. This file says where Black Belt testing stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -13,7 +13,7 @@
 
 - Research is done (inventory files in `Inventory/`).
 - **The plan is approved** (v0.204): `TKD-BlackBelt-Plan.md`. Two reviewer agents checked it first (§4).
-- **Black Belt is built now**, not queued behind other sections (v0.205; B1 withdrawn). B2 (where it lives) follows rule v0.59: the third row of the Testing chooser, with Star's page layout (v0.60). B3 answered (v0.209): a cycle holds a **list of testing days**, each with the parts graded that day. B4 answered (v0.210): roles same as Star. B5 answered (v0.211): form fields like Star's. Question B6 (who may register) is asked.
+- **Black Belt is built now**, not queued behind other sections (v0.205; B1 withdrawn). B2 (where it lives) follows rule v0.59: the third row of the Testing chooser, with Star's page layout (v0.60). B3 answered (v0.209): a cycle holds a **list of testing days**, each with the parts graded that day. B4 answered (v0.210): roles same as Star. B5 answered (v0.211): form fields like Star's. B6 answered (v0.212): open form, staff check. Question B7 (waiver and signature) is asked.
 - Nothing is built and there is no migration. The branch includes main up to `5ccb355` (Star 0006 live).
 
 ## 2. Files
@@ -33,7 +33,7 @@
 ## 3. Next steps
 
 1. Jeffrey checks the urgent live-system items (plan §2): the live Sheet before Oct 24, and the `updateInfo` stopgap.
-2. **Question B6 (who may register): waiting on Jeffrey.** Then B7, B8, and so on, one at a time; each part is built as soon as its design is approved.
+2. **Question B7 (waiver and signature): waiting on Jeffrey.** Then B8, B9, and so on, one at a time; each part is built as soon as its design is approved.
 3. With Jeffrey's OK, send the Finance session a note (plan §7).
 4. Make the printable rules sheet for Master Jeong (part A) in parallel.
 
@@ -76,3 +76,4 @@ All the items below were applied to the plan.
 | v0.209 | **B3 (B): a cycle holds a list of testing days**, any number, each with name, date, time, place and the parts graded that day; deadlines + payment due dates; copied from the last cycle. Four details to settle with the mockups. |
 | v0.210 | **B4 (A): roles same as Star.** Staff record payments (5-second Undo), add/fix candidates, grade; admins do setup, later payment changes, refunds, bounced checks, removals, reopening after the closing date. Enforced in the database. |
 | v0.211 | **B5 (A): form fields like Star's**: first + last name for the belt, DOB, Dan, Kukkiwon yes/no, payment plan with amounts, one email for results; school from the link; no sex, phone or parent name (sex only if Kukkiwon needs it). |
+| v0.212 | **B6 (A): open form**, registrations count at once, staff check the list; closes at the end of the application date; late families added by staff, or an admin reopens. |

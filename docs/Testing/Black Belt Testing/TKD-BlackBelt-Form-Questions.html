@@ -531,6 +531,15 @@ code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
 .tg{font-size:11px;border-radius:999px;padding:1px 8px;border:1px solid}
 #b6 .qexp{min-height:0}
 #b6{border-top:1px solid var(--border-strong);margin-top:24px}
+#b7{border-top:1px solid var(--border-strong);margin-top:24px}
+.b7grid{display:grid;grid-template-columns:420px 1fr;gap:20px;align-items:start}
+.b7opts{display:flex;flex-direction:column;gap:14px}
+#b7 .qexp{min-height:0;margin:8px 0 0}
+.tline{display:flex;height:34px;border-radius:6px;overflow:visible;font-size:11px;gap:2px}
+.tline .seg{display:flex;align-items:center;justify-content:center;text-align:center;padding:0 4px;line-height:1.2;border-radius:4px}
+.tline .s1{background:#D9D9D4}.tline .s2{background:var(--blue);color:#fff}.tline .s3{background:var(--blue-tint);color:var(--blue)}.tline .s4{background:#F3E3E3;color:#8A2B2B}
+.waiver{font-size:12px;color:var(--text2);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:10px;line-height:1.45}
+.waiver b{color:var(--text);font-weight:600}.waiver .more{color:var(--blue);text-decoration:underline}.waiver .ver{font-size:11px;margin-top:4px}
 </style>
 </head>
 <body>
@@ -667,6 +676,62 @@ code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
 
 </div>
 <p class="qfoot"><b>Same in every option:</b> registrations are checked in the database (Turnstile, rate limit, retries can't double-register); possible duplicates are flagged for staff (as Star); staff can add a candidate at the desk at any time (B4); the closing date can be changed by admins.</p>
+</main>
+<main class="qmain" id="b7">
+<h1 class="qh">Black Belt · Question B7: the waiver and signature, and how long the signed copy is kept</h1>
+<p class="qlead">Step 2 of the form (left) is the same in every option: the summary, the school's waiver text (saved with a version number, so we always know which text was signed), an "I agree" tick, the signer's name and the drawn signature. If the candidate is <b>under 18 on the first testing day</b>, a parent or guardian signs. The question is <b>how long the signed waiver is kept</b>. Today's waiver <b>releases the school from liability for injuries</b>, so the signed copy is a legal record, unlike Color Belt's and Star's simple confirmation (deleted after 90 days). <span class="ambtxt">Amber</span> = what differs. Not legal advice: the right number of years is a question for the school's insurer or lawyer.</p>
+<div class="b7grid">
+<div><p class="cap">Step 2 · phone · same in every option</p>
+<div class="dev dev-ph touch phx"><div class="pubframe"><div class="pub"><div class="pubcol">
+<div class="hdrB"><span class="lg" role="img" aria-label="logo"></span><div><div class="s1">Jae H. Jeong's U.S. Taekwondo Center</div><div class="s2">Black Belt testing registration · Shrewsbury</div></div></div>
+<div class="stepline">Step 2 of 2 · Check and send</div>
+<div class="card">
+<div class="rv"><span class="k">Cycle</span><span class="v">Spring 2027 Black Belt Testing · first day Sat, Apr 3</span></div>
+<div class="rv"><span class="k">Candidate</span><span class="v">Alex Kim</span></div>
+<div class="rv"><span class="k">School</span><span class="v">Shrewsbury (from this link)</span></div>
+<div class="rv"><span class="k">Date of birth</span><span class="v">Mar 4, 2012 (15 on Apr 3)</span></div>
+<div class="rv"><span class="k">Testing for</span><span class="v">1st Dan · Kukkiwon certificate</span></div>
+<div class="rv"><span class="k">To pay</span><span class="v">$970: 3 payments of $290 (Mar 27, Apr 24, May 29) + $100 Kukkiwon, at the front desk</span></div>
+<div class="rv"><span class="k">Results go to</span><span class="v">kim.family@example.com</span></div>
+</div>
+<div class="card">
+<div class="waiver"><b>Waiver and agreement</b><br>Every subject must be passed; subjects not passed are made up at a later testing. Testing fees are non-refundable and are applied to the next testing if not passed. I understand Taekwondo testing involves physical activity and risk of injury, and I release the school, its owners, instructors and staff … <span class="more">Read all</span><div class="ver">Version 2027-1</div></div>
+<div class="ack"><span class="cbx on"></span><span>I have read and agree to the waiver.</span></div>
+<div class="field"><label>Name of the person signing</label><div class="input">Jordan Kim</div><div class="hint">A parent or guardian, because Alex is under 18.</div></div>
+<div class="field"><label>Signature</label><div class="sigpad" role="img" aria-label="Signature"><a class="txtlink clr">Clear</a><svg width="300" height="70" viewBox="0 0 300 70"><path d="M10 50 C 30 8, 50 66, 70 32 S 110 18, 125 46 S 160 60, 180 28 S 230 36, 260 40" fill="none" stroke="#1F1F1F" stroke-width="2"/></svg><div class="ln"></div></div></div>
+</div>
+<span class="btn btn-primary btn-full">Send registration</span>
+</div></div></div></div>
+</div>
+
+<div class="b7opts">
+
+<div class="qcol rec">
+<div class="qot"><span class="letter">A</span>Keep for a set number of years<span class="rec-tag">Recommended</span></div>
+<div class="tline"><span class="seg s1" style="width:8%">reg.</span><span class="seg s2" style="width:14%">testing days</span><span class="seg s3 amb" style="width:66%">kept: e.g. 3 years after the last testing day, or until 3 years after an under-18 turns 18 if later</span><span class="seg s4" style="width:12%">deleted</span></div>
+<div class="qexp"><b>What it does:</b> the signed waiver (signature, signer's name, text version, date) is kept for a <b>set period</b>, then deleted automatically. The number of years is a setting, filled in from what the school's insurer or lawyer says. Only admins can open a signature.<br>
+<b>Pros:</b> the waiver is still there if an injury claim comes years later, which is the point of signing it; nothing kept longer than needed.<br>
+<b>Cons:</b> holds a minor's parent's signature for years (stored safely, admin-only); needs an answer from the insurer before go-live; different from Color Belt and Star.</div>
+</div>
+
+<div class="qcol">
+<div class="qot"><span class="letter">B</span>90 days, like Color Belt and Star</div>
+<div class="tline"><span class="seg s1" style="width:8%">reg.</span><span class="seg s2" style="width:14%">testing days</span><span class="seg s3 amb" style="width:10%">90 days</span><span class="seg s4" style="width:68%">deleted (only "signed on Mar 10, version 2027-1" remains)</span></div>
+<div class="qexp"><b>What it does:</b> the signature is deleted 90 days after the cycle's <b>last</b> testing day; the record keeps only "signed, by whom, when, which version".<br>
+<b>Pros:</b> least personal data kept; the same rule everywhere in Testing.<br>
+<b>Cons:</b> if an injury claim comes later, the signed waiver is gone; the school only has the log line.</div>
+</div>
+
+<div class="qcol">
+<div class="qot"><span class="letter">C</span>Keep forever</div>
+<div class="tline"><span class="seg s1" style="width:8%">reg.</span><span class="seg s2" style="width:14%">testing days</span><span class="seg s3 amb" style="width:78%">kept forever (admins can delete one by hand)</span></div>
+<div class="qexp"><b>What it does:</b> like today's Drive folder: every signature is kept until someone deletes it.<br>
+<b>Pros:</b> never missing; nothing to decide now.<br>
+<b>Cons:</b> minors' families' signatures pile up for no reason after the risk period; more to protect; against the rulebook's rule of keeping only what's needed.</div>
+</div>
+
+</div></div>
+<p class="qfoot"><b>Same in every option:</b> the waiver text is edited by admins on the Rubric and prices tab and saved with a version number; a change makes a new version and old registrations keep theirs; if a family can't sign on the phone, they sign on paper at the desk and staff tick "signed on paper"; signatures never appear in lists, on the grading tablet, in exports or in the change log ("on file" only).</p>
 </main>
 </body>
 </html>
