@@ -61,5 +61,5 @@
 
 1. ~~Commit the Camps docs~~ — done 2026-10-18 (`637fb29`, branch `camps`, not pushed).
 2. ~~Record in the rulebook~~ — done 2026-10-18: merged `main` (v0.196) into `camps`, added **v0.229–v0.237** (10b rows, changelog, §9 Camps row, §2.4 icons). Numbers start above the highest on any branch (v0.228 on `color-belt`); renumber at merge into `main` if needed.
-3. Build plan (migration number: `0010` is now Color Belt phase 3 on `main` — pick the next free number across all branches) + contract (like Color Belt phase 2): database migration (next free number), family-form public path reusing Color Belt's registrar / Turnstile / Hyperdrive pattern, staff screens, preview mock data; independent review of the plan; then build with subagents + security and design review.
-- Migration number: next free when the database part starts (0010 is taken by Prospects on its branch — check every branch first).
+3. Build plan — **drafted 2026-10-19** (`docs/Camps/TKD-Camps-Build-Plan.md`), independent review running. Migration **0013** (0011 = Finance worktree, 0012 = Prospects branch, both not on `main` yet). + contract (like Color Belt phase 2): database migration (next free number), family-form public path reusing Color Belt's registrar / Turnstile / Hyperdrive pattern, staff screens, preview mock data; independent review of the plan; then build with subagents + security and design review.
+- Migration number: **0013** (checked 2026-10-19 across all branches and worktrees: 0010 = Color Belt phase 3 on `main`, 0011 = Finance, 0012 = Prospects).
