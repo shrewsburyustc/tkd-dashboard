@@ -7,11 +7,13 @@
 //   - "Not the same person — keep both": the tag goes away on both
 //   - Close: nothing changes
 // PC / tablet: two columns. Phone: a full screen with the two registrations one after the other.
+// Phase 3 (v0.194): after the testing day "Keep this one" is for admins only — staff don't see
+// the two buttons (canKeepOne false), only "keep both" and a line saying an admin can keep one.
 import Dialog from '../../../components/Dialog.jsx';
 import Notice from '../../../components/Notice.jsx';
 import * as T from '../text.js';
 
-export default function CompareDialog({ first, second, rankById, isPhone, saving, failed, onKeep, onKeepBoth, onClose }) {
+export default function CompareDialog({ first, second, rankById, isPhone, saving, failed, canKeepOne = true, onKeep, onKeepBoth, onClose }) {
   const name = T.studentLabel(first);
   const testing = (row) => {
     const rank = rankById.get(row.eventRankId);
@@ -33,17 +35,18 @@ export default function CompareDialog({ first, second, rankById, isPhone, saving
       {highlight && <span className="visually-hidden"> ({T.DIFFERENT})</span>}
     </>
   );
-  const keepButton = (row, which) => (
-    <button
-      type="button"
-      className="btn btn-sm"
-      aria-label={T.keepThisOneLabel(which)}
-      aria-disabled={saving ? 'true' : undefined}
-      onClick={() => !saving && onKeep(row, row === first ? second : first)}
-    >
-      {T.KEEP_THIS_ONE}
-    </button>
-  );
+  const keepButton = (row, which) =>
+    canKeepOne && (
+      <button
+        type="button"
+        className="btn btn-sm"
+        aria-label={T.keepThisOneLabel(which)}
+        aria-disabled={saving ? 'true' : undefined}
+        onClick={() => !saving && onKeep(row, row === first ? second : first)}
+      >
+        {T.KEEP_THIS_ONE}
+      </button>
+    );
 
   return (
     <Dialog title={T.compareTitle(name)} size="wide" fullScreen={isPhone} onRequestClose={onClose}>
@@ -83,15 +86,17 @@ export default function CompareDialog({ first, second, rankById, isPhone, saving
                 <td className={differs(line) ? 'is-diff' : ''}>{value(line.b, differs(line))}</td>
               </tr>
             ))}
-            <tr className="ev-cmp-keep">
-              <td />
-              <td>{keepButton(first, T.FIRST_REGISTRATION)}</td>
-              <td>{keepButton(second, T.SECOND_REGISTRATION)}</td>
-            </tr>
+            {canKeepOne && (
+              <tr className="ev-cmp-keep">
+                <td />
+                <td>{keepButton(first, T.FIRST_REGISTRATION)}</td>
+                <td>{keepButton(second, T.SECOND_REGISTRATION)}</td>
+              </tr>
+            )}
           </tbody>
         </table>
       )}
-      <p className="field-hint ev-cmp-note">{T.COMPARE_NOTE}</p>
+      <p className="field-hint ev-cmp-note">{canKeepOne ? T.COMPARE_NOTE : T.KEEP_ONE_ADMIN_ONLY}</p>
       <div className="dialog-actions ev-cmp-actions">
         <button type="button" className="btn" aria-disabled={saving ? 'true' : undefined} onClick={() => !saving && onKeepBoth()}>
           {T.KEEP_BOTH}

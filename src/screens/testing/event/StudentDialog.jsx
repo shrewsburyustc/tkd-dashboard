@@ -8,6 +8,11 @@
 //           the new "Testing for" and fee at once. Payment is NOT changed here.
 // PC and tablet: a centered dialog. Phone: a full screen with a back arrow.
 //
+// Phase 3 (G8, contract 0010 §4.7): the summary shows the student's Result (tag, when and by
+// whom, the note) and the "Added … (admin)" line; Edit details warns that changing the belt or
+// class of a graded student clears their result, and — for staff after the testing day — keeps
+// the class and belt choices locked ("Only an admin can change this student now.").
+//
 // Like the other dialogs, this only DRAWS the form; the values live in EventPage (`state`), so a
 // screen lock hides the dialog and brings it back with everything still filled in.
 import { IconCheck, IconEdit } from '@tabler/icons-react';
@@ -17,6 +22,7 @@ import Notice from '../../../components/Notice.jsx';
 import { nameProblem, normalizeName } from '../../../lib/testing/names.js';
 import { classTimeLabel } from '../../../lib/testing/eventRules.js';
 import ChoiceGroup from '../events/ChoiceGroup.jsx';
+import { ResultTag } from './ResultButtons.jsx';
 import * as T from '../text.js';
 
 // ----- Small helpers shared with the roster -----
@@ -28,20 +34,24 @@ export function feeTextFor(rank, today, testingDate) {
 }
 
 // "Yellow → Orange" with both belt pictures (or "Deputy → No new rank").
+// Each belt stays on one line with its name ("[belt] Yellow →" and "[belt] Orange"): when the
+// column is narrow the line breaks only between the two, never between a belt and its name.
 export function TestingForCell({ rank }) {
   if (!rank) return null;
   const next = rank.testingFor;
   return (
     <span className="ev-tf">
-      <Belt belt={rank} />
-      <span>{rank.name}</span>
-      <span aria-hidden="true">→</span>
+      <span className="ev-tf-pair">
+        <Belt belt={rank} />
+        <span>{rank.name}</span>
+        <span aria-hidden="true">→</span>
+      </span>
       <span className="visually-hidden">{T.TESTING_FOR}</span>
       {next ? (
-        <>
+        <span className="ev-tf-pair">
           <Belt belt={next} />
           <span>{next.name}</span>
-        </>
+        </span>
       ) : (
         <span className="ev-tf-none">{T.NO_NEW_RANK}</span>
       )}
@@ -88,9 +98,10 @@ export function checkStudentForm(state, record) {
   return { firstError, lastError, classError, beltError, stripesError, payingError, canSave, sameAsSaved, payload };
 }
 
-const PHONE_DISCARD_NOTES = ['UNSAVED', 'STALE_DIALOG', 'NOT_ALLOWED'];
+const PHONE_DISCARD_NOTES = ['UNSAVED', 'STALE_DIALOG', 'NOT_ALLOWED', 'STUDENT_LOCKED'];
 const NOTES = {
   UNSAVED: T.UNSAVED,
+  STUDENT_LOCKED: T.STUDENT_LOCKED,
   STALE_DIALOG: T.STALE_DIALOG,
   NOT_ALLOWED: T.ROSTER_NOT_ALLOWED,
   INVALID_DIALOG: T.INVALID_DIALOG,
@@ -133,6 +144,8 @@ function Summary({ row, cls, rank, event, today }) {
             <span className="nowrap">{`${T.REFERENCE_WORD} ${row.reference}`}</span>
           </>
         )}
+        {/* Plan Q1: added by an admin after the testing day */}
+        {row.addedAfterDay && <span className="ev-sum-line">{T.addedAfterDayLine(row.addedAfterDay.date, row.addedAfterDay.byName)}</span>}
       </SummaryRow>
       <SummaryRow label={T.DETAIL_PAYING_BY}>{T.payingByText(row.payingBy)}</SummaryRow>
       <SummaryRow label={T.DETAIL_PAYMENT}>
@@ -147,6 +160,14 @@ function Summary({ row, cls, rank, event, today }) {
         )}
       </SummaryRow>
       <SummaryRow label={T.DETAIL_SIGNED}>{signed}</SummaryRow>
+      {row.graded && (
+        // G8: "Not passed · Nov 20, 5:41 PM by Staff", then "Note: …"
+        <SummaryRow label={T.DETAIL_RESULT}>
+          {row.result ? <ResultTag result={row.result} /> : <span className="gr-notrec">{T.NOT_RECORDED_YET}</span>}{' '}
+          {T.resultStamp(row.resultAt, row.resultByName)}
+          {row.note && <span className="ev-sum-line">{T.resultNoteLine(row.note)}</span>}
+        </SummaryRow>
+      )}
       {row.status === 'withdrawn' && (
         <SummaryRow label={T.DETAIL_REMOVED}>{T.removedDetail(row.withdrawnAt, row.withdrawnByName, row.withdrawnReason)}</SummaryRow>
       )}
@@ -163,6 +184,8 @@ export default function StudentDialog({
   record, // view / edit: the roster row
   isPhone,
   canEdit, // show "Edit details" in the summary
+  graded = null, // edit: { graded, result, note } as last read — warns that a belt change clears it
+  beltLocked = false, // edit: staff after the testing day, graded student → class and belt locked
   onChange,
   onTouch,
   onSave,
@@ -236,6 +259,14 @@ export default function StudentDialog({
     }
   }
 
+  // Phase 3: a graded student whose belt or class is being changed (Edit details).
+  let clearsLine = null;
+  if (!isAdd && record && graded?.graded && !beltLocked && values.rankId !== record.eventRankId) {
+    const first = record.firstName;
+    clearsLine = <Notice>{graded.result ? T.beltChangeClears(first, T.resultTagText(graded.result)) : T.beltChangeClearsNote(first)}</Notice>;
+  }
+  const chooserReadOnly = readOnly || beltLocked;
+
   function handleSubmit(submitEvent) {
     submitEvent.preventDefault();
     onSave(check.canSave);
@@ -298,7 +329,7 @@ export default function StudentDialog({
           {nameField('lastName', T.LAST_NAME, check.lastError)}
         </div>
 
-        <div className={`field${isAdd ? '' : ' ev-belt-box'}`}>
+        <div className={`field${isAdd ? '' : ' ev-belt-box'}${beltLocked ? ' ev-locked' : ''}`}>
           <span id={`${idBase}-class-label`} className="field-label">
             {T.CLASS}
           </span>
@@ -306,7 +337,8 @@ export default function StudentDialog({
             variant="chips"
             labelId={`${idBase}-class-label`}
             value={values.classId}
-            readOnly={readOnly}
+            readOnly={chooserReadOnly}
+            disabled={beltLocked}
             invalid={Boolean(check.classError)}
             options={classes.map((c) => ({ key: c.id, label: c.className }))}
             onChange={(classId) => onChange({ classId, rankId: null })}
@@ -321,7 +353,8 @@ export default function StudentDialog({
               variant="chips"
               labelId={`${idBase}-belt-label`}
               value={values.rankId}
-              readOnly={readOnly}
+              readOnly={chooserReadOnly}
+              disabled={beltLocked}
               invalid={Boolean(check.beltError)}
               options={cls.ranks.map((r) => ({
                 key: r.id,
@@ -340,6 +373,9 @@ export default function StudentDialog({
           )}
           {check.beltError && <Notice>{check.beltError}</Notice>}
           {testingLine}
+          {clearsLine}
+          {/* Staff after the testing day: the result is locked, so are class and belt (G8). */}
+          {beltLocked && <Notice>{T.STUDENT_LOCKED}</Notice>}
         </div>
 
         {isAdd && (

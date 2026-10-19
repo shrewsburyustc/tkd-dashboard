@@ -6,19 +6,27 @@
 //   'ok' (plus the result fields) · 'no_access' · 'not_allowed' · 'not_found' · 'stale' ·
 //   'duplicate_name' · 'invalid' · 'not_empty' · 'final_award_not_set' (+ className) ·
 //   'not_open' · 'closed' · 'finished' · 'already_paid' · 'withdrawn' · 'rate_limited' ·
+//   'has_results' (phase 3: Edit event can't move the date of an event that has results) ·
 //   'error' (no connection / unexpected answer — { status:'error', error })
 // These functions NEVER throw.
+//
+// Phase 3 (Grading, migration 0010, contract 0010 §3.2) added: the testing_results table (read
+// by loadEvent and loadResult) and the functions testing_set_result (setResult) and
+// testing_set_result_note (setResultNote). Results have no version: the last change wins, and a
+// result never changes a registration's version. updateStudent's answer may carry
+// resultCleared: true (a belt change cleared the student's result).
 //
 // Times: the database sends a time as '17:00:00'; this file turns it into '17:00'. Dates stay
 // 'YYYY-MM-DD' text. Money is whole cents (6500 = $65).
 import { supabase, isPreview } from '../supabase.js';
 import { readStorage } from '../storage.js';
 import { eventState, eventCounts, testingFor, todayInSchoolTime, shortTime, isIsoDate, PREVIEW_TODAY_KEY } from './eventRules.js';
+import { RESULTS, isGraded, addedAfterDay } from './gradingRules.js';
 
 // Every status a call here can return.
 export const EVENT_STATUSES = [
   'ok', 'no_access', 'not_allowed', 'not_found', 'stale', 'duplicate_name', 'invalid', 'not_empty',
-  'final_award_not_set', 'rate_limited', 'not_open', 'closed', 'finished', 'already_paid', 'withdrawn', 'error',
+  'final_award_not_set', 'rate_limited', 'not_open', 'closed', 'finished', 'already_paid', 'withdrawn', 'has_results', 'error',
 ];
 const SERVER_STATUSES = new Set(EVENT_STATUSES.filter((s) => s !== 'error'));
 const KNOWN_LOCATIONS = new Set(['worcester', 'shrewsbury']);
@@ -35,6 +43,9 @@ const EVENT_RANK_COLUMNS = `id, event_class_id, rank_id, name, position, ${BELT}
 // only uses columns the contract names exactly.
 const ROSTER_COLUMNS = 'id, event_id, event_rank_id, first_name, last_name, paying_by, stripes_confirmed, source, reference, signed, signed_at, signature_deleted_at, ack_version, registered_at, status, withdrawn_reason, withdrawn_at, withdrawn_by_name, duplicate_state, duplicate_of, version, created_at, created_by_name, updated_at, updated_by_name, paid, paid_cents, paid_on, paid_method, last_payment_id, last_payment_recorded_at';
 const PAYMENT_COLUMNS = 'id, registration_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by_name, reverses_payment_id';
+// A student's grading result (phase 3). Never updated_by (the login id isn't given to the app)
+// and never '*' (the database refuses it).
+const RESULT_COLUMNS = 'registration_id, result, note, updated_at, updated_by_name';
 // How many ids go into one "id is one of these" filter (they travel in the web address).
 const IN_CHUNK = 80;
 
@@ -122,7 +133,20 @@ function toEventClass(row, ranks) {
   };
 }
 
-function toRosterRow(row, classOfRank) {
+// A testing_results row → the grading fields every roster row carries. No row = not graded.
+function toResult(row) {
+  const result = RESULTS.includes(row?.result) ? row.result : null;
+  const note = typeof row?.note === 'string' ? row.note : null;
+  return {
+    result, // 'pass' | 'not_passed' | 'no_show' | null (not recorded yet)
+    note, // the grading note (one line) or null
+    resultAt: row?.updated_at ?? null, // when the result or note last changed
+    resultByName: row?.updated_by_name ?? null, // who changed it
+    graded: isGraded({ result, note }),
+  };
+}
+
+function toRosterRow(row, classOfRank, resultRow) {
   return {
     id: row.id,
     eventId: row.event_id,
@@ -156,6 +180,7 @@ function toRosterRow(row, classOfRank) {
     paidMethod: row.paid_method ?? null,
     lastPaymentId: row.last_payment_id ?? null,
     lastPaymentRecordedAt: row.last_payment_recorded_at ?? null,
+    ...toResult(resultRow), // result, note, resultAt, resultByName, graded (phase 3)
   };
 }
 
@@ -236,12 +261,18 @@ export async function loadEvents(locationCode) {
 }
 
 // One event with everything the event page needs:
-// → { status:'ok', today, event, classes:[{ …, ranks:[{ …, testingFor }] }], roster:[…], payments:[…] }
+// → { status:'ok', today, startedAt, event, classes:[{ …, ranks:[{ …, testingFor }] }], roster:[…], payments:[…] }
 //   event also carries the same counts as loadEvents (activeCount, withdrawnCount,
-//   registrationCount, paymentTotalCents, removedPaymentCents — eventRules.eventCounts).
+//   registrationCount, paymentTotalCents, removedPaymentCents — eventRules.eventCounts) and
+//   resultCount (students of any status with a result or a note — Delete event's warning).
 //   or { status:'not_found' } when the event doesn't exist (any more).
-// classes and ranks are in position order (belt order); roster rows carry eventClassId.
+// classes and ranks are in position order (belt order); roster rows carry eventClassId and the
+// grading fields result, note, resultAt, resultByName, graded and addedAfterDay
+// ({ date, byName } for a student an admin added after the testing day, else null).
+// startedAt = Date.now() when this call STARTED (before any request): the Grading tab compares
+// it with the time a save answered, so it never shows a read older than its own save.
 export async function loadEvent(eventId) {
+  const startedAt = Date.now();
   try {
     if (typeof eventId !== 'string' || eventId === '') return failure(new Error('No event id'));
     if (!supabase) return failure(new Error('No connection is set up'));
@@ -259,12 +290,14 @@ export async function loadEvent(eventId) {
 
     const classIds = classRes.data.map((c) => c.id);
     const regIds = rosterRes.data.map((r) => r.id);
-    const [rankRes, paymentRes] = await Promise.all([
+    const [rankRes, paymentRes, resultRes] = await Promise.all([
       selectIn('testing_event_ranks', EVENT_RANK_COLUMNS, 'event_class_id', classIds),
       selectIn('testing_payments', PAYMENT_COLUMNS, 'registration_id', regIds),
+      selectIn('testing_results', RESULT_COLUMNS, 'registration_id', regIds),
     ]);
     if (rankRes.error) return failure(rankRes.error);
     if (paymentRes.error) return failure(paymentRes.error);
+    if (resultRes.error) return failure(resultRes.error);
 
     const classes = classRes.data
       .map((c) => toEventClass(c, rankRes.rows.filter((r) => r.event_class_id === c.id).map(toEventRank).sort((a, b) => a.position - b.position)))
@@ -277,10 +310,37 @@ export async function loadEvent(eventId) {
         classOfRank.set(rank.id, cls.id);
       }
     }
-    const roster = rosterRes.data.map((row) => toRosterRow(row, classOfRank));
-    const payments = paymentRes.rows.map(toPayment).sort((a, b) => (a.recordedAt < b.recordedAt ? -1 : a.recordedAt > b.recordedAt ? 1 : 0));
+    const resultOf = new Map(resultRes.rows.map((r) => [r.registration_id, r]));
     const event = Object.assign(toEvent(eventRes.data[0], today), eventCounts(rosterRes.data));
-    return { status: 'ok', today, event, classes, roster, payments };
+    const roster = rosterRes.data.map((row) => {
+      const student = toRosterRow(row, classOfRank, resultOf.get(row.id) ?? null);
+      student.addedAfterDay = addedAfterDay(student, event.testingDate); // gradingRules.js
+      return student;
+    });
+    event.resultCount = roster.filter((r) => r.graded).length;
+    const payments = paymentRes.rows.map(toPayment).sort((a, b) => (a.recordedAt < b.recordedAt ? -1 : a.recordedAt > b.recordedAt ? 1 : 0));
+    return { status: 'ok', today, startedAt, event, classes, roster, payments };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+// One student's saved result, read fresh right before Edit details saves a belt change (so the
+// "this clears the result" warning is never out of date — contract 0010 §4.7).
+// → { status:'ok', graded, result, note, resultAt, resultByName } (graded false and nulls when
+//   nothing is saved) · 'no_access' · 'error'
+export async function loadResult(registrationId) {
+  try {
+    if (typeof registrationId !== 'string' || registrationId === '') return failure(new Error('No registration id'));
+    if (!supabase) return failure(new Error('No connection is set up'));
+    const [res, denied] = await Promise.all([
+      supabase.from('testing_results').select(RESULT_COLUMNS).eq('registration_id', registrationId),
+      accessCheck(),
+    ]);
+    if (denied) return denied;
+    if (res?.error) return failure(res.error);
+    if (!Array.isArray(res.data)) return unexpected('testing_results');
+    return { status: 'ok', ...toResult(res.data[0] ?? null) };
   } catch (error) {
     return failure(error);
   }
@@ -290,6 +350,7 @@ export async function loadEvent(eventId) {
 
 const isText = (v) => typeof v === 'string' && v.length > 0;
 const isInt = (v) => Number.isInteger(v);
+const isTextOrNull = (v) => v === null || typeof v === 'string';
 
 // Calls one database function and turns its answer into { status, … }. readOk(data) checks the
 // ok answer and converts it to camelCase; null = wrong shape → 'error' rather than a guess.
@@ -337,7 +398,8 @@ export async function addEvent({ locationCode, name, testingDate, classes, regis
 }
 
 // Edit event (admin). classes = the full new list (added ones are copied, missing ones removed —
-// 'not_empty' if a removed class has registrations; times always update).
+// 'not_empty' if a removed class has registrations; times always update). 'has_results' when the
+// date would change but a student of this event already has a result or a note (phase 3).
 export async function updateEvent({ eventId, expectedVersion, name, testingDate, classes, autoCloseOn = null, note = null } = {}) {
   return callRpc(
     'testing_update_event',
@@ -390,12 +452,38 @@ export async function addStudent({ eventId, firstName, lastName, eventRankId, st
 }
 
 // Edit details: names and current belt (the class follows the belt). Payments are untouched.
+// → { status:'ok', version, resultCleared } — resultCleared is true when the belt changed for a
+//   graded student, so the database cleared their result and note (phase 3; the database only
+//   sends result_cleared when it is true) · 'not_allowed' (staff, after the testing day, belt
+//   change of a graded student) · 'stale' · 'invalid' · 'not_found'
 export async function updateStudent({ registrationId, expectedVersion, firstName, lastName, eventRankId } = {}) {
   return callRpc(
     'testing_update_student',
     { p_registration_id: registrationId, p_expected_version: expectedVersion, p_first: firstName, p_last: lastName, p_event_rank_id: eventRankId },
-    readVersion,
+    (d) => (isInt(d.version) ? { version: d.version, resultCleared: d.result_cleared === true } : null),
   );
+}
+
+// ----- Grading (phase 3, migration 0010) -----
+// Both answer ok with what is stored NOW: { status:'ok', result, note, resultAt, resultByName }
+// (all null when nothing is saved any more). Refusals: 'no_access' · 'invalid' · 'not_found' ·
+// 'withdrawn' · 'not_open' (before the testing day) · 'finished' (staff after the testing day)
+// · 'stale' (busy, try again) · 'error'. No version: the last change wins, and sending the same
+// value again is harmless (that's what makes Retry safe).
+const readResult = (d) => {
+  if (!(d.result === null || RESULTS.includes(d.result))) return null;
+  if (!isTextOrNull(d.note) || !isTextOrNull(d.updated_at) || !isTextOrNull(d.updated_by_name)) return null;
+  return { result: d.result, note: d.note, resultAt: d.updated_at, resultByName: d.updated_by_name };
+};
+
+// Record a result: 'pass' | 'not_passed' | 'no_show', or null to clear it (the note stays).
+export async function setResult({ registrationId, result } = {}) {
+  return callRpc('testing_set_result', { p_registration_id: registrationId, p_result: result }, readResult);
+}
+
+// Save the grading note as typed (the database tidies it to one line); null or blank clears it.
+export async function setResultNote({ registrationId, note } = {}) {
+  return callRpc('testing_set_result_note', { p_registration_id: registrationId, p_note: note }, readResult);
 }
 
 // Change how they'll pay (not paid, not withdrawn).

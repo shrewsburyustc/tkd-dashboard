@@ -1,6 +1,7 @@
 // checks.mjs — automatic checks for the Testing data layer. Run:  node src/lib/testing/checks.mjs
 // (Phase 2 added: eventRules.js, qr.js, the events preview database and the family page's preview
-// API — contract 0005 §5. Those groups are at the end.)
+// API — contract 0005 §5. Those groups are at the end. Phase 3 added gradingRules.js and the
+// grading part of the preview database — contract 0010 §3.5 — just before the family page part.)
 // Why it exists: names.js, money.js, rankOrder.js and the preview database (mockTesting.js) carry
 // rules that must match the real database exactly. These plain `assert` checks run in a few
 // milliseconds without a browser or a database, and print ALL TESTING LIB CHECKS PASSED.
@@ -27,6 +28,10 @@ import {
   FORM_PAYING_BY, UNDO_WINDOW_MS, eventCounts,
 } from './eventRules.js';
 import { registrationLink, qrSvgDataUrl } from './qr.js';
+import {
+  RESULTS, GRADING_NOTE_MAX, normalizeGradingNote, gradingNoteProblem, gradingWindow, canChangeResults, isGraded,
+  resultCounts, schoolMinutesNow, defaultGradingClassId, addedAfterDay, testingGroups, groupOfClass,
+} from './gradingRules.js';
 import {
   createEventsBackend, defaultEventsData, EVENT_RPC_NAMES, EVENT_RESTRICTED_RPC_NAMES, EVENT_ADMIN_ONLY_RPCS, DEFAULT_EVENT_ID, DEFAULT_PUBLIC_CODE,
 } from '../mockTestingEvents.js';
@@ -1448,6 +1453,8 @@ check('events mock: who may call each function (A / S splits)', () => {
     testing_restore_student: { p_registration_id: anyId, p_expected_version: 1 },
     testing_delete_student: { p_registration_id: anyId, p_expected_version: 1, p_expected_payment_ids: [] },
     settings_update_school_address: { p_code: 'nowhere', p_expected_version: 1, p_street: null, p_city: null, p_state: null, p_zip: null },
+    testing_set_result: { p_registration_id: anyId, p_result: 'pass' }, // phase 3 (S)
+    testing_set_result_note: { p_registration_id: anyId, p_note: 'x' }, // phase 3 (S)
   };
   assert.deepEqual(Object.keys(sample).sort(), [...EVENT_RPC_NAMES].sort());
   // testing_restore_student checks who inside (staff: their own "keep one" for 10 seconds).
@@ -1916,6 +1923,383 @@ check('events mock: helpers and store migration', () => {
   assert.equal(evDb().classes.find((c) => c.id === cls.id).name, 'Group A1');
   assert.equal(rosterOf(DEFAULT_EVENT_ID).find((r) => r.reference === 'CB-3112').paid, true);
   assert.equal(evDb().event_classes.find((c) => c.class_id === cls.id).class_name, 'Group A'); // the copy keeps its name
+});
+
+// ======================= gradingRules.js (phase 3, contract 0010 §3.1) =======================
+
+const GRADING_DAY = '2026-11-20'; // the default event's testing day
+
+check('gradingRules: lists, window and who may change results', () => {
+  assert.deepEqual(RESULTS, ['pass', 'not_passed', 'no_show']);
+  assert.equal(GRADING_NOTE_MAX, 200);
+  assert.equal(gradingWindow('2026-11-19', GRADING_DAY), 'before');
+  assert.equal(gradingWindow(GRADING_DAY, GRADING_DAY), 'day');
+  assert.equal(gradingWindow('2026-11-21', GRADING_DAY), 'after');
+  assert.equal(gradingWindow('2026-12-31', '2027-01-01'), 'before'); // across a year
+  assert.equal(gradingWindow('2027-01-01', '2026-12-31'), 'after');
+  const table = [
+    ['before', false, false], ['before', true, false],
+    ['day', false, true], ['day', true, true],
+    ['after', false, false], ['after', true, true],
+  ];
+  for (const [window, admin, expected] of table) assert.equal(canChangeResults(window, admin), expected, `${window} ${admin}`);
+});
+
+check('gradingRules: the note is one line, 1–200 characters, nothing invisible', () => {
+  assert.equal(normalizeGradingNote('  Retest \n\n the  jumping\tkick  '), 'Retest the jumping kick');
+  assert.equal(normalizeGradingNote('a\n\n b'), 'a b');
+  for (const blank of [null, undefined, '', '   ', '\n\t\r ']) {
+    assert.equal(normalizeGradingNote(blank), null, JSON.stringify(blank));
+    assert.equal(gradingNoteProblem(blank), null, JSON.stringify(blank)); // blank = clear: fine
+  }
+  assert.equal(gradingNoteProblem('x'.repeat(200)), null);
+  assert.equal(gradingNoteProblem('x'.repeat(201)), 'tooLong');
+  assert.equal(gradingNoteProblem(`  ${'x'.repeat(200)}   `), null); // counted after tidying
+  assert.equal(gradingNoteProblem(`${'x'.repeat(100)}\n\n\n${'y'.repeat(99)}`), null); // 200 after tidying
+  assert.equal(gradingNoteProblem('é'.repeat(200)), null); // 'é' counts as 1
+  assert.equal(gradingNoteProblem('😀'.repeat(200)), null); // so does an emoji
+  assert.equal(gradingNoteProblem('😀'.repeat(201)), 'tooLong');
+  assert.equal(gradingNoteProblem('Good​kick'), 'badCharacter'); // zero-width space
+  assert.equal(gradingNoteProblem('​'), 'badCharacter'); // alone: not "blank"
+  assert.equal(gradingNoteProblem(`a‮b`), 'badCharacter'); // text-direction override
+  assert.equal(gradingNoteProblem(`${'x'.repeat(300)}\u0007`), 'badCharacter'); // checked before the length
+  assert.equal(gradingNoteProblem('Kick ✓ — “good”'), null);
+});
+
+check('gradingRules: isGraded, resultCounts, addedAfterDay', () => {
+  assert.equal(isGraded({ result: null, note: null }), false);
+  assert.equal(isGraded({ result: 'pass', note: null }), true);
+  assert.equal(isGraded({ result: null, note: 'Retest' }), true); // a note alone counts
+  assert.deepEqual(resultCounts([]), { total: 0, pass: 0, notPassed: 0, noShow: 0, notRecorded: 0 });
+  const rows = ['pass', 'pass', 'not_passed', 'no_show', null, null].map((result) => ({ result, note: null }));
+  rows.push({ result: null, note: 'Retest' }); // note only → not recorded yet
+  assert.deepEqual(resultCounts(rows), { total: 7, pass: 2, notPassed: 1, noShow: 1, notRecorded: 3 });
+  // Added after the testing day: only staff-added rows whose SCHOOL date is after the day.
+  const row = (source, registeredAt) => ({ source, registeredAt, createdByName: 'Jeffrey Berg' });
+  assert.equal(addedAfterDay(row('form', '2026-11-21T20:00:00Z'), GRADING_DAY), null); // the family form
+  assert.equal(addedAfterDay(row('staff', '2026-11-20T22:00:00Z'), GRADING_DAY), null); // on the day
+  assert.equal(addedAfterDay(row('staff', '2026-11-21T04:30:00Z'), GRADING_DAY), null); // 11:30 PM Nov 20 at the school
+  assert.deepEqual(addedAfterDay(row('staff', '2026-11-21T05:30:00Z'), GRADING_DAY), { date: '2026-11-21', byName: 'Jeffrey Berg' });
+  assert.deepEqual(addedAfterDay(row('staff', '2026-11-25T15:00:00Z'), GRADING_DAY), { date: '2026-11-25', byName: 'Jeffrey Berg' });
+  assert.equal(addedAfterDay(row('staff', null), GRADING_DAY), null);
+  assert.equal(addedAfterDay(null, GRADING_DAY), null);
+});
+
+check('gradingRules: school clock and the default class on the testing day', () => {
+  assert.equal(schoolMinutesNow(Date.parse('2026-11-20T22:41:00Z')), 17 * 60 + 41); // winter: UTC−5
+  assert.equal(schoolMinutesNow(new Date('2026-07-01T21:41:00Z')), 17 * 60 + 41); // summer: UTC−4
+  assert.equal(schoolMinutesNow(Date.parse('2026-11-21T05:00:00Z')), 0); // midnight
+  assert.equal(typeof schoolMinutesNow(), 'number');
+  const classes = [
+    { id: 'lt', position: 0, startTime: '16:00', endTime: '17:00' },
+    { id: 'w', position: 1, startTime: '16:00', endTime: '17:00' },
+    { id: 'a', position: 2, startTime: '17:00', endTime: '18:00' },
+    { id: 'c', position: 4, startTime: '19:00', endTime: '20:00' },
+    { id: 'b', position: 3, startTime: '18:30', endTime: '19:00' },
+  ];
+  const at = (hhmm) => timeToMinutes(hhmm);
+  assert.equal(defaultGradingClassId(classes, at('16:30')), 'lt'); // two classes on now → switch order
+  assert.equal(defaultGradingClassId(classes, at('16:59')), 'lt');
+  assert.equal(defaultGradingClassId(classes, at('17:00')), 'a'); // the end time itself is not "on"
+  assert.equal(defaultGradingClassId(classes, at('18:10')), 'b'); // between classes → the next one
+  assert.equal(defaultGradingClassId(classes, at('15:00')), 'lt'); // before the first (a tie → switch order)
+  assert.equal(defaultGradingClassId(classes, at('20:30')), 'lt'); // after the last → the first class
+  assert.equal(defaultGradingClassId([...classes].reverse(), at('15:00')), 'lt'); // order = position, not the list
+  const sameStart = [
+    { id: 'y', position: 1, startTime: '18:00', endTime: '19:00' },
+    { id: 'x', position: 0, startTime: '18:00', endTime: '19:00' },
+  ];
+  assert.equal(defaultGradingClassId(sameStart, at('17:00')), 'x');
+  assert.equal(defaultGradingClassId([], at('17:00')), null);
+  assert.equal(defaultGradingClassId(null, at('17:00')), null);
+});
+
+check('gradingRules: testing groups — same start AND end time test together (v0.193)', () => {
+  const classes = [
+    { id: 'lt', position: 0, startTime: '16:00', endTime: '16:45' },
+    { id: 'w', position: 1, startTime: '16:00', endTime: '17:00' }, // same start, other end → own group
+    { id: 'a', position: 2, startTime: '17:00', endTime: '18:00' },
+    { id: 'c', position: 4, startTime: '18:00', endTime: '19:00' },
+    { id: 'b', position: 3, startTime: '18:00:00', endTime: '19:00:00' }, // seconds from the database
+    { id: 'd', position: 5, startTime: null, endTime: null }, // no times → on its own
+    { id: 'e', position: 6, startTime: null, endTime: null },
+  ];
+  const groups = testingGroups(classes);
+  assert.deepEqual(groups.map((g) => g.classIds), [['lt'], ['w'], ['a'], ['b', 'c'], ['d'], ['e']]);
+  assert.deepEqual(groups.map((g) => g.id), ['lt', 'w', 'a', 'b', 'd', 'e']); // id = first class
+  assert.equal(groupOfClass(groups, 'c').id, 'b');
+  assert.equal(groupOfClass(groups, 'zz'), null);
+  assert.deepEqual(testingGroups([]), []);
+  assert.deepEqual(testingGroups(null), []);
+  // The testing-day default lands inside the right group (it returns the group's first class).
+  assert.equal(groupOfClass(groups, defaultGradingClassId(classes, timeToMinutes('18:30'))).id, 'b');
+});
+
+// ======================= the grading part of the preview database (0010 §1, §3.3) =======================
+// Replays of the database tests R3–R6 and R9–R15 that need no real sign-in sessions.
+
+// A fresh default store, SAVED first (so the default data is made for "today" = Oct 17 and the
+// testing day stays Nov 20), then today moved to `date` at 4 PM school time.
+const gradingStart = (date = GRADING_DAY) => {
+  evReset();
+  ev.reset();
+  evToday = date;
+  evClock = Date.parse(`${date}T21:00:00Z`);
+};
+const setRes = (ref, result, ctx = E_DESK) => evCall('testing_set_result', { p_registration_id: regBy(ref).id, p_result: result }, ctx);
+const setNote = (ref, note, ctx = E_DESK) => evCall('testing_set_result_note', { p_registration_id: regBy(ref).id, p_note: note }, ctx);
+const resultFor = (ref) => evDb().results.find((r) => r.registration_id === regBy(ref).id) ?? null;
+const editStudent = (ref, { first, last, rank } = {}, ctx = E_DESK) => {
+  const r = regBy(ref);
+  return evCall('testing_update_student', {
+    p_registration_id: r.id, p_expected_version: r.version, p_first: first ?? r.first_name, p_last: last ?? r.last_name, p_event_rank_id: rank ?? r.event_rank_id,
+  }, ctx);
+};
+const resolvePair = (keepRef, otherRef, keepBoth, ctx = E_DESK) => {
+  const k = regBy(keepRef);
+  const o = regBy(otherRef);
+  return evStatus('testing_resolve_duplicate', { p_keep_id: k.id, p_keep_version: k.version, p_other_id: o.id, p_other_version: o.version, p_keep_both: keepBoth }, ctx);
+};
+const restoreReg = (ref, ctx = E_DESK) => evStatus('testing_restore_student', { p_registration_id: regBy(ref).id, p_expected_version: regBy(ref).version }, ctx);
+const editEventDate = (testingDate, over = {}) => {
+  const e = eventRow();
+  const classes = evDb().event_classes.filter((c) => c.event_id === e.id).map((c) => ({ class_id: c.class_id, start_time: c.start_time, end_time: c.end_time }));
+  return evCall('testing_update_event', {
+    p_event_id: e.id, p_expected_version: e.version, p_name: e.name, p_testing_date: testingDate, p_classes: classes,
+    p_auto_close_on: e.auto_close_on, p_note: e.note, ...over,
+  }, E_ADMIN);
+};
+
+check('grading mock: the date rule for staff and admins, both functions (R3)', () => {
+  const cases = [
+    ['2026-11-19', E_DESK, 'not_open'], ['2026-11-19', E_ADMIN, 'not_open'], // before: nobody
+    [GRADING_DAY, E_DESK, 'ok'], [GRADING_DAY, E_ADMIN, 'ok'], // on the day: everyone
+    ['2026-11-21', E_DESK, 'finished'], ['2026-11-21', E_ADMIN, 'ok'], // after: admins only
+  ];
+  for (const [date, ctx, expected] of cases) {
+    gradingStart(date);
+    assert.equal(setRes('CB-3110', 'pass', ctx).status, expected, `set_result ${date} ${ctx.actorName}`);
+    assert.equal(setNote('CB-3112', 'Good kicks', ctx).status, expected, `set_result_note ${date} ${ctx.actorName}`);
+    assert.equal(evDb().results.length, expected === 'ok' ? 2 : 0); // a refusal writes nothing
+  }
+});
+
+check('grading mock: values, same value twice, clearing deletes the row, refusals (R4)', () => {
+  gradingStart();
+  for (const value of RESULTS) {
+    const answer = setRes('CB-3110', value);
+    assert.deepEqual(answer, { status: 'ok', result: value, note: null, updated_at: new Date(evClock).toISOString(), updated_by_name: 'Staff' });
+    assert.equal(resultFor('CB-3110').result, value);
+  }
+  // The same value again: ok, nothing written (the "last changed" stamp stays).
+  const stampBefore = resultFor('CB-3110').updated_at;
+  evClock += 60 * 1000;
+  assert.equal(setRes('CB-3110', 'no_show', E_ADMIN).updated_by_name, 'Staff');
+  assert.equal(resultFor('CB-3110').updated_at, stampBefore);
+  // null clears; with no note the row is removed.
+  assert.deepEqual(setRes('CB-3110', null), { status: 'ok', result: null, note: null, updated_at: null, updated_by_name: null });
+  assert.equal(resultFor('CB-3110'), null);
+  assert.equal(setRes('CB-3110', null).status, 'ok'); // clearing nothing is fine too
+  // Result + note, clear the result → the row stays with the note; clear the note → removed.
+  setRes('CB-3110', 'not_passed');
+  setNote('CB-3110', 'Retest the jumping front kick');
+  assert.deepEqual([resultFor('CB-3110').result, resultFor('CB-3110').note], ['not_passed', 'Retest the jumping front kick']);
+  assert.equal(setRes('CB-3110', null).note, 'Retest the jumping front kick');
+  assert.deepEqual([resultFor('CB-3110').result, resultFor('CB-3110').note], [null, 'Retest the jumping front kick']);
+  assert.equal(setNote('CB-3110', null).status, 'ok');
+  assert.equal(resultFor('CB-3110'), null);
+  // Refusals, in the database's order.
+  assert.equal(setRes('CB-3110', 'passed').status, 'invalid');
+  assert.equal(evStatus('testing_set_result', { p_registration_id: null, p_result: 'pass' }, E_DESK), 'invalid');
+  assert.equal(evStatus('testing_set_result_note', { p_registration_id: null, p_note: 'x' }, E_DESK), 'invalid');
+  assert.equal(evStatus('testing_set_result', { p_registration_id: '00000000-0000-4000-8000-00000000abcd', p_result: 'pass' }, E_DESK), 'not_found');
+  assert.equal(setRes('CB-3116', 'pass').status, 'withdrawn'); // Leo is withdrawn in the default data
+  assert.equal(setNote('CB-3116', 'x').status, 'withdrawn');
+  assert.equal(ev.rpc('testing_set_result', { p_registration_id: 'nope', p_result: 'pass' }, E_DESK).error.code, '22P02');
+  assert.equal(ev.rpc('testing_set_result', { p_registration_id: regBy('CB-3110').id }, E_DESK).error.code, 'PGRST202'); // missing argument
+  assert.equal(evDb().results.length, 0);
+});
+
+check('grading mock: the note rule (R5)', () => {
+  gradingStart();
+  assert.equal(setNote('CB-3110', 'x'.repeat(200)).note.length, 200);
+  assert.equal(setNote('CB-3110', 'x'.repeat(201)).status, 'invalid');
+  assert.equal(setNote('CB-3110', 'a\n\n b').note, 'a b'); // stored as one line
+  assert.equal(resultFor('CB-3110').note, 'a b');
+  assert.equal(setNote('CB-3110', 'Good​kick').status, 'invalid');
+  assert.equal(setNote('CB-3110', 'é'.repeat(200)).status, 'ok'); // 'é' counts as 1
+  assert.deepEqual(setNote('CB-3110', '   '), { status: 'ok', result: null, note: null, updated_at: null, updated_by_name: null }); // blank = cleared
+  assert.equal(resultFor('CB-3110'), null);
+});
+
+check('grading mock: last change wins; versions untouched; who is stamped; column rights (R6, R7)', () => {
+  gradingStart();
+  const reg = regBy('CB-3110');
+  const eventVersion = eventRow().version;
+  setRes('CB-3110', 'pass', E_DESK);
+  setRes('CB-3110', 'no_show', E_ADMIN);
+  setNote('CB-3110', 'Was sick', E_ADMIN);
+  const row = resultFor('CB-3110');
+  assert.deepEqual([row.result, row.note, row.updated_by, row.updated_by_name], ['no_show', 'Was sick', E_ADMIN.userId, 'Jeffrey Berg']);
+  assert.equal(regBy('CB-3110').version, reg.version); // a result never changes the registration's version
+  assert.equal(regBy('CB-3110').updated_at, reg.updated_at);
+  assert.equal(eventRow().version, eventVersion);
+  // Reads: the 5 granted columns; never updated_by, never '*'; a locked sign-in sees no rows.
+  const sel = (cols, ctx = E_DESK) => ev.select('testing_results', cols, [{ col: 'registration_id', value: reg.id }], [], ctx);
+  assert.deepEqual(sel('registration_id, result, note, updated_at, updated_by_name').data, [
+    { registration_id: reg.id, result: 'no_show', note: 'Was sick', updated_at: row.updated_at, updated_by_name: 'Jeffrey Berg' },
+  ]);
+  assert.equal(sel('registration_id, updated_by').error.code, '42501');
+  assert.equal(sel('*').error.code, '42501');
+  assert.equal(ev.select('testing_results', 'registration_id', [{ col: 'updated_by', value: E_ADMIN.userId }], [], E_DESK).error.code, '42501'); // not as a filter either
+  assert.deepEqual(sel('registration_id', E_LOCKED).data, []); // row-level security
+  assert.equal(sel('registration_id', E_ANON).error.code, '42501');
+  assert.equal(evStatus('testing_set_result', { p_registration_id: reg.id, p_result: 'pass' }, E_LOCKED), 'no_access');
+  assert.equal(resultFor('CB-3110').result, 'no_show');
+});
+
+check('grading mock: Edit details clears a result on a belt change; staff locked after the day (R9)', () => {
+  const green = () => eventRankByName('Group A', 'Green').id;
+  const highGreen = () => eventRankByName('Group A', 'High Green').id;
+  // On the testing day: staff change a graded student's belt → ok, result_cleared, row gone.
+  gradingStart();
+  setRes('CB-3110', 'not_passed');
+  setNote('CB-3110', 'Retest');
+  const cleared = editStudent('CB-3110', { rank: green() });
+  assert.deepEqual(cleared, { status: 'ok', version: regBy('CB-3110').version, result_cleared: true });
+  assert.equal(resultFor('CB-3110'), null);
+  // A name-only change of a graded student: exactly { status, version } (no result_cleared key).
+  setRes('CB-3112', 'pass');
+  const nameOnly = editStudent('CB-3112', { first: 'Zoey' });
+  assert.deepEqual(nameOnly, { status: 'ok', version: regBy('CB-3112').version });
+  assert.equal(resultFor('CB-3112').result, 'pass');
+  // An ungraded student's belt change: no key either.
+  assert.deepEqual(Object.keys(editStudent('CB-3111', { rank: highGreen() })).sort(), ['status', 'version']);
+  // After the testing day.
+  gradingStart('2026-11-21');
+  setRes('CB-3110', 'pass', E_ADMIN);
+  const before = JSON.stringify(evDb());
+  assert.equal(editStudent('CB-3110', { rank: green() }, E_DESK).status, 'not_allowed');
+  assert.equal(JSON.stringify(evDb()), before); // nothing changed
+  assert.deepEqual(Object.keys(editStudent('CB-3110', { first: 'Samuel' }, E_DESK)).sort(), ['status', 'version']); // names stay editable
+  assert.equal(resultFor('CB-3110').result, 'pass');
+  assert.equal(editStudent('CB-3112', { rank: green() }, E_DESK).status, 'ok'); // ungraded: fine
+  const adminChange = editStudent('CB-3110', { rank: green() }, E_ADMIN);
+  assert.equal(adminChange.result_cleared, true);
+  assert.equal(resultFor('CB-3110'), null);
+});
+
+check('grading mock: after the day, keep one is admin-only for every student (R10, v0.194)', () => {
+  // A graded student renamed to match another becomes a possible duplicate.
+  const renamedPair = () => {
+    gradingStart('2026-11-21');
+    setRes('CB-3112', 'pass', E_ADMIN); // Zoe is graded
+    assert.equal(editStudent('CB-3112', { first: 'Sam', last: 'Diaz' }, E_DESK).status, 'ok'); // name-only: allowed
+    assert.deepEqual([regBy('CB-3112').duplicate_state, regBy('CB-3112').duplicate_of], ['possible', regBy('CB-3110').id]);
+  };
+  renamedPair();
+  const before = JSON.stringify(evDb());
+  assert.equal(resolvePair('CB-3110', 'CB-3112', false, E_DESK), 'not_allowed'); // would remove the graded one
+  assert.equal(JSON.stringify(evDb()), before);
+  assert.equal(resolvePair('CB-3110', 'CB-3112', true, E_DESK), 'ok'); // keep both: unchanged rule
+  renamedPair();
+  assert.equal(resolvePair('CB-3112', 'CB-3110', false, E_DESK), 'not_allowed'); // the UNgraded one too (v0.194)
+  assert.equal(regBy('CB-3110').status, 'active');
+  // A pair where nobody is graded: staff still can't keep one after the day; keep both is fine.
+  gradingStart('2026-11-21');
+  assert.equal(resultFor('CB-3109'), null);
+  assert.equal(resolvePair('CB-3107', 'CB-3109', false, E_DESK), 'not_allowed');
+  assert.equal(resolvePair('CB-3107', 'CB-3109', false, E_ADMIN), 'ok');
+  renamedPair();
+  assert.equal(resolvePair('CB-3110', 'CB-3112', false, E_ADMIN), 'ok'); // admins may
+  assert.equal(regBy('CB-3112').status, 'withdrawn');
+  assert.equal(resultFor('CB-3112').result, 'pass'); // the result stays on the withdrawn student
+  // On the testing day staff may keep one of a graded copy.
+  gradingStart();
+  setRes('CB-3109', 'pass');
+  assert.equal(resolvePair('CB-3107', 'CB-3109', false, E_DESK), 'ok');
+});
+
+check('grading mock: the staff 10-second Undo of keep one, and admin restore (R11)', () => {
+  // Graded copy removed on the day; if the day is over by the time of the Undo → not_allowed.
+  gradingStart();
+  setRes('CB-3109', 'pass');
+  assert.equal(resolvePair('CB-3107', 'CB-3109', false, E_DESK), 'ok');
+  evToday = '2026-11-21'; // (the clock stays inside the 10 seconds)
+  assert.equal(restoreReg('CB-3109', E_DESK), 'not_allowed');
+  evToday = GRADING_DAY;
+  assert.equal(restoreReg('CB-3109', E_DESK), 'ok'); // on the day it's fine
+  // Ungraded copy removed on the day → the staff Undo works.
+  gradingStart();
+  assert.equal(resolvePair('CB-3107', 'CB-3109', false, E_DESK), 'ok');
+  assert.equal(restoreReg('CB-3109', E_DESK), 'ok');
+  // An admin restores a graded withdrawn student → the kept result reads again.
+  gradingStart();
+  setRes('CB-3109', 'not_passed');
+  assert.equal(resolvePair('CB-3107', 'CB-3109', false, E_DESK), 'ok');
+  evToday = '2026-11-21';
+  assert.equal(restoreReg('CB-3109', E_ADMIN), 'ok');
+  assert.deepEqual([regBy('CB-3109').status, resultFor('CB-3109').result], ['active', 'not_passed']);
+});
+
+check('grading mock: withdraw keeps the result; admins add after the day; has_results; cascades (R12–R15)', () => {
+  // R12: Withdraw (admin) keeps the row; then no more changes.
+  gradingStart();
+  setRes('CB-3112', 'no_show');
+  const zoe = regBy('CB-3112');
+  assert.equal(evStatus('testing_withdraw_student', { p_registration_id: zoe.id, p_expected_version: zoe.version }), 'ok');
+  assert.equal(resultFor('CB-3112').result, 'no_show');
+  assert.equal(setRes('CB-3112', 'pass', E_ADMIN).status, 'withdrawn');
+  // R13: after the day staff can't add a student; admins can, and can grade them.
+  gradingStart('2026-11-21');
+  const add = (ctx) => evCall('testing_add_student', { p_event_id: DEFAULT_EVENT_ID, p_first: 'Late', p_last: 'Comer', p_event_rank_id: eventRankByName('Group A', 'Yellow').id, p_stripes: true, p_paying_by: 'cash' }, ctx);
+  assert.equal(add(E_DESK).status, 'finished');
+  const added = add(E_ADMIN);
+  assert.equal(added.status, 'ok');
+  const late = evDb().registrations.find((r) => r.id === added.id);
+  assert.deepEqual([late.source, late.created_by_name], ['staff', 'Jeffrey Berg']);
+  assert.equal(setRes(added.reference, 'pass', E_ADMIN).status, 'ok');
+  assert.deepEqual(addedAfterDay({ source: late.source, registeredAt: late.registered_at, createdByName: late.created_by_name }, GRADING_DAY), { date: '2026-11-21', byName: 'Jeffrey Berg' });
+  // R14: the date can't move once a student has a result (a name change can).
+  gradingStart();
+  setRes('CB-3110', 'pass');
+  const eventBefore = JSON.stringify(eventRow());
+  assert.deepEqual(editEventDate('2026-11-27'), { status: 'has_results' });
+  assert.equal(JSON.stringify(eventRow()), eventBefore);
+  assert.equal(editEventDate(GRADING_DAY, { p_name: 'November Testing' }).status, 'ok');
+  setRes('CB-3110', null);
+  assert.equal(editEventDate('2026-11-27').status, 'ok');
+  // ... a withdrawn student's result counts too.
+  gradingStart();
+  setRes('CB-3112', 'pass');
+  evCall('testing_withdraw_student', { p_registration_id: regBy('CB-3112').id, p_expected_version: regBy('CB-3112').version });
+  assert.equal(editEventDate('2026-11-27').status, 'has_results');
+  // R15: Delete student / Delete event remove the results too.
+  gradingStart();
+  setRes('CB-3110', 'pass');
+  setRes('CB-3111', 'pass');
+  const sam = regBy('CB-3110');
+  assert.equal(evStatus('testing_delete_student', { p_registration_id: sam.id, p_expected_version: sam.version, p_expected_payment_ids: [] }), 'ok');
+  assert.equal(evDb().results.some((r) => r.registration_id === sam.id), false);
+  assert.equal(evDb().results.length, 1);
+  const regs = evDb().registrations.filter((r) => r.event_id === DEFAULT_EVENT_ID);
+  const total = evDb().payments.filter((p) => regs.some((r) => r.id === p.registration_id)).reduce((t, p) => t + p.amount_cents, 0);
+  assert.equal(evStatus('testing_delete_event', { p_event_id: DEFAULT_EVENT_ID, p_expected_version: eventRow().version, p_expected_registration_count: regs.length, p_expected_payment_total_cents: total }), 'ok');
+  assert.deepEqual(evDb().results, []);
+});
+
+check('grading mock: a store saved before phase 3 keeps its events', () => {
+  gradingStart();
+  const old = JSON.parse(JSON.stringify(evMemory));
+  delete old.results;
+  old.events[0].name = 'Kept event';
+  evMemory = old;
+  assert.deepEqual(evDb().results, []);
+  assert.equal(eventRow().name, 'Kept event');
+  assert.equal(setRes('CB-3110', 'pass').status, 'ok'); // and grading works on it
+  assert.equal(eventRow().name, 'Kept event');
+  ev.reset();
+  assert.deepEqual(evDb().results, []); // reset starts with nobody graded
 });
 
 // ======================= publicApi.preview.js (the family page in preview mode) =======================
