@@ -330,6 +330,71 @@ code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
 .psec{font-size:12px;color:var(--text2);margin:12px 0 4px}
 .kv{display:flex;align-items:center;gap:8px;min-height:32px;border-top:1px solid var(--border);font-size:13px}
 .r3{outline:2px solid #EF9F27;outline-offset:2px;border-radius:6px}
+/* progress track (screen 11, proposal) */
+.trk{display:inline-flex;align-items:center;gap:0;flex:none}
+.trk i{width:10px;height:10px;border-radius:50%;border:2px solid #CFCFCA;background:#fff;box-sizing:border-box;display:block}
+.trk i.d{background:#3B6D11;border-color:#3B6D11}
+.trk i.n{border-color:var(--blue);background:var(--blue-tint)}
+.trk i.x{background:var(--warn);border-color:var(--warn)}
+.trk i.g{background:#8F8F8A;border-color:#8F8F8A}
+.trk b{width:12px;height:2px;background:#CFCFCA;display:block}
+.trk b.d{background:#3B6D11}
+.prog{display:flex;align-items:center;gap:8px;min-width:0}
+.prog .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
+.prog .t.nx{color:var(--blue);font-weight:500}
+.prog .t.w{color:var(--warn)}
+.prw2{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,.9fr) minmax(0,1.9fr) minmax(0,.9fr) 104px;align-items:center;column-gap:12px;min-height:44px;padding:0 12px;border-top:1px solid var(--border);font-size:13px}
+.prw2.h{min-height:32px;background:var(--surface);font-size:12px;color:var(--text2);border-top:none}
+.prw2.sel{background:var(--blue-tint)}
+.prw2 .nm{font-weight:500}
+.prw2>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.narrow .prw2{grid-template-columns:minmax(0,1fr) minmax(0,1.7fr) 96px}
+.narrow .prw2 .wide{display:none}
+.touch .prw2{min-height:52px}
+.ptrack{display:flex;align-items:flex-start;margin:4px 0 12px;padding:10px 4px 8px;border:1px solid var(--border);border-radius:8px}
+.ptrack .s{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;min-width:0}
+.ptrack .s:not(:first-child)::before{content:'';position:absolute;top:8px;right:50%;width:100%;height:2px;background:#CFCFCA;z-index:0}
+.ptrack .s.d:not(:first-child)::before,.ptrack .s.n:not(:first-child)::before{background:#3B6D11}
+.ptrack .c{width:18px;height:18px;border-radius:50%;border:2px solid #CFCFCA;background:#fff;box-sizing:border-box;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff}
+.ptrack .s.d .c{background:#3B6D11;border-color:#3B6D11}
+.ptrack .s.n .c{border-color:var(--blue);background:var(--blue-tint)}
+.ptrack .s.x .c{background:var(--warn);border-color:var(--warn)}
+.ptrack .l{font-size:12px;margin-top:4px}
+.ptrack .s.n .l{color:var(--blue);font-weight:500}
+.ptrack .s.f .l{color:var(--text2)}
+.ptrack .m{font-size:11px;color:var(--text2);line-height:1.3}
+
+/* board view (screen 12, proposal) */
+.vsw{display:inline-flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;font-size:12px;flex:none}
+.vsw span{height:28px;display:inline-flex;align-items:center;gap:4px;padding:0 10px;color:var(--text2)}
+.vsw span+span{border-left:1px solid var(--control-border)}
+.vsw span.on{background:var(--blue-tint);color:var(--blue);font-weight:500}
+.touch .vsw span{height:36px}
+.board{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:8px;overflow:hidden;flex:none}
+.bcol{background:var(--surface);border-radius:8px;padding:8px;min-width:0}
+.bcol h5{margin:0 0 8px;font-size:12px;font-weight:500;display:flex;justify-content:space-between;color:var(--text2)}
+.bcol h5 b{font-weight:500;color:var(--text)}
+.bcol.j h5::after{content:'';}
+.bcard{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12px}
+.bcard .n{font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px}
+.bcard .p{color:var(--text2)}
+.bcard .x{margin-top:4px}
+.bcard .x.nx{color:var(--blue);font-weight:500}
+.bcard .x.w{color:var(--warn)}
+.bcard.sel{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+.bcard .dot{width:8px;height:8px;border-radius:50%;background:var(--blue);display:inline-block}
+.touch .bcard{padding:10px}
+.bscroll{display:flex;gap:8px;overflow:hidden}
+.bscroll .bcol{flex:none;width:160px}
+.phstages{display:flex;gap:6px;overflow:hidden;margin-bottom:8px;flex:none}
+.phstages span{flex:none;border:1px solid var(--border);border-radius:16px;padding:6px 12px;font-size:12px;color:var(--text2)}
+.phstages span.on{background:var(--blue-tint);border-color:var(--blue);color:var(--blue);font-weight:500}
+.swipe{font-size:11px;color:var(--text2);text-align:center;margin:6px 0}
+.btrk{margin-top:6px;display:inline-flex;padding:2px}
+.noamb .r3,.onlytrk .r3:not(.btrk){outline:none}
+.optlbl{font-size:17px;margin:28px 0 4px;padding:6px 12px;background:var(--blue-tint);color:var(--blue);border-radius:8px;display:inline-block}
+.pnext{display:flex;gap:8px;align-items:center;background:var(--blue-tint);color:var(--blue);border-radius:6px;padding:6px 8px;font-size:12px;margin:-4px 0 10px}
+
 .cwarn{display:flex;gap:6px;align-items:flex-start;background:var(--warn-tint);color:var(--warn);border-radius:6px;padding:6px 8px;font-size:12px;margin:4px 0 8px}
 .touch .kv{min-height:44px}
 .kv .k{width:88px;flex:none;font-size:12px;color:var(--text2)}
@@ -364,7 +429,7 @@ code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
 <body>
 <main>
 <h1>Prospects — mockups for approval</h1>
-<p class="lead">Jae H. Jeong's U.S. Taekwondo Center · New students, step 4: prospects list · guidelines v0.139 · October 17, 2026 · revision 2 (your 13 details applied) · <b>revision 3 (Oct 18): screen 10 adds what the Forms work changed</b></p>
+<p class="lead">Jae H. Jeong's U.S. Taekwondo Center · New students, step 4: prospects list · guidelines v0.139 · October 17, 2026 · revision 2 (your 13 details applied) · <b>revision 3 (Oct 18): screen 10 adds what the Forms work changed</b> · <b>proposal (Oct 19): screen 11, a progress track for every child</b> · <b>proposal (Oct 19): screen 12, a Board view beside the List</b> · <b>screen 13: where the progress track goes, A vs B</b></p>
 <div class="banner"><i class="ti ti-alert-triangle"></i><div><b>Design only — not a working app.</b> Nothing here is built or deployed. Screens are shown at PC (1024×800), tablet held upright (768×1024) and phone (375px). <b>All names and numbers are made-up samples.</b> "Today" is pretended to be Monday, January 11, 2027.</div></div>
 
 <div class="okbox">
@@ -465,6 +530,63 @@ function noTime(){return `<h4>Leo R., 6</h4><div class="who">Kim Ruiz (mom) · f
  <div class="r3"><div class="kv"><span class="k">Free class</span><span class="v">No time yet — call to set one up</span></div>
  <div style="margin:4px 0 8px"><button class="btn btn-sm btn-primary"><i class="ti ti-calendar-plus"></i>Book a free class</button></div></div>
  <div class="psec">Form answers and waiver</div><div class="kv r3"><span class="v">4 answers · waiver <b style="font-weight:500">signed Dec 2</b> · picture kept until Mar 2, then "Signed on Dec 2"</span><i class="ti ti-chevron-right"></i></div>`;}
+
+// screen 11: progress track. steps per child: [signed up, class booked, came, joined]; state d=done n=next f=future x=stopped
+const PR=[
+ ['Liam P.','Dan Park',['d','n','f','f'],'Signed up Oct 18 · needs a class','nx','New sign-up','New','new'],
+ ['Leo N.','Chris Nguyen',['d','d','n','f'],'Class Mon Oct 26 · 5:00 · class cancelled','w','—','Booked',''],
+ ['Ava R.','Kim Ruiz',['d','d','n','f'],'Class Wed Oct 21 · 4:00','','Today','Contacted',''],
+ ['Ethan B.','Lisa Brown',['d','d','x','f'],'No-show Oct 16 · call back','w','Overdue · Oct 16','No-show','warn'],
+ ['Mia S.','Sara Smith',['d','d','d','n'],'Came Oct 15 · ask to join','nx','Oct 21','Came',''],
+ ['Owen D.','Pat Diaz',['d','d','d','d'],'Joined Oct 4','','—','Joined','ok']];
+function trk(st){return `<span class="trk">${st.map((x,i)=>`${i?`<b class="${st[i]==='d'||st[i]==='n'||st[i]==='x'?'d':''}"></b>`:''}<i class="${x==='f'?'':x}"></i>`).join('')}</span>`;}
+function prog(r){return `<span class="prog">${trk(r[2])}<span class="t ${r[4]}">${r[4]==='w'?'<i class="ti ti-alert-triangle" style="font-size:14px;vertical-align:-2px"></i> ':''}${r[3]}</span></span>`;}
+function rows2(o={}){return `<div class="plist${o.narrow?' narrow':''}"><div class="prw2 h"><span>Child</span><span class="wide">Parent</span><span>Progress</span><span class="wide">Follow up</span><span>Status</span></div>${PR.map((r,i)=>`<div class="prw2${o.sel===i?' sel':''}"><span class="nm">${r[0]}</span><span class="wide">${r[1]}</span>${prog(r)}<span class="wide${r[6].startsWith('Overdue')||r[6]==='Today'?' due':''}" style="${r[5].startsWith('Overdue')||r[5]==='Today'?'color:var(--warn)':''}">${r[5]}</span><span><span class="st ${r[7]}">${r[6]}</span></span></div>`).join('')}</div>`;}
+function bigTrack(){return `<div class="ptrack r3">
+ <div class="s d"><span class="c"><i class="ti ti-check"></i></span><span class="l">Signed up</span><span class="m">Oct 13<br>Instagram form</span></div>
+ <div class="s d"><span class="c"><i class="ti ti-check"></i></span><span class="l">Class booked</span><span class="m">Wed Oct 21<br>4:00 · White</span></div>
+ <div class="s n"><span class="c"></span><span class="l">Came</span><span class="m">in 2 days</span></div>
+ <div class="s f"><span class="c"></span><span class="l">Joined</span><span class="m">&nbsp;</span></div></div>
+ <div class="pnext"><i class="ti ti-arrow-right"></i>Next: Check in on Wed Oct 21 when Ava arrives</div>`;}
+function avaPanel2(){return `<h4>Ava R., 10</h4><div class="who">Kim Ruiz (mom) · from "Free class — Instagram" · Oct 13</div>
+ ${bigTrack()}
+ <div class="cacts"><button class="btn btn-sm"><i class="ti ti-phone"></i>Call</button><button class="btn btn-sm"><i class="ti ti-message"></i>Text</button><button class="btn btn-sm"><i class="ti ti-mail"></i>Email</button></div>
+ <div class="kv"><span class="k">Status</span><span class="v"><span class="st">Contacted</span> <i class="ti ti-chevron-down" style="font-size:14px;color:var(--text2)"></i></span></div>
+ <div class="kv"><span class="k">Follow up</span><span class="v" style="color:var(--warn)"><i class="ti ti-alert-triangle" style="font-size:14px"></i> Today</span><i class="ti ti-clock-hour-4"></i></div>
+ <div class="kv"><span class="k">Free class</span><span class="v">Wed Oct 21 · 4:00 pm · White</span></div>
+ <div class="kv"><span class="k">Phone</span><span class="v">(508) 555-0177</span></div>
+ <div class="psec">Notes and calls</div><div class="addnote">Add a note…</div>
+ <div class="logi">Mom confirmed Wednesday.<div class="m">Oct 18 · Front Desk</div></div>`;}
+function stoppedTrack(){return `<div class="ptrack r3">
+ <div class="s d"><span class="c"><i class="ti ti-check"></i></span><span class="l">Signed up</span><span class="m">Oct 9</span></div>
+ <div class="s d"><span class="c"><i class="ti ti-check"></i></span><span class="l">Class booked</span><span class="m">Fri Oct 16<br>5:00 · White</span></div>
+ <div class="s x"><span class="c"><i class="ti ti-x"></i></span><span class="l" style="color:var(--warn)">No-show</span><span class="m">Oct 16</span></div>
+ <div class="s f"><span class="c"></span><span class="l">Joined</span><span class="m">&nbsp;</span></div></div>
+ <div class="pnext" style="background:var(--warn-tint);color:var(--warn)"><i class="ti ti-alert-triangle"></i>Next: call back (overdue) and book a new class</div>`;}
+function main2(dev,o={}){
+ if(dev==='ph') return head({ph:1})+`<div class="tiles">${STAGES.map(([n,c])=>`<div class="tile"><b>${c}</b><span>${n}</span></div>`).join('')}<div class="tile due"><b>3</b><span>Today</span></div></div>${PR.map(r=>`<div class="pcard"><div class="g"><div class="l1">${r[0]} · ${r[1]}</div><div class="l2" style="margin-top:4px">${prog(r)}</div></div><span class="st ${r[7]}">${r[6]}</span></div>`).join('')}`;
+ if(dev==='tab') return head()+pipe()+chips('','tab')+`<div class="pbody" style="flex-direction:column">${rows2({sel:o.sel})}${o.panel?`<div class="ppanel" style="width:auto;flex:1">${o.panel}</div>`:''}</div>`;
+ return head()+pipe()+chips('','pc')+`<div class="pbody">${rows2({sel:o.sel,narrow:!!o.panel})}${o.panel?`<div class="ppanel">${o.panel}</div>`:''}</div>`;}
+
+// screen 12: board view
+const BCOLS=[
+ ['New',[['Liam P.','Dan Park','Needs a class','nx',1]]],
+ ['Contacted',[['Ruby A.','Jo Allen','Call today','w',0]]],
+ ['Booked',[['Ava R.','Kim Ruiz','Wed Oct 21 · 4:00','',0],['Leo N.','Chris Nguyen','Class cancelled — call','w',1],['Zoe K.','Amy King','Sat Oct 24 · 9:30','',1]]],
+ ['Came',[['Mia S.','Sara Smith','Came Oct 15 · ask to join','nx',0]]],
+ ['Joined',[['Owen D.','Pat Diaz','Joined Oct 4','',0]]]];
+const BTRK={New:['d','n','f','f'],Contacted:['d','n','f','f'],Booked:['d','d','n','f'],Came:['d','d','d','n'],Joined:['d','d','d','d']};
+function bcard(c,sel,col){return `<div class="bcard${sel?' sel':''}"><div class="n">${c[4]?'<span class="dot"></span>':''}${c[0]}</div><div class="p">${c[1]}</div>${col?`<div class="btrk r3">${trk(BTRK[col])}</div>`:''}<div class="x ${c[3]}">${c[3]==='w'?'<i class="ti ti-alert-triangle" style="font-size:13px;vertical-align:-2px"></i> ':''}${c[2]}</div></div>`;}
+function bcol(c,sel,dots){return `<div class="bcol${c[0]==='Joined'?' j':''}"><h5><span>${c[0]}</span><b>${c[1].length}</b></h5>${c[1].map(x=>bcard(x,x[0]===sel,dots?c[0]:'')).join('')}</div>`;}
+function vsw(on,dev){return `<span class="vsw r3"><span class="${on==='list'?'on':''}"><i class="ti ti-list"></i>List</span><span class="${on==='board'?'on':''}"><i class="ti ti-layout-kanban"></i>Board</span></span>`;}
+function chips2(dev){return `<div class="chips">${vsw('board')}<span class="fchip">Follow up today · 3</span><span class="fchip">No-show · 1</span><span class="fchip">Not interested · 5</span>${dev==='pc'?'<div class="grow" style="flex:1"></div><div class="search"><i class="ti ti-search"></i>Search name or phone</div>':''}</div>`;}
+// the bar and tiles count the same children as the columns
+const STG2=()=>BCOLS.map(c=>[c[0],c[1].length]);
+function pipeB(){return `<div class="pipe">${STG2().map(([n,c])=>`<div class="stg${n==='Joined'?' j':''}"><div class="n">${c}</div><div class="l">${n}</div><div class="bar" style="width:${Math.max(8,c*30)}%"></div></div>`).join('')}</div>`;}
+function board(dev,o={}){
+ if(dev==='ph') return head({ph:1})+`<div class="tiles">${STG2().map(([n,c])=>`<div class="tile${n==='Booked'?' on':''}"><b>${c}</b><span>${n}</span></div>`).join('')}<div class="tile due"><b>3</b><span>Today</span></div></div><div class="chips">${vsw('board')}<span class="fchip">No-show · 1</span></div><div class="r3" style="flex:none">${bcol(BCOLS[2],null,o.dots)}</div><div class="swipe"><i class="ti ti-arrows-horizontal"></i> Swipe or tap a stage above for the next column</div>`;
+ if(dev==='tab') return head()+pipeB()+chips2('tab')+`<div class="bscroll r3">${BCOLS.map(c=>bcol(c,null,o.dots)).join('')}</div><div class="swipe"><i class="ti ti-arrows-horizontal"></i> Scroll sideways for Came and Joined</div>`;
+ return head()+pipeB()+chips2('pc')+`<div class="pbody"><div class="board r3" style="flex:1;${o.panel?'grid-template-columns:repeat(5,minmax(0,1fr))':''}">${BCOLS.map(c=>bcol(c,o.sel,o.dots)).join('')}</div>${o.panel?`<div class="ppanel">${o.panel}</div>`:''}</div>`;}
 function main(dev,o={}){const sel=o.stage, list=sel?P[sel]:P.today;
  if(dev==='ph') return head({ph:1})+`<div class="tiles">${STAGES.map(([n,c])=>`<div class="tile${sel===n?' on':''}"><b>${c}</b><span>${n}</span></div>`).join('')}<div class="tile${sel?'':' due'}"><b>3</b><span>Today</span></div></div>${list.map(r=>`<div class="pcard"><div class="g"><div class="l1">${r[0]} · ${r[1]}</div><div class="l2">${r[2]}${r[3]!=='—'?' · '+r[3]:''}</div></div><span class="st ${r[5]}">${r[4]}</span></div>`).join('')}`;
  if(dev==='tab') return head()+pipe(sel)+chips(sel?'':'today','tab')+`<div class="pbody" style="flex-direction:column">${rows(list,{sel:o.sel})}${o.panel?`<div class="ppanel" style="width:auto;flex:1">${o.panel}</div>`:''}</div>`;
@@ -519,7 +641,41 @@ function screens(){return [
 <li><span class="prop">dropped (Q4 = B, v0.191)</span> <b>Same family twice:</b> a line "Same phone as Leo R." (<code>ti-link</code>, not a warning) links to the other prospect. Nothing is merged.</li><li><b>Cancel booking</b> frees the spot and shows a toast with Undo (it is not a delete, so it is not red).</li><li>Tablet sample: Leo, a walk-in with no time yet, gets <b>Book a free class</b>.</li></ul></div>
 <div class="cap"><i class="ti ti-device-desktop"></i>PC · Max's free class was cancelled by the snow storm</div><div class="scroller">${frame('pc',main('pc',{stage:'Booked',sel:1,panel:panel3({dup:1})}))}</div>
 <div class="cap"><i class="ti ti-device-tablet"></i>Tablet · a walk-in who picked "No time yet"</div><div class="scroller">${frame('tab',main('tab',{panel:noTime()+'<div class="psec">Notes and calls</div><div class="addnote">Add a note…</div>'}))}</div>
-<div class="cap"><i class="ti ti-device-mobile"></i>Phone · full-screen panel</div><div class="scroller">${frame('ph','',{overlay:`<div class="fullscreen touch"><div class="head"><span class="tap"><i class="ti ti-arrow-left"></i></span>Max R., 7</div><div class="fbody"><div class="ppanel" style="width:auto;border:none;padding:0">${panel3()}</div></div></div>`})}</div>`
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone · full-screen panel</div><div class="scroller">${frame('ph','',{overlay:`<div class="fullscreen touch"><div class="head"><span class="tap"><i class="ti ti-arrow-left"></i></span>Max R., 7</div><div class="fbody"><div class="ppanel" style="width:auto;border:none;padding:0">${panel3()}</div></div></div>`})}</div>`,
+`<h2 id="s11">11. Proposal — a progress track for every child (outlined in amber)</h2><p class="lead">See at a glance where each child is: signed up, free class booked, came, joined — and what's next.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li><b>The same four steps for every child:</b> Signed up → Class booked → Came → Joined. Green = done, blue ring = the next step, gray = not yet. A side exit shows where they stopped (No-show in amber, Not interested in gray).</li>
+<li><b>In the list,</b> a "Progress" column replaces "Free class": the small track plus one line saying where they are or what's next ("Signed up Oct 18 · needs a class", "Class Wed Oct 21 · 4:00", "Came Oct 15 · ask to join"). It stays visible when the panel is open.</li>
+<li><b>In the panel,</b> a big track at the top with the date under each step, and a "Next:" line.</li>
+<li>Nothing new to fill in: the steps come from the sign-up, the booking, Check in and Joined.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · "Everyone", Ava open</div><div class="scroller">${frame('pc',main2('pc',{sel:2,panel:avaPanel2()}))}</div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · the list without a panel</div><div class="scroller">${frame('pc',main2('pc'))}</div>
+<div class="cap"><i class="ti ti-device-tablet"></i>Tablet · Ethan (stopped at No-show)</div><div class="scroller">${frame('tab',main2('tab',{sel:3,panel:`<h4>Ethan B., 9</h4><div class="who">Lisa Brown (mom) · from "Free class — Instagram" · Oct 9</div>${stoppedTrack()}<div class="cacts"><button class="btn btn-sm"><i class="ti ti-phone"></i>Call</button><button class="btn btn-sm"><i class="ti ti-message"></i>Text</button><button class="btn btn-sm"><i class="ti ti-mail"></i>Email</button></div>`}))}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone · list, then Ava full screen</div><div class="pair">${frame('ph',main2('ph'))}${frame('ph','',{overlay:`<div class="fullscreen touch"><div class="head"><span class="tap"><i class="ti ti-arrow-left"></i></span>Ava R., 10</div><div class="fbody ppanel" style="border:none;width:auto;padding:16px">${avaPanel2().replace('<h4>Ava R., 10</h4>','')}</div></div>`})}</div>`,
+`<h2 id="s12">12. Proposal — a Board view beside the List (outlined in amber)</h2><p class="lead">The stage bar stays on top. A List / Board switch shows the same children either as the list, or as one column per stage.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li><b>List / Board switch</b> (<code>ti-list</code> / <code>ti-layout-kanban</code>) next to the chips. Each person's choice is remembered on that device.</li>
+<li><b>Board:</b> one column per stage, in the stage bar's order (New, Contacted, Booked, Came, Joined), each child a card: name, parent, and one line with where they are or what's next. Amber with the icon when something needs a call. The blue dot = a new sign-up you haven't opened.</li>
+<li>Side exits (No-show, Not interested) stay as chips; clicking one shows those children (in the List).</li>
+<li>Click a card → the same side panel as the List. Search and the stage bar work in both views.</li>
+<li><b>Tablet:</b> the columns scroll sideways. <b>Phone:</b> one column at a time — tap a stage tile (or swipe) to change column.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · Board</div><div class="scroller">${frame('pc',board('pc'))}</div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · Board with Ava open</div><div class="scroller">${frame('pc',board('pc',{sel:'Ava R.',panel:avaPanel2()}))}</div>
+<div class="cap"><i class="ti ti-device-tablet"></i>Tablet · Board</div><div class="scroller">${frame('tab',board('tab'))}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone · Board, the Booked column</div><div class="scroller">${frame('ph',board('ph'))}</div>`,
+`<h2 id="s13">13. Where the progress track goes — A vs B (the difference outlined in amber)</h2><p class="lead">The List and the panel are the same in A and B. The only difference is the Board cards.</p>
+<div class="explain"><h3>The two choices</h3><ul>
+<li><b>A — List and panel only:</b> List rows have the small track + one line; the panel has the big track with dates; Board cards stay short (name, parent, one line), because the column already says the stage.</li>
+<li><b>B — cards too:</b> everything in A, plus the small track on every Board card (outlined in amber).</li></ul></div>
+<div class="noamb"><h3 class="optlbl">A — List and panel only</h3>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · A · List, Ava open (same in B)</div><div class="scroller">${frame('pc',main2('pc',{sel:2,panel:avaPanel2()}))}</div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · A · Board, Ava open</div><div class="scroller">${frame('pc',board('pc',{sel:'Ava R.',panel:avaPanel2()}))}</div>
+<div class="cap"><i class="ti ti-device-tablet"></i>Tablet · A · Board</div><div class="scroller">${frame('tab',board('tab'))}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone · A · Board, the Booked column</div><div class="scroller">${frame('ph',board('ph'))}</div>
+</div><div class="onlytrk"><h3 class="optlbl">B — cards too</h3>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · B · Board, Ava open</div><div class="scroller">${frame('pc',board('pc',{sel:'Ava R.',panel:avaPanel2(),dots:1}))}</div>
+<div class="cap"><i class="ti ti-device-tablet"></i>Tablet · B · Board</div><div class="scroller">${frame('tab',board('tab',{dots:1}))}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone · B · Board, the Booked column</div><div class="scroller">${frame('ph',board('ph',{dots:1}))}</div></div>`
 ].join('');}
 document.getElementById('screens').innerHTML=screens();
 </script>

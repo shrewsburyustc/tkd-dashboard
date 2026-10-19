@@ -11,6 +11,7 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Prospects-Build-Plan.md`
 | P2 Migration 0010 + tests + security review | Done 2026-10-18; PGlite 93/93 |
 | P3 Screens + preview database + design review | Done 2026-10-18 (preview only); 8 differences wait for Jeffrey in P4 |
 | P4 Jeffrey tries the preview (and decides the P3 differences below) | Differences decided 2026-10-18 (v0.206); 2, 3, 5 and 8 built |
+| P4b Board view + drag + progress track (mockup screens 11–13) | Decided 2026-10-18 (v0.214): both views, drag on every device, track in List + panel only. Build waits for Jeffrey's OK |
 | P5 Live setup (0007–0010, then Forms F3) | Waiting |
 | P6 Go live with Forms | Needs a separate OK |
 | — 0003 history exception | **Proposal only** (`PROPOSAL-0003-history-cleanup.md`), for the Color Belt session; Prospects must not go live before it's decided |
