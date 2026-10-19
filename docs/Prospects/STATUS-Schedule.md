@@ -4,7 +4,7 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Schedule-Build-Plan.md`.
 
 **Migration number (2026-10-17):** the Schedule migration is now **0007** (`0007_schedule.sql`, `0007_tests.sql`, `0007_fingerprints.sql`): 0005 belongs to Color Belt phase 2 and 0006 to Star testing (Jeffrey caught the clash before anything was pasted). New-students rulebook rows renumbered to v0.233–v0.238 after main (v0.130) and Color Belt's waiting v0.131–v0.136. Before S4: bring main in again once 0005 and 0006 are merged, then rerun PGlite with all of them.
 
-**Nothing is live.** Migration 0007 has not been applied to Supabase, and nothing has been pushed.
+**Database live, app not yet.** Migration 0007 is applied to the live Supabase database. Jeffrey pasted it into the Supabase SQL Editor on 2026-10-19 (order 0007 → 0008 → 0009 → 0012, after 0001–0006 and Color Belt's 0010). For each: the live fingerprints equal the PGlite live-order copy exactly (row count + one hash over every row), the security advisor showed only the expected entries (signed-in users may run the checked write functions; internal tables have RLS on and no read rule on purpose), and the tests file passed (run with the real admin and front-desk IDs, rolled back). Nothing has been pushed: the live dashboard has no Schedule screen until this branch is merged into main and pushed.
 
 ## Where it stands (2026-10-17)
 
@@ -14,7 +14,7 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Schedule-Build-Plan.md`.
 | S1 Migration 0007 + tests + security review | Done (`4482a88`); PGlite 54/54 |
 | S2 Screens + preview + design review | Done; independent design review findings fixed |
 | S3 Jeffrey tries the preview | Done 2026-10-17 — approved (rulebook v0.238) |
-| S4 Jeffrey pastes 0007 into the SQL Editor, then read-only checks | Waiting: 0005 (Color Belt phase 2) and 0006 (Star testing) go live first |
+| S4 Jeffrey pastes 0007 into the SQL Editor, then read-only checks | Done 2026-10-19: fingerprints match (82 rows), advisor expected-only, ALL 0007 TESTS PASSED |
 | S5 Real check with Worcester's real times | Waiting |
 | S6 Commit + merge (Main session) | Waiting |
 | S7 Push = live | Needs a separate OK |

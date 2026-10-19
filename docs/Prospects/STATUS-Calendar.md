@@ -2,7 +2,7 @@
 
 Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Calendar-Build-Plan.md` (approved 2026-10-17). Rulebook v0.234 (design) and v0.239 (plan answers). Approved mockup: `TKD-Calendar-Mockups.html` rev 1.
 
-**Nothing is live.** Migration 0008 has not been applied to Supabase, and nothing has been pushed. 0008 can only go live after 0005 (Color Belt phase 2), 0006 (Star testing) and 0007 (Schedule).
+**Database live, app not yet.** Migration 0008 is applied to the live Supabase database. Jeffrey pasted it into the Supabase SQL Editor on 2026-10-19 (order 0007 → 0008 → 0009 → 0012, after 0001–0006 and Color Belt's 0010). For each: the live fingerprints equal the PGlite live-order copy exactly (row count + one hash over every row), the security advisor showed only the expected entries (signed-in users may run the checked write functions; internal tables have RLS on and no read rule on purpose), and the tests file passed (run with the real admin and front-desk IDs, rolled back). Nothing has been pushed: the live dashboard has no Calendar screen until this branch is merged into main and pushed.
 
 | Step | State |
 |---|---|
@@ -10,7 +10,7 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Calendar-Build-Plan.md` 
 | C1 Migration 0008 + tests + security review | Done 2026-10-18; PGlite 67/67 |
 | C2 Screens + preview data + design review | Done 2026-10-18 |
 | C3 Jeffrey tries the preview | Done 2026-10-18 — six mockup differences decided (rulebook v0.240) |
-| C4 Jeffrey pastes 0008 (after 0005–0007 are live), then read-only checks | Waiting for 0005, 0006, 0007 live |
+| C4 Jeffrey pastes 0008 (after 0005–0007 are live), then read-only checks | Done 2026-10-19: fingerprints match (99 rows), advisor expected-only, ALL 0008 TESTS PASSED |
 | C5 Real check: one real closure and one real event | Waiting |
 | C6 Commit + merge (Main session) | Waiting |
 | C7 Push = live | Needs a separate OK |

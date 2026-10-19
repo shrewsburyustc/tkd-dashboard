@@ -2,7 +2,7 @@
 
 Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Prospects-Build-Plan.md` (approved 2026-10-18). Rulebook v0.236 (design) and v0.244 (plan answers). Mockup: `TKD-Prospects-Mockups.html` rev 3.
 
-**Nothing is live.** Migration 0012 has not been applied to Supabase, and nothing has been pushed. 0012 goes live after 0007 → 0008 → 0009, and Prospects goes live together with the Forms public page (v0.241 answer 1).
+**Database live, app not yet.** Migration 0012 is applied to the live Supabase database (2026-10-19), with the 7 starting statuses per school and 0 prospects. Jeffrey pasted it into the Supabase SQL Editor on 2026-10-19 (order 0007 → 0008 → 0009 → 0012, after 0001–0006 and Color Belt's 0010). For each: the live fingerprints equal the PGlite live-order copy exactly (row count + one hash over every row), the security advisor showed only the expected entries (signed-in users may run the checked write functions; internal tables have RLS on and no read rule on purpose), and the tests file passed (run with the real admin and front-desk IDs, rolled back). Nothing has been pushed. 0012 goes live after 0007 → 0008 → 0009, and Prospects goes live together with the Forms public page (v0.241 answer 1).
 
 | Step | State |
 |---|---|
@@ -12,7 +12,7 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Prospects-Build-Plan.md`
 | P3 Screens + preview database + design review | Done 2026-10-18 (preview only); 8 differences wait for Jeffrey in P4 |
 | P4 Jeffrey tries the preview (and decides the P3 differences below) | Differences decided 2026-10-18 (v0.245); 2, 3, 5 and 8 built |
 | P4b Board view + drag + progress track (mockup screens 11–13) | Decided 2026-10-18 (v0.246). Built in preview + design review (no High; plain bugs fixed); 5 differences decided (v0.247) and built. Committed locally 2026-10-18, not pushed |
-| P5 Live setup (0007–0012, then Forms F3) | Waiting |
+| P5 Live setup (0007–0012, then Forms F3) | 0007, 0008, 0009, 0012 applied and checked 2026-10-19 (fingerprints exact, advisor expected-only, all four tests files passed). Still to do: Forms F3 (public page) and F6 |
 | P6 Go live with Forms | Needs a separate OK |
 | — 0003 history exception | **Proposal only** (`PROPOSAL-0003-history-cleanup.md`), for the Color Belt session; Prospects must not go live before it's decided |
 

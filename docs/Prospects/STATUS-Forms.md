@@ -2,9 +2,9 @@
 
 Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Forms-Build-Plan.md` (approved 2026-10-18). Rulebook v0.235 (design) and v0.241 (plan answers). Approved mockup: `TKD-Forms-Mockups.html` rev 1.
 
-**Nothing is live.**
-- Migration 0009 has not been applied to Supabase, and nothing has been pushed.
-- 0009 can only go live after 0007 (Schedule) and 0008 (Calendar).
+**Database live, app and public page not yet.**
+- Migration 0009 is applied to the live Supabase database (2026-10-19). Jeffrey pasted it into the Supabase SQL Editor on 2026-10-19 (order 0007 → 0008 → 0009 → 0012, after 0001–0006 and Color Belt's 0010). For each: the live fingerprints equal the PGlite live-order copy exactly (row count + one hash over every row), the security advisor showed only the expected entries (signed-in users may run the checked write functions; internal tables have RLS on and no read rule on purpose), and the tests file passed (run with the real admin and front-desk IDs, rolled back).
+- The login `forms_registrar` exists **without a password** (it can't sign in until F6). Nothing has been pushed.
 - The public page also needs Color Belt phase 2's public path.
 - The public forms go live **together with Prospects** (v0.241 answer 1).
 
@@ -16,7 +16,7 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Forms-Build-Plan.md` (ap
 | F1 Merge main (after Color Belt phase 2 is merged — the Main session merges when Jeffrey asks) | Waiting |
 | F3 Public page + Cloudflare function; security review | Waiting for F1 |
 | F5 Jeffrey tries it in preview (and decides the F4 differences below) | Done 2026-10-18: differences decided (v0.243), Jeffrey tried the forms and Fill in — fine. Sign-ups show nowhere yet except Calendar bookings: that is Prospects (step 4) |
-| F6 Live setup (0009 after 0007 / 0008; two-connection race test; registrar password; Cloudflare settings) | Waiting |
+| F6 Live setup (0009 after 0007 / 0008; two-connection race test; registrar password; Cloudflare settings) | 0009 applied and checked 2026-10-19 (fingerprints 190/192 rows before 0012, all 192 after; advisor expected-only; ALL 0009 TESTS PASSED). Still waiting: race test, registrar password, Cloudflare settings (with F3) |
 | F7 Go live, with Prospects (step 4) | Needs a separate OK |
 
 ## What F2 added
