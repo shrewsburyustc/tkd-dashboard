@@ -57,6 +57,41 @@
 
 **All Camps screens approved (C1–C7), 2026-10-18.**
 
+**Rulebook numbering (Main session, 2026-10-19, rulebook v0.300):** this branch's block is **0.700–0.799**, used in order from 0.700. Existing rows v0.229–v0.237 are not renumbered now; 0.233–0.237 clash with the new-students branch and move into the 0.7xx block at merge if that branch merges first. Before the next rulebook edit: commit, `git merge main`, re-read.
+
+## Build plan questions (TKD-Camps-Build-Plan.md, asked one at a time from 2026-10-19)
+
+| # | Question | Answer |
+|---|---|---|
+| 1 | Public-form login + off switch | **A. Own** `camps_registrar` login + own `CAMPS_REGISTRATION` switch (like Star) — Jeffrey 2026-10-19 |
+| 2 | Who sets up camps and templates | **A. Admins only** (Add / Edit / Delete camp, prices, Save as template, Edit / Delete template). Staff incl. the desk login: open camps, roster, Mark paid, Edit details, Withdraw, Registration link — 2026-10-19 |
+| 3 | Who sees parent / emergency phones | **A. Staff and admins**, in Camper detail (C6) only, never in lists — 2026-10-19 |
+| 4 | Editing prices after sign-ups | **A. Allowed; existing campers keep their price**; a camper is re-priced (at current prices) only when staff change that camper's own days, member box or extras — 2026-10-19 |
+| 5 | Removing a camp day someone picked | **A. Refused** ("Can't remove Wed, Dec 30: Mia Rossi and 2 more picked it. Change their days or withdraw them first."); adding days is fine. **Replaces the v0.237 accepted proposal "asks first if any price would change" → needs a rulebook row (0.7xx).** — 2026-10-19 |
+| 6 | Removing days / extras after paying | **A. Allowed**: tag stays Paid, Camper detail shows "Paid $X more than the total"; an admin uses ⋯ → Edit payment if money is handed back; refund decisions stay outside the app — 2026-10-19 |
+| 7 | Signature retention | **B. 3 years after the camp's last day**, then deleted; "Signed on the form, <date>" stays. Jeffrey to confirm the period with the school's insurer (not legal advice). Clean-up runs from Add camp / Mark paid — 2026-10-19 |
+| 8 | Phone numbers in the change log | **A. Logged like other fields** (old → new), as Star's date of birth (v0.169) — 2026-10-19 |
+| 9 | Close / Reopen sign-up | **A. In the camp page ⋯ and the Camps list row ⋯, staff and admins**, instant with 5-second Undo; tag shows Closed (menu order: Edit camp, Close/Reopen sign-up, Save as template, Print roster, Delete camp) — 2026-10-19 |
+| 10 | Price changed while filling the form | **A. Refuse** ("The price changed while you were filling in the form. New total $X (was $Y). Check it and sign again." → back to Check and sign); covers admin price edits and the early → regular switch at midnight — 2026-10-19 |
+| 11 | Same child signed up twice | **B. Color Belt's "Possible duplicate" flag** (Jeffrey chose over "staff remove it"): same child name signed up again for the same camp → amber "Possible duplicate" tag on the later row with Keep both / Remove this one, copying Color Belt's built pattern. **Not in the approved C4 mockup → draw it (C4 addition) + rulebook row (0.7xx) + plan/contract update.** — 2026-10-19 |
+| 12 | Sign-up tries per hour (one connection) | **B. Camps counts only its own `camp:` rows, 30 per hour** (failed tries count); Color Belt / Star forms don't use it up — 2026-10-19 |
+| 13 | Ages the form accepts | **Set per camp** (Jeffrey: "Let us set a range"): Add / Edit camp → 5. Family form gets "Ages accepted: from [ ] to [ ]" (blank camp default 3–17; templates carry their own range); folded summary "Ages 5–12 · …"; family form shows "Ages 5–12" and refuses others with "This camp is for ages 5 to 12." **Not in approved C3 / C7 → draw it (with Q11's duplicate flag) + rulebook row (0.7xx) + plan update.** — 2026-10-19 |
+
+Details settled from precedent while drawing the additions (2026-10-19, design review): staff Close sign-up any time and Reopen only before the closing date, admins any time (Star v0.86); Close is hidden on Not-open-yet camps; Close / Reopen have no icon (Star's menu); phone row ⋯ includes Edit camp (Star v0.92); staff see "Ask an admin to add or change camps." and no Templates tab; duplicate compare follows Color Belt (Keep this one moves the other sign-up and its payment to Removed; Restore brings both back; after the camp's last day only admins Keep this one, Color Belt v0.194) and shows a Total row; age counts on the camp's first day.
+
+**Additions approved (Jeffrey, 2026-10-19: "all of this is good"):** C4b possible duplicate, age range (C3 / C7a), staff view + Close / Reopen sign-up (C1 / C4), overpayment line (C6).
+
+**Check-in and roster layout (Jeffrey, 2026-10-19):** "there's going to be a roster, right? So we can check the kids in" → daily check-in was not in the design; added. Then "too cluttered … I should be able to make decisions quickly" → **option A, three tabs on the camp page, check in only** (pictures `Decision images/Camps-attendance-roster.png`, `Camps-roster-layout-options.png`). Jeffrey: "go with it for now … I need to see it and actually use it" — may change after the preview.
+- **Check in** tab (opens here during camp week): only today's campers; "9 of 15 here"; Find a camper search; groups **Not here yet** (name, age, one small amber note only when needed — Not paid / Owes / drop-off / pick-up — and **Check in**) and **Here** (time). One tap records the time, 5-second Undo; ⋯ → Undo check-in later. Check in works on today; fixing an earlier day is admin-only; future days have no button. Tapping the "Not paid" note opens Mark paid.
+- **Payments** tab (opens here before camp): "13 paid · 5 to collect · $1,040"; **To collect** first (days · paying by in one gray line, total, Owes tag, Mark paid / Mark paid $X), then **Paid**; Possible duplicate box + compare (C4b) lives here; Withdraw → Removed group at the bottom.
+- **Attendance** tab: week grid — one row per camper, one column per camp day: came ✓ (time in Camper detail) / didn't come ✗ (past days) / dashed = still to come / — not signed up; "Came X of Y" (days so far). Print roster prints this grid. One camp = one week (summer weeks are separate camps; a whole-summer report is a later idea).
+- No check-out / pick-up record (option B not chosen).
+- Tap any name → Camper detail (C6) with everything else, incl. check-in times.
+
+**CP0 — build plan OK'd by Jeffrey 2026-10-19** ("let's finish it … do a preview so I can see it").
+
+**All 13 build plan questions answered (2026-10-19).** Follow-ups: draw C3 / C4 / C7 additions (age range, possible duplicate) for approval; then update the build plan, write CONTRACT-0013 and record Q5, Q11, Q13 (and the other answers) in the rulebook from the 0.7xx block.
+
 ## Next
 
 1. ~~Commit the Camps docs~~ — done 2026-10-18 (`637fb29`, branch `camps`, not pushed).
