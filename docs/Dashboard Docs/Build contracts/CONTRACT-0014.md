@@ -1,532 +1,430 @@
-# Contract 0014 — Color Belt testing phase 4: private testing
+# Contract 0014 — Color Belt testing phase 4: the Private testing tab
 
-The single source of truth for the three parallel builders: **A database**, **B data layer + preview mock**, **C staff screens**. They work at the same time and do not talk to each other, so everything they share is pinned here: names, arguments, columns, statuses, answer shapes, rules, wording and file ownership. It implements the approved build plan; it does not re-decide it. If something here is impossible or contradicts the sources below, **stop and report it** — do not improvise.
+The single source of truth for the three parallel builders: **A database**, **B data layer + preview mock**, **C staff screens**. They work at the same time without talking to each other, so everything they share is pinned here: tables, columns, grants, function names and arguments, statuses, answer shapes, the money / date / grading rules, JS names and shapes, the route, every string and file ownership. It implements the rewritten build plan; it does not re-decide it. If something here is impossible or contradicts the sources, **stop and report it** — do not improvise.
 
-> **Migration number: 0014** (decided 2026-10-19 after scanning every branch and worktree: 0011 = finance, 0012 = prospects, 0013 = camps). The plan and rulebook v0.254 said 0012; they are corrected.
+> **Rewritten 2026-10-19** for the redirect (rulebook v0.401): private testing is its own tab, not connected to any event. The event-linked version of this contract and its build (commit dae8d00) are superseded. §11 says exactly what each builder deletes or reverts first.
 
 | Source (in this order of authority) | |
 |---|---|
 | This contract | wins for phase 4 |
-| Build plan `docs/Testing/Color Belt Testing/TKD-Testing-Phase4-Build-Plan.md` — **§6 answers and §8 review changes override §0–5** | §6 answered 2026-10-18/19 (rulebook v0.254) |
-| Approved mockups (wording and layout source): `docs/Testing/Color Belt Testing/TKD-ColorBelt-Private-Mockups.html` (P1–P9 + P3b), images `Phase 4 images/` — **every proposal drawn there was approved** (v0.228) | approved 2026-10-18 |
-| Rulebook `docs/Dashboard Docs/TKD-Dashboard-Design-Guidelines.md` — 10b rows **v0.225–v0.228** and **v0.254** (v0.254 corrects v0.228 on the price after Back and adds the review rules), plus the Color Belt rows they lean on: v0.132, v0.136, v0.157, v0.183, v0.186–v0.195; §2.4, §2.5, §3.5, §4, §5, §7 | |
+| Build plan `docs/Testing/Color Belt Testing/TKD-Testing-Phase4-Build-Plan.md` (rewritten 2026-10-19) | CP0 pending |
+| Rulebook `docs/Dashboard Docs/TKD-Dashboard-Design-Guidelines.md` — **v0.401, v0.402, v0.403, v0.404** (binding; v0.404 = Move uses today's private price, and staff may Move any time); the parts of v0.225–v0.228 / v0.254 that v0.402 keeps (private price never typed, one-click Mark paid, day from today + weekday, 6 AM–10 PM / 5 minutes, only a result counts as graded, re-price on a pricier belt, Change how they'll pay while owed, “they / their”); v0.136, v0.157, v0.183, v0.186–v0.194; §2.4, §2.5, §3.5, §5 | |
+| Approved mockups (wording and layout): `docs/Testing/Color Belt Testing/TKD-ColorBelt-Private-Mockups.html` **P1–P8**, images `Phase 4 images/` — **every proposed item approved as drawn** (v0.403) | approved 2026-10-19 |
 | Handoff `docs/Dashboard Docs/TKD-Dashboard-Handoff.md` §6 (security rules, non-negotiable) | |
-| Existing code: migrations 0001–0006 and 0010 (**live in production — never edit their SQL**), CONTRACT-0005, CONTRACT-0010, `src/` | |
+| Live code: migrations 0001–0006 and 0010 (**live — never edit their SQL**), CONTRACT-0005, CONTRACT-0010, `src/` at commit `dae8d00^` for the phase 3 versions | |
 
-**Working copy:** the Color Belt worktree `.claude/worktrees/color-belt-session-01afc8`, branch `color-belt`. Do not touch Supabase (no connector calls), Cloudflare, git remotes, other worktrees or the main folder. Do not commit; the orchestrator commits.
-**Audience:** Jeffrey is learning IT — every new file starts with a header comment (what + why); short plain-English comments on non-obvious lines; readable over clever. Files keep the line endings of their neighbours (CRLF in this repo — check before and after with `file`).
-**Production facts:** Supabase project `tkd-dashboard` (ref `eozkfbdfxqlcbpewhach`), PostgreSQL 17, Free plan. Live: 0001–0006 and 0010 (Color Belt phases 2 and 3 live and in use). Staff: Main Admin (admin), Staff (shared desk, role staff). A push to `main` deploys.
-**Out of this build:** mat-side hiding (Star v0.249 / v0.250) — a later Color Belt follow-up once Star's switch reaches `main` (plan §6 Q6, v0.254 (6)); a Home card; private on the family form (never); Realtime; refunds / overpaid.
+**Working copy:** worktree `.claude/worktrees/color-belt-session-01afc8`, branch `color-belt`. No Supabase connector calls, no Cloudflare, no git remotes, no other worktrees. Do not commit; the orchestrator commits.
+**Audience:** Jeffrey is learning IT — every new file starts with a header comment (what + why); plain-English comments on non-obvious lines. Files keep CRLF line endings (check with `file` before and after).
+**Production facts:** Supabase `tkd-dashboard` (ref `eozkfbdfxqlcbpewhach`), PostgreSQL 17, Free plan. Live: 0001–0006, 0010. Claimed elsewhere: 0007 Schedule · 0008 Calendar · 0009 Forms · 0011 Finance · 0012 Prospects · 0013 Camps → this is **0014**. Staff: Main Admin (admin), Staff (shared desk). A push to `main` deploys.
+**Out:** mat-side hiding (Star v0.249 / v0.250 — a later Color Belt follow-up), a Home card, private on the family form, Realtime, refunds.
 
 ---
 
-## 0. File ownership (no two builders edit the same file)
+## 0. File ownership (no file has two owners)
 
-| Builder | Owns (creates / edits) | Must not edit |
+| Builder | Owns (creates / edits / deletes) | Must not edit |
 |---|---|---|
-| **A — database** | new `supabase/migrations/0014_testing_private.sql` · new `supabase/tests/0014_tests.sql` · new `supabase/tests/0014_fingerprints.sql` · `supabase/tests/0005_tests.sql` (**only the C3 list**, §3.2) · `supabase/tests/pglite/run.mjs` (new step 14 + moving 13g, §3.3) · `supabase/SETUP.md` (new **§15** incl. the down-script in §15e, plus **one warning line** at the top of §14e, §3.5) | `src/`, `docs/`, migrations 0001–0010, every other test file |
-| **B — data layer + mock** | `src/lib/testing/eventRules.js` · `src/lib/testing/eventsApi.js` · `src/lib/mockTestingEvents.js` · `src/lib/testing/checks.mjs` (add groups) | `src/screens/**`, `src/components/**`, `src/styles/**`, `src/App.jsx`, `src/lib/mockClient.js` (needs no change — `setToday` / `failSavesUntilRetry` already cover phase 4), `supabase/` |
-| **C — staff screens** | `src/screens/testing/event/EventPage.jsx` · `RosterRows.jsx` · `StudentDialog.jsx` · `PaymentDialogs.jsx` · `GradingTab.jsx` · `GradingSheet.jsx` · `useGradingSaves.js` · new `PrivateDialog.jsx` · new `PrivateGradingPage.jsx` · new `PrivateSheet.jsx` (all in `src/screens/testing/event/`) · `src/screens/testing/events/EventsTab.jsx` · new `src/screens/testing/events/PrivateTestingsList.jsx` · `src/screens/testing/text.js` · `src/styles/testing-events.css` · `src/App.jsx` (**shared file** — the route and the private page's ways in and out only, §5.1) | files owned by A and B; `src/screens/Testing.jsx`, `src/components/**`, `src/styles/tokens.css`, `src/styles/testing.css`, `navItems.js` (none needs a change — if one seems to, stop and report) |
-| Orchestrator | this contract, rulebook (incl. the §7 purple colour row and any CP1 wording changes), status file, handoff, `docs/*`, commits | |
+| **A — database** (`supabase/**`) | `supabase/migrations/0014_testing_private.sql` (rewrite) · `supabase/tests/0014_tests.sql` (rewrite) · `supabase/tests/0014_fingerprints.sql` (rewrite) · `supabase/tests/0005_tests.sql` (**revert only**, §11) · `supabase/tests/pglite/run.mjs` (step 14 rewritten, §3.3) · `supabase/SETUP.md` (§15 rewritten; the one-line warning at the top of §14e stays) | `src/`, `docs/`, migrations 0001–0010, other test files |
+| **B — data layer + mock** (`src/lib/**`) | new `src/lib/testing/privateRules.js` · new `src/lib/testing/privateApi.js` · `src/lib/testing/eventsApi.js` · `src/lib/testing/eventRules.js` (revert only) · `src/lib/mockTestingEvents.js` · `src/lib/testing/checks.mjs` | `src/screens/**`, `src/components/**`, `src/styles/**`, `src/App.jsx`, `src/lib/mockClient.js` (no change needed: new tables / functions are routed through `EVENT_TABLES` / `EVENT_RPC_NAMES`), `supabase/` |
+| **C — screens** | `src/screens/Testing.jsx` (**shared**) · `src/App.jsx` (**shared** — the route only) · everything under `src/screens/testing/event/`, `src/screens/testing/events/`, new `src/screens/testing/private/` · `src/screens/testing/text.js` · `src/styles/testing-events.css` · new `src/styles/testing-private.css` · `src/styles/testing.css` (**only** the `.ttabs` sideways scroll) | files of A and B; `src/components/**`, `src/styles/tokens.css`, `navItems.js` |
+| Orchestrator | this contract, plan, rulebook (icon-map rows, CP1 wording), status file, handoff, `docs/*`, commits | |
 
-B returns codes, never words; C owns all wording. C imports B's modules by the exact names in §4.
-**Shared files touched** (CLAUDE.md list): `src/App.jsx` (C). Not touched: `src/screens/Testing.jsx`, `src/styles/tokens.css`, `src/lib/mockClient.js`, `navItems.js`, `README.md`, `docs/README.md`. **Merge watch:** `run.mjs` and `SETUP.md` are also edited by other branches (the prospect branch adds sections for 0007–0009 and 0014) — if `main` already has a SETUP §15 or a run.mjs step 14 at merge time, ours is renumbered then.
+B returns codes, never words; C owns all wording. **Shared files touched:** `src/App.jsx`, `src/screens/Testing.jsx` (C). Not touched: `mockClient.js`, `tokens.css`, `navItems.js`, `README.md`, `docs/README.md`. Merge watch: `run.mjs`, `SETUP.md` (other branches add sections / steps — renumber at merge).
 
 ---
 
-## 1. Shared rules (A, B and C — the database, the mock and the screens must agree exactly)
+## 1. Shared rules (A, B and C must agree exactly)
 
-### 1.1 Words used below
-- *Today* = `public.testing_today()` (school time, America/New_York) in the database; `eventsApi.schoolToday()` in the app (the preview's `setToday` changes both).
-- *Private* = the registration's `private_date` is not null (then `private_time` is not null too).
-- *Own day* = `coalesce(private_date, testing_date)` — the day the student is graded.
-- *Graded (phase 3 meaning)* = a `testing_results` row exists (a result **or** a note). Used by every phase 3 lock, unchanged.
-- *Has a result* = the row exists **and** `result is not null`. **For the private paths (Change, Back, the Private testings list) only this counts as graded** (Q5, v0.254 (5)): a note alone never blocks Change / Back, is never cleared by them, and keeps the student on the list.
-- *Net paid* = the sum of the student's `testing_payments.amount_cents` (reversal rows are negative) — the roster's `paid_cents`.
-- *Due* = what Mark paid would record now (§1.3). *Owes more* = paid (`net > 0`) and due > 0.
-- *Admin* = `is_admin()` (always after `has_data_access()` was checked). *Active* = `status = 'active'`.
+### 1.1 Words
+- *Today* = `public.testing_today()` (America/New_York) / `eventsApi.schoolToday()` (the preview's `setToday` changes both).
+- *Private testing* = a `testing_private` row. *Active* / *cancelled* = its `status`.
+- *Net paid* = sum of its `testing_private_payments.amount_cents` (reversals negative). *Paid* = net > 0. *Owed* = §1.3. *Owes more* = paid and owed > 0.
+- *Has a result* = a `testing_private_results` row with `result is not null`. *Graded (lock meaning)* = a results row exists (result or note) — used only by the Edit-details belt lock, as phase 3.
+- *Admin* = `is_admin()` after `has_data_access()`.
+- *Upcoming* = active and `private_date >= today`. *Past* = `private_date < today` **or** cancelled.
 
 ### 1.2 Date and time rules
 | Rule | Exactly |
 |---|---|
-| Private day, lower bound | `private_date >= today` — else **`past_day`**. The same day as today is allowed at any time of day (only the day is checked). |
-| Private day, upper bound | `private_date <= testing_date + interval '1 year'` (Postgres date arithmetic: Feb 29 + 1 year = Feb 28) — else **`invalid`**. JS mirror: `eventRules.privateDayLimit(testingDate)`. |
-| Private day vs testing day | **Any** day in that range: before, on (Q4 — same day, another time) or after the testing day. |
-| Private time | `06:00` to `22:00` **inclusive**, minutes a multiple of 5, seconds 0 (v0.157, same list as Add event) — else **`invalid`**. 193 choices. |
-| Grading (set result / note) | Against the student's **own day**: today < own day → `not_open` (admins too); today > own day and not admin → `finished`; otherwise allowed. |
-| Back to the testing day (H1) | After the **testing day** (`today > testing_date`) only admins; staff → `not_allowed`. On / before the testing day: all staff. |
-| Set private after the testing day | Allowed for **all staff** when the student has no result row, or only a **No show** (Q3, v0.228, v0.254 (7)). |
-| Add student already private | Same as live Add student: staff refused when the event is finished (`today > testing_date` → `finished`), admins allowed (v0.191). |
-| Phase 3 belt lock (Edit details) | Graded (phase 3 meaning) **and** `today > own day` **and** not admin → `not_allowed`. |
-| Keep one / Restore lock (H3) | “After the testing day” becomes “`today > testing_date` **or** (private **and** `today > private_date`)” — for the student being withdrawn (keep one) / restored. |
-| Event date lock (M3) | `has_results` counts a results row unless its student is private **and** it has a result (`r.private_date is null or x.result is null`): a private note-only row still counts, since that student can go Back. |
-| Signatures (v0.254) | Deleted when `greatest(testing_date, private_date) < today - 90` (`greatest` ignores a null private date). |
-| Private testings list | No date filter: active, private, **no result** — past ungraded ones stay until graded (v0.228). |
+| Day | `today <= private_date <= today + interval '1 year'`; earlier → **`past_day`**; later → **`invalid`** (§10 point 1). Applies to Add, Change day or time and Move. |
+| Time | `06:00`–`22:00` inclusive, minutes a multiple of 5, seconds 0 → else **`invalid`**. 193 choices. |
+| Grading window | from the private day: `today < private_date` → `not_open` (admins too); `today > private_date` and not admin → `finished`; else allowed. |
+| Edit details belt lock | rank changes **and** a results row exists **and** `today > private_date` **and** not admin → `not_allowed`. |
+| Restore (un-cancel) | admins only; `private_date >= today` else **`past_day`** (§10 point 2). |
+| Move | all staff, any event state (also after the testing day — v0.404); the registration's own testing-day result decides (§2.5.1). |
 
-### 1.3 The money rule (one rule, three copies: `testing_amount_due` in SQL, `eventRules.amountDue` in JS, the mock)
-
+### 1.3 Money (one rule, three copies: `testing_private_amount_due` in SQL, `privateRules.amountDue` in JS, the mock)
 ```
-price = private          → the event rank copy's private_cents
-        not private      → testing_fee_cents(early_cents, day_cents, today, testing_date)
-                           (early price before the testing day, testing-day price on or after it —
-                            by TODAY's date, the day they pay: Q1, v0.254 (1))
-due   = private          → greatest(price − greatest(net, 0), 0)
-        not private      → 0 when net > 0 (v0.136: a regular student is never re-priced after paying),
-                           else price
+owed = greatest(private_cents − greatest(net, 0), 0)
 ```
-- **Mark paid records `due`**, by the registration's current `paying_by`, `paid_on` = today. **due = 0 → nothing is inserted, answer `already_paid`** (review L1: a $0 price never makes a $0 payment).
-- The roster's **Paid** tag stays `net > 0` (the view's `paid`, unchanged). A paid student who owes more stays **Paid** and shows the amber owed line + Mark paid (P4).
-- Back to the testing day after paying → not private → net > 0 → due 0, nothing owed (Q4). A partial net then also counts as Paid — accepted (review L2).
-- Belt / class correction re-prices automatically through the same rule (Q2): private + paid + pricier rank → due > 0; cheaper → due 0, no refund; regular paid → due 0.
+- **Mark paid** records `owed` by the current `paying_by`, `paid_on` = today. `owed = 0` → **`already_paid`**, nothing inserted.
+- **Change how they'll pay** allowed when `net <= 0 or owed > 0`; else `already_paid`.
+- **Belt correction** re-copies the rank with its **current** private price from Classes and ranks; `owed` follows the formula (pricier → owed; cheaper → 0, no refund).
+- **Cancel** keeps all payments. **Delete permanently** removes them with the row.
 
-**Worked examples** — Group A Yellow: early $65, testing day $75, private $85. Group B Blue: $70 / $80 / $95. Testing day Fri, Nov 20.
+Worked examples (Group A Yellow → Orange private $85; Group B Blue → High Blue $95):
 
-| # | Situation | Due → what happens |
+| # | Situation | Result |
 |---|---|---|
-| M1 | Regular, not paid, Mark paid on Nov 10 / Nov 20 / Nov 21 | $65 / $75 / $75 |
-| M2 | Private (set Nov 10), not paid, Mark paid any day | $85 |
-| M3 | Paid $65 cash Nov 2, set private Nov 10 | due $20 → row **Paid** + “Paid $65 · $20 more to collect”; Mark paid records **$20** (paying_by), then `already_paid` |
-| M4 | M3, then the desk's own toast Undo of the $20 within 10 s | due $20 again |
-| M5 | Private, paid $85, then Back to the testing day | net 85 > 0, not private → due 0, Paid, nothing owed |
-| M6 | Paid $65, private (owes $20), then Back | due 0 — Paid (partial accepted, L2) |
-| M7 | Private, not paid, Back on Nov 21, Mark paid | regular again → **$75** (price by the day they pay) |
-| M8 | Private, paid $85, belt corrected to Group B Blue | price $95 → due **$10**; Edit details warns “Price $85 → $95 · $10 more to collect”; Mark paid records $10 |
-| M9 | Private, paid $85, corrected to a rank with private $80 | due 0, payment stays, no refund |
-| M10 | Regular, paid $65, corrected to a pricier rank | due 0 (v0.136 unchanged) |
-| M11 | Private price $0, not paid | due 0 → Mark paid hidden; the database answers `already_paid`, inserts nothing (see §10 point 3) |
-| M12 | M3 topped up ($65 + $20), admin Edit payment changes the **$20** to $10 | net 75 → due $10 → the owed line shows again |
-| M13 | M3 topped up, admin Undo payment | reverses the most recent live payment ($20) → due $20 |
-| M14 | Private, owes $20, desk changes paying by cash → card, Mark paid | records $20 card; the $65 stays cash (Q3) |
+| E1 | Added, not paid | Not paid · Mark paid records **$85** → Paid; then `already_paid` |
+| E2 | Moved from an event with $65 cash paid Nov 2 | Paid · “Paid $65 · $20 more to collect” · Mark paid records **$20** (paying by) |
+| E3 | E2, the desk's own Undo of the $20 within 10 s | owed $20 again |
+| E4 | Moved, not paid | Not paid · Mark paid $85 |
+| E5 | Moved with $85 paid | Paid, owed 0, no amber line |
+| E6 | Paid $85, belt corrected to Group B Blue | price $95 · “Price $85 → $95 · $10 more to collect” (warned in Edit details) · Mark paid $10 |
+| E7 | Paid $95, corrected to a $85 rank | owed 0, nothing refunded |
+| E8 | Paid $65 + $20, admin Undo payment | reverses the **$20** (most recent live) → owed $20 |
+| E9 | Paid $65 + $20, admin Edit payment of the $20 to $10 | net 75 → owed $10 |
+| E10 | Private price $0 | owed 0 → no Mark paid button; the database answers `already_paid` |
+| E11 | Paid $85, then cancelled | stays Paid; Past card “Payments recorded” includes it: “includes $85 from cancelled” |
+| E12 | Owes $20, paying by changed cash → card, Mark paid | records $20 card; the $65 stays cash |
+| E13 | Moved with $95 paid, private price $85 (overpaid) | the whole $95 moves; Paid, owed 0, no amber line, nothing refunded |
 
-### 1.4 Statuses
-Existing codes keep their meaning. **New codes:** `past_day` (private day before today), `has_result` (Set private on a student who already has a testing-day Pass / Not passed or a note-only row), `graded` (Change / Back on a private student who has a result; Back also on a private No show). Reused for the new rules: `not_allowed` (H1, the phase 3 locks), `already_paid` (due = 0), `not_open` / `finished` (grading against the own day), `invalid`, `stale`, `withdrawn`, `not_found`, `no_access`, `finished` (add private after the day, staff).
+### 1.4 Statuses (all functions in §2)
+`ok`, `no_access`, `not_allowed`, `not_found`, `stale`, `invalid`, `withdrawn` (Move: the registration is withdrawn), `past_day`, `has_result` (Move: Passed / Not passed on the testing day), `graded` (Change day / Cancel after Pass / Not passed), `cancelled` (any write on a cancelled private testing except Restore / Delete), `already_paid`, `not_open`, `finished`, `final_award_not_set` (+ `class_name`), `moved` (Restore of a moved event registration).
 
 ---
 
 ## 2. Database — `0014_testing_private.sql` (Builder A)
 
-### 2.1 General rules (as 0005 §1.1 / 0010 §1.1 — non-negotiable)
-- Schema `public`; owner `postgres`. **One transaction** (`begin; … commit;`), header comment in 0010's style (§2.8).
-- **Re-runnable:** `add column if not exists`, `drop constraint if exists` + `add constraint`, `create or replace function`, column rights revoked then granted. Applying 0014 twice changes no row and no fingerprint (run.mjs, §3.3).
-- **No existing function changes its arguments or its name.** Replaced functions are `create or replace` of the **live body copied exactly** (0005's for `testing_mark_paid`, `testing_change_paying_by`, `testing_purge_old_signatures`; 0010's for the other six), with only the lines this contract adds, each marked `-- 0014:`; their revoke / grant lines repeated unchanged. Until someone sets a private day (only possible with the new screens) every replaced function behaves exactly as today — **one exception:** Mark paid on a rank priced $0 now answers `already_paid` (nothing to collect) instead of 0005's `invalid` (§1.3, §10 point 3).
-- Every function: `set search_path = ''`, fully qualified names, no argument defaults, `revoke execute … from public, anon, authenticated, service_role` **first**, then only the grants of §2.6.
-- Staff write functions: `security definer`, `volatile`, `returns jsonb` `{status: …}`, the whole body inside 0005's `begin … exception … end` block with 0005's mapping (`unique_violation` → `stale`; `foreign_key_violation`, `check_violation`, `not_null_violation` → `invalid`; `deadlock_detected`, `serialization_failure`, `lock_not_available` → `stale`). Every write sets `tkd.action` + **one** `tkd.batch_id` (`gen_random_uuid()`) and clears both before returning.
-- **Lock order** as 0005/0010: school → event → registration (via `public.testing_lock_registration(uuid)`) → its result row `for update`. The event's `testing_date` is read **after** that call.
-- **“Today”** is only ever `public.testing_today()`.
-- Dates and times in answers are text: `to_char(private_date, 'YYYY-MM-DD')`, `to_char(private_time, 'HH24:MI')` (e.g. `"16:00"`), or JSON `null`.
-- **Connector words:** `0014_fingerprints.sql` must not contain the words the Supabase connector refuses (spell names in pieces as `0005_fingerprints.sql` does). The migration and `0014_tests.sql` are pasted by Jeffrey in the SQL Editor and may contain them.
-- **The `testing_roster` view is NOT changed** (review M1). The app reads `private_date, private_time` from `testing_registrations`.
+### 2.1 General rules (as 0005 §1.1 / 0010 §1.1)
+- Schema `public`, owner `postgres`, **one transaction**, header comment in 0010's style (§2.8). Re-runnable: `create table if not exists`, `create or replace`, `drop trigger / policy if exists` + create, `revoke all` then grants. A second run changes no row and no fingerprint.
+- Every function: `set search_path = ''`, fully qualified names, no argument defaults, `revoke execute … from public, anon, authenticated, service_role` **first**, then only §2.7's grants.
+- Staff functions: `security definer`, `volatile`, `returns jsonb` `{status: …}`, body inside 0005's `begin … exception … end` block with 0005's mapping (`unique_violation` → `stale`; FK / check / not-null → `invalid`; deadlock / serialization / lock not available → `stale`). Every write sets `tkd.action` + **one** `tkd.batch_id` and clears both before returning.
+- **Lock order:** school (`locations` `for no key update`) → event → registration → its result row (Move only) → the private testing (`for update`) → its result row. `public.testing_private_lock(uuid)` does school → private testing.
+- Answers: dates `to_char(…, 'YYYY-MM-DD')`, times `to_char(…, 'HH24:MI')`.
+- Connector words: `0014_fingerprints.sql` contains neither `delete` nor `drop` (spell names in pieces). The migration and tests are pasted in the SQL Editor.
+- **Live objects:** only `testing_restore_student` is replaced (§2.6). No live table, view, trigger or other function changes.
 
-### 2.2 New columns on `public.testing_registrations`
+### 2.2 Tables
 
+**`public.testing_private`**
 | Column | Type | Rule |
 |---|---|---|
-| `private_date` | `date null` | the private testing day |
-| `private_time` | `time null` | its start time |
+| `id` | `uuid not null default gen_random_uuid()` | pk `testing_private_pkey` |
+| `location_code` | `text not null` | FK `testing_private_location_fk` → `locations(code)`; never changes |
+| `first_name`, `last_name` | `text not null` | `testing_name_is_valid` and `= testing_normalize_name(…)` (as registrations) |
+| `class_id` | `uuid null` | the Classes and ranks class at copy time; **no FK** (a history pointer — the class may be removed later) |
+| `class_name` | `text not null` | copied |
+| `rank_id` | `uuid null` | the Classes and ranks rank at copy time; no FK |
+| `rank_name` | `text not null` | copied |
+| `belt_pattern`, `belt_color`, `belt_color_2`, `belt_end_stripes`, `belt_end_stripe_color` | as `testing_event_ranks` | copied; check `testing_belt_is_valid(…)` |
+| `to_kind` | `text not null` | `'rank'` or `'none'` (No new rank) |
+| `to_name`, `to_belt_pattern`, `to_belt_color`, `to_belt_color_2`, `to_belt_end_stripes`, `to_belt_end_stripe_color` | nullable | check `testing_private_to_check`: `to_kind = 'none'` ⇒ all null; `'rank'` ⇒ `to_name` valid name and belt valid |
+| `private_cents` | `integer not null` | copied; `testing_cents_is_valid` |
+| `paying_by` | `text not null` | `cash`/`check`/`card` |
+| `stripes_confirmed` | `boolean not null` | check true |
+| `private_date` | `date not null` | |
+| `private_time` | `time not null` | check `testing_private_time_is_valid(private_time)` |
+| `status` | `text not null default 'active'` | `active` / `cancelled` |
+| `cancelled_at`, `cancelled_by_name` | `timestamptz null`, `text null` | check `testing_private_status_check`: active ⇒ `num_nonnulls(cancelled_at, cancelled_by_name, cancelled_by) = 0`; cancelled ⇒ `cancelled_at` and `cancelled_by_name` set |
+| `cancelled_by` | `uuid null` | login id, **never granted** |
+| `moved_from_event_id`, `moved_from_registration_id` | `uuid null` | no FK (history pointers: the event side may be deleted later); `moved_from_registration_id` **unique** (`testing_private_moved_from_key`) |
+| `moved_from_event_name` | `text null` | copied event name; check `testing_private_moved_check`: all three null or all three set |
+| `moved_cleared_no_show` | `boolean not null default false` | true when the move removed a testing-day No show (Undo move is then refused, L1); check: true only when moved; never changes after insert |
+| `moved_registration_version` | `integer null` | the event registration's version right after the move (set at insert by the move, §2.5.1 step 9; never changes; null when not moved; part of `testing_private_moved_check`: set exactly when the other `moved_from_*` columns are) |
+| `version` | `integer not null default 1` | ≥ 1 |
+| `created_at`, `updated_at` | `timestamptz not null default now()` | |
+| `created_by`, `updated_by` | `uuid null` | never granted |
+| `created_by_name`, `updated_by_name` | `text not null` | |
+Indexes: `(location_code, private_date)`, `(moved_from_event_id) where not null`.
 
-- `alter table public.testing_registrations add column if not exists private_date date null;` (same for `private_time time null`).
-- Constraint **`testing_registrations_private_pair_check`**: `check ((private_date is null) = (private_time is null))`.
-- Constraint **`testing_registrations_private_time_check`**: `check (private_time is null or public.testing_private_time_is_valid(private_time))`.
-- Both added with `drop constraint if exists` + `add constraint` (0005's pattern). The date cap (1 year) and “not in the past” are **function rules**, not table checks (they depend on today / the event).
-- `comment on column` for both (“Private testing day / start time (phase 4). Null = tests on the event's testing day. Set only by testing_set_private / testing_clear_private / testing_add_private_student.”).
-- Setting them is an ordinary registration change: the existing `testing_registrations_before_write` bumps `version` and stamps who/when; the existing `testing_registrations_log` logs them (no trigger change).
-- **Rights:** `revoke select (private_date, private_time) on public.testing_registrations from public, anon, authenticated, service_role;` then `grant select (private_date, private_time) on public.testing_registrations to authenticated;`. Nothing to `anon`, `service_role` or `testing_registrar`. (The existing RLS policy `testing_registrations_select_with_access` already covers the rows.)
+**`public.testing_private_payments`** — exactly `testing_payments`' shape and checks with `private_id uuid not null` (FK `testing_private_payments_private_fk` → `testing_private(id)` **on delete cascade**) instead of `registration_id`, plus `moved_from_payment_id uuid null` (no FK; **unique** `testing_private_payments_moved_from_key` — an event payment is moved at most once). Constraint names prefixed `testing_private_payments_…`. `recorded_by` never granted.
 
-### 2.3 Internal helpers (granted to nobody)
+**`public.testing_private_results`** — exactly `testing_results`' shape and checks with `private_id uuid not null` (pk, FK → `testing_private(id)` on delete cascade). Constraint names `testing_private_results_…`. `updated_by` never granted.
 
-**`public.testing_private_time_is_valid(p_time time) returns boolean`** — `language sql immutable`, `set search_path = ''`, not security definer, body written `as $$ … $$` (not `begin atomic`, like 0005's sql helpers). True only for `p_time between time '06:00' and time '22:00' and extract(minute from p_time)::integer % 5 = 0 and extract(second from p_time) = 0`; null → false. Used by the table check and by the functions.
+**View `public.testing_private_list`** `with (security_invoker = true)`: every granted column of `testing_private` + `paid_cents` (net), `paid` (net > 0), `paid_on`, `paid_method`, `last_payment_id`, `last_payment_recorded_at` (the latest non-reversed payment, as `testing_roster`), `amount_due_cents` = `greatest(p.private_cents - greatest(coalesce(t.net, 0), 0), 0)` computed **inline** from the lateral sum (as `testing_roster` computes `paid_cents`) — the view **never calls** `testing_private_amount_due` (it runs with the caller's rights, and the helper is granted to nobody). Never login ids.
 
-**`public.testing_amount_due(p_registration_id uuid) returns integer`** — `language sql stable`, `set search_path = ''`, not security definer, body `as $$ … $$`. §1.3's rule, ≥ 0; null when the registration doesn't exist:
-```sql
-select greatest(
-         case when r.private_date is not null
-                then k.private_cents - greatest(coalesce(t.net, 0), 0)
-              when coalesce(t.net, 0) > 0 then 0
-              else public.testing_fee_cents(k.early_cents, k.day_cents, public.testing_today(), e.testing_date)
-         end, 0)
-  from public.testing_registrations r
-  join public.testing_event_ranks k on k.id = r.event_rank_id
-  join public.testing_events e on e.id = r.event_id
-  left join lateral (select sum(p.amount_cents)::integer as net
-                       from public.testing_payments p where p.registration_id = r.id) t on true
- where r.id = p_registration_id;
-```
-Both: `revoke execute … from public, anon, authenticated, service_role;` and **no grant** (review M2).
+### 2.3 Triggers (each with `drop trigger if exists` + create)
+- `testing_private_before_write()` (before insert / update, plain): insert stamps (version 1, who / when via `auth.uid()` and `change_log_actor_name()`); update: `id`, `location_code`, `moved_from_*`, `moved_cleared_no_show`, `moved_registration_version`, `created_*` never change (errcode 23514, constraint `testing_private_immutable`); any other change or a deliberate `version + 1` bumps version and stamps (0005 §9c's pattern).
+- `testing_private_results_before_write()`: as 0010's `testing_results_before_write` (immutable `private_id`, constraint `testing_private_results_immutable`).
+- `testing_private_payments_guard()`: as 0005's `testing_payments_guard` for this table; deletes allowed only when `pg_trigger_depth() > 1` (cascade) or `tkd.action` in `('private_delete', 'undo_move_to_private', 'undo_0014')`.
+- `testing_private_log()` (after insert / update / delete, **security definer**) on all three tables: `testing_registrations_log`'s diff logic; `record_id` = `id` (or `private_id` for results); `location_code` = the row's `location_code` for `testing_private`, null for the other two; `table_name = tg_table_name`; action from `tkd.action` (default `manual`); batch from `tkd.batch_id`.
+- Truncate refused on all three (`testing_refuse_truncate`).
 
-### 2.4 New staff functions (S = staff and admins)
+### 2.4 Rights
+RLS on all three tables; policies `testing_private_select_with_access`, `testing_private_payments_select_with_access`, `testing_private_results_select_with_access`: `for select to authenticated using ((select public.has_data_access()))`. `revoke all` on the tables and the view from `public, anon, authenticated, service_role`; then `grant select (<every column except created_by, updated_by, cancelled_by>)` on `testing_private`, `grant select (<every column except recorded_by>)` on payments, `grant select (private_id, result, note, updated_at, updated_by_name)` on results, `grant select on testing_private_list` — all to `authenticated` only. Nothing to `anon`, `service_role`, `testing_registrar`. No insert / update / delete grants.
 
-**`testing_set_private(p_registration_id uuid, p_expected_version integer, p_private_date date, p_private_time time) returns jsonb`** — S. Set private (first time) **or** change the day / time.
-1. `has_data_access()` not true → `no_access`
-2. any argument null, or `not testing_private_time_is_valid(p_private_time)` → `invalid`
-3. `v_r := testing_lock_registration(p_registration_id)`; `v_r.id is null` → `not_found`
-4. `v_r.version <> p_expected_version` → `stale`
-5. `v_r.status = 'withdrawn'` → `withdrawn`
-6. read the event's `testing_date`; `p_private_date < testing_today()` → `past_day`; `p_private_date > testing_date + interval '1 year'` → `invalid`
-7. lock the result row (`select … for update`; may be absent) → `v_res`
-8. result rule:
-   - **not private yet** (`v_r.private_date is null`): no row → allowed; `v_res.result = 'no_show'` → allowed, **the row (No show and its note) will be removed**; any other row (Pass, Not passed, or a note only) → **`has_result`**.
-   - **already private**: no row, or `v_res.result is null` (note only) → allowed, the note is **kept**; `v_res.result = 'no_show'` → allowed, the row (result and note) will be removed (H2); `pass` / `not_passed` → **`graded`**.
-9. write with `tkd.action` = `set_private` (was not private) / `change_private` (was private) and one new batch id: `update testing_registrations set private_date = p_private_date, private_time = p_private_time where id = … and (private_date, private_time) is distinct from (p_private_date, p_private_time)`; then, when step 8 said “removed”: `set_config('tkd.action', 'clear_result', true)` (same batch) and `delete` the result row.
-   **When the day and time are both unchanged: write nothing and remove nothing** (`result_cleared` false) — also on a private No show, so a result is never removed without a version bump. The Change dialog's Save stays disabled until the day or time differs (§5.5).
-10. clear the tags; answer
-   `{"status":"ok","version":n,"private_date":"2026-12-01","private_time":"16:00","amount_due_cents":8500,"result_cleared":true|false}` (`amount_due_cents` = `testing_amount_due()` after the write; `result_cleared` always present, true only when a row was removed).
+### 2.5 Functions
 
-Statuses: `ok, no_access, invalid, not_found, stale, withdrawn, past_day, has_result, graded`.
+**Internal (granted to nobody):**
+- `testing_private_time_is_valid(p_time time) returns boolean` — sql, immutable, `as $$ … $$`: `p_time between '06:00' and '22:00' and extract(minute from p_time)::integer % 5 = 0 and extract(second from p_time) = 0`.
+- `testing_private_amount_due(p_private_id uuid) returns integer` — sql, stable: §1.3; null if missing.
+- `testing_private_lock(p_private_id uuid) returns public.testing_private` — school then the row `for update`; all-null when missing.
+- `testing_private_lock_payment(p_payment_id uuid) returns public.testing_private_payments` — as 0005's `testing_lock_payment`.
+- `testing_private_rank_copy(p_location_code text, p_rank_id uuid) returns jsonb` — from **live** Classes and ranks (school already locked): `{status:'ok', class_id, class_name, rank_id, rank_name, belt_pattern…, to_kind, to_name, to_belt_…, private_cents}`; testing-for = the next rank by `position` in the class, else the class's final award rank (`final_award_rank_id`), else `'none'` when `final_award_none`; rank missing → `{status:'stale'}`; other school → `{status:'invalid'}`; the student's rank is the class's **last** and its final award is Not set → `{status:'final_award_not_set', class_name}`.
 
-**`testing_clear_private(p_registration_id uuid, p_expected_version integer) returns jsonb`** — S (admins only after the testing day). Back to the testing day.
-1. `no_access` · 2. any argument null → `invalid` · 3. lock → `not_found` · 4. `stale` · 5. `withdrawn`
-6. not private → write nothing, answer ok (as step 9)
-7. lock the result row; `result is not null` (Pass, Not passed **or No show**) → **`graded`** (a note alone does not count, Q5)
-8. read `testing_date`; `testing_today() > testing_date` and not admin → **`not_allowed`** (H1)
-9. write: `tkd.action` `clear_private`, one batch id, `set private_date = null, private_time = null`. The note row (if any) stays. Answer `{"status":"ok","version":n,"amount_due_cents":n}`.
+**Staff functions** (S = staff and admins, A = admins). Common start for those on an existing private testing: 1 `has_data_access()` → `no_access` · (A only: `is_admin()` → `not_allowed`) · 2 arguments → `invalid` · 3 `testing_private_lock` → `not_found` · 4 version → `stale` (when it takes one) · 5 `status = 'cancelled'` → `cancelled` (except restore / delete).
 
-Statuses: `ok, no_access, invalid, not_found, stale, withdrawn, graded, not_allowed`.
+| Function | Who | Then | `tkd.action` | Ok answer |
+|---|---|---|---|---|
+| `testing_private_add(p_location_code text, p_first text, p_last text, p_rank_id uuid, p_stripes boolean, p_paying_by text, p_private_date date, p_private_time time)` | S | input (school `worcester`/`shrewsbury`, names, rank not null, stripes true, paying by, date / time not null, time valid) → `invalid`; lock school; `testing_private_rank_copy` (stale / invalid / final_award_not_set); day rule (§1.2); insert | `private_add` | `{status, id, version:1, amount_due_cents}` |
+| `testing_private_update(p_private_id uuid, p_expected_version integer, p_first text, p_last text, p_rank_id uuid)` | S | **rank changed = `p_rank_id is distinct from` the stored `rank_id`**; the stored id sent back unchanged means “belt not changed” and is never looked up (it may no longer exist in Classes and ranks, M4); rank changed → copy from live (same school as the private testing, else `invalid`; missing → `stale`); lock result row; belt lock (§1.2) → `not_allowed`; write names (+ the copy when the rank changed); rank changed and a results row exists → delete it (`clear_result`, same batch); nothing changed → write nothing | `private_update` | `{status, version, amount_due_cents, result_cleared}` |
+| `testing_private_change_day(p_private_id uuid, p_expected_version integer, p_private_date date, p_private_time time)` | S | time valid else `invalid`; day rule; lock result row: Pass / Not passed → `graded`; No show → the row (result + note) is deleted (`clear_result`); **day and time both unchanged → write nothing, remove nothing** | `private_change_day` | `{status, version, private_date, private_time, result_cleared}` |
+| `testing_private_change_paying_by(p_private_id uuid, p_expected_version integer, p_paying_by text)` | S | §1.3 rule → `already_paid` | `private_change_paying_by` | `{status, version}` |
+| `testing_private_mark_paid(p_private_id uuid, p_expected_version integer)` | S | owed ≤ 0 → `already_paid`; insert payment (owed, paying by, today); version + 1 | `private_mark_paid` | `{status, payment_id, amount_cents, method, version}` |
+| `testing_private_undo_payment(p_payment_id uuid)` | S own < 10 s / A | 0005's `testing_undo_payment` rules on this table (`not_found`, `not_allowed`, `invalid`, `stale`), **plus: the staff own-undo also requires `moved_from_payment_id is null`** (a payment that arrived with a move can't be undone by the mover — admins unchanged); cancelled → `cancelled`; reversal dated today; version + 1 | `private_undo_payment` | `{status, version}` |
+| `testing_private_edit_payment(p_payment_id uuid, p_method text, p_amount_cents integer, p_paid_on date)` | A | 0005's `testing_edit_payment` rules; cancelled → `cancelled` | `private_edit_payment` | `{status, payment_id, version}` |
+| `testing_private_cancel(p_private_id uuid, p_expected_version integer)` | S | Pass / Not passed → `graded`; set cancelled + who / when | `private_cancel` | `{status, version}` |
+| `testing_private_restore(p_private_id uuid, p_expected_version integer)` | A | active → `invalid`; `private_date < today` → `past_day`; back to active, cancel fields null | `private_restore` | `{status, version}` |
+| `testing_private_delete(p_private_id uuid, p_expected_version integer, p_expected_payment_ids uuid[])` | A | `p_expected_payment_ids` null, with a null element or a duplicate → `invalid` (`testing_ids_are_valid`, as 0005's delete); version or the set of all its payment-row ids differs → `stale`; delete (cascade, logged) | `private_delete` | `{status}` |
+| `testing_private_set_result(p_private_id uuid, p_result text)` · `testing_private_set_result_note(p_private_id uuid, p_note text)` | S | 0010's `testing_set_result` / `_note` bodies on these tables (no version, last change wins; note tidied, 1–200 chars, > 2000 sent → `invalid`), with the grading window from **`private_date`**; cancelled → `cancelled` | `private_set_result` / `private_set_result_note` | `{status, result, note, updated_at, updated_by_name}` |
+| `testing_move_to_private(p_registration_id uuid, p_expected_version integer, p_private_date date, p_private_time time)` | S | §2.5.1 | `move_to_private` (+ `clear_result`) | `{status, private_id, version:1, registration_version, amount_due_cents, result_cleared}` |
+| `testing_private_undo_move(p_private_id uuid, p_expected_version integer)` | S (the mover, < 10 s) | §2.5.2 | `undo_move_to_private` | `{status, registration_id, registration_version}` |
 
-**`testing_add_private_student(p_event_id uuid, p_first text, p_last text, p_event_rank_id uuid, p_stripes boolean, p_paying_by text, p_private_date date, p_private_time time) returns jsonb`** — S. Add student with **Tests privately** ticked (P3b, Q7).
-- The live `testing_add_student` body (0010 version) **copied exactly**, plus: step 2 also refuses a null `p_private_date` / `p_private_time` or an invalid time (`invalid`); after the existing `finished` (staff only) and rank checks, and before the write: `p_private_date < testing_today()` → `past_day`; `> testing_date + interval '1 year'` → `invalid`.
-- The private columns go **into the INSERT itself** (one row, version 1, **one** change_log row, `tkd.action` `add_student` — review L3). A refused call inserts nothing.
-- Answer `{"status":"ok","id":…,"reference":"CB-3120","version":1,"private_date":"…","private_time":"…","amount_due_cents":n}`.
+#### 2.5.1 `testing_move_to_private` — exactly
+1. `no_access` · 2. arguments null / time invalid → `invalid` · 3. `testing_lock_registration(p_registration_id)` → `not_found` · 4. version → `stale` · 5. withdrawn → `withdrawn` · 6. day rule (§1.2) → `past_day` / `invalid`.
+7. Lock the registration's `testing_results` row: `result in ('pass','not_passed')` → **`has_result`**; `no_show` → will be removed; a note only → **stays** with the registration.
+8. Copy from the **event copy**: `class_id` = the event class's `class_id`, `class_name`, `rank_id` = the event rank's `rank_id`, `rank_name`, belt, testing-for = `testing_rank_testing_for(event_rank_id)` (null → `to_kind 'none'`); **`private_cents` = the CURRENT Classes and ranks private price of `rank_id` (`testing_ranks.private_cents`, school locked), or the event rank copy's `private_cents` when that rank no longer exists** — **decided v0.404** (§10 point 13; same source as Add); `location_code` = the event's; `paying_by` = the registration's; `stripes_confirmed` true; `moved_from_event_id`, `moved_from_registration_id`, `moved_from_event_name`, `moved_cleared_no_show` = (step 7 found a No show).
+9. One batch, action `move_to_private`, in this order: (a) for every **live** event payment of the registration (kind `payment`, not reversed), oldest first, insert an event **reversal** (`-amount`, same method, **`paid_on` = the original's**, `reverses_payment_id`); (b) update the registration: `status 'withdrawn'`, `withdrawn_reason 'withdrawn'`, `withdrawn_at now()`, `withdrawn_by_name`, `withdrawn_by`, `duplicate_state 'none'`, `duplicate_of null`, then `testing_recheck_pointing_at(p_registration_id)`; read its new version; (c) insert the private testing with `moved_registration_version` = that version (so the private row stays at version 1); (d) insert one private **payment** per moved payment (same amount, method, original `paid_on`, `moved_from_payment_id` = the original id); (e) when step 7 said so, `clear_result` + delete the result row.
+   Only **live** payments move: a payment already reversed (an earlier Undo / Edit pair) stays on the event side as it is (its pair already nets 0). An overpaid student moves all of it (e.g. $95 paid, $85 price → owed 0; nothing is refunded).
+10. Answer as the table above (`registration_version` = the registration's new version).
 
-Statuses: `ok, no_access, invalid, not_found, finished, past_day, stale`.
+#### 2.5.2 `testing_private_undo_move` — exactly
+`no_access` · `invalid` · lock (school → the registration via `testing_lock_registration(moved_from_registration_id)` → the private row) → `not_found` (also when it wasn't moved, or the registration is gone — e.g. its event was deleted) · version → `stale` · **who and when are read from the registration** (backdatable in tests, §3.1): `registration.withdrawn_by is distinct from auth.uid()` or `registration.withdrawn_at <= now() - interval '10 seconds'` → `not_allowed` (admins too) · `moved_cleared_no_show` true → `not_allowed` (L1: the No show can't come back) · registration not withdrawn, `registration.version <> moved_registration_version` (edited since), a results row exists, any private payment row without `moved_from_payment_id`, or any reversal row → `stale`.
+Then one batch, action `undo_move_to_private`: for each private payment, insert an event **payment** (same amount, method, original `paid_on`, **`recorded_by` null**, `recorded_by_name` = the caller's name — so the live 10-second own-undo rule of 0005 can never reverse these recreated rows); registration back to active (withdrawn fields null); then the **three duplicate re-check lines of `testing_restore_student`** (`testing_recheck_duplicate(id)`, the partner's `testing_recheck_duplicate(duplicate_of)` when set, `testing_recheck_pointing_at(id)`); delete the private testing (cascade). Answer `{status, registration_id, registration_version}`.
 
-### 2.5 Replaced functions (same arguments; the live body + exactly these lines)
+### 2.6 Replaced live function (one)
+**`testing_restore_student(p_registration_id, p_expected_version)`** — 0010's body copied exactly + right after the `not_found` check: `if exists (select 1 from public.testing_private p where p.moved_from_registration_id = p_registration_id) then return jsonb_build_object('status', 'moved'); end if;` (`-- 0014:` comment). Same revoke / grant lines. Everything else live is untouched.
 
-| Function (live body from) | Change |
-|---|---|
-| `testing_mark_paid(p_registration_id, p_expected_version)` (0005) | The `already_paid` check (`sum > 0`) becomes `v_amount := public.testing_amount_due(p_registration_id); if coalesce(v_amount, 0) <= 0 then return already_paid`; the old fee lookup is removed (the amount is `v_amount`). Same check order (version → withdrawn → already_paid), same insert, version bump, purge call and answer `{status, payment_id, amount_cents, method, version}`. |
-| `testing_change_paying_by(p_registration_id, p_expected_version, p_paying_by)` (0005) | `already_paid` only when **net > 0 and `testing_amount_due()` = 0** (Q3: allowed while a private student owes more). Earlier payments keep their method. Answer unchanged. |
-| `testing_purge_old_signatures()` (0005) | `e.testing_date < testing_today() - 90` becomes `greatest(e.testing_date, x.private_date) < testing_today() - 90`. Nothing else. |
-| `testing_set_result(p_registration_id, p_result)` and `testing_set_result_note(p_registration_id, p_note)` (0010) | Step 5 compares with `coalesce(v_r.private_date, v_testing_date)` instead of `v_testing_date` (both the `not_open` and the `finished` line). |
-| `testing_update_student(…)` (0010) | (a) the lock line uses `public.testing_today() > coalesce(v_r.private_date, v_testing_date)`; (b) after the write, if the registration **is private** add `amount_due_cents` = `testing_amount_due()` to the ok answer. The answer is otherwise unchanged: `{status:'ok', version}` + `result_cleared: true` only when a result was cleared + `amount_due_cents` **only when private** (0005_tests T7 compares a regular student's whole answer with `{status:'ok', version:2}`). |
-| `testing_resolve_duplicate(…)` (0010) | The keep-one condition `testing_today() > v_testing_date` becomes `(testing_today() > v_testing_date or (v_other.private_date is not null and testing_today() > v_other.private_date))` (H3; `v_other` = the one being withdrawn, already locked). Keep both unchanged. |
-| `testing_restore_student(…)` (0010) | The staff refusal `testing_today() > v_testing_date and exists (result row)` becomes `(testing_today() > v_testing_date or (v_r.private_date is not null and testing_today() > v_r.private_date)) and exists (result row)` (H3). |
-| `testing_update_event(…)` (0010) | The `has_results` subquery adds `and (r.private_date is null or x.result is null)` (M3: a private student's **result** doesn't count; a private note-only row still counts, because that student can go Back). |
+### 2.7 Grants
+All functions in the S / A table + `testing_move_to_private` + `testing_private_undo_move`: revoke from `public, anon, authenticated, service_role`, then `grant execute … to authenticated`. The five internal helpers and the four trigger functions: revoke from everyone, no grant. `testing_restore_student`: its live lines.
 
-**Untouched:** `testing_add_student`, `testing_delete_student`, `testing_delete_event`, `testing_withdraw_student`, `testing_undo_payment`, `testing_edit_payment` (they already act on the most recent live payment), `testing_lock_registration`, `testing_fee_cents`, the triggers, both public functions, the view.
+### 2.8 Header facts
+What it adds (3 tables, 1 view, 4 trigger functions, 5 helpers, 14 staff functions, 1 replaced live function), the statuses, the actions, “private testings are logged in change_log like all testing data — v0.400's family_history is for Prospects only”, the re-run order (**re-running 0005 → re-run 0010, then 0014, straight after; re-running 0010 → re-run 0014 straight after** — 0005 / 0010 put back a Restore that ignores moves), and that the down-script is SETUP §15e.
 
-### 2.6 Grants
-- `testing_set_private(uuid, integer, date, time)`, `testing_clear_private(uuid, integer)`, `testing_add_private_student(uuid, text, text, uuid, boolean, text, date, time)`: revoke from `public, anon, authenticated, service_role`, then `grant execute … to authenticated` only.
-- `testing_private_time_is_valid(time)`, `testing_amount_due(uuid)`: revoke from everyone, **no grant**.
-- Replaced functions: the same revoke + grant lines as their live version (`testing_purge_old_signatures` stays granted to nobody).
-
-### 2.7 Removal order (review M1)
-Re-running **0005** after 0014 → re-run **0010**, then **0014**, straight after, in that order (until then the Testing pages fail: 0005 removes the read rights on the private columns, and 0014 doesn't replace 0005's `testing_add_student`, which only 0010 puts back). Re-running **0010** after 0014 → re-run **0014** straight after. Removal: **0014 down first (§2.9), then 0010 down (SETUP §14e)**.
-
-### 2.8 Header facts the migration must state
-What it adds (2 columns + 2 checks + column rights, 2 internal helpers, 3 staff functions, 9 replaced functions with one line each on what changed), the new statuses (`past_day`, `has_result`, `graded`), the new `tkd.action` names (`set_private`, `change_private`, `clear_private`; reused `add_student`, `clear_result`, `mark_paid`), §2.7's re-run / removal warning in those exact words (re-run 0005 → 0010 then 0014; re-run 0010 → 0014), “the testing_roster view is unchanged on purpose”, and that the down-script lives in SETUP §15e.
-
-### 2.9 Down-script (SETUP §15e, used only with Jeffrey's OK)
-First put the app back to a version without private testing. Then three steps in this order:
-1. Re-run the whole **0005** file (puts back 0005's `testing_mark_paid`, `testing_change_paying_by`, `testing_purge_old_signatures`; repeat 12i step 1 if the family-form off switch is in force).
-2. Re-run the whole **0010** file straight after (puts back 0010's six bodies).
-3. The SQL block (one transaction):
-```sql
-begin;
-select set_config('tkd.action', 'undo_0014', true);
-select set_config('tkd.batch_id', gen_random_uuid()::text, true);
-update public.testing_registrations set private_date = null, private_time = null where private_date is not null;
-select set_config('tkd.action', '', true);
-select set_config('tkd.batch_id', '', true);
-alter table public.testing_registrations
-  drop constraint if exists testing_registrations_private_pair_check,
-  drop constraint if exists testing_registrations_private_time_check;
-drop function if exists public.testing_set_private(uuid, integer, date, time);
-drop function if exists public.testing_clear_private(uuid, integer);
-drop function if exists public.testing_add_private_student(uuid, text, text, uuid, boolean, text, date, time);
-drop function if exists public.testing_amount_due(uuid);
-drop function if exists public.testing_private_time_is_valid(time);
-alter table public.testing_registrations drop column if exists private_date, drop column if exists private_time;
-commit;
-```
-(`change_log` keeps every row; each cleared private day gets one `undo_0014` row.) Afterwards `0010_fingerprints.sql` and `0005_fingerprints.sql` equal a database that never had 0014.
+### 2.9 Down-script (SETUP §15e, Jeffrey's OK only; before real private testings exist — removing 0014 deletes every private testing **and the money moved into it**)
+1. Put the app back to a version without the Private testing tab.
+2. Re-run the whole **0010** file (puts back its `testing_restore_student`).
+3. SQL block, one transaction: `tkd.action 'undo_0014'` + a batch id; `delete from public.testing_private;` (cascade, logged row by row); clear the tags; `drop view if exists public.testing_private_list;` then `drop table if exists` results, payments, `testing_private`; then `drop function if exists` every 0014 function (exact argument lists). Afterwards `0005_fingerprints.sql` and `0010_fingerprints.sql` equal a database that never had 0014.
 
 ---
 
 ## 3. Database tests (Builder A)
 
 ### 3.1 `supabase/tests/0014_tests.sql`
-0010_tests style: one `do` block inside `begin; … rollback;`, the same pretend sessions (A1 admin unlocked · A2 locked · A3 5 wrong PINs · A4 signed out · A5 password 8 days old · A6 magic link · D1 desk unlocked · D2 desk locked · D3 desk magic link · anon) with `<paste-admin-UID-here>` / `<paste-desk-UID-here>`, its own `zz test …` class (two ranks with different prices, one rank with private price $0) and events (made with `testing_add_event`, then moved as `postgres` like 0010_tests: **E_before** = today + 2, **E_day** = today, **E_after** = today − 1), made-up names, `TEST FAILED: Vn …` messages, last line `select 'ALL 0014 TESTS PASSED' as result;`. A private day in the past is made as `postgres` (`update … set private_date = …`), never through the functions.
+0010_tests style: one `do` block in `begin; … rollback;`, the sessions A1–A6, D1–D3, anon with `<paste-admin-UID-here>` / `<paste-desk-UID-here>`, its own `zz test …` classes (two ranks with private $85 / $95, a last rank with final award Not set, a rank with private $0) and one `zz test` event with registrations, made-up names, `TEST FAILED: Vn …`, last line `select 'ALL 0014 TESTS PASSED' as result;`. Past days are made as `postgres`. **The 10-second Undo-move window is tested by backdating the registration's `withdrawn_at` as `postgres` inside the rolled-back block with its stamping trigger switched off around that one statement** (`alter table public.testing_registrations disable trigger testing_registrations_before_write;` → `update … set withdrawn_at = now() - interval '11 seconds'` → `enable trigger …`), so the registration's version stays what the move left; everything is undone by the final `rollback`.
 
 | # | Proves |
 |---|---|
-| V1 | **Catalog:** both columns exist (`date`, `time`, nullable); both checks with the expected definitions; column SELECT on them for `authenticated` only (not anon, service_role, registrar, PUBLIC); `testing_roster` has no `private_*` column; the 3 functions `security definer`, `search_path=""`, no defaults, owner = owner of `testing_events`, executable by `authenticated` only; the 2 helpers executable by nobody, not security definer, `search_path=""`; the 9 replaced functions keep their grants / definer / search_path |
-| V2 | **Locked sessions:** A2–A6, D2, D3 get `no_access` from the 3 functions and read 0 rows of `testing_registrations`; `anon` permission denied on the functions and the two columns; registrar has no right (catalog) |
-| V3 | **Day / time input** (D1 and A1): nulls → `invalid`; times 05:55, 22:05, 16:03, 16:00:30 → `invalid`; 06:00 and 22:00 → ok; yesterday → `past_day`; today → ok; = the testing day → ok (Q4); before / after the testing day → ok; testing day + 1 year → ok; + 1 year + 1 day → `invalid` |
-| V4 | `stale` (old version), `withdrawn`, `not_found` for set / clear; a same-day-same-time Change writes nothing (version and change_log count unchanged) |
-| V5 | **add_private_student:** ok → one registration with both columns, `version 1`, exactly **one** change_log row (`add_student`); bad time / yesterday / too far → nothing inserted, no log row; D1 on E_after → `finished`; A1 on E_after → ok; `amount_due_cents` = the private price |
-| V6 | **Price:** private not paid → `testing_mark_paid` records `private_cents`, then `already_paid`; regular unchanged (early before the testing day, testing-day price on / after) |
-| V7 | **Top-up:** D1 marks a regular student paid ($65), sets private ($85) → `amount_due_cents 2000`; Mark paid records exactly 2000, then `already_paid`; D1 undoes its own $20 within 10 s → due 2000 again → Mark paid → `already_paid`; A1 Edit payment of the most recent payment to $10 → due 1000 |
-| V8 | **$0 private price:** set private → `amount_due_cents 0`; Mark paid → `already_paid` and **no** payment row inserted |
-| V9 | **Back after paying:** paid $85 private → clear → `amount_due_cents 0`, Mark paid `already_paid`; owes $20 then clear → due 0 |
-| V10 | **change_paying_by:** private owing → ok (later Mark paid uses the new method, the $65 row keeps cash); fully paid → `already_paid`; regular paid → `already_paid` (unchanged) |
-| V11 | **Testing-day No show cleared:** E_after, No show + note → D1 `set_private` ok with `result_cleared true`, result row gone, change_log has a `testing_registrations` update (`set_private`) and a `testing_results` delete (`clear_result`) with the **same** batch_id; Pass → `has_result`; Not passed → `has_result`; note only → `has_result` |
-| V12 | **Private No show (H2):** private day = today, `set_result no_show`; `clear_private` → `graded`; `set_private` to a new day → ok, `result_cleared true`, actions `change_private` + `clear_result`, same batch; **before that**, `set_private` with the **same** day and time on the private No show → ok, `result_cleared false`, the result row still there, registration version and change_log count unchanged |
-| V13 | **Graded private:** Pass → Change `graded`, Back `graded`; **note only** → Change ok (note kept), Back ok (note kept) (Q5) |
-| V14 | **H1:** E_after, ungraded private: D1 `clear_private` → `not_allowed`, nothing changed; A1 → ok. E_day and E_before: D1 → ok |
-| V15 | **Grading from the own day:** on E_day with private day = today + 1 → `not_open` (D1 and A1, both functions); private day = today → ok (both); private day = yesterday (as postgres) → `finished` (D1), ok (A1); a regular E_day student unchanged |
-| V16 | **update_student re-price (Q2):** private paid $85 → belt to a rank with private $95 → ok with `amount_due_cents 1000`, Mark paid records 1000; to a rank with private $80 → `amount_due_cents 0`, no payment; a **regular** paid student's belt change → answer exactly `{status:'ok', version:n}` (no `amount_due_cents`, no `result_cleared`); D1 belt change of a graded private student after the **private** day but before the testing day → `not_allowed`; A1 → ok |
-| V17 | **H3:** E_before. **Keep one:** a graded private student whose private day is yesterday (set as postgres), renamed into a possible duplicate: D1 keep-one withdrawing her → `not_allowed`; A1 → ok; control: private day tomorrow → D1 keep-one ok. **Restore** (the staff 10-second Undo needs a fresh keep-one, which is only possible while the private day is still in the future): D1 keep-one withdraws a private student whose private day is tomorrow → ok; then, as postgres, add a result row for her and move `private_date` to yesterday; then D1 Restore (within 10 s) → `not_allowed`; A1 Restore → ok |
-| V18 | **M3:** E_before with only a private student's result → `testing_update_event` date change → ok; after a non-private result exists → `has_results` |
-| V19 | **Signature purge:** a form registration (inserted as postgres with the form fields) on an event 100 days ago: private day 10 days ago → kept; no private day → removed (call the internal purge as postgres) |
-| V20 | **History:** actions `set_private`, `change_private`, `clear_private`, `add_student`, `clear_result`, `mark_paid` present with non-null batch ids and the session's actor name; every set / change / clear bumps the registration version by exactly 1 |
-| V21 | change_log never contains `data:image` (re-checked after V1–V20) |
+| V1 | Catalog: 3 tables RLS on, the one select policy each with `has_data_access()`, exact column rights (no login ids; nothing for public / anon / service_role / registrar), the view `security_invoker`, every function definer + `search_path=""` + no defaults + owner, staff functions executable by `authenticated` only, helpers / trigger functions by nobody, triggers attached, every check / FK / unique present; **D1 (staff) reads `testing_private_list` incl. `amount_due_cents`** (no permission error — the view doesn't call the helper) |
+| V2 | Locked sessions (A2–A6, D2, D3) read 0 rows of the tables and the view and get `no_access` from every function; anon permission denied |
+| V3 | Add: ok copy (names tidied, class / rank / belt / testing-for / price copied, version 1, one `private_add` log row); each input refusal; other-school rank → `invalid`; missing rank → `stale`; last rank with award Not set → `final_award_not_set`; yesterday → `past_day`; today ok; + 1 year ok; + 1 year + 1 day `invalid`; times 05:55 / 22:05 / 16:03 / 16:00:30 `invalid`, 06:00 / 22:00 ok; a Classes and ranks price change afterwards doesn't change the copy |
+| V4 | Edit details: names; another school's rank → `invalid`; a removed rank (as postgres, after the copy) with the stored `rank_id` sent back → ok, names saved, copy and price unchanged, no lookup; picking another live rank then re-copies; rank change re-copies (incl. current private price); paid $85 → $95 rank → `amount_due_cents 1000`; → cheaper → 0; graded + rank change → `result_cleared true` (same batch); after the private day D1 rank change of a graded one → `not_allowed`, A1 ok; nothing changed → no log row |
+| V5 | Change day: past / cap / time; Pass and Not passed → `graded`; No show (+ note) → removed, `result_cleared true`, `private_change_day` + `clear_result` same batch; note only kept; **unchanged day and time → nothing written** (version, log count, a No show row all unchanged) |
+| V6 | Money: D1's own 10-second Undo of a **moved-in** payment (`moved_from_payment_id` set) → `not_allowed`, A1 → ok; Mark paid full → then `already_paid`; difference after a move; $0 price → `already_paid`, no row; D1 Undo own < 10 s ok, after 10 s / other user `not_allowed`, A1 any time; Edit payment D1 `not_allowed`, A1 ok on the most recent; Change paying-by while owed ok, paid in full `already_paid`; double Mark paid with the old version → `stale` |
+| V7 | Cancel: D1 ok, payments kept; again → `cancelled`; Pass → `graded`; No show → ok; every write on a cancelled one → `cancelled`; Restore D1 `not_allowed`, A1 ok while the day is ahead, `past_day` after it; Delete D1 `not_allowed`, A1 with a null array / a null element / a duplicate id → `invalid`, with wrong payment ids `stale`, ok → rows, payments and result gone and logged `private_delete` |
+| V8 | Grading: before the private day `not_open` (D1, A1); on it ok (both); after it D1 `finished`, A1 ok; both functions; same value → no log row; the version of `testing_private` never changes because of grading |
+| V9 | **Move:** paid $65 → event net 0 (reversal dated the original day), private net 65 (same method, original `paid_on`, `moved_from_payment_id`), `amount_due_cents 2000`; registration withdrawn (who / when), counts of the event drop; all rows under one batch `move_to_private`; not paid → nothing moved; two payments → both moved; testing-day No show → removed (`clear_result`); note only → stays on the registration; Pass / Not passed → `has_result`; withdrawn → `withdrawn`; old version → `stale`; past day → `past_day`; moving the same registration again → `withdrawn`; **an already-reversed event payment pair** (payment + its Undo) is not moved and stays as it is, only the live one moves; **overpaid** ($95 paid, $85 price) → private net 95, `amount_due_cents 0`, nothing refunded |
+| V9b | **The moved registration afterwards (regression on live functions):** `testing_mark_paid` / `testing_change_paying_by` → `withdrawn`; `testing_undo_payment` / `testing_edit_payment` on the reversed original → `stale`, on the move's reversal row → `invalid`; `testing_set_result` → `withdrawn`; `testing_delete_event` of its event with the expected net **excluding** the moved money → ok, the private testing and its payments intact (the `moved_from_*` pointers stay), then Undo move → `not_found`; A1 `testing_delete_student` of the moved registration → ok, the private money intact |
+| V10 | Restore of the moved registration: A1 → `moved` **and D1 → `moved`** (the check comes before the staff rule), nothing changed; an ordinary withdrawn registration still restores (0010 rules unchanged) |
+| V11 | Undo move: D1 within 10 s → registration active, event net back to 65 (payment dated the original day), private row gone, one `undo_move_to_private` batch; the recreated event payments have `recorded_by` null, so D1's live own-undo of them → `not_allowed`; after a Mark paid on the private side → `stale`; after the registration was edited (e.g. A1 renames it) → `stale`; a move that cleared a No show → `not_allowed`; A1 (not the mover) → `not_allowed`; after 10 s (backdated, see above) → `not_allowed` |
+| V11b | **Guards and hygiene (as postgres):** update or delete of a `testing_private_payments` row → refused; a reversal with the wrong amount or of another private testing's payment → refused; changing `id`, `location_code` or any `moved_from_*` / `moved_cleared_no_show` / `moved_registration_version` / `created_*` → refused (`testing_private_immutable`); `truncate` refused on all three tables |
+| V12 | History: every action above present with batch ids and the session's actor name; no `data:image` in `change_log` |
 
-### 3.2 `supabase/tests/0005_tests.sql` — C3 only
-Add `'testing_registrations.private_date', 'testing_registrations.private_time'` to C3's `v_list` (after `'testing_registrations.updated_by_name'`), with a one-line comment “(0014: present only once 0014 is applied; C3 loops over existing columns, so the list works before and after)”. **No other byte changes.** The orchestrator tells Jeffrey before CP2 that the production copy of `0005_tests.sql` is this updated one (review H5).
+### 3.2 `supabase/tests/0005_tests.sql`
+Back to the live version (`git checkout dae8d00^ -- supabase/tests/0005_tests.sql`): no registration column is added any more.
 
-### 3.3 `run.mjs` — new step 14, and 13g moves to the very end
-- `step13()` loses its last line (13g). `main()` order becomes: step 13 (a–f) → **step 14** (below, only if 0010 applied) → **13g** `downScriptCheck(db, after5)` last, unchanged code. The header comment lists step 14 and says 13g now runs after 14i.
-- **Step 14** (0014), on the main database:
-  a. take the 0003, 0004, 0005, 0006 and 0010 fingerprints; apply `0014_testing_private.sql`; `0014_tests.sql` must print `ALL 0014 TESTS PASSED`.
-  b. 0004 and **0006** fingerprints **identical** to before (review M9). 0003 fingerprints identical except the rows of the 5 new and the 9 replaced `testing_*` functions (expected, because 0003's file lists every `testing_*` function). 0005 differs **only** in the rows of `testing_mark_paid`, `testing_change_paying_by`, `testing_purge_old_signatures`, the four 0010-replaced 0005 functions and the `testing_registrations` table row; 0010 differs only in its six replaced functions' rows.
-  c. test files again: `0010_tests.sql`, `0005_tests.sql` (with the new C3), `0006_tests.sql`, `0003_tests.sql`, `0004_tests.sql`, `0002_tests.sql`, `verify_pin_tests.sql` — all pass.
-  d. registrar live checks (11b) again plus: read `private_date` of `testing_registrations`; call `testing_set_private`, `testing_clear_private`, `testing_add_private_student`, `testing_amount_due` — all refused.
-  e. one private day for a seeded family registration of the test event (as postgres, labelled like 11c), so the re-run and the down-script have data.
-  f. fingerprints (`0014_fingerprints.sql`) + an md5 snapshot of (`id, private_date, private_time, version` of every registration) and the change_log count; apply 0014 a **second time**; snapshot and fingerprints identical; `0014_tests.sql` and `0005_tests.sql` pass again.
-  g. upgrade database: apply 0014 on top of its 0010; its 0014 fingerprints equal the main database's (fresh = upgrade); `0014_tests.sql`, `0010_tests.sql`, `0005_tests.sql` pass there.
-  h. print the 0014 fingerprints like the others.
-  i. **the 0014 down-script** (SETUP §15e, all three steps exactly as written there, the SQL block read from SETUP.md like 13g): afterwards both columns and the five 0014-only functions are gone, `0010_fingerprints.sql` equals step 13e's and `0005_fingerprints.sql` equals the 0005 fingerprints taken in 14a, `0003_fingerprints.sql` equals 14a's, one `undo_0014` change_log row per cleared private day, `0010_tests.sql` and `0005_tests.sql` pass. **Then 13g runs** (0014 down → 0010 down, the real removal order) — **only if 14i passed**; otherwise run.mjs records a failure for 13g (“skipped: the 0014 down-script failed”) instead of running it.
-- **14h** also checks that `0014_fingerprints.sql` contains neither `delete` nor `drop` (as 12a does for 0006).
-- The step-13 header line “so 0005 itself is never applied again after this - only its TEST files run” is updated: 14i re-runs 0005 and 0010 as steps 1–2 of the 0014 down-script, and 13g re-runs 0005 again.
+### 3.3 `run.mjs` — step 14 (between 13f and 13g)
+Start from `git checkout dae8d00^ -- supabase/tests/pglite/run.mjs`, then: `step13()` loses 13g; `main()` runs step 13 (a–f) → **step 14 — only if 13a–f all passed** (else a recorded failure “skipped: step 13 failed”) → **13g** last, and **13g runs only if 14i passed** (else a recorded failure “skipped: the 0014 down-script failed”). The step-13 header line “0005 itself is never applied again” is updated (14i re-runs 0010; 13g re-runs 0005).
+- a. take the 0003, 0004, 0005, 0006, 0010 fingerprints; apply 0014; `0014_tests.sql` → `ALL 0014 TESTS PASSED`.
+- b. 0004 and 0006 identical; **0003 identical except the rows of the new `testing_*` functions and `testing_restore_student`** (0003's file lists every `testing_*` function — expected); 0005 and 0010 differ only in `testing_restore_student`.
+- c. test files again: 0010, 0005, 0006, 0003, 0004, 0002, PIN — all pass.
+- d. registrar live checks (11b) + refusals: read each new table and the view, call `testing_private_add`, `testing_move_to_private`, `testing_private_amount_due`.
+- e. seed (as postgres, labelled): one private testing with a payment and a result, so re-run and down have data.
+- f. fingerprints + an md5 of the three tables and the `change_log` count; apply 0014 again; identical; 0014 / 0005 tests pass.
+- g. upgrade database: 0014 on its 0010; fingerprints equal (fresh = upgrade); 0014 / 0010 / 0005 tests pass.
+- h. `0014_fingerprints.sql` contains neither `delete` nor `drop`; print the 0014 fingerprints.
+- i. the down-script (SETUP §15e exactly, the SQL block read from SETUP.md): tables, view and 0014 functions gone; 0005 / 0010 **and 0003** fingerprints equal 14a's; one `undo_0014` delete row in `change_log` per removed `testing_private` row (its payments and result are logged too); 0010 / 0005 tests pass.
 
 ### 3.4 `supabase/tests/0014_fingerprints.sql`
-Read-only single SELECT in 0010_fingerprints' format (`kind, item, detail`): `function` rows for the 2 helpers, the 3 new and the 9 replaced functions (14); `column` rows `testing_registrations.private_date` / `.private_time` (type, nullable, per-column rights); `constraint` rows for the two checks (name + `pg_get_constraintdef`). 18 rows. Connector-safe (§2.1).
+Read-only single SELECT, `kind, item, detail`: `function` rows (every 0014 function + `testing_restore_student`), `table` rows (3: RLS, rights, columns, policies), `view` row, `trigger` rows, `constraint` rows (name + `pg_get_constraintdef`). Connector-safe.
 
-### 3.5 SETUP §15 (in §14's style; inserted right after §14e, before “Admin: change the front-desk PIN or password”)
-**15. Migration 0014: Color Belt private testing** — what it does (plain English); the order CP2 → CP3 → CP4; 15a apply (SQL Editor, the destructive-operations warning explained); 15b read-only checks (`0014_fingerprints.sql` = PGlite; `0005_fingerprints.sql` / `0010_fingerprints.sql` differ only in the rows listed in §3.3b — expected; 0004 / 0006 unchanged; 0003 identical except the rows of the 5 new and the 9 replaced `testing_*` functions (expected: 0003's file lists every `testing_*` function); security advisor: the only new expected notice is “security definer function executable by authenticated” for the 3 new functions); 15c tests (`0014_tests.sql`, then the **updated** `0005_tests.sql`, `0010`, `0006`, `0004`, `0003`, `0002`, PIN); 15d CP3 real check (plan §5 step 5: a **Closed** TEST event — review L13 — one student set private from ⋯ and one added with Tests privately, a top-up, grading on a private day = today, delete; Claude checks the history read-only); 15e undo and re-run warnings (§2.7's wording: re-running 0005 → re-run 0010, then 0014, straight after, in that order — until then the Testing pages fail because 0005 removes the read rights on the private columns; re-running 0010 → re-run 0014 straight after) + §2.9 verbatim.
-At the top of **§14e** add one line: “If migration 0014 exists, remove it first (§15e) — 0010 can only be removed after 0014.”
+### 3.5 SETUP §15 (rewritten, after §14e)
+**15. Migration 0014: Color Belt private testing** — what it does; CP2 → CP3 → CP4; 15a apply; 15b read-only checks (§3.3b expectations; security advisor: only “security definer function executable by authenticated” for the new staff functions); 15c tests (0014, then 0010 / 0005 / 0006 / 0004 / 0003 / 0002 / PIN); 15d CP3 real check (plan §5 step 5); 15e re-run warnings (§2.8 wording) + §2.9 verbatim. Keep the existing one-line warning at the top of §14e.
 
 ---
 
-## 4. Data layer and preview mock (Builder B)
+## 4. Data layer and mock (Builder B)
 
-### 4.1 `src/lib/testing/eventRules.js` (pure, node-importable)
-
+### 4.1 `src/lib/testing/privateRules.js` (new, pure, node-importable)
 | Export | Does |
 |---|---|
-| `PRIVATE_TIME_CHOICES` | `['06:00', '06:05', …, '22:00']` (193 strings) |
-| `privateTimeIsValid(text)` | true for `'HH:MM'` / `'HH:MM:SS'` with seconds 00 that is in `PRIVATE_TIME_CHOICES` |
-| `privateDayLimit(testingDate)` | `'YYYY-MM-DD'` = testingDate + 1 year, Feb 29 → Feb 28 (as Postgres) |
-| `privateDayProblem(day, today, testingDate)` | `null` · `'missing'` (not an ISO date) · `'past'` (`day < today`) · `'tooFar'` (`day > privateDayLimit(testingDate)`) |
-| `isPrivate(row)` | `isIsoDate(row.privateDate ?? row.private_date)` |
-| `gradingDay(row, testingDate)` | the row's private date, else `testingDate` (use with `gradingRules.gradingWindow`) |
-| `priceFor({ rank, privateDate, today, testingDate })` | `rank.privateCents` when `privateDate`, else `feeFor(rank, today, testingDate)` |
-| `amountDue({ rank, privateDate, paidCents, today, testingDate })` | §1.3 exactly, integer ≥ 0 |
-| `owesMore(row)` | `row.paid && row.amountDueCents > 0` |
-| `showMarkPaid(row)` | `row.status === 'active' && row.amountDueCents > 0` |
-| `canChangePayingBy(row)` | `row.status === 'active' && (!row.paid \|\| row.amountDueCents > 0)` (Q3) |
-| `privateMenu(row, { today, testingDate, isAdmin })` | `{ canSet, canChange, canBack, canGrade }` — `active` = status active; `canSet = active && !row.isPrivate && (!row.graded \|\| row.result === 'no_show')`; `canChange = active && row.isPrivate && (row.result === null \|\| row.result === 'no_show')`; `canBack = active && row.isPrivate && row.result === null && (isAdmin \|\| today <= testingDate)`; `canGrade = active && row.isPrivate` |
-| `livePayments(payments, registrationId)` | that student's `kind 'payment'` rows not reversed, oldest first (`recordedAt`) — for the top-up wording (Edit payment, details, delete) |
-| `privateTestingsList(rows)` | rows `{ status, privateDate, privateTime, result, firstName, lastName, … }` → only active, private, `result === null`; sorted by `privateDate`, `privateTime`, `lastName`, `firstName` (locale compare, case-insensitive) |
-- `feeFor`'s comment loses “Private price isn't used in phase 2”; `isPaid`'s comment “No partial payments exist” is replaced by the L2 note (a private top-up and the accepted partial-after-Back case).
+| `PRIVATE_TIME_CHOICES` | `'06:00' … '22:00'`, 193 strings |
+| `privateTimeIsValid(text)` | `'HH:MM'` / `'HH:MM:00'` in the list |
+| `privateDayLimit(today)` | today + 1 year (Feb 29 → Feb 28) |
+| `privateDayProblem(day, today)` | `null` · `'missing'` · `'past'` · `'tooFar'` |
+| `amountDue({ privateCents, paidCents })` | §1.3 |
+| `owesMore(row)` · `showMarkPaid(row)` · `canChangePayingBy(row)` | `paid && due > 0` · `active && due > 0` · `active && (!paid \|\| due > 0)` |
+| `privateSide(row, today)` | `'upcoming'` \| `'past'` (§1.1) |
+| `splitPrivate(rows, today)` | `{ upcoming, past }` — upcoming soonest first (day, time, last, first name); past latest first |
+| `privateCards(rows)` | over one side: `{ count, paid, notPaid, owesMore, paymentsCents, cancelledCents }` — count / paid / notPaid / owesMore over **active** rows only; `paymentsCents` = net of all rows incl. cancelled; `cancelledCents` = the cancelled rows' part |
+| `privateMenu(row, { today, isAdmin })` | `{ editDetails, changePayingBy, changeDay, grade, editPayment, undoPayment, cancel, restore, delete }` booleans: active → `grade` always; `editDetails`, `changeDay`, `cancel` when `result` is null or `'no_show'`; `changePayingBy` = `canChangePayingBy` **and** `result` is null or `'no_show'` (L5); admin + paid → `editPayment`, `undoPayment`; admin → `delete`. Cancelled → only admin `restore` (when `privateDate >= today`) and `delete` |
+| `canMoveToPrivate(regRow)` | `status 'active' && (result === null \|\| result === 'no_show')` |
+| `moveMoney({ paidCents, privateCents })` | `{ kind: 'notPaid' \| 'owes' \| 'enough', dueCents }` |
 
-### 4.2 `src/lib/testing/eventsApi.js`
-- `EVENT_STATUSES` adds `'past_day'`, `'has_result'`, `'graded'`. Header comment lists the new functions and statuses.
-- `PRIVATE_COLUMNS = 'id, private_date, private_time'` (never `*`).
-- **`loadEvent(eventId)`**: one more chunked read with the ranks / payments / results: `selectIn('testing_registrations', PRIVATE_COLUMNS, 'id', regIds)`. Every roster row gains:
-  `privateDate` (`'YYYY-MM-DD'` | null), `privateTime` (`'HH:MM'` via `shortTime` | null), `isPrivate` (boolean), `priceCents` (`priceFor`, with the row's rank copy, `today`, `event.testingDate`), `amountDueCents` (`amountDue`), `owesMore` (boolean).
-  `event` gains `owesMoreCount` = active rows with `owesMore`.
-- **`loadEvents(locationCode)`**: the existing roster read stays `'id, event_id, status, paid_cents'`; added: `selectIn('testing_registrations', 'id, event_id, private_date, private_time', 'event_id', ids)`, then, **for the private ids only**, a second chunked read `selectIn('testing_roster', 'id, first_name, last_name, class_name', 'id', privateIds)` and `selectIn('testing_results', 'registration_id, result', 'registration_id', privateIds)` (names and classes are never read for every registration). (The plan's L11 “add it to the existing roster read” is impossible because the view isn't changed — M1.) The answer gains **`privateTestings`**: `privateTestingsList(…)` of `{ registrationId, eventId, eventName, firstName, lastName, className, privateDate, privateTime, result }`.
-- New calls (all through `callRpc`; ok shapes checked, else `'error'`):
+### 4.2 `src/lib/testing/privateApi.js` (new; same `callRpc` / `selectIn` / access-check pattern as eventsApi — never throws)
+- `PRIVATE_STATUSES` = §1.4 + `'error'`.
+- **`loadPrivateTestings(locationCode)`** → `{ status:'ok', today, rows, payments }`: the view `testing_private_list` (`eq location_code`), `testing_private_results` (`private_id, result, note, updated_at, updated_by_name`) and `testing_private_payments` (all granted columns) for those ids, + the access check. **Row** (camelCase): `id, locationCode, firstName, lastName, classId, className, rankId, rankName, belt {beltPattern, beltColor, beltColor2, beltEndStripes, beltEndStripeColor}, testingFor { kind:'rank'|'none', name, belt }, privateCents, payingBy, stripesConfirmed, privateDate ('YYYY-MM-DD'), privateTime ('HH:MM'), status, cancelledAt, cancelledByName, movedFromEventId, movedFromRegistrationId, movedFromEventName, version, createdAt, createdByName, updatedAt, updatedByName, paid, paidCents, paidOn, paidMethod, lastPaymentId, lastPaymentRecordedAt, amountDueCents, owesMore, result, note, resultAt, resultByName, graded` (results row exists), `side` (`privateSide`). **Payment**: as eventsApi's `toPayment` with `privateId`, `movedFromPaymentId`.
+- **`loadPrivateTesting(privateId)`** → `{ status:'ok', today, startedAt, row, payments }` · `'not_found'` (`startedAt` as eventsApi.loadEvent, for the grading engine).
+- One function per database function, arguments camelCase, answers camelCase: `addPrivate({ locationCode, firstName, lastName, rankId, stripes, payingBy, privateDate, privateTime })` · `updatePrivate({ privateId, expectedVersion, firstName, lastName, rankId })` · `changePrivateDay({ privateId, expectedVersion, privateDate, privateTime })` · `changePrivatePayingBy({ privateId, expectedVersion, payingBy })` · `markPrivatePaid({ privateId, expectedVersion })` · `undoPrivatePayment({ paymentId })` · `editPrivatePayment({ paymentId, method, amountCents, paidOn })` · `cancelPrivate({ privateId, expectedVersion })` · `restorePrivate({ privateId, expectedVersion })` · `deletePrivate({ privateId, expectedVersion, expectedPaymentIds })` · `setPrivateResult({ privateId, result })` · `setPrivateResultNote({ privateId, note })` · `moveToPrivate({ registrationId, expectedVersion, privateDate, privateTime })` · `undoMoveToPrivate({ privateId, expectedVersion })`. Ok fields: `id`, `version`, `amountDueCents`, `resultCleared`, `privateDate`, `privateTime`, `paymentId`, `amountCents`, `method`, `privateId`, `registrationId`, `registrationVersion`, `result`, `note`, `resultAt`, `resultByName` as each function returns them; `final_award_not_set` carries `className`.
 
-| Function | Calls | Ok answer |
-|---|---|---|
-| `setPrivate({ registrationId, expectedVersion, privateDate, privateTime })` | `testing_set_private { p_registration_id, p_expected_version, p_private_date, p_private_time }` (time sent as `'HH:MM'`) | `{ status:'ok', version, privateDate, privateTime, amountDueCents, resultCleared }` |
-| `clearPrivate({ registrationId, expectedVersion })` | `testing_clear_private { p_registration_id, p_expected_version }` | `{ status:'ok', version, amountDueCents }` |
-| `addPrivateStudent({ eventId, firstName, lastName, eventRankId, stripes, payingBy, privateDate, privateTime })` | `testing_add_private_student { p_event_id, p_first, p_last, p_event_rank_id, p_stripes, p_paying_by, p_private_date, p_private_time }` | `{ status:'ok', id, reference, version, privateDate, privateTime, amountDueCents }` |
-- `updateStudent` ok answer gains `amountDueCents` (`Number.isInteger(d.amount_due_cents) ? d.amount_due_cents : null`).
-- `markPaid`, `changePayingBy`, `undoPayment`, `editPayment` unchanged (the database decides the amount).
+### 4.3 `src/lib/testing/eventsApi.js` / `eventRules.js`
+Both back to phase 3 (`git checkout dae8d00^ -- …`). Then eventsApi only: `EVENT_STATUSES` adds `'moved'`; **`loadEvent`** adds one read `supabase.from('testing_private').select('id, moved_from_registration_id, private_date, private_time, status').eq('moved_from_event_id', eventId)`; every roster row gains `movedTo: { privateId, privateDate, privateTime, status } | null` (`status` = the private testing's `'active'` / `'cancelled'`; the Removed tag shows the same wording either way).
 
-### 4.3 `src/lib/mockTestingEvents.js` — same rules, same order, same statuses as §2
-- Registrations get `private_date` / `private_time` (null). A saved store whose registrations lack them reads them as null and is **not** “damaged” (existing preview data is kept); new rows always carry both keys.
-- `GRANTED.testing_registrations = [...REG_COLS, 'private_date', 'private_time']`; **`ROSTER_COLS` stays as it is** (a select of `private_date` from `testing_roster` fails like the database's “column does not exist”).
-- `RPC_ARGS`: `testing_set_private: [ID('p_registration_id'), ['p_expected_version', 'int'], ['p_private_date', 'date'], ['p_private_time', 'time']]`, `testing_clear_private: [ID('p_registration_id'), ['p_expected_version', 'int']]`, `testing_add_private_student: [ID('p_event_id'), ['p_first', 'text'], ['p_last', 'text'], ID('p_event_rank_id'), ['p_stripes', 'bool'], ['p_paying_by', 'text'], ['p_private_date', 'date'], ['p_private_time', 'time']]`; `toDbType` learns `'time'` (`'HH:MM'` / `'HH:MM:SS'` → `'HH:MM:SS'`; anything else throws like a Postgres 22007). None is in `ADMIN_ONLY`. `testing_amount_due` and `testing_private_time_is_valid` go into `EVENT_RESTRICTED_RPC_NAMES`.
-- Handlers: the three new ones (§2.4 order) and the nine changes of §2.5, with the mock's `today()` (so `__tkdPreview.setToday` rehearses before / on / after the testing day and the private day). Change log entries with the same action names and one batch id per call.
+### 4.4 `src/lib/mockTestingEvents.js`
+Back to phase 3, then: store lists `private`, `private_payments`, `private_results` (a store without them gets empty lists, not “damaged”); `GRANTED` / `HIDDEN` for the three tables and the view `testing_private_list` (so `EVENT_TABLES` routes them); `RPC_ARGS` for all 14 functions (types `uuid`, `int`, `text`, `bool`, `date`, `uuid[]`, and a new `'time'`: `'HH:MM'` / `'HH:MM:SS'` → `'HH:MM:SS'`, anything else throws like Postgres 22007); `ADMIN_ONLY` += `testing_private_edit_payment`, `testing_private_restore`, `testing_private_delete`; the five helpers in `EVENT_RESTRICTED_RPC_NAMES`; handlers with §2's order and statuses, live Classes and ranks read from the shared store (`classes`, `ranks`), `testing_restore_student` → `moved`; the same action names and one batch id per call.
 
-### 4.4 `src/lib/testing/checks.mjs` — new groups
-- `eventRules`: `PRIVATE_TIME_CHOICES` (193, first / last), `privateTimeIsValid`, `privateDayLimit` (incl. Feb 29), `privateDayProblem`, `priceFor`, `amountDue` = **every row of §1.3's table M1–M14**, `privateMenu` truth table (incl. H1 staff / admin, note-only, private No show), `privateTestingsList` (withdrawn out, result out, note-only in, sort order, past day in).
-- Mock replays of V3–V18 (no session cases), and: the mock's internal due helper (its copy of `testing_amount_due`) equals `eventRules.amountDue` for every registration after every step (the view has no `amount_due_cents` field — compare inside checks.mjs); M7 (“Back on Nov 21”) is replayed as an **admin** (staff can't Back after the testing day, H1); a store without the new keys keeps its events.
-- Ends with the existing `ALL TESTING LIB CHECKS PASSED`.
+### 4.5 `src/lib/testing/checks.mjs`
+Back to phase 3, then groups: the Edit-details rank rule (the stored `rankId` of a rank no longer in Classes and ranks sent back → mock ok, copy unchanged; another school's rank → `invalid`), `privateRules` (time list, day rules incl. Feb 29, `amountDue` = E1–E12, `privateMenu` truth table, `splitPrivate` order incl. cancelled → past, `privateCards` incl. cancelled money, `canMoveToPrivate`, `moveMoney`); mock replays of V3–V11 (no session cases), the mock's due = `amountDue` after every step, a store without the new lists keeps its events. Ends with `ALL TESTING LIB CHECKS PASSED`.
 
 ---
 
-## 5. Staff screens (Builder C) — layout and wording exactly as P1–P9 + P3b
+## 5. Screens (Builder C) — layout and wording exactly as P1–P8
 
-### 5.1 Route (`src/App.jsx`, C's piece of the shared file)
-- `EVENT_HASH` becomes `/^#testing\/event\/([A-Za-z0-9-]{1,64})(?:\/(grading)|\/private\/([A-Za-z0-9-]{1,64}))?$/`.
-- The route is `{ section, eventId, eventTab: 'students' | 'grading' | 'private', privateId }` (`privateId` = the registration id on the private page, else null). `addressForRoute(section, eventId, eventTab, privateId)` writes `#testing/event/<id>`, `…/grading` or **`#testing/event/<id>/private/<registrationId>`**. `routeIsUnknown` uses the new pattern.
-- `navigate` options gain `privateId` (the `changed` test compares it too). New state + ref `privateId`, passed to `<Testing privateId=… onOpenPrivate=… onClosePrivate=…>`; they reach `EventPage` **and** `EventsTab` through Testing's `...tabProps` (Testing.jsx unchanged).
-- `openPrivate(eventId, registrationId)` = `navigate('testing', eventId, { tab: 'private', privateId })` — a normal history step, **not** guarded (from the Events tab nothing is unsaved; from the event page the same EventPage stays mounted).
-- `closePrivate()` = `guarded(() => navigate('testing', eventIdRef.current, { tab: 'students' }))` — the back link (always to the event, v0.228).
-- `handlePopState`, same event: when the current tab is `'private'` and the route's tab or privateId differs, call the leave guard like a page change (put the current address back first, `proceed` applies the route); other same-event tab changes stay silent as today.
+### 5.1 Route and tab
+- **`src/App.jsx`:** start from `git checkout dae8d00^ -- src/App.jsx` (removes the event `/private/` route). Add `PRIVATE_HASH = /^#testing\/private\/([A-Za-z0-9-]{1,64})$/` → route `{ section:'testing', eventId:null, eventTab:'students', privateId }` (`privateId` null elsewhere); `addressForRoute` writes `#testing/private/<id>`; `routeIsUnknown` (the `addressIsUnknown` tidy-up) **accepts `PRIVATE_HASH`** as it accepts the event and settings addresses; `navigate` compares `privateId`; `openPrivate(id)` = a normal step; `closePrivate(options)` = like `closeEvent`: `options?.replace` → `navigate('testing', null, options)` unguarded (the page closing itself after a guarded school change), else `guarded(() => navigate('testing'))`; Testing receives `privateId`, `onOpenPrivate`, `onClosePrivate` (they reach the tabs and EventPage through `...tabProps`). The grading page registers the leave guard exactly as EventPage does (`onLeaveGuardChange`).
+- **`src/screens/Testing.jsx`:** `TABS` gets `{ key:'private', label: TAB_PRIVATE }` **last** (far right); renders `PrivateTestingTab` for it (same `renderHeader` pattern, header action = Add private testing for all staff); when `privateId` is set → `<PrivateGradingPage key={privateId} …>` (before the `eventId` branch) **and the module-level `lastTab` is set to `'private'`**, so closing the grading page lands on the Private testing tab. Arrow keys / Home / End cycle the three tabs as today. **`.ttabs` scrolls sideways** at narrow widths (`overflow-x: auto`, no wrapping, the current tab scrolled into view) — `testing.css`.
 
-### 5.2 Component tree
-```
-EventPage                  owns: data (loadEvent), dialogs, banners, grading = useGradingSaves(testing-day rows),
-│                                privateGrading = useGradingSaves(private page row), the leave guard
-├─ (privateId set) PrivateGradingPage   props: event, school, classes, row, today, isAdmin, layout,
-│                                       grading: privateGrading, onBack, onOpenNote, onPrint
-│   └─ PrivateSheet (portal, class "grading-print") while printing
-├─ Students panel          RosterRows (Private line, owed line, result tag), cards ("1 owes more")
-└─ GradingTab              rows = active AND NOT private (counts, class switch, print too)
-PrivateDialog              an EventPage dialog (type 'private', mode 'set' | 'change')
-StudentDialog              Add (Tests privately) · Edit details (re-price warning) · view (private + payments)
-```
-- `gradingRows = active.filter((r) => !r.isPrivate)` sorted as today; `GradingSheet` gets the same rows.
-- **`privateGrading`** = a second `useGradingSaves({ roster: privateRow ? [privateRow] : [], …, isReadOnly: privateRow ? !canChangeResults(gradingWindow(today, privateRow.privateDate), isAdmin) : true })` (same props otherwise; `privateRow` may be missing — gone, withdrawn or not private). The leave guard and the `beforeunload` listener count **`grading.unsavedCount + privateGrading.unsavedCount`**; the leave dialog lists both engines' rows.
-- **L8 (useGradingSaves.js today calls `dropAll()` on `finished` / `not_open`, which would throw away every other unsaved tap):** the engine gets a new prop **`isNowPrivate(id)`** (EventPage answers it from its **full** roster: the row exists and `isPrivate`). When a save answers `not_open` for a row that is now private, or that is no longer in the engine's roster: **`dropEntry(id)` only (never `dropAll`)** and page banner `movedToPrivate(name)`. An overlay entry whose row leaves the roster is dropped (not counted, not retried) with the same banner. `dropAll()` stays only for `finished` / `not_open` on rows still in the roster.
-- On the private page the event header (Add student, Registration link, tabs, cards) is not shown and `N` does nothing.
+### 5.2 Private testing tab (P1, P7) — `private/PrivateTestingTab.jsx`, `private/PrivateRows.jsx`
+- Loads with `useLiveLoad({ key: locationCode, load: loadPrivateTestings, refreshMs: LIVE_REFRESH_MS })` (15 s, v0.157). Live Classes and ranks (`api.loadClassesAndRanks` + `rankOrder.withTestingFor`) are loaded when Add / Edit details opens.
+- Side switch Upcoming / Past (`ChoiceGroup`, labels `${T.UPCOMING} ${n}` / `${T.PAST} ${n}`), opens on **Upcoming**, kept per school while the page is open.
+- Cards over the side shown (`privateCards`): `CARD_PRIVATE` count · `CARD_PAID` paid + amber `owesMoreCount(n)` when > 0 · `CARD_NOT_PAID` · `CARD_PAYMENTS` `dollars(paymentsCents)` + gray `includesCancelled(cents)` when > 0.
+- Columns (PC): `COL_DAY_TIME` (`weekdayMonthDay` / `timeLabel`) · `COL_STUDENT` (name 500; class 12 px gray; on Past the result tag `TAG_PASSED` / `TAG_NOT_PASSED` / `TAG_NO_SHOW`, or gray `cancelledTag(cancelledAt)`) · `COL_TESTING_FOR_PRICE` (belts “Yellow → Orange · $85”) · `COL_PAYING_BY` · `COL_PAYMENT` (`TAG_PAID` / `TAG_NOT_PAID`) · `COL_PAID_ON` · Mark paid (`showMarkPaid`) · ⋯. Under the name: amber `ti-alert-triangle` `owedLine(paidCents, amountDueCents)` when `owesMore`; gray `ti-arrow-right` `movedFromLine(movedFromEventName)` when moved. Tablet: day · time under the name (`privateDayTime`), Paid on dropped, the lines full width. Phone / 320: stacked rows as P1. A cancelled row is grayed entirely; staff see no ⋯ on it.
+- Mark paid: `markPrivatePaid`; toast `markedPaidToast(name, amountCents, method)` + Undo (`undoPrivatePayment`), as the event roster.
+- Empty: no private testings at all → `NO_PRIVATE_TESTINGS` + the Add button (P1 tablet); one side empty → `NO_UPCOMING_PRIVATE` / `NO_PAST_PRIVATE` (CP1).
 
-### 5.3 Students tab (P1, P4, P9)
-- **Private line** under the name (purple `Private` tag + `privateLine(row.privateDate, row.privateTime, row.priceCents)` in 12px gray — `priceCents` is the private price for a private row, §4.2; roster rows don't carry the rank's `privateCents`). PC: under the name. Tablet: full row width under the name (like the mockup's `.xrow`). Phone: right under the name and Registered line, before the belts.
-- **Owed line** when `row.owesMore`: amber `ti-alert-triangle` + `owedLine(row.paidCents, row.amountDueCents)`, one line, never wraps mid-phrase (tablet full width; fits at 320).
-- **Mark paid** shows when `showMarkPaid(row)` — also next to the **Paid** tag while owed (P4). Its toast is the existing `markedPaidToast(name, amountCents, method)` with Undo (the answer's amount: “Ava Chen marked paid · $20 cash”).
-- **Result tag** next to the Private line once `row.result` is set (read-only tags `TAG_PASSED` / `TAG_NOT_PASSED` / `TAG_NO_SHOW`, P9). Note-only: no tag.
-- **Cards:** private students count everywhere on this tab (Students, Paid / Not paid, class switch numbers). Under the Paid card, amber `owesMoreCount(event.owesMoreCount)` when > 0 (P4).
-- Purple: `.ttag--private { background: #EEEDFE; color: #3C3489; border-color: #CECBF6; }` in `testing-events.css` (the mockup's values; not a token — tokens.css stays untouched; the orchestrator adds the §7 colour row).
+### 5.3 ⋯ menu (P3, P7)
+Items from `privateMenu`, in this order, dividers between groups: [Edit details (`ti-edit`) · Change how they'll pay (no icon) · Change day or time (`ti-calendar`) · Grade (`ti-school`)] | [Edit payment (`ti-cash`) · Undo payment (`ti-arrow-back-up`)] | [Cancel private testing (`ti-calendar-x`) · Delete permanently (`ti-trash`, red)]. Cancelled row (admin): Restore (`ti-arrow-back-up`) · Delete permanently. Phone: bottom sheet, title name, subtitle `${className} · ${from} → ${to}` (cancelled: `${className} · ${cancelledTag}`), Cancel at the end. Grade → `onOpenPrivate(row.id)`.
 
-### 5.4 The ⋯ menu (P2, P5)
-Fixed order, dividers between groups (a divider never starts the menu):
-1. Edit details · Change how they'll pay (when `canChangePayingBy(row)` — Q3) · Review possible duplicate
-2. **private group** (`privateMenu`): `canSet` → **Set private testing** (`ti-calendar`); else `canChange` → **Change private day or time** (`ti-calendar`), `canBack` → **Back to the testing day (Fri, Nov 20)** (`ti-calendar-event`), `canGrade` → **Grade private testing** (`ti-school`)
-3. admins, paid: Edit payment · Undo payment (both act on the most recent live payment — unchanged code path)
-4. admins: Withdraw / Restore · Delete permanently
-Phone: the same items in the bottom sheet. All staff see group 2 (Q3); Back is hidden for staff after the testing day (H1) and once a result exists.
-- **Set / Change** open `PrivateDialog`. **Grade private testing** → `onOpenPrivate(eventId, row.id)`.
-- **Back** (no dialog, one write): `clearPrivate`; ok → toast `backToTestingDayToast(name)` with **Undo** that calls `setPrivate` with the old day / time and **the version clearPrivate just returned** (review L12); reload.
+### 5.4 Dialogs (`Dialog.jsx`; phone full screen, back arrow, Save pinned at the bottom, `UNSAVED` / `DISCARD_CHANGES`)
+- **`private/DayTimeFields.jsx`** (salvaged from dae8d00's `event/PrivateDialog.jsx`): Day date field (`min` today, `max` `privateDayLimit(today)`), `longDate` under it once valid; Time select of `PRIVATE_TIME_CHOICES` (`timeLabel`, placeholder `NO_TIME`) with hint `TIME_HINT`; problems `PICK_PRIVATE_DAY` / `PRIVATE_DAY_PAST` (amber field) / `PRIVATE_DAY_TOO_FAR` / `PICK_PRIVATE_TIME`; Save gray until fixed.
+- **`private/PrivateDialog.jsx`** — Add (P2) and Edit details. Add: title `ADD_PRIVATE_TITLE`, subtitle `schoolName(school)`; First / Last name, Class buttons, Current belt buttons + `privateTestingForLine(from, to, className)`, `THREE_STRIPES` tick, Paying by, DayTimeFields, `privatePriceLine(cents)` (bold) + `privatePriceHint(rankName, cents)`, hint `ADD_PRIVATE_HINT`; Save → `addPrivate`. Edit details: title `EDIT_DETAILS_TITLE`, names + class + belt only; when the copied class / rank **no longer exists** in Classes and ranks, the dialog shows the copied class and belt as the current choice, followed by `notInClassesRanks` “(no longer in Classes and ranks)” (CP1), and sends the stored `rankId` unchanged (= belt not changed) unless another belt is picked; a paid row moving to a pricier price → amber `repriceLine(oldCents, newCents, dueCents)`; a cheaper one → `PAYMENT_STAYS`; a graded row changing belt → `beltChangeClearsPrivate(first, resultText)` / `beltChangeClearsNotePrivate(first)`; after the private day staff see class / belt disabled with `STUDENT_LOCKED` when graded. No toast after Add (the row appears); Edit → `TOAST_CHANGES_SAVED`.
+- **`private/ChangeDayDialog.jsx`** (P4): title `CHANGE_DAY_TIME_TITLE`, subtitle `privateDialogSub(name, className, from, to)`, DayTimeFields filled with the current values, `priceStays(cents)`; a No show → amber `clearsPrivateNoShow(first, privateDate)`; **Save gray until the day or the time differs**; no toast.
+- **`private/CancelPrivateDialog.jsx`** (P7): `variant="confirm"`, title `cancelTitle(name)`, body `cancelBody(dateIso, hhmm, payment)`, buttons `KEEP_IT` (outline) / `CANCEL_PRIVATE` (blue primary, not red). Ok → toast `cancelledToast(name)` (no Undo).
+- Delete permanently: `ConfirmDeleteDialog`-style red confirm, `deletePrivateTitle(name)`, `deletePrivateBody(payments, result)` naming every live payment and the result, `KEEP_IT`; sends all payment-row ids.
+- Edit payment (admins): the existing `PaymentDialogs` edit dialog pattern on the most recent live payment; with two or more live payments the subtitle `editPaymentSubTopUp(name, parts, editingCents)`.
+- Change how they'll pay: the existing pattern; subtitle `changePayingBySub(name)` when not paid, `changePayingBySubOwed(name, dueCents)` when owing.
 
-### 5.5 `PrivateDialog.jsx` (P3) — on `Dialog.jsx`
-- Title `SET_PRIVATE_TITLE` / `CHANGE_PRIVATE_TITLE`; subtitle `privateDialogSub(name, className, fromName, toName)`.
-- **Day**: the browser's date field (`min` = today, `max` = `privateDayLimit`), `longDate(day)` written out under it once valid (v0.157). **Time**: a select of `PRIVATE_TIME_CHOICES` shown with `timeLabel`, placeholder `NO_TIME`. Change opens with the current day and time filled in, and its **Save stays disabled until the day or the time differs** from the saved ones (the database writes and removes nothing for an unchanged day and time, §2.4).
-- **Set only** (not Change): the price line `privatePriceChange(currentPriceCents, rank.privateCents)` (bold, current = `priceFor` without the private day) and the hint `privatePriceHint(rankName, privateCents)`; when already paid: `privatePaidMore(paidCents, due)` if due > 0, else `privatePaidEnough(paidCents)` instead of the hint's second sentence; then `privateStaysLine(firstName)`.
-- **Clearing notice** (amber `Notice`, before Save): Set on a testing-day No show → `clearsNoShow(firstName, testingDate, hasNote)`; Change on a private No show → `clearsPrivateNoShow(firstName, privateDate, hasNote)`.
-- Field problems (`privateDayProblem` / time): `missing` → `PICK_PRIVATE_DAY`, `past` → `PRIVATE_DAY_PAST` (amber field, as the P3 tablet frame), `tooFar` → `PRIVATE_DAY_TOO_FAR`; no time → `PICK_PRIVATE_TIME`. Save does nothing until fixed.
-- No toast after Save (approved P3 proposal); the row's Private line is the confirmation; focus returns to the row's ⋯.
-- Phone: full screen, back arrow, Save pinned at the bottom (v0.194). Unsaved typing: `UNSAVED` / `DISCARD_CHANGES` (v0.56), EventPage's `requestClose` pattern.
+### 5.5 Move to private testing (event page, P5) — `event/MoveToPrivateDialog.jsx`
+- EventPage ⋯ item **Move to private testing** (`ti-arrow-right`) right **after Edit details**, all staff, when `canMoveToPrivate(row)`.
+- Dialog: title `MOVE_TO_PRIVATE`, subtitle `privateDialogSub(name, className, from, to)`, `moveIntro(first, eventName)`, DayTimeFields, the money line from `moveMoney` — `moveMoneyOwes(paid, price, due)` / `moveMoneyNotPaid(price)` / `moveMoneyEnough(paid)` — then `movePaymentHint(…)`; a testing-day No show → amber `moveClearsNoShow(first, testingDate)`. Button `MOVE_TO_PRIVATE` (`ti-arrow-right`; phone pinned footer as drawn).
+- Ok → reload; toast `movedToast(name)` with **Undo** (`undoMoveToPrivate` with the answer's `privateId` and version 1) **only when `resultCleared` is false**.
+- **Removed row** when `row.movedTo`: gray tag `movedTag(privateDate)`, line `movedBy(withdrawnAt, withdrawnByName)`; staff: no ⋯; admins: ⋯ = Open private testing (`ti-arrow-right`, `onOpenPrivate(movedTo.privateId)`) and Restore shown **disabled** with `restoreMovedReason(first)`; no Delete permanently.
+- EventPage, RosterRows: back to phase 3 first (§11); nothing else changes on the event page (the Grading tab is phase 3 exactly, P8).
 
-### 5.6 Add student with Tests privately (P3b)
-- Under **Paying by**: a tick box (styled like the 3-stripes tick) `TESTS_PRIVATELY` with the gray hint `testsPrivatelyHint(testingDate)`. Off by default — the dialog is exactly today's.
-- Ticked: Day, Time, price line + hint (as §5.5, indented under the tick, current price = the live “Testing for” fee by today) appear; then the existing `ADD_STUDENT_HINT`. Save → `addPrivateStudent` (unticked → `addStudent` as today). Ok → the same toast and behaviour as today's Add student.
-- Phone: full screen, the section scrolls with the form, Save pinned at the bottom.
+### 5.6 Grading page (P6) — `private/PrivateGradingPage.jsx`, `private/PrivateSheet.jsx` (moved from `event/`)
+- Loads `loadPrivateTesting(privateId)` (15 s refresh). Not found / deleted → `PRIVATE_PAGE_GONE` + back link. **Other school:** when the private testing's `locationCode` isn't the school on the switcher, the page closes itself exactly as EventPage does for an event of the other school (`onClosePrivate({ replace: true })`, not guarded — the school change was).
+- Back link `BACK_TO_PRIVATE` (`onClosePrivate`), title `privatePageTitle(name)` + gray `TAG_NOT_PAID` while `amountDueCents > 0` (never an amount), subtitle `privatePageSub(privateDate, privateTime, school)`, outline Print (`ti-printer`).
+- Lock line from `gradingWindow(today, privateDate)`: before `privateGradingOpensLine(privateDate)`; after staff `PRIVATE_OVER_STAFF`; after admin `PRIVATE_OVER_ADMIN`. A cancelled testing: read-only with `PRIVATE_CANCELLED_LINE` (CP1).
+- Card: `DETAIL_DAY` `longDate` · `DETAIL_TIME` · `DETAIL_CLASS` · `DETAIL_TESTING_FOR` (belts); `COL_RESULT`: `ResultButtons` + note button (`event/NoteDialog.jsx` — **dae8d00's optional `hint` prop is kept**, the grading page passes its own hint; nothing else of dae8d00's NoteDialog change is needed) as G1/G2; staff after the day: the result tag + `resultNoteLine(note)`. Saves through **`useGradingSaves`** (back to phase 3, plus optional props `saveResult` / `saveNote` defaulting to eventsApi's; here `setPrivateResult` / `setPrivateResultNote`, `roster: [row]`, `isReadOnly` from the window) — Not saved tag, banner, 10-second and `online` retry, the leave guard and `beforeunload`.
+- Print → `PrivateSheet` (portal, class `grading-print`): `PRIVATE_SHEET_TITLE`, `privateSheetHeader(privateDate, privateTime, school, className, printedAt)`, columns `SHEET_COL_STUDENT` · `COL_TESTING_FOR` · `SHEET_COL_RESULT` · `SHEET_COL_NOTE`, one row with blank ticks and a note line, footer `PRIVATE_SHEET_FOOTER`. Never payments, results or notes.
 
-### 5.7 Edit details and the detail view
-- Edit details of a **private** student whose belt changes: the fee sentence uses the private price (`feeNow(dollars(newPrivateCents))` / `feeStays(…)` when not paid). **Paid** private student moving to a pricier private price (new due > 0) → amber `Notice` `repriceLine(oldPrivateCents, newPrivateCents, newDue)` before saving (Q2); cheaper or equal → the existing `PAYMENT_STAYS`. Regular students: unchanged. A **graded private** student's belt change uses private variants of the phase 3 warnings: `beltChangeClearsPrivate(first, resultText)` / `beltChangeClearsNotePrivate(first)` (“… Record it again on their private testing page.”, `// CP1`).
-- View mode: a `DETAIL_PRIVATE` row with `privateLine(…)` for private students; the Payment row: owing → `paidDetailOwed(paidCents, method, paidOn, dueCents)`; two or more live payments → `paidDetailParts(totalCents, parts)`.
-
-### 5.8 Payment dialogs (M7)
-- **Edit payment** edits the most recent live payment (as today). With two or more live payments the subtitle is `editPaymentSubTopUp(name, parts, editingCents)` (“Ava Chen · $65 cash Nov 2 + $20 card Nov 12 — editing the $20”), so an admin can't turn the $20 into $85 by mistake.
-- **Change how they'll pay** while owing: subtitle `changePayingBySubOwed(name, dueCents)`.
-- **Delete permanently** with two or more live payments: `deleteStudentBody` names all of them (`paymentsList(parts)` in place of the single payment phrase).
-
-### 5.9 `PrivateGradingPage.jsx` (P7, P9) and `PrivateSheet.jsx`
-- Shown when `privateId` is set. Row missing or withdrawn → `PRIVATE_PAGE_GONE` + the back link; row not private any more → `notPrivateAnyMore(name)` + the back link.
-- Top: back link `← <event name>` (`IconArrowLeft`, calls `onClosePrivate`), title `privatePageTitle(name)` (+ gray `TAG_NOT_PAID` when `!row.paid` — the v0.183 fact only, never amounts or “more to collect”), subtitle `privatePageSub(privateDate, privateTime, school)`, outline **Print** (`ti-printer`) right-aligned (own line on phones).
-- Lock line (`ti-lock`), from `gradingWindow(today, row.privateDate)`: before → `privateGradingOpensLine(privateDate)`; after, staff → `PRIVATE_OVER_STAFF`; after, admin → `PRIVATE_OVER_ADMIN`; on the day none.
-- Card: `DETAIL_EVENT` `eventOnDate(eventName, testingDate)` · `DETAIL_PRIVATE_DAY` `longDate(privateDate)` · `DETAIL_TIME` `timeLabel(privateTime)` · `DETAIL_CLASS` class name · `DETAIL_TESTING_FOR` (TestingForCell) · then `COL_RESULT`: `ResultButtons` + the note button (as G1/G2; 44 px on touch; phone: one column, buttons full width, note button on the Result line) — before the day: buttons disabled, note button hidden; staff after: the read-only tag + `resultNoteLine(note)`, no note button. The note shows in 12px gray under the buttons.
-- Saves: `privateGrading.chooseResult` / `saveNote`, Not saved tag + page banner + 10-second auto-retry + `online` retry (v0.188, v0.192, review L9), exactly as the Grading tab. Answers `finished` → `TOO_LATE_RESULTS`, `not_open` → `GRADING_NOT_OPEN`, others as CONTRACT-0010 §4.3.
-- **Print**: `PrivateSheet` (portal, class `grading-print`, so the existing `@media print` rule applies; letter size, black on white): `privateSheetTitle(eventName)`, `privateSheetHeader(privateDate, privateTime, school, printedAt)`, the table `SHEET_COL_STUDENT` · `COL_TESTING_FOR` · `SHEET_COL_RESULT` · `SHEET_COL_NOTE` with one row (name · “Yellow → Orange” as text · three empty tick boxes · a note line), footer `privateSheetFooter(firstName)`. **Never** payments, Not paid, the recorded result or the note.
-
-### 5.10 Events tab — `PrivateTestingsList.jsx` (P8)
-- Above the Upcoming / Past switch, for staff and admins (staff line stays above it, as P8 tablet). **Not shown** when `privateTestings` is empty, while loading, or on a load error.
-- Heading `privateTestingsHeading(n)`. PC / tablet: table `COL_DAY` · `COL_TIME` · `COL_STUDENT` · `COL_CLASS` · `COL_EVENT` · an outline small **Open** button (`aria-label` `openPrivateLabel(name)`): `weekdayMonthDay(day)`, `timeLabel(time)`, name, class, event name. Phone: stacked rows — name (500) / `privateListPhoneLine(day, time, className)` / event name, Open on the right. No Private tag on these rows. Open → `onOpenPrivate(eventId, registrationId)`.
-- Same 15-second refresh as the list (v0.157).
-
-### 5.11 Status → message
-| Call (where) | ok | Refusals |
+### 5.7 Status → message
+| Call | ok | Refusals |
 |---|---|---|
-| `setPrivate` (PrivateDialog, Set / Change) | close, reload, no toast | `past_day` → field `PRIVATE_DAY_PAST` · `invalid` → dialog note `INVALID_DIALOG` · `has_result` → blocking note `PRIVATE_HAS_RESULT` + reload · `graded` → blocking note `PRIVATE_GRADED` + reload · `stale` / `not_found` → `STALE_DIALOG` (blocking) + reload · `withdrawn` → close, banner `isWithdrawn(name)`, reload · `no_access` → `onNoAccess()` · `error` → note `SAVE_FAILED`, stays open |
-| `clearPrivate` (⋯ Back) | toast `backToTestingDayToast(name)` + Undo, reload | `graded` → banner `PRIVATE_BACK_GRADED` + reload · `not_allowed` → banner `PRIVATE_BACK_ADMIN_ONLY`, `onRefreshProfile()`, reload · `stale` / `not_found` / `invalid` → `ROSTER_STALE` + reload · `withdrawn` → `isWithdrawn(name)` · `no_access` → `onNoAccess()` · `error` → row Not saved banner `backFailed(name)` with Retry |
-| Back toast **Undo** (`setPrivate`) | — (runUndo as today) | `past_day` → banner `UNDO_PRIVATE_PAST` · `stale` / `has_result` / `graded` / `not_found` → `UNDO_STALE` + reload · `withdrawn` → `isWithdrawn(name)` + reload · `error` → `UNDO_FAILED` with Retry |
-| `addPrivateStudent` (Add student) | as `addStudent` today | `past_day` → field `PRIVATE_DAY_PAST` · `finished` → `EVENT_FINISHED_ADD` (as today) · others as `addStudent` today |
-| `markPaid` (top-up) | toast with the answer's amount | as today (`already_paid` → `alreadyPaid(name)` + reload) |
-| `updateStudent` | as today | as today |
-| `setResult` / `setResultNote` (private page) | as Grading | `finished` → `TOO_LATE_RESULTS` · `not_open` → `GRADING_NOT_OPEN` · others as CONTRACT-0010 §4.3 / §4.5 |
-`PRIVATE_HAS_RESULT` and `PRIVATE_GRADED` join EventPage's `BLOCKING_NOTES`.
+| Dialog saves (add, update, change day, change paying-by, move) | close, reload (toasts as §5.4 / §5.5) | `past_day` → field `PRIVATE_DAY_PAST` · `invalid` → `INVALID_DIALOG` · `stale` / `not_found` → `STALE_DIALOG` (blocking) + reload · `final_award_not_set` → `finalAwardNotSet(className)` · `not_allowed` → `STUDENT_LOCKED` (update) / `ROSTER_NOT_ALLOWED` · `graded` → blocking `PRIVATE_GRADED` · `has_result` → blocking `MOVE_HAS_RESULT` · `withdrawn` → close, banner `isWithdrawn(name)` · `cancelled` → close, banner `PRIVATE_IS_CANCELLED` · `already_paid` → `ALREADY_PAID_DIALOG` · `no_access` → `onNoAccess()` · `error` → `SAVE_FAILED`, stays open |
+| Row actions (Mark paid, Undo / Edit payment, Cancel, Restore, Delete) | toast / reload | `already_paid` → `alreadyPaid(name)` · `not_allowed` → `ROSTER_NOT_ALLOWED` (Undo payment: `UNDO_PAYMENT_TOO_LATE`) · `past_day` (Restore) → `RESTORE_TOO_LATE` · `graded` (Cancel) → `PRIVATE_GRADED` · `cancelled` → `PRIVATE_IS_CANCELLED` · `stale` / `not_found` / `invalid` → `ROSTER_STALE` + reload · `error` → row Not saved banner with Retry (`markPaidFailed(name)` / `actionFailed`) |
+| Undo move (toast) | reload, `TOAST_UNDONE` | `not_allowed` → `UNDO_MOVE_TOO_LATE` · `stale` / `not_found` → `UNDO_STALE` · `error` → `UNDO_FAILED` + Retry |
+| Restore on the event (moved row) | — | `moved` → `RESTORE_MOVED` |
+| Grading saves | as CONTRACT-0010 §4.3 / §4.5 | `finished` → `TOO_LATE_RESULTS` · `not_open` → `GRADING_NOT_OPEN` · `cancelled` → `PRIVATE_IS_CANCELLED` |
 
-### 5.12 Wording (`src/screens/testing/text.js`) — exactly these strings
-From the approved mockups (P1–P9, P3b) and rulebook v0.254:
-
+### 5.8 Wording (`text.js`) — exactly these strings
+From P1–P8:
 | Constant | Wording |
 |---|---|
-| `TAG_PRIVATE` | Private |
-| `privateLine(dateIso, hhmm, cents)` | Tue, Dec 1 · 4:00 PM · $85 (`weekdayMonthDay` · `timeLabel` · `dollars`) |
-| `owedLine(paidCents, dueCents)` | Paid $65 · $20 more to collect |
+| `TAB_PRIVATE` | Private testing |
+| `ADD_PRIVATE` / `ADD_PRIVATE_TITLE` | Add private testing |
+| `CARD_PRIVATE` | Private testings |
 | `owesMoreCount(n)` | 1 owes more |
-| `SET_PRIVATE` / `SET_PRIVATE_TITLE` | Set private testing |
-| `CHANGE_PRIVATE` / `CHANGE_PRIVATE_TITLE` | Change private day or time |
-| `backToTestingDay(dateIso)` | Back to the testing day (Fri, Nov 20) |
-| `GRADE_PRIVATE` | Grade private testing |
-| `privateDialogSub(name, className, from, to)` | Ava Chen · Group A · Yellow → Orange |
+| `includesCancelled(cents)` | includes $85 from cancelled |
+| `COL_DAY_TIME` / `COL_TESTING_FOR_PRICE` | Day · time / Testing for · price |
+| `privateDayTime(dateIso, hhmm)` | Tue, Dec 1 · 4:00 PM |
+| `owedLine(paidCents, dueCents)` | Paid $65 · $20 more to collect |
+| `movedFromLine(eventName)` | Moved from November Children Testing |
+| `cancelledTag(stamp)` | Cancelled Nov 28 |
+| `NO_PRIVATE_TESTINGS` | No private testings yet. Add one when a family asks to test privately. |
+| `privateTestingForLine(from, to, className)` | Testing for Blue → High Blue · Group B |
 | `PRIVATE_DAY` / `PRIVATE_TIME` | Day / Time |
-| `privatePriceChange(fromCents, toCents)` | $65 → $85 private price |
-| `privatePriceHint(rankName, cents)` | The private price for Yellow in Classes and ranks. Mark paid charges $85. |
-| `privatePaidMore(paidCents, dueCents)` | Paid $65 · $20 more to collect after saving |
-| `clearsNoShow(first, dateIso, false)` | Ava was marked No show on the testing day (Fri, Nov 20). Setting a private testing clears that result. The change is logged. |
+| `TIME_HINT` | 6:00 AM – 10:00 PM, every 5 minutes |
+| `privatePriceLine(cents)` | $95 private price |
+| `privatePriceHint(rankName, cents)` | The private price for Blue in Classes and ranks. Mark paid charges $95. |
+| `ADD_PRIVATE_HINT` | For a family who asks to test privately, on their own day and time. Not part of a testing event. |
 | `PRIVATE_DAY_PAST` | The private day can’t be in the past. |
-| `TESTS_PRIVATELY` | Tests privately |
-| `testsPrivatelyHint(dateIso)` | Can’t make the testing day, Fri, Nov 20. |
-| `backToTestingDayToast(name)` | Ava Chen back to the testing day |
+| `CHANGE_DAY_TIME` / `CHANGE_DAY_TIME_TITLE` | Change day or time |
+| `GRADE` | Grade |
+| `CANCEL_PRIVATE` | Cancel private testing |
+| `privateDialogSub(name, className, from, to)` | Liam Park · Group B · Blue → High Blue |
+| `priceStays(cents)` | The price stays $95. |
+| `MOVE_TO_PRIVATE` | Move to private testing |
+| `moveIntro(first, eventName)` | Ava leaves November Children Testing (listed under Removed there) and is listed on the Private testing tab, with their name, class and belt filled in. |
+| `moveMoneyOwes(paid, price, due)` | $65 paid → $85 private price · $20 more to collect |
+| `moveMoneyNotPaid(price)` | $85 private price · not paid yet |
+| `moveMoneyEnough(paid)` | Already paid $85. Nothing more to collect. |
+| `movePaymentHint(paid, method, first, rankName)` | The $65 cash payment moves with Ava. The private price for Yellow in Classes and ranks. (not paid: only the second sentence) |
+| `moveClearsNoShow(first, dateIso)` | Ava was marked No show on Fri, Nov 20. Moving clears that result. |
+| `movedToast(name)` | Ava Chen moved to private testing |
+| `movedTag(dateIso)` | Moved to private testing, Tue, Dec 1 |
+| `movedBy(stamp, name)` | moved Nov 10 by Staff |
+| `OPEN_PRIVATE` | Open private testing |
+| `restoreMovedReason(first)` | Not available: Ava is on the Private testing tab with their payment. |
+| `BACK_TO_PRIVATE` | Private testing |
 | `privatePageTitle(name)` | Private testing · Ava Chen |
 | `privatePageSub(dateIso, hhmm, school)` | Tue, Dec 1, 2026 · 4:00 PM · Worcester school |
-| `PRINT` | Print |
-| `DETAIL_EVENT` / `DETAIL_PRIVATE_DAY` / `DETAIL_TIME` / `DETAIL_CLASS` | Event / Private day / Time / Class |
-| `eventOnDate(name, dateIso)` | November Children Testing · Fri, Nov 20, 2026 |
-| `privateGradingOpensLine(dateIso)` | Grading opens on the private testing day, Tuesday, December 1. (`longWeekdayMonthDay`) |
+| `DETAIL_DAY` / `DETAIL_TIME` / `DETAIL_CLASS` / `PRINT` | Day / Time / Class / Print |
+| `privateGradingOpensLine(dateIso)` | Grading opens on the private testing day, Tuesday, December 1. |
 | `PRIVATE_OVER_STAFF` | The private testing day is over. Only an admin can change the result or note now. |
 | `PRIVATE_OVER_ADMIN` | The private testing day is over. Staff can’t change the result now; as an admin, you can. |
-| `privateSheetTitle(eventName)` | November Children Testing — private testing |
-| `privateSheetHeader(dateIso, hhmm, school, printedAt)` | Tue, Dec 1, 2026 · 4:00 PM · Worcester school · printed Mon, Nov 30, 3:05 PM |
-| `privateSheetFooter(first)` | Type the result into Ava’s private testing page the same day. |
-| `privateTestingsHeading(n)` | Private testings · 2 |
-| `COL_DAY` / `COL_TIME` / `COL_CLASS` / `OPEN` | Day / Time / Class / Open |
-| `privateListPhoneLine(dateIso, hhmm, className)` | Tue, Dec 1 · 4:00 PM · Group A |
-| `repriceLine(fromCents, toCents, dueCents)` | Price $85 → $95 · $10 more to collect (v0.254) |
-| `editPaymentSubTopUp(name, parts, editingCents)` | Ava Chen · $65 cash Nov 2 + $20 card Nov 12 — editing the $20 (plan M7) |
-| existing, reused | `markedPaidToast`, `TAG_PAID`, `TAG_NOT_PAID`, `MARK_PAID`, `TAG_PASSED` / `TAG_NOT_PASSED` / `TAG_NO_SHOW`, `resultNoteLine`, `longDate`, `timeLabel`, `NO_TIME`, `SHEET_COL_*`, `COL_TESTING_FOR`, `COL_STUDENT`, `COL_EVENT`, `COL_RESULT`, `DETAIL_TESTING_FOR`, `UNSAVED`, `DISCARD_CHANGES`, `STALE_DIALOG`, `ROSTER_STALE`, `INVALID_DIALOG`, `SAVE_FAILED`, `isWithdrawn`, `alreadyPaid`, `EVENT_FINISHED_ADD`, `TOO_LATE_RESULTS`, `GRADING_NOT_OPEN`, `UNDO_STALE`, `UNDO_FAILED`, `ADD_STUDENT_HINT`, `feeNow`, `feeStays`, `PAYMENT_STAYS` |
+| `PRIVATE_SHEET_TITLE` | Private testing — grading sheet |
+| `privateSheetHeader(dateIso, hhmm, school, className, printedAt)` | Tue, Dec 1, 2026 · 4:00 PM · Worcester school · Group A · printed Mon, Nov 30, 3:05 PM |
+| `PRIVATE_SHEET_FOOTER` | Type the result into the private testing page the same day. |
+| `cancelTitle(name)` | Cancel Emma Ross’s private testing? |
+| `cancelBody(dateIso, hhmm, payment)` | Mon, Nov 30, 4:30 PM. It moves to Past as Cancelled. The $85 cash payment stays recorded; it isn’t refunded. |
+| `KEEP_IT` | Keep it |
+| `repriceLine(from, to, due)` | Price $85 → $95 · $10 more to collect (v0.254) |
+| existing, reused | `UPCOMING`, `PAST`, `CARD_PAID`, `CARD_NOT_PAID`, `CARD_PAYMENTS`, `COL_STUDENT`, `COL_PAYING_BY`, `COL_PAYMENT`, `COL_PAID_ON`, `TAG_PAID`, `TAG_NOT_PAID`, `MARK_PAID`, `markedPaidToast`, `paidOnPhone`, `TAG_PASSED` / `TAG_NOT_PASSED` / `TAG_NO_SHOW`, `EDIT_DETAILS`, `EDIT_DETAILS_TITLE`, `CHANGE_PAYING_BY`, `EDIT_PAYMENT`, `UNDO_PAYMENT`, `DELETE_PERMANENTLY`, `RESTORE`, `FIRST_NAME`, `LAST_NAME`, `CLASS`, `CURRENT_BELT`, `THREE_STRIPES`, `PAYING_BY_LABEL`, `schoolName`, `longDate`, `timeLabel`, `NO_TIME`, `COL_RESULT`, `DETAIL_TESTING_FOR`, `resultNoteLine`, `SHEET_COL_*`, `COL_TESTING_FOR`, `PAYMENT_STAYS`, `STUDENT_LOCKED`, `UNSAVED`, `DISCARD_CHANGES`, `STALE_DIALOG`, `ROSTER_STALE`, `ROSTER_NOT_ALLOWED`, `INVALID_DIALOG`, `SAVE_FAILED`, `ALREADY_PAID_DIALOG`, `alreadyPaid`, `isWithdrawn`, `finalAwardNotSet`, `markPaidFailed`, `actionFailed`, `UNDO_PAYMENT_TOO_LATE`, `UNDO_STALE`, `UNDO_FAILED`, `TOAST_UNDONE`, `TOAST_CHANGES_SAVED`, `TOO_LATE_RESULTS`, `GRADING_NOT_OPEN`, `changePayingBySub` |
 
-**Adapted from the mockup** (the app never assumes a student's gender — the mockup's “On her day she is graded on her own page”): `privateStaysLine(first)` “Ava stays in this event. On their day they’re graded on their own page, not on the Grading tab.” (§10 point 2).
+**Not in the mockups — `// CP1` in text.js, shown at CP1:** `owesMoreCount` plural “2 owe more” · `NO_UPCOMING_PRIVATE` “No upcoming private testings.” · `NO_PAST_PRIVATE` “No past private testings.” · `PICK_PRIVATE_DAY` “Enter the day.” · `PICK_PRIVATE_TIME` “Choose a time.” · `PRIVATE_DAY_TOO_FAR` “Pick a day within a year from today.” · `clearsPrivateNoShow(first, dateIso)` “Liam was marked No show on Thu, Dec 3. Saving a new day clears that result.” · `beltChangeClearsPrivate(first, resultText)` “Changing the belt clears Sam’s result (Not passed). Record it again on the private testing page.” · `beltChangeClearsNotePrivate(first)` “Changing the belt clears Sam’s grading note. Record it again on the private testing page.” · `cancelBody` not paid: “Mon, Nov 30, 4:30 PM. It moves to Past as Cancelled.” · `cancelledToast(name)` “Emma Ross’s private testing cancelled” · `deletePrivateTitle(name)` “Delete Emma Ross’s private testing permanently?” · `deletePrivateBody(…)` “The private testing, the $85 cash payment recorded on Nov 25 and the result (Passed, Dec 5) are deleted. This can’t be undone.” (parts left out when absent; for a **moved** one add: “November Children Testing will no longer show Ava as moved, so an admin could restore them there.” — accepted, L8) · `PRIVATE_GRADED` “This private testing is already graded, so it can’t change now.” · `MOVE_HAS_RESULT` “Ava already has a result for this testing day, so they can’t be moved.” · `PRIVATE_IS_CANCELLED` “This private testing was cancelled. An admin can restore it while its day is ahead.” · `RESTORE_TOO_LATE` “Its day has passed, so it can’t be restored. Add a new private testing instead.” · `UNDO_MOVE_TOO_LATE` “Too late to undo here. The private testing stays on the Private testing tab.” · `RESTORE_MOVED` same as `restoreMovedReason` · `PRIVATE_PAGE_GONE` “This private testing was deleted, or the link is wrong.” · `PRIVATE_CANCELLED_LINE` “This private testing was cancelled.” · `changePayingBySubOwed(name, due)` “Liam Park · $20 more to collect” · `editPaymentSubTopUp(name, parts, editing)` “Ava Chen · $65 cash Nov 2 + $20 card Dec 1 — editing the $20” · `movePaymentHint` with two payments “The $85 in payments moves with Ava.”.
+**Apostrophes:** typographic ’ in every new string.
 
-**Not in the mockups — written by C to the same pattern, marked `// CP1` in text.js, shown to Jeffrey at the CP1 walkthrough** (no decision needed before building):
-`owesMoreCount` plural “2 owe more” · `PICK_PRIVATE_DAY` “Enter the private day.” · `PICK_PRIVATE_TIME` “Choose a time.” · `PRIVATE_DAY_TOO_FAR` “Pick a day within a year of the testing day.” · `privatePaidEnough(paidCents)` “Already paid $85. Nothing more to collect.” · `clearsNoShow(…, true)` “… Setting a private testing clears the No show and its note. The change is logged.” (review L6) · `clearsPrivateNoShow(first, dateIso, hasNote)` “Ava was marked No show at the private testing (Tue, Dec 1). Saving a new day clears that result. The change is logged.” (with a note: “… clears the No show and its note. …”) · `PRIVATE_HAS_RESULT` “This student already has a result or note from the testing day, so they can’t be set private. An admin can clear it on the Grading tab first.” · `PRIVATE_GRADED` “This private testing is already graded, so the day can’t change. An admin can clear the result on the private testing page first.” · `PRIVATE_BACK_GRADED` “This private testing is already graded, so they can’t go back to the testing day.” · `PRIVATE_BACK_ADMIN_ONLY` “The testing day is over. Only an admin can send a student back to the testing day now.” · `backFailed(name)` “Ava Chen wasn’t moved back to the testing day. Check the connection and try again.” · `UNDO_PRIVATE_PAST` “Couldn’t undo: that private day has passed. Use ⋯ → Set private testing to pick a new day.” · `movedToPrivate(name)` “Ava Chen now tests privately, so this result wasn’t saved here. Grade them on their private testing page.” · `PRIVATE_PAGE_GONE` “This private testing isn’t in this event any more.” · `notPrivateAnyMore(name)` “Ava Chen tests on the testing day again. Grade them on the Grading tab.” · `openPrivateLabel(name)` “Open Ava Chen’s private testing” (screen readers) · `DETAIL_PRIVATE` “Private testing” · `paidDetailOwed(…)` “$65 cash · paid Nov 2 · $20 more to collect” · `paidDetailParts(total, parts)` “$85 · $65 cash Nov 2 + $20 cash Nov 12” · `changePayingBySubOwed(name, due)` “Ava Chen · $20 more to collect” · `paymentsList(parts)` (Delete permanently) “the 2 payments ($65 cash Nov 2, $20 cash Nov 12)” · `beltChangeClearsPrivate(first, resultText)` “Changing the belt clears Sam’s result (Not passed). Record it again on their private testing page.” · `beltChangeClearsNotePrivate(first)` “Changing the belt clears Sam’s grading note. Record it again on their private testing page.” · `privatePriceChange` when the two prices are equal: “$85 private price”.
-**Apostrophes:** every new string uses the typographic ’ (existing strings are not changed).
-
-### 5.13 Icons and CSS
-- Icons (`@tabler/icons-react`): `IconCalendar` (Set / Change), `IconCalendarEvent` (Back), `IconSchool` (Grade private testing), `IconPrinter`, `IconLock`, `IconAlertTriangle` (owed line), `IconArrowLeft` (back link). The rulebook's icon map rows came with v0.254.
-- All new styles in `src/styles/testing-events.css` (`.ttag--private`, the private / owed lines, the private page, the list). Touch targets ≥ 44 px; no horizontal scroll at 320 px.
+### 5.9 Styles and icons
+New `src/styles/testing-private.css` (imported by `PrivateTestingTab.jsx` and `PrivateGradingPage.jsx`); dae8d00's additions to `testing-events.css` removed (§11). No purple tag any more. Icons: `IconCalendar`, `IconSchool`, `IconCalendarX`, `IconArrowRight`, `IconArrowBackUp`, `IconTrash`, `IconCash`, `IconEdit`, `IconPrinter`, `IconLock`, `IconAlertTriangle`, `IconArrowLeft`. Touch targets ≥ 44 px; no horizontal page scroll at 320 px (only the tab bar scrolls).
 
 ---
 
-## 6. Checks before calling a builder done
-- `npm run build` and `npm run build:preview-mode` pass.
-- `node src/lib/testing/checks.mjs` prints `ALL TESTING LIB CHECKS PASSED` (B, and C after its changes).
-- PGlite: `cd supabase/tests/pglite && npm ci && node run.mjs` — every step passes, **0 failed**, step 14 and the moved 13g included (A).
-- Grep `dist/`: no `__tkdPreview`, `mockTestingEvents`, `setToday`, `failSavesUntilRetry`; no `service_role`, no secrets.
-- `git status` never lists `.env.local`, `node_modules`, `dist`, `dist-preview`. Line endings unchanged (CRLF), checked with `file` before and after. Every new file has its header comment.
-- Each builder's summary lists every file touched (shared files called out).
+## 6. Checks before a builder is done
+`npm run build` and `npm run build:preview-mode` pass · `node src/lib/testing/checks.mjs` → `ALL TESTING LIB CHECKS PASSED` · PGlite `node run.mjs` 0 failed (step 14 and 13g) · `dist/` has no `__tkdPreview`, `mockTestingEvents`, `setToday`, `service_role` · `git status` never lists `.env.local`, `node_modules`, `dist*` · CRLF unchanged · every new file has its header · each summary lists every file touched (shared ones called out).
 
 ## 7. Reviews (orchestrator)
-- **Security review of A + B together:** grants (the two columns, the three functions, the helpers granted to nobody), nothing to `anon` / `testing_registrar`; the check order of §2.4; every replaced function differs from its live body **only** by the `-- 0014:` lines (diff them); H1 / H2 / H3 / M3; `update_student`'s answer unchanged for regular students; the money rule = mock = `eventRules.amountDue` (M1–M14); no $0 payment; the down-script order; the view untouched; no preview code in production.
-- **Design review of C** against P1–P9 + P3b and the rulebook, screenshots at **1280×800, 820×1180 touch, 390×844 touch, 320 wide**, in preview with `setToday` (before / on / after the testing day and the private day) and `setRole` staff / admin: both ways in (⋯ and Tests privately), the past-day error, the top-up (owed line, Mark paid next to Paid, “1 owes more”, Undo), Change how they'll pay while owed, Edit payment subtitle after a top-up, Back + its Undo (staff after the testing day: Back hidden), a testing-day No show set private, a private No show changed, Grading tab without private students (counts, print), the private page before / on / after (staff and admin), Not saved → auto-retry → gone, the leave question from the private page, its Print preview, the Events list (empty → hidden; past ungraded stays; Open → back link to the event); keyboard-only and a screen reader pass on the menu, the dialog and the private page.
-- Fix round, then re-review. Then CP1 (plan §5).
+- **Security (A + B):** RLS / grants / no anon / registrar / no login ids; definer + search_path; check orders; the move (net preserved, dates kept, one batch, append-only on both sides), Undo move limits, Restore `moved`; only `testing_restore_student` differs from live (diff it); logging; mock = database statuses.
+- **Design (C)** against P1–P8 at 1280×800, 820×1180 touch, 390×844 touch, 320 wide, with `setToday` and `setRole`: the tab (Upcoming / Past, cards, empty), Add (past day), ⋯ staff / admin, Change day, Mark paid + Undo, the owed line, Edit payment after a top-up, Cancel / Restore / Delete, the grading page before / on / after, Print, Move (paid / not paid / No show) + Undo, the event Removed row, the tab bar scrolling at 320; keyboard and screen reader on the tabs, menu, dialogs and grading page.
 
 ## 8. Before building starts
-1. Jeffrey OKs this contract and **§10 point 1 (the migration number)**.
-2. Re-check the number on **every** branch and worktree (`git ls-tree --name-only <branch> supabase/migrations/` for each branch in `git branch`, plus `ls .claude/worktrees/*/supabase/migrations/` for uncommitted files).
-3. Rulebook: phase 4 rows exist (v0.225–v0.228, v0.254). The prospect branch already used **v0.255** — the next rulebook row is numbered after scanning all branches. The §7 purple colour row and any CP1 wording are recorded afterwards by the orchestrator.
+1. Independent review of this contract and the plan; Jeffrey's OK (CP0) incl. §10.
+2. Re-check that 0014 is free on every branch and worktree.
+3. Rulebook icon-map rows (`ti-calendar`, `ti-school`, `ti-calendar-x`, `ti-arrow-right`) by the orchestrator.
 
-## 9. Changes made after the first draft
-(none yet — the orchestrator records them here, with the review rounds)
+## 9. Changes after the first draft
+- **Independent review of the rewrite (2026-10-19, no critical / high):** M1 view computes the owed amount inline (+ V1 staff read); M2 a moved-in payment can't be own-undone by staff, Undo move recreates event payments with `recorded_by` null; M3 the Undo-move window counts from the registration's `withdrawn_at` (tests backdate it with the stamping trigger off); M4 Edit details keeps a removed rank (“(no longer in Classes and ranks)”); M5 / M6 decided by Jeffrey (v0.404, §10 points 13 / 14); M7 the extra negative tests (V4, V6, V7, V9, V9b, V10, V11, V11b); M8 `lastTab`, `routeIsUnknown`, other school, NoteDialog `hint` kept; L1 `moved_cleared_no_show` refuses Undo move; L2 three duplicate re-check lines; L3 payment-id array validated; L4 `moved_from_payment_id` unique; L5 Change how they'll pay only without Pass / Not passed; L6 0003 fingerprints after the down-script; L7 step 14 only after 13a–f; L8 delete-body note for moved ones; L9 E13; L10 Finance net / pairing note; L11 `movedTo.status`.
 
-## 10. Open points
+## 10. Open points (each with a proposed default)
+1. **The 1-year cap on the day** used to count from the event's testing day; with no event it counts from **today** (Add, Change, Move). Default: today + 1 year (a typo guard only).
+2. **Restore “while its day is still ahead”** — on the private day itself? Default: allowed on the day (`private_date >= today`), refused from the next day.
+3. **“Open private testing”** on a moved Removed row opens the **grading page** of that private testing (the only per-testing page). Alternative: open the Private testing tab.
+4. **Delete permanently of a moved event registration** is hidden on the screen (v0.403) but not refused by the database (that would mean replacing a second live function). Default: screen-only; it is admin-only and logged, and the event payments are already net 0.
+5. **Undo after a move that cleared a No show:** no Undo on the toast (the No show can't come back — phase 3's “no Undo when a result was cleared”). Default: as written.
+6. **A testing-day note alone** stays with the moved (withdrawn) event registration; it is not copied to the private testing. Default: as written.
+7. **Where Move takes the private price from** → decided, see point 13.
+8. **A last rank whose final award is Not set** is refused at Add / Edit details (`final_award_not_set`, like Add event). Default: as written.
+9. **No possible-duplicate check** on the Private testing tab (not drawn). Default: none.
+10. **Grading page “Not paid” tag** shows while anything is owed — also for a paid student who owes a top-up (as drawn in P6), while the roster says Paid. Default: as drawn.
+11. **For the Finance session (information):** private money lives in `testing_private_payments`; a move writes event-side **reversals dated on the original day — a transfer, not a refund**: sum **net** amounts per table (payments + reversals), never count reversals as refunds; a moved pair is matched by `testing_private_payments.moved_from_payment_id` = the event reversal's `reverses_payment_id`; `0011_finance.sql` must stop hard-coding “not private” for Color Belt.
+12. **Down-script** deletes every private testing and the money moved into it; use only before real private testings exist. Information.
+13. **Move's private price (review M5) — decided v0.404 (Jeffrey):** Move uses **today's** private price from Classes and ranks for the student's rank (`testing_ranks.private_cents` of the event rank's `rank_id`) — the same source as Add and as the approved hint “The private price for Yellow in Classes and ranks”; only when that rank no longer exists there, the event's copied `private_cents`. The other copied fields (class / rank names, belts, testing-for) still come from the event copy. Built as §2.5.1 step 8.
+14. **Staff powers through Move (review M6) — decided v0.404 (Jeffrey):** the front desk (all staff) may Move **any time**, including after the event's testing day; a testing-day No show is then cleared and logged — although Withdraw is admin-only and changing results after the day is admin-only (v0.186). As approved in v0.402 / v0.403; no admin-only rule is added to Move.
 
-1. ~~**Migration number (blocking).**~~ **Resolved 2026-10-19: 0014** — 0012 is the prospect branch’s (`0012_prospects.sql`, commit ea0600f), 0013 the camps branch’s. Every phase 4 name in this contract uses 0014.
-2. **Mockup wording that assumes gender.** P3's “Ava stays in this event. On her day she is graded on her own page, not on the Grading tab.” — the app can't know a student's gender. **Default:** “Ava stays in this event. On their day they’re graded on their own page, not on the Grading tab.” (the app already uses “they / their”, e.g. “Change how they’ll pay”).
-3. **A $0 price** (private price $0, or a regular rank priced $0). The money rule says due 0 = nothing to collect, so the database answers `already_paid` and inserts nothing (live 0005 answered `invalid` for a $0 regular price — a small behaviour change). **Default:** the row keeps the gray **Not paid** tag (net is 0), **Mark paid is hidden** (`showMarkPaid` needs due > 0), counts unchanged. Alternative: show it as Paid / “No fee” (a new UI state, not drawn).
-4. **First Set private on a student with a testing-day note only.** Plan §1.3 says `has_result`; this contract follows it. Edge it creates: a private student with a note only can go Back (Q5), and then can't be set private again until someone clears the note — which before the testing day nobody can (grading not open). **Default:** keep the plan (rare; an admin clears the note on the testing day). Alternative: allow it and keep the note, like Change.
-5. **A private No show that has a note.** Change clears the **whole row** (result and note), the same as the testing-day case (L6), and the dialog says so. **Default:** as written. Alternative: clear only the No show and keep the note.
-6. **Where the down-script lives.** Written as SETUP §15e (three steps: re-run 0005, re-run 0010, the SQL block) like 0010's §14e, not as a separate `.sql` file — a down file next to the migrations could be pasted by mistake, and run.mjs tests the documented text. Between step 1 and step 2 the grading locks are briefly the phase 2 ones (seconds, with the app already rolled back). **Default:** as written.
-7. **`testing_clear_private` on a student who is not private** answers ok and writes nothing (no new status invented). **Default:** as written.
-8. **The plan's review L11** (“add the private columns to the existing roster read on the Events tab”) can't work with the view unchanged (M1); `loadEvents` makes one extra `testing_registrations` read and a results read for private students only (§4.2). Information only.
-9. **A edits one line outside SETUP §15** (the warning at the top of §14e, §3.5) so nobody removes 0010 while 0014 exists. Information only.
-10. **Not in the mockups, shown at CP1** (no decision needed before building): the `// CP1` wordings in §5.12; no toast after Set / Change (approved) but a toast with Undo after Back; the Change dialog without the price and “stays” lines; the private page's “gone” / “not private any more” states; the leave question also covering the private page.
-11. **For the Finance session (orchestrator, plan §5 step 8 / review M8):** besides “two payments per student” and its hide-payments switch, Finance's `0011_finance.sql` hard-codes `false as is_private` for Color Belt — tell Finance to read `testing_registrations.private_date` (private = not null) once this migration is live. Information only.
+## 11. What each builder deletes or reverts first (from dae8d00)
+`git checkout dae8d00^ -- <file>` puts back the live phase 3 version.
+- **A:** rewrite `supabase/migrations/0014_testing_private.sql`, `supabase/tests/0014_tests.sql`, `supabase/tests/0014_fingerprints.sql` from scratch (delete their content — the registration columns, the event-linked functions and all nine replaced bodies go); revert `supabase/tests/0005_tests.sql`; revert `supabase/tests/pglite/run.mjs` and write the new step 14 (the dae8d00 step-14 skeleton — fresh / upgrade / re-run / down before 13g — may be reused); replace SETUP §15 entirely (keep the §14e warning line).
+- **B:** revert `src/lib/testing/eventRules.js`, `src/lib/testing/eventsApi.js`, `src/lib/mockTestingEvents.js`, `src/lib/testing/checks.mjs`, then add §4. Salvage into `privateRules.js`: dae8d00's `PRIVATE_TIME_CHOICES`, `privateTimeIsValid`, `privateDayProblem` (now from today), `privateDayLimit` (now from today). Everything else event-linked (`isPrivate`, `gradingDay`, `priceFor`, `amountDue` with fee rules, `privateMenu` for events, `livePayments`, `privateTestingsList`, `setPrivate`, `clearPrivate`, `addPrivateStudent`, the roster private fields) is dropped.
+- **C:** revert `src/App.jsx`, `event/EventPage.jsx`, `event/RosterRows.jsx`, `event/StudentDialog.jsx`, `event/PaymentDialogs.jsx`, `event/GradingTab.jsx`, `event/GradingSheet.jsx`, `event/NoteDialog.jsx`, `event/useGradingSaves.js`, `events/EventsTab.jsx`, `text.js`, `src/styles/testing-events.css`, then add §5. **Delete** `events/PrivateTestingsList.jsx`. **Move** `event/PrivateGradingPage.jsx` and `event/PrivateSheet.jsx` to `private/` and re-point them to `privateApi` (drop the event header / event props); turn `event/PrivateDialog.jsx` into `private/DayTimeFields.jsx` (keep the Day / Time fields and their checks; drop Set / Change private, the event price lines and the No show notice wording) and delete it from `event/`. Re-add to `text.js` only the strings §5.8 lists.
