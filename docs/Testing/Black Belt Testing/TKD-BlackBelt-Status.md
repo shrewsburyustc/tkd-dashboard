@@ -1,7 +1,7 @@
 # Black Belt testing — status
 
 **Updated:** 2026-10-18 (Black Belt worktree session, branch `black-belt`)
-**Rulebook at this update:** v0.219 (Black Belt rows: v0.204, v0.205, v0.209–v0.213, v0.216–v0.219; numbers 0.176–0.203 0.206–0.208 and 0.214–0.215 belong to other branches)
+**Rulebook at this update:** v0.220 (Black Belt rows: v0.204, v0.205, v0.209–v0.213, v0.216–v0.220; numbers 0.176–0.203 0.206–0.208 and 0.214–0.215 belong to other branches)
 
 > Read `CLAUDE.md` (repo root) first. This file says where Black Belt testing stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -13,7 +13,7 @@
 
 - Research is done (inventory files in `Inventory/`).
 - **The plan is approved** (v0.204): `TKD-BlackBelt-Plan.md`. Two reviewer agents checked it first (§4).
-- **Black Belt is built now**, not queued behind other sections (v0.205; B1 withdrawn). B2 (where it lives) follows rule v0.59: the third row of the Testing chooser, with Star's page layout (v0.60). B3 answered (v0.209): a cycle holds a **list of testing days**, each with the parts graded that day. B4 answered (v0.210): roles same as Star. B5 answered (v0.211): form fields like Star's. B6 answered (v0.212): open form, staff check. B7 answered (v0.213): waiver kept a set number of years. B8 answered (v0.216): requirements in a compact full-screen panel; confirmation page replaces the email. **Registration questions done.** B9 answered (v0.217): any payment plans, due dates per plan. B10 answered (v0.218): post-dated checks all count the day they are handed in. B11 answered (v0.219): roster Payments column with next / late / not paid. Question B12 (receipts) is asked.
+- **Black Belt is built now**, not queued behind other sections (v0.205; B1 withdrawn). B2 (where it lives) follows rule v0.59: the third row of the Testing chooser, with Star's page layout (v0.60). B3 answered (v0.209): a cycle holds a **list of testing days**, each with the parts graded that day. B4 answered (v0.210): roles same as Star. B5 answered (v0.211): form fields like Star's. B6 answered (v0.212): open form, staff check. B7 answered (v0.213): waiver kept a set number of years. B8 answered (v0.216): requirements in a compact full-screen panel; confirmation page replaces the email. **Registration questions done.** B9 answered (v0.217): any payment plans, due dates per plan. B10 answered (v0.218): post-dated checks all count the day they are handed in. B11 answered (v0.219): roster Payments column with next / late / not paid. B12 answered (v0.220): one printable receipt with the full history. **Registration and payment questions done (B2–B12).** Grading questions (B13–B18) wait for Master Jeong's answers (part A; printable sheet `TKD-BlackBelt-Rules-For-Master-Jeong.html` / `.pdf`).
 - Nothing is built and there is no migration. The branch includes main up to `5ccb355` (Star 0006 live).
 
 ## 2. Files
@@ -34,10 +34,10 @@
 ## 3. Next steps
 
 1. Jeffrey checks the urgent live-system items (plan §2): the live Sheet before Oct 24, and the `updateInfo` stopgap.
-2. **Question B12 (receipts): waiting on Jeffrey.** Then the grading questions (B13+, after Master Jeong's part A answers) or mockups of registration + payments, and so on, one at a time; each part is built as soon as its design is approved.
+2. **Next:** Jeffrey's OK to send the Finance session the note (`Finance-note-draft.md`); then full mockups of cycles, registration and payments (PC / tablet / phone) → design reviewer → screen-by-screen pass. Grading questions B13–B18 once Master Jeong answers part A., and so on, one at a time; each part is built as soon as its design is approved.
 3. With Jeffrey's OK, send the Finance session a note (plan §7).
 4. **Jeffrey asks the school's insurer** how many years signed waivers must be kept (v0.213 setting).
-5. Make the printable rules sheet for Master Jeong (part A) in parallel.
+5. Jeffrey hands Master Jeong the printable rules sheet (part A) and brings back the answers.
 
 ## 4. Reviewer check of the plan (2026-10-18)
 
@@ -84,3 +84,4 @@ All the items below were applied to the plan.
 | v0.217 | **B9 (C): any payment plans** (list on Rubric and prices; each plan: number of payments + amount per payment per Dan) + Kukkiwon fee per Dan; cycles copy them; changes v0.209: due dates per plan. Four details to settle with the mockups. |
 | v0.218 | **B10 (B): post-dated checks** recorded when handed in; all count as paid that day (like Color Belt and Star); optional note, no check date or number. |
 | v0.219 | **B11 (A): roster Payments column**: Paid in full / Next $X by date / Late · $X since date / Not paid, + balance; summary cards filter the list. |
+| v0.220 | **B12 (A): one printable receipt** per candidate with the full payment history, totals and balance; email later. |
