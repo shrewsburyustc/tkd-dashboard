@@ -16,6 +16,11 @@
 --     trigger    - every trigger on those tables
 --     constraint - each table rule (key, foreign key, checks) with the
 --                  rule's full text
+--     index      - every finance_* index with its definition: the two
+--                  finance_*_paid_on_idx indexes 0011 adds to the payment
+--                  tables of 0005 / 0006, and the finance tables' own (keys)
+-- The rows are sorted byte by byte (collate "C"), so the list comes out in
+-- the same order in PGlite and on production (whose text sorting is ICU).
 --
 -- WHY
 --   supabase/tests/pglite/run.mjs prints this list for the tested copy.
@@ -32,6 +37,7 @@ with tbls(name) as (
   values ('finance_day_closings'), ('finance_day_closing_items'), ('finance_settings'),
          ('finance_reminder_times'), ('finance_exports')
 )
+select fp.* from (
 select 'function' as kind,
        p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' as item,
        md5(regexp_replace(regexp_replace(p.prosrc, '--[^\n]*', '', 'g'), '\s+', '', 'g'))
@@ -77,4 +83,11 @@ select 'constraint',
        pg_get_constraintdef(c.oid)
   from pg_constraint c
  where c.conrelid in (select to_regclass('public.' || name) from tbls)
- order by 1, 2;
+union all
+select 'index',
+       i.tablename || '.' || i.indexname,
+       i.indexdef
+  from pg_indexes i
+ where i.schemaname = 'public' and i.indexname like 'finance\_%'
+) as fp
+ order by fp.kind collate "C", fp.item collate "C";

@@ -45,6 +45,15 @@
 --   Safe to run again: "create table if not exists", "create or replace
 --   function", triggers replaced with "drop trigger if exists" + create,
 --   seeds that never overwrite ("on conflict do nothing").
+--   UPDATE 2026-10-19 (speed): the first version of this file (pasted
+--   into production 2026-10-19) built the payment chains with one big SQL
+--   query that joined every payment with every other; on long date ranges
+--   it took minutes. This version builds them owner by owner (section 3a),
+--   adds two date indexes on the payment tables, and removes the old
+--   finance_chain_steps(date, date). Pasting THIS file over the first
+--   version is safe and is how production gets it: no table, row,
+--   setting or reminder time is changed; only functions are replaced
+--   (tested in run.mjs step 14b with the exact production copy).
 --
 -- WORDS USED BELOW
 --   * "today" = the date in Massachusetts: public.testing_today() (0005).
@@ -496,14 +505,31 @@ select set_config('tkd.batch_id', '', true);
 --    the security-definer functions of section 5 use them)
 -- ---------------------------------------------------------------------
 
--- 3a. finance_chain_steps(p_from, p_to) - every chain, step by step.
--- Contract 1.3, rules 1-4. Chains are built from ALL the rows of every
--- registration / candidate ("owner") that has a payment or refund dated
--- in the range - never from rows filtered by date first. (An undo is
--- dated the day it is made, so a payment on Oct 1 undone on Oct 20 is
--- still found as undone when only Oct 1 is asked for.) Every day a chain
--- shows on is the paid_on of one of its own payment / refund rows, so
--- picking owners this way never misses an item in the range.
+-- 3-. Indexes and an earlier helper.
+-- Finance looks payments up by their date (paid_on); these two indexes
+-- make that fast on 0005's and 0006's payment tables (they only speed up
+-- reading; nothing else changes). "if not exists": re-running adds nothing.
+create index if not exists finance_testing_payments_paid_on_idx on public.testing_payments (paid_on);
+create index if not exists finance_star_payments_paid_on_idx on public.star_payments (paid_on);
+
+-- An earlier version of this file (applied 2026-10-19) built the chains in
+-- one big SQL query, finance_chain_steps(date, date), which got very slow
+-- on long date ranges. 3a below replaces it; the old one is removed so
+-- nothing can use it by mistake (it has no rights and nothing calls it).
+drop function if exists public.finance_chain_steps(date, date);
+
+-- 3a. finance_chain_steps_core(p_from, p_to, p_source, p_owner) - every
+-- chain, step by step. Contract 1.3, rules 1-4.
+-- Which owners (registration / candidate):
+--   * p_owner NULL: every owner with a payment or refund dated p_from ..
+--     p_to. Chains are then built from ALL the rows of those owners -
+--     never from rows filtered by date first. (An undo is dated the day it
+--     is made, so a payment on Oct 1 undone on Oct 20 is still found as
+--     undone when only Oct 1 is asked for.) Every day a chain shows on is
+--     the paid_on of one of its own payment / refund rows, so picking
+--     owners this way never misses an item in the range.
+--   * p_owner set: just that one owner of source p_source (the payment
+--     detail), whatever the dates.
 -- One output row per payment / refund row of a chain:
 --   step 0 = the chain's first row (chain_id = its id), step 1 = the new
 --   row of the first edit, ... last_step = the final row.
@@ -513,8 +539,15 @@ select set_config('tkd.batch_id', '', true);
 --   'hidden' (undone by the SAME login within 10 seconds of recording it,
 --   with no edit in between - a mis-click; rule 4).
 --   undo_*: the reversal that undid the chain (end_state undone / hidden).
+-- HOW (why it is fast): ONE query reads the owners' rows sorted by owner,
+-- then each owner's few rows (usually 1 to 4) are worked out in small
+-- arrays. The work grows in step with the number of rows (5 years of
+-- payments is about a second's work at most), instead of joining every
+-- row with every other row.
+-- Rows are output chain by chain, in step order (finance_chain_items
+-- below relies on that order).
 -- Reads login ids (recorded_by) for two comparisons only; never returns one.
-create or replace function public.finance_chain_steps(p_from date, p_to date)
+create or replace function public.finance_chain_steps_core(p_from date, p_to date, p_source text, p_owner uuid)
 returns table (
   source            text,
   chain_id          uuid,
@@ -537,123 +570,404 @@ returns table (
   undo_amount_cents integer,
   undo_method       text
 )
-language sql
+language plpgsql
 stable
 set search_path = ''
 as $$
-  with recursive
-  -- every money row of both sources, in one shape ("owner" = the
-  -- registration or the candidate)
-  raw_rows as (
-    select 'color_belt'::text as src, p.id, p.registration_id as owner, p.kind, p.amount_cents, p.method,
-           p.paid_on, p.recorded_at, p.recorded_by, p.recorded_by_name, p.reverses_payment_id
-      from public.testing_payments p
-    union all
-    select 'star'::text, p.id, p.candidate_id, p.kind, p.amount_cents, p.method,
-           p.paid_on, p.recorded_at, p.recorded_by, p.recorded_by_name, p.reverses_payment_id
-      from public.star_payments p
-  ),
-  -- the owners with a payment or refund dated in the range
-  owners as (
-    select distinct x.src, x.owner
-      from raw_rows x
-     where x.kind <> 'reversal' and x.paid_on between p_from and p_to
-  ),
-  -- ALL rows of those owners, whatever their date
-  r as (
-    select x.* from raw_rows x join owners o on o.src = x.src and o.owner = x.owner
-  ),
-  -- every reversal, with the new payment of its edit when it was one
-  -- (rule 2: a payment N of the same owner with N.recorded_at =
-  -- R.recorded_at and the same login (plain "=", so a NULL login never
-  -- matches) - testing_edit_payment and
-  -- star_edit_payment write both in one transaction). Only a reversed
-  -- PAYMENT can have been edited (refunds can't be edited, 0006).
-  rev as (
-    select x.src, x.id, x.reverses_payment_id as target_id, x.recorded_at, x.recorded_by,
-           x.recorded_by_name, x.paid_on, x.amount_cents, x.method,
-           case when t.kind = 'payment' then
-             (select n.id
-                from r n
-               where n.src = x.src and n.owner = x.owner and n.kind = 'payment'
-                 and n.recorded_at = x.recorded_at
-                 and n.recorded_by = x.recorded_by   -- a NULL login (SQL Editor) never matches
-                 and n.id <> x.reverses_payment_id
-               order by n.id
-               limit 1)
-           end as new_id
-      from r x
-      join r t on t.src = x.src and t.id = x.reverses_payment_id
-     where x.kind = 'reversal'
-  ),
-  -- rule 1: a chain starts at a payment or refund that is not the new row
-  -- of an edit; the walk follows each edit to its new row (rule 2). A row
-  -- is reversed at most once (unique rule in 0005 / 0006), so each step
-  -- has at most one next step. "step < 50" is only a safety stop.
-  walk (src, chain, row_id, step, edit_rev) as (
-    select s.src, s.id, s.id, 0, null::uuid
-      from r s
-     where s.kind in ('payment', 'refund')
-       and not exists (select 1 from rev v where v.src = s.src and v.new_id = s.id)
-    union all
-    select w.src, w.chain, v.new_id, w.step + 1, v.id
-      from walk w
-      join rev v on v.src = w.src and v.target_id = w.row_id
-     where v.new_id is not null
-       and w.step < 50
-  ),
-  chains as (
-    select w.src, w.chain, max(w.step) as last_step
-      from walk w
-     group by w.src, w.chain
-  ),
-  -- rule 3: a reversal of the FINAL row (not an edit) ends the chain as
-  -- undone; rule 4's mis-click test needs the first row's login and time
-  ends as (
-    select c.src, c.chain, c.last_step,
-           f.recorded_at as first_at, f.recorded_by as first_by,
-           u.id is not null as undone,
-           u.recorded_at as u_at, u.recorded_by as u_by, u.recorded_by_name as u_by_name,
-           u.paid_on as u_on, u.amount_cents as u_amount, u.method as u_method
-      from chains c
-      join walk wf on wf.src = c.src and wf.chain = c.chain and wf.step = 0
-      join r f on f.src = c.src and f.id = wf.row_id
-      join walk wl on wl.src = c.src and wl.chain = c.chain and wl.step = c.last_step
-      left join rev u on u.src = c.src and u.target_id = wl.row_id and u.new_id is null
-  )
-  select w.src, w.chain, x.owner, w.step, e.last_step,
-         x.id, x.kind, x.amount_cents, x.method, x.paid_on, x.recorded_at, x.recorded_by_name,
-         ed.recorded_by_name, ed.paid_on,
-         case when not e.undone then 'live'
-              -- rule 4: no edit, the same login (a NULL login - the SQL
-              -- Editor - never matches), at most 10 seconds later
-              when e.last_step = 0 and e.u_by = e.first_by
-                   and e.u_at - e.first_at <= interval '10 seconds' then 'hidden'
-              else 'undone'
-         end,
-         e.u_by_name, e.u_on, e.u_at, e.u_amount, e.u_method
-    from walk w
-    join ends e on e.src = w.src and e.chain = w.chain
-    join r x on x.src = w.src and x.id = w.row_id
-    left join rev ed on ed.src = w.src and ed.id = w.edit_rev;
+#variable_conflict use_column
+declare
+  v_row    record;
+  -- the current owner's rows, in recorded_at order (index 1 .. v_n)
+  v_src    text;
+  v_owner  uuid;
+  v_n      integer := 0;
+  a_id     uuid[];
+  a_kind   text[];
+  a_amount integer[];
+  a_method text[];
+  a_paid   date[];
+  a_at     timestamptz[];
+  a_by     uuid[];
+  a_name   text[];
+  a_target uuid[];
+  -- worked out per owner
+  a_revof  integer[];   -- a_revof[j]  = the reversal of row j (0 = none)
+  a_new    integer[];   -- a_new[i]    = for reversal i, the new row of its edit (0 = a plain undo)
+  a_isnew  boolean[];   -- a_isnew[k]  = row k is the new row of an edit
+  a_steps  integer[];   -- one chain's rows, step by step
+  a_edits  integer[];   -- a_edits[s]  = the reversal that led to step s (0 for step 0)
+  v_i      integer;
+  v_j      integer;
+  v_k      integer;
+  v_t      integer;
+  v_cur    integer;
+  v_ri     integer;
+  v_last   integer;
+  v_state  text;
+begin
+  for v_row in
+    -- the owners' rows, both sources, grouped by owner, then in time
+    -- order; a last "end" row (is_end = 1, sorted last by that NUMBER -
+    -- never by text, whose order depends on the database's collation)
+    -- makes the loop work out the final owner too
+    select x.*
+      from (select 0 as is_end, 'color_belt'::text as src, p.registration_id as owner, p.id, p.kind, p.amount_cents,
+                   p.method, p.paid_on, p.recorded_at, p.recorded_by, p.recorded_by_name, p.reverses_payment_id
+              from public.testing_payments p
+             where p.registration_id in
+                   (select q.registration_id from public.testing_payments q
+                     where (p_owner is null and q.kind <> 'reversal' and q.paid_on between p_from and p_to)
+                        or (p_source = 'color_belt' and q.registration_id = p_owner))
+            union all
+            select 0, 'star'::text, p.candidate_id, p.id, p.kind, p.amount_cents,
+                   p.method, p.paid_on, p.recorded_at, p.recorded_by, p.recorded_by_name, p.reverses_payment_id
+              from public.star_payments p
+             where p.candidate_id in
+                   (select q.candidate_id from public.star_payments q
+                     where (p_owner is null and q.kind <> 'reversal' and q.paid_on between p_from and p_to)
+                        or (p_source = 'star' and q.candidate_id = p_owner))
+            union all
+            select 1, null::text, null::uuid, null::uuid, null::text, null::integer,
+                   null::text, null::date, null::timestamptz, null::uuid, null::text, null::uuid) as x
+     -- only equal (src, owner) rows must come together; which owner comes
+     -- first doesn't matter, so the text order of src is never relied on
+     order by x.is_end, x.src, x.owner, x.recorded_at, x.id
+  loop
+    -- a new owner starts (or the end): work out the rows collected so far
+    if v_n > 0 and (v_row.is_end = 1 or v_row.src is distinct from v_src or v_row.owner is distinct from v_owner) then
+      a_revof := array_fill(0, array[v_n]);
+      a_new   := array_fill(0, array[v_n]);
+      a_isnew := array_fill(false, array[v_n]);
+
+      -- each reversal: which row it reverses, and (rule 2) the new
+      -- payment of its edit: a payment of the same owner written at the
+      -- same moment by the same login (plain "=", so a missing login never
+      -- matches). Only a reversed PAYMENT can have been edited (refunds
+      -- can't be edited, 0006). On a tie the smallest id wins.
+      for v_i in 1 .. v_n loop
+        if a_kind[v_i] = 'reversal' then
+          v_t := 0;
+          for v_j in 1 .. v_n loop
+            if a_id[v_j] = a_target[v_i] then v_t := v_j; end if;
+          end loop;
+          if v_t > 0 then
+            a_revof[v_t] := v_i;
+            if a_kind[v_t] = 'payment' then
+              v_k := 0;
+              for v_j in 1 .. v_n loop
+                if a_kind[v_j] = 'payment' and v_j <> v_t
+                   and a_at[v_j] = a_at[v_i] and a_by[v_j] = a_by[v_i]
+                   and (v_k = 0 or a_id[v_j] < a_id[v_k]) then
+                  v_k := v_j;
+                end if;
+              end loop;
+              a_new[v_i] := v_k;
+              if v_k > 0 then a_isnew[v_k] := true; end if;
+            end if;
+          end if;
+        end if;
+      end loop;
+
+      -- rule 1: a chain starts at a payment or refund that isn't the new
+      -- row of an edit; follow each edit to its new row (rules 2-3)
+      for v_j in 1 .. v_n loop
+        continue when a_kind[v_j] not in ('payment', 'refund') or a_isnew[v_j];
+        a_steps := array[v_j];
+        a_edits := array[0];
+        v_cur := v_j;
+        v_ri := 0;
+        loop
+          v_ri := a_revof[v_cur];
+          exit when v_ri = 0;                                   -- live
+          exit when a_new[v_ri] = 0;                            -- undone
+          -- safety stop (a loop, or 50 edits): end the chain here as live,
+          -- like the first version of this file did
+          if a_new[v_ri] = any (a_steps) or cardinality(a_steps) >= 50 then
+            v_ri := 0;
+            exit;
+          end if;
+          a_steps := a_steps || a_new[v_ri];
+          a_edits := a_edits || v_ri;
+          v_cur := a_new[v_ri];
+          v_ri := 0;
+        end loop;
+        v_last := cardinality(a_steps) - 1;
+        v_state := case when v_ri = 0 then 'live'
+                        -- rule 4: no edit, the same login (a missing login
+                        -- never matches), at most 10 seconds later
+                        when v_last = 0 and a_by[v_ri] = a_by[v_j]
+                             and a_at[v_ri] - a_at[v_j] <= interval '10 seconds' then 'hidden'
+                        else 'undone' end;
+        for v_i in 1 .. cardinality(a_steps) loop
+          v_k := a_steps[v_i];
+          source            := v_src;
+          chain_id          := a_id[v_j];
+          owner_id          := v_owner;
+          step              := v_i - 1;
+          last_step         := v_last;
+          row_id            := a_id[v_k];
+          kind              := a_kind[v_k];
+          amount_cents      := a_amount[v_k];
+          method            := a_method[v_k];
+          paid_on           := a_paid[v_k];
+          recorded_at       := a_at[v_k];
+          recorded_by_name  := a_name[v_k];
+          edit_by_name      := case when a_edits[v_i] > 0 then a_name[a_edits[v_i]] end;
+          edit_on           := case when a_edits[v_i] > 0 then a_paid[a_edits[v_i]] end;
+          end_state         := v_state;
+          undo_by_name      := case when v_ri > 0 then a_name[v_ri] end;
+          undo_on           := case when v_ri > 0 then a_paid[v_ri] end;
+          undo_at           := case when v_ri > 0 then a_at[v_ri] end;
+          undo_amount_cents := case when v_ri > 0 then a_amount[v_ri] end;
+          undo_method       := case when v_ri > 0 then a_method[v_ri] end;
+          return next;
+        end loop;
+      end loop;
+      v_n := 0;
+    end if;
+
+    exit when v_row.is_end = 1;
+
+    -- collect this row
+    if v_n = 0 then
+      v_src := v_row.src;
+      v_owner := v_row.owner;
+      a_id := '{}'; a_kind := '{}'; a_amount := '{}'; a_method := '{}'; a_paid := '{}';
+      a_at := '{}'; a_by := '{}'; a_name := '{}'; a_target := '{}';
+    end if;
+    v_n := v_n + 1;
+    a_id[v_n]     := v_row.id;
+    a_kind[v_n]   := v_row.kind;
+    a_amount[v_n] := v_row.amount_cents;
+    a_method[v_n] := v_row.method;
+    a_paid[v_n]   := v_row.paid_on;
+    a_at[v_n]     := v_row.recorded_at;
+    a_by[v_n]     := v_row.recorded_by;
+    a_name[v_n]   := v_row.recorded_by_name;
+    a_target[v_n] := v_row.reverses_payment_id;
+  end loop;
+end;
 $$;
 
-revoke execute on function public.finance_chain_steps(date, date) from public, anon, authenticated, service_role;
+revoke execute on function public.finance_chain_steps_core(date, date, text, uuid) from public, anon, authenticated, service_role;
 
--- 3b. finance_money_rows(p_location_code, p_from, p_to) - the report's
--- ITEMS (contract 1.3): one row per displayed item of the school (NULL =
--- both) on the days p_from .. p_to. Hidden chains give no item at all.
--- Filtering by school and day happens AFTER the chains are built.
+-- 3a2. finance_chain_items(p_from, p_to, p_source, p_owner) - the report's
+-- ITEMS of those chains (contract 1.3, rule 4), without names or school:
 --   live chain, no edit   -> 'counted' on its day
 --   live chain, edited    -> the final row on its day: 'edited' (same day
 --                            as the first row) or 'moved_in'; every OTHER
 --                            day of the chain gets 'moved_out' ("Moved to")
 --   undone chain          -> 'undone' on every day of the chain
+--   hidden chain          -> nothing at all
 -- The row shown on a moved_out / undone day is the chain's first row of
--- that day. Extra columns after recorded_by_name are for the functions
--- only (row_id, counts = adds to the totals, the first row's time for
--- "Added after closing", the shown row's time for sorting, the event's name
--- and id for the payment detail).
+-- that day. Works chain by chain over 3a's rows (same owners rule).
+create or replace function public.finance_chain_items(p_from date, p_to date, p_source text, p_owner uuid)
+returns table (
+  source            text,
+  chain_id          uuid,
+  owner_id          uuid,
+  day               date,
+  row_id            uuid,
+  kind              text,
+  method            text,
+  amount_cents      integer,
+  recorded_at       timestamptz,
+  recorded_by_name  text,
+  state             text,
+  was_amount_cents  integer,
+  was_method        text,
+  moved_to          date,
+  moved_from        date,
+  changed_by_name   text,
+  changed_on        date,
+  first_recorded_at timestamptz
+)
+language plpgsql
+stable
+set search_path = ''
+as $$
+#variable_conflict use_column
+declare
+  v_s      record;
+  -- the current chain (index 1 = step 0), parallel lists
+  v_n      integer := 0;
+  c_paid   date[];
+  c_row    uuid[];
+  c_kind   text[];
+  c_method text[];
+  c_amount integer[];
+  c_at     timestamptz[];
+  c_name   text[];
+  c_editby text[];
+  c_editon date[];
+  -- the chain's own facts (from its first row)
+  v_src    text;
+  v_chain  uuid;
+  v_owner  uuid;
+  v_end    text;
+  v_undoby text;
+  v_undoon date;
+  v_i      integer;
+  v_j      integer;
+  v_seen   boolean;
+begin
+  for v_s in
+    -- 3a's rows in the order 3a output them (chain by chain, step by
+    -- step): "with ordinality" numbers them, and that number - not any
+    -- text - decides the order. A last "end" row (is_end = 1) makes the
+    -- loop work out the final chain too.
+    select y.*
+      from (select 0 as is_end, x.ordinality as ord, x.source, x.chain_id, x.owner_id, x.step, x.row_id, x.kind,
+                   x.amount_cents, x.method, x.paid_on, x.recorded_at, x.recorded_by_name, x.edit_by_name, x.edit_on,
+                   x.end_state, x.undo_by_name, x.undo_on
+              from public.finance_chain_steps_core(p_from, p_to, p_source, p_owner) with ordinality as x
+            union all
+            select 1, null::bigint, null::text, null::uuid, null::uuid, 0, null::uuid, null::text,
+                   null::integer, null::text, null::date, null::timestamptz, null::text, null::text, null::date,
+                   null::text, null::text, null::date) as y
+     order by y.is_end, y.ord
+  loop
+    if v_n > 0 and (v_s.is_end = 1 or v_s.step = 0) then
+      if v_end = 'live' then
+        -- the final row on its day
+        source := v_src; chain_id := v_chain; owner_id := v_owner;
+        day := c_paid[v_n]; row_id := c_row[v_n]; kind := c_kind[v_n]; method := c_method[v_n];
+        amount_cents := c_amount[v_n]; recorded_at := c_at[v_n]; recorded_by_name := c_name[v_n];
+        state := case when v_n = 1 then 'counted'
+                      when c_paid[v_n] = c_paid[1] then 'edited'
+                      else 'moved_in' end;
+        was_amount_cents := case when v_n > 1 then c_amount[1] end;
+        was_method := case when v_n > 1 then c_method[1] end;
+        moved_to := null;
+        moved_from := case when v_n > 1 and c_paid[v_n] <> c_paid[1] then c_paid[1] end;
+        changed_by_name := c_editby[v_n]; changed_on := c_editon[v_n];
+        first_recorded_at := c_at[1];
+        return next;
+      end if;
+      if v_end in ('live', 'undone') then
+        -- every other day the chain touched (live: moved_out), or every
+        -- day (undone); the row shown is the chain's first row of that day
+        for v_i in 1 .. v_n loop
+          continue when v_end = 'live' and c_paid[v_i] = c_paid[v_n];
+          v_seen := false;
+          for v_j in 1 .. v_i - 1 loop
+            if c_paid[v_j] = c_paid[v_i] then v_seen := true; end if;
+          end loop;
+          continue when v_seen;
+          source := v_src; chain_id := v_chain; owner_id := v_owner;
+          day := c_paid[v_i]; row_id := c_row[v_i]; kind := c_kind[v_i]; method := c_method[v_i];
+          amount_cents := c_amount[v_i]; recorded_at := c_at[v_i]; recorded_by_name := c_name[v_i];
+          was_amount_cents := null; was_method := null; moved_from := null;
+          first_recorded_at := c_at[1];
+          if v_end = 'live' then
+            state := 'moved_out';
+            moved_to := c_paid[v_n];
+            changed_by_name := c_editby[v_n]; changed_on := c_editon[v_n];
+          else
+            state := 'undone';
+            moved_to := null;
+            changed_by_name := v_undoby; changed_on := v_undoon;
+          end if;
+          return next;
+        end loop;
+      end if;
+      v_n := 0;
+    end if;
+    exit when v_s.is_end = 1;
+
+    if v_n = 0 then
+      v_src := v_s.source; v_chain := v_s.chain_id; v_owner := v_s.owner_id;
+      v_end := v_s.end_state; v_undoby := v_s.undo_by_name; v_undoon := v_s.undo_on;
+      c_paid := '{}'; c_row := '{}'; c_kind := '{}'; c_method := '{}'; c_amount := '{}';
+      c_at := '{}'; c_name := '{}'; c_editby := '{}'; c_editon := '{}';
+    end if;
+    v_n := v_n + 1;
+    c_paid[v_n] := v_s.paid_on;     c_row[v_n] := v_s.row_id;       c_kind[v_n] := v_s.kind;
+    c_method[v_n] := v_s.method;    c_amount[v_n] := v_s.amount_cents;
+    c_at[v_n] := v_s.recorded_at;   c_name[v_n] := v_s.recorded_by_name;
+    c_editby[v_n] := v_s.edit_by_name; c_editon[v_n] := v_s.edit_on;
+  end loop;
+end;
+$$;
+
+revoke execute on function public.finance_chain_items(date, date, text, uuid) from public, anon, authenticated, service_role;
+
+-- 3b. finance_money_rows_core(p_location_code, p_from, p_to, p_source,
+-- p_owner) - the report's ITEMS with names and school (contract 1.3): one
+-- row per displayed item of the school (NULL = both) on the days p_from ..
+-- p_to (both NULL = every day; used with p_owner for the payment detail).
+-- Filtering by school and day happens AFTER the chains are built (3a).
+-- Color Belt's school = the event's school; Star's = the CANDIDATE's school
+-- (v0.58). event_date: the testing date, or a private Star candidate's own
+-- private testing day ("Star testing - private <date>"). Only names,
+-- dates and the private flag are read from the people tables.
+-- Extra columns after recorded_by_name are for the functions only
+-- (row_id, counts = adds to the totals, the first row's time for "Added
+-- after closing", the shown row's time for sorting, the event's name and
+-- id for the payment detail).
+create or replace function public.finance_money_rows_core(
+  p_location_code text, p_from date, p_to date, p_source text, p_owner uuid)
+returns table (
+  source            text,
+  payment_id        uuid,
+  school            text,
+  day               date,
+  "time"            text,
+  first_name        text,
+  last_name         text,
+  what              text,
+  event_date        date,
+  is_private        boolean,
+  kind              text,
+  method            text,
+  amount_cents      integer,
+  state             text,
+  was_amount_cents  integer,
+  was_method        text,
+  moved_to          date,
+  moved_from        date,
+  changed_by_name   text,
+  changed_on        date,
+  recorded_by_name  text,
+  row_id            uuid,
+  counts            boolean,
+  first_recorded_at timestamptz,
+  row_recorded_at   timestamptz,
+  event_name        text,
+  event_id          uuid
+)
+language sql
+stable
+set search_path = ''
+as $$
+  select i.source, i.chain_id,
+         coalesce(e.location_code, c.location_code),
+         i.day,
+         to_char(i.recorded_at at time zone 'America/New_York', 'HH24:MI'),
+         coalesce(g.first_name, c.first_name), coalesce(g.last_name, c.last_name),
+         i.source,
+         case when i.source = 'color_belt' then e.testing_date else coalesce(c.private_on, se.testing_date) end,
+         (i.source = 'star' and c.private_on is not null),
+         i.kind, i.method, i.amount_cents, i.state,
+         i.was_amount_cents, i.was_method, i.moved_to, i.moved_from,
+         i.changed_by_name, i.changed_on, i.recorded_by_name,
+         i.row_id, i.state in ('counted', 'edited', 'moved_in'), i.first_recorded_at, i.recorded_at,
+         coalesce(e.name, se.name), coalesce(e.id, se.id)
+    from public.finance_chain_items(p_from, p_to, p_source, p_owner) i
+    left join public.testing_registrations g on i.source = 'color_belt' and g.id = i.owner_id
+    left join public.testing_events e on e.id = g.event_id
+    left join public.star_candidates c on i.source = 'star' and c.id = i.owner_id
+    left join public.star_events se on se.id = c.event_id
+   where (e.id is not null or se.id is not null)
+     and (p_location_code is null or coalesce(e.location_code, c.location_code) = p_location_code)
+     and (p_from is null or i.day >= p_from)
+     and (p_to is null or i.day <= p_to);
+$$;
+
+revoke execute on function public.finance_money_rows_core(text, date, date, text, uuid) from public, anon, authenticated, service_role;
+
+-- 3b2. finance_money_rows(p_location_code, p_from, p_to) - 3b for a school
+-- (NULL = both) and a range of days: the contract's helper (1.3).
 -- Not security definer, no grants: only the section 5 functions call it.
 create or replace function public.finance_money_rows(p_location_code text, p_from date, p_to date)
 returns table (
@@ -689,84 +1003,7 @@ language sql
 stable
 set search_path = ''
 as $$
-  with s as (
-    select c.* from public.finance_chain_steps(p_from, p_to) c where c.end_state <> 'hidden'
-  ),
-  f0 as (select s.* from s where s.step = 0),
-  fl as (select s.* from s where s.step = s.last_step),
-  -- each day of a chain, with the chain's first row of that day
-  per_day as (
-    select distinct on (s.source, s.chain_id, s.paid_on) s.*
-      from s
-     order by s.source, s.chain_id, s.paid_on, s.step
-  ),
-  items as (
-    -- a live chain: its final row
-    select fl.source, fl.chain_id, fl.owner_id, fl.paid_on as day, fl.row_id, fl.kind, fl.method,
-           fl.amount_cents, fl.recorded_at, fl.recorded_by_name,
-           case when fl.last_step = 0 then 'counted'
-                when fl.paid_on = f0.paid_on then 'edited'
-                else 'moved_in' end as state,
-           case when fl.last_step > 0 then f0.amount_cents end as was_amount_cents,
-           case when fl.last_step > 0 then f0.method end as was_method,
-           null::date as moved_to,
-           case when fl.last_step > 0 and fl.paid_on <> f0.paid_on then f0.paid_on end as moved_from,
-           fl.edit_by_name as changed_by_name,
-           fl.edit_on as changed_on,
-           f0.recorded_at as first_recorded_at
-      from fl
-      join f0 on f0.source = fl.source and f0.chain_id = fl.chain_id
-     where fl.end_state = 'live'
-    union all
-    -- a live chain: every other day it touched -> "Moved to <final day>"
-    select d.source, d.chain_id, d.owner_id, d.paid_on, d.row_id, d.kind, d.method,
-           d.amount_cents, d.recorded_at, d.recorded_by_name,
-           'moved_out', null::integer, null::text, fl.paid_on, null::date,
-           fl.edit_by_name, fl.edit_on, f0.recorded_at
-      from per_day d
-      join fl on fl.source = d.source and fl.chain_id = d.chain_id
-      join f0 on f0.source = d.source and f0.chain_id = d.chain_id
-     where fl.end_state = 'live'
-       and d.paid_on <> fl.paid_on
-    union all
-    -- an undone chain: every day it touched -> 'undone'
-    select d.source, d.chain_id, d.owner_id, d.paid_on, d.row_id, d.kind, d.method,
-           d.amount_cents, d.recorded_at, d.recorded_by_name,
-           'undone', null::integer, null::text, null::date, null::date,
-           d.undo_by_name, d.undo_on, f0.recorded_at
-      from per_day d
-      join f0 on f0.source = d.source and f0.chain_id = d.chain_id
-     where d.end_state = 'undone'
-  ),
-  -- who and which event: Color Belt = the event's school; Star = the
-  -- CANDIDATE's school (v0.58). Only names, dates and the private flag.
-  -- event_date: the testing date, or a private Star candidate's own
-  -- private testing day ("Star testing - private <date>").
-  people as (
-    select 'color_belt'::text as source, g.id as owner_id, e.location_code as school,
-           g.first_name, g.last_name, e.testing_date as event_date, false as is_private, e.name as event_name,
-           e.id as event_id
-      from public.testing_registrations g
-      join public.testing_events e on e.id = g.event_id
-     where g.id in (select i.owner_id from items i where i.source = 'color_belt')
-    union all
-    select 'star'::text, c.id, c.location_code,
-           c.first_name, c.last_name, coalesce(c.private_on, e.testing_date), c.private_on is not null, e.name, e.id
-      from public.star_candidates c
-      join public.star_events e on e.id = c.event_id
-     where c.id in (select i.owner_id from items i where i.source = 'star')
-  )
-  select i.source, i.chain_id, p.school, i.day,
-         to_char(i.recorded_at at time zone 'America/New_York', 'HH24:MI'),
-         p.first_name, p.last_name, i.source, p.event_date, p.is_private,
-         i.kind, i.method, i.amount_cents, i.state,
-         i.was_amount_cents, i.was_method, i.moved_to, i.moved_from,
-         i.changed_by_name, i.changed_on, i.recorded_by_name,
-         i.row_id, i.state in ('counted', 'edited', 'moved_in'), i.first_recorded_at, i.recorded_at, p.event_name, p.event_id
-    from items i
-    join people p on p.source = i.source and p.owner_id = i.owner_id
-   where (p_location_code is null or p.school = p_location_code)
-     and i.day between p_from and p_to;
+  select m.* from public.finance_money_rows_core(p_location_code, p_from, p_to, null, null) m;
 $$;
 
 revoke execute on function public.finance_money_rows(text, date, date) from public, anon, authenticated, service_role;
@@ -1224,6 +1461,7 @@ declare
   v_admin      boolean;
   v_f          record;
   v_c          public.finance_day_closings;
+  v_all        jsonb;
   v_items      jsonb;
   v_closing    jsonb := null;
   v_changes    record;
@@ -1243,7 +1481,10 @@ begin
     return jsonb_build_object('status', 'not_found');
   end if;
 
-  select * into v_f from public.finance_figures(p_location_code, p_day, p_day);
+  -- the day's items, built ONCE; the figures, the list and "Changed
+  -- after closing" all come from this one copy
+  v_all := public.finance_items_json(p_location_code, p_day, p_day);
+  select * into v_f from public.finance_figures_from(v_all, p_location_code, p_day, p_day);
   v_c := public.finance_active_close(p_location_code, p_day);
 
   select coalesce(jsonb_agg(jsonb_build_object(
@@ -1258,10 +1499,15 @@ begin
            'added_after_closing', (v_c.id is not null and m.counts and m.first_recorded_at > v_c.recorded_at))
            order by m.row_recorded_at, m.last_name, m.first_name, m.payment_id), '[]'::jsonb)
     into v_items
-    from public.finance_money_rows(p_location_code, p_day, p_day) m;
+    from jsonb_to_recordset(v_all)
+         as m(source text, payment_id uuid, day date, "time" text, first_name text, last_name text, what text,
+              event_date date, is_private boolean, kind text, method text, amount_cents integer, state text,
+              was_amount_cents integer, was_method text, moved_to date, moved_from date, changed_by_name text,
+              changed_on date, recorded_by_name text, counts boolean, first_recorded_at timestamptz,
+              row_recorded_at timestamptz);
 
   if v_c.id is not null then
-    select * into v_changes from public.finance_closing_changes(v_c.id);
+    select * into v_changes from public.finance_closing_changes_from(v_c.id, v_all);
     v_closing := jsonb_build_object(
       'id', v_c.id, 'kind', v_c.kind, 'by_name', v_c.recorded_by_name, 'at', v_c.recorded_at,
       'cash_counted_cents', v_c.cash_counted_cents, 'checks_counted', v_c.checks_counted,
@@ -1507,8 +1753,8 @@ begin
     return jsonb_build_object('status', 'invalid');
   end if;
 
-  -- the owner (registration / candidate) and the dates of its rows, so the
-  -- chain is built from all of them
+  -- the owner (registration / candidate); its chains are built from all
+  -- its rows (3a with p_owner), whatever their dates
   if p_source = 'color_belt' then
     select p.registration_id into v_owner from public.testing_payments p where p.id = p_payment_id;
     select min(p.paid_on), max(p.paid_on) into v_from, v_to
@@ -1522,12 +1768,12 @@ begin
     return jsonb_build_object('status', 'not_found');
   end if;
 
-  if not exists (select 1 from public.finance_money_rows(null, v_from, v_to) m
+  if not exists (select 1 from public.finance_money_rows_core(null, null, null, p_source, v_owner) m
                   where m.source = p_source and m.payment_id = p_payment_id) then
     return jsonb_build_object('status', 'not_found');
   end if;
   if public.is_admin() is not true
-     and not exists (select 1 from public.finance_money_rows(null, v_from, v_to) m
+     and not exists (select 1 from public.finance_money_rows_core(null, null, null, p_source, v_owner) m
                       where m.source = p_source and m.payment_id = p_payment_id and m.day = v_today) then
     return jsonb_build_object('status', 'not_allowed');
   end if;
@@ -1535,7 +1781,7 @@ begin
   -- the item shown: the counting one (live chain), else the first day's
   -- (undone chain: its row is the chain's first row)
   select m.* into v_item
-    from public.finance_money_rows(null, v_from, v_to) m
+    from public.finance_money_rows_core(null, null, null, p_source, v_owner) m
    where m.source = p_source and m.payment_id = p_payment_id
    order by m.counts desc, (m.row_id = m.payment_id) desc, m.day
    limit 1;
@@ -1548,13 +1794,13 @@ begin
                                                  when c.kind = 'refund' then 'refunded'
                                                  else 'recorded' end,
                                     'amount_cents', c.amount_cents, 'method', c.method, 'paid_on', c.paid_on) as line
-            from public.finance_chain_steps(v_from, v_to) c
+            from public.finance_chain_steps_core(null, null, p_source, v_owner) c
            where c.source = p_source and c.chain_id = p_payment_id
           union all
           select c.undo_at, 1000,
                  jsonb_build_object('at', c.undo_at, 'by_name', c.undo_by_name, 'what', 'undone',
                                     'amount_cents', -c.undo_amount_cents, 'method', c.undo_method, 'paid_on', c.undo_on)
-            from public.finance_chain_steps(v_from, v_to) c
+            from public.finance_chain_steps_core(null, null, p_source, v_owner) c
            where c.source = p_source and c.chain_id = p_payment_id
              and c.step = c.last_step and c.end_state = 'undone') as h;
 

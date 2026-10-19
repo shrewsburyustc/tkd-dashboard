@@ -1082,7 +1082,7 @@ Tested in PGlite on every run (`run.mjs` step 13g, both steps exactly as written
 
 ### 15c. Run the tests (you, in the SQL Editor)
 
-1. Open `supabase/tests/0011_tests.sql`, replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>` (**Authentication → Users**), and **add `set statement_timeout = '10min';` as the first line** (the SQL Editor stops a statement after 2 minutes and the test's main block needs about 3 — found on production 2026-10-19; it was cancelled and rolled back). Paste the whole thing, **Run**, and wait up to a few minutes. Supabase may also offer “Run and enable RLS” for the test's temporary table `t_answers`: choose **Run without RLS** (it exists only inside this session and is rolled back). Supabase may warn about destructive operations (the test removes its own test students and events and checks some removals are refused). Everything is rolled back. Confirm.
+1. Open `supabase/tests/0011_tests.sql`, replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>` (**Authentication → Users**), paste the whole file, **Run**. Since the speed fix (15e) it finishes in seconds; **only if 15e is not applied yet**, add `set statement_timeout = '10min';` as the first line (the first version of 0011 made the test run for over 10 minutes on production on 2026-10-19; it was cancelled and rolled back). Supabase may also offer “Run and enable RLS” for the test's temporary table `t_answers`: choose **Run without RLS** (it exists only inside this session and is rolled back). Supabase may warn about destructive operations (the test removes its own test students and events and checks some removals are refused). Everything is rolled back. Confirm.
 2. Expected: one row, **ALL 0011 TESTS PASSED**. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved. Run `rollback;` once on its own, then tell Claude.
 3. The test makes its own `zz fin …` classes, events, students and payments on days in 2020–2023 (no real data there; Finance refuses days before 2020-01-01), so it works before **and** after real payments exist. To try Close the day as the desk it adds a test payment **today** in Worcester (and, if today's Worcester drawer is already closed for real, reopens it inside the test) — all rolled back.
 4. Then run `0010_tests.sql`, `0006_tests.sql`, `0005_tests.sql`, `0004_tests.sql`, `0003_tests.sql`, `0002_tests.sql` and `verify_pin_tests.sql` again — 0011 must not have broken them.
@@ -1090,6 +1090,16 @@ Tested in PGlite on every run (`run.mjs` step 13g, both steps exactly as written
 ### 15d. After applying
 
 An admin sets the reminder times in **Finance → Settings** (they start Off; plan Q3).
+
+### 15e. Speed fix: apply the NEW 0011 over the first one (you, in the SQL Editor; Jeffrey's OK)
+
+**Why:** the first version of 0011 (pasted 2026-10-19) built the payment "chains" with one big query that compared every payment with every other. On long date ranges (a year's export, the test file) it took minutes — `0011_tests.sql` was cancelled on production after 10 minutes. The new version builds the chains owner by owner and adds two date indexes on the payment tables. Measured in PGlite on ~11,000 payment rows (5 years, both schools): every Finance function answers in under 50 ms (the year export took over 20 minutes before); `0011_tests.sql` takes about 1 second.
+
+0. **Paste it outside desk hours** (no one recording a payment): building the two new indexes briefly holds back payment writes on `testing_payments` and `star_payments` until the paste finishes (seconds; an empty or small table takes well under a second). A payment saved at that moment just waits, it isn't lost.
+1. Copy **the whole file** `supabase/migrations/0011_finance.sql` (the new version), **SQL Editor → New query**, paste, **Run**, confirm the destructive-operations warning (the words are in `drop … if exists` lines; the only thing removed is the old internal function `finance_chain_steps(date, date)`, which nothing calls).
+2. **What it changes:** functions only (replaced), two new indexes (`finance_testing_payments_paid_on_idx`, `finance_star_payments_paid_on_idx`), one old internal function removed. **What it keeps:** every table and row — the settings row, the 14 reminder times, closings, exports — and every right. Tested in `run.mjs` step 14b: the exact production copy of the first version is applied, the settings are changed like an admin would, then the new file is pasted over it: the settings and times are unchanged and all tests pass.
+3. Claude re-runs `0011_fingerprints.sql` through the connection: the lines must match the new PGlite run (95 rows: 83 as before + 12 index rows — the two new `paid_on` indexes and the finance tables' own keys). The 0003–0006 and 0010 fingerprints stay unchanged.
+4. Run `0011_tests.sql` (15c) — no timeout line needed.
 
 **Rollback:** Finance only reads payments, so turning it off is a code rollback (Cloudflare Pages → Deployments → **Rollback**). The 0011 tables can stay; nothing else depends on them.
 

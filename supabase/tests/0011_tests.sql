@@ -345,11 +345,12 @@ declare
     'finance_export_preview'];
   v_helper_fns text[] := array['finance_reminder_time_is_valid', 'finance_date_ok', 'finance_figures_from',
     'finance_items_json', 'finance_closing_changes_from', 'finance_append_only', 'finance_keep_rows',
-    'finance_day_closings_guard', 'finance_chain_steps', 'finance_money_rows', 'finance_figures',
+    'finance_day_closings_guard', 'finance_chain_steps_core', 'finance_chain_items', 'finance_money_rows_core',
+    'finance_money_rows', 'finance_figures',
     'finance_active_close', 'finance_closing_is_mine', 'finance_compare', 'finance_results',
     'finance_closing_changes', 'finance_home_at'];
   -- the only two helpers allowed to READ login ids (they never return one)
-  v_login_readers text[] := array['finance_chain_steps', 'finance_closing_is_mine'];
+  v_login_readers text[] := array['finance_chain_steps_core', 'finance_closing_is_mine'];
   v_tables text[] := array['finance_day_closings', 'finance_day_closing_items', 'finance_settings',
                            'finance_reminder_times', 'finance_exports'];
 begin
@@ -1666,6 +1667,12 @@ begin
       raise exception 'TEST FAILED: F11 % must be owned by the tables'' owner', v_fn.proname;
     end if;
   end loop;
+  -- the two date indexes on the payment tables (speed, 0011 section 3)
+  perform pg_temp.t_eq('F11 the paid_on indexes', (select string_agg(i.indexname || ' on ' || i.tablename || ': '
+      || regexp_replace(i.indexdef, '^.* USING ', ''), ', ' order by i.indexname collate "C")
+      from pg_indexes i where i.schemaname = 'public' and i.indexname like 'finance\_%\_paid\_on\_idx'),
+    'finance_star_payments_paid_on_idx on star_payments: btree (paid_on), '
+    || 'finance_testing_payments_paid_on_idx on testing_payments: btree (paid_on)');
   -- the seed
   perform pg_temp.t_eq('F11 one settings row', (select count(*)::text from public.finance_settings), '1');
   perform pg_temp.t_eq('F11 14 reminder times', (select count(*)::text from public.finance_reminder_times), '14');
