@@ -44,7 +44,7 @@ Both tables are append-only. Corrections are `reversal` rows. Facts the report r
 
 ## 2. Database — migration `0011_finance.sql`
 
-(0005 Color Belt phase 2, 0006 Star, 0007–0010 Schedule / Calendar / Forms / Prospects. **Both** the Prospects branch and Color Belt phase 3 currently use **0010** — flagged for the Main session. Finance takes **0011**; re-check before building.)
+(0005 Color Belt phase 2, 0006 Star, 0007–0010 Schedule / Calendar / Forms / Prospects. **0010 is on `main`** (Color Belt phase 3); the Prospects branch's own 0010 must be renumbered by the Main session. Finance takes **0011**; re-check before building.)
 
 Same rules as 0003 / 0005 (handoff §6): RLS on every table; `revoke all … from public, anon, authenticated, service_role`; **no table grants to the app at all** — every read and write goes through `security definer` functions (`set search_path = ''`, fully qualified names, `has_data_access()` first, `{status: …}` jsonb); every change logged in `change_log`; re-run safe; nothing to `anon`.
 
@@ -88,7 +88,7 @@ Writes:
 ---
 
 ## 5. Order and checkpoints (Jeffrey's OK where marked)
-0. **Merge `main` into `finance`** (main now has 0006 and rulebook v0.175+). The rulebook will conflict where both added 10b rows and changelog lines: keep both; Finance's own numbers stay as they are until the Main session merges Finance (then renumbered per CLAUDE.md). I explain the conflict before resolving. **Needs Jeffrey's OK.**
+0. ~~**Merge `main` into `finance`**~~ **done 2026-10-18 (8a5ada5)** (main now has 0006 and rulebook v0.175+). The rulebook will conflict where both added 10b rows and changelog lines: keep both; Finance's own numbers stay as they are until the Main session merges Finance (then renumbered per CLAUDE.md). I explain the conflict before resolving. **Needs Jeffrey's OK.**
 1. **CP0 — this plan + contract OK**, and the §6 questions answered one at a time.
 2. Build by separate builders, no shared files between them: **A** database (0011 + tests + PGlite) · **B** data layer + mock · **C** screens. Then a **security review** (A + B) and a **design review** (C); fix; re-review.
 3. **CP1 — preview walkthrough** by Jeffrey.
