@@ -1056,88 +1056,122 @@ Tested in PGlite on every run (`run.mjs` step 13g, both steps exactly as written
 
 ---
 
-## 15. Migration 0014: Color Belt private testing
+## 15. Migration 0014: Color Belt private testing (the Private testing tab)
 
 **What it does** (`supabase/migrations/0014_testing_private.sql`, contract `docs/Dashboard Docs/Build contracts/CONTRACT-0014.md` §2):
-- **Private testing:** a student who can't make the testing day can test **privately** — on their own day and time, at the rank's private price — and stays in the event. Two new columns on `testing_registrations`: `private_date` and `private_time` (both empty = tests on the testing day). The day: from today up to a year after the testing day, before, on or after the testing day. The time: 6:00 AM to 10:00 PM in 5-minute steps (the same list as Add event).
-- **Three staff functions** (the only way to set them): `testing_set_private` (⋯ → Set private testing, or Change private day or time), `testing_clear_private` (⋯ → Back to the testing day; **after the testing day only an admin**: after the testing day Set private on its own still clears a testing-day No show — the agreed rule, rulebook v0.228, and logged — but staff can't then send that student back to the testing day ungraded) and `testing_add_private_student` (Add student with **Tests privately** ticked). Setting a student private who was marked **No show** on the testing day clears that No show (and its note), logged; a Pass, Not passed or a note blocks it (`has_result`). A private student with a result can't change day or go back (`graded`) — except a private No show, which can get a new day.
-- **Money:** one internal helper, `testing_amount_due`, decides what **Mark paid** records: the private price for a private student, or **just the difference** a paid private student still owes (a top-up: "Paid $65 · $20 more to collect"). Nothing due → `already_paid`, and nothing is inserted (this also covers a $0 price, which used to answer `invalid`). Regular students are unchanged: never re-priced after paying.
-- **Nine functions replaced** (same names and arguments, so the live phase 3 screens keep working until phase 4 is deployed): grading (result and note) counts from the student's **own day** (the private day when private); Edit details re-prices a private student whose belt changes, and its "graded + day over" lock counts from the own day; "keep one" and the desk's Undo are locked after the **private** day too; an event's date can move when only private students have results; the signature clean-up waits 90 days after the **later** of the testing day and the private day; "Change how they'll pay" stays allowed while a top-up is owed.
-- **Same security rules as 0005 / 0010:** the app (signed-in staff) may **read** the two columns; nothing for `anon`, the secret key or the family form's login; the two helpers can't be called by anyone in the app; every change is in `change_log` (new actions `set_private`, `change_private`, `clear_private`; reused `add_student`, `clear_result`, `mark_paid`). The `testing_roster` view is **unchanged on purpose** (changing it would break re-running 0005 and the 0010 removal); the app reads the two columns from `testing_registrations`.
+- **Private testing is its own record, not part of any event** (rulebook v0.401). Three new tables: `testing_private` (one row per private testing: school, student, a **copy** of their class, belt, what they test for and the private price, paying by, day, time, active / cancelled), `testing_private_payments` (append-only, like event payments) and `testing_private_results` (Pass / Not passed / No show and a note, like the Grading tab). Plus a read view `testing_private_list` (the row + its payment state + what is still owed).
+- **The rules, in the database:** the day from today up to a year ahead, the time 6:00 AM–10:00 PM in 5-minute steps; the private price is copied from Classes and ranks (never typed); **Mark paid** records what is owed (the full price, or just the difference); grading opens on the private day, after it only an admin; Change day or time is refused after Pass / Not passed and clears a No show (logged); Cancel keeps the payments; Restore (admins) only while the day is still ahead; Delete permanently (admins) removes it with its payments and result.
+- **Move to private testing** (from an event roster's ⋯, all staff, any time — v0.404): the student leaves the event (withdrawn) and becomes a private testing; **the money moves with them** — for every live event payment an event reversal and a private payment, both dated on the **original** day (a transfer, not a refund). A testing-day No show is cleared (logged); Pass / Not passed refuse. Undo (only the mover, within 10 seconds) puts everything back — except when the move cleared a No show.
+- **One live function replaced:** `testing_restore_student` (0010's version + one check): a moved registration can't be restored onto the event (new status `moved`). Nothing else that is live changes — no live table, view, trigger or other function.
+- **Same security rules as 0005 / 0010:** RLS with `has_data_access()`, read rights for the app on every column except the login ids, no direct writes for anyone in the app, nothing for `anon`, the secret key or the family form's login; every change is in `change_log` (actions `private_add`, `private_update`, `private_change_day`, `private_change_paying_by`, `private_mark_paid`, `private_undo_payment`, `private_edit_payment`, `private_cancel`, `private_restore`, `private_delete`, `private_set_result`, `private_set_result_note`, `move_to_private`, `undo_move_to_private`, `clear_result`). Private testings are logged in `change_log` like all testing data (v0.400's `family_history` is for Prospects only).
 
-**The order** (build plan §5): **CP2** database (15a–15c, Jeffrey's OK) → **CP3** real check from the local app (15d) → **CP4** deploy (Jeffrey's OK). The live site keeps working between CP2 and CP4: until someone sets a private day (only the new screens can), every replaced function behaves exactly as before — one exception: Mark paid on a rank priced $0 now answers "already paid" instead of "invalid".
+**The order** (build plan §5): **CP2** database (15a–15c, Jeffrey's OK) → **CP3** real check from the local app (15d) → **CP4** deploy (Jeffrey's OK). The live site keeps working between CP2 and CP4: it never reads the new tables, and the replaced Restore behaves as before for every registration that wasn't moved (none can be until phase 4 is deployed).
 
 ### 15a. Apply 0014 (you, in the SQL Editor)
 
 1. Copy **the whole file** `supabase/migrations/0014_testing_private.sql`.
 2. **SQL Editor → New query**, paste, **Run**.
-3. Supabase will warn about **destructive operations**. That's expected: the words are inside functions that run later (setting a private day on a No show removes that result; a belt change clears a result) and in `drop constraint if exists` lines that make re-running safe. **Nothing is removed now.** Confirm.
+3. Supabase will warn about **destructive operations**. That's expected: the words are inside rules (`on delete cascade`: removing a private testing removes its payments and result), inside functions that run later (Delete permanently, clearing a No show, Undo move) and in `drop … if exists` lines that make re-running safe. **Nothing is removed now.** Confirm.
 4. "Success. No rows returned." It's one transaction: on any error nothing is kept. Copy the error to Claude.
 
 **Running it again is safe** (tested: a second run changes no row and no fingerprint). **Never re-run 0005 or 0010 on its own after this** — see 15e.
 
 ### 15b. Read-only checks (Claude runs these through the connection)
 
-1. **Fingerprints:** `supabase/tests/0014_fingerprints.sql`. Every line must match what `supabase/tests/pglite/run.mjs` printed for the tested copy: 18 rows — the 14 functions (2 helpers, 3 new, 9 replaced: code, settings, owner, who may call them), the 2 columns (type, nullable, rights) and the 2 rules.
-2. `0005_fingerprints.sql`: **only** these lines differ from before — expected: `testing_mark_paid`, `testing_change_paying_by`, `testing_purge_old_signatures`, `testing_update_student`, `testing_resolve_duplicate`, `testing_restore_student`, `testing_update_event`, and the `testing_registrations` table line (the read rights on the two new columns). `0010_fingerprints.sql`: **only** `testing_set_result`, `testing_set_result_note`, `testing_update_student`, `testing_resolve_duplicate`, `testing_restore_student` and `testing_update_event` differ — expected. `0004_fingerprints.sql` and `0006_fingerprints.sql`: unchanged. `0003_fingerprints.sql`: identical except the rows of the 5 new and the 9 replaced `testing_*` functions — expected (0003's file lists every `testing_*` function).
-3. **Security advisor:** the only new expected notice is "security definer function executable by authenticated" for `testing_set_private`, `testing_clear_private` and `testing_add_private_student` (each checks access itself, then its rules). Anything else (for example a function without a fixed `search_path`) is a real problem.
+1. **Fingerprints:** `supabase/tests/0014_fingerprints.sql`. Every line must match what `supabase/tests/pglite/run.mjs` printed for the tested copy: the 24 functions (4 trigger functions, 5 helpers, 14 staff functions and the replaced `testing_restore_student`: code, settings, owner, who may call them), the 3 tables (RLS, rights per column, read rules), the view, the 9 triggers and every rule.
+2. `0005_fingerprints.sql` and `0010_fingerprints.sql`: **only** the `testing_restore_student` line differs from before — expected. `0004_fingerprints.sql` and `0006_fingerprints.sql`: unchanged. `0003_fingerprints.sql`: identical except the rows of the new `testing_*` functions and `testing_restore_student` — expected (0003's file lists every `testing_*` function).
+3. **Security advisor:** the only new expected notice is "security definer function executable by authenticated" for the 14 new staff functions (each checks access itself, then its rules). Anything else about the three new tables or the view (for example RLS off, or a function without a fixed `search_path`) is a real problem.
 
 ### 15c. Run the tests (you, in the SQL Editor)
 
-1. Open `supabase/tests/0014_tests.sql`, replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>` (**Authentication → Users**), paste the whole file, **Run**. Supabase may warn about destructive operations (the test removes its own test rows and checks some changes are refused). Everything is rolled back. Confirm.
+1. Open `supabase/tests/0014_tests.sql`, replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>` (**Authentication → Users**), paste the whole file, **Run**. Supabase may warn about destructive operations (the test removes its own test rows, switches one trigger off for a moment to backdate a time, and checks some changes are refused). Everything is rolled back. Confirm.
 2. Expected: one row, **ALL 0014 TESTS PASSED**. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved. Run `rollback;` once on its own, then tell Claude.
-3. Then run the **updated** `0005_tests.sql` (the copy that came with 0014: its C3 list now includes the two new columns — the older copy fails C3 once 0014 is applied), then `0010_tests.sql`, `0006_tests.sql`, `0004_tests.sql`, `0003_tests.sql`, `0002_tests.sql` and `verify_pin_tests.sql` — 0014 must not have broken them.
-4. The test makes its own `zz test …` classes and events (dated in two days, today, yesterday and 100 days ago), so it works before **and** after real events exist.
+3. Then run `0010_tests.sql`, `0005_tests.sql`, `0006_tests.sql`, `0004_tests.sql`, `0003_tests.sql`, `0002_tests.sql` and `verify_pin_tests.sql` again — 0014 must not have broken them.
+4. The test makes its own `zz test …` classes, events and private testings, so it works before **and** after real data exists.
 
 ### 15d. CP3 — the real check (you, with the local app on the real database; Claude watches)
 
 Run `Start dashboard.bat`, sign in as the admin.
-1. Create a **TEST** event dated a few days from now (any school, one or two classes) and leave its registration **Closed** (review L13: until CP4 the live site still lists every student of an event on its phase 3 Grading tab and printed sheet, so the TEST event must stay out of families' sight).
-2. Add one student the normal way and **Mark paid** (the regular price). Then **⋯ → Set private testing**: today, a time later today. The row shows the purple Private line and the amber "Paid $… · $… more to collect"; **Mark paid** records just the difference (the top-up).
-3. **Add student** with **Tests privately** ticked (today, another time).
-4. **⋯ → Grade private testing** on one of them: record a result and a note on their private page (the private day is today, so grading is open); **Print** (print preview is enough).
-5. **Delete the TEST event** (Events → ⋯ → Delete event).
-6. Claude checks through the connection (read-only): the history has the `set_private`, `add_student` (with the private day), `mark_paid` and `set_result` rows with the right names, the removals under `delete_event`, and nothing is left of the TEST event.
+1. On the **Private testing** tab: **Add private testing** for a TEST student, today, a time later today. **Mark paid** (the private price).
+2. Create a **TEST** event and leave its registration **Closed** (so families never see it). Add one student, **Mark paid** (the regular price). Then **⋯ → Move to private testing** (today, another time): the student shows as Removed on the event ("Moved to private testing"), and on the Private testing tab with "Paid $… · $… more to collect"; **Mark paid** records just the difference (the top-up).
+3. Open the first private testing's grading page: record a result and a note (the private day is today, so grading is open); **Print** (print preview is enough).
+4. **Cancel** the moved one, then **Delete permanently** both private testings (admin), and delete the TEST event.
+5. Claude checks through the connection (read-only): the history has the `private_add`, `move_to_private`, `private_mark_paid`, `private_set_result`, `private_cancel` and `private_delete` rows with the right names, the event money of the moved student nets 0, and nothing is left of the TEST data.
 
 ### 15e. Undo and re-run warnings (only with Jeffrey's OK)
 
-**Re-running 0005 after 0014** → re-run **0010**, then **0014**, straight after, in that order. Until then the Testing pages fail: 0005 removes the read rights on the private columns, and 0014 doesn't replace 0005's `testing_add_student`, which only 0010 puts back. (And if the family-form off switch of 12i is in force, repeat 12i step 1 after re-running 0005.) **Re-running 0010 after 0014** → re-run **0014** straight after (0010 puts back the six function versions without the private-day rules).
+**Re-running 0005 after 0014** → re-run **0010**, then **0014**, straight after. **Re-running 0010 after 0014** → re-run **0014** straight after. (0005 and 0010 put back a `testing_restore_student` that ignores moves, so a moved student could be restored onto the event while their private testing exists. If the family-form off switch of 12i is in force, repeat 12i step 1 after re-running 0005.)
 
-**Rollback without touching data:** put the previous site version back (Cloudflare Pages → Deployments → **Rollback**). 0014 can stay: the columns go unused, and until a private day is set the replaced functions behave as before (Mark paid on a $0 price answers "already paid").
+**Rollback without touching data:** put the previous site version back (Cloudflare Pages → Deployments → **Rollback**). 0014 can stay: the older screens never read the new tables.
 
-**Removing 0014 completely** (only if Jeffrey decides so). **0014 is removed first, then (if wanted) 0010 (14e)** — never the other way round. First put the app back to a version **without private testing**. Then three steps, **in this order**:
+**Removing 0014 completely** (only if Jeffrey decides so, and only **before real private testings exist**: it deletes every private testing **and the money moved into it**). **0014 is removed first, then (if wanted) 0010 (14e)** — never the other way round. Three steps, **in this order**:
 
-1. **Re-run the whole 0005 file** (12c). That puts back 0005's `testing_mark_paid`, `testing_change_paying_by` and `testing_purge_old_signatures`. (Repeat 12i step 1 afterwards if the family-form off switch is in force.)
-2. **Re-run the whole 0010 file** (14a) straight after. That puts back 0010's six versions (grading, Edit details, keep one, Undo, Add student, Edit event).
-3. Run this in the SQL Editor (one transaction). **This empties every private day and time and removes the two columns.** Each cleared private day is first logged in `change_log` (action `undo_0014`), and the history keeps all its earlier rows too. Supabase's destructive-operations warning is real this time.
+1. Put the app back to a version **without the Private testing tab**.
+2. **Re-run the whole 0010 file** (14a). That puts back 0010's `testing_restore_student` (without the `moved` check).
+3. Run this in the SQL Editor (one transaction). **This deletes every private testing with its payments and result.** Each removed row is first logged in `change_log` (action `undo_0014`), and the history keeps all its earlier rows too. Supabase's destructive-operations warning is real this time. It first checks that step 2 was done (if `testing_restore_student` still mentions private testings, it stops with a message and removes nothing). (The two lock helpers are removed before the tables because they return the tables' row types.)
 
 ```sql
+-- Undo migration 0014 (step 3; run AFTER re-running 0010). change_log is KEPT.
 begin;
+
+-- safety check: stop here if step 2 (re-running 0010) wasn't done first
+do $$
+begin
+  if pg_get_functiondef('public.testing_restore_student(uuid,integer)'::regprocedure) like '%testing_private%' then
+    raise exception 'Do step 2 first: re-run the whole 0010 file, then run this block again. Nothing was removed.';
+  end if;
+end
+$$;
+
+-- remove the private testings row by row first (their payments and
+-- results go with them), so every removal is in the history
 select set_config('tkd.action', 'undo_0014', true);
 select set_config('tkd.batch_id', gen_random_uuid()::text, true);
-update public.testing_registrations set private_date = null, private_time = null where private_date is not null;
+delete from public.testing_private;
 select set_config('tkd.action', '', true);
 select set_config('tkd.batch_id', '', true);
-alter table public.testing_registrations
-  drop constraint if exists testing_registrations_private_pair_check,
-  drop constraint if exists testing_registrations_private_time_check;
-drop function if exists public.testing_set_private(uuid, integer, date, time);
-drop function if exists public.testing_clear_private(uuid, integer);
-drop function if exists public.testing_add_private_student(uuid, text, text, uuid, boolean, text, date, time);
-drop function if exists public.testing_amount_due(uuid);
+
+-- the view, the two helpers that return the tables' row types, then the
+-- tables (their triggers, rules and read rules go with them)
+drop view if exists public.testing_private_list;
+drop function if exists public.testing_private_lock(uuid);
+drop function if exists public.testing_private_lock_payment(uuid);
+drop table if exists public.testing_private_results;
+drop table if exists public.testing_private_payments;
+drop table if exists public.testing_private;
+
+-- every other 0014 function
+drop function if exists public.testing_private_add(text, text, text, uuid, boolean, text, date, time);
+drop function if exists public.testing_private_update(uuid, integer, text, text, uuid);
+drop function if exists public.testing_private_change_day(uuid, integer, date, time);
+drop function if exists public.testing_private_change_paying_by(uuid, integer, text);
+drop function if exists public.testing_private_mark_paid(uuid, integer);
+drop function if exists public.testing_private_undo_payment(uuid);
+drop function if exists public.testing_private_edit_payment(uuid, text, integer, date);
+drop function if exists public.testing_private_cancel(uuid, integer);
+drop function if exists public.testing_private_restore(uuid, integer);
+drop function if exists public.testing_private_delete(uuid, integer, uuid[]);
+drop function if exists public.testing_private_set_result(uuid, text);
+drop function if exists public.testing_private_set_result_note(uuid, text);
+drop function if exists public.testing_move_to_private(uuid, integer, date, time);
+drop function if exists public.testing_private_undo_move(uuid, integer);
+drop function if exists public.testing_private_rank_copy(text, uuid);
+drop function if exists public.testing_private_amount_due(uuid);
 drop function if exists public.testing_private_time_is_valid(time);
-alter table public.testing_registrations drop column if exists private_date, drop column if exists private_time;
+drop function if exists public.testing_private_log();
+drop function if exists public.testing_private_payments_guard();
+drop function if exists public.testing_private_results_before_write();
+drop function if exists public.testing_private_before_write();
+
 commit;
 ```
 
-(`change_log` keeps every row; each cleared private day gets one `undo_0014` row.) Afterwards `0010_fingerprints.sql` and `0005_fingerprints.sql` equal a database that never had 0014.
-
-Tested in PGlite on every run (`run.mjs` step 14i, all three steps exactly as written here, then the 0010 removal of 14e on top — the real removal order).
+Afterwards `0005_fingerprints.sql` and `0010_fingerprints.sql` equal a database that never had 0014. Tested in PGlite on every run (`run.mjs` step 14i, steps 2–3 exactly as written here, then the 0010 removal of 14e on top — the real removal order): the tables, the view and every 0014 function are gone, the 0005 / 0010 / 0003 fingerprints equal the ones from before 0014, `change_log` has one `undo_0014` row per removed row, and `0010_tests.sql` / `0005_tests.sql` pass.
 
 **Why:**
-- **Private day on the registration, not a new table:** setting it is an ordinary registration change — it bumps the version (a stale screen reloads) and is logged like every other change.
-- **One money rule in the database:** Mark paid can never charge the wrong amount, whatever the screen shows; the app's copy (`eventRules.amountDue`) is checked against the same examples.
-- **The locks from the private day:** a private day can be before the testing day, so "after the day" has to mean the student's own day, or the desk could change a graded private student after the fact.
+- **Separate tables, not event registrations:** a registration must belong to an event; bending that would have changed live tables, checks and nine live functions. New tables leave everything live untouched except Restore.
+- **The money moves append-only:** the event side gets reversals and the private side new payments, both on the original day, so nothing is ever edited or lost and a daily money report stays right.
+- **Restore refuses a moved registration:** otherwise the student could be on the event and in a private testing at the same time.
 
 ---
 

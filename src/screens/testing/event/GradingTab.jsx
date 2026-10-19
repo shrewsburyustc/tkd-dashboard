@@ -25,9 +25,6 @@
 // The Students tab stays one class at a time; both tabs share the class choice (a group is
 // chosen through its first class).
 // This file only DRAWS; EventPage owns the class choice and the dialogs, useGradingSaves the saves.
-// Phase 4 (contract 0014 §5.2, P6): private students are graded on their own page, so `rows` are
-// the active students who are NOT private — every count, the class switch and the print leave
-// them out, and this tab never mentions private testing.
 import { IconAlertTriangle, IconLock, IconNote, IconPrinter } from '@tabler/icons-react';
 import { placeTip } from '../../../components/IconButton.jsx';
 import { classTimeLabel } from '../../../lib/testing/eventRules.js';
@@ -130,7 +127,7 @@ function GradingRow({ row, shown, rank, readOnlyTags, showNote, buttonsDisabled,
   );
 }
 
-// props: event, classes, rows (ACTIVE, not private roster rows of the whole event, roster order), today,
+// props: event, classes, rows (ACTIVE roster rows of the whole event, roster order), today,
 // isAdmin, layout, classSel (the chosen class id — its testing group shows), onClassSel, grading,
 // onOpenNote(row, opener), onPrint(opener), panelId, tabId
 export default function GradingTab({ event, classes, rows, today, isAdmin, layout, classSel, onClassSel, grading, onOpenNote, onPrint, panelId, tabId }) {

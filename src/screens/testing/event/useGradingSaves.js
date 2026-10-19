@@ -16,11 +16,9 @@
 //   showPageBanner(text)  the event page's amber banner (for the answers that aren't retried)
 //   isReadOnly      true when this person can't change results now (before the day; staff after it)
 //   screenLocked    true while the lock screen shows (no retries then)
-//   isNowPrivate(id) phase 4 (contract 0014 §5.2, review L8): true when that student now tests
-//                   privately (EventPage answers from its full roster). Such a row leaves this
-//                   engine: its unsaved tap is dropped with the banner "… now tests privately …"
-//                   and the OTHER rows' unsaved taps are kept (never dropAll for it). The private
-//                   page's own engine passes a function that always answers false.
+//   saveResult / saveNote   optional (phase 4): the functions that save — eventsApi's setResult /
+//                   setResultNote unless given. The private grading page passes privateApi's
+//                   (called with { registrationId, result } / { registrationId, note }).
 //
 // The "overlay": for every row with a tap that the screen shows instead of the loaded value,
 //   { result, state: 'saving' | 'unsaved' | 'retrying' | 'saved', sentResult, wanted,
@@ -47,7 +45,8 @@ export function useGradingSaves({
   showPageBanner,
   isReadOnly,
   screenLocked,
-  isNowPrivate = () => false,
+  saveResult = setResult,
+  saveNote: saveNoteCall = setResultNote,
 }) {
   // The overlay lives in a ref (so the async answers always see the newest one); `tick` only
   // makes React draw again after a change.
@@ -61,9 +60,9 @@ export function useGradingSaves({
   const reloadTimerRef = useRef(null);
 
   // The newest props, for the async code below.
-  const propsRef = useRef({ roster, classes, reload, onNoAccess, showPageBanner, isNowPrivate });
+  const propsRef = useRef({ roster, classes, reload, onNoAccess, showPageBanner });
   useLayoutEffect(() => {
-    propsRef.current = { roster, classes, reload, onNoAccess, showPageBanner, isNowPrivate };
+    propsRef.current = { roster, classes, reload, onNoAccess, showPageBanner };
   });
 
   // ----- Small helpers -----
@@ -78,13 +77,9 @@ export function useGradingSaves({
   function dropAll() {
     overlayRef.current = {};
   }
-  // The student's name: from the roster, else the name kept with the tap (a row that just left).
   function nameOf(id) {
     const row = propsRef.current.roster.find((r) => r.id === id);
-    return row ? T.studentLabel(row) : (overlayRef.current[id]?.name ?? '');
-  }
-  function inRoster(id) {
-    return propsRef.current.roster.some((r) => r.id === id);
+    return row ? T.studentLabel(row) : '';
   }
   // The polite live region: cleared first, so the same word twice is announced twice.
   const announce = useCallback((text) => {
@@ -110,7 +105,7 @@ export function useGradingSaves({
     setEntry(id, { ...start, inFlight: true, sentResult: value, state: retrying ? 'retrying' : 'saving' });
     redraw();
 
-    const answer = await setResult({ registrationId: id, result: value });
+    const answer = await saveResult({ registrationId: id, result: value });
     const now = overlayRef.current[id];
     if (!now || now.token !== token) return; // dropped meanwhile (finished, row gone …)
     const status = answer?.status ?? 'error';
@@ -152,16 +147,13 @@ export function useGradingSaves({
       return;
     }
     // Answers that are never retried: the screen goes back to the database's own values.
-    // Phase 4 (L8): a row that now tests privately (or left this list) loses only its own tap —
-    // the other rows' unsaved taps stay and keep retrying.
-    if ((status === 'finished' || status === 'not_open') && (p.isNowPrivate(id) || !inRoster(id))) {
-      const name = nameOf(id);
-      const moved = p.isNowPrivate(id);
-      dropEntry(id);
-      p.showPageBanner(moved ? T.movedToPrivate(name) : status === 'finished' ? T.TOO_LATE_RESULTS : T.GRADING_NOT_OPEN);
-    } else if (status === 'finished' || status === 'not_open') {
+    if (status === 'finished' || status === 'not_open') {
       dropAll();
       p.showPageBanner(status === 'finished' ? T.TOO_LATE_RESULTS : T.GRADING_NOT_OPEN);
+    } else if (status === 'cancelled') {
+      // Phase 4: the private testing was cancelled meanwhile (only privateApi answers this).
+      dropEntry(id);
+      p.showPageBanner(T.PRIVATE_IS_CANCELLED);
     } else if (status === 'withdrawn') {
       const name = nameOf(id);
       dropEntry(id);
@@ -183,16 +175,7 @@ export function useGradingSaves({
     if (current) {
       setEntry(row.id, { ...current, result: value, wanted: value, state: current.inFlight ? current.state : 'saving' });
     } else {
-      setEntry(row.id, {
-        result: value,
-        wanted: value,
-        state: 'saving',
-        sentResult: null,
-        answeredAt: null,
-        inFlight: false,
-        token: nextToken++,
-        name: T.studentLabel(row), // kept for the banner if the row leaves this list
-      });
+      setEntry(row.id, { result: value, wanted: value, state: 'saving', sentResult: null, answeredAt: null, inFlight: false, token: nextToken++ });
     }
     redraw();
     send(row.id);
@@ -202,7 +185,7 @@ export function useGradingSaves({
   function retryAll() {
     if (noAccessRef.current) return;
     for (const [id, entry] of Object.entries(overlayRef.current)) {
-      if (entry.state === 'unsaved' && !entry.inFlight && inRoster(id)) send(id, true);
+      if (entry.state === 'unsaved' && !entry.inFlight) send(id, true);
     }
   }
   const retryRef = useRef(retryAll);
@@ -212,10 +195,9 @@ export function useGradingSaves({
 
   // ----- Counting -----
   const entries = overlayRef.current;
-  const rowById = new Map(roster.map((r) => [r.id, r]));
-  // A row that already left this list isn't counted (its entry is dropped just after this draw).
-  const unsavedIds = Object.keys(entries).filter((id) => rowById.has(id) && (entries[id].state === 'unsaved' || entries[id].state === 'retrying'));
+  const unsavedIds = Object.keys(entries).filter((id) => entries[id].state === 'unsaved' || entries[id].state === 'retrying');
   const unsavedCount = unsavedIds.length;
+  const rowById = new Map(roster.map((r) => [r.id, r]));
   const unsavedSet = new Set(unsavedIds);
   // Class ids with unsaved rows, in class switch order.
   const unsavedClassIds = classes.map((c) => c.id).filter((cid) => roster.some((r) => r.eventClassId === cid && unsavedSet.has(r.id)));
@@ -245,7 +227,7 @@ export function useGradingSaves({
 
   // ----- Notes (no queue: the note dialog waits for the answer) -----
   async function saveNote(row, text) {
-    const answer = await setResultNote({ registrationId: row.id, note: text });
+    const answer = await saveNoteCall({ registrationId: row.id, note: text });
     const status = answer?.status ?? 'error';
     if (status === 'ok') {
       notesRef.current = { ...notesRef.current, [row.id]: { note: answer.note ?? null, answeredAt: Date.now() } };
@@ -283,23 +265,15 @@ export function useGradingSaves({
     }
   }, [loadedAt, redraw]);
 
-  // Rows that left the active roster (withdrawn, deleted elsewhere) lose their entry. Phase 4:
-  // a row that left because it now tests privately, with a tap not yet saved, says so in the
-  // page banner (contract 0014 §5.2) — its tap is dropped, never retried here.
+  // Rows that left the active roster (withdrawn, deleted elsewhere) lose their entry.
   const rosterKey = roster.map((r) => r.id).join('|');
   useEffect(() => {
     const ids = new Set(rosterKey.split('|'));
     const gone = Object.keys(overlayRef.current).filter((id) => !ids.has(id));
     if (gone.length === 0) return;
     const next = { ...overlayRef.current };
-    let movedName = null;
-    for (const id of gone) {
-      const entry = next[id];
-      if (entry.state !== 'saved' && propsRef.current.isNowPrivate(id)) movedName = entry.name ?? '';
-      delete next[id];
-    }
+    for (const id of gone) delete next[id];
     overlayRef.current = next;
-    if (movedName !== null) propsRef.current.showPageBanner(T.movedToPrivate(movedName));
     redraw();
   }, [rosterKey, redraw]);
 

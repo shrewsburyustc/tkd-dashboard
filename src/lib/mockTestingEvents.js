@@ -31,27 +31,27 @@
 // restore_student, add_student, update_event — see each one). A store saved before phase 3 has
 // no `results`; it simply gets an empty list (its events and students are kept).
 //
-// Phase 4 (private testing, migration 0014, contract 0014 §2, §4.3) adds two registration keys,
-// private_date ('YYYY-MM-DD' or null) and private_time ('16:00:00' or null) — readable from
-// testing_registrations but NOT from the testing_roster view (unchanged on purpose) — the three
-// functions testing_set_private, testing_clear_private and testing_add_private_student, and
-// the changes of 0014 §2.5 in nine existing functions: Mark paid records what is DUE
-// (amountDueOf below = the database's testing_amount_due), Change how they'll pay is allowed
-// while a top-up is owed, grading counts from the student's OWN day (private day, else the
-// testing day), the keep-one / restore locks also count from the private day, Edit event's
-// "has results" ignores private students' results, and the 90-day signature clean-up waits for
-// the later of the two days. A store saved before phase 4 simply reads both keys as null.
+// Phase 4 (the Private testing tab, migration 0014, contract 0014 §2, §4.4) adds three lists —
+// `private` (the table testing_private: one private testing, NOT part of any event), its
+// `private_payments` and its `private_results` — the view testing_private_list, the 14 staff
+// functions testing_private_* and testing_move_to_private (a registration leaves its event and
+// becomes a private testing, its live payments move with it as event reversals + private
+// payments, all in one batch), and one change to a live function: testing_restore_student
+// answers 'moved' for a registration that was moved. Classes and ranks are read LIVE from the
+// same store (`classes`, `ranks`) — a private testing copies its class, rank, belts, testing-for
+// and private price at that moment. A store saved before phase 4 simply gets empty lists.
 // The preview also keeps a small history list `change_log` (the newest 500 rows) for the phase 4
-// writes and Mark paid — the action names and one batch id per call, like the database's
-// change_log — so checks.mjs can test them. The app can't read it (like the real one).
+// writes — the database's action names and one batch id per call — so checks.mjs can test them.
+// The app can't read it (like the real change_log).
 import { normalizeName, nameProblem, nameKey } from './testing/names.js';
 import { RESULTS, normalizeGradingNote, gradingNoteProblem } from './testing/gradingRules.js';
 import { defaultTestingData } from './mockTesting.js';
 import {
   eventState, registrationSwitch, publicStateFor, feeFor, timeToMinutes, isIsoDate, addDays, signatureIsValid,
   noteIsValid, normalizeNote, shortTime, todayInSchoolTime, defaultAutoCloseOn, SCHOOL_TIME_ZONE, PAYING_BY, FORM_PAYING_BY, ACK_VERSION, UNDO_WINDOW_MS, SIGNATURE_KEEP_DAYS, MAX_PAYMENT_CENTS,
-  testingFor, privateTimeIsValid, privateDayLimit,
+  testingFor,
 } from './testing/eventRules.js';
+import { privateTimeIsValid, privateDayLimit } from './testing/privateRules.js';
 
 const LOCATION_CODES = ['worcester', 'shrewsbury'];
 const REFERENCE_START = 3101; // CB-3101 is the first reference number (§1.5)
@@ -205,7 +205,6 @@ export function defaultEventsData({ today = todayInSchoolTime(new Date()) } = {}
       signed_at: fromForm ? at : null, signature_deleted_at: null, ack_version: fromForm ? ACK_VERSION : null,
       registered_at: at, status: 'active', withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null, withdrawn_by_name: null,
       duplicate_state: 'none', duplicate_of: null,
-      private_date: null, private_time: null, // phase 4: tests on the testing day
       ...stamps(at, fromForm ? 'Family form' : 'Staff'),
     };
     if (extra.withdrawn) {
@@ -231,10 +230,124 @@ export function defaultEventsData({ today = todayInSchoolTime(new Date()) } = {}
     }
   });
 
+
+  // ----- Phase 4: the Private testing tab's preview story (the approved mockups P1–P8) -----
+  // Five Worcester private testings, dated around the event's testing day T (Nov 20) and "today",
+  // so Upcoming / Past make sense and nothing is paid or cancelled in the future:
+  //   Liam Park   Group B Blue → High Blue, $95, not paid, T+13 (Thu Dec 3) 5:30 PM
+  //   Noah Kim    Group A Orange → Green, $85, paid yesterday, T+15 (Sat Dec 5) 10:00 AM
+  //   Ava Chen    MOVED from November Children Testing two days ago: paid $65 there (Group A
+  //               Yellow, 7 days ago), private $85 → owes $20, T+11 (Tue Dec 1) 4:00 PM. Her event
+  //               registration (CB-3117) is withdrawn and her $65 transferred exactly as
+  //               testing_move_to_private writes it (an event reversal dated the original day +
+  //               a private payment pointing at the original).
+  //   Emma Ross   Group A Green → High Green, $85 paid, cancelled yesterday (payment kept), T+10
+  //               (Mon Nov 30) 4:30 PM
+  //   Sofia Reyes Group A Yellow → Orange, $85 paid, three days ago at 4:00 PM, Passed (Past)
+  const school = 'worcester';
+  const liveRank = (className, rankName) => {
+    const cls = base.classes.find((c) => c.location_code === school && c.name === className);
+    return base.ranks.find((r) => r.class_id === cls.id && r.name === rankName);
+  };
+  // The copy testing_private_add makes from Classes and ranks (class, rank, belt, testing-for, price).
+  const liveCopy = (className, rankName) => {
+    const rank = liveRank(className, rankName);
+    const cls = base.classes.find((c) => c.id === rank.class_id);
+    const inClass = base.ranks.filter((r) => r.class_id === cls.id).sort((a, b) => a.position - b.position);
+    const target = inClass[inClass.indexOf(rank) + 1]
+      ?? (cls.final_award_none ? null : base.ranks.find((r) => r.id === cls.final_award_rank_id) ?? null);
+    return {
+      class_id: cls.id, class_name: cls.name, rank_id: rank.id, rank_name: rank.name, ...beltOfRank(rank),
+      to_kind: target ? 'rank' : 'none', to_name: target ? target.name : null,
+      ...Object.fromEntries(BELT_KEYS.map((k) => [`to_${k}`, target ? target[k] : null])),
+      private_cents: rank.private_cents,
+    };
+  };
+  const privateRow = (n, first, last, copy, payingBy, privateDate, privateTime, createdAt, extra = {}) => ({
+    id: fixedId('f0', n), location_code: school, first_name: first, last_name: last, ...copy, paying_by: payingBy,
+    stripes_confirmed: true, private_date: privateDate, private_time: privateTime, status: 'active',
+    cancelled_at: null, cancelled_by_name: null, cancelled_by: null,
+    moved_from_event_id: null, moved_from_registration_id: null, moved_from_event_name: null,
+    moved_cleared_no_show: false, moved_registration_version: null,
+    version: 1, created_at: createdAt, updated_at: createdAt, created_by: DESK_USER_ID, updated_by: DESK_USER_ID,
+    created_by_name: 'Staff', updated_by_name: 'Staff', ...extra,
+  });
+  const privatePayment = (n, row, amount, method, daysBack, at, extra = {}) => ({
+    id: fixedId('f1', n), private_id: row.id, kind: 'payment', amount_cents: amount, method, paid_on: addDays(today, -daysBack),
+    recorded_at: daysAgo([daysBack, at]), recorded_by: DESK_USER_ID, recorded_by_name: 'Staff', reverses_payment_id: null,
+    moved_from_payment_id: null, ...extra,
+  });
+  const T = testingDate;
+  const privateList = [];
+  const privatePayments = [];
+  const privateResults = [];
+  const bump = (row, at) => Object.assign(row, { version: row.version + 1, updated_at: at }); // Mark paid / Cancel
+
+  const liam = privateRow(1, 'Liam', 'Park', liveCopy('Group B', 'Blue'), 'cash', addDays(T, 13), '17:30:00', daysAgo([3, '17:05']));
+  const noah = privateRow(2, 'Noah', 'Kim', liveCopy('Group A', 'Orange'), 'check', addDays(T, 15), '10:00:00', daysAgo([4, '18:10']));
+  privatePayments.push(privatePayment(1, noah, noah.private_cents, 'check', 1, '17:40'));
+  bump(noah, daysAgo([1, '17:40']));
+
+  // Ava: her event registration first (Group A Yellow, paid $65 cash 9 days ago), then the move.
+  const avaRank = eventRanks.find((r) => r.event_class_id === eventClasses.find((c) => c.class_name === 'Group A').id && r.name === 'Yellow');
+  const avaAt = daysAgo([8, '18:20']);
+  const avaReg = {
+    id: fixedId('e3', DEFAULT_STUDENTS.length + 1), event_id: event.id, event_rank_id: avaRank.id, first_name: 'Ava', last_name: 'Chen',
+    paying_by: 'cash', stripes_confirmed: true, source: 'form', reference: `CB-${REFERENCE_START + DEFAULT_STUDENTS.length}`,
+    submission_id: fixedId('e5', DEFAULT_STUDENTS.length + 1), signature: SAMPLE_SIGNATURE, signed_at: avaAt, signature_deleted_at: null,
+    ack_version: ACK_VERSION, registered_at: avaAt, status: 'active', withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null,
+    withdrawn_by_name: null, duplicate_state: 'none', duplicate_of: null, ...stamps(avaAt, 'Family form'),
+  };
+  registrations.push(avaReg);
+  const avaPaidAt = daysAgo([7, '17:15']);
+  const avaEventPayment = {
+    id: fixedId('e4', payments.length + 1), registration_id: avaReg.id, kind: 'payment', amount_cents: avaRank.early_cents, method: 'cash',
+    paid_on: addDays(today, -7), recorded_at: avaPaidAt, recorded_by: DESK_USER_ID, recorded_by_name: 'Staff', reverses_payment_id: null,
+  };
+  payments.push(avaEventPayment);
+  Object.assign(avaReg, { version: 2, updated_at: avaPaidAt, updated_by_name: 'Staff' });
+  // The move (two days ago, by the front desk): reversal → registration withdrawn → private testing → its payment.
+  const movedAt = daysAgo([2, '16:45']);
+  payments.push({
+    id: fixedId('e4', payments.length + 1), registration_id: avaReg.id, kind: 'reversal', amount_cents: -avaEventPayment.amount_cents,
+    method: avaEventPayment.method, paid_on: avaEventPayment.paid_on, recorded_at: movedAt, recorded_by: DESK_USER_ID, recorded_by_name: 'Staff',
+    reverses_payment_id: avaEventPayment.id,
+  });
+  Object.assign(avaReg, {
+    status: 'withdrawn', withdrawn_reason: 'withdrawn', withdrawn_at: movedAt, withdrawn_by: DESK_USER_ID, withdrawn_by_name: 'Staff',
+    version: 3, updated_at: movedAt, updated_by_name: 'Staff',
+  });
+  const avaCopy = {
+    ...liveCopy('Group A', 'Yellow'), // today's private price (v0.404) …
+    // … and the class / rank / belt / testing-for of the EVENT copy (the same values here).
+    class_id: eventClasses.find((c) => c.class_name === 'Group A').class_id, rank_id: avaRank.rank_id, rank_name: avaRank.name, ...beltOfRank(avaRank),
+  };
+  const ava = privateRow(3, 'Ava', 'Chen', avaCopy, 'cash', addDays(T, 11), '16:00:00', movedAt, {
+    moved_from_event_id: event.id, moved_from_registration_id: avaReg.id, moved_from_event_name: event.name,
+    moved_cleared_no_show: false, moved_registration_version: avaReg.version,
+  });
+  privatePayments.push(privatePayment(2, ava, avaEventPayment.amount_cents, 'cash', 7, '17:15', { moved_from_payment_id: avaEventPayment.id })); // the original's recorded_at
+
+  const emma = privateRow(4, 'Emma', 'Ross', liveCopy('Group A', 'Green'), 'cash', addDays(T, 10), '16:30:00', daysAgo([6, '17:00']));
+  privatePayments.push(privatePayment(3, emma, emma.private_cents, 'cash', 5, '17:20'));
+  bump(emma, daysAgo([5, '17:20']));
+  const emmaCancelledAt = daysAgo([1, '18:05']);
+  Object.assign(emma, { status: 'cancelled', cancelled_at: emmaCancelledAt, cancelled_by_name: 'Staff', cancelled_by: DESK_USER_ID });
+  bump(emma, emmaCancelledAt);
+
+  const sofia = privateRow(5, 'Sofia', 'Reyes', liveCopy('Group A', 'Yellow'), 'card', addDays(today, -3), '16:00:00', daysAgo([10, '16:30']));
+  privatePayments.push(privatePayment(4, sofia, sofia.private_cents, 'card', 3, '15:50'));
+  bump(sofia, daysAgo([3, '15:50']));
+  privateResults.push({ private_id: sofia.id, result: 'pass', note: null, updated_at: daysAgo([3, '16:40']), updated_by: DESK_USER_ID, updated_by_name: 'Staff' });
+
+  privateList.push(liam, noah, ava, emma, sofia);
+
   return {
     locations, events: [event], event_classes: eventClasses, event_ranks: eventRanks,
-    registrations, payments, public_attempts: [], next_reference: REFERENCE_START + DEFAULT_STUDENTS.length, next_attempt_id: 1,
+    registrations, payments, public_attempts: [], next_reference: REFERENCE_START + DEFAULT_STUDENTS.length + 1, next_attempt_id: 1,
     results: [], // phase 3: nobody is graded yet
+    // Phase 4: the Private testing tab's preview story (above), and an empty preview history.
+    private: privateList, private_payments: privatePayments, private_results: privateResults, change_log: [],
   };
 }
 
@@ -268,17 +381,31 @@ const ROSTER_COLS = [...REG_COLS, 'signed', 'event_class_id', 'class_id', 'class
   'rank_id', 'rank_name', 'rank_position', ...BELT_KEYS, 'early_cents', 'day_cents', 'sparring_gear',
   'paid', 'paid_cents', 'paid_on', 'paid_method', 'last_payment_id', 'last_payment_recorded_at'];
 
+// Phase 4 (0014 §2.2, §2.4): the private testing tables. Login ids (created_by, updated_by,
+// cancelled_by, recorded_by) are never given to the app.
+const PRIVATE_COLS = ['id', 'location_code', 'first_name', 'last_name', 'class_id', 'class_name', 'rank_id', 'rank_name', ...BELT_KEYS,
+  'to_kind', 'to_name', ...BELT_KEYS.map((k) => `to_${k}`), 'private_cents', 'paying_by', 'stripes_confirmed', 'private_date', 'private_time',
+  'status', 'cancelled_at', 'cancelled_by_name', 'moved_from_event_id', 'moved_from_registration_id', 'moved_from_event_name',
+  'moved_cleared_no_show', 'moved_registration_version', 'version', 'created_at', 'updated_at', 'created_by_name', 'updated_by_name'];
+const PRIVATE_PAYMENT_COLS = ['id', 'private_id', 'kind', 'amount_cents', 'method', 'paid_on', 'recorded_at', 'recorded_by_name', 'reverses_payment_id', 'moved_from_payment_id'];
+const PRIVATE_RESULT_COLS = ['private_id', 'result', 'note', 'updated_at', 'updated_by_name'];
+// The view: every granted column + the payment summary + what is owed (computed inline).
+const PRIVATE_LIST_COLS = [...PRIVATE_COLS, 'paid_cents', 'paid', 'paid_on', 'paid_method', 'last_payment_id', 'last_payment_recorded_at', 'amount_due_cents'];
+
 const GRANTED = {
   locations: ['code', 'name', 'id', 'address_street', 'address_city', 'address_state', 'address_zip', 'version'],
   testing_events: EVENT_COLS,
   testing_event_classes: EVENT_CLASS_COLS,
   testing_event_ranks: EVENT_RANK_COLS,
-  // Phase 4: the private day and time can be read here (0014 §2.2) — not from the roster view.
-  testing_registrations: [...REG_COLS, 'private_date', 'private_time'],
+  testing_registrations: REG_COLS,
   testing_payments: PAYMENT_COLS,
   testing_roster: ROSTER_COLS,
   testing_public_attempts: [], // no client grants at all
   testing_results: RESULT_COLS,
+  testing_private: PRIVATE_COLS,
+  testing_private_payments: PRIVATE_PAYMENT_COLS,
+  testing_private_results: PRIVATE_RESULT_COLS,
+  testing_private_list: PRIVATE_LIST_COLS,
 };
 const HIDDEN = {
   locations: ['updated_at', 'updated_by', 'updated_by_name'],
@@ -290,6 +417,10 @@ const HIDDEN = {
   testing_roster: [],
   testing_public_attempts: ['id', 'client_key', 'event_id', 'at', 'outcome'],
   testing_results: ['updated_by'],
+  testing_private: ['created_by', 'updated_by', 'cancelled_by'],
+  testing_private_payments: ['recorded_by'],
+  testing_private_results: ['updated_by'],
+  testing_private_list: [],
 };
 export const EVENT_TABLES = Object.keys(GRANTED);
 
@@ -314,25 +445,36 @@ const RPC_ARGS = {
   // Phase 3 (0010 §1.5), staff and admins.
   testing_set_result: [ID('p_registration_id'), ['p_result', 'text']],
   testing_set_result_note: [ID('p_registration_id'), ['p_note', 'text']],
-  // Phase 4 (0014 §2.4), staff and admins.
-  testing_set_private: [ID('p_registration_id'), ['p_expected_version', 'int'], ['p_private_date', 'date'], ['p_private_time', 'time']],
-  testing_clear_private: [ID('p_registration_id'), ['p_expected_version', 'int']],
-  testing_add_private_student: [ID('p_event_id'), ['p_first', 'text'], ['p_last', 'text'], ID('p_event_rank_id'), ['p_stripes', 'bool'], ['p_paying_by', 'text'], ['p_private_date', 'date'], ['p_private_time', 'time']],
+  // Phase 4 (0014 §2.5): the Private testing tab.
+  testing_private_add: [['p_location_code', 'text'], ['p_first', 'text'], ['p_last', 'text'], ID('p_rank_id'), ['p_stripes', 'bool'], ['p_paying_by', 'text'], ['p_private_date', 'date'], ['p_private_time', 'time']],
+  testing_private_update: [ID('p_private_id'), ['p_expected_version', 'int'], ['p_first', 'text'], ['p_last', 'text'], ID('p_rank_id')],
+  testing_private_change_day: [ID('p_private_id'), ['p_expected_version', 'int'], ['p_private_date', 'date'], ['p_private_time', 'time']],
+  testing_private_change_paying_by: [ID('p_private_id'), ['p_expected_version', 'int'], ['p_paying_by', 'text']],
+  testing_private_mark_paid: [ID('p_private_id'), ['p_expected_version', 'int']],
+  testing_private_undo_payment: [ID('p_payment_id')],
+  testing_private_edit_payment: [ID('p_payment_id'), ['p_method', 'text'], ['p_amount_cents', 'int'], ['p_paid_on', 'date']],
+  testing_private_cancel: [ID('p_private_id'), ['p_expected_version', 'int']],
+  testing_private_restore: [ID('p_private_id'), ['p_expected_version', 'int']],
+  testing_private_delete: [ID('p_private_id'), ['p_expected_version', 'int'], ['p_expected_payment_ids', 'uuid[]']],
+  testing_private_set_result: [ID('p_private_id'), ['p_result', 'text']],
+  testing_private_set_result_note: [ID('p_private_id'), ['p_note', 'text']],
+  testing_move_to_private: [ID('p_registration_id'), ['p_expected_version', 'int'], ['p_private_date', 'date'], ['p_private_time', 'time']],
+  testing_private_undo_move: [ID('p_private_id'), ['p_expected_version', 'int']],
 };
 // Who may call (§1.8): A = admins only, S = staff and admins. testing_restore_student is not in
 // this list: staff may undo their OWN "keep one" for 10 seconds, so it checks who inside (14o).
 const ADMIN_ONLY = new Set([
   'testing_add_event', 'testing_update_event', 'testing_delete_event', 'testing_edit_payment',
   'testing_withdraw_student', 'testing_delete_student', 'settings_update_school_address',
+  'testing_private_edit_payment', 'testing_private_restore', 'testing_private_delete', // phase 4
 ]);
 export const EVENT_RPC_NAMES = Object.keys(RPC_ARGS);
 // Functions that exist but that a signed-in staff member may NOT call (only testing_registrar, or
 // nobody): the app gets "permission denied", like the real database.
-// (Phase 4: the two internal helpers testing_amount_due and testing_private_time_is_valid are
-// granted to nobody.)
+// (Phase 4: the five internal helpers of 0014 are granted to nobody.)
 export const EVENT_RESTRICTED_RPC_NAMES = [
   'testing_public_event', 'testing_public_register', 'testing_purge_old_signatures', 'testing_event_state',
-  'testing_amount_due', 'testing_private_time_is_valid',
+  'testing_private_time_is_valid', 'testing_private_amount_due', 'testing_private_lock', 'testing_private_lock_payment', 'testing_private_rank_copy',
 ];
 export { ADMIN_ONLY as EVENT_ADMIN_ONLY_RPCS };
 
@@ -465,13 +607,10 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
     // A store saved before phase 3 has no grading results yet: an empty list, NOT "damaged"
     // (so the events and students someone made in preview are kept).
     if (!Array.isArray(store.results)) store.results = [];
-    // Phase 4: registrations saved before it have no private keys — they read as null (tests on
-    // the testing day), NOT as damaged data. The history list starts empty.
-    for (const reg of store.registrations) {
-      if (reg.private_date === undefined) reg.private_date = null;
-      if (reg.private_time === undefined) reg.private_time = null;
+    // Phase 4: a store saved before it has no private testings yet — empty lists, NOT "damaged".
+    for (const key of ['private', 'private_payments', 'private_results', 'change_log']) {
+      if (!Array.isArray(store[key])) store[key] = [];
     }
-    if (!Array.isArray(store.change_log)) store.change_log = [];
     return store;
   }
   const write = (db) => saveStore?.(db);
@@ -521,38 +660,6 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
   const isGradedReg = (db, regId) => resultOf(db, regId) !== null;
   // "After the testing day" for a registration's event (today > testing_date).
   const afterTestingDay = (db, reg) => today() > findEvent(db, reg.event_id).testing_date;
-  // ----- Private testing (phase 4) -----
-  // The student's own day: coalesce(private_date, testing_date).
-  const ownDay = (db, reg) => reg.private_date ?? findEvent(db, reg.event_id).testing_date;
-  // "After the private day" (only for a private student).
-  const afterPrivateDay = (reg) => reg.private_date !== null && today() > reg.private_date;
-  // Phase 4: "has a result" for the private paths = a row with a result (a note alone doesn't count).
-  const hasResultValue = (db, regId) => (resultOf(db, regId)?.result ?? null) !== null;
-  // The preview's copy of testing_amount_due (0014 §2.3), written out step by step like the SQL
-  // (checks.mjs compares it with eventRules.amountDue after every step):
-  //   private      → private_cents − greatest(net, 0)
-  //   net > 0      → 0 (a regular student is never re-priced after paying)
-  //   otherwise    → testing_fee_cents(early, day, today, testing_date)
-  // and never below 0.
-  function amountDueOf(db, reg) {
-    const rank = rankRow(db, reg.event_rank_id);
-    const event = findEvent(db, reg.event_id);
-    const net = sum(paymentsOf(db, reg.id).map((p) => p.amount_cents));
-    let due;
-    if (reg.private_date !== null) due = rank.private_cents - Math.max(net, 0);
-    else if (net > 0) due = 0;
-    else due = today() < event.testing_date ? rank.early_cents : rank.day_cents;
-    return Math.max(due, 0);
-  }
-  // One history row per change (0014's tkd.action + tkd.batch_id). Keeps the newest 500 rows so
-  // the preview store stays small.
-  const LOG_KEEP = 500;
-  function logChange(db, batchId, action, tableName, op, rowId, ctx) {
-    db.change_log.push({ table_name: tableName, op, row_id: rowId, action, batch_id: batchId, actor_name: ctx.actorName, at: stamp() });
-    if (db.change_log.length > LOG_KEEP) db.change_log.splice(0, db.change_log.length - LOG_KEEP);
-  }
-  // The private day / time in an answer: '2026-12-01' and '16:00' (to_char … 'HH24:MI'), or null.
-  const answerTime = (t) => (t === null ? null : t.slice(0, 5));
   // Removes the result rows of registrations that are deleted (the database's ON DELETE CASCADE).
   const dropResultsOf = (db, regIds) => {
     db.results = db.results.filter((r) => !regIds.has(r.registration_id));
@@ -565,10 +672,9 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
     if (!reg) return st('not_found');
     if (reg.status === 'withdrawn') return st('withdrawn');
     const t = today();
-    // Phase 4: counted from the student's OWN day (the private day when private).
-    const day = ownDay(db, reg);
-    if (t < day) return st('not_open'); // admins too
-    if (t > day && !ctx.isAdmin) return st('finished');
+    const testingDate = findEvent(db, reg.event_id).testing_date;
+    if (t < testingDate) return st('not_open'); // admins too
+    if (t > testingDate && !ctx.isAdmin) return st('finished');
     return null;
   }
 
@@ -601,7 +707,8 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
     const rows = paymentsOf(db, regId);
     const net = sum(rows.map((p) => p.amount_cents));
     const live = rows.filter((p) => p.kind === 'payment' && !isReversed(db, p.id))
-      .sort((a, b) => (a.recorded_at < b.recorded_at ? -1 : a.recorded_at > b.recorded_at ? 1 : 0));
+      // Oldest first; the same moment → by id (the database: order by recorded_at desc, id desc).
+      .sort((a, b) => (a.recorded_at < b.recorded_at ? -1 : a.recorded_at > b.recorded_at ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
     const last = live[live.length - 1] ?? null;
     return {
       paid: net > 0, paid_cents: net, paid_on: last?.paid_on ?? null, paid_method: last?.method ?? null,
@@ -649,17 +756,14 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
   }
 
   // ----- The 90-day signature clean-up (plan answer 3) -----
-  // Signatures are removed more than 90 days after the LATER of the testing date and the
-  // student's private day (phase 4: greatest() ignores a missing private day). It changes
+  // Signatures of events whose testing date is more than 90 days ago are removed. It changes
   // neither the version nor "last changed" (the database's before-write trigger skips it).
   function purgeOldSignatures(db) {
     const cutoff = addDays(today(), -SIGNATURE_KEEP_DAYS);
-    const testingDateOf = new Map(db.events.map((e) => [e.id, e.testing_date]));
+    const oldEvents = new Set(db.events.filter((e) => e.testing_date < cutoff).map((e) => e.id));
     const at = stamp();
     for (const reg of db.registrations) {
-      const testingDate = testingDateOf.get(reg.event_id);
-      const lastDay = reg.private_date !== null && reg.private_date > testingDate ? reg.private_date : testingDate;
-      if (lastDay < cutoff && reg.signature !== null) {
+      if (oldEvents.has(reg.event_id) && reg.signature !== null) {
         reg.signature = null;
         reg.signature_deleted_at = at;
       }
@@ -706,6 +810,486 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
   // Order everywhere: (no_access → role, done in rpc) → invalid (argument shape) → not_found →
   // stale → relational checks → write.
 
+  // ===== Phase 4: the Private testing tab (contract 0014 §2) =====
+  // A private testing is its own row (db.private), with its own payments (db.private_payments)
+  // and its own result row (db.private_results). Same check order and statuses as migration 0014.
+
+  const findPrivate = (db, id) => db.private.find((p) => p.id === id) ?? null;
+  const privatePaymentsOf = (db, privateId) => db.private_payments.filter((p) => p.private_id === privateId);
+  const privateIsReversed = (db, paymentId) => db.private_payments.some((p) => p.reverses_payment_id === paymentId);
+  const privateResultOf = (db, privateId) => db.private_results.find((r) => r.private_id === privateId) ?? null;
+  // Oldest first by recorded_at, ties by id — so the LAST one is "the most recent payment", as the
+  // database picks it (order by recorded_at desc, id desc).
+  const byRecordedAt = (a, b) => (a.recorded_at < b.recorded_at ? -1 : a.recorded_at > b.recorded_at ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+
+  // The preview's copy of testing_private_amount_due (0014 §1.3), written out like the SQL:
+  // greatest(private_cents − greatest(net, 0), 0). checks.mjs compares it with
+  // privateRules.amountDue after every step.
+  function privateAmountDue(db, row) {
+    const net = sum(privatePaymentsOf(db, row.id).map((p) => p.amount_cents));
+    return Math.max(row.private_cents - Math.max(net, 0), 0);
+  }
+
+  // The payment summary of the view testing_private_list (as testing_roster's): net, paid, and
+  // the latest payment that isn't reversed.
+  function privatePaymentSummary(db, privateId) {
+    const rows = privatePaymentsOf(db, privateId);
+    const net = sum(rows.map((p) => p.amount_cents));
+    const live = rows.filter((p) => p.kind === 'payment' && !privateIsReversed(db, p.id)).sort(byRecordedAt);
+    const last = live[live.length - 1] ?? null;
+    return {
+      paid: net > 0, paid_cents: net, paid_on: last?.paid_on ?? null, paid_method: last?.method ?? null,
+      last_payment_id: last?.id ?? null, last_payment_recorded_at: last?.recorded_at ?? null,
+    };
+  }
+
+  // One history row per changed row (0014's tkd.action + tkd.batch_id). Keeps the newest 500 rows
+  // so the preview store stays small.
+  const LOG_KEEP = 500;
+  function logChange(db, batchId, action, tableName, op, recordId, ctx) {
+    db.change_log.push({ table_name: tableName, op, record_id: recordId, action, batch_id: batchId, actor_name: ctx.actorName, at: stamp() });
+    if (db.change_log.length > LOG_KEEP) db.change_log.splice(0, db.change_log.length - LOG_KEEP);
+  }
+
+  // The day rule (§1.2): today ≤ day ≤ today + 1 year. → a refusal, or null when fine.
+  function privateDayRefusal(day) {
+    const t = today();
+    if (day < t) return st('past_day');
+    if (day > privateDayLimit(t)) return st('invalid');
+    return null;
+  }
+
+  // testing_private_rank_copy: what a private testing copies from LIVE Classes and ranks for one
+  // rank of one school — the class, the rank and its belt, what it tests for and its private
+  // price. → { status:'ok', copy } · stale (rank gone) · invalid (other school) ·
+  // final_award_not_set (+ class_name: the last rank of a class whose final award isn't set).
+  function privateRankCopy(db, locationCode, rankId) {
+    const rank = db.ranks.find((r) => r.id === rankId);
+    if (!rank) return st('stale');
+    if (rank.location_code !== locationCode) return st('invalid');
+    const cls = db.classes.find((c) => c.id === rank.class_id);
+    if (!cls) return st('stale');
+    const inClass = db.ranks.filter((r) => r.class_id === cls.id).sort(byPosition);
+    const next = inClass[inClass.indexOf(rank) + 1] ?? null;
+    // Testing for: the next rank, else the class's final award rank, else "No new rank".
+    let target = next;
+    if (!target && !cls.final_award_none) {
+      target = cls.final_award_rank_id ? db.ranks.find((r) => r.id === cls.final_award_rank_id) ?? null : null;
+      if (!target) return { status: 'final_award_not_set', class_name: cls.name };
+    }
+    const toBelt = Object.fromEntries(BELT_KEYS.map((k) => [`to_${k}`, target ? target[k] : null]));
+    return {
+      status: 'ok',
+      copy: {
+        class_id: cls.id, class_name: cls.name, rank_id: rank.id, rank_name: rank.name, ...beltOfRank(rank),
+        to_kind: target ? 'rank' : 'none', to_name: target ? target.name : null, ...toBelt,
+        private_cents: rank.private_cents,
+      },
+    };
+  }
+
+  // A new private testing row with the stamps the database's before-write trigger adds.
+  function insertPrivate(db, fields, ctx) {
+    const at = stamp();
+    const row = {
+      status: 'active', cancelled_at: null, cancelled_by_name: null, cancelled_by: null,
+      moved_from_event_id: null, moved_from_registration_id: null, moved_from_event_name: null,
+      moved_cleared_no_show: false, moved_registration_version: null,
+      ...fields,
+      version: 1, created_at: at, updated_at: at, created_by: ctx.userId ?? null, updated_by: ctx.userId ?? null,
+      created_by_name: ctx.actorName, updated_by_name: ctx.actorName,
+    };
+    db.private.push(row);
+    return row;
+  }
+  // A change to a private testing: a real change (or force) raises the version and stamps.
+  function updatePrivate(row, changes, ctx, force = false) {
+    const before = row.version;
+    updateRow(row, changes, ctx, force);
+    if (row.version !== before) row.updated_by = ctx.userId ?? null;
+    return row.version !== before;
+  }
+  const newPrivatePayment = (db, fields, ctx) => {
+    const payment = {
+      id: newId(), kind: 'payment', reverses_payment_id: null, moved_from_payment_id: null,
+      recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName, ...fields,
+    };
+    db.private_payments.push(payment);
+    return payment;
+  };
+
+  // The common start of the functions on an existing private testing (§2.5): the row → not_found,
+  // version → stale (when one is sent), cancelled → cancelled. → [row, refusal].
+  function privateStart(db, id, expectedVersion, { allowCancelled = false } = {}) {
+    const row = findPrivate(db, id);
+    if (!row) return [null, st('not_found')];
+    if (expectedVersion !== undefined && row.version !== expectedVersion) return [row, st('stale')];
+    if (!allowCancelled && row.status === 'cancelled') return [row, st('cancelled')];
+    return [row, null];
+  }
+
+  // The grading window from the private day (§1.2): before it nobody, after it admins only.
+  function privateGradingRefusal(row, ctx) {
+    const t = today();
+    if (t < row.private_date) return st('not_open');
+    if (t > row.private_date && !ctx.isAdmin) return st('finished');
+    return null;
+  }
+
+  // Writes the wanted { result, note } like the database (0010's step 7 on testing_private_results).
+  function writePrivateResult(db, row, wanted, ctx, action) {
+    const current = privateResultOf(db, row.id);
+    const stored = { result: current?.result ?? null, note: current?.note ?? null };
+    const stamps = { updated_at: stamp(), updated_by: ctx.userId ?? null, updated_by_name: ctx.actorName };
+    if (stored.result === wanted.result && stored.note === wanted.note) {
+      // the same as now: nothing is written, nothing logged
+    } else {
+      const batchId = newId();
+      if (wanted.result === null && wanted.note === null) {
+        db.private_results = db.private_results.filter((r) => r.private_id !== row.id);
+        logChange(db, batchId, action, 'testing_private_results', 'delete', row.id, ctx);
+      } else if (current) {
+        Object.assign(current, wanted, stamps);
+        logChange(db, batchId, action, 'testing_private_results', 'update', row.id, ctx);
+      } else {
+        db.private_results.push({ private_id: row.id, ...wanted, ...stamps });
+        logChange(db, batchId, action, 'testing_private_results', 'insert', row.id, ctx);
+      }
+    }
+    const saved = privateResultOf(db, row.id);
+    return {
+      status: 'ok', result: saved?.result ?? null, note: saved?.note ?? null,
+      updated_at: saved?.updated_at ?? null, updated_by_name: saved?.updated_by_name ?? null,
+    };
+  }
+
+  const answerTime = (t) => t.slice(0, 5); // '16:00:00' → '16:00' (to_char … 'HH24:MI')
+
+  const privateHandlers = {
+    // Add private testing (P2).
+    testing_private_add(db, a, ctx) {
+      if (!LOCATION_CODES.includes(a.p_location_code) || !nameIsValid(a.p_first) || !nameIsValid(a.p_last) || a.p_rank_id === null) return st('invalid');
+      if (a.p_stripes !== true || !PAYING_BY.includes(a.p_paying_by)) return st('invalid');
+      if (a.p_private_date === null || a.p_private_time === null || !privateTimeIsValid(a.p_private_time)) return st('invalid');
+      const copied = privateRankCopy(db, a.p_location_code, a.p_rank_id);
+      if (copied.status !== 'ok') return copied;
+      const day = privateDayRefusal(a.p_private_date);
+      if (day) return day;
+      const row = insertPrivate(db, {
+        id: newId(), location_code: a.p_location_code, first_name: normalizeName(a.p_first), last_name: normalizeName(a.p_last),
+        ...copied.copy, paying_by: a.p_paying_by, stripes_confirmed: true, private_date: a.p_private_date, private_time: a.p_private_time,
+      }, ctx);
+      logChange(db, newId(), 'private_add', 'testing_private', 'insert', row.id, ctx);
+      return { status: 'ok', id: row.id, version: row.version, amount_due_cents: privateAmountDue(db, row) };
+    },
+
+    // Edit details: names and the belt. The stored rank id sent back = "belt not changed" and is
+    // never looked up (that rank may be gone from Classes and ranks).
+    testing_private_update(db, a, ctx) {
+      if (a.p_private_id === null || a.p_expected_version === null || !nameIsValid(a.p_first) || !nameIsValid(a.p_last) || a.p_rank_id === null) return st('invalid');
+      const [row, refusal] = privateStart(db, a.p_private_id, a.p_expected_version);
+      if (refusal) return refusal;
+      const rankChanged = a.p_rank_id !== row.rank_id;
+      let copy = {};
+      if (rankChanged) {
+        const copied = privateRankCopy(db, row.location_code, a.p_rank_id);
+        if (copied.status !== 'ok') return copied;
+        copy = copied.copy;
+      }
+      const res = privateResultOf(db, row.id);
+      // The belt lock: a graded one (result or note) after its day — admins only.
+      if (rankChanged && res && today() > row.private_date && !ctx.isAdmin) return st('not_allowed');
+      const batchId = newId();
+      const changed = updatePrivate(row, { first_name: normalizeName(a.p_first), last_name: normalizeName(a.p_last), ...copy }, ctx);
+      if (changed) logChange(db, batchId, 'private_update', 'testing_private', 'update', row.id, ctx);
+      let cleared = false;
+      if (rankChanged && res) {
+        db.private_results = db.private_results.filter((r) => r.private_id !== row.id);
+        logChange(db, batchId, 'clear_result', 'testing_private_results', 'delete', row.id, ctx);
+        cleared = true;
+      }
+      return { status: 'ok', version: row.version, amount_due_cents: privateAmountDue(db, row), result_cleared: cleared };
+    },
+
+    // Change day or time (P4). A No show is cleared with its note; Pass / Not passed → graded.
+    testing_private_change_day(db, a, ctx) {
+      if ([a.p_private_id, a.p_expected_version, a.p_private_date, a.p_private_time].includes(null)) return st('invalid');
+      if (!privateTimeIsValid(a.p_private_time)) return st('invalid');
+      const [row, refusal] = privateStart(db, a.p_private_id, a.p_expected_version);
+      if (refusal) return refusal;
+      const day = privateDayRefusal(a.p_private_date);
+      if (day) return day;
+      const res = privateResultOf(db, row.id);
+      if (res && (res.result === 'pass' || res.result === 'not_passed')) return st('graded');
+      let cleared = false;
+      // The same day AND time: nothing written, nothing removed (no version bump).
+      if (row.private_date !== a.p_private_date || row.private_time !== a.p_private_time) {
+        const batchId = newId();
+        updatePrivate(row, { private_date: a.p_private_date, private_time: a.p_private_time }, ctx);
+        logChange(db, batchId, 'private_change_day', 'testing_private', 'update', row.id, ctx);
+        if (res && res.result === 'no_show') {
+          db.private_results = db.private_results.filter((r) => r.private_id !== row.id);
+          logChange(db, batchId, 'clear_result', 'testing_private_results', 'delete', row.id, ctx);
+          cleared = true;
+        }
+      }
+      return { status: 'ok', version: row.version, private_date: row.private_date, private_time: answerTime(row.private_time), result_cleared: cleared };
+    },
+
+    // Change how they'll pay: while nothing is paid, or while money is still owed.
+    testing_private_change_paying_by(db, a, ctx) {
+      if (a.p_private_id === null || a.p_expected_version === null || !PAYING_BY.includes(a.p_paying_by)) return st('invalid');
+      const [row, refusal] = privateStart(db, a.p_private_id, a.p_expected_version);
+      if (refusal) return refusal;
+      // A Pass / Not passed locks it, like Change day and Cancel (security review L3).
+      const res = privateResultOf(db, row.id);
+      if (res && (res.result === 'pass' || res.result === 'not_passed')) return st('graded');
+      const net = sum(privatePaymentsOf(db, row.id).map((p) => p.amount_cents));
+      if (!(net <= 0 || privateAmountDue(db, row) > 0)) return st('already_paid');
+      if (updatePrivate(row, { paying_by: a.p_paying_by }, ctx)) logChange(db, newId(), 'private_change_paying_by', 'testing_private', 'update', row.id, ctx);
+      return { status: 'ok', version: row.version };
+    },
+
+    // Mark paid: records what is owed (the price, or just the difference), by today's date.
+    testing_private_mark_paid(db, a, ctx) {
+      if (a.p_private_id === null || a.p_expected_version === null) return st('invalid');
+      const [row, refusal] = privateStart(db, a.p_private_id, a.p_expected_version);
+      if (refusal) return refusal;
+      const owed = privateAmountDue(db, row);
+      if (owed <= 0) return st('already_paid'); // also a $0 price: nothing is inserted (E10)
+      if (owed > MAX_PAYMENT_CENTS) return st('invalid'); // the payments table's own limit
+      const batchId = newId();
+      const payment = newPrivatePayment(db, { private_id: row.id, amount_cents: owed, method: row.paying_by, paid_on: today() }, ctx);
+      updatePrivate(row, {}, ctx, true); // a double click with the old version now gets 'stale'
+      logChange(db, batchId, 'private_mark_paid', 'testing_private_payments', 'insert', payment.id, ctx);
+      logChange(db, batchId, 'private_mark_paid', 'testing_private', 'update', row.id, ctx);
+      return { status: 'ok', payment_id: payment.id, amount_cents: owed, method: payment.method, version: row.version };
+    },
+
+    // Undo payment: staff only their OWN payment, less than 10 seconds old, and never one that
+    // arrived with a move (M2); admins any time.
+    testing_private_undo_payment(db, a, ctx) {
+      if (a.p_payment_id === null) return st('invalid');
+      const payment = db.private_payments.find((p) => p.id === a.p_payment_id);
+      if (!payment) return st('not_found');
+      const recent = now() - Date.parse(payment.recorded_at) < UNDO_WINDOW_MS;
+      const ownUndo = payment.recorded_by === ctx.userId && ctx.userId !== null && recent && payment.moved_from_payment_id === null;
+      if (!ctx.isAdmin && !ownUndo) return st('not_allowed');
+      if (payment.kind !== 'payment') return st('invalid'); // a reversal can't be reversed
+      if (privateIsReversed(db, payment.id)) return st('stale'); // already undone
+      const row = findPrivate(db, payment.private_id);
+      if (row.status === 'cancelled') return st('cancelled');
+      const batchId = newId();
+      const reversal = newPrivatePayment(db, {
+        private_id: row.id, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(), reverses_payment_id: payment.id,
+      }, ctx);
+      updatePrivate(row, {}, ctx, true);
+      logChange(db, batchId, 'private_undo_payment', 'testing_private_payments', 'insert', reversal.id, ctx);
+      logChange(db, batchId, 'private_undo_payment', 'testing_private', 'update', row.id, ctx);
+      return { status: 'ok', version: row.version };
+    },
+
+    // Edit payment (admins): the old payment is reversed and a new one recorded.
+    testing_private_edit_payment(db, a, ctx) {
+      if (a.p_payment_id === null || !PAYING_BY.includes(a.p_method) || a.p_paid_on === null || a.p_paid_on > today()) return st('invalid');
+      if (a.p_amount_cents === null || a.p_amount_cents <= 0 || a.p_amount_cents > MAX_PAYMENT_CENTS) return st('invalid');
+      const payment = db.private_payments.find((p) => p.id === a.p_payment_id);
+      if (!payment) return st('not_found');
+      if (payment.kind !== 'payment') return st('invalid');
+      if (privateIsReversed(db, payment.id)) return st('stale');
+      const row = findPrivate(db, payment.private_id);
+      if (row.status === 'cancelled') return st('cancelled');
+      const batchId = newId();
+      const reversal = newPrivatePayment(db, {
+        private_id: row.id, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(), reverses_payment_id: payment.id,
+      }, ctx);
+      const replacement = newPrivatePayment(db, { private_id: row.id, amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on }, ctx);
+      updatePrivate(row, {}, ctx, true);
+      for (const p of [reversal, replacement]) logChange(db, batchId, 'private_edit_payment', 'testing_private_payments', 'insert', p.id, ctx);
+      logChange(db, batchId, 'private_edit_payment', 'testing_private', 'update', row.id, ctx);
+      return { status: 'ok', payment_id: replacement.id, version: row.version };
+    },
+
+    // Cancel private testing (P7): payments stay. Refused once there is a Pass / Not passed.
+    testing_private_cancel(db, a, ctx) {
+      if (a.p_private_id === null || a.p_expected_version === null) return st('invalid');
+      const [row, refusal] = privateStart(db, a.p_private_id, a.p_expected_version);
+      if (refusal) return refusal;
+      const res = privateResultOf(db, row.id);
+      if (res && (res.result === 'pass' || res.result === 'not_passed')) return st('graded');
+      updatePrivate(row, { status: 'cancelled', cancelled_at: stamp(), cancelled_by_name: ctx.actorName, cancelled_by: ctx.userId ?? null }, ctx);
+      logChange(db, newId(), 'private_cancel', 'testing_private', 'update', row.id, ctx);
+      return { status: 'ok', version: row.version };
+    },
+
+    // Restore (admins): only while its day is today or later (§10 point 2).
+    testing_private_restore(db, a, ctx) {
+      if (a.p_private_id === null || a.p_expected_version === null) return st('invalid');
+      const [row, refusal] = privateStart(db, a.p_private_id, a.p_expected_version, { allowCancelled: true });
+      if (refusal) return refusal;
+      if (row.status === 'active') return st('invalid'); // nothing to restore
+      if (row.private_date < today()) return st('past_day');
+      updatePrivate(row, { status: 'active', cancelled_at: null, cancelled_by_name: null, cancelled_by: null }, ctx);
+      logChange(db, newId(), 'private_restore', 'testing_private', 'update', row.id, ctx);
+      return { status: 'ok', version: row.version };
+    },
+
+    // Delete permanently (admins): the row, its payments and its result. The payment ids must be
+    // exactly the ones the warning named.
+    testing_private_delete(db, a, ctx) {
+      if (a.p_private_id === null || a.p_expected_version === null || a.p_expected_payment_ids === null) return st('invalid');
+      if (hasNull(a.p_expected_payment_ids) || hasDuplicates(a.p_expected_payment_ids)) return st('invalid');
+      const [row, refusal] = privateStart(db, a.p_private_id, a.p_expected_version, { allowCancelled: true });
+      if (refusal) return refusal;
+      const payments = privatePaymentsOf(db, row.id);
+      if (!sameSet(payments.map((p) => p.id), a.p_expected_payment_ids)) return st('stale');
+      const batchId = newId();
+      for (const p of payments) logChange(db, batchId, 'private_delete', 'testing_private_payments', 'delete', p.id, ctx);
+      if (privateResultOf(db, row.id)) logChange(db, batchId, 'private_delete', 'testing_private_results', 'delete', row.id, ctx);
+      logChange(db, batchId, 'private_delete', 'testing_private', 'delete', row.id, ctx);
+      db.private_payments = db.private_payments.filter((p) => p.private_id !== row.id);
+      db.private_results = db.private_results.filter((r) => r.private_id !== row.id);
+      db.private = db.private.filter((p) => p.id !== row.id);
+      return { status: 'ok' };
+    },
+
+    // Grading on the private testing's own page (0010's rules, counted from the private day).
+    testing_private_set_result(db, a, ctx) {
+      if (a.p_private_id === null) return st('invalid');
+      if (a.p_result !== null && !RESULTS.includes(a.p_result)) return st('invalid');
+      const [row, refusal] = privateStart(db, a.p_private_id);
+      if (refusal) return refusal;
+      const window = privateGradingRefusal(row, ctx);
+      if (window) return window;
+      return writePrivateResult(db, row, { result: a.p_result, note: privateResultOf(db, row.id)?.note ?? null }, ctx, 'private_set_result');
+    },
+
+    testing_private_set_result_note(db, a, ctx) {
+      if (a.p_private_id === null) return st('invalid');
+      if (typeof a.p_note === 'string' && a.p_note.length > 2000) return st('invalid'); // far too long to even tidy
+      const note = normalizeGradingNote(a.p_note);
+      if (note !== null && gradingNoteProblem(note) !== null) return st('invalid');
+      const [row, refusal] = privateStart(db, a.p_private_id);
+      if (refusal) return refusal;
+      const window = privateGradingRefusal(row, ctx);
+      if (window) return window;
+      return writePrivateResult(db, row, { result: privateResultOf(db, row.id)?.result ?? null, note }, ctx, 'private_set_result_note');
+    },
+
+    // Move to private testing (P5, §2.5.1): the registration leaves its event (withdrawn, listed
+    // under Removed) and becomes a private testing; its LIVE payments move with it — an event
+    // reversal and a private payment each, both dated the original day. All staff, any time.
+    testing_move_to_private(db, a, ctx) {
+      if ([a.p_registration_id, a.p_expected_version, a.p_private_date, a.p_private_time].includes(null)) return st('invalid');
+      if (!privateTimeIsValid(a.p_private_time)) return st('invalid');
+      const reg = findReg(db, a.p_registration_id);
+      if (!reg) return st('not_found');
+      if (reg.version !== a.p_expected_version) return st('stale');
+      if (reg.status === 'withdrawn') return st('withdrawn');
+      const day = privateDayRefusal(a.p_private_date);
+      if (day) return day;
+      // Step 7: the testing-day result. Pass / Not passed → has_result; a No show is removed; a
+      // note alone stays with the registration.
+      const res = resultOf(db, reg.id);
+      if (res && (res.result === 'pass' || res.result === 'not_passed')) return st('has_result');
+      const clearsNoShow = res?.result === 'no_show';
+      // Step 8: the copy comes from the EVENT copy; the price is TODAY's private price in Classes
+      // and ranks for that rank, or the event's copied price when the rank is gone (v0.404).
+      const event = findEvent(db, reg.event_id);
+      const eventRank = rankRow(db, reg.event_rank_id);
+      const eventClass = classOfRank(db, reg.event_rank_id);
+      const target = testingFor(copyOf(db, event.id), eventRank);
+      const liveRank = eventRank.rank_id ? db.ranks.find((r) => r.id === eventRank.rank_id) ?? null : null;
+      const toBelt = Object.fromEntries(BELT_KEYS.map((k) => [`to_${k}`, target ? target[k.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase())] ?? null : null]));
+      // Step 9, one batch: (a) event reversals of every live payment, oldest first.
+      const batchId = newId();
+      const live = paymentsOf(db, reg.id).filter((p) => p.kind === 'payment' && !isReversed(db, p.id)).sort(byRecordedAt);
+      for (const p of live) {
+        const reversal = {
+          id: newId(), registration_id: reg.id, kind: 'reversal', amount_cents: -p.amount_cents, method: p.method, paid_on: p.paid_on,
+          recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName, reverses_payment_id: p.id,
+        };
+        db.payments.push(reversal);
+        logChange(db, batchId, 'move_to_private', 'testing_payments', 'insert', reversal.id, ctx);
+      }
+      // (b) the registration is withdrawn (who / when), then its duplicate partners re-checked.
+      updateRow(reg, {
+        status: 'withdrawn', withdrawn_reason: 'withdrawn', withdrawn_at: stamp(), withdrawn_by: ctx.userId ?? null, withdrawn_by_name: ctx.actorName,
+        duplicate_state: 'none', duplicate_of: null,
+      }, ctx);
+      logChange(db, batchId, 'move_to_private', 'testing_registrations', 'update', reg.id, ctx);
+      recheckPointingAt(db, reg.id, ctx);
+      // (c) the private testing (version 1), remembering the registration's version now.
+      const row = insertPrivate(db, {
+        id: newId(), location_code: event.location_code, first_name: reg.first_name, last_name: reg.last_name,
+        class_id: eventClass.class_id, class_name: eventClass.class_name, rank_id: eventRank.rank_id, rank_name: eventRank.name, ...beltOfRank(eventRank),
+        to_kind: target ? 'rank' : 'none', to_name: target ? target.name : null, ...toBelt,
+        private_cents: liveRank ? liveRank.private_cents : eventRank.private_cents,
+        paying_by: reg.paying_by, stripes_confirmed: true, private_date: a.p_private_date, private_time: a.p_private_time,
+        moved_from_event_id: event.id, moved_from_registration_id: reg.id, moved_from_event_name: event.name,
+        moved_cleared_no_show: clearsNoShow, moved_registration_version: reg.version,
+      }, ctx);
+      logChange(db, batchId, 'move_to_private', 'testing_private', 'insert', row.id, ctx);
+      // (d) one private payment per moved payment (same amount, method and day).
+      for (const p of live) {
+        // recorded_at stays the ORIGINAL payment's, so "the most recent payment" stays the same one (M1).
+        const moved = newPrivatePayment(db, { private_id: row.id, amount_cents: p.amount_cents, method: p.method, paid_on: p.paid_on, moved_from_payment_id: p.id, recorded_at: p.recorded_at }, ctx);
+        logChange(db, batchId, 'move_to_private', 'testing_private_payments', 'insert', moved.id, ctx);
+      }
+      // (e) a testing-day No show (and its note) is removed.
+      if (clearsNoShow) {
+        db.results = db.results.filter((r) => r.registration_id !== reg.id);
+        logChange(db, batchId, 'clear_result', 'testing_results', 'delete', reg.id, ctx);
+      }
+      return {
+        status: 'ok', private_id: row.id, version: row.version, registration_version: reg.version,
+        amount_due_cents: privateAmountDue(db, row), result_cleared: clearsNoShow,
+      };
+    },
+
+    // Undo move (the toast's Undo, §2.5.2): only the mover, within 10 seconds of the move (read
+    // from the registration's withdrawn_by / withdrawn_at), and only while nothing changed since.
+    testing_private_undo_move(db, a, ctx) {
+      if (a.p_private_id === null || a.p_expected_version === null) return st('invalid');
+      const row = findPrivate(db, a.p_private_id);
+      if (!row || row.moved_from_registration_id === null) return st('not_found');
+      const reg = findReg(db, row.moved_from_registration_id);
+      if (!reg) return st('not_found'); // e.g. its event was deleted
+      if (row.version !== a.p_expected_version) return st('stale');
+      const withdrawnMs = reg.withdrawn_at ? Date.parse(reg.withdrawn_at) : NaN;
+      if (reg.withdrawn_by !== (ctx.userId ?? null) || !(now() - withdrawnMs < UNDO_WINDOW_MS)) return st('not_allowed'); // admins too
+      if (row.moved_cleared_no_show) return st('not_allowed'); // the No show can't come back (L1)
+      const payments = privatePaymentsOf(db, row.id);
+      if (reg.status !== 'withdrawn' || reg.version !== row.moved_registration_version || privateResultOf(db, row.id)
+        || payments.some((p) => p.moved_from_payment_id === null || p.kind === 'reversal')) return st('stale');
+      const batchId = newId();
+      // Event payments again (recorded_by null, so the live 10-second own-undo can't reverse them).
+      for (const p of [...payments].sort(byRecordedAt)) {
+        const back = {
+          id: newId(), registration_id: reg.id, kind: 'payment', amount_cents: p.amount_cents, method: p.method, paid_on: p.paid_on,
+          recorded_at: p.recorded_at, recorded_by: null, recorded_by_name: ctx.actorName, reverses_payment_id: null, // its original moment (M1)
+        };
+        db.payments.push(back);
+        logChange(db, batchId, 'undo_move_to_private', 'testing_payments', 'insert', back.id, ctx);
+      }
+      updateRow(reg, { status: 'active', withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null, withdrawn_by_name: null }, ctx);
+      logChange(db, batchId, 'undo_move_to_private', 'testing_registrations', 'update', reg.id, ctx);
+      // The three duplicate re-checks of testing_restore_student.
+      recheckDuplicate(db, reg, ctx);
+      if (reg.duplicate_of !== null) {
+        const partner = db.registrations.find((r) => r.id === reg.duplicate_of);
+        if (partner) recheckDuplicate(db, partner, ctx);
+      }
+      recheckPointingAt(db, reg.id, ctx);
+      for (const p of payments) logChange(db, batchId, 'undo_move_to_private', 'testing_private_payments', 'delete', p.id, ctx);
+      logChange(db, batchId, 'undo_move_to_private', 'testing_private', 'delete', row.id, ctx);
+      db.private_payments = db.private_payments.filter((p) => p.private_id !== row.id);
+      db.private = db.private.filter((p) => p.id !== row.id);
+      return { status: 'ok', registration_id: reg.id, registration_version: reg.version };
+    },
+  };
+
+
   const handlers = {
     testing_add_event(db, a, ctx) {
       const t = today();
@@ -741,12 +1325,9 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       if (event.version !== a.p_expected_version) return st('stale');
       // Phase 3: once any student of this event (active or withdrawn) has a result or a note,
       // the date can't move (the results belong to that day).
-      // Phase 4 (M3): a private student's RESULT doesn't count (it belongs to their own day); a
-      // private note-only row still counts (that student can go Back to the testing day).
       if (a.p_testing_date !== event.testing_date) {
-        const regsOfEvent = new Map(db.registrations.filter((r) => r.event_id === event.id).map((r) => [r.id, r]));
-        const counts = (x) => regsOfEvent.has(x.registration_id) && (regsOfEvent.get(x.registration_id).private_date === null || x.result === null);
-        if (db.results.some(counts)) return st('has_results');
+        const regIds = new Set(db.registrations.filter((r) => r.event_id === event.id).map((r) => r.id));
+        if (db.results.some((r) => regIds.has(r.registration_id))) return st('has_results');
       }
       // A past event may keep its date; a NEW date must be today or later.
       if (a.p_testing_date !== event.testing_date && a.p_testing_date < t) return st('invalid');
@@ -832,7 +1413,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
         stripes_confirmed: true, source: 'staff', reference: nextReference(db), submission_id: null, signature: null,
         signed_at: null, signature_deleted_at: null, ack_version: null, registered_at: at, status: 'active',
         withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null, withdrawn_by_name: null,
-        ...duplicateFlagsFor(db, event.id, a.p_first, a.p_last), private_date: null, private_time: null,
+        ...duplicateFlagsFor(db, event.id, a.p_first, a.p_last),
       }, ctx);
       return { status: 'ok', id: reg.id, reference: reg.reference, version: reg.version };
     },
@@ -845,25 +1426,20 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       if (!rankInEvent(db, a.p_event_rank_id, reg.event_id)) return st('invalid');
       // Phase 3: a belt (and so class) change of a graded student clears their result; after
       // the testing day only an admin may do that. Name-only edits never touch the result.
-      // Phase 4: "after the day" = after the student's OWN day (the private day when private).
       const rankChanged = a.p_event_rank_id !== reg.event_rank_id;
       const graded = isGradedReg(db, reg.id);
-      if (rankChanged && graded && today() > ownDay(db, reg) && !ctx.isAdmin) return st('not_allowed');
+      if (rankChanged && graded && afterTestingDay(db, reg) && !ctx.isAdmin) return st('not_allowed');
       const before = reg.version;
       updateRow(reg, { first_name: normalizeName(a.p_first), last_name: normalizeName(a.p_last), event_rank_id: a.p_event_rank_id }, ctx);
       if (reg.version !== before) {
         recheckDuplicate(db, reg, ctx);
         recheckPointingAt(db, reg.id, ctx);
       }
-      const answer = { status: 'ok', version: reg.version };
       if (rankChanged && graded) {
         db.results = db.results.filter((r) => r.registration_id !== reg.id); // the 'clear_result' step
-        answer.result_cleared = true; // the key only when true
+        return { status: 'ok', version: reg.version, result_cleared: true }; // the key only when true
       }
-      // Phase 4 (Q2): a private student is re-priced by the new rank — the answer says what is
-      // due now. A regular student's answer stays exactly as before (no extra key).
-      if (reg.private_date !== null) answer.amount_due_cents = amountDueOf(db, reg);
-      return answer;
+      return { status: 'ok', version: reg.version };
     },
 
     testing_change_paying_by(db, a, ctx) {
@@ -872,9 +1448,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       if (!reg) return st('not_found');
       if (reg.version !== a.p_expected_version) return st('stale');
       if (reg.status === 'withdrawn') return st('withdrawn');
-      // Phase 4 (Q3): still allowed while a private student owes a top-up. Earlier payments keep
-      // their own method.
-      if (paymentSummary(db, reg.id).paid && amountDueOf(db, reg) === 0) return st('already_paid');
+      if (paymentSummary(db, reg.id).paid) return st('already_paid');
       updateRow(reg, { paying_by: a.p_paying_by }, ctx);
       return { status: 'ok', version: reg.version };
     },
@@ -885,20 +1459,18 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       if (!reg) return st('not_found');
       if (reg.version !== a.p_expected_version) return st('stale');
       if (reg.status === 'withdrawn') return st('withdrawn');
-      // Phase 4: the database records what is DUE (testing_amount_due): the regular fee by today
-      // (early before the testing day, testing-day price on it), the private price, or just the
-      // difference still owed. Nothing due (also a $0 price) → already_paid, nothing inserted.
-      const amount = amountDueOf(db, reg);
-      if (amount <= 0) return st('already_paid');
-      if (amount > MAX_PAYMENT_CENTS) return st('invalid'); // the payments table's own limit
+      if (paymentSummary(db, reg.id).paid) return st('already_paid');
+      const event = findEvent(db, reg.event_id);
       const t = today();
+      // The database decides: early price before the testing day, testing-day price on it.
+      const amount = feeFor(rankRow(db, reg.event_rank_id), t, event.testing_date);
+      if (!(amount > 0 && amount <= MAX_PAYMENT_CENTS)) return st('invalid'); // a $0 rank can't be "paid"
       const payment = {
         id: newId(), registration_id: reg.id, kind: 'payment', amount_cents: amount, method: reg.paying_by,
         paid_on: t, recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName, reverses_payment_id: null,
       };
       db.payments.push(payment);
       updateRow(reg, {}, ctx, true); // a double click with the old version now gets 'stale'
-      logChange(db, newId(), 'mark_paid', 'testing_payments', 'insert', payment.id, ctx);
       purgeOldSignatures(db); // the last step (§1.5)
       return { status: 'ok', payment_id: payment.id, amount_cents: amount, method: payment.method, version: reg.version };
     },
@@ -953,9 +1525,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       // Phase 3 (v0.194 point 3): after the testing day "keep one" is for admins only — for every
       // student, graded or not (it removes a registration once results may exist). Keep both stays
       // open to staff.
-      // Phase 4 (H3): also after the PRIVATE day of the one being withdrawn (a private day can
-      // be before the testing day).
-      if (!a.p_keep_both && (afterTestingDay(db, keep) || afterPrivateDay(other)) && !ctx.isAdmin) return st('not_allowed');
+      if (!a.p_keep_both && afterTestingDay(db, keep) && !ctx.isAdmin) return st('not_allowed');
       if (a.p_keep_both) {
         updateRow(keep, { duplicate_state: 'kept_both', duplicate_of: other.id }, ctx);
         updateRow(other, { duplicate_state: 'kept_both', duplicate_of: keep.id }, ctx);
@@ -989,13 +1559,16 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       if (a.p_registration_id === null || a.p_expected_version === null) return st('invalid');
       const reg = findReg(db, a.p_registration_id);
       if (!reg) return st('not_found');
+      // Phase 4 (0014 §2.6): a registration that was moved to a private testing can't come back
+      // here — its payment is on the private testing now. Checked before the staff rule.
+      if (db.private.some((p) => p.moved_from_registration_id === reg.id)) return st('moved');
       // Staff: only the copy they themselves removed with "keep one", less than 10 seconds ago
       // (the toast's Undo). Admins: any time. Checked before the version, like the payment Undo.
       // Phase 3: not for a graded student after the testing day (then admins only).
       const ownKeepOne = reg.status === 'withdrawn' && reg.withdrawn_reason === 'duplicate_copy'
         && ctx.userId !== null && reg.withdrawn_by === ctx.userId
         && now() - Date.parse(reg.withdrawn_at) < UNDO_WINDOW_MS
-        && !(isGradedReg(db, reg.id) && (afterTestingDay(db, reg) || afterPrivateDay(reg))); // phase 4 (H3): or after their private day
+        && !(isGradedReg(db, reg.id) && afterTestingDay(db, reg));
       if (!ctx.isAdmin && !ownKeepOne) return st('not_allowed');
       if (reg.version !== a.p_expected_version) return st('stale');
       if (reg.status !== 'withdrawn') return st('invalid'); // nothing to restore
@@ -1071,96 +1644,8 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       return writeResult(db, reg.id, { result: resultOf(db, reg.id)?.result ?? null, note }, ctx);
     },
 
-    // ----- Private testing (phase 4, contract 0014 §2.4) — the database's check order -----
-
-    // Set private testing (first time) or change the private day / time.
-    testing_set_private(db, a, ctx) {
-      if ([a.p_registration_id, a.p_expected_version, a.p_private_date, a.p_private_time].includes(null)) return st('invalid');
-      if (!privateTimeIsValid(a.p_private_time)) return st('invalid'); // 6 AM–10 PM, 5-minute steps
-      const reg = findReg(db, a.p_registration_id);
-      if (!reg) return st('not_found');
-      if (reg.version !== a.p_expected_version) return st('stale');
-      if (reg.status === 'withdrawn') return st('withdrawn');
-      const testingDate = findEvent(db, reg.event_id).testing_date;
-      if (a.p_private_date < today()) return st('past_day');
-      if (a.p_private_date > privateDayLimit(testingDate)) return st('invalid'); // more than a year after
-      const res = resultOf(db, reg.id);
-      const wasPrivate = reg.private_date !== null;
-      let removes = false;
-      if (!wasPrivate) {
-        // Not private yet: only a testing-day No show may be there (it is cleared with its note).
-        if (res && res.result === 'no_show') removes = true;
-        else if (res) return st('has_result'); // Pass, Not passed, or a note only
-      } else if (res && res.result === 'no_show') {
-        removes = true; // a private No show gets a new day (H2)
-      } else if (res && res.result !== null) {
-        return st('graded'); // a private Pass / Not passed
-      } // else: no row, or a note only — kept
-      const unchanged = wasPrivate && reg.private_date === a.p_private_date && reg.private_time === a.p_private_time;
-      let cleared = false;
-      if (!unchanged) {
-        // The same day and time again writes and removes nothing (no version bump).
-        const batchId = newId();
-        updateRow(reg, { private_date: a.p_private_date, private_time: a.p_private_time }, ctx);
-        logChange(db, batchId, wasPrivate ? 'change_private' : 'set_private', 'testing_registrations', 'update', reg.id, ctx);
-        if (removes) {
-          db.results = db.results.filter((r) => r.registration_id !== reg.id);
-          logChange(db, batchId, 'clear_result', 'testing_results', 'delete', reg.id, ctx);
-          cleared = true;
-        }
-      }
-      return {
-        status: 'ok', version: reg.version, private_date: reg.private_date, private_time: answerTime(reg.private_time),
-        amount_due_cents: amountDueOf(db, reg), result_cleared: cleared,
-      };
-    },
-
-    // Back to the testing day.
-    testing_clear_private(db, a, ctx) {
-      if (a.p_registration_id === null || a.p_expected_version === null) return st('invalid');
-      const reg = findReg(db, a.p_registration_id);
-      if (!reg) return st('not_found');
-      if (reg.version !== a.p_expected_version) return st('stale');
-      if (reg.status === 'withdrawn') return st('withdrawn');
-      if (reg.private_date !== null) {
-        // A private result (Pass, Not passed or No show) locks Back; a note alone doesn't (Q5).
-        if (hasResultValue(db, reg.id)) return st('graded');
-        // H1: after the testing day only an admin may send a student back.
-        if (afterTestingDay(db, reg) && !ctx.isAdmin) return st('not_allowed');
-        updateRow(reg, { private_date: null, private_time: null }, ctx);
-        logChange(db, newId(), 'clear_private', 'testing_registrations', 'update', reg.id, ctx);
-      } // not private: nothing to do, answer ok (0014 §10 point 7). The note row (if any) stays.
-      return { status: 'ok', version: reg.version, amount_due_cents: amountDueOf(db, reg) };
-    },
-
-    // Add student with "Tests privately" ticked: testing_add_student's checks + the private day.
-    testing_add_private_student(db, a, ctx) {
-      if (a.p_event_id === null || !nameIsValid(a.p_first) || !nameIsValid(a.p_last) || a.p_event_rank_id === null) return st('invalid');
-      if (a.p_stripes !== true || !PAYING_BY.includes(a.p_paying_by)) return st('invalid');
-      if (a.p_private_date === null || a.p_private_time === null || !privateTimeIsValid(a.p_private_time)) return st('invalid');
-      const event = findEvent(db, a.p_event_id);
-      if (!event) return st('not_found');
-      if (eventState(event, today()) === 'finished' && !ctx.isAdmin) return st('finished');
-      if (!rankInEvent(db, a.p_event_rank_id, event.id)) return st('invalid');
-      if (a.p_private_date < today()) return st('past_day');
-      if (a.p_private_date > privateDayLimit(event.testing_date)) return st('invalid');
-      const at = stamp();
-      // One new row with the private day already in it (version 1, one history row).
-      const reg = insertRow(db.registrations, {
-        id: newId(), event_id: event.id, event_rank_id: a.p_event_rank_id,
-        first_name: normalizeName(a.p_first), last_name: normalizeName(a.p_last), paying_by: a.p_paying_by,
-        stripes_confirmed: true, source: 'staff', reference: nextReference(db), submission_id: null, signature: null,
-        signed_at: null, signature_deleted_at: null, ack_version: null, registered_at: at, status: 'active',
-        withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null, withdrawn_by_name: null,
-        ...duplicateFlagsFor(db, event.id, a.p_first, a.p_last),
-        private_date: a.p_private_date, private_time: a.p_private_time,
-      }, ctx);
-      logChange(db, newId(), 'add_student', 'testing_registrations', 'insert', reg.id, ctx);
-      return {
-        status: 'ok', id: reg.id, reference: reg.reference, version: reg.version,
-        private_date: reg.private_date, private_time: answerTime(reg.private_time), amount_due_cents: amountDueOf(db, reg),
-      };
-    },
+    // Phase 4: the Private testing tab (below, contract 0014 §2.5).
+    ...privateHandlers,
   };
 
   // ----- The public functions (only testing_registrar may call them, §1.8) -----
@@ -1269,7 +1754,6 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
         signature: args.signature, signed_at: at, signature_deleted_at: null, ack_version: args.ackVersion, registered_at: at,
         status: 'active', withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null, withdrawn_by_name: null,
         ...duplicateFlagsFor(db, event.id, args.first, args.last), // flagged silently — the family isn't told
-        private_date: null, private_time: null, // never private from the form
       }, ctx);
       return registeredAnswer(db, reg);
     })();
@@ -1299,6 +1783,11 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       case 'testing_registrations': return db.registrations;
       case 'testing_payments': return db.payments;
       case 'testing_results': return db.results;
+      case 'testing_private': return db.private;
+      case 'testing_private_payments': return db.private_payments;
+      case 'testing_private_results': return db.private_results;
+      case 'testing_private_list':
+        return db.private.map((row) => ({ ...row, ...privatePaymentSummary(db, row.id), amount_due_cents: privateAmountDue(db, row) }));
       case 'testing_roster':
         return db.registrations.map((reg) => {
           const rank = rankRow(db, reg.event_rank_id);
@@ -1346,7 +1835,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
     return ok(rows.map((row) => Object.fromEntries(wanted.map((col) => [col, row[col] ?? null]))));
   }
 
-  // supabase.rpc(name, args) for the staff functions (15 from phase 2, 2 from phase 3, 3 from phase 4).
+  // supabase.rpc(name, args) for the staff functions (15 from phase 2, 2 from phase 3, 14 from phase 4).
   function rpc(name, args = {}, ctx = {}) {
     if (EVENT_RESTRICTED_RPC_NAMES.includes(name)) {
       if (!ctx.signedIn) return denied(`function ${name}`);
@@ -1382,11 +1871,12 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
     failNext = true;
   }
 
-  // "Another admin" changes every event, registration and school: open dialogs go stale.
+  // "Another admin" changes every event, registration, school and private testing: open dialogs
+  // go stale.
   function simulateOtherAdminEdit() {
     const db = read();
     const at = stamp();
-    for (const row of [...db.events, ...db.registrations, ...db.locations]) {
+    for (const row of [...db.events, ...db.registrations, ...db.locations, ...db.private]) {
       row.version += 1;
       row.updated_by_name = 'Other Admin';
       row.updated_at = at;
@@ -1398,16 +1888,15 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
   function reset() {
     const db = read();
     Object.assign(db, defaultEventsData({ today: dataToday() }));
-    db.change_log = []; // phase 4: the preview history starts again too
     write(db);
   }
 
-  // checks.mjs only: the preview's testing_amount_due for one registration (null = no such row).
-  function amountDueFor(registrationId) {
+  // checks.mjs only: the preview's testing_private_amount_due for one private testing (null = none).
+  function privateAmountDueFor(privateId) {
     const db = read();
-    const reg = findReg(db, registrationId);
-    return reg ? amountDueOf(db, reg) : null;
+    const row = db.private.find((p) => p.id === privateId);
+    return row ? privateAmountDue(db, row) : null;
   }
 
-  return { select, rpc, publicEvent, publicRegister, failNextSave, simulateOtherAdminEdit, reset, snapshot: read, amountDueFor };
+  return { select, rpc, publicEvent, publicRegister, failNextSave, simulateOtherAdminEdit, reset, snapshot: read, privateAmountDueFor };
 }

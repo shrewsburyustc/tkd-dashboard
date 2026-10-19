@@ -10,9 +10,6 @@
 //   - opens an event's page when a row is clicked (App.jsx gives it the #testing/event/<id> address)
 // The drawing of the form lives in EventDialog.jsx; the delete confirmation in
 // ConfirmDeleteDialog.jsx.
-// Phase 4 (contract 0014 §5.10, P8): above Upcoming / Past, the "Private testings" list
-// (PrivateTestingsList.jsx) — every private testing of this school not graded yet, with Open to
-// the student's private grading page. It refreshes with the list (every 15 seconds, v0.157).
 //
 // Rules worth knowing (same as phase 1, contract 0003 §8):
 //   - ONE change at a time: while a save is on its way, other changes are ignored.
@@ -37,7 +34,6 @@ import { useShortcutN } from '../../../lib/useShortcutN.js';
 import ChoiceGroup from './ChoiceGroup.jsx';
 import ConfirmDeleteDialog from './ConfirmDeleteDialog.jsx';
 import EventDialog, { checkEventForm, isEventFormDirty } from './EventDialog.jsx';
-import PrivateTestingsList from './PrivateTestingsList.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from './useLiveLoad.js';
 import * as T from '../text.js';
 
@@ -84,13 +80,10 @@ export default function EventsTab({
   clearToast,
   onModalOpenChange,
   onOpenEvent,
-  onOpenPrivate, // phase 4: (eventId, registrationId) => open a student's private grading page
 }) {
   const locationCode = LOCATION_CODE[school];
   const live = useLiveLoad({ key: locationCode, enabled: !screenLocked, load: loadEvents, refreshMs: LIVE_REFRESH_MS });
   const events = live.data?.events ?? [];
-  // Phase 4: private testings without a result (eventsApi.loadEvents, sorted soonest first)
-  const privateTestings = live.data?.privateTestings ?? [];
   const today = live.data?.today ?? schoolToday();
 
   // Newest values for callbacks that run later (after a save, from a toast's Undo …).
@@ -933,15 +926,6 @@ export default function EventsTab({
       <div role="tabpanel" id={panelId} aria-labelledby={tabId} className="tpanel">
         {banner && (
           <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />
-        )}
-        {/* Not shown while loading, on a load error, or when there is none (P8). */}
-        {live.status === 'ready' && privateTestings.length > 0 && (
-          <PrivateTestingsList
-            rows={privateTestings}
-            isPhone={isPhone}
-            isTouch={isTouch}
-            onOpen={(row) => onOpenPrivate?.(row.eventId, row.registrationId)}
-          />
         )}
         {live.status === 'ready' && (
           <div className="ev-side">

@@ -83,9 +83,8 @@
 //            them back or adds a duplicate
 //   13. 0010 (Color Belt phase 3: grading results) on the main database,
 //       AFTER steps 11 and 12 (it replaces five 0005 functions, so 0005
-//       itself is applied again only as part of a down-script: 14i re-runs
-//       0005 and 0010 as steps 1-2 of the 0014 down-script, and 13g re-runs
-//       0005 again):
+//       itself is applied again only inside the down-scripts: 14i re-runs
+//       0010 (step 2 of the 0014 down-script) and 13g re-runs 0005):
 //         a. apply 0010 (the main database already has 0005 and the test
 //            event); 0010_tests.sql must pass
 //         b. the earlier test files again: 0005_tests.sql, 0003_tests.sql,
@@ -109,38 +108,37 @@
 //            undo_0010 row per removed result, and 0005_tests.sql /
 //            0003_tests.sql pass. It runs only if 14i passed (otherwise a
 //            failure "skipped: the 0014 down-script failed" is recorded).
-//   14. 0014 (Color Belt phase 4: private testing) on the main database,
-//       after 13a-13f (only if 0010 is in place; contract CONTRACT-0014.md
-//       section 3.3):
+//   14. 0014 (Color Belt phase 4: the Private testing tab) on the main
+//       database, between 13f and 13g, and ONLY if 13a-13f all passed
+//       (otherwise a failure "skipped: step 13 failed" is recorded;
+//       contract CONTRACT-0014.md section 3.3):
 //         a. the 0003 / 0004 / 0005 / 0006 / 0010 fingerprints are taken,
 //            0014 is applied, and 0014_tests.sql must pass
 //         b. 0004 and 0006 fingerprints IDENTICAL; 0003 identical except the
-//            rows of the 5 new and the 9 replaced testing_* functions; 0005
-//            differs only in its 7 replaced functions' rows and the
-//            testing_registrations table row; 0010 only in its 6 replaced
-//            functions' rows (and each of those rows really changed)
-//         c. every earlier test file again (0010, 0005 with the new C3,
-//            0006, 0003, 0004, 0002, PIN) - all must pass
-//         d. the registrar live checks (11b) again, plus: it can't read
-//            private_date and can't call the four private functions
-//         e. one private day for a seeded family registration of the test
-//            event (as postgres, labelled like 11c), so the re-run and the
-//            down-script have data
-//         f. 0014 applied a SECOND time: every registration's id / private
-//            day / time / version and the history count unchanged, the
-//            fingerprints (0014_fingerprints.sql) identical; 0014_tests.sql
-//            and 0005_tests.sql pass again
+//            rows of the new testing_* functions and testing_restore_student
+//            (0003's file lists every testing_* function); 0005 and 0010
+//            differ only in testing_restore_student (and that row really
+//            changed)
+//         c. every earlier test file again (0010, 0005, 0006, 0003, 0004,
+//            0002, PIN) - all must pass
+//         d. the registrar live checks (11b) again, plus: it can't read the
+//            3 new tables or the view, and can't call testing_private_add,
+//            testing_move_to_private or testing_private_amount_due
+//         e. one private testing with a payment and a result (as postgres,
+//            labelled like 11c), so the re-run and the down-script have data
+//         f. 0014 applied a SECOND time: the 3 tables and the history count
+//            unchanged, the fingerprints (0014_fingerprints.sql) identical;
+//            0014_tests.sql and 0005_tests.sql pass again
 //         g. the upgrade database: 0014 on top of its 0010; its 0014
 //            fingerprints must equal the main database's (fresh = upgrade);
 //            0014_tests.sql, 0010_tests.sql and 0005_tests.sql pass there
 //         h. 0014_fingerprints.sql contains neither "delete" nor "drop"
 //            (connector-safe); its rows are printed at the end
-//         i. the 0014 down-script of SETUP section 15e, all three steps
-//            exactly as written there (re-run 0005, re-run 0010, then the SQL
-//            block). Afterwards both columns and the five 0014-only
-//            functions are gone, the 0010 fingerprints equal 13e's, the 0005
-//            and 0003 fingerprints equal 14a's, change_log has one undo_0014
-//            row per cleared private day, and 0010_tests.sql /
+//         i. the 0014 down-script of SETUP section 15e, exactly as written
+//            there (re-run 0010, then the SQL block). Afterwards the 3
+//            tables, the view and every 0014 function are gone, the 0005 /
+//            0010 / 0003 fingerprints equal 14a's, change_log has one
+//            undo_0014 row per removed row, and 0010_tests.sql /
 //            0005_tests.sql pass. Then 13g runs.
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
@@ -428,20 +426,27 @@ async function main() {
 
   // 13. Color Belt phase 3 (0010), only if 0005 is in place (13a-13f).
   let after10 = null;
-  let upgradeHas0010 = false;
+  let step13 = { prints: null, upgradeHas0010: false, ok: false };
   if (after5) {
     console.log('\nMigration 0010 (grading results):');
-    ({ prints: after10, upgradeHas0010 } = await step13(db, upgradeHas0005 ? upgradeDb : null));
+    step13 = await runStep13(db, upgradeHas0005 ? upgradeDb : null);
+    after10 = step13.prints;
   }
 
-  // 14. Color Belt phase 4 (0014), only if 0010 is in place. It ends with
+  // 14. Color Belt phase 4 (0014), only if 13a-13f all passed. It ends with
   // the 0014 down-script (14i); then 13g - the 0010 down-script - runs
   // LAST on the main database (the real removal order: 0014, then 0010).
   let after14 = null;
   if (after10) {
     console.log('\nMigration 0014 (private testing):');
-    const { prints, downOk } = await step14(db, upgradeHas0010 ? upgradeDb : null, after10);
-    after14 = prints;
+    let downOk = false;
+    if (step13.ok) {
+      const result14 = await step14(db, step13.upgradeHas0010 ? upgradeDb : null);
+      after14 = result14.prints;
+      downOk = result14.downOk;
+    } else {
+      record('[0014] step 14', false, 'skipped: step 13 failed');
+    }
     console.log('\n0010 down-script (13g, after the 0014 down-script):');
     if (downOk) {
       await downScriptCheck(db, after5);
@@ -662,14 +667,18 @@ const snapshot10Sql = `select md5(
      coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.registration_id) from public.testing_results x), '')
   || (select count(*) from public.change_log)::text)`;
 
-// Step 13 on the main database (and 0010 on top of the upgrade database).
-// Returns { prints: 0010's fingerprints (null if 0010 could not be
-// applied), upgradeHas0010: true if 0010 is on the upgrade database too }.
-// (13g, the 0010 down-script, is run by main() after step 14.)
-async function step13(db, upgradeDb) {
+// Step 13 (a-f) on the main database (and 0010 on top of the upgrade
+// database). Returns { prints: 0010's fingerprints (null if 0010 could not
+// be applied), upgradeHas0010: true if 0010 is on the upgrade database
+// too, ok: true if every 13a-13f check passed }. (13g, the 0010
+// down-script, is run by main() after step 14.)
+async function runStep13(db, upgradeDb) {
+  const failuresBefore = results.filter((r) => !r.ok).length;
   let upgradeHas0010 = false;
   // a. apply 0010 + its tests
-  if (!(await run(db, 'apply 0010_testing_results.sql', read('migrations', '0010_testing_results.sql')))) return { prints: null, upgradeHas0010 };
+  if (!(await run(db, 'apply 0010_testing_results.sql', read('migrations', '0010_testing_results.sql')))) {
+    return { prints: null, upgradeHas0010, ok: false };
+  }
   await runTestFile(db, '0010_tests.sql', '0010_tests.sql', 'ALL 0010 TESTS PASSED');
 
   // b. the earlier TEST files again (never the 0005 SQL itself)
@@ -727,7 +736,7 @@ async function step13(db, upgradeDb) {
     record('[upgrade] 0010 on top of the upgrade database', false, 'the upgrade database has no 0005 (see the lines above)');
   }
 
-  return { prints: after10, upgradeHas0010 };
+  return { prints: after10, upgradeHas0010, ok: results.filter((r) => !r.ok).length === failuresBefore };
 }
 
 // 13g. SETUP section 14e, step 1 (re-run 0005) then step 2 (the SQL block,
@@ -761,21 +770,25 @@ async function downScriptCheck(db, after5) {
 }
 
 // ---------------------------------------------------------------------
-// Step 14: Color Belt private testing (0014)
+// Step 14: Color Belt private testing (0014) - the Private testing tab
 // ---------------------------------------------------------------------
 
-// The functions 0014 adds and replaces (contract §2.3-§2.5), by name.
-const NEW_0014_FNS = ['testing_private_time_is_valid', 'testing_amount_due',
-  'testing_set_private', 'testing_clear_private', 'testing_add_private_student'];
-const REPLACED_0005_FNS = ['testing_mark_paid', 'testing_change_paying_by', 'testing_purge_old_signatures'];
-const REPLACED_0010_FNS = ['testing_set_result', 'testing_set_result_note', 'testing_update_student',
-  'testing_resolve_duplicate', 'testing_restore_student', 'testing_update_event'];
+// Every function 0014 adds (all named testing_*), by name (contract §2.5).
+const FNS_0014 = ['testing_private_before_write', 'testing_private_results_before_write',
+  'testing_private_payments_guard', 'testing_private_log',
+  'testing_private_time_is_valid', 'testing_private_amount_due', 'testing_private_lock',
+  'testing_private_lock_payment', 'testing_private_rank_copy',
+  'testing_private_add', 'testing_private_update', 'testing_private_change_day', 'testing_private_change_paying_by',
+  'testing_private_mark_paid', 'testing_private_undo_payment', 'testing_private_edit_payment', 'testing_private_cancel',
+  'testing_private_restore', 'testing_private_delete', 'testing_private_set_result', 'testing_private_set_result_note',
+  'testing_move_to_private', 'testing_private_undo_move'];
+const PRIVATE_TABLES = ['testing_private', 'testing_private_payments', 'testing_private_results'];
 
-// Every registration's id, private day, time and version, plus the
-// history's row count, as one md5 (14f: "re-running changed nothing").
+// Everything 0014 stores, plus the history's row count, as one md5 (14f).
 const snapshot14Sql = `select md5(
-     coalesce((select string_agg(concat_ws('|', x.id, x.private_date, x.private_time, x.version), ',' order by x.id)
-                 from public.testing_registrations x), '')
+     coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.testing_private x), '')
+  || coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.testing_private_payments x), '')
+  || coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.private_id) from public.testing_private_results x), '')
   || (select count(*) from public.change_log)::text)`;
 
 // Compares two fingerprint lists row by row. keyOf gives each row a
@@ -801,7 +814,7 @@ function onlyTheseChanged(before, after, keyOf, nameOf, expected) {
 const key3 = (line) => line.split('  ').slice(0, 2).join('(');
 const name3 = (line) => line.split('  ')[0];
 // 0005 / 0010 rows: "kind  item  detail"; a function's item is
-// "name(arguments)", a table's item its name.
+// "name(arguments)", any other row's item its name.
 const keyKind = (line) => line.split('  ').slice(0, 2).join(' ');
 const nameKind = (line) => {
   const [kind, item] = line.split('  ');
@@ -809,10 +822,10 @@ const nameKind = (line) => {
 };
 
 // Step 14 on the main database (and 0014 on top of the upgrade database).
-// after10 = step 13e's 0010 fingerprints. Returns { prints: 0014's
-// fingerprints (null if 0014 could not be applied), downOk: true if the
-// 0014 down-script (14i) passed every check - main() runs 13g only then }.
-async function step14(db, upgradeDb, after10) {
+// Returns { prints: 0014's fingerprints (null if 0014 could not be
+// applied), downOk: true if the 0014 down-script (14i) passed every check
+// - main() runs 13g only then }.
+async function step14(db, upgradeDb) {
   // h (first). the fingerprints file must stay runnable through the connector
   const printsText = read('tests', '0014_fingerprints.sql');
   record('0014_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)', !/delete|drop/i.test(printsText));
@@ -834,61 +847,76 @@ async function step14(db, upgradeDb, after10) {
   record('[0014] 0006 fingerprints identical before/after 0014',
     JSON.stringify(p6) === JSON.stringify(await fingerprints(db, '0006_fingerprints.sql')));
   const c3 = onlyTheseChanged(p3, await fingerprints(db, '0003_fingerprints.sql'), key3, name3,
-    [...NEW_0014_FNS, ...REPLACED_0005_FNS, ...REPLACED_0010_FNS]);
-  record('[0014] 0003 fingerprints differ only in the 5 new and the 9 replaced testing_* functions', c3.ok, c3.detail);
-  const c5 = onlyTheseChanged(p5, await fingerprints(db, '0005_fingerprints.sql'), keyKind, nameKind,
-    [...REPLACED_0005_FNS, 'testing_update_student', 'testing_resolve_duplicate', 'testing_restore_student',
-      'testing_update_event', 'table testing_registrations']);
-  record('[0014] 0005 fingerprints differ only in the 7 replaced functions and the testing_registrations table row', c5.ok, c5.detail);
-  const c10 = onlyTheseChanged(p10, await fingerprints(db, '0010_fingerprints.sql'), keyKind, nameKind, REPLACED_0010_FNS);
-  record('[0014] 0010 fingerprints differ only in the 6 replaced functions', c10.ok, c10.detail);
+    [...FNS_0014, 'testing_restore_student']);
+  record('[0014] 0003 fingerprints differ only in the new testing_* functions and testing_restore_student', c3.ok, c3.detail);
+  const c5 = onlyTheseChanged(p5, await fingerprints(db, '0005_fingerprints.sql'), keyKind, nameKind, ['testing_restore_student']);
+  record('[0014] 0005 fingerprints differ only in testing_restore_student', c5.ok, c5.detail);
+  const c10 = onlyTheseChanged(p10, await fingerprints(db, '0010_fingerprints.sql'), keyKind, nameKind, ['testing_restore_student']);
+  record('[0014] 0010 fingerprints differ only in testing_restore_student', c10.ok, c10.detail);
 
   // c. every earlier test file again
   await runTestFile(db, '0010_tests.sql (after 0014)', '0010_tests.sql', 'ALL 0010 TESTS PASSED');
-  await runTestFile(db, '0005_tests.sql (after 0014, new C3)', '0005_tests.sql', 'ALL 0005 TESTS PASSED');
+  await runTestFile(db, '0005_tests.sql (after 0014)', '0005_tests.sql', 'ALL 0005 TESTS PASSED');
   await runTestFile(db, '0006_tests.sql (after 0014)', '0006_tests.sql', 'ALL 0006 TESTS PASSED');
   await runTestFile(db, '0003_tests.sql (after 0014)', '0003_tests.sql', 'ALL 0003 TESTS PASSED');
   await runTestFile(db, '0004_tests.sql (after 0014)', '0004_tests.sql', 'ALL 0004 TESTS PASSED');
   await runTestFile(db, '0002_tests.sql (after 0014)', '0002_tests.sql', 'ALL 0002 TESTS PASSED');
   await runTestFile(db, 'verify_pin_tests.sql (after 0014)', 'verify_pin_tests.sql', 'ALL PIN TESTS PASSED');
 
-  // d. the family form's login can't reach the private columns or functions
+  // d. the family form's login can't reach anything of 0014
   await registrarLiveChecks(db, [
     ['read testing_results', 'select 1 from public.testing_results limit 1'],
     ['call testing_set_result', 'select public.testing_set_result(gen_random_uuid(), null)'],
-    ['read testing_registrations.private_date', 'select private_date from public.testing_registrations limit 1'],
-    ['call testing_set_private', "select public.testing_set_private(gen_random_uuid(), 1, current_date, time '16:00')"],
-    ['call testing_clear_private', 'select public.testing_clear_private(gen_random_uuid(), 1)'],
-    ['call testing_add_private_student', "select public.testing_add_private_student(gen_random_uuid(), 'a', 'b', gen_random_uuid(), true, 'cash', current_date, time '16:00')"],
-    ['call testing_amount_due', 'select public.testing_amount_due(gen_random_uuid())'],
+    ...PRIVATE_TABLES.map((t) => [`read ${t}`, `select 1 from public.${t} limit 1`]),
+    ['read testing_private_list', 'select 1 from public.testing_private_list limit 1'],
+    ['call testing_private_add', "select public.testing_private_add('worcester', 'a', 'b', gen_random_uuid(), true, 'cash', current_date, time '16:00')"],
+    ['call testing_move_to_private', "select public.testing_move_to_private(gen_random_uuid(), 1, current_date, time '16:00')"],
+    ['call testing_private_amount_due', 'select public.testing_private_amount_due(gen_random_uuid())'],
   ]);
 
-  // e. one private day for a family registration of the test event (11c)
-  await run(db, "[0014] a private day for the test event's family registration Pat Lee", `
+  // e. one private testing with a payment and a result (as postgres,
+  //    labelled like 11c), so the re-run and the down-script have data
+  await run(db, '[0014] a seeded private testing with a payment and a result', `
     begin;
     select set_config('request.jwt.claims', '', true);
     select set_config('tkd.actor_label', 'PGlite test event', true);
     select set_config('tkd.action', 'seed', true);
     select set_config('tkd.batch_id', gen_random_uuid()::text, true);
-    update public.testing_registrations r
-       set private_date = public.testing_today() + 10, private_time = time '16:00'
-     where r.first_name = 'Pat' and r.last_name = 'Lee' and r.source = 'form';
+    insert into public.testing_private
+      (location_code, first_name, last_name, class_id, class_name, rank_id, rank_name,
+       belt_pattern, belt_color, belt_color_2, belt_end_stripes, belt_end_stripe_color, to_kind,
+       private_cents, paying_by, stripes_confirmed, private_date, private_time)
+    select 'worcester', 'Pia', 'Private', c.id, c.name, r.id, r.name,
+           r.belt_pattern, r.belt_color, r.belt_color_2, r.belt_end_stripes, r.belt_end_stripe_color, 'none',
+           r.private_cents, 'cash', true, public.testing_today(), time '16:00'
+      from public.testing_ranks r join public.testing_classes c on c.id = r.class_id
+     where r.location_code = 'worcester'
+     order by c.position, r.position
+     limit 1;
+    insert into public.testing_private_payments (private_id, kind, amount_cents, method, paid_on, recorded_by_name)
+    select p.id, 'payment', 5000, 'cash', public.testing_today(), 'PGlite test event'
+      from public.testing_private p where p.first_name = 'Pia' and p.last_name = 'Private';
+    insert into public.testing_private_results (private_id, result, note)
+    select p.id, 'pass', 'Strong forms.'
+      from public.testing_private p where p.first_name = 'Pia' and p.last_name = 'Private';
     select set_config('tkd.actor_label', '', true);
     select set_config('tkd.action', '', true);
     select set_config('tkd.batch_id', '', true);
     commit;`);
-  const privateCount = await one(db, 'select count(*)::int from public.testing_registrations where private_date is not null');
-  record('[0014] the test event has one private registration', privateCount === 1, `${privateCount} private`);
+  const seeded = (await db.query(`select (select count(*)::int from public.testing_private) as privates,
+      (select count(*)::int from public.testing_private_payments) as payments,
+      (select count(*)::int from public.testing_private_results) as results`)).rows[0];
+  record('[0014] one private testing, one payment, one result', seeded.privates === 1 && seeded.payments === 1 && seeded.results === 1,
+    JSON.stringify(seeded));
 
   // f. re-run safety
   const before14 = await fingerprints(db, '0014_fingerprints.sql');
   const data14Before = await one(db, snapshot14Sql);
   await run(db, 'apply 0014 a SECOND time (re-run safety)', read('migrations', '0014_testing_private.sql'));
   const data14After = await one(db, snapshot14Sql);
-  record('0014 re-run kept every registration (id, private day, time, version) and the history count unchanged', data14Before === data14After);
+  record('0014 re-run kept every row (3 tables) and the history count unchanged', data14Before === data14After);
   const after14 = await fingerprints(db, '0014_fingerprints.sql');
-  record('0014 fingerprints identical before/after re-run (18 rows)',
-    JSON.stringify(before14) === JSON.stringify(after14) && after14.length === 18, `${after14.length} rows`);
+  record('0014 fingerprints identical before/after re-run', JSON.stringify(before14) === JSON.stringify(after14), `${after14.length} rows`);
   await runTestFile(db, '0014_tests.sql (after re-run)', '0014_tests.sql', 'ALL 0014 TESTS PASSED');
   await runTestFile(db, '0005_tests.sql (after 0014 re-run)', '0005_tests.sql', 'ALL 0005 TESTS PASSED');
 
@@ -906,14 +934,15 @@ async function step14(db, upgradeDb, after10) {
   }
 
   // i. the 0014 down-script (SETUP section 15e)
-  const downOk = await downScript14Check(db, { p3, p5, after10, privateCount });
+  const downOk = await downScript14Check(db, { p3, p5, p10 });
   return { prints: after14, downOk };
 }
 
-// 14i. SETUP section 15e: step 1 (re-run 0005), step 2 (re-run 0010),
-// step 3 (the SQL block, read from SETUP.md so the tested text is the
-// documented text). Returns true only if every step and check passed.
-async function downScript14Check(db, { p3, p5, after10, privateCount }) {
+// 14i. SETUP section 15e: step 2 (re-run 0010), then step 3 (the SQL
+// block, read from SETUP.md so the tested text is the documented text).
+// (Step 1, putting the app back, has nothing to test here.) Returns true
+// only if every step and check passed.
+async function downScript14Check(db, { p3, p5, p10 }) {
   const failuresBefore = results.filter((r) => !r.ok).length;
   const setup = read('SETUP.md').replace(/\r\n/g, '\n');
   const start = setup.indexOf('### 15e.');
@@ -922,32 +951,36 @@ async function downScript14Check(db, { p3, p5, after10, privateCount }) {
     record('[undo 0014] find the down-script in SETUP section 15e', false, 'no sql block after "### 15e."');
     return false;
   }
+  const counts = (await db.query(`select (select count(*)::int from public.testing_private) as privates,
+      (select count(*)::int from public.testing_private_payments) as payments,
+      (select count(*)::int from public.testing_private_results) as results`)).rows[0];
   const logBefore = await one(db, 'select count(*)::int from public.change_log');
-  if (!(await run(db, '[undo 0014] step 1: re-run 0005', read('migrations', '0005_testing_events.sql')))) return false;
   if (!(await run(db, '[undo 0014] step 2: re-run 0010', read('migrations', '0010_testing_results.sql')))) return false;
   if (!(await run(db, '[undo 0014] step 3: the SQL block of SETUP 15e', block[1]))) return false;
-  const gone = await one(db, `select not exists (select 1 from pg_attribute a
-                                     where a.attrelid = 'public.testing_registrations'::regclass
-                                       and a.attname in ('private_date', 'private_time') and not a.attisdropped)
+  const gone = await one(db, `select ${PRIVATE_TABLES.map((t) => `to_regclass('public.${t}') is null`).join(' and ')}
+      and to_regclass('public.testing_private_list') is null
       and not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
                        where n.nspname = 'public'
-                         and p.proname in (${NEW_0014_FNS.map((n) => `'${n}'`).join(', ')}))`);
-  record('[undo 0014] both columns and the five 0014-only functions are gone', gone === true);
-  const undoRows = await one(db, `select count(*)::int from public.change_log
-      where table_name = 'testing_registrations' and action = 'undo_0014' and op = 'update' and batch_id is not null`);
+                         and p.proname in (${FNS_0014.map((n) => `'${n}'`).join(', ')}))`);
+  record('[undo 0014] the 3 tables, the view and every 0014 function are gone', gone === true);
+  const undo = (await db.query(`select
+      (select count(*)::int from public.change_log where action = 'undo_0014' and op = 'delete' and batch_id is not null
+          and table_name = 'testing_private') as privates,
+      (select count(*)::int from public.change_log where action = 'undo_0014' and op = 'delete' and batch_id is not null
+          and table_name = 'testing_private_payments') as payments,
+      (select count(*)::int from public.change_log where action = 'undo_0014' and op = 'delete' and batch_id is not null
+          and table_name = 'testing_private_results') as results`)).rows[0];
   const logAfter = await one(db, 'select count(*)::int from public.change_log');
-  record('[undo 0014] one undo_0014 history row per cleared private day, nothing else lost',
-    privateCount > 0 && undoRows === privateCount && logAfter === logBefore + privateCount,
-    `${privateCount} private days, ${undoRows} undo rows`);
-  const prints10 = await fingerprints(db, '0010_fingerprints.sql');
-  record('[undo 0014] 0010 fingerprints equal step 13e (a database that never had 0014)',
-    JSON.stringify(prints10) === JSON.stringify(after10), `${prints10.length} rows`);
-  const prints5 = await fingerprints(db, '0005_fingerprints.sql');
-  record('[undo 0014] 0005 fingerprints equal the ones taken before 0014 (14a)',
-    JSON.stringify(prints5) === JSON.stringify(p5), `${prints5.length} rows`);
-  const prints3 = await fingerprints(db, '0003_fingerprints.sql');
-  record('[undo 0014] 0003 fingerprints equal the ones taken before 0014 (14a)',
-    JSON.stringify(prints3) === JSON.stringify(p3), `${prints3.length} rows`);
+  const removed = counts.privates + counts.payments + counts.results;
+  record('[undo 0014] one undo_0014 history row per removed private testing (and its payments and result), nothing else lost',
+    counts.privates > 0 && JSON.stringify(undo) === JSON.stringify(counts) && logAfter === logBefore + removed,
+    `removed ${JSON.stringify(counts)}, undo rows ${JSON.stringify(undo)}`);
+  for (const [file, before, label] of [['0010_fingerprints.sql', p10, '0010'], ['0005_fingerprints.sql', p5, '0005'],
+    ['0003_fingerprints.sql', p3, '0003']]) {
+    const now = await fingerprints(db, file);
+    record(`[undo 0014] ${label} fingerprints equal the ones taken before 0014 (14a)`,
+      JSON.stringify(now) === JSON.stringify(before), `${now.length} rows`);
+  }
   await runTestFile(db, '[undo 0014] 0010_tests.sql', '0010_tests.sql', 'ALL 0010 TESTS PASSED');
   await runTestFile(db, '[undo 0014] 0005_tests.sql', '0005_tests.sql', 'ALL 0005 TESTS PASSED');
   return results.filter((r) => !r.ok).length === failuresBefore;

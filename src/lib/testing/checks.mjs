@@ -2,8 +2,8 @@
 // (Phase 2 added: eventRules.js, qr.js, the events preview database and the family page's preview
 // API — contract 0005 §5. Those groups are at the end. Phase 3 added gradingRules.js and the
 // grading part of the preview database — contract 0010 §3.5 — just before the family page part.
-// Phase 4 added the private testing rules and the private part of the preview database —
-// contract 0014 §4.4, the worked examples M1–M14 and the replays V3–V20 — after the grading part.)
+// Phase 4 added privateRules.js and the Private testing part of the preview database — contract
+// 0014 §4.5, the worked examples E1–E13 and the replays V3–V11 — after the grading part.)
 // Why it exists: names.js, money.js, rankOrder.js and the preview database (mockTesting.js) carry
 // rules that must match the real database exactly. These plain `assert` checks run in a few
 // milliseconds without a browser or a database, and print ALL TESTING LIB CHECKS PASSED.
@@ -28,8 +28,6 @@ import {
   registrationSwitch, testingFor, feeFor, isPaid, classTimeLabel, shortTime, timeToMinutes, validateClassTimes,
   signatureIsValid, noteIsValid, normalizeNote, registrationUrl, SIGNATURE_PREFIX, SIGNATURE_MAX_LENGTH, NOTE_MAX, ACK_VERSION,
   FORM_PAYING_BY, UNDO_WINDOW_MS, eventCounts,
-  PRIVATE_TIME_CHOICES, privateTimeIsValid, privateDayLimit, privateDayProblem, isPrivate, gradingDay, priceFor, amountDue,
-  owesMore, showMarkPaid, canChangePayingBy, privateMenu, livePayments, privateTestingsList,
 } from './eventRules.js';
 import { registrationLink, qrSvgDataUrl } from './qr.js';
 import {
@@ -38,7 +36,9 @@ import {
 } from './gradingRules.js';
 import {
   createEventsBackend, defaultEventsData, EVENT_RPC_NAMES, EVENT_RESTRICTED_RPC_NAMES, EVENT_ADMIN_ONLY_RPCS, DEFAULT_EVENT_ID, DEFAULT_PUBLIC_CODE,
+  EVENT_TABLES,
 } from '../mockTestingEvents.js';
+import * as PR from './privateRules.js'; // phase 4: the Private testing tab's rules
 
 let count = 0;
 function check(label, fn) {
@@ -1337,7 +1337,8 @@ check('events mock: default preview data (contract 0005 §5)', () => {
   assert.equal(roster.filter((r) => r.paid).length, 6);
   assert.equal(roster.reduce((t, r) => t + r.paid_cents, 0), 41000); // $410
   assert.equal(roster.filter((r) => r.duplicate_state === 'possible').length, 1);
-  assert.equal(roster.filter((r) => r.status === 'withdrawn').length, 1);
+  // Withdrawn: Leo, and (phase 4) Ava Chen CB-3117, moved to a private testing (her $65 nets 0 here).
+  assert.equal(roster.filter((r) => r.status === 'withdrawn').length, 2);
   const zoe = roster.find((r) => r.reference === 'CB-3112');
   assert.equal(zoe.first_name, 'Zoe');
   assert.equal(zoe.signed, true);
@@ -1374,7 +1375,10 @@ check('events mock: default data dates are in the past and in order', () => {
     for (const p of d.payments) {
       const reg = d.registrations.find((r) => r.id === p.registration_id);
       assert.ok(p.paid_on < today && p.paid_on >= schoolDay(reg.registered_at), `${today} ${reg.reference} paid ${p.paid_on}`);
-      assert.ok(reg.registered_at < p.recorded_at && schoolDay(p.recorded_at) === p.paid_on);
+      assert.ok(reg.registered_at < p.recorded_at && schoolDay(p.recorded_at) < today);
+      // A payment is dated the day it was recorded; a move's reversal (phase 4) the original's day.
+      if (p.kind === 'payment') assert.equal(schoolDay(p.recorded_at), p.paid_on);
+      else assert.equal(p.paid_on, d.payments.find((x) => x.id === p.reverses_payment_id).paid_on);
     }
     assert.equal(d.payments.reduce((t, p) => t + p.amount_cents, 0), 41000); // early prices: $410
   }
@@ -1405,7 +1409,8 @@ check('eventRules: eventCounts for the Events list and Delete event', () => {
   // On the default data the totals are exactly what Delete event expects.
   evReset();
   const c = eventCounts(rosterOf(DEFAULT_EVENT_ID));
-  assert.deepEqual(c, { activeCount: 15, withdrawnCount: 1, registrationCount: 16, paymentTotalCents: 41000, removedPaymentCents: 0 });
+  // (Phase 4: + Ava Chen CB-3117, moved to a private testing — withdrawn, her $65 nets 0 here.)
+  assert.deepEqual(c, { activeCount: 15, withdrawnCount: 2, registrationCount: 17, paymentTotalCents: 41000, removedPaymentCents: 0 });
   const e = eventRow();
   assert.equal(evStatus('testing_delete_event', { p_event_id: e.id, p_expected_version: e.version, p_expected_registration_count: c.activeCount, p_expected_payment_total_cents: c.paymentTotalCents }), 'stale');
   assert.equal(evStatus('testing_delete_event', { p_event_id: e.id, p_expected_version: e.version, p_expected_registration_count: c.registrationCount, p_expected_payment_total_cents: c.paymentTotalCents }), 'ok');
@@ -1459,13 +1464,26 @@ check('events mock: who may call each function (A / S splits)', () => {
     settings_update_school_address: { p_code: 'nowhere', p_expected_version: 1, p_street: null, p_city: null, p_state: null, p_zip: null },
     testing_set_result: { p_registration_id: anyId, p_result: 'pass' }, // phase 3 (S)
     testing_set_result_note: { p_registration_id: anyId, p_note: 'x' }, // phase 3 (S)
-    testing_set_private: { p_registration_id: anyId, p_expected_version: 1, p_private_date: '2026-12-01', p_private_time: '16:00' }, // phase 4 (S)
-    testing_clear_private: { p_registration_id: anyId, p_expected_version: 1 }, // phase 4 (S)
-    testing_add_private_student: { p_event_id: anyId, p_first: 'A', p_last: 'B', p_event_rank_id: anyId, p_stripes: true, p_paying_by: 'cash', p_private_date: '2026-12-01', p_private_time: '16:00' }, // phase 4 (S)
+    // Phase 4 (S unless marked A).
+    testing_private_add: { p_location_code: 'worcester', p_first: 'A', p_last: 'B', p_rank_id: anyId, p_stripes: true, p_paying_by: 'cash', p_private_date: '2026-12-01', p_private_time: '16:00' },
+    testing_private_update: { p_private_id: anyId, p_expected_version: 1, p_first: 'A', p_last: 'B', p_rank_id: anyId },
+    testing_private_change_day: { p_private_id: anyId, p_expected_version: 1, p_private_date: '2026-12-01', p_private_time: '16:00' },
+    testing_private_change_paying_by: { p_private_id: anyId, p_expected_version: 1, p_paying_by: 'cash' },
+    testing_private_mark_paid: { p_private_id: anyId, p_expected_version: 1 },
+    testing_private_undo_payment: { p_payment_id: anyId },
+    testing_private_edit_payment: { p_payment_id: anyId, p_method: 'cash', p_amount_cents: 100, p_paid_on: '2026-10-17' }, // A
+    testing_private_cancel: { p_private_id: anyId, p_expected_version: 1 },
+    testing_private_restore: { p_private_id: anyId, p_expected_version: 1 }, // A
+    testing_private_delete: { p_private_id: anyId, p_expected_version: 1, p_expected_payment_ids: [] }, // A
+    testing_private_set_result: { p_private_id: anyId, p_result: 'pass' },
+    testing_private_set_result_note: { p_private_id: anyId, p_note: 'x' },
+    testing_move_to_private: { p_registration_id: anyId, p_expected_version: 1, p_private_date: '2026-12-01', p_private_time: '16:00' },
+    testing_private_undo_move: { p_private_id: anyId, p_expected_version: 1 },
   };
   assert.deepEqual(Object.keys(sample).sort(), [...EVENT_RPC_NAMES].sort());
   // testing_restore_student checks who inside (staff: their own "keep one" for 10 seconds).
-  const adminOnly = ['testing_add_event', 'testing_update_event', 'testing_delete_event', 'testing_edit_payment', 'testing_withdraw_student', 'testing_delete_student', 'settings_update_school_address'];
+  const adminOnly = ['testing_add_event', 'testing_update_event', 'testing_delete_event', 'testing_edit_payment', 'testing_withdraw_student', 'testing_delete_student', 'settings_update_school_address',
+    'testing_private_edit_payment', 'testing_private_restore', 'testing_private_delete']; // the last three: phase 4
   assert.deepEqual([...EVENT_ADMIN_ONLY_RPCS].sort(), [...adminOnly].sort());
   const before = JSON.stringify(evDb());
   for (const name of EVENT_RPC_NAMES) {
@@ -1562,11 +1580,11 @@ check('events mock: Add / Edit / Delete event and the copy rule', () => {
   // Delete: the counts must be what the dialog showed (all registrations, net payments).
   const regs = evDb().registrations.filter((r) => r.event_id === nov.id);
   const del = (count, total) => evStatus('testing_delete_event', { p_event_id: nov.id, p_expected_version: eventRow().version, p_expected_registration_count: count, p_expected_payment_total_cents: total });
-  assert.equal(regs.length, 16); // incl. the withdrawn one and the duplicate copy
+  assert.equal(regs.length, 17); // incl. the withdrawn one, the duplicate copy and (phase 4) Ava's moved one
   assert.equal(del(14, 41000), 'stale');
-  assert.equal(del(16, 0), 'stale');
-  assert.equal(evStatus('testing_delete_event', { p_event_id: nov.id, p_expected_version: 1, p_expected_registration_count: 16, p_expected_payment_total_cents: 41000 }), 'stale'); // old version
-  assert.equal(del(16, 41000), 'ok');
+  assert.equal(del(17, 0), 'stale');
+  assert.equal(evStatus('testing_delete_event', { p_event_id: nov.id, p_expected_version: 1, p_expected_registration_count: 17, p_expected_payment_total_cents: 41000 }), 'stale'); // old version
+  assert.equal(del(17, 41000), 'ok');
   const after = evDb();
   assert.equal(after.events.length, 1);
   assert.equal(after.registrations.length, 0);
@@ -1614,7 +1632,7 @@ check('events mock: students, Mark paid, Undo window, Edit payment', () => {
   assert.equal(addS({ p_event_rank_id: evDb().ranks[0].id }).status, 'invalid'); // not a rank of this event
   const walkIn = addS({ p_first: '  Sam  ', p_last: 'Ortiz' });
   assert.equal(walkIn.status, 'ok');
-  assert.equal(walkIn.reference, 'CB-3117');
+  assert.equal(walkIn.reference, 'CB-3118');
   assert.equal(walkIn.version, 1);
   const sam = evDb().registrations.find((r) => r.id === walkIn.id);
   assert.equal(sam.first_name, 'Sam');
@@ -1846,11 +1864,11 @@ check('events mock: family form (testing_public_event / testing_public_register)
   const first = send({ submissionId: sid, first: ' Ivy ', last: 'Stone' });
   assert.equal(first.status, 'ok');
   assert.deepEqual(Object.keys(first).sort(), ['address', 'class_name', 'day_cents', 'early_cents', 'end_time', 'first_name', 'last_name', 'paying_by', 'reference', 'school_name', 'start_time', 'status', 'testing_date', 'testing_for'].sort());
-  assert.deepEqual([first.reference, first.first_name, first.class_name, first.early_cents, first.day_cents, first.testing_for.name], ['CB-3117', 'Ivy', 'Group A', 6500, 7500, 'Orange']);
+  assert.deepEqual([first.reference, first.first_name, first.class_name, first.early_cents, first.day_cents, first.testing_for.name], ['CB-3118', 'Ivy', 'Group A', 6500, 7500, 'Orange']);
   const count = evDb().registrations.length;
   assert.deepEqual(send({ submissionId: sid }), first);
   assert.equal(evDb().registrations.length, count);
-  const ivy = regBy('CB-3117');
+  const ivy = regBy('CB-3118');
   assert.deepEqual([ivy.source, ivy.created_by_name, ivy.signature, ivy.ack_version, ivy.duplicate_state], ['form', 'Family form', SIG, ACK_VERSION, 'none']);
   // A duplicate is flagged silently.
   const dup = send({ first: 'zoe', last: 'park' });
@@ -2309,725 +2327,871 @@ check('grading mock: a store saved before phase 3 keeps its events', () => {
   assert.deepEqual(evDb().results, []); // reset starts with nobody graded
 });
 
-// ======================= private testing rules (phase 4, contract 0014 §1, §4.1) =======================
-// The contract's worked examples (§1.3 M1–M14) and the menu / list rules, on eventRules.js alone.
+// ======================= privateRules.js (phase 4, contract 0014 §1, §4.1) =======================
+// The Private testing tab's rules on their own: the day and time rules, the money rule with the
+// contract's worked examples E1–E13, the ⋯ menu, Upcoming / Past and the cards, and Move.
 
-const P4_DAY = '2026-11-20'; // the testing day of the examples (a Friday)
-const RANK_A = { earlyCents: 6500, dayCents: 7500, privateCents: 8500 }; // Group A Yellow
-const RANK_B = { earlyCents: 7000, dayCents: 8000, privateCents: 9500 }; // Group B Blue
+const PT = '2026-10-17'; // "today" of the default preview data
 
-check('private rules: the time list and the time check (v0.157)', () => {
-  assert.equal(PRIVATE_TIME_CHOICES.length, 193);
-  assert.equal(PRIVATE_TIME_CHOICES[0], '06:00');
-  assert.equal(PRIVATE_TIME_CHOICES[1], '06:05');
-  assert.equal(PRIVATE_TIME_CHOICES[192], '22:00');
-  assert.ok(PRIVATE_TIME_CHOICES.includes('16:00'));
-  for (const ok of ['06:00', '22:00', '16:00', '16:05', '16:00:00', '21:55']) assert.equal(privateTimeIsValid(ok), true, ok);
-  for (const bad of ['05:55', '22:05', '16:03', '16:00:30', '6:00', '24:00', '', null, undefined, 1600, '16:00:00.5', ' 16:00']) {
-    assert.equal(privateTimeIsValid(bad), false, String(bad));
+check('privateRules: the time list and the time check (v0.157)', () => {
+  assert.equal(PR.PRIVATE_TIME_CHOICES.length, 193);
+  assert.equal(PR.PRIVATE_TIME_CHOICES[0], '06:00');
+  assert.equal(PR.PRIVATE_TIME_CHOICES[1], '06:05');
+  assert.equal(PR.PRIVATE_TIME_CHOICES[192], '22:00');
+  for (const ok of ['06:00', '22:00', '16:00', '16:05', '16:00:00', '21:55']) assert.equal(PR.privateTimeIsValid(ok), true, ok);
+  for (const bad of ['05:55', '22:05', '16:03', '16:00:30', '6:00', '24:00', '', null, undefined, 1600, ' 16:00']) {
+    assert.equal(PR.privateTimeIsValid(bad), false, String(bad));
   }
 });
 
-check('private rules: the day limit (Postgres + 1 year) and the day problems', () => {
-  assert.equal(privateDayLimit('2026-11-20'), '2027-11-20');
-  assert.equal(privateDayLimit('2028-02-29'), '2029-02-28'); // a leap day → Feb 28, as Postgres
-  assert.equal(privateDayLimit('2027-02-28'), '2028-02-28');
-  assert.equal(privateDayLimit('2026-02-30'), null);
-  assert.equal(privateDayLimit(null), null);
-  const today = '2026-10-17';
-  assert.equal(privateDayProblem('', today, P4_DAY), 'missing');
-  assert.equal(privateDayProblem(null, today, P4_DAY), 'missing');
-  assert.equal(privateDayProblem('2026-12-3', today, P4_DAY), 'missing'); // half typed
-  assert.equal(privateDayProblem('2026-02-30', today, P4_DAY), 'missing');
-  assert.equal(privateDayProblem('2026-10-16', today, P4_DAY), 'past');
-  assert.equal(privateDayProblem(today, today, P4_DAY), null); // today is fine
-  assert.equal(privateDayProblem('2026-11-01', today, P4_DAY), null); // before the testing day
-  assert.equal(privateDayProblem(P4_DAY, today, P4_DAY), null); // the testing day itself (Q4)
-  assert.equal(privateDayProblem('2027-11-20', today, P4_DAY), null); // exactly a year after
-  assert.equal(privateDayProblem('2027-11-21', today, P4_DAY), 'tooFar');
+check('privateRules: the day rules count from today (incl. Feb 29)', () => {
+  assert.equal(PR.privateDayLimit(PT), '2027-10-17');
+  assert.equal(PR.privateDayLimit('2028-02-29'), '2029-02-28'); // as Postgres + interval '1 year'
+  assert.equal(PR.privateDayLimit('2027-02-28'), '2028-02-28');
+  assert.equal(PR.privateDayLimit('nope'), null);
+  assert.equal(PR.privateDayProblem('', PT), 'missing');
+  assert.equal(PR.privateDayProblem('2026-12-3', PT), 'missing');
+  assert.equal(PR.privateDayProblem('2026-02-30', PT), 'missing');
+  assert.equal(PR.privateDayProblem('2026-10-16', PT), 'past');
+  assert.equal(PR.privateDayProblem(PT, PT), null);
+  assert.equal(PR.privateDayProblem('2027-10-17', PT), null);
+  assert.equal(PR.privateDayProblem('2027-10-18', PT), 'tooFar');
+  assert.equal(PR.privateDayProblem('2029-02-28', '2028-02-29'), null);
+  assert.equal(PR.privateDayProblem('2029-03-01', '2028-02-29'), 'tooFar');
 });
 
-check('private rules: isPrivate, gradingDay, priceFor', () => {
-  assert.equal(isPrivate({ privateDate: '2026-12-01' }), true);
-  assert.equal(isPrivate({ private_date: '2026-12-01' }), true);
-  assert.equal(isPrivate({ privateDate: null }), false);
-  assert.equal(isPrivate({}), false);
-  assert.equal(isPrivate(null), false);
-  assert.equal(gradingDay({ privateDate: '2026-12-01' }, P4_DAY), '2026-12-01');
-  assert.equal(gradingDay({ privateDate: null }, P4_DAY), P4_DAY);
-  assert.equal(gradingWindow('2026-11-30', gradingDay({ privateDate: '2026-12-01' }, P4_DAY)), 'before');
-  assert.equal(priceFor({ rank: RANK_A, privateDate: '2026-12-01', today: '2026-10-17', testingDate: P4_DAY }), 8500);
-  assert.equal(priceFor({ rank: RANK_A, privateDate: null, today: '2026-11-19', testingDate: P4_DAY }), 6500);
-  assert.equal(priceFor({ rank: RANK_A, privateDate: null, today: P4_DAY, testingDate: P4_DAY }), 7500);
-  assert.equal(priceFor({ rank: { private_cents: 9500 }, privateDate: '2026-12-01', today: '2026-10-17', testingDate: P4_DAY }), 9500); // database spelling
+check('privateRules: amountDue = the worked examples E1–E13 (§1.3)', () => {
+  const due = (privateCents, paidCents) => PR.amountDue({ privateCents, paidCents });
+  assert.equal(due(8500, 0), 8500); // E1 added, not paid
+  assert.equal(due(8500, 8500), 0); // E1 after Mark paid → already_paid
+  assert.equal(due(8500, 6500), 2000); // E2 moved with $65 paid
+  assert.equal(due(8500, 6500 + 2000 - 2000), 2000); // E3 the $20 undone
+  assert.equal(due(8500, 0), 8500); // E4 moved, not paid
+  assert.equal(due(8500, 8500), 0); // E5 moved with $85 paid
+  assert.equal(due(9500, 8500), 1000); // E6 belt corrected to Group B Blue
+  assert.equal(due(8500, 9500), 0); // E7 corrected to a cheaper rank, nothing refunded
+  assert.equal(due(8500, 6500 + 2000 - 2000), 2000); // E8 admin Undo of the $20
+  assert.equal(due(8500, 6500 + 2000 - 2000 + 1000), 1000); // E9 the $20 edited to $10
+  assert.equal(due(0, 0), 0); // E10 private price $0
+  assert.equal(due(8500, 8500), 0); // E11 paid, then cancelled (still paid)
+  assert.equal(due(8500, 6500), 2000); // E12 owes $20 whatever the method
+  assert.equal(due(8500, 9500), 0); // E13 moved overpaid
+  assert.equal(due(8500, undefined), 8500); // a missing paid amount counts as 0
+  assert.equal(due(8500, -500), 8500); // (net never negative in practice)
+  // E2 / E5 / E13 / E4 as the Move dialog's money line.
+  assert.deepEqual(PR.moveMoney({ paidCents: 6500, privateCents: 8500 }), { kind: 'owes', dueCents: 2000 });
+  assert.deepEqual(PR.moveMoney({ paidCents: 8500, privateCents: 8500 }), { kind: 'enough', dueCents: 0 });
+  assert.deepEqual(PR.moveMoney({ paidCents: 9500, privateCents: 8500 }), { kind: 'enough', dueCents: 0 });
+  assert.deepEqual(PR.moveMoney({ paidCents: 0, privateCents: 8500 }), { kind: 'notPaid', dueCents: 8500 });
 });
 
-check('private rules: amountDue = every worked example M1–M14 (§1.3)', () => {
-  const due = (rank, privateDate, paidCents, today) => amountDue({ rank, privateDate, paidCents, today, testingDate: P4_DAY });
-  const PRIV = '2026-12-01';
-  // M1 regular, not paid: by the day they pay.
-  assert.equal(due(RANK_A, null, 0, '2026-11-10'), 6500);
-  assert.equal(due(RANK_A, null, 0, '2026-11-20'), 7500);
-  assert.equal(due(RANK_A, null, 0, '2026-11-21'), 7500);
-  // M2 private, not paid, any day.
-  for (const day of ['2026-11-10', '2026-11-20', '2026-12-01']) assert.equal(due(RANK_A, PRIV, 0, day), 8500);
-  // M3 paid $65, then private → $20 more; after the $20 → nothing.
-  assert.equal(due(RANK_A, PRIV, 6500, '2026-11-10'), 2000);
-  assert.equal(due(RANK_A, PRIV, 8500, '2026-11-10'), 0);
-  // M4 the $20 undone (net back to 6500) → $20 again.
-  assert.equal(due(RANK_A, PRIV, 8500 - 2000, '2026-11-10'), 2000);
-  // M5 private paid $85, then Back → not private, paid → 0.
-  assert.equal(due(RANK_A, null, 8500, '2026-11-10'), 0);
-  // M6 paid $65, private (owes $20), then Back → 0 (partial accepted, L2).
-  assert.equal(due(RANK_A, null, 6500, '2026-11-10'), 0);
-  // M7 private, not paid, Back on Nov 21 → regular, testing-day price.
-  assert.equal(due(RANK_A, null, 0, '2026-11-21'), 7500);
-  // M8 private paid $85, belt corrected to Group B Blue ($95) → $10.
-  assert.equal(due(RANK_B, PRIV, 8500, '2026-11-10'), 1000);
-  // M9 corrected to a rank with private $80 → 0 (no refund).
-  assert.equal(due({ ...RANK_A, privateCents: 8000 }, PRIV, 8500, '2026-11-10'), 0);
-  // M10 regular, paid $65, pricier rank → 0 (v0.136).
-  assert.equal(due(RANK_B, null, 6500, '2026-11-10'), 0);
-  // M11 private price $0, not paid → 0 (nothing to collect); a regular $0 rank too.
-  assert.equal(due({ ...RANK_A, privateCents: 0 }, PRIV, 0, '2026-11-10'), 0);
-  assert.equal(due({ earlyCents: 0, dayCents: 0, privateCents: 0 }, null, 0, '2026-11-10'), 0);
-  // M12 topped up ($65 + $20), the $20 edited to $10 (reversal −2000, new 1000) → $10.
-  assert.equal(due(RANK_A, PRIV, 6500 + 2000 - 2000 + 1000, '2026-11-12'), 1000);
-  // M13 topped up, admin Undo of the $20 → $20.
-  assert.equal(due(RANK_A, PRIV, 6500 + 2000 - 2000, '2026-11-12'), 2000);
-  // M14 owes $20 whatever the method (the method is the database's part, replayed below).
-  assert.equal(due(RANK_A, PRIV, 6500, '2026-11-12'), 2000);
-  // Never negative, never a fraction; a missing paid amount counts as 0.
-  assert.equal(due(RANK_A, PRIV, 20000, '2026-11-12'), 0);
-  assert.equal(due(RANK_A, PRIV, undefined, '2026-11-12'), 8500);
-  assert.equal(due(RANK_A, null, -6500, '2026-11-12'), 6500); // (net can't be negative; read as not paid)
-});
-
-check('private rules: owesMore, showMarkPaid, canChangePayingBy (P4, Q3)', () => {
+check('privateRules: owesMore, showMarkPaid, canChangePayingBy, canMoveToPrivate', () => {
   const row = (paid, amountDueCents, status = 'active') => ({ paid, amountDueCents, status });
-  assert.equal(owesMore(row(true, 2000)), true);
-  assert.equal(owesMore(row(true, 0)), false);
-  assert.equal(owesMore(row(false, 8500)), false); // not paid at all isn't "owes more"
-  assert.equal(showMarkPaid(row(false, 8500)), true);
-  assert.equal(showMarkPaid(row(true, 2000)), true); // next to the Paid tag (P4)
-  assert.equal(showMarkPaid(row(true, 0)), false);
-  assert.equal(showMarkPaid(row(false, 0)), false); // a $0 price: nothing to collect (§10 point 3)
-  assert.equal(showMarkPaid(row(false, 8500, 'withdrawn')), false);
-  assert.equal(canChangePayingBy(row(false, 0)), true);
-  assert.equal(canChangePayingBy(row(true, 2000)), true);
-  assert.equal(canChangePayingBy(row(true, 0)), false);
-  assert.equal(canChangePayingBy(row(false, 6500, 'withdrawn')), false);
+  assert.equal(PR.owesMore(row(true, 2000)), true);
+  assert.equal(PR.owesMore(row(true, 0)), false);
+  assert.equal(PR.owesMore(row(false, 8500)), false);
+  assert.equal(PR.showMarkPaid(row(false, 8500)), true);
+  assert.equal(PR.showMarkPaid(row(true, 2000)), true);
+  assert.equal(PR.showMarkPaid(row(false, 0)), false); // E10: no button
+  assert.equal(PR.showMarkPaid(row(false, 8500, 'cancelled')), false);
+  assert.equal(PR.canChangePayingBy(row(false, 8500)), true);
+  assert.equal(PR.canChangePayingBy(row(true, 2000)), true);
+  assert.equal(PR.canChangePayingBy(row(true, 0)), false);
+  assert.equal(PR.canChangePayingBy(row(false, 8500, 'cancelled')), false);
+  assert.equal(PR.canMoveToPrivate({ status: 'active', result: null }), true);
+  assert.equal(PR.canMoveToPrivate({ status: 'active' }), true);
+  assert.equal(PR.canMoveToPrivate({ status: 'active', result: 'no_show' }), true);
+  assert.equal(PR.canMoveToPrivate({ status: 'active', result: null, note: 'note only' }), true);
+  assert.equal(PR.canMoveToPrivate({ status: 'active', result: 'pass' }), false);
+  assert.equal(PR.canMoveToPrivate({ status: 'active', result: 'not_passed' }), false);
+  assert.equal(PR.canMoveToPrivate({ status: 'withdrawn', result: null }), false);
 });
 
-check('private rules: the ⋯ menu truth table (P2, P5, H1, Q5)', () => {
-  const before = { today: '2026-11-19', testingDate: P4_DAY, isAdmin: false };
-  const onDay = { today: P4_DAY, testingDate: P4_DAY, isAdmin: false };
-  const afterStaff = { today: '2026-11-21', testingDate: P4_DAY, isAdmin: false };
-  const afterAdmin = { ...afterStaff, isAdmin: true };
-  const row = (isPrivate, result = null, note = null, status = 'active') => ({ status, isPrivate, result, note, graded: isGraded({ result, note }) });
-  const menu = (r, when) => {
-    const m = privateMenu(r, when);
-    return [m.canSet, m.canChange, m.canBack, m.canGrade].map((b) => (b ? 1 : 0)).join('');
+check('privateRules: the ⋯ menu truth table (P3, P7, L5)', () => {
+  const keys = ['editDetails', 'changePayingBy', 'changeDay', 'grade', 'editPayment', 'undoPayment', 'cancel', 'restore', 'delete'];
+  const menu = (row, isAdmin, today = PT) => {
+    const m = PR.privateMenu(row, { today, isAdmin });
+    assert.deepEqual(Object.keys(m).sort(), [...keys].sort());
+    return keys.filter((k) => m[k]).join(' ');
   };
-  // Regular students: Set private unless graded (a testing-day No show may be set private).
-  assert.equal(menu(row(false), before), '1000');
-  assert.equal(menu(row(false), afterStaff), '1000'); // Q3: also after the testing day, all staff
-  assert.equal(menu(row(false, 'no_show'), afterStaff), '1000');
-  assert.equal(menu(row(false, 'no_show', 'Sick'), afterStaff), '1000');
-  assert.equal(menu(row(false, 'pass'), onDay), '0000');
-  assert.equal(menu(row(false, 'not_passed'), onDay), '0000');
-  assert.equal(menu(row(false, null, 'Note only'), onDay), '0000'); // a testing-day note blocks (has_result)
-  // Private, nothing recorded: Change, Back (staff until the testing day), Grade.
-  assert.equal(menu(row(true), before), '0111');
-  assert.equal(menu(row(true), onDay), '0111');
-  assert.equal(menu(row(true), afterStaff), '0101'); // H1: Back hidden for staff
-  assert.equal(menu(row(true), afterAdmin), '0111');
-  // A note alone doesn't count for the private paths (Q5).
-  assert.equal(menu(row(true, null, 'Bring gear'), before), '0111');
-  // A private No show: Change (a new day clears it, H2), no Back.
-  assert.equal(menu(row(true, 'no_show'), before), '0101');
-  assert.equal(menu(row(true, 'no_show'), afterAdmin), '0101');
-  // A private result: only Grade (to see / fix it).
-  assert.equal(menu(row(true, 'pass'), afterAdmin), '0001');
-  assert.equal(menu(row(true, 'not_passed'), before), '0001');
-  // Withdrawn: nothing.
-  assert.equal(menu(row(false, null, null, 'withdrawn'), before), '0000');
-  assert.equal(menu(row(true, null, null, 'withdrawn'), afterAdmin), '0000');
+  const row = (over = {}) => ({ status: 'active', paid: false, amountDueCents: 8500, result: null, privateDate: '2026-12-01', ...over });
+  assert.equal(menu(row(), false), 'editDetails changePayingBy changeDay grade cancel');
+  assert.equal(menu(row(), true), 'editDetails changePayingBy changeDay grade cancel delete');
+  assert.equal(menu(row({ paid: true, amountDueCents: 0 }), true), 'editDetails changeDay grade editPayment undoPayment cancel delete');
+  assert.equal(menu(row({ paid: true, amountDueCents: 2000 }), false), 'editDetails changePayingBy changeDay grade cancel');
+  assert.equal(menu(row({ result: 'no_show' }), false), 'editDetails changePayingBy changeDay grade cancel');
+  assert.equal(menu(row({ result: null, note: 'note only' }), false), 'editDetails changePayingBy changeDay grade cancel'); // a note never counts
+  assert.equal(menu(row({ result: 'pass' }), false), 'grade'); // L5: no Change how they'll pay either
+  assert.equal(menu(row({ result: 'not_passed', paid: true, amountDueCents: 0 }), true), 'grade editPayment undoPayment delete');
+  // Cancelled: staff nothing; admins Restore while the day is today or later, and Delete.
+  assert.equal(menu(row({ status: 'cancelled' }), false), '');
+  assert.equal(menu(row({ status: 'cancelled' }), true), 'restore delete');
+  assert.equal(menu(row({ status: 'cancelled', privateDate: PT }), true), 'restore delete');
+  assert.equal(menu(row({ status: 'cancelled', privateDate: '2026-10-16' }), true), 'delete');
+  assert.equal(menu(null, true), '');
 });
 
-check('private rules: livePayments (oldest first, reversed ones out)', () => {
-  const payments = [
-    { id: 'p3', registrationId: 'r1', kind: 'payment', amountCents: 2000, recordedAt: '2026-11-12T17:00:00.000Z', reversesPaymentId: null },
-    { id: 'p1', registrationId: 'r1', kind: 'payment', amountCents: 6500, recordedAt: '2026-11-02T17:00:00.000Z', reversesPaymentId: null },
-    { id: 'p2', registrationId: 'r1', kind: 'payment', amountCents: 500, recordedAt: '2026-11-05T17:00:00.000Z', reversesPaymentId: null },
-    { id: 'x2', registrationId: 'r1', kind: 'reversal', amountCents: -500, recordedAt: '2026-11-05T17:00:05.000Z', reversesPaymentId: 'p2' },
-    { id: 'q1', registrationId: 'r2', kind: 'payment', amountCents: 7000, recordedAt: '2026-11-01T17:00:00.000Z', reversesPaymentId: null },
-  ];
-  assert.deepEqual(livePayments(payments, 'r1').map((p) => p.id), ['p1', 'p3']);
-  assert.deepEqual(livePayments(payments, 'r2').map((p) => p.id), ['q1']);
-  assert.deepEqual(livePayments(payments, 'r9'), []);
-  assert.deepEqual(livePayments(null, 'r1'), []);
-  // The database spelling works too.
-  assert.deepEqual(livePayments([{ id: 'a', registration_id: 'r1', kind: 'payment', recorded_at: 'x', reverses_payment_id: null }], 'r1').map((p) => p.id), ['a']);
-});
-
-check('private rules: the Private testings list (P8, v0.228, Q5)', () => {
-  const r = (firstName, lastName, privateDate, privateTime, result = null, status = 'active', note = null) => ({ firstName, lastName, privateDate, privateTime, result, status, note });
+check('privateRules: Upcoming / Past order and the cards (P1, E11)', () => {
+  const r = (firstName, lastName, privateDate, privateTime, over = {}) => ({
+    firstName, lastName, privateDate, privateTime, status: 'active', paid: false, paidCents: 0, amountDueCents: 8500, ...over,
+  });
   const rows = [
     r('Ava', 'chen', '2026-12-01', '16:00'),
-    r('Ben', 'Adams', '2026-12-01', '16:00'),
-    r('Cal', 'Adams', '2026-12-01', '16:00'),
-    r('Dee', 'Zane', '2026-12-01', '09:30'),
-    r('Eve', 'Old', '2026-10-01', '17:00'), // a past day, still ungraded → stays
-    r('Fay', 'Passed', '2026-11-25', '16:00', 'pass'), // graded → out
-    r('Gus', 'NoShow', '2026-11-25', '16:00', 'no_show'), // a No show is a result → out
-    r('Hal', 'Gone', '2026-11-25', '16:00', null, 'withdrawn'), // withdrawn → out
-    r('Ivy', 'Note', '2026-11-26', '16:00', null, 'active', 'Bring gear'), // a note alone → stays
-    r('Jo', 'Regular', null, null), // not private → out
+    r('Ben', 'Adams', '2026-12-01', '16:00', { paid: true, paidCents: 6500, amountDueCents: 2000 }),
+    r('Dee', 'Zane', '2026-12-01', '09:30', { paid: true, paidCents: 8500, amountDueCents: 0 }),
+    r('Eli', 'Today', PT, '18:00'),
+    r('Fay', 'Old', '2026-10-01', '17:00', { paid: true, paidCents: 8500, amountDueCents: 0, result: 'pass' }),
+    r('Gus', 'Older', '2026-09-01', '17:00'),
+    r('Hal', 'Same', '2026-10-01', '18:00'),
+    r('Ivy', 'Cancelled', '2026-12-05', '16:00', { status: 'cancelled', paid: true, paidCents: 8500, amountDueCents: 0 }), // E11
   ];
-  assert.deepEqual(privateTestingsList(rows).map((x) => x.firstName), ['Eve', 'Ivy', 'Dee', 'Ben', 'Cal', 'Ava']);
-  assert.deepEqual(privateTestingsList([]), []);
-  assert.deepEqual(privateTestingsList(null), []);
-  const input = [rows[0], rows[1]];
-  privateTestingsList(input);
-  assert.equal(input[0].firstName, 'Ava'); // the input list isn't re-ordered
+  assert.equal(PR.privateSide(rows[3], PT), 'upcoming'); // today is upcoming
+  assert.equal(PR.privateSide(rows[7], PT), 'past'); // cancelled → past, even with a future day
+  const { upcoming, past } = PR.splitPrivate(rows, PT);
+  assert.deepEqual(upcoming.map((x) => x.firstName), ['Eli', 'Dee', 'Ben', 'Ava']);
+  assert.deepEqual(past.map((x) => x.firstName), ['Ivy', 'Hal', 'Fay', 'Gus']);
+  assert.equal(rows[0].firstName, 'Ava'); // the input isn't re-ordered
+  assert.deepEqual(PR.privateCards(upcoming), { count: 4, paid: 2, notPaid: 2, owesMore: 1, paymentsCents: 15000, cancelledCents: 0 });
+  // E11: the cancelled one isn't counted, but its money is ("includes $85 from cancelled").
+  assert.deepEqual(PR.privateCards(past), { count: 3, paid: 1, notPaid: 2, owesMore: 0, paymentsCents: 17000, cancelledCents: 8500 });
+  assert.deepEqual(PR.privateCards([]), { count: 0, paid: 0, notPaid: 0, owesMore: 0, paymentsCents: 0, cancelledCents: 0 });
+  assert.deepEqual(PR.splitPrivate(null, PT), { upcoming: [], past: [] });
 });
 
-// ======================= the private part of the preview database (0014 §2, §4.3) =======================
-// Replays of the database tests V3–V20 that need no real sign-in sessions. After every call the
-// preview's own copy of testing_amount_due must equal eventRules.amountDue for EVERY registration.
+// ======================= the Private testing part of the preview database (0014 §2, §4.4) =======================
+// Replays of the database tests V3–V11 that need no real sign-in sessions. After EVERY call the
+// preview's own copy of testing_private_amount_due — and the view's amount_due_cents — must equal
+// privateRules.amountDue for every private testing.
 
-const P4_TODAY = '2026-10-17'; // "today" of the default preview data (before the testing day)
-const p4Start = (date = P4_TODAY) => {
+// A fresh default store WITHOUT the seeded private testings (the replays below start from an empty
+// Private testing tab; the seed has its own check at the end).
+const pStart = (date = PT) => {
   evReset();
   ev.reset();
+  Object.assign(evMemory, { private: [], private_payments: [], private_results: [] });
   evToday = date;
   evClock = Date.parse(`${date}T21:00:00Z`);
 };
-const moveToday = (date) => {
+const pMoveToday = (date) => {
   evToday = date;
   evClock = Date.parse(`${date}T21:00:00Z`);
 };
-// Change the stored data directly — what the database tests do "as postgres".
-const asPostgres = (fn) => fn(evMemory);
-const memReg = (ref) => evMemory.registrations.find((r) => r.reference === ref);
-const netOf = (ref) => evDb().payments.filter((p) => p.registration_id === regBy(ref).id).reduce((t, p) => t + p.amount_cents, 0);
-const logRows = () => evDb().change_log;
-function assertDueSame() {
+const pAsPostgres = (fn) => fn(evMemory); // change stored data directly ("as postgres")
+const liveRankOf = (className, rankName, school = 'worcester') => {
   const d = evDb();
-  for (const reg of d.registrations) {
-    const event = d.events.find((e) => e.id === reg.event_id);
-    const rank = d.event_ranks.find((x) => x.id === reg.event_rank_id);
-    const net = d.payments.filter((p) => p.registration_id === reg.id).reduce((t, p) => t + p.amount_cents, 0);
-    const expected = amountDue({ rank, privateDate: reg.private_date, paidCents: net, today: evToday, testingDate: event.testing_date });
-    assert.equal(ev.amountDueFor(reg.id), expected, `due of ${reg.reference}`);
+  const c = d.classes.find((x) => x.location_code === school && x.name === className);
+  return d.ranks.find((x) => x.class_id === c.id && x.name === rankName);
+};
+const privRow = (id) => evDb().private.find((p) => p.id === id) ?? null;
+const privPayments = (id) => evDb().private_payments.filter((p) => p.private_id === id);
+const privNet = (id) => privPayments(id).reduce((t, p) => t + p.amount_cents, 0);
+const eventNet = (ref) => evDb().payments.filter((p) => p.registration_id === regBy(ref).id).reduce((t, p) => t + p.amount_cents, 0);
+const pLogs = () => evDb().change_log;
+const PRIVATE_LIST_SELECT = 'id, status, first_name, last_name, private_date, private_time, private_cents, paid, paid_cents, amount_due_cents';
+const viewOf = (school = 'worcester', ctx = E_ADMIN) => ev.select('testing_private_list', PRIVATE_LIST_SELECT, [{ col: 'location_code', value: school }], [], ctx).data;
+function assertPrivDueSame(rule = PR.amountDue) {
+  const d = evDb();
+  const view = new Map(ev.select('testing_private_list', 'id, amount_due_cents', [], [], E_ADMIN).data.map((v) => [v.id, v.amount_due_cents]));
+  for (const row of d.private) {
+    const net = d.private_payments.filter((p) => p.private_id === row.id).reduce((t, p) => t + p.amount_cents, 0);
+    const expected = rule({ privateCents: row.private_cents, paidCents: net });
+    assert.equal(ev.privateAmountDueFor(row.id), expected, `owed of ${row.first_name}`);
+    assert.equal(view.get(row.id), expected, `view owed of ${row.first_name}`);
   }
 }
-const p4Call = (name, args, ctx = E_DESK) => {
+const pCall = (name, args, ctx = E_DESK) => {
   const answer = evCall(name, args, ctx);
-  assertDueSame();
+  assertPrivDueSame();
   return answer;
 };
-const setPriv = (ref, date, time = '16:00', ctx = E_DESK, over = {}) => p4Call('testing_set_private', {
-  p_registration_id: regBy(ref).id, p_expected_version: regBy(ref).version, p_private_date: date, p_private_time: time, ...over,
-}, ctx);
-const clearPriv = (ref, ctx = E_DESK, over = {}) => p4Call('testing_clear_private', { p_registration_id: regBy(ref).id, p_expected_version: regBy(ref).version, ...over }, ctx);
-const payNow = (ref, ctx = E_DESK) => p4Call('testing_mark_paid', { p_registration_id: regBy(ref).id, p_expected_version: regBy(ref).version }, ctx);
-const addPriv = (over = {}, ctx = E_DESK) => p4Call('testing_add_private_student', {
-  p_event_id: DEFAULT_EVENT_ID, p_first: 'Pia', p_last: 'Vale', p_event_rank_id: eventRankByName('Group A', 'Yellow').id, p_stripes: true,
+const pArgs = (id, extra = {}) => ({ p_private_id: id, p_expected_version: privRow(id).version, ...extra });
+const pAdd = (over = {}, ctx = E_DESK) => pCall('testing_private_add', {
+  p_location_code: 'worcester', p_first: 'Liam', p_last: 'Park', p_rank_id: liveRankOf('Group A', 'Yellow').id, p_stripes: true,
   p_paying_by: 'cash', p_private_date: '2026-12-01', p_private_time: '16:00', ...over,
 }, ctx);
+const pMark = (id, ctx = E_DESK) => pCall('testing_private_mark_paid', pArgs(id), ctx);
+const pUpdate = (id, rankId, ctx = E_DESK, names = {}) => pCall('testing_private_update', pArgs(id, {
+  p_first: names.first ?? privRow(id).first_name, p_last: names.last ?? privRow(id).last_name, p_rank_id: rankId,
+}), ctx);
+const pDay = (id, date, time = '16:00', ctx = E_DESK, extra = {}) => pCall('testing_private_change_day', pArgs(id, { p_private_date: date, p_private_time: time, ...extra }), ctx);
+const pResult = (id, result, ctx = E_DESK) => pCall('testing_private_set_result', { p_private_id: id, p_result: result }, ctx);
+const pNote = (id, note, ctx = E_DESK) => pCall('testing_private_set_result_note', { p_private_id: id, p_note: note }, ctx);
+const pMove = (ref, date = '2026-12-01', time = '16:00', ctx = E_DESK, extra = {}) => pCall('testing_move_to_private', {
+  p_registration_id: regBy(ref).id, p_expected_version: regBy(ref).version, p_private_date: date, p_private_time: time, ...extra,
+}, ctx);
+const pUndoMove = (id, ctx = E_DESK, version = 1) => pCall('testing_private_undo_move', { p_private_id: id, p_expected_version: version }, ctx);
 
-check('private mock: columns, grants, the time type, restricted helpers (V1, V2 without sessions)', () => {
-  p4Start();
-  const sel = (table, columns) => ev.select(table, columns, [{ col: 'reference', value: 'CB-3112' }], [], E_ADMIN);
-  assert.deepEqual(ev.select('testing_registrations', 'id, private_date, private_time', [{ col: 'id', value: regBy('CB-3112').id }], [], E_ADMIN).data,
-    [{ id: regBy('CB-3112').id, private_date: null, private_time: null }]);
-  assert.equal(sel('testing_roster', 'private_date').error.code, '42703'); // the view is unchanged (M1)
-  assert.equal(sel('testing_roster', 'private_time').error.code, '42703');
-  assert.equal(ev.select('testing_registrations', 'private_date', [], [], E_ANON).error.code, '42501');
-  assert.deepEqual(ev.select('testing_registrations', 'private_date', [], [], E_LOCKED).data, []); // RLS
-  for (const name of ['testing_amount_due', 'testing_private_time_is_valid']) {
-    assert.ok(EVENT_RESTRICTED_RPC_NAMES.includes(name));
-    assert.equal(ev.rpc(name, { p_registration_id: regBy('CB-3112').id }, E_ADMIN).error.code, '42501', name);
+check('private mock: tables, grants, the view, the time type, helpers (V1, V2 without sessions)', () => {
+  pStart();
+  const sel = (table, cols, ctx = E_ADMIN) => ev.select(table, cols, [], [], ctx);
+  for (const [table, hidden] of [['testing_private', ['created_by', 'updated_by', 'cancelled_by']], ['testing_private_payments', ['recorded_by']], ['testing_private_results', ['updated_by']]]) {
+    assert.ok(EVENT_TABLES.includes(table), table);
+    for (const col of hidden) assert.equal(sel(table, col).error.code, '42501', `${table}.${col}`);
+    assert.equal(sel(table, '*').error.code, '42501');
+    assert.equal(sel(table, 'nope').error.code, '42703');
+    assert.equal(sel(table, table === 'testing_private_results' ? 'private_id' : 'id', E_ANON).error.code, '42501');
+    assert.deepEqual(sel(table, table === 'testing_private_results' ? 'private_id' : 'id', E_LOCKED).data, []); // RLS
   }
-  for (const name of ['testing_set_private', 'testing_clear_private', 'testing_add_private_student']) {
-    assert.ok(EVENT_RPC_NAMES.includes(name));
-    assert.equal(EVENT_ADMIN_ONLY_RPCS.has(name), false, name); // staff and admins
+  assert.ok(EVENT_TABLES.includes('testing_private_list'));
+  assert.equal(sel('testing_private_list', 'created_by').error.code, '42703'); // never login ids
+  assert.equal(sel('testing_private_list', 'amount_due_cents', E_DESK).error, null); // staff read the owed amount (M1)
+  for (const name of ['testing_private_time_is_valid', 'testing_private_amount_due', 'testing_private_lock', 'testing_private_lock_payment', 'testing_private_rank_copy']) {
+    assert.ok(EVENT_RESTRICTED_RPC_NAMES.includes(name), name);
+    assert.equal(ev.rpc(name, {}, E_ADMIN).error.code, '42501', name);
   }
-  // The time type: '16:00' and '16:00:30' are times (the function then checks the rule); 'x' isn't.
-  const bad = (time) => ev.rpc('testing_set_private', { p_registration_id: regBy('CB-3112').id, p_expected_version: 99, p_private_date: '2026-12-01', p_private_time: time }, E_DESK).error?.code;
-  assert.equal(bad('x'), '22007');
-  assert.equal(bad('25:00'), '22007');
-  assert.equal(bad(1600), '22007');
-  assert.equal(bad('16:00'), undefined); // a time: reaches the function (stale here — nothing is written)
-  assert.equal(ev.rpc('testing_set_private', { p_registration_id: regBy('CB-3112').id, p_expected_version: 1, p_private_date: '2026-12-01' }, E_DESK).error.code, 'PGRST202'); // missing argument
-  assert.deepEqual(logRows(), []);
+  const bad = (time) => ev.rpc('testing_private_add', {
+    p_location_code: 'worcester', p_first: 'A', p_last: 'B', p_rank_id: liveRankOf('Group A', 'Yellow').id, p_stripes: true, p_paying_by: 'cash',
+    p_private_date: '2026-10-16', p_private_time: time,
+  }, E_DESK);
+  assert.equal(bad('x').error.code, '22007');
+  assert.equal(bad('25:00').error.code, '22007');
+  assert.equal(bad(1600).error.code, '22007');
+  assert.equal(bad('16:00').data.status, 'past_day'); // a time: it reaches the function
+  assert.deepEqual(evDb().private, []);
 });
 
-check('private mock: day and time input, staff and admin (V3)', () => {
+check('private mock: Add copies from Classes and ranks; day, time and input rules (V3)', () => {
   for (const ctx of [E_DESK, E_ADMIN]) {
-    p4Start();
-    const z = regBy('CB-3112').id;
-    const raw = (date, time, version = regBy('CB-3112').version) => p4Call('testing_set_private', { p_registration_id: z, p_expected_version: version, p_private_date: date, p_private_time: time }, ctx).status;
-    assert.equal(raw(null, '16:00'), 'invalid');
-    assert.equal(raw('2026-12-01', null), 'invalid');
-    assert.equal(raw('2026-12-01', '16:00', null), 'invalid');
-    for (const time of ['05:55', '22:05', '16:03', '16:00:30']) assert.equal(raw('2026-12-01', time), 'invalid', time);
-    assert.equal(regBy('CB-3112').version, 1); // refusals write nothing
-    assert.equal(raw('2026-10-16', '16:00'), 'past_day'); // yesterday
-    assert.equal(raw('2027-11-21', '16:00'), 'invalid'); // testing day + 1 year + 1 day
-    const okCases = [['2026-12-01', '06:00'], ['2026-12-01', '22:00'], [P4_TODAY, '16:00'], ['2026-11-20', '16:00'], ['2026-11-01', '16:00'], ['2027-11-20', '16:00']];
-    let version = 1;
-    for (const [date, time] of okCases) {
-      const answer = setPriv('CB-3112', date, time, ctx);
-      version += 1;
-      assert.deepEqual(answer, { status: 'ok', version, private_date: date, private_time: time, amount_due_cents: 8500, result_cleared: false }, `${date} ${time}`);
-      assert.deepEqual([memReg('CB-3112').private_date, memReg('CB-3112').private_time], [date, `${time}:00`]);
-    }
-    assert.equal(setPriv('CB-3112', '2026-12-01', '16:00:00', ctx).private_time, '16:00'); // seconds 00 are fine
-    assert.deepEqual(logRows().map((x) => x.action), ['set_private', ...Array(okCases.length).fill('change_private')]);
+    pStart();
+    const yellow = liveRankOf('Group A', 'Yellow');
+    const a = pAdd({ p_first: '  Liam   ', p_last: ' Park ' }, ctx);
+    assert.deepEqual(Object.keys(a).sort(), ['amount_due_cents', 'id', 'status', 'version']);
+    assert.deepEqual([a.status, a.version, a.amount_due_cents], ['ok', 1, 8500]);
+    const row = privRow(a.id);
+    assert.deepEqual([row.first_name, row.last_name, row.location_code, row.class_name, row.rank_name, row.rank_id, row.belt_color], ['Liam', 'Park', 'worcester', 'Group A', 'Yellow', yellow.id, 'yellow']);
+    assert.deepEqual([row.to_kind, row.to_name, row.to_belt_color, row.private_cents, row.paying_by, row.private_date, row.private_time, row.status], ['rank', 'Orange', 'orange', 8500, 'cash', '2026-12-01', '16:00:00', 'active']);
+    assert.deepEqual([row.moved_from_event_id, row.moved_cleared_no_show, row.moved_registration_version, row.created_by_name], [null, false, null, ctx.actorName]);
+    assert.deepEqual(pLogs().map((x) => [x.action, x.table_name, x.op]), [['private_add', 'testing_private', 'insert']]);
+  }
+  pStart();
+  // Testing for: the last rank → the class's final award; a class with None → No new rank.
+  const hg = privRow(pAdd({ p_rank_id: liveRankOf('Group A', 'High Green').id }).id);
+  assert.deepEqual([hg.to_kind, hg.to_name, hg.to_belt_color], ['rank', 'Blue', 'blue']);
+  const deputy = privRow(pAdd({ p_rank_id: liveRankOf('Group D', 'Deputy').id }).id);
+  assert.deepEqual([deputy.to_kind, deputy.to_name, deputy.to_belt_color, deputy.private_cents], ['none', null, null, 1000]);
+  const n = evDb().private.length;
+  // Input refusals.
+  const refusals = [
+    [{ p_location_code: 'both' }, 'invalid'], [{ p_first: '   ' }, 'invalid'], [{ p_last: null }, 'invalid'], [{ p_rank_id: null }, 'invalid'],
+    [{ p_stripes: false }, 'invalid'], [{ p_paying_by: 'venmo' }, 'invalid'], [{ p_private_date: null }, 'invalid'], [{ p_private_time: null }, 'invalid'],
+    [{ p_rank_id: liveRankOf('Group A', 'Yellow', 'shrewsbury').id }, 'invalid'], // another school's rank
+    [{ p_rank_id: '00000000-0000-4000-8000-00000000dead' }, 'stale'], // a removed rank
+    [{ p_private_date: '2026-10-16' }, 'past_day'], [{ p_private_date: '2027-10-18' }, 'invalid'],
+    ...['05:55', '22:05', '16:03', '16:00:30'].map((t) => [{ p_private_time: t }, 'invalid']),
+  ];
+  for (const [over, expected] of refusals) assert.equal(pAdd(over).status, expected, JSON.stringify(over));
+  assert.equal(evDb().private.length, n);
+  for (const over of [{ p_private_date: PT }, { p_private_date: '2027-10-17' }, { p_private_time: '06:00' }, { p_private_time: '22:00' }]) {
+    assert.equal(pAdd(over).status, 'ok', JSON.stringify(over));
+  }
+  // The last rank of a class whose final award is Not set → final_award_not_set + the class.
+  pAsPostgres((s) => { const c = s.classes.find((x) => x.location_code === 'worcester' && x.name === 'Group A'); c.final_award_rank_id = null; c.final_award_none = false; });
+  assert.deepEqual(pAdd({ p_rank_id: liveRankOf('Group A', 'High Green').id }), { status: 'final_award_not_set', class_name: 'Group A' });
+  assert.equal(pAdd({ p_rank_id: liveRankOf('Group A', 'Green').id }).status, 'ok'); // not the last rank: fine
+  // A price change in Classes and ranks afterwards doesn't change the copy.
+  const keep = pAdd();
+  pAsPostgres((s) => { s.ranks.find((x) => x.id === liveRankOf('Group A', 'Yellow').id).private_cents = 9900; });
+  assert.equal(privRow(keep.id).private_cents, 8500);
+  assert.equal(pAdd().amount_due_cents, 9900); // a NEW one takes today's price
+});
+
+check('private mock: Edit details — names, re-copy, re-price, the kept removed rank, the belt lock (V4, E6, E7)', () => {
+  pStart();
+  const a = pAdd();
+  const id = a.id;
+  // Names only: ok, nothing else changes; the same again writes nothing.
+  const names = pUpdate(id, privRow(id).rank_id, E_DESK, { first: ' Liam ', last: 'Parker' });
+  assert.deepEqual(names, { status: 'ok', version: 2, amount_due_cents: 8500, result_cleared: false });
+  assert.equal(privRow(id).last_name, 'Parker');
+  const logs = pLogs().length;
+  assert.equal(pUpdate(id, privRow(id).rank_id).version, 2);
+  assert.equal(pLogs().length, logs);
+  // Another school's rank → invalid; a rank that doesn't exist → stale.
+  assert.equal(pUpdate(id, liveRankOf('Group B', 'Blue', 'shrewsbury').id).status, 'invalid');
+  assert.equal(pUpdate(id, '00000000-0000-4000-8000-00000000dead').status, 'stale');
+  // E6: paid $85, corrected to Group B Blue ($95) → $10 more; Mark paid records $10.
+  assert.equal(pMark(id).amount_cents, 8500);
+  const up = pUpdate(id, liveRankOf('Group B', 'Blue').id);
+  assert.deepEqual([up.status, up.amount_due_cents, up.result_cleared], ['ok', 1000, false]);
+  assert.deepEqual([privRow(id).class_name, privRow(id).rank_name, privRow(id).to_name, privRow(id).private_cents], ['Group B', 'Blue', 'High Blue', 9500]);
+  assert.equal(pMark(id).amount_cents, 1000);
+  // E7: paid $95, corrected to an $85 rank → owed 0, nothing refunded.
+  assert.equal(pUpdate(id, liveRankOf('Group A', 'Orange').id).amount_due_cents, 0);
+  assert.equal(privNet(id), 9500);
+  assert.equal(pMark(id).status, 'already_paid');
+  // M4: the copied rank is removed from Classes and ranks; sending the stored id back is "belt not changed".
+  pAsPostgres((s) => { s.ranks = s.ranks.filter((x) => x.id !== privRow(id).rank_id); });
+  const kept = pUpdate(id, privRow(id).rank_id, E_DESK, { first: 'Leo' });
+  assert.equal(kept.status, 'ok');
+  assert.deepEqual([privRow(id).first_name, privRow(id).rank_name, privRow(id).private_cents], ['Leo', 'Orange', 8500]);
+  assert.equal(pUpdate(id, liveRankOf('Group A', 'Green').id).status, 'ok'); // another live rank re-copies
+  assert.equal(privRow(id).rank_name, 'Green');
+  // A graded one (result or note): a belt change clears it, in the same batch.
+  pStart();
+  const g = pAdd({ p_private_date: PT }).id;
+  pNote(g, 'Good stances');
+  const cleared = pUpdate(g, liveRankOf('Group A', 'Orange').id);
+  assert.equal(cleared.result_cleared, true);
+  assert.equal(evDb().private_results.length, 0);
+  const batch = pLogs().slice(-2);
+  assert.deepEqual(batch.map((x) => x.action), ['private_update', 'clear_result']);
+  assert.equal(batch[0].batch_id, batch[1].batch_id);
+  // After the private day: staff can't change the belt of a graded one; admins can; names stay open.
+  pResult(g, 'pass');
+  pMoveToday('2026-10-18');
+  assert.equal(pUpdate(g, liveRankOf('Group A', 'Yellow').id, E_DESK).status, 'not_allowed');
+  assert.equal(pUpdate(g, privRow(g).rank_id, E_DESK, { first: 'Sam' }).status, 'ok');
+  assert.equal(pUpdate(g, liveRankOf('Group A', 'Yellow').id, E_ADMIN).result_cleared, true);
+  // Not graded after the day: staff may.
+  const u = pAdd({ p_private_date: '2026-10-18' }).id;
+  pMoveToday('2026-10-19');
+  assert.equal(pUpdate(u, liveRankOf('Group A', 'Orange').id, E_DESK).status, 'ok');
+});
+
+check('private mock: Change day or time — rules, graded, No show cleared, unchanged writes nothing (V5)', () => {
+  pStart();
+  const id = pAdd({ p_private_date: PT }).id;
+  for (const [date, time, expected] of [['2026-10-16', '16:00', 'past_day'], ['2027-10-18', '16:00', 'invalid'], ['2026-12-01', '16:03', 'invalid'], [null, '16:00', 'invalid'], ['2026-12-01', null, 'invalid']]) {
+    assert.equal(pDay(id, date, time).status, expected, `${date} ${time}`);
+  }
+  assert.equal(pDay(id, '2026-12-01', '16:00', E_DESK, { p_expected_version: 9 }).status, 'stale');
+  assert.equal(privRow(id).version, 1);
+  // A No show (+ note) → removed with the change, one batch.
+  pResult(id, 'no_show');
+  pNote(id, 'Called in sick');
+  // The same day and time: nothing written, the No show stays.
+  const logs = pLogs().length;
+  assert.deepEqual(pDay(id, PT, '16:00'), { status: 'ok', version: 1, private_date: PT, private_time: '16:00', result_cleared: false });
+  assert.equal(evDb().private_results.length, 1);
+  assert.equal(pLogs().length, logs);
+  const moved = pDay(id, '2026-12-01', '17:30');
+  assert.deepEqual(moved, { status: 'ok', version: 2, private_date: '2026-12-01', private_time: '17:30', result_cleared: true });
+  assert.equal(evDb().private_results.length, 0);
+  const batch = pLogs().slice(-2);
+  assert.deepEqual(batch.map((x) => x.action), ['private_change_day', 'clear_result']);
+  assert.equal(batch[0].batch_id, batch[1].batch_id);
+  // A note only is kept; Pass / Not passed → graded.
+  const n = pAdd({ p_private_date: PT }).id;
+  pNote(n, 'Bring gear');
+  assert.equal(pDay(n, '2026-12-02').result_cleared, false);
+  assert.equal(evDb().private_results.find((r) => r.private_id === n).note, 'Bring gear');
+  for (const result of ['pass', 'not_passed']) {
+    const x = pAdd({ p_private_date: PT }).id;
+    pResult(x, result);
+    assert.equal(pDay(x, '2026-12-02', '16:00', E_ADMIN).status, 'graded');
   }
 });
 
-check('private mock: stale, withdrawn, not found, and an unchanged Change writes nothing (V4)', () => {
-  p4Start();
-  const missing = '00000000-0000-4000-8000-00000000abcd';
-  assert.equal(setPriv('CB-3112', '2026-12-01', '16:00', E_DESK, { p_expected_version: 9 }).status, 'stale');
-  assert.equal(clearPriv('CB-3112', E_DESK, { p_expected_version: 9 }).status, 'stale');
-  assert.equal(setPriv('CB-3116', '2026-12-01').status, 'withdrawn'); // Leo is withdrawn
-  assert.equal(clearPriv('CB-3116').status, 'withdrawn');
-  assert.equal(p4Call('testing_set_private', { p_registration_id: missing, p_expected_version: 1, p_private_date: '2026-12-01', p_private_time: '16:00' }).status, 'not_found');
-  assert.equal(p4Call('testing_clear_private', { p_registration_id: missing, p_expected_version: 1 }).status, 'not_found');
-  assert.equal(p4Call('testing_clear_private', { p_registration_id: null, p_expected_version: 1 }).status, 'invalid');
-  // Clear on a student who isn't private: ok, nothing written (0014 §10 point 7).
-  const before = JSON.stringify(evDb());
-  assert.deepEqual(clearPriv('CB-3112'), { status: 'ok', version: 1, amount_due_cents: 6500 });
-  assert.equal(JSON.stringify(evDb()), before);
-  // Set, then the same day and time again: ok, same version, nothing logged.
-  assert.equal(setPriv('CB-3112', '2026-12-01', '16:00').version, 2);
-  const same = JSON.stringify(evDb());
-  assert.deepEqual(setPriv('CB-3112', '2026-12-01', '16:00'), { status: 'ok', version: 2, private_date: '2026-12-01', private_time: '16:00', amount_due_cents: 8500, result_cleared: false });
-  assert.equal(JSON.stringify(evDb()), same);
-  assert.equal(logRows().length, 1);
-  // Only the time changes → a real change.
-  assert.equal(setPriv('CB-3112', '2026-12-01', '16:30').version, 3);
-});
-
-check('private mock: Add student with Tests privately (V5)', () => {
-  p4Start();
-  const count = () => evDb().registrations.length;
-  const n = count();
-  const yellow = eventRankByName('Group A', 'Yellow');
-  const answer = addPriv();
-  assert.equal(answer.status, 'ok');
-  assert.deepEqual({ ...answer, id: 'x', reference: 'x' }, { status: 'ok', id: 'x', reference: 'x', version: 1, private_date: '2026-12-01', private_time: '16:00', amount_due_cents: yellow.private_cents });
-  assert.equal(yellow.private_cents, 8500);
-  const reg = evDb().registrations.find((r) => r.id === answer.id);
-  assert.deepEqual([reg.private_date, reg.private_time, reg.version, reg.source, reg.status], ['2026-12-01', '16:00:00', 1, 'staff', 'active']);
-  assert.match(answer.reference, /^CB-\d+$/);
-  assert.deepEqual(logRows().map((x) => [x.action, x.table_name, x.op, x.row_id]), [['add_student', 'testing_registrations', 'insert', answer.id]]);
-  // Refusals insert nothing and log nothing.
-  assert.equal(addPriv({ p_private_time: '16:03' }).status, 'invalid');
-  assert.equal(addPriv({ p_private_time: null }).status, 'invalid');
-  assert.equal(addPriv({ p_private_date: null }).status, 'invalid');
-  assert.equal(addPriv({ p_private_date: '2026-10-16' }).status, 'past_day');
-  assert.equal(addPriv({ p_private_date: '2027-11-21' }).status, 'invalid');
-  assert.equal(addPriv({ p_stripes: false }).status, 'invalid');
-  assert.equal(addPriv({ p_event_id: '00000000-0000-4000-8000-00000000abcd' }).status, 'not_found');
-  assert.equal(count(), n + 1);
-  assert.equal(logRows().length, 1);
-  // After the testing day (E_after): staff → finished, admins may (v0.191).
-  moveToday('2026-11-21');
-  assert.equal(addPriv({ p_first: 'Late', p_private_date: '2026-11-21' }, E_DESK).status, 'finished');
-  assert.equal(addPriv({ p_first: 'Late', p_private_date: '2026-11-21' }, E_ADMIN).status, 'ok');
-  assert.equal(count(), n + 2);
-});
-
-check('private mock: the price, the top-up, Undo and Edit payment (V6, V7, M2, M3, M4, M12, M13, M14)', () => {
-  p4Start();
-  // V6 / M2: a private student who hasn't paid pays the private price, then nothing more.
-  setPriv('CB-3110', '2026-12-01'); // Sam, Group A Orange
-  const sam = payNow('CB-3110');
-  assert.equal(sam.amount_cents, 8500);
-  assert.equal(sam.method, 'cash');
-  assert.equal(payNow('CB-3110').status, 'already_paid');
-  // Regular unchanged: early before the testing day, testing-day price on it.
-  assert.equal(payNow('CB-3114').amount_cents, 7500); // Chloe, Group C Brown early $75
-  moveToday('2026-11-20');
-  assert.equal(payNow('CB-3113').amount_cents, 8000); // Maya, Group B Purple day $80
-  // V7 / M3: Zoe paid $65 (check) before going private → $20 more.
-  p4Start();
-  assert.equal(payNow('CB-3112').amount_cents, 6500);
-  const set = setPriv('CB-3112', '2026-12-01');
-  assert.equal(set.amount_due_cents, 2000);
-  assert.equal(evDb().registrations.find((r) => r.reference === 'CB-3112').paying_by, 'check');
-  const topUp = payNow('CB-3112');
-  assert.deepEqual([topUp.status, topUp.amount_cents, topUp.method], ['ok', 2000, 'check']);
-  assert.equal(payNow('CB-3112').status, 'already_paid');
-  assert.equal(netOf('CB-3112'), 8500);
-  // M4: the desk's own Undo of the $20 within 10 seconds → $20 due again → pay → nothing more.
+check('private mock: money — Mark paid, Undo (own / moved / admin), Edit, paying-by, $0, double click (V6, E1, E8–E10, E12)', () => {
+  pStart();
+  // E1: Mark paid records the price, then already_paid.
+  const id = pAdd().id;
+  const paid = pMark(id);
+  assert.deepEqual([paid.status, paid.amount_cents, paid.method, paid.version], ['ok', 8500, 'cash', 2]);
+  assert.equal(pMark(id).status, 'already_paid');
+  assert.equal(pCall('testing_private_mark_paid', { p_private_id: id, p_expected_version: 1 }).status, 'stale'); // double click
+  // The desk's own Undo within 10 seconds: ok; after 10 seconds / another desk: not_allowed; admins any time.
   evClock += 3000;
-  assert.equal(p4Call('testing_undo_payment', { p_payment_id: topUp.payment_id }, E_DESK).status, 'ok');
-  assert.equal(ev.amountDueFor(regBy('CB-3112').id), 2000);
-  const again = payNow('CB-3112');
-  assert.equal(again.amount_cents, 2000);
-  assert.equal(payNow('CB-3112').status, 'already_paid');
-  // M12: an admin edits the most recent payment ($20) to $10 → $10 due.
-  assert.equal(p4Call('testing_edit_payment', { p_payment_id: again.payment_id, p_method: 'check', p_amount_cents: 1000, p_paid_on: evToday }, E_ADMIN).status, 'ok');
-  assert.equal(ev.amountDueFor(regBy('CB-3112').id), 1000);
-  // M13: an admin Undo of the most recent live payment ($10) → $20 due.
-  const live = evDb().payments.filter((p) => p.registration_id === regBy('CB-3112').id && p.kind === 'payment' && !evDb().payments.some((x) => x.reverses_payment_id === p.id));
-  const newest = live.sort((a, b) => (a.recorded_at < b.recorded_at ? -1 : 1)).at(-1);
-  assert.equal(newest.amount_cents, 1000);
-  assert.equal(p4Call('testing_undo_payment', { p_payment_id: newest.id }, E_ADMIN).status, 'ok');
-  assert.equal(ev.amountDueFor(regBy('CB-3112').id), 2000);
-  // M14 / V10: while owing, the desk changes check → card; the top-up is card, the $65 stays check.
-  assert.equal(p4Call('testing_change_paying_by', { p_registration_id: regBy('CB-3112').id, p_expected_version: regBy('CB-3112').version, p_paying_by: 'card' }).status, 'ok');
-  const card = payNow('CB-3112');
-  assert.deepEqual([card.amount_cents, card.method], [2000, 'card']);
-  const first = evDb().payments.find((p) => p.registration_id === regBy('CB-3112').id && p.amount_cents === 6500);
-  assert.equal(first.method, 'check');
-  // Fully paid → Change how they'll pay is refused again.
-  assert.equal(p4Call('testing_change_paying_by', { p_registration_id: regBy('CB-3112').id, p_expected_version: regBy('CB-3112').version, p_paying_by: 'cash' }).status, 'already_paid');
-  // A regular paid student: refused, as before (v0.136).
-  assert.equal(p4Call('testing_change_paying_by', { p_registration_id: regBy('CB-3111').id, p_expected_version: regBy('CB-3111').version, p_paying_by: 'cash' }).status, 'already_paid');
-  // The roster still says Paid while a top-up is owed (paid = net > 0).
-  p4Start();
-  payNow('CB-3112');
-  setPriv('CB-3112', '2026-12-01');
-  const view = rosterOf(DEFAULT_EVENT_ID).find((r) => r.reference === 'CB-3112');
-  assert.deepEqual([view.paid, view.paid_cents], [true, 6500]);
+  assert.equal(pCall('testing_private_undo_payment', { p_payment_id: paid.payment_id }, E_DESK2).status, 'not_allowed');
+  assert.equal(pCall('testing_private_undo_payment', { p_payment_id: paid.payment_id }, E_DESK).status, 'ok');
+  assert.equal(pCall('testing_private_undo_payment', { p_payment_id: paid.payment_id }, E_ADMIN).status, 'stale'); // already undone
+  const again = pMark(id);
+  evClock += 11000;
+  assert.equal(pCall('testing_private_undo_payment', { p_payment_id: again.payment_id }, E_DESK).status, 'not_allowed');
+  const reversal = evDb().private_payments.find((p) => p.kind === 'reversal');
+  assert.equal(pCall('testing_private_undo_payment', { p_payment_id: reversal.id }, E_ADMIN).status, 'invalid');
+  assert.equal(pCall('testing_private_undo_payment', { p_payment_id: '00000000-0000-4000-8000-00000000dead' }, E_ADMIN).status, 'not_found');
+  assert.equal(pCall('testing_private_undo_payment', { p_payment_id: again.payment_id }, E_ADMIN).status, 'ok');
+  assert.equal(reversal.paid_on, PT); // a reversal is dated today
+  // E8 / E9 / E12 on a moved one: Mia paid $65 cash at the event → owes $20.
+  const m = pMove('CB-3107').private_id;
+  assert.equal(PR.amountDue({ privateCents: privRow(m).private_cents, paidCents: privNet(m) }), 2000);
+  // M2: the mover can't own-undo the payment that came with the move; an admin can.
+  const movedPay = privPayments(m)[0];
+  assert.equal(pCall('testing_private_undo_payment', { p_payment_id: movedPay.id }, E_DESK).status, 'not_allowed');
+  // E12: paying by changed cash → card while owing; the $20 is card, the $65 stays cash.
+  assert.equal(pCall('testing_private_change_paying_by', pArgs(m, { p_paying_by: 'card' })).status, 'ok');
+  const topUp = pMark(m);
+  assert.deepEqual([topUp.amount_cents, topUp.method], [2000, 'card']);
+  assert.equal(privPayments(m).find((p) => p.amount_cents === 6500).method, 'cash');
+  assert.equal(pCall('testing_private_change_paying_by', pArgs(m, { p_paying_by: 'cash' })).status, 'already_paid'); // paid in full
+  // E9: an admin edits the $20 to $10 → owed $10 (staff: not_allowed).
+  const edit = { p_payment_id: topUp.payment_id, p_method: 'card', p_amount_cents: 1000, p_paid_on: PT };
+  assert.equal(evCall('testing_private_edit_payment', edit, E_DESK).status, 'not_allowed');
+  const edited = pCall('testing_private_edit_payment', edit, E_ADMIN);
+  assert.equal(edited.status, 'ok');
+  assert.equal(ev.privateAmountDueFor(m), 1000);
+  assert.equal(pCall('testing_private_edit_payment', edit, E_ADMIN).status, 'stale'); // already replaced
+  assert.equal(pCall('testing_private_edit_payment', { ...edit, p_amount_cents: 0 }, E_ADMIN).status, 'invalid');
+  assert.equal(pCall('testing_private_edit_payment', { ...edit, p_paid_on: '2026-10-18' }, E_ADMIN).status, 'invalid'); // in the future
+  // E8: an admin Undo of the most recent live payment ($10 now) → owed $20.
+  assert.equal(pCall('testing_private_undo_payment', { p_payment_id: edited.payment_id }, E_ADMIN).status, 'ok');
+  assert.equal(ev.privateAmountDueFor(m), 2000);
+  // The admin may undo the moved-in payment.
+  assert.equal(pCall('testing_private_undo_payment', { p_payment_id: movedPay.id }, E_ADMIN).status, 'ok');
+  assert.equal(ev.privateAmountDueFor(m), 8500);
+  // E10: a $0 private price → nothing to collect, nothing inserted.
+  pAsPostgres((s) => { s.ranks.find((x) => x.id === liveRankOf('Group A', 'Yellow').id).private_cents = 0; });
+  const zero = pAdd();
+  assert.equal(zero.amount_due_cents, 0);
+  const before = evDb().private_payments.length;
+  assert.equal(pMark(zero.id).status, 'already_paid');
+  assert.equal(evDb().private_payments.length, before);
+  assert.equal(privRow(zero.id).version, 1);
 });
 
-check('private mock: a $0 private price inserts nothing (V8, M11, L1)', () => {
-  p4Start();
-  asPostgres((s) => { s.event_ranks.find((r) => r.id === regBy('CB-3110').event_rank_id).private_cents = 0; });
-  assert.equal(setPriv('CB-3110', '2026-12-01').amount_due_cents, 0);
-  const payments = evDb().payments.length;
-  const version = regBy('CB-3110').version;
-  assert.equal(payNow('CB-3110').status, 'already_paid');
-  assert.equal(evDb().payments.length, payments);
-  assert.equal(regBy('CB-3110').version, version);
-  // A regular $0 rank too (0005 answered 'invalid'; 0014 answers already_paid, §10 point 3).
-  asPostgres((s) => { const r = s.event_ranks.find((x) => x.id === regBy('CB-3114').event_rank_id); r.early_cents = 0; r.day_cents = 0; });
-  assert.equal(payNow('CB-3114').status, 'already_paid');
-  assert.equal(evDb().payments.length, payments);
+check('private mock: Cancel, Restore and Delete (V7, E11)', () => {
+  pStart();
+  const id = pAdd().id;
+  pMark(id);
+  assert.equal(pCall('testing_private_cancel', pArgs(id)).status, 'ok');
+  const row = privRow(id);
+  assert.deepEqual([row.status, row.cancelled_by_name, typeof row.cancelled_at], ['cancelled', 'Staff', 'string']);
+  assert.equal(privNet(id), 8500); // E11: payments stay
+  const view = viewOf().find((v) => v.id === id);
+  assert.deepEqual([view.paid, view.paid_cents, view.amount_due_cents], [true, 8500, 0]);
+  // Every write on a cancelled one → cancelled.
+  const pay = privPayments(id)[0];
+  const writes = [
+    ['testing_private_cancel', pArgs(id)], ['testing_private_mark_paid', pArgs(id)],
+    ['testing_private_update', pArgs(id, { p_first: 'X', p_last: 'Y', p_rank_id: row.rank_id })],
+    ['testing_private_change_day', pArgs(id, { p_private_date: '2026-12-02', p_private_time: '16:00' })],
+    ['testing_private_change_paying_by', pArgs(id, { p_paying_by: 'card' })],
+    ['testing_private_set_result', { p_private_id: id, p_result: 'pass' }], ['testing_private_set_result_note', { p_private_id: id, p_note: 'x' }],
+  ];
+  for (const [name, args] of writes) assert.equal(pCall(name, args, E_ADMIN).status, 'cancelled', name);
+  assert.equal(pCall('testing_private_undo_payment', { p_payment_id: pay.id }, E_ADMIN).status, 'cancelled');
+  assert.equal(pCall('testing_private_edit_payment', { p_payment_id: pay.id, p_method: 'cash', p_amount_cents: 100, p_paid_on: PT }, E_ADMIN).status, 'cancelled');
+  // Restore: admins only, while the day is ahead.
+  assert.equal(evCall('testing_private_restore', pArgs(id), E_DESK).status, 'not_allowed');
+  assert.equal(pCall('testing_private_restore', pArgs(id), E_ADMIN).status, 'ok');
+  assert.equal(privRow(id).status, 'active');
+  assert.deepEqual([privRow(id).cancelled_at, privRow(id).cancelled_by_name, privRow(id).cancelled_by], [null, null, null]);
+  assert.equal(pCall('testing_private_restore', pArgs(id), E_ADMIN).status, 'invalid'); // not cancelled
+  pCall('testing_private_cancel', pArgs(id));
+  pMoveToday('2026-12-01');
+  assert.equal(pCall('testing_private_restore', pArgs(id), E_ADMIN).status, 'ok'); // on the day itself
+  pCall('testing_private_cancel', pArgs(id));
+  pMoveToday('2026-12-02');
+  assert.equal(pCall('testing_private_restore', pArgs(id), E_ADMIN).status, 'past_day');
+  // Cancel: Pass / Not passed → graded; a No show → fine.
+  pStart();
+  const graded = pAdd({ p_private_date: PT }).id;
+  pResult(graded, 'not_passed');
+  assert.equal(pCall('testing_private_cancel', pArgs(graded)).status, 'graded');
+  const noShow = pAdd({ p_private_date: PT }).id;
+  pResult(noShow, 'no_show');
+  assert.equal(pCall('testing_private_cancel', pArgs(noShow)).status, 'ok');
+  // Delete permanently: admins; the payment ids must be exact.
+  pMark(graded);
+  const ids = privPayments(graded).map((p) => p.id);
+  const del = (paymentIds, ctx = E_ADMIN) => pCall('testing_private_delete', pArgs(graded, { p_expected_payment_ids: paymentIds }), ctx).status;
+  assert.equal(evCall('testing_private_delete', pArgs(graded, { p_expected_payment_ids: ids }), E_DESK).status, 'not_allowed');
+  assert.equal(del(null), 'invalid');
+  assert.equal(del([null]), 'invalid');
+  assert.equal(del([ids[0], ids[0]]), 'invalid');
+  assert.equal(del([]), 'stale');
+  assert.equal(del(['00000000-0000-4000-8000-00000000dead']), 'stale');
+  assert.equal(del(ids), 'ok');
+  assert.equal(privRow(graded), null);
+  assert.equal(evDb().private_payments.some((p) => p.private_id === graded), false);
+  assert.equal(evDb().private_results.some((r) => r.private_id === graded), false);
+  assert.deepEqual(pLogs().filter((x) => x.action === 'private_delete').map((x) => x.table_name).sort(), ['testing_private', 'testing_private_payments', 'testing_private_results']);
+  assert.equal(pCall('testing_private_delete', { p_private_id: noShow, p_expected_version: privRow(noShow).version, p_expected_payment_ids: [] }, E_ADMIN).status, 'ok'); // a cancelled one too
 });
 
-check('private mock: Back after paying, and M7 as an admin (V9, M5, M6, M7)', () => {
-  p4Start();
-  // M5: private, paid $85, Back → nothing owed.
-  setPriv('CB-3110', '2026-12-01');
-  payNow('CB-3110');
-  const back = clearPriv('CB-3110');
-  assert.deepEqual(back, { status: 'ok', version: regBy('CB-3110').version, amount_due_cents: 0 });
-  assert.equal(payNow('CB-3110').status, 'already_paid');
-  // M6: paid $65, private (owes $20), Back → nothing owed (partial accepted, L2).
-  payNow('CB-3112');
-  assert.equal(setPriv('CB-3112', '2026-12-01').amount_due_cents, 2000);
-  assert.equal(clearPriv('CB-3112').amount_due_cents, 0);
-  assert.equal(payNow('CB-3112').status, 'already_paid');
-  // M7: private, not paid, Back on Nov 21 (staff can't then — H1 — so an admin) → $75.
-  setPriv('CB-3114', '2026-12-01');
-  moveToday('2026-11-21');
-  assert.equal(clearPriv('CB-3114', E_DESK).status, 'not_allowed');
-  assert.equal(clearPriv('CB-3114', E_ADMIN).amount_due_cents, 8500); // Group C Brown, day $85
-  assert.equal(payNow('CB-3114').amount_cents, 8500);
-  // The same for a Group A student: $75.
-  p4Start();
-  setPriv('CB-3110', '2026-12-01');
-  moveToday('2026-11-21');
-  assert.equal(clearPriv('CB-3110', E_ADMIN).amount_due_cents, 7500);
-  assert.equal(payNow('CB-3110').amount_cents, 7500);
+check('private mock: grading from the private day (V8)', () => {
+  pStart();
+  const id = pAdd({ p_private_date: '2026-10-18' }).id;
+  for (const ctx of [E_DESK, E_ADMIN]) {
+    assert.equal(pResult(id, 'pass', ctx).status, 'not_open');
+    assert.equal(pNote(id, 'x', ctx).status, 'not_open');
+  }
+  pMoveToday('2026-10-18');
+  for (const ctx of [E_DESK, E_ADMIN]) {
+    assert.equal(pResult(id, 'pass', ctx).status, 'ok');
+    assert.equal(pNote(id, 'Good', ctx).status, 'ok');
+  }
+  pMoveToday('2026-10-19');
+  assert.equal(pResult(id, 'not_passed', E_DESK).status, 'finished');
+  assert.equal(pNote(id, 'x', E_DESK).status, 'finished');
+  const answer = pResult(id, 'not_passed', E_ADMIN);
+  assert.deepEqual([answer.status, answer.result, answer.note, answer.updated_by_name], ['ok', 'not_passed', 'Good', 'Jeffrey Berg']);
+  // The same value again: no log row; grading never changes the private testing's version.
+  const logs = pLogs().length;
+  assert.equal(pResult(id, 'not_passed', E_ADMIN).status, 'ok');
+  assert.equal(pLogs().length, logs);
+  assert.equal(privRow(id).version, 1);
+  // Clearing both removes the row; bad values are refused.
+  assert.equal(pResult(id, null, E_ADMIN).note, 'Good');
+  assert.deepEqual(pNote(id, '   ', E_ADMIN), { status: 'ok', result: null, note: null, updated_at: null, updated_by_name: null });
+  assert.equal(evDb().private_results.length, 0);
+  assert.equal(pResult(id, 'passed', E_ADMIN).status, 'invalid');
+  assert.equal(pNote(id, 'x'.repeat(201), E_ADMIN).status, 'invalid');
+  assert.equal(pNote(id, 'x'.repeat(2001), E_ADMIN).status, 'invalid');
+  assert.equal(pResult('00000000-0000-4000-8000-00000000dead', 'pass', E_ADMIN).status, 'not_found');
 });
 
-check('private mock: a testing-day No show is cleared by Set private, other results refuse (V11)', () => {
-  p4Start('2026-11-20');
+check('private mock: Move to private testing — money transfer, statuses, the copy (V9, E2, E4, E5, E13)', () => {
+  pStart();
+  // E2: Mia paid $65 cash at the event (6 days ago) → owes $20 on the private side.
+  const mia = regBy('CB-3107');
+  const paidOn = evDb().payments.find((p) => p.registration_id === mia.id).paid_on;
+  const activeBefore = rosterOf(DEFAULT_EVENT_ID).filter((r) => r.status === 'active').length;
+  const move = pMove('CB-3107');
+  assert.deepEqual(Object.keys(move).sort(), ['amount_due_cents', 'private_id', 'registration_version', 'result_cleared', 'status', 'version']);
+  assert.deepEqual([move.status, move.version, move.amount_due_cents, move.result_cleared, move.registration_version], ['ok', 1, 2000, false, regBy('CB-3107').version]);
+  assert.equal(eventNet('CB-3107'), 0); // the event side nets 0 …
+  const reversal = evDb().payments.find((p) => p.registration_id === mia.id && p.kind === 'reversal');
+  assert.deepEqual([reversal.amount_cents, reversal.method, reversal.paid_on], [-6500, 'cash', paidOn]); // … dated the original day
+  const priv = privRow(move.private_id);
+  const pp = privPayments(priv.id);
+  assert.deepEqual(pp.map((p) => [p.amount_cents, p.method, p.paid_on, p.moved_from_payment_id]), [[6500, 'cash', paidOn, reversal.reverses_payment_id]]);
+  assert.deepEqual([priv.first_name, priv.last_name, priv.class_name, priv.rank_name, priv.to_name, priv.private_cents, priv.paying_by], ['Mia', 'Lopez', 'Group A', 'Yellow', 'Orange', 8500, 'cash']);
+  assert.deepEqual([priv.moved_from_event_id, priv.moved_from_registration_id, priv.moved_from_event_name, priv.moved_cleared_no_show, priv.moved_registration_version], [DEFAULT_EVENT_ID, mia.id, 'November Children Testing', false, move.registration_version]);
+  const reg = regBy('CB-3107');
+  assert.deepEqual([reg.status, reg.withdrawn_reason, reg.withdrawn_by_name, reg.duplicate_state], ['withdrawn', 'withdrawn', 'Staff', 'none']);
+  assert.equal(rosterOf(DEFAULT_EVENT_ID).filter((r) => r.status === 'active').length, activeBefore - 1);
+  assert.equal(regBy('CB-3109').duplicate_state, 'none'); // its duplicate partner was re-checked
+  const batches = new Set(pLogs().map((x) => x.batch_id));
+  assert.equal(batches.size, 1);
+  assert.ok(pLogs().every((x) => x.action === 'move_to_private'));
+  // What the event page reads (loadEvent's extra query): the moved registration → its private testing.
+  assert.deepEqual(ev.select('testing_private', 'id, moved_from_registration_id, private_date, private_time, status', [{ col: 'moved_from_event_id', value: DEFAULT_EVENT_ID }], [], E_DESK).data,
+    [{ id: priv.id, moved_from_registration_id: mia.id, private_date: '2026-12-01', private_time: '16:00:00', status: 'active' }]);
+  // Refusals.
+  assert.equal(pMove('CB-3107').status, 'withdrawn'); // moving the same registration again
+  assert.equal(pMove('CB-3116').status, 'withdrawn'); // Leo is withdrawn
+  assert.equal(pMove('CB-3112', '2026-12-01', '16:00', E_DESK, { p_expected_version: 9 }).status, 'stale');
+  assert.equal(pMove('CB-3112', '2026-10-16').status, 'past_day');
+  assert.equal(pMove('CB-3112', '2027-10-18').status, 'invalid');
+  assert.equal(pMove('CB-3112', '2026-12-01', '16:03').status, 'invalid');
+  assert.equal(pCall('testing_move_to_private', { p_registration_id: '00000000-0000-4000-8000-00000000dead', p_expected_version: 1, p_private_date: '2026-12-01', p_private_time: '16:00' }).status, 'not_found');
+  // E4: not paid → nothing moves, the full price is owed.
+  const zoe = pMove('CB-3112');
+  assert.equal(zoe.amount_due_cents, 8500);
+  assert.equal(privPayments(zoe.private_id).length, 0);
+  // Today's price from Classes and ranks (v0.404); the event's copy only when the rank is gone.
+  pStart();
+  pAsPostgres((s) => { s.ranks.find((x) => x.id === liveRankOf('Group A', 'Orange').id).private_cents = 9000; });
+  assert.equal(privRow(pMove('CB-3110').private_id).private_cents, 9000); // Sam, Orange
+  pAsPostgres((s) => { s.ranks = s.ranks.filter((x) => x.id !== liveRankOf('Group A', 'Yellow').id); });
+  assert.equal(privRow(pMove('CB-3112').private_id).private_cents, 8500); // Zoe, Yellow: the event copy
+  // E5 / an already-reversed pair: Mia's $65 is edited (admin) to $85 at the event → only the live $85 moves.
+  pStart();
+  const original = evDb().payments.find((p) => p.registration_id === regBy('CB-3107').id);
+  assert.equal(evStatus('testing_edit_payment', { p_payment_id: original.id, p_method: 'cash', p_amount_cents: 8500, p_paid_on: original.paid_on }, E_ADMIN), 'ok');
+  const e5 = pMove('CB-3107');
+  assert.equal(e5.amount_due_cents, 0);
+  assert.deepEqual(privPayments(e5.private_id).map((p) => p.amount_cents), [8500]);
+  assert.equal(evDb().payments.filter((p) => p.registration_id === regBy('CB-3107').id).length, 4); // the pair + the live one + its move reversal
+  assert.equal(eventNet('CB-3107'), 0);
+  // E13: overpaid ($95 paid, $85 price) → the whole $95 moves, owed 0, nothing refunded.
+  const ethan = evDb().payments.find((p) => p.registration_id === regBy('CB-3111').id);
+  evStatus('testing_edit_payment', { p_payment_id: ethan.id, p_method: 'check', p_amount_cents: 9500, p_paid_on: ethan.paid_on }, E_ADMIN);
+  const e13 = pMove('CB-3111');
+  assert.deepEqual([e13.amount_due_cents, privNet(e13.private_id)], [0, 9500]);
+  // Two live payments → both move, oldest first.
+  pStart();
+  pAsPostgres((s) => {
+    const r = s.registrations.find((x) => x.reference === 'CB-3105');
+    s.payments.push({ id: randomUUID(), registration_id: r.id, kind: 'payment', amount_cents: 2500, method: 'card', paid_on: PT, recorded_at: new Date(evClock).toISOString(), recorded_by: null, recorded_by_name: 'Staff', reverses_payment_id: null });
+  });
+  const two = pMove('CB-3105'); // Ella, Group B Blue ($95)
+  assert.deepEqual(privPayments(two.private_id).map((p) => [p.amount_cents, p.method]), [[7000, 'cash'], [2500, 'card']]);
+  assert.deepEqual([two.amount_due_cents, eventNet('CB-3105')], [0, 0]);
+});
+
+check('private mock: Move and the testing-day result; staff any time (V9, v0.404)', () => {
+  pStart('2026-11-20');
   setRes('CB-3110', 'no_show');
   setNote('CB-3110', 'Was sick');
   setRes('CB-3112', 'pass');
   setRes('CB-3113', 'not_passed');
   setNote('CB-3114', 'Note only');
-  moveToday('2026-11-21'); // E_after: staff may still set an ungraded / No show student private (Q3)
-  const answer = setPriv('CB-3110', '2026-11-21', '16:00', E_DESK);
-  assert.equal(answer.status, 'ok');
-  assert.equal(answer.result_cleared, true);
-  assert.equal(resultFor('CB-3110'), null); // the No show AND its note are gone
-  const rows = logRows().filter((x) => x.row_id === regBy('CB-3110').id);
-  assert.deepEqual(rows.map((x) => [x.action, x.table_name, x.op]), [['set_private', 'testing_registrations', 'update'], ['clear_result', 'testing_results', 'delete']]);
-  assert.equal(rows[0].batch_id, rows[1].batch_id);
-  assert.ok(rows[0].batch_id);
-  for (const ref of ['CB-3112', 'CB-3113', 'CB-3114']) {
-    const version = regBy(ref).version;
-    assert.equal(setPriv(ref, '2026-11-21', '16:00', E_DESK).status, 'has_result', ref);
-    assert.equal(setPriv(ref, '2026-11-21', '16:00', E_ADMIN).status, 'has_result', ref); // admins too
-    assert.equal(regBy(ref).version, version);
-  }
-  // An ungraded student after the testing day: all staff (Q3).
-  assert.equal(setPriv('CB-3101', '2026-11-21', '16:00', E_DESK).status, 'ok');
-});
-
-check('private mock: a private No show — Back refused, same day writes nothing, new day clears it (V12, H2)', () => {
-  p4Start();
-  setPriv('CB-3112', P4_TODAY, '16:00'); // private day = today
-  assert.equal(setRes('CB-3112', 'no_show').status, 'ok');
-  setNote('CB-3112', 'Called in sick');
-  assert.equal(clearPriv('CB-3112').status, 'graded');
-  assert.equal(clearPriv('CB-3112', E_ADMIN).status, 'graded');
-  // The same day and time on the private No show: ok, nothing removed, nothing written.
-  const version = regBy('CB-3112').version;
-  const logs = logRows().length;
-  assert.deepEqual(setPriv('CB-3112', P4_TODAY, '16:00'), { status: 'ok', version, private_date: P4_TODAY, private_time: '16:00', amount_due_cents: 8500, result_cleared: false });
-  assert.equal(resultFor('CB-3112').result, 'no_show');
-  assert.equal(regBy('CB-3112').version, version);
-  assert.equal(logRows().length, logs);
-  // A new day: ok, the No show and its note are cleared, change_private + clear_result in one batch.
-  const moved = setPriv('CB-3112', '2026-10-24', '16:00');
-  assert.deepEqual([moved.status, moved.result_cleared, moved.version], ['ok', true, version + 1]);
-  assert.equal(resultFor('CB-3112'), null);
-  const rows = logRows().slice(logs);
-  assert.deepEqual(rows.map((x) => x.action), ['change_private', 'clear_result']);
-  assert.equal(rows[0].batch_id, rows[1].batch_id);
-});
-
-check('private mock: a graded private student; a note alone never counts (V13, Q5)', () => {
-  p4Start();
-  setPriv('CB-3112', P4_TODAY, '16:00');
-  setRes('CB-3112', 'pass');
-  assert.equal(setPriv('CB-3112', '2026-10-24').status, 'graded');
-  assert.equal(clearPriv('CB-3112').status, 'graded');
-  setRes('CB-3112', 'not_passed');
-  assert.equal(setPriv('CB-3112', '2026-10-24', '16:00', E_ADMIN).status, 'graded');
-  // Note only: Change ok (note kept), Back ok (note kept).
-  setPriv('CB-3110', P4_TODAY, '17:00');
-  setNote('CB-3110', 'Bring sparring gear');
-  const change = setPriv('CB-3110', '2026-10-24', '17:00');
-  assert.deepEqual([change.status, change.result_cleared], ['ok', false]);
-  assert.equal(resultFor('CB-3110').note, 'Bring sparring gear');
-  assert.equal(clearPriv('CB-3110').status, 'ok');
-  assert.equal(resultFor('CB-3110').note, 'Bring sparring gear');
-  assert.equal(memReg('CB-3110').private_date, null);
-});
-
-check('private mock: Back after the testing day is for admins (V14, H1)', () => {
-  p4Start();
-  setPriv('CB-3112', '2026-12-01');
-  setPriv('CB-3110', '2026-12-01');
-  setPriv('CB-3114', '2026-12-01');
-  moveToday('2026-11-21'); // E_after
-  const before = JSON.stringify(evDb());
-  assert.equal(clearPriv('CB-3112', E_DESK).status, 'not_allowed');
-  assert.equal(JSON.stringify(evDb()), before);
-  assert.equal(clearPriv('CB-3112', E_ADMIN).status, 'ok');
-  moveToday('2026-11-20'); // E_day
-  assert.equal(clearPriv('CB-3110', E_DESK).status, 'ok');
-  moveToday('2026-11-19'); // E_before
-  assert.equal(clearPriv('CB-3114', E_DESK).status, 'ok');
-  assert.deepEqual(logRows().filter((x) => x.action === 'clear_private').map((x) => x.actor_name), ['Jeffrey Berg', 'Staff', 'Staff']);
-});
-
-check('private mock: grading counts from the student\'s own day (V15)', () => {
-  p4Start();
-  setPriv('CB-3112', '2026-11-21'); // the day after the testing day
-  setPriv('CB-3110', '2026-11-20'); // the testing day itself (Q4)
-  setPriv('CB-3114', '2026-11-19'); // will become "yesterday"
-  moveToday('2026-11-20'); // E_day
-  for (const ctx of [E_DESK, E_ADMIN]) {
-    assert.equal(setRes('CB-3112', 'pass', ctx).status, 'not_open');
-    assert.equal(setNote('CB-3112', 'x', ctx).status, 'not_open');
-    assert.equal(setRes('CB-3110', 'pass', ctx).status, 'ok');
-    assert.equal(setNote('CB-3110', 'Good', ctx).status, 'ok');
-  }
-  assert.equal(setRes('CB-3114', 'pass', E_DESK).status, 'finished'); // private day was yesterday
-  assert.equal(setNote('CB-3114', 'x', E_DESK).status, 'finished');
-  assert.equal(setRes('CB-3114', 'pass', E_ADMIN).status, 'ok');
-  assert.equal(setNote('CB-3114', 'x', E_ADMIN).status, 'ok');
-  assert.equal(setRes('CB-3113', 'pass', E_DESK).status, 'ok'); // a regular student, unchanged
-  // A private day made "yesterday" as postgres, before the testing day.
-  p4Start();
-  setPriv('CB-3112', P4_TODAY);
-  asPostgres(() => { memReg('CB-3112').private_date = '2026-10-16'; });
-  assert.equal(setRes('CB-3112', 'pass', E_DESK).status, 'finished');
-  assert.equal(setRes('CB-3112', 'pass', E_ADMIN).status, 'ok');
-  assert.equal(setRes('CB-3113', 'pass', E_DESK).status, 'not_open'); // regular: before the testing day
-});
-
-check('private mock: Edit details re-prices a private student; the lock uses the own day (V16, Q2, M8–M10)', () => {
-  p4Start();
-  const blue = eventRankByName('Group B', 'Blue');
-  const orange = eventRankByName('Group A', 'Orange');
-  const edit = (ref, rankId, ctx = E_DESK) => {
-    const r = regBy(ref);
-    return p4Call('testing_update_student', { p_registration_id: r.id, p_expected_version: r.version, p_first: r.first_name, p_last: r.last_name, p_event_rank_id: rankId }, ctx);
-  };
-  // M8: private paid $85 → Group B Blue ($95) → $10 due; Mark paid records $10.
-  setPriv('CB-3112', '2026-12-01');
-  payNow('CB-3112');
-  const up = edit('CB-3112', blue.id);
-  assert.deepEqual(up, { status: 'ok', version: regBy('CB-3112').version, amount_due_cents: 1000 });
-  assert.equal(payNow('CB-3112').amount_cents, 1000);
-  // M9: to a rank with a private price of $80 → nothing due, no refund.
-  asPostgres((s) => { s.event_ranks.find((r) => r.id === orange.id).private_cents = 8000; });
-  const down = edit('CB-3112', orange.id);
-  assert.equal(down.amount_due_cents, 0);
-  assert.equal(payNow('CB-3112').status, 'already_paid');
-  assert.equal(netOf('CB-3112'), 9500);
-  // A name-only edit of a private student also says what is due.
-  const r = regBy('CB-3112');
-  assert.equal(p4Call('testing_update_student', { p_registration_id: r.id, p_expected_version: r.version, p_first: 'Zoey', p_last: r.last_name, p_event_rank_id: r.event_rank_id }).amount_due_cents, 0);
-  // M10: a regular paid student → the answer is exactly as before (no extra keys).
-  const regular = edit('CB-3107', blue.id); // Mia, paid $65
-  assert.deepEqual(regular, { status: 'ok', version: regBy('CB-3107').version });
-  assert.equal(payNow('CB-3107').status, 'already_paid');
-  // The lock: a graded private student after their PRIVATE day (still before the testing day).
-  p4Start();
-  setPriv('CB-3110', P4_TODAY);
-  setRes('CB-3110', 'pass');
-  moveToday('2026-10-18');
-  assert.equal(edit('CB-3110', blue.id, E_DESK).status, 'not_allowed');
-  const admin = edit('CB-3110', blue.id, E_ADMIN);
-  assert.deepEqual(admin, { status: 'ok', version: regBy('CB-3110').version, result_cleared: true, amount_due_cents: 9500 });
+  pMoveToday('2026-11-21'); // after the testing day: staff may still move (v0.404)
+  assert.equal(pMove('CB-3112', '2026-11-21').status, 'has_result');
+  assert.equal(pMove('CB-3113', '2026-11-21', '16:00', E_ADMIN).status, 'has_result');
+  const noShow = pMove('CB-3110', '2026-11-21');
+  assert.deepEqual([noShow.status, noShow.result_cleared], ['ok', true]);
   assert.equal(resultFor('CB-3110'), null);
-  // Graded on the private day itself: staff may still correct the belt.
-  p4Start();
-  setPriv('CB-3110', P4_TODAY);
-  setRes('CB-3110', 'pass');
-  assert.equal(edit('CB-3110', blue.id, E_DESK).result_cleared, true);
+  assert.equal(privRow(noShow.private_id).moved_cleared_no_show, true);
+  const rows = pLogs().filter((x) => x.batch_id === pLogs().at(-1).batch_id);
+  assert.deepEqual(rows.at(-1).action, 'clear_result');
+  assert.ok(rows.slice(0, -1).every((x) => x.action === 'move_to_private'));
+  const note = pMove('CB-3114', '2026-11-21');
+  assert.equal(note.result_cleared, false);
+  assert.equal(resultFor('CB-3114').note, 'Note only'); // the note stays with the registration
+  assert.equal(evDb().private_results.length, 0); // and isn't copied
 });
 
-check('private mock: keep one and Restore lock from the private day (V17, H3)', () => {
-  // Mia Lopez CB-3107 (kept) and CB-3109 (a possible copy) in the default data.
-  p4Start();
-  asPostgres(() => {
-    Object.assign(memReg('CB-3109'), { private_date: '2026-10-16', private_time: '16:00:00' });
-    evMemory.results.push({ registration_id: memReg('CB-3109').id, result: 'pass', note: null, updated_at: new Date(evClock).toISOString(), updated_by: null, updated_by_name: 'Staff' });
-  });
-  assert.equal(resolvePair('CB-3107', 'CB-3109', false, E_DESK), 'not_allowed');
-  assert.equal(resolvePair('CB-3107', 'CB-3109', true, E_DESK), 'ok'); // keep both stays open
-  p4Start();
-  asPostgres(() => { Object.assign(memReg('CB-3109'), { private_date: '2026-10-16', private_time: '16:00:00' }); });
-  assert.equal(resolvePair('CB-3107', 'CB-3109', false, E_ADMIN), 'ok');
-  // Control: the private day is tomorrow → staff may keep one.
-  p4Start();
-  setPriv('CB-3109', '2026-10-18');
-  assert.equal(resolvePair('CB-3107', 'CB-3109', false, E_DESK), 'ok');
-  // Restore: then as postgres a result + the private day moved to yesterday → staff Undo refused.
-  asPostgres(() => {
-    memReg('CB-3109').private_date = '2026-10-16';
-    evMemory.results.push({ registration_id: memReg('CB-3109').id, result: 'pass', note: null, updated_at: new Date(evClock).toISOString(), updated_by: null, updated_by_name: 'Staff' });
-  });
-  evClock += 2000; // still inside the 10 seconds
-  assert.equal(restoreReg('CB-3109', E_DESK), 'not_allowed');
-  assert.equal(restoreReg('CB-3109', E_ADMIN), 'ok');
-  // Control: without the result, the desk's own Undo works.
-  p4Start();
-  setPriv('CB-3109', '2026-10-18');
-  assert.equal(resolvePair('CB-3107', 'CB-3109', false, E_DESK), 'ok');
-  assert.equal(restoreReg('CB-3109', E_DESK), 'ok');
+check('private mock: the moved registration afterwards — live functions (V9b, V10)', () => {
+  pStart();
+  const mia = regBy('CB-3107');
+  const original = evDb().payments.find((p) => p.registration_id === mia.id);
+  const move = pMove('CB-3107');
+  const moveReversal = evDb().payments.find((p) => p.reverses_payment_id === original.id);
+  const v = () => regBy('CB-3107').version;
+  assert.equal(evStatus('testing_mark_paid', { p_registration_id: mia.id, p_expected_version: v() }, E_ADMIN), 'withdrawn');
+  assert.equal(evStatus('testing_change_paying_by', { p_registration_id: mia.id, p_expected_version: v(), p_paying_by: 'card' }, E_ADMIN), 'withdrawn');
+  assert.equal(evStatus('testing_undo_payment', { p_payment_id: original.id }, E_ADMIN), 'stale');
+  assert.equal(evStatus('testing_undo_payment', { p_payment_id: moveReversal.id }, E_ADMIN), 'invalid');
+  assert.equal(evStatus('testing_edit_payment', { p_payment_id: original.id, p_method: 'cash', p_amount_cents: 100, p_paid_on: PT }, E_ADMIN), 'stale');
+  assert.equal(evStatus('testing_edit_payment', { p_payment_id: moveReversal.id, p_method: 'cash', p_amount_cents: 100, p_paid_on: PT }, E_ADMIN), 'invalid');
+  pMoveToday('2026-11-20');
+  assert.equal(evStatus('testing_set_result', { p_registration_id: mia.id, p_result: 'pass' }, E_ADMIN), 'withdrawn');
+  pMoveToday(PT);
+  // V10: Restore of the moved registration → moved (staff and admins), nothing changes.
+  const before = JSON.stringify(evDb());
+  assert.equal(evStatus('testing_restore_student', { p_registration_id: mia.id, p_expected_version: v() }, E_ADMIN), 'moved');
+  assert.equal(evStatus('testing_restore_student', { p_registration_id: mia.id, p_expected_version: v() }, E_DESK), 'moved');
+  assert.equal(JSON.stringify(evDb()), before);
+  const leo = regBy('CB-3116'); // an ordinary withdrawn registration still restores
+  assert.equal(evStatus('testing_restore_student', { p_registration_id: leo.id, p_expected_version: leo.version }, E_ADMIN), 'ok');
+  // Delete the event with the net WITHOUT the moved money → ok; the private testing stays.
+  const regs = evDb().registrations.filter((r) => r.event_id === DEFAULT_EVENT_ID);
+  const total = evDb().payments.filter((p) => regs.some((r) => r.id === p.registration_id)).reduce((t, p) => t + p.amount_cents, 0);
+  assert.equal(total, 41000 - 6500); // $410 of the default data minus Mia's moved $65
+  assert.equal(evStatus('testing_delete_event', { p_event_id: DEFAULT_EVENT_ID, p_expected_version: eventRow().version, p_expected_registration_count: regs.length, p_expected_payment_total_cents: total }, E_ADMIN), 'ok');
+  assert.deepEqual([privRow(move.private_id).moved_from_registration_id, privNet(move.private_id)], [mia.id, 6500]);
+  assert.equal(pUndoMove(move.private_id).status, 'not_found');
+  // Delete permanently of a moved registration (admin) → ok, the private money stays.
+  pStart();
+  const m2 = pMove('CB-3107');
+  const r2 = regBy('CB-3107');
+  const payIds = evDb().payments.filter((p) => p.registration_id === r2.id).map((p) => p.id);
+  assert.equal(evStatus('testing_delete_student', { p_registration_id: r2.id, p_expected_version: r2.version, p_expected_payment_ids: payIds }, E_ADMIN), 'ok');
+  assert.equal(privNet(m2.private_id), 6500);
 });
 
-check('private mock: Edit event ignores private results, not private notes (V18, M3)', () => {
-  p4Start();
-  setPriv('CB-3112', P4_TODAY);
-  setRes('CB-3112', 'pass');
-  assert.equal(editEventDate('2026-11-27').status, 'ok');
-  setPriv('CB-3110', P4_TODAY);
-  setNote('CB-3110', 'Note only'); // a private note-only row counts (that student can go Back)
-  assert.equal(editEventDate('2026-11-28').status, 'has_results');
-  setNote('CB-3110', null);
-  assert.equal(editEventDate('2026-11-28').status, 'ok');
-  asPostgres(() => {
-    evMemory.results.push({ registration_id: memReg('CB-3113').id, result: 'pass', note: null, updated_at: new Date(evClock).toISOString(), updated_by: null, updated_by_name: 'Staff' });
-  });
-  assert.equal(editEventDate('2026-11-29').status, 'has_results'); // a regular student's result
-  assert.equal(editEventDate('2026-11-28').status, 'ok'); // the same date: always fine
-});
-
-check('private mock: a private NOTE-only row alone still blocks a date change (M3 negative case)', () => {
-  // The rule counts a results row when `private_date is null or result is null`: a private
-  // student's note without a result counts (they can still go Back to the testing day).
-  p4Start();
-  setPriv('CB-3110', P4_TODAY);
-  setNote('CB-3110', 'Bring sparring gear');
-  assert.equal(evDb().results.length, 1); // the only results row of the event
-  assert.equal(resultFor('CB-3110').result, null);
-  const version = eventRow().version;
-  assert.equal(editEventDate('2026-11-27').status, 'has_results');
-  assert.equal(eventRow().testing_date, '2026-11-20'); // nothing changed
-  assert.equal(eventRow().version, version);
-  // Once that note gets a result, the row stops counting (a private result belongs to their own day).
-  setRes('CB-3110', 'pass');
-  assert.equal(editEventDate('2026-11-27').status, 'ok');
-});
-
-check('private mock: signatures wait for the later day (V19)', () => {
-  p4Start();
-  // As postgres: the event was 100 days ago; Ava (form, signed) had a private day 10 days ago.
-  asPostgres(() => {
-    evMemory.events[0].testing_date = addDays(P4_TODAY, -100);
-    Object.assign(memReg('CB-3101'), { private_date: addDays(P4_TODAY, -10), private_time: '16:00:00' });
-  });
-  payNow('CB-3103', E_ADMIN); // Mark paid runs the clean-up as its last step
-  const d = evDb();
-  assert.notEqual(d.registrations.find((r) => r.reference === 'CB-3101').signature, null); // kept
-  assert.equal(d.registrations.find((r) => r.reference === 'CB-3102').signature, null); // removed
-  assert.ok(d.registrations.find((r) => r.reference === 'CB-3102').signature_deleted_at);
-  // Once the private day is also more than 90 days ago, it goes too.
-  asPostgres(() => { memReg('CB-3101').private_date = addDays(P4_TODAY, -91); });
-  payNow('CB-3113', E_ADMIN);
-  assert.equal(regBy('CB-3101').signature, null);
-});
-
-check('private mock: history — actions, batch ids, actor names, one version step each (V20)', () => {
-  p4Start();
-  const v = (ref) => regBy(ref).version;
-  let before = v('CB-3112');
-  payNow('CB-3112');
-  assert.equal(v('CB-3112'), before + 1);
-  before = v('CB-3112');
-  setPriv('CB-3112', P4_TODAY);
-  assert.equal(v('CB-3112'), before + 1);
-  setPriv('CB-3112', '2026-10-24', '17:00', E_ADMIN);
-  assert.equal(v('CB-3112'), before + 2);
-  clearPriv('CB-3112');
-  assert.equal(v('CB-3112'), before + 3);
-  addPriv();
-  setPriv('CB-3110', P4_TODAY);
+check('private mock: Undo move — the mover within 10 seconds, nothing changed since (V11, M2, M3, L1)', () => {
+  pStart();
+  const mia = regBy('CB-3107');
+  const original = evDb().payments.find((p) => p.registration_id === mia.id);
+  const versionBefore = mia.version;
+  const move = pMove('CB-3107');
+  evClock += 4000;
+  assert.equal(pUndoMove(move.private_id, E_ADMIN).status, 'not_allowed'); // not the mover (admins too)
+  assert.equal(pUndoMove(move.private_id, E_DESK2).status, 'not_allowed');
+  assert.equal(pUndoMove(move.private_id, E_DESK, 2).status, 'stale');
+  const logs = pLogs().length;
+  const undo = pUndoMove(move.private_id);
+  assert.deepEqual(undo, { status: 'ok', registration_id: mia.id, registration_version: regBy('CB-3107').version });
+  const reg = regBy('CB-3107');
+  assert.deepEqual([reg.status, reg.withdrawn_at, reg.withdrawn_by, reg.withdrawn_by_name, reg.withdrawn_reason], ['active', null, null, null, null]);
+  assert.ok(reg.version >= versionBefore + 2); // back to active (+ the duplicate re-check)
+  assert.equal(regBy('CB-3109').duplicate_state, 'possible'); // the duplicate pair is back
+  assert.equal(eventNet('CB-3107'), 6500);
+  const recreated = evDb().payments.filter((p) => p.registration_id === mia.id).at(-1);
+  assert.deepEqual([recreated.kind, recreated.amount_cents, recreated.paid_on, recreated.recorded_by, recreated.recorded_by_name], ['payment', 6500, original.paid_on, null, 'Staff']);
+  assert.equal(privRow(move.private_id), null);
+  assert.equal(evDb().private_payments.length, 0);
+  assert.equal(new Set(pLogs().slice(logs).map((x) => x.batch_id)).size, 1);
+  assert.ok(pLogs().slice(logs).every((x) => x.action === 'undo_move_to_private'));
+  // The recreated event payment has no recorder → the desk's live own-undo can't touch it.
+  assert.equal(evStatus('testing_undo_payment', { p_payment_id: recreated.id }, E_DESK), 'not_allowed');
+  // After 10 seconds → not_allowed.
+  const late = pMove('CB-3107');
+  evClock += 10000;
+  assert.equal(pUndoMove(late.private_id).status, 'not_allowed');
+  // A Mark paid on the private side since → stale (also with its new version).
+  pStart();
+  const paid = pMove('CB-3107');
+  pMark(paid.private_id);
+  assert.equal(pUndoMove(paid.private_id).status, 'stale');
+  assert.equal(pUndoMove(paid.private_id, E_DESK, privRow(paid.private_id).version).status, 'stale');
+  // The registration edited since (an admin renames it) → stale.
+  const renamed = pMove('CB-3112');
+  const z = regBy('CB-3112');
+  evStatus('testing_update_student', { p_registration_id: z.id, p_expected_version: z.version, p_first: 'Zoey', p_last: z.last_name, p_event_rank_id: z.event_rank_id }, E_ADMIN);
+  assert.equal(pUndoMove(renamed.private_id).status, 'stale');
+  // A result on the private side since → stale.
+  const graded = pMove('CB-3110', PT);
+  pNote(graded.private_id, 'note');
+  assert.equal(pUndoMove(graded.private_id).status, 'stale');
+  // L1: a move that cleared a No show → not_allowed (the No show can't come back).
+  pStart('2026-11-20');
   setRes('CB-3110', 'no_show');
-  setPriv('CB-3110', '2026-10-24');
-  const rows = logRows();
-  const actions = new Set(rows.map((x) => x.action));
-  for (const a of ['set_private', 'change_private', 'clear_private', 'add_student', 'clear_result', 'mark_paid']) assert.ok(actions.has(a), a);
-  assert.ok(rows.every((x) => typeof x.batch_id === 'string' && x.batch_id.length > 0));
-  assert.ok(rows.every((x) => x.actor_name === 'Staff' || x.actor_name === 'Jeffrey Berg'));
-  assert.equal(rows.find((x) => x.action === 'change_private').actor_name, 'Jeffrey Berg');
-  // One batch per call: only a cleared result shares its call's batch.
-  const batches = new Map();
-  for (const x of rows) batches.set(x.batch_id, [...(batches.get(x.batch_id) ?? []), x.action]);
-  for (const list of batches.values()) assert.ok(list.length === 1 || (list.length === 2 && list[1] === 'clear_result'), list.join());
-  assert.ok(!JSON.stringify(rows).includes('data:image')); // V21
+  const cleared = pMove('CB-3110', '2026-11-20');
+  assert.equal(pUndoMove(cleared.private_id).status, 'not_allowed');
+  // Not a moved one → not_found.
+  const added = pAdd({ p_private_date: '2026-11-20' });
+  assert.equal(pUndoMove(added.id).status, 'not_found');
 });
 
-check('private mock: a store saved before phase 4 keeps its events', () => {
-  p4Start();
+check('private mock: the Past / Upcoming cards from the view (E11, privateCards)', () => {
+  pStart();
+  const a = pAdd({ p_first: 'Ann', p_private_date: '2026-11-02' }).id;
+  pMark(a);
+  pCall('testing_private_cancel', pArgs(a)); // E11: paid $85, then cancelled
+  pAdd({ p_first: 'Bo', p_private_date: '2026-11-03' });
+  pMove('CB-3107', '2026-11-04'); // owes $20
+  const rows = viewOf().map((v) => ({
+    id: v.id, status: v.status, firstName: v.first_name, lastName: v.last_name, privateDate: v.private_date, privateTime: v.private_time,
+    paid: v.paid, paidCents: v.paid_cents, amountDueCents: v.amount_due_cents,
+  }));
+  const { upcoming, past } = PR.splitPrivate(rows, PT);
+  assert.deepEqual(upcoming.map((r) => r.firstName), ['Bo', 'Mia']);
+  assert.deepEqual(past.map((r) => r.firstName), ['Ann']);
+  assert.deepEqual(PR.privateCards(upcoming), { count: 2, paid: 1, notPaid: 1, owesMore: 1, paymentsCents: 6500, cancelledCents: 0 });
+  assert.deepEqual(PR.privateCards(past), { count: 0, paid: 0, notPaid: 0, owesMore: 0, paymentsCents: 8500, cancelledCents: 8500 });
+  assert.deepEqual(viewOf('shrewsbury'), []);
+});
+
+check('private mock: history and a store saved before phase 4', () => {
+  pStart();
+  const id = pAdd().id;
+  pMark(id);
+  pDay(id, '2026-12-02');
+  pCall('testing_private_cancel', pArgs(id));
+  pCall('testing_private_restore', pArgs(id), E_ADMIN);
+  const actions = new Set(pLogs().map((x) => x.action));
+  for (const a of ['private_add', 'private_mark_paid', 'private_change_day', 'private_cancel', 'private_restore']) assert.ok(actions.has(a), a);
+  assert.ok(pLogs().every((x) => typeof x.batch_id === 'string' && x.batch_id && (x.actor_name === 'Staff' || x.actor_name === 'Jeffrey Berg')));
+  assert.ok(!JSON.stringify(pLogs()).includes('data:image'));
+  // A store without the new lists keeps its events (and private testing works on it).
   const old = JSON.parse(JSON.stringify(evMemory));
-  for (const reg of old.registrations) {
-    delete reg.private_date;
-    delete reg.private_time;
-  }
-  delete old.change_log;
+  for (const key of ['private', 'private_payments', 'private_results', 'change_log']) delete old[key];
   old.events[0].name = 'Kept event';
   evMemory = old;
   assert.equal(eventRow().name, 'Kept event');
-  assert.ok(evDb().registrations.every((r) => r.private_date === null && r.private_time === null));
-  assert.deepEqual(evDb().change_log, []);
-  assertDueSame();
-  assert.equal(setPriv('CB-3112', '2026-12-01').status, 'ok'); // and private testing works on it
+  assert.deepEqual([evDb().private, evDb().private_payments, evDb().private_results, evDb().change_log], [[], [], [], []]);
+  assert.equal(pAdd().status, 'ok');
   assert.equal(eventRow().name, 'Kept event');
   ev.reset();
-  assert.ok(evDb().registrations.every((r) => r.private_date === null));
-  assert.deepEqual(evDb().change_log, []);
+  assert.equal(evDb().private.length, 5); // reset brings back the seeded preview story
+});
+
+check('private mock: the seeded preview story is consistent (money nets, the moved pair)', () => {
+  evReset();
+  ev.reset(); // the default store, made for "today" = Oct 17 (testing day Nov 20)
+  const d = evDb();
+  const byName = (first) => d.private.find((p) => p.first_name === first);
+  const net = (id) => d.private_payments.filter((p) => p.private_id === id).reduce((t, p) => t + p.amount_cents, 0);
+  const result = (id) => d.private_results.find((r) => r.private_id === id)?.result ?? null;
+  assert.deepEqual(d.private.map((p) => p.first_name), ['Liam', 'Noah', 'Ava', 'Emma', 'Sofia']);
+  assert.ok(d.private.every((p) => p.location_code === 'worcester' && p.stripes_confirmed && PR.privateTimeIsValid(p.private_time)));
+  // Each one as the story says (class, belt → testing for, price, day, paid, owed, status, result).
+  const facts = (first) => {
+    const p = byName(first);
+    return [p.class_name, p.rank_name, p.to_name, p.private_cents, p.private_date, p.private_time, net(p.id), ev.privateAmountDueFor(p.id), p.status, result(p.id)];
+  };
+  assert.deepEqual(facts('Liam'), ['Group B', 'Blue', 'High Blue', 9500, '2026-12-03', '17:30:00', 0, 9500, 'active', null]);
+  assert.deepEqual(facts('Noah'), ['Group A', 'Orange', 'Green', 8500, '2026-12-05', '10:00:00', 8500, 0, 'active', null]);
+  assert.deepEqual(facts('Ava'), ['Group A', 'Yellow', 'Orange', 8500, '2026-12-01', '16:00:00', 6500, 2000, 'active', null]);
+  assert.deepEqual(facts('Emma'), ['Group A', 'Green', 'High Green', 8500, '2026-11-30', '16:30:00', 8500, 0, 'cancelled', null]);
+  assert.deepEqual(facts('Sofia'), ['Group A', 'Yellow', 'Orange', 8500, '2026-10-14', '16:00:00', 8500, 0, 'active', 'pass']);
+  // Weekdays as in the mockups: Thu Dec 3, Sat Dec 5, Tue Dec 1, Mon Nov 30.
+  const weekday = (iso) => new Date(`${iso}T12:00:00Z`).getUTCDay();
+  assert.deepEqual(['Liam', 'Noah', 'Ava', 'Emma'].map((f) => weekday(byName(f).private_date)), [4, 6, 2, 1]);
+  assert.ok(byName('Emma').cancelled_at && byName('Emma').cancelled_by_name === 'Staff');
+  // Upcoming / Past on today: Ava, Liam, Noah upcoming; Emma (cancelled) and Sofia (past) on Past.
+  const rows = d.private.map((p) => ({ status: p.status, privateDate: p.private_date, privateTime: p.private_time, firstName: p.first_name, lastName: p.last_name }));
+  const sides = PR.splitPrivate(rows, PT);
+  assert.deepEqual([sides.upcoming.map((r) => r.firstName), sides.past.map((r) => r.firstName)], [['Ava', 'Liam', 'Noah'], ['Emma', 'Sofia']]);
+  // Nothing is dated in the future; every stamp is in order.
+  const day = (iso) => todayInSchoolTime(new Date(iso));
+  for (const p of d.private) assert.ok(day(p.created_at) < PT && p.created_at <= p.updated_at, p.first_name);
+  for (const p of d.private_payments) assert.ok(p.paid_on < PT && day(p.recorded_at) < PT, p.id);
+  // The moved pair, exactly as testing_move_to_private writes it.
+  const ava = byName('Ava');
+  const reg = d.registrations.find((r) => r.id === ava.moved_from_registration_id);
+  assert.deepEqual([reg.reference, reg.first_name, reg.last_name, reg.status, reg.withdrawn_reason, reg.withdrawn_by_name, reg.duplicate_state], ['CB-3117', 'Ava', 'Chen', 'withdrawn', 'withdrawn', 'Staff', 'none']);
+  assert.deepEqual([ava.moved_from_event_id, ava.moved_from_event_name, ava.moved_registration_version, ava.moved_cleared_no_show, ava.version], [DEFAULT_EVENT_ID, 'November Children Testing', reg.version, false, 1]);
+  const eventPays = d.payments.filter((p) => p.registration_id === reg.id);
+  const original = eventPays.find((p) => p.kind === 'payment');
+  const reversal = eventPays.find((p) => p.kind === 'reversal');
+  assert.equal(eventPays.length, 2);
+  assert.deepEqual([original.amount_cents, original.method, reversal.amount_cents, reversal.method, reversal.paid_on, reversal.reverses_payment_id], [6500, 'cash', -6500, 'cash', original.paid_on, original.id]);
+  assert.equal(eventPays.reduce((t, p) => t + p.amount_cents, 0), 0); // the event side nets 0
+  const moved = d.private_payments.filter((p) => p.private_id === ava.id);
+  assert.deepEqual(moved.map((p) => [p.amount_cents, p.method, p.paid_on, p.moved_from_payment_id]), [[6500, 'cash', original.paid_on, original.id]]);
+  assert.equal(reversal.recorded_at, reg.withdrawn_at); // one move: the same moment
+  assert.equal(moved[0].recorded_at, original.recorded_at); // the original's moment (M1)
+  // What the event page reads for the Removed row, and Restore there.
+  assert.deepEqual(ev.select('testing_private', 'id, moved_from_registration_id, status', [{ col: 'moved_from_event_id', value: DEFAULT_EVENT_ID }], [], E_DESK).data,
+    [{ id: ava.id, moved_from_registration_id: reg.id, status: 'active' }]);
+  assert.equal(evStatus('testing_restore_student', { p_registration_id: reg.id, p_expected_version: reg.version }, E_ADMIN), 'moved');
+  // Event money unchanged by the seed ($410), and every other private payment is unmoved.
+  assert.equal(d.payments.reduce((t, p) => t + p.amount_cents, 0), 41000);
+  assert.ok(d.private_payments.filter((p) => p.private_id !== ava.id).every((p) => p.moved_from_payment_id === null));
+  assertPrivDueSame();
+  // The seed works with the functions: Mark paid on Ava records her $20; on Liam his $95.
+  assert.equal(pMark(ava.id).amount_cents, 2000);
+  assert.equal(pMark(byName('Liam').id).amount_cents, 9500);
+  // A seed made for a later "today" (after the testing day) is still in the past and in order.
+  const late = defaultEventsData({ today: '2026-12-10' });
+  assert.ok(late.private_payments.every((p) => p.paid_on < '2026-12-10'));
+  assert.ok(late.private.every((p) => p.created_at <= p.updated_at));
+});
+
+check('private mock: a move keeps each payment\'s moment, so "the most recent payment" stays the same (review M1)', () => {
+  pStart();
+  // Mia: $65 early (6 days ago, default data), then a $20 top-up 3 days ago (as postgres).
+  const mia = regBy('CB-3107');
+  const early = evDb().payments.find((p) => p.registration_id === mia.id);
+  const topUpId = randomUUID();
+  pAsPostgres((s) => {
+    s.payments.push({ id: topUpId, registration_id: mia.id, kind: 'payment', amount_cents: 2000, method: 'card', paid_on: addDays(PT, -3),
+      recorded_at: new Date(Date.parse(early.recorded_at) + 3 * 24 * 3600 * 1000).toISOString(), recorded_by: null, recorded_by_name: 'Staff', reverses_payment_id: null });
+  });
+  const roster = () => rosterOf(DEFAULT_EVENT_ID).find((r) => r.reference === 'CB-3107');
+  assert.equal(roster().last_payment_id, topUpId);
+  const move = pMove('CB-3107');
+  const moved = privPayments(move.private_id);
+  const topUpCopy = moved.find((p) => p.moved_from_payment_id === topUpId);
+  // Each private copy keeps the original's recorded_at (not "now").
+  for (const p of moved) assert.equal(p.recorded_at, evDb().payments.find((x) => x.id === p.moved_from_payment_id).recorded_at);
+  const view = ev.select('testing_private_list', 'id, last_payment_id, paid_on, paid_method, paid_cents, amount_due_cents', [{ col: 'id', value: move.private_id }], [], E_ADMIN).data[0];
+  assert.deepEqual([view.last_payment_id, view.paid_on, view.paid_method, view.paid_cents, view.amount_due_cents], [topUpCopy.id, addDays(PT, -3), 'card', 8500, 0]);
+  // Undo move: the recreated event payments keep those moments → the $20 is the latest live one again.
+  evClock += 2000;
+  assert.equal(pUndoMove(move.private_id).status, 'ok');
+  const recreated = evDb().payments.filter((p) => p.registration_id === mia.id && p.kind === 'payment' && p.recorded_by === null && p.id !== topUpId);
+  assert.deepEqual(recreated.map((p) => [p.amount_cents, p.recorded_at]).sort(), [[2000, moved.find((p) => p.amount_cents === 2000).recorded_at], [6500, early.recorded_at]].sort());
+  const after = roster();
+  const latest = recreated.find((p) => p.amount_cents === 2000);
+  assert.deepEqual([after.last_payment_id, after.paid_method, after.paid_on, after.paid_cents], [latest.id, 'card', addDays(PT, -3), 8500]);
+  // The same moment: the higher id is "the most recent" (recorded_at desc, id desc).
+  pStart();
+  const id = pAdd().id;
+  const at = new Date(evClock - 60000).toISOString();
+  pAsPostgres((s) => {
+    for (const pid of ['00000000-0000-4000-8000-0000000000a2', '00000000-0000-4000-8000-0000000000a1']) { // the higher id stored first
+      s.private_payments.push({ id: pid, private_id: id, kind: 'payment', amount_cents: 1000, method: 'cash', paid_on: PT, recorded_at: at, recorded_by: null, recorded_by_name: 'Staff', reverses_payment_id: null, moved_from_payment_id: null });
+    }
+  });
+  assert.equal(ev.select('testing_private_list', 'last_payment_id', [{ col: 'id', value: id }], [], E_ADMIN).data[0].last_payment_id, '00000000-0000-4000-8000-0000000000a2');
+});
+
+check('private mock: Change how they\'ll pay is refused after a Pass / Not passed (review L3)', () => {
+  pStart();
+  for (const [result, expected] of [['pass', 'graded'], ['not_passed', 'graded'], ['no_show', 'ok'], [null, 'ok']]) {
+    const id = pAdd({ p_private_date: PT }).id;
+    if (result) pResult(id, result);
+    else pNote(id, 'a note alone never counts');
+    assert.equal(pCall('testing_private_change_paying_by', pArgs(id, { p_paying_by: 'card' })).status, expected, String(result));
+    assert.equal(pCall('testing_private_change_paying_by', pArgs(id, { p_paying_by: 'card' }), E_ADMIN).status, expected, `${result} admin`);
+  }
+  // The screen agrees: privateMenu hides it after a Pass / Not passed (L5).
+  assert.equal(PR.privateMenu({ status: 'active', paid: false, amountDueCents: 8500, result: 'pass' }, { today: PT, isAdmin: true }).changePayingBy, false);
+});
+
+check('sanity: these checks catch a broken rule (break on purpose)', () => {
+  // The comparison helper must FAIL when the rule it compares with is wrong.
+  pStart();
+  const m = pMove('CB-3107'); // owes $20
+  assert.throws(() => assertPrivDueSame(({ privateCents }) => privateCents)); // "ignores what's paid"
+  assert.throws(() => assertPrivDueSame(({ privateCents, paidCents }) => privateCents - paidCents + 1)); // off by a cent
+  assert.throws(() => assertPrivDueSame(() => 0)); // "never owes"
+  assertPrivDueSame(); // the real rule passes
+  // And on a broken copy of the data: a payment changed behind the mock's back shows up in both
+  // the mock and the rule (same data), but no longer matches the expected E2 amount.
+  pAsPostgres((s) => { s.private_payments.find((p) => p.private_id === m.private_id).amount_cents = 7000; });
+  assert.notEqual(ev.privateAmountDueFor(m.private_id), 2000);
+  // The menu and the money rule reject wrong answers too.
+  assert.throws(() => assert.equal(PR.amountDue({ privateCents: 8500, paidCents: 6500 }), 1500));
+  assert.throws(() => assert.equal(PR.privateMenu({ status: 'active', result: 'pass' }, { today: PT, isAdmin: false }).cancel, true));
 });
 
 // ======================= publicApi.preview.js (the family page in preview mode) =======================
@@ -3074,13 +3238,13 @@ await (async () => {
     const ok = await previewApi.register(code, body()); // only the next one failed
     assert.equal(ok.status, 'ok');
     assert.equal(ok.testing_for.name, 'Green');
-    assert.equal(ok.reference, 'CB-3117');
+    assert.equal(ok.reference, 'CB-3118');
     helpers.forceRateLimited(true);
     assert.deepEqual(await previewApi.register(code, body()), { status: 'rate_limited' });
     helpers.forceRateLimited(false);
     // The staff preview (same store) sees the registration.
     const store = JSON.parse(fakeStorage.get('tkd.preview.testing'));
-    assert.equal(store.registrations.find((r) => r.reference === 'CB-3117').first_name, 'Ivy');
+    assert.equal(store.registrations.find((r) => r.reference === 'CB-3118').first_name, 'Ivy');
     helpers.setToday('2026-11-14');
     assert.deepEqual(await previewApi.register(code, body()), { status: 'closed', closed_on: '2026-11-13' });
     assert.equal((await previewApi.getEvent(code)).state, 'closed');

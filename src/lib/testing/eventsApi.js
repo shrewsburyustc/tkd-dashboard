@@ -16,31 +16,23 @@
 // result never changes a registration's version. updateStudent's answer may carry
 // resultCleared: true (a belt change cleared the student's result).
 //
-// Phase 4 (private testing, migration 0014, contract 0014 §4.2) added: the registration columns
-// private_date / private_time (read from testing_registrations — the testing_roster view is not
-// changed), the money fields every roster row carries (priceCents, amountDueCents, owesMore),
-// the Events tab's privateTestings list, and the functions testing_set_private (setPrivate),
-// testing_clear_private (clearPrivate) and testing_add_private_student (addPrivateStudent).
-// New statuses: 'past_day' (the private day is before today), 'has_result' (Set private on a
-// student who already has a testing-day Pass / Not passed or a note), 'graded' (Change / Back on
-// a private student who already has a result). Mark paid now records what is DUE (a private
-// top-up records just the difference; nothing due → 'already_paid').
+// Phase 4 (the Private testing tab, migration 0014, contract 0014 §4.3) added only: the status
+// 'moved' (Restore of a registration that was moved to a private testing) and, in loadEvent, the
+// private testings moved out of this event — every roster row carries movedTo (see loadEvent).
+// Everything else about private testings is in privateApi.js.
 //
 // Times: the database sends a time as '17:00:00'; this file turns it into '17:00'. Dates stay
 // 'YYYY-MM-DD' text. Money is whole cents (6500 = $65).
 import { supabase, isPreview } from '../supabase.js';
 import { readStorage } from '../storage.js';
-import {
-  eventState, eventCounts, testingFor, todayInSchoolTime, shortTime, isIsoDate, PREVIEW_TODAY_KEY,
-  isPrivate, priceFor, amountDue, owesMore, privateTestingsList,
-} from './eventRules.js';
+import { eventState, eventCounts, testingFor, todayInSchoolTime, shortTime, isIsoDate, PREVIEW_TODAY_KEY } from './eventRules.js';
 import { RESULTS, isGraded, addedAfterDay } from './gradingRules.js';
 
 // Every status a call here can return.
 export const EVENT_STATUSES = [
   'ok', 'no_access', 'not_allowed', 'not_found', 'stale', 'duplicate_name', 'invalid', 'not_empty',
   'final_award_not_set', 'rate_limited', 'not_open', 'closed', 'finished', 'already_paid', 'withdrawn', 'has_results',
-  'past_day', 'has_result', 'graded', // phase 4 (private testing)
+  'moved', // phase 4: Restore of a registration that was moved to a private testing
   'error',
 ];
 const SERVER_STATUSES = new Set(EVENT_STATUSES.filter((s) => s !== 'error'));
@@ -61,9 +53,6 @@ const PAYMENT_COLUMNS = 'id, registration_id, kind, amount_cents, method, paid_o
 // A student's grading result (phase 3). Never updated_by (the login id isn't given to the app)
 // and never '*' (the database refuses it).
 const RESULT_COLUMNS = 'registration_id, result, note, updated_at, updated_by_name';
-// A student's private day and start time (phase 4). Read from testing_registrations by id — the
-// roster view doesn't have them (contract 0014 §2.1). Never '*'.
-const PRIVATE_COLUMNS = 'id, private_date, private_time';
 // How many ids go into one "id is one of these" filter (they travel in the web address).
 const IN_CHUNK = 80;
 
@@ -164,9 +153,7 @@ function toResult(row) {
   };
 }
 
-// privateRow = the student's { private_date, private_time } (phase 4), or null.
-function toRosterRow(row, classOfRank, resultRow, privateRow) {
-  const privateDate = isIsoDate(privateRow?.private_date) ? privateRow.private_date : null;
+function toRosterRow(row, classOfRank, resultRow) {
   return {
     id: row.id,
     eventId: row.event_id,
@@ -201,11 +188,6 @@ function toRosterRow(row, classOfRank, resultRow, privateRow) {
     lastPaymentId: row.last_payment_id ?? null,
     lastPaymentRecordedAt: row.last_payment_recorded_at ?? null,
     ...toResult(resultRow), // result, note, resultAt, resultByName, graded (phase 3)
-    // Phase 4: the private testing day ('YYYY-MM-DD') and start time ('16:00'), both null for a
-    // student who tests on the event's testing day.
-    privateDate,
-    privateTime: privateDate ? shortTime(privateRow?.private_time) : null,
-    isPrivate: privateDate !== null,
   };
 }
 
@@ -249,12 +231,8 @@ async function selectIn(table, columns, column, ids) {
 
 // One school's events, newest testing date first, each with its classes (no ranks) and counts.
 // → { status:'ok', today, events: [{ …event, state, classes:[…], activeCount, withdrawnCount,
-//      registrationCount, paymentTotalCents, removedPaymentCents }] (eventRules.eventCounts),
-//      privateTestings: [{ registrationId, eventId, eventName, firstName, lastName, className,
-//      privateDate, privateTime, result }] }
+//      registrationCount, paymentTotalCents, removedPaymentCents }] }   (eventRules.eventCounts)
 // (classes are used to copy "Classes testing" from the last event in Add event.)
-// privateTestings (phase 4, P8) = eventRules.privateTestingsList: active private students with no
-// result yet, sorted by day and time. Names and classes are read ONLY for those students.
 export async function loadEvents(locationCode) {
   try {
     if (!KNOWN_LOCATIONS.has(locationCode)) return failure(new Error(`Unknown school: ${locationCode}`));
@@ -268,25 +246,12 @@ export async function loadEvents(locationCode) {
     if (eventRes?.error) return failure(eventRes.error);
     if (!Array.isArray(eventRes.data)) return unexpected('testing_events');
     const ids = eventRes.data.map((row) => row.id);
-    const [classRes, rosterRes, privateRes] = await Promise.all([
+    const [classRes, rosterRes] = await Promise.all([
       selectIn('testing_event_classes', EVENT_CLASS_COLUMNS, 'event_id', ids),
       selectIn('testing_roster', 'id, event_id, status, paid_cents', 'event_id', ids),
-      selectIn('testing_registrations', 'id, event_id, private_date, private_time', 'event_id', ids),
     ]);
     if (classRes.error) return failure(classRes.error);
     if (rosterRes.error) return failure(rosterRes.error);
-    if (privateRes.error) return failure(privateRes.error);
-    // Phase 4: the active students with a private day — only their names, classes and results
-    // are read (a second, small read), never everyone's.
-    const statusOf = new Map(rosterRes.rows.map((r) => [r.id, r.status]));
-    const privateRows = privateRes.rows.filter((r) => isIsoDate(r.private_date) && statusOf.get(r.id) === 'active');
-    const privateIds = privateRows.map((r) => r.id);
-    const [nameRes, privateResultRes] = await Promise.all([
-      selectIn('testing_roster', 'id, first_name, last_name, class_name', 'id', privateIds),
-      selectIn('testing_results', 'registration_id, result', 'registration_id', privateIds),
-    ]);
-    if (nameRes.error) return failure(nameRes.error);
-    if (privateResultRes.error) return failure(privateResultRes.error);
     const events = eventRes.data.map((row) => {
       const event = toEvent(row, today);
       event.classes = classRes.rows
@@ -296,22 +261,7 @@ export async function loadEvents(locationCode) {
       Object.assign(event, eventCounts(rosterRes.rows.filter((r) => r.event_id === row.id)));
       return event;
     });
-    const eventName = new Map(events.map((e) => [e.id, e.name]));
-    const nameOf = new Map(nameRes.rows.map((r) => [r.id, r]));
-    const resultOf = new Map(privateResultRes.rows.map((r) => [r.registration_id, r.result ?? null]));
-    const privateTestings = privateTestingsList(privateRows.map((r) => ({
-      registrationId: r.id,
-      eventId: r.event_id,
-      eventName: eventName.get(r.event_id) ?? null,
-      firstName: nameOf.get(r.id)?.first_name ?? null,
-      lastName: nameOf.get(r.id)?.last_name ?? null,
-      className: nameOf.get(r.id)?.class_name ?? null,
-      privateDate: r.private_date,
-      privateTime: shortTime(r.private_time),
-      result: resultOf.get(r.id) ?? null,
-      status: statusOf.get(r.id), // used by the filter (always 'active' here), then left out
-    }))).map(({ status, ...item }) => item);
-    return { status: 'ok', today, events, privateTestings };
+    return { status: 'ok', today, events };
   } catch (error) {
     return failure(error);
   }
@@ -328,69 +278,63 @@ export async function loadEvents(locationCode) {
 // ({ date, byName } for a student an admin added after the testing day, else null).
 // startedAt = Date.now() when this call STARTED (before any request): the Grading tab compares
 // it with the time a save answered, so it never shows a read older than its own save.
-// Phase 4: every roster row also carries privateDate, privateTime, isPrivate, priceCents (the
-// private price for a private student, else the regular fee by today — eventRules.priceFor),
-// amountDueCents (what Mark paid would record now — eventRules.amountDue) and owesMore (paid but
-// still owing a top-up); event.owesMoreCount = the active students who owe more.
+// Phase 4: every roster row also carries movedTo — { privateId, privateDate ('YYYY-MM-DD'),
+// privateTime ('16:00'), status ('active' | 'cancelled') } for a registration that was moved to
+// a private testing (it is listed under Removed), else null.
 export async function loadEvent(eventId) {
   const startedAt = Date.now();
   try {
     if (typeof eventId !== 'string' || eventId === '') return failure(new Error('No event id'));
     if (!supabase) return failure(new Error('No connection is set up'));
     const today = schoolToday();
-    const [eventRes, classRes, rosterRes, denied] = await Promise.all([
+    const [eventRes, classRes, rosterRes, movedRes, denied] = await Promise.all([
       supabase.from('testing_events').select(EVENT_COLUMNS).eq('id', eventId),
       supabase.from('testing_event_classes').select(EVENT_CLASS_COLUMNS).eq('event_id', eventId).order('position', { ascending: true }),
       supabase.from('testing_roster').select(ROSTER_COLUMNS).eq('event_id', eventId),
+      // Phase 4: the private testings moved out of this event (the Removed rows say so).
+      supabase.from('testing_private').select('id, moved_from_registration_id, private_date, private_time, status').eq('moved_from_event_id', eventId),
       accessCheck(),
     ]);
     if (denied) return denied;
-    for (const res of [eventRes, classRes, rosterRes]) if (res?.error) return failure(res.error);
-    if (![eventRes.data, classRes.data, rosterRes.data].every(Array.isArray)) return unexpected('the event tables');
+    for (const res of [eventRes, classRes, rosterRes, movedRes]) if (res?.error) return failure(res.error);
+    if (![eventRes.data, classRes.data, rosterRes.data, movedRes.data].every(Array.isArray)) return unexpected('the event tables');
     if (eventRes.data.length === 0) return { status: 'not_found' };
 
     const classIds = classRes.data.map((c) => c.id);
     const regIds = rosterRes.data.map((r) => r.id);
-    const [rankRes, paymentRes, resultRes, privateRes] = await Promise.all([
+    const [rankRes, paymentRes, resultRes] = await Promise.all([
       selectIn('testing_event_ranks', EVENT_RANK_COLUMNS, 'event_class_id', classIds),
       selectIn('testing_payments', PAYMENT_COLUMNS, 'registration_id', regIds),
       selectIn('testing_results', RESULT_COLUMNS, 'registration_id', regIds),
-      selectIn('testing_registrations', PRIVATE_COLUMNS, 'id', regIds),
     ]);
     if (rankRes.error) return failure(rankRes.error);
     if (paymentRes.error) return failure(paymentRes.error);
     if (resultRes.error) return failure(resultRes.error);
-    if (privateRes.error) return failure(privateRes.error);
 
     const classes = classRes.data
       .map((c) => toEventClass(c, rankRes.rows.filter((r) => r.event_class_id === c.id).map(toEventRank).sort((a, b) => a.position - b.position)))
       .sort((a, b) => a.position - b.position);
     // "Testing for" for every rank (eventRules.testingFor), and which class each rank is in.
     const classOfRank = new Map();
-    const rankById = new Map();
     for (const cls of classes) {
       for (const rank of cls.ranks) {
         rank.testingFor = testingFor(classes, rank);
         classOfRank.set(rank.id, cls.id);
-        rankById.set(rank.id, rank);
       }
     }
     const resultOf = new Map(resultRes.rows.map((r) => [r.registration_id, r]));
-    const privateOf = new Map(privateRes.rows.map((r) => [r.id, r]));
+    const movedOf = new Map(movedRes.data.map((p) => [p.moved_from_registration_id, p]));
     const event = Object.assign(toEvent(eventRes.data[0], today), eventCounts(rosterRes.data));
     const roster = rosterRes.data.map((row) => {
-      const student = toRosterRow(row, classOfRank, resultOf.get(row.id) ?? null, privateOf.get(row.id) ?? null);
+      const student = toRosterRow(row, classOfRank, resultOf.get(row.id) ?? null);
       student.addedAfterDay = addedAfterDay(student, event.testingDate); // gradingRules.js
-      // Phase 4 money (contract 0014 §1.3): the same rule as the database's Mark paid.
-      const rank = rankById.get(row.event_rank_id) ?? null;
-      const money = { rank, privateDate: student.privateDate, today, testingDate: event.testingDate };
-      student.priceCents = rank ? priceFor(money) : null;
-      student.amountDueCents = rank ? amountDue({ ...money, paidCents: student.paidCents }) : 0;
-      student.owesMore = owesMore(student);
+      const moved = movedOf.get(row.id);
+      student.movedTo = moved
+        ? { privateId: moved.id, privateDate: moved.private_date, privateTime: shortTime(moved.private_time), status: moved.status }
+        : null; // phase 4
       return student;
     });
     event.resultCount = roster.filter((r) => r.graded).length;
-    event.owesMoreCount = roster.filter((r) => r.status === 'active' && r.owesMore).length;
     const payments = paymentRes.rows.map(toPayment).sort((a, b) => (a.recordedAt < b.recordedAt ? -1 : a.recordedAt > b.recordedAt ? 1 : 0));
     return { status: 'ok', today, startedAt, event, classes, roster, payments };
   } catch (error) {
@@ -525,91 +469,22 @@ export async function addStudent({ eventId, firstName, lastName, eventRankId, st
 }
 
 // Edit details: names and current belt (the class follows the belt). Payments are untouched.
-// → { status:'ok', version, resultCleared, amountDueCents } — resultCleared is true when the belt
-//   changed for a graded student, so the database cleared their result and note (phase 3; the
-//   database only sends result_cleared when it is true). amountDueCents (phase 4) = what is due
-//   now for a PRIVATE student (a pricier rank after paying → a top-up, Q2); null for a regular
-//   student (the database doesn't send it) · 'not_allowed' (staff, after the student's own day,
-//   belt change of a graded student) · 'stale' · 'invalid' · 'not_found'
+// → { status:'ok', version, resultCleared } — resultCleared is true when the belt changed for a
+//   graded student, so the database cleared their result and note (phase 3; the database only
+//   sends result_cleared when it is true) · 'not_allowed' (staff, after the testing day, belt
+//   change of a graded student) · 'stale' · 'invalid' · 'not_found'
 export async function updateStudent({ registrationId, expectedVersion, firstName, lastName, eventRankId } = {}) {
   return callRpc(
     'testing_update_student',
     { p_registration_id: registrationId, p_expected_version: expectedVersion, p_first: firstName, p_last: lastName, p_event_rank_id: eventRankId },
-    (d) => (isInt(d.version)
-      ? { version: d.version, resultCleared: d.result_cleared === true, amountDueCents: Number.isInteger(d.amount_due_cents) ? d.amount_due_cents : null }
-      : null),
-  );
-}
-
-// ----- Private testing (phase 4, migration 0014, contract 0014 §2.4) -----
-// privateDate = 'YYYY-MM-DD' (today or later, at most a year after the testing day);
-// privateTime = 'HH:MM' from eventRules.PRIVATE_TIME_CHOICES (6:00 AM–10:00 PM, 5-minute steps).
-
-// A private answer: the day stays 'YYYY-MM-DD', the time becomes '16:00'. null = wrong shape.
-const readPrivateDay = (d) => {
-  const privateTime = shortTime(d.private_time);
-  if (!isIsoDate(d.private_date) || privateTime === null || !isInt(d.amount_due_cents)) return null;
-  return { privateDate: d.private_date, privateTime, amountDueCents: d.amount_due_cents };
-};
-// The time as the database function wants it ('16:00'); anything unreadable is sent as it is,
-// so the database refuses it (invalid) instead of this file guessing.
-const timeArg = (text) => shortTime(text) ?? text;
-
-// Set private testing (first time) or Change private day or time.
-// → { status:'ok', version, privateDate, privateTime, amountDueCents, resultCleared } —
-//   resultCleared is true when a No show (testing-day or private) was removed with its note ·
-//   'past_day' · 'invalid' (bad time, or more than a year after the testing day) · 'has_result'
-//   (testing-day Pass / Not passed / note) · 'graded' (private Pass / Not passed) · 'stale' ·
-//   'withdrawn' · 'not_found' · 'no_access' · 'error'
-// The same day AND time again writes nothing (ok, same version, resultCleared false).
-export async function setPrivate({ registrationId, expectedVersion, privateDate, privateTime } = {}) {
-  return callRpc(
-    'testing_set_private',
-    { p_registration_id: registrationId, p_expected_version: expectedVersion, p_private_date: privateDate, p_private_time: timeArg(privateTime) },
-    (d) => {
-      const day = readPrivateDay(d);
-      if (!day || !isInt(d.version) || typeof d.result_cleared !== 'boolean') return null;
-      return { version: d.version, ...day, resultCleared: d.result_cleared };
-    },
-  );
-}
-
-// Back to the testing day. → { status:'ok', version, amountDueCents } · 'graded' (a private
-// result exists — No show too; a note alone doesn't count) · 'not_allowed' (staff after the
-// testing day, H1) · 'stale' · 'withdrawn' · 'not_found' · 'invalid' · 'no_access' · 'error'.
-// A student who isn't private any more answers ok and nothing changes.
-export async function clearPrivate({ registrationId, expectedVersion } = {}) {
-  return callRpc(
-    'testing_clear_private',
-    { p_registration_id: registrationId, p_expected_version: expectedVersion },
-    (d) => (isInt(d.version) && isInt(d.amount_due_cents) ? { version: d.version, amountDueCents: d.amount_due_cents } : null),
-  );
-}
-
-// Add student with "Tests privately" ticked (P3b): addStudent's arguments plus the private day
-// and time, in ONE database call (one new registration, version 1).
-// → { status:'ok', id, reference, version, privateDate, privateTime, amountDueCents } ·
-//   'past_day' · 'finished' (staff after the testing day) · 'invalid' · 'not_found' · 'stale' …
-export async function addPrivateStudent({ eventId, firstName, lastName, eventRankId, stripes, payingBy, privateDate, privateTime } = {}) {
-  return callRpc(
-    'testing_add_private_student',
-    {
-      p_event_id: eventId, p_first: firstName, p_last: lastName, p_event_rank_id: eventRankId, p_stripes: stripes,
-      p_paying_by: payingBy, p_private_date: privateDate, p_private_time: timeArg(privateTime),
-    },
-    (d) => {
-      const day = readPrivateDay(d);
-      if (!day || !isText(d.id) || !isText(d.reference) || !isInt(d.version)) return null;
-      return { id: d.id, reference: d.reference, version: d.version, ...day };
-    },
+    (d) => (isInt(d.version) ? { version: d.version, resultCleared: d.result_cleared === true } : null),
   );
 }
 
 // ----- Grading (phase 3, migration 0010) -----
 // Both answer ok with what is stored NOW: { status:'ok', result, note, resultAt, resultByName }
 // (all null when nothing is saved any more). Refusals: 'no_access' · 'invalid' · 'not_found' ·
-// 'withdrawn' · 'not_open' (before the student's own day: their private day when private, else
-// the testing day — phase 4) · 'finished' (staff after that day)
+// 'withdrawn' · 'not_open' (before the testing day) · 'finished' (staff after the testing day)
 // · 'stale' (busy, try again) · 'error'. No version: the last change wins, and sending the same
 // value again is harmless (that's what makes Retry safe).
 const readResult = (d) => {
@@ -628,8 +503,7 @@ export async function setResultNote({ registrationId, note } = {}) {
   return callRpc('testing_set_result_note', { p_registration_id: registrationId, p_note: note }, readResult);
 }
 
-// Change how they'll pay (not paid — or, phase 4, a private student who still owes a top-up;
-// earlier payments keep their method — not withdrawn).
+// Change how they'll pay (not paid, not withdrawn).
 export async function changePayingBy({ registrationId, expectedVersion, payingBy } = {}) {
   return callRpc(
     'testing_change_paying_by',
@@ -638,11 +512,9 @@ export async function changePayingBy({ registrationId, expectedVersion, payingBy
   );
 }
 
-// Mark paid: one click pays what is due. The DATABASE decides the amount (testing_amount_due:
-// a regular student pays the early price before the testing day, the testing-day price on it;
-// a private student pays the private price, or just the difference after an earlier payment)
-// and the date (today). → { status:'ok', paymentId, amountCents, method, version } ·
-// 'already_paid' (nothing due — also a $0 price) · 'withdrawn' · 'stale' (e.g. a double click)
+// Mark paid: one click pays in full. The DATABASE decides the amount (early price before the
+// testing day, testing-day price on it) and the date (today). → { status:'ok', paymentId,
+// amountCents, method, version } · 'already_paid' · 'withdrawn' · 'stale' (e.g. a double click)
 export async function markPaid({ registrationId, expectedVersion } = {}) {
   return callRpc(
     'testing_mark_paid',

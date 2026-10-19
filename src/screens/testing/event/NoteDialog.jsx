@@ -46,7 +46,7 @@ export function isNoteDirty(state) {
   return state.values.text !== state.initial.text;
 }
 
-// hint (phase 4): the gray line under the field — the private page passes its own wording.
+// hint (phase 4, optional): the gray line under the field — the private grading page passes its own.
 export default function NoteDialog({ state, name, subtitle, savedNote, hint = T.GRADING_NOTE_HINT, isPhone, onChange, onSave, onCancel, onRequestClose }) {
   const idBase = `note-dialog-${state.key}`;
   // Opening on an existing note: the cursor starts at its end, ready to add to it. (Dialog.jsx

@@ -11,48 +11,16 @@
 // Phase 3 (v0.191): a student an admin added after the testing day gets a gray line
 // "Added Nov 21 by Jeffrey Berg (admin)" under the name.
 // Withdrawn students sit in a "Removed" group at the bottom, "Not in the counts" (Star v0.113).
+// Phase 4 (P5): a student moved to private testing sits there too, with "moved Nov 10 by Staff"
+// and the gray tag "Moved to private testing, Tue, Dec 1" under the name (no payment tag: the
+// payment moved with them).
 // v0.195: classes that test together show together — `sections` gives each class its own small
 // heading row ("Group B · 3 students") with its rows under it; one Removed group after them all.
-// Phase 4 (contract 0014 §5.3, P1 / P4 / P9): a private student gets one more line — the purple
-// "Private" tag + "Tue, Dec 1 · 4:00 PM · $85" (and, once graded, the result tag); a private
-// student who paid less than the private price gets the amber "Paid $65 · $20 more to collect"
-// line and keeps Mark paid next to the Paid tag. PC: under the name. Tablet: the full row width
-// under the name. Phone: right under the name and Registered line, before the belts.
 import { Fragment } from 'react';
 import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp, IconDots } from '@tabler/icons-react';
 import IconButton from '../../../components/IconButton.jsx';
-import { showMarkPaid as markPaidShows } from '../../../lib/testing/eventRules.js';
-import { ResultTag } from './ResultButtons.jsx';
 import { TestingForCell } from './StudentDialog.jsx';
 import * as T from '../text.js';
-
-// The private line (purple tag, day · time · price, result tag once graded) and the amber owed
-// line. Returns null for a regular student who owes nothing.
-function PrivateLines({ row }) {
-  const removed = row.status === 'withdrawn';
-  const privateLine = row.isPrivate ? (
-    <span className="ev-private-line">
-      <span className="ttag ttag--private">{T.TAG_PRIVATE}</span>
-      <span className="ev-private-text">{T.privateLine(row.privateDate, row.privateTime, row.priceCents)}</span>
-      {row.result && <ResultTag result={row.result} />}
-    </span>
-  ) : null;
-  const owedLine =
-    !removed && row.owesMore ? (
-      <span className="ev-owed-line">
-        {/* ti-alert-triangle = something still to collect */}
-        <IconAlertTriangle size={14} aria-hidden="true" />
-        <span>{T.owedLine(row.paidCents, row.amountDueCents)}</span>
-      </span>
-    ) : null;
-  if (!privateLine && !owedLine) return null;
-  return (
-    <>
-      {privateLine}
-      {owedLine}
-    </>
-  );
-}
 
 // The one tag of a row.
 function PaymentTag({ row, onReview }) {
@@ -95,19 +63,26 @@ function StudentRow({ row, ctx }) {
   const rank = rankById.get(row.eventRankId);
   const name = T.studentLabel(row);
   const removed = row.status === 'withdrawn';
-  // Mark paid shows while something is due (eventRules.showMarkPaid) — for a private student who
-  // owes more that is next to the Paid tag (P4). Never on a possible duplicate (Review first).
-  const showMarkPaid = !removed && markPaidShows(row) && row.duplicateState !== 'possible';
+  const showMarkPaid = !removed && !row.paid && row.duplicateState !== 'possible';
   const showMenu = !removed || ctx.isAdmin;
   const open = ctx.menuFor === row.id;
   const selected = open || ctx.selectedId === row.id;
-  const tag = ctx.notSavedId === row.id ? <NotSavedTag /> : <PaymentTag row={row} onReview={handlers.onReview} />;
+  const moved = removed && row.movedTo ? row.movedTo : null;
+  let tag = ctx.notSavedId === row.id ? <NotSavedTag /> : <PaymentTag row={row} onReview={handlers.onReview} />;
+  if (moved) tag = <span className="ev-ssub">—</span>;
   // Phase 3 (plan Q1, v0.191): a student an admin added after the testing day gets a gray line
   // "Added Nov 21 by Jeffrey Berg (admin)" under the name, on Students and on Grading.
   const addedAfter = row.addedAfterDay ? (
     <span className="ev-ssub ev-added-after">{T.addedAfterDayLine(row.addedAfterDay.date, row.addedAfterDay.byName)}</span>
   ) : null;
-  const subline = removed ? T.removedBy(row.withdrawnAt, row.withdrawnByName) : row.source === 'form' ? T.registeredOn(row.registeredAt) : T.addedOn(row.registeredAt);
+  let subline = removed ? T.removedBy(row.withdrawnAt, row.withdrawnByName) : row.source === 'form' ? T.registeredOn(row.registeredAt) : T.addedOn(row.registeredAt);
+  if (moved) subline = T.movedBy(row.withdrawnAt, row.withdrawnByName);
+  // Phase 4: the moved tag on its own line under the name
+  const movedLine = moved ? (
+    <span className="ev-added-after">
+      <span className="ttag">{T.movedTag(moved.privateDate)}</span>
+    </span>
+  ) : null;
 
   const markPaid = showMarkPaid ? (
     <button
@@ -151,9 +126,6 @@ function StudentRow({ row, ctx }) {
     onClick: () => handlers.onOpen(row),
   };
 
-  const privateLines = <PrivateLines row={row} />;
-  const hasPrivateLines = row.isPrivate || (!removed && row.owesMore);
-
   if (layout.isPhone) {
     const payLine = row.paid ? T.paidOnPhone(row.paidMethod, row.paidOn) : T.payingByText(row.payingBy);
     return (
@@ -163,8 +135,8 @@ function StudentRow({ row, ctx }) {
             <span className="ev-sname">{name}</span>
             <span className="ev-ssub">{subline}</span>
             {addedAfter}
+            {movedLine}
           </span>
-          {hasPrivateLines && <span className="ev-private-lines">{privateLines}</span>}
           <span className="ev-sline">
             <TestingForCell rank={rank} />
           </span>
@@ -181,16 +153,13 @@ function StudentRow({ row, ctx }) {
     );
   }
 
-  // PC: the lines sit in the Student cell. Tablet: they run the full row width under the name
-  // (a second grid line), so the name cell stays two lines (P1).
-  const fullWidthLines = !layout.isWide && hasPrivateLines;
   return (
     <div {...rowProps}>
       <span className="ev-scell ev-sname-line" role="cell">
         <span className="ev-sname">{name}</span>
         <span className="ev-ssub">{subline}</span>
         {addedAfter}
-        {layout.isWide && hasPrivateLines && <span className="ev-private-lines">{privateLines}</span>}
+        {movedLine}
       </span>
       <span className="ev-scell" role="cell">
         <TestingForCell rank={rank} />
@@ -210,11 +179,6 @@ function StudentRow({ row, ctx }) {
         {markPaid}
         {more}
       </span>
-      {fullWidthLines && (
-        <span className="ev-private-lines ev-private-lines--full" role="cell">
-          {privateLines}
-        </span>
-      )}
     </div>
   );
 }
