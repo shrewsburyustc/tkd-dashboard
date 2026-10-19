@@ -61,7 +61,20 @@ Color Belt testing and Star testing are built at the same time in separate Claud
 - **Commit on your own branch** when a step is reviewed and done. Never edit files in the main folder or another worktree (Claude Code blocks it anyway).
 - **Merging:** when a worktree finishes a reviewed step, Jeffrey asks the **Main** session to `git merge <branch>` into `main` (explain the merge and any conflict before resolving it). The main folder must be clean first (`git status` shows nothing). Then each other worktree session commits its own work and runs `git merge main` on its own branch to stay current. Merge small and often.
 - **Shared files** — the rulebook, `README.md`, `docs/README.md`, `src/App.jsx`, `src/components/navItems.js`, `src/lib/mockClient.js`, `src/styles/tokens.css`, `src/screens/Testing.jsx`: change only what your project needs and list every shared file you touched in your summary. These are where merge conflicts happen.
-- **Rulebook versions:** both branches may add the same version number. When merging into `main`, keep both sets of changes and renumber the branch being merged so its versions follow the highest version already on `main` (10b rows, changelog lines, and any "vX.XX" references in that branch's docs). Before starting new rulebook edits in a worktree, `git merge main` first.
+- **Rulebook versions: one fixed block per branch** (decided 2026-10-19, rulebook v0.300). Use **only numbers from your own block**, in order, so two branches never pick the same number:
+
+  | Branch / session | Block |
+  |---|---|
+  | `main` (Main session) | 0.300–0.399 |
+  | `color-belt` | 0.400–0.499 |
+  | `star-testing` | 0.500–0.599 |
+  | `claude/prospect-form-system-cd893d` (new students) | 0.600–0.699 |
+  | `camps` | 0.700–0.799 |
+  | `finance` | 0.800–0.899 |
+  | `black-belt` | 0.900–0.999 |
+  | any new branch | the next free block (1.000+) — ask Jeffrey first |
+
+  A new 10b row and its changelog line take the next unused number in your block; the header's `**Version:**` shows the number you just used. Before any rulebook edit in a worktree, `git merge main` first. **Rows numbered before this rule keep their numbers until that branch merges into `main`; at that merge, renumber only that branch's rows that clash with a number already on `main`, into the branch's own block** (10b row, changelog line, and any "vX.XX" mention in that branch's docs). The changelog therefore has gaps and is no longer in strict number order; the check is "no number used twice", not "1…N with no gaps". If a block runs out, ask Jeffrey for the next free block.
 - **Migration numbers:** `0003` belongs to Color Belt phase 1; Star testing takes the next free number.
 - **Don't archive a worktree session in the app** until its branch is merged into `main` — archiving removes the worktree folder.
 - Never use the app's **Create PR** / push buttons — they push the branch. `.claude/settings.json` makes every `git push` ask first.
