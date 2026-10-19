@@ -10,7 +10,7 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Prospects-Build-Plan.md`
 | P1 Merge main (with Forms F1) | Waiting — the Main session merges when Jeffrey asks |
 | P2 Migration 0010 + tests + security review | Done 2026-10-18; PGlite 93/93 |
 | P3 Screens + preview database + design review | Done 2026-10-18 (preview only); 8 differences wait for Jeffrey in P4 |
-| P4 Jeffrey tries the preview (and decides the P3 differences below) | Next |
+| P4 Jeffrey tries the preview (and decides the P3 differences below) | Differences decided 2026-10-18 (v0.206); 2, 3, 5 and 8 built |
 | P5 Live setup (0007–0010, then Forms F3) | Waiting |
 | P6 Go live with Forms | Needs a separate OK |
 | — 0003 history exception | **Proposal only** (`PROPOSAL-0003-history-cleanup.md`), for the Color Belt session; Prospects must not go live before it's decided |
@@ -40,7 +40,11 @@ No High. Fixed: **M2** check-in on a Joined / Not interested child refused, Undo
 - **Shared files touched:** `src/App.jsx`, `src/components/navItems.js`, `src/lib/mockClient.js`; also `BottomBar.jsx`, `Rail.jsx`, `Shell.jsx`, `pageAddress.js`, `main.jsx`, Calendar (`Calendar.jsx`, `calendar/DayPanel.jsx`, `calendar/text.js`), Forms (`Forms.jsx` now uses the shared Fill in).
 - **Design review (separate agent, screenshots at 1280 / 820 touch / 390 touch / 320):** no High; 7 Medium fixed (panel close + Esc, unsaved-note guard, follow-up warning with icon + words, phone cancelled-class icon, dot = what the badge counts, whole row clickable, tablet panel scrolled into view); Low fixed: Check in plain button, tablet warning wraps, Today tile icon, 16px warning icons, Edit icon, search clear tap area, 4px grid, one search on Both + school pins, dead CSS.
 
-## Differences from the approved mockup — for Jeffrey to decide in P4
+## Differences from the approved mockup — decided in P4 (Jeffrey, 2026-10-18, rulebook v0.206)
+
+Answers: 1 A (no age in the list), **2 B (status tag + menu — built)**, **3 B (follow-up as words + quick choices — built)**, 4 A (one-tap Add prospect), **5 B (plain Book button — built)**, 6 A (dot = badge), 7 A (Edit statuses under ⋯), **8 B (`ti-clock-edit` — built)**.
+
+The list as it was asked:
 
 1. The list shows **"Ava R."** but never the child's **age** (the plan says lists never show age; the mockup showed "Ava R., 10").
 2. **Status** is a plain dropdown (the mockup shows a colored tag with a chevron).

@@ -397,6 +397,7 @@ export default function Prospects({ location, isAdmin, screenLocked, onNoAccess,
         statusById={school.statusById}
         today={today}
         isPc={isPc}
+        isPhone={isPhone}
         isAdmin={isAdmin}
         busy={busy}
         note={note}

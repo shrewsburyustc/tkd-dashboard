@@ -583,6 +583,57 @@
   outline-offset: -2px;
 }
 
+/* the status tag opens the status menu (P4 difference 2) */
+.pstatus-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 32px;
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.pstatus-btn:hover {
+  border-color: var(--color-border-control);
+}
+
+.pstatus-btn:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+.pdot-menu {
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* the quick follow-up choices (P4 difference 3) */
+.pfollow {
+  margin: 0 0 var(--space-8) 96px;
+}
+
+.pfollow .pwhen-item {
+  border-style: solid;
+  background: var(--color-bg);
+  font: inherit;
+  font-size: var(--text-12);
+}
+
+.pfollow-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+}
+
 .pkv-select {
   display: flex;
   align-items: center;
@@ -829,6 +880,10 @@
     min-height: var(--tap-size);
   }
 
+  .pstatus-btn {
+    min-height: var(--tap-size);
+  }
+
   .psearch-clear {
     position: relative;
   }
@@ -863,6 +918,10 @@
 
 /* ----- Phone ----- */
 @media (max-width: 639.98px) {
+  .pfollow {
+    margin-left: 0;
+  }
+
   .prospects {
     padding: var(--space-16) var(--space-16) calc(40px + var(--space-24) + var(--space-16));
   }

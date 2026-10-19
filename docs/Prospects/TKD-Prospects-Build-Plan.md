@@ -119,3 +119,4 @@ As asked:
 - 2026-10-18 — **Q1–Q7 answered** (rulebook v0.191). Mockup rev 3's "Same phone as …" line is dropped (Q4). Next: P1 (merge main) and P2 (migration 0010) — each on Jeffrey's OK.
 - 2026-10-18 — **P2 done:** migration 0010 + tests (PGlite 93/93), security review (no High; 2 Medium — one fixed, one in the 0003 proposal). 0003 change written as a proposal for the Color Belt session. Nothing live.
 - 2026-10-18 — **P3 done (preview only):** Prospects screens, panel, dialogs, phone More bar, Calendar check-in, shared Fill in. Design review: no High, 7 Medium fixed. Eight differences listed in STATUS-Prospects.md for Jeffrey in P4.
+- 2026-10-18 — **P4 differences decided (v0.206):** keep 1, 4, 6, 7 as built; 2 status tag + menu, 3 follow-up as words with quick choices, 5 plain Book button, 8 `ti-clock-edit` — all built. Rulebook number 0.206 because black-belt already uses up to 0.205.

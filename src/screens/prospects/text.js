@@ -102,6 +102,8 @@ export const classLine = (b) => `${formatDate(b.date, { year: false })} · ${for
 export const checkedIn = (name, at) => `Checked in by ${name} · ${new Date(at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
 export const DELETE_PROSPECT = 'Delete prospect';
 export const NO_FOLLOW_UP = 'No follow-up';
+export const SET_DATE = 'Set date';
+export const CURRENT = '(now)';
 export const EDIT_STATUSES = 'Edit statuses';
 export const signedLine = (signedAt, hasPicture) => (signedAt
   ? `waiver signed ${shortDate(signedAt.slice(0, 10)).slice(4)}${hasPicture ? '' : ' (picture deleted after 90 days)'}`
