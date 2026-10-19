@@ -62,6 +62,21 @@ b{font-weight:600}
 .grade.yes{border-color:#9DBE7A;background:var(--ok-tint)}
 .grade.no{border-color:#E9C2C2;background:var(--bad-tint)}
 .amb{outline:3px solid var(--amber);outline-offset:3px;border-radius:6px}
+
+.dlg{background:#fff;border:1px solid var(--border-strong);border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.10);padding:14px;font-size:12.5px}
+.dlg h4{margin:0 0 2px;font-size:14px;font-weight:600}
+.dlg .sub{color:var(--text2);font-size:12px;margin-bottom:10px}
+.dlg .row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border)}
+.dlg .btnx{display:inline-block;border:1px solid #8F8F8A;border-radius:7px;padding:3px 10px;font-size:12px;background:#fff;white-space:nowrap}
+.dlg .btnx.p{background:var(--blue);border-color:var(--blue);color:#fff}
+.dlg .btnx.r{background:#A32D2D;border-color:#A32D2D;color:#fff}
+.dlg .acts{display:flex;justify-content:flex-end;gap:6px;margin-top:10px}
+.warnbox{background:var(--warn-tint);color:var(--warn);border-radius:6px;padding:6px 8px;font-size:12px;margin:6px 0}
+.grid{display:grid;grid-template-columns:70px repeat(4,1fr);gap:4px;font-size:11.5px;align-items:center}
+.grid .h{color:var(--text2)}
+.grid .in{border:1px solid #8F8F8A;border-radius:5px;padding:2px 5px;background:#fff}
+.gl{font-size:12px;font-weight:600;margin:8px 0 4px}
+.arrowd{text-align:center;color:var(--text2);font-size:12px;margin:6px 0}
 </style>
 </head>
 <body>
@@ -156,6 +171,52 @@ b{font-weight:600}
 
 </div>
 <p class="foot"><b>The decision in one line:</b> build the scoring tables now, before the rules are confirmed (A), or show families a handout copy now and build the scoring tables once, after the rules are confirmed (B).</p>
+</section>
+
+<section id="qb2">
+<h1>Black Belt · Database question 2 of 7: changing a cycle's prices before anyone has paid</h1>
+<p class="lead">When an admin adds a cycle, it <b>copies</b> the plans, amounts and Kukkiwon fees from <b>Rubric and prices</b> (v0.217). Once someone pays, they can never change. The question is <b>how an admin changes them before that</b>, e.g. prices go up after Spring 2027 was added and 6 families have already registered (their confirmation pages showed the old amounts). <span class="ambtxt">Amber</span> = what each option adds.</p>
+<div class="opts">
+
+<div class="opt rec">
+<div class="ot"><span class="letter">A</span>"Copy prices again"<span class="rec-tag">Recommended</span></div>
+<div class="dlg"><h4>Edit cycle · Spring 2027</h4><div class="sub">…testing days, deadlines, due dates…</div>
+<div class="row amb"><span>Plans and prices copied from Rubric and prices on Feb 1, 2027.</span><span class="btnx">Copy prices again</span></div></div>
+<div class="arrowd">↓ after changing the prices on Rubric and prices</div>
+<div class="dlg amb"><h4>Copy prices again?</h4>
+<div class="warnbox">6 families have registered and saw the old amounts on their confirmation page. Tell them the new amounts.</div>
+<div style="font-size:12px">Every plan, amount and Kukkiwon fee is copied again from Rubric and prices. This cycle's due dates and "Offer this plan" ticks stay.</div>
+<div class="acts"><span class="btnx">Cancel</span><span class="btnx p">Copy prices again</span></div></div>
+<div class="exp" style="margin-top:10px"><b>What it does:</b> one button in Edit cycle, only while <b>nobody has paid</b>. It copies all the prices again from Rubric and prices.<br><b>Pros:</b> prices are only ever typed in one place; small to build.<br><b>Cons:</b> all or nothing: one season can't have its own special price without changing Rubric and prices too (you could change it back afterwards).</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">B</span>Edit the amounts on each cycle</div>
+<div class="dlg"><h4>Edit cycle · Spring 2027</h4><div class="sub">…testing days, deadlines, due dates…</div>
+<div class="amb" style="padding:4px">
+<div class="gl">3 payments</div>
+<div class="grid"><span class="h"></span><span class="h">1st Dan</span><span class="h">2nd Dan</span><span class="h">3rd Dan</span><span class="h">4th Dan</span>
+<span class="h">Payment 1</span><span class="in">$300</span><span class="in">$340</span><span class="in">$510</span><span class="in">$920</span>
+<span class="h">Payment 2</span><span class="in">$300</span><span class="in">$340</span><span class="in">$510</span><span class="in">$920</span>
+<span class="h">Payment 3</span><span class="in">$300</span><span class="in">$340</span><span class="in">$510</span><span class="in">$920</span></div>
+<div class="gl">In full · 2 payments · Kukkiwon…</div>
+<div style="font-size:11.5px;color:var(--text2)">(the same grid for every plan)</div></div>
+<div class="acts"><span class="btnx">Cancel</span><span class="btnx p">Save</span></div></div>
+<div class="exp" style="margin-top:10px"><b>What it does:</b> Edit cycle gets the full price grid for every plan and Dan, editable until someone pays.<br><b>Pros:</b> a season can have its own prices without touching Rubric and prices.<br><b>Cons:</b> a second big grid to build, check and keep right; prices typed in two places, so they can drift apart.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">C</span>Delete the cycle and add it again</div>
+<div class="dlg"><h4>Delete Spring 2027?</h4>
+<div class="warnbox amb">6 registrations and their signed waivers are deleted. The registration links stop working.</div>
+<div class="acts"><span class="btnx">Cancel</span><span class="btnx r">Delete cycle</span></div></div>
+<div class="arrowd">↓ then + Add cycle again (new prices copied)</div>
+<div class="dlg"><h4>Add cycle</h4><div class="sub">New link codes and QR codes for both schools</div></div>
+<div class="exp" style="margin-top:10px"><b>What it does:</b> nothing new is built. To change prices, delete the cycle and add it again.<br><b>Pros:</b> no extra work.<br><b>Cons:</b> families must register again; new links and QR codes; and the database plan already refuses Delete cycle once any signed waiver exists, so this only works before anyone registers.</div>
+</div>
+
+</div>
+<p class="foot"><b>Same in every option:</b> once anyone has paid, a cycle's prices can't change (v0.217); changing a single family's plan stays as approved (screen 23).</p>
 </section>
 </main>
 </body>
