@@ -32,6 +32,9 @@ import TimeGrid from './TimeGrid.jsx';
 import * as T from './text.js';
 
 const BLOCKING_NOTES = ['STALE_DIALOG', 'NOT_ALLOWED', 'PAST_NOT_ALLOWED'];
+// where a new time slot's times start (24-hour, like <input type="time">): 4:00-4:40 PM
+const NEW_SLOT_START = '16:00';
+const NEW_SLOT_END = '16:40';
 const usable = (el) => (el && el.isConnected && el.getClientRects().length > 0 ? el : null);
 
 // How tall a minute is: the PC fits a whole day on one screen; the tablet (held upright) has
@@ -170,7 +173,10 @@ export default function ScheduleSchool({
 
   function openAddSlot(opener) {
     if (!editable || !loaded) return;
-    const values = { classIds: [], colors: {}, days: [], start: '', end: '' };
+    // A new slot starts at 4:00-4:40 PM (rulebook v0.600): classes are in the afternoon, and the
+    // browser's time box would otherwise start on AM, so typing "4:20" saved 4:20 AM. Being the
+    // starting values, they don't count as unsaved changes.
+    const values = { classIds: [], colors: {}, days: [], start: NEW_SLOT_START, end: NEW_SLOT_END };
     openDialog({ type: 'slot', mode: 'add', values, initial: values, versionId: shown?.id ?? null, opener });
   }
   function openEditSlot(slot, opener) {
