@@ -49,6 +49,15 @@
 | Cycles 4 · Add cycle | **OK**: first cycle copies Fall 2026 (loaded once from the Sheet), then each copies the last; "Offer this plan" tick per plan; payment 1 follows Application due until changed |
 | Cycles 5 · Testing day dialog | **OK**: the four v0.209 details: Save refused while a part is on no day; a part may be on two days (grades count as one); outdoor = second part of the same day; a day (or a part) with grades can't be deleted / unticked |
 | Cycles 6 · Rubric and prices | **OK**: plan order by drag = order on the form; waiver versions "2027-1"; keep signed waivers N years after the last testing day, under-18s until 3 years after 18 if later (N from the insurer) |
+| Cycles 7 · Registration links | **OK + change**: Jeffrey added **Download QR code** (PNG) per school, always available (open, not open yet, closed) for staff and admins; no flyer for now; `?dan=` hint; new random codes each cycle |
+| Cycles 8 · Cycle page | **OK**: summary line (first day · testing days · both schools · candidates); ⋯ menu (Edit cycle, Registration links, Open/Close registration) instead of a button |
+| Form 1 · Step 1 empty | **OK**: cycle box shows dates and places only; Kukkiwon fee and plan amounts show once a Dan is chosen; Kukkiwon starts on "No, thanks" |
+| Form 2 · Step 1 filled | **OK**: one two-line card per plan (name + total; payments + dates); total box shows the chosen plan's schedule with Kukkiwon in payment 1 |
+| Form 3 · Requirements panel | **OK**: dialog on tablet and PC (full screen on phones); credits per subject and a maximum per part; extra-point numbers wait for Master Jeong (part A) |
+| Form 4 · Step 1 errors | **OK**: Star's messages + "Choose the Dan the candidate is testing for." and "Choose how you'll pay." (amber border on the plan cards) |
+| Form 5 · Step 2 check and send | **OK**: signature label adds "(parent or guardian)" for under-18s; adult signer's name prefilled from the candidate (editable); Read all opens the full waiver in the panel / dialog; privacy line under Send |
+| Form 6 · Step 2 missing items | **OK**: "Tick the box to agree to the waiver." and "Enter the name of the person signing." (+ Star's signature message) |
+| Form 7 · Registered | **OK**: What to pay as a Due by · For · Amount table; Kukkiwon steps wording; printout drops buttons and adds the Dan's requirements fully opened; Register another refills email and plan, no combined schedule; results line waits for email |
 
 ## 4. Reviewer check of the plan (2026-10-18)
 
