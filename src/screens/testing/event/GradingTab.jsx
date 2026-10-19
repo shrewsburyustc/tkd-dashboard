@@ -166,9 +166,7 @@ export default function GradingTab({ event, classes, rows, today, isAdmin, layou
     const time = first ? classTimeLabel(first.startTime, first.endTime) : '';
     // Sparring gear: one tag when the group's classes agree, else one tag per class
     // ("Group B: Sparring gear", "Group C: No sparring gear").
-    const gearTexts = groupClasses.map((c) => gearText(c));
-    const gearTags =
-      new Set(gearTexts).size <= 1 ? gearTexts.slice(0, 1) : groupClasses.map((c, i) => T.classGearTag(c.className, gearTexts[i]));
+    const gearTags = groupGearTags(groupClasses);
     const isGroup = groupClasses.length > 1;
     const printButton = classRows.length > 0 && (
       <button type="button" className="btn gr-print" onClick={(clickEvent) => onPrint(clickEvent.currentTarget)}>
@@ -298,6 +296,14 @@ export default function GradingTab({ event, classes, rows, today, isAdmin, layou
       </span>
     </div>
   );
+}
+
+// The sparring-gear tag(s) of a testing group's class line (Grading and Students, v0.193 /
+// v0.195): one tag when its classes agree, else one per class ("Group B: Sparring gear").
+export function groupGearTags(groupClasses) {
+  const texts = groupClasses.map((c) => gearText(c));
+  if (new Set(texts).size <= 1) return texts.slice(0, 1);
+  return groupClasses.map((c, i) => T.classGearTag(c.className, texts[i]));
 }
 
 // The class line's gear tag (same rule as the Students tab).

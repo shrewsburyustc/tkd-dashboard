@@ -12,7 +12,9 @@
 //   - the four summary cards (Students, Paid, Not paid, Payments recorded — Star v0.115);
 //     Paid / Not paid filter the roster, Students clears the filter
 //   - the amber "possible duplicate" box with Review (Star v0.114), when there is one
-//   - the class switch (classes in this event, with counts) and the class line (time + gear)
+//   - the class switch (classes in this event, with counts) and the class line (time + gear);
+//     classes with the same start and end time are one choice, "Group B + C", with a small
+//     heading per class in the list (v0.193 Grading, v0.195 Students)
 //   - the roster of the chosen class (RosterRows.jsx), then its Removed group
 // Every change goes to the database (src/lib/testing/eventsApi.js) and the page reloads after it.
 // Reversible changes get a 5-second Undo toast; Delete permanently asks first (rule 1.4).
@@ -60,7 +62,14 @@ import {
   updateStudent,
   withdrawStudent,
 } from '../../../lib/testing/eventsApi.js';
-import { canChangeResults, defaultGradingClassId, gradingWindow, schoolMinutesNow } from '../../../lib/testing/gradingRules.js';
+import {
+  canChangeResults,
+  defaultGradingClassId,
+  gradingWindow,
+  groupOfClass,
+  schoolMinutesNow,
+  testingGroups,
+} from '../../../lib/testing/gradingRules.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
@@ -70,7 +79,7 @@ import { NoIcon } from '../events/EventsTab.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../events/useLiveLoad.js';
 import CompareDialog from './CompareDialog.jsx';
 import GradingSheet from './GradingSheet.jsx';
-import GradingTab from './GradingTab.jsx';
+import GradingTab, { groupGearTags } from './GradingTab.jsx';
 import NoteDialog, { checkNote, isNoteDirty } from './NoteDialog.jsx';
 import { EditPaymentDialog, PayingByDialog, checkEditPayment, isEditPaymentDirty, isPayingByDirty } from './PaymentDialogs.jsx';
 import RegistrationLinkDialog from './RegistrationLinkDialog.jsx';
@@ -119,13 +128,6 @@ function activePaymentOf(payments, registrationId) {
   return live[live.length - 1] ?? null;
 }
 
-// The class line's gear tag: none of the class's ranks need sparring gear / all do / from a rank on.
-function gearText(cls) {
-  const needing = cls.ranks.filter((r) => r.sparringGear);
-  if (needing.length === 0) return T.NO_SPARRING_GEAR;
-  if (needing.length === cls.ranks.length) return T.SPARRING_GEAR;
-  return T.sparringFrom(needing[0].name);
-}
 
 export default function EventPage({
   eventId,
@@ -313,12 +315,33 @@ export default function EventPage({
     data?.removedPaymentCents ?? payments.filter((p) => removedIds.has(p.registrationId)).reduce((sum, p) => sum + p.amountCents, 0);
   const countByClass = new Map(classes.map((c) => [c.id, 0]));
   for (const r of active) countByClass.set(r.eventClassId, (countByClass.get(r.eventClassId) ?? 0) + 1);
-  const selected = classById.get(classSel) ?? classes[0] ?? null;
+  // Classes that test together (same start and end time) are one choice on BOTH tabs (v0.193,
+  // v0.195): the chosen class's testing group shows. A single class is a group of one.
+  const groups = testingGroups(classes);
+  const group = groupOfClass(groups, classSel) ?? groups[0] ?? null;
+  const groupClasses = group ? group.classes : [];
+  const selected = groupClasses[0] ?? null; // the group's first class (Add student starts on it)
+  const inGroup = (r) => group !== null && group.classIds.includes(r.eventClassId);
+  const classPos = new Map(classes.map((c, index) => [c.id, index]));
   const order = rosterOrder(rankById);
-  let rows = selected ? active.filter((r) => r.eventClassId === selected.id).sort(order) : [];
+  // Class switch order first (so each class's rows stay together), then belt order.
+  const groupOrder = (a, b) => (classPos.get(a.eventClassId) ?? 0) - (classPos.get(b.eventClassId) ?? 0) || order(a, b);
+  let rows = active.filter(inGroup).sort(groupOrder);
   if (filter === 'paid') rows = rows.filter((r) => r.paid);
   if (filter === 'notPaid') rows = rows.filter((r) => !r.paid);
-  const removedRows = selected && filter === null ? removed.filter((r) => r.eventClassId === selected.id).sort(order) : [];
+  // Removed students of the whole group, in one Removed group after the classes.
+  const removedRows = group && filter === null ? removed.filter(inGroup).sort(groupOrder) : [];
+  // v0.195: a small heading per class when classes test together ("Group B · 3 students");
+  // a class with nobody shown is left out. One class alone: no heading (as before).
+  const isGroup = groupClasses.length > 1;
+  const sections = isGroup
+    ? groupClasses
+        .map((c) => {
+          const mine = rows.filter((r) => r.eventClassId === c.id);
+          return { key: c.id, heading: T.groupClassHeading(c.className, mine.length), rows: mine };
+        })
+        .filter((section) => section.rows.length > 0)
+    : [{ key: group?.id ?? 'none', heading: null, rows }];
 
   // Possible duplicates (whole event): pairs of an active "possible" row and the row it matches.
   const pairs = [];
@@ -1196,7 +1219,7 @@ export default function EventPage({
     menuFor: menu?.id ?? null,
     selectedId: dialog && !screenLocked && dialog.rowId ? dialog.rowId : null,
     notSavedId,
-    tableLabel: selected ? selected.className : T.TAB_STUDENTS,
+    tableLabel: group ? T.groupFullName(groupClasses.map((c) => c.className)) : T.TAB_STUDENTS,
     handlers: {
       onOpen: (row) => openView(row, rowEl(row.id)),
       onMore: (row, anchor) => openMenu(row, anchor),
@@ -1320,7 +1343,7 @@ export default function EventPage({
   const content = menu && !screenLocked ? menuContent() : null;
   const classLabelId = `event-${eventId}-class-label`;
   const time = selected ? classTimeLabel(selected.startTime, selected.endTime) : '';
-  const selectedCount = selected ? (countByClass.get(selected.id) ?? 0) : 0;
+  const selectedCount = groupClasses.reduce((sum, c) => sum + (countByClass.get(c.id) ?? 0), 0);
 
   return (
     <>
@@ -1374,7 +1397,7 @@ export default function EventPage({
           today={today}
           isAdmin={isAdmin}
           layout={layout}
-          classSel={selected?.id ?? null}
+          classSel={classSel ?? selected?.id ?? null}
           onClassSel={(id) => setClassSel(id)}
           grading={grading}
           onOpenNote={openNote}
@@ -1457,32 +1480,41 @@ export default function EventPage({
               <div className="ev-class-switch">
                 <ChoiceGroup
                   labelId={classLabelId}
-                  value={selected?.id ?? null}
+                  value={group?.id ?? null}
                   onChange={(id) => {
                     setClassSel(id);
                     setMenu(null);
                   }}
-                  options={classes.map((c) => ({
-                    key: c.id,
-                    label: `${c.className} ${countByClass.get(c.id) ?? 0}`,
-                    content: (
-                      <>
-                        <span className="ev-cs-name">{c.className}</span>
-                        <span className="ev-cs-count">{countByClass.get(c.id) ?? 0}</span>
-                      </>
-                    ),
-                  }))}
+                  options={groups.map((g) => {
+                    const label = T.groupChoiceLabel(g.classes.map((c) => c.className));
+                    const count = g.classIds.reduce((sum, id) => sum + (countByClass.get(id) ?? 0), 0);
+                    return {
+                      key: g.id,
+                      label: `${label} ${count}`,
+                      content: (
+                        <>
+                          <span className="ev-cs-name">{label}</span>
+                          <span className="ev-cs-count">{count}</span>
+                        </>
+                      ),
+                    };
+                  })}
                 />
               </div>
-              {selected && (
+              {group && (
                 <p className="ev-classline">
-                  <strong>{T.classLineTitle(selected.className, time)}</strong>
+                  <strong>{T.classLineTitle(T.groupFullName(groupClasses.map((c) => c.className)), time)}</strong>
                   <span>{T.studentsCount(selectedCount)}</span>
-                  <span className="ttag">{gearText(selected)}</span>
+                  {groupGearTags(groupClasses).map((text) => (
+                    <span key={text} className="ttag">
+                      {text}
+                    </span>
+                  ))}
                 </p>
               )}
               <RosterRows
                 rows={rows}
+                sections={sections}
                 removedRows={removedRows}
                 removedOpen={removedOpen}
                 onToggleRemoved={() => setRemovedOpen(!removedOpen)}

@@ -11,6 +11,9 @@
 // Phase 3 (v0.191): a student an admin added after the testing day gets a gray line
 // "Added Nov 21 by Jeffrey Berg (admin)" under the name.
 // Withdrawn students sit in a "Removed" group at the bottom, "Not in the counts" (Star v0.113).
+// v0.195: classes that test together show together — `sections` gives each class its own small
+// heading row ("Group B · 3 students") with its rows under it; one Removed group after them all.
+import { Fragment } from 'react';
 import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp, IconDots } from '@tabler/icons-react';
 import IconButton from '../../../components/IconButton.jsx';
 import { TestingForCell } from './StudentDialog.jsx';
@@ -166,7 +169,9 @@ function StudentRow({ row, ctx }) {
   );
 }
 
-export default function RosterRows({ rows, removedRows, removedOpen, onToggleRemoved, emptyText, ctx }) {
+// sections (optional): [{ key, heading (text or null), rows }] — the same rows, split per class.
+export default function RosterRows({ rows, sections, removedRows, removedOpen, onToggleRemoved, emptyText, ctx }) {
+  const parts = sections ?? [{ key: 'all', heading: null, rows }];
   const { layout, nav } = ctx;
   return (
     <div
@@ -190,8 +195,17 @@ export default function RosterRows({ rows, removedRows, removedOpen, onToggleRem
             <span role="cell">{emptyText}</span>
           </p>
         )}
-        {rows.map((row) => (
-          <StudentRow key={row.id} row={row} ctx={ctx} />
+        {parts.map((part) => (
+          <Fragment key={part.key}>
+            {part.heading && (
+              <div className="gr-subhead ev-subhead" role="row">
+                <span role="cell">{part.heading}</span>
+              </div>
+            )}
+            {part.rows.map((row) => (
+              <StudentRow key={row.id} row={row} ctx={ctx} />
+            ))}
+          </Fragment>
         ))}
         {removedRows.length > 0 && (
           <>
