@@ -26,7 +26,8 @@
 | `TKD-BlackBelt-Questions.html` | B1 (withdrawn) |
 | `TKD-BlackBelt-Cycle-Questions.html` | B3: what a cycle holds (answered B) |
 | `TKD-BlackBelt-Roles-Questions.html` | B4: who can do what (answered A) |
-| `TKD-BlackBelt-Form-Questions.html` | B5 onward: the public registration form |
+| `TKD-BlackBelt-Form-Questions.html` | B5–B8: the public registration form (all answered) |
+| `TKD-BlackBelt-Payments-Questions.html` | B9 onward: plans, prices, payments |
 | `images/` | One PNG per question |
 | `Inventory/Old-RegistrationPage.md` | The live public page, field by field, plus how Color Belt's form compares |
 
