@@ -19,6 +19,10 @@ import { supabase, isPreview } from '../supabase.js';
 import { readStorage } from '../storage.js';
 import { PREVIEW_TODAY_KEY } from '../testing/eventRules.js';
 import { toCamel, toSnake, campCounts, isIsoDate, todayInSchoolTime } from './campRules.js';
+import {
+  CAMP_COLUMNS, DAY_COLUMNS, PRICE_COLUMNS, EXTRA_COLUMNS, TEMPLATE_COLUMNS, ROSTER_COLUMNS,
+  toCamp, toDay, byDay, toPriceRow, toExtra, toTemplate, toRosterRow, campArgs, templateArgs,
+} from './campsArgs.js';
 
 export { toCamel, toSnake };
 
@@ -31,15 +35,6 @@ export const CAMP_STATUSES = [
 const SERVER_STATUSES = new Set(CAMP_STATUSES.filter((s) => s !== 'error'));
 const LOCATIONS = new Set(['worcester', 'shrewsbury', 'both']);
 
-// The columns we read (the database refuses select('*') on purpose: some columns — phones, the
-// signature, who-as-an-id — are never given to the app). Only columns contract 0013 §1.15 grants.
-const CAMP_COLUMNS = 'id, location_code, both_schools, name, start_time, end_time, signup_opens_on, signup_closes_on, early_until, closed_by_hand, min_age, max_age, description, waiver_text, public_code, version';
-const DAY_COLUMNS = 'id, camp_id, day';
-const PRICE_COLUMNS = 'camp_id, day_count, member_early_cents, member_regular_cents, nonmember_early_cents, nonmember_regular_cents';
-const EXTRA_COLUMNS = 'id, camp_id, name, price_cents, per, not_for_all_days, sort';
-const TEMPLATE_COLUMNS = 'id, name, location_code, both_schools, day_count, start_time, end_time, opens_days_before, closes_days_before, early_days_before, min_age, max_age, description, waiver_text, prices, extras, version';
-// The camp_roster view (one row per camper; no phones, no signature).
-const ROSTER_COLUMNS = 'id, camp_id, signup_id, position, first_name, last_name, age, member, paying_by, status, withdrawn_reason, withdrawn_at, withdrawn_by_name, duplicate_state, duplicate_of, version, created_at, signup_version, reference, price_kind, signed_up_on, signed, signature_deleted_at, base_cents, days, extras, total_cents, paid_cents, owes_cents, paid_on, paid_method, last_payment_id, last_payment_recorded_at';
 // How many ids go into one "id is one of these" filter (they travel in the web address).
 const IN_CHUNK = 80;
 
@@ -56,40 +51,6 @@ export function campToday() {
   }
   return todayInSchoolTime(new Date());
 }
-
-// ----- Converting database rows to the §5.1 shapes -----
-
-// '09:00:00' → '09:00'. Anything else is kept.
-const hhmm = (t) => (typeof t === 'string' && /^\d{2}:\d{2}(:\d{2})?$/.test(t) ? t.slice(0, 5) : t);
-
-function toCamp(row) {
-  const c = toCamel(row);
-  return { ...c, startTime: hhmm(c.startTime), endTime: hhmm(c.endTime) };
-}
-// A camp_days row → { dayId, day } (the row's id becomes dayId; camp_id is dropped).
-const toDay = ({ id, day }) => ({ dayId: id, day });
-const byDay = (a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0);
-function toPriceRow(row) {
-  const { campId, ...rest } = toCamel(row);
-  return rest;
-}
-function toExtra(row) {
-  const { id, campId, ...rest } = toCamel(row);
-  return { extraId: id, ...rest };
-}
-function toTemplate(row) {
-  const t = toCamel(row);
-  return {
-    ...t,
-    startTime: hhmm(t.startTime),
-    endTime: hhmm(t.endTime),
-    prices: Array.isArray(t.prices) ? [...t.prices].sort((a, b) => a.dayCount - b.dayCount) : [],
-    // A template's extras have no ids and no sort key: their position in the list is the order.
-    extras: Array.isArray(t.extras) ? t.extras.map((e, i) => ({ ...e, sort: i })) : [],
-  };
-}
-// A roster row with its nested days / extras lists converted too (by toCamel).
-const toRosterRow = (row) => toCamel(row);
 
 // ----- Reading -----
 
@@ -258,46 +219,6 @@ const isText = (v) => typeof v === 'string' && v.length > 0;
 const hasVersion = (d) => isInt(d.version);
 const nothing = () => true;
 
-// The price grid as the database wants it: exactly the five keys per row.
-const pricesArg = (prices) => (Array.isArray(prices)
-  ? prices.map((p) => toSnake({
-    dayCount: p.dayCount, memberEarlyCents: p.memberEarlyCents, memberRegularCents: p.memberRegularCents,
-    nonmemberEarlyCents: p.nonmemberEarlyCents, nonmemberRegularCents: p.nonmemberRegularCents,
-  }))
-  : prices);
-// The extras: exactly the four keys, in the order they should appear (the position is the sort).
-// withIds: camp_update_camp also takes "id" (the extraId of an existing extra, or null for a new one).
-const extrasArg = (extras, withIds) => (Array.isArray(extras)
-  ? extras.map((e) => ({
-    ...(withIds ? { id: e.extraId ?? null } : {}),
-    ...toSnake({ name: e.name, priceCents: e.priceCents, per: e.per, notForAllDays: e.notForAllDays === true }),
-  }))
-  : extras);
-
-// The shared part of Add camp / Edit camp.
-//   input = { locationCode, bothSchools, name, days: ['YYYY-MM-DD', …], startTime 'HH:MM', endTime,
-//             signupOpensOn, signupClosesOn, earlyUntil, minAge, maxAge, prices: PriceRow[],
-//             extras: [{ extraId?, name, priceCents, per, notForAllDays }], description, waiverText }
-function campArgs(input = {}, withIds) {
-  return {
-    p_location_code: input.locationCode,
-    p_both_schools: input.bothSchools,
-    p_name: input.name,
-    p_days: input.days,
-    p_start_time: input.startTime,
-    p_end_time: input.endTime,
-    p_signup_opens_on: input.signupOpensOn,
-    p_signup_closes_on: input.signupClosesOn,
-    p_early_until: input.earlyUntil,
-    p_min_age: input.minAge,
-    p_max_age: input.maxAge,
-    p_prices: pricesArg(input.prices),
-    p_extras: extrasArg(input.extras, withIds),
-    p_description: input.description ?? null,
-    p_waiver_text: input.waiverText,
-  };
-}
-
 // Add camp (admin). → { status:'ok', id, publicCode, version }
 export async function addCamp(input) {
   return callRpc('camp_add_camp', campArgs(input, false), (d) => isText(d.id) && isText(d.publicCode) && hasVersion(d));
@@ -334,28 +255,11 @@ export async function saveTemplate(campId, name) {
 // Edit template (admin).
 //   input = { name, locationCode, bothSchools, dayCount, startTime, endTime, opensDaysBefore,
 //             closesDaysBefore, earlyDaysBefore, minAge, maxAge, prices, extras, description, waiverText }
+//   (extras: [{ name, priceCents, per, notForAllDays, onlyWeekdays }])
 // → { status:'ok', version } · 'duplicate_name' · 'invalid' (+ field:'offsets' when the three
 //   "days before" numbers are out of range or in the wrong order)
 export async function updateTemplate(templateId, expectedVersion, input = {}) {
-  return callRpc('camp_update_template', {
-    p_template_id: templateId,
-    p_expected_version: expectedVersion,
-    p_name: input.name,
-    p_location_code: input.locationCode,
-    p_both_schools: input.bothSchools,
-    p_day_count: input.dayCount,
-    p_start_time: input.startTime,
-    p_end_time: input.endTime,
-    p_opens_days_before: input.opensDaysBefore,
-    p_closes_days_before: input.closesDaysBefore,
-    p_early_days_before: input.earlyDaysBefore,
-    p_min_age: input.minAge,
-    p_max_age: input.maxAge,
-    p_prices: pricesArg(input.prices),
-    p_extras: extrasArg(input.extras, false),
-    p_description: input.description ?? null,
-    p_waiver_text: input.waiverText,
-  }, hasVersion);
+  return callRpc('camp_update_template', { p_template_id: templateId, p_expected_version: expectedVersion, ...templateArgs(input) }, hasVersion);
 }
 
 // Delete template (admin). Never changes camps made from it.

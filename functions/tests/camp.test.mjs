@@ -19,6 +19,7 @@ const SUBMISSION_ID = '0b9a8c7d-6e5f-4a3b-9c2d-1e0f9a8b7c6d';
 const DAY_1 = '11111111-1111-4111-8111-111111111111';
 const DAY_2 = '22222222-2222-4222-8222-222222222222';
 const EXTRA_1 = '33333333-3333-4333-8333-333333333333';
+const EXTRA_2 = '44444444-4444-4444-8444-444444444444';
 const SIGNATURE = 'data:image/png;base64,iVBORw0KGgo=';
 
 // A complete, correct set of settings. Tests remove or change one thing at a time.
@@ -145,7 +146,8 @@ const dbCamp = {
     min_age: 5,
     max_age: 12,
     prices: [{ day_count: 1, member_early_cents: 7500, member_regular_cents: 8000, nonmember_early_cents: 8500, nonmember_regular_cents: 9000, id: 'drop' }],
-    extras: [{ extra_id: EXTRA_1, name: 'Late pick-up', price_cents: 800, per: 'day', not_for_all_days: false, sort: 0, camp_id: 'drop' }],
+    extras: [{ extra_id: EXTRA_1, name: 'Late pick-up', price_cents: 800, per: 'day', not_for_all_days: false, only_on: [], sort: 0, camp_id: 'drop' },
+      { extra_id: EXTRA_2, name: 'Pizza party', price_cents: 500, per: 'day', not_for_all_days: true, only_on: ['2026-11-27'], camp_id: 'drop' }],
     id: 'camp id — must be dropped',
     public_code: 'drop',
     version: 7,
@@ -177,7 +179,8 @@ const expectedGet = {
     days: [{ day_id: DAY_1, day: '2026-11-25' }, { day_id: DAY_2, day: '2026-11-27' }],
     address: { street: '1 Main St', city: 'Worcester', state: 'MA', zip: '01608' },
     prices: [{ day_count: 1, member_early_cents: 7500, member_regular_cents: 8000, nonmember_early_cents: 8500, nonmember_regular_cents: 9000 }],
-    extras: [{ extra_id: EXTRA_1, name: 'Late pick-up', price_cents: 800, per: 'day', not_for_all_days: false }],
+    extras: [{ extra_id: EXTRA_1, name: 'Late pick-up', price_cents: 800, per: 'day', not_for_all_days: false, only_on: [] },
+      { extra_id: EXTRA_2, name: 'Pizza party', price_cents: 500, per: 'day', not_for_all_days: true, only_on: ['2026-11-27'] }],
   },
 };
 
@@ -273,6 +276,9 @@ test('GET: an unexpected answer or shape → unavailable', async () => {
     { ...dbCamp, camp: null },
     { ...dbCamp, camp: { ...dbCamp.camp, days: 'not a list' } },
     { ...dbCamp, camp: { ...dbCamp.camp, extras: [42] } },
+    // only_on must be a list of dates (CP1 2026-10-19)
+    { ...dbCamp, camp: { ...dbCamp.camp, extras: [{ ...dbCamp.camp.extras[0], only_on: '2026-11-27' }] } },
+    { ...dbCamp, camp: { ...dbCamp.camp, extras: [{ ...dbCamp.camp.extras[0], only_on: ['Friday'] }] } },
   ]) {
     const r = await run(handleGet, context({ method: 'GET' }), { openDatabase: fakeDb({ camp: answer }).openDatabase });
     assert.deepEqual(r.json, { status: 'unavailable' }, JSON.stringify(answer)?.slice(0, 60));

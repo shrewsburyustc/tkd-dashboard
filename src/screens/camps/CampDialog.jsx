@@ -41,6 +41,7 @@ import {
   valuesFromCamp,
   valuesFromTemplate,
   withAutoDates,
+  withExtraDays,
 } from './sections/campForm.js';
 import * as T from './text.js';
 
@@ -190,6 +191,8 @@ export default function CampDialog({
     const days = has ? values.days.filter((d) => d !== day) : [...values.days, day].sort();
     let next = { ...values, days };
     if (mode === 'add') next = withAutoDates(next, today);
+    // Extras from a template follow its weekdays onto the picked days (Wed, Fri → the Wednesdays …).
+    next = withExtraDays(next);
     setValues(next);
     // From a template or on Edit camp, a different number of days adds or drops grid rows: the
     // Prices summary shows it at once ("1 row needs prices", C2).
@@ -220,7 +223,7 @@ export default function CampDialog({
     clearSoftNote();
   }
   function addExtra() {
-    setValues((current) => ({ ...current, extras: [...current.extras, { key: newExtraKey(), id: null, name: '', price: '', per: 'day', notForAllDays: false }] }));
+    setValues((current) => ({ ...current, extras: [...current.extras, { key: newExtraKey(), id: null, name: '', price: '', per: 'day', notForAllDays: false, onlyOn: [], onlyWeekdays: [], followWeekdays: false }] }));
     // Focus the new extra's name box once it is drawn.
     window.requestAnimationFrame(() => {
       const boxes = document.querySelectorAll('.cp-extra-name input');
@@ -257,7 +260,12 @@ export default function CampDialog({
     const st = result.status;
     if (st === 'not_empty') {
       // A day or an extra an active camper picked can't be removed (v0.701).
-      if (result.kind === 'extra') {
+      if (result.kind !== 'day' && result.kind !== 'extra') {
+        // Removing a camp day would leave an extra with none of its days (owner decision 2026-10-19).
+        setServer((current) => ({ ...current, extraError: T.extraNoDaysLeft(result.extraName ?? '') }));
+        setOpenSection(4);
+        scrollToSection(4);
+      } else if (result.kind === 'extra') {
         setServer((current) => ({ ...current, extraError: T.cantRemoveExtra(result.extraName ?? '', result.count ?? 0) }));
         setOpenSection(4);
         scrollToSection(4);
@@ -442,7 +450,7 @@ export default function CampDialog({
             } else if (n === 3) {
               fields = <PricesSection {...common} show={showFor(3)} rowCount={rowCount} onPrice={changePrice} />;
             } else if (n === 4) {
-              fields = <ExtrasSection {...common} show={showFor(4) || Boolean(server.extraError)} onExtra={changeExtra} onAdd={addExtra} onRemove={removeExtra} />;
+              fields = <ExtrasSection {...common} mode={mode} campDays={[...values.days].sort()} show={showFor(4) || Boolean(server.extraError)} onExtra={changeExtra} onAdd={addExtra} onRemove={removeExtra} />;
             } else {
               fields = <FamilyFormSection {...common} show={showFor(5)} onChange={(patch) => change(5, patch)} />;
             }

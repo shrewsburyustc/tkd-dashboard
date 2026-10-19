@@ -1060,7 +1060,7 @@ Tested in PGlite on every run (`run.mjs` step 13g, both steps exactly as written
 
 **What it does** (`supabase/migrations/0013_camps.sql`, contract `docs/Dashboard Docs/Build contracts/CONTRACT-0013.md` §1):
 - **Camps** (`camps`): held at one school, optionally **for both schools**; 1–10 days (`camp_days`, any dates); daily hours; sign-up opening / closing dates, an early-price date and a **Close sign-up** switch; the ages the family form accepts; a description and a waiver; a random 8-character link code (`/camp/<code>`, never changes).
-- **Prices:** a small grid (`camp_prices`: one row per number of days, member / non-member × early / regular) and up to 10 **extras** (`camp_extras`: once or per day, optionally "not for all-days campers"). A camper's prices are written at sign-up and are **never** changed by a later price edit; only a change to that camper's own days, member box or extras in Edit details prices the whole camper again at the current prices (rulebook v0.700).
+- **Prices:** a small grid (`camp_prices`: one row per number of days, member / non-member × early / regular) and up to 10 **extras** (`camp_extras`: once or per day, optionally "not for all-days campers", and a per-day extra optionally only on some camp days — `only_on`, e.g. pizza on Wed and Fri; families choose it, it is never added by itself). A camper's prices are written at sign-up and are **never** changed by a later price edit; only a change to that camper's own days, member box or extras in Edit details prices the whole camper again at the current prices (rulebook v0.700).
 - **Templates** (`camp_templates`): everything except dates and campers, shared by both schools.
 - **Sign-ups and campers:** `camp_signups` (one family form send: parent and emergency contact with phones, a `CP-` reference, early / regular fixed by the sign-up date, the drawn signature, a copy of the waiver) and `camp_campers` (1–3 children per sign-up), with `camp_camper_days` (the days they come, with the **check-in** time and who) and `camp_camper_extras` (the extras chosen, with their price at the time). **Append-only** `camp_payments` (a mistake is fixed by a reversal row).
 - **Phones** are readable only through `camp_camper_detail` (staff and admins, v0.700). The **signature** and the **waiver copy** can never be read by the app, are never copied into `change_log` (the history shows "on file"), and the signature is removed automatically **3 years after the camp's last day**.
@@ -1127,7 +1127,7 @@ Same method as 12d / 13e, with its **own** script and its **own** password — n
 
 ### 15e. Read-only checks (Claude runs these through the connection)
 
-1. **Fingerprints:** `supabase/tests/0013_fingerprints.sql`. Every line must match what `supabase/tests/pglite/run.mjs` printed for the tested copy: 111 rows — the 65 functions (code, settings, owner, who may call them), the `camps_registrar` row, the view, the 14 table / counter rows and the 30 triggers. **One expected difference:** on Supabase the role row shows `members=postgres` (PostgreSQL 16+ makes the role that created a login an administrator of it; that gives the registrar nothing). In PGlite it's empty. The file is a single read-only SELECT and contains neither of the words the connection refuses (run.mjs checks that).
+1. **Fingerprints:** `supabase/tests/0013_fingerprints.sql`. Every line must match what `supabase/tests/pglite/run.mjs` printed for the tested copy: 115 rows — the 69 functions (code, settings, owner, who may call them), the `camps_registrar` row, the view, the 14 table / counter rows and the 30 triggers. **One expected difference:** on Supabase the role row shows `members=postgres` (PostgreSQL 16+ makes the role that created a login an administrator of it; that gives the registrar nothing). In PGlite it's empty. The file is a single read-only SELECT and contains neither of the words the connection refuses (run.mjs checks that).
 2. `0003_fingerprints.sql`, `0004_fingerprints.sql`, `0005_fingerprints.sql`, `0006_fingerprints.sql`, `0010_fingerprints.sql`: **unchanged** from their production records (0013 touches none of their objects; run.mjs checks the same).
 3. **Security advisor:** expected notices — "RLS enabled, no policy" on `camp_public_attempts` (INFO; nobody in the app may read it) and "security definer function executable by authenticated" for the 18 staff functions and `camp_camper_detail` (each checks access and role itself). Anything else about a `camp` object is a real problem.
 
@@ -1242,6 +1242,8 @@ drop function if exists public.camp_setup_args_are_valid(text, boolean, text, da
 drop function if exists public.camp_extra_rows(jsonb);
 drop function if exists public.camp_camper_extras_are_ok(uuid, uuid[], jsonb);
 drop function if exists public.camp_extras_cents_now(jsonb);
+drop function if exists public.camp_extras_only_on_ok(jsonb, date[], date[]);
+drop function if exists public.camp_only_on_dates(jsonb, date[]);
 drop function if exists public.camp_add_camp(text, boolean, text, date[], time, time, date, date, date, integer, integer, jsonb, jsonb, text, text);
 drop function if exists public.camp_update_camp(uuid, integer, text, boolean, text, date[], time, time, date, date, date, integer, integer, jsonb, jsonb, text, text);
 drop function if exists public.camp_set_signup(uuid, integer, boolean);
@@ -1276,7 +1278,8 @@ drop function if exists public.camp_uuid_text_is_valid(text);
 drop function if exists public.camp_int_text_is_valid(jsonb, integer, integer);
 drop function if exists public.camp_time_is_valid(time);
 drop function if exists public.camp_prices_arg_is_valid(jsonb, integer);
-drop function if exists public.camp_extras_arg_is_valid(jsonb, boolean);
+drop function if exists public.camp_extras_arg_is_valid(jsonb, text);
+drop function if exists public.camp_dates_are_sorted_set(date[]);
 drop function if exists public.camp_uuid_list_is_valid(jsonb, integer, integer);
 drop function if exists public.camp_camper_extras_arg_is_valid(jsonb);
 drop function if exists public.camp_children_arg_is_valid(jsonb);
@@ -1285,6 +1288,7 @@ drop function if exists public.camp_price_kind(date, date);
 drop function if exists public.camps_before_write();
 drop function if exists public.camp_templates_before_write();
 drop function if exists public.camp_parts_before_write();
+drop function if exists public.camp_extras_before_write();
 drop function if exists public.camp_signups_before_write();
 drop function if exists public.camp_campers_before_write();
 drop function if exists public.camp_camper_days_before_write();

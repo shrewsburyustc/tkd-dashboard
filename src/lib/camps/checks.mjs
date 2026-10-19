@@ -13,8 +13,10 @@ import {
   priceChild, familyTotal, isAllDays, payTag, toCollectCents, checkInRule, checkInNote, attendanceCell, cameCount, validateAges,
   ageAllowed, phoneDigits, formatPhone, templateFromCamp, campDatesFromTemplate, gridRowsFor, campLink, toCamel, toSnake,
   childProblem, offsetsAreValid, todayInSchoolTime, campTextIsValid, normalizeCampText,
+  extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
 } from './campRules.js';
 import { qrFileName, campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
+import { campArgs, templateArgs, toExtra, toTemplate, EXTRA_COLUMNS, TEMPLATE_COLUMNS } from './campsArgs.js';
 import {
   createCampsBackend, defaultCampsData, md5, schoolClockToIso, DEFAULT_CAMP_CODES, CAMP_RPC_NAMES, CAMP_RESTRICTED_RPC_NAMES, CAMP_TABLES,
 } from '../mockCamps.js';
@@ -61,9 +63,10 @@ const DROP = '00000000-0000-4000-8000-0000000000e1';
 const PICK = '00000000-0000-4000-8000-0000000000e2';
 const PIZZA = '00000000-0000-4000-8000-0000000000e3';
 const APRIL_EXTRAS = [
-  { extraId: DROP, name: 'Early drop-off', priceCents: 1500, per: 'day', notForAllDays: false, sort: 0 },
-  { extraId: PICK, name: 'Late pick-up', priceCents: 800, per: 'day', notForAllDays: false, sort: 1 },
-  { extraId: PIZZA, name: 'Pizza party (Fri)', priceCents: 500, per: 'once', notForAllDays: true, sort: 2 },
+  { extraId: DROP, name: 'Early drop-off', priceCents: 1500, per: 'day', notForAllDays: false, onlyOn: [], sort: 0 },
+  { extraId: PICK, name: 'Late pick-up', priceCents: 800, per: 'day', notForAllDays: false, onlyOn: [], sort: 1 },
+  // Owner decision 2026-10-19: the pizza party is a per-day extra offered only on Wed and Fri.
+  { extraId: PIZZA, name: 'Pizza party', priceCents: 500, per: 'day', notForAllDays: true, onlyOn: ['2027-04-21', '2027-04-23'], sort: 2 },
 ];
 const APRIL_CAMP = {
   id: 'april', locationCode: 'worcester', bothSchools: true, name: 'April Vacation Camp', startTime: '09:00', endTime: '15:00',
@@ -83,8 +86,8 @@ check('§1.20 price case table P1–P10', () => {
   // P2 Ava: all 5 · member · early · drop-off ×5, pick-up ×5 → $275 + $75 + $40
   const p2 = price(child(DAY_IDS, true, [{ extraId: DROP, dayIds: DAY_IDS }, { extraId: PICK, dayIds: DAY_IDS }]), 'early');
   assert.equal(p2.totalCents, 39000);
-  // P3 Ethan: Mon, Thu, Fri · member · early · drop-off ×3, pizza → $195 + $45 + $5
-  const ethan = child([MON, THU, FRI], true, [{ extraId: DROP, dayIds: [MON, THU, FRI] }, { extraId: PIZZA, dayIds: [] }]);
+  // P3 Ethan: Mon, Thu, Fri · member · early · drop-off ×3, pizza (Fri — his only pizza day) → $195 + $45 + $5
+  const ethan = child([MON, THU, FRI], true, [{ extraId: DROP, dayIds: [MON, THU, FRI] }, { extraId: PIZZA, dayIds: [FRI] }]);
   assert.equal(price(ethan, 'early').totalCents, 24500);
   assert.equal(problem(ethan, 'early'), null);
   // P4 Leo: all 5 · member · early · drop-off ×5 → 35000; paid 33500 → owes 1500 → "Owes $15"
@@ -99,7 +102,7 @@ check('§1.20 price case table P1–P10', () => {
   // P7 Sofia: Mon, Tue · non-member · regular → 16000
   assert.equal(price(child([MON, TUE], false), 'regular').totalCents, 16000);
   // P8 Ava: all 5 · pizza → refused (not for all-days campers)
-  assert.equal(problem(child(DAY_IDS, true, [{ extraId: PIZZA, dayIds: [] }]), 'early'), 'not_for_all_days');
+  assert.equal(problem(child(DAY_IDS, true, [{ extraId: PIZZA, dayIds: [WED, FRI] }]), 'early'), 'not_for_all_days');
   // P9 Ava (paid 39000) → pick-up only → 31500; owes −7500 → Paid
   const p9 = price(child(DAY_IDS, true, [{ extraId: PICK, dayIds: DAY_IDS }]), 'early');
   assert.equal(p9.totalCents, 31500);
@@ -136,16 +139,77 @@ check('extras rules (childProblem)', () => {
   assert.equal(problem(child([], true), 'early'), 'no_days');
   assert.equal(problem(child([MON, '00000000-0000-4000-8000-000000000999'], true), 'early'), 'unknown_day');
   assert.equal(problem(child([MON], true, [{ extraId: '00000000-0000-4000-8000-000000000998', dayIds: [] }]), 'early'), 'unknown_extra');
-  assert.equal(problem(child([MON], true, [{ extraId: PIZZA, dayIds: [MON] }]), 'early'), 'once_with_days');
+  const lunch = [{ extraId: PIZZA, name: 'Lunch', priceCents: 600, per: 'once', notForAllDays: false, onlyOn: [], sort: 0 }];
+  assert.equal(childProblem(child([MON], true, [{ extraId: PIZZA, dayIds: [MON] }]), APRIL_PRICES, lunch, APRIL_DAYS, 'early'), 'once_with_days');
+  assert.equal(price(child([MON], true), 'early').totalCents, 7500);
   assert.equal(problem(child([MON], true, [{ extraId: DROP, dayIds: [] }]), 'early'), 'no_extra_days');
   assert.equal(problem(child([MON], true, [{ extraId: DROP, dayIds: [TUE] }]), 'early'), 'extra_day_not_child_day');
-  assert.equal(problem(child([MON, FRI], true, [{ extraId: PIZZA, dayIds: [] }]), 'early'), null); // not all days: fine
+  assert.equal(problem(child([MON, FRI], true, [{ extraId: PIZZA, dayIds: [FRI] }]), 'early'), null); // not all days: fine
   assert.equal(isAllDays(DAY_IDS, APRIL_DAYS), true);
   assert.equal(isAllDays([MON, TUE], APRIL_DAYS), false);
   assert.equal(isAllDays([], []), false);
   // Over $2,000 for one camper
   const costly = [{ extraId: DROP, name: 'Costly', priceCents: 100000, per: 'day', notForAllDays: false, sort: 0 }];
   assert.equal(childProblem(child([MON, TUE], true, [{ extraId: DROP, dayIds: [MON, TUE] }]), APRIL_PRICES, costly, APRIL_DAYS, 'early'), 'too_expensive');
+});
+
+check('extras offered only on some days (onlyOn, owner decision 2026-10-19)', () => {
+  const pizza = APRIL_EXTRAS[2];
+  assert.equal(extraOfferedOn(pizza, '2027-04-21'), true);
+  assert.equal(extraOfferedOn(pizza, '2027-04-20'), false);
+  assert.equal(extraOfferedOn(APRIL_EXTRAS[0], '2027-04-20'), true); // [] = every day
+  // extraDaysFor = the child's days ∩ onlyOn (or the child's days when onlyOn is empty).
+  const mtw = APRIL_DAYS.slice(0, 3);
+  assert.deepEqual(extraDaysFor(pizza, mtw).map((d) => d.day), ['2027-04-21']);
+  assert.deepEqual(extraDaysFor(APRIL_EXTRAS[0], mtw).map((d) => d.day), ['2027-04-19', '2027-04-20', '2027-04-21']);
+  assert.deepEqual(extraDaysFor(pizza, [APRIL_DAYS[0]]), []);
+  // Charged only when chosen, and only on offered days the child comes.
+  const noah = (extras) => child([MON, TUE, WED], true, extras);
+  assert.equal(price(noah([]), 'early').totalCents, 19500); // not chosen → not charged
+  assert.equal(price(noah([{ extraId: PIZZA, dayIds: [WED] }]), 'early').totalCents, 20000);
+  assert.equal(problem(noah([{ extraId: PIZZA, dayIds: [WED] }]), 'early'), null);
+  assert.equal(problem(noah([{ extraId: PIZZA, dayIds: [MON, WED] }]), 'early'), 'extra_day_not_offered');
+  assert.equal(price(noah([{ extraId: PIZZA, dayIds: [MON, WED] }]), 'early').totalCents, 20000); // Mon never counts
+  assert.equal(problem(child([MON, WED, THU, FRI], false, [{ extraId: PIZZA, dayIds: [WED, FRI] }]), 'early'), null);
+  assert.equal(price(child([MON, WED, THU, FRI], false, [{ extraId: PIZZA, dayIds: [WED, FRI] }]), 'early').totalCents, 27000 + 1000);
+  // Weekdays ↔ dates (templates keep weekdays).
+  assert.equal(isoWeekday('2027-04-19'), 1);
+  assert.equal(isoWeekday('2027-04-25'), 7);
+  assert.deepEqual(onlyOnToWeekdays(['2027-04-23', '2027-04-21', '2027-04-28']), [3, 5]);
+  assert.deepEqual(onlyOnToWeekdays([]), []);
+  assert.deepEqual(weekdaysToOnlyOn([3, 5], APRIL_DAYS), ['2027-04-21', '2027-04-23']);
+  assert.deepEqual(weekdaysToOnlyOn([3, 5], ['2026-11-25', '2026-11-27']), ['2026-11-25', '2026-11-27']); // Thanksgiving Wed & Fri
+  assert.deepEqual(weekdaysToOnlyOn([6], APRIL_DAYS), []); // no Saturday in camp: nothing (the screen must catch this)
+  assert.deepEqual(weekdaysToOnlyOn([], APRIL_DAYS), []);
+  // "Pizza party today: N" and the "No pizza party" note.
+  const r = (id, dayIds, extras = [], o = {}) => ({
+    id, status: 'active', duplicateState: 'none', paidCents: 100, owesCents: 0,
+    days: dayIds.map((dayId) => ({ dayId, day: APRIL_DAYS.find((d) => d.dayId === dayId).day, checkedInAt: null })),
+    extras: extras.map(([extraId, dayId]) => ({ extraId, name: APRIL_EXTRAS.find((e) => e.extraId === extraId).name, per: 'day', dayId })), ...o,
+  });
+  const rows = [
+    r('ava', DAY_IDS), // all days: pizza included
+    r('noah', [MON, TUE, WED]), // no pizza
+    r('mia', [MON, WED], [[PIZZA, WED], [PICK, WED]]),
+    r('leo', DAY_IDS, [], { status: 'withdrawn' }),
+    r('ethan', [MON, THU, FRI], [[PIZZA, FRI], [DROP, FRI]]),
+  ];
+  assert.equal(extraCountOnDay(rows, pizza, WED, APRIL_DAYS), 2); // Ava (all days) + Mia
+  assert.equal(extraCountOnDay(rows, pizza, FRI, APRIL_DAYS), 2); // Ava + Ethan
+  assert.equal(extraCountOnDay(rows, pizza, MON, APRIL_DAYS), 0); // not offered on Mon
+  assert.equal(extraCountOnDay(rows, APRIL_EXTRAS[1], WED, APRIL_DAYS), 1); // pick-up: Mia only (not "included")
+  assert.equal(missingExtraOnDay(rows[1], pizza, WED, APRIL_DAYS), true); // Noah
+  assert.equal(missingExtraOnDay(rows[0], pizza, WED, APRIL_DAYS), false); // all days
+  assert.equal(missingExtraOnDay(rows[2], pizza, WED, APRIL_DAYS), false); // chose it
+  assert.equal(missingExtraOnDay(rows[1], pizza, MON, APRIL_DAYS), false); // not offered
+  assert.equal(missingExtraOnDay(rows[4], pizza, WED, APRIL_DAYS), false); // doesn't come Wed
+  // checkInNote: pay notes first, then "No pizza party", then drop-off / pick-up.
+  assert.deepEqual(checkInNote(rows[1], WED, APRIL_EXTRAS, APRIL_DAYS), { kind: 'no_extra', name: 'Pizza party' });
+  assert.deepEqual(checkInNote({ ...rows[1], paidCents: 0, owesCents: 19500 }, WED, APRIL_EXTRAS, APRIL_DAYS), { kind: 'not_paid' });
+  assert.deepEqual(checkInNote(rows[2], WED, APRIL_EXTRAS, APRIL_DAYS), { kind: 'extra', name: 'Late pick-up' }); // the pizza is no note
+  assert.deepEqual(checkInNote(rows[4], FRI, APRIL_EXTRAS, APRIL_DAYS), { kind: 'extra', name: 'Early drop-off' });
+  assert.equal(checkInNote(rows[1], TUE, APRIL_EXTRAS, APRIL_DAYS), null);
+  assert.equal(checkInNote(rows[0], WED, APRIL_EXTRAS, APRIL_DAYS), null);
 });
 
 // ======================= states and tags =======================
@@ -266,7 +330,7 @@ check('check-in rule and notes', () => {
     { extraId: DROP, name: 'Early drop-off', per: 'day', dayId: MON, day: '2027-04-19', priceCents: 1500 },
     { extraId: PICK, name: 'Late pick-up', per: 'day', dayId: MON, day: '2027-04-19', priceCents: 800 },
     { extraId: PICK, name: 'Late pick-up', per: 'day', dayId: WED, day: '2027-04-21', priceCents: 800 },
-    { extraId: PIZZA, name: 'Pizza party (Fri)', per: 'once', dayId: null, day: null, priceCents: 500 },
+    { extraId: PIZZA, name: 'Pizza party', per: 'day', dayId: WED, day: '2027-04-21', priceCents: 500 },
   ] };
   assert.deepEqual(checkInNote({ ...base, duplicateState: 'possible' }, MON), { kind: 'duplicate' });
   assert.deepEqual(checkInNote({ ...base, paidCents: 0, owesCents: 16600 }, MON), { kind: 'not_paid' });
@@ -450,8 +514,8 @@ function addCampArgs(first, overrides = {}) {
     p_early_until: addD(first, -7), p_min_age: 5, p_max_age: 12,
     p_prices: [1, 2, 3].map((n) => ({ day_count: n, member_early_cents: 7500 * n, member_regular_cents: 8000 * n, nonmember_early_cents: 8500 * n, nonmember_regular_cents: 9000 * n })),
     p_extras: [
-      { name: 'Early drop-off', price_cents: 1500, per: 'day', not_for_all_days: false },
-      { name: 'Pizza party', price_cents: 500, per: 'once', not_for_all_days: true },
+      { name: 'Early drop-off', price_cents: 1500, per: 'day', not_for_all_days: false, only_on: [] },
+      { name: 'Pizza party', price_cents: 500, per: 'once', not_for_all_days: true, only_on: [] },
     ],
     p_description: 'Bring a lunch.', p_waiver_text: 'I agree.', ...overrides,
   };
@@ -671,7 +735,7 @@ check('mock: scripted run — add camp → sign up → check in → mark paid �
   const tArgs = (o = {}) => ({
     p_template_id: t.id, p_expected_version: t.version, p_name: 'Spring week', p_location_code: 'worcester', p_both_schools: false, p_day_count: 3,
     p_start_time: '09:00', p_end_time: '15:00', p_opens_days_before: 30, p_closes_days_before: 1, p_early_days_before: 7, p_min_age: 5, p_max_age: 12,
-    p_prices: addCampArgs('2027-06-07').p_prices, p_extras: addCampArgs('2027-06-07').p_extras, p_description: null, p_waiver_text: 'I agree.', ...o,
+    p_prices: addCampArgs('2027-06-07').p_prices, p_extras: addCampArgs('2027-06-07').p_extras.map(({ only_on: onlyOn, ...e }) => ({ ...e, only_weekdays: onlyOn })), p_description: null, p_waiver_text: 'I agree.', ...o,
   });
   assert.deepEqual(rpcOk(b, 'camp_update_template', tArgs({ p_opens_days_before: 0 })), { status: 'invalid', field: 'offsets' });
   assert.deepEqual(rpcOk(b, 'camp_update_template', tArgs({ p_opens_days_before: 400 })), { status: 'invalid', field: 'offsets' });
@@ -739,6 +803,131 @@ check('mock: removing a day / extra only withdrawn campers picked; rate limit; f
   assert.deepEqual([forced.status, forced.new_total_cents, forced.old_total_cents], ['price_changed', 8000, 7500]);
   assert.equal(b.publicSignup(signupArgs(b, added.public_code, [{ ...kid, day_ids: [d1], extras: [] }], { expected_total_cents: 8000 }), { forceCampChanged: true }).status, 'camp_changed');
   assert.equal(b.publicSignup(signupArgs(b, added.public_code, [{ ...kid, day_ids: [d1], extras: [] }], { expected_total_cents: 8000 })).status, 'ok');
+});
+
+check('mock: extras only on some days (only_on) — validation, public path, templates, seed', () => {
+  const { backend: b, env } = makeBackend({ today: '2027-05-20' });
+  const base = addCampArgs('2027-06-07', { p_signup_opens_on: '2027-05-01' }); // Mon 7, Tue 8, Wed 9
+  const pizzaOn = (only, per = 'day') => ({ ...base, p_extras: [base.p_extras[0], { name: 'Pizza party', price_cents: 500, per, not_for_all_days: true, only_on: only }] });
+  assert.deepEqual(rpcOk(b, 'camp_add_camp', pizzaOn(['2027-06-10'])), { status: 'invalid', field: 'extras' }); // not a camp day
+  assert.deepEqual(rpcOk(b, 'camp_add_camp', pizzaOn(['2027-06-09'], 'once')), { status: 'invalid', field: 'extras' }); // once + only_on
+  assert.deepEqual(rpcOk(b, 'camp_add_camp', pizzaOn(['2027-06-09', '2027-06-09'])), { status: 'invalid', field: 'extras' });
+  assert.deepEqual(rpcOk(b, 'camp_add_camp', pizzaOn(['June 9'])), { status: 'invalid', field: 'extras' });
+  const added = rpcOk(b, 'camp_add_camp', pizzaOn(['2027-06-07', '2027-06-09']));
+  assert.equal(added.status, 'ok');
+  let pub = b.publicCamp(added.public_code);
+  assert.deepEqual(pub.camp.extras.map((e) => e.only_on), [[], ['2027-06-07', '2027-06-09']]);
+  const [d1, d2, d3] = pub.camp.days.map((x) => x.day_id);
+  const pizza = pub.camp.extras[1].extra_id;
+  const kid = (pizzaDays, days = [d1, d2]) => ({ first_name: 'Noah', last_name: 'Patel', age: 9, member: true, day_ids: days, extras: [{ extra_id: pizza, day_ids: pizzaDays }] });
+  assert.equal(b.publicSignup(signupArgs(b, added.public_code, [kid([d2])], { expected_total_cents: 15500 })).status, 'camp_changed'); // Tue isn't a pizza day
+  const okSign = b.publicSignup(signupArgs(b, added.public_code, [kid([d1])], { expected_total_cents: 15500 }));
+  assert.equal(okSign.status, 'ok');
+  // The camp's extras in the list read (only_on is granted).
+  const extras = toCamel(rows(b, 'camp_extras', 'id, name, per, only_on', [{ col: 'camp_id', value: added.id }]));
+  assert.deepEqual(extras.find((e) => e.name === 'Pizza party').onlyOn, ['2027-06-07', '2027-06-09']);
+  // Edit camp: removing Mon + Wed would leave pizza "every day" — refused, field 'extras'.
+  const camp = toCamel(rows(b, 'camps', 'id, version', [{ col: 'id', value: added.id }]))[0];
+  const ids = toCamel(rows(b, 'camp_extras', 'id, name', [{ col: 'camp_id', value: added.id }]));
+  const edit = (days, only) => ({
+    ...base, p_camp_id: added.id, p_expected_version: camp.version, p_days: days, p_signup_closes_on: '2027-06-06',
+    p_prices: base.p_prices.slice(0, days.length),
+    p_extras: [{ ...base.p_extras[0], id: ids[0].id }, { name: 'Pizza party', price_cents: 500, per: 'day', not_for_all_days: true, only_on: only, id: ids[1].id }],
+  });
+  assert.deepEqual(rpcOk(b, 'camp_update_camp', edit(['2027-06-08', '2027-06-10'], [])), { status: 'invalid', field: 'extras' });
+  assert.deepEqual(rpcOk(b, 'camp_update_camp', edit(['2027-06-07', '2027-06-08'], ['2027-06-09'])), { status: 'invalid', field: 'extras' }); // a removed day
+  // Changing pizza to Tue only: Noah's family form (Mon pizza) is now out of date → camp_changed.
+  assert.equal(rpcOk(b, 'camp_update_camp', { ...edit(['2027-06-07', '2027-06-08', '2027-06-09'], ['2027-06-08']), p_signup_closes_on: '2027-06-06' }).status, 'ok');
+  assert.equal(b.publicSignup(signupArgs(b, added.public_code, [{ ...kid([d1]), first_name: 'Zoe' }], { expected_total_cents: 15500 })).status, 'camp_changed');
+  assert.equal(b.publicSignup(signupArgs(b, added.public_code, [{ ...kid([d2]), first_name: 'Zoe' }], { expected_total_cents: 15500 })).status, 'ok');
+  // Edit details: a day the extra isn't offered on → invalid.
+  const noah = toCamel(rows(b, 'camp_roster', ROSTER, [{ col: 'camp_id', value: added.id }])).find((x) => x.firstName === 'Noah');
+  const det = (pizzaDays) => ({
+    p_camper_id: noah.id, p_camper_version: noah.version, p_signup_version: noah.signupVersion, p_first: 'Noah', p_last: 'Patel', p_age: 9,
+    p_member: true, p_day_ids: [d1, d2], p_extras: [{ extra_id: pizza, day_ids: pizzaDays }], p_parent_name: 'Laura Rossi', p_parent_phone: '5085550142',
+    p_parent_relation: 'Mother', p_emergency_name: 'Paul Rossi', p_emergency_phone: '5085550187', p_emergency_relation: 'Uncle',
+  });
+  assert.equal(rpcOk(b, 'camp_update_details', det([d1]), STAFF).status, 'invalid');
+  assert.equal(rpcOk(b, 'camp_update_details', det([d2]), STAFF).status, 'ok');
+  // Save as template keeps weekdays; Edit template checks only_weekdays.
+  const saved = rpcOk(b, 'camp_save_template', { p_camp_id: added.id, p_name: 'June week' });
+  const tpl = toCamel(rows(b, 'camp_templates', 'id, extras, version', [{ col: 'id', value: saved.id }]))[0];
+  assert.deepEqual(tpl.extras.map((e) => e.onlyWeekdays), [[], [2]]); // Tue
+  const tArgs = (onlyWeekdays) => ({
+    p_template_id: tpl.id, p_expected_version: tpl.version, p_name: 'June week', p_location_code: 'worcester', p_both_schools: false, p_day_count: 3,
+    p_start_time: '09:00', p_end_time: '15:00', p_opens_days_before: 30, p_closes_days_before: 1, p_early_days_before: 7, p_min_age: 5, p_max_age: 12,
+    p_prices: base.p_prices, p_extras: [{ name: 'Pizza party', price_cents: 500, per: 'day', not_for_all_days: true, only_weekdays: onlyWeekdays }],
+    p_description: null, p_waiver_text: 'I agree.',
+  });
+  assert.deepEqual(rpcOk(b, 'camp_update_template', tArgs([8])), { status: 'invalid', field: 'extras' });
+  assert.deepEqual(rpcOk(b, 'camp_update_template', tArgs([3, 3])), { status: 'invalid', field: 'extras' });
+  assert.equal(rpcOk(b, 'camp_update_template', tArgs([3, 5])).status, 'ok');
+  // The seed: April Vacation Camp's "Pizza party" ($5 a day, Wed + Fri, not for all-days campers),
+  // Ethan has it on Fri (still $245); the Vacation week and Summer week templates have it as Wed + Fri.
+  env.today = '2027-04-21';
+  const { backend: s } = makeBackend({ today: '2027-04-21' });
+  const april = rows(s, 'camps', 'id, name').find((c) => c.name === 'April Vacation Camp');
+  const aExtras = toCamel(rows(s, 'camp_extras', 'id, name, price_cents, per, not_for_all_days, only_on', [{ col: 'camp_id', value: april.id }]));
+  const { id: pizzaId, ...pizzaRest } = aExtras.find((e) => e.name === 'Pizza party');
+  assert.equal(typeof pizzaId, 'string');
+  assert.deepEqual(pizzaRest, { name: 'Pizza party', priceCents: 500, per: 'day', notForAllDays: true, onlyOn: ['2027-04-21', '2027-04-23'] });
+  const roster = toCamel(rows(s, 'camp_roster', ROSTER, [{ col: 'camp_id', value: april.id }]));
+  assert.equal(roster.find((x) => x.firstName === 'Ethan').totalCents, 24500);
+  assert.equal(roster.find((x) => x.firstName === 'Mia').totalCents, 16600);
+  const tpls = toCamel(rows(s, 'camp_templates', 'name, extras'));
+  for (const name of ['Vacation week', 'Summer week']) {
+    const p = tpls.find((x) => x.name === name).extras.find((e) => e.name === 'Pizza party');
+    assert.deepEqual(p, { name: 'Pizza party', priceCents: 500, per: 'day', notForAllDays: true, onlyWeekdays: [3, 5] });
+  }
+  const sDays = toCamel(rows(s, 'camp_days', 'id, day', [{ col: 'camp_id', value: april.id }])).map((d) => ({ dayId: d.id, day: d.day }));
+  const wed = sDays.find((d) => d.day === '2027-04-21').dayId;
+  const pizzaExtra = { ...pizzaRest, extraId: pizzaId };
+  // Wed: every active all-days camper (incl. Ava's duplicate) gets the pizza; nobody chose it on Wed.
+  const allDaysActive = roster.filter((x) => x.status === 'active' && x.days.length === 5).length;
+  assert.equal(extraCountOnDay(roster, pizzaExtra, wed, sDays), allDaysActive);
+});
+
+check('campsArgs round trip: onlyOn through Add / Edit camp, onlyWeekdays through templates', () => {
+  const { backend: b } = makeBackend({ today: '2027-05-20' });
+  // What the Add camp dialog sends, in the app's camelCase shapes (campsApi.addCamp → campArgs).
+  const input = {
+    locationCode: 'worcester', bothSchools: false, name: 'June Camp', days: ['2027-06-07', '2027-06-08', '2027-06-09'],
+    startTime: '09:00', endTime: '15:00', signupOpensOn: '2027-05-01', signupClosesOn: '2027-06-06', earlyUntil: '2027-05-31',
+    minAge: 5, maxAge: 12,
+    prices: [1, 2, 3].map((n) => ({ dayCount: n, memberEarlyCents: 7500 * n, memberRegularCents: 8000 * n, nonmemberEarlyCents: 8500 * n, nonmemberRegularCents: 9000 * n })),
+    extras: [
+      { name: 'Early drop-off', priceCents: 1500, per: 'day', notForAllDays: false, onlyOn: [] },
+      { name: 'Pizza party', priceCents: 500, per: 'day', notForAllDays: true, onlyOn: ['2027-06-07', '2027-06-09'] },
+    ],
+    description: null, waiverText: 'I agree.',
+  };
+  assert.deepEqual(campArgs(input, false).p_extras[1], { name: 'Pizza party', price_cents: 500, per: 'day', not_for_all_days: true, only_on: ['2027-06-07', '2027-06-09'] });
+  const added = rpcOk(b, 'camp_add_camp', campArgs(input, false));
+  assert.equal(added.status, 'ok');
+  // What campsApi.loadCamp reads back (EXTRA_COLUMNS → toExtra).
+  const load = () => rows(b, 'camp_extras', EXTRA_COLUMNS, [{ col: 'camp_id', value: added.id }]).map(toExtra).sort((x, y) => x.sort - y.sort);
+  let extras = load();
+  assert.deepEqual(extras.map((e) => e.onlyOn), [[], ['2027-06-07', '2027-06-09']]);
+  assert.equal(typeof extras[1].extraId, 'string');
+  // Edit camp: pizza on Tue only, sent with its extraId (campsApi.updateCamp → campArgs(…, true)).
+  const camp = rows(b, 'camps', 'id, version', [{ col: 'id', value: added.id }])[0];
+  const edited = { ...input, extras: extras.map((e) => (e.name === 'Pizza party' ? { ...e, onlyOn: ['2027-06-08'] } : e)) };
+  assert.equal(campArgs(edited, true).p_extras[1].id, extras[1].extraId);
+  assert.equal(rpcOk(b, 'camp_update_camp', { p_camp_id: added.id, p_expected_version: camp.version, ...campArgs(edited, true) }).status, 'ok');
+  extras = load();
+  assert.deepEqual(extras.map((e) => e.onlyOn), [[], ['2027-06-08']]);
+  assert.equal(extras.length, 2); // changed in place, not added again
+  // Save as template → Load templates (TEMPLATE_COLUMNS → toTemplate): onlyWeekdays [2] (Tue).
+  const saved = rpcOk(b, 'camp_save_template', { p_camp_id: added.id, p_name: 'June template' });
+  const loadTpl = () => toTemplate(rows(b, 'camp_templates', TEMPLATE_COLUMNS, [{ col: 'id', value: saved.id }])[0]);
+  let tpl = loadTpl();
+  assert.deepEqual(tpl.extras.map((e) => e.onlyWeekdays), [[], [2]]);
+  // Edit template (campsApi.updateTemplate → templateArgs): pizza on Wed + Fri.
+  const tInput = { ...tpl, extras: tpl.extras.map((e) => (e.name === 'Pizza party' ? { ...e, onlyWeekdays: [3, 5] } : e)) };
+  assert.deepEqual(templateArgs(tInput).p_extras[1], { name: 'Pizza party', price_cents: 500, per: 'day', not_for_all_days: true, only_weekdays: [3, 5] });
+  assert.equal(rpcOk(b, 'camp_update_template', { p_template_id: tpl.id, p_expected_version: tpl.version, ...templateArgs(tInput) }).status, 'ok');
+  tpl = loadTpl();
+  assert.deepEqual(tpl.extras.map((e) => e.onlyWeekdays), [[], [3, 5]]);
 });
 
 check('mock: the signature clean-up after 3 years (only from Add camp / Mark paid)', () => {

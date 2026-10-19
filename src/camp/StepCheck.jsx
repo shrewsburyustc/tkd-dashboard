@@ -7,7 +7,7 @@
 // Messages after a failed Sign up appear at the top, and nothing the family entered is lost.
 import SignaturePad from '../register/SignaturePad.jsx';
 import { FieldError, TickBox, TopError } from './parts.jsx';
-import { priceFor } from './form.js';
+import { extraPriceLabel, priceFor } from './form.js';
 import { campDaysShort, campHours, capitalize, childDaysLabel, formatDollars, shortDate } from './format.js';
 import { formatPhone, phoneDigits } from '../lib/camps/campRules.js';
 import { normalizeName } from '../lib/testing/names.js';
@@ -76,7 +76,7 @@ export default function StepCheck({
             </div>
             {priced.extras.map((e) => (
               <div key={e.extraId} className="camp-line">
-                <span>{e.per === 'day' ? T.extraTimes(e.name, e.count) : e.name}</span>
+                <span>{extraPriceLabel(e, camp, child)}</span>
                 <b>{formatDollars(e.cents)}</b>
               </div>
             ))}

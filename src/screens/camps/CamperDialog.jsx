@@ -25,7 +25,7 @@ import { IconCheck, IconEdit } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
 import { loadCamperDetail, updateDetails } from '../../lib/camps/campsApi.js';
-import { AGE_LIMITS, MAX_CAMPER_CENTS, RELATION_MAX, formatPhone, isAllDays, phoneDigits, priceChild } from '../../lib/camps/campRules.js';
+import { AGE_LIMITS, MAX_CAMPER_CENTS, RELATION_MAX, extraDaysFor, formatPhone, isAllDays, phoneDigits, priceChild } from '../../lib/camps/campRules.js';
 import { nameProblem, normalizeName } from '../../lib/testing/names.js';
 import ChoiceGroup from '../testing/events/ChoiceGroup.jsx';
 import { CamperTag } from './CamperRows.jsx';
@@ -78,12 +78,17 @@ function editValues(camper, family) {
 // Extras not allowed for an all-days child are left out (the screen removes them, §1.14).
 function childOf(values, campExtras, campDays) {
   const all = isAllDays(values.dayIds, campDays);
+  const childDays = campDays.filter((d) => values.dayIds.includes(d.dayId));
   const extras = [];
   for (const extra of campExtras) {
     const pick = values.picks[extra.extraId];
     if (!pick?.on) continue;
     if (extra.notForAllDays && all) continue;
-    extras.push({ extraId: extra.extraId, dayIds: extra.per === 'day' ? pick.dayIds.filter((id) => values.dayIds.includes(id)) : [] });
+    // A per-day extra only on the child's days it is offered on (onlyOn, owner decision 2026-10-19).
+    const offered = new Set(extraDaysFor(extra, childDays).map((d) => d.dayId));
+    const dayIds = extra.per === 'day' ? pick.dayIds.filter((id) => offered.has(id)) : [];
+    if (extra.per === 'day' && dayIds.length === 0) continue;
+    extras.push({ extraId: extra.extraId, dayIds });
   }
   return { firstName: values.firstName, lastName: values.lastName, member: values.member, dayIds: values.dayIds, extras };
 }
@@ -180,7 +185,8 @@ export default function CamperDialog({ camperId, camperName, camp, days, prices,
               ? T.NO_EXTRAS_DETAIL
               : b.extras.map((e) => (
                   <span key={e.name} className="ev-sum-line">
-                    {T.detailExtraLine(e, campDayIsos)}
+                    {/* An extra offered only on some days shows its days: "Pizza party — Wed" */}
+                    {extras.some((x) => x.name === e.name && (x.onlyOn ?? []).length > 0) ? T.detailExtraOnlyLine(e.name, e.days ?? []) : T.detailExtraLine(e, campDayIsos)}
                   </span>
                 ))}
           </Row>
@@ -275,7 +281,8 @@ export default function CamperDialog({ camperId, camperName, camp, days, prices,
   for (const extra of campExtras) {
     const pick = values.picks[extra.extraId];
     if (!pick?.on || extra.per !== 'day' || (extra.notForAllDays && allDays)) continue;
-    if (pick.dayIds.filter((id) => values.dayIds.includes(id)).length === 0) errors[`extra-${extra.extraId}`] = T.CHOOSE_WHICH_DAYS;
+    const offeredIds = extraDaysFor(extra, days.filter((d) => values.dayIds.includes(d.dayId))).map((d) => d.dayId);
+    if (offeredIds.length > 0 && pick.dayIds.filter((id) => offeredIds.includes(id)).length === 0) errors[`extra-${extra.extraId}`] = T.CHOOSE_WHICH_DAYS;
   }
   for (const who of ['parent', 'emergency']) {
     if (nameProblem(values[`${who}Name`])) errors[`${who}Name`] = T.ENTER_NAME;
@@ -312,7 +319,8 @@ export default function CamperDialog({ camperId, camperName, camp, days, prices,
   }
   function toggleExtra(extra, on) {
     // A per-day extra starts with all of the child's days (C7: "starting with the child's days").
-    const pick = { on, dayIds: on && extra.per === 'day' ? [...values.dayIds] : [] };
+    const offered = extraDaysFor(extra, days.filter((d) => values.dayIds.includes(d.dayId))).map((d) => d.dayId);
+    const pick = { on, dayIds: on && extra.per === 'day' ? offered : [] };
     change({ picks: { ...values.picks, [extra.extraId]: pick } });
   }
   function toggleExtraDay(extra, dayId) {
@@ -416,7 +424,12 @@ export default function CamperDialog({ camperId, camperName, camp, days, prices,
       </Notice>
     </div>
   );
-  const shownExtras = campExtras.filter((e) => !(e.notForAllDays && allDays));
+  const childDayObjs = days.filter((d) => values.dayIds.includes(d.dayId));
+  // Hidden: not-for-all-days extras for an all-days child, and per-day extras offered on none of
+  // the child's days (pizza only on Wed and Fri, the child comes Mon and Tue).
+  const shownExtras = campExtras.filter(
+    (e) => !(e.notForAllDays && allDays) && (e.per !== 'day' || (e.onlyOn ?? []).length === 0 || extraDaysFor(e, childDayObjs).length > 0),
+  );
 
   return (
     <Dialog title={T.EDIT_DETAILS_TITLE} size="medium" fullScreen={isPhone} onRequestClose={requestClose}>
@@ -482,9 +495,7 @@ export default function CamperDialog({ camperId, camperName, camp, days, prices,
                   </label>
                   {on && extra.per === 'day' && (
                     <div className="cp-chips cp-chips--small" role="group" aria-label={`${extra.name}: ${T.EXTRA_WHICH_DAYS}`}>
-                      {days
-                        .filter((d) => values.dayIds.includes(d.dayId))
-                        .map((d) => {
+                      {extraDaysFor(extra, childDayObjs).map((d) => {
                           const dayOn = pick.dayIds.includes(d.dayId);
                           return (
                             <button key={d.dayId} type="button" className={`cp-daychip${dayOn ? ' is-picked' : ''}`} aria-pressed={dayOn ? 'true' : 'false'} onClick={() => !saving && toggleExtraDay(extra, d.dayId)}>

@@ -151,6 +151,21 @@
   margin-bottom: 12px;
 }
 
+/* The extra's name on a day button it is limited to, e.g. "Wed, Nov 25  Pizza party"
+   (CP1 2026-10-19, amber tint as in the decision picture Camps-pizza-days-options). */
+.camp-pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--color-warning-text);
+  background: var(--color-warning-bg);
+  border-radius: 6px;
+  padding: 0 6px;
+  margin-left: 6px;
+  vertical-align: 1px;
+}
+
 /* ---------- phones ---------- */
 @media (max-width: 599px) {
   .camp-two {

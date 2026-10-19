@@ -4,6 +4,7 @@
 // like the approved mockups C7a–C7d. They use the Color Belt page's styles (register.css, classes
 // starting "reg-") so both public forms look the same (rulebook v0.106); camp-only pieces use
 // camp.css ("camp-").
+import { onlyOnLines } from './form.js';
 import * as T from './text.js';
 import { addressLine, campDaysLong, campHours, locationLine, longDate } from './format.js';
 
@@ -64,6 +65,12 @@ export function CampCard({ camp, full = false, priceKindToday = 'early' }) {
           <div className="reg-hero__where camp-ages">
             <b>{T.agesLine(camp.minAge, camp.maxAge)}</b>
           </div>
+          {/* Extras offered only on some days: "Pizza party: Wed, Fri" (CP1 2026-10-19) */}
+          {onlyOnLines(camp).map((line) => (
+            <div key={line.extraId} className="reg-hero__where">
+              {line.text}
+            </div>
+          ))}
           {byParts.length > 0 ? (
             <div className="reg-hero__by">
               <b>{byParts.join(' · ')}</b>

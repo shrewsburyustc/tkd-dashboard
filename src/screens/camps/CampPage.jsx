@@ -873,6 +873,7 @@ export default function CampPage({
           today={today}
           isAdmin={isAdmin}
           active={active}
+          extras={extras}
           query={query}
           onQuery={setQuery}
           busy={busy}

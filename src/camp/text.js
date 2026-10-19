@@ -47,6 +47,10 @@ export const NON_MEMBER_WORD = 'non-member';
 export const EARLY_PRICE_WORD = 'early price';
 export const REGULAR_PRICE_WORD = 'regular price'; // after the early-price date (not in the mockups)
 export const extraTimes = (name, count) => `${name} × ${count}`;
+// An extra limited to some days (CP1 2026-10-19): "Pizza party — Wed" in the price lines and
+// "Pizza party: Wed, Fri, included when coming every day" under the day buttons / in the camp info.
+export const extraOnDays = (name, days) => `${name} — ${days}`;
+export const onlyOnLine = (name, days, includedForAllDays) => `${name}: ${days}${includedForAllDays ? ', included when coming every day' : ''}`;
 export const childTotal = (name) => `${name}’s total`;
 export const ADD_CHILD = 'Add another child';
 export const UP_TO_3 = 'Up to 3 children';

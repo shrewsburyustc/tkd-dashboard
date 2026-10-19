@@ -381,7 +381,7 @@ export default function CampApp() {
       />
     );
   } else {
-    content = <SignedUp result={result} headingRef={headingRef} />;
+    content = <SignedUp result={result} campInfo={camp} headingRef={headingRef} />;
   }
 
   return (

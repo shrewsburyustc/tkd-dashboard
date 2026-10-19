@@ -18,7 +18,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { IconAlertTriangle, IconCheck, IconDots, IconSearch } from '@tabler/icons-react';
 import IconButton from '../../components/IconButton.jsx';
-import { checkInNote, checkInRule } from '../../lib/camps/campRules.js';
+import { checkInNote, checkInRule, extraCountOnDay, extraOfferedOn } from '../../lib/camps/campRules.js';
 import ChoiceGroup from '../testing/events/ChoiceGroup.jsx';
 import { MarkPaidButton, NameAge } from './CamperRows.jsx';
 import * as T from './text.js';
@@ -98,10 +98,12 @@ function PaymentPopover({ row, anchor, busy, onMarkPaid, onClose }) {
 }
 
 // The one amber note of a "Not here yet" row (or nothing).
-function RowNote({ row, dayId, onNote, onReview }) {
-  const note = checkInNote(row, dayId);
+// extras / days: the camp's, so the "No pizza party" note can show (owner decision 2026-10-19).
+function RowNote({ row, dayId, extras, days, onNote, onReview }) {
+  const note = checkInNote(row, dayId, extras, days);
   if (!note) return null;
   if (note.kind === 'extra') return <span className="ttag ttag--warn cp-pill">{note.name}</span>;
+  if (note.kind === 'no_extra') return <span className="ttag ttag--warn cp-pill">{T.noExtraNote(note.name)}</span>;
   const text = note.kind === 'duplicate' ? T.TAG_POSSIBLE_DUPLICATE : note.kind === 'owes' ? T.noteOwes(note.cents) : T.NOTE_NOT_PAID;
   return (
     <button
@@ -130,6 +132,7 @@ export default function CheckInTab({
   today,
   isAdmin,
   active,
+  extras = [], // the camp's extras (for "Pizza party today: 15" and "No pizza party")
   query,
   onQuery,
   busy,
@@ -160,10 +163,13 @@ export default function CheckInTab({
   const rule = day ? checkInRule(day, today, isAdmin) : 'future';
   // An earlier day: whoever wasn't checked in didn't come (review item 8).
   const past = Boolean(day && day.day < today);
+  // A future day: nobody can be here yet — "16 coming on Wed, Nov 11", one Coming group.
+  const future = Boolean(day && day.day > today);
+  // Extras offered only on some days and offered on this one: how many to order (pizza).
+  const dayExtras = day ? extras.filter((e) => e.per === 'day' && (e.onlyOn ?? []).length > 0 && extraOfferedOn(e, day.day)) : [];
   const canAct = rule === 'allowed';
   let dayNote = null;
-  if (day && rule === 'future') dayNote = T.FUTURE_DAY_NOTE;
-  else if (day && day.day < today) dayNote = isAdmin ? T.EARLIER_DAY_ADMIN : T.EARLIER_DAY_STAFF;
+  if (day && day.day < today) dayNote = isAdmin ? T.EARLIER_DAY_ADMIN : T.EARLIER_DAY_STAFF;
 
   const popoverRow = popover ? active.find((r) => r.id === popover.rowId) : null;
   // The camper paid meanwhile (another device): the box closes by itself.
@@ -203,7 +209,7 @@ export default function CheckInTab({
               {T.TAG_NOT_SAVED}
             </span>
           )}
-          {!isHere && <RowNote row={rowData} dayId={day.dayId} onNote={(r, anchor) => setPopover({ rowId: r.id, anchor })} onReview={handlers.onReview} />}
+          {!isHere && <RowNote row={rowData} dayId={day.dayId} extras={extras} days={days} onNote={(r, anchor) => setPopover({ rowId: r.id, anchor })} onReview={handlers.onReview} />}
         </span>
         <span className="acts cp-crow-acts" role="cell">
           {isHere ? (
@@ -291,14 +297,28 @@ export default function CheckInTab({
           <>
             {/* Option A's big numbers: "9 of 15 here   6 not here yet" */}
             <p className="cp-statline">
-              <span>
-                <span className="cp-big">{here.length}</span>
-                {past ? T.cameOf(onDay_.length) : T.hereOf(onDay_.length)}
-              </span>
-              <span>
-                <span className="cp-big">{notHere.length}</span>
-                {past ? T.DIDNT_COME_WORDS : T.NOT_HERE_WORDS}
-              </span>
+              {future ? (
+                <span>
+                  <span className="cp-big">{onDay_.length}</span>
+                  {`${T.comingOn(day.day)} · ${T.CHECK_IN_OPENS}`}
+                </span>
+              ) : (
+                <>
+                  <span>
+                    <span className="cp-big">{here.length}</span>
+                    {past ? T.cameOf(onDay_.length) : T.hereOf(onDay_.length)}
+                  </span>
+                  <span>
+                    <span className="cp-big">{notHere.length}</span>
+                    {past ? T.DIDNT_COME_WORDS : T.NOT_HERE_WORDS}
+                  </span>
+                </>
+              )}
+              {dayExtras.map((extra) => (
+                <span key={extra.extraId}>
+                  {T.extraTodayLine(extra.name, day.day === today)} <span className="cp-big">{extraCountOnDay(active, extra, day.dayId, days)}</span>
+                </span>
+              ))}
             </p>
             {dayNote && <p className="field-hint cp-daynote">{dayNote}</p>}
             <div className="cp-search">
@@ -317,13 +337,17 @@ export default function CheckInTab({
             <div className={`clist ev-roster cp-checkin-list${layout.isTouch ? ' is-touch' : ''}`} role="table" aria-label={T.TAB_CHECK_IN}>
               <div role="rowgroup">
                 <div className="gr-subhead ev-subhead cp-subhead" role="row">
-                  <span role="cell">{past ? T.DIDNT_COME(shownNotHere.length) : T.NOT_HERE_YET(shownNotHere.length)}</span>
+                  <span role="cell">
+                    {future ? T.COMING(shownNotHere.length) : past ? T.DIDNT_COME(shownNotHere.length) : T.NOT_HERE_YET(shownNotHere.length)}
+                  </span>
                 </div>
                 {shownNotHere.map((r) => row(r, false))}
-                <div className="gr-subhead ev-subhead cp-subhead" role="row">
-                  <span role="cell">{T.HERE(shownHere.length)}</span>
-                </div>
-                {shownHere.map((r) => row(r, true))}
+                {!future && (
+                  <div className="gr-subhead ev-subhead cp-subhead" role="row">
+                    <span role="cell">{T.HERE(shownHere.length)}</span>
+                  </div>
+                )}
+                {!future && shownHere.map((r) => row(r, true))}
                 {q && shownHere.length + shownNotHere.length === 0 && (
                   <p className="tempty ev-roster-empty" role="row">
                     <span role="cell">{T.NO_MATCH}</span>

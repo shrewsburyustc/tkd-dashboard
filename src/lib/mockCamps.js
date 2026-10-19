@@ -24,7 +24,9 @@
 // The store is RE-READ ON EVERY CALL (no copy is kept in memory), so the staff tab and the family
 // page open in another tab always see each other's changes.
 //
-// Store (schema version 1), column names are the database's (snake_case):
+// Store (schema version 2 — version 2 added the extras' only_on / only_weekdays, owner decision
+// 2026-10-19 "pizza on Wed and Fri"; an older saved store is replaced by the default data), column
+// names are the database's (snake_case):
 //   camps, camp_days, camp_prices, camp_extras, camp_templates, camp_signups, camp_campers,
 //   camp_camper_days, camp_camper_extras, camp_payments, camp_public_attempts,
 //   next_reference (the CP- number sequence), next_attempt_id
@@ -34,10 +36,11 @@ import {
   CAMP_ACK_VERSION, PAYING_BY, MAX_CAMPER_CENTS, CAMP_TRIES_PER_HOUR, UNDO_WINDOW_MS, SIGNATURE_KEEP_YEARS,
   MAX_DAYS, MAX_EXTRAS, MAX_CHILDREN, AGE_LIMITS, DESCRIPTION_MAX, WAIVER_MAX, EXTRA_NAME_MAX, RELATION_MAX,
   signupState, priceKind, baseCents, priceChild, childProblem, isAllDays, offsetsAreValid, templateFromCamp,
+  extraOfferedOn, onlyOnToWeekdays, weekdaysToOnlyOn,
   normalizeCampText, campTextIsValid, isIsoDate, addDays, todayInSchoolTime, lastDay, firstDay, SCHOOL_TIME_ZONE,
 } from './camps/campRules.js';
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const LOCATION_CODES = ['worcester', 'shrewsbury'];
 const REFERENCE_START = 4001; // CP-4001 is the first reference the database makes (§1.7)
 const ATTEMPT_KEEP_MS = 2 * 24 * 60 * 60 * 1000; // rate-limit rows older than 2 days are removed
@@ -127,16 +130,23 @@ const GRID_ONE = [[1, 70, 75, 80, 85]];
 const GRID_TWO = [[1, 75, 80, 85, 90], [2, 140, 150, 150, 160]];
 const GRID_THREE = [...GRID_TWO, [3, 195, 210, 205, 220]];
 const GRID_WEEK = [...GRID_THREE, [4, 260, 280, 270, 290], [5, 275, 325, 285, 335]];
-const DROP = ['Early drop-off, 7:30–9:00 AM', 15, 'day', false];
-const PICK = ['Late pick-up, 3:00–4:00 PM', 8, 'day', false];
-const PIZZA = ['Pizza party (Fri)', 5, 'once', true];
-const LUNCH = ['Pizza lunch', 6, 'once', false];
-const ICE_CREAM = ['Ice cream party (Fri)', 5, 'once', true];
+// Extras: [name, dollars, per, not charged to all-days campers, offered only on these ISO weekdays
+// (1 = Mon … 7 = Sun; [] = every day)].
+const DROP = ['Early drop-off, 7:30–9:00 AM', 15, 'day', false, []];
+const PICK = ['Late pick-up, 3:00–4:00 PM', 8, 'day', false, []];
+const PIZZA = ['Pizza party', 5, 'day', true, [3, 5]]; // Wed and Fri only (owner decision 2026-10-19)
+const LUNCH = ['Pizza lunch', 6, 'once', false, []];
 
 const gridRows = (grid) => grid.map(([n, me, mr, ne, nr]) => ({
   day_count: n, member_early_cents: me * 100, member_regular_cents: mr * 100, nonmember_early_cents: ne * 100, nonmember_regular_cents: nr * 100,
 }));
-const extraJson = ([name, dollars, per, notForAllDays]) => ({ name, price_cents: dollars * 100, per, not_for_all_days: notForAllDays });
+// A camp's extra row (only_on = the camp dates on those weekdays) and a template's extra (only_weekdays).
+const extraJson = ([name, dollars, per, notForAllDays, weekdays], campDays) => ({
+  name, price_cents: dollars * 100, per, not_for_all_days: notForAllDays, only_on: weekdaysToOnlyOn(weekdays, campDays),
+});
+const templateExtraJson = ([name, dollars, per, notForAllDays, weekdays]) => ({
+  name, price_cents: dollars * 100, per, not_for_all_days: notForAllDays, only_weekdays: [...weekdays],
+});
 
 // The camps. days = the camp's days; extras = indexes into the camp's extras below.
 const DEFAULT_CAMPS = [
@@ -187,7 +197,7 @@ const DEFAULT_CAMPERS = {
       { checkins: { 0: '09:01' }, family: ['Laura Rossi', 'Mother', '5085550142', 'Paul Rossi', 'Uncle', '5085550187'] }],
     ['Sofia', 'Nguyen', 6, true, D(0, 1), [], 'cash', ['2027-03-08', '12:15'], 4806,
       { paid: { on: '2027-03-18', at: '16:40', desk: true }, checkins: { 0: '08:40', 1: '08:44' } }],
-    ['Ethan', 'Brooks', 12, true, D(0, 3, 4), [[0, D(0, 3, 4)], [2, null]], 'cash', ['2027-03-09', '20:05'], 4808, {}],
+    ['Ethan', 'Brooks', 12, true, D(0, 3, 4), [[0, D(0, 3, 4)], [2, D(4)]], 'cash', ['2027-03-09', '20:05'], 4808, {}], // pizza on Fri
     ['Chloe', 'Martin', 8, true, 'all', [[1, 'all']], 'check', ['2027-03-04', '19:45'], 4818,
       { paid: { on: '2027-03-11', at: '17:05', desk: true }, checkins: { 0: '08:20', 1: '08:25', 2: '08:31' } }],
     ['Leo', 'Kim', 11, true, 'all', [[0, 'all']], 'card', ['2027-03-06', '09:30'], 4803,
@@ -256,7 +266,7 @@ const DEFAULT_TEMPLATES = [
   ['One-day holiday camp', 'worcester', false, 1, GRID_ONE, [DROP, PICK, LUNCH], [21, 1, 7], DESC_ONE],
   ['Thanksgiving Camp', 'worcester', false, 2, GRID_TWO, [DROP, PICK], [51, 1, 7], DESC_TWO],
   ['Vacation week', 'worcester', true, 5, GRID_WEEK, [DROP, PICK, PIZZA], [49, 1, 7], DESC_WEEK],
-  ['Summer week', 'worcester', false, 5, GRID_WEEK, [DROP, PICK, ICE_CREAM], [42, 1, 7], 'A week of Taekwondo, games, crafts and outdoor play. Bring a lunch, a water bottle, sunscreen and comfortable clothes.'],
+  ['Summer week', 'worcester', false, 5, GRID_WEEK, [DROP, PICK, PIZZA], [42, 1, 7], 'A week of Taekwondo, games, crafts and outdoor play. Bring a lunch, a water bottle, sunscreen and comfortable clothes.'],
 ];
 
 // Builds the whole default store. today = 'YYYY-MM-DD' (the preview's today): check-ins are only
@@ -287,7 +297,7 @@ export function defaultCampsData({ today = todayInSchoolTime(new Date()) } = {})
     const days = def.days.map((day) => ({ id: id('c1'), camp_id: camp.id, day }));
     db.camp_days.push(...days);
     db.camp_prices.push(...gridRows(def.grid).map((row) => ({ id: id('c2'), camp_id: camp.id, ...row })));
-    const extras = def.extras.map((e, sort) => ({ id: id('c3'), camp_id: camp.id, ...extraJson(e), sort }));
+    const extras = def.extras.map((e, sort) => ({ id: id('c3'), camp_id: camp.id, ...extraJson(e, def.days), sort }));
     db.camp_extras.push(...extras);
     const grid = gridRows(def.grid);
 
@@ -376,7 +386,7 @@ export function defaultCampsData({ today = todayInSchoolTime(new Date()) } = {})
     db.camp_templates.push({
       id: id('c4'), name, location_code: location, both_schools: both, day_count: dayCount, start_time: '09:00:00', end_time: '15:00:00',
       opens_days_before: opens, closes_days_before: closes, early_days_before: early, min_age: 5, max_age: 12,
-      description, waiver_text: WAIVER, prices: gridRows(grid), extras: extras.map(extraJson), ...stamps(at, 'Jeffrey Berg', ADMIN_USER_ID),
+      description, waiver_text: WAIVER, prices: gridRows(grid), extras: extras.map(templateExtraJson), ...stamps(at, 'Jeffrey Berg', ADMIN_USER_ID),
     });
   });
   db.next_reference = maxRef + 1;
@@ -412,7 +422,7 @@ const GRANTED = {
   camps: CAMP_COLS,
   camp_days: ['id', 'camp_id', 'day'],
   camp_prices: ['id', 'camp_id', 'day_count', 'member_early_cents', 'member_regular_cents', 'nonmember_early_cents', 'nonmember_regular_cents'],
-  camp_extras: ['id', 'camp_id', 'name', 'price_cents', 'per', 'not_for_all_days', 'sort'],
+  camp_extras: ['id', 'camp_id', 'name', 'price_cents', 'per', 'not_for_all_days', 'only_on', 'sort'],
   camp_templates: TEMPLATE_COLS,
   camp_roster: ROSTER_COLS,
   camp_campers: CAMPER_COLS,
@@ -592,12 +602,21 @@ function pricesArgValid(prices, dayCount) {
 }
 
 // camp_extras_arg_is_valid(p_extras, p_with_ids): 0–10 extras, names unique ignoring case.
-function extrasArgValid(extras, withIds) {
+// A camp's extra may carry only_on (dates, no repeats; each must be a camp day — checked by the
+// caller, which knows the days); a template's extra only_weekdays (1–7, no repeats) instead.
+// Either one non-empty only for a per-day extra. Left out = [] (every day).
+const dateListJson = (v) => Array.isArray(v) && v.length <= MAX_DAYS && v.every(isIsoDate) && !hasDuplicates(v);
+const weekdayListJson = (v) => Array.isArray(v) && v.length <= 7 && v.every((n) => intJson(n, 1, 7)) && !hasDuplicates(v);
+function extrasArgValid(extras, withIds, forTemplate = false) {
   if (!Array.isArray(extras) || extras.length > MAX_EXTRAS) return false;
   const names = [];
   const ids = [];
   for (const e of extras) {
-    if (!isObj(e) || !exactKeys(e, EXTRA_KEYS, withIds ? ['id'] : [])) return false;
+    const limitKey = forTemplate ? 'only_weekdays' : 'only_on';
+    if (!isObj(e) || !exactKeys(e, EXTRA_KEYS, [...(withIds ? ['id'] : []), limitKey])) return false;
+    const limit = e[limitKey] ?? [];
+    if (!(forTemplate ? weekdayListJson(limit) : dateListJson(limit))) return false;
+    if (limit.length > 0 && e.per !== 'day') return false;
     if (!lineIsValid(e.name, EXTRA_NAME_MAX)) return false;
     if (!intJson(e.price_cents, 0, 100000) || !centsAreValid(e.price_cents)) return false;
     if (e.per !== 'once' && e.per !== 'day') return false;
@@ -716,7 +735,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
     nonmemberEarlyCents: p.nonmember_early_cents, nonmemberRegularCents: p.nonmember_regular_cents,
   }));
   const extrasView = (db, campId) => extraRows(db, campId).map((e) => ({
-    extraId: e.id, name: e.name, priceCents: e.price_cents, per: e.per, notForAllDays: e.not_for_all_days, sort: e.sort,
+    extraId: e.id, name: e.name, priceCents: e.price_cents, per: e.per, notForAllDays: e.not_for_all_days, onlyOn: e.only_on ?? [], sort: e.sort,
   }));
   const campView = (c) => ({ closedByHand: c.closed_by_hand, signupOpensOn: c.signup_opens_on, signupClosesOn: c.signup_closes_on, earlyUntil: c.early_until });
   const stateOf = (db, camp) => signupState(campView(camp), daysView(db, camp.id), today());
@@ -822,7 +841,9 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
     }
   }
 
-  // The checks Add camp and Edit camp share (argument shape). Returns the cleaned values or null.
+  // The checks Add camp and Edit camp share (argument shape). Returns the cleaned values, null
+  // (→ invalid) or EXTRAS_INVALID (→ { status:'invalid', field:'extras' }: section 4 of the dialog).
+  const EXTRAS_INVALID = { problem: { status: 'invalid', field: 'extras' } };
   function readCampFields(a, withIds) {
     if (!LOCATION_CODES.includes(a.p_location_code) || typeof a.p_both_schools !== 'boolean' || !nameIsValid(a.p_name)) return null;
     if (!daysArgValid(a.p_days)) return null;
@@ -833,7 +854,8 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
     if (a.p_signup_closes_on > days[days.length - 1]) return null;
     if (!ageOk(a.p_min_age) || !ageOk(a.p_max_age) || a.p_min_age > a.p_max_age) return null;
     if (!pricesArgValid(a.p_prices, days.length)) return null;
-    if (!extrasArgValid(a.p_extras, withIds)) return null;
+    if (!extrasArgValid(a.p_extras, withIds)) return EXTRAS_INVALID;
+    if (a.p_extras.some((e) => (e.only_on ?? []).some((d) => !days.includes(d)))) return EXTRAS_INVALID; // not a camp day
     if (!descriptionOk(a.p_description) || !campTextIsValid(a.p_waiver_text, WAIVER_MAX)) return null;
     return {
       days,
@@ -844,7 +866,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
         description: normalizeCampText(a.p_description), waiver_text: normalizeCampText(a.p_waiver_text),
       },
       prices: a.p_prices.map((p) => Object.fromEntries(PRICE_KEYS.map((k) => [k, p[k]]))),
-      extras: a.p_extras.map((e, sort) => ({ id: withIds && e.id ? e.id.toLowerCase() : null, name: normalizeName(e.name), price_cents: e.price_cents, per: e.per, not_for_all_days: e.not_for_all_days, sort })),
+      extras: a.p_extras.map((e, sort) => ({ id: withIds && e.id ? e.id.toLowerCase() : null, name: normalizeName(e.name), price_cents: e.price_cents, per: e.per, not_for_all_days: e.not_for_all_days, only_on: [...(e.only_on ?? [])].sort(), sort })),
     };
   }
 
@@ -856,7 +878,8 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
     if (!timeOnStep(a.p_start_time) || !timeOnStep(a.p_end_time) || a.p_end_time <= a.p_start_time) return st('invalid');
     if (!offsetsAreValid(offsets)) return { status: 'invalid', field: 'offsets' };
     if (!ageOk(a.p_min_age) || !ageOk(a.p_max_age) || a.p_min_age > a.p_max_age) return st('invalid');
-    if (!pricesArgValid(a.p_prices, a.p_day_count) || !extrasArgValid(a.p_extras, false)) return st('invalid');
+    if (!pricesArgValid(a.p_prices, a.p_day_count)) return st('invalid');
+    if (!extrasArgValid(a.p_extras, false, true)) return { status: 'invalid', field: 'extras' };
     if (!descriptionOk(a.p_description) || !campTextIsValid(a.p_waiver_text, WAIVER_MAX)) return st('invalid');
     return {
       fields: {
@@ -865,7 +888,10 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
         early_days_before: a.p_early_days_before, min_age: a.p_min_age, max_age: a.p_max_age,
         description: normalizeCampText(a.p_description), waiver_text: normalizeCampText(a.p_waiver_text),
         prices: a.p_prices.map((p) => Object.fromEntries(PRICE_KEYS.map((k) => [k, p[k]]))).sort((x, y) => x.day_count - y.day_count),
-        extras: a.p_extras.map((e) => ({ name: normalizeName(e.name), price_cents: e.price_cents, per: e.per, not_for_all_days: e.not_for_all_days })),
+        extras: a.p_extras.map((e) => ({
+          name: normalizeName(e.name), price_cents: e.price_cents, per: e.per, not_for_all_days: e.not_for_all_days,
+          only_weekdays: [...(e.only_weekdays ?? [])].sort((x, y) => x - y),
+        })),
       },
     };
   }
@@ -903,6 +929,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
     camp_add_camp(db, a, ctx) {
       const v = readCampFields(a, false);
       if (!v) return st('invalid');
+      if (v.problem) return v.problem;
       if (v.days.some((d) => d < today())) return st('invalid'); // every day today or later
       const camp = insertRow(db.camps, { id: newId(), ...v.fields, closed_by_hand: false, public_code: newPublicCode(db) }, ctx);
       v.days.forEach((day) => db.camp_days.push({ id: newId(), camp_id: camp.id, day }));
@@ -916,6 +943,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       if (a.p_camp_id === null || a.p_expected_version === null) return st('invalid');
       const v = readCampFields(a, true);
       if (!v) return st('invalid');
+      if (v.problem) return v.problem;
       const camp = findCamp(db, a.p_camp_id);
       if (!camp) return st('not_found');
       if (camp.version !== a.p_expected_version) return st('stale');
@@ -927,6 +955,14 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       const currentExtras = extraRows(db, camp.id);
       if (v.extras.some((e) => e.id !== null && !currentExtras.some((c) => c.id === e.id))) return st('invalid'); // another camp's extra
       const removedExtras = currentExtras.filter((c) => !v.extras.some((e) => e.id === c.id));
+      // Removing camp days must not empty an extra's "only on" list (that would silently mean
+      // "every day"): an extra offered only on removed days → invalid (field 'extras').
+      const removedDates = new Set(current.filter((c) => !v.days.includes(c.day)).map((c) => c.day));
+      for (const e of v.extras) {
+        const was = currentExtras.find((c) => c.id === e.id);
+        const before = was?.only_on ?? [];
+        if (before.length > 0 && e.only_on.length === 0 && before.every((d) => removedDates.has(d))) return { status: 'invalid', field: 'extras' };
+      }
       const campers = db.camp_campers.filter((c) => c.camp_id === camp.id);
       const activeIds = new Set(campers.filter((c) => c.status === 'active').map((c) => c.id));
       // A removed day an ACTIVE camper picked → refused (v0.701), naming the oldest one.
@@ -950,8 +986,8 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       added.forEach((day) => db.camp_days.push({ id: newId(), camp_id: camp.id, day }));
       db.camp_extras = db.camp_extras.filter((e) => !removedExtraIds.has(e.id));
       for (const e of v.extras) {
-        if (e.id) Object.assign(db.camp_extras.find((x) => x.id === e.id), { name: e.name, price_cents: e.price_cents, per: e.per, not_for_all_days: e.not_for_all_days, sort: e.sort });
-        else db.camp_extras.push({ id: newId(), camp_id: camp.id, name: e.name, price_cents: e.price_cents, per: e.per, not_for_all_days: e.not_for_all_days, sort: e.sort });
+        if (e.id) Object.assign(db.camp_extras.find((x) => x.id === e.id), { name: e.name, price_cents: e.price_cents, per: e.per, not_for_all_days: e.not_for_all_days, only_on: e.only_on, sort: e.sort });
+        else db.camp_extras.push({ id: newId(), camp_id: camp.id, name: e.name, price_cents: e.price_cents, per: e.per, not_for_all_days: e.not_for_all_days, only_on: e.only_on, sort: e.sort });
       }
       db.camp_prices = db.camp_prices.filter((p) => p.camp_id !== camp.id); // the grid is replaced
       v.prices.forEach((p) => db.camp_prices.push({ id: newId(), camp_id: camp.id, ...p }));
@@ -1007,7 +1043,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
         closes_days_before: offsets.closesDaysBefore, early_days_before: offsets.earlyDaysBefore, min_age: camp.min_age, max_age: camp.max_age,
         description: camp.description, waiver_text: camp.waiver_text,
         prices: db.camp_prices.filter((p) => p.camp_id === camp.id).sort((x, y) => x.day_count - y.day_count).map((p) => Object.fromEntries(PRICE_KEYS.map((k) => [k, p[k]]))),
-        extras: extraRows(db, camp.id).map((e) => ({ name: e.name, price_cents: e.price_cents, per: e.per, not_for_all_days: e.not_for_all_days })),
+        extras: extraRows(db, camp.id).map((e) => ({ name: e.name, price_cents: e.price_cents, per: e.per, not_for_all_days: e.not_for_all_days, only_weekdays: onlyOnToWeekdays(e.only_on ?? []) })),
       }, ctx);
       return { status: 'ok', id: template.id, version: template.version };
     },
@@ -1324,7 +1360,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
         description: camp.description, waiver_text: camp.waiver_text, early_until: camp.early_until, signup_closes_on: camp.signup_closes_on,
         min_age: camp.min_age, max_age: camp.max_age,
         prices: db.camp_prices.filter((p) => p.camp_id === camp.id).sort((x, y) => x.day_count - y.day_count).map((p) => Object.fromEntries(PRICE_KEYS.map((k) => [k, p[k]]))),
-        extras: extraRows(db, camp.id).map((e) => ({ extra_id: e.id, name: e.name, price_cents: e.price_cents, per: e.per, not_for_all_days: e.not_for_all_days })),
+        extras: extraRows(db, camp.id).map((e) => ({ extra_id: e.id, name: e.name, price_cents: e.price_cents, per: e.per, not_for_all_days: e.not_for_all_days, only_on: e.only_on ?? [] })),
       },
     };
   }
@@ -1405,7 +1441,12 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
     // 8 the camp changed while the family filled the form
     const dayIds = new Set(days.map((d) => d.dayId));
     const extraIds = new Set(extras.map((e) => e.extraId));
-    const changed = flags.forceCampChanged
+    const dateOf = new Map(days.map((d) => [d.dayId, d.day]));
+    const notOfferedAnyMore = (c) => c.extras.some((pick) => {
+      const extra = extras.find((e) => e.extraId === pick.extraId);
+      return extra && pick.dayIds.some((id) => dateOf.has(id) && !extraOfferedOn(extra, dateOf.get(id)));
+    });
+    const changed = flags.forceCampChanged || children.some(notOfferedAnyMore)
       || children.some((c) => c.dayIds.some((id) => !dayIds.has(id)) || c.extras.some((e) => !extraIds.has(e.extraId)))
       || args.children.some((c) => c.age < camp.min_age || c.age > camp.max_age)
       || args.waiver_version.toLowerCase() !== md5(camp.waiver_text);

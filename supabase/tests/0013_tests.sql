@@ -134,6 +134,7 @@ declare
   v_cw uuid; v_cs uuid; v_cb uuid; v_ck uuid; v_ck_code text; v_cd uuid; v_cd_code text; v_cp uuid; v_cp_code text;
   v_cn uuid; v_cn_code text; v_cc uuid; v_cc_code text; v_co uuid; v_co_code text; v_ce uuid; v_ce_code text;
   v_cm uuid; v_cm_code text;
+  v_cz uuid; v_cz2 uuid; v_dz date[]; v_j2 jsonb;   -- T4d: extras only on some days
   -- days and extras of camp A
   v_a_d uuid[]; v_drop uuid; v_pick uuid; v_pizza uuid;
   -- sign-up references and campers
@@ -165,7 +166,8 @@ declare
     'camp_purge_old_signatures', 'camp_find_duplicate', 'camp_recheck_duplicate', 'camp_recheck_pointing_at',
     'camp_lock_camper', 'camp_lock_payment', 'camp_public_camp_answer', 'camp_public_signup_answer', 'camp_add_parts',
     'camp_tidy_extras', 'camp_tidy_prices', 'camp_setup_args_are_valid', 'camp_extra_rows',
-    'camp_camper_extras_are_ok', 'camp_extras_cents_now', 'camp_public_signup_core'];
+    'camp_camper_extras_are_ok', 'camp_extras_cents_now', 'camp_public_signup_core', 'camp_dates_are_sorted_set',
+    'camp_extras_before_write', 'camp_extras_only_on_ok', 'camp_only_on_dates'];
   v_tables text[] := array[
     'camps', 'camp_days', 'camp_prices', 'camp_extras', 'camp_templates', 'camp_signups', 'camp_campers',
     'camp_camper_days', 'camp_camper_extras', 'camp_payments', 'camp_public_attempts'];
@@ -291,7 +293,8 @@ begin
   execute $f$
     create function pg_temp.xtr_ids(p_camp uuid) returns jsonb language sql as $b$
       select coalesce(jsonb_agg(jsonb_build_object('id', e.id, 'name', e.name, 'price_cents', e.price_cents,
-                                                   'per', e.per, 'not_for_all_days', e.not_for_all_days) order by e.sort), '[]'::jsonb)
+                                                   'per', e.per, 'not_for_all_days', e.not_for_all_days,
+                                                   'only_on', to_jsonb(e.only_on)) order by e.sort), '[]'::jsonb)
         from public.camp_extras e where e.camp_id = p_camp;
     $b$;
   $f$;
@@ -916,6 +919,196 @@ begin
     raise exception 'TEST FAILED: T4c an extra of another camp was written directly';
   exception when check_violation then null;
   end;
+
+  -- T4d. Extras offered only on some camp days ("pizza on Wed and Fri",
+  --      only_on - decided at CP1, 2026-10-19). Camp Z: 5 days in a row,
+  --      the pizza (per day, $5, not for all-days campers) only on days 3
+  --      and 5 (sent in the wrong order: stored sorted)
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_dz := array(select v_today + 80 + x from generate_series(0, 4) as x);
+  v_j2 := jsonb_build_array(
+            '{"name": "Early drop-off", "price_cents": 1500, "per": "day", "not_for_all_days": false}'::jsonb,
+            jsonb_build_object('name', 'Pizza', 'price_cents', 500, 'per', 'day', 'not_for_all_days', true,
+                               'only_on', to_jsonb(array[v_dz[5], v_dz[3]])));
+  -- refused lists -> {"status":"invalid","field":"extras"}: a once extra
+  -- with dates, a date that isn't a camp day, a date twice, not a date, not
+  -- a list, an empty-string date
+  foreach v_j1 in array array[
+      jsonb_build_array(jsonb_build_object('name', 'Pizza', 'price_cents', 500, 'per', 'once', 'not_for_all_days', true,
+                                           'only_on', to_jsonb(array[v_dz[3]]))),
+      jsonb_build_array(jsonb_build_object('name', 'Pizza', 'price_cents', 500, 'per', 'day', 'not_for_all_days', true,
+                                           'only_on', to_jsonb(array[v_dz[3], v_today + 79]))),
+      jsonb_build_array(jsonb_build_object('name', 'Pizza', 'price_cents', 500, 'per', 'day', 'not_for_all_days', true,
+                                           'only_on', to_jsonb(array[v_dz[3], v_dz[3]]))),
+      jsonb_build_array(jsonb_build_object('name', 'Pizza', 'price_cents', 500, 'per', 'day', 'not_for_all_days', true,
+                                           'only_on', '["Wed"]'::jsonb)),
+      jsonb_build_array(jsonb_build_object('name', 'Pizza', 'price_cents', 500, 'per', 'day', 'not_for_all_days', true,
+                                           'only_on', to_jsonb(v_dz[3]))),
+      jsonb_build_array(jsonb_build_object('name', 'Pizza', 'price_cents', 500, 'per', 'day', 'not_for_all_days', true,
+                                           'only_on', '[""]'::jsonb))] loop
+    v_r := public.camp_add_camp('worcester', false, v_tag || ' Pizza bad', v_dz, '09:00', '15:00', v_today - 1, v_today + 20,
+                                v_today + 5, 5, 12, pg_temp.grid(5), v_j1, null, 'W');
+    if v_r is distinct from '{"status": "invalid", "field": "extras"}'::jsonb then
+      raise exception 'TEST FAILED: T4d only_on % answered %', v_j1 -> 0 -> 'only_on', v_r;
+    end if;
+  end loop;
+  -- an unknown key is still plain invalid
+  perform pg_temp.st('T4d unknown extra key', public.camp_add_camp('worcester', false, v_tag || ' Pizza bad', v_dz, '09:00', '15:00',
+           v_today - 1, v_today + 20, v_today + 5, 5, 12, pg_temp.grid(5),
+           '[{"name": "P", "price_cents": 500, "per": "day", "not_for_all_days": false, "only_weekdays": [3]}]', null, 'W'), 'invalid');
+  v_r := pg_temp.st('T4d add camp Z', public.camp_add_camp('worcester', false, v_tag || ' Pizza', v_dz, '09:00', '15:00',
+           v_today - 1, v_today + 20, v_today + 5, 5, 12, pg_temp.grid(5), v_j2, null, 'W'), 'ok');
+  v_cz := (v_r ->> 'id')::uuid;
+  if (select e.only_on from public.camp_extras e where e.camp_id = v_cz and e.name = 'Pizza') <> array[v_dz[3], v_dz[5]]
+     or (select e.only_on from public.camp_extras e where e.camp_id = v_cz and e.name = 'Early drop-off') <> '{}'::date[] then
+    raise exception 'TEST FAILED: T4d stored only_on lists';
+  end if;
+  v_r := public.camp_public_camp(v_r ->> 'public_code');
+  if v_r -> 'camp' -> 'extras' -> 1 -> 'only_on' <> to_jsonb(array[v_dz[3], v_dz[5]])
+     or v_r -> 'camp' -> 'extras' -> 0 -> 'only_on' <> '[]'::jsonb then
+    raise exception 'TEST FAILED: T4d the public answer''s only_on: %', v_r -> 'camp' -> 'extras';
+  end if;
+  -- the table rules refuse the same lists written directly
+  begin
+    update public.camp_extras set only_on = array[v_dz[5], v_dz[3]] where camp_id = v_cz and name = 'Pizza';
+    raise exception 'TEST FAILED: T4d an unsorted only_on was written directly';
+  exception when check_violation then null;
+  end;
+  begin
+    update public.camp_extras set only_on = array[v_today + 79] where camp_id = v_cz and name = 'Pizza';
+    raise exception 'TEST FAILED: T4d an only_on date that isn''t a camp day was written directly';
+  exception when check_violation then null;
+  end;
+  begin
+    update public.camp_extras set per = 'once' where camp_id = v_cz and name = 'Pizza';
+    raise exception 'TEST FAILED: T4d a once extra with only_on was written directly';
+  exception when check_violation then null;
+  end;
+  -- the family form: the pizza only on listed days that are the child's
+  -- days, charged per chosen day; never added by itself
+  perform set_config('request.jwt.claims', '', true);
+  v_key := v_tag || ' k-pizza';
+  v_r := pg_temp.st('T4d pizza on days 3 and 5', pg_temp.su(pg_temp.code(v_cz), v_key, jsonb_build_array(
+           pg_temp.ch('Pia', 'Pizza', 8, true, pg_temp.dys(v_cz, array[1, 3, 5]),
+                      jsonb_build_array(pg_temp.ex(pg_temp.xid(v_cz, 'Pizza'), pg_temp.dys(v_cz, array[3, 5]))))), 19500 + 1000), 'ok');
+  v_k1 := pg_temp.cmp(v_r ->> 'reference', 1);
+  if v_r -> 'children' -> 0 -> 'extras' <> '[{"name": "Pizza", "per": "day", "count": 2, "cents": 1000}]'::jsonb then
+    raise exception 'TEST FAILED: T4d the pizza must count only the chosen listed days: %', v_r;
+  end if;
+  perform pg_temp.st('T4d pizza on a day it isn''t offered (camp changed)', pg_temp.su(pg_temp.code(v_cz), v_key, jsonb_build_array(
+           pg_temp.ch('Pia', 'Two', 8, true, pg_temp.dys(v_cz, array[1, 3]),
+                      jsonb_build_array(pg_temp.ex(pg_temp.xid(v_cz, 'Pizza'), pg_temp.dys(v_cz, array[1]))))), 14000 + 500), 'camp_changed');
+  perform pg_temp.st('T4d pizza on a listed day the child doesn''t come', pg_temp.su(pg_temp.code(v_cz), v_key, jsonb_build_array(
+           pg_temp.ch('Pia', 'Three', 8, true, pg_temp.dys(v_cz, array[1, 3]),
+                      jsonb_build_array(pg_temp.ex(pg_temp.xid(v_cz, 'Pizza'), pg_temp.dys(v_cz, array[5]))))), 14000 + 500), 'invalid');
+  perform pg_temp.st('T4d pizza for an all-days child', pg_temp.su(pg_temp.code(v_cz), v_key, jsonb_build_array(
+           pg_temp.ch('All', 'Days', 8, true, pg_temp.dys(v_cz, array[1, 2, 3, 4, 5]),
+                      jsonb_build_array(pg_temp.ex(pg_temp.xid(v_cz, 'Pizza'), pg_temp.dys(v_cz, array[3, 5]))))), 27500 + 1000), 'invalid');
+  v_r := pg_temp.st('T4d an all-days child without the pizza', pg_temp.su(pg_temp.code(v_cz), v_key, jsonb_build_array(
+           pg_temp.ch('All', 'Days', 8, true, pg_temp.dys(v_cz, array[1, 2, 3, 4, 5]), '[]'::jsonb)), 27500), 'ok');
+  v_r := pg_temp.st('T4d day 3 without the pizza (never added by itself)', pg_temp.su(pg_temp.code(v_cz), v_key, jsonb_build_array(
+           pg_temp.ch('Noe', 'Pizza', 8, true, pg_temp.dys(v_cz, array[3]), '[]'::jsonb)), 7500), 'ok');
+  v_k2 := pg_temp.cmp(v_r ->> 'reference', 1);
+  if exists (select 1 from public.camp_camper_extras x where x.camper_id = v_k2) then
+    raise exception 'TEST FAILED: T4d an extra was added by itself';
+  end if;
+  -- "Pizza party today: N" can be worked out from the roster: active
+  -- campers with the pizza on that day + active all-days campers (the
+  -- pizza is part of the all-week price): day 3 -> Pia + All Days = 2
+  select count(*) into v_n
+    from public.camp_roster r
+   where r.camp_id = v_cz and r.status = 'active'
+     and (exists (select 1 from jsonb_array_elements(r.extras) as x
+                   where (x ->> 'extra_id')::uuid = pg_temp.xid(v_cz, 'Pizza') and (x ->> 'day')::date = v_dz[3])
+          or jsonb_array_length(r.days) = cardinality(v_dz));
+  if v_n <> 2 then raise exception 'TEST FAILED: T4d pizza count for day 3 is %, expected 2', v_n; end if;
+  -- Edit details: the same rule ('invalid' on the staff side)
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  perform pg_temp.st('T4d edit: pizza on a day it isn''t offered', pg_temp.ud(v_k1, 'Pia', 'Pizza', 8, true, pg_temp.dys(v_cz, array[1, 3, 5]),
+           jsonb_build_array(pg_temp.ex(pg_temp.xid(v_cz, 'Pizza'), pg_temp.dys(v_cz, array[1, 3]))), '5085550100'), 'invalid');
+  v_r := pg_temp.st('T4d edit: pizza on day 3 only', pg_temp.ud(v_k1, 'Pia', 'Pizza', 8, true, pg_temp.dys(v_cz, array[1, 3, 5]),
+           jsonb_build_array(pg_temp.ex(pg_temp.xid(v_cz, 'Pizza'), pg_temp.dys(v_cz, array[3]))), '5085550100'), 'ok');
+  if (v_r ->> 'total_cents')::integer <> 19500 + 500 then raise exception 'TEST FAILED: T4d edit total %', v_r; end if;
+  begin
+    insert into public.camp_camper_extras (camper_id, extra_id, day_id, price_cents)
+    values (v_k1, pg_temp.xid(v_cz, 'Pizza'), pg_temp.dy(v_cz, 1), 500);
+    raise exception 'TEST FAILED: T4d the pizza was written directly on a day it isn''t offered';
+  exception when check_violation then null;
+  end;
+  -- Edit camp: a removed day leaves the lists; a list whose days would
+  -- ALL go is refused; camp Z2 (no campers): 3 days, pizza only on day 3
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_dates := array[v_today + 85, v_today + 86, v_today + 87];
+  v_r := pg_temp.st('T4d add camp Z2', public.camp_add_camp('worcester', false, v_tag || ' Pizza 2', v_dates, '09:00', '15:00',
+           v_today - 1, v_today + 20, v_today + 5, 5, 12, pg_temp.grid(3),
+           jsonb_build_array(jsonb_build_object('name', 'Pizza', 'price_cents', 500, 'per', 'day', 'not_for_all_days', false,
+                                                'only_on', to_jsonb(array[v_dates[2], v_dates[3]]))), null, 'W'), 'ok');
+  v_cz2 := (v_r ->> 'id')::uuid;
+  select c.version into v_v from public.camps c where c.id = v_cz2;
+  v_r := public.camp_update_camp(v_cz2, v_v, 'worcester', false, v_tag || ' Pizza 2', array[v_dates[1]], '09:00', '15:00',
+           v_today - 1, v_today + 20, v_today + 5, 5, 12, pg_temp.grid(1), pg_temp.xtr_ids(v_cz2), null, 'W');
+  if v_r is distinct from '{"status": "invalid", "field": "extras"}'::jsonb then
+    raise exception 'TEST FAILED: T4d removing every day of an only_on list answered %', v_r;
+  end if;
+  v_r := public.camp_update_camp(v_cz2, v_v, 'worcester', false, v_tag || ' Pizza 2', v_dates, '09:00', '15:00',
+           v_today - 1, v_today + 20, v_today + 5, 5, 12, pg_temp.grid(3),
+           jsonb_set(pg_temp.xtr_ids(v_cz2), '{0,only_on}', to_jsonb(array[v_today + 99])), null, 'W');
+  if v_r is distinct from '{"status": "invalid", "field": "extras"}'::jsonb then
+    raise exception 'TEST FAILED: T4d Edit camp with a date that isn''t a camp day answered %', v_r;
+  end if;
+  v_r := pg_temp.st('T4d remove day 3 (it leaves the pizza''s list)', public.camp_update_camp(v_cz2, v_v, 'worcester', false,
+           v_tag || ' Pizza 2', array[v_dates[1], v_dates[2]], '09:00', '15:00', v_today - 1, v_today + 20, v_today + 5, 5, 12,
+           pg_temp.grid(2), pg_temp.xtr_ids(v_cz2), null, 'W'), 'ok');
+  if (select e.only_on from public.camp_extras e where e.camp_id = v_cz2) <> array[v_dates[2]] then
+    raise exception 'TEST FAILED: T4d the removed day must leave only_on: %', (select e.only_on from public.camp_extras e where e.camp_id = v_cz2);
+  end if;
+  -- Templates keep weekdays: Save as template turns days 3 and 5 into
+  -- their ISO weekdays; using the template on a new week maps them back
+  v_r := pg_temp.st('T4d save template', public.camp_save_template(v_cz, v_tag || ' Pizza week'), 'ok');
+  v_tpl := (v_r ->> 'id')::uuid;
+  select t.extras into v_j1 from public.camp_templates t where t.id = v_tpl;
+  if v_j1 -> 1 -> 'only_weekdays' <> to_jsonb(array(select distinct extract(isodow from x)::integer
+                                                       from unnest(array[v_dz[3], v_dz[5]]) as x order by 1))
+     or v_j1 -> 0 -> 'only_weekdays' <> '[]'::jsonb or v_j1 -> 1 ? 'only_on' then
+    raise exception 'TEST FAILED: T4d template weekdays: %', v_j1;
+  end if;
+  -- (the app's "Use template": the new camp's days with those weekdays)
+  v_dates := array(select v_today + 100 + x from generate_series(0, 6) as x);
+  v_j2 := jsonb_build_array(
+            (v_j1 -> 0) - 'only_weekdays',
+            ((v_j1 -> 1) - 'only_weekdays')
+              || jsonb_build_object('only_on', to_jsonb(array(
+                   select x from unnest(v_dates) as x
+                    where extract(isodow from x)::integer in (select (w #>> '{}')::integer
+                                                                from jsonb_array_elements(v_j1 -> 1 -> 'only_weekdays') as w)
+                    order by x))));
+  v_r := pg_temp.st('T4d a camp from the template', public.camp_add_camp('worcester', false, v_tag || ' Pizza again', v_dates,
+           '09:00', '15:00', v_today - 1, v_today + 20, v_today + 5, 5, 12, pg_temp.grid(7), v_j2, null, 'W'), 'ok');
+  if (select array_agg(distinct extract(isodow from x)::integer order by extract(isodow from x)::integer)
+        from public.camp_extras e, unnest(e.only_on) as x
+       where e.camp_id = (v_r ->> 'id')::uuid and e.name = 'Pizza')
+     <> array(select (w #>> '{}')::integer from jsonb_array_elements(v_j1 -> 1 -> 'only_weekdays') as w)
+     or (select cardinality(e.only_on) from public.camp_extras e where e.camp_id = (v_r ->> 'id')::uuid and e.name = 'Pizza') <> 2 then
+    raise exception 'TEST FAILED: T4d the template''s weekdays didn''t come back as the same weekdays';
+  end if;
+  -- Edit template: weekdays 1-7 only, none for a once extra, no dates
+  select t.version into v_tplv from public.camp_templates t where t.id = v_tpl;
+  foreach v_j2 in array array[
+      '[{"name": "P", "price_cents": 500, "per": "day", "not_for_all_days": false, "only_weekdays": [8]}]'::jsonb,
+      '[{"name": "P", "price_cents": 500, "per": "day", "not_for_all_days": false, "only_weekdays": [3, 3]}]'::jsonb,
+      '[{"name": "P", "price_cents": 500, "per": "day", "not_for_all_days": false, "only_weekdays": ["3"]}]'::jsonb,
+      '[{"name": "P", "price_cents": 500, "per": "once", "not_for_all_days": false, "only_weekdays": [3]}]'::jsonb,
+      '[{"name": "P", "price_cents": 500, "per": "day", "not_for_all_days": false, "only_on": []}]'::jsonb] loop
+    perform pg_temp.st('T4d bad template extras ' || v_j2::text, public.camp_update_template(v_tpl, v_tplv, v_tag || ' Pizza week',
+             'worcester', false, 5, '09:00', '15:00', 31, 10, 25, 5, 12, pg_temp.grid(5), v_j2, null, 'W'), 'invalid');
+  end loop;
+  perform pg_temp.st('T4d template weekdays sorted', public.camp_update_template(v_tpl, v_tplv, v_tag || ' Pizza week',
+           'worcester', false, 5, '09:00', '15:00', 31, 10, 25, 5, 12, pg_temp.grid(5),
+           '[{"name": "P", "price_cents": 500, "per": "day", "not_for_all_days": false, "only_weekdays": [5, 1]}]', null, 'W'), 'ok');
+  if (select t.extras -> 0 -> 'only_weekdays' from public.camp_templates t where t.id = v_tpl) <> '[1, 5]'::jsonb then
+    raise exception 'TEST FAILED: T4d template weekdays must be stored sorted';
+  end if;
+  v_dates := array(select v_today + 30 + x from generate_series(0, 4) as x);   -- camp A's days again (used below)
 
   -- ===================================================================
   -- T5. Snapshots, the re-price rule, Owes, overpaid
@@ -2028,7 +2221,9 @@ begin
                     and t.min_age = 5 and t.max_age = 12 and t.description = 'Bring a lunch.'
                     and t.waiver_text = 'I agree to the camp rules.'
                     and jsonb_array_length(t.prices) = 5 and (t.prices -> 2 ->> 'member_early_cents')::integer = 20000
-                    and t.extras = jsonb_set(pg_temp.xtr(), '{1,price_cents}', '1000')) or v_tplv <> 1 then
+                    and t.extras = (select jsonb_agg(x.value || '{"only_weekdays": []}'::jsonb order by x.n)
+                                      from jsonb_array_elements(jsonb_set(pg_temp.xtr(), '{1,price_cents}', '1000'))
+                                           with ordinality as x(value, n))) or v_tplv <> 1 then
     raise exception 'TEST FAILED: T14a the saved template is wrong: %', (select to_jsonb(t) from public.camp_templates t where t.id = v_tpl);
   end if;
   perform pg_temp.st('T14a the same name again', public.camp_save_template(v_cr, upper(v_tag) || ' VACATION WEEK'), 'duplicate_name');

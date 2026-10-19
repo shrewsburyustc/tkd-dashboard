@@ -337,6 +337,15 @@
   margin-top: var(--space-8);
 }
 
+/* "Only on these days" under a per-day extra */
+.cp-only {
+  margin-top: var(--space-8);
+}
+
+.cp-only .cp-only-chips {
+  margin: var(--space-4) 0 0;
+}
+
 .cp-add-extra {
   margin-top: var(--space-12);
 }

@@ -29,6 +29,7 @@ import {
   isIsoDate,
   normalizeCampText,
   validateAges,
+  weekdaysToOnlyOn,
 } from '../../../lib/camps/campRules.js';
 import { nameProblem, normalizeName } from '../../../lib/testing/names.js';
 import * as T from '../text.js';
@@ -64,7 +65,9 @@ function bankFrom(prices) {
   }
   return bank;
 }
-function extrasFrom(extras, keepIds) {
+// follow: Add camp from a template — the template's weekdays (onlyWeekdays) become the camp's
+// matching dates (onlyOn) and keep following the picked days until the admin changes the chips.
+function extrasFrom(extras, keepIds, follow = false) {
   return [...(extras ?? [])]
     .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
     .map((e) => ({
@@ -74,7 +77,16 @@ function extrasFrom(extras, keepIds) {
       price: centsToInputText(e.priceCents),
       per: e.per,
       notForAllDays: Boolean(e.notForAllDays),
+      onlyOn: [...(e.onlyOn ?? [])].sort(), // camp dates ([] = every day)
+      onlyWeekdays: [...(e.onlyWeekdays ?? [])].sort((a, b) => a - b), // template: ISO weekdays 1–7
+      followWeekdays: follow && (e.onlyWeekdays ?? []).length > 0,
     }));
+}
+
+// A template's weekdays → this camp's dates, for extras that still follow them.
+export function withExtraDays(values) {
+  if (!values.extras.some((e) => e.followWeekdays)) return values;
+  return { ...values, extras: values.extras.map((e) => (e.followWeekdays ? { ...e, onlyOn: weekdaysToOnlyOn(e.onlyWeekdays, values.days) } : e)) };
 }
 
 // ----- Starting values -----
@@ -119,7 +131,7 @@ export function applyTemplate(values, template, today) {
     startTime: hhmm(template.startTime),
     endTime: hhmm(template.endTime),
     bank: bankFrom(template.prices),
-    extras: extrasFrom(template.extras, false),
+    extras: extrasFrom(template.extras, false, true),
     minAge: String(template.minAge),
     maxAge: String(template.maxAge),
     description: template.description ?? '',
@@ -127,7 +139,7 @@ export function applyTemplate(values, template, today) {
     datesEdited: false,
     template, // kept for the dates (offsets) while days are picked
   };
-  return withAutoDates(next, today);
+  return withExtraDays(withAutoDates(next, today));
 }
 
 // Back to Blank camp: everything except name, school and days goes back to empty.
@@ -329,6 +341,7 @@ export function checkForm(values, ctx) {
   const extras = [];
   let noPrice = 0;
   let noName = 0;
+  let noDays = 0;
   const seen = new Map();
   values.extras.forEach((extra, index) => {
     const issue = nameProblem(extra.name);
@@ -346,6 +359,18 @@ export function checkForm(values, ctx) {
       errors.extras[`${extra.key}.price`] = T.priceProblemText(parsed.problem);
     }
     const out = { name: clean, priceCents: parsed.cents ?? null, per: extra.per, notForAllDays: Boolean(extra.notForAllDays) };
+    // "Only on these days" (per-day extras only): camp dates, or weekdays on a template.
+    if (isTemplate) out.onlyWeekdays = extra.per === 'day' ? [...extra.onlyWeekdays].sort((a, b) => a - b) : [];
+    else {
+      const kept = extra.per === 'day' ? extra.onlyOn.filter((d) => isoDays.includes(d)).sort() : [];
+      // Days were chosen but none of them is a camp day any more: refuse rather than silently
+      // turning it into "every day".
+      if (extra.per === 'day' && extra.onlyOn.length > 0 && kept.length === 0 && isoDays.length > 0) {
+        noDays += 1;
+        errors.extras[`${extra.key}.days`] = T.extraNoDaysLeft(clean);
+      }
+      out.onlyOn = kept;
+    }
     // Edit camp keeps each existing extra's id, so it is updated in place (§1.14 camp_update_camp).
     if (mode === 'edit') out.extraId = extra.id ?? null;
     extras.push(out);
@@ -356,10 +381,18 @@ export function checkForm(values, ctx) {
   if (noPrice > 0) extrasSummary = T.extrasNoPrice(noPrice);
   else if (noName > 0) extrasSummary = T.extrasNoName(noName);
   else if (sameName) extrasSummary = T.EXTRAS_SAME_NAME;
+  else if (noDays > 0) extrasSummary = T.extraNoDaysSummary(noDays);
   else if (server.extraError) extrasSummary = server.extraError;
   else if (extras.length === 0) extrasSummary = T.NO_EXTRAS;
-  else extrasSummary = extras.map((e) => T.extraSummaryPart(e.name, e.priceCents, e.per)).join(' · ');
-  sections[4] = { problem: noPrice > 0 || noName > 0 || sameName || Boolean(server.extraError) || values.extras.length > MAX_EXTRAS, summary: extrasSummary };
+  else {
+    extrasSummary = extras
+      .map((e) => {
+        const labels = isTemplate ? (e.onlyWeekdays ?? []).map((n) => T.ISO_WEEKDAYS[n - 1]) : T.shortDayLabels(e.onlyOn ?? []);
+        return labels.length > 0 ? T.extraOnlySummary(e.name, e.priceCents, labels) : T.extraSummaryPart(e.name, e.priceCents, e.per);
+      })
+      .join(' · ');
+  }
+  sections[4] = { problem: noPrice > 0 || noName > 0 || noDays > 0 || sameName || Boolean(server.extraError) || values.extras.length > MAX_EXTRAS, summary: extrasSummary };
 
   // ----- 5. Family form: ages, description, waiver -----
   const minAge = ageNumber(values.minAge);

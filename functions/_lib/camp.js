@@ -160,8 +160,17 @@ function publicCampObject(camp) {
     prices: pickList(camp.prices, [
       'day_count', 'member_early_cents', 'member_regular_cents', 'nonmember_early_cents', 'nonmember_regular_cents',
     ]),
-    extras: pickList(camp.extras, ['extra_id', 'name', 'price_cents', 'per', 'not_for_all_days']),
+    extras: pickList(camp.extras, ['extra_id', 'name', 'price_cents', 'per', 'not_for_all_days', 'only_on']).map(checkOnlyOn),
   };
+}
+
+// only_on (CP1 decision 2026-10-19): the camp days an extra is offered on, as 'YYYY-MM-DD' texts
+// (empty = every day). Anything but a list of such dates is an answer we don't expect → unavailable.
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+function checkOnlyOn(extra) {
+  if (extra.only_on === undefined) return extra;
+  if (!Array.isArray(extra.only_on) || !extra.only_on.every((d) => typeof d === 'string' && ISO_DATE.test(d))) throw new Unexpected();
+  return extra;
 }
 
 const CAMP_STATES = ['open', 'not_open_yet', 'closed', 'finished'];

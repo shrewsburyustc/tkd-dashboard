@@ -251,54 +251,60 @@ $$;
 
 revoke execute on function public.camp_prices_arg_is_valid(jsonb, integer) from public, anon, authenticated, service_role;
 
--- 1g. camp_extras_arg_is_valid(p_extras, p_with_ids) - the extras list:
+-- 1g. camp_extras_arg_is_valid(p_extras, p_kind) - the extras list:
 --   [{"name": "Early drop-off, 7:30-9:00 AM", "price_cents": 1500,
---     "per": "day", "not_for_all_days": false}, ...]
--- 0 to 10 objects with exactly these 4 keys; when p_with_ids is true
--- (Edit camp) each may also carry "id": "<uuid>" or null (an existing
--- extra). Names: one line of 1 to 60 characters, no two the same ignoring
--- capitals and extra spaces; ids never repeated. The position in the list
--- is the extra's order on the form (there is no sort key).
-create or replace function public.camp_extras_arg_is_valid(p_extras jsonb, p_with_ids boolean)
+--     "per": "day", "not_for_all_days": false, "only_on": [...]}, ...]
+-- 0 to 10 objects. Always these 4 keys: name (one line of 1 to 60
+-- characters, no two the same ignoring capitals and extra spaces),
+-- price_cents (whole dollars $0-$1,000), per ('once' or 'day') and
+-- not_for_all_days (true / false). Optional keys, by p_kind:
+--   'camp'       (Add camp)  "only_on": the camp days it is offered on -
+--                its CONTENT is checked separately by camp_extras_only_on_ok
+--                (19e), which answers {status:'invalid', field:'extras'}
+--   'camp_edit'  (Edit camp) the same, plus "id": "<uuid>" or null (an
+--                existing extra; ids never repeated)
+--   'template'   (templates) "only_weekdays": the weekdays it is offered
+--                on, ISO numbers 1 = Mon ... 7 = Sun, none twice; only for
+--                a per-day extra; [] or missing = every day
+-- Any other key -> false. The position in the list is the extra's order on
+-- the form (there is no sort key).
+create or replace function public.camp_extras_arg_is_valid(p_extras jsonb, p_kind text)
 returns boolean
 language plpgsql
 immutable
 set search_path = ''
 as $$
 declare
-  v_item  jsonb;
-  v_names text[] := '{}';
-  v_ids   text[] := '{}';
-  v_name  text;
-  v_keys  integer;
+  v_item    jsonb;
+  v_names   text[] := '{}';
+  v_ids     text[] := '{}';
+  v_name    text;
+  v_allowed text[];
+  v_w       jsonb;
+  v_days    integer[];
 begin
-  if p_extras is null or p_with_ids is null
+  if p_extras is null or p_kind is null or p_kind not in ('camp', 'camp_edit', 'template')
      or jsonb_typeof(p_extras) <> 'array'
      or jsonb_array_length(p_extras) > 10 then
     return false;
   end if;
+  v_allowed := array['name', 'price_cents', 'per', 'not_for_all_days']
+               || case p_kind when 'camp' then array['only_on']
+                              when 'camp_edit' then array['only_on', 'id']
+                              else array['only_weekdays'] end;
   for v_item in select x.value from jsonb_array_elements(p_extras) as x(value) loop
-    if jsonb_typeof(v_item) <> 'object' then
+    if jsonb_typeof(v_item) <> 'object'
+       or not (v_item ?& array['name', 'price_cents', 'per', 'not_for_all_days'])
+       or exists (select 1 from jsonb_object_keys(v_item) as k where k <> all (v_allowed)) then
       return false;
     end if;
-    v_keys := (select count(*) from jsonb_object_keys(v_item));
-    if not (v_item ?& array['name', 'price_cents', 'per', 'not_for_all_days']) then
-      return false;
-    end if;
-    if p_with_ids and v_item ? 'id' then
-      if v_keys <> 5 then
+    if v_item ? 'id' and jsonb_typeof(v_item -> 'id') <> 'null' then
+      if jsonb_typeof(v_item -> 'id') <> 'string'
+         or not public.camp_uuid_text_is_valid(v_item ->> 'id')
+         or lower(v_item ->> 'id') = any (v_ids) then
         return false;
       end if;
-      if jsonb_typeof(v_item -> 'id') <> 'null' then
-        if jsonb_typeof(v_item -> 'id') <> 'string'
-           or not public.camp_uuid_text_is_valid(v_item ->> 'id')
-           or lower(v_item ->> 'id') = any (v_ids) then
-          return false;
-        end if;
-        v_ids := v_ids || lower(v_item ->> 'id');
-      end if;
-    elsif v_keys <> 4 then
-      return false;
+      v_ids := v_ids || lower(v_item ->> 'id');
     end if;
     if jsonb_typeof(v_item -> 'name') is distinct from 'string'
        or not public.testing_line_is_valid(v_item ->> 'name', 60)
@@ -312,6 +318,23 @@ begin
     if not public.testing_cents_is_valid((v_item ->> 'price_cents')::integer) then
       return false;
     end if;
+    if v_item ? 'only_weekdays' then
+      if jsonb_typeof(v_item -> 'only_weekdays') <> 'array'
+         or jsonb_array_length(v_item -> 'only_weekdays') > 7
+         or (v_item ->> 'per' = 'once' and jsonb_array_length(v_item -> 'only_weekdays') > 0) then
+        return false;
+      end if;
+      v_days := '{}';
+      for v_w in select y.value from jsonb_array_elements(v_item -> 'only_weekdays') as y(value) loop
+        if not public.camp_int_text_is_valid(v_w, 1, 7) then
+          return false;
+        end if;
+        if (v_w::text)::integer = any (v_days) then
+          return false;   -- a weekday twice
+        end if;
+        v_days := v_days || (v_w::text)::integer;
+      end loop;
+    end if;
     v_name := lower(public.testing_normalize_name(v_item ->> 'name'));
     if v_name = any (v_names) then
       return false;   -- two extras with the same name
@@ -322,7 +345,27 @@ begin
 end;
 $$;
 
-revoke execute on function public.camp_extras_arg_is_valid(jsonb, boolean) from public, anon, authenticated, service_role;
+revoke execute on function public.camp_extras_arg_is_valid(jsonb, text) from public, anon, authenticated, service_role;
+
+-- 1g2. camp_dates_are_sorted_set(p_dates) - a camp extra's only_on list
+-- as stored: at most 10 dates, no empty entry, each date only once, in
+-- date order. (The rule that each date is one of the camp's days needs
+-- the days table, so the trigger in section 13 checks that.)
+create or replace function public.camp_dates_are_sorted_set(p_dates date[])
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $$
+  select coalesce(
+           p_dates is not null
+           and coalesce(array_ndims(p_dates), 1) = 1
+           and cardinality(p_dates) <= 10
+           and p_dates = array(select distinct x.d from unnest(p_dates) as x(d) where x.d is not null order by x.d),
+         false);
+$$;
+
+revoke execute on function public.camp_dates_are_sorted_set(date[]) from public, anon, authenticated, service_role;
 
 -- 1h. camp_uuid_list_is_valid(p_list, p_min, p_max) - (internal to 1i and
 -- 1j) a jsonb list of p_min to p_max uuid strings, none repeated.
@@ -432,7 +475,8 @@ revoke execute on function public.camp_children_arg_is_valid(jsonb) from public,
 
 -- 1k. camp_template_setup_is_valid(p_day_count, p_prices, p_extras) - a
 -- template's number of days (1 to 10), price grid (1f, one row per day
--- count) and extras (1g, without ids). Used by the templates table rule.
+-- count) and extras (1g, kind 'template': weekdays instead of dates, no
+-- ids). Used by the templates table rule.
 create or replace function public.camp_template_setup_is_valid(p_day_count integer, p_prices jsonb, p_extras jsonb)
 returns boolean
 language sql
@@ -441,7 +485,7 @@ set search_path = ''
 as $$
   select coalesce(p_day_count between 1 and 10
                   and public.camp_prices_arg_is_valid(p_prices, p_day_count)
-                  and public.camp_extras_arg_is_valid(p_extras, false),
+                  and public.camp_extras_arg_is_valid(p_extras, 'template'),
                   false);
 $$;
 
@@ -598,6 +642,11 @@ comment on table public.camp_prices is
 --     for each day it is used)
 --   * not_for_all_days: not offered to a child who comes every day (e.g.
 --     the pizza party is part of the all-week price)
+--   * only_on: the camp days (dates) a per-day extra is offered on, e.g.
+--     "pizza on Wed and Fri"; empty = every camp day. A once extra always
+--     has it empty. Sorted, no date twice, each one of the camp's days
+--     (the trigger in section 13 checks that last rule). Families choose
+--     it - it is never added by itself.
 --   * sort: the order on the form (0, 1, 2 ...)
 --   * names unique per camp ignoring capitals (the index below)
 -- ---------------------------------------------------------------------
@@ -608,6 +657,7 @@ create table if not exists public.camp_extras (
   price_cents      integer  not null,
   per              text     not null,
   not_for_all_days boolean  not null default false,
+  only_on          date[]   not null default '{}',
   sort             smallint not null,
 
   constraint camp_extras_pkey primary key (id),
@@ -617,7 +667,9 @@ create table if not exists public.camp_extras (
     check (coalesce(public.testing_line_is_valid(name, 60) and name = public.testing_normalize_name(name), false)),
   constraint camp_extras_price_check check (public.testing_cents_is_valid(price_cents)),
   constraint camp_extras_per_check check (per in ('once', 'day')),
-  constraint camp_extras_sort_check check (sort between 0 and 9)
+  constraint camp_extras_sort_check check (sort between 0 and 9),
+  constraint camp_extras_only_on_check
+    check (public.camp_dates_are_sorted_set(only_on) and (per = 'day' or cardinality(only_on) = 0))
 );
 
 create unique index if not exists camp_extras_camp_lower_name_idx on public.camp_extras (camp_id, lower(name));
@@ -636,7 +688,9 @@ comment on table public.camp_extras is
 --     the form opens no later than it closes, and the early price ends no
 --     later than the closing date (named rule camp_templates_offsets_check;
 --     the functions answer {status:'invalid', field:'offsets'} first)
---   * prices / extras: the grid and the extras as checked jsonb (1k)
+--   * prices / extras: the grid and the extras as checked jsonb (1k);
+--     a template extra keeps "only_weekdays" (1 = Mon ... 7 = Sun) instead
+--     of dates - using a template maps them to the new camp's days
 -- ---------------------------------------------------------------------
 create table if not exists public.camp_templates (
   id                 uuid        not null default gen_random_uuid(),
@@ -1109,9 +1163,9 @@ $$;
 
 revoke execute on function public.camp_templates_before_write() from public, anon, authenticated, service_role;
 
--- 13c. camp_parts_before_write() - BEFORE UPDATE on camp_days,
--- camp_prices and camp_extras: a row never moves to another camp (and its
--- id never changes). Everything else may be updated by Edit camp.
+-- 13c. camp_parts_before_write() - BEFORE UPDATE on camp_days and
+-- camp_prices: a row never moves to another camp (and its id never
+-- changes). Everything else may be updated by Edit camp.
 create or replace function public.camp_parts_before_write()
 returns trigger
 language plpgsql
@@ -1129,6 +1183,34 @@ end;
 $$;
 
 revoke execute on function public.camp_parts_before_write() from public, anon, authenticated, service_role;
+
+-- 13c2. camp_extras_before_write() - BEFORE INSERT OR UPDATE on extras:
+-- an extra never moves to another camp, and every date in only_on is one
+-- of its camp's days.
+create or replace function public.camp_extras_before_write()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if tg_op = 'UPDATE' and (new.id is distinct from old.id or new.camp_id is distinct from old.camp_id) then
+    raise exception using
+      errcode    = '23514',
+      constraint = 'camp_extras_immutable',
+      message    = 'a camp''s extra can''t move to another camp';
+  end if;
+  if exists (select 1 from unnest(new.only_on) as x(d)
+              where not exists (select 1 from public.camp_days d where d.camp_id = new.camp_id and d.day = x.d)) then
+    raise exception using
+      errcode    = '23514',
+      constraint = 'camp_extras_only_on_days',
+      message    = 'an extra can only be offered on the camp''s own days';
+  end if;
+  return new;
+end;
+$$;
+
+revoke execute on function public.camp_extras_before_write() from public, anon, authenticated, service_role;
 
 -- 13d. camp_signups_before_write() - BEFORE INSERT OR UPDATE on sign-ups
 --   insert: bookkeeping; signed_up_on = the school date of created_at
@@ -1299,8 +1381,9 @@ revoke execute on function public.camp_camper_days_before_write() from public, a
 -- 13g. camp_camper_extras_before_write() - BEFORE INSERT OR UPDATE
 --   insert: the extra is one of the camper's camp's extras; a 'once'
 --           extra has no day; a 'day' extra has a day that is one of the
---           camper's own days; a not-for-all-days extra is refused for a
---           camper who comes every day
+--           camper's own days (and, when the extra is offered only on
+--           some days, one of those); a not-for-all-days extra is refused
+--           for a camper who comes every day
 --   update: only the price may change (Edit details re-pricing)
 create or replace function public.camp_camper_extras_before_write()
 returns trigger
@@ -1311,6 +1394,7 @@ declare
   v_per      text;
   v_not_all  boolean;
   v_camp_id  uuid;
+  v_only_on  date[];
 begin
   if tg_op = 'UPDATE' then
     if new.id is distinct from old.id
@@ -1325,7 +1409,7 @@ begin
     return new;
   end if;
 
-  select e.per, e.not_for_all_days, c.camp_id into v_per, v_not_all, v_camp_id
+  select e.per, e.not_for_all_days, c.camp_id, e.only_on into v_per, v_not_all, v_camp_id, v_only_on
     from public.camp_campers c
     join public.camp_extras e on e.camp_id = c.camp_id
    where c.id = new.camper_id and e.id = new.extra_id;
@@ -1334,6 +1418,8 @@ begin
      or (v_per = 'day' and (new.day_id is null
                             or not exists (select 1 from public.camp_camper_days cd
                                             where cd.camper_id = new.camper_id and cd.day_id = new.day_id)))
+     or (v_per = 'day' and cardinality(v_only_on) > 0
+         and not exists (select 1 from public.camp_days d where d.id = new.day_id and d.day = any (v_only_on)))
      or (v_not_all and (select count(*) from public.camp_camper_days cd where cd.camper_id = new.camper_id)
                        = (select count(*) from public.camp_days d where d.camp_id = v_camp_id)) then
     raise exception using
@@ -1483,8 +1569,8 @@ create trigger camp_prices_before_write
 
 drop trigger if exists camp_extras_before_write on public.camp_extras;
 create trigger camp_extras_before_write
-  before update on public.camp_extras
-  for each row execute function public.camp_parts_before_write();
+  before insert or update on public.camp_extras
+  for each row execute function public.camp_extras_before_write();
 
 drop trigger if exists camp_signups_before_write on public.camp_signups;
 create trigger camp_signups_before_write
@@ -1858,7 +1944,7 @@ grant select (id, camp_id, day) on public.camp_days to authenticated;
 grant select (id, camp_id, day_count, member_early_cents, member_regular_cents, nonmember_early_cents,
               nonmember_regular_cents)
   on public.camp_prices to authenticated;
-grant select (id, camp_id, name, price_cents, per, not_for_all_days, sort) on public.camp_extras to authenticated;
+grant select (id, camp_id, name, price_cents, per, not_for_all_days, only_on, sort) on public.camp_extras to authenticated;
 grant select (id, name, location_code, both_schools, day_count, start_time, end_time, opens_days_before,
               closes_days_before, early_days_before, min_age, max_age, description, waiver_text, prices, extras,
               version, created_at, created_by_name, updated_at, updated_by_name)
@@ -2179,7 +2265,8 @@ as $$
                                              from public.camp_prices p where p.camp_id = c.id), '[]'::jsonb),
              'extras',           coalesce((select jsonb_agg(jsonb_build_object(
                                                      'extra_id', e.id, 'name', e.name, 'price_cents', e.price_cents,
-                                                     'per', e.per, 'not_for_all_days', e.not_for_all_days)
+                                                     'per', e.per, 'not_for_all_days', e.not_for_all_days,
+                                                     'only_on', to_jsonb(e.only_on))
                                                    order by e.sort)
                                              from public.camp_extras e where e.camp_id = c.id), '[]'::jsonb)))
     from public.camps c
@@ -2248,8 +2335,10 @@ $$;
 revoke execute on function public.camp_public_signup_answer(uuid) from public, anon, authenticated, service_role;
 
 -- 17i. camp_add_parts(camp_id, prices, extras) - writes a new camp's price
--- grid and extras from the checked jsonb (1f, 1g). Extras get sort = their
--- position in the list. Used by Add camp (Edit camp has its own diff).
+-- grid and extras from the checked jsonb (1f, 1g, 19e). Extras get sort =
+-- their position in the list and only_on = the camp's days named in their
+-- "only_on" list (sorted). Used by Add camp (Edit camp has its own diff),
+-- after the days are written.
 create or replace function public.camp_add_parts(p_camp_id uuid, p_prices jsonb, p_extras jsonb)
 returns void
 language plpgsql
@@ -2265,9 +2354,12 @@ begin
     from jsonb_array_elements(p_prices) as x(value)
    order by (x.value ->> 'day_count')::integer;
 
-  insert into public.camp_extras (camp_id, name, price_cents, per, not_for_all_days, sort)
+  insert into public.camp_extras (camp_id, name, price_cents, per, not_for_all_days, only_on, sort)
   select p_camp_id, public.testing_normalize_name(x.value ->> 'name'), (x.value ->> 'price_cents')::integer,
-         x.value ->> 'per', (x.value ->> 'not_for_all_days')::boolean, (x.n - 1)::smallint
+         x.value ->> 'per', (x.value ->> 'not_for_all_days')::boolean,
+         public.camp_only_on_dates(x.value -> 'only_on',
+                                   array(select d.day from public.camp_days d where d.camp_id = p_camp_id)),
+         (x.n - 1)::smallint
     from jsonb_array_elements(p_extras) with ordinality as x(value, n)
    order by x.n;
 end;
@@ -2276,7 +2368,8 @@ $$;
 revoke execute on function public.camp_add_parts(uuid, jsonb, jsonb) from public, anon, authenticated, service_role;
 
 -- 17j. camp_tidy_extras(extras) - the extras list as stored in a template:
--- the 4 keys only (no ids), names tidied (spaces). Order kept.
+-- the 4 keys + only_weekdays (sorted; [] when not given), names tidied
+-- (spaces). Order kept. Only called on lists that passed 1g.
 create or replace function public.camp_tidy_extras(p_extras jsonb)
 returns jsonb
 language sql
@@ -2286,7 +2379,11 @@ as $$
   select coalesce(jsonb_agg(jsonb_build_object('name', public.testing_normalize_name(x.value ->> 'name'),
                                                'price_cents', x.value -> 'price_cents',
                                                'per', x.value -> 'per',
-                                               'not_for_all_days', x.value -> 'not_for_all_days')
+                                               'not_for_all_days', x.value -> 'not_for_all_days',
+                                               'only_weekdays',
+                                               coalesce((select jsonb_agg(w.value order by (w.value #>> '{}')::integer)
+                                                           from jsonb_array_elements(coalesce(x.value -> 'only_weekdays', '[]'::jsonb)) as w(value)),
+                                                        '[]'::jsonb))
                             order by x.n), '[]'::jsonb)
     from jsonb_array_elements(p_extras) with ordinality as x(value, n);
 $$;
@@ -2361,7 +2458,8 @@ grant usage on schema public to camps_registrar;
 --   different days; hours on 5-minute steps, end after start; sign-up
 --   opens <= closes <= the last of the days; early price until <= closes;
 --   ages 1-99, from <= to; the grid exactly 1 ... number of days (1f); the
---   extras (1g; with "id"s when p_with_ids); description empty or up to
+--   extras (1g; with "id"s when p_with_ids; their only_on lists are checked
+--   separately by 19e); description empty or up to
 --   2000 characters; a waiver of 1-8000 characters.
 create or replace function public.camp_setup_args_are_valid(
   p_location_code    text,
@@ -2409,7 +2507,7 @@ begin
     return false;
   end if;
   if not public.camp_prices_arg_is_valid(p_prices, cardinality(p_days))
-     or not public.camp_extras_arg_is_valid(p_extras, p_with_ids) then
+     or not public.camp_extras_arg_is_valid(p_extras, case when p_with_ids then 'camp_edit' else 'camp' end) then
     return false;
   end if;
   if public.testing_normalize_note(p_description) is not null
@@ -2448,8 +2546,9 @@ revoke execute on function public.camp_extra_rows(jsonb) from public, anon, auth
 -- of contract §1.10 for one child's choice (used by Edit details and the
 -- family form after the ids were checked to belong to the camp):
 --   a once extra has no days; a per-day extra has 1+ days, all of them
---   the child's own days; a not-for-all-days extra is not chosen when the
---   child comes every day of the camp.
+--   the child's own days AND, when the extra is offered only on some days
+--   (only_on), all of them among those; a not-for-all-days extra is not
+--   chosen when the child comes every day of the camp.
 create or replace function public.camp_camper_extras_are_ok(p_camp_id uuid, p_day_ids uuid[], p_extras jsonb)
 returns boolean
 language plpgsql
@@ -2472,6 +2571,8 @@ begin
     v_ids := array(select (y.value #>> '{}')::uuid from jsonb_array_elements(v_item -> 'day_ids') as y(value));
     if (v_e.per = 'once' and cardinality(v_ids) <> 0)
        or (v_e.per = 'day' and (cardinality(v_ids) = 0 or not (v_ids <@ p_day_ids)))
+       or (v_e.per = 'day' and cardinality(v_e.only_on) > 0
+           and exists (select 1 from public.camp_days d where d.id = any (v_ids) and not (d.day = any (v_e.only_on))))
        or (v_e.not_for_all_days and v_all) then
       return false;
     end if;
@@ -2496,6 +2597,78 @@ as $$
 $$;
 
 revoke execute on function public.camp_extras_cents_now(jsonb) from public, anon, authenticated, service_role;
+
+-- 19e. camp_extras_only_on_ok(extras, days, removed_days) - the "only_on"
+-- lists of the extras Add / Edit camp sends (each optional; [] = every
+-- day). For each extra: a list of at most 10 dates written 'YYYY-MM-DD',
+-- none twice; a once extra must have none; every date must be one of the
+-- camp's days (p_days) - or one of the days Edit camp is removing right
+-- now (p_removed), which are then simply left out; if a list named days
+-- and ALL of them are being removed, it is refused (otherwise the extra
+-- would quietly become "every day" - the admin decides instead).
+-- false -> the functions answer {status:'invalid', field:'extras'}.
+-- Dates are compared as text, so a malformed date can never raise an error.
+create or replace function public.camp_extras_only_on_ok(p_extras jsonb, p_days date[], p_removed date[])
+returns boolean
+language plpgsql
+stable
+set search_path = ''
+as $$
+declare
+  v_item  jsonb;
+  v_list  jsonb;
+  v_days  text[] := array(select to_char(x.d, 'YYYY-MM-DD') from unnest(p_days) as x(d));
+  v_gone  text[] := array(select to_char(x.d, 'YYYY-MM-DD') from unnest(coalesce(p_removed, '{}'::date[])) as x(d));
+  v_seen  text[];
+  v_kept  integer;
+  v_one   jsonb;
+begin
+  for v_item in select x.value from jsonb_array_elements(p_extras) as x(value) loop
+    continue when not (v_item ? 'only_on');
+    v_list := v_item -> 'only_on';
+    if jsonb_typeof(v_list) <> 'array' or jsonb_array_length(v_list) > 10
+       or (v_item ->> 'per' = 'once' and jsonb_array_length(v_list) > 0) then
+      return false;
+    end if;
+    v_seen := '{}';
+    v_kept := 0;
+    for v_one in select y.value from jsonb_array_elements(v_list) as y(value) loop
+      if jsonb_typeof(v_one) <> 'string'
+         or (v_one #>> '{}') = any (v_seen)
+         or not ((v_one #>> '{}') = any (v_days || v_gone)) then
+        return false;
+      end if;
+      v_seen := v_seen || (v_one #>> '{}');
+      if (v_one #>> '{}') = any (v_days) then
+        v_kept := v_kept + 1;
+      end if;
+    end loop;
+    if jsonb_array_length(v_list) > 0 and v_kept = 0 then
+      return false;
+    end if;
+  end loop;
+  return true;
+end;
+$$;
+
+revoke execute on function public.camp_extras_only_on_ok(jsonb, date[], date[]) from public, anon, authenticated, service_role;
+
+-- 19f. camp_only_on_dates(only_on, days) - an extra's checked "only_on"
+-- list (19e) as the stored date[]: the days of p_days it names, sorted.
+-- Missing / [] -> {} (every day).
+create or replace function public.camp_only_on_dates(p_only_on jsonb, p_days date[])
+returns date[]
+language sql
+stable
+set search_path = ''
+as $$
+  select coalesce(array(select x.d from unnest(p_days) as x(d)
+                         where to_char(x.d, 'YYYY-MM-DD') in (select y.value #>> '{}'
+                                                                from jsonb_array_elements(coalesce(p_only_on, '[]'::jsonb)) as y(value))
+                         order by x.d), '{}'::date[]);
+$$;
+
+revoke execute on function public.camp_only_on_dates(jsonb, date[]) from public, anon, authenticated, service_role;
 
 
 -- ---------------------------------------------------------------------
@@ -2526,7 +2699,9 @@ revoke execute on function public.camp_extras_cents_now(jsonb) from public, anon
 -- Creates a camp with its days, price grid and extras.
 --   p_days          1-10 different dates, all today or later
 --   p_prices        the grid, exactly one row per day count 1 ... N (1f)
---   p_extras        0-10 extras (1g), in form order
+--   p_extras        0-10 extras (1g), in form order; a per-day extra may
+--                   carry "only_on": the camp days it is offered on (19e;
+--                   a bad list -> {"status":"invalid","field":"extras"})
 --   the rest        as camp_setup_args_are_valid (19a)
 -- Makes the link code. Last step: the signature clean-up (17a).
 -- Ok: {"status":"ok","id":...,"public_code":"...","version":1}
@@ -2571,6 +2746,10 @@ begin
                                             p_prices, p_extras, false, p_description, p_waiver_text)
        or exists (select 1 from unnest(p_days) as x(d) where x.d < public.testing_today()) then
       return jsonb_build_object('status', 'invalid');
+    end if;
+    -- the extras' "only on these days" lists (19e)
+    if not public.camp_extras_only_on_ok(p_extras, p_days, '{}') then
+      return jsonb_build_object('status', 'invalid', 'field', 'extras');
     end if;
 
     perform set_config('tkd.action', 'camp_add_camp', true);
@@ -2632,6 +2811,10 @@ grant  execute on function public.camp_add_camp(text, boolean, text, date[], tim
 --             that an ACTIVE camper chose is refused:
 --             {"status":"not_empty","kind":"extra","extra_name","count"};
 --             otherwise withdrawn campers' rows for it go first, then it.
+--   only_on   each extra's "only on these days" list (19e): dates of the
+--             new days; a date of a day being removed is dropped from it;
+--             a list whose days are ALL being removed is refused (as is
+--             any other bad list): {"status":"invalid","field":"extras"}
 --   grid      replaced (one row per day count 1 ... the new N).
 -- Existing campers' prices are NEVER changed (snapshots). Saving with
 -- nothing changed writes nothing; a change to only days, extras or prices
@@ -2714,6 +2897,13 @@ begin
        <> cardinality(v_kept_ids) then
       return jsonb_build_object('status', 'invalid');   -- an "id" that isn't one of this camp's extras
     end if;
+    -- the extras' "only on these days" lists, against the new days (the
+    -- days being removed are allowed in them and dropped)
+    if not public.camp_extras_only_on_ok(p_extras, p_days,
+                                         array(select d.day from public.camp_days d
+                                                where d.camp_id = p_camp_id and not (d.day = any (p_days)))) then
+      return jsonb_build_object('status', 'invalid', 'field', 'extras');
+    end if;
 
     v_removed_days := array(select d.id from public.camp_days d
                              where d.camp_id = p_camp_id and not (d.day = any (p_days))
@@ -2779,6 +2969,7 @@ begin
            price_cents      = (x.value ->> 'price_cents')::integer,
            per              = x.value ->> 'per',
            not_for_all_days = (x.value ->> 'not_for_all_days')::boolean,
+           only_on          = public.camp_only_on_dates(x.value -> 'only_on', p_days),
            sort             = (x.n - 1)::smallint
       from jsonb_array_elements(p_extras) with ordinality as x(value, n)
      where jsonb_typeof(x.value -> 'id') = 'string'
@@ -2787,14 +2978,16 @@ begin
             or e.price_cents is distinct from (x.value ->> 'price_cents')::integer
             or e.per is distinct from x.value ->> 'per'
             or e.not_for_all_days is distinct from (x.value ->> 'not_for_all_days')::boolean
+            or e.only_on is distinct from public.camp_only_on_dates(x.value -> 'only_on', p_days)
             or e.sort is distinct from (x.n - 1)::smallint);
     get diagnostics v_n = row_count;
     if v_n > 0 then v_changed := true; end if;
 
     -- new extras
-    insert into public.camp_extras (camp_id, name, price_cents, per, not_for_all_days, sort)
+    insert into public.camp_extras (camp_id, name, price_cents, per, not_for_all_days, only_on, sort)
     select p_camp_id, public.testing_normalize_name(x.value ->> 'name'), (x.value ->> 'price_cents')::integer,
-           x.value ->> 'per', (x.value ->> 'not_for_all_days')::boolean, (x.n - 1)::smallint
+           x.value ->> 'per', (x.value ->> 'not_for_all_days')::boolean,
+           public.camp_only_on_dates(x.value -> 'only_on', p_days), (x.n - 1)::smallint
       from jsonb_array_elements(p_extras) with ordinality as x(value, n)
      where jsonb_typeof(x.value -> 'id') is distinct from 'string'
      order by x.n;
@@ -3070,7 +3263,9 @@ grant  execute on function public.camp_delete_camp(uuid, integer, integer, integ
 -- Save as template: copies everything except the dates and the campers -
 -- school, both schools, number of days, hours, ages, description, waiver,
 -- price grid and extras - and turns the sign-up dates into "days before
--- the first camp day" (first day - date). A template with this name
+-- the first camp day" (first day - date), and each extra's only_on dates
+-- into weekdays ("only_weekdays", 1 = Mon ... 7 = Sun; the app maps them
+-- back to a new camp's days with those weekdays). A template with this name
 -- (ignoring capitals and extra spaces) -> duplicate_name. Offsets outside
 -- -365 ... 365 -> {"status":"invalid","field":"offsets"}.
 -- Ok: {"status":"ok","id":...,"version":1}
@@ -3145,7 +3340,9 @@ begin
                    from public.camp_prices p where p.camp_id = p_camp_id), '[]'::jsonb),
        coalesce((select jsonb_agg(jsonb_build_object(
                           'name', e.name, 'price_cents', e.price_cents, 'per', e.per,
-                          'not_for_all_days', e.not_for_all_days) order by e.sort)
+                          'not_for_all_days', e.not_for_all_days,
+                          'only_weekdays', to_jsonb(array(select distinct extract(isodow from x.d)::integer
+                                                            from unnest(e.only_on) as x(d) order by 1))) order by e.sort)
                    from public.camp_extras e where e.camp_id = p_camp_id), '[]'::jsonb),
        '', '')
     returning id, version into v_id, v_version;
@@ -3180,7 +3377,8 @@ grant  execute on function public.camp_save_template(uuid, text) to authenticate
 -- Edit template. The three offsets are checked FIRST: each -365 ... 365,
 -- opens >= closes, early >= closes, else
 -- {"status":"invalid","field":"offsets"}. Then the other fields (as Add
--- camp, the grid for p_day_count days, extras without ids) -> invalid;
+-- camp, the grid for p_day_count days, extras without ids and with
+-- "only_weekdays" instead of dates, 1g) -> invalid;
 -- the name -> duplicate_name. Never touches any camp.
 -- Ok: {"status":"ok","version":n}
 create or replace function public.camp_update_template(
@@ -3241,7 +3439,7 @@ begin
        or p_min_age is null or p_max_age is null
        or p_min_age not between 1 and 99 or p_max_age not between 1 and 99 or p_min_age > p_max_age
        or not public.camp_prices_arg_is_valid(p_prices, p_day_count)
-       or not public.camp_extras_arg_is_valid(p_extras, false)
+       or not public.camp_extras_arg_is_valid(p_extras, 'template')
        or (public.testing_normalize_note(p_description) is not null
            and not public.camp_text_is_valid(p_description, 2000))
        or not public.camp_text_is_valid(p_waiver_text, 8000) then
@@ -4590,7 +4788,8 @@ grant  execute on function public.camp_public_camp(text) to camps_registrar;
 --      camp_public_attempts only) -> rate_limited. 200 tries for this camp
 --      in the last hour is only written to the database log
 --   8. the camp changed while the family filled in the form: a day or
---      extra id that isn't this camp's (any more), an age outside the
+--      extra id that isn't this camp's (any more), an extra chosen on a
+--      day it is no longer offered on (only_on), an age outside the
 --      camp's CURRENT range, or a different waiver ->
 --      {"status":"camp_changed","camp": <the camp_public_camp answer>}
 --   9. the extra rules (19c)                           -> invalid
@@ -4745,7 +4944,11 @@ begin
                        public.camp_extra_rows(x.value -> 'extras') as r
                  where not exists (select 1 from public.camp_extras e where e.camp_id = v_c.id and e.id = r.extra_id)
                     or (r.day_id is not null
-                        and not exists (select 1 from public.camp_days d where d.camp_id = v_c.id and d.id = r.day_id))) then
+                        and not exists (select 1 from public.camp_days d where d.camp_id = v_c.id and d.id = r.day_id))
+                    or (r.day_id is not null
+                        and exists (select 1 from public.camp_extras e join public.camp_days d on d.id = r.day_id
+                                     where e.id = r.extra_id and e.per = 'day' and cardinality(e.only_on) > 0
+                                       and not (d.day = any (e.only_on))))) then
     return jsonb_build_object('status', 'camp_changed', 'camp', public.camp_public_camp_answer(v_c.id));
   end if;
 

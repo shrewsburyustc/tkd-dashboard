@@ -25,9 +25,11 @@
 //              publicCode, version }
 //   Day      { dayId, day 'YYYY-MM-DD' }                         (sorted by day)
 //   PriceRow { dayCount, memberEarlyCents, memberRegularCents, nonmemberEarlyCents, nonmemberRegularCents }
-//   Extra    { extraId, name, priceCents, per 'once'|'day', notForAllDays, sort }
+//   Extra    { extraId, name, priceCents, per 'once'|'day', notForAllDays, onlyOn:[date], sort }
+//            (onlyOn: the camp days a per-day extra is offered on; [] = every day)
 //   Child    { firstName, lastName, age, member, dayIds:[uuid], extras:[{ extraId, dayIds:[uuid] }] }
-//   RosterRow, Template — see contract 0013 §5.1.
+//   RosterRow, Template — see contract 0013 §5.1. A Template's extras carry onlyWeekdays:[1–7]
+//            (ISO weekdays) instead of onlyOn.
 import { addDays, isIsoDate, todayInSchoolTime, SCHOOL_TIME_ZONE } from '../testing/eventRules.js';
 
 export { addDays, isIsoDate, todayInSchoolTime, SCHOOL_TIME_ZONE };
@@ -197,22 +199,62 @@ export function isAllDays(dayIds, days) {
 
 const bySort = (a, b) => (a.sort ?? 0) - (b.sort ?? 0);
 
+// ----- Extras offered only on some days (owner decision 2026-10-19: "pizza on Wed and Fri") -----
+// A per-day extra may carry onlyOn: the camp dates it is offered on ([] = every camp day). Templates
+// keep the same thing as weekdays (onlyWeekdays, ISO numbers 1 = Mon … 7 = Sun), because a template
+// has no dates.
+
+// Is this per-day extra offered on this date? (Always true when onlyOn is empty.)
+export function extraOfferedOn(extra, dateIso) {
+  const only = extra?.onlyOn ?? [];
+  return only.length === 0 || only.includes(dateIso);
+}
+
+// The days a child could take this extra on: the child's days that the extra is offered on.
+// childDays = the child's Day objects ({ dayId, day }). Returns Day objects, earliest first.
+export function extraDaysFor(extra, childDays) {
+  return [...(childDays ?? [])].filter((d) => extraOfferedOn(extra, d.day)).sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
+}
+
+// ISO weekday of a date: 1 = Monday … 7 = Sunday ('2027-04-21' → 3).
+export function isoWeekday(dateIso) {
+  const [y, m, d] = dateIso.split('-').map(Number);
+  const js = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0 = Sunday
+  return js === 0 ? 7 : js;
+}
+
+// Camp dates → weekdays, for Save as template: ['2027-04-21', '2027-04-23'] → [3, 5].
+export function onlyOnToWeekdays(onlyOn) {
+  return [...new Set((onlyOn ?? []).filter(isIsoDate).map(isoWeekday))].sort((a, b) => a - b);
+}
+
+// Weekdays → the camp dates that fall on them, for "Start from a template": [3, 5] + the camp's
+// days → the Wednesdays and Fridays among them. campDays = Day objects or plain dates. [] stays [].
+export function weekdaysToOnlyOn(weekdays, campDays) {
+  const wanted = new Set(weekdays ?? []);
+  if (wanted.size === 0) return [];
+  return dayDates(campDays).filter((day) => wanted.has(isoWeekday(day)));
+}
+
 // What one child costs: { dayCount, baseCents, extras:[{ extraId, name, per, count, cents }], totalCents }.
-// Only the child's days that are days of this camp count. A per-day extra counts the extra's days
-// that are also the child's days; a once extra counts 1. Unknown extra ids are skipped. Extras come
-// out in the camp's order (sort). This is plain arithmetic: whether the choice is ALLOWED (e.g. a
+// Only the child's days that are days of this camp count. A per-day extra counts the chosen days
+// that are also the child's days AND days the extra is offered on (onlyOn); a once extra counts 1.
+// Extras are only charged when chosen. Unknown extra ids are skipped. Extras come out in the
+// camp's order (sort). This is plain arithmetic: whether the choice is ALLOWED (e.g. a
 // not-for-all-days extra on an all-days child, §1.20 P8) is childProblem's job.
 // baseCents is null when the grid has no row for that many days (totalCents then counts it as 0).
 export function priceChild(child, prices, extras, days, kind) {
-  const campDayIds = new Set((days ?? []).map((d) => d.dayId));
-  const childDays = new Set((child?.dayIds ?? []).filter((id) => campDayIds.has(id)));
+  const dateOf = new Map((days ?? []).map((d) => [d.dayId, d.day]));
+  const childDays = new Set((child?.dayIds ?? []).filter((id) => dateOf.has(id)));
   const dayCount = childDays.size;
   const base = dayCount > 0 ? baseCents(prices, dayCount, child?.member === true, kind) : null;
   const chosen = [];
   for (const extra of [...(extras ?? [])].sort(bySort)) {
     const pick = (child?.extras ?? []).find((e) => e.extraId === extra.extraId);
     if (!pick) continue;
-    const count = extra.per === 'once' ? 1 : new Set((pick.dayIds ?? []).filter((id) => childDays.has(id))).size;
+    const count = extra.per === 'once'
+      ? 1
+      : new Set((pick.dayIds ?? []).filter((id) => childDays.has(id) && extraOfferedOn(extra, dateOf.get(id)))).size;
     if (count === 0) continue;
     chosen.push({ extraId: extra.extraId, name: extra.name, per: extra.per, count, cents: count * extra.priceCents });
   }
@@ -233,13 +275,14 @@ export function familyTotal(priced) {
 //   'once_with_days'   a once extra sent with days
 //   'no_extra_days'    a per-day extra with no day chosen ("Choose which days.")
 //   'extra_day_not_child_day'  a per-day extra on a day the child doesn't come
+//   'extra_day_not_offered'    a per-day extra on a day it isn't offered on (onlyOn)
 //   'not_for_all_days' a "not charged to all-days campers" extra for a child who comes every day
 //   'too_expensive'    the child's total is over $2,000
 export function childProblem(child, prices, extras, days, kind) {
-  const campDayIds = new Set((days ?? []).map((d) => d.dayId));
+  const dateOf = new Map((days ?? []).map((d) => [d.dayId, d.day]));
   const dayIds = child?.dayIds ?? [];
   if (dayIds.length === 0) return 'no_days';
-  if (dayIds.some((id) => !campDayIds.has(id))) return 'unknown_day';
+  if (dayIds.some((id) => !dateOf.has(id))) return 'unknown_day';
   const childDays = new Set(dayIds);
   const allDays = isAllDays(dayIds, days);
   for (const pick of child?.extras ?? []) {
@@ -249,10 +292,36 @@ export function childProblem(child, prices, extras, days, kind) {
     if (extra.per === 'once' && pickDays.length > 0) return 'once_with_days';
     if (extra.per === 'day' && pickDays.length === 0) return 'no_extra_days';
     if (pickDays.some((id) => !childDays.has(id))) return 'extra_day_not_child_day';
+    if (pickDays.some((id) => !extraOfferedOn(extra, dateOf.get(id)))) return 'extra_day_not_offered';
     if (extra.notForAllDays && allDays) return 'not_for_all_days';
   }
   if (priceChild(child, prices, extras, days, kind).totalCents > MAX_CAMPER_CENTS) return 'too_expensive';
   return null;
+}
+
+// ----- Extras on one camp day (the Check in tab) -----
+
+const rowDayIds = (row) => (row?.days ?? []).map((d) => d.dayId);
+const comesOn = (row, dayId) => rowDayIds(row).includes(dayId);
+const choseOn = (row, extra, dayId) => (row?.extras ?? []).some((e) => e.extraId === extra.extraId && e.dayId === dayId);
+const dateOfDay = (days, dayId) => (days ?? []).find((d) => d.dayId === dayId)?.day ?? null;
+
+// "Pizza party today: N" — how many ACTIVE campers get this per-day extra on that day: the ones
+// coming that day who chose it that day, plus (for a "not charged to all-days campers" extra)
+// every active all-days camper. 0 when the extra isn't offered that day.
+// rows = RosterRow[], days = the camp's Day[] (needed to know who comes every day).
+export function extraCountOnDay(rows, extra, dayId, days) {
+  if (extra?.per !== 'day' || !extraOfferedOn(extra, dateOfDay(days, dayId))) return 0;
+  return (rows ?? []).filter((r) => r.status === 'active' && comesOn(r, dayId)
+    && (choseOn(r, extra, dayId) || (extra.notForAllDays && isAllDays(rowDayIds(r), days)))).length;
+}
+
+// The Check in "No pizza party" note: true when the child comes that day, doesn't come every day,
+// the extra is offered that day, and the child didn't choose it for that day.
+export function missingExtraOnDay(row, extra, dayId, days) {
+  if (extra?.per !== 'day' || !extraOfferedOn(extra, dateOfDay(days, dayId))) return false;
+  if (!comesOn(row, dayId) || isAllDays(rowDayIds(row), days)) return false;
+  return !choseOn(row, extra, dayId);
 }
 
 // ----- Payments (§1.13 pay tag, v0.702) -----
@@ -289,13 +358,23 @@ export function checkInRule(day, today, isAdmin) {
 
 // The one small amber note a Check in row shows (at most one), in this order:
 //   { kind:'duplicate' } · { kind:'not_paid' } · { kind:'owes', cents } ·
-//   { kind:'extra', name } (the first per-day extra on that day, in the camp's order) · null
-export function checkInNote(row, dayId) {
+//   { kind:'no_extra', name }  an extra offered only on some days (onlyOn) is offered that day and
+//                              this child (not an all-days camper) didn't choose it — "No pizza party" ·
+//   { kind:'extra', name }     the first other per-day extra the child has that day (drop-off,
+//                              pick-up), in the camp's order · null
+// extras / days = the camp's Extra[] and Day[]. When they're left out there is no 'no_extra' note
+// and every per-day extra the child has that day counts for 'extra'.
+export function checkInNote(row, dayId, extras = null, days = null) {
   const tag = payTag(row);
   if (tag === 'duplicate') return { kind: 'duplicate' };
   if (tag === 'not_paid') return { kind: 'not_paid' };
   if (tag === 'owes') return { kind: 'owes', cents: row.owesCents };
-  const extra = (row?.extras ?? []).find((e) => e.per === 'day' && e.dayId === dayId);
+  const campExtras = [...(extras ?? [])].sort(bySort);
+  for (const extra of campExtras) {
+    if ((extra.onlyOn ?? []).length > 0 && missingExtraOnDay(row, extra, dayId, days)) return { kind: 'no_extra', name: extra.name };
+  }
+  const limited = new Set(campExtras.filter((e) => (e.onlyOn ?? []).length > 0).map((e) => e.extraId));
+  const extra = (row?.extras ?? []).find((e) => e.per === 'day' && e.dayId === dayId && !limited.has(e.extraId));
   return extra ? { kind: 'extra', name: extra.name } : null;
 }
 

@@ -10,8 +10,9 @@
 //                         dayIds: [uuid], extras: [{ extraId, dayIds: [uuid] }] }
 // The camp (camelCase, from the GET answer): { name, days:[{dayId, day}], prices:[PriceRow],
 //                         extras:[Extra], minAge, maxAge, … }
-import { ageAllowed, familyTotal, isAllDays, phoneDigits, priceChild, CAMP_ACK_VERSION } from '../lib/camps/campRules.js';
+import { ageAllowed, extraDaysFor, familyTotal, isAllDays, phoneDigits, priceChild, CAMP_ACK_VERSION } from '../lib/camps/campRules.js';
 import { nameLength, nameProblem, normalizeName } from '../lib/testing/names.js';
+import { weekdayList } from './format.js';
 import * as T from './text.js';
 
 export const RELATION_MAX = 40; // the database's limit for "Relationship to the child"
@@ -46,18 +47,40 @@ export function rulesChild(child) {
   };
 }
 
-// Extras this child may choose: all of the camp's, except a "not charged to all-days campers"
-// extra for a child who comes every day (C7a).
+// Is this extra limited to some camp days? (only_on, CP1 decision 2026-10-19: e.g. pizza on
+// Wed and Fri only. An empty list means every day.)
+export const isLimited = (extra) => Array.isArray(extra.onlyOn) && extra.onlyOn.length > 0;
+
+// The day ids (camp order) on which this extra is offered to a child coming on `dayIds`: the
+// child's days, or for a limited extra only the child's days that are in its only_on.
+export function offeredDayIds(extra, camp, dayIds) {
+  const days = (camp.days ?? []).filter((d) => dayIds.includes(d.dayId));
+  const ids = extraDaysFor(extra, days);
+  return (Array.isArray(ids) ? ids : []).map((d) => (typeof d === 'string' ? d : d.dayId));
+}
+
+// The camp days (Day objects, camp order) a limited extra is on — for the labels on the day
+// buttons and the "Pizza party: Wed, Fri" lines.
+export const limitedDays = (extra, camp) => (camp.days ?? []).filter((d) => extra.onlyOn.includes(d.day));
+
+// Extras this child may choose: all of the camp's, except
+//   - a "not charged to all-days campers" extra for a child who comes every day (C7a)
+//   - a limited extra when the child comes on none of its days
 export function extrasFor(child, camp) {
   const allDays = isAllDays(child.dayIds, camp.days);
-  return (camp.extras ?? []).filter((extra) => !(extra.notForAllDays && allDays));
+  return (camp.extras ?? []).filter((extra) => {
+    if (extra.notForAllDays && allDays) return false;
+    if (isLimited(extra) && offeredDayIds(extra, camp, child.dayIds).length === 0) return false;
+    return true;
+  });
 }
 
 // Tidies a child after its days changed or the camp was updated:
 //   - days that aren't (any more) days of this camp are dropped; days are kept in camp order
 //   - extras the camp no longer has are dropped, and so is a not-for-all-days extra when the
 //     child now comes every day
-//   - a per-day extra keeps only days the child still comes; a once extra never has days
+//   - a per-day extra keeps only days the child still comes (and, for a limited extra, days in its
+//     only_on); a once extra never has days
 export function tidyChild(child, camp) {
   const campDays = (camp.days ?? []).map((d) => d.dayId);
   const dayIds = campDays.filter((id) => child.dayIds.includes(id));
@@ -66,9 +89,31 @@ export function tidyChild(child, camp) {
   for (const extra of allowed) {
     const pick = child.extras.find((e) => e.extraId === extra.extraId);
     if (!pick) continue;
-    extras.push({ extraId: extra.extraId, dayIds: extra.per === 'day' ? dayIds.filter((id) => pick.dayIds.includes(id)) : [] });
+    // A per-day extra keeps only days it is still offered on for this child.
+    const offered = offeredDayIds(extra, camp, dayIds);
+    extras.push({ extraId: extra.extraId, dayIds: extra.per === 'day' ? offered.filter((id) => pick.dayIds.includes(id)) : [] });
   }
   return { ...child, dayIds, extras };
+}
+
+// The words for one priced extra (from priceFor) on a child's price lines:
+//   limited per-day extra → "Pizza party — Wed" · other per-day extra → "Late pick-up × 2" ·
+//   once extra → its name.
+export function extraPriceLabel(priced, camp, child) {
+  const extra = (camp.extras ?? []).find((e) => e.extraId === priced.extraId);
+  if (priced.per === 'day' && extra && isLimited(extra)) {
+    const pick = child.extras.find((e) => e.extraId === priced.extraId);
+    const days = (camp.days ?? []).filter((d) => pick?.dayIds.includes(d.dayId)).map((d) => d.day);
+    return T.extraOnDays(priced.name, weekdayList(days));
+  }
+  return priced.per === 'day' ? T.extraTimes(priced.name, priced.count) : priced.name;
+}
+
+// The "Pizza party: Wed, Fri[, included when coming every day]" line of every limited extra.
+export function onlyOnLines(camp) {
+  return (camp?.extras ?? [])
+    .filter(isLimited)
+    .map((extra) => ({ extraId: extra.extraId, text: T.onlyOnLine(extra.name, weekdayList(limitedDays(extra, camp).map((d) => d.day)), extra.notForAllDays) }));
 }
 
 // What one child costs at today's price kind (campRules.priceChild).

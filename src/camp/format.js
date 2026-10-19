@@ -71,6 +71,13 @@ export function childDaysLabel(dates) {
   return joinAnd(sorted.map(shortDate));
 }
 
+// Days as a short comma list: "Wed, Fri" (weekday names), or short dates when a weekday repeats.
+export function weekdayList(dates) {
+  const sorted = sortedDates(dates);
+  const names = sorted.map((d) => WEEKDAY.format(utcDate(d)));
+  return new Set(names).size === names.length ? names.join(', ') : sorted.map(shortDate).join(' · ');
+}
+
 // '09:00' or '09:00:00' → minutes after midnight, or null.
 function minutesOf(text) {
   const m = /^([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/.exec(String(text ?? ''));

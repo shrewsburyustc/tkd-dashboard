@@ -369,6 +369,19 @@ export const ONCE = 'Once';
 export const PER_DAY = 'Per day';
 export const NOT_FOR_ALL_DAYS = 'Not charged to all-days campers';
 export const ADD_EXTRA = 'Add extra';
+// Owner decision 2026-10-19 (Camps-pizza-days-options.html): a per-day extra offered only on some days.
+export const ONLY_ON_DAYS = 'Only on these days';
+export const ONLY_ON_HINT = 'Leave it empty for every day.'; // (not in the mockups)
+export const ISO_WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; // index 0 = ISO 1 (Monday)
+export const extraNoDaysLeft = (name) => `${name || 'This extra'} has none of the camp's days left. Pick its days again, or clear them for every day.`; // (not in the mockups)
+export const extraNoDaysSummary = (n) => (n === 1 ? '1 extra has no days left' : `${n} extras have no days left`); // (not in the mockups)
+// "Pizza party $5 · Wed, Fri"
+export const extraOnlySummary = (name, cents, dayLabels) => `${name} ${dollars(cents)} · ${dayLabels.join(', ')}`;
+// Short labels for camp dates: weekday names, or "Mon 19" when a weekday repeats.
+export function shortDayLabels(isoDays) {
+  const names = isoDays.map(weekdayShort);
+  return new Set(names).size === names.length ? names : isoDays.map(dayChip);
+}
 export const removeExtraLabel = (name) => `Remove ${name || 'this extra'}`; // (not in the mockups)
 export const NO_EXTRAS = 'No extras'; // (not in the mockups)
 export const MAX_EXTRAS_NOTE = 'A camp can have up to 10 extras.'; // (not in the mockups)
@@ -455,6 +468,10 @@ export const checkInUndoneToast = (name) => `Check-in undone for ${name}`; // (n
 export const noCampersOn = (day) => `No campers on ${dayLong(day)}.`; // (§7.3)
 export const NO_MATCH = 'No camper with that name on this day.'; // (not in the mockups)
 export const FUTURE_DAY_NOTE = 'Check in opens on the day itself.'; // (not in the mockups)
+// A future day (CP1 finding 2026-10-19): "16 coming on Wed, Nov 11 · Check in opens that morning."
+export const comingOn = (day) => `coming on ${dayLong(day)}`; // (not in the mockups)
+export const CHECK_IN_OPENS = 'Check in opens that morning.'; // (not in the mockups)
+export const COMING = (n) => `Coming · ${n}`; // (not in the mockups)
 export const EARLIER_DAY_STAFF = 'An earlier day. Only an admin can change its check-ins.'; // (not in the mockups)
 export const EARLIER_DAY_ADMIN = 'An earlier day. Check-ins changed here fix a missed one.'; // (not in the mockups)
 export const checkedInAt = (stamp) => `Checked in at ${clockTime(stamp)}`; // screen readers
@@ -464,6 +481,9 @@ export const CHECK_IN_FUTURE = 'That day hasn’t come yet, so nobody can be che
 export const CHECK_IN_NOT_ALLOWED = 'Only an admin can change check-ins of an earlier day.'; // (not in the mockups)
 export const isWithdrawn = (name) => `${name} was withdrawn. Restore them first.`; // (§7.2, "an admin can" dropped: staff restore too)
 export const NOTE_NOT_PAID = 'Not paid';
+export const noExtraNote = (name) => `No ${name.charAt(0).toLowerCase()}${name.slice(1)}`; // "No pizza party" (owner decision 2026-10-19)
+// "Pizza party today: 15" — the number is drawn big. Another day: "Pizza party: 12" (not in the mockups).
+export const extraTodayLine = (name, isToday = true) => (isToday ? `${name} today:` : `${name}:`);
 export const noteOwes = (cents) => `Owes ${dollars(cents)}`;
 export const notePopoverLine = (name, kind, cents) => (kind === 'owes' ? `${name} owes ${dollars(cents)}` : `${name} · not paid · ${dollars(cents)}`); // (not in the mockups)
 export const PAYMENT_NOTE_LABEL = (name) => `Payment for ${name}`; // (not in the mockups) screen readers
@@ -570,6 +590,8 @@ export function detailExtraLine(extra, allCampDays) {
   return `${extra.name} on ${all ? 'all days' : days.map(weekdayShort).join(', ')}`;
 }
 export const NO_EXTRAS_DETAIL = 'None'; // (not in the mockups)
+// An extra offered only on some days, with the child's days: "Pizza party — Wed" (owner decision 2026-10-19)
+export const detailExtraOnlyLine = (name, isoDays) => `${name} — ${shortDayLabels([...isoDays].sort()).join(', ')}`;
 // "Early price, 2 days $150 + late pick-up × 2 $16 = $166"
 export function priceBreakdownLine(b, allDays) {
   const kind = b.priceKind === 'early' ? 'Early price' : 'Regular price';

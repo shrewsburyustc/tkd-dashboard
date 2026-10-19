@@ -5,9 +5,12 @@
 // Everything here comes from the server's answer (`result`, already camelCase), so the family
 // sees exactly what was saved — not what the form guessed.
 import { addressLine, campDaysShort, campHours, formatDollars, joinAnd, locationLine, shortDate, sortedDates } from './format.js';
+import { onlyOnLines } from './form.js';
 import * as T from './text.js';
 
-export default function SignedUp({ result, headingRef }) {
+// `campInfo` = the camp as the form knew it (camelCase GET answer camp): the sign-up answer
+// doesn't carry the extras, so the "Pizza party: Wed, Fri" lines come from there.
+export default function SignedUp({ result, campInfo, headingRef }) {
   const camp = result.camp ?? {};
   const children = result.children ?? [];
   const names = children.map((c) => `${c.firstName} ${c.lastName}`);
@@ -35,6 +38,12 @@ export default function SignedUp({ result, headingRef }) {
           </Row>
           <Row label={T.ROW_CAMP}>
             {campDaysShort(camp.days)} · {campHours(camp.startTime, camp.endTime)}
+            {onlyOnLines(campInfo).map((line) => (
+              <span key={line.extraId}>
+                <br />
+                {line.text}
+              </span>
+            ))}
           </Row>
           {camp.bothSchools ? (
             <Row label={T.ROW_WHERE}>

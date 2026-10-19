@@ -5,7 +5,7 @@
 // days, starting with the child's days) and the child's running price.
 // The card only draws; CampApp keeps the values and the rules live in form.js / campRules.js.
 import { FieldError, TickBox } from './parts.jsx';
-import { extrasFor, fieldId, priceFor, tidyChild } from './form.js';
+import { extraPriceLabel, extrasFor, fieldId, isLimited, offeredDayIds, onlyOnLines, priceFor, tidyChild } from './form.js';
 import { formatDollars, shortDate } from './format.js';
 import { normalizeName } from '../lib/testing/names.js';
 import * as T from './text.js';
@@ -28,8 +28,9 @@ export default function ChildCard({ child, index, camp, kind, update, onRemove, 
   const toggleExtra = (extra, ticked) =>
     change((cur) => {
       const others = cur.extras.filter((e) => e.extraId !== extra.extraId);
-      // A per-day extra starts with all of the child's days (C7a); a once extra has no days.
-      return { extras: ticked ? [...others, { extraId: extra.extraId, dayIds: extra.per === 'day' ? cur.dayIds : [] }] : others };
+      // A per-day extra starts with all of the child's days it is offered on (C7a; for a limited
+      // extra only its only_on days); a once extra has no days.
+      return { extras: ticked ? [...others, { extraId: extra.extraId, dayIds: extra.per === 'day' ? offeredDayIds(extra, camp, cur.dayIds) : [] }] : others };
     });
 
   const toggleExtraDay = (extraId, dayId) =>
@@ -41,7 +42,11 @@ export default function ChildCard({ child, index, camp, kind, update, onRemove, 
       }),
     }));
 
-  const childDays = camp.days.filter((d) => child.dayIds.includes(d.dayId));
+  // Limited extras (e.g. pizza on Wed and Fri only, CP1 2026-10-19): their names label the day
+  // buttons they are on, and a line under the buttons lists their days.
+  const limited = (camp.extras ?? []).filter(isLimited);
+  const labelsFor = (day) => limited.filter((extra) => extra.onlyOn.includes(day)).map((extra) => extra.name);
+  const lines = onlyOnLines(camp);
   const extras = extrasFor(child, camp);
   const priced = child.member !== null && child.dayIds.length > 0 ? priceFor(child, camp, kind) : null;
 
@@ -118,9 +123,19 @@ export default function ChildCard({ child, index, camp, kind, update, onRemove, 
               onClick={() => toggleDay(d.dayId)}
             >
               {shortDate(d.day)}
+              {labelsFor(d.day).map((name) => (
+                <span key={name} className="camp-pill">
+                  {name}
+                </span>
+              ))}
             </button>
           ))}
         </div>
+        {lines.map((line) => (
+          <div key={line.extraId} className="reg-hint">
+            {line.text}
+          </div>
+        ))}
         <FieldError>{err('days')}</FieldError>
       </div>
 
@@ -145,7 +160,7 @@ export default function ChildCard({ child, index, camp, kind, update, onRemove, 
                 {pick && extra.per === 'day' ? (
                   <div className="reg-indent">
                     <div className="reg-chips" role="group" aria-label={`${extra.name} · ${T.PER_DAY_WHICH}`}>
-                      {childDays.map((d) => (
+                      {camp.days.filter((d) => offeredDayIds(extra, camp, child.dayIds).includes(d.dayId)).map((d) => (
                         <button
                           key={d.dayId}
                           type="button"
@@ -167,7 +182,7 @@ export default function ChildCard({ child, index, camp, kind, update, onRemove, 
       ) : null}
 
       {/* The child's running price (once member and days are chosen) */}
-      {priced ? <PriceBox priced={priced} member={child.member} kind={kind} name={first || T.childTitle(index + 1)} /> : null}
+      {priced ? <PriceBox priced={priced} member={child.member} kind={kind} name={first || T.childTitle(index + 1)} label={(e) => extraPriceLabel(e, camp, child)} /> : null}
     </section>
   );
 }
@@ -198,7 +213,7 @@ export function TextField({ id, label, value, error, onChange, onBlur, type = 't
 }
 
 // "2 days · non-member · early price $150 / Late pick-up × 2 $16 / Mia's total $166" (C7a).
-function PriceBox({ priced, member, kind, name }) {
+function PriceBox({ priced, member, kind, name, label }) {
   return (
     <div className="camp-price" aria-live="polite">
       <div>
@@ -207,7 +222,7 @@ function PriceBox({ priced, member, kind, name }) {
       </div>
       {priced.extras.map((e) => (
         <div key={e.extraId}>
-          {e.per === 'day' ? T.extraTimes(e.name, e.count) : e.name} <b>{formatDollars(e.cents)}</b>
+          {label(e)} <b>{formatDollars(e.cents)}</b>
         </div>
       ))}
       <div className="camp-price__total">
