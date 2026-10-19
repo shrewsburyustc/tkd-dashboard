@@ -34,8 +34,8 @@
 ## 3. Next steps
 
 1. Jeffrey checks the urgent live-system items (plan §2): the live Sheet before Oct 24, and the `updateInfo` stopgap.
-2. **Next:** Jeffrey's OK to send the Finance session the note (`Finance-note-draft.md`); then full mockups of cycles, registration and payments (PC / tablet / phone) → design reviewer → screen-by-screen pass. Grading questions B13–B18 once Master Jeong answers part A., and so on, one at a time; each part is built as soon as its design is approved.
-3. With Jeffrey's OK, send the Finance session a note (plan §7).
+2. **Now:** full mockups of cycles, registration and payments (PC / tablet / phone), three files built by subagents → design reviewer → screen-by-screen pass with Jeffrey. Grading questions B13–B18 once Master Jeong answers part A., and so on, one at a time; each part is built as soon as its design is approved.
+3. **Finance note sent** 2026-10-18 with Jeffrey's OK (`Finance-note-draft.md`; two questions for Jeffrey in it: Black Belt money in the school's Daily report at all? bounced checks on closed days?).
 4. **Jeffrey asks the school's insurer** how many years signed waivers must be kept (v0.213 setting).
 5. Jeffrey hands Master Jeong the printable rules sheet (part A) and brings back the answers.
 
