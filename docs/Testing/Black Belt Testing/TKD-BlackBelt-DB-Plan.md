@@ -155,7 +155,7 @@ Structure first, then money, then waivers and privacy. Each will be shown with a
 - **Recommendation:** B.
 - **Touches:** v0.216, v0.900 (Form 3), plan §8 B1.
 
-### Q-B2 · Changing a cycle's prices before anyone has paid
+### Q-B2 · Changing a cycle's prices before anyone has paid — **answered v0.902: prices live on each cycle, filled in from the previous cycle in Add cycle, set once saved; no template price tables** (replaces options A–C; update §3.1/§3.2 and the functions when the contract is written)
 
 - **The question:** a cycle copies the plans and amounts when it is added; after a payment they never change (v0.217). Before that, how does an admin change them (for example prices go up after Spring 2027 was added)?
 - **Why it matters:** decides which functions and dialog exist. Families who already registered saw the old amounts on their confirmation page.
