@@ -20,11 +20,11 @@
 
 **Out (later):** a Home card (Q5) · private on the online form (never) · the instant Realtime ping (v0.157 B) · refunds / overpaid (Q4) · Star's own private build.
 
-## 1. Database — migration `0012_testing_private.sql`
+## 1. Database — migration `0014_testing_private.sql`
 
-Number: next free after checking **every branch and worktree** at build time. Claimed today: 0005 · 0006 Star · 0007 Schedule · 0008 Calendar · 0009 Forms · 0010 Color Belt phase 3 (live) · 0011 Finance → **0012**. (The prospect branch also uses 0010 — the Main session must renumber it.)
+Number: next free after checking **every branch and worktree** at build time. Claimed today: 0005 · 0006 Star · 0007 Schedule · 0008 Calendar · 0009 Forms · 0010 Color Belt phase 3 (live) · 0011 Finance · 0012 Prospects · 0013 Camps → **0014** (renumbered 2026-10-19; the plan first said 0012). (The prospect branch also used 0010 — the Main session renumbered it to 0012.)
 
-**Rule: no existing function changes its arguments.** The live phase 3 site keeps working between "0012 applied" and "phase 4 deployed": until someone sets a private day (only possible with the new screens), every replaced function behaves exactly as today.
+**Rule: no existing function changes its arguments.** The live phase 3 site keeps working between "0014 applied" and "phase 4 deployed": until someone sets a private day (only possible with the new screens), every replaced function behaves exactly as today.
 
 ### 1.1 New columns on `public.testing_registrations`
 
@@ -78,8 +78,8 @@ All: security definer, `set search_path = ''`, fully qualified; **revoke from pu
 - **`testing_purge_old_signatures`**: 90 days after **the later of** the testing day and the private day (a new rulebook line for this v0.136 wording change, review L10).
 - **`testing_change_paying_by`**: also allowed while a private student still owes money (§6 Q3, decided), so the top-up can be paid another way; earlier payments keep their method.
 - Untouched: `testing_delete_student`, `testing_delete_event`, `testing_withdraw_student`, `testing_undo_payment`, `testing_edit_payment` (they already act on the most recent payment), both public functions, the view.
-- **Re-run / removal order:** headers + SETUP §15: re-running 0005 or 0010 after 0012 puts back old bodies → re-run 0012 right after. Removal: **0012 down first, then 0010 down** (review M1). The down-script restores the 0010 bodies.
-- `0012_fingerprints.sql`: new and replaced functions, new columns' grants; connector-safe spelling.
+- **Re-run / removal order:** headers + SETUP §15: re-running 0005 or 0010 after 0014 puts back old bodies → re-run 0014 right after. Removal: **0014 down first, then 0010 down** (review M1). The down-script restores the 0010 bodies.
+- `0014_fingerprints.sql`: new and replaced functions, new columns' grants; connector-safe spelling.
 
 ### 1.5 Read path
 
@@ -112,20 +112,20 @@ Shared files: `src/App.jsx` (route), the rulebook. Not touched: `navItems.js`, `
 
 ## 4. Tests
 
-- **`supabase/tests/0012_tests.sql`** (one block, rollback, `ALL 0012 TESTS PASSED`, made-up names / cities): grants (columns visible to staff only; the four functions not runnable by anon or `testing_registrar`; the helper by nobody); each function for staff and admin; past day; time range / step / date cap; stale / withdrawn; add-private writes one row and nothing on a bad day; price; Mark paid full private price; **top-up = just the difference, then `already_paid`**; top-up → own Undo within 10 s → owed again → Mark paid → `already_paid`; Edit of the most recent payment; $0 private price → nothing inserted; back after paying → nothing owed; Change / Back refused once graded; **testing-day No show cleared** (logged, same batch, note gone); **private No show → Change clears it, Back refused**; pass / not passed → `has_result` / `graded`; **H1: staff Back after the testing day refused, admin allowed**; set-result date rule from the private day (before / on / after, staff / admin); **H3: keep-one / restore lock from the private day**; **M3: update_event date change allowed with only private results**; private day = testing day (§6 Q4); signature purge uses the later day; change_log actions and batch ids; catalog checks.
+- **`supabase/tests/0014_tests.sql`** (one block, rollback, `ALL 0014 TESTS PASSED`, made-up names / cities): grants (columns visible to staff only; the four functions not runnable by anon or `testing_registrar`; the helper by nobody); each function for staff and admin; past day; time range / step / date cap; stale / withdrawn; add-private writes one row and nothing on a bad day; price; Mark paid full private price; **top-up = just the difference, then `already_paid`**; top-up → own Undo within 10 s → owed again → Mark paid → `already_paid`; Edit of the most recent payment; $0 private price → nothing inserted; back after paying → nothing owed; Change / Back refused once graded; **testing-day No show cleared** (logged, same batch, note gone); **private No show → Change clears it, Back refused**; pass / not passed → `has_result` / `graded`; **H1: staff Back after the testing day refused, admin allowed**; set-result date rule from the private day (before / on / after, staff / admin); **H3: keep-one / restore lock from the private day**; **M3: update_event date change allowed with only private results**; private day = testing day (§6 Q4); signature purge uses the later day; change_log actions and batch ids; catalog checks.
 - **Update `0005_tests.sql` C3 (exact staff-readable columns of `testing_registrations`) in the same commit** — the two new columns break it (review H5; T7 / the view is untouched now). Jeffrey is told before CP2 that the production copy of `0005_tests.sql` is the updated one.
-- `run.mjs`: a step applies 0012 on top of 0010 on its own database (fresh and upgrade), **before / apart from step 13g** (the 0010 down-script step, review M1); re-runs the 0010, 0005, 0006, 0003, 0004, 0002 and PIN test files; applies 0012 twice; fresh = upgrade fingerprints; **0006's fingerprints unchanged** (review M9); runs 0012-down then 0010-down cleanly.
+- `run.mjs`: a step applies 0014 on top of 0010 on its own database (fresh and upgrade), **before / apart from step 13g** (the 0010 down-script step, review M1); re-runs the 0010, 0005, 0006, 0003, 0004, 0002 and PIN test files; applies 0014 twice; fresh = upgrade fingerprints; **0006's fingerprints unchanged** (review M9); runs 0014-down then 0010-down cleanly.
 - App: `checks.mjs`, both builds, no preview code in production.
 
 ## 5. Order and checkpoints
 
-1. **CP0 — Jeffrey OKs this plan** and answers §6. Then `docs/Dashboard Docs/Build contracts/CONTRACT-0012.md`.
-2. **Build:** **A** database + tests (`0012_*`, `0005_tests.sql` C3, `run.mjs`, SETUP §15) · **B** data layer + mock + checks · **C** screens. Then **security review** (A, B), **design review** of C against P1–P9 + P3b at 1280×800, 820×1180 touch, 390×844 touch and 320 wide; fix; re-review.
+1. **CP0 — Jeffrey OKs this plan** and answers §6. Then `docs/Dashboard Docs/Build contracts/CONTRACT-0014.md`.
+2. **Build:** **A** database + tests (`0014_*`, `0005_tests.sql` C3, `run.mjs`, SETUP §15) · **B** data layer + mock + checks · **C** screens. Then **security review** (A, B), **design review** of C against P1–P9 + P3b at 1280×800, 820×1180 touch, 390×844 touch and 320 wide; fix; re-review.
 3. **CP1 — preview walkthrough** (both ways in, top-up, Back, grading on a private day with `setToday`, print, the Events list).
-4. **CP2 — production database** (Jeffrey's OK): paste 0012; fingerprints = PGlite, security advisor, `0012_tests.sql` + the updated `0005_tests.sql` + the other test files pass. The live site keeps working.
+4. **CP2 — production database** (Jeffrey's OK): paste 0014; fingerprints = PGlite, security advisor, `0014_tests.sql` + the updated `0005_tests.sql` + the other test files pass. The live site keeps working.
 5. **CP3 — real-database check** from the local app on a **Closed** TEST event (review L13: until CP4 its students show on the live phase 3 Grading tab and sheet), one private student both ways, top-up, grade on a private TEST day; delete; read-only check that all is logged and gone.
 6. **CP4 — deploy** (Jeffrey's OK): Main merges `color-belt` → `main`, push; live smoke check.
-7. **Rollback:** push the previous `main`; 0012 can stay (unused columns, bodies equal to 0010's until a private day is set). Down-script only with Jeffrey's OK.
+7. **Rollback:** push the previous `main`; 0014 can stay (unused columns, bodies equal to 0010's until a private day is set). Down-script only with Jeffrey's OK.
 8. **Housekeeping:** status, rulebook, `docs/README.md`, handoff §9, claude.ai copies; tell the **Star** session (its private build can reuse the rules) and the **Finance** session (Color Belt can now have two payments per student — a top-up — and its hide-payments switch, v0.215, must also hide the owed line and "1 owes more"; review M8).
 
 ## 6. Questions for Jeffrey (one at a time, at CP0)
@@ -142,12 +142,12 @@ Shared files: `src/App.jsx` (route), the rulebook. Not touched: `navItems.js`, `
 
 | Risk | What we do |
 |---|---|
-| Replaced `mark_paid` charges the wrong amount | One helper; the app mirrors it, `checks.mjs` compares; 0012 tests cover every case. |
+| Replaced `mark_paid` charges the wrong amount | One helper; the app mirrors it, `checks.mjs` compares; 0014 tests cover every case. |
 | A private student graded on the testing day by habit | DB refuses (`not_open`); the Grading tab doesn't list her. |
 | The shared desk account erasing results through private paths | H1 / H2 / H3 rules + tests; every change logged. |
-| Many 0010 bodies replaced → fingerprints change; re-run hazards | Listed in 0012's notes and SETUP §15; CP2 compares with a fresh PGlite run; down order 0012 → 0010. |
+| Many 0010 bodies replaced → fingerprints change; re-run hazards | Listed in 0014's notes and SETUP §15; CP2 compares with a fresh PGlite run; down order 0014 → 0010. |
 | `0005_tests.sql` C3 fails at CP2 | Updated in the same commit; Jeffrey told before CP2. |
-| Two branches share migration 0010 | Flagged to Main; 0012 re-checked at build time. |
+| Two branches share migration 0010 | Flagged to Main; 0014 re-checked at build time. |
 
 ## 8. Changes from the independent review (2026-10-18)
 
@@ -158,7 +158,7 @@ Shared files: `src/App.jsx` (route), the rulebook. Not touched: `navItems.js`, `
 | H3 | High | Keep-one / restore lock reopened for privates graded before the testing day → lock from the private day (§1.4). |
 | H4 | High | Price after Back contradicted the approved wording → CP0 question 1 (§6). |
 | H5 | High | `0005_tests.sql` C3 would fail → updated in the same commit; view untouched (§1.1, §4). |
-| M1 | Medium | Changing the view breaks re-running 0005 and the 0010 removal path → view untouched; down order 0012 → 0010; run.mjs order (§1.1, §1.4, §4). |
+| M1 | Medium | Changing the view breaks re-running 0005 and the 0010 removal path → view untouched; down order 0014 → 0010; run.mjs order (§1.1, §1.4, §4). |
 | M2 | Medium | Revoke-first grants for all new functions; the helper granted to nobody (§1.2, §1.3). |
 | M3 | Medium | A graded private froze the event date → `has_results` counts non-private only (§1.4). |
 | M4 | Medium | Withdrawn privates stuck on the list → active only (§1.5). |
@@ -166,5 +166,5 @@ Shared files: `src/App.jsx` (route), the rulebook. Not touched: `navItems.js`, `
 | M6 | Medium | Change paying-by while owed → CP0 question 3 (§6). |
 | M7 | Medium | Edit payment after a top-up names both payments; owed line from net; tests (§3, §4). |
 | M8 | Medium | Tell the Finance session (two payments per student; its hide switch) (§5). |
-| M9 | Medium | run.mjs: 0006 fingerprints unchanged; 0012 step order vs 13g (§4). |
+| M9 | Medium | run.mjs: 0006 fingerprints unchanged; 0014 step order vs 13g (§4). |
 | L1–L14 | Low | $0 price (§1.2) · partial net accepted (§1.2) · add-private single INSERT (§1.3) · time range + date cap (§1.1) · private day = testing day → Q4 · "No show and its note" (§1.3) · note-only → Q5 · retry race (§3) · private page guard + Not paid fact (§3) · rulebook icon rows + purge line (§1.4, §3) · fewer reads (§1.5) · Back-toast Undo (§3) · Closed TEST event at CP3 (§5) · L14 told at CP0 (§6). |
