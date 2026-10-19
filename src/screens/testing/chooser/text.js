@@ -10,6 +10,9 @@ export const COLOR_BELT_ROW = 'Color belt testing';
 export const STAR_ROW = 'Star testing';
 // "Next: Jan 9 · Shrewsbury" — Color Belt's next event (v0.177). date is 'YYYY-MM-DD'.
 export const nextEventLine = (date, school) => `Next: ${monthDay(date)} · ${school}`;
+// Star testing's row (Star phase 2, v0.59's example "Next: Nov 14 · both schools"): Star events are
+// joint for both schools (v0.58), so the place is always this.
+export const STAR_BOTH_SCHOOLS = 'both schools';
 
 // Color Belt's page while the Star testing switch is on (v0.177): its own title, and the back link.
 export const COLOR_BELT_TITLE = 'Color belt testing';

@@ -6,8 +6,12 @@
 // What it shows (approved Chooser mockups, screen 1):
 //   Testing                                        (the page title)
 //   [ti-certificate] Color belt testing         >  (+ "Next: Jan 9 · Shrewsbury" once there is one)
-//   [ti-star]        Star testing               >  (no line in phase 1: Star has no events yet)
-// The same for staff and admins, and it works on Both (it reads Color Belt's events of both schools).
+//   [ti-star]        Star testing               >  (+ "Next: Nov 14 · both schools" once Star has an
+//                                                   upcoming event — Star phase 2; v0.59's example:
+//                                                   every Star event is for both schools, v0.58)
+// No line at all when a testing has no upcoming event (v0.59, v0.177 — no filler text).
+// The same for staff and admins, and it works on Both (it reads Color Belt's events of both schools;
+// Star events are joint for both schools, so the switcher doesn't change Star's line).
 // Each row is one big button: the whole row opens that testing page.
 //
 // Props:
@@ -20,16 +24,19 @@
 //                   from Star testing, focus lands back on the Star row), or null
 import { useEffect, useRef, useState } from 'react';
 import { IconCertificate, IconChevronRight, IconStar } from '@tabler/icons-react';
-import { loadNextColorBeltEvent } from '../../../lib/testingChooserApi.js';
-import { CHOOSER_TITLE, COLOR_BELT_ROW, STAR_ROW, nextEventLine } from './text.js';
+import { loadNextColorBeltEvent, loadNextStarEvent } from '../../../lib/testingChooserApi.js';
+import { CHOOSER_TITLE, COLOR_BELT_ROW, STAR_ROW, STAR_BOTH_SCHOOLS, nextEventLine } from './text.js';
 import './chooser.css';
 
 // The last answer per switcher value, kept while the app is open: coming back to the chooser
 // shows the line straight away instead of the row growing a moment later (it is re-checked anyway).
 const lastNext = {};
+// Star's next event (one answer for every switcher value), kept the same way (null = none, or not read yet).
+let lastStarNext = null;
 
 export default function TestingChooser({ location, screenLocked = false, onNoAccess, onOpen, focusPage = null }) {
   const [next, setNext] = useState(() => lastNext[location] ?? null);
+  const [starNext, setStarNext] = useState(() => lastStarNext);
   const rowRefs = useRef({});
 
   // Read Color Belt's next event for the school(s) shown. Not while locked (no requests then).
@@ -52,6 +59,25 @@ export default function TestingChooser({ location, screenLocked = false, onNoAcc
     };
   }, [location, screenLocked, onNoAccess]);
 
+  // Read Star testing's next event (Star phase 2). Not while locked.
+  useEffect(() => {
+    if (screenLocked) return undefined;
+    let stale = false;
+    loadNextStarEvent().then((answer) => {
+      if (stale) return;
+      if (answer.status === 'no_access') {
+        onNoAccess?.();
+        return;
+      }
+      if (answer.status !== 'ok') return; // offline etc.: keep what we had
+      lastStarNext = answer.next;
+      setStarNext(answer.next);
+    });
+    return () => {
+      stale = true;
+    };
+  }, [screenLocked, onNoAccess]);
+
   // Coming back here with the keyboard: focus the row of the page we came from.
   useEffect(() => {
     if (focusPage) rowRefs.current[focusPage]?.focus();
@@ -59,7 +85,7 @@ export default function TestingChooser({ location, screenLocked = false, onNoAcc
 
   const rows = [
     { key: 'colorBelt', label: COLOR_BELT_ROW, Icon: IconCertificate, line: next ? nextEventLine(next.date, next.school) : null },
-    { key: 'star', label: STAR_ROW, Icon: IconStar, line: null }, // Star's events come in phase 2
+    { key: 'star', label: STAR_ROW, Icon: IconStar, line: starNext ? nextEventLine(starNext.date, STAR_BOTH_SCHOOLS) : null },
   ];
 
   return (

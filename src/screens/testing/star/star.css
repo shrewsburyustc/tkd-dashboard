@@ -708,3 +708,262 @@
   gap: var(--space-4);
   margin-top: var(--space-4);
 }
+
+/* =====================================================================================
+   Build phase 2 — the Events tab, Add / Edit event, the event page, Registration links and
+   the flyer (Events mockups screens 1–14, v0.92 / v0.99 / v0.107; gap mockups G1–G5, v0.500).
+   The Events list, the dialog fields, the Upcoming / Past switch and the sortable headers reuse
+   Color Belt's live classes (.ev-row, .ev-sort, .ev-side … in testing-events.css, which Testing.jsx
+   always loads) so both testing sections look the same (v0.501). Only Star's own pieces are here.
+   ===================================================================================== */
+
+/* Start time / Where with nothing chosen yet ("Choose…", screen 4): the gray placeholder look */
+.st-select-empty .fa-value {
+  color: var(--color-text-secondary);
+}
+
+/* ----- The event page header (screen 11) ----- */
+.st-event-head {
+  align-items: center;
+}
+
+/* The summary line: 14px in the normal text color, not the small gray caption (v0.92, Jeffrey) */
+.st-summary {
+  margin-top: 2px;
+  color: var(--color-text);
+  font-size: var(--text-14);
+  line-height: 1.4;
+}
+
+.st-event-buttons {
+  display: flex;
+  flex: none;
+  gap: var(--space-8);
+}
+
+/* G2: gray bars where the event name and the summary line will be */
+.st-head-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding-top: var(--space-4);
+}
+
+.st-skel-bar {
+  display: block;
+  height: 12px;
+  border-radius: var(--radius-tag);
+  background: var(--color-surface);
+}
+
+.st-skel-title {
+  width: 240px;
+  max-width: 70%;
+  height: 20px;
+}
+
+.st-skel-line {
+  width: 420px;
+  max-width: 100%;
+}
+
+.st-skel-short {
+  width: 55%;
+}
+
+/* G3: "This testing event was deleted, or the link is wrong." — under the back link, left */
+.st-gone {
+  padding-left: 0;
+  text-align: left;
+}
+
+/* ----- Registration links (screen 11 as updated by v0.99 / v0.107) ----- */
+/* The dialog is 600px wide (as drawn), a size between Dialog.jsx's 'medium' and 'wide' */
+.tdialog--wide:has(.st-links) {
+  width: 600px;
+}
+
+.st-links .tdialog-sub {
+  margin-bottom: var(--space-4);
+}
+
+.st-links-line {
+  margin-bottom: var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* Both schools side by side (stacked on phones, below) */
+.st-links-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-12);
+}
+
+.st-link-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+  padding: var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  text-align: center;
+}
+
+.st-link-school {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* ----- Focus (Star phase 1's ring: 2px blue) on the new buttons ----- */
+.st-page .st-back:focus-visible,
+.st-page .ev-sort:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+  border-radius: var(--radius-control);
+}
+
+/* ----- Touch: 44px tap areas (guidelines 2.5) ----- */
+@media (pointer: coarse) {
+  .st-event-buttons .btn {
+    height: var(--control-height-touch);
+  }
+
+}
+
+/* ----- Phones (narrower than 640px) ----- */
+@media (max-width: 639.98px) {
+  /* The Registration link button goes under the summary line, so the date and time get the full
+     width (Jeffrey, 2026-10-17) */
+  .st-event-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-8);
+  }
+
+  .st-links-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ----- The flyer (screen 12): only on paper ----- */
+/* Hidden on screen; Color Belt's print rule shows .flyer-print and hides everything else. */
+.st-flyer-print {
+  display: none;
+}
+
+@media print {
+  .st-flyer-print {
+    display: block;
+  }
+
+  .st-flyer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10pt;
+    padding: 0;
+    color: #000;
+    font-family: var(--font-family);
+    text-align: center;
+  }
+
+  .st-flyer .logo {
+    filter: grayscale(1); /* black and white page */
+  }
+
+  .st-flyer-school {
+    font-size: 14pt;
+  }
+
+  /* "For Shrewsbury school students": large type, boxed */
+  .st-flyer-for {
+    padding: 4pt 14pt;
+    border: 2pt solid #000;
+    border-radius: 6pt;
+    font-size: 20pt;
+    font-weight: 500;
+  }
+
+  .st-flyer-title {
+    margin-top: 6pt;
+    font-size: 26pt;
+    font-weight: 500;
+  }
+
+  .st-flyer-big {
+    font-size: 16pt;
+  }
+
+  .st-flyer-line {
+    font-size: 12pt;
+  }
+
+  .st-flyer-qr {
+    width: 2.4in;
+    height: 2.4in;
+    margin: 4pt 0;
+  }
+
+  .st-flyer-url {
+    font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+    font-size: 12pt;
+    overflow-wrap: anywhere;
+  }
+
+  .st-flyer-note {
+    max-width: 5.5in;
+    font-size: 12pt;
+    line-height: 1.5;
+  }
+}
+
+/* The Registration links' link: wraps only between its two parts (StarLinksDialog splitLink) */
+.st-link-url {
+  overflow-wrap: normal;
+}
+
+.st-nowrap {
+  white-space: nowrap;
+}
+
+/* The Events list: the "Candidates" header is longer than Color Belt's "Students", and the sorted
+   header gets " ↑" after it (v0.501) — so that column is wider here */
+.st-page .ev-row:not(.is-phone) {
+  grid-template-columns: minmax(0, 1fr) 128px 96px 160px 64px;
+}
+
+/* Tablets: a FIXED actions column (not "auto"), so the header row — whose actions cell is empty —
+   gets the same columns as the rows and every header sits over its values. Admins have Edit + ⋯
+   (two 44px tap areas), staff only ⋯ (v0.86). */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .st-page .ev-list.has-edit .ev-row:not(.is-phone) {
+    grid-template-columns: minmax(0, 1fr) 120px 92px 148px 88px;
+  }
+
+  .st-page .ev-list:not(.has-edit) .ev-row:not(.is-phone) {
+    grid-template-columns: minmax(0, 1fr) 120px 92px 148px 44px;
+  }
+}
+
+/* Touch: short words that are buttons (the "Event" / "Status" sort headers, the "Events" tab) get
+   a tap area at least 44px wide (guidelines 2.5) */
+@media (pointer: coarse) {
+  .st-page .ev-sort,
+  .st-page .ttabs button.ttab {
+    min-width: var(--tap-size);
+  }
+}
+
+/* The calendar in the phone's full-screen Add / Edit event scrolls into view clear of the sticky
+   Save bar (12px + 36px button + 16px + 1px line, plus the iPhone home-bar space) */
+.tdialog-page {
+  --dp-scroll-bottom: calc(68px + env(safe-area-inset-bottom));
+}
+
+/* v0.504 / finished-event hints under the Registration switch */
+.st-reg-hint {
+  margin-top: var(--space-4);
+}

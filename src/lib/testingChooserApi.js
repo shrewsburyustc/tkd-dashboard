@@ -1,4 +1,4 @@
-// testingChooserApi.js — the one read the Testing chooser page makes: Color Belt's next event.
+// testingChooserApi.js — the reads the Testing chooser page makes: Color Belt's and Star's next event.
 // Why it exists: the chooser's "Color belt testing" row shows its next event (rulebook v0.177):
 //   one school:  that school's next event        → "Next: Jan 16 · Worcester"
 //   Both:        the earliest one of either school → "Next: Jan 9 · Shrewsbury"
@@ -44,6 +44,37 @@ export async function loadNextColorBeltEvent(location) {
       .filter((row) => typeof row.testing_date === 'string' && row.testing_date >= today && codes.includes(row.location_code))
       .sort((a, b) => (a.testing_date < b.testing_date ? -1 : a.testing_date > b.testing_date ? 1 : 0))[0];
     return { status: 'ok', next: next ? { date: next.testing_date, school: LOCATION_NAME[next.location_code] ?? '' } : null };
+  } catch {
+    return ERROR;
+  }
+}
+
+// Star testing's next event, for the chooser's "Star testing" row (Star phase 2, v0.177: Star's row
+// has no line until it has events). Star events cover BOTH schools (v0.58), so the location
+// switcher doesn't filter them: the next one is the earliest Star event on or after today.
+// "Where" (the place it is held, information only, v0.87) comes with it, for the screen to word.
+// Reads three columns of star_events (no names, nothing about candidates), with the same
+// has_data_access check as above.
+//   { status: 'ok', next: { date: 'YYYY-MM-DD', whereCode, where: 'Shrewsbury' } }   next null when none
+//   { status: 'no_access' } · { status: 'error' }
+export async function loadNextStarEvent() {
+  try {
+    if (!supabase) return ERROR;
+    const [eventRes, accessRes] = await Promise.all([
+      supabase.from('star_events').select('id, testing_date, where_code').order('testing_date', { ascending: true }),
+      supabase.rpc('has_data_access'),
+    ]);
+    if (!accessRes?.error && accessRes?.data === false) return { status: 'no_access' };
+    if (accessRes?.error || accessRes?.data !== true) return ERROR;
+    if (eventRes?.error || !Array.isArray(eventRes?.data)) return ERROR;
+    const today = schoolToday();
+    const next = eventRes.data
+      .filter((row) => typeof row.testing_date === 'string' && row.testing_date >= today)
+      .sort((a, b) => (a.testing_date < b.testing_date ? -1 : a.testing_date > b.testing_date ? 1 : 0))[0];
+    return {
+      status: 'ok',
+      next: next ? { date: next.testing_date, whereCode: next.where_code, where: LOCATION_NAME[next.where_code] ?? '' } : null,
+    };
   } catch {
     return ERROR;
   }

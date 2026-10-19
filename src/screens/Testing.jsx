@@ -18,7 +18,8 @@
 //
 // Star testing (v0.59, v0.177) — only while its build switch is on (lib/features.js):
 //   - Testing has three pages: the CHOOSER (#testing, testing/chooser/TestingChooser.jsx), COLOR BELT
-//     (#testing/color-belt — everything described above) and STAR TESTING (#testing/star,
+//     (#testing/color-belt — everything described above) and STAR TESTING (#testing/star with its
+//     Events tab, #testing/star/rubrics, and an event's page #testing/star/event/<id> —
 //     testing/star/StarTesting.jsx).
 //   - Color Belt's header gets "← Testing" above its title, and the title "Color belt testing".
 //   - The chooser and Star testing work on Both; only Color Belt's own pages show the Both block.
@@ -34,7 +35,9 @@
 //   onOpenEvent(id)    open an event's page (App.jsx adds a browser history step)
 //   onCloseEvent()     back to the Events tab
 //   eventTab, onEventTab, onLeaveGuardChange   the event page's tab and leave guard (phase 3;
-//                      passed on to EventPage untouched)
+//                      passed on to EventPage untouched). On Star testing, eventTab / onEventTab
+//                      are Star's home tab ('events' | 'rubrics') and eventId is a Star event.
+//   onOpenStarEvent(id), onCloseStarEvent()   open a Star event's page / back to Star's Events tab
 //   screenLocked       true while the lock screen shows (dialogs and menus are hidden, no requests)
 //   onNoAccess         the database refused data because this sign-in is locked: lock the screen
 //   onRefreshProfile   re-read "who am I?" (e.g. after the database said "not allowed")
@@ -129,6 +132,8 @@ export default function Testing({
   eventId,
   onOpenEvent,
   onCloseEvent,
+  onOpenStarEvent,
+  onCloseStarEvent,
   ...tabProps
 }) {
   const page = STAR_TESTING_ON ? testingPage : 'colorBelt'; // switch off: Color Belt only
@@ -209,7 +214,14 @@ export default function Testing({
     // Star testing is the same for both schools (v0.58): no Both block, no school line.
     return (
       <Suspense fallback={null}>
-        <StarTesting isAdmin={isAdmin} onBack={backToChooser} {...tabProps} />
+        <StarTesting
+          isAdmin={isAdmin}
+          onBack={backToChooser}
+          eventId={eventId}
+          onOpenEvent={onOpenStarEvent}
+          onCloseEvent={onCloseStarEvent}
+          {...tabProps}
+        />
       </Suspense>
     );
   }

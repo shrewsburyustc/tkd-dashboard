@@ -13,8 +13,9 @@
 // while grading results are "Not saved", leaving the event page asks first (contract 0010 §4.9).
 // Star testing (v0.177, behind the build switch in lib/features.js) splits Testing into pages of
 // its own: the chooser, Color Belt and Star testing (with the switch on, a Color Belt event lives at
-// "#testing/color-belt/event/<id>" and its Grading tab at ".../grading"). Every address lives in
-// lib/pageAddress.js.
+// "#testing/color-belt/event/<id>" and its Grading tab at ".../grading"). Star testing phase 2 adds
+// Star's tabs ("#testing/star" = Events, "#testing/star/rubrics") and a Star event's page
+// ("#testing/star/event/<id>"). Every address lives in lib/pageAddress.js.
 //
 // Every screen change goes through the small functions below, so the rules (7-day password
 // check, access check, per-account idle lock, the database lock) live in one readable place.
@@ -32,7 +33,18 @@ import { getIdleLimitMs, markActivityNow, setLockedFlag, shouldBeLocked, useIdle
 import { lockSession, touchSession } from './lib/serverLock.js';
 import { useSessionHeartbeat } from './lib/useSessionHeartbeat.js';
 import { loadDeviceLocation, saveDeviceLocation } from './lib/device.js';
-import { addressFor, addressForRoute, correctedAddress, DEFAULT_TESTING_PAGE, routeFromAddress, routeIsUnknown, samePage, sameRoute } from './lib/pageAddress.js';
+import {
+  addressFor,
+  addressForRoute,
+  correctedAddress,
+  DEFAULT_TESTING_PAGE,
+  hasAddressTabs,
+  normalEventTab,
+  routeFromAddress,
+  routeIsUnknown,
+  samePage,
+  sameRoute,
+} from './lib/pageAddress.js';
 import { STAR_TESTING_ON } from './lib/features.js';
 import { backIsClaimed, isLeftoverDialogStep } from './lib/backButton.js';
 import PreviewBanner from './components/PreviewBanner.jsx';
@@ -525,23 +537,27 @@ export default function App() {
   // Options (all optional):
   //   testingPage: on Testing, which page: 'chooser' | 'colorBelt' | 'star'. Left out = Testing's
   //                default — the chooser while the Star testing switch is on, Color Belt while off.
-  //   eventId:     on Color Belt, the event whose page opens (null = the Color Belt tabs).
+  //   eventId:     on Color Belt or Star testing, the event whose page opens (null = the tabs).
   //   eventTab:    the event page's tab, 'students' | 'grading' ('students' unless said otherwise —
-  //                opening an event lands on Students; contract 0010 §4.1). `tab` is the same thing.
+  //                opening an event lands on Students; contract 0010 §4.1); on Star testing's
+  //                home, 'events' (the default) | 'rubrics'. `tab` is the same thing.
   //   replace:     true swaps the current step instead of adding one (used when an event page
   //                closes by itself because the event belongs to the other school — Back then
   //                doesn't bring it back).
   const navigate = useCallback(
     (id, { testingPage: nextPage = null, eventId: nextEventId = null, eventTab: nextTab, tab, replace = false } = {}) => {
       setToast(null);
-      const nextEvent = id === 'testing' ? nextEventId : null;
+      // Switch off: Testing has only the Color Belt page, whatever was asked for — and a Star event's
+      // id is dropped, so it can never become a Color Belt event address.
+      const starAskedWhileOff = !STAR_TESTING_ON && nextPage === 'star';
+      const nextEvent = id === 'testing' && !starAskedWhileOff ? nextEventId : null;
+      const page = id === 'testing' ? (STAR_TESTING_ON ? (nextPage ?? DEFAULT_TESTING_PAGE) : 'colorBelt') : null;
       const next = {
         section: id,
-        // Switch off: Testing has only the Color Belt page, whatever was asked for.
-        testingPage: id === 'testing' ? (STAR_TESTING_ON ? (nextPage ?? DEFAULT_TESTING_PAGE) : 'colorBelt') : null,
+        testingPage: page,
         eventId: nextEvent,
-        // The tab only means something while an event is open; otherwise it is always 'students'.
-        eventTab: nextEvent && (nextTab ?? tab) === 'grading' ? 'grading' : 'students',
+        // The tab only means something on a page that has tabs (pageAddress.normalEventTab).
+        eventTab: normalEventTab(page, nextEvent, nextTab ?? tab),
       };
       const here = {
         section: sectionRef.current,
@@ -586,14 +602,19 @@ export default function App() {
     },
     [navigate, guarded],
   );
-  // Students ↔ Grading: the same page, so never guarded, and no new history step (Back still
-  // leaves the event page; a reload keeps the tab).
+  // Star testing's event page (phase 2): in and out, the same way.
+  const openStarEvent = useCallback((id) => navigate('testing', { testingPage: 'star', eventId: id }), [navigate]);
+  const closeStarEvent = useCallback(() => guarded(() => navigate('testing', { testingPage: 'star', eventId: null })), [navigate, guarded]);
+  // Students ↔ Grading (a Color Belt event page) and Events ↔ Rubrics and prices (Star testing's
+  // home): the same page, so never guarded, and no new history step (Back still leaves the page;
+  // a reload keeps the tab).
   const changeEventTab = useCallback((tab) => {
-    if (eventIdRef.current) {
-      const route = { section: 'testing', testingPage: 'colorBelt', eventId: eventIdRef.current, eventTab: tab };
-      window.history.replaceState(window.history.state, '', addressForRoute(route));
+    const route = { section: 'testing', testingPage: testingPageRef.current, eventId: eventIdRef.current, eventTab: tab };
+    const nextTab = normalEventTab(route.testingPage, route.eventId, tab);
+    if (hasAddressTabs(route)) {
+      window.history.replaceState(window.history.state, '', addressForRoute({ ...route, eventTab: nextTab }));
     }
-    setEventTab(tab);
+    setEventTab(nextTab);
   }, []);
   // Moving between Testing's own pages: the chooser's rows, "← Testing", Star's back link. Guarded
   // like every other way off a Color Belt event page (the guard is only set while one is open).
@@ -653,7 +674,7 @@ export default function App() {
       };
       if (samePage(route, current)) {
         // Same page; only the event tab may differ (an address typed by hand): switch it, never asked.
-        if (route.eventId && route.eventTab !== eventTabRef.current && phaseRef.current === 'home') setEventTab(route.eventTab);
+        if (hasAddressTabs(route) && route.eventTab !== eventTabRef.current && phaseRef.current === 'home') setEventTab(route.eventTab);
         return;
       }
       const here = addressForRoute(current);
@@ -779,6 +800,8 @@ export default function App() {
                 onLeaveGuardChange={setLeaveGuard}
                 onOpenEvent={openEvent}
                 onCloseEvent={closeEvent}
+                onOpenStarEvent={openStarEvent}
+                onCloseStarEvent={closeStarEvent}
                 screenLocked={phase === 'locked'}
                 onNoAccess={handleNoAccess}
                 onRefreshProfile={refreshProfile}

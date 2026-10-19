@@ -6,7 +6,8 @@
 // — and follows the same rules as the real database (migrations 0001 + 0002 + 0003).
 // Testing → Classes and ranks lives in its own file, mockTesting.js; Events, the roster with
 // payments and Settings → Schools live in mockTestingEvents.js (phase 2); Star testing → Rubrics and
-// prices lives in mockStarTesting.js (Star phase 1); this file plugs all three in.
+// prices lives in mockStarTesting.js (Star phase 1) and Star testing events in mockStarEvents.js
+// (Star phase 2); this file plugs them all in.
 //
 // Try it:  any email + password "preview" signs in as Jeffrey Berg (admin). PIN is 2580.
 // Test helpers in the browser console (F12 → Console):
@@ -19,7 +20,7 @@
 // Testing helpers:
 //   __tkdPreview.setRole('staff')         view-only account ('admin' to switch back; then reload)
 //   __tkdPreview.failNextSave()           the next Testing save fails like a dropped connection
-//   __tkdPreview.failNextSave('star')     the next Star testing (Rubrics and prices) save fails instead
+//   __tkdPreview.failNextSave('star')     the next Star testing save (Rubrics and prices or events) fails instead
 //   __tkdPreview.simulateOtherAdminEdit() "another admin" changes everything (open dialogs go stale)
 //   __tkdPreview.clearSchool('Shrewsbury') remove that school's classes (to see the empty state)
 //   __tkdPreview.resetTesting()           back to the default classes and ranks
@@ -36,10 +37,11 @@
 //                                         Wi-Fi connection (reads still work) — "Not saved"
 //   __tkdPreview.reconnect()              saves work again, and the browser's "online" event
 //                                         fires, so unsaved results save by themselves
-// Star testing (Rubrics and prices, mockStarTesting.js):
-//   simulateOtherAdminEdit() and resetTesting() cover Star's rubrics and prices too; setRole and
-//   setTestingDelay work the same; failNextSave('star') targets Star (see above). The grading
-//   helpers above (failSavesUntilRetry / reconnect) touch Color Belt's Events saves only.
+// Star testing (Rubrics and prices, mockStarTesting.js; events, mockStarEvents.js):
+//   simulateOtherAdminEdit() and resetTesting() cover Star's rubrics and prices and Star's events
+//   too; setRole, setTestingDelay and setToday work the same; failNextSave('star') targets Star
+//   (see above). The grading helpers above (failSavesUntilRetry / reconnect) touch Color Belt's
+//   Events saves only.
 // Staff accounts helpers (account menu → Admin → Staff accounts; mockStaff.js):
 //   __tkdPreview.failNextSave()           also makes the next Reset password / Reset PIN fail
 //   __tkdPreview.resetStaffAccounts()     the fake desk is signed in on 3 devices again
@@ -53,6 +55,7 @@ import { createEventsBackend, EVENT_RPC_NAMES, EVENT_RESTRICTED_RPC_NAMES, EVENT
 import { previewToday, publicPreviewHelpers } from './testing/publicApi.preview.js';
 import { createStaffBackend, STAFF_RPC_NAMES } from './mockStaff.js';
 import { createStarBackend, STAR_RPC_NAMES, STAR_TABLES, STAR_STORE_KEY } from './mockStarTesting.js';
+import { createStarEventsBackend, STAR_EVENT_RPC_NAMES, STAR_EVENT_TABLES } from './mockStarEvents.js';
 
 const SESSION_KEY = 'tkd.preview.session'; // the fake "signed in" session
 const STAFF_STATE_KEY = 'tkd.preview.staffState'; // fake staff row: PIN, shared flag
@@ -448,6 +451,17 @@ export function createMockClient() {
     now: () => Date.now(),
     newId: newUuid,
   });
+  // Star testing events (mockStarEvents.js): the same store as Rubrics and prices, so Add event can
+  // copy the template as it is at that moment.
+  const starEvents = createStarEventsBackend({
+    readBase: () => star.snapshot(),
+    saveStore: (store) => writeStorage(STAR_STORE_KEY, JSON.stringify(store)),
+    now: () => Date.now(),
+    today: previewToday, // the real school date, or the one set with setToday
+    newId: newUuid,
+  });
+  // failNextSave('star') arms this; the next Star save then fails (rubrics or events, whichever comes first).
+  let failNextStar = false;
 
   // The fake network time for Testing calls (setTestingDelay saves it so it survives a reload).
   function testingDelay() {
@@ -494,6 +508,8 @@ export function createMockClient() {
           }
           // Phase 2 tables (and locations, which gained the address columns) → mockTestingEvents.js.
           if (EVENT_TABLES.includes(table)) return events.select(table, query.columns, query.filters, query.orders, testingContext());
+          // Star testing's events, their copies and the roster counts → mockStarEvents.js.
+          if (STAR_EVENT_TABLES.includes(table)) return starEvents.select(table, query.columns, query.filters, query.orders, testingContext());
           // Star testing's four rubric tables → mockStarTesting.js.
           if (STAR_TABLES.includes(table)) return star.select(table, query.columns, query.filters, query.orders, testingContext());
           return testing.select(table, query.columns, query.filters, query.orders, testingContext());
@@ -540,10 +556,14 @@ export function createMockClient() {
       }
       return events.rpc(name, args, testingContext());
     }
-    if (STAR_RPC_NAMES.includes(name)) {
+    if (STAR_RPC_NAMES.includes(name) || STAR_EVENT_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
-      // (failNextSave('star') arms Star's own flag directly; nothing to pass on here.)
-      return star.rpc(name, args, testingContext());
+      const backend = STAR_RPC_NAMES.includes(name) ? star : starEvents;
+      if (failNextStar) {
+        failNextStar = false;
+        backend.failNextSave(); // this one call fails like a dropped connection
+      }
+      return backend.rpc(name, args, testingContext());
     }
     if (name === 'has_data_access' || TESTING_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
@@ -608,11 +628,11 @@ export function createMockClient() {
       return `The preview account is now ${role === 'admin' ? 'an admin' : 'staff (view only)'}. Reload the page to see it.`;
     },
     // failNextSave()       → the next Color Belt Testing/Events save (and Reset password / PIN) fails.
-    // failNextSave('star') → the next Star testing (Rubrics and prices) save fails.
+    // failNextSave('star') → the next Star testing save (Rubrics and prices or events) fails.
     failNextSave(target) {
       if (target === 'star') {
-        star.failNextSave();
-        return 'The next Star testing save (Rubrics and prices) will fail like a dropped connection and change nothing.';
+        failNextStar = true;
+        return 'The next Star testing save (Rubrics and prices or events) will fail like a dropped connection and change nothing.';
       }
       if (target !== undefined) return "Use failNextSave() for Color Belt and Staff accounts, or failNextSave('star') for Star testing.";
       failNextTesting = true;
@@ -627,7 +647,8 @@ export function createMockClient() {
       testing.simulateOtherAdminEdit();
       events.simulateOtherAdminEdit();
       star.simulateOtherAdminEdit();
-      return 'Another admin changed every class, rank, event, student and school address, and swapped two ranks — and changed Star testing\'s rubrics and prices. Open dialogs and Undo are now out of date.';
+      starEvents.simulateOtherAdminEdit();
+      return 'Another admin changed every class, rank, event, student and school address, and swapped two ranks — and changed Star testing\'s rubrics and prices, events and candidates. Open dialogs and Undo are now out of date.';
     },
     clearSchool(school) {
       if (!testing.clearSchool(school)) return "Use clearSchool('Worcester') or clearSchool('Shrewsbury').";
@@ -637,7 +658,8 @@ export function createMockClient() {
       testing.reset();
       events.reset();
       star.reset();
-      return 'Testing is back to the default classes and ranks, the November Children Testing event with its students, and empty school addresses — and Star testing to its seed rubrics and prices. Reload to see them.';
+      starEvents.reset(); // after star.reset(): it adds the seeded events to the fresh template
+      return 'Testing is back to the default classes and ranks, the November Children Testing event with its students, and empty school addresses — and Star testing to its seed rubrics and prices and its three seeded events. Reload to see them.';
     },
     setTestingDelay(ms) {
       const value = Number(ms);

@@ -9,11 +9,13 @@
 //   onRetry    optional — shows the "Retry" button
 //   onDismiss  optional — shows the X ("Dismiss") button
 //   retrying   true while a retry is on its way (the Retry button is then unavailable)
+//   retryLabel optional words for the Retry button when it does something more specific (Star
+//              testing's "Close registration", v0.504); then it has no ti-refresh icon
 import { IconAlertTriangle, IconRefresh, IconX } from '@tabler/icons-react';
 import IconButton from './IconButton.jsx';
 import { DISMISS, RETRY } from '../screens/testing/text.js';
 
-export default function ErrorBanner({ text, onRetry, onDismiss, retrying = false }) {
+export default function ErrorBanner({ text, onRetry, onDismiss, retrying = false, retryLabel = null }) {
   return (
     // role="alert": screen readers announce it as soon as it appears.
     <div className="errbar" role="alert">
@@ -31,8 +33,8 @@ export default function ErrorBanner({ text, onRetry, onDismiss, retrying = false
               }}
             >
               {/* ti-refresh = Retry */}
-              <IconRefresh size={16} aria-hidden="true" />
-              {RETRY}
+              {!retryLabel && <IconRefresh size={16} aria-hidden="true" />}
+              {retryLabel ?? RETRY}
             </button>
           )}
           {/* ti-x = close; icon-only, so it gets the "Dismiss" tooltip too */}

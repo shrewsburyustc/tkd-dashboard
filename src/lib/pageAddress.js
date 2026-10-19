@@ -17,20 +17,25 @@
 //   #testing/color-belt                     Color Belt    #testing/event/<id>          a Color Belt event
 //   #testing/color-belt/event/<id>          an event      #testing/event/<id>/grading  its Grading tab
 //   #testing/color-belt/event/<id>/grading  its Grading tab
-//   #testing/star                           Star testing
+//   #testing/star                           Star testing, Events tab (Star phase 2)
+//   #testing/star/rubrics                   Star testing, Rubrics and prices tab
+//   #testing/star/event/<id>                a Star testing event
 // Old or "other switch" addresses are sent to the right one (the address bar is quietly corrected,
 // replacing the step instead of adding one), so bookmarks keep working:
 //   switch ON:  #testing/event/<id>          → #testing/color-belt/event/<id>
 //               #testing/event/<id>/grading  → #testing/color-belt/event/<id>/grading
 //   switch OFF: #testing/color-belt  → #testing,
 //               #testing/color-belt/event/<id>(/grading) → #testing/event/<id>(/grading),
-//               #testing/star        → #testing (Color Belt — Star doesn't exist yet on this build)
+//               #testing/star, #testing/star/rubrics, #testing/star/event/<id>
+//                                    → #testing (Color Belt — Star isn't in this build)
 //
 // A "route" is a small object saying which page is open:
 //   { section: 'home' | 'testing' | 'staffAccounts' | 'settings',
 //     testingPage: 'chooser' | 'colorBelt' | 'star' | null   (null when section isn't 'testing'),
-//     eventId: the open Color Belt event's id, or null,
-//     eventTab: that event page's tab, 'students' | 'grading' (always 'students' with no event) }
+//     eventId: the open event's id (a Color Belt event, or a Star event when testingPage is
+//              'star'), or null,
+//     eventTab: the tab. On a Color Belt event page 'students' | 'grading'; on Star's home (no
+//               event) 'events' | 'rubrics'; otherwise always 'students' — see normalEventTab }
 import { STAR_TESTING_ON } from './features.js';
 
 const HASH_BY_PAGE = {
@@ -50,11 +55,30 @@ const COLOR_BELT_HASH = '#testing/color-belt';
 const COLOR_BELT_EVENT_HASH = new RegExp(`^#testing/color-belt/event/${ID}(/grading)?$`);
 const GRADING_SUFFIX = '/grading';
 const STAR_HASH = '#testing/star';
+const STAR_RUBRICS_HASH = '#testing/star/rubrics';
+const STAR_EVENT_HASH = new RegExp(`^#testing/star/event/${ID}$`);
+// Any Star address at all (used while the switch is off, to send them all to Color Belt).
+const ANY_STAR_HASH = /^#testing\/star(\/.*)?$/;
 
 // The page Testing opens on when you click it in the rail or bottom bar.
 export const DEFAULT_TESTING_PAGE = STAR_TESTING_ON ? 'chooser' : 'colorBelt';
 
-const route = (section, testingPage = null, eventId = null, eventTab = 'students') => ({ section, testingPage, eventId, eventTab });
+// The tab a route really has, from what was asked for:
+//   a Star page without an event      'rubrics' when asked, otherwise 'events' (the default tab)
+//   a Color Belt event page           'grading' when asked, otherwise 'students'
+//   anything else (incl. a Star event page, which has no tabs in phase 2)   'students'
+export function normalEventTab(testingPage, eventId, tab) {
+  if (testingPage === 'star' && !eventId) return tab === 'rubrics' ? 'rubrics' : 'events';
+  if (testingPage === 'colorBelt' && eventId && tab === 'grading') return 'grading';
+  return 'students';
+}
+
+const route = (section, testingPage = null, eventId = null, eventTab = 'students') => ({
+  section,
+  testingPage,
+  eventId,
+  eventTab: normalEventTab(testingPage, eventId, eventTab),
+});
 
 // Reads an address ("#…") → { route, known }.
 //   known: false when no page has this address (it then shows Home).
@@ -63,7 +87,12 @@ function readHash(hash) {
   let match = COLOR_BELT_EVENT_HASH.exec(hash) ?? OLD_EVENT_HASH.exec(hash);
   if (match) return { route: route('testing', 'colorBelt', match[1], match[2] ? 'grading' : 'students'), known: true };
   if (hash === COLOR_BELT_HASH) return { route: route('testing', 'colorBelt'), known: true };
-  if (hash === STAR_HASH) return { route: route('testing', STAR_TESTING_ON ? 'star' : 'colorBelt'), known: true };
+  // Star testing (switch off: every Star address shows Color Belt, as in phase 1).
+  if (!STAR_TESTING_ON && ANY_STAR_HASH.test(hash)) return { route: route('testing', 'colorBelt'), known: true };
+  match = STAR_EVENT_HASH.exec(hash);
+  if (match) return { route: route('testing', 'star', match[1]), known: true };
+  if (hash === STAR_RUBRICS_HASH) return { route: route('testing', 'star', null, 'rubrics'), known: true };
+  if (hash === STAR_HASH) return { route: route('testing', 'star', null, 'events'), known: true };
   if (hash === HASH_BY_PAGE.testing) return { route: route('testing', DEFAULT_TESTING_PAGE), known: true };
   // The other pages.
   if (hash in PAGE_BY_HASH) return { route: route(PAGE_BY_HASH[hash]), known: true };
@@ -85,7 +114,10 @@ function hashForRoute({ section, testingPage = null, eventId = null, eventTab = 
   if (section !== 'testing') return HASH_BY_PAGE[section] ?? '';
   const tabPart = eventTab === 'grading' ? GRADING_SUFFIX : ''; // Students has no ending of its own
   if (!STAR_TESTING_ON) return eventId ? `#testing/event/${eventId}${tabPart}` : HASH_BY_PAGE.testing;
-  if (testingPage === 'star') return STAR_HASH;
+  if (testingPage === 'star') {
+    if (eventId) return `${STAR_HASH}/event/${eventId}`;
+    return eventTab === 'rubrics' ? STAR_RUBRICS_HASH : STAR_HASH;
+  }
   if (testingPage === 'colorBelt') return eventId ? `${COLOR_BELT_HASH}/event/${eventId}${tabPart}` : COLOR_BELT_HASH;
   return HASH_BY_PAGE.testing; // the chooser
 }
@@ -115,8 +147,15 @@ export function samePage(a, b) {
   return a.section === b.section && (a.testingPage ?? null) === (b.testingPage ?? null) && (a.eventId ?? null) === (b.eventId ?? null);
 }
 
-// true when two routes are exactly the same: same page AND, on an event page, the same tab.
+// true when two routes are exactly the same: same page AND, on an event page (or Star's home,
+// which has tabs of its own), the same tab.
 export function sameRoute(a, b) {
   if (!samePage(a, b)) return false;
-  return !a.eventId || (a.eventTab ?? 'students') === (b.eventTab ?? 'students');
+  if (!a.eventId && a.testingPage !== 'star') return true;
+  return normalEventTab(a.testingPage, a.eventId, a.eventTab) === normalEventTab(b.testingPage, b.eventId, b.eventTab);
+}
+
+// true when a route's page has tabs that live in the address (a Color Belt event page, Star's home).
+export function hasAddressTabs(r) {
+  return r.section === 'testing' && (Boolean(r.eventId) || r.testingPage === 'star');
 }

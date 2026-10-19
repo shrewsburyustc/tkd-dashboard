@@ -1,34 +1,57 @@
-// StarTesting.jsx — the Star testing home page (address #testing/star, phase 1).
+// StarTesting.jsx — the Star testing pages: the home with its two tabs, and one event's page.
 // Why it exists: Star testing lives inside Testing next to Color belt testing (v0.58) and is
 // joint for both schools, so — unlike Color Belt — it works on Both: there is no "choose a
-// school" block and no school line. The approved phase 1 header (Chooser mockups screen 5,
-// v0.177) is:
-//   ← Testing                      (back to the Testing choice page, v0.59; ti-arrow-left)
-//   Star testing                   (the page title)
-//   [Rubrics and prices]           (the tab bar — ONLY this tab in phase 1; Events joins it in
-//                                   phase 2 without the page jumping, rule P7)
-//   View only. Ask an admin to make changes.      (staff only, v0.40 pattern)
-//   Same for both schools. Events keep the rubric and prices they were created with.
-// The tab itself is RubricsTab.jsx. This tab has no page-header button (nothing to "add" at page
-// level, approved screen 1).
+// school" block and no school line. Addresses (v0.83, phase 1 plan §1c; App.jsx + pageAddress.js):
+//   #testing/star              the home, Events tab (the default, build phase 2)
+//   #testing/star/rubrics      the home, Rubrics and prices tab (build phase 1)
+//   #testing/star/event/<id>   one event's page (StarEventPage.jsx)
+// The home header (Chooser mockups screen 5, v0.177; Events mockups screen 1, v0.92):
+//   ← Testing                                   [+ Add event]   (Events tab, admins only)
+//   Star testing
+//   [Events] [Rubrics and prices]               (Events joined in phase 2 without the page
+//                                                jumping: the tab bar was already there, v0.177)
+//   Events, staff:   "Staff can open or close registration from ⋯ until the closing date. Ask an
+//                    admin to add or change events." (v0.86)
+//   Rubrics, staff:  "View only. Ask an admin to make changes." — then for everyone "Same for both
+//                    schools. Events keep the rubric and prices they were created with."
+// Switching tabs changes the address in place (no new Back step — the same as Color Belt's
+// Students | Grading tabs), so Back leaves Star testing and a reload stays on the tab.
 //
-// Props (from the screen that shows it — wired in by Testing.jsx / App.jsx):
+// Props (from Testing.jsx / App.jsx):
 //   isAdmin            show edit controls? (only for the screen — the database enforces the rule)
 //   onBack()           "← Testing": back to the Testing choice page
+//   eventTab           the home's tab from the address: 'events' | 'rubrics'
+//   onEventTab(tab)    switch the tab (App.jsx updates the address without a new history step)
+//   eventId            the open Star event's id (#testing/star/event/<id>), or null for the home
+//   onOpenEvent(id)    open an event's page (App.jsx adds a browser history step)
+//   onCloseEvent()     "← Star testing": back to the Events tab
 //   screenLocked       true while the lock screen shows (dialogs and menus are hidden, no requests)
 //   onNoAccess()       the database refused data because this sign-in is locked: lock the screen
 //   onRefreshProfile() re-read "who am I?" (e.g. after the database said "not allowed")
 //   showToast(text, { action, icon }) / clearToast()   the toast at the bottom (with Undo)
 //   onModalOpenChange(open)  tells the App a dialog is open (the page behind becomes inert)
-import { useId } from 'react';
+import { useId, useRef } from 'react';
 import { IconArrowLeft } from '@tabler/icons-react';
 import RubricsTab from './RubricsTab.jsx';
+import StarEventsTab, { returnFocusTo } from './events/StarEventsTab.jsx';
+import StarEventPage from './event/StarEventPage.jsx';
 import * as T from './text.js';
+import { TAB_EVENTS } from './events/text.js';
 import './star.css';
+
+const TABS = [
+  { key: 'events', label: TAB_EVENTS },
+  { key: 'rubrics', label: T.TAB_RUBRICS },
+];
 
 export default function StarTesting({
   isAdmin,
   onBack,
+  eventTab,
+  onEventTab,
+  eventId = null,
+  onOpenEvent,
+  onCloseEvent,
   screenLocked = false,
   onNoAccess,
   onRefreshProfile,
@@ -37,11 +60,47 @@ export default function StarTesting({
   onModalOpenChange,
 }) {
   const baseId = useId();
-  const tabId = `${baseId}-tab-rubrics`;
-  const panelId = `${baseId}-panel-rubrics`;
+  const tabRefs = useRef({});
+  const tab = eventTab === 'rubrics' ? 'rubrics' : 'events';
+  const ids = { tab: (key) => `${baseId}-tab-${key}`, panel: (key) => `${baseId}-panel-${key}` };
 
-  return (
-    <div className="testing st-page">
+  // ----- One event's page -----
+  if (eventId) {
+    return (
+      <StarEventPage
+        key={eventId}
+        eventId={eventId}
+        onBack={(id) => {
+          returnFocusTo(id); // the list focuses this event's row again
+          onCloseEvent?.();
+        }}
+        screenLocked={screenLocked}
+        onNoAccess={onNoAccess}
+        showToast={showToast}
+        clearToast={clearToast}
+        onModalOpenChange={onModalOpenChange}
+      />
+    );
+  }
+
+  // ----- The home: header, tabs, the open tab -----
+  function chooseTab(key) {
+    if (key !== tab) onEventTab?.(key);
+  }
+  // ← → move between the tabs (and choose), like Color Belt's tab bar.
+  function handleTabKeyDown(event) {
+    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+    event.preventDefault();
+    const index = TABS.findIndex((t) => t.key === tab);
+    const next = TABS[(index + (event.key === 'ArrowRight' ? 1 : -1) + TABS.length) % TABS.length];
+    chooseTab(next.key);
+    tabRefs.current[next.key]?.focus();
+  }
+
+  // The header and tab bar. action = the tab's header button (Add event) or null; lines = the gray
+  // lines under the tabs.
+  const renderHeader = (action, lines) => (
+    <>
       <div className="phead st-phead">
         <div className="phead-titles">
           {/* A link-styled button: it goes back inside the app (App.jsx changes the address). */}
@@ -52,26 +111,58 @@ export default function StarTesting({
           </button>
           <h1 className="ptitle">{T.PAGE_TITLE}</h1>
         </div>
+        {action}
       </div>
-      {/* One tab for now. A tab list with one tab still tells screen readers what the area is. */}
-      <div className="ttabs" role="tablist" aria-label={T.PAGE_TITLE}>
-        <button id={tabId} type="button" className="ttab is-current" role="tab" aria-selected="true" aria-controls={panelId} tabIndex={0}>
-          {T.TAB_RUBRICS}
-        </button>
+      <div className="ttabs" role="tablist" aria-label={T.PAGE_TITLE} onKeyDown={handleTabKeyDown}>
+        {TABS.map((t) => {
+          const current = t.key === tab;
+          return (
+            <button
+              key={t.key}
+              ref={(element) => {
+                tabRefs.current[t.key] = element;
+              }}
+              id={ids.tab(t.key)}
+              type="button"
+              className={`ttab${current ? ' is-current' : ''}`}
+              role="tab"
+              aria-selected={current ? 'true' : 'false'}
+              aria-controls={ids.panel(t.key)}
+              tabIndex={current ? 0 : -1}
+              onClick={() => chooseTab(t.key)}
+            >
+              {t.label}
+            </button>
+          );
+        })}
       </div>
-      {!isAdmin && <p className="viewonly">{T.VIEW_ONLY_LINE}</p>}
-      <p className="viewonly">{T.SAME_FOR_BOTH}</p>
-      <RubricsTab
-        isAdmin={isAdmin}
-        panelId={panelId}
-        tabId={tabId}
-        screenLocked={screenLocked}
-        onNoAccess={onNoAccess}
-        onRefreshProfile={onRefreshProfile}
-        showToast={showToast}
-        clearToast={clearToast}
-        onModalOpenChange={onModalOpenChange}
-      />
+      {(lines ?? []).map((line) => (
+        <p key={line} className="viewonly">
+          {line}
+        </p>
+      ))}
+    </>
+  );
+
+  const shared = { isAdmin, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange };
+
+  return (
+    <div className="testing st-page">
+      {tab === 'events' ? (
+        <StarEventsTab
+          {...shared}
+          panelId={ids.panel('events')}
+          tabId={ids.tab('events')}
+          renderHeader={(action, staffLine) => renderHeader(action, staffLine ? [staffLine] : [])}
+          onOpenEvent={onOpenEvent}
+        />
+      ) : (
+        <>
+          {renderHeader(null, isAdmin ? [T.SAME_FOR_BOTH] : [T.VIEW_ONLY_LINE, T.SAME_FOR_BOTH])}
+          <RubricsTab {...shared} panelId={ids.panel('rubrics')} tabId={ids.tab('rubrics')} />
+        </>
+      )}
     </div>
   );
 }
+
