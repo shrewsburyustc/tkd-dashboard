@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Black Belt database questions</title>
+<!--
+  Black Belt testing → database plan questions (TKD-BlackBelt-DB-Plan.md §7), one at a time (rule P3).
+  Why: Jeffrey decides each database choice from a picture, in plain words.
+  Each option is drawn as "where the information lives → what families and staff see".
+  Self-contained so it opens offline and can be screenshotted.
+-->
+<style>
+:root{--page:#EFEFEC;--bg:#FFFFFF;--surface:#F7F7F5;--border:#E5E5E2;--border-strong:#CFCFCA;--text:#1F1F1F;--text2:#6B6B6B;--blue:#003595;--blue-tint:#E6EBF4;--ok:#3B6D11;--ok-tint:#EAF3DE;--warn:#8A5A00;--warn-tint:#FDF0D9;--amber:#E8A317;--bad:#A32D2D;--bad-tint:#FBE9E9}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:24px 16px 40px}
+section+section{border-top:1px solid var(--border-strong);margin-top:28px;padding-top:20px}
+h1{font-size:20px;font-weight:500;margin:0 0 4px}
+b{font-weight:600}
+.lead{color:var(--text2);margin:0 0 16px;max-width:1300px}
+.opts{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
+.opt{background:var(--bg);border:1px solid var(--border-strong);border-radius:10px;padding:14px}
+.opt.rec{border:2px solid var(--blue)}
+.ot{display:flex;align-items:center;font-size:16px;font-weight:500;margin-bottom:10px}
+.letter{display:inline-flex;width:28px;height:28px;border-radius:50%;background:var(--text);color:#fff;align-items:center;justify-content:center;font-size:14px;margin-right:8px;flex:none}
+.rec-tag{font-size:12px;color:var(--blue);background:var(--blue-tint);border-radius:6px;padding:2px 8px;margin-left:8px;font-weight:400}
+.flow{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.box{border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;background:var(--surface);font-size:13px}
+.box .t{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--text2);margin-bottom:2px}
+.box.amb{outline:3px solid var(--amber);outline-offset:2px;background:#FFFBF2}
+.box.db{background:#EEF0F6;border-color:#C9CFE0}
+.box.old{background:var(--bad-tint);border-color:#E9C2C2}
+.arrow{font-size:12px;color:var(--text2);padding-left:12px}
+.when{font-size:12px;font-weight:600;color:var(--text);margin-top:4px}
+.exp{font-size:13px;color:var(--text2)}
+.exp b{color:var(--text)}
+.mini{background:#fff;border:1px solid var(--border-strong);border-radius:8px;padding:6px 10px;font-size:12px}
+.mini .r{display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:3px 0}
+.foot{font-size:13px;color:var(--text2);margin-top:14px}
+.ambtxt{outline:3px solid var(--amber);outline-offset:1px;border-radius:3px;padding:0 3px}
+</style>
+</head>
+<body>
+<main>
+
+<section id="qb1">
+<h1>Black Belt · Database question 1 of 7: where the "What 1st Dan is tested on" panel gets its numbers</h1>
+<p class="lead">The family form's requirements panel (approved, v0.216) must work by <b>February</b>. Normally it reads the cycle's <b>rubric</b>: the subjects, credits, scoring tables and pass marks that grading also uses. But the rubric's final shape waits for <b>Master Jeong's answers</b> (child/adult age, the B and B− points, extra points…). The question is what the panel reads <b>until grading is built</b>. <span class="ambtxt">Amber</span> = where the numbers live in each option.</p>
+<div class="opts">
+
+<div class="opt">
+<div class="ot"><span class="letter">A</span>Build the real rubric tables now</div>
+<div class="flow">
+<div class="box db amb"><div class="t">Database, now</div>Rubric tables: parts → subjects → credits → scoring tables → pass marks, loaded with the Fall 2026 numbers. Each cycle gets its own copy.</div>
+<div class="arrow">↓ the panel reads them</div>
+<div class="box"><div class="t">Family form, February</div>"What 1st Dan is tested on" panel</div>
+<div class="when">When grading is built (spring):</div>
+<div class="box">Grading adds grades on top of the same tables. If Master Jeong's answers change their shape, the tables are rebuilt.</div>
+</div>
+<div class="exp"><b>Pros:</b> one source from day one, exactly as v0.216 says.<br><b>Cons:</b> the biggest piece of work, designed <b>before</b> the rules are known, so it's likely to be reshaped; it slows down the part needed for February.</div>
+</div>
+
+<div class="opt rec">
+<div class="ot"><span class="letter">B</span>A requirements sheet per cycle, for now<span class="rec-tag">Recommended</span></div>
+<div class="flow">
+<div class="box db amb"><div class="t">Database, now</div>One <b>requirements sheet</b> stored with each cycle (a single block of text in a fixed layout), copied from a starting sheet loaded with the Fall 2026 numbers. No editor screen.</div>
+<div class="arrow">↓ the panel reads it</div>
+<div class="box"><div class="t">Family form, February</div>"What 1st Dan is tested on" panel: looks exactly as approved</div>
+<div class="when">When grading is built (spring):</div>
+<div class="box">The real rubric tables are built <b>once</b>, from Master Jeong's answers. The panel switches to them and the sheet is dropped.</div>
+</div>
+<div class="exp"><b>Pros:</b> small; nothing is locked in before the rules are known; the form ships on time; families see no difference.<br><b>Cons:</b> until grading exists, changing a number (e.g. a credit) means a short database update that you paste in; two sources for a few months, though they can't disagree because grading doesn't exist yet.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">C</span>No panel until grading</div>
+<div class="flow">
+<div class="box old amb"><div class="t">Old website, now</div>Today's <code>requirements.html</code> on the old Worker stays online.</div>
+<div class="arrow">↓ the form links to it</div>
+<div class="box"><div class="t">Family form, February</div>A "Testing requirements ↗" link that opens the old page</div>
+<div class="when">When grading is built (spring):</div>
+<div class="box">The approved panel is built then, from the real rubric.</div>
+</div>
+<div class="exp"><b>Pros:</b> nothing to build now.<br><b>Cons:</b> goes against what you approved for the form (v0.216, screen 11); the old website stays online longer; the old page has no dates and can disagree with the school's real numbers.</div>
+</div>
+
+</div>
+<p class="foot"><b>Same in every option:</b> grading itself (scores, results, make-ups) comes in the next migration, after Master Jeong's answers; the numbers families see in February are the Fall 2026 ones unless he changes them first.</p>
+</section>
+
+</main>
+</body>
+</html>
