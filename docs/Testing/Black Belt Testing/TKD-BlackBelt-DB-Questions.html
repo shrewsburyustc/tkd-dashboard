@@ -110,6 +110,15 @@ b{font-weight:600}
 .gone{color:#A32D2D;text-decoration:line-through}
 .keep{color:var(--ok)}
 .sig{font-family:'Segoe Script','Brush Script MT',cursive;font-size:16px}
+
+.tl7{display:flex;height:30px;gap:2px;font-size:11px;margin:6px 0}
+.tl7 .s{display:flex;align-items:center;justify-content:center;text-align:center;border-radius:4px;padding:0 4px;line-height:1.15}
+.tl7 .kp{background:var(--blue-tint);color:var(--blue)}
+.tl7 .gn{background:#F3E3E3;color:#8A2B2B}
+.det{background:#fff;border:1px solid var(--border-strong);border-radius:8px;font-size:12px;margin-top:6px}
+.det .ln{display:flex;justify-content:space-between;padding:4px 8px;border-bottom:1px solid var(--border)}
+.det .ln span:first-child{color:var(--text2)}
+.det .rm{color:#A32D2D;font-style:italic}
 </style>
 </head>
 <body>
@@ -410,6 +419,36 @@ b{font-weight:600}
 
 </div>
 <p class="foot"><b>Same in every option:</b> removal happens by itself on the date, with nothing to click; changing the number of years warns first ("this will delete X signed waivers now", floor 3 years); payments, Dan and results are never removed by this. Whether the candidate's date of birth and email are removed too is the next question (7).</p>
+</section>
+
+<section id="qb7">
+<h1>Black Belt · Database question 7 of 7: how long a candidate's date of birth and email are kept</h1>
+<p class="lead">Most Black Belt candidates are <b>minors</b>. Their <b>date of birth</b> is needed for this cycle (age groups, child/adult, who signs the waiver) and for a make-up the next season; the <b>email</b> is for results. After that they mostly sit there. Color Belt and Star keep them <b>forever</b>. <b>Names, Dan, results and payments are kept in every option</b> (rank history and the money record). Example: Alex Kim, born Mar 4, 2012, last testing day Jun 5, 2027. <span class="ambtxt">Amber</span> = when the date of birth and email are removed, and what the candidate detail shows afterwards.</p>
+<div class="opts">
+
+<div class="opt">
+<div class="ot"><span class="letter">A</span>Keep forever (like Color Belt and Star)</div>
+<div class="tl7 amb"><span class="s kp" style="flex:1">kept forever</span></div>
+<div class="det"><div class="ln"><span>Name</span><span>Alex Kim</span></div><div class="ln"><span>Date of birth</span><span>Mar 4, 2012</span></div><div class="ln"><span>Email for results</span><span>kim.family@example.com</span></div><div class="ln"><span>Dan · result · payments</span><span>1st Dan · Passed · $970 paid</span></div></div>
+<div class="exp" style="margin-top:8px"><b>Pros:</b> one rule across all testing; old cycles stay complete (e.g. a Kukkiwon question years later).<br><b>Cons:</b> minors' birth dates and emails stay indefinitely, also in the change log.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">B</span>Remove a few years after the cycle</div>
+<div class="tl7 amb"><span class="s kp" style="flex:1.2">kept until Jun 5, 2030 (3 years)</span><span class="s gn" style="flex:1">removed</span></div>
+<div class="det"><div class="ln"><span>Name</span><span>Alex Kim</span></div><div class="ln"><span>Date of birth</span><span><span class="rm">removed Jun 5, 2030</span></span></div><div class="ln"><span>Email for results</span><span><span class="rm">removed Jun 5, 2030</span></span></div><div class="ln"><span>Dan · result · payments</span><span>1st Dan · Passed · $970 paid</span></div></div>
+<div class="exp" style="margin-top:8px">A third setting: "remove date of birth and email N years after the cycle's last testing day" (e.g. 3).<br><b>Pros:</b> a short, clear limit, shortest for young children.<br><b>Cons:</b> one more number to set; for a young child, the waiver (kept until after they turn 18) outlives their date of birth.</div>
+</div>
+
+<div class="opt rec">
+<div class="ot"><span class="letter">C</span>Remove together with the waiver signature<span class="rec-tag">Recommended</span></div>
+<div class="tl7 amb"><span class="s kp" style="flex:2">kept until Mar 4, 2033 (with the waiver)</span><span class="s gn" style="flex:1">removed</span></div>
+<div class="det"><div class="ln"><span>Name</span><span>Alex Kim</span></div><div class="ln"><span>Date of birth</span><span><span class="rm">removed Mar 4, 2033</span></span></div><div class="ln"><span>Email for results</span><span><span class="rm">removed Mar 4, 2033</span></span></div><div class="ln"><span>Dan · result · payments</span><span>1st Dan · Passed · $970 paid</span></div></div>
+<div class="exp" style="margin-top:8px">One date per candidate: the same day the waiver's signature and signer's name go (v0.906).<br><b>Pros:</b> one simple promise: "personal details are kept as long as the insurer needs the waiver, then removed"; no extra setting.<br><b>Cons:</b> kept longer than B for young children (until a few years after they turn 18).</div>
+</div>
+
+</div>
+<p class="foot"><b>Same in B and C:</b> the date of birth and email are also hidden in the change log (shown as "changed"), otherwise the log would keep the old values forever. <b>In every option:</b> date of birth and email are never in lists or on the grading tablet (§5), only in one candidate's detail on desk devices.</p>
 </section>
 </main>
 </body>
