@@ -25,6 +25,7 @@ export default function Shell({
   onSetPin,
   onChangePassword,
   onStaffAccounts,
+  onSettings,
   onSignOut,
   badges,
   children,
@@ -44,6 +45,7 @@ export default function Shell({
           onSetPin={onSetPin}
           onChangePassword={onChangePassword}
           onStaffAccounts={onStaffAccounts}
+          onSettings={onSettings}
           onSignOut={onSignOut}
           isScreenLocked={hidden}
         />

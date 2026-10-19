@@ -1,6 +1,6 @@
 // text.js — every word the Calendar screens show, in one place.
 // Why it exists: same as the Schedule's text.js — one spot to check the wording against the
-// approved mockup (docs/Prospects/TKD-Calendar-Mockups.html, rulebook v0.138 / v0.143) and to
+// approved mockup (docs/Prospects/TKD-Calendar-Mockups.html, rulebook v0.234 / v0.239) and to
 // change it later. The data layer only returns codes ('stale', 'tooLong' …); this file turns
 // them into plain English.
 import { formatDate } from '../../lib/schedule/versions.js';

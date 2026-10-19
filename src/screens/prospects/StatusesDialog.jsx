@@ -1,4 +1,4 @@
-// StatusesDialog.jsx — "Edit statuses" (mockup screen 7; rulebook v0.140, v0.191 answers 5 and 7).
+// StatusesDialog.jsx — "Edit statuses" (mockup screen 7; rulebook v0.236, v0.244 answers 5 and 7).
 // Why it exists: each school has its own status list. Admins AND staff rename, recolor, reorder
 // (drag the grip, or ⋯ → Move up / Move down, like the Calendar's event types) and add statuses —
 // each is a stage (in the bar) or a side exit (a chip). Only ADMINS delete a custom status, and

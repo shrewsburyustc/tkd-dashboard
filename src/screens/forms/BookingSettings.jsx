@@ -2,7 +2,7 @@
 // Why it exists: which classes this form offers, which of their times, how many free-class
 // spots each time has, and the booking window ("Show the next … days", "Book at least …
 // hours ahead"). The times come from the Schedule in effect today; nothing is pre-chosen.
-// These settings take effect RIGHT AWAY, also on a Live form (rulebook v0.146), so — unlike the
+// These settings take effect RIGHT AWAY, also on a Live form (rulebook v0.242), so — unlike the
 // fields, which save as you go and wait for Publish — they have their own Save button and say
 // "Changes here go live right away". Closures and full times never show to families.
 //

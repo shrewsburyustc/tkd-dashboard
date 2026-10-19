@@ -1,5 +1,5 @@
 /*
-  prospects.css — the look of the Prospects section (rulebook v0.140, approved mockup rev 3), plus
+  prospects.css — the look of the Prospects section (rulebook v0.236, approved mockup rev 3), plus
   the navigation badge and the phone bar's More button.
   Why it exists: the stage bar and chips, the list and the phone cards, the side panel, the note
   composer, the timeline and the small dialogs. Buttons, fields, notes, banners, dialogs and menus
@@ -422,7 +422,7 @@
   color: var(--color-warning-text);
 }
 
-/* ----- Progress track (v0.214): Signed up → Class booked → Came → Joined ----- */
+/* ----- Progress track (v0.246): Signed up → Class booked → Came → Joined ----- */
 .ptrack {
   display: inline-flex;
   align-items: center;
@@ -627,7 +627,7 @@
   color: var(--color-warning-text);
 }
 
-/* ----- List / Board switch (v0.214) ----- */
+/* ----- List / Board switch (v0.246) ----- */
 .pview {
   display: inline-flex;
   flex: none;

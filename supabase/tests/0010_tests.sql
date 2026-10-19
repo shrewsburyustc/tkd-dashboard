@@ -2,38 +2,70 @@
 -- 0010_tests.sql
 -- ---------------------------------------------------------------------
 -- WHAT THIS FILE IS
---   A manual test script for migrations/0010_prospects.sql (Prospects):
---   prospects made automatically from sign-ups (one per child, New or
---   Booked), who can read and work them (only unlocked staff sessions),
---   the list never showing contact details, search by phone digits,
---   status / note / follow-up rules, check in and "did they come?",
---   booking / changing / cancelling a free class from the panel (the
---   SHARED spot limit of 0009), each school's own statuses (only admins
---   delete one), deleting a prospect (admins; the family's sign-up goes
---   with its last child), the 2-year clean-up, the per-person badge, and a
---   catalog section that checks the permissions on everything 0010 adds.
---   Run it in the Supabase SQL Editor AFTER 0010 is applied.
+--   A manual test script for migrations/0010_testing_results.sql (Color
+--   Belt phase 3: grading results). It checks, in this order (contract
+--   0010 §2.1):
+--     R1  catalog: the table, RLS, the one read rule, column rights (never
+--         updated_by), the functions' rights / owner / search_path, the
+--         five replaced functions keep 0005's rights, triggers and rules
+--     R2  locked / signed-out / old / magic-link sessions see no result
+--         and get no_access; anon is refused; the family form's login has
+--         no rights
+--     R3  the date rule: before / on / after the testing day, staff and
+--         admin, both functions
+--     R4  the result values, saving the same again, clearing
+--     R5  the note: 200 / 201 characters, blank, line breaks, invisible
+--         characters, "é" counts as 1
+--     R6  the last change wins; results never change a registration's or
+--         an event's version
+--     R7  the history (change_log) and the "who / when" stamps
+--     R8  table rules hold even for the SQL Editor's own role
+--     R9  Edit details: a belt change clears the result; after the day
+--         only an admin may change a graded student's belt
+--     R10 possible duplicate "keep one" can't remove a graded student
+--         after the day (staff)
+--     R11 the staff Undo (restore) after "keep one": the same rule
+--     R12 Withdraw keeps the result; a withdrawn student can't be graded
+--     R13 admins may add a student after the testing day; staff can't
+--     R14 Edit event: the date can't change once the event has results
+--     R15 removing a student / an event removes their results (logged)
+--     R16 the history never holds a signature picture
+--   It makes its own test classes and events with unusual names ("zz test
+--   1a2b3c4d ..."), so it works whatever is already in the database (run
+--   it before AND after real events exist).
 --
 -- IS IT SAFE?
---   Yes. One transaction that ends with ROLLBACK: every change is undone.
---   NEVER change the final "rollback;" to "commit;".
+--   Yes. Everything happens inside one transaction that ends with
+--   ROLLBACK, which undoes every change (test classes, events, students,
+--   results, history rows, test sessions). NEVER change the final
+--   "rollback;" to "commit;".
 --
 -- HOW IT PRETENDS TO BE SIGNED-IN USERS
---   Same sessions as 0009 (A1 admin unlocked, A2-A7 shut out in different
---   ways, D1 front desk, anon). The functions check the session (the
---   claims), so most tests call them as the SQL Editor's own role, which
---   can also look at the tables to check the result; the role
---   "authenticated" is used where the PERMISSIONS themselves are tested
---   (Test 2, the catalog), like 0009's public functions.
+--   Same trick as 0005_tests.sql (read its header): "set local role
+--   authenticated" + a pretend login token per session:
+--     A1 admin unlocked · A2 locked ("Lock now") · A3 5 wrong PINs ·
+--     A4 signed out · A5 password sign-in 8 days ago · A6 magic link ·
+--     D1 desk unlocked · D2 desk locked · D3 desk magic link · anon
+--   The test events are made with testing_add_event and then MOVED to
+--   tomorrow / today / yesterday as the SQL Editor's role (as 0005_tests
+--   T6g does), because an event can't be created in the past.
 --
 -- BEFORE YOU RUN IT
---   Replace <paste-admin-UID-here> and <paste-desk-UID-here> below with
---   the UIDs of an ACTIVE admin and the ACTIVE front-desk account.
+--   1. 0001-0005 and 0010 are applied. You need TWO existing, ACTIVE staff
+--      rows: an admin (Main Admin) and the shared front desk (Staff, role
+--      staff).
+--   2. Replace <paste-admin-UID-here> and <paste-desk-UID-here> below with
+--      their UIDs from Authentication -> Users.
+--   3. Paste the whole file into a new SQL Editor query and click Run.
+--      Supabase may warn about destructive operations: the test removes its
+--      own test rows and checks that some removals are REFUSED. Everything
+--      is rolled back. Confirm.
 --
 -- HOW TO READ THE RESULT
---   Passed: one row "ALL 0010 TESTS PASSED".
---   Failed: an error starting with "TEST FAILED:" or "TEST SETUP:".
---   Nothing is saved either way. If it failed, run   rollback;   once.
+--   * Passed: one row "ALL 0010 TESTS PASSED".
+--   * Failed: an error starting with "TEST FAILED:" (or "TEST SETUP:")
+--     saying which check broke and what came back instead. Nothing was
+--     saved either way. If it failed, run   rollback;   on its own once.
 -- =====================================================================
 
 begin;
@@ -44,568 +76,1083 @@ declare
   v_admin uuid := '<paste-admin-UID-here>';
   v_desk  uuid := '<paste-desk-UID-here>';
 
-  v_a1 uuid := gen_random_uuid(); v_a2 uuid := gen_random_uuid(); v_a3 uuid := gen_random_uuid();
-  v_a4 uuid := gen_random_uuid(); v_a5 uuid := gen_random_uuid(); v_a6 uuid := gen_random_uuid();
-  v_a7 uuid := gen_random_uuid(); v_d1 uuid := gen_random_uuid();
-  v_now_s  bigint := extract(epoch from now())::bigint;
+  v_a1 uuid := gen_random_uuid();  v_a2 uuid := gen_random_uuid();  v_a3 uuid := gen_random_uuid();
+  v_a4 uuid := gen_random_uuid();  v_a5 uuid := gen_random_uuid();  v_a6 uuid := gen_random_uuid();
+  v_d1 uuid := gen_random_uuid();  v_d2 uuid := gen_random_uuid();  v_d3 uuid := gen_random_uuid();
+
+  v_now_s   bigint := extract(epoch from now())::bigint;
   v_amr_1m  jsonb := jsonb_build_array(jsonb_build_object('method', 'password', 'timestamp', v_now_s - 60));
-  v_amr_2h  jsonb := jsonb_build_array(jsonb_build_object('method', 'password', 'timestamp', v_now_s - 2 * 3600));
   v_amr_8d  jsonb := jsonb_build_array(jsonb_build_object('method', 'password', 'timestamp', v_now_s - 8 * 24 * 3600));
   v_amr_otp jsonb := jsonb_build_array(jsonb_build_object('method', 'otp',      'timestamp', v_now_s - 60));
-  v_c_a1 text; v_c_a2 text; v_c_a3 text; v_c_a4 text; v_c_a5 text; v_c_a6 text; v_c_a7 text; v_c_d1 text;
-  v_shut  text[];
+
+  v_c_a1 text; v_c_a2 text; v_c_a3 text; v_c_a4 text; v_c_a5 text; v_c_a6 text;
+  v_c_d1 text; v_c_d2 text; v_c_d3 text;
   v_c_anon text := '{"role": "anon"}';
 
   v_tag   text := 'zz test ' || left(gen_random_uuid()::text, 8);
-  v_slug  text := 'zz-' || left(replace(gen_random_uuid()::text, '-', ''), 10);
-  v_today date;
-  v_day   date;
-  v_dow   smallint;
+  v_today date := public.testing_today();
   v_role  text;
-  v_sig   text := 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg' || repeat('A', 200) || '==';
+  v_admin_name text;
+  v_desk_name  text;
 
-  v_r     jsonb;
-  v_n     integer;
-  v_txt   text;
-  v_bool  boolean;
-  v_rand  uuid := gen_random_uuid();
-  v_ver   integer;
-  v_prev  uuid;
+  v_r      jsonb;
+  v_i      integer;
+  v_n      integer;
+  v_n2     integer;
+  v_v      integer;
+  v_v2     integer;
+  v_ev_v   integer;
+  v_txt    text;
+  v_mark   bigint;
+  v_batch  uuid;
+  v_list   text[];
+  v_constraint text;
+  v_row    public.testing_results;
 
-  v_cw1 uuid; v_vw uuid; v_vt uuid;
-  v_f1 uuid; v_f1_v integer; v_pub integer; v_fields jsonb;
-  v_ans jsonb;
-  v_s1 uuid; v_s2 uuid; v_s3 uuid;
-  v_p0 uuid; v_p1 uuid; v_p3 uuid;
-  v_st_new uuid; v_st_booked uuid; v_st_came uuid; v_st_joined uuid; v_st_noshow uuid; v_st_contacted uuid; v_st_custom uuid;
-  v_fn record;
-  v_tbl text;
-  v_staff_fns text[] := array['prospects_list', 'prospects_search', 'prospects_get', 'prospects_badge', 'prospects_for_bookings',
-                              'prospects_set_status', 'prospects_add_note', 'prospects_set_follow_up', 'prospects_mark_opened',
-                              'prospects_check_in', 'prospects_undo_check_in', 'prospects_open_times', 'prospects_book_time',
-                              'prospects_cancel_time', 'prospect_statuses_add', 'prospect_statuses_update', 'prospect_statuses_reorder',
-                              'prospect_statuses_delete', 'prospects_delete'];
-  v_helper_fns text[] := array['prospects_seed_statuses', 'prospects_status_of', 'prospects_log', 'prospects_class_ran',
-                               'prospects_lock_slot', 'prospects_before_write', 'prospects_refuse_change', 'prospects_from_submission',
-                               'prospects_follow_booking', 'prospects_purge_old', 'prospects_lock'];
+  -- test classes (Worcester): ta "A" (Yellow, Orange, Green -> final
+  -- award tb's Blue) and tb "B" (Blue, Red -> final award None)
+  v_ta uuid; v_tb uuid;
+  v_ta_yellow uuid; v_ta_orange uuid; v_ta_green uuid; v_tb_blue uuid; v_tb_red uuid;
+  v_classes jsonb;
+
+  -- events: before (tomorrow), day (today), after (yesterday), upd (today,
+  -- for Edit event), del (today, for Delete event)
+  v_ebefore uuid; v_eday uuid; v_eafter uuid; v_eupd uuid; v_edel uuid;
+  v_before_yellow uuid;
+  v_day_yellow uuid; v_day_orange uuid;
+  v_after_yellow uuid; v_after_orange uuid;
+  v_upd_yellow uuid; v_del_yellow uuid;
+
+  -- students (s = on the testing day, a = after it, b = before it)
+  v_sb1 uuid;
+  v_s0 uuid; v_sd1 uuid; v_sv uuid; v_sn uuid; v_sl uuid; v_sh uuid; v_sh2 uuid;
+  v_s9a uuid; v_s9b uuid; v_sdw uuid; v_s12 uuid; v_sdel uuid;
+  v_g4 uuid; v_u4 uuid; v_p5 uuid; v_q5 uuid;
+  v_sa1 uuid; v_sa2 uuid; v_sa3 uuid;
+  v_g1 uuid; v_u1 uuid; v_g2 uuid; v_u2 uuid; v_g3 uuid; v_u3 uuid;
+  v_walk uuid;
+  v_su1 uuid; v_sx1 uuid; v_sx2 uuid;
+
+  -- catalog
+  v_fn      record;
+  v_col     text;
+  v_priv    text;
+  v_owner   oid;
+  v_new_fns      text[] := array['testing_set_result', 'testing_set_result_note'];
+  v_trigger_fns  text[] := array['testing_results_before_write', 'testing_results_log'];
+  v_replaced_fns text[] := array['testing_update_student', 'testing_resolve_duplicate', 'testing_restore_student',
+                                 'testing_add_student', 'testing_update_event'];
+  v_cols_read    text[] := array['registration_id', 'result', 'note', 'updated_at', 'updated_by_name'];
 begin
   -- -------------------------------------------------------------------
-  -- Setup (as postgres)
+  -- Setup (as the "postgres" role the SQL Editor uses)
   -- -------------------------------------------------------------------
-  select s.role into v_role from public.staff s where s.id = v_admin and s.active;
+  select s.role, s.full_name into v_role, v_admin_name from public.staff s where s.id = v_admin and s.active;
   if v_role is distinct from 'admin' then
     raise exception 'TEST SETUP: no ACTIVE admin staff row with id %. Paste the admin UID into v_admin.', v_admin;
   end if;
-  select s.role into v_role from public.staff s where s.id = v_desk and s.active;
+  select s.role, s.full_name into v_role, v_desk_name from public.staff s where s.id = v_desk and s.active;
   if v_role is distinct from 'staff' then
     raise exception 'TEST SETUP: no ACTIVE role-staff row with id %. Paste the front-desk UID into v_desk.', v_desk;
   end if;
-  if to_regclass('public.prospects') is null then raise exception 'TEST SETUP: 0010 is not applied'; end if;
+  if to_regclass('public.testing_results') is null then
+    raise exception 'TEST SETUP: public.testing_results is missing (is 0010 applied?)';
+  end if;
 
   perform set_config('request.jwt.claims', '', true);
-  insert into auth.sessions (id, user_id)
-  select x, v_admin from unnest(array[v_a1, v_a2, v_a3, v_a5, v_a6, v_a7]) as x
-  union all select v_d1, v_desk;
+
+  begin
+    insert into auth.sessions (id, user_id)
+    select x, v_admin from unnest(array[v_a1, v_a2, v_a3, v_a5, v_a6]) as x
+    union all
+    select x, v_desk  from unnest(array[v_d1, v_d2, v_d3]) as x;
+  exception
+    when others then
+      raise exception 'TEST SETUP: could not add test sessions to auth.sessions (%). Tell Claude.', sqlerrm;
+  end;
   insert into public.session_unlock (session_id, staff_id, unlocked_until) values
-    (v_a1, v_admin, now() + interval '30 minutes'), (v_a2, v_admin, now() - interval '1 minute'),
-    (v_a3, v_admin, now() + interval '30 minutes'), (v_a4, v_admin, now() + interval '30 minutes'),
-    (v_a5, v_admin, now() + interval '30 minutes'), (v_a6, v_admin, now() + interval '30 minutes'),
-    (v_a7, v_admin, to_timestamp(v_now_s - 2 * 3600) + interval '45 minutes'), (v_d1, v_desk, now() + interval '30 minutes');
+    (v_a1, v_admin, now() + interval '30 minutes'),
+    (v_a2, v_admin, now() - interval '1 minute'),
+    (v_a3, v_admin, now() + interval '30 minutes'),
+    (v_a4, v_admin, now() + interval '30 minutes'),
+    (v_a5, v_admin, now() + interval '30 minutes'),
+    (v_a6, v_admin, now() + interval '30 minutes'),
+    (v_d1, v_desk,  now() + interval '30 minutes'),
+    (v_d2, v_desk,  now() - interval '1 minute'),
+    (v_d3, v_desk,  now() + interval '30 minutes');
   insert into public.pin_attempts (session_id, staff_id, failed, locked_at) values (v_a3, v_admin, 5, now());
+
   v_c_a1 := jsonb_build_object('sub', v_admin, 'role', 'authenticated', 'session_id', v_a1, 'amr', v_amr_1m)::text;
   v_c_a2 := jsonb_build_object('sub', v_admin, 'role', 'authenticated', 'session_id', v_a2, 'amr', v_amr_1m)::text;
   v_c_a3 := jsonb_build_object('sub', v_admin, 'role', 'authenticated', 'session_id', v_a3, 'amr', v_amr_1m)::text;
   v_c_a4 := jsonb_build_object('sub', v_admin, 'role', 'authenticated', 'session_id', v_a4, 'amr', v_amr_1m)::text;
   v_c_a5 := jsonb_build_object('sub', v_admin, 'role', 'authenticated', 'session_id', v_a5, 'amr', v_amr_8d)::text;
   v_c_a6 := jsonb_build_object('sub', v_admin, 'role', 'authenticated', 'session_id', v_a6, 'amr', v_amr_otp)::text;
-  v_c_a7 := jsonb_build_object('sub', v_admin, 'role', 'authenticated', 'session_id', v_a7, 'amr', v_amr_2h)::text;
   v_c_d1 := jsonb_build_object('sub', v_desk,  'role', 'authenticated', 'session_id', v_d1, 'amr', v_amr_1m)::text;
-  v_shut := array[v_c_a2, v_c_a3, v_c_a4, v_c_a5, v_c_a6, v_c_a7];
+  v_c_d2 := jsonb_build_object('sub', v_desk,  'role', 'authenticated', 'session_id', v_d2, 'amr', v_amr_1m)::text;
+  v_c_d3 := jsonb_build_object('sub', v_desk,  'role', 'authenticated', 'session_id', v_d3, 'amr', v_amr_otp)::text;
 
-  v_today := (now() at time zone 'America/New_York')::date;
-  v_day   := v_today + 3;
-  v_dow   := extract(isodow from v_day)::smallint;
-
-  -- a Worcester class, a time slot on v_day, and two on TODAY (00:00 = over, 23:30 = later today)
-  perform set_config('request.jwt.claims', v_c_a1, true);
-  v_cw1 := (public.testing_add_class('worcester', v_tag || ' w1', null, false) ->> 'id')::uuid;
-  if v_cw1 is null then raise exception 'TEST SETUP: could not add a test class'; end if;
-  select v.id into v_vw from public.schedule_versions v
-   where v.location_code = 'worcester' and v.starts_on <= v_day order by v.starts_on desc limit 1;
-  v_r := public.schedule_add_slots('worcester', v_vw, array[v_cw1], array[v_dow], '06:00', '06:45');
-  if v_r ->> 'status' <> 'ok' then raise exception 'TEST SETUP: slot: %', v_r; end if;
-  select v.id into v_vt from public.schedule_versions v
-   where v.location_code = 'worcester' and v.starts_on <= v_today order by v.starts_on desc limit 1;
-  if v_vt is null then raise exception 'TEST SETUP: no Worcester schedule in effect today'; end if;
-  v_r := public.schedule_add_slots('worcester', v_vt, array[v_cw1], array[extract(isodow from v_today)::smallint], '00:00', '00:15');
-  if v_r ->> 'status' <> 'ok' then raise exception 'TEST SETUP: slot today 00:00: %', v_r; end if;
-  v_r := public.schedule_add_slots('worcester', v_vt, array[v_cw1], array[extract(isodow from v_today)::smallint], '23:30', '23:45');
-  if v_r ->> 'status' <> 'ok' then raise exception 'TEST SETUP: slot today 23:30: %', v_r; end if;
-
-  -- a Live free-class form offering the class, 2 spots a time, no notice needed
-  reset role;
-  v_fields := jsonb_set(public.forms_template('free_class'), '{8,text}', to_jsonb('Our wording.'::text));
-  perform set_config('request.jwt.claims', v_c_a1, true);
-  v_r := public.forms_create('worcester', 'free_class', v_tag || ' form', v_slug);
-  v_f1 := (v_r ->> 'id')::uuid;
-  v_r := public.forms_save_draft(v_f1, (v_r ->> 'version')::integer, v_tag || ' form', v_slug, v_fields,
-                                 '{"thank_you":"","alert_email":null,"confirm_email":false,"add_to_calendar":false}');
-  if v_r ->> 'status' <> 'ok' then raise exception 'TEST SETUP: save draft: %', v_r; end if;
-  v_r := public.forms_set_booking(v_f1, (v_r ->> 'version')::integer,
-           jsonb_build_array(jsonb_build_object('class_id', v_cw1, 'default_limit', 2, 'days_ahead', 14, 'min_hours_ahead', 0)), '[]');
-  if v_r ->> 'status' <> 'ok' then raise exception 'TEST SETUP: booking: %', v_r; end if;
-  v_r := public.forms_publish(v_f1, (v_r ->> 'version')::integer);
-  if v_r ->> 'status' <> 'ok' then raise exception 'TEST SETUP: publish: %', v_r; end if;
-  reset role;
-  select published_version into v_pub from public.forms where id = v_f1;
-  v_ans := jsonb_build_object('parent_name', 'Kim Zztest', 'parent_phone', '(508) 555-7731', 'parent_email', 'kim@example.com', 'waiver', true);
-
-  -- -------------------------------------------------------------------
-  -- Test 1: a sign-up makes one prospect per child (New / Booked)
-  -- -------------------------------------------------------------------
-  perform set_config('request.jwt.claims', v_c_d1, true);
-  v_r := public.forms_staff_submit(v_f1, gen_random_uuid(), v_pub, v_ans,
-           '[{"first_name":"Ava","age":10},{"first_name":"Max","age":7}]',
-           jsonb_build_array(jsonb_build_object('child', 0, 'class_id', v_cw1, 'date', v_day, 'starts_at', '06:00')), v_sig);
-  if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: 1a staff submit: %', v_r; end if;
-  v_s1 := (v_r ->> 'id')::uuid;
-  reset role;
-  select id into v_st_new from public.prospect_statuses where location_code = 'worcester' and builtin = 'new';
-  select id into v_st_booked from public.prospect_statuses where location_code = 'worcester' and builtin = 'booked';
-  select id into v_st_came from public.prospect_statuses where location_code = 'worcester' and builtin = 'came';
-  select id into v_st_joined from public.prospect_statuses where location_code = 'worcester' and builtin = 'joined';
-  select id into v_st_noshow from public.prospect_statuses where location_code = 'worcester' and builtin = 'no_show';
-  select id into v_st_contacted from public.prospect_statuses where location_code = 'worcester' and name = 'Contacted';
-  if (select count(*) from public.prospect_statuses where location_code = 'worcester' and builtin is not null) <> 6
-     or (select count(*) from public.prospect_statuses where location_code = 'shrewsbury' and builtin is not null) <> 6 then
-    raise exception 'TEST FAILED: 1b each school should have its own 6 built-in statuses';
-  end if;
-  select id into v_p0 from public.prospects where submission_id = v_s1 and child_index = 0;
-  select id into v_p1 from public.prospects where submission_id = v_s1 and child_index = 1;
-  if v_p0 is null or v_p1 is null
-     or (select status_id from public.prospects where id = v_p0) <> v_st_booked
-     or (select status_id from public.prospects where id = v_p1) <> v_st_new
-     or (select child_first_name || child_age from public.prospects where id = v_p1) <> 'Max7' then
-    raise exception 'TEST FAILED: 1c Ava (booked) should be Booked and Max New';
-  end if;
-  if not exists (select 1 from public.prospect_activity where prospect_id = v_p0 and kind = 'created') then
-    raise exception 'TEST FAILED: 1d the timeline should start with "created"';
-  end if;
-
-  -- -------------------------------------------------------------------
-  -- Test 2: nobody without a session; shut-out sessions; no direct reads
-  -- -------------------------------------------------------------------
-  set local role anon;
-  perform set_config('request.jwt.claims', v_c_anon, true);
-  begin perform public.prospects_list('worcester'); raise exception 'TEST FAILED: 2a anon called prospects_list';
-  exception when insufficient_privilege then null; end;
-  reset role;
-  for v_n in 1 .. array_length(v_shut, 1) loop
-    set local role authenticated;
-    perform set_config('request.jwt.claims', v_shut[v_n], true);
-    v_txt := concat_ws(',',
-      public.prospects_list('worcester') ->> 'status', public.prospects_get(v_p0) ->> 'status',
-      public.prospects_search('worcester', 'Ava') ->> 'status', public.prospects_badge(null) ->> 'status',
-      public.prospects_set_status(v_p0, 1, v_st_new, null) ->> 'status', public.prospects_add_note(v_p0, 'x', false, null) ->> 'status',
-      public.prospects_book_time(v_p0, 1, v_f1, v_cw1, v_day, '06:00') ->> 'status', public.prospects_delete(v_p0, 1) ->> 'status');
-    if v_txt <> 'no_access,no_access,no_access,no_access,no_access,no_access,no_access,no_access' then
-      raise exception 'TEST FAILED: 2b shut-out session A% got %', v_n + 1, v_txt;
+  set local role authenticated;
+  v_list := array[v_c_a1, v_c_a2, v_c_a3, v_c_a4, v_c_a5, v_c_a6, v_c_d1, v_c_d2, v_c_d3];
+  for v_i in 1 .. cardinality(v_list) loop
+    perform set_config('request.jwt.claims', v_list[v_i], true);
+    if public.has_data_access() is distinct from (v_i in (1, 7)) then
+      raise exception 'TEST SETUP: session % of A1..A6,D1..D3 has data access %, expected %',
+        v_i, public.has_data_access(), (v_i in (1, 7));
     end if;
-    if (select count(*) from public.prospect_statuses) <> 0 then raise exception 'TEST FAILED: 2c shut-out session reads statuses'; end if;
-    reset role;
   end loop;
+
+  -- Test classes and five events, made by the admin through the app's
+  -- functions (all dated in 5 days for now; moved below)
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_tb := (public.testing_add_class('worcester', v_tag || ' B', null, true) ->> 'id')::uuid;
+  v_tb_blue := (public.testing_add_rank(v_tb, 'Blue', 7000, 8000, 9500, true, 'solid', 'blue', null, 0, 'yellow') ->> 'id')::uuid;
+  v_tb_red  := (public.testing_add_rank(v_tb, 'Red', 7000, 8000, 9500, true, 'solid', 'red', null, 0, 'yellow') ->> 'id')::uuid;
+  v_ta := (public.testing_add_class('worcester', v_tag || ' A', v_tb_blue, false) ->> 'id')::uuid;
+  v_ta_yellow := (public.testing_add_rank(v_ta, 'Yellow', 6500, 7500, 8500, false, 'solid', 'yellow', null, 0, 'yellow') ->> 'id')::uuid;
+  v_ta_orange := (public.testing_add_rank(v_ta, 'Orange', 6500, 7500, 8500, false, 'solid', 'orange', null, 0, 'yellow') ->> 'id')::uuid;
+  v_ta_green  := (public.testing_add_rank(v_ta, 'Green', 6500, 7500, 8500, false, 'stripe', 'green', 'black', 1, 'yellow') ->> 'id')::uuid;
+  if v_tb_red is null or v_ta_green is null then
+    raise exception 'TEST SETUP: could not create the test classes and ranks';
+  end if;
+  v_classes := jsonb_build_array(jsonb_build_object('class_id', v_ta, 'start_time', '17:00', 'end_time', '18:00'),
+                                 jsonb_build_object('class_id', v_tb, 'start_time', '18:00', 'end_time', '19:00'));
+  v_ebefore := (public.testing_add_event('worcester', v_tag || ' before', v_today + 5, v_classes, false, null, null) ->> 'id')::uuid;
+  v_eday    := (public.testing_add_event('worcester', v_tag || ' day',    v_today + 5, v_classes, false, null, null) ->> 'id')::uuid;
+  v_eafter  := (public.testing_add_event('worcester', v_tag || ' after',  v_today + 5, v_classes, false, null, null) ->> 'id')::uuid;
+  v_eupd    := (public.testing_add_event('worcester', v_tag || ' upd',    v_today + 5, v_classes, false, null, null) ->> 'id')::uuid;
+  v_edel    := (public.testing_add_event('worcester', v_tag || ' del',    v_today + 5, v_classes, false, null, null) ->> 'id')::uuid;
+  if v_ebefore is null or v_eday is null or v_eafter is null or v_eupd is null or v_edel is null then
+    raise exception 'TEST SETUP: could not create the test events';
+  end if;
+  reset role;
+
+  -- each event's copy of Yellow / Orange
+  select k.id into v_before_yellow from public.testing_event_ranks k join public.testing_event_classes c on c.id = k.event_class_id
+   where c.event_id = v_ebefore and k.rank_id = v_ta_yellow;
+  select k.id into v_day_yellow from public.testing_event_ranks k join public.testing_event_classes c on c.id = k.event_class_id
+   where c.event_id = v_eday and k.rank_id = v_ta_yellow;
+  select k.id into v_day_orange from public.testing_event_ranks k join public.testing_event_classes c on c.id = k.event_class_id
+   where c.event_id = v_eday and k.rank_id = v_ta_orange;
+  select k.id into v_after_yellow from public.testing_event_ranks k join public.testing_event_classes c on c.id = k.event_class_id
+   where c.event_id = v_eafter and k.rank_id = v_ta_yellow;
+  select k.id into v_after_orange from public.testing_event_ranks k join public.testing_event_classes c on c.id = k.event_class_id
+   where c.event_id = v_eafter and k.rank_id = v_ta_orange;
+  select k.id into v_upd_yellow from public.testing_event_ranks k join public.testing_event_classes c on c.id = k.event_class_id
+   where c.event_id = v_eupd and k.rank_id = v_ta_yellow;
+  select k.id into v_del_yellow from public.testing_event_ranks k join public.testing_event_classes c on c.id = k.event_class_id
+   where c.event_id = v_edel and k.rank_id = v_ta_yellow;
+
+  -- the students (added at the desk by the admin, all Yellow)
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_sb1  := (public.testing_add_student(v_ebefore, 'Bea', 'Before', v_before_yellow, true, 'cash') ->> 'id')::uuid;
+  v_s0   := (public.testing_add_student(v_eday, 'Zed', 'Zero', v_day_yellow, true, 'cash') ->> 'id')::uuid;
+  v_sd1  := (public.testing_add_student(v_eday, 'Dan', 'Day', v_day_yellow, true, 'cash') ->> 'id')::uuid;
+  v_sv   := (public.testing_add_student(v_eday, 'Val', 'Values', v_day_yellow, true, 'cash') ->> 'id')::uuid;
+  v_sn   := (public.testing_add_student(v_eday, 'Nora', 'Note', v_day_yellow, true, 'cash') ->> 'id')::uuid;
+  v_sl   := (public.testing_add_student(v_eday, 'Lars', 'Last', v_day_yellow, true, 'cash') ->> 'id')::uuid;
+  v_sh   := (public.testing_add_student(v_eday, 'Hal', 'Hygiene', v_day_yellow, true, 'cash') ->> 'id')::uuid;
+  v_sh2  := (public.testing_add_student(v_eday, 'Hana', 'Hygiene', v_day_yellow, true, 'cash') ->> 'id')::uuid;
+  v_s9a  := (public.testing_add_student(v_eday, 'Nina', 'Belt', v_day_yellow, true, 'cash') ->> 'id')::uuid;
+  v_s9b  := (public.testing_add_student(v_eday, 'Omar', 'Name', v_day_yellow, true, 'cash') ->> 'id')::uuid;
+  v_sdw  := (public.testing_add_student(v_eday, 'Wes', 'Withdrawn', v_day_yellow, true, 'cash') ->> 'id')::uuid;
+  v_s12  := (public.testing_add_student(v_eday, 'Tess', 'Twelve', v_day_yellow, true, 'cash') ->> 'id')::uuid;
+  v_sdel := (public.testing_add_student(v_eday, 'Del', 'Student', v_day_yellow, true, 'cash') ->> 'id')::uuid;
+  v_g4   := (public.testing_add_student(v_eday, 'Pia', 'Four', v_day_yellow, true, 'cash') ->> 'id')::uuid;
+  v_u4   := (public.testing_add_student(v_eday, 'Una', 'Four', v_day_yellow, true, 'cash') ->> 'id')::uuid;
+  v_p5   := (public.testing_add_student(v_eday, 'Pam', 'Five', v_day_yellow, true, 'cash') ->> 'id')::uuid;
+  v_q5   := (public.testing_add_student(v_eday, 'Quin', 'Five', v_day_yellow, true, 'cash') ->> 'id')::uuid;
+  v_sa1  := (public.testing_add_student(v_eafter, 'Abe', 'After', v_after_yellow, true, 'cash') ->> 'id')::uuid;
+  v_sa2  := (public.testing_add_student(v_eafter, 'Ada', 'Graded', v_after_yellow, true, 'cash') ->> 'id')::uuid;
+  v_sa3  := (public.testing_add_student(v_eafter, 'Ari', 'Ungraded', v_after_yellow, true, 'cash') ->> 'id')::uuid;
+  v_g1   := (public.testing_add_student(v_eafter, 'Gus', 'One', v_after_yellow, true, 'cash') ->> 'id')::uuid;
+  v_u1   := (public.testing_add_student(v_eafter, 'Uma', 'One', v_after_yellow, true, 'cash') ->> 'id')::uuid;
+  v_g2   := (public.testing_add_student(v_eafter, 'Gil', 'Two', v_after_yellow, true, 'cash') ->> 'id')::uuid;
+  v_u2   := (public.testing_add_student(v_eafter, 'Ugo', 'Two', v_after_yellow, true, 'cash') ->> 'id')::uuid;
+  v_g3   := (public.testing_add_student(v_eafter, 'Gwen', 'Three', v_after_yellow, true, 'cash') ->> 'id')::uuid;
+  v_u3   := (public.testing_add_student(v_eafter, 'Ursa', 'Three', v_after_yellow, true, 'cash') ->> 'id')::uuid;
+  v_su1  := (public.testing_add_student(v_eupd, 'Uli', 'Update', v_upd_yellow, true, 'cash') ->> 'id')::uuid;
+  v_sx1  := (public.testing_add_student(v_edel, 'Xia', 'Gone', v_del_yellow, true, 'cash') ->> 'id')::uuid;
+  v_sx2  := (public.testing_add_student(v_edel, 'Xen', 'Gone', v_del_yellow, true, 'cash') ->> 'id')::uuid;
+  reset role;
+  if v_sb1 is null or v_s0 is null or v_sd1 is null or v_sv is null or v_sn is null or v_sl is null or v_sh is null
+     or v_sh2 is null or v_s9a is null or v_s9b is null or v_sdw is null or v_s12 is null or v_sdel is null
+     or v_g4 is null or v_u4 is null or v_p5 is null or v_q5 is null or v_sa1 is null or v_sa2 is null or v_sa3 is null or v_g1 is null
+     or v_u1 is null or v_g2 is null or v_u2 is null or v_g3 is null or v_u3 is null or v_su1 is null
+     or v_sx1 is null or v_sx2 is null then
+    raise exception 'TEST SETUP: could not add the test students';
+  end if;
+
+  -- move the events: before = tomorrow, after = yesterday, the rest today
+  update public.testing_events set testing_date = v_today + 1 where id = v_ebefore;
+  update public.testing_events set testing_date = v_today     where id in (v_eday, v_eupd, v_edel);
+  update public.testing_events set testing_date = v_today - 1 where id = v_eafter;
+
+  -- ===================================================================
+  -- R1. Catalog
+  -- ===================================================================
+  select c.relowner into v_owner from pg_class c where c.oid = 'public.testing_events'::regclass;
+
+  -- the table: RLS on, same owner as the 0005 tables
+  if not exists (select 1 from pg_class c where c.oid = 'public.testing_results'::regclass
+                  and c.relrowsecurity and c.relowner = v_owner) then
+    raise exception 'TEST FAILED: R1 testing_results must have RLS on and the owner of testing_events';
+  end if;
+  -- exactly one rule: read, for authenticated, with has_data_access()
+  select count(*) into v_n from pg_policies p
+   where p.schemaname = 'public' and p.tablename = 'testing_results' and p.cmd = 'SELECT'
+     and p.policyname = 'testing_results_select_with_access'
+     and p.roles = array['authenticated']::name[] and p.permissive = 'PERMISSIVE' and p.qual like '%has_data_access()%';
+  select count(*) into v_n2 from pg_policies p where p.schemaname = 'public' and p.tablename = 'testing_results';
+  if v_n <> 1 or v_n2 <> 1 then
+    raise exception 'TEST FAILED: R1 expected exactly one has_data_access read rule on testing_results, found % (of %)', v_n, v_n2;
+  end if;
+  -- no table-wide right for anyone in the app
+  foreach v_priv in array array['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER'] loop
+    if has_table_privilege('anon', 'public.testing_results', v_priv)
+       or has_table_privilege('authenticated', 'public.testing_results', v_priv)
+       or has_table_privilege('service_role', 'public.testing_results', v_priv)
+       or has_table_privilege('public', 'public.testing_results', v_priv)
+       or has_table_privilege('testing_registrar', 'public.testing_results', v_priv) then
+      raise exception 'TEST FAILED: R1 testing_results has table-wide % for a client role', v_priv;
+    end if;
+  end loop;
+  foreach v_priv in array array['INSERT', 'UPDATE', 'REFERENCES'] loop
+    if has_any_column_privilege('authenticated', 'public.testing_results', v_priv)
+       or has_any_column_privilege('anon', 'public.testing_results', v_priv)
+       or has_any_column_privilege('service_role', 'public.testing_results', v_priv)
+       or has_any_column_privilege('testing_registrar', 'public.testing_results', v_priv) then
+      raise exception 'TEST FAILED: R1 a client role has a column % right on testing_results', v_priv;
+    end if;
+  end loop;
+  -- column reads: exactly the five, to authenticated only (never updated_by)
+  for v_col in
+    select a.attname::text from pg_attribute a
+     where a.attrelid = 'public.testing_results'::regclass and a.attnum > 0 and not a.attisdropped
+  loop
+    if has_column_privilege('authenticated', 'public.testing_results', v_col, 'SELECT') is distinct from (v_col = any (v_cols_read)) then
+      raise exception 'TEST FAILED: R1 authenticated SELECT on testing_results.% is %, expected %',
+        v_col, has_column_privilege('authenticated', 'public.testing_results', v_col, 'SELECT'), (v_col = any (v_cols_read));
+    end if;
+    if has_column_privilege('anon', 'public.testing_results', v_col, 'SELECT')
+       or has_column_privilege('service_role', 'public.testing_results', v_col, 'SELECT')
+       or has_column_privilege('testing_registrar', 'public.testing_results', v_col, 'SELECT') then
+      raise exception 'TEST FAILED: R1 testing_results.% readable by anon, service_role or testing_registrar', v_col;
+    end if;
+  end loop;
+  select count(*) into v_n from pg_attribute a
+   where a.attrelid = 'public.testing_results'::regclass and a.attnum > 0 and not a.attisdropped;
+  if v_n <> 6 then raise exception 'TEST FAILED: R1 testing_results should have 6 columns, has %', v_n; end if;
+
+  -- the functions: one version each, pinned search_path, no defaults,
+  -- same owner, who may run them, security definer as designed
+  v_n := 0;
+  for v_fn in
+    select p.oid, p.proname::text as name, p.prosecdef, p.proconfig, p.proowner, p.pronargdefaults
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = any (v_new_fns || v_trigger_fns || v_replaced_fns)
+  loop
+    v_n := v_n + 1;
+    if not coalesce('search_path=""' = any (v_fn.proconfig), false) then
+      raise exception 'TEST FAILED: R1 % has no search_path = ''''', v_fn.oid::regprocedure;
+    end if;
+    if v_fn.pronargdefaults > 0 then
+      raise exception 'TEST FAILED: R1 % has argument defaults', v_fn.oid::regprocedure;
+    end if;
+    if v_fn.proowner <> v_owner then
+      raise exception 'TEST FAILED: R1 % is not owned by the owner of testing_events', v_fn.oid::regprocedure;
+    end if;
+    if has_function_privilege('anon', v_fn.oid, 'EXECUTE')
+       or has_function_privilege('service_role', v_fn.oid, 'EXECUTE')
+       or has_function_privilege('testing_registrar', v_fn.oid, 'EXECUTE')
+       or exists (select 1 from aclexplode(coalesce((select p.proacl from pg_proc p where p.oid = v_fn.oid),
+                                                    acldefault('f', v_fn.proowner))) as a
+                   where a.grantee = 0 and a.privilege_type = 'EXECUTE') then
+      raise exception 'TEST FAILED: R1 % is executable by anon, service_role, testing_registrar or PUBLIC', v_fn.oid::regprocedure;
+    end if;
+    if has_function_privilege('authenticated', v_fn.oid, 'EXECUTE') is distinct from (v_fn.name = any (v_new_fns || v_replaced_fns)) then
+      raise exception 'TEST FAILED: R1 authenticated execute on % is wrong', v_fn.oid::regprocedure;
+    end if;
+    if v_fn.prosecdef is distinct from (v_fn.name <> 'testing_results_before_write') then
+      raise exception 'TEST FAILED: R1 % security definer is %, not as designed', v_fn.oid::regprocedure, v_fn.prosecdef;
+    end if;
+  end loop;
+  if v_n <> cardinality(v_new_fns || v_trigger_fns || v_replaced_fns) then
+    raise exception 'TEST FAILED: R1 expected exactly % functions (one version each), found %',
+      cardinality(v_new_fns || v_trigger_fns || v_replaced_fns), v_n;
+  end if;
+  select string_agg(x.sig, ', ') into v_txt
+    from unnest(array[
+      'public.testing_set_result(uuid, text)',
+      'public.testing_set_result_note(uuid, text)',
+      'public.testing_results_before_write()',
+      'public.testing_results_log()',
+      'public.testing_update_student(uuid, integer, text, text, uuid)',
+      'public.testing_resolve_duplicate(uuid, integer, uuid, integer, boolean)',
+      'public.testing_restore_student(uuid, integer)',
+      'public.testing_add_student(uuid, text, text, uuid, boolean, text)',
+      'public.testing_update_event(uuid, integer, text, date, jsonb, date, text)']) as x(sig)
+   where to_regprocedure(x.sig) is null;
+  if v_txt is not null then raise exception 'TEST FAILED: R1 missing function signature(s): %', v_txt; end if;
+
+  -- the triggers exist, run the right function and are enabled
+  select string_agg(x.trg, ', ') into v_txt
+    from (values ('testing_results_before_write', 'testing_results_before_write'),
+                 ('testing_results_log', 'testing_results_log'),
+                 ('testing_results_no_truncate', 'testing_refuse_truncate')) as x(trg, fn)
+   where not exists (
+     select 1 from pg_trigger t join pg_proc p on p.oid = t.tgfoid
+      where t.tgrelid = 'public.testing_results'::regclass and t.tgname = x.trg
+        and p.proname = x.fn and t.tgenabled = 'O' and not t.tgisinternal);
+  if v_txt is not null then raise exception 'TEST FAILED: R1 missing / wrong / disabled trigger(s): %', v_txt; end if;
+  select count(*) into v_n from pg_trigger t where t.tgrelid = 'public.testing_results'::regclass and not t.tgisinternal;
+  if v_n <> 3 then raise exception 'TEST FAILED: R1 expected exactly 3 triggers on testing_results, found %', v_n; end if;
+
+  -- the rules: three checks and the foreign key with "on delete cascade"
+  select string_agg(x.con, ', ') into v_txt
+    from (values ('testing_results_pkey', 'p'), ('testing_results_registration_fk', 'f'),
+                 ('testing_results_result_check', 'c'), ('testing_results_note_check', 'c'),
+                 ('testing_results_not_empty_check', 'c')) as x(con, typ)
+   where not exists (select 1 from pg_constraint c
+                      where c.conrelid = 'public.testing_results'::regclass and c.conname = x.con and c.contype = x.typ);
+  if v_txt is not null then raise exception 'TEST FAILED: R1 missing rule(s): %', v_txt; end if;
+  if not exists (select 1 from pg_constraint c
+                  where c.conname = 'testing_results_registration_fk' and c.contype = 'f' and c.confdeltype = 'c'
+                    and c.confrelid = 'public.testing_registrations'::regclass) then
+    raise exception 'TEST FAILED: R1 testing_results_registration_fk must point at testing_registrations, on delete cascade';
+  end if;
+
+  -- ===================================================================
+  -- R2. Locked sessions, anon, the family form's login
+  -- ===================================================================
+  -- one result exists (D1 on the testing day)
   set local role authenticated;
   perform set_config('request.jwt.claims', v_c_d1, true);
-  foreach v_tbl in array array['prospects', 'prospect_notes', 'prospect_activity', 'prospect_opens'] loop
-    begin
-      execute format('select 1 from public.%I limit 1', v_tbl);
-      raise exception 'TEST FAILED: 2d staff can read % directly', v_tbl;
-    exception when insufficient_privilege then null;
-    end;
+  v_r := public.testing_set_result(v_s0, 'pass');
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: R2 setup set_result expected ok, got %', v_r; end if;
+  select count(*) into v_n from public.testing_results x where x.registration_id = v_s0;
+  if v_n <> 1 then raise exception 'TEST FAILED: R2 D1 must see the result it saved'; end if;
+  -- A2, A3, A4, A5, A6, D2, D3: no rows, no_access from both functions
+  v_list := array[v_c_a2, v_c_a3, v_c_a4, v_c_a5, v_c_a6, v_c_d2, v_c_d3];
+  for v_i in 1 .. cardinality(v_list) loop
+    perform set_config('request.jwt.claims', v_list[v_i], true);
+    select count(*) into v_n from public.testing_results;
+    if v_n <> 0 then raise exception 'TEST FAILED: R2 session % of (A2,A3,A4,A5,A6,D2,D3) sees % result rows', v_i, v_n; end if;
+    v_r := public.testing_set_result(v_s0, 'no_show');
+    if v_r ->> 'status' is distinct from 'no_access' then
+      raise exception 'TEST FAILED: R2 session % of (A2,A3,A4,A5,A6,D2,D3) set_result got %', v_i, v_r;
+    end if;
+    v_r := public.testing_set_result_note(v_s0, 'x');
+    if v_r ->> 'status' is distinct from 'no_access' then
+      raise exception 'TEST FAILED: R2 session % of (A2,A3,A4,A5,A6,D2,D3) set_result_note got %', v_i, v_r;
+    end if;
+  end loop;
+  reset role;
+  if not exists (select 1 from public.testing_results x where x.registration_id = v_s0 and x.result = 'pass' and x.note is null) then
+    raise exception 'TEST FAILED: R2 the refused calls must not change the result';
+  end if;
+  -- anon: refused on the table and both functions
+  set local role anon;
+  perform set_config('request.jwt.claims', v_c_anon, true);
+  begin perform 1 from public.testing_results;
+        raise exception 'TEST FAILED: R2 anon could read testing_results'; exception when insufficient_privilege then null; end;
+  begin perform public.testing_set_result(v_s0, null);
+        raise exception 'TEST FAILED: R2 anon could call testing_set_result'; exception when insufficient_privilege then null; end;
+  begin perform public.testing_set_result_note(v_s0, null);
+        raise exception 'TEST FAILED: R2 anon could call testing_set_result_note'; exception when insufficient_privilege then null; end;
+  reset role;
+  -- an unlocked admin can't read updated_by, nor write the table directly
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  begin perform x.updated_by from public.testing_results x;
+        raise exception 'TEST FAILED: R2 authenticated could read testing_results.updated_by'; exception when insufficient_privilege then null; end;
+  begin perform * from public.testing_results;
+        raise exception 'TEST FAILED: R2 authenticated could select * from testing_results'; exception when insufficient_privilege then null; end;
+  begin insert into public.testing_results (registration_id, result) values (v_sd1, 'pass');
+        raise exception 'TEST FAILED: R2 A1 could insert into testing_results'; exception when insufficient_privilege then null; end;
+  begin update public.testing_results set result = 'no_show';
+        raise exception 'TEST FAILED: R2 A1 could update testing_results'; exception when insufficient_privilege then null; end;
+  begin delete from public.testing_results;
+        raise exception 'TEST FAILED: R2 A1 could delete from testing_results'; exception when insufficient_privilege then null; end;
+  begin perform public.testing_results_log();
+        raise exception 'TEST FAILED: R2 A1 could call testing_results_log'; exception when insufficient_privilege or feature_not_supported then null; end;
+  reset role;
+  -- the family form's login (catalog proofs, as 0005_tests T2)
+  if has_table_privilege('testing_registrar', 'public.testing_results', 'SELECT')
+     or has_any_column_privilege('testing_registrar', 'public.testing_results', 'SELECT')
+     or has_function_privilege('testing_registrar', 'public.testing_set_result(uuid, text)', 'EXECUTE')
+     or has_function_privilege('testing_registrar', 'public.testing_set_result_note(uuid, text)', 'EXECUTE') then
+    raise exception 'TEST FAILED: R2 testing_registrar can reach testing_results or the grading functions';
+  end if;
+
+  -- ===================================================================
+  -- R3. The date rule (staff D1, admin A1; both functions)
+  -- ===================================================================
+  set local role authenticated;
+  foreach v_txt in array array[v_c_d1, v_c_a1] loop
+    perform set_config('request.jwt.claims', v_txt, true);
+    -- before the testing day: nobody
+    v_r := public.testing_set_result(v_sb1, 'pass');
+    if v_r ->> 'status' is distinct from 'not_open' then raise exception 'TEST FAILED: R3 before the day set_result (%) expected not_open, got %', case when v_txt = v_c_d1 then 'D1' else 'A1' end, v_r; end if;
+    v_r := public.testing_set_result_note(v_sb1, 'Early');
+    if v_r ->> 'status' is distinct from 'not_open' then raise exception 'TEST FAILED: R3 before the day set_result_note (%) expected not_open, got %', case when v_txt = v_c_d1 then 'D1' else 'A1' end, v_r; end if;
+    -- on the testing day: everyone
+    v_r := public.testing_set_result(v_sd1, case when v_txt = v_c_d1 then 'pass' else 'not_passed' end);
+    if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: R3 on the day set_result (%) expected ok, got %', case when v_txt = v_c_d1 then 'D1' else 'A1' end, v_r; end if;
+    v_r := public.testing_set_result_note(v_sd1, case when v_txt = v_c_d1 then 'Good kicks' else 'Retest forms' end);
+    if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: R3 on the day set_result_note (%) expected ok, got %', case when v_txt = v_c_d1 then 'D1' else 'A1' end, v_r; end if;
+  end loop;
+  -- after the testing day: staff no, admins yes
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  v_r := public.testing_set_result(v_sa1, 'pass');
+  if v_r ->> 'status' is distinct from 'finished' then raise exception 'TEST FAILED: R3 after the day D1 set_result expected finished, got %', v_r; end if;
+  v_r := public.testing_set_result_note(v_sa1, 'Late');
+  if v_r ->> 'status' is distinct from 'finished' then raise exception 'TEST FAILED: R3 after the day D1 set_result_note expected finished, got %', v_r; end if;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_r := public.testing_set_result(v_sa1, 'pass');
+  if v_r ->> 'status' is distinct from 'ok' or v_r ->> 'result' is distinct from 'pass' then
+    raise exception 'TEST FAILED: R3 after the day A1 set_result expected ok pass, got %', v_r;
+  end if;
+  v_r := public.testing_set_result_note(v_sa1, 'Typed in from paper');
+  if v_r ->> 'status' is distinct from 'ok' or v_r ->> 'note' is distinct from 'Typed in from paper' or v_r ->> 'result' is distinct from 'pass' then
+    raise exception 'TEST FAILED: R3 after the day A1 set_result_note expected ok with result and note, got %', v_r;
+  end if;
+  reset role;
+  if exists (select 1 from public.testing_results x where x.registration_id = v_sb1) then
+    raise exception 'TEST FAILED: R3 nothing may be stored before the testing day';
+  end if;
+  if not exists (select 1 from public.testing_results x where x.registration_id = v_sd1
+                  and x.result = 'not_passed' and x.note = 'Retest forms') then
+    raise exception 'TEST FAILED: R3 on the day the admin''s later values must be stored';
+  end if;
+
+  -- ===================================================================
+  -- R4. Values (D1, on the testing day)
+  -- ===================================================================
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  foreach v_txt in array array['pass', 'not_passed', 'no_show'] loop
+    v_r := public.testing_set_result(v_sv, v_txt);
+    if v_r ->> 'status' is distinct from 'ok' or v_r ->> 'result' is distinct from v_txt or v_r ? 'note' is not true
+       or v_r -> 'note' <> 'null'::jsonb or v_r ->> 'updated_at' is null or v_r ->> 'updated_by_name' is distinct from v_desk_name then
+      raise exception 'TEST FAILED: R4 set_result % expected {ok, result %, note null, updated_at, updated_by_name %}, got %', v_txt, v_txt, v_desk_name, v_r;
+    end if;
+    if not exists (select 1 from public.testing_results x where x.registration_id = v_sv and x.result = v_txt) then
+      raise exception 'TEST FAILED: R4 % must be stored', v_txt;
+    end if;
+  end loop;
+  -- the same value again: ok, no new history row
+  reset role;
+  select count(*) into v_n from public.change_log l where l.table_name = 'testing_results' and l.record_id = v_sv;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  v_r := public.testing_set_result(v_sv, 'no_show');
+  if v_r ->> 'status' is distinct from 'ok' or v_r ->> 'result' is distinct from 'no_show' then
+    raise exception 'TEST FAILED: R4 the same value again expected ok no_show, got %', v_r;
+  end if;
+  reset role;
+  select count(*) into v_n2 from public.change_log l where l.table_name = 'testing_results' and l.record_id = v_sv;
+  if v_n2 <> v_n then raise exception 'TEST FAILED: R4 the same value again must write no history row (% -> %)', v_n, v_n2; end if;
+  -- null clears it: no note -> the row goes; the answer is all null
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  v_r := public.testing_set_result(v_sv, null);
+  if v_r is distinct from jsonb_build_object('status', 'ok', 'result', null, 'note', null, 'updated_at', null, 'updated_by_name', null) then
+    raise exception 'TEST FAILED: R4 clearing expected {ok, all null}, got %', v_r;
+  end if;
+  if exists (select 1 from public.testing_results x where x.registration_id = v_sv) then
+    raise exception 'TEST FAILED: R4 clearing the only value must remove the row';
+  end if;
+  -- clearing again (no row): ok, nothing written
+  v_r := public.testing_set_result(v_sv, null);
+  if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: R4 clearing with no row expected ok, got %', v_r; end if;
+  -- result + note, then clear the result -> the row stays with the note;
+  -- then clear the note -> the row goes
+  v_r := public.testing_set_result(v_sv, 'pass');
+  v_r := public.testing_set_result_note(v_sv, 'Great spirit');
+  v_r := public.testing_set_result(v_sv, null);
+  if v_r ->> 'status' is distinct from 'ok' or v_r -> 'result' <> 'null'::jsonb or v_r ->> 'note' is distinct from 'Great spirit' then
+    raise exception 'TEST FAILED: R4 clearing the result of a row with a note expected {ok, result null, the note}, got %', v_r;
+  end if;
+  if not exists (select 1 from public.testing_results x where x.registration_id = v_sv and x.result is null and x.note = 'Great spirit') then
+    raise exception 'TEST FAILED: R4 the row must stay with its note';
+  end if;
+  v_r := public.testing_set_result_note(v_sv, null);
+  if v_r ->> 'status' is distinct from 'ok' or exists (select 1 from public.testing_results x where x.registration_id = v_sv) then
+    raise exception 'TEST FAILED: R4 clearing the note too must remove the row, got %', v_r;
+  end if;
+  -- bad input, unknown student
+  v_r := public.testing_set_result(v_sv, 'passed');
+  if v_r ->> 'status' is distinct from 'invalid' then raise exception 'TEST FAILED: R4 ''passed'' expected invalid, got %', v_r; end if;
+  v_r := public.testing_set_result(null, 'pass');
+  if v_r ->> 'status' is distinct from 'invalid' then raise exception 'TEST FAILED: R4 null id expected invalid, got %', v_r; end if;
+  v_r := public.testing_set_result_note(null, 'x');
+  if v_r ->> 'status' is distinct from 'invalid' then raise exception 'TEST FAILED: R4 note with null id expected invalid, got %', v_r; end if;
+  v_r := public.testing_set_result(gen_random_uuid(), 'pass');
+  if v_r ->> 'status' is distinct from 'not_found' then raise exception 'TEST FAILED: R4 unknown id expected not_found, got %', v_r; end if;
+  v_r := public.testing_set_result_note(gen_random_uuid(), 'x');
+  if v_r ->> 'status' is distinct from 'not_found' then raise exception 'TEST FAILED: R4 note for an unknown id expected not_found, got %', v_r; end if;
+  -- a withdrawn student (Withdraw is admin-only)
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  select r.version into v_v from public.testing_registrations r where r.id = v_sdw;
+  v_r := public.testing_withdraw_student(v_sdw, v_v);
+  if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: R4 setup withdraw expected ok, got %', v_r; end if;
+  foreach v_txt in array array[v_c_d1, v_c_a1] loop
+    perform set_config('request.jwt.claims', v_txt, true);
+    v_r := public.testing_set_result(v_sdw, 'pass');
+    if v_r ->> 'status' is distinct from 'withdrawn' then raise exception 'TEST FAILED: R4 withdrawn student set_result expected withdrawn, got %', v_r; end if;
+    v_r := public.testing_set_result_note(v_sdw, 'x');
+    if v_r ->> 'status' is distinct from 'withdrawn' then raise exception 'TEST FAILED: R4 withdrawn student set_result_note expected withdrawn, got %', v_r; end if;
   end loop;
   reset role;
 
-  -- -------------------------------------------------------------------
-  -- Test 3: the list shows list columns only; search
-  -- -------------------------------------------------------------------
+  -- ===================================================================
+  -- R5. The note (D1, on the testing day)
+  -- ===================================================================
+  set local role authenticated;
   perform set_config('request.jwt.claims', v_c_d1, true);
-  v_r := public.prospects_list('worcester');
-  if v_r ->> 'status' <> 'ok' or not exists (select 1 from jsonb_array_elements(v_r -> 'prospects') e where (e ->> 'id')::uuid = v_p0) then
-    raise exception 'TEST FAILED: 3a the list should hold Ava: %', left(v_r::text, 200);
+  v_r := public.testing_set_result_note(v_sn, repeat('a', 200));
+  if v_r ->> 'status' is distinct from 'ok' or char_length(v_r ->> 'note') <> 200 or v_r -> 'result' <> 'null'::jsonb then
+    raise exception 'TEST FAILED: R5 a 200-character note expected ok, got %', v_r;
   end if;
-  if position('555-7731' in (v_r -> 'prospects')::text) > 0 or position('kim@example' in (v_r -> 'prospects')::text) > 0
-     or exists (select 1 from jsonb_array_elements(v_r -> 'prospects') e where e ? 'parent_phone' or e ? 'child_age' or e ? 'answers') then
-    raise exception 'TEST FAILED: 3b the list must not hold phone, email, age or answers';
+  -- more than 2000 characters as sent -> invalid even if it would tidy
+  -- down to a short note (refused before tidying)
+  v_r := public.testing_set_result_note(v_sn, 'x' || repeat(' ', 2000));
+  if v_r ->> 'status' is distinct from 'invalid' then raise exception 'TEST FAILED: R5 a 2001-character text expected invalid, got %', v_r; end if;
+  v_r := public.testing_set_result_note(v_sn, 'y' || repeat(' ', 1999));
+  if v_r ->> 'status' is distinct from 'ok' or v_r ->> 'note' is distinct from 'y' then
+    raise exception 'TEST FAILED: R5 a 2000-character text tidied to ''y'' expected ok, got %', v_r;
   end if;
-  if (select (e -> 'booking' ->> 'class_running')::boolean from jsonb_array_elements(v_r -> 'prospects') e where (e ->> 'id')::uuid = v_p0) is not true then
-    raise exception 'TEST FAILED: 3c Ava''s free class still runs';
+  v_r := public.testing_set_result_note(v_sn, repeat('a', 200));
+  v_r := public.testing_set_result_note(v_sn, repeat('b', 201));
+  if v_r ->> 'status' is distinct from 'invalid' then raise exception 'TEST FAILED: R5 a 201-character note expected invalid, got %', v_r; end if;
+  -- 201 characters that tidy down to 200 are fine (spaces at the ends go)
+  v_r := public.testing_set_result_note(v_sn, ' ' || repeat('c', 200));
+  if v_r ->> 'status' is distinct from 'ok' or v_r ->> 'note' is distinct from repeat('c', 200) then
+    raise exception 'TEST FAILED: R5 a note tidied to 200 characters expected ok, got %', v_r;
   end if;
-  if (select (e ->> 'signed_up_at')::timestamptz from jsonb_array_elements(v_r -> 'prospects') e where (e ->> 'id')::uuid = v_p0)
-     is distinct from (select s.created_at from public.form_submissions s join public.prospects p on p.submission_id = s.id where p.id = v_p0) then
-    raise exception 'TEST FAILED: 3g the list''s signed_up_at must be the sign-up''s own time';
+  -- blank = clear (and the row goes: there is no result)
+  v_r := public.testing_set_result_note(v_sn, '   ');
+  if v_r ->> 'status' is distinct from 'ok' or v_r -> 'note' <> 'null'::jsonb
+     or exists (select 1 from public.testing_results x where x.registration_id = v_sn) then
+    raise exception 'TEST FAILED: R5 a blank note expected ok and the note cleared, got %', v_r;
   end if;
-  v_txt := concat_ws(',',
-    (public.prospects_search('worcester', '7731') -> 'ids') @> to_jsonb(array[v_p0]),
-    (public.prospects_search('worcester', '508-555-7731') -> 'ids') @> to_jsonb(array[v_p0]),
-    not ((public.prospects_search('worcester', '77') -> 'ids') @> to_jsonb(array[v_p0])),                -- under 4 digits: no phone match
-    (public.prospects_search('worcester', 'zztest') -> 'ids') @> to_jsonb(array[v_p0, v_p1]),
-    (public.prospects_search('shrewsbury', '7731') -> 'ids') = '[]'::jsonb,
-    public.prospects_search('worcester', 'x') ->> 'status');
-  if v_txt <> 't,t,t,t,t,invalid' then raise exception 'TEST FAILED: 3d search gave %', v_txt; end if;
-  if position('555-7731' in public.prospects_search('worcester', '7731')::text) > 0 then
-    raise exception 'TEST FAILED: 3e search must never return a phone number';
+  -- line breaks and runs of spaces become one space
+  v_r := public.testing_set_result_note(v_sn, E'a\n\n b');
+  if v_r ->> 'status' is distinct from 'ok' or v_r ->> 'note' is distinct from 'a b' then
+    raise exception 'TEST FAILED: R5 E''a\n\n b'' expected stored as ''a b'', got %', v_r;
   end if;
-  v_r := public.prospects_get(v_p0);
-  if v_r ->> 'status' <> 'ok' or v_r -> 'prospect' ->> 'parent_phone' <> '(508) 555-7731'
-     or (v_r -> 'prospect' ->> 'has_signature')::boolean is not true
-     or jsonb_array_length(v_r -> 'prospect' -> 'siblings') <> 1 or v_r -> 'prospect' ? 'signature' then
-    raise exception 'TEST FAILED: 3f the panel: contact details, signature on file (not the picture), one sibling';
+  v_r := public.testing_set_result_note(v_sn, E'\tKeep  hands\r\nup ');
+  if v_r ->> 'note' is distinct from 'Keep hands up' then
+    raise exception 'TEST FAILED: R5 tabs / Windows line breaks expected ''Keep hands up'', got %', v_r;
   end if;
+  -- an invisible character -> invalid (the stored note is unchanged)
+  v_r := public.testing_set_result_note(v_sn, 'a' || chr(8203) || 'b');
+  if v_r ->> 'status' is distinct from 'invalid' then raise exception 'TEST FAILED: R5 a zero-width character expected invalid, got %', v_r; end if;
+  v_r := public.testing_set_result_note(v_sn, 'a' || chr(7) || 'b');
+  if v_r ->> 'status' is distinct from 'invalid' then raise exception 'TEST FAILED: R5 a control character expected invalid, got %', v_r; end if;
+  -- "é" counts as one character
+  v_r := public.testing_set_result_note(v_sn, repeat('é', 200));
+  if v_r ->> 'status' is distinct from 'ok' or char_length(v_r ->> 'note') <> 200 then
+    raise exception 'TEST FAILED: R5 200 x é expected ok, got %', v_r;
+  end if;
+  v_r := public.testing_set_result_note(v_sn, repeat('é', 201));
+  if v_r ->> 'status' is distinct from 'invalid' then raise exception 'TEST FAILED: R5 201 x é expected invalid, got %', v_r; end if;
   reset role;
+  if not exists (select 1 from public.testing_results x where x.registration_id = v_sn and x.note = repeat('é', 200)) then
+    raise exception 'TEST FAILED: R5 refused notes must not change the stored note';
+  end if;
 
-  -- -------------------------------------------------------------------
-  -- Test 4: status, Joined date, notes, follow-up
-  -- -------------------------------------------------------------------
+  -- ===================================================================
+  -- R6 + R7. Last change wins; versions untouched; the history
+  -- ===================================================================
+  select r.version into v_v from public.testing_registrations r where r.id = v_sl;
+  select e.version into v_ev_v from public.testing_events e where e.id = v_eday;
+  select coalesce(max(id), 0) into v_mark from public.change_log;
+  set local role authenticated;
   perform set_config('request.jwt.claims', v_c_d1, true);
-  select version into v_ver from public.prospects where id = v_p1;
-  v_txt := concat_ws(',',
-    public.prospects_set_status(v_p1, v_ver + 5, v_st_contacted, null) ->> 'status',                    -- stale
-    public.prospects_set_status(v_p1, v_ver, v_st_joined, null) ->> 'status',                           -- Joined needs a date
-    public.prospects_set_status(v_p1, v_ver, v_st_contacted, v_today) ->> 'status',                     -- only Joined has one
-    public.prospects_set_status(v_p1, v_ver, v_st_joined, v_today + 1) ->> 'status',                    -- not in the future
-    public.prospects_set_status(v_p1, v_ver, (select id from public.prospect_statuses where location_code = 'shrewsbury' and builtin = 'came'), null) ->> 'status');
-  if v_txt <> 'stale,invalid,invalid,invalid,stale' then raise exception 'TEST FAILED: 4a status rules gave %', v_txt; end if;
-  v_r := public.prospects_set_status(v_p1, v_ver, v_st_contacted, null);
-  if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: 4b set Contacted: %', v_r; end if;
-  if not exists (select 1 from public.prospect_activity where prospect_id = v_p1 and kind = 'status' and detail ->> 'to' = 'Contacted') then
-    raise exception 'TEST FAILED: 4c a status change shows in the timeline';
+  v_r := public.testing_set_result(v_sl, 'pass');                 -- insert (desk)
+  if v_r ->> 'updated_by_name' is distinct from v_desk_name then
+    raise exception 'TEST FAILED: R7 updated_by_name expected %, got %', v_desk_name, v_r;
   end if;
-  v_txt := concat_ws(',',
-    public.prospects_add_note(v_p1, '', false, null) ->> 'status',
-    public.prospects_add_note(v_p1, repeat('x', 1001), false, null) ->> 'status',
-    public.prospects_add_note(v_p1, 'Left voicemail', true, v_today - 1) ->> 'status',
-    public.prospects_add_note(v_p1, 'Left voicemail', false, v_today + 2) ->> 'status',
-    public.prospects_add_note(v_p1, 'Left voicemail', true, v_today + 3) ->> 'status');
-  if v_txt <> 'invalid,invalid,invalid,invalid,ok' then raise exception 'TEST FAILED: 4d note rules gave %', v_txt; end if;
-  if (select follow_up_on from public.prospects where id = v_p1) <> v_today + 3
-     or (select created_by_name from public.prospect_notes where prospect_id = v_p1) is null then
-    raise exception 'TEST FAILED: 4e a note sets the follow-up and keeps who wrote it';
+  if coalesce(current_setting('tkd.action', true), '') <> '' or coalesce(current_setting('tkd.batch_id', true), '') <> '' then
+    raise exception 'TEST FAILED: R7 tkd.action / tkd.batch_id must be cleared after the call';
   end if;
   reset role;
+  if not exists (select 1 from public.testing_results x where x.registration_id = v_sl
+                  and x.updated_by = v_desk and x.updated_by_name = v_desk_name) then
+    raise exception 'TEST FAILED: R7 the row must be stamped with the desk''s login and name';
+  end if;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_r := public.testing_set_result(v_sl, 'no_show');              -- update (admin): the last change wins
+  if v_r ->> 'result' is distinct from 'no_show' or v_r ->> 'updated_by_name' is distinct from v_admin_name then
+    raise exception 'TEST FAILED: R6 the admin''s later no_show must win, got %', v_r;
+  end if;
+  v_r := public.testing_set_result_note(v_sl, 'Came late');      -- update
+  v_r := public.testing_set_result(v_sl, null);                   -- update (the note stays)
+  v_r := public.testing_set_result_note(v_sl, null);              -- removal
+  reset role;
+  if not exists (select 1 from public.testing_registrations r where r.id = v_sl and r.version = v_v)
+     or not exists (select 1 from public.testing_events e where e.id = v_eday and e.version = v_ev_v) then
+    raise exception 'TEST FAILED: R6 result writes must not change the registration''s or the event''s version';
+  end if;
+  -- R7: five history rows for this student, in order
+  select string_agg(l.action || '/' || l.op || '/' || l.actor_name, ', ' order by l.id) into v_txt
+    from public.change_log l
+   where l.id > v_mark and l.table_name = 'testing_results' and l.record_id = v_sl;
+  if v_txt is distinct from format('set_result/insert/%s, set_result/update/%s, set_result_note/update/%s, set_result/update/%s, set_result_note/delete/%s',
+                                   v_desk_name, v_admin_name, v_admin_name, v_admin_name, v_admin_name) then
+    raise exception 'TEST FAILED: R7 history rows for the student: %', v_txt;
+  end if;
+  if exists (select 1 from public.change_log l
+              where l.id > v_mark and l.table_name = 'testing_results' and l.record_id = v_sl
+                and (l.batch_id is null or l.location_code is not null or l.session_id is null)) then
+    raise exception 'TEST FAILED: R7 every history row needs a batch id and the session, and no school';
+  end if;
+  if not exists (select 1 from public.change_log l
+                  where l.id > v_mark and l.table_name = 'testing_results' and l.record_id = v_sl and l.op = 'insert'
+                    and l.actor_id = v_desk and l.session_id = v_d1
+                    and l.after ->> 'result' = 'pass' and l.after ->> 'registration_id' = v_sl::text) then
+    raise exception 'TEST FAILED: R7 the insert row must name the desk, its session and the new values';
+  end if;
+  if not exists (select 1 from public.change_log l
+                  where l.id > v_mark and l.table_name = 'testing_results' and l.record_id = v_sl and l.op = 'update'
+                    and l.before ->> 'result' = 'pass' and l.after ->> 'result' = 'no_show' and not (l.after ? 'note')) then
+    raise exception 'TEST FAILED: R7 an update row must hold only the changed keys';
+  end if;
+  if not exists (select 1 from public.change_log l
+                  where l.id > v_mark and l.table_name = 'testing_results' and l.record_id = v_sl and l.op = 'delete'
+                    and l.before ->> 'note' = 'Came late' and l.after is null) then
+    raise exception 'TEST FAILED: R7 the removal row must hold the old values';
+  end if;
+  if has_column_privilege('authenticated', 'public.testing_results', 'updated_by', 'SELECT') then
+    raise exception 'TEST FAILED: R7 updated_by must not be readable by authenticated';
+  end if;
+
+  -- ===================================================================
+  -- R8. Table rules, even for the SQL Editor's role (as postgres)
+  -- ===================================================================
   begin
-    update public.prospect_notes set body = 'changed' where prospect_id = v_p1;
-    raise exception 'TEST FAILED: 4f a note must never change';
+    insert into public.testing_results (registration_id, result, note) values (v_sh, null, null);
+    raise exception 'TEST FAILED: R8 a row with neither result nor note was allowed';
+  exception when check_violation then
+    get stacked diagnostics v_constraint = constraint_name;
+    if v_constraint <> 'testing_results_not_empty_check' then raise exception 'TEST FAILED: R8 empty row refused by % instead', v_constraint; end if;
+  end;
+  begin
+    insert into public.testing_results (registration_id, result) values (v_sh, 'passed');
+    raise exception 'TEST FAILED: R8 result ''passed'' was allowed';
   exception when check_violation then null;
   end;
-  perform set_config('request.jwt.claims', v_c_d1, true);
-  select version into v_ver from public.prospects where id = v_p1;
-  -- (each function runs FIRST, then the result is checked: inside one "if" the
-  --  database may read the table before it calls the function)
-  v_r := public.prospects_set_follow_up(v_p1, v_ver, null);
-  if v_r ->> 'status' <> 'ok' or (select follow_up_on from public.prospects where id = v_p1) is not null then
-    raise exception 'TEST FAILED: 4g No follow-up clears the date: %', v_r;
-  end if;
-  reset role;
-
-  -- -------------------------------------------------------------------
-  -- Test 5: free classes from the panel - shared limit, change, cancel
-  -- -------------------------------------------------------------------
-  perform set_config('request.jwt.claims', v_c_d1, true);
-  v_r := public.prospects_open_times(v_p1, v_day, v_day);
-  if v_r ->> 'status' <> 'ok' or jsonb_array_length(v_r -> 'times') <> 1 or (v_r -> 'times' -> 0 ->> 'spots_left')::integer <> 1 then
-    raise exception 'TEST FAILED: 5a one time with 1 spot left (Ava took one of 2): %', v_r;
-  end if;
-  select version into v_ver from public.prospects where id = v_p1;
-  v_r := public.prospects_book_time(v_p1, v_ver, v_f1, v_cw1, v_day, '06:00');
-  if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: 5b book Max: %', v_r; end if;
-  if (select status_id from public.prospects where id = v_p1) <> v_st_contacted then
-    raise exception 'TEST FAILED: 5c booking keeps a status staff chose (Contacted)';
-  end if;
-  -- a third child (another family) can't get the time: it's full
-  v_r := public.forms_staff_submit(v_f1, gen_random_uuid(), v_pub, v_ans || '{"parent_name":"Lee Zzfamily"}', '[{"first_name":"Zoe","age":8}]', '[]', v_sig);
-  v_s3 := (v_r ->> 'id')::uuid;
-  select id, version into v_p3, v_ver from public.prospects where submission_id = v_s3;
-  v_r := public.prospects_book_time(v_p3, v_ver, v_f1, v_cw1, v_day, '06:00');
-  if v_r ->> 'status' <> 'time_taken' or exists (select 1 from public.class_bookings where submission_id = v_s3) then
-    raise exception 'TEST FAILED: 5d the full time must answer time_taken and book nothing';
-  end if;
-  -- Ava cancels -> back to New, the spot is free; Zoe gets it (Booked)
-  select version into v_ver from public.prospects where id = v_p0;
-  v_r := public.prospects_cancel_time(v_p0, v_ver);
-  if v_r ->> 'status' <> 'ok' or (select status_id from public.prospects where id = v_p0) <> v_st_new then
-    raise exception 'TEST FAILED: 5e cancel: % / Booked should go back to New', v_r;
-  end if;
-  select version into v_ver from public.prospects where id = v_p3;
-  v_r := public.prospects_book_time(v_p3, v_ver, v_f1, v_cw1, v_day, '06:00');
-  if v_r ->> 'status' <> 'ok' or (select status_id from public.prospects where id = v_p3) <> v_st_booked then
-    raise exception 'TEST FAILED: 5f the freed spot can be booked (Booked)';
-  end if;
-  -- Ava books again into the cancelled row's place: the time is full now
-  select version into v_ver from public.prospects where id = v_p0;
-  v_r := public.prospects_book_time(v_p0, v_ver, v_f1, v_cw1, v_day, '06:00');
-  if v_r ->> 'status' <> 'time_taken' or (select status from public.class_bookings where submission_id = v_s1 and child_index = 0) <> 'cancelled' then
-    raise exception 'TEST FAILED: 5g a failed booking leaves the old (cancelled) row untouched';
-  end if;
-  -- change Zoe to today 23:30 (in place of her old booking, one row per child)
-  select version into v_ver from public.prospects where id = v_p3;
-  v_r := public.prospects_book_time(v_p3, v_ver, v_f1, v_cw1, v_today, '23:30');
-  if v_r ->> 'status' <> 'ok' and (now() at time zone 'America/New_York')::time < '23:30' then
-    raise exception 'TEST FAILED: 5h change Zoe to today 23:30: %', v_r;
-  end if;
-  if (select count(*) from public.class_bookings where submission_id = v_s3) <> 1 then
-    raise exception 'TEST FAILED: 5i still one booking row for Zoe';
-  end if;
-  if public.prospects_book_time(v_p1, (select version from public.prospects where id = v_p1), v_rand, v_cw1, v_day, '06:00') ->> 'status' <> 'invalid' then
-    raise exception 'TEST FAILED: 5j an unknown form is refused';
-  end if;
-  reset role;
-
-  -- -------------------------------------------------------------------
-  -- Test 6: check in, Undo, and "did they come?"
-  -- -------------------------------------------------------------------
-  perform set_config('request.jwt.claims', v_c_d1, true);
-  -- Max's class is in 3 days: no check-in yet, no "did they come?" yet
-  select version into v_ver from public.prospects where id = v_p1;
-  v_txt := concat_ws(',',
-    public.prospects_check_in(v_p1, v_ver, true, false) ->> 'status',
-    public.prospects_check_in(v_p1, v_ver, false, true) ->> 'status',
-    public.prospects_check_in(v_p1, v_ver, false, false) ->> 'status');
-  if v_txt <> 'not_allowed,not_allowed,invalid' then raise exception 'TEST FAILED: 6a early check-in gave %', v_txt; end if;
-  reset role;
-  -- move Max's booking to today 23:30 (test only, as postgres)
-  update public.class_bookings set on_date = v_today, starts_at = '23:30', ends_at = '23:45' where submission_id = v_s1 and child_index = 1;
-  perform set_config('request.jwt.claims', v_c_d1, true);
-  select version, status_id into v_ver, v_prev from public.prospects where id = v_p1;
-  v_r := public.prospects_check_in(v_p1, v_ver, true, false);
-  if v_r ->> 'status' <> 'ok' or (select status_id from public.prospects where id = v_p1) <> v_st_came
-     or (v_r ->> 'previous_status_id')::uuid <> v_prev then
-    raise exception 'TEST FAILED: 6b check in -> Came: %', v_r;
-  end if;
-  if public.prospects_check_in(v_p1, (v_r ->> 'version')::integer, true, false) ->> 'status' <> 'not_allowed' then
-    raise exception 'TEST FAILED: 6c checking in twice is refused';
-  end if;
-  if public.prospects_book_time(v_p1, (v_r ->> 'version')::integer, v_f1, v_cw1, v_day, '06:00') ->> 'status' <> 'not_allowed' then
-    raise exception 'TEST FAILED: 6d a checked-in child can''t be moved';
-  end if;
-  if public.prospects_undo_check_in(v_p1, (v_r ->> 'version')::integer + 9, v_prev, null) ->> 'status' <> 'stale' then
-    raise exception 'TEST FAILED: 6e Undo after a change is stale';
-  end if;
-  v_r := public.prospects_undo_check_in(v_p1, (v_r ->> 'version')::integer, v_prev, null);
-  if v_r ->> 'status' <> 'ok' or (select status_id from public.prospects where id = v_p1) <> v_prev
-     or (select checked_in_at from public.prospects where id = v_p1) is not null then
-    raise exception 'TEST FAILED: 6f Undo puts the status back: %', v_r;
-  end if;
-  reset role;
-  -- the class at 00:00 today is over: "did they come?" -> No-show + call back tomorrow
-  update public.class_bookings set starts_at = '00:00', ends_at = '00:15' where submission_id = v_s1 and child_index = 1;
-  perform set_config('request.jwt.claims', v_c_d1, true);
-  v_r := public.prospects_list('worcester');
-  if (select (e ->> 'ask_came')::boolean from jsonb_array_elements(v_r -> 'prospects') e where (e ->> 'id')::uuid = v_p1) is not true then
-    raise exception 'TEST FAILED: 6g the list asks "did Max come?"';
-  end if;
-  select version into v_ver from public.prospects where id = v_p1;
-  if public.prospects_check_in(v_p1, v_ver, true, false) ->> 'status' <> 'ok' then
-    -- (checking in during the class day is allowed even after it ended - undo it for the next check)
-    raise exception 'TEST FAILED: 6h a check-in on the class day is still allowed';
-  end if;
-  select version into v_ver from public.prospects where id = v_p1;
-  perform public.prospects_undo_check_in(v_p1, v_ver, v_prev, null);
-  select version into v_ver from public.prospects where id = v_p1;
-  v_r := public.prospects_check_in(v_p1, v_ver, false, true);
-  if v_r ->> 'status' <> 'ok' or (select status_id from public.prospects where id = v_p1) <> v_st_noshow
-     or (select follow_up_on from public.prospects where id = v_p1) <> v_today + 1 then
-    raise exception 'TEST FAILED: 6i No-show sets a call-back for tomorrow: %', v_r;
-  end if;
-  reset role;
-  -- a cancelled class (closure) is never asked about and can't be checked in
-  insert into public.calendar_closures (location_code, starts_on, ends_on, reason, whole_day, class_key)
-  values ('worcester', v_today, v_today, 'zz test closure', true, '');
-  perform set_config('request.jwt.claims', v_c_d1, true);
-  select version into v_ver from public.prospects where id = v_p1;
-  perform public.prospects_undo_check_in(v_p1, v_ver, v_prev, v_today + 3);
-  v_r := public.prospects_list('worcester');
-  if (select (e ->> 'ask_came')::boolean from jsonb_array_elements(v_r -> 'prospects') e where (e ->> 'id')::uuid = v_p1) is not false
-     or (select (e -> 'booking' ->> 'class_running')::boolean from jsonb_array_elements(v_r -> 'prospects') e where (e ->> 'id')::uuid = v_p1) is not false then
-    raise exception 'TEST FAILED: 6j a closed day: no "did they come?", class not running';
-  end if;
-  select version into v_ver from public.prospects where id = v_p1;
-  if public.prospects_check_in(v_p1, v_ver, true, false) ->> 'status' <> 'not_allowed' then
-    raise exception 'TEST FAILED: 6k no check-in for a cancelled class';
-  end if;
-  reset role;
-  delete from public.calendar_closures where reason = 'zz test closure';
-
-  -- a Joined child is never checked in (it would lose its protection from the clean-up)
-  update public.class_bookings set on_date = v_today, starts_at = '23:30', ends_at = '23:45' where submission_id = v_s1 and child_index = 1;
-  update public.prospects set status_id = v_st_joined, joined_on = v_today where id = v_p1;
-  perform set_config('request.jwt.claims', v_c_d1, true);
-  v_r := public.prospects_check_in(v_p1, (select version from public.prospects where id = v_p1), true, false);
-  if v_r ->> 'status' <> 'not_allowed' then raise exception 'TEST FAILED: 6l a Joined child can''t be checked in: %', v_r; end if;
-  update public.prospects set status_id = v_prev, joined_on = null where id = v_p1;
-
-  -- -------------------------------------------------------------------
-  -- Test 7: each school's statuses; only admins delete
-  -- -------------------------------------------------------------------
-  perform set_config('request.jwt.claims', v_c_d1, true);
-  v_r := public.prospect_statuses_add('worcester', '  Left   voicemail ', 'stage', 'pink');
-  if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: 7a staff can add a status: %', v_r; end if;
-  v_st_custom := (v_r ->> 'id')::uuid;
-  v_txt := concat_ws(',',
-    public.prospect_statuses_add('worcester', 'left voicemail', 'stage', 'pink') ->> 'status',
-    public.prospect_statuses_add('worcester', 'Red one', 'stage', 'red') ->> 'status',
-    public.prospect_statuses_add('worcester', 'Odd', 'middle', 'gray') ->> 'status',
-    public.prospect_statuses_update(v_st_booked, (select version from public.prospect_statuses where id = v_st_booked), 'Booked in', 'exit', 'purple') ->> 'status',
-    public.prospect_statuses_update(v_st_booked, (select version from public.prospect_statuses where id = v_st_booked), 'Booked in', 'stage', 'purple') ->> 'status',
-    public.prospect_statuses_delete(v_st_custom, 1, 0, null) ->> 'status');
-  if v_txt <> 'duplicate_name,invalid,invalid,not_allowed,ok,not_allowed' then
-    raise exception 'TEST FAILED: 7b status rules gave %', v_txt;
-  end if;
-  if exists (select 1 from public.prospect_statuses where location_code = 'shrewsbury' and name = 'Left voicemail') then
-    raise exception 'TEST FAILED: 7c a status belongs to one school';
-  end if;
-  -- reorder: the order the screen saw must still be true
-  reset role;
-  declare
-    v_order uuid[];
-    v_new_order uuid[];
   begin
-    select array_agg(id order by position, id) into v_order from public.prospect_statuses where location_code = 'worcester';
-    v_new_order := array[v_order[cardinality(v_order)]] || v_order[1:cardinality(v_order) - 1];
-    perform set_config('request.jwt.claims', v_c_d1, true);
-      v_txt := concat_ws(',', public.prospect_statuses_reorder('worcester', v_new_order, v_order) ->> 'status',
-                            public.prospect_statuses_reorder('worcester', v_order, v_new_order) ->> 'status');
-    if v_txt <> 'stale,ok' or (select position from public.prospect_statuses where id = v_order[cardinality(v_order)]) <> 0 then
-      raise exception 'TEST FAILED: 7d reorder gave %', v_txt;
-    end if;
-    reset role;
+    insert into public.testing_results (registration_id, note) values (v_sh, repeat('a', 201));
+    raise exception 'TEST FAILED: R8 a 201-character note was allowed';
+  exception when check_violation then null;
   end;
-  -- admin deletes the custom status, moving its people to New
+  begin
+    insert into public.testing_results (registration_id, note) values (v_sh, 'two  spaces');
+    raise exception 'TEST FAILED: R8 an untidied note was allowed';
+  exception when check_violation then null;
+  end;
+  begin
+    insert into public.testing_results (registration_id, result) values (gen_random_uuid(), 'pass');
+    raise exception 'TEST FAILED: R8 a result for an unknown registration was allowed';
+  exception when foreign_key_violation then null;
+  end;
+  insert into public.testing_results (registration_id, result) values (v_sh, 'pass');
+  begin
+    update public.testing_results set registration_id = v_sh2 where registration_id = v_sh;
+    raise exception 'TEST FAILED: R8 a result was moved to another registration';
+  exception when check_violation then
+    get stacked diagnostics v_constraint = constraint_name;
+    if v_constraint <> 'testing_results_immutable' then raise exception 'TEST FAILED: R8 the move was refused by % instead', v_constraint; end if;
+  end;
+  -- an update that changes nothing keeps the stamps (and writes no history)
+  select * into v_row from public.testing_results x where x.registration_id = v_sh;
+  select count(*) into v_n from public.change_log l where l.table_name = 'testing_results' and l.record_id = v_sh;
+  update public.testing_results set result = 'pass', updated_by_name = 'someone else', updated_at = now() - interval '1 day'
+   where registration_id = v_sh;
+  select count(*) into v_n2 from public.change_log l where l.table_name = 'testing_results' and l.record_id = v_sh;
+  if not exists (select 1 from public.testing_results x where x.registration_id = v_sh
+                  and x.updated_by_name = v_row.updated_by_name and x.updated_at = v_row.updated_at)
+     or v_n2 <> v_n then
+    raise exception 'TEST FAILED: R8 an update that changes nothing must keep the stamps and write no history';
+  end if;
+  begin
+    truncate public.testing_results;
+    raise exception 'TEST FAILED: R8 truncate was allowed';
+  exception when others then
+    if sqlerrm like 'TEST FAILED%' then raise; end if;
+  end;
+  if not exists (select 1 from public.testing_results x where x.registration_id = v_sh) then
+    raise exception 'TEST FAILED: R8 the row must still be there after the refused truncate';
+  end if;
+  -- a direct write in the SQL Editor is logged as "manual"
+  if not exists (select 1 from public.change_log l where l.table_name = 'testing_results' and l.record_id = v_sh
+                  and l.op = 'insert' and l.action = 'manual') then
+    raise exception 'TEST FAILED: R8 a direct insert must be logged with action manual';
+  end if;
+
+  -- ===================================================================
+  -- R9. Edit details (testing_update_student)
+  -- ===================================================================
+  -- on the testing day: a belt change clears the result (staff too)
+  set local role authenticated;
   perform set_config('request.jwt.claims', v_c_d1, true);
-  select version into v_ver from public.prospects where id = v_p3;
-  perform public.prospects_set_status(v_p3, v_ver, v_st_custom, null);
+  v_r := public.testing_set_result(v_s9a, 'pass');
+  v_r := public.testing_set_result_note(v_s9a, 'Strong');
+  v_r := public.testing_set_result(v_s9b, 'not_passed');
+  select r.version into v_v from public.testing_registrations r where r.id = v_s9a;
+  reset role;
+  select coalesce(max(id), 0) into v_mark from public.change_log;   -- (the history is readable only here)
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  v_r :=public.testing_update_student(v_s9a, v_v, 'Nina', 'Belt', v_day_orange);
+  if v_r is distinct from jsonb_build_object('status', 'ok', 'version', v_v + 1, 'result_cleared', true) then
+    raise exception 'TEST FAILED: R9 belt change of a graded student expected {ok, version %, result_cleared true}, got %', v_v + 1, v_r;
+  end if;
+  reset role;
+  if exists (select 1 from public.testing_results x where x.registration_id = v_s9a) then
+    raise exception 'TEST FAILED: R9 the belt change must remove the result row';
+  end if;
+  select l.batch_id into v_batch from public.change_log l
+   where l.id > v_mark and l.table_name = 'testing_registrations' and l.record_id = v_s9a and l.action = 'update_student';
+  if v_batch is null
+     or not exists (select 1 from public.change_log l
+                     where l.id > v_mark and l.table_name = 'testing_results' and l.record_id = v_s9a
+                       and l.action = 'clear_result' and l.op = 'delete' and l.batch_id = v_batch
+                       and l.before ->> 'result' = 'pass' and l.before ->> 'note' = 'Strong') then
+    raise exception 'TEST FAILED: R9 history must have update_student + clear_result rows with the same batch id';
+  end if;
+  -- name-only change of a graded student: exactly 0005's answer, result kept
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  select r.version into v_v from public.testing_registrations r where r.id = v_s9b;
+  v_r := public.testing_update_student(v_s9b, v_v, 'Omari', 'Name', v_day_yellow);
+  if v_r is distinct from jsonb_build_object('status', 'ok', 'version', v_v + 1) then
+    raise exception 'TEST FAILED: R9 name-only edit expected exactly {ok, version %} (no result_cleared), got %', v_v + 1, v_r;
+  end if;
+  reset role;
+  if not exists (select 1 from public.testing_results x where x.registration_id = v_s9b and x.result = 'not_passed') then
+    raise exception 'TEST FAILED: R9 a name-only edit must keep the result';
+  end if;
+  -- after the testing day
+  set local role authenticated;
   perform set_config('request.jwt.claims', v_c_a1, true);
-  v_txt := concat_ws(',',
-    public.prospect_statuses_delete(v_st_custom, (select version from public.prospect_statuses where id = v_st_custom), 0, v_st_new) ->> 'status',
-    public.prospect_statuses_delete(v_st_custom, (select version from public.prospect_statuses where id = v_st_custom), 1, null) ->> 'status',
-    public.prospect_statuses_delete(v_st_new, (select version from public.prospect_statuses where id = v_st_new), 0, null) ->> 'status',
-    public.prospect_statuses_delete(v_st_custom, (select version from public.prospect_statuses where id = v_st_custom), 1, v_st_new) ->> 'status');
-  if v_txt <> 'stale,invalid,not_allowed,ok' or (select status_id from public.prospects where id = v_p3) <> v_st_new then
-    raise exception 'TEST FAILED: 7e delete status gave % (people move to New)', v_txt;
+  v_r := public.testing_set_result(v_sa2, 'pass');
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: R9 setup admin result after the day expected ok, got %', v_r; end if;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  select r.version into v_v from public.testing_registrations r where r.id = v_sa2;
+  v_r := public.testing_update_student(v_sa2, v_v, 'Ada', 'Graded', v_after_orange);
+  if v_r is distinct from jsonb_build_object('status', 'not_allowed') then
+    raise exception 'TEST FAILED: R9 staff belt change of a graded student after the day expected not_allowed, got %', v_r;
   end if;
   reset role;
-
-  -- -------------------------------------------------------------------
-  -- Test 8: the badge is per person
-  -- -------------------------------------------------------------------
+  if not exists (select 1 from public.testing_registrations r where r.id = v_sa2 and r.version = v_v and r.event_rank_id = v_after_yellow)
+     or not exists (select 1 from public.testing_results x where x.registration_id = v_sa2 and x.result = 'pass') then
+    raise exception 'TEST FAILED: R9 the refused belt change must change nothing';
+  end if;
+  set local role authenticated;
   perform set_config('request.jwt.claims', v_c_d1, true);
-  v_n := (public.prospects_badge('worcester') ->> 'count')::integer;
-  v_r := public.prospects_mark_opened(v_p3);
-  if v_r ->> 'status' <> 'ok' or (public.prospects_badge('worcester') ->> 'count')::integer <> v_n - 1 then
-    raise exception 'TEST FAILED: 8a opening Zoe lowers the desk''s badge';
+  v_r := public.testing_update_student(v_sa2, v_v, 'Adah', 'Graded', v_after_yellow);
+  if v_r is distinct from jsonb_build_object('status', 'ok', 'version', v_v + 1) then
+    raise exception 'TEST FAILED: R9 staff name-only edit after the day expected {ok, version %}, got %', v_v + 1, v_r;
   end if;
-  perform public.prospects_mark_opened(v_p3);   -- twice is fine
-  perform set_config('request.jwt.claims', v_c_a1, true);
-  if (public.prospects_badge('worcester') ->> 'count')::integer <> v_n then
-    raise exception 'TEST FAILED: 8b the admin''s badge is their own';
-  end if;
-  -- the Calendar finds the prospect from a booking
-  v_r := public.prospects_for_bookings(array(select id from public.class_bookings where submission_id = v_s3));
-  if v_r ->> 'status' <> 'ok' or (v_r -> 'prospects' -> 0 ->> 'prospect_id')::uuid <> v_p3 then
-    raise exception 'TEST FAILED: 8c prospects_for_bookings: %', v_r;
-  end if;
-  reset role;
-
-  -- -------------------------------------------------------------------
-  -- Test 9: deleting (admins only; the sign-up goes with the last child)
-  -- -------------------------------------------------------------------
-  perform set_config('request.jwt.claims', v_c_d1, true);
-  if public.prospects_delete(v_p1, (select version from public.prospects where id = v_p1)) ->> 'status' <> 'not_allowed' then
-    raise exception 'TEST FAILED: 9a staff can''t delete a prospect';
+  select r.version into v_v2 from public.testing_registrations r where r.id = v_sa3;
+  v_r := public.testing_update_student(v_sa3, v_v2, 'Ari', 'Ungraded', v_after_orange);
+  if v_r is distinct from jsonb_build_object('status', 'ok', 'version', v_v2 + 1) then
+    raise exception 'TEST FAILED: R9 staff belt change of an UNgraded student after the day expected {ok, version %}, got %', v_v2 + 1, v_r;
   end if;
   perform set_config('request.jwt.claims', v_c_a1, true);
-  v_r := public.prospects_delete(v_p1, (select version from public.prospects where id = v_p1));
-  if v_r ->> 'status' <> 'ok' or (v_r ->> 'family_removed')::boolean
-     or not exists (select 1 from public.form_submissions where id = v_s1)
-     or exists (select 1 from public.class_bookings where submission_id = v_s1 and child_index = 1) then
-    raise exception 'TEST FAILED: 9b deleting Max keeps the family (Ava) and frees his booking: %', v_r;
-  end if;
-  v_r := public.prospects_delete(v_p0, (select version from public.prospects where id = v_p0));
-  if v_r ->> 'status' <> 'ok' or not (v_r ->> 'family_removed')::boolean or exists (select 1 from public.form_submissions where id = v_s1) then
-    raise exception 'TEST FAILED: 9c deleting the last child removes the sign-up: %', v_r;
+  v_r := public.testing_update_student(v_sa2, v_v + 1, 'Adah', 'Graded', v_after_orange);
+  if v_r is distinct from jsonb_build_object('status', 'ok', 'version', v_v + 2, 'result_cleared', true) then
+    raise exception 'TEST FAILED: R9 admin belt change of a graded student after the day expected {ok, version %, result_cleared true}, got %', v_v + 2, v_r;
   end if;
   reset role;
+  if exists (select 1 from public.testing_results x where x.registration_id = v_sa2) then
+    raise exception 'TEST FAILED: R9 the admin''s belt change must clear the result';
+  end if;
 
-  -- -------------------------------------------------------------------
-  -- Test 10: the 2-year clean-up (every family that isn't Joined)
-  -- -------------------------------------------------------------------
+  -- ===================================================================
+  -- R10. Possible duplicate "keep one" (the rename path)
+  -- ===================================================================
+  -- after the testing day: grade g1, g2, g3 (admin), then the desk renames
+  -- each to match u1, u2, u3 -> each g is a possible duplicate of its u
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_r := public.testing_set_result(v_g1, 'pass');
+  v_r := public.testing_set_result(v_g2, 'pass');
+  v_r := public.testing_set_result(v_g3, 'no_show');
   perform set_config('request.jwt.claims', v_c_d1, true);
-  v_r := public.forms_staff_submit(v_f1, gen_random_uuid(), v_pub, v_ans, '[{"first_name":"Old","age":9},{"first_name":"Kid","age":5}]', '[]', v_sig);
-  v_s2 := (v_r ->> 'id')::uuid;
+  select r.version into v_v from public.testing_registrations r where r.id = v_g1;
+  v_r := public.testing_update_student(v_g1, v_v, 'Uma', 'One', v_after_yellow);
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: R10 rename g1 expected ok, got %', v_r; end if;
+  select r.version into v_v from public.testing_registrations r where r.id = v_g2;
+  v_r := public.testing_update_student(v_g2, v_v, 'Ugo', 'Two', v_after_yellow);
+  select r.version into v_v from public.testing_registrations r where r.id = v_g3;
+  v_r := public.testing_update_student(v_g3, v_v, 'Ursa', 'Three', v_after_yellow);
   reset role;
-  -- both families quiet for 25 months; Zoe's family has a Joined child
-  update public.prospects set last_activity_at = now() - interval '25 months' where submission_id in (v_s2, v_s3);
-  update public.prospects set status_id = v_st_joined, joined_on = v_today where submission_id = v_s3;
-  -- one sibling still active keeps a family: first make Kid active, then quiet
-  update public.prospects set last_activity_at = now() - interval '1 month' where submission_id = v_s2 and child_index = 1;
-  perform public.prospects_purge_old();
-  if not exists (select 1 from public.form_submissions where id = v_s2) then
-    raise exception 'TEST FAILED: 10a an active sibling keeps the family';
+  if (select count(*) from public.testing_registrations r
+       where (r.id, r.duplicate_of) in ((v_g1, v_u1), (v_g2, v_u2), (v_g3, v_u3)) and r.duplicate_state = 'possible') <> 3 then
+    raise exception 'TEST FAILED: R10 setup: each renamed graded student must be a possible duplicate of its match';
   end if;
-  update public.prospects set last_activity_at = now() - interval '25 months' where submission_id = v_s2;
-  v_n := public.prospects_purge_old();
-  if v_n < 1 or exists (select 1 from public.form_submissions where id = v_s2) or exists (select 1 from public.prospects where submission_id = v_s2)
-     or not exists (select 1 from public.form_submissions where id = v_s3) then
-    raise exception 'TEST FAILED: 10b the quiet family goes, the Joined family stays';
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  -- staff keep-one that withdraws the GRADED copy -> not_allowed
+  select r.version into v_v from public.testing_registrations r where r.id = v_u1;
+  select r.version into v_v2 from public.testing_registrations r where r.id = v_g1;
+  v_r := public.testing_resolve_duplicate(v_u1, v_v, v_g1, v_v2, false);
+  if v_r is distinct from jsonb_build_object('status', 'not_allowed') then
+    raise exception 'TEST FAILED: R10 staff keep-one withdrawing a graded student after the day expected not_allowed, got %', v_r;
+  end if;
+  -- staff keep-one that withdraws the UNgraded copy -> also not_allowed
+  -- (v0.194: after the testing day keep one is admin-only for everyone)
+  v_r := public.testing_resolve_duplicate(v_g1, v_v2, v_u1, v_v, false);
+  if v_r is distinct from jsonb_build_object('status', 'not_allowed') then
+    raise exception 'TEST FAILED: R10 staff keep-one withdrawing an UNgraded student after the day expected not_allowed, got %', v_r;
+  end if;
+  -- the same keep-one by an admin -> ok
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_r := public.testing_resolve_duplicate(v_g1, v_v2, v_u1, v_v, false);
+  if v_r is distinct from jsonb_build_object('status', 'ok') then
+    raise exception 'TEST FAILED: R10 admin keep-one withdrawing the ungraded student after the day expected ok, got %', v_r;
+  end if;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  -- staff keep both after the day -> ok (it withdraws nobody)
+  select r.version into v_v from public.testing_registrations r where r.id = v_u2;
+  select r.version into v_v2 from public.testing_registrations r where r.id = v_g2;
+  v_r := public.testing_resolve_duplicate(v_u2, v_v, v_g2, v_v2, true);
+  if v_r is distinct from jsonb_build_object('status', 'ok') then
+    raise exception 'TEST FAILED: R10 staff keep both expected ok, got %', v_r;
+  end if;
+  -- admin keep-one withdrawing a graded copy -> ok; the result stays
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  select r.version into v_v from public.testing_registrations r where r.id = v_u3;
+  select r.version into v_v2 from public.testing_registrations r where r.id = v_g3;
+  v_r := public.testing_resolve_duplicate(v_u3, v_v, v_g3, v_v2, false);
+  if v_r is distinct from jsonb_build_object('status', 'ok') then
+    raise exception 'TEST FAILED: R10 admin keep-one withdrawing a graded student expected ok, got %', v_r;
+  end if;
+  reset role;
+  if not exists (select 1 from public.testing_registrations r where r.id = v_u1 and r.status = 'withdrawn')
+     or not exists (select 1 from public.testing_registrations r where r.id = v_g1 and r.status = 'active')
+     or (select count(*) from public.testing_registrations r where r.id in (v_g2, v_u2) and r.duplicate_state = 'kept_both') <> 2
+     or not exists (select 1 from public.testing_registrations r where r.id = v_g3 and r.status = 'withdrawn' and r.withdrawn_by = v_admin)
+     or not exists (select 1 from public.testing_results x where x.registration_id = v_g3 and x.result = 'no_show') then
+    raise exception 'TEST FAILED: R10 the keep-one / keep-both results are wrong';
+  end if;
+  -- on the testing day: staff keep-one of a graded copy -> ok
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  v_r := public.testing_set_result(v_g4, 'pass');
+  select r.version into v_v from public.testing_registrations r where r.id = v_g4;
+  v_r := public.testing_update_student(v_g4, v_v, 'Una', 'Four', v_day_yellow);
+  select r.version into v_v from public.testing_registrations r where r.id = v_u4;
+  select r.version into v_v2 from public.testing_registrations r where r.id = v_g4;
+  v_r := public.testing_resolve_duplicate(v_u4, v_v, v_g4, v_v2, false);
+  if v_r is distinct from jsonb_build_object('status', 'ok') then
+    raise exception 'TEST FAILED: R10 staff keep-one of a graded copy ON the testing day expected ok, got %', v_r;
+  end if;
+  reset role;
+  if not exists (select 1 from public.testing_registrations r where r.id = v_g4 and r.status = 'withdrawn'
+                  and r.withdrawn_reason = 'duplicate_copy' and r.withdrawn_by = v_desk) then
+    raise exception 'TEST FAILED: R10 the graded copy must be withdrawn as duplicate_copy by the desk';
+  end if;
+  -- on the testing day: staff keep-one of an UNgraded copy -> ok (p5)
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  select r.version into v_v from public.testing_registrations r where r.id = v_p5;
+  v_r := public.testing_update_student(v_p5, v_v, 'Quin', 'Five', v_day_yellow);
+  select r.version into v_v from public.testing_registrations r where r.id = v_q5;
+  select r.version into v_v2 from public.testing_registrations r where r.id = v_p5;
+  v_r := public.testing_resolve_duplicate(v_q5, v_v, v_p5, v_v2, false);
+  if v_r is distinct from jsonb_build_object('status', 'ok') then
+    raise exception 'TEST FAILED: R10 staff keep-one of an ungraded copy ON the testing day expected ok, got %', v_r;
+  end if;
+  reset role;
+  if not exists (select 1 from public.testing_registrations r where r.id = v_p5 and r.status = 'withdrawn' and r.withdrawn_by = v_desk) then
+    raise exception 'TEST FAILED: R10 the ungraded copy must be withdrawn by the desk';
   end if;
 
-  -- -------------------------------------------------------------------
-  -- Catalog: permissions on everything 0010 created
-  -- -------------------------------------------------------------------
-  foreach v_tbl in array array['prospect_statuses', 'prospects', 'prospect_notes', 'prospect_activity', 'prospect_opens'] loop
-    if not (select c.relrowsecurity from pg_class c where c.oid = ('public.' || v_tbl)::regclass) then
-      raise exception 'TEST FAILED: C1 RLS is off on %', v_tbl;
-    end if;
-    if has_table_privilege('anon', 'public.' || v_tbl, 'select') or has_any_column_privilege('anon', 'public.' || v_tbl, 'select')
-       or has_table_privilege('service_role', 'public.' || v_tbl, 'select') or has_any_column_privilege('service_role', 'public.' || v_tbl, 'select')
-       or has_table_privilege('authenticated', 'public.' || v_tbl, 'insert') or has_table_privilege('authenticated', 'public.' || v_tbl, 'update')
-       or has_table_privilege('authenticated', 'public.' || v_tbl, 'delete') or has_table_privilege('authenticated', 'public.' || v_tbl, 'truncate')
-       or (v_tbl <> 'prospect_statuses' and has_any_column_privilege('authenticated', 'public.' || v_tbl, 'select')) then
-      raise exception 'TEST FAILED: C2 wrong grants on %', v_tbl;
-    end if;
-  end loop;
-  if has_column_privilege('authenticated', 'public.prospect_statuses', 'created_by', 'select') then
-    raise exception 'TEST FAILED: C3 a hidden column is readable';
+  -- ===================================================================
+  -- R11. Restore (the staff 10-second Undo; admins)
+  -- ===================================================================
+  -- the desk's own keep-ones were done on the testing day (p5 ungraded,
+  -- g4 graded); the event is moved to yesterday for the "after" checks
+  update public.testing_events set testing_date = v_today - 1 where id = v_eday;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  -- ungraded, after the day -> ok
+  select r.version into v_v from public.testing_registrations r where r.id = v_p5;
+  v_r := public.testing_restore_student(v_p5, v_v);
+  if v_r ->> 'status' is distinct from 'ok' then
+    raise exception 'TEST FAILED: R11 staff Undo of an ungraded keep-one after the day expected ok, got %', v_r;
   end if;
-  for v_fn in
-    select p.proname, p.oid, p.prosecdef, p.proconfig from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-     where n.nspname = 'public' and p.proname = any (v_staff_fns || v_helper_fns)
-  loop
-    if v_fn.proconfig is null or not ('search_path=""' = any (v_fn.proconfig)) then
-      raise exception 'TEST FAILED: C4 % has no search_path = ''''', v_fn.proname;
-    end if;
-    if has_function_privilege('anon', v_fn.oid, 'execute') or has_function_privilege('service_role', v_fn.oid, 'execute')
-       or has_function_privilege('public', v_fn.oid, 'execute') then
-      raise exception 'TEST FAILED: C5 % can be called by anon / public / service_role', v_fn.proname;
-    end if;
-    v_bool := has_function_privilege('authenticated', v_fn.oid, 'execute');
-    if v_fn.proname = any (v_staff_fns) then
-      if not v_bool or not v_fn.prosecdef then raise exception 'TEST FAILED: C6 % should be callable by the app and security definer', v_fn.proname; end if;
-    elsif v_bool then
-      raise exception 'TEST FAILED: C7 the app can call %', v_fn.proname;
-    end if;
-  end loop;
-  foreach v_tbl in array v_staff_fns || v_helper_fns loop
-    if (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = v_tbl) <> 1 then
-      raise exception 'TEST FAILED: C8 expected exactly one function %', v_tbl;
-    end if;
-  end loop;
-  if not exists (select 1 from pg_trigger t where t.tgrelid = 'public.form_submissions'::regclass and t.tgname = 'form_submissions_make_prospects')
-     or not exists (select 1 from pg_trigger t where t.tgrelid = 'public.class_bookings'::regclass and t.tgname = 'class_bookings_follow_prospect') then
-    raise exception 'TEST FAILED: C9 the two 0009 triggers are missing';
+  -- graded, after the day -> not_allowed
+  select r.version into v_v from public.testing_registrations r where r.id = v_g4;
+  v_r := public.testing_restore_student(v_g4, v_v);
+  if v_r is distinct from jsonb_build_object('status', 'not_allowed') then
+    raise exception 'TEST FAILED: R11 staff Undo of a graded keep-one after the day expected not_allowed, got %', v_r;
   end if;
+  reset role;
+  update public.testing_events set testing_date = v_today where id = v_eday;
+  -- the same Undo on the testing day -> ok
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  v_r := public.testing_restore_student(v_g4, v_v);
+  if v_r ->> 'status' is distinct from 'ok' then
+    raise exception 'TEST FAILED: R11 staff Undo of a graded keep-one ON the testing day expected ok, got %', v_r;
+  end if;
+  -- admin restore of a graded withdrawn student after the day -> ok, and
+  -- the result can be read again
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  select r.version into v_v from public.testing_registrations r where r.id = v_g3;
+  v_r := public.testing_restore_student(v_g3, v_v);
+  if v_r ->> 'status' is distinct from 'ok' then
+    raise exception 'TEST FAILED: R11 admin restore of a graded student expected ok, got %', v_r;
+  end if;
+  if not exists (select 1 from public.testing_results x where x.registration_id = v_g3 and x.result = 'no_show') then
+    raise exception 'TEST FAILED: R11 the restored student''s result must read again';
+  end if;
+  reset role;
+
+  -- ===================================================================
+  -- R12. Withdraw keeps the result
+  -- ===================================================================
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  v_r := public.testing_set_result(v_s12, 'pass');
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  select r.version into v_v from public.testing_registrations r where r.id = v_s12;
+  v_r := public.testing_withdraw_student(v_s12, v_v);
+  if v_r ->> 'status' is distinct from 'ok' then raise exception 'TEST FAILED: R12 withdraw expected ok, got %', v_r; end if;
+  if not exists (select 1 from public.testing_results x where x.registration_id = v_s12 and x.result = 'pass') then
+    raise exception 'TEST FAILED: R12 Withdraw must keep the result';
+  end if;
+  foreach v_txt in array array[v_c_d1, v_c_a1] loop
+    perform set_config('request.jwt.claims', v_txt, true);
+    v_r := public.testing_set_result(v_s12, 'no_show');
+    if v_r ->> 'status' is distinct from 'withdrawn' then raise exception 'TEST FAILED: R12 set_result on a withdrawn student expected withdrawn, got %', v_r; end if;
+  end loop;
+  reset role;
+
+  -- ===================================================================
+  -- R13. Add student after the testing day
+  -- ===================================================================
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  v_r := public.testing_add_student(v_eafter, 'Walt', 'Late', v_after_yellow, true, 'cash');
+  if v_r ->> 'status' is distinct from 'finished' then
+    raise exception 'TEST FAILED: R13 staff add after the day expected finished, got %', v_r;
+  end if;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_r := public.testing_add_student(v_eafter, 'Walt', 'Late', v_after_yellow, true, 'cash');
+  if v_r ->> 'status' is distinct from 'ok' or (v_r ->> 'version')::int <> 1 or v_r ->> 'reference' is null then
+    raise exception 'TEST FAILED: R13 admin add after the day expected ok, got %', v_r;
+  end if;
+  v_walk := (v_r ->> 'id')::uuid;
+  if not exists (select 1 from public.testing_registrations r where r.id = v_walk and r.source = 'staff'
+                  and r.created_by_name = v_admin_name and r.status = 'active') then
+    raise exception 'TEST FAILED: R13 the added student must be source staff, created by the admin';
+  end if;
+  v_r := public.testing_set_result(v_walk, 'pass');
+  if v_r ->> 'status' is distinct from 'ok' or v_r ->> 'result' is distinct from 'pass' then
+    raise exception 'TEST FAILED: R13 admin result for the added student expected ok, got %', v_r;
+  end if;
+  reset role;
+  if not exists (select 1 from public.change_log l where l.table_name = 'testing_registrations' and l.record_id = v_walk
+                  and l.action = 'add_student' and l.op = 'insert') then
+    raise exception 'TEST FAILED: R13 the add must be logged as add_student';
+  end if;
+
+  -- ===================================================================
+  -- R14. Edit event: no date change once there are results
+  -- ===================================================================
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  v_r := public.testing_set_result(v_su1, 'pass');
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  select e.version into v_v from public.testing_events e where e.id = v_eupd;
+  v_r := public.testing_update_event(v_eupd, v_v, v_tag || ' upd', v_today + 3, v_classes, null, null);
+  if v_r is distinct from jsonb_build_object('status', 'has_results') then
+    raise exception 'TEST FAILED: R14 a date change with a result expected has_results, got %', v_r;
+  end if;
+  if not exists (select 1 from public.testing_events e where e.id = v_eupd and e.version = v_v and e.testing_date = v_today) then
+    raise exception 'TEST FAILED: R14 has_results must change nothing';
+  end if;
+  -- the same date with a new name -> ok
+  v_r := public.testing_update_event(v_eupd, v_v, v_tag || ' upd renamed', v_today, v_classes, null, null);
+  if v_r is distinct from jsonb_build_object('status', 'ok', 'version', v_v + 1) then
+    raise exception 'TEST FAILED: R14 a name change with results expected {ok, version %}, got %', v_v + 1, v_r;
+  end if;
+  -- a WITHDRAWN student's result counts too
+  select r.version into v_v2 from public.testing_registrations r where r.id = v_su1;
+  v_r := public.testing_withdraw_student(v_su1, v_v2);
+  v_r := public.testing_update_event(v_eupd, v_v + 1, v_tag || ' upd renamed', v_today + 3, v_classes, null, null);
+  if v_r is distinct from jsonb_build_object('status', 'has_results') then
+    raise exception 'TEST FAILED: R14 a date change with a withdrawn student''s result expected has_results, got %', v_r;
+  end if;
+  -- once the result is gone (restore, clear) -> the date can change
+  select r.version into v_v2 from public.testing_registrations r where r.id = v_su1;
+  v_r := public.testing_restore_student(v_su1, v_v2);
+  v_r := public.testing_set_result(v_su1, null);
+  if v_r ->> 'status' <> 'ok' or exists (select 1 from public.testing_results x where x.registration_id = v_su1) then
+    raise exception 'TEST FAILED: R14 clearing the result expected ok and no row, got %', v_r;
+  end if;
+  v_r := public.testing_update_event(v_eupd, v_v + 1, v_tag || ' upd renamed', v_today + 3, v_classes, null, null);
+  if v_r is distinct from jsonb_build_object('status', 'ok', 'version', v_v + 2) then
+    raise exception 'TEST FAILED: R14 a date change without results expected {ok, version %}, got %', v_v + 2, v_r;
+  end if;
+  reset role;
+
+  -- ===================================================================
+  -- R15. Removals take the results with them (logged)
+  -- ===================================================================
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  v_r := public.testing_set_result(v_sdel, 'not_passed');
+  v_r := public.testing_set_result(v_sx1, 'pass');
+  v_r := public.testing_set_result_note(v_sx2, 'Only a note');
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  select r.version into v_v from public.testing_registrations r where r.id = v_sdel;
+  v_r := public.testing_delete_student(v_sdel, v_v, '{}'::uuid[]);
+  if v_r is distinct from jsonb_build_object('status', 'ok') then raise exception 'TEST FAILED: R15 delete_student expected ok, got %', v_r; end if;
+  reset role;
+  if exists (select 1 from public.testing_results x where x.registration_id = v_sdel) then
+    raise exception 'TEST FAILED: R15 removing a student must remove their result';
+  end if;
+  if not exists (select 1 from public.change_log l where l.table_name = 'testing_results' and l.record_id = v_sdel
+                  and l.op = 'delete' and l.action = 'delete_student' and l.before ->> 'result' = 'not_passed') then
+    raise exception 'TEST FAILED: R15 the removed result must be logged under delete_student';
+  end if;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  select e.version into v_v from public.testing_events e where e.id = v_edel;
+  v_r := public.testing_delete_event(v_edel, v_v, 2, 0);
+  if v_r is distinct from jsonb_build_object('status', 'ok') then raise exception 'TEST FAILED: R15 delete_event expected ok, got %', v_r; end if;
+  reset role;
+  if exists (select 1 from public.testing_results x where x.registration_id in (v_sx1, v_sx2)) then
+    raise exception 'TEST FAILED: R15 removing an event must remove its results';
+  end if;
+  if (select count(*) from public.change_log l where l.table_name = 'testing_results' and l.record_id in (v_sx1, v_sx2)
+       and l.op = 'delete' and l.action = 'delete_event') <> 2 then
+    raise exception 'TEST FAILED: R15 both removed results must be logged under delete_event';
+  end if;
+
+  -- ===================================================================
+  -- R16. The history never holds a signature picture
+  -- ===================================================================
+  select count(*) into v_n from public.change_log l
+   where coalesce(l.before::text, '') || coalesce(l.after::text, '') like '%data:image%';
+  if v_n <> 0 then raise exception 'TEST FAILED: R16 % history row(s) contain data:image', v_n; end if;
+
+  reset role;
 end;
 $$;
 
 select 'ALL 0010 TESTS PASSED' as result;
 
+-- Undo EVERYTHING the tests changed. Do not change this to commit.
 rollback;

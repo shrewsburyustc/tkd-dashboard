@@ -7,9 +7,9 @@
 --   change anything 0001-0007 made.
 --
 -- WHY IT EXISTS
---   The Calendar section (rulebook v0.138, approved mockup
+--   The Calendar section (rulebook v0.234, approved mockup
 --   docs/Prospects/TKD-Calendar-Mockups.html rev 1; build plan answers
---   v0.143, docs/Prospects/TKD-Calendar-Build-Plan.md). Next to the
+--   v0.239, docs/Prospects/TKD-Calendar-Build-Plan.md). Next to the
 --   regular classes (worked out from the Schedule - nothing is copied
 --   here) the Calendar shows:
 --     * closures: a whole day (or up to 31 days), or only SOME classes on
@@ -17,7 +17,7 @@
 --     * school events (tournaments, camps ...), each with an event TYPE
 --       that gives it its color.
 --   Color Belt and Star testing events are NOT stored here: the app reads
---   them from Testing (v0.143 answer 1). Free-class bookings come with
+--   them from Testing (v0.239 answer 1). Free-class bookings come with
 --   Forms (step 3).
 --   Staff can read; only admins change anything. Every change is
 --   recorded in change_log.
@@ -50,7 +50,7 @@
 --   a record, the app matches each cancelled class against the classes
 --   really in effect that day; one that no longer matches shows as an
 --   amber line "Cancelled class no longer on the schedule: Group A 4:30"
---   (Jeffrey, v0.143 answer 2). The slot id is kept only as a hint.
+--   (Jeffrey, v0.239 answer 2). The slot id is kept only as a hint.
 --
 -- "BOTH SCHOOLS"
 --   An event or closure for both schools has location_code NULL.
@@ -142,7 +142,7 @@ $$;
 revoke execute on function public.calendar_notes_is_valid(text) from public, anon, authenticated, service_role;
 
 -- 1d. calendar_color_is_valid(color) - one of the 8 class colors; red
--- is never offered (rulebook section 7, v0.138).
+-- is never offered (rulebook section 7, v0.234).
 create or replace function public.calendar_color_is_valid(p_color text)
 returns boolean
 language sql
@@ -155,7 +155,7 @@ $$;
 revoke execute on function public.calendar_color_is_valid(text) from public, anon, authenticated, service_role;
 
 -- 1e. calendar_dates_are_valid(starts, ends) - both set, end on or after
--- start, at most 31 days counting both ends (v0.143 answer 4), and
+-- start, at most 31 days counting both ends (v0.239 answer 4), and
 -- between 2020 and 2100 (catches a typo like 2206).
 create or replace function public.calendar_dates_are_valid(p_starts date, p_ends date)
 returns boolean
@@ -206,7 +206,7 @@ revoke execute on function public.calendar_event_times_are_valid(date, date, boo
 
 -- ---------------------------------------------------------------------
 -- 2. public.calendar_event_types
--- Shared by both schools (v0.138). Color = one of the 8 class colors.
+-- Shared by both schools (v0.234). Color = one of the 8 class colors.
 -- position = list order (0, 1, 2 ...); changing only the order is not a
 -- content change (same as Testing's classes).
 -- ---------------------------------------------------------------------
@@ -287,7 +287,7 @@ comment on table public.calendar_events is
 -- 4. public.calendar_closures
 --   location_code NULL = both schools.
 --   whole_day = true: every class on those days is cancelled.
---   whole_day = false ("some classes"): only on ONE day (v0.138); which
+--   whole_day = false ("some classes"): only on ONE day (v0.234); which
 --   classes is in calendar_closure_classes.
 --   class_key: the hint slot ids of the cancelled classes, joined. Not
 --   readable by the app; it makes a change of only the ticked classes
@@ -1411,7 +1411,7 @@ grant  execute on function public.calendar_reorder_types(uuid[], uuid[]) to auth
 --   in use, no other type exists      -> not_allowed
 --   in use, no / the same move-to type -> invalid
 --   move-to type deleted meanwhile    -> stale
--- The last type may be deleted when no event uses it (v0.143).
+-- The last type may be deleted when no event uses it (v0.239).
 -- Ok: {"status":"ok","moved":n}
 create or replace function public.calendar_delete_type(
   p_type_id              uuid,
@@ -1502,7 +1502,7 @@ grant  execute on function public.calendar_delete_type(uuid, integer, integer, u
 
 
 -- ---------------------------------------------------------------------
--- 10. The five ready-made event types (v0.143 answer 3; the mockup's
+-- 10. The five ready-made event types (v0.239 answer 3; the mockup's
 -- names and colors). Only the FIRST time this file runs (the history
 -- has no "calendar_setup_types" entry yet), so re-running it never adds
 -- them again - not even after admins deleted them on purpose. Logged

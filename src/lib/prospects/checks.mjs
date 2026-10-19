@@ -1,5 +1,5 @@
 // checks.mjs — plain checks for the Prospects preview database (mockProspects.js, inside
-// mockForms.js). Why it exists: the fake database must answer like migration 0010 — prospects
+// mockForms.js). Why it exists: the fake database must answer like migration 0012 — prospects
 // made from sign-ups, New ↔ Booked from bookings, the list without contact details, check in and
 // "did they come?", booking from the panel with the shared limit, each school's statuses, deleting
 // and the 2-year clean-up. Runs in Node without a browser:

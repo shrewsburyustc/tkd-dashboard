@@ -1,6 +1,6 @@
 # Prospects — build plan (approved 2026-10-18)
 
-Branch `claude/prospect-form-system-cd893d` · 2026-10-18 · step 4 of the new-students work (rulebook v0.137: Schedule → Calendar → Forms → **Prospects**) · implements the Prospects decisions (rulebook v0.140, the "Prospects" row) with the Forms decisions that touch it (v0.145 answers 1 and 6, v0.146, v0.172) · approved mockup `docs/Prospects/TKD-Prospects-Mockups.html` rev 2, plus **rev 3 additions** (screen 10) for what Forms changed · **nothing is built until Jeffrey says OK.**
+Branch `claude/prospect-form-system-cd893d` · 2026-10-18 · step 4 of the new-students work (rulebook v0.233: Schedule → Calendar → Forms → **Prospects**) · implements the Prospects decisions (rulebook v0.236, the "Prospects" row) with the Forms decisions that touch it (v0.241 answers 1 and 6, v0.242, v0.243) · approved mockup `docs/Prospects/TKD-Prospects-Mockups.html` rev 2, plus **rev 3 additions** (screen 10) for what Forms changed · **nothing is built until Jeffrey says OK.**
 
 ## 0. What gets built
 
@@ -14,13 +14,13 @@ A new **Prospects** section (rail icon `ti-address-book`, after Forms, address `
   - **Call / Text / Email** open the device's own apps (`tel:`, `sms:`, `mailto:`); on a PC Call shows the number large with Copy. The dashboard sends nothing.
   - **Status** menu (stages, then side exits). Joined asks the date joined (default today).
   - **Follow-up date** (`ti-clock-hour-4`).
-  - **Free class:** date, time, class; amber **"Class cancelled — call the family"** when the class no longer runs (v0.145 answer 6); **Book a free class / Change time / Cancel booking** here (Q2 answer).
+  - **Free class:** date, time, class; amber **"Class cancelled — call the family"** when the class no longer runs (v0.241 answer 6); **Book a free class / Change time / Cancel booking** here (Q2 answer).
   - **Check in** (`ti-user-check`) on the class day → Came, with Undo. After the class has ended without a check-in: **"Did … come?" Came / No-show** (`ti-user-x`); No-show sets a call-back for tomorrow.
   - **Siblings** (tap to switch).
   - **Notes and calls:** a note + one-tap follow-up (Tomorrow, In 3 days, Next week, Pick a date, No follow-up), saved with who and when; notes can't be edited. Status changes, check-ins and bookings show in the same timeline.
-  - **Form and answers:** the source form, every answer (as the form was when they signed up), "Entered by …" for staff entries, and the **waiver**: the signature picture while it is kept, then **"Signed on <date>"** (v0.146: deleted 90 days after the free class). Every look at a signature is recorded.
+  - **Form and answers:** the source form, every answer (as the form was when they signed up), "Entered by …" for staff entries, and the **waiver**: the signature picture while it is kept, then **"Signed on <date>"** (v0.242: deleted 90 days after the free class). Every look at a signature is recorded.
 - **"+ Add prospect"** asks which Live form (of this school) and opens **Fill in** (already built in Forms).
-- **Edit statuses** (admins **and staff**, v0.140): rename, reorder (drag grip or ⋯ Move up / down), add (stage or side exit). **Deleting** a custom status is **admins only** (Q5) and asks where its people move. **Each school has its own status list** (Q7); the six built-ins exist in both. The built-in six (New, Booked, Came, Joined, No-show, Not interested) can be renamed but not deleted — the app uses them. "Contacted" is an ordinary status that starts in the list.
+- **Edit statuses** (admins **and staff**, v0.236): rename, reorder (drag grip or ⋯ Move up / down), add (stage or side exit). **Deleting** a custom status is **admins only** (Q5) and asks where its people move. **Each school has its own status list** (Q7); the six built-ins exist in both. The built-in six (New, Booked, Came, Joined, No-show, Not interested) can be renamed but not deleted — the app uses them. "Contacted" is an ordinary status that starts in the list.
 - **Delete a prospect:** admins only, with a confirmation.
 - **Calendar:** the day panel's free classes get the **Check in** button and link to the prospect.
 - **Phone bottom bar** (six sections): Home, Calendar, Prospects, **More** (`ti-menu-2`: Testing, Schedule, Forms). PC and tablet rails show all six.
@@ -45,14 +45,14 @@ No scheduler. The question is worked out when the list loads: a free class that 
 
 ## 1. Order, dependencies, numbers
 
-- **Migration number: `0010`** (checked 2026-10-18 on main, color-belt, color-belt-phase3, star-testing: main has 0001–0005; 0006 is reserved for Star testing; 0007–0009 are this branch).
-- **0010 needs** 0001–0004 and 0007–0009 (prospects are made from Forms sign-ups and bookings).
+- **Migration number: `0012`** (checked 2026-10-18 on main, color-belt, color-belt-phase3, star-testing: main has 0001–0005; 0006 is reserved for Star testing; 0007–0009 are this branch).
+- **0012 needs** 0001–0004 and 0007–0009 (prospects are made from Forms sign-ups and bookings).
 - **Rulebook numbers:** main uses up to v0.157 and the Star branch up to v0.171; this branch's next is **v0.173**.
-- **0009 is not changed.** Prospects are made by a trigger in 0010 (2a), so re-running 0009 never undoes 0010.
+- **0009 is not changed.** Prospects are made by a trigger in 0012 (2a), so re-running 0009 never undoes 0012.
 - **One shared-file change:** 0003's `change_log` refuses every UPDATE and DELETE today. The 2-year clean-up needs a narrow exception there (2c). 0003 belongs to Color Belt phase 1 and is fingerprinted, so this change is listed as a shared-file change, gets its own security review, and is agreed with the Color Belt session before it's written.
-- **Going live:** 0007 → 0008 → 0009 → 0010, then the public page (Forms F3) — **Forms and Prospects go live together** (v0.145 answer 1).
+- **Going live:** 0007 → 0008 → 0009 → 0012, then the public page (Forms F3) — **Forms and Prospects go live together** (v0.241 answer 1).
 
-## 2. Database — migration `0010_prospects.sql`
+## 2. Database — migration `0012_prospects.sql`
 
 | Table | Holds |
 |---|---|
@@ -62,8 +62,8 @@ No scheduler. The question is worked out when the list loads: a free class that 
 | `prospect_activity` | the panel timeline: status changes, check-ins, booking changes — kind, from/to, who, when. No personal details beyond the prospect id. |
 
 ### 2a. How a prospect is made
-- **Automatically** (already implied by v0.140: "a sign-up without a booking starts New"): an **AFTER INSERT trigger on `form_submissions`** makes one prospect per child (New); a trigger on `class_bookings` sets Booked when a child's free class is booked and back to New when it is cancelled (only from New / Booked — never over a status staff chose). Public Send, kiosk and staff Fill in all work this way, without changing 0009.
-- **Backfill:** 0010 makes prospects for sign-ups saved before it ran (0009 may be live first).
+- **Automatically** (already implied by v0.236: "a sign-up without a booking starts New"): an **AFTER INSERT trigger on `form_submissions`** makes one prospect per child (New); a trigger on `class_bookings` sets Booked when a child's free class is booked and back to New when it is cancelled (only from New / Booked — never over a status staff chose). Public Send, kiosk and staff Fill in all work this way, without changing 0009.
+- **Backfill:** 0012 makes prospects for sign-ups saved before it ran (0009 may be live first).
 
 ### 2b. Free-class bookings from the panel (Q2: yes)
 - 0009 allows **one booking row per child** (`unique (submission_id, child_index)`). Change time and Book again **update that row in place**: lock the old and the new class time in a fixed order, re-count the shared spot limit (0009 `forms_times`), then update; "Cancel booking" sets it to cancelled (spot freed). No second row, no change to 0009's rule.
@@ -78,12 +78,12 @@ No scheduler. The question is worked out when the list loads: a free class that 
   `prospects_list(school, filter)` (list columns only), `prospects_set_status`, `prospects_add_note`, `prospects_set_follow_up`, `prospects_check_in` / `prospects_undo_check_in`, `prospects_answer_came` (Came / No-show), `prospects_mark_opened`, `prospects_book_time` / `prospects_cancel_time` (Q3; same shared spot limits and locks as 0009), `prospects_search(school, text)`, `prospect_statuses_add` / `_update` / `_reorder` / `_delete(move_to)`, `prospects_delete` (admins only), `prospects_purge_old()` (2-year rule; runs inside functions that are already called, like the 90-day signature clean-up — no scheduler).
 - **Locking:** status edits use the version number; deleting a status locks the status rows in a fixed order and moves its people and deletes in one transaction; a status change racing with it answers "stale". Reordering statuses sends the order it saw (like Calendar event types).
 - **Grants:** RLS `has_data_access()` on every table; column grants for the panel; nothing to `anon`; the list only through `prospects_list`.
-- **Tests:** `supabase/tests/0010_tests.sql` + fingerprints, run by the PGlite runner before and after seed, re-run and upgrade path. A separate **security review** before it's called done.
+- **Tests:** `supabase/tests/0012_tests.sql` + fingerprints, run by the PGlite runner before and after seed, re-run and upgrade path. A separate **security review** before it's called done.
 
 ## 3. Screens
 
 - `src/screens/Prospects.jsx` + `src/screens/prospects/` (PipelineBar, ProspectList, ProspectPanel, NotesLog, StatusMenu, FollowUpPicker, CheckIn, AddProspectDialog, StatusesDialog, DeleteDialog, text.js), `src/styles/prospects.css`.
-- `src/lib/prospects/` (rules, api, useProspects, checks.mjs) and `src/lib/mockProspects.js` (fake 0010, same answers), plugged into `mockClient.js`; the fake Forms Send also makes prospects.
+- `src/lib/prospects/` (rules, api, useProspects, checks.mjs) and `src/lib/mockProspects.js` (fake 0012, same answers), plugged into `mockClient.js`; the fake Forms Send also makes prospects.
 - Shared files touched: `App.jsx`, `navItems.js` (six sections + phone More), `mockClient.js`, Calendar day panel (Check in).
 - Reused: Fill in (Forms), RowMenu, Dialog, drag grips (Testing), toasts with Undo.
 
@@ -93,13 +93,13 @@ No scheduler. The question is worked out when the list loads: a free class that 
 |---|---|---|
 | P0 | This plan + questions Q1–Q5, mockup rev 3 additions | Jeffrey approves; answers in the rulebook |
 | P1 | Merge main into this branch (with Forms F1) | The Main session merges when Jeffrey asks |
-| P2 | Migration 0010 + tests + security review | PGlite passes; review findings fixed |
+| P2 | Migration 0012 + tests + security review | PGlite passes; review findings fixed |
 | P3 | Screens + preview database + design review | Builds pass; review at 1280 / 820 touch / 390 touch / 320 |
 | P4 | Jeffrey tries the preview | His OK; differences decided one at a time |
-| P5 | Live setup: 0007–0010 pasted by Jeffrey, checks, then Forms F3 | Each with Jeffrey's OK |
+| P5 | Live setup: 0007–0012 pasted by Jeffrey, checks, then Forms F3 | Each with Jeffrey's OK |
 | P6 | Go live: Forms + Prospects together | Separate OK; push only when Jeffrey says |
 
-## 5. Questions for Jeffrey — answered 2026-10-18 (rulebook v0.191)
+## 5. Questions for Jeffrey — answered 2026-10-18 (rulebook v0.244)
 
 Answers: **Q1 B** (every non-Joined family after 2 quiet years, per family) · **Q2 A** (book / change / cancel from the panel) · **Q3 B** (badge per person) · **Q4 B** (no duplicate flag) · **Q5 A** (only admins delete a status) · **Q6 A** (staff see answers and waiver picture) · **Q7 B** (status list per school).
 
@@ -116,9 +116,9 @@ As asked:
 ## 6. Progress log
 - 2026-10-18 — Plan drafted (P0). Reviewed by a separate agent: 4 High (history can't be deleted without a 0003 exception; per-child prospects vs per-family sign-ups; the one-booking-per-child rule; changing 0009) and 6 Medium findings — all written into sections 0–2; questions now Q1–Q7.
 - 2026-10-18 — **Jeffrey approved the plan and mockup revision 3 (screen 10).** Next: questions Q1–Q7, one at a time.
-- 2026-10-18 — **Q1–Q7 answered** (rulebook v0.191). Mockup rev 3's "Same phone as …" line is dropped (Q4). Next: P1 (merge main) and P2 (migration 0010) — each on Jeffrey's OK.
-- 2026-10-18 — **P2 done:** migration 0010 + tests (PGlite 93/93), security review (no High; 2 Medium — one fixed, one in the 0003 proposal). 0003 change written as a proposal for the Color Belt session. Nothing live.
+- 2026-10-18 — **Q1–Q7 answered** (rulebook v0.244). Mockup rev 3's "Same phone as …" line is dropped (Q4). Next: P1 (merge main) and P2 (migration 0012) — each on Jeffrey's OK.
+- 2026-10-18 — **P2 done:** migration 0012 + tests (PGlite 93/93), security review (no High; 2 Medium — one fixed, one in the 0003 proposal). 0003 change written as a proposal for the Color Belt session. Nothing live.
 - 2026-10-18 — **P3 done (preview only):** Prospects screens, panel, dialogs, phone More bar, Calendar check-in, shared Fill in. Design review: no High, 7 Medium fixed. Eight differences listed in STATUS-Prospects.md for Jeffrey in P4.
-- 2026-10-18 — **P4 differences decided (v0.206):** keep 1, 4, 6, 7 as built; 2 status tag + menu, 3 follow-up as words with quick choices, 5 plain Book button, 8 `ti-clock-edit` — all built. Rulebook number 0.206 because black-belt already uses up to 0.205.
-- 2026-10-18 — **Board view decided (v0.214):** after trying the preview Jeffrey asked for a clear progression. Mockup screens 11–13. Keep the List and add a Board (List / Board switch, List first by default); cards drag between columns on every device (Booked, Came, Joined open their dialog, Cancel puts the card back); the progress track goes in the List and the panel, Board cards stay plain. No database change. Build waits for Jeffrey's OK.
-- 2026-10-18 — **Board built (preview) and five differences decided (v0.221):** gray switch, the Board always shows everyone, phone follow-up line only when needed, green flash after a drop, phones hide empty side-exit chips. Committed locally, not pushed. Open: migration 0010's backfill dates old sign-ups by the day 0010 is applied (see STATUS).
+- 2026-10-18 — **P4 differences decided (v0.245):** keep 1, 4, 6, 7 as built; 2 status tag + menu, 3 follow-up as words with quick choices, 5 plain Book button, 8 `ti-clock-edit` — all built. Rulebook number 0.245 because black-belt already uses up to 0.205.
+- 2026-10-18 — **Board view decided (v0.246):** after trying the preview Jeffrey asked for a clear progression. Mockup screens 11–13. Keep the List and add a Board (List / Board switch, List first by default); cards drag between columns on every device (Booked, Came, Joined open their dialog, Cancel puts the card back); the progress track goes in the List and the panel, Board cards stay plain. No database change. Build waits for Jeffrey's OK.
+- 2026-10-18 — **Board built (preview) and five differences decided (v0.247):** gray switch, the Board always shows everyone, phone follow-up line only when needed, green flash after a drop, phones hide empty side-exit chips. Committed locally, not pushed. Open: migration 0012's backfill dates old sign-ups by the day 0012 is applied (see STATUS).

@@ -5,10 +5,10 @@
 //   All classes, or Some classes (single day only) — that day's classes from the Schedule, to
 //   tick.
 // Edit has Remove (instant, with Undo). If the schedule changed after the closure was saved, the
-// classes that are no longer on it are listed (they are dropped when you save, v0.143 answer 2).
+// classes that are no longer on it are listed (they are dropped when you save, v0.239 answer 2).
 // Cancelled classes can't be booked for a free class (Forms). Free classes already booked on the
 // classes it cancels stay booked and turn amber; the dialog warns that the families need a call
-// (v0.145 answer 6).
+// (v0.241 answer 6).
 import { IconCheck, IconTrash } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';

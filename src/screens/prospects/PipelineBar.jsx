@@ -6,7 +6,7 @@
 //     someone in them) and search.
 // Click a stage (or chip) to show only those; click it again for everyone. The List opens on
 // "Follow up today".
-// List / Board switch (v0.214) first in the chips row. On the Board:
+// List / Board switch (v0.246) first in the chips row. On the Board:
 //   - a stage in the bar jumps to its column (PC / tablet); a phone stage tile picks the one
 //     column shown
 //   - the stages and tiles are also places to drop a dragged card (data-drop-status)

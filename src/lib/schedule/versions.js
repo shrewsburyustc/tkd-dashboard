@@ -1,5 +1,5 @@
 // versions.js — which schedule is current, planned or past (the same rule as the database).
-// Why it exists: a school can have many schedules, each with a start date (rulebook v0.137).
+// Why it exists: a school can have many schedules, each with a start date (rulebook v0.233).
 // The app shows one at a time and needs to know what each one is:
 //   current = the one with the LATEST start date that is on or before today
 //   planned = starts after today (any number; editable; can be moved or deleted)

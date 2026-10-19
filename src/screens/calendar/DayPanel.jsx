@@ -1,16 +1,16 @@
 // DayPanel.jsx — everything on one day (approved mockup screens 1, 5 and 8).
 // Why it exists: clicking a day shows it here — in a side panel on the PC, under the month on a
-// tablet held upright and on a phone. It shows today until another day is clicked (v0.138):
+// tablet held upright and on a phone. It shows today until another day is clicked (v0.234):
 //   - closures at the top (amber); click one to edit it (admins) or see it (staff)
 //   - "Cancelled class no longer on the schedule: …" when the schedule changed after a closure
-//     was saved (v0.143 answer 2)
+//     was saved (v0.239 answer 2)
 //   - events (time, type color, title); click one to edit / see it
-//   - Color Belt / Star testing events, read from Testing (changed there, v0.143 answer 1)
+//   - Color Belt / Star testing events, read from Testing (changed there, v0.239 answer 1)
 //   - every class that day in its color; cancelled ones stay listed, crossed out
 //     (on Both: each school's classes under its own heading)
 //   - free classes booked through Forms (child's first name, class, time, form); one whose class
-//     no longer runs then is amber: "Class cancelled — call the family" (v0.145 answer 6); on
-//     the class day each free class has Check in (ti-user-check) when the family walks in (v0.140)
+//     no longer runs then is amber: "Class cancelled — call the family" (v0.241 answer 6); on
+//     the class day each free class has Check in (ti-user-check) when the family walks in (v0.236)
 //
 // Props:
 //   date, today, info (buildDay result), schoolLabel, both, typeColor,

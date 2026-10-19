@@ -1,21 +1,21 @@
 # Forms — status
 
-Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Forms-Build-Plan.md` (approved 2026-10-18). Rulebook v0.139 (design) and v0.145 (plan answers). Approved mockup: `TKD-Forms-Mockups.html` rev 1.
+Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Forms-Build-Plan.md` (approved 2026-10-18). Rulebook v0.235 (design) and v0.241 (plan answers). Approved mockup: `TKD-Forms-Mockups.html` rev 1.
 
 **Nothing is live.**
 - Migration 0009 has not been applied to Supabase, and nothing has been pushed.
 - 0009 can only go live after 0007 (Schedule) and 0008 (Calendar).
 - The public page also needs Color Belt phase 2's public path.
-- The public forms go live **together with Prospects** (v0.145 answer 1).
+- The public forms go live **together with Prospects** (v0.241 answer 1).
 
 | Step | State |
 |---|---|
-| F0 Plan + questions Q1–Q7 | Done 2026-10-18 (v0.145) |
+| F0 Plan + questions Q1–Q7 | Done 2026-10-18 (v0.241) |
 | F2 Migration 0009 + tests + security review | Done 2026-10-18; PGlite 78/78 |
 | F4 Staff screens + Calendar bookings + preview data; design review | Done 2026-10-18 (preview only); 9 differences wait for Jeffrey in F5 |
 | F1 Merge main (after Color Belt phase 2 is merged — the Main session merges when Jeffrey asks) | Waiting |
 | F3 Public page + Cloudflare function; security review | Waiting for F1 |
-| F5 Jeffrey tries it in preview (and decides the F4 differences below) | Done 2026-10-18: differences decided (v0.172), Jeffrey tried the forms and Fill in — fine. Sign-ups show nowhere yet except Calendar bookings: that is Prospects (step 4) |
+| F5 Jeffrey tries it in preview (and decides the F4 differences below) | Done 2026-10-18: differences decided (v0.243), Jeffrey tried the forms and Fill in — fine. Sign-ups show nowhere yet except Calendar bookings: that is Prospects (step 4) |
 | F6 Live setup (0009 after 0007 / 0008; two-connection race test; registrar password; Cloudflare settings) | Waiting |
 | F7 Go live, with Prospects (step 4) | Needs a separate OK |
 
@@ -57,7 +57,7 @@ No High findings. Fixed:
 - **L7:** a signature must be at least 200 characters.
 - **Note:** closure records are also matched on the closure's school.
 
-## Decided after F2 (Jeffrey, 2026-10-18, rulebook v0.146)
+## Decided after F2 (Jeffrey, 2026-10-18, rulebook v0.242)
 
 1. **Signatures:**
    - the picture is deleted 90 days after the free class, or after signing if no class was booked;
@@ -84,14 +84,14 @@ No High findings. Fixed:
 - **Shared files touched:** `src/App.jsx`, `src/components/navItems.js`, `src/lib/mockClient.js`.
 - **Design review (separate agent):** 1 High (the phone ⋯ menu crashed the app — fixed), 5 Medium (time picker as cards, keyboard way back to Form settings, focus on the first field, link "not live until F3" note, amber chip says why — all fixed), 8 Low (6 fixed; the tablet "+ Add field" menu opening over the rail and the staff phone ⋯ sheet are left as they are).
 
-## Differences from the approved mockup — decided in F5 (Jeffrey, 2026-10-18, rulebook v0.172)
+## Differences from the approved mockup — decided in F5 (Jeffrey, 2026-10-18, rulebook v0.243)
 
 Answers: 1 A (click to add), 2 A (own Save), 3 A (fixed wording, signature always), 4 A (notes, link can be copied), 5 A (Preview; phone ⋯), 6 A (rename in Form settings), **7 B (switches — built)**, **8 B (waiver never "Show only if" — built in the screens and in 0009, test 1h; PGlite 78/78)**, **9 B (spots on every time — built)**.
 
 The list as it was asked:
 
 1. Field types are added by **click** (after the chosen field); dragging a type from the palette into the form isn't built. Fields are moved by their grip.
-2. **Booking settings have their own Save button** (they go live right away, v0.146); the rest saves as you go.
+2. **Booking settings have their own Save button** (they go live right away, v0.242); the rest saves as you go.
 3. The waiver has **no "Checkbox wording" or "Signature required"** setting: the wording is "I have read and agree to the waiver" and a signature is always needed (the database stores only the waiver text).
 4. **QR code and kiosk** are notes until step F3; the link can be copied but works only after F3 (the dialog says so).
 5. **Staff:** clicking a row opens a read-only Preview; on a phone, staff reach Fill in through a ⋯ sheet (the mockup says "no ⋯" for staff).

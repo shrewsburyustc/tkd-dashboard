@@ -1,4 +1,4 @@
-// Forms.jsx — the Forms section (rail icon ti-clipboard-text, "Forms"; rulebook v0.139, v0.145, v0.146).
+// Forms.jsx — the Forms section (rail icon ti-clipboard-text, "Forms"; rulebook v0.235, v0.241, v0.242).
 // Why it exists: the school builds its own sign-up forms here — free class (social media),
 // walk-in, event — and staff fill them in for a family. This file is the "brain" of the
 // section, like Calendar.jsx. It:
@@ -9,7 +9,7 @@
 //   - opens Share (ShareDialog), Fill in and Preview (FillInDialog, through useFillIn — shared with Prospects)
 //
 // The public page, its QR code and kiosk mode are step F3; emails wait for the school's sending
-// address (rulebook v0.146). Admin vs staff only changes what is SHOWN — the database enforces
+// address (rulebook v0.242). Admin vs staff only changes what is SHOWN — the database enforces
 // who may change what.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { IconCopy, IconDoorExit, IconDoorEnter, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';

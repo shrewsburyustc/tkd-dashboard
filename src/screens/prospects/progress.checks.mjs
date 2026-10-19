@@ -1,4 +1,4 @@
-// progress.checks.mjs — plain checks for progress.js (the progress track, rulebook v0.214).
+// progress.checks.mjs — plain checks for progress.js (the progress track, rulebook v0.246).
 // Why it exists: the List, the panel and the Board cards all trust progressOf() to say where a
 // child is; these checks pin down each case. Runs in Node without a browser:
 //   node src/screens/prospects/progress.checks.mjs

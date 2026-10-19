@@ -10,7 +10,7 @@
 //   backend.select('schedule_slots', 'id, …', [{ col, value }], [{ col, ascending }], ctx)
 //   backend.rpc('schedule_add_slots', { p_… }, ctx)     ctx = { signedIn, hasDataAccess, isAdmin, actorName }
 //
-// A slot is for one class or several taught together (v0.141): the store keeps them as the slot's
+// A slot is for one class or several taught together (v0.237): the store keeps them as the slot's
 // class_ids list; the app reads them as rows of schedule_slot_classes, like the real table.
 // Deleting a class in Testing removes it from its slots and drops its color in the real database
 // ("on delete cascade"; a slot left with no class goes too). Here the two fake databases are
@@ -20,7 +20,7 @@ import { COLOR_KEYS } from './schedule/colors.js';
 import { classifyVersions, addDays, weekdayOf } from './schedule/versions.js';
 import { nameProblem, normalizeName } from './testing/names.js';
 
-// 2 — combined classes (v0.141): a slot keeps class_ids (a list) instead of class_id.
+// 2 — combined classes (v0.237): a slot keeps class_ids (a list) instead of class_id.
 export const SCHEDULE_STORE_SCHEMA = 2;
 const LOCATION_CODES = ['worcester', 'shrewsbury'];
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -132,7 +132,7 @@ const SAMPLE_WEEK = [
   // [class name, weekdays, start, end]
   ['Little Tiger', [2, 4], '16:00', '16:30'],
   ['White', [1, 3], '16:00', '16:45'],
-  [['White', 'Little Tiger'], [6], '09:30', '10:15'], // taught together (combined slot, v0.141)
+  [['White', 'Little Tiger'], [6], '09:30', '10:15'], // taught together (combined slot, v0.237)
   ['Group A', [1, 3], '17:00', '17:45'],
   ['Group A', [6], '10:15', '11:00'],
   ['Group B', [2, 4], '17:00', '17:45'],

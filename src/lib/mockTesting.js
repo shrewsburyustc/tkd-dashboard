@@ -30,7 +30,9 @@ import { validateBelt } from './testing/belts.js';
 // Raised whenever the columns change, so preview data saved by an older build is replaced by
 // the default data instead of being read without the new columns:
 //   2 — v0.62 added final_award_none   3 — v0.64 added the five belt_* columns
-export const TESTING_STORE_SCHEMA = 3;
+//   4 — phase 2 (contract 0005) added events, registrations, payments and school addresses to the
+//       same store (mockTestingEvents.js fills them in when they are missing)
+export const TESTING_STORE_SCHEMA = 4;
 const LOCATION_CODES = ['worcester', 'shrewsbury'];
 const LOCATION_ROWS = [
   { code: 'worcester', name: 'Worcester' },

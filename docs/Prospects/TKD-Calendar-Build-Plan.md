@@ -1,6 +1,6 @@
 # Calendar — build plan (approved 2026-10-17)
 
-Branch `claude/prospect-form-system-cd893d` · 2026-10-17 · implements the Calendar decisions (rulebook v0.138) · approved mockup `docs/Prospects/TKD-Calendar-Mockups.html` rev 1 (all 12 details) · builds on the Schedule (`TKD-Schedule-Build-Plan.md`, migration 0007) · **nothing is built until Jeffrey says OK.**
+Branch `claude/prospect-form-system-cd893d` · 2026-10-17 · implements the Calendar decisions (rulebook v0.234) · approved mockup `docs/Prospects/TKD-Calendar-Mockups.html` rev 1 (all 12 details) · builds on the Schedule (`TKD-Schedule-Build-Plan.md`, migration 0007) · **nothing is built until Jeffrey says OK.**
 
 ## 0. What gets built
 
@@ -9,7 +9,7 @@ A new **Calendar** section (rail icon `ti-calendar-month`, after Schedule, addre
 - **closures**, either a whole day (or several days), or only some classes on one day;
 - **school events** (testing days, tournaments, …), colored by their **event type**.
 
-Free-class bookings are **not** in this step. They arrive with Forms (step 3), and nothing is left in their place (decided v0.138).
+Free-class bookings are **not** in this step. They arrive with Forms (step 3), and nothing is left in their place (decided v0.234).
 
 Views:
 - **Month view** (the default) shows summary day boxes. Clicking a day opens the **side panel** on PC.
@@ -33,7 +33,7 @@ Not in this step: bookings, Forms, Prospects.
 
 ### 2a. Tables
 
-**`calendar_event_types`** holds the event types. They are shared by both schools (v0.138).
+**`calendar_event_types`** holds the event types. They are shared by both schools (v0.234).
 - Columns:
   - `id uuid pk`
   - `name text` (1–40 characters, unique ignoring case, using the Testing name rules)
@@ -61,7 +61,7 @@ Not in this step: bookings, Forms, Prospects.
   - `reason text` (1–80 characters, shown on the calendar)
   - `whole_day boolean`
   - bookkeeping as above
-- Rule: **some classes only** (`whole_day = false`) is allowed only when `starts_on = ends_on` (single day, v0.138).
+- Rule: **some classes only** (`whole_day = false`) is allowed only when `starts_on = ends_on` (single day, v0.234).
 
 **`calendar_closure_classes`** lists which classes a "some classes" closure cancels. The exact shape depends on **Q2**; this is the recommended one.
 - Columns:
@@ -180,7 +180,7 @@ Same pattern as 0007:
 - `Dialog`, `RowMenu`, `Toast`, `Notice`, `ErrorBanner`, `useShortcutN` (N = Add), `useMediaQuery`, `backButton`.
 
 **Shared files touched** (listed for the merge):
-- `navItems.js` (Calendar after Schedule). For now the phone bar shows Home, Testing, Schedule, Calendar (checked at 320 px wide). The final bar (v0.140: Home, Calendar, Prospects, More) comes with step 4.
+- `navItems.js` (Calendar after Schedule). For now the phone bar shows Home, Testing, Schedule, Calendar (checked at 320 px wide). The final bar (v0.236: Home, Calendar, Prospects, More) comes with step 4.
 - `pageAddress.js` (`#calendar`)
 - `App.jsx`
 - `main.jsx` (CSS)
@@ -232,7 +232,7 @@ Same pattern as 0007:
 - 2026-10-17 — **Q1 → A (automatic):** Color Belt and Star testing events show on the Calendar by themselves. The app reads Testing's own event tables (read-only, no copy, nothing extra in 0008). They are shown with `ti-certificate` and the school letter on Both, and clicking one opens it in Testing. They appear once 0005 and 0006 exist; before that the Calendar works without them. Admins can still add other events by hand.
 - 2026-10-17 — **Q2 → A (keep and flag):** a "some classes" closure keeps a snapshot of each cancelled class. If the schedule later moves or removes it, the day shows an amber line ("Cancelled class no longer on the schedule: Group A 4:30") and the schedule change saves normally. Jeffrey: only one person edits schedules, so blocking was also workable; A was chosen as the simpler one.
 - 2026-10-17 — **Q3 → A (five ready-made types):** 0008 adds Testing (purple), Tournament (sky), Camp (teal), Meeting (orange) and Party (pink), the mockup's types and colors. Admins can rename, recolor or delete them. The seed only runs when the table is empty, so it is safe to re-run. Testing events shown automatically (Q1) use purple.
-- 2026-10-17 — **Q4 → A (31 days):** an event or closure can run at most 31 days. The dialog says "A closure can be at most 31 days. Check the end date." (same wording for events), and the database refuses longer ones. All four answers are recorded in the rulebook as v0.143.
+- 2026-10-17 — **Q4 → A (31 days):** an event or closure can run at most 31 days. The dialog says "A closure can be at most 31 days. Check the end date." (same wording for events), and the database refuses longer ones. All four answers are recorded in the rulebook as v0.239.
 - 2026-10-18 — **C1 done:** `0008_calendar.sql` with its tests and fingerprints, plus the runner steps. PGlite 67/67. Independent security review: no High or Medium; all five Low items fixed (own error code for the closure undo, `\u` escapes, seed only once, more tests, C9 by name). See `STATUS-Calendar.md`.
 - 2026-10-18 — **C2 done:** Calendar screens and preview data were built, then checked at 1280×800, 820×1180, 390×844 and 320. An independent design review found no High issues; its Medium and Low items are fixed. Six differences from the mockup are waiting for Jeffrey at C3 (see `STATUS-Calendar.md`).
-- 2026-10-18 — **C3 done:** Jeffrey tried the preview and decided the six mockup differences one at a time (rulebook v0.144). Two changes were built: School is above "What's cancelled", and event types have a drag grip and ⋯ menu.
+- 2026-10-18 — **C3 done:** Jeffrey tried the preview and decided the six mockup differences one at a time (rulebook v0.240). Two changes were built: School is above "What's cancelled", and event types have a drag grip and ⋯ menu.

@@ -213,6 +213,19 @@ Fake database + fake Turnstile: kill switch, wrong origin, wrong type, oversized
 Security review of A + B together (the public path is the focus: registrar proofs, Function checks, CSP, secrets) and design review of D + B against every approved screen at 1280×800, 820×1180 touch, 390×844 touch, 320 wide; fix; re-review.
 
 ## 9. Before building starts
-1. Main merges `staff-accounts` and `star-testing`; this branch merges `main`.
-2. The orchestrator records phase 2 in the rulebook (decisions Q1–Q9, plan answers 1–9, Settings → Schools, v0.36 change) and updates this contract's references if numbers moved.
+1. ~~Main merges `staff-accounts` and `star-testing`; this branch merges `main`~~ **done 2026-10-17** (main e2d793e).
+2. ~~Record phase 2 in the rulebook~~ **done 2026-10-17: rulebook v0.131–v0.136** (on top of v0.130 after the merges; Star references here were renumbered by the Main session).
 3. Jeffrey OKs: ~~the two new dependencies~~ **approved by Jeffrey 2026-10-17: `postgres` (Postgres.js) and `qrcode-generator`, exact pinned versions** (§4.6); ~~the `rate_limited` and `verify_failed` wordings~~ **both wordings approved by Jeffrey 2026-10-17** (§4.2); and ~~registering on the testing day~~ **confirmed by Jeffrey 2026-10-17: families can register on the testing day itself until the end of the day, at the testing-day price** (§1.3 state 2).
+
+---
+
+## 10. Changes made during the build and the first review round (2026-10-18)
+
+- **"Too fast" check** (§4.2): measured as `sent_at − started_at ≥ 4 s`, both taken on the family's device (comparing the phone's clock with the server's would refuse families whose clocks run ahead). It only filters unsophisticated bots; Turnstile is the real gate.
+- **Flood protection** (security review M1–M2): before any database connection the Function rate-limits per client — with Cloudflare's Workers Rate Limiting binding `RATE_LIMITER` if the Pages project offers it, otherwise a best-effort in-memory limit — and answers `rate_limited`. The client key groups IPv6 addresses by their /64. A WAF rate-limiting rule needs a domain the school owns (later, with the school domain); until then the residual risk is accepted.
+- **Instant off switch** (security M3): SETUP §12i step 1 revokes execute on the two public functions from `testing_registrar` (instant on pooled connections; the Function answers `unavailable`), then the Pages variable + redeploy, then `nologin`. Any unexpected error in the Function also answers `unavailable`.
+- **Staff Undo after keeping one duplicate** (design review M1, rule 1.4): `testing_restore_student` also lets a staff member restore a `duplicate_copy` they removed themselves less than 10 seconds ago (`withdrawn_by` recorded); admins can restore any time.
+- **Delete event / Payments recorded wording** (design review M2–M3): the delete warning counts active students like the list and names removed ones separately; the Payments recorded card notes money from removed students.
+- **0003_tests.sql** checks only 0003's own objects, so it passes before and after 0005.
+- **Extra wordings** written by Builder B for states the mockups don't show (`src/register/text.js`, marked) and Builder D's small Edit payment / Change how they'll pay dialogs are shown to Jeffrey at the CP1 walkthrough.
+

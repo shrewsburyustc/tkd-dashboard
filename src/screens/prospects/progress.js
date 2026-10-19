@@ -1,4 +1,4 @@
-// progress.js — where one child is on the way to joining (rulebook v0.214, mockup screens 11 and 13).
+// progress.js — where one child is on the way to joining (rulebook v0.246, mockup screens 11 and 13).
 // Why it exists: staff asked to SEE the progression. Every child has the same four steps:
 //   Signed up → Class booked → Came → Joined
 // Each step is 'done' (green), 'next' (blue ring), 'todo' (gray), 'stopped' (amber: a No-show at

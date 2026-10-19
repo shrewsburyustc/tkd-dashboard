@@ -1,4 +1,4 @@
-// Calendar.jsx — the Calendar section (rail icon ti-calendar-month, "Calendar"; rulebook v0.138, v0.143).
+// Calendar.jsx — the Calendar section (rail icon ti-calendar-month, "Calendar"; rulebook v0.234, v0.239).
 // Why it exists: one place to see every school day — the regular classes (from the Schedule),
 // closures, school events, and Color Belt / Star testing events (read from Testing). It follows
 // the school switcher. This file is the "brain" of the section, like ScheduleSchool is for the
@@ -371,7 +371,7 @@ export default function Calendar({ location, isAdmin, screenLocked, onNoAccess, 
     return buildDay(d.values.startsOn, ref.current.ctxFor(codes)).schools;
   }
   // How many free-class bookings sit on the classes this closure cancels (the dialog warns:
-  // someone has to call those families, v0.145 answer 6).
+  // someone has to call those families, v0.241 answer 6).
   function closureBookingCount(d) {
     const v = d.values;
     if (!v.startsOn || !v.endsOn || v.endsOn < v.startsOn) return 0;
@@ -539,7 +539,7 @@ export default function Calendar({ location, isAdmin, screenLocked, onNoAccess, 
   }
 
   // ===== Undo =====
-  // ----- Check in a free class (Prospects, v0.140) — today only -----
+  // ----- Check in a free class (Prospects, v0.236) — today only -----
   const [checkIns, setCheckIns] = useState(null); // booking id -> { prospectId, version, checkedIn, builtin }
   const todayBookingIds = (loaded ? infoFor(today).bookings.map((b) => b.id) : []).join(',');
   useEffect(() => {

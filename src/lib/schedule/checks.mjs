@@ -202,7 +202,7 @@ group('mock: past schedules are read-only', () => {
   assert.equal(call('schedule_remove_slot', { p_slot_id: pastSlot, p_expected_version: 1 }).status, 'not_allowed');
 });
 
-group('mock: combined classes (v0.141)', () => {
+group('mock: combined classes (v0.237)', () => {
   const r = add({ p_version_id: currentId, p_class_ids: [W2, W1], p_weekdays: [2], p_starts_at: '07:00', p_ends_at: '07:45' });
   assert.equal(r.status, 'ok');
   const id = r.slots[0].id;

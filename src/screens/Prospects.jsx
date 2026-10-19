@@ -1,4 +1,4 @@
-// Prospects.jsx — the Prospects section (rail icon ti-address-book, "Prospects"; rulebook v0.140, v0.191).
+// Prospects.jsx — the Prospects section (rail icon ti-address-book, "Prospects"; rulebook v0.236, v0.244).
 // Why it exists: every sign-up from a form becomes one prospect per child, and staff work them
 // here until they join (or drop out). This file is the "brain" of the section, like Forms.jsx:
 //   - loads the shown school's prospects and statuses (useProspects); on Both, Worcester's and
@@ -6,7 +6,7 @@
 //   - the stage bar + chips + search (PipelineBar), the list (ProspectList), opening on
 //     "Follow up today" (follow-ups due today or overdue, new sign-ups, "Did … come?", and free
 //     classes whose class was cancelled)
-//   - List or Board (v0.214): the switch next to the chips; each person's choice is remembered on
+//   - List or Board (v0.246): the switch next to the chips; each person's choice is remembered on
 //     this device (the List the first time). The Board (Board.jsx) shows one column per stage;
 //     cards drag to another column (useCardDrag.js) — New / Contacted save at once, Booked, Came
 //     and Joined open their dialog first and Cancel leaves the card where it was
@@ -42,7 +42,7 @@ import { AddProspectDialog, BookTimeDialog, CameDialog, DeleteDialog, JoinedDial
 import * as T from './prospects/text.js';
 
 const ALL_CODES = ['worcester', 'shrewsbury'];
-// 'list' | 'board', remembered per person on this device (v0.214) — the front-desk PC is shared
+// 'list' | 'board', remembered per person on this device (v0.246) — the front-desk PC is shared
 const viewKey = (staffId) => `tkd.prospects.view.${staffId ?? 'anyone'}`;
 const savedView = (staffId) => (readStorage(viewKey(staffId)) === 'board' ? 'board' : 'list');
 const localToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
@@ -311,7 +311,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     });
   }
 
-  // ----- The Board: List / Board, and dropping a card on another stage (v0.214) -----
+  // ----- The Board: List / Board, and dropping a card on another stage (v0.246) -----
   function setView(next, code = null, filter = null) {
     writeStorage(viewKey(staffId), next);
     setViewState(next);

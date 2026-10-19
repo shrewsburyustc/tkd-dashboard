@@ -1,6 +1,6 @@
 # Forms — build plan (approved 2026-10-18)
 
-Branch `claude/prospect-form-system-cd893d` · 2026-10-18 · implements the Forms decisions (rulebook v0.139, the "Forms" row) and the free-class part of the Calendar (v0.138: "bookings appear once Forms is built") · approved mockup `docs/Prospects/TKD-Forms-Mockups.html` rev 1 (all 12 details) · builds on Schedule (0007), Calendar (0008) and the public registration path of Color Belt phase 2 (0005, `CONTRACT-0005.md`) · **nothing is built until Jeffrey says OK.**
+Branch `claude/prospect-form-system-cd893d` · 2026-10-18 · implements the Forms decisions (rulebook v0.235, the "Forms" row) and the free-class part of the Calendar (v0.234: "bookings appear once Forms is built") · approved mockup `docs/Prospects/TKD-Forms-Mockups.html` rev 1 (all 12 details) · builds on Schedule (0007), Calendar (0008) and the public registration path of Color Belt phase 2 (0005, `CONTRACT-0005.md`) · **nothing is built until Jeffrey says OK.**
 
 ## 0. What gets built
 
@@ -31,7 +31,7 @@ A new **Forms** section (rail icon `ti-clipboard-text`, after Calendar, address 
 
 **Kiosk:** see **Q3**.
 
-**Calendar (v0.138):** free-class bookings now show in the Calendar:
+**Calendar (v0.234):** free-class bookings now show in the Calendar:
 - written out in the day box ("2 free classes");
 - listed in the day panel (child's first name, time, class);
 - a `ti-user-plus` count badge on the class in Week view.
@@ -202,8 +202,8 @@ All dates and times are Massachusetts time, including the days the clocks change
   The other option is a kiosk inside the signed-in dashboard.
 - **Q4 — Waiver text:** do you have the school's wording for the templates, or should they start with a placeholder?
 - **Q5 — Spot limit per form or per class time?** If two forms (Instagram, walk-in) both offer Wed 4:00 with 3 spots, can 6 free-class kids land in one class? Recommended: **one limit per class time, shared by all forms** (set in each form, the lowest wins). The other option is a separate count per form.
-- **Q6 — A booked class is cancelled later** (a closure or schedule change after the family booked): recommended — the booking stays, marked amber "Class cancelled — call the family", in the Calendar and later in Prospects (like v0.143). Nothing is sent automatically.
-- **Q7 — Phone bottom bar with Forms:** recommended — switch now to the approved final bar (v0.140: Home, Calendar, Prospects, More), showing Home, Calendar and More (Testing, Schedule, Forms) until Prospects exists. The other option is five buttons until step 4.
+- **Q6 — A booked class is cancelled later** (a closure or schedule change after the family booked): recommended — the booking stays, marked amber "Class cancelled — call the family", in the Calendar and later in Prospects (like v0.239). Nothing is sent automatically.
+- **Q7 — Phone bottom bar with Forms:** recommended — switch now to the approved final bar (v0.236: Home, Calendar, Prospects, More), showing Home, Calendar and More (Testing, Schedule, Forms) until Prospects exists. The other option is five buttons until step 4.
 
 **New rulebook rows after the answers:** Q1–Q7, the limits (fields, options, labels, children 1–6, ages 2–99, days 1–60, hours 0–72, spots 1–20, 20 per hour / kiosk 120), delete-only-when-empty, and the `time_taken` / `form_changed` messages.
 
@@ -245,8 +245,8 @@ All dates and times are Massachusetts time, including the days the clocks change
 - 2026-10-18 — **Q4:** no set waiver wording. Templates start with an **empty waiver block**, and admins write their own text in the app per form. A form with an empty waiver block can't be published (`forms_publish` → `invalid`, message "Write the waiver text first"), and the waiver block can be removed from a form.
 - 2026-10-18 — **Q5 → A:** one free-class spot limit per class time (school, class, date, start), **shared by all forms**. Each form still sets its own limit, and the lowest limit among the forms offering that time wins. `class_booking_slots` counts across forms.
 - 2026-10-18 — **Q6 → A:** a booking whose class is later cancelled (a closure or a Schedule change) stays and is shown amber, "Class cancelled — call the family", in the Calendar day panel (and in Prospects from step 4). Saving a closure that cancels booked free classes first warns, e.g. "2 free-class bookings are on these classes — you'll need to call them." Nothing is sent to the family automatically; a cancellation email could be a later decision.
-- 2026-10-18 — **Q7 → B:** the phone bottom bar shows five buttons (Home, Testing, Schedule, Calendar, Forms) until step 4, then changes to the approved final bar (v0.140: Home, Calendar, Prospects, More). All seven answers are recorded in the rulebook as v0.145.
+- 2026-10-18 — **Q7 → B:** the phone bottom bar shows five buttons (Home, Testing, Schedule, Calendar, Forms) until step 4, then changes to the approved final bar (v0.236: Home, Calendar, Prospects, More). All seven answers are recorded in the rulebook as v0.241.
 - 2026-10-18 — **F2 done:** `0009_forms.sql`, its tests and fingerprints, plus the runner steps. PGlite 78/78. Independent security review: no High; M1–M3 and L1–L7 fixed, with a test for each. Open points for Jeffrey are in `STATUS-Forms.md`. Note: F2 ran before F1 (as planned, §1).
-- 2026-10-18 — **Open points after F2 (v0.146):** signature pictures are deleted 90 days after the free class (built and tested), booking settings take effect right away, and the email sender stays open until Jeffrey checks for a school web address.
+- 2026-10-18 — **Open points after F2 (v0.242):** signature pictures are deleted 90 days after the free class (built and tested), booking settings take effect right away, and the email sender stays open until Jeffrey checks for a school web address.
 - 2026-10-18 — **F4 done (preview only):** Forms staff screens, Fill in, Preview and the Calendar's free-class bookings, on the fake database. Design review: 1 High + 5 Medium fixed. Nine differences from the mockup are listed in STATUS-Forms.md for Jeffrey to decide in F5.
-- 2026-10-18 — **F5 differences decided (v0.172):** keep 1–6 as built; 7 switches, 8 waiver never conditional (screens + 0009 + test), 9 spots on every time — all three built. Rulebook number 0.172 because main and the Star branch already use up to 0.171.
+- 2026-10-18 — **F5 differences decided (v0.243):** keep 1–6 as built; 7 switches, 8 waiver never conditional (screens + 0009 + test), 9 spots on every time — all three built. Rulebook number 0.243 because main and the Star branch already use up to 0.171.

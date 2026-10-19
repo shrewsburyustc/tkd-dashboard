@@ -1,0 +1,139 @@
+/*
+  settings.css — the styles for the Settings page (Settings → Schools, rulebook v0.135,
+  mockups docs/Dashboard Docs/TKD-Settings-Schools-Mockups.html S1–S3).
+  Why it exists: a page "like Staff accounts" — the same frame and list look (staff.css,
+  testing.css), plus the few pieces this page adds. Every value comes from tokens.css or the
+  4px grid. Class names start with "st-" so they never clash with other pages.
+*/
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  max-width: 720px;
+  min-height: 100%;
+  /* Bottom: room for the toast, so it never covers the last row */
+  padding: var(--space-24) var(--space-24) calc(40px + var(--space-24) + var(--space-16));
+}
+
+.st-sub {
+  margin: calc(-1 * var(--space-4)) 0 var(--space-24);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.st-heading {
+  margin-bottom: var(--space-4);
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.st-sub--section {
+  margin: 0 0 var(--space-8);
+}
+
+.st-empty {
+  padding: var(--space-32) var(--space-16);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+  text-align: center;
+}
+
+.st-list {
+  border-radius: var(--radius-control);
+}
+
+/* One school: name · address · pencil */
+.st-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-height: 40px;
+  padding: var(--space-4) var(--space-8) var(--space-4) var(--space-12);
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+.st-row + .st-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.st-row.is-selected {
+  background: var(--color-blue-tint);
+}
+
+.st-main {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 144px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.st-name {
+  font-weight: 500;
+}
+
+.st-address {
+  min-width: 0;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* No address yet: an amber line with the warning triangle (contract 0005 §6) — words, never color alone */
+.st-address.is-empty {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  color: var(--color-warning-text);
+}
+
+.st-address.is-empty svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+/* The dialog (S3) */
+.st-section {
+  margin-bottom: var(--space-8);
+}
+
+.st-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: var(--space-12);
+}
+
+/* Street address and City use the full width; State and ZIP share a line */
+.st-fields > .field:not(.st-short) {
+  grid-column: 1 / -1;
+}
+
+@media (hover: hover) {
+  .st-row:not(.is-selected):hover {
+    background: var(--color-surface);
+  }
+}
+
+@media (pointer: coarse) {
+  .st-row {
+    min-height: 48px;
+  }
+}
+
+@media (max-width: 639.98px) {
+  .settings {
+    padding: var(--space-16) var(--space-16) calc(44px + var(--space-8) + var(--space-16));
+  }
+
+  /* Phone: the address goes under the school name */
+  .st-main {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .st-fields .input {
+    height: var(--control-height-touch);
+    font-size: var(--text-16); /* stops phones zooming into the field */
+  }
+}

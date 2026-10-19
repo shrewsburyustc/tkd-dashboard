@@ -1,6 +1,6 @@
 // Rail.jsx — the left navigation column on PC and tablet.
 // Why it exists: it lists the dashboard sections. Prospects shows a dark count badge: the new
-// sign-ups this person hasn't opened yet (rulebook v0.140, counted per person v0.191).
+// sign-ups this person hasn't opened yet (rulebook v0.236, counted per person v0.244).
 //   - PC (≥1024px, mouse): 52px wide, icon only; a dark label bubble appears on hover
 //     and on keyboard focus.
 //   - Tablet (640–1023px, or any touch screen ≥640px): 72px wide, label always shown.

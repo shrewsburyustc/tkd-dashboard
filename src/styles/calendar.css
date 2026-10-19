@@ -1,11 +1,11 @@
 /*
-  calendar.css — the look of the Calendar section (rulebook v0.138, approved mockup rev 1).
+  calendar.css — the look of the Calendar section (rulebook v0.234, approved mockup rev 1).
   Why it exists: the month grid with its day boxes and chips, the day panel, the phone's small
   month with dots, the week view's "All day" row and striped closed hours, and a few dialog bits.
   Page header, buttons, fields, notes, banners and dialogs reuse app.css / testing.css; the week
   grid reuses schedule.css (sgrid / sslot). Colors come from tokens.css, except the 8 class /
   event-type colors, which each chip receives as --chip-fill / --chip-edge / --chip-text
-  (the same recorded exception as the Schedule, v0.137). Closures are amber (a warning).
+  (the same recorded exception as the Schedule, v0.233). Closures are amber (a warning).
 */
 
 /* The page: same padding as the Schedule (bottom: room for the toast). */
@@ -903,7 +903,7 @@ button.cchip--btn:focus-visible {
   gap: 0;
 }
 
-/* ----- Free-class bookings from Forms (v0.145 answer 6) ----- */
+/* ----- Free-class bookings from Forms (v0.241 answer 6) ----- */
 .cchip--free {
   border: 1px solid var(--color-border-strong);
   background: var(--color-bg);

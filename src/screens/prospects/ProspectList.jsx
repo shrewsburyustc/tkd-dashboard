@@ -1,6 +1,6 @@
 // ProspectList.jsx — the list of prospects (mockup screens 1, 2, 8, 11).
 // Why it exists: one row per child: Child · Parent · Progress · Follow up · Status.
-//   - Progress (v0.214): the small track (Signed up → Class booked → Came → Joined) plus one line
+//   - Progress (v0.246): the small track (Signed up → Class booked → Came → Joined) plus one line
 //     saying where the child is or what's next ("Signed up Oct 18 · needs a class").
 //   - PC: a table-like list; with the side panel open, only Child · Progress · Status fit.
 //   - Tablet: the full list (the panel is below it).

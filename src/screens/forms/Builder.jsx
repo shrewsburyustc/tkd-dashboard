@@ -11,7 +11,7 @@
 // Saving: field and wording changes SAVE AS YOU GO as a draft (a short pause after typing);
 // families see them only after Publish. A draft with a problem (an empty label, two options the
 // same …) waits until it's fixed. Booking settings are different: they go live right away, so
-// they have their own Save button (rulebook v0.146).
+// they have their own Save button (rulebook v0.242).
 // Only one save travels at a time (a queue); each one sends the version it last saw, so another
 // admin's change is noticed ('stale') instead of overwritten.
 import { useEffect, useMemo, useRef, useState } from 'react';

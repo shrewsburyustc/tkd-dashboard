@@ -4,15 +4,15 @@
 //     Call shows the number large with Copy
 //   - Check in on the free-class day, or "Did … come?" Came / No-show after the class
 //   - The big progress track at the top: Signed up → Class booked → Came → Joined with dates,
-//     and a "Next:" line (v0.214)
+//     and a "Next:" line (v0.246)
 //   - Status: the colored tag with a chevron opens a menu (stages, then side exits; P4 difference 2)
 //   - Follow up: the date as words ("Today", "Overdue · Oct 16") with a clock; click for the quick
 //     choices Tomorrow / In 3 days / Next week / Pick a date / No follow-up (P4 difference 3)
 //   - Free class: the time, amber "Class cancelled — call the family" when it no longer runs,
-//     Book a free class / Change time / Cancel booking (v0.191 answer 2)
+//     Book a free class / Change time / Cancel booking (v0.244 answer 2)
 //   - Siblings (same sign-up), Notes and calls (a note + one-tap follow-up), the timeline
 //   - Form answers and waiver: every answer as the form was, and the signature picture while it
-//     is kept (each look recorded), then "signed on <date>" (v0.146)
+//     is kept (each look recorded), then "signed on <date>" (v0.242)
 // PC: a column beside the list; tablet upright: under the list; phone: a full-screen page
 // (Prospects.jsx wraps it in a Dialog). The note being typed lives in Prospects.jsx.
 import { useState } from 'react';

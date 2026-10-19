@@ -523,7 +523,7 @@ begin
   v_cl2_v := (v_r ->> 'version')::integer;
 
   -- -------------------------------------------------------------------
-  -- Test 9: the Schedule changes after the closure (v0.143 answer 2):
+  -- Test 9: the Schedule changes after the closure (v0.239 answer 2):
   --         the records stay exactly as they were
   -- -------------------------------------------------------------------
   v_ids := array(select id from public.calendar_closure_classes where closure_id = v_cl2 order by id);

@@ -12,8 +12,8 @@
 //   backend.rpc('forms_create', { p_… }, ctx)   ctx = { signedIn, hasDataAccess, isAdmin, actorName }
 // The public page's three functions (forms_public_*) are NOT here: they belong to the restricted
 // login of step F3, which the dashboard never uses.
-// Prospects (migration 0010) live in the same fake store: mockProspects.js is plugged in below, so
-// a sign-up makes its prospects and a booking moves them, like 0010's triggers.
+// Prospects (migration 0012) live in the same fake store: mockProspects.js is plugged in below, so
+// a sign-up makes its prospects and a booking moves them, like 0012's triggers.
 import { parseTime, toTimeText } from './schedule/time.js';
 import { addDays, weekdayOf } from './schedule/versions.js';
 import { versionInEffect } from './calendar/days.js';
@@ -21,13 +21,13 @@ import { cleanText, textProblem } from './calendar/rules.js';
 import { emailOk, fieldsProblem, longTextProblem, phoneOk, publishProblem, slugOk, template } from './forms/fields.js';
 import { createProspectsPart, emptyProspectsTables, PROSPECTS_ADMIN_ONLY, PROSPECTS_RPC_ARGS, PROSPECTS_SAVE_ALWAYS } from './mockProspects.js';
 
-export const FORMS_STORE_SCHEMA = 2; // 2: + the Prospects tables (0010)
+export const FORMS_STORE_SCHEMA = 2; // 2: + the Prospects tables (0012)
 const LOCATION_CODES = ['worcester', 'shrewsbury'];
 const KINDS = ['free_class', 'walk_in', 'event', 'blank'];
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
-const SIGNATURE_DAYS = 90; // Jeffrey, 2026-10-18 (rulebook v0.146)
+const SIGNATURE_DAYS = 90; // Jeffrey, 2026-10-18 (rulebook v0.242)
 
 // The columns staff may read (0009's column grants). signature, submission_key and booking_key
 // are granted to nobody.
@@ -460,7 +460,7 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
       children: a.p_children.map((c) => ({ first_name: cleanText(c.first_name), age: c.age })),
       signature: a.p_signature, signed_at: a.p_signature === null ? null : stamp(), entered_by: enteredBy, source, submission_key: a.p_submission_key,
     }, ctx);
-    prospects().afterSubmission(db, sub, ctx); // = 0010's trigger on form_submissions
+    prospects().afterSubmission(db, sub, ctx); // = 0012's trigger on form_submissions
     const sorted = [...bookings].sort((x, y) => (x.class_id + x.date + x.starts_at < y.class_id + y.date + y.starts_at ? -1 : 1));
     for (const b of sorted) {
       const t = times(db, form.id, b.date, b.date).find((x) => x.class_id === b.class_id.toLowerCase() && x.starts_at === b.starts_at);
@@ -469,14 +469,14 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
         id: newId(), submission_id: sub.id, form_id: form.id, location_code: form.location_code, class_id: t.class_id, class_name: t.class_name,
         on_date: b.date, starts_at: `${b.starts_at}:00`, ends_at: `${t.ends_at}:00`, child_index: b.child, status: 'booked',
       }, ctx);
-      prospects().afterBooking(db, booking, ctx); // = 0010's trigger on class_bookings
+      prospects().afterBooking(db, booking, ctx); // = 0012's trigger on class_bookings
     }
     return answerOf(db, sub.id, false);
   }
 
   const findForm = (db, id) => db.forms.find((f) => f.id === id) ?? null;
 
-  // The Prospects part (0010), made once on first use (it needs the helpers above).
+  // The Prospects part (0012), made once on first use (it needs the helpers above).
   let prospectsPart = null;
   function prospects() {
     if (!prospectsPart) {

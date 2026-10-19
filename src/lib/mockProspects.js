@@ -1,14 +1,14 @@
-// mockProspects.js — the PREVIEW (fake) database for Prospects (migration 0010).
+// mockProspects.js — the PREVIEW (fake) database for Prospects (migration 0012).
 // Why it exists: preview mode runs without Supabase. This file pretends to be the prospects
 // tables and the prospects_* / prospect_statuses_* functions, with the SAME rules and answers as
-// migration 0010. It is a PART of the fake Forms database (mockForms.js), because a sign-up and
-// its prospects change together there too: 0010's triggers make one prospect per child when a
+// migration 0012. It is a PART of the fake Forms database (mockForms.js), because a sign-up and
+// its prospects change together there too: 0012's triggers make one prospect per child when a
 // sign-up is saved, and move a child New ↔ Booked when a free class is booked or cancelled.
 //
 //   const part = createProspectsPart({ newId, stamp, today, nowLocal, times, slotsOn, insertRow, updateRow });
 //   part.afterSubmission(db, submission, ctx)   (= trigger prospects_from_submission)
 //   part.afterBooking(db, booking, ctx)         (= trigger prospects_follow_booking)
-//   part.backfill(db)                           (= 0010 section 12, plus a few made-up samples)
+//   part.backfill(db)                           (= 0012 section 12, plus a few made-up samples)
 //   part.handlers                               the functions, called by mockForms' rpc()
 import { addDays } from './schedule/versions.js';
 import { cleanText, textProblem } from './calendar/rules.js';
@@ -37,7 +37,7 @@ export const PROSPECTS_RPC_ARGS = {
   prospect_statuses_delete: [['p_status_id', 'uuid'], ['p_expected_version', 'int'], ['p_expected_count', 'int'], ['p_move_to_id', 'uuid']],
   prospects_delete: [['p_prospect_id', 'uuid'], ['p_expected_version', 'int']],
 };
-// Only these need an admin (0010: deleting a prospect or a custom status).
+// Only these need an admin (0012: deleting a prospect or a custom status).
 export const PROSPECTS_ADMIN_ONLY = ['prospect_statuses_delete', 'prospects_delete'];
 // Functions that change data (a fake transaction: saved only on 'ok'). The list also runs the
 // clean-up and seeds statuses, so it is saved too.
@@ -147,7 +147,7 @@ export function createProspectsPart({ newId, stamp, today, nowLocal, times, slot
       const list = db.prospects
         .filter((p) => p.location_code === a.p_location_code)
         .map((p) => ({ p, at: db.submissions.find((x) => x.id === p.submission_id)?.created_at ?? p.created_at }))
-        // newest sign-up first (like 0010: by the family's sign-up time)
+        // newest sign-up first (like 0012: by the family's sign-up time)
         .sort((x, y) => (x.at < y.at ? 1 : x.at > y.at ? -1 : x.p.child_index - y.p.child_index))
         .map(({ p }) => {
           const s = db.submissions.find((x) => x.id === p.submission_id);
@@ -416,7 +416,7 @@ export function createProspectsPart({ newId, stamp, today, nowLocal, times, slot
     },
   };
 
-  // = 0010 section 12, plus made-up samples so every stage has someone in preview.
+  // = 0012 section 12, plus made-up samples so every stage has someone in preview.
   function backfill(db, { samples = false } = {}) {
     for (const code of LOCATION_CODES) seedStatuses(db, code);
     for (const s of db.submissions) {

@@ -122,7 +122,7 @@ export async function loadCalendar({ from, to }) {
   }
 }
 
-// Color Belt and Star testing events, read from Testing (rulebook v0.143 answer 1). Their tables
+// Color Belt and Star testing events, read from Testing (rulebook v0.239 answer 1). Their tables
 // arrive with migrations 0005 (Color Belt phase 2) and 0006 (Star testing), which aren't built
 // yet; until then there is nothing to show. When they exist, this reads them (read-only) and
 // returns [{ id, locationCode, title, date, start, kind: 'colorBelt' | 'star' }].

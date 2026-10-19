@@ -4,7 +4,7 @@
 //   to set times), Starts / Ends (a later end date = a several-day event, at most 31 days),
 //   School (Worcester, Shrewsbury or Both — starts with the school in the switcher), and notes
 //   under "More details". Save stays gray until there's a title, a type and good dates.
-// Edit has Remove (instant, with Undo — no confirmation, v0.138).
+// Edit has Remove (instant, with Undo — no confirmation, v0.234).
 // Staff see the same fields read-only, with "View only — ask an admin to change this."
 // Like the Schedule's dialogs, the typed values live in the parent (Calendar.jsx) so they
 // survive the screen locking while the dialog is open.

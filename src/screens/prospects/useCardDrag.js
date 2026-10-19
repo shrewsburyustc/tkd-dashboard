@@ -1,4 +1,4 @@
-// useCardDrag.js — dragging a Board card to another stage (rulebook v0.214, choice B).
+// useCardDrag.js — dragging a Board card to another stage (rulebook v0.246, choice B).
 // Why it exists: on the Board, moving a child should be one move, on every device:
 //   - mouse (PC): press and move the card a few pixels — the drag starts
 //   - touch / pen (tablet, phone): press and HOLD the card (0.45 s), then drag it. A finger that

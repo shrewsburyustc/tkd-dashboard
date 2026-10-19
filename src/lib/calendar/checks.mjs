@@ -226,7 +226,7 @@ group('mock: event types (duplicate, recolor, reorder, delete + move)', () => {
   assert.equal(del.moved, 1);
 });
 
-group('days: free-class bookings (Forms, v0.145 answer 6)', () => {
+group('days: free-class bookings (Forms, v0.241 answer 6)', () => {
   // Friday 2026-12-18 runs White at 17:00 (slot n1). One booking on it, one on a time that isn't
   // a class any more (classRunning false → amber), one cancelled (not shown), one at the other school.
   const b = (id, extra) => ({ id, locationCode: 'worcester', classId: W.white, className: 'White', date: '2026-12-18', start: '17:00', end: '17:45',

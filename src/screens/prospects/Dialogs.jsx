@@ -1,10 +1,10 @@
 // Dialogs.jsx — the smaller Prospects dialogs.
 // Why it exists: four short dialogs that belong together:
-//   BookTimeDialog    Book a free class / Change time (v0.191 answer 2): the open times of the
+//   BookTimeDialog    Book a free class / Change time (v0.244 answer 2): the open times of the
 //                     school's Live booking forms, grouped by week, as cards (like Fill in)
-//   JoinedDialog      choosing Joined asks the date joined (default today, v0.140)
-//   CameDialog        a Board card dropped on Came asks "Did … come?" first (v0.214)
-//   AddProspectDialog "+ Add prospect" asks which Live form to fill in for the family (v0.140)
+//   JoinedDialog      choosing Joined asks the date joined (default today, v0.236)
+//   CameDialog        a Board card dropped on Came asks "Did … come?" first (v0.246)
+//   AddProspectDialog "+ Add prospect" asks which Live form to fill in for the family (v0.236)
 //   DeleteDialog      delete a prospect — admins only, with a confirmation
 // The values being typed live in Prospects.jsx (so a lock while one is open loses nothing).
 import { IconCheck, IconClipboardText, IconTrash, IconUserCheck } from '@tabler/icons-react';
@@ -109,7 +109,7 @@ export function JoinedDialog({ state, today, isPhone, onChange, onSave, onCancel
   );
 }
 
-// A Board card dropped on Came (v0.214): "Did Ava come to the free class?" — Came checks the
+// A Board card dropped on Came (v0.246): "Did Ava come to the free class?" — Came checks the
 // child in (on the class day, or after it) or, with no class to check in to, saves Came as the status.
 export function CameDialog({ state, isPhone, onSave, onCancel }) {
   const b = state.prospect.booking;

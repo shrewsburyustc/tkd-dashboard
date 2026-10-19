@@ -76,7 +76,7 @@ export function findOverlaps(slots, weekdays, start, end, skipId = null) {
 }
 
 // The hours shown down the side of the week: every hour from the first class's hour to the
-// last class's end, rounded out to whole hours (decided v0.137: "show every hour").
+// last class's end, rounded out to whole hours (decided v0.233: "show every hour").
 // With no slots: 4 pm to 8 pm, so an empty grid still looks like a week.
 export function hourRange(slots) {
   if (slots.length === 0) return { from: 16 * 60, to: 20 * 60 };

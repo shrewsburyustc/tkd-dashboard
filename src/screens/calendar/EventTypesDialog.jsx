@@ -1,4 +1,4 @@
-// EventTypesDialog.jsx — ⋯ → "Event types" (approved mockup screen 6, rulebook v0.138 / v0.143).
+// EventTypesDialog.jsx — ⋯ → "Event types" (approved mockup screen 6, rulebook v0.234 / v0.239).
 // Why it exists: an event's color comes from its TYPE. Admins add, rename and recolor types here
 // (recoloring a type recolors all its events). Types are shared by both schools. Five come ready
 // (Testing, Tournament, Camp, Meeting, Party); any can be renamed, recolored or deleted.

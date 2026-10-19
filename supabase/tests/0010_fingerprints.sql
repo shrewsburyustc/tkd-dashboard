@@ -2,23 +2,40 @@
 -- 0010_fingerprints.sql  (read-only - changes nothing)
 -- ---------------------------------------------------------------------
 -- WHAT THIS FILE IS
---   One query listing everything migration 0010 (Prospects) made, so the
---   tested copy and production can be compared line by line: every
---   prospects_* / prospect_statuses_* function (code fingerprint, security
---   definer, settings, owner, who may call it), the five tables (RLS,
---   grants, column grants), their triggers, rules, policies and indexes,
---   each function's kind, and the two triggers 0010 adds to 0009's tables.
+--   One query with several kinds of rows about migration 0010 (Color Belt
+--   phase 3: the Grading tab's results), in 0005_fingerprints.sql's
+--   format (kind, item, detail):
+--     function   - the 2 new staff functions, the 2 trigger functions and
+--                  the 5 functions 0010 replaces, with: body_md5 (an md5
+--                  of its code without comments and spaces), security
+--                  definer, settings (must say search_path=""), owner,
+--                  and who may call it (role:EXECUTE, sorted)
+--     table      - testing_results: RLS on/off and the exact list of
+--                  rights (table-wide and per column)
+--     trigger    - its three triggers
+--     constraint - each of its rules (key, foreign key, checks) with the
+--                  rule's full text
 --
 -- WHY
---   Same idea as 0003 / 0004 / 0007 / 0008 / 0009_fingerprints.sql: run.mjs prints
---   this for the tested copy; after Jeffrey pastes 0010 into the SQL
---   Editor, Claude runs this on production through the read-only
---   connection and every line must match.
+--   Same idea as 0005_fingerprints.sql: supabase/tests/pglite/run.mjs
+--   prints this list for the tested copy. After Jeffrey pastes 0010 into
+--   the SQL Editor, Claude runs this on production through the read-only
+--   connection and every line must match. That proves production has
+--   exactly the code, rights and rules that passed the tests.
+--   (0005_fingerprints.sql then differs ONLY in the five replaced
+--   functions' lines - expected.)
 --
--- CONNECTOR-SAFE: a single read-only SELECT; the words the Supabase
--- connection refuses are not used.
+-- CONNECTOR-SAFE: a single read-only SELECT, and none of its text uses
+-- the words the Supabase connection refuses (removed columns are skipped
+-- by their type, atttypid = 0, as in 0005_fingerprints.sql).
 -- =====================================================================
 
+with fns(name) as (
+  values ('testing_set_result'), ('testing_set_result_note'),
+         ('testing_results_before_write'), ('testing_results_log'),
+         ('testing_update_student'), ('testing_resolve_duplicate'), ('testing_restore_student'),
+         ('testing_add_student'), ('testing_update_event')
+)
 select 'function' as kind,
        p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' as item,
        md5(regexp_replace(regexp_replace(p.prosrc, '--[^\n]*', '', 'g'), '\s+', '', 'g'))
@@ -31,61 +48,37 @@ select 'function' as kind,
   from pg_proc p
   join pg_namespace n on n.oid = p.pronamespace
  where n.nspname = 'public'
-   and (p.proname like 'prospects\_%' or p.proname like 'prospect\_statuses\_%')
+   and p.proname in (select name from fns)
 union all
 select 'table',
        c.relname,
-       'rls=' || c.relrowsecurity::text
-         || ' grants=' || coalesce((select string_agg(a.grantee::regrole::text || ':' || a.privilege_type, ','
-                                                       order by a.grantee::regrole::text, a.privilege_type)
-                                       from aclexplode(c.relacl) as a), '')
-         || ' columns=' || coalesce((select string_agg(att.attname || ':' || array_to_string(att.attacl, ';'), ','
-                                                        order by att.attname)
-                                        from pg_attribute att
-                                       where att.attrelid = c.oid and att.attacl is not null), '')
-  from pg_class c
-  join pg_namespace n on n.oid = c.relnamespace
- where n.nspname = 'public'
-   and c.relname in ('prospect_statuses', 'prospects', 'prospect_notes', 'prospect_activity', 'prospect_opens')
+       'rls=' || c.relrowsecurity
+         || ' owner=' || c.relowner::regrole::text
+         || ' rights=' || coalesce((select string_agg(a.grantee::regrole::text || ':' || a.privilege_type, ','
+                                                      order by a.grantee::regrole::text, a.privilege_type)
+                                      from aclexplode(c.relacl) as a
+                                     where a.grantee <> c.relowner), '')
+         || ' columns=' || coalesce((select string_agg(t.attname || '>' || a.grantee::regrole::text || ':' || a.privilege_type, ','
+                                                       order by t.attname, a.grantee::regrole::text, a.privilege_type)
+                                       from pg_attribute t, aclexplode(t.attacl) as a
+                                      where t.attrelid = c.oid and t.attnum > 0 and t.atttypid <> 0), '')
+         || ' policies=' || coalesce((select string_agg(pp.policyname || ':' || pp.cmd || ':' || array_to_string(pp.roles, '+')
+                                                        || ':' || coalesce(pp.qual, ''), ',' order by pp.policyname)
+                                        from pg_policies pp
+                                       where pp.schemaname = 'public' and pp.tablename = c.relname), '')
+  from pg_class c join pg_namespace n on n.oid = c.relnamespace
+ where n.nspname = 'public' and c.relname = 'testing_results'
 union all
 select 'trigger',
        t.tgrelid::regclass::text || '.' || t.tgname,
-       pg_get_triggerdef(t.oid)
+       pg_get_triggerdef(t.oid) || ' enabled=' || t.tgenabled::text
   from pg_trigger t
- where t.tgrelid in (select ('public.' || x)::regclass from unnest(array['prospect_statuses', 'prospects', 'prospect_notes', 'prospect_activity', 'prospect_opens']) as x)
+ where t.tgrelid = to_regclass('public.testing_results')
    and not t.tgisinternal
 union all
 select 'constraint',
-       k.conrelid::regclass::text || '.' || k.conname,
-       k.contype::text || ' ' || pg_get_constraintdef(k.oid)
-  from pg_constraint k
- where k.conrelid in (select ('public.' || x)::regclass from unnest(array['prospect_statuses', 'prospects', 'prospect_notes', 'prospect_activity', 'prospect_opens']) as x)
-union all
-select 'policy',
-       p.tablename || '.' || p.policyname,
-       p.cmd || ' roles=' || p.roles::text || ' using=' || coalesce(p.qual, '') || ' check=' || coalesce(p.with_check, '')
-  from pg_policies p
- where p.schemaname = 'public'
-   and p.tablename in ('prospect_statuses', 'prospects', 'prospect_notes', 'prospect_activity', 'prospect_opens')
-union all
-select 'function-kind',
-       p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')',
-       'volatility=' || p.provolatile::text || ' returns=' || pg_get_function_result(p.oid)
-  from pg_proc p
-  join pg_namespace n on n.oid = p.pronamespace
- where n.nspname = 'public'
-   and (p.proname like 'prospects\_%' or p.proname like 'prospect\_statuses\_%')
-union all
-select 'index',
-       i.tablename || '.' || i.indexname,
-       i.indexdef
-  from pg_indexes i
- where i.schemaname = 'public'
-   and i.tablename in ('prospect_statuses', 'prospects', 'prospect_notes', 'prospect_activity', 'prospect_opens')
-union all
-select 'trigger-on-0009',
-       t.tgrelid::regclass::text || '.' || t.tgname,
-       pg_get_triggerdef(t.oid)
-  from pg_trigger t
- where t.tgname in ('form_submissions_make_prospects', 'class_bookings_follow_prospect')
+       c.conrelid::regclass::text || '.' || c.conname,
+       pg_get_constraintdef(c.oid)
+  from pg_constraint c
+ where c.conrelid = to_regclass('public.testing_results')
  order by 1, 2;

@@ -2,7 +2,7 @@
 // Why it exists: the thank-you message ({parent} and {class time} fill in automatically), the
 // two email switches, the school alert address, the web address (…/f/<slug>) and "Accepting
 // sign-ups". The emails don't go out yet: the school's sending address is still open
-// (rulebook v0.146), and the switches say so. "Accepting sign-ups" switches between Live and
+// (rulebook v0.242), and the switches say so. "Accepting sign-ups" switches between Live and
 // Closed right away (a Draft must be published first).
 import Notice from '../../components/Notice.jsx';
 import { emailOk, longTextProblem, slugOk } from '../../lib/forms/fields.js';

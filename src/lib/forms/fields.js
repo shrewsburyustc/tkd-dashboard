@@ -10,8 +10,8 @@
 //   - short_text, long_text, phone, email, number, date: a question
 //   - choice ("One choice"), checkboxes, dropdown: 2-30 options
 //   - heading ("Heading and text"), step ("New step"): layout only
-//   - waiver: the school's own text + "I agree" + a signature (v0.145 answer 4: no set wording)
-//   - booking ("Book a class"): each child picks a free-class time; never required (v0.139)
+//   - waiver: the school's own text + "I agree" + a signature (v0.241 answer 4: no set wording)
+//   - booking ("Book a class"): each child picks a free-class time; never required (v0.235)
 import { cleanText, textProblem } from '../calendar/rules.js';
 
 export const MAX_FIELDS = 60;
@@ -156,7 +156,7 @@ export function fieldsProblem(fields) {
     if (f.type === 'waiver' && (typeof f.text !== 'string' || [...f.text].length > WAIVER_MAX || (f.text !== '' && longTextProblem(f.text, WAIVER_MAX)))) {
       return { fieldId: f.id, code: 'waiver' };
     }
-    // show_if: missing / null, or a plain object (like the database); never on the waiver (v0.172)
+    // show_if: missing / null, or a plain object (like the database); never on the waiver (v0.243)
     if (f.show_if != null && (f.type === 'waiver' || typeof f.show_if !== 'object' || Array.isArray(f.show_if))) return { fieldId: f.id, code: 'showIf' };
     if (f.show_if != null) {
       const target = seen.get(f.show_if.field);
@@ -173,7 +173,7 @@ export function fieldsProblem(fields) {
   return null;
 }
 
-// Can it be published? Valid AND every waiver has its text (v0.145 answer 4).
+// Can it be published? Valid AND every waiver has its text (v0.241 answer 4).
 export function publishProblem(fields) {
   const p = fieldsProblem(fields);
   if (p) return p;

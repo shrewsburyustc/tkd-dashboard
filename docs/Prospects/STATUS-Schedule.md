@@ -1,8 +1,8 @@
 # Schedule — status
 
-Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Schedule-Build-Plan.md`. Rulebook v0.137. Approved mockup: `TKD-Class-Schedule-Mockups.html` rev 2.
+Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Schedule-Build-Plan.md`. Rulebook v0.233. Approved mockup: `TKD-Class-Schedule-Mockups.html` rev 2.
 
-**Migration number (2026-10-17):** the Schedule migration is now **0007** (`0007_schedule.sql`, `0007_tests.sql`, `0007_fingerprints.sql`): 0005 belongs to Color Belt phase 2 and 0006 to Star testing (Jeffrey caught the clash before anything was pasted). New-students rulebook rows renumbered to v0.137–v0.142 after main (v0.130) and Color Belt's waiting v0.131–v0.136. Before S4: bring main in again once 0005 and 0006 are merged, then rerun PGlite with all of them.
+**Migration number (2026-10-17):** the Schedule migration is now **0007** (`0007_schedule.sql`, `0007_tests.sql`, `0007_fingerprints.sql`): 0005 belongs to Color Belt phase 2 and 0006 to Star testing (Jeffrey caught the clash before anything was pasted). New-students rulebook rows renumbered to v0.233–v0.238 after main (v0.130) and Color Belt's waiting v0.131–v0.136. Before S4: bring main in again once 0005 and 0006 are merged, then rerun PGlite with all of them.
 
 **Nothing is live.** Migration 0007 has not been applied to Supabase, and nothing has been pushed.
 
@@ -13,7 +13,7 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Schedule-Build-Plan.md`.
 | S0 Bring main in, renumber the rulebook | Done (`3cf3cc0`) |
 | S1 Migration 0007 + tests + security review | Done (`4482a88`); PGlite 54/54 |
 | S2 Screens + preview + design review | Done; independent design review findings fixed |
-| S3 Jeffrey tries the preview | Done 2026-10-17 — approved (rulebook v0.142) |
+| S3 Jeffrey tries the preview | Done 2026-10-17 — approved (rulebook v0.238) |
 | S4 Jeffrey pastes 0007 into the SQL Editor, then read-only checks | Waiting: 0005 (Color Belt phase 2) and 0006 (Star testing) go live first |
 | S5 Real check with Worcester's real times | Waiting |
 | S6 Commit + merge (Main session) | Waiting |
@@ -75,13 +75,13 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Schedule-Build-Plan.md`.
 - The color group has an accessible name.
 - Testing's sentence says the count covers every schedule.
 
-## Combined classes (rulebook v0.141, added 2026-10-17)
+## Combined classes (rulebook v0.237, added 2026-10-17)
 
 - A time slot can hold one or more classes taught together. For example, Saturday 9:30 in preview is "White + Little Tiger".
 - Migration 0007 (not live yet) now has `schedule_slot_classes`, and the PGlite suite still passes 54/54.
 - The screens, preview database and checks are updated (13 groups pass).
 
-## Known small compromises (accepted by Jeffrey at S3, 2026-10-17, v0.142)
+## Known small compromises (accepted by Jeffrey at S3, 2026-10-17, v0.238)
 
 - **320px phones:** the 7 day buttons are about 38px wide (a 44px width can't fit 7 across); they are 44px tall to tap.
 - **Touch:** the color swatches' tap areas are 40px wide so all 8 fit one row.

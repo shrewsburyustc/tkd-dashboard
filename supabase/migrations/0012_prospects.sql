@@ -1,5 +1,5 @@
 -- =====================================================================
--- 0010_prospects.sql
+-- 0012_prospects.sql
 -- ---------------------------------------------------------------------
 -- WHAT THIS FILE IS
 --   A database migration for the TKD staff dashboard. It runs after 0009
@@ -8,13 +8,13 @@
 --   (it only ADDS triggers to two 0009 tables).
 --
 -- WHY IT EXISTS
---   The Prospects section (rulebook v0.140, approved mockup
+--   The Prospects section (rulebook v0.236, approved mockup
 --   docs/Prospects/TKD-Prospects-Mockups.html rev 3; build plan answers
---   v0.191, docs/Prospects/TKD-Prospects-Build-Plan.md). New students
+--   v0.244, docs/Prospects/TKD-Prospects-Build-Plan.md). New students
 --   only - current students stay on paper cards.
 --
 -- WHAT IT ADDS
---   1. public.prospect_statuses  - each school's own status list (v0.191
+--   1. public.prospect_statuses  - each school's own status list (v0.244
 --                                  answer 7); 6 built-in + "Contacted"
 --   2. public.prospects          - one per child of a sign-up
 --   3. public.prospect_notes     - notes and calls (never changed)
@@ -56,7 +56,7 @@ begin;
 do $$
 begin
   if to_regclass('public.form_submissions') is null or to_regclass('public.class_bookings') is null then
-    raise exception '0010 needs 0009 (Forms) first.';
+    raise exception '0012 needs 0009 (Forms) first.';
   end if;
 end;
 $$;
@@ -66,7 +66,7 @@ $$;
 -- 1. Tables
 -- ---------------------------------------------------------------------
 
--- 1a. prospect_statuses - each school's list (v0.191 answer 7).
+-- 1a. prospect_statuses - each school's list (v0.244 answer 7).
 --   kind     stage (in the pipeline bar) | exit (a chip beside it)
 --   builtin  the app's own: new, booked, came, joined, no_show,
 --            not_interested (renamable, never deleted); null = custom
@@ -248,7 +248,7 @@ revoke execute on function public.prospects_log(uuid, text, text, jsonb) from pu
 
 -- 2d. prospects_class_ran(school, class, date, start) - does that class
 -- still run then (0009's forms_slots_on: schedule in effect, closures)?
--- false = the amber "Class cancelled - call the family" (v0.145 answer 6).
+-- false = the amber "Class cancelled - call the family" (v0.241 answer 6).
 create or replace function public.prospects_class_ran(p_location text, p_class uuid, p_date date, p_start time)
 returns boolean
 language sql
@@ -481,7 +481,7 @@ create policy prospect_statuses_select_with_access on public.prospect_statuses
 
 
 -- ---------------------------------------------------------------------
--- 5. The 2-year clean-up (v0.191 answer 1)
+-- 5. The 2-year clean-up (v0.244 answer 1)
 -- ---------------------------------------------------------------------
 
 -- 5a. prospects_purge_old() - every FAMILY (sign-up) none of whose
@@ -623,7 +623,7 @@ $$;
 -- 6c. prospects_get(prospect) - the side panel: contact details, the
 -- child's age, the form and every answer (as the form was), entered by,
 -- signed on / signature kept, the free class, siblings, notes and the
--- timeline. Staff see all of it (v0.191 answer 6); the signature PICTURE
+-- timeline. Staff see all of it (v0.244 answer 6); the signature PICTURE
 -- is read with 0009's forms_submission_signature() (every look recorded).
 create or replace function public.prospects_get(p_prospect_id uuid)
 returns jsonb
@@ -1011,7 +1011,7 @@ $$;
 
 
 -- ---------------------------------------------------------------------
--- 8. Free classes from the panel (v0.191 answer 2)
+-- 8. Free classes from the panel (v0.244 answer 2)
 -- Times come from every form of the school that offers classes (0009's
 -- forms_times: the schedule in effect, closures, the booking window and
 -- the SHARED spot limit). 0009 keeps one booking row per child: a change
@@ -1176,8 +1176,8 @@ $$;
 
 -- ---------------------------------------------------------------------
 -- 9. Statuses (each school's own list)
--- Admins and staff add, rename, recolor, reorder (v0.140); only admins
--- delete a custom one (v0.191 answer 5). Built-in ones keep their kind.
+-- Admins and staff add, rename, recolor, reorder (v0.236); only admins
+-- delete a custom one (v0.244 answer 5). Built-in ones keep their kind.
 -- ---------------------------------------------------------------------
 
 -- 9a. prospect_statuses_add(school, name, kind, color)
@@ -1364,7 +1364,7 @@ $$;
 
 
 -- ---------------------------------------------------------------------
--- 10. Deleting a prospect - ADMINS ONLY (v0.140)
+-- 10. Deleting a prospect - ADMINS ONLY (v0.236)
 -- The child's prospect, notes, timeline and free-class booking go; the
 -- family's sign-up goes with its LAST child (siblings keep theirs).
 -- ---------------------------------------------------------------------
@@ -1447,7 +1447,7 @@ declare
   v_s record;
   v_b record;
 begin
-  perform set_config('tkd.action', '0010_backfill', true);
+  perform set_config('tkd.action', '0012_backfill', true);
   for v_loc in select l.code from public.locations l loop
     perform public.prospects_seed_statuses(v_loc);
   end loop;

@@ -7,7 +7,7 @@
 --     function - each schedule_* function: body_md5 of its code without
 --                comments and spaces, security definer, settings (must say
 --                search_path=""), owner, and who may call it
---     table    - each schedule table (incl. schedule_slot_classes, v0.141): RLS on/off and its grants
+--     table    - each schedule table (incl. schedule_slot_classes, v0.237): RLS on/off and its grants
 --     trigger  - every trigger on the three schedule tables
 --     constraint    - every table rule: keys, foreign keys (incl. "on
 --                     delete cascade" to Testing), checks, unique rules

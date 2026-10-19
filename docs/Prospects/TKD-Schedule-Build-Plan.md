@@ -1,6 +1,6 @@
 # Schedule — build plan (DRAFT for review)
 
-Branch `claude/prospect-form-system-cd893d` · 2026-10-17 · implements the Schedule decisions (rulebook v0.137; numbered v0.60, then v0.84, before main was brought in again) · approved mockup `docs/Prospects/TKD-Class-Schedule-Mockups.html` rev 2 · **nothing is built until Jeffrey says OK.**
+Branch `claude/prospect-form-system-cd893d` · 2026-10-17 · implements the Schedule decisions (rulebook v0.233; numbered v0.60, then v0.84, before main was brought in again) · approved mockup `docs/Prospects/TKD-Class-Schedule-Mockups.html` rev 2 · **nothing is built until Jeffrey says OK.**
 
 ## 0. What gets built
 
@@ -192,7 +192,7 @@ The app reads the tables directly (through RLS). One small function, `schedule_t
 
 - 2026-10-17 — Draft written. Q1–Q3 answered by Jeffrey.
 - 2026-10-17 — S0: main brought into this branch (Jeffrey ran the merge in the terminal); the rulebook conflict was resolved, giving v0.87 = main v0.83 + new students v0.84–v0.87.
-- 2026-10-17 — main brought in again (Star testing, Staff accounts, Color Belt). New-students rulebook rows renumbered v0.84–v0.89 → v0.137–v0.142 (main is at v0.130; Color Belt has v0.131–v0.136 waiting). Migration 0005 → **0007** (0005 = Color Belt phase 2, 0006 = Star testing).
+- 2026-10-17 — main brought in again (Star testing, Staff accounts, Color Belt). New-students rulebook rows renumbered v0.84–v0.89 → v0.233–v0.238 (main is at v0.130; Color Belt has v0.131–v0.136 waiting). Migration 0005 → **0007** (0005 = Color Belt phase 2, 0006 = Star testing).
 - 2026-10-17 — S1: `0005_schedule.sql`, `0005_tests.sql` and `0005_fingerprints.sql` written, and `run.mjs` runs them (before and after seed, after re-runs, on the upgrade path). 54/54 checks pass; a deliberately broken rule was caught. Independent security review: no High findings.
 - **Fixed after the review:**
   - The Medium finding (tests for every shut-out session type on all three tables).

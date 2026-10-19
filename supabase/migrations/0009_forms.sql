@@ -8,14 +8,14 @@
 --   0001-0008 made.
 --
 -- WHY IT EXISTS
---   The Forms section (rulebook v0.139, approved mockup
---   docs/Prospects/TKD-Forms-Mockups.html rev 1; build plan answers v0.145,
+--   The Forms section (rulebook v0.235, approved mockup
+--   docs/Prospects/TKD-Forms-Mockups.html rev 1; build plan answers v0.241,
 --   docs/Prospects/TKD-Forms-Build-Plan.md). Admins build forms in the
 --   app (free class from social media, walk-in, event, blank); families
 --   fill them in on a public page with no login, and can book a free
 --   class. Staff can fill one in for a family. Sign-ups are stored here
 --   from day one; the Prospects list that works them is step 4, and the
---   public page only goes live together with it (v0.145 answer 1).
+--   public page only goes live together with it (v0.241 answer 1).
 --
 -- WHAT IT ADDS
 --   1. public.forms                 - one row per form (draft + published fields)
@@ -34,7 +34,7 @@
 --      public functions and nothing else (the Cloudflare Function signs in
 --      as it - rulebook v0.33)
 --
--- PRIVACY (rulebook section 5, v0.139)
+-- PRIVACY (rulebook section 5, v0.235)
 --   Sign-ups hold children's first names and ages, parents' names, phone
 --   numbers and email addresses, and a drawn signature. Only signed-in,
 --   UNLOCKED staff can read them (has_data_access()). The signature
@@ -271,7 +271,7 @@ begin
     elsif v_opts is not null and jsonb_typeof(v_opts) <> 'null' then
       return false;
     end if;
-    -- the booking field is never required: with no times left, a family can still send (v0.139)
+    -- the booking field is never required: with no times left, a family can still send (v0.235)
     if v_type = 'booking' and (v_f -> 'required') = 'true'::jsonb then
       return false;
     end if;
@@ -314,7 +314,7 @@ $$;
 revoke execute on function public.forms_fields_are_valid(jsonb) from public, anon, authenticated, service_role;
 
 -- 1g. forms_fields_publishable(fields) - valid AND every waiver has its
--- text (v0.145 answer 4: no set wording; an empty waiver can't go out).
+-- text (v0.241 answer 4: no set wording; an empty waiver can't go out).
 create or replace function public.forms_fields_publishable(p_fields jsonb)
 returns boolean
 language sql
@@ -352,7 +352,7 @@ revoke execute on function public.forms_settings_are_valid(jsonb) from public, a
 
 -- 1i. forms_template(kind) - the starting field list of a new form
 -- (mockup screen 2). Templates are only starting points. The waiver starts
--- EMPTY: the school writes its own wording in the app (v0.145 answer 4).
+-- EMPTY: the school writes its own wording in the app (v0.241 answer 4).
 create or replace function public.forms_template(p_kind text)
 returns jsonb
 language sql
@@ -439,7 +439,7 @@ comment on table public.forms is
 
 -- 2b. form_booking_offers - a class offered by a form's "Book a class"
 -- field, with the default spot limit for its times (shared by all forms,
--- the lowest wins - v0.145 answer 5) and the booking window.
+-- the lowest wins - v0.241 answer 5) and the booking window.
 create table if not exists public.form_booking_offers (
   id              uuid        not null default gen_random_uuid(),
   form_id         uuid        not null,
@@ -553,7 +553,7 @@ create table if not exists public.class_booking_slots (
 );
 
 -- 2f. class_bookings - one child's free class. Keeps the class name as it
--- was (a class deleted in Testing leaves the booking, flagged, v0.145
+-- was (a class deleted in Testing leaves the booking, flagged, v0.241
 -- answer 6). status: booked | cancelled (cancelled by staff, step 4).
 create table if not exists public.class_bookings (
   id              uuid        not null default gen_random_uuid(),
@@ -589,7 +589,7 @@ create index if not exists class_bookings_date_idx on public.class_bookings (loc
 create index if not exists class_bookings_slot_idx on public.class_bookings (location_code, class_id, on_date, starts_at) where status = 'booked';
 
 -- 2g. form_kiosk_tokens - a token handed to a tablet when kiosk mode is
--- opened (v0.145 answer 3). Only its SHA-256 is stored. 12 hours, one form.
+-- opened (v0.241 answer 3). Only its SHA-256 is stored. 12 hours, one form.
 create table if not exists public.form_kiosk_tokens (
   id            uuid        not null default gen_random_uuid(),
   form_id       uuid        not null,
@@ -604,7 +604,7 @@ create table if not exists public.form_kiosk_tokens (
 );
 
 -- 2h. form_email_results - an email the Cloudflare Function could NOT
--- send (v0.145 answer 2: a failed email never undoes a sign-up; staff see
+-- send (v0.241 answer 2: a failed email never undoes a sign-up; staff see
 -- it). which: family | school.
 create table if not exists public.form_email_results (
   id            uuid        not null default gen_random_uuid(),
@@ -902,7 +902,7 @@ revoke execute on function public.forms_slots_on(text, date) from public, anon, 
 -- 5c. forms_spot_limit(form, school, class, date, start) - the limit of a
 -- class time ON THIS FORM: this form's own limit (its time limit, else its
 -- default); 0 = this form doesn't offer that time. Shared with every other
--- LIVE form that still has a booking field and offers it (v0.145 answer 5:
+-- LIVE form that still has a booking field and offers it (v0.241 answer 5:
 -- the lowest wins) - but another form's 0 only means "not on that form"
 -- and is left out (security review M2). null = this form doesn't offer the
 -- class.
@@ -945,7 +945,7 @@ revoke execute on function public.forms_spot_limit(uuid, text, uuid, date, time)
 -- now: for each offered class, each day of its window (from today, at most
 -- days_ahead days; within from..to), each running slot of that class,
 -- not sooner than min_hours_ahead, with spots left > 0 (shared count over
--- all forms, v0.145 answer 5). Massachusetts dates and times.
+-- all forms, v0.241 answer 5). Massachusetts dates and times.
 create or replace function public.forms_times(p_form_id uuid, p_from date, p_to date)
 returns table (class_id uuid, class_name text, on_date date, starts_at time, ends_at time, spots_left integer)
 language sql
@@ -1036,7 +1036,7 @@ begin
     v_type := v_f ->> 'type';
     continue when v_type in ('heading', 'step', 'children', 'booking');
     v_si := v_f -> 'show_if';
-    -- a waiver is always visible (v0.172), even if a show_if ever slipped past the table check
+    -- a waiver is always visible (v0.243), even if a show_if ever slipped past the table check
     v_visible := v_type = 'waiver' or v_si is null or jsonb_typeof(v_si) = 'null'
                  or (p_answers -> (v_si ->> 'field')) = (v_si -> 'value');
     v_val := p_answers -> v_id;
@@ -1412,7 +1412,7 @@ grant  execute on function public.forms_save_draft(uuid, integer, text, text, js
 
 -- 7c. forms_publish(form, expected version) - copies the draft to what
 -- families see. A Draft becomes Live; a Closed form stays Closed. An empty
--- waiver -> not_publishable (v0.145 answer 4).
+-- waiver -> not_publishable (v0.241 answer 4).
 create or replace function public.forms_publish(p_form_id uuid, p_expected_version integer)
 returns jsonb
 language plpgsql
@@ -1743,9 +1743,9 @@ revoke execute on function public.forms_open_times(uuid, date, date) from public
 grant  execute on function public.forms_open_times(uuid, date, date) to authenticated;
 
 -- 7j. forms_bookings_between(school or null, from, to) - free-class
--- bookings for the Calendar (v0.138): the child's FIRST name only, class,
+-- bookings for the Calendar (v0.234): the child's FIRST name only, class,
 -- time, form, status, and whether that class still runs then (false = the
--- amber "Class cancelled — call the family", v0.145 answer 6).
+-- amber "Class cancelled — call the family", v0.241 answer 6).
 create or replace function public.forms_bookings_between(p_location_code text, p_from date, p_to date)
 returns jsonb
 language plpgsql
@@ -1808,7 +1808,7 @@ $$;
 revoke execute on function public.forms_submission_signature(uuid) from public, anon, authenticated, service_role;
 grant  execute on function public.forms_submission_signature(uuid) to authenticated;
 
--- 7l. forms_kiosk_token(form) - "Open kiosk mode on this device" (v0.145
+-- 7l. forms_kiosk_token(form) - "Open kiosk mode on this device" (v0.241
 -- answer 3): a one-form token, 12 hours, that raises the public page's
 -- rate limit for that tablet. Only its SHA-256 is kept. The app then locks
 -- the dashboard on that device (Lock now). Staff and admins; Live forms.
@@ -2050,7 +2050,7 @@ revoke execute on function public.forms_public_submit(text, text, uuid, integer,
 grant  execute on function public.forms_public_submit(text, text, uuid, integer, jsonb, jsonb, jsonb, text, text) to forms_registrar;
 
 -- 9c. forms_public_email_result(slug, submission_key, which, ok) - the
--- Function reports an email it could not send (v0.145 answer 2). Only the
+-- Function reports an email it could not send (v0.241 answer 2). Only the
 -- form the key belongs to; one row per (sign-up, which).
 create or replace function public.forms_public_email_result(p_slug text, p_submission_key uuid, p_which text, p_ok boolean)
 returns jsonb

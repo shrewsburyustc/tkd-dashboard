@@ -1,6 +1,6 @@
 // text.js — every word the Forms screens show, in one place.
 // Why it exists: same as the Calendar's text.js — one spot to check the wording against the
-// approved mockup (docs/Prospects/TKD-Forms-Mockups.html, rulebook v0.139 / v0.145 / v0.146) and
+// approved mockup (docs/Prospects/TKD-Forms-Mockups.html, rulebook v0.235 / v0.241 / v0.242) and
 // to change it later. The data layer only returns codes ('stale', 'waiverEmpty' …); this file
 // turns them into plain English.
 import { formatDate } from '../../lib/schedule/versions.js';

@@ -4,10 +4,13 @@
 //   'signedOut' → SignIn screen
 //   'setPin'    → Set your PIN (right after a password sign-in when the account has no PIN)
 //   'home'      → the dashboard (Shell + the open page: Home, Testing, or — admins, from the account
-//                 menu — Staff accounts), maybe with a dialog on top
+//                 menu — Staff accounts or Settings), maybe with a dialog on top
 //   'locked'    → LockScreen (the dashboard stays in memory, hidden, behind it)
 // Pages have their own address ("#testing", "#staff-accounts"; rulebook v0.83) so the browser's
 // Back / Forward, reload and bookmarks work per page — see "Browser Back / Forward" below.
+// Phase 2 adds two: a testing event's page ("#testing/event/<id>") and Settings ("#settings").
+// Phase 3 adds the event page's Grading tab ("#testing/event/<id>/grading") and the leave guard:
+// while grading results are "Not saved", leaving the event page asks first (contract 0010 §4.9).
 //
 // Every screen change goes through the small functions below, so the rules (7-day password
 // check, access check, per-account idle lock, the database lock) live in one readable place.
@@ -39,6 +42,7 @@ import Calendar from './screens/Calendar.jsx';
 import Forms from './screens/Forms.jsx';
 import Prospects from './screens/Prospects.jsx';
 import StaffAccounts from './screens/StaffAccounts.jsx';
+import Settings from './screens/Settings.jsx';
 import LockScreen from './screens/LockScreen.jsx';
 import SetPinScreen from './screens/SetPinScreen.jsx';
 import ChangePinDialog from './screens/ChangePinDialog.jsx';
@@ -74,6 +78,7 @@ const SECTION_TITLES = {
   forms: 'Forms · U.S. Taekwondo Center',
   prospects: 'Prospects · U.S. Taekwondo Center',
   staffAccounts: 'Staff accounts · U.S. Taekwondo Center',
+  settings: 'Settings · U.S. Taekwondo Center',
 };
 
 // Toast texts (guidelines 8: 5 seconds, bottom-right — bottom-center on phones — no Undo for these).
@@ -82,6 +87,39 @@ const TOASTS = {
   pinChanged: 'PIN changed',
   passwordChanged: 'Password changed',
 };
+
+// ----- Page addresses added in phase 2 -----
+// pageAddress.js knows Home, Testing and Staff accounts. Two more addresses are read here:
+//   #testing/event/<id>   one testing event's page (contract 0005 §6) — section 'testing' + eventId
+//   #testing/event/<id>/grading   the same page on its Grading tab (contract 0010 §4.1)
+//   #settings             Settings (admins, rulebook v0.135)
+// An event id is the database's uuid; the pattern only allows letters, digits and dashes, so
+// nothing odd from the address bar ever reaches the page.
+const EVENT_HASH = /^#testing\/event\/([A-Za-z0-9-]{1,64})(\/grading)?$/;
+const SETTINGS_HASH = '#settings';
+
+// The page (and event, and its tab) the address bar points at: { section, eventId, eventTab }.
+function routeFromAddress() {
+  const hash = window.location.hash;
+  if (hash === SETTINGS_HASH) return { section: 'settings', eventId: null, eventTab: 'students' };
+  const match = EVENT_HASH.exec(hash);
+  if (match) return { section: 'testing', eventId: match[1], eventTab: match[2] ? 'grading' : 'students' };
+  return { section: pageFromAddress(), eventId: null, eventTab: 'students' };
+}
+
+// true when the address bar shows something no page knows (it is then tidied to Home).
+function routeIsUnknown() {
+  const hash = window.location.hash;
+  return addressIsUnknown() && hash !== SETTINGS_HASH && !EVENT_HASH.test(hash);
+}
+
+// The address for a page (and, on Testing, an open event and its tab).
+function addressForRoute(section, eventId = null, eventTab = 'students') {
+  const base = `${window.location.pathname}${window.location.search}`;
+  if (section === 'settings') return `${base}${SETTINGS_HASH}`;
+  if (section === 'testing' && eventId) return `${base}#testing/event/${eventId}${eventTab === 'grading' ? '/grading' : ''}`;
+  return addressFor(section);
+}
 
 // If telling the database "lock this sign-in" fails (offline), try again this often until it works.
 const LOCK_RETRY_EVERY_MS = 30 * 1000;
@@ -118,15 +156,20 @@ export default function App() {
   // (it opens from the account menu), so no rail item is highlighted while it shows (v0.76).
   // It starts from the address in the browser bar (v0.83): a reload, a bookmark or a link to
   // ".../#testing" opens Testing once the person is signed in and unlocked.
-  const [section, setSection] = useState(pageFromAddress);
+  const [section, setSection] = useState(() => routeFromAddress().section);
+  // The open testing event (#testing/event/<id>), or null for the Testing tabs.
+  const [eventId, setEventId] = useState(() => routeFromAddress().eventId);
+  // The event page's tab: 'students' | 'grading' (phase 3).
+  const [eventTab, setEventTab] = useState(() => routeFromAddress().eventTab);
   const [accountDialog, setAccountDialog] = useState(null); // null | 'changePin' | 'changePassword'
   const [testingModalOpen, setTestingModalOpen] = useState(false); // a Testing dialog is showing
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false); // a Schedule dialog is showing
   const [calendarModalOpen, setCalendarModalOpen] = useState(false); // a Calendar dialog is showing
   const [formsModalOpen, setFormsModalOpen] = useState(false); // a Forms dialog is showing
   const [prospectsModalOpen, setProspectsModalOpen] = useState(false); // a Prospects dialog is showing
-  const [prospectsCount, setProspectsCount] = useState(0); // the rail badge: new sign-ups I haven't opened (v0.191)
+  const [prospectsCount, setProspectsCount] = useState(0); // the rail badge: new sign-ups I haven't opened (v0.244)
   const [staffModalOpen, setStaffModalOpen] = useState(false); // a Staff accounts dialog is showing
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false); // a Settings dialog is showing
   const [toast, setToast] = useState(null); // { id, text, action, icon } or null
 
   // Focus memory for the lock screen (see "Locking and unlocking" below).
@@ -136,6 +179,12 @@ export default function App() {
   // Set your PIN uses it too: { element: null } = "focus the initials button when Home shows".
   const phaseRef = useRef(phase);
   const sectionRef = useRef(section); // same idea, for the Back / Forward listener below
+  const eventIdRef = useRef(eventId);
+  const eventTabRef = useRef(eventTab);
+  // The leave guard (contract 0010 §4.9): the open event page puts a function here while it is
+  // open. fn(proceed) answers false = "nothing unsaved, go ahead", or true = "I asked the person
+  // first" — the page then calls proceed() itself if they choose Leave anyway.
+  const leaveGuardRef = useRef(null);
   // true while signOut() below is signing this tab out itself, so the SIGNED_OUT event that
   // Supabase sends back doesn't treat it as "signed out somewhere else" (which resets the address).
   const signingOutHereRef = useRef(false);
@@ -162,6 +211,7 @@ export default function App() {
     if (noticeText === null || noticeText === NOTICES.noAccess) {
       window.history.replaceState(null, '', addressFor('home'));
       setSection('home');
+      setEventId(null);
     }
     // A new id each time makes the SignIn screen start fresh (see `key` below).
     setNotice(noticeText ? { id: Date.now(), text: noticeText } : null);
@@ -275,6 +325,7 @@ export default function App() {
         if (!signingOutHereRef.current) {
           window.history.replaceState(null, '', addressFor('home'));
           setSection('home');
+          setEventId(null);
         }
         setProfile(null);
         setAccountDialog(null);
@@ -497,11 +548,48 @@ export default function App() {
   // Same idea: a toast belongs to the section it was made in.
   // Each change of page is a step in the browser's history (v0.83), so Back / Forward walk
   // through the pages. Clicking the page you're already on adds nothing.
-  const navigate = useCallback((id) => {
+  // nextEventId: on Testing, the event whose page opens (null = the Testing tabs).
+  // replace: true swaps the current step instead of adding one (used when an event page closes by
+  // itself because the event belongs to the other school — Back then doesn't bring it back).
+  // tab: the event page's tab ('students' unless said otherwise — opening an event lands on Students).
+  const navigate = useCallback((id, nextEventId = null, { replace = false, tab = 'students' } = {}) => {
     setToast(null);
+    const changed =
+      id !== sectionRef.current || nextEventId !== eventIdRef.current || (nextEventId !== null && tab !== eventTabRef.current);
     // { tkdPage: true } marks the step as "added by the dashboard while signed in" (see below).
-    if (id !== sectionRef.current) window.history.pushState({ tkdPage: true }, '', addressFor(id));
+    if (changed && replace) window.history.replaceState({ tkdPage: true }, '', addressForRoute(id, nextEventId, tab));
+    else if (changed) window.history.pushState({ tkdPage: true }, '', addressForRoute(id, nextEventId, tab));
     setSection(id);
+    setEventId(nextEventId);
+    setEventTab(tab);
+  }, []);
+
+  // ----- The leave guard (contract 0010 §4.9) -----
+  const setLeaveGuard = useCallback((fn) => {
+    leaveGuardRef.current = fn;
+  }, []);
+  // Runs `action` now, unless the open event page has grading results that aren't saved: then it
+  // asks first ("2 results aren't saved") and runs the action only on "Leave anyway".
+  // Only for steps the PERSON starts; automatic sign-outs and the screen lock are never asked.
+  const guarded = useCallback((action) => {
+    const fn = leaveGuardRef.current;
+    if (fn && fn(action)) return;
+    action();
+  }, []);
+
+  // The event page's ways in and out (Testing.jsx → EventsTab / EventPage).
+  const openEvent = useCallback((id) => navigate('testing', id), [navigate]);
+  // { replace: true } = the page closes itself (its event belongs to the other school, after a
+  // school change that was already guarded) — not asked again.
+  const closeEvent = useCallback(
+    (options) => (options?.replace ? navigate('testing', null, options) : guarded(() => navigate('testing', null, options))),
+    [navigate, guarded],
+  );
+  // Students ↔ Grading: the same page, so never guarded, and no new history step (Back still
+  // leaves the event page; a reload keeps the tab).
+  const changeEventTab = useCallback((tab) => {
+    if (eventIdRef.current) window.history.replaceState(window.history.state, '', addressForRoute('testing', eventIdRef.current, tab));
+    setEventTab(tab);
   }, []);
 
   // ----- Browser Back / Forward (rulebook v0.83) -----
@@ -516,7 +604,9 @@ export default function App() {
   //     marker) is kept: after signing in, that page opens.
   useEffect(() => {
     sectionRef.current = section;
-  }, [section]);
+    eventIdRef.current = eventId;
+    eventTabRef.current = eventTab;
+  }, [section, eventId, eventTab]);
   // Once someone is in the dashboard, the step they're on counts as "added while signed in" too —
   // also when they arrived by a bookmark or a link — so Back on a later sign-in screen can't
   // return to it (see below).
@@ -524,10 +614,10 @@ export default function App() {
     if (phase === 'home' && !window.history.state?.tkdPage && !window.history.state?.tkdDialog) {
       window.history.replaceState({ ...(window.history.state ?? {}), tkdPage: true }, '');
     }
-  }, [phase, section]);
+  }, [phase, section, eventId]);
   useEffect(() => {
     // An address we don't know (e.g. "#xyz") shows Home; tidy the bar to match.
-    if (addressIsUnknown()) window.history.replaceState(null, '', addressFor('home'));
+    if (routeIsUnknown()) window.history.replaceState(null, '', addressFor('home'));
     // A reload while a dialog was open lands on that dialog's step; no dialog is open now, so it
     // becomes a plain page step (otherwise Forward could get stuck on it).
     if (window.history.state?.tkdDialog) window.history.replaceState({ tkdPage: true }, '');
@@ -538,29 +628,47 @@ export default function App() {
         window.history.back();
         return;
       }
-      const target = pageFromAddress();
-      if (addressIsUnknown()) window.history.replaceState(null, '', addressFor(target));
-      if (target === sectionRef.current) return;
+      const route = routeFromAddress();
+      const target = route.section;
+      if (routeIsUnknown()) window.history.replaceState(null, '', addressFor(target));
+      if (target === sectionRef.current && route.eventId === eventIdRef.current) {
+        // Same page; only the tab may differ (an address typed by hand): switch it, never asked.
+        if (route.eventId && route.eventTab !== eventTabRef.current && phaseRef.current === 'home') setEventTab(route.eventTab);
+        return;
+      }
+      const here = addressForRoute(sectionRef.current, eventIdRef.current, eventTabRef.current);
       // The account menu is open: Back closes it (AccountMenu.jsx) and the page stays.
       if (backIsClaimed()) {
-        window.history.pushState({ tkdPage: true }, '', addressFor(sectionRef.current));
+        window.history.pushState({ tkdPage: true }, '', here);
         return;
       }
       if (phaseRef.current === 'home') {
+        // Leaving an event page with unsaved grading results: ask first, and put the current
+        // address back (contract 0010 §4.9). "Leave anyway" goes where Back / Forward pointed.
+        const fn = leaveGuardRef.current;
+        if (fn && fn(() => navigate(target, route.eventId, { tab: route.eventTab }))) {
+          window.history.pushState({ tkdPage: true }, '', here);
+          return;
+        }
         setToast(null);
         setSection(target);
+        setEventId(route.eventId);
+        setEventTab(route.eventTab);
       } else if (phaseRef.current === 'locked') {
-        window.history.pushState({ tkdPage: true }, '', addressFor(sectionRef.current));
+        window.history.pushState({ tkdPage: true }, '', here);
       } else if (window.history.state?.tkdPage) {
         window.history.replaceState(null, '', addressFor('home'));
         setSection('home');
+        setEventId(null);
       } else {
         setSection(target); // a link or typed address: opens after signing in
+        setEventId(route.eventId);
+        setEventTab(route.eventTab);
       }
     }
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [navigate]);
 
   // ----- Testing helpers -----
   // Re-read "who am I?" — e.g. the database said "not allowed", so this person may no longer be
@@ -585,7 +693,7 @@ export default function App() {
   // ----- Drawing -----
   const isSignedIn = (phase === 'home' || phase === 'locked') && profile !== null;
 
-  // The Prospects badge (rulebook v0.140; per person, v0.191): the New / Booked prospects of the
+  // The Prospects badge (rulebook v0.236; per person, v0.244): the New / Booked prospects of the
   // school in the switcher (both on Both) this person hasn't opened. Refreshed when the page or
   // school changes, after Prospects changes something, and every 2 minutes while unlocked.
   const badgeLocation = location === 'Both' ? null : LOCATION_CODE[location] ?? null;
@@ -601,7 +709,7 @@ export default function App() {
   }, [phase, profile, section, refreshBadge]);
   const dialogOpen = phase === 'home' && profile !== null && accountDialog !== null;
   // The page behind a dialog can't be clicked or reached with Tab (account or Testing dialog).
-  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || scheduleModalOpen || calendarModalOpen || formsModalOpen || prospectsModalOpen || staffModalOpen));
+  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || scheduleModalOpen || calendarModalOpen || formsModalOpen || prospectsModalOpen || staffModalOpen || settingsModalOpen));
 
   return (
     <div className="app-root">
@@ -626,18 +734,24 @@ export default function App() {
             hidden={phase === 'locked'}
             inert={shellInert}
             currentSection={section}
-            onNavigate={navigate}
+            // The person's own ways off the event page are guarded (contract 0010 §4.9).
+            onNavigate={(id) => guarded(() => navigate(id))}
             location={location}
-            onLocationChange={changeLocation}
+            onLocationChange={(next) => guarded(() => changeLocation(next))}
             profile={profile}
             deviceLocation={deviceLocation}
-            onDeviceLocationChange={handleDeviceLocationChange}
+            onDeviceLocationChange={(next) => {
+              // Asked only when it moves the switcher to another school.
+              if (next === location) handleDeviceLocationChange(next);
+              else guarded(() => handleDeviceLocationChange(next));
+            }}
             onLockNow={lockNow}
             onChangePin={() => openAccountDialog('changePin')}
             onSetPin={() => setPhase('setPin')}
             onChangePassword={() => openAccountDialog('changePassword')}
-            onStaffAccounts={() => navigate('staffAccounts')}
-            onSignOut={() => signOut()}
+            onStaffAccounts={() => guarded(() => navigate('staffAccounts'))}
+            onSettings={() => guarded(() => navigate('settings'))}
+            onSignOut={() => guarded(() => signOut())}
             badges={{ prospects: prospectsCount }}
           >
             {section === 'home' && <Home location={location} />}
@@ -647,6 +761,12 @@ export default function App() {
                 onLocationChange={changeLocation}
                 // For showing or hiding controls only — the database decides what may change.
                 isAdmin={profile.role === 'admin'}
+                eventId={eventId}
+                eventTab={eventTab}
+                onEventTab={changeEventTab}
+                onLeaveGuardChange={setLeaveGuard}
+                onOpenEvent={openEvent}
+                onCloseEvent={closeEvent}
                 screenLocked={phase === 'locked'}
                 onNoAccess={handleNoAccess}
                 onRefreshProfile={refreshProfile}
@@ -716,6 +836,16 @@ export default function App() {
                 showToast={showToast}
                 onModalOpenChange={setStaffModalOpen}
                 onRefreshProfile={refreshProfile}
+              />
+            )}
+            {section === 'settings' && (
+              <Settings
+                profile={profile}
+                screenLocked={phase === 'locked'}
+                showToast={showToast}
+                onModalOpenChange={setSettingsModalOpen}
+                onRefreshProfile={refreshProfile}
+                onNoAccess={handleNoAccess}
               />
             )}
           </Shell>

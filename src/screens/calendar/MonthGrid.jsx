@@ -1,4 +1,4 @@
-// MonthGrid.jsx — the Month view's grid of day boxes (approved mockup screen 1, rulebook v0.138).
+// MonthGrid.jsx — the Month view's grid of day boxes (approved mockup screen 1, rulebook v0.234).
 // Why it exists: the Calendar opens on the month. Each day box is ONE button (click → that day
 // shows in the side panel) with a short summary written out inside:
 //   - closures first (amber, ti-alert-triangle: they are a warning — classes are cancelled)

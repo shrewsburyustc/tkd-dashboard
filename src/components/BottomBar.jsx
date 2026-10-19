@@ -1,7 +1,7 @@
 // BottomBar.jsx — the navigation bar along the bottom of the screen on phones (<640px).
 // Why it exists: on a phone the left rail would waste width, and the bottom is within
 // thumb reach. Labels are always visible. Hidden on tablet and PC (see app.css).
-// With six sections there isn't room for all of them (rulebook v0.140): the bar shows the
+// With six sections there isn't room for all of them (rulebook v0.236): the bar shows the
 // sections marked phone: true in navItems.js (Home, Calendar, Prospects) and More (ti-menu-2),
 // which opens a sheet with the others (Testing, Schedule, Forms). More is highlighted while one
 // of those is open. Prospects carries the same count badge as on the rail.

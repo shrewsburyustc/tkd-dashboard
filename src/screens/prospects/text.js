@@ -1,6 +1,6 @@
 // text.js — every word the Prospects screens show, in one place.
 // Why it exists: same as the Forms and Calendar text.js — one spot to check the wording against
-// the approved mockup (docs/Prospects/TKD-Prospects-Mockups.html rev 3, rulebook v0.140 / v0.191)
+// the approved mockup (docs/Prospects/TKD-Prospects-Mockups.html rev 3, rulebook v0.236 / v0.244)
 // and to change it later. The data layer only returns codes; this file turns them into words.
 import { formatDate } from '../../lib/schedule/versions.js';
 import { formatTime, parseTime } from '../../lib/schedule/time.js';
@@ -60,7 +60,7 @@ export const joinedLine = (d) => `Joined ${shortDate(d).slice(4)}`;
 export const cameLine = (b) => `Came ${shortDate(b.date).slice(4)}`;
 export const openLabel = (name, unopened = false) => `Open ${name}${unopened ? ', new — not opened yet' : ''}`;
 
-// ----- Progress track (v0.214) -----
+// ----- Progress track (v0.246) -----
 export const COL_PROGRESS = 'Progress';
 export const STEP_SIGNED = 'Signed up';
 export const STEP_BOOKED = 'Class booked';
@@ -93,7 +93,7 @@ export const nextWords = (name) => `next: ${name}`;
 export const stoppedWords = (name) => `stopped at ${name}`;
 export const STEP_STATE = { done: ', done', next: ', next', stopped: ', stopped', off: ', stopped', todo: ', not yet' };
 
-// ----- List / Board switch and the Board (v0.214) -----
+// ----- List / Board switch and the Board (v0.246) -----
 export const VIEW = 'View';
 export const VIEW_LIST = 'List';
 export const VIEW_BOARD = 'Board';

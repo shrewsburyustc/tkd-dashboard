@@ -3,13 +3,13 @@
 // the same answers — which classes run that day (from the Schedule), which are cancelled, which
 // events and closures cover it — so they are computed once, here, and tested in checks.mjs.
 //
-// Rules (rulebook v0.138 / v0.143):
+// Rules (rulebook v0.234 / v0.239):
 //   - Classes come from the Schedule: on a date, a school uses the schedule with the LATEST
 //     start date on or before that date (nothing is copied into the Calendar).
 //   - A whole-day closure cancels every class of its school(s) that day (NULL school = both).
 //   - A "some classes" closure keeps a RECORD of each cancelled class (day, time, classes). A
 //     class is cancelled when it matches a record exactly. A record that matches nothing any
-//     more ("the schedule changed later") is shown as an amber line (v0.143 answer 2).
+//     more ("the schedule changed later") is shown as an amber line (v0.239 answer 2).
 //   - Events and closures cover every date from their first to their last day.
 // Dates are 'YYYY-MM-DD' text (Massachusetts dates); times are minutes after midnight.
 import { addDays, weekdayOf } from '../schedule/versions.js';
@@ -85,9 +85,9 @@ export function recordMatches(record, slot, code) {
 //   ctx.events         [{ id, locationCode, typeId, title, startsOn, endsOn, allDay, start, end, notes, version }]
 //   ctx.closures       [{ id, locationCode, startsOn, endsOn, reason, wholeDay, version }]
 //   ctx.closureClasses Map closureId → [{ locationCode, weekday, start, end, classIds, classNames, slotId }]
-//   ctx.testingEvents  [{ id, locationCode, title, date, start }] — read from Testing (v0.143 answer 1)
+//   ctx.testingEvents  [{ id, locationCode, title, date, start }] — read from Testing (v0.239 answer 1)
 //   ctx.bookings       [{ id, locationCode, classId, className, date, start 'HH:MM', end, childFirstName,
-//                        formName, status, classRunning }] — free classes from Forms (v0.145 answer 6)
+//                        formName, status, classRunning }] — free classes from Forms (v0.241 answer 6)
 // Returns {
 //   date, weekday,
 //   schools:  [{ code, name, classes: [{ slot, name, colorKeys, cancelled }] }]   (by start time)

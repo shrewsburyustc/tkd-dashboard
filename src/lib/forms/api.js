@@ -8,7 +8,7 @@
 //   'not_found'       the form no longer exists (or, for kiosk, isn't Live)
 //   'stale'           someone else changed it since this screen loaded it
 //   'duplicate_slug'  another form already uses that link
-//   'not_publishable' the waiver has no wording yet (v0.145 answer 4)
+//   'not_publishable' the waiver has no wording yet (v0.241 answer 4)
 //   'invalid'         the values were refused
 //   'closed'          (Fill in) the form was closed meanwhile
 //   'form_changed'    (Fill in) the form was published again meanwhile
@@ -185,7 +185,7 @@ export async function deleteForm({ id, expectedVersion }) {
 
 // offers: [{ classId, defaultLimit, daysAhead, minHoursAhead }]
 // limits: [{ classId, weekday, start 'HH:MM', spotLimit }]   (0 = this time isn't offered)
-// Takes effect right away, also on a Live form (rulebook v0.146).
+// Takes effect right away, also on a Live form (rulebook v0.242).
 export async function setBooking({ id, expectedVersion, offers, limits }) {
   return callRpc('forms_set_booking', {
     p_form_id: id,

@@ -623,7 +623,7 @@ begin
   begin truncate public.schedule_versions cascade; raise exception 'TEST FAILED: 16e truncate allowed'; exception when raise_exception then null; end;
 
   -- -------------------------------------------------------------------
-  -- Test 17: combined classes (several classes in ONE time slot, v0.141)
+  -- Test 17: combined classes (several classes in ONE time slot, v0.237)
   -- -------------------------------------------------------------------
   set local role authenticated;
   perform set_config('request.jwt.claims', v_c_a1, true);

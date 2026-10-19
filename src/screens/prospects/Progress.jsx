@@ -1,4 +1,4 @@
-// Progress.jsx — the progress track, drawn two ways (rulebook v0.214, mockup screens 11 and 13).
+// Progress.jsx — the progress track, drawn two ways (rulebook v0.246, mockup screens 11 and 13).
 // Why it exists: one look shows where a child is: Signed up → Class booked → Came → Joined.
 //   Track     the small dots + one line, in each List row (and on the phone's list cards)
 //   BigTrack  the large track at the top of the side panel: each step's name and date under it,

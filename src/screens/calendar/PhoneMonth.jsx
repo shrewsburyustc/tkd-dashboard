@@ -2,7 +2,7 @@
 // Why it exists: a phone is too narrow for written-out day boxes, so each day is a 44px-tall
 // button with up to three colored dots underneath its number (amber = a closure, then the colors
 // of that day's events). The chosen day is listed below the month (DayPanel), which is also the
-// phone's "day view" — the phone has no Week view (v0.138).
+// phone's "day view" — the phone has no Week view (v0.234).
 //
 // Props: weeks, month, today, selected, infoFor, typeColor, onPick — as MonthGrid.
 import { colorOf } from '../../lib/schedule/colors.js';

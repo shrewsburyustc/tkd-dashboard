@@ -8,7 +8,7 @@
 //   c.status   'loading' | 'ready' | 'error' (first load failed) | 'noAccess'
 //   c.data     { today, schools: [{ code, versions, slots, classes, colors }], types, events,
 //                closures, closureClasses (Map), testingEvents, bookings } once 'ready' (else null)
-//   bookings = free-class bookings from Forms (v0.145 answer 6). If they can't be read (e.g. the
+//   bookings = free-class bookings from Forms (v0.241 answer 6). If they can't be read (e.g. the
 //   Forms tables aren't in the database yet) the Calendar still shows, without them.
 //   c.reload() quiet reload; resolves 'ok' | 'error' | 'noAccess'
 //

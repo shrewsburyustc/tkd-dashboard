@@ -149,7 +149,7 @@ group('backend: who may do what, check order', () => {
   assert.equal(t.call('forms_create', { p_location_code: 'worcester', p_kind: 'blank', p_name: 'X', p_slug: 'admin' }).status, 'invalid');
   const a = t.call('forms_create', { p_location_code: 'worcester', p_kind: 'free_class', p_name: 'X', p_slug: 'xyz' });
   assert.equal(t.call('forms_create', { p_location_code: 'shrewsbury', p_kind: 'blank', p_name: 'Y', p_slug: 'xyz' }).status, 'duplicate_slug');
-  // the empty waiver can't be published (v0.145 answer 4)
+  // the empty waiver can't be published (v0.241 answer 4)
   assert.equal(t.call('forms_publish', { p_form_id: a.id, p_expected_version: a.version }).status, 'not_publishable');
   assert.equal(t.call('forms_publish', { p_form_id: a.id, p_expected_version: a.version + 5 }).status, 'stale');
   assert.equal(t.call('forms_set_status', { p_form_id: a.id, p_expected_version: a.version, p_status: 'live' }).status, 'not_publishable');
@@ -187,7 +187,7 @@ group('backend: free-class times, shared limit, booking', () => {
   const again = sendFor(t, f, [], key);
   assert.equal(again.repeat, true);
   assert.equal(again.id, first.id);
-  // a second live form with a lower limit lowers the shared one (v0.145 answer 5)
+  // a second live form with a lower limit lowers the shared one (v0.241 answer 5)
   const g = liveFreeClass(t, 'free-class-two');
   const g2 = t.call('forms_set_booking', { p_form_id: g.id, p_expected_version: g.version, p_offers: [{ class_id: white, default_limit: 1, days_ahead: 14, min_hours_ahead: 3 }], p_limits: [] });
   assert.equal(g2.status, 'ok');
@@ -220,7 +220,7 @@ group('backend: closures hide times; Calendar list flags cancelled classes', () 
   assert.equal(t.call('forms_bookings_between', { p_location_code: null, p_from: TODAY, p_to: '2027-04-30' }).status, 'invalid'); // > 62 days
 });
 
-group('backend: signatures deleted 90 days after the free class (v0.146)', () => {
+group('backend: signatures deleted 90 days after the free class (v0.242)', () => {
   const t = makeBackend();
   const f = liveFreeClass(t);
   const sent = sendFor(t, f, [{ child: 0, class_id: white, date: '2027-01-13', starts_at: '16:00' }]);

@@ -6,7 +6,13 @@
 // of this project ("worktrees") inside .claude/worktrees/. Without them, a preview started
 // in the main folder would also scan and watch those copies (their index.html files and
 // node_modules), which makes it slow and can cause errors.
+//
+// The build has TWO pages (contract 0005 §4.1): index.html (the staff dashboard) and
+// register.html (the public family registration form, /register/<code>). On Cloudflare,
+// public/_redirects serves register.html for every /register/<code> address; on this PC the
+// small plugin below does the same for `npm run dev`, `dev:preview-mode` and `vite preview`.
 import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -17,14 +23,44 @@ import react from '@vitejs/plugin-react';
 // preview inside a worktree ignore every edit (it kept showing the code from when it started).
 const worktreesDir = fileURLToPath(new URL('./.claude/worktrees/', import.meta.url)).replace(/\\/g, '/').toLowerCase();
 
+// /register, /register/ and /register/<code> (with or without ?query) → register.html,
+// like public/_redirects does on Cloudflare. Everything else is left alone.
+function registerPageRewrite() {
+  const rewrite = (req, _res, next) => {
+    const [path, query] = (req.url ?? '').split('?');
+    if (path === '/register' || path.startsWith('/register/')) {
+      req.url = '/register.html' + (query !== undefined ? `?${query}` : '');
+    }
+    next();
+  };
+  return {
+    name: 'register-page-rewrite',
+    configureServer(server) {
+      server.middlewares.use(rewrite);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(rewrite);
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), registerPageRewrite()],
+  build: {
+    rollupOptions: {
+      // The two pages of the build.
+      input: {
+        main: resolve(fileURLToPath(new URL('.', import.meta.url)), 'index.html'),
+        register: resolve(fileURLToPath(new URL('.', import.meta.url)), 'register.html'),
+      },
+    },
+  },
   server: {
     // Don't watch the worktree copies for changes.
     watch: { ignored: (path) => path.replace(/\\/g, '/').toLowerCase().startsWith(worktreesDir) },
   },
   optimizeDeps: {
-    // Only look for the app's libraries starting from our own index.html.
-    entries: ['index.html'],
+    // Only look for the app's libraries starting from our own two pages.
+    entries: ['index.html', 'register.html'],
   },
 });

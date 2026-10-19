@@ -1,15 +1,15 @@
 # Calendar — status
 
-Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Calendar-Build-Plan.md` (approved 2026-10-17). Rulebook v0.138 (design) and v0.143 (plan answers). Approved mockup: `TKD-Calendar-Mockups.html` rev 1.
+Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Calendar-Build-Plan.md` (approved 2026-10-17). Rulebook v0.234 (design) and v0.239 (plan answers). Approved mockup: `TKD-Calendar-Mockups.html` rev 1.
 
 **Nothing is live.** Migration 0008 has not been applied to Supabase, and nothing has been pushed. 0008 can only go live after 0005 (Color Belt phase 2), 0006 (Star testing) and 0007 (Schedule).
 
 | Step | State |
 |---|---|
-| C0 Plan + questions Q1–Q4 | Done 2026-10-17 (v0.143) |
+| C0 Plan + questions Q1–Q4 | Done 2026-10-17 (v0.239) |
 | C1 Migration 0008 + tests + security review | Done 2026-10-18; PGlite 67/67 |
 | C2 Screens + preview data + design review | Done 2026-10-18 |
-| C3 Jeffrey tries the preview | Done 2026-10-18 — six mockup differences decided (rulebook v0.144) |
+| C3 Jeffrey tries the preview | Done 2026-10-18 — six mockup differences decided (rulebook v0.240) |
 | C4 Jeffrey pastes 0008 (after 0005–0007 are live), then read-only checks | Waiting for 0005, 0006, 0007 live |
 | C5 Real check: one real closure and one real event | Waiting |
 | C6 Commit + merge (Main session) | Waiting |
@@ -54,7 +54,7 @@ Accepted as notes, to handle in C2 or later:
   - `pageAddress.js` (`#calendar`)
   - `App.jsx`, `main.jsx`, `mockClient.js` (adds `lte` / `gte` / `in` reads)
   - `schedule/TimeGrid.jsx` (`layoutDay` exported)
-- **Testing events (v0.143 answer 1):** `loadTestingEvents()` returns nothing until 0005 and 0006 exist. Then it reads them, and clicking one should open Testing.
+- **Testing events (v0.239 answer 1):** `loadTestingEvents()` returns nothing until 0005 and 0006 exist. Then it reads them, and clicking one should open Testing.
 
 ## Design review (2026-10-18)
 
@@ -78,7 +78,7 @@ No High findings. Fixed:
   - the notes box uses the page font;
   - a style name no longer clashes with Testing's.
 
-## C3 decisions (Jeffrey, 2026-10-18, rulebook v0.144)
+## C3 decisions (Jeffrey, 2026-10-18, rulebook v0.240)
 
 1. Closure dialog: **School moved above "What's cancelled"** (built).
 2. The closure reason in the day box: kept as built.

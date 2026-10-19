@@ -9,7 +9,7 @@ import { normalizeName } from '../testing/names.js';
 export const TITLE_MAX = 80; // event title, closure reason
 export const TYPE_NAME_MAX = 40; // event type name
 export const NOTES_MAX = 1000; // "More details"
-export const MAX_DAYS = 31; // an event or closure runs at most 31 days (rulebook v0.143)
+export const MAX_DAYS = 31; // an event or closure runs at most 31 days (rulebook v0.239)
 export const MAX_TYPES = 50;
 const FIRST_DAY = '2020-01-01';
 const LAST_DAY = '2100-12-31';

@@ -1,6 +1,6 @@
 // PlanDialog.jsx — "Plan a schedule change" and "Edit planned schedule" (mockup screens 4 and 5).
 // Why it exists: admins plan any number of future schedules, each with its own start date
-// (v0.137). A new one starts as a copy of the schedule running just before its date, or blank.
+// (v0.233). A new one starts as a copy of the schedule running just before its date, or blank.
 // Editing a planned one changes its name and/or start date (the ⋯ menu's Change start date
 // and Rename open this same dialog).
 import { IconCheck } from '@tabler/icons-react';

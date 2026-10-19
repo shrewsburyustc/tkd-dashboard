@@ -1,6 +1,6 @@
 // api.js — every call the Prospects screens make to the database, in one place.
 // Why it exists: like forms/api.js — the screens never need table names or the argument names of
-// the database functions (migration 0010). Every function returns a plain object with a `status`
+// the database functions (migration 0012). Every function returns a plain object with a `status`
 // and NEVER throws:
 //   'ok'              it worked (plus the result fields)
 //   'no_access'       this sign-in can't see data right now (locked, password too old …)
