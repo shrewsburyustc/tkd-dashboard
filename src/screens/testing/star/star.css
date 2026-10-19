@@ -1,0 +1,710 @@
+/*
+  star.css — the styles for Star testing → Rubrics and prices (approved mockups
+  docs/Testing/Star Testing/TKD-StarTesting-Rubrics-Mockups.html, v0.66, and the phase 1 header,
+  Chooser mockups screen 5, v0.177).
+  Why it exists: Star's own pieces, kept apart from Color Belt's testing.css so the two projects
+  don't edit the same file. It REUSES testing.css (loaded for the whole app in main.jsx) for the
+  shared pieces — the page frame (.testing), tabs (.ttabs), the list box (.clist), icon buttons
+  (.tib), grips (.grip), tags (.ttag), dialogs (.tdialog), price fields (.money), the menu
+  (.tmenu) — and only adds what Star needs. Every class here starts with "st-".
+  Every value comes from tokens.css or the 4px grid.
+
+  Screen-size rules used below (the same as testing.css / app.css):
+    Phone          (max-width: 639.98px)
+    Touch screens  (pointer: coarse)  → 48px rows, 44px tap areas (guidelines 2.5)
+    Hover          (hover: hover)     → mouse-only highlights
+*/
+
+/* ===== Page header: "← Testing", "Star testing" ===== */
+.st-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 24px;
+  margin-bottom: 2px;
+}
+
+/* The tab is a button: drawn exactly like Color Belt's tabs (the same rule lives in
+   testing-events.css, which this page can't count on being loaded) */
+.st-page .ttabs button.ttab {
+  padding: 0;
+  border-width: 0 0 2px;
+  border-style: solid;
+  border-color: transparent;
+  border-radius: 0;
+  background: none;
+  font-family: inherit;
+}
+
+.st-page .ttabs button.ttab.is-current {
+  border-bottom-color: var(--color-blue);
+}
+
+/* Two gray lines in a row (staff: "View only…" then "Same for both schools…") */
+.st-page .viewonly + .viewonly {
+  margin-top: calc(-1 * var(--space-8));
+}
+
+/* ===== The Dan list ===== */
+.st-dblock + .st-dblock {
+  border-top: 1px solid var(--color-border);
+}
+
+/* One Dan line: chevron · name · summary [tag] ………… Edit */
+.st-dline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 40px;
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-8);
+  font-size: var(--text-13);
+}
+
+.st-dline.is-staff {
+  padding-right: var(--space-16);
+}
+
+.st-dtoggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+  min-height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text);
+  font-size: var(--text-13);
+  text-align: left;
+}
+
+.st-dtoggle:focus-visible {
+  outline-offset: -2px;
+}
+
+.st-dchev-box {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.st-dname {
+  flex: none;
+  font-weight: 500;
+}
+
+.st-dsum {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+  min-width: 0;
+}
+
+.st-dcnt {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* Phone Dan line: name + chevron (+ tag) on top, the summary underneath */
+.st-dtext {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.st-dl1 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+}
+
+.st-dl2 {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  line-height: 1.4;
+}
+
+.st-dchev {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+/* ===== Category rows ===== */
+.st-crow {
+  position: relative;
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-13);
+}
+
+/* PC / tablet: one dense grid row. Columns come from DanBlock.jsx (categoryColumns). */
+.st-crow.is-table {
+  display: grid;
+  align-items: center;
+  column-gap: var(--space-12);
+  min-height: 40px;
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-8);
+}
+
+/* Staff (no grip): names line up under the Dan name (8 + 28 chevron + 8) */
+.st-crow.is-table.is-staff {
+  padding: var(--space-4) var(--space-16) var(--space-4) 44px;
+}
+
+.st-crow:not(.is-staff) {
+  cursor: pointer;
+}
+
+/* Arrow-key focus on a row: the 2px blue ring, drawn inside the row */
+.st-crow:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+/* The category open in a dialog right now; the fees row whose dialog is open */
+.st-crow.is-selected,
+.st-trow.is-selected,
+.st-feerow.is-selected {
+  background: var(--color-blue-tint);
+}
+
+.st-cnamecell,
+.st-l1 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+  min-width: 0;
+}
+
+.st-cname {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.st-muted {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.st-cgrip {
+  display: flex;
+  align-items: center;
+}
+
+.st-cacts {
+  justify-self: end;
+}
+
+/* Phone: two-line row — [grip] name, then "15 credits · max 67.5" — Edit ⋯ */
+.st-crow.is-phone,
+.st-feerow {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  padding: var(--space-4) 0 var(--space-4) 2px;
+}
+
+.st-crow.is-phone.is-staff {
+  min-height: 48px;
+  padding: var(--space-4) var(--space-16);
+}
+
+.st-crow.is-phone .st-cgrip {
+  flex: none;
+  margin-right: 2px;
+}
+
+.st-cmain {
+  flex: 1;
+  min-width: 0;
+}
+
+.st-l1 {
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.st-l1 .ttag {
+  font-weight: 400;
+}
+
+.st-l2 {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.st-l2 span {
+  white-space: nowrap;
+}
+
+/* While dragging: the original row fades, a lifted gray copy sits at the landing spot
+   under a 2px blue line (approved screen 4, same look as Classes and ranks). */
+.st-crow.is-drag-origin {
+  opacity: 0.35;
+}
+
+.st-crow.is-lifted {
+  z-index: 2;
+  margin: var(--space-4) calc(-1 * var(--space-4)) var(--space-4) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+}
+
+.st-dropline {
+  position: relative;
+  z-index: 3;
+  height: 0;
+  margin: -1px 0 -1px var(--space-8);
+  border-top: 2px solid var(--color-blue);
+}
+
+/* "+ Add category" on the left, the running total on the right */
+.st-addrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-12);
+  padding: var(--space-8) var(--space-4) var(--space-8) 44px;
+  border-top: 1px solid var(--color-border);
+}
+
+.st-addrow.is-staff {
+  padding: 10px var(--space-16);
+}
+
+.st-tot {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  white-space: nowrap;
+}
+
+/* ===== Grade scale, assistant-class table, fees (always open) ===== */
+.st-blk {
+  flex: none;
+  margin-top: var(--space-24);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.st-bhead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  height: 40px;
+  padding: 0 var(--space-4) 0 var(--space-12);
+}
+
+.st-bname {
+  flex: 1;
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.st-bbody {
+  padding: var(--space-12);
+  border-top: 1px solid var(--color-border);
+}
+
+.st-gscale {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  max-width: 448px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  list-style: none;
+}
+
+.st-gscale li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-4) 0;
+  font-size: var(--text-13);
+  font-variant-numeric: tabular-nums;
+}
+
+.st-gscale li + li {
+  border-left: 1px solid var(--color-border);
+}
+
+.st-gscale b,
+.st-trow b {
+  font-weight: 500;
+}
+
+.st-gscale span {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.st-bline {
+  margin-top: var(--space-8);
+  font-size: var(--text-13);
+}
+
+.st-bline--sec {
+  margin-top: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.st-bsub {
+  margin-top: calc(-1 * var(--space-4));
+  padding: 0 var(--space-12) var(--space-8);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.st-thead,
+.st-trow {
+  display: grid;
+  align-items: center;
+  column-gap: var(--space-12);
+  border-top: 1px solid var(--color-border);
+}
+
+.st-thead {
+  height: 32px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.st-trow {
+  min-height: 36px;
+  font-size: var(--text-13);
+}
+
+.st-g-as {
+  grid-template-columns: 72px 200px minmax(0, 1fr);
+  padding: 0 var(--space-12);
+}
+
+.st-g-asp {
+  grid-template-columns: 48px minmax(0, 1fr) minmax(0, 1fr);
+  padding: 0 var(--space-16);
+}
+
+.st-g-fee {
+  grid-template-columns: minmax(0, 1fr) 104px 104px 104px 64px;
+  padding: 0 var(--space-4) 0 var(--space-12);
+}
+
+.st-g-fees {
+  grid-template-columns: minmax(0, 1fr) 104px 104px 104px;
+  padding: 0 var(--space-16) 0 var(--space-12);
+}
+
+.st-g-feet {
+  grid-template-columns: minmax(0, 1fr) 88px 88px 88px 52px;
+  padding: 0 0 0 var(--space-16);
+}
+
+.st-g-feets {
+  grid-template-columns: minmax(0, 1fr) 88px 88px 88px;
+  padding: 0 var(--space-16);
+}
+
+.st-bfoot {
+  padding: var(--space-8) var(--space-12);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* Phone fees: one line of three prices per Dan */
+.st-feerow {
+  min-height: 48px;
+  padding: var(--space-4) 0 var(--space-4) var(--space-16);
+  border-top: 1px solid var(--color-border);
+}
+
+.st-feerow.is-staff {
+  padding-right: var(--space-16);
+}
+
+/* ===== Dialogs ===== */
+/* The assistant-class table dialog is a little wider (480px, approved screen 9) */
+.tdialog--star-wide {
+  width: 480px;
+}
+
+/* A number field with a gray word inside on the right ("10   credits") — drawn like .money */
+.money.st-numfield {
+  width: 140px;
+}
+
+.money.st-numfield--full {
+  width: 100%;
+}
+
+.st-suffix {
+  flex: none;
+  margin-left: auto;
+  padding-left: var(--space-8);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  white-space: nowrap;
+}
+
+/* A field with a problem: amber outline (never red) */
+.money.is-bad {
+  border-color: var(--color-warning-text);
+}
+
+.st-total-note {
+  margin-bottom: var(--space-12);
+}
+
+.st-add-hint {
+  margin: calc(-1 * var(--space-4)) 0 0;
+}
+
+/* The gray live-preview box ("Progressions: 0→1 …", "Max score …") */
+.st-preview {
+  margin-bottom: var(--space-4);
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-size: var(--text-13);
+}
+
+.st-preview div + div {
+  margin-top: 2px;
+}
+
+.st-after-preview {
+  margin-top: var(--space-8);
+}
+
+/* Grade values: a 4-column grid (4 + 3) on every device; a row's errors span the whole width */
+.st-ggrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: var(--space-12);
+}
+
+.st-gerr {
+  display: flex;
+  flex-direction: column;
+  grid-column: 1 / -1;
+  gap: var(--space-4);
+  margin: calc(-1 * var(--space-4)) 0 var(--space-12);
+}
+
+/* Assistant-class table: Grade · 12 and under · 13 and up */
+.st-grp-lbl {
+  margin: var(--space-16) 0 var(--space-8);
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.st-agrid {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-12);
+  margin-bottom: var(--space-8);
+}
+
+.st-agrid--head {
+  margin-bottom: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.st-ag {
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.st-rov {
+  padding-left: var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.st-aerr {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: calc(-1 * var(--space-4)) 0 var(--space-8);
+}
+
+/* ===== ⋯ menu: the gray "Delete category" with its reason under it (approved screen 5) ===== */
+.tmenu-item.menu-item:has(.st-menu-two) {
+  align-items: flex-start;
+  height: auto;
+  min-height: 32px;
+  padding-top: var(--space-8);
+  padding-bottom: var(--space-8);
+  white-space: normal;
+  text-align: left;
+}
+
+.tmenu-item.menu-item:has(.st-menu-two) .menu-icon {
+  margin-top: 2px;
+}
+
+.st-menu-two {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The reason stays readable (#6B6B6B on white = 5.3:1, above 4.5:1) */
+.st-menu-why {
+  margin-top: 2px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  line-height: 1.4;
+}
+
+/* ===== Hover — mouse only ===== */
+@media (hover: hover) {
+  .st-dtoggle:hover .st-dchev-box {
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  .st-crow:not(.is-staff):not(.is-lifted):not(.is-selected):hover {
+    background: var(--color-surface);
+  }
+}
+
+/* ===== Touch screens: 48px rows, 44px tap areas (guidelines 2.5) ===== */
+@media (pointer: coarse) {
+  .st-back {
+    min-height: var(--tap-size);
+    margin: -10px 0 -8px;
+  }
+
+  .st-dline {
+    gap: var(--space-4);
+    min-height: 48px;
+    padding: 2px 0;
+  }
+
+  .st-dline.is-staff {
+    padding-right: var(--space-16);
+  }
+
+  .st-dtoggle {
+    gap: var(--space-4);
+    min-height: var(--tap-size);
+  }
+
+  .st-dchev-box {
+    width: var(--tap-size);
+    height: var(--tap-size);
+  }
+
+  .st-dchev-box + .st-dname {
+    margin-right: var(--space-4);
+  }
+
+  .st-crow.is-table {
+    min-height: 48px;
+    padding: 0;
+  }
+
+  .st-crow.is-table.is-staff {
+    padding: 0 var(--space-16) 0 48px;
+  }
+
+  .st-addrow {
+    padding: var(--space-4) var(--space-16) var(--space-4) 48px;
+  }
+
+  .st-addrow.is-staff {
+    padding: var(--space-12) var(--space-16);
+  }
+
+  .st-bhead {
+    height: 48px;
+    padding: 0 0 0 var(--space-16);
+  }
+
+  .st-bbody {
+    padding: var(--space-12) var(--space-16);
+  }
+
+  .st-bsub {
+    padding: 0 var(--space-16) var(--space-8);
+  }
+
+  .st-g-as {
+    padding: 0 var(--space-16);
+  }
+
+  .st-trow {
+    min-height: var(--tap-size);
+  }
+
+  .st-bfoot {
+    padding: 10px var(--space-16);
+  }
+
+  .tmenu-item.menu-item:has(.st-menu-two) {
+    min-height: var(--tap-size);
+  }
+}
+
+/* ===== Phones (narrower than 640px) ===== */
+@media (max-width: 639.98px) {
+  /* Dan names start at the 16px gutter; the whole name area opens / closes the Dan */
+  .st-dline {
+    min-height: 56px;
+    padding: 2px 0 2px var(--space-16);
+  }
+
+  .st-dline.is-staff {
+    padding-right: var(--space-16);
+  }
+
+  .st-dtoggle {
+    min-height: 52px;
+  }
+
+  .st-addrow,
+  .st-addrow.is-staff {
+    padding: var(--space-4) var(--space-16);
+  }
+
+  .st-addrow.is-staff {
+    padding-top: var(--space-12);
+    padding-bottom: var(--space-12);
+  }
+
+  .st-crow.is-lifted {
+    margin: var(--space-4) calc(-1 * var(--space-4)) var(--space-4) var(--space-4);
+  }
+}
+
+/* Focus put back on a button after a tap or click (e.g. Edit, once its dialog closes) draws no
+   ring: the ring is for keyboard focus only. quietFocus.js sets data-quiet-focus and removes it
+   again on the next key press, so keyboard users still see it. */
+.st-page [data-quiet-focus]:focus-visible {
+  outline: none;
+}
+
+/* Edit fees (PC and tablet): the messages under the row of three fields, 4px below it and 4px
+   apart — the same spacing as a message under a single field. */
+.st-fee-errors {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}

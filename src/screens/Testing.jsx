@@ -15,10 +15,20 @@
 // Everything inside a tab lives in testing/events/EventsTab.jsx and testing/ClassesRanksTab.jsx;
 // the event page in testing/event/EventPage.jsx.
 //
+// Star testing (v0.59, v0.177) — only while its build switch is on (lib/features.js):
+//   - Testing has three pages: the CHOOSER (#testing, testing/chooser/TestingChooser.jsx), COLOR BELT
+//     (#testing/color-belt — everything described above) and STAR TESTING (#testing/star,
+//     testing/star/StarTesting.jsx).
+//   - Color Belt's header gets "← Testing" above its title, and the title "Color belt testing".
+//   - The chooser and Star testing work on Both; only Color Belt's own pages show the Both block.
+// With the switch off this file draws exactly what it drew before Star testing existed.
+//
 // Props (from App.jsx):
 //   location           'Worcester' | 'Shrewsbury' | 'Both' (the top-bar switcher)
 //   onLocationChange   switches the whole dashboard (used by the Both buttons)
 //   isAdmin            show edit controls? (only for the screen — the database enforces the rule)
+//   testingPage        'chooser' | 'colorBelt' | 'star' (always 'colorBelt' with the switch off)
+//   onOpenTestingPage(page)  go to another Testing page (App.jsx adds a browser history step)
 //   eventId            the open event's id, or null for the tabs
 //   onOpenEvent(id)    open an event's page (App.jsx adds a browser history step)
 //   onCloseEvent()     back to the Events tab
@@ -27,13 +37,24 @@
 //   onRefreshProfile   re-read "who am I?" (e.g. after the database said "not allowed")
 //   showToast / clearToast   the toast at the bottom (with Undo)
 //   onModalOpenChange  tells the App a Testing dialog is open (the page behind becomes inert)
-import { useEffect, useId, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
 import BlockedOnBoth from './testing/BlockedOnBoth.jsx';
 import ClassesRanksTab from './testing/ClassesRanksTab.jsx';
 import EventsTab from './testing/events/EventsTab.jsx';
 import EventPage from './testing/event/EventPage.jsx';
+import TestingChooser from './testing/chooser/TestingChooser.jsx';
+import BackToTesting from './testing/chooser/BackToTesting.jsx';
+import { COLOR_BELT_TITLE } from './testing/chooser/text.js';
 import { PAGE_TITLE, TAB_CLASSES_RANKS, TAB_EVENTS, VIEW_ONLY_LINE } from './testing/text.js';
+import { loadStarTesting, STAR_TESTING_ON } from '../lib/features.js';
 import '../styles/testing-events.css';
+
+// Star testing's screens are loaded only when its page is first opened ("lazy"). With the build
+// switch off there is no loader (features.js), so the live build doesn't contain Star's screens.
+const StarTesting = loadStarTesting ? lazy(loadStarTesting) : null;
+
+// Color Belt's page title: "Testing" as before, or "Color belt testing" once the chooser exists.
+const COLOR_BELT_PAGE_TITLE = STAR_TESTING_ON ? COLOR_BELT_TITLE : PAGE_TITLE;
 
 const TABS = [
   { key: 'events', label: TAB_EVENTS },
@@ -47,7 +68,8 @@ let lastTab = 'events';
 // The header + tab bar, drawn by the tab itself (it knows when its add button may show).
 //   action     the add button element, or null
 //   staffLine  the gray line for staff under the tabs, or null
-function TestingHeader({ school, action, staffLine, tab, onTab, ids }) {
+//   onBack     "← Testing" (only while the Star testing switch is on), or null for no back link
+function TestingHeader({ school, action, staffLine, tab, onTab, ids, onBack }) {
   const tabRefs = useRef({});
   function handleKeyDown(event) {
     if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
@@ -61,12 +83,13 @@ function TestingHeader({ school, action, staffLine, tab, onTab, ids }) {
     <>
       <div className="phead">
         <div className="phead-titles">
-          <h1 className="ptitle">{PAGE_TITLE}</h1>
+          {onBack && <BackToTesting onBack={onBack} />}
+          <h1 className="ptitle">{COLOR_BELT_PAGE_TITLE}</h1>
           <p className="psub">{school}</p>
         </div>
         {action}
       </div>
-      <div className="ttabs" role="tablist" aria-label={PAGE_TITLE} onKeyDown={handleKeyDown}>
+      <div className="ttabs" role="tablist" aria-label={COLOR_BELT_PAGE_TITLE} onKeyDown={handleKeyDown}>
         {TABS.map((t) => {
           const current = t.key === tab;
           return (
@@ -94,7 +117,18 @@ function TestingHeader({ school, action, staffLine, tab, onTab, ids }) {
   );
 }
 
-export default function Testing({ location, onLocationChange, isAdmin, eventId, onOpenEvent, onCloseEvent, ...tabProps }) {
+export default function Testing({
+  location,
+  onLocationChange,
+  isAdmin,
+  testingPage = 'colorBelt',
+  onOpenTestingPage,
+  eventId,
+  onOpenEvent,
+  onCloseEvent,
+  ...tabProps
+}) {
+  const page = STAR_TESTING_ON ? testingPage : 'colorBelt'; // switch off: Color Belt only
   const baseId = useId();
   const ids = { tab: (key) => `${baseId}-tab-${key}`, panel: (key) => `${baseId}-panel-${key}` };
   const [tab, setTabState] = useState(lastTab);
@@ -116,13 +150,75 @@ export default function Testing({ location, onLocationChange, isAdmin, eventId, 
     document.getElementById(`${baseId}-tab-${lastTab}`)?.focus();
   }, [location, baseId]);
 
+  // ----- Moving between the chooser and a testing page (switch on) -----
+  // The button that was pressed disappears with its page, so keyboard focus would fall to the top
+  // of the document. Instead: a chooser row → focus the new page's "← Testing"; "← Testing" →
+  // focus the chooser row of the page we came from. (Browser Back/Forward leave focus alone.)
+  const [chooserFocus, setChooserFocus] = useState(null); // the row to focus on the chooser
+  const focusBackLinkRef = useRef(false);
+  function openFromChooser(next) {
+    if (next === 'star') loadStarTesting?.(); // start loading Star's screens straight away
+    focusBackLinkRef.current = true;
+    setChooserFocus(null);
+    onOpenTestingPage(next);
+  }
+  function backToChooser() {
+    setChooserFocus(page);
+    onOpenTestingPage('chooser');
+  }
+  useEffect(() => {
+    if (page === 'chooser' || !focusBackLinkRef.current) return undefined;
+    // Star's page may still be loading its screens: look for its back link every 50ms, up to 3s.
+    let timer = 0;
+    let tries = 0;
+    function tryFocus() {
+      const link = document.querySelector('.tc-back, .st-back');
+      if (link) {
+        focusBackLinkRef.current = false;
+        link.focus();
+      } else if (tries++ < 60) {
+        timer = window.setTimeout(tryFocus, 50);
+      }
+    }
+    tryFocus();
+    return () => window.clearTimeout(timer);
+  }, [page, location]);
+  // The chooser has used its "focus this row" (its own effect runs first): forget it, so arriving
+  // later by the rail doesn't move focus.
+  useEffect(() => {
+    if (page === 'chooser' && chooserFocus) setChooserFocus(null);
+  }, [page, chooserFocus]);
+  const onBack = STAR_TESTING_ON ? backToChooser : null;
+
+  if (page === 'chooser') {
+    return (
+      <TestingChooser
+        location={location}
+        screenLocked={tabProps.screenLocked}
+        onNoAccess={tabProps.onNoAccess}
+        onOpen={openFromChooser}
+        focusPage={chooserFocus}
+      />
+    );
+  }
+
+  if (page === 'star' && StarTesting) {
+    // Star testing is the same for both schools (v0.58): no Both block, no school line.
+    return (
+      <Suspense fallback={null}>
+        <StarTesting isAdmin={isAdmin} onBack={backToChooser} {...tabProps} />
+      </Suspense>
+    );
+  }
+
   if (location === 'Both') {
     // Title only — no school line, no tabs (there's nothing in either tab to show).
     return (
       <div className="testing">
         <div className="phead">
           <div className="phead-titles">
-            <h1 className="ptitle">{PAGE_TITLE}</h1>
+            {onBack && <BackToTesting onBack={onBack} />}
+            <h1 className="ptitle">{COLOR_BELT_PAGE_TITLE}</h1>
           </div>
         </div>
         <BlockedOnBoth onChoose={chooseSchool} />
@@ -139,7 +235,7 @@ export default function Testing({ location, onLocationChange, isAdmin, eventId, 
   }
 
   const renderHeader = (action, staffLine) => (
-    <TestingHeader school={location} action={action} staffLine={staffLine} tab={tab} onTab={setTab} ids={ids} />
+    <TestingHeader school={location} action={action} staffLine={staffLine} tab={tab} onTab={setTab} ids={ids} onBack={onBack} />
   );
 
   return (

@@ -14,6 +14,7 @@ export default function Shell({
   hidden,
   inert,
   currentSection,
+  currentTestingPage = null, // the open Testing page ('chooser' | 'colorBelt' | 'star'), for the rail's menu
   onNavigate,
   location,
   onLocationChange,
@@ -31,7 +32,7 @@ export default function Shell({
 }) {
   return (
     <div className="shell" hidden={hidden} inert={inert}>
-      <Rail current={currentSection} onNavigate={onNavigate} />
+      <Rail current={currentSection} currentPage={currentTestingPage} onNavigate={onNavigate} />
       <div className="shell-main">
         <TopBar
           location={location}

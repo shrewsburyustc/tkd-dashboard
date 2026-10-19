@@ -5,7 +5,8 @@
 // getSession / onAuthStateChange / signOut / updateUser, rpc, and from(table).select().eq().order()
 // — and follows the same rules as the real database (migrations 0001 + 0002 + 0003).
 // Testing → Classes and ranks lives in its own file, mockTesting.js; Events, the roster with
-// payments and Settings → Schools live in mockTestingEvents.js (phase 2); this file plugs both in.
+// payments and Settings → Schools live in mockTestingEvents.js (phase 2); Star testing → Rubrics and
+// prices lives in mockStarTesting.js (Star phase 1); this file plugs all three in.
 //
 // Try it:  any email + password "preview" signs in as Jeffrey Berg (admin). PIN is 2580.
 // Test helpers in the browser console (F12 → Console):
@@ -18,6 +19,7 @@
 // Testing helpers:
 //   __tkdPreview.setRole('staff')         view-only account ('admin' to switch back; then reload)
 //   __tkdPreview.failNextSave()           the next Testing save fails like a dropped connection
+//   __tkdPreview.failNextSave('star')     the next Star testing (Rubrics and prices) save fails instead
 //   __tkdPreview.simulateOtherAdminEdit() "another admin" changes everything (open dialogs go stale)
 //   __tkdPreview.clearSchool('Shrewsbury') remove that school's classes (to see the empty state)
 //   __tkdPreview.resetTesting()           back to the default classes and ranks
@@ -29,6 +31,9 @@
 //   __tkdPreview.forceVerifyFailed(true)  the next family-form Send fails the human check
 //   __tkdPreview.forceRateLimited(true)   family-form Sends answer "too many tries" until set false
 //   (failNextSave, simulateOtherAdminEdit and resetTesting cover the events and roster too)
+// Star testing (Rubrics and prices, mockStarTesting.js):
+//   simulateOtherAdminEdit() and resetTesting() cover Star's rubrics and prices too; setRole and
+//   setTestingDelay work the same; failNextSave('star') targets Star (see above).
 // Staff accounts helpers (account menu → Admin → Staff accounts; mockStaff.js):
 //   __tkdPreview.failNextSave()           also makes the next Reset password / Reset PIN fail
 //   __tkdPreview.resetStaffAccounts()     the fake desk is signed in on 3 devices again
@@ -41,6 +46,7 @@ import { createTestingBackend, TESTING_RPC_NAMES } from './mockTesting.js';
 import { createEventsBackend, EVENT_RPC_NAMES, EVENT_RESTRICTED_RPC_NAMES, EVENT_TABLES } from './mockTestingEvents.js';
 import { previewToday, publicPreviewHelpers } from './testing/publicApi.preview.js';
 import { createStaffBackend, STAFF_RPC_NAMES } from './mockStaff.js';
+import { createStarBackend, STAR_RPC_NAMES, STAR_TABLES, STAR_STORE_KEY } from './mockStarTesting.js';
 
 const SESSION_KEY = 'tkd.preview.session'; // the fake "signed in" session
 const STAFF_STATE_KEY = 'tkd.preview.staffState'; // fake staff row: PIN, shared flag
@@ -425,6 +431,15 @@ export function createMockClient() {
   // failNextSave arms this; the next Testing or Events save then fails (whichever comes first).
   let failNextTesting = false;
 
+  // ----- Star testing → Rubrics and prices (mockStarTesting.js) -----
+  // Its own store (STAR_STORE_KEY), apart from Color Belt's. failNextSave('star') arms its own flag.
+  const star = createStarBackend({
+    loadStore: () => JSON.parse(readStorage(STAR_STORE_KEY)), // missing/damaged → the seed (0006)
+    saveStore: (store) => writeStorage(STAR_STORE_KEY, JSON.stringify(store)),
+    now: () => Date.now(),
+    newId: newUuid,
+  });
+
   // The fake network time for Testing calls (setTestingDelay saves it so it survives a reload).
   function testingDelay() {
     const saved = readStorage(TESTING_DELAY_KEY);
@@ -470,6 +485,8 @@ export function createMockClient() {
           }
           // Phase 2 tables (and locations, which gained the address columns) → mockTestingEvents.js.
           if (EVENT_TABLES.includes(table)) return events.select(table, query.columns, query.filters, query.orders, testingContext());
+          // Star testing's four rubric tables → mockStarTesting.js.
+          if (STAR_TABLES.includes(table)) return star.select(table, query.columns, query.filters, query.orders, testingContext());
           return testing.select(table, query.columns, query.filters, query.orders, testingContext());
         };
         return run().then(resolve, reject);
@@ -509,6 +526,11 @@ export function createMockClient() {
         events.failNextSave();
       }
       return events.rpc(name, args, testingContext());
+    }
+    if (STAR_RPC_NAMES.includes(name)) {
+      await wait(testingDelay());
+      // (failNextSave('star') arms Star's own flag directly; nothing to pass on here.)
+      return star.rpc(name, args, testingContext());
     }
     if (name === 'has_data_access' || TESTING_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
@@ -572,7 +594,14 @@ export function createMockClient() {
       saveStaffState(staff);
       return `The preview account is now ${role === 'admin' ? 'an admin' : 'staff (view only)'}. Reload the page to see it.`;
     },
-    failNextSave() {
+    // failNextSave()       → the next Color Belt Testing/Events save (and Reset password / PIN) fails.
+    // failNextSave('star') → the next Star testing (Rubrics and prices) save fails.
+    failNextSave(target) {
+      if (target === 'star') {
+        star.failNextSave();
+        return 'The next Star testing save (Rubrics and prices) will fail like a dropped connection and change nothing.';
+      }
+      if (target !== undefined) return "Use failNextSave() for Color Belt and Staff accounts, or failNextSave('star') for Star testing.";
       failNextTesting = true;
       staffAccounts.failNext();
       return 'The next Testing save (and the next Reset password / Reset PIN) will fail like a dropped connection and change nothing.';
@@ -584,7 +613,8 @@ export function createMockClient() {
     simulateOtherAdminEdit() {
       testing.simulateOtherAdminEdit();
       events.simulateOtherAdminEdit();
-      return 'Another admin changed every class, rank, event, student and school address, and swapped two ranks. Open dialogs and Undo are now out of date.';
+      star.simulateOtherAdminEdit();
+      return 'Another admin changed every class, rank, event, student and school address, and swapped two ranks — and changed Star testing\'s rubrics and prices. Open dialogs and Undo are now out of date.';
     },
     clearSchool(school) {
       if (!testing.clearSchool(school)) return "Use clearSchool('Worcester') or clearSchool('Shrewsbury').";
@@ -593,7 +623,8 @@ export function createMockClient() {
     resetTesting() {
       testing.reset();
       events.reset();
-      return 'Testing is back to the default classes and ranks, the November Children Testing event with its students, and empty school addresses. Reload to see them.';
+      star.reset();
+      return 'Testing is back to the default classes and ranks, the November Children Testing event with its students, and empty school addresses — and Star testing to its seed rubrics and prices. Reload to see them.';
     },
     setTestingDelay(ms) {
       const value = Number(ms);
