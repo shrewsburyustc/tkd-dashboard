@@ -166,7 +166,7 @@ Structure first, then money, then waivers and privacy. Each will be shown with a
 - **Recommendation:** A.
 - **Touches:** v0.217, v0.900 (Cycles 4, the "copied from Rubric and prices on …" line).
 
-### Q-B3 · What each payment row remembers for Finance
+### Q-B3 · What each payment row remembers for Finance — **answered v0.903: A**
 
 - **The question:** when a payment is recorded, does its row keep the candidate's school and the cycle's name **as they were then**, or read them from the candidate and cycle each time?
 - **Why it matters:** if staff later fix a candidate's school (registered through the wrong link), money already recorded either stays in the old school's Daily report or moves to the new one, and a moved amount marks a closed day "Changed after closing" (Finance v0.199).
