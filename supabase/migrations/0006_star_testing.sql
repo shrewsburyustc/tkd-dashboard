@@ -3989,7 +3989,8 @@ grant  execute on function public.star_add_makeup(uuid, uuid) to authenticated;
 -- Edit details: names, DOB, email, school, Dan and stars (v0.112, v0.164),
 -- also for withdrawn candidates. Payments are never touched (the fee is
 -- worked out from the new Dan, OPEN-5).
---   DOB / email may be empty only on a desk row (a form row -> invalid)
+--   the email is always required (v0.175); the DOB may be empty only on a
+--   desk row (a form row -> invalid)
 --   a stars change in the same Dan keeps the grades (v0.164)
 --   a Dan change CLEARS every grade (kept ones too, OPEN-7) and make-up
 --     subject of the old Dan. If there are any and p_clear_grade_count is
@@ -4045,7 +4046,7 @@ begin
        or not public.testing_name_is_valid(p_first)
        or not public.testing_name_is_valid(p_last)
        or (p_date_of_birth is not null and (p_date_of_birth > v_today or p_date_of_birth < date '1900-01-01'))
-       or (v_email is not null and not public.star_email_is_valid(v_email))
+       or not public.star_email_is_valid(v_email)
        or p_location_code is null or p_location_code not in ('worcester', 'shrewsbury')
        or p_dan is null or p_stars_from is null or p_stars_from < 0
        or (p_clear_grade_count is not null and p_clear_grade_count < 0) then
@@ -4061,7 +4062,7 @@ begin
     end if;
 
     -- 6. rules that depend on the saved row
-    if v_c.source = 'form' and (p_date_of_birth is null or v_email is null) then
+    if v_c.source = 'form' and p_date_of_birth is null then
       return jsonb_build_object('status', 'invalid');
     end if;
     if p_dan <> v_c.dan and public.star_net_paid_cents(v_c.id) > 0 and public.is_admin() is not true then
@@ -4692,7 +4693,9 @@ grant  execute on function public.star_delete_candidate(uuid, integer, uuid[]) t
 -- Record payment (v0.109, v0.110): the dialog fills in the expected fee
 -- (12d); staff may type another amount (1 cent to $1,000, e.g. a
 -- discount). Any recorded amount counts as Paid (v0.167). Method cash /
--- check / card; date not in the future. Allowed in every event state.
+-- check / card; date not in the future and not before the day the
+-- candidate registered (Massachusetts date, v0.175; later dates are fine,
+-- e.g. a late entry of an earlier payment). Allowed in every event state.
 -- Refused: withdrawn (withdrawn), a make-up (no_fee), already paid
 -- (already_paid). The candidate's version goes up, so a double click with
 -- the old version gets "stale". Last step: the signature clean-up (16a).
@@ -4744,6 +4747,10 @@ begin
     end if;
     if public.star_net_paid_cents(v_c.id) > 0 then
       return jsonb_build_object('status', 'already_paid');
+    end if;
+    -- "Date paid" never before the day the candidate registered (v0.175)
+    if p_paid_on < public.testing_school_date(v_c.registered_at) then
+      return jsonb_build_object('status', 'invalid');
     end if;
 
     perform set_config('tkd.action', 'star_record_payment', true);
@@ -4872,7 +4879,8 @@ grant  execute on function public.star_undo_payment(uuid) to authenticated;
 -- 18w. star_edit_payment(p_payment_id, p_method, p_amount_cents,
 --        p_paid_on)   A
 -- Edit payment = a reversal of the old payment + a new payment with the
--- new method / amount / date. Only a payment (not a refund or reversal:
+-- new method / amount / date (the date not before the candidate's
+-- registered day, v0.175). Only a payment (not a refund or reversal:
 -- invalid); already reversed -> stale; the candidate has a refund that
 -- isn't reversed -> invalid (undo the refund first).
 -- locks: event (no key update) -> candidate (update) -> payment (update)
@@ -4925,6 +4933,11 @@ begin
                   and not exists (select 1 from public.star_payments x where x.reverses_payment_id = r.id)) then
       return jsonb_build_object('status', 'invalid');
     end if;
+    -- "Date paid" never before the day the candidate registered (v0.175)
+    if p_paid_on < (select public.testing_school_date(c.registered_at)
+                      from public.star_candidates c where c.id = v_p.candidate_id) then
+      return jsonb_build_object('status', 'invalid');
+    end if;
 
     perform set_config('tkd.action', 'star_edit_payment', true);
     perform set_config('tkd.batch_id', gen_random_uuid()::text, true);
@@ -4972,7 +4985,8 @@ grant  execute on function public.star_edit_payment(uuid, text, integer, date) t
 --        p_amount_cents, p_refunded_on)   A (S7)
 -- A refund of an OVERPAID amount (e.g. paid the private fee, then "Back
 -- to the testing day"): its own negative row, cash or check, with its own
--- date (v0.166). Not overpaid, or more than the overpaid amount ->
+-- date (v0.166; not before the candidate's registered day, v0.175). Not
+-- overpaid, or more than the overpaid amount ->
 -- {"status":"refund_too_large","overpaid_cents":n}. The candidate's
 -- version goes up.
 -- locks: event (no key update) -> candidate (update)
@@ -5022,6 +5036,10 @@ begin
     end if;
     if v_c.status = 'withdrawn' then
       return jsonb_build_object('status', 'withdrawn');
+    end if;
+    -- the refund date never before the day the candidate registered (v0.175)
+    if p_refunded_on < public.testing_school_date(v_c.registered_at) then
+      return jsonb_build_object('status', 'invalid');
     end if;
     v_paid := public.star_net_paid_cents(v_c.id);
     v_overpaid := case when v_paid > 0 then greatest(v_paid - public.star_expected_fee_cents(v_c.id), 0) else 0 end;

@@ -117,6 +117,7 @@ declare
   v_mark   bigint;
   v_mark2  bigint;
   v_mark0  bigint;   -- the last history row before this test run
+  v_dreg   date;     -- a candidate's registered day (T7h)
   v_list   text[];
   v_labels text[];
   v_ok     text[];
@@ -1693,6 +1694,18 @@ begin
      or public.star_update_candidate(v_f1, v_v, 'Bo', 'Kim', v_child, null, 'shrewsbury', 1, 1, null) ->> 'status' <> 'invalid' then
     raise exception 'TEST FAILED: T6b a form row can''t lose its DOB or email';
   end if;
+  -- the email is required on every row, desk rows too (v0.175)
+  select c.version into v_v from public.star_candidates c where c.id = v_c3;
+  if public.star_update_candidate(v_c3, v_v, 'Dee', 'Fox', null, null, 'worcester', 2, 2, null) ->> 'status' <> 'invalid'
+     or public.star_update_candidate(v_c3, v_v, 'Dee', 'Fox', null, '   ', 'worcester', 2, 2, null) ->> 'status' <> 'invalid'
+     or public.star_update_candidate(v_c3, v_v, 'Dee', 'Fox', null, '', 'worcester', 2, 2, null) ->> 'status' <> 'invalid'
+     or public.star_add_candidate(v_e1, 'No', 'Mail', null, '', 'worcester', 1, 0, 'cash') ->> 'status' <> 'invalid' then
+    raise exception 'TEST FAILED: T6b a blank or missing email must be refused on a desk row (edit and add)';
+  end if;
+  v_r := public.star_update_candidate(v_c3, v_v, 'Dee', 'Fox', null, ' dee3@example.com ', 'worcester', 2, 2, null);
+  if v_r ->> 'status' <> 'ok' or (select c.email_for_results from public.star_candidates c where c.id = v_c3) <> 'dee3@example.com' then
+    raise exception 'TEST FAILED: T6b the same desk-row edit with a valid email expected ok (stored trimmed), got %', v_r;
+  end if;
   -- a DOB / email edit works the duplicate marks out again
   v_x1 := (public.star_add_candidate(v_e1, 'Ida', 'Jay', v_adult, 'ida@example.com', 'worcester', 1, 0, 'cash') ->> 'id')::uuid;
   v_x2 := (public.star_add_candidate(v_e1, 'Ida', 'Jay', v_child, 'ida2@example.com', 'worcester', 1, 0, 'cash') ->> 'id')::uuid;
@@ -2037,11 +2050,11 @@ begin
   if public.star_undo_payment(v_p1) ->> 'status' <> 'ok' then raise exception 'TEST FAILED: T7c an admin may undo any time'; end if;
 
   -- T7d. Edit payment (admin) = a reversal + a new payment
-  v_r := public.star_edit_payment(v_p3, 'check', 13000, v_today - 2);
+  v_r := public.star_edit_payment(v_p3, 'check', 13000, v_today);
   if v_r ->> 'status' <> 'ok' or (v_r ->> 'payment_id')::uuid = v_p3
      or (select array_agg(k order by k) from jsonb_object_keys(v_r) as k) <> array['payment_id', 'status', 'version']
      or not exists (select 1 from public.star_roster v where v.id = v_x2 and v.paid_cents = 13000 and v.paid_method = 'check'
-                      and v.paid_on = v_today - 2 and v.last_payment_id = (v_r ->> 'payment_id')::uuid)
+                      and v.paid_on = v_today and v.last_payment_id = (v_r ->> 'payment_id')::uuid)
      or not exists (select 1 from public.star_payments p where p.reverses_payment_id = v_p3 and p.amount_cents = -14000) then
     raise exception 'TEST FAILED: T7d edit_payment expected a reversal + a new $130 check payment, got %', v_r;
   end if;
@@ -2076,11 +2089,11 @@ begin
     raise exception 'TEST FAILED: T7e the desk can''t record a refund';
   end if;
   perform set_config('request.jwt.claims', v_c_a1, true);
-  v_r := public.star_record_refund(v_pr, 4, 'check', 2000, v_today - 1);
+  v_r := public.star_record_refund(v_pr, 4, 'check', 2000, v_today);
   if v_r ->> 'status' <> 'ok' or (v_r ->> 'version')::int <> 5 then raise exception 'TEST FAILED: T7e refund $20 expected ok, got %', v_r; end if;
   v_pref := (v_r ->> 'payment_id')::uuid;
   if not exists (select 1 from public.star_payments p where p.id = v_pref and p.kind = 'refund' and p.amount_cents = -2000
-                   and p.method = 'check' and p.paid_on = v_today - 1)
+                   and p.method = 'check' and p.paid_on = v_today)
      or not exists (select 1 from public.star_roster v where v.id = v_pr and v.overpaid_cents = 0 and v.refunded_cents = 2000
                       and v.paid_cents = 14000 and v.paid) then
     raise exception 'TEST FAILED: T7e the refund row / roster after the refund';
@@ -2128,6 +2141,56 @@ begin
   if v_r ->> 'status' <> 'ok' or public.star_undo_payment((v_r ->> 'payment_id')::uuid) ->> 'status' <> 'ok' then
     raise exception 'TEST FAILED: T7g after the refund was undone, edit and undo must work';
   end if;
+
+  -- T7h. "Date paid" (and a refund's date) never before the day the
+  --      candidate registered, in Massachusetts time (v0.175); that day and
+  --      later are fine, also a late entry of an earlier payment. The
+  --      candidate here registered 5 days ago (written directly).
+  insert into public.star_candidates (event_id, first_name, last_name, date_of_birth, email_for_results, location_code,
+                                      dan, stars_from, paying_by, source, registered_at, created_by_name, updated_by_name)
+  values (v_e1, 'Early', 'Bird', v_adult, 'eb@example.com', 'worcester', 1, 0, 'cash', 'desk', now() - interval '5 days', '', '')
+  returning id into v_x1;
+  select public.testing_school_date(c.registered_at), c.version into v_dreg, v_v from public.star_candidates c where c.id = v_x1;
+  if public.star_record_payment(v_x1, v_v, 'cash', 14000, v_dreg - 1) is distinct from '{"status": "invalid"}'::jsonb then
+    raise exception 'TEST FAILED: T7h a payment dated the day before registering expected invalid';
+  end if;
+  v_r := public.star_record_payment(v_x1, v_v, 'cash', 14000, v_dreg);
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: T7h a payment dated the registered day expected ok, got %', v_r; end if;
+  v_p2 := (v_r ->> 'payment_id')::uuid;
+  if public.star_edit_payment(v_p2, 'cash', 14000, v_dreg - 1) is distinct from '{"status": "invalid"}'::jsonb then
+    raise exception 'TEST FAILED: T7h an edit to a date before registering expected invalid';
+  end if;
+  v_r := public.star_edit_payment(v_p2, 'check', 14000, v_dreg + 2);
+  if v_r ->> 'status' <> 'ok'
+     or not exists (select 1 from public.star_payments p where p.id = (v_r ->> 'payment_id')::uuid and p.paid_on = v_dreg + 2) then
+    raise exception 'TEST FAILED: T7h an edit to a date after registering expected ok, got %', v_r;
+  end if;
+  -- an edit to exactly the registered day; $150 against a $140 fee, so
+  -- $10 is overpaid for the refunds below
+  v_r := public.star_edit_payment((v_r ->> 'payment_id')::uuid, 'cash', 15000, v_dreg);
+  if v_r ->> 'status' <> 'ok'
+     or not exists (select 1 from public.star_payments p where p.id = (v_r ->> 'payment_id')::uuid and p.paid_on = v_dreg)
+     or (select v.overpaid_cents from public.star_roster v where v.id = v_x1) <> 1000 then
+    raise exception 'TEST FAILED: T7h an edit to exactly the registered day expected ok ($10 overpaid), got %', v_r;
+  end if;
+  v_p2 := (v_r ->> 'payment_id')::uuid;
+  if public.star_record_refund(v_x1, (v_r ->> 'version')::int, 'cash', 100, v_dreg - 1) is distinct from '{"status": "invalid"}'::jsonb then
+    raise exception 'TEST FAILED: T7h a refund dated before registering expected invalid';
+  end if;
+  -- refunds dated on and after the registered day are allowed
+  v_r := public.star_record_refund(v_x1, (v_r ->> 'version')::int, 'cash', 500, v_dreg);
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: T7h a refund dated the registered day expected ok, got %', v_r; end if;
+  v_p3 := (v_r ->> 'payment_id')::uuid;
+  v_r := public.star_record_refund(v_x1, (v_r ->> 'version')::int, 'check', 500, v_dreg + 1);
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: T7h a refund dated after the registered day expected ok, got %', v_r; end if;
+  -- a late entry: registered and paid long ago, typed in today (the two
+  -- refunds and the payment are undone first)
+  perform public.star_undo_payment((v_r ->> 'payment_id')::uuid);
+  perform public.star_undo_payment(v_p3);
+  v_r := public.star_undo_payment(v_p2);
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST SETUP: T7h undo of the payment answered %', v_r; end if;
+  v_r := public.star_record_payment(v_x1, (select c.version from public.star_candidates c where c.id = v_x1), 'card', 14000, v_dreg + 1);
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: T7h a late entry of an earlier payment expected ok, got %', v_r; end if;
 
   -- T7f. append-only: no update, no removal (Color Belt's tags don't
   --      unlock a Star removal and Star's don't unlock a Color Belt one)
