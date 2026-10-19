@@ -11,7 +11,8 @@
 --   by the app, never in the history), deleting, and a catalog section
 --   that checks the permissions on every object 0009 creates - including
 --   the restricted login forms_registrar.
---   Run it in the Supabase SQL Editor AFTER 0009 is applied. It makes its
+--   Run it in the Supabase SQL Editor AFTER 0009 is applied (after 0015,
+--   the sign-up history checks look in family_history). It makes its
 --   own test classes, time slots and forms named "zz test ...".
 --
 -- IS IT SAFE?
@@ -69,6 +70,10 @@ declare
   v_txt   text;
   v_bool  boolean;
   v_mark  bigint;
+  -- where sign-ups are logged: change_log, or family_history once 0015 is applied
+  v_hist  text := case when to_regclass('public.family_history') is null then 'change_log' else 'family_history' end;
+  v_hmark bigint;
+  v_hok   boolean;
   v_rand  uuid := gen_random_uuid();
   v_ver   integer;
 
@@ -381,6 +386,7 @@ begin
   -- Test 7: a sign-up with a free class; sending twice; the history
   -- -------------------------------------------------------------------
   select max(id) into v_mark from public.change_log;
+  execute format('select coalesce(max(id), 0) from public.%I', v_hist) into v_hmark;
   v_r := public.forms_public_submit(v_slug, 'zz-k7', v_key1, v_pub, v_ans, v_kids, v_book, v_sig, null);
   if v_r ->> 'status' <> 'ok' or jsonb_array_length(v_r -> 'bookings') <> 1 or v_r -> 'bookings' -> 0 ->> 'starts_at' <> '06:00' then
     raise exception 'TEST FAILED: 7a sign-up with a booking: %', v_r;
@@ -398,10 +404,16 @@ begin
      or (select count(*) from public.class_bookings where submission_id = v_sub1) <> 1 then
     raise exception 'TEST FAILED: 7c sending twice should save once: %', v_r;
   end if;
-  if exists (select 1 from public.change_log l where l.id > v_mark and (l.after::text like '%data:image%' or l.before::text like '%data:image%'))
-     or not exists (select 1 from public.change_log l where l.id > v_mark and l.table_name = 'form_submissions'
-                     and l.record_id = v_sub1 and l.after ->> 'signature' = 'on file' and l.actor_name = 'Family form'
-                     and l.action = 'forms_public_submit') then
+  execute format('select exists (select 1 from public.%I l where l.id > $1 and l.table_name = ''form_submissions''
+                    and l.record_id = $2 and l.after ->> ''signature'' = ''on file'' and l.actor_name = ''Family form''
+                    and l.action = ''forms_public_submit'')', v_hist) into v_hok using v_hmark, v_sub1;
+  if not v_hok then
+    raise exception 'TEST FAILED: 7d history: signature "on file", actor Family form, never the picture';
+  end if;
+  -- (a static query naming family_history would fail before 0015, so it is built as text)
+  execute format('select exists (select 1 from public.%I l where l.id > $1 and (l.after::text like ''%%data:image%%'' or l.before::text like ''%%data:image%%''))',
+                 v_hist) into v_hok using v_hmark;
+  if v_hok or exists (select 1 from public.change_log l where l.id > v_mark and (l.after::text like '%data:image%' or l.before::text like '%data:image%')) then
     raise exception 'TEST FAILED: 7d history: signature "on file", actor Family form, never the picture';
   end if;
   begin
@@ -583,7 +595,7 @@ begin
   update public.class_bookings set on_date = v_today - 91 where submission_id = v_sub1;
   alter table public.class_bookings enable trigger class_bookings_before_write;
   alter table public.class_bookings enable trigger class_bookings_log;
-  select max(id) into v_mark from public.change_log;
+  execute format('select coalesce(max(id), 0) from public.%I', v_hist) into v_hmark;
   v_n := public.forms_purge_old_signatures();
   if v_n < 1
      or (select signature from public.form_submissions where id = v_sub1) is not null
@@ -592,9 +604,11 @@ begin
       v_n, (select string_agg(on_date::text, ',') from public.class_bookings where submission_id = v_sub1),
       (select signed_at from public.form_submissions where id = v_sub1);
   end if;
-  if not exists (select 1 from public.change_log l where l.id > v_mark and l.record_id = v_sub1
-                  and l.action = 'forms_purge_signatures' and l.actor_name = 'Signature clean-up'
-                  and l.before ->> 'signature' = 'on file' and l.after ->> 'signature' is null) then
+  execute format('select exists (select 1 from public.%I l where l.id > $1 and l.record_id = $2
+                    and l.action = ''forms_purge_signatures'' and l.actor_name = ''Signature clean-up''
+                    and l.before ->> ''signature'' = ''on file'' and l.after ->> ''signature'' is null)', v_hist)
+    into v_hok using v_hmark, v_sub1;
+  if not v_hok then
     raise exception 'TEST FAILED: 11b the clean-up is in the history (without the picture)';
   end if;
   -- a sign-up whose class is still to come keeps its picture

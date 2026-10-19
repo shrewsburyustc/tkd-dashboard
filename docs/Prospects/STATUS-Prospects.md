@@ -14,7 +14,7 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Prospects-Build-Plan.md`
 | P4b Board view + drag + progress track (mockup screens 11–13) | Decided 2026-10-18 (v0.246). Built in preview + design review (no High; plain bugs fixed); 5 differences decided (v0.247) and built. Committed locally 2026-10-18, not pushed |
 | P5 Live setup (0007–0012, then Forms F3) | 0007, 0008, 0009, 0012 applied and checked 2026-10-19 (fingerprints exact, advisor expected-only, all four tests files passed). Still to do: Forms F3 (public page) and F6 |
 | P6 Go live with Forms | Needs a separate OK |
-| — 0003 history exception | **Proposal only** (`PROPOSAL-0003-history-cleanup.md`), for the Color Belt session; Prospects must not go live before it's decided |
+| — Family history (replaces the 0003 proposal) | Decided by Jeffrey 2026-10-19 (rulebook v0.400 on color-belt, design note `docs/Testing/Color Belt Testing/DECISION-history-purge.md`, commit 0103c69): family records log into their own table `family_history`; `change_log` and 0003 stay untouched. **Migration 0015 written** here with tests (PGlite 276/276) and a separate security review (no High; M1 + L2–L5 fixed). Waiting: Color Belt session's review, then Jeffrey applies it. **Prospects must not go live before 0015 is applied and tested.** |
 
 ## What P2 added
 
@@ -73,3 +73,10 @@ The list as it was asked:
 - **Paste order for the live database:** 0007, 0008, 0009, 0012 — each followed by its fingerprints file, the security advisor and its tests file.
 
 - 2026-10-19 (v0.255, Jeffrey option A): the panel keeps typed notes visible and puts the automatic changes in a closed "History · n changes" dropdown. Built in preview, checked at 1280 / 820 touch / 390 / 320. **Rulebook numbers clash again:** the camps branch took v0.230–v0.237 after this branch was renumbered to v0.233–v0.247 (overlap v0.233–v0.237).
+
+## Migration 0015 — family history (2026-10-19, not applied)
+
+- `supabase/migrations/0015_family_history.sql`: `public.family_history` (twin of `change_log`; RLS on, no policy, no grants), update / truncate refused, delete only while `tkd.action` is `prospects_purge_old` or `prospects_delete`; `family_history_write()`; `forms_submissions_log()` retargeted; the `_log` triggers of `class_bookings`, `prospects`, `prospect_notes` re-pointed; `family_history_forget()` + `family_history_counts_row()`; `prospects_purge_old()` (rule re-checked in the delete, counts from what was removed) and `prospects_delete()` remove the family's history and leave one counts-only `change_log` row. Refuses to run if `change_log` already holds family rows (R5). Nothing in 0003 changes.
+- Tests: `supabase/tests/0015_tests.sql` (design note §5 items 1–9 + catalog), `0015_fingerprints.sql` (connector-safe), `pglite/run.mjs` step 15 (live order; earlier fingerprints unchanged incl. 0003; every earlier test file passes on top; applied twice more; minimal = live order; R5 refusal on step 14's database). `0009_tests.sql` now looks for sign-up history in `family_history` once it exists.
+- Security review: no High. Fixed: M1 (the purge test now checks every other family's history is untouched; Ava's note survives Max's delete), L2 (the delete re-checks the 2-year / Joined rule), L3 + L1 (comments), L4 (search for every removed id), L5 (a half-Joined family stays). Not done: guards inside 0009 / 0012 (they're live; the 0015 header says never to re-run them).
+- **Never re-run 0009 or 0012 after 0015.**
