@@ -1,7 +1,7 @@
 # Black Belt testing — status
 
 **Updated:** 2026-10-18 (Black Belt worktree session, branch `black-belt`)
-**Rulebook at this update:** v0.220 (Black Belt rows: v0.204, v0.205, v0.209–v0.213, v0.216–v0.220; numbers 0.176–0.203 0.206–0.208 and 0.214–0.215 belong to other branches)
+**Rulebook at this update:** v0.224 (Black Belt rows: v0.204, v0.205, v0.209–v0.213, v0.216–v0.220, v0.224; numbers 0.176–0.203 0.206–0.208 and 0.214–0.215 and 0.221–0.223 belong to other branches)
 
 > Read `CLAUDE.md` (repo root) first. This file says where Black Belt testing stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -34,7 +34,7 @@
 ## 3. Next steps
 
 1. Jeffrey checks the urgent live-system items (plan §2): the live Sheet before Oct 24, and the `updateInfo` stopgap.
-2. **Now:** full mockups of cycles, registration and payments (PC / tablet / phone), three files built by subagents → design reviewer → screen-by-screen pass with Jeffrey. Grading questions B13–B18 once Master Jeong answers part A., and so on, one at a time; each part is built as soon as its design is approved.
+2. **Now:** screen-by-screen pass with Jeffrey through the three mockup files (`TKD-BlackBelt-Cycles-Mockups.html`, `TKD-BlackBelt-Form-Mockups.html`, `TKD-BlackBelt-Candidates-Mockups.html`; built from `TKD-BlackBelt-Mockups-Brief.md`, design-reviewed and fixed). One image per screen in `images/mockups/`. Grading questions B13–B18 once Master Jeong answers part A., and so on, one at a time; each part is built as soon as its design is approved.
 3. **Finance note sent** 2026-10-18 with Jeffrey's OK (`Finance-note-draft.md`; two questions for Jeffrey in it: Black Belt money in the school's Daily report at all? bounced checks on closed days?).
 4. **Jeffrey asks the school's insurer** how many years signed waivers must be kept (v0.213 setting).
 5. Jeffrey hands Master Jeong the printable rules sheet (part A) and brings back the answers.
@@ -85,3 +85,4 @@ All the items below were applied to the plan.
 | v0.218 | **B10 (B): post-dated checks** recorded when handed in; all count as paid that day (like Color Belt and Star); optional note, no check date or number. |
 | v0.219 | **B11 (A): roster Payments column**: Paid in full / Next $X by date / Late · $X since date / Not paid, + balance; summary cards filter the list. |
 | v0.220 | **B12 (A): one printable receipt** per candidate with the full payment history, totals and balance; email later. |
+| v0.224 | **Changes v0.219:** unpaid registrants stay gray "Next $X by [date]" (Paying on schedule) until the first due date passes, then red Not paid. |
