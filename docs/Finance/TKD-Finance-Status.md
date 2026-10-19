@@ -1,7 +1,7 @@
 # Finance — status and plan
 
 **Updated:** 2026-10-18 (Finance worktree session, branch `finance`)
-**Rulebook at this update:** v0.215 (Finance rows: v0.193–v0.203, v0.207–v0.209, v0.215) · **Questions:** `TKD-Finance-DailyReport-Questions.html` (this folder), images in `images/`
+**Rulebook at this update:** v0.216 (Finance rows: v0.193–v0.203, v0.207–v0.209, v0.215–v0.216) · **Questions:** `TKD-Finance-DailyReport-Questions.html` (this folder), images in `images/`
 
 > Read `CLAUDE.md` (repo root) first. This file says where Finance stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -88,3 +88,4 @@ Build plan + contract (like `TKD-Testing-Phase2-Build-Plan.md` / `CONTRACT-0005.
 - **Hide-payments switch: A (v0.215)** — account menu, anyone, remembered per device, gray Payments hidden chip in the top bar (tap to show). Replaces v0.208's fixed Mat-side device; tablets show payments by default.
 - **Plan §6 Q2–Q4 approved as listed (2026-10-18):** hide-payments switch + chip + Finance / Home hiding in this build, Testing roster hiding right after with those sessions; reminder times seeded Off; export ≤ 1 year; History back to the first payment; card total vs hand-recorded card payments; a day with only undone payments = no payments. **Next: step 0 (merge `main` into `finance`, needs Jeffrey's OK), then CP0 (plan + contract OK), then build.**
 - **Step 0 done (2026-10-18):** `main` merged into `finance` (8a5ada5); only the rulebook conflicted, both sides kept, version line v0.215. `main` now has 0006 (Star) and 0010 (Color Belt phase 3), so the Prospects branch's 0010 must be renumbered by the Main session; Finance stays 0011. **Next: CP0 (plan + contract OK), then build.**
+- **CP0 OK'd (2026-10-18, v0.216):** plan + CONTRACT-0011. Build started: builders A database, B data layer + mock, C screens.
