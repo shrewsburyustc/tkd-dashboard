@@ -1,7 +1,7 @@
 # Finance — status and plan
 
 **Updated:** 2026-10-18 (Finance worktree session, branch `finance`)
-**Rulebook at this update:** v0.209 (Finance rows: v0.193–v0.203, v0.207–v0.209) · **Questions:** `TKD-Finance-DailyReport-Questions.html` (this folder), images in `images/`
+**Rulebook at this update:** v0.215 (Finance rows: v0.193–v0.203, v0.207–v0.209, v0.215) · **Questions:** `TKD-Finance-DailyReport-Questions.html` (this folder), images in `images/`
 
 > Read `CLAUDE.md` (repo root) first. This file says where Finance stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -84,3 +84,5 @@ Build plan + contract (like `TKD-Testing-Phase2-Build-Plan.md` / `CONTRACT-0005.
 - Plan §6 Q1 (refunds) picture sent: `images/Finance-Q12-refunds.png` (`#q12`): A inside the Cash / Check group · B own Refunds group, cards show money in (recommended). Both: refund-only day asks “Cash taken out of the drawer”.
 - Refunds answer (Jeffrey): **both layouts, switchable** (Own group / In groups); Close the day the same in both. Follow-up sent: where the switch lives (`images/Finance-Q13-refund-toggle.png`, `#q13`): A Finance → Settings for everyone (recommended) · B switch on the report per device.
 - **Refund switch: B (v0.209)** — on the Daily report next to Print (phones under ⋯), each device remembers; default Own group (proposed); Print / Export follow the screen (proposed). Plan §6 Q1 done. Next: plan §6 Q2 (Mat-side switch as its own step).
+- **Q2 changed by Jeffrey (2026-10-18):** don't block payments on the tablets (used during testing); instead a **hide-payments mode** staff turn on when students / parents are around and off when needed. Changes v0.208's fixed Mat-side device. Follow-up sent (`images/Finance-Q14-hide-payments.png`, `#q14`): A account menu · B one-tap top-bar button · C B + hides again on lock / next day (recommended).
+- **Hide-payments switch: A (v0.215)** — account menu, anyone, remembered per device, gray Payments hidden chip in the top bar (tap to show). Replaces v0.208's fixed Mat-side device; tablets show payments by default.

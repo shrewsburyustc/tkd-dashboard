@@ -118,8 +118,8 @@ Internal set-returning helper (**not** security definer — only definer functio
 
 **Changed after closing** (`closing.changed_after`, History tag): the day is closed and **the counted items now differ from `finance_day_closing_items`** (an item added, removed, or with a different amount / method / school), **or** today's expected values differ from the close's `expected_*`. `changed_count` = number of differing items. The `recorded_at > close` test is used **only** for the `added_after_closing: true` label (counted / moved_in items whose chain has no row before the close).
 
-### 1.5 Mat-side device (v0.208) — **not in this build** [Q2]
-No database part. The later step stores it per device in the browser (`tkd.device.matSide`), like the default location.
+### 1.5 Hide-payments switch (v0.215) — **[Q2] which parts are in this build**
+No database part. Stored per device in the browser (`tkd.device.hidePayments` = `true` / absent). Proposed for this build: the account-menu switch, the top-bar **Payments hidden** chip, hiding the Finance item and the Home reminder link. Hiding the **Testing roster** payment parts touches the Color Belt and Star sessions' files and is done with them right after (they read the same browser setting).
 
 ### 1.6 Grants
 RLS on every new table (no policies needed: no app access); `revoke all` on tables / sequences from public, anon, authenticated, service_role. Execute on each §1.4 function to `authenticated` only; `finance_money_rows` (plain, not definer) and other helpers to nobody. Tables: `finance_day_closings`, `finance_day_closing_items`, `finance_settings`, `finance_reminder_times`, `finance_exports` — all logged, all truncate-guarded, the closings / items / exports append-only.

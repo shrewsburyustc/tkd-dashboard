@@ -14,7 +14,7 @@
 **In (this build):** Finance rail item (`ti-report-money`, last; phones under More) · Daily report (D1–D4, D11–D13) · History (D5) · Both summary (D6) · Export… + CSV (D7) · Print (D8) · Settings tab with reminder times (D9) · Home reminder lines (D10) · payment detail (D12) · phone ⋯ menu (D14).
 
 **Out (later, separate steps):**
-- **Mat-side device switch** (v0.208). It also hides payment details on the **Testing rosters**, which belong to the Color Belt and Star sessions. Proposed: build it as its own small step right after this one, once those sessions agree on what hides (see §6 Q2). Until then Finance follows v0.208's exception for staff devices.
+- **Hide-payments switch — Testing roster part** (v0.215). The switch itself (account menu, chip, hiding Finance + the Home link) is **in** this build (proposed, §6 Q2); hiding payment parts on the **Testing rosters** touches the Color Belt and Star sessions' files and is done with them right after.
 - Card payments online (Square), memberships / tuition, bank deposits (Q1 option C), daily email of the report.
 
 ---
@@ -95,7 +95,7 @@ Writes:
 4. **CP2 — database:** Jeffrey pastes 0011 into the SQL Editor (after 0006 is confirmed live); fingerprints; security advisor; `0011_tests.sql`. Then an admin sets the reminder times in Settings.
 5. **CP3 — local check** against the real database (`Start dashboard.bat`).
 6. **CP4 — OK to merge into `main` and push** (= deploy).
-7. Next step: Mat-side device switch with the Color Belt and Star sessions (§0).
+7. Next step: the hide-payments switch on the Testing rosters, with the Color Belt and Star sessions (§0).
 
 Rollback: Finance only reads payments, so turning it off is a code rollback (previous deployment in Cloudflare Pages). Its tables can stay; nothing else depends on them.
 
@@ -103,7 +103,7 @@ Rollback: Finance only reads payments, so turning it off is a code rollback (pre
 
 ## 6. Questions for Jeffrey (one at a time, with pictures, before the contract is final)
 1. ~~**Star refunds on the Daily report.**~~ **Decided v0.209: both layouts, switch on the report, remembered per device.** Not in the approved screens. Money handed back is real money out of the drawer, and on a day with more refunds than cash payments the drawer would be *expected* to hold less than nothing, which no count can match. Proposed: Close the day shows **Cash in** and **Cash paid out** separately; a refund shows on **its own date** in its method's group with a **Refund** tag and a minus amount, lowers that group's total and what Close the day expects. A check refund (a check the school writes) doesn't change the number of checks in the drawer. *(Picture to come.)*
-2. **Mat-side device switch** as its own step after this build (proposed), because it changes the Testing rosters too.
+2. **Hide-payments switch (v0.215):** the switch, chip and Finance / Home hiding in this build; the Testing roster part right after with those sessions (proposed).
 3. **Reminder times start Off** until an admin sets them after launch (proposed). The alternative is guessed defaults.
 4. **Small defaults** to OK as a batch: export range at most one year · History goes back to the first payment ever recorded · the card machine total is compared with card payments recorded by hand (no Square yet) · CSV formula guard · a day with only undone payments counts as "no payments".
 
@@ -114,4 +114,4 @@ Rollback: Finance only reads payments, so turning it off is a code rollback (pre
 | Finance and Testing disagree on totals | One set of database functions does the adding; Testing's own cards stay as they are |
 | Staff see past days another way | Accepted and documented (Testing rosters, v0.108); "today only" is about the report |
 | Merge with other branches (rulebook numbers, migration 0010 clash, shared files) | Step 0 merge; Finance takes 0011; shared files listed |
-| Money with names on the mat-side tablet before the switch exists | v0.208 exception covers staff devices; the switch is the next step |
+| Money with names on a tablet parents can see | Hide-payments switch (v0.215), anyone can flip it; it's a screen guard and relies on staff using it |
