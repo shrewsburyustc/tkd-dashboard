@@ -572,7 +572,7 @@ begin
     select jsonb_agg(jsonb_build_object(
              'id', p.id, 'version', p.version, 'family_id', p.submission_id, 'child_first_name', p.child_first_name,
              'parent_name', s.parent_name, 'status_id', p.status_id, 'follow_up_on', p.follow_up_on, 'joined_on', p.joined_on,
-             'created_at', p.created_at, 'checked_in', p.checked_in_at is not null,
+             'created_at', p.created_at, 'signed_up_at', s.created_at, 'checked_in', p.checked_in_at is not null,
              'opened_by_me', exists (select 1 from public.prospect_opens o where o.prospect_id = p.id and o.staff_id = auth.uid()),
              'booking', case when b.id is null then null else jsonb_build_object(
                'id', b.id, 'status', b.status, 'class_name', b.class_name, 'date', b.on_date,
@@ -582,7 +582,7 @@ begin
                          and coalesce(st.builtin, '') not in ('came', 'no_show', 'joined', 'not_interested')
                          and (b.on_date + b.ends_at) < v_now
                          and b.class_id is not null and public.prospects_class_ran(b.location_code, b.class_id, b.on_date, b.starts_at))
-             order by p.created_at desc, p.child_index)
+             order by s.created_at desc, p.child_index)
       from public.prospects p
       join public.form_submissions s on s.id = p.submission_id
       join public.prospect_statuses st on st.id = p.status_id
@@ -610,7 +610,7 @@ begin
     return jsonb_build_object('status', 'invalid');
   end if;
   return jsonb_build_object('status', 'ok', 'ids', coalesce((
-    select jsonb_agg(p.id order by p.created_at desc)
+    select jsonb_agg(p.id order by s.created_at desc)
       from public.prospects p
       join public.form_submissions s on s.id = p.submission_id
      where p.location_code = p_location_code
@@ -770,7 +770,8 @@ begin
     if not found then return jsonb_build_object('status', 'stale'); end if;
     if (coalesce(v_s.builtin, '') = 'joined') <> (p_joined_on is not null)   -- (a custom status has no built-in key)
        or (p_joined_on is not null and (p_joined_on > public.schedule_today()
-                                        or p_joined_on < (v_p.created_at at time zone 'America/New_York')::date - 1)) then
+                                        or p_joined_on < ((select s.created_at from public.form_submissions s where s.id = v_p.submission_id)
+                                                          at time zone 'America/New_York')::date - 1)) then
       return jsonb_build_object('status', 'invalid');
     end if;
     select s.name into v_old from public.prospect_statuses s where s.id = v_p.status_id;
@@ -1435,7 +1436,10 @@ $$;
 -- ---------------------------------------------------------------------
 -- 12. Backfill: statuses for every school, and prospects for sign-ups
 -- saved before this file ran (0009 may have been live first). Safe to run
--- again: nothing is added twice.
+-- again: nothing is added twice. A backfilled prospect's own created_at is
+-- the day this file ran (the bookkeeping trigger sets it), so everything
+-- that shows or checks the SIGN-UP date reads form_submissions.created_at;
+-- the "Signed up" line in each child's timeline gets that time too.
 -- ---------------------------------------------------------------------
 do $$
 declare
@@ -1458,6 +1462,12 @@ begin
            v_s.created_at
       from jsonb_array_elements(v_s.children) with ordinality as t(c, ord)
     on conflict (submission_id, child_index) do nothing;
+    insert into public.prospect_activity (prospect_id, location_code, kind, detail, created_at, created_by_name)
+    select p.id, p.location_code, 'created', jsonb_build_object('source', v_s.source, 'entered_by', v_s.entered_by),
+           v_s.created_at, public.change_log_actor_name()
+      from public.prospects p
+     where p.submission_id = v_s.id
+       and not exists (select 1 from public.prospect_activity a where a.prospect_id = p.id and a.kind = 'created');
   end loop;
   perform set_config('tkd.action', '', true);
 end;

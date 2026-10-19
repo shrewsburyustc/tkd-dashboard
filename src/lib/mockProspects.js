@@ -82,9 +82,6 @@ export function createProspectsPart({ newId, stamp, today, nowLocal, times, slot
         status_id: statusOf(db, sub.location_code, 'new'), follow_up_on: null, joined_on: null, checked_in_at: null, checked_in_by_name: null,
         last_activity_at: stamp(),
       }, ctx);
-      // like the real trigger: the prospect is made the moment the form is sent (the preview's
-      // sample sign-ups are dated days ago, so copy that date)
-      p.created_at = sub.created_at;
       log(db, p, 'created', { source: sub.source, entered_by: sub.entered_by }, ctx, sub.created_at);
     });
   }
@@ -149,14 +146,17 @@ export function createProspectsPart({ newId, stamp, today, nowLocal, times, slot
       const now = nowLocal();
       const list = db.prospects
         .filter((p) => p.location_code === a.p_location_code)
-        .sort((x, y) => (x.created_at < y.created_at ? 1 : x.created_at > y.created_at ? -1 : x.child_index - y.child_index))
-        .map((p) => {
+        .map((p) => ({ p, at: db.submissions.find((x) => x.id === p.submission_id)?.created_at ?? p.created_at }))
+        // newest sign-up first (like 0010: by the family's sign-up time)
+        .sort((x, y) => (x.at < y.at ? 1 : x.at > y.at ? -1 : x.p.child_index - y.p.child_index))
+        .map(({ p }) => {
           const s = db.submissions.find((x) => x.id === p.submission_id);
           const b = bookingOf(db, p);
           const builtin = builtinOf(db, p.status_id);
           return {
             id: p.id, version: p.version, family_id: p.submission_id, child_first_name: p.child_first_name, parent_name: s?.parent_name ?? '',
-            status_id: p.status_id, follow_up_on: p.follow_up_on, joined_on: p.joined_on, created_at: p.created_at, checked_in: Boolean(p.checked_in_at),
+            status_id: p.status_id, follow_up_on: p.follow_up_on, joined_on: p.joined_on, created_at: p.created_at, signed_up_at: s?.created_at ?? p.created_at,
+            checked_in: Boolean(p.checked_in_at),
             opened_by_me: db.opens.some((o) => o.prospect_id === p.id && o.staff === ctx.actorName),
             booking: bookingJson(b),
             ask_came: Boolean(b) && b.status === 'booked' && !p.checked_in_at && !['came', 'no_show', 'joined', 'not_interested'].includes(builtin ?? '')
@@ -225,7 +225,8 @@ export function createProspectsPart({ newId, stamp, today, nowLocal, times, slot
       const { p } = l;
       const s = db.statuses.find((x) => x.id === a.p_status_id && x.location_code === p.location_code);
       if (!s) return st('stale');
-      const joinedFloor = addDays(p.created_at.slice(0, 10), -1);
+      const signedUp = db.submissions.find((x) => x.id === p.submission_id)?.created_at ?? p.created_at;
+      const joinedFloor = addDays(signedUp.slice(0, 10), -1);
       if ((s.builtin === 'joined') !== (a.p_joined_on !== null) || (a.p_joined_on !== null && !okDate(a.p_joined_on, joinedFloor, today()))) return st('invalid');
       const from = db.statuses.find((x) => x.id === p.status_id)?.name;
       const changed = p.status_id !== s.id || p.joined_on !== a.p_joined_on;

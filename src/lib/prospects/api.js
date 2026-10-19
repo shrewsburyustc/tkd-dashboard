@@ -31,7 +31,7 @@ function toBooking(b) {
 function toListItem(r) {
   return {
     id: r.id, version: r.version, familyId: r.family_id, childFirstName: r.child_first_name, parentName: r.parent_name, statusId: r.status_id,
-    followUpOn: r.follow_up_on ?? null, joinedOn: r.joined_on ?? null, createdAt: r.created_at, checkedIn: r.checked_in === true,
+    followUpOn: r.follow_up_on ?? null, joinedOn: r.joined_on ?? null, createdAt: r.created_at, signedUpAt: r.signed_up_at ?? null, checkedIn: r.checked_in === true,
     openedByMe: r.opened_by_me === true, booking: toBooking(r.booking), askCame: r.ask_came === true,
   };
 }

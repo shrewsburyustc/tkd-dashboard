@@ -401,10 +401,16 @@ async function main() {
                                                        children, source, submission_key)
                   select f.id, 'worcester', 1, f.published, '{}', 'Up Grade', '5085550000', 'up@example.com',
                          '[{"first_name":"Una","age":6},{"first_name":"Ned","age":8}]', 'staff', gen_random_uuid()
-                    from public.forms f where f.slug = 'zz-upgrade-form';`);
+                    from public.forms f where f.slug = 'zz-upgrade-form';
+                  -- it was sent weeks before 0010 runs (the bookkeeping trigger would reset the time, so skip triggers for this one line)
+                  set session_replication_role = replica;
+                  update public.form_submissions set created_at = timestamptz '2026-09-01 21:30:00-04' where parent_name = 'Up Grade';
+                  set session_replication_role = origin;`);
                 if (await run(up, '[upgrade] apply 0010 on top', read('migrations', '0010_prospects.sql'))) {
                   record('[upgrade] 0010 made prospects for the earlier sign-up (2 children)',
                     (await one(up, "select count(*)::int from public.prospects p join public.form_submissions s on s.id = p.submission_id where s.parent_name = 'Up Grade'")) === 2);
+                  record('[upgrade] each backfilled child has a "Signed up" timeline line at the real sign-up time',
+                    (await one(up, "select count(*)::int from public.prospect_activity a join public.prospects p on p.id = a.prospect_id join public.form_submissions s on s.id = p.submission_id where s.parent_name = 'Up Grade' and a.kind = 'created' and a.created_at = timestamptz '2026-09-01 21:30:00-04'")) === 2);
                   // (0009's fingerprints include the triggers 0010 adds to its tables, so they are compared after 0010)
                   const up9 = await fingerprints(up, '0009_fingerprints.sql');
                   record('[upgrade] 0009 fingerprints identical to a fresh install', JSON.stringify(up9) === JSON.stringify(after9), `${up9.length} rows`);

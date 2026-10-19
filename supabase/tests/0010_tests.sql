@@ -240,6 +240,10 @@ begin
   if (select (e -> 'booking' ->> 'class_running')::boolean from jsonb_array_elements(v_r -> 'prospects') e where (e ->> 'id')::uuid = v_p0) is not true then
     raise exception 'TEST FAILED: 3c Ava''s free class still runs';
   end if;
+  if (select (e ->> 'signed_up_at')::timestamptz from jsonb_array_elements(v_r -> 'prospects') e where (e ->> 'id')::uuid = v_p0)
+     is distinct from (select s.created_at from public.form_submissions s join public.prospects p on p.submission_id = s.id where p.id = v_p0) then
+    raise exception 'TEST FAILED: 3g the list''s signed_up_at must be the sign-up''s own time';
+  end if;
   v_txt := concat_ws(',',
     (public.prospects_search('worcester', '7731') -> 'ids') @> to_jsonb(array[v_p0]),
     (public.prospects_search('worcester', '508-555-7731') -> 'ids') @> to_jsonb(array[v_p0]),
