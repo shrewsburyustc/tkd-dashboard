@@ -88,7 +88,7 @@ Full detail, every number and every formula are in the three inventory files.
   - For Fall 2026 the first registration came in Jun 17, most came Aug–Sep, and 17 of 43 came **after** the Sep 19 deadline (the last on Oct 8).
 - **Payments must be live with registration** (the first checks come with the application). **Grading must be live by the first testing day**, around early April.
 - **The Testing chooser** (v0.59) isn't built yet, so whichever of Star or Black Belt builds first builds it.
-- **This needs a place in the build queue.** v0.61 says one build at a time, and Star (its database 0006 is live; its screens are still to build), Color Belt phase 3, Finance, Prospects, Schedule, Calendar and Forms are all ahead or alongside. **February is only realistic if you put Black Belt's registration and payments build (B1–B2) ahead of some of them.** That's your call; it's the first thing I'll ask.
+- **Black Belt is built now, in its own session (decided v0.205).** It doesn't wait behind other sections. Each part is designed, then built straight away.
 - Before Spring 2027 opens, the corrected **Fall 2026 make-up list**, plus any older pending make-ups kept only in copied files, is brought into the new system.
 
 ## 4. What the new system changes
@@ -169,7 +169,7 @@ Design runs in two tracks. **Registration + payments design starts right away.**
 | Step | What | Output |
 |---|---|---|
 | 0 | **This plan** + inventory files → your OK | plan, status file, first rulebook row ("Black Belt testing added") |
-| 1a | **Registration + payments questions**, one at a time (§9 B1–B11), each with pictures: one combined PNG per question, amber outlines, a recommendation. Each answer becomes a rulebook row | questions files + images |
+| 1a | **Registration + payments questions**, one at a time (§9 B2–B12), each with pictures: one combined PNG per question, amber outlines, a recommendation. Each answer becomes a rulebook row | questions files + images |
 | 1b | **Rules check with Master Jeong** (§9 part A), in parallel with 1a. I'll make a one-page printable sheet you can hand him | answers |
 | 2 | **Grading questions** (§9 B12–B18) | questions files + images |
 | 3 | **Full mockups** at 1280×800, 820×1180 touch, 390×844 touch and 320 wide → separate design reviewer agent → screen-by-screen pass with you. Registration/payment mockups go first and don't wait for grading | mockups |
@@ -213,7 +213,7 @@ Design runs in two tracks. **Registration + payments design starts right away.**
 ### Part B — design questions for you (one at a time, pictures, recommendation)
 
 **Foundations**
-1. **Build priority:** put Black Belt registration + payments (B1–B2) ahead of other builds in the queue so February is reachable?
+1. ~~Build priority~~: **withdrawn (v0.205): Black Belt is built now, not queued.**
 2. Where Black Belt lives (the third Testing chooser row vs its own rail item) and its page tabs.
 3. What a **cycle** holds: 3 testing days (date, time, place, the outdoor part), deadlines, payment due dates; copied from the last cycle.
 4. **Who can do what** (Admin / Staff) for settings, candidates, payments, grading and results, enforced in the database.

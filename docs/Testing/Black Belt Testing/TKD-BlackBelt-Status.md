@@ -1,7 +1,7 @@
 # Black Belt testing — status
 
 **Updated:** 2026-10-18 (Black Belt worktree session, branch `black-belt`)
-**Rulebook at this update:** v0.204 (Black Belt row: v0.204; numbers 0.176–0.203 belong to other branches)
+**Rulebook at this update:** v0.205 (Black Belt rows: v0.204–v0.205; numbers 0.176–0.203 belong to other branches)
 
 > Read `CLAUDE.md` (repo root) first. This file says where Black Belt testing stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -13,7 +13,7 @@
 
 - Research is done (inventory files in `Inventory/`).
 - **The plan is approved** (v0.204): `TKD-BlackBelt-Plan.md`. Two reviewer agents checked it first (§4).
-- Question B1 (build priority) is asked.
+- **Black Belt is built now**, not queued behind other sections (v0.205; B1 withdrawn). Question B2 (where Black Belt lives) is asked.
 - Nothing is built and there is no migration. The branch includes main up to `5ccb355` (Star 0006 live).
 
 ## 2. Files
@@ -28,7 +28,7 @@
 ## 3. Next steps
 
 1. Jeffrey checks the urgent live-system items (plan §2): the live Sheet before Oct 24, and the `updateInfo` stopgap.
-2. **Question B1 (build priority): waiting on Jeffrey.** Then B2, B3, and so on, one at a time.
+2. **Question B3 (what a cycle holds): waiting on Jeffrey.** Then B3, B4, and so on, one at a time; each part is built as soon as its design is approved.
 3. With Jeffrey's OK, send the Finance session a note (plan §7).
 4. Make the printable rules sheet for Master Jeong (part A) in parallel.
 
@@ -67,3 +67,4 @@ All the items below were applied to the plan.
 | Version | Decision |
 |---|---|
 | v0.204 | **Black Belt testing added** as the last testing section; plan approved. Registration, grading and payments come first, for Spring 2027, alongside Finance. Two design tracks (grading waits for Master Jeong's rules answers). |
+| v0.205 | **Built now**, in this session, not queued behind other sections; design-first order still applies; B1 withdrawn. |
