@@ -198,7 +198,7 @@ Structure first, then money, then waivers and privacy. Each will be shown with a
 - **Recommendation:** A.
 - **Touches:** v0.213, v0.900 (Form 5, Rubric and prices waiver versions).
 
-### Q-B6 · What is removed when a signed waiver's keeping time ends
+### Q-B6 · What is removed when a signed waiver's keeping time ends — **answered v0.906: A**
 
 - **The question:** when a signed waiver reaches its deletion date (the later of last testing day + N1 years and 18th birthday + N2 years, §2.7), what goes?
 - **Why it matters:** privacy of minors versus being able to say later "a waiver was signed, version 2027-1, on Mar 10".
