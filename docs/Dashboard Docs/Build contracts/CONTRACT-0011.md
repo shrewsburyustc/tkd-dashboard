@@ -1,6 +1,6 @@
 # Contract 0011 — Finance: Daily report, close the day, History, Export, reminder settings (DRAFT)
 
-**Status:** draft written with the build plan, 2026-10-18; **security review applied** the same day (4 must-fix + 5 should-fix: closing-items snapshot for Changed after closing, every middle day of a moved chain, chains built from whole histories, refunds vs the drawer [Q1], fingerprint stale check, closings guard + lock mode, CSV quoting and formula guard, stronger privacy tests, payment-detail rules). **Not final** until Jeffrey OKs the plan (CP0) and answers its §6 questions; items marked **[Q2]**–**[Q4]** change with those answers (Q1 refunds: decided v0.209).
+**Status:** draft written with the build plan, 2026-10-18; **security review applied** the same day (4 must-fix + 5 should-fix: closing-items snapshot for Changed after closing, every middle day of a moved chain, chains built from whole histories, refunds vs the drawer [Q1], fingerprint stale check, closings guard + lock mode, CSV quoting and formula guard, stronger privacy tests, payment-detail rules). **Not final** until Jeffrey OKs the plan (CP0) and answers its §6 questions; **all plan questions answered 2026-10-18** (Q1 refunds v0.209; Q2 hide-payments switch v0.215 — switch, chip, Finance + Home hiding in this build, Testing rosters right after; Q3 reminder times seeded Off; Q4 defaults approved). The **[Qn]** marks below are kept only as pointers.
 
 The single source of truth for three builders: **A database**, **B data layer + preview mock**, **C screens**. Follow it exactly so the parts fit. If something here is impossible or contradicts the sources below, **stop and report it** — do not improvise.
 
@@ -118,8 +118,8 @@ Internal set-returning helper (**not** security definer — only definer functio
 
 **Changed after closing** (`closing.changed_after`, History tag): the day is closed and **the counted items now differ from `finance_day_closing_items`** (an item added, removed, or with a different amount / method / school), **or** today's expected values differ from the close's `expected_*`. `changed_count` = number of differing items. The `recorded_at > close` test is used **only** for the `added_after_closing: true` label (counted / moved_in items whose chain has no row before the close).
 
-### 1.5 Hide-payments switch (v0.215) — **[Q2] which parts are in this build**
-No database part. Stored per device in the browser (`tkd.device.hidePayments` = `true` / absent). Proposed for this build: the account-menu switch, the top-bar **Payments hidden** chip, hiding the Finance item and the Home reminder link. Hiding the **Testing roster** payment parts touches the Color Belt and Star sessions' files and is done with them right after (they read the same browser setting).
+### 1.5 Hide-payments switch (v0.215) — parts in this build (Q2, approved)
+No database part. Stored per device in the browser (`tkd.device.hidePayments` = `true` / absent). In this build: the account-menu switch, the top-bar **Payments hidden** chip, hiding the Finance item and the Home reminder link. Hiding the **Testing roster** payment parts touches the Color Belt and Star sessions' files and is done with them right after (they read the same browser setting).
 
 ### 1.6 Grants
 RLS on every new table (no policies needed: no app access); `revoke all` on tables / sequences from public, anon, authenticated, service_role. Execute on each §1.4 function to `authenticated` only; `finance_money_rows` (plain, not definer) and other helpers to nobody. Tables: `finance_day_closings`, `finance_day_closing_items`, `finance_settings`, `finance_reminder_times`, `finance_exports` — all logged, all truncate-guarded, the closings / items / exports append-only.

@@ -101,7 +101,7 @@ Rollback: Finance only reads payments, so turning it off is a code rollback (pre
 
 ---
 
-## 6. Questions for Jeffrey (one at a time, with pictures, before the contract is final)
+## 6. Questions for Jeffrey — **all answered 2026-10-18** (Q2–Q4 defaults approved as listed)
 1. ~~**Star refunds on the Daily report.**~~ **Decided v0.209: both layouts, switch on the report, remembered per device.** Not in the approved screens. Money handed back is real money out of the drawer, and on a day with more refunds than cash payments the drawer would be *expected* to hold less than nothing, which no count can match. Proposed: Close the day shows **Cash in** and **Cash paid out** separately; a refund shows on **its own date** in its method's group with a **Refund** tag and a minus amount, lowers that group's total and what Close the day expects. A check refund (a check the school writes) doesn't change the number of checks in the drawer. *(Picture to come.)*
 2. **Hide-payments switch (v0.215):** the switch, chip and Finance / Home hiding in this build; the Testing roster part right after with those sessions (proposed).
 3. **Reminder times start Off** until an admin sets them after launch (proposed). The alternative is guessed defaults.
