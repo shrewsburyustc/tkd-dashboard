@@ -58,6 +58,19 @@
 | Form 5 · Step 2 check and send | **OK**: signature label adds "(parent or guardian)" for under-18s; adult signer's name prefilled from the candidate (editable); Read all opens the full waiver in the panel / dialog; privacy line under Send |
 | Form 6 · Step 2 missing items | **OK**: "Tick the box to agree to the waiver." and "Enter the name of the person signing." (+ Star's signature message) |
 | Form 7 · Registered | **OK**: What to pay as a Due by · For · Amount table; Kukkiwon steps wording; printout drops buttons and adds the Dan's requirements fully opened; Register another refills email and plan, no combined schedule; results line waits for email |
+| Form 8 · Can't register | **OK**: not open yet / closed after the application date ("ask at the front desk") / sending failed ("Try again", no duplicate) / closed while filling in keeps the summary on screen |
+| Form 9 · PC version | **OK** |
+| Candidates 1 · Candidates tab | **OK**: duplicates left out of cards until resolved; Late shows only the overdue amount; order Dan → school → last name; tablet puts Dan/school under the name and Record payment in ⋯; phone one line + pills; mat-side tablet setting hides cards, money and payment buttons |
+| Candidates 2 · Staff view | **OK**: role table as v0.210; gray staff line under the tabs once registration has closed |
+| Candidates 3 · Candidate detail | **OK**: Record payment stays on paid-in-full candidates; Remove = Star's Withdraw / Delete permanently; no history section (change log keeps everything) |
+| Candidates 4 · Record payment | **OK**: "For" is a checklist of unpaid items that fills the Amount with their sum (editable); "Owes … due today" line; "Save and record another"; one check for two items = one line "Payment 1 + Kukkiwon" |
+| Candidates 5 · Admin payment actions | **OK**: Edit needs a reason; Undo = instant with Undo toast; refund capped at what's been paid, counts the day recorded; Mark check returned has a note only (no bank fee); toast wording |
+| Candidates 6 · Change plan or Kukkiwon | **OK**: staff before anything is paid; grayed for staff after a payment; admin allowed with the amber "already paid … balance worked out again" line; Kukkiwon added late is due at once; plans in Rubric and prices order with a "Current" tag |
+| Candidates 7 · Add candidate (desk) | **OK**: form fields + School + "Waiver signed on paper" (required); desk-added candidates get a reference (BB-####, differs from Star); opens straight away (no New / Make-up menu); due dates already passed count as due today for a late family |
+| Candidates 8 · Print receipt | **OK**: letter page as drawn; opens a preview first with "Print or save as PDF"; notes and "recorded by" not printed; DOB and email never printed |
+| Candidates 9 · Overpaid, Kukkiwon in the tag | **OK**: "Paid in full · ⚠ $X overpaid" (amber) with −$X balance and "Record refund · $X overpaid" in ⋯ (admins); Paid in full needs the plan and the Kukkiwon fee; a late Kukkiwon-only amount is named ("Late · $110 Kukkiwon since Mar 27"); Plan column shows "· Kukkiwon" |
+
+**All 26 screens approved 2026-10-19** (rulebook v0.900).
 
 ## 4. Reviewer check of the plan (2026-10-18)
 
