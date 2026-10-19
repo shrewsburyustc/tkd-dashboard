@@ -88,6 +88,8 @@ Details settled from precedent while drawing the additions (2026-10-19, design r
 - No check-out / pick-up record (option B not chosen).
 - Tap any name → Camper detail (C6) with everything else, incl. check-in times.
 
+**CONTRACT-0013 written 2026-10-19** (`docs/Dashboard Docs/Build contracts/CONTRACT-0013.md`), plan updated to all answers; contract review running. Items the contract settled on its own (§10), **to confirm at the CP1 walkthrough**: admin Reopen after the closing date moves the close date to the camp's last day; Check in tab keeps a day switch (default today) so admins can fix an earlier day; tapping a Not paid / Owes note opens a small Mark paid popup; Payments uses a one-line summary instead of the four cards; Edit details allows ages 1–99 (range checked only on the form); age range may be equal (8–8); Edit details refuses removing a day already checked in; possible duplicates can be checked in; Save as template note mentions ages; new wording list (contract §7.3).
+
 **CP0 — build plan OK'd by Jeffrey 2026-10-19** ("let's finish it … do a preview so I can see it").
 
 **All 13 build plan questions answered (2026-10-19).** Follow-ups: draw C3 / C4 / C7 additions (age range, possible duplicate) for approval; then update the build plan, write CONTRACT-0013 and record Q5, Q11, Q13 (and the other answers) in the rulebook from the 0.7xx block.
