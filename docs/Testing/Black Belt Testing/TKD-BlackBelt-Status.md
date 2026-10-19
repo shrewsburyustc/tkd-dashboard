@@ -34,7 +34,7 @@
 ## 3. Next steps
 
 1. Jeffrey checks the urgent live-system items (plan §2): the live Sheet before Oct 24, and the `updateInfo` stopgap.
-2. **Now:** screen-by-screen pass with Jeffrey through the three mockup files (`TKD-BlackBelt-Cycles-Mockups.html`, `TKD-BlackBelt-Form-Mockups.html`, `TKD-BlackBelt-Candidates-Mockups.html`; built from `TKD-BlackBelt-Mockups-Brief.md`, design-reviewed and fixed). One image per screen in `images/mockups/`. Grading questions B13–B18 once Master Jeong answers part A., and so on, one at a time; each part is built as soon as its design is approved.
+2. **Mockups approved (v0.900, 2026-10-19).** **Next:** the database plan for cycles, registration and payments (its own questions, like Star's Q-D list) → build contract → security reviewer → build in the preview (B1 cycles + prices + public form, B2 candidates + payments). Grading questions B13–B18 once Master Jeong answers part A.
 3. **Finance note sent** 2026-10-18 with Jeffrey's OK (`Finance-note-draft.md`; two questions for Jeffrey in it: Black Belt money in the school's Daily report at all? bounced checks on closed days?).
 4. **Jeffrey asks the school's insurer** how many years signed waivers must be kept (v0.213 setting).
 5. Jeffrey hands Master Jeong the printable rules sheet (part A) and brings back the answers.
@@ -119,3 +119,4 @@ All the items below were applied to the plan.
 | v0.219 | **B11 (A): roster Payments column**: Paid in full / Next $X by date / Late · $X since date / Not paid, + balance; summary cards filter the list. |
 | v0.220 | **B12 (A): one printable receipt** per candidate with the full payment history, totals and balance; email later. |
 | v0.224 | **Changes v0.219:** unpaid registrants stay gray "Next $X by [date]" (Paying on schedule) until the first due date passes, then red Not paid. |
+| v0.900 | **Mockups approved**: cycles (8), family form (9), Candidates/payments (9), all amber proposals, plus Download QR code at any time (Jeffrey). First row of Black Belt's 0.900–0.999 block. |
