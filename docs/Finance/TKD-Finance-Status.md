@@ -79,3 +79,5 @@ Full mockups at PC / tablet / phone → separate design reviewer agent → scree
 ## 7. Next
 
 Build plan + contract (like `TKD-Testing-Phase2-Build-Plan.md` / `CONTRACT-0005.md`): tables (day closings, reminder settings, export log), read functions over `testing_payments` (+ Star's once built), roles, migration number (next free), PGlite tests, security reviewer. Then build in the preview with checkpoints. Nothing built or deployed without Jeffrey's OK.
+
+**2026-10-18:** build plan `TKD-Finance-Build-Plan.md` + draft `CONTRACT-0011.md` written and security-reviewed (fixes applied). Migration **0011** (0010 is used by both Prospects and Color Belt phase 3 — Main session to resolve). Found: **Star refunds** (0006, live) aren't in the approved screens → plan §6 Q1, asked next with a picture. Waiting on: CP0 OK, plan §6 Q1–Q4, OK to merge `main` into `finance` (step 0).
