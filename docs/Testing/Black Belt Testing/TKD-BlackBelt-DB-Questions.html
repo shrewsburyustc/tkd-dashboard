@@ -88,6 +88,10 @@ b{font-weight:600}
 .tg.ok{background:var(--ok-tint);color:var(--ok);border-color:#CFE2B8}
 .tg.wa{background:var(--warn-tint);color:var(--warn);border-color:#F2D9B0}
 .strike{text-decoration:line-through;color:var(--text2)}
+
+.choice{border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12.5px}
+.choice.dis{color:#8A8A85;background:var(--surface)}
+.choice .why{font-size:11.5px;color:var(--text2);margin-top:2px}
 </style>
 </head>
 <body>
@@ -271,6 +275,45 @@ b{font-weight:600}
 
 </div>
 <p class="foot"><b>Same in every option:</b> fixing a candidate's school is allowed (staff, v0.210); undos, refunds and returned checks belong to the same school as the payment they correct, so one family's money never splits between two reports.</p>
+</section>
+
+<section id="qb4">
+<h1>Black Belt · Database question 4 of 7: can payment records ever be deleted?</h1>
+<p class="lead">An admin removes a candidate (⋯ → Remove candidate). Star offers two choices: <b>Withdraw</b> (hidden under "Removed", can be restored) and <b>Delete permanently</b>, which also wipes the candidate's payments. The question is whether Black Belt <b>ever</b> deletes payment records. Example: Ethan Park, added at the desk by mistake on Mar 27; a $290 check was recorded and then undone. <span class="ambtxt">Amber</span> = what happens.</p>
+<div class="opts">
+
+<div class="opt rec">
+<div class="ot"><span class="letter">A</span>Never<span class="rec-tag">Recommended</span></div>
+<div class="dlg"><h4>Remove Ethan Park?</h4>
+<div class="choice">◉ <b>Withdraw</b><div class="why">Hidden under "Removed". Can be restored. Payments stay on record.</div></div>
+<div class="choice dis amb">○ Delete permanently<div class="why">Ethan has payment records (even undone ones), so he can't be deleted. Withdraw him instead.</div></div>
+<div class="acts"><span class="btnx">Cancel</span><span class="btnx p">Withdraw</span></div></div>
+<div class="rep"><div class="hd"><span>Shrewsbury · Sat, Mar 27</span><span class="tg ok">Closed</span></div><div class="ln"><span class="strike">Ethan Park · Payment 1 · check $290</span><span>Undone</span></div></div>
+<div class="exp" style="margin-top:8px"><b>What it does:</b> once a candidate or cycle has <b>any</b> payment record, it can only be withdrawn, never deleted. The database itself refuses to delete payment records, even by mistake.<br><b>Pros:</b> the money record is complete forever; closed days never lose lines.<br><b>Cons:</b> a mistaken test payment means that candidate can only be withdrawn, not deleted.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">B</span>Star's way: delete with a warning</div>
+<div class="dlg"><h4>Remove Ethan Park?</h4>
+<div class="choice">○ Withdraw<div class="why">Hidden under "Removed". Can be restored.</div></div>
+<div class="choice amb">◉ <b>Delete permanently</b><div class="why">Also deletes 2 payment records ($290 check and its undo). This can't be undone.</div></div>
+<div class="acts"><span class="btnx">Cancel</span><span class="btnx r">Delete permanently</span></div></div>
+<div class="rep"><div class="hd"><span>Shrewsbury · Sat, Mar 27</span><span class="tg wa">Changed after closing</span></div><div class="ln"><span style="color:var(--text2)">(Ethan's lines are gone)</span><span></span></div></div>
+<div class="exp" style="margin-top:8px"><b>What it does:</b> Delete permanently removes the candidate and their payment records after a warning.<br><b>Pros:</b> same as Star; mistakes can be cleaned away completely.<br><b>Cons:</b> real money can vanish from the record; a closed day is flagged changed with nothing left to see why.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">C</span>Only when nothing is left owing or paid</div>
+<div class="dlg"><h4>Remove Ethan Park?</h4>
+<div class="choice">○ Withdraw</div>
+<div class="choice amb">◉ <b>Delete permanently</b><div class="why">Allowed: Ethan's payments add up to $0 (the check was undone).</div></div>
+<div class="acts"><span class="btnx">Cancel</span><span class="btnx r">Delete permanently</span></div></div>
+<div class="rep"><div class="hd"><span>Shrewsbury · Sat, Mar 27</span><span class="tg wa">Changed after closing</span></div><div class="ln"><span style="color:var(--text2)">(the undone check is gone)</span><span></span></div></div>
+<div class="exp" style="margin-top:8px"><b>What it does:</b> deleting is allowed only if the candidate's payments add up to $0 (all undone or refunded).<br><b>Pros:</b> a mistake that was undone doesn't block a clean delete.<br><b>Cons:</b> the undone lines still vanish from the closed day's history; a rule staff must remember.</div>
+</div>
+
+</div>
+<p class="foot"><b>Same in every option:</b> only admins remove candidates (v0.210); a cycle can't be deleted once any payment or signed waiver exists (screen 2); Withdraw is always available and keeps everything.</p>
 </section>
 </main>
 </body>
