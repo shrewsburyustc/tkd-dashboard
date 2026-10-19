@@ -209,7 +209,7 @@ Structure first, then money, then waivers and privacy. Each will be shown with a
 - **Recommendation:** A.
 - **Touches:** v0.213, v0.900 (Cycles 6).
 
-### Q-B7 · How long a candidate's date of birth and email are kept
+### Q-B7 · How long a candidate's date of birth and email are kept — **answered v0.907: C**
 
 - **The question:** unless we decide otherwise, each candidate's DOB, email and names stay in `bb_candidates`, and their old values in `change_log`, **forever** (as Color Belt and Star decided, v0.162 / v0.169). Most candidates are minors. Should Black Belt remove the DOB and email after a while?
 - **Why it matters:** the DOB is needed for this cycle's age brackets and for any make-up the next season; after that it mostly sits there. Names, Dan, results and payments are the rank history and Finance's record, so they stay in every option.
