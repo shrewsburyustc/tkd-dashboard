@@ -81,6 +81,29 @@
 //            fresh install, tests pass); then one seeded subject renamed
 //            and one removed, 0006 applied again: the seed never brings
 //            them back or adds a duplicate
+//   13. 0010 (Color Belt phase 3: grading results) on the main database,
+//       AFTER steps 11 and 12 (it replaces five 0005 functions, so 0005 itself is
+//       never applied again after this - only its TEST files run):
+//         a. apply 0010 (the main database already has 0005 and the test
+//            event); 0010_tests.sql must pass
+//         b. the earlier test files again: 0005_tests.sql, 0003_tests.sql,
+//            0004_tests.sql, 0002_tests.sql, verify_pin_tests.sql
+//         c. the registrar live checks (11b) again, plus: it can't read
+//            testing_results and can't call testing_set_result
+//         d. one result + note for the test event's desk student (as
+//            postgres, labelled like 11c), so the re-run below has data
+//         e. 0010 applied a SECOND time: testing_results and the history
+//            count unchanged, the fingerprints (0010_fingerprints.sql)
+//            identical; 0010_tests.sql and 0005_tests.sql pass again
+//         f. the upgrade database: 0010 on top of its 0005; its 0010
+//            fingerprints must equal the main database's (fresh =
+//            upgrade); 0010_tests.sql and 0005_tests.sql pass there
+//         g. LAST, on the main database (nothing runs on it afterwards):
+//            the down-script of SETUP section 14e, both steps exactly as
+//            written there (re-run 0005, then the SQL block). Afterwards
+//            the 0005 fingerprints must equal step 11's (= a database that
+//            never had 0010), change_log must have one undo_0010 row per
+//            removed result, and 0005_tests.sql / 0003_tests.sql pass.
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -359,11 +382,19 @@ async function main() {
 
   // 11. Color Belt phase 2 (0005)
   console.log('\nMigration 0005 (events, family form, payments):');
-  const after5 = await step11(db, upgradeDb);
+  const { prints: after5, upgradeHas0005 } = await step11(db, upgradeDb);
 
   // 12. Star testing (0006)
   console.log('\nMigration 0006 (Star testing):');
   const after6 = after5 ? await step12(db, upgradeDb) : null;
+
+  // 13. Color Belt phase 3 (0010), only if 0005 is in place. Runs LAST: it ends
+  // with the 0010 down-script check (13g) on the main database.
+  let after10 = null;
+  if (after5) {
+    console.log('\nMigration 0010 (grading results):');
+    after10 = await step13(db, upgradeHas0005 ? upgradeDb : null, after5);
+  }
 
   console.log('\nFunction fingerprints (name  arguments  body_md5  security_definer  settings  owner  execute_rights):');
   for (const line of after) console.log('  ' + line);
@@ -376,6 +407,10 @@ async function main() {
   if (after6) {
     console.log('\n0006 fingerprints (kind  item  detail):');
     for (const line of after6) console.log('  ' + line);
+  }
+  if (after10) {
+    console.log('\n0010 fingerprints (kind  item  detail):');
+    for (const line of after10) console.log('  ' + line);
   }
 
   return finish();
@@ -400,7 +435,8 @@ const snapshot5Sql = `select md5(
 
 // 11b. Acting AS the family form's login. Each statement must be refused
 // (permission denied), except the last group, which must work.
-async function registrarLiveChecks(db) {
+// "extra" = more [label, sql] pairs that must also be refused (step 13c).
+async function registrarLiveChecks(db, extra = []) {
   const refused = [
     ['read testing_events', 'select 1 from public.testing_events limit 1'],
     ['read testing_registrations', 'select 1 from public.testing_registrations limit 1'],
@@ -423,6 +459,7 @@ async function registrarLiveChecks(db) {
     // against the SIGNED-IN user, which in PGlite is the superuser, so it
     // would always be allowed. 0005_tests.sql T2e proves from the catalog
     // that testing_registrar is a member of no role.)
+    ...extra,
   ];
   let allRefused = true;
   const leaks = [];
@@ -520,9 +557,11 @@ async function seedTestEvent(db) {
 }
 
 // Step 11 on the main database (and 0005 on top of the upgrade database).
-// Returns 0005's fingerprints (or null if 0005 could not be applied).
+// Returns { prints: 0005's fingerprints (null if 0005 could not be
+// applied), upgradeHas0005: true if 0005 is on the upgrade database too }.
 async function step11(db, upgradeDb) {
-  if (!(await run(db, 'apply 0005_testing_events.sql', read('migrations', '0005_testing_events.sql')))) return null;
+  let upgradeHas0005 = false;
+  if (!(await run(db, 'apply 0005_testing_events.sql', read('migrations', '0005_testing_events.sql')))) return { prints: null, upgradeHas0005 };
   await runTestFile(db, '0005_tests.sql (no event yet)', '0005_tests.sql', 'ALL 0005 TESTS PASSED');
   await runTestFile(db, '0002_tests.sql (after 0005)', '0002_tests.sql', 'ALL 0002 TESTS PASSED');
   await runTestFile(db, 'verify_pin_tests.sql (after 0005)', 'verify_pin_tests.sql', 'ALL PIN TESTS PASSED');
@@ -549,13 +588,117 @@ async function step11(db, upgradeDb) {
 
   if (upgradeDb) {
     if (await run(upgradeDb, '[upgrade] apply 0005 on top', read('migrations', '0005_testing_events.sql'))) {
+      upgradeHas0005 = true;
       const up5 = await fingerprints(upgradeDb, '0005_fingerprints.sql');
       record('[upgrade] 0005 fingerprints identical to a fresh install', JSON.stringify(up5) === JSON.stringify(after5), `${up5.length} rows`);
       await runTestFile(upgradeDb, '[upgrade] 0005_tests.sql', '0005_tests.sql', 'ALL 0005 TESTS PASSED');
       await runTestFile(upgradeDb, '[upgrade] 0003_tests.sql (after 0005)', '0003_tests.sql', 'ALL 0003 TESTS PASSED');
     }
   }
-  return after5;
+  return { prints: after5, upgradeHas0005 };
+}
+
+// Everything 0010 stores, as one md5, plus the history count (used for
+// "re-running 0010 changed nothing").
+const snapshot10Sql = `select md5(
+     coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.registration_id) from public.testing_results x), '')
+  || (select count(*) from public.change_log)::text)`;
+
+// Step 12 on the main database (and 0010 on top of the upgrade database).
+// Returns 0010's fingerprints (or null if 0010 could not be applied).
+// after5 = step 11's 0005 fingerprints (a database without 0010), for g.
+async function step13(db, upgradeDb, after5) {
+  // a. apply 0010 + its tests
+  if (!(await run(db, 'apply 0010_testing_results.sql', read('migrations', '0010_testing_results.sql')))) return null;
+  await runTestFile(db, '0010_tests.sql', '0010_tests.sql', 'ALL 0010 TESTS PASSED');
+
+  // b. the earlier TEST files again (never the 0005 SQL itself)
+  await runTestFile(db, '0005_tests.sql (after 0010)', '0005_tests.sql', 'ALL 0005 TESTS PASSED');
+  await runTestFile(db, '0003_tests.sql (after 0010)', '0003_tests.sql', 'ALL 0003 TESTS PASSED');
+  await runTestFile(db, '0004_tests.sql (after 0010)', '0004_tests.sql', 'ALL 0004 TESTS PASSED');
+  await runTestFile(db, '0002_tests.sql (after 0010)', '0002_tests.sql', 'ALL 0002 TESTS PASSED');
+  await runTestFile(db, 'verify_pin_tests.sql (after 0010)', 'verify_pin_tests.sql', 'ALL PIN TESTS PASSED');
+
+  // c. the family form's login can't reach the results either
+  await registrarLiveChecks(db, [
+    ['read testing_results', 'select 1 from public.testing_results limit 1'],
+    ['call testing_set_result', 'select public.testing_set_result(gen_random_uuid(), null)'],
+  ]);
+
+  // d. one result + note for the test event's desk student (11c)
+  await run(db, "[0010] a result + note for the test event's desk student", `
+    begin;
+    select set_config('request.jwt.claims', '', true);
+    select set_config('tkd.actor_label', 'PGlite test event', true);
+    select set_config('tkd.action', 'seed', true);
+    select set_config('tkd.batch_id', gen_random_uuid()::text, true);
+    insert into public.testing_results (registration_id, result, note)
+    select r.id, 'pass', 'Strong forms.'
+      from public.testing_registrations r where r.first_name = 'Sam' and r.last_name = 'Ortiz';
+    select set_config('tkd.actor_label', '', true);
+    select set_config('tkd.action', '', true);
+    select set_config('tkd.batch_id', '', true);
+    commit;`);
+  const graded = await db.query('select count(*)::int as n, min(updated_by_name) as by_name from public.testing_results');
+  record('[0010] the desk student has one result, stamped with the label',
+    graded.rows[0].n === 1 && graded.rows[0].by_name === 'PGlite test event', JSON.stringify(graded.rows[0]));
+
+  // e. re-run safety
+  const before10 = await fingerprints(db, '0010_fingerprints.sql');
+  const data10Before = await one(db, snapshot10Sql);
+  await run(db, 'apply 0010 a SECOND time (re-run safety)', read('migrations', '0010_testing_results.sql'));
+  const data10After = await one(db, snapshot10Sql);
+  record('0010 re-run kept every result row and the history count unchanged', data10Before === data10After);
+  const after10 = await fingerprints(db, '0010_fingerprints.sql');
+  record('0010 fingerprints identical before/after re-run', JSON.stringify(before10) === JSON.stringify(after10), `${after10.length} rows`);
+  await runTestFile(db, '0010_tests.sql (after re-run)', '0010_tests.sql', 'ALL 0010 TESTS PASSED');
+  await runTestFile(db, '0005_tests.sql (after 0010 re-run)', '0005_tests.sql', 'ALL 0005 TESTS PASSED');
+
+  // f. fresh = upgrade
+  if (upgradeDb) {
+    if (await run(upgradeDb, '[upgrade] apply 0010 on top', read('migrations', '0010_testing_results.sql'))) {
+      const up10 = await fingerprints(upgradeDb, '0010_fingerprints.sql');
+      record('[upgrade] 0010 fingerprints identical to the main database', JSON.stringify(up10) === JSON.stringify(after10), `${up10.length} rows`);
+      await runTestFile(upgradeDb, '[upgrade] 0010_tests.sql', '0010_tests.sql', 'ALL 0010 TESTS PASSED');
+      await runTestFile(upgradeDb, '[upgrade] 0005_tests.sql (after 0010)', '0005_tests.sql', 'ALL 0005 TESTS PASSED');
+    }
+  } else {
+    record('[upgrade] 0010 on top of the upgrade database', false, 'the upgrade database has no 0005 (see the lines above)');
+  }
+
+  // g. the down-script (SETUP section 14e), last
+  await downScriptCheck(db, after5);
+  return after10;
+}
+
+// 13g. SETUP section 14e, step 1 (re-run 0005) then step 2 (the SQL block,
+// read from SETUP.md so the tested text is the documented text).
+async function downScriptCheck(db, after5) {
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const block = setup.slice(setup.indexOf('### 14e.')).match(/```sql\n([\s\S]*?)```/);
+  if (!block) {
+    record('[undo 0010] find the down-script in SETUP section 14e', false, 'no sql block after "### 14e."');
+    return;
+  }
+  const results = await one(db, 'select count(*)::int from public.testing_results');
+  const logBefore = await one(db, 'select count(*)::int from public.change_log');
+  if (!(await run(db, '[undo 0010] step 1: re-run 0005', read('migrations', '0005_testing_events.sql')))) return;
+  if (!(await run(db, '[undo 0010] step 2: the SQL block of SETUP 14e', block[1]))) return;
+  const gone = await one(db, `select (to_regclass('public.testing_results') is null)
+      and not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                       where n.nspname = 'public'
+                         and p.proname in ('testing_set_result', 'testing_set_result_note', 'testing_results_log', 'testing_results_before_write'))`);
+  record('[undo 0010] the table and the four 0010-only functions are gone', gone === true);
+  const undoRows = await one(db, `select count(*)::int from public.change_log
+      where table_name = 'testing_results' and action = 'undo_0010' and op = 'delete' and batch_id is not null`);
+  const logAfter = await one(db, 'select count(*)::int from public.change_log');
+  record('[undo 0010] one undo_0010 history row per removed result, nothing else lost',
+    results > 0 && undoRows === results && logAfter === logBefore + results, `${results} results, ${undoRows} undo rows`);
+  const prints5 = await fingerprints(db, '0005_fingerprints.sql');
+  record('[undo 0010] 0005 fingerprints equal a database that never had 0010',
+    after5 != null && JSON.stringify(prints5) === JSON.stringify(after5), `${prints5.length} rows`);
+  await runTestFile(db, '[undo 0010] 0005_tests.sql', '0005_tests.sql', 'ALL 0005 TESTS PASSED');
+  await runTestFile(db, '[undo 0010] 0003_tests.sql', '0003_tests.sql', 'ALL 0003 TESTS PASSED');
 }
 
 // ---------------------------------------------------------------------

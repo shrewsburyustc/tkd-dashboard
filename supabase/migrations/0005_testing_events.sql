@@ -57,6 +57,12 @@
 --   NOTE: re-running 0003 AFTER this file would take away the new read
 --   rights on public.locations (0003 resets that table's rights). If that
 --   ever happens, run this file again.
+--   NOTE: migration 0010 (Color Belt grading) REPLACES five functions of
+--   this file (testing_update_student, testing_resolve_duplicate,
+--   testing_restore_student, testing_add_student, testing_update_event).
+--   Re-running THIS file after 0010 would put back the versions without
+--   the grading locks: if you ever re-run it, run 0010 again straight
+--   after it (supabase/SETUP.md section 14).
 --
 -- WORDS USED BELOW
 --   * "today" = the date in Massachusetts: (now() at time zone

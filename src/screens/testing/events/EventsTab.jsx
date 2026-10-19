@@ -392,6 +392,10 @@ export default function EventsTab({
       patchDialog({ saving: false, serverAwardClass: result.className ?? '' });
     } else if (status === 'not_empty') {
       patchDialog({ saving: false, note: 'NOT_EMPTY' });
+    } else if (status === 'has_results') {
+      // Phase 3: the event already has testing results, so its date can't move (not blocking:
+      // the person can put the date back and save the rest).
+      patchDialog({ saving: false, note: 'HAS_RESULTS' });
     } else if (status === 'invalid' || status === 'finished') {
       patchDialog({ saving: false, note: 'INVALID_DIALOG' });
     } else {
@@ -521,7 +525,7 @@ export default function EventsTab({
     } else if (status === 'not_allowed') {
       setBanner({ text: T.EVENTS_NOT_ALLOWED });
       onRefreshProfile();
-    } else if (['stale', 'not_found', 'duplicate_name', 'invalid', 'not_empty', 'finished', 'final_award_not_set'].includes(status)) {
+    } else if (['stale', 'not_found', 'duplicate_name', 'invalid', 'not_empty', 'finished', 'final_award_not_set', 'has_results'].includes(status)) {
       setBanner({ text: T.UNDO_STALE });
       reloadQuiet();
     } else {
@@ -610,13 +614,15 @@ export default function EventsTab({
     // …while the sentence uses the list's number (active students) and names removed ones apart.
     const activeCount = fresh.activeCount ?? fresh.roster.filter((r) => r.status === 'active').length;
     const removedCount = fresh.withdrawnCount ?? count - activeCount;
+    // Phase 3: the testing results that go with it (graded rows, any status — contract 0010 §4.7).
+    const resultCount = fresh.event.resultCount ?? fresh.roster.filter((r) => r.graded).length;
     const index = shown.findIndex((e) => e.id === event.id);
     openDialog({
       type: 'delete',
       id: event.id,
       name: fresh.event.name,
       title: T.deleteEventTitle(fresh.event.name),
-      body: T.deleteEventBody({ activeCount, removedCount, paymentCents: total }),
+      body: T.deleteEventBody({ activeCount, removedCount, paymentCents: total, resultCount }),
       args: { eventId: event.id, expectedVersion: fresh.event.version, expectedRegistrationCount: count, expectedPaymentTotalCents: total },
       failed: false,
       index,

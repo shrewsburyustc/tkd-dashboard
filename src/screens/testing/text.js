@@ -467,14 +467,22 @@ export const deleteEventTitle = (name) => `Delete ${name}?`;
 // (withdrawn or duplicate copies) are mentioned separately, and the money is every payment
 // recorded for the event, removed students' included.
 // e.g. "Its 15 students (plus 1 removed), their registrations and $410 of payments are deleted
-// too. This can't be undone." (No grades: Color Belt has no grading until phase 3.)
-export function deleteEventBody({ activeCount, removedCount, paymentCents }) {
+// too. This can't be undone."
+// Phase 3 (G8, contract 0010 §4.8): testing results are named too — "Its 14 students (plus 1
+// removed), their registrations, their 8 testing results and $410 of payments are deleted too.
+// This can't be undone." resultCount = graded students (any status).
+export function deleteEventBody({ activeCount, removedCount, paymentCents, resultCount = 0 }) {
   const tail = "This can't be undone.";
   let who = null;
   if (activeCount > 0) who = `${studentsCount(activeCount)}${removedCount > 0 ? ` (plus ${removedCount} removed)` : ''}`;
   else if (removedCount > 0) who = removedCount === 1 ? '1 removed student' : `${removedCount} removed students`;
   if (who === null) return tail;
   const regs = activeCount + removedCount === 1 ? 'their registration' : 'their registrations';
+  if (resultCount > 0) {
+    const results = resultCount === 1 ? 'their 1 testing result' : `their ${resultCount} testing results`;
+    if (paymentCents > 0) return `Its ${who}, ${regs}, ${results} and ${dollars(paymentCents)} of payments are deleted too. ${tail}`;
+    return `Its ${who}, ${regs} and ${results} are deleted too. ${tail}`; // CP1
+  }
   if (paymentCents > 0) return `Its ${who}, ${regs} and ${dollars(paymentCents)} of payments are deleted too. ${tail}`;
   return `Its ${who} and ${regs} are deleted too. ${tail}`;
 }
@@ -685,7 +693,18 @@ export const EDIT_PAYMENT_HINT = 'The old payment is kept in the history and rep
 
 // Delete permanently (admins; plan answer 8: allowed for a paid student, naming the payment)
 export const deleteStudentTitle = (name) => `Delete ${name} permanently?`;
-export function deleteStudentBody(eventName, payment) {
+// graded (phase 3, G8) = { result, resultAt, hasNote }, or null when the student has no result
+// and no grading note. firstName is used only when graded ("Sam’s registration …").
+export function deleteStudentBody(eventName, payment, graded = null, firstName = '') {
+  if (graded) {
+    // "the testing result (Not passed, Nov 20)" — or "the grading note" when only a note exists.
+    const what = graded.result ? `the testing result (${resultTagText(graded.result)}, ${stampDay(graded.resultAt)})` : 'the grading note';
+    if (payment) {
+      const paid = `the ${dollars(payment.cents)} ${payingByLower(payment.method)} payment recorded on ${monthDay(payment.paidOn)}`;
+      return `${firstName}’s registration, ${paid} and ${what} are deleted. They won’t show in Payments recorded or on the Grading tab any more. This can’t be undone.`;
+    }
+    return `${firstName}’s registration and ${what} are deleted. They won’t show on the Grading tab any more. This can’t be undone.`; // CP1
+  }
   if (!payment) return `The registration is deleted from ${eventName}. This can’t be undone.`;
   return `The registration and the ${dollars(payment.cents)} ${payingByLower(payment.method)} payment recorded on ${monthDay(
     payment.paidOn,
@@ -719,3 +738,153 @@ export const FLYER_SCHOOL = "Jae H. Jeong's U.S. Taekwondo Center";
 export const flyerLocation = (school, address) => (address ? `Location: ${schoolName(school)}, ${address}` : `Location: ${schoolName(school)}`);
 export const flyerRegisterBy = (iso) => `Register by ${longWeekdayMonthDay(iso)}`;
 export const flyerScan = (shortLink) => `Scan the code, or go to ${shortLink}`;
+
+// =====================================================================================
+// Phase 3 — the Grading tab (contract 0010 §4.8, approved mockups G1–G8 in
+// TKD-ColorBelt-Grading-Mockups.html, rulebook v0.180–v0.192). Lines marked "// CP1" are not in
+// the mockups; they follow the same pattern and are shown to Jeffrey at the CP1 walkthrough.
+// =====================================================================================
+
+export const TAB_GRADING = 'Grading';
+
+// "14 students · 6 passed · 1 not passed · 1 no show · 6 not recorded yet" — parts that are 0
+// are left out. c = gradingRules.resultCounts(rows): { total, pass, notPassed, noShow, notRecorded }
+function countParts(c) {
+  const parts = [studentsCount(c.total)];
+  if (c.pass > 0) parts.push(`${c.pass} passed`);
+  if (c.notPassed > 0) parts.push(`${c.notPassed} not passed`);
+  if (c.noShow > 0) parts.push(`${c.noShow} no show`);
+  if (c.notRecorded > 0) parts.push(`${c.notRecorded} not recorded yet`);
+  return parts.join(' · ');
+}
+export const allClassesLine = (c) => `All classes: ${countParts(c)}`;
+export const resultCountLine = (c) => countParts(c);
+
+export const PRINT_GRADING_SHEET = 'Print grading sheet';
+export const COL_RESULT = 'Result';
+
+// The three result buttons
+export const RESULT_PASS = 'Pass';
+export const RESULT_NOT_PASSED = 'Not passed';
+export const RESULT_NO_SHOW = 'No show';
+const RESULT_BUTTON_TEXT = { pass: RESULT_PASS, not_passed: RESULT_NOT_PASSED, no_show: RESULT_NO_SHOW };
+export const resultButtonText = (code) => RESULT_BUTTON_TEXT[code] ?? '';
+
+// Read-only tags (staff after the testing day; the Students detail view)
+export const TAG_PASSED = 'Passed';
+export const TAG_NOT_PASSED = 'Not passed';
+export const TAG_NO_SHOW = 'No show';
+export const NOT_RECORDED = 'Not recorded';
+const RESULT_TAG_TEXT = { pass: TAG_PASSED, not_passed: TAG_NOT_PASSED, no_show: TAG_NO_SHOW };
+export function resultTagText(code) {
+  return RESULT_TAG_TEXT[code] ?? '';
+}
+
+export const resultGroupLabel = (name) => `Result for ${name}`;
+export const addNoteLabel = (name) => `Add note for ${name}`;
+export const editNoteLabel = (name) => `Edit note for ${name}`;
+export const ADD_NOTE_TIP = 'Add note';
+export const EDIT_NOTE_TIP = 'Edit note';
+
+// Lock lines (ti-lock)
+export const gradingOpensLine = (dateIso) => `Grading opens on the testing day, ${longWeekdayMonthDay(dateIso)}.`;
+export const GRADING_OVER_STAFF = 'The testing day is over. Only an admin can change results or notes now.';
+export const GRADING_OVER_ADMIN = 'The testing day is over. Staff can’t change results now; as an admin, you can.';
+
+// Banners
+export const TOO_LATE_RESULTS = 'Too late to change. Only an admin can change results now.';
+export const GRADING_NOT_OPEN = 'Grading hasn’t opened yet. Your change wasn’t saved.'; // CP1
+// "Couldn’t save 2 results (Group A). Check the connection, then try again."
+export function gradingSaveFailed(n, classNames) {
+  const what = n === 1 ? '1 result' : `${n} results`;
+  const where = classNames.length > 0 ? ` (${classNames.join(', ')})` : '';
+  return `Couldn’t save ${what}${where}. Check the connection, then try again.`;
+}
+export const ANNOUNCE_SAVED = 'Saved';
+export const ANNOUNCE_NOT_SAVED = 'Not saved';
+export const TAG_SAVING = 'Saving…'; // v0.192: a Not saved row being sent again by itself
+export const classUnsavedLabel = 'has results not saved'; // CP1 — screen readers only
+
+// Empty states (G7)
+export const noStudentsInClass = (className) => `No students in ${className}. Students added on the Students tab show here.`;
+export const NO_STUDENTS_AT_EVENT = 'No students at this event yet. Add students on the Students tab.';
+
+// G2: the note dialog. (Named GRADING_NOTE_HINT: NOTE_HINT is already the event form's hint.)
+export const noteTitle = (name) => `Note for ${name}`;
+// "Group A · Orange → Green · Not passed"
+export const noteSub = (className, fromName, toName, resultText) =>
+  [className, fromName ? `${fromName} → ${toName}` : '', resultText].filter(Boolean).join(' · ');
+export const NOT_RECORDED_YET = 'Not recorded yet'; // CP1
+export const NOTE_FIELD_LABEL = 'Note'; // CP1
+export const GRADING_NOTE_HINT = 'Shows on the Grading tab, also on the mat. Write only what a parent could read.';
+export const noteCounter = (n) => `${n} / 200`;
+export const NOTE_SAVE_FAILED = 'Couldn’t save the note. Check the connection, then try again.';
+export const NOTE_BAD_CHARACTER = 'That note has a character that can’t be used. Remove it.'; // CP1
+export const NOTE_TOO_LONG_200 = 'Use 200 characters or fewer.'; // CP1
+
+// G6: the printed grading sheet
+export const sheetTitle = (eventName) => `${eventName} — grading sheet`;
+// "Thu, Nov 19, 4:12 PM" in Massachusetts time
+function printedStamp(date) {
+  return date.toLocaleString('en-US', { timeZone: SCHOOL_TZ, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+// "Fri, Nov 20, 2026 · Worcester school · printed Thu, Nov 19, 4:12 PM · Little Tiger, page 1"
+export const sheetHeaderLine = (dateIso, school, printedAt, className, page) =>
+  `${shortDate(dateIso)} · ${schoolName(school)} · printed ${printedStamp(printedAt)} · ${className}, page ${page}`;
+// "Little Tiger · 4:00 – 4:45 PM · 3 students"
+export const sheetClassLine = (className, timeText, count) => [className, timeText, studentsCount(count)].filter(Boolean).join(' · ');
+export const SHEET_COL_STUDENT = 'Student';
+export const SHEET_COL_RESULT = 'Result (tick one)';
+export const SHEET_COL_NOTE = 'Note';
+export const SHEET_ADDED_ON_DAY = 'Added on the day:';
+export const SHEET_FOOTER = 'Type the results into the Grading tab the same day.';
+
+// G8: the Students tab
+export const DETAIL_RESULT = 'Result';
+// "· Nov 20, 5:41 PM by Staff"
+export const resultStamp = (stamp, name) => `· ${stampDayTime(stamp)}${name ? ` by ${name}` : ''}`;
+export const resultNoteLine = (note) => `Note: ${note}`;
+export const beltChangeClears = (firstName, resultText) =>
+  `Changing the belt clears ${firstName}’s result (${resultText}). Record it again on the Grading tab.`;
+export const beltChangeClearsNote = (firstName) =>
+  `Changing the belt clears ${firstName}’s grading note. Record it again on the Grading tab.`; // CP1
+export const STUDENT_LOCKED = 'Only an admin can change this student now. Their result is locked.';
+export const EVENT_HAS_RESULTS = 'This event already has testing results, so its date can’t change.';
+// Plan Q1: a student an admin added after the testing day — "Added Nov 21 by Jeffrey Berg (admin)"
+export const addedAfterDayLine = (dateIso, name) => `Added ${monthDay(dateIso)}${name ? ` by ${name}` : ''} (admin)`;
+
+// v0.193: classes that test together (same start and end time) are one testing group on Grading.
+// The class switch: "Group B + C" when every name starts with the same word ("Group"), so it is
+// said once; otherwise the full names, "White + Little Tiger".
+export function groupChoiceLabel(names) {
+  if (names.length <= 1) return names.join('');
+  const words = names.map((n) => n.split(' '));
+  const first = words[0][0];
+  const shared = words.every((w) => w.length > 1 && w[0] === first);
+  if (shared) return `${first} ${words.map((w) => w.slice(1).join(' ')).join(' + ')}`;
+  return names.join(' + ');
+}
+// The class line and the printed sheet: "Group B + Group C"
+export const groupFullName = (names) => names.join(' + ');
+// The small heading above each class of a group: "Group B · 3 students"
+export const groupClassHeading = (className, count) => `${className} · ${studentsCount(count)}`;
+// A group whose classes need different sparring gear: one tag per class, "Group B: Sparring gear"
+export const classGearTag = (className, gearText) => `${className}: ${gearText}`;
+
+// v0.192: leaving the event page while results are Not saved
+export const leaveTitle = (n) => (n === 1 ? '1 result isn’t saved' : `${n} results aren’t saved`);
+// "Zoe Park and Sam Diaz" / "Ava Chen, Leo Brown and Nora Kim"
+function joinNames(names) {
+  if (names.length <= 1) return names.join('');
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+// groups = [{ className, names: ['Zoe Park', 'Sam Diaz'] }] in class switch order
+export function leaveBody(groups) {
+  const total = groups.reduce((sum, g) => sum + g.names.length, 0);
+  const who = groups.map((g) => `${joinNames(g.names)} (${g.className})`).join(', ');
+  return `${who} ${total === 1 ? 'wasn’t' : 'weren’t'} saved because the connection dropped. If you leave now, they’re lost. Stay, and they’ll save when the Wi-Fi is back.`;
+}
+export const STAY_ON_PAGE = 'Stay on this page';
+// v0.194: the compare dialog for staff after the testing day (in place of COMPARE_NOTE)
+export const KEEP_ONE_ADMIN_ONLY = 'The testing day is over. Only an admin can keep one registration and remove the other now.'; // CP1
+export const LEAVE_ANYWAY = 'Leave anyway';
