@@ -517,6 +517,20 @@ code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
 .amb{outline:3px solid #E8A317;outline-offset:4px;border-radius:6px}
 .radio-col{display:flex;flex-direction:column;gap:8px}
 .qfoot{font-size:13px;color:var(--text2);margin:14px 0 0}
+.flow{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.fstep{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px}
+.fl{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px}
+.mini{background:#fff;border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px}
+.mt{font-size:15px;font-weight:600}.ms{font-size:12px;color:var(--text2)}
+.rowx{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)}
+.rowx b{font-weight:500}
+.btnrow{display:flex;gap:6px;margin-top:6px}
+.arrow{font-size:12px;color:var(--text2);padding-left:10px}
+.hint2{font-size:12px;color:var(--text2);margin-top:4px}
+.tag-blue{background:var(--blue-tint);color:var(--blue);border-color:#C5D0E6}
+.tg{font-size:11px;border-radius:999px;padding:1px 8px;border:1px solid}
+#b6 .qexp{min-height:0}
+#b6{border-top:1px solid var(--border-strong);margin-top:24px}
 </style>
 </head>
 <body>
@@ -600,6 +614,59 @@ code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
 
 </div>
 <p class="qfoot"><b>Same in every option:</b> the school comes from the link (one link per school); a <code>?dan=</code> link can preselect the Dan (as today); every field is checked again in the database; step 2 shows a summary with the age on each testing day; the reference number and what happens next come after sending (question B8).</p>
+</main>
+<main class="qmain" id="b6">
+<h1 class="qh">Black Belt · Question B6: who may register, and what happens after the deadline</h1>
+<p class="qlead">Today anyone with the link can register for any Dan, even after the deadline: 17 of 43 Fall 2026 registrations came in after Sep 19. There's no student list in the dashboard yet, so the form can't check a candidate's current rank. The question is <b>whether a registration counts straight away</b> and <b>how late families get in</b>. The part that differs between options is <span class="ambtxt">outlined in amber</span>. Sample data only.</p>
+<div class="qopts3">
+
+<!-- A -->
+<div class="qcol rec">
+<div class="qot"><span class="letter">A</span>Open form, staff check the list<span class="rec-tag">Recommended</span></div>
+<div class="flow">
+<div class="fstep"><div class="fl">Family</div><div class="mini"><div class="mt">Alex Kim is registered</div><div class="ms">Spring 2027 Black Belt Testing · 1st Dan<br>Reference BB-4821 · Pay at the front desk.</div></div></div>
+<div class="arrow">↓ straight onto the roster</div>
+<div class="fstep"><div class="fl">Staff · Candidates tab</div><div class="mini"><div class="rowx"><b>Kim, Alex</b><span>1st Dan</span><span class="tag tag-blue">Registered</span></div><div class="rowx"><b>Kim, Alex</b><span>1st Dan</span><span class="tag tag-warn">Possible duplicate</span></div></div></div>
+<div class="arrow">↓ after "Apply by Mar 27"</div>
+<div class="fstep amb"><div class="fl">Late family</div><div class="mini"><div class="mt">Registration is closed</div><div class="ms">Ask at the front desk.</div></div><div class="hint2">Staff add the candidate themselves (any time), or an admin reopens the form.</div></div>
+</div>
+<div class="qexp"><b>What it does:</b> any registration counts at once and appears on the roster, as for Star and Color Belt. Staff look over the list and fix a wrong Dan or remove a fake one (admins). The form closes itself at the end of the application date (v0.85). Late families are added by staff at the desk; an admin can reopen the form for everyone.<br>
+<b>Pros:</b> same as Star and Color Belt; nobody waits for an approval; late registrations still work, but through a person.<br>
+<b>Cons:</b> someone could register for the wrong Dan until staff notice; staff must glance at new registrations.</div>
+</div>
+
+<!-- B -->
+<div class="qcol">
+<div class="qot"><span class="letter">B</span>Admin approves each one</div>
+<div class="flow">
+<div class="fstep amb"><div class="fl">Family</div><div class="mini"><div class="mt">Application received</div><div class="ms">The school will confirm your registration by email.<br>Reference BB-4821</div></div></div>
+<div class="arrow">↓ waits</div>
+<div class="fstep amb"><div class="fl">Admin · Candidates tab</div><div class="mini"><div class="rowx"><b>Kim, Alex</b><span>1st Dan</span><span class="tag tag-warn">Waiting for approval</span></div><div class="btnrow"><span class="btn btn-sm btn-primary">Approve</span><span class="btn btn-sm">Decline</span></div></div></div>
+<div class="arrow">↓ approved → counts, fee due</div>
+<div class="fstep"><div class="fl">Late family</div><div class="mini"><div class="mt">Registration is closed</div><div class="ms">Ask at the front desk.</div></div></div>
+</div>
+<div class="qexp"><b>What it does:</b> registrations arrive as <b>Waiting for approval</b>. An admin approves or declines each one; only approved candidates count for fees, grading sheets and results.<br>
+<b>Pros:</b> nobody tests for a Dan they aren't ready for; Master Jeong sees every application first.<br>
+<b>Cons:</b> an extra step for every candidate; families wait, and the dashboard <b>can't email yet</b>, so "we'll confirm by email" means staff contact each family by hand; unlike Star and Color Belt.</div>
+</div>
+
+<!-- C -->
+<div class="qcol">
+<div class="qot"><span class="letter">C</span>Invited candidates only</div>
+<div class="flow">
+<div class="fstep amb"><div class="fl">Staff · before the cycle</div><div class="mini"><div class="mt" style="font-size:13px">Invite candidates</div><div class="rowx"><b>Kim, Alex</b><span>1st Dan</span><span class="tag tag-blue">Invited</span></div><div class="rowx"><b>Lee, Sam</b><span>2nd Dan</span><span class="tag tag-blue">Invited</span></div></div></div>
+<div class="arrow">↓ each family gets its own link</div>
+<div class="fstep amb"><div class="fl">Family</div><div class="mini"><div class="mt">Alex Kim · 1st Dan</div><div class="ms">Name and Dan are filled in by the school.<br>Fill in the rest and sign.</div></div></div>
+<div class="arrow">↓ others can't register</div>
+<div class="fstep"><div class="fl">Not invited</div><div class="mini"><div class="mt">This link isn't valid</div><div class="ms">Ask your instructor.</div></div></div>
+</div>
+<div class="qexp"><b>What it does:</b> before registration opens, staff type in every candidate who is ready (name + Dan). Each gets a <b>personal link</b> (handed out or texted) to finish the form and sign.<br>
+<b>Pros:</b> only ready candidates can register, for the right Dan; no fake or duplicate registrations.<br>
+<b>Cons:</b> staff type ~40 names and hand out ~40 links every cycle; a lost link means a trip to the desk; a different system from Star and Color Belt; much more to build.</div>
+</div>
+
+</div>
+<p class="qfoot"><b>Same in every option:</b> registrations are checked in the database (Turnstile, rate limit, retries can't double-register); possible duplicates are flagged for staff (as Star); staff can add a candidate at the desk at any time (B4); the closing date can be changed by admins.</p>
 </main>
 </body>
 </html>
