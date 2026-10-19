@@ -92,6 +92,18 @@ b{font-weight:600}
 .choice{border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12.5px}
 .choice.dis{color:#8A8A85;background:var(--surface)}
 .choice .why{font-size:11.5px;color:var(--text2);margin-top:2px}
+
+.opts2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.phone{width:300px;border:6px solid #2B2B2B;border-radius:24px;background:#F7F7F5;padding:10px;font-size:12px;margin:0 auto}
+.phone .card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px;margin-top:8px}
+.phone .wv{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px;font-size:11px;color:var(--text2)}
+.phone .ck{display:flex;gap:6px;align-items:center;margin-top:6px}
+.phone .box{width:14px;height:14px;border:1px solid #8F8F8A;border-radius:3px;display:inline-block;background:#fff}
+.phone .box.on{background:var(--blue);border-color:var(--blue)}
+.phone .send{background:var(--blue);color:#fff;text-align:center;border-radius:7px;padding:6px;margin-top:8px}
+.phone .banner{background:var(--warn-tint);color:var(--warn);border-radius:6px;padding:6px;font-size:11.5px;margin-top:6px}
+.pair2{display:flex;gap:14px;align-items:flex-start}
+.after{flex:1;font-size:12.5px}
 </style>
 </head>
 <body>
@@ -314,6 +326,48 @@ b{font-weight:600}
 
 </div>
 <p class="foot"><b>Same in every option:</b> only admins remove candidates (v0.210); a cycle can't be deleted once any payment or signed waiver exists (screen 2); Withdraw is always available and keeps everything.</p>
+</section>
+
+<section id="qb5">
+<h1>Black Belt · Database question 5 of 7: the waiver text changes while a family is filling in the form</h1>
+<p class="lead">At 7:40 PM a parent opens the form; the waiver on screen is <b>version 2027-1</b>. At 7:45 an admin saves a corrected waiver, <b>version 2027-2</b> (v0.213). At 7:50 the parent ticks, signs and presses <b>Send</b>. The signed record must say exactly which text they agreed to. What happens? <span class="ambtxt">Amber</span> = what differs.</p>
+<div class="opts2">
+
+<div class="opt rec">
+<div class="ot"><span class="letter">A</span>Accept the version they saw<span class="rec-tag">Recommended</span></div>
+<div class="pair2">
+<div class="phone"><div style="font-weight:600">Step 2 of 2 · Check and send</div>
+<div class="card"><div class="wv"><b>Waiver and agreement</b> · Version 2027-1<br>Every subject must be passed; … I release the school …</div>
+<div class="ck"><span class="box on"></span>I have read and agree to the waiver.</div>
+<div style="margin-top:6px">Signed by: Jordan Kim ✍</div></div>
+<div class="send">Send registration</div></div>
+<div class="after"><div class="step">After Send</div>
+<div class="box amb" style="background:#FFFBF2">✓ Registered. The record says <b>"Signed by Jordan Kim (parent) · version 2027-1"</b>, the exact text they saw.</div>
+<div class="step">In the candidate detail</div>
+<div class="box">Waiver: signed · version 2027-1 · on file</div>
+<div class="exp" style="margin-top:8px">Accepted if their version was the current one <b>within the last 24 hours</b>. A page left open for days (an older version) is refused with "Please reload the page".</div></div>
+</div>
+<div class="exp" style="margin-top:10px"><b>Pros:</b> nothing new for families; the record is always exact.<br><b>Cons:</b> for up to a day after a change, someone can still sign the previous text.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">B</span>Stop them and show the new text</div>
+<div class="pair2">
+<div class="phone"><div style="font-weight:600">Step 2 of 2 · Check and send</div>
+<div class="banner amb">The waiver was updated while you were filling this in. Please read it and tick again.</div>
+<div class="card"><div class="wv"><b>Waiver and agreement</b> · Version 2027-2<br>Every subject must be passed; … (updated text) …</div>
+<div class="ck"><span class="box"></span>I have read and agree to the waiver.</div>
+<div style="margin-top:6px">Signed by: Jordan Kim ✍ (kept)</div></div>
+<div class="send">Send registration</div></div>
+<div class="after"><div class="step">After ticking again and Send</div>
+<div class="box">✓ Registered with <b>version 2027-2</b>.</div>
+<div class="exp" style="margin-top:8px">Send is refused once; the page reloads the new text and clears the tick.</div></div>
+</div>
+<div class="exp" style="margin-top:10px"><b>Pros:</b> everyone always signs the newest text.<br><b>Cons:</b> a new message and screen state to build; families who were nearly done must read and tick again.</div>
+</div>
+
+</div>
+<p class="foot"><b>Same in every option:</b> each signed waiver stores its exact version; admins change the text on Rubric and prices, which makes a new version (v0.213); registrations already sent keep their version.</p>
 </section>
 </main>
 </body>
