@@ -39,6 +39,17 @@
 4. **Jeffrey asks the school's insurer** how many years signed waivers must be kept (v0.213 setting).
 5. Jeffrey hands Master Jeong the printable rules sheet (part A) and brings back the answers.
 
+## 3b. Mockup pass (screen by screen, 2026-10-18)
+
+| Screen | Result |
+|---|---|
+| Cycles 1 · Testing chooser | **OK**: medal icon (`ti-award`), next-testing-day line approved |
+| Cycles 2 · Cycles tab (admin) | **OK**: status tags (Open until / Registration closed / Next day / Testing today; Past the day after the last day) and Delete cycle only while no payment is recorded approved |
+| Cycles 3 · Staff view, empty states | **OK** |
+| Cycles 4 · Add cycle | **OK**: first cycle copies Fall 2026 (loaded once from the Sheet), then each copies the last; "Offer this plan" tick per plan; payment 1 follows Application due until changed |
+| Cycles 5 · Testing day dialog | **OK**: the four v0.209 details: Save refused while a part is on no day; a part may be on two days (grades count as one); outdoor = second part of the same day; a day (or a part) with grades can't be deleted / unticked |
+| Cycles 6 · Rubric and prices | **OK**: plan order by drag = order on the form; waiver versions "2027-1"; keep signed waivers N years after the last testing day, under-18s until 3 years after 18 if later (N from the insurer) |
+
 ## 4. Reviewer check of the plan (2026-10-18)
 
 There were two reviewers:
