@@ -119,13 +119,13 @@ No expected-version argument: **last change wins** (v0.187). Statuses: `ok, no_a
 - What it adds (table, 2 functions, 2 trigger functions, 3 triggers, 5 replaced functions, new status `has_results`, and the `result_cleared: true` key that update_student adds only when it cleared a result).
 - Statuses: 0005's set plus `has_results`.
 - **Re-running 0005 after 0010 puts back the phase 2 versions of the five replaced functions (without the grading locks).** After 0010 exists, re-run 0005 only together with 0010 right after it.
-- The down-script lives in SETUP §13e (not in this file).
+- The down-script lives in SETUP §14e (not in this file; §13 became Star testing’s 0006 at the merge of main).
 
 ### 1.9 The warning added to 0005's header (comment only)
 In 0005's header, after the existing "NOTE: re-running 0003 AFTER this file…" paragraph, add (CRLF, same style):
 `--   NOTE: migration 0010 (Color Belt grading) REPLACES five functions of this file (testing_update_student, testing_resolve_duplicate, testing_restore_student, testing_add_student, testing_update_event). Re-running THIS file after 0010 would put back the versions without the grading locks: if you ever re-run it, run 0010 again straight after it (supabase/SETUP.md section 13).` (wrapped to the file's line width). No other byte of 0005 changes; its function fingerprints stay the same.
 
-### 1.10 Down-script (SETUP §13e, used only with Jeffrey's OK)
+### 1.10 Down-script (SETUP §14e, used only with Jeffrey's OK)
 One transaction: put the app back to a version without Grading first; then `drop table public.testing_results` (its triggers go with it), `drop function` the two new functions and the two trigger functions, `commit`; then re-run the **whole 0005 file** to put back the phase 2 versions of the five replaced functions (and repeat 0005 §12i step 1 if the family-form off switch is in force, since re-running 0005 grants it back). `change_log` keeps every result row's history. Tested in PGlite by A: afterwards `0005_fingerprints.sql` equals a database that never had 0010, and `0005_tests.sql` passes.
 
 ---
@@ -168,7 +168,7 @@ Print the 0010 fingerprints like the others.
 ### 2.3 `supabase/tests/0010_fingerprints.sql`
 Read-only single SELECT in 0005_fingerprints' format (`kind, item, detail`): `function` rows for `testing_set_result`, `testing_set_result_note`, `testing_results_before_write`, `testing_results_log` and the five replaced functions; `table` row for `testing_results` (RLS + exact rights, table-wide and per column); `trigger` rows for its three triggers; a `constraint` row per check / FK (name + `pg_get_constraintdef`). Connector-safe (§1.1).
 
-### 2.4 SETUP §13 (Builder A, in §12's style)
+### 2.4 SETUP §14 (was §13 before the merge with Star’s §13; Builder A, in §12's style)
 Inserted **right after §12i** (before the "Admin: change the front-desk PIN or password" section).
 **13. Migration 0010: Color Belt grading** — what it does (plain English); the order: CP2 database → CP3 real check → CP4 deploy; 13a apply (SQL Editor, the destructive-operations warning explained); 13b read-only checks (Claude: `0010_fingerprints.sql` = PGlite; `0005_fingerprints.sql` now differs **only** in the five replaced functions — expected; security advisor: the only new expected notice is "security definer function executable by authenticated" for the two new functions); 13c tests (`0010_tests.sql`, then 0005/0004/0003/0002/PIN again); 13d CP3 real check (plan §5 step 5: TEST event dated today, two students, grade, note, clear, print; a second TEST event moved to yesterday by edit for the admin after-day rule — note that its date can't move once it has results, so move it **before** grading; delete both; Claude checks the history read-only); 13e the down-script (§1.10) and the 0005 re-run warning.
 

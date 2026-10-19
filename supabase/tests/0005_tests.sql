@@ -1607,11 +1607,13 @@ begin
   if v_r ->> 'status' <> 'not_found' then raise exception 'TEST FAILED: T9 unknown school expected not_found, got %', v_r; end if;
   v_r := public.settings_update_school_address('shrewsbury', v_v + 7, null, null, null, null);
   if v_r ->> 'status' <> 'stale' then raise exception 'TEST FAILED: T9 old version expected stale, got %', v_r; end if;
-  v_r := public.settings_update_school_address('shrewsbury', v_v, '  1   Main St ', ' Shrewsbury', 'MA', '01545-1234');
+  -- 'Testville', not 'Shrewsbury': change_log keeps only the columns that changed, and the real
+  -- Shrewsbury address (entered in Settings) already has city Shrewsbury. Rolled back at the end.
+  v_r := public.settings_update_school_address('shrewsbury', v_v, '  1   Main St ', ' Testville', 'MA', '01545-1234');
   if v_r is distinct from jsonb_build_object('status', 'ok', 'version', v_v + 1) then
     raise exception 'TEST FAILED: T9 set address expected {ok, version %}, got %', v_v + 1, v_r;
   end if;
-  v_r := public.settings_update_school_address('shrewsbury', v_v + 1, '1 Main St', 'Shrewsbury', 'MA', '01545-1234');
+  v_r := public.settings_update_school_address('shrewsbury', v_v + 1, '1 Main St', 'Testville', 'MA', '01545-1234');
   if v_r is distinct from jsonb_build_object('status', 'ok', 'version', v_v + 1) then
     raise exception 'TEST FAILED: T9 same address again must not bump the version, got %', v_r;
   end if;
@@ -1621,14 +1623,12 @@ begin
     raise exception 'TEST FAILED: T9 the address is not readable / stored tidied';
   end if;
   reset role;
-  -- (Checks that the change is logged, not which columns changed: the history keeps only changed
-  -- columns, and on the live database the real address may already share the city or ZIP.)
   if not exists (select 1 from public.change_log l where l.id > v_mark and l.table_name = 'locations'
-                  and l.action = 'update_school_address' and l.after ? 'version') then
+                  and l.action = 'update_school_address' and l.after ->> 'address_city' = 'Testville') then
     raise exception 'TEST FAILED: T9 the address change must be in the history';
   end if;
   if public.testing_location_address('shrewsbury') is distinct from
-     jsonb_build_object('street', '1 Main St', 'city', 'Shrewsbury', 'state', 'MA', 'zip', '01545-1234') then
+     jsonb_build_object('street', '1 Main St', 'city', 'Testville', 'state', 'MA', 'zip', '01545-1234') then
     raise exception 'TEST FAILED: T9 the family pages'' address';
   end if;
   -- the address appears on the family page of a Shrewsbury event (v_e3)

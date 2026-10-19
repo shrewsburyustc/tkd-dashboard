@@ -60,12 +60,12 @@
 --   Safe to run again: "create table if not exists", "create or replace
 --   function", rules and triggers replaced with "... if exists" + create,
 --   rights reset with "revoke all" and granted again. A second run changes
---   no row and no fingerprint (tested in PGlite, run.mjs step 12).
+--   no row and no fingerprint (tested in PGlite, run.mjs step 13).
 --   NOTE: re-running 0005 AFTER this file puts back the phase 2 versions
 --   of the five replaced functions (without the grading locks). After 0010
 --   exists, re-run 0005 only together with 0010 straight after it
---   (supabase/SETUP.md section 13).
---   Undo: the down-script is in supabase/SETUP.md section 13e (not here).
+--   (supabase/SETUP.md section 14).
+--   Undo: the down-script is in supabase/SETUP.md section 14e (not here).
 --
 -- WORDS USED BELOW
 --   * "graded" = a testing_results row exists for the registration (a

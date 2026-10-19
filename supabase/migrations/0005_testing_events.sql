@@ -62,7 +62,7 @@
 --   testing_restore_student, testing_add_student, testing_update_event).
 --   Re-running THIS file after 0010 would put back the versions without
 --   the grading locks: if you ever re-run it, run 0010 again straight
---   after it (supabase/SETUP.md section 13).
+--   after it (supabase/SETUP.md section 14).
 --
 -- WORDS USED BELOW
 --   * "today" = the date in Massachusetts: (now() at time zone
