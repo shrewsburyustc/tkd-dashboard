@@ -59,7 +59,7 @@
 
 ## Next
 
-1. Commit the Camps docs on branch `camps` (with Jeffrey's OK).
-2. Record everything in the rulebook: `git merge main` first, re-read it, add 10b rows + changelog + §9 Camps row + §2.4 icon rows (`ti-tent`, `ti-template`, `ti-users`, `ti-clock`, `ti-cash`, `ti-user-minus`, Mark paid / Paid → `ti-check`) + dark-outline day chips. Version numbers will be renumbered at merge (highest seen on any branch: v0.192 on `color-belt-phase3`).
-3. Build plan + contract (like Color Belt phase 2): database migration (next free number), family-form public path reusing Color Belt's registrar / Turnstile / Hyperdrive pattern, staff screens, preview mock data; independent review of the plan; then build with subagents + security and design review.
+1. ~~Commit the Camps docs~~ — done 2026-10-18 (`637fb29`, branch `camps`, not pushed).
+2. ~~Record in the rulebook~~ — done 2026-10-18: merged `main` (v0.196) into `camps`, added **v0.229–v0.237** (10b rows, changelog, §9 Camps row, §2.4 icons). Numbers start above the highest on any branch (v0.228 on `color-belt`); renumber at merge into `main` if needed.
+3. Build plan (migration number: `0010` is now Color Belt phase 3 on `main` — pick the next free number across all branches) + contract (like Color Belt phase 2): database migration (next free number), family-form public path reusing Color Belt's registrar / Turnstile / Hyperdrive pattern, staff screens, preview mock data; independent review of the plan; then build with subagents + security and design review.
 - Migration number: next free when the database part starts (0010 is taken by Prospects on its branch — check every branch first).

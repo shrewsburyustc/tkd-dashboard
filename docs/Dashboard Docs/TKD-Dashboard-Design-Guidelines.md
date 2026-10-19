@@ -1,7 +1,7 @@
 # TKD Dashboard — Design Guidelines
 
 **School:** Jae H. Jeong's U.S. Taekwondo Center (U.S.T.C.) — Worcester and Shrewsbury, MA
-**Version:** 0.196 (draft) · **Last updated:** 2026-10-18
+**Version:** 0.237 (draft) · **Last updated:** 2026-10-18
 **Status:** Design outline only. Nothing in this document authorizes building or deploying.
 
 > **How to use this file:** Upload it at the start of any chat about the dashboard. Every screen, component, or feature built for the dashboard must follow the rules below. If a request conflicts with a rule, flag the conflict before building. Rules marked **(provisional)** depend on an open decision in section 10.
@@ -101,13 +101,14 @@ Section icons are added to this table only when that section is added (rule P7).
 | Home | `ti-home` |
 | Testing (rail icon; decided v0.39) — also marks **Color belt testing** on the Testing choice page and menu (v0.59) | `ti-certificate` |
 | Star testing (Testing choice page and menu; decided v0.59) | `ti-star` |
+| Camps (rail icon; decided v0.229) | `ti-tent` |
 | More (phone bottom bar, once needed) | `ti-menu-2` |
 
 **Actions**
 
 | Meaning | Tabler icon |
 |---------|-------------|
-| Save / done | `ti-check` — used **only** for save/done |
+| Save / done | `ti-check` — used **only** for save/done, plus one recorded exception: **Mark paid** and the **Paid** card (Color Belt v0.136, Camps v0.233) |
 | Add new | `ti-plus` |
 | Edit | `ti-edit` |
 | Delete | `ti-trash` |
@@ -133,6 +134,9 @@ Section icons are added to this table only when that section is added (rule P7).
 | Change password | `ti-password` — also **Reset password** in Staff accounts (v0.70) |
 | Generate a password (Staff accounts → Reset password; decided v0.73) | `ti-wand` — not `ti-refresh`, which means Retry |
 | Copy to clipboard, e.g. Copy link (decided v0.73; also Star testing, v0.90) | `ti-copy` |
+| Save as template (Camps; decided v0.229) | `ti-template` |
+| Withdraw from a roster (Color Belt, Camps; recorded v0.229) | `ti-user-minus` |
+| Download QR code (Camps Registration link; decided v0.232) | `ti-download` — same icon as Export |
 
 **Objects**
 
@@ -141,8 +145,11 @@ Section icons are added to this table only when that section is added (rule P7).
 | Single student / profile | `ti-user` |
 | Location (Worcester / Shrewsbury) | `ti-map-pin` |
 | Unsaved / error | `ti-alert-triangle` |
-| Staff accounts (admin) | `ti-user-cog` — not `ti-users`, which is kept free |
+| Staff accounts (admin) | `ti-user-cog` — not `ti-users`, which is used only for count cards (v0.229) |
 | Settings (admin) | `ti-settings` |
+| Campers / students count card (Color Belt, Camps; recorded v0.229) | `ti-users` — summary cards only, not for staff accounts |
+| Not paid count card (Color Belt, Camps; recorded v0.229) | `ti-clock` |
+| Payments recorded card (Color Belt, Camps; recorded v0.229) | `ti-cash` |
 
 New icons get added to this map **before** they're used.
 
@@ -341,6 +348,7 @@ Sections are added only when Jeffrey says so (rule P7). When one is added, it's 
 |---------|---------|-------|--------|
 | Color Belt testing *(designing)* | **Decided v0.32: full merge, rebuilt from scratch and improved.** Testing becomes a real dashboard section (rail icon, top bar, location switcher, lock/PIN, Admin/Staff). Every screen, the database tables and the rules are rebuilt from scratch to this rulebook, using the old system (`Testing\Color Belt Prototype`, Notion "Color Belt Testing System - Design", Supabase "USTC Color Belt Staging") as the feature reference only — no code or SQL is copied as-is. The old system keeps running untouched through the October testing events (10/29, 10/30); afterwards its data is moved and the staging project is retired. Inventory: `TKD-ColorBelt-Inventory.md`. | 2026-10-15 | Designing (inventory done 2026-10-16) |
 | Star testing *(designing)* | Testing for the stars between Dan ranks (1st Dan up to 4 stars, 2nd up to 3, 3rd up to 5). Lives **inside Testing** next to Color belt testing (v0.58). Joint event for both schools; works on Both. Rebuilt from scratch to this rulebook; the old prototype (`Testing\Star Testing`, never used) is the feature reference only. Inventory: `TKD-StarTesting-Inventory.md`. | 2026-10-16 | Designing |
+| Camps *(designed)* | Holiday and vacation camps (one day or several days; summer = one camp per week). Create camps for Worcester, Shrewsbury or both schools, reuse them as templates, set prices (grid by number of days + extras), families sign up online by QR code / link, staff see the roster per day and mark payments. Rail icon `ti-tent`, after Testing. Decisions v0.229–v0.237; status `docs/Camps/TKD-Camps-Status.md`; mockups `docs/Camps/TKD-Camps-Mockups.html`. The old stand-alone `tkd-camps` app (Cloudflare Worker + D1) was only a test — nothing is moved from it. | 2026-10-18 | Designed — screens C1–C7 approved; build plan next |
 | Home | Shows the most important info staff need, quickly — "today at a glance" style (decided v0.10). **Starts empty.** Nothing goes on Home until a section exists to feed it; each new section decides what (if anything) it adds to Home when that section is designed. **Header (decided v0.11):** school logo, time-of-day greeting ("Good evening"), today's date, and active location; stays permanently. **While empty:** one gray line under the header — "Nothing on Home yet. Items appear here as sections are added." — removed once real items exist. | 2026-10-15 | **Built and live** (v0.30). Mockups `TKD-Home-Mockups.html` approved 2026-10-15; deployed 2026-10-16. |
 
 ---
@@ -540,6 +548,15 @@ To be decided one at a time, each with visual options (rule P3):
 | Color Belt phase 3: CP1 walkthrough approvals (decided v0.194) | Jeffrey walked through the built Grading tab in the preview on 2026-10-18 (before / on / after the testing day as staff and admin, notes, Wi-Fi drop with auto-save and the leave question, printing, Students details and delete warnings, the has_results refusal) — **all passed**; classes that test together were added during it (v0.193). Open points: (1) on phones the note dialog's **Save is pinned at the bottom**, like every other phone dialog (changes G2's top-right Save); (2) **Delete event does not re-check the result count** on the server — accepted (admin-only, logged, rare); (3) **after the testing day, “keep one” on a possible duplicate is admin-only for every student** (closes the rename loophole for ungraded students too; same function arguments); (4) the note hint stays “Shows on the Grading tab, also on the mat. Write only what a parent could read.”; (5) the real-database check of the after-day lock (CP3) is a **two-day check**: a Closed TEST event dated today, graded on day 1, staff lock and admin change checked on day 2, then deleted — no hand-written SQL. Screenshot: `docs/Testing/Color Belt Testing/Phase 3 images/ColorBelt-CP1-phone-note-dialog.jpg`. |
 | Color Belt phase 3: the Students tab groups classes that test together too (decided v0.195; changes v0.193) | Jeffrey (2026-10-18, during CP3), for consistency: the **Students** tab uses the same testing groups as the Grading tab (v0.193) — classes with the same start and end time are **one choice** in the class switch (“Group B + C”, count = both), the class line reads “Group B + Group C · 6:00 – 7:00 PM · 5 students”, and the list shows **each class under its own small heading** (“Group B · 3 students”), each in belt order, with the Removed group after them. Payment columns, Mark paid, ⋯, the possible-duplicate box and the four summary cards are unchanged (the cards always count the whole event). Both tabs share the chosen group. Image: `docs/Testing/Color Belt Testing/Phase 3 images/ColorBelt-Q12-students-together.png`. |
 | Color Belt phase 3 live (v0.196) | **The Grading tab is live** (2026-10-18). CP2: migration 0010 applied to production by Jeffrey; its 18 fingerprints identical to the tested copy, nothing else changed, all test files (0010, 0005, 0004, 0003, 0002, PIN) passed on production. CP3: the real-database check on a Closed TEST event (graded as admin and as the desk on the testing day; after moving its date back in the SQL Editor: staff locked, admin could change results and add a student, date change refused; event deleted, nothing left, everything logged). CP4: `main` fast-forwarded to `color-belt-phase3` (b7e767a) and pushed with Jeffrey's OK; the live site serves that exact build (no preview code), the family form's endpoint and security headers unchanged, and Jeffrey signed in on the live site. The first real Color Belt testing day on the new system (November 2026) is graded on this tab (v0.180). |
+| Camps section added (decided v0.229) | Jeffrey, 2026-10-18 (rule P7): a **Camps** section — create camp events (single or multi-day), save them as **templates** to reuse, see each camp's **roster**, with full control over prices and room to add services later; "do not overcomplicate it". Rail icon `ti-tent` after Home and Testing; page "Camps" with tabs **Camps | Templates**, Upcoming / Past, header button **+ Add camp** (`N`). Built fresh in the dashboard: the old `tkd-camps` app (Worker + D1, 1 camp / 11 registrations) **was only a test** — nothing is moved from it; it can be deleted later (separate OK). Icon map: `ti-tent`, `ti-template`, and entries for the roster icons Color Belt already uses (`ti-users`, `ti-clock`, `ti-cash`, `ti-user-minus`). Status `docs/Camps/TKD-Camps-Status.md`. |
+| Camps: prices (decided v0.230) | Question 2, option B (Jeffrey; recommended was a flat price list). Each camp has one **"Early price until"** date and a **price grid**: one row per number of days (made automatically from the camp's days; last row "N days (all days)"), four prices per row — member early / member regular / non-member early / non-member regular. A camper's base price fills in from the days they picked and member yes/no. Plus **Extras**: name, price, **Once** or **Per day**, and "Not charged to all-days campers" (e.g. "Pizza party (Fri)" $5 once). New services = a new extra. Early or regular is chosen by the **sign-up date** (America/New_York) and fixed at sign-up. Picture `docs/Camps/Decision images/Camps-price-options.png`. |
+| Camps: summer weeks (decided v0.231) | Question 3, option A: **each summer week is its own camp**, made from a "Summer week" template. No "weeks" concept in the app; a child coming several weeks signs up for each week. Chosen over one 8-week camp (week filter, grid per week, 40 day boxes). |
+| Camps: sign-up only online (decided v0.232; changes the Q4 answer) | Question 4, option B, then Jeffrey 2026-10-18: **no paper forms**. Families always sign up on the online **family form** (like Color Belt's, same security pattern) reached by **QR code / link**; staff have **no Add camper**. Walk-ins: the parent scans the QR, or staff open the link on the desk tablet and hand it over. Staff fix mistakes with ⋯ → Edit details. **No flyer in the app** — Jeffrey designs flyers elsewhere: the camp page's primary button **Registration link** opens a dialog with the QR code, short link, **Copy link** and **Download QR code** (`ti-download`; image file), no Print flyer. Up to 3 children per sign-up; signature on the form; reference code (e.g. CP-4821). |
+| Camps: paying (decided v0.233) | Question 5, option A — same as Color Belt (v0.136): **Mark paid** records the whole amount owed in one click, method = what the family chose, 5-second Undo. If days or extras are added after paying, the row shows amber **Owes $X** and the button **Mark paid $X** records just the difference. No part payments or deposits. Admin ⋯: Edit payment / Undo payment. Ways to pay at the school: **Cash / Check / Card** (Card is Camps only; Color Belt unchanged). Tags: Paid (green) · Not paid (gray) · Owes $X (amber); priority Owes > Paid > Not paid. |
+| Camps: both schools (decided v0.234) | Jeffrey, 2026-10-18: a camp is for **Worcester, Shrewsbury or Both schools**. A Both camp also picks **Held at** (Worcester / Shrewsbury) for the family form's location line; it appears on every school's list marked "Both schools", has one registration link, and members of either school pay member prices. |
+| Camps: templates (decided v0.235) | Made only from a camp (⋯ → **Save as template**, `ti-template`): keeps everything except the dates and campers; name kept as typed (duplicate = amber error). **Shared by both schools** (the switcher doesn't filter the Templates tab). **Use** opens Add camp filled in; ⋯ Edit template / Delete template (asks first); changing or deleting a template never changes camps made from it. Sign-up and early-price dates are stored as days before the first camp day and **prefilled, changeable** (Jeffrey chose prefilled over blank). Fewer / more days than the template drops / adds grid rows (new rows need prices). |
+| Camps: Add camp in folded sections (decided v0.236) | Jeffrey: C3 "looks fine, just a lot at once". Option A: one page — **Start from** on top, then **1 Camp** (name, school, held at, days calendar) open and **2 Times · 3 Prices · 4 Extras · 5 Family form** folded, each with a one-line summary. A section with a problem turns amber and opens on Save; Save works from anywhere; Edit camp / Edit template use the same layout. Chosen over Next/Back steps. Picture `docs/Camps/Decision images/Camps-addcamp-layout-options.png`. |
+| Camps mockups approved (v0.237) | `docs/Camps/TKD-Camps-Mockups.html`, images `docs/Camps/Mockup images/Camps-C1…C7d.png` (C1 Camps list · C2 Templates · C2b Save as template · C3 Add camp · C4 Camp page / roster · C5 Registration link · C6 Camper detail · C7a–d family form), design-reviewed and **approved one by one 2026-10-18**. Accepted proposals: sign-up can be **closed by hand** (e.g. full; no camper limit); Delete camp with campers = admin only with a warning naming them; changing a camp's days asks first if any price would change; the real waiver text is pasted once and carried by templates; day filter on the roster (per-day counts + drop-off / pick-up line) **starts on today during camp week**; roster ⋯ uses Color Belt's wording incl. Withdraw → Removed + Restore; Color Belt's four summary cards (Owes counts as Not paid); privacy line + emergency-contact hint on the form. **Multi-select day chips and calendar days use the dark outline** (not blue, 5-blue rule). Phone calendar at 320 px: run edge to edge so day cells reach 44 px. |
 | Approved 2026-10-16 (v0.26) | (1) **No PIN set:** when the 45-minute lock (or Lock now) happens to someone without a PIN, there is no lock screen — they are signed out to the sign-in screen with an amber note "Signed out after 45 minutes idle. Set a PIN to unlock faster." (2) **This device:** clicking it expands a Worcester / Shrewsbury choice inside the account menu; one click saves and closes (reversible, so no Save step). Sets the device's default school only; the top switcher still offers Both. (3) **Borders:** control borders use `#8F8F8A` (3:1); dividers stay `#E5E5E2`. Items (1) and (3) are coded with the Set PIN build. |
 
 ## 11. Changelog
@@ -738,3 +755,12 @@ To be decided one at a time, each with visual options (rule P3):
 | 0.194 | 2026-10-18 | Color Belt phase 3 CP1 walkthrough passed; phone note Save at the bottom; Delete event result-count re-check not added; keep-one admin-only after the testing day; note hint unchanged; CP3 after-day check over two days (10b). |
 | 0.195 | 2026-10-18 | Color Belt phase 3: Students tab groups same-time classes like Grading (changes v0.193) (10b). |
 | 0.196 | 2026-10-18 | Color Belt phase 3 (Grading) live: 0010 in production, CP3 real check passed, deployed b7e767a (10b). |
+| 0.229 | 2026-10-18 | Camps section added: rail `ti-tent`, Camps | Templates tabs; tkd-camps was only a test; icon map entries `ti-tent`, `ti-template`, `ti-users`, `ti-clock`, `ti-cash`, `ti-user-minus`; §9 row (10b). |
+| 0.230 | 2026-10-18 | Camps prices: early-price date + grid by number of days (member/non-member × early/regular) + extras (once / per day, not charged to all-days campers) (10b). |
+| 0.231 | 2026-10-18 | Camps: each summer week is its own camp (10b). |
+| 0.232 | 2026-10-18 | Camps: sign-up only on the online family form by QR / link; no paper, no staff Add camper, no flyer in the app; Registration link dialog with Download QR code (10b). |
+| 0.233 | 2026-10-18 | Camps paying: one-click Mark paid, Owes $X / Mark paid $X for later additions, Cash / Check / Card; `ti-check` exception recorded for Mark paid / Paid (10b, §2.4). |
+| 0.234 | 2026-10-18 | Camps for Worcester, Shrewsbury or Both schools, with Held at (10b). |
+| 0.235 | 2026-10-18 | Camps templates: made from a camp, shared by both schools, dates prefilled as days before camp (10b). |
+| 0.236 | 2026-10-18 | Camps: Add camp in folded sections (10b). |
+| 0.237 | 2026-10-18 | Camps mockups C1–C7 approved with accepted proposals; dark-outline day chips (10b). |
