@@ -1,7 +1,7 @@
 # Black Belt testing — status
 
 **Updated:** 2026-10-18 (Black Belt worktree session, branch `black-belt`)
-**Rulebook at this update:** v0.300 on main (merged). **Black Belt's number block is 0.900–0.999** (v0.300); used so far: 0.900–0.903. Older Black Belt rows: v0.204, v0.205, v0.209–v0.213, v0.216–v0.220, v0.224 (0.209 and 0.216 clash with Finance and move into 0.9xx at merge if Finance merges first).
+**Rulebook at this update:** v0.300 on main (merged). **Black Belt's number block is 0.900–0.999** (v0.300); used so far: 0.900–0.904. Older Black Belt rows: v0.204, v0.205, v0.209–v0.213, v0.216–v0.220, v0.224 (0.209 and 0.216 clash with Finance and move into 0.9xx at merge if Finance merges first).
 
 > Read `CLAUDE.md` (repo root) first. This file says where Black Belt testing stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -125,3 +125,4 @@ All the items below were applied to the plan.
 | v0.901 | **DB Q-B1 (B):** a requirements sheet per cycle (Fall 2026 numbers, no editor) feeds the form panel until grading; the rubric is built in spring after Master Jeong's answers and the sheet dropped. |
 | v0.902 | **DB Q-B2:** prices live on each cycle: Add cycle pre-fills the previous cycle's plans, amounts and Kukkiwon fees (editable there); **set once the cycle is saved**; Rubric and prices drops its price sections; "Offer this plan" ticks removed. Changes v0.217 and screens 4 and 6. |
 | v0.903 | **DB Q-B3 (A):** each payment row keeps the school and cycle name as they were when paid; corrections copy them; a later school fix doesn't move recorded money. |
+| v0.904 | **DB Q-B4 (A):** payment records are never deleted; a candidate with any payment record can only be withdrawn; a cycle with one can't be deleted; enforced in the database (on delete restrict, guard refuses every delete). |

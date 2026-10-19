@@ -177,7 +177,7 @@ Structure first, then money, then waivers and privacy. Each will be shown with a
 - **Recommendation:** A.
 - **Touches:** plan §7.1, Finance note point 4, Finance v0.196, v0.199.
 
-### Q-B4 · Can payment rows ever be deleted?
+### Q-B4 · Can payment rows ever be deleted? — **answered v0.904: A (never)**
 
 - **The question:** v0.900 allows Delete cycle "only while no payment is recorded", and Remove candidate offers Star's "Delete permanently", which in Star also removes the candidate's payments. Should Black Belt ever delete a payment row?
 - **Why it matters:** a deleted payment disappears from Finance's days (a closed day would show "Changed after closing" with nothing to see), and an undone payment still leaves rows behind.
