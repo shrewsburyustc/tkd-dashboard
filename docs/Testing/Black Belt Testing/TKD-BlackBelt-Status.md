@@ -130,3 +130,5 @@ All the items below were applied to the plan.
 | v0.906 | **DB Q-B6 (A):** at the end of the keeping time the signature and signer's name are removed (also hidden in the change log); that a waiver was signed, when and which version stays. |
 | v0.907 | **DB Q-B7 (C):** date of birth and email removed on the same day as the waiver signature, also hidden in the change log; names, Dan, results and payments stay. **All 7 database questions answered.** |
 | v0.908 | **DB plan §8: all 19 smaller defaults OK'd.** Next: build contract CONTRACT-0016 → security review → Jeffrey's OK. |
+
+**Where it stopped (2026-10-19):** `docs/Dashboard Docs/Build contracts/CONTRACT-0016.md` is written and security-reviewed (all fixes applied, commit 930f08d). **Waiting on Jeffrey:** approve the contract and its open items OI-1…OI-8 (OI-7 daily cap on online registrations, default no; OI-8 Delete permanently also deletes a fake registration's online waiver, default yes). Then: ask the Main session to reserve migration 0016 (with Jeffrey's OK), write the SQL + tests + PGlite run, separate security review of the SQL, then the preview build (B1/B2).
