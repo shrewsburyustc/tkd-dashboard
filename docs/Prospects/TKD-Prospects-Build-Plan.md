@@ -118,3 +118,4 @@ As asked:
 - 2026-10-18 — **Jeffrey approved the plan and mockup revision 3 (screen 10).** Next: questions Q1–Q7, one at a time.
 - 2026-10-18 — **Q1–Q7 answered** (rulebook v0.191). Mockup rev 3's "Same phone as …" line is dropped (Q4). Next: P1 (merge main) and P2 (migration 0010) — each on Jeffrey's OK.
 - 2026-10-18 — **P2 done:** migration 0010 + tests (PGlite 93/93), security review (no High; 2 Medium — one fixed, one in the 0003 proposal). 0003 change written as a proposal for the Color Belt session. Nothing live.
+- 2026-10-18 — **P3 done (preview only):** Prospects screens, panel, dialogs, phone More bar, Calendar check-in, shared Fill in. Design review: no High, 7 Medium fixed. Eight differences listed in STATUS-Prospects.md for Jeffrey in P4.

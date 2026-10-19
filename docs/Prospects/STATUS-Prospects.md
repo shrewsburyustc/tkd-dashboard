@@ -9,8 +9,8 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Prospects-Build-Plan.md`
 | P0 Plan + questions Q1–Q7 | Done 2026-10-18 (v0.191) |
 | P1 Merge main (with Forms F1) | Waiting — the Main session merges when Jeffrey asks |
 | P2 Migration 0010 + tests + security review | Done 2026-10-18; PGlite 93/93 |
-| P3 Screens + preview database + design review | Next |
-| P4 Jeffrey tries the preview | Waiting |
+| P3 Screens + preview database + design review | Done 2026-10-18 (preview only); 8 differences wait for Jeffrey in P4 |
+| P4 Jeffrey tries the preview (and decides the P3 differences below) | Next |
 | P5 Live setup (0007–0010, then Forms F3) | Waiting |
 | P6 Go live with Forms | Needs a separate OK |
 | — 0003 history exception | **Proposal only** (`PROPOSAL-0003-history-cleanup.md`), for the Color Belt session; Prospects must not go live before it's decided |
@@ -29,3 +29,24 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Prospects-Build-Plan.md`
 ## Security review (2026-10-18)
 
 No High. Fixed: **M2** check-in on a Joined / Not interested child refused, Undo can't restore Joined; **L3** the clean-up takes turns and deletes in id order, and never breaks the list; **L5** two first sign-ups at once can't fail on seeding; **L8** booking only on forms that still have a booking field; **L9** opening a just-deleted prospect answers not_found; **L10** fingerprints header. **M1** (deleting writes fresh full copies into the history), L4, L6, L7 are written into the 0003 proposal. Test gaps noted for P3/P5: a two-form shared limit from the panel, TKD01 undo with prospects, history rows.
+
+## What P3 added (2026-10-18, preview only — nothing live, nothing pushed)
+
+- **Prospects section** (rail `ti-address-book` after Forms, address `#prospects`, dark badge = new sign-ups **you** haven't opened). Stage bar + "Follow up today" chip (follow-ups due or overdue, new sign-ups, "Did … come?", cancelled classes) + side-exit chips + search (names or 4+ phone digits). One row per child (Child · Parent · Free class · Follow up · Status); on Both, Worcester then Shrewsbury, each with its own bar, one search for both.
+- **Panel** (PC beside the list with ×/Esc to close; tablet below; phone full screen): Call / Text / Email (PC: number large + Copy), Check in / "Did … come?" Came / No-show with Undo, status (Joined asks the date), follow-up, free class with amber "Class cancelled — call the family", Book / Change time / Cancel booking (Undo), siblings, notes with one-tap follow-up (a typed note is never lost silently), timeline, answers and the signature picture (each look recorded), Delete (admins).
+- **+ Add prospect** → which Live form → the same Fill in as Forms (now shared: `src/screens/forms/useFillIn.js`). **Edit statuses** (page ⋯): per school; drag or Move up/down; add, rename, recolor; delete custom ones (admins).
+- **Phone bar:** Home, Calendar, Prospects, More (Testing, Schedule, Forms). **Calendar:** Check in on today's free classes in the day panel, with Undo.
+- **Code:** `src/lib/prospects/` (api, useProspects, checks — 7 groups pass), `src/lib/mockProspects.js` (fake 0010 inside the fake Forms store, schema 2), `src/screens/Prospects.jsx`, `src/screens/prospects/*`, `src/styles/prospects.css`. Builds pass; all 5 check sets pass.
+- **Shared files touched:** `src/App.jsx`, `src/components/navItems.js`, `src/lib/mockClient.js`; also `BottomBar.jsx`, `Rail.jsx`, `Shell.jsx`, `pageAddress.js`, `main.jsx`, Calendar (`Calendar.jsx`, `calendar/DayPanel.jsx`, `calendar/text.js`), Forms (`Forms.jsx` now uses the shared Fill in).
+- **Design review (separate agent, screenshots at 1280 / 820 touch / 390 touch / 320):** no High; 7 Medium fixed (panel close + Esc, unsaved-note guard, follow-up warning with icon + words, phone cancelled-class icon, dot = what the badge counts, whole row clickable, tablet panel scrolled into view); Low fixed: Check in plain button, tablet warning wraps, Today tile icon, 16px warning icons, Edit icon, search clear tap area, 4px grid, one search on Both + school pins, dead CSS.
+
+## Differences from the approved mockup — for Jeffrey to decide in P4
+
+1. The list shows **"Ava R."** but never the child's **age** (the plan says lists never show age; the mockup showed "Ava R., 10").
+2. **Status** is a plain dropdown (the mockup shows a colored tag with a chevron).
+3. **Follow up** is a date field with "No follow-up" (the mockup shows the date text with a clock icon).
+4. **+ Add prospect** opens the form in one tap (the mockup had a list + "Open form").
+5. **Check in** is a plain button (the mockup's style); Book a free class stays blue (rev 3).
+6. The blue **dot** marks new sign-ups you haven't opened (the same ones the badge counts).
+7. **Edit statuses** is under the page's ⋯ menu.
+8. **Change time** uses the calendar-event icon (rev 3), which elsewhere means "event"; and the rail's hover bubble says "Prospects" while a screen reader hears "Prospects, 3 new".

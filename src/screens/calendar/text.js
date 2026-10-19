@@ -79,6 +79,9 @@ export const FREE_CLASSES = 'Free classes';
 export const freeLine = (b) => `${b.childFirstName} · ${b.className}`;
 export const FREE_FROM = (form) => `Booked with ${form}`;
 export const CLASS_GONE = 'Class cancelled — call the family';
+export const CHECK_IN = 'Check in';
+export const CHECKED_IN = 'checked in';
+export const checkedInToast = (name) => `${name} checked in.`;
 export const freeBadge = (n) => (n === 1 ? '1 free-class booking' : `${n} free-class bookings`);
 export const closureBookings = (n) => `${n === 1 ? '1 free-class booking is' : `${n} free-class bookings are`} on these classes — you'll need to call ${n === 1 ? 'the family' : 'the families'}.`;
 

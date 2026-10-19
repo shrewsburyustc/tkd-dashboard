@@ -24,7 +24,8 @@ import { classifySignInError } from './lib/authErrors.js';
 import { getIdleLimitMs, markActivityNow, setLockedFlag, shouldBeLocked, useIdleLock } from './lib/useIdleLock.js';
 import { lockSession, touchSession } from './lib/serverLock.js';
 import { useSessionHeartbeat } from './lib/useSessionHeartbeat.js';
-import { loadDeviceLocation, saveDeviceLocation } from './lib/device.js';
+import { LOCATION_CODE, loadDeviceLocation, saveDeviceLocation } from './lib/device.js';
+import { prospectsBadge } from './lib/prospects/api.js';
 import { addressFor, addressIsUnknown, pageFromAddress } from './lib/pageAddress.js';
 import { backIsClaimed, isLeftoverDialogStep } from './lib/backButton.js';
 import PreviewBanner from './components/PreviewBanner.jsx';
@@ -36,6 +37,7 @@ import Testing from './screens/Testing.jsx';
 import Schedule from './screens/Schedule.jsx';
 import Calendar from './screens/Calendar.jsx';
 import Forms from './screens/Forms.jsx';
+import Prospects from './screens/Prospects.jsx';
 import StaffAccounts from './screens/StaffAccounts.jsx';
 import LockScreen from './screens/LockScreen.jsx';
 import SetPinScreen from './screens/SetPinScreen.jsx';
@@ -70,6 +72,7 @@ const SECTION_TITLES = {
   schedule: 'Schedule · U.S. Taekwondo Center',
   calendar: 'Calendar · U.S. Taekwondo Center',
   forms: 'Forms · U.S. Taekwondo Center',
+  prospects: 'Prospects · U.S. Taekwondo Center',
   staffAccounts: 'Staff accounts · U.S. Taekwondo Center',
 };
 
@@ -121,6 +124,8 @@ export default function App() {
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false); // a Schedule dialog is showing
   const [calendarModalOpen, setCalendarModalOpen] = useState(false); // a Calendar dialog is showing
   const [formsModalOpen, setFormsModalOpen] = useState(false); // a Forms dialog is showing
+  const [prospectsModalOpen, setProspectsModalOpen] = useState(false); // a Prospects dialog is showing
+  const [prospectsCount, setProspectsCount] = useState(0); // the rail badge: new sign-ups I haven't opened (v0.191)
   const [staffModalOpen, setStaffModalOpen] = useState(false); // a Staff accounts dialog is showing
   const [toast, setToast] = useState(null); // { id, text, action, icon } or null
 
@@ -579,9 +584,24 @@ export default function App() {
 
   // ----- Drawing -----
   const isSignedIn = (phase === 'home' || phase === 'locked') && profile !== null;
+
+  // The Prospects badge (rulebook v0.140; per person, v0.191): the New / Booked prospects of the
+  // school in the switcher (both on Both) this person hasn't opened. Refreshed when the page or
+  // school changes, after Prospects changes something, and every 2 minutes while unlocked.
+  const badgeLocation = location === 'Both' ? null : LOCATION_CODE[location] ?? null;
+  const refreshBadge = useCallback(async () => {
+    const res = await prospectsBadge(badgeLocation);
+    if (res.status === 'ok') setProspectsCount(res.count);
+  }, [badgeLocation]);
+  useEffect(() => {
+    if (phase !== 'home' || profile === null) return undefined;
+    refreshBadge();
+    const timer = window.setInterval(refreshBadge, 120000);
+    return () => window.clearInterval(timer);
+  }, [phase, profile, section, refreshBadge]);
   const dialogOpen = phase === 'home' && profile !== null && accountDialog !== null;
   // The page behind a dialog can't be clicked or reached with Tab (account or Testing dialog).
-  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || scheduleModalOpen || calendarModalOpen || formsModalOpen || staffModalOpen));
+  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || scheduleModalOpen || calendarModalOpen || formsModalOpen || prospectsModalOpen || staffModalOpen));
 
   return (
     <div className="app-root">
@@ -618,6 +638,7 @@ export default function App() {
             onChangePassword={() => openAccountDialog('changePassword')}
             onStaffAccounts={() => navigate('staffAccounts')}
             onSignOut={() => signOut()}
+            badges={{ prospects: prospectsCount }}
           >
             {section === 'home' && <Home location={location} />}
             {section === 'testing' && (
@@ -671,6 +692,20 @@ export default function App() {
                 showToast={showToast}
                 clearToast={clearToast}
                 onModalOpenChange={setFormsModalOpen}
+              />
+            )}
+            {section === 'prospects' && (
+              <Prospects
+                location={location}
+                // For showing or hiding controls only — the database decides what may change.
+                isAdmin={profile.role === 'admin'}
+                screenLocked={phase === 'locked'}
+                onNoAccess={handleNoAccess}
+                onRefreshProfile={refreshProfile}
+                showToast={showToast}
+                clearToast={clearToast}
+                onModalOpenChange={setProspectsModalOpen}
+                onBadgeRefresh={refreshBadge}
               />
             )}
             {section === 'staffAccounts' && (

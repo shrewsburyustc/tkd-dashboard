@@ -41,6 +41,7 @@ import {
   updateEvent,
   updateType,
 } from '../lib/calendar/api.js';
+import { checkIn, prospectsForBookings, undoCheckIn } from '../lib/prospects/api.js';
 import MonthGrid from './calendar/MonthGrid.jsx';
 import PhoneMonth from './calendar/PhoneMonth.jsx';
 import DayPanel from './calendar/DayPanel.jsx';
@@ -538,6 +539,39 @@ export default function Calendar({ location, isAdmin, screenLocked, onNoAccess, 
   }
 
   // ===== Undo =====
+  // ----- Check in a free class (Prospects, v0.140) — today only -----
+  const [checkIns, setCheckIns] = useState(null); // booking id -> { prospectId, version, checkedIn, builtin }
+  const todayBookingIds = (loaded ? infoFor(today).bookings.map((b) => b.id) : []).join(',');
+  useEffect(() => {
+    if (!todayBookingIds || screenLocked) {
+      setCheckIns(null);
+      return;
+    }
+    let live = true;
+    prospectsForBookings(todayBookingIds.split(',')).then((res) => {
+      if (live && res.status === 'ok') setCheckIns(new Map(res.prospects.map((x) => [x.bookingId, x])));
+    });
+    return () => {
+      live = false;
+    };
+  }, [todayBookingIds, screenLocked, loaded]);
+  async function doCheckIn(booking, p) {
+    if (!beginWrite()) return;
+    const r = await checkIn({ id: p.prospectId, expectedVersion: p.version, came: true, afterClass: false });
+    endWrite(r.status);
+    if (r.status === 'ok') {
+      await reloadQuiet();
+      showToast(T.checkedInToast(booking.childFirstName), {
+        icon: false,
+        action: { label: T.UNDO, onAction: () => runUndo(() => undoCheckIn({ id: p.prospectId, expectedVersion: r.version, previousStatusId: r.previousStatusId, previousFollowUpOn: r.previousFollowUpOn })) },
+      });
+    } else if (r.status === 'no_access') onNoAccess();
+    else {
+      setBanner({ text: T.LOAD_FAILED });
+      reloadQuiet();
+    }
+  }
+
   async function runUndo(call) {
     if (!beginWrite()) return;
     const result = await call();
@@ -657,6 +691,9 @@ export default function Calendar({ location, isAdmin, screenLocked, onNoAccess, 
       <DayPanel
         date={selectedDate}
         today={today}
+        checkIns={selectedDate === today ? checkIns : null}
+        checkInBusy={busy}
+        onCheckIn={doCheckIn}
         info={infoFor(selectedDate)}
         schoolLabel={schoolLabel}
         both={both}

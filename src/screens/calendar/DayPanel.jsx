@@ -9,12 +9,13 @@
 //   - every class that day in its color; cancelled ones stay listed, crossed out
 //     (on Both: each school's classes under its own heading)
 //   - free classes booked through Forms (child's first name, class, time, form); one whose class
-//     no longer runs then is amber: "Class cancelled — call the family" (v0.145 answer 6)
+//     no longer runs then is amber: "Class cancelled — call the family" (v0.145 answer 6); on
+//     the class day each free class has Check in (ti-user-check) when the family walks in (v0.140)
 //
 // Props:
 //   date, today, info (buildDay result), schoolLabel, both, typeColor,
 //   isAdmin, onOpenEvent(event, element), onOpenClosure(closure, element)
-import { IconAlertTriangle, IconCertificate, IconChevronRight, IconUserPlus } from '@tabler/icons-react';
+import { IconAlertTriangle, IconCertificate, IconChevronRight, IconUserCheck, IconUserPlus } from '@tabler/icons-react';
 import { colorOf } from '../../lib/schedule/colors.js';
 import { eventTimeOn } from '../../lib/calendar/days.js';
 import { formatRange, formatTime, parseTime } from '../../lib/schedule/time.js';
@@ -32,7 +33,7 @@ function Dots({ colorKeys }) {
   );
 }
 
-export default function DayPanel({ date, today, info, schoolLabel, both, typeColor, isAdmin, onOpenEvent, onOpenClosure }) {
+export default function DayPanel({ date, today, info, schoolLabel, both, typeColor, isAdmin, onOpenEvent, onOpenClosure, checkIns = null, checkInBusy = false, onCheckIn }) {
   const isToday = date === today;
   const action = isAdmin ? T.editThing : T.viewThing;
   const hasEvents = info.events.length > 0 || info.testing.length > 0;
@@ -121,6 +122,18 @@ export default function DayPanel({ date, today, info, schoolLabel, both, typeCol
                   {T.freeLine(b)}
                   {!b.classRunning && <span className="cpanel-free-warn">{T.CLASS_GONE}</span>}
                 </span>
+                {date === today && b.classRunning && checkIns?.get(b.id) && (
+                  checkIns.get(b.id).checkedIn ? (
+                    <span className="cpanel-tag">{T.CHECKED_IN}</span>
+                  ) : (
+                    !['joined', 'not_interested', 'came', 'no_show'].includes(checkIns.get(b.id).builtin ?? '') && (
+                      <button type="button" className="btn btn-sm cpanel-checkin" disabled={checkInBusy} onClick={() => onCheckIn(b, checkIns.get(b.id))}>
+                        <IconUserCheck size={16} aria-hidden="true" />
+                        {T.CHECK_IN}
+                      </button>
+                    )
+                  )
+                )}
               </li>
             ))}
           </ul>

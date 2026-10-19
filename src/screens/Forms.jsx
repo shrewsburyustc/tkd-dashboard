@@ -6,7 +6,7 @@
 //   - admins: "New form" (NewFormDialog) → the builder (Builder.jsx); ⋯ → Fill in, Duplicate,
 //     Close form / Open form again, Delete (only without sign-ups)
 //   - staff: no building; a row opens a read-only Preview; "Fill in" and Share on each row
-//   - opens Share (ShareDialog), Fill in and Preview (FillInDialog)
+//   - opens Share (ShareDialog), Fill in and Preview (FillInDialog, through useFillIn — shared with Prospects)
 //
 // The public page, its QR code and kiosk mode are step F3; emails wait for the school's sending
 // address (rulebook v0.146). Admin vs staff only changes what is SHOWN — the database enforces
@@ -19,22 +19,19 @@ import RowMenu from '../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../lib/device.js';
 import { PHONE_QUERY, WIDE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
 import { useShortcutN } from '../lib/useShortcutN.js';
-import { addDays } from '../lib/schedule/versions.js';
 import { loadSchedule } from '../lib/schedule/api.js';
 import { cleanText } from '../lib/calendar/rules.js';
-import { cleanAnswers, slugify } from '../lib/forms/fields.js';
+import { slugify } from '../lib/forms/fields.js';
 import { useForms } from '../lib/forms/useForms.js';
-import { createForm, deleteForm, duplicateForm, loadForm, openTimes, setFormStatus, staffSubmit } from '../lib/forms/api.js';
+import { createForm, deleteForm, duplicateForm, loadForm, setFormStatus } from '../lib/forms/api.js';
 import FormsList from './forms/FormsList.jsx';
 import NewFormDialog, { checkNewForm } from './forms/NewFormDialog.jsx';
 import Builder from './forms/Builder.jsx';
 import ShareDialog from './forms/ShareDialog.jsx';
-import FillInDialog, { emptyFillValues } from './forms/FillInDialog.jsx';
+import { useFillIn } from './forms/useFillIn.js';
 import * as T from './forms/text.js';
 
-const localToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
 const usable = (el) => (el && el.isConnected && el.getClientRects().length > 0 ? el : null);
-const newKey = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
 
 export default function Forms({ location, isAdmin, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange }) {
   const isPhone = useMediaQuery(PHONE_QUERY);
@@ -59,7 +56,8 @@ export default function Forms({ location, isAdmin, screenLocked, onNoAccess, onR
   useEffect(() => {
     if (list.status === 'noAccess') onNoAccess();
   }, [list.status, onNoAccess]);
-  const modalShown = dialog !== null && !screenLocked;
+  const fill = useFillIn({ isPhone, screenLocked, onNoAccess, onSent: () => list.reload() });
+  const modalShown = (dialog !== null || fill.isOpen) && !screenLocked;
   useEffect(() => {
     onModalOpenChange(modalShown);
   }, [modalShown, onModalOpenChange]);
@@ -150,83 +148,10 @@ export default function Forms({ location, isAdmin, screenLocked, onNoAccess, onR
   }
 
   // ----- Fill in and Preview -----
-  async function openFill(form, opener, { mode = 'fill', fields = null } = {}) {
-    if (mode === 'fill' && form.status !== 'live') {
-      setBanner({ text: form.status === 'draft' ? T.DRAFT_NO_FILL : T.FORM_CLOSED });
-      return;
-    }
-    const shown = fields ?? (mode === 'fill' ? form.published : form.published ?? form.draft);
-    openDialog({ type: 'fill', mode, form, fields: shown, step: 0, values: emptyFillValues(), problems: {}, times: null, opener, submissionKey: newKey(), draftPreview: Boolean(fields) });
-    if (!shown.some((f) => f.type === 'booking')) return;
-    const today = localToday();
-    const res = await openTimes({ formId: form.id, from: today, to: addDays(today, 60) });
-    setDialog((d) => (d && d.type === 'fill' && d.form.id === form.id ? { ...d, times: res.status === 'ok' ? res.times : 'error' } : d));
-    if (res.status === 'no_access') onNoAccess();
-  }
-  function changeFill(patch) {
-    setDialog((d) => {
-      if (!d || d.saving) return d;
-      const problems = { ...d.problems };
-      for (const k of Object.keys(patch.answers ?? {})) delete problems[k];
-      if (patch.children) delete problems.children;
-      if (patch.signature !== undefined) delete problems.signature;
-      return { ...d, values: { ...d.values, ...patch }, problems, note: d.note === 'LEAVE_FILL' ? null : d.note, submissionKey: d.note === 'TIME_TAKEN' ? newKey() : d.submissionKey };
-    });
-  }
-  async function submitFill() {
-    const d = dialogRef.current;
-    if (!d || d.saving) return;
-    patchDialog({ saving: true, note: null });
-    const v = d.values;
-    const children = v.children.map((c) => ({ first_name: cleanText(c.first_name), age: c.age }));
-    const bookings = Object.entries(v.bookings)
-      .filter(([i, key]) => key && Number(i) < children.length)
-      .map(([i, key]) => {
-        const [classId, date, start] = key.split('|');
-        return { child: Number(i), classId, date, start };
-      });
-    const hasWaiver = d.fields.some((f) => f.type === 'waiver' && v.answers[f.id] === true);
-    const res = await staffSubmit({
-      formId: d.form.id,
-      submissionKey: d.submissionKey,
-      publishedVersion: d.form.publishedVersion,
-      answers: cleanAnswers(d.fields, v.answers),
-      children,
-      bookings,
-      signature: hasWaiver ? v.signature : null,
-    });
-    if (res.status === 'ok') {
-      patchDialog({ saving: false, sent: { bookings: res.bookings } });
-      list.reload();
-      return;
-    }
-    if (res.status === 'no_access') {
-      patchDialog({ saving: false });
-      onNoAccess();
-    } else if (res.status === 'time_taken') {
-      patchDialog({ saving: false, note: 'TIME_TAKEN', submissionKey: newKey() });
-      const today = localToday();
-      const t = await openTimes({ formId: d.form.id, from: today, to: addDays(today, 60) });
-      if (t.status === 'ok') patchDialog({ times: t.times });
-    } else if (res.status === 'form_changed') {
-      const fresh = await loadForm(d.form.id);
-      if (fresh.status === 'ok') patchDialog({ saving: false, note: 'FORM_CHANGED', form: fresh.form, fields: fresh.form.published, step: 0, submissionKey: newKey() });
-      else patchDialog({ saving: false, note: 'SEND_FAILED' });
-    } else if (res.status === 'closed' || res.status === 'not_found') {
-      patchDialog({ saving: false, note: 'FORM_CLOSED' });
-      list.reload();
-    } else if (res.status === 'invalid') {
-      patchDialog({ saving: false, note: 'SEND_INVALID', submissionKey: newKey() });
-    } else {
-      patchDialog({ saving: false, note: 'SEND_FAILED' }); // same key: a repeat can't save twice
-    }
-  }
-  function requestCloseFill() {
-    const d = dialogRef.current;
-    if (!d || d.saving) return;
-    const started = d.mode === 'fill' && !d.sent && JSON.stringify(d.values) !== JSON.stringify(emptyFillValues());
-    if (started && d.note !== 'LEAVE_FILL') patchDialog({ note: 'LEAVE_FILL' });
-    else closeDialog();
+  function openFill(form, opener, opts = {}) {
+    clearToast();
+    setMenu(null);
+    if (!fill.open(form, opener, opts)) setBanner({ text: form.status === 'draft' ? T.DRAFT_NO_FILL : T.FORM_CLOSED });
   }
 
   // ----- Row actions -----
@@ -380,20 +305,6 @@ export default function Forms({ location, isAdmin, screenLocked, onNoAccess, onR
       );
     } else if (dialog.type === 'share') {
       dialogElement = <ShareDialog key={dialog.key} form={dialog.form} isPhone={isPhone} onClose={closeDialog} />;
-    } else if (dialog.type === 'fill') {
-      dialogElement = (
-        <FillInDialog
-          key={dialog.key}
-          state={dialog}
-          isPhone={isPhone}
-          onChange={changeFill}
-          onStep={(step, problems) => patchDialog({ step, problems, note: null })}
-          onSubmit={submitFill}
-          onAnother={() => patchDialog({ sent: null, step: 0, values: emptyFillValues(), problems: {}, note: null, submissionKey: newKey() })}
-          onCancel={closeDialog}
-          onRequestClose={requestCloseFill}
-        />
-      );
     } else if (dialog.type === 'delete') {
       dialogElement = (
         <Dialog title={T.DELETE_TITLE} variant="confirm" describedBy={`forms-del-${dialog.key}`} onRequestClose={closeDialog}>
@@ -453,6 +364,7 @@ export default function Forms({ location, isAdmin, screenLocked, onNoAccess, onR
         />
       )}
       {dialogElement}
+      {fill.element}
     </div>
   );
 }

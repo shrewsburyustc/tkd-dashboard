@@ -514,7 +514,7 @@ export function createMockClient() {
           }
           if (table.startsWith('schedule_')) return schedule.select(table, query.columns, query.filters, query.orders, testingContext());
           if (table.startsWith('calendar_')) return calendar.select(table, query.columns, query.filters, query.orders, testingContext());
-          if (table === 'forms' || table.startsWith('form_')) return forms.select(table, query.columns, query.filters, query.orders, testingContext());
+          if (table === 'forms' || table.startsWith('form_') || table === 'prospect_statuses') return forms.select(table, query.columns, query.filters, query.orders, testingContext());
           return testing.select(table, query.columns, query.filters, query.orders, testingContext());
         };
         return run().then(resolve, reject);

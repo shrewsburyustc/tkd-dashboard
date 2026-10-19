@@ -12,13 +12,16 @@
 //   backend.rpc('forms_create', { p_… }, ctx)   ctx = { signedIn, hasDataAccess, isAdmin, actorName }
 // The public page's three functions (forms_public_*) are NOT here: they belong to the restricted
 // login of step F3, which the dashboard never uses.
+// Prospects (migration 0010) live in the same fake store: mockProspects.js is plugged in below, so
+// a sign-up makes its prospects and a booking moves them, like 0010's triggers.
 import { parseTime, toTimeText } from './schedule/time.js';
 import { addDays, weekdayOf } from './schedule/versions.js';
 import { versionInEffect } from './calendar/days.js';
 import { cleanText, textProblem } from './calendar/rules.js';
 import { emailOk, fieldsProblem, longTextProblem, phoneOk, publishProblem, slugOk, template } from './forms/fields.js';
+import { createProspectsPart, emptyProspectsTables, PROSPECTS_ADMIN_ONLY, PROSPECTS_RPC_ARGS, PROSPECTS_SAVE_ALWAYS } from './mockProspects.js';
 
-export const FORMS_STORE_SCHEMA = 1;
+export const FORMS_STORE_SCHEMA = 2; // 2: + the Prospects tables (0010)
 const LOCATION_CODES = ['worcester', 'shrewsbury'];
 const KINDS = ['free_class', 'walk_in', 'event', 'blank'];
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -36,7 +39,8 @@ const GRANTED_COLUMNS = {
   form_submissions: ['id', 'form_id', 'location_code', 'published_version', 'fields', 'answers', 'parent_name', 'parent_phone', 'parent_email',
     'children', 'signed_at', 'entered_by', 'source', 'created_at', 'created_by_name'],
 };
-const TABLE_KEY = { forms: 'forms', form_booking_offers: 'offers', form_booking_limits: 'limits', form_submissions: 'submissions' };
+GRANTED_COLUMNS.prospect_statuses = ['id', 'location_code', 'name', 'kind', 'position', 'color', 'builtin', 'version'];
+const TABLE_KEY = { forms: 'forms', form_booking_offers: 'offers', form_booking_limits: 'limits', form_submissions: 'submissions', prospect_statuses: 'statuses' };
 const HIDDEN = ['created_by', 'updated_by', 'booking_key', 'signature', 'submission_key'];
 
 const RPC_ARGS = {
@@ -53,10 +57,12 @@ const RPC_ARGS = {
   forms_submission_signature: [['p_submission_id', 'uuid']],
   forms_kiosk_token: [['p_form_id', 'uuid']],
   forms_kiosk_revoke: [['p_form_id', 'uuid']],
+  ...PROSPECTS_RPC_ARGS,
 };
 export const FORMS_RPC_NAMES = Object.keys(RPC_ARGS);
 // Staff (not only admins) may call these (0009 section 7h-7m).
-const STAFF_RPCS = ['forms_staff_submit', 'forms_open_times', 'forms_bookings_between', 'forms_submission_signature', 'forms_kiosk_token', 'forms_kiosk_revoke'];
+const STAFF_RPCS = ['forms_staff_submit', 'forms_open_times', 'forms_bookings_between', 'forms_submission_signature', 'forms_kiosk_token', 'forms_kiosk_revoke',
+  ...Object.keys(PROSPECTS_RPC_ARGS).filter((n) => !PROSPECTS_ADMIN_ONLY.includes(n))];
 
 class DbError extends Error {
   constructor(code, message, httpStatus = 400) {
@@ -84,6 +90,15 @@ function toDbType(value, type) {
       throw bad();
     case 'jsonb':
       return JSON.parse(JSON.stringify(value));
+    case 'bool':
+      if (typeof value === 'boolean') return value;
+      throw bad();
+    case 'uuid[]':
+      if (!Array.isArray(value)) throw bad();
+      return value.map((v) => toDbType(v, 'uuid'));
+    case 'time':
+      if (typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d(:\d\d)?$/.test(value)) return value.slice(0, 5);
+      throw bad();
     default:
       throw new Error(`unknown type ${type}`);
   }
@@ -205,7 +220,7 @@ const SAMPLE_SIGNATURE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAAAy
 
 // ----- Default preview data, around "today" (made-up samples) -----
 export function defaultFormsData({ today, newId, stamp, classes, schedule, calendar, actorName = 'Preview' }) {
-  const db = { schema: FORMS_STORE_SCHEMA, forms: [], offers: [], limits: [], submissions: [], bookings: [], kioskTokens: [], signatureViews: [] };
+  const db = { schema: FORMS_STORE_SCHEMA, forms: [], offers: [], limits: [], submissions: [], bookings: [], kioskTokens: [], signatureViews: [], ...emptyProspectsTables() };
   const book = (row) => ({ ...row, version: 1, created_at: stamp, updated_at: stamp, created_by_name: actorName, updated_by_name: actorName });
   const classOf = (code, name) => classes.find((c) => c.location_code === code && c.name === name) ?? null;
   const form = (row) => {
@@ -288,7 +303,8 @@ export function defaultFormsData({ today, newId, stamp, classes, schedule, calen
 
 function isUsableStore(store) {
   return Boolean(store) && store.schema === FORMS_STORE_SCHEMA
-    && ['forms', 'offers', 'limits', 'submissions', 'bookings', 'kioskTokens', 'signatureViews'].every((key) => Array.isArray(store[key]));
+    && ['forms', 'offers', 'limits', 'submissions', 'bookings', 'kioskTokens', 'signatureViews', 'statuses', 'prospects', 'notes', 'activity', 'opens']
+      .every((key) => Array.isArray(store[key]));
 }
 
 // ----- The backend -----
@@ -296,7 +312,11 @@ function isUsableStore(store) {
 export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(), newId, getSchedule, getCalendar, getClasses, today }) {
   let failNext = false;
   const stamp = () => new Date(now()).toISOString();
-  const fresh = () => defaultFormsData({ today: today(), newId, stamp: stamp(), classes: getClasses(), schedule: getSchedule(), calendar: getCalendar() });
+  const fresh = () => {
+    const db = defaultFormsData({ today: today(), newId, stamp: stamp(), classes: getClasses(), schedule: getSchedule(), calendar: getCalendar() });
+    prospects().backfill(db, { samples: true });
+    return db;
+  };
 
   function read() {
     let store = null;
@@ -440,19 +460,30 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
       children: a.p_children.map((c) => ({ first_name: cleanText(c.first_name), age: c.age })),
       signature: a.p_signature, signed_at: a.p_signature === null ? null : stamp(), entered_by: enteredBy, source, submission_key: a.p_submission_key,
     }, ctx);
+    prospects().afterSubmission(db, sub, ctx); // = 0010's trigger on form_submissions
     const sorted = [...bookings].sort((x, y) => (x.class_id + x.date + x.starts_at < y.class_id + y.date + y.starts_at ? -1 : 1));
     for (const b of sorted) {
       const t = times(db, form.id, b.date, b.date).find((x) => x.class_id === b.class_id.toLowerCase() && x.starts_at === b.starts_at);
       if (!t) return st('time_taken');
-      insertRow(db.bookings, {
+      const booking = insertRow(db.bookings, {
         id: newId(), submission_id: sub.id, form_id: form.id, location_code: form.location_code, class_id: t.class_id, class_name: t.class_name,
         on_date: b.date, starts_at: `${b.starts_at}:00`, ends_at: `${t.ends_at}:00`, child_index: b.child, status: 'booked',
       }, ctx);
+      prospects().afterBooking(db, booking, ctx); // = 0010's trigger on class_bookings
     }
     return answerOf(db, sub.id, false);
   }
 
   const findForm = (db, id) => db.forms.find((f) => f.id === id) ?? null;
+
+  // The Prospects part (0010), made once on first use (it needs the helpers above).
+  let prospectsPart = null;
+  function prospects() {
+    if (!prospectsPart) {
+      prospectsPart = createProspectsPart({ newId, stamp, today, nowLocal: () => localStamp(now()), times, slotsOn, insertRow, updateRow });
+    }
+    return prospectsPart;
+  }
 
   // ----- The functions (access → admin → input → found → stale → write) -----
   const handlers = {
@@ -615,7 +646,7 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
   };
   // Functions that change nothing unless they say 'ok' — but the signature read and the clean-up
   // inside Fill in are saved even then (like the real ones, which write the view row first).
-  const ALWAYS_SAVE = ['forms_submission_signature'];
+  const ALWAYS_SAVE = ['forms_submission_signature', ...PROSPECTS_SAVE_ALWAYS];
 
   const ok = (data) => ({ data, error: null, count: null, status: 200, statusText: 'OK' });
   const fail = (code, message, status = 403) => ({ data: null, error: { code, message, details: null, hint: null }, count: null, status, statusText: '' });
@@ -658,7 +689,7 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
   }
 
   function rpc(name, args = {}, ctx = {}) {
-    if (!(name in handlers)) return fail('PGRST202', `Could not find the function public.${name} in the schema cache`, 404);
+    if (!(name in handlers) && !(name in prospects().handlers)) return fail('PGRST202', `Could not find the function public.${name} in the schema cache`, 404);
     if (failNext) {
       failNext = false;
       return { data: null, error: { message: 'Failed to fetch (preview: failNextFormsSave)' }, count: null, status: 0, statusText: '' };
@@ -674,7 +705,8 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
     if (!ctx.hasDataAccess) return ok(st('no_access'));
     if (!STAFF_RPCS.includes(name) && !ctx.isAdmin) return ok(st('not_allowed'));
     const db = read(); // a private copy = a transaction: only an 'ok' is saved
-    const answer = handlers[name](db, parsed, { actorName: ctx.actorName ?? 'Database admin' });
+    const fn = handlers[name] ?? prospects().handlers[name];
+    const answer = fn(db, parsed, { actorName: ctx.actorName ?? 'Database admin' });
     if (answer.status === 'ok' || ALWAYS_SAVE.includes(name)) write(db);
     return ok(answer);
   }
@@ -692,7 +724,7 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
     write(db);
   }
   function clear() {
-    write({ schema: FORMS_STORE_SCHEMA, forms: [], offers: [], limits: [], submissions: [], bookings: [], kioskTokens: [], signatureViews: [] });
+    write({ schema: FORMS_STORE_SCHEMA, forms: [], offers: [], limits: [], submissions: [], bookings: [], kioskTokens: [], signatureViews: [], ...emptyProspectsTables() });
   }
   function reset() {
     write(fresh());

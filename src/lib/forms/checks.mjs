@@ -98,7 +98,8 @@ const schedule = {
 const calendar = { closures: [], closureClasses: [] };
 
 function makeBackend() {
-  let store = { schema: 1, forms: [], offers: [], limits: [], submissions: [], bookings: [], kioskTokens: [], signatureViews: [] };
+  let store = { schema: 2, forms: [], offers: [], limits: [], submissions: [], bookings: [], kioskTokens: [], signatureViews: [],
+    statuses: [], prospects: [], notes: [], activity: [], opens: [] };
   let clock = NOW;
   let today = TODAY;
   const backend = createFormsBackend({
