@@ -123,3 +123,7 @@ Reviews of the differences + 0019 (2026-10-19): security — no High / Medium; t
 
 Plan and answers K1–K4: `TKD-Kiosk-Build-Plan.md` (rulebook v0.606–v0.609). No new migration (0009 already has the kiosk token). Inside the dashboard app (K3): Share → "Open kiosk mode on this device" → the dashboard locks on the server and the tablet shows the kiosk (welcome → the public form with autofill off → thank-you 30 s + "Take a photo" + Done → back to Start; 2 minutes idle → "Still there?" → wiped; the corner lock → PIN pad, Cancel back, the right PIN leaves). Ends 11 h 45 min after opening (the token's 12 h minus a 15-minute margin) with a 30-minute staff warning; "End kiosk mode on all tablets" in Share. The Pages Function saves a sign-up whose kiosk token was refused once more as a normal one (72/72 server tests). Security review: no bypass, no High; 2 Medium + 4 Low fixed. Design review: no High; 4 Medium + 4 Low fixed. Tablet setup steps for go-live are in the plan.
 
+## F6 live setup (2026-10-19/20, Jeffrey)
+
+Done: the `forms_registrar` password (only its SCRAM verifier is in the database; the password is in Jeffrey's password manager), Hyperdrive `tkd-forms-registrar` (checked: caching off, verify-full, limit 5), the Production binding `HYPERDRIVE_FORMS` and the Production variable `PUBLIC_FORMS=off`. Nothing deployed. Left for go-live (F7, each with Jeffrey's OK): merge this branch into `main` (Main session) and push = deploy; check the `/f/…` security headers; switch `PUBLIC_FORMS` to `on`; a real test sign-up; the two-connection race test.
+
