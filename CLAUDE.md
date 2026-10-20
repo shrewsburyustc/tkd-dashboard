@@ -93,8 +93,10 @@ Color Belt testing and Star testing are built at the same time in separate Claud
   | 0017 | camps → Finance: camp payments in the Daily report (`0017_finance_camps.sql`, rulebook v0.707) | `camps` |
   | 0018 | Finance: private testing payments in the Daily report (rulebook v0.407) — **runs after 0017 and must build on 0017's version of the Finance functions it replaces** | `finance` |
   | 0019 | school phone in Settings → Schools (was an uncommitted `0016_school_phone.sql`) | `claude/prospect-form-system-cd893d` |
+  | 0020 | security: `current_session_id()` reads only `request.jwt.claims` (rulebook v0.408; replaces only that 0001 function, closing the gap Black Belt's 0016 review found in the public forms) — reserved 2026-10-20 | `color-belt` |
 
-  Next free: **0020**. Add a row here (Main session) when a number is reserved. (Decided 2026-10-19, Jeffrey: 0016 and 0017 had each been claimed by two branches; camps kept 0017.)
+  Next free: **0021**.
+- **`supabase/SETUP.md` section names** (decided 2026-10-20, rulebook v0.302): a section for a migration is titled by its **migration number**, `## Migration 00NN: <what it does>`, with sub-steps `### 00NNa.`, `### 00NNb.` … — never "the next free §". A section that isn't about one migration (e.g. a Cloudflare setup) gets a descriptive title with no number. Sections already on `main` (§1–§17) keep their numbers (the test runner finds some by number, e.g. `### 14e.`). If your branch has an unmerged section numbered §16 or higher, rename it to its migration number and update every "SETUP §…" mention and any `run.mjs` lookup with it. Add a row here (Main session) when a number is reserved. (Decided 2026-10-19, Jeffrey: 0016 and 0017 had each been claimed by two branches; camps kept 0017.)
 - **Don't archive a worktree session in the app** until its branch is merged into `main` — archiving removes the worktree folder.
 - Never use the app's **Create PR** / push buttons — they push the branch. `.claude/settings.json` makes every `git push` ask first.
 
