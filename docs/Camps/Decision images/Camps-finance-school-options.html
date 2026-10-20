@@ -1,0 +1,106 @@
+<!doctype html>
+<!--
+  Camps-finance-school-options.html — decision picture: which school's Daily report gets a camp payment
+  for a Both-schools camp. Why it exists: camp payments are joining Finance's Daily report
+  (TKD-Camps-Finance-Plan.md); a Both-schools camp is held at one school but families from the other
+  school may pay at their own desk. The PNG next to it is a screenshot.
+-->
+<html lang="en"><head><meta charset="utf-8"><title>Camps — which school gets the payment</title>
+<style>
+  :root{--bg:#fff;--surface:#f7f7f5;--border:#e5e5e2;--ctl:#8f8f8a;--text:#1f1f1f;--muted:#6b6b6b;
+    --blue:#003595;--tint:#e6ebf4;--amber:#c98a1b;--ok:#3b6d11;--okbg:#eaf3de;--wbg:#faeeda;--wt:#633806}
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:#efeee9;font:14px/1.45 "Segoe UI",system-ui,sans-serif;color:var(--text);width:1320px}
+  h1{font-size:20px;font-weight:500;margin:0 0 4px}
+  .lead{color:var(--muted);margin:0 0 18px;max-width:1150px}
+  .opt{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:24px}
+  .opt h2{font-size:16px;font-weight:500;margin:0 0 2px}
+  .rec{display:inline-block;font-size:12px;background:var(--okbg);color:var(--ok);border-radius:6px;padding:1px 8px;margin-left:8px;vertical-align:2px}
+  .sub{color:var(--muted);margin:0 0 14px;font-size:13px;max-width:1200px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+  .cap{font-size:12px;color:var(--muted);margin:0 0 6px}
+  .frame{border:1px solid #cfcfca;border-radius:10px;padding:14px 16px;background:#fff}
+  .t{font-size:16px;font-weight:500}
+  .h{font-size:12px;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+  th{background:var(--surface);color:var(--muted);font-weight:400;font-size:12px;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+  td{padding:0 8px;height:36px;border-bottom:1px solid var(--border)}
+  td.n,th.n{text-align:right}
+  .grp{font-size:12px;color:var(--muted);margin-top:10px}
+  .amber{outline:3px solid var(--amber);outline-offset:3px;border-radius:6px}
+  .note{font-size:12px;color:#7a4f00;margin:10px 0 0;font-weight:500}
+  .muted{color:var(--muted)}
+  .seg{display:inline-flex;border:1px solid var(--ctl);border-radius:8px;overflow:hidden;font-size:12px}
+  .seg span{padding:5px 10px;border-right:1px solid var(--border)}.seg span:last-child{border:0}.seg .on{background:var(--tint);color:var(--blue)}
+  .btn{height:32px;padding:0 14px;border-radius:8px;font-size:13px;display:inline-flex;align-items:center;border:1px solid var(--ctl);background:#fff}
+  .btn.p{background:var(--blue);border-color:var(--blue);color:#fff}
+  .pc{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:14px;font-size:13px}
+  .pc h3{font-size:13px;font-weight:500;margin:0 0 4px}
+  .pc ul{margin:0;padding-left:18px}
+  .tag{font-size:12px;border-radius:6px;padding:1px 8px;background:var(--surface);color:var(--muted);border:1px solid var(--border)}
+</style></head><body>
+
+<h1>Camp payments in the Daily report — which school's drawer?</h1>
+<p class="lead">Example: <b>April Vacation Camp</b> is for <b>both schools</b>, held at <b>Worcester</b>. Mia Rossi's family lives near Shrewsbury and pays <b>$166 cash at the Shrewsbury desk</b>. Single-school camps are simple (their school). This choice only matters for both-schools camps. Amber = what differs.</p>
+
+<div class="opt">
+  <h2>A. The school whose desk took the money <span class="rec">Recommended</span></h2>
+  <p class="sub">Mark paid records the school the device is set to (the Worcester | Shrewsbury switcher). If the switcher is on <b>Both</b> for a both-schools camp, Mark paid asks once: "Paid at which school?" The $166 lands in <b>Shrewsbury's</b> Daily report, where the cash actually is.</p>
+  <div class="cols">
+    <div>
+      <div class="cap">Shrewsbury → Finance → Daily report, Mon, Apr 19</div>
+      <div class="frame">
+        <div class="t">Daily report · Shrewsbury</div>
+        <div class="grp">Cash · 3 · $416</div>
+        <table>
+          <tr><th>Time</th><th>Name</th><th>For</th><th class="n">Amount</th></tr>
+          <tr><td>8:12 AM</td><td>Leo Park</td><td>Star testing</td><td class="n">$150</td></tr>
+          <tr class="amber"><td>8:40 AM</td><td>Mia Rossi</td><td>Camp · April Vacation Camp</td><td class="n">$166</td></tr>
+          <tr><td>9:05 AM</td><td>Ana Ruiz</td><td>Color belt testing</td><td class="n">$100</td></tr>
+        </table>
+        <p class="note">Shrewsbury's drawer has the $166, and the report expects it: Close the day matches.</p>
+      </div>
+    </div>
+    <div>
+      <div class="cap">Mark paid when the switcher is on Both (both-schools camp only)</div>
+      <div class="frame amber" style="max-width:360px">
+        <div class="t" style="font-size:15px">Mark paid — Mia Rossi</div>
+        <div class="h" style="margin:4px 0 10px">$166 · cash</div>
+        <div class="h">Paid at which school?</div>
+        <div class="seg" style="margin-top:4px"><span>Worcester</span><span class="on">Shrewsbury</span></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px"><span class="btn">Cancel</span><span class="btn p">Mark paid</span></div>
+      </div>
+      <p class="note">On Worcester or Shrewsbury there's no question — one click, as now.</p>
+    </div>
+  </div>
+  <div class="pc">
+    <div><h3>Pros</h3><ul><li>Each school's report matches its own drawer — Close the day always balances.</li><li>No extra click in the normal case (switcher on a school).</li></ul></div>
+    <div><h3>Cons</h3><ul><li>One small extra question when marking paid from the "Both" view.</li><li>A new field on camp payments (the school) — small database change.</li><li>A device left on the wrong school records the wrong school (same as any setting; fix with Edit payment).</li></ul></div>
+  </div>
+</div>
+
+<div class="opt">
+  <h2>B. Always the school the camp is held at</h2>
+  <p class="sub">No question, no new field. Every payment for April Vacation Camp goes to <b>Worcester's</b> Daily report, wherever it was paid.</p>
+  <div class="cols">
+    <div class="frame">
+      <div class="t">Daily report · Worcester</div>
+      <table>
+        <tr><th>Time</th><th>Name</th><th>For</th><th class="n">Amount</th></tr>
+        <tr class="amber"><td>8:40 AM</td><td>Mia Rossi</td><td>Camp · April Vacation Camp</td><td class="n">$166</td></tr>
+      </table>
+      <p class="note">Worcester expects $166 that is sitting in Shrewsbury's drawer.</p>
+    </div>
+    <div class="frame">
+      <div class="t">Close the day · Shrewsbury</div>
+      <div style="font-size:13px;margin-top:6px">Expected cash $250 · counted $416 <span class="tag" style="background:var(--wbg);color:var(--wt);border-color:#f2d9b0">Over $166</span></div>
+      <p class="note">…and Worcester shows Short $166 the same day.</p>
+    </div>
+  </div>
+  <div class="pc">
+    <div><h3>Pros</h3><ul><li>Simplest: nothing new on the Camps side.</li><li>Fine if families always pay where the camp is held.</li></ul></div>
+    <div><h3>Cons</h3><ul><li>When a family pays at the other school, both drawers are off (one over, one short) and staff must explain it in the close note.</li></ul></div>
+  </div>
+</div>
+
+</body></html>
