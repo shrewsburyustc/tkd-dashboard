@@ -15,7 +15,7 @@ The single source of truth for the three parallel builders: **A database**, **B 
 
 **Working copy:** worktree `.claude/worktrees/color-belt-session-01afc8`, branch `color-belt`. No Supabase connector calls, no Cloudflare, no git remotes, no other worktrees. Do not commit; the orchestrator commits.
 **Audience:** Jeffrey is learning IT — every new file starts with a header comment (what + why); plain-English comments on non-obvious lines. Files keep CRLF line endings (check with `file` before and after).
-**Production facts:** Supabase `tkd-dashboard` (ref `eozkfbdfxqlcbpewhach`), PostgreSQL 17, Free plan. Live: 0001–0006, 0010. Claimed elsewhere: 0007 Schedule · 0008 Calendar · 0009 Forms · 0011 Finance · 0012 Prospects · 0013 Camps → this is **0014**. Staff: Main Admin (admin), Staff (shared desk). A push to `main` deploys.
+**Production facts:** Supabase `tkd-dashboard` (ref `eozkfbdfxqlcbpewhach`), PostgreSQL 17, Free plan. Live: 0001–0006, 0010, 0011 (Finance). Claimed elsewhere: 0007 Schedule · 0008 Calendar · 0009 Forms · 0011 Finance · 0012 Prospects · 0013 Camps → this is **0014**. Staff: Main Admin (admin), Staff (shared desk). A push to `main` deploys.
 **Out:** mat-side hiding (Star v0.249 / v0.250 — a later Color Belt follow-up), a Home card, private on the family form, Realtime, refunds.
 
 ---
@@ -24,7 +24,7 @@ The single source of truth for the three parallel builders: **A database**, **B 
 
 | Builder | Owns (creates / edits / deletes) | Must not edit |
 |---|---|---|
-| **A — database** (`supabase/**`) | `supabase/migrations/0014_testing_private.sql` (rewrite) · `supabase/tests/0014_tests.sql` (rewrite) · `supabase/tests/0014_fingerprints.sql` (rewrite) · `supabase/tests/0005_tests.sql` (**revert only**, §11) · `supabase/tests/pglite/run.mjs` (step 14 rewritten, §3.3) · `supabase/SETUP.md` (§15 rewritten; the one-line warning at the top of §14e stays) | `src/`, `docs/`, migrations 0001–0010, other test files |
+| **A — database** (`supabase/**`) | `supabase/migrations/0014_testing_private.sql` (rewrite) · `supabase/tests/0014_tests.sql` (rewrite) · `supabase/tests/0014_fingerprints.sql` (rewrite) · `supabase/tests/0005_tests.sql` (**revert only**, §11) · `supabase/tests/pglite/run.mjs` (step 15 rewritten, §3.3) · `supabase/SETUP.md` (§16 rewritten; the one-line warning at the top of §14e stays) | `src/`, `docs/`, migrations 0001–0010, other test files |
 | **B — data layer + mock** (`src/lib/**`) | new `src/lib/testing/privateRules.js` · new `src/lib/testing/privateApi.js` · `src/lib/testing/eventsApi.js` · `src/lib/testing/eventRules.js` (revert only) · `src/lib/mockTestingEvents.js` · `src/lib/testing/checks.mjs` | `src/screens/**`, `src/components/**`, `src/styles/**`, `src/App.jsx`, `src/lib/mockClient.js` (no change needed: new tables / functions are routed through `EVENT_TABLES` / `EVENT_RPC_NAMES`), `supabase/` |
 | **C — screens** | `src/screens/Testing.jsx` (**shared**) · `src/App.jsx` (**shared** — the route only) · everything under `src/screens/testing/event/`, `src/screens/testing/events/`, new `src/screens/testing/private/` · `src/screens/testing/text.js` · `src/styles/testing-events.css` · new `src/styles/testing-private.css` · `src/styles/testing.css` (**only** the `.ttabs` sideways scroll) | files of A and B; `src/components/**`, `src/styles/tokens.css`, `navItems.js` |
 | Orchestrator | this contract, plan, rulebook (icon-map rows, CP1 wording), status file, handoff, `docs/*`, commits | |
@@ -191,9 +191,9 @@ Then one batch, action `undo_move_to_private`: for each private payment, insert 
 All functions in the S / A table + `testing_move_to_private` + `testing_private_undo_move`: revoke from `public, anon, authenticated, service_role`, then `grant execute … to authenticated`. The five internal helpers and the four trigger functions: revoke from everyone, no grant. `testing_restore_student`: its live lines.
 
 ### 2.8 Header facts
-What it adds (3 tables, 1 view, 4 trigger functions, 5 helpers, 14 staff functions, 1 replaced live function), the statuses, the actions, “private testings are logged in change_log like all testing data — v0.400's family_history is for Prospects only”, the re-run order (**re-running 0005 → re-run 0010, then 0014, straight after; re-running 0010 → re-run 0014 straight after** — 0005 / 0010 put back a Restore that ignores moves), and that the down-script is SETUP §15e.
+What it adds (3 tables, 1 view, 4 trigger functions, 5 helpers, 14 staff functions, 1 replaced live function), the statuses, the actions, “private testings are logged in change_log like all testing data — v0.400's family_history is for Prospects only”, the re-run order (**re-running 0005 → re-run 0010, then 0014, straight after; re-running 0010 → re-run 0014 straight after** — 0005 / 0010 put back a Restore that ignores moves), and that the down-script is SETUP §16e.
 
-### 2.9 Down-script (SETUP §15e, Jeffrey's OK only; before real private testings exist — removing 0014 deletes every private testing **and the money moved into it**)
+### 2.9 Down-script (SETUP §16e, Jeffrey's OK only; before real private testings exist — removing 0014 deletes every private testing **and the money moved into it**)
 1. Put the app back to a version without the Private testing tab.
 2. Re-run the whole **0010** file (puts back its `testing_restore_student`).
 3. SQL block, one transaction: `tkd.action 'undo_0014'` + a batch id; `delete from public.testing_private;` (cascade, logged row by row); clear the tags; `drop view if exists public.testing_private_list;` then `drop table if exists` results, payments, `testing_private`; then `drop function if exists` every 0014 function (exact argument lists). Afterwards `0005_fingerprints.sql` and `0010_fingerprints.sql` equal a database that never had 0014.
@@ -225,7 +225,8 @@ What it adds (3 tables, 1 view, 4 trigger functions, 5 helpers, 14 staff functio
 ### 3.2 `supabase/tests/0005_tests.sql`
 Back to the live version (`git checkout dae8d00^ -- supabase/tests/0005_tests.sql`): no registration column is added any more.
 
-### 3.3 `run.mjs` — step 14 (between 13f and 13g)
+### 3.3 `run.mjs` — step 15 (after Finance's step 14 = 0011, before 13g)
+(Renumbered at the 2026-10-19 merge of `main`: Finance's 0011 is live, so its step 14 runs first and 0014 is applied on top of it as step 15; the 0011 fingerprints must also be unchanged by 0014 and `0011_tests.sql` must still pass; 13g runs only if step 14 and 15i both passed. Below, "14x" means "15x".)
 Start from `git checkout dae8d00^ -- supabase/tests/pglite/run.mjs`, then: `step13()` loses 13g; `main()` runs step 13 (a–f) → **step 14 — only if 13a–f all passed** (else a recorded failure “skipped: step 13 failed”) → **13g** last, and **13g runs only if 14i passed** (else a recorded failure “skipped: the 0014 down-script failed”). The step-13 header line “0005 itself is never applied again” is updated (14i re-runs 0010; 13g re-runs 0005).
 - a. take the 0003, 0004, 0005, 0006, 0010 fingerprints; apply 0014; `0014_tests.sql` → `ALL 0014 TESTS PASSED`.
 - b. 0004 and 0006 identical; **0003 identical except the rows of the new `testing_*` functions and `testing_restore_student`** (0003's file lists every `testing_*` function — expected); 0005 and 0010 differ only in `testing_restore_student`.
@@ -235,13 +236,13 @@ Start from `git checkout dae8d00^ -- supabase/tests/pglite/run.mjs`, then: `step
 - f. fingerprints + an md5 of the three tables and the `change_log` count; apply 0014 again; identical; 0014 / 0005 tests pass.
 - g. upgrade database: 0014 on its 0010; fingerprints equal (fresh = upgrade); 0014 / 0010 / 0005 tests pass.
 - h. `0014_fingerprints.sql` contains neither `delete` nor `drop`; print the 0014 fingerprints.
-- i. the down-script (SETUP §15e exactly, the SQL block read from SETUP.md): tables, view and 0014 functions gone; 0005 / 0010 **and 0003** fingerprints equal 14a's; one `undo_0014` delete row in `change_log` per removed `testing_private` row (its payments and result are logged too); 0010 / 0005 tests pass.
+- i. the down-script (SETUP §16e exactly, the SQL block read from SETUP.md): tables, view and 0014 functions gone; 0005 / 0010 **and 0003** fingerprints equal 14a's; one `undo_0014` delete row in `change_log` per removed `testing_private` row (its payments and result are logged too); 0010 / 0005 tests pass.
 
 ### 3.4 `supabase/tests/0014_fingerprints.sql`
 Read-only single SELECT, `kind, item, detail`: `function` rows (every 0014 function + `testing_restore_student`), `table` rows (3: RLS, rights, columns, policies), `view` row, `trigger` rows, `constraint` rows (name + `pg_get_constraintdef`). Connector-safe.
 
-### 3.5 SETUP §15 (rewritten, after §14e)
-**15. Migration 0014: Color Belt private testing** — what it does; CP2 → CP3 → CP4; 15a apply; 15b read-only checks (§3.3b expectations; security advisor: only “security definer function executable by authenticated” for the new staff functions); 15c tests (0014, then 0010 / 0005 / 0006 / 0004 / 0003 / 0002 / PIN); 15d CP3 real check (plan §5 step 5); 15e re-run warnings (§2.8 wording) + §2.9 verbatim. Keep the existing one-line warning at the top of §14e.
+### 3.5 SETUP §16 (rewritten; after Finance's §15 since the 2026-10-19 merge)
+**16. Migration 0014: Color Belt private testing** — what it does; CP2 → CP3 → CP4; 16a apply; 16b read-only checks (§3.3b expectations; security advisor: only “security definer function executable by authenticated” for the new staff functions); 16c tests (0014, 0011, then 0010 / 0005 / 0006 / 0004 / 0003 / 0002 / PIN); 16d CP3 real check (plan §5 step 5); 16e re-run warnings (§2.8 wording) + §2.9 verbatim. Keep the existing one-line warning at the top of §14e.
 
 ---
 
@@ -393,7 +394,7 @@ New `src/styles/testing-private.css` (imported by `PrivateTestingTab.jsx` and `P
 ---
 
 ## 6. Checks before a builder is done
-`npm run build` and `npm run build:preview-mode` pass · `node src/lib/testing/checks.mjs` → `ALL TESTING LIB CHECKS PASSED` · PGlite `node run.mjs` 0 failed (step 14 and 13g) · `dist/` has no `__tkdPreview`, `mockTestingEvents`, `setToday`, `service_role` · `git status` never lists `.env.local`, `node_modules`, `dist*` · CRLF unchanged · every new file has its header · each summary lists every file touched (shared ones called out).
+`npm run build` and `npm run build:preview-mode` pass · `node src/lib/testing/checks.mjs` → `ALL TESTING LIB CHECKS PASSED` · PGlite `node run.mjs` 0 failed (step 15 and 13g) · `dist/` has no `__tkdPreview`, `mockTestingEvents`, `setToday`, `service_role` · `git status` never lists `.env.local`, `node_modules`, `dist*` · CRLF unchanged · every new file has its header · each summary lists every file touched (shared ones called out).
 
 ## 7. Reviews (orchestrator)
 - **Security (A + B):** RLS / grants / no anon / registrar / no login ids; definer + search_path; check orders; the move (net preserved, dates kept, one batch, append-only on both sides), Undo move limits, Restore `moved`; only `testing_restore_student` differs from live (diff it); logging; mock = database statuses.
@@ -425,6 +426,6 @@ New `src/styles/testing-private.css` (imported by `PrivateTestingTab.jsx` and `P
 
 ## 11. What each builder deletes or reverts first (from dae8d00)
 `git checkout dae8d00^ -- <file>` puts back the live phase 3 version.
-- **A:** rewrite `supabase/migrations/0014_testing_private.sql`, `supabase/tests/0014_tests.sql`, `supabase/tests/0014_fingerprints.sql` from scratch (delete their content — the registration columns, the event-linked functions and all nine replaced bodies go); revert `supabase/tests/0005_tests.sql`; revert `supabase/tests/pglite/run.mjs` and write the new step 14 (the dae8d00 step-14 skeleton — fresh / upgrade / re-run / down before 13g — may be reused); replace SETUP §15 entirely (keep the §14e warning line).
+- **A:** rewrite `supabase/migrations/0014_testing_private.sql`, `supabase/tests/0014_tests.sql`, `supabase/tests/0014_fingerprints.sql` from scratch (delete their content — the registration columns, the event-linked functions and all nine replaced bodies go); revert `supabase/tests/0005_tests.sql`; revert `supabase/tests/pglite/run.mjs` and write the new step 14 — now step 15 after the merge — (the dae8d00 step-14 skeleton — fresh / upgrade / re-run / down before 13g — may be reused); replace SETUP §15 — now §16 — entirely (keep the §14e warning line).
 - **B:** revert `src/lib/testing/eventRules.js`, `src/lib/testing/eventsApi.js`, `src/lib/mockTestingEvents.js`, `src/lib/testing/checks.mjs`, then add §4. Salvage into `privateRules.js`: dae8d00's `PRIVATE_TIME_CHOICES`, `privateTimeIsValid`, `privateDayProblem` (now from today), `privateDayLimit` (now from today). Everything else event-linked (`isPrivate`, `gradingDay`, `priceFor`, `amountDue` with fee rules, `privateMenu` for events, `livePayments`, `privateTestingsList`, `setPrivate`, `clearPrivate`, `addPrivateStudent`, the roster private fields) is dropped.
 - **C:** revert `src/App.jsx`, `event/EventPage.jsx`, `event/RosterRows.jsx`, `event/StudentDialog.jsx`, `event/PaymentDialogs.jsx`, `event/GradingTab.jsx`, `event/GradingSheet.jsx`, `event/NoteDialog.jsx`, `event/useGradingSaves.js`, `events/EventsTab.jsx`, `text.js`, `src/styles/testing-events.css`, then add §5. **Delete** `events/PrivateTestingsList.jsx`. **Move** `event/PrivateGradingPage.jsx` and `event/PrivateSheet.jsx` to `private/` and re-point them to `privateApi` (drop the event header / event props); turn `event/PrivateDialog.jsx` into `private/DayTimeFields.jsx` (keep the Day / Time fields and their checks; drop Set / Change private, the event price lines and the No show notice wording) and delete it from `event/`. Re-add to `text.js` only the strings §5.8 lists.

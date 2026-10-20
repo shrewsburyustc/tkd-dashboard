@@ -6,10 +6,10 @@
 --   testing tab (build contract docs/Dashboard Docs/Build contracts/
 --   CONTRACT-0014.md, section 2 - rewritten 2026-10-19 for rulebook
 --   v0.401: private testing is its own tab, NOT part of any event). It
---   runs after 0001-0006 and 0010 (all live). (0007-0009 and 0011-0013
---   are numbers claimed by other branches - Schedule, Calendar, Forms,
---   Finance, Prospects, Camps - and none of them touches what this file
---   touches.)
+--   runs after 0001-0006, 0010 and 0011 (Finance) - all live. (0007-0009,
+--   0012 and 0013 are numbers claimed by other branches - Schedule,
+--   Calendar, Forms, Prospects, Camps - and neither they nor 0011 touch
+--   what this file touches.)
 --
 -- WHY IT EXISTS
 --   A student who can't make a testing day tests PRIVATELY, on their own
@@ -64,11 +64,11 @@
 --   Safe to run again: "create table if not exists", "create or replace",
 --   triggers and read rules replaced with "drop ... if exists" + create,
 --   rights reset with "revoke all" and granted again. A second run changes
---   no row and no fingerprint (tested in PGlite, run.mjs step 14).
+--   no row and no fingerprint (tested in PGlite, run.mjs step 15).
 --   RE-RUN ORDER: re-running 0005 -> re-run 0010, then 0014, straight
 --   after; re-running 0010 -> re-run 0014 straight after (0005 and 0010
 --   put back a testing_restore_student that ignores moves).
---   Undo: the down-script is in supabase/SETUP.md section 15e (not here).
+--   Undo: the down-script is in supabase/SETUP.md section 16e (not here).
 --
 -- WORDS USED BELOW
 --   * "today" = public.testing_today() (school time, America/New_York -

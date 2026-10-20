@@ -26,7 +26,7 @@
 --   connection and every line must match. That proves production has
 --   exactly the code, rights and rules that passed the tests.
 --   (0005_fingerprints.sql and 0010_fingerprints.sql then differ ONLY in
---   the testing_restore_student line - expected; SETUP.md section 15b.)
+--   the testing_restore_student line - expected; SETUP.md section 16b.)
 --
 -- CONNECTOR-SAFE: a single read-only SELECT, and none of its text uses
 -- the words the Supabase connection refuses (the one function name that

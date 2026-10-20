@@ -1,0 +1,1018 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily report questions</title>
+<!--
+  Finance → Daily report: design questions, one at a time (rule P3).
+  Why: Jeffrey chooses each option from a picture. Every question shows each
+  option at PC and phone size with the part being chosen outlined in amber.
+  Self-contained (icons inlined) so it opens offline and can be screenshotted.
+  Sample data only: made-up students, Shrewsbury, Saturday Oct 24, 2026.
+-->
+<style>
+:root{--control-border:#8F8F8A;--page:#EFEFEC;--bg:#FFFFFF;--surface:#F7F7F5;--border:#E5E5E2;--border-strong:#CFCFCA;--text:#1F1F1F;--text2:#6B6B6B;--blue:#003595;--blue-tint:#E6EBF4;--ok:#3B6D11;--ok-tint:#EAF3DE;--warn:#633806;--warn-tint:#FAEEDA;--amber:#EF9F27}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1900px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:20px;font-weight:500;margin:0 0 4px}
+h2{font-size:18px;font-weight:500;margin:40px 0 4px;padding-top:16px;border-top:1px solid var(--border-strong);display:flex;align-items:center;gap:8px}
+b{font-weight:500}
+.lead{color:var(--text2);font-size:14px;margin:0 0 12px;max-width:1100px}
+.letter{display:inline-flex;width:28px;height:28px;border-radius:50%;background:var(--text);color:#fff;align-items:center;justify-content:center;font-size:14px}
+.rec-tag{font-size:12px;color:var(--blue);background:var(--blue-tint);border-radius:6px;padding:2px 8px;font-weight:400}
+.optrow{display:flex;gap:24px;align-items:flex-start}
+.explain{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:13px;width:340px;flex:none}
+.explain h3{font-size:13px;font-weight:500;margin:10px 0 2px}.explain h3:first-child{margin-top:0}
+.explain ul{margin:0;padding-left:18px}.explain li{margin:2px 0}
+.rec .explain{border-color:var(--blue)}
+.cap{font-size:12px;color:var(--text2);margin:0 0 6px}
+/* device frames */
+.dev{background:var(--bg);border:1px solid var(--border-strong);overflow:hidden;position:relative;flex:none}
+.dev-pc{width:1000px;border-radius:10px}
+.dev-ph{width:340px;border-radius:24px;border:6px solid #2B2B2B}
+/* app shell */
+.app{display:flex;background:var(--bg)}
+.app-col{flex:1;min-width:0;display:flex;flex-direction:column}
+.rail{width:52px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;flex:none}
+.rail a{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;color:var(--text2)}
+.rail a i{font-size:18px}.rail a.on{background:var(--blue-tint);color:var(--blue)}
+.topbar{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 12px;flex:none}
+.grow{flex:1}
+.loc{display:flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;font-size:12px;height:32px}
+.loc span{display:flex;align-items:center;gap:4px;padding:0 12px;color:var(--text2)}
+.loc span.on{background:var(--blue-tint);color:var(--blue)}
+.loc span+span{border-left:1px solid var(--border)}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--surface);border:1px solid var(--control-border);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:500}
+.content{padding:20px 24px 24px}
+.ph .content{padding:12px 12px 16px}
+.phbar{border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:4px 0 8px}
+.phbar a{display:flex;flex-direction:column;align-items:center;min-width:60px;font-size:12px;color:var(--text2);gap:2px}
+.phbar a i{font-size:20px}.phbar a.on{color:var(--blue)}
+/* page */
+.ptitle{font-size:20px;font-weight:500;margin:0}
+.tabs{display:flex;gap:20px;border-bottom:1px solid var(--border);margin:8px 0 12px;font-size:13px}
+.tabs span{padding:6px 0;color:var(--text2)}
+.tabs span.on{color:var(--blue);border-bottom:2px solid var(--blue);margin-bottom:-1px}
+.dayrow{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.ibtn{width:32px;height:32px;border:1px solid var(--control-border);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;color:var(--text)}
+.ibtn i{font-size:16px}
+.day{font-size:16px;font-weight:500}
+.chip{font-size:12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1px 8px;color:var(--text2)}
+.btn{height:32px;padding:0 14px;border-radius:8px;font-size:13px;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--control-border);background:var(--bg);color:var(--text);white-space:nowrap}
+.btn i{font-size:16px}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.ph .btn,.ph .ibtn{height:36px}.ph .ibtn{width:36px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.ph .cards{grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.card .l{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px}
+.card .l i{font-size:16px}
+.card .n{font-size:20px;font-weight:500;line-height:1.3}
+.card .s{font-size:12px;color:var(--text2)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-weight:500;font-size:12px;color:var(--text2);text-align:left;background:var(--surface);padding:6px 8px;border-bottom:1px solid var(--border)}
+td{padding:8px;border-bottom:1px solid var(--border);height:38px}
+td.r,th.r{text-align:right}
+.sub{color:var(--text2)}
+.pcard{border-bottom:1px solid var(--border);padding:8px 0;font-size:13px;display:flex;justify-content:space-between;gap:8px}
+.pcard .sub{font-size:12px}
+.more{font-size:12px;color:var(--text2);text-align:center;padding:8px 0}
+/* the part being chosen */
+.q{outline:3px dashed var(--amber);outline-offset:4px;border-radius:6px}
+.qlabel{display:inline-block;background:var(--amber);color:#1F1F1F;font-size:12px;font-weight:500;border-radius:6px;padding:1px 8px;margin-bottom:6px}
+/* close-out box (B, C) */
+.box{border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:16px}
+.box h4{font-size:14px;font-weight:500;margin:0 0 8px;display:flex;align-items:center;gap:6px}
+.box h4 i{font-size:16px}
+.crow{display:flex;align-items:center;gap:10px;font-size:13px;padding:4px 0;flex-wrap:wrap}
+.crow .k{width:150px;color:var(--text2)}
+.ph .crow .k{width:100%}
+.input{height:32px;border:1px solid var(--control-border);border-radius:8px;padding:0 10px;display:inline-flex;align-items:center;font-size:13px;width:110px}
+.ph .input{height:36px}
+.tag{font-size:12px;border-radius:6px;padding:1px 8px;display:inline-flex;align-items:center;gap:4px}
+.tag i{font-size:14px}
+.tag.ok{background:var(--ok-tint);color:var(--ok)}
+.tag.warn{background:var(--warn-tint);color:var(--warn)}
+.tag.neutral{background:var(--surface);color:var(--text2);border:1px solid var(--border)}
+.boxfoot{display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+.hint{font-size:12px;color:var(--text2)}
+.twobox{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.twobox .box{margin-bottom:0}
+.ph .twobox{grid-template-columns:1fr}
+/*ICONS*/
+.ti{display:inline-flex;align-items:center;justify-content:center;font-style:normal;line-height:1;flex:none;vertical-align:-0.125em}
+.ti::before{content:"";display:block;width:1em;height:1em;background-color:currentColor;-webkit-mask:var(--i) center/contain no-repeat;mask:var(--i) center/contain no-repeat}
+.ti-address-book{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M20 6v12a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2%22 /%3E %3Cpath d=%22M10 16h6%22 /%3E %3Cpath d=%22M11 11a2 2 0 1 0 4 0a2 2 0 1 0 -4 0%22 /%3E %3Cpath d=%22M4 8h3%22 /%3E %3Cpath d=%22M4 12h3%22 /%3E %3Cpath d=%22M4 16h3%22 /%3E %3C/svg%3E")}
+.ti-alert-triangle{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M12 9v4%22 /%3E %3Cpath d=%22M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0%22 /%3E %3Cpath d=%22M12 16h.01%22 /%3E %3C/svg%3E")}
+.ti-arrow-back-up{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M9 14l-4 -4l4 -4%22 /%3E %3Cpath d=%22M5 10h11a4 4 0 1 1 0 8h-1%22 /%3E %3C/svg%3E")}
+.ti-arrow-left{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M5 12l14 0%22 /%3E %3Cpath d=%22M5 12l6 6%22 /%3E %3Cpath d=%22M5 12l6 -6%22 /%3E %3C/svg%3E")}
+.ti-building-bank{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M3 21l18 0%22 /%3E %3Cpath d=%22M3 10l18 0%22 /%3E %3Cpath d=%22M5 6l7 -3l7 3%22 /%3E %3Cpath d=%22M4 10l0 11%22 /%3E %3Cpath d=%22M20 10l0 11%22 /%3E %3Cpath d=%22M8 14l0 3%22 /%3E %3Cpath d=%22M12 14l0 3%22 /%3E %3Cpath d=%22M16 14l0 3%22 /%3E %3C/svg%3E")}
+.ti-calendar{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12%22 /%3E %3Cpath d=%22M16 3v4%22 /%3E %3Cpath d=%22M8 3v4%22 /%3E %3Cpath d=%22M4 11h16%22 /%3E %3Cpath d=%22M11 15h1%22 /%3E %3Cpath d=%22M12 15v3%22 /%3E %3C/svg%3E")}
+.ti-calendar-month{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12%22 /%3E %3Cpath d=%22M16 3v4%22 /%3E %3Cpath d=%22M8 3v4%22 /%3E %3Cpath d=%22M4 11h16%22 /%3E %3Cpath d=%22M8 14v4%22 /%3E %3Cpath d=%22M12 14v4%22 /%3E %3Cpath d=%22M16 14v4%22 /%3E %3C/svg%3E")}
+.ti-cash{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M7 15h-3a1 1 0 0 1 -1 -1v-8a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v3%22 /%3E %3Cpath d=%22M7 10a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v8a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1l0 -8%22 /%3E %3Cpath d=%22M12 14a2 2 0 1 0 4 0a2 2 0 0 0 -4 0%22 /%3E %3C/svg%3E")}
+.ti-cash-banknote{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0%22 /%3E %3Cpath d=%22M3 8a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2l0 -8%22 /%3E %3Cpath d=%22M18 12h.01%22 /%3E %3Cpath d=%22M6 12h.01%22 /%3E %3C/svg%3E")}
+.ti-cash-register{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M21 15h-2.5c-.398 0 -.779 .158 -1.061 .439c-.281 .281 -.439 .663 -.439 1.061c0 .398 .158 .779 .439 1.061c.281 .281 .663 .439 1.061 .439h1c.398 0 .779 .158 1.061 .439c.281 .281 .439 .663 .439 1.061c0 .398 -.158 .779 -.439 1.061c-.281 .281 -.663 .439 -1.061 .439h-2.5%22 /%3E %3Cpath d=%22M19 21v1m0 -8v1%22 /%3E %3Cpath d=%22M13 21h-7c-.53 0 -1.039 -.211 -1.414 -.586c-.375 -.375 -.586 -.884 -.586 -1.414v-10c0 -.53 .211 -1.039 .586 -1.414c.375 -.375 .884 -.586 1.414 -.586h2m12 3.12v-1.12c0 -.53 -.211 -1.039 -.586 -1.414c-.375 -.375 -.884 -.586 -1.414 -.586h-2%22 /%3E %3Cpath d=%22M16 10v-6c0 -.53 -.211 -1.039 -.586 -1.414c-.375 -.375 -.884 -.586 -1.414 -.586h-4c-.53 0 -1.039 .211 -1.414 .586c-.375 .375 -.586 .884 -.586 1.414v6m8 0h-8m8 0h1m-9 0h-1%22 /%3E %3Cpath d=%22M8 14v.01%22 /%3E %3Cpath d=%22M8 17v.01%22 /%3E %3Cpath d=%22M12 13.99v.01%22 /%3E %3Cpath d=%22M12 17v.01%22 /%3E %3C/svg%3E")}
+.ti-certificate{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M12 15a3 3 0 1 0 6 0a3 3 0 1 0 -6 0%22 /%3E %3Cpath d=%22M13 17.5v4.5l2 -1.5l2 1.5v-4.5%22 /%3E %3Cpath d=%22M10 19h-5a2 2 0 0 1 -2 -2v-10c0 -1.1 .9 -2 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -1 1.73%22 /%3E %3Cpath d=%22M6 9l12 0%22 /%3E %3Cpath d=%22M6 12l3 0%22 /%3E %3Cpath d=%22M6 15l2 0%22 /%3E %3C/svg%3E")}
+.ti-check{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M5 12l5 5l10 -10%22 /%3E %3C/svg%3E")}
+.ti-chevron-down{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M6 9l6 6l6 -6%22 /%3E %3C/svg%3E")}
+.ti-chevron-left{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M15 6l-6 6l6 6%22 /%3E %3C/svg%3E")}
+.ti-chevron-right{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M9 6l6 6l-6 6%22 /%3E %3C/svg%3E")}
+.ti-clipboard-text{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2%22 /%3E %3Cpath d=%22M9 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2%22 /%3E %3Cpath d=%22M9 12h6%22 /%3E %3Cpath d=%22M9 16h6%22 /%3E %3C/svg%3E")}
+.ti-clock{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0%22 /%3E %3Cpath d=%22M12 7v5l3 3%22 /%3E %3C/svg%3E")}
+.ti-coins{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M9 14c0 1.657 2.686 3 6 3s6 -1.343 6 -3s-2.686 -3 -6 -3s-6 1.343 -6 3%22 /%3E %3Cpath d=%22M9 14v4c0 1.656 2.686 3 6 3s6 -1.344 6 -3v-4%22 /%3E %3Cpath d=%22M3 6c0 1.072 1.144 2.062 3 2.598s4.144 .536 6 0c1.856 -.536 3 -1.526 3 -2.598c0 -1.072 -1.144 -2.062 -3 -2.598s-4.144 -.536 -6 0c-1.856 .536 -3 1.526 -3 2.598%22 /%3E %3Cpath d=%22M3 6v10c0 .888 .772 1.45 2 2%22 /%3E %3Cpath d=%22M3 11c0 .888 .772 1.45 2 2%22 /%3E %3C/svg%3E")}
+.ti-credit-card{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M3 8a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3l0 -8%22 /%3E %3Cpath d=%22M3 10l18 0%22 /%3E %3Cpath d=%22M7 15l.01 0%22 /%3E %3Cpath d=%22M11 15l2 0%22 /%3E %3C/svg%3E")}
+.ti-currency-dollar{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M16.7 8a3 3 0 0 0 -2.7 -2h-4a3 3 0 0 0 0 6h4a3 3 0 0 1 0 6h-4a3 3 0 0 1 -2.7 -2%22 /%3E %3Cpath d=%22M12 3v3m0 12v3%22 /%3E %3C/svg%3E")}
+.ti-currency-dollar-off{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M16.7 8a3 3 0 0 0 -2.7 -2h-4m-2.557 1.431a3 3 0 0 0 2.557 4.569h2m4.564 4.558a3 3 0 0 1 -2.564 1.442h-4a3 3 0 0 1 -2.7 -2%22 /%3E %3Cpath d=%22M12 3v3m0 12v3%22 /%3E %3Cpath d=%22M3 3l18 18%22 /%3E %3C/svg%3E")}
+.ti-device-tablet{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M5 4a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v16a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1v-16%22 /%3E %3Cpath d=%22M11 17a1 1 0 1 0 2 0a1 1 0 0 0 -2 0%22 /%3E %3C/svg%3E")}
+.ti-download{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2%22 /%3E %3Cpath d=%22M7 11l5 5l5 -5%22 /%3E %3Cpath d=%22M12 4l0 12%22 /%3E %3C/svg%3E")}
+.ti-history{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M12 8l0 4l2 2%22 /%3E %3Cpath d=%22M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5%22 /%3E %3C/svg%3E")}
+.ti-home{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M5 12l-2 0l9 -9l9 9l-2 0%22 /%3E %3Cpath d=%22M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7%22 /%3E %3Cpath d=%22M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6%22 /%3E %3C/svg%3E")}
+.ti-lock{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6%22 /%3E %3Cpath d=%22M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0%22 /%3E %3Cpath d=%22M8 11v-4a4 4 0 1 1 8 0v4%22 /%3E %3C/svg%3E")}
+.ti-lock-check{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M11.5 21h-4.5a2 2 0 0 1 -2 -2v-6a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v.5%22 /%3E %3Cpath d=%22M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0%22 /%3E %3Cpath d=%22M8 11v-4a4 4 0 1 1 8 0v4%22 /%3E %3Cpath d=%22M15 19l2 2l4 -4%22 /%3E %3C/svg%3E")}
+.ti-lock-open{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2l0 -6%22 /%3E %3Cpath d=%22M11 16a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E %3Cpath d=%22M8 11v-5a4 4 0 0 1 8 0%22 /%3E %3C/svg%3E")}
+.ti-logout{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2%22 /%3E %3Cpath d=%22M9 12h12l-3 -3%22 /%3E %3Cpath d=%22M18 15l3 -3%22 /%3E %3C/svg%3E")}
+.ti-map-pin{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0%22 /%3E %3Cpath d=%22M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0%22 /%3E %3C/svg%3E")}
+.ti-menu-2{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M4 6l16 0%22 /%3E %3Cpath d=%22M4 12l16 0%22 /%3E %3Cpath d=%22M4 18l16 0%22 /%3E %3C/svg%3E")}
+.ti-printer{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2%22 /%3E %3Cpath d=%22M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4%22 /%3E %3Cpath d=%22M7 15a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2l0 -4%22 /%3E %3C/svg%3E")}
+.ti-receipt{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2m4 -14h6m-6 4h6m-2 4h2%22 /%3E %3C/svg%3E")}
+.ti-report-money{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2%22 /%3E %3Cpath d=%22M9 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2%22 /%3E %3Cpath d=%22M14 11h-2.5a1.5 1.5 0 0 0 0 3h1a1.5 1.5 0 0 1 0 3h-2.5%22 /%3E %3Cpath d=%22M12 17v1m0 -8v1%22 /%3E %3C/svg%3E")}
+.ti-settings{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065%22 /%3E %3Cpath d=%22M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0%22 /%3E %3C/svg%3E")}
+.ti-square-check{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M3 5a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14%22 /%3E %3Cpath d=%22M9 12l2 2l4 -4%22 /%3E %3C/svg%3E")}
+.ti-sum{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M18 16v2a1 1 0 0 1 -1 1h-11l6 -7l-6 -7h11a1 1 0 0 1 1 1v2%22 /%3E %3C/svg%3E")}
+.ti-user{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0%22 /%3E %3Cpath d=%22M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2%22 /%3E %3C/svg%3E")}
+.ti-x{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M18 6l-12 12%22 /%3E %3Cpath d=%22M6 6l12 12%22 /%3E %3C/svg%3E")}
+/*END-ICONS*/
+</style>
+</head>
+<body>
+<main>
+<h1 id="qtitle">Finance → Daily report · Question 1 of 8 <span class="rec-tag">Answered v0.805: B</span></h1>
+<p class="lead" id="qlead"><b>What should the Daily report do?</b> Every option lists the day’s payments from Color belt testing and Star testing for the school picked in the top bar. They differ in the part outlined in amber: what staff do with the report at the end of the day. Sample day: Shrewsbury, Saturday Oct 24, 8 payments, $665.</p>
+<div id="opts"></div>
+</main>
+
+<script>
+// Sample payments for one day at Shrewsbury (made-up students).
+const PAY = [
+  ['10:04 AM','Mia Chen','Color belt testing','Oct 29','Cash',65,'Staff'],
+  ['10:21 AM','Lucas Patel','Color belt testing','Oct 29','Check',70,'Staff'],
+  ['10:40 AM','Ava Rossi','Star testing','Nov 14','Check',140,'Staff'],
+  ['11:15 AM','Noah Kim','Color belt testing','Oct 29','Card',65,'Jeffrey'],
+  ['11:32 AM','Emma Silva','Color belt testing','Oct 29','Cash',50,'Staff'],
+  ['12:05 PM','Liam Walsh','Star testing','Nov 14','Cash',140,'Staff'],
+  ['12:30 PM','Sofia Nguyen','Color belt testing','Oct 29','Card',70,'Staff'],
+  ['1:10 PM','Ethan Brooks','Color belt testing','Oct 29','Cash',65,'Jeffrey'],
+];
+const $ = (n) => '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+const cards = () => `
+  <div class="cards">
+    <div class="card"><div class="l"><i class="ti ti-report-money"></i>Total</div><div class="n">$665.00</div><div class="s">8 payments</div></div>
+    <div class="card"><div class="l"><i class="ti ti-cash"></i>Cash</div><div class="n">$320.00</div><div class="s">4 payments</div></div>
+    <div class="card"><div class="l"><i class="ti ti-receipt"></i>Check</div><div class="n">$210.00</div><div class="s">2 payments</div></div>
+    <div class="card"><div class="l"><i class="ti ti-credit-card"></i>Card</div><div class="n">$135.00</div><div class="s">2 payments</div></div>
+  </div>`;
+
+const table = (rows) => `
+  <table><thead><tr><th>Time</th><th>Student</th><th>For</th><th>Paid by</th><th class="r">Amount</th><th>Recorded by</th></tr></thead><tbody>
+  ${PAY.slice(0, rows).map(p => `<tr><td class="sub">${p[0]}</td><td>${p[1]}</td><td>${p[2]} <span class="sub">· ${p[3]}</span></td><td>${p[4]}</td><td class="r">${$(p[5])}</td><td class="sub">${p[6]}</td></tr>`).join('')}
+  </tbody></table>
+  ${rows < PAY.length ? `<div class="more">… ${PAY.length - rows} more payments</div>` : ''}`;
+
+const pcards = (rows) => PAY.slice(0, rows).map(p => `
+  <div class="pcard"><div>${p[1]}<div class="sub">${p[2]} · ${p[3]}</div><div class="sub">${p[0]} · ${p[6]}</div></div>
+  <div style="text-align:right">${$(p[5])}<div class="sub">${p[4]}</div></div></div>`).join('')
+  + (rows < PAY.length ? `<div class="more">… ${PAY.length - rows} more payments</div>` : '');
+
+// Option-specific part (the amber-outlined area). ph = phone layout.
+function closeBox(ph) {
+  return `
+  <div class="box">
+    <h4><i class="ti ti-cash-register"></i>Close the day</h4>
+    <div class="crow"><span class="k">Cash counted in drawer</span><span class="input">$300.00</span><span class="tag warn"><i class="ti ti-alert-triangle"></i>Short $20.00</span></div>
+    <div class="crow"><span class="k">Checks in drawer</span><span class="input">2</span><span class="tag ok"><i class="ti ti-check"></i>Matches</span></div>
+    <div class="crow"><span class="k">Card machine total</span><span class="input">$135.00</span><span class="tag ok"><i class="ti ti-check"></i>Matches</span></div>
+    <div class="boxfoot"><span class="btn btn-primary"><i class="ti ti-lock-check"></i>Close the day</span><span class="hint">Saves the count with your name. A short or over needs a note.</span></div>
+  </div>`;
+}
+function depositBox() {
+  return `
+  <div class="box">
+    <h4><i class="ti ti-building-bank"></i>Bank deposit</h4>
+    <div class="crow"><span class="k">To deposit</span><span>Cash $300.00 + 2 checks $210.00 = <b>$510.00</b></span></div>
+    <div class="crow"><span class="k">Status</span><span class="tag neutral">Not deposited</span></div>
+    <div class="boxfoot"><span class="btn">Mark deposited</span><span class="hint">Asks for the deposit date. Admins see every day not yet deposited.</span></div>
+  </div>`;
+}
+function extra(opt, ph) {
+  if (opt === 'A') return `<div class="q" style="padding:8px 10px;margin-bottom:16px"><span class="qlabel">A · read only</span><div class="hint" style="font-size:13px">Nothing to fill in. Staff look, print if needed, and count the drawer by hand as they do now.</div></div>`;
+  if (opt === 'B') return `<div class="q" style="margin-bottom:16px"><span class="qlabel" style="margin:6px 0 0 8px">B · close the day</span>${closeBox(ph)}</div>`;
+  return `<div class="q" style="margin-bottom:16px"><span class="qlabel" style="margin:6px 0 0 8px">C · close the day + bank deposit</span>${ph ? closeBox(ph) + depositBox() : `<div class="twobox">${closeBox(ph)}${depositBox()}</div>`}</div>`;
+}
+
+const header = (ph) => `
+  <h1 class="ptitle">Finance</h1>
+  <div class="tabs"><span class="on">Daily report</span></div>
+  <div class="dayrow">
+    <span class="ibtn"><i class="ti ti-chevron-left"></i></span>
+    <span class="day">${ph ? 'Sat, Oct 24, 2026' : 'Saturday, October 24, 2026'}</span>
+    <span class="ibtn"><i class="ti ti-chevron-right"></i></span>
+    <span class="ibtn"><i class="ti ti-calendar"></i></span>
+    <span class="chip">Today</span>
+    <span class="grow"></span>
+    ${ph ? '' : '<span class="btn"><i class="ti ti-printer"></i>Print</span>'}
+  </div>`;
+
+function pc(opt) {
+  return `<div><div class="cap">PC (1000 wide shown)</div><div class="dev dev-pc"><div class="app">
+    <nav class="rail"><a><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a><a class="on"><i class="ti ti-report-money"></i></a></nav>
+    <div class="app-col">
+      <div class="topbar"><span class="grow"></span><div class="loc"><span><i class="ti ti-map-pin"></i>Worcester</span><span class="on">Shrewsbury</span><span>Both</span></div><span class="avatar">JB</span></div>
+      <div class="content">${header(false)}${cards()}${extra(opt, false)}${table(opt === 'A' ? 8 : 4)}</div>
+    </div></div></div></div>`;
+}
+function phone(opt) {
+  return `<div><div class="cap">Phone (390 wide)</div><div class="dev dev-ph ph">
+    <div class="topbar"><div class="loc"><span>Worc.</span><span class="on">Shrew.</span><span>Both</span></div><span class="grow"></span><span class="avatar">JB</span></div>
+    <div class="content">${header(true)}${cards()}${extra(opt, true)}${pcards(opt === 'A' ? 4 : 2)}</div>
+    <div class="phbar"><a><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a><a class="on"><i class="ti ti-report-money"></i>Finance</a></div>
+  </div></div>`;
+}
+
+const OPTS = [
+  ['A', 'Look up the day (read only)', true, `
+    <h3>What it does</h3><ul><li>Shows the day’s totals (all, cash, check, card) and every payment: time, student, what it was for, how paid, amount, who recorded it.</li><li>Arrows and a calendar move to any other day. Print for a paper copy.</li><li>Nothing is typed in. It only reads payments the Testing screens already saved.</li></ul>
+    <h3>Pros</h3><ul><li>Simplest and fastest to build. No new database tables, only a read.</li><li>Lowest risk: it can’t change any money record.</li><li>B or C can be added later on top of it without redoing anything.</li></ul>
+    <h3>Cons</h3><ul><li>Doesn’t catch a missing $20 by itself. Someone still compares the drawer to the totals by eye.</li><li>No record of who checked the day.</li></ul>`],
+  ['B', 'Look up + close the day', false, `
+    <h3>What it does</h3><ul><li>Everything in A, plus a <b>Close the day</b> box: staff type the cash they counted, the number of checks and the card machine’s total.</li><li>The screen shows <b>Matches</b> or <b>Short / Over $X</b> for each. A short or over needs a note.</li><li>Close the day saves the count with the person’s name and time. A payment added to a closed day later is flagged.</li></ul>
+    <h3>Pros</h3><ul><li>Catches cash mistakes the same day, with a name attached.</li><li>Admins see a history of closed days and every short / over.</li></ul>
+    <h3>Cons</h3><ul><li>A new table and new database functions (more security work and testing).</li><li>Adds a step at the end of every day, which only helps if someone actually does it.</li><li>Undecided rules: who can reopen a closed day, what happens on days with no payments.</li></ul>`],
+  ['C', 'Close the day + track the bank deposit', false, `
+    <h3>What it does</h3><ul><li>Everything in B, plus a <b>Bank deposit</b> box: the cash and checks to take to the bank, and <b>Mark deposited</b> with the deposit date.</li><li>Admins see every day whose money hasn’t been deposited yet.</li></ul>
+    <h3>Pros</h3><ul><li>Follows money from the desk to the bank.</li></ul>
+    <h3>Cons</h3><ul><li>The most to build and test.</li><li>Only worth it if the school deposits per day and wants to track it here. If deposits are weekly, this box gets in the way.</li></ul>`],
+];
+
+document.getElementById('opts').innerHTML = OPTS.map(([k, title, rec, ex]) => `
+  <section class="${rec ? 'rec' : ''}">
+    <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+    <div class="optrow"><div class="explain">${ex}</div>${pc(k)}${phone(k)}</div>
+  </section>`).join('');
+</script>
+
+<script>
+// ---------- Question 2: who can see Finance, close a day, reopen a day ----------
+// Open the file with #q2 at the end of the address to see this question alone.
+if (location.hash === '#q2') {
+  document.getElementById('qtitle').innerHTML = 'Finance → Daily report · Question 2 of 8';
+  document.getElementById('qlead').innerHTML = '<b>Who can see Finance, close the day and reopen a closed day?</b> Each option shows the same moment twice: what <b>staff</b> see (incl. the shared front-desk account, logged as “Staff”) and what an <b>admin</b> sees. Amber marks what differs between the options.';
+
+  const shell = (railFinance, body) => `<div class="dev dev-pc" style="width:720px"><div class="app">
+    <nav class="rail"><a><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a>${railFinance ? '<a class="on"><i class="ti ti-report-money"></i></a>' : ''}</nav>
+    <div class="app-col">
+      <div class="topbar"><span class="grow"></span><div class="loc"><span><i class="ti ti-map-pin"></i>Worcester</span><span class="on">Shrewsbury</span><span>Both</span></div><span class="avatar">${railFinance === 'admin' ? 'JB' : 'S'}</span></div>
+      <div class="content">${body}</div>
+    </div></div></div>`;
+
+  const smallCards = `<div class="cards"><div class="card"><div class="l"><i class="ti ti-report-money"></i>Total</div><div class="n">$665.00</div></div><div class="card"><div class="l"><i class="ti ti-cash"></i>Cash</div><div class="n">$320.00</div></div><div class="card"><div class="l"><i class="ti ti-receipt"></i>Check</div><div class="n">$210.00</div></div><div class="card"><div class="l"><i class="ti ti-credit-card"></i>Card</div><div class="n">$135.00</div></div></div>`;
+  const rows = `<table><thead><tr><th>Time</th><th>Student</th><th>Paid by</th><th class="r">Amount</th></tr></thead><tbody>${PAY.slice(0, 3).map(p => `<tr><td class="sub">${p[0]}</td><td>${p[1]}</td><td>${p[4]}</td><td class="r">${$(p[5])}</td></tr>`).join('')}</tbody></table><div class="more">… 5 more payments</div>`;
+
+  // Day row: any day (arrows + calendar) or today only.
+  const anyDay = (q) => `<div class="dayrow"><span class="${q ? 'q' : ''}" style="display:inline-flex;gap:8px;align-items:center;padding:2px"><span class="ibtn"><i class="ti ti-chevron-left"></i></span><span class="day">Saturday, October 24, 2026</span><span class="ibtn"><i class="ti ti-chevron-right"></i></span><span class="ibtn"><i class="ti ti-calendar"></i></span></span><span class="grow"></span><span class="btn"><i class="ti ti-printer"></i>Print</span></div>`;
+  const todayOnly = `<div class="dayrow"><span class="q" style="display:inline-flex;gap:8px;align-items:center;padding:2px 6px"><span class="day">Today · Saturday, October 24</span><span class="hint">Staff see today only. Ask an admin for other days.</span></span><span class="grow"></span><span class="btn"><i class="ti ti-printer"></i>Print</span></div>`;
+  const closeOpen = `<div class="box" style="margin-bottom:12px"><h4><i class="ti ti-cash-register"></i>Close the day</h4><div class="crow"><span class="k">Cash counted</span><span class="input">$300.00</span><span class="tag warn"><i class="ti ti-alert-triangle"></i>Short $20.00</span></div><div class="boxfoot"><span class="btn btn-primary"><i class="ti ti-lock-check"></i>Close the day</span><span class="hint">Checks and card total below this line</span></div></div>`;
+  const closedReopen = (q) => `<div class="box" style="margin-bottom:12px"><h4><i class="ti ti-lock"></i>Day closed</h4><div class="crow">Closed by Staff at 8:42 PM · Cash short $20.00 · “Gave $20 change from the drawer to a parent.”</div><div class="boxfoot"><span class="${q ? 'q' : ''}" style="display:inline-flex;padding:2px"><span class="btn"><i class="ti ti-lock-open"></i>Reopen day</span></span><span class="hint">Reopening is logged. The count stays in the history.</span></div></div>`;
+
+  const report = (dayRow, box) => `<h1 class="ptitle">Finance</h1><div class="tabs"><span class="on">Daily report</span></div>${dayRow}${smallCards}${box}${rows}`;
+  const blockedStaff = `<h1 class="ptitle">Good evening</h1><p class="hint" style="font-size:13px">Saturday, October 24 · Shrewsbury</p><div class="q" style="padding:10px;margin-top:24px"><span class="qlabel">No Finance icon for staff</span><div style="font-size:13px">The rail shows Home and Testing only. Opening a Finance link shows “Finance is for admins.”</div></div>`;
+
+  const Q2 = [
+    ['A', 'Admins only', false,
+      `<h3>What it does</h3><ul><li>Staff, including the shared desk account, don’t see Finance at all.</li><li>An admin opens the report, counts the drawer and closes the day. Admins can reopen a day.</li></ul>
+       <h3>Pros</h3><ul><li>Money totals are never on a staff screen or the mat-side tablet.</li><li>Every close has a real name, never “Staff”.</li></ul>
+       <h3>Cons</h3><ul><li>An admin has to be there at the end of every day the desk took money. Otherwise days stay open.</li></ul>`,
+      shell(false, blockedStaff),
+      shell('admin', report(anyDay(false), closeOpen))],
+    ['B', 'Staff close today · admins see any day and reopen', true,
+      `<h3>What it does</h3><ul><li><b>Staff</b> see <b>today only</b>: today’s payments and the Close the day box. No arrows or calendar.</li><li><b>Admins</b> see any day, the history of closed days, and can <b>reopen</b> a closed day (logged).</li><li>Enforced in the database, not only hidden on screen.</li></ul>
+       <h3>Pros</h3><ul><li>The person at the desk at closing counts the drawer, the same night.</li><li>Past money totals stay with admins.</li></ul>
+       <h3>Cons</h3><ul><li>A close done on the shared desk account is logged as “Staff”, not a person’s name.</li><li>A staff member who forgot can’t close yesterday. An admin has to.</li></ul>`,
+      shell('staff', report(todayOnly, closeOpen)),
+      shell('admin', report(anyDay(true), closedReopen(true)))],
+    ['C', 'Staff and admins the same · admins reopen', false,
+      `<h3>What it does</h3><ul><li>Staff and admins both see <b>any day</b> and can close any open day.</li><li>Only admins can <b>reopen</b> a closed day.</li></ul>
+       <h3>Pros</h3><ul><li>Anyone can catch up on a day nobody closed.</li></ul>
+       <h3>Cons</h3><ul><li>Anyone signed in to the desk account can browse every past day’s money.</li><li>Easier to close the wrong day by mistake.</li></ul>`,
+      shell('staff', report(anyDay(true), closeOpen)),
+      shell('admin', report(anyDay(false), closedReopen(true)))],
+  ];
+
+  document.getElementById('opts').innerHTML = Q2.map(([k, title, rec, ex, staff, admin]) => `
+    <section class="${rec ? 'rec' : ''}">
+      <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+      <div class="optrow"><div class="explain">${ex}</div>
+        <div><div class="cap">Staff (shared desk account) · PC</div>${staff}</div>
+        <div><div class="cap">Admin · PC</div>${admin}</div></div>
+    </section>`).join('');
+}
+</script>
+
+<script>
+// ---------- Question 3: how the payments list is grouped ----------
+// Open the file with #q3 at the end of the address. Shown as staff see it (today, v0.806).
+if (location.hash === '#q3') {
+  document.getElementById('qtitle').innerHTML = 'Finance → Daily report · Question 3 of 8';
+  document.getElementById('qlead').innerHTML = '<b>How should the day’s payments be listed?</b> Same day, same 8 payments, same totals and Close the day box (closed up here to save space). Only the list outlined in amber changes. Shown as staff see it: today only (v0.806).';
+
+  const sum = (rows) => rows.reduce((t, p) => t + p[5], 0);
+  const groupRow = (label, rows, cols) => `<tr><td colspan="${cols}" style="background:var(--surface);font-weight:500;font-size:12px;height:30px">${label} <span class="sub" style="font-weight:400">· ${rows.length} payment${rows.length === 1 ? '' : 's'} · ${$(sum(rows))}</span></td></tr>`;
+
+  // PC tables
+  const flat = () => `<table><thead><tr><th>Time</th><th>Student</th><th>For</th><th>Paid by</th><th class="r">Amount</th><th>Recorded by</th></tr></thead><tbody>${PAY.map(p => `<tr><td class="sub">${p[0]}</td><td>${p[1]}</td><td>${p[2]} <span class="sub">· ${p[3]}</span></td><td>${p[4]}</td><td class="r">${$(p[5])}</td><td class="sub">${p[6]}</td></tr>`).join('')}</tbody></table>`;
+  const byMethod = () => `<table><thead><tr><th>Time</th><th>Student</th><th>For</th><th class="r">Amount</th><th>Recorded by</th></tr></thead><tbody>${['Cash', 'Check', 'Card'].map(m => { const r = PAY.filter(p => p[4] === m); return groupRow(m, r, 5) + r.map(p => `<tr><td class="sub">${p[0]}</td><td>${p[1]}</td><td>${p[2]} <span class="sub">· ${p[3]}</span></td><td class="r">${$(p[5])}</td><td class="sub">${p[6]}</td></tr>`).join(''); }).join('')}</tbody></table>`;
+  const EVENTS = [['Color belt testing · Oct 29', 'Color belt testing'], ['Star testing · Nov 14', 'Star testing']];
+  const byEvent = () => `<table><thead><tr><th>Time</th><th>Student</th><th>Paid by</th><th class="r">Amount</th><th>Recorded by</th></tr></thead><tbody>${EVENTS.map(([label, k]) => { const r = PAY.filter(p => p[2] === k); return groupRow(label, r, 5) + r.map(p => `<tr><td class="sub">${p[0]}</td><td>${p[1]}</td><td>${p[4]}</td><td class="r">${$(p[5])}</td><td class="sub">${p[6]}</td></tr>`).join(''); }).join('')}</tbody></table>`;
+
+  // Phone cards
+  const pcard = (p, showFor, showMethod) => `<div class="pcard"><div>${p[1]}${showFor ? `<div class="sub">${p[2]} · ${p[3]}</div>` : ''}<div class="sub">${p[0]} · ${p[6]}</div></div><div style="text-align:right">${$(p[5])}${showMethod ? `<div class="sub">${p[4]}</div>` : ''}</div></div>`;
+  const phHead = (label, rows) => `<div style="background:var(--surface);font-size:12px;font-weight:500;padding:6px 8px;margin-top:8px;border-radius:6px">${label} <span class="sub" style="font-weight:400">· ${rows.length} · ${$(sum(rows))}</span></div>`;
+  const phFlat = () => PAY.slice(0, 5).map(p => pcard(p, true, true)).join('') + '<div class="more">… 3 more payments</div>';
+  const phMethod = () => ['Cash', 'Check'].map(m => { const r = PAY.filter(p => p[4] === m); return phHead(m, r) + r.map(p => pcard(p, true, false)).join(''); }).join('') + '<div class="more">… Card (2 payments) below</div>';
+  const phEvent = () => { const r = PAY.filter(p => p[2] === 'Color belt testing'); return phHead('Color belt testing · Oct 29', r) + r.slice(0, 4).map(p => pcard(p, false, true)).join('') + '<div class="more">… 2 more, then Star testing · Nov 14</div>'; };
+
+  const closedBox = `<div class="box" style="margin-bottom:16px;display:flex;align-items:center;gap:8px"><i class="ti ti-cash-register"></i><b style="font-size:14px">Close the day</b><span class="grow"></span><i class="ti ti-chevron-down"></i></div>`;
+  const head = (ph) => `<h1 class="ptitle">Finance</h1><div class="tabs"><span class="on">Daily report</span></div><div class="dayrow"><span class="day">Today · ${ph ? 'Sat, Oct 24' : 'Saturday, October 24'}</span><span class="grow"></span>${ph ? '' : '<span class="btn"><i class="ti ti-printer"></i>Print</span>'}</div>`;
+  const pc3 = (list) => `<div><div class="cap">PC (1000 wide shown)</div><div class="dev dev-pc"><div class="app">
+    <nav class="rail"><a><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a><a class="on"><i class="ti ti-report-money"></i></a></nav>
+    <div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc"><span><i class="ti ti-map-pin"></i>Worcester</span><span class="on">Shrewsbury</span><span>Both</span></div><span class="avatar">S</span></div>
+    <div class="content">${head(false)}${cards()}${closedBox}<div class="q" style="padding:4px">${list}</div></div></div></div></div></div>`;
+  const ph3 = (list) => `<div><div class="cap">Phone (390 wide)</div><div class="dev dev-ph ph">
+    <div class="topbar"><div class="loc"><span>Worc.</span><span class="on">Shrew.</span><span>Both</span></div><span class="grow"></span><span class="avatar">S</span></div>
+    <div class="content">${head(true)}${cards()}${closedBox}<div class="q" style="padding:4px">${list}</div></div>
+    <div class="phbar"><a><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a><a class="on"><i class="ti ti-report-money"></i>Finance</a></div></div></div>`;
+
+  const Q3 = [
+    ['A', 'One list, in the order they were paid', false,
+      `<h3>What it does</h3><ul><li>Every payment in time order, earliest first. “Paid by” is a column.</li><li>Clicking a column header sorts by it (rule 8), e.g. by Paid by.</li></ul>
+       <h3>Pros</h3><ul><li>Simplest. Easy to find “who paid around 11?”.</li></ul>
+       <h3>Cons</h3><ul><li>When counting the drawer, staff pick the cash and checks out of a mixed list.</li></ul>`, flat(), phFlat()],
+    ['B', 'Grouped by how they paid: Cash, Check, Card', true,
+      `<h3>What it does</h3><ul><li>Three groups, each with a header: “Cash · 4 payments · $320.00”, then its payments in time order.</li><li>Groups follow the drawer count: cash first, then checks, then card.</li></ul>
+       <h3>Pros</h3><ul><li>Matches Close the day: staff count the cash against the Cash group and lay the checks next to the Check group.</li><li>A short is easier to trace to one payment.</li></ul>
+       <h3>Cons</h3><ul><li>One student paying twice in different ways shows in two groups.</li><li>Group headers take a little room.</li></ul>`, byMethod(), phMethod()],
+    ['C', 'Grouped by testing event', false,
+      `<h3>What it does</h3><ul><li>One group per event: “Color belt testing · Oct 29 · 6 payments · $385.00”, then “Star testing · Nov 14”.</li></ul>
+       <h3>Pros</h3><ul><li>Shows which event the day’s money came from.</li></ul>
+       <h3>Cons</h3><ul><li>Doesn’t help count the drawer. Cash is mixed across groups.</li><li>Event totals already show on each event’s own page (Payments recorded card).</li></ul>`, byEvent(), phEvent()],
+  ];
+
+  document.getElementById('opts').innerHTML = Q3.map(([k, title, rec, ex, list, phList]) => `
+    <section class="${rec ? 'rec' : ''}">
+      <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+      <div class="optrow"><div class="explain">${ex}</div>${pc3(list)}${ph3(phList)}</div>
+    </section>`).join('');
+}
+</script>
+
+<script>
+// ---------- Question 4: how admins move between days and see the closed-day history ----------
+// Open the file with #q4. Admin view (staff see today only, v0.806).
+if (location.hash === '#q4') {
+  document.getElementById('qtitle').innerHTML = 'Finance → Daily report · Question 4 of 8';
+  document.getElementById('qlead').innerHTML = '<b>How do admins move between days and see which days were closed?</b> Admins see any day and the history of closed days (v0.806). Staff don’t see any of this: they get today only. Amber marks what you’re choosing.';
+
+  // Sample days at Shrewsbury.
+  const DAYS = [
+    ['Sat, Oct 24', 665, 'open', 'Not closed yet', ''],
+    ['Fri, Oct 23', 420, 'ok', 'Closed by Staff · 8:40 PM', 'Matches'],
+    ['Thu, Oct 22', 135, 'warn', 'Closed by Staff · 8:51 PM', 'Cash short $20.00'],
+    ['Wed, Oct 21', 0, 'none', 'No payments', ''],
+    ['Tue, Oct 20', 280, 'late', 'Not closed', ''],
+    ['Mon, Oct 19', 70, 'warn', 'Closed by Jeffrey · 9:02 PM', 'Cash over $5.00'],
+  ];
+  const statusTag = (d) => d[2] === 'ok' ? '<span class="tag ok"><i class="ti ti-check"></i>Closed</span>'
+    : d[2] === 'warn' ? `<span class="tag warn"><i class="ti ti-alert-triangle"></i>${d[4]}</span>`
+    : d[2] === 'late' ? '<span class="tag warn"><i class="ti ti-alert-triangle"></i>Not closed</span>'
+    : d[2] === 'none' ? '<span class="tag neutral">No payments</span>' : '<span class="tag neutral">Today · open</span>';
+
+  const shortList = () => { const r = PAY.filter(p => p[4] === 'Cash'); return `<table><thead><tr><th>Time</th><th>Student</th><th>For</th><th class="r">Amount</th><th>Recorded by</th></tr></thead><tbody><tr><td colspan="5" style="background:var(--surface);font-weight:500;font-size:12px;height:30px">Cash <span class="sub" style="font-weight:400">· 4 payments · $320.00</span></td></tr>${r.slice(0, 2).map(p => `<tr><td class="sub">${p[0]}</td><td>${p[1]}</td><td>${p[2]} <span class="sub">· ${p[3]}</span></td><td class="r">${$(p[5])}</td><td class="sub">${p[6]}</td></tr>`).join('')}</tbody></table><div class="more">… 2 more cash, then Check and Card</div>`; };
+  const closedBox = `<div class="box" style="margin-bottom:16px;display:flex;align-items:center;gap:8px"><i class="ti ti-cash-register"></i><b style="font-size:14px">Close the day</b><span class="grow"></span><i class="ti ti-chevron-down"></i></div>`;
+
+  // Calendar popover (option B): October 2026 starts on a Thursday.
+  const mark = { 19: 'warn', 20: 'late', 21: 'none', 22: 'warn', 23: 'ok', 24: 'open' };
+  const calendar = () => {
+    let cells = '';
+    for (let i = 0; i < 4; i++) cells += '<span></span>';
+    for (let d = 1; d <= 31; d++) {
+      const m = mark[d] || (d < 19 ? 'ok' : (d > 24 ? 'future' : 'ok'));
+      const icon = m === 'ok' ? '<i class="ti ti-check" style="color:var(--ok)"></i>' : (m === 'warn' || m === 'late') ? '<i class="ti ti-alert-triangle" style="color:var(--warn)"></i>' : '';
+      const sel = d === 24 ? 'background:var(--blue);color:#fff;' : '';
+      cells += `<span style="height:40px;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;${sel}${m === 'future' ? 'color:#B5B5B0' : ''}">${d}<span style="font-size:12px;height:14px">${icon}</span></span>`;
+    }
+    return `<div class="q" style="position:absolute;top:118px;left:300px;width:330px;background:#fff;border:1px solid var(--border-strong);border-radius:8px;padding:10px;box-shadow:0 4px 12px rgba(0,0,0,.08);z-index:2">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span class="ibtn"><i class="ti ti-chevron-left"></i></span><b class="grow" style="text-align:center;font-size:13px">October 2026</b><span class="ibtn"><i class="ti ti-chevron-right"></i></span></div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:12px;color:var(--text2)"><span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>${cells}</div>
+      <div class="hint" style="margin-top:6px;display:flex;gap:12px;flex-wrap:wrap"><span><i class="ti ti-check" style="color:var(--ok)"></i> Closed, matches</span><span><i class="ti ti-alert-triangle" style="color:var(--warn)"></i> Short, over or not closed</span><span>Blank: no payments</span></div></div>`;
+  };
+
+  // History list (option C).
+  const historyPC = () => `<div class="q" style="padding:6px"><div class="dayrow" style="margin-bottom:8px"><span class="btn"><i class="ti ti-arrow-left"></i>Back to the day</span><span class="day">History · Shrewsbury</span><span class="grow"></span><span class="ibtn"><i class="ti ti-chevron-left"></i></span><b style="font-size:13px">October 2026</b><span class="ibtn"><i class="ti ti-chevron-right"></i></span></div>
+    <table><thead><tr><th>Day</th><th class="r">Total</th><th>Closed</th><th>Status</th><th></th></tr></thead><tbody>${DAYS.map(d => `<tr><td>${d[0]}</td><td class="r">${$(d[1])}</td><td class="sub">${d[3]}</td><td>${statusTag(d)}</td><td class="r"><i class="ti ti-chevron-right sub"></i></td></tr>`).join('')}</tbody></table><div class="more">Click a day to open its report. 1 day not closed this month.</div></div>`;
+  const historyPh = () => `<div class="q" style="padding:4px"><div class="dayrow"><span class="ibtn"><i class="ti ti-arrow-left"></i></span><span class="day">History</span><span class="grow"></span><span class="hint">Oct 2026</span></div>${DAYS.map(d => `<div class="pcard"><div>${d[0]}<div class="sub">${d[3]}</div></div><div style="text-align:right">${$(d[1])}<div>${statusTag(d)}</div></div></div>`).join('')}</div>`;
+
+  const dayRowPC = (opt) => `<div class="dayrow"><span class="${opt === 'A' ? 'q' : ''}" style="display:inline-flex;gap:8px;align-items:center;padding:2px"><span class="ibtn"><i class="ti ti-chevron-left"></i></span><span class="day">Saturday, October 24, 2026</span><span class="ibtn"><i class="ti ti-chevron-right"></i></span><span class="ibtn" ${opt === 'B' ? 'style="border-color:var(--blue);color:var(--blue)"' : ''}><i class="ti ti-calendar"></i></span><span class="chip">Today</span></span>${opt === 'C' ? '<span class="q" style="display:inline-flex;padding:2px"><span class="btn"><i class="ti ti-history"></i>History</span></span>' : ''}<span class="grow"></span><span class="btn"><i class="ti ti-printer"></i>Print</span></div>`;
+  const dayRowPh = (opt) => `<div class="dayrow"><span class="${opt === 'A' ? 'q' : ''}" style="display:inline-flex;gap:6px;align-items:center;padding:2px"><span class="ibtn"><i class="ti ti-chevron-left"></i></span><span class="day" style="font-size:14px">Sat, Oct 24</span><span class="ibtn"><i class="ti ti-chevron-right"></i></span><span class="ibtn"><i class="ti ti-calendar"></i></span></span>${opt === 'C' ? '<span class="q" style="display:inline-flex;padding:2px"><span class="ibtn"><i class="ti ti-history"></i></span></span>' : ''}</div>`;
+
+  const pc4 = (opt) => `<div><div class="cap">Admin · PC (1000 wide shown)</div><div class="dev dev-pc"><div class="app">
+    <nav class="rail"><a><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a><a class="on"><i class="ti ti-report-money"></i></a></nav>
+    <div class="app-col" style="position:relative"><div class="topbar"><span class="grow"></span><div class="loc"><span><i class="ti ti-map-pin"></i>Worcester</span><span class="on">Shrewsbury</span><span>Both</span></div><span class="avatar">JB</span></div>
+    <div class="content"><h1 class="ptitle">Finance</h1><div class="tabs"><span class="on">Daily report</span></div>
+    ${opt === 'C' ? historyPC() : dayRowPC(opt) + cards() + closedBox + shortList()}</div>${opt === 'B' ? calendar() : ''}</div></div></div></div>`;
+  const ph4 = (opt) => `<div><div class="cap">Admin · Phone (390 wide)</div><div class="dev dev-ph ph" style="position:relative">
+    <div class="topbar"><div class="loc"><span>Worc.</span><span class="on">Shrew.</span><span>Both</span></div><span class="grow"></span><span class="avatar">JB</span></div>
+    <div class="content"><h1 class="ptitle">Finance</h1><div class="tabs"><span class="on">Daily report</span></div>
+    ${opt === 'C' ? historyPh() : dayRowPh(opt) + cards() + closedBox}
+    ${opt === 'B' ? calendar().replace('top:118px;left:300px;width:330px', 'top:150px;left:8px;width:312px') : ''}</div>
+    <div class="phbar"><a><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a><a class="on"><i class="ti ti-report-money"></i>Finance</a></div></div></div>`;
+
+  const Q4 = [
+    ['A', 'Arrows and a plain calendar', false,
+      `<h3>What it does</h3><ul><li>‹ › step one day back or forward; the calendar jumps to any date; Today comes back.</li><li>To see if a day was closed, open that day: its Close the day box says who closed it and any short or over.</li></ul>
+       <h3>Pros</h3><ul><li>Simplest. Nothing new to learn.</li></ul>
+       <h3>Cons</h3><ul><li>No overview. Finding a day nobody closed means opening days one by one.</li></ul>`],
+    ['B', 'Calendar with a mark on each day', false,
+      `<h3>What it does</h3><ul><li>Same arrows. The calendar shows a mark under each date: ✓ closed and matched; ⚠ short, over or not closed; blank = no payments.</li><li>Click a date to open its report.</li></ul>
+       <h3>Pros</h3><ul><li>A month at a glance in the control you already use.</li></ul>
+       <h3>Cons</h3><ul><li>Marks are small and need the legend. Amounts and names aren’t visible until you open the day.</li><li>On phones the calendar covers the page.</li></ul>`],
+    ['C', 'Arrows + calendar, plus a History list', true,
+      `<h3>What it does</h3><ul><li>Same arrows and calendar for moving day to day.</li><li>A <b>History</b> button opens a list of a month’s days: total, who closed it and when, and one tag (Closed · Short / Over $X · Not closed · No payments).</li><li>Click a row to open that day. ‹ › change the month.</li></ul>
+       <h3>Pros</h3><ul><li>Shorts, overs and unclosed days are readable in one list, with names and amounts.</li><li>Follows the dashboard’s list rules (rows, one tag per row).</li></ul>
+       <h3>Cons</h3><ul><li>One more screen and a new icon (<code>ti-history</code>, to add to the icon map).</li></ul>`],
+  ];
+  document.getElementById('opts').innerHTML = Q4.map(([k, title, rec, ex]) => `
+    <section class="${rec ? 'rec' : ''}">
+      <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+      <div class="optrow"><div class="explain">${ex}</div>${pc4(k)}${ph4(k)}</div>
+    </section>`).join('');
+}
+</script>
+
+<script>
+// ---------- Question 5: what Finance shows when the top bar is on Both ----------
+// Open the file with #q5. Admin view, top bar on Both.
+if (location.hash === '#q5') {
+  document.getElementById('qtitle').innerHTML = 'Finance → Daily report · Question 5 of 8';
+  document.getElementById('qlead').innerHTML = '<b>What does Finance show when the top bar is set to Both?</b> On Worcester or Shrewsbury it shows that school only (as in the earlier pictures). Each school has its own drawer, so Close the day is always for one school. A Star testing payment counts for the candidate’s school (Star events are joint). Sample: Shrewsbury $665 (8 payments) + Worcester $275 (3 payments).';
+
+  const mins = (t) => { const [h, m] = t.split(/[: ]/); return (+h % 12 + (t.endsWith('PM') ? 12 : 0)) * 60 + +m; };
+  const WOR = [['9:45 AM', 'Jacob Lee', 'Color belt testing', 'Oct 30', 'Cash', 70, 'Staff'], ['11:20 AM', 'Grace Park', 'Color belt testing', 'Oct 30', 'Check', 65, 'Staff'], ['2:05 PM', 'Owen Diaz', 'Star testing', 'Nov 14', 'Card', 140, 'Jeffrey']];
+  const ALL = PAY.map(p => [...p, 'Shrewsbury']).concat(WOR.map(p => [...p, 'Worcester']));
+  const both = `<div class="loc q" style="outline-offset:3px"><span><i class="ti ti-map-pin"></i>Worcester</span><span>Shrewsbury</span><span class="on">Both</span></div>`;
+  const bothPh = `<div class="loc q" style="outline-offset:3px"><span>Worc.</span><span>Shrew.</span><span class="on">Both</span></div>`;
+  const head = (ph) => `<h1 class="ptitle">Finance</h1><div class="tabs"><span class="on">Daily report</span></div><div class="dayrow"><span class="ibtn"><i class="ti ti-chevron-left"></i></span><span class="day">${ph ? 'Sat, Oct 24' : 'Saturday, October 24, 2026'}</span><span class="ibtn"><i class="ti ti-chevron-right"></i></span>${ph ? '' : '<span class="ibtn"><i class="ti ti-calendar"></i></span><span class="btn"><i class="ti ti-history"></i>History</span><span class="grow"></span><span class="btn"><i class="ti ti-printer"></i>Print</span>'}</div>`;
+
+  // A: blocked, like Testing (v0.35)
+  const blocked = (ph) => `<h1 class="ptitle">Finance</h1><div class="q" style="margin-top:24px;padding:16px;text-align:center"><div style="font-size:14px;margin-bottom:12px">Finance is kept separate for each school. Choose a school to see its daily report.</div><span class="btn"><i class="ti ti-map-pin"></i>Worcester</span> <span class="btn"><i class="ti ti-map-pin"></i>Shrewsbury</span></div>`;
+
+  // B: combined, School column, close per school
+  const cardsBoth = `<div class="cards q" style="padding:2px">
+    <div class="card"><div class="l"><i class="ti ti-report-money"></i>Total</div><div class="n">$940.00</div><div class="s">Shrew. $665 · Worc. $275</div></div>
+    <div class="card"><div class="l"><i class="ti ti-cash"></i>Cash</div><div class="n">$390.00</div><div class="s">Shrew. $320 · Worc. $70</div></div>
+    <div class="card"><div class="l"><i class="ti ti-receipt"></i>Check</div><div class="n">$275.00</div><div class="s">Shrew. $210 · Worc. $65</div></div>
+    <div class="card"><div class="l"><i class="ti ti-credit-card"></i>Card</div><div class="n">$275.00</div><div class="s">Shrew. $135 · Worc. $140</div></div></div>`;
+  const closePerSchool = `<div class="box q" style="margin-bottom:16px"><h4><i class="ti ti-cash-register"></i>Close the day</h4><div class="crow"><span class="k">Shrewsbury</span><span class="tag neutral">Not closed yet</span></div><div class="crow"><span class="k">Worcester</span><span class="tag ok"><i class="ti ti-check"></i>Closed by Staff · 7:55 PM</span></div><div class="hint">Each school closes its own drawer. Choose a school in the top bar to close its day.</div></div>`;
+  const listBoth = () => { const r = ALL.filter(p => p[4] === 'Cash'); return `<table><thead><tr><th>Time</th><th>Student</th><th class="q">School</th><th>For</th><th class="r">Amount</th><th>Recorded by</th></tr></thead><tbody><tr><td colspan="6" style="background:var(--surface);font-weight:500;font-size:12px;height:30px">Cash <span class="sub" style="font-weight:400">· 5 payments · $390.00</span></td></tr>${r.sort((a, b) => mins(a[0]) - mins(b[0])).slice(0, 3).map(p => `<tr><td class="sub">${p[0]}</td><td>${p[1]}</td><td>${p[7]}</td><td>${p[2]} <span class="sub">· ${p[3]}</span></td><td class="r">${$(p[5])}</td><td class="sub">${p[6]}</td></tr>`).join('')}</tbody></table><div class="more">… 2 more cash, then Check and Card</div>`; };
+  const phBoth = () => `${cardsBoth}${closePerSchool}<div style="background:var(--surface);font-size:12px;font-weight:500;padding:6px 8px;border-radius:6px">Cash <span class="sub" style="font-weight:400">· 5 · $390.00</span></div>${ALL.filter(p => p[4] === 'Cash').sort((a, b) => mins(a[0]) - mins(b[0])).slice(0, 2).map(p => `<div class="pcard"><div>${p[1]}<div class="sub">${p[7]} · ${p[2]}</div></div><div>${$(p[5])}</div></div>`).join('')}`;
+
+  // C: two school summaries side by side
+  const schoolCard = (name, tot, cash, check, card, n, status) => `<div class="box" style="margin-bottom:0"><h4><i class="ti ti-map-pin"></i>${name}<span class="grow"></span>${status}</h4>
+    <div class="crow"><span class="k">Total</span><b>${tot}</b><span class="sub">${n} payments</span></div>
+    <div class="crow"><span class="k">Cash · Check · Card</span><span>${cash} · ${check} · ${card}</span></div>
+    <div class="boxfoot"><span class="btn">Open ${name}<i class="ti ti-chevron-right"></i></span></div></div>`;
+  const twoSchools = (ph) => `<div class="${ph ? '' : 'twobox'} q" style="padding:4px;${ph ? 'display:grid;gap:8px' : ''}">${schoolCard('Shrewsbury', '$665.00', '$320', '$210', '$135', 8, '<span class="tag neutral">Not closed yet</span>')}${schoolCard('Worcester', '$275.00', '$70', '$65', '$140', 3, '<span class="tag ok"><i class="ti ti-check"></i>Closed</span>')}</div><div class="hint" style="margin-top:8px">Both schools together: $940.00. The payment lists open per school.</div>`;
+
+  const pc5 = (body) => `<div><div class="cap">Admin · PC (1000 wide shown)</div><div class="dev dev-pc"><div class="app">
+    <nav class="rail"><a><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a><a class="on"><i class="ti ti-report-money"></i></a></nav>
+    <div class="app-col"><div class="topbar"><span class="grow"></span>${both}<span class="avatar">JB</span></div><div class="content">${body}</div></div></div></div></div>`;
+  const ph5 = (body) => `<div><div class="cap">Admin · Phone (390 wide)</div><div class="dev dev-ph ph">
+    <div class="topbar">${bothPh}<span class="grow"></span><span class="avatar">JB</span></div><div class="content">${body}</div>
+    <div class="phbar"><a><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a><a class="on"><i class="ti ti-report-money"></i>Finance</a></div></div></div>`;
+
+  const Q5 = [
+    ['A', 'One school only (like Testing)', false,
+      `<h3>What it does</h3><ul><li>On Both, Finance shows no money: “Finance is kept separate for each school. Choose a school…” with two buttons that switch the whole dashboard.</li><li>Same rule as Testing (v0.35).</li></ul>
+       <h3>Pros</h3><ul><li>Simplest. No mixing of the two drawers.</li><li>Consistent with Testing.</li></ul>
+       <h3>Cons</h3><ul><li>No combined total for the day. The owner adds the two schools up by hand.</li></ul>`,
+      pc5(blocked(false)), ph5(blocked(true))],
+    ['B', 'Both combined, with a School column', true,
+      `<h3>What it does</h3><ul><li>Totals add both schools, with each school’s share under the number.</li><li>The list keeps the Cash / Check / Card groups and adds a <b>School</b> column (on phones, the school is in the second line).</li><li>Close the day shows each school’s status only. Closing needs one school picked: “Choose a school in the top bar to close its day.”</li><li>History on Both lists both schools’ days, with a School column.</li></ul>
+       <h3>Pros</h3><ul><li>One look shows the whole day’s money for both schools.</li><li>Each drawer is still closed separately.</li></ul>
+       <h3>Cons</h3><ul><li>Busier cards (two numbers each) and one more column.</li></ul>`,
+      pc5(head(false) + cardsBoth + closePerSchool + listBoth()), ph5(head(true) + phBoth())],
+    ['C', 'Both = two school summaries side by side', false,
+      `<h3>What it does</h3><ul><li>On Both, one box per school: total, cash · check · card, closed or not, and <b>Open [school]</b>, which switches to that school.</li><li>A line gives the combined total. No payment list on Both.</li></ul>
+       <h3>Pros</h3><ul><li>Clear split of the two drawers. Quick check that both days are closed.</li></ul>
+       <h3>Cons</h3><ul><li>To see payments you still switch to one school.</li><li>A different layout to learn on Both only.</li></ul>`,
+      pc5(head(false).replace(/<span class="btn"><i class="ti ti-printer"><\/i>Print<\/span>/, '') + twoSchools(false)), ph5(head(true) + twoSchools(true))],
+  ];
+  document.getElementById('opts').innerHTML = Q5.map(([k, title, rec, ex, pcHtml, phHtml]) => `
+    <section class="${rec ? 'rec' : ''}">
+      <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+      <div class="optrow"><div class="explain">${ex}</div>${pcHtml}${phHtml}</div>
+    </section>`).join('');
+}
+</script>
+
+<script>
+// ---------- Question 6: undone and edited payments ----------
+// Open the file with #q6. Admin view, Shrewsbury.
+if (location.hash === '#q6') {
+  document.getElementById('qtitle').innerHTML = 'Finance → Daily report · Question 6 of 8';
+  document.getElementById('qlead').innerHTML = '<b>How should undone and edited payments show?</b> Example: Saturday Oct 24 was closed at 8:42 PM. On Monday Oct 26 an admin <b>undoes</b> Mia Chen’s $65 cash payment (it was recorded by mistake) and <b>edits</b> Lucas Patel’s check from $70 to $65. Only admins can undo or edit after the first 10 seconds (v0.147). Amber marks what differs.';
+
+  const cardsAfter = (cash, check, total, n) => `<div class="cards"><div class="card"><div class="l"><i class="ti ti-report-money"></i>Total</div><div class="n">${total}</div><div class="s">${n}</div></div><div class="card"><div class="l"><i class="ti ti-cash"></i>Cash</div><div class="n">${cash}</div></div><div class="card"><div class="l"><i class="ti ti-receipt"></i>Check</div><div class="n">${check}</div></div><div class="card"><div class="l"><i class="ti ti-credit-card"></i>Card</div><div class="n">$135.00</div></div></div>`;
+  const changedBox = `<div class="box q" style="margin-bottom:16px"><h4><i class="ti ti-lock"></i>Day closed<span class="grow"></span><span class="tag warn" style="font-weight:400"><i class="ti ti-alert-triangle"></i>Changed after closing</span></h4><div class="crow">Closed by Staff at 8:42 PM · counted cash $320.00 · checks 2 · card $135.00</div><div class="hint">2 payments were changed on Mon, Oct 26 by Jeffrey. The totals above no longer match the count.</div></div>`;
+  const plainClosed = `<div class="box" style="margin-bottom:16px"><h4><i class="ti ti-lock"></i>Day closed</h4><div class="crow">Closed by Staff at 8:42 PM · Matches</div></div>`;
+  const g = (label, extra) => `<tr><td colspan="5" style="background:var(--surface);font-weight:500;font-size:12px;height:30px">${label} <span class="sub" style="font-weight:400">${extra}</span></td></tr>`;
+  const r = (t, name, forr, amt, by, cls = '', note = '') => `<tr class="${cls}"><td class="sub">${t}</td><td>${name}${note}</td><td>${forr}</td><td class="r">${amt}</td><td class="sub">${by}</td></tr>`;
+  const thead = `<table><thead><tr><th>Time</th><th>Student</th><th>For</th><th class="r">Amount</th><th>Recorded by</th></tr></thead><tbody>`;
+  const CB = 'Color belt testing <span class="sub">· Oct 29</span>';
+
+  // A: hidden — Saturday shows what's true now.
+  const listA = `${thead}${g('Cash', '· 3 payments · $255.00')}${r('11:32 AM', 'Emma Silva', CB, '$50.00', 'Staff')}${r('12:05 PM', 'Liam Walsh', 'Star testing <span class="sub">· Nov 14</span>', '$140.00', 'Staff')}${g('Check', '· 2 payments · $205.00')}${r('10:21 AM', 'Lucas Patel', CB, '$65.00', 'Staff')}</tbody></table><div class="more">Mia Chen’s payment is gone; Lucas Patel shows only the new amount.</div>`;
+  // B: struck through + note, not counted.
+  const strike = 'style="text-decoration:line-through;color:var(--text2)"';
+  const listB = `${thead}${g('Cash', '· 3 payments · $255.00')}<tr class="q"><td class="sub">10:04 AM</td><td><span ${strike}>Mia Chen</span> <span class="tag neutral">Undone</span><div class="sub" style="font-size:12px">Undone by Jeffrey · Mon, Oct 26 · not counted</div></td><td>${CB}</td><td class="r"><span ${strike}>$65.00</span></td><td class="sub">Staff</td></tr>${r('11:32 AM', 'Emma Silva', CB, '$50.00', 'Staff')}${g('Check', '· 2 payments · $205.00')}<tr class="q"><td class="sub">10:21 AM</td><td>Lucas Patel <span class="tag neutral">Edited</span><div class="sub" style="font-size:12px">Was $70.00 · edited by Jeffrey · Mon, Oct 26</div></td><td>${CB}</td><td class="r">$65.00</td><td class="sub">Staff</td></tr></tbody></table>`;
+  // C: Saturday never changes; corrections count on Monday.
+  const listC = `${thead}${g('Cash', '· 1 payment · $40.00')}${r('10:15 AM', 'Chloe Moreau', CB, '$40.00', 'Staff')}</tbody></table><div class="q" style="margin-top:12px;padding:4px">${thead}${g('Corrections', '· 2 · −$70.00')}${r('9:05 AM', 'Mia Chen <div class="sub" style="font-size:12px">Undo of the Sat, Oct 24 cash payment</div>', CB, '−$65.00', 'Jeffrey')}${r('9:07 AM', 'Lucas Patel <div class="sub" style="font-size:12px">Edit of the Sat, Oct 24 check: $70.00 → $65.00</div>', CB, '−$5.00', 'Jeffrey')}</tbody></table></div>`;
+
+  const dayRow = (d) => `<div class="dayrow"><span class="ibtn"><i class="ti ti-chevron-left"></i></span><span class="day">${d}</span><span class="ibtn"><i class="ti ti-chevron-right"></i></span><span class="ibtn"><i class="ti ti-calendar"></i></span><span class="btn"><i class="ti ti-history"></i>History</span><span class="grow"></span><span class="btn"><i class="ti ti-printer"></i>Print</span></div>`;
+  const pc6 = (body) => `<div><div class="cap">Admin · PC (1000 wide shown)</div><div class="dev dev-pc"><div class="app">
+    <nav class="rail"><a><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a><a class="on"><i class="ti ti-report-money"></i></a></nav>
+    <div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc"><span><i class="ti ti-map-pin"></i>Worcester</span><span class="on">Shrewsbury</span><span>Both</span></div><span class="avatar">JB</span></div><div class="content"><h1 class="ptitle">Finance</h1><div class="tabs"><span class="on">Daily report</span></div>${body}</div></div></div></div></div>`;
+
+  // Phone: just the changed rows, as cards.
+  const phCard = (name, sub, amt, q, st) => `<div class="pcard ${q ? 'q' : ''}" style="${q ? 'margin:6px 0;padding:6px' : ''}"><div><span ${st ? strike : ''}>${name}</span><div class="sub">${sub}</div></div><div style="text-align:right"><span ${st ? strike : ''}>${amt}</span></div></div>`;
+  const ph6 = (title, body) => `<div><div class="cap">Admin · Phone (390 wide)</div><div class="dev dev-ph ph">
+    <div class="topbar"><div class="loc"><span>Worc.</span><span class="on">Shrew.</span><span>Both</span></div><span class="grow"></span><span class="avatar">JB</span></div>
+    <div class="content"><h1 class="ptitle">Finance</h1><div class="tabs"><span class="on">Daily report</span></div><div class="dayrow"><span class="ibtn"><i class="ti ti-chevron-left"></i></span><span class="day" style="font-size:14px">${title}</span><span class="ibtn"><i class="ti ti-chevron-right"></i></span></div>${body}</div>
+    <div class="phbar"><a><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a><a class="on"><i class="ti ti-report-money"></i>Finance</a></div></div></div>`;
+  const phHead = (l, x) => `<div style="background:var(--surface);font-size:12px;font-weight:500;padding:6px 8px;margin-top:8px;border-radius:6px">${l} <span class="sub" style="font-weight:400">${x}</span></div>`;
+  const phChanged = `<div class="box q" style="margin-bottom:8px;padding:8px"><span class="tag warn"><i class="ti ti-alert-triangle"></i>Changed after closing</span><div class="hint">2 payments changed Mon, Oct 26 by Jeffrey.</div></div>`;
+
+  const Q6 = [
+    ['A', 'Hidden: the day shows what’s true now', false,
+      `<h3>What it does</h3><ul><li>An undone payment disappears from its day; an edited one shows only its new amount, method and date.</li><li>Totals change to match. A closed day gets a “Changed after closing” tag (also in History).</li><li>Who undid or edited it is only in the student’s history on the Testing page.</li></ul>
+       <h3>Pros</h3><ul><li>Cleanest list.</li></ul>
+       <h3>Cons</h3><ul><li>From the report you can’t see what changed, only that something did.</li></ul>`,
+      pc6(dayRow('Saturday, October 24, 2026') + cardsAfter('$255.00', '$205.00', '$595.00', '7 payments') + changedBox + listA),
+      ph6('Sat, Oct 24', phChanged + phHead('Cash', '· 3 · $255.00') + phCard('Emma Silva', 'Color belt testing · 11:32 AM', '$50.00') + phHead('Check', '· 2 · $205.00') + phCard('Lucas Patel', 'Color belt testing · 10:21 AM', '$65.00'))],
+    ['B', 'Shown on the original day: struck through or marked edited', true,
+      `<h3>What it does</h3><ul><li>An undone payment stays in its group, <b>struck through</b> with an <b>Undone</b> tag and “Undone by Jeffrey · Mon, Oct 26 · not counted”.</li><li>An edited payment shows the new amount with an <b>Edited</b> tag and “Was $70.00 · edited by …”.</li><li>Totals count only what’s true now. A closed day gets “Changed after closing”.</li></ul>
+       <h3>Pros</h3><ul><li>The day explains itself: what changed, who, when.</li><li>Fits testing fees: they aren’t refunded, so an undo almost always fixes a mistake on that day.</li></ul>
+       <h3>Cons</h3><ul><li>A staff mis-click undone within 10 seconds also shows struck through (proposed: hide those).</li></ul>`,
+      pc6(dayRow('Saturday, October 24, 2026') + cardsAfter('$255.00', '$205.00', '$595.00', '7 payments') + changedBox + listB),
+      ph6('Sat, Oct 24', phChanged + phHead('Cash', '· 3 · $255.00') + phCard('Mia Chen', 'Undone by Jeffrey · Mon, Oct 26', '$65.00', true, true) + phCard('Emma Silva', 'Color belt testing · 11:32 AM', '$50.00') + phHead('Check', '· 2 · $205.00') + phCard('Lucas Patel', 'Edited · was $70.00 · Jeffrey · Oct 26', '$65.00', true))],
+    ['C', 'Counted on the day the correction is made', false,
+      `<h3>What it does</h3><ul><li>Saturday never changes after it’s closed: it still shows $665.00.</li><li>The corrections show on <b>Monday’s</b> report in a <b>Corrections</b> group: −$65.00 (undo) and −$5.00 (edit), and Monday’s total includes them.</li><li>The database already dates an undo this way (the day it’s made).</li></ul>
+       <h3>Pros</h3><ul><li>A closed day stays exactly as it was counted.</li><li>Right for real refunds (money handed back on Monday).</li></ul>
+       <h3>Cons</h3><ul><li>Monday’s cash total ($40 − $65) doesn’t match Monday’s drawer when the undo was only a mistake from Saturday.</li><li>Saturday keeps showing $65 that never came in.</li></ul>`,
+      pc6(dayRow('Monday, October 26, 2026') + cardsAfter('−$25.00', '−$5.00', '−$30.00', '1 payment + 2 corrections').replace('$135.00', '$0.00') + plainClosed.replace('Day closed', 'Not closed yet').replace('Closed by Staff at 8:42 PM · Matches', 'Today').replace('ti-lock', 'ti-cash-register') + listC),
+      ph6('Mon, Oct 26', phHead('Cash', '· 1 · $40.00') + phCard('Chloe Moreau', 'Color belt testing · 10:15 AM', '$40.00') + `<div class="q" style="padding:4px;margin-top:8px">${phHead('Corrections', '· 2 · −$70.00')}${phCard('Mia Chen', 'Undo of Sat, Oct 24 cash · Jeffrey', '−$65.00')}${phCard('Lucas Patel', 'Edit of Sat, Oct 24 check: $70 → $65', '−$5.00')}</div>`)],
+  ];
+  document.getElementById('opts').innerHTML = Q6.map(([k, title, rec, ex, pcHtml, phHtml]) => `
+    <section class="${rec ? 'rec' : ''}">
+      <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+      <div class="optrow"><div class="explain">${ex}</div>${pcHtml}${phHtml}</div>
+    </section>`).join('');
+}
+</script>
+
+<script>
+// ---------- Question 7: print and export ----------
+// Open the file with #q7. Admin view, Shrewsbury.
+if (location.hash === '#q7') {
+  document.getElementById('qtitle').innerHTML = 'Finance → Daily report · Question 7 of 8';
+  document.getElementById('qlead').innerHTML = '<b>What can be printed or downloaded?</b> Every option has <b>Print</b> (staff print today, admins any day). They differ in a downloadable file (CSV: a plain spreadsheet file that opens in Excel or Google Sheets, e.g. for a bookkeeper). Right side: what comes out. Amber marks what differs.';
+
+  const paper = `<div><div class="cap">Printed page (letter, portrait) · same in every option</div><div class="dev" style="width:420px;border-radius:2px;padding:24px;font-size:11px;line-height:1.45">
+    <div style="display:flex;justify-content:space-between"><b style="font-size:14px">Daily report · Shrewsbury</b><span>Sat, Oct 24, 2026</span></div>
+    <div class="sub" style="font-size:11px">U.S. Taekwondo Center · printed Oct 24, 8:45 PM by Staff</div>
+    <div style="margin:10px 0;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;border:1px solid #999;padding:6px"><span>Total<br><b>$665.00</b></span><span>Cash<br><b>$320.00</b></span><span>Check<br><b>$210.00</b></span><span>Card<br><b>$135.00</b></span></div>
+    <div style="margin-bottom:8px">Closed by Staff 8:42 PM · cash counted $300.00 (short $20.00) · checks 2 · card $135.00<br>Note: “Gave $20 change from the drawer to a parent.”</div>
+    ${['Cash', 'Check', 'Card'].map(m => { const r = PAY.filter(p => p[4] === m); return `<div style="font-weight:500;border-bottom:1px solid #999;margin-top:6px">${m} · ${r.length} · ${$(r.reduce((t, p) => t + p[5], 0))}</div>` + r.map(p => `<div style="display:flex;gap:8px"><span style="width:56px">${p[0]}</span><span style="flex:1">${p[1]} · ${p[2]}</span><span>${$(p[5])}</span></div>`).join(''); }).join('')}
+    <div style="margin-top:14px">Counted by: ____________________</div></div></div>`;
+
+  const csvDay = 'date,school,time,student,for,event_date,paid_by,amount,recorded_by,status\n2026-10-24,Shrewsbury,10:04 AM,Mia Chen,Color belt testing,2026-10-29,Cash,65.00,Staff,\n2026-10-24,Shrewsbury,10:21 AM,Lucas Patel,Color belt testing,2026-10-29,Check,70.00,Staff,\n2026-10-24,Shrewsbury,10:40 AM,Ava Rossi,Star testing,2026-11-14,Check,140.00,Staff,\n… 5 more rows';
+  const csvMonth = 'date,school,time,student,for,event_date,paid_by,amount,recorded_by,status\n2026-10-01,Shrewsbury,4:12 PM,Leo Grant,Color belt testing,2026-10-29,Cash,65.00,Staff,\n2026-10-01,Shrewsbury,5:30 PM,Nora Ali,Color belt testing,2026-10-29,Card,70.00,Staff,\n…\n2026-10-24,Shrewsbury,10:04 AM,Mia Chen,Color belt testing,2026-10-29,Cash,65.00,Staff,undone 2026-10-26\n… 142 rows · October 2026 · Shrewsbury';
+  const file = (name, csv) => `<div><div class="cap">Downloaded file (admins)</div><div class="dev" style="width:420px;border-radius:8px;padding:12px"><div style="display:flex;align-items:center;gap:6px;font-size:13px;margin-bottom:8px"><i class="ti ti-download"></i><b>${name}</b></div><pre class="q" style="margin:0;font-size:11px;white-space:pre-wrap;word-break:break-all;background:var(--surface);padding:8px;border-radius:6px">${csv}</pre><div class="hint" style="margin-top:8px">Contains students’ names and amounts. Admins only. Each download is logged.</div></div></div>`;
+  const exportDialog = `<div class="q" style="position:absolute;right:24px;top:150px;width:360px;background:#fff;border:1px solid var(--border-strong);border-radius:12px;padding:16px;box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:2">
+    <div style="display:flex;align-items:center;margin-bottom:12px"><b style="font-size:16px">Export payments</b><span class="grow"></span><i class="ti ti-x"></i></div>
+    <div class="crow"><span class="k" style="width:60px">From</span><span class="input">Oct 1, 2026</span></div>
+    <div class="crow"><span class="k" style="width:60px">To</span><span class="input">Oct 31, 2026</span></div>
+    <div class="crow"><span class="k" style="width:60px">School</span><span>Shrewsbury <span class="hint">(from the top bar)</span></span></div>
+    <div class="hint" style="margin:8px 0">142 payments · $9,450.00. One row per payment; corrections marked.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><span class="btn">Cancel</span><span class="btn btn-primary"><i class="ti ti-download"></i>Download CSV</span></div></div>`;
+
+  const actions = (opt) => opt === 'A' ? '<span class="btn"><i class="ti ti-printer"></i>Print</span>'
+    : `<span class="btn"><i class="ti ti-printer"></i>Print</span><span class="q" style="display:inline-flex;padding:2px"><span class="btn"><i class="ti ti-download"></i>${opt === 'B' ? 'Export day' : 'Export…'}</span></span>`;
+  const pc7 = (opt) => `<div><div class="cap">Admin · PC</div><div class="dev dev-pc" style="width:860px"><div class="app">
+    <nav class="rail"><a><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a><a class="on"><i class="ti ti-report-money"></i></a></nav>
+    <div class="app-col" style="position:relative"><div class="topbar"><span class="grow"></span><div class="loc"><span><i class="ti ti-map-pin"></i>Worcester</span><span class="on">Shrewsbury</span><span>Both</span></div><span class="avatar">JB</span></div>
+    <div class="content"><h1 class="ptitle">Finance</h1><div class="tabs"><span class="on">Daily report</span></div>
+    <div class="dayrow"><span class="ibtn"><i class="ti ti-chevron-left"></i></span><span class="day">Saturday, October 24, 2026</span><span class="ibtn"><i class="ti ti-chevron-right"></i></span><span class="ibtn"><i class="ti ti-calendar"></i></span><span class="btn"><i class="ti ti-history"></i>History</span><span class="grow"></span>${actions(opt)}</div>
+    ${cards()}<div class="box" style="display:flex;align-items:center;gap:8px"><i class="ti ti-lock"></i><b style="font-size:14px">Day closed</b><span class="grow"></span><span class="tag warn"><i class="ti ti-alert-triangle"></i>Cash short $20.00</span></div>
+    <div class="hint" style="margin-top:${opt === 'C' ? '160' : '8'}px">Phones: Print and Export sit under a ⋯ menu next to the date.</div></div>${opt === 'C' ? exportDialog : ''}</div></div></div></div>`;
+
+  const Q7 = [
+    ['A', 'Print only', false,
+      `<h3>What it does</h3><ul><li><b>Print</b> makes a one-page paper copy of the day: school, date, totals, the Close the day count and note, the Cash / Check / Card list, who printed it, and a “Counted by” line to sign.</li><li>No files.</li></ul>
+       <h3>Pros</h3><ul><li>Students’ names leave the dashboard only on paper.</li><li>The paper can go in the drawer with the checks.</li></ul>
+       <h3>Cons</h3><ul><li>A bookkeeper types the numbers in by hand.</li></ul>`, paper],
+    ['B', 'Print + export one day as a file', false,
+      `<h3>What it does</h3><ul><li>Print as in A.</li><li><b>Export day</b> (admins) downloads that day’s payments as a CSV file, one row per payment.</li></ul>
+       <h3>Pros</h3><ul><li>One click, one day.</li></ul>
+       <h3>Cons</h3><ul><li>A month takes about 30 downloads. Few people want one day as a file.</li><li>Files with students’ names leave the dashboard (logged).</li></ul>`, file('Shrewsbury-2026-10-24.csv', csvDay)],
+    ['C', 'Print + export any date range as a file', true,
+      `<h3>What it does</h3><ul><li>Print as in A.</li><li><b>Export…</b> (admins) opens a small dialog: From and To dates (default: this month), the school from the top bar, a count and total, then <b>Download CSV</b>. Corrections are marked in a Status column.</li></ul>
+       <h3>Pros</h3><ul><li>A whole month for the bookkeeper in one file.</li><li>Covers one day too (From = To).</li></ul>
+       <h3>Cons</h3><ul><li>Files with students’ names leave the dashboard (admins only, logged).</li><li>One more dialog to build.</li></ul>`, file('Shrewsbury-2026-10-01-to-2026-10-31.csv', csvMonth)],
+  ];
+  document.getElementById('opts').innerHTML = Q7.map(([k, title, rec, ex, out]) => `
+    <section class="${rec ? 'rec' : ''}">
+      <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+      <div class="optrow"><div class="explain">${ex}</div>${pc7(k)}${out}</div>
+    </section>`).join('');
+}
+</script>
+
+<script>
+// ---------- Question 8: Finance's rail icon and place ----------
+// Open the file with #q8. Rail as it will be once the other branches merge:
+// Home, Testing, Schedule, Calendar, Forms, Prospects (Prospects branch v0.137–v0.140), then Finance.
+if (location.hash === '#q8') {
+  document.getElementById('qtitle').innerHTML = 'Finance → Daily report · Question 8 of 9';
+  document.getElementById('qlead').innerHTML = '<b>Which icon should Finance have?</b> Placed <b>last on the rail</b>, after the sections other branches are adding (Schedule, Calendar, Forms, Prospects). On phones the bottom bar is already full (Home, Calendar, Prospects, More), so Finance goes under <b>More</b> (v0.140 rule). Amber marks Finance. The big icons on the right compare it with its nearest neighbor, Forms.';
+
+  // Icons used by name below (so the icon inliner finds them): ti-clock ti-calendar-month ti-clipboard-text ti-address-book ti-coins ti-cash-banknote ti-menu-2
+  const SECT = [['home', 'Home'], ['certificate', 'Testing'], ['clock', 'Schedule'], ['calendar-month', 'Calendar'], ['clipboard-text', 'Forms'], ['address-book', 'Prospects']];
+  const railPC = (ic) => `<div><div class="cap">PC rail (hover label)</div><div class="dev" style="width:200px;border-radius:10px;padding:10px 0;position:relative">
+    <div style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding-left:8px">
+    ${SECT.map(([i]) => `<a class="rail" style="border:none;padding:0;width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:var(--text2)"><i class="ti ti-${i}" style="font-size:18px"></i></a>`).join('')}
+    <div style="display:flex;align-items:center;gap:8px"><span class="q" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--blue-tint);color:var(--blue);border-radius:8px"><i class="ti ti-${ic}" style="font-size:18px"></i></span><span style="background:#1F1F1F;color:#fff;font-size:13px;padding:3px 8px;border-radius:6px">Finance</span></div></div></div></div>`;
+  const railTab = (ic) => `<div><div class="cap">Tablet rail (labels shown)</div><div class="dev" style="width:96px;border-radius:10px;padding:8px 0;display:flex;flex-direction:column;align-items:center">
+    ${SECT.map(([i, l]) => `<div style="display:flex;flex-direction:column;align-items:center;width:64px;min-height:54px;justify-content:center;font-size:12px;color:var(--text2)"><i class="ti ti-${i}" style="font-size:20px"></i>${l}</div>`).join('')}
+    <div class="q" style="display:flex;flex-direction:column;align-items:center;width:64px;min-height:54px;justify-content:center;font-size:12px;color:var(--blue)"><i class="ti ti-${ic}" style="font-size:20px;background:var(--blue-tint);border-radius:8px;padding:4px 10px;box-sizing:content-box"></i>Finance</div></div></div>`;
+  const phone = (ic) => `<div><div class="cap">Phone: More opened</div><div class="dev dev-ph ph" style="height:420px;display:flex;flex-direction:column">
+    <div style="flex:1;background:rgba(0,0,0,.25);display:flex;flex-direction:column;justify-content:flex-end">
+    <div style="background:#fff;border-radius:12px 12px 0 0;padding:8px 12px">
+      <div class="hint" style="padding:4px 0">More</div>
+      ${[['certificate', 'Testing'], ['clock', 'Schedule'], ['clipboard-text', 'Forms']].map(([i, l]) => `<div style="display:flex;align-items:center;gap:12px;min-height:44px;font-size:14px;border-top:1px solid var(--border)"><i class="ti ti-${i}" style="font-size:20px;color:var(--text2)"></i>${l}</div>`).join('')}
+      <div class="q" style="display:flex;align-items:center;gap:12px;min-height:44px;font-size:14px"><i class="ti ti-${ic}" style="font-size:20px;color:var(--blue)"></i>Finance</div>
+    </div></div>
+    <div class="phbar"><a><i class="ti ti-home"></i>Home</a><a><i class="ti ti-calendar-month"></i>Calendar</a><a><i class="ti ti-address-book"></i>Prospects</a><a class="on"><i class="ti ti-menu-2"></i>More</a></div></div></div>`;
+  const big = (ic) => `<div><div class="cap">Big, next to Forms</div><div class="dev" style="width:200px;border-radius:10px;padding:16px;display:flex;gap:24px;justify-content:center">
+    <div style="text-align:center;font-size:12px;color:var(--text2)"><i class="ti ti-clipboard-text" style="font-size:48px"></i><br>Forms</div>
+    <div class="q" style="text-align:center;font-size:12px;color:var(--blue);padding:2px"><i class="ti ti-${ic}" style="font-size:48px"></i><br>Finance</div></div></div>`;
+
+  const Q8 = [
+    ['A', 'Money report: ti-report-money', false, 'report-money',
+      `<h3>What it is</h3><ul><li>A clipboard with a dollar sign. The icon used in the earlier pictures.</li></ul>
+       <h3>Pros</h3><ul><li>Says “report about money”, which is what the first tab is.</li></ul>
+       <h3>Cons</h3><ul><li>Almost the same shape as Forms (<code>ti-clipboard-text</code>) at 18px. On the rail they could be mixed up.</li></ul>`],
+    ['B', 'Coins: ti-coins', true, 'coins',
+      `<h3>What it is</h3><ul><li>A small stack of coins.</li></ul>
+       <h3>Pros</h3><ul><li>Clearly “money”, and a shape nothing else on the rail has.</li><li>Fits later Finance tabs too, not only reports.</li></ul>
+       <h3>Cons</h3><ul><li>Less specific than “report”. The label says Finance on touch screens and on hover.</li></ul>`],
+    ['C', 'Bank note: ti-cash-banknote', false, 'cash-banknote',
+      `<h3>What it is</h3><ul><li>A single bill.</li></ul>
+       <h3>Pros</h3><ul><li>Clearly “money”, distinct shape.</li></ul>
+       <h3>Cons</h3><ul><li>Close to the Cash icon (<code>ti-cash</code>, two bills) used on the report’s Cash total, so one meaning would have two near-identical icons.</li></ul>`],
+  ];
+  document.getElementById('opts').innerHTML = Q8.map(([k, title, rec, ic, ex]) => `
+    <section class="${rec ? 'rec' : ''}">
+      <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+      <div class="optrow"><div class="explain">${ex}</div>${railPC(ic)}${railTab(ic)}${phone(ic)}${big(ic)}</div>
+    </section>`).join('');
+}
+</script>
+
+<script>
+// ---------- Question 9: anything on Home ----------
+// Open the file with #q9. Home as it is live today (v0.30): logo, greeting, date, location.
+// Icons used by name: ti-report-money ti-alert-triangle ti-chevron-right
+if (location.hash === '#q9') {
+  document.getElementById('qtitle').innerHTML = 'Finance → Daily report · Question 9 of 9';
+  document.getElementById('qlead').innerHTML = '<b>Should Finance put anything on Home?</b> Home is “today at a glance” (v0.10) and is also seen on the mat-side tablet, where parents can see the screen. Rule 5 keeps billing details off that tablet. Shown at 7:30 PM on Saturday, staff on the Shrewsbury desk. Amber marks what Finance adds.';
+
+  const homeHead = (ph) => `<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px"><span style="width:${ph ? 40 : 48}px;height:${ph ? 40 : 48}px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text2)">logo</span><div><div class="ptitle">Good evening</div><div class="hint" style="font-size:13px">Saturday, October 24, 2026 · Shrewsbury</div></div></div>`;
+  const empty = '<p class="hint" style="font-size:13px">Nothing on Home yet. Items appear here as sections are added.</p>';
+  const nothing = `${empty}<div class="q" style="padding:10px;margin-top:8px"><span class="qlabel">Nothing from Finance</span><div class="hint" style="font-size:13px">Home stays as it is. Staff open Finance from the rail when they close the drawer.</div></div>`;
+  const moneyCard = (ph) => `<div class="q" style="padding:4px;${ph ? '' : 'max-width:420px'}"><div class="box" style="margin:0;display:flex;align-items:center;gap:12px"><i class="ti ti-report-money" style="font-size:20px;color:var(--text2)"></i><div class="grow"><div style="font-size:13px;color:var(--text2)">Today’s payments</div><div style="font-size:20px;font-weight:500">$665.00 <span class="hint">8 payments</span></div></div><span class="tag neutral">Not closed yet</span><i class="ti ti-chevron-right" style="color:var(--text2)"></i></div></div>`;
+  const reminder = (ph) => `<div class="q" style="padding:4px;${ph ? '' : 'max-width:520px'}"><div style="background:var(--warn-tint);color:var(--warn);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:8px;font-size:13px"><i class="ti ti-alert-triangle" style="font-size:16px"></i><span class="grow">Today’s drawer isn’t closed yet.</span><span style="text-decoration:underline;white-space:nowrap">Close the day</span><i class="ti ti-chevron-right"></i></div></div><div class="hint" style="margin-top:8px">No amounts. Shows from 6:00 PM on days the school took payments, until the day is closed. Admins also see “2 earlier days not closed”.</div>`;
+
+  const pc9 = (body) => `<div><div class="cap">Staff · PC (1000 wide shown)</div><div class="dev dev-pc"><div class="app" style="min-height:330px">
+    <nav class="rail"><a class="on"><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a><a><i class="ti ti-report-money"></i></a></nav>
+    <div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc"><span><i class="ti ti-map-pin"></i>Worcester</span><span class="on">Shrewsbury</span><span>Both</span></div><span class="avatar">S</span></div><div class="content">${homeHead(false)}${body}</div></div></div></div></div>`;
+  const ph9 = (body) => `<div><div class="cap">Staff · Phone (390 wide)</div><div class="dev dev-ph ph" style="min-height:430px;display:flex;flex-direction:column">
+    <div class="topbar"><div class="loc"><span>Worc.</span><span class="on">Shrew.</span><span>Both</span></div><span class="grow"></span><span class="avatar">S</span></div><div class="content" style="flex:1">${homeHead(true)}${body}</div>
+    <div class="phbar"><a class="on"><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a><a><i class="ti ti-report-money"></i>Finance</a></div></div></div>`;
+
+  const Q9 = [
+    ['A', 'Nothing on Home', false,
+      `<h3>What it does</h3><ul><li>Finance adds nothing to Home. Staff go to Finance from the rail.</li></ul>
+       <h3>Pros</h3><ul><li>No money on a screen parents might see.</li><li>Nothing to build.</li></ul>
+       <h3>Cons</h3><ul><li>Nothing reminds staff to close the drawer.</li></ul>`, nothing, nothing],
+    ['B', 'Today’s total on Home', false,
+      `<h3>What it does</h3><ul><li>A card: “Today’s payments $665.00 · 8 payments” and Closed / Not closed yet. Clicking opens Finance.</li></ul>
+       <h3>Pros</h3><ul><li>The day’s money at a glance.</li></ul>
+       <h3>Cons</h3><ul><li><b>Breaks rule 5:</b> the mat-side tablet shows Home, so parents could see the school’s takings. It would need a way to hide it on that tablet.</li></ul>`, moneyCard(false), moneyCard(true)],
+    ['C', 'A reminder to close the day, no amounts', true,
+      `<h3>What it does</h3><ul><li>From 6:00 PM, on a day with payments that isn’t closed yet, Home shows an amber line: “Today’s drawer isn’t closed yet. Close the day ›”.</li><li>It goes away once the day is closed. Admins also see how many earlier days weren’t closed.</li></ul>
+       <h3>Pros</h3><ul><li>Gets Close the day done (your Q1 choice only helps if someone does it).</li><li>No dollar amounts, so it is fine on the mat-side tablet.</li></ul>
+       <h3>Cons</h3><ul><li>The 6:00 PM time is a guess. Closing time differs by day (to confirm, or make it a setting later).</li></ul>`, reminder(false), reminder(true)],
+  ];
+  document.getElementById('opts').innerHTML = Q9.map(([k, title, rec, ex, pcBody, phBody]) => `
+    <section class="${rec ? 'rec' : ''}">
+      <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+      <div class="optrow"><div class="explain">${ex}</div>${pc9(pcBody)}${ph9(phBody)}</div>
+    </section>`).join('');
+}
+</script>
+
+<script>
+// ---------- Question 10: the close-the-day reminder setting ----------
+// Open the file with #q10. Admin view: Finance gets a second tab, Settings (admins only).
+// Icons used by name: ti-settings ti-clock
+if (location.hash === '#q10') {
+  document.getElementById('qtitle').innerHTML = 'Finance → Settings · Question 10 of 10';
+  document.getElementById('qlead').innerHTML = '<b>How should the close-the-day reminder time be set?</b> You asked for a setting in Finance. It is drawn as a second tab, <b>Settings</b>, that <b>only admins see</b> (staff keep just Daily report). Each school has its own times. Amber marks what differs.';
+
+  const sw = (on) => `<span style="display:inline-flex;align-items:center;gap:8px;font-size:13px"><span style="width:36px;height:20px;border-radius:10px;background:${on ? 'var(--blue)' : 'var(--border-strong)'};position:relative;display:inline-block"><span style="position:absolute;top:2px;${on ? 'right:2px' : 'left:2px'};width:16px;height:16px;border-radius:50%;background:#fff"></span></span>${on ? 'On' : 'Off'}</span>`;
+  const t = (v) => `<span class="input" style="width:96px">${v}</span>`;
+  const head = `<h4 style="font-size:14px;font-weight:500;margin:0 0 4px">Close-the-day reminder</h4><div class="hint" style="margin-bottom:12px">Home shows “Today’s drawer isn’t closed yet” from this time, on days with payments, until the day is closed.</div><div class="crow" style="margin-bottom:8px"><span class="k">Reminder</span>${sw(true)}</div>`;
+
+  const optA = (ph) => `${head}<div class="q" style="padding:6px"><div class="crow"><span class="k">Shrewsbury</span>${t('7:30 PM')}</div><div class="crow"><span class="k">Worcester</span>${t('8:00 PM')}</div></div><div class="hint" style="margin-top:8px">Same time every day. Saved as you change it, with Undo.</div>`;
+  const DAYS = [['Monday', '7:30 PM', '8:00 PM'], ['Tuesday', '7:30 PM', '8:00 PM'], ['Wednesday', '7:30 PM', '8:00 PM'], ['Thursday', '7:30 PM', '8:00 PM'], ['Friday', '7:00 PM', '7:30 PM'], ['Saturday', '1:00 PM', '1:30 PM'], ['Sunday', 'Off', 'Off']];
+  const optB = (ph) => `${head}<div class="q" style="padding:6px">${ph
+      ? `<div class="hint" style="margin-bottom:4px">Shrewsbury</div>${DAYS.map(d => `<div class="crow" style="padding:2px 0"><span style="width:110px">${d[0]}</span>${t(d[1])}</div>`).join('')}<div class="hint" style="margin-top:6px">Worcester below ›</div>`
+      : `<table style="max-width:520px"><thead><tr><th>Day</th><th>Shrewsbury</th><th>Worcester</th></tr></thead><tbody>${DAYS.map(d => `<tr><td>${d[0]}</td><td>${t(d[1])}</td><td>${t(d[2])}</td></tr>`).join('')}</tbody></table>`}
+    </div><div class="hint" style="margin-top:8px">Pick a time or Off for each day. “Copy Monday to every weekday” fills Mon–Fri.</div>`;
+  const optC = (ph) => `${head}<div class="q" style="padding:6px"><div class="crow"><span class="k">Remind</span>${t('30')}<span>minutes after the last class of the day ends</span></div><div class="crow"><span class="k">No classes that day</span>${t('6:00 PM')}</div>
+    <div class="box" style="margin:8px 0 0;font-size:13px"><b>Today, Saturday</b><br>Shrewsbury: last class ends 12:30 PM → reminder at 1:00 PM<br>Worcester: last class ends 1:00 PM → reminder at 1:30 PM</div></div><div class="hint" style="margin-top:8px">Uses the Schedule section (being built on another branch).</div>`;
+
+  const pc10 = (body) => `<div><div class="cap">Admin · PC (1000 wide shown)</div><div class="dev dev-pc"><div class="app" style="min-height:520px">
+    <nav class="rail"><a><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a><a class="on"><i class="ti ti-report-money"></i></a></nav>
+    <div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc"><span><i class="ti ti-map-pin"></i>Worcester</span><span class="on">Shrewsbury</span><span>Both</span></div><span class="avatar">JB</span></div>
+    <div class="content"><h1 class="ptitle">Finance</h1><div class="tabs"><span>Daily report</span><span class="on">Settings</span></div>${body}</div></div></div></div></div>`;
+  const ph10 = (body) => `<div><div class="cap">Admin · Phone (390 wide)</div><div class="dev dev-ph ph">
+    <div class="topbar"><div class="loc"><span>Worc.</span><span class="on">Shrew.</span><span>Both</span></div><span class="grow"></span><span class="avatar">JB</span></div>
+    <div class="content"><h1 class="ptitle">Finance</h1><div class="tabs"><span>Daily report</span><span class="on">Settings</span></div>${body}</div>
+    <div class="phbar"><a><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a><a class="on"><i class="ti ti-report-money"></i>Finance</a></div></div></div>`;
+
+  const Q10 = [
+    ['A', 'One time per school', false,
+      `<h3>What it does</h3><ul><li>One reminder time for each school, the same every day, plus an On / Off switch.</li></ul>
+       <h3>Pros</h3><ul><li>Simplest to set and understand.</li></ul>
+       <h3>Cons</h3><ul><li>Saturday closes early, so the reminder would come hours late that day (or too early on weekdays).</li></ul>`, optA(false), optA(true)],
+    ['B', 'A time for each day of the week, per school', true,
+      `<h3>What it does</h3><ul><li>A small table: Monday to Sunday, a time or Off for each school.</li><li>A shortcut copies Monday to every weekday.</li></ul>
+       <h3>Pros</h3><ul><li>Matches real closing times (e.g. Saturday 1:00 PM, Sunday off).</li><li>Works now, with no other section needed.</li></ul>
+       <h3>Cons</h3><ul><li>14 times to set once. Holidays and special days still use the normal time.</li></ul>`, optB(false), optB(true)],
+    ['C', 'Automatic: after the last class ends', false,
+      `<h3>What it does</h3><ul><li>The reminder starts a set number of minutes after the school’s last class that day, read from the Schedule section, with a fallback time for days with no classes.</li></ul>
+       <h3>Pros</h3><ul><li>Nothing to update when the class schedule changes.</li></ul>
+       <h3>Cons</h3><ul><li>Depends on Schedule (another branch, not merged yet) being built and kept accurate.</li><li>Harder to predict: “why did it show at 1:00?”.</li></ul>`, optC(false), optC(true)],
+  ];
+  document.getElementById('opts').innerHTML = Q10.map(([k, title, rec, ex, pcBody, phBody]) => `
+    <section class="${rec ? 'rec' : ''}">
+      <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+      <div class="optrow"><div class="explain">${ex}</div>${pc10(pcBody)}${ph10(phBody)}</div>
+    </section>`).join('');
+}
+</script>
+
+<script>
+// ---------- Question 11: rule 5 and the mat-side tablet ----------
+// Open the file with #q11. Raised by the design review: rule 5 says list views and the
+// mat-side tablet never show billing details, but the Daily report lists students' names
+// with amounts for every staff login (v0.806).
+// Icons used by name: ti-device-tablet ti-user ti-lock ti-logout ti-square-check
+if (location.hash === '#q11') {
+  document.getElementById('qtitle').innerHTML = 'Finance · Question 11: money on the mat-side tablet (rule 5)';
+  document.getElementById('qlead').innerHTML = '<b>Rule 5 says list views and the mat-side tablet never show billing details.</b> The Daily report lists students’ names (mostly minors) with what they paid, and any staff login can open it (v0.806), including on the tablet by the mat that parents can see. The Testing rosters already show payments too (v0.108, “how the mat-side tablet hides it still to confirm”). The rulebook needs one clear answer. Shown: the mat-side tablet (820 wide), Shrewsbury.';
+
+  const tabShell = (rail, body, extra = '') => `<div class="dev" style="width:620px;border-radius:18px;border:6px solid #2B2B2B;position:relative;overflow:hidden"><div class="app" style="min-height:560px">
+    <nav style="width:72px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;flex:none">${rail.map(([i, l, on, q]) => `<a class="${q ? 'q' : ''}" style="display:flex;flex-direction:column;align-items:center;width:64px;min-height:56px;justify-content:center;font-size:12px;color:${on ? 'var(--blue)' : 'var(--text2)'}"><i class="ti ti-${i}" style="font-size:20px"></i>${l}</a>`).join('')}</nav>
+    <div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" style="height:36px"><span>Worcester</span><span class="on">Shrewsbury</span><span>Both</span></div><span class="avatar">S</span></div><div class="content">${body}</div></div></div>${extra}</div>`;
+  const reportBody = `<h1 class="ptitle">Finance</h1><div class="tabs"><span class="on">Daily report</span></div><div class="dayrow"><span class="day">Today · Saturday, October 24</span></div>
+    <div class="q" style="padding:4px"><table><thead><tr><th>Time</th><th>Student</th><th class="r">Amount</th></tr></thead><tbody><tr><td colspan="3" style="font-weight:500;font-size:12px">Cash · 4 payments · $320.00</td></tr>${PAY.filter(p => p[4] === 'Cash').map(p => `<tr><td class="sub">${p[0]}</td><td>${p[1]}<div class="sub" style="font-size:12px">${p[2]} · ${p[3]}</div></td><td class="r">${$(p[5])}</td></tr>`).join('')}</tbody></table></div>`;
+  const homeBody = `<div style="font-size:20px;font-weight:500">Good evening</div><div class="hint" style="font-size:13px;margin-bottom:16px">Saturday, October 24, 2026 · Shrewsbury</div><p class="hint" style="font-size:13px">Nothing on Home yet. Items appear here as sections are added.</p>`;
+  const menu = `<div class="q" style="position:absolute;right:16px;top:58px;width:300px;background:#fff;border:1px solid var(--border-strong);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.1);padding:8px 0;font-size:14px;z-index:3">
+    <div style="padding:6px 16px"><b>Staff</b><div class="hint">shrewsburyustc@gmail.com</div></div>
+    <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:10px"><i class="ti ti-map-pin"></i>This device: Shrewsbury</div>
+    <div style="padding:10px 16px;display:flex;gap:10px;align-items:flex-start"><i class="ti ti-square-check" style="color:var(--blue)"></i><div>Mat-side device<div class="hint">Hides Finance and payment details on this device, for everyone who signs in here.</div></div></div>
+    <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:10px"><i class="ti ti-lock"></i>Lock now</div></div>`;
+  const RAIL = (fin) => [['home', 'Home', !fin], ['certificate', 'Testing', false]].concat(fin ? [['report-money', 'Finance', true, true]] : []);
+
+  const Q11 = [
+    ['A', 'Allow it: write a rule-5 exception', false,
+      `<h3>What it does</h3><ul><li>Rule 5 gets one explicit exception: <b>Finance and the Testing rosters may list students’ names with payments</b> on any staff login, on any device.</li><li>Nothing hides Finance on the mat-side tablet. Staff are trusted not to open it there.</li></ul>
+       <h3>Pros</h3><ul><li>Nothing more to build.</li></ul>
+       <h3>Cons</h3><ul><li>A parent by the mat could see other families’ names and amounts if someone opens Finance on that tablet.</li></ul>`,
+      tabShell(RAIL(true), reportBody)],
+    ['B', 'Exception + a “Mat-side device” switch that hides it', true,
+      `<h3>What it does</h3><ul><li>Same rule-5 exception for staff devices (desk PC, office).</li><li>The account menu gets <b>Mat-side device</b> under “This device” (stored per device, like the location, rule 3.3). When it’s on, that device <b>hides the Finance icon</b>, the Home reminder’s link, and payment columns / tiles on the Testing rosters, for whoever signs in there.</li><li>Also settles the open Testing item from v0.108.</li></ul>
+       <h3>Pros</h3><ul><li>Parents by the mat never see money, without staff having to remember.</li></ul>
+       <h3>Cons</h3><ul><li>It’s a screen guard, not a lock: someone could switch it off. (The database still allows the login; rule 5 is about what’s shown.)</li><li>A bit more to build, and it touches the Testing screens.</li></ul>`,
+      tabShell(RAIL(false), homeBody, menu)],
+  ];
+  document.getElementById('opts').innerHTML = Q11.map(([k, title, rec, ex, tab]) => `
+    <section class="${rec ? 'rec' : ''}">
+      <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+      <div class="optrow"><div class="explain">${ex}</div><div><div class="cap">Mat-side tablet · 820 wide (shown narrower), staff signed in</div>${tab}</div></div>
+    </section>`).join('');
+}
+</script>
+
+<script>
+// ---------- Question 12: Star refunds on the Daily report (build plan §6 Q1) ----------
+// Open the file with #q12. Star testing (0006, live) records refunds: money handed back in cash
+// or by check, on their own date (v0.166). The approved screens D1–D14 don't show them.
+// Icons used by name: ti-arrow-back-up
+if (location.hash === '#q12') {
+  document.getElementById('qtitle').innerHTML = 'Finance → Daily report · Question 12: refunds';
+  document.getElementById('qlead').innerHTML = '<b>How should refunds show, and what should Close the day expect?</b> Star testing can record a <b>refund</b>: money handed back to a family, in cash (out of the drawer) or by a check the school writes (v0.166). Same Saturday as before, plus two Star refunds: <b>Liam Walsh $20.00 cash</b> (overpaid) and <b>Ava Rossi $10.00 by check</b>. A cash refund lowers what should be in the drawer; a check refund doesn’t (the school’s check never enters the drawer). Amber marks what differs.';
+
+  const REF = [['12:20 PM', 'Liam Walsh', 'Star testing', 'Nov 14', 'Cash', -20, 'Jeffrey'], ['12:45 PM', 'Ava Rossi', 'Star testing', 'Nov 14', 'Check', -10, 'Jeffrey']];
+  const tr = (p, refund) => `<tr class="${refund ? 'q' : ''}"><td class="sub">${p[0]}</td><td>${p[1]}${refund ? ' <span class="tag neutral">Refund</span>' : ''}</td><td>${p[2]} <span class="sub">· ${p[3]}</span></td><td class="r">${p[5] < 0 ? '−' + $(-p[5]) : $(p[5])}</td><td class="sub">${p[6]}</td></tr>`;
+  const gh = (l, x) => `<tr><td colspan="5" style="background:var(--surface);font-weight:500;font-size:12px;height:30px">${l} <span class="sub" style="font-weight:400">${x}</span></td></tr>`;
+  const head = `<table><thead><tr><th>Time</th><th>Student</th><th>For</th><th class="r">Amount</th><th>Recorded by</th></tr></thead><tbody>`;
+  const cardsQ = (cash, check, total, totalSub, q) => `<div class="cards"><div class="card ${q ? 'q' : ''}"><div class="l"><i class="ti ti-sum"></i>Total</div><div class="n">${total}</div><div class="s">${totalSub}</div></div><div class="card"><div class="l"><i class="ti ti-cash"></i>Cash</div><div class="n">${cash}</div></div><div class="card"><div class="l"><i class="ti ti-receipt"></i>Check</div><div class="n">${check}</div></div><div class="card"><div class="l"><i class="ti ti-credit-card"></i>Card</div><div class="n">$135.00</div></div></div>`;
+  const closeQ = (cashExp, chkExp, q) => `<div class="box ${q ? 'q' : ''}" style="margin-bottom:16px"><h4><i class="ti ti-cash-register"></i>Close the day</h4>
+    <div class="crow"><span class="k">Cash counted<div class="hint">${cashExp}</div></span><span class="input">$300.00</span><span class="tag ok">Matches</span></div>
+    <div class="crow"><span class="k">Checks in the drawer<div class="hint">${chkExp}</div></span><span class="input">2 · $210.00</span><span class="tag ok">Matches</span></div></div>`;
+
+  // A: refunds inside their method's group; Cash and Check cards net.
+  const listA = head + gh('Cash', '· 4 payments, 1 refund · $300.00') + PAY.filter(p => p[4] === 'Cash').slice(0, 2).map(p => tr(p)).join('') + tr(REF[0], true)
+    + gh('Check', '· 2 payments, 1 refund · $200.00') + PAY.filter(p => p[4] === 'Check').map(p => tr(p)).join('') + tr(REF[1], true) + '</tbody></table><div class="more">… 2 more cash, then Card</div>';
+  // B: refunds as their own group at the end; method cards stay "money in".
+  const listB = head + gh('Cash', '· 4 payments · $320.00') + PAY.filter(p => p[4] === 'Cash').slice(0, 2).map(p => tr(p)).join('') + '<tr><td colspan="5" class="sub" style="text-align:center;font-size:12px">… 2 more cash, then Check and Card</td></tr>'
+    + `<tr class="q"><td colspan="5" style="background:var(--surface);font-weight:500;font-size:12px;height:30px">Refunds <span class="sub" style="font-weight:400">· 2 · −$30.00 (cash −$20.00, check −$10.00)</span></td></tr>` + REF.map(p => tr([p[0], p[1], p[2], p[3] + ' · ' + p[4].toLowerCase(), p[4], p[5], p[6]])).join('') + '</tbody></table>';
+
+  const shellQ = (body) => `<div><div class="cap">Admin · PC (1000 wide shown)</div><div class="dev dev-pc"><div class="app">
+    <nav class="rail"><a><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a><a class="on"><i class="ti ti-report-money"></i></a></nav>
+    <div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc"><span><i class="ti ti-map-pin"></i>Worcester</span><span class="on">Shrewsbury</span><span>Both</span></div><span class="avatar">JB</span></div>
+    <div class="content"><h1 class="ptitle">Finance</h1><div class="tabs"><span class="on">Daily report</span><span>Settings</span></div><div class="dayrow"><span class="day">Today · Saturday, October 24</span></div>${body}</div></div></div></div></div>`;
+  const neg = `<div class="hint" style="margin:-8px 0 16px">If more cash goes out than comes in (a refund-only day), the cash line asks <b>“Cash taken out of the drawer”</b> instead, so nobody types a minus amount.</div>`;
+
+  const Q12 = [
+    ['A', 'Inside the Cash or Check group, with a Refund tag', false,
+      `<h3>What it does</h3><ul><li>A refund sits in its method’s group with a gray <b>Refund</b> tag and a minus amount. The Cash and Check cards show money in minus money out.</li><li>Close the day expects cash after refunds ($300.00).</li></ul>
+       <h3>Pros</h3><ul><li>No new group; the Cash group adds up to what should be in the drawer.</li></ul>
+       <h3>Cons</h3><ul><li>The Check card ($200.00) no longer matches the checks in the drawer ($210.00): a check refund is the school’s own check, not one in the drawer. Staff would see two different check numbers.</li><li>Refunds are easy to miss inside long groups.</li></ul>`,
+      shellQ(cardsQ('$300.00', '$200.00', '$635.00', '8 payments, 2 refunds', true) + closeQ('Expected $300.00', 'Expected 2 checks, $210.00 (the check refund isn’t in the drawer)', true) + neg + `<div class="q" style="padding:4px">${listA}</div>`)],
+    ['B', 'Own “Refunds” group at the end; cards show money in', true,
+      `<h3>What it does</h3><ul><li>Cash, Check and Card keep showing <b>money in</b>, matching what came into the drawer and the machine.</li><li>Refunds get their own <b>Refunds</b> group at the end (method on each row). The <b>Total</b> card shows the net: “$635.00 · after $30.00 refunds”.</li><li>Close the day’s cash line expects cash in minus cash refunds, and says so: “Expected $300.00 ($320.00 in − $20.00 refunded)”. Checks are unchanged.</li></ul>
+       <h3>Pros</h3><ul><li>Every number on screen matches something real: the drawer, the checks, the machine.</li><li>Refunds stand out, so an admin sees them at a glance.</li></ul>
+       <h3>Cons</h3><ul><li>One more group on days with refunds (rare: Color belt fees aren’t refundable, v0.132).</li></ul>`,
+      shellQ(cardsQ('$320.00', '$210.00', '$635.00', 'after $30.00 refunds', true) + closeQ('Expected $300.00 ($320.00 in − $20.00 refunded)', 'Expected 2 checks, $210.00', true) + neg + `<div class="q" style="padding:4px">${listB}</div>`)],
+  ];
+  document.getElementById('opts').innerHTML = Q12.map(([k, title, rec, ex, pcHtml]) => `
+    <section class="${rec ? 'rec' : ''}">
+      <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+      <div class="optrow"><div class="explain">${ex}</div>${pcHtml}</div>
+    </section>`).join('');
+}
+</script>
+
+<script>
+// ---------- Question 13: where the refunds layout toggle lives ----------
+// Jeffrey (2026-10-18) answered the refund question with "have both toggleable".
+// Both layouts share one Close the day box (same expected numbers); only the list and cards change.
+if (location.hash === '#q13') {
+  document.getElementById('qtitle').innerHTML = 'Finance → Daily report · Question 13: where the refund toggle lives';
+  document.getElementById('qlead').innerHTML = 'You chose <b>both refund layouts, switchable</b>: <b>Own group</b> (refunds in a Refunds group, cards show money in) and <b>In groups</b> (refunds inside Cash / Check, cards show net). Close the day is the same in both. <b>Where should the switch be?</b> Amber marks it.';
+  const seg = (a, q) => `<span class="${q ? 'q' : ''}" style="display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);padding:2px">Refunds<span style="display:inline-flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;height:32px;font-size:12px"><span style="display:flex;align-items:center;padding:0 10px;${a === 'own' ? 'background:var(--surface);color:var(--text);font-weight:500' : 'color:var(--text2)'}">Own group</span><span style="display:flex;align-items:center;padding:0 10px;border-left:1px solid var(--border);${a === 'in' ? 'background:var(--surface);color:var(--text);font-weight:500' : 'color:var(--text2)'}">In groups</span></span></span>`;
+  const shellS = (tab, body) => `<div class="dev dev-pc" style="width:860px"><div class="app"><nav class="rail"><a><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a><a class="on"><i class="ti ti-report-money"></i></a></nav>
+    <div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc"><span><i class="ti ti-map-pin"></i>Worcester</span><span class="on">Shrewsbury</span><span>Both</span></div><span class="avatar">JB</span></div>
+    <div class="content"><h1 class="ptitle">Finance</h1><div class="tabs"><span class="${tab === 'r' ? 'on' : ''}">Daily report</span><span class="${tab === 's' ? 'on' : ''}">Settings</span></div>${body}</div></div></div></div>`;
+  const reportTop = (extra) => `<div class="dayrow"><span class="day">Today · Saturday, October 24</span><span class="grow"></span>${extra}<span class="btn"><i class="ti ti-printer"></i>Print</span></div>
+    <div class="cards"><div class="card"><div class="l"><i class="ti ti-sum"></i>Total</div><div class="n">$635.00</div><div class="s">after $30.00 refunds</div></div><div class="card"><div class="l"><i class="ti ti-cash"></i>Cash</div><div class="n">$320.00</div></div><div class="card"><div class="l"><i class="ti ti-receipt"></i>Check</div><div class="n">$210.00</div></div><div class="card"><div class="l"><i class="ti ti-credit-card"></i>Card</div><div class="n">$135.00</div></div></div><div class="hint">… Close the day, then the payments list in the chosen layout</div>`;
+  const settingsBody = `<h4 style="font-size:16px;font-weight:500;margin:0 0 4px">Close-the-day reminder</h4><div class="hint" style="margin-bottom:16px">(as approved, D9)</div>
+    <div class="q" style="padding:8px"><h4 style="font-size:16px;font-weight:500;margin:0 0 4px">Refunds on the Daily report</h4><div class="hint" style="margin-bottom:8px">How refunds are listed for everyone at both schools. Close the day works the same either way.</div>
+    <div style="font-size:13px;display:grid;gap:8px"><label style="display:flex;gap:8px;align-items:flex-start"><span style="width:16px;height:16px;border-radius:50%;border:5px solid var(--blue);flex:none;margin-top:2px"></span><span><b>Own group</b> — refunds in a Refunds group at the end; Cash, Check and Card show money in.</span></label>
+    <label style="display:flex;gap:8px;align-items:flex-start"><span style="width:16px;height:16px;border-radius:50%;border:1px solid var(--control-border);flex:none;margin-top:2px"></span><span><b>In groups</b> — refunds inside Cash or Check with a Refund tag; the cards show money in minus refunds.</span></label></div></div>`;
+
+  const Q13 = [
+    ['A', 'In Finance → Settings (admins choose for everyone)', true,
+      `<h3>What it does</h3><ul><li>Admins pick one layout in the Settings tab. Everyone sees the Daily report that way, on every device. Saved and logged like the reminder times.</li></ul>
+       <h3>Pros</h3><ul><li>Staff all see the same screen, so instructions and printed pages match.</li><li>No extra control on the report.</li></ul>
+       <h3>Cons</h3><ul><li>Changing it means going to Settings.</li></ul>`,
+      `<div><div class="cap">Admin · Settings tab</div>${shellS('s', settingsBody)}</div>`],
+    ['B', 'A switch on the Daily report (each device remembers)', false,
+      `<h3>What it does</h3><ul><li>A small <b>Refunds: Own group | In groups</b> switch next to Print. Anyone can flip it; the device remembers the choice.</li></ul>
+       <h3>Pros</h3><ul><li>Flip it while looking at the day.</li></ul>
+       <h3>Cons</h3><ul><li>Two people can see different screens for the same day (“my Check total is $200, yours is $210”).</li><li>One more control on a busy row; on phones it goes under ⋯.</li></ul>`,
+      `<div><div class="cap">Daily report · PC</div>${shellS('r', reportTop(seg('own', true)))}</div>`],
+  ];
+  document.getElementById('opts').innerHTML = Q13.map(([k, title, rec, ex, html]) => `
+    <section class="${rec ? 'rec' : ''}">
+      <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+      <div class="optrow"><div class="explain">${ex}</div>${html}</div>
+    </section>`).join('');
+}
+</script>
+
+<script>
+// ---------- Question 14: a "hide payments" toggle instead of a fixed Mat-side device ----------
+// Jeffrey (2026-10-18): don't block payments on the tablets (they're used during testing);
+// instead a mode staff turn on when students / parents are around and off when they need to see money.
+// Icons used by name: ti-currency-dollar ti-currency-dollar-off ti-lock ti-logout
+if (location.hash === '#q14') {
+  document.getElementById('qtitle').innerHTML = 'Finance · Question 14: the “hide payments” switch';
+  document.getElementById('qlead').innerHTML = 'You want payments <b>visible on the tablets</b> (they’re used during testing), with a switch to <b>hide them</b> while students or parents are around. When hidden: the Finance item, the Home reminder link, and the payment column / tiles / Mark paid on the Testing rosters disappear on <b>that device</b>, and a gray <b>Payments hidden</b> chip shows in the top bar. <b>Where should the switch be, and should it hide again by itself?</b> Shown: a tablet on a Color belt testing roster.';
+
+  const ROSTER = [['Mia Chen', 'Yellow → Orange', 'Paid $65.00 · cash'], ['Lucas Patel', 'Orange → Green', 'Paid $70.00 · check'], ['Noah Kim', 'Green → High Green', 'Not paid']];
+  const roster = (hidden) => `<div style="font-size:16px;font-weight:500;margin-bottom:8px">Group A · 5:00 – 6:00 PM</div><table><thead><tr><th>Student</th><th>Testing for</th>${hidden ? '' : '<th>Payment</th>'}</tr></thead><tbody>${ROSTER.map(r => `<tr><td>${r[0]}</td><td class="sub">${r[1]}</td>${hidden ? '' : `<td>${r[2].startsWith('Not') ? '<span class="tag warn"><i class="ti ti-alert-triangle"></i>Not paid</span>' : `<span class="tag ok">${r[2]}</span>`}</td>`}</tr>`).join('')}</tbody></table>`;
+  const btn = (hidden, q) => `<span class="${q ? 'q' : ''}" style="display:inline-flex;padding:2px"><span class="btn" style="height:36px"><i class="ti ti-currency-dollar${hidden ? '-off' : ''}"></i>${hidden ? 'Payments hidden' : 'Payments shown'}</span></span>`;
+  const chip = `<span class="tag neutral" style="height:28px;padding:0 10px"><i class="ti ti-currency-dollar-off"></i>Payments hidden</span>`;
+  const tab = (top, body, extra = '', rail = true) => `<div class="dev" style="width:560px;border-radius:18px;border:6px solid #2B2B2B;position:relative;overflow:hidden"><div class="app" style="min-height:340px">
+    <nav style="width:72px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;flex:none">${[['home', 'Home'], ['certificate', 'Testing', 1]].concat(rail ? [['report-money', 'Finance']] : []).map(([i, l, on]) => `<a style="display:flex;flex-direction:column;align-items:center;width:64px;min-height:56px;justify-content:center;font-size:12px;color:${on ? 'var(--blue)' : 'var(--text2)'}"><i class="ti ti-${i}" style="font-size:20px"></i>${l}</a>`).join('')}</nav>
+    <div class="app-col"><div class="topbar">${top}<span class="grow"></span><div class="loc" style="height:36px"><span class="on">Shrew.</span><span>Both</span></div><span class="avatar">S</span></div><div class="content">${body}</div></div></div>${extra}</div>`;
+  const menu = `<div class="q" style="position:absolute;right:12px;top:56px;width:290px;background:#fff;border:1px solid var(--border-strong);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.1);padding:8px 0;font-size:14px;z-index:3">
+    <div style="padding:6px 16px"><b>Staff</b><div class="hint">shrewsburyustc@gmail.com</div></div>
+    <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:10px"><i class="ti ti-map-pin"></i>This device: Shrewsbury</div>
+    <div style="padding:10px 16px;display:flex;gap:10px;align-items:center"><i class="ti ti-currency-dollar-off"></i><span class="grow">Hide payments</span><span class="sw"><span class="t" style="background:var(--border-strong)"></span></span></div>
+    <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:10px"><i class="ti ti-lock"></i>Lock now</div></div>`;
+  const pair = (a, b) => `<div style="display:flex;gap:16px;flex-wrap:wrap"><div><div class="cap">Payments shown</div>${a}</div><div><div class="cap">Payments hidden (tap the chip or switch to show again)</div>${b}</div></div>`;
+
+  const Q14 = [
+    ['A', 'In the account menu: “Hide payments”', false,
+      `<h3>What it does</h3><ul><li>A <b>Hide payments</b> switch in the account menu (under This device). Anyone signed in can flip it. The device remembers it until someone flips it back.</li><li>While on, the gray chip shows in the top bar; tapping the chip turns it off.</li></ul>
+       <h3>Pros</h3><ul><li>Out of the way; nothing new on every screen.</li></ul>
+       <h3>Cons</h3><ul><li>Two taps to hide; easy to forget it exists when a parent walks up.</li><li>Easy to forget to turn it back on after testing.</li></ul>`,
+      pair(tab('', roster(false), menu), tab(chip, roster(true), '', false))],
+    ['B', 'A one-tap button in the top bar', false,
+      `<h3>What it does</h3><ul><li>A <b>Payments shown / Payments hidden</b> button in the top bar on every screen. One tap hides, one tap shows. The device remembers it.</li></ul>
+       <h3>Pros</h3><ul><li>Fastest: one tap when a parent walks up.</li></ul>
+       <h3>Cons</h3><ul><li>One more control in the top bar on every device, including the desk PC (rule 2.1 “save space”).</li><li>Still easy to forget to hide it again after testing.</li></ul>`,
+      pair(tab(btn(false, true), roster(false)), tab(btn(true, true), roster(true), '', false))],
+    ['C', 'One-tap button + hides again when the screen locks', true,
+      `<h3>What it does</h3><ul><li>Same one-tap button as B.</li><li>On a device where payments were ever hidden, they <b>hide again automatically</b> when the screen locks, signs out or is reloaded the next day. Showing them is always a deliberate tap; hiding never depends on someone remembering.</li><li>Devices that never hide (the desk PC) are not affected.</li></ul>
+       <h3>Pros</h3><ul><li>Can’t be left showing by accident after testing.</li><li>Still one tap to see payments during testing.</li></ul>
+       <h3>Cons</h3><ul><li>Staff may have to tap “show” again after a lock during a long testing day.</li><li>Same top-bar space as B.</li></ul>`,
+      pair(tab(btn(false, true), roster(false)), tab(btn(true, true), roster(true), '<div class="hint" style="position:absolute;left:90px;bottom:10px;right:10px">Locked or new day → back to hidden on this tablet.</div>', false))],
+  ];
+  document.getElementById('opts').innerHTML = Q14.map(([k, title, rec, ex, html]) => `
+    <section class="${rec ? 'rec' : ''}">
+      <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+      <div class="optrow"><div class="explain">${ex}</div>${html}</div>
+    </section>`).join('');
+}
+</script>
+
+<script>
+// ---------- Question 15: keep Close the day out of the way until closing ----------
+// Jeffrey (2026-10-19): staff check the report all day; Close the day is only needed at the end.
+if (location.hash === '#q15') {
+  document.getElementById('qtitle').innerHTML = 'Finance → Daily report · Question 15: where Close the day lives';
+  document.getElementById('qlead').innerHTML = 'During the day staff check the report often; <b>Close the day</b> is only needed at closing. Three ways to keep it out of the way. Shown: staff, Shrewsbury, 3:00 PM (left) and at closing (right). Amber marks Close the day.';
+  const cardsS = `<div class="cards"><div class="card"><div class="l"><i class="ti ti-sum"></i>Total</div><div class="n">$665.00</div></div><div class="card"><div class="l"><i class="ti ti-cash"></i>Cash</div><div class="n">$320.00</div></div><div class="card"><div class="l"><i class="ti ti-receipt"></i>Check</div><div class="n">$210.00</div></div><div class="card"><div class="l"><i class="ti ti-credit-card"></i>Card</div><div class="n">$135.00</div></div></div>`;
+  const listS = `<table><thead><tr><th>Time</th><th>Student</th><th class="r">Amount</th></tr></thead><tbody><tr><td colspan="3" style="background:var(--surface);font-weight:500;font-size:12px">Cash · 4 payments · $320.00</td></tr>${PAY.filter(p => p[4] === 'Cash').slice(0, 3).map(p => `<tr><td class="sub">${p[0]}</td><td>${p[1]}</td><td class="r">${$(p[5])}</td></tr>`).join('')}</tbody></table><div class="more">… then Check and Card</div>`;
+  const box = `<div class="box q" style="margin-bottom:12px"><h4><i class="ti ti-cash-register"></i>Close the day</h4><div class="crow"><span class="k">Cash counted<div class="hint">Expected $320.00</div></span><span class="input">$300.00</span><span class="tag warn"><i class="ti ti-alert-triangle"></i>Short $20.00</span></div><div class="crow"><span class="k">Checks<div class="hint">Expected 2, $210.00</div></span><span class="input">2 · $210.00</span><span class="tag ok">Matches</span></div><div class="boxfoot"><span class="btn btn-primary"><i class="ti ti-lock-check"></i>Close the day</span></div></div>`;
+  const bar = (txt) => `<div class="box q" style="margin-bottom:12px;padding:10px 12px;display:flex;align-items:center;gap:8px"><i class="ti ti-cash-register"></i><b style="font-size:14px">Close the day</b><span class="tag neutral">Not closed yet</span><span class="grow"></span><span class="hint">${txt}</span><i class="ti ti-chevron-down"></i></div>`;
+  const shell = (tabs, body, extra = '') => `<div class="dev dev-pc" style="width:620px;position:relative"><div class="app" style="min-height:430px"><nav class="rail"><a><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a><a class="on"><i class="ti ti-report-money"></i></a></nav>
+    <div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc"><span class="on">Shrewsbury</span><span>Both</span></div><span class="avatar">S</span></div><div class="content"><h1 class="ptitle">Finance</h1><div class="tabs">${tabs}</div>${body}</div></div></div>${extra}</div>`;
+  const T1 = '<span class="on">Daily report</span>';
+  const day = (btn) => `<div class="dayrow"><span class="day">Today · Saturday, October 24</span><span class="grow"></span>${btn || ''}<span class="btn"><i class="ti ti-printer"></i>Print</span></div>`;
+
+  const Q15 = [
+    ['A', 'Folded bar on the report; opens at closing', true,
+      `<h3>What it does</h3><ul><li>During the day Close the day is <b>one folded line</b> (“Close the day · Not closed yet ›”) between the totals and the list.</li><li>Tap it to open the counting box. It <b>opens by itself after the reminder time</b> (Settings) and stays open once someone starts typing.</li><li>The Cash / Check / Card list stays right under it while counting.</li></ul>
+       <h3>Pros</h3><ul><li>Report stays clean all day; one tap at closing.</li><li>Counting sits next to the list it’s checked against (why you grouped by method, Q3).</li><li>Smallest change to the approved screens.</li></ul>
+       <h3>Cons</h3><ul><li>Still one line on the report during the day.</li></ul>`,
+      `<div style="display:flex;gap:16px;flex-wrap:wrap"><div><div class="cap">3:00 PM — folded</div>${shell(T1, day() + cardsS + bar('Opens at closing') + listS)}</div><div><div class="cap">Closing — open</div>${shell(T1, day() + cardsS + box + listS)}</div></div>`],
+    ['B', 'Its own tab: “Close the day”', false,
+      `<h3>What it does</h3><ul><li>Finance gets a tab <b>Close the day</b> next to Daily report (staff see it; admins also Settings). The report tab has no counting box at all.</li><li>The tab shows the expected figures, the counting box and the Cash / Check lists again (so counting can be checked).</li></ul>
+       <h3>Pros</h3><ul><li>Report tab completely clean.</li><li>Clear place to go at closing.</li></ul>
+       <h3>Cons</h3><ul><li>The lists appear on two tabs (or, without them, counting can’t be traced to a payment).</li><li>One more tab to build and learn; the Day closed summary needs a home on the report too.</li></ul>`,
+      `<div style="display:flex;gap:16px;flex-wrap:wrap"><div><div class="cap">Daily report tab</div>${shell(T1 + '<span>Close the day</span>', day() + cardsS + listS)}</div><div><div class="cap">Close the day tab</div>${shell('<span>Daily report</span><span class="on q">Close the day</span>', day() + box + listS)}</div></div>`],
+    ['C', 'A “Close the day…” button that opens a dialog', false,
+      `<h3>What it does</h3><ul><li>The report has a <b>Close the day…</b> button next to Print. It opens the counting box in a dialog over the report (full screen on phones).</li></ul>
+       <h3>Pros</h3><ul><li>Report clean; nothing on screen until needed.</li></ul>
+       <h3>Cons</h3><ul><li>The dialog covers the list, so a short can’t be traced while counting.</li><li>Typed counts are lost if the dialog is closed by mistake (unless saved as a draft).</li></ul>`,
+      `<div style="display:flex;gap:16px;flex-wrap:wrap"><div><div class="cap">3:00 PM</div>${shell(T1, day('<span class="q" style="display:inline-flex;padding:2px"><span class="btn"><i class="ti ti-cash-register"></i>Close the day…</span></span>') + cardsS + listS)}</div><div><div class="cap">Closing — dialog</div>${shell(T1, day('<span class="btn"><i class="ti ti-cash-register"></i>Close the day…</span>') + cardsS + listS, `<div style="position:absolute;inset:0;background:rgba(0,0,0,.35)"></div><div style="position:absolute;left:60px;right:30px;top:120px;background:#fff;border-radius:12px;padding:12px">${box}</div>`)}</div></div>`],
+  ];
+  document.getElementById('opts').innerHTML = Q15.map(([k, title, rec, ex, html]) => `
+    <section class="${rec ? 'rec' : ''}">
+      <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+      <div class="explain" style="max-width:1280px;margin-bottom:12px">${ex}</div>${html}
+    </section>`).join('');
+}
+</script>
+</body>
+</html>

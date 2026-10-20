@@ -1013,7 +1013,7 @@ Run `Start dashboard.bat`, sign in as the admin.
 
 ### 14e. Undo and re-run warnings (only with Jeffrey's OK)
 
-If migration 0014 exists, remove it first (§15e) — 0010 can only be removed after 0014.
+If migration 0014 exists, remove it first (§16e) — 0010 can only be removed after 0014.
 
 **Re-running 0005 after 0010** puts back the phase 2 versions of the five replaced functions, **without the grading locks** (0005's header says so too). If 0005 is ever re-run, run **0010 again straight after it**. (And if the family-form off switch of 12i is in force, repeat 12i step 1 after re-running 0005, because 0005 grants the two public functions back.)
 
@@ -1056,7 +1056,59 @@ Tested in PGlite on every run (`run.mjs` step 13g, both steps exactly as written
 
 ---
 
-## 15. Migration 0014: Color Belt private testing (the Private testing tab)
+## 15. Migration 0011: Finance (Daily report, Close the day, History, Export, reminder)
+
+**What it does** (`supabase/migrations/0011_finance.sql`, contract `docs/Dashboard Docs/Build contracts/CONTRACT-0011.md` §1):
+- **Reads** the payments Color Belt (`testing_payments`, 0005) and Star (`star_payments`, 0006) already store — it **never changes a payment**. Each payment is followed through its corrections ("chains": an edit = a reversal + a new payment written together; an undo = a reversal alone; a staff mis-click undone by the same login within 10 seconds is hidden), then added up per school and school day (America/New_York).
+- **5 new tables:** `finance_day_closings` (close / undo / reopen of a school's day: what was counted, what the server expected, the note, who and when — append-only), `finance_day_closing_items` (the exact items each close counted, so any later change shows as **Changed after closing** — append-only), `finance_settings` (one row: reminder On / Off + a version), `finance_reminder_times` (a time or Off per school per weekday, seeded **Off**), `finance_exports` (one row per CSV export — append-only).
+- **14 functions** the app calls (`finance_day`, `finance_day_both`, `finance_history`, `finance_payment_detail`, `finance_home`, `finance_close_day`, `finance_undo_close`, `finance_reopen_day`, `finance_export`, `finance_export_preview`, `finance_settings_get`, `finance_set_reminder_on`, `finance_set_reminder_time`, `finance_copy_monday`). Staff see and close **today only**; admins any day up to today, plus History, Reopen, Export and Settings.
+- **Same security rules as 0005 / 0006:** RLS on every table with **no** read rule and **no** rights for anyone in the app (every read goes through the functions), `has_data_access()` first in every function, nothing for `anon` or `service_role`, every change in `change_log`, no `truncate`. No answer ever holds a date of birth, an email, a signature or a login id (tested).
+- 0011 changes **nothing** that 0001–0006 or 0010 made (tested: their fingerprints are identical before and after).
+
+**Each step below needs Jeffrey's OK.** Apply only after 0006 is confirmed live (it is, 13).
+
+### 15a. Apply 0011 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0011_finance.sql`.
+2. **SQL Editor → New query**, paste, **Run**.
+3. Supabase will warn about **destructive operations**. That's expected: the words are in `drop trigger if exists` lines that make re-running safe and inside guards that **refuse** removals. **Nothing is removed.** Confirm.
+4. "Success." It's one transaction: on any error nothing is kept. Copy the error to Claude. (A few small result grids may show — the seed sets its label with `select set_config(…)`. That's fine.)
+
+**Running it again is safe** (tested: a second run changes no row and no fingerprint; the seed never overwrites what an admin set).
+
+### 15b. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0011_fingerprints.sql`. Every line must match what `supabase/tests/pglite/run.mjs` printed for the tested copy (every `finance_` function with its code, settings, owner and who may call it; the 5 tables; their triggers and rules). The file is a single read-only SELECT and contains neither of the words the connection refuses (run.mjs checks that).
+2. `0003`–`0006` and `0010` fingerprints: **unchanged**.
+3. **Security advisor:** expected notices — "RLS enabled, no policy" on the 5 `finance_` tables (INFO; nobody in the app reads them directly) and "security definer function executable by authenticated" for the 14 functions (each checks access and role itself). Anything else about a `finance_` object is a real problem.
+
+### 15c. Run the tests (you, in the SQL Editor)
+
+1. Open `supabase/tests/0011_tests.sql`, replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>` (**Authentication → Users**), paste the whole file, **Run**. Since the speed fix (15e) it finishes in seconds; **only if 15e is not applied yet**, add `set statement_timeout = '10min';` as the first line (the first version of 0011 made the test run for over 10 minutes on production on 2026-10-19; it was cancelled and rolled back). Supabase may also offer “Run and enable RLS” for the test's temporary table `t_answers`: choose **Run without RLS** (it exists only inside this session and is rolled back). Supabase may warn about destructive operations (the test removes its own test students and events and checks some removals are refused). Everything is rolled back. Confirm.
+2. Expected: one row, **ALL 0011 TESTS PASSED**. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved. Run `rollback;` once on its own, then tell Claude.
+3. The test makes its own `zz fin …` classes, events, students and payments on days in 2020–2023 (no real data there; Finance refuses days before 2020-01-01), so it works before **and** after real payments exist. To try Close the day as the desk it adds a test payment **today** in Worcester (and, if today's Worcester drawer is already closed for real, reopens it inside the test) — all rolled back.
+4. Then run `0010_tests.sql`, `0006_tests.sql`, `0005_tests.sql`, `0004_tests.sql`, `0003_tests.sql`, `0002_tests.sql` and `verify_pin_tests.sql` again — 0011 must not have broken them.
+
+### 15d. After applying
+
+An admin sets the reminder times in **Finance → Settings** (they start Off; plan Q3).
+
+### 15e. Speed fix: apply the NEW 0011 over the first one (you, in the SQL Editor; Jeffrey's OK)
+
+**Why:** the first version of 0011 (pasted 2026-10-19) built the payment "chains" with one big query that compared every payment with every other. On long date ranges (a year's export, the test file) it took minutes — `0011_tests.sql` was cancelled on production after 10 minutes. The new version builds the chains owner by owner and adds two date indexes on the payment tables. Measured in PGlite on ~11,000 payment rows (5 years, both schools): every Finance function answers in under 50 ms (the year export took over 20 minutes before); `0011_tests.sql` takes about 1 second.
+
+0. **Paste it outside desk hours** (no one recording a payment): building the two new indexes briefly holds back payment writes on `testing_payments` and `star_payments` until the paste finishes (seconds; an empty or small table takes well under a second). A payment saved at that moment just waits, it isn't lost.
+1. Copy **the whole file** `supabase/migrations/0011_finance.sql` (the new version), **SQL Editor → New query**, paste, **Run**, confirm the destructive-operations warning (the words are in `drop … if exists` lines; the only thing removed is the old internal function `finance_chain_steps(date, date)`, which nothing calls).
+2. **What it changes:** functions only (replaced), two new indexes (`finance_testing_payments_paid_on_idx`, `finance_star_payments_paid_on_idx`), one old internal function removed. **What it keeps:** every table and row — the settings row, the 14 reminder times, closings, exports — and every right. Tested in `run.mjs` step 14b: the exact production copy of the first version is applied, the settings are changed like an admin would, then the new file is pasted over it: the settings and times are unchanged and all tests pass.
+3. Claude re-runs `0011_fingerprints.sql` through the connection: the lines must match the new PGlite run (95 rows: 83 as before + 12 index rows — the two new `paid_on` indexes and the finance tables' own keys). The 0003–0006 and 0010 fingerprints stay unchanged.
+3b. Claude runs the **Security Advisor** through the connection: no new warnings for any `finance_` object or the two new indexes (only the notices listed in 15b).
+4. Run `0011_tests.sql` (15c step 1 — with the admin and desk ids filled in; no timeout line needed) → **ALL 0011 TESTS PASSED**. Then run `0010_tests.sql`, `0006_tests.sql`, `0005_tests.sql`, `0004_tests.sql`, `0003_tests.sql`, `0002_tests.sql` and `verify_pin_tests.sql` again — the new 0011 must not have broken them.
+
+**Rollback:** Finance only reads payments, so turning it off is a code rollback (Cloudflare Pages → Deployments → **Rollback**). The 0011 tables can stay; nothing else depends on them.
+
+---
+
+## 16. Migration 0014: Color Belt private testing (the Private testing tab)
 
 **What it does** (`supabase/migrations/0014_testing_private.sql`, contract `docs/Dashboard Docs/Build contracts/CONTRACT-0014.md` §2):
 - **Private testing is its own record, not part of any event** (rulebook v0.401). Three new tables: `testing_private` (one row per private testing: school, student, a **copy** of their class, belt, what they test for and the private price, paying by, day, time, active / cancelled), `testing_private_payments` (append-only, like event payments) and `testing_private_results` (Pass / Not passed / No show and a note, like the Grading tab). Plus a read view `testing_private_list` (the row + its payment state + what is still owed).
@@ -1065,31 +1117,31 @@ Tested in PGlite on every run (`run.mjs` step 13g, both steps exactly as written
 - **One live function replaced:** `testing_restore_student` (0010's version + one check): a moved registration can't be restored onto the event (new status `moved`). Nothing else that is live changes — no live table, view, trigger or other function.
 - **Same security rules as 0005 / 0010:** RLS with `has_data_access()`, read rights for the app on every column except the login ids, no direct writes for anyone in the app, nothing for `anon`, the secret key or the family form's login; every change is in `change_log` (actions `private_add`, `private_update`, `private_change_day`, `private_change_paying_by`, `private_mark_paid`, `private_undo_payment`, `private_edit_payment`, `private_cancel`, `private_restore`, `private_delete`, `private_set_result`, `private_set_result_note`, `move_to_private`, `undo_move_to_private`, `clear_result`). Private testings are logged in `change_log` like all testing data (v0.400's `family_history` is for Prospects only).
 
-**The order** (build plan §5): **CP2** database (15a–15c, Jeffrey's OK) → **CP3** real check from the local app (15d) → **CP4** deploy (Jeffrey's OK). The live site keeps working between CP2 and CP4: it never reads the new tables, and the replaced Restore behaves as before for every registration that wasn't moved (none can be until phase 4 is deployed).
+**The order** (build plan §5): **CP2** database (16a–16c, Jeffrey's OK) → **CP3** real check from the local app (16d) → **CP4** deploy (Jeffrey's OK). The live site keeps working between CP2 and CP4: it never reads the new tables, and the replaced Restore behaves as before for every registration that wasn't moved (none can be until phase 4 is deployed).
 
-### 15a. Apply 0014 (you, in the SQL Editor)
+### 16a. Apply 0014 (you, in the SQL Editor)
 
 1. Copy **the whole file** `supabase/migrations/0014_testing_private.sql`.
 2. **SQL Editor → New query**, paste, **Run**.
 3. Supabase will warn about **destructive operations**. That's expected: the words are inside rules (`on delete cascade`: removing a private testing removes its payments and result), inside functions that run later (Delete permanently, clearing a No show, Undo move) and in `drop … if exists` lines that make re-running safe. **Nothing is removed now.** Confirm.
 4. "Success. No rows returned." It's one transaction: on any error nothing is kept. Copy the error to Claude.
 
-**Running it again is safe** (tested: a second run changes no row and no fingerprint). **Never re-run 0005 or 0010 on its own after this** — see 15e.
+**Running it again is safe** (tested: a second run changes no row and no fingerprint). **Never re-run 0005 or 0010 on its own after this** — see 16e.
 
-### 15b. Read-only checks (Claude runs these through the connection)
+### 16b. Read-only checks (Claude runs these through the connection)
 
 1. **Fingerprints:** `supabase/tests/0014_fingerprints.sql`. Every line must match what `supabase/tests/pglite/run.mjs` printed for the tested copy: the 24 functions (4 trigger functions, 5 helpers, 14 staff functions and the replaced `testing_restore_student`: code, settings, owner, who may call them), the 3 tables (RLS, rights per column, read rules), the view, the 9 triggers and every rule.
-2. `0005_fingerprints.sql` and `0010_fingerprints.sql`: **only** the `testing_restore_student` line differs from before — expected. `0004_fingerprints.sql` and `0006_fingerprints.sql`: unchanged. `0003_fingerprints.sql`: identical except the rows of the new `testing_*` functions and `testing_restore_student` — expected (0003's file lists every `testing_*` function).
+2. `0005_fingerprints.sql` and `0010_fingerprints.sql`: **only** the `testing_restore_student` line differs from before — expected. `0004_fingerprints.sql`, `0006_fingerprints.sql` and `0011_fingerprints.sql` (Finance): unchanged. `0003_fingerprints.sql`: identical except the rows of the new `testing_*` functions and `testing_restore_student` — expected (0003's file lists every `testing_*` function).
 3. **Security advisor:** the only new expected notice is "security definer function executable by authenticated" for the 14 new staff functions (each checks access itself, then its rules). Anything else about the three new tables or the view (for example RLS off, or a function without a fixed `search_path`) is a real problem.
 
-### 15c. Run the tests (you, in the SQL Editor)
+### 16c. Run the tests (you, in the SQL Editor)
 
 1. Open `supabase/tests/0014_tests.sql`, replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>` (**Authentication → Users**), paste the whole file, **Run**. Supabase may warn about destructive operations (the test removes its own test rows, switches one trigger off for a moment to backdate a time, and checks some changes are refused). Everything is rolled back. Confirm.
 2. Expected: one row, **ALL 0014 TESTS PASSED**. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved. Run `rollback;` once on its own, then tell Claude.
-3. Then run `0010_tests.sql`, `0005_tests.sql`, `0006_tests.sql`, `0004_tests.sql`, `0003_tests.sql`, `0002_tests.sql` and `verify_pin_tests.sql` again — 0014 must not have broken them.
+3. Then run `0011_tests.sql`, `0010_tests.sql`, `0005_tests.sql`, `0006_tests.sql`, `0004_tests.sql`, `0003_tests.sql`, `0002_tests.sql` and `verify_pin_tests.sql` again — 0014 must not have broken them.
 4. The test makes its own `zz test …` classes, events and private testings, so it works before **and** after real data exists.
 
-### 15d. CP3 — the real check (you, with the local app on the real database; Claude watches)
+### 16d. CP3 — the real check (you, with the local app on the real database; Claude watches)
 
 Run `Start dashboard.bat`, sign in as the admin.
 1. On the **Private testing** tab: **Add private testing** for a TEST student, today, a time later today. **Mark paid** (the private price).
@@ -1098,7 +1150,7 @@ Run `Start dashboard.bat`, sign in as the admin.
 4. **Cancel** the moved one, then **Delete permanently** both private testings (admin), and delete the TEST event.
 5. Claude checks through the connection (read-only): the history has the `private_add`, `move_to_private`, `private_mark_paid`, `private_set_result`, `private_cancel` and `private_delete` rows with the right names, the event money of the moved student nets 0, and nothing is left of the TEST data.
 
-### 15e. Undo and re-run warnings (only with Jeffrey's OK)
+### 16e. Undo and re-run warnings (only with Jeffrey's OK)
 
 **Re-running 0005 after 0014** → re-run **0010**, then **0014**, straight after. **Re-running 0010 after 0014** → re-run **0014** straight after. (0005 and 0010 put back a `testing_restore_student` that ignores moves, so a moved student could be restored onto the event while their private testing exists. If the family-form off switch of 12i is in force, repeat 12i step 1 after re-running 0005.)
 
@@ -1166,7 +1218,7 @@ drop function if exists public.testing_private_before_write();
 commit;
 ```
 
-Afterwards `0005_fingerprints.sql` and `0010_fingerprints.sql` equal a database that never had 0014. Tested in PGlite on every run (`run.mjs` step 14i, steps 2–3 exactly as written here, then the 0010 removal of 14e on top — the real removal order): the tables, the view and every 0014 function are gone, the 0005 / 0010 / 0003 fingerprints equal the ones from before 0014, `change_log` has one `undo_0014` row per removed row, and `0010_tests.sql` / `0005_tests.sql` pass.
+Afterwards `0005_fingerprints.sql` and `0010_fingerprints.sql` equal a database that never had 0014. Tested in PGlite on every run (`run.mjs` step 15i, steps 2–3 exactly as written here, then the 0010 removal of 14e on top — the real removal order): the tables, the view and every 0014 function are gone, the 0005 / 0010 / 0003 fingerprints equal the ones from before 0014, `change_log` has one `undo_0014` row per removed row, and `0010_tests.sql` / `0005_tests.sql` pass.
 
 **Why:**
 - **Separate tables, not event registrations:** a registration must belong to an event; bending that would have changed live tables, checks and nine live functions. New tables leave everything live untouched except Restore.
