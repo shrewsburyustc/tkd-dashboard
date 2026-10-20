@@ -35,7 +35,7 @@
 --     for the family form, and internal helpers nobody can call
 --   * a restricted login role, bb_registrar, that can run exactly the 2
 --     public functions and nothing else (its password is NOT in this file
---     - see supabase/SETUP.md section 16)
+--     - see supabase/SETUP.md section 18)
 --
 -- HOW TO RUN IT
 --   Supabase dashboard -> SQL Editor -> New query -> paste this WHOLE file
@@ -2669,7 +2669,7 @@ revoke execute on function public.bb_public_answer(uuid) from public, anon, auth
 -- 14. The restricted login for the Black Belt family form: bb_registrar
 -- The same settings as 0005's testing_registrar and 0006's star_registrar
 -- (read 0005 section 13): it can sign in (password set separately as a
--- SCRAM verifier made on Jeffrey's PC - SETUP.md section 16. NO password
+-- SCRAM verifier made on Jeffrey's PC - SETUP.md section 18. NO password
 -- in this file), has no inherited rights, can't create databases or
 -- roles, can't skip RLS, at most 5 connections, a stuck call is cut off
 -- after 5 seconds, and nothing is found without its schema name. It can

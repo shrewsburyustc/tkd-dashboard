@@ -6,3 +6,10 @@
 # It points at /register (not /register.html) on purpose: Pages turns /register.html into
 # /register by itself ("pretty URLs"), and pointing at the .html name can cause a redirect loop.
 /register/*  /register  200
+
+# The public Forms page (build plan §3): every family link looks like /f/<name> (e.g.
+# /f/free-class-instagram), served by the one page forms.html in the same way. Pages serves
+# forms.html at /forms by itself ("pretty URLs"), so both lines point at /forms. (/f alone, with
+# no name, shows the page's "This form was not found".)
+/f  /forms  200
+/f/*  /forms  200

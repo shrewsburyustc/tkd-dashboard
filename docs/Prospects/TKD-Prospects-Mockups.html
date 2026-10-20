@@ -1,0 +1,683 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prospects Mockups</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root{--control-border:#8F8F8A;--page:#EFEFEC;--bg:#FFFFFF;--surface:#F7F7F5;--border:#E5E5E2;--border-strong:#CFCFCA;--text:#1F1F1F;--text2:#6B6B6B;--blue:#003595;--blue-hover:#002A77;--blue-tint:#E6EBF4;--red:#A32D2D;--red-tint:#FCEBEB;--ok:#3B6D11;--ok-tint:#EAF3DE;--warn:#633806;--warn-tint:#FAEEDA}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:20px;font-weight:500;margin:0 0 4px}
+h2{font-size:16px;font-weight:500;margin:48px 0 4px;padding-top:16px;border-top:1px solid var(--border-strong)}
+h4{font-size:13px;font-weight:500;margin:32px 0 4px}
+.lead{color:var(--text2);font-size:13px;margin:0 0 12px}
+.banner{background:var(--warn-tint);color:var(--warn);padding:8px 12px;border-radius:8px;font-size:13px;display:flex;gap:8px;align-items:flex-start}
+/* explanation block (P1) */
+.explain{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:8px 0 16px;font-size:13px}
+.explain h3{font-size:13px;font-weight:500;margin:8px 0 2px}.explain h3:first-child{margin-top:0}
+.explain ul,.explain ol{margin:0;padding-left:20px}.explain li{margin:2px 0}
+.explain .prop{color:var(--warn)}
+b{font-weight:500}
+/* device frames */
+.cap{font-size:12px;color:var(--text2);margin:16px 0 6px;display:flex;align-items:center;gap:6px}
+.cap i{font-size:16px}
+.scroller{overflow-x:auto;padding-bottom:4px}
+.dev{background:var(--bg);border:1px solid var(--border-strong);overflow:hidden;position:relative;flex:none}
+.dev-pc{width:1024px;height:600px;border-radius:10px}
+.dev-tab{width:768px;height:560px;border-radius:18px;border-width:6px;border-color:#2B2B2B}
+.dev-ph{width:375px;height:700px;border-radius:28px;border-width:6px;border-color:#2B2B2B}
+.pair{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+/* app shell (as approved in the Home / Account files) */
+.app{display:flex;height:100%;background:var(--bg)}
+.app-col{flex:1;min-width:0;display:flex;flex-direction:column}
+.content{flex:1;min-height:0;padding:24px;display:flex;flex-direction:column;overflow:hidden}
+.ph-shell{height:100%;display:flex;flex-direction:column}
+.ph-shell .content{padding:16px}
+.rail{width:52px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;flex:none}
+.rail a{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;color:var(--text2)}
+.rail a i{font-size:18px}
+.rail a.on{background:var(--blue-tint);color:var(--blue)}
+.rail-t{width:72px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;flex:none}
+.rail-t a{display:flex;flex-direction:column;align-items:center;justify-content:center;width:64px;min-height:56px;border-radius:8px;color:var(--text2);font-size:12px;gap:2px}
+.rail-t a i{font-size:20px}
+.rail-t a.on{color:var(--blue)}.rail-t a.on i{background:var(--blue-tint);border-radius:8px;padding:4px 10px}
+.topbar{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 12px;flex:none}
+.topbar .grow{flex:1}
+.loc{display:flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;font-size:12px;height:32px}
+.loc span{display:flex;align-items:center;gap:4px;padding:0 12px;color:var(--text2)}
+.loc span.on{background:var(--blue-tint);color:var(--blue)}
+.loc span+span{border-left:1px solid var(--border)}
+.touch .loc{height:36px}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--surface);border:1px solid var(--control-border);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--text);flex:none}
+.tap{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.phbar{border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:4px 0 10px;flex:none;background:var(--bg)}
+.phbar a{display:flex;flex-direction:column;align-items:center;min-width:64px;min-height:48px;justify-content:center;font-size:12px;color:var(--text2);gap:2px}
+.phbar a i{font-size:20px}.phbar a.on{color:var(--blue)}
+/* controls */
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.field label,.lbl{font-size:12px;color:var(--text2)}
+.input{height:32px;border:1px solid var(--control-border);border-radius:8px;padding:0 12px;display:flex;align-items:center;font-size:13px;color:var(--text);background:var(--bg)}
+.input.focus{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+.input .pre{color:var(--text2);margin-right:4px}
+.input.money{width:120px}
+.input.select{justify-content:space-between}.input.select i{font-size:16px;color:var(--text2)}
+.touch .input{height:36px;font-size:14px}
+.caret{display:inline-block;width:1px;height:16px;background:var(--text);margin-left:1px}
+.btn{height:32px;padding:0 16px;border-radius:8px;font-size:13px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--control-border);background:var(--bg);color:var(--text);flex:none;white-space:nowrap}
+.btn i{font-size:16px}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn-primary.dis{background:var(--surface);border-color:var(--border-strong);color:#8A8A85}
+.btn-sm{height:28px;padding:0 12px}
+.btn-full{width:100%}
+.touch .btn{height:36px}
+.touch .btn-sm{height:36px;padding:0 12px}
+.err{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--warn);background:var(--warn-tint);padding:8px;border-radius:6px}
+.hint{font-size:12px;color:var(--text2)}
+/* dialogs */
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:5}
+.dialog{background:var(--bg);border-radius:12px;width:360px;max-width:calc(100% - 32px);padding:24px;position:relative}
+.dialog h3{font-size:16px;font-weight:500;margin:0 0 4px}
+.dialog .sub{font-size:13px;color:var(--text2);margin:0 0 16px}
+.dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+/* detail view (v0.46): centered dialog showing every field */
+.dialog-detail{width:440px}
+.dialog-detail .meta{margin-top:12px}
+.prices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.prices .input.money{width:100%}
+.fullscreen{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;z-index:5}
+.fullscreen .head{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 4px;font-size:16px;font-weight:500;flex:none}
+.fullscreen .fbody{padding:16px;flex:1;overflow:hidden}
+/* menus */
+.menu{position:absolute;background:var(--bg);border:1px solid var(--border-strong);border-radius:8px;padding:4px 0;width:200px;box-shadow:0 4px 16px rgba(0,0,0,.08);z-index:5;text-align:left}
+.menu .it{display:flex;align-items:center;gap:8px;padding:0 12px;height:32px;font-size:13px;color:var(--text);white-space:nowrap}
+.touch .menu .it{height:44px}
+.menu .it i{font-size:16px;color:var(--text2)}
+.menu .it.hov{background:var(--surface)}
+.menu .it.sel{background:var(--blue-tint);color:var(--blue)}
+.menu .it.dis{color:#A3A39E}.menu .it.dis i{color:#B8B8B3}
+.menu .it.red,.menu .it.red i{color:var(--red)}
+.menu .it.red.hov{background:var(--red-tint)}
+.menu .sep{border-top:1px solid var(--border);margin:4px 0}
+.menu .grp{font-size:12px;color:var(--text2);padding:8px 12px 4px}
+.sheet-wrap{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;z-index:5}
+.sheet{background:var(--bg);width:100%;border-radius:16px 16px 0 0;padding:8px 0 16px}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--border-strong);margin:4px auto 8px}
+.sheet .stitle{padding:4px 16px 8px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.sheet .stitle b{display:block;font-size:14px}.sheet .stitle span{font-size:12px;color:var(--text2)}
+.sheet .menu{position:static;width:auto;border:none;box-shadow:none;border-radius:0;padding:0}
+.sheet .menu .it{padding:0 16px}
+.sheet .menu .it.cancel{justify-content:center;color:var(--text);font-weight:500}
+.tag{font-size:12px;line-height:16px;padding:2px 8px;border-radius:6px;background:var(--surface);color:var(--text2);border:1px solid var(--border);white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.tag-warn{background:var(--warn-tint);color:var(--warn);border-color:#F2D9B0}
+.tag i{font-size:12px}
+.callout{position:absolute;background:var(--warn-tint);color:var(--warn);border:1px dashed #EF9F27;font-size:12px;padding:4px 8px;border-radius:6px;z-index:7;white-space:nowrap}
+/* ---------- new for Testing ---------- */
+.phead{display:flex;align-items:center;gap:12px;margin-bottom:8px;flex:none}
+.phead .grow{flex:1}
+.ptitle{font-size:20px;font-weight:500;line-height:1.3}
+.psub{font-size:12px;color:var(--text2)}
+.tabs{display:flex;gap:24px;border-bottom:1px solid var(--border);margin-bottom:16px;flex:none}
+.tabs span{height:40px;display:flex;align-items:center;font-size:13px;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs span.on{color:var(--blue);border-bottom-color:var(--blue);font-weight:500}
+.touch .tabs span{height:44px}
+.ph-shell .tabs{gap:0}.ph-shell .tabs span{flex:1;justify-content:center}
+.more-tog{display:inline-flex;align-items:center;gap:4px;height:28px;font-size:13px;color:var(--text2)}
+.more-tog i{font-size:16px}
+.touch .more-tog{min-height:44px}
+.crow.cgap{opacity:.35}
+.crow.clift{background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.10);border:1px solid var(--border-strong);border-radius:8px;margin:4px -4px 4px 8px;position:relative;z-index:2}
+.viewonly{font-size:13px;color:var(--text2);margin:-4px 0 12px;flex:none}
+/* failed-save banner (rule 3.5) */
+.errbar{display:flex;align-items:center;gap:8px;background:var(--warn-tint);color:var(--warn);border-radius:8px;padding:4px 4px 4px 12px;font-size:13px;margin:-4px 0 12px;flex:none}
+.errbar>i{font-size:16px}
+.errbar .grow{flex:1}
+.errbar .btn{border-color:var(--control-border)}
+.touch .errbar{flex-wrap:wrap;padding:8px 4px 4px 12px}
+/* icon buttons: 28px visible square; on touch the outer box is a 44x44 invisible tap area */
+.ib{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;color:var(--text2);flex:none}
+.ib .ibv{width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center}
+.ib i{font-size:16px}
+.ib.hov .ibv{background:var(--surface);color:var(--text)}
+.touch .ib{width:44px;height:44px}
+/* class list */
+.clist{border:1px solid var(--border);border-radius:8px;flex:none}
+.crow{display:flex;align-items:center;gap:8px;height:40px;padding:0 4px 0 8px;font-size:13px;border-top:1px solid var(--border)}
+.clist>.crow:first-child{border-top:none}
+.touch .crow{height:48px;padding:0;gap:4px}
+.crow .nm{font-weight:500}
+.crow .cnt{font-size:12px;color:var(--text2)}
+.crow .grow{flex:1}
+.acts{display:flex;align-items:center;gap:4px;justify-content:flex-end;position:relative}
+.touch .acts{gap:0}
+/* rank table */
+.rhead,.rrow{display:grid;align-items:center;column-gap:12px;border-top:1px solid var(--border)}
+.rhead{height:32px;background:var(--surface);font-size:12px;color:var(--text2)}
+.rrow{min-height:40px;font-size:13px;position:relative;padding-top:4px;padding-bottom:4px}
+.touch .rrow{min-height:48px}
+.g-pc{grid-template-columns:24px minmax(0,1fr) minmax(0,1.6fr) 64px 88px 64px 104px 64px;padding:0 4px 0 40px}
+.g-st{grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) 64px 88px 64px 104px;padding:0 16px 0 44px}
+.g-tab{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 64px 96px 88px;padding:0 0 0 48px}
+.g-tst{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 64px 96px 72px;padding:0 8px 0 48px}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.rk{display:flex;align-items:center;gap:8px;min-width:0}
+.grip{display:inline-flex;align-items:center;justify-content:center;width:24px;height:28px;color:var(--text2);border-radius:8px}
+.grip i{font-size:16px}
+.grip.hov{background:var(--border);color:var(--text)}
+.rrow.sel{background:var(--blue-tint)}
+.rrow.hovrow{background:var(--surface)}
+.rrow.lift{background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.10);z-index:2;margin:4px -4px 4px 32px;padding-left:8px;border:1px solid var(--border-strong);border-radius:8px}
+.rrow.gap{opacity:.35}
+.dropline{height:0;border-top:2px solid var(--blue);margin:-1px 0 -1px 40px;position:relative;z-index:3}
+.addrow{display:flex;align-items:center;gap:12px;padding:8px 8px 8px 76px;border-top:1px solid var(--border)}
+.addrow .grow{flex:1}
+.touch .addrow{padding:4px 4px 4px 48px}
+.emptyrow{display:flex;align-items:center;gap:12px;padding:12px 16px 12px 76px;border-top:1px solid var(--border);font-size:13px;color:var(--text2);flex-wrap:wrap}
+.touch .emptyrow{padding-left:48px}
+/* phone stacked rank rows */
+.prow{display:flex;align-items:center;gap:0;min-height:56px;padding:4px 0 4px 16px;border-top:1px solid var(--border)}
+.prow .grow{flex:1;min-width:0}
+.prow .l1{font-size:13px;font-weight:500;display:flex;align-items:center;column-gap:8px;row-gap:2px;flex-wrap:wrap}
+.prow .l2{font-size:12px;color:var(--text2)}
+.prow .l2 span{white-space:nowrap}
+.prow.sel{background:var(--blue-tint)}
+.prow>.tapbox{margin-right:8px}
+.grp-lbl{font-size:12px;color:var(--text2);margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--border)}
+.ro{font-size:13px;margin-bottom:12px}
+.ro .lbl{display:block}
+.ro .sec{color:var(--text2)}
+.meta{font-size:12px;color:var(--text2);margin-top:16px}
+/* checkbox (CSS tick: ti-check is reserved for Save) */
+.cbrow{display:flex;align-items:center;gap:8px;min-height:32px;font-size:13px}
+.touch .cbrow{min-height:44px}
+.cb{width:16px;height:16px;border:1px solid var(--control-border);border-radius:4px;display:inline-block;position:relative;flex:none;background:var(--bg)}
+.cb.on{background:var(--blue);border-color:var(--blue)}
+.cb.on::after{content:"";position:absolute;left:4px;top:1px;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.cb.dis{background:var(--surface);border-color:var(--border-strong)}
+/* toast (Undo) */
+.toast{position:absolute;right:16px;bottom:16px;background:#1F1F1F;color:#fff;border-radius:8px;display:flex;align-items:center;gap:8px;padding:0 4px 0 12px;font-size:13px;z-index:6;min-height:40px;white-space:nowrap}
+.toast .undo{display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 8px;color:#fff;font-weight:500;border-left:1px solid #4A4A4A;flex:none}
+.toast .undo i{font-size:16px}
+.touch .toast{min-height:44px}
+.touch .toast .undo{height:44px}
+.toast.ph{left:50%;right:auto;transform:translateX(-50%);bottom:76px}
+.toast.ph.wide{width:calc(100% - 32px);white-space:normal;line-height:1.4;padding:4px 4px 4px 12px}
+.toast.ph.wide>span:first-child{flex:1}
+/* blocked (Both) */
+.blocked{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;color:var(--text2);font-size:13px;padding:24px}
+.blocked .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+/* top-of-file boxes */
+.okbox{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:16px 0;font-size:13px}
+.okbox h3{font-size:14px;font-weight:500;margin:0 0 4px}
+.okbox ol{margin:0;padding-left:20px}.okbox li{margin:4px 0}
+.toc{font-size:13px;margin:8px 0 0;columns:2}
+.toc a{color:var(--blue);text-decoration:none}
+/* phone: class names and rank rows start at the 16px gutter */
+.touch .ph-shell .crow{padding-left:16px}
+.ctog{display:flex;align-items:center;gap:8px;flex:1;min-width:0;min-height:48px}
+.ctog i{font-size:16px;color:var(--text2)}
+/* compact outline button (staff View): 28px with a mouse, 36px on touch, 44px tap box */
+.tapbox{display:inline-flex;align-items:center;justify-content:center;flex:none}
+.touch .tapbox{min-height:44px;min-width:44px}
+.touch .btn.c28{height:36px}
+/* final award problems shown in the Testing for cell */
+.tfwarn{color:var(--warn);font-size:12px;display:inline-flex;gap:4px;align-items:flex-start;line-height:1.4}
+.tfwarn i{font-size:16px;line-height:1}
+.prow .l1 .tfwarn{font-weight:400}
+/* dropdown list with scroll cue */
+.menu.scroll{overflow:hidden;padding-right:12px}
+.menu .sbar{position:absolute;right:4px;top:6px;width:4px;height:64px;border-radius:2px;background:var(--border-strong)}
+.touch .ph-shell .addrow,.touch .ph-shell .emptyrow{padding-left:16px}
+code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
+/* ---------- new for Schedule ---------- */
+/* frames at real screen heights so the whole day fits: PC 1024x800, tablet portrait 768x1024 */
+
+.wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;flex:none}
+.dayh{font-size:12px;color:var(--text2);padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:2px}
+.dcol{display:flex;flex-direction:column;gap:6px;min-width:0}
+.slot{border:1px solid var(--border);border-radius:8px;padding:6px 8px;background:var(--bg);min-width:0}
+.slot .t{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot .c{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot.hov{background:var(--surface);border-color:var(--border-strong)}
+.slot.sel{background:var(--blue-tint);border-color:var(--blue)}
+.touch .slot{min-height:44px}
+.none{font-size:12px;color:var(--text2);padding:6px 0}
+.vrow{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex:none;position:relative}
+.vrow .input.select{width:340px}
+.ph-shell .vrow .input.select{width:auto;flex:1;min-width:0}
+.ph-shell .vrow .input.select span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.infobar{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;margin:-4px 0 16px;flex:none}
+.infobar>i{font-size:16px;color:var(--text2)}
+.infobar .grow{flex:1}
+.pday{font-size:12px;color:var(--text2);padding:12px 0 4px}
+.prow2{display:flex;align-items:center;min-height:52px;border-top:1px solid var(--border);gap:12px}
+.prow2 .tm{font-size:12px;color:var(--text2);width:84px;flex:none}
+.prow2 .cl{font-size:13px;font-weight:500;flex:1}
+.prow2 i{font-size:16px;color:var(--text2)}
+.daypick{display:flex;flex-wrap:wrap;gap:4px 12px}
+.times{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.schoolh{font-size:13px;font-weight:500;margin:4px 0 8px;display:flex;align-items:center;gap:8px}
+.scrollhint{flex:1;min-height:0;overflow:hidden}
+/* time-on-the-side week view: box height = class length */
+.tg{display:grid;grid-template-columns:48px repeat(7,minmax(0,1fr));flex:none}
+.tg .dh{font-size:12px;color:var(--text2);text-align:center;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.tg.one{grid-template-columns:48px minmax(0,1fr)}
+.tcol{position:relative;border-left:1px solid var(--border)}
+.hl{position:absolute;left:0;right:0;border-top:1px solid var(--border)}
+.hl.half{border-top-style:dotted}
+.ax{position:relative}
+.ax span{position:absolute;right:6px;font-size:12px;color:var(--text2);transform:translateY(-50%);white-space:nowrap;background:var(--bg);padding:0 2px}
+.blk{position:absolute;left:3px;right:3px;border:1px solid var(--border-strong);background:var(--surface);border-radius:6px;padding:2px 6px;overflow:hidden;line-height:1.3}
+.blk .c{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blk .t{font-size:12px;color:var(--text2);white-space:nowrap}
+.blk.hov{background:#EDEDEA}
+.blk.sel{background:var(--blue-tint);border-color:var(--blue)}
+.tgwrap{flex:1;min-height:0;overflow:hidden;position:relative}
+.dpick{display:flex;gap:4px;margin-bottom:12px;flex:none}
+.dpick span{flex:1;height:36px;border:1px solid var(--control-border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text2)}
+.sw{display:flex;flex-wrap:wrap;gap:8px}
+.sw span{width:28px;height:28px;border-radius:50%;border:1px solid rgba(0,0,0,.18);position:relative}
+.touch .sw span{width:36px;height:36px}
+.sw span.on{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--text)}
+.dpick span.on{background:var(--blue-tint);border-color:var(--blue);color:var(--blue);font-weight:500}
+/* ---------- new for Prospects ---------- */
+.dev-pc{height:800px}.dev-tab{height:1024px}
+.rail a{position:relative}
+.rbadge{position:absolute;top:2px;right:0;min-width:16px;height:16px;border-radius:8px;background:#1F1F1F;color:#fff;font-size:12px;line-height:16px;text-align:center;padding:0 4px;font-style:normal}
+.rail-t a .rbadge{top:2px;right:8px}
+.phbar a{position:relative}.phbar a .rbadge{top:2px;right:12px}
+.pipe{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;flex:none;margin-bottom:8px}
+.stg{flex:1;padding:8px 12px;border-right:1px solid var(--border);min-width:0}
+.stg:last-child{border-right:none}
+.stg .n{font-size:20px;font-weight:500;line-height:1.2}
+.stg .l{font-size:12px;color:var(--text2)}
+.stg .bar{height:4px;border-radius:2px;margin-top:6px;background:var(--border-strong)}
+.stg.on{background:var(--blue-tint)}.stg.on .l{color:var(--blue)}.stg.on .bar{background:var(--blue)}
+.stg.j .bar{background:#9CC26A}
+.touch .stg{min-height:64px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;flex:none;align-items:center}
+.fchip{height:28px;display:inline-flex;align-items:center;gap:4px;border:1px solid var(--control-border);border-radius:14px;padding:0 12px;font-size:12px;color:var(--text2)}
+.fchip i{font-size:14px}
+.fchip.on{background:var(--blue-tint);border-color:var(--blue);color:var(--blue)}
+.fchip.due{background:var(--warn-tint);border-color:#F2D9B0;color:var(--warn)}
+.touch .fchip{height:36px}
+.search{height:32px;border:1px solid var(--control-border);border-radius:8px;padding:0 12px;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);width:220px}
+.search i{font-size:16px}
+.touch .search{height:36px}
+.pbody{flex:1;min-height:0;display:flex;gap:16px}
+.plist{flex:1;min-width:0;border:1px solid var(--border);border-radius:8px;overflow:hidden;align-self:flex-start}
+.prw{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.1fr) minmax(0,1.2fr) minmax(0,1fr) 104px;align-items:center;column-gap:12px;min-height:40px;padding:0 12px;border-top:1px solid var(--border);font-size:13px}
+.prw.h{min-height:32px;background:var(--surface);font-size:12px;color:var(--text2);border-top:none}
+.prw.sel{background:var(--blue-tint)}
+.prw .nm{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prw span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prw .due{color:var(--warn)}
+.touch .prw{min-height:52px}
+.narrow .prw{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) 96px}
+.narrow .prw .wide{display:none}
+.st{display:inline-flex;align-items:center;gap:4px;font-size:12px;line-height:16px;padding:2px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text2);white-space:nowrap}
+.st i{font-size:12px}
+.st.new{background:#EEEDFE;border-color:#D7D4FA;color:#3C3489}
+.st.ok{background:#EAF3DE;border-color:#C9DFAE;color:#3B6D11}
+.st.warn{background:var(--warn-tint);border-color:#F2D9B0;color:var(--warn)}
+.ppanel{width:330px;flex:none;border:1px solid var(--border);border-radius:8px;padding:16px;overflow:hidden;background:var(--bg)}
+.ppanel h4{font-size:16px;font-weight:500;margin:0}
+.ppanel .who{font-size:13px;color:var(--text2);margin:2px 0 8px}
+.cacts{display:flex;gap:8px;margin-bottom:12px}
+.psec{font-size:12px;color:var(--text2);margin:12px 0 4px}
+.kv{display:flex;align-items:center;gap:8px;min-height:32px;border-top:1px solid var(--border);font-size:13px}
+.r3{outline:2px solid #EF9F27;outline-offset:2px;border-radius:6px}
+/* progress track (screen 11, proposal) */
+.trk{display:inline-flex;align-items:center;gap:0;flex:none}
+.trk i{width:10px;height:10px;border-radius:50%;border:2px solid #CFCFCA;background:#fff;box-sizing:border-box;display:block}
+.trk i.d{background:#3B6D11;border-color:#3B6D11}
+.trk i.n{border-color:var(--blue);background:var(--blue-tint)}
+.trk i.x{background:var(--warn);border-color:var(--warn)}
+.trk i.g{background:#8F8F8A;border-color:#8F8F8A}
+.trk b{width:12px;height:2px;background:#CFCFCA;display:block}
+.trk b.d{background:#3B6D11}
+.prog{display:flex;align-items:center;gap:8px;min-width:0}
+.prog .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
+.prog .t.nx{color:var(--blue);font-weight:500}
+.prog .t.w{color:var(--warn)}
+.prw2{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,.9fr) minmax(0,1.9fr) minmax(0,.9fr) 104px;align-items:center;column-gap:12px;min-height:44px;padding:0 12px;border-top:1px solid var(--border);font-size:13px}
+.prw2.h{min-height:32px;background:var(--surface);font-size:12px;color:var(--text2);border-top:none}
+.prw2.sel{background:var(--blue-tint)}
+.prw2 .nm{font-weight:500}
+.prw2>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.narrow .prw2{grid-template-columns:minmax(0,1fr) minmax(0,1.7fr) 96px}
+.narrow .prw2 .wide{display:none}
+.touch .prw2{min-height:52px}
+.ptrack{display:flex;align-items:flex-start;margin:4px 0 12px;padding:10px 4px 8px;border:1px solid var(--border);border-radius:8px}
+.ptrack .s{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative;min-width:0}
+.ptrack .s:not(:first-child)::before{content:'';position:absolute;top:8px;right:50%;width:100%;height:2px;background:#CFCFCA;z-index:0}
+.ptrack .s.d:not(:first-child)::before,.ptrack .s.n:not(:first-child)::before{background:#3B6D11}
+.ptrack .c{width:18px;height:18px;border-radius:50%;border:2px solid #CFCFCA;background:#fff;box-sizing:border-box;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff}
+.ptrack .s.d .c{background:#3B6D11;border-color:#3B6D11}
+.ptrack .s.n .c{border-color:var(--blue);background:var(--blue-tint)}
+.ptrack .s.x .c{background:var(--warn);border-color:var(--warn)}
+.ptrack .l{font-size:12px;margin-top:4px}
+.ptrack .s.n .l{color:var(--blue);font-weight:500}
+.ptrack .s.f .l{color:var(--text2)}
+.ptrack .m{font-size:11px;color:var(--text2);line-height:1.3}
+
+/* board view (screen 12, proposal) */
+.vsw{display:inline-flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;font-size:12px;flex:none}
+.vsw span{height:28px;display:inline-flex;align-items:center;gap:4px;padding:0 10px;color:var(--text2)}
+.vsw span+span{border-left:1px solid var(--control-border)}
+.vsw span.on{background:var(--blue-tint);color:var(--blue);font-weight:500}
+.touch .vsw span{height:36px}
+.board{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:8px;overflow:hidden;flex:none}
+.bcol{background:var(--surface);border-radius:8px;padding:8px;min-width:0}
+.bcol h5{margin:0 0 8px;font-size:12px;font-weight:500;display:flex;justify-content:space-between;color:var(--text2)}
+.bcol h5 b{font-weight:500;color:var(--text)}
+.bcol.j h5::after{content:'';}
+.bcard{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12px}
+.bcard .n{font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px}
+.bcard .p{color:var(--text2)}
+.bcard .x{margin-top:4px}
+.bcard .x.nx{color:var(--blue);font-weight:500}
+.bcard .x.w{color:var(--warn)}
+.bcard.sel{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+.bcard .dot{width:8px;height:8px;border-radius:50%;background:var(--blue);display:inline-block}
+.touch .bcard{padding:10px}
+.bscroll{display:flex;gap:8px;overflow:hidden}
+.bscroll .bcol{flex:none;width:160px}
+.phstages{display:flex;gap:6px;overflow:hidden;margin-bottom:8px;flex:none}
+.phstages span{flex:none;border:1px solid var(--border);border-radius:16px;padding:6px 12px;font-size:12px;color:var(--text2)}
+.phstages span.on{background:var(--blue-tint);border-color:var(--blue);color:var(--blue);font-weight:500}
+.swipe{font-size:11px;color:var(--text2);text-align:center;margin:6px 0}
+.btrk{margin-top:6px;display:inline-flex;padding:2px}
+.noamb .r3,.onlytrk .r3:not(.btrk){outline:none}
+.optlbl{font-size:17px;margin:28px 0 4px;padding:6px 12px;background:var(--blue-tint);color:var(--blue);border-radius:8px;display:inline-block}
+.pnext{display:flex;gap:8px;align-items:center;background:var(--blue-tint);color:var(--blue);border-radius:6px;padding:6px 8px;font-size:12px;margin:-4px 0 10px}
+
+.cwarn{display:flex;gap:6px;align-items:flex-start;background:var(--warn-tint);color:var(--warn);border-radius:6px;padding:6px 8px;font-size:12px;margin:4px 0 8px}
+.touch .kv{min-height:44px}
+.kv .k{width:88px;flex:none;font-size:12px;color:var(--text2)}
+.kv .v{flex:1;min-width:0}
+.kv>i{font-size:16px;color:var(--text2)}
+.logi{border-top:1px solid var(--border);padding:6px 0;font-size:13px}
+.logi .m{font-size:12px;color:var(--text2)}
+.addnote{border:1px solid var(--control-border);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--text2);min-height:56px}
+.addnote.focus{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue);color:var(--text)}
+.when{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.when span{height:28px;border:1px solid var(--control-border);border-radius:14px;padding:0 10px;font-size:12px;display:inline-flex;align-items:center;color:var(--text2)}
+.when span.on{background:var(--blue-tint);border-color:var(--blue);color:var(--blue)}
+.touch .when span{height:36px}
+.askbox{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;margin:4px 0 8px}
+.askbox .row2{display:flex;gap:8px;margin-top:8px}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px;flex:none}
+.tile{border:1px solid var(--border);border-radius:8px;padding:6px 8px;min-height:52px}
+.tile b{display:block;font-size:18px;font-weight:500;line-height:1.2}
+.tile span{font-size:12px;color:var(--text2)}
+.tile.on{background:var(--blue-tint);border-color:var(--blue)}.tile.on span{color:var(--blue)}
+.tile.due{background:var(--warn-tint);border-color:#F2D9B0}.tile.due span,.tile.due b{color:var(--warn)}
+.pcard{display:flex;align-items:center;gap:8px;min-height:60px;border-top:1px solid var(--border);padding:4px 0}
+.pcard .g{flex:1;min-width:0}
+.pcard .l1{font-size:13px;font-weight:500}
+.pcard .l2{font-size:12px;color:var(--text2)}
+.srow{display:flex;align-items:center;gap:8px;height:40px;border-top:1px solid var(--border);font-size:13px}
+.srow .grow{flex:1}
+.srow .lk{font-size:12px;color:var(--text2);display:inline-flex;gap:4px;align-items:center}
+.srow .lk i{font-size:12px}
+</style>
+</head>
+<body>
+<main>
+<h1>Prospects — mockups for approval</h1>
+<p class="lead">Jae H. Jeong's U.S. Taekwondo Center · New students, step 4: prospects list · guidelines v0.235 · October 17, 2026 · revision 2 (your 13 details applied) · <b>revision 3 (Oct 18): screen 10 adds what the Forms work changed</b> · <b>proposal (Oct 19): screen 11, a progress track for every child</b> · <b>proposal (Oct 19): screen 12, a Board view beside the List</b> · <b>screen 13: where the progress track goes, A vs B</b></p>
+<div class="banner"><i class="ti ti-alert-triangle"></i><div><b>Design only — not a working app.</b> Nothing here is built or deployed. Screens are shown at PC (1024×800), tablet held upright (768×1024) and phone (375px). <b>All names and numbers are made-up samples.</b> "Today" is pretended to be Monday, January 11, 2027.</div></div>
+
+<div class="okbox">
+<h3>Decided in chat (written into the rulebook once you approve)</h3>
+<ol>
+<li><b>Pipeline bar + list:</b> stage counts across the top (New, Contacted, Booked, Came, Joined); click a stage to show only those people, click again for everyone.</li>
+<li><b>One row per child.</b> Siblings share the family's contact details and are linked to each other.</li>
+<li><b>Statuses:</b> start with New, Contacted, Booked, Came, Joined, No-show, Not interested; <b>admins can edit the list</b>.</li>
+<li><b>Follow-up tools:</b> notes and call log, follow-up reminders ("Follow up today"), tap to call / text / email, and marking Came / No-show (also from the Calendar).</li>
+<li><b>Joined</b> prospects have their own place (the Joined stage) until a Students section exists.</li>
+<li>Clicking a prospect opens a <b>side panel</b> next to the list (phone: full screen).</li>
+</ol>
+</div>
+
+<div class="okbox">
+<h3>Details — reviewed one by one and approved (changes from revision 1 are marked <span class="tag tag-warn">changed</span>)</h3>
+<ol>
+<li>Rail icon <code>ti-address-book</code>, label "Prospects", after Forms, with a <b>dark count badge</b> = new sign-ups nobody has opened yet.</li>
+<li>Prospects opens on <b>"Follow up today"</b> (amber chip): everyone whose follow-up date is today or overdue, plus brand-new sign-ups. Overdue dates show amber.</li>
+<li>No-show and Not interested are <b>chips beside the bar</b>, not stages (they're side exits). Joined is the last stage, with a green bar.</li>
+<li><b>Status rules the app keeps</b>, even when admins edit the list: a sign-up with a booking starts as <b>Booked</b>, without one as <b>New</b>; marking the free class sets <b>Came</b> or <b>No-show</b>. These built-in statuses can be <b>renamed and recolored but not deleted</b>; admins can add their own (e.g. "Trial 2") and reorder them.</li>
+<li><span class="tag tag-warn">changed</span> <b>Staff mark attendance — never automatic.</b> On the free-class day a <b>Check in</b> button shows (in the prospect's panel and the Calendar's day panel); tap it when the family arrives → Came. If nobody checked them in by the time class ends, a reminder asks <b>"Did Ava come?" Came / No-show</b> until someone answers. No-show sets a call-back for tomorrow.</li>
+<li><b>Log a call:</b> type a note, then pick when to follow up (Tomorrow, In 3 days, Next week, Pick a date, No follow-up). Each note keeps who wrote it and when.</li>
+<li><b>Call / Text / Email</b> open the phone's dialer, texting app or email app. On a PC, Call shows the number large to dial. Nothing is sent by the dashboard.</li>
+<li><span class="tag tag-warn">changed</span> <b>"+ Add prospect" asks which form to use</b> (e.g. Walk-in) and opens it for staff to fill in for the family — the same questions as the real form.</li>
+<li>The panel also shows the <b>form they came from</b>, all their answers, and the signed waiver (if any).</li>
+<li><span class="tag tag-warn">changed</span> <b>Staff</b> can do everything here, <b>including editing the status list</b>. Only <b>deleting a prospect</b> is admins only (with a confirmation).</li>
+<li><span class="tag tag-warn">changed</span> Columns: Child · Parent · Free class · Follow up · Status. <b>Each school's prospects stay separate:</b> on Both, Worcester's list and Shrewsbury's list show one after the other, each with its own pipeline bar — never mixed (screen 9).</li>
+<li><b>Phone bottom bar:</b> with six sections there isn't room for all of them, so it shows <b>Home, Calendar, Prospects, More</b>; More (<code>ti-menu-2</code>, already in the rulebook) lists Testing, Schedule and Forms.</li>
+<li>Icons: <code>ti-address-book</code>, <code>ti-message</code> (text), <code>ti-notes</code>, <code>ti-user-check</code> (Came), <code>ti-user-x</code> (No-show), <code>ti-clock-hour-4</code> (follow-up date).</li>
+</ol>
+</div>
+
+<div class="okbox">
+<h3>Screens in this file</h3>
+<div class="toc">
+<div><a href="#s1">1. Prospects — follow up today</a></div>
+<div><a href="#s2">2. Click a stage (Booked)</a></div>
+<div><a href="#s3">3. Log a call and set a follow-up</a></div>
+<div><a href="#s4">4. Check in, or "Did they come?"</a></div>
+<div><a href="#s5">5. Change status</a></div>
+<div><a href="#s6">6. Add a prospect</a></div>
+<div><a href="#s7">7. Edit statuses (admin)</a></div>
+<div><a href="#s8">8. Joined</a></div>
+<div><a href="#s9">9. Switcher on Both</a></div>
+</div>
+</div>
+<div id="screens"></div>
+</main>
+<script>
+const RAILI=[['ti-home','Home'],['ti-certificate','Testing'],['ti-clock','Schedule'],['ti-calendar-month','Calendar'],['ti-clipboard-text','Forms'],['ti-address-book','Prospects']];
+function loc(on){return `<div class="loc">${['Worcester','Shrewsbury','Both'].map(x=>`<span class="${x===on?'on':''}">${x===on?'<i class="ti ti-map-pin"></i>':''}${x}</span>`).join('')}</div>`;}
+const BADGE='<i class="rbadge">2</i>';
+function frame(dev,content,o={}){const L=o.loc||'Worcester',av=o.av||'JB',on=o.on||'Prospects';
+ if(dev==='pc') return `<div class="dev dev-pc"><div class="app"><div class="rail">${RAILI.map(([i,n])=>`<a class="${n===on?'on':''}"><i class="ti ${i}"></i>${n==='Prospects'?BADGE:''}</a>`).join('')}</div><div class="app-col"><div class="topbar"><div class="grow"></div>${loc(L)}<span class="avatar">${av}</span></div><div class="content">${content}</div></div></div>${o.overlay||''}</div>`;
+ if(dev==='tab') return `<div class="dev dev-tab touch"><div class="app"><div class="rail-t">${RAILI.map(([i,n])=>`<a class="${n===on?'on':''}"><i class="ti ${i}"></i>${n}${n==='Prospects'?BADGE:''}</a>`).join('')}</div><div class="app-col"><div class="topbar"><div class="grow"></div>${loc(L)}<span class="tap"><span class="avatar">${av}</span></span></div><div class="content">${content}</div></div></div>${o.overlay||''}</div>`;
+ const PB=[['ti-home','Home'],['ti-calendar-month','Calendar'],['ti-address-book','Prospects'],['ti-menu-2','More']];
+ return `<div class="dev dev-ph touch"><div class="ph-shell"><div class="topbar">${loc(L)}<div class="grow"></div><span class="tap"><span class="avatar">${av}</span></span></div><div class="content">${content}</div><div class="phbar">${PB.map(([i,n])=>`<a class="${n===on?'on':''}"><i class="ti ${i}"></i>${n}${n==='Prospects'?BADGE:''}</a>`).join('')}</div></div>${o.overlay||''}</div>`;}
+const STAGES=[['New',2],['Contacted',2],['Booked',3],['Came',2],['Joined',4]];
+const P={
+ today:[['Ava R., 10','Kim Ruiz','Mon Jan 11 · 4:00','Today · call back','Contacted',''],['Liam P., 6','Dan Park','—','New sign-up','New','new'],['Ethan B., 9','Lisa Brown','Sat Jan 9 · 9:30','Overdue · Jan 10','No-show','warn']],
+ Booked:[['Sofia L., 8','Maria Lopez','Wed Jan 13 · 4:00','—','Booked',''],['Max R., 7','Kim Ruiz','Wed Jan 13 · 4:00','—','Booked',''],['Zoe K., 11','Amy King','Sat Jan 16 · 9:30','—','Booked','']],
+ Joined:[['Owen D., 8','Pat Diaz','Came Jan 4','Joined Jan 6','Joined','ok'],['Lily W., 6','Kate Wu','Came Jan 2','Joined Jan 5','Joined','ok'],['Noah K., 7','Jen Kay','Came Jan 9','Joined Jan 9','Joined','ok'],['Ivy T., 6','Sam Tran','Came Dec 28','Joined Dec 30','Joined','ok']]};
+function pipe(sel){return `<div class="pipe">${STAGES.map(([n,c])=>`<div class="stg${sel===n?' on':''}${n==='Joined'?' j':''}"><div class="n">${c}</div><div class="l">${n}</div><div class="bar" style="width:${c*22}%"></div></div>`).join('')}</div>`;}
+function chips(sel,dev){return `<div class="chips"><span class="fchip ${sel==='today'?'due':''}"><i class="ti ti-clock-hour-4"></i>Follow up today · 3</span><span class="fchip">No-show · 1</span><span class="fchip">Not interested · 5</span>${dev==='pc'?'<div class="grow" style="flex:1"></div><div class="search"><i class="ti ti-search"></i>Search name or phone</div>':''}</div>`;}
+function head(o={}){return `<div class="phead"><div class="ptitle">Prospects</div><div class="grow"></div><button class="btn btn-primary"><i class="ti ti-plus"></i>${o.ph?'Add':'Add prospect'}</button></div>`;}
+function rows(list,o={}){return `<div class="plist${o.narrow?' narrow':''}"><div class="prw h"><span>Child</span><span>Parent</span><span class="wide">Free class</span><span class="wide">Follow up</span><span>Status</span></div>${list.map((r,i)=>`<div class="prw${o.sel===i?' sel':''}"><span class="nm">${r[0]}</span><span>${r[1]}</span><span class="wide">${r[2]}</span><span class="wide${r[3].startsWith('Overdue')||r[3].startsWith('Today')?' due':''}">${r[3]}</span><span><span class="st ${r[5]}">${r[4]}</span></span></div>`).join('')}</div>`;}
+function avaPanel(o={}){return `<h4>Ava R., 10</h4><div class="who">Kim Ruiz (mom) · from "Free class — Instagram" · Jan 8</div>
+ <div class="cacts"><button class="btn btn-sm"><i class="ti ti-phone"></i>Call</button><button class="btn btn-sm"><i class="ti ti-message"></i>Text</button><button class="btn btn-sm"><i class="ti ti-mail"></i>Email</button></div>
+ ${o.checkin?`<div class="askbox"><b style="font-weight:500">Free class today · 4:00 · White belt</b><div class="row2"><button class="btn btn-sm"><i class="ti ti-user-check"></i>Check in</button></div></div>`:''}${o.ask?`<div class="askbox"><b style="font-weight:500">Did Ava come to her free class?</b><br><span class="hint">Mon, Jan 11 · 4:00 · White belt</span><div class="row2"><button class="btn btn-sm"><i class="ti ti-user-check"></i>Came</button><button class="btn btn-sm"><i class="ti ti-user-x"></i>No-show</button></div></div>`:''}
+ <div class="kv"><span class="k">Status</span><span class="v"><span class="st">${o.status||'Contacted'}</span></span><i class="ti ti-chevron-down"></i></div>
+ <div class="kv"><span class="k">Follow up</span><span class="v" style="color:var(--warn)">${o.fu||'Today · call back'}</span><i class="ti ti-clock-hour-4"></i></div>
+ <div class="kv"><span class="k">Free class</span><span class="v">Mon Jan 11 · 4:00 · White belt</span></div>
+ <div class="kv"><span class="k">Phone</span><span class="v">(508) 555-0177</span></div>
+ <div class="kv"><span class="k">Sibling</span><span class="v">Max R., 7 · Booked</span><i class="ti ti-chevron-right"></i></div>
+ <div class="psec">Notes and calls</div>
+ ${o.note?`<div class="addnote focus">Mom called back, Ava is excited. Bringing her today at 4.<span class="caret"></span></div><div class="when"><span>Tomorrow</span><span>In 3 days</span><span class="on">Next week</span><span>Pick a date</span><span>No follow-up</span></div><div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn btn-sm">Cancel</button><button class="btn btn-sm btn-primary"><i class="ti ti-check"></i>Save note</button></div>`:`<div class="addnote">Add a note…</div>`}
+ <div class="logi">Left voicemail, will try again Monday.<div class="m">Jan 10 · Front Desk</div></div>
+ <div class="logi">Signed up online, booked Mon 4:00.<div class="m">Jan 8 · from the form</div></div>
+ <div class="psec">Form answers and waiver</div><div class="kv"><span class="v">7 answers · waiver signed Jan 8</span><i class="ti ti-chevron-right"></i></div>`;}
+
+function panel3(o={}){return `<h4>Max R., 7</h4><div class="who">Kim Ruiz (mom) · from "Free class — Instagram" · Jan 8</div>
+ <div class="cacts"><button class="btn btn-sm"><i class="ti ti-phone"></i>Call</button><button class="btn btn-sm"><i class="ti ti-message"></i>Text</button><button class="btn btn-sm"><i class="ti ti-mail"></i>Email</button></div>
+ <div class="kv"><span class="k">Status</span><span class="v"><span class="st">Booked</span></span><i class="ti ti-chevron-down"></i></div>
+ <div class="kv"><span class="k">Follow up</span><span class="v">—</span><i class="ti ti-clock-hour-4"></i></div>
+ <div class="r3"><div class="kv"><span class="k">Free class</span><span class="v">Mon Jan 11 · 5:00 · Group A</span></div>
+ <div class="cwarn"><i class="ti ti-alert-triangle"></i><span>Class cancelled (Snow storm) — call the family</span></div>
+ <div style="display:flex;gap:8px;margin-bottom:8px"><button class="btn btn-sm"><i class="ti ti-calendar-event"></i>Change time</button><button class="btn btn-sm">Cancel booking</button></div></div>
+ <div class="kv"><span class="k">Phone</span><span class="v">(508) 555-0177</span></div>
+ <div class="kv"><span class="k">Sibling</span><span class="v">Ava R., 10 · Contacted</span><i class="ti ti-chevron-right"></i></div>
+ ${o.dup?`<div class="kv r3"><span class="k">Also</span><span class="v"><i class="ti ti-link"></i> Same phone as Leo R., 6 · Walk-in, Dec 2</span><i class="ti ti-chevron-right"></i></div>`:''}
+ <div class="psec">Notes and calls</div><div class="addnote">Add a note…</div>
+ <div class="logi">Class cancelled by the closure "Snow storm" — booking kept.<div class="m">Jan 10 · Calendar</div></div>
+ <div class="psec">Form answers and waiver</div><div class="kv r3"><span class="v">7 answers · waiver <b style="font-weight:500">signed Jan 8</b> · picture kept until Apr 11</span><i class="ti ti-chevron-right"></i></div>`;}
+function noTime(){return `<h4>Leo R., 6</h4><div class="who">Kim Ruiz (mom) · from "Walk-in" · Dec 2 · Entered by Front Desk</div>
+ <div class="cacts"><button class="btn btn-sm"><i class="ti ti-phone"></i>Call</button><button class="btn btn-sm"><i class="ti ti-message"></i>Text</button><button class="btn btn-sm"><i class="ti ti-mail"></i>Email</button></div>
+ <div class="kv"><span class="k">Status</span><span class="v"><span class="st">New</span></span><i class="ti ti-chevron-down"></i></div>
+ <div class="r3"><div class="kv"><span class="k">Free class</span><span class="v">No time yet — call to set one up</span></div>
+ <div style="margin:4px 0 8px"><button class="btn btn-sm btn-primary"><i class="ti ti-calendar-plus"></i>Book a free class</button></div></div>
+ <div class="psec">Form answers and waiver</div><div class="kv r3"><span class="v">4 answers · waiver <b style="font-weight:500">signed Dec 2</b> · picture kept until Mar 2, then "Signed on Dec 2"</span><i class="ti ti-chevron-right"></i></div>`;}
+
+// screen 11: progress track. steps per child: [signed up, class booked, came, joined]; state d=done n=next f=future x=stopped
+const PR=[
+ ['Liam P.','Dan Park',['d','n','f','f'],'Signed up Oct 18 · needs a class','nx','New sign-up','New','new'],
+ ['Leo N.','Chris Nguyen',['d','d','n','f'],'Class Mon Oct 26 · 5:00 · class cancelled','w','—','Booked',''],
+ ['Ava R.','Kim Ruiz',['d','d','n','f'],'Class Wed Oct 21 · 4:00','','Today','Contacted',''],
+ ['Ethan B.','Lisa Brown',['d','d','x','f'],'No-show Oct 16 · call back','w','Overdue · Oct 16','No-show','warn'],
+ ['Mia S.','Sara Smith',['d','d','d','n'],'Came Oct 15 · ask to join','nx','Oct 21','Came',''],
+ ['Owen D.','Pat Diaz',['d','d','d','d'],'Joined Oct 4','','—','Joined','ok']];
+function trk(st){return `<span class="trk">${st.map((x,i)=>`${i?`<b class="${st[i]==='d'||st[i]==='n'||st[i]==='x'?'d':''}"></b>`:''}<i class="${x==='f'?'':x}"></i>`).join('')}</span>`;}
+function prog(r){return `<span class="prog">${trk(r[2])}<span class="t ${r[4]}">${r[4]==='w'?'<i class="ti ti-alert-triangle" style="font-size:14px;vertical-align:-2px"></i> ':''}${r[3]}</span></span>`;}
+function rows2(o={}){return `<div class="plist${o.narrow?' narrow':''}"><div class="prw2 h"><span>Child</span><span class="wide">Parent</span><span>Progress</span><span class="wide">Follow up</span><span>Status</span></div>${PR.map((r,i)=>`<div class="prw2${o.sel===i?' sel':''}"><span class="nm">${r[0]}</span><span class="wide">${r[1]}</span>${prog(r)}<span class="wide${r[6].startsWith('Overdue')||r[6]==='Today'?' due':''}" style="${r[5].startsWith('Overdue')||r[5]==='Today'?'color:var(--warn)':''}">${r[5]}</span><span><span class="st ${r[7]}">${r[6]}</span></span></div>`).join('')}</div>`;}
+function bigTrack(){return `<div class="ptrack r3">
+ <div class="s d"><span class="c"><i class="ti ti-check"></i></span><span class="l">Signed up</span><span class="m">Oct 13<br>Instagram form</span></div>
+ <div class="s d"><span class="c"><i class="ti ti-check"></i></span><span class="l">Class booked</span><span class="m">Wed Oct 21<br>4:00 · White</span></div>
+ <div class="s n"><span class="c"></span><span class="l">Came</span><span class="m">in 2 days</span></div>
+ <div class="s f"><span class="c"></span><span class="l">Joined</span><span class="m">&nbsp;</span></div></div>
+ <div class="pnext"><i class="ti ti-arrow-right"></i>Next: Check in on Wed Oct 21 when Ava arrives</div>`;}
+function avaPanel2(){return `<h4>Ava R., 10</h4><div class="who">Kim Ruiz (mom) · from "Free class — Instagram" · Oct 13</div>
+ ${bigTrack()}
+ <div class="cacts"><button class="btn btn-sm"><i class="ti ti-phone"></i>Call</button><button class="btn btn-sm"><i class="ti ti-message"></i>Text</button><button class="btn btn-sm"><i class="ti ti-mail"></i>Email</button></div>
+ <div class="kv"><span class="k">Status</span><span class="v"><span class="st">Contacted</span> <i class="ti ti-chevron-down" style="font-size:14px;color:var(--text2)"></i></span></div>
+ <div class="kv"><span class="k">Follow up</span><span class="v" style="color:var(--warn)"><i class="ti ti-alert-triangle" style="font-size:14px"></i> Today</span><i class="ti ti-clock-hour-4"></i></div>
+ <div class="kv"><span class="k">Free class</span><span class="v">Wed Oct 21 · 4:00 pm · White</span></div>
+ <div class="kv"><span class="k">Phone</span><span class="v">(508) 555-0177</span></div>
+ <div class="psec">Notes and calls</div><div class="addnote">Add a note…</div>
+ <div class="logi">Mom confirmed Wednesday.<div class="m">Oct 18 · Front Desk</div></div>`;}
+function stoppedTrack(){return `<div class="ptrack r3">
+ <div class="s d"><span class="c"><i class="ti ti-check"></i></span><span class="l">Signed up</span><span class="m">Oct 9</span></div>
+ <div class="s d"><span class="c"><i class="ti ti-check"></i></span><span class="l">Class booked</span><span class="m">Fri Oct 16<br>5:00 · White</span></div>
+ <div class="s x"><span class="c"><i class="ti ti-x"></i></span><span class="l" style="color:var(--warn)">No-show</span><span class="m">Oct 16</span></div>
+ <div class="s f"><span class="c"></span><span class="l">Joined</span><span class="m">&nbsp;</span></div></div>
+ <div class="pnext" style="background:var(--warn-tint);color:var(--warn)"><i class="ti ti-alert-triangle"></i>Next: call back (overdue) and book a new class</div>`;}
+function main2(dev,o={}){
+ if(dev==='ph') return head({ph:1})+`<div class="tiles">${STAGES.map(([n,c])=>`<div class="tile"><b>${c}</b><span>${n}</span></div>`).join('')}<div class="tile due"><b>3</b><span>Today</span></div></div>${PR.map(r=>`<div class="pcard"><div class="g"><div class="l1">${r[0]} · ${r[1]}</div><div class="l2" style="margin-top:4px">${prog(r)}</div></div><span class="st ${r[7]}">${r[6]}</span></div>`).join('')}`;
+ if(dev==='tab') return head()+pipe()+chips('','tab')+`<div class="pbody" style="flex-direction:column">${rows2({sel:o.sel})}${o.panel?`<div class="ppanel" style="width:auto;flex:1">${o.panel}</div>`:''}</div>`;
+ return head()+pipe()+chips('','pc')+`<div class="pbody">${rows2({sel:o.sel,narrow:!!o.panel})}${o.panel?`<div class="ppanel">${o.panel}</div>`:''}</div>`;}
+
+// screen 12: board view
+const BCOLS=[
+ ['New',[['Liam P.','Dan Park','Needs a class','nx',1]]],
+ ['Contacted',[['Ruby A.','Jo Allen','Call today','w',0]]],
+ ['Booked',[['Ava R.','Kim Ruiz','Wed Oct 21 · 4:00','',0],['Leo N.','Chris Nguyen','Class cancelled — call','w',1],['Zoe K.','Amy King','Sat Oct 24 · 9:30','',1]]],
+ ['Came',[['Mia S.','Sara Smith','Came Oct 15 · ask to join','nx',0]]],
+ ['Joined',[['Owen D.','Pat Diaz','Joined Oct 4','',0]]]];
+const BTRK={New:['d','n','f','f'],Contacted:['d','n','f','f'],Booked:['d','d','n','f'],Came:['d','d','d','n'],Joined:['d','d','d','d']};
+function bcard(c,sel,col){return `<div class="bcard${sel?' sel':''}"><div class="n">${c[4]?'<span class="dot"></span>':''}${c[0]}</div><div class="p">${c[1]}</div>${col?`<div class="btrk r3">${trk(BTRK[col])}</div>`:''}<div class="x ${c[3]}">${c[3]==='w'?'<i class="ti ti-alert-triangle" style="font-size:13px;vertical-align:-2px"></i> ':''}${c[2]}</div></div>`;}
+function bcol(c,sel,dots){return `<div class="bcol${c[0]==='Joined'?' j':''}"><h5><span>${c[0]}</span><b>${c[1].length}</b></h5>${c[1].map(x=>bcard(x,x[0]===sel,dots?c[0]:'')).join('')}</div>`;}
+function vsw(on,dev){return `<span class="vsw r3"><span class="${on==='list'?'on':''}"><i class="ti ti-list"></i>List</span><span class="${on==='board'?'on':''}"><i class="ti ti-layout-kanban"></i>Board</span></span>`;}
+function chips2(dev){return `<div class="chips">${vsw('board')}<span class="fchip">Follow up today · 3</span><span class="fchip">No-show · 1</span><span class="fchip">Not interested · 5</span>${dev==='pc'?'<div class="grow" style="flex:1"></div><div class="search"><i class="ti ti-search"></i>Search name or phone</div>':''}</div>`;}
+// the bar and tiles count the same children as the columns
+const STG2=()=>BCOLS.map(c=>[c[0],c[1].length]);
+function pipeB(){return `<div class="pipe">${STG2().map(([n,c])=>`<div class="stg${n==='Joined'?' j':''}"><div class="n">${c}</div><div class="l">${n}</div><div class="bar" style="width:${Math.max(8,c*30)}%"></div></div>`).join('')}</div>`;}
+function board(dev,o={}){
+ if(dev==='ph') return head({ph:1})+`<div class="tiles">${STG2().map(([n,c])=>`<div class="tile${n==='Booked'?' on':''}"><b>${c}</b><span>${n}</span></div>`).join('')}<div class="tile due"><b>3</b><span>Today</span></div></div><div class="chips">${vsw('board')}<span class="fchip">No-show · 1</span></div><div class="r3" style="flex:none">${bcol(BCOLS[2],null,o.dots)}</div><div class="swipe"><i class="ti ti-arrows-horizontal"></i> Swipe or tap a stage above for the next column</div>`;
+ if(dev==='tab') return head()+pipeB()+chips2('tab')+`<div class="bscroll r3">${BCOLS.map(c=>bcol(c,null,o.dots)).join('')}</div><div class="swipe"><i class="ti ti-arrows-horizontal"></i> Scroll sideways for Came and Joined</div>`;
+ return head()+pipeB()+chips2('pc')+`<div class="pbody"><div class="board r3" style="flex:1;${o.panel?'grid-template-columns:repeat(5,minmax(0,1fr))':''}">${BCOLS.map(c=>bcol(c,o.sel,o.dots)).join('')}</div>${o.panel?`<div class="ppanel">${o.panel}</div>`:''}</div>`;}
+function main(dev,o={}){const sel=o.stage, list=sel?P[sel]:P.today;
+ if(dev==='ph') return head({ph:1})+`<div class="tiles">${STAGES.map(([n,c])=>`<div class="tile${sel===n?' on':''}"><b>${c}</b><span>${n}</span></div>`).join('')}<div class="tile${sel?'':' due'}"><b>3</b><span>Today</span></div></div>${list.map(r=>`<div class="pcard"><div class="g"><div class="l1">${r[0]} · ${r[1]}</div><div class="l2">${r[2]}${r[3]!=='—'?' · '+r[3]:''}</div></div><span class="st ${r[5]}">${r[4]}</span></div>`).join('')}`;
+ if(dev==='tab') return head()+pipe(sel)+chips(sel?'':'today','tab')+`<div class="pbody" style="flex-direction:column">${rows(list,{sel:o.sel})}${o.panel?`<div class="ppanel" style="width:auto;flex:1">${o.panel}</div>`:''}</div>`;
+ return head()+pipe(sel)+chips(sel?'':'today','pc')+`<div class="pbody">${rows(list,{sel:o.sel,narrow:!!o.panel})}${o.panel?`<div class="ppanel">${o.panel}</div>`:''}</div>`;}
+
+function screens(){return [
+`<h2 id="s1">1. Prospects — follow up today</h2><p class="lead">Who needs a call today, with the whole pipeline above.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li>Prospects is a new rail item with a count of new sign-ups nobody has opened yet.</li>
+<li>The <b>pipeline bar</b> shows how many children are at each stage. It opens on <b>Follow up today</b>: today's and overdue follow-ups plus new sign-ups.</li>
+<li>Click a row → the <b>side panel</b>: Call / Text / Email, status, follow-up date, free class, siblings, notes and calls, form answers and waiver.</li>
+<li>Tablet (upright): list on top, panel underneath. Phone: tiles for the stages, cards for people; tap a card for the full-screen panel.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · Ava selected (her free class is today, so Check in shows)</div><div class="scroller">${frame('pc',main('pc',{sel:0,panel:avaPanel({checkin:1})}))}</div>
+<div class="cap"><i class="ti ti-device-tablet"></i>Tablet</div><div class="scroller">${frame('tab',main('tab',{sel:0,panel:avaPanel()}))}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone · list, then Ava full screen</div><div class="pair">${frame('ph',main('ph'))}${frame('ph','',{overlay:`<div class="fullscreen touch"><div class="head"><span class="tap"><i class="ti ti-arrow-left"></i></span>Ava R., 10</div><div class="fbody ppanel" style="border:none;width:auto;padding:16px">${avaPanel().replace('<h4>Ava R., 10</h4>','')}</div></div>`})}</div>`,
+
+`<h2 id="s2">2. Click a stage</h2><p class="lead">Clicking "Booked" shows only the 3 children with a free class booked.</p>
+<div class="explain"><h3>What it does</h3><ul><li>The chosen stage turns blue; the list shows only that stage. Click it again (or "Follow up today") to go back.</li><li>Search finds anyone by child name, parent name or phone, at any stage.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',main('pc',{stage:'Booked'}))}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone</div><div class="scroller">${frame('ph',main('ph',{stage:'Booked'}))}</div>`,
+
+`<h2 id="s3">3. Log a call and set a follow-up</h2><p class="lead">Write what happened, pick when to call next.</p>
+<div class="explain"><h3>What it does</h3><ul><li>Type in "Add a note…", then pick a follow-up: Tomorrow, In 3 days, Next week, a date, or none.</li><li>Save note adds it to the log with your name and the time, and moves the follow-up date. The person drops off "Follow up today" if the new date is later.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',main('pc',{sel:0,panel:avaPanel({note:1})}))}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone · full screen</div><div class="scroller">${frame('ph','',{overlay:`<div class="fullscreen touch"><div class="head"><span class="tap"><i class="ti ti-arrow-left"></i></span>Ava R., 10</div><div class="fbody ppanel" style="border:none;width:auto;padding:16px">${avaPanel({note:1}).replace('<h4>Ava R., 10</h4>','')}</div></div>`})}</div>`,
+
+`<h2 id="s4">4. Check in, or "Did they come?"</h2><p class="lead">Staff mark attendance — the app never guesses.</p>
+<div class="explain"><h3>What it does</h3><ul><li><b>On the class day</b>, a <b>Check in</b> button shows for each free class — in the prospect's panel and in the Calendar's day panel. Tap it when the family walks in (while you grab their info) → status Came, with who and when. Undo is available for 5 seconds.</li><li><b>If nobody checked them in</b> by the time class ends, the panel asks "Did Ava come?" with <b>Came</b> and <b>No-show</b>, and keeps asking until someone answers. No-show sets a call-back for tomorrow to rebook.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · Calendar day panel, 3:55 pm — Ava just walked in</div><div class="scroller">${frame('pc',`<div class="phead"><div class="ptitle">Calendar</div></div><div class="pbody"><div style="flex:1;border:1px solid var(--border);border-radius:8px;background:var(--surface);display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:13px">(month view, as approved)</div><div class="ppanel"><h4>Monday, January 11</h4><div class="who">Today · Worcester</div><div class="psec">Free classes</div><div class="kv"><span class="v">4:00 · Ava R. · White belt</span><span class="st">Came</span></div><div class="kv"><span class="v">5:15 · Noah K. · White belt</span><button class="btn btn-sm"><i class="ti ti-user-check"></i>Check in</button></div><div class="psec">Classes</div><div class="kv"><span class="v">4:00–4:45 · White belt</span></div><div class="kv"><span class="v">5:15–6:00 · Group A</span></div></div></div>`,{on:'Calendar',overlay:`<div class="toast"><span>Ava R. checked in</span><span class="undo"><i class="ti ti-arrow-back-up"></i>Undo</span></div>`})}</div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · Prospects, 4:50 pm — nobody checked Ava in</div><div class="scroller">${frame('pc',main('pc',{sel:0,panel:avaPanel({ask:1,status:'Booked',fu:'—'})}))}</div>`,
+`<h2 id="s5">5. Change status</h2><p class="lead">Pick any status from the panel.</p>
+<div class="explain"><h3>What it does</h3><ul><li>The status menu lists the stages in order, then the side exits. Choosing "Joined" asks for the date they joined (defaults to today).</li><li>Every change is logged in "Notes and calls" (e.g. "Status: Booked → Came · Front Desk").</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',main('pc',{sel:0,panel:avaPanel()}),{overlay:`<div class="menu" style="top:262px;right:40px;width:220px"><div class="it">New</div><div class="it sel">Contacted</div><div class="it">Booked</div><div class="it hov">Came</div><div class="it">Joined</div><div class="sep"></div><div class="it">No-show</div><div class="it">Not interested</div></div>`})}</div>`,
+
+`<h2 id="s6">6. Add a prospect</h2><p class="lead">For phone calls and anyone who didn't use a form: pick a form and fill it in for them.</p>
+<div class="explain"><h3>What it does</h3><ul><li>"+ Add prospect" lists this school's Live forms. Pick one (e.g. Walk-in) and it opens the same steps families see, inside the dashboard.</li><li>The new prospect is marked "Entered by Front Desk". It starts as New, or Booked if a free class was picked.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',main('pc'),{overlay:`<div class="overlay"><div class="dialog"><h3>Add prospect</h3><p class="sub">Which form do you want to fill in for them?</p>${['Walk-in','Free class — Instagram','Free class — Facebook'].map((n,i)=>`<span class="cbrow" style="min-height:40px;border-top:1px solid var(--border)"><span class="cb${i===0?' on':''}" style="border-radius:50%"></span>${n}</span>`).join('')}<div class="actions"><button class="btn">Cancel</button><button class="btn btn-primary">Open form</button></div></div></div>`})}</div>`,
+`<h2 id="s7">7. Edit statuses</h2><p class="lead"><code>⋯</code> → Edit statuses.</p>
+<div class="explain"><h3>What it does</h3><ul><li>Admins <b>and staff</b> can rename, reorder (drag or Move up/down) and add statuses. Each is either a <b>stage</b> (shown in the pipeline bar) or a <b>side exit</b> (shown as a chip).</li><li>Built-in statuses (<code>ti-lock</code>) can be renamed but not deleted, because the app uses them: new sign-ups, bookings, Came / No-show, and Joined (never auto-deleted) / Not interested (deleted after 2 years).</li><li>Deleting a status you added asks where its people should move.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',main('pc'),{overlay:`<div class="overlay"><div class="dialog dialog-detail"><h3>Edit statuses</h3><p class="sub">Shared by both schools</p><div class="psec" style="margin-top:0">Stages (in the pipeline bar, in order)</div>${['New','Contacted','Booked','Came','Second trial','Joined'].map(n=>`<div class="srow"><i class="ti ti-grip-vertical" style="color:var(--text2)"></i><span class="grow">${n}</span>${['Contacted','Second trial'].includes(n)?'':'<span class="lk"><i class="ti ti-lock"></i>built-in</span>'}<span class="ib"><span class="ibv"><i class="ti ti-edit"></i></span></span><span class="ib"><span class="ibv"><i class="ti ti-dots"></i></span></span></div>`).join('')}<div class="psec">Side exits (chips)</div>${['No-show','Not interested'].map(n=>`<div class="srow"><i class="ti ti-grip-vertical" style="color:var(--text2)"></i><span class="grow">${n}</span><span class="lk"><i class="ti ti-lock"></i>built-in</span><span class="ib"><span class="ibv"><i class="ti ti-edit"></i></span></span><span class="ib"><span class="ibv"><i class="ti ti-dots"></i></span></span></div>`).join('')}<div class="srow"><button class="btn btn-sm"><i class="ti ti-plus"></i>Add status</button></div><div class="actions"><button class="btn">Close</button></div></div></div>`})}</div>`,
+
+`<h2 id="s8">8. Joined</h2><p class="lead">The place for families who signed up, until there's a Students section.</p>
+<div class="explain"><h3>What it does</h3><ul><li>Click the green "Joined" stage to see everyone who joined, newest first, with when they came and when they joined.</li><li>Joined prospects are never deleted automatically. When a Students section is built, they can be moved over.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',main('pc',{stage:'Joined'}))}</div>`
+,
+`<h2 id="s9">9. Switcher on Both</h2><p class="lead">Each school keeps its own prospects. On Both they're shown one after the other, never mixed.</p><div class="explain"><h3>What it does</h3><ul><li>A Worcester section (its own pipeline bar, chips and list), then a Shrewsbury section below it. Scroll to see the second school.</li><li>Opening someone opens the side panel as usual. "+ Add prospect" asks which school first.</li></ul></div><div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',head()+`<div class="schoolh"><i class="ti ti-map-pin"></i>Worcester</div>`+pipe()+chips('today','tab')+'<div class="pbody" style="flex:none">'+rows(P.today)+'</div>'+`<div class="schoolh" style="margin-top:20px"><i class="ti ti-map-pin"></i>Shrewsbury</div><div class="pipe">${[['New',1],['Contacted',0],['Booked',2],['Came',1],['Joined',3]].map(([n,c])=>`<div class="stg${n==='Joined'?' j':''}"><div class="n">${c}</div><div class="l">${n}</div><div class="bar" style="width:${c*22}%"></div></div>`).join('')}</div>`,{loc:'Both'})}</div>`,
+`<h2 id="s10">10. Revision 3 — what the Forms work changed (outlined in amber)</h2><p class="lead">Small additions to the side panel, from decisions made while building Forms (rulebook v0.241, v0.242, v0.243). Everything else above stays as approved.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li><b>Cancelled class:</b> a booked free class whose class was cancelled later (a closure or a Schedule change) stays booked and shows amber "Class cancelled — call the family" (v0.241 answer 6). The timeline says what cancelled it.</li>
+<li><span class="prop">decided (Q2 = A, v0.244)</span> <b>Book / Change time / Cancel booking</b> from the panel, using the same open times and spot limits as the form. A family that chose "No time yet" gets <b>Book a free class</b>.</li>
+<li><b>Waiver:</b> the signature picture is kept until 90 days after the free class, then deleted; the panel then shows "signed on &lt;date&gt;" (v0.242).</li>
+<li><span class="prop">dropped (Q4 = B, v0.244)</span> <b>Same family twice:</b> a line "Same phone as Leo R." (<code>ti-link</code>, not a warning) links to the other prospect. Nothing is merged.</li><li><b>Cancel booking</b> frees the spot and shows a toast with Undo (it is not a delete, so it is not red).</li><li>Tablet sample: Leo, a walk-in with no time yet, gets <b>Book a free class</b>.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · Max's free class was cancelled by the snow storm</div><div class="scroller">${frame('pc',main('pc',{stage:'Booked',sel:1,panel:panel3({dup:1})}))}</div>
+<div class="cap"><i class="ti ti-device-tablet"></i>Tablet · a walk-in who picked "No time yet"</div><div class="scroller">${frame('tab',main('tab',{panel:noTime()+'<div class="psec">Notes and calls</div><div class="addnote">Add a note…</div>'}))}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone · full-screen panel</div><div class="scroller">${frame('ph','',{overlay:`<div class="fullscreen touch"><div class="head"><span class="tap"><i class="ti ti-arrow-left"></i></span>Max R., 7</div><div class="fbody"><div class="ppanel" style="width:auto;border:none;padding:0">${panel3()}</div></div></div>`})}</div>`,
+`<h2 id="s11">11. Proposal — a progress track for every child (outlined in amber)</h2><p class="lead">See at a glance where each child is: signed up, free class booked, came, joined — and what's next.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li><b>The same four steps for every child:</b> Signed up → Class booked → Came → Joined. Green = done, blue ring = the next step, gray = not yet. A side exit shows where they stopped (No-show in amber, Not interested in gray).</li>
+<li><b>In the list,</b> a "Progress" column replaces "Free class": the small track plus one line saying where they are or what's next ("Signed up Oct 18 · needs a class", "Class Wed Oct 21 · 4:00", "Came Oct 15 · ask to join"). It stays visible when the panel is open.</li>
+<li><b>In the panel,</b> a big track at the top with the date under each step, and a "Next:" line.</li>
+<li>Nothing new to fill in: the steps come from the sign-up, the booking, Check in and Joined.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · "Everyone", Ava open</div><div class="scroller">${frame('pc',main2('pc',{sel:2,panel:avaPanel2()}))}</div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · the list without a panel</div><div class="scroller">${frame('pc',main2('pc'))}</div>
+<div class="cap"><i class="ti ti-device-tablet"></i>Tablet · Ethan (stopped at No-show)</div><div class="scroller">${frame('tab',main2('tab',{sel:3,panel:`<h4>Ethan B., 9</h4><div class="who">Lisa Brown (mom) · from "Free class — Instagram" · Oct 9</div>${stoppedTrack()}<div class="cacts"><button class="btn btn-sm"><i class="ti ti-phone"></i>Call</button><button class="btn btn-sm"><i class="ti ti-message"></i>Text</button><button class="btn btn-sm"><i class="ti ti-mail"></i>Email</button></div>`}))}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone · list, then Ava full screen</div><div class="pair">${frame('ph',main2('ph'))}${frame('ph','',{overlay:`<div class="fullscreen touch"><div class="head"><span class="tap"><i class="ti ti-arrow-left"></i></span>Ava R., 10</div><div class="fbody ppanel" style="border:none;width:auto;padding:16px">${avaPanel2().replace('<h4>Ava R., 10</h4>','')}</div></div>`})}</div>`,
+`<h2 id="s12">12. Proposal — a Board view beside the List (outlined in amber)</h2><p class="lead">The stage bar stays on top. A List / Board switch shows the same children either as the list, or as one column per stage.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li><b>List / Board switch</b> (<code>ti-list</code> / <code>ti-layout-kanban</code>) next to the chips. Each person's choice is remembered on that device.</li>
+<li><b>Board:</b> one column per stage, in the stage bar's order (New, Contacted, Booked, Came, Joined), each child a card: name, parent, and one line with where they are or what's next. Amber with the icon when something needs a call. The blue dot = a new sign-up you haven't opened.</li>
+<li>Side exits (No-show, Not interested) stay as chips; clicking one shows those children (in the List).</li>
+<li>Click a card → the same side panel as the List. Search and the stage bar work in both views.</li>
+<li><b>Tablet:</b> the columns scroll sideways. <b>Phone:</b> one column at a time — tap a stage tile (or swipe) to change column.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · Board</div><div class="scroller">${frame('pc',board('pc'))}</div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · Board with Ava open</div><div class="scroller">${frame('pc',board('pc',{sel:'Ava R.',panel:avaPanel2()}))}</div>
+<div class="cap"><i class="ti ti-device-tablet"></i>Tablet · Board</div><div class="scroller">${frame('tab',board('tab'))}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone · Board, the Booked column</div><div class="scroller">${frame('ph',board('ph'))}</div>`,
+`<h2 id="s13">13. Where the progress track goes — A vs B (the difference outlined in amber)</h2><p class="lead">The List and the panel are the same in A and B. The only difference is the Board cards.</p>
+<div class="explain"><h3>The two choices</h3><ul>
+<li><b>A — List and panel only:</b> List rows have the small track + one line; the panel has the big track with dates; Board cards stay short (name, parent, one line), because the column already says the stage.</li>
+<li><b>B — cards too:</b> everything in A, plus the small track on every Board card (outlined in amber).</li></ul></div>
+<div class="noamb"><h3 class="optlbl">A — List and panel only</h3>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · A · List, Ava open (same in B)</div><div class="scroller">${frame('pc',main2('pc',{sel:2,panel:avaPanel2()}))}</div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · A · Board, Ava open</div><div class="scroller">${frame('pc',board('pc',{sel:'Ava R.',panel:avaPanel2()}))}</div>
+<div class="cap"><i class="ti ti-device-tablet"></i>Tablet · A · Board</div><div class="scroller">${frame('tab',board('tab'))}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone · A · Board, the Booked column</div><div class="scroller">${frame('ph',board('ph'))}</div>
+</div><div class="onlytrk"><h3 class="optlbl">B — cards too</h3>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · B · Board, Ava open</div><div class="scroller">${frame('pc',board('pc',{sel:'Ava R.',panel:avaPanel2(),dots:1}))}</div>
+<div class="cap"><i class="ti ti-device-tablet"></i>Tablet · B · Board</div><div class="scroller">${frame('tab',board('tab',{dots:1}))}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone · B · Board, the Booked column</div><div class="scroller">${frame('ph',board('ph',{dots:1}))}</div></div>`
+].join('');}
+document.getElementById('screens').innerHTML=screens();
+</script>
+</body>
+</html>

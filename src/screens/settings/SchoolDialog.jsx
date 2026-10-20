@@ -1,15 +1,17 @@
-// SchoolDialog.jsx — edit one school's street address (Settings → Schools, mockup S3).
+// SchoolDialog.jsx — edit one school's street address and phone (Settings → Schools, mockup S3).
 // Why it exists: rulebook v0.135 — admins enter each school's address in the dashboard; the
 // family registration pages and the printed flyer show "Location: <school>, <address>".
 // Four fields: Street address, City, State, ZIP code. All four empty = no address (the family
 // pages then show just the school name); otherwise all four are needed. The same rules as the
 // database (src/lib/settings/schoolsApi.js addressProblems) are checked while typing.
+// Under the address: an optional Phone (migration 0019, F3 difference 4) — a closed sign-up form
+// shows it as "Call us at …". One Save stores the address and the phone together.
 // PC / tablet: a small centered dialog with Cancel / Save. Phone: a full screen with a back arrow.
 // The values live in Settings.jsx (`state`), so a screen lock never loses what was typed.
 import { IconCheck } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
-import { addressProblems } from '../../lib/settings/schoolsApi.js';
+import { addressProblems, phoneProblem } from '../../lib/settings/schoolsApi.js';
 import * as T from './text.js';
 
 const FIELDS = [
@@ -20,7 +22,7 @@ const FIELDS = [
 ];
 
 export function isSchoolFormDirty(state) {
-  return FIELDS.some((field) => state.values[field.key] !== state.initial[field.key]);
+  return [...FIELDS.map((field) => field.key), 'phone'].some((key) => state.values[key] !== state.initial[key]);
 }
 
 // Messages + whether Save is available. "Empty" messages wait until the field was used or
@@ -35,12 +37,19 @@ export function checkSchoolForm(state) {
     valid = false;
     if (code !== 'empty' || state.touched[field.key] || state.triedSave) errors[field.key] = T.addressProblemText(field.key, code);
   }
+  // the phone: shown once the field was left or Save was pressed (not while typing the first digits)
+  if (phoneProblem(state.values.phone)) {
+    valid = false;
+    if (state.touched.phoneDone || state.triedSave) errors.phone = T.PHONE_PROBLEM;
+  }
   const t = (v) => String(v ?? '').trim();
   return {
     errors,
     canSave: valid && !state.saving && !state.blocked,
     sameAsSaved: valid && !isSchoolFormDirty(state),
-    payload: valid ? { street: t(state.values.street), city: t(state.values.city), state: t(state.values.state), zip: t(state.values.zip) } : null,
+    payload: valid
+      ? { street: t(state.values.street), city: t(state.values.city), state: t(state.values.state), zip: t(state.values.zip), phone: t(state.values.phone) }
+      : null,
   };
 }
 
@@ -119,6 +128,28 @@ export default function SchoolDialog({ state, school, isPhone, onChange, onTouch
         </div>
         <p className="field-hint">{T.addressHint(school.name)}</p>
         <p className="field-hint">{T.CLEAR_HINT}</p>
+
+        <div className="st-fields st-phone">
+          <div className="field">
+            <label htmlFor={`${idBase}-phone`}>{T.PHONE}</label>
+            <input
+              id={`${idBase}-phone`}
+              className="input"
+              type="tel"
+              autoComplete="off"
+              inputMode="tel"
+              maxLength={20}
+              readOnly={readOnly}
+              value={state.values.phone}
+              aria-invalid={check.errors.phone ? true : undefined}
+              aria-describedby={`${idBase}-phone-hint${check.errors.phone ? ` ${idBase}-phone-error` : ''}`}
+              onChange={(event) => onChange({ phone: event.target.value })}
+              onBlur={() => onTouch('phoneDone')}
+            />
+            <p className="field-hint" id={`${idBase}-phone-hint`}>{T.PHONE_HINT}</p>
+            {check.errors.phone && <Notice id={`${idBase}-phone-error`}>{check.errors.phone}</Notice>}
+          </div>
+        </div>
 
         {isPhone && noteBlock}
         {isPhone ? (
