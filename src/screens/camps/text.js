@@ -484,11 +484,6 @@ export const markPaidAmount = (cents) => `Mark paid ${dollars(cents)}`;
 export const markPaidLabel = (name, cents) => `Mark ${name} paid, ${dollars(cents)}`;
 export const reviewDuplicateLabel = (name) => `Possible duplicate: review ${name}`;
 export const ADMIN_GROUP = 'Admin';
-// Mark paid on the Both view of a both-schools camp (v0.707, picture option A)
-export const markPaidTitle = (name) => `Mark paid — ${name}`;
-export const markPaidAmountLine = (cents, method) => `${dollars(cents)} · ${payingByLower(method)}`;
-export const PAID_AT_WHICH = 'Paid at which school?';
-export const PICK_SCHOOL_FIRST = 'Pick a school first.'; // (not in the mockups)
 export const SCHOOL_REFUSED = 'Pick the school where it was paid.'; // (not in the mockups) database: invalid, field school
 export const PAID_AT = 'Paid at'; // (not in the mockups) Edit payment's school choice
 export const COL_CAMPER = 'Camper';

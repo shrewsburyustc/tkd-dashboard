@@ -941,13 +941,13 @@ check('campsArgs round trip: onlyOn through Add / Edit camp, onlyWeekdays throug
 });
 
 check('payment school (v0.707): paymentSchoolFor, Mark paid / Undo / Edit payment, detail, seed', () => {
-  const single = { locationCode: 'shrewsbury', bothSchools: false };
-  const both = { locationCode: 'worcester', bothSchools: true };
-  assert.equal(paymentSchoolFor(single, 'worcester'), 'worcester'); // the desk that took it, always
-  assert.equal(paymentSchoolFor(both, 'shrewsbury'), 'shrewsbury');
-  assert.equal(paymentSchoolFor(single, 'both'), 'shrewsbury'); // Both view: a single-school camp's own school
-  assert.equal(paymentSchoolFor(both, 'both'), null); // Both view + both-schools camp: the screen asks
-  assert.equal(paymentSchoolFor(single, 'boston'), null);
+  // This device's home school, whatever the camp or the switcher (owner decision 2026-10-19).
+  assert.equal(paymentSchoolFor('Worcester'), 'worcester');
+  assert.equal(paymentSchoolFor('Shrewsbury'), 'shrewsbury');
+  assert.equal(paymentSchoolFor('shrewsbury'), 'shrewsbury');
+  assert.equal(paymentSchoolFor('Both'), null); // never a device school
+  assert.equal(paymentSchoolFor('boston'), null);
+  assert.equal(paymentSchoolFor(undefined), null);
   const { backend: b } = makeBackend({ today: '2027-04-21' });
   const april = rows(b, 'camps', 'id, name').find((c) => c.name === 'April Vacation Camp');
   const roster = () => toCamel(rows(b, 'camp_roster', ROSTER, [{ col: 'camp_id', value: april.id }]));

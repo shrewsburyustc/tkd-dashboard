@@ -52,6 +52,7 @@ export default function Camps({
   onCampTab,
   onOpenCamp,
   onCloseCamp,
+  deviceLocation, // this device's home school ('Worcester' | 'Shrewsbury'): where Mark paid's money goes
   followSchoolFor = null, // a camp opened from Finance: its page may move the switcher once
   onLocationChange = null,
   screenLocked,
@@ -181,6 +182,7 @@ export default function Camps({
           tab={campTab}
           onTab={onCampTab}
           onBack={onCloseCamp}
+          deviceLocation={deviceLocation}
           followSchool={followSchoolFor === campId}
           onLocationChange={onLocationChange}
           {...shared}

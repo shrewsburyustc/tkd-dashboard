@@ -304,7 +304,7 @@ export async function changePayingBy(camperId, expectedVersion, payingBy) {
 
 // Mark paid: one click records what the camper owes now, the way they said they'd pay, today.
 // school = the school whose desk took the money ('worcester' | 'shrewsbury', v0.707 — work it out
-// with campRules.paymentSchoolFor; when that gives null, ask "Paid at which school?").
+// with campRules.paymentSchoolFor from this device's home school — never asked, owner decision 2026-10-19).
 // → { status:'ok', paymentId, amountCents, method, version, school } · 'already_paid' · 'stale'
 //   (double click) · { status:'invalid', field:'school' }
 export async function markPaid(camperId, expectedVersion, school) {

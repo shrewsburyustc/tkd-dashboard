@@ -51,7 +51,6 @@ import { useCampActions } from './CampRowMenu.jsx';
 import CheckInTab from './CheckInTab.jsx';
 import CompareDialog from './CompareDialog.jsx';
 import { findPairs } from './DuplicateBox.jsx';
-import MarkPaidDialog from './MarkPaidDialog.jsx';
 import { EditPaymentDialog, PayingByDialog } from './PaymentDialogs.jsx';
 import PaymentsTab from './PaymentsTab.jsx';
 import * as T from './text.js';
@@ -95,6 +94,7 @@ export default function CampPage({
   tab: requestedTab,
   onTab,
   onBack,
+  deviceLocation, // 'Worcester' | 'Shrewsbury' — this device's home school (where Mark paid's money goes)
   followSchool = false, // opened from a Finance payment: show the camp on its own school instead of leaving
   onLocationChange = null,
   screenLocked,
@@ -301,13 +301,10 @@ export default function CampPage({
   }
 
   // ===== Mark paid: one click, the full amount owed (Color Belt plan answer 6) =====
-  // The payment goes to the Daily report of the school whose desk took the money (v0.707): the
-  // switcher's school. On Both, a single-school camp uses its own school; a both-schools camp asks
-  // "Paid at which school?" first (MarkPaidDialog).
+  // The payment goes to the Daily report of THIS DEVICE's home school (account menu "This device",
+  // owner decision 2026-10-19) — whatever the top switcher shows and whatever the camp. Never asked.
   function doMarkPaid(row) {
-    const school = paymentSchoolFor(camp, locationKey);
-    if (school) doMarkPaidAt(row, school);
-    else openDialog({ type: 'paidAt', row, opener: document.activeElement });
+    doMarkPaidAt(row, paymentSchoolFor(deviceLocation));
   }
   async function doMarkPaidAt(row, school) {
     if (!begin()) return;
@@ -772,19 +769,6 @@ export default function CampPage({
           onKeep={keepOne}
           onKeepBoth={keepBoth}
           onClose={closeDialog}
-        />
-      );
-    } else if (!hidden && dialog.type === 'paidAt') {
-      dialogElement = (
-        <MarkPaidDialog
-          key={dialog.key}
-          row={dialog.row}
-          onClose={closeDialog}
-          onConfirm={(school) => {
-            const row = dialog.row;
-            closeDialog();
-            doMarkPaidAt(row, school);
-          }}
         />
       );
     } else if (!hidden && dialog.type === 'deleteCamper') {

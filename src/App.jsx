@@ -895,6 +895,8 @@ export default function App() {
                 onCampTab={changeCampTab}
                 onOpenCamp={openCamp}
                 onCloseCamp={closeCamp}
+                // This device's home school: a camp payment lands in its Daily report (owner decision 2026-10-19).
+                deviceLocation={deviceLocation}
                 followSchoolFor={campSchoolFollow}
                 onLocationChange={(next) => {
                   setCampSchoolFollow(null);
