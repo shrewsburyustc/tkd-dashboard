@@ -209,6 +209,31 @@
 //       re-run takes the phone's read right away and a 0019 re-run brings
 //       it back (the numbers kept), and a minimal database gives the same
 //       0019 fingerprints.
+//   19. 0020 (current_session_id reads only request.jwt.claims, rulebook
+//       v0.408), LAST - after step 18 and after 13g, on the main database
+//       and on the upgrade database (which still has every migration up
+//       to 0014 and 0011):
+//         a. 0020_fingerprints.sql and the migration contain neither
+//            "delete" nor "drop"; the fingerprint BEFORE 0020 (0001's
+//            version) is taken
+//         b. the attack, before the fix: AS testing_registrar, a planted
+//            legacy request.jwt.claim + a family registration on 11c's test
+//            event -> its history rows carry the planted session id (proves
+//            the check really reproduces the finding)
+//         c. apply 0020; 0020_tests.sql; verify_pin / 0002 / 0003 / 0004 /
+//            0005 / 0011 tests again; the body changed, owner and rights not
+//         d. the attack again -> the new history rows have session_id NULL
+//         e. 0020 applied a SECOND time: history count and fingerprint
+//            unchanged; 0020_tests.sql again
+//         f. the undo of SETUP section 0020e, exactly as written there: the
+//            fingerprint equals (a); PIN + 0002 tests pass; then 0020 again
+//            (fingerprint equals c's; 0020_tests.sql passes)
+//         g. the upgrade database: 0006_tests.sql BEFORE 0020 (its C9
+//            accepts 0001's and 0020's current_session_id), 0020 on top,
+//            its fingerprint equals the main database's, then 0020_tests.sql
+//            and every earlier test file (0014, 0010, 0006, 0005, 0004,
+//            0003, 0002, PIN) pass. (0011_tests.sql runs in c instead: the
+//            upgrade database holds 14g's big seed, which it refuses.)
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -566,6 +591,10 @@ async function main() {
   console.log('\nMigration 0019 (school phone):');
   const after19 = after5 ? await step18() : null;
 
+  // 19. 0020 (current_session_id reads only request.jwt.claims), LAST
+  console.log('\nMigration 0020 (current_session_id reads only request.jwt.claims), last:');
+  const after20 = after5 ? await step19(db, upgradeDb) : null;
+
   console.log('\nFunction fingerprints (name  arguments  body_md5  security_definer  settings  owner  execute_rights):');
   for (const line of after) console.log('  ' + line);
   console.log('\n0004 fingerprints (kind  item  detail):');
@@ -603,6 +632,10 @@ async function main() {
   if (prints0014) {
     console.log('\n0014 fingerprints (kind  item  detail):');
     for (const line of prints0014) console.log('  ' + line);
+  }
+  if (after20) {
+    console.log('\n0020 fingerprints (kind  item  detail):');
+    for (const line of after20) console.log('  ' + line);
   }
 
   return finish();
@@ -2009,6 +2042,135 @@ async function financeIcuCheck() {
     if (db) await db.close().catch(() => {});
     rmSync(dir, { recursive: true, force: true });
   }
+}
+
+// =====================================================================
+// Step 19: 0020 - current_session_id() reads only request.jwt.claims
+// (rulebook v0.408)
+// =====================================================================
+const PLANTED_SESSION = '99999999-9999-4999-8999-999999999999';
+
+// 19b / 19d. The attack: AS the family form's login, fill the legacy
+// request.jwt.claim with a made-up token, then register through the
+// public function (which empties request.jwt.claims and
+// request.jwt.claim.sub, but not request.jwt.claim). Returns the
+// session_id values of the history rows that registration wrote.
+async function plantedSessionAttack(db, first) {
+  const mark = await one(db, 'select coalesce(max(id), 0)::bigint from public.change_log');
+  const rank = await db.query(`select k.id from public.testing_event_ranks k
+      join public.testing_event_classes c on c.id = k.event_class_id
+      join public.testing_events e on e.id = c.event_id
+     where e.public_code = '${TEST_EVENT_CODE}' order by c.position, k.position limit 1`);
+  if (rank.rows.length !== 1) throw new Error('the test event (step 11c) has no rank');
+  let status;
+  try {
+    await db.exec('set role testing_registrar;');
+    await db.query(`select set_config('request.jwt.claim', $1, false)`,
+      [JSON.stringify({ sub: ADMIN_UID, role: 'authenticated', session_id: PLANTED_SESSION })]);
+    const r = await db.query(
+      'select public.testing_public_register($1, $2, gen_random_uuid(), $3, $4, $5::uuid, $6, true, $7, $8) as r',
+      [TEST_EVENT_CODE, 'pglite-attack-' + first, first, 'Planted', rank.rows[0].id, 'cash', TEST_SIGNATURE, ACK_VERSION]);
+    status = r.rows[0].r?.status;
+  } finally {
+    await db.exec('reset role;').catch(() => {});
+    await db.exec(`select set_config('request.jwt.claim', '', false);`).catch(() => {});
+  }
+  if (status !== 'ok') throw new Error(`testing_public_register said ${status}`);
+  const rows = await db.query(`select session_id::text as s from public.change_log where id > ${mark}`);
+  return rows.rows.map((r) => r.s);
+}
+
+// Step 19 on the main database (after 13g) and 0020 on top of the upgrade
+// database. Returns 0020's fingerprints (null if 0020 could not be applied).
+async function step19(db, upgradeDb) {
+  const migration = read('migrations', '0020_session_id_claims.sql');
+  const printsText = read('tests', '0020_fingerprints.sql');
+  // a. connector-safe files, and the fingerprint before 0020
+  record('[0020] 0020_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)', !/delete|drop/i.test(printsText));
+  record('[0020] the migration contains neither "delete" nor "drop"', !/delete|drop/i.test(migration));
+  const before = await fingerprints(db, '0020_fingerprints.sql');
+  record("[0020] fingerprint before 0020 (0001's version) taken", before.length === 1, before.join(' | '));
+
+  // b. the attack before the fix
+  try {
+    const s = await plantedSessionAttack(db, 'Before');
+    record('[0020] BEFORE the fix the planted session id reaches change_log (finding reproduced)',
+      s.length > 0 && s.every((x) => x === PLANTED_SESSION), `${s.length} rows: ${[...new Set(s)].join(',')}`);
+  } catch (error) {
+    record('[0020] BEFORE the fix the planted session id reaches change_log (finding reproduced)', false, error.message);
+  }
+
+  // c. apply + tests
+  if (!(await run(db, 'apply 0020_session_id_claims.sql', migration))) return null;
+  await runTestFile(db, '0020_tests.sql', '0020_tests.sql', 'ALL 0020 TESTS PASSED');
+  await runTestFile(db, 'verify_pin_tests.sql (after 0020)', 'verify_pin_tests.sql', 'ALL PIN TESTS PASSED');
+  await runTestFile(db, '0002_tests.sql (after 0020)', '0002_tests.sql', 'ALL 0002 TESTS PASSED');
+  await runTestFile(db, '0003_tests.sql (after 0020)', '0003_tests.sql', 'ALL 0003 TESTS PASSED');
+  await runTestFile(db, '0004_tests.sql (after 0020)', '0004_tests.sql', 'ALL 0004 TESTS PASSED');
+  await runTestFile(db, '0005_tests.sql (after 0020)', '0005_tests.sql', 'ALL 0005 TESTS PASSED');
+  await runTestFile(db, '0011_tests.sql (after 0020)', '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+  const after = await fingerprints(db, '0020_fingerprints.sql');
+  const tail = (line, key) => line.slice(line.indexOf(key));
+  record('[0020] the body changed; owner and rights unchanged',
+    after.length === 1 && after[0] !== before[0] && tail(after[0], ' owner=') === tail(before[0], ' owner='),
+    after.join(' | '));
+
+  // d. the attack after the fix
+  try {
+    const s = await plantedSessionAttack(db, 'After');
+    record('[0020] AFTER the fix the planted session id is ignored (history rows have session_id NULL)',
+      s.length > 0 && s.every((x) => x === null), `${s.length} rows: ${[...new Set(s)].join(',')}`);
+  } catch (error) {
+    record('[0020] AFTER the fix the planted session id is ignored (history rows have session_id NULL)', false, error.message);
+  }
+
+  // e. re-run safety
+  const count1 = await one(db, 'select count(*)::int from public.change_log');
+  await run(db, 'apply 0020 a SECOND time (re-run safety)', migration);
+  const count2 = await one(db, 'select count(*)::int from public.change_log');
+  record('[0020] re-run left the history count unchanged', count1 === count2, `${count1} -> ${count2}`);
+  const again = await fingerprints(db, '0020_fingerprints.sql');
+  record('[0020] fingerprint identical before/after re-run', JSON.stringify(again) === JSON.stringify(after));
+  await runTestFile(db, '0020_tests.sql (after re-run)', '0020_tests.sql', 'ALL 0020 TESTS PASSED');
+
+  // f. the undo (SETUP section 0020e), exactly as written there, then redo
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const block = setup.slice(setup.indexOf('### 0020e.')).match(/```sql\n([\s\S]*?)```/);
+  if (!block) {
+    record('[undo 0020] find the undo script in SETUP section 0020e', false, 'no sql block after "### 0020e."');
+  } else if (await run(db, '[undo 0020] the SQL block of SETUP 0020e', block[1])) {
+    const undone = await fingerprints(db, '0020_fingerprints.sql');
+    record("[undo 0020] fingerprint equals 0001's version (before 0020)", JSON.stringify(undone) === JSON.stringify(before), undone.join(' | '));
+    await runTestFile(db, '[undo 0020] verify_pin_tests.sql', 'verify_pin_tests.sql', 'ALL PIN TESTS PASSED');
+    await runTestFile(db, '[undo 0020] 0002_tests.sql', '0002_tests.sql', 'ALL 0002 TESTS PASSED');
+    if (await run(db, '[undo 0020] apply 0020 again (redo)', migration)) {
+      const redone = await fingerprints(db, '0020_fingerprints.sql');
+      record('[undo 0020] after redo the fingerprint equals the first apply', JSON.stringify(redone) === JSON.stringify(after));
+      await runTestFile(db, '[undo 0020] 0020_tests.sql (after redo)', '0020_tests.sql', 'ALL 0020 TESTS PASSED');
+    }
+  }
+
+  // g. the upgrade database (still has every migration up to 0014)
+  const has0014 = upgradeDb ? await one(upgradeDb, `select to_regclass('public.testing_private') is not null`) : false;
+  if (!upgradeDb || !has0014) {
+    record('[upgrade] 0020 on top of the upgrade database', false, 'the upgrade database has no 0014 (see the lines above)');
+  } else {
+    await runTestFile(upgradeDb, '[upgrade] 0006_tests.sql (before 0020)', '0006_tests.sql', 'ALL 0006 TESTS PASSED');
+    if (await run(upgradeDb, '[upgrade] apply 0020 on top', migration)) {
+      const up = await fingerprints(upgradeDb, '0020_fingerprints.sql');
+      record('[upgrade] 0020 fingerprint identical to the main database', JSON.stringify(up) === JSON.stringify(after), up.join(' | '));
+      for (const [file, passed] of [
+        ['0020_tests.sql', 'ALL 0020 TESTS PASSED'], ['0014_tests.sql', 'ALL 0014 TESTS PASSED'],
+        ['0010_tests.sql', 'ALL 0010 TESTS PASSED'], ['0006_tests.sql', 'ALL 0006 TESTS PASSED'],
+        ['0005_tests.sql', 'ALL 0005 TESTS PASSED'], ['0004_tests.sql', 'ALL 0004 TESTS PASSED'],
+        ['0003_tests.sql', 'ALL 0003 TESTS PASSED'], ['0002_tests.sql', 'ALL 0002 TESTS PASSED'],
+        ['verify_pin_tests.sql', 'ALL PIN TESTS PASSED'],
+      ]) {
+        await runTestFile(upgradeDb, `[upgrade] ${file} (after 0020)`, file, passed);
+      }
+    }
+  }
+  return after;
 }
 
 function finish() {

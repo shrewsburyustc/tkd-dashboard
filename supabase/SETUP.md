@@ -1303,6 +1303,90 @@ Afterwards `0005_fingerprints.sql` and `0010_fingerprints.sql` equal a database 
 - **Restore refuses a moved registration:** otherwise the student could be on the event and in a private testing at the same time.
 
 ---
+## Migration 0020: session id only from the login token (security fix, rulebook v0.408)
+
+**What it does** (`supabase/migrations/0020_session_id_claims.sql`):
+- **Replaces one live function, `current_session_id()` (0001), and nothing else.** It answers "which sign-in session (device) is this?" for the PIN lock, the server lock and every history row (`change_log.session_id`).
+- **Why:** 0001's version read the session id through Supabase's `auth.jwt()`, which looks at the old (legacy) setting `request.jwt.claim` **before** `request.jwt.claims`. The public form functions empty only `request.jwt.claims` and `request.jwt.claim.sub`, so whoever holds the family form's database login could plant a staff session id in a history row the form writes. No access gain (`auth.uid()` and `has_data_access()` stay empty) — low severity, fixed anyway.
+- **The fix (decision B):** read the session id **only** from `request.jwt.claims` — what Supabase's API server fills for a signed-in user. A missing, empty, non-JSON or non-uuid value gives NULL, never an error. Same language (sql), stable, security definer, `search_path = ''`, same owner, same rights (`create or replace` keeps them; 0001's revoke is repeated).
+- **What the app sees:** nothing. A real signed-in request carries the session id in `request.jwt.claims`, so every answer is the same uuid as before. That is exactly what the live checks in 0020d confirm.
+
+**The order:** 0020a–0020c (Jeffrey's OK to paste) → **0020d live checks right after applying** (the PIN lock and server lock depend on this function). No app deploy is needed — no screen changes.
+
+### 0020a. Before you paste (you, in the SQL Editor; Claude runs one read-only check)
+
+1. **Green start:** run `supabase/tests/verify_pin_tests.sql` (one active staff UID) and `supabase/tests/0002_tests.sql` (admin + desk UIDs). Both must say **ALL PIN TESTS PASSED** / **ALL 0002 TESTS PASSED**. If either fails now, stop — the problem is older than 0020.
+2. Claude runs `supabase/tests/0020_fingerprints.sql` through the read-only connection and writes the row down: that is **0001's version** (the undo below must give it back exactly).
+
+### 0020b. Apply 0020 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0020_session_id_claims.sql`.
+2. **SQL Editor → New query**, paste, **Run**.
+3. Expected: "Success. No rows returned." There should be **no** destructive-operations warning (the file removes nothing). It's one transaction: on any error nothing is kept. If it stops with a message starting `0020:`, an earlier migration is missing — copy the message to Claude.
+
+**Running it again is safe** (tested: a second run changes no fingerprint). **Re-running 0001 after this** puts the old function back → re-run 0020 straight after.
+
+### 0020c. Read-only checks, then the tests
+
+1. **Fingerprint** (Claude, connector): `supabase/tests/0020_fingerprints.sql` — the one row must match what `supabase/tests/pglite/run.mjs` printed for the tested copy (code, `lang=sql`, `volatility=s`, `definer=true`, `settings=search_path=""`, owner, rights).
+2. **Security advisor** (Claude): no new notice. (`current_session_id` is not callable by `anon` or `authenticated`, so it never shows up as "executable by authenticated".)
+3. **Tests** (you): open `supabase/tests/0020_tests.sql`, replace `<paste-admin-UID-here>` (**Authentication → Users**), paste the whole file, **Run**. Supabase may warn about destructive operations (the setup clears the admin's test PIN counters inside the transaction). Everything is rolled back. Confirm. Expected: one row, **ALL 0020 TESTS PASSED**. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved. Run `rollback;` once on its own, then tell Claude.
+4. Then run `verify_pin_tests.sql`, `0002_tests.sql`, `0004_tests.sql` and `0014_tests.sql` again (they use the PIN, the server lock and the history) — all must still pass. If you have time, also `0003`, `0005`, `0010` and `0011_tests.sql`.
+5. `0006_tests.sql` (Star) passes before **and** after 0020: its check C9 (shared helpers Star uses must not change) accepts both the 0001 and the 0020 version of `current_session_id`.
+
+### 0020d. LIVE CHECKS on the real site, right after applying (you; Claude watches)
+
+Do these on **https://tkd-dashboard.pages.dev** (no deploy needed — the live app already uses the database functions). If **any** step fails: do the undo in 0020e straight away, then tell Claude.
+
+1. **Sign in** with your admin password. The PIN screen (or the app) appears as usual.
+2. **Enter your PIN** → the app opens and shows data (e.g. Testing → Classes and ranks lists the classes).
+3. **Wrong PIN counts:** **Lock now** (top bar). Enter a **wrong** PIN **once** → the screen says how many tries are left (4). Then enter the right PIN → the app opens. (Don't go to 5 wrong tries — that signs this device out on purpose.)
+4. **Lock / unlock:** **Lock now** again → the Lock screen; enter the PIN → back in.
+5. **Server lock:** Lock now, then **reload the page** (F5) while locked → it must still ask for the PIN (the database, not just the browser, says "locked"); PIN → back in.
+6. **One small change with a history row:** Testing → Classes and ranks → edit one rank's **testing-day price** up by $1 and save, then put it back (two changes, two history rows). Claude then checks through the read-only connection:
+   `select id, occurred_at, action, table_name, session_id, actor_name from public.change_log order by id desc limit 2;`
+   Both rows must have a **session_id** (not NULL) and your name. (A NULL here means the API server does not put the session id in `request.jwt.claims` — undo 0020e at once.)
+7. On the **front desk** computer (or a private window signed in as the desk account): sign in, PIN → data shows. Same function, second account.
+
+### 0020e. Undo (only with Jeffrey's OK)
+
+Puts back **0001's exact** `current_session_id()` (word for word, same rights). Nothing else changes; no data is touched. Afterwards `0020_fingerprints.sql` must show the row written down in 0020a step 2. Paste in the SQL Editor:
+
+```sql
+-- Undo migration 0020: put back 0001's current_session_id() exactly.
+begin;
+
+-- 4c. current_session_id()
+-- This sign-in session's id from the token's "session_id" claim, or NULL if
+-- it is missing or not a valid uuid (checked with a pattern first, so a bad
+-- value returns NULL instead of crashing the cast).
+create or replace function public.current_session_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select case
+           when (auth.jwt() ->> 'session_id')
+                ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+           then (auth.jwt() ->> 'session_id')::uuid
+         end;   -- no "else" = NULL
+$$;
+
+revoke execute on function public.current_session_id() from public, anon, authenticated;
+
+commit;
+```
+
+Tested in PGlite on every run (`run.mjs` step 19f, this block exactly as written here): afterwards the fingerprint equals the one from before 0020, and `verify_pin_tests.sql` / `0002_tests.sql` pass. Then 0020 is applied again and its tests pass (undo → redo works).
+
+**Why:**
+- **Fix the one reader, not every form:** changing `current_session_id()` covers every current and future public form (Color Belt, Star, Forms, Camps) without touching any of them.
+- **Only `request.jwt.claims`:** that is the setting Supabase's API server fills from the real login token. The legacy `request.jwt.claim` exists only for old setups; nothing in this app needs it.
+- **Never an error:** this function runs inside every logged change. A crash on a strange value would block saving, so every bad value becomes NULL instead (the same as 0001 did for a bad uuid).
+
+---
 ## Admin: change the front-desk PIN or password
 
 The front desk (`shrewsburyustc@gmail.com`) is a **shared account**, so the app hides Change PIN and Change password for it. Only an admin changes them, here in Supabase, until the Staff accounts screen exists.
