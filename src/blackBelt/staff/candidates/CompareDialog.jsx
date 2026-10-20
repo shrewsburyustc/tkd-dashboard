@@ -3,7 +3,7 @@
 // Why it exists: Star v0.114, approved through mockup Candidates 1 (contract CONTRACT-0016-B2 §3.8).
 // Before deciding, the desk looks at both registrations next to each other: Registered (date and
 // time), Reference, Source, Date of birth, Email, Dan, School, Plan + Kukkiwon, Paid — differences
-// highlighted (amber background + "different" for screen readers; never color alone).
+// highlighted (amber background AND a small ⚠ "different" mark on screen; never color alone).
 //   Keep this one (under each)        the OTHER one moves under Removed as "Duplicate copy"
 //                                     (toast with Undo; staff may undo their own for 10 seconds)
 //   Not the same person — keep both   the amber tag goes away on both
@@ -14,6 +14,7 @@
 import Dialog from '../../../components/Dialog.jsx';
 import Notice from '../../../components/Notice.jsx';
 import { formatCents } from '../../../lib/blackBelt/money.js';
+import { ICONS } from './icons.js';
 import * as T from '../text.js';
 
 export default function CompareDialog({ state, isPhone, hidden, onKeep, onKeepBoth, onCancel }) {
@@ -49,10 +50,16 @@ export default function CompareDialog({ state, isPhone, hidden, onKeep, onKeepBo
   ];
   // The time and the reference always differ, so they are never highlighted.
   const differs = (line) => !line.plain && a[line.key] !== b[line.key];
+  const Warn = ICONS.warn;
   const value = (text, highlight) => (
     <>
       {text}
-      {highlight && <span className="visually-hidden"> ({T.DIFFERENT})</span>}
+      {highlight && (
+        <span className="bb-diff-mark">
+          <Warn size={12} aria-hidden="true" />
+          {T.DIFFERENT}
+        </span>
+      )}
     </>
   );
   const keep = (keepThis, other, which) => (

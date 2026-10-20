@@ -186,8 +186,10 @@
     border-bottom-color: var(--color-border-control);
   }
 
+  /* The totals sit in the right half of the page, as printed (phones: the full width) */
   .bbr-sheet--screen .bbr-totals {
-    width: 100%;
+    width: 50%;
+    min-width: 240px;
   }
 
   .bbr-sheet--screen .bbr-balance {

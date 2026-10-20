@@ -1,5 +1,7 @@
 // dialogParts.jsx — small pieces the Candidates dialogs share: the Amount box with "$", the
 // Cash · Check · Card choice, the optional Note, and the bottom row (note + Cancel / Save).
+// AmountMethod puts Amount and Method side by side on the PC and tablet (mockup Candidates 4);
+// phones stack them.
 // Why it exists: Record payment, Edit payment and Record refund (mockups Candidates 4 and 5) draw
 // the same fields the same way; writing them once keeps them identical.
 import { useId } from 'react';
@@ -47,7 +49,8 @@ export function AmountField({ value, onChange, error, readOnly, autoFocus = fals
   );
 }
 
-// "Method  Cash | Check | Card" — nothing chosen at first (OP-B5).
+// "Method  Cash | Check | Card" — nothing chosen at first (OP-B5). Compact: only as wide as its
+// three words (bb-segmented--compact), as drawn.
 export function MethodField({ value, onChange, error, readOnly }) {
   const id = useId();
   return (
@@ -55,10 +58,15 @@ export function MethodField({ value, onChange, error, readOnly }) {
       <span id={`${id}-method`} className="field-label">
         {T.METHOD}
       </span>
-      <Choice labelId={`${id}-method`} options={METHODS.map((key) => ({ key, label: T.methodName(key) }))} value={value} readOnly={readOnly} onChange={onChange} className={error ? 'is-invalid' : ''} />
+      <Choice labelId={`${id}-method`} options={METHODS.map((key) => ({ key, label: T.methodName(key) }))} value={value} readOnly={readOnly} onChange={onChange} className={`bb-segmented--compact${error ? ' is-invalid' : ''}`} />
       {error && <Notice>{error}</Notice>}
     </div>
   );
+}
+
+// Amount and Method side by side (PC / tablet); one under the other on phones (blackBelt.css).
+export function AmountMethod({ children }) {
+  return <div className="bb-pay-pair">{children}</div>;
 }
 
 // A one-line text box (the Note, the Reason for the change).
@@ -96,7 +104,9 @@ export function FailedBanner({ state, onRetry }) {
 //   primary   the main button (type="submit")
 //   extra     other buttons (e.g. "Save and record another"), drawn before the primary on the PC
 //             and after it on phones (as drawn)
-export function Footer({ state, isPhone, primary, extra = null, onCancel }) {
+//   divider   true = the gray line above the buttons even in a small dialog (Record refund, Mark
+//             check returned), like every other Candidates dialog
+export function Footer({ state, isPhone, primary, extra = null, onCancel, divider = false }) {
   const note = state.note && (
     <div className="tdialog-note">
       <Notice>
@@ -121,7 +131,7 @@ export function Footer({ state, isPhone, primary, extra = null, onCancel }) {
     );
   }
   return (
-    <div className="dialog-footer">
+    <div className={`dialog-footer${divider ? ' bb-footer-divider' : ''}`}>
       <div className="dialog-actions">
         <button type="button" className="btn" onClick={onCancel}>
           {T.CANCEL}

@@ -3,8 +3,10 @@
 // bottom:
 //   - (one school on the location switcher) "Showing Worcester candidates only · Show both schools"
 //   - the amber possible-duplicate box with Review (DuplicateBox.jsx)
-//   - the four summary cards that filter the list (phones: two pills) (SummaryCards.jsx)
-//   - Search candidates, and on the PC the caption "9 candidates · Dan, then school, then last name"
+//   - the four summary cards that filter the list (SummaryCards.jsx)
+//   - Search candidates (tablet: the full width), and on the PC the caption "9 candidates · Dan,
+//     then school, then last name" right beside it
+//   - phones: Search first, then the two filter pills and the gray duplicates line (mockup 1)
 //   - the roster (RosterRows.jsx) with each row's ⋯ menu, and the Removed group at the bottom
 //   - every dialog: the candidate detail and what opens from it (useCandidateActions.js decides)
 // "+ Add candidate" sits in the cycle page's header (CyclePage.jsx); it opens the Add dialog here
@@ -124,12 +126,21 @@ export default function CandidatesTab({
   useEffect(() => {
     if (live.status === 'noAccess') onNoAccess();
   }, [live.status, onNoAccess]);
+  // The screen locked: menus close and the signature picture is dropped (useCandidateActions).
+  const { screenLockedNow, paymentsHiddenNow } = actions;
   useEffect(() => {
-    if (screenLocked) setMenu(null);
+    if (!screenLocked) return;
+    setMenu(null);
+    screenLockedNow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screenLocked]);
-  // Hide payments switched on while a card filter was on: the cards are gone, so is the filter.
+  // Hide payments switched on (mat-side): the cards are gone, so is their filter; every money
+  // dialog closes, Edit details is left and a money toast is cleared (useCandidateActions).
   useEffect(() => {
-    if (hidden) setCard(null);
+    if (!hidden) return;
+    setCard(null);
+    paymentsHiddenNow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hidden]);
 
   // ----- What the list shows -----
@@ -176,12 +187,25 @@ export default function CandidatesTab({
       return items;
     }
     if (!hidden && !layout.isWide && m.balanceCents > 0) items.push({ key: 'record', label: T.RECORD_PAYMENT, Icon: ICONS.recordPayment, onSelect: () => actions.openRecordPayment(row.id, anchor) });
-    items.push({ key: 'edit', label: T.EDIT_DETAILS, Icon: ICONS.editDetails, onSelect: () => actions.openDetail(row.id, anchor, { edit: true }) });
-    // Staff can change the plan only until something is paid; the database decides (not_allowed).
-    const planLocked = !isAdmin && m.paidCents > 0;
+    // Hide payments on (mat-side): Edit details shows the date of birth and email, so it waits
+    // for the desk (grayed with its reason, like Add candidate).
+    items.push({
+      key: 'edit',
+      label: hidden ? <TwoLines label={T.EDIT_DETAILS} reason={T.EDIT_AT_DESK} /> : T.EDIT_DETAILS,
+      Icon: ICONS.editDetails,
+      disabled: hidden,
+      onSelect: () => actions.openDetail(row.id, anchor, { edit: true }),
+    });
+    // Staff can change the plan only until a payment is recorded — the database's rule is "any
+    // live payment row", even one whose check bounced or that a refund cancelled out, so the paid
+    // total alone can't tell. The row knows whether any payment row exists (hasPaymentRows) and,
+    // through its "Not paid" tag, that none is live; grayed when a row exists and the tag isn't
+    // Not paid (the database still decides: not_allowed). The detail's ⋯ checks the live lines.
+    const planLocked = !isAdmin && (m.paidCents > 0 || (row.hasPaymentRows && m.tag !== 'not_paid'));
+    const planReason = hidden || !(m.paidCents > 0) ? T.PAYMENT_RECORDED_ASK_ADMIN : T.alreadyPaidAskAdmin(m.paidCents);
     items.push({
       key: 'plan',
-      label: planLocked ? <TwoLines label={T.CHANGE_PLAN} reason={hidden ? T.PAYMENT_RECORDED_ASK_ADMIN : T.alreadyPaidAskAdmin(m.paidCents)} /> : T.CHANGE_PLAN,
+      label: planLocked ? <TwoLines label={T.CHANGE_PLAN} reason={planReason} /> : T.CHANGE_PLAN,
       Icon: ICONS.changePlan,
       disabled: planLocked,
       onSelect: () => actions.openChangePlan(row.id, anchor),
@@ -249,9 +273,9 @@ export default function CandidatesTab({
         </p>
       )}
       <DuplicateBox pairs={pairs} busy={actions.busy} onReview={(row, partner, opener) => actions.openCompare(row, partner, opener)} />
-      {!hidden && <SummaryCards counts={counts} card={card} onCard={setCard} isPhone={isPhone} />}
+      {!hidden && !isPhone && <SummaryCards counts={counts} card={card} onCard={setCard} isPhone={false} />}
 
-      <div className="bb-list-bar">
+      <div className={`bb-list-bar${layout.isWide ? ' is-wide' : ''}`}>
         <label className="bb-search">
           <SearchIcon size={16} aria-hidden="true" className="bb-search-icon" />
           <span className="visually-hidden">{T.SEARCH_CANDIDATES}</span>
@@ -264,6 +288,8 @@ export default function CandidatesTab({
         </label>
         {layout.isWide && <p className="bb-caption">{T.listCaption(activeRows.length)}</p>}
       </div>
+      {/* Phones: the Late / Not paid pills and the gray line come after Search (mockup 1) */}
+      {!hidden && isPhone && <SummaryCards counts={counts} card={card} onCard={setCard} isPhone />}
 
       <RosterRows
         rows={activeRows}
@@ -291,13 +317,13 @@ export default function CandidatesTab({
         />
       )}
 
-      {!screenLocked && dlg && <Dialogs actions={actions} cycle={cycle} isAdmin={isAdmin} isPhone={isPhone} hidden={hidden} today={today} showToast={showToast} />}
+      {!screenLocked && dlg && <Dialogs actions={actions} cycle={cycle} isAdmin={isAdmin} isPhone={isPhone} hidden={hidden} today={today} showToast={showToast} onNoAccess={onNoAccess} />}
     </div>
   );
 }
 
 // The one dialog on screen: a child (Record payment, …) or else the detail.
-function Dialogs({ actions, cycle, isAdmin, isPhone, hidden, today, showToast }) {
+function Dialogs({ actions, cycle, isAdmin, isPhone, hidden, today, showToast, onNoAccess }) {
   const { dlg } = actions;
   const c = dlg.child;
   const common = { state: c, cycle, isPhone, today, onChange: actions.changeChild, onCancel: actions.closeChild, onRequestClose: actions.requestCloseChild };
@@ -326,7 +352,19 @@ function Dialogs({ actions, cycle, isAdmin, isPhone, hidden, today, showToast })
       case 'signature':
         return <SignatureDialog {...common} />;
       case 'receipt':
-        return <ReceiptDialog candidateId={c.candidateId} cycle={cycle} isPhone={isPhone} onClose={actions.closeChild} showToast={showToast} nested={false} />;
+        return (
+          <ReceiptDialog
+            candidateId={c.candidateId}
+            cycle={cycle}
+            isPhone={isPhone}
+            onClose={actions.closeChild}
+            showToast={showToast}
+            nested={false}
+            onNoAccess={onNoAccess}
+            kukkiwonAddedOn={c.kukkiwonDates?.kukkiwonAddedOn ?? null}
+            registeredOn={c.kukkiwonDates?.registeredOn ?? null}
+          />
+        );
       default:
         return null;
     }

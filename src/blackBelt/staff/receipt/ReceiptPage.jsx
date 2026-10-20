@@ -22,7 +22,9 @@
 //
 // Props (both components): receipt (api.js loadReceipt's Receipt), cycle (the cycle page's
 // CycleDetail: the first testing day and the prices come from there, because the receipt data has
-// neither — contract §7.3). ReceiptSheet also takes `screen` (true = the preview look).
+// neither — contract §7.3), kukkiwonAddedOn and registeredOn (optional 'YYYY-MM-DD': a Kukkiwon fee
+// added after payment 1's date prints "added Apr 26" instead of "with payment 1").
+// ReceiptSheet also takes `screen` (true = the preview look).
 import { createPortal } from 'react-dom';
 import { pairReturnedLines } from '../../../lib/blackBelt/rules.js';
 import { formatCents } from '../../../lib/blackBelt/money.js';
@@ -30,13 +32,18 @@ import * as T from './text.js';
 
 // Works out every piece of text the page shows, from the receipt and the cycle. Kept apart from
 // the drawing below so the preview and the printed copy can never say different things.
-export function receiptView(receipt, cycle) {
+export function receiptView(receipt, cycle, { kukkiwonAddedOn = null, registeredOn = null } = {}) {
   const { candidate, money } = receipt;
   const dan = candidate.dan;
   // The candidate's plan in the cycle's price list (plan names are unique within a cycle).
   const plan = (cycle?.plans ?? []).find((p) => p.name === receipt.planName) ?? null;
   const planInfo = { planName: receipt.planName, paymentsCount: plan?.paymentsCount ?? null };
   const school = receipt.schools.find((s) => s.code === candidate.locationCode);
+  // Payment 1's date for THIS candidate: the plan's date, or the day they registered when that
+  // was later (a late family, S4). A Kukkiwon fee chosen after it was due that day, on its own.
+  const p1Plan = (plan?.payments ?? []).find((p) => (p.paymentNo ?? p.payment_no) === 1);
+  const p1On = p1Plan ? [p1Plan.dueOn ?? p1Plan.due_on, registeredOn].filter(Boolean).sort().pop() : null;
+  const kukkiwonAddedLate = Boolean(receipt.kukkiwon && kukkiwonAddedOn && p1On && kukkiwonAddedOn > p1On);
 
   // A returned check's line has no link to the check it marks (bb_receipt sends no row ids), so
   // rules.js pairs each one with the matching crossed-out check to name its item (contract §1.4).
@@ -73,6 +80,7 @@ export function receiptView(receipt, cycle) {
       amounts: plan?.amounts?.[dan] ?? null,
       kukkiwon: receipt.kukkiwon,
       kukkiwonCents: cycle?.kukkiwon?.[dan] ?? null,
+      kukkiwonAddedOn: kukkiwonAddedLate ? kukkiwonAddedOn : null,
     }),
     rows,
     totalDue: formatCents(money.totalDueCents),
@@ -84,8 +92,8 @@ export function receiptView(receipt, cycle) {
 }
 
 // The page. `screen` = the preview inside the dialog (narrower padding and type, no fixed size).
-export function ReceiptSheet({ receipt, cycle, screen = false }) {
-  const view = receiptView(receipt, cycle);
+export function ReceiptSheet({ receipt, cycle, kukkiwonAddedOn = null, registeredOn = null, screen = false }) {
+  const view = receiptView(receipt, cycle, { kukkiwonAddedOn, registeredOn });
   return (
     <div className={`bbr-sheet${screen ? ' bbr-sheet--screen' : ''}`}>
       <p className="bbr-title">{T.SCHOOL_NAME}</p>
@@ -155,10 +163,10 @@ export function ReceiptSheet({ receipt, cycle, screen = false }) {
 }
 
 // The printed copy: the page straight into <body>, shown only when printing (receipt.css).
-export default function ReceiptPage({ receipt, cycle }) {
+export default function ReceiptPage({ receipt, cycle, kukkiwonAddedOn = null, registeredOn = null }) {
   return createPortal(
     <div className="bbr-print">
-      <ReceiptSheet receipt={receipt} cycle={cycle} />
+      <ReceiptSheet receipt={receipt} cycle={cycle} kukkiwonAddedOn={kukkiwonAddedOn} registeredOn={registeredOn} />
     </div>,
     document.body,
   );

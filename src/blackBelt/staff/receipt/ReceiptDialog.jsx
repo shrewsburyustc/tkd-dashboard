@@ -24,7 +24,14 @@
 //                 Left out, the dialog checks for itself whether another dialog is already open.
 //                 On top of another one it uses InnerDialog, which adds no second browser-history
 //                 step (two dialogs fighting over one step would close the detail too).
-import { useCallback, useEffect, useState } from 'react';
+//   onNoAccess    optional: the app's "no access" path (lock screen / signed out), called when the
+//                 database answers no_access — the same as every other Black Belt screen, instead
+//                 of "Couldn't load the receipt".
+//   kukkiwonAddedOn, registeredOn
+//                 optional: the day the Kukkiwon fee was chosen and the day the candidate
+//                 registered (the receipt data has neither). A fee added after payment 1's date
+//                 prints "Kukkiwon certificate ($110, added Apr 26)" instead of "with payment 1".
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { IconPrinter } from '@tabler/icons-react';
 import Dialog from '../../../components/Dialog.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
@@ -40,13 +47,19 @@ import './receipt.css';
 // .dialog-page pages straight into <body>.)
 const anotherDialogOpen = () => typeof document !== 'undefined' && document.querySelector('body > .dialog-backdrop, body > .dialog-page') !== null;
 
-export default function ReceiptDialog({ candidateId, cycle, isPhone, onClose, nested }) {
+export default function ReceiptDialog({ candidateId, cycle, isPhone, onClose, nested, onNoAccess, kukkiwonAddedOn = null, registeredOn = null }) {
   // Worked out once, when the dialog opens (before it draws its own box).
   const [onTop] = useState(() => nested ?? anotherDialogOpen());
   const [hidden] = usePaymentsHidden();
   // { phase: 'loading' } · { phase: 'ok', receipt } · { phase: 'failed', status }
   const [load, setLoad] = useState({ phase: 'loading' });
   const [printing, setPrinting] = useState(false);
+  // The newest onNoAccess, kept in a "ref" (a box React doesn't watch) so a new function from the
+  // parent never makes the receipt load again.
+  const noAccessRef = useRef(onNoAccess);
+  useEffect(() => {
+    noAccessRef.current = onNoAccess;
+  });
 
   // Asks the database for the receipt. `isCurrent` says whether the dialog is still waiting for
   // this answer (it may have closed, or changed candidate, while the answer was on its way).
@@ -56,6 +69,7 @@ export default function ReceiptDialog({ candidateId, cycle, isPhone, onClose, ne
       const answer = await loadReceipt({ candidateId });
       if (!isCurrent()) return;
       if (answer.status === 'ok' && answer.receipt) setLoad({ phase: 'ok', receipt: answer.receipt });
+      else if (answer.status === 'no_access' && noAccessRef.current) noAccessRef.current(); // the lock / sign-in path; the placeholder stays meanwhile
       else setLoad({ phase: 'failed', status: answer.status });
     },
     [candidateId],
@@ -126,7 +140,7 @@ export default function ReceiptDialog({ candidateId, cycle, isPhone, onClose, ne
   } else {
     body = (
       <section className="bbr-preview" aria-label={T.PAGE_LABEL}>
-        <ReceiptSheet receipt={receipt} cycle={cycle} screen />
+        <ReceiptSheet receipt={receipt} cycle={cycle} kukkiwonAddedOn={kukkiwonAddedOn} registeredOn={registeredOn} screen />
       </section>
     );
   }
@@ -148,7 +162,7 @@ export default function ReceiptDialog({ candidateId, cycle, isPhone, onClose, ne
           </div>
         )}
       </Frame>
-      {printing && receipt && <ReceiptPage receipt={receipt} cycle={cycle} />}
+      {printing && receipt && <ReceiptPage receipt={receipt} cycle={cycle} kukkiwonAddedOn={kukkiwonAddedOn} registeredOn={registeredOn} />}
     </>
   );
 }

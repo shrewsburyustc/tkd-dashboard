@@ -38,19 +38,22 @@ export default function ItemChecklist({ items, ticks, onChange, showAll = false,
   return (
     <fieldset className="bb-checklist" aria-describedby={error ? `${id}-err` : undefined}>
       <legend className="field-label">{label}</legend>
-      {list.map((x) => {
-        const paid = x.remainingCents <= 0;
-        return (
-          <label key={x.item} className="cbrow bb-check-item">
-            <input type="checkbox" className="cb" checked={ticks.includes(x.item)} disabled={readOnly} onChange={() => toggle(x.item)} />
-            <span className="bb-check-text">
-              {T.itemLine(x.item, x.dueOn)}
-              {paid && !showAll && <span className="bb-check-paid"> {T.PAID_MARK}</span>}
-            </span>
-            <span className="bb-num bb-check-amount">{formatCents(paid || showAll ? x.amountCents : x.remainingCents)}</span>
-          </label>
-        );
-      })}
+      {/* The items in a bordered list, one line each (mockup Candidates 4) */}
+      <div className="bb-check-list">
+        {list.map((x) => {
+          const paid = x.remainingCents <= 0;
+          return (
+            <label key={x.item} className="cbrow bb-check-item">
+              <input type="checkbox" className="cb" checked={ticks.includes(x.item)} disabled={readOnly} onChange={() => toggle(x.item)} />
+              <span className="bb-check-text">
+                {T.itemLine(x.item, x.dueOn)}
+                {paid && !showAll && <span className="bb-check-paid"> {T.PAID_MARK}</span>}
+              </span>
+              <span className="bb-num bb-check-amount">{formatCents(paid || showAll ? x.amountCents : x.remainingCents)}</span>
+            </label>
+          );
+        })}
+      </div>
       {error && <Notice id={`${id}-err`}>{error}</Notice>}
     </fieldset>
   );

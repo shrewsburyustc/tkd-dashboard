@@ -13,6 +13,9 @@
 // waiver."). Due dates that have already passed count as today for a late family (S4).
 // Add → toast "Ethan Park added · BB-5107" (admins also get Undo, OP-B2); the row appears in Dan
 // order, and a same-name + same-birthday match shows the duplicate box.
+// Layout as drawn: First and Last name side by side on the PC and tablet (stacked on phones);
+// School, Testing for and Kukkiwon are joined buttons of equal width across the dialog.
+// With Hide payments on (mat-side) no amount, fee or total shows (OP-B7).
 import { useId } from 'react';
 import Dialog from '../../../components/Dialog.jsx';
 import Notice from '../../../components/Notice.jsx';
@@ -27,7 +30,7 @@ import * as T from '../text.js';
 
 const DANS = [1, 2, 3, 4];
 
-export default function AddCandidateDialog({ state, cycle, isPhone, today, onChange, onSave, onCancel, onRequestClose }) {
+export default function AddCandidateDialog({ state, cycle, isPhone, hidden = false, today, onChange, onSave, onCancel, onRequestClose }) {
   const id = useId();
   const v = state.values;
   const ro = state.saving;
@@ -44,7 +47,7 @@ export default function AddCandidateDialog({ state, cycle, isPhone, today, onCha
   const age = !dobProblem(v.dob, today) && firstDay ? ageOn(v.dob, firstDay) : null;
   const dobHint = age === null ? null : age >= 18 ? T.adultHint(age) : T.MINOR_HINT;
   const plan = (cycle.plans ?? []).find((p) => p.id === v.planId) ?? null;
-  const schedule = plan && dan ? scheduleFor({ plan, dan, kukkiwon: v.kukkiwon, fees: cycle.kukkiwon, today }) : null;
+  const schedule = plan && dan && !hidden ? scheduleFor({ plan, dan, kukkiwon: v.kukkiwon, fees: cycle.kukkiwon, today }) : null;
 
   const messages = {
     school: show('school') ? T.ERR_SCHOOL : null,
@@ -74,7 +77,7 @@ export default function AddCandidateDialog({ state, cycle, isPhone, today, onCha
           </span>
           <Choice
             labelId={`${id}-school`}
-            className={messages.school ? 'is-invalid' : ''}
+            className={`bb-segmented--fill${messages.school ? ' is-invalid' : ''}`}
             options={[
               { key: 'worcester', label: T.schoolName('worcester') },
               { key: 'shrewsbury', label: T.schoolName('shrewsbury') },
@@ -85,16 +88,20 @@ export default function AddCandidateDialog({ state, cycle, isPhone, today, onCha
           />
           {messages.school && <Notice>{messages.school}</Notice>}
         </div>
-        <div className="field">
-          <label htmlFor={`${id}-first`}>{T.FIRST_NAME}</label>
-          <input id={`${id}-first`} className="input" type="text" autoComplete="off" data-autofocus readOnly={ro} value={v.first} aria-invalid={messages.first ? 'true' : undefined} aria-describedby={messages.first ? err('first') : undefined} onChange={(e) => onChange({ first: e.target.value })} />
-          {messages.first && <Notice id={err('first')}>{messages.first}</Notice>}
+        {/* First | Last name side by side (PC / tablet), the belt-spelling hint under both */}
+        <div className="bb-name-pair">
+          <div className="field">
+            <label htmlFor={`${id}-first`}>{T.FIRST_NAME}</label>
+            <input id={`${id}-first`} className="input" type="text" autoComplete="off" data-autofocus readOnly={ro} value={v.first} aria-invalid={messages.first ? 'true' : undefined} aria-describedby={messages.first ? err('first') : `${id}-last-hint`} onChange={(e) => onChange({ first: e.target.value })} />
+            {messages.first && <Notice id={err('first')}>{messages.first}</Notice>}
+          </div>
+          <div className="field">
+            <label htmlFor={`${id}-last`}>{T.LAST_NAME}</label>
+            <input id={`${id}-last`} className="input" type="text" autoComplete="off" readOnly={ro} value={v.last} aria-invalid={messages.last ? 'true' : undefined} aria-describedby={messages.last ? `${err('last')} ${id}-last-hint` : `${id}-last-hint`} onChange={(e) => onChange({ last: e.target.value })} />
+            {messages.last && <Notice id={err('last')}>{messages.last}</Notice>}
+          </div>
         </div>
-        <div className="field">
-          <label htmlFor={`${id}-last`}>{T.LAST_NAME}</label>
-          <input id={`${id}-last`} className="input" type="text" autoComplete="off" readOnly={ro} value={v.last} aria-invalid={messages.last ? 'true' : undefined} aria-describedby={messages.last ? err('last') : `${id}-last-hint`} onChange={(e) => onChange({ last: e.target.value })} />
-          {messages.last ? <Notice id={err('last')}>{messages.last}</Notice> : <p id={`${id}-last-hint`} className="field-hint">{T.LAST_NAME_HINT}</p>}
-        </div>
+        <p id={`${id}-last-hint`} className="field-hint bb-name-hint">{T.LAST_NAME_HINT}</p>
         <div className="field">
           <label htmlFor={`${id}-dob`}>{T.DOB}</label>
           <DateField id={`${id}-dob`} value={v.dob} readOnly={ro} invalid={Boolean(messages.dob)} describedBy={messages.dob ? err('dob') : dobHint ? `${id}-dob-hint` : undefined} onChange={(dob) => onChange({ dob })} />
@@ -104,7 +111,7 @@ export default function AddCandidateDialog({ state, cycle, isPhone, today, onCha
           <span id={`${id}-dan`} className="field-label">
             {T.TESTING_FOR}
           </span>
-          <Choice labelId={`${id}-dan`} className={messages.dan ? 'is-invalid' : ''} options={DANS.map((d) => ({ key: d, label: T.DAN_LABELS[d] }))} value={dan} readOnly={ro} onChange={(d) => onChange({ dan: d })} />
+          <Choice labelId={`${id}-dan`} className={`bb-segmented--fill${messages.dan ? ' is-invalid' : ''}`} options={DANS.map((d) => ({ key: d, label: T.DAN_LABELS[d] }))} value={dan} readOnly={ro} onChange={(d) => onChange({ dan: d })} />
           {messages.dan && <Notice>{messages.dan}</Notice>}
         </div>
         <div className="field">
@@ -113,9 +120,10 @@ export default function AddCandidateDialog({ state, cycle, isPhone, today, onCha
           </span>
           <Choice
             labelId={`${id}-kuk`}
+            className="bb-segmented--fill"
             options={[
               { key: 'no', label: T.KUKKIWON_NO },
-              { key: 'yes', label: T.kukkiwonYes(fee) },
+              { key: 'yes', label: T.kukkiwonYes(hidden ? null : fee) },
             ]}
             value={v.kukkiwon ? 'yes' : 'no'}
             readOnly={ro}
@@ -127,7 +135,7 @@ export default function AddCandidateDialog({ state, cycle, isPhone, today, onCha
             {T.HOW_THEY_PAY}
           </span>
           {!dan && <p className="field-hint bb-plan-hint">{T.AMOUNTS_AFTER_DAN}</p>}
-          <PlanCards cycle={cycle} dan={dan} value={v.planId} registeredOn={today} invalid={Boolean(messages.plan)} readOnly={ro} labelId={`${id}-plan`} onChange={(planId) => onChange({ planId })} />
+          <PlanCards cycle={cycle} dan={dan} value={v.planId} hidden={hidden} invalid={Boolean(messages.plan)} readOnly={ro} labelId={`${id}-plan`} onChange={(planId) => onChange({ planId })} />
           {messages.plan && <Notice>{messages.plan}</Notice>}
         </div>
         {schedule && <p className="bb-total-line">{T.addTotalLine(schedule.totalCents, schedule.lines, schedule.kukkiwonCents)}</p>}

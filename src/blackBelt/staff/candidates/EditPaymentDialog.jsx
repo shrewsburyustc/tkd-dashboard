@@ -5,8 +5,12 @@
 // (required); "The date (Mar 27) stays. The old and new values go in the change log."
 // The database never changes a payment row: it adds an undo of the old one and the new one, both
 // on the old date (append-only, Star v0.166). Save → toast "Payment changed · Undo".
+// Only the items the plan still has are ticked; when none is left (the plan changed since) the
+// list starts empty with "This payment was for an item no longer in the plan." and "Tick what this
+// payment is for." under it (useCandidateActions.openEditPayment).
 import Dialog from '../../../components/Dialog.jsx';
-import { AmountField, FailedBanner, Footer, MethodField, PrimaryButton, TextField } from './dialogParts.jsx';
+import Notice from '../../../components/Notice.jsx';
+import { AmountField, AmountMethod, FailedBanner, Footer, MethodField, PrimaryButton, TextField } from './dialogParts.jsx';
 import { ICONS } from './icons.js';
 import ItemChecklist from './ItemChecklist.jsx';
 import { paymentErrors } from './RecordPaymentDialog.jsx';
@@ -19,6 +23,8 @@ export default function EditPaymentDialog({ state, isPhone, onChange, onTicks, o
   const errors = paymentErrors(state, { needReason: true });
   const ro = state.saving;
   const what = lineWords(line, data.payments, c.plan).what;
+  // Nothing left ticked because the line's items left the plan: say so at once (not only on Save).
+  const ticksError = errors.ticks ?? (state.itemGone && v.ticks.length === 0 ? T.ERR_TICK : null);
 
   return (
     <Dialog title={T.EDIT_PAYMENT_TITLE} size="medium" fullScreen={isPhone} onRequestClose={onRequestClose}>
@@ -31,9 +37,16 @@ export default function EditPaymentDialog({ state, isPhone, onChange, onTicks, o
         }}
       >
         <FailedBanner state={state} onRetry={onSave} />
-        <ItemChecklist items={data.money.items ?? []} ticks={v.ticks} onChange={onTicks} showAll label={T.FOR_LABEL} error={errors.ticks} readOnly={ro} />
-        <AmountField value={v.amount} error={errors.amount} readOnly={ro} onChange={(amount) => onChange({ amount })} />
-        <MethodField value={v.method} error={errors.method} readOnly={ro} onChange={(method) => onChange({ method })} />
+        {state.itemGone && (
+          <div className="bb-item-gone">
+            <Notice>{T.EDIT_PAYMENT_ITEM_GONE}</Notice>
+          </div>
+        )}
+        <ItemChecklist items={data.money.items ?? []} ticks={v.ticks} onChange={onTicks} showAll label={T.FOR_LABEL} error={ticksError} readOnly={ro} />
+        <AmountMethod>
+          <AmountField value={v.amount} error={errors.amount} readOnly={ro} onChange={(amount) => onChange({ amount })} />
+          <MethodField value={v.method} error={errors.method} readOnly={ro} onChange={(method) => onChange({ method })} />
+        </AmountMethod>
         <TextField label={T.NOTE_OPTIONAL} placeholder={T.NOTE_PLACEHOLDER} value={v.note} error={errors.note} readOnly={ro} onChange={(note) => onChange({ note })} />
         <TextField label={T.REASON} placeholder={T.REASON_PLACEHOLDER} value={v.reason} error={errors.reason} readOnly={ro} onChange={(reason) => onChange({ reason })} />
         <p className="field-hint">{T.editPaymentHint(line.paidOn)}</p>

@@ -2,10 +2,11 @@
 // Why it exists: approved mockup Candidates 4 (post-dated checks), contract CONTRACT-0016-B2 §3.4,
 // rulebook v0.218. Top to bottom:
 //   "Alex Kim · 1st Dan · Shrewsbury · 3 payments + Kukkiwon"
-//   "Owes $970 · due today: $390 (payment 1 $290 + Kukkiwon $100)"
-//   For (tick one or more) — the unpaid items; what's due now is ticked (ItemChecklist.jsx)
-//   Amount — the ticked items' sum, refilled on every tick until someone types in it (OP-B6)
-//   Method Cash · Check · Card — nothing chosen at first (OP-B5)
+//   "Owes $970 · due today: $390 (payment 1 $290 + Kukkiwon $100)" in a gray box
+//   For (tick one or more) — the unpaid items in a bordered list; what's due now is ticked
+//   (ItemChecklist.jsx)
+//   Amount — the ticked items' sum, refilled on every tick until someone types in it (OP-B6) —
+//   and beside it Method Cash · Check · Card — nothing chosen at first (OP-B5)
 //   Note (optional) "e.g. post-dated Apr 24"
 //   "Counts as paid today, Sat, Mar 27, like every check handed in today."
 //   Cancel · Save and record another · Save (phones: Save, then Save and record another)
@@ -15,7 +16,7 @@
 import Dialog from '../../../components/Dialog.jsx';
 import { dueNowItems, nextItems } from '../../../lib/blackBelt/rules.js';
 import { paymentProblems } from './checks.js';
-import { AmountField, FailedBanner, Footer, MethodField, PrimaryButton, TextField } from './dialogParts.jsx';
+import { AmountField, AmountMethod, FailedBanner, Footer, MethodField, PrimaryButton, TextField } from './dialogParts.jsx';
 import { ICONS } from './icons.js';
 import ItemChecklist from './ItemChecklist.jsx';
 import * as T from '../text.js';
@@ -66,8 +67,10 @@ export default function RecordPaymentDialog({ state, isPhone, today, onChange, o
         <FailedBanner state={state} onRetry={() => onSave({ another: false })} />
         <p className="bb-owes">{T.owesLine(money, dueNowItems(money, today), nextItems(money), today)}</p>
         <ItemChecklist items={money.items ?? []} ticks={v.ticks} onChange={onTicks} error={errors.ticks} readOnly={ro} />
-        <AmountField value={v.amount} error={errors.amount} readOnly={ro} onChange={(amount) => onChange({ amount, amountTyped: true })} />
-        <MethodField value={v.method} error={errors.method} readOnly={ro} onChange={(method) => onChange({ method })} />
+        <AmountMethod>
+          <AmountField value={v.amount} error={errors.amount} readOnly={ro} onChange={(amount) => onChange({ amount, amountTyped: true })} />
+          <MethodField value={v.method} error={errors.method} readOnly={ro} onChange={(method) => onChange({ method })} />
+        </AmountMethod>
         <TextField label={T.NOTE_OPTIONAL} placeholder={T.NOTE_PLACEHOLDER} value={v.note} error={errors.note} readOnly={ro} onChange={(note) => onChange({ note })} />
         <p className="field-hint bb-counts-today">{T.countsToday(today)}</p>
         <Footer state={state} isPhone={isPhone} onCancel={onCancel} extra={another} primary={<PrimaryButton state={state} isPhone={isPhone} label={T.SAVE} Icon={ICONS.save} />} />

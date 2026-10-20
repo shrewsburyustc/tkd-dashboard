@@ -41,10 +41,23 @@ import { addProblems, anyProblem, detailsProblems, paymentProblems } from './che
 import * as T from '../text.js';
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-const focusSoon = (element) =>
-  window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
-    if (element?.isConnected) element.focus();
-  }));
+// Focus goes back to the button that opened a dialog once the dialog is gone. The page behind a
+// dialog is "inert" (can't take focus) until the App hears that the dialog closed, which takes a
+// few frames — so this waits, frame by frame (at most about half a second), until the button can
+// take focus again.
+const focusSoon = (element) => {
+  let frames = 0;
+  const attempt = () => {
+    if (!element?.isConnected) return;
+    if (element.closest('[inert]') && frames < 30) {
+      frames += 1;
+      window.requestAnimationFrame(attempt);
+      return;
+    }
+    element.focus();
+  };
+  window.requestAnimationFrame(() => window.requestAnimationFrame(attempt));
+};
 // The items of a payment in the plan's item order (the order the checklist shows them).
 const inItemOrder = (codes, money) => {
   const order = (money?.items ?? []).map((x) => x.item);
@@ -168,16 +181,55 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     setDlg((d) => ({ detail: d?.detail ? { ...d.detail, menu: null } : null, child: { key: Date.now(), note: null, blocking: false, saving: false, failed: false, triedSave: false, opener, ...child, initial: child.values } }));
   }
   // Back to the detail (re-read: something may have changed) or, without one, to the list.
+  // Focus goes back to the button that opened the child: on the list it is still on screen; in
+  // the detail the buttons are drawn again, so the detail finds it by its data-focus-key
+  // (CandidateDialog.jsx).
   function closeChild() {
     const d = dlgRef.current;
     if (!d) return;
     if (d.detail) {
-      setDlg({ detail: d.detail, child: null });
+      const focusKey = d.child?.opener?.dataset?.focusKey ?? null;
+      setDlg({ detail: { ...d.detail, focusKey }, child: null });
       refreshDetail();
       return;
     }
     setDlg(null);
     focusSoon(d.child?.opener);
+  }
+  function clearFocusKey() {
+    if (dlgRef.current?.detail?.focusKey) patchDetail({ focusKey: null });
+  }
+
+  // The device's Hide payments switch was just turned on (mat-side, OP-B7): nothing about money,
+  // the date of birth or the email may stay on screen. Close every money dialog (Record / Edit /
+  // Undo payment, refund, returned check, receipt), leave Edit details (it shows the date of birth
+  // and email), close a payment line's ⋯ and clear a money toast. The detail itself redraws with
+  // "Hidden on this device"; Compare, Change plan and Add hide their money parts themselves.
+  const MONEY_CHILDREN = ['record', 'editPayment', 'undo', 'refund', 'returned', 'receipt'];
+  function paymentsHiddenNow() {
+    const d = dlgRef.current;
+    latest.current.clearToast();
+    if (!d) return;
+    if (d.child && MONEY_CHILDREN.includes(d.child.kind)) {
+      if (d.detail) {
+        setDlg({ detail: { ...d.detail, mode: 'view', edit: null, menu: null }, child: null });
+        refreshDetail();
+      } else {
+        setDlg(null);
+        focusSoon(d.child.opener);
+      }
+      return;
+    }
+    if (d.detail && (d.detail.mode === 'edit' || d.detail.menu?.kind === 'line')) {
+      patchDetail({ mode: 'view', edit: null, menu: null });
+    }
+  }
+
+  // The screen locked: the signature picture is dropped at once (it is opened again on purpose,
+  // never brought back by the unlock). The other dialogs wait hidden behind the lock screen.
+  function screenLockedNow() {
+    const d = dlgRef.current;
+    if (d?.child?.kind === 'signature') setDlg({ detail: d.detail ? { ...d.detail, focusKey: 'detail-signature' } : null, child: null });
   }
   function requestCloseChild() {
     const c = dlgRef.current?.child;
@@ -329,11 +381,20 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   }
 
   // ===== Admin payment actions (Candidates 5) =====
-  function openEditPayment(line) {
+  // Only the line's items the plan still has are ticked (the plan may have changed since it was
+  // recorded — e.g. Kukkiwon taken off). When none is left, nothing is ticked and the dialog says
+  // why ("This payment was for an item no longer in the plan.") with "Tick what this payment is
+  // for." under the list.
+  const stillInPlan = (codes, money) => {
+    const known = new Set((money?.items ?? []).map((x) => x.item));
+    return (codes ?? []).filter((code) => known.has(code));
+  };
+  function openEditPayment(line, opener) {
     const d = dlgRef.current?.detail;
     if (!d?.data) return;
-    const values = { ticks: [...(line.forItems ?? [])], amount: amountInputText(line.amountCents), amountTyped: true, method: line.method, note: line.note ?? '', reason: '' };
-    openChild({ kind: 'editPayment', candidateId: d.candidateId, data: d.data, line, values });
+    const ticks = stillInPlan(line.forItems, d.data.money);
+    const values = { ticks, amount: amountInputText(line.amountCents), amountTyped: true, method: line.method, note: line.note ?? '', reason: '' };
+    openChild({ kind: 'editPayment', candidateId: d.candidateId, data: d.data, line, values, itemGone: ticks.length === 0 }, opener);
   }
   async function saveEditPayment() {
     const c = dlgRef.current?.child;
@@ -347,6 +408,10 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     patchChild({ saving: true, failed: false, note: null });
     const name = T.candidateName(c.data.candidate);
     const old = c.line;
+    // The toast's Undo puts the old values back — with the old items the plan still has (else the
+    // items just saved), so the undo is never refused for an item that no longer exists.
+    const oldTicks = stillInPlan(old.forItems, c.data.money);
+    const undoTicks = oldTicks.length > 0 ? inItemOrder(oldTicks, c.data.money) : inItemOrder(c.values.ticks, c.data.money);
     const result = await editPayment({
       paymentId: old.id,
       amountCents: cents,
@@ -363,7 +428,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
         T.TOAST_PAYMENT_CHANGED,
         undoAction(() =>
           runQuick(
-            () => editPayment({ paymentId: newId, amountCents: old.amountCents, method: old.method, forItems: old.forItems, note: old.note ?? '', reason: T.UNDO_EDIT_REASON }),
+            () => editPayment({ paymentId: newId, amountCents: old.amountCents, method: old.method, forItems: undoTicks, note: old.note ?? '', reason: T.UNDO_EDIT_REASON }),
             { ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }), statuses: { stale: T.PAYMENT_GONE } },
           ),
         ),
@@ -385,10 +450,10 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   }
 
   // OP-B1 working default: a short confirmation, then a toast WITHOUT Undo (an undo can't be undone).
-  function openUndoPayment(line, what) {
+  function openUndoPayment(line, what, opener) {
     const d = dlgRef.current?.detail;
     if (!d?.data) return;
-    openChild({ kind: 'undo', candidateId: d.candidateId, data: d.data, line, what, values: null });
+    openChild({ kind: 'undo', candidateId: d.candidateId, data: d.data, line, what, values: null }, opener);
   }
   async function confirmUndoPayment() {
     const c = dlgRef.current?.child;
@@ -472,10 +537,10 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     patchChild({ saving: false, note: T.INVALID });
   }
 
-  function openReturned(line, what) {
+  function openReturned(line, what, opener) {
     const d = dlgRef.current?.detail;
     if (!d?.data) return;
-    openChild({ kind: 'returned', candidateId: d.candidateId, data: d.data, line, what, values: { note: '' } });
+    openChild({ kind: 'returned', candidateId: d.candidateId, data: d.data, line, what, values: { note: '' } }, opener);
   }
   async function saveReturned() {
     const c = dlgRef.current?.child;
@@ -642,7 +707,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   // ===== Edit details (inside the detail, Star v0.112) =====
   function startEdit() {
     const d = dlgRef.current?.detail;
-    if (!d?.data) return;
+    if (!d?.data || latest.current.paymentsHidden) return; // Hide payments on: Edit details at the desk
     const c = d.data.candidate;
     const values = { first: c.firstName, last: c.lastName, dob: c.dateOfBirth ?? '', email: c.emailForResults ?? '', school: c.locationCode, dan: c.dan };
     patchDetail({ mode: 'edit', menu: null, edit: { values, initial: values, triedSave: false, note: null, blocking: false, saving: false, failed: false, version: c.version } });
@@ -822,8 +887,13 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
       loadProblem(problem);
       return;
     }
-    // The earlier registration is "First registration".
-    const [first, second] = a.data.candidate.registeredAt <= b.data.candidate.registeredAt ? [a.data, b.data] : [b.data, a.data];
+    // The earlier registration is "First registration" (by the moment itself, not its text — two
+    // stamps may be written differently); the same moment → the lower reference first. The same
+    // order at every size, whichever row's Review was used.
+    const when = (x) => Date.parse(x.candidate.registeredAt) || 0;
+    const ref = (x) => String(x.candidate.reference ?? '');
+    const aFirst = when(a.data) - when(b.data) || ref(a.data).localeCompare(ref(b.data), 'en', { numeric: true });
+    const [first, second] = aFirst <= 0 ? [a.data, b.data] : [b.data, a.data];
     openChild({ kind: 'compare', first, second, values: null }, opener);
   }
   async function resolve(keep, other, keepBoth) {
@@ -865,10 +935,10 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   }
 
   // ===== View signature (admins) and the receipt =====
-  async function openSignature() {
+  async function openSignature(opener) {
     const d = dlgRef.current?.detail;
-    if (!d?.data) return;
-    openChild({ kind: 'signature', candidateId: d.candidateId, status: 'loading', result: null, values: null });
+    if (!d?.data || latest.current.paymentsHidden) return;
+    openChild({ kind: 'signature', candidateId: d.candidateId, status: 'loading', result: null, values: null }, opener);
     const result = await loadSignature({ candidateId: d.candidateId });
     if (dlgRef.current?.child?.kind !== 'signature') return; // closed meanwhile
     if (result.status === 'no_access') {
@@ -878,9 +948,20 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     if (result.status === 'not_allowed') latest.current.onRefreshProfile();
     patchChild({ status: result.status === 'ok' ? 'ready' : result.status, result: result.status === 'ok' ? result : null });
   }
+  // The receipt reads its own data (ReceiptDialog). It also needs the day the Kukkiwon fee was
+  // added (the receipt data doesn't carry it): from the open detail, or — from a row's ⋯ — read
+  // once here, keeping ONLY those two dates (nothing else of the detail is kept).
   function openReceipt(candidateId, opener) {
     if (latest.current.paymentsHidden) return;
-    openChild({ kind: 'receipt', candidateId, values: null }, opener);
+    const from = dlgRef.current?.detail;
+    const known = from?.data && from.candidateId === candidateId ? from.data.candidate : null;
+    const dates = (c) => ({ kukkiwonAddedOn: c.kukkiwonAddedOn ?? null, registeredOn: c.registeredOn ?? null });
+    openChild({ kind: 'receipt', candidateId, values: null, kukkiwonDates: known ? dates(known) : null }, opener);
+    if (known) return;
+    fetchCandidate(candidateId).then(({ data }) => {
+      const c = dlgRef.current?.child;
+      if (data && c?.kind === 'receipt' && c.candidateId === candidateId) patchChild({ kukkiwonDates: dates(data.candidate) });
+    });
   }
 
   // ----- Menus inside the detail -----
@@ -896,6 +977,9 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     requestCloseDetail,
     closeAll,
     closeChild,
+    clearFocusKey,
+    paymentsHiddenNow,
+    screenLockedNow,
     requestCloseChild,
     changeChild,
     setTicks,

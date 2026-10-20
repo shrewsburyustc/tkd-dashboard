@@ -52,8 +52,10 @@ export const cycleLine = (cycleName, firstDay) => (firstDay ? `${cycleName} · f
 //   equal payments       "3 payments of $290"
 //   unequal payments     "2 payments: $400 + $470"                      (not in the mockups)
 //   + Kukkiwon           " + Kukkiwon certificate ($100, with payment 1)"
+//   + Kukkiwon added after payment 1's date (kukkiwonAddedOn given)
+//                        " + Kukkiwon certificate ($110, added Apr 26)"      (not in the mockups)
 //   prices not found     the plan's name alone (should not happen)
-export function planLine({ planName, amounts, kukkiwon, kukkiwonCents }) {
+export function planLine({ planName, amounts, kukkiwon, kukkiwonCents, kukkiwonAddedOn = null }) {
   let text = planName ?? '';
   if (Array.isArray(amounts) && amounts.length > 0 && amounts.every(Number.isInteger)) {
     const total = amounts.reduce((sum, c) => sum + c, 0);
@@ -62,8 +64,9 @@ export function planLine({ planName, amounts, kukkiwon, kukkiwonCents }) {
     else text = `${amounts.length} payments: ${amounts.map(formatCents).join(' + ')}`;
   }
   if (kukkiwon) {
+    const when = kukkiwonAddedOn ? `added ${monthDay(kukkiwonAddedOn)}` : 'with payment 1';
     text += Number.isInteger(kukkiwonCents)
-      ? ` + Kukkiwon certificate (${formatCents(kukkiwonCents)}, with payment 1)`
+      ? ` + Kukkiwon certificate (${formatCents(kukkiwonCents)}, ${when})`
       : ' + Kukkiwon certificate';
   }
   return text;

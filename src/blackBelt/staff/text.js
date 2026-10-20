@@ -562,6 +562,9 @@ export const balanceText = (m) => (m ? money(m.balanceCents) : '');
 // Row ⋯ items
 export const RECORD_PAYMENT = 'Record payment';
 export const EDIT_DETAILS = 'Edit details';
+// Hide payments on (the mat-side switch): Edit details shows the date of birth and email, so it
+// is grayed with this reason, like Add candidate's (not in the mockups)
+export const EDIT_AT_DESK = 'Edit details at the desk.';
 export const CHANGE_PLAN = 'Change plan or Kukkiwon';
 export const alreadyPaidAskAdmin = (cents) => `${money(cents)} is already paid. Ask an admin.`;
 export const PAYMENT_RECORDED_ASK_ADMIN = 'A payment is recorded. Ask an admin.';
@@ -597,6 +600,8 @@ export const ROW_PLAN = 'Plan';
 export const ROW_KUKKIWON = 'Kukkiwon certificate';
 export const ROW_REMOVED = 'Removed'; // (not in the mockups)
 export const detailSub = (cycleName, dan, code) => `${cycleName} · ${DAN_LABELS[dan] ?? ''} · ${schoolName(code)}`;
+// Edit details' line under its title names whose details they are (not in the mockups)
+export const editDetailsSub = (name, cycleName, dan, code) => `${name} · ${detailSub(cycleName, dan, code)}`;
 export const dobLine = (dob, age, firstDay) => (age === null || age === undefined || !firstDay ? monthDayYear(dob) : `${monthDayYear(dob)} (${age} on ${monthDayYear(firstDay)})`);
 export const DELETED_AFTER_KEEPING = 'Deleted after the keeping time';
 export const HIDDEN_ON_DEVICE = 'Hidden on this device'; // Hide payments on (OP-B7)
@@ -622,15 +627,32 @@ export const needsParentSignature = (first, firstDay) =>
 export const WAIVER_SIGNED_ON_PAPER = 'Waiver signed on paper';
 export const TOAST_PAPER_WAIVER = 'Paper waiver recorded'; // (not in the mockups)
 
+// The due dates of a candidate's payments, with payments due on the SAME day said once: a late
+// family's passed dates all count from the day they registered, so "Apr 26, Apr 26, May 29"
+// reads "today (payments 1 and 2), May 29" (on another day: "Apr 26 (payments 1 and 2), May 29").
+// items: [{ item: 'p1', dueOn }] in payment order. (The grouped wording is not in the mockups.)
+export function dueDatesText(items, today = null) {
+  const groups = [];
+  for (const x of items ?? []) {
+    const last = groups[groups.length - 1];
+    if (last && last.dueOn === x.dueOn) last.nos.push(String(x.item).slice(1));
+    else groups.push({ dueOn: x.dueOn, nos: [String(x.item).slice(1)] });
+  }
+  return groups
+    .map((g) => (g.nos.length === 1 ? monthDay(g.dueOn) : `${g.dueOn === today ? 'today' : monthDay(g.dueOn)} (payments ${andList(g.nos)})`))
+    .join(', ');
+}
+
 // The Plan line: "3 payments · $290 each, due Mar 27, Apr 24, May 29" / "$400 + $470, due …" /
-// "In full · $870, due Mar 27". amounts: this Dan's amounts; dates: the candidate's item dates.
-export function planLine(planName, amounts, dates) {
+// "In full · $870, due Mar 27". amounts: this Dan's amounts; items: the candidate's payment items
+// [{ item, dueOn }] in payment order (same-day ones said once, dueDatesText).
+export function planLine(planName, amounts, items, today = null) {
   const list = amounts ?? [];
   let what;
   if (list.length === 1) what = money(list[0]);
   else if (list.length > 1 && list.every((a) => a === list[0])) what = `${money(list[0])} each`;
   else what = list.map(money).join(' + ');
-  return `${planName} · ${what}, due ${dates.map(monthDay).join(', ')}`;
+  return `${planName} · ${what}, due ${dueDatesText(items, today)}`;
 }
 // Kukkiwon: "Yes · $100, due with payment 1" / added late "Yes · $110, due Apr 26" / "No"
 export function kukkiwonLine(item, p1) {
@@ -747,6 +769,9 @@ export const REASON = 'Reason for the change';
 export const REASON_PLACEHOLDER = 'e.g. typed the wrong amount';
 export const ERR_REASON = 'Enter a reason for the change.';
 export const editPaymentHint = (paidOn) => `The date (${monthDay(paidOn)}) stays. The old and new values go in the change log.`;
+// The payment was ticked for an item the plan no longer has (the plan changed since): nothing is
+// ticked, so the person ticks what it is for now (not in the mockups)
+export const EDIT_PAYMENT_ITEM_GONE = 'This payment was for an item no longer in the plan.';
 export const TOAST_PAYMENT_CHANGED = 'Payment changed';
 export const UNDO_EDIT_REASON = 'Undo of the change just made'; // (not in the mockups)
 export const PAYMENT_GONE = 'This payment was already undone or changed.';
@@ -811,8 +836,9 @@ export function planCardLine(amounts, dates) {
 }
 export const centsText = (cents) => money(cents);
 // "New total $870 · 3 × $290, due Mar 27, Apr 24, May 29 · nothing paid yet"
-export function newTotalNothingPaid(totalCents, amounts, dates) {
-  const days = dates.map(monthDay).join(', ');
+// items: the candidate's payment items [{ item, dueOn }] (a late family's same-day ones said once)
+export function newTotalNothingPaid(totalCents, amounts, items, today = null) {
+  const days = dueDatesText(items, today);
   let what;
   if (amounts.length === 1) what = `in full, due ${days}`;
   else if (amounts.every((a) => a === amounts[0])) what = `${amounts.length} × ${money(amounts[0])}, due ${days}`;
@@ -820,10 +846,12 @@ export function newTotalNothingPaid(totalCents, amounts, dates) {
   return `New total ${money(totalCents)} · ${what} · nothing paid yet`;
 }
 // "New total $1,100 · paid $330 · balance $770 · due now: $440 (Kukkiwon $110 + payment 2 $330)"
+// — the Kukkiwon fee first (contract §3.6): adding it is what changed, so it is named first.
 export function newTotalWithPaid(m, dueNow, next) {
   const sum = (list) => list.reduce((a, x) => a + (x.remainingCents ?? 0), 0);
   const head = `New total ${money(m.totalDueCents)} · paid ${money(m.paidCents)} · balance ${money(m.balanceCents)}`;
-  if (dueNow.length > 0) return `${head} · due now: ${money(sum(dueNow))} ${itemsWithAmounts(dueNow)}`;
+  const kukkiwonFirst = [...dueNow].sort((a, b) => (b.item === 'kukkiwon') - (a.item === 'kukkiwon'));
+  if (dueNow.length > 0) return `${head} · due now: ${money(sum(dueNow))} ${itemsWithAmounts(kukkiwonFirst)}`;
   if (next.length > 0) return `${head} · next: ${money(sum(next))} by ${monthDay(next[0].dueOn)}`;
   return head;
 }

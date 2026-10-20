@@ -13,9 +13,12 @@
 //     Kukkiwon · Remove candidate / Restore / Delete permanently (admins)
 // Edit details (Star v0.112) turns the same dialog into fields with Cancel and Save.
 // Privacy (§5): the date of birth and email appear only here, and with the device's Hide payments
-// switch on they read "Hidden on this device" (OP-B7); so do the payments. The data lives in
+// switch on they read "Hidden on this device" (OP-B7); so do the payments, Edit details is grayed
+// ("Edit details at the desk.") and View signature isn't offered. The data lives in
 // useCandidateActions only while this dialog is open.
-import { useId, useRef } from 'react';
+// Focus: Edit details puts the cursor in First name; back from it, or from a dialog opened here,
+// focus returns to the button that opened it (its data-focus-key).
+import { useEffect, useId, useRef } from 'react';
 import Dialog from '../../../components/Dialog.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
@@ -87,6 +90,7 @@ function Payments({ data, cycle, isAdmin, isPhone, today, onLineMore, menuLineId
         Icon={ICONS.more}
         aria-haspopup="menu"
         aria-expanded={menuLineId === line.id ? 'true' : 'false'}
+        data-focus-key={`line-${line.id}`}
         onClick={(event) => onLineMore(line, w.what, event.currentTarget)}
       />
     );
@@ -95,7 +99,7 @@ function Payments({ data, cycle, isAdmin, isPhone, today, onLineMore, menuLineId
   return (
     <>
       <dl className="ev-sum bb-sum">
-        <Row label={T.ROW_PLAN}>{T.planLine(planName, amounts, payItems.map((x) => x.dueOn))}</Row>
+        <Row label={T.ROW_PLAN}>{T.planLine(planName, amounts, payItems, today)}</Row>
         <Row label={T.ROW_KUKKIWON}>{T.kukkiwonLine(c.kukkiwon ? kukItem : null, p1)}</Row>
       </dl>
       {payments.length === 0 ? (
@@ -104,7 +108,9 @@ function Payments({ data, cycle, isAdmin, isPhone, today, onLineMore, menuLineId
         <ul className="bb-pay-blocks">
           {payments.map((line) => {
             const w = words(line);
-            const second = [T.monthDay(line.paidOn), w.how, line.kind === 'payment' && !line.note && !line.returned ? null : noteWords(line), T.byName(line.recordedByName)].filter(Boolean);
+            // Phones leave the note out when there is none (no lone "—" between the dots)
+            const note = line.note || line.returned ? noteWords(line) : null;
+            const second = [T.monthDay(line.paidOn), w.how, note, T.byName(line.recordedByName)].filter(Boolean);
             return (
               <li key={line.id} className={`bb-pay-block${line.returned ? ' is-returned' : ''}`}>
                 <span className="bb-pay-block-text">
@@ -202,7 +208,7 @@ function EditFields({ edit, data, isAdmin, today, onChange }) {
     <div className="bb-edit">
       <div className="field">
         <label htmlFor={`${id}-first`}>{T.FIRST_NAME}</label>
-        <input id={`${id}-first`} className="input" type="text" autoComplete="off" data-autofocus readOnly={ro} value={v.first} aria-invalid={firstMsg ? 'true' : undefined} aria-describedby={firstMsg ? err('first') : undefined} onChange={(e) => onChange({ first: e.target.value })} />
+        <input id={`${id}-first`} className="input" type="text" autoComplete="off" data-autofocus data-edit-first readOnly={ro} value={v.first} aria-invalid={firstMsg ? 'true' : undefined} aria-describedby={firstMsg ? err('first') : undefined} onChange={(e) => onChange({ first: e.target.value })} />
         {firstMsg && <Notice id={err('first')}>{firstMsg}</Notice>}
       </div>
       <div className="field">
@@ -232,13 +238,13 @@ function EditFields({ edit, data, isAdmin, today, onChange }) {
         <span id={`${id}-school`} className="field-label">
           {T.SCHOOL}
         </span>
-        <Choice labelId={`${id}-school`} options={[{ key: 'worcester', label: T.schoolName('worcester') }, { key: 'shrewsbury', label: T.schoolName('shrewsbury') }]} value={v.school} readOnly={ro} onChange={(school) => onChange({ school })} />
+        <Choice labelId={`${id}-school`} className="bb-segmented--fill" options={[{ key: 'worcester', label: T.schoolName('worcester') }, { key: 'shrewsbury', label: T.schoolName('shrewsbury') }]} value={v.school} readOnly={ro} onChange={(school) => onChange({ school })} />
       </div>
       <div className="field">
         <span id={`${id}-dan`} className="field-label">
           {T.TESTING_FOR}
         </span>
-        <Choice labelId={`${id}-dan`} className={danLocked ? 'is-locked' : ''} options={DANS.map((dan) => ({ key: dan, label: T.DAN_LABELS[dan] }))} value={Number(v.dan)} readOnly={ro || danLocked} onChange={(dan) => onChange({ dan })} />
+        <Choice labelId={`${id}-dan`} className={`bb-segmented--fill${danLocked ? ' is-locked' : ''}`} options={DANS.map((dan) => ({ key: dan, label: T.DAN_LABELS[dan] }))} value={Number(v.dan)} readOnly={ro || danLocked} onChange={(dan) => onChange({ dan })} />
         {danLocked && <p className="field-hint">{T.DAN_LOCKED_STAFF}</p>}
         {danChangedAfterPay && (
           <p className="bb-amber-line">
@@ -259,10 +265,50 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
   const moreRef = useRef(null);
   const title = c ? T.candidateName(c) : T.SECTION_CANDIDATE;
   const withdrawn = c?.status === 'withdrawn';
+  const moreButtonElement = () => moreRef.current?.querySelector('button') ?? null;
+
+  // Edit details turns this same dialog into fields (React keeps the same dialog box, so its
+  // "focus the first field on open" doesn't run again): put the cursor in First name, so typing
+  // and Esc work at once. Back from Edit details: focus returns to the ⋯ it was opened from.
+  const wasEditing = useRef(false);
+  useEffect(() => {
+    if (editing && !wasEditing.current) {
+      window.requestAnimationFrame(() => document.querySelector('[data-edit-first]')?.focus());
+    } else if (!editing && wasEditing.current) {
+      window.requestAnimationFrame(() => moreButtonElement()?.focus());
+    }
+    wasEditing.current = Boolean(editing);
+  }, [editing]);
+
+  // Back from a dialog opened here (Record payment, Change plan, a payment line's ⋯ …): the detail
+  // is drawn again, so focus goes back to the button that opened it (found by its data-focus-key).
+  const focusKey = d.focusKey ?? null;
+  const hasData = Boolean(data);
+  const { clearFocusKey } = actions;
+  useEffect(() => {
+    if (!focusKey || !hasData) return;
+    window.requestAnimationFrame(() =>
+      window.requestAnimationFrame(() => {
+        const target = document.querySelector(`[data-focus-key="${CSS.escape(focusKey)}"]`);
+        if (target) target.focus();
+      }),
+    );
+    clearFocusKey();
+  }, [focusKey, hasData, clearFocusKey]);
 
   // ----- The detail's ⋯ (Edit details · Change plan · Remove / Restore / Delete) -----
   function detailItems() {
-    const items = [{ key: 'edit', label: T.EDIT_DETAILS, Icon: ICONS.editDetails, onSelect: () => actions.startEdit() }];
+    // Hide payments on (mat-side): Edit details would show the date of birth and email, so it is
+    // grayed with its reason, like Add candidate.
+    const items = [
+      {
+        key: 'edit',
+        label: hidden ? <TwoLines label={T.EDIT_DETAILS} reason={T.EDIT_AT_DESK} /> : T.EDIT_DETAILS,
+        Icon: ICONS.editDetails,
+        disabled: hidden,
+        onSelect: () => actions.startEdit(),
+      },
+    ];
     if (!withdrawn) {
       const locked = !isAdmin && hasLivePayment(data.payments);
       const reason = hidden || data.money.paidCents <= 0 ? T.PAYMENT_RECORDED_ASK_ADMIN : T.alreadyPaidAskAdmin(data.money.paidCents);
@@ -271,11 +317,11 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
         label: locked ? <TwoLines label={T.CHANGE_PLAN} reason={reason} /> : T.CHANGE_PLAN,
         Icon: ICONS.changePlan,
         disabled: locked,
-        onSelect: () => actions.openChangePlan(c.id, moreRef.current?.querySelector('button')),
+        onSelect: () => actions.openChangePlan(c.id, moreButtonElement()),
       });
     }
     const target = { id: c.id, firstName: c.firstName, lastName: c.lastName, version: c.version, hasPaymentRows: data.payments.length > 0 };
-    if (isAdmin && !withdrawn) items.push({ key: 'remove', label: T.REMOVE_CANDIDATE, Icon: ICONS.remove, separatorBefore: true, onSelect: () => actions.openRemove(target) });
+    if (isAdmin && !withdrawn) items.push({ key: 'remove', label: T.REMOVE_CANDIDATE, Icon: ICONS.remove, separatorBefore: true, onSelect: () => actions.openRemove(target, moreButtonElement()) });
     if (isAdmin && withdrawn) {
       items.push({ key: 'restore', label: T.RESTORE, Icon: ICONS.restore, separatorBefore: true, disabled: actions.busy, onSelect: () => actions.restore(target) });
       // The database refuses a delete while ANY payment row exists (even an undone one); the
@@ -287,7 +333,7 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
         Icon: ICONS.deleteForever,
         danger: !has,
         disabled: has,
-        onSelect: () => actions.openDelete(target),
+        onSelect: () => actions.openDelete(target, moreButtonElement()),
       });
     }
     return items;
@@ -296,25 +342,26 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
   // ----- A payment line's ⋯ (admins only; contract §3.3 "Payment line ⋯") -----
   function lineItems(line, what) {
     const items = [];
+    const opener = menu?.anchor ?? null; // the line's ⋯ (focus goes back to it)
     const refundActive = data.payments.some((p) => p.kind === 'refund');
     if (line.kind === 'payment') {
       if (!withdrawn) {
         const editReason = line.returned ? T.RETURNED_FIRST : refundActive ? T.REFUND_FIRST : null;
-        items.push({ key: 'edit', label: editReason ? <TwoLines label={T.EDIT_PAYMENT} reason={editReason} /> : T.EDIT_PAYMENT, Icon: ICONS.editPayment, disabled: Boolean(editReason), onSelect: () => actions.openEditPayment(line) });
+        items.push({ key: 'edit', label: editReason ? <TwoLines label={T.EDIT_PAYMENT} reason={editReason} /> : T.EDIT_PAYMENT, Icon: ICONS.editPayment, disabled: Boolean(editReason), onSelect: () => actions.openEditPayment(line, opener) });
       }
       items.push({
         key: 'undo',
         label: line.returned ? <TwoLines label={T.UNDO_PAYMENT} reason={T.RETURNED_FIRST} /> : T.UNDO_PAYMENT,
         Icon: ICONS.undo,
         disabled: line.returned,
-        onSelect: () => actions.openUndoPayment(line, what),
+        onSelect: () => actions.openUndoPayment(line, what, opener),
       });
-      if (data.money.paidCents > 0) items.push({ key: 'refund', label: T.RECORD_REFUND, Icon: ICONS.refund, onSelect: () => actions.openRefund(c.id) });
-      if (line.method === 'check' && !line.returned) items.push({ key: 'returned', label: T.MARK_CHECK_RETURNED, Icon: ICONS.returned, onSelect: () => actions.openReturned(line, what) });
+      if (data.money.paidCents > 0) items.push({ key: 'refund', label: T.RECORD_REFUND, Icon: ICONS.refund, onSelect: () => actions.openRefund(c.id, opener) });
+      if (line.method === 'check' && !line.returned) items.push({ key: 'returned', label: T.MARK_CHECK_RETURNED, Icon: ICONS.returned, onSelect: () => actions.openReturned(line, what, opener) });
     } else if (line.kind === 'returned') {
-      items.push({ key: 'undo', label: T.UNDO_RETURNED, Icon: ICONS.undo, onSelect: () => actions.openUndoPayment(line, what) });
+      items.push({ key: 'undo', label: T.UNDO_RETURNED, Icon: ICONS.undo, onSelect: () => actions.openUndoPayment(line, what, opener) });
     } else if (line.kind === 'refund') {
-      items.push({ key: 'undo', label: T.UNDO_REFUND, Icon: ICONS.undo, onSelect: () => actions.openUndoPayment(line, what) });
+      items.push({ key: 'undo', label: T.UNDO_REFUND, Icon: ICONS.undo, onSelect: () => actions.openUndoPayment(line, what, opener) });
     }
     return items;
   }
@@ -344,6 +391,7 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
         Icon={ICONS.more}
         aria-haspopup="menu"
         aria-expanded={menu?.kind === 'detail' ? 'true' : 'false'}
+        data-focus-key="detail-more"
         onClick={(event) => {
           const anchor = event.currentTarget;
           actions.setDetailMenu(menu?.kind === 'detail' ? null : { kind: 'detail', anchor });
@@ -395,7 +443,7 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
     );
     return (
       <Dialog title={T.EDIT_DETAILS} size="medium" fullScreen={isPhone} onRequestClose={actions.requestCloseDetail}>
-        <p className="tdialog-sub">{T.detailSub(cycle.name, c.dan, c.locationCode)}</p>
+        <p className="tdialog-sub">{T.editDetailsSub(T.candidateName(c), cycle.name, c.dan, c.locationCode)}</p>
         <form
           noValidate
           onSubmit={(event) => {
@@ -446,13 +494,13 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
   const RecordIcon = ICONS.recordPayment;
   const PrintIcon = ICONS.print;
   const recordButton = showRecord && (
-    <button type="button" className={`btn btn-primary${isPhone ? ' btn-block' : ''}`} onClick={(event) => actions.openRecordPayment(c.id, event.currentTarget)}>
+    <button type="button" className={`btn btn-primary${isPhone ? ' btn-block' : ''}`} data-focus-key="detail-record" onClick={(event) => actions.openRecordPayment(c.id, event.currentTarget)}>
       <RecordIcon size={16} aria-hidden="true" />
       {T.RECORD_PAYMENT}
     </button>
   );
   const printButton = !hidden && (
-    <button type="button" className={`btn${isPhone ? ' btn-block' : ''}`} onClick={(event) => actions.openReceipt(c.id, event.currentTarget)}>
+    <button type="button" className={`btn${isPhone ? ' btn-block' : ''}`} data-focus-key="detail-print" onClick={(event) => actions.openReceipt(c.id, event.currentTarget)}>
       <PrintIcon size={16} aria-hidden="true" />
       {T.PRINT_RECEIPT}
     </button>
@@ -497,12 +545,17 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
           <Row label={T.ROW_REFERENCE}>{c.reference}</Row>
           <Row label={T.ROW_WAIVER}>
             {T.waiverLine(w)}
-            {isAdmin && w && w.how === 'drawn' && !w.removedAt && (
+            {/* Not with Hide payments on (mat-side): the signature stays at the desk. "· View
+                signature" never wraps apart, so no lone "on file ·" is left at a line's end. */}
+            {isAdmin && !hidden && w && w.how === 'drawn' && !w.removedAt && (
               <>
-                {' · '}
-                <button type="button" className="link-button bb-inline-link" onClick={() => actions.openSignature()}>
-                  {T.VIEW_SIGNATURE}
-                </button>
+                {' '}
+                <span className="bb-nowrap">
+                  {'· '}
+                  <button type="button" className="link-button bb-inline-link" data-focus-key="detail-signature" onClick={(event) => actions.openSignature(event.currentTarget)}>
+                    {T.VIEW_SIGNATURE}
+                  </button>
+                </span>
               </>
             )}
           </Row>

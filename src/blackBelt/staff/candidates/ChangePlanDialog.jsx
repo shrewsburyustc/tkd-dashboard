@@ -1,8 +1,10 @@
 // ChangePlanDialog.jsx — "Change plan or Kukkiwon" (staff before anything is paid; admins always).
 // Why it exists: approved mockup Candidates 6, contract CONTRACT-0016-B2 §3.6 (rulebook v0.217).
-// "Rina Patel · 1st Dan · Worcester"; Plan: one card per plan of the cycle, in the order set on the
-// cycle (Rubric and prices / Add cycle), the current one tagged "Current", each with this Dan's
-// amounts and THIS candidate's due dates ("3 payments · 3 × $290 · Mar 27, Apr 24, May 29 · $870");
+// "Rina Patel · 1st Dan · Worcester"; Plan: one radio card per plan of the cycle (a round radio dot
+// at the left, as drawn), in the order set on the cycle (Rubric and prices / Add cycle), the
+// current one tagged "Current", each with this Dan's amounts and the PLAN's own due dates ("3
+// payments · 3 × $290 · Mar 27, Apr 24, May 29 · $870" — mockup 7: a late family's cards still
+// show the plan's dates; what they owe today is in the total line under the cards);
 // Kukkiwon Dan certificate No, thanks · Yes, add it · $100; then the new total worked out in advance
 // with rules.predictMoney ("New total $870 · 3 × $290, due … · nothing paid yet" or, after a payment,
 // "New total $1,100 · paid $330 · balance $770 · due now: $440 (…)"). Adding the Kukkiwon fee late
@@ -21,16 +23,19 @@ import { FailedBanner, Footer, PrimaryButton } from './dialogParts.jsx';
 import { ICONS } from './icons.js';
 import * as T from '../text.js';
 
-// The payment dates of a plan for one candidate (the database's items, S4: a passed date counts
-// from the day they registered — for a new desk candidate, today).
-export function planDates(cycle, planId, dan, registeredOn) {
+// The payment items of a plan for one candidate, in payment order: [{ item: 'p1', dueOn }] (the
+// database's items, S4: a passed date counts from the day they registered — for a new desk
+// candidate, today). registeredOn null = the plan's own dates.
+export function planItems(cycle, planId, dan, registeredOn) {
   return cycleCandidateItems(cycle, { planId, dan: dan ?? 1, kukkiwon: false, registeredOn })
     .sort((a, b) => Number(a.item.slice(1)) - Number(b.item.slice(1)))
-    .map((x) => x.dueOn);
+    .map((x) => ({ item: x.item, dueOn: x.dueOn }));
 }
+export const planDates = (cycle, planId, dan, registeredOn) => planItems(cycle, planId, dan, registeredOn).map((x) => x.dueOn);
 
-// One radio card per plan. dan null → no amounts yet; hidden → no amounts (Hide payments).
-export function PlanCards({ cycle, dan, value, currentId = null, registeredOn, hidden = false, invalid = false, readOnly = false, labelId, describedBy, onChange }) {
+// One radio card per plan, with the plan's own due dates. dan null → no amounts yet; hidden → no
+// amounts (Hide payments).
+export function PlanCards({ cycle, dan, value, currentId = null, hidden = false, invalid = false, readOnly = false, labelId, describedBy, onChange }) {
   const plans = [...(cycle.plans ?? [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
   const refs = useRef([]);
   const current = plans.findIndex((p) => p.id === value);
@@ -55,7 +60,7 @@ export function PlanCards({ cycle, dan, value, currentId = null, registeredOn, h
       {plans.map((plan, index) => {
         const checked = plan.id === value;
         const amounts = dan && !hidden ? plan.amounts?.[dan] ?? [] : null;
-        const dates = planDates(cycle, plan.id, dan, registeredOn);
+        const dates = planDates(cycle, plan.id, dan, null);
         const total = amounts ? amounts.reduce((a, b) => a + b, 0) : null;
         return (
           <button
@@ -70,12 +75,15 @@ export function PlanCards({ cycle, dan, value, currentId = null, registeredOn, h
             className={`bb-plancard${checked ? ' is-checked' : ''}`}
             onClick={() => choose(index)}
           >
-            <span className="bb-plancard-top">
-              <span className="bb-plancard-name">{plan.name}</span>
-              {plan.id === currentId && <span className="ttag">{T.CURRENT}</span>}
-              {total !== null && <span className="bb-plancard-total">{formatCents(total)}</span>}
+            <span className="bb-plancard-dot" aria-hidden="true" />
+            <span className="bb-plancard-body">
+              <span className="bb-plancard-top">
+                <span className="bb-plancard-name">{plan.name}</span>
+                {plan.id === currentId && <span className="ttag">{T.CURRENT}</span>}
+                {total !== null && <span className="bb-plancard-total">{formatCents(total)}</span>}
+              </span>
+              <span className="bb-plancard-line">{T.planCardLine(amounts, dates)}</span>
             </span>
-            <span className="bb-plancard-line">{T.planCardLine(amounts, dates)}</span>
           </button>
         );
       })}
@@ -107,7 +115,7 @@ export default function ChangePlanDialog({ state, cycle, isAdmin, isPhone, hidde
   if (!hidden && plan) {
     totalLine = paidLive
       ? T.newTotalWithPaid(predicted, dueNowItems(predicted, today), nextItems(predicted))
-      : T.newTotalNothingPaid(predicted.totalDueCents, plan.amounts?.[c.dan] ?? [], planDates(cycle, plan.id, c.dan, c.registeredOn));
+      : T.newTotalNothingPaid(predicted.totalDueCents, plan.amounts?.[c.dan] ?? [], planItems(cycle, plan.id, c.dan, c.registeredOn), today);
   }
 
   const primaryState = { ...state, blocking: state.blocking || !changed };
@@ -132,7 +140,7 @@ export default function ChangePlanDialog({ state, cycle, isAdmin, isPhone, hidde
           <span id={`${id}-plan`} className="field-label">
             {T.PLAN}
           </span>
-          <PlanCards cycle={cycle} dan={c.dan} value={v.planId} currentId={state.initial.planId} registeredOn={c.registeredOn} hidden={hidden} readOnly={ro} labelId={`${id}-plan`} onChange={(planId) => onChange({ planId })} />
+          <PlanCards cycle={cycle} dan={c.dan} value={v.planId} currentId={state.initial.planId} hidden={hidden} readOnly={ro} labelId={`${id}-plan`} onChange={(planId) => onChange({ planId })} />
         </div>
         <div className="field">
           <span id={`${id}-kuk`} className="field-label">
@@ -140,6 +148,7 @@ export default function ChangePlanDialog({ state, cycle, isAdmin, isPhone, hidde
           </span>
           <Choice
             labelId={`${id}-kuk`}
+            className="bb-segmented--fill"
             options={[
               { key: 'no', label: T.KUKKIWON_NO },
               { key: 'yes', label: T.kukkiwonYes(hidden ? null : fee) },

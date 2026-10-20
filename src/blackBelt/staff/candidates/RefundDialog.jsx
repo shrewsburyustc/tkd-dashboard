@@ -42,7 +42,7 @@ export default function RefundDialog({ state, isPhone, onChange, onSave, onCance
         <MethodField value={v.method} error={errors.method} readOnly={ro} onChange={(method) => onChange({ method })} />
         <TextField label={T.NOTE_OPTIONAL} value={v.note} error={errors.note} readOnly={ro} onChange={(note) => onChange({ note })} />
         <p className="field-hint">{T.refundHint(m.paidCents)}</p>
-        <Footer state={state} isPhone={isPhone} onCancel={onCancel} primary={<PrimaryButton state={state} isPhone={isPhone} label={T.REFUND_TITLE} Icon={ICONS.save} />} />
+        <Footer state={state} isPhone={isPhone} onCancel={onCancel} divider primary={<PrimaryButton state={state} isPhone={isPhone} label={T.REFUND_TITLE} Icon={ICONS.save} />} />
       </form>
     </Dialog>
   );

@@ -870,14 +870,19 @@
   font-weight: 500;
 }
 
-/* Search candidates · caption */
+/* Search candidates · caption (PC: the caption right beside Search; tablet and phone: Search
+   across the full width, no caption — mockup Candidates 1) */
 .bb-list-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-8) var(--space-16);
+  justify-content: flex-start;
+  gap: var(--space-8) var(--space-24);
   margin-bottom: var(--space-12);
+}
+
+.bb-list-bar:not(.is-wide) .bb-search {
+  width: 100%;
 }
 
 .bb-search {
@@ -979,6 +984,25 @@
   justify-content: space-between;
 }
 
+/* The balance stays at the right edge even when a long tag wraps onto two lines (320px) */
+.bb-ctagline .bb-balance {
+  margin-left: auto;
+}
+
+/* The duplicate box: Review at the box's right edge (PC and tablet, as drawn; phones too) */
+.bb-dupbox .ev-dupbox-lines {
+  flex: 1;
+}
+
+.bb-dupbox .ev-dupbox-line {
+  flex-wrap: nowrap;
+  justify-content: space-between;
+}
+
+.bb-dupbox .ev-dupbox-review {
+  flex: none;
+}
+
 .bb-balance.is-over {
   color: var(--color-warning-text);
 }
@@ -1025,11 +1049,17 @@
 
 .bb-sum-row {
   grid-template-columns: 140px minmax(0, 1fr);
+  align-items: start; /* label and value start on the same line, even when the value wraps */
 }
 
 .bb-inline-link {
   display: inline;
   font-size: inherit;
+}
+
+/* "· View signature" stays together on one line */
+.bb-nowrap {
+  white-space: nowrap;
 }
 
 /* The amber "needs a parent's signature" box */
@@ -1204,11 +1234,31 @@
   border-color: var(--color-warning-text);
 }
 
+/* Joined buttons as drawn: School, Testing for and Kukkiwon fill the dialog's width in equal parts;
+   Method (Cash · Check · Card) is only as wide as its words. (Black Belt only.) */
+.bb-segmented--fill {
+  display: flex;
+  width: 100%;
+}
+
+.bb-segmented--fill .segment {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 var(--space-4);
+}
+
+.bb-segmented--compact {
+  align-self: flex-start;
+}
+
 /* ----- Record payment / Edit payment / Refund / Mark check returned ----- */
+/* "Owes $970 · due today: …" in a gray box */
 .bb-owes {
-  margin: 0 0 var(--space-12);
+  margin: 0 0 var(--space-16);
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
   font-size: var(--text-13);
-  font-weight: 500;
 }
 
 .bb-checklist {
@@ -1222,11 +1272,47 @@
   padding: 0;
 }
 
+/* The items in a bordered list */
+.bb-check-list {
+  padding: var(--space-4) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.bb-check-list + .notice {
+  margin-top: var(--space-4);
+}
+
 .bb-check-item {
   display: grid;
   grid-template-columns: 16px minmax(0, 1fr) auto;
-  gap: var(--space-8);
-  padding: 2px 0;
+  align-items: center;
+  gap: var(--space-8) var(--space-12);
+  padding: 7px 0;
+}
+
+/* Amount | Method side by side (phones: stacked, below) */
+.bb-pay-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 var(--space-16);
+}
+
+.bb-pay-pair .bb-amount {
+  width: 100%;
+}
+
+.bb-item-gone {
+  margin-bottom: var(--space-8);
+}
+
+/* Record refund and Mark check returned are small dialogs; they still get the gray line above
+   their buttons like every other Candidates dialog (the shared style leaves it off small ones). */
+.tdialog--small .dialog-footer.bb-footer-divider {
+  margin: var(--space-16) calc(-1 * var(--space-24)) calc(-1 * var(--space-24));
+  padding: var(--space-12) var(--space-24) var(--space-24);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
 }
 
 .bb-check-paid {
@@ -1266,8 +1352,8 @@
 
 .bb-plancard {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: flex-start;
+  gap: var(--space-12);
   width: 100%;
   padding: var(--space-8) var(--space-12);
   border: 1px solid var(--color-border-control);
@@ -1287,6 +1373,31 @@
 
 .bb-plancards.is-invalid .bb-plancard {
   border-color: var(--color-warning-text);
+}
+
+/* The round radio dot at the left of each card (mockups 6 and 7): an empty ring, a blue dot when
+   chosen. (aria-checked on the card says it to screen readers.) */
+.bb-plancard-dot {
+  flex: none;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: var(--color-bg);
+}
+
+.bb-plancard.is-checked .bb-plancard-dot {
+  border: 5px solid var(--color-blue);
+}
+
+.bb-plancard-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .bb-plancard-top {
@@ -1324,6 +1435,32 @@
 
 .bb-paper-hint {
   margin: 0 0 0 24px;
+}
+
+/* Add candidate: First name | Last name side by side, the spelling hint under both */
+.bb-name-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 var(--space-16);
+}
+
+.bb-name-pair .field {
+  margin-bottom: var(--space-4);
+}
+
+.bb-name-hint {
+  margin: 0 0 var(--space-12);
+}
+
+/* Compare: a difference is marked with a small ⚠ and the word, not only the amber color */
+.bb-diff-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: var(--space-8);
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+  white-space: nowrap;
 }
 
 /* ----- Remove: Withdraw / Delete permanently ----- */
@@ -1398,8 +1535,12 @@
     min-height: 48px;
   }
 
-  .bb-inline-link {
+  /* The shared touch style makes a link button 44px tall, which pushed the Waiver value below
+     its label; here it stays one text line high, with the 44px tap area drawn around it. */
+  .link-button.bb-inline-link {
     position: relative;
+    min-height: 0;
+    padding: 0;
   }
 
   .bb-inline-link::after {
@@ -1429,5 +1570,25 @@
 
   .bb-detail-head {
     margin-top: 0;
+  }
+
+  .bb-pay-pair,
+  .bb-name-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bb-name-pair .field {
+    margin-bottom: var(--space-12);
+  }
+
+  .bb-name-pair .field:last-child {
+    margin-bottom: var(--space-4);
+  }
+
+  /* A toast sits just above the bottom bar, where the ⋯ sheet's last items are: while one shows
+     on a Black Belt cycle page, the sheet leaves room under its items so nothing is covered. */
+  body:has(.bb-candidates):has(.toast-region .toast) .tsheet {
+    /* the toast's own place (above the bottom bar) + a two-line toast + a gap */
+    padding-bottom: calc(var(--bottombar-height) + var(--space-8) + 72px + env(safe-area-inset-bottom));
   }
 }

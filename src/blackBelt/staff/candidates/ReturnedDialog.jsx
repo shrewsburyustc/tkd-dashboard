@@ -48,7 +48,7 @@ export default function ReturnedDialog({ state, cycle, isPhone, today, onChange,
           {T.returnedSentence(line.amountCents, name)} {T.returnedPrediction(what, dueOn, predicted)}
         </p>
         <TextField label={T.NOTE_OPTIONAL} value={v.note} error={noteError} readOnly={ro} autoFocus onChange={(note) => onChange({ note })} />
-        <Footer state={state} isPhone={isPhone} onCancel={onCancel} primary={<PrimaryButton state={state} isPhone={isPhone} label={T.MARK_RETURNED} Icon={ICONS.returned} />} />
+        <Footer state={state} isPhone={isPhone} onCancel={onCancel} divider primary={<PrimaryButton state={state} isPhone={isPhone} label={T.MARK_RETURNED} Icon={ICONS.returned} />} />
       </form>
     </Dialog>
   );
