@@ -591,9 +591,9 @@ async function main() {
   console.log('\nMigration 0019 (school phone):');
   const after19 = after5 ? await step18() : null;
 
-  // 19. 0020 (current_session_id reads only request.jwt.claims), LAST
+  // step0020 (named after its migration, not a number other branches use): 0020, LAST
   console.log('\nMigration 0020 (current_session_id reads only request.jwt.claims), last:');
-  const after20 = after5 ? await step19(db, upgradeDb) : null;
+  const after20 = after5 ? await step0020(db, upgradeDb) : null;
 
   console.log('\nFunction fingerprints (name  arguments  body_md5  security_definer  settings  owner  execute_rights):');
   for (const line of after) console.log('  ' + line);
@@ -2045,7 +2045,7 @@ async function financeIcuCheck() {
 }
 
 // =====================================================================
-// Step 19: 0020 - current_session_id() reads only request.jwt.claims
+// Step step0020: 0020 - current_session_id() reads only request.jwt.claims
 // (rulebook v0.408)
 // =====================================================================
 const PLANTED_SESSION = '99999999-9999-4999-8999-999999999999';
@@ -2080,9 +2080,9 @@ async function plantedSessionAttack(db, first) {
   return rows.rows.map((r) => r.s);
 }
 
-// Step 19 on the main database (after 13g) and 0020 on top of the upgrade
+// step0020 on the main database (after 13g) and 0020 on top of the upgrade
 // database. Returns 0020's fingerprints (null if 0020 could not be applied).
-async function step19(db, upgradeDb) {
+async function step0020(db, upgradeDb) {
   const migration = read('migrations', '0020_session_id_claims.sql');
   const printsText = read('tests', '0020_fingerprints.sql');
   // a. connector-safe files, and the fingerprint before 0020
