@@ -1014,5 +1014,42 @@ if (location.hash === '#q15') {
     </section>`).join('');
 }
 </script>
+
+<script>
+// ---------- Question 16: a Black Belt check that bounces weeks later ----------
+// From the Black Belt session (2026-10-19). Black Belt stores "returned check" rows; v0.218 there:
+// every payment (incl. a post-dated check) counts on the day it's handed in.
+if (location.hash === '#q16') {
+  document.getElementById('qtitle').innerHTML = 'Finance → Daily report · Question 16: a check that bounces weeks later';
+  document.getElementById('qlead').innerHTML = '<b>The story:</b> on <b>Monday, March 2</b> a family hands in a <b>$900 check</b> for Black Belt testing. The desk records it, counts the drawer (the check is there), and closes the day: everything matches. On <b>Friday, March 20</b> the bank says the check <b>bounced</b> (no money behind it). Staff record “Returned check” in Black Belt. <b>Which day’s report should show the bounce?</b> Amber marks where it shows.';
+  const frame = (title, body) => `<div class="dev dev-pc" style="width:600px"><div class="app"><nav class="rail"><a><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a><a class="on"><i class="ti ti-report-money"></i></a></nav>
+    <div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc"><span class="on">Shrewsbury</span><span>Both</span></div><span class="avatar">JB</span></div>
+    <div class="content"><h1 class="ptitle">Finance</h1><div class="tabs"><span class="on">Daily report</span><span>Settings</span></div><div class="dayrow"><span class="day">${title}</span></div>${body}</div></div></div></div>`;
+  const cardsB = (total, check, sub) => `<div class="cards" style="grid-template-columns:1fr 1fr"><div class="card"><div class="l"><i class="ti ti-sum"></i>Total</div><div class="n">${total}</div>${sub ? `<div class="s">${sub}</div>` : ''}</div><div class="card"><div class="l"><i class="ti ti-receipt"></i>Check</div><div class="n">${check}</div></div></div>`;
+  const closedOk = `<div class="box" style="margin-bottom:12px"><h4><i class="ti ti-lock-check"></i>Day closed<span class="grow"></span><span class="tag ok">Matches</span></h4><div style="font-size:13px">Closed by Staff · checks counted: 1, $900.00</div></div>`;
+  const closedChanged = `<div class="box q" style="margin-bottom:12px"><h4><i class="ti ti-lock-check"></i>Day closed<span class="grow"></span><span class="tag warn"><i class="ti ti-alert-triangle"></i>Changed after closing</span></h4><div style="font-size:13px">Closed by Staff · checks counted: 1, $900.00</div><div class="banner" style="margin:8px 0 0"><i class="ti ti-alert-triangle"></i><span>1 payment changed after closing. The totals no longer match this count.</span></div></div>`;
+  const row = (name, amt, extra, q, strike) => `<table><tbody><tr class="${q ? 'q' : ''}"><td>${strike ? `<span style="text-decoration:line-through;color:var(--text2)">${name}</span>` : name}${extra}</td><td class="sub">Black Belt · Spring 2027 · Payment 2</td><td class="r">${strike ? `<span style="text-decoration:line-through;color:var(--text2)">${amt}</span>` : amt}</td></tr></tbody></table>`;
+
+  const Q16 = [
+    ['A', 'On the day it was handed in (March 2)', false,
+      `<h3>What happens</h3><ul><li>March 2’s report changes: the $900 check is <b>struck through</b> with “Returned by the bank · Mar 20”, and March 2’s total drops by $900.</li><li>March 2 was already closed, so it gets the amber <b>Changed after closing</b> warning: the count staff signed no longer matches the report.</li><li>March 20’s report shows nothing about it.</li></ul>
+       <h3>Pros</h3><ul><li>March 2 shows what the school really ended up keeping that day.</li><li>Same rule as undoing a payment by mistake (v0.199).</li></ul>
+       <h3>Cons</h3><ul><li>A day that was counted correctly shows a warning weeks later, though nobody made a mistake: the check really was in the drawer.</li><li>Easy to miss: nobody looks at March 2 again, and March 20 shows nothing.</li></ul>`,
+      `<div style="display:flex;gap:16px;flex-wrap:wrap"><div><div class="cap">March 2 (opened again after March 20)</div>${frame('Monday, March 2', cardsB('$0.00', '$0.00') + closedChanged + row('Maya Patel', '$900.00', ' <span class="tag neutral">Returned</span><div class="sub" style="font-size:12px">Returned by the bank · recorded Mar 20 by Jeffrey · not counted</div>', true, true))}</div>
+        <div><div class="cap">March 20</div>${frame('Friday, March 20', cardsB('$0.00', '$0.00') + '<div class="box" style="text-align:center"><div style="font-size:14px">No payments recorded today.</div></div>')}</div></div>`],
+    ['B', 'On the day it bounced (March 20)', true,
+      `<h3>What happens</h3><ul><li>March 2 <b>stays exactly as counted</b>: the check shows as paid, the day stays closed and matching.</li><li>March 20’s report gets a <b>Returned checks</b> group: “Maya Patel · −$900.00 · returned by the bank (handed in Mar 2)”. March 20’s Total drops by $900.</li><li>Close the day on March 20 is <b>not affected</b>: no cash or check moved in the drawer that day.</li></ul>
+       <h3>Pros</h3><ul><li>Every closed day stays true to what was really in the drawer; warnings only mean a real counting problem.</li><li>The bounce shows up on the day the school found out, where staff are looking, and it can be followed up with the family.</li><li>Matches how a bank statement shows it.</li></ul>
+       <h3>Cons</h3><ul><li>March 2’s total still includes $900 the school never got. To see what a day finally kept, look at the export (it lists the return too).</li><li>A new group type on the report (only on days with returned checks).</li></ul>`,
+      `<div style="display:flex;gap:16px;flex-wrap:wrap"><div><div class="cap">March 2 — unchanged</div>${frame('Monday, March 2', cardsB('$900.00', '$900.00') + closedOk + row('Maya Patel', '$900.00', '', false, false))}</div>
+        <div><div class="cap">March 20</div>${frame('Friday, March 20', cardsB('−$900.00', '$0.00', 'after a $900.00 returned check') + `<div class="q" style="padding:2px"><div style="font-size:13px;font-weight:500;padding:6px 0">Returned checks <span class="sub" style="font-weight:400">· 1 · −$900.00</span></div>${row('Maya Patel', '−$900.00', ' <span class="tag warn"><i class="ti ti-alert-triangle"></i>Returned check</span><div class="sub" style="font-size:12px">Returned by the bank · handed in Mon, Mar 2 · recorded by Jeffrey</div>', false, false)}</div>`)}</div></div>`],
+  ];
+  document.getElementById('opts').innerHTML = Q16.map(([k, title, rec, ex, html]) => `
+    <section class="${rec ? 'rec' : ''}">
+      <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+      <div class="explain" style="max-width:1280px;margin-bottom:12px">${ex}</div>${html}
+    </section>`).join('');
+}
+</script>
 </body>
 </html>
