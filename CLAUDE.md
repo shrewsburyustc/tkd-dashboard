@@ -77,7 +77,22 @@ Color Belt testing and Star testing are built at the same time in separate Claud
   | any new branch | the next free block (1.000+) — ask Jeffrey first |
 
   A new 10b row and its changelog line take the next unused number in your block; the header's `**Version:**` shows the number you just used. Before any rulebook edit in a worktree, `git merge main` first. **Rows numbered before this rule keep their numbers until that branch merges into `main`; at that merge, renumber only that branch's rows that clash with a number already on `main`, into the branch's own block** (10b row, changelog line, and any "vX.XX" mention in that branch's docs). The changelog therefore has gaps and is no longer in strict number order; the check is "no number used twice", not "1…N with no gaps". If a block runs out, ask Jeffrey for the next free block.
-- **Migration numbers:** `0003` belongs to Color Belt phase 1; Star testing takes the next free number.
+- **Migration numbers:** one number per migration, reserved through the **Main session** before the file is written. Before asking, check every branch and every worktree folder (including uncommitted files and contracts/plans). Taken or reserved (checked 2026-10-19):
+
+  | No. | Migration | Branch |
+  |---|---|---|
+  | 0001–0004 | staff + PIN, server lock, Color Belt phase 1, staff accounts | `main` (live) |
+  | 0005, 0010 | Color Belt events, results | `main` (live) |
+  | 0006 | Star testing | `main` (live) |
+  | 0007–0009 | schedule, calendar, forms | `claude/prospect-form-system-cd893d` |
+  | 0011 | finance | `main` (live) |
+  | 0012 | prospects | `claude/prospect-form-system-cd893d` |
+  | 0013 | camps | `camps` |
+  | 0014 | Color Belt private testing (phase 4) | `color-belt` |
+  | 0015 | family history | `claude/prospect-form-system-cd893d` |
+  | 0016 | black belt (reserved 2026-10-19, CONTRACT-0016) | `black-belt` |
+
+  Next free: **0017**. Add a row here (Main session) when a number is reserved.
 - **Don't archive a worktree session in the app** until its branch is merged into `main` — archiving removes the worktree folder.
 - Never use the app's **Create PR** / push buttons — they push the branch. `.claude/settings.json` makes every `git push` ask first.
 
