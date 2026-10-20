@@ -557,11 +557,11 @@ async function main() {
   if (after10) {
     console.log('\nMigration 0014 (private testing), on top of 0011:');
     if (!step13.ok) {
-      record('[0014] step 15', false, 'skipped: step 13 failed');
+      record('[0014] step0014', false, 'skipped: step 13 failed');
     } else if (!finance14Ok) {
-      record('[0014] step 15', false, 'skipped: step 14 (0011 Finance) failed');
+      record('[0014] step0014', false, 'skipped: step 14 (0011 Finance) failed');
     } else {
-      const result15 = await step15(db, step13.upgradeHas0010 ? upgradeDb : null);
+      const result15 = await step0014(db, step13.upgradeHas0010 ? upgradeDb : null);
       prints0014 = result15.prints;
       down15Ok = result15.downOk;
     }
@@ -989,7 +989,7 @@ const nameKind = (line) => {
 // Returns { prints: 0014's fingerprints (null if 0014 could not be
 // applied), downOk: true if the 0014 down-script (15i) passed every check
 // - main() runs 13g only then }.
-async function step15(db, upgradeDb) {
+async function step0014(db, upgradeDb) {
   // h (first). the fingerprints file must stay runnable through the connector
   const printsText = read('tests', '0014_fingerprints.sql');
   record('0014_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)', !/delete|drop/i.test(printsText));
