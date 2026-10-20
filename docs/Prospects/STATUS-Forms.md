@@ -127,3 +127,6 @@ Plan and answers K1–K4: `TKD-Kiosk-Build-Plan.md` (rulebook v0.606–v0.609). 
 
 Done: the `forms_registrar` password (only its SCRAM verifier is in the database; the password is in Jeffrey's password manager), Hyperdrive `tkd-forms-registrar` (checked: caching off, verify-full, limit 5), the Production binding `HYPERDRIVE_FORMS` and the Production variable `PUBLIC_FORMS=off`. Nothing deployed. Left for go-live (F7, each with Jeffrey's OK): merge this branch into `main` (Main session) and push = deploy; check the `/f/…` security headers; switch `PUBLIC_FORMS` to `on`; a real test sign-up; the two-connection race test.
 
+## Deployed 2026-10-20
+
+This branch is on `main` and live (the push included `0ccf776`; live `main` = `cc8b095`). Checked on https://tkd-dashboard.pages.dev: `/f/…` and `/forms` have the strict security policy, the dashboard keeps its own, and `GET /api/forms/<slug>` answers `not_open` (PUBLIC_FORMS=off). Next: Jeffrey looks at the new sections signed in; then PUBLIC_FORMS=on + redeploy, one real test sign-up, the two-connection race test.
