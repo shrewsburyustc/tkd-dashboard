@@ -226,7 +226,6 @@ export const SAVE_AS_TEMPLATE = 'Save as template';
 export const PRINT_ROSTER = 'Print roster';
 export const DELETE_CAMP = 'Delete camp';
 export const KEEP_CAMP = 'Keep camp'; // (not in the mockups) — like Color Belt's "Keep event"
-export const campMenuSub = (camp, days) => campDatesText(days);
 export const TOAST_SIGNUP_CLOSED = 'Sign-up closed'; // (not in the mockups)
 export const TOAST_SIGNUP_REOPENED = 'Sign-up reopened'; // (not in the mockups)
 export const signupReopenedUntil = (iso) => `Sign-up reopened until ${monthDay(iso)}`; // (not in the mockups) admin, after the closing date
@@ -392,6 +391,9 @@ export const ENTER_EXTRA_NAME = 'Enter a name.'; // (not in the mockups)
 export const SAME_EXTRA_NAME = 'Another extra has this name.'; // (not in the mockups)
 // "Early drop-off $15/day · Late pick-up $8/day · Pizza party (Fri) $5"
 export const extraSummaryPart = (name, cents, per) => `${name} ${dollars(cents)}${per === 'day' ? '/day' : ''}`;
+// Removing a day from an extra's "Only on these days" that campers chose (database / mock
+// refusal not_empty, kind 'extra_day'): "Can't remove Wed from Pizza party: 3 campers chose it …"
+export const cantRemoveExtraDay = (day, extraName, n) => `Can’t remove ${weekdayShort(day)} from ${extraName}: ${campersCount(n)} chose it. Change their ${extraName.charAt(0).toLowerCase()}${extraName.slice(1)} days first.`; // (not in the mockups)
 export const cantRemoveExtra = (name, n) => `Can’t remove ${name}: ${campersCount(n)} picked it. Change their extras first.`; // (§7.3)
 
 // Family form
@@ -447,16 +449,11 @@ export const NO_CAMPERS = 'No campers yet. Families sign up with the Registratio
 
 // Check in
 export const DAY_SWITCH_LABEL = 'Camp day'; // (not in the mockups) screen readers only
-export const hereLine = (here, total) => `${here} of ${total} here`;
 // The big-number line (option A): the number is drawn large, the words after it normal.
 export const hereOf = (total) => `of ${total} here`;
 export const NOT_HERE_WORDS = 'not here yet';
-export const cameOf = (total) => `of ${total} came`; // (not in the mockups) an earlier day
-export const DIDNT_COME_WORDS = 'didn’t come'; // (not in the mockups) an earlier day
-export const DIDNT_COME = (n) => `Didn’t come · ${n}`; // (not in the mockups) an earlier day's group
 export const PAID_WORDS = 'paid';
 export const toCollectWords = (cents) => `to collect · ${dollars(cents)}`;
-export const notHereLine = (n) => `${n} not here yet`;
 export const FIND_CAMPER = 'Find a camper';
 export const NOT_HERE_YET = (n) => `Not here yet · ${n}`;
 export const HERE = (n) => `Here · ${n}`;
@@ -467,18 +464,9 @@ export const UNDO_CHECK_IN = 'Undo check-in';
 export const checkInUndoneToast = (name) => `Check-in undone for ${name}`; // (not in the mockups)
 export const noCampersOn = (day) => `No campers on ${dayLong(day)}.`; // (§7.3)
 export const NO_MATCH = 'No camper with that name on this day.'; // (not in the mockups)
-export const FUTURE_DAY_NOTE = 'Check in opens on the day itself.'; // (not in the mockups)
-// A future day (CP1 finding 2026-10-19): "16 coming on Wed, Nov 11 · Check in opens that morning."
-export const comingOn = (day) => `coming on ${dayLong(day)}`; // (not in the mockups)
-export const CHECK_IN_OPENS = 'Check in opens that morning.'; // (not in the mockups)
-export const COMING = (n) => `Coming · ${n}`; // (not in the mockups)
-export const EARLIER_DAY_STAFF = 'An earlier day. Only an admin can change its check-ins.'; // (not in the mockups)
-export const EARLIER_DAY_ADMIN = 'An earlier day. Check-ins changed here fix a missed one.'; // (not in the mockups)
 export const checkedInAt = (stamp) => `Checked in at ${clockTime(stamp)}`; // screen readers
 export const checkInFailed = (name) => `${name} wasn't checked in. Check the connection and try again.`; // (not in the mockups)
 export const undoCheckInFailed = (name) => `${name}'s check-in wasn't undone. Check the connection and try again.`; // (not in the mockups)
-export const CHECK_IN_FUTURE = 'That day hasn’t come yet, so nobody can be checked in.'; // (not in the mockups)
-export const CHECK_IN_NOT_ALLOWED = 'Only an admin can change check-ins of an earlier day.'; // (not in the mockups)
 export const isWithdrawn = (name) => `${name} was withdrawn. Restore them first.`; // (§7.2, "an admin can" dropped: staff restore too)
 export const NOTE_NOT_PAID = 'Not paid';
 export const noExtraNote = (name) => `No ${name.charAt(0).toLowerCase()}${name.slice(1)}`; // "No pizza party" (owner decision 2026-10-19)
@@ -489,8 +477,6 @@ export const notePopoverLine = (name, kind, cents) => (kind === 'owes' ? `${name
 export const PAYMENT_NOTE_LABEL = (name) => `Payment for ${name}`; // (not in the mockups) screen readers
 
 // Payments
-export const paidLine = (n) => `${n} paid`;
-export const toCollectLine = (n, cents) => `${n} to collect · ${dollars(cents)}`;
 export const TO_COLLECT = (n) => `To collect · ${n}`;
 export const PAID_GROUP = (n) => `Paid · ${n}`;
 export const tagOwes = (cents) => `Owes ${dollars(cents)}`;
@@ -500,12 +486,10 @@ export const reviewDuplicateLabel = (name) => `Possible duplicate: review ${name
 export const ADMIN_GROUP = 'Admin';
 export const COL_CAMPER = 'Camper';
 export const COL_TOTAL = 'Total';
-export const camperAge = (age) => `${age}`;
 export const camperNameAge = (row) => `${row.firstName} ${row.lastName} · ${row.age}`;
 export const camperLabel = (row) => `${row.firstName} ${row.lastName}`;
 export const nonMember = 'non-member';
 export const camperPayLine = (daysText, payingBy) => `${daysText} · ${payingByLower(payingBy)}`;
-export const NO_ONE_TO_COLLECT = 'Nobody owes anything.'; // (not in the mockups)
 export const duplicateBoxLine = (n) => (n === 1 ? '1 possible duplicate' : `${n} possible duplicates`);
 export const signedUpTwice = (name) => `${name} is signed up twice`;
 export const DELETE_CAMPER_BODY_NO_PAY = (camp) => `The sign-up is deleted from ${camp}. This can’t be undone.`;
@@ -527,11 +511,9 @@ export const CELL_MISSED = 'didn’t come';
 export const CELL_UPCOMING = 'signed up, still to come';
 export const CELL_NOT_SIGNED_UP = 'not signed up that day';
 export const ATTENDANCE_LEGEND = '✓ came (check-in time) · ✗ signed up, didn’t come · dashed: still to come · — not signed up that day'; // (not in the mockups) short legend
-export const ATTENDANCE_EMPTY = 'No campers yet.'; // (not in the mockups)
 
 // Print roster
 export const printedOn = (stamp) => `Printed ${stampDayTime(stamp)}`; // (not in the mockups)
-export const PRINT_TITLE_SUFFIX = 'Roster'; // (not in the mockups)
 export const printLoadFailed = "Couldn't load the roster to print. Check the connection, then retry."; // (not in the mockups)
 
 // ----- C4b compare -----
@@ -611,8 +593,6 @@ export const overpaidLine = (total, paid) => `Total now ${dollars(total)} · pai
 export const overpaidAmber = (cents) => `Paid ${dollars(cents)} more than the total`;
 export const OVERPAID_ADMIN = 'An admin can change the payment from the roster’s ⋯ → Edit payment if money is handed back.';
 export const owesLine = (total, paid, owes) => `Total now ${dollars(total)} · paid ${dollars(paid)} · owes ${dollars(owes)}`; // (not in the mockups)
-export const checkInDetailLine = (day, stamp, by) =>
-  stamp ? `${dayLong(day)} · ${clockTime(stamp)}${by ? ` · ${by}` : ''}` : `${dayLong(day)} · not checked in`; // (not in the mockups)
 export const contactLine = (name, relation, phone) => `${name} · ${relation} · ${phone}`;
 export function signupLine(row) {
   const signed = row.signatureDeletedAt ? 'signature deleted after 3 years' : 'waiver signed on the form';

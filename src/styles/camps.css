@@ -423,6 +423,11 @@
   gap: var(--space-4) var(--space-24);
 }
 
+/* The chosen check-in day, written out first ("Wed, Apr 21") */
+.cp-statday {
+  font-weight: 500;
+}
+
 /* The big numbers of option A: "9 of 15 here", "13 paid" */
 .cp-big {
   margin-right: var(--space-4);
@@ -496,10 +501,6 @@
 
 .cp-dayswitch.is-phone .segment:nth-child(n + 4) {
   border-top: 1px solid var(--color-border);
-}
-
-.cp-daynote {
-  margin: calc(-1 * var(--space-8)) 0 var(--space-12);
 }
 
 .cp-search {

@@ -5,7 +5,7 @@
 // `status` CODE (never words — the screens' text.js turns codes into words):
 //   'ok' (plus the result fields) · 'no_access' · 'not_allowed' · 'not_found' · 'stale' ·
 //   'duplicate_name' · 'invalid' (+ field) · 'not_empty' (+ kind, day / extraName …) · 'finished' ·
-//   'already_paid' · 'withdrawn' · 'checked_in' (+ day) · 'future_day' ·
+//   'already_paid' · 'withdrawn' · 'checked_in' (+ day) · 'future_day' (kept, no longer sent) ·
 //   'error' (no connection / unexpected answer — { status:'error', error })
 // These functions NEVER throw.
 //
@@ -226,7 +226,9 @@ export async function addCamp(input) {
 
 // Edit camp (admin). Extras that carry their extraId are changed in place; new ones are added.
 // → { status:'ok', version } · 'not_empty' + { kind:'day', day, firstName, lastName, more } (an
-//   active camper picked a removed day) or + { kind:'extra', extraName, count } · 'stale' …
+//   active camper picked a removed day) or + { kind:'extra', extraName, count } (a removed extra) or
+//   + { kind:'extra_day', extraName, day, count } (an extra's "only on" days narrowed while an
+//   active camper chose a removed day) · 'invalid' + field:'extras' · 'stale' …
 export async function updateCamp(campId, expectedVersion, input) {
   return callRpc('camp_update_camp', { p_camp_id: campId, p_expected_version: expectedVersion, ...campArgs(input, true) }, hasVersion);
 }
@@ -348,15 +350,15 @@ export async function deleteCamper(camperId, expectedVersion, expectedPaymentIds
   }, nothing);
 }
 
-// Check in on one day. Today: staff and admins; an earlier day: admins ('not_allowed' for staff);
-// a later day: 'future_day'. Checking in twice is fine: { already: true } with the stored time.
+// Check in on one day: ANY of the camper's camp days, for staff and admins (owner decision
+// 2026-10-19). Checking in twice is fine: { already: true } with the stored time.
 // → { status:'ok', checkedInAt, checkedInByName, already } · 'withdrawn' · 'not_found'
 export async function checkIn(camperId, dayId) {
   return callRpc('camp_check_in', { p_camper_id: camperId, p_day_id: dayId },
     (d) => isText(d.checkedInAt) && typeof d.checkedInByName === 'string' && typeof d.already === 'boolean');
 }
 
-// Undo check-in (same day rule). Not checked in → ok (nothing to do).
+// Undo check-in (any camp day, staff and admins). Not checked in → ok (nothing to do).
 export async function undoCheckIn(camperId, dayId) {
   return callRpc('camp_undo_check_in', { p_camper_id: camperId, p_day_id: dayId }, nothing);
 }

@@ -87,7 +87,7 @@
 --     the same meaning as in 0003 (read its header).
 --   * statuses the functions answer: ok, no_access, not_allowed, not_found,
 --     stale, duplicate_name, invalid, not_empty, finished, already_paid,
---     withdrawn, checked_in, future_day, rate_limited, not_open, closed,
+--     withdrawn, checked_in, rate_limited, not_open, closed,
 --     price_changed, camp_changed.
 -- =====================================================================
 
@@ -2814,7 +2814,10 @@ grant  execute on function public.camp_add_camp(text, boolean, text, date[], tim
 --   only_on   each extra's "only on these days" list (19e): dates of the
 --             new days; a date of a day being removed is dropped from it;
 --             a list whose days are ALL being removed is refused (as is
---             any other bad list): {"status":"invalid","field":"extras"}
+--             any other bad list): {"status":"invalid","field":"extras"}.
+--             A list narrowed so that an ACTIVE camper's chosen day drops
+--             out is refused: {"status":"not_empty","kind":"extra_day",
+--             "extra_name","day","count"}
 --   grid      replaced (one row per day count 1 ... the new N).
 -- Existing campers' prices are NEVER changed (snapshots). Saving with
 -- nothing changed writes nothing; a change to only days, extras or prices
@@ -2855,6 +2858,7 @@ declare
   v_extra        record;
   v_first        text;
   v_last         text;
+  v_day_date     date;
   v_n            integer;
   v_changed      boolean := false;
   v_version      integer;
@@ -2933,6 +2937,31 @@ begin
        where x.extra_id = v_extra.id and c.status = 'active';
       if v_n > 0 then
         return jsonb_build_object('status', 'not_empty', 'kind', 'extra', 'extra_name', v_extra.name, 'count', v_n);
+      end if;
+    end loop;
+    -- a kept extra offered on fewer days than before (its only_on list
+    -- narrowed): refused when an ACTIVE camper chose it on a day it would
+    -- no longer be offered on - the same idea as a picked camp day (v0.701):
+    -- {"status":"not_empty","kind":"extra_day","extra_name","day","count"}
+    -- (count = active campers who chose it on that day; the earliest such
+    -- day is named)
+    for v_extra in select e.id, e.name, public.camp_only_on_dates(x.value -> 'only_on', p_days) as new_on
+                     from jsonb_array_elements(p_extras) as x(value)
+                     join public.camp_extras e on e.id = (x.value ->> 'id')::uuid
+                    where jsonb_typeof(x.value -> 'id') = 'string' and e.camp_id = p_camp_id
+                    order by e.sort loop
+      continue when cardinality(v_extra.new_on) = 0;
+      select d.day, count(distinct c.id) into v_day_date, v_n
+        from public.camp_camper_extras x
+        join public.camp_campers c on c.id = x.camper_id
+        join public.camp_days d on d.id = x.day_id
+       where x.extra_id = v_extra.id and c.status = 'active' and not (d.day = any (v_extra.new_on))
+       group by d.day
+       order by d.day
+       limit 1;
+      if found then
+        return jsonb_build_object('status', 'not_empty', 'kind', 'extra_day', 'extra_name', v_extra.name,
+                                  'day', v_day_date, 'count', v_n);
       end if;
     end loop;
 
@@ -4475,10 +4504,11 @@ $$;
 revoke execute on function public.camp_delete_camper(uuid, integer, uuid[]) from public, anon, authenticated, service_role;
 grant  execute on function public.camp_delete_camper(uuid, integer, uuid[]) to authenticated;
 
--- 20q. camp_check_in(p_camper_id, p_day_id)   S today / A earlier days
+-- 20q. camp_check_in(p_camper_id, p_day_id)   S (any camp day)
 -- Checks a camper in on one of their days (v0.704): checked_in_at = now,
--- checked_in_by / _name = who. Day rule: a day after today -> future_day;
--- today -> staff and admins; an earlier day -> admins only (not_allowed).
+-- checked_in_by / _name = who. Staff and admins may check in on ANY of
+-- the camper's days - earlier, today or later (Jeffrey at CP1,
+-- 2026-10-19: "check in no matter what, regardless of the day").
 -- A withdrawn camper -> withdrawn; a day the camper didn't pick ->
 -- not_found. Already checked in -> ok with the stored values and
 -- "already": true. Does NOT bump the camper's version (an open Edit
@@ -4497,8 +4527,6 @@ as $$
 declare
   v_c     public.camp_campers;
   v_cd    public.camp_camper_days;
-  v_day   date;
-  v_today date;
 begin
   begin
     if public.has_data_access() is not true then
@@ -4521,15 +4549,6 @@ begin
        for update;
     if not found then
       return jsonb_build_object('status', 'not_found');
-    end if;
-    select d.day into v_day from public.camp_days d where d.id = p_day_id;
-
-    v_today := public.testing_today();
-    if v_day > v_today then
-      return jsonb_build_object('status', 'future_day');
-    end if;
-    if v_day < v_today and public.is_admin() is not true then
-      return jsonb_build_object('status', 'not_allowed');
     end if;
     if v_cd.checked_in_at is not null then
       return jsonb_build_object('status', 'ok', 'checked_in_at', v_cd.checked_in_at,
@@ -4565,7 +4584,7 @@ $$;
 revoke execute on function public.camp_check_in(uuid, uuid) from public, anon, authenticated, service_role;
 grant  execute on function public.camp_check_in(uuid, uuid) to authenticated;
 
--- 20r. camp_undo_check_in(p_camper_id, p_day_id)   same day rule as 20q
+-- 20r. camp_undo_check_in(p_camper_id, p_day_id)   S (any camp day, as 20q)
 -- Clears the check-in (the toast's Undo, or ... -> Undo check-in). Not
 -- checked in -> ok (nothing to do). Doesn't bump the camper's version.
 -- Ok: {"status":"ok"}
@@ -4582,8 +4601,6 @@ as $$
 declare
   v_c     public.camp_campers;
   v_cd    public.camp_camper_days;
-  v_day   date;
-  v_today date;
 begin
   begin
     if public.has_data_access() is not true then
@@ -4606,15 +4623,6 @@ begin
        for update;
     if not found then
       return jsonb_build_object('status', 'not_found');
-    end if;
-    select d.day into v_day from public.camp_days d where d.id = p_day_id;
-
-    v_today := public.testing_today();
-    if v_day > v_today then
-      return jsonb_build_object('status', 'future_day');
-    end if;
-    if v_day < v_today and public.is_admin() is not true then
-      return jsonb_build_object('status', 'not_allowed');
     end if;
     if v_cd.checked_in_at is null then
       return jsonb_build_object('status', 'ok');

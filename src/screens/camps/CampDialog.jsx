@@ -261,8 +261,10 @@ export default function CampDialog({
     if (st === 'not_empty') {
       // A day or an extra an active camper picked can't be removed (v0.701).
       if (result.kind !== 'day' && result.kind !== 'extra') {
-        // Removing a camp day would leave an extra with none of its days (owner decision 2026-10-19).
-        setServer((current) => ({ ...current, extraError: T.extraNoDaysLeft(result.extraName ?? '') }));
+        // An extra's "Only on these days" lost a day that campers chose ('extra_day', owner decision
+        // 2026-10-19), or a camp day removal left an extra with none of its days.
+        const text = result.kind === 'extra_day' ? T.cantRemoveExtraDay(result.day ?? '', result.extraName ?? '', result.count ?? 0) : T.extraNoDaysLeft(result.extraName ?? '');
+        setServer((current) => ({ ...current, extraError: text }));
         setOpenSection(4);
         scrollToSection(4);
       } else if (result.kind === 'extra') {

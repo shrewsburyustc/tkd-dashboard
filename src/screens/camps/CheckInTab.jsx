@@ -4,21 +4,22 @@
 // detail. During camp week the camp page opens on this tab.
 //   - a day switch with the camp's days ("Mon 19  14"; Color Belt's segmented style, a 3-column
 //     grid on phones), starting on today (or the next camp day, campRules.defaultCheckInDay)
-//   - the line "9 of 15 here · 6 not here yet"
+//   - the line "Wed, Apr 21  9 of 15 here  6 not here yet" (the chosen day first, big numbers), and
+//     for an extra offered only on some days: "Pizza party today: 15"
 //   - Find a camper (filters both groups by name)
 //   - "Not here yet · 6": name · age, at most ONE small amber note (Possible duplicate / Not paid /
 //     Owes $15 / that day's per-day extra, campRules.checkInNote), and Check in
 //   - "Here · 9": name · age · ✓ 9:10 AM, and ⋯ → Undo check-in
-// Check in is instant with a 5-second Undo toast (the page does it). The day rule (§1.13): a
-// future day has no buttons; today is for everyone; an earlier day is for admins only (to fix a
-// missed check-in) — staff see it read-only. Withdrawn campers aren't listed.
+// Check in is instant with a 5-second Undo toast (the page does it). Owner decision at CP1
+// (2026-10-19): staff and admins can check in — and undo a check-in — on ANY camp day, past,
+// today or future. Withdrawn campers aren't listed.
 // Tapping the Not paid / Owes note opens a small box with the amount and Mark paid (the same call
 // and toast as the Payments tab).
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { IconAlertTriangle, IconCheck, IconDots, IconSearch } from '@tabler/icons-react';
 import IconButton from '../../components/IconButton.jsx';
-import { checkInNote, checkInRule, extraCountOnDay, extraOfferedOn } from '../../lib/camps/campRules.js';
+import { checkInNote, extraCountOnDay, extraOfferedOn } from '../../lib/camps/campRules.js';
 import ChoiceGroup from '../testing/events/ChoiceGroup.jsx';
 import { MarkPaidButton, NameAge } from './CamperRows.jsx';
 import * as T from './text.js';
@@ -130,7 +131,6 @@ export default function CheckInTab({
   dayId,
   onDay,
   today,
-  isAdmin,
   active,
   extras = [], // the camp's extras (for "Pizza party today: 15" and "No pizza party")
   query,
@@ -160,16 +160,11 @@ export default function CheckInTab({
   const shownNotHere = notHere.filter(match).sort(byName);
   const shownHere = here.filter(match).sort(byName);
 
-  const rule = day ? checkInRule(day, today, isAdmin) : 'future';
-  // An earlier day: whoever wasn't checked in didn't come (review item 8).
-  const past = Boolean(day && day.day < today);
-  // A future day: nobody can be here yet — "16 coming on Wed, Nov 11", one Coming group.
-  const future = Boolean(day && day.day > today);
   // Extras offered only on some days and offered on this one: how many to order (pizza).
   const dayExtras = day ? extras.filter((e) => e.per === 'day' && (e.onlyOn ?? []).length > 0 && extraOfferedOn(e, day.day)) : [];
-  const canAct = rule === 'allowed';
-  let dayNote = null;
-  if (day && day.day < today) dayNote = isAdmin ? T.EARLIER_DAY_ADMIN : T.EARLIER_DAY_STAFF;
+  // Owner decision at CP1 (2026-10-19): staff and admins can check in on ANY camp day — past,
+  // today or future — so every day has the same buttons and the same wording.
+  const canAct = true;
 
   const popoverRow = popover ? active.find((r) => r.id === popover.rowId) : null;
   // The camper paid meanwhile (another device): the box closes by itself.
@@ -297,30 +292,22 @@ export default function CheckInTab({
           <>
             {/* Option A's big numbers: "9 of 15 here   6 not here yet" */}
             <p className="cp-statline">
-              {future ? (
-                <span>
-                  <span className="cp-big">{onDay_.length}</span>
-                  {`${T.comingOn(day.day)} · ${T.CHECK_IN_OPENS}`}
-                </span>
-              ) : (
-                <>
-                  <span>
-                    <span className="cp-big">{here.length}</span>
-                    {past ? T.cameOf(onDay_.length) : T.hereOf(onDay_.length)}
-                  </span>
-                  <span>
-                    <span className="cp-big">{notHere.length}</span>
-                    {past ? T.DIDNT_COME_WORDS : T.NOT_HERE_WORDS}
-                  </span>
-                </>
-              )}
+              {/* The chosen day in full first, so it's obvious which day the list is for. */}
+              <strong className="cp-statday">{T.dayLong(day.day)}</strong>
+              <span>
+                <span className="cp-big">{here.length}</span>
+                {T.hereOf(onDay_.length)}
+              </span>
+              <span>
+                <span className="cp-big">{notHere.length}</span>
+                {T.NOT_HERE_WORDS}
+              </span>
               {dayExtras.map((extra) => (
                 <span key={extra.extraId}>
                   {T.extraTodayLine(extra.name, day.day === today)} <span className="cp-big">{extraCountOnDay(active, extra, day.dayId, days)}</span>
                 </span>
               ))}
             </p>
-            {dayNote && <p className="field-hint cp-daynote">{dayNote}</p>}
             <div className="cp-search">
               {/* ti-search = find */}
               <IconSearch size={16} aria-hidden="true" className="cp-search-icon" />
@@ -338,16 +325,14 @@ export default function CheckInTab({
               <div role="rowgroup">
                 <div className="gr-subhead ev-subhead cp-subhead" role="row">
                   <span role="cell">
-                    {future ? T.COMING(shownNotHere.length) : past ? T.DIDNT_COME(shownNotHere.length) : T.NOT_HERE_YET(shownNotHere.length)}
+                    {T.NOT_HERE_YET(shownNotHere.length)}
                   </span>
                 </div>
                 {shownNotHere.map((r) => row(r, false))}
-                {!future && (
-                  <div className="gr-subhead ev-subhead cp-subhead" role="row">
-                    <span role="cell">{T.HERE(shownHere.length)}</span>
-                  </div>
-                )}
-                {!future && shownHere.map((r) => row(r, true))}
+                <div className="gr-subhead ev-subhead cp-subhead" role="row">
+                  <span role="cell">{T.HERE(shownHere.length)}</span>
+                </div>
+                {shownHere.map((r) => row(r, true))}
                 {q && shownHere.length + shownNotHere.length === 0 && (
                   <p className="tempty ev-roster-empty" role="row">
                     <span role="cell">{T.NO_MATCH}</span>

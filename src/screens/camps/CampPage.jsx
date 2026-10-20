@@ -275,9 +275,6 @@ export default function CampPage({
     } else if (status === 'withdrawn') {
       setBanner({ text: T.isWithdrawn(name) });
       reloadQuiet();
-    } else if (status === 'future_day') {
-      setBanner({ text: T.CHECK_IN_FUTURE });
-      reloadQuiet();
     } else if (status === 'error') {
       // Didn't reach the database: the row shows "Not saved" and the banner offers Retry.
       setNotSavedId(row.id);
@@ -354,14 +351,14 @@ export default function CampPage({
     end(result.status);
     const name = T.camperLabel(row);
     if (result.status !== 'ok') {
-      rowProblem(result.status, row, { text: T.checkInFailed(name), run: () => doCheckIn(row, day), notAllowedText: T.CHECK_IN_NOT_ALLOWED });
+      rowProblem(result.status, row, { text: T.checkInFailed(name), run: () => doCheckIn(row, day) });
       return;
     }
     rowDone();
     reloadQuiet();
     showToast(T.checkedInToast(name, result.checkedInAt ?? new Date().toISOString()), {
       icon: false,
-      action: { label: T.UNDO, onAction: () => runUndo(() => undoCheckIn(row.id, day.dayId), { notAllowedText: T.CHECK_IN_NOT_ALLOWED }) },
+      action: { label: T.UNDO, onAction: () => runUndo(() => undoCheckIn(row.id, day.dayId)) },
     });
     // Keyboard: the next "Not here yet" Check in button, so a queue at the door is quick.
     focusSoon(() => document.querySelector('[data-checkin-btn]'));
@@ -372,7 +369,7 @@ export default function CampPage({
     const result = await undoCheckIn(row.id, day.dayId);
     end(result.status);
     if (result.status !== 'ok') {
-      rowProblem(result.status, row, { text: T.undoCheckInFailed(T.camperLabel(row)), run: () => doUndoCheckIn(row), notAllowedText: T.CHECK_IN_NOT_ALLOWED });
+      rowProblem(result.status, row, { text: T.undoCheckInFailed(T.camperLabel(row)), run: () => doUndoCheckIn(row) });
       return;
     }
     rowDone();
@@ -871,7 +868,6 @@ export default function CampPage({
           dayId={checkDay?.dayId ?? null}
           onDay={setCheckInDayId}
           today={today}
-          isAdmin={isAdmin}
           active={active}
           extras={extras}
           query={query}

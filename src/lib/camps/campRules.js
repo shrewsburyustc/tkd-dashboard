@@ -150,8 +150,8 @@ export function defaultCampTab(days, today) {
   return isCampWeek(days, today) ? 'checkin' : 'payments';
 }
 
-// The day the Check in tab starts on: today if it's a camp day, else the next camp day, else the
-// last one. Returns that Day object ({ dayId, day }), or null when the camp has no days.
+// The day the Check in tab starts on: today if it's a camp day; otherwise the next camp day (so
+// before the camp, the first day); after the camp, the last day. Returns that Day object ({ dayId, day }), or null when the camp has no days.
 export function defaultCheckInDay(days, today) {
   const sorted = [...(days ?? [])].filter((d) => isIsoDate(d?.day)).sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
   if (sorted.length === 0) return null;
@@ -316,6 +316,17 @@ export function extraCountOnDay(rows, extra, dayId, days) {
     && (choseOn(r, extra, dayId) || (extra.notForAllDays && isAllDays(rowDayIds(r), days)))).length;
 }
 
+// The dates an extra is no longer offered on after an edit, among the camp days that remain:
+// before / after = the extra's onlyOn before and after ([] = every day); campDays = the camp's days
+// AFTER the edit (Day objects or dates). Edit camp is refused when an active camper chose one of
+// these days ({ status:'not_empty', kind:'extra_day', extraName, day, count }).
+export function extraDaysRemoved(before, after, campDays) {
+  const dates = dayDates(campDays);
+  const offered = (only) => (only?.length ? dates.filter((d) => only.includes(d)) : dates);
+  const now = new Set(offered(after));
+  return offered(before).filter((d) => !now.has(d));
+}
+
 // The Check in "No pizza party" note: true when the child comes that day, doesn't come every day,
 // the extra is offered that day, and the child didn't choose it for that day.
 export function missingExtraOnDay(row, extra, dayId, days) {
@@ -346,14 +357,12 @@ export function toCollectCents(rows) {
 
 // ----- Check-in (§1.13 check-in day rule, v0.704) -----
 
-// May this person check a camper in (or undo it) on `day`?
-//   a future day → 'future' (nobody) · today → 'allowed' · an earlier day → admins 'allowed',
-//   staff 'admin_only'.
+// May this person check a camper in (or undo it) on `day`? Owner decision 2026-10-19 (CP1):
+// check-in works on ANY camp day — earlier, today or later — for staff and admins alike, for a
+// camper signed up that day. So the answer is always 'allowed'. (The arguments are kept so the
+// screens don't change if a rule comes back.)
 export function checkInRule(day, today, isAdmin) {
-  const date = typeof day === 'string' ? day : day?.day;
-  if (date > today) return 'future';
-  if (date === today) return 'allowed';
-  return isAdmin ? 'allowed' : 'admin_only';
+  return 'allowed';
 }
 
 // The one small amber note a Check in row shows (at most one), in this order:

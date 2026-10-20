@@ -36,7 +36,7 @@ import {
   CAMP_ACK_VERSION, PAYING_BY, MAX_CAMPER_CENTS, CAMP_TRIES_PER_HOUR, UNDO_WINDOW_MS, SIGNATURE_KEEP_YEARS,
   MAX_DAYS, MAX_EXTRAS, MAX_CHILDREN, AGE_LIMITS, DESCRIPTION_MAX, WAIVER_MAX, EXTRA_NAME_MAX, RELATION_MAX,
   signupState, priceKind, baseCents, priceChild, childProblem, isAllDays, offsetsAreValid, templateFromCamp,
-  extraOfferedOn, onlyOnToWeekdays, weekdaysToOnlyOn,
+  extraOfferedOn, onlyOnToWeekdays, weekdaysToOnlyOn, extraDaysRemoved,
   normalizeCampText, campTextIsValid, isIsoDate, addDays, todayInSchoolTime, lastDay, firstDay, SCHOOL_TIME_ZONE,
 } from './camps/campRules.js';
 
@@ -910,11 +910,9 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
     member, dayIds, extras: extras.map((e) => ({ extraId: e.extra_id.toLowerCase(), dayIds: e.day_ids.map((x) => x.toLowerCase()) })),
   });
 
-  // Both "who may" rules for check-in (§1.13): null = allowed, else the refusal.
-  function checkInRefusal(dayIso, ctx) {
-    const t = today();
-    if (dayIso > t) return st('future_day');
-    if (dayIso < t && !ctx.isAdmin) return st('not_allowed');
+  // The "who may" rule for check-in: owner decision 2026-10-19 (CP1) — any camp day, staff and
+  // admins alike. Kept as one place so a rule could come back. null = allowed.
+  function checkInRefusal() {
     return null;
   }
 
@@ -976,6 +974,26 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       for (const extra of removedExtras) {
         const choosers = new Set(db.camp_camper_extras.filter((r) => r.extra_id === extra.id && activeIds.has(r.camper_id)).map((r) => r.camper_id));
         if (choosers.size > 0) return { status: 'not_empty', kind: 'extra', extra_name: extra.name, count: choosers.size };
+      }
+      // An extra's "only on" days narrowed: an ACTIVE camper who chose a day no longer offered →
+      // refused, naming the earliest such day (the same rule as A). Withdrawn campers' rows for
+      // those days are deleted below.
+      const keptDates = v.days;
+      const narrowedRows = []; // [extra id, Set of day ids no longer offered]
+      for (const e of v.extras.filter((x) => x.id)) {
+        const was = currentExtras.find((c) => c.id === e.id);
+        const gone = extraDaysRemoved(was.only_on ?? [], e.only_on, keptDates);
+        if (gone.length === 0) continue;
+        const goneIds = new Set(current.filter((d) => gone.includes(d.day)).map((d) => d.id));
+        narrowedRows.push([e.id, goneIds]);
+        for (const date of gone) {
+          const dayId = current.find((d) => d.day === date).id;
+          const choosers = new Set(db.camp_camper_extras.filter((r) => r.extra_id === e.id && r.day_id === dayId && activeIds.has(r.camper_id)).map((r) => r.camper_id));
+          if (choosers.size > 0) return { status: 'not_empty', kind: 'extra_day', extra_name: e.name, day: date, count: choosers.size };
+        }
+      }
+      for (const [extraId, goneIds] of narrowedRows) {
+        db.camp_camper_extras = db.camp_camper_extras.filter((r) => !(r.extra_id === extraId && goneIds.has(r.day_id)));
       }
       // Write. Withdrawn campers' rows for removed days / extras go first, then the days / extras.
       const removedDayIds = new Set(removed.map((d) => d.id));
@@ -1282,7 +1300,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       if (camper.status === 'withdrawn') return st('withdrawn');
       const row = camperDayRows(db, camper.id).find((r) => r.day_id === a.p_day_id);
       if (!row) return st('not_found'); // not one of the camper's days
-      const refusal = checkInRefusal(db.camp_days.find((d) => d.id === row.day_id).day, ctx);
+      const refusal = checkInRefusal();
       if (refusal) return refusal;
       if (row.checked_in_at !== null) return { status: 'ok', checked_in_at: row.checked_in_at, checked_in_by_name: row.checked_in_by_name, already: true };
       Object.assign(row, { checked_in_at: stamp(), checked_in_by: ctx.userId ?? null, checked_in_by_name: ctx.actorName }); // no version bump
@@ -1296,7 +1314,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       if (camper.status === 'withdrawn') return st('withdrawn');
       const row = camperDayRows(db, camper.id).find((r) => r.day_id === a.p_day_id);
       if (!row) return st('not_found');
-      const refusal = checkInRefusal(db.camp_days.find((d) => d.id === row.day_id).day, ctx);
+      const refusal = checkInRefusal();
       if (refusal) return refusal;
       Object.assign(row, { checked_in_at: null, checked_in_by: null, checked_in_by_name: null }); // not checked in → nothing to do
       return st('ok');

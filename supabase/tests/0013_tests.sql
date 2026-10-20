@@ -18,7 +18,7 @@
 --     T5  snapshots and the re-price rule, Owes, overpaid, Mark paid
 --     T6  dates in America/New_York at the minute boundaries, Close /
 --         Reopen, a walk-in sign-up on a camp day
---     T7  check-in: staff today only, admins earlier days, never future
+--     T7  check-in: staff and admins on any of the camper's days (CP1)
 --     T8  "both schools" visibility (the two queries the app sends)
 --     T9  payments are append-only; Undo / Edit payment
 --     T10 removing a whole camp; removing days / extras in Edit camp
@@ -1035,6 +1035,29 @@ begin
     raise exception 'TEST FAILED: T4d the pizza was written directly on a day it isn''t offered';
   exception when check_violation then null;
   end;
+  -- Edit camp: narrowing the pizza's days while an ACTIVE camper chose a
+  -- day that drops out is refused (Pia has the pizza on day 3); dropping
+  -- day 5 (nobody chose it there now) is fine
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  select c.version into v_v from public.camps c where c.id = v_cz;
+  v_r := pg_temp.st('T4d narrow the pizza to day 5', public.camp_update_camp(v_cz, v_v, 'worcester', false, v_tag || ' Pizza', v_dz,
+           '09:00', '15:00', v_today - 1, v_today + 20, v_today + 5, 5, 12, pg_temp.grid(5),
+           jsonb_set(pg_temp.xtr_ids(v_cz), '{1,only_on}', to_jsonb(array[v_dz[5]])), null, 'W'), 'not_empty');
+  if v_r ->> 'kind' <> 'extra_day' or v_r ->> 'extra_name' <> 'Pizza' or (v_r ->> 'day')::date <> v_dz[3]
+     or (v_r ->> 'count')::integer <> 1 then
+    raise exception 'TEST FAILED: T4d narrowing answer %', v_r;
+  end if;
+  if (select c.version from public.camps c where c.id = v_cz) <> v_v then raise exception 'TEST FAILED: T4d a refused narrowing changed the camp'; end if;
+  v_r := pg_temp.st('T4d narrow the pizza to day 3', public.camp_update_camp(v_cz, v_v, 'worcester', false, v_tag || ' Pizza', v_dz,
+           '09:00', '15:00', v_today - 1, v_today + 20, v_today + 5, 5, 12, pg_temp.grid(5),
+           jsonb_set(pg_temp.xtr_ids(v_cz), '{1,only_on}', to_jsonb(array[v_dz[3]])), null, 'W'), 'ok');
+  if (select e.only_on from public.camp_extras e where e.camp_id = v_cz and e.name = 'Pizza') <> array[v_dz[3]] then
+    raise exception 'TEST FAILED: T4d the narrowed list';
+  end if;
+  -- (back to days 3 and 5 for the template test below)
+  v_r := pg_temp.st('T4d widen again', public.camp_update_camp(v_cz, (v_r ->> 'version')::integer, 'worcester', false, v_tag || ' Pizza', v_dz,
+           '09:00', '15:00', v_today - 1, v_today + 20, v_today + 5, 5, 12, pg_temp.grid(5),
+           jsonb_set(pg_temp.xtr_ids(v_cz), '{1,only_on}', to_jsonb(array[v_dz[3], v_dz[5]])), null, 'W'), 'ok');
   -- Edit camp: a removed day leaves the lists; a list whose days would
   -- ALL go is refused; camp Z2 (no campers): 3 days, pizza only on day 3
   perform set_config('request.jwt.claims', v_c_a1, true);
@@ -1313,8 +1336,9 @@ begin
   if public.camp_public_camp(v_co_code) ->> 'state' <> 'finished' then raise exception 'TEST FAILED: T6c public state not finished'; end if;
 
   -- ===================================================================
-  -- T7. Check-in. Camp T has three days: yesterday, today, tomorrow (made
-  --     for today .. +2, then each day moved back one directly)
+  -- T7. Check-in (any day, staff and admins - CP1 2026-10-19). Camp T has
+  --     three days: yesterday, today, tomorrow (made for today .. +2, then
+  --     each day moved back one directly)
   -- ===================================================================
   perform set_config('request.jwt.claims', v_c_a1, true);
   v_ct := pg_temp.mk(v_tag || ' Check In', 'worcester', false, array[v_today, v_today + 1, v_today + 2], v_today - 5, v_today, v_today - 5);
@@ -1337,8 +1361,9 @@ begin
     raise exception 'TEST FAILED: T6d walk-in answer %', v_r;
   end if;
 
-  -- T7a. staff: today ok (once, then "already"), yesterday not_allowed,
-  --      tomorrow future_day; the camper's version never moves
+  -- T7a. check-in on ANY of the camper's days, for staff and admins alike
+  --      (CP1 2026-10-19); once, then "already"; the camper's version
+  --      never moves
   perform set_config('request.jwt.claims', v_c_d1, true);
   v_v := pg_temp.cv(v_k1);
   select max(id) into v_mark from public.change_log;
@@ -1349,31 +1374,35 @@ begin
   perform pg_temp.t15(v_mark, 'camp_check_in', v_dn, 'check in');
   v_r := pg_temp.st('T7a staff today again', public.camp_check_in(v_k1, pg_temp.dy(v_ct, 2)), 'ok');
   if not (v_r ->> 'already')::boolean then raise exception 'TEST FAILED: T7a a second check-in must say already: %', v_r; end if;
-  perform pg_temp.st('T7a staff yesterday', public.camp_check_in(v_k1, pg_temp.dy(v_ct, 1)), 'not_allowed');
-  perform pg_temp.st('T7a staff tomorrow', public.camp_check_in(v_k1, pg_temp.dy(v_ct, 3)), 'future_day');
+  v_r := pg_temp.st('T7a staff yesterday', public.camp_check_in(v_k1, pg_temp.dy(v_ct, 1)), 'ok');
+  if (v_r ->> 'already')::boolean then raise exception 'TEST FAILED: T7a staff yesterday answered %', v_r; end if;
+  v_r := pg_temp.st('T7a staff tomorrow', public.camp_check_in(v_k1, pg_temp.dy(v_ct, 3)), 'ok');
+  if (v_r ->> 'already')::boolean then raise exception 'TEST FAILED: T7a staff tomorrow answered %', v_r; end if;
   perform pg_temp.st('T7a a day Tom did not pick', public.camp_check_in(v_k2, pg_temp.dy(v_ct, 1)), 'not_found');
   perform pg_temp.st('T7a a day of another camp', public.camp_check_in(v_k2, v_a_d[1]), 'not_found');
   perform pg_temp.st('T7a unknown camper', public.camp_check_in(v_rand, pg_temp.dy(v_ct, 2)), 'not_found');
   perform pg_temp.st('T7a no day', public.camp_check_in(v_k1, null), 'invalid');
   if pg_temp.cv(v_k1) <> v_v then raise exception 'TEST FAILED: T7a check-in bumped the camper''s version'; end if;
   v_r := pg_temp.ro(v_k1);
-  if (select count(*) from jsonb_array_elements(v_r -> 'days') as x where x ->> 'checked_in_at' is not null) <> 1
+  if (select count(*) from jsonb_array_elements(v_r -> 'days') as x where x ->> 'checked_in_at' is not null) <> 3
      or (select x ->> 'checked_in_by_name' from jsonb_array_elements(v_r -> 'days') as x where (x ->> 'day_id')::uuid = pg_temp.dy(v_ct, 2)) <> v_dn then
-    raise exception 'TEST FAILED: T7a the roster''s days don''t show the check-in: %', v_r -> 'days';
+    raise exception 'TEST FAILED: T7a the roster''s days don''t show the check-ins: %', v_r -> 'days';
   end if;
-  -- T7b. admins: yesterday ok, tomorrow still future_day
+  -- T7b. admins the same (earlier and later days are "already" now)
   perform set_config('request.jwt.claims', v_c_a1, true);
-  perform pg_temp.st('T7b admin yesterday', public.camp_check_in(v_k1, pg_temp.dy(v_ct, 1)), 'ok');
-  perform pg_temp.st('T7b admin tomorrow', public.camp_check_in(v_k1, pg_temp.dy(v_ct, 3)), 'future_day');
-  -- T7c. Undo check-in: same day rule; nothing to undo -> ok; logged
+  v_r := pg_temp.st('T7b admin yesterday', public.camp_check_in(v_k1, pg_temp.dy(v_ct, 1)), 'ok');
+  if not (v_r ->> 'already')::boolean then raise exception 'TEST FAILED: T7b admin yesterday answered %', v_r; end if;
+  v_r := pg_temp.st('T7b admin tomorrow', public.camp_check_in(v_k1, pg_temp.dy(v_ct, 3)), 'ok');
+  if not (v_r ->> 'already')::boolean then raise exception 'TEST FAILED: T7b admin tomorrow answered %', v_r; end if;
+  -- T7c. Undo check-in on any day, staff too; nothing to undo -> ok; logged
   perform set_config('request.jwt.claims', v_c_d1, true);
-  perform pg_temp.st('T7c staff undo yesterday', public.camp_undo_check_in(v_k1, pg_temp.dy(v_ct, 1)), 'not_allowed');
-  perform pg_temp.st('T7c staff undo tomorrow', public.camp_undo_check_in(v_k1, pg_temp.dy(v_ct, 3)), 'future_day');
+  perform pg_temp.st('T7c staff undo yesterday', public.camp_undo_check_in(v_k1, pg_temp.dy(v_ct, 1)), 'ok');
+  perform pg_temp.st('T7c staff undo tomorrow', public.camp_undo_check_in(v_k1, pg_temp.dy(v_ct, 3)), 'ok');
   select max(id) into v_mark from public.change_log;
   perform pg_temp.st('T7c staff undo today', public.camp_undo_check_in(v_k1, pg_temp.dy(v_ct, 2)), 'ok');
   perform pg_temp.t15(v_mark, 'camp_undo_check_in', v_dn, 'undo check in');
   if exists (select 1 from public.camp_camper_days cd
-              where cd.camper_id = v_k1 and cd.day_id = pg_temp.dy(v_ct, 2)
+              where cd.camper_id = v_k1
                 and (cd.checked_in_at is not null or cd.checked_in_by is not null or cd.checked_in_by_name is not null)) then
     raise exception 'TEST FAILED: T7c undo left check-in values';
   end if;
@@ -1381,7 +1410,9 @@ begin
   perform pg_temp.st('T7c undo again (nothing to do)', public.camp_undo_check_in(v_k1, pg_temp.dy(v_ct, 2)), 'ok');
   if exists (select 1 from public.change_log l where l.id > v_mark) then raise exception 'TEST FAILED: T7c a no-op undo wrote history'; end if;
   perform set_config('request.jwt.claims', v_c_a1, true);
+  perform pg_temp.st('T7c admin check-in yesterday', public.camp_check_in(v_k1, pg_temp.dy(v_ct, 1)), 'ok');
   perform pg_temp.st('T7c admin undo yesterday', public.camp_undo_check_in(v_k1, pg_temp.dy(v_ct, 1)), 'ok');
+  perform pg_temp.st('T7c undo on a day not picked', public.camp_undo_check_in(v_k2, pg_temp.dy(v_ct, 1)), 'not_found');
   if pg_temp.cv(v_k1) <> v_v then raise exception 'TEST FAILED: T7c undo bumped the camper''s version'; end if;
   -- T7d. Edit details can't remove a day the camper was checked in on
   perform set_config('request.jwt.claims', v_c_d1, true);
