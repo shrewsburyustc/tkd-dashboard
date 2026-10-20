@@ -1,13 +1,13 @@
 # Contract 0016 — Black Belt testing database (migration `0016_black_belt.sql`)
 
-**Status: DRAFT 2026-10-19, for security review, then Jeffrey's OK.** Build and test locally only; nothing is applied to Supabase without his OK for that paste. **The number 0016 must be reserved with the Main session before any SQL is written** (0011 Finance, 0012 Prospects, 0013 Camps, 0014 Color Belt phase 4 and 0015 family history are claimed).
+**Status: APPROVED by Jeffrey 2026-10-19 (rulebook v0.909), after security review; OI-7 and OI-8 decided by him, OI-1–OI-6 use their defaults.** Build and test locally only; nothing is applied to Supabase without his OK for that paste. **The number 0016 must be reserved with the Main session before any SQL is written** (0011 Finance, 0012 Prospects, 0013 Camps, 0014 Color Belt phase 4 and 0015 family history are claimed).
 
 The single source of truth for **Builder A — database**, who turns it into `supabase/migrations/0016_black_belt.sql`, `supabase/tests/0016_tests.sql`, `supabase/tests/0016_fingerprints.sql`, a new PGlite step and a new `supabase/SETUP.md` section. It also fixes the interface the later builders use (the public Pages Function, the data layer, the preview mock, the screens; §9–§10). If something here is impossible or contradicts the sources below, **stop and report it** — do not improvise. The few undecided technical points are in §14 with a working default; the builder uses the default and changes nothing else about it.
 
 | Source (in this order of authority) | |
 |---|---|
 | This contract | wins for 0016 |
-| Rulebook `docs/Dashboard Docs/TKD-Dashboard-Design-Guidelines.md`: every Black Belt row v0.204–v0.224 and **v0.900–v0.908** (the newest row wins: v0.902 replaces v0.217's template prices and the "Offer this plan" ticks), §5 privacy | v0.908 |
+| Rulebook `docs/Dashboard Docs/TKD-Dashboard-Design-Guidelines.md`: every Black Belt row v0.204–v0.224 and **v0.900–v0.909** (the newest row wins: v0.902 replaces v0.217's template prices and the "Offer this plan" ticks), §5 privacy | v0.909 |
 | Database plan `docs/Testing/Black Belt Testing/TKD-BlackBelt-DB-Plan.md` (Q-B1–Q-B7 answered v0.901–v0.907; §8 S1–S20 OK'd v0.908, S16 removed by v0.902) | final |
 | Approved mockups `TKD-BlackBelt-Cycles-Mockups.html` (incl. the v0.902 redraw of screens 4 and 6), `TKD-BlackBelt-Form-Mockups.html`, `TKD-BlackBelt-Candidates-Mockups.html`; status file §3b | wording and layout |
 | `Inventory/Old-Spreadsheet.md` §1.5–§1.10, §3.1–§3.5 and `Inventory/Old-RegistrationPage.md` | seed values only |
@@ -640,7 +640,7 @@ PGlite runs on one connection, so two calls never run at the same time. Races ar
 | **OI-5** | Star's Function (not built yet) will need the same `turnstile.js` change | Whichever form is built first makes the action a parameter (§9.2); the other uses it as is |
 | **OI-6** | The approved Rubric and prices screen shows one editable number ("Keep … for [3] years … and for under-18s until 3 years after they turn 18"), but v0.906 / S12 make two settings | Two number fields in the same sentence; the screens builder shows the change at CP2 |
 | **OI-7** (for Jeffrey) | A **hard daily cap of online registrations per cycle** (e.g. 200 a day): yes or no? Today only the 20-per-hour-per-connection limit refuses; the per-cycle count is logged only (§8.3 step 8) | **Decided by Jeffrey 2026-10-19: no hard cap** (log only); the database size is watched by the CP3 / CP5 size check |
-| **OI-8** (for Jeffrey) | **Delete permanently on a candidate with no payments also deletes their online-signed waiver** (signature, signer, version). Meant for fake and test registrations (v0.212, CP6). Confirm, or keep the waiver row (signature removed) as a record? | **Delete it** (fake registrations aren't records; a real family is withdrawn, which keeps everything) |
+| **OI-8** (for Jeffrey) | **Delete permanently on a candidate with no payments also deletes their online-signed waiver** (signature, signer, version). Meant for fake and test registrations (v0.212, CP6). Confirm, or keep the waiver row (signature removed) as a record? | **Decided by Jeffrey 2026-10-19: delete it** (fake registrations aren't records; a real family is withdrawn, which keeps everything) |
 
 ---
 
