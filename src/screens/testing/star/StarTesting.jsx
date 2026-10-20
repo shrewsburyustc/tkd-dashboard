@@ -25,6 +25,8 @@
 //   eventId            the open Star event's id (#testing/star/event/<id>), or null for the home
 //   onOpenEvent(id)    open an event's page (App.jsx adds a browser history step)
 //   onCloseEvent()     "← Star testing": back to the Events tab
+//   location, onLocationChange   the top-bar switcher (the Candidates tab follows it, v0.118, and
+//                      its "Show both schools" sets it to Both for now, G12)
 //   screenLocked       true while the lock screen shows (dialogs and menus are hidden, no requests)
 //   onNoAccess()       the database refused data because this sign-in is locked: lock the screen
 //   onRefreshProfile() re-read "who am I?" (e.g. after the database said "not allowed")
@@ -52,6 +54,8 @@ export default function StarTesting({
   eventId = null,
   onOpenEvent,
   onCloseEvent,
+  location = 'Both',
+  onLocationChange,
   screenLocked = false,
   onNoAccess,
   onRefreshProfile,
@@ -74,8 +78,12 @@ export default function StarTesting({
           returnFocusTo(id); // the list focuses this event's row again
           onCloseEvent?.();
         }}
+        isAdmin={isAdmin}
+        location={location}
+        onLocationChange={onLocationChange}
         screenLocked={screenLocked}
         onNoAccess={onNoAccess}
+        onRefreshProfile={onRefreshProfile}
         showToast={showToast}
         clearToast={clearToast}
         onModalOpenChange={onModalOpenChange}

@@ -18,7 +18,7 @@
 // ("#testing/star/event/<id>").
 // Finance (contract 0011 §4) adds three: the Daily report ("#finance"), History ("#finance/history")
 // and Finance → Settings ("#finance/settings") — the last two for admins only (staff are sent to
-// "#finance"). While "Hide payments" is on for this device (v0.215), every "#finance…" address
+// "#finance"). While "Hide private details" is on for this device (v0.215, renamed v0.506), every "#finance…" address
 // goes to Home and Finance is left out of the rail.
 // Every address lives in lib/pageAddress.js.
 //
@@ -166,7 +166,7 @@ export default function App() {
   const [staffModalOpen, setStaffModalOpen] = useState(false); // a Staff accounts dialog is showing
   const [settingsModalOpen, setSettingsModalOpen] = useState(false); // a Settings dialog is showing
   const [financeModalOpen, setFinanceModalOpen] = useState(false); // a Finance dialog is showing
-  // This device's "Hide payments" switch (v0.215): Finance leaves the rail and its addresses go Home.
+  // This device's "Hide private details" switch (v0.215, renamed v0.506): Finance leaves the rail and its addresses go Home.
   const [paymentsHidden] = usePaymentsHidden();
   const [toast, setToast] = useState(null); // { id, text, action, icon } or null
 
@@ -777,7 +777,7 @@ export default function App() {
     [location, changeLocation, navigate],
   );
   const isAdminNow = profile?.role === 'admin';
-  // Who may be where: payments hidden → no Finance at all (Home instead); staff → no History or
+  // Who may be where: private details hidden → no Finance at all (Home instead); staff → no History or
   // Settings (the Daily report instead). replaceState swaps the address without a history step.
   useEffect(() => {
     if (phase !== 'home' || section !== 'finance' || !profile) return;

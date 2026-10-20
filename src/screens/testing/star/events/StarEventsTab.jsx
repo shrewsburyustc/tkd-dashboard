@@ -21,8 +21,7 @@
 //     overwritten, the person is told, and the list reloads.
 //   - Admin vs staff only changes what is SHOWN — the database enforces who may do what (v0.86).
 //   - Nothing personal is shown: names of events, dates, counts and tags only.
-// Not in phase 2: the 15-second quiet refresh (v0.157 is a Color Belt decision; proposed for Star
-// in phase 3).
+// From phase 3 it also reloads quietly every 15 seconds (v0.507 Q3: Star adopts Color Belt's v0.157).
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconAlertTriangle, IconCopy, IconDots, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
 import ErrorBanner from '../../../../components/ErrorBanner.jsx';
@@ -47,7 +46,7 @@ import { PHONE_QUERY, TOUCH_QUERY, useMediaQuery } from '../../../../lib/useMedi
 import { useRowArrowNav } from '../../../../lib/useRowArrowNav.js';
 import { useShortcutN } from '../../../../lib/useShortcutN.js';
 import ChoiceGroup from '../../events/ChoiceGroup.jsx';
-import { useLiveLoad } from '../../events/useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../events/useLiveLoad.js';
 import StarDeleteEventDialog from './StarDeleteEventDialog.jsx';
 import StarEventDialog, { checkStarEventForm, isStarEventFormDirty } from './StarEventDialog.jsx';
 import * as T from './text.js';
@@ -101,7 +100,8 @@ export default function StarEventsTab({
   onModalOpenChange,
   onOpenEvent, // (eventId) => void
 }) {
-  const live = useLiveLoad({ key: LIST_KEY, enabled: !screenLocked, load: loadList });
+  // Reloads quietly every 15 seconds too (v0.507 Q3, Color Belt's v0.157), so counts stay fresh.
+  const live = useLiveLoad({ key: LIST_KEY, enabled: !screenLocked, load: loadList, refreshMs: LIVE_REFRESH_MS });
   const events = live.data?.events ?? [];
   const today = live.data?.today ?? schoolToday();
 

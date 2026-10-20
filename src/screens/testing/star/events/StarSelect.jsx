@@ -26,6 +26,7 @@
 //   onChange       (value) => void
 //   readOnly       true while saving
 //   invalid        true when an error is shown under the field
+//   autoFocus      true: the dialog puts keyboard focus here when it opens (data-autofocus)
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { IconChevronDown } from '@tabler/icons-react';
 
@@ -33,7 +34,7 @@ const PAGE_STEP = 8;
 const TYPE_AHEAD_MS = 500;
 const LIST_MAX_HEIGHT = 244; // px — the same as FinalAwardSelect: the last visible row is cut in half (the cue there's more)
 
-export default function StarSelect({ id, labelId, describedBy, value, options, placeholder, onChange, readOnly = false, invalid = false }) {
+export default function StarSelect({ id, labelId, describedBy, value, options, placeholder, onChange, readOnly = false, invalid = false, autoFocus = false }) {
   const baseId = useId();
   const listId = `${baseId}-list`;
   const optionId = (index) => `${baseId}-o${index}`;
@@ -208,6 +209,7 @@ export default function StarSelect({ id, labelId, describedBy, value, options, p
         id={id}
         role="combobox"
         tabIndex={0}
+        data-autofocus={autoFocus ? true : undefined}
         className={`input fa-field${open ? ' is-open' : ''}${readOnly ? ' is-readonly' : ''}${currentIndex < 0 ? ' st-select-empty' : ''}`}
         aria-labelledby={labelId}
         aria-describedby={describedBy}

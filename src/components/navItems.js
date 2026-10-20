@@ -11,7 +11,7 @@
 // Finance (v0.201): icon ti-report-money, LAST on the rail. On phones it belongs under More once
 // the bottom bar has more than 5 sections (v0.140); with three sections it still fits in the bar.
 //
-// "Hide payments" (v0.215): while it is on for this device, Finance is left out of the list.
+// "Hide private details" (v0.215, renamed v0.506): while it is on for this device, Finance is left out of the list.
 // Rail.jsx and BottomBar.jsx read NAV_ITEMS directly, so App.jsx calls showFinanceInNav() each
 // time it draws; it refills the SAME list (in place) with or without Finance, and the bars, which
 // are drawn again right after, pick it up. (Testing's `pages` are part of its item, so they stay.)

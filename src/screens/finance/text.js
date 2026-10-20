@@ -362,7 +362,6 @@ export function earlierNotClosedAt(school, count, firstDay) {
 }
 export const OPEN_HISTORY = 'Open History';
 
-// ----- Hide payments (Questions #q14, v0.215) -----
-export const HIDE_PAYMENTS = 'Hide payments';
-export const PAYMENTS_HIDDEN = 'Payments hidden';
-export const SHOW_PAYMENTS = 'Payments hidden. Tap to show payments again.'; // the chip's screen-reader name. NOT IN MOCKUPS — for CP1
+// ----- Hide private details (was Hide payments, Questions #q14, v0.215; renamed v0.506) -----
+// The switch is dashboard-wide now, so its words live with it in src/lib/privateDetails.js
+// (HIDE_PRIVATE_DETAILS, PRIVATE_DETAILS_HIDDEN, SHOW_PRIVATE_DETAILS).

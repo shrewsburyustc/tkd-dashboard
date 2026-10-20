@@ -967,3 +967,371 @@
 .st-reg-hint {
   margin-top: var(--space-4);
 }
+
+/* =====================================================================================
+   Build phase 3 — the Candidates tab (Candidates mockups v0.121, Private v0.153, phase 3 gap
+   mockups G1–G16, v0.508). It reuses Color Belt's live roster look (.ev-cards, .ev-dupbox,
+   .ev-removed-…, .ev-sum, .ev-cmp in testing-events.css) and only adds Star's own pieces here.
+   ===================================================================================== */
+
+/* ----- The roster: one grid, its columns set by CandidateRows (--st-cols) ----- */
+.st-roster {
+  border-radius: var(--radius-control);
+}
+
+.st-crow-c {
+  display: grid;
+  grid-template-columns: var(--st-cols, minmax(0, 1fr));
+  align-items: center;
+  column-gap: var(--space-12);
+  min-height: 40px;
+  padding: var(--space-4) var(--space-8) var(--space-4) var(--space-12);
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+.st-roster [role="rowgroup"] > * + * {
+  border-top: 1px solid var(--color-border);
+}
+
+.st-chead {
+  min-height: 32px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  cursor: default;
+}
+
+.st-crow-c.is-selected {
+  background: var(--color-blue-tint);
+}
+
+.st-crow-c:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+.st-crow-c .acts {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
+}
+
+.st-crow-c.is-removed .ev-sname,
+.st-crow-c.is-removed .ev-scell {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+/* The name cell: the name, then the gray lines (registered, make-up, private) */
+.st-namecell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* PC with a mouse: the name and "Registered Oct 12" on one line (v0.109, G12, screen 1) */
+.st-nameline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-8);
+}
+
+/* The plain gray make-up / private line under the name (v0.116, G15: no tag) */
+.st-cline {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  overflow-wrap: anywhere;
+}
+
+.st-cline-plain {
+  font-size: var(--text-13);
+}
+
+.st-record {
+  white-space: nowrap;
+}
+
+/* "Paid $160 · ⚠ $20 overpaid": the overpaid part in amber, with the triangle (Private screen 4, G1) */
+.st-paytag {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+}
+
+.st-overpaid {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+}
+
+/* Phone rows: stacked lines */
+.st-crow-c.is-phone {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-4) var(--space-8) var(--space-12);
+}
+
+/* ----- Cards: the selected card gets a dark neutral border, not blue (G12, 5-blue rule) ----- */
+.st-cards .ev-card.st-card-selected {
+  border-color: var(--color-text);
+  box-shadow: inset 0 0 0 1px var(--color-text);
+}
+
+/* Hide private details: only the Candidates card (G4) */
+.st-cards.is-one {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 280px;
+}
+
+/* The inline links ("Show all", "Show both schools", "View signature", "Show all (6)") */
+.st-inline-link {
+  display: inline;
+  font-size: inherit;
+}
+
+/* ----- Hidden values (v0.507 Q2): gray "Hidden on this tablet" ----- */
+.st-hidden-value {
+  color: var(--color-text-secondary);
+}
+
+.st-hidden-line {
+  font-size: var(--text-13);
+}
+
+.st-hidden-box {
+  display: flex;
+  align-items: center;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+}
+
+/* ----- Edit details / New candidate: the fields in pairs above phone width (screen 9, G2, G8) ----- */
+.st-two {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: var(--space-12);
+  align-items: start;
+}
+
+@media (max-width: 639.98px) {
+  .st-two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ----- The detail view: sections, History, View signature ----- */
+.st-detail-part + .st-detail-part {
+  margin-top: var(--space-12);
+}
+
+.st-detail-head {
+  margin-bottom: var(--space-4);
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.st-history-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.st-history-item {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  column-gap: var(--space-12);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-13);
+}
+
+.st-history-item:first-child {
+  border-top: none;
+}
+
+.st-history-head {
+  color: var(--color-text-secondary);
+}
+
+.st-history-line {
+  grid-column: 2;
+  overflow-wrap: anywhere;
+}
+
+.st-view-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* The drawing on white, 150px tall as drawn in G5 */
+.st-sig-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 150px;
+  margin: var(--space-4) 0 var(--space-8);
+  padding: var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: #ffffff; /* the drawing on white (G5) */
+}
+
+.st-sig-img {
+  max-width: 100%;
+  max-height: 100%;
+  height: auto;
+}
+
+/* ----- The Add candidate menu: two-line items with a description ----- */
+.st-menu-desc .ev-menu-reason {
+  white-space: normal;
+}
+
+/* ----- The make-up list (screen 7, G10) ----- */
+.st-mk-search {
+  position: relative;
+}
+
+.st-mk-search-icon {
+  position: absolute;
+  top: 50%;
+  left: var(--space-12);
+  display: flex;
+  color: var(--color-text-secondary);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.st-mk-input {
+  padding-left: 36px;
+}
+
+.st-mk-list {
+  margin: 0 0 var(--space-12);
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  list-style: none;
+}
+
+.st-mk-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-8) var(--space-12);
+}
+
+.st-mk-row + .st-mk-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.st-mk-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.st-mk-name {
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.st-mk-sub {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  overflow-wrap: anywhere;
+}
+
+.st-mk-act {
+  flex: none;
+}
+
+.st-mk-state {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.st-mk-empty {
+  margin-bottom: var(--space-12);
+}
+
+/* ----- Touch: 48px rows, 44px tap areas (rule 2.5) ----- */
+@media (pointer: coarse) {
+  .st-crow-c {
+    min-height: 48px;
+  }
+
+  .st-chead {
+    min-height: 36px;
+  }
+
+  /* Inline links keep their look but get a 44px tap area (G5, G12) */
+  .st-inline-link {
+    position: relative;
+  }
+
+  /* app.css gives every touch link-button a 44px box; an inline link in a sentence keeps its
+     line height instead and gets the tap area from ::after below */
+  .link-button.st-inline-link {
+    min-height: 0;
+    padding: 0;
+  }
+
+  .st-inline-link::after {
+    content: "";
+    position: absolute;
+    inset: -12px -4px;
+  }
+
+  .st-record {
+    height: var(--control-height-touch);
+  }
+}
+
+/* ----- Phones ----- */
+@media (max-width: 639.98px) {
+  .st-history-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .st-history-line {
+    grid-column: 1;
+  }
+
+  .st-cards.is-one {
+    max-width: none;
+  }
+}
+
+/* The 320 check (v0.508 proposal 40): under 360px the Dan switch's side padding drops to 8px */
+@media (max-width: 359.98px) {
+  /* Add candidate and Registration link don't fit side by side at 320: each keeps its label on one
+     line and the second button wraps under the first */
+  .st-event-buttons {
+    flex-wrap: wrap;
+  }
+
+  .st-event-buttons .btn {
+    white-space: nowrap;
+  }
+
+  .st-dan-switch .segment {
+    padding-right: var(--space-8);
+    padding-left: var(--space-8);
+  }
+
+  .st-dan-switch .ev-side-count {
+    margin-left: var(--space-8);
+  }
+}

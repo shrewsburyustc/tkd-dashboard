@@ -220,6 +220,8 @@ export default function Testing({
           eventId={eventId}
           onOpenEvent={onOpenStarEvent}
           onCloseEvent={onCloseStarEvent}
+          location={location}
+          onLocationChange={onLocationChange}
           {...tabProps}
         />
       </Suspense>

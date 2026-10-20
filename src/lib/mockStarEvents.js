@@ -27,6 +27,14 @@
 // by the seed below (three made-up events) and saved; the rubric template is kept.
 // Candidates and payments are only SEEDED here (so the list shows counts and Delete event has
 // something to count): adding, editing and paying candidates is build phase 3 (mockStarCandidates).
+// Phase 3 takeover: in the app (mockClient.js) this backend is created with
+//   seed: mockStarCandidates' defaultStarCandidatesData   — a richer seed (a finished past event,
+//         the Fall event with paid / unpaid / overpaid / duplicate / private / withdrawn / make-up
+//         candidates, a later Spring event), used instead of the one below, and
+//   seedIsCurrent: starCandidatesSeedIsCurrent            — a store saved before that seed existed
+//         counts as "missing", so both fakes always see the SAME events and candidates.
+// The star_roster view is then answered by mockStarCandidates.js (it routes first); this file's own
+// roster below is kept for the Node checks of phase 2 (eventsChecks.mjs), which use this seed.
 //
 // Seed (made-up names only; dates worked out from "today" when the seed is made):
 //   Fall Star Testing    — upcoming, registration OPEN, closing date 7 days before, 3 candidates
@@ -182,7 +190,8 @@ export const SEED_EVENT_IDS = { fall: fixedId('e0', 1), winter: fixedId('e0', 2)
 
 // ----- The copy rule (§2.3): the template as it is NOW, copied into one event -----
 // template: the store's dans / categories / grades / assistant. makeId(): a new id per copied row.
-function copyTemplateInto(db, eventId, makeId) {
+// Exported for mockStarCandidates.js's seed (it builds its own events the same way).
+export function copyStarTemplateInto(db, eventId, makeId) {
   for (const d of [...db.dans].sort((a, b) => a.dan - b.dan)) {
     db.event_dans.push({
       id: makeId(), event_id: eventId, dan: d.dan, label: d.label, pass_mark: d.pass_mark, star_limit: d.star_limit,
@@ -261,7 +270,7 @@ export function defaultStarEventsData(base, { today, now }) {
       first_opened_at: openedAgo === null ? null : at(openedAgo),
       public_code_worcester: codeW, public_code_shrewsbury: codeS, note, ...house(addedAgo),
     });
-    copyTemplateInto(work, id, () => fixedId('c1', (copyN += 1)));
+    copyStarTemplateInto(work, id, () => fixedId('c1', (copyN += 1)));
   });
   // Family-form references in registration order (oldest first), like the database's counter.
   const ordered = [...SEED_CANDIDATES].sort((a, b) => b[8] - a[8]);
@@ -301,7 +310,11 @@ function eventsPartIsUsable(store) {
 
 // ----- The backend -----
 
-export function createStarEventsBackend({ readBase, saveStore, now = () => Date.now(), today, newId }) {
+// seed / seedIsCurrent: optional (see the header, "Phase 3 takeover"). Without them: this file's
+// own seed, as in phase 2.
+export function createStarEventsBackend({
+  readBase, saveStore, now = () => Date.now(), today, newId, seed = defaultStarEventsData, seedIsCurrent = () => true,
+}) {
   let failNext = false; // set by failNextSave()
 
   function write(db) {
@@ -312,8 +325,8 @@ export function createStarEventsBackend({ readBase, saveStore, now = () => Date.
   // events part is replaced by the seed and saved at once, so its dates and ids stay put.
   function read() {
     const base = clone(readBase());
-    if (eventsPartIsUsable(base)) return base;
-    Object.assign(base, defaultStarEventsData(base, { today: today(), now: now() }));
+    if (eventsPartIsUsable(base) && seedIsCurrent(base)) return base;
+    Object.assign(base, seed(base, { today: today(), now: now() }));
     write(base);
     return clone(base);
   }
@@ -377,7 +390,7 @@ export function createStarEventsBackend({ readBase, saveStore, now = () => Date.
         version: 1, created_at: at, updated_at: at, created_by: null, updated_by: null,
         created_by_name: ctx.actorName, updated_by_name: ctx.actorName,
       });
-      copyTemplateInto(db, id, newId); // the template AT THIS MOMENT (v0.61)
+      copyStarTemplateInto(db, id, newId); // the template AT THIS MOMENT (v0.61)
       return { status: 'ok', id, public_code_worcester: codeW, public_code_shrewsbury: codeS, version: 1 };
     },
 
@@ -589,7 +602,7 @@ export function createStarEventsBackend({ readBase, saveStore, now = () => Date.
   // Back to the seeded events (their dates worked out from today); the rubric template is kept.
   function reset() {
     const base = clone(readBase());
-    Object.assign(base, defaultStarEventsData(base, { today: today(), now: now() }));
+    Object.assign(base, seed(base, { today: today(), now: now() }));
     write(base);
   }
 
