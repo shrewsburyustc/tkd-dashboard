@@ -1099,7 +1099,8 @@ An admin sets the reminder times in **Finance → Settings** (they start Off; pl
 1. Copy **the whole file** `supabase/migrations/0011_finance.sql` (the new version), **SQL Editor → New query**, paste, **Run**, confirm the destructive-operations warning (the words are in `drop … if exists` lines; the only thing removed is the old internal function `finance_chain_steps(date, date)`, which nothing calls).
 2. **What it changes:** functions only (replaced), two new indexes (`finance_testing_payments_paid_on_idx`, `finance_star_payments_paid_on_idx`), one old internal function removed. **What it keeps:** every table and row — the settings row, the 14 reminder times, closings, exports — and every right. Tested in `run.mjs` step 14b: the exact production copy of the first version is applied, the settings are changed like an admin would, then the new file is pasted over it: the settings and times are unchanged and all tests pass.
 3. Claude re-runs `0011_fingerprints.sql` through the connection: the lines must match the new PGlite run (95 rows: 83 as before + 12 index rows — the two new `paid_on` indexes and the finance tables' own keys). The 0003–0006 and 0010 fingerprints stay unchanged.
-4. Run `0011_tests.sql` (15c) — no timeout line needed.
+3b. Claude runs the **Security Advisor** through the connection: no new warnings for any `finance_` object or the two new indexes (only the notices listed in 15b).
+4. Run `0011_tests.sql` (15c step 1 — with the admin and desk ids filled in; no timeout line needed) → **ALL 0011 TESTS PASSED**. Then run `0010_tests.sql`, `0006_tests.sql`, `0005_tests.sql`, `0004_tests.sql`, `0003_tests.sql`, `0002_tests.sql` and `verify_pin_tests.sql` again — the new 0011 must not have broken them.
 
 **Rollback:** Finance only reads payments, so turning it off is a code rollback (Cloudflare Pages → Deployments → **Rollback**). The 0011 tables can stay; nothing else depends on them.
 

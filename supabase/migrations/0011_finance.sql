@@ -75,7 +75,7 @@
 -- PRIVACY (handoff section 6, guidelines section 5)
 --   No answer ever holds a date of birth, an email, a drawn signature or a
 --   login id. Only TWO internal helpers read login ids at all
---   (finance_chain_steps: "was the undo made by the same person?";
+--   (finance_chain_steps_core: "was the undo made by the same person?";
 --   finance_closing_is_mine: "did YOU close this day?") and both return
 --   only yes/no facts or names, never the id itself. 0011_tests.sql checks
 --   this from the catalog and from every answer.
@@ -682,7 +682,7 @@ begin
           exit when a_new[v_ri] = 0;                            -- undone
           -- safety stop (a loop, or 50 edits): end the chain here as live,
           -- like the first version of this file did
-          if a_new[v_ri] = any (a_steps) or cardinality(a_steps) >= 50 then
+          if a_new[v_ri] = any (a_steps) or cardinality(a_steps) >= 51 then
             v_ri := 0;
             exit;
           end if;
