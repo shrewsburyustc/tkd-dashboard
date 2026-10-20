@@ -8,14 +8,19 @@
 // the section's choice page. Testing gets its pages only while the Star testing build switch is on
 // (lib/features.js) — with it off, Testing is one page, exactly as before.
 //
-// Finance (v0.201): icon ti-report-money, LAST on the rail. On phones it belongs under More once
-// the bottom bar has more than 5 sections (v0.140); with three sections it still fits in the bar.
+// Schedule comes after Testing (ti-clock, v0.233); Calendar after Schedule (ti-calendar-month, v0.234);
+// Forms after Calendar (ti-clipboard-text, v0.235); Prospects after Forms (ti-address-book, v0.236).
+// phone: true = on the phone's bottom bar; the others go under More (ti-menu-2) on a phone
+// (six sections don't fit: Home, Calendar, Prospects, More - rulebook v0.236).
+// Finance (v0.201): icon ti-report-money, LAST on the rail; on phones it is under More.
 //
 // "Hide private details" (v0.215, renamed v0.506): while it is on for this device, Finance is left out of the list.
 // Rail.jsx and BottomBar.jsx read NAV_ITEMS directly, so App.jsx calls showFinanceInNav() each
 // time it draws; it refills the SAME list (in place) with or without Finance, and the bars, which
 // are drawn again right after, pick it up. (Testing's `pages` are part of its item, so they stay.)
-import { IconCertificate, IconHome, IconReportMoney, IconStar } from '@tabler/icons-react';
+import {
+  IconAddressBook, IconCalendarMonth, IconCertificate, IconClipboardText, IconClock, IconHome, IconReportMoney, IconStar,
+} from '@tabler/icons-react';
 import { STAR_TESTING_ON } from '../lib/features.js';
 
 // Testing's pages (v0.59): ti-certificate = Color belt testing, ti-star = Star testing.
@@ -25,8 +30,12 @@ export const TESTING_PAGES = [
 ];
 
 const ALL_ITEMS = [
-  { id: 'home', label: 'Home', Icon: IconHome },
+  { id: 'home', label: 'Home', Icon: IconHome, phone: true },
   { id: 'testing', label: 'Testing', Icon: IconCertificate, pages: STAR_TESTING_ON ? TESTING_PAGES : null },
+  { id: 'schedule', label: 'Schedule', Icon: IconClock },
+  { id: 'calendar', label: 'Calendar', Icon: IconCalendarMonth, phone: true },
+  { id: 'forms', label: 'Forms', Icon: IconClipboardText },
+  { id: 'prospects', label: 'Prospects', Icon: IconAddressBook, phone: true },
   { id: 'finance', label: 'Finance', Icon: IconReportMoney },
 ];
 

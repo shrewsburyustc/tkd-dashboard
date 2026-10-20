@@ -1,0 +1,228 @@
+/*
+  kiosk.css — the look of the front-desk kiosk (src/screens/kiosk/KioskApp.jsx).
+  Why it exists: mockup screen 9 (rulebook v0.235) and the kiosk plan K1–K4
+  (docs/Prospects/TKD-Kiosk-Build-Plan.md): a full-screen sign-up station on the desk tablet.
+  The form itself uses the public page's look (forms.css + forms-public.css, loaded with the kiosk
+  only — leaving kiosk mode reloads the page, so none of it stays in the dashboard).
+  Sizes are for a tablet first (820 × 1180 portrait, 1180 × 820 landscape); every button is at
+  least 44px tall; colors and spacing come from tokens.css.
+*/
+
+/* The whole screen, over the (locked, hidden) dashboard */
+.fk {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow-y: auto;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+/* ----- Welcome ----- */
+.fk-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-16);
+  min-height: 100%;
+  padding: var(--space-32) var(--space-24) 88px; /* room for the lock in the corner */
+  text-align: center;
+}
+
+.fk-logo {
+  width: 96px;
+  height: 96px;
+}
+
+.fk-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.fk-sub {
+  margin: 0;
+  font-size: 18px;
+  color: var(--color-text-secondary);
+}
+
+.fk-start {
+  min-width: 240px;
+  min-height: 56px;
+  font-size: 18px;
+}
+
+/* After 12 hours: Start is greyed out (it says why above it) */
+.fk-start[aria-disabled='true'] {
+  background: var(--color-border-strong);
+  color: var(--color-disabled-text);
+  border-color: transparent;
+  cursor: default;
+}
+
+/* The amber line for staff (30-minute warning / ended) — words and an icon, never color alone */
+.fk-staff {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  max-width: 480px;
+  margin: var(--space-8) 0 0;
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--radius-control);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: 15px;
+  text-align: left;
+}
+
+.fk-staff svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+/* ----- The form: the public page's frame as it is (its phone sizes apply below 600px) ----- */
+.fk-form {
+  min-height: 100%;
+  padding-bottom: 72px; /* room for the lock in the corner */
+}
+
+/* ----- The kiosk thank-you (K1 → B) ----- */
+.fk-times .fp-done__list {
+  font-size: 18px;
+}
+
+.fk-keep {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  font-size: 15px;
+}
+
+.fk-keep svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.fk-countdown {
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--color-border);
+}
+
+.fk-countdown i {
+  display: block;
+  height: 100%;
+  background: var(--color-blue);
+  transition: width 1s linear;
+}
+
+/* Done: the button the family taps — full width and 48px tall at every size (K1 image) */
+.fk-done .fp-btn--main {
+  width: 100%;
+  min-height: 48px;
+  font-size: 16px;
+}
+
+.fk-left {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+/* ----- The lock in the corner (mockup 9): small and gray, but a full 44px tap area ----- */
+.fk-lock {
+  position: fixed;
+  right: var(--space-12);
+  bottom: var(--space-12);
+  z-index: 51;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-bg); /* a white circle: readable over the form card on small screens */
+  color: var(--color-border-control); /* gray: visible (3:1) without drawing the eye */
+  cursor: pointer;
+}
+
+.fk-lock:hover {
+  color: var(--color-text-secondary);
+}
+
+/* ----- The PIN pad (LockScreen's kiosk look) ----- */
+.fk-pin {
+  position: fixed;
+  inset: 0;
+  z-index: 52;
+  display: flex;
+  background: var(--color-surface);
+}
+
+.lock-prompt--kiosk {
+  margin: 0 0 var(--space-16);
+  color: var(--color-text);
+  font-size: 18px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.lock-kiosk-cancel {
+  min-width: 140px;
+  min-height: 44px;
+  margin-top: var(--space-16);
+}
+
+/* ----- "Still there?" (2 minutes idle mid-form) ----- */
+.fk-still {
+  position: fixed;
+  inset: 0;
+  z-index: 53;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-24);
+  background: var(--color-backdrop);
+}
+
+.fk-still__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-12);
+  width: 100%;
+  max-width: 420px;
+  padding: var(--space-24);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  text-align: center;
+  font-size: 16px;
+}
+
+.fk-still__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.fk-still__btn {
+  min-width: 200px;
+  min-height: 48px;
+  font-size: 16px;
+}
+
+@media (max-width: 599px) {
+  .fk-title {
+    font-size: 22px;
+  }
+
+  .fk-start {
+    width: 100%;
+  }
+}

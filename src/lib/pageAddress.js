@@ -5,6 +5,10 @@
 // address after a "#":
 //   Home            tkd-dashboard.pages.dev/
 //   Testing         tkd-dashboard.pages.dev/#testing
+//   Schedule        tkd-dashboard.pages.dev/#schedule
+//   Calendar        tkd-dashboard.pages.dev/#calendar
+//   Forms           tkd-dashboard.pages.dev/#forms
+//   Prospects       tkd-dashboard.pages.dev/#prospects
 //   Staff accounts  tkd-dashboard.pages.dev/#staff-accounts
 //   Settings        tkd-dashboard.pages.dev/#settings          (admins, v0.135)
 //   Finance         tkd-dashboard.pages.dev/#finance           the Daily report (contract 0011 §4)
@@ -47,6 +51,10 @@ import { STAR_TESTING_ON } from './features.js';
 const HASH_BY_PAGE = {
   home: '',
   testing: '#testing',
+  schedule: '#schedule',
+  calendar: '#calendar',
+  forms: '#forms',
+  prospects: '#prospects',
   staffAccounts: '#staff-accounts',
   settings: '#settings',
 };

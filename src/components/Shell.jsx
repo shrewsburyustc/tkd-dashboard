@@ -28,11 +28,12 @@ export default function Shell({
   onStaffAccounts,
   onSettings,
   onSignOut,
+  badges,
   children,
 }) {
   return (
     <div className="shell" hidden={hidden} inert={inert}>
-      <Rail current={currentSection} currentPage={currentTestingPage} onNavigate={onNavigate} />
+      <Rail current={currentSection} currentPage={currentTestingPage} onNavigate={onNavigate} badges={badges} />
       <div className="shell-main">
         <TopBar
           location={location}
@@ -50,7 +51,7 @@ export default function Shell({
           isScreenLocked={hidden}
         />
         <main className="shell-content">{children}</main>
-        <BottomBar current={currentSection} onNavigate={onNavigate} />
+        <BottomBar current={currentSection} onNavigate={onNavigate} badges={badges} />
       </div>
     </div>
   );

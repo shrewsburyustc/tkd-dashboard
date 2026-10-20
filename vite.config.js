@@ -11,6 +11,8 @@
 // register.html (the public family registration form, /register/<code>). On Cloudflare,
 // public/_redirects serves register.html for every /register/<code> address; on this PC the
 // small plugin below does the same for `npm run dev`, `dev:preview-mode` and `vite preview`.
+// A third page, forms.html (the public Forms page, /f/<name>, build plan §3), works the same way
+// with its own small plugin (formsPageRewrite) and its own line in public/_redirects.
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
@@ -44,14 +46,36 @@ function registerPageRewrite() {
   };
 }
 
+// /f, /f/ and /f/<name> (with or without ?query) → forms.html, like public/_redirects does on
+// Cloudflare. Everything else is left alone (e.g. /forms or /favicon.ico don't match).
+function formsPageRewrite() {
+  const rewrite = (req, _res, next) => {
+    const [path, query] = (req.url ?? '').split('?');
+    if (path === '/f' || path.startsWith('/f/')) {
+      req.url = '/forms.html' + (query !== undefined ? `?${query}` : '');
+    }
+    next();
+  };
+  return {
+    name: 'forms-page-rewrite',
+    configureServer(server) {
+      server.middlewares.use(rewrite);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(rewrite);
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), registerPageRewrite()],
+  plugins: [react(), registerPageRewrite(), formsPageRewrite()],
   build: {
     rollupOptions: {
-      // The two pages of the build.
+      // The pages of the build.
       input: {
         main: resolve(fileURLToPath(new URL('.', import.meta.url)), 'index.html'),
         register: resolve(fileURLToPath(new URL('.', import.meta.url)), 'register.html'),
+        forms: resolve(fileURLToPath(new URL('.', import.meta.url)), 'forms.html'),
       },
     },
   },
@@ -60,7 +84,7 @@ export default defineConfig({
     watch: { ignored: (path) => path.replace(/\\/g, '/').toLowerCase().startsWith(worktreesDir) },
   },
   optimizeDeps: {
-    // Only look for the app's libraries starting from our own two pages.
-    entries: ['index.html', 'register.html'],
+    // Only look for the app's libraries starting from our own pages.
+    entries: ['index.html', 'register.html', 'forms.html'],
   },
 });

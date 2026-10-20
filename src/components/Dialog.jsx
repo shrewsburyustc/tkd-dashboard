@@ -42,8 +42,9 @@ import { BACK } from '../screens/testing/text.js';
 import { dialogStep } from '../lib/backButton.js';
 
 // Everything a person can Tab to. (A disabled button or a tabIndex="-1" element can't be.)
+// (select / textarea added for the Schedule's Class and Day dropdowns.)
 const FOCUSABLE =
-  'button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+  'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
 
 export default function Dialog({
   title,
