@@ -5,6 +5,9 @@
 // ("siteverify"). We also check that the token was made on our own site (hostname) and for the
 // registration form (action "register"), so a token from some other page can't be reused here.
 // Plan §8: success, hostname = production host, action = register, remoteip.
+//
+// The action is a parameter (expectedAction, CONTRACT-0016 §9.2): Color Belt doesn't pass it, so it
+// stays 'register' exactly as before; the Black Belt Function passes 'bb_register'.
 
 export const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 export const TURNSTILE_ACTION = 'register';
@@ -17,7 +20,8 @@ export const TURNSTILE_ACTION = 'register';
 //   token         what the page sent as turnstile_token
 //   ip            the visitor's IP (Cloudflare uses it as one more signal; never stored)
 //   expectedHost  e.g. "tkd-dashboard.pages.dev" (taken from PUBLIC_ORIGIN)
-export async function verifyTurnstile({ fetchImpl, secret, token, ip, expectedHost }) {
+//   expectedAction  the action the page started Turnstile with; default 'register' (Color Belt)
+export async function verifyTurnstile({ fetchImpl, secret, token, ip, expectedHost, expectedAction = TURNSTILE_ACTION }) {
   // Tokens are at most 2048 characters (Cloudflare's documented limit).
   if (typeof token !== 'string' || token.length === 0 || token.length > 2048) return false;
   try {
@@ -31,7 +35,7 @@ export async function verifyTurnstile({ fetchImpl, secret, token, ip, expectedHo
     return (
       result?.success === true &&
       result.hostname === expectedHost &&
-      result.action === TURNSTILE_ACTION
+      result.action === expectedAction
     );
   } catch {
     return false;

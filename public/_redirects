@@ -13,3 +13,8 @@
 # no name, shows the page's "This form was not found".)
 /f  /forms  200
 /f/*  /forms  200
+
+# The public Black Belt testing registration page (CONTRACT-0016 §9.1): every family link looks
+# like /black-belt/<code> (one per school per cycle), served by the one page black-belt.html in
+# the same way. Pages serves black-belt.html at /black-belt by itself ("pretty URLs").
+/black-belt/*  /black-belt  200

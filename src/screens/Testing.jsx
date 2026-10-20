@@ -27,13 +27,28 @@
 //   onRefreshProfile   re-read "who am I?" (e.g. after the database said "not allowed")
 //   showToast / clearToast   the toast at the bottom (with Undo)
 //   onModalOpenChange  tells the App a Testing dialog is open (the page behind becomes inert)
-import { useEffect, useId, useRef, useState } from 'react';
+//
+// Black Belt testing (contract CONTRACT-0016-B1 §3): until step C2 brings the Testing chooser and
+// the #testing/black-belt addresses (they wait for Star's chooser, §7 OP-1), Black Belt is reached
+// from a "Black Belt testing ›" link at the top of this page, in PREVIEW MODE ONLY. The screens
+// are loaded with a lazy import behind that check, so the live build doesn't contain them at all
+// (Vite replaces import.meta.env.MODE with a fixed text when it builds, and drops dead code).
+// Black Belt is joint for both schools, so the link shows on Both too.
+import { Suspense, lazy, useEffect, useId, useRef, useState } from 'react';
+import { IconAward, IconChevronRight } from '@tabler/icons-react';
 import BlockedOnBoth from './testing/BlockedOnBoth.jsx';
 import ClassesRanksTab from './testing/ClassesRanksTab.jsx';
 import EventsTab from './testing/events/EventsTab.jsx';
 import EventPage from './testing/event/EventPage.jsx';
 import { PAGE_TITLE, TAB_CLASSES_RANKS, TAB_EVENTS, VIEW_ONLY_LINE } from './testing/text.js';
 import '../styles/testing-events.css';
+
+// Black Belt testing's staff screens: preview builds only, until the build switch of step C2.
+const BLACK_BELT_PREVIEW = import.meta.env.MODE === 'preview';
+const BlackBeltTesting = BLACK_BELT_PREVIEW ? lazy(() => import('../blackBelt/staff/BlackBeltTesting.jsx')) : null;
+const BLACK_BELT_LINK = 'Black Belt testing'; // the link's words (Black Belt's own text.js has the rest)
+// Is Black Belt open? Kept while the dashboard is open, like the tab.
+let blackBeltOpen = false;
 
 const TABS = [
   { key: 'events', label: TAB_EVENTS },
@@ -96,6 +111,11 @@ function TestingHeader({ school, action, staffLine, tab, onTab, ids }) {
 
 export default function Testing({ location, onLocationChange, isAdmin, eventId, onOpenEvent, onCloseEvent, ...tabProps }) {
   const baseId = useId();
+  const [showBlackBelt, setShowBlackBeltState] = useState(blackBeltOpen);
+  function setShowBlackBelt(next) {
+    blackBeltOpen = next;
+    setShowBlackBeltState(next);
+  }
   const ids = { tab: (key) => `${baseId}-tab-${key}`, panel: (key) => `${baseId}-panel-${key}` };
   const [tab, setTabState] = useState(lastTab);
   function setTab(key) {
@@ -116,10 +136,38 @@ export default function Testing({ location, onLocationChange, isAdmin, eventId, 
     document.getElementById(`${baseId}-tab-${lastTab}`)?.focus();
   }, [location, baseId]);
 
+  if (BlackBeltTesting && showBlackBelt && !eventId) {
+    const { screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange } = tabProps;
+    return (
+      <Suspense fallback={null}>
+        <BlackBeltTesting
+          isAdmin={isAdmin}
+          onBack={() => setShowBlackBelt(false)}
+          screenLocked={screenLocked}
+          onNoAccess={onNoAccess}
+          onRefreshProfile={onRefreshProfile}
+          showToast={showToast}
+          clearToast={clearToast}
+          onModalOpenChange={onModalOpenChange}
+        />
+      </Suspense>
+    );
+  }
+  // The preview-only way in (see the header comment).
+  const blackBeltLink = BlackBeltTesting ? (
+    <button type="button" className="link-button ev-back" onClick={() => setShowBlackBelt(true)}>
+      {/* ti-award = Black Belt testing (rulebook icon map); ti-chevron-right = go there */}
+      <IconAward size={16} aria-hidden="true" />
+      {BLACK_BELT_LINK}
+      <IconChevronRight size={16} aria-hidden="true" />
+    </button>
+  ) : null;
+
   if (location === 'Both') {
     // Title only — no school line, no tabs (there's nothing in either tab to show).
     return (
       <div className="testing">
+        {blackBeltLink}
         <div className="phead">
           <div className="phead-titles">
             <h1 className="ptitle">{PAGE_TITLE}</h1>
@@ -144,6 +192,7 @@ export default function Testing({ location, onLocationChange, isAdmin, eventId, 
 
   return (
     <div className="testing">
+      {blackBeltLink}
       {tab === 'events' ? (
         <EventsTab
           school={location}
