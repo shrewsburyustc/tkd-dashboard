@@ -38,7 +38,7 @@ import {
   IconArrowBackUp,
   IconArrowLeft,
   IconArrowRight,
-  IconCash,
+  IconSum,
   IconCashEdit,
   IconCheck,
   IconClock,
@@ -1316,7 +1316,7 @@ export default function EventPage({
     { key: null, label: T.CARD_STUDENTS, Icon: IconUsers, value: active.length },
     { key: 'paid', label: T.CARD_PAID, Icon: IconCheck, value: paidCount },
     { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconClock, value: active.length - paidCount },
-    { key: 'money', label: T.CARD_PAYMENTS, Icon: IconCash, value: T.dollars(paymentsTotal) },
+    { key: 'money', label: T.CARD_PAYMENTS, Icon: IconSum, value: T.dollars(paymentsTotal) }, // ti-sum = a money total (v0.303)
   ];
 
   const ctx = {

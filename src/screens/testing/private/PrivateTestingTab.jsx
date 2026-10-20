@@ -22,12 +22,13 @@ import {
   IconArrowBackUp,
   IconCalendar,
   IconCalendarX,
-  IconCash,
+  IconCashEdit,
   IconCheck,
   IconClock,
   IconEdit,
   IconPlus,
   IconSchool,
+  IconSum,
   IconTrash,
   IconUsers,
 } from '@tabler/icons-react';
@@ -695,7 +696,7 @@ export default function PrivateTestingTab({
       // ti-calendar = change the day; ti-school = grade
       if (can.changeDay) groups[0].push({ key: 'day', label: T.CHANGE_DAY_TIME, Icon: IconCalendar, onSelect: () => openChangeDay(row, anchor) });
       if (can.grade) groups[0].push({ key: 'grade', label: T.GRADE, Icon: IconSchool, onSelect: () => onOpenPrivate?.(row.id) });
-      if (can.editPayment) groups[1].push({ key: 'editpay', label: T.EDIT_PAYMENT, Icon: IconCash, onSelect: () => openEditPayment(row, anchor) });
+      if (can.editPayment) groups[1].push({ key: 'editpay', label: T.EDIT_PAYMENT, Icon: IconCashEdit, onSelect: () => openEditPayment(row, anchor) });
       if (can.undoPayment) groups[1].push({ key: 'undopay', label: T.UNDO_PAYMENT, Icon: IconArrowBackUp, disabled: busy, onSelect: () => doUndoPayment(row) });
       // ti-calendar-x = cancel the private testing (blue, not red: nothing is deleted)
       if (can.cancel) groups[2].push({ key: 'cancel', label: T.CANCEL_PRIVATE, Icon: IconCalendarX, onSelect: () => openCancel(row, anchor) });
@@ -751,7 +752,7 @@ export default function PrivateTestingTab({
       { key: 'count', label: T.CARD_PRIVATE, Icon: IconUsers, value: cards.count },
       { key: 'paid', label: T.CARD_PAID, Icon: IconCheck, value: cards.paid, note: cards.owesMore > 0 ? T.owesMoreCount(cards.owesMore) : null, warn: true },
       { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconClock, value: cards.notPaid },
-      { key: 'money', label: T.CARD_PAYMENTS, Icon: IconCash, value: T.dollars(cards.paymentsCents), note: cards.cancelledCents > 0 ? T.includesCancelled(cards.cancelledCents) : null },
+      { key: 'money', label: T.CARD_PAYMENTS, Icon: IconSum, value: T.dollars(cards.paymentsCents), note: cards.cancelledCents > 0 ? T.includesCancelled(cards.cancelledCents) : null }, // ti-sum = a money total (v0.303)
     ];
     const sideLabelId = `${panelId}-side`;
     let list;
