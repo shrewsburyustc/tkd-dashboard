@@ -95,7 +95,7 @@ function TestingHeader({ school, action, staffLine, tab, onTab, ids }) {
               }}
               id={ids.tab(t.key)}
               type="button"
-              className={`ttab${current ? ' is-current' : ''}`}
+              className={`ttab${current ? ' is-current' : ''}${t.key === 'private' ? ' ttab--end' : ''}`}
               role="tab"
               aria-selected={current ? 'true' : 'false'}
               aria-controls={ids.panel(t.key)}

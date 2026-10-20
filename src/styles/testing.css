@@ -72,6 +72,13 @@
   display: none;
 }
 
+/* Phase 4 (rulebook v0.401): Private testing sits at the far right of the tab bar, out of the
+   way. margin-left: auto pushes it right when there is room; when the bar is too narrow and
+   scrolls (phones), the auto margin is simply 0 and the tabs sit side by side. */
+.ttab--end {
+  margin-left: auto;
+}
+
 .ttab {
   display: flex;
   flex: none;
