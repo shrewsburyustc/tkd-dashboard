@@ -151,10 +151,11 @@
 //
 //   15. 0013 (Camps), on its OWN fresh database (stepCamps; the main one
 //       ends step 13 with the 0010 down-script, so it no longer looks like
-//       production): 0001-0006 + 0010 (+ 0011 once stepCamps adds it) as on production, then 0013, its
-//       tests and every earlier test file, live checks AS camps_registrar,
-//       a seeded TEST camp, a second apply (re-run safety), and last the
-//       "Undo 0013" script of SETUP.md - see stepCamps below.
+//       production): 0001-0006, 0010 and 0011 in production's order, then
+//       0013, its tests and every earlier test file (0011's included), live
+//       checks AS camps_registrar, a seeded TEST camp, a second apply
+//       (re-run safety), and last the "Undo 0013" script of SETUP.md - see
+//       stepCamps below.
 //
 // THE FIXTURE fixtures/0011_as_applied_2026-10-19.sql
 //   An exact copy of 0011 as it was pasted into production on 2026-10-19
@@ -1336,11 +1337,11 @@ async function financeIcuCheck() {
 // The main database can't be used for this step: step 13g ends with the
 // 0010 down-script, so it no longer looks like production. stepCamps
 // therefore builds its OWN fresh database in production's order
-// (0001-0006, then 0010) and puts 0013 on top:
+// (0001-0006, then 0010, then 0011) and puts 0013 on top:
 //   a. 0013_fingerprints.sql must not contain the words the Supabase
 //      connection refuses
-//   b. the 0003 / 0004 / 0005 / 0006 / 0010 fingerprints are taken, 0013
-//      is applied, and they must be IDENTICAL afterwards (0013 changed
+//   b. the 0003 / 0004 / 0005 / 0006 / 0010 / 0011 fingerprints are taken,
+//      0013 is applied, and they must be IDENTICAL afterwards (0013 changed
 //      none of their objects)
 //   c. 0013_tests.sql, then every earlier test file again
 //   d. "live" checks AS camps_registrar: every table, the counter, a
@@ -1351,7 +1352,7 @@ async function financeIcuCheck() {
 //      camps_registrar, one check-in and one payment; then 0013_tests.sql
 //      again (before AND after a camp exists)
 //   f. 0013 applied a SECOND time: no row changed, the fingerprints
-//      identical, 0013_tests.sql and the 0005 / 0006 / 0010 tests pass
+//      identical, 0013_tests.sql and the 0005 / 0006 / 0010 / 0011 tests pass
 //   g. LAST: the "Undo 0013" script of SETUP.md (read from SETUP.md, so
 //      the tested text is the documented text): afterwards no camp object
 //      or camps_registrar is left, the earlier fingerprints equal step b's
@@ -1373,8 +1374,10 @@ async function stepCamps() {
     ...(await fingerprints(cdb, '0005_fingerprints.sql')),
     ...(await fingerprints(cdb, '0006_fingerprints.sql')),
     ...(await fingerprints(cdb, '0010_fingerprints.sql')),
+    ...(await fingerprints(cdb, '0011_fingerprints.sql')),
   ];
   const earlierTests = async (cdb, label) => {
+    await runTestFile(cdb, `${L}0011_tests.sql (${label})`, '0011_tests.sql', 'ALL 0011 TESTS PASSED');
     await runTestFile(cdb, `${L}0010_tests.sql (${label})`, '0010_tests.sql', 'ALL 0010 TESTS PASSED');
     await runTestFile(cdb, `${L}0006_tests.sql (${label})`, '0006_tests.sql', 'ALL 0006 TESTS PASSED');
     await runTestFile(cdb, `${L}0005_tests.sql (${label})`, '0005_tests.sql', 'ALL 0005 TESTS PASSED');
@@ -1533,7 +1536,7 @@ async function stepCamps() {
   const cdb = await buildBase(L);
   if (!cdb) return null;
   for (const file of ['0003_testing_classes_ranks.sql', '0004_staff_accounts.sql', '0005_testing_events.sql',
-    '0006_star_testing.sql', '0010_testing_results.sql']) {
+    '0006_star_testing.sql', '0010_testing_results.sql', '0011_finance.sql']) {
     if (!(await run(cdb, `${L}apply ${file}`, read('migrations', file)))) return null;
   }
 
@@ -1544,7 +1547,7 @@ async function stepCamps() {
   // b. apply 0013; the earlier fingerprints don't move
   const earlierBefore = await earlier(cdb);
   if (!(await run(cdb, `${L}apply 0013_camps.sql`, read('migrations', '0013_camps.sql')))) return null;
-  record(`${L}0003 / 0004 / 0005 / 0006 / 0010 fingerprints identical before/after 0013`,
+  record(`${L}0003 / 0004 / 0005 / 0006 / 0010 / 0011 fingerprints identical before/after 0013`,
     JSON.stringify(earlierBefore) === JSON.stringify(await earlier(cdb)), `${earlierBefore.length} rows`);
 
   // c. the tests
