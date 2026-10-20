@@ -1,7 +1,7 @@
 # TKD Dashboard — Design Guidelines
 
 **School:** Jae H. Jeong's U.S. Taekwondo Center (U.S.T.C.) — Worcester and Shrewsbury, MA
-**Version:** 0.302 (draft) · **Last updated:** 2026-10-20
+**Version:** 0.714 (draft) · **Last updated:** 2026-10-20
 **Status:** Design outline only. Nothing in this document authorizes building or deploying.
 
 > **How to use this file:** Upload it at the start of any chat about the dashboard. Every screen, component, or feature built for the dashboard must follow the rules below. If a request conflicts with a rule, flag the conflict before building. Rules marked **(provisional)** depend on an open decision in section 10.
@@ -107,7 +107,7 @@ Section icons are added to this table only when that section is added (rule P7).
 | Forms (rail icon; decided v0.235) | `ti-clipboard-text` |
 | Prospects (rail icon; decided v0.236) | `ti-address-book` |
 | Finance (rail icon, last on the rail; on phones under More; decided v0.201, added to the map v0.301) | `ti-report-money` |
-| More (phone bottom bar, once needed — needed from v0.236: holds Testing, Schedule, Forms) | `ti-menu-2` |
+| More (phone bottom bar, once needed — needed from v0.236: holds Testing, Schedule, Forms, Camps and Finance; Camps added v0.714, Finance under More since v0.201) | `ti-menu-2` |
 
 **Actions**
 
@@ -380,7 +380,7 @@ Sections are added only when Jeffrey says so (rule P7). When one is added, it's 
 |---------|---------|-------|--------|
 | Color Belt testing *(designing)* | **Decided v0.32: full merge, rebuilt from scratch and improved.** Testing becomes a real dashboard section (rail icon, top bar, location switcher, lock/PIN, Admin/Staff). Every screen, the database tables and the rules are rebuilt from scratch to this rulebook, using the old system (`Testing\Color Belt Prototype`, Notion "Color Belt Testing System - Design", Supabase "USTC Color Belt Staging") as the feature reference only — no code or SQL is copied as-is. The old system keeps running untouched through the October testing events (10/29, 10/30); afterwards its data is moved and the staging project is retired. Inventory: `TKD-ColorBelt-Inventory.md`. | 2026-10-15 | Designing (inventory done 2026-10-16) |
 | Star testing *(designing)* | Testing for the stars between Dan ranks (1st Dan up to 4 stars, 2nd up to 3, 3rd up to 5). Lives **inside Testing** next to Color belt testing (v0.58). Joint event for both schools; works on Both. Rebuilt from scratch to this rulebook; the old prototype (`Testing\Star Testing`, never used) is the feature reference only. Inventory: `TKD-StarTesting-Inventory.md`. | 2026-10-16 | Designing |
-| Camps *(designed)* | Holiday and vacation camps (one day or several days; summer = one camp per week). Create camps for Worcester, Shrewsbury or both schools, reuse them as templates, set prices (grid by number of days + extras), families sign up online by QR code / link, staff see the roster per day and mark payments. Rail icon `ti-tent`, after Testing. Decisions v0.229–v0.232 and v0.700–v0.713; status `docs/Camps/TKD-Camps-Status.md`; mockups `docs/Camps/TKD-Camps-Mockups.html`. The old stand-alone `tkd-camps` app (Cloudflare Worker + D1) was only a test — nothing is moved from it. | 2026-10-18 | Building — screens approved, build plan OK (CP0, 2026-10-19), migration 0013 |
+| Camps *(designed)* | Holiday and vacation camps (one day or several days; summer = one camp per week). Create camps for Worcester, Shrewsbury or both schools, reuse them as templates, set prices (grid by number of days + extras), families sign up online by QR code / link, staff see the roster per day and mark payments. Rail icon `ti-tent`, after Testing. Decisions v0.229–v0.232 and v0.700–v0.714; status `docs/Camps/TKD-Camps-Status.md`; mockups `docs/Camps/TKD-Camps-Mockups.html`. The old stand-alone `tkd-camps` app (Cloudflare Worker + D1) was only a test — nothing is moved from it. | 2026-10-18 | Building — screens approved, build plan OK (CP0, 2026-10-19), migration 0013 |
 | Finance *(designing)* | Money the school takes in. **First tab: Daily report** — the day's payments (Color belt testing now, Star testing once built) for the school picked in the top bar. Decided by Jeffrey 2026-10-18 (v0.804); designed one question at a time in `docs/Finance/` (status file `TKD-Finance-Status.md`). | 2026-10-18 | Designing |
 | Home | Shows the most important info staff need, quickly — "today at a glance" style (decided v0.10). **Starts empty.** Nothing goes on Home until a section exists to feed it; each new section decides what (if anything) it adds to Home when that section is designed. **Header (decided v0.11):** school logo, time-of-day greeting ("Good evening"), today's date, and active location; stays permanently. **While empty:** one gray line under the header — "Nothing on Home yet. Items appear here as sections are added." — removed once real items exist. | 2026-10-15 | **Built and live** (v0.30). Mockups `TKD-Home-Mockups.html` approved 2026-10-15; deployed 2026-10-16. |
 
@@ -912,3 +912,4 @@ To be decided one at a time, each with visual options (rule P3):
 | 0.609 | 2026-10-19 | Kiosk mode ends after 12 hours with a 30-minute staff warning, then "Please ask at the front desk"; a sign-up made just as it ends is saved as a normal one (10b). |
 | 0.301 | 2026-10-20 | Icon map (2.4): Finance's icons from v0.207 added — `ti-report-money` (rail), `ti-cash-register` Close the day…, `ti-lock-check` Close the day / Day closed, `ti-lock-open` Reopen day, `ti-sum` Total, `ti-cash` / `ti-receipt` / `ti-credit-card` payment kinds. The phone "More" row is updated by the camps branch. |
 | 0.302 | 2026-10-20 | `supabase/SETUP.md` sections for a migration are titled by its migration number (`## Migration 00NN`, `### 00NNa.`); sections already on main keep their numbers (10b). |
+| 0.714 | 2026-10-20 | §2.4: the phone "More" row now lists everything under More — Testing, Schedule, Forms, Camps and Finance (Main session asked; no behaviour change). Camps SETUP sections titled by migration number (v0.302): Migration 0013 / 0017. |
