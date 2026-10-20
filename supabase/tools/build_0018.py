@@ -418,14 +418,18 @@ figs = rep(figs, """           md5(coalesce(string_agg(i.row_id::text || '|' || 
 chg = block(base11, '-- 3h. finance_closing_changes_from(closing, items) - "Changed after',
             'revoke execute on function public.finance_closing_changes_from(uuid, jsonb) from public, anon, authenticated, service_role;\n')
 chg = rep(chg, """--   changed_count    chains added, removed, or with another row / amount /
---                    method than the snapshot""", """""" + B + """
+--                    method than the snapshot (a deleted student or
+--                    event, a Star candidate moved to the other school, a
+--                    late mis-click undo ... all show up here)""", """""" + B + """
 --   changed_count    chains added, removed, or with another amount / method /
 --                    kind than the snapshot. 0018: a snapshot item and an item
 --                    now are the same when EITHER the chain id or the row id
 --                    agrees (a row belongs to one chain, so nothing pairs
 --                    twice) - so a Move, an Undo move made before a close of
 --                    0011's time, or a moved payment whose event was deleted
---                    later are not differences; the money still is
+--                    later are not differences; the money still is (a
+--                    deleted student or event, a Star candidate moved to the
+--                    other school, a late mis-click undo ... all show up)
 """ + E + """""")
 chg = rep(chg, """    from (select x.source, x.payment_id, x.row_id, x.amount_cents, x.method
             from jsonb_to_recordset(coalesce(p_items, '[]'::jsonb))
@@ -504,7 +508,8 @@ head = r"""-- ==================================================================
 --   the Daily report, Close the day, History, Export, the payment detail,
 --   the Home reminder and the Both summary all include them. Build
 --   contract: docs/Dashboard Docs/Build contracts/CONTRACT-0018.md.
---   Production order: 0011 -> (camps) 0013 + 0017 -> 0014 -> 0018.
+--   Production order: 0011 (with its speed fix, SETUP 15e) -> camps'
+--   0013 + 0017 -> 0014 -> 0018. Forward-only: there is no undo file.
 --
 -- WHY IT EXISTS
 --   0014 keeps private testing money in its own table
@@ -560,13 +565,23 @@ head = r"""-- ==================================================================
 
 begin;
 
--- The guard: 0018 is built over camps' 0017 (camp payments in Finance) and
--- must come after it (and after 0014, Color Belt private testing).
--- Camps' 0017 leaves its mark in the chain helper's code ("source: camp
--- (0017)"); without it, or without 0014's private payments table, this
--- file stops here and nothing is changed.
+-- The guard: this file stops here, and nothing is changed, unless
+--   * 0011 with its speed fix is applied (SETUP section 15e: its paid_on
+--     index exists),
+--   * 0014 (Color Belt private testing) is applied,
+--   * camps' 0017 is applied (its "source: camp (0017)" mark), and
+--   * the three Finance functions 0018 shares with camps' 0017 are EXACTLY
+--     what 0017 at git fb4ec24 made - or what this file made (a re-run).
+--     They are compared by the md5 of their code without comments and
+--     white space (as the fingerprints files do). If camps changed 0017
+--     after fb4ec24, pasting this file would silently undo that change, so
+--     0018 must first be rebuilt over the new 0017 (supabase/tools/
+--     build_0018.py).
 do $$
 begin
+  if to_regclass('public.finance_testing_payments_paid_on_idx') is null then
+    raise exception '0018 needs migration 0011 with its speed fix (SETUP section 15e) first';
+  end if;
   if to_regclass('public.testing_private_payments') is null then
     raise exception '0018 needs migration 0014 (Color Belt private testing) first';
   end if;
@@ -574,6 +589,17 @@ begin
                   where n.nspname = 'public' and p.proname = 'finance_chain_steps_core'
                     and position('source: camp (0017)' in p.prosrc) > 0) then
     raise exception '0018 must be applied after camps'' 0017 - not yet (SETUP section 18)';
+  end if;
+  if exists (select 1
+               from (values
+@@GUARD_VALUES@@
+                    ) as v(name, md5_0017, md5_0018)
+               left join (select p.proname,
+                                 md5(regexp_replace(regexp_replace(p.prosrc, '--[^\n]*', '', 'g'), '\s+', '', 'g')) as md5
+                            from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                           where n.nspname = 'public') as l on l.proname = v.name
+              where l.md5 is null or l.md5 not in (v.md5_0017, v.md5_0018)) then
+    raise exception '0018 was built over camps'' 0017 at fb4ec24; the live 0017 differs - rebuild 0018 first (supabase/tools/build_0018.py)';
   end if;
 end;
 $$;
@@ -613,9 +639,11 @@ def verify(name, old, new):
             inside.append(flag)
     bad = []
     changed = 0
+    replaced = []
     for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes():
         if tag == 'equal':
             continue
+        replaced += [x for x in a[i1:i2]]
         if j1 == j2:
             bad.append('base lines removed: ' + ' | '.join(x.strip() for x in a[i1:i2])[:200])
             continue
@@ -634,12 +662,48 @@ def verify(name, old, new):
             bad.append('camp block changed: ' + old[i:k][:120])
         camps += 1
         pos = k
-    print(f'  check {name}: {changed} new / changed lines, all marked; {camps} camp blocks kept' if not bad
+    print(f'  check {name}: {changed} new / changed lines, all marked; {camps} camp blocks kept; '
+          f'{len(replaced)} base lines replaced (by marked lines):' if not bad
           else f'  check {name}: PROBLEMS')
+    for x in replaced:
+        print('      - ' + x.rstrip())
     for x in bad:
         print('    ' + x)
     return not bad
 
+
+# the md5 of a function body, as the fingerprints and the guard work it
+# out: comments (-- to the end of the line) and all white space removed
+import hashlib
+import re
+
+
+def body_md5(func_text):
+    i = func_text.index('as $$') + len('as $$')
+    j = func_text.index('$$;', i)
+    body = re.sub(r'--[^\n]*', '', func_text[i:j])
+    body = re.sub(r'\s+', '', body)
+    return hashlib.md5(body.encode('utf-8')).hexdigest()
+
+
+def only_function(text, name):
+    # the "create ... function public.<name>(" ... "$$;" part of a block
+    i = text.index('function public.' + name + '(')
+    i = text.rindex('create', 0, i)
+    return text[i:text.index('$$;', text.index('as $$', i)) + 3]
+
+
+GUARD_MD5 = {name: (body_md5(only_function(src17, name)), body_md5(only_function(src18, name)))
+             for name, src17, src18 in [
+                 ('finance_chain_steps_core', block(base17, '-- 3a (0011) with a third source, camp.',
+                  'revoke execute on function public.finance_chain_steps_core(date, date, text, uuid) from public, anon, authenticated, service_role;\n'), steps),
+                 ('finance_money_rows_core', block(base17, '-- 3b (0011) with camp items.',
+                  'revoke execute on function public.finance_money_rows_core(text, date, date, text, uuid) from public, anon, authenticated, service_role;\n'), money),
+                 ('finance_payment_detail', block(base17, '-- 5d (0011) for camp payments too.',
+                  'grant  execute on function public.finance_payment_detail(text, uuid) to authenticated;\n'), det)]}
+guard_values = ',\n'.join(f"           ('{n}', '{a}', '{b}')" for n, (a, b) in GUARD_MD5.items())
+head = head.replace('@@GUARD_VALUES@@', guard_values)
+print('  guard: ' + '; '.join(f'{n} 0017 {a[:8]} / 0018 {b[:8]}' for n, (a, b) in GUARD_MD5.items()))
 
 ok = all([
     verify('finance_chain_steps_core (over 0017)', block(base17, '-- 3a (0011) with a third source, camp.',
@@ -658,6 +722,6 @@ ok = all([
 if not ok:
     raise SystemExit('build_0018: the self-check failed (see above); nothing written')
 
-out = head + steps + '\n' + items + '\n' + money + '\n' + figs + chg + det + '\ncommit;\n'
+out = head + steps + '\n' + items + '\n' + money + '\n' + figs + '\n' + chg + '\n' + det + '\ncommit;\n'
 open(out_path, 'w', encoding='utf-8', newline='').write(out.replace('\n', '\r\n'))
 print('ok', len(out.splitlines()), 'lines')

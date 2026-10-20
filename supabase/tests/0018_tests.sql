@@ -31,6 +31,7 @@
 --         and catalog (the index; the six replaced functions' rights)
 --     P11 near misses: rows that LOOK like an undo move (no login, the
 --         payment's recorded_at) but aren't one stay an undo + a payment
+--         (Color Belt, and the same look-alike on Star and camp rows)
 --     P12 move -> undo move -> move -> undo move (edge case 1): the money
 --         is right (at most one extra undone line)
 --     P13 an event deleted after a move, on a day closed under 0018: not
@@ -45,7 +46,7 @@
 --   ROLLBACK. NEVER change the final "rollback;" to "commit;".
 --
 -- BEFORE YOU RUN IT
---   0011, (camps' 0013 + 0017), 0014 and 0018 are applied. Replace
+--   0011 (with its speed fix), camps' 0013 + 0017, 0014 and 0018 are applied. Replace
 --   <paste-admin-UID-here> and <paste-desk-UID-here> (Authentication ->
 --   Users) and run the whole file in the SQL Editor. Expected: one row
 --   "ALL 0018 TESTS PASSED"; a failure says "TEST FAILED:" / "TEST SETUP:"
@@ -632,6 +633,57 @@ begin
   v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.finance_day(%L, %L)', 'worcester', v_d));
   perform pg_temp.t_eq('P11 an undo + a payment each, not undo moves', pg_temp.t_mine(v_r, 'Move 6'),
     'counted:false:3000:check,counted:false:4000:cash,undone:false:3000:check,undone:false:4000:cash');
+  -- (c) the same look-alike on STAR and CAMP rows (a reversal by a login on
+  --     the payment's own day + a no-login payment with the same recorded
+  --     time, amount, method and day, by the reverser's name): the undo
+  --     move rule is Color Belt only, so these stay an undo + a payment
+  insert into public.star_events (name, testing_date, start_time, where_code, registration_open,
+                                  public_code_worcester, public_code_shrewsbury, created_by_name, updated_by_name)
+  values (v_tag || ' star', v_today + 30, '10:00', 'worcester', false,
+          public.testing_new_public_code(), public.testing_new_public_code(), '', '')
+  returning id into v_x;
+  perform public.star_copy_template_into_event(v_x);
+  insert into public.star_candidates (event_id, first_name, last_name, location_code, dan, stars_from, paying_by, source,
+                                      created_by_name, updated_by_name)
+  values (v_x, 'Fin18', 'Look Star', 'shrewsbury', 1, 0, 'cash', 'desk', '', '')
+  returning id into v_x;
+  v_d := v_b + 33;
+  v_p := pg_temp.t_pay('star', v_x, 'payment', 14000, 'cash', v_d, pg_temp.t_at(v_d, '15:00'), v_desk, v_dn);
+  insert into public.star_payments (candidate_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by,
+                                    recorded_by_name, reverses_payment_id)
+  values (v_x, 'reversal', -14000, 'cash', v_d, now(), v_admin, v_an, v_p);
+  perform pg_temp.t_pay('star', v_x, 'payment', 14000, 'cash', v_d, pg_temp.t_at(v_d, '15:00'), null, v_an);
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.finance_day(%L, %L)', 'shrewsbury', v_d));
+  perform pg_temp.t_eq('P11 a Star look-alike is an undo + a payment', pg_temp.t_mine(v_r, 'Look Star'),
+    'counted:false:14000:cash,undone:false:14000:cash');
+
+  insert into public.camps (location_code, both_schools, name, start_time, end_time, signup_opens_on, signup_closes_on,
+                            early_until, min_age, max_age, waiver_text, public_code, created_by_name, updated_by_name)
+  values ('worcester', false, v_tag || ' camp', '09:00', '15:00', v_today, v_today + 30, v_today + 30, 5, 12,
+          'I agree to the camp rules.', public.testing_new_public_code(), '', '')
+  returning id into v_x;
+  insert into public.camp_days (camp_id, day) values (v_x, v_today + 30);
+  insert into public.camp_signups (camp_id, submission_id, parent_name, parent_relation, parent_phone, emergency_name,
+                                   emergency_relation, emergency_phone, price_kind, signed_up_on, signature, signed_at,
+                                   signature_deleted_at, waiver_text_signed, ack_version, created_by_name, updated_by_name)
+  values (v_x, gen_random_uuid(), 'Fin Parent', 'Parent', '5085550100', 'Fin Contact', 'Friend', '5085550101',
+          'early', v_today, null, now(), now(), 'I agree to the camp rules.', 'camp-2026-10-18', '', '')
+  returning id into v_id;
+  insert into public.camp_campers (signup_id, camp_id, position, first_name, last_name, age, member, paying_by, base_cents,
+                                   created_by_name, updated_by_name)
+  values (v_id, v_x, 1, 'Fin18', 'Look Camp', 8, true, 'cash', 7500, '', '')
+  returning id into v_x;
+  insert into public.camp_payments (camper_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name)
+  values (v_x, 'payment', 7500, 'cash', v_d, 'worcester', pg_temp.t_at(v_d, '15:00'), v_desk, v_dn)
+  returning id into v_p;
+  insert into public.camp_payments (camper_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by,
+                                    recorded_by_name, reverses_payment_id)
+  values (v_x, 'reversal', -7500, 'cash', v_d, 'worcester', now(), v_admin, v_an, v_p);
+  insert into public.camp_payments (camper_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name)
+  values (v_x, 'payment', 7500, 'cash', v_d, 'worcester', pg_temp.t_at(v_d, '15:00'), null, v_an);
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.finance_day(%L, %L)', 'worcester', v_d));
+  perform pg_temp.t_eq('P11 a camp look-alike is an undo + a payment', pg_temp.t_mine(v_r, 'Look Camp'),
+    'counted:false:7500:cash,undone:false:7500:cash');
 
 
   -- ===================================================================

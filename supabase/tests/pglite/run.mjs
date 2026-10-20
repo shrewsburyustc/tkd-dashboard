@@ -1578,6 +1578,32 @@ async function step18() {
     refused || 'it ran');
   if (!(await run(db, '[0018] camps\' 0013 + 0017', CAMPS_SQL()))) return null;
   await runTestFile(db, '[0018] camps\' 0017_tests.sql (before 0018)', CAMPS_TESTS, 'ALL 0017 TESTS PASSED');
+  // the guard's other branches, each inside a transaction that is rolled
+  // back: (1) 0011 without its speed fix (its paid_on index missing);
+  // (2) one of the three shared functions not what camps' 0017 at fb4ec24
+  // made (here finance_payment_detail with one word changed)
+  const guardTry = async (label, before, wanted) => {
+    const detailBefore = await one(db, `select md5(p.prosrc) from pg_proc p where p.proname = 'finance_payment_detail'`);
+    let message = '';
+    try {
+      await db.exec('begin;\n' + before + '\n' + MIGRATION_0018());
+    } catch (error) {
+      message = error.message;
+    }
+    await db.exec('rollback;').catch(() => {});
+    record(`[0018] the guard refuses 0018 when ${label} (it stops, nothing changes)`,
+      message.includes(wanted)
+        && (await one(db, `select to_regclass('public.finance_testing_private_payments_paid_on_idx') is null`)) === true
+        && (await one(db, `select to_regclass('public.finance_testing_payments_paid_on_idx') is not null`)) === true
+        && (await one(db, `select md5(p.prosrc) from pg_proc p where p.proname = 'finance_payment_detail'`)) === detailBefore,
+      message || 'it ran');
+  };
+  await guardTry('0011 has no speed fix', 'drop index public.finance_testing_payments_paid_on_idx;', 'speed fix');
+  const t17 = CAMPS_0017().replace(/\r\n/g, '\n');
+  const at = t17.indexOf('create or replace function public.finance_payment_detail(');
+  const changedDetail = t17.slice(at, t17.indexOf('$$;', t17.indexOf('as $$', at)) + 3)
+    .replace("'status', 'no_access'", "'status', 'no_access_changed'");
+  await guardTry('the live 0017 differs from fb4ec24 (finance_payment_detail changed)', changedDetail, 'rebuild 0018 first');
   const earlier = async () => [
     ...(await fingerprints(db, '0003_fingerprints.sql')), ...(await fingerprints(db, '0004_fingerprints.sql')),
     ...(await fingerprints(db, '0005_fingerprints.sql')), ...(await fingerprints(db, '0006_fingerprints.sql')),

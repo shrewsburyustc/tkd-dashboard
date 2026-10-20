@@ -7,8 +7,12 @@
 --   Color Belt private testing money) and that have private testing money
 --   or a Move to private testing on them. One row per school day:
 --     school, day, closed_by, closed_at,
---     private_payments    private testing payments dated that day (not
---                         counted when the day was closed)
+--     private_payments    private testing payments dated that day that
+--                         still count (not undone - a mis-click hidden
+--                         undo included - and an edited payment once, as
+--                         its new row; moved-in copies are in the next
+--                         column instead). None was counted when the day
+--                         was closed.
 --     moved_before_close  event payments of that day moved to a private
 --                         testing BEFORE the day was closed (under 0011
 --                         they showed as undone, so the close left them
@@ -41,6 +45,9 @@ private_days as (
     from public.testing_private_payments p
     join public.testing_private t on t.id = p.private_id
    where p.kind = 'payment' and p.moved_from_payment_id is null
+     -- still counting: not reversed (an undo, a hidden mis-click, or the
+     -- old row of an edit - whose new row is counted instead)
+     and not exists (select 1 from public.testing_private_payments x where x.reverses_payment_id = p.id)
    group by t.location_code, p.paid_on
 ),
 moved as (
