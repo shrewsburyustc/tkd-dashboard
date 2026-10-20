@@ -44,7 +44,7 @@ export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmi
     const id = window.requestAnimationFrame(() => {
       const root = formRef.current;
       if (!root) return;
-      const target = (problemKey && root.querySelector('[aria-invalid="true"], .notice')?.closest('.field, fieldset, .fchildren, .fwaiver')?.querySelector('input, select, textarea'))
+      const target = (problemKey && root.querySelector('[aria-invalid="true"], .notice')?.closest('.field, fieldset, .fchildren, .fwaiver')?.querySelector('input:not([disabled]), select, textarea'))
         || root.querySelector('input:not([type="hidden"]), select, textarea');
       target?.focus();
     });

@@ -164,6 +164,14 @@
 //       pass, 0015 twice more is harmless, a minimal database gives the
 //       same fingerprints, and on step 16's database (a sign-up logged in
 //       change_log before 0012) 0015 refuses to apply.
+//   18. 0019 (school phone) on a database built in the live order (with
+//       0011 and 0015): the other migrations' fingerprints don't move -
+//       except 0005's line for the locations table, which gains the phone
+//       column's read right (and nothing else) - 0019_tests.sql and every
+//       earlier test file pass, 0019 twice more is harmless, a 0005
+//       re-run takes the phone's read right away and a 0019 re-run brings
+//       it back (the numbers kept), and a minimal database gives the same
+//       0019 fingerprints.
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -488,6 +496,10 @@ async function main() {
   console.log('\nMigration 0015 (family history):');
   const after15 = after5 ? await step17(newStudents?.db ?? null) : null;
 
+  // 18. 0019 (school phone)
+  console.log('\nMigration 0019 (school phone):');
+  const after19 = after5 ? await step18() : null;
+
   console.log('\nFunction fingerprints (name  arguments  body_md5  security_definer  settings  owner  execute_rights):');
   for (const line of after) console.log('  ' + line);
   console.log('\n0004 fingerprints (kind  item  detail):');
@@ -513,6 +525,10 @@ async function main() {
   if (after15) {
     console.log('\n0015 fingerprints (kind  item  detail):');
     for (const line of after15) console.log('  ' + line);
+  }
+  if (after19) {
+    console.log('\n0019 fingerprints (kind  item  detail):');
+    for (const line of after19) console.log('  ' + line);
   }
   if (after11) {
     console.log('\n0011 fingerprints (kind  item  detail):');
@@ -1301,6 +1317,111 @@ async function step17(refuseDb) {
     record('[0015 refuse] the step-16 database exists for the R5 check', false);
   }
   return after15;
+}
+
+// =====================================================================
+// Step 18: 0019 (school phone), in the live order.
+//   a. a database built like production on 2026-10-19 (as step 17) plus
+//      0015 and 0011
+//   b. 0019; the other fingerprints don't move, except 0005's "table
+//      locations" line, which may only gain "phone:" read rights
+//   c. 0019_tests.sql, then every earlier test file
+//   d. 0019 twice more: fingerprints and the saved phone unchanged
+//   e. 0005 re-run: the phone can't be read any more; 0019 re-run: it
+//      can again and the number is still there (SETUP section 17)
+//   f. a minimal database gives the same 0019 fingerprints
+// Returns 0019's fingerprints.
+// =====================================================================
+async function step18() {
+  const L = '[0019] ';
+  const db = await buildBase(L);
+  if (!db) return null;
+  for (const [label, file] of [['0003', '0003_testing_classes_ranks.sql'], ['0004', '0004_staff_accounts.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+  await run(db, L + 'apply built-in seed', builtInSeedSql());
+  if (!(await run(db, L + 'apply 0005', read('migrations', '0005_testing_events.sql')))) return null;
+  await seedTestEvent(db);
+  for (const [label, file] of [['0006', '0006_star_testing.sql'], ['0010 (grading results)', '0010_testing_results.sql'],
+    ['0007', '0007_schedule.sql'], ['0008', '0008_calendar.sql'], ['0009', '0009_forms.sql'], ['0012', '0012_prospects.sql'],
+    ['0015', '0015_family_history.sql'], ['0011 (Finance)', '0011_finance.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // b. apply 0019; nothing else moves (0005's locations line: only the phone right)
+  const prints = ['0003_fingerprints.sql', '0004_fingerprints.sql', '0005_fingerprints.sql', '0006_fingerprints.sql', '0010_fingerprints.sql',
+    '0007_fingerprints.sql', '0008_fingerprints.sql', '0009_fingerprints.sql', '0012_fingerprints.sql', '0015_fingerprints.sql', '0011_fingerprints.sql'];
+  const before = {};
+  for (const f of prints) before[f] = await fingerprints(db, f);
+  if (!(await run(db, L + 'apply 0019_school_phone.sql', read('migrations', '0019_school_phone.sql')))) return null;
+  for (const f of prints) {
+    const after = await fingerprints(db, f);
+    if (f.startsWith('0005')) {
+      const gone = before[f].filter((line) => !after.includes(line));
+      const added = after.filter((line) => !before[f].includes(line));
+      // 0005's "table locations" line gains "phone>authenticated:SELECT"; its trigger list gains
+      // 0019's locations_phone_before_write. Nothing else may move.
+      const table = added.filter((line) => /^table {2}locations /.test(line));
+      const others = added.filter((line) => !table.includes(line));
+      const onlyPhone = gone.length === 1 && /^table {2}locations /.test(gone[0]) && table.length === 1
+        && table[0].includes('phone>authenticated:SELECT') && table[0].replace(/,?phone>authenticated:SELECT/, '') === gone[0]
+        && others.every((line) => /^trigger {2}locations\.locations_phone_before_write /.test(line));
+      record(L + '0005 fingerprints: only the locations line moved, by the phone read right', gone.length + added.length === 0 || onlyPhone,
+        gone.length + added.length === 0 ? 'unchanged' : `${gone.length} line(s) -> ${added.length}: ${added.map((l) => l.slice(0, 50)).join(' | ')}`);
+    } else {
+      record(`${L}${f.slice(0, 4)} fingerprints unchanged by 0019`, JSON.stringify(before[f]) === JSON.stringify(after), `${after.length} rows`);
+    }
+  }
+
+  // c. its own tests, then every earlier test file
+  await runTestFile(db, L + '0019_tests.sql', '0019_tests.sql', 'ALL 0019 TESTS PASSED');
+  for (const [file, ok] of [['verify_pin_tests.sql', 'ALL PIN TESTS PASSED'], ['0002_tests.sql', 'ALL 0002 TESTS PASSED'], ['0003_tests.sql', 'ALL 0003 TESTS PASSED'],
+    ['0004_tests.sql', 'ALL 0004 TESTS PASSED'], ['0005_tests.sql', 'ALL 0005 TESTS PASSED'], ['0006_tests.sql', 'ALL 0006 TESTS PASSED'], ['0010_tests.sql', 'ALL 0010 TESTS PASSED'],
+    ['0007_tests.sql', 'ALL 0007 TESTS PASSED'], ['0008_tests.sql', 'ALL 0008 TESTS PASSED'], ['0009_tests.sql', 'ALL 0009 TESTS PASSED'], ['0012_tests.sql', 'ALL 0012 TESTS PASSED'],
+    ['0015_tests.sql', 'ALL 0015 TESTS PASSED'], ['0011_tests.sql', 'ALL 0011 TESTS PASSED']]) {
+    await runTestFile(db, `${L}${file} (after 0019)`, file, ok);
+  }
+
+  // d. re-run safety (twice), with a real phone saved
+  await db.exec("select set_config('tkd.action', 'manual', false); update public.locations set phone = '(508) 555-0100' where code = 'worcester'; select set_config('tkd.action', '', false);");
+  const phoneSql = "select coalesce(phone, '') || '/' || version from public.locations where code = 'worcester'";
+  const before19 = await fingerprints(db, '0019_fingerprints.sql');
+  const phoneBefore = await one(db, phoneSql);
+  for (const n of ['SECOND', 'THIRD']) {
+    await run(db, `${L}apply 0019 a ${n} time (re-run safety)`, read('migrations', '0019_school_phone.sql'));
+  }
+  record(L + '0019 re-runs kept the saved phone and the version', phoneBefore === (await one(db, phoneSql)), phoneBefore);
+  const after19 = await fingerprints(db, '0019_fingerprints.sql');
+  record(L + '0019 fingerprints identical before/after the re-runs', JSON.stringify(before19) === JSON.stringify(after19), `${after19.length} rows`);
+  await runTestFile(db, L + '0019_tests.sql (after re-runs)', '0019_tests.sql', 'ALL 0019 TESTS PASSED');
+
+  // e. a 0005 re-run takes the read right; a 0019 re-run brings it back
+  const canRead = "select has_column_privilege('authenticated', 'public.locations', 'phone', 'select')";
+  if (await run(db, L + 're-run 0005 (as the 0010 undo does)', read('migrations', '0005_testing_events.sql'))) {
+    record(L + 'after a 0005 re-run the phone is not readable (expected; SETUP says re-run 0019)', (await one(db, canRead)) === false);
+    await run(db, L + 're-run 0019 after 0005', read('migrations', '0019_school_phone.sql'));
+    record(L + 'after the 0019 re-run the phone is readable again and kept', (await one(db, canRead)) === true && phoneBefore === (await one(db, phoneSql)));
+    const again = await fingerprints(db, '0019_fingerprints.sql');
+    record(L + '0019 fingerprints back to the same after 0005 + 0019 re-runs', JSON.stringify(again) === JSON.stringify(after19), `${again.length} rows`);
+  }
+
+  // f. a minimal database gives the same fingerprints
+  const M = '[0019 minimal] ';
+  const mini = await buildBase(M);
+  if (mini) {
+    let ok = true;
+    for (const f of ['0003_testing_classes_ranks.sql', '0004_staff_accounts.sql']) ok = ok && (await run(mini, M + 'apply ' + f, read('migrations', f)));
+    if (ok) await run(mini, M + 'apply built-in seed', builtInSeedSql());
+    for (const f of ['0005_testing_events.sql', '0007_schedule.sql', '0008_calendar.sql', '0009_forms.sql', '0019_school_phone.sql']) {
+      ok = ok && (await run(mini, M + 'apply ' + f, read('migrations', f)));
+    }
+    if (ok) {
+      const p = await fingerprints(mini, '0019_fingerprints.sql');
+      record(M + '0019 fingerprints identical to the live-order database', JSON.stringify(p) === JSON.stringify(after19), `${p.length} rows`);
+      await runTestFile(mini, M + '0019_tests.sql', '0019_tests.sql', 'ALL 0019 TESTS PASSED');
+    }
+  }
+  return after19;
 }
 
 // ---------------------------------------------------------------------

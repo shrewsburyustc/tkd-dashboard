@@ -386,6 +386,16 @@ h1:focus,
   font-size: 15px;
 }
 
+/* the school phone on a closed form: a tap-to-call link (F3 difference 4) */
+.fp-tel {
+  display: inline-block;
+  padding-block: 12px; /* a 44px-tall tap area without moving the line */
+  margin-block: -12px;
+  color: var(--color-blue);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .fp-state .fp-btn {
   margin-top: var(--space-12);
 }
@@ -411,8 +421,11 @@ h1:focus,
   color: var(--color-success-text);
 }
 
+/* the form's own message, as normal text under the short heading (F3 difference 3) */
 .fp-done__text {
   margin: 0;
+  font-size: var(--text-16);
+  line-height: 1.5;
   white-space: pre-line; /* keep the thank-you text's line breaks */
 }
 

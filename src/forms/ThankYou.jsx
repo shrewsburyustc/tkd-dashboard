@@ -1,6 +1,6 @@
 // ThankYou.jsx — the screen after a sign-up is saved (mockup screen 8, last phone).
-// Why it exists: the family sees the form's own thank-you message ({parent} and {class time}
-// filled in), each child's booked free class, and "Add to calendar" (an .ics file made in the
+// Why it exists: the family sees a short "Thanks, Maria!" heading, the form's own thank-you
+// message under it ({parent} and {class time} filled in; F3 difference 3), each child's booked free class, and "Add to calendar" (an .ics file made in the
 // browser, when the form has that switch on). Emails are OFF at launch (rulebook v0.601), so
 // this screen IS the confirmation: it asks the family to take a screenshot or write the time
 // down, and never says an email was sent.
@@ -11,7 +11,7 @@ import * as T from './text.js';
 export default function ThankYou({ form, sent, headingRef }) {
   const { bookings, values } = sent;
   const childName = (i) => values.children[i]?.first_name?.trim() || `Child ${i + 1}`;
-  const message = T.fillThankYou(form.thankYou, { parentName: values.answers.parent_name, bookings });
+  const message = T.thankYouBody(form.thankYou, { parentName: values.answers.parent_name, bookings });
 
   function addToCalendar() {
     const text = icsText({
@@ -28,9 +28,10 @@ export default function ThankYou({ form, sent, headingRef }) {
       <div className="fp-done__ok" aria-hidden="true">
         <IconCheck size={24} />
       </div>
-      <h1 id="fp-done-title" className="fp-title fp-done__text" ref={headingRef} tabIndex={-1}>
-        {message}
+      <h1 id="fp-done-title" className="fp-title" ref={headingRef} tabIndex={-1}>
+        {T.thanksHeading(values.answers.parent_name)}
       </h1>
+      {message && <p className="fp-done__text">{message}</p>}
       {bookings.length > 0 && (
         <div className="fp-done__times">
           <h2 className="fp-done__sub">{T.BOOKED_TITLE}</h2>

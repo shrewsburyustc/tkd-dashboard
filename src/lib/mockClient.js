@@ -485,6 +485,7 @@ export function createMockClient() {
     getSchedule: () => schedule.snapshot(),
     getCalendar: () => calendar.snapshot(),
     getClasses: () => testing.snapshot().classes.map((c) => ({ id: c.id, location_code: c.location_code, name: c.name })),
+    getSchoolPhone: (code) => { try { return JSON.parse(readStorage(TESTING_KEY))?.locations?.find?.((l) => l.code === code)?.phone ?? null; } catch { return null; } }, // 0019
     today: () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date()),
   });
 

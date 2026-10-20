@@ -17,7 +17,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readForm, readSubmit, toTimes } from './publicApi.js';
 import { icsText, schoolTimeToUtc } from './ics.js';
-import { fillThankYou, NO_CLASS_TIME } from './text.js';
+import { fillThankYou, NO_CLASS_TIME, thankYouBody, thanksHeading } from './text.js';
 import { template } from '../lib/forms/fields.js';
 import { createFormsBackend } from '../lib/mockForms.js';
 
@@ -68,7 +68,17 @@ group('thank-you text: {parent} and {class time}; no email wording', () => {
   assert.equal(fillThankYou('Thanks, {parent}! See you {class time}.', { parentName: ' Maria  Lopez ', bookings: [b] }), 'Thanks, Maria! See you Wednesday, January 13 at 4:00 pm.');
   assert.equal(fillThankYou('{class time}', { parentName: 'A', bookings: [b, { ...b, child: 1 }] }), 'Wednesday, January 13 at 4:00 pm');
   assert.equal(fillThankYou('{class time}', { parentName: 'A', bookings: [] }), NO_CLASS_TIME);
-  assert.match(fillThankYou(null, { parentName: 'Maria', bookings: [] }), /Maria/);
+  assert.match(fillThankYou(null, { parentName: 'Maria', bookings: [] }), /touch/);
+  // the short heading + the message under it (F3 difference 3)
+  assert.equal(thanksHeading(' Maria  Lopez '), 'Thanks, Maria!');
+  assert.equal(thanksHeading(''), 'Thanks!');
+  const info = { parentName: 'Maria', bookings: [b] };
+  assert.equal(thankYouBody("Thank you, {parent}! We'll see you soon.", info), "We'll see you soon.");
+  assert.equal(thankYouBody('Thanks {parent}!! See you {class time}.', info), 'See you Wednesday, January 13 at 4:00 pm.');
+  assert.equal(thankYouBody('Hi {parent}', info), '');
+  assert.equal(thankYouBody('See you {class time}, {parent}.', info), 'See you Wednesday, January 13 at 4:00 pm, Maria.');
+  assert.equal(thankYouBody('Thank you! Bring water.', info), 'Thank you! Bring water.');
+  assert.equal(thankYouBody(null, info), 'We will be in touch soon.');
   // Emails are off (rulebook v0.601): no page wording may promise one.
   const here = dirname(fileURLToPath(import.meta.url));
   for (const file of ['text.js', 'ThankYou.jsx', 'FormsApp.jsx', 'parts.jsx']) {

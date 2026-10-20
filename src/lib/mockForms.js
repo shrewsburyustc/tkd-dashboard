@@ -311,7 +311,8 @@ function isUsableStore(store) {
 
 // ----- The backend -----
 
-export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(), newId, getSchedule, getCalendar, getClasses, today }) {
+// getSchoolPhone(code) → the school's phone from Settings → Schools (0019), or null.
+export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(), newId, getSchedule, getCalendar, getClasses, today, getSchoolPhone = () => null }) {
   let failNext = false;
   const stamp = () => new Date(now()).toISOString();
   const fresh = () => {
@@ -726,7 +727,8 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
     const db = read();
     const form = db.forms.find((f) => f.slug === slug);
     if (!form || form.status === 'draft' || !form.published) return st('not_found');
-    const school = { school_name: SCHOOL_NAMES[form.location_code] ?? null, school_phone: null }; // no phone column yet (0005)
+    const phone = getSchoolPhone(form.location_code);
+    const school = { school_name: SCHOOL_NAMES[form.location_code] ?? null, school_phone: typeof phone === 'string' && phone ? phone : null }; // = locations.phone (0019)
     if (form.status === 'closed') return st('closed', school);
     return {
       status: 'ok', form_name: form.name, fields: clone(form.published), published_version: form.published_version, ...school,

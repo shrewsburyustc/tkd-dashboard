@@ -15,7 +15,7 @@
 //   onAnswer(fieldId, value)  onChildren(list)  onBooking(childIndex, timeKey | '')  onSignature(dataUrl | null)
 import { IconPlus, IconTrash } from '@tabler/icons-react';
 import Notice from '../../components/Notice.jsx';
-import { isVisible, MAX_CHILDREN } from '../../lib/forms/fields.js';
+import { isVisible, MAX_CHILDREN, NO_TIME_KEY } from '../../lib/forms/fields.js';
 import { formatDate } from '../../lib/schedule/versions.js';
 import { formatTime, parseTime } from '../../lib/schedule/time.js';
 import { weekStart } from '../../lib/calendar/days.js';
@@ -186,7 +186,8 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
     if (times === 'error') return <Notice key={f.id}>{T.TIMES_FAILED}</Notice>;
     return (
       <div key={f.id} className="fbooking">
-        <span className="field-label">{f.label}</span>
+        {/* With times showing, each child's own "Free class for …" is the label (F3 difference 2). */}
+        {times.length === 0 && <span className="field-label">{f.label}</span>}
         {f.help && <p className="field-hint">{f.help}</p>}
         {times.length === 0 ? (
           <p className="fnotimes">{noTimesText ?? T.NO_OPEN_TIMES}</p>
@@ -201,17 +202,17 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
               if (!groups.length || groups[groups.length - 1].label !== label) groups.push({ label, times: [] });
               groups[groups.length - 1].times.push(t);
             }
-            const chosen = values.bookings[i] ?? '';
+            const chosen = values.bookings[i] ?? null; // nothing ticked until the parent picks
             const name = `${idBase}-book-${i}`;
             // a brother's or sister's pick takes one of the spots too (design review, F3)
             const takenBy = (key) => children.map((x, j) => (j !== i && values.bookings[j] === key ? x.first_name.trim() || T.CHILD(j + 1) : null)).filter(Boolean);
             // Every time shows its spots left (Jeffrey, F5 difference 9); the last spot is amber.
             const slot = (key, text, spotsLeft) => {
-              const others = key ? takenBy(key) : [];
+              const others = key !== NO_TIME_KEY ? takenBy(key) : [];
               const spots = spotsLeft == null ? null : spotsLeft - others.length;
               const full = spots != null && spots <= 0 && chosen !== key;
               return (
-                <label key={key || 'none'} className={`ftslot${chosen === key ? ' is-on' : ''}${full ? ' is-full' : ''}`}>
+                <label key={key} className={`ftslot${chosen === key ? ' is-on' : ''}${full ? ' is-full' : ''}`}>
                   <input type="radio" name={name} value={key} checked={chosen === key} disabled={readOnly || full} onChange={() => onBooking(i, key)} />
                   <span className="ftslot-text">{text}</span>
                   {spots != null && (
@@ -220,8 +221,16 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
                 </label>
               );
             };
+            // this child has no answer yet after Next: marked, with its own message (design review F3)
+            const unpicked = problems[f.id] === 'booking_pick' && !chosen;
+            const errId = `${name}-err`;
             return (
-              <fieldset key={i} className="field cfieldset">
+              <fieldset
+                key={i}
+                className="field cfieldset"
+                aria-invalid={unpicked ? true : undefined}
+                aria-describedby={unpicked ? errId : undefined}
+              >
                 <legend className="field-label">{T.pickTimeFor(c.first_name.trim() || T.CHILD(i + 1))}</legend>
                 {groups.map((g) => (
                   <div key={g.label} role="group" aria-label={g.label}>
@@ -231,12 +240,14 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
                     )}
                   </div>
                 ))}
-                {slot('', T.NO_TIME, null)}
+                {slot(NO_TIME_KEY, T.NO_TIME, null)}
+                {unpicked && <Notice id={errId}>{T.pickTimeProblem(c.first_name.trim() || T.CHILD(i + 1))}</Notice>}
               </fieldset>
             );
           })
         )}
-        <Problem id={`${idBase}-${f.id}-err`} code={problems[f.id]} />
+        {/* "booking_pick" shows inside each unpicked child's list instead (above) */}
+        <Problem id={`${idBase}-${f.id}-err`} code={problems[f.id] === 'booking_pick' ? null : problems[f.id]} />
       </div>
     );
   }

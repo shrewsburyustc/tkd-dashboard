@@ -14,7 +14,7 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Forms-Build-Plan.md` (ap
 | F2 Migration 0009 + tests + security review | Done 2026-10-18; PGlite 78/78 |
 | F4 Staff screens + Calendar bookings + preview data; design review | Done 2026-10-18 (preview only); 9 differences wait for Jeffrey in F5 |
 | F1 Merge main (after Color Belt phase 2 is merged — the Main session merges when Jeffrey asks) | Waiting |
-| F3 Public page + Cloudflare function; security review | Waiting for F1 |
+| F3 Public page + Cloudflare function; security review | Built 2026-10-19 in preview (commit c7f988e + the differences below); security and design reviews done; 4 differences from mockup screen 8 decided (v0.602–v0.605). **Waiting:** migration **0019** (school phone) to be pasted live, then F6 |
 | F5 Jeffrey tries it in preview (and decides the F4 differences below) | Done 2026-10-18: differences decided (v0.243), Jeffrey tried the forms and Fill in — fine. Sign-ups show nowhere yet except Calendar bookings: that is Prospects (step 4) |
 | F6 Live setup (0009 after 0007 / 0008; two-connection race test; registrar password; Cloudflare settings) | 0009 applied and checked 2026-10-19 (fingerprints 190/192 rows before 0012, all 192 after; advisor expected-only; ALL 0009 TESTS PASSED). Still waiting: race test, registrar password, Cloudflare settings (with F3) |
 | F7 Go live, with Prospects (step 4) | Needs a separate OK |
@@ -103,3 +103,19 @@ The list as it was asked:
 ## Security re-check of the waiver rule (2026-10-18)
 
 No High or Medium findings. Applied: the answer check also treats a waiver as always visible (0009 forms_check_answers + preview), and the screen refuses any show_if that is not a plain object, like the database. Noted for go-live: a later rule change on a live database should also check the rows already saved. PGlite 78/78.
+
+## What F3 added (2026-10-19, preview only — nothing live, nothing pushed)
+
+- **Public page** `/f/<slug>` (`forms.html`, `src/forms/`): the steps, the children, a free-class time per child, the waiver with a drawn signature, the thank-you screen with "Add to calendar", and the closed / not found / paused / "didn't load" screens. Strict CSP on `/f`, `/f/*`, `/forms`.
+- **Pages Function** `functions/api/forms/[slug].js` (+ `functions/_lib/forms/`): GET the published form and open times, POST a sign-up; Turnstile, rate limit, honeypot, one database function through the restricted login `forms_registrar` (SETUP §16). Server tests 67/67.
+- **Merged main** (Finance) on 2026-10-19: conflicts in the rulebook, App.jsx, navItems.js, mockClient.js, SETUP.md, run.mjs — all "both sides added" (Finance kept SETUP §15 and run.mjs step 14; this branch's became §16 and steps 16-17).
+
+## Differences from mockup screen 8 — decided (Jeffrey, 2026-10-19)
+
+1. **v0.602** — each step's name is the heading, "Step n of N" under it.
+2. **v0.603** — each child's time starts blank; a time or "No time yet" is required; no outer "Free class time" label while times show (the staff Fill in asks too).
+3. **v0.604** — thank-you heading "Thanks, {first name}!", the form's message as normal text under it.
+4. **v0.605** — the school's phone, entered in **Settings → Schools** (new optional field), shows on a closed form as a tap-to-call link. Needs **migration 0019** (`0019_school_phone.sql`, number reserved by Main; 0016-0018 belong to other branches). PGlite step 18 tests it in the live order; SETUP §17 has the paste steps. **Not live yet** — apply 0019 before deploying this app version (Settings → Schools reads the new column).
+
+Reviews of the differences + 0019 (2026-10-19): security — no High / Medium; three Lows fixed (two history batch ids per save documented; the 0010 undo checklist now says to re-run 0019; the trigger test checks its type). Design review (4 sizes): no High; two Medium fixed (after Next, focus goes to the first child without a pick, and each unpicked child's list is marked with its own message); Lows fixed: a 44px tap area around the call link, the phone hint under the field with the approved wording. Open question for Jeffrey: the approval image put the phone line under the school's name, the build puts it under the address (his written answer). Database tests (PGlite) 424/424.
+

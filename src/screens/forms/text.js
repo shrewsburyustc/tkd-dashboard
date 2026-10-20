@@ -170,7 +170,7 @@ export const weekdayTime = (weekday, start, end) => `${['', 'Mon', 'Tue', 'Wed',
 
 // ----- Form settings -----
 export const THANK_YOU = 'Thank-you message';
-export const THANK_YOU_HINT = '{parent} and {class time} fill in automatically.';
+export const THANK_YOU_HINT = 'Shown under the heading "Thanks, {first name}!". {parent} and {class time} fill in automatically.';
 export const CONFIRM_EMAIL = 'Send confirmation email';
 export const ADD_TO_CALENDAR = '"Add to calendar" button';
 export const ALERT_EMAIL = 'Email the school about new sign-ups';
@@ -216,6 +216,7 @@ export const AGE = 'Age';
 export const ADD_CHILD = 'Add another child';
 export const removeChild = (n) => `Remove child ${n}`;
 export const pickTimeFor = (name) => (name ? `Free class for ${name}` : 'Free class');
+export const pickTimeProblem = (name) => `Pick a time for ${name}, or "No time yet".`;
 export const NO_OPEN_TIMES = 'No free-class times are open right now. Send the form and call the family to set one up.';
 export const NO_TIME = 'No time yet — we\'ll call to set one up';
 export const THIS_WEEK = 'This week';
@@ -242,6 +243,7 @@ export const FIELD_PROBLEM = {
   children: 'Add at least one child (up to 6).',
   child: 'Each child needs a first name and an age from 2 to 99.',
   signature: 'Please sign in the box.',
+  booking_pick: 'Pick a time for each child, or "No time yet".',
   booking_full: 'Two children picked a time with fewer spots left. Pick another time for one of them.',
 };
 export const takenBy = (names) => `Taken by ${names}`;

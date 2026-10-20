@@ -11,7 +11,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { createElement } from 'react';
 import { addDays } from '../../lib/schedule/versions.js';
 import { cleanText } from '../../lib/calendar/rules.js';
-import { cleanAnswers } from '../../lib/forms/fields.js';
+import { cleanAnswers, isTimeKey } from '../../lib/forms/fields.js';
 import { loadForm, openTimes, staffSubmit } from '../../lib/forms/api.js';
 import FillInDialog, { emptyFillValues } from './FillInDialog.jsx';
 
@@ -69,7 +69,7 @@ export function useFillIn({ isPhone, screenLocked, onNoAccess, onSent, onClosed 
     const v = d.values;
     const children = v.children.map((c) => ({ first_name: cleanText(c.first_name), age: c.age }));
     const bookings = Object.entries(v.bookings)
-      .filter(([i, key]) => key && Number(i) < children.length)
+      .filter(([i, key]) => isTimeKey(key) && Number(i) < children.length)
       .map(([i, key]) => {
         const [classId, date, start] = key.split('|');
         return { child: Number(i), classId, date, start };

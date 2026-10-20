@@ -76,6 +76,8 @@ function backend() {
   forms = createFormsBackend({
     ...store(FORMS_KEY), now: () => Date.now(), newId: newUuid,
     getSchedule: () => schedule.snapshot(), getCalendar: () => calendar.snapshot(), getClasses: classes, today: schoolToday,
+    // the phone saved in Settings → Schools (same preview storage as the dashboard)
+    getSchoolPhone: (code) => json(TESTING_KEY)?.locations?.find?.((l) => l.code === code)?.phone ?? null,
   });
   return forms;
 }

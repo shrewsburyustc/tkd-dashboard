@@ -37,7 +37,7 @@ export const BOOKED_TITLE = 'Your free class';
 export const KEEP_TIME = 'Please save this page (a screenshot is fine) or write the time down — it is your confirmation.';
 export const KEEP_NO_TIME = 'Please save this page (a screenshot is fine) — the school will call you to set up a time.';
 export const ADD_TO_CALENDAR = 'Add to calendar';
-export const DEFAULT_THANK_YOU = 'Thank you, {parent}! We will be in touch soon.';
+export const DEFAULT_THANK_YOU = 'We will be in touch soon.';
 export const NO_CLASS_TIME = 'a time we set up with you'; // {class time} when no time was booked
 export const longTime = (b) => `${longDay(b.date)} at ${formatTime(parseTime(b.start), true)}`;
 export const bookedLine = (child, b) => `${child}: ${longDay(b.date)} · ${formatTime(parseTime(b.start), true)}–${formatTime(parseTime(b.end), true)} · ${b.className}`;
@@ -45,11 +45,27 @@ export const calendarTitle = (child, className) => `Free class for ${child}: ${c
 export const calendarFile = 'free-class.ics';
 export const SIGN_UP_ANOTHER = 'Start a new sign-up';
 
+// The thank-you screen's heading: always short (Jeffrey, F3 difference 3).
+export const thanksHeading = (parentName) => {
+  const first = firstName(parentName);
+  return first ? `Thanks, ${first}!` : 'Thanks!';
+};
+const firstName = (name) => String(name ?? '').trim().split(/\s+/)[0] || '';
+
+// The form's message shows under that heading, so an opening "Thank you, {parent}!" (the
+// usual way admins start it, and the database's default) is dropped instead of said twice.
+// Only a FIRST sentence that greets AND names {parent} is dropped; anything else stays.
+const GREETING = /^\s*(?:thank you|thanks|hi|hello)\b[^.!?\n]*\{parent\}[^.!?\n]*[.!?]*\s*/i;
+export function thankYouBody(template, info) {
+  const rest = String(template || DEFAULT_THANK_YOU).replace(GREETING, '');
+  return rest.trim() ? fillThankYou(rest, info) : '';
+}
+
 // The form's thank-you text with {parent} and {class time} filled in. {parent} is the parent's
 // first name ("Maria Lopez" → "Maria", like the mockup's "Thanks, Maria!"); {class time} is the
 // booked time(s) ("Wednesday, January 13 at 4:00 pm"), or NO_CLASS_TIME when none was booked.
 export function fillThankYou(template, { parentName, bookings }) {
-  const parent = String(parentName ?? '').trim().split(/\s+/)[0] || '';
+  const parent = firstName(parentName);
   const times = [...new Set(bookings.map((b) => longTime(b)))];
   const classTime = times.length ? times.join(' and ') : NO_CLASS_TIME;
   // (functions as replacements, so a typed name with "$&" in it stays exactly as typed)
@@ -65,7 +81,12 @@ export function longDay(date) {
 export const NOT_FOUND_TITLE = 'This form was not found';
 export const NOT_FOUND_TEXT = 'Check the link, or ask the school for a new one.';
 export const CLOSED_TITLE = 'This form is closed';
-export const closedText = (phone) => (phone ? `Call us at ${phone} to try a free class.` : 'It is not taking sign-ups any more. Please contact the school.');
+export const CLOSED_NO_PHONE = 'It is not taking sign-ups any more. Please contact the school.';
+// With the school's phone (Settings → Schools, migration 0019): "Call us at <tap-to-call> to try a free class."
+export const CALL_BEFORE = 'Call us at ';
+export const CALL_AFTER = ' to try a free class.';
+// "tel:" + only the digits and + signs (the shown number keeps its spaces and brackets)
+export const telHref = (phone) => `tel:${String(phone).replace(/[^0-9+]/g, '')}`;
 export const OFF_TITLE = 'Sign-ups are paused';
 export const OFF_TEXT = 'Online sign-up is switched off for now. Please try again later, or contact the school.';
 export const LOAD_FAILED_TITLE = "The form didn't load";

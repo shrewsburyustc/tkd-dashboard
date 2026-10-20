@@ -137,3 +137,21 @@
     font-size: var(--text-16); /* stops phones zooming into the field */
   }
 }
+
+/* The address and the phone line under it (migration 0019, F3 difference 4) */
+.st-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.st-phone-line {
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* the phone field sits under the address hints */
+.st-phone {
+  margin-top: var(--space-16);
+}

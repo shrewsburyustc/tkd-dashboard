@@ -241,6 +241,11 @@ export function answerProblems(fields, answers, children) {
 
 // What a fresh form holds while it is filled in (staff "Fill in" and the public page):
 //   answers, children: [{ first_name, age }], bookings: { childIndex: timeKey }, signature
+// Each child's pick: a time's key ("classId|date|start"), NO_TIME_KEY ("No time yet"), or
+// nothing yet. Nothing is ticked at the start (Jeffrey, F3 difference 2).
+export const NO_TIME_KEY = 'none';
+export const isTimeKey = (key) => typeof key === 'string' && key.includes('|');
+
 export const emptyFillValues = () => ({ answers: {}, children: [{ first_name: '', age: null }], bookings: {}, signature: null });
 
 // The problems of ONE step's fields (only the ones on screen), plus the children and the
@@ -258,9 +263,12 @@ export function stepProblems(stepFields, allFields, values, times = null) {
     if (f.type === 'waiver' && !values.signature) out.signature = 'signature';
     if (f.type === 'booking' && Array.isArray(times)) {
       const picks = {};
-      for (const key of Object.values(values.bookings ?? {})) if (key) picks[key] = (picks[key] ?? 0) + 1;
+      for (const key of Object.values(values.bookings ?? {})) if (isTimeKey(key)) picks[key] = (picks[key] ?? 0) + 1;
       const tooMany = times.some((t) => (picks[`${t.classId}|${t.date}|${t.start}`] ?? 0) > t.spotsLeft);
-      if (tooMany) out[f.id] = 'booking_full';
+      // every child needs an answer once times show: a time, or "No time yet"
+      const missing = times.length > 0 && values.children.some((c, i) => !values.bookings?.[i]);
+      if (missing) out[f.id] = 'booking_pick';
+      else if (tooMany) out[f.id] = 'booking_full';
     }
   }
   return out;

@@ -1013,7 +1013,7 @@ Run `Start dashboard.bat`, sign in as the admin.
 
 ### 14e. Undo and re-run warnings (only with Jeffrey's OK)
 
-**Re-running 0005 after 0010** puts back the phase 2 versions of the five replaced functions, **without the grading locks** (0005's header says so too). If 0005 is ever re-run, run **0010 again straight after it**. (And if the family-form off switch of 12i is in force, repeat 12i step 1 after re-running 0005, because 0005 grants the two public functions back.)
+**Re-running 0005 after 0010** puts back the phase 2 versions of the five replaced functions, **without the grading locks** (0005's header says so too). If 0005 is ever re-run, run **0010 again straight after it**. (And if the family-form off switch of 12i is in force, repeat 12i step 1 after re-running 0005, because 0005 grants the two public functions back.) **Once 0019 (school phone) is live, also re-run 0019 after any 0005 re-run** — 0005 takes away the phone's read right and Settings → Schools stops loading (17d).
 
 **Rollback without touching data:** put the previous site version back (Cloudflare Pages → Deployments → **Rollback**). 0010 can stay: the phase 2 screens don't read results.
 
@@ -1151,6 +1151,37 @@ In this order (step 1 works in seconds):
 Color Belt's form (12i) is not affected by any of these, and its off switch doesn't affect Forms.
 
 ---
+
+## 17. Migration 0019: school phone (Settings → Schools → Phone; a closed sign-up form shows it)
+
+**What it does** (`supabase/migrations/0019_school_phone.sql`, rulebook v0.605):
+- `public.locations` gets an optional **`phone`** (empty, or 7–20 characters of digits, spaces, `+ ( ) - .` with 7–15 digits — checked by the table itself).
+- **`settings_update_school_contact`** (admins only; `has_data_access()` first): saves the address (through 0005's `settings_update_school_address`, unchanged) **and** the phone — both or neither. Settings → Schools → Edit uses it.
+- A second BEFORE trigger, `locations_phone_before_write`, raises the version and stamps "last changed by" when the phone changes (0005's trigger is unchanged). History: 0005's `locations_log` already logs every school change to `change_log`.
+- Staff may **read** the phone (the school's public number). **Nothing for `anon`.** 0009 is **unchanged**: its `forms_public_get` already hands the phone to a closed form.
+
+**Each step needs Jeffrey's OK.** Apply **before** deploying the app version that shows the phone (that version reads the `phone` column; without 0019 Settings → Schools can't load).
+
+### 17a. Apply 0019 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0019_school_phone.sql` → **SQL Editor → New query** → paste → **Run**.
+2. Supabase may warn about **destructive operations**: the words are in `drop … if exists` lines that make re-running safe. **Nothing is removed.** Confirm.
+3. "Success." One transaction: on any error nothing is kept. Copy the error to Claude. **Running it again is safe** (tested: the saved phones and versions stay).
+
+### 17b. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0019_fingerprints.sql` — every line must match what `supabase/tests/pglite/run.mjs` printed (10 rows).
+2. **0005's fingerprints move by exactly one line on purpose:** the `table locations` line gains `phone>authenticated:SELECT`, and the trigger list gains `locations.locations_phone_before_write`. Every other migration's fingerprints: **unchanged** (run.mjs step 18 checks all of them).
+3. **Security advisor:** at most the expected "security definer function executable by authenticated" for `settings_update_school_contact` (it checks access and the admin role itself). Anything else about `locations` or the new function is a real problem.
+
+### 17c. Run the tests (you, in the SQL Editor)
+
+1. Open `supabase/tests/0019_tests.sql`, replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste the whole file, **Run** → one row **ALL 0019 TESTS PASSED**. Everything is rolled back (it empties Worcester's address and phone inside the test only; they come back).
+2. Then run `0005_tests.sql` again (it now allows the one new read right) and `0009_tests.sql`.
+
+### 17d. If 0005 is ever re-run
+
+The 0010 undo (14e) re-runs 0005, and 0005 starts by removing **all** read rights on `locations` and granting back only its own columns, so the phone can't be read any more (Settings → Schools stops loading). **Re-run 0019 right after**; the phone numbers themselves stay in the table (tested in run.mjs step 18e).
 
 ## Admin: change the front-desk PIN or password
 

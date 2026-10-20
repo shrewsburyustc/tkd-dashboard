@@ -21,7 +21,7 @@
 import { useEffect, useRef, useState } from 'react';
 import FormFields from '../screens/forms/FormFields.jsx';
 import Notice from '../components/Notice.jsx';
-import { cleanAnswers, emptyFillValues, stepProblems, stepsOf } from '../lib/forms/fields.js';
+import { cleanAnswers, emptyFillValues, isTimeKey, NO_TIME_KEY, stepProblems, stepsOf } from '../lib/forms/fields.js';
 import { cleanText } from '../lib/calendar/rules.js';
 import { getForm, submitForm } from './publicApi.js';
 import { getTurnstileToken, removeTurnstile } from './turnstile.js';
@@ -143,7 +143,7 @@ export default function FormsApp() {
   function focusFirstProblem() {
     window.requestAnimationFrame(() => {
       const root = formRef.current;
-      const target = root?.querySelector('[aria-invalid="true"], .notice')?.closest('.field, fieldset, .fchildren, .fwaiver')?.querySelector('input, select, textarea');
+      const target = root?.querySelector('[aria-invalid="true"], .notice')?.closest('.field, fieldset, .fchildren, .fwaiver')?.querySelector('input:not([disabled]), select, textarea');
       target?.focus();
       target?.scrollIntoView?.({ block: 'center' });
     });
@@ -194,7 +194,7 @@ export default function FormsApp() {
       const v = values;
       const children = v.children.map((c) => ({ first_name: cleanText(c.first_name), age: c.age }));
       const bookings = Object.entries(v.bookings)
-        .filter(([i, key]) => key && Number(i) < children.length)
+        .filter(([i, key]) => isTimeKey(key) && Number(i) < children.length)
         .map(([i, key]) => {
           const [classId, date, start] = key.split('|');
           return { child: Number(i), class_id: classId, date, starts_at: start };
@@ -235,7 +235,7 @@ export default function FormsApp() {
         }
         const keys = new Set(fresh.map((t) => `${t.classId}|${t.date}|${t.start}`));
         setTimes(fresh);
-        setValues((v) => ({ ...v, bookings: Object.fromEntries(Object.entries(v.bookings).filter(([, key]) => key && keys.has(key))) }));
+        setValues((v) => ({ ...v, bookings: Object.fromEntries(Object.entries(v.bookings).filter(([, key]) => key === NO_TIME_KEY || keys.has(key))) }));
         submissionKey.current = newKey();
         const bookingStep = stepsFor(form.fields).findIndex((s) => s.fields.some((f) => f.type === 'booking'));
         if (bookingStep >= 0) setStep(bookingStep);
@@ -361,7 +361,22 @@ export default function FormsApp() {
 // The "can't sign up" screens and "didn't load". `answer` is the GET (or POST) answer.
 function Message({ answer, onRetry }) {
   const status = answer?.status;
-  if (status === 'closed') return <StateMessage title={T.CLOSED_TITLE} text={T.closedText(answer.schoolPhone)} />;
+  if (status === 'closed') {
+    // The school phone from Settings → Schools is a tap-to-call link (F3 difference 4).
+    const phone = answer.schoolPhone;
+    const text = phone ? (
+      <>
+        {T.CALL_BEFORE}
+        <a className="fp-tel" href={T.telHref(phone)}>
+          {phone}
+        </a>
+        {T.CALL_AFTER}
+      </>
+    ) : (
+      T.CLOSED_NO_PHONE
+    );
+    return <StateMessage title={T.CLOSED_TITLE} text={text} />;
+  }
   if (status === 'not_found') return <StateMessage title={T.NOT_FOUND_TITLE} text={T.NOT_FOUND_TEXT} />;
   if (status === 'not_open') return <StateMessage title={T.OFF_TITLE} text={T.OFF_TEXT} />;
   return (
