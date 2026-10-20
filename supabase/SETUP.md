@@ -1156,7 +1156,7 @@ Run `Start dashboard.bat`, sign in as the admin.
 
 **Rollback without touching data:** put the previous site version back (Cloudflare Pages → Deployments → **Rollback**). 0014 can stay: the older screens never read the new tables.
 
-**Removing 0014 completely** (only if Jeffrey decides so, and only **before real private testings exist**: it deletes every private testing **and the money moved into it**). **0014 is removed first, then (if wanted) 0010 (14e)** — never the other way round. Three steps, **in this order**:
+**Removing 0014 completely** (only if Jeffrey decides so, and only **before real private testings exist**: it deletes every private testing **and the money moved into it**). **0014 is removed first, then (if wanted) 0010 (14e)** — never the other way round. **Never after Finance’s migration 0018 is live**: 0018’s Daily report functions read `testing_private` / `testing_private_payments`, so removing 0014 would break the Daily report — 0018 would have to be undone first (Finance’s SETUP §18). Three steps, **in this order**:
 
 1. Put the app back to a version **without the Private testing tab**.
 2. **Re-run the whole 0010 file** (14a). That puts back 0010's `testing_restore_student` (without the `moved` check).
