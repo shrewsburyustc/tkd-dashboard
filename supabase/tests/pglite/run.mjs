@@ -164,30 +164,39 @@
 //            sort byte by byte, "C"): all migrations, 0011_tests.sql and the
 //            speed + correctness check of g again. A Finance function that
 //            relied on text order would give wrong answers there.
-//   16. 0018 (Finance: Color Belt PRIVATE testing payments), after 14 and
-//       before 13g. 0018 needs 0014 (Color Belt private testing), which is
-//       live on production but not on this branch yet: until
-//       migrations/0014_testing_private.sql exists here, the exact live
-//       copy fixtures/0014_testing_private_as_live.sql is used. Camps'
-//       0013 + 0017 (camp payments in Finance) come before 0014 on
-//       production; when migrations/0013_*.sql and 0017_*.sql exist here
-//       they are applied in that place too.
+//   ===== Finance 0018 (step 18; camps' run.mjs has its own steps 15-16) =====
+//   18. 0018 (Finance: Color Belt PRIVATE testing payments), after 14 and
+//       before 13g, in production order: 0011 -> camps' 0013 + 0017 ->
+//       0014 -> 0018. Until the real files are on this branch, exact
+//       copies are used: fixtures/0013_camps_at_fb4ec24.sql,
+//       fixtures/0017_finance_camps_at_fb4ec24.sql (and camps' tests
+//       fixtures/0017_tests_at_fb4ec24.sql) from git fb4ec24, and
+//       fixtures/0014_testing_private_as_live.sql (live 0014).
 //         a. 0018_fingerprints.sql must not contain the words the Supabase
 //            connection refuses
-//         b. database 1 (no payments): 0011 -> (0013 + 0017) -> 0014 ->
-//            0018; the 0003 / 0004 / 0005 / 0006 / 0010 fingerprints don't
-//            move; 0011_tests.sql and 0018_tests.sql pass; 0018 applied a
-//            SECOND time changes no row and no fingerprint
-//         c. database 2: the big seed + the chain seed with 0011 (no
-//            private rows yet), the answers written down; 0018 applied:
-//            every 7th day of 5 years + every chain-seed day (items, and
-//            figures without the fingerprint - 0018 builds it from the
-//            chain id now) and ~50 payment details must be identical
+//         b. database 1 (no payments): 0011 + 0014 first - 0018's GUARD
+//            must refuse to run (no camps' 0017 yet); then camps' 0013 +
+//            0017 (camps' 0017_tests.sql passes), then 0018; the 0003 /
+//            0004 / 0005 / 0006 / 0010 fingerprints don't move;
+//            0011_tests.sql, camps' 0017_tests.sql and 0018_tests.sql pass;
+//            0018 applied a SECOND time changes no row and no fingerprint;
+//            0018's camp blocks are byte-identical to 0017's
+//         c. database 2 (production order): the big seed + the chain seed +
+//            camps' big seed (no private rows yet) with 0017, the answers
+//            written down; 0018 applied: every 7th day of 5 years + every
+//            chain-seed day (items, and figures without the fingerprint -
+//            0018 builds it from the chain id now) and ~60 payment details
+//            (Color Belt, Star and camp) must be identical
 //         d. then the private seed (finance_private_perf_seed.sql: 2,000
 //            private testings, ~400 moves) on database 2: 0018_tests.sql
 //            passes there too, and every app function answers in < 2 s
 //         e. the ICU database (14i) also gets 0014 + 0018 and runs
 //            0018_tests.sql
+//         f. days closed UNDER 0011 (a move, a move + undo move, a private
+//            payment), then 0018: only real money differences show as
+//            "changed after closing"; and an event deleted after a move
+//            on a day closed under 0018 doesn't
+//   ===== end Finance 0018 =====
 //
 // THE FIXTURE fixtures/0014_testing_private_as_live.sql
 //   An exact copy of git color-belt:supabase/migrations/0014_testing_private.sql
@@ -499,12 +508,14 @@ async function main() {
     record('0011 (Finance)', false, 'skipped: 0006 or 0010 could not be applied (see the lines above)');
   }
 
-  // 16. Finance + Color Belt private testing (0018)
+  // ===== Finance 0018 (step 18) =====
+  // 18. Finance + Color Belt private testing (0018)
   let after18 = null;
   if (after11) {
     console.log('\nMigration 0018 (Finance: Color Belt private testing payments):');
-    after18 = await step16();
+    after18 = await step18();
   }
+  // ===== end Finance 0018 =====
 
   // 14h + 14i. old vs new chain builder; the ICU-collation database
   if (after11) {
@@ -1494,9 +1505,10 @@ async function financeIcuCheck() {
       + read('migrations', '0011_finance.sql'));
     if (!ok) return;
     await runTestFile(db, '[icu] 0011_tests.sql', '0011_tests.sql', 'ALL 0011 TESTS PASSED');
-    if (await run(db, '[icu] (0013 + 0017) + 0014 + 0018', CAMPS_SQL() + MIGRATION_0014() + '\n' + read('migrations', '0018_finance_private.sql'))) {
+    if (await run(db, '[icu] 0013 + 0017 + 0014 + 0018', CAMPS_SQL() + MIGRATION_0014() + '\n' + MIGRATION_0018())) {
       await runTestFile(db, '[icu] 0018_tests.sql', '0018_tests.sql', 'ALL 0018 TESTS PASSED');
       await runTestFile(db, '[icu] 0011_tests.sql (after 0018)', '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+      await runTestFile(db, '[icu] camps\' 0017_tests.sql (after 0018)', CAMPS_TESTS, 'ALL 0017 TESTS PASSED');
     }
     await financeSpeedCheck(db, '[icu speed]');
   } catch (error) {
@@ -1516,47 +1528,78 @@ const MIGRATION_0014 = () => existsSync(path.join(supabaseDir, 'migrations', '00
   ? read('migrations', '0014_testing_private.sql')
   : readFileSync(path.join(here, 'fixtures', '0014_testing_private_as_live.sql'), 'utf8');
 
-// Camps' 0013 + 0017 (camp payments in Finance) when they are on this
-// branch: on production they come between 0011 and 0014.
-const CAMPS_FILES = () => {
-  const dir = path.join(supabaseDir, 'migrations');
-  const names = readdirSync(dir);
-  return ['0013_', '0017_'].map((p) => names.find((n) => n.startsWith(p) && n.endsWith('.sql'))).filter(Boolean);
-};
-const CAMPS_SQL = () => CAMPS_FILES().map((n) => read('migrations', n) + '\n').join('');
+// Camps' 0013 + 0017 (camp payments in Finance): on production they come
+// between 0011 and 0014. The real files once they are on this branch, else
+// the exact copies from git fb4ec24.
+const CAMPS_FILES = () => [
+  ['0013_camps.sql', '0013_camps_at_fb4ec24.sql'],
+  ['0017_finance_camps.sql', '0017_finance_camps_at_fb4ec24.sql'],
+].map(([real, copy]) => (existsSync(path.join(supabaseDir, 'migrations', real))
+  ? path.join(supabaseDir, 'migrations', real) : path.join(here, 'fixtures', copy)));
+const CAMPS_SQL = () => CAMPS_FILES().map((f) => readFileSync(f, 'utf8') + '\n').join('');
+const CAMPS_0013 = () => readFileSync(CAMPS_FILES()[0], 'utf8');
+const CAMPS_0017 = () => readFileSync(CAMPS_FILES()[1], 'utf8');
+// camps' 0017_tests.sql (relative to supabase/tests, as runTestFile wants)
+const CAMPS_TESTS = existsSync(path.join(supabaseDir, 'tests', '0017_tests.sql'))
+  ? '0017_tests.sql' : path.join('pglite', 'fixtures', '0017_tests_at_fb4ec24.sql');
+const CAMPS_PERF_SEED = () => readFileSync(existsSync(path.join(here, 'finance_camps_perf_seed.sql'))
+  ? path.join(here, 'finance_camps_perf_seed.sql') : path.join(here, 'fixtures', 'finance_camps_perf_seed_at_fb4ec24.sql'), 'utf8');
+
+// 0018 (it refuses to run before camps' 0017 - its guard)
+const MIGRATION_0018 = () => read('migrations', '0018_finance_private.sql');
 
 // The 0014 + 0018 tables, plus the history's row count, as one md5.
 const snapshot18Sql = `select md5(${['testing_private', 'testing_private_payments', ...FINANCE_TABLES].map((t) =>
   `coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.${t} x), '')`).join(' || ')}
   || (select count(*) from public.change_log)::text)`;
 
-async function step16() {
-  // 16a.
+async function step18() {
+  // 18a.
   record('0018_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)',
     !/delete|drop/i.test(read('tests', '0018_fingerprints.sql')));
-  const camps = CAMPS_FILES();
-  record('[0018] camps 0013 + 0017 ' + (camps.length ? `applied before 0014: ${camps.join(', ')}` : 'not on this branch yet (skipped)'), true);
+  record('[0018] camps 0013 + 0017 from ' + CAMPS_FILES().map((f) => path.basename(f)).join(', '), true);
 
-  // 16b. database 1, no payments
+  // 18b. database 1, no payments
   const db = await buildBase('[0018] ');
   if (!db) return null;
-  if (!(await run(db, '[0018] 0003 - 0010 + 0011 + (0013 + 0017) + 0014', SETUP_TO_0010() + read('migrations', '0011_finance.sql') + '\n'
-    + CAMPS_SQL() + MIGRATION_0014()))) return null;
+  if (!(await run(db, '[0018] 0003 - 0010 + 0011 + 0014', SETUP_TO_0010() + read('migrations', '0011_finance.sql') + '\n'
+    + MIGRATION_0014()))) return null;
+  // the guard: without camps' 0017, 0018 stops and changes nothing
+  let refused = '';
+  try {
+    await db.exec(MIGRATION_0018());
+  } catch (error) {
+    refused = error.message;
+    await db.exec('rollback;').catch(() => {});
+  }
+  record('[0018] the guard refuses 0018 before camps\' 0017 (it stops, nothing changes)',
+    refused.includes("must be applied after camps' 0017")
+      && (await one(db, `select to_regclass('public.finance_testing_private_payments_paid_on_idx') is null`)) === true,
+    refused || 'it ran');
+  if (!(await run(db, '[0018] camps\' 0013 + 0017', CAMPS_SQL()))) return null;
+  await runTestFile(db, '[0018] camps\' 0017_tests.sql (before 0018)', CAMPS_TESTS, 'ALL 0017 TESTS PASSED');
   const earlier = async () => [
     ...(await fingerprints(db, '0003_fingerprints.sql')), ...(await fingerprints(db, '0004_fingerprints.sql')),
     ...(await fingerprints(db, '0005_fingerprints.sql')), ...(await fingerprints(db, '0006_fingerprints.sql')),
     ...(await fingerprints(db, '0010_fingerprints.sql'))];
   const earlierBefore = await earlier();
-  if (!(await run(db, '[0018] apply 0018_finance_private.sql', read('migrations', '0018_finance_private.sql')))) return null;
+  if (!(await run(db, '[0018] apply 0018_finance_private.sql', MIGRATION_0018()))) return null;
   record('[0018] 0003 / 0004 / 0005 / 0006 / 0010 fingerprints identical before/after 0018',
     JSON.stringify(earlierBefore) === JSON.stringify(await earlier()), `${earlierBefore.length} rows`);
   const t0 = Date.now();
   await runTestFile(db, '[0018] 0018_tests.sql (no payments)', '0018_tests.sql', 'ALL 0018 TESTS PASSED');
   record('[0018] 0018_tests.sql finished in under 60 seconds', Date.now() - t0 < 60000, `${((Date.now() - t0) / 1000).toFixed(1)} s`);
   await runTestFile(db, '[0018] 0011_tests.sql (after 0018)', '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+  await runTestFile(db, '[0018] camps\' 0017_tests.sql (after 0018)', CAMPS_TESTS, 'ALL 0017 TESTS PASSED');
+  // 0018's camp blocks = 0017's, byte for byte (also checked by build_0018.py)
+  const campBlocks = (text) => (text.replace(/\r\n/g, '\n').match(/-- ===== source: camp \(0017\) =====[\s\S]*?-- ===== end camp =====/g) ?? []);
+  const in17 = campBlocks(CAMPS_0017());
+  const in18 = campBlocks(MIGRATION_0018());
+  record('[0018] every camp block of 0018 is one of 0017\'s, byte for byte',
+    in18.length > 0 && in18.every((b) => in17.includes(b)), `${in18.length} camp blocks in 0018, ${in17.length} in 0017`);
   const before18 = await fingerprints(db, '0018_fingerprints.sql');
   const dataBefore = await one(db, snapshot18Sql);
-  await run(db, '[0018] apply 0018 a SECOND time (re-run safety)', read('migrations', '0018_finance_private.sql'));
+  await run(db, '[0018] apply 0018 a SECOND time (re-run safety)', MIGRATION_0018());
   record('[0018] re-run kept every row unchanged (private testings + payments, finance tables, change_log)',
     dataBefore === (await one(db, snapshot18Sql)));
   const after18 = await fingerprints(db, '0018_fingerprints.sql');
@@ -1565,15 +1608,18 @@ async function step16() {
   await runTestFile(db, '[0018] 0018_tests.sql (after re-run)', '0018_tests.sql', 'ALL 0018 TESTS PASSED');
   await db.close();
 
-  // 16c. database 2: 0011 vs 0018 on the big seed + chain seed (no private rows)
-  const db2 = await buildBase('[0018 vs 0011] ');
+  // 18c. database 2: 0017 vs 0018 on the big seed + chain seed + camps (no private rows)
+  const db2 = await buildBase('[0018 vs 0017] ');
   if (!db2) return after18;
-  if (!(await run(db2, '[0018 vs 0011] 0003 - 0010 + 0011 + (0013 + 0017) + 0014 + the big seed + the chain seed',
+  if (!(await run(db2, '[0018 vs 0017] 0003 - 0010 + 0011 + 0013 + 0017 + 0014 + the big seed + the chain seed + camps\' big seed',
     SETUP_TO_0010() + read('migrations', '0011_finance.sql') + '\n' + CAMPS_SQL() + MIGRATION_0014() + '\n'
-    + PERF_SEED() + '\n' + CHAIN_SEED()))) return after18;
+    + PERF_SEED() + '\n' + CHAIN_SEED() + '\n' + CAMPS_PERF_SEED()))) return after18;
   await adminSession(db2);
   const signatureSql = DAY_SIGNATURE_SQL.replace('to_jsonb(f)::text', `(to_jsonb(f) - 'fingerprint')::text`);
-  const ids = (await db2.query(DETAIL_IDS_SQL)).rows;
+  const ids = (await db2.query(DETAIL_IDS_SQL + `
+  union all
+  (select 'camp', p.id::text from public.camp_payments p where p.kind = 'payment' order by p.id limit 12)`)).rows;
+  const campDays = await one(db2, `select count(distinct p.paid_on) from public.camp_payments p`);
   const details = async () => {
     const out = [];
     for (const { src, id } of ids) out.push(JSON.stringify(await asAdmin(db2, 'select public.finance_payment_detail($1, $2::uuid) as r', [src, id])));
@@ -1581,19 +1627,22 @@ async function step16() {
   };
   const daysBefore = (await db2.query(signatureSql)).rows;
   const detailsBefore = await details();
-  if (!(await run(db2, '[0018 vs 0011] apply 0018 over it', read('migrations', '0018_finance_private.sql')))) return after18;
+  if (!(await run(db2, '[0018 vs 0017] apply 0018 over it', MIGRATION_0018()))) return after18;
   const daysAfter = (await db2.query(signatureSql)).rows;
   const detailsAfter = await details();
   const items = daysBefore.reduce((n, r) => n + r.n, 0);
   const differ = daysBefore.filter((r, i) => JSON.stringify(r) !== JSON.stringify(daysAfter[i])).map((r) => r.day);
-  record('[0018 vs 0011] the same items and figures (without the fingerprint) on 5 years of days, no private rows',
-    daysBefore.length > 300 && items > 1200 && differ.length === 0,
-    `${daysBefore.length} days, ${items} items` + (differ.length ? `; DIFFER on ${differ.slice(0, 5).join(', ')}` : ''));
+  const campItems = daysBefore.reduce((n, r) => n + (r.items.match(/\|camp\|/g) ?? []).length, 0);
+  record('[0018 vs 0017] the same items and figures (without the fingerprint) on 5 years of days, camps included, no private rows',
+    daysBefore.length > 300 && items > 1200 && campItems > 100 && differ.length === 0,
+    `${daysBefore.length} days, ${items} items (${campItems} camp items; camp payments on ${campDays} days)`
+      + (differ.length ? `; DIFFER on ${differ.slice(0, 5).join(', ')}` : ''));
   const detailDiffer = ids.filter((x, i) => detailsBefore[i] !== detailsAfter[i]).map((x) => `${x.src} ${x.id}`);
-  record('[0018 vs 0011] the same payment details for about 50 chain starts', ids.length >= 45 && detailDiffer.length === 0,
-    `${ids.length} ids` + (detailDiffer.length ? `; DIFFER: ${detailDiffer.slice(0, 5).join(', ')}` : ''));
+  record('[0018 vs 0017] the same payment details for about 60 chain starts (Color Belt, Star, camp)',
+    ids.length >= 55 && ids.some((x) => x.src === 'camp') && detailDiffer.length === 0,
+    `${ids.length} ids (${ids.filter((x) => x.src === 'camp').length} camp)` + (detailDiffer.length ? `; DIFFER: ${detailDiffer.slice(0, 5).join(', ')}` : ''));
 
-  // 16d. private rows on database 2: the tests, then speed
+  // 18d. private rows on database 2: the tests, then speed
   if (!(await run(db2, '[0018 speed] private seed (finance_private_perf_seed.sql)',
     readFileSync(path.join(here, 'finance_private_perf_seed.sql'), 'utf8')))) return after18;
   const counts = (await db2.query(`select (select count(*)::int from public.testing_private_payments) as private_rows,
@@ -1604,7 +1653,120 @@ async function step16() {
   await runTestFile(db2, '[0018] 0018_tests.sql (with the big seed and private rows)', '0018_tests.sql', 'ALL 0018 TESTS PASSED');
   await financeSpeedCheck(db2, '[0018 speed]', false);
   await db2.close();
+
+  // 18f. days closed BEFORE 0018 (under 0011's rules), then 0018
+  await closesUnder0011();
   return after18;
+}
+
+// 18f. Days closed while 0011 / 0017 (without private payments) were in force,
+// then 0018 applied: which of them must show "changed after closing"?
+//   A  a move BEFORE the close: under 0011 the money had left the event
+//      and private money wasn't counted, so the close left it out; 0018
+//      counts it -> a real difference -> changed
+//   B  move + undo move BEFORE the close: under 0011 the payment showed
+//      undone and the recreated row counted; 0018 joins them into one
+//      chain, paired by the row id -> NOT changed
+//   C  a private payment (no move) on a day closed under 0011 -> changed
+//   D  (under 0018) a move, a close, then the EVENT deleted: the private
+//      copy carries on as its own chain, paired by the row id -> NOT changed
+async function closesUnder0011() {
+  const db = await buildBase('[0018 closes] ');
+  if (!db) return;
+  if (!(await run(db, '[0018 closes] 0003 - 0010 + 0011 + (0013 + 0017) + 0014',
+    SETUP_TO_0010() + read('migrations', '0011_finance.sql') + '\n' + CAMPS_SQL() + MIGRATION_0014()))) return;
+  // test data written as the SQL Editor would: two Worcester events copied
+  // from the seed's first class, five students, payments on past days
+  const ok = await run(db, '[0018 closes] events, students, payments on four past days', `
+    begin;
+    select set_config('request.jwt.claims', '', true);
+    select set_config('tkd.actor_label', 'PGlite closes', true);
+    insert into public.testing_events (location_code, name, testing_date, registration_open, public_code)
+    select 'worcester', 'PGlite closes ' || n, public.testing_today() + 30, false, public.testing_new_public_code()
+      from generate_series(1, 2) as n;
+    select public.testing_copy_class_into_event(e.id,
+             (select c.id from public.testing_classes c where c.location_code = 'worcester'
+                and (c.final_award_none or c.final_award_rank_id is not null) order by c.position limit 1),
+             time '16:00', time '17:00')
+      from public.testing_events e where e.name like 'PGlite closes %';
+    insert into public.testing_registrations (event_id, event_rank_id, first_name, last_name, paying_by, stripes_confirmed, source)
+    select e.id, (select k.id from public.testing_event_ranks k join public.testing_event_classes c on c.id = k.event_class_id
+                   where c.event_id = e.id order by k.position limit 1),
+           'Close', v.last, 'cash', true, 'staff'
+      from (values ('A', 1), ('B', 1), ('Q', 1), ('D', 2)) as v(last, ev)
+      join public.testing_events e on e.name = 'PGlite closes ' || v.ev;
+    insert into public.testing_payments (registration_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by, recorded_by_name)
+    select r.id, 'payment', v.amount, 'cash', public.testing_today() - v.ago,
+           ((public.testing_today() - v.ago) + time '15:00') at time zone 'America/New_York',
+           '22222222-2222-4222-8222-222222222222', 'Staff'
+      from (values ('A', 7000, 40), ('Q', 5000, 40), ('B', 6000, 41), ('Q', 5000, 42), ('D', 6600, 43)) as v(last, amount, ago)
+      join public.testing_registrations r on r.first_name = 'Close' and r.last_name = v.last;
+    -- C: a private testing added by hand with a payment on day 42
+    insert into public.testing_private (location_code, first_name, last_name, class_name, rank_name, belt_pattern, belt_color,
+                                        belt_end_stripes, belt_end_stripe_color, to_kind, private_cents, paying_by,
+                                        stripes_confirmed, private_date, private_time, created_by_name, updated_by_name)
+    values ('worcester', 'Close', 'C', 'Perf class', 'White', 'solid', 'white', 0, 'yellow', 'none', 8500, 'cash', true,
+            public.testing_today() + 3, time '10:00', '', '');
+    insert into public.testing_private_payments (private_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by, recorded_by_name)
+    select t.id, 'payment', 8500, 'cash', public.testing_today() - 42,
+           ((public.testing_today() - 42) + time '12:00') at time zone 'America/New_York',
+           '22222222-2222-4222-8222-222222222222', 'Staff'
+      from public.testing_private t where t.first_name = 'Close' and t.last_name = 'C';
+    select set_config('tkd.actor_label', '', true);
+    commit;`);
+  if (!ok) return;
+  await adminSession(db);
+  const today = await one(db, 'select public.testing_today()::text');
+  const reg = async (last) => (await db.query(`select id::text, version from public.testing_registrations
+      where first_name = 'Close' and last_name = $1`, [last])).rows[0];
+  const day = (ago) => `date '${today}' - ${ago}`;
+  const closeDay = async (ago) => {
+    const d = await asAdmin(db, `select public.finance_day('worcester', ${day(ago)}) as r`);
+    return asAdmin(db, `select public.finance_close_day('worcester', ${day(ago)}, $1, $2, $3, $4, $5, null) as r`,
+      [d.fingerprint, d.totals.cash.cents + d.refunds.cash_cents, d.totals.check.count, d.totals.check.cents, d.totals.card.cents]);
+  };
+  const changed = async (ago) => {
+    const d = await asAdmin(db, `select public.finance_day('worcester', ${day(ago)}) as r`);
+    return `${d.closing?.changed_after}:${d.closing?.changed_count}`;
+  };
+  // A: move, then close (0011)
+  let r = await reg('A');
+  const movedA = await asAdmin(db, `select public.testing_move_to_private($1::uuid, $2, date '${today}' + 7, '17:00') as r`, [r.id, r.version]);
+  // B: move + undo move, then close (0011)
+  r = await reg('B');
+  const movedB = await asAdmin(db, `select public.testing_move_to_private($1::uuid, $2, date '${today}' + 7, '17:00') as r`, [r.id, r.version]);
+  const undoneB = await asAdmin(db, `select public.testing_private_undo_move($1::uuid, 1) as r`, [movedB?.private_id]);
+  const closes = [await closeDay(40), await closeDay(41), await closeDay(42)];
+  record('[0018 closes] moves and closes under 0011',
+    movedA?.status === 'ok' && movedB?.status === 'ok' && undoneB?.status === 'ok' && closes.every((c) => c?.status === 'ok'),
+    JSON.stringify([movedA?.status, movedB?.status, undoneB?.status, ...closes.map((c) => c?.status)]));
+  // the pre-apply check (read-only) lists exactly those closed days,
+  // oldest first: C (42 days ago, a private payment), B (41, an undone
+  // move - no change), A (40, a move before the close)
+  record('0018_preapply_check.sql contains neither "delete" nor "drop" (connector-safe)',
+    !/delete|drop/i.test(read('tests', '0018_preapply_check.sql')));
+  const pre = (await db.query(read('tests', '0018_preapply_check.sql'))).rows
+    .map((x) => `${x.private_payments}/${x.moved_before_close}/${x.undone_moves}`);
+  record('[0018 closes] the pre-apply check lists the three closed days (private / moved before close / undone moves)',
+    JSON.stringify(pre) === JSON.stringify(['1/0/0', '0/0/1', '0/1/0']), JSON.stringify(pre));
+  if (!(await run(db, '[0018 closes] apply 0018', MIGRATION_0018()))) return;
+  record('[0018 closes] A: a move before a close of 0011\'s time -> changed (that close left the money out)',
+    (await changed(40)) === 'true:1', await changed(40));
+  record('[0018 closes] B: move + undo move before a close of 0011\'s time -> NOT changed', (await changed(41)) === 'false:0', await changed(41));
+  record('[0018 closes] C: a private payment on a day closed under 0011 -> changed', (await changed(42)) === 'true:1', await changed(42));
+  // D: under 0018 - move, close, then the event is deleted
+  r = await reg('D');
+  const movedD = await asAdmin(db, `select public.testing_move_to_private($1::uuid, $2, date '${today}' + 7, '17:00') as r`, [r.id, r.version]);
+  const closeD = await closeDay(43);
+  await run(db, '[0018 closes] D: the event is deleted after the move', `
+    begin;
+    select set_config('tkd.action', 'delete_event', true);
+    delete from public.testing_events where name = 'PGlite closes 2';
+    select set_config('tkd.action', '', true);
+    commit;`);
+  record('[0018 closes] D: an event deleted after a move (closed under 0018) -> NOT changed',
+    movedD?.status === 'ok' && closeD?.status === 'ok' && (await changed(43)) === 'false:0', await changed(43));
+  await db.close();
 }
 
 function finish() {

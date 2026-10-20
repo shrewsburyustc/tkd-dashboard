@@ -29,6 +29,12 @@
 --         rows
 --     P10 privacy (every key on a fixed list; no login id in any answer)
 --         and catalog (the index; the six replaced functions' rights)
+--     P11 near misses: rows that LOOK like an undo move (no login, the
+--         payment's recorded_at) but aren't one stay an undo + a payment
+--     P12 move -> undo move -> move -> undo move (edge case 1): the money
+--         is right (at most one extra undone line)
+--     P13 an event deleted after a move, on a day closed under 0018: not
+--         changed after closing (edge case 3)
 --   The payments are made with the REAL 0014 functions (Add, Mark paid,
 --   Undo / Edit payment, Cancel, Delete, Move to private, Undo move); only
 --   event payments on fixed past days (2021) are written straight into
@@ -245,7 +251,9 @@ returns text
 language sql
 as $$
   select coalesce(string_agg((e ->> 'state') || ':' || (e ->> 'is_private') || ':' || (e ->> 'amount_cents') || ':'
-                             || (e ->> 'method'), ',' order by ((e ->> 'state') || (e ->> 'is_private')) collate "C"), '')
+                             || (e ->> 'method'), ','
+                             order by ((e ->> 'state') || ':' || (e ->> 'is_private') || ':' || (e ->> 'amount_cents') || ':'
+                                       || (e ->> 'method')) collate "C"), '')
     from jsonb_array_elements(p_day -> 'items') e
    where e ->> 'last_name' = p_last;
 $$;
@@ -295,7 +303,7 @@ declare
   v_priv  uuid;
   v_ids   uuid[];
 
-  v_cls_w uuid; v_rank_w uuid; v_cls_s uuid; v_rank_s uuid; v_ev uuid; v_er uuid;
+  v_cls_w uuid; v_rank_w uuid; v_cls_s uuid; v_rank_s uuid; v_ev uuid; v_er uuid; v_ev2 uuid; v_er2 uuid;
   v_reg   uuid[] := '{}';
   v_x     uuid;
   v_i     integer;
@@ -363,8 +371,8 @@ begin
   end if;
   select k.id into v_er from public.testing_event_ranks k join public.testing_event_classes c on c.id = k.event_class_id
    where c.event_id = v_ev and k.rank_id = v_rank_w;
-  -- five event students to move ("Move 1" .. "Move 5")
-  for v_i in 1 .. 5 loop
+  -- seven event students ("Move 1" .. "Move 7")
+  for v_i in 1 .. 7 loop
     insert into public.testing_registrations (event_id, event_rank_id, first_name, last_name, paying_by, stripes_confirmed, source)
     values (v_ev, v_er, 'Fin18', 'Move ' || v_i, 'cash', true, 'staff') returning id into v_x;
     v_reg := v_reg || v_x;
@@ -474,6 +482,10 @@ begin
   v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.finance_day(%L, %L)', 'worcester', v_b + 3));
   perform pg_temp.t_eq('P4 second day unchanged', pg_temp.t_money(v_r), pg_temp.t_money(v_before2));
   perform pg_temp.t_eq('P4 second day item', pg_temp.t_mine(v_r, 'Move 2'), 'counted:true:2500:check');
+  -- the admin moved it; the line still names the desk, who took the money (and its time)
+  select (e ->> 'recorded_by_name') || ' ' || (e ->> 'time') into v_txt
+    from jsonb_array_elements(v_r -> 'items') e where e ->> 'last_name' = 'Move 2';
+  perform pg_temp.t_eq('P4 recorded by the desk, not the mover', v_txt, v_dn || ' 16:00');
   perform pg_temp.t_eq('P4 two copies', (select count(*)::text from public.testing_private_payments x where x.moved_from_payment_id in (v_p1, v_p2)), '2');
 
 
@@ -600,6 +612,72 @@ begin
   v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.finance_set_reminder_time(%L, %s::smallint, %L, %s)', 'worcester', v_w, '19:30', v_v));
   perform pg_temp.t_eq('P9 reminder time', v_r ->> 'status', 'ok');
   perform pg_temp.t_eq('P9 Home reminder for a private-only day', (public.finance_home_at(pg_temp.t_at(v_d, '19:30'), false) -> 'today')::text, '["worcester"]');
+
+
+  -- ===================================================================
+  -- P11. Near misses: these look like an undo move, but are not one
+  -- ===================================================================
+  -- (a) an admin Undo dated TODAY, then a payment written in the SQL
+  --     Editor (no login) with the old payment's recorded_at, amount,
+  --     method and day
+  v_d := v_b + 30;
+  v_p := pg_temp.t_pay('color_belt', v_reg[6], 'payment', 4000, 'cash', v_d, pg_temp.t_at(v_d, '15:00'), v_desk, v_dn);
+  perform pg_temp.t_rev('color_belt', v_p, v_today, now(), v_admin, v_an);
+  perform pg_temp.t_pay('color_belt', v_reg[6], 'payment', 4000, 'cash', v_d, pg_temp.t_at(v_d, '15:00'), null, v_an);
+  -- (b) a reversal dated on the payment's day but written WITHOUT a login,
+  --     then the same kind of SQL Editor payment
+  v_p := pg_temp.t_pay('color_belt', v_reg[6], 'payment', 3000, 'check', v_d, pg_temp.t_at(v_d, '16:00'), v_desk, v_dn);
+  perform pg_temp.t_rev('color_belt', v_p, v_d, now(), null, 'Database admin');
+  perform pg_temp.t_pay('color_belt', v_reg[6], 'payment', 3000, 'check', v_d, pg_temp.t_at(v_d, '16:00'), null, 'Database admin');
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.finance_day(%L, %L)', 'worcester', v_d));
+  perform pg_temp.t_eq('P11 an undo + a payment each, not undo moves', pg_temp.t_mine(v_r, 'Move 6'),
+    'counted:false:3000:check,counted:false:4000:cash,undone:false:3000:check,undone:false:4000:cash');
+
+
+  -- ===================================================================
+  -- P12. Move -> undo move -> move -> undo move (edge case 1)
+  -- ===================================================================
+  v_d := v_b + 31;
+  v_p := pg_temp.t_pay('color_belt', v_reg[7], 'payment', 7000, 'cash', v_d, pg_temp.t_at(v_d, '15:00'), v_desk, v_dn);
+  v_before := pg_temp.t_call('authenticated', v_c_a1, format('public.finance_day(%L, %L)', 'worcester', v_d));
+  for v_i in 1 .. 2 loop
+    select r.version into v_v from public.testing_registrations r where r.id = v_reg[7];
+    v_r := pg_temp.t_call('authenticated', v_c_d1, format('public.testing_move_to_private(%L, %s, %L, %L)', v_reg[7], v_v, v_today + 7, '17:00'));
+    perform pg_temp.t_eq('P12 move ' || v_i, v_r ->> 'status', 'ok');
+    perform pg_temp.t_eq('P12 undo move ' || v_i, pg_temp.t_call('authenticated', v_c_d1,
+      format('public.testing_private_undo_move(%L, 1)', v_r ->> 'private_id')) ->> 'status', 'ok');
+  end loop;
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.finance_day(%L, %L)', 'worcester', v_d));
+  perform pg_temp.t_eq('P12 totals unchanged', (v_r -> 'totals')::text || (v_r -> 'refunds')::text,
+    (v_before -> 'totals')::text || (v_before -> 'refunds')::text);
+  select count(*) filter (where e ->> 'state' = 'counted'), count(*) filter (where e ->> 'state' = 'undone') into v_n, v_i
+    from jsonb_array_elements(v_r -> 'items') e where e ->> 'last_name' = 'Move 7';
+  perform pg_temp.t_eq('P12 one counted line, at most one extra undone line', (v_n = 1 and v_i <= 1)::text, 'true');
+
+
+  -- ===================================================================
+  -- P13. An event deleted after a move, on a day closed under 0018
+  -- ===================================================================
+  v_ev2 := (pg_temp.t_call('authenticated', v_c_a1, format('public.testing_add_event(%L, %L, %L, %L::jsonb, false, null, null)',
+    'worcester', v_tag || ' event two', v_today + 5,
+    jsonb_build_array(jsonb_build_object('class_id', v_cls_w, 'start_time', '17:00', 'end_time', '18:00'))::text)) ->> 'id')::uuid;
+  select k.id into v_er2 from public.testing_event_ranks k join public.testing_event_classes c on c.id = k.event_class_id
+   where c.event_id = v_ev2 and k.rank_id = v_rank_w;
+  insert into public.testing_registrations (event_id, event_rank_id, first_name, last_name, paying_by, stripes_confirmed, source)
+  values (v_ev2, v_er2, 'Fin18', 'Move 8', 'cash', true, 'staff') returning id into v_x;
+  v_d := v_b + 32;
+  v_p := pg_temp.t_pay('color_belt', v_x, 'payment', 6600, 'card', v_d, pg_temp.t_at(v_d, '15:00'), v_desk, v_dn);
+  perform pg_temp.t_call('authenticated', v_c_d1, format('public.testing_move_to_private(%L, 1, %L, %L)', v_x, v_today + 7, '17:00'));
+  perform pg_temp.t_eq('P13 close', (pg_temp.t_close(v_c_a1, 'worcester', v_d, 0, null)) ->> 'status', 'ok');
+  v_before := pg_temp.t_call('authenticated', v_c_a1, format('public.finance_day(%L, %L)', 'worcester', v_d));
+  perform set_config('tkd.action', 'delete_event', true);
+  delete from public.testing_events where id = v_ev2;
+  perform set_config('tkd.action', '', true);
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.finance_day(%L, %L)', 'worcester', v_d));
+  perform pg_temp.t_eq('P13 the copy is still counted, same money', pg_temp.t_mine(v_r, 'Move 8') || ' ' || (v_r -> 'totals')::text,
+    'counted:true:6600:card ' || (v_before -> 'totals')::text);
+  perform pg_temp.t_eq('P13 NOT changed after closing (paired by the row id)',
+    (v_r #>> '{closing,changed_after}') || ':' || (v_r #>> '{closing,changed_count}'), 'false:0');
 
 
   -- ===================================================================

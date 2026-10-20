@@ -1,17 +1,25 @@
-"""Builds supabase/migrations/0018_finance_private.sql from the BASE migration's
-function texts (today 0011; later camps' 0017) plus the marked 0018 blocks.
-Usage: python build_0018.py <base .sql> <out .sql>
-Every change is an exact text replacement; a missing anchor stops the build."""
+"""Builds supabase/migrations/0018_finance_private.sql from the function texts
+of the migrations it is laid over, plus the marked 0018 blocks:
+  camps' 0017 for finance_chain_steps_core, finance_money_rows_core and
+  finance_payment_detail (the three 0017 replaced that 0018 changes too);
+  0011 for finance_chain_items, finance_figures_from and
+  finance_closing_changes_from (0017 doesn't touch them).
+Usage: python build_0018.py <0011 .sql> <0017 .sql> <out .sql>
+Every change is an exact text replacement; a missing anchor stops the build
+(SystemExit with the anchor's first characters)."""
 import sys
 
-base_path, out_path = sys.argv[1], sys.argv[2]
-base = open(base_path, encoding='utf-8', newline='').read().replace('\r\n', '\n')
+base11_path, base17_path, out_path = sys.argv[1], sys.argv[2], sys.argv[3]
+base11 = open(base11_path, encoding='utf-8', newline='').read().replace('\r\n', '\n')
+base17 = open(base17_path, encoding='utf-8', newline='').read().replace('\r\n', '\n')
 
 B = '-- ===== source: color belt private (0018) ====='
 E = '-- ===== end color belt private ====='
 
 
-def block(start, end_line):
+def block(base, start, end_line):
+    if start not in base:
+        raise SystemExit(f'build_0018: block start {start[:70]!r} not found - the base file changed')
     a = base.index(start)
     b = base.index(end_line, a) + len(end_line)
     return base[a:b]
@@ -19,17 +27,17 @@ def block(start, end_line):
 
 def rep(text, old, new, count=1):
     n = text.count(old)
-    assert n == count, (old[:90], n)
+    if n != count:
+        raise SystemExit(f'build_0018: expected {count} x {old[:90]!r}, found {n} - the base file changed; update this anchor')
     return text.replace(old, new)
 
 
 # ---------------------------------------------------------------------
 # 3a. finance_chain_steps_core
-steps = block('-- 3a. finance_chain_steps_core(p_from, p_to, p_source, p_owner) - every',
+steps = block(base17, '-- 3a (0011) with a third source, camp.',
               'revoke execute on function public.finance_chain_steps_core(date, date, text, uuid) from public, anon, authenticated, service_role;\n')
-steps = rep(steps, """-- Reads login ids (recorded_by) for two comparisons only; never returns one.
-create or replace function""", """-- Reads login ids (recorded_by) for two comparisons only; never returns one.
-""" + B + """
+steps = rep(steps, """drop function if exists public.finance_chain_steps_core(date, date, text, uuid);
+create function""", """""" + B + """
 -- 0018: Color Belt PRIVATE testing payments (0014) are Color Belt rows
 -- too (source 'color_belt'). A moved private testing belongs to the same
 -- OWNER as the event registration it came from (moved_from_registration_id);
@@ -48,14 +56,18 @@ create or replace function""", """-- Reads login ids (recorded_by) for two compa
 -- item "edited" (3a2). New output columns: private_id (the private testing
 -- of the row, NULL for event / Star rows), step_kind ('first', 'edit',
 -- 'move', 'move_undone'), link_at / link_by_name (when and by whom the
--- step's link was written).
+-- step's link was written). The private rows are one more branch of the
+-- query (their extra columns come from a left join after it, so the Color
+-- Belt event, Star and camp branches stay as they are); the move and undo
+-- move links are looked for only among Color Belt rows.
 """ + E + """
-create or replace function""")
+drop function if exists public.finance_chain_steps_core(date, date, text, uuid);
+create function""")
 steps = rep(steps, """  undo_amount_cents integer,
   undo_method       text
 )
 language plpgsql""", """  undo_amount_cents integer,
-  undo_method       text,
+  undo_method       text,   -- 0018: + the columns below
   """ + B + """
   private_id        uuid,
   step_kind         text,
@@ -80,13 +92,13 @@ steps = rep(steps, """    select x.*
                    (select q.registration_id from public.testing_payments q
                      where (p_owner is null and q.kind <> 'reversal' and q.paid_on between p_from and p_to)
                         or (p_source = 'color_belt' and q.registration_id = p_owner))
-            union all""", """    with cb_owner as (
+            union all""", """    """ + B + """
+    with cb_owner as (
       -- the Color Belt owners: registrations with a payment in the range
       -- (or the one asked for)
       select q.registration_id as owner from public.testing_payments q
        where (p_owner is null and q.kind <> 'reversal' and q.paid_on between p_from and p_to)
           or (p_source = 'color_belt' and q.registration_id = p_owner)
-      """ + B + """
       union
       -- ... and the owners of private testings with a payment in the range
       select coalesce(t.moved_from_registration_id, t.id)
@@ -94,35 +106,29 @@ steps = rep(steps, """    select x.*
         join public.testing_private t on t.id = q.private_id
        where (p_owner is null and q.kind <> 'reversal' and q.paid_on between p_from and p_to)
           or (p_source = 'color_belt' and coalesce(t.moved_from_registration_id, t.id) = p_owner)
-      """ + E + """
     )
-    select x.*
+    """ + E + """
+    select x.*, tpp.private_id, tpp.moved_from_payment_id as moved_from   -- 0018: + the private columns
       from (select 0 as is_end, 'color_belt'::text as src, p.registration_id as owner, p.id, p.kind, p.amount_cents,
-                   p.method, p.paid_on, p.recorded_at, p.recorded_by, p.recorded_by_name, p.reverses_payment_id,
-                   null::uuid as private_id, null::uuid as moved_from
+                   p.method, p.paid_on, p.recorded_at, p.recorded_by, p.recorded_by_name, p.reverses_payment_id
               from public.testing_payments p
-             where p.registration_id in (select o.owner from cb_owner o)
+             where p.registration_id in (select o.owner from cb_owner o)   -- 0018: owners incl. private testings'
             union all
             """ + B + """
             select 0, 'color_belt'::text, coalesce(t.moved_from_registration_id, t.id), p.id, p.kind, p.amount_cents,
-                   p.method, p.paid_on, p.recorded_at, p.recorded_by, p.recorded_by_name, p.reverses_payment_id,
-                   t.id, p.moved_from_payment_id
+                   p.method, p.paid_on, p.recorded_at, p.recorded_by, p.recorded_by_name, p.reverses_payment_id
               from public.testing_private_payments p
               join public.testing_private t on t.id = p.private_id
              where coalesce(t.moved_from_registration_id, t.id) in (select o.owner from cb_owner o)
             union all
             """ + E + """""")
-steps = rep(steps, """            select 0, 'star'::text, p.candidate_id, p.id, p.kind, p.amount_cents,
-                   p.method, p.paid_on, p.recorded_at, p.recorded_by, p.recorded_by_name, p.reverses_payment_id
-              from public.star_payments p""", """            select 0, 'star'::text, p.candidate_id, p.id, p.kind, p.amount_cents,
-                   p.method, p.paid_on, p.recorded_at, p.recorded_by, p.recorded_by_name, p.reverses_payment_id,
-                   null::uuid, null::uuid   -- 0018: (no private testing)
-              from public.star_payments p""")
-steps = rep(steps, """            select 1, null::text, null::uuid, null::uuid, null::text, null::integer,
-                   null::text, null::date, null::timestamptz, null::uuid, null::text, null::uuid) as x""",
-            """            select 1, null::text, null::uuid, null::uuid, null::text, null::integer,
-                   null::text, null::date, null::timestamptz, null::uuid, null::text, null::uuid,
-                   null::uuid, null::uuid) as x   -- 0018: + private_id, moved_from""")
+steps = rep(steps, """                   null::text, null::date, null::timestamptz, null::uuid, null::text, null::uuid) as x
+""", """                   null::text, null::date, null::timestamptz, null::uuid, null::text, null::uuid) as x
+    """ + B + """
+    -- the private columns of a private testing row (NULL for every other row)
+    left join public.testing_private_payments tpp on x.src = 'color_belt' and tpp.id = x.id
+    """ + E + """
+""")
 steps = rep(steps, """      a_isnew := array_fill(false, array[v_n]);
 """, """      a_isnew := array_fill(false, array[v_n]);
       a_ltype := array_fill(''::text, array[v_n]);   -- 0018
@@ -168,27 +174,30 @@ steps = rep(steps, """          if v_t > 0 then
                 end if;
               end loop;
               a_new[v_i] := v_k;
-              if v_k > 0 then a_isnew[v_k] := true; a_ltype[v_i] := 'edit'; end if;
+              if v_k > 0 then a_isnew[v_k] := true; a_ltype[v_i] := 'edit'; end if;   -- 0018: + the link kind
             end if;
           end if;""")
 steps = rep(steps, """      -- rule 1: a chain starts at a payment or refund that isn't the new
       -- row of an edit; follow each edit to its new row (rules 2-3)""", """      """ + B + """
-      -- an undone move: an EVENT reversal of an event payment P that is
-      -- neither an edit nor a move, and an unclaimed event payment N of the
-      -- same student with P's recorded_at, NO login, and P's amount, method
-      -- and day (0014's Undo move writes exactly that). On a tie the
-      -- smallest id wins (CONTRACT-0018 2.3, edge case 1).
+      -- an undone move (Color Belt only): an EVENT reversal R of an event payment P that is
+      -- neither an edit nor a move, dated on P's day and written by a login
+      -- (0014's Move writes it so), and an unclaimed event payment N of the
+      -- same student with P's recorded_at, NO login, R's name (only the
+      -- mover can undo a move), and P's amount, method and day (0014's Undo
+      -- move writes exactly that). On a tie the smallest id wins
+      -- (CONTRACT-0018 2.3, edge case 1).
       for v_i in 1 .. v_n loop
-        continue when a_kind[v_i] <> 'reversal' or a_new[v_i] > 0 or a_priv[v_i] is not null;
+        continue when v_src <> 'color_belt' or a_kind[v_i] <> 'reversal' or a_new[v_i] > 0 or a_priv[v_i] is not null;
         v_t := 0;
         for v_j in 1 .. v_n loop
           if a_id[v_j] = a_target[v_i] then v_t := v_j; end if;
         end loop;
-        continue when v_t = 0 or a_kind[v_t] <> 'payment' or a_priv[v_t] is not null;
+        continue when v_t = 0 or a_kind[v_t] <> 'payment' or a_priv[v_t] is not null
+                   or a_paid[v_i] <> a_paid[v_t] or a_by[v_i] is null;
         v_k := 0;
         for v_j in 1 .. v_n loop
           if a_kind[v_j] = 'payment' and v_j <> v_t and not a_isnew[v_j] and a_priv[v_j] is null
-             and a_by[v_j] is null and a_at[v_j] = a_at[v_t]
+             and a_by[v_j] is null and a_at[v_j] = a_at[v_t] and a_name[v_j] = a_name[v_i]
              and a_amount[v_j] = a_amount[v_t] and a_method[v_j] = a_method[v_t] and a_paid[v_j] = a_paid[v_t]
              and (v_k = 0 or a_id[v_j] < a_id[v_k]) then
             v_k := v_j;
@@ -207,8 +216,8 @@ steps = rep(steps, """      -- rule 1: a chain starts at a payment or refund tha
 steps = rep(steps, """          edit_by_name      := case when a_edits[v_i] > 0 then a_name[a_edits[v_i]] end;
           edit_on           := case when a_edits[v_i] > 0 then a_paid[a_edits[v_i]] end;""",
             """          -- 0018: who / when of an EDIT only (a move is not a correction)
-          edit_by_name      := case when a_edits[v_i] > 0 and a_ltype[a_edits[v_i]] = 'edit' then a_name[a_edits[v_i]] end;
-          edit_on           := case when a_edits[v_i] > 0 and a_ltype[a_edits[v_i]] = 'edit' then a_paid[a_edits[v_i]] end;""")
+          edit_by_name      := case when a_edits[v_i] > 0 and a_ltype[a_edits[v_i]] = 'edit' then a_name[a_edits[v_i]] end;   -- 0018
+          edit_on           := case when a_edits[v_i] > 0 and a_ltype[a_edits[v_i]] = 'edit' then a_paid[a_edits[v_i]] end;      -- 0018""")
 steps = rep(steps, """          undo_method       := case when v_ri > 0 then a_method[v_ri] end;
           return next;""", """          undo_method       := case when v_ri > 0 then a_method[v_ri] end;
           """ + B + """
@@ -233,14 +242,16 @@ steps = rep(steps, """    a_target[v_n] := v_row.reverses_payment_id;
 
 # ---------------------------------------------------------------------
 # 3a2. finance_chain_items
-items = block('-- 3a2. finance_chain_items(p_from, p_to, p_source, p_owner) - the report\'s',
+items = block(base11, '-- 3a2. finance_chain_items(p_from, p_to, p_source, p_owner) - the report\'s',
               'revoke execute on function public.finance_chain_items(date, date, text, uuid) from public, anon, authenticated, service_role;\n')
 items = rep(items, """-- that day. Works chain by chain over 3a's rows (same owners rule).
 create or replace function""", """-- that day. Works chain by chain over 3a's rows (same owners rule).
 """ + B + """
 -- 0018: only EDIT steps make an item edited / moved_in and fill was_* and
 -- changed_* (a move or an undone move is not a correction: a moved payment
--- stays 'counted'); new output column private_id = the shown row's private
+-- stays 'counted'); the final row's recorded_by_name and time are those of
+-- the last 'first' or 'edit' step - the person who TOOK the money, not the
+-- one who moved it; new output column private_id = the shown row's private
 -- testing (NULL = an event / Star row).
 """ + E + """
 create or replace function""")
@@ -248,7 +259,7 @@ items = rep(items, """  changed_on        date,
   first_recorded_at timestamptz
 )
 language plpgsql""", """  changed_on        date,
-  first_recorded_at timestamptz,
+  first_recorded_at timestamptz,   -- 0018: + private_id
   private_id        uuid   -- 0018
 )
 language plpgsql""")
@@ -259,6 +270,7 @@ items = rep(items, """  c_editon date[];
   c_skind  text[];
   v_ned    integer;      -- how many EDIT steps the chain has
   v_le     integer;      -- the last edit step (0 = none)
+  v_lt     integer;      -- the last step that took money ('first' or 'edit')
   """ + E + """
   -- the chain's own facts""")
 items = rep(items, """                   x.end_state, x.undo_by_name, x.undo_on
@@ -266,24 +278,30 @@ items = rep(items, """                   x.end_state, x.undo_by_name, x.undo_on
             union all
             select 1, null::bigint, null::text, null::uuid, null::uuid, 0, null::uuid, null::text,
                    null::integer, null::text, null::date, null::timestamptz, null::text, null::text, null::date,
-                   null::text, null::text, null::date) as y""", """                   x.end_state, x.undo_by_name, x.undo_on,
+                   null::text, null::text, null::date) as y""", """                   x.end_state, x.undo_by_name, x.undo_on,   -- 0018: + the two below
                    x.private_id, x.step_kind   -- 0018
               from public.finance_chain_steps_core(p_from, p_to, p_source, p_owner) with ordinality as x
             union all
             select 1, null::bigint, null::text, null::uuid, null::uuid, 0, null::uuid, null::text,
                    null::integer, null::text, null::date, null::timestamptz, null::text, null::text, null::date,
-                   null::text, null::text, null::date,
+                   null::text, null::text, null::date,   -- 0018: + the two below
                    null::uuid, null::text) as y   -- 0018""")
 items = rep(items, """    if v_n > 0 and (v_s.is_end = 1 or v_s.step = 0) then
       if v_end = 'live' then""", """    if v_n > 0 and (v_s.is_end = 1 or v_s.step = 0) then
       """ + B + """
       v_ned := 0;
       v_le := 0;
+      v_lt := 1;
       for v_i in 1 .. v_n loop
         if c_skind[v_i] = 'edit' then v_ned := v_ned + 1; v_le := v_i; end if;
+        if c_skind[v_i] in ('first', 'edit') then v_lt := v_i; end if;
       end loop;
       """ + E + """
       if v_end = 'live' then""")
+items = rep(items, """        amount_cents := c_amount[v_n]; recorded_at := c_at[v_n]; recorded_by_name := c_name[v_n];
+        state := case when v_n = 1""", """        amount_cents := c_amount[v_n];   -- 0018: (the time and name below)
+        recorded_at := c_at[v_lt]; recorded_by_name := c_name[v_lt];   -- 0018: who took the money
+        state := case when v_n = 1""")
 items = rep(items, """        state := case when v_n = 1 then 'counted'
                       when c_paid[v_n] = c_paid[1] then 'edited'
                       else 'moved_in' end;
@@ -294,15 +312,15 @@ items = rep(items, """        state := case when v_n = 1 then 'counted'
         changed_by_name := c_editby[v_n]; changed_on := c_editon[v_n];
         first_recorded_at := c_at[1];
         return next;""", """        -- 0018: edits only (v_ned) - was "v_n > 1" (every later step was an edit)
-        state := case when v_ned = 0 then 'counted'
+        state := case when v_ned = 0 then 'counted'   -- 0018
                       when c_paid[v_n] = c_paid[1] then 'edited'
                       else 'moved_in' end;
-        was_amount_cents := case when v_ned > 0 then c_amount[1] end;
-        was_method := case when v_ned > 0 then c_method[1] end;
+        was_amount_cents := case when v_ned > 0 then c_amount[1] end;   -- 0018
+        was_method := case when v_ned > 0 then c_method[1] end;   -- 0018
         moved_to := null;
-        moved_from := case when v_ned > 0 and c_paid[v_n] <> c_paid[1] then c_paid[1] end;
+        moved_from := case when v_ned > 0 and c_paid[v_n] <> c_paid[1] then c_paid[1] end;   -- 0018
         changed_by_name := case when v_le > 0 then c_editby[v_le] end;   -- 0018: the last EDIT
-        changed_on := case when v_le > 0 then c_editon[v_le] end;
+        changed_on := case when v_le > 0 then c_editon[v_le] end;   -- 0018
         first_recorded_at := c_at[1];
         private_id := c_priv[v_n];   -- 0018
         return next;""")
@@ -316,7 +334,7 @@ items = rep(items, """          first_recorded_at := c_at[1];
             state := 'moved_out';
             moved_to := c_paid[v_n];
             changed_by_name := case when v_le > 0 then c_editby[v_le] end;   -- 0018: the last EDIT
-            changed_on := case when v_le > 0 then c_editon[v_le] end;""")
+            changed_on := case when v_le > 0 then c_editon[v_le] end;   -- 0018""")
 items = rep(items, """      c_at := '{}'; c_name := '{}'; c_editby := '{}'; c_editon := '{}';
     end if;""", """      c_at := '{}'; c_name := '{}'; c_editby := '{}'; c_editon := '{}';
       c_priv := '{}'; c_skind := '{}';   -- 0018
@@ -327,73 +345,88 @@ items = rep(items, """    c_editby[v_n] := v_s.edit_by_name; c_editon[v_n] := v_
   end loop;""")
 
 # ---------------------------------------------------------------------
-# 3b. finance_money_rows_core
-money = block('-- 3b. finance_money_rows_core(p_location_code, p_from, p_to, p_source,',
+# 3b. finance_money_rows_core (camps' 0017 version)
+money = block(base17, '-- 3b (0011) with camp items.',
               'revoke execute on function public.finance_money_rows_core(text, date, date, text, uuid) from public, anon, authenticated, service_role;\n')
-money = rep(money, """-- id for the payment detail).
-create or replace function public.finance_money_rows_core(""", """-- id for the payment detail).
+money = rep(money, """-- 3b (0011) with camp items.
+create or replace function""", """-- 3b (0011) with camp items.
 """ + B + """
 -- 0018: an item whose shown row is a PRIVATE testing payment takes the
 -- private testing's school, names and private day (is_private true,
 -- event_date = private_date) and has no event (event_name / event_id NULL).
 """ + E + """
-create or replace function public.finance_money_rows_core(""")
-money = rep(money, """  select i.source, i.chain_id,
-         coalesce(e.location_code, c.location_code),
-         i.day,
-         to_char(i.recorded_at at time zone 'America/New_York', 'HH24:MI'),
-         coalesce(g.first_name, c.first_name), coalesce(g.last_name, c.last_name),
-         i.source,
-         case when i.source = 'color_belt' then e.testing_date else coalesce(c.private_on, se.testing_date) end,
-         (i.source = 'star' and c.private_on is not null),""", """  select i.source, i.chain_id,
-         coalesce(tp.location_code, e.location_code, c.location_code),   -- 0018: tp first
-         i.day,
-         to_char(i.recorded_at at time zone 'America/New_York', 'HH24:MI'),
-         case when tp.id is not null then tp.first_name else coalesce(g.first_name, c.first_name) end,   -- 0018
-         case when tp.id is not null then tp.last_name else coalesce(g.last_name, c.last_name) end,      -- 0018
-         i.source,
-         case when tp.id is not null then tp.private_date   -- 0018
-              when i.source = 'color_belt' then e.testing_date else coalesce(c.private_on, se.testing_date) end,
-         (tp.id is not null or (i.source = 'star' and c.private_on is not null)),   -- 0018: tp""")
-money = rep(money, """         coalesce(e.name, se.name), coalesce(e.id, se.id)
-    from public.finance_chain_items(p_from, p_to, p_source, p_owner) i""", """         case when tp.id is null then coalesce(e.name, se.name) end,   -- 0018: no event for a private row
-         case when tp.id is null then coalesce(e.id, se.id) end
-    from public.finance_chain_items(p_from, p_to, p_source, p_owner) i
+create or replace function""")
+money = rep(money, """           else coalesce(e.location_code, c.location_code) end,""",
+            """           else coalesce(tp.location_code, e.location_code, c.location_code) end,   -- 0018: tp first""")
+money = rep(money, """         coalesce(g.first_name, c.first_name
+""", """         coalesce(tp.first_name, g.first_name, c.first_name   -- 0018: tp first
+""")
+money = rep(money, """         coalesce(g.last_name, c.last_name
+""", """         coalesce(tp.last_name, g.last_name, c.last_name   -- 0018: tp first
+""")
+money = rep(money, """         case when i.source = 'color_belt' then e.testing_date
+""", """         case when tp.id is not null then tp.private_date   -- 0018
+              when i.source = 'color_belt' then e.testing_date   -- 0018: (moved down a line)
+""")
+money = rep(money, """         (i.source = 'star' and c.private_on is not null),""",
+            """         (tp.id is not null or (i.source = 'star' and c.private_on is not null)),   -- 0018: tp""")
+money = rep(money, """         coalesce(e.name, se.name
+""", """         case when tp.id is null then coalesce(e.name, se.name   -- 0018: no event for a private row
+""")
+money = rep(money, """                  ),
+         coalesce(e.id, se.id
+""", """                  ) end,   -- 0018
+         case when tp.id is null then coalesce(e.id, se.id   -- 0018: no event for a private row
+""")
+money = rep(money, """                  )
+    from public.finance_chain_items(p_from, p_to, p_source, p_owner) i""", """                  ) end   -- 0018
+    from public.finance_chain_items(p_from, p_to, p_source, p_owner) i""")
+money = rep(money, """    left join public.star_events se on se.id = c.event_id
+""", """    left join public.star_events se on se.id = c.event_id
     """ + B + """
     left join public.testing_private tp on tp.id = i.private_id
-    """ + E + """""")
-money = rep(money, """   where (e.id is not null or se.id is not null)
-     and (p_location_code is null or coalesce(e.location_code, c.location_code) = p_location_code)""",
-            """   where (tp.id is not null or e.id is not null or se.id is not null)   -- 0018: tp
-     and (p_location_code is null or coalesce(tp.location_code, e.location_code, c.location_code) = p_location_code)""")
+    """ + E + """
+""")
+money = rep(money, """   where (e.id is not null or se.id is not null
+""", """   where (tp.id is not null or e.id is not null or se.id is not null   -- 0018: tp
+""")
+money = rep(money, """                else coalesce(e.location_code, c.location_code) end) = p_location_code)""",
+            """                else coalesce(tp.location_code, e.location_code, c.location_code) end) = p_location_code)   -- 0018: tp""")
 
 # ---------------------------------------------------------------------
 # 3c. finance_figures_from: fingerprint by payment_id
-figs = block('-- 3c. finance_figures(p_location_code, p_from, p_to) - one row per school',
+figs = block(base11, '-- 3c. finance_figures(p_location_code, p_from, p_to) - one row per school',
              'revoke execute on function public.finance_figures_from(jsonb, text, date, date) from public, anon, authenticated, service_role;\n')
 figs = rep(figs, """--   fingerprint  md5 of the day's shown items, "row_id|amount|method|state"
---                sorted and joined with commas (empty day: md5 of '').""", """--   fingerprint  md5 of the day's shown items, "payment_id|amount|method|state"
+--                sorted and joined with commas (empty day: md5 of '').""", """""" + B + """
+--   fingerprint  md5 of the day's shown items, "payment_id|amount|method|state"
 --                sorted and joined with commas (empty day: md5 of '').
 --                0018: payment_id (the chain's first row) instead of 0011's
 --                row_id, so a Move to private testing (the shown row
---                changes, the money doesn't) leaves it unchanged.""")
+--                changes, the money doesn't) leaves it unchanged.
+""" + E + """""")
 figs = rep(figs, """           as x(school text, day date, kind text, method text, amount_cents integer, state text, row_id uuid, counts boolean)""",
-           """           as x(school text, day date, kind text, method text, amount_cents integer, state text, row_id uuid, counts boolean,
+           """           as x(school text, day date, kind text, method text, amount_cents integer, state text, row_id uuid, counts boolean,   -- 0018
                 payment_id uuid)   -- 0018""")
 figs = rep(figs, """           md5(coalesce(string_agg(i.row_id::text || '|' || i.amount_cents::text || '|' || i.method || '|' || i.state, ','
                                    order by (i.row_id::text || '|' || i.amount_cents::text || '|' || i.method || '|' || i.state) collate "C"),""",
-           """           md5(coalesce(string_agg(i.payment_id::text || '|' || i.amount_cents::text || '|' || i.method || '|' || i.state, ','
-                                   order by (i.payment_id::text || '|' || i.amount_cents::text || '|' || i.method || '|' || i.state) collate "C"),""")
+           """           md5(coalesce(string_agg(i.payment_id::text || '|' || i.amount_cents::text || '|' || i.method || '|' || i.state, ','   -- 0018
+                                   order by (i.payment_id::text || '|' || i.amount_cents::text || '|' || i.method || '|' || i.state) collate "C"),   -- 0018""")
 
 # ---------------------------------------------------------------------
 # 3h. finance_closing_changes_from: by chain id + amount + method + kind
-chg = block('-- 3h. finance_closing_changes_from(closing, items) - "Changed after',
+chg = block(base11, '-- 3h. finance_closing_changes_from(closing, items) - "Changed after',
             'revoke execute on function public.finance_closing_changes_from(uuid, jsonb) from public, anon, authenticated, service_role;\n')
 chg = rep(chg, """--   changed_count    chains added, removed, or with another row / amount /
---                    method than the snapshot""", """--   changed_count    chains added, removed, or with another amount / method /
---                    kind than the snapshot (0018: no longer the shown row's
---                    id - a Move to private testing changes the row, not
---                    the money)""")
+--                    method than the snapshot""", """""" + B + """
+--   changed_count    chains added, removed, or with another amount / method /
+--                    kind than the snapshot. 0018: a snapshot item and an item
+--                    now are the same when EITHER the chain id or the row id
+--                    agrees (a row belongs to one chain, so nothing pairs
+--                    twice) - so a Move, an Undo move made before a close of
+--                    0011's time, or a moved payment whose event was deleted
+--                    later are not differences; the money still is
+""" + E + """""")
 chg = rep(chg, """    from (select x.source, x.payment_id, x.row_id, x.amount_cents, x.method
             from jsonb_to_recordset(coalesce(p_items, '[]'::jsonb))
                  as x(source text, payment_id uuid, school text, day date, row_id uuid, amount_cents integer,
@@ -410,57 +443,61 @@ chg = rep(chg, """      or cur.row_id <> snap.row_id
       or cur.method <> snap.method
       or cur.kind <> snap.kind;""")
 
+# 3h (continued): the comparison itself (pairs by chain id OR row id)
+chg = rep(chg, "  select count(*)::integer into changed_count\n    from (select x.source, x.payment_id, x.row_id, x.amount_cents, x.method, x.kind   -- 0018: + kind\n            from jsonb_to_recordset(coalesce(p_items, '[]'::jsonb))\n                 as x(source text, payment_id uuid, school text, day date, row_id uuid, amount_cents integer,\n                      method text, counts boolean, kind text)\n           where x.school = v_c.location_code and x.day = v_c.day and x.counts) as cur\n    full join (select ci.source, ci.chain_id, ci.row_id, ci.amount_cents, ci.method, ci.kind   -- 0018: + kind\n                 from public.finance_day_closing_items ci\n                where ci.closing_id = p_closing_id) as snap\n      on snap.source = cur.source and snap.chain_id = cur.payment_id\n   where cur.payment_id is null\n      or snap.chain_id is null\n      or cur.amount_cents <> snap.amount_cents   -- 0018: row_id no longer compared\n      or cur.method <> snap.method\n      or cur.kind <> snap.kind;", '  -- ===== source: color belt private (0018) =====\n  -- a snapshot item and an item now are the same chain when EITHER the\n  -- chain id or the row id agrees (a row belongs to one chain, so nothing\n  -- pairs twice). A full join can\'t pair on "this OR that", so the three\n  -- kinds of difference are counted one by one: only now, only in the\n  -- snapshot, paired but with other money.\n  with cur as (\n    select x.source, x.payment_id, x.row_id, x.amount_cents, x.method, x.kind\n      from jsonb_to_recordset(coalesce(p_items, \'[]\'::jsonb))\n           as x(source text, payment_id uuid, school text, day date, row_id uuid, amount_cents integer,\n                method text, counts boolean, kind text)\n     where x.school = v_c.location_code and x.day = v_c.day and x.counts\n  ),\n  snap as (\n    select ci.source, ci.chain_id, ci.row_id, ci.amount_cents, ci.method, ci.kind\n      from public.finance_day_closing_items ci\n     where ci.closing_id = p_closing_id\n  )\n  select ((select count(*) from cur c\n            where not exists (select 1 from snap s\n                               where s.source = c.source and (s.chain_id = c.payment_id or s.row_id = c.row_id)))\n        + (select count(*) from snap s\n            where not exists (select 1 from cur c\n                               where c.source = s.source and (s.chain_id = c.payment_id or s.row_id = c.row_id)))\n        + (select count(*) from cur c join snap s\n                on s.source = c.source and (s.chain_id = c.payment_id or s.row_id = c.row_id)\n            where c.amount_cents <> s.amount_cents or c.method <> s.method or c.kind <> s.kind))::integer\n    into changed_count;\n  -- ===== end color belt private =====')
+
 # ---------------------------------------------------------------------
-# 5d. finance_payment_detail
-det = block('-- 5d. finance_payment_detail(p_source, p_payment_id)   S',
+# 5d. finance_payment_detail (camps' 0017 version)
+det = block(base17, '-- 5d (0011) for camp payments too.',
             'grant  execute on function public.finance_payment_detail(text, uuid) to authenticated;\n')
-det = rep(det, """--      history: [{at, by_name, what: recorded | edited | undone | refunded,
---                 amount_cents, method, paid_on}]}   (newest first; an
---      undone line carries the undone row's amount and the undo's date)""", """--      history: [{at, by_name, what: recorded | edited | undone | refunded
---                 | moved | move_undone (0018), amount_cents, method,
---                 paid_on}]}   (newest first; an undone line carries the
---      undone row's amount and the undo's date)
+det = rep(det, """-- 5d (0011) for camp payments too.
+create or replace function""", """-- 5d (0011) for camp payments too.
 """ + B + """
 -- 0018: p_payment_id may be a private testing payment (source 'color_belt');
 -- its owner is the event registration it was moved from, else the private
--- testing. A Move adds a 'moved' line (when and by whom it was moved), an
--- Undo move a 'move_undone' line (by whom; at the move's time - 0014 keeps
--- no time of the undo on the rows).
-""" + E + """""")
-det = rep(det, """  if p_source = 'color_belt' then
-    select p.registration_id into v_owner from public.testing_payments p where p.id = p_payment_id;
+-- testing. History "what" codes: recorded | edited | undone | refunded and
+-- (0018) moved | move_undone: a Move adds a 'moved' line (when and by whom
+-- it was moved), an Undo move a 'move_undone' line (by whom; at the move's
+-- time - 0014 keeps no time of the undo on the rows).
+""" + E + """
+create or replace function""")
+det = rep(det, """    select p.registration_id into v_owner from public.testing_payments p where p.id = p_payment_id;
     select min(p.paid_on), max(p.paid_on) into v_from, v_to
       from public.testing_payments p where p.registration_id = v_owner and p.kind <> 'reversal';
-  else""", """  if p_source = 'color_belt' then
-    select p.registration_id into v_owner from public.testing_payments p where p.id = p_payment_id;
+""", """    select p.registration_id into v_owner from public.testing_payments p where p.id = p_payment_id;
     """ + B + """
     if v_owner is null then
       select coalesce(t.moved_from_registration_id, t.id) into v_owner
         from public.testing_private_payments p join public.testing_private t on t.id = p.private_id
        where p.id = p_payment_id;
     end if;
-    """ + E + """
     -- (the chain itself is looked up below; this only says "the owner has rows")
     v_from := case when v_owner is not null then v_today end;
-  else""")
+    """ + E + """
+""")
 det = rep(det, """    from (select c.recorded_at as at, c.step as n,
                  jsonb_build_object('at', c.recorded_at, 'by_name', c.recorded_by_name,
                                     'what', case when c.step > 0 then 'edited'
                                                  when c.kind = 'refund' then 'refunded'
-                                                 else 'recorded' end,""", """    from (select coalesce(c.link_at, c.recorded_at) as at, c.step as n,
-                 -- 0018: a step's time and person are its link's (for an edit
-                 -- they are the new row's, as before)
+                                                 else 'recorded' end,""", """    from (select coalesce(c.link_at, c.recorded_at) as at, c.step as n,   -- 0018
+                 """ + B + """
+                 -- a step's time and person are its link's (for an edit they
+                 -- are the new row's, as before)
                  jsonb_build_object('at', coalesce(c.link_at, c.recorded_at),
                                     'by_name', coalesce(c.link_by_name, c.recorded_by_name),
                                     'what', case c.step_kind
                                               when 'edit' then 'edited'
-                                              when 'move' then 'moved'                 -- 0018
-                                              when 'move_undone' then 'move_undone'    -- 0018
+                                              when 'move' then 'moved'
+                                              when 'move_undone' then 'move_undone'
                                               else case when c.kind = 'refund' then 'refunded' else 'recorded' end
-                                            end,""")
+                                            end,
+                 """ + E + """""")
 
 head = r"""-- =====================================================================
 -- 0018_finance_private.sql
+-- Built over camps' 0017 (0017_finance_camps.sql at git fb4ec24) by
+-- supabase/tools/build_0018.py. A guard at the top refuses to run before
+-- camps' 0017 is applied.
 -- ---------------------------------------------------------------------
 -- WHAT THIS FILE IS
 --   Finance (0011) learns about Color Belt PRIVATE testing payments (0014):
@@ -481,16 +518,18 @@ head = r"""-- ==================================================================
 --
 -- WHAT IT CHANGES
 --   * one index: finance_testing_private_payments_paid_on_idx
---   * six 0011 functions, replaced (create or replace; two are first
---     removed with "drop function if exists" because their list of output
---     columns grows): finance_chain_steps_core, finance_chain_items,
---     finance_money_rows_core, finance_figures_from,
---     finance_closing_changes_from, finance_payment_detail.
+--   * six Finance functions, replaced: three as camps' 0017 leaves them
+--     (finance_chain_steps_core, finance_money_rows_core,
+--     finance_payment_detail - every camp block kept byte for byte) and
+--     three as 0011 has them (finance_chain_items, finance_figures_from,
+--     finance_closing_changes_from). The two chain helpers are first
+--     removed with "drop function if exists", because their list of output
+--     columns grows.
 --     Every change is inside a block marked
 --       -- ===== source: color belt private (0018) =====
 --       -- ===== end color belt private =====
 --     or on a line ending in a "-- 0018" comment; the rest is the base
---     text unchanged.
+--     text unchanged (run.mjs checks that).
 --   Nothing else: no table, row, setting, reminder time, closing or right
 --   changes. Every answer keeps its keys; the only new values are the
 --   payment detail's history "what" codes 'moved' and 'move_undone'.
@@ -502,9 +541,15 @@ head = r"""-- ==================================================================
 --   kept. The destructive-operations warning comes from the two
 --   "drop function if exists" lines (they are recreated straight after).
 --   Safe to run again.
---   NOTE: re-running 0011 (or camps' 0017) after this file puts back
---   versions WITHOUT private testing payments: run this file again
---   straight after.
+--   NOTE on re-running earlier files after this one:
+--   * 0011: stops with "cannot change return type of existing function"
+--     (finance_chain_items) and is rolled back - nothing changes, 0018
+--     stays in force.
+--   * camps' 0017: RUNS (it drops and recreates the chain helper) and puts
+--     back the chain helper and the money rows WITHOUT private testing -
+--     and then the report fails, because 0018's finance_chain_items needs
+--     the private columns. Re-run this file straight after it, in the same
+--     sitting.
 --
 -- PRIVACY
 --   As 0011: login ids are read only inside finance_chain_steps_core (to
@@ -515,16 +560,104 @@ head = r"""-- ==================================================================
 
 begin;
 
+-- The guard: 0018 is built over camps' 0017 (camp payments in Finance) and
+-- must come after it (and after 0014, Color Belt private testing).
+-- Camps' 0017 leaves its mark in the chain helper's code ("source: camp
+-- (0017)"); without it, or without 0014's private payments table, this
+-- file stops here and nothing is changed.
+do $$
+begin
+  if to_regclass('public.testing_private_payments') is null then
+    raise exception '0018 needs migration 0014 (Color Belt private testing) first';
+  end if;
+  if not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                  where n.nspname = 'public' and p.proname = 'finance_chain_steps_core'
+                    and position('source: camp (0017)' in p.prosrc) > 0) then
+    raise exception '0018 must be applied after camps'' 0017 - not yet (SETUP section 18)';
+  end if;
+end;
+$$;
+
 -- Finance looks private payments up by their date (as 0011 does for the
 -- other two payment tables).
 create index if not exists finance_testing_private_payments_paid_on_idx on public.testing_private_payments (paid_on);
 
--- These two get more output columns, which "create or replace" can't do:
--- removed here and created again just below (nothing else is removed).
+-- finance_chain_items gets one more output column, which "create or
+-- replace" can't do: removed here and created again just below (the chain
+-- helper is removed and recreated in its own section, as 0017 does).
 drop function if exists public.finance_chain_items(date, date, text, uuid);
-drop function if exists public.finance_chain_steps_core(date, date, text, uuid);
 
 """
+# ---------------------------------------------------------------------
+# Self-check: every line that differs from the base text must be inside a
+# marked 0018 block or carry "0018" (a comment) - so the unmarked text IS
+# the base text - no base line may simply disappear, and every camp block
+# of the base must be in the output byte for byte.
+import difflib
+
+CAMP_B = '-- ===== source: camp (0017) ====='
+CAMP_E = '-- ===== end camp ====='
+
+
+def verify(name, old, new):
+    a, b = old.split('\n'), new.split('\n')
+    inside, flag = [], False
+    for line in b:
+        if B in line:
+            flag = True
+            inside.append(True)
+        elif E in line:
+            inside.append(True)
+            flag = False
+        else:
+            inside.append(flag)
+    bad = []
+    changed = 0
+    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, a, b, autojunk=False).get_opcodes():
+        if tag == 'equal':
+            continue
+        if j1 == j2:
+            bad.append('base lines removed: ' + ' | '.join(x.strip() for x in a[i1:i2])[:200])
+            continue
+        for j in range(j1, j2):
+            changed += 1
+            if not (inside[j] or '0018' in b[j] or b[j].strip() == ''):
+                bad.append('unmarked new line: ' + b[j].strip()[:160])
+    camps = 0
+    pos = 0
+    while True:
+        i = old.find(CAMP_B, pos)
+        if i < 0:
+            break
+        k = old.index(CAMP_E, i) + len(CAMP_E)
+        if old[i:k] not in new:
+            bad.append('camp block changed: ' + old[i:k][:120])
+        camps += 1
+        pos = k
+    print(f'  check {name}: {changed} new / changed lines, all marked; {camps} camp blocks kept' if not bad
+          else f'  check {name}: PROBLEMS')
+    for x in bad:
+        print('    ' + x)
+    return not bad
+
+
+ok = all([
+    verify('finance_chain_steps_core (over 0017)', block(base17, '-- 3a (0011) with a third source, camp.',
+           'revoke execute on function public.finance_chain_steps_core(date, date, text, uuid) from public, anon, authenticated, service_role;\n'), steps),
+    verify('finance_chain_items (over 0011)', block(base11, '-- 3a2.',
+           'revoke execute on function public.finance_chain_items(date, date, text, uuid) from public, anon, authenticated, service_role;\n'), items),
+    verify('finance_money_rows_core (over 0017)', block(base17, '-- 3b (0011) with camp items.',
+           'revoke execute on function public.finance_money_rows_core(text, date, date, text, uuid) from public, anon, authenticated, service_role;\n'), money),
+    verify('finance_figures_from (over 0011)', block(base11, '-- 3c. finance_figures(p_location_code, p_from, p_to) - one row per school',
+           'revoke execute on function public.finance_figures_from(jsonb, text, date, date) from public, anon, authenticated, service_role;\n'), figs),
+    verify('finance_closing_changes_from (over 0011)', block(base11, '-- 3h. finance_closing_changes_from(closing, items) - "Changed after',
+           'revoke execute on function public.finance_closing_changes_from(uuid, jsonb) from public, anon, authenticated, service_role;\n'), chg),
+    verify('finance_payment_detail (over 0017)', block(base17, '-- 5d (0011) for camp payments too.',
+           'grant  execute on function public.finance_payment_detail(text, uuid) to authenticated;\n'), det),
+])
+if not ok:
+    raise SystemExit('build_0018: the self-check failed (see above); nothing written')
+
 out = head + steps + '\n' + items + '\n' + money + '\n' + figs + chg + det + '\ncommit;\n'
 open(out_path, 'w', encoding='utf-8', newline='').write(out.replace('\n', '\r\n'))
 print('ok', len(out.splitlines()), 'lines')
