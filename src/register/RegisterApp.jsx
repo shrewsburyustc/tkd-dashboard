@@ -402,6 +402,16 @@ function Message({ answer, onRetry }) {
   else if (status === 'closed') box = <StateMessage title={T.CLOSED_TITLE} text={closedOn ? T.closedOn(longDate(closedOn)) : T.CLOSED_TEXT} />;
   else if (status === 'finished') box = <StateMessage title={T.FINISHED_TITLE} text={T.FINISHED_TEXT} />;
   else if (status === 'not_found') box = <StateMessage title={T.NOT_FOUND_TITLE} text={T.NOT_FOUND_TEXT} />;
+  // Too many page loads from this connection: say so (not "check your internet"), with Try again
+  // for when the few minutes are up.
+  else if (status === 'rate_limited')
+    box = (
+      <StateMessage title={T.RATE_LIMITED_TITLE} text={T.RATE_LIMITED_TEXT}>
+        <button type="button" className="reg-btn reg-btn--primary reg-btn--main" onClick={onRetry}>
+          {T.TRY_AGAIN}
+        </button>
+      </StateMessage>
+    );
   else
     box = (
       <StateMessage title={T.LOAD_FAILED_TITLE} text={T.LOAD_FAILED_TEXT}>
