@@ -9,6 +9,8 @@
 // THIS computer's calendar with new Date(year, month - 1, day) — never new Date('YYYY-MM-DD'),
 // which would read the text as UTC midnight and could show the day before.
 
+import { formatCents } from '../../lib/blackBelt/money.js';
+
 // ===== Dates, times, money =====
 function parseDay(iso) {
   if (typeof iso !== 'string') return null;
@@ -425,8 +427,484 @@ export const cycleSummary = (firstDay, dayCount, candidates) =>
   `First day ${shortDate(firstDay)} · ${testingDaysCount(dayCount)} · both schools · ${candidatesCount(candidates)}`;
 export const TAB_CANDIDATES = 'Candidates';
 export const LOADING_CYCLE = 'Loading the cycle';
-// OP-7: preview-only line until B2 builds the list
-export const candidatesComingLine = (n) => `${candidatesCount(n)}. The list is built in the next step (B2).`;
 
 // ===== Testing.jsx entry (until the chooser row arrives in step C2) =====
 export const ENTRY_LABEL = 'Black Belt testing';
+
+// ===== B2 · Candidates tab (contract CONTRACT-0016-B2 §3, mockups Candidates 1–7 and 9) =====
+// Money is shown with formatCents ("$290", "$290.50", "−$50"; OP-B15). Every sentence the
+// mockups don't draw is marked "(not in the mockups)" for Jeffrey's walkthrough (CP2, OP-B12).
+// The points still open for Jeffrey (contract §7.1) are kept in one place each so they are easy
+// to change: OP-B1 (Undo payment) → UNDO_PAYMENT_*, OP-B2 (Add's Undo for staff) →
+// ADD_UNDO_FOR_STAFF, OP-B3 (icons) → candidates/icons.js.
+const money = (cents) => formatCents(cents);
+
+// "Mar 4, 2012"
+export const monthDayYear = (iso) => dayText(iso, { month: 'short', day: 'numeric', year: 'numeric' });
+// A moment in time as a month and day in Massachusetts time: "Mar 10"
+export function stampMonthDay(stamp) {
+  if (!stamp) return '';
+  const date = new Date(stamp);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' });
+}
+// A moment in time with the clock: "Mar 25, 2027 · 2:14 PM" (the compare dialog)
+export function stampDateTime(stamp) {
+  if (!stamp) return '';
+  const date = new Date(stamp);
+  if (Number.isNaN(date.getTime())) return '';
+  const time = date.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
+  return `${stampDate(stamp)} · ${time}`;
+}
+// "A, B and C" / "A and B" / "A"
+function andList(parts) {
+  if (parts.length <= 1) return parts.join('');
+  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+}
+
+export const SCHOOL_NAMES = { worcester: 'Worcester', shrewsbury: 'Shrewsbury' };
+export const schoolName = (code) => SCHOOL_NAMES[code] ?? code ?? '';
+export const METHOD_NAMES = { cash: 'Cash', check: 'Check', card: 'Card' };
+export const methodName = (method) => METHOD_NAMES[method] ?? method ?? '';
+export const candidateName = (c) => `${c?.firstName ?? ''} ${c?.lastName ?? ''}`.trim();
+
+// ----- Items: what a payment is for (p1 … p12, kukkiwon) -----
+// "Payment 1" / "Kukkiwon certificate" (the Record payment checklist, the receipt)
+export const itemLabel = (item) => (item === 'kukkiwon' ? 'Kukkiwon certificate' : `Payment ${String(item).slice(1)}`);
+// "Payment 1" / "Kukkiwon" (the detail's For column: "Payment 1 + Kukkiwon")
+const itemShort = (item) => (item === 'kukkiwon' ? 'Kukkiwon' : `Payment ${String(item).slice(1)}`);
+// "payment 1" / "Kukkiwon" (inside a sentence: "(payment 1 $290 + Kukkiwon $100)")
+const itemLower = (item) => (item === 'kukkiwon' ? 'Kukkiwon' : `payment ${String(item).slice(1)}`);
+// The For text of a payment line. A one-payment plan's only payment reads as the plan's name
+// ("In full"), as drawn on Candidates 9.
+export function forText(items, { paymentsCount = null, planName = '' } = {}) {
+  const list = Array.isArray(items) ? items : [];
+  if (paymentsCount === 1 && list.length === 1 && list[0] === 'p1' && planName) return planName;
+  return list.map(itemShort).join(' + ');
+}
+// "(payment 1 $290 + Kukkiwon $100)" from [{item, remainingCents}]
+export const itemsWithAmounts = (items) => `(${items.map((x) => `${itemLower(x.item)} ${money(x.remainingCents ?? x.amountCents)}`).join(' + ')})`;
+
+// ----- Candidates 1 · the tab -----
+export const ADD_CANDIDATE = 'Add candidate';
+export const ADD_AT_DESK = 'Add new candidates at the desk.'; // Hide payments on (OP-B7)
+export const registrationClosedStaff = (date) => `Registration closed on ${weekdayMonthDay(date)}. Ask an admin to reopen it.`;
+export const LOADING_CANDIDATES = 'Loading the candidates'; // screen readers only (not in the mockups)
+export const showingSchoolOnly = (school) => `Showing ${school} candidates only`;
+export const SHOW_BOTH_SCHOOLS = 'Show both schools';
+
+// Duplicate box (Star v0.114; several pairs: one line each, OP-B11)
+export const possibleDuplicates = (n) => (n === 1 ? '1 possible duplicate' : `${n} possible duplicates`);
+export const registeredTwice = (name, dan) => `${name} (${DAN_LABELS[dan] ?? ''}) is registered twice`;
+export const REVIEW = 'Review';
+export const reviewDuplicateLabel = (name) => `Review the possible duplicate ${name}`; // screen readers (not in the mockups)
+
+// Cards (v0.219) and phone pills
+export const CARD_PAID_IN_FULL = 'Paid in full';
+export const CARD_ON_SCHEDULE = 'Paying on schedule';
+export const CARD_LATE = 'Late';
+export const CARD_NOT_PAID = 'Not paid';
+export const duplicatesLeftOut = (n) =>
+  n === 1 ? "The possible duplicate row isn't counted in the cards until it's resolved." : `The ${n} possible duplicate rows aren’t counted in the cards until they’re resolved.`;
+export const duplicatesLeftOutPhone = (n) => (n === 1 ? "1 possible duplicate isn't counted until resolved." : `${n} possible duplicates aren’t counted until resolved.`);
+export const SHOWING_FILTER = {
+  paidInFull: 'Showing paid in full only',
+  onSchedule: 'Showing paying on schedule only',
+  late: 'Showing late only',
+  notPaid: 'Showing not paid only',
+};
+export const SHOW_ALL = 'Show all';
+
+// Search and the list
+export const SEARCH_CANDIDATES = 'Search candidates';
+export const CLEAR_SEARCH = 'Clear search'; // (not in the mockups)
+export const listCaption = (n) => `${candidatesCount(n)} · Dan, then school, then last name`;
+export const COL_CANDIDATE = 'Candidate';
+export const COL_SCHOOL = 'School';
+export const COL_PLAN = 'Plan';
+export const COL_PAYMENTS = 'Payments';
+export const COL_BALANCE = 'Balance';
+export const registeredOnShort = (iso) => `Registered ${monthDay(iso)}`;
+export const danSchool = (dan, code) => `${DAN_LABELS[dan] ?? ''} · ${schoolName(code)}`;
+export const planCell = (planName, kukkiwon) => (kukkiwon ? `${planName} · Kukkiwon` : planName);
+export const phoneSubline = (row) => `${danSchool(row.dan, row.locationCode)} · ${planCell(row.planName, row.kukkiwon)}`;
+export const NO_CANDIDATES = "No candidates yet. Families register with the cycle's links, or add one here."; // (not in the mockups)
+export const noMatch = (text) => `No candidates match "${text}".`; // (not in the mockups)
+export const NO_FILTER_MATCH = 'No candidates in this group.'; // a card filter with no rows (not in the mockups)
+export const removedGroup = (n) => `Removed (${n})`; // (not in the mockups, OP-B10)
+export const NOT_IN_COUNTS = 'Not in the counts'; // (not in the mockups, OP-B10)
+export const TAG_REMOVED = 'Removed';
+export const TAG_DUPLICATE_COPY = 'Duplicate copy';
+export const TAG_POSSIBLE_DUPLICATE = 'Possible duplicate';
+export const recordPaymentFor = (name) => `Record payment for ${name}`; // the row button's screen-reader name
+export const moreForCandidate = (name) => `More actions for ${name}`;
+
+// The one Payments tag of a row (Money from the data layer). kind = how it's colored.
+export function moneyTag(m) {
+  if (!m) return { kind: 'gray', text: '' };
+  switch (m.tag) {
+    case 'paid_in_full':
+      return m.overpaidCents > 0 ? { kind: 'warn', text: `Paid in full · ⚠ ${money(m.overpaidCents)} overpaid` } : { kind: 'ok', text: 'Paid in full' };
+    case 'next':
+      return { kind: 'gray', text: `Next ${money(m.nextCents)} by ${monthDay(m.nextOn)}` };
+    case 'late':
+      return m.lateKukkiwonOnly
+        ? { kind: 'warn', text: `Late · ${money(m.lateCents)} Kukkiwon since ${monthDay(m.lateSince)}` }
+        : { kind: 'warn', text: `Late · ${money(m.lateCents)} since ${monthDay(m.lateSince)}` };
+    case 'not_paid':
+      return { kind: 'red', text: 'Not paid' };
+    default:
+      return { kind: 'gray', text: '' };
+  }
+}
+export const balanceText = (m) => (m ? money(m.balanceCents) : '');
+
+// Row ⋯ items
+export const RECORD_PAYMENT = 'Record payment';
+export const EDIT_DETAILS = 'Edit details';
+export const CHANGE_PLAN = 'Change plan or Kukkiwon';
+export const alreadyPaidAskAdmin = (cents) => `${money(cents)} is already paid. Ask an admin.`;
+export const PAYMENT_RECORDED_ASK_ADMIN = 'A payment is recorded. Ask an admin.';
+export const RECORD_REFUND = 'Record refund';
+export const recordRefundOverpaid = (cents) => `Record refund · ${money(cents)} overpaid`;
+export const PRINT_RECEIPT = 'Print receipt';
+export const REMOVE_CANDIDATE = 'Remove candidate';
+export const RESTORE = 'Restore';
+export const DELETE_PERMANENTLY = 'Delete permanently';
+
+// Statuses → words (B returns codes only)
+export const candidateStale = (name) => `Someone else changed ${name} just now. Close and open them again to see the change.`;
+export const CANDIDATE_GONE = 'This candidate was deleted.'; // (not in the mockups)
+export const CANDIDATE_FINISHED = "This cycle is finished, so candidates can't be added.";
+export const PAPER_WAIVER_FINISHED = "This cycle is finished, so the waiver can't be recorded here."; // (not in the mockups)
+export const PURGED_INVALID = "This candidate's personal details were deleted after the keeping time, so this can't be saved."; // (not in the mockups)
+export const TOO_LATE_TO_UNDO = 'Too late to undo here. Ask an admin.'; // (not in the mockups)
+export const ACTION_FAILED = "That didn't work. Check the connection, then try again."; // a toast Undo or a one-click action (not in the mockups)
+
+// ----- Candidates 3 · Candidate detail -----
+export const SECTION_CANDIDATE = 'Candidate';
+export const SECTION_REGISTRATION = 'Registration';
+export const SECTION_PAYMENTS = 'Payments';
+export const ROW_NAME = 'Name';
+export const ROW_DOB = 'Date of birth';
+export const ROW_EMAIL = 'Email for results';
+export const ROW_SCHOOL = 'School';
+export const ROW_TESTING_FOR = 'Testing for';
+export const ROW_REGISTERED = 'Registered';
+export const ROW_REFERENCE = 'Reference';
+export const ROW_WAIVER = 'Waiver';
+export const ROW_PLAN = 'Plan';
+export const ROW_KUKKIWON = 'Kukkiwon certificate';
+export const ROW_REMOVED = 'Removed'; // (not in the mockups)
+export const detailSub = (cycleName, dan, code) => `${cycleName} · ${DAN_LABELS[dan] ?? ''} · ${schoolName(code)}`;
+export const dobLine = (dob, age, firstDay) => (age === null || age === undefined || !firstDay ? monthDayYear(dob) : `${monthDayYear(dob)} (${age} on ${monthDayYear(firstDay)})`);
+export const DELETED_AFTER_KEEPING = 'Deleted after the keeping time';
+export const HIDDEN_ON_DEVICE = 'Hidden on this device'; // Hide payments on (OP-B7)
+export const PAYMENTS_HIDDEN = 'Payments are hidden on this device.'; // (OP-B7)
+export const registeredLine = (registeredOn, source, code) =>
+  source === 'desk' ? `${shortDate(registeredOn)} · at the desk` : `${shortDate(registeredOn)} · family form (${schoolName(code)} link)`;
+export const VIEW_SIGNATURE = 'View signature';
+export function waiverLine(w) {
+  if (!w) return 'No waiver on file'; // (not in the mockups)
+  if (w.removedAt) {
+    return `Signed on ${stampDate(w.signedAt)} · version ${w.versionName} · signature and signer's name deleted on ${stampDate(w.removedAt)} after the keeping time`;
+  }
+  if (w.how === 'paper') return `Signed on paper · ${stampMonthDay(w.signedAt)} · version ${w.versionName} · ticked by ${w.tickedByName ?? ''}`;
+  const who = w.signedAsMinor ? `${w.signerName} (parent)` : w.signerName;
+  return `Signed by ${who} · ${stampMonthDay(w.signedAt)} · version ${w.versionName} · on file`;
+}
+export const removedLine = (c) =>
+  c.withdrawnReason === 'duplicate_copy' ? `Duplicate copy · ${stampMonthDay(c.withdrawnAt)}` : `Removed ${stampMonthDay(c.withdrawnAt)} by ${c.withdrawnByName ?? ''}`;
+
+// Needs a parent's signature (CONTRACT-0016 OI-2; not in the mockups, shown at CP2)
+export const needsParentSignature = (first, firstDay) =>
+  `${first} is under 18 on ${monthDay(firstDay)}, but the waiver was signed as an adult. Have a parent or guardian sign the paper waiver.`;
+export const WAIVER_SIGNED_ON_PAPER = 'Waiver signed on paper';
+export const TOAST_PAPER_WAIVER = 'Paper waiver recorded'; // (not in the mockups)
+
+// The Plan line: "3 payments · $290 each, due Mar 27, Apr 24, May 29" / "$400 + $470, due …" /
+// "In full · $870, due Mar 27". amounts: this Dan's amounts; dates: the candidate's item dates.
+export function planLine(planName, amounts, dates) {
+  const list = amounts ?? [];
+  let what;
+  if (list.length === 1) what = money(list[0]);
+  else if (list.length > 1 && list.every((a) => a === list[0])) what = `${money(list[0])} each`;
+  else what = list.map(money).join(' + ');
+  return `${planName} · ${what}, due ${dates.map(monthDay).join(', ')}`;
+}
+// Kukkiwon: "Yes · $100, due with payment 1" / added late "Yes · $110, due Apr 26" / "No"
+export function kukkiwonLine(item, p1) {
+  if (!item) return 'No';
+  if (p1 && item.dueOn === p1.dueOn) return `Yes · ${money(item.amountCents)}, due with payment 1`;
+  return `Yes · ${money(item.amountCents)}, due ${monthDay(item.dueOn)}`;
+}
+export const COL_DATE = 'Date';
+export const COL_FOR = 'For';
+export const COL_HOW = 'How';
+export const COL_AMOUNT = 'Amount';
+export const COL_NOTE = 'Note';
+export const COL_RECORDED_BY = 'Recorded by';
+export const FOR_REFUND = 'Refund';
+export const RETURNED_CHECK = 'Returned check';
+export const RETURNED_NOTE = 'returned'; // "post-dated Apr 24 · returned"
+export const NO_NOTE = '—';
+export const NO_PAYMENTS_YET = 'No payments recorded yet.'; // (not in the mockups)
+export const byName = (name) => `by ${name}`;
+export const paymentMoreLabel = (what, date) => `More actions for ${what} of ${monthDay(date)}`;
+export const TOTAL_DUE = 'Total due';
+export const PAID = 'Paid';
+export const BALANCE = 'Balance';
+export const NEXT_DUE = 'Next due';
+export const PAID_IN_FULL = 'Paid in full';
+// The Next due value. dueNow = the items due by today (Not paid's "was due" date comes from them).
+export function nextDueText(m, dueNow) {
+  if (!m) return '';
+  if (m.tag === 'paid_in_full') return PAID_IN_FULL;
+  if (m.tag === 'next') return `${money(m.nextCents)} by ${monthDay(m.nextOn)}`;
+  if (m.tag === 'late') return `${money(m.lateCents)} · late since ${monthDay(m.lateSince)}`;
+  if (m.tag === 'not_paid') {
+    const items = dueNow ?? [];
+    const cents = items.reduce((a, x) => a + (x.remainingCents ?? 0), 0);
+    const first = items.map((x) => x.dueOn).sort()[0];
+    return first ? `${money(cents)} · was due ${monthDay(first)}` : money(m.balanceCents);
+  }
+  return '';
+}
+export const MORE_FOR_DETAIL = (name) => `More actions for ${name}`;
+
+// Payment line ⋯ (admins)
+export const EDIT_PAYMENT = 'Edit payment';
+export const UNDO_PAYMENT = 'Undo payment';
+export const MARK_CHECK_RETURNED = 'Mark check returned';
+export const UNDO_RETURNED = 'Undo returned mark'; // (not in the mockups)
+export const UNDO_REFUND = 'Undo refund'; // (not in the mockups)
+export const REFUND_FIRST = 'A refund is recorded. Undo the refund first.';
+export const RETURNED_FIRST = 'Undo the returned-check mark first.';
+
+// Edit details (Star v0.112)
+export const FIRST_NAME = 'First name';
+export const LAST_NAME = 'Last name';
+export const LAST_NAME_HINT = 'Spell it exactly as it should be printed on the black belt and certificate.';
+export const DAN_LOCKED_STAFF = 'A payment is recorded. Ask an admin to change the Dan.';
+export const alreadyPaidAdmin = (cents) => `${money(cents)} is already paid. Recorded payments stay as they are; the balance is worked out again.`;
+// Field errors: the family form's wording (B1 Form 4), plus the desk's own two (not in the mockups)
+export const ERR_FIRST = 'Enter the candidate’s first name.';
+export const ERR_LAST = 'Enter the candidate’s last name.';
+export const ERR_DOB = 'Choose the candidate’s date of birth.';
+export const ERR_DAN = 'Choose the Dan the candidate is testing for.';
+export const ERR_EMAIL = 'Enter a full email address, like name@example.com.';
+export const ERR_SCHOOL = 'Choose the school.'; // (not in the mockups)
+export const ERR_PLAN = 'Choose how they’ll pay.'; // (not in the mockups)
+export const ERR_WAIVER_TICK = 'Tick this once the family has signed the paper waiver.';
+export function nameError(code, emptyText) {
+  if (code === 'empty') return emptyText;
+  if (code === 'tooLong') return NAME_TOO_LONG;
+  if (code === 'badCharacter') return NAME_BAD_CHARACTER;
+  return null;
+}
+
+// ----- Candidates 4 · Record payment -----
+export const RECORD_PAYMENT_TITLE = 'Record payment';
+export const paymentSub = (c, planName) => `${candidateName(c)} · ${DAN_LABELS[c.dan] ?? ''} · ${schoolName(c.locationCode)} · ${planName}${c.kukkiwon ? ' + Kukkiwon' : ''}`;
+// The "Owes …" line. dueNow / next: [{item, dueOn, remainingCents}]
+export function owesLine(m, dueNow, next, today) {
+  if (!m || m.balanceCents <= 0) return 'Paid in full. A payment here is counted as overpaid.'; // (not in the mockups)
+  const sum = (list) => list.reduce((a, x) => a + (x.remainingCents ?? 0), 0);
+  if (dueNow.length > 0) {
+    const word = dueNow.every((x) => x.dueOn === today) ? 'due today' : 'due now';
+    return `Owes ${money(m.balanceCents)} · ${word}: ${money(sum(dueNow))} ${itemsWithAmounts(dueNow)}`;
+  }
+  if (next.length > 0) return `Owes ${money(m.balanceCents)} · next: ${money(sum(next))} by ${monthDay(next[0].dueOn)}`;
+  return `Owes ${money(m.balanceCents)}`;
+}
+export const FOR_TICK = 'For (tick one or more)';
+export const FOR_LABEL = 'For';
+export const itemLine = (item, dueOn) => `${itemLabel(item)} · due ${monthDay(dueOn)}`;
+export const PAID_MARK = '(paid)';
+export const AMOUNT = 'Amount';
+export const METHOD = 'Method';
+export const NOTE_OPTIONAL = 'Note (optional)';
+export const NOTE_PLACEHOLDER = 'e.g. post-dated Apr 24';
+export const countsToday = (today) => `Counts as paid today, ${weekdayMonthDay(today)}, like every check handed in today.`;
+export const SAVE_AND_ANOTHER = 'Save and record another';
+export const ERR_TICK = 'Tick what this payment is for.';
+export const ERR_AMOUNT = {
+  empty: 'Enter an amount, like 290 or 290.50.',
+  notNumber: 'Enter an amount, like 290 or 290.50.',
+  tooManyDecimals: 'Use at most two decimals.',
+  tooLow: 'The amount must be more than $0.',
+  tooHigh: 'One payment can be at most $5,000.',
+};
+export const ERR_METHOD = 'Choose cash, check or card.';
+export const ERR_NOTE = 'Use 600 characters or fewer.';
+export const toastPaymentRecorded = (cents, name) => `Payment recorded · ${money(cents)} · ${name}`;
+export const withdrawnNoPayment = (name) => `${name} was withdrawn, so no payment can be recorded.`;
+
+// ----- Candidates 5 · Admin payment actions -----
+export const EDIT_PAYMENT_TITLE = 'Edit payment';
+export const editPaymentSub = (name, what, paidOn, by) => `${name} · ${what} · recorded ${monthDay(paidOn)} by ${by}`;
+export const REASON = 'Reason for the change';
+export const REASON_PLACEHOLDER = 'e.g. typed the wrong amount';
+export const ERR_REASON = 'Enter a reason for the change.';
+export const editPaymentHint = (paidOn) => `The date (${monthDay(paidOn)}) stays. The old and new values go in the change log.`;
+export const TOAST_PAYMENT_CHANGED = 'Payment changed';
+export const UNDO_EDIT_REASON = 'Undo of the change just made'; // (not in the mockups)
+export const PAYMENT_GONE = 'This payment was already undone or changed.';
+
+// OP-B1 (working default): Undo payment asks first, then a toast WITHOUT Undo — kept here so the
+// wording can follow Jeffrey's choice at CP2.
+export const undoPaymentTitle = (what) => (/^Payment /.test(what) ? `Undo p${what.slice(1)}?` : 'Undo this payment?');
+export const undoPaymentBody = (cents, method, paidOn, name) =>
+  `${money(cents)} ${methodName(method).toLowerCase()} from ${monthDay(paidOn)} comes off ${name}'s balance. The history keeps it.`;
+export const UNDO_PAYMENT_CONFIRM = 'Undo payment';
+export const toastPaymentUndone = (what, cents, name) => `${what} undone · ${money(cents)} · ${name}`;
+export const UNDO_REFUND_TITLE = 'Undo the refund?'; // (not in the mockups)
+export const undoRefundBody = (cents, paidOn, name) => `The ${money(cents)} refund of ${monthDay(paidOn)} comes off ${name}'s history. The change log keeps it.`; // (not in the mockups)
+export const toastRefundUndone = (cents, name) => `Refund undone · ${money(cents)} · ${name}`; // (not in the mockups)
+export const UNDO_RETURNED_TITLE = 'Undo the returned-check mark?'; // (not in the mockups)
+export const undoReturnedBody = (what, cents) => `${what} (${money(cents)} check) counts as paid again. The change log keeps the mark.`; // (not in the mockups)
+export const toastReturnedUndone = (cents, name) => `Returned-check mark undone · ${money(cents)} · ${name}`; // (not in the mockups)
+export const UNDO_RETURNED_CONFIRM = 'Undo the mark'; // (not in the mockups)
+export const UNDO_REFUND_CONFIRM = 'Undo refund'; // (not in the mockups)
+export const undoBlockedReturned = RETURNED_FIRST;
+export const UNDO_NET_FLOOR = 'Undoing this would take the paid total below zero. Undo the refund first.';
+
+export const REFUND_TITLE = 'Record refund';
+export const refundSub = (name, planName, paidCents, dueCents) => `${name} · ${planName} · paid ${money(paidCents)} of ${money(dueCents)}`;
+export const overpaidLine = (cents) => `Overpaid ${money(cents)}`;
+export const refundHint = (paidCents) =>
+  `Fees are non-refundable. Record a refund only when money is handed back, for example an overpayment. It can’t be more than ${money(paidCents)} (what’s been paid). It counts today.`;
+export const refundTooLarge = (paidCents) => `A refund can't be more than ${money(paidCents)} (what's been paid).`;
+export const toastRefund = (cents, name) => `Refund recorded · ${money(cents)} · ${name}`;
+
+export const RETURNED_TITLE = 'Mark check returned';
+export const returnedSub = (name, what, cents, paidOn) => `${name} · ${what} · ${money(cents)} check recorded ${monthDay(paidOn)}`;
+export const returnedSentence = (cents, name) => `The check stays in the history, marked returned. ${money(cents)} goes back on ${name}’s balance.`;
+// The predicted tag after the mark (from the predicted Money). what = "Payment 2"; firstDue = its due date
+export function returnedPrediction(what, dueOn, m) {
+  const tag = moneyTag(m);
+  const start = dueOn ? `${what} was due ${monthDay(dueOn)}, so the roster will show` : 'The roster will show';
+  if (m?.tag === 'not_paid') return `${start} Not paid.`;
+  return `${start} ${tag.text}.`;
+}
+export const MARK_RETURNED = 'Mark returned';
+export const toastReturned = (cents, name) => `Check marked returned · ${money(cents)} · ${name}`;
+export const RETURNED_TWICE = 'This check was already marked returned once. To mark it again, undo the payment and record it again.';
+export const NOT_A_CHECK = 'Only a check payment can be marked returned.'; // (not in the mockups)
+
+// ----- Candidates 6 · Change plan or Kukkiwon -----
+export const CHANGE_PLAN_TITLE = 'Change plan or Kukkiwon';
+export const changePlanSub = (c) => `${candidateName(c)} · ${DAN_LABELS[c.dan] ?? ''} · ${schoolName(c.locationCode)}`;
+export const PLAN = 'Plan';
+export const CURRENT = 'Current';
+export const KUKKIWON_DAN_CERT = 'Kukkiwon Dan certificate';
+export const KUKKIWON_NO = 'No, thanks';
+export const kukkiwonYes = (fee) => (fee === null || fee === undefined ? 'Yes, add it' : `Yes, add it · ${money(fee)}`);
+// The second line of a plan card: "1 payment · due Mar 27" / "3 × $290 · Mar 27, Apr 24, May 29" /
+// "$400 + $470 · Mar 27, May 29". amounts null → only the dates (before a Dan; Hide payments).
+export function planCardLine(amounts, dates) {
+  const days = dates.map(monthDay).join(', ');
+  if (dates.length === 1) return `1 payment · due ${days}`;
+  if (!amounts) return `${paymentsCount(dates.length)} · ${days}`;
+  const what = amounts.every((a) => a === amounts[0]) ? `${amounts.length} × ${money(amounts[0])}` : amounts.map(money).join(' + ');
+  return `${what} · ${days}`;
+}
+export const centsText = (cents) => money(cents);
+// "New total $870 · 3 × $290, due Mar 27, Apr 24, May 29 · nothing paid yet"
+export function newTotalNothingPaid(totalCents, amounts, dates) {
+  const days = dates.map(monthDay).join(', ');
+  let what;
+  if (amounts.length === 1) what = `in full, due ${days}`;
+  else if (amounts.every((a) => a === amounts[0])) what = `${amounts.length} × ${money(amounts[0])}, due ${days}`;
+  else what = `${amounts.map(money).join(' + ')}, due ${days}`;
+  return `New total ${money(totalCents)} · ${what} · nothing paid yet`;
+}
+// "New total $1,100 · paid $330 · balance $770 · due now: $440 (Kukkiwon $110 + payment 2 $330)"
+export function newTotalWithPaid(m, dueNow, next) {
+  const sum = (list) => list.reduce((a, x) => a + (x.remainingCents ?? 0), 0);
+  const head = `New total ${money(m.totalDueCents)} · paid ${money(m.paidCents)} · balance ${money(m.balanceCents)}`;
+  if (dueNow.length > 0) return `${head} · due now: ${money(sum(dueNow))} ${itemsWithAmounts(dueNow)}`;
+  if (next.length > 0) return `${head} · next: ${money(sum(next))} by ${monthDay(next[0].dueOn)}`;
+  return head;
+}
+export const toastPlanChanged = (name) => `Plan changed · ${name}`;
+export const planWithdrawn = (name) => `${name} was withdrawn, so the plan can't change.`;
+export const PLAN_PURGED = "This candidate's personal details were deleted after the keeping time, so the plan can't change.";
+
+// ----- Candidates 7 · Add candidate -----
+export const ADD_TITLE = 'Add candidate';
+export const addSub = (cycleName) => `${cycleName} · for walk-ins and late families.`;
+export const addClosedSub = (date) => `Registration closed on ${weekdayMonthDay(date)}; staff can still add here.`;
+export const SCHOOL = 'School';
+export const DOB = 'Date of birth';
+export const TESTING_FOR = 'Testing for';
+export const HOW_THEY_PAY = 'How they’ll pay';
+export const AMOUNTS_AFTER_DAN = 'Amounts show once you choose a Dan.';
+export const EMAIL = 'Email for results';
+export const PAPER_WAIVER_HINT = 'The signed paper goes in the testing folder.';
+export const adultHint = (age) => `${age} on the first testing day, so they sign for themself.`;
+export const MINOR_HINT = 'Under 18 on the first testing day, so a parent or guardian signs the paper waiver.';
+// "Total $1,100 · $440 with payment 1 (includes Kukkiwon $110), then $330 and $330"
+// lines: scheduleFor's [{dueOn, items, amountCents}]
+export function addTotalLine(totalCents, lines, kukkiwonCents) {
+  if (!lines || lines.length === 0) return '';
+  const first = lines[0];
+  const withKuk = first.items.includes('kukkiwon') && kukkiwonCents > 0 ? ` (includes Kukkiwon ${money(kukkiwonCents)})` : '';
+  if (lines.length === 1) return `Total ${money(totalCents)}, due ${monthDay(first.dueOn)}${withKuk}`; // (not in the mockups)
+  const rest = andList(lines.slice(1).map((l) => money(l.amountCents)));
+  // A late family may owe several payments at once (passed dates count as today): "with payments 1 and 2".
+  const nos = first.items.filter((i) => i !== 'kukkiwon').map((i) => i.slice(1));
+  const withWhat = nos.length > 1 ? `payments ${andList(nos)}` : `payment ${nos[0] ?? 1}`;
+  return `Total ${money(totalCents)} · ${money(first.amountCents)} with ${withWhat}${withKuk}, then ${rest}`;
+}
+export const toastAdded = (name, reference) => `${name} added · ${reference}`;
+// OP-B2 (working default): staff get no Undo on "added" (removing a candidate is admin-only).
+export const ADD_UNDO_FOR_STAFF = false;
+
+// ----- Possible duplicates · compare (all not in the mockups beyond screen 1) -----
+export const compareTitle = (name) => `${name} is registered twice`;
+export const COMPARE_SUB = 'Check both registrations. Differences are highlighted.';
+export const FIRST_REGISTRATION = 'First registration';
+export const SECOND_REGISTRATION = 'Second registration';
+export const CMP_REGISTERED = 'Registered';
+export const CMP_REFERENCE = 'Reference';
+export const CMP_SOURCE = 'Source';
+export const CMP_DOB = 'Date of birth';
+export const CMP_EMAIL = 'Email';
+export const CMP_DAN = 'Dan';
+export const CMP_SCHOOL = 'School';
+export const CMP_PLAN = 'Plan';
+export const CMP_PAID = 'Paid';
+export const SOURCE_FORM = 'Family form';
+export const SOURCE_DESK = 'At the desk';
+export const DIFFERENT = 'different';
+export const KEEP_THIS_ONE = 'Keep this one';
+export const keepThisOneLabel = (which) => `Keep this one: ${which}`;
+export const KEEP_BOTH = 'Not the same person — keep both';
+export const COMPARE_NOTE = 'Keep this one moves the other registration under Removed. Its payments stay with it.';
+export const toastKeptOne = (name) => `Kept one ${name} · the other is under Removed`;
+export const TOAST_BOTH_KEPT = 'Both kept';
+export const DUPLICATE_CHANGED = 'These registrations changed just now. Close and open them again.';
+
+// ----- Remove (v0.113) -----
+export const removeTitle = (name) => `Remove ${name}?`;
+export const WITHDRAW = 'Withdraw';
+export const WITHDRAW_HINT = 'Kept under Removed, with their payments; can be restored.';
+export const DELETE_HINT = "Deletes the registration and its signed waiver. This can't be undone."; // (not in the mockups)
+export const hasPaymentRecords = (name) => `${name} has payment records, so they can't be deleted. Withdraw them instead.`;
+export const hasPaymentRecordsShort = (name) => `${name} has payment records, so they can't be deleted.`; // a candidate already withdrawn (not in the mockups)
+export const deleteTitle = (name) => `Delete ${name} permanently?`;
+export const deleteBody = (cycleName) => `Their registration and signed waiver are deleted from ${cycleName}. This can't be undone.`;
+export const KEEP_CANDIDATE = 'Keep candidate';
+export const toastWithdrawn = (name) => `${name} withdrawn`;
+export const toastDeleted = (name) => `${name} deleted`;
+export const toastRestored = (name) => `${name} restored`; // (not in the mockups)
+
+// ----- View signature (admins) -----
+export const SIGNATURE_TITLE = 'Signature';
+export const signatureAlt = (name) => `Signature of ${name}`;
+export const signedByOn = (name, stamp) => `Signed by ${name} · ${stampDate(stamp)}`;
+export const SIGNED_ON_PAPER_ONLY = 'Signed on paper. There is no signature picture.';
+export const signatureDeleted = (stamp) => `The signature and signer's name were deleted on ${stampDate(stamp)} after the keeping time.`;
+export const LOADING_SIGNATURE = 'Loading the signature'; // (not in the mockups)
+export const UNDO_STALE_CANDIDATE = "Couldn't undo. Someone else changed this candidate just now."; // (not in the mockups)

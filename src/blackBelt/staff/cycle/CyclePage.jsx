@@ -5,20 +5,27 @@
 //     (14px, normal text color; it wraps under the title on phones)
 //   - a ⋯ menu opposite the title: Edit cycle (admins) · Registration links · Close / Open
 //     registration (staff: Open grayed after the application date, with the reason)
-//   - the tabs. In B1 only Candidates exists, with a preview-only line until B2 builds the list;
-//     Grading and Results appear when they are built (P7: no placeholders).
+//   - "+ Add candidate" (primary; N on the PC) beside the ⋯ (phones: both under the summary line)
+//     — phase B2, contract CONTRACT-0016-B2 §3.2 / §3.7. Grayed with its reason while the device's
+//     Hide payments switch is on ("Add new candidates at the desk.", OP-B7) or the cycle is past.
+//   - the tabs. Only Candidates exists (candidates/CandidatesTab.jsx, phase B2); Grading and
+//     Results appear when they are built (P7: no placeholders).
+//   - for staff, once registration has closed by its date: the gray line "Registration closed on
+//     Sat, Mar 27. Ask an admin to reopen it." under the tabs (approved on Candidates 2).
 // A cycle that no longer exists (deleted elsewhere) → "This cycle was deleted." and back to the
 // Cycles tab.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { IconArrowLeft, IconDots, IconEdit, IconLock, IconLockOpen, IconQrcode } from '@tabler/icons-react';
+import { IconArrowLeft, IconDots, IconEdit, IconLock, IconLockOpen, IconPlus, IconQrcode } from '@tabler/icons-react';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
-import { isPreview } from '../../../lib/supabase.js';
 import { loadCycle, schoolToday } from '../../../lib/blackBelt/api.js';
 import { PHONE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
+import { useShortcutN } from '../../../lib/useShortcutN.js';
+import { usePaymentsHidden } from '../../../screens/finance/usePaymentsHidden.js';
+import CandidatesTab from '../candidates/CandidatesTab.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
-import { useCycleActions } from '../cycles/useCycleActions.js';
+import { openNeedsAdmin, useCycleActions } from '../cycles/useCycleActions.js';
 import LinksDialog from './LinksDialog.jsx';
 import { useCycleEditor } from './useCycleEditor.jsx';
 import * as T from '../text.js';
@@ -34,7 +41,7 @@ function TwoLines({ label, reason }) {
   );
 }
 
-export default function CyclePage({ cycleId, isAdmin, onBack, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange }) {
+export default function CyclePage({ cycleId, isAdmin, onBack, location, onLocationChange, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange }) {
   const live = useLiveLoad({ key: cycleId, enabled: !screenLocked, load, refreshMs: LIVE_REFRESH_MS });
   const cycle = live.data?.cycle ?? null;
   const today = schoolToday();
@@ -99,7 +106,25 @@ export default function CyclePage({ cycleId, isAdmin, onBack, screenLocked, onNo
     onGone: () => reloadQuiet(),
   });
 
-  const modalShown = (editor.isOpen || links !== null) && !screenLocked;
+  // The Candidates tab (B2): its dialogs count as "a dialog is open" too, and its Add candidate
+  // dialog opens from this page's header button through candidatesRef.
+  const candidatesRef = useRef(null);
+  const addRef = useRef(null);
+  const [candidatesModal, setCandidatesModal] = useState(false);
+  const [paymentsHidden] = usePaymentsHidden();
+  const cyclePast = cycle ? cycle.state?.state === 'past' || cycle.state?.past === true : false;
+  // Why Add candidate is grayed (null = it can be used).
+  const addBlocked = paymentsHidden ? T.ADD_AT_DESK : cyclePast ? T.CANDIDATE_FINISHED : null;
+  function pressAdd() {
+    if (addBlocked) {
+      showToast(addBlocked, { icon: false });
+      return;
+    }
+    candidatesRef.current?.openAdd(addRef.current);
+  }
+
+  const modalShown = (editor.isOpen || links !== null || candidatesModal) && !screenLocked;
+  useShortcutN({ enabled: Boolean(cycle) && !addBlocked && !modalShown && !screenLocked && !menu && !busy, onPress: pressAdd });
   useEffect(() => {
     onModalOpenChange(modalShown);
   }, [modalShown, onModalOpenChange]);
@@ -140,6 +165,31 @@ export default function CyclePage({ cycleId, isAdmin, onBack, screenLocked, onNo
   const state = cycle.state ?? {};
   const isPast = state.state === 'past' || state.past === true;
 
+  const addButton = (
+    <>
+      <button
+        ref={addRef}
+        type="button"
+        className={`btn btn-primary bb-add-candidate${addBlocked ? ' is-unavailable' : ''}`}
+        aria-disabled={addBlocked ? 'true' : undefined}
+        aria-describedby={addBlocked ? `bb-add-reason-${cycle.id}` : undefined}
+        onClick={pressAdd}
+      >
+        {/* ti-plus = add new */}
+        <IconPlus size={16} aria-hidden="true" />
+        {T.ADD_CANDIDATE}
+      </button>
+      {/* The reason, read with the button (outside it, so it isn't part of the button's name) */}
+      {addBlocked && (
+        <span id={`bb-add-reason-${cycle.id}`} className="visually-hidden">
+          {addBlocked}
+        </span>
+      )}
+    </>
+  );
+  // Staff, after registration closed by its date (only an admin can reopen then).
+  const staffLine = !isAdmin && !isPast && state.registration !== 'open' && openNeedsAdmin(cycle, today) ? T.registrationClosedStaff(cycle.applicationDue) : null;
+
   function menuItems() {
     const items = [];
     if (isAdmin) items.push({ key: 'edit', label: T.EDIT_CYCLE, Icon: IconEdit, disabled: busy, onSelect: () => editor.openEdit(cycle.id, moreRef.current) });
@@ -171,6 +221,7 @@ export default function CyclePage({ cycleId, isAdmin, onBack, screenLocked, onNo
           <h1 className="ptitle">{cycle.name}</h1>
           <p className="ev-summary bb-summary">{T.cycleSummary(firstDay, cycle.days?.length ?? 0, cycle.candidateCount ?? 0)}</p>
         </div>
+        {!isPhone && addButton}
         <span ref={moreRef} className="bb-head-more">
           <IconButton
             label={T.moreFor(cycle.name)}
@@ -184,16 +235,30 @@ export default function CyclePage({ cycleId, isAdmin, onBack, screenLocked, onNo
           />
         </span>
       </div>
+      {isPhone && <div className="bb-phone-add">{addButton}</div>}
       <div className="ttabs ev-tabs" role="tablist" aria-label={cycle.name}>
         <button type="button" id={`bb-cycle-tab-${cycle.id}`} className="ttab is-current" role="tab" aria-selected="true" aria-controls={`bb-cycle-panel-${cycle.id}`} tabIndex={0}>
           {T.TAB_CANDIDATES}
         </button>
       </div>
+      {staffLine && <p className="viewonly">{staffLine}</p>}
       {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />}
-      <div id={`bb-cycle-panel-${cycle.id}`} role="tabpanel" aria-labelledby={`bb-cycle-tab-${cycle.id}`} className="tpanel">
-        {/* OP-7: the Candidates list is built in B2. This line shows in preview only. */}
-        {isPreview && <p className="tempty ev-empty">{T.candidatesComingLine(cycle.candidateCount ?? 0)}</p>}
-      </div>
+      <CandidatesTab
+        cycle={cycle}
+        isAdmin={isAdmin}
+        location={location}
+        onLocationChange={onLocationChange}
+        screenLocked={screenLocked}
+        onNoAccess={onNoAccess}
+        onRefreshProfile={onRefreshProfile}
+        showToast={showToast}
+        clearToast={clearToast}
+        onModalChange={setCandidatesModal}
+        onCandidatesChanged={reloadQuiet}
+        actionsRef={candidatesRef}
+        panelId={`bb-cycle-panel-${cycle.id}`}
+        tabId={`bb-cycle-tab-${cycle.id}`}
+      />
 
       {menu && !screenLocked && (
         <RowMenu

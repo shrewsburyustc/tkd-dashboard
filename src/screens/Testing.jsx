@@ -149,6 +149,7 @@ export default function Testing({ location, onLocationChange, isAdmin, eventId, 
           showToast={showToast}
           clearToast={clearToast}
           onModalOpenChange={onModalOpenChange}
+          location={location} onLocationChange={onLocationChange}
         />
       </Suspense>
     );

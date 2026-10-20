@@ -63,15 +63,21 @@
 // failNextSave makes the next Finance save fail, e.g. Close the day):
 //   __tkdPreview.setNow('19:30')          pretend the school clock says 7:30 PM (Home reminder); null = real time
 //   __tkdPreview.resetFinance()           back to the sample closings and Star payments, reminder times Off
-// Black Belt testing helpers (contract 0016-B1 §2.3, src/lib/blackBelt/mockBlackBelt.js; setRole, setToday and
+// Black Belt testing helpers (contracts 0016-B1 §2.3 + 0016-B2 §2.4, src/lib/blackBelt/mockBlackBelt.js; setRole, setToday and
 // setTestingDelay cover Black Belt too; failNextSave() fails the next save of whichever section comes first):
 //   __tkdPreview.failNextSave('blackBelt') the next Black Belt save fails like a dropped connection
-//   __tkdPreview.simulateOtherAdminEdit() also bumps every Black Belt cycle and the settings, and saves a new waiver
+//   __tkdPreview.simulateOtherAdminEdit() also bumps every Black Belt cycle, candidate and the settings, and saves a new waiver
 //   __tkdPreview.resetBlackBelt()         back to 0016's seed (no cycles, the placeholder waiver)
 //   __tkdPreview.bbSample()               the mockups' sample (Spring 2027 with 6 candidates, Fall 2027)
 //   __tkdPreview.bbLinks()                both family links of every cycle as LOCAL preview addresses
 //   __tkdPreview.setBlackBeltRegistration(false) the Black Belt form's kill switch ("not open" everywhere)
 //   __tkdPreview.bbWaiverChanged()        the waiver was replaced 25 hours ago -> the next Send answers waiver_changed
+//   __tkdPreview.bbSampleRoster()         the Candidates mockups' sample (9 candidates with payments; for Apr 26, 2027)
+//   __tkdPreview.bbSampleEdge()           bbSampleRoster + the edge cases (overpaid, Kukkiwon late, withdrawn, a
+//                                         parent's signature needed, a desk paper waiver)
+//                                         (both fill the schools' street and phone only where they are empty)
+//   __tkdPreview.bbExpireUndo()           the newest Black Belt payment looks 11 s old -> a staff Undo is "too late"
+//   __tkdPreview.bbAddDuplicate()         a second form registration of the newest cycle's first candidate (duplicate box)
 //   (forceVerifyFailed / forceRateLimited above work on the Black Belt form too)
 import { getLastPasswordSignIn, PASSWORD_MAX_AGE_MS, decodeJwtPayload } from './session.js';
 import { setLockedFlag } from './useIdleLock.js';
@@ -521,6 +527,30 @@ export function createMockClient() {
     newId: newUuid,
     getLocations: () => events.snapshot().locations,
   });
+  // The Black Belt samples' school street and phone (the mockups' made-up sample data), written
+  // only where the preview school has none yet, through the Events store's own Schools save
+  // (as an admin would in Settings -> Schools). The receipt's footer shows them.
+  const SAMPLE_SCHOOLS = {
+    worcester: { street: '1141 Main St', city: 'Worcester', state: 'MA', zip: '01603', phone: '(508) 767-1717' },
+    shrewsbury: { street: '370 Boston Turnpike', city: 'Shrewsbury', state: 'MA', zip: '01545', phone: '(508) 792-5534' },
+  };
+  function fillSampleSchools() {
+    const admin = { ...testingContext(), signedIn: true, hasDataAccess: true, isAdmin: true };
+    for (const school of events.snapshot().locations ?? []) {
+      const sample = SAMPLE_SCHOOLS[school.code];
+      if (!sample || (school.address_street && school.phone)) continue;
+      const keepAddress = Boolean(school.address_street);
+      events.rpc('settings_update_school_contact', {
+        p_code: school.code,
+        p_expected_version: school.version,
+        p_street: keepAddress ? school.address_street : sample.street,
+        p_city: keepAddress ? school.address_city : sample.city,
+        p_state: keepAddress ? school.address_state : sample.state,
+        p_zip: keepAddress ? school.address_zip : sample.zip,
+        p_phone: school.phone || sample.phone,
+      }, admin);
+    }
+  }
   // failNextSave arms this; the next Testing or Events save then fails (whichever comes first).
   let failNextTesting = false;
   // failSavesUntilRetry turns this on and reconnect turns it off: while on, every Events save
@@ -760,7 +790,7 @@ export function createMockClient() {
       testing.simulateOtherAdminEdit();
       events.simulateOtherAdminEdit();
       blackBelt.simulateOtherAdminEdit();
-      return 'Another admin changed every class, rank, event, student and school address, and swapped two ranks - and every Black Belt cycle, the keep-years settings and the waiver. Open dialogs and Undo are now out of date.';
+      return 'Another admin changed every class, rank, event, student and school address, and swapped two ranks - and every Black Belt cycle and candidate, the keep-years settings and the waiver. Open dialogs and Undo are now out of date.';
     },
     clearSchool(school) {
       if (!testing.clearSchool(school)) return "Use clearSchool('Worcester') or clearSchool('Shrewsbury').";
@@ -860,6 +890,28 @@ export function createMockClient() {
       return lines.length > 0 ? lines.join('\n') : 'No Black Belt cycles yet. Add one, or run __tkdPreview.bbSample().';
     },
     setBlackBeltRegistration: blackBeltPublicHelpers().setBlackBeltRegistration,
+    bbSampleRoster() {
+      blackBelt.loadSampleRoster();
+      fillSampleSchools();
+      return "Sample loaded — run __tkdPreview.setToday('2027-04-26') and reload.";
+    },
+    bbSampleEdge() {
+      blackBelt.loadSampleEdge();
+      fillSampleSchools();
+      return "Sample loaded (with the edge cases) — run __tkdPreview.setToday('2027-04-26') and reload.";
+    },
+    bbExpireUndo() {
+      const moved = blackBelt.expireUndo();
+      return moved
+        ? 'The newest Black Belt payment row now looks 11 seconds old: a staff Undo of it answers "too late" (admins can still undo).'
+        : 'There is no Black Belt payment yet. Record one first.';
+    },
+    bbAddDuplicate() {
+      const added = blackBelt.addDuplicate();
+      return added
+        ? `Added a second form registration for ${added.name} (${added.reference}). Reload the Candidates tab to see the duplicate box.`
+        : 'No active candidate to copy. Run __tkdPreview.bbSampleRoster() first.';
+    },
     bbWaiverChanged() {
       const { from: before, to } = blackBelt.waiverChanged();
       return `Waiver ${before} was replaced by ${to} 25 hours ago. A family form still showing ${before} now gets "the waiver has changed" on Send.`;

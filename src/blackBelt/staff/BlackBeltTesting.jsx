@@ -22,6 +22,8 @@
 //   onRefreshProfile   re-read "who am I?" (after the database said "not allowed")
 //   showToast / clearToast   the toast at the bottom (with Undo)
 //   onModalOpenChange  tells the App a dialog is open (the page behind becomes inert)
+//   location / onLocationChange   the top bar's location switcher (phase B2: the cycle page's
+//                      Candidates tab follows it — v0.118; Cycles and Rubric don't)
 import { useId, useRef, useState } from 'react';
 import { IconArrowLeft } from '@tabler/icons-react';
 import CyclesTab from './cycles/CyclesTab.jsx';
@@ -90,7 +92,7 @@ function Header({ action, staffLine, tab, onTab, onBack, ids }) {
   );
 }
 
-export default function BlackBeltTesting({ isAdmin, onBack, ...shared }) {
+export default function BlackBeltTesting({ isAdmin, onBack, location, onLocationChange, ...shared }) {
   const baseId = useId();
   const ids = { tab: (key) => `${baseId}-tab-${key}`, panel: (key) => `${baseId}-panel-${key}` };
   const [tab, setTabState] = useState(lastTab);
@@ -115,7 +117,7 @@ export default function BlackBeltTesting({ isAdmin, onBack, ...shared }) {
   if (cycleId) {
     return (
       <div className="testing bb">
-        <CyclePage key={cycleId} cycleId={cycleId} isAdmin={isAdmin} onBack={closeCycle} {...shared} />
+        <CyclePage key={cycleId} cycleId={cycleId} isAdmin={isAdmin} onBack={closeCycle} location={location} onLocationChange={onLocationChange} {...shared} />
       </div>
     );
   }

@@ -1,0 +1,316 @@
+/*
+  receipt.css — the look of the Black Belt payment receipt: the preview in the dialog and the
+  printed US Letter page (mockup Candidates 8, rulebook v0.220, contract CONTRACT-0016-B2 §4).
+  Why it exists: the receipt is a paper page, so it has its own styles. Every class starts with
+  "bbr-" (Black Belt receipt) so nothing clashes with the other sections. The dialog frame,
+  buttons and skeleton bars are the app's shared ones (app.css, testing.css).
+
+  Two looks of ONE page (ReceiptPage.jsx, ReceiptSheet):
+    .bbr-sheet--screen  the preview: a white "paper" card at reading size inside the dialog,
+                        using only the app's text sizes (tokens.css: 12–20px)
+    .bbr-print          the printed copy: hidden on screen; when printing it is the ONLY thing
+                        on the paper, black on white, US Letter portrait
+  Screen sizes: phone (max-width: 639.98px) gets a full-screen page with the button at the bottom.
+*/
+
+/* ===== The dialog (PC and tablet) ===== */
+/* 560px wide, as drawn (the shared 'medium' size is 520px). max-width keeps it inside a narrow
+   window. */
+.tdialog--medium:has(.bbr-preview, .bbr-loading) {
+  width: 560px;
+}
+
+/* Phones: the full-width "Print or save as PDF" at the bottom of the page, pinned like the
+   other phone pages' Save button */
+.bbr-phone-buttons {
+  position: sticky;
+  bottom: calc(-1 * (var(--space-16) + env(safe-area-inset-bottom)));
+  z-index: 2;
+  margin: var(--space-16) calc(-1 * var(--space-16)) calc(-1 * (var(--space-16) + env(safe-area-inset-bottom)));
+  padding: var(--space-12) var(--space-16) calc(var(--space-16) + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+/* "Payments are hidden on this device." (Hide payments switch on) */
+.bbr-hidden {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-14);
+}
+
+.bbr-full {
+  width: 100%;
+  justify-content: center;
+}
+
+/* ===== The page: shared by the preview and the printed copy ===== */
+.bbr-sheet {
+  display: flex;
+  flex-direction: column;
+  color: var(--color-text);
+  background: #fff;
+}
+
+.bbr-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.bbr-subtitle {
+  margin: 2px 0 0;
+}
+
+/* Label / value pairs: gray label column, value beside it */
+.bbr-facts {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  margin: 0;
+}
+
+.bbr-facts dt {
+  font-weight: 400;
+}
+
+.bbr-facts dd {
+  margin: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere; /* a very long name never pushes the page sideways */
+}
+
+.bbr-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.bbr-table th,
+.bbr-table td {
+  padding: 8px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.bbr-table th {
+  font-weight: 500;
+}
+
+/* Amounts line up on the right, with digits of equal width */
+.bbr-table .bbr-r {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bbr-date {
+  white-space: nowrap;
+}
+
+/* Total due · Paid to date · Balance, on the right */
+.bbr-totals {
+  width: 340px;
+  max-width: 100%;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.bbr-totals > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-16);
+  padding: 4px 0;
+}
+
+.bbr-totals > .bbr-balance {
+  margin-top: 4px;
+  padding-top: 8px;
+  font-weight: 600;
+}
+
+/* The Balance label is as dark as its amount (the other two labels are gray) */
+.bbr-sheet .bbr-totals .bbr-balance span {
+  color: inherit;
+}
+
+.bbr-foot p {
+  margin: 0;
+}
+
+/* ===== The preview (screen only) ===== */
+@media screen {
+  /* Hidden on screen: only the print window shows the printed copy */
+  .bbr-print {
+    display: none;
+  }
+
+  .bbr-sheet--screen {
+    padding: var(--space-16);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-control);
+    font-size: var(--text-13);
+    line-height: 1.45;
+  }
+
+  .bbr-sheet--screen .bbr-title {
+    font-size: var(--text-16);
+  }
+
+  .bbr-sheet--screen .bbr-subtitle {
+    margin-bottom: var(--space-16);
+    color: var(--color-text-secondary);
+    font-size: var(--text-13);
+  }
+
+  .bbr-sheet--screen .bbr-facts {
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: var(--space-4) 10px;
+  }
+
+  .bbr-sheet--screen .bbr-facts dt,
+  .bbr-sheet--screen .bbr-table th,
+  .bbr-sheet--screen .bbr-totals span {
+    color: var(--color-text-secondary);
+  }
+
+  .bbr-sheet--screen .bbr-table {
+    margin: var(--space-16) 0 var(--space-8);
+    font-size: var(--text-12);
+  }
+
+  .bbr-sheet--screen .bbr-table th,
+  .bbr-sheet--screen .bbr-table td {
+    padding: 6px 4px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .bbr-sheet--screen .bbr-table th {
+    border-bottom-color: var(--color-border-control);
+  }
+
+  .bbr-sheet--screen .bbr-totals {
+    width: 100%;
+  }
+
+  .bbr-sheet--screen .bbr-balance {
+    border-top: 1px solid var(--color-border-control);
+  }
+
+  .bbr-sheet--screen .bbr-foot {
+    margin-top: var(--space-16);
+    padding-top: var(--space-12);
+    border-top: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    font-size: var(--text-12);
+    line-height: 1.6;
+  }
+
+  /* The loading placeholder keeps the page's outline, with gray bars inside */
+  .bbr-loading {
+    min-height: 320px;
+    gap: var(--space-12);
+  }
+}
+
+/* ===== The printed page ===== */
+/* A named page ("bb-receipt") so these paper margins apply to the receipt only; the other
+   sections' print pages keep their own @page rules. */
+@page bb-receipt {
+  size: letter portrait;
+  margin: 0.6in 0.7in;
+}
+
+@media print {
+  /* Only the receipt is printed. (body:has(...) = "a body that holds the receipt".) The second
+     rule is written extra-specific on purpose: testing-events.css hides every page part except
+     its own print pages when printing, and this one must win (the Finance pattern). */
+  body:has(> .bbr-print) > *:not(.bbr-print) {
+    display: none !important;
+  }
+
+  body > div.bbr-print.bbr-print {
+    display: block !important;
+    page: bb-receipt;
+    color: #000;
+    background: #fff;
+    font-family: var(--font-family);
+    font-size: 10.5pt;
+    line-height: 1.45;
+  }
+
+  html,
+  body:has(> .bbr-print) {
+    background: #fff;
+  }
+
+  .bbr-print .bbr-sheet {
+    color: #000;
+    /* One page: the footer sits at the foot of the paper (the page is 11in minus 1.2in of
+       margins; a little less so a rounding never adds an empty second page). A longer history
+       simply grows past it onto page 2, with the footer after the totals. */
+    min-height: 9.5in;
+  }
+
+  .bbr-print .bbr-title {
+    font-size: 15pt;
+  }
+
+  .bbr-print .bbr-subtitle {
+    margin-bottom: 21pt;
+    color: #444;
+    font-size: 11pt;
+  }
+
+  .bbr-print .bbr-facts {
+    grid-template-columns: 1.55in minmax(0, 1fr);
+    gap: 4.5pt 12pt;
+  }
+
+  .bbr-print .bbr-facts dt,
+  .bbr-print .bbr-table th,
+  .bbr-print .bbr-totals span {
+    color: #444;
+  }
+
+  .bbr-print .bbr-table {
+    margin: 21pt 0 12pt;
+    font-size: 10.5pt;
+  }
+
+  .bbr-print .bbr-table th {
+    font-size: 10pt;
+    border-bottom: 1px solid #777;
+  }
+
+  .bbr-print .bbr-table th,
+  .bbr-print .bbr-table td {
+    padding: 5pt 4.5pt;
+  }
+
+  .bbr-print .bbr-table td {
+    border-bottom: 1px solid #ccc;
+  }
+
+  /* A line never splits across two pages */
+  .bbr-print .bbr-table tr {
+    break-inside: avoid;
+  }
+
+  .bbr-print .bbr-totals {
+    width: 3.55in;
+    margin-bottom: 18pt; /* room above the footer when the page is full */
+    break-inside: avoid;
+  }
+
+  .bbr-print .bbr-balance {
+    border-top: 1px solid #777;
+  }
+
+  .bbr-print .bbr-foot {
+    margin-top: auto;
+    padding-top: 18pt;
+    border-top: 1px solid #ccc;
+    color: #444;
+    font-size: 9pt;
+    line-height: 1.6;
+    break-inside: avoid; /* the school lines and "Printed …" stay together */
+  }
+}
