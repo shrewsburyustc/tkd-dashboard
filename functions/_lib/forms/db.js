@@ -21,8 +21,12 @@
 //   onnotice            ignore database notices instead of printing them to the log.
 // Every value goes in as a separate typed parameter (`${value}::type` below). Postgres.js sends
 // them apart from the SQL text, so nothing a family types can ever change the SQL itself.
-// The jsonb values (answers, children, bookings) are sent as JSON text and turned into jsonb
-// by the database (`::jsonb`).
+// The jsonb values (answers, children, bookings) go in with sql.json(value): the driver turns
+// the object into JSON text exactly ONCE. (Found at go-live, 2026-10-20: the first version sent
+// JSON.stringify(value) with `::jsonb`, and Postgres.js — which asks the database for each
+// parameter's type and then encodes jsonb itself — wrapped that text a second time, so the
+// database received one quoted string instead of the answers and refused every sign-up as
+// "invalid".)
 import postgres from 'postgres';
 
 // jsonb answers normally arrive already turned into objects; this also copes with text.
@@ -57,9 +61,9 @@ export function openDatabase(env) {
           ${args.clientKey}::text,
           ${args.submissionKey}::uuid,
           ${args.publishedVersion}::integer,
-          ${JSON.stringify(args.answers)}::jsonb,
-          ${JSON.stringify(args.children)}::jsonb,
-          ${JSON.stringify(args.bookings)}::jsonb,
+          ${sql.json(args.answers)}::jsonb,
+          ${sql.json(args.children)}::jsonb,
+          ${sql.json(args.bookings)}::jsonb,
           ${args.signature}::text,
           ${args.kioskToken}::text
         ) as answer`;

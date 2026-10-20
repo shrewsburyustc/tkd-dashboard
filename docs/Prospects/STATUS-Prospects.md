@@ -81,3 +81,7 @@ The list as it was asked:
 - Security review: no High. Fixed: M1 (the purge test now checks every other family's history is untouched; Ava's note survives Max's delete), L2 (the delete re-checks the 2-year / Joined rule), L3 + L1 (comments), L4 (search for every removed id), L5 (a half-Joined family stays). Not done: guards inside 0009 / 0012 (they're live; the 0015 header says never to re-run them).
 - **Never re-run 0009 or 0012 after 0015.**
 - For later (Main session, once both branches are on main): run the full run.mjs once with Color Belt's 0014 (private testing) and this branch's 0015 together - neither branch has run them side by side yet.
+
+## Deployed 2026-10-20
+
+This branch is on `main` and live (the push included `0ccf776`; live `main` = `cc8b095`). Checked on https://tkd-dashboard.pages.dev: `/f/…` and `/forms` have the strict security policy, the dashboard keeps its own, and `GET /api/forms/<slug>` answers `not_open` (PUBLIC_FORMS=off). Next: Jeffrey looks at the new sections signed in; then PUBLIC_FORMS=on + redeploy, one real test sign-up, the two-connection race test.
