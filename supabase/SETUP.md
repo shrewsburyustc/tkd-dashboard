@@ -1182,7 +1182,7 @@ Color Belt's form (12i) is not affected by any of these, and its off switch does
 ### 17d. If 0005 is ever re-run
 
 The 0010 undo (14e) re-runs 0005, and 0005 starts by removing **all** read rights on `locations` and granting back only its own columns, so the phone can't be read any more (Settings → Schools stops loading). **Re-run 0019 right after**; the phone numbers themselves stay in the table (tested in run.mjs step 18e).
-## 18. Migration 0016: Black Belt testing (cycles, family form, candidates, payments)
+## Migration 0016: Black Belt testing (cycles, family form, candidates, payments)
 
 **Status: NOT APPLIED.** Built and tested in PGlite only (`cd supabase/tests/pglite && node run.mjs` → `… passed, 0 failed.`). Each step below needs Jeffrey's OK; nothing is pasted before the security review of the SQL is done.
 
@@ -1200,13 +1200,13 @@ The 0010 undo (14e) re-runs 0005, and 0005 starts by removing **all** read right
 
 **Nothing secret goes into chat, git, `.env.local` or a screenshot** (handoff §6).
 
-### 18a. Before you apply 0016
+### 0016a. Before you apply 0016
 
 1. Jeffrey's OK for this paste. The PGlite run passed and the security review of the SQL is done.
 2. **CP1:** Jeffrey has checked `supabase/tests/0016_seed_review.txt` against the old Sheet (days, places, deadlines, prices, due dates, the requirements sheet, the placeholder waiver).
 3. Claude checks read-only (through the connection) that **no `bb_` object exists yet**: no table, sequence or function whose name starts with `bb_`, and no role `bb_registrar`; and that `select session_user` in the SQL Editor answers `postgres` (Jeffrey runs that one line himself).
 
-### 18b. Apply 0016 (you, in the SQL Editor)
+### 0016b. Apply 0016 (you, in the SQL Editor)
 
 1. Copy **the whole file** `supabase/migrations/0016_black_belt.sql`.
 2. **SQL Editor → New query**, paste, **Run**.
@@ -1215,7 +1215,7 @@ The 0010 undo (14e) re-runs 0005, and 0005 starts by removing **all** read right
 
 **Running it again is safe** (tested: a second run changes no row and no fingerprint; the seed never overwrites, and the role's attributes and password are never touched).
 
-### 18c. Read-only checks (Claude runs these through the connection)
+### 0016c. Read-only checks (Claude runs these through the connection)
 
 1. The list of new objects: 13 `bb_*` tables and the sequence `bb_candidate_ref_seq`.
 2. **Fingerprints:** `supabase/tests/0016_fingerprints.sql`. Every line must match what `supabase/tests/pglite/run.mjs` printed for the tested copy (every `bb_` function with its code, settings, owner and who may call it; the `bb_registrar` role row; the 14 table / sequence rows; the read rules; the triggers, rules and indexes). **One expected difference:** on Supabase the role row shows `members=postgres` (as 13c). The file is a single read-only SELECT and contains neither of the words the connection refuses (run.mjs checks that).
@@ -1223,7 +1223,7 @@ The 0010 undo (14e) re-runs 0005, and 0005 starts by removing **all** read right
 4. **Security advisor:** expected notices — "RLS enabled, no policy" on `bb_candidate_waivers` and `bb_starting_point` (INFO; nobody in the app may read them) and "security definer function executable by authenticated" for the 25 staff functions (each checks access and role itself). Anything else about a `bb_` object is a real problem.
 5. **Size check** (contract CP3): the database size now vs the Free plan's 500 MB, and the expected growth (a drawn signature is at most 70 KB, so about 14 MB a season for 200 registrations, kept for years) — written into the Black Belt status file.
 
-### 18d. Run the tests (you, in the SQL Editor)
+### 0016d. Run the tests (you, in the SQL Editor)
 
 1. Open `supabase/tests/0016_tests.sql`, replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>` (**Authentication → Users**), paste the whole file, **Run**. Supabase may warn about destructive operations (the test removes its own test rows and checks some removals are refused). Everything is rolled back. Confirm.
 2. Expected: one row, **ALL 0016 TESTS PASSED**. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved. Run `rollback;` once on its own, then tell Claude.
@@ -1241,7 +1241,7 @@ The 0010 undo (14e) re-runs 0005, and 0005 starts by removing **all** read right
    Once any family has registered, never run this (numbers are never reused, S14).
 6. The test makes its own `zz test …` cycles and candidates, so it works before **and** after real Black Belt cycles exist. On a database where the school's waiver was already saved, it makes a test placeholder current for its first checks (rolled back).
 
-### 18e. Set the `bb_registrar` password (CP3b — you, on your PC + SQL Editor)
+### 0016e. Set the `bb_registrar` password (CP3b — you, on your PC + SQL Editor)
 
 Same method as 12d / 13e, with its **own** script and its **own** password — never the Color Belt or Star one.
 
@@ -1266,9 +1266,9 @@ Same method as 12d / 13e, with its **own** script and its **own** password — n
 2. In PowerShell: `node C:\Users\jberg\Documents\make-scram-bb.mjs`. The password is now on the clipboard: **save it in your password manager as a NEW entry**, "Supabase bb_registrar (Hyperdrive)" — not the Color Belt or Star entry.
 3. **Check the printed line says `alter role bb_registrar password 'SCRAM-SHA-256$4096:…';`** — `bb_registrar`, **not** `testing_registrar` or `star_registrar`. If it names any other role, stop and tell Claude.
 4. Copy only that line into a **new** SQL Editor query and **Run**. Then **delete that snippet** in the SQL Editor (handoff §6), copy something harmless, and **delete `make-scram-bb.mjs`**.
-5. If the password ever leaks: run the script again (new password + verifier), update the Hyperdrive config (18f), and the old one stops working.
+5. If the password ever leaks: run the script again (new password + verifier), update the Hyperdrive config (0016f), and the old one stops working.
 
-### 18f. Hyperdrive for the Black Belt form (CP5 — later, when the Black Belt Function is built, with Jeffrey's OK)
+### 0016f. Hyperdrive for the Black Belt form (CP5 — later, when the Black Belt Function is built, with Jeffrey's OK)
 
 Not part of the 0016 paste. When the Black Belt family form's Pages Function (`functions/api/black-belt/[code].js`, page `/black-belt/<code>`) is built:
 1. Cloudflare → **Hyperdrive** → a **third** configuration `tkd-bb-registrar`: the same Session pooler host and port as 12g, database `postgres`, user **`bb_registrar.eozkfbdfxqlcbpewhach`**, password from the "Supabase bb_registrar (Hyperdrive)" entry. **Caching: Disabled.** **Origin connection limit: 5 or less.** TLS as 12g (Verify full with the existing Supabase CA certificate).
@@ -1277,7 +1277,7 @@ Not part of the 0016 paste. When the Black Belt family form's Pages Function (`f
 4. **The shared rate limit** (20 tries an hour per visitor) counts the three forms together only while every Function makes its visitor key with the **same** `CLIENT_KEY_SECRET` (true today). A separate secret would make the limit per form.
 5. Turnstile must accept the action `bb_register` on the production hostname.
 
-### 18g. Off switch (any time)
+### 0016g. Off switch (any time)
 
 In this order (step 1 works in seconds):
 1. **Database off switch (instant):** in the SQL Editor, run
@@ -1291,7 +1291,7 @@ In this order (step 1 works in seconds):
 
 Color Belt's and Star's forms (12i, 13g) are not affected by any of these.
 
-### 18h. Undo 0016 (only if something is badly wrong, and only BEFORE real data exists)
+### 0016h. Undo 0016 (only if something is badly wrong, and only BEFORE real data exists)
 
 Only if Jeffrey decides to remove Black Belt testing completely: put the app back to a version without the Black Belt screens **first**, then run this in the SQL Editor (one transaction; tested in a scratch PGlite run: afterwards no `bb_` object or role is left, and `0005_tests.sql`, `0006_tests.sql` and `0011_tests.sql` pass again). **This deletes every Black Belt setting, waiver text, cycle, candidate, signed waiver and payment.** Supabase's destructive-operations warning is real this time.
 
@@ -1393,7 +1393,7 @@ drop role if exists bb_registrar;
 commit;
 ```
 
-**Then the Cloudflare side** (only if 18f was done): remove the `HYPERDRIVE_BB` binding, delete the `tkd-bb-registrar` Hyperdrive configuration, delete the `BB_PUBLIC_REGISTRATION` variable, **Retry deployment**, and delete the "Supabase bb_registrar (Hyperdrive)" password-manager entry.
+**Then the Cloudflare side** (only if 0016f was done): remove the `HYPERDRIVE_BB` binding, delete the `tkd-bb-registrar` Hyperdrive configuration, delete the `BB_PUBLIC_REGISTRATION` variable, **Retry deployment**, and delete the "Supabase bb_registrar (Hyperdrive)" password-manager entry.
 
 **Why:**
 - **Its own login and its own password:** a leak of one form's password can't reach another form's functions; each can be switched off on its own.
