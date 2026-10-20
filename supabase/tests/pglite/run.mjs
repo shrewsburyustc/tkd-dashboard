@@ -195,6 +195,13 @@
 //       re-run takes the phone's read right away and a 0019 re-run brings
 //       it back (the numbers kept), and a minimal database gives the same
 //       0019 fingerprints.
+//   step0016_after_new_students. 0016 on a database built in the
+//       PRODUCTION order (everything live: 0001-0006, 0010, 0007, 0008,
+//       0009, 0012, 0015, 0011 as production got it, 0019, and 0020 once
+//       this branch has it): the other migrations' fingerprints don't
+//       move, 0016_tests.sql and every earlier test file pass, the
+//       bb_registrar live checks and a test cycle + registration work,
+//       and 0016's fingerprints equal step 15's.
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -219,7 +226,7 @@
 //   Exit code 0 = everything passed, 1 = something failed.
 // =====================================================================
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
@@ -532,6 +539,10 @@ async function main() {
   // 18. 0019 (school phone)
   console.log('\nMigration 0019 (school phone):');
   const after19 = after5 ? await step18() : null;
+
+  // 0016 on top of everything, in the production order (its own database)
+  console.log('\nMigration 0016 on top of the new-students migrations (production order):');
+  await step0016_after_new_students(after16);
 
   console.log('\nFunction fingerprints (name  arguments  body_md5  security_definer  settings  owner  execute_rights):');
   for (const line of after) console.log('  ' + line);
@@ -2008,6 +2019,99 @@ async function stepBlackBelt(db) {
   await runTestFile(db, '0016_tests.sql (after re-run)', '0016_tests.sql', 'ALL 0016 TESTS PASSED');
   await bbRegistrarLiveChecks(db);
   return after16;
+}
+
+// =====================================================================
+// step0016_after_new_students: 0016 (Black Belt) on a database built in
+// the PRODUCTION order. Step 15 tests 0016 on the main database, which
+// has 0001-0006, 0010 and 0011 but none of the new-students files. On
+// production 0016 will be pasted AFTER all of these, so this step builds
+// that database and proves 0016 applies and passes on top of it:
+//   a. a database built like production: steps 1-5, 0003, 0004, the
+//      seed, 0005 (+ its test event), 0006, 0010, 0007, 0008, 0009,
+//      0012, 0015, then 0011 the way production got it (first the copy
+//      pasted on 2026-10-19, fixtures/0011_as_applied_2026-10-19.sql,
+//      then today's 0011 over it), then 0019 - the order of step 18 -
+//      and 0020 (the current_session_id() fix) once this branch has it
+//   b. the fingerprints of every migration already there are taken,
+//      0016 is applied, and they must be IDENTICAL afterwards
+//   c. 0016_tests.sql, then the test files of every migration 0016 sits
+//      on top of (all must still pass)
+//   d. the bb_registrar live checks (15d) and a seeded Black Belt test
+//      cycle with a family registration (15e), then 0016's, 0015's and
+//      0011's tests again
+//   e. 0016's fingerprints must be IDENTICAL to step 15's (the main
+//      database's): the new-students files change nothing of 0016's
+// "main16" = step 15's 0016 fingerprints (or null if step 15 failed).
+// =====================================================================
+async function step0016_after_new_students(main16) {
+  const L = '[0016 live order] ';
+  const db = await buildBase(L);
+  if (!db) return;
+  // a. what production will have when 0016 is pasted
+  for (const [label, file] of [['0003', '0003_testing_classes_ranks.sql'], ['0004', '0004_staff_accounts.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return;
+  }
+  await run(db, L + 'apply built-in seed', builtInSeedSql());
+  if (!(await run(db, L + 'apply 0005', read('migrations', '0005_testing_events.sql')))) return;
+  await seedTestEvent(db);
+  for (const [label, file] of [['0006', '0006_star_testing.sql'], ['0010 (grading results)', '0010_testing_results.sql'],
+    ['0007', '0007_schedule.sql'], ['0008', '0008_calendar.sql'], ['0009', '0009_forms.sql'], ['0012', '0012_prospects.sql'],
+    ['0015', '0015_family_history.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return;
+  }
+  // 0011 as production got it: the 2026-10-19 copy first, today's over it
+  const old11 = readFileSync(path.join(here, 'fixtures', '0011_as_applied_2026-10-19.sql'), 'utf8');
+  if (!(await run(db, L + 'apply 0011 as pasted on production 2026-10-19 (fixture)', old11))) return;
+  if (!(await run(db, L + 'apply today\'s 0011 over it', read('migrations', '0011_finance.sql')))) return;
+  if (!(await run(db, L + 'apply 0019', read('migrations', '0019_school_phone.sql')))) return;
+  // 0020 is on the color-belt branch; once it reaches this branch (through
+  // a merge of main) this step applies it and runs its tests by itself
+  const file0020 = readdirSync(path.join(supabaseDir, 'migrations')).find((f) => f.startsWith('0020_'));
+  if (file0020) {
+    if (!(await run(db, `${L}apply ${file0020}`, read('migrations', file0020)))) return;
+  } else {
+    console.log(`  ${L}no 0020 migration in this branch yet - not applied`);
+  }
+
+  // b. apply 0016; nothing earlier moves
+  const prints = ['0003', '0004', '0005', '0006', '0010', '0007', '0008', '0009', '0012', '0015', '0011', '0019', '0020']
+    .map((n) => `${n}_fingerprints.sql`)
+    .filter((f) => (f !== '0020_fingerprints.sql' || file0020) && existsSync(path.join(supabaseDir, 'tests', f)));
+  const before = {};
+  for (const f of prints) before[f] = await fingerprints(db, f);
+  if (!(await run(db, L + 'apply 0016_black_belt.sql', read('migrations', '0016_black_belt.sql')))) return;
+  const moved = [];
+  for (const f of prints) {
+    if (JSON.stringify(before[f]) !== JSON.stringify(await fingerprints(db, f))) moved.push(f.slice(0, 4));
+  }
+  record(`${L}${prints.map((f) => f.slice(0, 4)).join(' / ')} fingerprints identical before/after 0016`, moved.length === 0,
+    moved.length ? `moved: ${moved.join(', ')}` : `${prints.length} files`);
+
+  // c. 0016's tests, then every file it sits on top of
+  const testFiles = [['0016_tests.sql', 'ALL 0016 TESTS PASSED'], ['verify_pin_tests.sql', 'ALL PIN TESTS PASSED'],
+    ['0002_tests.sql', 'ALL 0002 TESTS PASSED'], ['0003_tests.sql', 'ALL 0003 TESTS PASSED'], ['0004_tests.sql', 'ALL 0004 TESTS PASSED'],
+    ['0005_tests.sql', 'ALL 0005 TESTS PASSED'], ['0006_tests.sql', 'ALL 0006 TESTS PASSED'], ['0010_tests.sql', 'ALL 0010 TESTS PASSED'],
+    ['0007_tests.sql', 'ALL 0007 TESTS PASSED'], ['0008_tests.sql', 'ALL 0008 TESTS PASSED'], ['0009_tests.sql', 'ALL 0009 TESTS PASSED'],
+    ['0012_tests.sql', 'ALL 0012 TESTS PASSED'], ['0015_tests.sql', 'ALL 0015 TESTS PASSED'], ['0011_tests.sql', 'ALL 0011 TESTS PASSED'],
+    ['0019_tests.sql', 'ALL 0019 TESTS PASSED']];
+  if (file0020 && existsSync(path.join(supabaseDir, 'tests', '0020_tests.sql'))) testFiles.push(['0020_tests.sql', 'ALL 0020 TESTS PASSED']);
+  for (const [file, ok] of testFiles) {
+    await runTestFile(db, `${L}${file} (after 0016)`, file, ok);
+  }
+
+  // d. the form's login, and a real-looking cycle + registration
+  await bbRegistrarLiveChecks(db);
+  if (await seedBbTestCycle(db)) {
+    await runTestFile(db, L + '0016_tests.sql (with the Black Belt test cycle)', '0016_tests.sql', 'ALL 0016 TESTS PASSED');
+    await runTestFile(db, L + '0015_tests.sql (with the Black Belt test cycle)', '0015_tests.sql', 'ALL 0015 TESTS PASSED');
+    await runTestFile(db, L + '0011_tests.sql (with the Black Belt test cycle)', '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+  }
+
+  // e. the same 0016 as on the main database (step 15)
+  const mine = await fingerprints(db, '0016_fingerprints.sql');
+  record(L + '0016 fingerprints identical to step 15 (main database)', !!main16 && JSON.stringify(mine) === JSON.stringify(main16),
+    main16 ? `${mine.length} rows` : 'step 15 gave no fingerprints');
 }
 
 function finish() {
