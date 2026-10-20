@@ -1051,5 +1051,53 @@ if (location.hash === '#q16') {
     </section>`).join('');
 }
 </script>
+
+<script>
+// ---------- Question 17: acknowledging the admin's "earlier days weren't closed" line on Home ----------
+// Jeffrey (2026-10-20): the admin line on Home has no way to say "OK".
+if (location.hash === '#q17') {
+  document.getElementById('qtitle').innerHTML = 'Finance → Home · Question 17: an “OK” for the unclosed-days reminder';
+  document.getElementById('qlead').innerHTML = 'Admins see on Home: “21 earlier days at Worcester weren’t closed, the first on Fri, Sep 25. Open History ›”. Today it can’t be dismissed. <b>What should “OK” do?</b> Left: Home with the new OK. Right: what you see afterwards. Amber marks the change. (Staff never see this line; today’s own reminder “Today’s drawer isn’t closed yet” is not affected.)';
+  const line = (q, extra) => `<div class="${q ? 'q' : ''}" style="padding:2px;max-width:640px"><div class="banner" style="margin:0;min-height:44px"><i class="ti ti-alert-triangle"></i><span class="grow">21 earlier days at Worcester weren’t closed, the first on Fri, Sep 25.</span><span style="text-decoration:underline;white-space:nowrap">Open History</span><i class="ti ti-chevron-right"></i>${extra || ''}</div></div>`;
+  const okBtn = (label) => `<span class="btn" style="height:28px;margin-left:8px;background:#fff">${label}</span>`;
+  const home = (body, note) => `<div class="dev dev-pc" style="width:600px"><div class="app" style="min-height:250px"><nav class="rail"><a class="on"><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a><a><i class="ti ti-report-money"></i></a></nav>
+    <div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc"><span class="on">Worcester</span><span>Both</span></div><span class="avatar">JB</span></div>
+    <div class="content"><div style="font-size:20px;font-weight:500">Good morning</div><div class="hint" style="font-size:13px;margin-bottom:16px">Tuesday, October 20, 2026 · Worcester</div>${body}${note ? `<div class="hint" style="margin-top:10px">${note}</div>` : ''}</div></div></div></div>`;
+  const hist = `<div class="dev dev-pc" style="width:600px"><div class="app"><nav class="rail"><a><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a><a class="on"><i class="ti ti-report-money"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc"><span class="on">Worcester</span><span>Both</span></div><span class="avatar">JB</span></div>
+    <div class="content"><h1 class="ptitle">Finance</h1><div class="tabs"><span class="on">Daily report</span><span>Settings</span></div><div class="dayrow"><span class="day">History · September 2026</span></div>
+    <table><thead><tr><th>Day</th><th class="r">Total</th><th>Status</th></tr></thead><tbody>
+    <tr><td>Mon, Sep 28</td><td class="r">$140.00</td><td class="q"><span class="tag neutral">Won’t be closed</span><div class="hint">Marked by Jeffrey · Oct 20 · “Before Finance was used”</div></td></tr>
+    <tr><td>Fri, Sep 25</td><td class="r">$65.00</td><td class="q"><span class="tag neutral">Won’t be closed</span><div class="hint">Marked by Jeffrey · Oct 20 · “Before Finance was used”</div></td></tr>
+    </tbody></table></div></div></div></div>`;
+  const dlg = `<div class="dev dev-pc" style="width:600px;position:relative"><div class="app" style="min-height:300px"><nav class="rail"><a class="on"><i class="ti ti-home"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><span class="avatar">JB</span></div><div class="content">${line(false)}</div></div></div>
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,.35)"></div><div class="q" style="position:absolute;left:60px;right:40px;top:60px;background:#fff;border-radius:12px;padding:16px"><b style="font-size:16px">Mark 21 days as won’t be closed?</b>
+    <div style="font-size:13px;margin:8px 0">Worcester · Sep 25 – Oct 16. They leave this reminder and show “Won’t be closed” in History. Their payments don’t change. You can still close or reopen any of them later.</div>
+    <div class="lbl">Reason (shown in History)</div><div class="input" style="width:100%;margin-bottom:12px">Before Finance was used</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><span class="btn">Cancel</span><span class="btn btn-primary">Mark 21 days</span></div></div></div>`;
+
+  const Q17 = [
+    ['A', 'OK hides it until tomorrow', false,
+      `<h3>What it does</h3><ul><li>An <b>OK</b> button on the line. Pressed, the line goes away for the rest of today on this device. Tomorrow it comes back if any of those days are still not closed.</li></ul>
+       <h3>Pros</h3><ul><li>Simplest. No database change, nothing to build beyond the button.</li><li>The reminder never disappears for good, so missed days aren’t forgotten.</li></ul>
+       <h3>Cons</h3><ul><li>Old days you’ll never close keep coming back every morning — the nagging you want to stop.</li><li>Only on this device (another PC or phone still shows it).</li></ul>`,
+      `<div style="display:flex;gap:16px;flex-wrap:wrap"><div><div class="cap">Home, before</div>${home(line(true, okBtn('OK')))}</div><div><div class="cap">After OK (today)</div>${home('', 'The line is gone until tomorrow.')}</div></div>`],
+    ['B', 'OK hides it until a NEW unclosed day appears', true,
+      `<h3>What it does</h3><ul><li><b>OK</b> remembers which days you’ve seen. The line stays away while those are the only unclosed days.</li><li>As soon as a <b>new</b> day isn’t closed (e.g. tomorrow’s drawer is missed), the line comes back, saying how many are new: “1 new earlier day at Worcester wasn’t closed (21 seen before)”.</li><li>Closing old days later still works as now; History is unchanged and still shows “Not closed” for them.</li></ul>
+       <h3>Pros</h3><ul><li>Stops the daily nagging, but never hides a <b>new</b> missed close.</li><li>No database change: quick to build and nothing to paste.</li></ul>
+       <h3>Cons</h3><ul><li>Remembered on this device / browser (like the default location), so each admin PC says OK once.</li><li>No record of the decision; History still says “Not closed” for those days.</li></ul>`,
+      `<div style="display:flex;gap:16px;flex-wrap:wrap"><div><div class="cap">Home, before</div>${home(line(true, okBtn('OK')))}</div><div><div class="cap">Later, when a new day isn’t closed</div>${home(`<div class="q" style="padding:2px;max-width:640px"><div class="banner" style="margin:0;min-height:44px"><i class="ti ti-alert-triangle"></i><span class="grow">1 new earlier day at Worcester wasn’t closed: Mon, Oct 19 (21 seen before).</span><span style="text-decoration:underline;white-space:nowrap">Open History</span><i class="ti ti-chevron-right"></i>${okBtn('OK')}</div></div>`)}</div></div>`],
+    ['C', 'Mark old days as “Won’t be closed” (recorded, everyone sees it)', false,
+      `<h3>What it does</h3><ul><li>The line gets <b>Mark as won’t be closed…</b> (and History gets it per day). A dialog asks for a short reason, then marks those days for <b>everyone</b>: they leave the reminder and History shows a gray <b>Won’t be closed</b> tag with who, when and why. Logged in the change log.</li><li>Payments are untouched; an admin can still close or reopen those days later.</li></ul>
+       <h3>Pros</h3><ul><li>A real, shared, recorded decision; History tells the true story.</li><li>Works on every device and for every admin at once.</li></ul>
+       <h3>Cons</h3><ul><li>Needs a database change: a new migration (number from Main), which must come after camps’ 0017 and Finance’s 0018 because it touches the same functions — so it can only go live after those.</li><li>More to build, review and test; one more dialog.</li></ul>`,
+      `<div style="display:flex;gap:16px;flex-wrap:wrap"><div><div class="cap">Mark as won’t be closed…</div>${dlg}</div><div><div class="cap">History afterwards</div>${hist}</div></div>`],
+  ];
+  document.getElementById('opts').innerHTML = Q17.map(([k, title, rec, ex, html]) => `
+    <section class="${rec ? 'rec' : ''}">
+      <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+      <div class="explain" style="max-width:1280px;margin-bottom:12px">${ex}</div>${html}
+    </section>`).join('');
+}
+</script>
 </body>
 </html>
