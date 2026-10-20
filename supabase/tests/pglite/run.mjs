@@ -164,8 +164,8 @@
 //            sort byte by byte, "C"): all migrations, 0011_tests.sql and the
 //            speed + correctness check of g again. A Finance function that
 //            relied on text order would give wrong answers there.
-//   ===== Finance 0018 (step 18; camps' run.mjs has its own steps 15-16) =====
-//   18. 0018 (Finance: Color Belt PRIVATE testing payments), after 14 and
+//   ===== Finance 0018 (step0018; camps' run.mjs has its own steps 15-16) =====
+//   0018. (Finance: Color Belt PRIVATE testing payments), after 14 and
 //       before 13g, in production order: 0011 -> camps' 0013 + 0017 ->
 //       0014 -> 0018. Until the real files are on this branch, exact
 //       copies are used: fixtures/0013_camps_at_fb4ec24.sql,
@@ -218,7 +218,7 @@
 //       pass, 0015 twice more is harmless, a minimal database gives the
 //       same fingerprints, and on step 16's database (a sign-up logged in
 //       change_log before 0012) 0015 refuses to apply.
-//   19. 0019 (school phone) on a database built in the live order (with
+//   18. 0019 (school phone) on a database built in the live order (with
 //       0011 and 0015): the other migrations' fingerprints don't move -
 //       except 0005's line for the locations table, which gains the phone
 //       column's read right (and nothing else) - 0019_tests.sql and every
@@ -528,12 +528,12 @@ async function main() {
     record('0011 (Finance)', false, 'skipped: 0006 or 0010 could not be applied (see the lines above)');
   }
 
-  // ===== Finance 0018 (step 18) =====
-  // 18. Finance + Color Belt private testing (0018)
+  // ===== Finance 0018 (step0018, rule v0.304) =====
+  // 0018. Finance + Color Belt private testing
   let after18 = null;
   if (after11) {
     console.log('\nMigration 0018 (Finance: Color Belt private testing payments):');
-    after18 = await step18();
+    after18 = await step0018();
   }
   // ===== end Finance 0018 =====
 
@@ -559,9 +559,9 @@ async function main() {
   console.log('\nMigration 0015 (family history):');
   const after15 = after5 ? await step17(newStudents?.db ?? null) : null;
 
-  // 19. 0019 (school phone)
+  // 18. 0019 (school phone)
   console.log('\nMigration 0019 (school phone):');
-  const after19 = after5 ? await step19() : null;
+  const after19 = after5 ? await step18() : null;
 
   console.log('\nFunction fingerprints (name  arguments  body_md5  security_definer  settings  owner  execute_rights):');
   for (const line of after) console.log('  ' + line);
@@ -1387,7 +1387,7 @@ async function step17(refuseDb) {
 }
 
 // =====================================================================
-// Step 19 (was step 18 on main; renamed at the finance merge because Finance 0018 already used step18): 0019 (school phone), in the live order.
+// Step 18: 0019 (school phone), in the live order.
 //   a. a database built like production on 2026-10-19 (as step 17) plus
 //      0015 and 0011
 //   b. 0019; the other fingerprints don't move, except 0005's "table
@@ -1399,7 +1399,7 @@ async function step17(refuseDb) {
 //   f. a minimal database gives the same 0019 fingerprints
 // Returns 0019's fingerprints.
 // =====================================================================
-async function step19() {
+async function step18() {
   const L = '[0019] ';
   const db = await buildBase(L);
   if (!db) return null;
@@ -1949,13 +1949,13 @@ const snapshot18Sql = `select md5(${['testing_private', 'testing_private_payment
   `coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.${t} x), '')`).join(' || ')}
   || (select count(*) from public.change_log)::text)`;
 
-async function step18() {
-  // 18a.
+async function step0018() {
+  // 0018a.
   record('0018_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)',
     !/delete|drop/i.test(read('tests', '0018_fingerprints.sql')));
   record('[0018] camps 0013 + 0017 from ' + CAMPS_FILES().map((f) => path.basename(f)).join(', '), true);
 
-  // 18b. database 1, no payments
+  // 0018b. database 1, no payments
   const db = await buildBase('[0018] ');
   if (!db) return null;
   if (!(await run(db, '[0018] 0003 - 0010 + 0011 + 0014', SETUP_TO_0010() + read('migrations', '0011_finance.sql') + '\n'
@@ -2030,7 +2030,7 @@ async function step18() {
   await runTestFile(db, '[0018] 0018_tests.sql (after re-run)', '0018_tests.sql', 'ALL 0018 TESTS PASSED');
   await db.close();
 
-  // 18c. database 2: 0017 vs 0018 on the big seed + chain seed + camps (no private rows)
+  // 0018c. database 2: 0017 vs 0018 on the big seed + chain seed + camps (no private rows)
   const db2 = await buildBase('[0018 vs 0017] ');
   if (!db2) return after18;
   if (!(await run(db2, '[0018 vs 0017] 0003 - 0010 + 0011 + 0013 + 0017 + 0014 + the big seed + the chain seed + camps\' big seed',
@@ -2064,7 +2064,7 @@ async function step18() {
     ids.length >= 55 && ids.some((x) => x.src === 'camp') && detailDiffer.length === 0,
     `${ids.length} ids (${ids.filter((x) => x.src === 'camp').length} camp)` + (detailDiffer.length ? `; DIFFER: ${detailDiffer.slice(0, 5).join(', ')}` : ''));
 
-  // 18d. private rows on database 2: the tests, then speed
+  // 0018d. private rows on database 2: the tests, then speed
   if (!(await run(db2, '[0018 speed] private seed (finance_private_perf_seed.sql)',
     readFileSync(path.join(here, 'finance_private_perf_seed.sql'), 'utf8')))) return after18;
   const counts = (await db2.query(`select (select count(*)::int from public.testing_private_payments) as private_rows,
@@ -2076,12 +2076,12 @@ async function step18() {
   await financeSpeedCheck(db2, '[0018 speed]', false);
   await db2.close();
 
-  // 18f. days closed BEFORE 0018 (under 0011's rules), then 0018
+  // 0018f. days closed BEFORE 0018 (under 0011's rules), then 0018
   await closesUnder0011();
   return after18;
 }
 
-// 18f. Days closed while 0011 / 0017 (without private payments) were in force,
+// 0018f. Days closed while 0011 / 0017 (without private payments) were in force,
 // then 0018 applied: which of them must show "changed after closing"?
 //   A  a move BEFORE the close: under 0011 the money had left the event
 //      and private money wasn't counted, so the close left it out; 0018
