@@ -327,7 +327,6 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
     onAmount: (key, dan, i, text) => mapPlan(key, (p) => ({ ...p, amounts: { ...p.amounts, [dan]: p.amounts[dan].map((x, j) => (j === i ? text : x)) } })),
     onDueDate: (key, paymentNo, date) => changeValues((values) => setPaymentDueDate(values, key, paymentNo, date)),
     onKukkiwon: (dan, text) => changeValues((values) => ({ ...values, kukkiwon: { ...values.kukkiwon, [dan]: text } })),
-    onPlanName: (key, name) => mapPlan(key, (p) => ({ ...p, name })),
     onRemove: (key) => changeValues((values) => ({ ...values, plans: values.plans.filter((p) => p.key !== key) })),
     onMove: (key, delta) => {
       const index = dialogRef.current?.values.plans.findIndex((p) => p.key === key) ?? -1;

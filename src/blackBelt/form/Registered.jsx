@@ -137,8 +137,9 @@ export default function Registered({ cycle, result, visit, onAnother, onOpenRequ
         </section>
       ) : null}
 
-      {/* Reference */}
-      <section className="bbf-card">
+      {/* Reference — one row only (the Results row is gone), so the card has no row padding
+          on top of its own (bbf-ref-card in form.css) */}
+      <section className="bbf-card bbf-ref-card">
         <dl className="bbf-review">
           <Row label={T.REFERENCE}>
             <b className="bbf-ref">{result.reference}</b>

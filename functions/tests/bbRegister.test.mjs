@@ -395,6 +395,20 @@ test('BB POST: fields of the wrong type or size → bad_request', async () => {
     { signer_name: 'x'.repeat(201) },
     { signature: undefined },
     { signature: 'x'.repeat(70001) },
+    // A LIST holding a valid uuid: String(["<uuid>"]) looks like the uuid, but it isn't text.
+    { submission_id: [SUBMISSION_ID] },
+    { cycle_plan_id: [PLAN_ID] },
+    { submission_id: { id: SUBMISSION_ID } },
+    // The null character \u0000 — Postgres text can't hold it — in every text field.
+    { submission_id: `${SUBMISSION_ID}\u0000` },
+    { cycle_plan_id: `\u0000${PLAN_ID}` },
+    { first_name: 'Al\u0000ex' },
+    { last_name: 'Kim\u0000' },
+    { date_of_birth: '2012-03-\u00004' },
+    { email: 'parent@example.com\u0000' },
+    { waiver_version: '2027-1\u0000' },
+    { signer_name: '\u0000Jordan Kim' },
+    { signature: `${SIGNATURE}\u0000` },
   ];
   for (const change of bad) {
     await expectRefused(context({ body: goodBody(change) }), { status: 'bad_request' }, JSON.stringify(change).slice(0, 80));
@@ -666,11 +680,32 @@ test('BB rate limit: blocks after the limit, before Turnstile and the database',
     assert.equal(db.log.opened, 0);
     assert.equal(ts.seen.length, 0);
   }
-  // With the Cloudflare binding: the key is the client key + method, never the IP.
+  // With the Cloudflare binding: the key is the client key + Black Belt's own method name
+  // (BB_POST / BB_GET), never the IP.
   const seen = [];
   const binding = { async limit({ key }) { seen.push(key); return { success: true }; } };
   await run(handlePost, context({ env: goodEnv({ RATE_LIMITER: binding }) }), { openDatabase: fakeDb({ register: okRegister }).openDatabase, fetchImpl: fakeTurnstile().fetchImpl });
-  assert.match(seen[0], /^[0-9a-f]{64}:POST$/);
+  await run(handleGet, context({ method: 'GET', env: goodEnv({ RATE_LIMITER: binding }) }), { openDatabase: fakeDb({ cycle: okCycle }).openDatabase, fetchImpl: fakeTurnstile().fetchImpl });
+  assert.match(seen[0], /^[0-9a-f]{64}:BB_POST$/);
+  assert.match(seen[1], /^[0-9a-f]{64}:BB_GET$/);
+});
+
+test("BB rate limit: its own bucket — Color Belt's counter (same client, same method) never blocks Black Belt", async () => {
+  // One shared in-memory counter, as in a real copy of the Function. Fill Color Belt's bucket
+  // for this client ('<key>:POST' / '<key>:GET' — what register.js uses) to the limit…
+  const { makeClientKey } = await import('../_lib/clientKey.js');
+  const { allowRequest } = await import('../_lib/rateLimit.js');
+  const nowMs = 1_700_000_000_000;
+  const clientKey = await makeClientKey(goodEnv().CLIENT_KEY_SECRET, IP, new Date(nowMs));
+  for (const [handler, method] of [[handleGet, 'GET'], [handlePost, 'POST']]) {
+    const memoryLimiter = new MemoryRateLimiter({ limit: 1 });
+    assert.equal(await allowRequest({ env: {}, clientKey, method, nowMs, memoryLimiter }), true);
+    assert.equal(await allowRequest({ env: {}, clientKey, method, nowMs, memoryLimiter }), false, 'Color Belt bucket is full');
+    // …Black Belt still gets through, because it counts in 'BB_<method>'.
+    const r = await run(handler, context({ method }), { openDatabase: fakeDb({ cycle: okCycle, register: okRegister }).openDatabase, fetchImpl: fakeTurnstile().fetchImpl, memoryLimiter });
+    assert.equal(r.json.status, 'ok', method);
+    assert.ok(memoryLimiter.counts.has(`${clientKey}:BB_${method}`), method);
+  }
 });
 
 test('BB: anything unplanned that throws → unavailable, with no details', async () => {

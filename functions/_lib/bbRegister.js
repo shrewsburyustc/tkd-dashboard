@@ -103,7 +103,11 @@ async function passRateLimit(context, deps, method) {
   if (!ip) return { answer: { status: 'bad_request' } }; // Cloudflare always sets it; missing = not via Cloudflare
   const nowMs = (deps.now ?? Date.now)();
   const clientKey = await makeClientKey(env.CLIENT_KEY_SECRET, ip, new Date(nowMs));
-  const allowed = await allowRequest({ env, clientKey, method, nowMs, memoryLimiter: deps.memoryLimiter });
+  // The method is sent as 'BB_GET' / 'BB_POST' so Black Belt gets its OWN counter (rateLimit.js
+  // keys on clientKey + method). Without the prefix, a family hammering Color Belt's form would
+  // also use up their Black Belt allowance in the same copy of the Function, and the other way
+  // round (security review B1, item 15).
+  const allowed = await allowRequest({ env, clientKey, method: `BB_${method}`, nowMs, memoryLimiter: deps.memoryLimiter });
   if (!allowed) return { answer: { status: 'rate_limited' } };
   return { clientKey, ip };
 }
@@ -217,9 +221,15 @@ function isRealIsoDate(text) {
 // (The database checks the real rules — name rule, email rule, Dan 1–4, the plan belongs to
 // this cycle, the signature is a PNG, … — and answers `invalid` when one is broken.)
 function readFields(body) {
-  const isText = (value, max) => typeof value === 'string' && value.length <= max;
-  if (!UUID.test(String(body.submission_id ?? ''))) return null;
-  if (!UUID.test(String(body.cycle_plan_id ?? ''))) return null;
+  // Text = a string, not too long, and without the "null character" (\u0000). Postgres can't
+  // store \u0000 in text at all — it would throw, and the family would see "try again" instead
+  // of a plain "bad request" (security review B1, item 17).
+  const isText = (value, max) => typeof value === 'string' && value.length <= max && !value.includes('\u0000');
+  // A UUID must be a STRING first: String(["<uuid>"]) would turn a list into the same text and
+  // pass the test, then crash on .toLowerCase() below (→ unavailable instead of bad_request).
+  const isUuid = (value) => typeof value === 'string' && UUID.test(value);
+  if (!isUuid(body.submission_id)) return null;
+  if (!isUuid(body.cycle_plan_id)) return null;
   if (!isText(body.first_name, LIMITS.name) || !isText(body.last_name, LIMITS.name)) return null;
   if (!isText(body.date_of_birth, 10) || !isRealIsoDate(body.date_of_birth)) return null;
   if (!isText(body.email, LIMITS.email)) return null;

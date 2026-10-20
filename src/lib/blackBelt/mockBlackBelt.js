@@ -104,8 +104,12 @@ const HIDDEN = {
   bb_payments: ['recorded_by'],
 };
 // Every Black Belt table (mockClient routes supabase.from(<one of these>) here).
-export const BB_TABLES = Object.keys(GRANTED);
-const STORE_LISTS = [...BB_TABLES, 'public_attempts'];
+// The /* @__PURE__ */ marks tell the bundler (Vite) "this call has no side effects", so when
+// nothing uses the result — the live build, where mockClient.js is never used — it drops the call
+// AND the lists it reads. Without them the table, column and function names below ended up in the
+// live dashboard's JavaScript (security review B1, item 14).
+export const BB_TABLES = /* @__PURE__ */ Object.keys(GRANTED);
+const STORE_LISTS = /* @__PURE__ */ BB_TABLES.concat(['public_attempts']);
 
 // ----- The staff functions' argument lists (name, type) — exactly 0016's names -----
 const ID = (name) => [name, 'uuid'];
@@ -121,7 +125,7 @@ const RPC_ARGS = {
 };
 // A = admins only (checked right after has_data_access). bb_cycles_list and bb_set_registration
 // are S (staff and admins); set_registration's admin-only case is inside it.
-const ADMIN_ONLY = new Set(['bb_cycle_defaults', 'bb_add_cycle', 'bb_update_cycle', 'bb_delete_cycle', 'bb_save_waiver', 'bb_set_keep_years']);
+const ADMIN_ONLY = /* @__PURE__ */ new Set(['bb_cycle_defaults', 'bb_add_cycle', 'bb_update_cycle', 'bb_delete_cycle', 'bb_save_waiver', 'bb_set_keep_years']);
 // Functions that exist but that a signed-in staff member may NOT call (only bb_registrar, or
 // nobody): the app gets "permission denied", like the real database.
 const RESTRICTED = ['bb_public_cycle', 'bb_public_register', 'bb_public_register_core', 'bb_cycle_state', 'bb_purge_due',
@@ -130,9 +134,9 @@ const RESTRICTED = ['bb_public_cycle', 'bb_public_register', 'bb_public_register
 export const BB_WRITE_RPC_NAMES = ['bb_add_cycle', 'bb_update_cycle', 'bb_set_registration', 'bb_delete_cycle', 'bb_save_waiver', 'bb_set_keep_years'];
 // "volatile" functions: they write (bb_cycles_list runs the purge), so a read-only GET call is
 // refused, as PostgREST does.
-const VOLATILE = new Set(['bb_cycles_list', ...BB_WRITE_RPC_NAMES]);
+const VOLATILE = /* @__PURE__ */ new Set(/* @__PURE__ */ ['bb_cycles_list'].concat(BB_WRITE_RPC_NAMES));
 // Every function name mockClient routes here (one list B2 extends).
-export const BB_RPC_NAMES = [...Object.keys(RPC_ARGS), ...RESTRICTED];
+export const BB_RPC_NAMES = /* @__PURE__ */ Object.keys(RPC_ARGS).concat(RESTRICTED);
 
 class DbError extends Error {
   constructor(code, message, httpStatus = 400) {

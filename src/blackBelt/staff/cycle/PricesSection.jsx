@@ -10,6 +10,8 @@
 //     dates can still change." — only the due dates can be changed.
 //   - Phones: one card per plan — its due dates first, then one row per Dan ("Pay 1 · Pay 2 …").
 // Payment 1 "follows Application due" until someone types its date (rules.setPaymentDueDate).
+// A plan's name is plain text, as drawn: it is typed (and checked — empty, same as another plan)
+// only in the Add plan dialog, and plans are not renamed afterwards (the drawing has no rename).
 // This file only draws; the values live in useCycleEditor.jsx.
 import { Fragment, useId, useState } from 'react';
 import { IconArrowDown, IconArrowUp, IconDots, IconPlus, IconTrash } from '@tabler/icons-react';
@@ -24,23 +26,37 @@ import Grip from '../parts/Grip.jsx';
 import { DANS, priceTextProblem } from './formValues.js';
 import * as T from '../text.js';
 
-// One price box with a "$" in front (a typed price stays exactly as typed).
+// One price box with a "$" in front (a typed price stays exactly as typed). As drawn, the
+// price sits at the RIGHT of the box with the "$" right next to it ("$870"): the input is only as
+// wide as its text (bb-price-fit copies the text into a hidden ::after that sets the width), so
+// the "$" follows the number. Clicking the empty part of the box still puts the cursor in it.
 function PriceInput({ value, label, invalid, onChange }) {
   return (
-    <span className={`money bb-price${invalid ? ' is-invalid' : ''}`}>
+    <span
+      className={`money bb-price${invalid ? ' is-invalid' : ''}`}
+      onMouseDown={(event) => {
+        const input = event.currentTarget.querySelector('input');
+        if (event.target !== input && input) {
+          event.preventDefault(); // keep the click from taking the focus away
+          input.focus();
+        }
+      }}
+    >
       <span className="money-prefix" aria-hidden="true">
         $
       </span>
-      <input
-        className="money-input"
-        type="text"
-        inputMode="numeric"
-        autoComplete="off"
-        aria-label={label}
-        aria-invalid={invalid ? 'true' : undefined}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      />
+      <span className="bb-price-fit" data-value={value || ' '}>
+        <input
+          className="money-input"
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          aria-label={label}
+          aria-invalid={invalid ? 'true' : undefined}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </span>
     </span>
   );
 }
@@ -51,7 +67,7 @@ const dollarsText = (text) => {
   return Number.isFinite(cents) && String(text).trim() !== '' ? formatDollars(cents) : '';
 };
 
-export default function PricesSection({ mode, values, formForRules, problems, triedSave, isPhone, readOnly, onAmount, onDueDate, onKukkiwon, onPlanName, onRemove, onMove, onReorder, onAddPlan }) {
+export default function PricesSection({ mode, values, formForRules, problems, triedSave, isPhone, readOnly, onAmount, onDueDate, onKukkiwon, onRemove, onMove, onReorder, onAddPlan }) {
   const id = useId();
   const isAdd = mode === 'add';
   const [menu, setMenu] = useState(null); // { key, anchor } — a plan's ⋯
@@ -76,8 +92,6 @@ export default function PricesSection({ mode, values, formForRules, problems, tr
     const totals = planTotals(formPlan);
     const payments = plan.payments;
     const priceWrong = isAdd && DANS.some((dan) => (plan.amounts[dan] ?? []).some(showPrice));
-    const nameCode = planProblems.name;
-    const nameMsg = isAdd && nameCode && (nameCode !== 'empty' || triedSave) ? T.nameProblemText(nameCode, T.ENTER_PLAN_NAME) : null;
     const dueCodes = (planProblems.payments ?? []).map((p) => p?.dueOn ?? null);
     const dueShown = dueCodes.map((code) => (code === 'missing' && !triedSave ? null : code));
     const firstDue = dueShown.find(Boolean);
@@ -108,20 +122,7 @@ export default function PricesSection({ mode, values, formForRules, problems, tr
     const head = (
       <div className="bb-plan-head">
         {isAdd && <Grip label={T.dragPlanLabel(plan.name)} gripProps={drag.gripProps('bb-plans', plan.key)} disabled={readOnly} />}
-        {isAdd ? (
-          <input
-            className="input bb-plan-name"
-            type="text"
-            autoComplete="off"
-            aria-label={T.PLAN_NAME_LABEL}
-            aria-invalid={nameMsg ? 'true' : undefined}
-            value={plan.name}
-            readOnly={readOnly}
-            onChange={(event) => onPlanName(plan.key, event.target.value)}
-          />
-        ) : (
-          <span className="bb-plan-title">{plan.name}</span>
-        )}
+        <span className="bb-plan-title">{plan.name}</span>
         {/* "3 payments" isn't repeated after a plan already called "3 payments" (as drawn) */}
         {plan.name.trim().toLowerCase() !== T.paymentsCount(payments.length).toLowerCase() && <span className="bb-plan-count">{T.paymentsCount(payments.length)}</span>}
         {isAdd && (
@@ -156,13 +157,14 @@ export default function PricesSection({ mode, values, formForRules, problems, tr
             ))}
           </div>
           <div className="bb-scroll-x">
-            {/* At least 72px per payment column: many payments scroll inside the card, never the page */}
-            <table className="bb-grid bb-grid--phone" style={{ minWidth: 44 + payments.length * 80 }}>
+            {/* Up to 3 payments share the card's width (they fit at 320px, as drawn). More than
+                3: at least 64px per payment column, scrolling inside the card, never the page. */}
+            <table className="bb-grid bb-grid--phone" style={payments.length > 3 ? { minWidth: 44 + payments.length * 64 } : undefined}>
               <thead>
                 <tr>
                   <th scope="col">{T.COL_DAN}</th>
                   {payments.map((pay) => (
-                    <th key={pay.paymentNo} scope="col">
+                    <th key={pay.paymentNo} scope="col" className="num">
                       {payments.length === 1 ? T.paymentLabel(1) : T.payShort(pay.paymentNo)}
                     </th>
                   ))}
@@ -173,7 +175,9 @@ export default function PricesSection({ mode, values, formForRules, problems, tr
                   <tr key={dan}>
                     <th scope="row">{T.DAN_SHORT[dan]}</th>
                     {payments.map((pay, i) => (
-                      <td key={pay.paymentNo}>{amountCell(dan, i)}</td>
+                      <td key={pay.paymentNo} className="num">
+                        {amountCell(dan, i)}
+                      </td>
                     ))}
                   </tr>
                 ))}
@@ -235,7 +239,6 @@ export default function PricesSection({ mode, values, formForRules, problems, tr
     return (
       <div key={plan.key} className={`bb-plan${dragging ? ' is-dragging' : ''}`} data-drag-group={isAdd ? 'bb-plans' : undefined} data-drag-id={plan.key}>
         {head}
-        {nameMsg && <Notice>{nameMsg}</Notice>}
         {grid}
         {firstDue && <Notice>{T.dateProblemText(firstDue)}</Notice>}
         {priceWrong && <Notice>{T.PRICE_RANGE}</Notice>}

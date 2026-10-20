@@ -181,8 +181,11 @@ export const REGISTRATION_LINKS = 'Registration links';
 
 // OP-6: the Delete cycle confirmation (not in the mockups)
 export const deleteCycleTitle = (name) => `Delete ${name}?`;
+// No candidates → the candidates part is left out (not "…and its 0 candidates"); 1 → "1 candidate".
 export const deleteCycleBody = (count) =>
-  `This removes the cycle, its testing days and prices, and its ${candidatesCount(count)}. This can't be undone.`;
+  count > 0
+    ? `This removes the cycle, its testing days and prices, and its ${candidatesCount(count)}. This can't be undone.`
+    : "This removes the cycle, its testing days and prices. This can't be undone.";
 
 // ===== Cycles 4 · Add cycle / Edit cycle =====
 export const ADD_CYCLE_TITLE = 'Add cycle';
@@ -237,7 +240,7 @@ export const DUE_DATES = 'Due dates';
 export const paymentLabel = (n) => `Payment ${n}`;
 export const payShort = (n) => `Pay ${n}`;
 export const TOTAL = 'Total';
-export const PLAN_NAME_LABEL = 'Plan name'; // screen readers (the name field in a plan block)
+export const PLAN_NAME_LABEL = 'Plan name'; // the name field in the Add plan dialog
 export const amountLabel = (planName, dan, n) => `${planName || 'Plan'}, ${DAN_LABELS[dan]}, payment ${n}`;
 export const dueDateLabel = (planName, n) => `${planName || 'Plan'}, payment ${n} due date`;
 export const ADD_PLAN = 'Add plan';

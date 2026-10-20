@@ -2,7 +2,10 @@
 // Why it exists: approved v0.902 redraw of Cycles 4 — "+ Add plan asks name + number of
 // payments, then its amounts and due dates are typed in the grid". This small box opens on top
 // of Add cycle (a sibling InnerDialog, like the testing-day dialog); Add puts an empty plan at the
-// end of the list. Its wording is not in the mockups (listed for CP2).
+// end of the list. Its wording is not in the mockups (listed for CP2). On phones the Add button
+// sits at the bottom of the screen, like Add cycle's Save (bb-addplan-form--page).
+// The plan's name is typed and checked ONLY here ("Enter a plan name.", "Another plan has this
+// name."): in Add cycle the name is plain text, as drawn.
 // The values live in useCycleEditor.jsx; this file only draws.
 import { useId } from 'react';
 import { IconPlus } from '@tabler/icons-react';
@@ -31,6 +34,7 @@ export default function AddPlanDialog({ state, plans, isPhone, onChange, onAdd, 
     <InnerDialog title={T.ADD_PLAN_TITLE} size="small" fullScreen={isPhone} onRequestClose={onCancel}>
       <form
         noValidate
+        className={isPhone ? 'bb-addplan-form--page' : undefined}
         onSubmit={(event) => {
           event.preventDefault();
           onAdd(check);

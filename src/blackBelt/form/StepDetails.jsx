@@ -28,7 +28,9 @@ export default function StepDetails({
   onOpenRequirements,
 }) {
   const err = (field) => (showErrors ? errors[field] : null);
-  const describe = (field, hintId) => [err(field) ? `bbf-${field}-err` : null, hintId].filter(Boolean).join(' ') || undefined;
+  // As drawn (Form 4): while a field shows its error, its grey hint is hidden — the error takes
+  // its place. So the field is described by the error OR the hint, never both.
+  const describe = (field, hintId) => (err(field) ? `bbf-${field}-err` : hintId) || undefined;
 
   const plans = [...(cycle.plans ?? [])].sort((a, b) => a.position - b.position);
   const plan = plans.find((p) => p.id === form.planId) ?? null;
@@ -75,9 +77,11 @@ export default function StepDetails({
               aria-describedby={describe('last', 'bbf-last-hint')}
             />
             <FieldError id="bbf-last-err">{err('last')}</FieldError>
-            <div className="bbf-hint" id="bbf-last-hint">
-              {T.LAST_NAME_HINT}
-            </div>
+            {!err('last') && (
+              <div className="bbf-hint" id="bbf-last-hint">
+                {T.LAST_NAME_HINT}
+              </div>
+            )}
           </div>
 
           {/* Date of birth */}
@@ -96,9 +100,11 @@ export default function StepDetails({
               describedBy={describe('dob', 'bbf-dob-hint')}
             />
             <FieldError id="bbf-dob-err">{err('dob')}</FieldError>
-            <div className="bbf-hint" id="bbf-dob-hint">
-              {T.DOB_HINT}
-            </div>
+            {!err('dob') && (
+              <div className="bbf-hint" id="bbf-dob-hint">
+                {T.DOB_HINT}
+              </div>
+            )}
           </div>
 
           {/* Testing for: 1st–4th Dan */}
@@ -165,7 +171,7 @@ export default function StepDetails({
               ))}
             </div>
             <FieldError id="bbf-plan-err">{err('plan')}</FieldError>
-            {!form.dan ? <div className="bbf-hint">{T.AMOUNTS_LATER}</div> : null}
+            {!form.dan && !err('plan') ? <div className="bbf-hint">{T.AMOUNTS_LATER}</div> : null}
           </fieldset>
 
           {form.dan && plan ? (
@@ -197,16 +203,20 @@ export default function StepDetails({
               aria-describedby={describe('email', 'bbf-email-hint')}
             />
             <FieldError id="bbf-email-err">{err('email')}</FieldError>
-            <div className="bbf-hint" id="bbf-email-hint">
-              {T.EMAIL_HINT}
-            </div>
+            {!err('email') && (
+              <div className="bbf-hint" id="bbf-email-hint">
+                {T.EMAIL_HINT}
+              </div>
+            )}
           </div>
 
           {/* The honeypot: a field people never see or fill in. Bots that fill every field
-              give themselves away; the server refuses a registration with anything in it. */}
+              give themselves away; the server refuses a registration with anything in it.
+              No name="website": a name lets the browser's autofill fill it in for a real
+              family (and get them refused) — Color Belt's form has none either. */}
           <div className="bbf-hp" aria-hidden="true">
             <label htmlFor="bbf-website">Website</label>
-            <input id="bbf-website" name="website" tabIndex={-1} autoComplete="off" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
+            <input id="bbf-website" type="text" tabIndex={-1} autoComplete="off" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
           </div>
         </div>
 

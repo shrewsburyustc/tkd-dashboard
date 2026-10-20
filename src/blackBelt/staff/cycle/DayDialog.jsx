@@ -201,7 +201,7 @@ export default function DayDialog({ state, cycleName, dayCount, today, otherDays
         )}
 
         <div className="field">
-          <span id={`${id}-parts-label`} className="field-label">
+          <span id={`${id}-parts-label`} className="field-label bb-parts-title">
             {T.GRADED_THIS_DAY}
           </span>
           <div className="bb-parts" role="group" aria-labelledby={`${id}-parts-label`} aria-describedby={partsMsg ? err('parts') : undefined}>

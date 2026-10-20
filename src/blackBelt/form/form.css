@@ -538,6 +538,10 @@ section.bbf-card .bbf-review {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+/* The Reference card on the Registered page holds a single row: no extra space above or below it */
+.bbf-ref-card .bbf-rv {
+  padding: 0;
+}
 .bbf-waiver {
   background: var(--color-surface);
   border: 1px solid var(--color-border);

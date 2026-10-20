@@ -194,7 +194,9 @@ export default function StepCheck({
           </div>
         </>
       )}
-      <p className="bbf-privacy">{T.PRIVACY}</p>
+      {/* As drawn (Form 8): when registration closed while the family was filling in, nothing
+          more can be sent, so the privacy line (about the details being sent) is left out. */}
+      {banner === 'closed' ? null : <p className="bbf-privacy">{T.PRIVACY}</p>}
     </div>
   );
 }

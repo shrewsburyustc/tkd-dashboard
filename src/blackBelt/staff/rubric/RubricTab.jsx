@@ -2,8 +2,9 @@
 // Why it exists: approved mockup Cycles 6 with the v0.902 redraw (prices moved to each cycle), and
 // contract CONTRACT-0016-B1 §3, OP-3, OP-8, OP-9. For now it holds:
 //   - "Same for both schools. Prices are set on each cycle."
-//   - the Waiver block: "Version 2027-1", the first lines and Read all (the whole text), who signs,
-//     and for admins the Edit icon (Edit waiver → a new version). The seeded waiver is a
+//   - the Waiver block (full width, as drawn): head "Waiver [Version 2027-1]" (the version as a
+//     tag) with the admin's Edit icon; the first lines in a gray box; "Read all" (the whole text)
+//     under the box; who signs. The Edit icon (Edit waiver → a new version). The seeded waiver is a
 //     placeholder: an amber line says to save the school's waiver before opening registration.
 //   - the Keeping block: "Keep signed waivers for N years after the last testing day. For a
 //     candidate under 18: …" — while the insurer hasn't answered, "Not set: nothing is deleted
@@ -86,12 +87,12 @@ export default function RubricTab({ isAdmin, panelId, tabId, renderHeader, scree
       <>
         <p className="bb-rubric-line">{T.RUBRIC_LINE}</p>
 
-        <section className="bb-block" aria-labelledby={`${panelId}-waiver`}>
-          <div className="bb-block-head">
+        <section className="bb-block bb-block--waiver" aria-labelledby={`${panelId}-waiver`}>
+          <div className="bb-block-head bb-block-head--line">
             <h2 id={`${panelId}-waiver`} className="bb-block-title">
               {T.WAIVER}
             </h2>
-            <span className="bb-block-meta">{T.versionLabel(current.versionName)}</span>
+            <span className="ttag">{T.versionLabel(current.versionName)}</span>
             {isAdmin && (
               <IconButton label={T.EDIT_WAIVER} Icon={IconEdit} className="bb-block-edit" onClick={(event) => setDialog({ type: 'waiver', opener: event.currentTarget, key: Date.now() })} />
             )}
@@ -102,12 +103,10 @@ export default function RubricTab({ isAdmin, panelId, tabId, renderHeader, scree
               <span>{T.WAIVER_PLACEHOLDER}</span>
             </p>
           )}
-          <p className="bb-waiver-start">
-            {firstLines(current.body)}{' '}
-            <button type="button" className="link-button bb-read-all" onClick={(event) => setDialog({ type: 'read', opener: event.currentTarget, key: Date.now() })}>
-              {T.READ_ALL}
-            </button>
-          </p>
+          <p className="bb-waiver-start">{firstLines(current.body)}</p>
+          <button type="button" className="link-button bb-read-all" onClick={(event) => setDialog({ type: 'read', opener: event.currentTarget, key: Date.now() })}>
+            {T.READ_ALL}
+          </button>
           <p className="field-hint">{isAdmin ? T.WAIVER_ABOUT_ADMIN : T.WAIVER_ABOUT_STAFF}</p>
         </section>
 
