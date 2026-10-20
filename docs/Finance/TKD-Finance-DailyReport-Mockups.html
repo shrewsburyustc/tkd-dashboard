@@ -6,7 +6,7 @@
 <title>Daily report mockups</title>
 <!--
   Finance → Daily report: full mockups (rule P1 / P6), built from Jeffrey's answers
-  to the 10 design questions (rulebook v0.193–v0.203).
+  to the 10 design questions (rulebook v0.804–v0.807, v0.197–v0.203).
   Every screen is drawn at PC 1280 wide, tablet 820 wide (touch: labeled rail, 36px
   controls, 44px rows) and phone 390 wide (touch, bottom bar). Frames grow to show the
   whole page; the dashed gray line marks the bottom of the real screen.
@@ -192,7 +192,7 @@ tr.grp td{background:var(--bg);font-weight:500;height:36px;border-bottom:1px sol
 <body>
 <main>
 <h1 class="doc">Finance → Daily report · full mockups (14 screens)</h1>
-<p class="lead">Built from your answers (rulebook v0.193–v0.203). Each screen is shown at PC (1280), tablet (820, touch) and phone (390, touch). The dashed gray line is the bottom of the real screen; below it you scroll. <b>Amber outline</b> = what this screen is about. <span class="prop">Amber text</span> = a proposal for you to confirm. Sample day: Shrewsbury, Saturday Oct 24, 2026, 8 payments, $665.</p>
+<p class="lead">Built from your answers (rulebook v0.804–v0.807, v0.197–v0.203). Each screen is shown at PC (1280), tablet (820, touch) and phone (390, touch). The dashed gray line is the bottom of the real screen; below it you scroll. <b>Amber outline</b> = what this screen is about. <span class="prop">Amber text</span> = a proposal for you to confirm. Sample day: Shrewsbury, Saturday Oct 24, 2026, 8 payments, $665.</p>
 <div id="screens"></div>
 </main>
 
@@ -241,7 +241,7 @@ function shell(d, o) {
 // ===== Parts =====
 const touch = (d) => d !== 'pc';
 
-// Day row. staff: today only (v0.195). admin: arrows, calendar, Today, History, Print, Export (v0.197, v0.200).
+// Day row. staff: today only (v0.806). admin: arrows, calendar, Today, History, Print, Export (v0.197, v0.200).
 function dayRow(d, o = {}) {
   const { role = 'staff', date = 'Saturday, October 24, 2026', short = 'Sat, Oct 24', today = true, q = '' } = o;
   if (role === 'staff') {
@@ -295,7 +295,7 @@ function closeBox(d, state, o = {}) {
     <div class="boxfoot"><span class="btn btn-primary" ${disabled}><i class="ti ${btnIcon}"></i>${btnText}</span><span class="hint">${state === 'empty' ? 'Fill in all three counts first.' : state === 'unsaved' ? '' : 'Saves the count with your name.'}</span></div></div>`;
 }
 
-// Payments list grouped Cash / Check / Card (v0.196). opts.corr = show corrections (v0.199); opts.school = Both column (unused on Both: v0.198)
+// Payments list grouped Cash / Check / Card (v0.807). opts.corr = show corrections (v0.199); opts.school = Both column (unused on Both: v0.198)
 function list(d, opts = {}) {
   let rows = PAY.map(p => ({ t: p[0], name: p[1], what: p[2], ev: p[3], m: p[4], amt: p[5], by: p[6] }));
   if (opts.corr) {
@@ -328,10 +328,10 @@ const SCREENS = [];
 const S = (id, title, explain, render) => SCREENS.push({ id, title, explain, render });
 
 S('D1', 'Staff · today, before closing', `
-  <h3>What it shows</h3><ul><li>Staff (incl. the shared desk account) see <b>today only</b> (v0.195): no arrows, calendar, History or Export. Print is there (phones: under ⋯).</li>
+  <h3>What it shows</h3><ul><li>Staff (incl. the shared desk account) see <b>today only</b> (v0.806): no arrows, calendar, History or Export. Print is there (phones: under ⋯).</li>
   <li>Four totals: Total, Cash, Check, Card, each with its number of payments. Clicking Cash / Check / Card jumps to that group (rule 8). <span class="prop">The Total card uses <code>ti-sum</code>, since <code>ti-report-money</code> now means Finance (v0.201).</span></li>
-  <li><b>Close the day</b> box (v0.194): three counts to type, each with what the dashboard expects. The button is the screen’s one primary action.</li>
-  <li>Payments grouped <b>Cash, Check, Card</b>, each with its count and total (v0.196). Tablet drops the For and Recorded by columns into a second line; phone uses stacked cards.</li></ul>
+  <li><b>Close the day</b> box (v0.805): three counts to type, each with what the dashboard expects. The button is the screen’s one primary action.</li>
+  <li>Payments grouped <b>Cash, Check, Card</b>, each with its count and total (v0.807). Tablet drops the For and Recorded by columns into a second line; phone uses stacked cards.</li></ul>
   <h3>Proposals to confirm</h3><ul class="prop"><li>Checks are counted by <b>How many</b> and <b>Total</b>. If only one part is off, its tag says which (e.g. “Total short $5.00”).</li><li>Close the day stays gray until all three counts are filled in.</li><li>New icons for the §2.4 map: <code>ti-report-money</code> Finance · <code>ti-sum</code> Total · <code>ti-cash</code> Cash · <code>ti-receipt</code> Check · <code>ti-credit-card</code> Card · <code>ti-cash-register</code> Close the day box · <code>ti-lock-check</code> Close the day / Day closed · <code>ti-lock-open</code> Reopen day. Shared with the Prospects branch: <code>ti-history</code> (past records) and ‹ › (previous / next day, week or month). Success tags (Matches, Closed) carry no icon, since <code>ti-check</code> means save / done only.</li><li>The “Expected …” line shows under each count. (Seeing it first can make people type what’s expected instead of counting. The other choice is to show it only after typing.)</li></ul>`,
   (d) => shell(d, { body: dayRow(d) + cards() + closeBox(d, 'empty', { q: 1 }) + list(d) }));
 
@@ -343,13 +343,13 @@ S('D2', 'Staff · counting: cash short, note needed', `
 
 S('D3', 'Staff · day closed (toast with Undo)', `
   <h3>What it shows</h3><ul><li>After Close the day, the box turns into a summary: who closed it and when, the counts, any short / over and the note. The tag shows the most important result (warning before success, rule 8).</li>
-  <li>A toast confirms it with <b>Undo</b>. Staff can’t reopen after that. An admin can (v0.195).</li><li>The Home reminder (v0.202) goes away.</li></ul>
+  <li>A toast confirms it with <b>Undo</b>. Staff can’t reopen after that. An admin can (v0.806).</li><li>The Home reminder (v0.202) goes away.</li></ul>
   <h3>Proposals to confirm</h3><ul class="prop"><li>Undo works for <b>10 seconds</b> for the person who closed it, the same as staff payment Undo (v0.147). After that: “Too late to undo here. Ask an admin to reopen the day.”</li><li>If a payment is recorded on a closed day (e.g. a family pays late that evening), the day gets “Changed after closing”, the same as v0.199.</li></ul>`,
   (d) => shell(d, { body: dayRow(d) + cards() + closeBox(d, 'closed', { q: 1 }) + list(d), overlay: toast(d, 'Today’s drawer is closed.') }));
 
 S('D4', 'Admin · an earlier day: corrections and Reopen', `
   <h3>What it shows</h3><ul><li>Admins move day to day with <b>‹ ›</b>, the <b>calendar</b>, and <b>Today</b> (shown only when not on today). Also History, Print and Export (v0.197, v0.200).</li>
-  <li>Corrections on the payment’s <b>original day</b> (v0.199): Mia Chen <b>struck through</b> with an Undone tag, not counted; Lucas Patel with an <b>Edited</b> tag and “Was $70.00”. Totals count what’s true now ($660).</li><li><b>Owen Price</b> paid at 4:05 PM, after the day was closed at 1:42 PM: the row says <b>Added after closing</b> (v0.194).</li>
+  <li>Corrections on the payment’s <b>original day</b> (v0.199): Mia Chen <b>struck through</b> with an Undone tag, not counted; Lucas Patel with an <b>Edited</b> tag and “Was $70.00”. Totals count what’s true now ($660).</li><li><b>Owen Price</b> paid at 4:05 PM, after the day was closed at 1:42 PM: the row says <b>Added after closing</b> (v0.805).</li>
   <li>The day was closed before the corrections, so it shows <b>Changed after closing</b> and an amber line explaining why the totals no longer match the count.</li>
   <li><b>Reopen day</b> (admins only) clears the closed state so the day can be counted again. The old count stays in the history.</li></ul>
   <h3>Proposals to confirm</h3><ul class="prop"><li>A staff mis-click that was undone within its 10 seconds is <b>not shown</b> at all (it never really happened).</li><li>An edit that moves a payment to another date shows on the new day, with “Moved to Mon, Oct 26” struck through on the old day.</li></ul>`,

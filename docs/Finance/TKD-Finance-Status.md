@@ -1,7 +1,7 @@
 # Finance — status and plan
 
 **Updated:** 2026-10-18 (Finance worktree session, branch `finance`)
-**Rulebook at this update:** v0.216 (Finance rows: v0.193–v0.203, v0.207–v0.209, v0.215–v0.216) · **Questions:** `TKD-Finance-DailyReport-Questions.html` (this folder), images in `images/`
+**Rulebook at this update:** v0.216 (Finance rows: v0.804–v0.807, v0.197–v0.203, v0.207–v0.209, v0.215–v0.216) · **Questions:** `TKD-Finance-DailyReport-Questions.html` (this folder), images in `images/`
 
 > Read `CLAUDE.md` (repo root) first. This file says where Finance stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -9,7 +9,7 @@
 
 ## 1. Where things stand
 
-Jeffrey decided (2026-10-18, v0.193) to add a **Finance** section to the dashboard. Its first tab is the **Daily report**: the day's payments for a school, because families now pay for Color belt testing and Star testing. **Design stage only.** Nothing built, no migration. Q1 answered (v0.194: B, report + Close the day). Q2 answered (v0.195: staff today only + close; admins any day, history, reopen). Q3 answered (v0.196: grouped Cash / Check / Card). Q4 answered (v0.197: arrows + calendar + History list). Q5 answered (v0.198: Both = one summary box per school). Q6 answered (v0.199: corrections shown on the original day). Q7 answered (v0.200: Print + admin CSV export of any range). Q8 answered (v0.201: ti-report-money, last on the rail, More on phones). Q9 answered (v0.202: reminder on Home, no amounts). Q10 answered (v0.203: Finance → Settings, a time per weekday per school). **All 10 questions answered.** Full mockups built (`TKD-Finance-DailyReport-Mockups.html`, 14 screens D1–D14 at PC / tablet / phone, images in `Mockup images/`), design-reviewed by a separate agent (1 blocker + 9 should-fix, all fixed: phone bar per v0.140, icons, staff hint, phone ⋯ menu D14, labeled check fields, error inside the box, Added after closing, 44px Home lines, Settings copy wording). **Next: screen-by-screen pass with Jeffrey, then the rule-5 question** (payments with students' names on any staff login, incl. the mat-side tablet — needs an explicit rule-5 exception or a way to hide Finance there).
+Jeffrey decided (2026-10-18, v0.804) to add a **Finance** section to the dashboard. Its first tab is the **Daily report**: the day's payments for a school, because families now pay for Color belt testing and Star testing. **Design stage only.** Nothing built, no migration. Q1 answered (v0.805: B, report + Close the day). Q2 answered (v0.806: staff today only + close; admins any day, history, reopen). Q3 answered (v0.807: grouped Cash / Check / Card). Q4 answered (v0.197: arrows + calendar + History list). Q5 answered (v0.198: Both = one summary box per school). Q6 answered (v0.199: corrections shown on the original day). Q7 answered (v0.200: Print + admin CSV export of any range). Q8 answered (v0.201: ti-report-money, last on the rail, More on phones). Q9 answered (v0.202: reminder on Home, no amounts). Q10 answered (v0.203: Finance → Settings, a time per weekday per school). **All 10 questions answered.** Full mockups built (`TKD-Finance-DailyReport-Mockups.html`, 14 screens D1–D14 at PC / tablet / phone, images in `Mockup images/`), design-reviewed by a separate agent (1 blocker + 9 should-fix, all fixed: phone bar per v0.140, icons, staff hint, phone ⋯ menu D14, labeled check fields, error inside the box, Added after closing, 44px Home lines, Settings copy wording). **Next: screen-by-screen pass with Jeffrey, then the rule-5 question** (payments with students' names on any staff login, incl. the mat-side tablet — needs an explicit rule-5 exception or a way to hide Finance there).
 
 ## 2. Facts the plan is built on
 
@@ -18,14 +18,14 @@ Jeffrey decided (2026-10-18, v0.193) to add a **Finance** section to the dashboa
 - **Card means a card taken at the desk and recorded by hand.** No Square link yet (v0.98), so the card total is what staff recorded.
 - The database dates an undo / edit's reversal on the day it's made (`testing_today()`), and an edit's new payment on the date the admin picks. The report shows corrections on the original day (v0.199), so it groups by the original payment, not by the reversal's date.
 - Admins can change a payment's date (Edit payment, v0.147), so `paid_on` and the day it was recorded can differ. Proposed: the report goes by `paid_on`.
-- Close the day (v0.194) needs a new table + functions, so Finance gets its own migration (next free number when building).
+- Close the day (v0.805) needs a new table + functions, so Finance gets its own migration (next free number when building).
 - Money is billing data: rule 5 keeps it off list views on the mat-side tablet. Who may open Finance is question 2.
 
 ## 3. Questions (one at a time, each with a picture; 10 in all — Home split off from 8; the reminder setting added after 9)
 
-1. **What the Daily report does** — A read only · B + close the day (count the drawer, short / over) · C + bank deposit. **done v0.194 (B: report + Close the day)**. Follow-ups to ask: who closes / reopens, no-payment days, checks by number or amount, closed-days history.
-2. Who can see Finance, close the day, reopen a closed day (A admins only · B staff close today, admins any day + reopen · C same for both, admins reopen) — **done v0.195 (B)**
-3. Page layout: totals, then the list grouped how (by time · by how paid · by testing event) — **done v0.196 (B: grouped by how paid)**
+1. **What the Daily report does** — A read only · B + close the day (count the drawer, short / over) · C + bank deposit. **done v0.805 (B: report + Close the day)**. Follow-ups to ask: who closes / reopens, no-payment days, checks by number or amount, closed-days history.
+2. Who can see Finance, close the day, reopen a closed day (A admins only · B staff close today, admins any day + reopen · C same for both, admins reopen) — **done v0.806 (B)**
+3. Page layout: totals, then the list grouped how (by time · by how paid · by testing event) — **done v0.807 (B: grouped by how paid)**
 4. How admins move between days and see the closed-day history — **done v0.197 (C: arrows + calendar + History list)**
 5. Location switcher: one school vs Both (Star payments count for the candidate's school) — **done v0.198 (C: one box per school, Open [school] shows its full report)**
 6. Undone and edited payments: hidden, shown struck through, or listed separately — **done v0.199 (B: struck through / Edited on the original day; Changed after closing)**
@@ -45,10 +45,10 @@ Full mockups at PC / tablet / phone → separate design reviewer agent → scree
 
 | Version | Decision |
 |---|---|
-| v0.193 | **Finance section added**; its first tab is the **Daily report** (the day's testing payments per school). Designed one question at a time. |
-| v0.194 | **Q1 (B): report + Close the day.** Totals + payments list, any day, Print; staff enter cash counted, number of checks, card machine total; Matches / Short / Over; a short or over needs a note; closed by name and time; later payments on a closed day are flagged. Needs a new table. |
-| v0.195 | **Q2 (B): roles.** Staff see today only and close it; admins see any day, the closed-day history, and reopen (logged). Enforced in the database. Risk: desk-account closes log as “Staff”. |
-| v0.196 | **Q3 (B): list grouped Cash / Check / Card**, each with count and total; payments in time order inside each group. |
+| v0.804 | **Finance section added**; its first tab is the **Daily report** (the day's testing payments per school). Designed one question at a time. |
+| v0.805 | **Q1 (B): report + Close the day.** Totals + payments list, any day, Print; staff enter cash counted, number of checks, card machine total; Matches / Short / Over; a short or over needs a note; closed by name and time; later payments on a closed day are flagged. Needs a new table. |
+| v0.806 | **Q2 (B): roles.** Staff see today only and close it; admins see any day, the closed-day history, and reopen (logged). Enforced in the database. Risk: desk-account closes log as “Staff”. |
+| v0.807 | **Q3 (B): list grouped Cash / Check / Card**, each with count and total; payments in time order inside each group. |
 | v0.197 | **Q4 (C): arrows + calendar + Today; History list** of a month's days (total, closed by + time, one tag), click to open a day. Admins only. |
 | v0.198 | **Q5 (C): Both = one summary box per school** (total, cash · check · card, closed or not, Open [school]) + combined total; Open switches the dashboard to that school's full report. No list or closing on Both. To confirm: History on Both. |
 | v0.199 | **Q6 (B): corrections on the original day.** Undone = struck through + Undone tag + who/when, not counted; edited = new amount + Edited tag + was/who/when; Changed after closing tag on closed days. To confirm: hide 10-second mis-click undos; date-changing edits. |
@@ -118,3 +118,4 @@ Builders A (0011 + tests), B (data layer + mock), C (screens) done; PGlite 154 p
 - Older test files rerun on production after 0011 (0010, 0006, 0005, 0004, 0003, 0002, PIN) in one paste: **ALL 7 OLDER TEST FILES PASSED** (2026-10-19). **Next: CP3** (local app against the real database).
 - **CP3 started (2026-10-19):** this branch running locally against the real database at http://localhost:5199 (worktree `.env.local`). Jeffrey signs in (admin, then desk) and checks Finance with no real payments yet, sets the real reminder times in Settings (SETUP 15d). Close the day with real money is first seen after deploy (its database side passed in 0011_tests on production).
 - **CP3 approved (2026-10-19, v0.803):** works against the real database; real reminder times set. **Next: CP4** (Main session merges `finance` into `main`, renumbers clashing rulebook rows, Jeffrey OKs the push).
+- **Renumbered for the merge (2026-10-19, rule v0.300):** Finance's old rows v0.193–v0.196 clashed with `main` (Color Belt phase 3) and are now **v0.804–v0.807** (10b rows, changelog lines and every mention in Finance's docs and code comments; Color Belt's own v0.193–v0.196 mentions untouched). Finance's other old rows (v0.197–v0.203, v0.207–v0.209, v0.215–v0.216) don't clash with `main` and keep their numbers. Rulebook header v0.807.

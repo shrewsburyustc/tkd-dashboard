@@ -10,7 +10,7 @@ The single source of truth for three builders: **A database**, **B data layer + 
 | Build plan `docs/Finance/TKD-Finance-Build-Plan.md` (its §6 answers override §0–5) | draft |
 | Status file `docs/Finance/TKD-Finance-Status.md` (Q1–Q11, screen pass D1–D14) | |
 | Approved mockups `docs/Finance/TKD-Finance-DailyReport-Mockups.html` (D1–D14) — wording and layout source | approved 2026-10-18 (v0.207) |
-| Rulebook 10b v0.193–v0.203, v0.207, v0.208 | |
+| Rulebook 10b v0.804–v0.807, v0.197–v0.203, v0.207, v0.208 | |
 | Handoff §6 (security rules, non-negotiable) | |
 | Existing code: migrations 0001–0006 (live — **never edit**), CONTRACT-0005, `src/` | |
 

@@ -1,4 +1,4 @@
-// CloseDayBox.jsx — the "Close the day" dialog of the Daily report (mockups D1, D2, D13; v0.194, v0.207,
+// CloseDayBox.jsx — the "Close the day" dialog of the Daily report (mockups D1, D2, D13; v0.805, v0.207,
 // v0.209; moved into a dialog by v0.800).
 // Why it exists: at the end of the day staff count the drawer and type three things — the cash
 // in the drawer, the checks (how many + their total) and the card machine's total. The box

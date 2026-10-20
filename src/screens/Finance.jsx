@@ -1,4 +1,4 @@
-// Finance.jsx — the Finance section (rail icon ti-report-money, "Finance", last on the rail; v0.193, v0.201).
+// Finance.jsx — the Finance section (rail icon ti-report-money, "Finance", last on the rail; v0.804, v0.201).
 // Why it exists: families pay for Color belt and Star testing at the desk, and each school's
 // drawer is counted and closed at the end of the day. This file draws the frame of the section:
 //   - the page title "Finance" and the tab bar: Daily report · Settings (Settings for admins only)
@@ -6,7 +6,7 @@
 //       #finance           the Daily report (finance/DayReport.jsx)
 //       #finance/history   History, a month of days (finance/HistoryView.jsx) — admins only
 //       #finance/settings  the reminder settings (finance/SettingsTab.jsx) — admins only
-// It also keeps "which day is shown": staff always see today (v0.195); admins move between days
+// It also keeps "which day is shown": staff always see today (v0.806); admins move between days
 // and the day is remembered while the dashboard is open (finance/financeState.js).
 // "Today" is the school's date (America/New_York), re-checked every minute so a page left open
 // past midnight moves on to the new day.

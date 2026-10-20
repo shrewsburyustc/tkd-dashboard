@@ -148,7 +148,7 @@ td.r,th.r{text-align:right}
 </head>
 <body>
 <main>
-<h1 id="qtitle">Finance → Daily report · Question 1 of 8 <span class="rec-tag">Answered v0.194: B</span></h1>
+<h1 id="qtitle">Finance → Daily report · Question 1 of 8 <span class="rec-tag">Answered v0.805: B</span></h1>
 <p class="lead" id="qlead"><b>What should the Daily report do?</b> Every option lists the day’s payments from Color belt testing and Star testing for the school picked in the top bar. They differ in the part outlined in amber: what staff do with the report at the end of the day. Sample day: Shrewsbury, Saturday Oct 24, 8 payments, $665.</p>
 <div id="opts"></div>
 </main>
@@ -322,10 +322,10 @@ if (location.hash === '#q2') {
 
 <script>
 // ---------- Question 3: how the payments list is grouped ----------
-// Open the file with #q3 at the end of the address. Shown as staff see it (today, v0.195).
+// Open the file with #q3 at the end of the address. Shown as staff see it (today, v0.806).
 if (location.hash === '#q3') {
   document.getElementById('qtitle').innerHTML = 'Finance → Daily report · Question 3 of 8';
-  document.getElementById('qlead').innerHTML = '<b>How should the day’s payments be listed?</b> Same day, same 8 payments, same totals and Close the day box (closed up here to save space). Only the list outlined in amber changes. Shown as staff see it: today only (v0.195).';
+  document.getElementById('qlead').innerHTML = '<b>How should the day’s payments be listed?</b> Same day, same 8 payments, same totals and Close the day box (closed up here to save space). Only the list outlined in amber changes. Shown as staff see it: today only (v0.806).';
 
   const sum = (rows) => rows.reduce((t, p) => t + p[5], 0);
   const groupRow = (label, rows, cols) => `<tr><td colspan="${cols}" style="background:var(--surface);font-weight:500;font-size:12px;height:30px">${label} <span class="sub" style="font-weight:400">· ${rows.length} payment${rows.length === 1 ? '' : 's'} · ${$(sum(rows))}</span></td></tr>`;
@@ -379,10 +379,10 @@ if (location.hash === '#q3') {
 
 <script>
 // ---------- Question 4: how admins move between days and see the closed-day history ----------
-// Open the file with #q4. Admin view (staff see today only, v0.195).
+// Open the file with #q4. Admin view (staff see today only, v0.806).
 if (location.hash === '#q4') {
   document.getElementById('qtitle').innerHTML = 'Finance → Daily report · Question 4 of 8';
-  document.getElementById('qlead').innerHTML = '<b>How do admins move between days and see which days were closed?</b> Admins see any day and the history of closed days (v0.195). Staff don’t see any of this: they get today only. Amber marks what you’re choosing.';
+  document.getElementById('qlead').innerHTML = '<b>How do admins move between days and see which days were closed?</b> Admins see any day and the history of closed days (v0.806). Staff don’t see any of this: they get today only. Amber marks what you’re choosing.';
 
   // Sample days at Shrewsbury.
   const DAYS = [
@@ -799,11 +799,11 @@ if (location.hash === '#q10') {
 // ---------- Question 11: rule 5 and the mat-side tablet ----------
 // Open the file with #q11. Raised by the design review: rule 5 says list views and the
 // mat-side tablet never show billing details, but the Daily report lists students' names
-// with amounts for every staff login (v0.195).
+// with amounts for every staff login (v0.806).
 // Icons used by name: ti-device-tablet ti-user ti-lock ti-logout ti-square-check
 if (location.hash === '#q11') {
   document.getElementById('qtitle').innerHTML = 'Finance · Question 11: money on the mat-side tablet (rule 5)';
-  document.getElementById('qlead').innerHTML = '<b>Rule 5 says list views and the mat-side tablet never show billing details.</b> The Daily report lists students’ names (mostly minors) with what they paid, and any staff login can open it (v0.195), including on the tablet by the mat that parents can see. The Testing rosters already show payments too (v0.108, “how the mat-side tablet hides it still to confirm”). The rulebook needs one clear answer. Shown: the mat-side tablet (820 wide), Shrewsbury.';
+  document.getElementById('qlead').innerHTML = '<b>Rule 5 says list views and the mat-side tablet never show billing details.</b> The Daily report lists students’ names (mostly minors) with what they paid, and any staff login can open it (v0.806), including on the tablet by the mat that parents can see. The Testing rosters already show payments too (v0.108, “how the mat-side tablet hides it still to confirm”). The rulebook needs one clear answer. Shown: the mat-side tablet (820 wide), Shrewsbury.';
 
   const tabShell = (rail, body, extra = '') => `<div class="dev" style="width:620px;border-radius:18px;border:6px solid #2B2B2B;position:relative;overflow:hidden"><div class="app" style="min-height:560px">
     <nav style="width:72px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;flex:none">${rail.map(([i, l, on, q]) => `<a class="${q ? 'q' : ''}" style="display:flex;flex-direction:column;align-items:center;width:64px;min-height:56px;justify-content:center;font-size:12px;color:${on ? 'var(--blue)' : 'var(--text2)'}"><i class="ti ti-${i}" style="font-size:20px"></i>${l}</a>`).join('')}</nav>

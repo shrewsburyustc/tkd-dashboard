@@ -1,9 +1,9 @@
 // DayReport.jsx — Finance → Daily report: one school's payments for one day (mockups D1–D4, D6–D8, D11–D14).
 // Why it exists: families pay for Color belt and Star testing at the desk. This page lists the
 // day's payments, grouped the way the drawer is counted (Cash, Check, Card), with the four
-// totals on top and the "Close the day" box where staff type what they counted (v0.193–v0.209).
+// totals on top and the "Close the day" box where staff type what they counted (v0.804–v0.807, v0.197–v0.209).
 //
-// Who sees what (v0.195, enforced by the database):
+// Who sees what (v0.806, enforced by the database):
 //   staff  — today only ("Staff see today only. Ask an admin for other days."), Close the day, Print
 //   admins — any day: ‹ › arrows, a calendar, Today, History, Print, Export…, Reopen day
 // On Both: one summary box per school instead (BothSummary.jsx, D6); no Print or Export there.

@@ -3,7 +3,7 @@
 // what they counted, whether anything was short or over, and the note. If payments changed
 // AFTER the count (a late payment, an undo, an edit), the day gets the amber "Changed after
 // closing" tag and a line saying what changed, because the totals no longer match the count
-// (v0.199, v0.207). Admins get "Reopen day" so the day can be counted again (v0.195).
+// (v0.199, v0.207). Admins get "Reopen day" so the day can be counted again (v0.806).
 //
 // Props:
 //   closing     finance_day's `closing` (kind 'close')

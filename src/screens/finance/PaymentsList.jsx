@@ -1,4 +1,4 @@
-// PaymentsList.jsx — the day's payments, grouped Cash / Check / Card (mockups D1, D4; v0.196, v0.199, v0.209).
+// PaymentsList.jsx — the day's payments, grouped Cash / Check / Card (mockups D1, D4; v0.807, v0.199, v0.209).
 // Why it exists: staff count the drawer against the Cash group and lay the checks next to the
 // Check group, so a short is easy to trace. Each group has a header with its count and total,
 // then its payments in time order. Corrections stay on the payment's ORIGINAL day: an undone

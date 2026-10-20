@@ -1,7 +1,7 @@
 # Finance build plan — Daily report (DRAFT for review)
 
 **Written:** 2026-10-18 · **Status:** draft, security-reviewed 2026-10-18 (fixes in the contract), waiting for Jeffrey's OK (CP0). Nothing is built until he says so.
-**Design (approved 2026-10-18):** `TKD-Finance-DailyReport-Mockups.html` (D1–D14, images in `Mockup images/`), questions Q1–Q11 in `TKD-Finance-DailyReport-Questions.html`; decisions in rulebook 10b v0.193–v0.203, v0.207, v0.208 and `TKD-Finance-Status.md`.
+**Design (approved 2026-10-18):** `TKD-Finance-DailyReport-Mockups.html` (D1–D14, images in `Mockup images/`), questions Q1–Q11 in `TKD-Finance-DailyReport-Questions.html`; decisions in rulebook 10b v0.804–v0.807, v0.197–v0.203, v0.207, v0.208 and `TKD-Finance-Status.md`.
 **Contract:** `docs/Dashboard Docs/Build contracts/CONTRACT-0011.md` (draft, written with this plan; finalised after the CP0 answers).
 **Rules:** CLAUDE.md; handoff §6 (security, non-negotiable).
 
@@ -48,7 +48,7 @@ Both tables are append-only. Corrections are `reversal` rows. Facts the report r
 
 Same rules as 0003 / 0005 (handoff §6): RLS on every table; `revoke all … from public, anon, authenticated, service_role`; **no table grants to the app at all** — every read and write goes through `security definer` functions (`set search_path = ''`, fully qualified names, `has_data_access()` first, `{status: …}` jsonb); every change logged in `change_log`; re-run safe; nothing to `anon`.
 
-Why functions for reads (not views): the **staff-today-only** rule (v0.195), the correction rules above, and keeping DOB / email out are all easier to enforce and test in one place. Honest limit: staff can already read payments per event on the Testing rosters (v0.108), so "today only" limits the Finance report, not every way to see a payment.
+Why functions for reads (not views): the **staff-today-only** rule (v0.806), the correction rules above, and keeping DOB / email out are all easier to enforce and test in one place. Honest limit: staff can already read payments per event on the Testing rosters (v0.108), so "today only" limits the Finance report, not every way to see a payment.
 
 ### 2.1 New tables
 | Table | Holds | Notes |
