@@ -191,9 +191,9 @@ Then one batch, action `undo_move_to_private`: for each private payment, insert 
 All functions in the S / A table + `testing_move_to_private` + `testing_private_undo_move`: revoke from `public, anon, authenticated, service_role`, then `grant execute … to authenticated`. The five internal helpers and the four trigger functions: revoke from everyone, no grant. `testing_restore_student`: its live lines.
 
 ### 2.8 Header facts
-What it adds (3 tables, 1 view, 4 trigger functions, 5 helpers, 14 staff functions, 1 replaced live function), the statuses, the actions, “private testings are logged in change_log like all testing data — v0.400's family_history is for Prospects only”, the re-run order (**re-running 0005 → re-run 0010, then 0014, straight after; re-running 0010 → re-run 0014 straight after** — 0005 / 0010 put back a Restore that ignores moves), and that the down-script is SETUP §16e.
+What it adds (3 tables, 1 view, 4 trigger functions, 5 helpers, 14 staff functions, 1 replaced live function), the statuses, the actions, “private testings are logged in change_log like all testing data — v0.400's family_history is for Prospects only”, the re-run order (**re-running 0005 → re-run 0010, then 0014, straight after; re-running 0010 → re-run 0014 straight after** — 0005 / 0010 put back a Restore that ignores moves), and that the down-script is SETUP §0014e.
 
-### 2.9 Down-script (SETUP §16e, Jeffrey's OK only; before real private testings exist — removing 0014 deletes every private testing **and the money moved into it**)
+### 2.9 Down-script (SETUP §0014e, Jeffrey's OK only; before real private testings exist — removing 0014 deletes every private testing **and the money moved into it**)
 1. Put the app back to a version without the Private testing tab.
 2. Re-run the whole **0010** file (puts back its `testing_restore_student`).
 3. SQL block, one transaction: `tkd.action 'undo_0014'` + a batch id; `delete from public.testing_private;` (cascade, logged row by row); clear the tags; `drop view if exists public.testing_private_list;` then `drop table if exists` results, payments, `testing_private`; then `drop function if exists` every 0014 function (exact argument lists). Afterwards `0005_fingerprints.sql` and `0010_fingerprints.sql` equal a database that never had 0014.
@@ -236,13 +236,13 @@ Start from `git checkout dae8d00^ -- supabase/tests/pglite/run.mjs`, then: `step
 - f. fingerprints + an md5 of the three tables and the `change_log` count; apply 0014 again; identical; 0014 / 0005 tests pass.
 - g. upgrade database: 0014 on its 0010; fingerprints equal (fresh = upgrade); 0014 / 0010 / 0005 tests pass.
 - h. `0014_fingerprints.sql` contains neither `delete` nor `drop`; print the 0014 fingerprints.
-- i. the down-script (SETUP §16e exactly, the SQL block read from SETUP.md): tables, view and 0014 functions gone; 0005 / 0010 **and 0003** fingerprints equal 14a's; one `undo_0014` delete row in `change_log` per removed `testing_private` row (its payments and result are logged too); 0010 / 0005 tests pass.
+- i. the down-script (SETUP §0014e exactly, the SQL block read from SETUP.md): tables, view and 0014 functions gone; 0005 / 0010 **and 0003** fingerprints equal 14a's; one `undo_0014` delete row in `change_log` per removed `testing_private` row (its payments and result are logged too); 0010 / 0005 tests pass.
 
 ### 3.4 `supabase/tests/0014_fingerprints.sql`
 Read-only single SELECT, `kind, item, detail`: `function` rows (every 0014 function + `testing_restore_student`), `table` rows (3: RLS, rights, columns, policies), `view` row, `trigger` rows, `constraint` rows (name + `pg_get_constraintdef`). Connector-safe.
 
-### 3.5 SETUP §16 (rewritten; after Finance's §15 since the 2026-10-19 merge)
-**16. Migration 0014: Color Belt private testing** — what it does; CP2 → CP3 → CP4; 16a apply; 16b read-only checks (§3.3b expectations; security advisor: only “security definer function executable by authenticated” for the new staff functions); 16c tests (0014, 0011, then 0010 / 0005 / 0006 / 0004 / 0003 / 0002 / PIN); 16d CP3 real check (plan §5 step 5); 16e re-run warnings (§2.8 wording) + §2.9 verbatim. Keep the existing one-line warning at the top of §14e.
+### 3.5 SETUP §0014 (renumbered from §16 on 2026-10-20 — main’s §16 is the Forms page; rewritten; after Finance's §15 since the 2026-10-19 merge)
+**0014. Migration 0014: Color Belt private testing** — what it does; CP2 → CP3 → CP4; 16a apply; 16b read-only checks (§3.3b expectations; security advisor: only “security definer function executable by authenticated” for the new staff functions); 16c tests (0014, 0011, then 0010 / 0005 / 0006 / 0004 / 0003 / 0002 / PIN); 16d CP3 real check (plan §5 step 5); 16e re-run warnings (§2.8 wording) + §2.9 verbatim. Keep the existing one-line warning at the top of §14e.
 
 ---
 

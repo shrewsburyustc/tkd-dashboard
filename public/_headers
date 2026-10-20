@@ -35,6 +35,24 @@
 /register/*
   Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
 
+# The public Forms page (/f/<name>, build plan §3): the same strict policy as /register above.
+# connect-src 'self' = the page may only talk to /api/forms/… on this site; Turnstile is allowed
+# from challenges.cloudflare.com; img-src data: is the drawn signature and the logo. The "Add to
+# calendar" file is made in the page and saved as a download (no extra rule needed).
+# The page's file is forms.html, which Pages serves at /forms (see public/_redirects), so the
+# policy is on those addresses too.
+/f
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+
+/forms
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+
+/forms.html
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+
+/f/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+
 # Answers from the registration Function must never be stored by browsers or proxies.
 # (Cloudflare doesn't apply this file to Function answers, so the Function also sets this
 # header itself — functions/_lib/http.js. This line is the backup the contract asks for.)

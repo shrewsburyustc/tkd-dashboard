@@ -18,6 +18,7 @@ School management dashboard for Jae H. Jeong's U.S. Taekwondo Center (Worcester 
 | `Testing/Color Belt Testing/` | Color Belt: **status file (`TKD-ColorBelt-Status.md` — start here)**, inventory of the old system, approved mockups for every phase (Classes and ranks, belts, events, family form, roster, grading, private testing — PNG copies in `Phase 2/3/4 images/`), build plans for phases 1–4, and `DECISION-history-purge.md` (family history design for the Prospects purge). |
 | `Testing/Star Testing/` | Star testing: inventory of the old prototype; `Old prototype/` holds the never-used prototype and its notes (feature reference only). |
 | `Dashboard Docs/Build contracts/` | Build contracts for Home (`BUILD-CONTRACT.md`), migration 0002 (`CONTRACT-0002.md`) and Color Belt migrations 0003 (phase 1, `CONTRACT-0003.md`), 0005 (events, `CONTRACT-0005.md`), 0010 (results, `CONTRACT-0010.md`) and 0014 (private testing, `CONTRACT-0014.md`); other sections' contracts sit beside them. |
+| `Prospects/` | New students: approved Schedule mockups (`TKD-Class-Schedule-Mockups.html`, rev 2) Calendar mockups (`TKD-Calendar-Mockups.html`, rev 1) Forms mockups (`TKD-Forms-Mockups.html`, rev 1) and Prospects mockups (`TKD-Prospects-Mockups.html`, rev 2), Oct 17, 2026. All four new-students designs are approved. Schedule screens are built and tried in preview mode (migration 0007, not live yet). |
 | `README.md` | This file. |
 
 The school logo used for brand colors lives in `U.S.T.C Projects\Logos\Logo.png` on the school PC (OneDrive).
@@ -59,5 +60,10 @@ The school logo used for brand colors lives in `U.S.T.C Projects\Logos\Logo.png`
 - **Home** (mockups approved Oct 15, 2026 — not approved to build): "today at a glance" style. Welcome header (logo, greeting, date, location). Starts empty with a one-line message; items are added only as other sections are built.
 
 - **Color Belt testing — phases 1–3 LIVE; phase 4 database live, screens not yet deployed (Oct 2026):** Testing → Classes and ranks (phase 1, migration 0003), events + public family form + registrations, payments and the testing roster (phase 2, migration 0005), grading and results (phase 3, migration 0010). Phase 4: a separate **Private testing** tab (its own roster, payments, Move from an event, grading) — migration 0014 live since Oct 19; the screens deploy only after Finance's migration 0018 (private testing money in the Daily report) is live. The old Color Belt Supabase project stays read-only and in use until the new section replaces it. Planned: Classes and ranks move to school-wide Settings after the Calendar is built. Details: `Testing/Color Belt Testing/TKD-ColorBelt-Status.md`.
+
+- **Schedule** (mockups approved Oct 17, 2026 — not approved to build): first step of the new-students work (Schedule → Calendar → Forms → Prospects list). Built after Color Belt phase 1 is merged, because schedule classes come from Classes and ranks.
+- **Calendar** (mockups approved Oct 17, 2026 — not approved to build): Month view (default) and Week view; classes, closures, events colored by event type, and free-class bookings once Forms exist.
+- **Forms** (mockups approved Oct 17, 2026 — not approved to build): in-app three-panel form builder, public forms in short steps with free-class booking, link / QR / front-desk kiosk, confirmation and school emails.
+- **Prospects** (mockups approved Oct 17, 2026 — not approved to build): pipeline bar + follow-up list per school, side panel with calls, notes and follow-ups, staff Check in on arrival, Joined as the place for new students until a Students section exists.
 
 Sections are added only when Jeffrey says so, one at a time.

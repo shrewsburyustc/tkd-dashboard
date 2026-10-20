@@ -5,7 +5,11 @@
 //   'setPin'    → Set your PIN (right after a password sign-in when the account has no PIN)
 //   'home'      → the dashboard (Shell + the open page: Home, Testing, or — admins, from the account
 //                 menu — Staff accounts or Settings), maybe with a dialog on top
-//   'locked'    → LockScreen (the dashboard stays in memory, hidden, behind it)
+//   'locked'    → LockScreen (the dashboard stays in memory, hidden, behind it) — or, while this
+//                 tablet is the front-desk KIOSK (Share → "Open kiosk mode on this device",
+//                 src/lib/kiosk.js), the kiosk (src/screens/kiosk/KioskApp.jsx, loaded only then):
+//                 the dashboard is locked the same way, and the kiosk's PIN pad is the lock
+//                 screen's own check. Leaving it forgets the kiosk and reloads the page.
 // Pages have their own address ("#testing", "#staff-accounts"; rulebook v0.83) so the browser's
 // Back / Forward, reload and bookmarks work per page — see "Browser Back / Forward" below.
 // Phase 2 adds two: a testing event's page ("#testing/event/<id>") and Settings ("#settings").
@@ -26,14 +30,15 @@
 // keep it fresh while someone is active (useSessionHeartbeat), tell it whenever the lock screen
 // shows (lock_session — sent again after reconnecting if it failed), and a right PIN unlocks it
 // (verify_pin / set_my_pin do that on their side).
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { supabase, isPreview } from './lib/supabase.js';
 import { isPasswordTooOld } from './lib/session.js';
 import { classifySignInError } from './lib/authErrors.js';
 import { getIdleLimitMs, markActivityNow, setLockedFlag, shouldBeLocked, useIdleLock } from './lib/useIdleLock.js';
 import { lockSession, touchSession } from './lib/serverLock.js';
 import { useSessionHeartbeat } from './lib/useSessionHeartbeat.js';
-import { loadDeviceLocation, saveDeviceLocation } from './lib/device.js';
+import { LOCATION_CODE, loadDeviceLocation, saveDeviceLocation } from './lib/device.js';
+import { prospectsBadge } from './lib/prospects/api.js';
 import { addressFor, addressIsUnknown, pageFromAddress } from './lib/pageAddress.js';
 import { backIsClaimed, isLeftoverDialogStep } from './lib/backButton.js';
 import PreviewBanner from './components/PreviewBanner.jsx';
@@ -42,6 +47,10 @@ import Toast from './components/Toast.jsx';
 import SignIn from './screens/SignIn.jsx';
 import Home from './screens/Home.jsx';
 import Testing from './screens/Testing.jsx';
+import Schedule from './screens/Schedule.jsx';
+import Calendar from './screens/Calendar.jsx';
+import Forms from './screens/Forms.jsx';
+import Prospects from './screens/Prospects.jsx';
 import Finance from './screens/Finance.jsx';
 import { showToday, showMonthOf } from './screens/finance/financeState.js';
 import { usePaymentsHidden } from './screens/finance/usePaymentsHidden.js';
@@ -49,9 +58,13 @@ import { showFinanceInNav } from './components/navItems.js';
 import StaffAccounts from './screens/StaffAccounts.jsx';
 import Settings from './screens/Settings.jsx';
 import LockScreen from './screens/LockScreen.jsx';
+import { clearKiosk, readKiosk } from './lib/kiosk.js';
+import KioskLoadGuard from './screens/kiosk/KioskLoadGuard.jsx';
 import SetPinScreen from './screens/SetPinScreen.jsx';
 import ChangePinDialog from './screens/ChangePinDialog.jsx';
 import ChangePasswordDialog from './screens/ChangePasswordDialog.jsx';
+// The kiosk is a separate download, fetched only when a tablet becomes a kiosk.
+const KioskApp = lazy(() => import('./screens/kiosk/KioskApp.jsx'));
 
 // Messages shown on the sign-in screen after the App signs someone out.
 const NOTICES = {
@@ -78,6 +91,10 @@ const PAGE_TITLES = {
 const SECTION_TITLES = {
   home: 'Home · U.S. Taekwondo Center',
   testing: 'Testing · U.S. Taekwondo Center',
+  schedule: 'Schedule · U.S. Taekwondo Center',
+  calendar: 'Calendar · U.S. Taekwondo Center',
+  forms: 'Forms · U.S. Taekwondo Center',
+  prospects: 'Prospects · U.S. Taekwondo Center',
   finance: 'Finance · U.S. Taekwondo Center',
   staffAccounts: 'Staff accounts · U.S. Taekwondo Center',
   settings: 'Settings · U.S. Taekwondo Center',
@@ -167,7 +184,7 @@ export default function App() {
   const [notice, setNotice] = useState(null); // { id, text } for the sign-in screen
   const [deviceLocation, setDeviceLocation] = useState(loadDeviceLocation); // this device's default
   const [location, setLocation] = useState(loadDeviceLocation); // the switcher's current value
-  // Which page is open: 'home' | 'testing' | 'staffAccounts'. Staff accounts isn't a rail section
+  // Which page is open: 'home' | 'testing' | 'schedule' | 'calendar' | 'forms' | 'staffAccounts'. Staff accounts isn't a rail section
   // (it opens from the account menu), so no rail item is highlighted while it shows (v0.76).
   // It starts from the address in the browser bar (v0.83): a reload, a bookmark or a link to
   // ".../#testing" opens Testing once the person is signed in and unlocked.
@@ -180,6 +197,11 @@ export default function App() {
   const [privateId, setPrivateId] = useState(() => routeFromAddress().privateId);
   const [accountDialog, setAccountDialog] = useState(null); // null | 'changePin' | 'changePassword'
   const [testingModalOpen, setTestingModalOpen] = useState(false); // a Testing dialog is showing
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false); // a Schedule dialog is showing
+  const [calendarModalOpen, setCalendarModalOpen] = useState(false); // a Calendar dialog is showing
+  const [formsModalOpen, setFormsModalOpen] = useState(false); // a Forms dialog is showing
+  const [prospectsModalOpen, setProspectsModalOpen] = useState(false); // a Prospects dialog is showing
+  const [prospectsCount, setProspectsCount] = useState(0); // the rail badge: new sign-ups I haven't opened (v0.244)
   const [staffModalOpen, setStaffModalOpen] = useState(false); // a Staff accounts dialog is showing
   const [settingsModalOpen, setSettingsModalOpen] = useState(false); // a Settings dialog is showing
   const [financeModalOpen, setFinanceModalOpen] = useState(false); // a Finance dialog is showing
@@ -231,6 +253,7 @@ export default function App() {
       setPrivateId(null);
     }
     // A new id each time makes the SignIn screen start fresh (see `key` below).
+    clearKiosk(); // a signed-out tablet is never a kiosk any more
     setNotice(noticeText ? { id: Date.now(), text: noticeText } : null);
     setProfile(null);
     setAccountDialog(null);
@@ -434,6 +457,11 @@ export default function App() {
 
   const lockNow = useCallback(() => setLockedFlag(true), []); // the idle hook hears this and locks
 
+  // The front-desk kiosk of this tablet (only while locked, and only for the account that opened
+  // it). Leaving it: the right PIN on its pad → forget it, unlock as usual, then reload the page so
+  // nothing of the kiosk (its screens, styles or the last family's answers) stays in memory.
+  const kiosk = phase === 'locked' && profile !== null ? readKiosk(profile.id) : null;
+
   const handleUnlocked = useCallback(async () => {
     // Rule: password every 7 days. The tab may have sat on the lock screen past the 7 days, so
     // check again before showing Home. (The database's PIN check already looks at this too;
@@ -453,6 +481,12 @@ export default function App() {
     markActivityNow(); // count the unlock as activity so it doesn't re-lock straight away
     setLockedFlag(false); // the idle hook hears this and shows Home
   }, [signOut]);
+
+  const leaveKiosk = useCallback(async () => {
+    clearKiosk();
+    await handleUnlocked();
+    window.location.reload();
+  }, [handleUnlocked]);
 
   // After unlocking, give keyboard focus back to where it was before the lock. If that
   // control is gone (e.g. the "Lock now" menu item — the menu has closed), use the initials.
@@ -774,9 +808,24 @@ export default function App() {
 
   // ----- Drawing -----
   const isSignedIn = (phase === 'home' || phase === 'locked') && profile !== null;
+
+  // The Prospects badge (rulebook v0.236; per person, v0.244): the New / Booked prospects of the
+  // school in the switcher (both on Both) this person hasn't opened. Refreshed when the page or
+  // school changes, after Prospects changes something, and every 2 minutes while unlocked.
+  const badgeLocation = location === 'Both' ? null : LOCATION_CODE[location] ?? null;
+  const refreshBadge = useCallback(async () => {
+    const res = await prospectsBadge(badgeLocation);
+    if (res.status === 'ok') setProspectsCount(res.count);
+  }, [badgeLocation]);
+  useEffect(() => {
+    if (phase !== 'home' || profile === null) return undefined;
+    refreshBadge();
+    const timer = window.setInterval(refreshBadge, 120000);
+    return () => window.clearInterval(timer);
+  }, [phase, profile, section, refreshBadge]);
   const dialogOpen = phase === 'home' && profile !== null && accountDialog !== null;
   // The page behind a dialog can't be clicked or reached with Tab (account or Testing dialog).
-  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || staffModalOpen || settingsModalOpen || financeModalOpen));
+  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || scheduleModalOpen || calendarModalOpen || formsModalOpen || prospectsModalOpen || staffModalOpen || settingsModalOpen || financeModalOpen));
   // Finance is in the rail / bottom bar unless payments are hidden on this device (navItems.js).
   showFinanceInNav(!paymentsHidden);
 
@@ -821,6 +870,7 @@ export default function App() {
             onStaffAccounts={() => guarded(() => navigate('staffAccounts'))}
             onSettings={() => guarded(() => navigate('settings'))}
             onSignOut={() => guarded(() => signOut())}
+            badges={{ prospects: prospectsCount }}
           >
             {section === 'home' && (
               <Home
@@ -853,6 +903,61 @@ export default function App() {
                 showToast={showToast}
                 clearToast={clearToast}
                 onModalOpenChange={setTestingModalOpen}
+              />
+            )}
+            {section === 'schedule' && (
+              <Schedule
+                location={location}
+                // For showing or hiding controls only — the database decides what may change.
+                isAdmin={profile.role === 'admin'}
+                screenLocked={phase === 'locked'}
+                onNoAccess={handleNoAccess}
+                onRefreshProfile={refreshProfile}
+                showToast={showToast}
+                clearToast={clearToast}
+                onModalOpenChange={setScheduleModalOpen}
+              />
+            )}
+            {section === 'calendar' && (
+              <Calendar
+                location={location}
+                // For showing or hiding controls only — the database decides what may change.
+                isAdmin={profile.role === 'admin'}
+                screenLocked={phase === 'locked'}
+                onNoAccess={handleNoAccess}
+                onRefreshProfile={refreshProfile}
+                showToast={showToast}
+                clearToast={clearToast}
+                onModalOpenChange={setCalendarModalOpen}
+              />
+            )}
+            {section === 'forms' && (
+              <Forms
+                location={location}
+                profile={profile}
+                // For showing or hiding controls only — the database decides what may change.
+                isAdmin={profile.role === 'admin'}
+                screenLocked={phase === 'locked'}
+                onNoAccess={handleNoAccess}
+                onRefreshProfile={refreshProfile}
+                showToast={showToast}
+                clearToast={clearToast}
+                onModalOpenChange={setFormsModalOpen}
+              />
+            )}
+            {section === 'prospects' && (
+              <Prospects
+                location={location}
+                staffId={profile.id}
+                // For showing or hiding controls only — the database decides what may change.
+                isAdmin={profile.role === 'admin'}
+                screenLocked={phase === 'locked'}
+                onNoAccess={handleNoAccess}
+                onRefreshProfile={refreshProfile}
+                showToast={showToast}
+                clearToast={clearToast}
+                onModalOpenChange={setProspectsModalOpen}
+                onBadgeRefresh={refreshBadge}
               />
             )}
             {section === 'finance' && !paymentsHidden && (
@@ -902,13 +1007,26 @@ export default function App() {
           <ChangePasswordDialog profile={profile} onCancel={closeAccountDialog} onChanged={handlePasswordChanged} />
         )}
 
-        {phase === 'locked' && profile !== null && (
+        {phase === 'locked' && profile !== null && kiosk === null && (
           <LockScreen
             profile={profile}
             onUnlock={handleUnlocked}
             onPasswordRequired={() => signOut(NOTICES.unlockWithPassword)}
             onSignOut={() => signOut()}
           />
+        )}
+        {phase === 'locked' && profile !== null && kiosk !== null && (
+          <KioskLoadGuard>
+          <Suspense fallback={null}>
+            <KioskApp
+              profile={profile}
+              entry={kiosk}
+              onLeave={leaveKiosk}
+              onPasswordRequired={() => signOut(NOTICES.unlockWithPassword)}
+              onSignOut={() => signOut()}
+            />
+          </Suspense>
+          </KioskLoadGuard>
         )}
       </div>
 

@@ -1462,6 +1462,7 @@ check('events mock: who may call each function (A / S splits)', () => {
     testing_restore_student: { p_registration_id: anyId, p_expected_version: 1 },
     testing_delete_student: { p_registration_id: anyId, p_expected_version: 1, p_expected_payment_ids: [] },
     settings_update_school_address: { p_code: 'nowhere', p_expected_version: 1, p_street: null, p_city: null, p_state: null, p_zip: null },
+    settings_update_school_contact: { p_code: 'nowhere', p_expected_version: 1, p_street: null, p_city: null, p_state: null, p_zip: null, p_phone: null }, // 0019 (new students)
     testing_set_result: { p_registration_id: anyId, p_result: 'pass' }, // phase 3 (S)
     testing_set_result_note: { p_registration_id: anyId, p_note: 'x' }, // phase 3 (S)
     // Phase 4 (S unless marked A).
@@ -1482,7 +1483,7 @@ check('events mock: who may call each function (A / S splits)', () => {
   };
   assert.deepEqual(Object.keys(sample).sort(), [...EVENT_RPC_NAMES].sort());
   // testing_restore_student checks who inside (staff: their own "keep one" for 10 seconds).
-  const adminOnly = ['testing_add_event', 'testing_update_event', 'testing_delete_event', 'testing_edit_payment', 'testing_withdraw_student', 'testing_delete_student', 'settings_update_school_address',
+  const adminOnly = ['testing_add_event', 'testing_update_event', 'testing_delete_event', 'testing_edit_payment', 'testing_withdraw_student', 'testing_delete_student', 'settings_update_school_address', 'settings_update_school_contact',
     'testing_private_edit_payment', 'testing_private_restore', 'testing_private_delete']; // the last three: phase 4
   assert.deepEqual([...EVENT_ADMIN_ONLY_RPCS].sort(), [...adminOnly].sort());
   const before = JSON.stringify(evDb());

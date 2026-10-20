@@ -1,0 +1,938 @@
+/*
+  calendar.css — the look of the Calendar section (rulebook v0.234, approved mockup rev 1).
+  Why it exists: the month grid with its day boxes and chips, the day panel, the phone's small
+  month with dots, the week view's "All day" row and striped closed hours, and a few dialog bits.
+  Page header, buttons, fields, notes, banners and dialogs reuse app.css / testing.css; the week
+  grid reuses schedule.css (sgrid / sslot). Colors come from tokens.css, except the 8 class /
+  event-type colors, which each chip receives as --chip-fill / --chip-edge / --chip-text
+  (the same recorded exception as the Schedule, v0.233). Closures are amber (a warning).
+*/
+
+/* The page: same padding as the Schedule (bottom: room for the toast). */
+.calendar {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: var(--space-24) var(--space-24) calc(40px + var(--space-24) + var(--space-16));
+}
+
+.shell-content:has(.calendar) {
+  scroll-padding-bottom: calc(40px + var(--space-24) + var(--space-16));
+}
+
+/* ----- Toolbar: ‹ › January 2027 [Today]          [Month | Week] ----- */
+.ctoolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+}
+
+.ctoolbar-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.ctoolbar-title {
+  min-width: 9.5em;
+  margin: 0 var(--space-8);
+  font-size: var(--text-16);
+  font-weight: 500;
+}
+
+/* A switch made of 2–3 buttons or radios (Month / Week; Worcester / Shrewsbury / Both). */
+.cseg {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+}
+
+.cseg-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  height: var(--control-height);
+  padding: 0 var(--space-12);
+  border: 0;
+  border-left: 1px solid var(--color-border-control);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+.cseg-item:first-child {
+  border-left: 0;
+}
+
+.cseg-item.is-on {
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+  font-weight: 500;
+}
+
+.cseg-item input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.cseg-item:has(input:focus-visible),
+button.cseg-item:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+/* ----- Month view (+ the day panel) ----- */
+.cmonth-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.cmonth-wrap--side {
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.cmonth {
+  flex: 1;
+  min-width: 0;
+  border-top: 1px solid var(--color-border);
+  border-left: 1px solid var(--color-border);
+}
+
+.cmonth-heads,
+.cmonth-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.cmonth-head {
+  padding: var(--space-4) 0;
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  text-align: center;
+}
+
+.cmonth-cell {
+  min-width: 0;
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* A day box: one button holding the day number and its summary chips. */
+.cday {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  min-height: 96px;
+  padding: var(--space-4);
+  border: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cday:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+.cday.is-selected {
+  background: var(--color-blue-tint);
+}
+
+.cday.is-out {
+  background: var(--color-surface);
+}
+
+.cday-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.cday.is-out .cday-num {
+  color: var(--color-disabled-text);
+}
+
+.cday.is-today .cday-num {
+  background: var(--color-blue);
+  color: var(--color-on-blue);
+  font-weight: 500;
+}
+
+.cday-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* A chip: one line of a day's summary. */
+.cchip {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: var(--text-12);
+  line-height: 16px;
+}
+
+.cchip svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.cchip-text {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+
+/* School letters on Both: "W", "S", "W S". */
+.cchip-letters {
+  flex: none;
+  margin-right: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.cchip--event,
+.cchip--testing {
+  border-left: 3px solid var(--chip-edge);
+  background: var(--chip-fill);
+  color: var(--chip-text);
+}
+
+.cchip--closed {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.cchip--sched {
+  border: 1px dashed var(--color-border-control);
+  color: var(--color-text-secondary);
+}
+
+.cchip--cls {
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+}
+
+.cchip--cls.is-x {
+  text-decoration: line-through;
+}
+
+.cchip--more {
+  color: var(--color-text-secondary);
+}
+
+button.cchip--btn {
+  width: 100%;
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  font: inherit;
+  font-size: var(--text-12);
+  text-align: left;
+  cursor: pointer;
+}
+
+button.cchip--closed {
+  border-left: 0;
+}
+
+button.cchip--btn:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 1px;
+}
+
+/* ----- The day panel ----- */
+.cpanel {
+  min-width: 0;
+  padding: var(--space-12) var(--space-16);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.cmonth-wrap--side .cpanel {
+  flex: none;
+  width: 280px;
+}
+
+.cpanel-title {
+  margin: 0;
+  font-size: var(--text-16);
+  font-weight: 500;
+}
+
+.cpanel-sub {
+  margin: 0 0 var(--space-8);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.cpanel-head {
+  margin: var(--space-12) 0 var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+}
+
+.cpanel-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cpanel-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  min-height: 32px;
+  padding: 2px 0;
+  font-size: var(--text-13);
+}
+
+.cpanel-row--btn {
+  border: 0;
+  border-radius: var(--radius-tag);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-13);
+  text-align: left;
+  cursor: pointer;
+}
+
+.cpanel-row--btn:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 1px;
+}
+
+.cpanel-row--btn > svg:last-child {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.cpanel-time {
+  flex: none;
+  width: 76px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.cpanel-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cpanel-icon {
+  flex: none;
+  color: #3c3489;
+}
+
+.cpanel-swatch {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+}
+
+.cdots {
+  display: inline-flex;
+  flex: none;
+  gap: 2px;
+}
+
+.cdots i {
+  width: 12px;
+  height: 12px;
+  border: 1px solid;
+  border-radius: 50%;
+}
+
+.cpanel-row.is-cancelled .cpanel-classname {
+  color: var(--color-text-secondary);
+  text-decoration: line-through;
+}
+
+.cpanel-tag {
+  margin-left: var(--space-8);
+  padding: 0 6px;
+  border: 1px solid var(--color-tag-warn-border);
+  border-radius: var(--radius-tag);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: 11px;
+}
+
+.cpanel-empty {
+  margin: var(--space-4) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.cpanel-closure-wrap {
+  margin-bottom: var(--space-8);
+}
+
+.cpanel-closure {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  width: 100%;
+  min-height: 36px;
+  padding: var(--space-8);
+  border: 1px solid var(--color-tag-warn-border);
+  border-radius: var(--radius-control);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font: inherit;
+  font-size: var(--text-13);
+  text-align: left;
+  cursor: pointer;
+}
+
+.cpanel-closure svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.cpanel-closure-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.cpanel-closure:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 1px;
+}
+
+.cpanel-orphan {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin: var(--space-4) 0 0;
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+}
+
+.cpanel-orphan svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+/* ----- Phone: the small month with dots ----- */
+.cmini-heads,
+.cmini-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.cmini-heads span {
+  padding: var(--space-4) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  text-align: center;
+}
+
+.cmini-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+.cmini-day:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+.cmini-day.is-out {
+  color: var(--color-disabled-text);
+}
+
+.cmini-day.is-selected {
+  background: var(--color-blue-tint);
+}
+
+.cmini-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+}
+
+.cmini-day.is-today .cmini-num {
+  background: var(--color-blue);
+  color: var(--color-on-blue);
+  font-weight: 500;
+}
+
+.cmini-dots {
+  display: flex;
+  gap: 2px;
+  height: 5px;
+}
+
+.cmini-dots i {
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+/* ----- Week view ----- */
+.cweek {
+  --cw-axis: 48px;
+}
+
+.cweek-heads,
+.cweek-allday {
+  display: grid;
+  grid-template-columns: var(--cw-axis) repeat(7, minmax(0, 1fr));
+}
+
+.cweek-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.cweek-head b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: var(--color-text);
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.cweek-head.is-today b {
+  background: var(--color-blue);
+  color: var(--color-on-blue);
+}
+
+.cweek-allday {
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cweek-allday-label {
+  padding: var(--space-4) var(--space-8) var(--space-4) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  text-align: right;
+}
+
+.cweek-allday-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  min-height: 28px;
+  padding: 2px;
+  border-left: 1px solid var(--color-border);
+}
+
+.cweek-grid {
+  --sg-axis: var(--cw-axis);
+}
+
+/* A cancelled class: crossed out on amber stripes; a whole closed day is striped. */
+.sslot.is-cancelled {
+  background: repeating-linear-gradient(135deg, #faeeda 0 6px, #fff7ea 6px 12px);
+  color: var(--color-warning-text);
+  text-decoration: line-through;
+}
+
+.sgrid-col.is-closed {
+  background: repeating-linear-gradient(135deg, #faeeda 0 6px, #fff7ea 6px 12px);
+}
+
+/* An event box: its type's color with a thicker left edge. */
+.sslot.cevent-box {
+  border-left-width: 4px;
+}
+
+/* ----- Dialog bits ----- */
+.cfieldset {
+  margin: 0 0 var(--space-12);
+  padding: 0;
+  border: 0;
+}
+
+.cfieldset > .field-label {
+  margin-bottom: var(--space-4);
+  padding: 0;
+}
+
+.cbox {
+  display: flex;
+  margin-bottom: var(--space-4);
+}
+
+.ctype-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.ctype-row .input {
+  flex: 1;
+}
+
+.ctimes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin: var(--space-8) 0 var(--space-12);
+}
+
+.ctimes-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1.4fr) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.ctimes-label {
+  margin: 0;
+}
+
+.ctextarea {
+  width: 100%;
+  height: auto;
+  min-height: 88px;
+  padding: var(--space-8);
+  resize: vertical;
+}
+
+.cmore-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+.cmore-toggle:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+.csome {
+  margin: var(--space-4) 0 0 var(--space-24);
+}
+
+.csome-school {
+  margin: var(--space-8) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.csome-orphans {
+  margin-top: var(--space-8);
+}
+
+.ctypes {
+  margin: var(--space-8) 0;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  list-style: none;
+}
+
+.ctypes li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+.ctypes-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  width: 100%;
+  min-height: 40px;
+  padding: 0 var(--space-12);
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-13);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ctypes-row:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+.ctypes-row > svg {
+  color: var(--color-text-secondary);
+}
+
+.ctypes-name {
+  flex: 1;
+}
+
+.ctypes-add {
+  margin-bottom: var(--space-8);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cday:hover:not(.is-selected) {
+    background: var(--color-surface);
+  }
+
+  .cpanel-row--btn:hover,
+  .ctypes-row:hover {
+    background: var(--color-surface);
+  }
+
+  .cpanel-closure:hover,
+  button.cchip--btn:hover {
+    filter: brightness(0.97);
+  }
+}
+
+/* ----- Touch: 44px tap areas (guidelines 2.5) ----- */
+@media (pointer: coarse) {
+  .cseg-item {
+    height: var(--control-height-touch);
+  }
+
+  .cseg-item::after {
+    position: absolute;
+    inset: -4px 0;
+    content: '';
+  }
+
+  .cpanel-row--btn,
+  .cpanel-closure,
+  .ctypes-row,
+  .cmore-toggle {
+    min-height: 44px;
+  }
+
+  button.cchip--btn {
+    min-height: 32px;
+  }
+}
+
+/* ----- Tablet held upright: the month a bit shorter so the day shows below ----- */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .cday {
+    min-height: 84px;
+  }
+}
+
+/* ----- Phone ----- */
+@media (max-width: 639.98px) {
+  .calendar {
+    padding: var(--space-16) var(--space-16) calc(44px + var(--space-8) + var(--space-16));
+  }
+
+  .ctoolbar-title {
+    min-width: 0;
+    margin: 0 var(--space-4);
+  }
+
+  .cpanel {
+    padding: var(--space-12) 0 0;
+    border: 0;
+    border-top: 1px solid var(--color-border);
+    border-radius: 0;
+  }
+
+  .ctimes-row {
+    grid-template-columns: 48px minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .cseg {
+    display: flex;
+  }
+
+  .cseg-item {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* Notes use the page's font (a text box would otherwise use the browser's fixed-width one). */
+.ctextarea {
+  font: inherit;
+  font-size: var(--text-13);
+}
+
+/* Delete event type: gray until a "Move to" type is picked (like Save, guidelines 6). */
+.btn-delete.is-unavailable,
+.btn-delete.is-unavailable:hover,
+.btn-delete.is-unavailable:active {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+/* Week view: the closed hours of a "some classes" closure (detail 3: striped amber). */
+.cweek-closedband {
+  position: absolute;
+  right: 0;
+  left: 0;
+  z-index: 0;
+  background: repeating-linear-gradient(135deg, #faeeda 0 6px, #fff7ea 6px 12px);
+}
+
+/* The School switch in a dialog is only as wide as its three options. */
+.cfieldset .cseg {
+  width: fit-content;
+  max-width: 100%;
+}
+
+/* All day: the date fields fill the row (no time fields next to them). */
+.ctimes.is-allday .ctimes-row {
+  grid-template-columns: 56px minmax(0, 1fr);
+}
+
+/* Event types: grip (drag) | name | ⋯ — like Testing's rows (Jeffrey, C3). */
+.ctypes-item {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+}
+
+.ctypes-item .ctypes-row {
+  flex: 1;
+  min-width: 0;
+  padding-left: var(--space-4);
+}
+
+.ctypes-item.is-lifted {
+  opacity: 0.45;
+}
+
+/* Where the dragged row will land: a 2px blue line. */
+.ctypes-gap {
+  height: 2px;
+  margin: -1px 0;
+  background: var(--color-blue);
+}
+
+@media (pointer: coarse) {
+  /* Week view chips: drawn 32px, tapped at 44px. */
+  button.cchip--btn {
+    position: relative;
+  }
+
+  button.cchip--btn::after {
+    position: absolute;
+    inset: -6px 0;
+    content: '';
+  }
+}
+
+@media (max-width: 639.98px) {
+  .ctimes.is-allday .ctimes-row {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+}
+
+/* "4 classes" with "2 cancelled" crossed out on the line below. */
+.cchip--cls {
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ----- Free-class bookings from Forms (v0.241 answer 6) ----- */
+.cchip--free {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+}
+
+.cchip--free.is-warn {
+  border-color: var(--color-tag-warn-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.cpanel-free.is-warn {
+  border-radius: var(--radius-tag);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.cpanel-free-warn {
+  display: block;
+  font-size: var(--text-12);
+  font-weight: 500;
+}
+
+.cweek-free {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: var(--space-4);
+  font-size: var(--text-12);
+  font-weight: 600;
+}

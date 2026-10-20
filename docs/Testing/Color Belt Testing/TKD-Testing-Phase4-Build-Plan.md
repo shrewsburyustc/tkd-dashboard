@@ -79,7 +79,7 @@ RLS on all three tables with `(select public.has_data_access())`; explicit colum
 `0014_tests.sql` (every rule, staff vs admin, negative cases, locked sessions, history), `0014_fingerprints.sql`, `run.mjs` step 15 (after Finance's step 14; fresh + upgrade + re-run + down-script, before 13g). **Fingerprint rule:** `0003_fingerprints.sql` lists every `testing_*` function, so the new `testing_*` functions (and the replaced restore) add / change rows there — expected; 0004 / 0006 unchanged; 0005 and 0010 differ only in `testing_restore_student`. `0005_tests.sql` goes back to the live version (the dae8d00 C3 change is reverted — no new registration columns).
 
 ### 1.9 What happens to the dae8d00 database work
-`0014_testing_private.sql`, `0014_tests.sql`, `0014_fingerprints.sql` and SETUP §16 (§15 before the 2026-10-19 merge of Finance) are **rewritten from scratch** (all nine replaced function bodies and the registration columns go). Reused ideas: the 5-minute time helper, the “owed” helper, the one-batch logging, the down-script-in-SETUP pattern tested by run.mjs, the run.mjs step 14 skeleton (fresh / upgrade / re-run / down before 13g).
+`0014_testing_private.sql`, `0014_tests.sql`, `0014_fingerprints.sql` and SETUP §0014 (§15 before the 2026-10-19 merge of Finance) are **rewritten from scratch** (all nine replaced function bodies and the registration columns go). Reused ideas: the 5-minute time helper, the “owed” helper, the one-batch logging, the down-script-in-SETUP pattern tested by run.mjs, the run.mjs step 14 skeleton (fresh / upgrade / re-run / down before 13g).
 
 ## 2. Data layer and preview mock
 
@@ -103,7 +103,7 @@ RLS on all three tables with `(select public.has_data_access())`; explicit colum
 ## 4. Tests
 
 - **`0014_tests.sql`** (one block, rollback, `ALL 0014 TESTS PASSED`, made-up names): catalog (RLS, grants, no anon / registrar, definer + search_path, triggers, checks); locked sessions; Add (every refusal, the copy, price); Edit details (re-price up / down, clears a result, after-day lock); Change day (past, cap, step, No show cleared, Pass refused, unchanged = nothing written); money (Mark paid full / difference / `already_paid` / $0, Undo own 10 s / admin, Edit admin, Change paying-by while owed); Cancel / Restore / Delete (staff vs admin, day ahead, payments kept / removed); grading window × staff / admin; **Move** (payments moved with net preserved and dates kept, No show cleared, Pass refused, withdrawn registration, one batch, Restore refused `moved`, Undo within 10 s / refused after a change); history and no `data:image` in `change_log`.
-- `run.mjs` step 15 on the main and the upgrade database, after Finance's step 14 (0011) and before 13g; 0014 applied twice; fresh = upgrade; registrar refusals; the down-script (SETUP §16e) then 13g.
+- `run.mjs` step 15 on the main and the upgrade database, after Finance's step 14 (0011) and before 13g; 0014 applied twice; fresh = upgrade; registrar refusals; the down-script (SETUP §0014e) then 13g.
 - App: `checks.mjs`, both builds, no preview code in production.
 
 ## 5. Order and checkpoints
@@ -129,7 +129,7 @@ None open for the product: v0.401–v0.403 decided everything drawn. The contrac
 | A moved student restored onto the event while their private testing exists | The database refuses Restore (`moved`); the screen grays it with the reason. |
 | Many live functions replaced (the old plan's risk) | Only `testing_restore_student`; everything else is new objects. |
 | Children's names in the history | Same as every testing record today (`change_log`, staff-only); nothing else personal is stored. |
-| Re-run hazards | 0014 header + SETUP §16: re-run 0005 → 0010 → 0014; re-run 0010 → 0014. |
+| Re-run hazards | 0014 header + SETUP §0014: re-run 0005 → 0010 → 0014; re-run 0010 → 0014. |
 | Two branches claim the same migration number | 0014 re-checked on every branch at build time. |
 
 ## 8. Changes from reviews

@@ -1,7 +1,7 @@
 // mockTestingEvents.js — the PREVIEW (fake) database for Color Belt testing phase 2: events, the
 // family form's registrations, the per-class roster with payments, and the schools' addresses.
 // Why it exists: preview mode (npm run dev:preview-mode) runs without Supabase. This file pretends
-// to be what migration 0005 adds (contract 0005 §1): the tables, the testing_roster view, the 15
+// to be what migration 0005 adds (contract 0005 §1) — plus 0019's school phone — the tables, the testing_roster view, the 15
 // staff functions, the two public functions the family page uses, and the same rules — the same
 // order of checks, the same status codes, the same staff/admin splits, the 10-second Undo rule,
 // the copy rule, duplicates and the 90-day signature clean-up. What you see in preview is what
@@ -169,7 +169,7 @@ export function defaultEventsData({ today = todayInSchoolTime(new Date()) } = {}
     { code: 'worcester', name: 'Worcester', id: '0000000c-0000-4000-8000-000000000001' },
     { code: 'shrewsbury', name: 'Shrewsbury', id: '0000000c-0000-4000-8000-000000000002' },
   ].map((l) => ({
-    ...l, address_street: null, address_city: null, address_state: null, address_zip: null,
+    ...l, address_street: null, address_city: null, address_state: null, address_zip: null, phone: null,
     version: 1, updated_at: daysAgo([12, '16:52']), updated_by_name: null,
   }));
 
@@ -393,7 +393,7 @@ const PRIVATE_RESULT_COLS = ['private_id', 'result', 'note', 'updated_at', 'upda
 const PRIVATE_LIST_COLS = [...PRIVATE_COLS, 'paid_cents', 'paid', 'paid_on', 'paid_method', 'last_payment_id', 'last_payment_recorded_at', 'amount_due_cents'];
 
 const GRANTED = {
-  locations: ['code', 'name', 'id', 'address_street', 'address_city', 'address_state', 'address_zip', 'version'],
+  locations: ['code', 'name', 'id', 'address_street', 'address_city', 'address_state', 'address_zip', 'version', 'phone'], // phone: 0019
   testing_events: EVENT_COLS,
   testing_event_classes: EVENT_CLASS_COLS,
   testing_event_ranks: EVENT_RANK_COLS,
@@ -442,6 +442,8 @@ const RPC_ARGS = {
   testing_restore_student: [ID('p_registration_id'), ['p_expected_version', 'int']],
   testing_delete_student: [ID('p_registration_id'), ['p_expected_version', 'int'], ['p_expected_payment_ids', 'uuid[]']],
   settings_update_school_address: [['p_code', 'text'], ['p_expected_version', 'int'], ['p_street', 'text'], ['p_city', 'text'], ['p_state', 'text'], ['p_zip', 'text']],
+  // 0019: the address and the school phone in one save
+  settings_update_school_contact: [['p_code', 'text'], ['p_expected_version', 'int'], ['p_street', 'text'], ['p_city', 'text'], ['p_state', 'text'], ['p_zip', 'text'], ['p_phone', 'text']],
   // Phase 3 (0010 §1.5), staff and admins.
   testing_set_result: [ID('p_registration_id'), ['p_result', 'text']],
   testing_set_result_note: [ID('p_registration_id'), ['p_note', 'text']],
@@ -465,7 +467,7 @@ const RPC_ARGS = {
 // this list: staff may undo their OWN "keep one" for 10 seconds, so it checks who inside (14o).
 const ADMIN_ONLY = new Set([
   'testing_add_event', 'testing_update_event', 'testing_delete_event', 'testing_edit_payment',
-  'testing_withdraw_student', 'testing_delete_student', 'settings_update_school_address',
+  'testing_withdraw_student', 'testing_delete_student', 'settings_update_school_address', 'settings_update_school_contact',
   'testing_private_edit_payment', 'testing_private_restore', 'testing_private_delete', // phase 4
 ]);
 export const EVENT_RPC_NAMES = Object.keys(RPC_ARGS);
@@ -562,6 +564,10 @@ const personKey = (r) => `${nameKey(r.first_name)}|${nameKey(r.last_name)}`;
 // spaces at their ends. Empty → null.
 const tidyLine = (v) => (v === null ? null : normalizeName(v) || null);
 const trimSpaces = (v) => (v === null ? null : v.replace(/^ +| +$/g, '') || null);
+// A school phone (0019's locations_phone_check): 7-20 characters of digits, spaces, + ( ) - .
+// with 7-15 digits.
+const schoolPhoneOk = (p) => p.length >= 7 && p.length <= 20 && /^[0-9 +().-]+$/.test(p)
+  && p.replace(/[^0-9]/g, '').length >= 7 && p.replace(/[^0-9]/g, '').length <= 15;
 // One line of an address: 1..max characters and no invisible characters (testing_line_is_valid).
 const lineIsValid = (v, max) => [...v].length <= max && nameProblem(v) !== 'badCharacter';
 
@@ -1617,6 +1623,19 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       if (school.version !== a.p_expected_version) return st('stale');
       // Only a change to an address part raises the version (§1.2).
       updateRow(school, { address_street: street, address_city: city, address_state: state, address_zip: zip }, ctx);
+      return { status: 'ok', version: school.version };
+    },
+
+    // = 0019's settings_update_school_contact: the phone is checked first, then the address
+    // exactly as above; both are saved or neither.
+    settings_update_school_contact(db, a, ctx) {
+      const phone = a.p_phone === null ? null : a.p_phone.trim() || null;
+      if (phone !== null && !schoolPhoneOk(phone)) return st('invalid');
+      const answer = handlers.settings_update_school_address(db, a, ctx);
+      if (answer.status !== 'ok') return answer;
+      const school = location(db, a.p_code);
+      // written after the address, so a save that changes both raises the version by 2 (as 0019)
+      if ((school.phone ?? null) !== phone) updateRow(school, { phone }, ctx);
       return { status: 'ok', version: school.version };
     },
 
