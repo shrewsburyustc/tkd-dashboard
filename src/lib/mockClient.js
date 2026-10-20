@@ -49,6 +49,10 @@
 //                                         code, and { duplicateOf: 'Ava Thompson' } for a duplicate)
 //   __tkdPreview.forcePriceChanged(true)  the next camp Send answers price_changed (+$5)
 //   __tkdPreview.forceCampChanged(true)   the next camp Send answers camp_changed
+// Finance helpers (contract 0011 §3, mockFinance.js; setToday, setRole and failNextSave cover Finance too —
+// failNextSave makes the next Finance save fail, e.g. Close the day):
+//   __tkdPreview.setNow('19:30')          pretend the school clock says 7:30 PM (Home reminder); null = real time
+//   __tkdPreview.resetFinance()           back to the sample closings and Star payments, reminder times Off
 import { getLastPasswordSignIn, PASSWORD_MAX_AGE_MS, decodeJwtPayload } from './session.js';
 import { setLockedFlag } from './useIdleLock.js';
 import { readStorage, writeStorage, removeStorage } from './storage.js';
@@ -59,6 +63,7 @@ import { previewToday, publicPreviewHelpers } from './testing/publicApi.preview.
 import { createStaffBackend, STAFF_RPC_NAMES } from './mockStaff.js';
 import { createCampsBackend, CAMP_RPC_NAMES, CAMP_RESTRICTED_RPC_NAMES, CAMP_READ_RPC_NAMES, CAMP_TABLES } from './mockCamps.js';
 import { publicCampHelpers } from './camps/publicApi.preview.js';
+import { createFinanceBackend, FINANCE_RPC_NAMES, FINANCE_WRITE_RPC_NAMES } from './mockFinance.js';
 
 const SESSION_KEY = 'tkd.preview.session'; // the fake "signed in" session
 const STAFF_STATE_KEY = 'tkd.preview.staffState'; // fake staff row: PIN, shared flag
@@ -68,6 +73,7 @@ const TESTING_KEY = 'tkd.preview.testing'; // fake Testing tables (classes + ran
 const TESTING_DELAY_KEY = 'tkd.preview.testingDelay'; // setTestingDelay(ms), kept across reloads
 const STAFF_ACCOUNTS_KEY = 'tkd.preview.staffAccounts'; // fake Staff accounts (mockStaff.js)
 const CAMPS_KEY = 'tkd.preview.camps'; // fake Camps tables (mockCamps.js)
+const FINANCE_KEY = 'tkd.preview.finance'; // fake Finance tables: closings, settings, exports, Star sample (mockFinance.js)
 
 const PREVIEW_PASSWORD = 'preview';
 const PREVIEW_PIN = '2580'; // not too easy: 1234 is refused by the weak-PIN rule now
@@ -510,6 +516,17 @@ export function createMockClient() {
     return builder;
   }
 
+  // ----- Finance (mockFinance.js) -----
+  // Reads the Color Belt payments from the Testing store above; keeps its own store for the rest.
+  const finance = createFinanceBackend({
+    loadStore: () => JSON.parse(readStorage(FINANCE_KEY)), // missing/damaged → the default sample
+    saveStore: (store) => writeStorage(FINANCE_KEY, JSON.stringify(store)),
+    readColorBelt: () => events.snapshot(),
+    now: () => Date.now(),
+    today: previewToday, // the real school date, or the one set with setToday
+    newId: newUuid,
+  });
+
   // ----- Staff accounts (mockStaff.js) -----
 
   const staffAccounts = createStaffBackend({
@@ -557,6 +574,14 @@ export function createMockClient() {
         events.failNextSave();
       }
       return events.rpc(name, args, testingContext());
+    }
+    if (FINANCE_RPC_NAMES.includes(name)) {
+      await wait(testingDelay());
+      if (failNextTesting && FINANCE_WRITE_RPC_NAMES.includes(name)) {
+        failNextTesting = false; // failNextSave: the next save fails, whichever section it is in
+        finance.failNextSave();
+      }
+      return finance.rpc(name, args, testingContext());
     }
     if (name === 'has_data_access' || TESTING_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
@@ -660,6 +685,15 @@ export function createMockClient() {
       // The page's automatic retry listens for the browser's "online" event; fire it now.
       window.dispatchEvent(new Event('online'));
       return 'Saves work again. Unsaved results save by themselves now (or press Retry).';
+    },
+    // ----- Finance helpers (mockFinance.js) -----
+    setNow(hhmm) {
+      if (!finance.setNow(hhmm ?? null)) return "Use setNow('19:30') (school time, 24-hour), or setNow(null) for the real time.";
+      return hhmm ? `The school clock now says ${hhmm} for the Finance reminder (the date follows setToday). Reload Home to see it.` : 'Back to the real school time. Reload to see it.';
+    },
+    resetFinance() {
+      finance.reset();
+      return 'Finance is back to the sample: a few closed Shrewsbury days, the sample Star payments and refunds, reminder times Off, no exports. Reload to see it.';
     },
     // ----- Events / family form helpers (publicApi.preview.js) -----
     ...publicPreviewHelpers(),

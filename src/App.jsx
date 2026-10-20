@@ -11,6 +11,10 @@
 // Phase 2 adds two: a testing event's page ("#testing/event/<id>") and Settings ("#settings").
 // Phase 3 adds the event page's Grading tab ("#testing/event/<id>/grading") and the leave guard:
 // while grading results are "Not saved", leaving the event page asks first (contract 0010 §4.9).
+// Finance (contract 0011 §4) adds three: the Daily report ("#finance"), History ("#finance/history")
+// and Finance → Settings ("#finance/settings") — the last two for admins only (staff are sent to
+// "#finance"). While "Hide payments" is on for this device (v0.215), every "#finance…" address
+// goes to Home and Finance is left out of the rail.
 //
 // Every screen change goes through the small functions below, so the rules (7-day password
 // check, access check, per-account idle lock, the database lock) live in one readable place.
@@ -37,6 +41,10 @@ import SignIn from './screens/SignIn.jsx';
 import Home from './screens/Home.jsx';
 import Testing from './screens/Testing.jsx';
 import Camps from './screens/Camps.jsx';
+import Finance from './screens/Finance.jsx';
+import { showToday, showMonthOf } from './screens/finance/financeState.js';
+import { usePaymentsHidden } from './screens/finance/usePaymentsHidden.js';
+import { showFinanceInNav } from './components/navItems.js';
 import StaffAccounts from './screens/StaffAccounts.jsx';
 import Settings from './screens/Settings.jsx';
 import LockScreen from './screens/LockScreen.jsx';
@@ -70,6 +78,7 @@ const SECTION_TITLES = {
   home: 'Home · U.S. Taekwondo Center',
   testing: 'Testing · U.S. Taekwondo Center',
   camps: 'Camps · U.S. Taekwondo Center',
+  finance: 'Finance · U.S. Taekwondo Center',
   staffAccounts: 'Staff accounts · U.S. Taekwondo Center',
   settings: 'Settings · U.S. Taekwondo Center',
 };
@@ -90,6 +99,9 @@ const TOASTS = {
 // nothing odd from the address bar ever reaches the page.
 const EVENT_HASH = /^#testing\/event\/([A-Za-z0-9-]{1,64})(\/grading)?$/;
 const SETTINGS_HASH = '#settings';
+// Finance (contract 0011 §4): #finance, #finance/history, #finance/settings. The view is kept in
+// the `eventTab` slot of a route ('report' | 'history' | 'settings'), since Finance has no events.
+const FINANCE_HASH = /^#finance(?:\/(history|settings))?$/;
 
 // ----- Camps addresses (contract 0013 §6.1) -----
 // Camps reuses the same two route values as Testing, so Back / Forward work the same way:
@@ -106,6 +118,8 @@ const CAMPS_HASH = /^#camps(?:\/templates|\/camp\/([A-Za-z0-9-]{1,64})(?:\/(chec
 function routeFromAddress() {
   const hash = window.location.hash;
   if (hash === SETTINGS_HASH) return { section: 'settings', eventId: null, eventTab: 'students' };
+  const finance = FINANCE_HASH.exec(hash);
+  if (finance) return { section: 'finance', eventId: null, eventTab: finance[1] ?? 'report' };
   const match = EVENT_HASH.exec(hash);
   if (match) return { section: 'testing', eventId: match[1], eventTab: match[2] ? 'grading' : 'students' };
   const camp = CAMPS_HASH.exec(hash);
@@ -119,13 +133,15 @@ function routeFromAddress() {
 // true when the address bar shows something no page knows (it is then tidied to Home).
 function routeIsUnknown() {
   const hash = window.location.hash;
-  return addressIsUnknown() && hash !== SETTINGS_HASH && !EVENT_HASH.test(hash) && !CAMPS_HASH.test(hash);
+  return addressIsUnknown() && hash !== SETTINGS_HASH && !EVENT_HASH.test(hash) && !FINANCE_HASH.test(hash) && !CAMPS_HASH.test(hash);
 }
 
-// The address for a page (and, on Testing, an open event and its tab; on Camps, a camp or a tab).
+// The address for a page (and, on Testing, an open event and its tab; on Finance, its view;
+// on Camps, a camp or a tab).
 function addressForRoute(section, eventId = null, eventTab = 'students') {
   const base = `${window.location.pathname}${window.location.search}`;
   if (section === 'settings') return `${base}${SETTINGS_HASH}`;
+  if (section === 'finance') return `${base}#finance${eventTab === 'history' || eventTab === 'settings' ? `/${eventTab}` : ''}`;
   if (section === 'testing' && eventId) return `${base}#testing/event/${eventId}${eventTab === 'grading' ? '/grading' : ''}`;
   if (section === 'camps' && eventId) {
     const suffix = ['checkin', 'payments', 'attendance'].includes(eventTab) ? `/${eventTab}` : '';
@@ -186,6 +202,9 @@ export default function App() {
   const [campsModalOpen, setCampsModalOpen] = useState(false); // a Camps dialog is showing
   const [staffModalOpen, setStaffModalOpen] = useState(false); // a Staff accounts dialog is showing
   const [settingsModalOpen, setSettingsModalOpen] = useState(false); // a Settings dialog is showing
+  const [financeModalOpen, setFinanceModalOpen] = useState(false); // a Finance dialog is showing
+  // This device's "Hide payments" switch (v0.215): Finance leaves the rail and its addresses go Home.
+  const [paymentsHidden] = usePaymentsHidden();
   const [toast, setToast] = useState(null); // { id, text, action, icon } or null
 
   // Focus memory for the lock screen (see "Locking and unlocking" below).
@@ -569,11 +588,13 @@ export default function App() {
   // itself because the event belongs to the other school — Back then doesn't bring it back).
   // tab: the event page's tab ('students' unless said otherwise — opening an event lands on Students).
   // On Camps, `nextEventId` is the camp whose page opens and `tab` the list tab or the camp's tab.
-  const navigate = useCallback((id, nextEventId = null, { replace = false, tab: askedTab = 'students' } = {}) => {
+  // On Finance, `tab` is its view ('report' unless said otherwise — the rail opens the Daily report).
+  const navigate = useCallback((id, nextEventId = null, { replace = false, tab: askedTab = id === 'finance' ? 'report' : 'students' } = {}) => {
     setToast(null);
     const tab = id === 'camps' ? campsTab(nextEventId, askedTab) : askedTab;
-    // On Camps the tab is part of the address on the list too (#camps vs #camps/templates).
-    const tabMatters = nextEventId !== null || id === 'camps';
+    // On Camps and Finance the tab is part of the address even with no event open
+    // (#camps vs #camps/templates; #finance vs #finance/history).
+    const tabMatters = nextEventId !== null || id === 'camps' || id === 'finance';
     const changed = id !== sectionRef.current || nextEventId !== eventIdRef.current || (tabMatters && tab !== eventTabRef.current);
     // { tkdPage: true } marks the step as "added by the dashboard while signed in" (see below).
     if (changed && replace) window.history.replaceState({ tkdPage: true }, '', addressForRoute(id, nextEventId, tab));
@@ -662,7 +683,8 @@ export default function App() {
       const route = routeFromAddress();
       const target = route.section;
       if (routeIsUnknown()) window.history.replaceState(null, '', addressFor(target));
-      if (target === sectionRef.current && route.eventId === eventIdRef.current) {
+      // (On Finance a different view — Daily report / History / Settings — is a different page.)
+      if (target === sectionRef.current && route.eventId === eventIdRef.current && (target !== 'finance' || route.eventTab === eventTabRef.current)) {
         // Same page; only the tab may differ (an address typed by hand): switch it, never asked.
         // (Camps: also Camps ↔ Templates on the list.)
         if ((route.eventId || target === 'camps') && route.eventTab !== eventTabRef.current && phaseRef.current === 'home') setEventTab(route.eventTab);
@@ -717,6 +739,50 @@ export default function App() {
   // The database refused data because this sign-in is locked on its side: lock the screen too.
   const handleNoAccess = useCallback(() => setLockedFlag(true), []);
 
+  // ----- Finance helpers (contract 0011 §4) -----
+  // The Finance view ('report' | 'history' | 'settings') lives in eventTab while Finance is open.
+  const changeFinanceView = useCallback((view) => navigate('finance', null, { tab: view }), [navigate]);
+  // Home's reminder lines: "Close the day" opens today's report of that school; "Open History"
+  // opens History for the school chosen now (Both → History on Both) at the month of the first
+  // unclosed day.
+  const openFinanceReport = useCallback(
+    (school) => {
+      showToday({ openClose: true }); // v0.800: the report AND the Close the day dialog
+      if (school && school !== location) changeLocation(school);
+      navigate('finance', null, { tab: 'report' });
+    },
+    [location, changeLocation, navigate],
+  );
+  const openFinanceHistory = useCallback((firstDay) => {
+    showMonthOf(firstDay);
+    navigate('finance', null, { tab: 'history' });
+  }, [navigate]);
+  // A payment's "Open in Testing" (D12), on that payment's school: a Color belt payment opens its
+  // event's roster (#testing/event/<id>). Star testing has no event page route in this branch yet,
+  // so a Star payment opens the Testing section.
+  const openTestingFor = useCallback(
+    (school, eventId = null, source = null) => {
+      if (school && school !== 'Both' && school !== location) changeLocation(school);
+      if (source === 'color_belt' && eventId) navigate('testing', eventId);
+      else navigate('testing');
+    },
+    [location, changeLocation, navigate],
+  );
+  const isAdminNow = profile?.role === 'admin';
+  // Who may be where: payments hidden → no Finance at all (Home instead); staff → no History or
+  // Settings (the Daily report instead). replaceState swaps the address without a history step.
+  useEffect(() => {
+    if (phase !== 'home' || section !== 'finance' || !profile) return;
+    if (paymentsHidden) {
+      window.history.replaceState({ tkdPage: true }, '', addressFor('home'));
+      setSection('home');
+      setEventTab('students');
+    } else if (!isAdminNow && eventTab !== 'report') {
+      window.history.replaceState({ tkdPage: true }, '', addressForRoute('finance', null, 'report'));
+      setEventTab('report');
+    }
+  }, [phase, section, eventTab, paymentsHidden, isAdminNow, profile]);
+
   // Keep the browser tab title in step with the screen (and, on the dashboard, the section).
   useEffect(() => {
     document.title = phase === 'home' ? SECTION_TITLES[section] : PAGE_TITLES[phase];
@@ -726,7 +792,9 @@ export default function App() {
   const isSignedIn = (phase === 'home' || phase === 'locked') && profile !== null;
   const dialogOpen = phase === 'home' && profile !== null && accountDialog !== null;
   // The page behind a dialog can't be clicked or reached with Tab (account or Testing dialog).
-  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || campsModalOpen || staffModalOpen || settingsModalOpen));
+  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || campsModalOpen || staffModalOpen || settingsModalOpen || financeModalOpen));
+  // Finance is in the rail / bottom bar unless payments are hidden on this device (navItems.js).
+  showFinanceInNav(!paymentsHidden);
 
   return (
     <div className="app-root">
@@ -770,7 +838,15 @@ export default function App() {
             onSettings={() => guarded(() => navigate('settings'))}
             onSignOut={() => guarded(() => signOut())}
           >
-            {section === 'home' && <Home location={location} />}
+            {section === 'home' && (
+              <Home
+                location={location}
+                screenLocked={phase === 'locked'}
+                paymentsHidden={paymentsHidden}
+                onOpenFinance={openFinanceReport}
+                onOpenFinanceHistory={openFinanceHistory}
+              />
+            )}
             {section === 'testing' && (
               <Testing
                 location={location}
@@ -807,6 +883,24 @@ export default function App() {
                 showToast={showToast}
                 clearToast={clearToast}
                 onModalOpenChange={setCampsModalOpen}
+              />
+            )}
+            {section === 'finance' && !paymentsHidden && (
+              <Finance
+                location={location}
+                onLocationChange={changeLocation}
+                // For showing or hiding controls only — the database decides what may be seen.
+                isAdmin={profile.role === 'admin'}
+                view={profile.role === 'admin' ? eventTab : 'report'}
+                onView={changeFinanceView}
+                profileName={profile.full_name}
+                screenLocked={phase === 'locked'}
+                onNoAccess={handleNoAccess}
+                onRefreshProfile={refreshProfile}
+                showToast={showToast}
+                clearToast={clearToast}
+                onModalOpenChange={setFinanceModalOpen}
+                onOpenTesting={openTestingFor}
               />
             )}
             {section === 'staffAccounts' && (

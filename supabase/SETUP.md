@@ -1054,7 +1054,57 @@ Tested in PGlite on every run (`run.mjs` step 13g, both steps exactly as written
 
 ---
 
-## 15. Migration 0013: Camps (camps, templates, family sign-up form, check-in, payments)
+## 15. Migration 0011: Finance (Daily report, Close the day, History, Export, reminder)
+
+**What it does** (`supabase/migrations/0011_finance.sql`, contract `docs/Dashboard Docs/Build contracts/CONTRACT-0011.md` §1):
+- **Reads** the payments Color Belt (`testing_payments`, 0005) and Star (`star_payments`, 0006) already store — it **never changes a payment**. Each payment is followed through its corrections ("chains": an edit = a reversal + a new payment written together; an undo = a reversal alone; a staff mis-click undone by the same login within 10 seconds is hidden), then added up per school and school day (America/New_York).
+- **5 new tables:** `finance_day_closings` (close / undo / reopen of a school's day: what was counted, what the server expected, the note, who and when — append-only), `finance_day_closing_items` (the exact items each close counted, so any later change shows as **Changed after closing** — append-only), `finance_settings` (one row: reminder On / Off + a version), `finance_reminder_times` (a time or Off per school per weekday, seeded **Off**), `finance_exports` (one row per CSV export — append-only).
+- **14 functions** the app calls (`finance_day`, `finance_day_both`, `finance_history`, `finance_payment_detail`, `finance_home`, `finance_close_day`, `finance_undo_close`, `finance_reopen_day`, `finance_export`, `finance_export_preview`, `finance_settings_get`, `finance_set_reminder_on`, `finance_set_reminder_time`, `finance_copy_monday`). Staff see and close **today only**; admins any day up to today, plus History, Reopen, Export and Settings.
+- **Same security rules as 0005 / 0006:** RLS on every table with **no** read rule and **no** rights for anyone in the app (every read goes through the functions), `has_data_access()` first in every function, nothing for `anon` or `service_role`, every change in `change_log`, no `truncate`. No answer ever holds a date of birth, an email, a signature or a login id (tested).
+- 0011 changes **nothing** that 0001–0006 or 0010 made (tested: their fingerprints are identical before and after).
+
+**Each step below needs Jeffrey's OK.** Apply only after 0006 is confirmed live (it is, 13).
+
+### 15a. Apply 0011 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0011_finance.sql`.
+2. **SQL Editor → New query**, paste, **Run**.
+3. Supabase will warn about **destructive operations**. That's expected: the words are in `drop trigger if exists` lines that make re-running safe and inside guards that **refuse** removals. **Nothing is removed.** Confirm.
+4. "Success." It's one transaction: on any error nothing is kept. Copy the error to Claude. (A few small result grids may show — the seed sets its label with `select set_config(…)`. That's fine.)
+
+**Running it again is safe** (tested: a second run changes no row and no fingerprint; the seed never overwrites what an admin set).
+
+### 15b. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0011_fingerprints.sql`. Every line must match what `supabase/tests/pglite/run.mjs` printed for the tested copy (every `finance_` function with its code, settings, owner and who may call it; the 5 tables; their triggers and rules). The file is a single read-only SELECT and contains neither of the words the connection refuses (run.mjs checks that).
+2. `0003`–`0006` and `0010` fingerprints: **unchanged**.
+3. **Security advisor:** expected notices — "RLS enabled, no policy" on the 5 `finance_` tables (INFO; nobody in the app reads them directly) and "security definer function executable by authenticated" for the 14 functions (each checks access and role itself). Anything else about a `finance_` object is a real problem.
+
+### 15c. Run the tests (you, in the SQL Editor)
+
+1. Open `supabase/tests/0011_tests.sql`, replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>` (**Authentication → Users**), paste the whole file, **Run**. Since the speed fix (15e) it finishes in seconds; **only if 15e is not applied yet**, add `set statement_timeout = '10min';` as the first line (the first version of 0011 made the test run for over 10 minutes on production on 2026-10-19; it was cancelled and rolled back). Supabase may also offer “Run and enable RLS” for the test's temporary table `t_answers`: choose **Run without RLS** (it exists only inside this session and is rolled back). Supabase may warn about destructive operations (the test removes its own test students and events and checks some removals are refused). Everything is rolled back. Confirm.
+2. Expected: one row, **ALL 0011 TESTS PASSED**. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved. Run `rollback;` once on its own, then tell Claude.
+3. The test makes its own `zz fin …` classes, events, students and payments on days in 2020–2023 (no real data there; Finance refuses days before 2020-01-01), so it works before **and** after real payments exist. To try Close the day as the desk it adds a test payment **today** in Worcester (and, if today's Worcester drawer is already closed for real, reopens it inside the test) — all rolled back.
+4. Then run `0010_tests.sql`, `0006_tests.sql`, `0005_tests.sql`, `0004_tests.sql`, `0003_tests.sql`, `0002_tests.sql` and `verify_pin_tests.sql` again — 0011 must not have broken them.
+
+### 15d. After applying
+
+An admin sets the reminder times in **Finance → Settings** (they start Off; plan Q3).
+
+### 15e. Speed fix: apply the NEW 0011 over the first one (you, in the SQL Editor; Jeffrey's OK)
+
+**Why:** the first version of 0011 (pasted 2026-10-19) built the payment "chains" with one big query that compared every payment with every other. On long date ranges (a year's export, the test file) it took minutes — `0011_tests.sql` was cancelled on production after 10 minutes. The new version builds the chains owner by owner and adds two date indexes on the payment tables. Measured in PGlite on ~11,000 payment rows (5 years, both schools): every Finance function answers in under 50 ms (the year export took over 20 minutes before); `0011_tests.sql` takes about 1 second.
+
+0. **Paste it outside desk hours** (no one recording a payment): building the two new indexes briefly holds back payment writes on `testing_payments` and `star_payments` until the paste finishes (seconds; an empty or small table takes well under a second). A payment saved at that moment just waits, it isn't lost.
+1. Copy **the whole file** `supabase/migrations/0011_finance.sql` (the new version), **SQL Editor → New query**, paste, **Run**, confirm the destructive-operations warning (the words are in `drop … if exists` lines; the only thing removed is the old internal function `finance_chain_steps(date, date)`, which nothing calls).
+2. **What it changes:** functions only (replaced), two new indexes (`finance_testing_payments_paid_on_idx`, `finance_star_payments_paid_on_idx`), one old internal function removed. **What it keeps:** every table and row — the settings row, the 14 reminder times, closings, exports — and every right. Tested in `run.mjs` step 14b: the exact production copy of the first version is applied, the settings are changed like an admin would, then the new file is pasted over it: the settings and times are unchanged and all tests pass.
+3. Claude re-runs `0011_fingerprints.sql` through the connection: the lines must match the new PGlite run (95 rows: 83 as before + 12 index rows — the two new `paid_on` indexes and the finance tables' own keys). The 0003–0006 and 0010 fingerprints stay unchanged.
+3b. Claude runs the **Security Advisor** through the connection: no new warnings for any `finance_` object or the two new indexes (only the notices listed in 15b).
+4. Run `0011_tests.sql` (15c step 1 — with the admin and desk ids filled in; no timeout line needed) → **ALL 0011 TESTS PASSED**. Then run `0010_tests.sql`, `0006_tests.sql`, `0005_tests.sql`, `0004_tests.sql`, `0003_tests.sql`, `0002_tests.sql` and `verify_pin_tests.sql` again — the new 0011 must not have broken them.
+
+**Rollback:** Finance only reads payments, so turning it off is a code rollback (Cloudflare Pages → Deployments → **Rollback**). The 0011 tables can stay; nothing else depends on them.
+
+## 16. Migration 0013: Camps (camps, templates, family sign-up form, check-in, payments)
 
 **Status: not applied yet.** (The section number is final only at the merge into `main`.)
 
@@ -1068,13 +1118,13 @@ Tested in PGlite on every run (`run.mjs` step 13g, both steps exactly as written
 - **18 staff functions + `camp_camper_detail`** (the only way to write), the roster view `camp_roster`, and the same security rules as 0003 / 0005: RLS with `has_data_access()`, column rights only, nothing for `anon` or `service_role`, every change in `change_log` (actions `camp_…`).
 - 0013 changes **nothing** that 0001–0012 made. It uses a few of 0003's and 0005's helpers (school date, name / price / signature rules, the link-code maker, the history writer).
 
-**The order** (build plan §8): **CP2** Cloudflare variable (15a) → **CP3** database (15b–15f) → **CP4** Hyperdrive (15g) → **CP5** staff side on the real database + the test sign-up (15h) → **CP6** deploy (15i). **Each step needs Jeffrey's OK. Nothing secret goes into chat, git, `.env.local` or a screenshot** (handoff §6).
+**The order** (build plan §8): **CP2** Cloudflare variable (16a) → **CP3** database (16b–16f) → **CP4** Hyperdrive (16g) → **CP5** staff side on the real database + the test sign-up (16h) → **CP6** deploy (16i). **Each step needs Jeffrey's OK. Nothing secret goes into chat, git, `.env.local` or a screenshot** (handoff §6).
 
-### 15a. CP2 — Cloudflare variable (you, in the Cloudflare dashboard)
+### 16a. CP2 — Cloudflare variable (you, in the Cloudflare dashboard)
 
 `tkd-dashboard` → **Settings** → **Variables and Secrets** → **Production** only: add `CAMPS_REGISTRATION` = `off` (Text). Leave **Preview** empty. Turnstile, `CLIENT_KEY_SECRET` and `PUBLIC_ORIGIN` from 12a are reused. Variables take effect on the next deployment.
 
-### 15b. CP3 — before you apply 0013
+### 16b. CP3 — before you apply 0013
 
 1. In the **SQL Editor**, run the tests already on production and check each passes: `verify_pin_tests.sql`, `0002_tests.sql`, `0003_tests.sql`, `0004_tests.sql`, `0005_tests.sql`, `0006_tests.sql`, `0010_tests.sql` (replace the UID placeholders as in 12f; put them back afterwards).
 2. Claude checks read-only (through the connection) that **no camp object exists yet**: no table, view, sequence or function whose name starts with `camp` in schema `public`, and no role `camps_registrar`:
@@ -1089,7 +1139,7 @@ Tested in PGlite on every run (`run.mjs` step 13g, both steps exactly as written
    ```
    Expected: no rows.
 
-### 15c. Apply 0013 (you, in the SQL Editor)
+### 16c. Apply 0013 (you, in the SQL Editor)
 
 1. Copy **the whole file** `supabase/migrations/0013_camps.sql`.
 2. **SQL Editor → New query**, paste, **Run**.
@@ -1098,7 +1148,7 @@ Tested in PGlite on every run (`run.mjs` step 13g, both steps exactly as written
 
 **Running it again is safe** (tested in PGlite: a second run changes no row and no fingerprint; the role's attributes and password are never touched).
 
-### 15d. Set the `camps_registrar` password (you, on your PC + SQL Editor)
+### 16d. Set the `camps_registrar` password (you, on your PC + SQL Editor)
 
 Same method as 12d / 13e, with its **own** script and its **own** password — never the Color Belt or Star one.
 
@@ -1123,15 +1173,15 @@ Same method as 12d / 13e, with its **own** script and its **own** password — n
 2. In PowerShell: `node C:\Users\jberg\Documents\make-scram-camps.mjs`. The password is now on the clipboard: **save it in your password manager as a NEW entry**, "Supabase camps_registrar (Hyperdrive)".
 3. **Check the printed line says `alter role camps_registrar password 'SCRAM-SHA-256$4096:…';`** — `camps_registrar`, **not** `testing_registrar` or `star_registrar`. If it names any other role, stop and tell Claude.
 4. Copy only that line into a **new** SQL Editor query and **Run**. Then **delete that snippet** in the SQL Editor (handoff §6), copy something harmless, and **delete `make-scram-camps.mjs`**.
-5. If the password ever leaks: run the script again (new password + verifier), update the Hyperdrive config (15g), and the old one stops working.
+5. If the password ever leaks: run the script again (new password + verifier), update the Hyperdrive config (16g), and the old one stops working.
 
-### 15e. Read-only checks (Claude runs these through the connection)
+### 16e. Read-only checks (Claude runs these through the connection)
 
 1. **Fingerprints:** `supabase/tests/0013_fingerprints.sql`. Every line must match what `supabase/tests/pglite/run.mjs` printed for the tested copy: 115 rows — the 69 functions (code, settings, owner, who may call them), the `camps_registrar` row, the view, the 14 table / counter rows and the 30 triggers. **One expected difference:** on Supabase the role row shows `members=postgres` (PostgreSQL 16+ makes the role that created a login an administrator of it; that gives the registrar nothing). In PGlite it's empty. The file is a single read-only SELECT and contains neither of the words the connection refuses (run.mjs checks that).
 2. `0003_fingerprints.sql`, `0004_fingerprints.sql`, `0005_fingerprints.sql`, `0006_fingerprints.sql`, `0010_fingerprints.sql`: **unchanged** from their production records (0013 touches none of their objects; run.mjs checks the same).
 3. **Security advisor:** expected notices — "RLS enabled, no policy" on `camp_public_attempts` (INFO; nobody in the app may read it) and "security definer function executable by authenticated" for the 18 staff functions and `camp_camper_detail` (each checks access and role itself). Anything else about a `camp` object is a real problem.
 
-### 15f. Run the tests (you, in the SQL Editor)
+### 16f. Run the tests (you, in the SQL Editor)
 
 1. Open `supabase/tests/0013_tests.sql`, replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>` (**Authentication → Users**), copy the whole file **as UTF-8** (it contains a few non-English characters such as "§"), paste, **Run**. Supabase may warn about destructive operations (the test removes its own test rows, adds and removes a test-only table rule, and checks some removals are refused). Everything is rolled back. Confirm. (The test-only rule briefly locks `camp_campers` until the test ends — run it when nobody is using the camp pages, as before real use.)
 2. Expected: one row, **ALL 0013 TESTS PASSED**. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved. Run `rollback;` once on its own, then tell Claude.
@@ -1139,7 +1189,7 @@ Same method as 12d / 13e, with its **own** script and its **own** password — n
 4. Put the placeholders back afterwards (don't save the file with the UIDs in it).
 5. The test makes its own `zz test …` camps, so it works before **and** after real camps exist.
 
-### 15g. CP4 — Hyperdrive for the camp form (you, with Jeffrey's OK)
+### 16g. CP4 — Hyperdrive for the camp form (you, with Jeffrey's OK)
 
 1. Cloudflare → **Storage & databases → Postgres & MySQL (Hyperdrive) → Connect database → Connect to public database**: name **`tkd-camps-registrar`**; the same Session pooler host and port as 12g (`aws-0-us-east-1.pooler.supabase.com`, 5432); database `postgres`; user **`camps_registrar.eozkfbdfxqlcbpewhach`**; password from the "Supabase camps_registrar (Hyperdrive)" entry. Use **Manual entry** and keep the Connection String box empty (12g "what the dashboard looked like").
    - **Caching: Disabled.**
@@ -1148,7 +1198,7 @@ Same method as 12d / 13e, with its **own** script and its **own** password — n
 2. `tkd-dashboard` → **Settings** → **Bindings** → **Add** → **Hyperdrive**: variable name **`HYPERDRIVE_CAMPS`**, configuration `tkd-camps-registrar`, **Production only**.
 3. Check the Free plan's pooler connection budget with Claude (this adds up to 5 connections; the role's limit can be lowered to 3 with `alter role camps_registrar connection limit 3;`).
 
-### 15h. CP5 — the staff side on the real database, and a test sign-up (each with Jeffrey's OK)
+### 16h. CP5 — the staff side on the real database, and a test sign-up (each with Jeffrey's OK)
 
 Run `Start dashboard.bat` and sign in as the admin. Create a **TEST** camp (Add camp, Edit, Save as template, Use template, Registration link + QR + Download, Close / Reopen). Then, because the family page isn't deployed yet, make the sign-up **in the SQL Editor** — it calls the real function (never inserts directly):
 
@@ -1175,13 +1225,13 @@ select public.camp_public_signup(
 
 Then in the app: Check in + Undo (today), Mark paid + Undo, Edit details add a day → Owes → Mark paid $X, admin Edit / Undo payment, the possible duplicate → Keep this one / Restore, Withdraw / Restore, Delete camper, **Delete camp**. Claude then checks read-only: every step is in `change_log` (actions `camp_…`, the sign-up by "Family form", no `data:image` anywhere), the attempt rows say `ok` / `price_changed`, and **zero rows** are left for the TEST camp.
 
-### 15i. CP6 — after the deploy (each with Jeffrey's OK)
+### 16i. CP6 — after the deploy (each with Jeffrey's OK)
 
 1. Deploy with `CAMPS_REGISTRATION=off`. Live checks: the dashboard works; `https://tkd-dashboard.pages.dev/camp/abcdefgh` shows the page with the strict CSP; `/api/camp/abcdefgh` answers `not_open`.
 2. **Phone path:** open the TEST camp; set `CAMPS_REGISTRATION=on` (Production) and **Retry deployment**; Jeffrey signs up from his phone, and several times in a row from the desk tablet; sign-ups show on the camp page within 15 seconds; check one child in; Hyperdrive → `tkd-camps-registrar` → **Metrics**: queries **not cached**.
 3. Delete the TEST camp in the app; Claude checks read-only that zero camp rows are left for it. Only then create the first real camp.
 
-### 15j. Off switch (any time)
+### 16j. Off switch (any time)
 
 In this order (step 1 works in seconds):
 1. **Database off switch (instant):** in the SQL Editor, run
@@ -1200,7 +1250,7 @@ In this order (step 1 works in seconds):
 
 Color Belt's form (12i) and Star's (13g) are not affected by any of these, and their off switches don't affect Camps. **Previous site version:** Cloudflare Pages → **Deployments** → the previous one → **Rollback to this deployment**.
 
-### 15k. Undo 0013 (only if something is badly wrong, before real camp data exists)
+### 16k. Undo 0013 (only if something is badly wrong, before real camp data exists)
 
 Only if Jeffrey decides to remove Camps completely: put the app back to a version without the Camps screens and the camp page **first**, then run this in the SQL Editor (one transaction; tested in PGlite on every run: afterwards no camp object or role is left, the earlier fingerprints equal a database that never had 0013, and the earlier tests pass). **This deletes every camp, template, sign-up, camper, check-in and payment.** Supabase's destructive-operations warning is real this time.
 
@@ -1303,7 +1353,7 @@ drop role if exists camps_registrar;
 commit;
 ```
 
-**Then the Cloudflare side** (only if 15a / 15g were done): remove the `HYPERDRIVE_CAMPS` binding, delete the `tkd-camps-registrar` Hyperdrive configuration, delete the `CAMPS_REGISTRATION` variable, **Retry deployment**, and delete the "Supabase camps_registrar (Hyperdrive)" password-manager entry.
+**Then the Cloudflare side** (only if 16a / 16g were done): remove the `HYPERDRIVE_CAMPS` binding, delete the `tkd-camps-registrar` Hyperdrive configuration, delete the `CAMPS_REGISTRATION` variable, **Retry deployment**, and delete the "Supabase camps_registrar (Hyperdrive)" password-manager entry.
 
 **Why:**
 - **Its own login, password, Hyperdrive config and off switch:** a leak of one form's password can't reach another form's functions; each form can be stopped on its own.

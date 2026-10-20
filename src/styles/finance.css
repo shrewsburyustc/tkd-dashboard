@@ -1,0 +1,1179 @@
+/*
+  finance.css — the look of the Finance section (Daily report, History, Settings, Export, Print),
+  the Home reminder lines, and Finance's two bits of the app frame (the "Payments hidden" chip in
+  the top bar and the Hide payments switch in the account menu).
+  Why it exists: the approved mockups D1–D14 (docs/Finance/TKD-Finance-DailyReport-Mockups.html)
+  drawn with the design tokens (tokens.css). Shared pieces (.btn, .input, .ttag, .ttabs, .errbar,
+  .segmented, dialogs, sheets) come from app.css and testing.css; everything here starts with
+  "fin-" (screen) or "fp-" (the printed page), so nothing collides with other sections.
+  Layouts: PC ≥1024px with a mouse · tablet / touch (36px controls, 44px tap areas, 48px rows) ·
+  phone <640px (stacked cards, full-screen dialogs) · and 320px wide without sideways scrolling.
+*/
+
+/* Success tint (guidelines 7: green #3B6D11 on #EAF3DE), as Testing's .ttag--ok */
+.finance,
+.fin-home-lines {
+  --fin-ok-bg: #eaf3de;
+  --fin-ok-border: #cfe3b8;
+}
+
+/* ===== Page frame ===== */
+.finance {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  /* Bottom: room for the toast (40px, 24px from the edge) + 16px, so it never covers the last row */
+  padding: var(--space-24) var(--space-24) calc(40px + var(--space-24) + var(--space-16));
+}
+
+.fin-title {
+  margin-bottom: var(--space-8);
+}
+
+.fin-grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.fin-hint {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.fin-sub {
+  color: var(--color-text-secondary);
+}
+
+.fin-lbl {
+  display: block;
+  margin-bottom: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.fin-lbl span {
+  color: var(--color-text-secondary);
+}
+
+.fin-strike {
+  color: var(--color-text-secondary);
+  text-decoration: line-through;
+}
+
+.fin-r {
+  text-align: right;
+}
+
+.fin-tag-ok {
+  border-color: var(--fin-ok-border);
+  background: var(--fin-ok-bg);
+  color: var(--color-success-text);
+}
+
+/* The amber explanation line (Changed after closing, History's unclosed days) */
+.fin-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin-bottom: var(--space-16);
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-tag-warn-border);
+  border-radius: var(--radius-control);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--text-13);
+}
+
+.fin-banner svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.fin-box .fin-banner {
+  margin: var(--space-12) 0 0;
+}
+
+/* ===== Date row (D1, D4, D14) ===== */
+.fin-dayrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  margin-bottom: var(--space-16);
+}
+
+.fin-day {
+  font-size: var(--text-16);
+  font-weight: 500;
+}
+
+/* Refunds switch + Print + Export…: one group on the right. If the row is too narrow (tablet),
+   the whole group moves to the next line, still on the right — no button left alone. */
+.fin-dayrow-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-8);
+  margin-left: auto;
+}
+
+.fin-staff-hint {
+  margin: calc(-1 * var(--space-8)) 0 var(--space-12);
+}
+
+.fin-month {
+  font-size: var(--text-13);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Outlined icon buttons: ‹ › and the calendar (32px, 36px on touch with a 44px tap area) */
+.fin-ibtn.tib {
+  width: 32px;
+  height: 32px;
+  color: var(--color-text);
+}
+
+.fin-ibtn .tib-box {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border-control);
+}
+
+.fin-ibtn.is-unavailable {
+  color: var(--color-disabled-text);
+  cursor: default;
+}
+
+.fin-ibtn.is-unavailable .tib-box {
+  border-color: var(--color-border-strong);
+}
+
+/* The real date field sits invisibly under the calendar button; showPicker() opens it. */
+.fin-cal {
+  position: relative;
+  display: inline-flex;
+}
+
+.fin-cal-input {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The first button of the date row: its tooltip opens to the right, so it isn't cut off */
+.fin-dayrow > .fin-ibtn:first-child .tib-tip {
+  right: auto;
+  left: 0;
+}
+
+.fin-dayrow > .fin-ibtn:first-child .tib-tip::after {
+  right: auto;
+  left: 9px;
+}
+
+.fin-more.tib {
+  color: var(--color-text);
+}
+
+/* "Refunds: Own group | In groups" (v0.209). The chosen side is gray, not blue (as v0.89). */
+.fin-refund-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.fin-seg .segment.is-checked {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+/* ===== Metric cards (D1) ===== */
+.fin-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-12);
+  margin-bottom: var(--space-16);
+}
+
+.fin-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-12);
+  text-align: left;
+}
+
+.fin-card--button {
+  cursor: pointer;
+}
+
+.fin-card-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  color: var(--color-text-secondary);
+}
+
+.fin-card-value {
+  font-size: var(--text-20);
+  font-weight: 500;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.fin-card-sub {
+  color: var(--color-text-secondary);
+}
+
+/* ===== Boxes: Close the day, Day closed, Both, empty day ===== */
+.fin-box {
+  margin-bottom: var(--space-16);
+  padding: var(--space-16);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.fin-box-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  margin-bottom: var(--space-4);
+  font-size: var(--text-16);
+  font-weight: 500;
+}
+
+.fin-box-icon {
+  color: var(--color-text-secondary);
+}
+
+.fin-box-hint {
+  margin-bottom: var(--space-8);
+}
+
+/* One count: label + Expected line · field · tag */
+.fin-crow {
+  display: grid;
+  grid-template-columns: 200px auto minmax(0, 1fr);
+  gap: var(--space-12);
+  align-items: center;
+  padding: 6px 0;
+  font-size: var(--text-13);
+}
+
+.fin-crow-label label,
+.fin-crow-label > span {
+  font-size: var(--text-13);
+}
+
+.fin-exp {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.fin-crow-field {
+  min-width: 0;
+}
+
+.fin-money.money {
+  width: 130px;
+}
+
+.fin-money--checks.money {
+  width: 110px;
+}
+
+.fin-checks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-8);
+}
+
+.fin-count.input {
+  width: 64px;
+}
+
+.fin-checks .fin-field-error {
+  flex-basis: 100%;
+}
+
+.fin-crow-tag {
+  min-width: 0;
+}
+
+.fin-crow-tag .ttag {
+  white-space: normal;
+}
+
+.fin-field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+}
+
+.fin-field-error svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.fin-money.money:has(input[aria-invalid='true']),
+.fin-count.input[aria-invalid='true'],
+.fin-textarea.is-bad {
+  border-color: var(--color-warning-text);
+  box-shadow: 0 0 0 1px var(--color-warning-text);
+}
+
+.fin-note {
+  margin-top: var(--space-8);
+}
+
+.fin-textarea.input {
+  display: block;
+  width: 520px;
+  max-width: 100%;
+  height: auto;
+  min-height: 56px;
+  padding: 6px 10px;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+/* D13: the error inside the box, right above the button */
+.fin-box-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin-top: var(--space-12);
+  color: var(--color-warning-text);
+  font-size: var(--text-13);
+}
+
+.fin-box-error svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.fin-boxfoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-12);
+  margin-top: var(--space-12);
+}
+
+/* The Close the day dialog (v0.800) */
+.fin-close-dialog .fin-close-notsaved {
+  margin-bottom: var(--space-8);
+}
+
+.fin-close-dialog .notice {
+  margin: var(--space-4) 0 var(--space-8);
+}
+
+.fin-close-foot {
+  margin-top: var(--space-12);
+}
+
+[data-day-closed]:focus {
+  outline: none;
+}
+
+[data-day-closed]:focus-visible {
+  outline: 2px solid var(--color-blue);
+}
+
+/* Close the day stays gray until all three counts are filled in (v0.207) */
+.fin-close-btn.is-unavailable {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+  cursor: default;
+}
+
+.fin-closed-line {
+  font-size: var(--text-13);
+}
+
+.fin-closed-note {
+  margin-top: var(--space-4);
+}
+
+.fin-empty {
+  text-align: center;
+}
+
+.fin-empty-line {
+  font-size: var(--text-14);
+}
+
+/* ===== Both (D6) ===== */
+.fin-both {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-12);
+}
+
+.fin-both-box {
+  margin: 0;
+}
+
+.fin-both-total {
+  margin-top: var(--space-4);
+  font-size: var(--text-20);
+  font-weight: 500;
+}
+
+.fin-both-total .fin-hint {
+  font-weight: 400;
+}
+
+.fin-both-line {
+  margin: var(--space-4) 0 var(--space-12);
+  font-size: var(--text-13);
+}
+
+.fin-both-together {
+  margin: var(--space-12) 0 var(--space-4);
+  font-size: var(--text-13);
+}
+
+.fin-both-together strong {
+  font-weight: 500;
+}
+
+/* ===== Tables (payments, History, Settings) ===== */
+.fin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-13);
+}
+
+.fin-table th {
+  height: 32px;
+  padding: 0 var(--space-8);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 500;
+  text-align: left;
+}
+
+.fin-table th.fin-r {
+  text-align: right;
+}
+
+.fin-table td {
+  height: 40px;
+  padding: 6px var(--space-8);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.fin-col-time {
+  width: 96px;
+}
+
+.fin-col-amount {
+  width: 110px;
+}
+
+.fin-col-by {
+  width: 130px;
+}
+
+.fin-col-chev {
+  width: 40px;
+}
+
+.fin-table--narrow .fin-col-time {
+  width: 80px;
+}
+
+.fin-table--narrow .fin-col-amount {
+  width: 96px;
+}
+
+/* A group's header row: "Cash · 4 payments · $320.00" */
+.fin-grp th {
+  height: 36px;
+  padding-top: var(--space-12);
+  border-bottom: 1px solid var(--color-border-strong);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.fin-grp th span,
+.fin-pgrp span {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.fin-grp th:focus {
+  outline: none;
+}
+
+.fin-row {
+  cursor: pointer;
+}
+
+.fin-row:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+.fin-name-line {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+}
+
+.fin-line2 {
+  display: block;
+  font-size: var(--text-12);
+}
+
+.fin-table-hint {
+  margin-top: var(--space-8);
+}
+
+/* ===== Phone: stacked cards (payments, History) ===== */
+.fin-pgrp {
+  padding: var(--space-12) 0 6px;
+  border-bottom: 1px solid var(--color-border-strong);
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.fin-pgrp:focus {
+  outline: none;
+}
+
+.fin-pcard,
+.fin-hrow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-8);
+  min-height: var(--tap-size);
+  padding: var(--space-8) 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+.fin-pcard:focus-visible,
+.fin-hrow:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+.fin-pcard-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.fin-pcard-main .fin-sub {
+  font-size: var(--text-12);
+}
+
+.fin-pcard-amount {
+  white-space: nowrap;
+}
+
+/* ===== Skeleton (first load) ===== */
+.fin-skeleton-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-12);
+}
+
+.fin-skeleton-cards span {
+  height: 72px;
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+/* ===== Payment detail (D12) ===== */
+.fin-drows {
+  margin: var(--space-4) 0 var(--space-12);
+}
+
+.fin-drow {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: var(--space-8);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-13);
+  overflow-wrap: anywhere;
+}
+
+.fin-drow-k {
+  color: var(--color-text-secondary);
+}
+
+.fin-drow-tag {
+  margin-left: var(--space-8);
+}
+
+.fin-history {
+  margin: 0;
+  padding: 0;
+  font-size: var(--text-13);
+  list-style: none;
+}
+
+.fin-detail-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  color: var(--color-warning-text);
+  font-size: var(--text-13);
+}
+
+.fin-detail-hint {
+  margin-top: var(--space-12);
+}
+
+/* ===== Export (D7) ===== */
+.fin-export-hint {
+  margin-bottom: var(--space-12);
+}
+
+.fin-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+}
+
+.fin-date-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.fin-date-input.input {
+  width: 160px;
+}
+
+.fin-export-school {
+  margin-top: var(--space-12);
+  font-size: var(--text-13);
+}
+
+.fin-export-summary {
+  min-height: 20px;
+  margin: var(--space-12) 0 0;
+  font-size: var(--text-13);
+}
+
+/* ===== Settings (D9) ===== */
+.fin-section-title {
+  margin-bottom: var(--space-4);
+  font-size: var(--text-16);
+  font-weight: 500;
+}
+
+.fin-settings-hint {
+  max-width: 560px;
+  margin-bottom: var(--space-12);
+}
+
+/* On / Off switch: the track turns blue when on (role="switch", aria-checked) */
+.fin-switch {
+  position: relative;
+  display: flex;
+  width: max-content;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 32px;
+  margin-bottom: var(--space-12);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font-size: var(--text-13);
+}
+
+.fin-switch-track,
+.fin-menu-switch {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--color-border-control);
+}
+
+.fin-switch-track::after,
+.fin-menu-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-bg);
+}
+
+.fin-switch[aria-checked='true'] .fin-switch-track,
+.fin-menu-switch.is-on {
+  background: var(--color-blue);
+}
+
+.fin-switch[aria-checked='true'] .fin-switch-track::after,
+.fin-menu-switch.is-on::after {
+  left: 18px;
+}
+
+.fin-menu-switch {
+  margin-left: auto;
+}
+
+.fin-set-table {
+  max-width: 560px;
+}
+
+.fin-set-table td {
+  height: 44px;
+}
+
+.fin-select.input {
+  width: 140px;
+  padding: 0 var(--space-8);
+  font: inherit; /* the page's font, not the browser's own for dropdowns */
+}
+
+.fin-select.is-off {
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+}
+
+.fin-set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  min-height: var(--tap-size);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-13);
+}
+
+.fin-seg {
+  display: inline-flex;
+  max-width: 100%;
+}
+
+.fin-settings .fin-seg {
+  margin-bottom: var(--space-8);
+}
+
+.fin-set-copy {
+  margin-top: var(--space-12);
+}
+
+.fin-set-copy .btn[aria-disabled='true'] {
+  border-color: var(--color-border-strong);
+  color: var(--color-disabled-text);
+  cursor: default;
+}
+
+.fin-settings-foot {
+  margin-top: var(--space-12);
+}
+
+/* ===== Home reminder lines (D10) ===== */
+.fin-home-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  max-width: 640px;
+  margin-bottom: var(--space-16);
+}
+
+.fin-home-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  min-height: var(--tap-size); /* the whole line is one link, at least 44px tall (v0.207) */
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-tag-warn-border);
+  border-radius: var(--radius-control);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--text-13);
+  text-align: left;
+}
+
+.fin-home-line svg {
+  flex: none;
+}
+
+.fin-home-line--link {
+  cursor: pointer;
+}
+
+.fin-home-link {
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+/* ===== Top bar: the "Payments hidden" chip (v0.215) ===== */
+.fin-hidden-chip {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-4);
+  height: 28px;
+  padding: 0 var(--space-8);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-tag);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  white-space: nowrap;
+}
+
+/* ===== Hover (mouse only) ===== */
+@media (hover: hover) {
+  .fin-row:hover td,
+  .fin-pcard:hover,
+  .fin-hrow:hover {
+    background: var(--color-surface);
+  }
+
+  .fin-card--button:hover {
+    border-color: var(--color-border-strong);
+  }
+
+  .fin-ibtn:not(.is-unavailable):hover .tib-box,
+  .fin-hidden-chip:hover {
+    background: var(--color-bg);
+    border-color: var(--color-text-secondary);
+  }
+
+  .fin-home-line--link:hover .fin-home-link {
+    text-decoration-thickness: 2px;
+  }
+}
+
+/* ===== Touch screens: 36px controls, 44px tap areas, 48px rows (guidelines 2.5) ===== */
+@media (pointer: coarse) {
+  .fin-ibtn.tib {
+    width: var(--tap-size);
+    height: var(--tap-size);
+  }
+
+  .fin-ibtn .tib-box {
+    width: 36px;
+    height: 36px;
+  }
+
+  .fin-money.money {
+    height: var(--control-height-touch);
+  }
+
+  .fin-money .money-input {
+    font-size: var(--text-16); /* stops iPhones / iPads zooming in */
+  }
+
+  .fin-table td {
+    height: 48px;
+  }
+
+  .fin-select.input {
+    height: var(--control-height-touch);
+    font-size: var(--text-16); /* stops iPhones / iPads zooming in when the dropdown is tapped */
+  }
+
+  .fin-switch {
+    min-height: var(--tap-size);
+  }
+
+  .fin-hidden-chip::after {
+    content: '';
+    position: absolute;
+    inset: -8px -4px; /* invisible: 28px chip + 2 × 8px = 44px tap height */
+  }
+}
+
+/* ===== Tablets and small PCs (narrower than 1024px) ===== */
+@media (max-width: 1023.98px) {
+  .fin-crow {
+    grid-template-columns: 180px auto minmax(0, 1fr);
+  }
+}
+
+/* ===== Phones (narrower than 640px) ===== */
+@media (max-width: 639.98px) {
+  .finance {
+    padding: var(--space-16) var(--space-16) calc(44px + var(--space-8) + var(--space-16));
+  }
+
+  /* The date row stays ONE line on phones, down to 320px: the ⋯ never drops to a second line.
+     Gaps are tighter and a long title is cut with "…" rather than wrapping. */
+  .fin-dayrow {
+    flex-wrap: nowrap;
+    gap: var(--space-4);
+  }
+
+  .fin-dayrow .fin-day {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .fin-dayrow > * {
+    flex-shrink: 0;
+  }
+
+  .fin-dayrow > .fin-day,
+  .fin-dayrow > .fin-grow {
+    flex-shrink: 1;
+  }
+
+  .fin-cards,
+  .fin-skeleton-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-8);
+  }
+
+  .fin-box {
+    padding: var(--space-12);
+  }
+
+  .fin-empty {
+    text-align: left;
+  }
+
+  /* A count: label on its own line, then field + tag */
+  .fin-crow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-4) var(--space-8);
+  }
+
+  .fin-crow-label {
+    grid-column: 1 / -1;
+  }
+
+  .fin-crow-tag {
+    text-align: right;
+  }
+
+  .fin-textarea.input {
+    width: 100%;
+  }
+
+  .fin-close-btn--phone {
+    width: 100%; /* the single submit button of a phone form (rule 2.1) */
+  }
+
+  .fin-both {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fin-drow {
+    grid-template-columns: 110px minmax(0, 1fr);
+  }
+
+  .fin-date-input.input {
+    width: 150px;
+  }
+
+  /* The chip shows its icon only (its name is still read out and shown as a tooltip) */
+  .fin-hidden-chip {
+    padding: 0 6px;
+  }
+
+  /* Icon-only chip (30px wide, 28px tall): an invisible frame makes the tap area 44 × 44 */
+  .fin-hidden-chip::after {
+    content: '';
+    position: absolute;
+    inset: -8px -7px;
+  }
+
+  .fin-hidden-chip-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+/* ===== The printed page (D8) ===== */
+@media screen {
+  .fin-print {
+    display: none;
+  }
+}
+
+@media print {
+  @page {
+    size: letter portrait;
+    margin: 0.6in;
+  }
+
+  /* Only the report is printed. (body:has(...) = "a body that holds the print page".) The second
+     rule is written extra-specific on purpose: testing-events.css hides every page part except its
+     own print pages when printing, and this one must win. */
+  body:has(> .fin-print) > *:not(.fin-print) {
+    display: none !important;
+  }
+
+  body > div.fin-print.fin-print {
+    display: block !important;
+    color: #000;
+    font-family: var(--font-family);
+    font-size: 9.5pt;
+    line-height: 1.45;
+  }
+
+  .fp-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .fp-col-time {
+    width: 0.75in;
+  }
+
+  .fp-col-for {
+    width: 2.1in;
+  }
+
+  .fp-col-amount {
+    width: 0.85in;
+  }
+
+  .fp-col-by {
+    width: 0.8in;
+  }
+
+  /* The header is the table's head, so it is printed again at the top of page 2 */
+  .fp-head {
+    padding-bottom: 8pt;
+    font-weight: 400;
+    text-align: left;
+  }
+
+  .fp-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .fp-title {
+    font-size: 14pt;
+    font-weight: 500;
+  }
+
+  .fp-date {
+    font-size: 11pt;
+    font-weight: 500;
+  }
+
+  .fp-sub {
+    display: block;
+    color: #444;
+  }
+
+  .fp-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    margin: 4pt 0 10pt;
+    border: 1px solid #000;
+  }
+
+  .fp-card {
+    display: flex;
+    flex-direction: column;
+    padding: 6pt;
+  }
+
+  .fp-card + .fp-card {
+    border-left: 1px solid #000;
+  }
+
+  .fp-card strong {
+    font-size: 12pt;
+    font-weight: 500;
+  }
+
+  .fp-line {
+    margin: 0 0 2pt;
+  }
+
+  .fp-line strong {
+    font-weight: 500;
+  }
+
+  .fp-group {
+    padding-top: 8pt;
+    border-bottom: 1px solid #999;
+    font-weight: 500;
+  }
+
+  .fp-row td {
+    padding: 2pt 4pt 2pt 0;
+    border-bottom: 1px solid #ddd;
+    vertical-align: top;
+  }
+
+  .fp-row {
+    break-inside: avoid;
+  }
+
+  .fp-r {
+    text-align: right;
+  }
+
+  .fp-strike {
+    text-decoration: line-through;
+  }
+
+  .fp-note {
+    display: block;
+    color: #444;
+  }
+
+  .fp-sign {
+    display: flex;
+    gap: 48pt;
+    margin-top: 32pt;
+    break-inside: avoid;
+  }
+}
