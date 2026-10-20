@@ -246,7 +246,7 @@
   background: var(--color-surface);
 }
 
-/* Chosen days: the DARK outline, not blue (v0.237) — 2px, so it isn't color alone */
+/* Chosen days: the DARK outline, not blue (v0.713) — 2px, so it isn't color alone */
 .cp-cal-day.is-picked {
   border: 2px solid var(--color-text);
   font-weight: 500;
@@ -770,7 +770,7 @@
   margin: var(--space-4) 0 0 28px;
 }
 
-/* Day chips: the dark outline when chosen (v0.237), like the family form */
+/* Day chips: the dark outline when chosen (v0.713), like the family form */
 .cp-daychip {
   position: relative;
   min-height: 32px;

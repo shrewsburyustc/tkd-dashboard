@@ -3,7 +3,7 @@
 // & Fri), so a "from – to" pair of dates can't describe it. Tapping days on a month view can.
 //   - a Month and a Year list at the top (as drawn), plus ‹ › buttons for the next / previous month
 //   - Su–Sa columns; each day is a button. Chosen days use the DARK outline, not blue (C3 note:
-//     multi-select day chips use the dark outline, v0.237), with aria-pressed for screen readers
+//     multi-select day chips use the dark outline, v0.713), with aria-pressed for screen readers
 //   - days before today can't be added (an Edit camp's kept past days stay chosen and can be
 //     taken off); with 10 days chosen, other days can't be added
 //   - keyboard: the calendar is ONE Tab stop; ← → move a day, ↑ ↓ a week, Enter / Space toggles

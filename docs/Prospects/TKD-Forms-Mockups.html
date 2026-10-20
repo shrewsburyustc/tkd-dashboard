@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forms Mockups</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root{--control-border:#8F8F8A;--page:#EFEFEC;--bg:#FFFFFF;--surface:#F7F7F5;--border:#E5E5E2;--border-strong:#CFCFCA;--text:#1F1F1F;--text2:#6B6B6B;--blue:#003595;--blue-hover:#002A77;--blue-tint:#E6EBF4;--red:#A32D2D;--red-tint:#FCEBEB;--ok:#3B6D11;--ok-tint:#EAF3DE;--warn:#633806;--warn-tint:#FAEEDA}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:20px;font-weight:500;margin:0 0 4px}
+h2{font-size:16px;font-weight:500;margin:48px 0 4px;padding-top:16px;border-top:1px solid var(--border-strong)}
+h4{font-size:13px;font-weight:500;margin:32px 0 4px}
+.lead{color:var(--text2);font-size:13px;margin:0 0 12px}
+.banner{background:var(--warn-tint);color:var(--warn);padding:8px 12px;border-radius:8px;font-size:13px;display:flex;gap:8px;align-items:flex-start}
+/* explanation block (P1) */
+.explain{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:8px 0 16px;font-size:13px}
+.explain h3{font-size:13px;font-weight:500;margin:8px 0 2px}.explain h3:first-child{margin-top:0}
+.explain ul,.explain ol{margin:0;padding-left:20px}.explain li{margin:2px 0}
+.explain .prop{color:var(--warn)}
+b{font-weight:500}
+/* device frames */
+.cap{font-size:12px;color:var(--text2);margin:16px 0 6px;display:flex;align-items:center;gap:6px}
+.cap i{font-size:16px}
+.scroller{overflow-x:auto;padding-bottom:4px}
+.dev{background:var(--bg);border:1px solid var(--border-strong);overflow:hidden;position:relative;flex:none}
+.dev-pc{width:1024px;height:600px;border-radius:10px}
+.dev-tab{width:768px;height:560px;border-radius:18px;border-width:6px;border-color:#2B2B2B}
+.dev-ph{width:375px;height:700px;border-radius:28px;border-width:6px;border-color:#2B2B2B}
+.pair{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+/* app shell (as approved in the Home / Account files) */
+.app{display:flex;height:100%;background:var(--bg)}
+.app-col{flex:1;min-width:0;display:flex;flex-direction:column}
+.content{flex:1;min-height:0;padding:24px;display:flex;flex-direction:column;overflow:hidden}
+.ph-shell{height:100%;display:flex;flex-direction:column}
+.ph-shell .content{padding:16px}
+.rail{width:52px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;flex:none}
+.rail a{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;color:var(--text2)}
+.rail a i{font-size:18px}
+.rail a.on{background:var(--blue-tint);color:var(--blue)}
+.rail-t{width:72px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;flex:none}
+.rail-t a{display:flex;flex-direction:column;align-items:center;justify-content:center;width:64px;min-height:56px;border-radius:8px;color:var(--text2);font-size:12px;gap:2px}
+.rail-t a i{font-size:20px}
+.rail-t a.on{color:var(--blue)}.rail-t a.on i{background:var(--blue-tint);border-radius:8px;padding:4px 10px}
+.topbar{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 12px;flex:none}
+.topbar .grow{flex:1}
+.loc{display:flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;font-size:12px;height:32px}
+.loc span{display:flex;align-items:center;gap:4px;padding:0 12px;color:var(--text2)}
+.loc span.on{background:var(--blue-tint);color:var(--blue)}
+.loc span+span{border-left:1px solid var(--border)}
+.touch .loc{height:36px}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--surface);border:1px solid var(--control-border);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--text);flex:none}
+.tap{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.phbar{border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:4px 0 10px;flex:none;background:var(--bg)}
+.phbar a{display:flex;flex-direction:column;align-items:center;min-width:64px;min-height:48px;justify-content:center;font-size:12px;color:var(--text2);gap:2px}
+.phbar a i{font-size:20px}.phbar a.on{color:var(--blue)}
+/* controls */
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.field label,.lbl{font-size:12px;color:var(--text2)}
+.input{height:32px;border:1px solid var(--control-border);border-radius:8px;padding:0 12px;display:flex;align-items:center;font-size:13px;color:var(--text);background:var(--bg)}
+.input.focus{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+.input .pre{color:var(--text2);margin-right:4px}
+.input.money{width:120px}
+.input.select{justify-content:space-between}.input.select i{font-size:16px;color:var(--text2)}
+.touch .input{height:36px;font-size:14px}
+.caret{display:inline-block;width:1px;height:16px;background:var(--text);margin-left:1px}
+.btn{height:32px;padding:0 16px;border-radius:8px;font-size:13px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--control-border);background:var(--bg);color:var(--text);flex:none;white-space:nowrap}
+.btn i{font-size:16px}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn-primary.dis{background:var(--surface);border-color:var(--border-strong);color:#8A8A85}
+.btn-sm{height:28px;padding:0 12px}
+.btn-full{width:100%}
+.touch .btn{height:36px}
+.touch .btn-sm{height:36px;padding:0 12px}
+.err{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--warn);background:var(--warn-tint);padding:8px;border-radius:6px}
+.hint{font-size:12px;color:var(--text2)}
+/* dialogs */
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:5}
+.dialog{background:var(--bg);border-radius:12px;width:360px;max-width:calc(100% - 32px);padding:24px;position:relative}
+.dialog h3{font-size:16px;font-weight:500;margin:0 0 4px}
+.dialog .sub{font-size:13px;color:var(--text2);margin:0 0 16px}
+.dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+/* detail view (v0.46): centered dialog showing every field */
+.dialog-detail{width:440px}
+.dialog-detail .meta{margin-top:12px}
+.prices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.prices .input.money{width:100%}
+.fullscreen{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;z-index:5}
+.fullscreen .head{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 4px;font-size:16px;font-weight:500;flex:none}
+.fullscreen .fbody{padding:16px;flex:1;overflow:hidden}
+/* menus */
+.menu{position:absolute;background:var(--bg);border:1px solid var(--border-strong);border-radius:8px;padding:4px 0;width:200px;box-shadow:0 4px 16px rgba(0,0,0,.08);z-index:5;text-align:left}
+.menu .it{display:flex;align-items:center;gap:8px;padding:0 12px;height:32px;font-size:13px;color:var(--text);white-space:nowrap}
+.touch .menu .it{height:44px}
+.menu .it i{font-size:16px;color:var(--text2)}
+.menu .it.hov{background:var(--surface)}
+.menu .it.sel{background:var(--blue-tint);color:var(--blue)}
+.menu .it.dis{color:#A3A39E}.menu .it.dis i{color:#B8B8B3}
+.menu .it.red,.menu .it.red i{color:var(--red)}
+.menu .it.red.hov{background:var(--red-tint)}
+.menu .sep{border-top:1px solid var(--border);margin:4px 0}
+.menu .grp{font-size:12px;color:var(--text2);padding:8px 12px 4px}
+.sheet-wrap{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;z-index:5}
+.sheet{background:var(--bg);width:100%;border-radius:16px 16px 0 0;padding:8px 0 16px}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--border-strong);margin:4px auto 8px}
+.sheet .stitle{padding:4px 16px 8px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.sheet .stitle b{display:block;font-size:14px}.sheet .stitle span{font-size:12px;color:var(--text2)}
+.sheet .menu{position:static;width:auto;border:none;box-shadow:none;border-radius:0;padding:0}
+.sheet .menu .it{padding:0 16px}
+.sheet .menu .it.cancel{justify-content:center;color:var(--text);font-weight:500}
+.tag{font-size:12px;line-height:16px;padding:2px 8px;border-radius:6px;background:var(--surface);color:var(--text2);border:1px solid var(--border);white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.tag-warn{background:var(--warn-tint);color:var(--warn);border-color:#F2D9B0}
+.tag i{font-size:12px}
+.callout{position:absolute;background:var(--warn-tint);color:var(--warn);border:1px dashed #EF9F27;font-size:12px;padding:4px 8px;border-radius:6px;z-index:7;white-space:nowrap}
+/* ---------- new for Testing ---------- */
+.phead{display:flex;align-items:center;gap:12px;margin-bottom:8px;flex:none}
+.phead .grow{flex:1}
+.ptitle{font-size:20px;font-weight:500;line-height:1.3}
+.psub{font-size:12px;color:var(--text2)}
+.tabs{display:flex;gap:24px;border-bottom:1px solid var(--border);margin-bottom:16px;flex:none}
+.tabs span{height:40px;display:flex;align-items:center;font-size:13px;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs span.on{color:var(--blue);border-bottom-color:var(--blue);font-weight:500}
+.touch .tabs span{height:44px}
+.ph-shell .tabs{gap:0}.ph-shell .tabs span{flex:1;justify-content:center}
+.more-tog{display:inline-flex;align-items:center;gap:4px;height:28px;font-size:13px;color:var(--text2)}
+.more-tog i{font-size:16px}
+.touch .more-tog{min-height:44px}
+.crow.cgap{opacity:.35}
+.crow.clift{background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.10);border:1px solid var(--border-strong);border-radius:8px;margin:4px -4px 4px 8px;position:relative;z-index:2}
+.viewonly{font-size:13px;color:var(--text2);margin:-4px 0 12px;flex:none}
+/* failed-save banner (rule 3.5) */
+.errbar{display:flex;align-items:center;gap:8px;background:var(--warn-tint);color:var(--warn);border-radius:8px;padding:4px 4px 4px 12px;font-size:13px;margin:-4px 0 12px;flex:none}
+.errbar>i{font-size:16px}
+.errbar .grow{flex:1}
+.errbar .btn{border-color:var(--control-border)}
+.touch .errbar{flex-wrap:wrap;padding:8px 4px 4px 12px}
+/* icon buttons: 28px visible square; on touch the outer box is a 44x44 invisible tap area */
+.ib{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;color:var(--text2);flex:none}
+.ib .ibv{width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center}
+.ib i{font-size:16px}
+.ib.hov .ibv{background:var(--surface);color:var(--text)}
+.touch .ib{width:44px;height:44px}
+/* class list */
+.clist{border:1px solid var(--border);border-radius:8px;flex:none}
+.crow{display:flex;align-items:center;gap:8px;height:40px;padding:0 4px 0 8px;font-size:13px;border-top:1px solid var(--border)}
+.clist>.crow:first-child{border-top:none}
+.touch .crow{height:48px;padding:0;gap:4px}
+.crow .nm{font-weight:500}
+.crow .cnt{font-size:12px;color:var(--text2)}
+.crow .grow{flex:1}
+.acts{display:flex;align-items:center;gap:4px;justify-content:flex-end;position:relative}
+.touch .acts{gap:0}
+/* rank table */
+.rhead,.rrow{display:grid;align-items:center;column-gap:12px;border-top:1px solid var(--border)}
+.rhead{height:32px;background:var(--surface);font-size:12px;color:var(--text2)}
+.rrow{min-height:40px;font-size:13px;position:relative;padding-top:4px;padding-bottom:4px}
+.touch .rrow{min-height:48px}
+.g-pc{grid-template-columns:24px minmax(0,1fr) minmax(0,1.6fr) 64px 88px 64px 104px 64px;padding:0 4px 0 40px}
+.g-st{grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) 64px 88px 64px 104px;padding:0 16px 0 44px}
+.g-tab{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 64px 96px 88px;padding:0 0 0 48px}
+.g-tst{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 64px 96px 72px;padding:0 8px 0 48px}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.rk{display:flex;align-items:center;gap:8px;min-width:0}
+.grip{display:inline-flex;align-items:center;justify-content:center;width:24px;height:28px;color:var(--text2);border-radius:8px}
+.grip i{font-size:16px}
+.grip.hov{background:var(--border);color:var(--text)}
+.rrow.sel{background:var(--blue-tint)}
+.rrow.hovrow{background:var(--surface)}
+.rrow.lift{background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.10);z-index:2;margin:4px -4px 4px 32px;padding-left:8px;border:1px solid var(--border-strong);border-radius:8px}
+.rrow.gap{opacity:.35}
+.dropline{height:0;border-top:2px solid var(--blue);margin:-1px 0 -1px 40px;position:relative;z-index:3}
+.addrow{display:flex;align-items:center;gap:12px;padding:8px 8px 8px 76px;border-top:1px solid var(--border)}
+.addrow .grow{flex:1}
+.touch .addrow{padding:4px 4px 4px 48px}
+.emptyrow{display:flex;align-items:center;gap:12px;padding:12px 16px 12px 76px;border-top:1px solid var(--border);font-size:13px;color:var(--text2);flex-wrap:wrap}
+.touch .emptyrow{padding-left:48px}
+/* phone stacked rank rows */
+.prow{display:flex;align-items:center;gap:0;min-height:56px;padding:4px 0 4px 16px;border-top:1px solid var(--border)}
+.prow .grow{flex:1;min-width:0}
+.prow .l1{font-size:13px;font-weight:500;display:flex;align-items:center;column-gap:8px;row-gap:2px;flex-wrap:wrap}
+.prow .l2{font-size:12px;color:var(--text2)}
+.prow .l2 span{white-space:nowrap}
+.prow.sel{background:var(--blue-tint)}
+.prow>.tapbox{margin-right:8px}
+.grp-lbl{font-size:12px;color:var(--text2);margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--border)}
+.ro{font-size:13px;margin-bottom:12px}
+.ro .lbl{display:block}
+.ro .sec{color:var(--text2)}
+.meta{font-size:12px;color:var(--text2);margin-top:16px}
+/* checkbox (CSS tick: ti-check is reserved for Save) */
+.cbrow{display:flex;align-items:center;gap:8px;min-height:32px;font-size:13px}
+.touch .cbrow{min-height:44px}
+.cb{width:16px;height:16px;border:1px solid var(--control-border);border-radius:4px;display:inline-block;position:relative;flex:none;background:var(--bg)}
+.cb.on{background:var(--blue);border-color:var(--blue)}
+.cb.on::after{content:"";position:absolute;left:4px;top:1px;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.cb.dis{background:var(--surface);border-color:var(--border-strong)}
+/* toast (Undo) */
+.toast{position:absolute;right:16px;bottom:16px;background:#1F1F1F;color:#fff;border-radius:8px;display:flex;align-items:center;gap:8px;padding:0 4px 0 12px;font-size:13px;z-index:6;min-height:40px;white-space:nowrap}
+.toast .undo{display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 8px;color:#fff;font-weight:500;border-left:1px solid #4A4A4A;flex:none}
+.toast .undo i{font-size:16px}
+.touch .toast{min-height:44px}
+.touch .toast .undo{height:44px}
+.toast.ph{left:50%;right:auto;transform:translateX(-50%);bottom:76px}
+.toast.ph.wide{width:calc(100% - 32px);white-space:normal;line-height:1.4;padding:4px 4px 4px 12px}
+.toast.ph.wide>span:first-child{flex:1}
+/* blocked (Both) */
+.blocked{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;color:var(--text2);font-size:13px;padding:24px}
+.blocked .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+/* top-of-file boxes */
+.okbox{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:16px 0;font-size:13px}
+.okbox h3{font-size:14px;font-weight:500;margin:0 0 4px}
+.okbox ol{margin:0;padding-left:20px}.okbox li{margin:4px 0}
+.toc{font-size:13px;margin:8px 0 0;columns:2}
+.toc a{color:var(--blue);text-decoration:none}
+/* phone: class names and rank rows start at the 16px gutter */
+.touch .ph-shell .crow{padding-left:16px}
+.ctog{display:flex;align-items:center;gap:8px;flex:1;min-width:0;min-height:48px}
+.ctog i{font-size:16px;color:var(--text2)}
+/* compact outline button (staff View): 28px with a mouse, 36px on touch, 44px tap box */
+.tapbox{display:inline-flex;align-items:center;justify-content:center;flex:none}
+.touch .tapbox{min-height:44px;min-width:44px}
+.touch .btn.c28{height:36px}
+/* final award problems shown in the Testing for cell */
+.tfwarn{color:var(--warn);font-size:12px;display:inline-flex;gap:4px;align-items:flex-start;line-height:1.4}
+.tfwarn i{font-size:16px;line-height:1}
+.prow .l1 .tfwarn{font-weight:400}
+/* dropdown list with scroll cue */
+.menu.scroll{overflow:hidden;padding-right:12px}
+.menu .sbar{position:absolute;right:4px;top:6px;width:4px;height:64px;border-radius:2px;background:var(--border-strong)}
+.touch .ph-shell .addrow,.touch .ph-shell .emptyrow{padding-left:16px}
+code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
+/* ---------- new for Schedule ---------- */
+/* frames at real screen heights so the whole day fits: PC 1024x800, tablet portrait 768x1024 */
+
+.wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;flex:none}
+.dayh{font-size:12px;color:var(--text2);padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:2px}
+.dcol{display:flex;flex-direction:column;gap:6px;min-width:0}
+.slot{border:1px solid var(--border);border-radius:8px;padding:6px 8px;background:var(--bg);min-width:0}
+.slot .t{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot .c{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot.hov{background:var(--surface);border-color:var(--border-strong)}
+.slot.sel{background:var(--blue-tint);border-color:var(--blue)}
+.touch .slot{min-height:44px}
+.none{font-size:12px;color:var(--text2);padding:6px 0}
+.vrow{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex:none;position:relative}
+.vrow .input.select{width:340px}
+.ph-shell .vrow .input.select{width:auto;flex:1;min-width:0}
+.ph-shell .vrow .input.select span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.infobar{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;margin:-4px 0 16px;flex:none}
+.infobar>i{font-size:16px;color:var(--text2)}
+.infobar .grow{flex:1}
+.pday{font-size:12px;color:var(--text2);padding:12px 0 4px}
+.prow2{display:flex;align-items:center;min-height:52px;border-top:1px solid var(--border);gap:12px}
+.prow2 .tm{font-size:12px;color:var(--text2);width:84px;flex:none}
+.prow2 .cl{font-size:13px;font-weight:500;flex:1}
+.prow2 i{font-size:16px;color:var(--text2)}
+.daypick{display:flex;flex-wrap:wrap;gap:4px 12px}
+.times{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.schoolh{font-size:13px;font-weight:500;margin:4px 0 8px;display:flex;align-items:center;gap:8px}
+.scrollhint{flex:1;min-height:0;overflow:hidden}
+/* time-on-the-side week view: box height = class length */
+.tg{display:grid;grid-template-columns:48px repeat(7,minmax(0,1fr));flex:none}
+.tg .dh{font-size:12px;color:var(--text2);text-align:center;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.tg.one{grid-template-columns:48px minmax(0,1fr)}
+.tcol{position:relative;border-left:1px solid var(--border)}
+.hl{position:absolute;left:0;right:0;border-top:1px solid var(--border)}
+.hl.half{border-top-style:dotted}
+.ax{position:relative}
+.ax span{position:absolute;right:6px;font-size:12px;color:var(--text2);transform:translateY(-50%);white-space:nowrap;background:var(--bg);padding:0 2px}
+.blk{position:absolute;left:3px;right:3px;border:1px solid var(--border-strong);background:var(--surface);border-radius:6px;padding:2px 6px;overflow:hidden;line-height:1.3}
+.blk .c{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blk .t{font-size:12px;color:var(--text2);white-space:nowrap}
+.blk.hov{background:#EDEDEA}
+.blk.sel{background:var(--blue-tint);border-color:var(--blue)}
+.tgwrap{flex:1;min-height:0;overflow:hidden;position:relative}
+.dpick{display:flex;gap:4px;margin-bottom:12px;flex:none}
+.dpick span{flex:1;height:36px;border:1px solid var(--control-border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text2)}
+.sw{display:flex;flex-wrap:wrap;gap:8px}
+.sw span{width:28px;height:28px;border-radius:50%;border:1px solid rgba(0,0,0,.18);position:relative}
+.touch .sw span{width:36px;height:36px}
+.sw span.on{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--text)}
+.dpick span.on{background:var(--blue-tint);border-color:var(--blue);color:var(--blue);font-weight:500}
+/* ---------- new for Forms ---------- */
+.dev-pc{height:800px}.dev-tab{height:1024px}
+.flist{border:1px solid var(--border);border-radius:8px;flex:none}
+.frow{display:grid;grid-template-columns:minmax(0,2fr) 110px 90px 90px 120px;align-items:center;column-gap:12px;min-height:44px;padding:0 4px 0 12px;border-top:1px solid var(--border);font-size:13px}
+.frow.h{min-height:32px;background:var(--surface);font-size:12px;color:var(--text2);border-top:none}
+.frow .nm{font-weight:500}.frow .sub{font-size:12px;color:var(--text2);font-weight:400}
+.touch .frow{min-height:52px}
+.tag-ok{background:#EAF3DE;color:#3B6D11;border-color:#C9DFAE}
+.bld{flex:1;min-height:0;display:flex;gap:12px}
+.bpal{width:180px;flex:none;border:1px solid var(--border);border-radius:8px;padding:8px;overflow:hidden}
+.bpal .grp{font-size:12px;color:var(--text2);margin:8px 0 4px}.bpal .grp:first-child{margin-top:0}
+.bpi{display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;border:1px solid var(--border);border-radius:8px;margin-bottom:4px;font-size:13px;background:var(--bg)}
+.bpi i{font-size:16px;color:var(--text2)}
+.bpi.hov{background:var(--surface);border-color:var(--border-strong)}
+.bcan{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;overflow:hidden}
+.bcan .paper{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;max-width:460px;margin:0 auto}
+.secbar{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);margin:12px 0 8px}
+.secbar::before,.secbar::after{content:"";flex:1;border-top:1px dashed var(--border-strong)}
+.bf{border:1px solid transparent;border-radius:8px;padding:6px 8px;margin:0 -8px 4px;position:relative}
+.bf.sel{border-color:var(--blue);background:var(--blue-tint)}
+.bf.hov{border-color:var(--border-strong)}
+.bf .lb{font-size:12px;color:var(--text2);display:flex;gap:6px;align-items:center}
+.bf .lb .req{color:var(--text2)}
+.bf .ctl{height:28px;border:1px solid var(--control-border);border-radius:8px;margin-top:4px;background:var(--bg)}
+.bf .cond{font-size:12px;color:var(--text2);display:inline-flex;align-items:center;gap:4px;margin-top:4px}
+.bf .cond i{font-size:12px}
+.bf .grip2{position:absolute;left:-22px;top:8px;color:var(--text2)}
+.bset{width:280px;flex:none;border:1px solid var(--border);border-radius:8px;padding:12px;overflow:hidden}
+.bset h4{font-size:13px;font-weight:500;margin:0 0 12px;display:flex;align-items:center;gap:8px}
+.bset h4 i{font-size:16px;color:var(--text2)}
+.togrow{display:flex;align-items:center;justify-content:space-between;min-height:32px;font-size:13px;margin-bottom:8px}
+.touch .togrow{min-height:44px}
+.tg2{width:32px;height:18px;border-radius:9px;background:var(--border-strong);position:relative;flex:none}
+.tg2::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff}
+.tg2.on{background:var(--blue)}.tg2.on::after{left:16px}
+.slotrow{display:grid;grid-template-columns:minmax(0,1fr) 64px;gap:8px;align-items:center;font-size:13px;min-height:32px;border-top:1px solid var(--border)}
+.slotrow .input{height:28px}
+.bhead{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex:none}
+.bhead .grow{flex:1}
+.bhead .ptitle{font-size:20px}
+/* public form */
+.pub{background:var(--bg);height:100%;display:flex;flex-direction:column;overflow:hidden}
+.pubtop{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:500;flex:none}
+.logo{width:28px;height:28px;border-radius:50%;background:#FD0000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex:none}
+.pubbody{flex:1;overflow:hidden;padding:16px}
+.pubcard{max-width:480px;margin:0 auto}
+.prog2{display:flex;gap:4px;margin:0 0 12px}.prog2 i{flex:1;height:4px;border-radius:2px;background:var(--border)}.prog2 i.on{background:var(--blue)}
+.pubh{font-size:20px;font-weight:500;margin:0 0 4px}
+.pubs{font-size:13px;color:var(--text2);margin:0 0 16px}
+.child{border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px}
+.child .ct{font-size:13px;font-weight:500;margin-bottom:8px;display:flex;justify-content:space-between}
+.tslot{display:flex;align-items:center;gap:12px;border:1px solid var(--control-border);border-radius:8px;padding:0 12px;min-height:44px;margin-bottom:8px;font-size:14px}
+.tslot.on{border-color:var(--blue);background:var(--blue-tint);color:var(--blue)}
+.tslot .cb{border-radius:50%}
+.tslot .r{margin-left:auto;font-size:12px;color:var(--text2)}
+.tday{font-size:12px;color:var(--text2);margin:12px 0 6px}
+.waiver{border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;color:var(--text2);height:110px;overflow:hidden;margin-bottom:12px;line-height:1.5}
+.sig{border:1px dashed var(--control-border);border-radius:8px;height:100px;position:relative;margin-bottom:4px}
+.sig svg{position:absolute;inset:0}
+.done{text-align:center;padding-top:32px}
+.done .ok{width:48px;height:48px;border-radius:50%;background:#EAF3DE;color:#3B6D11;display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+.done .ok i{font-size:24px}
+.qr{width:140px;height:140px;border:1px solid var(--border);padding:8px;background:#fff}
+.kiosk{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:32px;position:relative;background:var(--bg)}
+.kiosk .klock{position:absolute;right:12px;bottom:12px;color:#B4B2A9}
+.kiosk .klock i{font-size:20px}
+.pinpad{display:grid;grid-template-columns:repeat(3,64px);gap:12px}
+.pinpad span{height:56px;border:1px solid var(--control-border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.pindots{display:flex;gap:12px}.pindots i{width:14px;height:14px;border-radius:50%;border:1px solid var(--control-border);display:block}.pindots i.on{background:var(--text);border-color:var(--text)}
+.tmpl{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.tmpl div{border:1px solid var(--control-border);border-radius:8px;padding:10px 12px;font-size:13px}
+.tmpl div b{display:flex;align-items:center;gap:8px;font-weight:500;margin-bottom:2px}
+.tmpl div b i{font-size:16px;color:var(--text2)}
+.tmpl div span{font-size:12px;color:var(--text2)}
+.tmpl div.on{border-color:var(--blue);background:var(--blue-tint)}
+.copyrow{display:flex;gap:8px;align-items:center}
+.copyrow .input{flex:1;min-width:0;overflow:hidden;white-space:nowrap}
+.mail{border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;line-height:1.5;background:var(--bg)}
+.mail .mh{font-size:12px;color:var(--text2);border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:8px}
+</style>
+</head>
+<body>
+<main>
+<h1>Forms — mockups for approval</h1>
+<p class="lead">Jae H. Jeong's U.S. Taekwondo Center · New students, step 3: forms · guidelines v0.234 · October 17, 2026 · revision 1</p>
+<div class="banner"><i class="ti ti-alert-triangle"></i><div><b>Design only — not a working app.</b> Nothing here is built or deployed. Dashboard screens are shown at PC (1024×800), tablet held upright (768×1024) and phone (375px); public pages are mostly shown on a phone, since that's where families fill them in. <b>Names, times and wording are made-up samples.</b> "Today" is pretended to be Monday, January 11, 2027.</div></div>
+
+<div class="okbox">
+<h3>Decided in chat (written into the rulebook once you approve)</h3>
+<ol>
+<li><b>Builder: three panels on PC</b> — field types on the left, the form in the middle, settings for the chosen field on the right. Drag fields in; any field type, reorder, sections, "show only if" rules.</li>
+<li><b>Public forms come in short steps</b> with a progress bar; each section in the builder is one step.</li>
+<li><b>Families get</b> a thank-you screen (wording set per form), a <b>confirmation email</b> and an <b>"Add to calendar"</b> button.</li>
+<li><b>Staff get</b> a count badge in the dashboard (shown with step 4, Prospects) and an <b>email to the school</b> for each new submission.</li>
+<li><b>Siblings:</b> "+ Add another child" on any form; each child can book their own free class.</li>
+<li><b>Waiver</b> block can be added to any form: text, "I agree" checkbox, finger or mouse signature.</li>
+<li><b>Booking:</b> the form offers only the classes and times the admin picks from the Schedule, each time with a spot limit; full, closed and cancelled times disappear. Each form sets its own <b>booking window</b> (how many days ahead, how much notice).</li>
+<li><b>Sharing:</b> a link, a QR code, and <b>kiosk mode</b> for the front-desk tablet (start screen, clears itself after submit or 2 minutes idle, staff PIN to leave). Staff can also fill in a form for a family.</li>
+<li><b>Spam:</b> Cloudflare Turnstile (usually invisible). <b>Privacy:</b> prospects who never join are deleted after 2 years; all staff can see phone and email.</li>
+<li><b>Admins build and edit forms;</b> staff can view forms, share them and fill them in for a family.</li>
+</ol>
+</div>
+
+<div class="okbox">
+<h3>Still needs your OK — details I added</h3>
+<ol>
+<li>Rail icon <code>ti-clipboard-text</code>, label "Forms", after Calendar.</li>
+<li>A form is <b>Draft</b> (not public yet), <b>Live</b> (green tag), or <b>Closed</b> (link shows "This form is closed").</li>
+<li><b>"+ New form" starts from a template:</b> Free class (social media), Walk-in, Event, or Blank. Templates are just starting points; everything can be changed.</li>
+<li>Every form always asks for <b>parent name, phone and email</b> and has a <b>Children</b> block (first name, age). These can be relabeled but not removed — a prospect needs a way to be called back.</li>
+<li>The builder <b>saves as you go</b>, but families only see changes after you press <b>Publish</b>.</li>
+<li>When nothing is selected, the right panel shows <b>Form settings</b>: thank-you message, confirmation email on/off, which school, and Live/Closed.</li>
+<li>Booking times are listed <b>per class</b> from the Schedule, each with its own spot limit (default 3). If the Schedule changes, new times appear with the default limit.</li>
+<li>Public link looks like <code>tkd-dashboard.pages.dev/f/free-class</code> (later your school's own web address). You can edit the last part.</li>
+<li>On the public form a full or closed time is <b>hidden</b>, not shown grayed. If no times are left, the family sees "No free-class times are open right now. Leave your details and we'll call you." and can still submit.</li>
+<li>The school email alert goes to one address you set in the form settings.</li>
+<li>Field-type icons added to the icon map: <code>ti-cursor-text</code>, <code>ti-align-left</code>, <code>ti-phone</code>, <code>ti-mail</code>, <code>ti-123</code>, <code>ti-circle-dot</code>, <code>ti-checkbox</code>, <code>ti-selector</code>, <code>ti-heading</code>, <code>ti-separator-horizontal</code>, <code>ti-users</code>, <code>ti-signature</code>, plus <code>ti-share</code>, <code>ti-qrcode</code>, <code>ti-device-tablet</code>, <code>ti-eye</code>, <code>ti-copy</code>, <code>ti-lock</code>, <code>ti-git-branch</code>.</li>
+<li>A family who books gets their spot right away (no approval step); staff can still call to confirm.</li>
+</ol>
+</div>
+
+<div class="okbox">
+<h3>Screens in this file</h3>
+<div class="toc">
+<div><a href="#s1">1. Forms list</a></div>
+<div><a href="#s2">2. New form (pick a template)</a></div>
+<div><a href="#s3">3. The builder</a></div>
+<div><a href="#s4">4. Booking field settings</a></div>
+<div><a href="#s5">5. "Show only if" rule and waiver</a></div>
+<div><a href="#s6">6. Form settings and the emails</a></div>
+<div><a href="#s7">7. Share: link, QR, kiosk</a></div>
+<div><a href="#s8">8. What families see</a></div>
+<div><a href="#s9">9. Front-desk kiosk</a></div>
+<div><a href="#s10">10. Staff view</a></div>
+</div>
+</div>
+<div id="screens"></div>
+</main>
+<script>
+const RAILI=[['ti-home','Home'],['ti-certificate','Testing'],['ti-clock','Schedule'],['ti-calendar-month','Calendar'],['ti-clipboard-text','Forms']];
+function loc(on){return `<div class="loc">${['Worcester','Shrewsbury','Both'].map(x=>`<span class="${x===on?'on':''}">${x===on?'<i class="ti ti-map-pin"></i>':''}${x}</span>`).join('')}</div>`;}
+function frame(dev,content,o={}){const L=o.loc||'Worcester',av=o.av||'JB';
+ if(dev==='pc') return `<div class="dev dev-pc"><div class="app"><div class="rail">${RAILI.map(([i,n])=>`<a class="${n==='Forms'?'on':''}"><i class="ti ${i}"></i></a>`).join('')}</div><div class="app-col"><div class="topbar"><div class="grow"></div>${loc(L)}<span class="avatar">${av}</span></div><div class="content">${content}</div></div></div>${o.overlay||''}</div>`;
+ if(dev==='tab') return `<div class="dev dev-tab touch"><div class="app"><div class="rail-t">${RAILI.map(([i,n])=>`<a class="${n==='Forms'?'on':''}"><i class="ti ${i}"></i>${n}</a>`).join('')}</div><div class="app-col"><div class="topbar"><div class="grow"></div>${loc(L)}<span class="tap"><span class="avatar">${av}</span></span></div><div class="content">${content}</div></div></div>${o.overlay||''}</div>`;
+ return `<div class="dev dev-ph touch"><div class="ph-shell"><div class="topbar">${loc(L)}<div class="grow"></div><span class="tap"><span class="avatar">${av}</span></span></div><div class="content">${content}</div><div class="phbar">${RAILI.map(([i,n])=>`<a class="${n==='Forms'?'on':''}"><i class="ti ${i}"></i>${n}</a>`).join('')}</div></div>${o.overlay||''}</div>`;}
+function pub(dev,content,o={}){const cls=dev==='pc'?'dev-pc':dev==='tab'?'dev-tab touch':'dev-ph touch';
+ return `<div class="dev ${cls}"><div class="pub"><div class="pubtop"><span class="logo">US</span>U.S. Taekwondo Center · Worcester</div><div class="pubbody"><div class="pubcard">${content}</div></div></div>${o.overlay||''}</div>`;}
+const FORMS=[['Free class — Instagram','Free class','Live','Worcester',14],['Free class — Facebook','Free class','Live','Worcester',6],['Walk-in','Walk-in','Live','Worcester',9],['Spring fair booth','Event','Draft','Worcester',0],['Summer camp 2026','Event','Closed','Worcester',22]];
+function tag(s){return s==='Live'?'<span class="tag tag-ok">Live</span>':`<span class="tag">${s}</span>`;}
+function list(dev,o={}){
+ const h=o.staff?`<div class="phead"><div class="ptitle">Forms</div><div class="grow"></div></div>`:`<div class="phead"><div class="ptitle">Forms</div><div class="grow"></div><button class="btn btn-primary"><i class="ti ti-plus"></i>${dev==='ph'?'New':'New form'}</button></div>`;
+ if(dev==='ph') return h+`<div class="flist">${FORMS.map(([n,t,s,l,c])=>`<div class="prow"><div class="grow"><div class="l1">${n} ${tag(s)}</div><div class="l2">${t} · ${c} this month</div></div><span class="ib"><span class="ibv"><i class="ti ti-share"></i></span></span><span class="ib"><span class="ibv"><i class="ti ti-dots"></i></span></span></div>`).join('')}</div>`;
+ return h+`<div class="flist"><div class="frow h"><span>Form</span><span>Status</span><span>This month</span><span>Type</span><span></span></div>${FORMS.map(([n,t,s,l,c],i)=>`<div class="frow${i===0&&o.hov?' rrow hovrow':''}"><span class="nm">${n}</span><span>${tag(s)}</span><span>${c} sign-ups</span><span class="sub">${t}</span><span class="acts">${o.staff?`<button class="btn btn-sm">Fill in</button>`:''}<span class="ib"><span class="ibv"><i class="ti ti-share"></i></span></span>${o.staff?'':`<span class="ib"><span class="ibv"><i class="ti ti-dots"></i></span></span>`}</span></div>`).join('')}</div>`;}
+/* builder */
+const PALI=[['Contact','ti-cursor-text','Short text'],['','ti-align-left','Long text'],['','ti-phone','Phone'],['','ti-mail','Email'],['','ti-123','Number'],['','ti-calendar','Date'],['Choices','ti-circle-dot','One choice'],['','ti-checkbox','Checkboxes'],['','ti-selector','Dropdown'],['School','ti-user-plus','Book a class'],['','ti-signature','Waiver'],['Layout','ti-heading','Heading and text'],['','ti-separator-horizontal','New step']];
+function palette(hot){return `<div class="bpal">${PALI.map(([g,i,n])=>`${g?`<div class="grp">${g}</div>`:''}<div class="bpi${n===hot?' hov':''}"><i class="ti ${i}"></i>${n}</div>`).join('')}</div>`;}
+function bf(lbl,o={}){return `<div class="bf${o.sel?' sel':''}${o.hov?' hov':''}">${o.hov||o.sel?'<i class="ti ti-grip-vertical grip2"></i>':''}<div class="lb">${lbl}${o.req?' <span class="req">· required</span>':''}${o.lock?' <i class="ti ti-lock" style="font-size:12px"></i>':''}</div>${o.body||'<div class="ctl"></div>'}${o.cond?`<div class="cond"><i class="ti ti-git-branch"></i>${o.cond}</div>`:''}</div>`;}
+function canvas(sel){return `<div class="bcan"><div class="paper">
+ <div style="font-size:16px;font-weight:500">Try a free class</div><div class="hint" style="margin-bottom:8px">Fill this out and pick a time — your first class is free.</div>
+ <div class="secbar">Step 1 · About you</div>
+ ${bf('Parent name',{req:1,lock:1,sel:sel==='parent'})}${bf('Phone',{req:1,lock:1,sel:sel==='phone'})}${bf('Email',{req:1,lock:1})}
+ ${bf('Children',{lock:1,body:'<div class="ctl" style="height:48px"></div><div class="hint" style="margin-top:4px">First name, age · "+ Add another child"</div>'})}
+ ${bf('Has your child done martial arts before?',{sel:sel==='choice',body:'<div class="hint">Yes / No</div>'})}
+ ${bf('Which style and for how long?',{cond:'Shows only if the answer above is Yes',sel:sel==='cond'})}
+ <div class="secbar">Step 2 · Pick a time</div>
+ ${bf('Book your free class',{sel:sel==='book',body:'<div class="hint">White belt · 9 times · 3 spots each</div>'})}
+ <div class="secbar">Step 3 · Waiver</div>
+ ${bf('Waiver',{req:1,sel:sel==='waiver',body:'<div class="hint">Waiver text · I agree · signature</div>'})}
+ </div></div>`;}
+function bhead(dev,o={}){return `<div class="bhead"><span class="ib"><span class="ibv"><i class="ti ti-arrow-left"></i></span></span><div><div class="ptitle">Free class — Instagram</div><div class="psub">Live · last published Jan 8 · <span style="color:var(--warn)">unpublished changes</span></div></div><div class="grow"></div>${dev==='ph'?'':'<button class="btn"><i class="ti ti-eye"></i>Preview</button><button class="btn"><i class="ti ti-share"></i>Share</button>'}<button class="btn btn-primary">Publish</button></div>`;}
+function setPhone(){return `<div class="bset"><h4><i class="ti ti-phone"></i>Phone field</h4>
+ <div class="field"><label>Label</label><div class="input focus">Best phone number<span class="caret"></span></div></div>
+ <div class="field"><label>Help text (optional)</label><div class="input" style="color:var(--text2)">We'll text to confirm your class</div></div>
+ <div class="togrow">Required<span class="tg2 on" style="opacity:.5"></span></div><div class="hint" style="margin:-6px 0 12px">Always required — we need a way to reach the family.</div>
+ <div class="togrow">Show only if…<span class="tg2"></span></div></div>`;}
+function setBook(dev){return `<div class="bset"${dev==='full'?' style="width:auto;border:none;padding:0"':''}><h4><i class="ti ti-user-plus"></i>Book a class</h4>
+ <div class="field"><label>Label</label><div class="input">Book your free class</div></div>
+ <div class="field"><label>Classes offered</label>${[['White belt',1],['Group A',0],['Group B',0],['Group C',0],['Teen and adult',0]].map(([c,on])=>`<span class="cbrow"><span class="cb${on?' on':''}"></span>${c}</span>`).join('')}</div>
+ <div class="field"><label>Times and spots · White belt</label>${[['Mon 4:00–4:45',3],['Tue 5:15–6:00',3],['Wed 4:00–4:45',3],['Thu 5:15–6:00',2],['Fri 5:45–6:30',3],['Sat 9:30–10:15',4]].map(([t,n])=>`<div class="slotrow"><span><span class="cb on" style="margin-right:8px;vertical-align:-3px"></span>${t}</span><div class="input">${n}</div></div>`).join('')}<span class="hint">Spots = free-class students per class. Untick a time to hide it.</span></div>
+ <div class="times"><div class="field"><label>Show the next</label><div class="input">14 days</div></div><div class="field"><label>Book at least</label><div class="input">3 hours ahead</div></div></div></div>`;}
+function setForm(){return `<div class="bset"><h4><i class="ti ti-settings"></i>Form settings</h4>
+ <div class="field"><label>Thank-you message</label><div class="textarea" style="height:56px;color:var(--text)">Thanks, {parent}! See you {class time}. Wear comfy clothes and bring water.</div></div>
+ <div class="togrow">Send confirmation email<span class="tg2 on"></span></div>
+ <div class="togrow">"Add to calendar" button<span class="tg2 on"></span></div>
+ <div class="field"><label>Email the school about new sign-ups</label><div class="input">worcester@ustkd.example</div></div>
+ <div class="field"><label>Web address</label><div class="input"><span class="pre">…/f/</span>free-class</div></div>
+ <div class="togrow">Accepting sign-ups (Live)<span class="tg2 on"></span></div></div>`;}
+
+/* sample QR-looking pattern (not a real code) */
+function qr(){let r='',x=7;const rnd=()=>{x=(x*9301+49297)%233280;return x/233280};const N=21;
+ const fin=(a,b)=>`<rect x="${a}" y="${b}" width="7" height="7" fill="#1F1F1F"/><rect x="${a+1}" y="${b+1}" width="5" height="5" fill="#fff"/><rect x="${a+2}" y="${b+2}" width="3" height="3" fill="#1F1F1F"/>`;
+ for(let i=0;i<N;i++)for(let j=0;j<N;j++){if((i<8&&j<8)||(i<8&&j>12)||(i>12&&j<8))continue;if(rnd()<.45)r+=`<rect x="${i}" y="${j}" width="1" height="1" fill="#1F1F1F"/>`;}
+ return `<svg viewBox="0 0 21 21" width="122" height="122" shape-rendering="crispEdges">${r}${fin(0,0)}${fin(14,0)}${fin(0,14)}</svg>`;}
+function screens(){return [
+`<h2 id="s1">1. Forms list</h2><p class="lead">All the school's forms in one place.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li>Forms is a new rail item. Each row shows the form, its status, and how many sign-ups it got this month.</li>
+<li>Click a row to open it in the builder. <code>ti-share</code> opens Share (screen 7). <code>⋯</code>: Fill in for a family, Duplicate, Close form, Delete.</li>
+<li>"+ New form" (or the N key) starts from a template (screen 2).</li>
+<li>Forms belong to one school; the switcher filters the list (Both shows all, with a W/S letter).</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',list('pc',{hov:1}))}</div>
+<div class="cap"><i class="ti ti-device-tablet"></i>Tablet</div><div class="scroller">${frame('tab',list('tab'))}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone</div><div class="scroller">${frame('ph',list('ph'))}</div>`,
+
+`<h2 id="s2">2. New form</h2><p class="lead">Start from a template — everything can be changed after.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li><b>Free class (social media):</b> contact, children, a few questions, Book a class, thank-you.</li>
+<li><b>Walk-in:</b> contact, children, "How did you hear about us?", optional booking, waiver.</li>
+<li><b>Event:</b> contact, children, event questions, waiver. <b>Blank:</b> just the contact and children blocks.</li>
+<li>Save opens the builder with the form as a Draft.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',list('pc'),{overlay:`<div class="overlay"><div class="dialog dialog-detail" style="width:480px"><h3>New form</h3><p class="sub">Worcester</p><div class="field"><label>Form name</label><div class="input focus">Free class — Instagram<span class="caret"></span></div></div><label class="lbl">Start from</label><div class="tmpl" style="margin-top:4px"><div class="on"><b><i class="ti ti-user-plus"></i>Free class</b><span>Social media sign-up with booking</span></div><div><b><i class="ti ti-door"></i>Walk-in</b><span>Front desk, with waiver</span></div><div><b><i class="ti ti-calendar-event"></i>Event</b><span>Fairs, demos, camps</span></div><div><b><i class="ti ti-file"></i>Blank</b><span>Contact and children only</span></div></div><div class="actions"><button class="btn">Cancel</button><button class="btn btn-primary"><i class="ti ti-check"></i>Create</button></div></div></div>`})}</div>`,
+
+`<h2 id="s3">3. The builder</h2><p class="lead">Three panels: field types, the form, and settings.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li><b>Left:</b> drag a field type into the form (or click it to add at the end). "New step" splits the form into steps.</li>
+<li><b>Middle:</b> the form as families will see it. Drag by the grip to reorder. Click a field to edit it. Dashed lines show where each step starts.</li>
+<li><b>Right:</b> settings for the chosen field. Changes save as you go; <b>Publish</b> makes them public. The lock marks the contact fields that can't be removed.</li>
+<li><b>Tablet:</b> the left panel becomes a "+ Add field" button; settings stay on the right. <b>Phone:</b> a list of fields; tap one to edit full screen; ⋯ → Move up / Move down.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · Phone field selected</div><div class="scroller">${frame('pc',bhead('pc')+`<div class="bld">${palette('Number')}${canvas('phone')}${setPhone()}</div>`)}</div>
+<div class="cap"><i class="ti ti-device-tablet"></i>Tablet</div><div class="scroller">${frame('tab',bhead('tab')+`<div style="margin-bottom:12px;flex:none"><button class="btn"><i class="ti ti-plus"></i>Add field</button></div><div class="bld">${canvas('phone')}${setPhone()}</div>`)}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone</div><div class="scroller">${frame('ph',bhead('ph')+`<div style="margin-bottom:8px;flex:none;display:flex;gap:8px"><button class="btn"><i class="ti ti-plus"></i>Add field</button><button class="btn"><i class="ti ti-eye"></i>Preview</button></div><div class="flist">${[['Step 1 · About you',1],['Parent name'],['Phone'],['Email'],['Children'],['Has your child done martial arts before?'],['Which style and for how long?'],['Step 2 · Pick a time',1],['Book your free class'],['Step 3 · Waiver',1],['Waiver']].map(([n,s])=>s?`<div class="grp-lbl" style="margin:8px 16px 4px;padding-top:8px">${n}</div>`:`<div class="prow"><div class="grow"><div class="l1" style="font-weight:400">${n}</div></div><span class="ib"><span class="ibv"><i class="ti ti-dots"></i></span></span></div>`).join('')}</div>`)}</div>`,
+
+`<h2 id="s4">4. Booking field settings</h2><p class="lead">Pick which classes and times this form offers, and how many free-class spots each has.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li><b>Classes offered:</b> any class from the Schedule — usually White belt. Nothing is pre-chosen for you.</li>
+<li><b>Times and spots:</b> every time that class runs, from the Schedule. Untick a time to hide it; set the spots for each.</li>
+<li><b>Show the next … days</b> and <b>Book at least … ahead</b> set this form's booking window.</li>
+<li>Closed or cancelled classes (Calendar) and full times never show to families.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',bhead('pc')+`<div class="bld">${palette()}${canvas('book')}${setBook()}</div>`)}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone · full screen</div><div class="scroller">${frame('ph','',{overlay:`<div class="fullscreen touch"><div class="head"><span class="tap"><i class="ti ti-arrow-left"></i></span>Book a class</div><div class="fbody">${setBook('full')}</div></div>`})}</div>`,
+
+`<h2 id="s5">5. "Show only if" rule and waiver</h2><p class="lead">Questions that appear only when they matter, and a signed waiver.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li>Turn on <b>Show only if…</b>, then pick a question and an answer. In the form the field shows a small <code>ti-git-branch</code> note.</li>
+<li>The <b>Waiver</b> block holds your waiver text (paste it in), an "I agree" checkbox and a signature box. Signed waivers are kept with the prospect.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · "Show only if" on the follow-up question</div><div class="scroller">${frame('pc',bhead('pc')+`<div class="bld">${palette()}${canvas('cond')}<div class="bset"><h4><i class="ti ti-cursor-text"></i>Short text field</h4><div class="field"><label>Label</label><div class="input">Which style and for how long?</div></div><div class="togrow">Required<span class="tg2"></span></div><div class="togrow">Show only if…<span class="tg2 on"></span></div><div class="field"><label>Question</label><div class="input select"><span>Has your child done martial arts before?</span><i class="ti ti-chevron-down"></i></div></div><div class="field"><label>Answer is</label><div class="input select"><span>Yes</span><i class="ti ti-chevron-down"></i></div></div></div></div>`)}</div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · Waiver selected</div><div class="scroller">${frame('pc',bhead('pc')+`<div class="bld">${palette()}${canvas('waiver')}<div class="bset"><h4><i class="ti ti-signature"></i>Waiver</h4><div class="field"><label>Waiver text</label><div class="textarea" style="height:140px;color:var(--text)">I understand that taekwondo is a physical activity and involves risk of injury. I give permission for my child to take part in a free trial class at U.S. Taekwondo Center…</div></div><div class="field"><label>Checkbox wording</label><div class="input">I have read and agree to the waiver</div></div><div class="togrow">Signature required<span class="tg2 on"></span></div></div></div>`)}</div>`,
+
+`<h2 id="s6">6. Form settings and the emails</h2><p class="lead">Click empty space in the form to see its settings.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li><b>Thank-you message:</b> your own words. <code>{parent}</code> and <code>{class time}</code> fill in automatically.</li>
+<li><b>Confirmation email</b> to the family and the <b>school alert email</b> are shown below as examples.</li>
+<li>Turning off "Accepting sign-ups" closes the form (the link then says it's closed).</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',bhead('pc')+`<div class="bld">${palette()}${canvas('')}${setForm()}</div>`)}</div>
+<div class="cap"><i class="ti ti-mail"></i>The two emails (examples)</div>
+<div class="pair"><div class="mail" style="width:440px"><div class="mh">To: maria.lopez@example.com<br>Subject: Your free class on Wed, Jan 13 at 4:00 pm</div>Hi Maria,<br><br>Thanks for signing up! Sofia's free <b>White belt</b> class is on <b>Wednesday, January 13 at 4:00 pm</b> at U.S. Taekwondo Center, 123 Main St, Worcester.<br><br>Wear comfy clothes and bring water. Please arrive 10 minutes early.<br><br>Need to change the time? Call us at (508) 555-0100.<br><br><span class="hint">[ Add to calendar ]</span></div>
+<div class="mail" style="width:360px"><div class="mh">To: worcester@ustkd.example<br>Subject: New sign-up: Maria Lopez (Free class — Instagram)</div>Maria Lopez · (508) 555-0142<br>Child: Sofia, 8<br>Free class: Wed, Jan 13 · 4:00 pm · White belt<br><br><span class="hint">Open in the dashboard to see all answers.</span></div></div>`,
+
+`<h2 id="s7">7. Share: link, QR, kiosk</h2><p class="lead">Three ways to get the form to families.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li><b>Link:</b> copy it for Instagram, Facebook, texts.</li>
+<li><b>QR code:</b> download or print a sign with the code (for the front desk or an event table).</li>
+<li><b>Open kiosk mode on this device:</b> turns this tablet into the front-desk sign-up station (screen 9).</li>
+<li>A Draft form can't be shared until it's published.</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',list('pc'),{overlay:`<div class="overlay"><div class="dialog dialog-detail"><h3>Share "Free class — Instagram"</h3><p class="sub">Live</p><div class="field"><label>Link</label><div class="copyrow"><div class="input">tkd-dashboard.pages.dev/f/free-class</div><button class="btn"><i class="ti ti-copy"></i>Copy</button></div></div><div class="field"><label>QR code</label><div style="display:flex;gap:16px;align-items:center"><div class="qr">${qr()}</div><div style="display:flex;flex-direction:column;gap:8px"><button class="btn"><i class="ti ti-download"></i>Download</button><button class="btn"><i class="ti ti-printer"></i>Print a sign</button></div></div></div><div class="field"><label>Front desk</label><button class="btn" style="align-self:flex-start"><i class="ti ti-device-tablet"></i>Open kiosk mode on this device</button></div><div class="actions"><button class="btn">Close</button></div></div></div>`})}</div>`,
+
+`<h2 id="s8">8. What families see</h2><p class="lead">The public form, one step at a time, then the thank-you screen.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li>School logo on top, progress bar, one step per screen, big buttons. Errors show under the field as they type.</li>
+<li>"+ Add another child" repeats the child fields; in step 2 each child picks a time.</li>
+<li>Only open times show, grouped by day. Spam check (Turnstile) runs quietly on the last step.</li>
+<li>The thank-you screen shows your message and an "Add to calendar" button; the confirmation email is sent.</li></ul></div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone · step 1, step 2, step 3, done</div>
+<div class="pair">
+${pub('ph',`<div class="prog2"><i class="on"></i><i></i><i></i></div><div class="pubh">Try a free class</div><p class="pubs">Step 1 of 3 · About you</p><div class="field"><label>Parent name</label><div class="input">Maria Lopez</div></div><div class="field"><label>Best phone number</label><div class="input">(508) 555-0142</div><span class="hint">We'll text to confirm your class</span></div><div class="field"><label>Email</label><div class="input focus">maria.lopez@<span class="caret"></span></div><div class="err" style="margin-top:4px"><i class="ti ti-alert-triangle"></i><span>Finish the email address, like name@example.com.</span></div></div><div class="child"><div class="ct">Child 1</div><div class="times"><div class="field"><label>First name</label><div class="input">Sofia</div></div><div class="field"><label>Age</label><div class="input">8</div></div></div></div><button class="btn" style="margin-bottom:16px"><i class="ti ti-plus"></i>Add another child</button><button class="btn btn-primary btn-full">Next</button>`)}
+${pub('ph',`<div class="prog2"><i class="on"></i><i class="on"></i><i></i></div><div class="pubh">Pick a time for Sofia</div><p class="pubs">Step 2 of 3 · White belt class (ages 5 and up)</p><div class="tday">This week</div><div class="tslot"><span class="cb"></span>Tue, Jan 12 · 5:15 pm</div><div class="tslot on"><span class="cb on"></span>Wed, Jan 13 · 4:00 pm<span class="r">1 spot left</span></div><div class="tslot"><span class="cb"></span>Thu, Jan 14 · 5:15 pm</div><div class="tslot"><span class="cb"></span>Sat, Jan 16 · 9:30 am</div><div class="tday">Next week</div><div class="tslot"><span class="cb"></span>Tue, Jan 19 · 5:15 pm</div><div style="display:flex;gap:8px;margin-top:12px"><button class="btn">Back</button><button class="btn btn-primary" style="flex:1">Next</button></div>`)}
+${pub('ph',`<div class="prog2"><i class="on"></i><i class="on"></i><i class="on"></i></div><div class="pubh">Waiver</div><p class="pubs">Step 3 of 3</p><div class="waiver">I understand that taekwondo is a physical activity and involves risk of injury. I give permission for my child to take part in a free trial class at U.S. Taekwondo Center…</div><span class="cbrow" style="margin-bottom:12px"><span class="cb on"></span>I have read and agree to the waiver</span><label class="lbl">Sign with your finger</label><div class="sig"><svg viewBox="0 0 300 100" preserveAspectRatio="none"><path d="M20 70 C40 20,60 90,80 50 S120 30,140 60 S190 80,210 40 S250 50,280 55" fill="none" stroke="#1F1F1F" stroke-width="2"/></svg></div><span class="hint">Clear</span><div style="display:flex;gap:8px;margin-top:16px"><button class="btn">Back</button><button class="btn btn-primary" style="flex:1">Submit</button></div>`)}
+${pub('ph',`<div class="done"><div class="ok"><i class="ti ti-check"></i></div><div class="pubh">Thanks, Maria!</div><p class="pubs" style="margin-bottom:24px">See you Wednesday, January 13 at 4:00 pm. Wear comfy clothes and bring water.<br><br>We sent a confirmation to maria.lopez@example.com.</p><button class="btn"><i class="ti ti-calendar-plus"></i>Add to calendar</button></div>`)}
+</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone · no times left, and a closed form</div>
+<div class="pair">
+${pub('ph',`<div class="prog2"><i class="on"></i><i class="on"></i><i></i></div><div class="pubh">Pick a time for Sofia</div><p class="pubs">Step 2 of 3</p><div class="notice" style="background:var(--surface);border-radius:8px;padding:12px;font-size:14px">No free-class times are open right now. Leave your details and we'll call you to set one up.</div><div style="display:flex;gap:8px;margin-top:16px"><button class="btn">Back</button><button class="btn btn-primary" style="flex:1">Next</button></div>`)}
+${pub('ph',`<div class="done"><div class="pubh">This form is closed</div><p class="pubs">Call us at (508) 555-0100 to try a free class.</p></div>`)}
+</div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC · the same form on a computer</div><div class="scroller">${pub('pc',`<div class="prog2"><i class="on"></i><i class="on"></i><i></i></div><div class="pubh">Pick a time for Sofia</div><p class="pubs">Step 2 of 3 · White belt class</p><div class="tday">This week</div><div class="tslot"><span class="cb"></span>Tue, Jan 12 · 5:15 pm</div><div class="tslot on"><span class="cb on"></span>Wed, Jan 13 · 4:00 pm<span class="r">1 spot left</span></div><div class="tslot"><span class="cb"></span>Thu, Jan 14 · 5:15 pm</div><div class="tslot"><span class="cb"></span>Sat, Jan 16 · 9:30 am</div><div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end"><button class="btn">Back</button><button class="btn btn-primary">Next</button></div>`)}</div>`,
+
+`<h2 id="s9">9. Front-desk kiosk</h2><p class="lead">The tablet at the desk becomes a sign-up station.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li>Opened from Share → "Open kiosk mode on this device" (by any signed-in staff).</li>
+<li>Between families it shows a welcome screen with Start. After Submit, the thank-you shows for 10 seconds, then it goes back to Start. If nobody taps for 2 minutes mid-form, it clears and goes back to Start.</li>
+<li>The small lock in the corner asks for a <b>staff PIN</b> to leave kiosk mode and get back to the dashboard.</li></ul></div>
+<div class="cap"><i class="ti ti-device-tablet"></i>Tablet · welcome, thank-you, staff PIN</div>
+<div><div class="pair">
+<div class="dev dev-tab touch" style="height:560px;width:520px"><div class="kiosk"><span class="logo" style="width:64px;height:64px;font-size:20px">US</span><div style="font-size:24px;font-weight:500">Welcome to U.S. Taekwondo Center</div><div class="pubs" style="font-size:16px">New here? Tell us about your family.</div><button class="btn btn-primary" style="height:44px;padding:0 32px;font-size:16px">Start</button><span class="klock tap"><i class="ti ti-lock"></i></span></div></div>
+<div class="dev dev-tab touch" style="height:560px;width:520px"><div class="kiosk"><div class="done" style="padding:0"><div class="ok"><i class="ti ti-check"></i></div></div><div style="font-size:24px;font-weight:500">Thanks, Maria!</div><div class="pubs" style="font-size:16px">See you Wednesday at 4:00 pm.</div><div class="hint">Starting over in 10 seconds…</div></div></div>
+<div class="dev dev-tab touch" style="height:560px;width:520px"><div class="kiosk"><div style="font-size:16px;font-weight:500">Staff PIN to leave kiosk mode</div><div class="pindots"><i class="on"></i><i class="on"></i><i></i><i></i></div><div class="pinpad">${[1,2,3,4,5,6,7,8,9,'',0,''].map(n=>n===''?'<span style="border:none"></span>':`<span>${n}</span>`).join('')}</div><button class="btn">Cancel</button></div></div>
+</div></div>`,
+
+`<h2 id="s10">10. Staff view</h2><p class="lead">Staff can't build or change forms, but can share them and fill them in for a family.</p>
+<div class="explain"><h3>What it does</h3><ul>
+<li>No "+ New form", no <code>⋯</code>. Each row has <b>Fill in</b> (staff entry while talking to a family) and <b>Share</b> (link, QR, kiosk).</li>
+<li>Clicking a row opens a read-only preview of the form.</li>
+<li>"Fill in" opens the same steps as the public form inside the dashboard; the sign-up is marked "Entered by Front Desk".</li></ul></div>
+<div class="cap"><i class="ti ti-device-desktop"></i>PC</div><div class="scroller">${frame('pc',list('pc',{staff:1})+'<div class="viewonly" style="margin-top:12px">View only — ask an admin to create or change forms.</div>',{av:'FD'})}</div>
+<div class="cap"><i class="ti ti-device-mobile"></i>Phone</div><div class="scroller">${frame('ph',list('ph',{staff:1}),{av:'FD'})}</div>`
+].join('');}
+document.getElementById('screens').innerHTML=screens();
+</script>
+</body>
+</html>

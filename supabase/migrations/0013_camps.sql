@@ -508,7 +508,7 @@ revoke execute on function public.camp_price_kind(date, date) from public, anon,
 
 -- ---------------------------------------------------------------------
 -- 2. public.camps - one camp
---   * location_code: the school the camp is HELD AT (rulebook v0.234). An
+--   * location_code: the school the camp is HELD AT (rulebook v0.710). An
 --     admin may correct it later in Edit camp.
 --   * both_schools: true = the camp is for both schools' families (it
 --     shows in both schools' lists; member prices for members of either).
@@ -841,7 +841,7 @@ comment on column public.camp_signups.signature is
 --   * position: 1, 2 or 3 - the child's place in the family's form
 --   * names: name rule; age 1-99 (the camp's range binds only the form)
 --   * member: U.S.T.C. member (member prices)
---   * paying_by: cash / check / card (Card is only a label, v0.233)
+--   * paying_by: cash / check / card (Card is only a label, v0.709)
 --   * base_cents: the grid price at the time (snapshot), 0-$2,000
 --   * status: 'active' or 'withdrawn' (withdrawn_reason 'withdrawn' by
 --     staff, or 'duplicate_copy' when a possible duplicate was resolved)

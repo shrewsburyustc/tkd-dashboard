@@ -1708,7 +1708,10 @@ begin
     'testing_registrations.updated_at', 'testing_registrations.created_by_name', 'testing_registrations.updated_by_name',
     'testing_payments.id', 'testing_payments.registration_id', 'testing_payments.kind', 'testing_payments.amount_cents',
     'testing_payments.method', 'testing_payments.paid_on', 'testing_payments.recorded_at', 'testing_payments.recorded_by_name',
-    'testing_payments.reverses_payment_id'];
+    'testing_payments.reverses_payment_id']
+    -- 0019 (school phone, new-students branch) adds exactly one read right on locations
+    || case when to_regprocedure('public.settings_update_school_contact(text, integer, text, text, text, text, text)') is not null
+            then array['locations.phone'] else array[]::text[] end;
   for v_tbl, v_col in
     select c.relname::text, a.attname::text
       from pg_attribute a join pg_class c on c.oid = a.attrelid join pg_namespace n on n.oid = c.relnamespace

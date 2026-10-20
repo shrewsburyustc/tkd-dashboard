@@ -9,7 +9,7 @@
 // The list itself lives in camps/CampsTab.jsx, the templates in camps/TemplatesTab.jsx.
 //
 // Unlike Testing, Camps works on "Both": the list then shows every camp with a School column
-// (a camp can be for one school or for both, v0.234).
+// (a camp can be for one school or for both, v0.710).
 //
 // Add camp / Edit camp / Use template / Edit template all open the same dialog
 // (camps/CampDialog.jsx). It is kept HERE, above both tabs, because the header's + Add camp

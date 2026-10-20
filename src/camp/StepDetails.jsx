@@ -79,7 +79,7 @@ export default function StepDetails({
 
         <FamilyFields form={form} setPerson={setPerson} show={show} onLeave={onLeave} />
 
-        {/* How you'll pay at the school: Cash / Check / Card (Card is Camps only, v0.233) */}
+        {/* How you'll pay at the school: Cash / Check / Card (Card is Camps only, v0.709) */}
         <section className="reg-card">
           <fieldset className="reg-field reg-fieldset camp-last" aria-describedby={show('paying') ? 'camp-paying-err' : 'camp-paying-hint'}>
             <legend className="reg-card__title camp-legend">{T.HOW_PAY}</legend>

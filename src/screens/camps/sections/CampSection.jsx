@@ -2,7 +2,7 @@
 // Why it exists: the first thing every camp needs. Drawn inside CampDialog's folded frame.
 //   - Camp name (Edit template: Template name — renaming a template happens here, C2)
 //   - School: Worcester | Shrewsbury | Both schools; with Both schools, "Held at Worcester |
-//     Shrewsbury" appears next to it (v0.234). Neutral gray selection, not blue (C3 note).
+//     Shrewsbury" appears next to it (v0.710). Neutral gray selection, not blue (C3 note).
 //   - Days: the month calendar (DayCalendar.jsx), its one-line summary
 //     ("Mon, Apr 19 – Fri, Apr 23, 2027 · 5 days") and the hint. Edit template has no days, only
 //     "Number of days" (1–10), which sets the size of the price grid.

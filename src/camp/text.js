@@ -1,6 +1,6 @@
 // text.js — every word the public camp sign-up page shows.
 // Why it exists: the wording was approved screen by screen (mockups C7a–C7d in
-// docs/Camps/TKD-Camps-Mockups.html, rulebook v0.229–v0.237 and v0.700–v0.704, contract 0013 §7).
+// docs/Camps/TKD-Camps-Mockups.html, rulebook v0.229–v0.232, v0.709–v0.713 and v0.700–v0.704, contract 0013 §7).
 // Keeping it in one file makes it easy to compare with the mockups and to change one line
 // without hunting through the screens.
 // Lines marked "(not in the mockups)" are for cases the mockups don't show (contract 0013 §7.3 or

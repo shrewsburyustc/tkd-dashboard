@@ -1,7 +1,7 @@
 // ChildCard.jsx — one child's card on step 1 of the camp form (mockup C7a, "Child 1").
 // Why it exists: a family signs up 1 to 3 children at once (rulebook v0.232); each child has
 // their own card: first and last name, age (counted on the first day of camp, v0.703), member
-// Yes / No, which days (chips with the dark outline, v0.237), extras (a per-day extra asks which
+// Yes / No, which days (chips with the dark outline, v0.713), extras (a per-day extra asks which
 // days, starting with the child's days) and the child's running price.
 // The card only draws; CampApp keeps the values and the rules live in form.js / campRules.js.
 import { FieldError, TickBox } from './parts.jsx';

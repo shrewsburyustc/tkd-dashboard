@@ -2,7 +2,7 @@
 
 **Written:** 2026-10-19 · **Revised:** 2026-10-19 after the independent review (§12) and after Jeffrey's answers (§13) · **Status:** **CP0 — OK'd by Jeffrey 2026-10-19.** The build follows `docs/Dashboard Docs/Build contracts/CONTRACT-0013.md`. Nothing is applied or deployed without his OK for that step.
 **Branch:** `camps` (worktree `camp-event-creator-templates-83eafe`).
-**Design (approved):** `TKD-Camps-Mockups.html` (C1–C7d incl. the 2026-10-19 additions C4b, age range, staff view, Close / Reopen, overpayment line), images in `Mockup images/`, `Decision images/Camps-roster-layout-options.html` (option **A** chosen) and `Camps-attendance-roster.html`; decisions in `TKD-Camps-Status.md`; rulebook **v0.229–v0.237** and **v0.700–v0.704**.
+**Design (approved):** `TKD-Camps-Mockups.html` (C1–C7d incl. the 2026-10-19 additions C4b, age range, staff view, Close / Reopen, overpayment line), images in `Mockup images/`, `Decision images/Camps-roster-layout-options.html` (option **A** chosen) and `Camps-attendance-roster.html`; decisions in `TKD-Camps-Status.md`; rulebook **v0.229–v0.232**, **v0.709–v0.713** and **v0.700–v0.704**.
 **Rules:** CLAUDE.md; handoff §6 (security, non-negotiable); rulebook §5 (privacy). The newest 10b row wins.
 **Model copied:** Color Belt phase 2 (`TKD-Testing-Phase2-Build-Plan.md`, `CONTRACT-0005.md`, `0005_testing_events.sql`, `functions/**`, `src/register/**`), Color Belt grading (`CONTRACT-0010.md`) and Star testing's later choices (`0006_star_testing.sql`, CONTRACT-0006).
 
@@ -24,9 +24,9 @@
 - Public family sign-up page `/camp/<code>`, all states (C7a–d incl. the age rule), with its Cloudflare Function, own restricted login `camps_registrar`, Turnstile and own kill switch `CAMPS_REGISTRATION`.
 - Preview mode (fake database) for all of it, including the family page.
 
-**Deliberately NOT built:** online card payment (Card is only a label) · paper entry / staff **Add camper** (v0.232) · flyer in the app (v0.232) · camper limit · "weeks" concept (v0.231) · medical questionnaire · credits / refunds as records · part payments or deposits (v0.233) · **check-out / pick-up record** (v0.704) · a whole-summer attendance report (later idea) · Home tile · emails to families · central Calendar link · a rule against two camps with the same name · anything from the old `tkd-camps` Worker.
+**Deliberately NOT built:** online card payment (Card is only a label) · paper entry / staff **Add camper** (v0.232) · flyer in the app (v0.232) · camper limit · "weeks" concept (v0.231) · medical questionnaire · credits / refunds as records · part payments or deposits (v0.709) · **check-out / pick-up record** (v0.704) · a whole-summer attendance report (later idea) · Home tile · emails to families · central Calendar link · a rule against two camps with the same name · anything from the old `tkd-camps` Worker.
 
-**Decided (no longer open):** Card = label only (v0.233). Delete camp with campers = admin only, warning names them (v0.237). Price fixed at sign-up by the sign-up date in Massachusetts time (v0.230). Both-schools camps: member prices for members of either school (v0.234). All 13 plan questions: §10.
+**Decided (no longer open):** Card = label only (v0.709). Delete camp with campers = admin only, warning names them (v0.713). Price fixed at sign-up by the sign-up date in Massachusetts time (v0.230). Both-schools camps: member prices for members of either school (v0.710). All 13 plan questions: §10.
 
 ---
 
@@ -170,7 +170,7 @@ Contract **CONTRACT-0013.md**, then four parallel builders (A database · B publ
 | 2 | Who sets up camps and templates | **A.** Admins only; staff run the roster. Staff see no Templates tab and "Ask an admin to add or change camps." |
 | 3 | Who sees parent / emergency phones | **A.** Staff and admins, in Camper detail only. |
 | 4 | Editing prices after sign-ups | **A.** Allowed; existing campers keep their price; re-price a camper only when their own days / member / extras change. |
-| 5 | Removing a camp day someone picked | **A. Refused** — "Can't remove Wed, Dec 30: Mia Rossi and 2 more picked it. Change their days or withdraw them first." (v0.701, replaces the v0.237 proposal). |
+| 5 | Removing a camp day someone picked | **A. Refused** — "Can't remove Wed, Dec 30: Mia Rossi and 2 more picked it. Change their days or withdraw them first." (v0.701, replaces the v0.713 proposal). |
 | 6 | Removing days / extras after paying | **A.** Allowed; tag stays Paid; "Paid $X more than the total" in Camper detail; admin Edit payment if money is handed back. |
 | 7 | Signature retention | **3 years after the camp's last day** (confirm with the insurer). |
 | 8 | Phones in the change log | **A.** Logged like other fields. |
@@ -194,7 +194,7 @@ Changes made after the independent review of the first draft:
 - **M1** `camp_public_signup` checks jsonb shape, types and uuid pattern before any cast; the wrapper also catches `data_exception`, so every call writes an attempt row; tests for malformed uuid, fractional / huge / text age, wrong-type arrays.
 - **M2** `camp_camper_days` and `camp_camper_extras` have their own `id uuid primary key` + unique keys (`change_log_write` needs `id`); catalog test.
 - **M3** `no action` instead of `restrict` on camper-day / camper-extra keys; "picked day can't be removed" kept in `camp_update_camp`; full-camp delete test.
-- **M4** The days question stated the conflict with v0.237 plainly (now answered: refuse, v0.701).
+- **M4** The days question stated the conflict with v0.713 plainly (now answered: refuse, v0.701).
 - **S1** Function-side field limits written out. **S2** `camp_roster.signed` = `signed_at is not null`. **S3** Duplicate sign-up question added (answered B). **S4** Desk-tablet rate-limit note + question (answered B). **S5** CP5 SQL-Editor snippet calling `camp_public_signup` so the roster is tested on the real database before deploy. **S6** No "same camp name" rule. **S7** Camper total over $2,000 → `invalid`.
 - **N1** Migration 0013 stated as fact; registrar + switch in one question. **N2** Note that "accept and show" was the simpler build. **N3** `finished` instead of `done`. **N4** Checkpoints in order. **N5** `camp_` action tags. **N6** No `source` column, no 31-day rule; C1 Campers count from `camp_roster`.
 - Added: phones-for-staff question; retention note; the Star session will need the Turnstile `action` argument.
@@ -202,7 +202,7 @@ Changes made after the independent review of the first draft:
 ## 13. Answers applied (CP0, 2026-10-19)
 
 - All 13 answers written into §0–§10 (rulebook v0.700–v0.703); the questions section is now a table of answers.
-- **Q5** refuse removing a picked day (replaces the v0.237 proposal). **Q9** Star v0.86 reopen rule; Close hidden on Not open yet. **Q11** possible-duplicate columns, `camp_resolve_duplicate`, staff Restore of their own duplicate copy < 10 s, Keep this one admin-only after the last day, tag priority. **Q12** camp-only count, 30 per hour. **Q13** `min_age` / `max_age` on camps and templates (default 3–17), checked by the public sign-up.
+- **Q5** refuse removing a picked day (replaces the v0.713 proposal). **Q9** Star v0.86 reopen rule; Close hidden on Not open yet. **Q11** possible-duplicate columns, `camp_resolve_duplicate`, staff Restore of their own duplicate copy < 10 s, Keep this one admin-only after the last day, tag priority. **Q12** camp-only count, 30 per hour. **Q13** `min_age` / `max_age` on camps and templates (default 3–17), checked by the public sign-up.
 - **Contract review (2026-10-19, coordinator's decisions):** staff Withdraw / Restore; own ledger `camp_public_attempts`; Edit camp may correct held at / both schools; day / extra removal refused only for active campers (withdrawn campers' rows deleted); re-price rule literally as v0.700; `camp_changed` refusal with a waiver version; the shared price case table and exact data shapes are in the contract.
 - **New (v0.704): daily check-in** — `checked_in_at`, `checked_in_by`, `checked_in_by_name` on `camp_camper_days`; `camp_check_in` / `camp_undo_check_in`; the camp page becomes **Check in / Payments / Attendance**; no check-out.
 - **Superseded and removed:** the single C4 roster with the day filter and four summary cards (now three tabs; Payments shows the one-line summary of option A); the "Questions for Jeffrey" list; Print roster printing the screen list (it now prints the Attendance grid).

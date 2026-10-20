@@ -1,4 +1,4 @@
-// schoolsApi.js — reading and saving the two schools' street addresses (Settings → Schools).
+// schoolsApi.js — reading and saving the two schools' street addresses and phones (Settings → Schools).
 // Why it exists: the family registration page and the printed flyer show the school's address
 // (contract 0005 §1.2). Admins enter it on the Settings page (mockups S1–S3); this file is the
 // only place that knows the database's column and argument names for it. Like api.js, every
@@ -8,7 +8,8 @@
 import { supabase } from '../supabase.js';
 import { normalizeName, nameProblem } from '../testing/names.js';
 
-const SCHOOL_COLUMNS = 'code, name, id, address_street, address_city, address_state, address_zip, version';
+// phone: migration 0019 (the closed sign-up form says "Call us at …"; F3 difference 4)
+const SCHOOL_COLUMNS = 'code, name, id, address_street, address_city, address_state, address_zip, version, phone';
 const STATUSES = new Set(['ok', 'no_access', 'not_allowed', 'not_found', 'stale', 'invalid']);
 
 const failure = (error) => ({ status: 'error', error });
@@ -43,6 +44,15 @@ export function addressProblems({ street, city, state, zip } = {}) {
   return problems;
 }
 
+// The school phone rule (= 0019's locations_phone_check): empty, or 7-20 characters of digits,
+// spaces, + ( ) - . with 7-15 digits. → null (fine) or 'badPhone'.
+export function phoneProblem(phone) {
+  const p = String(phone ?? '').trim();
+  if (p === '') return null;
+  const digits = p.replace(/[^0-9]/g, '').length;
+  return p.length <= 20 && /^[0-9 +().-]+$/.test(p) && digits >= 7 && digits <= 15 ? null : 'badPhone';
+}
+
 function toSchool(row) {
   const hasAddress = row.address_street !== null && row.address_street !== undefined;
   return {
@@ -54,6 +64,7 @@ function toSchool(row) {
       ? { street: row.address_street, city: row.address_city, state: row.address_state, zip: row.address_zip }
       : null,
     version: row.version,
+    phone: typeof row.phone === 'string' && row.phone !== '' ? row.phone : null, // null = none yet
   };
 }
 
@@ -71,6 +82,31 @@ export async function loadSchools() {
     if (access?.data !== true) return unexpected('has_data_access');
     if (!Array.isArray(res.data)) return unexpected('locations');
     return { status: 'ok', schools: res.data.map(toSchool) };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+// Save one school's address AND phone in one go (admin; 0019's settings_update_school_contact):
+// both are saved or neither. An empty phone clears it. → { status:'ok', version } or a refusal code.
+export async function updateSchoolContact({ code, expectedVersion, street, city, state, zip, phone } = {}) {
+  try {
+    if (!supabase) return failure(new Error('No connection is set up'));
+    const blankToNull = (v) => (v === undefined || v === null || String(v).trim() === '' ? null : String(v));
+    const { data, error } = await supabase.rpc('settings_update_school_contact', {
+      p_code: code,
+      p_expected_version: expectedVersion,
+      p_street: blankToNull(street),
+      p_city: blankToNull(city),
+      p_state: blankToNull(state),
+      p_zip: blankToNull(zip),
+      p_phone: blankToNull(phone),
+    });
+    if (error) return failure(error);
+    const status = data?.status;
+    if (typeof status !== 'string' || !STATUSES.has(status)) return unexpected('settings_update_school_contact');
+    if (status !== 'ok') return { status };
+    return Number.isInteger(data.version) ? { status: 'ok', version: data.version } : unexpected('settings_update_school_contact');
   } catch (error) {
     return failure(error);
   }
