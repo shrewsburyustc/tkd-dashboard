@@ -9,6 +9,7 @@ Staff dashboard (Kicksite-style) for Jae H. Jeong's U.S. Taekwondo Center (U.S.T
 3. The **status file of the project you are working on**:
    - Color Belt testing → `docs/Testing/Color Belt Testing/TKD-ColorBelt-Status.md`
    - Star testing → `docs/Testing/Star Testing/` (its own status file, kept by the Star testing session)
+   - Finance (Daily report) → `docs/Finance/TKD-Finance-Status.md` (branch `finance`)
    - Black Belt testing → `docs/Testing/Black Belt Testing/TKD-BlackBelt-Status.md` (plan: `TKD-BlackBelt-Plan.md` in the same folder)
 
 Keep the status file current: when a step finishes or a decision is made, update it in the same turn.
