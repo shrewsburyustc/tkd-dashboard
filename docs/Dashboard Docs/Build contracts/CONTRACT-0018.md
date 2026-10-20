@@ -12,7 +12,7 @@
 
 | Action (0014 function) | Rows written |
 |---|---|
-| Add + Mark paid (`testing_private_add`, `testing_private_mark_paid`) | private payment: `paid_on` = today, `recorded_by` = the login |
+| Mark paid (`testing_private_mark_paid`; `testing_private_add` itself writes no payment) | private payment: `paid_on` = today, `recorded_by` = the login |
 | Undo payment (`testing_private_undo_payment`; staff own < 10 s — never on a moved-in row; admins) | private reversal, `paid_on` = today |
 | Edit payment (`testing_private_edit_payment`, admins) | private reversal + private payment, same `recorded_at` and `recorded_by` (as 0005) |
 | **Move** (`testing_move_to_private`, §2.5.1 step 9) for each live event payment P | event **reversal R** of P: `paid_on` = **P's**, `recorded_at` = the move time, `recorded_by` = the mover · private **copy C**: same amount / method / `paid_on`, **`recorded_at` = P's original `recorded_at`**, `recorded_by` = the mover, `moved_from_payment_id` = P.id (unique) |
@@ -90,3 +90,12 @@ Unchanged: every table, row, setting, reminder time, closing, right and every ot
 - **`run.mjs` step 18** (production order with camps' 0013 + 0017 from `fb4ec24` fixtures and 0014 from the live fixture): the guard refuses 0018 before 0017, without 0011's speed fix, and with a changed 0017 function (nothing changes each time), and lets a re-run through; camps' `0017_tests.sql`, `0011_tests.sql` and `0018_tests.sql` pass; re-run safety; camp blocks byte-identical; **0017 vs 0018** on the big seed + chain seed + camps' big seed without private rows: 474 days (3,471 items, 1,478 of them camp) and 64 payment details identical (figures without the fingerprint); speed with private rows; **days closed before 0018** (move before the close → changed; move + undo move before → not; private payment → changed; event deleted after a move under 0018 → not), and the pre-apply check lists exactly those days; the ICU run (0018_tests, 0011_tests, camps' 0017_tests).
 
 **Decision (Jeffrey, 2026-10-20, rulebook v0.810):** a no-op edit after closing no longer marks the day Changed after closing — accepted for every source (Color Belt, Star, camps, private testing).
+
+## Color Belt session review (2026-10-20, of finance 1f37630): OK to paste once camps' 0017 is live
+
+Checked against live 0014's function bodies; nothing high or medium. Move / Undo move write exactly what §2 assumes; no other 0014 path writes money (add, update, change day, change paying-by, cancel, restore write none; delete cascades, covered by the closed-day snapshot); no later Color Belt phase writes payments. Low findings, decided by the Finance session:
+- **L1 (kept, documented):** after repeated move → undo → move → undo by the same person, the first reversal can pair with the later recreated payment (smallest id wins), so one extra "undone" line can show; totals stay right. Rare (10-second undo window); not worth a rebuild.
+- **L2 (fixed):** `testing_private_add` writes no payment row (table above corrected).
+- **L3 (fixed):** SETUP §18b says a Daily report left open during the paste gets one "Someone else changed this just now" on Close the day and reloads.
+- **L4 (Color Belt's side):** 0014's down-script (SETUP §16e) must never run after 0018 — noted there by the Color Belt session.
+- **L5 (kept, harmless):** pairing by chain id OR row id can count one item twice in the change count; the screen only uses "more than 0".

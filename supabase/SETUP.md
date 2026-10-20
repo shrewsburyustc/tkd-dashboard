@@ -1121,6 +1121,8 @@ An admin sets the reminder times in **Finance → Settings** (they start Off; pl
 2. Copy the whole file, **SQL Editor → New query**, paste, **Run**. The destructive-operations warning comes from the `drop function if exists` lines (the chain helpers are recreated straight after, with more output columns). One transaction; safe to run again.
 3. **Forward-only — don't re-run earlier Finance files after 0018:** re-running **0011** stops with "cannot change return type of existing function" and is rolled back (nothing changes). Re-running camps' **0017** runs and puts back a chain helper *without* private payments — `finance_chain_items` then fails when called and the Daily report breaks until 0018 is pasted again, so 0018 must follow straight after, in the same sitting.
 
+4. **A Daily report left open during the paste** gets one amber “Someone else changed this just now” when Close the day is pressed (0018 builds the day's fingerprint differently), then reloads — nothing is lost; just close the day again.
+
 ### 18c. Read-only checks (Claude, through the connection)
 1. `0018_fingerprints.sql`: every line matches the PGlite run (6 functions + 1 index). `0011_fingerprints.sql` and camps' `0017_fingerprints.sql` differ from their records only in the functions 0018 replaces (and the new index line). 0003–0006, 0010 and 0014: unchanged.
 2. **Security advisor:** nothing new (no new table; the replaced functions keep their rights).
