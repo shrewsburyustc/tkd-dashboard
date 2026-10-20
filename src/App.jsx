@@ -633,9 +633,20 @@ export default function App() {
   }, []);
 
   // The Camps section's ways in and out (Camps.jsx → CampsTab / CampPage).
-  const openCamp = useCallback((id) => navigate('camps', id, { tab: 'default' }), [navigate]);
+  // campSchoolFollow: the camp opened from a Finance payment ("Open in Camps"). A camp payment can be
+  // paid at the other school, so the switcher isn't moved to the payment's school; instead, if the
+  // camp isn't shown on the current school, its page moves the switcher to the camp's own school
+  // once (CampPage.jsx) rather than going back to the list. null = a normal opening.
+  const [campSchoolFollow, setCampSchoolFollow] = useState(null);
+  const openCamp = useCallback((id) => {
+    setCampSchoolFollow(null);
+    navigate('camps', id, { tab: 'default' });
+  }, [navigate]);
   // { replace: true } = the page closes itself (the camp is for the other school, or was deleted).
-  const closeCamp = useCallback((options) => navigate('camps', null, { ...options, tab: 'camps' }), [navigate]);
+  const closeCamp = useCallback((options) => {
+    setCampSchoolFollow(null);
+    navigate('camps', null, { ...options, tab: 'camps' });
+  }, [navigate]);
   // Camps | Templates, and Check in | Payments | Attendance: the same page, so no new history step
   // (Back still leaves the page; a reload keeps the tab).
   const changeCampTab = useCallback((tab) => {
@@ -762,6 +773,13 @@ export default function App() {
   // so a Star payment opens the Testing section.
   const openTestingFor = useCallback(
     (school, eventId = null, source = null) => {
+      // A camp payment's detail opens the camp's page in Camps (Camps v0.707) WITHOUT moving the
+      // switcher to the payment's school (see campSchoolFollow above).
+      if (source === 'camp') {
+        setCampSchoolFollow(eventId ?? null);
+        navigate('camps', eventId ?? null, { tab: eventId ? 'payments' : 'camps' });
+        return;
+      }
       if (school && school !== 'Both' && school !== location) changeLocation(school);
       if (source === 'color_belt' && eventId) navigate('testing', eventId);
       else navigate('testing');
@@ -877,6 +895,11 @@ export default function App() {
                 onCampTab={changeCampTab}
                 onOpenCamp={openCamp}
                 onCloseCamp={closeCamp}
+                followSchoolFor={campSchoolFollow}
+                onLocationChange={(next) => {
+                  setCampSchoolFollow(null);
+                  changeLocation(next);
+                }}
                 screenLocked={phase === 'locked'}
                 onNoAccess={handleNoAccess}
                 onRefreshProfile={refreshProfile}

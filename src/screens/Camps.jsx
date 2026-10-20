@@ -25,6 +25,8 @@
 //   onCampTab(tab)  switch the tab (App.jsx updates the address without a new history step)
 //   onOpenCamp(id)  open a camp's page (App.jsx adds a browser history step)
 //   onCloseCamp()   back to the list
+//   followSchoolFor the camp id opened from Finance ("Open in Camps"), or null
+//   onLocationChange(name)  moves the top-bar switcher (only used for that case)
 //   screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange — as Testing
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { IconPlus } from '@tabler/icons-react';
@@ -50,6 +52,8 @@ export default function Camps({
   onCampTab,
   onOpenCamp,
   onCloseCamp,
+  followSchoolFor = null, // a camp opened from Finance: its page may move the switcher once
+  onLocationChange = null,
   screenLocked,
   onNoAccess,
   onRefreshProfile,
@@ -177,6 +181,8 @@ export default function Camps({
           tab={campTab}
           onTab={onCampTab}
           onBack={onCloseCamp}
+          followSchool={followSchoolFor === campId}
+          onLocationChange={onLocationChange}
           {...shared}
         />
       </div>

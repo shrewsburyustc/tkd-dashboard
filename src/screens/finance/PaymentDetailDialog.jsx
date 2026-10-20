@@ -10,7 +10,8 @@
 //   school     the school's name (Worcester / Shrewsbury)
 //   isPhone
 //   onClose    () => void
-//   onOpenInTesting  (eventId, source) => void — the answer's event_id (null until it has loaded)
+//   onOpenInTesting  (eventId, source) => void — the answer's event_id (null until it has loaded);
+//                    for a camp payment (source 'camp', Camps v0.707) it opens the camp's page
 //   onNoAccess       the database says this sign-in is locked
 import { useEffect, useState } from 'react';
 import { IconAlertTriangle, IconChevronRight } from '@tabler/icons-react';
@@ -18,6 +19,7 @@ import Dialog from '../../components/Dialog.jsx';
 import { financePaymentDetail } from '../../lib/finance/financeApi.js';
 import { dayAndTime, dayShort, dayShortYear, money, timeOfDay } from './format.js';
 import { whatText } from './PaymentsList.jsx';
+import { LOCATION_NAME } from '../../lib/device.js';
 import * as T from './text.js';
 
 export default function PaymentDetailDialog({ item, school, isPhone, onClose, onOpenInTesting, onNoAccess }) {
@@ -42,7 +44,11 @@ export default function PaymentDetailDialog({ item, school, isPhone, onClose, on
   const shown = state.data?.item ?? item;
   const name = `${shown.first_name ?? ''} ${shown.last_name ?? ''}`.trim();
   const isRefund = shown.kind === 'refund';
-  const what = state.data?.event_name || whatText(shown);
+  const isCamp = (shown.source ?? item.source) === 'camp' || shown.what === 'camp';
+  // A camp payment: "Camp · April Vacation Camp", and the camp's days on their own line (v0.707).
+  const campName = state.data?.event_name ?? shown.event_name ?? item.event_name ?? '';
+  const campDays = state.data?.camp_days ?? state.data?.days ?? [];
+  const what = isCamp ? `${T.WHAT_CAMP} · ${campName}` : state.data?.event_name || whatText(shown);
   const edited = shown.state === 'edited' || shown.state === 'moved_in';
   // Oldest first (whatever order the answer used), so each edit can be compared with the line before it.
   const history = [...(state.data?.history ?? [])].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
@@ -60,7 +66,11 @@ export default function PaymentDetailDialog({ item, school, isPhone, onClose, on
     <Dialog title={T.detailTitle(name, isRefund)} size="medium" fullScreen={isPhone} onRequestClose={onClose}>
       <div className="fin-detail">
         <div className="fin-drows">
-          {row(T.D_FOR, T.detailFor(what, dayShort(shown.event_date), school))}
+          {/* A camp payment: "Camp · April Vacation Camp", and "Paid at" on its own line — the school
+              whose drawer has it, which can differ from the camp's (v0.707). */}
+          {isCamp ? row(T.D_FOR, what) : row(T.D_FOR, T.detailFor(what, dayShort(shown.event_date), school))}
+          {isCamp && row(T.D_PAID_AT, LOCATION_NAME[shown.school ?? item.school] ?? school ?? '')}
+          {isCamp && campDays.length > 0 && row(T.D_CAMP_DAYS, campDays.map((d) => dayShort(typeof d === 'string' ? d : d.day)).join(' · '))}
           {row(isRefund ? T.D_REFUNDED_BY : T.D_PAID_BY, T.METHOD[shown.method] ?? shown.method)}
           {row(
             T.D_AMOUNT,
@@ -102,11 +112,11 @@ export default function PaymentDetailDialog({ item, school, isPhone, onClose, on
               ))}
           </ul>
         )}
-        <p className="fin-hint fin-detail-hint">{T.DETAIL_HINT}</p>
+        <p className="fin-hint fin-detail-hint">{isCamp ? T.DETAIL_HINT_CAMP : T.DETAIL_HINT}</p>
       </div>
       <div className="dialog-actions fin-detail-actions">
         <button type="button" className={`btn${isPhone ? ' btn-block' : ''}`} onClick={() => onOpenInTesting(state.data?.event_id ?? null, shown.source ?? item.source)}>
-          {T.OPEN_IN_TESTING}
+          {isCamp ? T.OPEN_IN_CAMPS : T.OPEN_IN_TESTING}
           <IconChevronRight size={16} aria-hidden="true" />
         </button>
         {!isPhone && (

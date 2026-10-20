@@ -426,9 +426,9 @@ begin
     format('public.camp_update_details(%L::uuid, 1, 1, %L, %L, 8, true, array[%L::uuid], %L::jsonb, %L, %L, %L, %L, %L, %L)',
            v_rand, 'Ann', 'Lee', v_rand2, '[]', 'Pat Lee', '5085550100', 'Mother', 'Sam Lee', '5085550101', 'Aunt'),
     format('public.camp_change_paying_by(%L::uuid, 1, %L)', v_rand, 'cash'),
-    format('public.camp_mark_paid(%L::uuid, 1)', v_rand),
+    format('public.camp_mark_paid(%L::uuid, 1, %L)', v_rand, 'worcester'),
     format('public.camp_undo_payment(%L::uuid)', v_rand),
-    format('public.camp_edit_payment(%L::uuid, %L, 100, %L::date)', v_rand, 'cash', v_today),
+    format('public.camp_edit_payment(%L::uuid, %L, 100, %L::date, %L)', v_rand, 'cash', v_today, 'worcester'),
     format('public.camp_resolve_duplicate(%L::uuid, 1, %L::uuid, 1, true)', v_rand, v_rand2),
     format('public.camp_withdraw_camper(%L::uuid, 1)', v_rand),
     format('public.camp_restore_camper(%L::uuid, 1)', v_rand),
@@ -786,13 +786,13 @@ begin
   -- T3c. P4: Mark paid records what is owed (35000); an admin edits it to
   --      33500 -> owes 1500
   perform set_config('request.jwt.claims', v_c_d1, true);
-  v_r := pg_temp.st('T3c P4 mark paid', public.camp_mark_paid(v_leo, pg_temp.cv(v_leo)), 'ok');
+  v_r := pg_temp.st('T3c P4 mark paid', public.camp_mark_paid(v_leo, pg_temp.cv(v_leo), 'worcester'), 'ok');
   if (v_r ->> 'amount_cents')::integer <> 35000 or v_r ->> 'method' <> 'cash' then
     raise exception 'TEST FAILED: T3c P4 mark paid answered %', v_r;
   end if;
   v_p1 := (v_r ->> 'payment_id')::uuid;
   perform set_config('request.jwt.claims', v_c_a1, true);
-  v_r := pg_temp.st('T3c P4 edit payment', public.camp_edit_payment(v_p1, 'cash', 33500, v_today), 'ok');
+  v_r := pg_temp.st('T3c P4 edit payment', public.camp_edit_payment(v_p1, 'cash', 33500, v_today, 'worcester'), 'ok');
   v_r := pg_temp.ro(v_leo);
   if (v_r ->> 'paid_cents')::integer <> 33500 or (v_r ->> 'owes_cents')::integer <> 1500 then
     raise exception 'TEST FAILED: T3c P4 expected paid 33500 owes 1500, got %', v_r;
@@ -807,7 +807,7 @@ begin
                       jsonb_build_array(pg_temp.ex(v_drop, v_a_d), pg_temp.ex(v_pick, v_a_d)))), 39000), 'ok');
   v_ava9 := pg_temp.cmp(v_r ->> 'reference', 1);
   perform set_config('request.jwt.claims', v_c_d1, true);
-  perform pg_temp.st('T3c2 P9 mark paid', public.camp_mark_paid(v_ava9, pg_temp.cv(v_ava9)), 'ok');
+  perform pg_temp.st('T3c2 P9 mark paid', public.camp_mark_paid(v_ava9, pg_temp.cv(v_ava9), 'worcester'), 'ok');
   v_r := pg_temp.st('T3c2 P9 drop the drop-off', pg_temp.ud(v_ava9, 'Ava', 'Nine', 9, true, v_a_d,
            jsonb_build_array(pg_temp.ex(v_pick, v_a_d)), '5085550100'), 'ok');
   if (v_r ->> 'total_cents')::integer <> 31500 or (v_r ->> 'owes_cents')::integer <> -7500
@@ -815,7 +815,7 @@ begin
      or (pg_temp.ro(v_ava9) ->> 'owes_cents')::integer <> -7500 then
     raise exception 'TEST FAILED: T3c2 P9 expected total 31500 owes -7500, got %', v_r;
   end if;
-  perform pg_temp.st('T3c2 P9 overpaid -> already paid', public.camp_mark_paid(v_ava9, pg_temp.cv(v_ava9)), 'already_paid');
+  perform pg_temp.st('T3c2 P9 overpaid -> already paid', public.camp_mark_paid(v_ava9, pg_temp.cv(v_ava9), 'worcester'), 'already_paid');
 
   -- T3d. P10: early / regular by the sign-up DATE in Massachusetts: 11:59:59
   --      PM on Mon Apr 12 2027 is still early (7500), midnight is regular
@@ -1206,12 +1206,12 @@ begin
   --      a second Mark paid -> already_paid; Change how they'll pay ->
   --      already_paid once paid
   v_v := pg_temp.cv(v_noah);
-  v_r := pg_temp.st('T5d mark paid Noah', public.camp_mark_paid(v_noah, v_v), 'ok');
+  v_r := pg_temp.st('T5d mark paid Noah', public.camp_mark_paid(v_noah, v_v, 'worcester'), 'ok');
   if (v_r ->> 'amount_cents')::integer <> 23500 or (v_r ->> 'version')::integer <> v_v + 1 then
     raise exception 'TEST FAILED: T5d Mark paid answered %', v_r;
   end if;
-  perform pg_temp.st('T5d double click', public.camp_mark_paid(v_noah, v_v), 'stale');
-  perform pg_temp.st('T5d already paid', public.camp_mark_paid(v_noah, v_v + 1), 'already_paid');
+  perform pg_temp.st('T5d double click', public.camp_mark_paid(v_noah, v_v, 'worcester'), 'stale');
+  perform pg_temp.st('T5d already paid', public.camp_mark_paid(v_noah, v_v + 1, 'worcester'), 'already_paid');
   perform pg_temp.st('T5d change paying by once paid', public.camp_change_paying_by(v_noah, v_v + 1, 'card'), 'already_paid');
   v_r := pg_temp.st('T5d change paying by', public.camp_change_paying_by(v_sofia, pg_temp.cv(v_sofia), 'card'), 'ok');
   if (select c.paying_by from public.camp_campers c where c.id = v_sofia) <> 'card' then
@@ -1219,7 +1219,7 @@ begin
   end if;
   perform pg_temp.st('T5d bad paying by', public.camp_change_paying_by(v_sofia, pg_temp.cv(v_sofia), 'gold'), 'invalid');
   -- Leo owes 1500 (T3c): Mark paid $15 records exactly 1500
-  v_r := pg_temp.st('T5d mark paid Leo $15', public.camp_mark_paid(v_leo, pg_temp.cv(v_leo)), 'ok');
+  v_r := pg_temp.st('T5d mark paid Leo $15', public.camp_mark_paid(v_leo, pg_temp.cv(v_leo), 'worcester'), 'ok');
   if (v_r ->> 'amount_cents')::integer <> 1500 or (pg_temp.ro(v_leo) ->> 'owes_cents')::integer <> 0 then
     raise exception 'TEST FAILED: T5d Leo''s $15 answered %', v_r;
   end if;
@@ -1434,7 +1434,7 @@ begin
   perform pg_temp.st('T7e withdraw twice', public.camp_withdraw_camper(v_k2, pg_temp.cv(v_k2)), 'withdrawn');
   perform pg_temp.st('T7e Edit details of a withdrawn camper', pg_temp.ud(v_k2, 'Tom', 'Gate', 6, true, array[pg_temp.dy(v_ct, 2)], '[]', '5085550100'),
                      'withdrawn');
-  perform pg_temp.st('T7e Mark paid for a withdrawn camper', public.camp_mark_paid(v_k2, pg_temp.cv(v_k2)), 'withdrawn');
+  perform pg_temp.st('T7e Mark paid for a withdrawn camper', public.camp_mark_paid(v_k2, pg_temp.cv(v_k2), 'worcester'), 'withdrawn');
   -- T14a: staff may Restore an ordinary withdrawal
   perform pg_temp.st('T7e staff restore an ordinary withdrawal', public.camp_restore_camper(v_k2, pg_temp.cv(v_k2)), 'ok');
   perform pg_temp.st('T7e restore an active camper', public.camp_restore_camper(v_k2, pg_temp.cv(v_k2)), 'invalid');
@@ -1532,14 +1532,14 @@ begin
     raise exception 'TEST FAILED: T9a the delete-camper tag must allow a removal (and the block must undo it)';
   end if;
   begin
-    insert into public.camp_payments (camper_id, kind, amount_cents, method, paid_on, recorded_by_name, reverses_payment_id)
-    values (v_noah, 'reversal', -1, 'cash', v_today, 'x', v_p1);
+    insert into public.camp_payments (camper_id, kind, amount_cents, method, paid_on, school, recorded_by_name, reverses_payment_id)
+    values (v_noah, 'reversal', -1, 'cash', v_today, 'worcester', 'x', v_p1);
     raise exception 'TEST FAILED: T9a a reversal for the wrong amount was written';
   exception when check_violation then null;
   end;
   begin
-    insert into public.camp_payments (camper_id, kind, amount_cents, method, paid_on, recorded_by_name)
-    values (v_noah, 'payment', 200001, 'cash', v_today, 'x');
+    insert into public.camp_payments (camper_id, kind, amount_cents, method, paid_on, school, recorded_by_name)
+    values (v_noah, 'payment', 200001, 'cash', v_today, 'worcester', 'x');
     raise exception 'TEST FAILED: T9a a payment over $2,000 was written';
   exception when check_violation then null;
   end;
@@ -1553,7 +1553,7 @@ begin
   -- T9b. Undo: the staff member's own payment within 10 seconds; older or
   --      someone else's -> admins only; twice / a reversal -> stale
   perform set_config('request.jwt.claims', v_c_d1, true);
-  v_r := pg_temp.st('T9b staff mark paid Sofia', public.camp_mark_paid(v_sofia, pg_temp.cv(v_sofia)), 'ok');
+  v_r := pg_temp.st('T9b staff mark paid Sofia', public.camp_mark_paid(v_sofia, pg_temp.cv(v_sofia), 'worcester'), 'ok');
   v_p1 := (v_r ->> 'payment_id')::uuid;
   if (v_r ->> 'amount_cents')::integer <> 16000 or v_r ->> 'method' <> 'card' then
     raise exception 'TEST FAILED: T9b Mark paid Sofia answered %', v_r;
@@ -1569,28 +1569,28 @@ begin
   select p.id into v_p2 from public.camp_payments p where p.reverses_payment_id = v_p1;
   perform pg_temp.st('T9b undo a reversal', public.camp_undo_payment(v_p2), 'stale');
   -- an older payment by the desk (written directly, 11 seconds ago)
-  insert into public.camp_payments (camper_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by, recorded_by_name)
-  values (v_sofia, 'payment', 16000, 'cash', v_today, now() - interval '11 seconds', v_desk, v_dn)
+  insert into public.camp_payments (camper_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name)
+  values (v_sofia, 'payment', 16000, 'cash', v_today, 'worcester', now() - interval '11 seconds', v_desk, v_dn)
   returning id into v_p3;
   perform pg_temp.st('T9b staff undo after 10 seconds', public.camp_undo_payment(v_p3), 'not_allowed');
   perform set_config('request.jwt.claims', v_c_a1, true);
-  v_r := pg_temp.st('T9b admin mark paid... already paid', public.camp_mark_paid(v_sofia, pg_temp.cv(v_sofia)), 'already_paid');
+  v_r := pg_temp.st('T9b admin mark paid... already paid', public.camp_mark_paid(v_sofia, pg_temp.cv(v_sofia), 'worcester'), 'already_paid');
   perform pg_temp.st('T9b admin undo', public.camp_undo_payment(v_p3), 'ok');
-  v_r := pg_temp.st('T9b admin mark paid', public.camp_mark_paid(v_sofia, pg_temp.cv(v_sofia)), 'ok');
+  v_r := pg_temp.st('T9b admin mark paid', public.camp_mark_paid(v_sofia, pg_temp.cv(v_sofia), 'worcester'), 'ok');
   v_p3 := (v_r ->> 'payment_id')::uuid;
   perform set_config('request.jwt.claims', v_c_d1, true);
   perform pg_temp.st('T9b staff undo the admin''s payment', public.camp_undo_payment(v_p3), 'not_allowed');
   perform pg_temp.st('T9b undo unknown', public.camp_undo_payment(v_rand), 'not_found');
   -- T9c. Edit payment: admins only; reversal + new payment; rules
-  perform pg_temp.st('T9c staff edit payment', public.camp_edit_payment(v_p3, 'check', 15000, v_today), 'not_allowed');
+  perform pg_temp.st('T9c staff edit payment', public.camp_edit_payment(v_p3, 'check', 15000, v_today, 'worcester'), 'not_allowed');
   perform set_config('request.jwt.claims', v_c_a1, true);
-  perform pg_temp.st('T9c amount 0', public.camp_edit_payment(v_p3, 'check', 0, v_today), 'invalid');
-  perform pg_temp.st('T9c amount over $2,000', public.camp_edit_payment(v_p3, 'check', 200001, v_today), 'invalid');
-  perform pg_temp.st('T9c a future date', public.camp_edit_payment(v_p3, 'check', 15000, v_today + 1), 'invalid');
-  perform pg_temp.st('T9c bad method', public.camp_edit_payment(v_p3, 'gold', 15000, v_today), 'invalid');
-  perform pg_temp.st('T9c unknown payment', public.camp_edit_payment(v_rand, 'check', 15000, v_today), 'not_found');
-  perform pg_temp.st('T9c edit a reversal', public.camp_edit_payment(v_p2, 'check', 15000, v_today), 'invalid');
-  v_r := pg_temp.st('T9c edit', public.camp_edit_payment(v_p3, 'check', 15000, v_today - 1), 'ok');
+  perform pg_temp.st('T9c amount 0', public.camp_edit_payment(v_p3, 'check', 0, v_today, 'worcester'), 'invalid');
+  perform pg_temp.st('T9c amount over $2,000', public.camp_edit_payment(v_p3, 'check', 200001, v_today, 'worcester'), 'invalid');
+  perform pg_temp.st('T9c a future date', public.camp_edit_payment(v_p3, 'check', 15000, v_today + 1, 'worcester'), 'invalid');
+  perform pg_temp.st('T9c bad method', public.camp_edit_payment(v_p3, 'gold', 15000, v_today, 'worcester'), 'invalid');
+  perform pg_temp.st('T9c unknown payment', public.camp_edit_payment(v_rand, 'check', 15000, v_today, 'worcester'), 'not_found');
+  perform pg_temp.st('T9c edit a reversal', public.camp_edit_payment(v_p2, 'check', 15000, v_today, 'worcester'), 'invalid');
+  v_r := pg_temp.st('T9c edit', public.camp_edit_payment(v_p3, 'check', 15000, v_today - 1, 'worcester'), 'ok');
   if not exists (select 1 from public.camp_payments p where p.reverses_payment_id = v_p3 and p.amount_cents = -16000)
      or not exists (select 1 from public.camp_payments p where p.id = (v_r ->> 'payment_id')::uuid
                      and p.amount_cents = 15000 and p.method = 'check' and p.paid_on = v_today - 1)
@@ -1599,7 +1599,53 @@ begin
      or pg_temp.ro(v_sofia) ->> 'paid_method' <> 'check' then
     raise exception 'TEST FAILED: T9c Edit payment didn''t write a reversal + a new payment: %', pg_temp.ro(v_sofia);
   end if;
-  perform pg_temp.st('T9c edit an already reversed payment', public.camp_edit_payment(v_p3, 'cash', 100, v_today), 'stale');
+  perform pg_temp.st('T9c edit an already reversed payment', public.camp_edit_payment(v_p3, 'cash', 100, v_today, 'worcester'), 'stale');
+  -- T9d. The school that took the money (v0.707): Mark paid needs a real
+  --      school; a both-schools camp's payment can be taken at the OTHER
+  --      school; Undo copies the school; Edit payment can correct it
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  v_v := pg_temp.cv(v_ethan);
+  foreach v_txt in array array['nowhere', ''] loop
+    v_r := public.camp_mark_paid(v_ethan, v_v, v_txt);
+    if v_r is distinct from '{"status": "invalid", "field": "school"}'::jsonb then
+      raise exception 'TEST FAILED: T9d Mark paid at school "%" answered %', v_txt, v_r;
+    end if;
+  end loop;
+  if public.camp_mark_paid(v_ethan, v_v, null) is distinct from '{"status": "invalid", "field": "school"}'::jsonb then
+    raise exception 'TEST FAILED: T9d Mark paid without a school';
+  end if;
+  v_r := pg_temp.st('T9d Ethan pays at Shrewsbury (camp held at Worcester)', public.camp_mark_paid(v_ethan, v_v, 'shrewsbury'), 'ok');
+  v_p1 := (v_r ->> 'payment_id')::uuid;
+  if (select p.school from public.camp_payments p where p.id = v_p1) <> 'shrewsbury' then
+    raise exception 'TEST FAILED: T9d the payment''s school';
+  end if;
+  perform pg_temp.st('T9d undo', public.camp_undo_payment(v_p1), 'ok');
+  if (select p.school from public.camp_payments p where p.reverses_payment_id = v_p1) <> 'shrewsbury' then
+    raise exception 'TEST FAILED: T9d the reversal must copy its payment''s school';
+  end if;
+  v_r := pg_temp.st('T9d Ethan pays again at Shrewsbury', public.camp_mark_paid(v_ethan, pg_temp.cv(v_ethan), 'shrewsbury'), 'ok');
+  v_p1 := (v_r ->> 'payment_id')::uuid;
+  begin
+    insert into public.camp_payments (camper_id, kind, amount_cents, method, paid_on, school, recorded_by_name, reverses_payment_id)
+    select p.camper_id, 'reversal', -p.amount_cents, p.method, v_today, 'worcester', 'x', p.id
+      from public.camp_payments p where p.id = v_p1;
+    raise exception 'TEST FAILED: T9d a reversal at another school was written directly';
+  exception when check_violation then null;
+  end;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_r := public.camp_edit_payment(v_p1, 'cash', 31000, v_today, 'nowhere');
+  if v_r is distinct from '{"status": "invalid", "field": "school"}'::jsonb then
+    raise exception 'TEST FAILED: T9d Edit payment at an unknown school answered %', v_r;
+  end if;
+  v_r := pg_temp.st('T9d Edit payment corrects the school', public.camp_edit_payment(v_p1, 'cash', 31000, v_today, 'worcester'), 'ok');
+  if (select p.school from public.camp_payments p where p.reverses_payment_id = v_p1) <> 'shrewsbury'
+     or (select p.school from public.camp_payments p where p.id = (v_r ->> 'payment_id')::uuid) <> 'worcester' then
+    raise exception 'TEST FAILED: T9d Edit payment: the reversal keeps the old school, the new payment has the new one';
+  end if;
+  v_r := public.camp_camper_detail(v_ethan);
+  if (select count(*) from jsonb_array_elements(v_r -> 'payments') as x where x ->> 'school' = 'shrewsbury') <> 4 then
+    raise exception 'TEST FAILED: T9d the camper detail must show each payment''s school: %', v_r -> 'payments';
+  end if;
 
   -- ===================================================================
   -- T10. Removing days / extras in Edit camp; removing a whole camp
@@ -1622,11 +1668,11 @@ begin
   v_k2 := pg_temp.cmp(v_r ->> 'reference', 2);
   perform set_config('request.jwt.claims', v_c_d1, true);
   perform pg_temp.st('T10 check in K1', public.camp_check_in(v_k1, pg_temp.dy(v_ck, 1)), 'ok');
-  v_r := pg_temp.st('T10 pay K1', public.camp_mark_paid(v_k1, pg_temp.cv(v_k1)), 'ok');
+  v_r := pg_temp.st('T10 pay K1', public.camp_mark_paid(v_k1, pg_temp.cv(v_k1), 'worcester'), 'ok');
   perform set_config('request.jwt.claims', v_c_a1, true);
   perform pg_temp.st('T10 undo K1', public.camp_undo_payment((v_r ->> 'payment_id')::uuid), 'ok');
-  perform pg_temp.st('T10 pay K1 again', public.camp_mark_paid(v_k1, pg_temp.cv(v_k1)), 'ok');
-  perform pg_temp.st('T10 pay K2', public.camp_mark_paid(v_k2, pg_temp.cv(v_k2)), 'ok');
+  perform pg_temp.st('T10 pay K1 again', public.camp_mark_paid(v_k1, pg_temp.cv(v_k1), 'worcester'), 'ok');
+  perform pg_temp.st('T10 pay K2', public.camp_mark_paid(v_k2, pg_temp.cv(v_k2), 'worcester'), 'ok');
 
   -- T10a. removing a day an ACTIVE camper picked -> not_empty (names one,
   --       counts the others); nothing changes
@@ -2101,7 +2147,7 @@ begin
   v_k3 := pg_temp.cmp(pg_temp.st('T12c third', pg_temp.su(v_cd_code, v_key, v_j1, 7500), 'ok') ->> 'reference', 1);
   if (pg_temp.ro(v_k3) ->> 'duplicate_of')::uuid <> v_k1 then raise exception 'TEST FAILED: T12c third must point at the first'; end if;
   perform set_config('request.jwt.claims', v_c_d1, true);
-  perform pg_temp.st('T12c the third pays', public.camp_mark_paid(v_k3, pg_temp.cv(v_k3)), 'ok');
+  perform pg_temp.st('T12c the third pays', public.camp_mark_paid(v_k3, pg_temp.cv(v_k3), 'worcester'), 'ok');
   v_r := pg_temp.st('T12c keep one', public.camp_resolve_duplicate(v_k1, pg_temp.cv(v_k1), v_k3, pg_temp.cv(v_k3), false), 'ok');
   if pg_temp.ro(v_k3) ->> 'status' <> 'withdrawn' or pg_temp.ro(v_k3) ->> 'withdrawn_reason' <> 'duplicate_copy'
      or pg_temp.ro(v_k3) ->> 'withdrawn_by_name' <> v_dn
@@ -2199,7 +2245,7 @@ begin
   end if;
   perform set_config('request.jwt.claims', v_c_d1, true);
   select max(id) into v_mark from public.change_log;
-  perform pg_temp.st('T13b mark paid runs the clean-up', public.camp_mark_paid(v_mia, pg_temp.cv(v_mia)), 'ok');
+  perform pg_temp.st('T13b mark paid runs the clean-up', public.camp_mark_paid(v_mia, pg_temp.cv(v_mia), 'worcester'), 'ok');
   if not exists (select 1 from public.camp_signups s join public.camp_campers c on c.signup_id = s.id
                   where c.id = v_k1 and s.signature is null and s.signature_deleted_at is not null and s.version = v_v)
      or not exists (select 1 from public.camp_signups s join public.camp_campers c on c.signup_id = s.id
@@ -2341,9 +2387,9 @@ begin
   perform set_config('request.jwt.claims', v_c_d1, true);
   perform pg_temp.st('T14a staff withdraw', public.camp_withdraw_camper(v_k1, pg_temp.cv(v_k1)), 'ok');
   perform pg_temp.st('T14a staff restore', public.camp_restore_camper(v_k1, pg_temp.cv(v_k1)), 'ok');
-  v_r := pg_temp.st('T14a staff mark paid', public.camp_mark_paid(v_k1, pg_temp.cv(v_k1)), 'ok');
+  v_r := pg_temp.st('T14a staff mark paid', public.camp_mark_paid(v_k1, pg_temp.cv(v_k1), 'worcester'), 'ok');
   v_p1 := (v_r ->> 'payment_id')::uuid;
-  perform pg_temp.st('T14a staff edit payment', public.camp_edit_payment(v_p1, 'cash', 100, v_today), 'not_allowed');
+  perform pg_temp.st('T14a staff edit payment', public.camp_edit_payment(v_p1, 'cash', 100, v_today, 'worcester'), 'not_allowed');
   perform pg_temp.st('T14a staff delete permanently', public.camp_delete_camper(v_k1, pg_temp.cv(v_k1), array[v_p1]), 'not_allowed');
   perform set_config('request.jwt.claims', v_c_a1, true);
   perform pg_temp.st('T14a delete with the wrong payment list', public.camp_delete_camper(v_k1, pg_temp.cv(v_k1), '{}'), 'stale');
@@ -2409,7 +2455,7 @@ begin
   perform pg_temp.st('T15 change paying by', public.camp_change_paying_by(v_k1, pg_temp.cv(v_k1), 'check'), 'ok');
   perform pg_temp.t15(v_mark, 'camp_change_paying_by', v_dn, 'change paying by');
   select max(id) into v_mark from public.change_log;
-  v_r := pg_temp.st('T15 mark paid', public.camp_mark_paid(v_k1, pg_temp.cv(v_k1)), 'ok');
+  v_r := pg_temp.st('T15 mark paid', public.camp_mark_paid(v_k1, pg_temp.cv(v_k1), 'worcester'), 'ok');
   perform pg_temp.t15(v_mark, 'camp_mark_paid', v_dn, 'mark paid');
   select max(id) into v_mark from public.change_log;
   perform pg_temp.st('T15 undo payment', public.camp_undo_payment((v_r ->> 'payment_id')::uuid), 'ok');
@@ -2424,9 +2470,9 @@ begin
   perform pg_temp.st('T15 withdraw', public.camp_withdraw_camper(v_k2, pg_temp.cv(v_k2)), 'ok');
   perform pg_temp.t15(v_mark, 'camp_withdraw_camper', v_dn, 'withdraw');
   perform set_config('request.jwt.claims', v_c_a1, true);
-  v_r := pg_temp.st('T15 mark paid (admin)', public.camp_mark_paid(v_k1, pg_temp.cv(v_k1)), 'ok');
+  v_r := pg_temp.st('T15 mark paid (admin)', public.camp_mark_paid(v_k1, pg_temp.cv(v_k1), 'worcester'), 'ok');
   select max(id) into v_mark from public.change_log;
-  perform pg_temp.st('T15 edit payment', public.camp_edit_payment((v_r ->> 'payment_id')::uuid, 'card', 7000, v_today), 'ok');
+  perform pg_temp.st('T15 edit payment', public.camp_edit_payment((v_r ->> 'payment_id')::uuid, 'card', 7000, v_today, 'worcester'), 'ok');
   perform pg_temp.t15(v_mark, 'camp_edit_payment', v_an, 'edit payment');
   -- every history row Camps wrote in this run is tagged camp_... (only
   -- the test's own direct writes are "manual"), and no row anywhere in

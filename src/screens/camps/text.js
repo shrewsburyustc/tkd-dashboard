@@ -484,6 +484,13 @@ export const markPaidAmount = (cents) => `Mark paid ${dollars(cents)}`;
 export const markPaidLabel = (name, cents) => `Mark ${name} paid, ${dollars(cents)}`;
 export const reviewDuplicateLabel = (name) => `Possible duplicate: review ${name}`;
 export const ADMIN_GROUP = 'Admin';
+// Mark paid on the Both view of a both-schools camp (v0.707, picture option A)
+export const markPaidTitle = (name) => `Mark paid — ${name}`;
+export const markPaidAmountLine = (cents, method) => `${dollars(cents)} · ${payingByLower(method)}`;
+export const PAID_AT_WHICH = 'Paid at which school?';
+export const PICK_SCHOOL_FIRST = 'Pick a school first.'; // (not in the mockups)
+export const SCHOOL_REFUSED = 'Pick the school where it was paid.'; // (not in the mockups) database: invalid, field school
+export const PAID_AT = 'Paid at'; // (not in the mockups) Edit payment's school choice
 export const COL_CAMPER = 'Camper';
 export const COL_TOTAL = 'Total';
 export const camperNameAge = (row) => `${row.firstName} ${row.lastName} · ${row.age}`;
@@ -587,8 +594,9 @@ export function priceBreakdownLine(b, allDays) {
   return `${parts.join(' + ')} = ${dollars(b.totalCents)}`;
 }
 // "Apr 19, 8:52 AM  $166  Cash  Staff"
+// "$166 cash · Shrewsbury · Mar 3 · Jeffrey" — with the school whose drawer has it (v0.707)
 export const paymentLine = (p) =>
-  `${stampDayTime(p.recordedAt)} · ${dollars(p.amountCents)} ${payingByText(p.method)}${p.kind === 'reversal' ? ' (reversed)' : ''} · ${p.recordedByName}`;
+  [`${dollars(p.amountCents)} ${payingByLower(p.method)}${p.kind === 'reversal' ? ' (reversed)' : ''}`, schoolName(p.school), monthDay(p.paidOn), p.recordedByName].filter(Boolean).join(' · ');
 export const overpaidLine = (total, paid) => `Total now ${dollars(total)} · paid ${dollars(paid)} · `;
 export const overpaidAmber = (cents) => `Paid ${dollars(cents)} more than the total`;
 export const OVERPAID_ADMIN = 'An admin can change the payment from the roster’s ⋯ → Edit payment if money is handed back.';

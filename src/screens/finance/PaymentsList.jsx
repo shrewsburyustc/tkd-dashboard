@@ -28,8 +28,9 @@ const GROUP_LABEL = { cash: T.GROUP_CASH, check: T.GROUP_CHECK, card: T.GROUP_CA
 // A stable key for one row (the same chain can show twice on a day only with different rows).
 export const itemKey = (item) => `${item.payment_id}:${item.row_id ?? ''}:${item.state}`;
 
-// "Color belt testing" / "Star testing" / "Star testing, private"
+// "Color belt testing" / "Star testing" / "Star testing, private" / "Camp" (Camps v0.707)
 export function whatText(item) {
+  if (item.what === 'camp') return T.WHAT_CAMP;
   if (item.what === 'star') return item.is_private ? T.WHAT_STAR_PRIVATE : T.WHAT_STAR;
   return T.WHAT_COLOR_BELT;
 }
@@ -70,7 +71,10 @@ export function rowText(item, layout) {
     tag = T.TAG_REFUND;
   }
   // "For": testing type · event date (+ the method on a refund in its own group, #q12 B).
-  let forText = `${whatText(item)} · ${monthDay(item.event_date)}`;
+  // A camp payment names the camp instead of a date: "Camp · April Vacation Camp" (v0.707).
+  // (Until a day's rows carry the camp's name, the camp's first day stands in for it.)
+  const campName = item.event_name ?? item.camp_name ?? null;
+  let forText = item.what === 'camp' ? `${T.WHAT_CAMP} · ${campName ?? monthDay(item.event_date)}` : `${whatText(item)} · ${monthDay(item.event_date)}`;
   if (isRefund && layout !== 'in') forText += ` · ${T.refundMethodNote(item.method)}`;
   return {
     name,

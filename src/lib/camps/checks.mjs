@@ -13,7 +13,7 @@ import {
   priceChild, familyTotal, isAllDays, payTag, toCollectCents, checkInRule, checkInNote, attendanceCell, cameCount, validateAges,
   ageAllowed, phoneDigits, formatPhone, templateFromCamp, campDatesFromTemplate, gridRowsFor, campLink, toCamel, toSnake,
   childProblem, offsetsAreValid, todayInSchoolTime, campTextIsValid, normalizeCampText, extraDaysRemoved,
-  extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
+  paymentSchoolFor, extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
 } from './campRules.js';
 import { qrFileName, campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
 import { campArgs, templateArgs, toExtra, toTemplate, EXTRA_COLUMNS, TEMPLATE_COLUMNS } from './campsArgs.js';
@@ -505,9 +505,9 @@ check('mock: table permissions and restricted functions', () => {
   assert.equal(b.select('camps', 'id', [], [], { signedIn: false }).error.code, '42501');
   for (const name of CAMP_RESTRICTED_RPC_NAMES) assert.equal(b.rpc(name, {}, ADMIN).error.code, '42501');
   assert.equal(CAMP_RPC_NAMES.includes('camp_camper_detail'), true);
-  assert.equal(rpcOk(b, 'camp_mark_paid', { p_camper_id: randomUUID(), p_expected_version: 1 }, LOCKED).status, 'no_access');
+  assert.equal(rpcOk(b, 'camp_mark_paid', { p_camper_id: randomUUID(), p_expected_version: 1, p_school: 'worcester' }, LOCKED).status, 'no_access');
   assert.equal(rpcOk(b, 'camp_delete_template', { p_template_id: randomUUID(), p_expected_version: 1 }, STAFF).status, 'not_allowed');
-  assert.equal(b.rpc('camp_mark_paid', { p_camper_id: 'nope', p_expected_version: 1 }, ADMIN).error.code, '22P02');
+  assert.equal(b.rpc('camp_mark_paid', { p_camper_id: 'nope', p_expected_version: 1, p_school: 'worcester' }, ADMIN).error.code, '22P02');
   assert.equal(b.rpc('camp_mark_paid', { p_camper_id: randomUUID() }, ADMIN).error.code, 'PGRST202'); // a missing argument
 });
 
@@ -622,17 +622,17 @@ check('mock: scripted run — add camp → sign up → check in → mark paid �
   env.today = '2027-06-08';
 
   // Mark paid = owes; a second click with the old version → stale; then already_paid.
-  const paid = rpcOk(b, 'camp_mark_paid', { p_camper_id: r.id, p_expected_version: r.version }, STAFF);
+  const paid = rpcOk(b, 'camp_mark_paid', { p_camper_id: r.id, p_expected_version: r.version, p_school: 'worcester' }, STAFF);
   assert.equal(paid.status, 'ok');
   assert.equal(paid.amount_cents, 18500);
   assert.equal(paid.method, 'cash');
-  assert.equal(rpcOk(b, 'camp_mark_paid', { p_camper_id: r.id, p_expected_version: r.version }, STAFF).status, 'stale');
-  assert.equal(rpcOk(b, 'camp_mark_paid', { p_camper_id: r.id, p_expected_version: paid.version }, STAFF).status, 'already_paid');
+  assert.equal(rpcOk(b, 'camp_mark_paid', { p_camper_id: r.id, p_expected_version: r.version, p_school: 'worcester' }, STAFF).status, 'stale');
+  assert.equal(rpcOk(b, 'camp_mark_paid', { p_camper_id: r.id, p_expected_version: paid.version, p_school: 'worcester' }, STAFF).status, 'already_paid');
   // Staff Undo within 10 s works; after 10 s only an admin.
   const undone = rpcOk(b, 'camp_undo_payment', { p_payment_id: paid.payment_id }, STAFF);
   assert.equal(undone.status, 'ok');
   assert.equal(rpcOk(b, 'camp_undo_payment', { p_payment_id: paid.payment_id }, ADMIN).status, 'stale'); // already undone
-  const paid2 = rpcOk(b, 'camp_mark_paid', { p_camper_id: r.id, p_expected_version: undone.version }, STAFF);
+  const paid2 = rpcOk(b, 'camp_mark_paid', { p_camper_id: r.id, p_expected_version: undone.version, p_school: 'worcester' }, STAFF);
   env.clock += 11000;
   assert.equal(rpcOk(b, 'camp_undo_payment', { p_payment_id: paid2.payment_id }, STAFF).status, 'not_allowed');
   r = roster()[0];
@@ -675,7 +675,7 @@ check('mock: scripted run — add camp → sign up → check in → mark paid �
   assert.equal(rpcOk(b, 'camp_update_details', details(1, 1), STAFF).status, 'stale');
   // Fewer days after paying more → owes < 0 → still Paid (overpaid).
   r = roster()[0];
-  const pay3 = rpcOk(b, 'camp_mark_paid', { p_camper_id: r.id, p_expected_version: r.version }, STAFF);
+  const pay3 = rpcOk(b, 'camp_mark_paid', { p_camper_id: r.id, p_expected_version: r.version, p_school: 'worcester' }, STAFF);
   assert.equal(pay3.amount_cents, 13500); // just the difference
   const fewer = rpcOk(b, 'camp_update_details', details(pay3.version, more.signup_version, { p_day_ids: [d1, d2], p_extras: [] }), STAFF);
   assert.equal(fewer.total_cents, 20000);
@@ -938,6 +938,45 @@ check('campsArgs round trip: onlyOn through Add / Edit camp, onlyWeekdays throug
   assert.equal(rpcOk(b, 'camp_update_template', { p_template_id: tpl.id, p_expected_version: tpl.version, ...templateArgs(tInput) }).status, 'ok');
   tpl = loadTpl();
   assert.deepEqual(tpl.extras.map((e) => e.onlyWeekdays), [[], [3, 5]]);
+});
+
+check('payment school (v0.707): paymentSchoolFor, Mark paid / Undo / Edit payment, detail, seed', () => {
+  const single = { locationCode: 'shrewsbury', bothSchools: false };
+  const both = { locationCode: 'worcester', bothSchools: true };
+  assert.equal(paymentSchoolFor(single, 'worcester'), 'worcester'); // the desk that took it, always
+  assert.equal(paymentSchoolFor(both, 'shrewsbury'), 'shrewsbury');
+  assert.equal(paymentSchoolFor(single, 'both'), 'shrewsbury'); // Both view: a single-school camp's own school
+  assert.equal(paymentSchoolFor(both, 'both'), null); // Both view + both-schools camp: the screen asks
+  assert.equal(paymentSchoolFor(single, 'boston'), null);
+  const { backend: b } = makeBackend({ today: '2027-04-21' });
+  const april = rows(b, 'camps', 'id, name').find((c) => c.name === 'April Vacation Camp');
+  const roster = () => toCamel(rows(b, 'camp_roster', ROSTER, [{ col: 'camp_id', value: april.id }]));
+  const detail = (id) => toCamel(rpcOk(b, 'camp_camper_detail', { p_camper_id: id }, STAFF));
+  // Seed: Olivia Chen paid at the Shrewsbury desk; Liam at Worcester (the camp's school).
+  const olivia = roster().find((x) => x.firstName === 'Olivia');
+  assert.equal(detail(olivia.id).payments[0].school, 'shrewsbury');
+  assert.equal(detail(roster().find((x) => x.firstName === 'Liam').id).payments[0].school, 'worcester');
+  // Mark paid needs a school.
+  const noah = roster().find((x) => x.firstName === 'Noah');
+  for (const bad of [null, 'both', 'boston']) {
+    assert.deepEqual(rpcOk(b, 'camp_mark_paid', { p_camper_id: noah.id, p_expected_version: noah.version, p_school: bad }, STAFF), { status: 'invalid', field: 'school' });
+  }
+  const paid = rpcOk(b, 'camp_mark_paid', { p_camper_id: noah.id, p_expected_version: noah.version, p_school: 'shrewsbury' }, STAFF);
+  assert.equal(paid.status, 'ok');
+  assert.equal(paid.school, 'shrewsbury');
+  // The toast's Undo: the reversal lands in the same school's drawer.
+  assert.equal(rpcOk(b, 'camp_undo_payment', { p_payment_id: paid.payment_id }, STAFF).status, 'ok');
+  let pays = detail(noah.id).payments;
+  assert.deepEqual(pays.map((p) => [p.kind, p.school]), [['payment', 'shrewsbury'], ['reversal', 'shrewsbury']]);
+  // Edit payment (admin) can correct the school: the reversal keeps the old school, the new row has the new one.
+  const v = roster().find((x) => x.id === noah.id).version;
+  const again = rpcOk(b, 'camp_mark_paid', { p_camper_id: noah.id, p_expected_version: v, p_school: 'shrewsbury' }, STAFF);
+  const editArgs = (school) => ({ p_payment_id: again.payment_id, p_method: 'check', p_amount_cents: 21900, p_paid_on: '2027-04-21', p_school: school });
+  assert.deepEqual(rpcOk(b, 'camp_edit_payment', editArgs('nowhere')), { status: 'invalid', field: 'school' });
+  assert.equal(rpcOk(b, 'camp_edit_payment', editArgs('worcester')).status, 'ok');
+  pays = detail(noah.id).payments;
+  assert.deepEqual(pays.slice(2).map((p) => [p.kind, p.school]), [['payment', 'shrewsbury'], ['reversal', 'shrewsbury'], ['payment', 'worcester']]);
+  assert.equal(roster().find((x) => x.id === noah.id).owesCents, 0);
 });
 
 check('mock: the signature clean-up after 3 years (only from Add camp / Mark paid)', () => {

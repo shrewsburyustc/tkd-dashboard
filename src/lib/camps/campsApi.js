@@ -303,9 +303,12 @@ export async function changePayingBy(camperId, expectedVersion, payingBy) {
 }
 
 // Mark paid: one click records what the camper owes now, the way they said they'd pay, today.
-// → { status:'ok', paymentId, amountCents, method, version } · 'already_paid' · 'stale' (double click)
-export async function markPaid(camperId, expectedVersion) {
-  return callRpc('camp_mark_paid', { p_camper_id: camperId, p_expected_version: expectedVersion },
+// school = the school whose desk took the money ('worcester' | 'shrewsbury', v0.707 — work it out
+// with campRules.paymentSchoolFor; when that gives null, ask "Paid at which school?").
+// → { status:'ok', paymentId, amountCents, method, version, school } · 'already_paid' · 'stale'
+//   (double click) · { status:'invalid', field:'school' }
+export async function markPaid(camperId, expectedVersion, school) {
+  return callRpc('camp_mark_paid', { p_camper_id: camperId, p_expected_version: expectedVersion, p_school: school },
     (d) => isText(d.paymentId) && isInt(d.amountCents) && isText(d.method) && hasVersion(d));
 }
 
@@ -315,10 +318,11 @@ export async function undoPayment(paymentId) {
   return callRpc('camp_undo_payment', { p_payment_id: paymentId }, hasVersion);
 }
 
-// Edit payment (admin): the old payment is reversed and a new one recorded.
-// → { status:'ok', paymentId (the new one), version }
-export async function editPayment(paymentId, { method, amountCents, paidOn } = {}) {
-  return callRpc('camp_edit_payment', { p_payment_id: paymentId, p_method: method, p_amount_cents: amountCents, p_paid_on: paidOn },
+// Edit payment (admin): the old payment is reversed and a new one recorded. school = the school
+// the payment belongs to (it can be corrected here, v0.707); given as the last argument or inside
+// the object. → { status:'ok', paymentId (the new one), version } · { status:'invalid', field:'school' }
+export async function editPayment(paymentId, { method, amountCents, paidOn, school: schoolInside } = {}, school = schoolInside) {
+  return callRpc('camp_edit_payment', { p_payment_id: paymentId, p_method: method, p_amount_cents: amountCents, p_paid_on: paidOn, p_school: school },
     (d) => isText(d.paymentId) && hasVersion(d));
 }
 

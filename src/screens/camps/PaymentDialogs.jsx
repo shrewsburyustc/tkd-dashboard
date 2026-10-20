@@ -23,6 +23,7 @@ const NOTES = {
   INVALID_DIALOG: T.INVALID_DIALOG,
   SAVE_FAILED: T.SAVE_FAILED,
   ALREADY_PAID: T.ALREADY_PAID_DIALOG,
+  SCHOOL: T.SCHOOL_REFUSED,
 };
 const BLOCKING = ['STALE_DIALOG', 'NOT_ALLOWED', 'ALREADY_PAID'];
 const PHONE_DISCARD = ['UNSAVED', 'STALE_DIALOG', 'NOT_ALLOWED'];
@@ -32,6 +33,7 @@ export function noteFor(status) {
   if (status === 'not_allowed') return 'NOT_ALLOWED';
   if (status === 'stale' || status === 'not_found' || status === 'withdrawn') return 'STALE_DIALOG';
   if (status === 'already_paid') return 'ALREADY_PAID';
+  if (status === 'invalid_school') return 'SCHOOL'; // { status:'invalid', field:'school' } (review L4)
   if (status === 'invalid') return 'INVALID_DIALOG';
   return 'SAVE_FAILED';
 }
@@ -149,18 +151,19 @@ export function PayingByDialog({ name, initial, isPhone, onSave, onClose }) {
 }
 
 // ----- Edit payment (admins) -----
-// payment: { id, method, amountCents, paidOn } · today: the newest allowed date
-// onSave({ method, amountCents, paidOn }) → Promise<status>
+// payment: { id, method, amountCents, paidOn, school } · today: the newest allowed date
+// onSave({ method, amountCents, paidOn, school }) → Promise<status>
+// "Paid at" (v0.707): the school whose Daily report has the payment — it can be corrected here.
 export function EditPaymentDialog({ name, payment, today, isPhone, onSave, onClose }) {
   const idBase = useId();
-  const start = { method: payment.method, amount: String(payment.amountCents / 100), paidOn: payment.paidOn };
+  const start = { method: payment.method, amount: String(payment.amountCents / 100), paidOn: payment.paidOn, school: payment.school ?? null };
   const [values, setValues] = useState(start);
   const [touched, setTouched] = useState({});
   const [tried, setTried] = useState(false);
   const [saving, setSaving] = useState(false);
   const [note, setNote] = useState(null);
   const blocked = BLOCKING.includes(note);
-  const dirty = values.method !== start.method || values.amount !== start.amount || values.paidOn !== start.paidOn;
+  const dirty = values.method !== start.method || values.amount !== start.amount || values.paidOn !== start.paidOn || values.school !== start.school;
 
   const parsed = parseAmount(values.amount);
   let amountError = null;
@@ -170,7 +173,7 @@ export function EditPaymentDialog({ name, payment, today, isPhone, onSave, onClo
   } else if (parsed.cents <= 0) amountError = T.AMOUNT_ZERO;
   const dateOk = isIsoDate(values.paidOn) && (!today || values.paidOn <= today);
   const dateError = !dateOk && (touched.paidOn || tried) ? T.ENTER_DATE_PAID : null;
-  const valid = !parsed.problem && parsed.cents > 0 && dateOk;
+  const valid = !parsed.problem && parsed.cents > 0 && dateOk && values.school !== null;
   const canSave = valid && !saving && !blocked;
 
   function change(patch, field) {
@@ -188,7 +191,7 @@ export function EditPaymentDialog({ name, payment, today, isPhone, onSave, onClo
     }
     setSaving(true);
     setNote(null);
-    const status = await onSave({ method: values.method, amountCents: parsed.cents, paidOn: values.paidOn });
+    const status = await onSave({ method: values.method, amountCents: parsed.cents, paidOn: values.paidOn, school: values.school });
     setSaving(false);
     if (status !== 'ok' && status !== 'no_access') setNote(noteFor(status));
   }
@@ -252,6 +255,23 @@ export function EditPaymentDialog({ name, payment, today, isPhone, onSave, onClo
             onChange={(event) => change({ paidOn: event.target.value }, 'paidOn')}
           />
           {dateError && <Notice id={`${idBase}-date-error`}>{dateError}</Notice>}
+        </div>
+        <div className="field">
+          <span id={`${idBase}-school`} className="field-label">
+            {T.PAID_AT}
+          </span>
+          <div>
+            <ChoiceGroup
+              labelId={`${idBase}-school`}
+              value={values.school}
+              readOnly={saving}
+              options={[
+                { key: 'worcester', label: T.schoolName('worcester') },
+                { key: 'shrewsbury', label: T.schoolName('shrewsbury') },
+              ]}
+              onChange={(school) => change({ school })}
+            />
+          </div>
         </div>
         <p className="field-hint">{T.EDIT_PAYMENT_HINT}</p>
         <Footer saving={saving} note={note} isPhone={isPhone} canSave={canSave} onCancel={() => !saving && onClose()} />

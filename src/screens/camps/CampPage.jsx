@@ -19,6 +19,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { IconArrowLeft, IconDots, IconQrcode } from '@tabler/icons-react';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
+import { LOCATION_NAME } from '../../lib/device.js';
 import IconButton from '../../components/IconButton.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
 import {
@@ -36,7 +37,7 @@ import {
   withdrawCamper,
   campToday,
 } from '../../lib/camps/campsApi.js';
-import { campTag, defaultCampTab, defaultCheckInDay, lastDay, payTag, signupState } from '../../lib/camps/campRules.js';
+import { paymentSchoolFor, campTag, defaultCampTab, defaultCheckInDay, lastDay, payTag, signupState } from '../../lib/camps/campRules.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
 import ConfirmDeleteDialog from '../testing/events/ConfirmDeleteDialog.jsx';
@@ -50,6 +51,7 @@ import { useCampActions } from './CampRowMenu.jsx';
 import CheckInTab from './CheckInTab.jsx';
 import CompareDialog from './CompareDialog.jsx';
 import { findPairs } from './DuplicateBox.jsx';
+import MarkPaidDialog from './MarkPaidDialog.jsx';
 import { EditPaymentDialog, PayingByDialog } from './PaymentDialogs.jsx';
 import PaymentsTab from './PaymentsTab.jsx';
 import * as T from './text.js';
@@ -93,6 +95,8 @@ export default function CampPage({
   tab: requestedTab,
   onTab,
   onBack,
+  followSchool = false, // opened from a Finance payment: show the camp on its own school instead of leaving
+  onLocationChange = null,
   screenLocked,
   onNoAccess,
   onRefreshProfile,
@@ -169,9 +173,16 @@ export default function CampPage({
   // The camp isn't for the chosen school (the switcher was changed, or a link from the other
   // school's device): back to the list, which shows only that school's camps (+ both-schools ones).
   const wrongSchool = camp !== null && locationKey !== 'both' && camp.locationCode !== locationKey && !camp.bothSchools;
+  // Opened from a Finance payment ("Open in Camps", review L3): the switcher may be on the school
+  // where the money was paid; move it once to the camp's own school and stay on the page.
+  const followedRef = useRef(false);
   useEffect(() => {
-    if (wrongSchool) onBack({ replace: true });
-  }, [wrongSchool, onBack]);
+    if (!wrongSchool) return;
+    if (followSchool && onLocationChange && !followedRef.current) {
+      followedRef.current = true;
+      onLocationChange(LOCATION_NAME[camp.locationCode]);
+    } else onBack({ replace: true });
+  }, [wrongSchool, onBack, followSchool, onLocationChange, camp]);
 
   const actions = useCampActions({
     isAdmin,
@@ -290,13 +301,25 @@ export default function CampPage({
   }
 
   // ===== Mark paid: one click, the full amount owed (Color Belt plan answer 6) =====
-  async function doMarkPaid(row) {
+  // The payment goes to the Daily report of the school whose desk took the money (v0.707): the
+  // switcher's school. On Both, a single-school camp uses its own school; a both-schools camp asks
+  // "Paid at which school?" first (MarkPaidDialog).
+  function doMarkPaid(row) {
+    const school = paymentSchoolFor(camp, locationKey);
+    if (school) doMarkPaidAt(row, school);
+    else openDialog({ type: 'paidAt', row, opener: document.activeElement });
+  }
+  async function doMarkPaidAt(row, school) {
     if (!begin()) return;
-    const result = await markPaid(row.id, row.version);
+    const result = await markPaid(row.id, row.version, school);
     end(result.status);
     const name = T.camperLabel(row);
+    if (result.status === 'invalid' && result.field === 'school') {
+      setBanner({ text: T.SCHOOL_REFUSED }); // (review L4)
+      return;
+    }
     if (result.status !== 'ok') {
-      rowProblem(result.status, row, { text: T.markPaidFailed(name), run: () => doMarkPaid(row) });
+      rowProblem(result.status, row, { text: T.markPaidFailed(name), run: () => doMarkPaidAt(row, school) });
       return;
     }
     rowDone();
@@ -720,6 +743,7 @@ export default function CampPage({
           onClose={closeDialog}
           onSave={async (values) => {
             const result = await editPayment(dialog.payment.id, values);
+            if (result.status === 'invalid' && result.field === 'school') return 'invalid_school';
             if (result.status === 'ok') {
               closeDialog();
               reloadQuiet();
@@ -748,6 +772,19 @@ export default function CampPage({
           onKeep={keepOne}
           onKeepBoth={keepBoth}
           onClose={closeDialog}
+        />
+      );
+    } else if (!hidden && dialog.type === 'paidAt') {
+      dialogElement = (
+        <MarkPaidDialog
+          key={dialog.key}
+          row={dialog.row}
+          onClose={closeDialog}
+          onConfirm={(school) => {
+            const row = dialog.row;
+            closeDialog();
+            doMarkPaidAt(row, school);
+          }}
         />
       );
     } else if (!hidden && dialog.type === 'deleteCamper') {

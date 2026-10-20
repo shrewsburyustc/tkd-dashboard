@@ -988,6 +988,10 @@ comment on table public.camp_camper_extras is
 --   * kind 'reversal': undoes one payment: exactly minus its amount,
 --     reverses_payment_id = that payment (unique: reversed at most once)
 --   * paid_on: the school date it was paid; recorded_at / by: when, who
+--   * school: the school whose DESK took the money (rulebook v0.707) - the
+--     school the device is set to; on the Both view a both-schools camp
+--     asks "Paid at which school?". Finance counts the payment in that
+--     school's Daily report. A reversal always has its payment's school.
 --   Rows are never changed or removed (section 8), except inside
 --   camp_delete_camper / camp_delete_camp (plan answer: Delete permanently).
 -- ---------------------------------------------------------------------
@@ -998,12 +1002,15 @@ create table if not exists public.camp_payments (
   amount_cents        integer     not null,
   method              text        not null,
   paid_on             date        not null,
+  school              text        not null,
   recorded_at         timestamptz not null default now(),
   recorded_by         uuid        null,       -- login id; not readable by the app
   recorded_by_name    text        not null,
   reverses_payment_id uuid        null,
 
   constraint camp_payments_pkey primary key (id),
+  constraint camp_payments_school_fk
+    foreign key (school) references public.locations (code),
   constraint camp_payments_camper_fk
     foreign key (camper_id) references public.camp_campers (id) on delete cascade,
   constraint camp_payments_reverses_fk
@@ -1435,7 +1442,8 @@ revoke execute on function public.camp_camper_extras_before_write() from public,
 
 -- 13h. camp_payments_guard() - keeps payments append-only (0005's 9e)
 --   BEFORE INSERT: a reversal must undo a real PAYMENT (not a reversal) of
---                  the same camper, for exactly minus its amount
+--                  the same camper, for exactly minus its amount, at the
+--                  same school
 --   BEFORE UPDATE: always refused
 --   BEFORE DELETE: refused, EXCEPT inside camp_delete_camper /
 --                  camp_delete_camp (the tkd.action tag those two set)
@@ -1455,11 +1463,12 @@ begin
       if not found
          or v_reversed.kind <> 'payment'
          or v_reversed.camper_id <> new.camper_id
-         or new.amount_cents <> -v_reversed.amount_cents then
+         or new.amount_cents <> -v_reversed.amount_cents
+         or new.school <> v_reversed.school then
         raise exception using
           errcode    = '23514',
           constraint = 'camp_payments_reversal_check',
-          message    = 'a reversal must undo one payment of the same camper, for exactly minus its amount';
+          message    = 'a reversal must undo one payment of the same camper, for exactly minus its amount, at its school';
       end if;
     end if;
     return new;
@@ -1958,7 +1967,7 @@ grant select (id, signup_id, camp_id, position, first_name, last_name, age, memb
 grant select (id, camper_id, day_id, checked_in_at, checked_in_by_name)
   on public.camp_camper_days to authenticated;            -- NOT checked_in_by
 grant select (id, camper_id, extra_id, day_id, price_cents) on public.camp_camper_extras to authenticated;
-grant select (id, camper_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by_name, reverses_payment_id)
+grant select (id, camper_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by_name, reverses_payment_id)
   on public.camp_payments to authenticated;               -- NOT recorded_by
 grant select on public.camp_roster to authenticated;
 
@@ -3897,16 +3906,20 @@ $$;
 revoke execute on function public.camp_change_paying_by(uuid, integer, text) from public, anon, authenticated, service_role;
 grant  execute on function public.camp_change_paying_by(uuid, integer, text) to authenticated;
 
--- 20j. camp_mark_paid(p_camper_id, p_expected_version)   S
+-- 20j. camp_mark_paid(p_camper_id, p_expected_version, p_school)   S
 -- "Mark paid" / "Mark paid $X": one click records exactly what is OWED
--- now (total - paid), method = the camper's paying_by, paid_on = today.
+-- now (total - paid), method = the camper's paying_by, paid_on = today,
+-- school = p_school: the school whose desk took the money (v0.707; the
+-- app sends the device's school, or asks on the Both view). Any school in
+-- public.locations is accepted, else {"status":"invalid","field":"school"}.
 -- Refused for a withdrawn camper (withdrawn) or one who owes nothing
 -- (already_paid). The camper's version goes up, so a double click with
 -- the old version gets "stale". Last step: the signature clean-up (17a).
--- Ok: {"status":"ok","payment_id":...,"amount_cents":n,"method":"cash","version":n}
+-- Ok: {"status":"ok","payment_id":...,"amount_cents":n,"method":"cash","school":"...","version":n}
 create or replace function public.camp_mark_paid(
   p_camper_id        uuid,
-  p_expected_version integer
+  p_expected_version integer,
+  p_school           text
 )
 returns jsonb
 language plpgsql
@@ -3928,6 +3941,9 @@ begin
     if p_camper_id is null or p_expected_version is null then
       return jsonb_build_object('status', 'invalid');
     end if;
+    if p_school is null or not exists (select 1 from public.locations l where l.code = p_school) then
+      return jsonb_build_object('status', 'invalid', 'field', 'school');
+    end if;
 
     v_c := public.camp_lock_camper(p_camper_id);
     if v_c.id is null then
@@ -3948,9 +3964,9 @@ begin
     perform set_config('tkd.batch_id', gen_random_uuid()::text, true);
 
     insert into public.camp_payments
-      (camper_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by, recorded_by_name)
+      (camper_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name)
     values
-      (v_c.id, 'payment', v_amount, v_c.paying_by, public.testing_today(), now(), auth.uid(),
+      (v_c.id, 'payment', v_amount, v_c.paying_by, public.testing_today(), p_school, now(), auth.uid(),
        public.change_log_actor_name())
     returning id into v_payment_id;
 
@@ -3965,7 +3981,7 @@ begin
     perform public.camp_purge_old_signatures();
 
     return jsonb_build_object('status', 'ok', 'payment_id', v_payment_id, 'amount_cents', v_amount,
-                              'method', v_c.paying_by, 'version', v_version);
+                              'method', v_c.paying_by, 'school', p_school, 'version', v_version);
   exception
     when unique_violation then
       return jsonb_build_object('status', 'stale');
@@ -3977,8 +3993,8 @@ begin
 end;
 $$;
 
-revoke execute on function public.camp_mark_paid(uuid, integer) from public, anon, authenticated, service_role;
-grant  execute on function public.camp_mark_paid(uuid, integer) to authenticated;
+revoke execute on function public.camp_mark_paid(uuid, integer, text) from public, anon, authenticated, service_role;
+grant  execute on function public.camp_mark_paid(uuid, integer, text) to authenticated;
 
 -- 20k. camp_undo_payment(p_payment_id)   A (own, within 10 s: S)
 -- Writes a reversal for a payment (the payment row stays; the two add up
@@ -4025,9 +4041,9 @@ begin
     perform set_config('tkd.batch_id', gen_random_uuid()::text, true);
 
     insert into public.camp_payments
-      (camper_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by, recorded_by_name, reverses_payment_id)
+      (camper_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name, reverses_payment_id)
     values
-      (v_p.camper_id, 'reversal', -v_p.amount_cents, v_p.method, public.testing_today(), now(), auth.uid(),
+      (v_p.camper_id, 'reversal', -v_p.amount_cents, v_p.method, public.testing_today(), v_p.school, now(), auth.uid(),
        public.change_log_actor_name(), v_p.id);
 
     update public.camp_campers c
@@ -4053,16 +4069,20 @@ $$;
 revoke execute on function public.camp_undo_payment(uuid) from public, anon, authenticated, service_role;
 grant  execute on function public.camp_undo_payment(uuid) to authenticated;
 
--- 20l. camp_edit_payment(p_payment_id, p_method, p_amount_cents, p_paid_on)   A
--- Edit payment = a reversal of the old payment + a new payment with the
--- new method / amount (1 cent to $2,000) / date (not in the future).
+-- 20l. camp_edit_payment(p_payment_id, p_method, p_amount_cents, p_paid_on,
+--        p_school)   A
+-- Edit payment = a reversal of the old payment (at the old school) + a new
+-- payment with the new method / amount (1 cent to $2,000) / date (not in
+-- the future) / school (v0.707: correct the desk that took it; any school
+-- in public.locations, else {"status":"invalid","field":"school"}).
 -- Already reversed -> stale; a reversal can't be edited (invalid, as 0005).
 -- Ok: {"status":"ok","payment_id":<the new payment>,"version":n}
 create or replace function public.camp_edit_payment(
   p_payment_id   uuid,
   p_method       text,
   p_amount_cents integer,
-  p_paid_on      date
+  p_paid_on      date,
+  p_school       text
 )
 returns jsonb
 language plpgsql
@@ -4089,6 +4109,9 @@ begin
        or p_paid_on is null or p_paid_on > public.testing_today() then
       return jsonb_build_object('status', 'invalid');
     end if;
+    if p_school is null or not exists (select 1 from public.locations l where l.code = p_school) then
+      return jsonb_build_object('status', 'invalid', 'field', 'school');
+    end if;
 
     v_p := public.camp_lock_payment(p_payment_id);
     if v_p.id is null then
@@ -4105,15 +4128,16 @@ begin
     perform set_config('tkd.batch_id', gen_random_uuid()::text, true);
 
     insert into public.camp_payments
-      (camper_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by, recorded_by_name, reverses_payment_id)
+      (camper_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name, reverses_payment_id)
     values
-      (v_p.camper_id, 'reversal', -v_p.amount_cents, v_p.method, public.testing_today(), now(), auth.uid(),
+      (v_p.camper_id, 'reversal', -v_p.amount_cents, v_p.method, public.testing_today(), v_p.school, now(), auth.uid(),
        public.change_log_actor_name(), v_p.id);
 
     insert into public.camp_payments
-      (camper_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by, recorded_by_name)
+      (camper_id, kind, amount_cents, method, paid_on, school, recorded_at, recorded_by, recorded_by_name)
     values
-      (v_p.camper_id, 'payment', p_amount_cents, p_method, p_paid_on, now(), auth.uid(), public.change_log_actor_name())
+      (v_p.camper_id, 'payment', p_amount_cents, p_method, p_paid_on, p_school, now(), auth.uid(),
+       public.change_log_actor_name())
     returning id into v_new_id;
 
     update public.camp_campers c
@@ -4136,8 +4160,8 @@ begin
 end;
 $$;
 
-revoke execute on function public.camp_edit_payment(uuid, text, integer, date) from public, anon, authenticated, service_role;
-grant  execute on function public.camp_edit_payment(uuid, text, integer, date) to authenticated;
+revoke execute on function public.camp_edit_payment(uuid, text, integer, date, text) from public, anon, authenticated, service_role;
+grant  execute on function public.camp_edit_payment(uuid, text, integer, date, text) to authenticated;
 
 -- 20m. camp_resolve_duplicate(p_keep_id, p_keep_version, p_other_id,
 --        p_other_version, p_keep_both)   S (keep one after the last day: A)
@@ -4666,8 +4690,8 @@ grant  execute on function public.camp_undo_check_in(uuid, uuid) to authenticate
 --  "breakdown": {day_count, price_kind, member, base_cents,
 --                extras: [{name, per, days: [date], cents}],
 --                total_cents, paid_cents, owes_cents},
---  "payments": [{id, kind, amount_cents, method, paid_on, recorded_at,
---                recorded_by_name, reverses_payment_id}],
+--  "payments": [{id, kind, amount_cents, method, paid_on, school,
+--                recorded_at, recorded_by_name, reverses_payment_id}],
 --  "checkins": [{day, checked_in_at, checked_in_by_name}]}  (every day of
 --   the camper's, in date order; not checked in = nulls)
 -- or {"status":"no_access"} / {"status":"not_found"}.
@@ -4727,7 +4751,7 @@ begin
                 'owes_cents',  v_row -> 'owes_cents'),
     'payments', coalesce((select jsonb_agg(jsonb_build_object(
                                      'id', p.id, 'kind', p.kind, 'amount_cents', p.amount_cents, 'method', p.method,
-                                     'paid_on', p.paid_on, 'recorded_at', p.recorded_at,
+                                     'paid_on', p.paid_on, 'school', p.school, 'recorded_at', p.recorded_at,
                                      'recorded_by_name', p.recorded_by_name, 'reverses_payment_id', p.reverses_payment_id)
                                    order by p.recorded_at, p.id)
                             from public.camp_payments p where p.camper_id = p_camper_id), '[]'::jsonb),

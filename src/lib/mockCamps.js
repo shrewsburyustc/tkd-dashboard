@@ -24,8 +24,9 @@
 // The store is RE-READ ON EVERY CALL (no copy is kept in memory), so the staff tab and the family
 // page open in another tab always see each other's changes.
 //
-// Store (schema version 2 — version 2 added the extras' only_on / only_weekdays, owner decision
-// 2026-10-19 "pizza on Wed and Fri"; an older saved store is replaced by the default data), column
+// Store (schema version 3 — version 2 added the extras' only_on / only_weekdays, owner decision
+// 2026-10-19 "pizza on Wed and Fri"; version 3 the payments' school, v0.707; an older saved store
+// is replaced by the default data), column
 // names are the database's (snake_case):
 //   camps, camp_days, camp_prices, camp_extras, camp_templates, camp_signups, camp_campers,
 //   camp_camper_days, camp_camper_extras, camp_payments, camp_public_attempts,
@@ -40,7 +41,7 @@ import {
   normalizeCampText, campTextIsValid, isIsoDate, addDays, todayInSchoolTime, lastDay, firstDay, SCHOOL_TIME_ZONE,
 } from './camps/campRules.js';
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 const LOCATION_CODES = ['worcester', 'shrewsbury'];
 const REFERENCE_START = 4001; // CP-4001 is the first reference the database makes (§1.7)
 const ATTEMPT_KEEP_MS = 2 * 24 * 60 * 60 * 1000; // rate-limit rows older than 2 days are removed
@@ -204,7 +205,7 @@ const DEFAULT_CAMPERS = {
       { paid: { cents: 33500, on: '2027-03-25', at: '16:15', desk: true }, checkins: { 0: '07:51', 1: '07:48', 2: '07:51' } }],
     ['Grace', 'Lee', 6, false, 'all', [[0, D(0, 1, 2, 3)]], 'cash', ['2027-04-15', '20:20'], 4830, { checkins: { 0: '07:35', 1: '07:39' } }],
     ['Olivia', 'Chen', 9, true, 'all', [], 'cash', ['2027-03-02', '18:00'], 4785,
-      { paid: { on: '2027-03-09', at: '16:30', desk: true }, checkins: { 0: '08:47', 1: '08:50', 2: '08:52' } }],
+      { paid: { on: '2027-03-09', at: '16:30', desk: true, school: 'shrewsbury' }, checkins: { 0: '08:47', 1: '08:50', 2: '08:52' } }], // paid at the Shrewsbury desk
     ['Lucas', 'Rivera', 10, true, 'all', [[0, 'all']], 'check', ['2027-03-07', '14:10'], 4804,
       { paid: { on: '2027-03-14', at: '11:10', desk: false }, checkins: { 0: '07:33', 1: '07:36', 2: '07:38' } }],
     ['Emma', 'Garcia', 7, true, 'all', [[1, 'all']], 'card', ['2027-03-10', '21:00'], 4809,
@@ -352,6 +353,7 @@ export function defaultCampsData({ today = todayInSchoolTime(new Date()) } = {})
           id: id('c9'), camper_id: camper.id, kind: 'payment', amount_cents: opt.paid.cents ?? total, method: payingBy,
           paid_on: opt.paid.on, recorded_at: paidAt, recorded_by: opt.paid.desk ? DESK_USER_ID : ADMIN_USER_ID,
           recorded_by_name: opt.paid.desk ? 'Staff' : 'Jeffrey Berg', reverses_payment_id: null,
+          school: opt.paid.school ?? def.location, // the desk that took it (default: the camp's school)
         });
         bump(camper, paidAt, opt.paid.desk ? 'Staff' : 'Jeffrey Berg'); // Mark paid bumps the version
       }
@@ -417,7 +419,7 @@ const CAMPER_COLS = ['id', 'signup_id', 'camp_id', 'position', 'first_name', 'la
 const ROSTER_COLS = ['id', 'camp_id', 'signup_id', 'position', 'first_name', 'last_name', 'age', 'member', 'paying_by', 'status', 'withdrawn_reason',
   'withdrawn_at', 'withdrawn_by_name', 'duplicate_state', 'duplicate_of', 'version', 'created_at', 'signup_version', 'reference', 'price_kind',
   'signed_up_on', 'signed', 'signature_deleted_at', 'base_cents', 'days', 'extras', 'total_cents', 'paid_cents', 'owes_cents',
-  'paid_on', 'paid_method', 'last_payment_id', 'last_payment_recorded_at'];
+  'paid_on', 'paid_method', 'last_payment_id', 'last_payment_recorded_at', 'paid_school'];
 const GRANTED = {
   camps: CAMP_COLS,
   camp_days: ['id', 'camp_id', 'day'],
@@ -429,7 +431,7 @@ const GRANTED = {
   camp_signups: ['id', 'camp_id', 'reference', 'price_kind', 'signed_up_on', 'signed_at', 'signature_deleted_at', 'version'],
   camp_camper_days: ['id', 'camper_id', 'day_id', 'checked_in_at', 'checked_in_by_name'],
   camp_camper_extras: ['id', 'camper_id', 'extra_id', 'day_id', 'price_cents'],
-  camp_payments: ['id', 'camper_id', 'kind', 'amount_cents', 'method', 'paid_on', 'recorded_at', 'recorded_by_name', 'reverses_payment_id'],
+  camp_payments: ['id', 'camper_id', 'kind', 'amount_cents', 'method', 'paid_on', 'recorded_at', 'recorded_by_name', 'reverses_payment_id', 'school'],
 };
 // Columns that exist but are never given to the app (asking for one is "permission denied").
 const HIDDEN = {
@@ -467,9 +469,9 @@ const RPC_ARGS = {
     ['p_age', 'int'], ['p_member', 'bool'], ['p_day_ids', 'uuid[]'], ['p_extras', 'jsonb'], ['p_parent_name', 'text'], ['p_parent_phone', 'text'],
     ['p_parent_relation', 'text'], ['p_emergency_name', 'text'], ['p_emergency_phone', 'text'], ['p_emergency_relation', 'text']],
   camp_change_paying_by: [ID('p_camper_id'), ['p_expected_version', 'int'], ['p_paying_by', 'text']],
-  camp_mark_paid: [ID('p_camper_id'), ['p_expected_version', 'int']],
+  camp_mark_paid: [ID('p_camper_id'), ['p_expected_version', 'int'], ['p_school', 'text']],
   camp_undo_payment: [ID('p_payment_id')],
-  camp_edit_payment: [ID('p_payment_id'), ['p_method', 'text'], ['p_amount_cents', 'int'], ['p_paid_on', 'date']],
+  camp_edit_payment: [ID('p_payment_id'), ['p_method', 'text'], ['p_amount_cents', 'int'], ['p_paid_on', 'date'], ['p_school', 'text']],
   camp_resolve_duplicate: [ID('p_keep_id'), ['p_keep_version', 'int'], ID('p_other_id'), ['p_other_version', 'int'], ['p_keep_both', 'bool']],
   camp_withdraw_camper: [ID('p_camper_id'), ['p_expected_version', 'int']],
   camp_restore_camper: [ID('p_camper_id'), ['p_expected_version', 'int']],
@@ -781,6 +783,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       signature_deleted_at: signup?.signature_deleted_at ?? null, base_cents: c.base_cents, days, extras,
       total_cents: total, paid_cents: paid, owes_cents: owes,
       paid_on: last?.paid_on ?? null, paid_method: last?.method ?? null, last_payment_id: last?.id ?? null, last_payment_recorded_at: last?.recorded_at ?? null,
+      paid_school: last?.school ?? null, // mock-only extra column (campsApi doesn't ask for it)
     };
   }
 
@@ -1170,6 +1173,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
 
     camp_mark_paid(db, a, ctx) {
       if (a.p_camper_id === null || a.p_expected_version === null) return st('invalid');
+      if (!LOCATION_CODES.includes(a.p_school)) return { status: 'invalid', field: 'school' }; // the desk's school (v0.707)
       const camper = findCamper(db, a.p_camper_id);
       if (!camper) return st('not_found');
       if (camper.version !== a.p_expected_version) return st('stale');
@@ -1180,11 +1184,12 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       const payment = {
         id: newId(), camper_id: camper.id, kind: 'payment', amount_cents: owes, method: camper.paying_by, paid_on: today(),
         recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName, reverses_payment_id: null,
+        school: a.p_school,
       };
       db.camp_payments.push(payment);
       updateRow(camper, {}, ctx, true); // a double click with the old version now gets 'stale'
       purgeOldSignatures(db); // the last step
-      return { status: 'ok', payment_id: payment.id, amount_cents: owes, method: payment.method, version: camper.version };
+      return { status: 'ok', payment_id: payment.id, amount_cents: owes, method: payment.method, version: camper.version, school: payment.school };
     },
 
     camp_undo_payment(db, a, ctx) {
@@ -1198,6 +1203,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       db.camp_payments.push({
         id: newId(), camper_id: camper.id, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(),
         recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName, reverses_payment_id: payment.id,
+        school: payment.school, // an undo lands in the same drawer as the payment
       });
       updateRow(camper, {}, ctx, true);
       return { status: 'ok', version: camper.version };
@@ -1206,13 +1212,15 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
     camp_edit_payment(db, a, ctx) {
       if (a.p_payment_id === null || !PAYING_BY.includes(a.p_method) || a.p_paid_on === null || a.p_paid_on > today()) return st('invalid');
       if (a.p_amount_cents === null || a.p_amount_cents < 1 || a.p_amount_cents > MAX_PAYMENT_CENTS) return st('invalid');
+      if (!LOCATION_CODES.includes(a.p_school)) return { status: 'invalid', field: 'school' };
       const payment = db.camp_payments.find((p) => p.id === a.p_payment_id);
       if (!payment) return st('not_found');
       if (payment.kind !== 'payment' || isReversed(db, payment.id)) return st('stale');
       const camper = findCamper(db, payment.camper_id);
       const common = { camper_id: camper.id, recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName };
-      db.camp_payments.push({ id: newId(), ...common, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(), reverses_payment_id: payment.id });
-      const replacement = { id: newId(), ...common, kind: 'payment', amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on, reverses_payment_id: null };
+      db.camp_payments.push({ id: newId(), ...common, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(), reverses_payment_id: payment.id, school: payment.school });
+      // The new row may correct the school (the reversal stays with the old one's school).
+      const replacement = { id: newId(), ...common, kind: 'payment', amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on, reverses_payment_id: null, school: a.p_school };
       db.camp_payments.push(replacement);
       updateRow(camper, {}, ctx, true);
       return { status: 'ok', payment_id: replacement.id, version: camper.version };
@@ -1348,7 +1356,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
         },
         payments: paymentsOf(db, camper.id).sort(byText('recorded_at')).map((p) => ({
           id: p.id, kind: p.kind, amount_cents: p.amount_cents, method: p.method, paid_on: p.paid_on, recorded_at: p.recorded_at,
-          recorded_by_name: p.recorded_by_name, reverses_payment_id: p.reverses_payment_id,
+          recorded_by_name: p.recorded_by_name, reverses_payment_id: p.reverses_payment_id, school: p.school,
         })),
         checkins: row.days.map((d) => ({ day: d.day, checked_in_at: d.checked_in_at, checked_in_by_name: d.checked_in_by_name })),
       };

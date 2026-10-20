@@ -522,6 +522,7 @@ export function createMockClient() {
     loadStore: () => JSON.parse(readStorage(FINANCE_KEY)), // missing/damaged → the default sample
     saveStore: (store) => writeStorage(FINANCE_KEY, JSON.stringify(store)),
     readColorBelt: () => events.snapshot(),
+    readCamps: () => camps.snapshot(), // camp payments are Finance's third source (v0.707)
     now: () => Date.now(),
     today: previewToday, // the real school date, or the one set with setToday
     newId: newUuid,

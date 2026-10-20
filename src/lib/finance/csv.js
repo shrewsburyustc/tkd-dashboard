@@ -46,7 +46,7 @@ export const DEFAULT_CSV_HEADERS = {
 };
 export const DEFAULT_CSV_LABELS = {
   school: { worcester: 'Worcester', shrewsbury: 'Shrewsbury' },
-  what: { color_belt: 'Color belt testing', star: 'Star testing' },
+  what: { color_belt: 'Color belt testing', star: 'Star testing', camp: 'Camp' }, // Camp: v0.707
   kind: { payment: 'Payment', refund: 'Refund' },
   method: { cash: 'Cash', check: 'Check', card: 'Card' },
   state: { counted: 'Counted', undone: 'Undone', edited: 'Edited', moved_out: 'Moved out', moved_in: 'Moved in' },
@@ -82,7 +82,12 @@ function cellText(row, key, type, labels) {
   if (value === null || value === undefined) return '';
   if (type === 'money') return centsToCsvNumber(value);
   if (type === 'plain') return quoteCell(String(value));
-  const shown = type === 'code' ? (labels[key]?.[value] ?? String(value)) : String(value);
+  let shown = type === 'code' ? (labels[key]?.[value] ?? String(value)) : String(value);
+  // A camp row's "For" cell names the camp: "Camp · April Vacation Camp" (v0.707). The camp name is
+  // typed by staff, so the whole cell goes through the formula guard and quoting like any text.
+  if (key === 'what' && value === 'camp' && typeof row.event_name === 'string' && row.event_name !== '') {
+    shown = `${shown} · ${row.event_name}`;
+  }
   return quoteCell(guardFormula(shown));
 }
 

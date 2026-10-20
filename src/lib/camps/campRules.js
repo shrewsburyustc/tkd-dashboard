@@ -355,6 +355,17 @@ export function toCollectCents(rows) {
   return (rows ?? []).filter((r) => r.status === 'active').reduce((sum, r) => sum + Math.max(0, r.owesCents ?? 0), 0);
 }
 
+// Which school's drawer a camp payment goes to (v0.707, "the school whose desk took the money"):
+//   the device's school (the location switcher) when it is a school; on 'both' (no device school):
+//   a single-school camp's own school, or null for a both-schools camp — then the screen asks
+//   "Paid at which school?" (Worcester | Shrewsbury) and sends the answer.
+export const SCHOOLS = ['worcester', 'shrewsbury'];
+export function paymentSchoolFor(camp, deviceLocation) {
+  if (SCHOOLS.includes(deviceLocation)) return deviceLocation;
+  if (deviceLocation !== 'both') return null;
+  return camp?.bothSchools === true ? null : (SCHOOLS.includes(camp?.locationCode) ? camp.locationCode : null);
+}
+
 // ----- Check-in (§1.13 check-in day rule, v0.704) -----
 
 // May this person check a camper in (or undo it) on `day`? Owner decision 2026-10-19 (CP1):

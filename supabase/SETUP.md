@@ -1112,6 +1112,7 @@ An admin sets the reminder times in **Finance → Settings** (they start Off; pl
 - **Camps** (`camps`): held at one school, optionally **for both schools**; 1–10 days (`camp_days`, any dates); daily hours; sign-up opening / closing dates, an early-price date and a **Close sign-up** switch; the ages the family form accepts; a description and a waiver; a random 8-character link code (`/camp/<code>`, never changes).
 - **Prices:** a small grid (`camp_prices`: one row per number of days, member / non-member × early / regular) and up to 10 **extras** (`camp_extras`: once or per day, optionally "not for all-days campers", and a per-day extra optionally only on some camp days — `only_on`, e.g. pizza on Wed and Fri; families choose it, it is never added by itself). A camper's prices are written at sign-up and are **never** changed by a later price edit; only a change to that camper's own days, member box or extras in Edit details prices the whole camper again at the current prices (rulebook v0.700).
 - **Templates** (`camp_templates`): everything except dates and campers, shared by both schools.
+- **Payments record the desk's school** (`camp_payments.school`, v0.707): Mark paid takes the school (`camp_mark_paid(p_camper_id, p_expected_version, p_school)`; the app sends the device's school, or asks on the Both view), Edit payment can correct it (`camp_edit_payment(p_payment_id, p_method, p_amount_cents, p_paid_on, p_school)`), a reversal keeps its payment's school; an unknown school → `{status:'invalid', field:'school'}`. Finance counts camp money only after 0017 (section 17).
 - **Sign-ups and campers:** `camp_signups` (one family form send: parent and emergency contact with phones, a `CP-` reference, early / regular fixed by the sign-up date, the drawn signature, a copy of the waiver) and `camp_campers` (1–3 children per sign-up), with `camp_camper_days` (the days they come, with the **check-in** time and who) and `camp_camper_extras` (the extras chosen, with their price at the time). **Append-only** `camp_payments` (a mistake is fixed by a reversal row).
 - **Phones** are readable only through `camp_camper_detail` (staff and admins, v0.700). The **signature** and the **waiver copy** can never be read by the app, are never copied into `change_log` (the history shows "on file"), and the signature is removed automatically **3 years after the camp's last day**.
 - **The family form:** a new restricted login, **`camps_registrar`**, used only by the Camps Cloudflare Function through its own Hyperdrive config. It can run exactly two functions (`camp_public_camp`, `camp_public_signup`) and nothing else. Every call is counted in Camps' **own** ledger `camp_public_attempts` (a hashed key, never a raw IP; 30 tries per hour per key; Color Belt's `testing_public_attempts` is never used).
@@ -1252,7 +1253,7 @@ Color Belt's form (12i) and Star's (13g) are not affected by any of these, and t
 
 ### 16k. Undo 0013 (only if something is badly wrong, before real camp data exists)
 
-Only if Jeffrey decides to remove Camps completely: put the app back to a version without the Camps screens and the camp page **first**, then run this in the SQL Editor (one transaction; tested in PGlite on every run: afterwards no camp object or role is left, the earlier fingerprints equal a database that never had 0013, and the earlier tests pass). **This deletes every camp, template, sign-up, camper, check-in and payment.** Supabase's destructive-operations warning is real this time.
+Only if Jeffrey decides to remove Camps completely: put the app back to a version without the Camps screens and the camp page **first**, and if 0017 is applied **undo 0017 first** (section 17d — Finance's functions read the camp tables), then run this in the SQL Editor (one transaction; tested in PGlite on every run: afterwards no camp object or role is left, the earlier fingerprints equal a database that never had 0013, and the earlier tests pass). **This deletes every camp, template, sign-up, camper, check-in and payment.** Supabase's destructive-operations warning is real this time.
 
 **What stays:** the `change_log` rows Camps wrote (the history is append-only — including the phones, v0.700). Nothing from 0001–0012 is touched.
 
@@ -1303,9 +1304,9 @@ drop function if exists public.camp_update_template(uuid, integer, text, text, b
 drop function if exists public.camp_delete_template(uuid, integer);
 drop function if exists public.camp_update_details(uuid, integer, integer, text, text, integer, boolean, uuid[], jsonb, text, text, text, text, text, text);
 drop function if exists public.camp_change_paying_by(uuid, integer, text);
-drop function if exists public.camp_mark_paid(uuid, integer);
+drop function if exists public.camp_mark_paid(uuid, integer, text);
 drop function if exists public.camp_undo_payment(uuid);
-drop function if exists public.camp_edit_payment(uuid, text, integer, date);
+drop function if exists public.camp_edit_payment(uuid, text, integer, date, text);
 drop function if exists public.camp_resolve_duplicate(uuid, integer, uuid, integer, boolean);
 drop function if exists public.camp_withdraw_camper(uuid, integer);
 drop function if exists public.camp_restore_camper(uuid, integer);
@@ -1360,6 +1361,73 @@ commit;
 - **Its own rate-limit ledger:** the desk tablet's camp sign-ups never use up Color Belt's tries (and the other way round).
 - **Phones only through one function, signatures never:** the records are mostly about minors (rulebook §5); leaving columns out of a view wouldn't protect them, not granting them does.
 - **Prices as snapshots:** a price edit during an open sign-up never changes what a family was shown; the form refuses a send whose total changed (`price_changed`).
+
+---
+
+## 17. Migration 0017: camp payments in Finance
+
+**Status: not applied yet.** Apply it **right after 0013** (section 16), in the same CP3 session — Camps and this go live together (rulebook v0.707), or camp days would close short.
+
+**Production order:** 0011 (Finance, live) → **0013 + 0017** (Camps, together) → Color Belt 0014 (already live; it doesn't touch these Finance functions) → **Finance 0018** (private Color Belt payments), which is built on 0017's text of the Finance functions.
+
+**What it does** (`supabase/migrations/0017_finance_camps.sql`, plan `docs/Camps/TKD-Camps-Finance-Plan.md`):
+- Camp payments become a **third source** in Finance, next to Color Belt and Star: the Daily report (list and Cash / Check / Card totals), **Close the day**, Both, History, Export (+ preview), the payment detail and the Home reminder.
+- A camp line belongs to **the school whose desk took the money** (`camp_payments.school`, which 0013's Mark paid / Edit payment record): each line takes the school of its own payment row, so a both-schools camp paid at Shrewsbury lands in Shrewsbury's drawer.
+- A camp line reads "Camp · <camp name>": `what` = `camp`, `event_name` = the camp's name (Daily report lines, export rows and the payment detail — **camp lines only**; Color Belt and Star lines keep exactly their old keys), event date = the camp's first day. The payment detail of a camp payment also has `camp_days`.
+- Same chain rules as the other two (edit, undo, the 10-second mis-click).
+- How: it **replaces five 0011 functions** (`finance_chain_steps_core` by drop + create; `finance_money_rows_core`, `finance_day`, `finance_payment_detail`, `finance_export` by create or replace — same names, arguments, rights), lets a close's snapshot hold camp items of up to $2,000 (two rules of `finance_day_closing_items`), and adds an index `camp_payments_paid_on_idx`. Every camp part is in a block marked `-- ===== source: camp (0017) =====` … `-- ===== end camp =====`; the Finance session's next migration (0018, private Color Belt payments) builds on these versions.
+- It stops with a clear message if 0011 or 0013 is missing. Tested in PGlite: every Color Belt / Star answer identical before and after; 0011's own tests still pass; speed with ~4,000 camp rows on top of Finance's big seed, also on a database that sorts text like production.
+
+### 17a. Apply 0017 (you, in the SQL Editor, after 16c–16f)
+
+1. Copy **the whole file** `supabase/migrations/0017_finance_camps.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Supabase may warn about destructive operations: the words are only in `drop constraint if exists` lines and one `drop function if exists` line (`finance_chain_steps_core`, created again straight after with 0011's rights) that make re-running safe. **No data is removed.** Confirm.
+3. "Success." One transaction: on any error nothing is kept (e.g. "0017 needs migration 0013 … first"). Copy the error to Claude.
+
+**Running it again is safe** (tested: no row and no fingerprint changes). **If 0017 is ever re-run after Finance's 0018 is applied, re-run 0018 straight after it** (0018 is built on 0017's function text; re-running 0017 alone puts back the versions without 0018's changes). `finance_chain_steps_core` is written as `drop function if exists` + `create` for exactly this case: 0018 changes its return columns, which `create or replace` could not change back.
+
+### 17b. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0017_fingerprints.sql` (Finance after 0017). Every line must match what `run.mjs` printed ("0017 fingerprints"). The file contains neither of the words the connection refuses.
+2. `0011_fingerprints.sql`: **only** the lines of the five replaced functions and the two widened rules (`finance_day_closing_items_source_check`, `…_amount_check`) differ from 15b's record — expected. `0013_fingerprints.sql`: unchanged.
+3. **Security advisor:** nothing new (the replaced functions keep 0011's rights; the index is not a security object).
+
+### 17c. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0017_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0017 TESTS PASSED**. It makes its own `zz fin camp …` camp with payments in June 2021 and rolls everything back.
+2. Then `0011_tests.sql` and `0013_tests.sql` again — both must still pass.
+3. Put the placeholders back afterwards.
+
+### 17d. Undo 0017 (only if something is badly wrong, and only while no closed day has counted a camp payment)
+
+Put the app back to a version without camp lines in Finance first. Then two steps, **in this order**:
+1. **Re-run the whole 0011 file** (section 15) — that puts back 0011's versions of the five functions (Finance then ignores camp payments again).
+2. Run this in the SQL Editor (one transaction). If a close already counted a camp payment (or an amount over $1,000), the old rule can't come back and it stops — nothing is changed; tell Claude.
+
+```sql
+-- Undo migration 0017 (step 2; run AFTER re-running 0011). change_log is KEPT.
+begin;
+
+-- the index on camp_payments (paid_on)
+drop index if exists public.camp_payments_paid_on_idx;
+
+-- finance_day_closing_items back to 0011's two rules
+alter table public.finance_day_closing_items drop constraint if exists finance_day_closing_items_source_check;
+alter table public.finance_day_closing_items add constraint finance_day_closing_items_source_check
+  check (source in ('color_belt', 'star'));
+alter table public.finance_day_closing_items drop constraint if exists finance_day_closing_items_amount_check;
+alter table public.finance_day_closing_items add constraint finance_day_closing_items_amount_check
+  check (amount_cents between -100000 and 100000 and amount_cents <> 0);
+
+commit;
+```
+
+Tested in PGlite on every run (both steps exactly as written here): afterwards the 0011 fingerprints equal a database that never had 0017, and `0011_tests.sql` passes. **Once the Finance session's 0018 is applied on top, undo 0018 first.** Undo 0017 always comes **before** Undo 0013 (16k): 0017's functions read the camp tables.
+
+**Why:**
+- **A new migration, not an edit of 0011:** 0011 is live; replacing its functions in a later file keeps the history clear and the undo simple (re-run 0011).
+- **The desk's school:** the money lands in the drawer that actually holds it, also for both-schools camps.
+- **Camp lines only get new keys:** the Color Belt and Star answers stay byte-for-byte the same, which run.mjs proves.
 
 ---
 
