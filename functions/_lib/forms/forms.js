@@ -85,7 +85,7 @@ function logLine(method, status, startedMs, now) {
 
 // What a database error turns into: always `unavailable`, never the error text. "Permission
 // denied" (Postgres error 42501) is EXPECTED once the registrar login's rights are taken away
-// (the instant "off switch" in SETUP §15); the page then shows the same "try again" message.
+// (the instant "off switch" in SETUP §16); the page then shows the same "try again" message.
 function databaseFailure() {
   return { status: 'unavailable' };
 }

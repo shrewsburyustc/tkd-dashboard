@@ -16,7 +16,7 @@
 // Turnstile's siteverify). It is a copy of Color Belt's functions/api/register/[code].js
 // pattern; nothing of Color Belt's is changed or shared.
 //
-// Settings it reads (Cloudflare dashboard, Production only — never in git; SETUP §15):
+// Settings it reads (Cloudflare dashboard, Production only — never in git; SETUP §16):
 //   HYPERDRIVE_FORMS     binding to its OWN Hyperdrive configuration, user forms_registrar
 //                        (caching disabled)
 //   PUBLIC_FORMS         "on" to accept sign-ups; anything else (or missing) = forms "not open"

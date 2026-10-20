@@ -493,7 +493,7 @@ test('POST: database error → unavailable; nothing personal in the answer or th
   assert.equal(db.log.closed, 1);
 });
 
-test('database "permission denied" (the SETUP §15 off switch) or no connection → unavailable', async () => {
+test('database "permission denied" (the SETUP §16 off switch) or no connection → unavailable', async () => {
   const denied = () => {
     throw Object.assign(new Error('permission denied for function forms_public_submit'), { code: '42501' });
   };
