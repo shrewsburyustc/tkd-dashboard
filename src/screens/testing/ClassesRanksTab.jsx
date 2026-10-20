@@ -37,6 +37,7 @@ import {
   updateClass,
   updateRank,
 } from '../../lib/testing/api.js';
+import { countSlotsForClass } from '../../lib/schedule/api.js';
 import {
   checkUndoAddRank,
   classOrderIds,
@@ -696,7 +697,11 @@ export default function ClassesRanksTab({
       setBanner({ text: T.STALE }); // it's already gone
       return;
     }
-    const text = kind === 'rank' ? T.rankDeleteText(description) : T.classDeleteText(description);
+    // A class's schedule time slots go with it (Schedule, decision Q1), so the confirmation
+    // says how many. If the count can't be read, the dialog simply doesn't mention it.
+    const slots = kind === 'class' ? await countSlotsForClass(id) : null;
+    const slotCount = slots?.status === 'ok' ? slots.count : 0;
+    const text = kind === 'rank' ? T.rankDeleteText(description) : T.classDeleteText(description, slotCount);
     // Remember where it was, for putting focus back afterwards.
     let classId = null;
     let index = -1;

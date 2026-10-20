@@ -1,0 +1,25 @@
+<!doctype html>
+<!--
+  forms.html — the public forms page (/f/<name>, e.g. /f/free-class-instagram).
+  Why it exists: families open a link or QR code from the school to sign up (for example for a
+  free class, build plan docs/Prospects/TKD-Forms-Build-Plan.md §3). It is a third page in the
+  same Vite build as the staff dashboard (index.html) and Color Belt's register.html, but shares
+  none of the dashboard's code; React draws the form inside the empty <div id="root"> below,
+  starting from src/forms/main.jsx.
+  public/_redirects serves this page for every /f/<name> address, and public/_headers gives it a
+  strict security policy.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <title>Jae H. Jeong's U.S. Taekwondo Center</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/forms/main.jsx"></script>
+  </body>
+</html>

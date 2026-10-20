@@ -1,6 +1,7 @@
 // Settings.jsx — the Settings page (admins only; account menu → Admin → Settings, ti-settings).
 // Why it exists: rulebook v0.135 — school street addresses are entered by admins in the
-// dashboard. Phase 2 has one part, **Schools**: each school's street, city, state and ZIP,
+// dashboard. Phase 2 has one part, **Schools**: each school's street, city, state and ZIP (and,
+// since migration 0019, an optional phone for the closed sign-up form — F3 difference 4),
 // edited in a small dialog (SchoolDialog.jsx), logged by the database. Approved mockups:
 // docs/Dashboard Docs/TKD-Settings-Schools-Mockups.html (S1–S3). Later parts of Settings
 // (e.g. keyboard shortcuts on/off) are separate decisions.
@@ -20,7 +21,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { IconAlertTriangle, IconEdit } from '@tabler/icons-react';
 import ErrorBanner from '../components/ErrorBanner.jsx';
 import IconButton from '../components/IconButton.jsx';
-import { loadSchools, updateSchoolAddress } from '../lib/settings/schoolsApi.js';
+import { loadSchools, updateSchoolContact } from '../lib/settings/schoolsApi.js';
 import { PHONE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../lib/useRowArrowNav.js';
 import SchoolDialog, { checkSchoolForm, isSchoolFormDirty } from './settings/SchoolDialog.jsx';
@@ -78,7 +79,7 @@ export default function Settings({ profile, screenLocked, showToast, onModalOpen
 
   function openDialog(school) {
     const a = school.address;
-    const values = { street: a?.street ?? '', city: a?.city ?? '', state: a?.state ?? '', zip: a?.zip ?? '' };
+    const values = { street: a?.street ?? '', city: a?.city ?? '', state: a?.state ?? '', zip: a?.zip ?? '', phone: school.phone ?? '' };
     setDialog({ key: Date.now(), code: school.code, school, values, initial: values, touched: {}, triedSave: false, note: null, blocked: false, saving: false });
   }
   function patchDialog(patch) {
@@ -112,7 +113,7 @@ export default function Settings({ profile, screenLocked, showToast, onModalOpen
     }
     patchDialog({ saving: true, note: null });
     const p = check.payload;
-    const result = await updateSchoolAddress({ code: d.code, expectedVersion: d.school.version, ...p });
+    const result = await updateSchoolContact({ code: d.code, expectedVersion: d.school.version, ...p });
     if (result.status === 'ok') {
       patchDialog({ saving: false });
       focusAfterRef.current = d.code;
@@ -174,20 +175,24 @@ export default function Settings({ profile, screenLocked, showToast, onModalOpen
                 key={school.code}
                 className={`st-row${dialog?.code === school.code && !screenLocked ? ' is-selected' : ''}`}
                 role="listitem"
-                aria-label={`${name}, ${address ?? T.NO_ADDRESS}`}
+                aria-label={`${name}, ${address ?? T.NO_ADDRESS}, ${school.phone ? T.phoneLine(school.phone) : T.NO_PHONE}`}
                 {...nav.rowProps(school.code)}
                 onClick={() => openDialog(school)}
               >
                 <span className="st-main">
                   <span className="st-name">{name}</span>
-                  {address ? (
-                    <span className="st-address">{address}</span>
-                  ) : (
-                    <span className="st-address is-empty">
-                      <IconAlertTriangle size={16} aria-hidden="true" />
-                      {T.NO_ADDRESS}
-                    </span>
-                  )}
+                  <span className="st-details">
+                    {address ? (
+                      <span className="st-address">{address}</span>
+                    ) : (
+                      <span className="st-address is-empty">
+                        <IconAlertTriangle size={16} aria-hidden="true" />
+                        {T.NO_ADDRESS}
+                      </span>
+                    )}
+                    {/* the phone is optional: no warning when there is none */}
+                    <span className="st-phone-line">{school.phone ? T.phoneLine(school.phone) : T.NO_PHONE}</span>
+                  </span>
                 </span>
                 <IconButton
                   label={T.editSchoolLabel(school.name)}

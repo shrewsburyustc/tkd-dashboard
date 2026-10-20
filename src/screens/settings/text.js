@@ -8,8 +8,10 @@ export const MENU_ITEM = 'Settings';
 export const PAGE_TITLE = 'Settings';
 export const PAGE_SUB = 'Details for the whole school. Admins only.';
 export const SCHOOLS = 'Schools';
-export const SCHOOLS_SUB = "Each school's address is shown to families on registration pages and printed flyers.";
+export const SCHOOLS_SUB = "Each school's address and phone are shown to families on registration pages, sign-up forms and printed flyers.";
 export const NO_ADDRESS = 'No address yet. Family pages show only the school name.';
+export const NO_PHONE = 'No phone yet';
+export const phoneLine = (phone) => `Phone: ${phone}`;
 export const LOADING = 'Loading Settings';
 export const LOAD_FAILED = "Couldn't load the schools. Check the connection, then retry.";
 export const ONLY_ADMINS = 'Only admins can see Settings.';
@@ -32,7 +34,12 @@ export const CLEAR_HINT = 'Leave all four empty to show just the school name.';
 export const CANCEL = 'Cancel';
 export const SAVE = 'Save';
 export const SAVING = 'Saving…';
-export const TOAST_SAVED = 'Address saved';
+export const TOAST_SAVED = 'School saved';
+
+// The school phone (migration 0019, F3 difference 4)
+export const PHONE = 'Phone (optional)';
+export const PHONE_HINT = 'Shown on a closed sign-up form as a tap-to-call number. Leave empty for none.';
+export const PHONE_PROBLEM = 'Enter a phone number, like (508) 555-0100 (7 to 15 digits).';
 
 // Field messages (codes from schoolsApi.addressProblems)
 const PART_EMPTY = {
@@ -55,6 +62,6 @@ export const DISCARD_CHANGES = 'Discard changes';
 export const STALE = "Someone else changed this just now. Your change wasn't saved. Cancel, then open it again to see the latest.";
 export const STALE_PHONE =
   "Someone else changed this just now. Your change wasn't saved. Discard changes, then open it again to see the latest.";
-export const NOT_ALLOWED = "Only an admin can change school addresses. Your change wasn't saved.";
+export const NOT_ALLOWED = "Only an admin can change school details. Your change wasn't saved.";
 export const INVALID = "That didn't save. Check the fields and try again.";
 export const SAVE_FAILED = "Couldn't save. Check the connection, then try again.";

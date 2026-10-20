@@ -10,6 +10,7 @@
 // Try it:  any email + password "preview" signs in as Jeffrey Berg (admin). PIN is 2580.
 // Test helpers in the browser console (F12 → Console):
 //   __tkdPreview.lockNow()                lock the screen right away
+//   __tkdPreview.kioskEndsIn(20)          the kiosk on this tablet ends in 20 minutes (0 = now)
 //   __tkdPreview.setHasPin(false)         remove the PIN (reload → Set your PIN; Lock now → signed out)
 //   __tkdPreview.setShared(true)          pretend this is the shared front-desk account (then reload)
 //   __tkdPreview.setPasswordAgeDays(8)    pretend the password was typed 8 days ago (then reload)
@@ -22,6 +23,21 @@
 //   __tkdPreview.clearSchool('Shrewsbury') remove that school's classes (to see the empty state)
 //   __tkdPreview.resetTesting()           back to the default classes and ranks
 //   __tkdPreview.setTestingDelay(3000)    slow Testing calls down (e.g. to see the skeleton)
+// Schedule helpers (mockSchedule.js; setRole and setTestingDelay apply too):
+//   __tkdPreview.failNextScheduleSave()            the next Schedule save fails like a dropped connection
+//   __tkdPreview.simulateOtherAdminEditSchedule()  "another admin" changes every schedule row
+//   __tkdPreview.clearSchedule('Shrewsbury')       remove that school's schedules (empty state)
+//   __tkdPreview.resetSchedule()                   back to the sample week
+// Calendar helpers (mockCalendar.js; setRole and setTestingDelay apply too):
+//   __tkdPreview.failNextCalendarSave()            the next Calendar save fails like a dropped connection
+//   __tkdPreview.simulateOtherAdminEditCalendar()  "another admin" changes every event, closure and type
+//   __tkdPreview.clearCalendar()                   no events or closures (types stay)
+//   __tkdPreview.resetCalendar()                   back to the sample events and closures
+// Forms helpers (mockForms.js; setRole and setTestingDelay apply too):
+//   __tkdPreview.failNextFormsSave()               the next Forms save fails like a dropped connection
+//   __tkdPreview.simulateOtherAdminEditForms()     "another admin" changes every form (open builders go stale)
+//   __tkdPreview.clearForms()                      no forms, sign-ups or bookings (empty state)
+//   __tkdPreview.resetForms()                      back to the sample forms and sign-ups
 // Events / roster / family form helpers (phase 2, contract 0005 §4.5 / §5):
 //   __tkdPreview.setToday('2026-11-20')   pretend it's another day in school time (null = real date)
 //                                         — event states, prices and Mark paid follow it
@@ -29,6 +45,11 @@
 //   __tkdPreview.forceVerifyFailed(true)  the next family-form Send fails the human check
 //   __tkdPreview.forceRateLimited(true)   family-form Sends answer "too many tries" until set false
 //   (failNextSave, simulateOtherAdminEdit and resetTesting cover the events and roster too)
+// Public Forms page helpers (src/forms/publicApi.preview.js; open /f/<name> on the same port):
+//   __tkdPreview.setPublicForms(false)    the forms kill switch (every /f/<name> says "paused")
+//   __tkdPreview.forceTimeTaken()         the next forms Submit with a time answers "time taken"
+//   __tkdPreview.forceFormChanged()       the next forms Submit answers "form changed"
+//   __tkdPreview.forceFormsRateLimited(true) every forms Submit answers "too many tries"
 // Grading helpers (phase 3, contract 0010 §3.4; setToday and failNextSave cover grading too):
 //   __tkdPreview.failSavesUntilRetry()    from now on EVERY Events save fails like a dropped
 //                                         Wi-Fi connection (reads still work) — "Not saved"
@@ -49,7 +70,11 @@ import { isFourDigits, isPinTooEasy } from './pinRules.js';
 import { createTestingBackend, TESTING_RPC_NAMES } from './mockTesting.js';
 import { createEventsBackend, EVENT_RPC_NAMES, EVENT_RESTRICTED_RPC_NAMES, EVENT_TABLES } from './mockTestingEvents.js';
 import { previewToday, publicPreviewHelpers } from './testing/publicApi.preview.js';
+import { formsPublicPreviewHelpers } from '../forms/publicApi.preview.js';
 import { createStaffBackend, STAFF_RPC_NAMES } from './mockStaff.js';
+import { createScheduleBackend, SCHEDULE_RPC_NAMES } from './mockSchedule.js';
+import { createCalendarBackend, CALENDAR_RPC_NAMES } from './mockCalendar.js';
+import { createFormsBackend, FORMS_RPC_NAMES } from './mockForms.js';
 import { createFinanceBackend, FINANCE_RPC_NAMES, FINANCE_WRITE_RPC_NAMES } from './mockFinance.js';
 
 const SESSION_KEY = 'tkd.preview.session'; // the fake "signed in" session
@@ -59,6 +84,9 @@ const OLD_PIN_STATE_KEY = 'tkd.preview.pinState'; // used by the first build; cl
 const TESTING_KEY = 'tkd.preview.testing'; // fake Testing tables (classes + ranks)
 const TESTING_DELAY_KEY = 'tkd.preview.testingDelay'; // setTestingDelay(ms), kept across reloads
 const STAFF_ACCOUNTS_KEY = 'tkd.preview.staffAccounts'; // fake Staff accounts (mockStaff.js)
+const SCHEDULE_KEY = 'tkd.preview.schedule'; // fake Schedule tables (mockSchedule.js)
+const CALENDAR_KEY = 'tkd.preview.calendar'; // fake Calendar tables (mockCalendar.js)
+const FORMS_KEY = 'tkd.preview.forms'; // fake Forms tables (mockForms.js)
 const FINANCE_KEY = 'tkd.preview.finance'; // fake Finance tables: closings, settings, exports, Star sample (mockFinance.js)
 
 const PREVIEW_PASSWORD = 'preview';
@@ -424,6 +452,44 @@ export function createMockClient() {
     newId: newUuid,
   });
 
+  // ----- Schedule (mockSchedule.js) -----
+  // Its classes come from the fake Testing tables above, like the real foreign key.
+  const schedule = createScheduleBackend({
+    loadStore: () => JSON.parse(readStorage(SCHEDULE_KEY)),
+    saveStore: (store) => writeStorage(SCHEDULE_KEY, JSON.stringify(store)),
+    now: () => Date.now(),
+    newId: newUuid,
+    getClasses: () => testing.snapshot().classes.map((c) => ({ id: c.id, location_code: c.location_code, name: c.name, position: c.position })),
+    // Today in Massachusetts, 'YYYY-MM-DD' (the "en-CA" format happens to be exactly that).
+    today: () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date()),
+  });
+
+  // ----- Calendar (mockCalendar.js) -----
+  // Its "some classes" closures look at the fake Schedule above, like the real function does.
+  const calendar = createCalendarBackend({
+    loadStore: () => JSON.parse(readStorage(CALENDAR_KEY)),
+    saveStore: (store) => writeStorage(CALENDAR_KEY, JSON.stringify(store)),
+    now: () => Date.now(),
+    newId: newUuid,
+    getSchedule: () => schedule.snapshot(),
+    getClasses: () => testing.snapshot().classes.map((c) => ({ id: c.id, location_code: c.location_code, name: c.name })),
+    today: () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date()),
+  });
+
+  // ----- Forms (mockForms.js) -----
+  // Its free-class times come from the fake Schedule and Calendar above, like the real functions.
+  const forms = createFormsBackend({
+    loadStore: () => JSON.parse(readStorage(FORMS_KEY)),
+    saveStore: (store) => writeStorage(FORMS_KEY, JSON.stringify(store)),
+    now: () => Date.now(),
+    newId: newUuid,
+    getSchedule: () => schedule.snapshot(),
+    getCalendar: () => calendar.snapshot(),
+    getClasses: () => testing.snapshot().classes.map((c) => ({ id: c.id, location_code: c.location_code, name: c.name })),
+    getSchoolPhone: (code) => { try { return JSON.parse(readStorage(TESTING_KEY))?.locations?.find?.((l) => l.code === code)?.phone ?? null; } catch { return null; } }, // 0019
+    today: () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date()),
+  });
+
   // ----- Events, roster with payments, Settings → Schools (mockTestingEvents.js) -----
   // Same store as Classes and ranks (the event copies classes from it).
   const events = createEventsBackend({
@@ -463,6 +529,15 @@ export function createMockClient() {
         query.filters.push({ col, value });
         return builder;
       },
+      // (lte / gte / in: used by the Calendar's date-range reads, mockCalendar.js)
+      lte(col, value) {
+        query.filters.push({ col, value, op: 'lte' });
+        return builder;
+      },
+      gte(col, value) {
+        query.filters.push({ col, value, op: 'gte' });
+        return builder;
+      },
       in(col, values) {
         query.filters.push({ col, value: values, op: 'in' });
         return builder;
@@ -482,6 +557,9 @@ export function createMockClient() {
           if (query.write) {
             return { data: null, error: { code: '42501', message: `permission denied for table ${table}`, details: null, hint: null }, status: 403 };
           }
+          if (table.startsWith('schedule_')) return schedule.select(table, query.columns, query.filters, query.orders, testingContext());
+          if (table.startsWith('calendar_')) return calendar.select(table, query.columns, query.filters, query.orders, testingContext());
+          if (table === 'forms' || table.startsWith('form_') || table === 'prospect_statuses') return forms.select(table, query.columns, query.filters, query.orders, testingContext());
           // Phase 2 tables (and locations, which gained the address columns) → mockTestingEvents.js.
           if (EVENT_TABLES.includes(table)) return events.select(table, query.columns, query.filters, query.orders, testingContext());
           return testing.select(table, query.columns, query.filters, query.orders, testingContext());
@@ -526,6 +604,18 @@ export function createMockClient() {
     if (STAFF_RPC_NAMES.includes(name)) {
       await wait(FAKE_DELAY_MS);
       return staffAccounts.rpc(name, args, staffContext());
+    }
+    if (SCHEDULE_RPC_NAMES.includes(name)) {
+      await wait(testingDelay());
+      return schedule.rpc(name, args, testingContext());
+    }
+    if (CALENDAR_RPC_NAMES.includes(name)) {
+      await wait(testingDelay());
+      return calendar.rpc(name, args, testingContext());
+    }
+    if (FORMS_RPC_NAMES.includes(name)) {
+      await wait(testingDelay());
+      return forms.rpc(name, args, testingContext());
     }
     if (EVENT_RPC_NAMES.includes(name) || EVENT_RESTRICTED_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
@@ -575,6 +665,18 @@ export function createMockClient() {
 
   // Console helpers for testing (see the top of this file).
   window.__tkdPreview = {
+    kioskEndsIn(minutes = 0) {
+      let entry = null;
+      try {
+        entry = JSON.parse(readStorage('tkd.kiosk'));
+      } catch {
+        entry = null;
+      }
+      if (!entry) return 'No kiosk on this tablet. Open one from Forms → Share → "Open kiosk mode on this device".';
+      entry.expiresAt = Date.now() + Math.max(0, Number(minutes) || 0) * 60000;
+      writeStorage('tkd.kiosk', JSON.stringify(entry));
+      return `This kiosk now ends in ${minutes} minute(s). The welcome screen updates within a second.`;
+    },
     lockNow() {
       setLockedFlag(true);
       return 'Locked (or signed out, if no PIN is set).';
@@ -627,6 +729,54 @@ export function createMockClient() {
       if (!testing.clearSchool(school)) return "Use clearSchool('Worcester') or clearSchool('Shrewsbury').";
       return `Removed every class and rank at ${school}. Reload or switch schools to see the empty state.`;
     },
+    failNextScheduleSave() {
+      schedule.failNextSave();
+      return 'The next Schedule save will fail like a dropped connection and change nothing.';
+    },
+    simulateOtherAdminEditSchedule() {
+      schedule.simulateOtherAdminEdit();
+      return 'Another admin changed every schedule row. Open dialogs and Undo are now out of date.';
+    },
+    clearSchedule(school) {
+      if (!schedule.clearSchool(school)) return "Use clearSchedule('Worcester') or clearSchedule('Shrewsbury').";
+      return `${school}'s schedules are removed. Reload or switch schools to see the empty Schedule.`;
+    },
+    resetSchedule() {
+      schedule.reset();
+      return 'Schedule is back to the sample week. Reload or switch schools to see it.';
+    },
+    failNextCalendarSave() {
+      calendar.failNextSave();
+      return 'The next Calendar save will fail like a dropped connection and change nothing.';
+    },
+    simulateOtherAdminEditCalendar() {
+      calendar.simulateOtherAdminEdit();
+      return 'Another admin changed every event, closure and event type. Open dialogs and Undo are now out of date.';
+    },
+    clearCalendar() {
+      calendar.clear();
+      return 'Every event and closure is removed (event types stay). Reload or change month to see it.';
+    },
+    resetCalendar() {
+      calendar.reset();
+      return 'The Calendar is back to the sample events and closures. Reload or change month to see them.';
+    },
+    failNextFormsSave() {
+      forms.failNextSave();
+      return 'The next Forms save will fail like a dropped connection and change nothing.';
+    },
+    simulateOtherAdminEditForms() {
+      forms.simulateOtherAdminEdit();
+      return 'Another admin changed every form. An open builder is now out of date.';
+    },
+    clearForms() {
+      forms.clear();
+      return 'Every form, sign-up and free-class booking is removed. Reload to see the empty Forms list.';
+    },
+    resetForms() {
+      forms.reset();
+      return 'Forms are back to the sample forms and sign-ups. Reload to see them.';
+    },
     resetTesting() {
       testing.reset();
       events.reset();
@@ -660,6 +810,13 @@ export function createMockClient() {
     },
     // ----- Events / family form helpers (publicApi.preview.js) -----
     ...publicPreviewHelpers(),
+    // ----- Public Forms page helpers (src/forms/publicApi.preview.js). forceRateLimited above
+    // stays Color Belt's; the forms one is called forceFormsRateLimited here (on the /f/<name>
+    // page itself it is plain forceRateLimited). -----
+    setPublicForms: formsPublicPreviewHelpers().setPublicForms,
+    forceTimeTaken: formsPublicPreviewHelpers().forceTimeTaken,
+    forceFormChanged: formsPublicPreviewHelpers().forceFormChanged,
+    forceFormsRateLimited: formsPublicPreviewHelpers().forceRateLimited,
   };
 
   return { auth, rpc, from };

@@ -1013,7 +1013,7 @@ Run `Start dashboard.bat`, sign in as the admin.
 
 ### 14e. Undo and re-run warnings (only with Jeffrey's OK)
 
-**Re-running 0005 after 0010** puts back the phase 2 versions of the five replaced functions, **without the grading locks** (0005's header says so too). If 0005 is ever re-run, run **0010 again straight after it**. (And if the family-form off switch of 12i is in force, repeat 12i step 1 after re-running 0005, because 0005 grants the two public functions back.)
+**Re-running 0005 after 0010** puts back the phase 2 versions of the five replaced functions, **without the grading locks** (0005's header says so too). If 0005 is ever re-run, run **0010 again straight after it**. (And if the family-form off switch of 12i is in force, repeat 12i step 1 after re-running 0005, because 0005 grants the two public functions back.) **Once 0019 (school phone) is live, also re-run 0019 after any 0005 re-run** — 0005 takes away the phone's read right and Settings → Schools stops loading (17d).
 
 **Rollback without touching data:** put the previous site version back (Cloudflare Pages → Deployments → **Rollback**). 0010 can stay: the phase 2 screens don't read results.
 
@@ -1103,6 +1103,85 @@ An admin sets the reminder times in **Finance → Settings** (they start Off; pl
 4. Run `0011_tests.sql` (15c step 1 — with the admin and desk ids filled in; no timeout line needed) → **ALL 0011 TESTS PASSED**. Then run `0010_tests.sql`, `0006_tests.sql`, `0005_tests.sql`, `0004_tests.sql`, `0003_tests.sql`, `0002_tests.sql` and `verify_pin_tests.sql` again — the new 0011 must not have broken them.
 
 **Rollback:** Finance only reads payments, so turning it off is a code rollback (Cloudflare Pages → Deployments → **Rollback**). The 0011 tables can stay; nothing else depends on them.
+## 16. Forms public page: Cloudflare settings (at go-live, F6 / F7 — each with Jeffrey's OK)
+
+**What it is:** the public form page `/f/<slug>` (free-class sign-ups, and the kiosk tablet) talks only to the Pages Function `functions/api/forms/[slug].js`. That Function signs in to the database as its **own** restricted login, `forms_registrar` (migration 0009 §8: it can run exactly `forms_public_get`, `forms_public_submit` and `forms_public_email_result`, nothing else). It is built the same way as Color Belt's family form (section 12) but shares **nothing secret with it except** the Turnstile widget and the client-key secret. Emails are **off** (rulebook v0.601): no email settings are needed.
+
+**16a–16c done 2026-10-19/20 (F6, Jeffrey):** `forms_registrar` has its own password (checked read-only: a SCRAM-SHA-256 verifier is stored), the Hyperdrive configuration `tkd-forms-registrar` exists (checked through the Cloudflare connection: Session pooler host, port 5432, database `postgres`, user `forms_registrar.eozkfbdfxqlcbpewhach`, caching disabled, `verify-full` with the same Supabase CA certificate as `tkd-registrar`, origin connection limit 5 — it was created with 20 and lowered), the binding `HYPERDRIVE_FORMS` (Production) and the Production text variable `PUBLIC_FORMS=off` were added. No deployment was made. The public forms go live together with Prospects (rulebook v0.241 answer 1); until `PUBLIC_FORMS` is `on`, every form link says "not open" without touching the database. Still to do at go-live: deploy (with Jeffrey's OK), check the security headers of `/f/…` with `curl -I`, a test sign-up with `PUBLIC_FORMS=on`, then the two-connection race test (F6).
+
+### 16a. The `forms_registrar` password (you, on your PC + SQL Editor)
+
+The same method as 12d, with its **own** script and its **own** password — never the Color Belt or Star one. In the script, the role name is `forms_registrar` (as in 13e's script: `const role = 'forms_registrar';`). Save the password as a **new** entry, "Supabase forms_registrar (Hyperdrive)". **Check the printed line says `alter role forms_registrar password 'SCRAM-SHA-256$4096:…';`** before running it, then delete the SQL Editor snippet and the script.
+
+### 16b. Hyperdrive for the Forms page (you)
+
+1. Cloudflare → **Hyperdrive** → a **separate** configuration `tkd-forms-registrar`: the same Session pooler host and port as 12g, database `postgres`, user **`forms_registrar.eozkfbdfxqlcbpewhach`**, password from the "Supabase forms_registrar (Hyperdrive)" entry. **Caching: Disabled** (otherwise "spots left" and "closed" could be answered from a cache). **Origin connection limit: 5** (the role allows at most 5). TLS as 12g (Verify full with the existing Supabase CA certificate).
+2. `tkd-dashboard` → **Settings** → **Bindings** → **Add** → **Hyperdrive**: variable name **`HYPERDRIVE_FORMS`**, configuration `tkd-forms-registrar`, **Production only**.
+
+### 16c. Variables (you, Production only — leave Preview empty)
+
+`tkd-dashboard` → **Settings** → **Variables and Secrets** → **Production**:
+
+| Name | Type | Value | New? |
+|---|---|---|---|
+| `PUBLIC_FORMS` | Text | `off` (later `on` to go live) | **new** — the Forms kill switch; anything other than `on` = forms closed |
+| `HYPERDRIVE_FORMS` | Binding | 15b | **new** |
+| `PUBLIC_ORIGIN` | Text | `https://tkd-dashboard.pages.dev` | already there (12a) — shared |
+| `TURNSTILE_SITE_KEY` | Text | the Site Key | already there (12a) — shared |
+| `TURNSTILE_SECRET` | Secret | the Secret Key | already there (12a) — shared |
+| `CLIENT_KEY_SECRET` | Secret | — | already there (12a) — shared (Forms adds "forms\|" before hashing, so its keys never match Color Belt's) |
+| `RATE_LIMITER` | Binding | — | optional, already set up or skipped in 12a step 5 — shared (Forms' keys start with "forms:") |
+
+**Turnstile:** the same widget (hostname `tkd-dashboard.pages.dev`) works; the Forms page asks for action **`form`** and the Function refuses any other action (so a Color Belt token can't be reused). If the school later gets its own web address, add that hostname to the widget and change `PUBLIC_ORIGIN` for both Functions together.
+
+Variables and bindings take effect on the **next deployment**.
+
+### 16d. Off switch (any time)
+
+In this order (step 1 works in seconds):
+1. **Database off switch (instant):** in the SQL Editor, run
+   ```sql
+   revoke execute on function public.forms_public_get(text) from forms_registrar;
+   revoke execute on function public.forms_public_submit(text, text, uuid, integer, jsonb, jsonb, jsonb, text, text) from forms_registrar;
+   ```
+   The Function then gets "permission denied" and the page shows "try again"; nothing is written. **To turn it back on:** re-run the whole 0009 file, or `grant execute on function …` the same two lines `to forms_registrar`. While it is off, the 0009 tests and fingerprints fail — expected.
+2. **Stop the forms:** set `PUBLIC_FORMS=off` (Production) and **Retry deployment**.
+3. **Lock the login:** `alter role forms_registrar nologin;` (`alter role forms_registrar login;` turns it back on).
+
+Color Belt's form (12i) is not affected by any of these, and its off switch doesn't affect Forms.
+
+---
+
+## 17. Migration 0019: school phone (Settings → Schools → Phone; a closed sign-up form shows it)
+
+**What it does** (`supabase/migrations/0019_school_phone.sql`, rulebook v0.605):
+- `public.locations` gets an optional **`phone`** (empty, or 7–20 characters of digits, spaces, `+ ( ) - .` with 7–15 digits — checked by the table itself).
+- **`settings_update_school_contact`** (admins only; `has_data_access()` first): saves the address (through 0005's `settings_update_school_address`, unchanged) **and** the phone — both or neither. Settings → Schools → Edit uses it.
+- A second BEFORE trigger, `locations_phone_before_write`, raises the version and stamps "last changed by" when the phone changes (0005's trigger is unchanged). History: 0005's `locations_log` already logs every school change to `change_log`.
+- Staff may **read** the phone (the school's public number). **Nothing for `anon`.** 0009 is **unchanged**: its `forms_public_get` already hands the phone to a closed form.
+
+**Each step needs Jeffrey's OK.** Apply **before** deploying the app version that shows the phone (that version reads the `phone` column; without 0019 Settings → Schools can't load).
+
+### 17a. Apply 0019 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0019_school_phone.sql` → **SQL Editor → New query** → paste → **Run**.
+2. Supabase may warn about **destructive operations**: the words are in `drop … if exists` lines that make re-running safe. **Nothing is removed.** Confirm.
+3. "Success." One transaction: on any error nothing is kept. Copy the error to Claude. **Running it again is safe** (tested: the saved phones and versions stay).
+
+### 17b. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0019_fingerprints.sql` — every line must match what `supabase/tests/pglite/run.mjs` printed (10 rows).
+2. **0005's fingerprints move by exactly one line on purpose:** the `table locations` line gains `phone>authenticated:SELECT`, and the trigger list gains `locations.locations_phone_before_write`. Every other migration's fingerprints: **unchanged** (run.mjs step 18 checks all of them).
+3. **Security advisor:** at most the expected "security definer function executable by authenticated" for `settings_update_school_contact` (it checks access and the admin role itself). Anything else about `locations` or the new function is a real problem.
+
+### 17c. Run the tests (you, in the SQL Editor)
+
+1. Open `supabase/tests/0019_tests.sql`, replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste the whole file, **Run** → one row **ALL 0019 TESTS PASSED**. Everything is rolled back (it empties Worcester's address and phone inside the test only; they come back).
+2. Then run `0005_tests.sql` again (it now allows the one new read right) and `0009_tests.sql`.
+
+### 17d. If 0005 is ever re-run
+
+The 0010 undo (14e) re-runs 0005, and 0005 starts by removing **all** read rights on `locations` and granting back only its own columns, so the phone can't be read any more (Settings → Schools stops loading). **Re-run 0019 right after**; the phone numbers themselves stay in the table (tested in run.mjs step 18e).
 
 ---
 
