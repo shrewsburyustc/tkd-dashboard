@@ -3530,7 +3530,7 @@ begin
   --     this file)
   select string_agg(x.f, ', ') into v_txt
     from (values ('change_log_actor_name', 'dfaaf9fd240a31fad052fa49e9909c96'), ('change_log_write', '0dbd01d2fb6cb41108f126bfe1a44f2d'),
-                 ('current_session_id', '32c5f96f3adc387fd022a040fcbc2a4e'), ('has_data_access', '950515a63adf44c7f70449441cad0a8a'),
+                 ('current_session_id', '32c5f96f3adc387fd022a040fcbc2a4e|1429eed0526fc8ba7ef6cc98c54d9cba'), ('has_data_access', '950515a63adf44c7f70449441cad0a8a'),
                  ('is_admin', '497cd39cbd84bfb2233bde0198713c12'),
                  ('testing_location_address', '4cae0f1d89755becac314c91b7272ab8'), ('testing_name_is_valid', 'ab59348605c54a7fc76c4f69e4c8a6b4'),
                  ('testing_new_public_code', 'b85a828150a0dbad98e10c9bc77d184f'), ('testing_normalize_name', 'd91c6d79a9d50cf9752ecf6ec6a278fe'),
@@ -3540,7 +3540,11 @@ begin
            as x(f, m)
    where (select string_agg(md5(regexp_replace(regexp_replace(p.prosrc, '--[^\n]*', '', 'g'), '\s+', '', 'g')), ',')
             from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-           where n.nspname = 'public' and p.proname = x.f) is distinct from x.m;
+           where n.nspname = 'public' and p.proname = x.f) <> all (string_to_array(x.m, '|'))
+      -- "a|b" = either body is fine: current_session_id has two approved
+      -- bodies (before / after Color Belt's central fix, rulebook v0.408)
+      or not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                      where n.nspname = 'public' and p.proname = x.f);
   if v_txt is not null then raise exception 'TEST FAILED: C8 shared helper(s) changed since 0016: %', v_txt; end if;
 
   -- C9. no 0016 function uses clock_timestamp (an Edit's two rows must
