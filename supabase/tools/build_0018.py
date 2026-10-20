@@ -588,7 +588,7 @@ begin
   if not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
                   where n.nspname = 'public' and p.proname = 'finance_chain_steps_core'
                     and position('source: camp (0017)' in p.prosrc) > 0) then
-    raise exception '0018 must be applied after camps'' 0017 - not yet (SETUP section 18)';
+    raise exception '0018 must be applied after camps'' 0017 - not yet (SETUP, Migration 0018)';
   end if;
   if exists (select 1
                from (values
