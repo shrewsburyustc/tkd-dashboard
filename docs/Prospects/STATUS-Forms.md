@@ -130,3 +130,8 @@ Done: the `forms_registrar` password (only its SCRAM verifier is in the database
 ## Deployed 2026-10-20
 
 This branch is on `main` and live (the push included `0ccf776`; live `main` = `cc8b095`). Checked on https://tkd-dashboard.pages.dev: `/f/…` and `/forms` have the strict security policy, the dashboard keeps its own, and `GET /api/forms/<slug>` answers `not_open` (PUBLIC_FORMS=off). Next: Jeffrey looks at the new sections signed in; then PUBLIC_FORMS=on + redeploy, one real test sign-up, the two-connection race test.
+
+## Go-live test 2026-10-20: every sign-up refused → fixed in `58e9d0f` (waiting for deploy)
+
+Jeffrey made a test form ("Test - Delete Me", `/f/test-delete-me`, Live), set `PUBLIC_FORMS=on`, and a test sign-up from his phone said "Some answers were refused" twice (two `invalid` rows in forms_public_attempts; nothing saved). Cause: `functions/_lib/forms/db.js` sent `JSON.stringify(value)::jsonb`; Postgres.js encodes jsonb parameters itself, so the answers arrived as one quoted string (proved with the driver's own encoder and the live database: old payload = `string`, new = `object`). Fix: `sql.json(value)`. Never caught before because the preview and the server tests use a fake database (this was the open item "db.js against real Postgres"). Next: Main fast-forwards and pushes; then the test sign-up again.
+
