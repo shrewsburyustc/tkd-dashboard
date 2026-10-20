@@ -1,7 +1,7 @@
 # TKD Dashboard — Design Guidelines
 
 **School:** Jae H. Jeong's U.S. Taekwondo Center (U.S.T.C.) — Worcester and Shrewsbury, MA
-**Version:** 0.609 (draft) · **Last updated:** 2026-10-19
+**Version:** 0.302 (draft) · **Last updated:** 2026-10-20
 **Status:** Design outline only. Nothing in this document authorizes building or deploying.
 
 > **How to use this file:** Upload it at the start of any chat about the dashboard. Every screen, component, or feature built for the dashboard must follow the rules below. If a request conflicts with a rule, flag the conflict before building. Rules marked **(provisional)** depend on an open decision in section 10.
@@ -105,6 +105,7 @@ Section icons are added to this table only when that section is added (rule P7).
 | Calendar (rail icon; decided v0.234) | `ti-calendar-month` |
 | Forms (rail icon; decided v0.235) | `ti-clipboard-text` |
 | Prospects (rail icon; decided v0.236) | `ti-address-book` |
+| Finance (rail icon, last on the rail; on phones under More; decided v0.201, added to the map v0.301) | `ti-report-money` |
 | More (phone bottom bar, once needed — needed from v0.236: holds Testing, Schedule, Forms) | `ti-menu-2` |
 
 **Actions**
@@ -159,6 +160,9 @@ Section icons are added to this table only when that section is added (rule P7).
 | Change password | `ti-password` — also **Reset password** in Staff accounts (v0.70) |
 | Generate a password (Staff accounts → Reset password; decided v0.73) | `ti-wand` — not `ti-refresh`, which means Retry |
 | Copy to clipboard, e.g. Copy link (decided v0.73; also Star testing, v0.90) | `ti-copy` |
+| Close the day… (Finance: opens the counting dialog; decided v0.207 / v0.800, added to the map v0.301) | `ti-cash-register` |
+| Close the day (the dialog's button) / Day closed (decided v0.207, added to the map v0.301) | `ti-lock-check` |
+| Reopen day (Finance, admins; decided v0.207, added to the map v0.301) | `ti-lock-open` |
 
 **Objects**
 
@@ -169,6 +173,8 @@ Section icons are added to this table only when that section is added (rule P7).
 | Unsaved / error | `ti-alert-triangle` |
 | Staff accounts (admin) | `ti-user-cog` — not `ti-users`, which is kept free |
 | Settings (admin) | `ti-settings` |
+| Payment total (Finance Daily report; decided v0.207, added to the map v0.301) | `ti-sum` |
+| Payment kinds (Finance Daily report; decided v0.207, added to the map v0.301) | Cash `ti-cash`, Check `ti-receipt`, Card `ti-credit-card` |
 
 New icons get added to this map **before** they're used.
 
@@ -614,6 +620,7 @@ To be decided one at a time, each with visual options (rule P3):
 | Kiosk: leaving with a PIN pad on the kiosk screen (decided v0.607) | **Jeffrey, 2026-10-19** (kiosk plan K2; image `Kiosk-K2-leaving.png`): **option A — as in mockup 9.** The small lock in the corner (`ti-lock`) opens a PIN pad on the kiosk screen ("Staff PIN to leave kiosk mode", keypad, **Cancel** back to where the family was). It is the dashboard's own PIN check for the account signed in on that tablet (5 wrong PINs → password, as always; no "Sign out" on it). The right PIN leaves kiosk mode: the tablet forgets its kiosk token and the dashboard reloads. Rejected: B (the dashboard's normal lock screen with a "Back to kiosk" button). |
 | Kiosk: runs inside the dashboard app (decided v0.608) | **Jeffrey, 2026-10-19** (kiosk plan K3; image `Kiosk-K3-where.png`): **option A.** Opening kiosk mode (Forms → Share, Live forms; staff and admins; an amber warning when it isn't the shared front-desk account; the Guided Access / screen pinning tip) gets the 12-hour kiosk token (0009), keeps it on that tablet only, and locks the dashboard on the server (the same lock as Lock now); the dashboard then shows the kiosk instead of the lock screen. The kiosk reuses the public form's own screens and sends sign-ups through the same public Function with the token; the browser's autofill is off; 2 minutes idle mid-form → "Still there?" for 15 s → everything is wiped. The public page `/f/…` is unchanged and keeps no sign-in code (rejected: B, adding sign-in to the public page). "End kiosk mode on all tablets" in Share ends every tablet of that form. No new migration. |
 | Kiosk: when kiosk mode ends (decided v0.609) | **Jeffrey, 2026-10-19** (kiosk plan K4; image `Kiosk-K4-ended.png`): **option A.** The kiosk token lasts **12 hours** from opening; the tablet stops taking new sign-ups **15 minutes before** that (security review: a family that has just started can always finish with a working token), so the end staff see is 11 h 45 min after opening. For the last **30 minutes** before it the welcome screen shows staff an amber line with the end time; after 12 hours it says **"Please ask at the front desk to sign up."**, Start is greyed out, and the staff line says to tap the lock, enter the PIN and open it again from Share. If "End kiosk mode on all tablets" is used while a family is filling in, their sign-up is never lost: the Pages Function saves it once more as a normal sign-up and the tablet then shows the ended screen. Rejected: B (keep working as a normal sign-up page after the end). |
+| SETUP.md sections named by migration number (decided v0.302) | Jeffrey, 2026-10-20, on the Color Belt session's suggestion. Branches kept giving their `supabase/SETUP.md` sections the next free number, and they clashed like the rulebook versions did (on 2026-10-20 three branches used **§18**: camps for 0013, Finance for 0018, Black Belt for 0016). From now on **a section for a migration is titled by its migration number**: `## Migration 00NN: <what it does>` with sub-steps `### 00NNa.`, `### 00NNb.` … (e.g. Color Belt's `§0014`, `### 0014e.`). Migration numbers are already unique (CLAUDE.md table), so these can't clash. A section that isn't about one migration (for example a Cloudflare setup) gets a **descriptive title with no number**. **Sections already on `main` (§1–§17) keep their numbers**, because the test runner finds some of them by number (e.g. `### 14e.`); a branch whose unmerged section clashes renames it to its migration number before or at its merge, and updates every "SETUP §…" mention and any `run.mjs` lookup with it. Rule written in `CLAUDE.md` ("Parallel sessions"). |
 | Approved 2026-10-16 (v0.26) | (1) **No PIN set:** when the 45-minute lock (or Lock now) happens to someone without a PIN, there is no lock screen — they are signed out to the sign-in screen with an amber note "Signed out after 45 minutes idle. Set a PIN to unlock faster." (2) **This device:** clicking it expands a Worcester / Shrewsbury choice inside the account menu; one click saves and closes (reversible, so no Save step). Sets the device's default school only; the top switcher still offers Both. (3) **Borders:** control borders use `#8F8F8A` (3:1); dividers stay `#E5E5E2`. Items (1) and (3) are coded with the Set PIN build. |
 
 ## 11. Changelog
@@ -859,3 +866,5 @@ To be decided one at a time, each with visual options (rule P3):
 | 0.607 | 2026-10-19 | Kiosk: the corner lock opens a PIN pad on the kiosk screen (mockup 9) using the dashboard's own PIN check; Cancel goes back (10b). |
 | 0.608 | 2026-10-19 | Kiosk runs inside the dashboard app (dashboard locked on the server); the public page keeps no sign-in code; autofill off; 2-minute idle wipe; End kiosk mode on all tablets (10b). |
 | 0.609 | 2026-10-19 | Kiosk mode ends after 12 hours with a 30-minute staff warning, then "Please ask at the front desk"; a sign-up made just as it ends is saved as a normal one (10b). |
+| 0.301 | 2026-10-20 | Icon map (2.4): Finance's icons from v0.207 added — `ti-report-money` (rail), `ti-cash-register` Close the day…, `ti-lock-check` Close the day / Day closed, `ti-lock-open` Reopen day, `ti-sum` Total, `ti-cash` / `ti-receipt` / `ti-credit-card` payment kinds. The phone "More" row is updated by the camps branch. |
+| 0.302 | 2026-10-20 | `supabase/SETUP.md` sections for a migration are titled by its migration number (`## Migration 00NN`, `### 00NNa.`); sections already on main keep their numbers (10b). |
