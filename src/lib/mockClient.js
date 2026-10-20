@@ -10,6 +10,7 @@
 // Try it:  any email + password "preview" signs in as Jeffrey Berg (admin). PIN is 2580.
 // Test helpers in the browser console (F12 → Console):
 //   __tkdPreview.lockNow()                lock the screen right away
+//   __tkdPreview.kioskEndsIn(20)          the kiosk on this tablet ends in 20 minutes (0 = now)
 //   __tkdPreview.setHasPin(false)         remove the PIN (reload → Set your PIN; Lock now → signed out)
 //   __tkdPreview.setShared(true)          pretend this is the shared front-desk account (then reload)
 //   __tkdPreview.setPasswordAgeDays(8)    pretend the password was typed 8 days ago (then reload)
@@ -664,6 +665,18 @@ export function createMockClient() {
 
   // Console helpers for testing (see the top of this file).
   window.__tkdPreview = {
+    kioskEndsIn(minutes = 0) {
+      let entry = null;
+      try {
+        entry = JSON.parse(readStorage('tkd.kiosk'));
+      } catch {
+        entry = null;
+      }
+      if (!entry) return 'No kiosk on this tablet. Open one from Forms → Share → "Open kiosk mode on this device".';
+      entry.expiresAt = Date.now() + Math.max(0, Number(minutes) || 0) * 60000;
+      writeStorage('tkd.kiosk', JSON.stringify(entry));
+      return `This kiosk now ends in ${minutes} minute(s). The welcome screen updates within a second.`;
+    },
     lockNow() {
       setLockedFlag(true);
       return 'Locked (or signed out, if no PIN is set).';

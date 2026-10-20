@@ -15,6 +15,10 @@
 //   POST answers: ok, closed, not_found, invalid, rate_limited, form_changed, time_taken
 //                                              (from the database)
 //                 not_open, bad_request, verify_failed, rate_limited, unavailable   (from here)
+//   POST extra field: kiosk_ended: true — added only when a kiosk sign-up's token was refused
+//                 (kiosk mode ended or expired), the sign-up was then sent again as a normal
+//                 public one, and that second answer was not `invalid` (step 9a below). It
+//                 tells the kiosk page that kiosk mode is over on this tablet.
 //
 // Safety rules followed here (handoff §6):
 //   - Fail closed: a missing setting, an error, or an answer we don't recognise never lets a
@@ -351,6 +355,20 @@ async function postAnswer(context, deps) {
   try {
     db = deps.openDatabase(env);
     const result = await db.publicSubmit({ slug, clientKey, ...fields });
+    // 9a. Kiosk mode ended mid-sign-up (kiosk plan K4, 2026-10-19). The database answers
+    //     `invalid` — and saves NOTHING — when the kiosk token is wrong, older than 12 hours or
+    //     ended by staff ("End kiosk mode on all tablets"). A family already filling in on the
+    //     tablet must never be lost, so we ask ONCE more as a normal public sign-up (no token):
+    //     same submission_key, so it can never be saved twice, and the normal public limit of
+    //     20 an hour applies. Turnstile was already passed in step 8 for this same request, so
+    //     it is not asked again. If the second answer is `invalid` too, the answers themselves
+    //     were wrong: the page gets the plain `invalid`, without the flag.
+    if (result?.status === 'invalid' && fields.kioskToken !== null) {
+      const retry = await db.publicSubmit({ slug, clientKey, ...fields, kioskToken: null });
+      const mapped = mapSubmitResult(retry);
+      if (mapped.status === 'invalid') return mapped;
+      return { ...mapped, kiosk_ended: true };
+    }
     // EMAILS (off for now, rulebook v0.601): when the school has its own web address in its
     // Cloudflare account and a Resend account, the confirmation to the family and the alert
     // to the school would be sent HERE, after an `ok` that is not a repeat — then any failure

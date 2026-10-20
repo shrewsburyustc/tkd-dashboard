@@ -81,6 +81,24 @@ export function longDay(date) {
 export const NOT_FOUND_TITLE = 'This form was not found';
 export const NOT_FOUND_TEXT = 'Check the link, or ask the school for a new one.';
 export const CLOSED_TITLE = 'This form is closed';
+// ----- The front-desk kiosk (kiosk plan K1–K4) -----
+export const KIOSK_KEEP_TIME = 'Take a photo of this screen with your phone, or write the time down.';
+export const KIOSK_KEEP_NO_TIME = 'The school will call you to set up a time.';
+export const KIOSK_DONE = 'Done';
+export const kioskStartingOver = (n) => `Starting over in ${n} second${n === 1 ? '' : 's'}…`;
+export const KIOSK_WELCOME = 'Welcome to U.S. Taekwondo Center';
+export const KIOSK_WELCOME_SUB = 'New here? Tell us about your family.';
+export const KIOSK_START = 'Start';
+export const KIOSK_ASK_DESK = 'Please ask at the front desk to sign up.';
+export const kioskEndsAt = (time) => `Staff: kiosk mode ends at ${time}. Unlock and open it again from Share.`;
+export const KIOSK_ENDED_STAFF = 'Staff: kiosk mode has ended. Tap the lock, enter your PIN, then open it again from Share.';
+export const KIOSK_STILL_THERE = 'Still there?';
+export const kioskClearingIn = (n) => `To keep your details private, this form clears in ${n} second${n === 1 ? '' : 's'}.`;
+export const KIOSK_KEEP_GOING = "I'm still here";
+export const KIOSK_LOCK = 'Staff: leave kiosk mode';
+export const KIOSK_PIN_TITLE = 'Staff PIN to leave kiosk mode';
+export const KIOSK_CANCEL = 'Cancel';
+
 export const CLOSED_NO_PHONE = 'It is not taking sign-ups any more. Please contact the school.';
 // With the school's phone (Settings → Schools, migration 0019): "Call us at <tap-to-call> to try a free class."
 export const CALL_BEFORE = 'Call us at ';

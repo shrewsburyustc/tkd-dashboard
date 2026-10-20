@@ -5,7 +5,11 @@
 //   'setPin'    → Set your PIN (right after a password sign-in when the account has no PIN)
 //   'home'      → the dashboard (Shell + the open page: Home, Testing, or — admins, from the account
 //                 menu — Staff accounts or Settings), maybe with a dialog on top
-//   'locked'    → LockScreen (the dashboard stays in memory, hidden, behind it)
+//   'locked'    → LockScreen (the dashboard stays in memory, hidden, behind it) — or, while this
+//                 tablet is the front-desk KIOSK (Share → "Open kiosk mode on this device",
+//                 src/lib/kiosk.js), the kiosk (src/screens/kiosk/KioskApp.jsx, loaded only then):
+//                 the dashboard is locked the same way, and the kiosk's PIN pad is the lock
+//                 screen's own check. Leaving it forgets the kiosk and reloads the page.
 // Pages have their own address ("#testing", "#staff-accounts"; rulebook v0.83) so the browser's
 // Back / Forward, reload and bookmarks work per page — see "Browser Back / Forward" below.
 // Phase 2 adds two: a testing event's page ("#testing/event/<id>") and Settings ("#settings").
@@ -24,7 +28,7 @@
 // keep it fresh while someone is active (useSessionHeartbeat), tell it whenever the lock screen
 // shows (lock_session — sent again after reconnecting if it failed), and a right PIN unlocks it
 // (verify_pin / set_my_pin do that on their side).
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { supabase, isPreview } from './lib/supabase.js';
 import { isPasswordTooOld } from './lib/session.js';
 import { classifySignInError } from './lib/authErrors.js';
@@ -52,9 +56,13 @@ import { showFinanceInNav } from './components/navItems.js';
 import StaffAccounts from './screens/StaffAccounts.jsx';
 import Settings from './screens/Settings.jsx';
 import LockScreen from './screens/LockScreen.jsx';
+import { clearKiosk, readKiosk } from './lib/kiosk.js';
+import KioskLoadGuard from './screens/kiosk/KioskLoadGuard.jsx';
 import SetPinScreen from './screens/SetPinScreen.jsx';
 import ChangePinDialog from './screens/ChangePinDialog.jsx';
 import ChangePasswordDialog from './screens/ChangePasswordDialog.jsx';
+// The kiosk is a separate download, fetched only when a tablet becomes a kiosk.
+const KioskApp = lazy(() => import('./screens/kiosk/KioskApp.jsx'));
 
 // Messages shown on the sign-in screen after the App signs someone out.
 const NOTICES = {
@@ -232,6 +240,7 @@ export default function App() {
       setEventId(null);
     }
     // A new id each time makes the SignIn screen start fresh (see `key` below).
+    clearKiosk(); // a signed-out tablet is never a kiosk any more
     setNotice(noticeText ? { id: Date.now(), text: noticeText } : null);
     setProfile(null);
     setAccountDialog(null);
@@ -434,6 +443,11 @@ export default function App() {
 
   const lockNow = useCallback(() => setLockedFlag(true), []); // the idle hook hears this and locks
 
+  // The front-desk kiosk of this tablet (only while locked, and only for the account that opened
+  // it). Leaving it: the right PIN on its pad → forget it, unlock as usual, then reload the page so
+  // nothing of the kiosk (its screens, styles or the last family's answers) stays in memory.
+  const kiosk = phase === 'locked' && profile !== null ? readKiosk(profile.id) : null;
+
   const handleUnlocked = useCallback(async () => {
     // Rule: password every 7 days. The tab may have sat on the lock screen past the 7 days, so
     // check again before showing Home. (The database's PIN check already looks at this too;
@@ -453,6 +467,12 @@ export default function App() {
     markActivityNow(); // count the unlock as activity so it doesn't re-lock straight away
     setLockedFlag(false); // the idle hook hears this and shows Home
   }, [signOut]);
+
+  const leaveKiosk = useCallback(async () => {
+    clearKiosk();
+    await handleUnlocked();
+    window.location.reload();
+  }, [handleUnlocked]);
 
   // After unlocking, give keyboard focus back to where it was before the lock. If that
   // control is gone (e.g. the "Lock now" menu item — the menu has closed), use the initials.
@@ -881,6 +901,7 @@ export default function App() {
             {section === 'forms' && (
               <Forms
                 location={location}
+                profile={profile}
                 // For showing or hiding controls only — the database decides what may change.
                 isAdmin={profile.role === 'admin'}
                 screenLocked={phase === 'locked'}
@@ -953,13 +974,26 @@ export default function App() {
           <ChangePasswordDialog profile={profile} onCancel={closeAccountDialog} onChanged={handlePasswordChanged} />
         )}
 
-        {phase === 'locked' && profile !== null && (
+        {phase === 'locked' && profile !== null && kiosk === null && (
           <LockScreen
             profile={profile}
             onUnlock={handleUnlocked}
             onPasswordRequired={() => signOut(NOTICES.unlockWithPassword)}
             onSignOut={() => signOut()}
           />
+        )}
+        {phase === 'locked' && profile !== null && kiosk !== null && (
+          <KioskLoadGuard>
+          <Suspense fallback={null}>
+            <KioskApp
+              profile={profile}
+              entry={kiosk}
+              onLeave={leaveKiosk}
+              onPasswordRequired={() => signOut(NOTICES.unlockWithPassword)}
+              onSignOut={() => signOut()}
+            />
+          </Suspense>
+          </KioskLoadGuard>
         )}
       </div>
 

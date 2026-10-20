@@ -12,6 +12,10 @@
 //   onUnlock           — PIN was right: go back to where they were
 //   onPasswordRequired — 5 wrong PINs / 7-day rule / PIN removed: sign out, ask for the password
 //   onSignOut          — "Not you? Sign out"
+//   kiosk              — optional, the front-desk kiosk's PIN pad (kiosk plan K2 → A, mockup 9):
+//                        { title, cancelLabel, onCancel }. Same PIN check and rules; it shows only the
+//                        title, the dots, the keypad and Cancel (back to the sign-up form) — no name,
+//                        no "Sign out" (a family must not be able to sign the tablet out).
 //
 // Typing the PIN (shared with Set PIN and Change PIN — see usePinDigits.js and PinEntry.jsx):
 //   - PC layout: a hidden password box holds the digits. It has keyboard focus as soon as the
@@ -50,7 +54,7 @@ async function checkPin(pin) {
   }
 }
 
-export default function LockScreen({ profile, onUnlock, onPasswordRequired, onSignOut }) {
+export default function LockScreen({ profile, onUnlock, onPasswordRequired, onSignOut, kiosk = null }) {
   const showKeypad = useMediaQuery(KEYPAD_QUERY); // touch or narrow screen → on-screen keypad
   const pin = usePinDigits({ keypadKeysActive: showKeypad });
   const [error, setError] = useState(null);
@@ -104,24 +108,38 @@ export default function LockScreen({ profile, onUnlock, onPasswordRequired, onSi
   return (
     <div className="center-screen">
       {/* Clicking anywhere on the card puts focus back in the hidden PIN box (PC layout). */}
-      <div className="lock-card" onClick={focusInput}>
-        <p className="lock-status">
-          <IconLock size={16} aria-hidden="true" />
-          Locked
-        </p>
-        <Avatar name={profile.full_name} size="large" />
-        <h1 className="lock-name">{profile.full_name}</h1>
+      <div className={`lock-card${kiosk ? ' lock-card--kiosk' : ''}`} onClick={focusInput}>
+        {kiosk ? (
+          <h1 className="lock-prompt lock-prompt--kiosk" id="lock-prompt" tabIndex={-1}>
+            {kiosk.title}
+          </h1>
+        ) : (
+          <>
+            <p className="lock-status">
+              <IconLock size={16} aria-hidden="true" />
+              Locked
+            </p>
+            <Avatar name={profile.full_name} size="large" />
+            <h1 className="lock-name">{profile.full_name}</h1>
 
-        <p className="lock-prompt" id="lock-prompt">
-          Enter your PIN
-        </p>
+            <p className="lock-prompt" id="lock-prompt">
+              Enter your PIN
+            </p>
+          </>
+        )}
         {error && <Notice>{error}</Notice>}
 
         <PinEntry pin={pin} showKeypad={showKeypad} labelledBy="lock-prompt" busyLabel="Checking PIN" />
 
-        <button type="button" className="link-button lock-signout" onClick={onSignOut}>
-          Not you? Sign out
-        </button>
+        {kiosk ? (
+          <button type="button" className="btn lock-kiosk-cancel" onClick={kiosk.onCancel}>
+            {kiosk.cancelLabel}
+          </button>
+        ) : (
+          <button type="button" className="link-button lock-signout" onClick={onSignOut}>
+            Not you? Sign out
+          </button>
+        )}
       </div>
     </div>
   );

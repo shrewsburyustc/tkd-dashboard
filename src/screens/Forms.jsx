@@ -33,7 +33,7 @@ import * as T from './forms/text.js';
 
 const usable = (el) => (el && el.isConnected && el.getClientRects().length > 0 ? el : null);
 
-export default function Forms({ location, isAdmin, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange }) {
+export default function Forms({ location, profile, isAdmin, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange }) {
   const isPhone = useMediaQuery(PHONE_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const both = location === 'Both';
@@ -304,7 +304,9 @@ export default function Forms({ location, isAdmin, screenLocked, onNoAccess, onR
         />
       );
     } else if (dialog.type === 'share') {
-      dialogElement = <ShareDialog key={dialog.key} form={dialog.form} isPhone={isPhone} onClose={closeDialog} />;
+      dialogElement = (
+        <ShareDialog key={dialog.key} form={dialog.form} profile={profile} isPhone={isPhone} onClose={closeDialog} onNoAccess={onNoAccess} showToast={showToast} />
+      );
     } else if (dialog.type === 'delete') {
       dialogElement = (
         <Dialog title={T.DELETE_TITLE} variant="confirm" describedBy={`forms-del-${dialog.key}`} onRequestClose={closeDialog}>

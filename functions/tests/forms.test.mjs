@@ -446,6 +446,78 @@ test('POST: no signature (form without a waiver) and a kiosk token are passed on
   assert.equal(db2.log.calls[0][1].kioskToken, null);
 });
 
+// ---------- POST: kiosk mode ended mid-sign-up (kiosk plan K4) --------------------------------
+
+// A fake database that gives the answers in `answers` one after the other.
+function answersInTurn(...answers) {
+  let i = 0;
+  return () => answers[Math.min(i++, answers.length - 1)];
+}
+
+test('kiosk: token refused (invalid), sent again as public and saved → ok + kiosk_ended', async () => {
+  const db = fakeDb({ submit: answersInTurn({ status: 'invalid' }, okSubmit) });
+  const ts = fakeTurnstile();
+  const logged = [];
+  const original = console.log;
+  console.log = (...parts) => logged.push(parts.join(' '));
+  let r;
+  try {
+    r = await run(handlePost, context({ body: goodBody({ kiosk_token: KIOSK }) }), { openDatabase: db.openDatabase, fetchImpl: ts.fetchImpl });
+  } finally {
+    console.log = original;
+  }
+  assert.deepEqual(r.json, {
+    status: 'ok',
+    repeat: false,
+    bookings: [{ child: 0, class_name: 'Little Tigers', date: '2026-11-03', starts_at: '16:00', ends_at: '16:40' }],
+    kiosk_ended: true,
+  });
+  assert.equal(db.log.calls.length, 2, 'database asked twice');
+  const [first, second] = db.log.calls.map((c) => c[1]);
+  assert.equal(first.kioskToken, KIOSK);
+  assert.equal(second.kioskToken, null);
+  assert.equal(second.submissionKey, first.submissionKey); // same key: can never be saved twice
+  assert.deepEqual({ ...second, kioskToken: KIOSK }, first); // everything else the same
+  assert.equal(ts.seen.length, 1, 'Turnstile asked only once');
+  assert.equal(db.log.opened, 1);
+  assert.equal(db.log.closed, 1);
+  assert.equal(logged.length, 1);
+  assert.doesNotMatch(logged[0], /abab/); // the token is never logged
+});
+
+test('kiosk: invalid twice → plain invalid, no kiosk_ended flag', async () => {
+  const db = fakeDb({ submit: { status: 'invalid' } });
+  const r = await run(handlePost, context({ body: goodBody({ kiosk_token: KIOSK }) }), { openDatabase: db.openDatabase, fetchImpl: fakeTurnstile().fetchImpl });
+  assert.deepEqual(r.json, { status: 'invalid' });
+  assert.equal(db.log.calls.length, 2);
+  assert.equal(db.log.calls[1][1].kioskToken, null);
+});
+
+test('kiosk: no token + invalid → no second try', async () => {
+  const db = fakeDb({ submit: { status: 'invalid' } });
+  const r = await run(handlePost, context(), { openDatabase: db.openDatabase, fetchImpl: fakeTurnstile().fetchImpl });
+  assert.deepEqual(r.json, { status: 'invalid' });
+  assert.equal(db.log.calls.length, 1);
+});
+
+test('kiosk: token + first answer ok → no second try, no flag', async () => {
+  const db = fakeDb({ submit: okSubmit });
+  const r = await run(handlePost, context({ body: goodBody({ kiosk_token: KIOSK }) }), { openDatabase: db.openDatabase, fetchImpl: fakeTurnstile().fetchImpl });
+  assert.equal(r.json.status, 'ok');
+  assert.equal(r.json.kiosk_ended, undefined);
+  assert.equal(db.log.calls.length, 1);
+});
+
+test('kiosk: token + first answer rate_limited (or any other non-invalid) → no second try', async () => {
+  for (const answer of [{ status: 'rate_limited' }, { status: 'closed' }, { status: 'time_taken', times: [] }, { status: 'form_changed', published_version: 4 }]) {
+    const db = fakeDb({ submit: answer });
+    const r = await run(handlePost, context({ body: goodBody({ kiosk_token: KIOSK }) }), { openDatabase: db.openDatabase, fetchImpl: fakeTurnstile().fetchImpl });
+    assert.equal(r.json.status, answer.status);
+    assert.equal(r.json.kiosk_ended, undefined);
+    assert.equal(db.log.calls.length, 1, answer.status);
+  }
+});
+
 test('POST: every database status is mapped (and only known ones)', async () => {
   const cases = [
     [{ status: 'not_found' }, { status: 'not_found' }],

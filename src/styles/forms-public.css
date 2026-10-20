@@ -5,7 +5,8 @@
   centred column on a light gray page, a progress bar, school blue only for the main button,
   links, ticks and the chosen time. Recorded exceptions on PHONES (v0.106): buttons are 44px tall
   and fields use 16px text, so phones don't zoom in while typing and taps are easy.
-  This file is loaded ONLY by the public page (src/forms/main.jsx), never by the dashboard.
+  This file is loaded by the public page (src/forms/main.jsx) and by the front-desk kiosk
+  (src/screens/kiosk/KioskApp.jsx, only once kiosk mode opens; leaving it reloads the page).
   It has two parts:
     1. The dashboard basics the shared fields use (.field, .input, .btn, .notice, .cbox …), the
        same values as app.css / calendar.css / testing.css — the fields are drawn by the staff

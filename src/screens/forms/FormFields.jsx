@@ -35,7 +35,13 @@ function Problem({ id, code }) {
   return <Notice id={id}>{T.FIELD_PROBLEM[code] ?? T.FIELD_PROBLEM.required}</Notice>;
 }
 
-export default function FormFields({ fields, values, problems, times, readOnly, idBase, noTimesText, onAnswer, onChildren, onBooking, onSignature }) {
+// noAutofill (the front-desk kiosk): the browser must not offer the previous family's name, phone
+// or email on a shared tablet (kiosk plan), so every box says autocomplete="off".
+export default function FormFields({ fields, values, problems, times, readOnly, idBase, noTimesText, noAutofill = false, onAnswer, onChildren, onBooking, onSignature }) {
+  const off = noAutofill ? 'off' : undefined;
+  // (on the kiosk the keyboard's spell-check and word suggestions are off too: they would learn
+  // and offer one family's names and emails to the next — security review L4)
+  const noLearn = noAutofill ? { autoCorrect: 'off', spellCheck: false } : {};
   const { answers, children } = values;
 
   function question(f) {
@@ -84,7 +90,7 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
     }
 
     let control;
-    const common = { id, className: 'input', readOnly, ...aria };
+    const common = { id, className: 'input', readOnly, autoComplete: off, ...noLearn, ...aria };
     switch (f.type) {
       case 'long_text':
         control = <textarea {...common} className="input ctextarea" rows={3} value={v ?? ''} onChange={(e) => onAnswer(f.id, e.target.value)} />;
@@ -117,7 +123,7 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
         break;
       default: {
         const type = ['phone', 'parent_phone'].includes(f.type) ? 'tel' : ['email', 'parent_email'].includes(f.type) ? 'email' : 'text';
-        const auto = { parent_name: 'name', parent_phone: 'tel', parent_email: 'email' }[f.type];
+        const auto = off ?? { parent_name: 'name', parent_phone: 'tel', parent_email: 'email' }[f.type];
         control = <input {...common} type={type} autoComplete={auto} maxLength={300} value={v ?? ''} onChange={(e) => onAnswer(f.id, e.target.value)} />;
       }
     }
@@ -149,13 +155,14 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
             <div className="fchild-row">
               <div className="field">
                 <label htmlFor={`${idBase}-child-${i}-name`}>{T.FIRST_NAME}</label>
-                <input id={`${idBase}-child-${i}-name`} className="input" maxLength={60} readOnly={readOnly} aria-invalid={problems.children ? true : undefined} aria-describedby={problems.children ? `${idBase}-children-err` : undefined} value={c.first_name} onChange={(e) => set(i, { first_name: e.target.value })} />
+                <input id={`${idBase}-child-${i}-name`} className="input" maxLength={60} autoComplete={off} {...noLearn} readOnly={readOnly} aria-invalid={problems.children ? true : undefined} aria-describedby={problems.children ? `${idBase}-children-err` : undefined} value={c.first_name} onChange={(e) => set(i, { first_name: e.target.value })} />
               </div>
               <div className="field fchild-age">
                 <label htmlFor={`${idBase}-child-${i}-age`}>{T.AGE}</label>
                 <input
                   id={`${idBase}-child-${i}-age`}
                   className="input"
+                  autoComplete={off}
                   type="number"
                   inputMode="numeric"
                   min={2}

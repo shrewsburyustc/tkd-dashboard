@@ -43,7 +43,10 @@ group('publicApi: answers are read field by field', () => {
   assert.deepEqual(readForm({ status: 'closed', school_name: 'Worcester', school_phone: '508' }), { status: 'closed', schoolName: 'Worcester', schoolPhone: '508' });
   assert.deepEqual(readForm({ status: 'not_open' }), { status: 'not_open' });
   assert.deepEqual(readSubmit({ status: 'ok', repeat: true, bookings: [{ child: 0, class_name: 'White', date: '2027-01-13', starts_at: '16:00', ends_at: '16:40' }] }),
-    { status: 'ok', bookings: [{ child: 0, className: 'White', date: '2027-01-13', start: '16:00', end: '16:40' }] });
+    { status: 'ok', bookings: [{ child: 0, className: 'White', date: '2027-01-13', start: '16:00', end: '16:40' }], kioskEnded: false });
+  // the kiosk is told when its kiosk mode had ended (saved as a normal sign-up — kiosk plan K4)
+  assert.equal(readSubmit({ status: 'ok', bookings: [], kiosk_ended: true }).kioskEnded, true);
+  assert.equal(readSubmit({ status: 'ok', bookings: [], kiosk_ended: 'yes' }).kioskEnded, false);
   assert.deepEqual(readSubmit({ status: 'time_taken', times: [good] }).times.length, 1);
   assert.deepEqual(readSubmit({ status: 'verify_failed' }), { status: 'verify_failed' });
 });

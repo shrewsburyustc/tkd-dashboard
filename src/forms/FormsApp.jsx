@@ -11,6 +11,12 @@
 // Function (publicApi.js) instead of the staff database call.
 // Emails are OFF (rulebook v0.601): the thank-you screen tells the family to keep the time.
 //
+// The front-desk KIOSK (kiosk plan, docs/Prospects/TKD-Kiosk-Build-Plan.md) shows this same page
+// inside the locked dashboard (src/screens/kiosk/KioskApp.jsx) with the prop `kiosk`:
+//   { slug, token, paused, onDone(kioskEnded), onEnded() } — the form comes from `slug` (not the address), every Submit
+//   carries the kiosk token, the browser's autofill is off, and the thank-you screen is the kiosk one
+//   (30 seconds, "Take a photo", Done → onDone). The public page itself never passes it.
+//
 // What is sent (POST /api/forms/<name>, checked again by the Function and the database):
 //   submission_key   made once per sign-up (crypto.randomUUID); a repeat Submit after a dropped
 //                    connection reuses it, so the database saves the sign-up only once
@@ -50,8 +56,8 @@ function slugFromAddress() {
 // The steps that have something in them (a divider with nothing after it is skipped, as in Fill in).
 const stepsFor = (fields) => stepsOf(fields).filter((s) => s.fields.length > 0);
 
-export default function FormsApp() {
-  const [slug] = useState(slugFromAddress);
+export default function FormsApp({ kiosk = null }) {
+  const [slug] = useState(() => kiosk?.slug ?? slugFromAddress());
   const [screen, setScreen] = useState('loading'); // loading | message | form | done
   const [message, setMessage] = useState(null); // { status, schoolPhone } for the message screen
   const [loadTry, setLoadTry] = useState(0);
@@ -211,6 +217,7 @@ export default function FormsApp() {
         started_at: startedAt.current,
         sent_at: Date.now(),
         turnstile_token: token,
+        ...(kiosk ? { kiosk_token: kiosk.token } : {}),
       });
       await handleAnswer(answer);
     } finally {
@@ -220,9 +227,12 @@ export default function FormsApp() {
   }
 
   async function handleAnswer(answer) {
+    // The kiosk's kiosk mode had ended and the server's fall-back didn't save it either: the
+    // tablet shows its ended screen from the next family on (security review M2).
+    if (kiosk && answer.kioskEnded && answer.status !== 'ok') kiosk.onEnded?.();
     switch (answer.status) {
       case 'ok':
-        setSent({ bookings: answer.bookings, values });
+        setSent({ bookings: answer.bookings, values, kioskEnded: answer.kioskEnded === true });
         setScreen('done');
         return;
       case 'time_taken': {
@@ -289,7 +299,7 @@ export default function FormsApp() {
   } else if (screen === 'message') {
     content = <Message answer={message} onRetry={() => { setScreen('loading'); setLoadTry((n) => n + 1); }} />;
   } else if (screen === 'done') {
-    content = <ThankYou form={form} sent={sent} headingRef={headingRef} />;
+    content = <ThankYou form={form} sent={sent} headingRef={headingRef} kiosk={kiosk} />;
   } else {
     const hasBooking = current.fields.some((f) => f.type === 'booking');
     content = (
@@ -312,7 +322,7 @@ export default function FormsApp() {
             <Notice>{T[note]}</Notice>
           </div>
         )}
-        <form ref={formRef} onSubmit={onNext} onBlur={onLeave} noValidate>
+        <form ref={formRef} onSubmit={onNext} onBlur={onLeave} noValidate autoComplete={kiosk ? 'off' : undefined}>
           <FormFields
             fields={current.fields}
             values={values}
@@ -321,6 +331,7 @@ export default function FormsApp() {
             readOnly={sending}
             idBase={ID_BASE}
             noTimesText={T.NO_OPEN_TIMES}
+            noAutofill={Boolean(kiosk)}
             onAnswer={(id, value) => onChange({ answers: { ...values.answers, [id]: value } })}
             onChildren={(children) => onChange({ children })}
             onBooking={(i, key) => onChange({ bookings: { ...values.bookings, [i]: key || undefined } })}
@@ -351,7 +362,7 @@ export default function FormsApp() {
 
   return (
     <>
-      {isPreview ? <PreviewStrip /> : null}
+      {isPreview && !kiosk ? <PreviewStrip /> : null}
       <Header schoolName={form?.schoolName ?? message?.schoolName ?? null} />
       <main className="fp-main">{content}</main>
     </>

@@ -147,14 +147,27 @@ export async function submit(slug, body) {
     const fresh = backend().publicGet(clean);
     return { status: 'time_taken', times: fresh.status === 'ok' ? fresh.times : [] };
   }
-  const result = backend().publicSubmit({
+  const kioskToken = typeof body.kiosk_token === 'string' ? body.kiosk_token : null;
+  if (body.kiosk_token !== undefined && body.kiosk_token !== null && !/^[0-9a-f]{64}$/.test(String(body.kiosk_token))) return { status: 'bad_request' };
+  const send = (token) => backend().publicSubmit({
     slug: clean, submissionKey: body.submission_key, publishedVersion: body.published_version, answers: body.answers,
-    children: body.children, bookings: body.bookings, signature: body.signature ?? null,
+    children: body.children, bookings: body.bookings, signature: body.signature ?? null, kioskToken: token,
   });
+  let result = send(kioskToken);
+  let kioskEnded = false;
+  // The Function's rule (kiosk plan K4): a refused kiosk token never loses a family's sign-up —
+  // once more as a normal one; if that works, the kiosk is told its kiosk mode has ended.
+  if (result.status === 'invalid' && kioskToken !== null) {
+    const again = send(null);
+    if (again.status !== 'invalid') {
+      result = again;
+      kioskEnded = true;
+    }
+  }
   // Only the fields the Function passes on (mapSubmitResult).
   switch (result.status) {
     case 'ok':
-      return { status: 'ok', repeat: result.repeat === true, bookings: result.bookings };
+      return { status: 'ok', repeat: result.repeat === true, bookings: result.bookings, ...(kioskEnded ? { kiosk_ended: true } : {}) };
     case 'form_changed':
       return { status: 'form_changed', published_version: result.published_version ?? null };
     case 'time_taken':

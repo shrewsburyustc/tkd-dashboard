@@ -633,10 +633,11 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
     forms_kiosk_token(db, a) {
       if (a.p_form_id === null) return st('invalid');
       if (!db.forms.some((f) => f.id === a.p_form_id && f.status === 'live')) return st('not_found');
-      const token = (newId() + newId()).replace(/-/g, '');
+      const token = (newId() + newId()).replace(/-/g, '').toLowerCase().slice(0, 64).padEnd(64, '0');
       const mine = db.kioskTokens.filter((t) => t.form_id === a.p_form_id).sort((x, y) => (x.created_at < y.created_at ? 1 : -1)).slice(0, 4);
       db.kioskTokens = [...db.kioskTokens.filter((t) => t.form_id !== a.p_form_id), ...mine];
-      db.kioskTokens.push({ id: newId(), form_id: a.p_form_id, created_at: stamp() });
+      // (the real database keeps only the token's SHA-256; the preview keeps the token itself)
+      db.kioskTokens.push({ id: newId(), form_id: a.p_form_id, token, expires_at: new Date(now() + 12 * 3600 * 1000).toISOString(), created_at: stamp() });
       return { status: 'ok', token, expires_in_hours: 12 };
     },
 
@@ -738,14 +739,21 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
   }
 
   // = forms_public_submit(slug, client_key, submission_key, published_version, answers, children,
-  // bookings, signature, kiosk_token) without the kiosk token and the rate limit (the preview
-  // stand-in counts tries itself). a = { slug, submissionKey, publishedVersion, answers, children,
-  // bookings, signature }. A 'time_taken' answer carries fresh times, like the SQL.
+  // bookings, signature, kiosk_token) without the rate limit (the preview stand-in counts tries
+  // itself). a = { slug, submissionKey, publishedVersion, answers, children, bookings, signature,
+  // kioskToken }. A kiosk token must be this form's and not past its 12 hours, else 'invalid'
+  // (as the SQL); a good one saves the sign-up as "Kiosk". A 'time_taken' answer carries fresh times.
   function publicSubmit(a) {
     if (typeof a?.slug !== 'string' || !slugOk(a.slug) || typeof a.submissionKey !== 'string' || !UUID_PATTERN.test(a.submissionKey)) return st('invalid');
     const db = read(); // a private copy = a transaction: only an 'ok' is saved
     const form = db.forms.find((f) => f.slug === a.slug);
     if (!form) return st('not_found');
+    let kiosk = false;
+    if (a.kioskToken !== null && a.kioskToken !== undefined) {
+      kiosk = typeof a.kioskToken === 'string'
+        && db.kioskTokens.some((t) => t.form_id === form.id && t.token === a.kioskToken && Date.parse(t.expires_at) > now());
+      if (!kiosk) return st('invalid'); // a wrong, old or ended kiosk token
+    }
     purgeSignatures(db);
     const args = {
       p_form_id: form.id, p_submission_key: a.submissionKey.toLowerCase(),
@@ -757,7 +765,7 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
     if (!args.p_answers || !args.p_children) answer = st('invalid');
     else {
       try {
-        answer = submitCore(db, args, 'public', null, { actorName: 'Family form' });
+        answer = submitCore(db, args, kiosk ? 'kiosk' : 'public', null, { actorName: kiosk ? 'Kiosk' : 'Family form' });
       } catch {
         answer = st('invalid'); // = a table rule that still says no
       }

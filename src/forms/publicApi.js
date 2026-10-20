@@ -18,12 +18,12 @@
 //   getForm(slug) → { status: 'ok', formName, fields, publishedVersion, schoolName, schoolPhone,
 //                     thankYou, addToCalendar, times, turnstileSiteKey }
 //                 | { status: 'closed', schoolName, schoolPhone } | { status: 'not_found' | 'not_open' (switched off) | … }
-//   submitForm(slug, body) → { status: 'ok', bookings } | { status: 'time_taken', times }
+//   submitForm(slug, body) → { status: 'ok', bookings, kioskEnded } | { status: 'time_taken', times }
 //                 | { status: 'form_changed' } | { status: 'closed' | 'not_found' | 'not_open' | 'rate_limited'
 //                 | 'verify_failed' | 'invalid' | 'bad_request' | 'network' | 'unavailable' }
 //   body = { submission_key, published_version, answers, children: [{ first_name, age }],
 //            bookings: [{ child, class_id, date, starts_at }], signature, website (honeypot),
-//            started_at, sent_at, turnstile_token }
+//            started_at, sent_at, turnstile_token, kiosk_token (only from the front-desk kiosk) }
 
 const apiPath = (slug) => `/api/forms/${encodeURIComponent(slug)}`;
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -75,9 +75,13 @@ export function readForm(answer) {
 
 // The POST answer → what the page uses.
 export function readSubmit(answer) {
-  if (answer.status === 'ok') return { status: 'ok', bookings: Array.isArray(answer.bookings) ? answer.bookings.map(toBooking).filter(Boolean) : [] };
+  // kioskEnded: sent from the kiosk, but its kiosk mode had ended (12 hours, or "End kiosk mode on
+  // all tablets"): the server saved it as a normal sign-up instead (kiosk plan K4).
+  if (answer.status === 'ok') {
+    return { status: 'ok', bookings: Array.isArray(answer.bookings) ? answer.bookings.map(toBooking).filter(Boolean) : [], kioskEnded: answer.kiosk_ended === true };
+  }
   if (answer.status === 'time_taken') return { status: 'time_taken', times: Array.isArray(answer.times) ? toTimes(answer.times) : null };
-  return { status: answer.status };
+  return answer.kiosk_ended === true ? { status: answer.status, kioskEnded: true } : { status: answer.status };
 }
 
 async function call(slug, init) {

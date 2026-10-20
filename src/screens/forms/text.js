@@ -199,7 +199,24 @@ export const signSchool = (code) => `Jae H. Jeong's U.S. Taekwondo Center${SCHOO
 export const signScan = (link) => `Scan the code with your phone camera, or go to ${link}`;
 export const FRONT_DESK = 'Front desk';
 export const KIOSK = 'Open kiosk mode on this device';
-export const KIOSK_LATER = 'Kiosk mode comes in a later build step.';
+export const KIOSK_HINT = 'Turns this tablet into the sign-up station at the desk. The dashboard locks while it runs.';
+export const KIOSK_ONLY_LIVE = 'Only a Live form can run in kiosk mode.';
+export const KIOSK_CONFIRM_TITLE = 'Open kiosk mode on this device?';
+export const kioskConfirmText = (name) => `This device will show "${name}" full screen for families to sign up. The dashboard locks: the small lock in the corner and your PIN bring it back.`;
+export const KIOSK_HOURS = 'Kiosk mode lasts 11 hours 45 minutes, then it asks staff to open it again.';
+export const KIOSK_PIN_TIP = 'Tip: turn on Guided Access (iPad) or screen pinning (Android) so nobody can leave the page.';
+export const KIOSK_NOT_SHARED = 'You are signed in with your own account. Kiosk mode is meant for the shared front-desk account: your PIN will be the one that ends it.';
+export const KIOSK_OPEN = 'Open kiosk mode';
+export const KIOSK_OPENING = 'Opening…';
+export const KIOSK_FAILED = "Couldn't open kiosk mode. Check the connection, then try again.";
+export const KIOSK_NOT_LIVE = 'This form is no longer Live, so it can\'t run in kiosk mode.';
+export const KIOSK_END = 'End kiosk mode on all tablets';
+export const KIOSK_END_HINT = 'For a lost or stolen tablet: its kiosk stops at the next sign-up.';
+export const KIOSK_END_TITLE = 'End kiosk mode on all tablets?';
+export const KIOSK_END_TEXT = 'Every tablet running this form in kiosk mode stops. A family that is filling it in right now still gets signed up.';
+export const KIOSK_END_CONFIRM = 'End kiosk mode';
+export const kioskEnded = (n) => (n === 0 ? 'No tablet was in kiosk mode for this form' : `Kiosk mode ended on ${n} tablet${n === 1 ? '' : 's'}`);
+export const KIOSK_END_FAILED = "Couldn't end kiosk mode. Check the connection, then try again.";
 export const SHARE_DRAFT = 'A Draft form can\'t be shared until it\'s published.';
 export const SHARE_CLOSED = 'This form is closed — the link tells families so.';
 
