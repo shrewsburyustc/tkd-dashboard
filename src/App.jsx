@@ -15,7 +15,12 @@
 // its own: the chooser, Color Belt and Star testing (with the switch on, a Color Belt event lives at
 // "#testing/color-belt/event/<id>" and its Grading tab at ".../grading"). Star testing phase 2 adds
 // Star's tabs ("#testing/star" = Events, "#testing/star/rubrics") and a Star event's page
-// ("#testing/star/event/<id>"). Every address lives in lib/pageAddress.js.
+// ("#testing/star/event/<id>").
+// Finance (contract 0011 §4) adds three: the Daily report ("#finance"), History ("#finance/history")
+// and Finance → Settings ("#finance/settings") — the last two for admins only (staff are sent to
+// "#finance"). While "Hide payments" is on for this device (v0.215), every "#finance…" address
+// goes to Home and Finance is left out of the rail.
+// Every address lives in lib/pageAddress.js.
 //
 // Every screen change goes through the small functions below, so the rules (7-day password
 // check, access check, per-account idle lock, the database lock) live in one readable place.
@@ -40,6 +45,7 @@ import {
   DEFAULT_TESTING_PAGE,
   hasAddressTabs,
   normalEventTab,
+  routeTab,
   routeFromAddress,
   routeIsUnknown,
   samePage,
@@ -53,6 +59,10 @@ import Toast from './components/Toast.jsx';
 import SignIn from './screens/SignIn.jsx';
 import Home from './screens/Home.jsx';
 import Testing from './screens/Testing.jsx';
+import Finance from './screens/Finance.jsx';
+import { showToday, showMonthOf } from './screens/finance/financeState.js';
+import { usePaymentsHidden } from './screens/finance/usePaymentsHidden.js';
+import { showFinanceInNav } from './components/navItems.js';
 import StaffAccounts from './screens/StaffAccounts.jsx';
 import Settings from './screens/Settings.jsx';
 import LockScreen from './screens/LockScreen.jsx';
@@ -85,6 +95,7 @@ const PAGE_TITLES = {
 const SECTION_TITLES = {
   home: 'Home · U.S. Taekwondo Center',
   testing: 'Testing · U.S. Taekwondo Center',
+  finance: 'Finance · U.S. Taekwondo Center',
   staffAccounts: 'Staff accounts · U.S. Taekwondo Center',
   settings: 'Settings · U.S. Taekwondo Center',
 };
@@ -103,8 +114,9 @@ const TOASTS = {
 
 // ----- Page addresses -----
 // lib/pageAddress.js reads and writes every address (Home, Testing and its pages, a Color Belt
-// event and its Grading tab, Staff accounts, Settings). A "route" is
-// { section, testingPage, eventId, eventTab } — see the top of that file.
+// event and its Grading tab, a Star event, Staff accounts, Settings, Finance and its views). A
+// "route" is { section, testingPage, eventId, eventTab } — see the top of that file. (Finance keeps
+// its view, 'report' | 'history' | 'settings', in the eventTab slot.)
 
 // If telling the database "lock this sign-in" fails (offline), try again this often until it works.
 const LOCK_RETRY_EVERY_MS = 30 * 1000;
@@ -153,6 +165,9 @@ export default function App() {
   const [testingModalOpen, setTestingModalOpen] = useState(false); // a Testing dialog is showing
   const [staffModalOpen, setStaffModalOpen] = useState(false); // a Staff accounts dialog is showing
   const [settingsModalOpen, setSettingsModalOpen] = useState(false); // a Settings dialog is showing
+  const [financeModalOpen, setFinanceModalOpen] = useState(false); // a Finance dialog is showing
+  // This device's "Hide payments" switch (v0.215): Finance leaves the rail and its addresses go Home.
+  const [paymentsHidden] = usePaymentsHidden();
   const [toast, setToast] = useState(null); // { id, text, action, icon } or null
 
   // Focus memory for the lock screen (see "Locking and unlocking" below).
@@ -540,7 +555,9 @@ export default function App() {
   //   eventId:     on Color Belt or Star testing, the event whose page opens (null = the tabs).
   //   eventTab:    the event page's tab, 'students' | 'grading' ('students' unless said otherwise —
   //                opening an event lands on Students; contract 0010 §4.1); on Star testing's
-  //                home, 'events' (the default) | 'rubrics'. `tab` is the same thing.
+  //                home, 'events' (the default) | 'rubrics'; on Finance its view, 'report' (the
+  //                default — the rail opens the Daily report) | 'history' | 'settings'.
+  //                `tab` is the same thing.
   //   replace:     true swaps the current step instead of adding one (used when an event page
   //                closes by itself because the event belongs to the other school — Back then
   //                doesn't bring it back).
@@ -556,8 +573,8 @@ export default function App() {
         section: id,
         testingPage: page,
         eventId: nextEvent,
-        // The tab only means something on a page that has tabs (pageAddress.normalEventTab).
-        eventTab: normalEventTab(page, nextEvent, nextTab ?? tab),
+        // The tab only means something on a page that has tabs (pageAddress.routeTab).
+        eventTab: routeTab(id, page, nextEvent, nextTab ?? tab),
       };
       const here = {
         section: sectionRef.current,
@@ -672,6 +689,7 @@ export default function App() {
         eventId: eventIdRef.current,
         eventTab: eventTabRef.current,
       };
+      // (samePage: on Finance a different view — Daily report / History / Settings — is a different page.)
       if (samePage(route, current)) {
         // Same page; only the event tab may differ (an address typed by hand): switch it, never asked.
         if (hasAddressTabs(route) && route.eventTab !== eventTabRef.current && phaseRef.current === 'home') setEventTab(route.eventTab);
@@ -729,6 +747,50 @@ export default function App() {
   // The database refused data because this sign-in is locked on its side: lock the screen too.
   const handleNoAccess = useCallback(() => setLockedFlag(true), []);
 
+  // ----- Finance helpers (contract 0011 §4) -----
+  // The Finance view ('report' | 'history' | 'settings') lives in eventTab while Finance is open.
+  const changeFinanceView = useCallback((view) => navigate('finance', { tab: view }), [navigate]);
+  // Home's reminder lines: "Close the day" opens today's report of that school; "Open History"
+  // opens History for the school chosen now (Both → History on Both) at the month of the first
+  // unclosed day.
+  const openFinanceReport = useCallback(
+    (school) => {
+      showToday({ openClose: true }); // v0.800: the report AND the Close the day dialog
+      if (school && school !== location) changeLocation(school);
+      navigate('finance', { tab: 'report' });
+    },
+    [location, changeLocation, navigate],
+  );
+  const openFinanceHistory = useCallback((firstDay) => {
+    showMonthOf(firstDay);
+    navigate('finance', { tab: 'history' });
+  }, [navigate]);
+  // A payment's "Open in Testing" (D12), on that payment's school: a Color belt payment opens its
+  // event's roster (a Color Belt event page). A Star payment opens Testing (the chooser while the
+  // Star testing switch is on).
+  const openTestingFor = useCallback(
+    (school, eventId = null, source = null) => {
+      if (school && school !== 'Both' && school !== location) changeLocation(school);
+      if (source === 'color_belt' && eventId) navigate('testing', { testingPage: 'colorBelt', eventId });
+      else navigate('testing');
+    },
+    [location, changeLocation, navigate],
+  );
+  const isAdminNow = profile?.role === 'admin';
+  // Who may be where: payments hidden → no Finance at all (Home instead); staff → no History or
+  // Settings (the Daily report instead). replaceState swaps the address without a history step.
+  useEffect(() => {
+    if (phase !== 'home' || section !== 'finance' || !profile) return;
+    if (paymentsHidden) {
+      window.history.replaceState({ tkdPage: true }, '', addressFor('home'));
+      setSection('home');
+      setEventTab('students');
+    } else if (!isAdminNow && eventTab !== 'report') {
+      window.history.replaceState({ tkdPage: true }, '', addressForRoute({ section: 'finance', testingPage: null, eventId: null, eventTab: 'report' }));
+      setEventTab('report');
+    }
+  }, [phase, section, eventTab, paymentsHidden, isAdminNow, profile]);
+
   // Keep the browser tab title in step with the screen (and, on the dashboard, the section).
   useEffect(() => {
     const testingTitle = section === 'testing' && STAR_TESTING_ON ? TESTING_PAGE_TITLES[testingPage] : null;
@@ -739,7 +801,9 @@ export default function App() {
   const isSignedIn = (phase === 'home' || phase === 'locked') && profile !== null;
   const dialogOpen = phase === 'home' && profile !== null && accountDialog !== null;
   // The page behind a dialog can't be clicked or reached with Tab (account or Testing dialog).
-  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || staffModalOpen || settingsModalOpen));
+  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || staffModalOpen || settingsModalOpen || financeModalOpen));
+  // Finance is in the rail / bottom bar unless payments are hidden on this device (navItems.js).
+  showFinanceInNav(!paymentsHidden);
 
   return (
     <div className="app-root">
@@ -785,7 +849,15 @@ export default function App() {
             onSettings={() => guarded(() => navigate('settings'))}
             onSignOut={() => guarded(() => signOut())}
           >
-            {section === 'home' && <Home location={location} />}
+            {section === 'home' && (
+              <Home
+                location={location}
+                screenLocked={phase === 'locked'}
+                paymentsHidden={paymentsHidden}
+                onOpenFinance={openFinanceReport}
+                onOpenFinanceHistory={openFinanceHistory}
+              />
+            )}
             {section === 'testing' && (
               <Testing
                 location={location}
@@ -808,6 +880,24 @@ export default function App() {
                 showToast={showToast}
                 clearToast={clearToast}
                 onModalOpenChange={setTestingModalOpen}
+              />
+            )}
+            {section === 'finance' && !paymentsHidden && (
+              <Finance
+                location={location}
+                onLocationChange={changeLocation}
+                // For showing or hiding controls only — the database decides what may be seen.
+                isAdmin={profile.role === 'admin'}
+                view={profile.role === 'admin' ? eventTab : 'report'}
+                onView={changeFinanceView}
+                profileName={profile.full_name}
+                screenLocked={phase === 'locked'}
+                onNoAccess={handleNoAccess}
+                onRefreshProfile={refreshProfile}
+                showToast={showToast}
+                clearToast={clearToast}
+                onModalOpenChange={setFinanceModalOpen}
+                onOpenTesting={openTestingFor}
               />
             )}
             {section === 'staffAccounts' && (

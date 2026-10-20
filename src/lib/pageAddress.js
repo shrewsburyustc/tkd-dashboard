@@ -7,6 +7,10 @@
 //   Testing         tkd-dashboard.pages.dev/#testing
 //   Staff accounts  tkd-dashboard.pages.dev/#staff-accounts
 //   Settings        tkd-dashboard.pages.dev/#settings          (admins, v0.135)
+//   Finance         tkd-dashboard.pages.dev/#finance           the Daily report (contract 0011 §4)
+//                   tkd-dashboard.pages.dev/#finance/history   History   (admins: App.jsx sends staff
+//                   tkd-dashboard.pages.dev/#finance/settings  Settings   to #finance; with "Hide
+//                                                              payments" on, every #finance… goes Home)
 // The "#…" part (the "hash") is never sent to the server — it only lives in the browser — so the
 // hosting needs no change. App.jsx adds a history step each time the page changes
 // (history.pushState) and listens for Back / Forward ('popstate').
@@ -35,7 +39,9 @@
 //     eventId: the open event's id (a Color Belt event, or a Star event when testingPage is
 //              'star'), or null,
 //     eventTab: the tab. On a Color Belt event page 'students' | 'grading'; on Star's home (no
-//               event) 'events' | 'rubrics'; otherwise always 'students' — see normalEventTab }
+//               event) 'events' | 'rubrics'; on Finance its view 'report' | 'history' | 'settings'
+//               (a different Finance view is a different page); otherwise always 'students' —
+//               see routeTab }
 import { STAR_TESTING_ON } from './features.js';
 
 const HASH_BY_PAGE = {
@@ -55,6 +61,9 @@ const COLOR_BELT_HASH = '#testing/color-belt';
 const COLOR_BELT_EVENT_HASH = new RegExp(`^#testing/color-belt/event/${ID}(/grading)?$`);
 const GRADING_SUFFIX = '/grading';
 const STAR_HASH = '#testing/star';
+// Finance (contract 0011 §4): #finance, #finance/history, #finance/settings.
+const FINANCE_HASH = /^#finance(?:\/(history|settings))?$/;
+export const FINANCE_VIEWS = ['report', 'history', 'settings'];
 const STAR_RUBRICS_HASH = '#testing/star/rubrics';
 const STAR_EVENT_HASH = new RegExp(`^#testing/star/event/${ID}$`);
 // Any Star address at all (used while the switch is off, to send them all to Color Belt).
@@ -73,11 +82,18 @@ export function normalEventTab(testingPage, eventId, tab) {
   return 'students';
 }
 
+// The tab of ANY route: Finance's view ('report' unless 'history' or 'settings' was asked for),
+// otherwise normalEventTab's answer.
+export function routeTab(section, testingPage, eventId, tab) {
+  if (section === 'finance') return FINANCE_VIEWS.includes(tab) ? tab : 'report';
+  return normalEventTab(testingPage, eventId, tab);
+}
+
 const route = (section, testingPage = null, eventId = null, eventTab = 'students') => ({
   section,
   testingPage,
   eventId,
-  eventTab: normalEventTab(testingPage, eventId, eventTab),
+  eventTab: routeTab(section, testingPage, eventId, eventTab),
 });
 
 // Reads an address ("#…") → { route, known }.
@@ -94,6 +110,9 @@ function readHash(hash) {
   if (hash === STAR_RUBRICS_HASH) return { route: route('testing', 'star', null, 'rubrics'), known: true };
   if (hash === STAR_HASH) return { route: route('testing', 'star', null, 'events'), known: true };
   if (hash === HASH_BY_PAGE.testing) return { route: route('testing', DEFAULT_TESTING_PAGE), known: true };
+  // Finance and its two other views.
+  const finance = FINANCE_HASH.exec(hash);
+  if (finance) return { route: route('finance', null, null, finance[1] ?? 'report'), known: true };
   // The other pages.
   if (hash in PAGE_BY_HASH) return { route: route(PAGE_BY_HASH[hash]), known: true };
   return { route: route('home'), known: false };
@@ -111,6 +130,7 @@ export function routeIsUnknown() {
 
 // The "#…" for a route (Home has none at all).
 function hashForRoute({ section, testingPage = null, eventId = null, eventTab = 'students' }) {
+  if (section === 'finance') return eventTab === 'history' || eventTab === 'settings' ? `#finance/${eventTab}` : '#finance';
   if (section !== 'testing') return HASH_BY_PAGE[section] ?? '';
   const tabPart = eventTab === 'grading' ? GRADING_SUFFIX : ''; // Students has no ending of its own
   if (!STAR_TESTING_ON) return eventId ? `#testing/event/${eventId}${tabPart}` : HASH_BY_PAGE.testing;
@@ -143,8 +163,11 @@ export function correctedAddress() {
 
 // true when two routes point at the same page — the event page's tab is NOT compared, so
 // Students and Grading of one event count as the same page (switching tabs is never "leaving").
+// On Finance, a different view (Daily report / History / Settings) IS a different page.
 export function samePage(a, b) {
-  return a.section === b.section && (a.testingPage ?? null) === (b.testingPage ?? null) && (a.eventId ?? null) === (b.eventId ?? null);
+  if (a.section !== b.section) return false;
+  if (a.section === 'finance') return routeTab('finance', null, null, a.eventTab) === routeTab('finance', null, null, b.eventTab);
+  return (a.testingPage ?? null) === (b.testingPage ?? null) && (a.eventId ?? null) === (b.eventId ?? null);
 }
 
 // true when two routes are exactly the same: same page AND, on an event page (or Star's home,
