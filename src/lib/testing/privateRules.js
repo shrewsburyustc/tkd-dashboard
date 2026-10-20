@@ -133,7 +133,9 @@ export function privateCards(rows) {
 // Which ⋯ items a row shows (booleans). Only a RESULT counts as graded (a note alone never
 // blocks anything): a Pass / Not passed locks Edit details, Change day or time, Change how
 // they'll pay and Cancel; a No show doesn't (a new day clears it).
-//   active:    grade always · editDetails / changeDay / cancel while no Pass / Not passed ·
+//   active:    grade always · editDetails while no Pass / Not passed, and for admins always
+//              (v0.405: an admin can still fix a graded one; a belt change clears its result) ·
+//              changeDay / cancel while no Pass / Not passed ·
 //              changePayingBy the same AND canChangePayingBy · admins: editPayment / undoPayment
 //              when paid, delete
 //   cancelled: admins only — restore while its day is today or later, delete
@@ -151,7 +153,7 @@ export function privateMenu(row, { today, isAdmin } = {}) {
   const open = result === null || result === 'no_show';
   return {
     ...none,
-    editDetails: open,
+    editDetails: open || admin,
     changePayingBy: open && canChangePayingBy(row),
     changeDay: open,
     grade: true,

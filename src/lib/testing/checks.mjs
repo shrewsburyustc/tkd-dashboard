@@ -2422,7 +2422,8 @@ check('privateRules: the ⋯ menu truth table (P3, P7, L5)', () => {
   assert.equal(menu(row({ result: 'no_show' }), false), 'editDetails changePayingBy changeDay grade cancel');
   assert.equal(menu(row({ result: null, note: 'note only' }), false), 'editDetails changePayingBy changeDay grade cancel'); // a note never counts
   assert.equal(menu(row({ result: 'pass' }), false), 'grade'); // L5: no Change how they'll pay either
-  assert.equal(menu(row({ result: 'not_passed', paid: true, amountDueCents: 0 }), true), 'grade editPayment undoPayment delete');
+  assert.equal(menu(row({ result: 'not_passed', paid: true, amountDueCents: 0 }), true), 'editDetails grade editPayment undoPayment delete'); // v0.405: admins can still edit a graded one
+  assert.equal(menu(row({ result: 'pass' }), true), 'editDetails grade delete');
   // Cancelled: staff nothing; admins Restore while the day is today or later, and Delete.
   assert.equal(menu(row({ status: 'cancelled' }), false), '');
   assert.equal(menu(row({ status: 'cancelled' }), true), 'restore delete');
