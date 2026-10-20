@@ -10,24 +10,13 @@ import { useEffect, useRef } from 'react';
 import { IconArrowLeft, IconArrowRight, IconCheck, IconCircleCheck } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
-import { answerProblems, isVisible, stepsOf } from '../../lib/forms/fields.js';
+import { emptyFillValues, stepProblems, stepsOf } from '../../lib/forms/fields.js';
 import FormFields from './FormFields.jsx';
 import * as T from './text.js';
 
-export const emptyFillValues = () => ({ answers: {}, children: [{ first_name: '', age: null }], bookings: {}, signature: null });
-
-// The problems of one step's fields (only the ones on screen), plus children and signature.
-export function stepProblems(stepFields, allFields, values) {
-  const all = answerProblems(allFields, values.answers, values.children.map((c) => ({ first_name: c.first_name, age: c.age })));
-  const out = {};
-  for (const f of stepFields) {
-    if (!isVisible(f, values.answers)) continue;
-    if (all[f.id]) out[f.id] = all[f.id];
-    if (f.type === 'children' && all.children) out.children = all.children;
-    if (f.type === 'waiver' && values.answers[f.id] === true && !values.signature) out.signature = 'signature';
-  }
-  return out;
-}
+// The empty answers and the per-step checks live in lib/forms/fields.js, shared with the public
+// page (src/forms/), and are re-exported here for the screens that already import them from here.
+export { emptyFillValues, stepProblems };
 
 const NOTES = {
   TIME_TAKEN: T.TIME_TAKEN,
@@ -95,7 +84,7 @@ export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmi
       if (!last) onStep(step + 1, {});
       return;
     }
-    const problems = stepProblems(current.fields, state.fields, v);
+    const problems = stepProblems(current.fields, state.fields, v, Array.isArray(state.times) ? state.times : null);
     if (Object.keys(problems).length > 0) {
       onStep(step, problems);
       return;

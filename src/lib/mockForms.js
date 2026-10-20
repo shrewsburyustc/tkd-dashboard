@@ -10,8 +10,10 @@
 //   getClasses()  → Testing's fake classes [{ id, location_code, name }]
 //   backend.select('forms', 'id, …', [{ col, value, op }], [{ col, ascending }], ctx)
 //   backend.rpc('forms_create', { p_… }, ctx)   ctx = { signedIn, hasDataAccess, isAdmin, actorName }
-// The public page's three functions (forms_public_*) are NOT here: they belong to the restricted
-// login of step F3, which the dashboard never uses.
+// The public page's functions (forms_public_get / forms_public_submit) are here too, as
+// backend.publicGet / backend.publicSubmit — used ONLY by the public page's preview stand-in
+// (src/forms/publicApi.preview.js); the dashboard never calls them (the real ones belong to the
+// restricted login forms_registrar).
 // Prospects (migration 0012) live in the same fake store: mockProspects.js is plugged in below, so
 // a sign-up makes its prospects and a booking moves them, like 0012's triggers.
 import { parseTime, toTimeText } from './schedule/time.js';
@@ -711,6 +713,58 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
     return ok(answer);
   }
 
+  // ----- The public page's two functions (0009 section 9: forms_public_get / forms_public_submit) -----
+  // Only the preview stand-in of the public Function (src/forms/publicApi.preview.js) calls these.
+  // The dashboard never does: in the real system they belong to the restricted login
+  // forms_registrar. Same checks, same order and the same answers as the SQL.
+  const SCHOOL_NAMES = { worcester: 'Worcester', shrewsbury: 'Shrewsbury' }; // = public.locations.name
+  const publicTimes = (db, formId) => times(db, formId, today(), addDays(today(), 60));
+
+  // = forms_public_get(slug). A Draft or unknown form → not_found; Closed → closed (+ school).
+  function publicGet(slug) {
+    if (typeof slug !== 'string' || !slugOk(slug)) return st('not_found');
+    const db = read();
+    const form = db.forms.find((f) => f.slug === slug);
+    if (!form || form.status === 'draft' || !form.published) return st('not_found');
+    const school = { school_name: SCHOOL_NAMES[form.location_code] ?? null, school_phone: null }; // no phone column yet (0005)
+    if (form.status === 'closed') return st('closed', school);
+    return {
+      status: 'ok', form_name: form.name, fields: clone(form.published), published_version: form.published_version, ...school,
+      thank_you: form.settings?.thank_you ?? null, add_to_calendar: form.settings?.add_to_calendar ?? null,
+      times: publicTimes(db, form.id),
+    };
+  }
+
+  // = forms_public_submit(slug, client_key, submission_key, published_version, answers, children,
+  // bookings, signature, kiosk_token) without the kiosk token and the rate limit (the preview
+  // stand-in counts tries itself). a = { slug, submissionKey, publishedVersion, answers, children,
+  // bookings, signature }. A 'time_taken' answer carries fresh times, like the SQL.
+  function publicSubmit(a) {
+    if (typeof a?.slug !== 'string' || !slugOk(a.slug) || typeof a.submissionKey !== 'string' || !UUID_PATTERN.test(a.submissionKey)) return st('invalid');
+    const db = read(); // a private copy = a transaction: only an 'ok' is saved
+    const form = db.forms.find((f) => f.slug === a.slug);
+    if (!form) return st('not_found');
+    purgeSignatures(db);
+    const args = {
+      p_form_id: form.id, p_submission_key: a.submissionKey.toLowerCase(),
+      p_published_version: Number.isInteger(a.publishedVersion) ? a.publishedVersion : null,
+      p_answers: isObject(a.answers) ? a.answers : null, p_children: Array.isArray(a.children) ? a.children : null,
+      p_bookings: a.bookings ?? null, p_signature: typeof a.signature === 'string' ? a.signature : null,
+    };
+    let answer;
+    if (!args.p_answers || !args.p_children) answer = st('invalid');
+    else {
+      try {
+        answer = submitCore(db, args, 'public', null, { actorName: 'Family form' });
+      } catch {
+        answer = st('invalid'); // = a table rule that still says no
+      }
+    }
+    if (answer.status === 'ok') write(db);
+    if (answer.status === 'time_taken') return { ...answer, times: publicTimes(read(), form.id) };
+    return answer;
+  }
+
   // ----- Test helpers -----
   function failNextSave() {
     failNext = true;
@@ -730,5 +784,5 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
     write(fresh());
   }
 
-  return { select, rpc, failNextSave, simulateOtherAdminEdit, clear, reset, snapshot: read };
+  return { select, rpc, publicGet, publicSubmit, failNextSave, simulateOtherAdminEdit, clear, reset, snapshot: read };
 }

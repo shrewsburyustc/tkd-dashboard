@@ -1054,6 +1054,55 @@ Tested in PGlite on every run (`run.mjs` step 13g, both steps exactly as written
 
 ---
 
+## 15. Forms public page: Cloudflare settings (at go-live, F6 / F7 — each with Jeffrey's OK)
+
+**What it is:** the public form page `/f/<slug>` (free-class sign-ups, and the kiosk tablet) talks only to the Pages Function `functions/api/forms/[slug].js`. That Function signs in to the database as its **own** restricted login, `forms_registrar` (migration 0009 §8: it can run exactly `forms_public_get`, `forms_public_submit` and `forms_public_email_result`, nothing else). It is built the same way as Color Belt's family form (section 12) but shares **nothing secret with it except** the Turnstile widget and the client-key secret. Emails are **off** (rulebook v0.601): no email settings are needed.
+
+**Nothing here is done yet.** The public forms go live together with Prospects (rulebook v0.241 answer 1). Until then `PUBLIC_FORMS` is left out or `off`, and every form link says "not open" without touching the database.
+
+### 15a. The `forms_registrar` password (you, on your PC + SQL Editor)
+
+The same method as 12d, with its **own** script and its **own** password — never the Color Belt or Star one. In the script, the role name is `forms_registrar` (as in 13e's script: `const role = 'forms_registrar';`). Save the password as a **new** entry, "Supabase forms_registrar (Hyperdrive)". **Check the printed line says `alter role forms_registrar password 'SCRAM-SHA-256$4096:…';`** before running it, then delete the SQL Editor snippet and the script.
+
+### 15b. Hyperdrive for the Forms page (you)
+
+1. Cloudflare → **Hyperdrive** → a **separate** configuration `tkd-forms-registrar`: the same Session pooler host and port as 12g, database `postgres`, user **`forms_registrar.eozkfbdfxqlcbpewhach`**, password from the "Supabase forms_registrar (Hyperdrive)" entry. **Caching: Disabled** (otherwise "spots left" and "closed" could be answered from a cache). **Origin connection limit: 5** (the role allows at most 5). TLS as 12g (Verify full with the existing Supabase CA certificate).
+2. `tkd-dashboard` → **Settings** → **Bindings** → **Add** → **Hyperdrive**: variable name **`HYPERDRIVE_FORMS`**, configuration `tkd-forms-registrar`, **Production only**.
+
+### 15c. Variables (you, Production only — leave Preview empty)
+
+`tkd-dashboard` → **Settings** → **Variables and Secrets** → **Production**:
+
+| Name | Type | Value | New? |
+|---|---|---|---|
+| `PUBLIC_FORMS` | Text | `off` (later `on` to go live) | **new** — the Forms kill switch; anything other than `on` = forms closed |
+| `HYPERDRIVE_FORMS` | Binding | 15b | **new** |
+| `PUBLIC_ORIGIN` | Text | `https://tkd-dashboard.pages.dev` | already there (12a) — shared |
+| `TURNSTILE_SITE_KEY` | Text | the Site Key | already there (12a) — shared |
+| `TURNSTILE_SECRET` | Secret | the Secret Key | already there (12a) — shared |
+| `CLIENT_KEY_SECRET` | Secret | — | already there (12a) — shared (Forms adds "forms\|" before hashing, so its keys never match Color Belt's) |
+| `RATE_LIMITER` | Binding | — | optional, already set up or skipped in 12a step 5 — shared (Forms' keys start with "forms:") |
+
+**Turnstile:** the same widget (hostname `tkd-dashboard.pages.dev`) works; the Forms page asks for action **`form`** and the Function refuses any other action (so a Color Belt token can't be reused). If the school later gets its own web address, add that hostname to the widget and change `PUBLIC_ORIGIN` for both Functions together.
+
+Variables and bindings take effect on the **next deployment**.
+
+### 15d. Off switch (any time)
+
+In this order (step 1 works in seconds):
+1. **Database off switch (instant):** in the SQL Editor, run
+   ```sql
+   revoke execute on function public.forms_public_get(text) from forms_registrar;
+   revoke execute on function public.forms_public_submit(text, text, uuid, integer, jsonb, jsonb, jsonb, text, text) from forms_registrar;
+   ```
+   The Function then gets "permission denied" and the page shows "try again"; nothing is written. **To turn it back on:** re-run the whole 0009 file, or `grant execute on function …` the same two lines `to forms_registrar`. While it is off, the 0009 tests and fingerprints fail — expected.
+2. **Stop the forms:** set `PUBLIC_FORMS=off` (Production) and **Retry deployment**.
+3. **Lock the login:** `alter role forms_registrar nologin;` (`alter role forms_registrar login;` turns it back on).
+
+Color Belt's form (12i) is not affected by any of these, and its off switch doesn't affect Forms.
+
+---
+
 ## Admin: change the front-desk PIN or password
 
 The front desk (`shrewsburyustc@gmail.com`) is a **shared account**, so the app hides Change PIN and Change password for it. Only an admin changes them, here in Supabase, until the Staff accounts screen exists.

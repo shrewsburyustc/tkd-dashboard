@@ -190,13 +190,18 @@ export const LINK = 'Link';
 export const COPY = 'Copy';
 export const COPIED = 'Copied';
 export const QR_CODE = 'QR code';
-export const QR_LATER = 'The QR code (download and print a sign) arrives with the public page, step F3.';
+export const DOWNLOAD = 'Download';
+export const PRINT_SIGN = 'Print a sign';
+export const DOWNLOAD_FAILED = "Couldn't make the picture in this browser. Try Print a sign instead.";
+export const qrAlt = (link) => `QR code for ${link}`;
+export const qrFileName = (slug) => `qr-${slug}.png`;
+export const signSchool = (code) => `Jae H. Jeong's U.S. Taekwondo Center${SCHOOL_NAME[code] ? ` · ${SCHOOL_NAME[code]}` : ''}`;
+export const signScan = (link) => `Scan the code with your phone camera, or go to ${link}`;
 export const FRONT_DESK = 'Front desk';
 export const KIOSK = 'Open kiosk mode on this device';
-export const KIOSK_LATER = 'Kiosk mode arrives with the public page, step F3.';
+export const KIOSK_LATER = 'Kiosk mode comes in a later build step.';
 export const SHARE_DRAFT = 'A Draft form can\'t be shared until it\'s published.';
 export const SHARE_CLOSED = 'This form is closed — the link tells families so.';
-export const PUBLIC_BASE = 'tkd-dashboard.pages.dev/f/';
 
 // ----- Fill in / Preview -----
 export const fillInTitle = (name) => `Fill in · ${name}`;
@@ -216,7 +221,6 @@ export const NO_TIME = 'No time yet — we\'ll call to set one up';
 export const THIS_WEEK = 'This week';
 export const NEXT_WEEK = 'Next week';
 export const weekOf = (date) => `Week of ${date}`;
-export const LINK_LATER = 'The link starts working when the public page goes live (step F3).';
 export const spotsLeft = (n) => (n === 1 ? '1 spot left' : `${n} spots left`);
 export const LOADING_TIMES = 'Loading open times…';
 export const TIMES_FAILED = "Couldn't load the open times. Check the connection.";
@@ -238,7 +242,9 @@ export const FIELD_PROBLEM = {
   children: 'Add at least one child (up to 6).',
   child: 'Each child needs a first name and an age from 2 to 99.',
   signature: 'Please sign in the box.',
+  booking_full: 'Two children picked a time with fewer spots left. Pick another time for one of them.',
 };
+export const takenBy = (names) => `Taken by ${names}`;
 export const SENT_TITLE = 'Sent';
 export const sentText = (parent) => `${parent}'s sign-up is saved.`;
 export const sentBooking = (child, b) => `${child}: ${formatDate(b.date, { year: false })} · ${formatTime(parseTime(b.start), true)} · ${b.className}`;

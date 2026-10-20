@@ -1,5 +1,5 @@
 // fields.js — the field rules of a form, written once for the builder, the "Fill in" form,
-// the preview database and the checks (and, in step F3, the public page).
+// the preview database, the checks and the public page (src/forms/).
 // Why it exists: the database checks every field list and every family's answers (migration
 // 0009: forms_fields_are_valid, forms_check_answers). The screens use the SAME rules so they can
 // help while you type, and mockForms.js uses them so preview refuses exactly what the server
@@ -237,6 +237,33 @@ export function answerProblems(fields, answers, children) {
   if (!Array.isArray(children) || children.length < 1 || children.length > MAX_CHILDREN) problems.children = 'children';
   else if (children.some((c) => textProblem(c.first_name, 40) || !Number.isInteger(c.age) || c.age < 2 || c.age > 99)) problems.children = 'child';
   return problems;
+}
+
+// What a fresh form holds while it is filled in (staff "Fill in" and the public page):
+//   answers, children: [{ first_name, age }], bookings: { childIndex: timeKey }, signature
+export const emptyFillValues = () => ({ answers: {}, children: [{ first_name: '', age: null }], bookings: {}, signature: null });
+
+// The problems of ONE step's fields (only the ones on screen), plus the children and the
+// signature. Used by Next / Submit on the staff "Fill in" and on the public page alike.
+// times (optional) = the open times with their spots left: brothers and sisters can't pick more
+// places at one time than it has left (design review, F3).
+export function stepProblems(stepFields, allFields, values, times = null) {
+  const all = answerProblems(allFields, values.answers, values.children.map((c) => ({ first_name: c.first_name, age: c.age })));
+  const out = {};
+  for (const f of stepFields) {
+    if (!isVisible(f, values.answers)) continue;
+    if (all[f.id]) out[f.id] = all[f.id];
+    if (f.type === 'children' && all.children) out.children = all.children;
+    // the signature is asked for at the same time as the agree box (not one round later)
+    if (f.type === 'waiver' && !values.signature) out.signature = 'signature';
+    if (f.type === 'booking' && Array.isArray(times)) {
+      const picks = {};
+      for (const key of Object.values(values.bookings ?? {})) if (key) picks[key] = (picks[key] ?? 0) + 1;
+      const tooMany = times.some((t) => (picks[`${t.classId}|${t.date}|${t.start}`] ?? 0) > t.spotsLeft);
+      if (tooMany) out[f.id] = 'booking_full';
+    }
+  }
+  return out;
 }
 
 // The answers object a form sends: only visible questions, never layout fields.

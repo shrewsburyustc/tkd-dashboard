@@ -1,7 +1,7 @@
 // FormFields.jsx — one step of a form as families see it (used by "Fill in" and Preview).
 // Why it exists: staff "Fill in" shows the same steps as the public page (mockup screens 8, 10),
 // and Preview shows the admin exactly that. Drawing the fields in one place keeps them alike.
-// (The public page of step F3 will reuse the same field rules from lib/forms/fields.js.)
+// The public page (src/forms/FormsApp.jsx, step F3) draws its steps with this same component.
 //
 // Props:
 //   fields      the fields of THIS step (already in order)
@@ -10,6 +10,8 @@
 //   times       the open free-class times [{ classId, className, date, start, end, spotsLeft }] | null (loading) | 'error'
 //   readOnly    true while sending
 //   idBase      unique prefix for ids
+//   noTimesText optional: the words when no free-class time is open (the public page says it to
+//               the family; staff see the staff wording by default)
 //   onAnswer(fieldId, value)  onChildren(list)  onBooking(childIndex, timeKey | '')  onSignature(dataUrl | null)
 import { IconPlus, IconTrash } from '@tabler/icons-react';
 import Notice from '../../components/Notice.jsx';
@@ -33,7 +35,7 @@ function Problem({ id, code }) {
   return <Notice id={id}>{T.FIELD_PROBLEM[code] ?? T.FIELD_PROBLEM.required}</Notice>;
 }
 
-export default function FormFields({ fields, values, problems, times, readOnly, idBase, onAnswer, onChildren, onBooking, onSignature }) {
+export default function FormFields({ fields, values, problems, times, readOnly, idBase, noTimesText, onAnswer, onChildren, onBooking, onSignature }) {
   const { answers, children } = values;
 
   function question(f) {
@@ -147,7 +149,7 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
             <div className="fchild-row">
               <div className="field">
                 <label htmlFor={`${idBase}-child-${i}-name`}>{T.FIRST_NAME}</label>
-                <input id={`${idBase}-child-${i}-name`} className="input" maxLength={60} readOnly={readOnly} value={c.first_name} onChange={(e) => set(i, { first_name: e.target.value })} />
+                <input id={`${idBase}-child-${i}-name`} className="input" maxLength={60} readOnly={readOnly} aria-invalid={problems.children ? true : undefined} aria-describedby={problems.children ? `${idBase}-children-err` : undefined} value={c.first_name} onChange={(e) => set(i, { first_name: e.target.value })} />
               </div>
               <div className="field fchild-age">
                 <label htmlFor={`${idBase}-child-${i}-age`}>{T.AGE}</label>
@@ -159,6 +161,8 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
                   min={2}
                   max={99}
                   readOnly={readOnly}
+                  aria-invalid={problems.children ? true : undefined}
+                  aria-describedby={problems.children ? `${idBase}-children-err` : undefined}
                   value={c.age ?? ''}
                   onChange={(e) => set(i, { age: e.target.value === '' ? null : Number(e.target.value) })}
                 />
@@ -172,7 +176,7 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
             {T.ADD_CHILD}
           </button>
         )}
-        <Problem code={problems.children} />
+        <Problem id={`${idBase}-children-err`} code={problems.children} />
       </div>
     );
   }
@@ -185,7 +189,7 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
         <span className="field-label">{f.label}</span>
         {f.help && <p className="field-hint">{f.help}</p>}
         {times.length === 0 ? (
-          <p className="fnotimes">{T.NO_OPEN_TIMES}</p>
+          <p className="fnotimes">{noTimesText ?? T.NO_OPEN_TIMES}</p>
         ) : (
           children.map((c, i) => {
             // Grouped like the public page: This week, Next week, then by week (mockup screen 8).
@@ -199,14 +203,23 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
             }
             const chosen = values.bookings[i] ?? '';
             const name = `${idBase}-book-${i}`;
+            // a brother's or sister's pick takes one of the spots too (design review, F3)
+            const takenBy = (key) => children.map((x, j) => (j !== i && values.bookings[j] === key ? x.first_name.trim() || T.CHILD(j + 1) : null)).filter(Boolean);
             // Every time shows its spots left (Jeffrey, F5 difference 9); the last spot is amber.
-            const slot = (key, text, spots) => (
-              <label key={key || 'none'} className={`ftslot${chosen === key ? ' is-on' : ''}`}>
-                <input type="radio" name={name} value={key} checked={chosen === key} disabled={readOnly} onChange={() => onBooking(i, key)} />
-                <span className="ftslot-text">{text}</span>
-                {spots != null && <span className={`ftslot-right${spots === 1 ? ' is-last' : ''}`}>{T.spotsLeft(spots)}</span>}
-              </label>
-            );
+            const slot = (key, text, spotsLeft) => {
+              const others = key ? takenBy(key) : [];
+              const spots = spotsLeft == null ? null : spotsLeft - others.length;
+              const full = spots != null && spots <= 0 && chosen !== key;
+              return (
+                <label key={key || 'none'} className={`ftslot${chosen === key ? ' is-on' : ''}${full ? ' is-full' : ''}`}>
+                  <input type="radio" name={name} value={key} checked={chosen === key} disabled={readOnly || full} onChange={() => onBooking(i, key)} />
+                  <span className="ftslot-text">{text}</span>
+                  {spots != null && (
+                    <span className={`ftslot-right${spots === 1 ? ' is-last' : ''}`}>{full ? T.takenBy(others.join(', ')) : T.spotsLeft(Math.max(spots, 1))}</span>
+                  )}
+                </label>
+              );
+            };
             return (
               <fieldset key={i} className="field cfieldset">
                 <legend className="field-label">{T.pickTimeFor(c.first_name.trim() || T.CHILD(i + 1))}</legend>
@@ -223,6 +236,7 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
             );
           })
         )}
+        <Problem id={`${idBase}-${f.id}-err`} code={problems[f.id]} />
       </div>
     );
   }
@@ -232,14 +246,21 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
     return (
       <div key={f.id} className="fwaiver">
         <span className="field-label">{f.label}</span>
-        <div className="fwaiver-text" tabIndex={0}>
+        <div className="fwaiver-text" tabIndex={0} role="region" aria-label={T.WAIVER_TEXT}>
           {f.text}
         </div>
         <label className="cbox">
-          <input type="checkbox" checked={answers[f.id] === true} disabled={readOnly} onChange={(e) => onAnswer(f.id, e.target.checked ? true : undefined)} />
+          <input
+            type="checkbox"
+            checked={answers[f.id] === true}
+            disabled={readOnly}
+            aria-invalid={problems[f.id] ? true : undefined}
+            aria-describedby={problems[f.id] ? `${id}-err` : undefined}
+            onChange={(e) => onAnswer(f.id, e.target.checked ? true : undefined)}
+          />
           <span>{T.AGREE}</span>
         </label>
-        <Problem code={problems[f.id]} />
+        <Problem id={`${id}-err`} code={problems[f.id]} />
         <span id={`${id}-sig-label`} className="field-label">
           {T.SIGN_HERE}
         </span>
@@ -247,7 +268,7 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
           {T.SIGN_HINT}
         </p>
         <SignaturePad value={values.signature} onChange={onSignature} disabled={readOnly} labelId={`${id}-sig-label`} hintId={`${id}-sig-hint`} />
-        <Problem code={problems.signature} />
+        <Problem id={`${id}-sig-err`} code={problems.signature} />
       </div>
     );
   }

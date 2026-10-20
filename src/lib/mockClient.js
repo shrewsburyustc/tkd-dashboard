@@ -44,6 +44,11 @@
 //   __tkdPreview.forceVerifyFailed(true)  the next family-form Send fails the human check
 //   __tkdPreview.forceRateLimited(true)   family-form Sends answer "too many tries" until set false
 //   (failNextSave, simulateOtherAdminEdit and resetTesting cover the events and roster too)
+// Public Forms page helpers (src/forms/publicApi.preview.js; open /f/<name> on the same port):
+//   __tkdPreview.setPublicForms(false)    the forms kill switch (every /f/<name> says "paused")
+//   __tkdPreview.forceTimeTaken()         the next forms Submit with a time answers "time taken"
+//   __tkdPreview.forceFormChanged()       the next forms Submit answers "form changed"
+//   __tkdPreview.forceFormsRateLimited(true) every forms Submit answers "too many tries"
 // Grading helpers (phase 3, contract 0010 §3.4; setToday and failNextSave cover grading too):
 //   __tkdPreview.failSavesUntilRetry()    from now on EVERY Events save fails like a dropped
 //                                         Wi-Fi connection (reads still work) — "Not saved"
@@ -60,6 +65,7 @@ import { isFourDigits, isPinTooEasy } from './pinRules.js';
 import { createTestingBackend, TESTING_RPC_NAMES } from './mockTesting.js';
 import { createEventsBackend, EVENT_RPC_NAMES, EVENT_RESTRICTED_RPC_NAMES, EVENT_TABLES } from './mockTestingEvents.js';
 import { previewToday, publicPreviewHelpers } from './testing/publicApi.preview.js';
+import { formsPublicPreviewHelpers } from '../forms/publicApi.preview.js';
 import { createStaffBackend, STAFF_RPC_NAMES } from './mockStaff.js';
 import { createScheduleBackend, SCHEDULE_RPC_NAMES } from './mockSchedule.js';
 import { createCalendarBackend, CALENDAR_RPC_NAMES } from './mockCalendar.js';
@@ -756,6 +762,13 @@ export function createMockClient() {
     },
     // ----- Events / family form helpers (publicApi.preview.js) -----
     ...publicPreviewHelpers(),
+    // ----- Public Forms page helpers (src/forms/publicApi.preview.js). forceRateLimited above
+    // stays Color Belt's; the forms one is called forceFormsRateLimited here (on the /f/<name>
+    // page itself it is plain forceRateLimited). -----
+    setPublicForms: formsPublicPreviewHelpers().setPublicForms,
+    forceTimeTaken: formsPublicPreviewHelpers().forceTimeTaken,
+    forceFormChanged: formsPublicPreviewHelpers().forceFormChanged,
+    forceFormsRateLimited: formsPublicPreviewHelpers().forceRateLimited,
   };
 
   return { auth, rpc, from };
