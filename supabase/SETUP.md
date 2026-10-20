@@ -838,6 +838,28 @@ Not part of the 0006 paste. When the Star family form's Pages Function (`functio
 2. `tkd-dashboard` → **Settings** → **Bindings** → **Add** → **Hyperdrive**: variable name `HYPERDRIVE_STAR`, configuration `tkd-star-registrar`, **Production only**.
 3. The Star Function has its own kill switch, the Production variable `STAR_PUBLIC_REGISTRATION` (default `off`).
 
+### 13i. Star Function settings at go-live (you, in Cloudflare — after the final merge into `main` and the push)
+
+The Star family form's Function (`functions/api/star/[code].js`, page `/star/<code>`) reaches production only with the final Star merge into `main` and its push (build plan §2, v0.222). It is deployed with that push **whatever `VITE_STAR_TESTING` says**; its only guards are its own kill switch and failing closed when a setting is missing — with no Star settings at all, every request answers "not open" and no database connection is opened. So these steps can wait until after the push. Each step needs Jeffrey's OK. **No value goes into git, `.env.local`, chat or a screenshot.**
+
+**Before the final push:** Cloudflare → **Workers & Pages** → `tkd-dashboard` → **Settings** → **Variables and Secrets** → **Production**: check `VITE_STAR_TESTING` is **not** `on` (the push starts a production build at once).
+
+**After the push, in this order:**
+1. **The kill switch, off.** Same page (**Production** only; leave **Preview** empty): add
+
+   | Name | Type | Value |
+   |---|---|---|
+   | `STAR_PUBLIC_REGISTRATION` | Text | `off` |
+
+   Only the exact text `on` turns the Star form on; anything else, or no setting, is off.
+2. **Reused, not new — check they are there, don't change them:** `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET`, `CLIENT_KEY_SECRET`, `PUBLIC_ORIGIN` (from 12a). The Star Function reads the same ones as Color Belt's. **`CLIENT_KEY_SECRET` must stay the same one**: the database's limit of 20 tries an hour per visitor counts both forms together, and that only works when both Functions make the same anonymous key. Don't make a second Turnstile widget either: the same widget serves both pages (the Star page asks for its own action, `star_register`, and the Function refuses a Color Belt token and the other way round).
+3. **The `RATE_LIMITER` binding is REQUIRED for Star** (for Color Belt it was optional, 12a step 5). Check **Settings** → **Bindings**: a **Rate limiting** binding named `RATE_LIMITER` must be there for **Production** (limit `60`, period `60` seconds, as 12a step 5). If it isn't, add it as 12a step 5 describes. **Why:** the Star link code is printed on flyers, so anyone can find it. Without the binding, each Cloudflare server keeps its own count, so a flood of page loads spread over many servers is never stopped and can use up all 5 of `star_registrar`'s database connections — then real families can't register. If the **Rate limiting** binding isn't offered for this project, **stop and tell Claude** before going on; Star is not switched on without it.
+4. **The `star_registrar` password:** do **13e** first if it isn't set yet (13f needs it).
+5. **Hyperdrive:** **13f** (the second configuration `tkd-star-registrar`, caching disabled, origin connection limit 5 or less, bound as `HYPERDRIVE_STAR`, **Production only**). Preview gets no binding, so a branch preview site can never reach the database.
+6. **Retry deployment** (Deployments → latest → **Retry deployment**): variables and bindings only take effect with the next deployment.
+7. **Check it is off:** open a made-up link `https://tkd-dashboard.pages.dev/star/abcdefgh` — it must say registration isn't open.
+8. **Before `STAR_PUBLIC_REGISTRATION` is ever set to `on`** (for the TEST registration or for families): check once more that `RATE_LIMITER` is bound in **Production** (step 3). Then build plan §2 steps 4–6: both street addresses in **Settings → Schools**, one TEST registration with `STAR_PUBLIC_REGISTRATION = on` (+ Retry deployment), and the switches on when families should register. To stop it again: 13g.
+
 ### 13g. Off switch (any time)
 
 In this order (step 1 works in seconds):

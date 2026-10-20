@@ -26,7 +26,7 @@
 //   - Fees: Record payment fills in candidate.expectedFeeCents; the screen never works out a fee.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  IconAlertTriangle, IconArrowBackUp, IconCalendar, IconCash, IconCheck, IconClock, IconEdit, IconPlus, IconReceiptRefund,
+  IconAlertTriangle, IconArrowBackUp, IconCalendar, IconCashEdit, IconCheck, IconSum, IconClock, IconEdit, IconPlus, IconReceiptRefund,
   IconRepeat, IconTrash, IconUserMinus, IconUserPlus, IconUsers,
 } from '@tabler/icons-react';
 import ErrorBanner from '../../../../components/ErrorBanner.jsx';
@@ -946,7 +946,7 @@ export default function CandidatesTab({
             <span className="ev-menu-reason">{T.UNDO_REFUND_FIRST}</span>
           </span>
         );
-        items.push({ key: 'editpay', label: refundStands ? grayed(T.EDIT_PAYMENT) : T.EDIT_PAYMENT, Icon: IconCash, disabled: busy || refundStands, onSelect: () => openEditPayment(row, anchor) });
+        items.push({ key: 'editpay', label: refundStands ? grayed(T.EDIT_PAYMENT) : T.EDIT_PAYMENT, Icon: IconCashEdit, disabled: busy || refundStands, onSelect: () => openEditPayment(row, anchor) });
         items.push({ key: 'undopay', label: refundStands ? grayed(T.UNDO_PAYMENT) : T.UNDO_PAYMENT, Icon: IconArrowBackUp, disabled: busy || refundStands, onSelect: () => openUndoPayment(row, anchor) });
         if (refundStands) items.push({ key: 'undorefund', label: T.UNDO_REFUND, Icon: IconArrowBackUp, disabled: busy, onSelect: () => openUndoRefund(row, anchor) });
         else if (row.overpaidCents > 0) items.push({ key: 'refund', label: T.RECORD_REFUND, Icon: IconReceiptRefund, disabled: busy, onSelect: () => openRefund(row, anchor) });
@@ -1228,7 +1228,7 @@ export default function CandidatesTab({
             {card(null, T.CARD_CANDIDATES, IconUsers, cards.candidates, schoolNote)}
             {!hidden && card('paid', T.CARD_PAID, IconCheck, cards.paid)}
             {!hidden && card('notPaid', T.CARD_NOT_PAID, IconClock, cards.notPaid)}
-            {!hidden && card('payments', T.CARD_PAYMENTS, IconCash, T.dollars(cards.payments))}
+            {!hidden && card('payments', T.CARD_PAYMENTS, IconSum, T.dollars(cards.payments)) /* ti-sum = a money total (v0.303) */}
           </div>
         )}
         {filter && (

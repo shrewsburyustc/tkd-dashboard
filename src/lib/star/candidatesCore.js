@@ -20,6 +20,7 @@
 // column list — the database doesn't even let the app read them there — and not in the make-up list.
 import { isIsoDate } from '../testing/eventRules.js';
 import { startTimeMinutes, shortStartTime } from './starEventRules.js';
+import { trimEmail, starEmailIsValid } from './emailRule.js';
 
 // Every status a Star candidates call can return.
 export const STAR_CANDIDATE_STATUSES = [
@@ -91,16 +92,8 @@ const asIdList = (v) => (v === null || v === undefined ? null : Array.isArray(v)
 
 // ----- Small pure helpers (the screens may use them too) -----
 
-// The email rule of the database (star_email_is_valid, contract §11 item 10): spaces at the start and
-// end are trimmed first; at most 254 characters, something@something.something, no spaces, one "@",
-// no invisible control or format characters. The address is stored as typed (capitals kept).
-const EMAIL_SHAPE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-const EMAIL_BAD_CHARACTER = /[\u0001-\u001f\u007f-\u009f ​-‏‪-‮⁠-⁤⁦-⁩﻿]/;
-export const trimEmail = (text) => (typeof text === 'string' ? text.replace(/^ +| +$/g, '') : text);
-export function starEmailIsValid(text) {
-  const email = trimEmail(text);
-  return typeof email === 'string' && [...email].length <= 254 && EMAIL_SHAPE.test(email) && !EMAIL_BAD_CHARACTER.test(email);
-}
+// The email rule (star_email_is_valid) lives in emailRule.js, shared with the public family form.
+export { trimEmail, starEmailIsValid };
 
 // Belt order (v0.117): Dan, stars from, school (Shrewsbury before Worcester), last name, first name.
 // Returns a new array. Works on app candidates (camelCase).

@@ -13,3 +13,7 @@
 # no name, shows the page's "This form was not found".)
 /f  /forms  200
 /f/*  /forms  200
+
+# The Star testing family links (/star/<code>) get their line from the BUILD, not from this file:
+# vite.config.js (starRedirects) adds "/star/*  /star  200" to dist/_redirects while the Star build
+# switch is on, and "/star" + "/star/*  /star-closed  200" (a plain "isn't open yet" page) while it is off.

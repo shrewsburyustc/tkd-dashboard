@@ -6,3 +6,4 @@
 // sends /api/* to Functions.)
 import './register.test.mjs';
 import './forms.test.mjs';
+import './starRegister.test.mjs';

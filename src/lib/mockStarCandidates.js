@@ -9,6 +9,8 @@
 //   writes   the 13 functions of §6.3–§6.4 (add, make-up, edit, paying by, duplicates, private,
 //            withdraw, restore, delete, record / undo / edit payment, refund)
 //   reads    star_candidate_detail, star_candidate_history, star_view_signature, star_makeup_list (§7)
+//   public   star_public_event, star_public_register (§8.2, §8.3 — the family form, phase 4; called
+//            only by src/lib/star/publicApi.preview.js, as publicEvent() / publicRegister())
 // It follows the SAME rules as the SQL: the same order of checks (§1.1), the same answers, the same
 // staff / admin split (S7, S8, the 10-second Undo windows), the same table rules (one active make-up
 // per earlier candidate, a payment total that never goes below zero). The fee and result rules come
@@ -46,18 +48,18 @@
 // The seed is made by running this file's own functions at past times (so its History, versions and
 // signatures are exactly what the functions would have written).
 import { normalizeName, nameProblem, nameKey } from './testing/names.js';
-import { eventState, isIsoDate, addDays, todayInSchoolTime } from './testing/eventRules.js';
-import { startTimeIsValid } from './star/starEventRules.js';
+import { eventState, isIsoDate, addDays, todayInSchoolTime, publicStateFor, signatureIsValid, FORM_PAYING_BY } from './testing/eventRules.js';
+import { startTimeIsValid, STAR_ACK_VERSION, STAR_CODE_PATTERN } from './star/starEventRules.js';
 import { STAR_EVENTS_SCHEMA, SEED_EVENT_IDS, copyStarTemplateInto } from './mockStarEvents.js';
 import { paymentSummary, netPaidCents, reversedIds, hasUnreversedRefund } from './star/feeRules.js';
 import { candidateResult, ageOn } from './star/resultRules.js';
-import { starEmailIsValid, trimEmail } from './star/candidatesCore.js';
+import { starEmailIsValid, trimEmail } from './star/emailRule.js';
 
 // Raised whenever the stored shape of the candidates part changes (older data → the seed).
 export const STAR_CANDIDATES_SCHEMA = 1;
 const UNDO_WINDOW_MS = 10 * 1000; // staff's own payment / "keep one" Undo (§6.3, §6.4)
 const SIGNATURE_KEEP_DAYS = 90; // signatures are removed 90 days after the testing day (§5.7)
-const ACK_VERSION = 'st-2026-10-18'; // the acknowledgment wording's label (OPEN-3)
+const ACK_VERSION = STAR_ACK_VERSION; // the acknowledgment wording's label (OPEN-3, starEventRules.js)
 const DAY_MS = 24 * 60 * 60 * 1000;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const INT_MAX = 2147483647;
@@ -903,6 +905,126 @@ function runHandler(name, db, args, x) {
   }
 }
 
+// ===== The family form's functions (contract 0006 §8.2, §8.3) =====
+
+const PUBLIC_ATTEMPT_KEEP_MS = 2 * DAY_MS; // rate-limit rows older than 2 days are removed (§8.3)
+const PUBLIC_RATE_LIMIT_PER_HOUR = 20; // per client key; the real limit is shared with Color Belt's form
+const HOUR_MS = 60 * 60 * 1000;
+const SCHOOL_NAMES = { worcester: 'Worcester', shrewsbury: 'Shrewsbury' }; // locations.name
+const isWhole = (v) => Number.isInteger(v) && v >= 0 && v <= INT_MAX;
+
+// The event and the school of a code: { event, schoolCode } or null. A code that matches more than
+// one column or event is refused rather than guessed (§8.2).
+function eventByCode(db, code) {
+  if (typeof code !== 'string' || !STAR_CODE_PATTERN.test(code)) return null;
+  const hits = [];
+  for (const e of db.events) {
+    if (e.public_code_worcester === code) hits.push({ event: e, schoolCode: 'worcester' });
+    if (e.public_code_shrewsbury === code) hits.push({ event: e, schoolCode: 'shrewsbury' });
+  }
+  return hits.length === 1 ? hits[0] : null;
+}
+
+// "where": the place of the testing and its address (testing_location_address: an object or null).
+const whereOf = (e, schoolAddress) => ({ name: SCHOOL_NAMES[e.where_code] ?? null, address: schoolAddress(e.where_code) ?? null });
+
+// star_public_event (§8.2): only what the form shows — no counts, candidates, ids or private fee.
+function publicEventAnswer(db, env, code, schoolAddress) {
+  const hit = eventByCode(db, code);
+  if (!hit) return st('not_found');
+  const { event: e, schoolCode } = hit;
+  const pub = publicStateFor(eventState(e, env.today()), e);
+  const aPlus = db.event_grades.find((g) => g.event_id === e.id && g.grade === 'A+')?.value ?? 0;
+  const dans = db.event_dans.filter((d) => d.event_id === e.id).sort((a, b) => a.dan - b.dan).map((d) => {
+    const categories = db.event_categories.filter((k) => k.event_id === e.id && k.dan === d.dan).sort((a, b) => a.position - b.position);
+    const max = categories.reduce((sum, k) => sum + k.credits * Number(aPlus), 0);
+    return {
+      dan: d.dan, label: d.label, star_limit: d.star_limit, standard_cents: d.standard_cents, same_day_cents: d.same_day_cents,
+      pass_mark: Number(d.pass_mark), max_score: Math.round(max * 10) / 10,
+      categories: categories.map((k) => ({ name: k.name, credits: k.credits })),
+    };
+  });
+  return {
+    status: 'ok', state: pub.state, closed_on: pub.closedOn,
+    school: { code: schoolCode, name: SCHOOL_NAMES[schoolCode] },
+    event: {
+      name: e.name, testing_date: e.testing_date, start_time: String(e.start_time).slice(0, 5), note: e.note ?? null,
+      auto_close_on: e.auto_close_on ?? null, where: whereOf(e, schoolAddress),
+    },
+    dans,
+  };
+}
+
+// star_public_answer (§8.3): the same answer for a new registration and for a repeated send —
+// whether or not it looks like a duplicate. No DOB, email or signature.
+function publicAnswer(db, c, schoolAddress) {
+  const e = findEvent(db, c.event_id);
+  const d = danCopy(db, c.event_id, c.dan);
+  return {
+    status: 'ok', reference: c.reference, first_name: c.first_name, last_name: c.last_name, dan: c.dan, dan_label: d.label,
+    stars_from: c.stars_from, stars_to: c.stars_from + 1, standard_cents: d.standard_cents, same_day_cents: d.same_day_cents,
+    paying_by: c.paying_by, event_name: e.name, testing_date: e.testing_date, start_time: String(e.start_time).slice(0, 5),
+    school_name: SCHOOL_NAMES[c.location_code] ?? null, where: whereOf(e, schoolAddress),
+  };
+}
+
+// star_public_register_core (§8.3), steps 1–9 in the contract's order. Writes into `db` (a copy).
+function publicRegisterCore(db, env, a, clientKey, nowMs, forceRateLimited, schoolAddress, noteEvent) {
+  // 1. the event by code
+  const hit = eventByCode(db, typeof a.code === 'string' ? a.code : null);
+  if (!hit) return st('not_found');
+  const { event: e, schoolCode } = hit;
+  noteEvent(e.id);
+  // 2. the same form sent again (double tap, retry after a timeout): the same answer
+  const submissionId = typeof a.submissionId === 'string' && UUID_PATTERN.test(a.submissionId) ? a.submissionId.toLowerCase() : null;
+  if (submissionId !== null) {
+    const earlier = db.signatures.find((s) => s.submission_id === submissionId);
+    if (earlier) {
+      const c = findCandidate(db, earlier.candidate_id);
+      return c && c.event_id === e.id ? publicAnswer(db, c, schoolAddress) : st('invalid');
+    }
+  }
+  // 3–4. (the lock) and the state
+  const pub = publicStateFor(eventState(e, env.today()), e);
+  if (pub.state === 'closed') return { status: 'closed', closed_on: pub.closedOn };
+  if (pub.state !== 'open') return st(pub.state);
+  // 5. the input
+  const today = env.today();
+  const text = (v) => (typeof v === 'string' ? v : null);
+  const ok = clientKey.length >= 1 && clientKey.length <= 200 && submissionId !== null
+    && nameIsValid(text(a.first)) && nameIsValid(text(a.last))
+    && isIsoDate(a.dateOfBirth) && a.dateOfBirth <= today && a.dateOfBirth >= '1900-01-01'
+    && starEmailIsValid(a.email) && isWhole(a.dan) && isWhole(a.starsFrom)
+    && FORM_PAYING_BY.includes(a.payingBy) && a.acknowledged === true && signatureIsValid(a.signature)
+    && a.ackVersion === ACK_VERSION;
+  if (!ok) return st('invalid');
+  // 6. a Dan of this event, and a star below its limit
+  const d = danCopy(db, e.id, a.dan);
+  if (!d || a.starsFrom >= d.star_limit) return st('invalid');
+  // 7. the rate limit: 20 tries an hour per client key
+  const recent = db.public_attempts.filter((row) => row.client_key === clientKey && nowMs - Date.parse(row.at) < HOUR_MS).length;
+  if (forceRateLimited || recent >= PUBLIC_RATE_LIMIT_PER_HOUR) return st('rate_limited');
+  // 8. the candidate and its signatures row, as "Family form"
+  const meta = newMeta(env, FAMILY_FORM, 'star_public_register');
+  const first = normalizeName(a.first);
+  const last = normalizeName(a.last);
+  const dup = findDuplicate(db, e.id, null, first, last, a.dateOfBirth); // accepted silently (v0.97)
+  const row = insertRow(db, env, 'star_candidates', candidateRow({
+    id: env.newId(), event_id: e.id, first_name: first, last_name: last, date_of_birth: a.dateOfBirth,
+    email_for_results: trimEmail(a.email), location_code: schoolCode, dan: a.dan, stars_from: a.starsFrom,
+    paying_by: a.payingBy, source: 'form', reference: `ST-${db.next_reference}`, registered_at: meta.at,
+    duplicate_state: dup === null ? 'none' : 'possible', duplicate_of: dup,
+  }), meta);
+  db.next_reference += 1;
+  if (dup !== null) recheckDuplicate(db, env, dup, meta);
+  insertRow(db, env, 'star_candidate_signatures', {
+    id: env.newId(), candidate_id: row.id, submission_id: submissionId, acknowledged: true, ack_version: a.ackVersion,
+    signature: a.signature, signed_at: meta.at, signature_deleted_at: null,
+  }, meta);
+  // 9. the ok answer
+  return publicAnswer(db, row, schoolAddress);
+}
+
 // ===== The seed =====
 
 // Fixed, valid uuids for the seed rows, so "Reset" always brings back the same ids.
@@ -1196,7 +1318,49 @@ export function createStarCandidatesBackend({ readBase, saveStore, now = () => D
     return ok(answer);
   }
 
-  // ----- Test helpers (console helpers in mockClient.js, and star/candidatesChecks.mjs) -----
+  // ----- The family form's two functions (contract 0006 §8.2, §8.3; Star phase 4) -----
+  // Only the star_registrar login may call these in the real database, through the Pages Function;
+  // in preview, src/lib/star/publicApi.preview.js calls them (never mockClient's rpc, so a signed-in
+  // staff page can't reach them either). `schoolAddress(code)` gives a school's address for the
+  // "Location:" line ({ street, city, state, zip } or null) — preview keeps the addresses in
+  // Color Belt's store (Settings → Schools), so publicApi.preview.js reads them from there.
+
+  // star_public_event(p_code)
+  function publicEvent(code, { schoolAddress = () => null } = {}) {
+    return publicEventAnswer(read(), env, code, schoolAddress);
+  }
+
+  // star_public_register(...). args use the database's names without "p_":
+  //   { code, clientKey, submissionId, first, last, dateOfBirth, email, dan, starsFrom, payingBy,
+  //     acknowledged, signature, ackVersion }
+  // forceRateLimited: preview helper — the rate-limit check fails at its normal place (step 7).
+  // Every call writes one rate-limit row (outcome 'star:' + the status), refusals too — after the
+  // registration part, so it counts even when that part is undone (§8.3).
+  function publicRegister(args = {}, { forceRateLimited = false, schoolAddress = () => null } = {}) {
+    const db = read();
+    const nowMs = env.now();
+    db.public_attempts = (Array.isArray(db.public_attempts) ? db.public_attempts : [])
+      .filter((row) => nowMs - Date.parse(row.at) <= PUBLIC_ATTEMPT_KEEP_MS); // rows older than 2 days go
+    const clientKey = typeof args.clientKey === 'string' ? args.clientKey : '';
+    let eventId = null;
+    let answer;
+    const work = clone(db); // the "core": only kept when it answers ok
+    try {
+      answer = publicRegisterCore(work, env, args, clientKey, nowMs, forceRateLimited, schoolAddress, (id) => {
+        eventId = id;
+      });
+    } catch (error) {
+      if (!(error instanceof TableRule)) throw error;
+      answer = st('invalid'); // the wrapper turns table-rule errors into 'invalid' (all undone)
+    }
+    const kept = answer.status === 'ok' ? work : db;
+    kept.public_attempts = [...(kept.public_attempts ?? []), {
+      client_key: clientKey.slice(0, 200), event_id: eventId, outcome: `star:${answer.status}`, at: iso(nowMs),
+    }];
+    write(kept);
+    return answer;
+  }
+
 
   function failNextSave() {
     failNext = true;
@@ -1209,5 +1373,5 @@ export function createStarCandidatesBackend({ readBase, saveStore, now = () => D
     write(base);
   }
 
-  return { select, rpc, failNextSave, reset, snapshot: read };
+  return { select, rpc, publicEvent, publicRegister, failNextSave, reset, snapshot: read };
 }

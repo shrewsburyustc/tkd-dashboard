@@ -13,9 +13,21 @@
 // small plugin below does the same for `npm run dev`, `dev:preview-mode` and `vite preview`.
 // A third page, forms.html (the public Forms page, /f/<name>, build plan §3), works the same way
 // with its own small plugin (formsPageRewrite) and its own line in public/_redirects.
+// A fourth page, star.html (the public Star testing registration form, /star/<code>, Star build
+// phase 4), is added ONLY while the Star build switch is on — the same rule as src/lib/features.js
+// (VITE_STAR_TESTING 'on' → on; 'off' → off; anything else → on in preview mode only). So the live
+// build (switch off) has no Star page or code at all; its rewrite (starPageRewrite) is added the
+// same way. The Cloudflare line for /star/* comes from the build too (starRedirects, below): the page
+// while the switch is on, the plain public/star-closed.html ("isn't open yet") while it is off.
+// Two cautions:
+//   - A build on THIS PC also reads .env.local, so `npm run build` here only shows what goes live
+//     when .env.local has no VITE_STAR_TESTING=on. What goes live is decided by Cloudflare's setting.
+//   - `npm run dev` with the switch off still SERVES the file /star.html on this PC (Vite's dev server
+//     serves any page file in the folder); only the /star/<code> rewrite and the build leave it out.
 import { fileURLToPath } from 'node:url';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
 // The worktrees folder inside THIS copy of the project (forward slashes and lowercase, so
@@ -67,24 +79,80 @@ function formsPageRewrite() {
   };
 }
 
-export default defineConfig({
-  plugins: [react(), registerPageRewrite(), formsPageRewrite()],
-  build: {
-    rollupOptions: {
-      // The pages of the build.
-      input: {
-        main: resolve(fileURLToPath(new URL('.', import.meta.url)), 'index.html'),
-        register: resolve(fileURLToPath(new URL('.', import.meta.url)), 'register.html'),
-        forms: resolve(fileURLToPath(new URL('.', import.meta.url)), 'forms.html'),
+// /star, /star/ and /star/<code> (with or without ?query) → star.html, like public/_redirects does on
+// Cloudflare. Everything else is left alone (/star.html itself, /src/…, /starlight don't match).
+function starPageRewrite() {
+  const rewrite = (req, _res, next) => {
+    const [path, query] = (req.url ?? '').split('?');
+    if (path === '/star' || path.startsWith('/star/')) {
+      req.url = '/star.html' + (query !== undefined ? `?${query}` : '');
+    }
+    next();
+  };
+  return {
+    name: 'star-page-rewrite',
+    configureServer(server) {
+      server.middlewares.use(rewrite);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(rewrite);
+    },
+  };
+}
+
+// Adds the /star/* line to the BUILT dist/_redirects (Cloudflare reads that copy of public/_redirects):
+//   switch on  → /star/*  /star         200   (star.html, the family form)
+//   switch off → /star and /star/*  /star-closed  200   (public/star-closed.html — no script, no Star code)
+// Without it, a /star/<code> link on the live site would fall through to the staff sign-in page.
+// Runs after the build has copied public/ into the output folder.
+function starRedirects(star) {
+  let outDir = 'dist';
+  return {
+    name: 'star-redirects',
+    apply: 'build',
+    configResolved(config) {
+      outDir = resolve(config.root, config.build.outDir);
+    },
+    closeBundle() {
+      const file = resolve(outDir, '_redirects');
+      // Off: a plain /star (no code) goes there too; on, Pages serves star.html at /star by itself.
+      const lines = star ? ['/star/*  /star  200'] : ['/star  /star-closed  200', '/star/*  /star-closed  200'];
+      const text = readFileSync(file, 'utf8');
+      writeFileSync(file, `${text.replace(/\s*$/, '')}\r\n${lines.join('\r\n')}\r\n`);
+    },
+  };
+}
+
+// Is the Star build switch on for this build? The same rule as src/lib/features.js. loadEnv reads
+// the .env files and the computer's own settings (e.g. Cloudflare's VITE_STAR_TESTING) for the mode.
+function starTestingOn(mode, root) {
+  const setting = loadEnv(mode, root, 'VITE_').VITE_STAR_TESTING;
+  return setting === 'on' || (setting !== 'off' && mode === 'preview');
+}
+
+export default defineConfig(({ mode }) => {
+  const root = fileURLToPath(new URL('.', import.meta.url));
+  const star = starTestingOn(mode, root);
+  return {
+    plugins: [react(), registerPageRewrite(), formsPageRewrite(), ...(star ? [starPageRewrite()] : []), starRedirects(star)],
+    build: {
+      rollupOptions: {
+        // The pages of the build (star.html only while the Star switch is on).
+        input: {
+          main: resolve(root, 'index.html'),
+          register: resolve(root, 'register.html'),
+          forms: resolve(root, 'forms.html'),
+          ...(star ? { star: resolve(root, 'star.html') } : {}),
+        },
       },
     },
-  },
-  server: {
-    // Don't watch the worktree copies for changes.
-    watch: { ignored: (path) => path.replace(/\\/g, '/').toLowerCase().startsWith(worktreesDir) },
-  },
-  optimizeDeps: {
-    // Only look for the app's libraries starting from our own pages.
-    entries: ['index.html', 'register.html', 'forms.html'],
-  },
+    server: {
+      // Don't watch the worktree copies for changes.
+      watch: { ignored: (path) => path.replace(/\\/g, '/').toLowerCase().startsWith(worktreesDir) },
+    },
+    optimizeDeps: {
+      // Only look for the app's libraries starting from our own pages.
+      entries: ['index.html', 'register.html', 'forms.html', ...(star ? ['star.html'] : [])],
+    },
+  };
 });

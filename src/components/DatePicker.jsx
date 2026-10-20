@@ -47,6 +47,12 @@
 //   describedBy      id(s) of text under the field (a hint or an error)
 //   invalid          true when an error is shown for the field
 //   inline           true on phones (in the page, edge to edge)
+// Three more props for the family form's date of birth (Star phase 4, v0.510); the dashboard's
+// own uses leave them out and keep the behaviour above:
+//   emptyFocus       'day' (default) or 'month': with nothing chosen yet, opening moves focus to
+//                    the Month list instead of a day (a birthday is never near today)
+//   yearsNewestFirst true: the Year list runs from the newest year down (1926 at the bottom)
+//   formatValue(iso) the words in the field ("Mar 4, 2012"); default shortDate ("Sat, Nov 14, 2026")
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { IconChevronDown, IconChevronUp } from '@tabler/icons-react';
@@ -250,6 +256,9 @@ export default function DatePicker({
   describedBy,
   invalid = false,
   inline = false,
+  emptyFocus = 'day',
+  yearsNewestFirst = false,
+  formatValue = shortDate,
 }) {
   const baseId = useId();
   const fieldRef = useRef(null);
@@ -264,6 +273,7 @@ export default function DatePicker({
   const [focusDate, setFocusDate] = useState(start); // the day with the Tab stop (keyboard focus)
   const [place, setPlace] = useState(null); // { top, left } of the floating box (PC / tablet)
   const focusDayRef = useRef(false); // move DOM focus to the focus day after the next render
+  const focusMonthRef = useRef(false); // …or to the Month list (emptyFocus 'month', nothing chosen)
 
   // The month on show. Without a value or `today` there is nothing to open on (the calendar
   // can't open then), so no guess from this computer's clock is ever made.
@@ -275,7 +285,8 @@ export default function DatePicker({
   function openCalendar() {
     if (disabled || open || !start) return;
     setFocusDate(start);
-    focusDayRef.current = true;
+    if (emptyFocus === 'month' && !chosen) focusMonthRef.current = true;
+    else focusDayRef.current = true;
     setOpen(true);
   }
   function closeCalendar(refocus) {
@@ -318,6 +329,14 @@ export default function DatePicker({
   useEffect(() => {
     if (open && inline) popRef.current?.scrollIntoView({ block: 'nearest' });
   }, [open, inline]);
+
+  // Opening with nothing chosen and emptyFocus 'month': keyboard focus to the Month list.
+  useEffect(() => {
+    if (!open || !focusMonthRef.current) return;
+    if (!inline && !place) return; // wait until the box has its place
+    focusMonthRef.current = false;
+    monthRef.current?.focus();
+  });
 
   // Keyboard focus to the focus day (after opening, and after every arrow key).
   useEffect(() => {
@@ -408,7 +427,7 @@ export default function DatePicker({
     const last = toIso(view.year, m, daysInMonth(view.year, m));
     return { value: m, label: name, disabled: Boolean((min && last < min) || (max && first > max)) };
   });
-  const yearList = [...new Set([...years, ...(view ? [view.year] : [])])].sort((a, b) => a - b);
+  const yearList = [...new Set([...years, ...(view ? [view.year] : [])])].sort((a, b) => (yearsNewestFirst ? b - a : a - b));
   const yearOptions = yearList.map((y) => ({ value: y, label: String(y) }));
   function showMonth(year, month) {
     const day = Math.min(view.day, daysInMonth(year, month));
@@ -526,7 +545,7 @@ export default function DatePicker({
           }
         }}
       >
-        <span className="dp-value">{chosen ? shortDate(chosen) : placeholder}</span>
+        <span className="dp-value">{chosen ? formatValue(chosen) : placeholder}</span>
         {/* ti-chevron-down / ti-chevron-up = closed / open */}
         {open ? <IconChevronUp size={16} aria-hidden="true" /> : <IconChevronDown size={16} aria-hidden="true" />}
       </button>

@@ -53,6 +53,27 @@
 /f/*
   Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
 
+# The public Star testing registration page (/star/<code>, Star build phase 4): the same strict
+# policy as /register above. connect-src 'self' = the page may only talk to /api/star/… on this site;
+# Turnstile is allowed from challenges.cloudflare.com; img-src data: is the drawn signature and the
+# logo. The page's file is star.html, which Pages serves at /star (see public/_redirects).
+/star
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+
+/star.html
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+
+/star/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+
+# The plain "isn't open yet" page /star/<code> shows while the Star form isn't built
+# (public/star-closed.html, served at /star-closed): the same strict policy.
+/star-closed
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+
+/star-closed.html
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+
 # Answers from the registration Function must never be stored by browsers or proxies.
 # (Cloudflare doesn't apply this file to Function answers, so the Function also sets this
 # header itself — functions/_lib/http.js. This line is the backup the contract asks for.)

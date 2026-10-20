@@ -34,6 +34,12 @@ export const START_TIME_STEP_MINUTES = 15;
 export const STAR_CODE_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';
 export const STAR_CODE_PATTERN = /^[a-hjkmnp-z2-9]{8}$/;
 
+// The family form's acknowledgment label (contract 0006 OPEN-3, build plan §4 M2, rulebook v0.510).
+// star_public_register accepts ONLY this label, and it stands for the exact wording in
+// src/star-register/text.js (ACK_TEXT + ACK_BOLD + ACK_END). Changing the wording later needs a
+// migration with a new label — never change one without the other.
+export const STAR_ACK_VERSION = 'st-2026-10-18';
+
 // The two places an event can be held (the locations table's codes), in the order shown.
 export const WHERE_CODES = ['worcester', 'shrewsbury'];
 

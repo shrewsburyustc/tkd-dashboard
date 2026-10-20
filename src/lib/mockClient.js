@@ -55,6 +55,13 @@
 //   __tkdPreview.forceTimeTaken()         the next forms Submit with a time answers "time taken"
 //   __tkdPreview.forceFormChanged()       the next forms Submit answers "form changed"
 //   __tkdPreview.forceFormsRateLimited(true) every forms Submit answers "too many tries"
+// Star family form helpers (src/lib/star/publicApi.preview.js; open /star/<code> on the same port):
+//   __tkdPreview.setStarPublicRegistration(false) the Star form's kill switch ("not open" everywhere)
+//   __tkdPreview.forceStarVerifyFailed(true)   the next Star Send fails the human check
+//   __tkdPreview.forceStarRateLimited(true)    Star Sends answer "too many tries" until set false
+//   __tkdPreview.forceStarPageRateLimited(true) opening the Star page answers "too many tries"
+//   __tkdPreview.failNextStarLoad() / failNextStarSend()  the next page load / Send fails
+//   __tkdPreview.setStarPublicDelay(3000)      slow the Star page's answers down
 // Grading helpers (phase 3, contract 0010 §3.4; setToday and failNextSave() cover grading too):
 //   __tkdPreview.failSavesUntilRetry()    from now on EVERY Events save fails like a dropped
 //                                         Wi-Fi connection (reads still work) — "Not saved"
@@ -84,6 +91,7 @@ import { createTestingBackend, TESTING_RPC_NAMES } from './mockTesting.js';
 import { createEventsBackend, EVENT_RPC_NAMES, EVENT_RESTRICTED_RPC_NAMES, EVENT_TABLES } from './mockTestingEvents.js';
 import { previewToday, publicPreviewHelpers } from './testing/publicApi.preview.js';
 import { formsPublicPreviewHelpers } from '../forms/publicApi.preview.js';
+import { starPublicPreviewHelpers } from './star/publicApi.preview.js';
 import { createStaffBackend, STAFF_RPC_NAMES } from './mockStaff.js';
 import { createStarBackend, STAR_RPC_NAMES, STAR_TABLES, STAR_STORE_KEY } from './mockStarTesting.js';
 import { createStarEventsBackend, STAR_EVENT_RPC_NAMES, STAR_EVENT_TABLES } from './mockStarEvents.js';
@@ -906,6 +914,8 @@ export function createMockClient() {
     forceTimeTaken: formsPublicPreviewHelpers().forceTimeTaken,
     forceFormChanged: formsPublicPreviewHelpers().forceFormChanged,
     forceFormsRateLimited: formsPublicPreviewHelpers().forceRateLimited,
+    // ----- Star family form helpers (src/lib/star/publicApi.preview.js; all named "…Star…") -----
+    ...starPublicPreviewHelpers(),
   };
 
   return { auth, rpc, from };
