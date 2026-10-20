@@ -1106,6 +1106,27 @@ An admin sets the reminder times in **Finance → Settings** (they start Off; pl
 
 ---
 
+## 18. Migration 0018: Finance — Color Belt private testing payments in the Daily report
+
+**What it does** (`supabase/migrations/0018_finance_private.sql`, contract `docs/Dashboard Docs/Build contracts/CONTRACT-0018.md`): the Daily report, Close the day, History, Export, the payment detail, the Home reminder and the Both summary include Color Belt **private testing** payments (0014). A **Move to private testing** is a transfer: the payment's line carries on as the private row, and the day's totals, expected cash and fingerprint don't change. A closed day is **not** "changed after closing" because of a move. An **Undo move** leaves the day as it was (no "undone" line). It replaces six Finance functions, adds one index (`finance_testing_private_payments_paid_on_idx`) and changes no table, row, setting or right.
+
+**Order:** 0011 → camps' 0013 + 0017 → 0014 → **0018**. 0018 is built over the Finance functions as camps' 0017 leaves them; until camps' 0017 exists, the file here is laid over 0011 (see the contract, section 3). Do **not** paste it before camps' 0017 is live and this file has been rebuilt over it. Each step needs Jeffrey's OK.
+
+### 18a. Apply 0018 (you, in the SQL Editor; outside desk hours)
+1. **Outside desk hours:** building the index briefly holds back private payment writes until the paste finishes (seconds).
+2. Copy the whole file, **SQL Editor → New query**, paste, **Run**. The destructive-operations warning comes from two `drop function if exists` lines (the chain helpers are recreated straight after, with more output columns). One transaction; safe to run again.
+3. **Re-run order:** re-running 0011 or camps' 0017 later puts back Finance functions **without** private payments — run 0018 again straight after.
+
+### 18b. Read-only checks (Claude, through the connection)
+1. `0018_fingerprints.sql`: every line matches the PGlite run (6 functions + 1 index). `0011_fingerprints.sql` differs from its earlier record only in those six functions' lines and one extra index line. 0003–0006, 0010 and 0014: unchanged.
+2. **Security advisor:** nothing new (no new table; the replaced functions keep their rights).
+
+### 18c. Run the tests (you, in the SQL Editor)
+1. `supabase/tests/0018_tests.sql` with the two UIDs pasted, **Run** (it finishes in seconds). Expected: **ALL 0018 TESTS PASSED**. It uses the real Color Belt private testing functions and test events named `zz fin18 …`, on days in 2021. A test payment is also recorded **today** in Shrewsbury. Everything is rolled back.
+2. Then `0011_tests.sql` again — it must still pass with 0018.
+
+---
+
 ## Admin: change the front-desk PIN or password
 
 The front desk (`shrewsburyustc@gmail.com`) is a **shared account**, so the app hides Change PIN and Change password for it. Only an admin changes them, here in Supabase, until the Staff accounts screen exists.
