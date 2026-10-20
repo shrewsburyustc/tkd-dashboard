@@ -98,23 +98,71 @@
 //         f. the upgrade database: 0010 on top of its 0005; its 0010
 //            fingerprints must equal the main database's (fresh =
 //            upgrade); 0010_tests.sql and 0005_tests.sql pass there
-//         g. LAST, on the main database (nothing runs on it afterwards):
-//            the down-script of SETUP section 14e, both steps exactly as
-//            written there (re-run 0005, then the SQL block). Afterwards
-//            the 0005 fingerprints must equal step 11's (= a database that
-//            never had 0010), change_log must have one undo_0010 row per
-//            removed result, and 0005_tests.sql / 0003_tests.sql pass.
-//   14. the new-students files in the LIVE order, on their own database:
+//         g. LAST, on the main database (nothing runs on it afterwards;
+//            it runs after step 14): the down-script of SETUP section
+//            14e, both steps exactly as written there (re-run 0005, then
+//            the SQL block). Afterwards the 0005 fingerprints must equal
+//            step 11's (= a database that never had 0010), change_log must
+//            have one undo_0010 row per removed result, and 0005_tests.sql
+//            / 0003_tests.sql pass.
+//   14. 0011 (Finance) after steps 11-13f (contract CONTRACT-0011.md
+//       section 2: the tests run before AND after sample payments):
+//         a. 0011_fingerprints.sql must not contain the words the Supabase
+//            connection refuses (so Claude can run it on production)
+//         b. BEFORE sample data, on the upgrade database (it has 0005,
+//            0006 and 0010 but no payment at all): FIRST the 0011 that was
+//            applied to production on 2026-10-19 (fixtures/
+//            0011_as_applied_2026-10-19.sql) with an admin's settings
+//            changed, THEN today's 0011 over it - as production will get
+//            it. The settings row and the 14 reminder times must be
+//            untouched, the old chain function gone; 0011_tests.sql
+//         c. the main database: the 0003 / 0004 / 0005 / 0006 / 0010
+//            fingerprints are taken, 0011 is applied, and they must be
+//            IDENTICAL afterwards (0011 changes none of their objects)
+//         d. AFTER sample data: the main database already has a Color Belt
+//            and a Star payment from steps 11c / 12e; a few more are added
+//            on both sources (a payment yesterday, a refund today), then
+//            0011_tests.sql and every earlier test file
+//         e. 0011 applied a SECOND time: the 5 finance tables and the
+//            history count unchanged, the fingerprints identical, tests
+//            pass
+//         f. fresh = upgrade: the upgrade database's 0011 fingerprints
+//            equal the main database's
+//         g. SPEED, on the upgrade database: 0011_tests.sql must finish in
+//            under 60 seconds (it timed out on production once); then a
+//            big seed (finance_perf_seed.sql: 5 years, both schools, both
+//            sources, about 11,000 payment rows with edits, moves, undos,
+//            mis-clicks and refunds) and every app function is timed as
+//            an unlocked admin: each must answer "ok" in under 2 seconds,
+//            and the answers must be right (a busy day has items whose
+//            totals add up; the year export has both sources)
+//         h. OLD vs NEW, on a third database: the big seed with the
+//            PRODUCTION copy of 0011 (whose chain builder is the slow but
+//            proven one): every 7th day of the 5 years, both schools, the
+//            items and figures are written down; today's 0011 is applied
+//            over it and every one of those days must give exactly the
+//            same items and figures
+//         i. COLLATION, on a fourth database whose text sorting is ICU
+//            "en-US" like production's (punctuation is ignored, so e.g.
+//            '~end' sorts BEFORE 'color_belt'; PGlite's normal databases
+//            sort byte by byte, "C"): all migrations, 0011_tests.sql and the
+//            speed + correctness check of g again. A Finance function that
+//            relied on text order would give wrong answers there.
+//
+// THE FIXTURE fixtures/0011_as_applied_2026-10-19.sql
+//   An exact copy of 0011 as it was pasted into production on 2026-10-19
+//   (git commit 278539b). Never edit it.
+//   16. the new-students files in the LIVE order, on their own database:
 //       0001-0006 + 0010 (grading) as live, then 0007 Schedule, 0008 Calendar,
 //       0009 Forms, 0012 Prospects (a sign-up saved before 0012 must keep its
 //       date), every test file again, re-run safety for 0007/0008/0009/0012,
 //       and a minimal database (only 0003, 0004, 0007-0012) whose
 //       0007/0008/0009/0012 fingerprints must be the same.
-//   15. 0015 (family history) on a database built in the live order
+//   17. 0015 (family history) on a database built in the live order
 //       (no family rows in change_log): earlier fingerprints unchanged
 //       (0003's above all), 0015_tests.sql and every earlier test file
 //       pass, 0015 twice more is harmless, a minimal database gives the
-//       same fingerprints, and on step 14's database (a sign-up logged in
+//       same fingerprints, and on step 16's database (a sign-up logged in
 //       change_log before 0012) 0015 refuses to apply.
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
@@ -277,8 +325,8 @@ async function fingerprints(db, file = '0003_fingerprints.sql') {
 // Steps 1-5: a fresh database with everything that exists before 0003.
 // Returns the database, or null if a step failed. "label" prefixes the
 // result lines (used by the upgrade check).
-async function buildBase(label = '') {
-  const db = new PGlite({ extensions: { pgcrypto } });
+async function buildBase(label = '', existing = null) {
+  const db = existing ?? new PGlite({ extensions: { pgcrypto } });
   if (!(await run(db, label + 'stubs.sql (Supabase stand-ins)', readFileSync(path.join(here, 'stubs.sql'), 'utf8')))) return null;
   if (!(await run(db, label + 'apply 0001_staff_and_pin.sql', read('migrations', '0001_staff_and_pin.sql')))) return null;
   await run(db, label + 'add test logins + staff rows', `
@@ -408,13 +456,37 @@ async function main() {
     after10 = await step13(db, upgradeHas0005 ? upgradeDb : null, after5);
   }
 
-  // 14. the new-students migrations (0007, 0008, 0009, 0012) in the live order
-  console.log('\nMigrations 0007-0012 (Schedule, Calendar, Forms, Prospects) in the live order:');
-  const newStudents = after5 ? await step14() : null;
+  // 14. Finance (0011), after 0010 and before 13g (the 0010 down-script,
+  // which must stay the last thing on the main database).
+  let after11 = null;
+  if (after6 && after10) {
+    console.log('\nMigration 0011 (Finance):');
+    after11 = await step14(db, upgradeHas0005 ? upgradeDb : null);
+  } else {
+    record('0011 (Finance)', false, 'skipped: 0006 or 0010 could not be applied (see the lines above)');
+  }
 
-  // 15. 0015 (family history) in the live order, and its refusal on step 14's database
+  // 14h + 14i. old vs new chain builder; the ICU-collation database
+  if (after11) {
+    console.log('\n0011 old vs new chain builder (big seed):');
+    await financeOldVsNew();
+    console.log('\n0011 on a database that sorts text like production (ICU en-US):');
+    await financeIcuCheck();
+  }
+
+  // 13g. the down-script (SETUP section 14e), LAST
+  if (after5 && after10) {
+    console.log('\nUndo 0010 (SETUP section 14e), last:');
+    await downScriptCheck(db, after5);
+  }
+
+  // 16. the new-students migrations (0007, 0008, 0009, 0012) in the live order
+  console.log('\nMigrations 0007-0012 (Schedule, Calendar, Forms, Prospects) in the live order:');
+  const newStudents = after5 ? await step16() : null;
+
+  // 17. 0015 (family history) in the live order, and its refusal on step 16's database
   console.log('\nMigration 0015 (family history):');
-  const after15 = after5 ? await step15(newStudents?.db ?? null) : null;
+  const after15 = after5 ? await step17(newStudents?.db ?? null) : null;
 
   console.log('\nFunction fingerprints (name  arguments  body_md5  security_definer  settings  owner  execute_rights):');
   for (const line of after) console.log('  ' + line);
@@ -441,6 +513,10 @@ async function main() {
   if (after15) {
     console.log('\n0015 fingerprints (kind  item  detail):');
     for (const line of after15) console.log('  ' + line);
+  }
+  if (after11) {
+    console.log('\n0011 fingerprints (kind  item  detail):');
+    for (const line of after11) console.log('  ' + line);
   }
 
   return finish();
@@ -696,8 +772,7 @@ async function step13(db, upgradeDb, after5) {
     record('[upgrade] 0010 on top of the upgrade database', false, 'the upgrade database has no 0005 (see the lines above)');
   }
 
-  // g. the down-script (SETUP section 14e), last
-  await downScriptCheck(db, after5);
+  // g. the down-script (SETUP section 14e) runs from main(), after step 14
   return after10;
 }
 
@@ -984,7 +1059,7 @@ async function step12(db, upgradeDb) {
 }
 
 // =====================================================================
-// Step 14: the new-students migrations (0007 Schedule, 0008 Calendar,
+// Step 16: the new-students migrations (0007 Schedule, 0008 Calendar,
 // 0009 Forms, 0012 Prospects) in the LIVE order, on their own database:
 //   a. steps 1-5, 0003, 0004, the seed, 0005 (+ its test event), 0006,
 //      0010 (grading results) - what the live database already has
@@ -999,7 +1074,7 @@ async function step12(db, upgradeDb) {
 //      fingerprints, so 0005, 0006 and 0010 change nothing of ours
 // Returns { after7, after8, after9, after12 } for the printout, or null.
 // =====================================================================
-async function step14() {
+async function step16() {
   const L = '[live order] ';
   const db = await buildBase(L);
   if (!db) return null;
@@ -1123,7 +1198,7 @@ async function step14() {
 }
 
 // =====================================================================
-// Step 15: 0015 (family history) on top of everything, in the live order.
+// Step 17: 0015 (family history) on top of everything, in the live order.
 //   a. a database built like production on 2026-10-19: steps 1-5, 0003,
 //      0004, the seed, 0005 (+ its test event), 0006, 0010, 0007, 0008,
 //      0009, 0012 - with no family record in change_log (as on production)
@@ -1134,11 +1209,11 @@ async function step14() {
 //      unchanged, the tests still pass
 //   e. fresh = live order: a minimal database (steps 1-5, 0003, 0004,
 //      0007, 0008, 0009, 0012, 0015) gives the same 0015 fingerprints
-//   f. R5: on step 14's database, where a sign-up was saved before 0012
+//   f. R5: on step 16's database, where a sign-up was saved before 0012
 //      (so change_log holds family rows), 0015 must REFUSE to apply
-// "refuseDb" = step 14's database (or null). Returns 0015's fingerprints.
+// "refuseDb" = step 16's database (or null). Returns 0015's fingerprints.
 // =====================================================================
-async function step15(refuseDb) {
+async function step17(refuseDb) {
   const L = '[0015] ';
   const db = await buildBase(L);
   if (!db) return null;
@@ -1223,9 +1298,297 @@ async function step15(refuseDb) {
     record('[0015 refuse] 0015 refuses to apply when change_log holds family rows (R5)', famRows > 0 && refused, `${famRows} family rows; ${message || 'it applied!'}`);
     record('[0015 refuse] nothing of 0015 was kept', (await one(refuseDb, "select to_regclass('public.family_history') is null")) === true);
   } else {
-    record('[0015 refuse] the step-14 database exists for the R5 check', false);
+    record('[0015 refuse] the step-16 database exists for the R5 check', false);
   }
   return after15;
+}
+
+// ---------------------------------------------------------------------
+// Step 14: Finance (0011)
+// ---------------------------------------------------------------------
+
+// The 5 Finance tables + the history's row count, as one md5 ("re-running
+// 0011 changed nothing").
+const FINANCE_TABLES = ['finance_day_closings', 'finance_day_closing_items', 'finance_settings',
+  'finance_reminder_times', 'finance_exports'];
+const snapshot11Sql = `select md5(${FINANCE_TABLES.map((t) =>
+  `coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.${t} x), '')`).join(' || ')}
+  || (select count(*) from public.change_log)::text)`;
+
+// Every earlier migration's fingerprints together (14c: 0011 must not
+// change them).
+async function before11Fingerprints(db) {
+  return [
+    ...(await fingerprints(db, '0003_fingerprints.sql')),
+    ...(await fingerprints(db, '0004_fingerprints.sql')),
+    ...(await fingerprints(db, '0005_fingerprints.sql')),
+    ...(await fingerprints(db, '0006_fingerprints.sql')),
+    ...(await fingerprints(db, '0010_fingerprints.sql')),
+  ];
+}
+
+// 14d. More sample payments on BOTH sources (written as the SQL Editor
+// would, labelled): Pat Lee (Color Belt, Worcester) paid cash yesterday;
+// Kim Ray (Star, Shrewsbury) paid cash yesterday and got a cash refund
+// today. Together with 11c / 12e the two schools now have payments today
+// and yesterday, and a refund.
+async function seedFinanceSamples(db) {
+  await run(db, '[0011] sample payments on both sources (yesterday + a refund today)', `
+    begin;
+    select set_config('request.jwt.claims', '', true);
+    select set_config('tkd.actor_label', 'PGlite test event', true);
+    select set_config('tkd.action', 'pglite_seed', true);
+    insert into public.testing_payments (registration_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by_name)
+    select r.id, 'payment', 6500, 'cash', public.testing_today() - 1, now() - interval '1 day', 'PGlite test event'
+      from public.testing_registrations r where r.first_name = 'Pat' and r.last_name = 'Lee';
+    insert into public.star_payments (candidate_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by_name)
+    select c.id, 'payment', 14000, 'cash', public.testing_today() - 1, now() - interval '1 day', 'PGlite test event'
+      from public.star_candidates c where c.first_name = 'Kim' and c.last_name = 'Ray';
+    insert into public.star_payments (candidate_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by_name)
+    select c.id, 'refund', -1000, 'cash', public.testing_today(), now() - interval '1 hour', 'PGlite test event'
+      from public.star_candidates c where c.first_name = 'Kim' and c.last_name = 'Ray';
+    select set_config('tkd.actor_label', '', true);
+    select set_config('tkd.action', '', true);
+    commit;`);
+  const counts = await db.query(`select
+      (select count(*)::int from public.testing_payments) as color_belt,
+      (select count(*)::int from public.star_payments) as star,
+      (select count(*)::int from public.finance_money_rows(null, public.testing_today() - 1, public.testing_today())) as items`);
+  const c = counts.rows[0];
+  record('[0011] samples: 2 Color Belt + 3 Star payment rows, 5 report items', c.color_belt === 2 && c.star === 3 && c.items === 5,
+    JSON.stringify(c));
+}
+
+async function step14(db, upgradeDb) {
+  // 14a. the fingerprints file must stay runnable through the connector
+  const printsText = read('tests', '0011_fingerprints.sql');
+  record('0011_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)', !/delete|drop/i.test(printsText));
+
+  // 14b. BEFORE sample data, on the upgrade database (no payments there):
+  // the production copy of 0011 first, then today's over it
+  let upPrints = null;
+  if (upgradeDb) {
+    const pays = await one(upgradeDb, 'select (select count(*) from public.testing_payments) + (select count(*) from public.star_payments)');
+    record('[upgrade] no payment exists yet (0011 tests "before sample data")', Number(pays) === 0, `${pays} rows`);
+    const old11 = readFileSync(path.join(here, 'fixtures', '0011_as_applied_2026-10-19.sql'), 'utf8');
+    if (await run(upgradeDb, '[upgrade] apply the PRODUCTION copy of 0011 (fixtures/0011_as_applied_2026-10-19.sql)', old11)) {
+      // as an admin would have done meanwhile: reminder On, a Sunday time
+      await run(upgradeDb, '[upgrade] change the settings like an admin would (reminder On, Worcester Sunday 7 PM)', `
+        begin;
+        select set_config('tkd.actor_label', 'PGlite admin', true);
+        update public.finance_settings set reminder_on = true, version = version + 1;
+        update public.finance_reminder_times set remind_at = '19:00' where location_code = 'worcester' and weekday = 7;
+        select set_config('tkd.actor_label', '', true);
+        commit;`);
+      const settingsSql = `select md5(coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.finance_settings x), '')
+          || coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.finance_reminder_times x), ''))`;
+      const settingsBefore = await one(upgradeDb, settingsSql);
+      if (await run(upgradeDb, '[upgrade] apply today\'s 0011_finance.sql OVER the production copy', read('migrations', '0011_finance.sql'))) {
+        record('[upgrade] the settings row and the 14 reminder times are untouched by the re-apply',
+          settingsBefore === (await one(upgradeDb, settingsSql))
+            && (await one(upgradeDb, 'select count(*)::int from public.finance_reminder_times')) === 14);
+        record('[upgrade] the old chain function finance_chain_steps(date, date) is gone',
+          (await one(upgradeDb, "select to_regprocedure('public.finance_chain_steps(date, date)') is null")) === true);
+        const t0 = Date.now();
+        await runTestFile(upgradeDb, '[upgrade] 0011_tests.sql (before sample data)', '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+        const secs = (Date.now() - t0) / 1000;
+        record('[speed] 0011_tests.sql finished in under 60 seconds', secs < 60, `${secs.toFixed(1)} s`);
+        upPrints = await fingerprints(upgradeDb, '0011_fingerprints.sql');
+      }
+    }
+  } else {
+    record('[upgrade] 0011 before sample data', false, 'the upgrade database has no 0005 (see the lines above)');
+  }
+
+  // 14c. the main database: earlier fingerprints don't move
+  const earlierBefore = await before11Fingerprints(db);
+  if (!(await run(db, 'apply 0011_finance.sql', read('migrations', '0011_finance.sql')))) return null;
+  record('0003 / 0004 / 0005 / 0006 / 0010 fingerprints identical before/after 0011',
+    JSON.stringify(earlierBefore) === JSON.stringify(await before11Fingerprints(db)), `${earlierBefore.length} rows`);
+  const seeded = await db.query(`select (select count(*)::int from public.finance_settings) as settings,
+      (select count(*)::int from public.finance_reminder_times where remind_at is null) as times_off,
+      (select count(*)::int from public.change_log where action = 'finance_seed') as seed_rows`);
+  record('[0011] seed: 1 settings row, 14 reminder times all Off, 15 history rows',
+    JSON.stringify(seeded.rows[0]) === JSON.stringify({ settings: 1, times_off: 14, seed_rows: 15 }), JSON.stringify(seeded.rows[0]));
+
+  // 14d. AFTER sample data (steps 11c / 12e + more here)
+  await seedFinanceSamples(db);
+  await runTestFile(db, '0011_tests.sql (after sample data)', '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+  await runTestFile(db, '0010_tests.sql (after 0011)', '0010_tests.sql', 'ALL 0010 TESTS PASSED');
+  await allTestFiles(db, 'after 0011');
+
+  // 14e. re-run safety
+  const before11 = await fingerprints(db, '0011_fingerprints.sql');
+  const data11Before = await one(db, snapshot11Sql);
+  await run(db, 'apply 0011 a SECOND time (re-run safety)', read('migrations', '0011_finance.sql'));
+  const data11After = await one(db, snapshot11Sql);
+  record('0011 re-run kept every row unchanged (5 finance tables, change_log)', data11Before === data11After);
+  const after11 = await fingerprints(db, '0011_fingerprints.sql');
+  record('0011 fingerprints identical before/after re-run', JSON.stringify(before11) === JSON.stringify(after11), `${after11.length} rows`);
+  await runTestFile(db, '0011_tests.sql (after re-run)', '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+
+  // 14f. fresh = upgrade
+  if (upPrints) {
+    record('[upgrade] 0011 fingerprints identical to the main database', JSON.stringify(upPrints) === JSON.stringify(after11),
+      `${upPrints.length} rows`);
+  }
+
+  // 14g. speed with realistic volume (on the upgrade database)
+  if (upPrints) await financeSpeedCheck(upgradeDb);
+  return after11;
+}
+
+// 14g. The big seed, then every app function timed as an unlocked admin
+// (a session + a fresh password sign-in, like the test files do). Each
+// call must answer "ok" in under 2 seconds.
+async function financeSpeedCheck(db, tag = '[speed]') {
+  const t0 = Date.now();
+  if (!(await run(db, `${tag} big seed (finance_perf_seed.sql)`, readFileSync(path.join(here, 'finance_perf_seed.sql'), 'utf8')))) return;
+  const rows = await one(db, 'select (select count(*) from public.testing_payments) + (select count(*) from public.star_payments)');
+  record(`${tag} the big seed has about 11,000 payment rows`, Number(rows) > 10000, `${rows} rows in ${Date.now() - t0} ms`);
+  const sid = '33333333-3333-4333-8333-333333333333';
+  const claims = JSON.stringify({ sub: ADMIN_UID, role: 'authenticated', session_id: sid,
+    amr: [{ method: 'password', timestamp: Math.floor(Date.now() / 1000) - 60 }] });
+  await db.exec(`insert into auth.sessions (id, user_id) values ('${sid}', '${ADMIN_UID}');
+    insert into public.session_unlock (session_id, staff_id, unlocked_until) values ('${sid}', '${ADMIN_UID}', now() + interval '1 hour');`);
+  await db.query(`select set_config('request.jwt.claims', $1, false)`, [claims]);
+  const today = await one(db, 'select public.testing_today()::text');
+  const chain = await one(db, `select p.id::text from public.testing_payments p join public.testing_registrations r on r.id = p.registration_id
+     where r.first_name = 'Perf' and r.last_name = 'Cb 14' and p.kind = 'payment' and p.amount_cents = 6500`);
+  const busy = await one(db, `select paid_on::text from public.testing_payments group by paid_on order by count(*) desc, paid_on limit 1`);
+  const calls = [
+    ['finance_day (today)', `select public.finance_day('worcester', '${today}') as r`],
+    ['finance_day (a busy day)', `select public.finance_day('worcester', '${busy}') as r`],
+    ['finance_day_both', `select public.finance_day_both('${today}') as r`],
+    ['finance_history (both schools, this month)', `select public.finance_history(null, '${today}') as r`],
+    ['finance_history (Worcester, 400 days ago)', `select public.finance_history('worcester', date '${today}' - 400) as r`],
+    ['finance_payment_detail', `select public.finance_payment_detail('color_belt', '${chain}') as r`],
+    ['finance_home', 'select public.finance_home() as r'],
+    ['finance_export (366 days)', `select public.finance_export('worcester', date '${today}' - 365, '${today}') as r`],
+    ['finance_export_preview (366 days)', `select public.finance_export_preview('shrewsbury', date '${today}' - 365, '${today}') as r`],
+    ['finance_settings_get', 'select public.finance_settings_get() as r'],
+  ];
+  const timed = async (label, sql, params = []) => {
+    try {
+      await db.exec('set role authenticated;');
+      const t = performance.now();
+      const r = await db.query(sql, params);
+      const ms = Math.round(performance.now() - t);
+      const status = r.rows[0].r?.status;
+      record(`${tag} ${label} under 2 s`, status === 'ok' && ms < 2000, `${ms} ms, ${status}`);
+      return r.rows[0].r;
+    } catch (error) {
+      record(`${tag} ${label} under 2 s`, false, error.message);
+      return null;
+    } finally {
+      await db.exec('reset role;').catch(() => {});
+    }
+  };
+  const answers = {};
+  for (const [label, sql] of calls) answers[label] = await timed(label, sql);
+  // ... and the answers must be RIGHT, not just fast
+  const day = answers['finance_day (a busy day)'];
+  const items = day?.items ?? [];
+  const counting = items.filter((i) => ['counted', 'edited', 'moved_in'].includes(i.state));
+  const paySum = counting.filter((i) => i.kind === 'payment').reduce((n, i) => n + i.amount_cents, 0);
+  const allSum = counting.reduce((n, i) => n + i.amount_cents, 0);
+  const expectedRows = Number(await one(db, `select count(*) from public.testing_payments p
+      join public.testing_registrations r on r.id = p.registration_id join public.testing_events e on e.id = r.event_id
+     where e.location_code = 'worcester' and p.kind = 'payment' and p.paid_on = '${busy}'`))
+    + Number(await one(db, `select count(*) from public.star_payments p join public.star_candidates c on c.id = p.candidate_id
+     where c.location_code = 'worcester' and p.kind in ('payment', 'refund') and p.paid_on = '${busy}'`));
+  record(`${tag} the answer for the busy day is right (items, totals add up)`,
+    items.length > 0 && day.totals.count === counting.filter((i) => i.kind === 'payment').length
+      && day.totals.in_cents === paySum && day.totals.total_cents === allSum && items.length <= expectedRows,
+    `${items.length} items (${expectedRows} payment / refund rows that day), count ${day?.totals?.count}, total ${day?.totals?.total_cents}`);
+  const exportRows = answers['finance_export (366 days)']?.rows ?? [];
+  record(`${tag} the year export has rows from both sources`,
+    exportRows.some((r) => r.what === 'color_belt') && exportRows.some((r) => r.what === 'star'), `${exportRows.length} rows`);
+  const preview = answers['finance_export_preview (366 days)'];
+  record(`${tag} the year preview counts something`, (preview?.count ?? 0) > 100, JSON.stringify(preview));
+  // Close the busy day with what it expects
+  await db.exec('set role authenticated;');
+  const d = (await db.query(`select public.finance_day('worcester', '${busy}') as r`)).rows[0].r;
+  await db.exec('reset role;');
+  await timed('finance_close_day (a busy day)', `select public.finance_close_day('worcester', '${busy}', $1, $2, $3, $4, $5, 'speed check') as r`,
+    [d.fingerprint, d.totals.cash.cents + d.refunds.cash_cents, d.totals.check.count, d.totals.check.cents, d.totals.card.cents]);
+  await db.query(`select set_config('request.jwt.claims', '', false)`);
+}
+
+
+// 14h. Old vs new: the same big seed through the production copy of 0011
+// and then through today's 0011 must give the same items and figures.
+// One line per (day, both schools); the items and the figures of the day
+// written as text (sorted byte by byte, collate "C").
+const DAY_SIGNATURE_SQL = `
+  select d.d::date::text as day,
+         (select coalesce(string_agg(concat_ws('|', m.school, m.source, m.payment_id, m.row_id, m.day, m."time", m.state, m.kind,
+                    m.method, m.amount_cents, m.was_amount_cents, m.was_method, m.moved_to, m.moved_from, m.changed_by_name,
+                    m.changed_on, m.recorded_by_name, m.first_name, m.last_name, m.what, m.event_date, m.is_private, m.counts,
+                    m.first_recorded_at, m.event_id),
+                    ',' order by concat_ws('|', m.school, m.payment_id, m.row_id, m.state) collate "C"), '')
+            from public.finance_money_rows(null, d.d::date, d.d::date) m) as items,
+         (select string_agg(to_jsonb(f)::text, ',' order by f.school collate "C")
+            from public.finance_figures(null, d.d::date, d.d::date) f) as figures
+    from generate_series(public.testing_today() - 1825, public.testing_today(), interval '7 days') as d(d)
+   order by 1`;
+
+async function financeOldVsNew() {
+  const db = await buildBase('[old vs new] ');
+  if (!db) return;
+  const ok = await run(db, '[old vs new] 0003 + seed + 0004 + 0005 + 0006 + 0010 + the PRODUCTION copy of 0011 + the big seed',
+    read('migrations', '0003_testing_classes_ranks.sql') + '\n' + builtInSeedSql() + '\n'
+    + read('migrations', '0004_staff_accounts.sql') + '\n' + read('migrations', '0005_testing_events.sql') + '\n'
+    + read('migrations', '0006_star_testing.sql') + '\n' + read('migrations', '0010_testing_results.sql') + '\n'
+    + readFileSync(path.join(here, 'fixtures', '0011_as_applied_2026-10-19.sql'), 'utf8') + '\n'
+    + readFileSync(path.join(here, 'finance_perf_seed.sql'), 'utf8'));
+  if (!ok) return;
+  const t0 = Date.now();
+  const before = (await db.query(DAY_SIGNATURE_SQL)).rows;
+  const oldMs = Date.now() - t0;
+  if (!(await run(db, '[old vs new] apply today\'s 0011 over it', read('migrations', '0011_finance.sql')))) return;
+  const t1 = Date.now();
+  const after = (await db.query(DAY_SIGNATURE_SQL)).rows;
+  const newMs = Date.now() - t1;
+  const items = before.reduce((n, r) => n + (r.items ? r.items.split(',').length : 0), 0);
+  const differ = before.filter((r, i) => JSON.stringify(r) !== JSON.stringify(after[i])).map((r) => r.day);
+  record('[old vs new] the same items and figures on every 7th day of 5 years (both schools)',
+    before.length > 250 && items > 1000 && after.length === before.length && differ.length === 0,
+    `${before.length} days, ${items} items; old builder ${oldMs} ms, new ${newMs} ms`
+      + (differ.length ? `; differ on ${differ.slice(0, 5).join(', ')}` : ''));
+  await db.close();
+}
+
+// 14i. A database that sorts text like production (ICU "en-US").
+// PGlite's own database sorts byte by byte ("C"); a second database in the
+// same PGlite folder can be made with ICU sorting and opened instead.
+async function financeIcuCheck() {
+  const { mkdtempSync, rmSync } = await import('node:fs');
+  const os = await import('node:os');
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'tkd-pglite-icu-'));
+  let db = null;
+  try {
+    const maker = new PGlite({ dataDir: dir, extensions: { pgcrypto } });
+    await maker.exec(`create database tkd_icu template template0 encoding 'UTF8' locale_provider icu icu_locale 'en-US' locale 'C'`);
+    await maker.close();
+    db = new PGlite({ dataDir: dir, database: 'tkd_icu', extensions: { pgcrypto } });
+    const order = await db.query(`select string_agg(x, ' ' order by x) as o from (values ('color_belt'), ('star'), ('~end')) as v(x)`);
+    record('[icu] the database sorts text like production (~end first)', order.rows[0].o === '~end color_belt star', order.rows[0].o);
+    if (!(await buildBase('[icu] ', db))) return;
+    const ok = await run(db, '[icu] 0003 + seed + 0004 + 0005 + 0006 + 0010 + 0011',
+      read('migrations', '0003_testing_classes_ranks.sql') + '\n' + builtInSeedSql() + '\n'
+      + read('migrations', '0004_staff_accounts.sql') + '\n' + read('migrations', '0005_testing_events.sql') + '\n'
+      + read('migrations', '0006_star_testing.sql') + '\n' + read('migrations', '0010_testing_results.sql') + '\n'
+      + read('migrations', '0011_finance.sql'));
+    if (!ok) return;
+    await runTestFile(db, '[icu] 0011_tests.sql', '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+    await financeSpeedCheck(db, '[icu speed]');
+  } catch (error) {
+    record('[icu] the ICU-collation database', false, error.message);
+  } finally {
+    if (db) await db.close().catch(() => {});
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 function finish() {
