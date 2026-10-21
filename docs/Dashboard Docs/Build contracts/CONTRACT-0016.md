@@ -142,7 +142,7 @@ Partial unique index `bb_waiver_versions_one_current_idx unique ((true)) where s
 ### 2.3 `public.bb_starting_point` — one row: what the very first Add cycle starts from (S9, v0.901, v0.902)
 `id` pk · `singleton boolean` (as §2.1) · `schedule jsonb not null` (an Add cycle payload without the name, §6.2 shape: days, deadlines, plans with amounts and due dates, Kukkiwon fees — the Fall 2026 values, §3) · `requirements jsonb not null` (`bb_requirements_is_valid`, §2.5) · `created_at`, `created_by_name`. **Never granted to any role; RLS on, no policy.** Read only by `bb_cycle_defaults` (§7). Guard: update and delete refused **except** when `session_user = 'postgres'` and `coalesce(current_setting('tkd.action', true), '') = ''` — i.e. Jeffrey's own SQL Editor session fixing a seeded number (v0.901). (`current_user` would not do: inside every security-definer function it is also `postgres`; `session_user` is the login that connected — `authenticator` for the app, `bb_registrar` for the form. Every 0016 function sets `tkd.action` before writing, so none passes.) **This is a convenience, not a security wall:** Supabase Studio's SQL Editor sessions, the Supabase connector and Studio's role switcher all connect as `postgres` and pass it, and `postgres` can disable triggers anyway. CP3 confirms read-only that the SQL Editor's `session_user` is `postgres`; if it isn't, the builder reports it. Logged.
 
-### 2.4 `public.bb_cycles` (v0.209, v0.212, v0.900, v0.901, v0.902)
+### 2.4 `public.bb_cycles` (v0.918, v0.212, v0.900, v0.901, v0.902)
 | Column | Type | Constraint |
 |---|---|---|
 | `id` | uuid pk `bb_cycles_pkey` | |
@@ -159,9 +159,9 @@ Partial unique index `bb_waiver_versions_one_current_idx unique ((true)) where s
 Indexes: `bb_cycles_lower_name_idx`; the two code keys.
 
 ### 2.5 The requirements sheet (v0.901) — `bb_requirements_is_valid(jsonb) returns boolean` (immutable)
-A structured document the form's requirements panel draws (v0.216, Form 3). The database checks only its outer shape, so the grading migration can drop it cleanly: an object with `schema_version = 1`, `dans` an array of exactly 4 objects with `dan` 1, 2, 3, 4 (in order), each with `pass_rule` (object), `parts` (array, 1–6 objects, each with `code` in `physical`/`technical`/`curriculum`/`other`, `name`, `max_points`, `subjects` array), `extra_points` (object) and optional `hand_in` (array); `pg_column_size` ≤ 200 000 bytes. Testing days and places are **not** in the sheet — the panel takes them from the cycle's days (§2.6), so they can't disagree. Inner shape (subjects: `name`, `credits`, `scoring` = `{kind:'grades', points:{…}}` or `{kind:'table', groups:[{ages, cutoffs:[…]}]}`) is fixed by the seed (§3) and the page, not by the database.
+A structured document the form's requirements panel draws (v0.919, Form 3). The database checks only its outer shape, so the grading migration can drop it cleanly: an object with `schema_version = 1`, `dans` an array of exactly 4 objects with `dan` 1, 2, 3, 4 (in order), each with `pass_rule` (object), `parts` (array, 1–6 objects, each with `code` in `physical`/`technical`/`curriculum`/`other`, `name`, `max_points`, `subjects` array), `extra_points` (object) and optional `hand_in` (array); `pg_column_size` ≤ 200 000 bytes. Testing days and places are **not** in the sheet — the panel takes them from the cycle's days (§2.6), so they can't disagree. Inner shape (subjects: `name`, `credits`, `scoring` = `{kind:'grades', points:{…}}` or `{kind:'table', groups:[{ages, cutoffs:[…]}]}`) is fixed by the seed (§3) and the page, not by the database.
 
-### 2.6 `public.bb_cycle_days` and `public.bb_cycle_day_parts` (v0.209, v0.900 details 1–4)
+### 2.6 `public.bb_cycle_days` and `public.bb_cycle_day_parts` (v0.918, v0.900 details 1–4)
 **`bb_cycle_days`**
 | Column | Type | Constraint |
 |---|---|---|
@@ -384,7 +384,7 @@ Roles: **A** = admin only; **S** = staff (incl. the shared desk account) and adm
 
 Staff read Rubric and prices through the column grants ("View only. Ask an admin to make changes.").
 
-### 6.2 Cycles (v0.209, v0.212, v0.900, v0.902)
+### 6.2 Cycles (v0.918, v0.212, v0.900, v0.902)
 **Payload shape** (`jsonb`, checked key by key; unknown keys → `invalid`):
 `{name, application_due, submissions_due, auto_close, days:[{id?, name, day_date, start_time, end_time, place:{code}|{other}, second:{start, end, place:{code}|{other}}|null, parts:[…]}], plans:[{name, payments:[{due_on, follows_application_due}], amounts:{"1":[c…], "2":[…], "3":[…], "4":[…]}}], kukkiwon:{"1":c, "2":c, "3":c, "4":c}, prices_from}` — `plans`, `kukkiwon` and `prices_from` only in Add cycle; Update cycle takes `due_dates:[{cycle_plan_id, payment_no, due_on, follows_application_due}]` instead.
 
@@ -450,7 +450,7 @@ The database takes **no device argument**: the mat-side tablet setting hides mon
 
 ---
 
-## 8. The public path (family form; v0.204 own login, v0.211–v0.213, v0.216, v0.905)
+## 8. The public path (family form; v0.204 own login, v0.211–v0.213, v0.919, v0.905)
 
 ### 8.1 The login `bb_registrar`
 Created only if missing, with **the same settings as `testing_registrar` and `star_registrar`**: `create role bb_registrar login noinherit nocreatedb nocreaterole nobypassrls noreplication connection limit 5`; `alter role bb_registrar set statement_timeout = '5s'`, `set idle_in_transaction_session_timeout = '10s'`, `set search_path = ''`. **No password in the file.** `grant usage on schema public to bb_registrar`; execute on `bb_public_cycle` and `bb_public_register` only; **nothing else granted by us** — no rights on any table, view or sequence (including `testing_public_attempts`), not a member of any role, no member roles except the creating owner. `authenticator` must not be able to become it. `testing_registrar`, `star_registrar` and their tests are untouched; none of the three logins can run another form's functions.

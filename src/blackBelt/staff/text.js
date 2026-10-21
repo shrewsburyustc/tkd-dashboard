@@ -208,7 +208,7 @@ export const PART_ORDER = ['physical', 'technical', 'curriculum'];
 export const gradedLine = (parts) => `Graded: ${PART_ORDER.filter((p) => parts.includes(p)).map((p) => PART_NAMES[p]).join(', ')}`;
 export const NO_DAYS_YET = 'No testing days yet.'; // (not in the mockups)
 
-// v0.209 detail 1: "Curriculum isn't graded on any testing day. …" / two or three parts.
+// v0.918 detail 1: "Curriculum isn't graded on any testing day. …" / two or three parts.
 export function partsWithoutDayText(parts) {
   const names = PART_ORDER.filter((p) => parts.includes(p)).map((p) => PART_NAMES[p]);
   const tail = 'Tick it on a day, or add a testing day.';
@@ -338,7 +338,7 @@ export const secondEndLabel = 'Second part end time';
 export const secondPlaceLabel = 'Second part place';
 export const secondOtherLabel = 'Second part other place';
 export const GRADED_THIS_DAY = 'Graded this day';
-// v0.209 detail 2
+// v0.918 detail 2
 export const alsoGradedOn = (part, otherDays) =>
   `${PART_NAMES[part]} is also graded on ${otherDays.map((d) => `${d.name} (${weekdayMonthDay(d.date)})`).join(' and ')}. Grades from both days count as one.`;
 export const CHOOSE_TIME = 'Choose a time';

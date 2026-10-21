@@ -1,4 +1,4 @@
-// RequirementsPanel.jsx — "What 1st Dan is tested on" (mockup Form 3, rulebook v0.216, B8
+// RequirementsPanel.jsx — "What 1st Dan is tested on" (mockup Form 3, rulebook v0.919, B8
 // compact A; contract 0016-B1 §4.5).
 // Why it exists: families see what the chosen Dan is tested on, from the cycle's own
 // requirements sheet and testing days (the same data grading uses, so it can't disagree):

@@ -1,4 +1,4 @@
-// Registered.jsx — the page after a successful Send (mockup Form 7; rulebook v0.216, v0.218,
+// Registered.jsx — the page after a successful Send (mockup Form 7; rulebook v0.919, v0.218,
 // v0.900; contract 0016-B1 §4.6).
 // Why it exists: it stands in for today's confirmation email. It shows "[name] is registered",
 // What to pay (Due by · For · Amount, from the server's answer, so a late family's passed dates

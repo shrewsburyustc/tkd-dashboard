@@ -5,7 +5,7 @@
 //   - Cycle name, and on Add the hint "Testing days, deadlines and due dates copied from …"
 //   - Testing days: one line per day (name; date · time · place; the second part; "Graded: …")
 //     with Edit and Delete, then "+ Add testing day" (DayDialog.jsx, opened on top). The error
-//     "Curriculum isn't graded on any testing day. …" sits under the list (v0.209 detail 1).
+//     "Curriculum isn't graded on any testing day. …" sits under the list (v0.918 detail 1).
 //   - Deadlines: Application due, Submissions due (+ the hand-in hint)
 //   - Prices and payment due dates, Kukkiwon certificate fee (PricesSection.jsx)
 //   - Registration: Open / Closed (Add starts Closed), "Close automatically at the end of

@@ -1,7 +1,7 @@
 # Black Belt testing — database plan (proposed migration 0016)
 
 **Status:** DRAFT 2026-10-19, revised the same day after a security review (19 findings applied). Nothing answered yet, no SQL, no contract. Nothing is applied to Supabase without Jeffrey's OK for that paste.
-**Built from:** rulebook v0.900 (every Black Belt row: v0.204, v0.205, v0.209–v0.213, v0.216–v0.220, v0.224, v0.900), rulebook §5 (privacy), handoff §6 (security rules), `TKD-BlackBelt-Plan.md` (§4, §6, §7), `TKD-BlackBelt-Status.md` §3b, `Finance-note-draft.md`, the three approved mockups (Cycles, Form, Candidates), `Inventory/Old-Spreadsheet.md`, Star's DB plan and `CONTRACT-0006.md`, the real migrations `0005_testing_events.sql`, `0006_star_testing.sql`, `0010_testing_results.sql`, and Finance's `0011_finance.sql` + `TKD-Finance-Status.md` (read-only, finance worktree).
+**Built from:** rulebook v0.900 (every Black Belt row: v0.204, v0.205, v0.918–v0.213, v0.919–v0.220, v0.224, v0.900), rulebook §5 (privacy), handoff §6 (security rules), `TKD-BlackBelt-Plan.md` (§4, §6, §7), `TKD-BlackBelt-Status.md` §3b, `Finance-note-draft.md`, the three approved mockups (Cycles, Form, Candidates), `Inventory/Old-Spreadsheet.md`, Star's DB plan and `CONTRACT-0006.md`, the real migrations `0005_testing_events.sql`, `0006_star_testing.sql`, `0010_testing_results.sql`, and Finance's `0011_finance.sql` + `TKD-Finance-Status.md` (read-only, finance worktree).
 **Words used:** "rule" = handoff §6 or the rulebook. "0005" = Color Belt's live migration, "0006" = Star's, "0011" = Finance's. "Template" = what admins keep on **Rubric and prices**; "cycle copy" = the copy a cycle takes of it. A **security-definer function** runs with its owner's rights, so the app can write only through it, never straight into a table. A **guard trigger** is a small database rule that runs before every change to a table and can refuse it.
 
 ---
@@ -14,7 +14,7 @@ Store everything the 26 approved screens show, for **cycles, the family form, ca
 
 1. **What's live.** 0005 (Color Belt: `testing_*` tables and ~45 functions, login `testing_registrar`), 0006 (Star: 16 `star_*` tables, login `star_registrar`) and 0010 (Color Belt results) are in production. 0011 Finance is built on its branch. Black Belt must not reuse or change any of their names, grants or tests. **`bb_` is unused** anywhere in the repo, so every new object starts with `bb_` and the new login is `bb_registrar`.
 2. **Migration number.** 0011 Finance, 0012 Prospects, 0013 Camps, 0014 Color Belt phase 4 and 0015 family history are claimed, so this plan proposes **0016**. **It must be reserved with the Main session before any SQL is written** (0010 was once claimed twice; plan §10).
-3. **A cycle is not a Star event.** A Star event is one day; a Black Belt cycle has any number of testing days (v0.209), two deadlines and due dates per plan payment (v0.217). Both schools share it, each candidate has a home school (v0.58 pattern). So **the cycle row replaces Star's event row as the first per-cycle lock**.
+3. **A cycle is not a Star event.** A Star event is one day; a Black Belt cycle has any number of testing days (v0.918), two deadlines and due dates per plan payment (v0.217). Both schools share it, each candidate has a home school (v0.58 pattern). So **the cycle row replaces Star's event row as the first per-cycle lock**.
 4. **Lock order (for the reviewer to check).** A *lock* makes other saves wait their turn; taking locks in the same order everywhere means two saves can never wait on each other in a circle (a *deadlock*). **Everywhere: `bb_settings` → cycle → candidate(s) → payment.**
    - Template edits and the keep-years setting lock the one `bb_settings` row `for no key update`; Add cycle and **Copy prices again** lock it `for share` first, then the cycle, so neither can copy a half-saved template. (Simpler than Star's "Dan rows in Dan order".)
    - **Record payment, every payment action, Copy prices again and Delete cycle** lock the cycle row first, then the candidate, then the payment row.
@@ -36,7 +36,7 @@ Store everything the 26 approved screens show, for **cycles, the family form, ca
    - The rate-limit table `testing_public_attempts` (0005) is shared: 20 tries per hour per visitor key, counted across all forms, **only if every Function makes its visitor key with the same `CLIENT_KEY_SECRET`** (otherwise each form's keys differ and the limit is per form; the contract states which). Outcomes are prefixed `bb:`. The "200 per cycle" count is **logged only, never a refusal** (a busy cycle must not lock families out).
    - 0016 runs **no** `revoke` or `grant` on any 0005 object (it would undo 0005's grants).
    - **What a separate login does and doesn't protect:** Pages Function bindings (Hyperdrive configs, secrets) are shared across the whole Pages project, so a compromised Function could reach any form's connection. The separate login protects **inside the database** (each login can run only its own two functions); it is not a wall between the Functions themselves.
-9. **The requirements panel needs rubric data at go-live** (v0.216: "filled from the cycle's own rubric", registration live by early February), but the rubric's real shape waits for Master Jeong. That conflict is question Q-B1.
+9. **The requirements panel needs rubric data at go-live** (v0.919: "filled from the cycle's own rubric", registration live by early February), but the rubric's real shape waits for Master Jeong. That conflict is question Q-B1.
 10. **Payments are append-only** (0005/0006): a guard trigger refuses every update; Undo and Edit are reversal rows. Star's guard also allows a delete inside a cascade (`pg_trigger_depth() > 1` or its delete functions' action tags). **If Jeffrey picks Q-B4 A (payment rows are never deleted), Black Belt has no such escape:** every foreign key pointing at a candidate or cycle from `bb_payments` is `on delete restrict`, and the guard refuses **every** delete, from anywhere. Delete cycle and Delete permanently then simply fail once any payment row exists, even a reversed one (tested, §5).
 11. **Dates.** "Today" is `public.testing_today()` (0005: the Massachusetts date). A school date from a timestamp (e.g. the day a candidate registered) is always `public.testing_school_date(…)`; the contract forbids `::date` on a `timestamptz` (that would use UTC and be a day off in the evening).
 
@@ -60,13 +60,13 @@ Seeds (tagged `bb_seed`, never overwrite): plans "In full" (1 payment) and "3 pa
 
 | Table | What it holds | Serves |
 |---|---|---|
-| `bb_cycles` | name (unique), Application due, Submissions due, registration open, auto-close date (= Application due; cleared when an admin reopens after it, v0.85), first opened at, two public codes (Worcester, Shrewsbury; new random codes each cycle), prices copied at | v0.209, v0.212, v0.900 |
-| `bb_cycle_days` | one testing day: name, date, start and end time (15-minute steps), place (Worcester school / Shrewsbury school / Other + text), optional **second part** (time + place, e.g. Horgan Arena) | v0.209, v0.900 detail 3 |
-| `bb_cycle_day_parts` | which parts are graded that day (Physical / Technical / Curriculum). A part may be on two days (detail 2). Each part must be on at least one day (detail 1, checked at the end of every cycle save) | v0.209, v0.900 details 1–2 |
+| `bb_cycles` | name (unique), Application due, Submissions due, registration open, auto-close date (= Application due; cleared when an admin reopens after it, v0.85), first opened at, two public codes (Worcester, Shrewsbury; new random codes each cycle), prices copied at | v0.918, v0.212, v0.900 |
+| `bb_cycle_days` | one testing day: name, date, start and end time (15-minute steps), place (Worcester school / Shrewsbury school / Other + text), optional **second part** (time + place, e.g. Horgan Arena) | v0.918, v0.900 detail 3 |
+| `bb_cycle_day_parts` | which parts are graded that day (Physical / Technical / Curriculum). A part may be on two days (detail 2). Each part must be on at least one day (detail 1, checked at the end of every cycle save) | v0.918, v0.900 details 1–2 |
 | `bb_cycle_plans` | the cycle's copy of each plan: name, number of payments, position, **Offer this plan** tick | v0.217, v0.900 |
 | `bb_cycle_plan_payments` | each plan payment's **due date**, and for payment 1 a "follows Application due" flag (until changed by hand) | v0.217, v0.900 |
 | `bb_cycle_plan_amounts`, `bb_cycle_kukkiwon_fees` | the cycle's copy of the amounts and Kukkiwon fees. A guard trigger refuses any update or delete of these rows once the cycle has a payment row (v0.217); before that, only Q-B2's function may replace them | v0.217 |
-| *(depends on Q-B1)* `bb_cycles.requirements` | the requirements panel's content for this cycle | v0.216 |
+| *(depends on Q-B1)* `bb_cycles.requirements` | the requirements panel's content for this cycle | v0.919 |
 
 ### 3.3 Candidates
 
@@ -146,14 +146,14 @@ Structure first, then money, then waivers and privacy. Each will be shown with a
 
 ### Q-B1 · Where the requirements panel gets its content until grading is built — **answered v0.901: B** (sheet now, rubric in spring)
 
-- **The question:** the family form's "What [Dan] is tested on" panel (v0.216) must work in February, but the real rubric tables wait for Master Jeong's answers. What feeds the panel until then?
+- **The question:** the family form's "What [Dan] is tested on" panel (v0.919) must work in February, but the real rubric tables wait for Master Jeong's answers. What feeds the panel until then?
 - **Why it matters:** if we build rubric tables now and his answers change the shape (child/adult pass marks, age tables, extra points), we rebuild them; if we don't, the panel needs another source for a few months.
 - **Options:**
-  - **A · Rubric tables now (display only).** Parts, subjects, credits, scoring tables and pass marks as real template + cycle copy tables, loaded from the Fall 2026 numbers; grading later adds grade storage on top. *Pro:* one source from day one; matches v0.216 exactly. *Con:* the biggest piece of work, designed before the rules are known; likely reshaped.
+  - **A · Rubric tables now (display only).** Parts, subjects, credits, scoring tables and pass marks as real template + cycle copy tables, loaded from the Fall 2026 numbers; grading later adds grade storage on top. *Pro:* one source from day one; matches v0.919 exactly. *Con:* the biggest piece of work, designed before the rules are known; likely reshaped.
   - **B · One requirements document per cycle (recommended).** A structured text block (JSON) on the cycle, copied from a template document that this migration loads from the Fall 2026 numbers; the panel draws it; no editor. When grading lands, the panel switches to the real rubric copy and the document is dropped. *Pro:* small, no shape locked in, the form ships on time. *Con:* until grading, a number change needs a small SQL update pasted by Jeffrey; two sources for a few months (grading doesn't exist yet, so they can't disagree).
-  - **C · No panel at go-live.** The form links to the old `requirements.html` until grading is built. *Pro:* nothing to build. *Con:* goes against v0.216; the old page stays online longer.
+  - **C · No panel at go-live.** The form links to the old `requirements.html` until grading is built. *Pro:* nothing to build. *Con:* goes against v0.919; the old page stays online longer.
 - **Recommendation:** B.
-- **Touches:** v0.216, v0.900 (Form 3), plan §8 B1.
+- **Touches:** v0.919, v0.900 (Form 3), plan §8 B1.
 
 ### Q-B2 · Changing a cycle's prices before anyone has paid — **answered v0.902: prices live on each cycle, filled in from the previous cycle in Add cycle, set once saved; no template price tables** (replaces options A–C; update §3.1/§3.2 and the functions when the contract is written)
 

@@ -1,5 +1,5 @@
 // DayDialog.jsx — "Add testing day" / "Edit testing day", on top of Add / Edit cycle.
-// Why it exists: approved mockup Cycles 5 (rulebook v0.209 and its four details). The fields:
+// Why it exists: approved mockup Cycles 5 (rulebook v0.918 and its four details). The fields:
 //   - Name (shown to families), Date, Start time, End time (the v0.51 dropdown: 6:00 AM–10:00 PM
 //     in 15-minute steps), Place (Worcester school · Shrewsbury school · Other place + its text)
 //   - "Second part at another time or place" (detail 3: e.g. the outdoor part of Physical at
