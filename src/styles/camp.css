@@ -1,0 +1,174 @@
+/*
+  camp.css — the camp-only pieces of the PUBLIC camp sign-up page (camp.html).
+  Why it exists: the camp form uses the Color Belt form's look (register.css, rulebook v0.106)
+  and adds only what Color Belt doesn't have (mockups C7a–C7c): a card per child with a remove
+  link, first and last name side by side, the extras list, the child's running price box, the
+  dashed "Add another child" button, the scrolling waiver box and the price lines of step 2.
+  Every class starts with "camp-" so nothing here can affect the dashboard or the Color Belt form.
+  Colors and sizes come from tokens.css.
+*/
+
+/* Long texts typed by the school (description, waiver) keep their line breaks. */
+.camp-pre {
+  white-space: pre-line;
+}
+
+/* "Ages 5–12" under the hours in the camp card */
+.camp-ages {
+  margin-top: 8px;
+}
+
+/* ---------- a child's card ---------- */
+.camp-child__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.camp-child__head .reg-link {
+  margin-top: -8px;
+}
+/* First and last name side by side, also on phones (C7a). */
+.camp-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+/* reg-fieldset removes the field gap; the member question needs it back so its
+   "Choose Yes or No." message doesn't touch the "Which days?" label. */
+.camp-member {
+  margin-bottom: 12px;
+}
+/* A phone number stays on one line in the step 2 summary. */
+.camp-nowrap {
+  white-space: nowrap;
+}
+.camp-age {
+  max-width: 120px;
+}
+.camp-extra + .camp-extra {
+  margin-top: 4px;
+}
+.camp-extra .reg-chips {
+  margin-bottom: 4px;
+}
+
+/* The child's running price: "2 days · non-member · early price $150 … Mia's total $166" */
+.camp-price {
+  background: var(--color-surface);
+  border-radius: var(--radius-control);
+  padding: 10px 12px;
+  margin: 4px 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.camp-price__total {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--color-border);
+  margin-top: 8px;
+  padding-top: 8px;
+  font-size: var(--text-14);
+}
+
+/* ---------- Add another child (dashed, full width) ---------- */
+.camp-add {
+  margin: 8px 0 20px;
+}
+.camp-add__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: var(--tap-size);
+  border: 1px dashed var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-blue);
+  font-size: var(--text-14);
+  cursor: pointer;
+}
+.camp-add__btn:hover {
+  border-color: var(--color-blue);
+}
+.camp-add__hint {
+  text-align: center;
+  margin-top: 4px;
+}
+
+.camp-person-hint {
+  margin-top: -4px;
+}
+
+/* The pay card's heading is the fieldset's legend. */
+.camp-legend {
+  padding: 0;
+}
+.camp-last {
+  margin-bottom: 0;
+}
+
+/* ---------- step 2 ---------- */
+.camp-sum {
+  padding-bottom: 8px;
+}
+.camp-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: var(--text-14);
+  padding: 6px 0;
+  border-top: 1px solid var(--color-border);
+}
+.camp-line span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.camp-line small {
+  display: block;
+  font-size: var(--text-12);
+  color: var(--color-text-secondary);
+}
+.camp-line b {
+  flex: none;
+}
+
+/* The camp's waiver text in a box that scrolls (C7b). */
+.camp-waiver {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  padding: 10px 12px;
+  font-size: var(--text-14);
+  line-height: 1.5;
+  max-height: 160px;
+  overflow-y: auto;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  background: var(--color-bg);
+  margin-bottom: 12px;
+}
+
+/* The extra's name on a day button it is limited to, e.g. "Wed, Nov 25  Pizza party"
+   (CP1 2026-10-19, amber tint as in the decision picture Camps-pizza-days-options). */
+.camp-pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--color-warning-text);
+  background: var(--color-warning-bg);
+  border-radius: 6px;
+  padding: 0 6px;
+  margin-left: 6px;
+  vertical-align: 1px;
+}
+
+/* ---------- phones ---------- */
+@media (max-width: 599px) {
+  .camp-two {
+    gap: 8px;
+  }
+}

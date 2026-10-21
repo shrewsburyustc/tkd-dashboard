@@ -1,0 +1,152 @@
+<!doctype html>
+<!--
+  Camps-addcamp-layout-options.html — decision picture: how to organize the long Add camp form (C3).
+  Why it exists: Jeffrey said C3 is fine but "a lot of information at once". Two ways to break it up,
+  shown with the same April Vacation Camp data (from the Vacation week template, both schools).
+  The PNG next to it is a screenshot of this page.
+-->
+<html lang="en"><head><meta charset="utf-8"><title>Camps — Add camp layout options</title>
+<style>
+  :root{--bg:#fff;--surface:#f7f7f5;--border:#e5e5e2;--ctl:#8f8f8a;--text:#1f1f1f;--muted:#6b6b6b;
+    --blue:#003595;--tint:#e6ebf4;--amber:#c98a1b;--ok:#3b6d11;--okbg:#eaf3de}
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:#efeee9;font:14px/1.45 "Segoe UI",system-ui,sans-serif;color:var(--text);width:1320px}
+  h1{font-size:20px;font-weight:500;margin:0 0 4px}
+  .lead{color:var(--muted);margin:0 0 20px;max-width:1080px}
+  .opt{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:24px}
+  .opt h2{font-size:16px;font-weight:500;margin:0 0 2px}
+  .rec{display:inline-block;font-size:12px;background:var(--okbg);color:var(--ok);border-radius:6px;padding:1px 8px;margin-left:8px;vertical-align:2px}
+  .sub{color:var(--muted);margin:0 0 16px;font-size:13px;max-width:1150px}
+  .cols{display:grid;grid-template-columns:620px 1fr;gap:28px;align-items:start}
+  .dlg{border:1px solid #cfcfca;border-radius:12px;padding:20px;background:#fff}
+  .dlg h3{font-size:16px;font-weight:500;margin:0 0 2px}
+  .muted{color:var(--muted)}
+  .small{font-size:12px}
+  label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+  .f{height:32px;border:1px solid var(--ctl);border-radius:8px;padding:0 10px;display:flex;align-items:center;font-size:13px}
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .seg{display:inline-flex;border:1px solid var(--ctl);border-radius:8px;overflow:hidden;font-size:12px;height:32px}
+  .seg span{padding:0 12px;display:flex;align-items:center;border-right:1px solid var(--border)}.seg span:last-child{border:0}
+  .seg .on{background:var(--tint);color:var(--blue)}
+  .btn{height:32px;padding:0 14px;border-radius:8px;font-size:13px;display:inline-flex;align-items:center;border:1px solid var(--ctl);background:#fff}
+  .btn.p{background:var(--blue);border-color:var(--blue);color:#fff}
+  .act{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;align-items:center}
+  .act .grow{flex:1}
+  .steps{display:flex;gap:6px;margin:12px 0 4px;font-size:12px}
+  .steps span{flex:1;border-top:3px solid var(--border);padding-top:6px;color:var(--muted)}
+  .steps span.done{border-color:#1f1f1f;color:var(--text)}
+  .steps span.on{border-color:var(--blue);color:var(--blue);font-weight:500}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-size:12px;text-align:center;width:260px}
+  .cal b{font-weight:400;color:var(--muted)}
+  .cal i{font-style:normal;padding:4px 0;border-radius:6px}
+  .cal i.s{outline:2px solid #1f1f1f;outline-offset:-2px}
+  .sec{border:1px solid var(--border);border-radius:8px;margin-top:8px}
+  .sec .hd{display:flex;align-items:center;gap:10px;padding:10px 12px;font-size:13px}
+  .sec .hd b{font-weight:500;width:120px;flex:none}
+  .sec .hd .sum{flex:1;color:var(--muted);font-size:12px}
+  .sec .hd .chev{color:var(--muted)}
+  .sec .bd{border-top:1px solid var(--border);padding:4px 12px 12px}
+  .amber{outline:3px solid var(--amber);outline-offset:4px;border-radius:8px}
+  .note{font-size:12px;color:#7a4f00;margin:10px 0 0;font-weight:500}
+  .phone{width:300px;border:6px solid #2a2a2a;border-radius:28px;padding:12px;background:#fff}
+  .phone .top{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:500;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:6px}
+  .full{background:var(--blue);color:#fff;border-radius:8px;text-align:center;padding:8px;font-size:13px;margin-top:12px}
+  .pc{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:16px;font-size:13px}
+  .pc h3{font-size:13px;font-weight:500;margin:0 0 4px}
+  .pc ul{margin:0;padding-left:18px}
+  table{border-collapse:collapse;font-size:12px;width:100%}
+  td,th{padding:3px 4px;text-align:left}th{color:var(--muted);font-weight:400}
+  .m{border:1px solid var(--ctl);border-radius:6px;padding:1px 6px;display:inline-block;min-width:46px;text-align:right}
+  .tick{color:var(--ok)}
+</style></head><body>
+
+<h1>Add camp — how to organize it so it isn't everything at once</h1>
+<p class="lead">Same fields as the approved C3, same example: April Vacation Camp from the "Vacation week" template, now for <b>Both schools</b> (held at Worcester). Left: PC dialog. Right: phone. Amber = what changes.</p>
+
+<!-- ============ OPTION A ============ -->
+<div class="opt">
+  <h2>A. Folded sections with a one-line summary <span class="rec">Recommended</span></h2>
+  <p class="sub">One page, five sections. Only <b>Camp</b> (name, school, days) is open at the start; the others are folded and show a one-line summary of what's inside. From a template those sections are already filled, so most camps are: type the name, tap the days, Save. Click a section to open it and change something. A section with a problem opens itself and shows amber.</p>
+  <div class="cols">
+    <div class="dlg amber">
+      <h3>Add camp</h3>
+      <label>Start from</label><div class="f" style="width:260px">Vacation week</div>
+      <div class="sec">
+        <div class="hd"><b>1. Camp</b><span class="sum">Name, school and days</span><span class="chev">▴</span></div>
+        <div class="bd">
+          <label>Camp name</label><div class="f">April Vacation Camp</div>
+          <div class="g2">
+            <div><label>School</label><div class="seg"><span>Worcester</span><span>Shrewsbury</span><span class="on">Both schools</span></div></div>
+            <div><label>Held at</label><div class="seg"><span class="on">Worcester</span><span>Shrewsbury</span></div></div>
+          </div>
+          <label>Days</label>
+          <div class="cal"><b>S</b><b>M</b><b>T</b><b>W</b><b>T</b><b>F</b><b>S</b>
+            <i>18</i><i class="s">19</i><i class="s">20</i><i class="s">21</i><i class="s">22</i><i class="s">23</i><i>24</i></div>
+          <div class="small" style="margin-top:4px">Mon, Apr 19 – Fri, Apr 23, 2027 · 5 days</div>
+        </div>
+      </div>
+      <div class="sec"><div class="hd"><b>2. Times</b><span class="sum">9:00 AM – 3:00 PM · sign-up Mar 1 – Apr 18 · early price until Apr 12</span><span class="chev">▾</span></div></div>
+      <div class="sec"><div class="hd"><b>3. Prices</b><span class="sum">5 rows · 1 day $75 … all days $275 (member early)</span><span class="chev">▾</span></div></div>
+      <div class="sec"><div class="hd"><b>4. Extras</b><span class="sum">Early drop-off $15/day · Late pick-up $8/day · Pizza party (Fri) $5</span><span class="chev">▾</span></div></div>
+      <div class="sec"><div class="hd"><b>5. Family form</b><span class="sum">Description and waiver from the template</span><span class="chev">▾</span></div></div>
+      <div class="act"><span class="btn">Cancel</span><span class="btn p">Save</span></div>
+      <p class="note">From a template: name + days + Save. Everything else is one click away, summed up so you can check it without opening it.</p>
+    </div>
+    <div class="phone amber">
+      <div class="top">← Add camp</div>
+      <label style="margin-top:4px">Start from</label><div class="f">Vacation week</div>
+      <div class="sec"><div class="hd"><b style="width:auto">1. Camp</b><span class="sum">April Vacation Camp · Both schools · 5 days</span><span class="chev">▾</span></div></div>
+      <div class="sec"><div class="hd"><b style="width:auto">2. Times</b><span class="sum">9–3 · sign-up until Apr 18 · early until Apr 12</span><span class="chev">▾</span></div></div>
+      <div class="sec"><div class="hd"><b style="width:auto">3. Prices</b><span class="sum">5 rows filled</span><span class="chev">▾</span></div></div>
+      <div class="sec" style="border-color:#f2d9b0;background:#faeeda"><div class="hd" style="color:#633806"><b style="width:auto">4. Extras</b><span class="sum" style="color:#633806">⚠ 1 extra has no price</span><span class="chev">▾</span></div></div>
+      <div class="sec"><div class="hd"><b style="width:auto">5. Family form</b><span class="sum">From the template</span><span class="chev">▾</span></div></div>
+      <div class="full">Save</div>
+      <p class="note">Phone: all five fit on one screen folded; a section with a problem turns amber.</p>
+    </div>
+  </div>
+  <div class="pc">
+    <div><h3>Pros</h3><ul><li>Shortest for the common case (from a template): nothing to scroll past.</li><li>Summaries let you check prices and dates at a glance before saving.</li><li>Edit camp works the same: open just the section you need.</li><li>Save works from anywhere — no Next / Back.</li></ul></div>
+    <div><h3>Cons</h3><ul><li>A blank camp still needs opening each section (5 clicks).</li><li>Something wrong inside a folded section is only a summary line until opened (it turns amber and opens on Save).</li></ul></div>
+  </div>
+</div>
+
+<!-- ============ OPTION B ============ -->
+<div class="opt">
+  <h2>B. Steps: one part per screen, Next / Back</h2>
+  <p class="sub">The same five parts, shown one at a time like the family form: <b>Camp → Times → Prices → Extras → Family form</b>, with a progress line on top. Save is on the last step.</p>
+  <div class="cols">
+    <div class="dlg amber">
+      <h3>Add camp</h3>
+      <div class="steps"><span class="done">1. Camp</span><span class="done">2. Times</span><span class="on">3. Prices</span><span>4. Extras</span><span>5. Family form</span></div>
+      <div class="small muted" style="margin:8px 0">One row per number of days. Early price until Apr 12.</div>
+      <table>
+        <tr><th>Days</th><th>Member early</th><th>Member regular</th><th>Non-mem. early</th><th>Non-mem. regular</th></tr>
+        <tr><td>1 day</td><td><span class="m">$75</span></td><td><span class="m">$80</span></td><td><span class="m">$85</span></td><td><span class="m">$90</span></td></tr>
+        <tr><td>2 days</td><td><span class="m">$140</span></td><td><span class="m">$150</span></td><td><span class="m">$150</span></td><td><span class="m">$160</span></td></tr>
+        <tr><td>3 days</td><td><span class="m">$195</span></td><td><span class="m">$210</span></td><td><span class="m">$205</span></td><td><span class="m">$220</span></td></tr>
+        <tr><td>4 days</td><td><span class="m">$260</span></td><td><span class="m">$280</span></td><td><span class="m">$270</span></td><td><span class="m">$290</span></td></tr>
+        <tr><td>5 days (all)</td><td><span class="m">$275</span></td><td><span class="m">$325</span></td><td><span class="m">$285</span></td><td><span class="m">$335</span></td></tr>
+      </table>
+      <div class="act"><span class="btn">Back</span><span class="grow"></span><span class="btn">Cancel</span><span class="btn p">Next</span></div>
+      <p class="note">Each screen is short and focused. Save appears on step 5.</p>
+    </div>
+    <div class="phone amber">
+      <div class="top">← Add camp</div>
+      <div class="steps" style="margin-top:0"><span class="done">1</span><span class="done">2</span><span class="on">3 Prices</span><span>4</span><span>5</span></div>
+      <label>1 day</label>
+      <div class="g2"><div class="f">$75</div><div class="f">$80</div></div>
+      <div class="g2" style="margin-top:6px"><div class="f">$85</div><div class="f">$90</div></div>
+      <label>2 days</label>
+      <div class="g2"><div class="f">$140</div><div class="f">$150</div></div>
+      <div class="small muted" style="margin-top:6px">… 3 more rows</div>
+      <div class="full">Next</div>
+      <p class="note">From a template you still tap Next four times to reach Save.</p>
+    </div>
+  </div>
+  <div class="pc">
+    <div><h3>Pros</h3><ul><li>Each screen is small and calm; a new staff member is guided in order.</li><li>Familiar: same idea as the family form's steps.</li></ul></div>
+    <div><h3>Cons</h3><ul><li>From a template: 4 extra taps (Next × 4) to reach Save, through screens that are already filled.</li><li>Edit camp to change one price still walks through the steps (or needs a jump-to-step bar).</li><li>Can't see the whole camp at once before saving.</li></ul></div>
+  </div>
+</div>
+
+</body></html>

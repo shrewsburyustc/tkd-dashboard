@@ -5,6 +5,7 @@
 // cards, school time and the reminder, and every function's statuses. These plain `assert`
 // checks run in well under a second without a browser or a database and print
 // ALL FINANCE LIB CHECKS PASSED.
+// Camp payments (v0.707) are the third source: the last group checks them.
 // The chain CASE TABLE below is the one the SQL tests (0011_tests.sql §2) replay on both sources.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -764,6 +765,114 @@ check('mock: failNextSave makes the next write fail and change nothing; reset', 
   finance.reset();
   assert.equal(call('finance_settings_get', {}).version, 1);
   assert.equal(financeStore.closings.length, 4);
+});
+
+// ======================= Camp payments: the third source (v0.707) =======================
+check('mock: camp payments — Daily report per desk school, edit / undo / mis-click chains, detail, export, CB + Star unchanged', () => {
+  const now = Date.parse('2026-10-24T22:00:00.000Z'); // 6 PM at the school
+  const campStore = {
+    camps: [{ id: 'k1', name: 'April Vacation Camp', location_code: 'worcester', both_schools: true }],
+    camp_days: [{ id: 'kd2', camp_id: 'k1', day: '2027-04-20' }, { id: 'kd1', camp_id: 'k1', day: '2027-04-19' }],
+    camp_campers: [
+      { id: 'kc1', camp_id: 'k1', first_name: 'Mia', last_name: 'Rossi' },
+      { id: 'kc2', camp_id: 'k1', first_name: 'Olivia', last_name: 'Chen' },
+      { id: 'kc3', camp_id: 'k1', first_name: 'Leo', last_name: 'Kim' },
+      { id: 'kc4', camp_id: 'k1', first_name: 'Ava', last_name: 'Thompson' },
+    ],
+    camp_camper_days: [{ id: 'x1', camper_id: 'kc1', day_id: 'kd2' }, { id: 'x2', camper_id: 'kc1', day_id: 'kd1' }],
+    camp_payments: [
+      // Mia: $166 cash at the Worcester desk.
+      { id: '00000000-0000-4000-8000-00000000c0a1', camper_id: 'kc1', kind: 'payment', amount_cents: 16600, method: 'cash', paid_on: T, recorded_at: at(T, '10:00'), recorded_by: 'desk', recorded_by_name: 'Staff', reverses_payment_id: null, school: 'worcester' },
+      // Olivia: $275 check at the Shrewsbury desk (a Worcester-held camp, paid in Shrewsbury).
+      { id: '00000000-0000-4000-8000-00000000c0a2', camper_id: 'kc2', kind: 'payment', amount_cents: 27500, method: 'check', paid_on: T, recorded_at: at(T, '11:00'), recorded_by: 'desk', recorded_by_name: 'Staff', reverses_payment_id: null, school: 'shrewsbury' },
+      // Leo: $335 cash, edited by an admin to $350 card (reversal + new row, same moment, same login).
+      { id: '00000000-0000-4000-8000-00000000c0a3', camper_id: 'kc3', kind: 'payment', amount_cents: 33500, method: 'cash', paid_on: T, recorded_at: at(T, '12:00'), recorded_by: 'desk', recorded_by_name: 'Staff', reverses_payment_id: null, school: 'worcester' },
+      { id: '00000000-0000-4000-8000-00000000c0a4', camper_id: 'kc3', kind: 'reversal', amount_cents: -33500, method: 'cash', paid_on: T, recorded_at: at(T, '13:00'), recorded_by: 'admin-1', recorded_by_name: 'Jeffrey Berg', reverses_payment_id: '00000000-0000-4000-8000-00000000c0a3', school: 'worcester' },
+      { id: '00000000-0000-4000-8000-00000000c0a5', camper_id: 'kc3', kind: 'payment', amount_cents: 35000, method: 'card', paid_on: T, recorded_at: at(T, '13:00'), recorded_by: 'admin-1', recorded_by_name: 'Jeffrey Berg', reverses_payment_id: null, school: 'worcester' },
+      // Ava: Mark paid, then the toast's Undo 4 seconds later by the same login → hidden (a mis-click).
+      { id: '00000000-0000-4000-8000-00000000c0a6', camper_id: 'kc4', kind: 'payment', amount_cents: 39000, method: 'check', paid_on: T, recorded_at: at(T, '14:00'), recorded_by: 'desk', recorded_by_name: 'Staff', reverses_payment_id: null, school: 'worcester' },
+      { id: '00000000-0000-4000-8000-00000000c0a7', camper_id: 'kc4', kind: 'reversal', amount_cents: -39000, method: 'check', paid_on: T, recorded_at: new Date(Date.parse(at(T, '14:00')) + 4000).toISOString(), recorded_by: 'desk', recorded_by_name: 'Staff', reverses_payment_id: '00000000-0000-4000-8000-00000000c0a6', school: 'worcester' },
+    ],
+  };
+  const make = (readCamps) => {
+    let store = null;
+    return createFinanceBackend({
+      loadStore: () => store, saveStore: (s) => { store = JSON.parse(JSON.stringify(s)); },
+      readColorBelt: () => JSON.parse(JSON.stringify(cbStore)), readCamps,
+      now: () => now, today: () => T, newId: () => randomUUID(),
+    });
+  };
+  const withCamps = make(() => JSON.parse(JSON.stringify(campStore)));
+  const without = make(undefined);
+  const withEmpty = make(() => ({ camps: [], camp_days: [], camp_campers: [], camp_payments: [] }));
+  const day = (b, school) => b.rpc('finance_day', dayArgs(school), ADMIN_CTX).data;
+  // Color Belt and Star results don't change (no camp rows → exactly the same answer).
+  for (const school of ['worcester', 'shrewsbury']) assert.deepEqual(day(withEmpty, school), day(without, school));
+  // Worcester: Mia counted, Leo edited (now $350 card), Ava's mis-click hidden.
+  const w = day(withCamps, 'worcester');
+  assertClean(w, 'finance_day with camps');
+  const campItems = w.items.filter((it) => it.source === 'camp');
+  assert.deepEqual(campItems.map((it) => [it.last_name, it.state, it.amount_cents, it.method]).sort(),
+    [['Kim', 'edited', 35000, 'card'], ['Rossi', 'counted', 16600, 'cash']]);
+  assert.ok(campItems.every((it) => it.what === 'camp' && it.event_date === '2027-04-19' && it.is_private === false));
+  // Camp rows carry the camp's name ("Camp · April Vacation Camp"); Color Belt / Star rows don't change.
+  assert.ok(campItems.every((it) => it.event_name === 'April Vacation Camp'));
+  assert.ok(w.items.filter((it) => it.source !== 'camp').every((it) => !('event_name' in it)));
+  assert.ok(withCamps.rpc('finance_export', { p_location_code: 'worcester', p_from: T, p_to: T }, ADMIN_CTX).data.rows
+    .every((r) => (r.what === 'camp' ? r.event_name === 'April Vacation Camp' : !('event_name' in r))));
+  const wPlain = day(without, 'worcester');
+  assert.equal(w.totals.total_cents, wPlain.totals.total_cents + 16600 + 35000);
+  assert.equal(w.totals.cash.cents, wPlain.totals.cash.cents + 16600);
+  assert.equal(w.totals.card.cents, wPlain.totals.card.cents + 35000);
+  assert.notEqual(w.fingerprint, wPlain.fingerprint);
+  // Shrewsbury: Olivia's check lands in the desk that took it, not the camp's school.
+  const s = day(withCamps, 'shrewsbury');
+  assert.deepEqual(s.items.filter((it) => it.source === 'camp').map((it) => [it.first_name, it.method, it.amount_cents]), [['Olivia', 'check', 27500]]);
+  assert.equal(s.totals.check.cents, day(without, 'shrewsbury').totals.check.cents + 27500);
+  // Close the day expects the camp money.
+  const close = withCamps.rpc('finance_close_day', {
+    p_location_code: 'worcester', p_day: T, p_expected_fingerprint: w.fingerprint, p_cash_cents: 0,
+    p_checks_count: 0, p_checks_cents: 0, p_card_cents: 0, p_note: 'camp check',
+  }, ADMIN_CTX).data;
+  assert.equal(close.status, 'ok');
+  assert.equal(day(withCamps, 'worcester').closing.expected_card_cents, w.totals.card.cents);
+  // Payment detail: camper, camp, days, history (recorded → edited).
+  const detail = withCamps.rpc('finance_payment_detail', { p_source: 'camp', p_payment_id: '00000000-0000-4000-8000-00000000c0a3' }, ADMIN_CTX).data;
+  assertClean(detail, 'finance_payment_detail camp');
+  assert.equal(detail.status, 'ok');
+  assert.equal(detail.event_name, 'April Vacation Camp');
+  assert.equal(detail.item.school, 'worcester');
+  assert.deepEqual(detail.camp_days, []); // Leo has no day rows in this small store
+  assert.deepEqual(detail.history.map((h) => [h.what, h.amount_cents, h.method]), [['edited', 35000, 'card'], ['recorded', 33500, 'cash']]);
+  const mia = withCamps.rpc('finance_payment_detail', { p_source: 'camp', p_payment_id: '00000000-0000-4000-8000-00000000c0a1' }, ADMIN_CTX).data;
+  assert.deepEqual(mia.camp_days, ['2027-04-19', '2027-04-20']);
+  assert.equal(without.rpc('finance_payment_detail', { p_source: 'camp', p_payment_id: '00000000-0000-4000-8000-00000000c0a1' }, ADMIN_CTX).data.status, 'not_found'); // no camps store → no camp rows
+  assert.deepEqual(withCamps.rpc('finance_payment_detail', { p_source: 'camp', p_payment_id: '00000000-0000-4000-8000-00000000c0a6' }, ADMIN_CTX).data, { status: 'not_found' }); // hidden mis-click
+  assert.deepEqual(withCamps.rpc('finance_payment_detail', { p_source: 'boat', p_payment_id: '00000000-0000-4000-8000-00000000c0a6' }, ADMIN_CTX).data, { status: 'invalid' });
+  // Export: What = "Camp", the camp's first day in the date column; counted cents add up.
+  const exp = withCamps.rpc('finance_export', { p_location_code: 'worcester', p_from: T, p_to: T }, ADMIN_CTX).data;
+  const campRows = exp.rows.filter((r) => r.what === 'camp');
+  assert.equal(campRows.length, 2); // Mia + Leo's edited line (the mis-click is hidden)
+  const csv = toCsv(campRows);
+  // The "For" cell names the camp (security review M1); the columns don't change.
+  assert.match(csv, /,Rossi,Camp · April Vacation Camp,2027-04-19,Payment,Cash,166\.00,166\.00,Staff,Counted,/);
+  assert.match(csv, /,Kim,Camp · April Vacation Camp,2027-04-19,Payment,Card,350\.00,350\.00,Jeffrey Berg,Edited,was \$335\.00 cash/);
+  assert.equal(csv.split('\r\n')[0], toCsv([]).split('\r\n')[0]); // same header line
+  // A camp name with a comma / quote is quoted; one that looks like a formula stays text inside the cell.
+  const tricky = toCsv([{ ...campRows[0], event_name: 'Fun, "Big" Camp' }, { ...campRows[0], event_name: '=HYPERLINK("x")' }]).split('\r\n');
+  assert.match(tricky[1], /,"Camp · Fun, ""Big"" Camp",/);
+  assert.match(tricky[2], /,"Camp · =HYPERLINK\(""x""\)",/); // starts with "Camp", so Excel never sees a formula
+  assert.match(toCsv([{ ...campRows[0], event_name: undefined }]), /,Rossi,Camp,2027-04-19,/); // no name → just "Camp"
+  // Color Belt / Star rows are unchanged, even if a row happened to carry an event_name.
+  const cbRow = { day: T, school: 'worcester', time: '10:00', first_name: 'Mia', last_name: 'Chen', what: 'color_belt', event_date: '2026-10-29', kind: 'payment', method: 'cash', amount_cents: 6500, counted_cents: 6500, recorded_by_name: 'Staff', state: 'counted', note: null };
+  for (const row of [cbRow, { ...cbRow, what: 'star' }]) {
+    assert.equal(toCsv([{ ...row, event_name: 'Something' }]), toCsv([row]));
+  }
+  assert.match(toCsv([cbRow]), /,Chen,Color belt testing,2026-10-29,/);
+  // Both schools view.
+  const both = withCamps.rpc('finance_day_both', { p_day: T }, ADMIN_CTX).data;
+  const bothPlain = without.rpc('finance_day_both', { p_day: T }, ADMIN_CTX).data;
+  assert.equal(both.total_cents, bothPlain.total_cents + 16600 + 35000 + 27500);
 });
 
 // ======================= Home reminder "OK" (reminderAck.js, v0.811) =======================

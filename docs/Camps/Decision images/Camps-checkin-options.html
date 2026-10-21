@@ -1,0 +1,119 @@
+<!doctype html>
+<!--
+  Camps-checkin-options.html — decision picture: checking kids in on the camp roster (C4).
+  Why it exists: Jeffrey asked for a roster to check kids in as they arrive; check-in was left
+  out of the first design. Two options on the same roster (April Vacation Camp, Mon, Apr 19).
+  The PNG next to it is a screenshot of this page.
+-->
+<html lang="en"><head><meta charset="utf-8"><title>Camps — check-in options</title>
+<style>
+  :root{--bg:#fff;--surface:#f7f7f5;--border:#e5e5e2;--ctl:#8f8f8a;--text:#1f1f1f;--muted:#6b6b6b;
+    --blue:#003595;--tint:#e6ebf4;--amber:#c98a1b;--ok:#3b6d11;--okbg:#eaf3de;--wbg:#faeeda;--wt:#633806}
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:#efeee9;font:14px/1.45 "Segoe UI",system-ui,sans-serif;color:var(--text);width:1320px}
+  h1{font-size:20px;font-weight:500;margin:0 0 4px}
+  .lead{color:var(--muted);margin:0 0 20px;max-width:1100px}
+  .opt{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:24px}
+  .opt h2{font-size:16px;font-weight:500;margin:0 0 2px}
+  .rec{display:inline-block;font-size:12px;background:var(--okbg);color:var(--ok);border-radius:6px;padding:1px 8px;margin-left:8px;vertical-align:2px}
+  .sub{color:var(--muted);margin:0 0 16px;font-size:13px;max-width:1180px}
+  .cols{display:grid;grid-template-columns:860px 1fr;gap:24px;align-items:start}
+  .panel{border:1px solid var(--border);border-radius:12px;padding:16px}
+  .t{font-size:16px;font-weight:500}
+  .h{font-size:12px;color:var(--muted);margin-bottom:10px}
+  .chips{display:flex;gap:0;border:1px solid var(--ctl);border-radius:8px;overflow:hidden;width:fit-content;font-size:12px;margin-bottom:8px}
+  .chips span{padding:5px 10px;border-right:1px solid var(--border)}.chips span:last-child{border:0}
+  .chips .on{background:var(--tint);color:var(--blue)}
+  .dayline{font-size:13px;margin-bottom:8px}
+  .dayline b{font-weight:500}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{background:var(--surface);color:var(--muted);font-weight:400;font-size:12px;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+  td{padding:0 8px;height:40px;border-bottom:1px solid var(--border);white-space:nowrap}
+  td.n{text-align:right}
+  .tag{font-size:12px;border-radius:6px;padding:1px 8px;background:var(--okbg);color:var(--ok)}
+  .tag.g{background:var(--surface);color:var(--muted);border:1px solid var(--border)}
+  .btn{height:28px;padding:0 10px;border-radius:8px;font-size:12px;display:inline-flex;align-items:center;gap:4px;border:1px solid var(--ctl);background:#fff}
+  .in{color:var(--ok);font-size:12px}
+  .muted{color:var(--muted)}
+  .amber{outline:3px solid var(--amber);outline-offset:3px;border-radius:6px}
+  .note{font-size:12px;color:#7a4f00;margin:10px 0 0;font-weight:500}
+  .phone{width:300px;border:6px solid #2a2a2a;border-radius:28px;padding:12px;background:#fff}
+  .card{border-bottom:1px solid var(--border);padding:8px 0;font-size:13px}
+  .card .r{display:flex;justify-content:space-between;align-items:center;margin-top:4px;gap:6px}
+  .toast{background:#1f1f1f;color:#fff;border-radius:8px;padding:8px 12px;font-size:13px;display:inline-flex;gap:14px;align-items:center;margin-top:10px}
+  .toast b{font-weight:500;border-left:1px solid #4a4a4a;padding-left:12px}
+  .pc{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:16px;font-size:13px}
+  .pc h3{font-size:13px;font-weight:500;margin:0 0 4px}
+  .pc ul{margin:0;padding-left:18px}
+  .count{display:inline-block;font-size:12px;border:1px solid var(--border);background:var(--surface);border-radius:6px;padding:1px 8px;margin-left:6px}
+</style></head><body>
+
+<h1>Camps roster — checking kids in when they arrive</h1>
+<p class="lead">Yes, every camp has a roster (C4). Picking a day shows exactly who is expected that day. What the approved design does <b>not</b> have yet is a way to mark a child as <b>arrived</b>. Two ways to add it — same roster, Mon, Apr 19, 9:05 AM. Amber = new.</p>
+
+<!-- ============ OPTION A ============ -->
+<div class="opt">
+  <h2>A. Check in only — one tap when a child arrives <span class="rec">Recommended</span></h2>
+  <p class="sub">On a day's roster each child has a <b>Check in</b> button. One tap records the time (5-second Undo). The day line counts "8 of 14 here". Check-in is per day, so a child coming Mon + Wed is checked in on each day. Works on the desk PC and the mat-side tablet; staff and admins.</p>
+  <div class="cols">
+    <div class="panel">
+      <div class="t">April Vacation Camp</div><div class="h">Mon, Apr 19 – Fri, Apr 23, 2027 · Both schools · held at Worcester</div>
+      <div class="chips"><span>All days 18</span><span class="on">Mon 19 · 14</span><span>Tue 20 · 16</span><span>Wed 21 · 15</span><span>Thu 22 · 16</span><span>Fri 23 · 13</span></div>
+      <div class="dayline"><b>Mon, Apr 19</b> · 14 campers · <span class="amber" style="padding:0 4px">8 here · 6 not here yet</span> · 6 early drop-off · 4 late pick-up</div>
+      <table>
+        <tr><th>Camper</th><th>Extras on Mon</th><th>Paying by</th><th class="n">Total</th><th>Status</th><th>Here</th><th></th></tr>
+        <tr><td>Ava Thompson <span class="muted">· 8</span></td><td>Drop-off · Pick-up</td><td>Check</td><td class="n">$390</td><td><span class="tag">Paid</span></td><td class="amber"><span class="in">✓ 7:42 AM</span></td><td class="muted">⋯</td></tr>
+        <tr><td>Noah Patel <span class="muted">· 10</span></td><td>Pick-up</td><td>Cash</td><td class="n">$219</td><td><span class="tag g">Not paid</span></td><td class="amber"><span class="btn">Check in</span></td><td><span class="btn">✓ Mark paid</span> <span class="muted">⋯</span></td></tr>
+        <tr><td>Liam Ortiz <span class="muted">· 7</span></td><td>—</td><td>Cash</td><td class="n">$275</td><td><span class="tag">Paid</span></td><td class="amber"><span class="in">✓ 8:58 AM</span></td><td class="muted">⋯</td></tr>
+        <tr><td>Mia Rossi <span class="muted">· 9 · non-member</span></td><td>Pick-up</td><td>Cash</td><td class="n">$166</td><td><span class="tag">Paid</span></td><td class="amber"><span class="btn">Check in</span></td><td class="muted">⋯</td></tr>
+      </table>
+      <div class="toast">Noah Patel checked in · 9:05 AM <b>Undo</b></div>
+      <p class="note">"Here" column only appears when one day is picked (not on All days). A checked-in child shows the time instead of the button; ⋯ → Undo check-in fixes a mistake later.</p>
+    </div>
+    <div class="phone">
+      <div class="t" style="font-size:15px">April Vacation Camp</div>
+      <div class="dayline" style="margin-top:6px"><b>Mon, Apr 19</b> · <span class="amber" style="padding:0 3px">8 of 14 here</span></div>
+      <div class="card"><b style="font-weight:500">Ava Thompson</b> <span class="muted">· 8</span><div class="muted" style="font-size:12px">All days · drop-off · pick-up · check</div>
+        <div class="r"><span class="tag">Paid</span><span class="amber in">✓ Here 7:42 AM</span><span class="muted">⋯</span></div></div>
+      <div class="card"><b style="font-weight:500">Noah Patel</b> <span class="muted">· 10</span><div class="muted" style="font-size:12px">Mon, Tue, Wed · pick-up · cash</div>
+        <div class="r"><span class="tag g">Not paid</span><span class="amber"><span class="btn">Check in</span></span><span class="btn">✓ Mark paid</span><span class="muted">⋯</span></div></div>
+      <div class="card"><b style="font-weight:500">Mia Rossi</b> <span class="muted">· 9</span><div class="muted" style="font-size:12px">Mon, Wed · pick-up · cash</div>
+        <div class="r"><span class="tag">Paid</span><span class="amber"><span class="btn">Check in</span></span><span class="muted">⋯</span></div></div>
+      <p class="note">Phone/tablet: Check in + Mark paid = the 2 visible buttons; the rest in ⋯.</p>
+    </div>
+  </div>
+  <div class="pc">
+    <div><h3>Pros</h3><ul><li>One tap per child at the door; you always know who's in the building.</li><li>"8 of 14 here" tells you at a glance who hasn't arrived.</li><li>Small to build: one time per child per day.</li></ul></div>
+    <div><h3>Cons</h3><ul><li>No record of who picked a child up or when they left.</li></ul></div>
+  </div>
+</div>
+
+<!-- ============ OPTION B ============ -->
+<div class="opt">
+  <h2>B. Check in and check out — arrival and pick-up</h2>
+  <p class="sub">Same Check in button; after it, the button becomes <b>Check out</b>. At pick-up staff tap it and type who picked the child up (e.g. "Mom", "Grandpa Joe"). The day line counts "8 here · 3 gone home · 3 not here yet".</p>
+  <div class="cols">
+    <div class="panel">
+      <div class="dayline"><b>Mon, Apr 19</b> · 14 campers · <span class="amber" style="padding:0 4px">8 here · 3 gone home · 3 not here yet</span></div>
+      <table>
+        <tr><th>Camper</th><th>Extras on Mon</th><th class="n">Total</th><th>Status</th><th>Here</th><th></th></tr>
+        <tr><td>Ava Thompson <span class="muted">· 8</span></td><td>Drop-off · Pick-up</td><td class="n">$390</td><td><span class="tag">Paid</span></td><td class="amber"><span class="in">In 7:42 AM</span> <span class="btn">Check out</span></td><td class="muted">⋯</td></tr>
+        <tr><td>Liam Ortiz <span class="muted">· 7</span></td><td>—</td><td class="n">$275</td><td><span class="tag">Paid</span></td><td class="amber"><span class="muted">In 8:58 · out 3:04 PM · Dad</span></td><td class="muted">⋯</td></tr>
+        <tr><td>Noah Patel <span class="muted">· 10</span></td><td>Pick-up</td><td class="n">$219</td><td><span class="tag g">Not paid</span></td><td class="amber"><span class="btn">Check in</span></td><td><span class="btn">✓ Mark paid</span> <span class="muted">⋯</span></td></tr>
+      </table>
+      <p class="note">Check out opens a small box: "Picked up by" [ Dad ] · Check out. Also shows who used late pick-up but wasn't signed up for it.</p>
+    </div>
+    <div class="panel">
+      <div class="t" style="font-size:14px">Check out — Liam Ortiz</div>
+      <div style="font-size:12px;color:var(--muted);margin:8px 0 4px">Picked up by</div>
+      <div style="height:32px;border:1px solid var(--ctl);border-radius:8px;padding:0 10px;display:flex;align-items:center;font-size:13px">Dad</div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><span class="btn">Cancel</span><span class="btn" style="background:var(--blue);color:#fff;border-color:var(--blue)">Check out</span></div>
+    </div>
+  </div>
+  <div class="pc">
+    <div><h3>Pros</h3><ul><li>Full day record: arrival, departure, who picked up.</li><li>At 3:30 you can see exactly who is still waiting.</li></ul></div>
+    <div><h3>Cons</h3><ul><li>Twice the taps per child per day, plus typing a name at the busiest time.</li><li>Bigger build (a dialog, more states, more tests).</li><li>"Picked up by" is typed by staff, not checked against an approved pick-up list.</li></ul></div>
+  </div>
+</div>
+
+</body></html>

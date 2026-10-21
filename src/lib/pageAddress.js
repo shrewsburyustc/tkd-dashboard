@@ -6,6 +6,12 @@
 // address after a "#":
 //   Home            tkd-dashboard.pages.dev/
 //   Testing         tkd-dashboard.pages.dev/#testing
+//   Camps           tkd-dashboard.pages.dev/#camps             the Camps tab (contract 0013 §6.1)
+//                   tkd-dashboard.pages.dev/#camps/templates   the Templates tab (admins)
+//                   tkd-dashboard.pages.dev/#camps/camp/<id>   a camp's page, on its default tab
+//                   tkd-dashboard.pages.dev/#camps/camp/<id>/checkin | /payments | /attendance
+//                                                              the same page on that tab
+//                   (Camps is the same with the Star switch on or off.)
 //   Schedule        tkd-dashboard.pages.dev/#schedule
 //   Calendar        tkd-dashboard.pages.dev/#calendar
 //   Forms           tkd-dashboard.pages.dev/#forms
@@ -44,15 +50,18 @@
 //                                    → #testing (Color Belt — Star isn't in this build)
 //
 // A "route" is a small object saying which page is open:
-//   { section: 'home' | 'testing' | 'staffAccounts' | 'settings',
+//   { section: 'home' | 'testing' | 'camps' | 'schedule' | 'calendar' | 'forms' | 'prospects' |
+//              'finance' | 'staffAccounts' | 'settings',
 //     testingPage: 'chooser' | 'colorBelt' | 'star' | null   (null when section isn't 'testing'),
 //     eventId: the open event's id (a Color Belt event, or a Star event when testingPage is
-//              'star'), or null,
+//              'star'), or on Camps the open camp's id, or null,
 //     eventTab: the tab. On a Color Belt event page 'students' | 'grading'; on a Star event page
 //               'students' (= its Candidates tab) | 'grading' (Star phase 5); on Star's home (no
 //               event) 'events' | 'rubrics'; on Finance its view 'report' | 'history' | 'settings'
-//               (a different Finance view is a different page); otherwise always 'students' —
-//               see routeTab,
+//               (a different Finance view is a different page); on the Camps list 'camps' |
+//               'templates', on a camp's page 'default' | 'checkin' | 'payments' | 'attendance'
+//               ('default' = Check in during camp week, else Payments — CampPage decides); otherwise
+//               always 'students' — see routeTab,
 //     privateId: the open private testing's id (its grading page, Color Belt phase 4 — always on
 //                the Color Belt page, never together with an event), or null }
 import { STAR_TESTING_ON } from './features.js';
@@ -60,6 +69,7 @@ import { STAR_TESTING_ON } from './features.js';
 const HASH_BY_PAGE = {
   home: '',
   testing: '#testing',
+  camps: '#camps',
   schedule: '#schedule',
   calendar: '#calendar',
   forms: '#forms',
@@ -85,6 +95,10 @@ const STAR_HASH = '#testing/star';
 // Finance (contract 0011 §4): #finance, #finance/history, #finance/settings.
 const FINANCE_HASH = /^#finance(?:\/(history|settings))?$/;
 export const FINANCE_VIEWS = ['report', 'history', 'settings'];
+// Camps (contract 0013 §6.1): #camps, #camps/templates, #camps/camp/<id>(/checkin|/payments|/attendance).
+const CAMPS_HASH = new RegExp(`^#camps(?:/templates|/camp/${ID}(?:/(checkin|payments|attendance))?)?$`);
+const CAMPS_TEMPLATES_HASH = '#camps/templates';
+const CAMP_TABS = ['checkin', 'payments', 'attendance'];
 const STAR_RUBRICS_HASH = '#testing/star/rubrics';
 // "(/grading)?" = the Star event page's Grading tab (Star phase 5), as Color Belt's.
 const STAR_EVENT_HASH = new RegExp(`^#testing/star/event/${ID}(/grading)?$`);
@@ -107,10 +121,15 @@ export function normalEventTab(testingPage, eventId, tab) {
   return 'students';
 }
 
-// The tab of ANY route: Finance's view ('report' unless 'history' or 'settings' was asked for),
-// otherwise normalEventTab's answer.
+// The tab of ANY route: Finance's view ('report' unless 'history' or 'settings' was asked for);
+// on Camps, a camp's tab ('default' unless 'checkin' | 'payments' | 'attendance' was asked for) or,
+// on the list, 'templates' when asked, otherwise 'camps'; otherwise normalEventTab's answer.
 export function routeTab(section, testingPage, eventId, tab) {
   if (section === 'finance') return FINANCE_VIEWS.includes(tab) ? tab : 'report';
+  if (section === 'camps') {
+    if (eventId) return CAMP_TABS.includes(tab) ? tab : 'default';
+    return tab === 'templates' ? 'templates' : 'camps';
+  }
   return normalEventTab(testingPage, eventId, tab);
 }
 
@@ -141,6 +160,12 @@ function readHash(hash) {
   // Finance and its two other views.
   const finance = FINANCE_HASH.exec(hash);
   if (finance) return { route: route('finance', null, null, finance[1] ?? 'report'), known: true };
+  // Camps: its two list tabs, and a camp's page on one of its tabs.
+  const camp = CAMPS_HASH.exec(hash);
+  if (camp) {
+    if (camp[1]) return { route: route('camps', null, camp[1], camp[2] ?? 'default'), known: true };
+    return { route: route('camps', null, null, hash === CAMPS_TEMPLATES_HASH ? 'templates' : 'camps'), known: true };
+  }
   // The other pages.
   if (hash in PAGE_BY_HASH) return { route: route(PAGE_BY_HASH[hash]), known: true };
   return { route: route('home'), known: false };
@@ -159,6 +184,10 @@ export function routeIsUnknown() {
 // The "#…" for a route (Home has none at all).
 function hashForRoute({ section, testingPage = null, eventId = null, eventTab = 'students', privateId = null }) {
   if (section === 'finance') return eventTab === 'history' || eventTab === 'settings' ? `#finance/${eventTab}` : '#finance';
+  if (section === 'camps') {
+    if (eventId) return `#camps/camp/${eventId}${CAMP_TABS.includes(eventTab) ? `/${eventTab}` : ''}`;
+    return eventTab === 'templates' ? CAMPS_TEMPLATES_HASH : HASH_BY_PAGE.camps;
+  }
   if (section !== 'testing') return HASH_BY_PAGE[section] ?? '';
   const tabPart = eventTab === 'grading' ? GRADING_SUFFIX : ''; // Students has no ending of its own
   if (!STAR_TESTING_ON) {
@@ -210,14 +239,18 @@ export function samePage(a, b) {
 }
 
 // true when two routes are exactly the same: same page AND, on an event page (or Star's home,
-// which has tabs of its own), the same tab.
+// which has tabs of its own, or anywhere in Camps — Camps | Templates, a camp's tabs), the same tab.
+// (Camps: a different tab is the same PAGE — switching is never "leaving" — but a different route.)
 export function sameRoute(a, b) {
   if (!samePage(a, b)) return false;
+  if (a.section === 'camps') return routeTab('camps', null, a.eventId, a.eventTab) === routeTab('camps', null, b.eventId, b.eventTab);
   if (!a.eventId && a.testingPage !== 'star') return true;
   return normalEventTab(a.testingPage, a.eventId, a.eventTab) === normalEventTab(b.testingPage, b.eventId, b.eventTab);
 }
 
-// true when a route's page has tabs that live in the address (a Color Belt event page, Star's home).
+// true when a route's page has tabs that live in the address (a Color Belt or Star event page, Star's
+// home, and every Camps page: the list's Camps | Templates and a camp's Check in | Payments | Attendance).
 export function hasAddressTabs(r) {
+  if (r.section === 'camps') return true;
   return r.section === 'testing' && (Boolean(r.eventId) || r.testingPage === 'star');
 }

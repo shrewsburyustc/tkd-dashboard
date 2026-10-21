@@ -8,10 +8,11 @@
 // the section's choice page. Testing gets its pages only while the Star testing build switch is on
 // (lib/features.js) — with it off, Testing is one page, exactly as before.
 //
-// Schedule comes after Testing (ti-clock, v0.233); Calendar after Schedule (ti-calendar-month, v0.234);
+// Camps comes after Testing (icon ti-tent, contract 0013 §6.1; rulebook v0.229).
+// Schedule comes after Camps (ti-clock, v0.233); Calendar after Schedule (ti-calendar-month, v0.234);
 // Forms after Calendar (ti-clipboard-text, v0.235); Prospects after Forms (ti-address-book, v0.236).
 // phone: true = on the phone's bottom bar; the others go under More (ti-menu-2) on a phone
-// (six sections don't fit: Home, Calendar, Prospects, More - rulebook v0.236).
+// (too many sections to fit: Home, Calendar, Prospects, More - rulebook v0.236).
 // Finance (v0.201): icon ti-report-money, LAST on the rail; on phones it is under More.
 //
 // "Hide private details" (v0.215, renamed v0.506): while it is on for this device, Finance is left out of the list.
@@ -20,6 +21,7 @@
 // are drawn again right after, pick it up. (Testing's `pages` are part of its item, so they stay.)
 import {
   IconAddressBook, IconCalendarMonth, IconCertificate, IconClipboardText, IconClock, IconHome, IconReportMoney, IconStar,
+  IconTent,
 } from '@tabler/icons-react';
 import { STAR_TESTING_ON } from '../lib/features.js';
 
@@ -32,6 +34,7 @@ export const TESTING_PAGES = [
 const ALL_ITEMS = [
   { id: 'home', label: 'Home', Icon: IconHome, phone: true },
   { id: 'testing', label: 'Testing', Icon: IconCertificate, pages: STAR_TESTING_ON ? TESTING_PAGES : null },
+  { id: 'camps', label: 'Camps', Icon: IconTent },
   { id: 'schedule', label: 'Schedule', Icon: IconClock },
   { id: 'calendar', label: 'Calendar', Icon: IconCalendarMonth, phone: true },
   { id: 'forms', label: 'Forms', Icon: IconClipboardText },

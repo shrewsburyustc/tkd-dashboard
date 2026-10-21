@@ -5,6 +5,7 @@
 // (Cloudflare ignores this file: it has no onRequest handler, and public/_routes.json only
 // sends /api/* to Functions.)
 import './register.test.mjs';
+import './camp.test.mjs';
 import './forms.test.mjs';
 import './starRegister.test.mjs';
 import './bbRegister.test.mjs';

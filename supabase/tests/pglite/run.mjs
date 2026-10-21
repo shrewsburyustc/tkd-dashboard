@@ -314,6 +314,22 @@
 //            and every earlier test file (0014, 0010, 0006, 0005, 0004,
 //            0003, 0002, PIN) pass. (0011_tests.sql runs in c instead: the
 //            upgrade database holds 14g's big seed, which it refuses.)
+//   stepCamps. 0013 (Camps), on its OWN fresh database (the main one
+//       ends with the 0010 down-script, so it no longer looks like
+//       production): the live order of step0016_after_new_students up to
+//       2026-10-20 (0001-0006, 0010, 0007, 0008, 0009, 0012, 0015, 0011 as
+//       production got it, 0019, 0014, 0020), then 0013, its tests and
+//       every earlier test file (0011's, the new-students', 0014's and
+//       0020's included), live checks AS camps_registrar, a seeded TEST
+//       camp, a second apply (re-run safety), 0017 on top (19b), and last
+//       the "Undo 0013" script of SETUP.md - see stepCamps below.
+//   stepFinanceCamps. 0017 (camp payments in Finance, v0.707): on the
+//       MAIN database (after 0016, before 13g; 0013 put on first) every
+//       Finance answer must be identical before and after 0017, its tests
+//       + 0011's + 0013's pass, re-run safety, the "Undo 0017" of
+//       SETUP.md; then two fresh databases with 0011's big seed + a big
+//       camp seed for speed and right answers (one sorting text like
+//       production) - see stepFinanceCamps below.
 //   step0016_after_new_students. 0016 on a database built in the
 //       PRODUCTION order with EVERY live migration: 0001-0006, 0010, 0007,
 //       0008, 0009, 0012, 0015, 0011 as production got it, 0019, 0014,
@@ -675,6 +691,21 @@ async function main() {
     record('0016 (Black Belt testing)', false, 'skipped: 0011 could not be applied (see the lines above)');
   }
 
+  // stepFinanceCamps (19a): camp payments in Finance (0017) on the main
+  // database (0013 put on first; 0017 ends with its Undo), then the
+  // speed / ICU databases. Before 13g, which must stay the last thing on
+  // the main database.
+  let after17 = null;
+  if (after11) {
+    console.log('\nMigration 0017 (camp payments in Finance), on the main database:');
+    if (await run(db, '[0017 main] apply 0013_camps.sql (0017 needs it)', read('migrations', '0013_camps.sql'))) {
+      after17 = await stepFinanceCamps(db, '[0017 main] ');
+    }
+    console.log('\n0017 speed with a big camp seed, and on a database that sorts text like production:');
+    await campsFinanceSpeed(false);
+    await campsFinanceSpeed(true);
+  }
+
   // 13g. the down-script (SETUP section 14e), LAST - the real removal
   // order: 0014 first (15i), then 0010. Only if steps 14 and 15i passed.
   if (after5 && after10) {
@@ -686,6 +717,9 @@ async function main() {
         !finance14Ok ? 'skipped: step 14 (0011 Finance) failed' : 'skipped: the 0014 down-script failed');
     }
   }
+
+  // stepCamps: Camps (0013) on its own fresh database, built in the live order
+  const after13 = await stepCamps();
 
   // 16. the new-students migrations (0007, 0008, 0009, 0012) in the live order
   console.log('\nMigrations 0007-0012 (Schedule, Calendar, Forms, Prospects) in the live order:');
@@ -764,6 +798,14 @@ async function main() {
   if (after18) {
     console.log('\n0018 fingerprints (kind  item  detail):');
     for (const line of after18) console.log('  ' + line);
+  }
+  if (after13) {
+    console.log('\n0013 fingerprints (kind  item  detail):');
+    for (const line of after13) console.log('  ' + line);
+  }
+  if (after17) {
+    console.log('\n0017 fingerprints (Finance after 0017; kind  item  detail):');
+    for (const line of after17) console.log('  ' + line);
   }
 
   return finish();
@@ -3167,6 +3209,569 @@ async function closesUnder0011() {
   record('[0018 closes] D: an event deleted after a move (closed under 0018) -> NOT changed',
     movedD?.status === 'ok' && closeD?.status === 'ok' && (await changed(43)) === 'false:0', await changed(43));
   await db.close();
+}
+
+// ---------------------------------------------------------------------
+// stepCamps: Camps (0013) - contract CONTRACT-0013.md section 2.2
+// ---------------------------------------------------------------------
+// The main database can't be used for this step: step 13g ends with the
+// 0010 down-script, so it no longer looks like production. stepCamps
+// therefore builds its OWN fresh database in production's (live) order,
+// as step0016_after_new_students does up to the day camps went live
+// (0001-0006, 0010, 0007, 0008, 0009, 0012, 0015, 0011 as production got
+// it, 0019, 0014, 0020), and puts 0013 on top (0017 follows in f2):
+//   a. 0013_fingerprints.sql must not contain the words the Supabase
+//      connection refuses
+//   b. the 0003 / 0004 / 0005 / 0006 / 0010 / 0011 fingerprints (and the
+//      new students' 0007 / 0008 / 0009 / 0012 / 0015 / 0019, Color Belt's
+//      0014 and 0020) are taken,
+//      0013 is applied, and they must be IDENTICAL afterwards (0013 changed
+//      none of their objects)
+//   c. 0013_tests.sql, then every earlier test file again
+//   d. "live" checks AS camps_registrar: every table, the counter, a
+//      write, staff functions, helpers, the other forms' functions and
+//      CREATE refused; camp_public_camp works; testing_registrar and
+//      star_registrar can't run the camp functions
+//   e. a TEST camp seeded here, two family sign-ups made AS
+//      camps_registrar, one check-in and one payment; then 0013_tests.sql
+//      again (before AND after a camp exists)
+//   f. 0013 applied a SECOND time: no row changed, the fingerprints
+//      identical, 0013_tests.sql and the 0005 / 0006 / 0010 / 0011 tests pass
+//   f2. 0017 (camp payments in Finance) on top, and its Undo -
+//      stepFinanceCamps (19b)
+//   g. LAST: the "Undo 0013" script of SETUP.md (read from SETUP.md, so
+//      the tested text is the documented text): afterwards no camp object
+//      or camps_registrar is left, the earlier fingerprints equal step b's
+//      (a database that never had 0013), and the earlier tests pass
+// Returns 0013's fingerprints (printed at the end), or null.
+async function stepCamps() {
+  const L = '[camps] ';
+  const CAMP_ACK_VERSION = 'camp-2026-10-18';
+  const CAMP_CODE = 'pgcp2345';   // 8 characters from the public-code alphabet
+  const CAMP_TABLES = ['camps', 'camp_days', 'camp_prices', 'camp_extras', 'camp_templates', 'camp_signups',
+    'camp_campers', 'camp_camper_days', 'camp_camper_extras', 'camp_payments', 'camp_public_attempts'];
+  // everything 0013 stores, plus the history's row count, as one md5
+  const snapshotSql = `select md5(${CAMP_TABLES.map((t) =>
+    `coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.${t} x), '')`).join(' || ')}
+    || (select count(*) from public.change_log)::text)`;
+  const earlier = async (cdb) => [
+    ...(await fingerprints(cdb, '0003_fingerprints.sql')),
+    ...(await fingerprints(cdb, '0004_fingerprints.sql')),
+    ...(await fingerprints(cdb, '0005_fingerprints.sql')),
+    ...(await fingerprints(cdb, '0006_fingerprints.sql')),
+    ...(await fingerprints(cdb, '0010_fingerprints.sql')),
+    ...(await fingerprints(cdb, '0011_fingerprints.sql')),
+    ...(await fingerprints(cdb, '0007_fingerprints.sql')),
+    ...(await fingerprints(cdb, '0008_fingerprints.sql')),
+    ...(await fingerprints(cdb, '0009_fingerprints.sql')),
+    ...(await fingerprints(cdb, '0012_fingerprints.sql')),
+    ...(await fingerprints(cdb, '0015_fingerprints.sql')),
+    ...(await fingerprints(cdb, '0019_fingerprints.sql')),
+    ...(await fingerprints(cdb, '0014_fingerprints.sql')),
+    ...(await fingerprints(cdb, '0020_fingerprints.sql')),
+  ];
+  const earlierTests = async (cdb, label) => {
+    for (const n of ['0020', '0014', '0019', '0015', '0012', '0009', '0008', '0007']) {
+      await runTestFile(cdb, `${L}${n}_tests.sql (${label})`, `${n}_tests.sql`, `ALL ${n} TESTS PASSED`);
+    }
+    await runTestFile(cdb, `${L}0011_tests.sql (${label})`, '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+    await runTestFile(cdb, `${L}0010_tests.sql (${label})`, '0010_tests.sql', 'ALL 0010 TESTS PASSED');
+    await runTestFile(cdb, `${L}0006_tests.sql (${label})`, '0006_tests.sql', 'ALL 0006 TESTS PASSED');
+    await runTestFile(cdb, `${L}0005_tests.sql (${label})`, '0005_tests.sql', 'ALL 0005 TESTS PASSED');
+  };
+  const campTests = (cdb, label) => runTestFile(cdb, `${L}0013_tests.sql (${label})`, '0013_tests.sql', 'ALL 0013 TESTS PASSED');
+
+  // d. acting AS the camp form's login. Each statement must be refused
+  // (permission denied), then camp_public_camp must work.
+  const liveChecks = async (cdb) => {
+    const refused = [
+      ...CAMP_TABLES.map((t) => [`read ${t}`, `select 1 from public.${t} limit 1`]),
+      ['read camp_roster', 'select 1 from public.camp_roster limit 1'],
+      ['read testing_public_attempts', 'select 1 from public.testing_public_attempts limit 1'],
+      ['read change_log', 'select 1 from public.change_log limit 1'],
+      ['read staff', 'select 1 from public.staff limit 1'],
+      ['read locations', 'select 1 from public.locations limit 1'],
+      ['read auth.users', 'select 1 from auth.users limit 1'],
+      ['use the reference counter', "select nextval('public.camp_signup_ref_seq')"],
+      ['write camp_campers', 'update public.camp_campers set first_name = first_name'],
+      ['write camp_payments', "insert into public.camp_payments (camper_id, kind, amount_cents, method, paid_on, school, recorded_by_name) values (gen_random_uuid(), 'payment', 1, 'cash', current_date, 'worcester', 'x')"],
+      ['write camp_public_attempts', "insert into public.camp_public_attempts (client_key, outcome) values ('k', 'ok')"],
+      ['call a staff function', "select public.camp_mark_paid(gen_random_uuid(), 1, 'worcester')"],
+      ['call the detail function', 'select public.camp_camper_detail(gen_random_uuid())'],
+      ['call has_data_access', 'select public.has_data_access()'],
+      ['call a helper', 'select public.camp_purge_old_signatures()'],
+      ['call the sign-up core directly', `select public.camp_public_signup_core('${CAMP_CODE}', 'k', gen_random_uuid(), '[]'::jsonb, 'a', '5085550100', 'b', 'c', '5085550101', 'd', 'cash', true, '${TEST_SIGNATURE}', '${CAMP_ACK_VERSION}', 'x', 0)`],
+      ['call testing_public_event', "select public.testing_public_event('abcdefgh')"],
+      ['call star_public_event', "select public.star_public_event('abcdefgh')"],
+      ['create a table in public', 'create table public.zz_camps_registrar_probe (x integer)'],
+      ['create a schema', 'create schema zz_camps_registrar_probe'],
+    ];
+    let allRefused = true;
+    const leaks = [];
+    for (const [label, sql] of refused) {
+      try {
+        await cdb.exec('set role camps_registrar;');
+        await cdb.exec(sql);
+        allRefused = false;
+        leaks.push(label);
+      } catch (error) {
+        if (!/permission denied|must be a member|not allowed/i.test(error.message)) {
+          allRefused = false;
+          leaks.push(`${label} (unexpected error: ${error.message})`);
+        }
+      } finally {
+        await cdb.exec('reset role;').catch(() => {});
+      }
+    }
+    record(`${L}[camps registrar] every table, the counter, writes, staff functions, helpers, the other forms and CREATE refused`,
+      allRefused, leaks.join('; '));
+    try {
+      await cdb.exec('set role camps_registrar;');
+      const r = await cdb.query("select public.camp_public_camp('zzzzzzzz') as r");
+      record(`${L}[camps registrar] can call camp_public_camp`, r.rows[0].r?.status === 'not_found', JSON.stringify(r.rows[0].r));
+    } catch (error) {
+      record(`${L}[camps registrar] can call camp_public_camp`, false, error.message);
+    } finally {
+      await cdb.exec('reset role;').catch(() => {});
+    }
+    const crossed = [];
+    for (const role of ['testing_registrar', 'star_registrar']) {
+      for (const sql of ["select public.camp_public_camp('zzzzzzzz')",
+        `select public.camp_public_signup('zzzzzzzz', 'k', gen_random_uuid(), '[]'::jsonb, 'a', '5085550100', 'b', 'c', '5085550101', 'd', 'cash', true, '${TEST_SIGNATURE}', '${CAMP_ACK_VERSION}', 'x', 0)`]) {
+        try {
+          await cdb.exec(`set role ${role};`);
+          await cdb.exec(sql);
+          crossed.push(`${role}: ${sql.slice(7, 40)}`);
+        } catch (error) {
+          if (!/permission denied/i.test(error.message)) crossed.push(`${role}: ${sql.slice(7, 40)} (${error.message})`);
+        } finally {
+          await cdb.exec('reset role;').catch(() => {});
+        }
+      }
+    }
+    record(`${L}[camps registrar] testing_registrar and star_registrar can't run the camp functions`, crossed.length === 0, crossed.join('; '));
+  };
+
+  // e. the seeded TEST camp: written as the SQL Editor would (postgres,
+  // labelled), then two families sign up AS camps_registrar, then one
+  // check-in and one payment (written directly, labelled)
+  const seedCamp = async (cdb) => {
+    const ok = await run(cdb, `${L}seed a TEST camp (Worcester, 2 days, open)`, `
+      begin;
+      select set_config('request.jwt.claims', '', true);
+      select set_config('tkd.actor_label', 'PGlite test camp', true);
+      select set_config('tkd.action', 'seed', true);
+      select set_config('tkd.batch_id', gen_random_uuid()::text, true);
+      insert into public.camps (location_code, both_schools, name, start_time, end_time, signup_opens_on, signup_closes_on,
+                                early_until, min_age, max_age, description, waiver_text, public_code, created_by_name, updated_by_name)
+      values ('worcester', false, 'PGlite Vacation Camp', '09:00', '15:00', public.testing_today() - 1, public.testing_today() + 1,
+              public.testing_today() + 1, 5, 12, 'Bring a lunch.', 'I agree to the camp rules.', '${CAMP_CODE}', '', '');
+      insert into public.camp_days (camp_id, day)
+      select c.id, public.testing_today() + x from public.camps c, generate_series(0, 1) as x where c.public_code = '${CAMP_CODE}';
+      insert into public.camp_prices (camp_id, day_count, member_early_cents, member_regular_cents, nonmember_early_cents, nonmember_regular_cents)
+      select c.id, k, 7500 * k, 8000 * k, 8500 * k, 9000 * k from public.camps c, generate_series(1, 2) as k where c.public_code = '${CAMP_CODE}';
+      insert into public.camp_extras (camp_id, name, price_cents, per, not_for_all_days, sort)
+      select c.id, 'Early drop-off', 1500, 'day', false, 0 from public.camps c where c.public_code = '${CAMP_CODE}';
+      select set_config('tkd.actor_label', '', true);
+      select set_config('tkd.action', '', true);
+      select set_config('tkd.batch_id', '', true);
+      commit;`);
+    if (!ok) return false;
+    const ids = (await cdb.query(`select (select array_agg(d.id::text order by d.day) from public.camp_days d where d.camp_id = c.id) as days,
+        (select e.id::text from public.camp_extras e where e.camp_id = c.id) as extra,
+        md5(c.waiver_text) as waiver from public.camps c where c.public_code = '${CAMP_CODE}'`)).rows[0];
+    let signedUp = 0;
+    // Pat: 2 days member early $150 + drop-off on day 1 $15; Kim and Sam
+    // Ray: 1 day non-member early $85 each
+    const families = [
+      [[{ first_name: 'Pat', last_name: 'Lee', age: 8, member: true, day_ids: ids.days, extras: [{ extra_id: ids.extra, day_ids: [ids.days[0]] }] }], 16500],
+      [[{ first_name: 'Kim', last_name: 'Ray', age: 9, member: false, day_ids: [ids.days[0]], extras: [] },
+        { first_name: 'Sam', last_name: 'Ray', age: 6, member: false, day_ids: [ids.days[1]], extras: [] }], 17000],
+    ];
+    for (const [children, total] of families) {
+      try {
+        await cdb.exec('set role camps_registrar;');
+        const r = await cdb.query(
+          `select public.camp_public_signup($1, $2, gen_random_uuid(), $3::jsonb, 'Test Parent', '5085550100', 'Parent',
+                  'Test Contact', '5085550101', 'Friend', 'cash', true, $4, $5, $6, $7) as r`,
+          [CAMP_CODE, 'pglite-camp-client-key', JSON.stringify(children), TEST_SIGNATURE, CAMP_ACK_VERSION, ids.waiver, total]);
+        if (r.rows[0].r?.status === 'ok') signedUp += 1;
+        else record(`${L}sign up ${children[0].first_name} as camps_registrar`, false, JSON.stringify(r.rows[0].r));
+      } catch (error) {
+        record(`${L}sign up ${children[0].first_name} as camps_registrar`, false, error.message);
+      } finally {
+        await cdb.exec('reset role;').catch(() => {});
+      }
+    }
+    record(`${L}two family sign-ups (3 children) made AS camps_registrar`, signedUp === 2, `${signedUp} ok`);
+    await run(cdb, `${L}one check-in and one payment for the TEST camp`, `
+      begin;
+      select set_config('tkd.actor_label', 'PGlite test camp', true);
+      select set_config('tkd.action', 'seed', true);
+      update public.camp_camper_days cd set checked_in_at = now(), checked_in_by_name = 'PGlite test camp'
+        from public.camp_campers c, public.camp_days d
+       where c.id = cd.camper_id and d.id = cd.day_id and c.first_name = 'Pat' and d.day = public.testing_today();
+      insert into public.camp_payments (camper_id, kind, amount_cents, method, paid_on, school, recorded_by_name)
+      select c.id, 'payment', 16500, 'cash', public.testing_today(), 'worcester', 'PGlite test camp' from public.camp_campers c where c.first_name = 'Pat';
+      select set_config('tkd.actor_label', '', true);
+      select set_config('tkd.action', '', true);
+      commit;`);
+    const c = (await cdb.query(`select (select count(*)::int from public.camp_campers) as campers,
+        (select count(*)::int from public.camp_signups where signature is not null) as signatures,
+        (select count(*)::int from public.camp_camper_days where checked_in_at is not null) as checked_in,
+        (select count(*)::int from public.camp_payments) as payments,
+        (select count(*)::int from public.camp_public_attempts) as attempts,
+        (select count(*)::int from public.change_log where coalesce(before::text, '') || coalesce(after::text, '') like '%data:image%') as pictures`)).rows[0];
+    record(`${L}3 campers, 2 signatures, 1 check-in, 1 payment, 2 attempt rows, no picture in change_log`,
+      c.campers === 3 && c.signatures === 2 && c.checked_in === 1 && c.payments === 1 && c.attempts === 2 && c.pictures === 0,
+      JSON.stringify(c));
+    return true;
+  };
+
+  // the fresh database, in production's order
+  console.log('\nMigration 0013 (Camps), on its own fresh database:');
+  const cdb = await buildBase(L);
+  if (!cdb) return null;
+  // the live order (as step0016_after_new_students): 0003-0006, 0010, the
+  // new-students files, 0015, 0011 as production got it (the 2026-10-19
+  // copy, then today's over it), 0019, 0014, 0020 - what production had
+  // when 0013 + 0017 were pasted on 2026-10-20 (0018 came after them)
+  for (const file of ['0003_testing_classes_ranks.sql', '0004_staff_accounts.sql', '0005_testing_events.sql',
+    '0006_star_testing.sql', '0010_testing_results.sql', '0007_schedule.sql', '0008_calendar.sql', '0009_forms.sql',
+    '0012_prospects.sql', '0015_family_history.sql']) {
+    if (!(await run(cdb, `${L}apply ${file}`, read('migrations', file)))) return null;
+  }
+  if (!(await run(cdb, `${L}apply 0011 as pasted on production 2026-10-19 (fixture)`,
+    readFileSync(path.join(here, 'fixtures', '0011_as_applied_2026-10-19.sql'), 'utf8')))) return null;
+  for (const file of ['0011_finance.sql', '0019_school_phone.sql', '0014_testing_private.sql', '0020_session_id_claims.sql']) {
+    if (!(await run(cdb, `${L}apply ${file}`, read('migrations', file)))) return null;
+  }
+
+  // a. connector-safe fingerprints file
+  record(`${L}0013_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)`,
+    !/delete|drop/i.test(read('tests', '0013_fingerprints.sql')));
+
+  // b. apply 0013; the earlier fingerprints don't move
+  const earlierBefore = await earlier(cdb);
+  if (!(await run(cdb, `${L}apply 0013_camps.sql`, read('migrations', '0013_camps.sql')))) return null;
+  record(`${L}0003-0012 / 0014 / 0015 / 0019 / 0020 fingerprints identical before/after 0013`,
+    JSON.stringify(earlierBefore) === JSON.stringify(await earlier(cdb)), `${earlierBefore.length} rows`);
+
+  // c. the tests
+  await campTests(cdb, 'no camp yet');
+  await earlierTests(cdb, 'after 0013');
+  await runTestFile(cdb, `${L}0004_tests.sql (after 0013)`, '0004_tests.sql', 'ALL 0004 TESTS PASSED');
+  await runTestFile(cdb, `${L}0003_tests.sql (after 0013)`, '0003_tests.sql', 'ALL 0003 TESTS PASSED');
+  await runTestFile(cdb, `${L}0002_tests.sql (after 0013)`, '0002_tests.sql', 'ALL 0002 TESTS PASSED');
+  await runTestFile(cdb, `${L}verify_pin_tests.sql (after 0013)`, 'verify_pin_tests.sql', 'ALL PIN TESTS PASSED');
+
+  // d. live checks as the camp form's login
+  await liveChecks(cdb);
+
+  // e. a seeded TEST camp, then the tests again
+  if (await seedCamp(cdb)) await campTests(cdb, 'with the TEST camp');
+
+  // f. re-run safety
+  const before13 = await fingerprints(cdb, '0013_fingerprints.sql');
+  const dataBefore = await one(cdb, snapshotSql);
+  await run(cdb, `${L}apply 0013 a SECOND time (re-run safety)`, read('migrations', '0013_camps.sql'));
+  record(`${L}0013 re-run kept every row unchanged (11 camp tables, change_log)`, dataBefore === (await one(cdb, snapshotSql)));
+  const after13 = await fingerprints(cdb, '0013_fingerprints.sql');
+  record(`${L}0013 fingerprints identical before/after re-run`, JSON.stringify(before13) === JSON.stringify(after13), `${after13.length} rows`);
+  record(`${L}earlier fingerprints still identical after the 0013 re-run`,
+    JSON.stringify(earlierBefore) === JSON.stringify(await earlier(cdb)));
+  await campTests(cdb, 'after re-run');
+  await earlierTests(cdb, 'after the 0013 re-run');
+  await liveChecks(cdb);
+
+  // 19b. 0017 (camp payments in Finance) on this production-order
+  // database: Color Belt / Star lines identical, tests, re-run, and its
+  // Undo (which must come BEFORE the Undo 0013)
+  await stepFinanceCamps(cdb, `${L}[0017] `, true);
+
+  // g. the Undo 0013 script, exactly as SETUP.md has it (the first sql
+  // block after its "### ... Undo 0013" heading)
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### [0-9]+[a-z]?\. Undo 0013/m);
+  const block = at < 0 ? null : setup.slice(at).match(/```sql\n([\s\S]*?)```/);
+  if (!block) {
+    record(`${L}[undo 0013] find the script in SETUP.md`, false, 'no sql block after a "### .. Undo 0013" heading');
+  } else if (await run(cdb, `${L}[undo 0013] the SQL block of SETUP.md`, block[1])) {
+    const left = (await cdb.query(`select string_agg(x, ', ') as left from (
+        select 'relation ' || c.relname as x from pg_class c join pg_namespace n on n.oid = c.relnamespace
+         where n.nspname = 'public' and (c.relname = 'camps' or c.relname like 'camp\\_%')
+        union all
+        select 'function ' || p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+         where n.nspname = 'public' and (p.proname like 'camp\\_%' or p.proname like 'camps\\_%')
+        union all
+        select 'type ' || t.typname from pg_type t join pg_namespace n on n.oid = t.typnamespace
+         where n.nspname = 'public' and (t.typname = 'camps' or t.typname like 'camp\\_%')
+        union all
+        select 'role ' || r.rolname from pg_roles r where r.rolname = 'camps_registrar') as q`)).rows[0].left;
+    record(`${L}[undo 0013] no camp object and no camps_registrar left`, left === null, left ?? '');
+    record(`${L}[undo 0013] earlier fingerprints equal a database that never had 0013`,
+      JSON.stringify(earlierBefore) === JSON.stringify(await earlier(cdb)));
+    await earlierTests(cdb, 'after Undo 0013');
+    await runTestFile(cdb, `${L}0003_tests.sql (after Undo 0013)`, '0003_tests.sql', 'ALL 0003 TESTS PASSED');
+  }
+  return after13;
+}
+
+// ---------------------------------------------------------------------
+// stepFinanceCamps: camp payments in Finance (0017) - rulebook v0.707
+// ---------------------------------------------------------------------
+// 0017 runs after 0011 and 0013 and replaces five Finance functions so
+// camp payments count as a third source. Checked here:
+//   19a. on the MAIN database (it has the Color Belt and Star sample
+//        payments of steps 11c / 12e / 14d): 0013 is put on, then every
+//        Finance answer the app uses (the Daily report of both schools for
+//        today and yesterday, Both, History, Export + preview, the detail
+//        of every payment) is taken as an admin, 0017 is applied, and the
+//        answers must be IDENTICAL (no camp payment exists yet); then
+//        0017_tests.sql, 0011_tests.sql and 0013_tests.sql; 0017 applied a
+//        second time (no row, no fingerprint changes); last the "Undo
+//        0017" of SETUP.md: the 0011 fingerprints equal a database that
+//        never had 0017, and 0011_tests.sql passes
+//   19b. (in stepCamps, f2) the same on the production-order database
+//   19c. SPEED: a fresh database with 0011's big seed + a big camp seed
+//        (finance_camps_perf_seed.sql); every Finance function timed, the
+//        export's camp total must equal the money in camp_payments, a busy
+//        camp day can be closed; once sorting text byte by byte (PGlite)
+//        and once like production (ICU en-US), with 0017_tests.sql and
+//        0011_tests.sql there too
+const CAMPS_ADMIN_SID = '44444444-4444-4444-8444-444444444444';
+
+// An unlocked admin session for the rest of this connection (like the
+// speed check's). Returns a function that ends it again.
+async function campsAdminSession(db) {
+  await db.exec(`insert into auth.sessions (id, user_id) values ('${CAMPS_ADMIN_SID}', '${ADMIN_UID}') on conflict do nothing;
+    delete from public.session_unlock where session_id = '${CAMPS_ADMIN_SID}';
+    insert into public.session_unlock (session_id, staff_id, unlocked_until) values ('${CAMPS_ADMIN_SID}', '${ADMIN_UID}', now() + interval '1 hour');`);
+  const claims = JSON.stringify({ sub: ADMIN_UID, role: 'authenticated', session_id: CAMPS_ADMIN_SID,
+    amr: [{ method: 'password', timestamp: Math.floor(Date.now() / 1000) - 60 }] });
+  await db.query(`select set_config('request.jwt.claims', $1, false)`, [claims]);
+  return async () => { await db.query(`select set_config('request.jwt.claims', '', false)`); };
+}
+
+// Every Finance answer the app uses, for today and yesterday, as one text
+// (payment details: every chain of those two days, in a fixed order).
+// "onlyOld" = the database already has camp payments (step 19b), so a
+// school's day that HAS camp money differs on purpose after 0017. Then:
+//   * a Daily report of such a (school, day) is compared by its Color Belt
+//     / Star lines only; every other Daily report is compared whole
+//   * Both: the boxes of schools without camp money that day, whole
+//   * History: the days (rows) of schools / days without camp money, whole
+//     (unclosed_count is left out only when such a row was left out)
+//   * the export preview: whole for a school with no camp money in the
+//     range, else left out (a marker says so)
+async function campsFinanceAnswers(db, onlyOld = false) {
+  const end = await campsAdminSession(db);
+  try {
+    const q = async (sql) => (await db.query(sql)).rows[0].r;
+    const campDays = new Set((await db.query(`select distinct p.school || '|' || p.paid_on::text as k
+        from public.camp_payments p`)).rows.map((r) => r.k));
+    const hasCamp = (school, day) => onlyOld && campDays.has(`${school}|${day}`);
+    const campSchool = (school) => onlyOld && [...campDays].some((k) => k.startsWith(`${school}|`));
+    const out = [];
+    for (const day of ['public.testing_today() - 1', 'public.testing_today()']) {
+      for (const school of ['worcester', 'shrewsbury']) {
+        const a = await q(`select public.finance_day('${school}', ${day}) as r`);
+        out.push(hasCamp(school, a.day) ? { cb_star_items: a.items.filter((x) => x.source !== 'camp') } : a);
+      }
+      const both = await q(`select public.finance_day_both(${day}) as r`);
+      const kept = both.schools.filter((x) => !hasCamp(x.code, both.day));
+      out.push(kept.length === both.schools.length ? both : { day: both.day, schools: kept });
+    }
+    for (const school of [null, 'worcester', 'shrewsbury']) {
+      const h = await q(`select public.finance_history(${school ? `'${school}'` : 'null'}, public.testing_today()) as r`);
+      const kept = h.days.filter((x) => !hasCamp(x.school, x.day));
+      out.push(kept.length === h.days.length ? h : { month: h.month, days: kept });
+    }
+    for (const school of ['worcester', 'shrewsbury']) {
+      out.push(campSchool(school) ? `preview ${school}: has camp money, left out`
+        : await q(`select public.finance_export_preview('${school}', public.testing_today() - 30, public.testing_today()) as r`));
+    }
+    const chains = (await db.query(`select distinct m.source, m.payment_id::text as id
+        from public.finance_money_rows(null, public.testing_today() - 1, public.testing_today()) m
+       where m.source in ('color_belt', 'star') order by 1, 2`)).rows;
+    for (const c of chains) out.push(await q(`select public.finance_payment_detail('${c.source}', '${c.id}') as r`));
+    return JSON.stringify({ out, chains: chains.length });
+  } finally {
+    await end();
+  }
+}
+
+// Export rows (a write: it logs one finance_exports row) are compared on
+// their own, inside a transaction that is rolled back.
+async function campsExportRows(db, onlyOld = false) {
+  const end = await campsAdminSession(db);
+  try {
+    await db.exec('begin;');
+    const rows = [];
+    for (const school of ['worcester', 'shrewsbury']) {
+      const r = (await db.query(`select public.finance_export('${school}', public.testing_today() - 30, public.testing_today()) as r`)).rows[0].r;
+      rows.push(onlyOld ? { ...r, rows: (r.rows ?? []).filter((x) => x.what !== 'camp') } : r);
+    }
+    return JSON.stringify(rows);
+  } finally {
+    await db.exec('rollback;').catch(() => {});
+    await end();
+  }
+}
+
+// The "Undo 0017" of SETUP.md: step 1 re-run 0011, step 2 its SQL block
+// (the first sql block after the "### ... Undo 0017" heading).
+async function campsUndo0017(db, tag) {
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### [0-9]+[a-z]?\. Undo 0017/m);
+  const block = at < 0 ? null : setup.slice(at).match(/```sql\n([\s\S]*?)```/);
+  if (!block) {
+    record(`${tag}[undo 0017] find the script in SETUP.md`, false, 'no sql block after a "### .. Undo 0017" heading');
+    return false;
+  }
+  if (!(await run(db, `${tag}[undo 0017] step 1: re-run 0011_finance.sql`, read('migrations', '0011_finance.sql')))) return false;
+  return run(db, `${tag}[undo 0017] step 2: the SQL block of SETUP.md`, block[1]);
+}
+
+// 19a / 19b on a database that has 0011 + 0013 (and Color Belt / Star
+// payments). onlyOld: that database already has camp payments.
+async function stepFinanceCamps(db, tag, onlyOld = false) {
+  record(`${tag}0017_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)`,
+    !/delete|drop/i.test(read('tests', '0017_fingerprints.sql')));
+  const prints11 = await fingerprints(db, '0011_fingerprints.sql');
+  const before = await campsFinanceAnswers(db, onlyOld);
+  const exportBefore = await campsExportRows(db, onlyOld);
+  if (!(await run(db, `${tag}apply 0017_finance_camps.sql`, read('migrations', '0017_finance_camps.sql')))) return null;
+  const after = await campsFinanceAnswers(db, onlyOld);
+  const exportAfter = await campsExportRows(db, onlyOld);
+  record(`${tag}Color Belt and Star answers identical before/after 0017 (Daily report, Both, History, Export, preview, details)`,
+    before === after && exportBefore === exportAfter, `${JSON.parse(before).chains} payment chains, ${before.length} characters`);
+  await runTestFile(db, `${tag}0017_tests.sql`, '0017_tests.sql', 'ALL 0017 TESTS PASSED');
+  await runTestFile(db, `${tag}0011_tests.sql (after 0017)`, '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+  await runTestFile(db, `${tag}0013_tests.sql (after 0017)`, '0013_tests.sql', 'ALL 0013 TESTS PASSED');
+  // re-run safety
+  const prints17 = await fingerprints(db, '0017_fingerprints.sql');
+  const rowsSql = `select md5(coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.finance_day_closing_items x), '')
+      || coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.camp_payments x), '')
+      || (select count(*) from public.change_log)::text)`;
+  const rowsBefore = await one(db, rowsSql);
+  await run(db, `${tag}apply 0017 a SECOND time (re-run safety)`, read('migrations', '0017_finance_camps.sql'));
+  record(`${tag}0017 re-run: no row changed, fingerprints identical`,
+    rowsBefore === (await one(db, rowsSql)) && JSON.stringify(prints17) === JSON.stringify(await fingerprints(db, '0017_fingerprints.sql')),
+    `${prints17.length} rows`);
+  await runTestFile(db, `${tag}0017_tests.sql (after re-run)`, '0017_tests.sql', 'ALL 0017 TESTS PASSED');
+  // Undo 0017 (SETUP.md)
+  if (await campsUndo0017(db, tag)) {
+    record(`${tag}[undo 0017] the 0011 fingerprints equal a database that never had 0017`,
+      JSON.stringify(prints11) === JSON.stringify(await fingerprints(db, '0011_fingerprints.sql')));
+    await runTestFile(db, `${tag}[undo 0017] 0011_tests.sql`, '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+  }
+  return prints17;
+}
+
+// 19c. Speed and right answers with realistic volume, on a fresh database
+// (icu = sort text like production).
+async function campsFinanceSpeed(icu) {
+  const tag = icu ? '[camps icu] ' : '[camps speed] ';
+  const { mkdtempSync, rmSync } = await import('node:fs');
+  const os = await import('node:os');
+  const dir = icu ? mkdtempSync(path.join(os.tmpdir(), 'tkd-pglite-icu-camps-')) : null;
+  let db = null;
+  try {
+    if (icu) {
+      const maker = new PGlite({ dataDir: dir, extensions: { pgcrypto } });
+      await maker.exec(`create database tkd_icu template template0 encoding 'UTF8' locale_provider icu icu_locale 'en-US' locale 'C'`);
+      await maker.close();
+      db = new PGlite({ dataDir: dir, database: 'tkd_icu', extensions: { pgcrypto } });
+      const order = await db.query(`select string_agg(x, ' ' order by x) as o from (values ('camp'), ('color_belt'), ('star'), ('~end')) as v(x)`);
+      record(`${tag}the database sorts text like production (~end first)`, order.rows[0].o === '~end camp color_belt star', order.rows[0].o);
+      if (!(await buildBase(tag, db))) return;
+    } else {
+      db = await buildBase(tag);
+      if (!db) return;
+    }
+    if (!(await run(db, `${tag}0003 + seed + 0004 + 0005 + 0006 + 0010 + 0011 + 0013 + 0017`,
+      read('migrations', '0003_testing_classes_ranks.sql') + '\n' + builtInSeedSql() + '\n'
+      + read('migrations', '0004_staff_accounts.sql') + '\n' + read('migrations', '0005_testing_events.sql') + '\n'
+      + read('migrations', '0006_star_testing.sql') + '\n' + read('migrations', '0010_testing_results.sql') + '\n'
+      + read('migrations', '0011_finance.sql') + '\n' + read('migrations', '0013_camps.sql') + '\n'
+      + read('migrations', '0017_finance_camps.sql')))) return;
+    await runTestFile(db, `${tag}0017_tests.sql (empty database)`, '0017_tests.sql', 'ALL 0017 TESTS PASSED');
+    await runTestFile(db, `${tag}0011_tests.sql (empty database)`, '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+    const t0 = Date.now();
+    if (!(await run(db, `${tag}big seeds (finance_perf_seed.sql + finance_camps_perf_seed.sql)`,
+      readFileSync(path.join(here, 'finance_perf_seed.sql'), 'utf8') + '\n'
+      + readFileSync(path.join(here, 'finance_camps_perf_seed.sql'), 'utf8')))) return;
+    const counts = (await db.query(`select (select count(*) from public.testing_payments) + (select count(*) from public.star_payments) as old,
+        (select count(*) from public.camp_payments) as camp`)).rows[0];
+    record(`${tag}about 11,000 Color Belt / Star rows and 4,000 camp rows`, Number(counts.old) > 10000 && Number(counts.camp) > 3500,
+      `${counts.old} + ${counts.camp} rows in ${Date.now() - t0} ms`);
+    const end = await campsAdminSession(db);
+    const today = await one(db, 'select public.testing_today()::text');
+    const busy = await one(db, `select paid_on::text from public.camp_payments group by paid_on order by count(*) desc, paid_on limit 1`);
+    const chain = await one(db, `select p.id::text from public.camp_payments p join public.camp_campers c on c.id = p.camper_id
+       where c.last_name = 'Camp 14' and p.kind = 'payment' and p.amount_cents = 7500`);
+    const answers = {};
+    const timed = async (label, sql, params = []) => {
+      try {
+        await db.exec('set role authenticated;');
+        const t = performance.now();
+        const r = await db.query(sql, params);
+        const ms = Math.round(performance.now() - t);
+        const status = r.rows[0].r?.status;
+        record(`${tag}${label} under 2 s`, status === 'ok' && ms < 2000, `${ms} ms, ${status}`);
+        return r.rows[0].r;
+      } catch (error) {
+        record(`${tag}${label} under 2 s`, false, error.message);
+        return null;
+      } finally {
+        await db.exec('reset role;').catch(() => {});
+      }
+    };
+    for (const [label, sql] of [
+      ['finance_day (Worcester, today)', `select public.finance_day('worcester', '${today}') as r`],
+      ['finance_day (Shrewsbury, the busiest camp day)', `select public.finance_day('shrewsbury', '${busy}') as r`],
+      ['finance_day_both (the busiest camp day)', `select public.finance_day_both('${busy}') as r`],
+      ['finance_history (both schools, this month)', `select public.finance_history(null, '${today}') as r`],
+      ['finance_payment_detail (a camp payment: edited and moved to the other school)', `select public.finance_payment_detail('camp', '${chain}') as r`],
+      ['finance_home', 'select public.finance_home() as r'],
+      ['finance_export (Worcester, 366 days)', `select public.finance_export('worcester', date '${today}' - 365, '${today}') as r`],
+      ['finance_export (Shrewsbury, 366 days)', `select public.finance_export('shrewsbury', date '${today}' - 365, '${today}') as r`],
+      ['finance_export_preview (Shrewsbury, 366 days)', `select public.finance_export_preview('shrewsbury', date '${today}' - 365, '${today}') as r`],
+    ]) answers[label] = await timed(label, sql);
+    // right answers: the export's counted camp money = the money in camp_payments at that school
+    for (const school of ['worcester', 'shrewsbury']) {
+      const label = `finance_export (${school === 'worcester' ? 'Worcester' : 'Shrewsbury'}, 366 days)`;
+      const rows = answers[label]?.rows ?? [];
+      const exported = rows.filter((r) => r.what === 'camp').reduce((n, r) => n + r.counted_cents, 0);
+      const money = Number(await one(db, `select coalesce(sum(amount_cents), 0) from public.camp_payments where school = '${school}'`));
+      record(`${tag}${school}: the export's camp total equals the camp money taken there; rows of all three sources`,
+        exported === money && money > 0 && ['camp', 'color_belt', 'star'].every((w) => rows.some((r) => r.what === w)),
+        `export ${exported}, camp_payments ${money}, ${rows.length} rows`);
+    }
+    const detail = answers['finance_payment_detail (a camp payment: edited and moved to the other school)'];
+    record(`${tag}the camp payment's detail: edited to $80 cash at the other school`,
+      detail?.item?.source === 'camp' && detail?.item?.amount_cents === 8000 && detail?.item?.school === 'shrewsbury'
+        && detail?.history?.length === 2, JSON.stringify(detail?.item ?? detail));
+    // Close the busiest camp day at Shrewsbury with what it expects
+    await db.exec('set role authenticated;');
+    const d = (await db.query(`select public.finance_day('shrewsbury', '${busy}') as r`)).rows[0].r;
+    await db.exec('reset role;');
+    const campItems = (d.items ?? []).filter((i) => i.source === 'camp' && ['counted', 'edited', 'moved_in'].includes(i.state));
+    record(`${tag}the busiest camp day has camp lines with event_name`, campItems.length > 0
+      && campItems.every((i) => i.event_name === 'PGlite Perf Camp'), `${campItems.length} counting camp lines`);
+    const closed = await timed('finance_close_day (the busiest camp day)', `select public.finance_close_day('shrewsbury', '${busy}', $1, $2, $3, $4, $5, 'speed check') as r`,
+      [d.fingerprint, d.totals.cash.cents + d.refunds.cash_cents, d.totals.check.count, d.totals.check.cents, d.totals.card.cents]);
+    record(`${tag}the close expected exactly the day's money`, closed?.results?.cash?.result === 'matches'
+      && closed?.results?.card?.result === 'matches', JSON.stringify(closed?.results));
+    await end();
+    await runTestFile(db, `${tag}0017_tests.sql (with the big seeds)`, '0017_tests.sql', 'ALL 0017 TESTS PASSED');
+  } catch (error) {
+    record(`${tag}the camp finance speed database`, false, error.message);
+  } finally {
+    if (db) await db.close().catch(() => {});
+    if (dir) rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 function finish() {

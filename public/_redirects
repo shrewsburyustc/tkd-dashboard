@@ -7,6 +7,10 @@
 # /register by itself ("pretty URLs"), and pointing at the .html name can cause a redirect loop.
 /register/*  /register  200
 
+# The camp sign-up page works the same way (contract 0013 §4.1): every /camp/<code> address
+# serves the ONE camp page, camp.html (Pages calls it /camp), and the page reads the code.
+/camp/*  /camp  200
+
 # The public Forms page (build plan §3): every family link looks like /f/<name> (e.g.
 # /f/free-class-instagram), served by the one page forms.html in the same way. Pages serves
 # forms.html at /forms by itself ("pretty URLs"), so both lines point at /forms. (/f alone, with

@@ -11,9 +11,12 @@
 // register.html (the public family registration form, /register/<code>). On Cloudflare,
 // public/_redirects serves register.html for every /register/<code> address; on this PC the
 // small plugin below does the same for `npm run dev`, `dev:preview-mode` and `vite preview`.
-// A third page, forms.html (the public Forms page, /f/<name>, build plan §3), works the same way
-// with its own small plugin (formsPageRewrite) and its own line in public/_redirects.
-// A fourth page, star.html (the public Star testing registration form, /star/<code>, Star build
+// More pages work the same way: camp.html (the public camp sign-up form, /camp/<code>, contract
+// 0013 §4.1) shares registerPageRewrite below; forms.html (the public Forms page, /f/<name>, build
+// plan §3) has its own small plugin (formsPageRewrite); black-belt.html (the public Black Belt
+// testing registration form, /black-belt/<code>, contract 0016-B1 §4.1) has its own too
+// (blackBeltPageRewrite). Each has its own line in public/_redirects.
+// One more page, star.html (the public Star testing registration form, /star/<code>, Star build
 // phase 4), is added ONLY while the Star build switch is on — the same rule as src/lib/features.js
 // (VITE_STAR_TESTING 'on' → on; 'off' → off; anything else → on in preview mode only). So the live
 // build (switch off) has no Star page or code at all; its rewrite (starPageRewrite) is added the
@@ -24,8 +27,6 @@
 //     when .env.local has no VITE_STAR_TESTING=on. What goes live is decided by Cloudflare's setting.
 //   - `npm run dev` with the switch off still SERVES the file /star.html on this PC (Vite's dev server
 //     serves any page file in the folder); only the /star/<code> rewrite and the build leave it out.
-// A fourth page, black-belt.html (the public Black Belt testing registration form,
-// /black-belt/<code>, contract 0016-B1 §4.1), works the same way again (blackBeltPageRewrite).
 import { fileURLToPath } from 'node:url';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -39,13 +40,16 @@ import react from '@vitejs/plugin-react';
 // preview inside a worktree ignore every edit (it kept showing the code from when it started).
 const worktreesDir = fileURLToPath(new URL('./.claude/worktrees/', import.meta.url)).replace(/\\/g, '/').toLowerCase();
 
-// /register, /register/ and /register/<code> (with or without ?query) → register.html,
-// like public/_redirects does on Cloudflare. Everything else is left alone.
+// /register, /register/ and /register/<code> (with or without ?query) → register.html, and
+// /camp, /camp/ and /camp/<code> → camp.html, like public/_redirects does on Cloudflare.
+// Everything else is left alone.
 function registerPageRewrite() {
   const rewrite = (req, _res, next) => {
     const [path, query] = (req.url ?? '').split('?');
     if (path === '/register' || path.startsWith('/register/')) {
       req.url = '/register.html' + (query !== undefined ? `?${query}` : '');
+    } else if (path === '/camp' || path.startsWith('/camp/')) {
+      req.url = '/camp.html' + (query !== undefined ? `?${query}` : '');
     }
     next();
   };
@@ -161,11 +165,12 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), registerPageRewrite(), formsPageRewrite(), blackBeltPageRewrite(), ...(star ? [starPageRewrite()] : []), starRedirects(star)],
     build: {
       rollupOptions: {
-        // The pages of the build (black-belt.html always; star.html only while the Star switch is on).
+        // The pages of the build (camp.html and black-belt.html always; star.html only while the Star switch is on).
         input: {
           main: resolve(root, 'index.html'),
           register: resolve(root, 'register.html'),
           forms: resolve(root, 'forms.html'),
+          camp: resolve(root, 'camp.html'),
           blackBelt: resolve(root, 'black-belt.html'),
           ...(star ? { star: resolve(root, 'star.html') } : {}),
         },
@@ -177,7 +182,7 @@ export default defineConfig(({ mode }) => {
     },
     optimizeDeps: {
       // Only look for the app's libraries starting from our own pages.
-      entries: ['index.html', 'register.html', 'forms.html', 'black-belt.html', ...(star ? ['star.html'] : [])],
+      entries: ['index.html', 'register.html', 'forms.html', 'camp.html', 'black-belt.html', ...(star ? ['star.html'] : [])],
     },
   };
 });

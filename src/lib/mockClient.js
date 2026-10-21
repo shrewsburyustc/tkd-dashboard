@@ -88,6 +88,17 @@
 //   __tkdPreview.failNextSave()           also makes the next Reset password / Reset PIN fail
 //   __tkdPreview.resetStaffAccounts()     the fake desk is signed in on 3 devices again
 //   __tkdPreview.setPasswordAgeMinutes(11) → a reset asks for "Confirm it's you" again
+// Camps helpers (contract 0013 §5.4; mockCamps.js + camps/publicApi.preview.js; data in
+// localStorage 'tkd.preview.camps'; setRole, failNextSave, failSavesUntilRetry, reconnect,
+// setTestingDelay, setToday and simulateOtherAdminEdit cover Camps too):
+//   __tkdPreview.resetCamps()             back to the default camps, campers and templates
+//   __tkdPreview.campWeek()               today = Wed, Apr 21, 2027 (April Vacation Camp week),
+//                                         camps reset + reload — to see Check in
+//   __tkdPreview.setCampsRegistration(false) the camp form's kill switch
+//   __tkdPreview.simulateFamilySignup()   a sign-up as if from a phone (first open camp; or pass a
+//                                         code, and { duplicateOf: 'Ava Thompson' } for a duplicate)
+//   __tkdPreview.forcePriceChanged(true)  the next camp Send answers price_changed (+$5)
+//   __tkdPreview.forceCampChanged(true)   the next camp Send answers camp_changed
 // Finance helpers (contract 0011 §3, mockFinance.js; setToday, setRole and failNextSave cover Finance too —
 // failNextSave makes the next Finance save fail, e.g. Close the day):
 //   __tkdPreview.setNow('19:30')          pretend the school clock says 7:30 PM (Home reminder); null = real time
@@ -125,6 +136,8 @@ import {
   STAR_CANDIDATE_WRITE_RPC_NAMES, STAR_CANDIDATE_TABLES,
 } from './mockStarCandidates.js';
 import { STAR_GRADING_RPC_NAMES, STAR_GRADING_WRITE_RPC_NAMES } from './mockStarGrading.js';
+import { createCampsBackend, CAMP_RPC_NAMES, CAMP_RESTRICTED_RPC_NAMES, CAMP_READ_RPC_NAMES, CAMP_TABLES } from './mockCamps.js';
+import { publicCampHelpers } from './camps/publicApi.preview.js';
 import { createScheduleBackend, SCHEDULE_RPC_NAMES } from './mockSchedule.js';
 import { createCalendarBackend, CALENDAR_RPC_NAMES } from './mockCalendar.js';
 import { createFormsBackend, FORMS_RPC_NAMES } from './mockForms.js';
@@ -139,6 +152,7 @@ const OLD_PIN_STATE_KEY = 'tkd.preview.pinState'; // used by the first build; cl
 const TESTING_KEY = 'tkd.preview.testing'; // fake Testing tables (classes + ranks)
 const TESTING_DELAY_KEY = 'tkd.preview.testingDelay'; // setTestingDelay(ms), kept across reloads
 const STAFF_ACCOUNTS_KEY = 'tkd.preview.staffAccounts'; // fake Staff accounts (mockStaff.js)
+const CAMPS_KEY = 'tkd.preview.camps'; // fake Camps tables (mockCamps.js)
 const SCHEDULE_KEY = 'tkd.preview.schedule'; // fake Schedule tables (mockSchedule.js)
 const CALENDAR_KEY = 'tkd.preview.calendar'; // fake Calendar tables (mockCalendar.js)
 const FORMS_KEY = 'tkd.preview.forms'; // fake Forms tables (mockForms.js)
@@ -554,6 +568,15 @@ export function createMockClient() {
     today: previewToday, // the real school date, or the one set with setToday
     newId: newUuid,
   });
+  // ----- Camps (mockCamps.js) — its own store; the schools' names / addresses come from Testing -----
+  const camps = createCampsBackend({
+    loadStore: () => JSON.parse(readStorage(CAMPS_KEY)), // missing/damaged → default data
+    saveStore: (store) => writeStorage(CAMPS_KEY, JSON.stringify(store)),
+    now: () => Date.now(),
+    today: previewToday,
+    newId: newUuid,
+    locations: () => events.snapshot().locations,
+  });
   // ----- Black Belt testing (src/lib/blackBelt/mockBlackBelt.js) -----
   // Its own store; the schools' names and addresses come from the Events store above.
   const blackBelt = createBlackBeltBackend({
@@ -686,6 +709,7 @@ export function createMockClient() {
           if (table === 'forms' || table.startsWith('form_') || table === 'prospect_statuses') return forms.select(table, query.columns, query.filters, query.orders, testingContext());
           if (BB_TABLES.includes(table)) return blackBelt.select(table, query.columns, query.filters, query.orders, testingContext());
           // Phase 2 tables (and locations, which gained the address columns) → mockTestingEvents.js.
+          if (CAMP_TABLES.includes(table)) return camps.select(table, query.columns, query.filters, query.orders, testingContext());
           if (EVENT_TABLES.includes(table)) return events.select(table, query.columns, query.filters, query.orders, testingContext());
           // Star testing's roster view and make-up subjects → mockStarCandidates.js (checked before
           // the events, which list star_roster too for their own phase 2 checks).
@@ -708,6 +732,7 @@ export function createMockClient() {
     loadStore: () => JSON.parse(readStorage(FINANCE_KEY)), // missing/damaged → the default sample
     saveStore: (store) => writeStorage(FINANCE_KEY, JSON.stringify(store)),
     readColorBelt: () => events.snapshot(),
+    readCamps: () => camps.snapshot(), // camp payments are Finance's third source (v0.707)
     now: () => Date.now(),
     today: previewToday, // the real school date, or the one set with setToday
     newId: newUuid,
@@ -755,6 +780,18 @@ export function createMockClient() {
     if (STAFF_RPC_NAMES.includes(name)) {
       await wait(FAKE_DELAY_MS);
       return staffAccounts.rpc(name, args, staffContext());
+    }
+    if (CAMP_RPC_NAMES.includes(name) || CAMP_RESTRICTED_RPC_NAMES.includes(name)) {
+      await wait(testingDelay());
+      const isSave = CAMP_RPC_NAMES.includes(name) && !CAMP_READ_RPC_NAMES.includes(name);
+      if (eventSavesOffline && isSave) {
+        return { data: null, error: { message: 'Failed to fetch (preview: failSavesUntilRetry)' }, status: 0 };
+      }
+      if (failNextTesting && isSave) {
+        failNextTesting = false;
+        camps.failNextSave();
+      }
+      return camps.rpc(name, args, testingContext());
     }
     if (SCHEDULE_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
@@ -879,8 +916,8 @@ export function createMockClient() {
       saveStaffState(staff);
       return `The preview account is now ${role === 'admin' ? 'an admin' : 'staff (view only)'}. Reload the page to see it.`;
     },
-    // failNextSave()            → the next Color Belt Testing/Events, Black Belt or Finance save (and
-    //                            Reset password / PIN) fails.
+    // failNextSave()            → the next Color Belt Testing/Events, Camps, Black Belt or Finance save
+    //                            (and Reset password / PIN) fails.
     // failNextSave('star')      → the next Star testing save (Rubrics and prices, events or candidates) fails.
     // failNextSave('blackBelt') → the next Black Belt save fails.
     failNextSave(target) {
@@ -892,10 +929,10 @@ export function createMockClient() {
         blackBelt.failNextSave();
         return 'The next Black Belt save will fail like a dropped connection and change nothing.';
       }
-      if (target !== undefined) return "Use failNextSave() for Color Belt, Black Belt, Finance and Staff accounts, failNextSave('blackBelt') for Black Belt only, or failNextSave('star') for Star testing.";
+      if (target !== undefined) return "Use failNextSave() for Color Belt, Camps, Black Belt, Finance and Staff accounts, failNextSave('blackBelt') for Black Belt only, or failNextSave('star') for Star testing.";
       failNextTesting = true;
       staffAccounts.failNext();
-      return 'The next Testing save (and the next Reset password / Reset PIN) will fail like a dropped connection and change nothing.';
+      return 'The next Testing or Camps save (and the next Reset password / Reset PIN) will fail like a dropped connection and change nothing.';
     },
     resetStaffAccounts() {
       staffAccounts.reset();
@@ -906,8 +943,9 @@ export function createMockClient() {
       events.simulateOtherAdminEdit();
       star.simulateOtherAdminEdit();
       starEvents.simulateOtherAdminEdit();
+      camps.simulateOtherAdminEdit();
       blackBelt.simulateOtherAdminEdit();
-      return 'Another admin changed every class, rank, event, student and school address, and swapped two ranks — and changed Star testing\'s rubrics and prices, events and candidates, and every Black Belt cycle and candidate, the keep-years settings and the waiver. Open dialogs and Undo are now out of date.';
+      return 'Another admin changed every class, rank, event, student, school address, camp, camper and template, and swapped two ranks — and changed Star testing\'s rubrics and prices, events and candidates, and every Black Belt cycle and candidate, the keep-years settings and the waiver. Open dialogs and Undo are now out of date.';
     },
     clearSchool(school) {
       if (!testing.clearSchool(school)) return "Use clearSchool('Worcester') or clearSchool('Shrewsbury').";
@@ -1048,6 +1086,8 @@ export function createMockClient() {
     },
     // ----- Events / family form helpers (publicApi.preview.js) -----
     ...publicPreviewHelpers(),
+    // ----- Camps helpers (camps/publicApi.preview.js) -----
+    ...publicCampHelpers(),
     // ----- Public Forms page helpers (src/forms/publicApi.preview.js). forceRateLimited above
     // stays Color Belt's; the forms one is called forceFormsRateLimited here (on the /f/<name>
     // page itself it is plain forceRateLimited). -----

@@ -22,6 +22,8 @@
 // ("#testing/star/event/<id>").
 // Color Belt phase 4 adds a private testing's grading page ("#testing/private/<id>", or with the
 // switch on "#testing/color-belt/private/<id>"; contract 0014 §5.1); leaving it is guarded the same way.
+// Camps (contract 0013 §6.1) adds "#camps", "#camps/templates" and a camp's page
+// ("#camps/camp/<id>", with "/checkin", "/payments" or "/attendance" for its tabs).
 // Finance (contract 0011 §4) adds three: the Daily report ("#finance"), History ("#finance/history")
 // and Finance → Settings ("#finance/settings") — the last two for admins only (staff are sent to
 // "#finance"). While "Hide private details" is on for this device (v0.215, renamed v0.506), every "#finance…" address
@@ -66,6 +68,7 @@ import Toast from './components/Toast.jsx';
 import SignIn from './screens/SignIn.jsx';
 import Home from './screens/Home.jsx';
 import Testing from './screens/Testing.jsx';
+import Camps from './screens/Camps.jsx';
 import Schedule from './screens/Schedule.jsx';
 import Calendar from './screens/Calendar.jsx';
 import Forms from './screens/Forms.jsx';
@@ -110,6 +113,7 @@ const PAGE_TITLES = {
 const SECTION_TITLES = {
   home: 'Home · U.S. Taekwondo Center',
   testing: 'Testing · U.S. Taekwondo Center',
+  camps: 'Camps · U.S. Taekwondo Center',
   schedule: 'Schedule · U.S. Taekwondo Center',
   calendar: 'Calendar · U.S. Taekwondo Center',
   forms: 'Forms · U.S. Taekwondo Center',
@@ -134,9 +138,11 @@ const TOASTS = {
 // ----- Page addresses -----
 // lib/pageAddress.js reads and writes every address (Home, Testing and its pages, a Color Belt
 // event and its Grading tab, a private testing's grading page (Color Belt phase 4), a Star event,
-// Staff accounts, Settings, Finance and its views). A "route" is
+// Camps and a camp's page, Staff accounts, Settings, Finance and its views). A "route" is
 // { section, testingPage, eventId, eventTab, privateId } — see the top of that file. (Finance keeps
-// its view, 'report' | 'history' | 'settings', in the eventTab slot.)
+// its view, 'report' | 'history' | 'settings', in the eventTab slot; Camps keeps the open camp's id
+// in eventId and its tab — 'camps' | 'templates' on the list, 'default' | 'checkin' | 'payments' |
+// 'attendance' on a camp's page — in eventTab, contract 0013 §6.1.)
 
 // If telling the database "lock this sign-in" fails (offline), try again this often until it works.
 const LOCK_RETRY_EVERY_MS = 30 * 1000;
@@ -169,7 +175,8 @@ export default function App() {
   const [notice, setNotice] = useState(null); // { id, text } for the sign-in screen
   const [deviceLocation, setDeviceLocation] = useState(loadDeviceLocation); // this device's default
   const [location, setLocation] = useState(loadDeviceLocation); // the switcher's current value
-  // Which page is open: 'home' | 'testing' | 'schedule' | 'calendar' | 'forms' | 'staffAccounts'. Staff accounts isn't a rail section
+  // Which page is open: 'home' | 'testing' | 'camps' | 'schedule' | 'calendar' | 'forms' |
+  // 'prospects' | 'finance' | 'staffAccounts' | 'settings'. Staff accounts isn't a rail section
   // (it opens from the account menu), so no rail item is highlighted while it shows (v0.76).
   // It starts from the address in the browser bar (v0.83): a reload, a bookmark or a link to
   // ".../#testing" opens Testing once the person is signed in and unlocked.
@@ -185,6 +192,7 @@ export default function App() {
   const [privateId, setPrivateId] = useState(() => routeFromAddress().privateId);
   const [accountDialog, setAccountDialog] = useState(null); // null | 'changePin' | 'changePassword'
   const [testingModalOpen, setTestingModalOpen] = useState(false); // a Testing dialog is showing
+  const [campsModalOpen, setCampsModalOpen] = useState(false); // a Camps dialog is showing
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false); // a Schedule dialog is showing
   const [calendarModalOpen, setCalendarModalOpen] = useState(false); // a Calendar dialog is showing
   const [formsModalOpen, setFormsModalOpen] = useState(false); // a Forms dialog is showing
@@ -594,11 +602,14 @@ export default function App() {
   // Options (all optional):
   //   testingPage: on Testing, which page: 'chooser' | 'colorBelt' | 'star'. Left out = Testing's
   //                default — the chooser while the Star testing switch is on, Color Belt while off.
-  //   eventId:     on Color Belt or Star testing, the event whose page opens (null = the tabs).
+  //   eventId:     on Color Belt or Star testing, the event whose page opens (null = the tabs); on
+  //                Camps, the camp whose page opens (null = the list).
   //   eventTab:    the event page's tab, 'students' | 'grading' ('students' unless said otherwise —
   //                opening an event lands on Students; contract 0010 §4.1); on Star testing's
   //                home, 'events' (the default) | 'rubrics'; on Finance its view, 'report' (the
-  //                default — the rail opens the Daily report) | 'history' | 'settings'.
+  //                default — the rail opens the Daily report) | 'history' | 'settings'; on Camps the
+  //                list's 'camps' (the default) | 'templates', or a camp's 'default' | 'checkin' |
+  //                'payments' | 'attendance'.
   //                `tab` is the same thing.
   //   privateId:   Color Belt phase 4 — the private testing whose grading page opens (null = none).
   //                It is always a Color Belt page, so asking for it opens Color Belt (an event id
@@ -612,7 +623,8 @@ export default function App() {
       // Switch off: Testing has only the Color Belt page, whatever was asked for — and a Star event's
       // id is dropped, so it can never become a Color Belt event address.
       const starAskedWhileOff = !STAR_TESTING_ON && nextPage === 'star';
-      const nextEvent = id === 'testing' && !starAskedWhileOff ? nextEventId : null;
+      // (Camps keeps its open camp's id in the same slot.)
+      const nextEvent = (id === 'testing' && !starAskedWhileOff) || id === 'camps' ? nextEventId : null;
       // A private testing only opens on Testing, and never together with an event.
       const nextPrivate = id === 'testing' && !nextEvent && !starAskedWhileOff ? nextPrivateId : null;
       const askedPage = nextPrivate ? 'colorBelt' : nextPage;
@@ -711,6 +723,30 @@ export default function App() {
   // like every other way off a Color Belt event page (the guard is only set while one is open).
   const openTestingPage = useCallback((page) => guarded(() => navigate('testing', { testingPage: page })), [navigate, guarded]);
 
+  // The Camps section's ways in and out (Camps.jsx → CampsTab / CampPage).
+  // campSchoolFollow: the camp opened from a Finance payment ("Open in Camps"). A camp payment can be
+  // paid at the other school, so the switcher isn't moved to the payment's school; instead, if the
+  // camp isn't shown on the current school, its page moves the switcher to the camp's own school
+  // once (CampPage.jsx) rather than going back to the list. null = a normal opening.
+  const [campSchoolFollow, setCampSchoolFollow] = useState(null);
+  const openCamp = useCallback((id) => {
+    setCampSchoolFollow(null);
+    navigate('camps', { eventId: id, tab: 'default' });
+  }, [navigate]);
+  // { replace: true } = the page closes itself (the camp is for the other school, or was deleted).
+  const closeCamp = useCallback((options) => {
+    setCampSchoolFollow(null);
+    navigate('camps', { ...options, eventId: null, tab: 'camps' });
+  }, [navigate]);
+  // Camps | Templates, and Check in | Payments | Attendance: the same page, so no new history step
+  // (Back still leaves the page; a reload keeps the tab).
+  const changeCampTab = useCallback((tab) => {
+    const next = routeTab('camps', null, eventIdRef.current, tab);
+    const route = { section: 'camps', testingPage: null, eventId: eventIdRef.current, eventTab: next, privateId: null };
+    window.history.replaceState(window.history.state, '', addressForRoute(route));
+    setEventTab(next);
+  }, []);
+
   // ----- Browser Back / Forward (rulebook v0.83) -----
   // 'popstate' = the browser moved to another step of its history (Back, Forward, or an address
   // typed by hand). Read the page from the new address and follow it — except:
@@ -769,6 +805,7 @@ export default function App() {
       // a private testing's grading page is a page of its own, apart from the Color Belt tabs.)
       if (samePage(route, current)) {
         // Same page; only the event tab may differ (an address typed by hand): switch it, never asked.
+        // (Camps: also Camps ↔ Templates on the list, and a camp's tabs — hasAddressTabs.)
         if (hasAddressTabs(route) && route.eventTab !== eventTabRef.current && phaseRef.current === 'home') setEventTab(route.eventTab);
         return;
       }
@@ -850,6 +887,13 @@ export default function App() {
   // Star testing switch is on).
   const openTestingFor = useCallback(
     (school, eventId = null, source = null) => {
+      // A camp payment's detail opens the camp's page in Camps (Camps v0.707) WITHOUT moving the
+      // switcher to the payment's school (see campSchoolFollow above).
+      if (source === 'camp') {
+        setCampSchoolFollow(eventId ?? null);
+        navigate('camps', { eventId: eventId ?? null, tab: eventId ? 'payments' : 'camps' });
+        return;
+      }
       if (school && school !== 'Both' && school !== location) changeLocation(school);
       if (source === 'color_belt' && eventId) navigate('testing', { testingPage: 'colorBelt', eventId });
       else navigate('testing');
@@ -896,7 +940,7 @@ export default function App() {
   }, [phase, profile, section, refreshBadge]);
   const dialogOpen = phase === 'home' && profile !== null && accountDialog !== null;
   // The page behind a dialog can't be clicked or reached with Tab (account or Testing dialog).
-  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || scheduleModalOpen || calendarModalOpen || formsModalOpen || prospectsModalOpen || staffModalOpen || settingsModalOpen || financeModalOpen));
+  const shellInert = dialogOpen || (phase === 'home' && (testingModalOpen || campsModalOpen || scheduleModalOpen || calendarModalOpen || formsModalOpen || prospectsModalOpen || staffModalOpen || settingsModalOpen || financeModalOpen));
   // Finance is in the rail / bottom bar unless payments are hidden on this device (navItems.js).
   showFinanceInNav(!paymentsHidden);
 
@@ -980,6 +1024,31 @@ export default function App() {
                 showToast={showToast}
                 clearToast={clearToast}
                 onModalOpenChange={setTestingModalOpen}
+              />
+            )}
+            {section === 'camps' && (
+              <Camps
+                location={location}
+                // For showing or hiding controls only — the database decides what may change.
+                isAdmin={profile.role === 'admin'}
+                campId={eventId}
+                campTab={eventTab}
+                onCampTab={changeCampTab}
+                onOpenCamp={openCamp}
+                onCloseCamp={closeCamp}
+                // This device's home school: a camp payment lands in its Daily report (owner decision 2026-10-19).
+                deviceLocation={deviceLocation}
+                followSchoolFor={campSchoolFollow}
+                onLocationChange={(next) => {
+                  setCampSchoolFollow(null);
+                  changeLocation(next);
+                }}
+                screenLocked={phase === 'locked'}
+                onNoAccess={handleNoAccess}
+                onRefreshProfile={refreshProfile}
+                showToast={showToast}
+                clearToast={clearToast}
+                onModalOpenChange={setCampsModalOpen}
               />
             )}
             {section === 'schedule' && (

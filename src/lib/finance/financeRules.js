@@ -53,11 +53,11 @@ const msOf = (iso) => Date.parse(iso);
 const sameLogin = (a, b) => a !== null && a !== undefined && a === b;
 
 // Reads one stored row into the shape the chain rules use. Color Belt rows name their owner
-// registration_id, Star rows candidate_id; either may be given as owner_id instead.
+// registration_id, Star rows candidate_id, Camp rows camper_id (v0.707); any may be given as owner_id instead.
 function normalizeRow(row) {
   return {
     ...row,
-    owner_id: row.owner_id ?? row.registration_id ?? row.candidate_id ?? null,
+    owner_id: row.owner_id ?? row.registration_id ?? row.candidate_id ?? row.camper_id ?? null,
     reverses_payment_id: row.reverses_payment_id ?? null,
     recorded_by: row.recorded_by ?? null,
     ms: msOf(row.recorded_at),
