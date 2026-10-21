@@ -386,3 +386,14 @@
     gap: 0;
   }
 }
+
+/* ===== Hide private details (rulebook v0.506) =====
+   The Private testing list without price, Paying by, Payment, Paid on and Mark paid:
+   (PC: Day · time) · Student · Testing for · ⋯ */
+.pv-list.is-hidden .pv-row:not(.is-phone) {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.5fr) 44px;
+}
+
+.pv-list.is-hidden.is-wide .pv-row:not(.is-phone) {
+  grid-template-columns: 88px minmax(0, 1.2fr) minmax(0, 1.6fr) 44px;
+}

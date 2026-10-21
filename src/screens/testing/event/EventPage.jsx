@@ -34,6 +34,14 @@
 // testing, Tue, Dec 1") and their payment moves with them to the Private testing tab. A moved
 // Removed row has no ⋯ for staff; admins get Open private testing and a grayed Restore (with the
 // reason) — no Delete permanently. Everything else on this page is phase 3 exactly.
+//
+// Follows "Hide private details" (v0.506, v0.507 Q2), the same way as Star's Candidates tab: while
+// the device switch is on, only the Students card shows (no Paid / Not paid / Payments recorded),
+// the roster has no payment columns, tags or Mark paid, the ⋯ menu has no Change how they'll pay /
+// Edit payment / Undo payment, and the dialogs name no amount. Turning it on closes an open payment
+// dialog, clears the Paid / Not paid filter, closes the ⋯ menu and clears the toast (it may name
+// money or carry a payment Undo). Color Belt keeps no date of birth or email, so it is money only.
+// The Grading tab's gray "Not paid" tag stays (exception, v0.250).
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import {
   IconAlertTriangle,
@@ -55,6 +63,7 @@ import Dialog from '../../../components/Dialog.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../../../lib/device.js';
+import { usePrivateDetailsHidden } from '../../../lib/privateDetails.js';
 import { centsToInputText } from '../../../lib/money.js';
 import { loadSchools } from '../../../lib/settings/schoolsApi.js';
 import { loadClassesAndRanks } from '../../../lib/testing/api.js';
@@ -97,7 +106,7 @@ import NoteDialog, { checkNote, isNoteDirty } from './NoteDialog.jsx';
 import { EditPaymentDialog, PayingByDialog, checkEditPayment, isEditPaymentDirty, isPayingByDirty } from './PaymentDialogs.jsx';
 import MoveToPrivateDialog, { checkMove, isMoveDirty } from './MoveToPrivateDialog.jsx';
 import RegistrationLinkDialog from './RegistrationLinkDialog.jsx';
-import RosterRows from './RosterRows.jsx';
+import RosterRows, { hasStatusTag } from './RosterRows.jsx';
 import StudentDialog, { checkStudentForm, isStudentFormDirty } from './StudentDialog.jsx';
 import { useGradingSaves } from './useGradingSaves.js';
 import * as T from '../text.js';
@@ -112,6 +121,8 @@ const gradingClassPicked = new Set();
 
 const BLOCKING_NOTES = ['STALE_DIALOG', 'NOT_ALLOWED', 'FINISHED', 'ALREADY_PAID', 'STUDENT_LOCKED', 'MOVE_HAS_RESULT'];
 const TABS = ['students', 'grading'];
+// The dialogs that are about money: closed when Hide private details is switched on.
+const PAYMENT_DIALOGS = ['paying', 'payment'];
 
 const find = (selector) => document.querySelector(selector);
 const rowEl = (id) => find(`[data-nav-row="${id}"]`);
@@ -179,6 +190,7 @@ export default function EventPage({
   const isTouch = useMediaQuery(TOUCH_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const layout = { isPhone, isTouch, isWide };
+  const [hidden] = usePrivateDetailsHidden(); // Hide private details (v0.506)
 
   // ----- State -----
   const [classSel, setClassSelState] = useState(() => classByEvent.get(eventId) ?? null);
@@ -314,6 +326,31 @@ export default function EventPage({
   }, [menuRowGone]);
   useEffect(() => () => onModalOpenChange(false), [onModalOpenChange]);
 
+  // Hide private details switched on: no payment dialog, payment filter, menu or toast may stay
+  // (as Star's Candidates tab, G4).
+  const hiddenBeforeRef = useRef(hidden);
+  useEffect(() => {
+    const switchedOn = hidden && !hiddenBeforeRef.current; // a change, not the first drawing
+    hiddenBeforeRef.current = hidden;
+    if (!switchedOn) return;
+    const d = dialogRef.current;
+    // (Even mid-save: the save still finishes, and its toast names no amount.)
+    if (d && PAYMENT_DIALOGS.includes(d.type)) {
+      setDialog(null);
+      focusAfterClose(d);
+    }
+    setFilter(null);
+    setMenu(null);
+    // A toast may name money ("marked paid · $65 cash") or carry a payment Undo: it goes too.
+    clearToast();
+    // So does every banner: a failed Mark paid / Undo payment keeps a Retry that records money,
+    // and "already marked paid" names paid status. The row's Not saved mark goes with it.
+    setBanner(null);
+    setNotSavedId(null);
+    // (only when the switch changes)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hidden]);
+
   // ===== Derived data =====
   const rankById = new Map(classes.flatMap((c) => c.ranks.map((r) => [r.id, r])));
   const classById = new Map(classes.map((c) => [c.id, c]));
@@ -342,10 +379,13 @@ export default function EventPage({
   // Class switch order first (so each class's rows stay together), then belt order.
   const groupOrder = (a, b) => (classPos.get(a.eventClassId) ?? 0) - (classPos.get(b.eventClassId) ?? 0) || order(a, b);
   let rows = active.filter(inGroup).sort(groupOrder);
-  if (filter === 'paid') rows = rows.filter((r) => r.paid);
-  if (filter === 'notPaid') rows = rows.filter((r) => !r.paid);
+  // (No Paid / Not paid filter while private details are hidden, even for the one drawing before
+  // the switch-on effect above clears it.)
+  const shownFilter = hidden ? null : filter;
+  if (shownFilter === 'paid') rows = rows.filter((r) => r.paid);
+  if (shownFilter === 'notPaid') rows = rows.filter((r) => !r.paid);
   // Removed students of the whole group, in one Removed group after the classes.
-  const removedRows = group && filter === null ? removed.filter(inGroup).sort(groupOrder) : [];
+  const removedRows = group && shownFilter === null ? removed.filter(inGroup).sort(groupOrder) : [];
   // v0.195: a small heading per class when classes test together ("Group B · 3 students");
   // a class with nobody shown is left out. One class alone: no heading (as before).
   const isGroup = groupClasses.length > 1;
@@ -975,7 +1015,9 @@ export default function EventPage({
     setBanner((current) => (current?.kind === 'row' ? null : current));
     reloadQuiet();
     const paymentId = result.paymentId;
-    showToast(T.markedPaidToast(name, result.amountCents, result.method), {
+    // Hide private details switched on while this was saving: the toast names no amount.
+    const toastText = hiddenBeforeRef.current ? T.TOAST_CHANGES_SAVED : T.markedPaidToast(name, result.amountCents, result.method);
+    showToast(toastText, {
       icon: false,
       action: {
         label: T.UNDO,
@@ -1050,13 +1092,15 @@ export default function EventPage({
       rowId: row.id,
       name,
       title: T.deleteStudentTitle(name),
-      body: T.deleteStudentBody(
+      // The warning's parts; the sentence is written when drawn, so it follows Hide private details
+      // even if the switch changes while the dialog is open.
+      bodyParts: [
         fresh.event.name,
         counted ? { cents: counted.amountCents, method: counted.method, paidOn: counted.paidOn } : null,
         // Phase 3 (G8): the warning names the testing result (or the grading note) too.
         freshRow.graded ? { result: freshRow.result ?? null, resultAt: freshRow.resultAt ?? null, hasNote: freshRow.note !== null && freshRow.note !== undefined } : null,
         freshRow.firstName,
-      ),
+      ],
       args: { registrationId: row.id, expectedVersion: freshRow.version, expectedPaymentIds: mine.map((p) => p.id) },
       index: rows.findIndex((r) => r.id === row.id),
       opener: anchor,
@@ -1219,12 +1263,14 @@ export default function EventPage({
       return { title: name, subtitle: T.movedTag(row.movedTo.privateDate), label: T.moreForStudent(name), items };
     }
     if (row.status === 'active') {
+      // Hide private details (v0.506): no payment items (Change how they'll pay, Edit / Undo payment).
+      const moneyShown = !hidden;
       items.push({ key: 'edit', label: T.EDIT_DETAILS, Icon: IconEdit, onSelect: () => openEdit(row, anchor) });
       // Phase 4: right after Edit details, all staff (P5)
       if (canMoveToPrivate(row)) items.push({ key: 'move', label: T.MOVE_TO_PRIVATE, Icon: IconArrowRight, onSelect: () => openMove(row, anchor) });
-      if (!row.paid) items.push({ key: 'paying', label: T.CHANGE_PAYING_BY, Icon: NoIcon, onSelect: () => openPayingBy(row, anchor) });
+      if (moneyShown && !row.paid) items.push({ key: 'paying', label: T.CHANGE_PAYING_BY, Icon: NoIcon, onSelect: () => openPayingBy(row, anchor) });
       if (row.duplicateState === 'possible') items.push({ key: 'review', label: T.REVIEW_DUPLICATE, Icon: IconAlertTriangle, onSelect: () => openCompareFor(row, anchor) });
-      if (isAdmin && row.paid) {
+      if (moneyShown && isAdmin && row.paid) {
         items.push({ key: 'editpay', label: T.EDIT_PAYMENT, Icon: IconCashEdit, separatorBefore: groupStart(), onSelect: () => openEditPayment(row, anchor) });
         items.push({ key: 'undopay', label: T.UNDO_PAYMENT, Icon: IconArrowBackUp, disabled: busy, onSelect: () => doUndoPayment(row) });
       }
@@ -1314,12 +1360,17 @@ export default function EventPage({
     </button>
   );
 
-  const cards = [
+  const allCards = [
     { key: null, label: T.CARD_STUDENTS, Icon: IconUsers, value: active.length },
     { key: 'paid', label: T.CARD_PAID, Icon: IconCheck, value: paidCount },
     { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconClock, value: active.length - paidCount },
     { key: 'money', label: T.CARD_PAYMENTS, Icon: IconSum, value: T.dollars(paymentsTotal) }, // ti-sum = a money total (v0.303)
   ];
+  // Hide private details: only the Students card (as Star's G4).
+  const cards = hidden ? allCards.slice(0, 1) : allCards;
+  // Hide private details: the Status column shows only when a shown row has a tag that isn't about
+  // money (Possible duplicate, Not saved, Removed / Duplicate copy) — Star's G4 rule.
+  const showStatusCol = !hidden || [...rows, ...(removedOpen ? removedRows : [])].some((r) => hasStatusTag(r, notSavedId));
 
   const ctx = {
     layout,
@@ -1330,6 +1381,8 @@ export default function EventPage({
     menuFor: menu?.id ?? null,
     selectedId: dialog && !screenLocked && dialog.rowId ? dialog.rowId : null,
     notSavedId,
+    hidden,
+    showStatusCol,
     tableLabel: group ? T.groupFullName(groupClasses.map((c) => c.className)) : T.TAB_STUDENTS,
     handlers: {
       onOpen: (row) => openView(row, rowEl(row.id)),
@@ -1340,8 +1393,8 @@ export default function EventPage({
   };
 
   let emptyText = T.EMPTY_CLASS_ROSTER;
-  if (filter === 'paid') emptyText = T.NO_STUDENTS_FILTERED_PAID;
-  if (filter === 'notPaid') emptyText = T.NO_STUDENTS_FILTERED_NOT_PAID;
+  if (shownFilter === 'paid') emptyText = T.NO_STUDENTS_FILTERED_PAID;
+  if (shownFilter === 'notPaid') emptyText = T.NO_STUDENTS_FILTERED_NOT_PAID;
 
   // ----- The open dialog (never while locked: it comes back after unlocking) -----
   let dialogElement = null;
@@ -1361,15 +1414,16 @@ export default function EventPage({
           canEdit={record?.status === 'active'}
           graded={dialog.graded ?? null}
           beltLocked={dialog.mode === 'edit' && Boolean(dialog.graded?.graded) && dayWindow === 'after' && !isAdmin}
+          hidden={hidden}
           onTouch={touch}
           onSave={saveStudent}
           onEdit={() => record && openEdit(record, dialog.opener, true)}
           {...common}
         />
       );
-    } else if (dialog.type === 'paying') {
+    } else if (dialog.type === 'paying' && !hidden) {
       dialogElement = <PayingByDialog key={dialog.key} state={dialog} name={T.studentLabel(dialog.snapshot)} onSave={savePayingBy} {...common} />;
-    } else if (dialog.type === 'payment') {
+    } else if (dialog.type === 'payment' && !hidden) {
       dialogElement = <EditPaymentDialog key={dialog.key} state={dialog} name={T.studentLabel(dialog.snapshot)} onTouch={touch} onSave={savePayment} {...common} />;
     } else if (dialog.type === 'move') {
       const rank = rankById.get(dialog.snapshot.eventRankId);
@@ -1383,6 +1437,7 @@ export default function EventPage({
           toName={rank?.testingFor?.name ?? T.NO_NEW_RANK}
           event={event}
           today={today}
+          hidden={hidden}
           onTouch={touch}
           onSave={saveMove}
           {...common}
@@ -1403,6 +1458,7 @@ export default function EventPage({
           // v0.194: after the testing day "keep one" is admin-only, so staff don't see it
           // (the same way staff don't see Add student on a finished event).
           canKeepOne={isAdmin || dayWindow !== 'after'}
+          hidden={hidden}
           onKeep={keepOne}
           onKeepBoth={keepBoth}
           onClose={cancelDialog}
@@ -1416,7 +1472,7 @@ export default function EventPage({
         <ConfirmDeleteDialog
           key={dialog.key}
           title={dialog.title}
-          body={dialog.body}
+          body={T.deleteStudentBody(...dialog.bodyParts, hidden)}
           hint={T.DELETE_STUDENT_HINT}
           keepLabel={T.KEEP_STUDENT}
           deleteLabel={T.DELETE_PERMANENTLY}
@@ -1535,11 +1591,12 @@ export default function EventPage({
         />
       ) : (
         <div id={tabIds.panel('students')} role="tabpanel" aria-labelledby={tabIds.tab('students')}>
-          {/* Summary cards (Star v0.115): clicking Paid / Not paid filters the roster. */}
-          <div className="ev-cards">
+          {/* Summary cards (Star v0.115): clicking Paid / Not paid filters the roster.
+              Hide private details: the Students card alone (is-one). */}
+          <div className={`ev-cards${hidden ? ' is-one' : ''}`}>
             {cards.map((card) => {
               const isFilter = card.key === 'paid' || card.key === 'notPaid';
-              const pressed = isFilter && filter === card.key;
+              const pressed = isFilter && shownFilter === card.key;
               const inner = (
                 <>
                   <span className="ev-card-label">
@@ -1570,7 +1627,7 @@ export default function EventPage({
               );
             })}
           </div>
-          {filter && (
+          {shownFilter && (
             <p className="ev-filter-line">
               {filter === 'paid' ? T.SHOWING_PAID : T.SHOWING_NOT_PAID} ·{' '}
               <button type="button" className="link-button" onClick={() => setFilter(null)}>
