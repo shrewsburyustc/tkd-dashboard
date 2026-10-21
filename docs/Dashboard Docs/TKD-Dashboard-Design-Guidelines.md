@@ -117,7 +117,6 @@ Section icons are added to this table only when that section is added (rule P7).
 | Edit | `ti-edit` |
 | Delete | `ti-trash` |
 | Undo | `ti-arrow-back-up` |
-| Record refund | `ti-receipt-refund` (v0.508) |
 | Close / cancel | `ti-x` |
 | Back | `ti-arrow-left` |
 | More actions | `ti-dots` |
@@ -164,12 +163,11 @@ Section icons are added to this table only when that section is added (rule P7).
 | Close the day… (Finance: opens the counting dialog; decided v0.207 / v0.800, added to the map v0.301) | `ti-cash-register` |
 | Close the day (the dialog's button) / Day closed (decided v0.207, added to the map v0.301) | `ti-lock-check` |
 | Reopen day (Finance, admins; decided v0.207, added to the map v0.301) | `ti-lock-open` |
-| Refunds layout switch (Finance Daily report, phone ⋯ menu; decided v0.812, added to the map v0.306) | `ti-receipt-refund` |
 | Grade private testing (Star Candidates ⋯ and Color Belt's Private testing Grade; decided v0.512) | `ti-school` |
 | Edit payment (roster ⋯ menu: Color Belt events and Private testing; decided v0.409, added to the map v0.305; also Black Belt, v0.914) | `ti-cash-edit` |
 | Record payment (Black Belt Candidates: row button, detail, ⋯; decided v0.914) | `ti-cash-plus` — not `ti-cash` (cash only) and not `ti-plus` (Add new) |
 | Change plan or Kukkiwon (Black Belt; decided v0.914) | `ti-switch-horizontal` |
-| Record refund (Black Belt, admins; decided v0.914) | `ti-receipt-refund` |
+| Refunds — one meaning (decided v0.308): **Record refund** (Black Belt v0.914; Star v0.508) and Finance's **refunds layout switch** in the phone ⋯ menu (v0.812); the label next to the icon says which | `ti-receipt-refund` |
 | Mark check returned (Black Belt, admins; decided v0.914) | `ti-ban` |
 | Remove / withdraw a candidate (Color Belt Withdraw, Black Belt Remove candidate; added to the map v0.914) | `ti-user-minus` |
 
@@ -713,6 +711,7 @@ To be decided one at a time, each with visual options (rule P3):
 | Black Belt testing CP3: migration 0016 live (v0.916) | Jeffrey pasted `supabase/migrations/0016_black_belt.sql` into production on 2026-10-21 (commit 5a670d0), following `docs/Testing/Black Belt Testing/TKD-BlackBelt-CP3-RunSheet.md`. Verified read-only: 0016's fingerprints equal the tested copy (only `members=postgres` on the `bb_registrar` row differs); every earlier migration's fingerprints and a whole-database snapshot of everything outside Black Belt are identical before and after; the security advisor shows only the expected 25 "security definer executable by authenticated" (Black Belt staff functions) and 2 "RLS enabled, no policy" (`bb_candidate_waivers`, `bb_starting_point`). Tests on production: 0016, 0006, 0011, 0018 pass; 0005's T5b fails on its own timing assumption (old form-attempts rows), not on 0016. The reference counter starts at BB-5001. `bb_registrar` exists without a password (can't log in) until CP3b; registration can't open until the real waiver (CP4). |
 | Black Belt testing: the temporary way in goes live (decided v0.917; changes v0.911 OP-1) | Jeffrey chose **C** (2026-10-21): so Black Belt can go live without waiting for Star, the temporary **"Black Belt testing ›"** link at the top of Testing shows in **every** build: the preview, this PC against the real database (`Start dashboard.bat`), and the live site once black-belt is merged into `main` and he OKs that push. Staff and admins both see it (the database decides what each role may do). When Star's Testing chooser reaches `main`, step C2 replaces the link with the chooser's third row, hover-menu item and page addresses, shown to Jeffrey then. Rejected: A (also on this PC, not the live site); B (preview only, everything waits for Star). |
 | Black Belt testing CP3b + CP5: form login and Cloudflare ready, form off (v0.920) | 2026-10-21, Jeffrey: `bb_registrar` has its own password (made on his PC, saved only in his password manager as site `bb-registrar.example.com`, user `bb_registrar.eozkfbdfxqlcbpewhach`; a first password didn't match and was replaced). Cloudflare: Hyperdrive configuration `tkd-bb-registrar` (Session pooler, database `postgres`, caching disabled, verify-full with the shared Supabase CA, origin limit 5; checked read-only), the Production binding `HYPERDRIVE_BB` and the Production variable `BB_PUBLIC_REGISTRATION=off` (both as reported by Jeffrey; the Pages settings can't be read through the connector). The shared Turnstile and form settings are reused; no RATE_LIMITER binding (v0.410). Nothing deployed: the settings take effect with the next deployment, and the form stays off until CP6 (which needs the real waiver, CP4). |
+| `ti-receipt-refund` means refunds (decided v0.308) | Option A (Jeffrey, 2026-10-21; found by the Star testing session). `ti-receipt-refund` was used for two things (rule 2.3 "same icon = same meaning"): Finance's **refunds layout switch** in the Daily report's phone ⋯ menu (v0.812) and **Record refund** (Black Belt v0.914; Star v0.508). Both are about refunds, and the words beside the icon say which, so the icon now has **one meaning: refunds**, and both keep it. The icon map shows one row. No code change. Rejected: B, Finance's switch changes to `ti-list-details` and `ti-receipt-refund` means Record refund only (changes the v0.812 answer and needs a Finance code change and deploy). |
 | Approved 2026-10-16 (v0.26) | (1) **No PIN set:** when the 45-minute lock (or Lock now) happens to someone without a PIN, there is no lock screen — they are signed out to the sign-in screen with an amber note "Signed out after 45 minutes idle. Set a PIN to unlock faster." (2) **This device:** clicking it expands a Worcester / Shrewsbury choice inside the account menu; one click saves and closes (reversible, so no Save step). Sets the device's default school only; the top switcher still offers Both. (3) **Borders:** control borders use `#8F8F8A` (3:1); dividers stay `#E5E5E2`. Items (1) and (3) are coded with the Set PIN build. |
 
 ## 11. Changelog
@@ -1044,3 +1043,4 @@ To be decided one at a time, each with visual options (rule P3):
 | 0.917 | 2026-10-21 | Black Belt testing: the temporary Black Belt link shows in every build, live site included (changes v0.911) (10b). |
 | 0.920 | 2026-10-21 | Black Belt testing CP3b + CP5: bb_registrar password, Hyperdrive tkd-bb-registrar, HYPERDRIVE_BB binding, BB_PUBLIC_REGISTRATION=off; nothing deployed (10b). |
 | 0.307 | 2026-10-21 | Icon map (2.4): removed the duplicate Edit payment `ti-cash-edit` row left by the black-belt merge (the remaining row includes Black Belt, v0.914). |
+| 0.308 | 2026-10-21 | Icon map: `ti-receipt-refund` has one meaning, refunds: Record refund (Black Belt, Star) and Finance's refunds layout switch both keep it (10b). |
