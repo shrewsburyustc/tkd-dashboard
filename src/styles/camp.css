@@ -166,6 +166,34 @@
   vertical-align: 1px;
 }
 
+/* ---------- a camp longer than one week: the day buttons week by week (2026-10-21) ----------
+   "Week 1 · Oct 26 – 30" on the left, the Whole week button on the right, the week's day
+   buttons under them. The heading row wraps, so on a very narrow phone the button drops under
+   the heading instead of making the page scroll sideways. */
+.camp-week + .camp-week {
+  margin-top: 8px;
+}
+.camp-week__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  column-gap: 12px;
+  margin-top: 4px;
+}
+.camp-week__title {
+  font-size: var(--text-13);
+  font-weight: 600;
+  color: var(--color-text);
+}
+.camp-week__all {
+  margin-left: auto; /* stays on the right, also after wrapping under the heading */
+}
+/* A per-day extra's weeks (no button): the heading sits a little closer to its buttons. */
+.camp-week--extra .camp-week__head {
+  min-height: 24px;
+}
+
 /* ---------- phones ---------- */
 @media (max-width: 599px) {
   .camp-two {

@@ -3,10 +3,12 @@
 // their own card: first and last name, age (counted on the first day of camp, v0.703), member
 // Yes / No, which days (chips with the dark outline, v0.713), extras (a per-day extra asks which
 // days, starting with the child's days) and the child's running price.
+// A camp longer than one week (Mon–Sun) shows its days week by week: "Week 1 · Oct 26 – 30" with
+// a Whole week button, then that week's buttons "Mon 26" … (Jeffrey, 2026-10-21).
 // The card only draws; CampApp keeps the values and the rules live in form.js / campRules.js.
 import { FieldError, TickBox } from './parts.jsx';
 import { extraPriceLabel, extrasFor, fieldId, isLimited, offeredDayIds, onlyOnLines, priceFor, tidyChild } from './form.js';
-import { formatDollars, monthDay, shortDate } from './format.js';
+import { formatDollars, monthDay, shortDate, weekdayAndNumber, weekRange, weeksOf } from './format.js';
 import { normalizeName } from '../lib/testing/names.js';
 import * as T from './text.js';
 
@@ -24,6 +26,13 @@ export default function ChildCard({ child, index, camp, kind, update, onRemove, 
 
   const toggleDay = (dayId) =>
     change((cur) => ({ dayIds: cur.dayIds.includes(dayId) ? cur.dayIds.filter((id) => id !== dayId) : [...cur.dayIds, dayId] }));
+
+  // "Whole week": picks every day of that week; if they are all picked already, clears them.
+  const toggleWeek = (weekDayIds) =>
+    change((cur) => {
+      const all = weekDayIds.every((id) => cur.dayIds.includes(id));
+      return { dayIds: all ? cur.dayIds.filter((id) => !weekDayIds.includes(id)) : [...cur.dayIds, ...weekDayIds.filter((id) => !cur.dayIds.includes(id))] };
+    });
 
   const toggleExtra = (extra, ticked) =>
     change((cur) => {
@@ -49,6 +58,30 @@ export default function ChildCard({ child, index, camp, kind, update, onRemove, 
   const lines = onlyOnLines(camp);
   const extras = extrasFor(child, camp);
   const priced = child.member !== null && child.dayIds.length > 0 ? priceFor(child, camp, kind) : null;
+  // The camp's weeks; more than one → the day buttons are grouped by week.
+  const weeks = weeksOf(camp.days);
+  const byWeek = weeks.length > 1;
+  const firstDayId = camp.days[0]?.dayId;
+
+  // One day button of "Which days?" (the same button with or without week groups; inside a week
+  // group it reads "Mon 26" because the heading already gives the month).
+  const dayChip = (d) => (
+    <button
+      key={d.dayId}
+      id={d.dayId === firstDayId ? fieldId(key('days')) : undefined}
+      type="button"
+      className={`reg-chip${child.dayIds.includes(d.dayId) ? ' is-on' : ''}`}
+      aria-pressed={child.dayIds.includes(d.dayId)}
+      onClick={() => toggleDay(d.dayId)}
+    >
+      {byWeek ? weekdayAndNumber(d.day) : shortDate(d.day)}
+      {labelsFor(d.day).map((name) => (
+        <span key={name} className="camp-pill">
+          {name}
+        </span>
+      ))}
+    </button>
+  );
 
   return (
     <section className="reg-card camp-child" aria-labelledby={`${fieldId(c)}-title`}>
@@ -112,25 +145,29 @@ export default function ChildCard({ child, index, camp, kind, update, onRemove, 
       {/* Which days? */}
       <div className="reg-field" role="group" aria-labelledby={`${fieldId(key('days'))}-label`}>
         <div className="reg-label" id={`${fieldId(key('days'))}-label`}>{T.WHICH_DAYS}</div>
-        <div className="reg-chips">
-          {camp.days.map((d, i) => (
-            <button
-              key={d.dayId}
-              id={i === 0 ? fieldId(key('days')) : undefined}
-              type="button"
-              className={`reg-chip${child.dayIds.includes(d.dayId) ? ' is-on' : ''}`}
-              aria-pressed={child.dayIds.includes(d.dayId)}
-              onClick={() => toggleDay(d.dayId)}
-            >
-              {shortDate(d.day)}
-              {labelsFor(d.day).map((name) => (
-                <span key={name} className="camp-pill">
-                  {name}
-                </span>
-              ))}
-            </button>
-          ))}
-        </div>
+        {byWeek ? (
+          weeks.map((week, w) => {
+            const range = weekRange(week);
+            const ids = week.days.map((d) => d.dayId);
+            const all = ids.every((id) => child.dayIds.includes(id));
+            const headingId = `${fieldId(key('days'))}-week${w + 1}`;
+            return (
+              <div key={week.monday} className="camp-week" role="group" aria-labelledby={headingId}>
+                <div className="camp-week__head">
+                  <span className="camp-week__title" id={headingId}>
+                    {T.weekHeading(w + 1, range)}
+                  </span>
+                  <button type="button" className="reg-link camp-week__all" onClick={() => toggleWeek(ids)} aria-label={all ? T.clearWeekLabel(range) : T.wholeWeekLabel(range)}>
+                    {all ? T.CLEAR_WEEK : T.WHOLE_WEEK}
+                  </button>
+                </div>
+                <div className="reg-chips">{week.days.map(dayChip)}</div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="reg-chips">{camp.days.map(dayChip)}</div>
+        )}
         {lines.map((line) => (
           <div key={line.extraId} className="reg-hint">
             {line.text}
@@ -159,19 +196,14 @@ export default function ChildCard({ child, index, camp, kind, update, onRemove, 
                 </TickBox>
                 {pick && extra.per === 'day' ? (
                   <div className="reg-indent">
-                    <div className="reg-chips" role="group" aria-label={`${extra.name} · ${T.PER_DAY_WHICH}`}>
-                      {camp.days.filter((d) => offeredDayIds(extra, camp, child.dayIds).includes(d.dayId)).map((d) => (
-                        <button
-                          key={d.dayId}
-                          type="button"
-                          className={`reg-chip${pick.dayIds.includes(d.dayId) ? ' is-on' : ''}`}
-                          aria-pressed={pick.dayIds.includes(d.dayId)}
-                          onClick={() => toggleExtraDay(extra.extraId, d.dayId)}
-                        >
-                          {shortDate(d.day)}
-                        </button>
-                      ))}
-                    </div>
+                    <ExtraDays
+                      label={`${extra.name} · ${T.PER_DAY_WHICH}`}
+                      weeks={weeks}
+                      offered={offeredDayIds(extra, camp, child.dayIds)}
+                      days={camp.days}
+                      picked={pick.dayIds}
+                      onToggle={(dayId) => toggleExtraDay(extra.extraId, dayId)}
+                    />
                     <FieldError>{show(extraKey)}</FieldError>
                   </div>
                 ) : null}
@@ -184,6 +216,40 @@ export default function ChildCard({ child, index, camp, kind, update, onRemove, 
       {/* The child's running price (once member and days are chosen) */}
       {priced ? <PriceBox priced={priced} member={child.member} kind={kind} name={first || T.childTitle(index + 1)} label={(e) => extraPriceLabel(e, camp, child)} /> : null}
     </section>
+  );
+}
+
+// The day buttons of a per-day extra (e.g. "Late pick-up · which days?"). Only the days it is
+// offered on; in a camp longer than one week they are grouped under "Week 1 · Oct 26 – 30"
+// headings (no Whole week button here: the child's days already decide which weeks).
+function ExtraDays({ label, weeks, offered, days, picked, onToggle }) {
+  const chip = (d, short) => (
+    <button key={d.dayId} type="button" className={`reg-chip${picked.includes(d.dayId) ? ' is-on' : ''}`} aria-pressed={picked.includes(d.dayId)} onClick={() => onToggle(d.dayId)}>
+      {short ? weekdayAndNumber(d.day) : shortDate(d.day)}
+    </button>
+  );
+  if (weeks.length <= 1) {
+    return (
+      <div className="reg-chips" role="group" aria-label={label}>
+        {days.filter((d) => offered.includes(d.dayId)).map((d) => chip(d, false))}
+      </div>
+    );
+  }
+  return (
+    <div role="group" aria-label={label}>
+      {weeks.map((week, w) => {
+        const shown = week.days.filter((d) => offered.includes(d.dayId));
+        if (shown.length === 0) return null;
+        return (
+          <div key={week.monday} className="camp-week camp-week--extra">
+            <div className="camp-week__head">
+              <span className="camp-week__title">{T.weekHeading(w + 1, weekRange(week))}</span>
+            </div>
+            <div className="reg-chips">{shown.map((d) => chip(d, true))}</div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

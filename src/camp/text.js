@@ -36,6 +36,13 @@ export const IS_MEMBER_NO_NAME = 'Is this child a U.S.T.C. member?'; // before a
 export const YES = 'Yes';
 export const NO = 'No';
 export const WHICH_DAYS = 'Which days?';
+// A camp longer than one week shows its days week by week (Jeffrey, 2026-10-21, not in the mockups):
+// "Week 1 · Oct 26 – 30" over that week's day buttons, with a button that picks the whole week.
+export const weekHeading = (n, range) => `Week ${n} · ${range}`;
+export const WHOLE_WEEK = 'Whole week';
+export const CLEAR_WEEK = 'Clear week'; // when every day of that week is already picked
+export const wholeWeekLabel = (range) => `${WHOLE_WEEK}, ${range}`; // for screen readers
+export const clearWeekLabel = (range) => `${CLEAR_WEEK}, ${range}`; // for screen readers
 export const EXTRAS = 'Extras';
 export const perDay = (amount) => `${amount} a day`;
 export const PER_DAY_WHICH = 'which days?'; // "$8 a day · which days?"
@@ -45,6 +52,8 @@ export const dayCount = (n) => (n === 1 ? '1 day' : `${n} days`);
 // Weekly pricing (rulebook v0.717): a child coming in more than one week gets one price line per
 // week, "Week of Jul 6 · 5 days" + the amount, under "member · early price".
 export const weekLine = (monday, days) => `Week of ${monday} · ${dayCount(days)}`;
+// Step 2 adds which weekdays: "Week of Nov 2 · 2 days (Mon, Wed)" (2026-10-21, not in the mockups).
+export const weekDaysLine = (monday, days, weekdays) => `${weekLine(monday, days)} (${weekdays})`;
 // "8 days in 2 weeks" (the "You're signed up" pay lines, more than one week)
 export const daysInWeeks = (days, weeks) => `${dayCount(days)} in ${weeks} weeks`;
 export const MEMBER_WORD = 'member';
