@@ -150,3 +150,11 @@ Option B: OK on the admin's earlier-unclosed-days line hides it until a NEW uncl
 ## 13. Refunds-switch icon (decided v0.812, 2026-10-20)
 
 Main found that the phone ⋯ menu's refunds switch used `ti-receipt-refund` without a rulebook row. Jeffrey chose A: keep it (question 18, `docs/Finance/images/Finance-Q18-refund-icon.png`). No code change. The Main session adds it to the 2.4 icon map.
+
+## 14. In sync with main (2026-10-21)
+
+`git merge main` was a fast-forward to 17ae5cb: every Finance commit is on `main`, and the Home reminder OK (9f69b92) is in GitHub's `main`, so it is deployed. v0.308 (Main): `ti-receipt-refund` means refunds everywhere; the refunds switch (v0.812) keeps it. Black Belt 0016, 0020 and 0021 are live and touch no Finance function. PGlite 745/745, builds and lib checks pass. **Open:** the private-testing wording in Finance screens (after Star merges, `text.js`); Black Belt money in the Daily report (when Black Belt payments exist; its own migration).
+
+## 15. Private testing payments on screen (decided v0.813, 2026-10-21)
+
+Star merged into main (2dec585), so `text.js` was free. Question 19 (`docs/Finance/images/Finance-Q19-private-payments.png`), Jeffrey chose A: For reads "Color belt testing, private · <day>" (row, detail, print; the export file unchanged — its rows carry no private flag); history "moved it to private testing" / "undid the move"; private hint; **Open in Testing** → Color belt testing's Private testing tab (new `showPrivateTestingTabNext()` in Testing.jsx, used by App.jsx `openTestingFor`). Preview: `mockFinance.js` now reads private testings (a moved payment = one counted private line, credited to whoever took the money). Checks 62/62, both builds pass. Shared files touched: `src/App.jsx`, `src/screens/Testing.jsx`, rulebook. Design review (4 sizes): matches the picture, no blockers. Nits kept: "undid the move" isn't in the preview data (checks cover it; an undo is only possible within 10 s); focus lands on the page top after Open in Testing (same as event payments today); the Private testing tab opens on Upcoming or Past as last used, so a past private testing can need a click on Past. Committed; Color Belt + Main told.

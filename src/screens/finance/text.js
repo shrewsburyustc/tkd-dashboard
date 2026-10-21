@@ -209,6 +209,8 @@ export function refundsHead(count, cents, cashCents, checkCents) {
 export const WHAT_COLOR_BELT = 'Color belt testing';
 export const WHAT_STAR = 'Star testing';
 export const WHAT_STAR_PRIVATE = 'Star testing, private'; // NOT IN MOCKUPS — for CP1 (contract §1.3 is_private)
+// Color Belt private testing (migration 0018, rulebook v0.813): the same pattern as Star's.
+export const WHAT_COLOR_BELT_PRIVATE = 'Color belt testing, private';
 // Camp payments (Camps v0.707): the row reads "Camp · April Vacation Camp".
 export const WHAT_CAMP = 'Camp';
 export const METHOD = { cash: 'Cash', check: 'Check', card: 'Card' };
@@ -308,6 +310,8 @@ export const D_HISTORY = 'History';
 export const detailFor = (what, eventDate, school) => `${what} · ${eventDate}${school ? ` (${school})` : ''}`;
 export const recordedAt = (whenText, name) => `${whenText} by ${name}`;
 export const DETAIL_HINT = 'Payments are changed on the event’s page in Testing, not here.';
+// A Color Belt private testing payment has no event: it is changed on the Private testing tab (v0.813).
+export const DETAIL_HINT_PRIVATE = 'Payments are changed on the Private testing tab in Testing, not here.';
 export const OPEN_IN_TESTING = 'Open in Testing';
 // A camp payment's detail (Camps v0.707): the camp's days, and the way to the camp's page.
 export const D_CAMP_DAYS = 'Camp days'; // (not in the mockups)
@@ -321,6 +325,9 @@ export function historyLine(entry, previous) {
   const by = entry.by_name;
   if (entry.what === 'recorded') return `${by} recorded ${money(entry.amount_cents)} by ${methodLower(entry.method)}`;
   if (entry.what === 'undone') return `${by} undid it`; // NOT IN MOCKUPS — for CP1
+  // A move to private testing and an undone move (migration 0018, v0.813): the money didn't change.
+  if (entry.what === 'moved') return `${by} moved it to private testing`;
+  if (entry.what === 'move_undone') return `${by} undid the move`;
   if (entry.what === 'refunded') return `${by} recorded a refund of ${money(Math.abs(entry.amount_cents))} by ${methodLower(entry.method)}`; // NOT IN MOCKUPS — for CP1
   // 'edited': say what changed compared with the line before it
   const changes = [];
