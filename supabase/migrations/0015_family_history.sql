@@ -45,6 +45,8 @@
 --   old history functions and triggers, so the next family write would land
 --   in change_log - where it can never be removed - and this file would
 --   then refuse to run again (R5). Ask first if it ever seems needed.
+--   And if THIS file is ever re-run, re-run 0021 straight after (0021,
+--   rulebook v0.611, replaced this file's prospects_purge_old).
 --
 -- NOT COVERED (R6)
 --   Supabase's own backups keep deleted rows until those backups expire.

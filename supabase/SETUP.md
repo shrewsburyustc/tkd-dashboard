@@ -1132,7 +1132,7 @@ The same method as 12d, with its **own** script and its **own** password — nev
 | `TURNSTILE_SITE_KEY` | Text | the Site Key | already there (12a) — shared |
 | `TURNSTILE_SECRET` | Secret | the Secret Key | already there (12a) — shared |
 | `CLIENT_KEY_SECRET` | Secret | — | already there (12a) — shared (Forms adds "forms\|" before hashing, so its keys never match Color Belt's) |
-| `RATE_LIMITER` | Binding | — | optional, already set up or skipped in 12a step 5 — shared (Forms' keys start with "forms:") |
+| ~~`RATE_LIMITER`~~ | — | — | **replaced by rulebook v0.410:** not set up (Pages Functions can't have this binding; Workers only). The Function still uses one if it ever exists (Forms' keys start with "forms:"). Protection meanwhile: the per-server memory counter, Turnstile on Send, `forms_registrar`'s limits and the `PUBLIC_FORMS` off switch; revisit with a WAF rule once the school has its own domain. |
 
 **Turnstile:** the same widget (hostname `tkd-dashboard.pages.dev`) works; the Forms page asks for action **`form`** and the Function refuses any other action (so a Color Belt token can't be reused). If the school later gets its own web address, add that hostname to the widget and change `PUBLIC_ORIGIN` for both Functions together.
 
@@ -1387,6 +1387,69 @@ Tested in PGlite on every run (`run.mjs` step 19f, this block exactly as written
 - **Never an error:** this function runs inside every logged change. A crash on a strange value would block saving, so every bad value becomes NULL instead (the same as 0001 did for a bad uuid).
 
 ---
+
+## Migration 0018: Finance — Color Belt private testing payments in the Daily report
+
+**What it does** (`supabase/migrations/0018_finance_private.sql`, contract `docs/Dashboard Docs/Build contracts/CONTRACT-0018.md`): the Daily report, Close the day, History, Export, the payment detail, the Home reminder and the Both summary include Color Belt **private testing** payments (0014). A **Move to private testing** is a transfer: the payment's line carries on as the private row, and the day's totals, expected cash and fingerprint don't change. A closed day is **not** "changed after closing" because of a move. An **Undo move** leaves the day as it was (no "undone" line). It replaces six Finance functions, adds one index (`finance_testing_private_payments_paid_on_idx`) and changes no table, row, setting or right.
+
+**Order:** 0011 (with its speed fix, §15e) → camps' 0013 + 0017 → 0014 → **0018**. **0018 is forward-only** — there is no undo file. It is built over the Finance functions as camps' 0017 leaves them (git `fb4ec24`; every camp part kept byte for byte). A **guard** at the top of the file stops it — and changes nothing — if 0011's speed fix, 0014 or camps' 0017 is missing, or if the three Finance functions it shares with 0017 aren't exactly what 0017 at `fb4ec24` made (then 0018 must be rebuilt first). Each step needs Jeffrey's OK.
+
+### 0018-0. First: remove the CP3 test private testings (you, then Claude checks)
+Color Belt's CP3 (2026-10-19) left **2 test private testings** on production ("Jeff Berg", Worcester, $70 each = **$140**, paid 2026-10-19). 0011 doesn't count private testing money, so today the Daily report doesn't show them. Once 0018 is in, it **would** count them as real money on Oct 19. So, before 0018:
+1. **Delete both permanently**, the same way as in CP3: the local app on the real database from the `color-belt` worktree (`Start dashboard.bat`), as an admin, private testing → **Delete permanently** (the Color Belt session can walk you through it). Each delete removes the testing, its payments and its result, and is logged.
+2. Nothing else needs removing (checked by the Color Belt session, 2026-10-20): the CP3 test event was already deleted with its payments, so `testing_payments` is empty. The only test money left is these 3 private payment rows (a $50 copy moved in from that event plus a $20 top-up, and one $70). After step 0, Oct 19 has no Color Belt money.
+3. **Claude checks (read-only):** `select count(*) from public.testing_private;` must be **0**. Phase 4 isn't deployed, so there are no real private testings yet. If it isn't 0, stop.
+
+### 0018a. Before you apply 0018 (Claude, read-only)
+1. Run camps' `0017_fingerprints.sql` through the connection and compare it with the record of the PGlite run at git `fb4ec24` (camps' SETUP section for 0017): every line must match. If not, camps' 0017 on production isn't the one 0018 was built over — stop; 0018 must be rebuilt (the guard would refuse it anyway).
+2. Run `supabase/tests/0018_preapply_check.sql` through the connection. It lists the **closed** days that have private testing payments, a payment moved to a private testing **before** the day was closed, or an undone move. After 0018, days with private payments or moves-before-close **will show "Changed after closing"** — correctly: that money wasn't counted when they were closed. Undone moves don't change anything. Show Jeffrey the list; an admin can reopen and close those days again afterwards if wanted. An empty list means no closed day changes.
+
+### 0018b. Apply 0018 (you, in the SQL Editor; outside desk hours)
+1. **Outside desk hours:** building the index briefly holds back private payment writes until the paste finishes (seconds).
+2. Copy the whole file, **SQL Editor → New query**, paste, **Run**. The destructive-operations warning comes from the `drop function if exists` lines (the chain helpers are recreated straight after, with more output columns). One transaction; safe to run again.
+3. **Forward-only — don't re-run earlier Finance files after 0018:** re-running **0011** stops with "cannot change return type of existing function" and is rolled back (nothing changes). Re-running camps' **0017** runs and puts back a chain helper *without* private payments — `finance_chain_items` then fails when called and the Daily report breaks until 0018 is pasted again, so 0018 must follow straight after, in the same sitting.
+
+4. **A Daily report left open during the paste** gets one amber “Someone else changed this just now” when Close the day is pressed (0018 builds the day's fingerprint differently), then reloads — nothing is lost; just close the day again.
+
+### 0018c. Read-only checks (Claude, through the connection)
+1. `0018_fingerprints.sql`: every line matches the PGlite run (6 functions + 1 index). `0011_fingerprints.sql` and camps' `0017_fingerprints.sql` differ from their records only in the functions 0018 replaces (and the new index line). 0003–0006, 0010 and 0014: unchanged.
+2. **Security advisor:** nothing new (no new table; the replaced functions keep their rights).
+
+### 0018d. Run the tests (you, in the SQL Editor)
+1. `supabase/tests/0018_tests.sql` with the two UIDs pasted, **Run** (it finishes in seconds). Expected: **ALL 0018 TESTS PASSED**. It uses the real Color Belt private testing functions and test events named `zz fin18 …`, on days in 2021. A test payment is also recorded **today** in Shrewsbury. Everything is rolled back.
+2. Then `0011_tests.sql` and camps' `0017_tests.sql` again — both must still pass with 0018.
+
+---
+
+## Migration 0021: Not interested families deleted after 6 months (rulebook v0.611)
+
+**What it does** (`supabase/migrations/0021_prospects_not_interested_sooner.sql`): replaces **one** function, `prospects_purge_old` — the clean-up that runs whenever Prospects is opened. A family in which **every** child is Not interested is deleted **6 months** after its last activity (a note, a call, a status change, a booking or a check-in; marking someone Not interested counts, so it restarts the 6 months). Every other family without a Joined child keeps the **2 years** (v0.244); Joined is never deleted. How a deletion happens is unchanged from 0015 (rule checked again at the moment of deleting, the family's history removed with it, one counts-only row in `change_log`). No table, permission or other function changes.
+
+**Each step needs Jeffrey's OK.** Only after 0015 is live (it is).
+
+**Before you paste:** the next time anyone opens Prospects after this, every all-Not-interested family that has been quiet for **6 months or more** is deleted for good. Look at the "Not interested" chip first if that matters.
+
+### 0021a. Apply 0021 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0021_prospects_not_interested_sooner.sql` → **SQL Editor → New query** → paste → **Run**.
+2. Supabase may warn about **destructive operations**: the word is inside the clean-up function, which only runs later. **Nothing is removed now.** Confirm.
+3. "Success." One transaction: on any error nothing is kept. **Running it again is safe.**
+
+### 0021b. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0021_fingerprints.sql` must match what `supabase/tests/pglite/run.mjs` (step0021) printed (2 rows).
+2. **0012's and 0015's fingerprints move by exactly one line each on purpose:** the `prospects_purge_old()` line (both list that function). Everything else: unchanged.
+3. **Security advisor:** nothing new (the function can't be called from the app; only the Prospects list calls it).
+
+### 0021c. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0021_tests.sql` with `<paste-admin-UID-here>` / `<paste-desk-UID-here>` replaced → **ALL 0021 TESTS PASSED**. It makes its own test families and rolls everything back; it only checks its own families.
+2. Then `0015_tests.sql` and `0012_tests.sql` again. (Those two count the clean-up's results exactly. If a real family happens to become due at that very moment they can fail for that reason alone — nothing is harmed, they roll back; run them again, or tell Claude. `0021_tests.sql` only counts its own families.)
+
+### 0021d. Never re-run 0012 or 0015 after this
+
+They would put back the 2-year-only clean-up (0012 also its old history triggers — see 0015's header). If 0015 is ever re-run, re-run 0021 straight after.
+
 ## Admin: change the front-desk PIN or password
 
 The front desk (`shrewsburyustc@gmail.com`) is a **shared account**, so the app hides Change PIN and Change password for it. Only an admin changes them, here in Supabase, until the Staff accounts screen exists.

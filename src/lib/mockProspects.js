@@ -96,18 +96,26 @@ export function createProspectsPart({ newId, stamp, today, nowLocal, times, slot
     touch(p);
   }
 
-  // = prospects_purge_old: every family with no Joined child, quiet for 2 years
+  // = prospects_purge_old (migration 0021, rulebook v0.611): every family with no Joined child,
+  // quiet for 6 months if EVERY child in it is Not interested, else quiet for 2 years
   function purge(db) {
-    const cutoff = new Date(new Date(stamp()).getTime() - 730 * 86400000).toISOString();
+    const now = new Date(stamp()).getTime();
+    const cutoff = new Date(now - 730 * 86400000).toISOString();
+    // 6 calendar months back, like the database's "interval '6 months'"
+    const sixAgo = new Date(now);
+    sixAgo.setUTCMonth(sixAgo.getUTCMonth() - 6);
+    const cutoffNotInterested = sixAgo.toISOString();
     const families = new Map();
     for (const p of db.prospects) {
-      const f = families.get(p.submission_id) ?? { joined: false, last: '' };
-      f.joined = f.joined || builtinOf(db, p.status_id) === 'joined';
+      const f = families.get(p.submission_id) ?? { joined: false, allNotInterested: true, last: '' };
+      const builtin = builtinOf(db, p.status_id);
+      f.joined = f.joined || builtin === 'joined';
+      f.allNotInterested = f.allNotInterested && builtin === 'not_interested';
       f.last = p.last_activity_at > f.last ? p.last_activity_at : f.last;
       families.set(p.submission_id, f);
     }
     for (const [subId, f] of families) {
-      if (!f.joined && f.last < cutoff) removeFamily(db, subId);
+      if (!f.joined && f.last < (f.allNotInterested ? cutoffNotInterested : cutoff)) removeFamily(db, subId);
     }
   }
   function removeProspect(db, id) {
