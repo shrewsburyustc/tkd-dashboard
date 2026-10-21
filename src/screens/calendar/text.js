@@ -70,8 +70,25 @@ export function dayLabel(date, info, isToday) {
     else bits.push(classCount(info.classCount));
   }
   if (info.bookingCount) bits.push(info.bookingProblems ? `${freeCount(info.bookingCount)}, ${info.bookingProblems} on a cancelled class` : freeCount(info.bookingCount));
+  if (info.followUpCount) bits.push(followUpCount(info.followUpCount));
   return bits.join(', ');
 }
+
+// ----- Follow-ups (prospects, v0.612 / v0.615) and the Show menu (v0.613) -----
+export const followUpCount = (n) => (n === 1 ? '1 follow-up' : `${n} follow-ups`);
+export const FOLLOW_UPS = 'Follow-ups';
+export const followUpsOf = (school) => `Follow-ups · ${school}`;
+export const followName = (f) => `${f.childFirstName}${f.initial ? ` ${f.initial}.` : ''}`;
+export const OVERDUE = 'Overdue';
+export const DUE_TODAY = 'Due today';
+export const openFollowUp = (f, tag) => `Open ${followName(f)} in Prospects${tag ? `, ${tag.toLowerCase()}` : ''}`;
+export const FOLLOW_UPS_FAILED = "Couldn't load follow-ups.";
+export const SHOW = 'Show';
+export const SHOW_TITLE = 'Show on the calendar';
+export const SHOW_EVERYTHING = 'Show everything';
+export const DONE = 'Done';
+export const showBadge = (shown, total) => `${shown} of ${total}`;
+export const showButtonLabel = (shown, total) => `Show, ${shown} of ${total} kinds shown`;
 
 export const freeCount = (n) => (n === 1 ? '1 free class' : `${n} free classes`);
 export const freeChip = (n, problems) => (problems ? `${freeCount(n)} · ${problems === n ? 'class cancelled' : `${problems} cancelled`}` : freeCount(n));

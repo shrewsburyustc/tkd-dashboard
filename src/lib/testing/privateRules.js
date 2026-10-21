@@ -139,7 +139,9 @@ export function privateCards(rows) {
 //              changePayingBy the same AND canChangePayingBy · admins: editPayment / undoPayment
 //              when paid, delete
 //   cancelled: admins only — restore while its day is today or later, delete
-export function privateMenu(row, { today, isAdmin } = {}) {
+//   hidden:    "Hide private details" is on (v0.506) → no payment items: changePayingBy,
+//              editPayment and undoPayment are false (as Star's ⋯ menus, v0.508 G4)
+export function privateMenu(row, { today, isAdmin, hidden = false } = {}) {
   const admin = isAdmin === true;
   const none = {
     editDetails: false, changePayingBy: false, changeDay: false, grade: false, editPayment: false,
@@ -151,14 +153,15 @@ export function privateMenu(row, { today, isAdmin } = {}) {
   if (row?.status !== 'active') return none;
   const result = row.result ?? null;
   const open = result === null || result === 'no_show';
+  const money = hidden !== true; // payment items only while money is shown
   return {
     ...none,
     editDetails: open || admin,
-    changePayingBy: open && canChangePayingBy(row),
+    changePayingBy: money && open && canChangePayingBy(row),
     changeDay: open,
     grade: true,
-    editPayment: admin && row.paid === true,
-    undoPayment: admin && row.paid === true,
+    editPayment: money && admin && row.paid === true,
+    undoPayment: money && admin && row.paid === true,
     cancel: open,
     delete: admin,
   };

@@ -18,12 +18,15 @@
 //   - "stale" = someone else changed the same thing since this screen loaded it: nothing is
 //     overwritten, the person is told, and the list reloads.
 //   - Admin vs staff only changes what is SHOWN — the database enforces who may do what.
+// Follows "Hide private details" (v0.506): while the device switch is on, the Delete event
+// warning says "any recorded payment" instead of the event's payment total.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconAlertTriangle, IconCopy, IconDots, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../../../lib/device.js';
+import { usePrivateDetailsHidden } from '../../../lib/privateDetails.js';
 import { loadClassesAndRanks } from '../../../lib/testing/api.js';
 import { addEvent, deleteEvent, loadEvent, loadEvents, schoolToday, setRegistration, updateEvent } from '../../../lib/testing/eventsApi.js';
 import { defaultAutoCloseOn, registrationSwitch, stateTag } from '../../../lib/testing/eventRules.js';
@@ -96,6 +99,7 @@ export default function EventsTab({
 
   // ----- Device -----
   const isPhone = useMediaQuery(PHONE_QUERY);
+  const [hidden] = usePrivateDetailsHidden(); // Hide private details (v0.506)
   const isTouch = useMediaQuery(TOUCH_QUERY);
 
   // ----- State -----
@@ -622,7 +626,9 @@ export default function EventsTab({
       id: event.id,
       name: fresh.event.name,
       title: T.deleteEventTitle(fresh.event.name),
-      body: T.deleteEventBody({ activeCount, removedCount, paymentCents: total, resultCount }),
+      // The warning's parts; the sentence is written when drawn, so it follows Hide private details
+      // even if the switch changes while the dialog is open.
+      bodyParts: { activeCount, removedCount, paymentCents: total, resultCount },
       args: { eventId: event.id, expectedVersion: fresh.event.version, expectedRegistrationCount: count, expectedPaymentTotalCents: total },
       failed: false,
       index,
@@ -904,7 +910,7 @@ export default function EventsTab({
         <ConfirmDeleteDialog
           key={dialog.key}
           title={dialog.title}
-          body={dialog.body}
+          body={T.deleteEventBody({ ...dialog.bodyParts, hidden })}
           keepLabel={T.KEEP_EVENT}
           deleteLabel={T.DELETE_EVENT}
           failed={dialog.failed}

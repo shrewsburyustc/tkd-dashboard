@@ -11,6 +11,8 @@
 // then "The $65 cash payment moves with Ava. The private price for Yellow in Classes and ranks."
 // A testing-day No show gets an amber note first: moving clears that result (logged).
 // All staff, any time (v0.404). The private price is TODAY's price in Classes and ranks (v0.404).
+// Follows "Hide private details" (v0.506, v0.507 Q2): while `hidden` is on, the money box says
+// only "Payment details are hidden on this tablet." (no price, no amount, no paid / not paid).
 // This file only DRAWS; EventPage keeps the values and saves.
 import { IconArrowRight } from '@tabler/icons-react';
 import Dialog from '../../../components/Dialog.jsx';
@@ -33,7 +35,7 @@ const PHONE_DISCARD_NOTES = ['UNSAVED', 'STALE_DIALOG', 'MOVE_HAS_RESULT'];
 // props: state (EventPage's dialog: values { day, time }, priceCents, payments [{ cents, method }],
 // note …), record (the registration row), className, rankName, toName, event, today, isPhone,
 // onChange, onTouch, onSave(canSave), onCancel, onRequestClose
-export default function MoveToPrivateDialog({ state, record, className, rankName, toName, event, today, isPhone, onChange, onTouch, onSave, onCancel, onRequestClose }) {
+export default function MoveToPrivateDialog({ state, record, className, rankName, toName, event, today, hidden = false, isPhone, onChange, onTouch, onSave, onCancel, onRequestClose }) {
   const idBase = `move-dialog-${state.key}`;
   const check = checkMove(state, { today });
   const first = record.firstName;
@@ -88,8 +90,14 @@ export default function MoveToPrivateDialog({ state, record, className, rankName
         <p className="field-hint pv-intro">{T.moveIntro(first, event.name)}</p>
         <DayTimeFields idBase={idBase} values={state.values} check={check} readOnly={state.saving} today={today} autoFocus onChange={onChange} onTouch={onTouch} />
         <div className="pv-price">
-          <p className="pv-price-line">{moneyLine}</p>
-          <p className="pv-price-hint">{T.movePaymentHint(state.payments, first, rankName)}</p>
+          {hidden ? (
+            <p className="pv-price-hint">{T.PAYMENT_DETAILS_HIDDEN}</p>
+          ) : (
+            <>
+              <p className="pv-price-line">{moneyLine}</p>
+              <p className="pv-price-hint">{T.movePaymentHint(state.payments, first, rankName)}</p>
+            </>
+          )}
         </div>
         {record.result === 'no_show' && (
           <div className="pv-clearing">

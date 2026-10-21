@@ -5,6 +5,8 @@
 // as 'stale' or 'tooLong'; this file turns those codes into plain English.
 //
 // Values in {curly braces} in the contract are filled in by the small functions below.
+// Follows "Hide private details" (v0.506): its words are at the end, and a few sentences take a
+// `hidden` input so they never name money while the switch is on.
 
 // ----- 7.1 Page, tabs, states -----
 export const PAGE_TITLE = 'Testing';
@@ -481,13 +483,19 @@ export const deleteEventTitle = (name) => `Delete ${name}?`;
 // Phase 3 (G8, contract 0010 §4.8): testing results are named too — "Its 14 students (plus 1
 // removed), their registrations, their 8 testing results and $410 of payments are deleted too.
 // This can't be undone." resultCount = graded students (any status).
-export function deleteEventBody({ activeCount, removedCount, paymentCents, resultCount = 0 }) {
+// hidden (Hide private details, v0.506): "any recorded payment" instead of the total — said
+// whenever the event has registrations, so it never shows whether anything was paid.
+export function deleteEventBody({ activeCount, removedCount, paymentCents, resultCount = 0, hidden = false }) {
   const tail = "This can't be undone.";
   let who = null;
   if (activeCount > 0) who = `${studentsCount(activeCount)}${removedCount > 0 ? ` (plus ${removedCount} removed)` : ''}`;
   else if (removedCount > 0) who = removedCount === 1 ? '1 removed student' : `${removedCount} removed students`;
   if (who === null) return tail;
   const regs = activeCount + removedCount === 1 ? 'their registration' : 'their registrations';
+  if (hidden) {
+    const results = resultCount === 1 ? ', their 1 testing result' : resultCount > 1 ? `, their ${resultCount} testing results` : '';
+    return `Its ${who}, ${regs}${results} and any recorded payment are deleted too. ${tail}`;
+  }
   if (resultCount > 0) {
     const results = resultCount === 1 ? 'their 1 testing result' : `their ${resultCount} testing results`;
     if (paymentCents > 0) return `Its ${who}, ${regs}, ${results} and ${dollars(paymentCents)} of payments are deleted too. ${tail}`;
@@ -636,8 +644,9 @@ export function feeText(earlyCents, dayCents, onOrAfterTestingDay) {
   return `${dollars(earlyCents)} (${dollars(dayCents)} on the testing day)`;
 }
 // "Testing for Orange → Green · Group A, 5:00 – 6:00 PM · $65 ($75 on the testing day)"
+// fee null (Hide private details, v0.506): the line ends after the class and time.
 export const testingForLine = (fromName, toName, className, timeText, fee) =>
-  `Testing for ${fromName} → ${toName} · ${className}${timeText ? `, ${timeText}` : ''} · ${fee}`;
+  `Testing for ${fromName} → ${toName} · ${className}${timeText ? `, ${timeText}` : ''}${fee === null ? '' : ` · ${fee}`}`;
 
 // R6: detail summary + Edit details
 export const DETAIL_CLASS_TIME = 'Class and time';
@@ -705,7 +714,16 @@ export const EDIT_PAYMENT_HINT = 'The old payment is kept in the history and rep
 export const deleteStudentTitle = (name) => `Delete ${name} permanently?`;
 // graded (phase 3, G8) = { result, resultAt, hasNote }, or null when the student has no result
 // and no grading note. firstName is used only when graded ("Sam’s registration …").
-export function deleteStudentBody(eventName, payment, graded = null, firstName = '') {
+// hidden (Hide private details, v0.506): never names an amount or whether anything was paid —
+// "any recorded payment" instead (Star's wording, v0.508 G4).
+export function deleteStudentBody(eventName, payment, graded = null, firstName = '', hidden = false) {
+  if (hidden) {
+    if (graded) {
+      const what = graded.result ? `the testing result (${resultTagText(graded.result)}, ${stampDay(graded.resultAt)})` : 'the grading note';
+      return `${firstName}’s registration, any recorded payment and ${what} are deleted. They won’t show on the Grading tab any more. This can’t be undone.`;
+    }
+    return `The registration and any recorded payment are deleted from ${eventName}. This can’t be undone.`;
+  }
   if (graded) {
     // "the testing result (Not passed, Nov 20)" — or "the grading note" when only a note exists.
     const what = graded.result ? `the testing result (${resultTagText(graded.result)}, ${stampDay(graded.resultAt)})` : 'the grading note';
@@ -974,8 +992,10 @@ export const clearsPrivateNoShow = (firstName, dateIso) =>
 export const cancelTitle = (name) => `Cancel ${name}’s private testing?`;
 // "Mon, Nov 30, 4:30 PM. It moves to Past as Cancelled. The $85 cash payment stays recorded; it
 // isn’t refunded." payment = { cents, method } or null (not paid: only the first two sentences — CP1)
-export function cancelBody(dateIso, hhmm, payment) {
+// hidden (Hide private details, v0.506): the same sentence for paid and not paid, no amount.
+export function cancelBody(dateIso, hhmm, payment, hidden = false) {
   const first = `${weekdayMonthDay(dateIso)}, ${timeLabel(hhmm)}. It moves to Past as Cancelled.`;
+  if (hidden) return `${first} Any recorded payment stays recorded; it isn’t refunded.`;
   if (!payment) return first;
   return `${first} The ${dollars(payment.cents)} ${payingByLower(payment.method)} payment stays recorded; it isn’t refunded.`;
 }
@@ -988,9 +1008,12 @@ export const deletePrivateTitle = (name) => `Delete ${name}’s private testing 
 //   payments  the live payments [{ cents, method, paidOn }]
 //   result    { result, resultAt } or null
 //   movedFrom { eventName, firstName } or null
-export function deletePrivateBody(payments, result, movedFrom = null) {
+//   hidden    Hide private details (v0.506): "any recorded payment", never an amount
+export function deletePrivateBody(payments, result, movedFrom = null, hidden = false) {
   const parts = ['The private testing'];
-  if (payments.length === 1) {
+  if (hidden) {
+    parts.push('any recorded payment');
+  } else if (payments.length === 1) {
     parts.push(`the ${dollars(payments[0].cents)} ${payingByLower(payments[0].method)} payment recorded on ${monthDay(payments[0].paidOn)}`);
   } else if (payments.length > 1) {
     parts.push(`the ${payments.length} payments (${payments.map(paymentPart).join(', ')})`);
@@ -1067,3 +1090,11 @@ export const PRIVATE_SHEET_FOOTER = 'Type the result into the private testing pa
 export const PRIVATE_GRADED = 'This private testing is already graded, so it can’t change now.';
 export const PRIVATE_IS_CANCELLED = 'This private testing was cancelled. An admin can restore it while its day is ahead.';
 export const RESTORE_TOO_LATE = 'Its day has passed, so it can’t be restored. Add a new private testing instead.';
+
+// =====================================================================================
+// "Hide private details" (rulebook v0.506, words v0.507 Q2). Color Belt keeps no date of birth or
+// email, so on its screens the switch hides MONEY: payment columns, tags, amounts, prices, Mark
+// paid, the payment items of the ⋯ menus and the money cards. The two placeholder sentences come
+// from src/lib/privateDetails.js, so every section says exactly the same thing (as Star does).
+// =====================================================================================
+export { HIDDEN_ON_THIS_TABLET, PAYMENT_DETAILS_HIDDEN } from '../../lib/privateDetails.js';

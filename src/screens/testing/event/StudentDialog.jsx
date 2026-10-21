@@ -13,6 +13,10 @@
 // class of a graded student clears their result, and — for staff after the testing day — keeps
 // the class and belt choices locked ("Only an admin can change this student now.").
 //
+// Follows "Hide private details" (v0.506, v0.507 Q2): while `hidden` is on, the summary's Paying by
+// and Payment lines become one gray "Payment details are hidden on this tablet." line, and Add /
+// Edit show no fee (the Paying by choice of Add stays: it records how they'll pay, not money).
+//
 // Like the other dialogs, this only DRAWS the form; the values live in EventPage (`state`), so a
 // screen lock hides the dialog and brings it back with everything still filled in.
 import { IconCheck, IconEdit } from '@tabler/icons-react';
@@ -120,7 +124,7 @@ function SummaryRow({ label, children }) {
 }
 
 // The read-only summary (R6).
-function Summary({ row, cls, rank, event, today }) {
+function Summary({ row, cls, rank, event, today, hidden }) {
   const time = cls ? classTimeLabel(cls.startTime, cls.endTime) : '';
   let signed;
   if (row.source !== 'form') signed = T.NOT_SIGNED_DESK;
@@ -147,18 +151,27 @@ function Summary({ row, cls, rank, event, today }) {
         {/* Plan Q1: added by an admin after the testing day */}
         {row.addedAfterDay && <span className="ev-sum-line">{T.addedAfterDayLine(row.addedAfterDay.date, row.addedAfterDay.byName)}</span>}
       </SummaryRow>
-      <SummaryRow label={T.DETAIL_PAYING_BY}>{T.payingByText(row.payingBy)}</SummaryRow>
-      <SummaryRow label={T.DETAIL_PAYMENT}>
-        {row.paid ? (
-          <>
-            <span className="ttag ttag--ok">{T.TAG_PAID}</span> · {T.paidDetail(row.paidCents, row.paidMethod, row.paidOn)}
-          </>
-        ) : (
-          <>
-            <span className="ttag">{T.TAG_NOT_PAID}</span> · {feeTextFor(rank, today, event.testingDate)}
-          </>
-        )}
-      </SummaryRow>
+      {hidden ? (
+        // Hide private details (v0.507 Q2): the payment part keeps its row and says it is hidden
+        <SummaryRow label={T.DETAIL_PAYMENT}>
+          <span className="ev-hidden-value">{T.PAYMENT_DETAILS_HIDDEN}</span>
+        </SummaryRow>
+      ) : (
+        <>
+          <SummaryRow label={T.DETAIL_PAYING_BY}>{T.payingByText(row.payingBy)}</SummaryRow>
+          <SummaryRow label={T.DETAIL_PAYMENT}>
+            {row.paid ? (
+              <>
+                <span className="ttag ttag--ok">{T.TAG_PAID}</span> · {T.paidDetail(row.paidCents, row.paidMethod, row.paidOn)}
+              </>
+            ) : (
+              <>
+                <span className="ttag">{T.TAG_NOT_PAID}</span> · {feeTextFor(rank, today, event.testingDate)}
+              </>
+            )}
+          </SummaryRow>
+        </>
+      )}
       <SummaryRow label={T.DETAIL_SIGNED}>{signed}</SummaryRow>
       {row.graded && (
         // G8: "Not passed · Nov 20, 5:41 PM by Staff", then "Note: …"
@@ -186,6 +199,7 @@ export default function StudentDialog({
   canEdit, // show "Edit details" in the summary
   graded = null, // edit: { graded, result, note } as last read — warns that a belt change clears it
   beltLocked = false, // edit: staff after the testing day, graded student → class and belt locked
+  hidden = false, // Hide private details (v0.506): no payment details, no fee
   onChange,
   onTouch,
   onSave,
@@ -215,7 +229,7 @@ export default function StudentDialog({
     return (
       <Dialog title={name} size="detail" fullScreen={isPhone} onRequestClose={onRequestClose}>
         <p className="tdialog-sub">{event.name}</p>
-        <Summary row={record} cls={cls} rank={rank} event={event} today={today} />
+        <Summary row={record} cls={cls} rank={rank} event={event} today={today} hidden={hidden} />
         {isPhone ? (
           editButton && <div className="dialog-page-submit">{editButton}</div>
         ) : (
@@ -237,7 +251,7 @@ export default function StudentDialog({
   const cls = values.classId ? classById.get(values.classId) : null;
   const rank = values.rankId ? rankById.get(values.rankId) : null;
   const time = cls ? classTimeLabel(cls.startTime, cls.endTime) : '';
-  const fee = feeTextFor(rank, today, event.testingDate);
+  const fee = hidden ? null : feeTextFor(rank, today, event.testingDate); // null = not shown (v0.506)
 
   // "Testing for …" under the belts (Add), or "Now testing for …" when the belt changed (Edit).
   let testingLine = null;
@@ -247,13 +261,16 @@ export default function StudentDialog({
       testingLine = <p className="field-hint ev-testing-line">{T.testingForLine(rank.name, toName, cls.className, time, fee)}</p>;
     } else if (record && values.rankId !== record.eventRankId) {
       const oldRank = rankById.get(record.eventRankId);
-      let feeSentence;
-      if (record.paid) feeSentence = T.PAYMENT_STAYS;
+      // Hide private details: no sentence (nothing about the fee or whether they paid)
+      let feeSentence = null;
+      if (hidden) feeSentence = null;
+      else if (record.paid) feeSentence = T.PAYMENT_STAYS;
       else if (oldRank && oldRank.earlyCents === rank.earlyCents && oldRank.dayCents === rank.dayCents) feeSentence = T.feeStays(fee);
       else feeSentence = T.feeNow(fee);
       testingLine = (
         <p className="ev-changed-line" role="status">
-          {T.nowTestingFor(rank.name, toName)} {feeSentence}
+          {T.nowTestingFor(rank.name, toName)}
+          {feeSentence && ` ${feeSentence}`}
         </p>
       );
     }

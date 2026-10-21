@@ -9,6 +9,9 @@ import { randomUUID } from 'node:crypto';
 import { cleanNotes, datesProblem, eventTimesProblem, notesProblem, textProblem } from './rules.js';
 import { addMonths, buildDay, eventTimeOn, monthWeeks, recordMatches, versionInEffect, weekDates } from './days.js';
 import { createCalendarBackend } from '../mockCalendar.js';
+import { KINDS, applyShow, hiddenKey, loadHidden, saveHidden, shownCount, toggleKind } from './showKinds.js';
+import { calendarFollowUps, isDueToday, lastInitial, openFollowUpOn } from '../prospects/followUps.js';
+import { clearOpenProspect, requestOpenProspect, takeOpenProspect } from '../prospects/openRequest.js';
 
 let groups = 0;
 function group(name, fn) {
@@ -239,6 +242,106 @@ group('days: free-class bookings (Forms, v0.241 answer 6)', () => {
   assert.equal(day.schools[0].classes.find((c) => c.slot.id === 'n1').bookings, 1);
   assert.equal(buildDay('2026-12-19', ctx({ bookings })).bookingCount, 0);
   assert.equal(buildDay('2026-12-18', ctx()).bookingCount, 0); // no Forms yet → none
+});
+
+group('follow-ups: which count, and what the Calendar keeps (v0.612 / v0.615)', () => {
+  const statuses = [
+    { id: 's-new', builtin: 'new' }, { id: 's-con', builtin: null }, { id: 's-joined', builtin: 'joined' },
+    { id: 's-ni', builtin: 'not_interested' }, { id: 's-noshow', builtin: 'no_show' },
+  ];
+  const p = (id, statusId, followUpOn, parentName = 'Jo Allen') => ({ id, statusId, followUpOn, parentName, childFirstName: id, booking: { secret: 1 }, familyId: 'f' });
+  const list = [p('Ruby', 's-con', '2027-01-15'), p('Owen', 's-joined', '2027-01-14'), p('Zoe', 's-ni', '2027-01-16'), p('Ethan', 's-noshow', '2027-01-13'), p('Liam', 's-new', null), p('Ann', 's-con', '2027-01-15', 'Cher')];
+  const out = calendarFollowUps(list, statuses, 'worcester');
+  // Joined and Not interested never count, even with a date left on them; no date = no follow-up
+  assert.deepEqual(out.map((f) => f.id), ['Ruby', 'Ethan', 'Ann']);
+  // only what the Calendar shows — nothing else from the list answer
+  assert.deepEqual(out[0], { id: 'Ruby', code: 'worcester', childFirstName: 'Ruby', initial: 'A', followUpOn: '2027-01-15' });
+  assert.equal(out[2].initial, ''); // one-word parent name
+  assert.equal(lastInitial('  dan  de la cruz '), 'C');
+  assert.equal(openFollowUpOn({ followUpOn: '2027-01-15' }, 'joined'), null);
+  // Prospects' "Follow up today" uses the same rule
+  assert.equal(isDueToday({ followUpOn: '2027-01-14' }, 'joined', '2027-01-15'), false);
+  assert.equal(isDueToday({ followUpOn: '2027-01-14' }, null, '2027-01-15'), true);
+  assert.equal(isDueToday({ followUpOn: '2027-01-16' }, null, '2027-01-15'), false);
+  assert.equal(isDueToday({ followUpOn: null }, 'new', '2027-01-15'), true);
+  // buildDay: that day's follow-ups of the shown schools, by name
+  const followUps = [...out, { id: 'S1', code: 'shrewsbury', childFirstName: 'Sam', initial: 'B', followUpOn: '2027-01-15' }];
+  const day = buildDay('2027-01-15', ctx({ followUps }));
+  assert.deepEqual(day.followUps.map((f) => f.id), ['Ann', 'Ruby']);
+  assert.equal(day.followUpCount, 2);
+  assert.equal(buildDay('2027-01-17', ctx({ followUps })).followUpCount, 0);
+  assert.equal(buildDay('2027-01-15', ctx()).followUpCount, 0); // none loaded → none
+});
+
+group('Show menu: what each kind hides (v0.613 / v0.615)', () => {
+  const whole = { id: 'c1', locationCode: null, startsOn: '2027-01-15', endsOn: '2027-01-15', reason: 'Storm', wholeDay: true };
+  const event = { id: 'e1', locationCode: 'worcester', typeId: 't', title: 'Party', startsOn: '2027-01-15', endsOn: '2027-01-15', allDay: true, start: null, end: null };
+  const booking = { id: 'b1', locationCode: 'worcester', classId: W.white, className: 'White', date: '2027-01-15', start: '17:00', end: '17:45', childFirstName: 'Maya', formName: 'Free class', status: 'booked', classRunning: true };
+  const followUps = [{ id: 'f1', code: 'worcester', childFirstName: 'Ruby', initial: 'A', followUpOn: '2027-01-15' }];
+  const day = buildDay('2027-01-15', ctx({ closures: [whole], events: [event], bookings: [booking], followUps }));
+  assert.ok(day.classCount > 0 && day.cancelledCount === day.classCount && day.events.length === 1 && day.bookingCount === 1 && day.followUpCount === 1);
+  // nothing hidden: unchanged
+  const all = applyShow(day, new Set());
+  assert.equal(all.classCount, day.classCount);
+  assert.deepEqual(all.shows, { classes: true, closures: true, events: true, free: true, followUps: true });
+  // Classes hidden: no classes, no counts, no "schedule starts"; the rest stays
+  const noCls = applyShow(day, new Set(['classes']));
+  assert.equal(noCls.classCount, 0);
+  assert.equal(noCls.cancelledCount, 0);
+  assert.deepEqual(noCls.schools[0].classes, []);
+  assert.deepEqual(noCls.scheduleStarts, []);
+  assert.equal(noCls.closures.length, 1);
+  assert.equal(noCls.shows.classes, false);
+  // Closures hidden: closure gone, but the classes stay CANCELLED (crossed out)
+  const noClo = applyShow(day, new Set(['closures']));
+  assert.equal(noClo.closures.length, 0);
+  assert.equal(noClo.cancelledCount, day.cancelledCount);
+  assert.ok(noClo.schools[0].classes.every((c) => c.cancelled));
+  // Events / Free classes / Follow-ups hidden
+  assert.equal(applyShow(day, new Set(['events'])).events.length, 0);
+  const noFree = applyShow(day, new Set(['free']));
+  assert.equal(noFree.bookingCount, 0);
+  assert.equal(noFree.bookingProblems, 0);
+  assert.ok(noFree.schools[0].classes.every((c) => c.bookings === 0)); // Week view's ti-user-plus badge
+  assert.equal(applyShow(day, new Set(['followUps'])).followUpCount, 0);
+  // the original day is never changed
+  assert.equal(day.followUpCount, 1);
+});
+
+group('Show menu: saved per person, hidden kinds only (v0.613)', () => {
+  const store = new Map();
+  const read = (k) => (store.has(k) ? store.get(k) : null);
+  const write = (k, v) => store.set(k, v);
+  assert.deepEqual(KINDS.map((k) => k.key), ['classes', 'closures', 'events', 'free', 'followUps']);
+  assert.equal(loadHidden('u1', read).size, 0); // nothing saved → everything shown
+  let h = toggleKind(new Set(), 'classes');
+  h = toggleKind(h, 'nonsense'); // unknown kinds are ignored
+  assert.deepEqual([...h], ['classes']);
+  saveHidden('u1', h, write);
+  assert.equal(store.get(hiddenKey('u1')), '["classes"]');
+  assert.deepEqual([...loadHidden('u1', read)], ['classes']);
+  assert.equal(loadHidden('u2', read).size, 0); // another person on this device: their own choice
+  assert.deepEqual(shownCount(h), { shown: 4, total: 5 });
+  assert.equal(shownCount(new Set()), null); // no badge while everything is shown
+  assert.equal(toggleKind(h, 'classes').size, 0);
+  store.set(hiddenKey('u3'), '{bad json');
+  assert.equal(loadHidden('u3', read).size, 0); // unreadable → everything shown
+  store.set(hiddenKey('u4'), '["events","gone-kind"]');
+  assert.deepEqual([...loadHidden('u4', read)], ['events']);
+  assert.equal(loadHidden('u5', () => { throw new Error('blocked'); }).size, 0); // storage blocked
+});
+
+group('Calendar → Prospects hand-over: once, fresh, cleared at sign-out (v0.615)', () => {
+  requestOpenProspect('p1', 1000);
+  assert.equal(takeOpenProspect(2000), 'p1');
+  assert.equal(takeOpenProspect(2000), null); // used once
+  requestOpenProspect('p2', 1000);
+  assert.equal(takeOpenProspect(1000 + 61000), null); // older than a minute: dropped
+  requestOpenProspect('p3', 1000);
+  clearOpenProspect(); // sign-out
+  assert.equal(takeOpenProspect(1500), null);
+  requestOpenProspect(42, 1000);
+  assert.equal(takeOpenProspect(1500), null); // only real ids
 });
 
 console.log(`${groups} groups of checks ran.`);
