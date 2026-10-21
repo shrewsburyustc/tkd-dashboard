@@ -1245,6 +1245,8 @@ The 0010 undo (14e) re-runs 0005, and 0005 starts by removing **all** read right
 
 ### 0016e. Set the `bb_registrar` password (CP3b — you, on your PC + SQL Editor)
 
+**Done 2026-10-21 (CP3b):** a SCRAM-SHA-256 password is stored for `bb_registrar` (checked read-only, value not shown); it's in Jeffrey's password manager as "Supabase bb_registrar (Hyperdrive)", user `bb_registrar.eozkfbdfxqlcbpewhach`; the script file was deleted.
+
 Same method as 12d / 13e, with its **own** script and its **own** password — never the Color Belt or Star one.
 
 0. **Clipboard history off** first (12a step 0): Windows **Settings → System → Clipboard** → Clipboard history off, Sync across your devices off.
