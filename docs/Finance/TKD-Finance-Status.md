@@ -150,3 +150,7 @@ Option B: OK on the admin's earlier-unclosed-days line hides it until a NEW uncl
 ## 13. Refunds-switch icon (decided v0.812, 2026-10-20)
 
 Main found that the phone ⋯ menu's refunds switch used `ti-receipt-refund` without a rulebook row. Jeffrey chose A: keep it (question 18, `docs/Finance/images/Finance-Q18-refund-icon.png`). No code change. The Main session adds it to the 2.4 icon map.
+
+## 14. In sync with main (2026-10-21)
+
+`git merge main` was a fast-forward to 17ae5cb: every Finance commit is on `main`, and the Home reminder OK (9f69b92) is in GitHub's `main`, so it is deployed. v0.308 (Main): `ti-receipt-refund` means refunds everywhere; the refunds switch (v0.812) keeps it. Black Belt 0016, 0020 and 0021 are live and touch no Finance function. PGlite 745/745, builds and lib checks pass. **Open:** the private-testing wording in Finance screens (after Star merges, `text.js`); Black Belt money in the Daily report (when Black Belt payments exist; its own migration).
