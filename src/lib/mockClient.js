@@ -75,6 +75,13 @@
 //   Events saves only. Star's seed (resetTesting): a finished Summer event with make-ups owed, the
 //   upcoming Fall event (paid, not paid, overpaid, duplicate, private, withdrawn, make-up) and a later
 //   Spring event that can pick make-ups.
+// Star testing on HOME (phase 7; star_home_today in mockStarCandidates.js — Home's "Today" cards):
+//   __tkdPreview.starHomeToday('event')    the Fall seed event's testing day becomes today → its card
+//   __tkdPreview.starHomeToday('private')  Alex Kim (4:00 PM) and Ethan Lopez (5:30 PM) test privately
+//                                          today → two private cards
+//   __tkdPreview.starHomeToday('none')     undoes both → no Star cards
+//   __tkdPreview.failStarHome(true)        every star_home_today ask fails like a dropped connection
+//                                          (in memory only); failStarHome(false) → answers again
 // Star testing GRADING (phase 5; mockStarGrading.js, plugged into the candidates fake):
 //   __tkdPreview.failNextSave() or failNextSave('star')  also make the next Star grade / count save fail
 //   __tkdPreview.setStarOffline(true)     every Star grading call fails like a dropped connection and the
@@ -662,6 +669,8 @@ export function createMockClient() {
   let failNextStar = false;
   // setStarOffline(true): every Star grading call fails like a dropped connection (phase 5).
   let starGradingOffline = false;
+  // failStarHome(true): every star_home_today ask fails like a dropped connection (phase 7).
+  let starHomeOffline = false;
 
   // The fake network time for Testing calls (setTestingDelay saves it so it survives a reload).
   function testingDelay() {
@@ -775,6 +784,9 @@ export function createMockClient() {
       await wait(testingDelay());
       if (starGradingOffline && STAR_GRADING_RPC_NAMES.includes(name)) {
         return { data: null, error: { message: 'Failed to fetch (preview: setStarOffline)' }, status: 0 };
+      }
+      if (starHomeOffline && name === 'star_home_today') {
+        return { data: null, error: { message: 'Failed to fetch (preview: failStarHome)' }, status: 0 };
       }
       if ((failNextStar || failNextTesting) && STAR_GRADING_WRITE_RPC_NAMES.includes(name)) {
         // failNextSave() / failNextSave('star'): the next save fails, whichever section it is in
@@ -1044,6 +1056,16 @@ export function createMockClient() {
     },
     simulateStarDanChange(firstName = 'Noah', dan = 2) {
       return starCandidates.simulateDanChange(firstName, dan);
+    },
+    // ----- Star on Home (phase 7) -----
+    starHomeToday(kind = 'event') {
+      return starCandidates.homeToday(kind);
+    },
+    failStarHome(on = true) {
+      starHomeOffline = Boolean(on);
+      return starHomeOffline
+        ? 'Every Star "Today" ask on Home now fails like a dropped connection. Run __tkdPreview.failStarHome(false) to come back.'
+        : 'Star "Today" asks answer again (Home asks every minute, or open Home again).';
     },
     // ----- Star results helpers (phase 6; mockStarResults.js, plugged into the candidates fake) -----
     simulateStarResultChange(firstName = 'Noah') {
