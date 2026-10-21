@@ -590,10 +590,17 @@ export function gridRowsFor(dayCount, rows) {
 
 // ----- The public link (§5.3; qr.js re-exports it) -----
 
-// The family sign-up address for a camp's public code — always the production address, so a QR
-// code made in preview still points at the real form. '' for a code that isn't a valid code.
+// The family sign-up address for a camp's public code — the production address, so a link or QR
+// code always points at the real form. Exception: in preview mode (fake database) its camps don't
+// exist on the real site, so the link uses the preview's own address (e.g. http://localhost:5176)
+// and opens the preview's family form instead (Jeffrey, 2026-10-21: the preview link opened the
+// live site's "This link isn't working"). '' for a code that isn't a valid code.
+function linkOrigin() {
+  const previewMode = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'preview';
+  return previewMode && typeof window !== 'undefined' ? window.location.origin : PUBLIC_ORIGIN;
+}
 export function campLink(code) {
-  return typeof code === 'string' && PUBLIC_CODE_PATTERN.test(code) ? `${PUBLIC_ORIGIN}/camp/${code}` : '';
+  return typeof code === 'string' && PUBLIC_CODE_PATTERN.test(code) ? `${linkOrigin()}/camp/${code}` : '';
 }
 
 // ----- Text rules shared with the preview database (the SQL helpers' twins) -----
