@@ -80,3 +80,5 @@ SETUP 0013h. `Start dashboard.bat` (real database, only on this PC — still not
 
 ## If something goes wrong (any time)
 SETUP 0013j: (1) instant database off switch (two `revoke` lines), (2) `CAMPS_REGISTRATION=off` + Retry deployment, (3) lock the login. Color Belt's and Star's forms aren't affected. Cloudflare → Deployments → **Rollback** puts the previous site back. Removing Camps completely (0017d then 0013k) only before real camp data exists.
+
+**2026-10-21 — fix deployed (main 12aa5e2, 08:13 UTC); phone sign-up CP-4050 = ok**, signature not in change_log. Jeffrey then asked for weekly pricing, longer camps and roster fixes → rulebook v0.717/v0.718, migration **0022** (see TKD-Camps-Status.md). **Next go-live steps for 0022:** preview test → SETUP "Migration 0022" (Jeffrey pastes, his OK) → Claude read-only fingerprints/advisor → Main merges `camps` + push (his OK) → live retest of a 2-week camp sign-up → delete the TEST camps and verify zero rows.
