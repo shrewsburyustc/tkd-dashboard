@@ -84,16 +84,16 @@ Color Belt testing and Star testing are built at the same time in separate Claud
   | 0001–0004 | staff + PIN, server lock, Color Belt phase 1, staff accounts | `main` (live) |
   | 0005, 0010 | Color Belt events, results | `main` (live) |
   | 0006 | Star testing | `main` (live) |
-  | 0007–0009 | schedule, calendar, forms | `claude/prospect-form-system-cd893d` |
+  | 0007–0009 | schedule, calendar, forms — applied 2026-10-19 | `main` (live) |
   | 0011 | finance | `main` (live) |
-  | 0012 | prospects | `claude/prospect-form-system-cd893d` |
+  | 0012 | prospects — applied 2026-10-19 | `main` (live) |
   | 0013 | camps — applied 2026-10-20 | `main` (live) |
   | 0014 | Color Belt private testing (phase 4) | `main` (live) |
-  | 0015 | family history | `claude/prospect-form-system-cd893d` |
+  | 0015 | family history — applied 2026-10-19 | `main` (live) |
   | 0016 | black belt (reserved 2026-10-19, CONTRACT-0016) — applied 2026-10-21 | `main` (live) |
   | 0017 | camps → Finance: camp payments in the Daily report (`0017_finance_camps.sql`, rulebook v0.707) — applied 2026-10-20 | `main` (live) |
   | 0018 | Finance: private testing payments in the Daily report (rulebook v0.407) — **runs after 0017 and must build on 0017's version of the Finance functions it replaces** — applied 2026-10-20 | `main` (live) |
-  | 0019 | school phone in Settings → Schools (was an uncommitted `0016_school_phone.sql`) | `claude/prospect-form-system-cd893d` |
+  | 0019 | school phone in Settings → Schools (was an uncommitted `0016_school_phone.sql`) — applied 2026-10-19 | `main` (live) |
   | 0020 | security: `current_session_id()` reads only `request.jwt.claims` (rulebook v0.408; replaces only that 0001 function, closing the gap Black Belt's 0016 review found in the public forms) — reserved and applied 2026-10-20 | `main` (live) |
   | 0021 | Prospects: Not interested families deleted after 6 months (rulebook v0.611; replaces only `prospects_purge_old()` from 0015, runs after 0015) — reserved and applied 2026-10-21 | `main` (live) |
 
