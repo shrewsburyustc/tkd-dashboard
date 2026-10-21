@@ -28,6 +28,9 @@
 // (showing the form) has only this file: the optional RATE_LIMITER binding, or else the
 // best-effort memory counter. A Cloudflare WAF rate-limiting rule on /api/forms/* only becomes
 // possible once the school has its own domain (SETUP §12a step 5 explains why).
+// Decided (Jeffrey, rulebook v0.410): accept these protections for now — Pages Functions can't
+// have a RATE_LIMITER binding (Workers only), so the binding stays unset — and revisit with a
+// WAF rule when the school has its own domain.
 
 // The in-memory limit: at most 60 requests per 60 seconds per key.
 export const MEMORY_LIMIT = 60;

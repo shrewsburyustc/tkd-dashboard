@@ -1132,7 +1132,7 @@ The same method as 12d, with its **own** script and its **own** password — nev
 | `TURNSTILE_SITE_KEY` | Text | the Site Key | already there (12a) — shared |
 | `TURNSTILE_SECRET` | Secret | the Secret Key | already there (12a) — shared |
 | `CLIENT_KEY_SECRET` | Secret | — | already there (12a) — shared (Forms adds "forms\|" before hashing, so its keys never match Color Belt's) |
-| `RATE_LIMITER` | Binding | — | optional, already set up or skipped in 12a step 5 — shared (Forms' keys start with "forms:") |
+| ~~`RATE_LIMITER`~~ | — | — | **replaced by rulebook v0.410:** not set up (Pages Functions can't have this binding; Workers only). The Function still uses one if it ever exists (Forms' keys start with "forms:"). Protection meanwhile: the per-server memory counter, Turnstile on Send, `forms_registrar`'s limits and the `PUBLIC_FORMS` off switch; revisit with a WAF rule once the school has its own domain. |
 
 **Turnstile:** the same widget (hostname `tkd-dashboard.pages.dev`) works; the Forms page asks for action **`form`** and the Function refuses any other action (so a Color Belt token can't be reused). If the school later gets its own web address, add that hostname to the widget and change `PUBLIC_ORIGIN` for both Functions together.
 
