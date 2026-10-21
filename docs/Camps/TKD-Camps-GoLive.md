@@ -16,6 +16,8 @@ Words used below:
 - [ ] `camps` up to date with `main` (`git merge main`) and every check green — done 2026-10-20.
 - [ ] Tell the Finance session the order is fixed: **0013 + 0017 before Finance's 0018** (0018 builds on 0017).
 
+**2026-10-20 — Jeffrey: "Yes, but quickly. Do all of them at once"** (CP2 + CP3 now, to unblock Finance's 0018; Camps stays undeployed). Pre-checks done read-only: no camp object on production; live = 0005–0012, 0014, 0015, 0019 (not 0016, 0018); the six Finance functions 0017 replaces/reads are byte-identical to the tested 0011 (0014 didn't touch them). Shortened run sheet: before = 0011/0005/0006 tests; apply 0013; password (0013d); apply 0017; after = 0013/0017/0011 tests; then Claude's full fingerprint + advisor checks.
+
 ## CP2 — Cloudflare setting (you, ~2 min) · *your OK needed*
 SETUP 0013a. Cloudflare → `tkd-dashboard` → Settings → Variables and Secrets → **Production**: add `CAMPS_REGISTRATION` = `off`. Nothing visible changes (it takes effect at the next deploy).
 **Done when:** the variable is listed under Production only.
