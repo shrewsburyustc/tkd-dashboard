@@ -107,3 +107,4 @@ This branch is on `main` and live (the push included `0ccf776`; live `main` = `c
 - Design review: no must-fix; 3 should-fix applied (quieter blue chip edge, bigger darker ring, menu heading hidden from screen readers). Security review: no must-fix; 3 should-fix applied (hand-over expires after 1 min and clears at sign-out, one shared empty list, loader can't hang).
 - Screens: `Calendar-show-built-PC.png`, `Calendar-show-built-tablet-phone.png`.
 - Next: Jeffrey tries it in preview -> commit on this branch -> Main merges -> Jeffrey OKs deploy. Later: a Testing line in the menu once Testing events load into the Calendar.
+- **Deployed 2026-10-21** (main 09f0b95, live 09:53 UTC). Left for Jeffrey: on the live site, check the Calendar's follow-ups match Prospects' "Follow up today".
