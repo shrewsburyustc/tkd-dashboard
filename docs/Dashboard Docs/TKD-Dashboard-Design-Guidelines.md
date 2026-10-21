@@ -1,7 +1,7 @@
 # TKD Dashboard — Design Guidelines
 
 **School:** Jae H. Jeong's U.S. Taekwondo Center (U.S.T.C.) — Worcester and Shrewsbury, MA
-**Version:** 0.930 (draft) · **Last updated:** 2026-10-21
+**Version:** 0.932 (draft) · **Last updated:** 2026-10-21
 **Status:** Design outline only. Nothing in this document authorizes building or deploying.
 
 > **How to use this file:** Upload it at the start of any chat about the dashboard. Every screen, component, or feature built for the dashboard must follow the rules below. If a request conflicts with a rule, flag the conflict before building. Rules marked **(provisional)** depend on an open decision in section 10.
@@ -750,6 +750,8 @@ To be decided one at a time, each with visual options (rule P3):
 | Black Belt testing rubric editor: leaving with unsaved changes (decided v0.928) | Rubric question 8, Jeffrey chose **A** (2026-10-21): on **phones** the editor follows v0.56 like every full-screen dialog (back with unsaved changes keeps it open with the amber note "Unsaved changes. Save or cancel first." and a **Discard changes** link); on **PC and tablet**, clicking away (another tab, Dan or section) asks **"Discard changes to 1st Dan?"** with "N changes aren't saved", **Keep editing** / **Discard**. Cancel in the editor discards without asking (v0.923). Rejected: B, the same question on every device (would differ from v0.56 on phones). |
 | Black Belt testing rubric editor: Undo of Open registration (decided v0.929) | Rubric question 9, Jeffrey chose **A** (2026-10-21): pressing **Undo** in the "Registration opened" toast puts the cycle back exactly as it was, **including "never opened"**, so its rubric stays editable. Once registration has really been open (the toast is gone), the cycle's rubric is locked for good; closing registration later doesn't unlock it. Rejected: B, opening locks the rubric even if undone. |
 | Black Belt testing: the first opening of a cycle is admin-only (decided v0.930; changes v0.210) | Rubric question 10, Jeffrey chose **B** (2026-10-21): because the first opening of a cycle's registration locks its rubric for good (v0.921), **only admins may open a cycle's registration the first time**. Staff see **Open registration** grayed with "An admin opens it the first time (it locks the rubric)." Once an admin has opened it, staff may close and reopen it as before (before the application date, v0.210). The Undo in the toast still counts as never opened (v0.929). The database enforces it (the open function refuses staff while the cycle has never opened). Rejected: A, anyone with a warning; C, as before with no warning. |
+| Black Belt testing rubric editor: colour of changed rows (decided v0.931) | Jeffrey chose **A** (2026-10-21): rows changed but not yet saved in the rubric editor are tinted **pale amber** (`#FFF6DD`, the app's "unsaved" colour, §7), as in the Q3 picture. Rejected: B, light blue (the "selected rows" colour). |
+| Black Belt testing rubric editor: the Discard button (decided v0.932) | Jeffrey (2026-10-21): "keep it consistent with the rest of the system". Everywhere else Discard changes is a plain link in the amber unsaved note, and red means delete/remove only (§7). So the PC/tablet question "Discard changes to 1st Dan?" (v0.928) has a **plain Discard** button and **Keep editing** as the highlighted (primary) choice. No red. Rejected: a red Discard (would be an exception to §7). |
 | Approved 2026-10-16 (v0.26) | (1) **No PIN set:** when the 45-minute lock (or Lock now) happens to someone without a PIN, there is no lock screen — they are signed out to the sign-in screen with an amber note "Signed out after 45 minutes idle. Set a PIN to unlock faster." (2) **This device:** clicking it expands a Worcester / Shrewsbury choice inside the account menu; one click saves and closes (reversible, so no Save step). Sets the device's default school only; the top switcher still offers Both. (3) **Borders:** control borders use `#8F8F8A` (3:1); dividers stay `#E5E5E2`. Items (1) and (3) are coded with the Set PIN build. |
 
 ## 11. Changelog
@@ -1114,3 +1116,5 @@ To be decided one at a time, each with visual options (rule P3):
 | 0.928 | 2026-10-21 | Black Belt testing rubric editor Q8: phones keep v0.56's unsaved-changes note; PC/tablet ask "Discard changes?" (10b). |
 | 0.929 | 2026-10-21 | Black Belt testing rubric editor Q9: an undone Open registration counts as never opened (10b). |
 | 0.930 | 2026-10-21 | Black Belt testing: a cycle's first opening is admin-only (it locks the rubric) (10b). |
+| 0.931 | 2026-10-21 | Black Belt testing rubric editor: unsaved changed rows tinted pale amber (10b). |
+| 0.932 | 2026-10-21 | Black Belt testing rubric editor: Discard is a plain button, Keep editing highlighted (10b). |
