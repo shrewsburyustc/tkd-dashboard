@@ -86,3 +86,7 @@ Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Schedule-Build-Plan.md`.
 - **320px phones:** the 7 day buttons are about 38px wide (a 44px width can't fit 7 across); they are 44px tall to tap.
 - **Touch:** the color swatches' tap areas are 40px wide so all 8 fit one row.
 - **Empty school:** "Add time slot" stays in the page header (the same as Testing) instead of under the message.
+
+## Deployed 2026-10-20
+
+This branch is on `main` and live (the push included `0ccf776`; live `main` = `cc8b095`). Checked on https://tkd-dashboard.pages.dev: `/f/…` and `/forms` have the strict security policy, the dashboard keeps its own, and `GET /api/forms/<slug>` answers `not_open` (PUBLIC_FORMS=off). Next: Jeffrey looks at the new sections signed in; then PUBLIC_FORMS=on + redeploy, one real test sign-up, the two-connection race test.
