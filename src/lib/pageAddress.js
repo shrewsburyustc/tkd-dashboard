@@ -38,6 +38,7 @@
 //   #testing/star/rubrics                   Star testing, Rubrics and prices tab
 //   #testing/star/event/<id>                a Star testing event (its Candidates tab)
 //   #testing/star/event/<id>/grading        its Grading tab (Star phase 5)
+//   #testing/star/event/<id>/results        its Results tab (Star phase 6)
 // Old or "other switch" addresses are sent to the right one (the address bar is quietly corrected,
 // replacing the step instead of adding one), so bookmarks keep working:
 //   switch ON:  #testing/event/<id>          → #testing/color-belt/event/<id>
@@ -46,7 +47,7 @@
 //   switch OFF: #testing/color-belt  → #testing,
 //               #testing/color-belt/event/<id>(/grading) → #testing/event/<id>(/grading),
 //               #testing/color-belt/private/<id> → #testing/private/<id>,
-//               #testing/star, #testing/star/rubrics, #testing/star/event/<id>(/grading)
+//               #testing/star, #testing/star/rubrics, #testing/star/event/<id>(/grading|/results)
 //                                    → #testing (Color Belt — Star isn't in this build)
 //
 // A "route" is a small object saying which page is open:
@@ -56,7 +57,7 @@
 //     eventId: the open event's id (a Color Belt event, or a Star event when testingPage is
 //              'star'), or on Camps the open camp's id, or null,
 //     eventTab: the tab. On a Color Belt event page 'students' | 'grading'; on a Star event page
-//               'students' (= its Candidates tab) | 'grading' (Star phase 5); on Star's home (no
+//               'students' (= its Candidates tab) | 'grading' (Star phase 5) | 'results' (Star phase 6); on Star's home (no
 //               event) 'events' | 'rubrics'; on Finance its view 'report' | 'history' | 'settings'
 //               (a different Finance view is a different page); on the Camps list 'camps' |
 //               'templates', on a camp's page 'default' | 'checkin' | 'payments' | 'attendance'
@@ -100,8 +101,10 @@ const CAMPS_HASH = new RegExp(`^#camps(?:/templates|/camp/${ID}(?:/(checkin|paym
 const CAMPS_TEMPLATES_HASH = '#camps/templates';
 const CAMP_TABS = ['checkin', 'payments', 'attendance'];
 const STAR_RUBRICS_HASH = '#testing/star/rubrics';
-// "(/grading)?" = the Star event page's Grading tab (Star phase 5), as Color Belt's.
-const STAR_EVENT_HASH = new RegExp(`^#testing/star/event/${ID}(/grading)?$`);
+// "(/grading|/results)?" = the Star event page's Grading tab (Star phase 5), as Color Belt's, or its
+// Results tab (Star phase 6).
+const STAR_EVENT_HASH = new RegExp(`^#testing/star/event/${ID}(/grading|/results)?$`);
+const STAR_RESULTS_SUFFIX = '/results';
 // Any Star address at all (used while the switch is off, to send them all to Color Belt).
 const ANY_STAR_HASH = /^#testing\/star(\/.*)?$/;
 
@@ -111,12 +114,12 @@ export const DEFAULT_TESTING_PAGE = STAR_TESTING_ON ? 'chooser' : 'colorBelt';
 // The tab a route really has, from what was asked for:
 //   a Star page without an event      'rubrics' when asked, otherwise 'events' (the default tab)
 //   a Color Belt event page           'grading' when asked, otherwise 'students'
-//   a Star event page                 'grading' when asked, otherwise 'students' (its Candidates
-//                                     tab; Star phase 5)
+//   a Star event page                 'grading' or 'results' when asked, otherwise 'students' (its
+//                                     Candidates tab; Star phases 5 and 6)
 //   anything else                     'students'
 export function normalEventTab(testingPage, eventId, tab) {
   if (testingPage === 'star' && !eventId) return tab === 'rubrics' ? 'rubrics' : 'events';
-  if (testingPage === 'star' && eventId && tab === 'grading') return 'grading';
+  if (testingPage === 'star' && eventId && (tab === 'grading' || tab === 'results')) return tab;
   if (testingPage === 'colorBelt' && eventId && tab === 'grading') return 'grading';
   return 'students';
 }
@@ -153,7 +156,7 @@ function readHash(hash) {
   // Star testing (switch off: every Star address shows Color Belt, as in phase 1).
   if (!STAR_TESTING_ON && ANY_STAR_HASH.test(hash)) return { route: route('testing', 'colorBelt'), known: true };
   match = STAR_EVENT_HASH.exec(hash);
-  if (match) return { route: route('testing', 'star', match[1], match[2] ? 'grading' : 'students'), known: true };
+  if (match) return { route: route('testing', 'star', match[1], match[2] ? match[2].slice(1) : 'students'), known: true };
   if (hash === STAR_RUBRICS_HASH) return { route: route('testing', 'star', null, 'rubrics'), known: true };
   if (hash === STAR_HASH) return { route: route('testing', 'star', null, 'events'), known: true };
   if (hash === HASH_BY_PAGE.testing) return { route: route('testing', DEFAULT_TESTING_PAGE), known: true };
@@ -195,7 +198,7 @@ function hashForRoute({ section, testingPage = null, eventId = null, eventTab = 
     return privateId ? `#testing/private/${privateId}` : HASH_BY_PAGE.testing;
   }
   if (testingPage === 'star') {
-    if (eventId) return `${STAR_HASH}/event/${eventId}${tabPart}`;
+    if (eventId) return `${STAR_HASH}/event/${eventId}${eventTab === 'results' ? STAR_RESULTS_SUFFIX : tabPart}`;
     return eventTab === 'rubrics' ? STAR_RUBRICS_HASH : STAR_HASH;
   }
   if (testingPage === 'colorBelt') {

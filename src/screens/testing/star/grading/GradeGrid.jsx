@@ -53,7 +53,8 @@ const WIDTHS = {
   narrow: { name: 112, count: 48, total: 48, result: 116, cell: 32 },
 };
 
-export default function GradeGrid({ rows, subjects, letters, maxScore, danLabel, saves, isAdmin, size = 'pc', typing = false, onChooseSubjects }) {
+// markedId (phase 6): the row Results' Open grades marked — gray tint + dark bar (proposal 29), or null.
+export default function GradeGrid({ rows, subjects, letters, maxScore, danLabel, saves, isAdmin, size = 'pc', typing = false, onChooseSubjects, markedId = null }) {
   const tableRef = useRef(null);
   const [selected, setSelected] = useState(null); // { rowId, categoryId } — the grid's Tab stop
   const [openKey, setOpenKey] = useState(null); // the cell whose list is open
@@ -200,7 +201,7 @@ export default function GradeGrid({ rows, subjects, letters, maxScore, danLabel,
               { what: T.COL_ASSISTANT_CLASSES, note: assistant.note },
             ].filter((n) => n.note);
             return (
-              <tr key={row.id}>
+              <tr key={row.id} data-grade-row={row.id} className={row.id === markedId ? 'stg-row-marked' : undefined}>
                 <th scope="row" className="stg-name">
                   <span className="stg-name-text">{name}</span>
                   <small>{candidateLine(row)}</small>

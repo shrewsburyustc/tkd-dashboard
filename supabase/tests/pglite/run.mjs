@@ -275,6 +275,16 @@
 //   step0021. 0021 (Not interested families deleted after 6 months) on its own
 //       live-order database: only prospects_purge_old's fingerprint moves,
 //       0021_tests + 0015/0012 tests pass, re-runs harmless, minimal = live.
+//   step0023. 0023 (Star result email texts + M5: star_update_event keeps
+//       registration closed, rulebook v0.514 / v0.504) on its own
+//       live-order database: 0023_fingerprints.sql is connector-safe;
+//       only the star_update_event and star_results_csv lines of 0006's
+//       fingerprints moves; 0023_tests + 0006_tests (+ 0003/0005) pass;
+//       re-runs keep an admin's changed text and change no fingerprint;
+//       the undo file (manual/0023u) gives back 0006's star_update_event
+//       fingerprint, 0023 again restores it; a 0006 re-run then 0023
+//       again gives the same fingerprints; a
+//       minimal database (0003-0006 + 0023) gives the same fingerprints.
 //   17. 0015 (family history) on a database built in the live order
 //       (no family rows in change_log): earlier fingerprints unchanged
 //       (0003's above all), 0015_tests.sql and every earlier test file
@@ -741,6 +751,10 @@ async function main() {
   console.log('\nMigration 0021 (Not interested families deleted after 6 months):');
   const after21 = after5 ? await step0021() : null;
 
+  // step0023: Star result email texts + M5 (its own database)
+  console.log('\nMigration 0023 (Star result email texts + registration stays closed on edit):');
+  const after23 = after5 ? await step0023() : null;
+
   // step0020 (named after its migration, not a number other branches use): 0020, LAST
   console.log('\nMigration 0020 (current_session_id reads only request.jwt.claims), last:');
   const after20 = after5 ? await step0020(db, upgradeDb) : null;
@@ -778,6 +792,10 @@ async function main() {
   if (after21) {
     console.log('\n0021 fingerprints (kind  item  detail):');
     for (const line of after21) console.log('  ' + line);
+  }
+  if (after23) {
+    console.log('\n0023 fingerprints (kind  item  detail):');
+    for (const line of after23) console.log('  ' + line);
   }
   if (after11) {
     console.log('\n0011 fingerprints (kind  item  detail):');
@@ -2013,6 +2031,159 @@ async function step0021() {
     }
   }
   return after21;
+}
+
+
+// =====================================================================
+// step0023: 0023 (Star result email texts, rulebook v0.514 R11; M5,
+// v0.504: star_update_event keeps registration closed in the same save),
+// on its own database built in the live order.
+//   a. steps 1-5, 0003, 0004, the seed, 0005 (+ its test event), 0006,
+//      0010, 0007, 0008, 0009, 0012, 0015, 0011, 0014, 0019, 0020, 0021;
+//      0023_fingerprints.sql contains neither "delete" nor "drop" (it
+//      goes through the connector; the migration is pasted by hand)
+//   b. 0023; every other migration's fingerprints stay the same, except
+//      the TWO lines of star_update_event (M5) and star_results_csv (the
+//      CSV keys) in 0006's, on purpose
+//   c. 0023_tests.sql, then 0006_tests.sql (every old star_update_event
+//      test must still pass), 0005_tests.sql and 0003_tests.sql
+//   d. an admin's changed text survives 0023 applied twice more; the
+//      function / table / rule / trigger fingerprints stay identical;
+//      0023_tests.sql again
+//   e. the undo file supabase/manual/0023u_undo_star_update_event.sql:
+//      star_update_event's and star_results_csv's fingerprints equal the
+//      ones before 0023, every other 0006 line unchanged; the table and its function stay;
+//      0006_tests pass; 0023 again restores the tested fingerprints
+//   e2. 0006 re-run (puts 0006's star_update_event back), then 0023 again:
+//      the fingerprints are 0023's again; 0023 + 0006 tests pass
+//   f. a minimal database (steps 1-5, 0003, 0004, 0005, 0006, 0023) gives
+//      the same 0023 fingerprints
+// Returns 0023's fingerprints.
+// =====================================================================
+async function step0023() {
+  const L = '[0023] ';
+  const migration = read('migrations', '0023_star_result_texts.sql');
+  record(L + '0023_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)',
+    !/delete|drop/i.test(read('tests', '0023_fingerprints.sql')));
+
+  const db = await buildBase(L);
+  if (!db) return null;
+  for (const [label, file] of [['0003', '0003_testing_classes_ranks.sql'], ['0004', '0004_staff_accounts.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+  await run(db, L + 'apply built-in seed', builtInSeedSql());
+  if (!(await run(db, L + 'apply 0005', read('migrations', '0005_testing_events.sql')))) return null;
+  await seedTestEvent(db);
+  for (const [label, file] of [['0006', '0006_star_testing.sql'], ['0010 (grading results)', '0010_testing_results.sql'],
+    ['0007', '0007_schedule.sql'], ['0008', '0008_calendar.sql'], ['0009', '0009_forms.sql'], ['0012', '0012_prospects.sql'],
+    ['0015', '0015_family_history.sql'], ['0011 (Finance)', '0011_finance.sql'], ['0014', '0014_testing_private.sql'],
+    ['0019', '0019_school_phone.sql'], ['0020', '0020_session_id_claims.sql'],
+    ['0021', '0021_prospects_not_interested_sooner.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // b. apply 0023; only star_update_event's line of 0006's fingerprints may move
+  const prints = ['0003_fingerprints.sql', '0004_fingerprints.sql', '0005_fingerprints.sql', '0006_fingerprints.sql', '0010_fingerprints.sql',
+    '0007_fingerprints.sql', '0008_fingerprints.sql', '0009_fingerprints.sql', '0012_fingerprints.sql', '0015_fingerprints.sql',
+    '0011_fingerprints.sql', '0014_fingerprints.sql', '0019_fingerprints.sql', '0020_fingerprints.sql', '0021_fingerprints.sql'];
+  const before = {};
+  for (const f of prints) before[f] = await fingerprints(db, f);
+  if (!(await run(db, L + 'apply 0023_star_result_texts.sql', migration))) return null;
+  const after23 = await fingerprints(db, '0023_fingerprints.sql');
+  for (const f of prints) {
+    const after = await fingerprints(db, f);
+    const gone = before[f].filter((line) => !after.includes(line));
+    const added = after.filter((line) => !before[f].includes(line));
+    const moved = [...gone, ...added];
+    const ok = f === '0006_fingerprints.sql'
+      ? gone.length === 2 && added.length === 2 && moved.every((line) => /^function {2}star_(update_event|results_csv)\(/.test(line))
+      : moved.length === 0;
+    record(`${L}${f.slice(0, 4)} fingerprints: ${f === '0006_fingerprints.sql' ? 'only star_update_event (M5) and star_results_csv moved' : 'unchanged'}`, ok,
+      moved.length === 0 ? `${after.length} rows, unchanged` : `${gone.length} line(s) changed: ${added.map((l) => l.slice(0, 60)).join(' | ')}`);
+  }
+  const updateEventLine = after23.find((line) => /^function {2}star_update_event\(/.test(line));
+  record(L + 'star_update_event: 0023_fingerprints.sql and 0006_fingerprints.sql agree on the new code',
+    !!updateEventLine && (await fingerprints(db, '0006_fingerprints.sql')).some((line) => line.split('  ')[2]?.split(' ')[0] === updateEventLine.split('  ')[2].split(' ')[0]));
+
+  // c. its own tests, then Star's and the files 0006's tests sit on
+  await runTestFile(db, L + '0023_tests.sql', '0023_tests.sql', 'ALL 0023 TESTS PASSED');
+  for (const [file, ok] of [['0006_tests.sql', 'ALL 0006 TESTS PASSED'], ['0005_tests.sql', 'ALL 0005 TESTS PASSED'],
+    ['0003_tests.sql', 'ALL 0003 TESTS PASSED']]) {
+    await runTestFile(db, `${L}${file} (after 0023)`, file, ok);
+  }
+
+  // d. an admin's changed text survives re-runs; nothing else moves
+  const structural = (lines) => lines.filter((line) => !line.startsWith('seed  '));
+  const changed = 'Hello, changed by an admin: {total} of {pass mark}. {first name}';
+  await run(db, L + 'an admin changes the Passed text (as the SQL Editor, tagged)', `
+    begin;
+    select set_config('tkd.action', 'star_set_result_text', true);
+    update public.star_result_texts set body = '${changed}' where kind = 'passed';
+    commit;`);
+  const changedVersion = await one(db, `select version from public.star_result_texts where kind = 'passed'`);
+  for (const n of ['SECOND', 'THIRD']) {
+    await run(db, `${L}apply 0023 a ${n} time (re-run safety)`, migration);
+  }
+  const again = await fingerprints(db, '0023_fingerprints.sql');
+  record(L + '0023 function / table / rule / trigger fingerprints identical before/after the re-runs',
+    JSON.stringify(structural(again)) === JSON.stringify(structural(after23)), `${again.length} rows`);
+  record(L + 'the re-runs kept the admin\'s text and its version (the seed never overwrites)',
+    (await one(db, `select body from public.star_result_texts where kind = 'passed'`)) === changed
+      && (await one(db, `select version from public.star_result_texts where kind = 'passed'`)) === changedVersion
+      && (await one(db, `select count(*)::int from public.star_result_texts`)) === 3);
+  await runTestFile(db, L + '0023_tests.sql (after re-runs)', '0023_tests.sql', 'ALL 0023 TESTS PASSED');
+
+  // e. the undo file gives back 0006's star_update_event exactly
+  const ueRe = /^function {2}star_(update_event|results_csv)\(/;
+  const before6 = before['0006_fingerprints.sql'];
+  const before6Lines = before6.filter((line) => ueRe.test(line));
+  const undoSql = readFileSync(path.join(supabaseDir, 'manual', '0023u_undo_star_update_event.sql'), 'utf8');
+  if (await run(db, L + 'apply the undo file manual/0023u_undo_star_update_event.sql', undoSql)) {
+    const undone = await fingerprints(db, '0006_fingerprints.sql');
+    record(L + 'after the undo star_update_event and star_results_csv have 0006\'s fingerprints again',
+      before6Lines.length === 2 && JSON.stringify(undone.filter((line) => ueRe.test(line))) === JSON.stringify(before6Lines));
+    record(L + 'after the undo every other 0006 line is unchanged',
+      JSON.stringify(undone.filter((line) => !ueRe.test(line))) === JSON.stringify(before6.filter((line) => !ueRe.test(line))));
+    record(L + 'after the undo the texts table and its function stay',
+      (await one(db, 'select count(*)::int from public.star_result_texts')) === 3
+        && (await one(db, "select to_regprocedure('public.star_set_result_text(text, integer, text)') is not null")) === true);
+    await runTestFile(db, L + '0006_tests.sql (after the undo)', '0006_tests.sql', 'ALL 0006 TESTS PASSED');
+    if (await run(db, L + 'apply 0023 again after the undo', migration)) {
+      const redo = await fingerprints(db, '0023_fingerprints.sql');
+      record(L + '0023 fingerprints back to the tested ones after undo + 0023',
+        JSON.stringify(structural(redo)) === JSON.stringify(structural(after23)), `${redo.length} rows`);
+    }
+  }
+
+  // e2. 0006 re-run (old star_update_event back), then 0023 again
+  if (await run(db, L + 're-run 0006 (puts 0006\'s star_update_event back)', read('migrations', '0006_star_testing.sql'))) {
+    const old = await fingerprints(db, '0023_fingerprints.sql');
+    record(L + 'after the 0006 re-run star_update_event is 0006\'s again (fingerprint differs)',
+      JSON.stringify(structural(old)) !== JSON.stringify(structural(after23)));
+    if (await run(db, L + 'apply 0023 again after the 0006 re-run', migration)) {
+      const back = await fingerprints(db, '0023_fingerprints.sql');
+      record(L + '0023 fingerprints back to the tested ones', JSON.stringify(structural(back)) === JSON.stringify(structural(after23)), `${back.length} rows`);
+      await runTestFile(db, L + '0023_tests.sql (after 0006 re-run + 0023)', '0023_tests.sql', 'ALL 0023 TESTS PASSED');
+      await runTestFile(db, L + '0006_tests.sql (after 0006 re-run + 0023)', '0006_tests.sql', 'ALL 0006 TESTS PASSED');
+    }
+  }
+
+  // f. a minimal database gives the same fingerprints (seed lines included)
+  const M = '[0023 minimal] ';
+  const mini = await buildBase(M);
+  if (mini) {
+    let ok = true;
+    for (const f of ['0003_testing_classes_ranks.sql', '0004_staff_accounts.sql', '0005_testing_events.sql', '0006_star_testing.sql',
+      '0023_star_result_texts.sql']) {
+      ok = ok && (await run(mini, M + 'apply ' + f, read('migrations', f)));
+    }
+    if (ok) {
+      const p = await fingerprints(mini, '0023_fingerprints.sql');
+      record(M + '0023 fingerprints identical to the live-order database', JSON.stringify(p) === JSON.stringify(after23), `${p.length} rows`);
+      await runTestFile(mini, M + '0023_tests.sql', '0023_tests.sql', 'ALL 0023 TESTS PASSED');
+    }
+  }
+  return after23;
 }
 
 // ---------------------------------------------------------------------
