@@ -1,7 +1,7 @@
 # TKD Dashboard — Design Guidelines
 
 **School:** Jae H. Jeong's U.S. Taekwondo Center (U.S.T.C.) — Worcester and Shrewsbury, MA
-**Version:** 0.409 (draft) · **Last updated:** 2026-10-20
+**Version:** 0.305 (draft) · **Last updated:** 2026-10-20
 **Status:** Design outline only. Nothing in this document authorizes building or deploying.
 
 > **How to use this file:** Upload it at the start of any chat about the dashboard. Every screen, component, or feature built for the dashboard must follow the rules below. If a request conflicts with a rule, flag the conflict before building. Rules marked **(provisional)** depend on an open decision in section 10.
@@ -163,6 +163,7 @@ Section icons are added to this table only when that section is added (rule P7).
 | Close the day… (Finance: opens the counting dialog; decided v0.207 / v0.800, added to the map v0.301) | `ti-cash-register` |
 | Close the day (the dialog's button) / Day closed (decided v0.207, added to the map v0.301) | `ti-lock-check` |
 | Reopen day (Finance, admins; decided v0.207, added to the map v0.301) | `ti-lock-open` |
+| Edit payment (roster ⋯ menu: Color Belt events and Private testing; decided v0.409, added to the map v0.305) | `ti-cash-edit` |
 
 **Objects**
 
@@ -902,3 +903,4 @@ To be decided one at a time, each with visual options (rule P3):
 | 0.303 | 2026-10-20 | Icon map: `ti-cash` means cash only; every Payments recorded card uses `ti-sum` (a money total, like Finance's Total) — Color Belt and Camps change their card (10b). |
 | 0.304 | 2026-10-20 | PGlite test steps in `run.mjs` are named by migration number (`step00NN`); main's `step11`–`step18` keep their names; v0.303's 10b row corrected (Camps has no Payments recorded card) (10b). |
 | 0.409 | 2026-10-20 | Edit payment (roster ⋯ menu, Color Belt events + Private testing) keeps `ti-cash-edit`; added to the icon map at the color-belt merge (10b). |
+| 0.305 | 2026-10-20 | Icon map (2.4): Edit payment `ti-cash-edit` (Color Belt, decided v0.409) added at the color-belt merge. |
