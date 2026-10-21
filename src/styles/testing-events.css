@@ -1641,3 +1641,37 @@
     height: 14px;
   }
 }
+
+/* ===== Hide private details (rulebook v0.506, v0.507 Q2) =====
+   While the device switch is on, Color Belt shows no money. The same look as Star's
+   (star.css .st-cards.is-one / .st-hidden-value), written here so Color Belt doesn't depend on
+   Star's stylesheet being loaded. */
+
+/* Only the Students (or Private testings) card: one card, not four */
+.ev-cards.is-one {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 280px;
+}
+
+/* A hidden value keeps its row and reads gray "Hidden on this tablet" */
+.ev-hidden-value {
+  color: var(--color-text-secondary);
+}
+
+/* The roster without Paying by, Payment, Paid on and Mark paid:
+   Student · Testing for · Status (only when a shown row has a tag) · ⋯ */
+.ev-roster.is-hidden .ev-srow:not(.is-phone),
+.ev-roster.is-hidden.is-wide .ev-srow:not(.is-phone) {
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.5fr) 148px 44px;
+}
+
+.ev-roster.is-hidden.no-status .ev-srow:not(.is-phone),
+.ev-roster.is-hidden.is-wide.no-status .ev-srow:not(.is-phone) {
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.5fr) 44px;
+}
+
+@media (max-width: 639.98px) {
+  .ev-cards.is-one {
+    max-width: none;
+  }
+}

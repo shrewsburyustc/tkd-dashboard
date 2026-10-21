@@ -12,6 +12,9 @@
 // Under the name: the amber "Paid $65 · $20 more to collect" line while a paid student owes more
 // (P1), and a gray "→ Moved from November Children Testing" line for one moved from an event.
 // A cancelled row is grayed entirely; staff see no ⋯ on it (admins: Restore / Delete).
+// Follows "Hide private details" (v0.506), as Star's CandidateRows: while ctx.hidden is on there is
+// no price, Paying by, Payment or Paid on column, no Paid / Not paid tag, no amber owed line and no
+// Mark paid (PC: Day · time · Student · Testing for · ⋯). The gray "Moved from …" line stays.
 import { IconAlertTriangle, IconArrowRight, IconCheck, IconDots } from '@tabler/icons-react';
 import IconButton from '../../../components/IconButton.jsx';
 import { showMarkPaid } from '../../../lib/testing/privateRules.js';
@@ -40,7 +43,7 @@ function NotSavedTag() {
 
 // One private testing. ctx = { layout, busy, isAdmin, menuFor, notSavedId, handlers }
 function PrivateRow({ row, ctx }) {
-  const { layout, handlers } = ctx;
+  const { layout, handlers, hidden } = ctx;
   const name = T.studentLabel(row);
   const cancelled = row.status === 'cancelled';
   const open = ctx.menuFor === row.id;
@@ -51,11 +54,15 @@ function PrivateRow({ row, ctx }) {
   if (cancelled) sideTag = <span className="ttag">{T.cancelledTag(row.cancelledAt)}</span>;
   else if (row.side === 'past' && row.result) sideTag = <ResultTag result={row.result} />;
 
-  const payTag = ctx.notSavedId === row.id ? <NotSavedTag /> : <span className={`ttag${row.paid ? ' ttag--ok' : ''}`}>{row.paid ? T.TAG_PAID : T.TAG_NOT_PAID}</span>;
+  // While hidden there is no Payment column, so a "Not saved" tag (a failed Restore, say) sits next
+  // to the name instead (nameTag), like the event roster's Status column keeps it.
+  const notSaved = ctx.notSavedId === row.id;
+  const nameTag = hidden && notSaved ? <NotSavedTag /> : null;
+  const payTag = notSaved ? <NotSavedTag /> : <span className={`ttag${row.paid ? ' ttag--ok' : ''}`}>{row.paid ? T.TAG_PAID : T.TAG_NOT_PAID}</span>;
 
   // The amber owed line and the gray moved line (P1)
   const owed =
-    !cancelled && row.owesMore ? (
+    !hidden && !cancelled && row.owesMore ? (
       <span className="pv-owed-line">
         {/* ti-alert-triangle = still something to collect */}
         <IconAlertTriangle size={14} aria-hidden="true" />
@@ -79,11 +86,11 @@ function PrivateRow({ row, ctx }) {
   const testingFor = (
     <span className="pv-tf">
       <TestingForCell rank={rankViewOf(row)} />
-      <span className="pv-tf-price">· {T.dollars(row.privateCents)}</span>
+      {!hidden && <span className="pv-tf-price">· {T.dollars(row.privateCents)}</span>}
     </span>
   );
 
-  const markPaid = !cancelled && showMarkPaid(row) ? (
+  const markPaid = !hidden && !cancelled && showMarkPaid(row) ? (
     <button
       type="button"
       className="btn btn-sm ev-markpaid"
@@ -114,7 +121,7 @@ function PrivateRow({ row, ctx }) {
   const rowClass = `pv-row${cancelled ? ' is-cancelled' : ''}${open ? ' is-selected' : ''}${layout.isPhone ? ' is-phone' : ''}`;
 
   if (layout.isPhone) {
-    const payLine = row.paid ? T.paidOnPhone(row.paidMethod, row.paidOn) : T.payingByText(row.payingBy);
+    const payLine = hidden ? null : row.paid ? T.paidOnPhone(row.paidMethod, row.paidOn) : T.payingByText(row.payingBy);
     return (
       <div className={rowClass} role="row" aria-label={name} data-private-row={row.id}>
         <span className="pv-phone-main" role="cell">
@@ -122,15 +129,20 @@ function PrivateRow({ row, ctx }) {
             <span className="ev-sname">{name}</span>
             <span className="pv-class">{row.className}</span>
             {sideTag}
+            {nameTag}
           </span>
           <span className="pv-daytime-line">{T.privateDayTime(row.privateDate, row.privateTime)}</span>
           {testingFor}
           {lines}
-          <span className="pv-sub">{payLine}</span>
-          <span className="ev-sline-tag">
-            {payTag}
-            {markPaid}
-          </span>
+          {!hidden && (
+            <>
+              <span className="pv-sub">{payLine}</span>
+              <span className="ev-sline-tag">
+                {payTag}
+                {markPaid}
+              </span>
+            </>
+          )}
         </span>
         <span className="acts" role="cell">
           {more}
@@ -144,6 +156,7 @@ function PrivateRow({ row, ctx }) {
       <span className="pv-name-line">
         <span className="ev-sname">{name}</span>
         {sideTag}
+        {nameTag}
       </span>
       <span className="pv-class">{row.className}</span>
       {!layout.isWide && <span className="pv-class">{T.privateDayTime(row.privateDate, row.privateTime)}</span>}
@@ -160,9 +173,9 @@ function PrivateRow({ row, ctx }) {
       )}
       {student}
       <span role="cell">{testingFor}</span>
-      <span role="cell">{T.payingByText(row.payingBy)}</span>
-      <span role="cell">{payTag}</span>
-      {layout.isWide && (
+      {!hidden && <span role="cell">{T.payingByText(row.payingBy)}</span>}
+      {!hidden && <span role="cell">{payTag}</span>}
+      {!hidden && layout.isWide && (
         <span className="nowrap" role="cell">
           {row.paid ? T.monthDay(row.paidOn) : '—'}
         </span>
@@ -183,17 +196,21 @@ function PrivateRow({ row, ctx }) {
 
 // rows: one side's private testings, already sorted (privateRules.splitPrivate)
 export default function PrivateRows({ rows, label, ctx }) {
-  const { layout } = ctx;
+  const { layout, hidden } = ctx;
   return (
-    <div className={`clist pv-list${layout.isWide ? ' is-wide' : ''}${layout.isPhone ? ' is-phone' : ''}${layout.isTouch ? ' is-touch' : ''}`} role="table" aria-label={label}>
+    <div
+      className={`clist pv-list${layout.isWide ? ' is-wide' : ''}${layout.isPhone ? ' is-phone' : ''}${layout.isTouch ? ' is-touch' : ''}${hidden ? ' is-hidden' : ''}`}
+      role="table"
+      aria-label={label}
+    >
       {!layout.isPhone && (
         <div className="pv-row pv-head" role="row">
           {layout.isWide && <span role="columnheader">{T.COL_DAY_TIME}</span>}
           <span role="columnheader">{T.COL_STUDENT}</span>
-          <span role="columnheader">{T.COL_TESTING_FOR_PRICE}</span>
-          <span role="columnheader">{T.COL_PAYING_BY}</span>
-          <span role="columnheader">{T.COL_PAYMENT}</span>
-          {layout.isWide && <span role="columnheader">{T.COL_PAID_ON}</span>}
+          <span role="columnheader">{hidden ? T.COL_TESTING_FOR : T.COL_TESTING_FOR_PRICE}</span>
+          {!hidden && <span role="columnheader">{T.COL_PAYING_BY}</span>}
+          {!hidden && <span role="columnheader">{T.COL_PAYMENT}</span>}
+          {!hidden && layout.isWide && <span role="columnheader">{T.COL_PAID_ON}</span>}
           <span role="columnheader" aria-label={T.ACTIONS_COL} />
         </div>
       )}

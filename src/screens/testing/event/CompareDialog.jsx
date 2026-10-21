@@ -9,11 +9,13 @@
 // PC / tablet: two columns. Phone: a full screen with the two registrations one after the other.
 // Phase 3 (v0.194): after the testing day "Keep this one" is for admins only — staff don't see
 // the two buttons (canKeepOne false), only "keep both" and a line saying an admin can keep one.
+// Follows "Hide private details" (v0.506, v0.507 Q2), as Star's compare: while `hidden` is on,
+// Paying by and Payment read gray "Hidden on this tablet" on both sides and are never highlighted.
 import Dialog from '../../../components/Dialog.jsx';
 import Notice from '../../../components/Notice.jsx';
 import * as T from '../text.js';
 
-export default function CompareDialog({ first, second, rankById, isPhone, saving, failed, canKeepOne = true, onKeep, onKeepBoth, onClose }) {
+export default function CompareDialog({ first, second, rankById, isPhone, saving, failed, canKeepOne = true, hidden = false, onKeep, onKeepBoth, onClose }) {
   const name = T.studentLabel(first);
   const testing = (row) => {
     const rank = rankById.get(row.eventRankId);
@@ -24,17 +26,20 @@ export default function CompareDialog({ first, second, rankById, isPhone, saving
     { label: T.DETAIL_REGISTERED, a: T.registeredDetail(first.registeredAt, first.source, null), b: T.registeredDetail(second.registeredAt, second.source, null) },
     { label: T.COMPARE_REFERENCE, a: first.reference ?? T.NO_REFERENCE, b: second.reference ?? T.NO_REFERENCE, plain: true },
     { label: T.DETAIL_TESTING_FOR, a: testing(first), b: testing(second) },
-    { label: T.DETAIL_PAYING_BY, a: T.payingByText(first.payingBy), b: T.payingByText(second.payingBy) },
-    { label: T.DETAIL_PAYMENT, a: payment(first), b: payment(second) },
-  ];
-  // A reference number always differs, so it is never highlighted.
+    { label: T.DETAIL_PAYING_BY, a: T.payingByText(first.payingBy), b: T.payingByText(second.payingBy), private: true },
+    { label: T.DETAIL_PAYMENT, a: payment(first), b: payment(second), private: true },
+  ].map((line) => (hidden && line.private ? { ...line, a: T.HIDDEN_ON_THIS_TABLET, b: T.HIDDEN_ON_THIS_TABLET, plain: true, isHidden: true } : line));
+  // A reference number always differs, so it is never highlighted; hidden values never are.
   const differs = (line) => !line.plain && line.a !== line.b;
-  const value = (text, highlight) => (
-    <>
-      {text}
-      {highlight && <span className="visually-hidden"> ({T.DIFFERENT})</span>}
-    </>
-  );
+  const value = (text, highlight, isHidden = false) =>
+    isHidden ? (
+      <span className="ev-hidden-value">{text}</span>
+    ) : (
+      <>
+        {text}
+        {highlight && <span className="visually-hidden"> ({T.DIFFERENT})</span>}
+      </>
+    );
   const keepButton = (row, which) =>
     canKeepOne && (
       <button
@@ -61,7 +66,7 @@ export default function CompareDialog({ first, second, rankById, isPhone, saving
                 {lines.map((line) => (
                   <div key={line.label} className={`ev-sum-row${differs(line) ? ' is-diff' : ''}`}>
                     <dt>{line.label}</dt>
-                    <dd>{value(index === 0 ? line.a : line.b, differs(line))}</dd>
+                    <dd>{value(index === 0 ? line.a : line.b, differs(line), line.isHidden)}</dd>
                   </div>
                 ))}
               </dl>
@@ -82,8 +87,8 @@ export default function CompareDialog({ first, second, rankById, isPhone, saving
             {lines.map((line) => (
               <tr key={line.label}>
                 <th scope="row">{line.label}</th>
-                <td className={differs(line) ? 'is-diff' : ''}>{value(line.a, differs(line))}</td>
-                <td className={differs(line) ? 'is-diff' : ''}>{value(line.b, differs(line))}</td>
+                <td className={differs(line) ? 'is-diff' : ''}>{value(line.a, differs(line), line.isHidden)}</td>
+                <td className={differs(line) ? 'is-diff' : ''}>{value(line.b, differs(line), line.isHidden)}</td>
               </tr>
             ))}
             {canKeepOne && (

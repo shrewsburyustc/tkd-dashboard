@@ -17,6 +17,11 @@
 // database; the dialog's values live HERE, so a screen lock hides the dialog and brings it back;
 // "stale" = someone else changed it — nothing is overwritten, the person is told, the list reloads.
 // Admin vs staff only changes what is SHOWN — the database enforces who may do what.
+// Follows "Hide private details" (v0.506, v0.507 Q2), as Star's Candidates tab: while the device
+// switch is on, only the Private testings card shows, the rows have no price, Paying by, Payment,
+// Paid on, "Paid $65 · $20 more to collect" line or Mark paid, the ⋯ menu has no payment items
+// (privateMenu's `hidden`), and the dialogs name no amount. Turning it on closes an open payment
+// dialog, closes the ⋯ menu and clears the toast. (Color Belt keeps no date of birth or email.)
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   IconArrowBackUp,
@@ -35,6 +40,7 @@ import {
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../../../lib/device.js';
+import { usePrivateDetailsHidden } from '../../../lib/privateDetails.js';
 import { centsToInputText } from '../../../lib/money.js';
 import { loadClassesAndRanks } from '../../../lib/testing/api.js';
 import { withTestingFor } from '../../../lib/testing/rankOrder.js';
@@ -70,6 +76,8 @@ import '../../../styles/testing-private.css';
 const sideBySchool = new Map();
 // Notes that make Save unavailable until the dialog is closed and opened again.
 const BLOCKING_NOTES = ['STALE_DIALOG', 'NOT_ALLOWED', 'STUDENT_LOCKED', 'PRIVATE_GRADED', 'ALREADY_PAID'];
+// The dialogs that are about money: closed when Hide private details is switched on.
+const PAYMENT_DIALOGS = ['paying', 'payment'];
 
 const find = (selector) => document.querySelector(selector);
 const rowEl = (id) => find(`[data-private-row="${id}"]`);
@@ -117,6 +125,7 @@ export default function PrivateTestingTab({
   const isTouch = useMediaQuery(TOUCH_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const layout = { isPhone, isTouch, isWide };
+  const [hidden] = usePrivateDetailsHidden(); // Hide private details (v0.506)
 
   // ----- State -----
   const [side, setSideState] = useState(() => sideBySchool.get(locationCode) ?? 'upcoming');
@@ -212,6 +221,33 @@ export default function PrivateTestingTab({
   }, [modalShown, onModalOpenChange]);
   useEffect(() => () => onModalOpenChange(false), [onModalOpenChange]);
 
+  // Hide private details switched on: no payment dialog, menu or toast may stay (as Star, G4).
+  // The switch's value RIGHT NOW (updated on every drawing, as Star's hiddenNowRef): a save already
+  // on its way when the switch turned on reads it when the answer arrives.
+  const hiddenNowRef = useRef(hidden);
+  hiddenNowRef.current = hidden;
+  const hiddenBeforeRef = useRef(hidden);
+  useEffect(() => {
+    const switchedOn = hidden && !hiddenBeforeRef.current; // a change, not the first drawing
+    hiddenBeforeRef.current = hidden;
+    if (!switchedOn) return;
+    const d = dialogRef.current;
+    // (Even mid-save: the save still finishes, and its toast names no amount.)
+    if (d && PAYMENT_DIALOGS.includes(d.type)) {
+      setDialog(null);
+      focusAfterClose(d);
+    }
+    setMenu(null);
+    // A toast may name money ("marked paid · $85 cash") or carry a payment Undo: it goes too.
+    clearToast();
+    // So does every banner: a failed Mark paid / Undo payment keeps a Retry that records money,
+    // and "already marked paid" names paid status. The row's Not saved mark goes with it.
+    setBanner(null);
+    setNotSavedId(null);
+    // (only when the switch changes)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hidden]);
+
   // ===== The two sides and the cards =====
   const { upcoming, past } = splitPrivate(rows, today);
   const shown = side === 'past' ? past : upcoming;
@@ -287,7 +323,8 @@ export default function PrivateTestingTab({
     const liveList = livePaymentsOf(payments, row.id);
     // "The $85 cash payment stays recorded" — the net paid, with the most recent method.
     const payment = row.paid ? { cents: row.paidCents, method: liveList[liveList.length - 1]?.method ?? row.paidMethod } : null;
-    openDialog({ type: 'cancel', rowId: row.id, snapshot: row, body: T.cancelBody(row.privateDate, row.privateTime, payment), opener });
+    // The sentence is written when drawn (bodyParts), so it follows Hide private details.
+    openDialog({ type: 'cancel', rowId: row.id, snapshot: row, bodyParts: [row.privateDate, row.privateTime, payment], opener });
   }
   function openDelete(row, opener) {
     const liveList = livePaymentsOf(payments, row.id);
@@ -297,7 +334,7 @@ export default function PrivateTestingTab({
       type: 'delete',
       rowId: row.id,
       snapshot: row,
-      body: T.deletePrivateBody(partsOf(liveList), result, movedFrom),
+      bodyParts: [partsOf(liveList), result, movedFrom], // written when drawn (Hide private details)
       args: { privateId: row.id, expectedVersion: row.version, expectedPaymentIds: payments.filter((p) => p.privateId === row.id).map((p) => p.id) },
       index: shown.findIndex((r) => r.id === row.id),
       opener,
@@ -458,19 +495,27 @@ export default function PrivateTestingTab({
     patchDialog({ saving: true, note: null });
     const result = await changePrivatePayingBy({ privateId: d.rowId, expectedVersion: d.snapshot.version, payingBy: d.values.payingBy });
     endWrite(result.status);
+    const open = stillOpen(d);
     if (result.status !== 'ok') {
-      handleDialogProblem(result, d);
+      if (open) handleDialogProblem(result, d);
+      else if (hiddenNowRef.current) hiddenMoneyProblem(result.status);
+      else setBanner({ text: result.status === 'error' ? T.SAVE_FAILED : T.ROSTER_STALE });
       return;
     }
-    setDialog(null);
+    if (open) setDialog(null);
     const reloaded = reloadQuiet();
     const back = d.snapshot.payingBy;
     const savedVersion = result.version;
+    // Hidden now: no Undo (changing how they'll pay is a payment item, hidden while on).
+    if (hiddenNowRef.current) {
+      showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+      return;
+    }
     showToast(T.TOAST_CHANGES_SAVED, {
       icon: false,
       action: {
         label: T.UNDO,
-        onAction: () => runUndo(() => changePrivatePayingBy({ privateId: d.rowId, expectedVersion: savedVersion, payingBy: back }), () => moreEl(d.rowId)),
+        onAction: () => runUndo(() => changePrivatePayingBy({ privateId: d.rowId, expectedVersion: savedVersion, payingBy: back }), () => moreEl(d.rowId), T.ROSTER_NOT_ALLOWED, true), // how they pay counts as money while hidden
       },
     });
     focusLater(() => moreEl(d.rowId), () => rowEl(d.rowId), reloaded);
@@ -493,22 +538,52 @@ export default function PrivateTestingTab({
     patchDialog({ saving: true, note: null });
     const result = await editPrivatePayment({ paymentId: d.paymentId, ...check.payload });
     endWrite(result.status);
+    const open = stillOpen(d);
     if (result.status !== 'ok') {
-      handleDialogProblem(result, d);
+      if (open) handleDialogProblem(result, d);
+      else if (hiddenNowRef.current) hiddenMoneyProblem(result.status);
+      else setBanner({ text: result.status === 'error' ? T.SAVE_FAILED : T.ROSTER_STALE });
       return;
     }
-    setDialog(null);
+    if (open) setDialog(null);
     const reloaded = reloadQuiet();
-    showToast(T.TOAST_PAYMENT_SAVED, { icon: false });
+    // Hidden now: the general words ("Payment saved" would say there is a payment).
+    showToast(hiddenNowRef.current ? T.TOAST_CHANGES_SAVED : T.TOAST_PAYMENT_SAVED, { icon: false });
     focusLater(() => moreEl(d.rowId), () => rowEl(d.rowId), reloaded);
   }
 
+  // ===== Hide private details: a money save's answer that arrives while hidden =====
+  // The general words only — no amount, no paid status, no Retry that would record money.
+  function hiddenMoneyProblem(status) {
+    if (status === 'no_access') onNoAccess();
+    else if (status === 'not_allowed') {
+      setBanner({ text: T.ROSTER_NOT_ALLOWED });
+      onRefreshProfile();
+      reloadQuiet();
+    } else if (status === 'error') {
+      setBanner({ text: T.SAVE_FAILED });
+    } else {
+      setBanner({ text: T.ROSTER_STALE });
+      reloadQuiet();
+    }
+  }
+  // Is this dialog still the open one? (Switching Hide private details on closes payment dialogs;
+  // their answer must then not patch or close whatever dialog is open by then.)
+  function stillOpen(d) {
+    return dialogRef.current !== null && dialogRef.current.key === d.key;
+  }
+
   // ===== Undo (toasts) =====
-  async function runUndo(call, findFocus = null, notAllowedText = T.ROSTER_NOT_ALLOWED) {
+  // money: the Undo of a payment — while hidden on arrival, the general words, no Retry.
+  async function runUndo(call, findFocus = null, notAllowedText = T.ROSTER_NOT_ALLOWED, money = false) {
     if (!beginWrite()) return;
     const result = await call();
     endWrite(result.status);
     const status = result.status;
+    if (money && hiddenNowRef.current && status !== 'ok') {
+      hiddenMoneyProblem(status);
+      return;
+    }
     if (status === 'ok') {
       setBanner((current) => (current?.kind === 'undo' ? null : current));
       showToast(T.TOAST_UNDONE, { icon: false });
@@ -528,9 +603,11 @@ export default function PrivateTestingTab({
   }
 
   // A row action the database didn't accept (§5.7, the second row).
-  function rowProblem(status, row, retry) {
+  // money: Mark paid / Undo payment — while hidden on arrival, the general words, no Retry.
+  function rowProblem(status, row, retry, money = false) {
     const name = T.studentLabel(row);
-    if (status === 'no_access') onNoAccess();
+    if (money && hiddenNowRef.current) hiddenMoneyProblem(status);
+    else if (status === 'no_access') onNoAccess();
     else if (status === 'already_paid') {
       setBanner({ text: T.alreadyPaid(name) });
       reloadQuiet();
@@ -567,15 +644,20 @@ export default function PrivateTestingTab({
     endWrite(result.status);
     const name = T.studentLabel(row);
     if (result.status !== 'ok') {
-      rowProblem(result.status, row, { text: T.markPaidFailed(name), run: () => doMarkPaid(row) });
+      rowProblem(result.status, row, { text: T.markPaidFailed(name), run: () => doMarkPaid(row) }, true);
       return;
     }
     rowDone();
     reloadQuiet();
     const paymentId = result.paymentId;
+    // Hide private details switched on while this was saving: the general words, no Undo payment.
+    if (hiddenNowRef.current) {
+      showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+      return;
+    }
     showToast(T.markedPaidToast(name, result.amountCents, result.method), {
       icon: false,
-      action: { label: T.UNDO, onAction: () => runUndo(() => undoPrivatePayment({ paymentId }), () => moreEl(row.id), T.UNDO_PAYMENT_TOO_LATE) },
+      action: { label: T.UNDO, onAction: () => runUndo(() => undoPrivatePayment({ paymentId }), () => moreEl(row.id), T.UNDO_PAYMENT_TOO_LATE, true) },
     });
   }
 
@@ -587,12 +669,13 @@ export default function PrivateTestingTab({
     const result = await undoPrivatePayment({ paymentId: payment.id });
     endWrite(result.status);
     if (result.status !== 'ok') {
-      rowProblem(result.status, row, { text: T.actionFailed, run: () => doUndoPayment(row) });
+      rowProblem(result.status, row, { text: T.actionFailed, run: () => doUndoPayment(row) }, true);
       return;
     }
     rowDone();
     reloadQuiet();
-    showToast(T.paymentUndoneToast(T.studentLabel(row)), { icon: false });
+    // Hidden now: the general words ("Payment undone" would say they had paid).
+    showToast(hiddenNowRef.current ? T.TOAST_CHANGES_SAVED : T.paymentUndoneToast(T.studentLabel(row)), { icon: false });
   }
 
   // ===== Cancel (confirm, P7) =====
@@ -685,7 +768,7 @@ export default function PrivateTestingTab({
     const row = menu.row ?? rows.find((r) => r.id === menu.id);
     if (!row) return null;
     const anchor = menu.anchor;
-    const can = privateMenu(row, { today, isAdmin });
+    const can = privateMenu(row, { today, isAdmin, hidden }); // hidden: no payment items (v0.506)
     const name = T.studentLabel(row);
     const groups = [[], [], []];
     if (row.status === 'cancelled') {
@@ -728,6 +811,7 @@ export default function PrivateTestingTab({
     isAdmin,
     menuFor: menu?.id ?? null,
     notSavedId,
+    hidden,
     handlers: { onMore: (row, anchor) => openMenu(row, anchor), onMarkPaid: (row) => doMarkPaid(row) },
   };
 
@@ -748,12 +832,14 @@ export default function PrivateTestingTab({
   } else if (live.status === 'noAccess') {
     body = null;
   } else {
-    const cardList = [
+    const allCards = [
       { key: 'count', label: T.CARD_PRIVATE, Icon: IconUsers, value: cards.count },
       { key: 'paid', label: T.CARD_PAID, Icon: IconCheck, value: cards.paid, note: cards.owesMore > 0 ? T.owesMoreCount(cards.owesMore) : null, warn: true },
       { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconClock, value: cards.notPaid },
       { key: 'money', label: T.CARD_PAYMENTS, Icon: IconSum, value: T.dollars(cards.paymentsCents), note: cards.cancelledCents > 0 ? T.includesCancelled(cards.cancelledCents) : null }, // ti-sum = a money total (v0.303)
     ];
+    // Hide private details: only the Private testings card (as Star's G4).
+    const cardList = hidden ? allCards.slice(0, 1) : allCards;
     const sideLabelId = `${panelId}-side`;
     let list;
     if (rows.length === 0) {
@@ -775,7 +861,7 @@ export default function PrivateTestingTab({
     body = (
       <>
         {rows.length > 0 && (
-          <div className="ev-cards">
+          <div className={`ev-cards${hidden ? ' is-one' : ''}`}>
             {cardList.map((card) => (
               <div key={card.key} className="ev-card">
                 <span className="ev-card-label">
@@ -840,14 +926,15 @@ export default function PrivateTestingTab({
           school={school}
           today={today}
           isAdmin={isAdmin}
+          hidden={hidden}
           onTouch={touch}
           onSave={savePrivateForm}
           {...common}
         />
       );
     } else if (dialog.type === 'changeDay') {
-      dialogElement = <ChangeDayDialog key={dialog.key} state={dialog} record={dialog.snapshot} today={today} onTouch={touch} onSave={saveChangeDay} {...common} />;
-    } else if (dialog.type === 'paying') {
+      dialogElement = <ChangeDayDialog key={dialog.key} state={dialog} record={dialog.snapshot} today={today} hidden={hidden} onTouch={touch} onSave={saveChangeDay} {...common} />;
+    } else if (dialog.type === 'paying' && !hidden) {
       const name = T.studentLabel(dialog.snapshot);
       const owing = dialog.snapshot.paid && dialog.snapshot.amountDueCents > 0;
       dialogElement = (
@@ -860,7 +947,7 @@ export default function PrivateTestingTab({
           {...common}
         />
       );
-    } else if (dialog.type === 'payment') {
+    } else if (dialog.type === 'payment' && !hidden) {
       const name = T.studentLabel(dialog.snapshot);
       const subtitle = dialog.parts.length > 1 ? T.editPaymentSubTopUp(name, dialog.parts, dialog.editingCents) : null;
       dialogElement = <EditPaymentDialog key={dialog.key} state={dialog} name={name} subtitle={subtitle} onTouch={touch} onSave={savePayment} {...common} />;
@@ -869,7 +956,7 @@ export default function PrivateTestingTab({
         <CancelPrivateDialog
           key={dialog.key}
           name={T.studentLabel(record ?? dialog.snapshot)}
-          body={dialog.body}
+          body={T.cancelBody(...dialog.bodyParts, hidden)}
           saving={dialog.saving}
           failed={dialog.failed}
           onConfirm={confirmCancel}
@@ -881,7 +968,7 @@ export default function PrivateTestingTab({
         <ConfirmDeleteDialog
           key={dialog.key}
           title={T.deletePrivateTitle(T.studentLabel(dialog.snapshot))}
-          body={dialog.body}
+          body={T.deletePrivateBody(...dialog.bodyParts, hidden)}
           keepLabel={T.KEEP_IT}
           deleteLabel={T.DELETE_PERMANENTLY}
           failed={dialog.failed}

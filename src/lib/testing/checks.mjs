@@ -2431,6 +2431,15 @@ check('privateRules: the ⋯ menu truth table (P3, P7, L5)', () => {
   assert.equal(menu(row({ status: 'cancelled', privateDate: PT }), true), 'restore delete');
   assert.equal(menu(row({ status: 'cancelled', privateDate: '2026-10-16' }), true), 'delete');
   assert.equal(menu(null, true), '');
+  // Hide private details (v0.506): no payment items; everything else unchanged.
+  const hiddenMenu = (r, isAdmin) => {
+    const m = PR.privateMenu(r, { today: PT, isAdmin, hidden: true });
+    return keys.filter((k) => m[k]).join(' ');
+  };
+  assert.equal(hiddenMenu(row(), false), 'editDetails changeDay grade cancel');
+  assert.equal(hiddenMenu(row({ paid: true, amountDueCents: 0 }), true), 'editDetails changeDay grade cancel delete');
+  assert.equal(hiddenMenu(row({ paid: true, amountDueCents: 2000 }), true), 'editDetails changeDay grade cancel delete');
+  assert.equal(hiddenMenu(row({ status: 'cancelled' }), true), 'restore delete');
 });
 
 check('privateRules: Upcoming / Past order and the cards (P1, E11)', () => {

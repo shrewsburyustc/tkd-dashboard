@@ -15,6 +15,9 @@
 // PC and tablet: a centered dialog. Phone: a full screen with a back arrow, Save pinned at the
 // bottom (v0.194). Like every dialog of the tab, this only DRAWS; the values live in
 // PrivateTestingTab (`state`), so a screen lock hides the dialog and brings it back filled in.
+// Follows "Hide private details" (v0.506, v0.507 Q2): while `hidden` is on, the price box says
+// only "Payment details are hidden on this tablet." and Edit details shows no reprice line and no
+// "payment stays" hint (the Paying by choice of Add stays: it records how they'll pay, not money).
 import { IconCheck } from '@tabler/icons-react';
 import Belt from '../../../components/Belt.jsx';
 import Dialog from '../../../components/Dialog.jsx';
@@ -108,7 +111,7 @@ const NOTES = {
 // saving, blocked, pastDay), classes (live Classes and ranks, withTestingFor views — null while
 // loading), record (edit: the row), school, today, isAdmin, isPhone, onChange, onTouch,
 // onSave(canSave), onCancel, onRequestClose
-export default function PrivateDialog({ state, classes, record, school, today, isAdmin, isPhone, onChange, onTouch, onSave, onCancel, onRequestClose }) {
+export default function PrivateDialog({ state, classes, record, school, today, isAdmin, hidden = false, isPhone, onChange, onTouch, onSave, onCancel, onRequestClose }) {
   const isAdd = state.mode === 'add';
   const idBase = `private-dialog-${state.key}`;
   const values = state.values;
@@ -128,8 +131,10 @@ export default function PrivateDialog({ state, classes, record, school, today, i
   let clearsLine = null;
   if (!isAdd && beltChanged && rank) {
     // A belt correction re-copies the CURRENT private price (§1.3): pricier → owed, cheaper → 0.
+    // (Nothing about it while private details are hidden.)
     const due = amountDue({ privateCents: rank.privateCents, paidCents: record.paidCents });
-    if (record.paid && due > 0) priceNotice = <Notice>{T.repriceLine(record.privateCents, rank.privateCents, due)}</Notice>;
+    if (hidden) priceNotice = null;
+    else if (record.paid && due > 0) priceNotice = <Notice>{T.repriceLine(record.privateCents, rank.privateCents, due)}</Notice>;
     else if (record.paid) priceHint = T.PAYMENT_STAYS;
     if (record.graded) {
       const first = record.firstName;
@@ -296,8 +301,14 @@ export default function PrivateDialog({ state, classes, record, school, today, i
             {rank && (
               // The private price of the chosen belt, from Classes and ranks — never typed (Q3)
               <div className="pv-price">
-                <p className="pv-price-line">{T.privatePriceLine(rank.privateCents)}</p>
-                <p className="pv-price-hint">{T.privatePriceHint(rank.name, rank.privateCents)}</p>
+                {hidden ? (
+                  <p className="pv-price-hint">{T.PAYMENT_DETAILS_HIDDEN}</p>
+                ) : (
+                  <>
+                    <p className="pv-price-line">{T.privatePriceLine(rank.privateCents)}</p>
+                    <p className="pv-price-hint">{T.privatePriceHint(rank.name, rank.privateCents)}</p>
+                  </>
+                )}
               </div>
             )}
             <p className="field-hint">{T.ADD_PRIVATE_HINT}</p>
