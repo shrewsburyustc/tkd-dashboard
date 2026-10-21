@@ -16,6 +16,11 @@
 // result never changes a registration's version. updateStudent's answer may carry
 // resultCleared: true (a belt change cleared the student's result).
 //
+// Phase 4 (the Private testing tab, migration 0014, contract 0014 §4.3) added only: the status
+// 'moved' (Restore of a registration that was moved to a private testing) and, in loadEvent, the
+// private testings moved out of this event — every roster row carries movedTo (see loadEvent).
+// Everything else about private testings is in privateApi.js.
+//
 // Times: the database sends a time as '17:00:00'; this file turns it into '17:00'. Dates stay
 // 'YYYY-MM-DD' text. Money is whole cents (6500 = $65).
 import { supabase, isPreview } from '../supabase.js';
@@ -26,7 +31,9 @@ import { RESULTS, isGraded, addedAfterDay } from './gradingRules.js';
 // Every status a call here can return.
 export const EVENT_STATUSES = [
   'ok', 'no_access', 'not_allowed', 'not_found', 'stale', 'duplicate_name', 'invalid', 'not_empty',
-  'final_award_not_set', 'rate_limited', 'not_open', 'closed', 'finished', 'already_paid', 'withdrawn', 'has_results', 'error',
+  'final_award_not_set', 'rate_limited', 'not_open', 'closed', 'finished', 'already_paid', 'withdrawn', 'has_results',
+  'moved', // phase 4: Restore of a registration that was moved to a private testing
+  'error',
 ];
 const SERVER_STATUSES = new Set(EVENT_STATUSES.filter((s) => s !== 'error'));
 const KNOWN_LOCATIONS = new Set(['worcester', 'shrewsbury']);
@@ -271,21 +278,26 @@ export async function loadEvents(locationCode) {
 // ({ date, byName } for a student an admin added after the testing day, else null).
 // startedAt = Date.now() when this call STARTED (before any request): the Grading tab compares
 // it with the time a save answered, so it never shows a read older than its own save.
+// Phase 4: every roster row also carries movedTo — { privateId, privateDate ('YYYY-MM-DD'),
+// privateTime ('16:00'), status ('active' | 'cancelled') } for a registration that was moved to
+// a private testing (it is listed under Removed), else null.
 export async function loadEvent(eventId) {
   const startedAt = Date.now();
   try {
     if (typeof eventId !== 'string' || eventId === '') return failure(new Error('No event id'));
     if (!supabase) return failure(new Error('No connection is set up'));
     const today = schoolToday();
-    const [eventRes, classRes, rosterRes, denied] = await Promise.all([
+    const [eventRes, classRes, rosterRes, movedRes, denied] = await Promise.all([
       supabase.from('testing_events').select(EVENT_COLUMNS).eq('id', eventId),
       supabase.from('testing_event_classes').select(EVENT_CLASS_COLUMNS).eq('event_id', eventId).order('position', { ascending: true }),
       supabase.from('testing_roster').select(ROSTER_COLUMNS).eq('event_id', eventId),
+      // Phase 4: the private testings moved out of this event (the Removed rows say so).
+      supabase.from('testing_private').select('id, moved_from_registration_id, private_date, private_time, status').eq('moved_from_event_id', eventId),
       accessCheck(),
     ]);
     if (denied) return denied;
-    for (const res of [eventRes, classRes, rosterRes]) if (res?.error) return failure(res.error);
-    if (![eventRes.data, classRes.data, rosterRes.data].every(Array.isArray)) return unexpected('the event tables');
+    for (const res of [eventRes, classRes, rosterRes, movedRes]) if (res?.error) return failure(res.error);
+    if (![eventRes.data, classRes.data, rosterRes.data, movedRes.data].every(Array.isArray)) return unexpected('the event tables');
     if (eventRes.data.length === 0) return { status: 'not_found' };
 
     const classIds = classRes.data.map((c) => c.id);
@@ -311,10 +323,15 @@ export async function loadEvent(eventId) {
       }
     }
     const resultOf = new Map(resultRes.rows.map((r) => [r.registration_id, r]));
+    const movedOf = new Map(movedRes.data.map((p) => [p.moved_from_registration_id, p]));
     const event = Object.assign(toEvent(eventRes.data[0], today), eventCounts(rosterRes.data));
     const roster = rosterRes.data.map((row) => {
       const student = toRosterRow(row, classOfRank, resultOf.get(row.id) ?? null);
       student.addedAfterDay = addedAfterDay(student, event.testingDate); // gradingRules.js
+      const moved = movedOf.get(row.id);
+      student.movedTo = moved
+        ? { privateId: moved.id, privateDate: moved.private_date, privateTime: shortTime(moved.private_time), status: moved.status }
+        : null; // phase 4
       return student;
     });
     event.resultCount = roster.filter((r) => r.graded).length;

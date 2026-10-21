@@ -7,3 +7,4 @@
 import './register.test.mjs';
 import './camp.test.mjs';
 import './forms.test.mjs';
+import './bbRegister.test.mjs';

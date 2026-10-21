@@ -19,6 +19,7 @@
 //   __tkdPreview.setPublicRegistration(false)  the kill switch: every code answers "not open"
 //   __tkdPreview.forceVerifyFailed(true)       the NEXT Send answers "verify_failed" (F6 message)
 //   __tkdPreview.forceRateLimited(true)        every Send answers "rate_limited" until set false
+//   __tkdPreview.forceLoadRateLimited(true)    every page load answers "rate_limited" until set false
 //   __tkdPreview.setToday('2026-11-20')        pretend it's another day (null = the real date)
 import { readStorage, writeStorage, removeStorage } from '../storage.js';
 import { createTestingBackend } from '../mockTesting.js';
@@ -29,6 +30,7 @@ const TESTING_KEY = 'tkd.preview.testing'; // the same store the staff preview u
 const SWITCH_KEY = 'tkd.preview.publicRegistration'; // 'off' = kill switch on (default: on)
 const VERIFY_KEY = 'tkd.preview.forceVerifyFailed'; // '1' = the next Send fails the human check
 const RATE_KEY = 'tkd.preview.forceRateLimited'; // '1' = every Send is "too many tries"
+const LOAD_RATE_KEY = 'tkd.preview.forceLoadRateLimited'; // '1' = every page load is "too many tries"
 const CLIENT_KEY = 'preview-browser'; // stands in for the Function's daily HMAC of the IP
 const MIN_FILL_MS = 4000; // the Function's "too fast" rule
 const MAX_BODY_CHARACTERS = 100 * 1024; // the Function's 100 KB body limit
@@ -82,6 +84,9 @@ export async function getEvent(code) {
   if (!switchedOn()) return { status: 'not_open' };
   const clean = typeof code === 'string' ? code.toLowerCase() : '';
   if (!CODE.test(clean)) return { status: 'not_found' };
+  // The Function's rate limit comes after the off switch and the code format check, before the
+  // database (functions/_lib/register.js).
+  if (readStorage(LOAD_RATE_KEY) === '1') return { status: 'rate_limited' };
   const result = events().publicEvent(clean);
   if (result.status !== 'ok') return { status: 'not_found' };
   return {
@@ -156,6 +161,11 @@ export function publicPreviewHelpers() {
       if (on) writeStorage(RATE_KEY, '1');
       else removeStorage(RATE_KEY);
       return on ? 'Every Send on the family page now answers "too many tries" (rate_limited) until forceRateLimited(false).' : 'The rate limit is back to normal (20 tries per hour).';
+    },
+    forceLoadRateLimited(on = true) {
+      if (on) writeStorage(LOAD_RATE_KEY, '1');
+      else removeStorage(LOAD_RATE_KEY);
+      return on ? 'Every page load on the family page now answers "too many tries" (rate_limited) until forceLoadRateLimited(false). Reload to see it.' : 'Page loads work normally again (reload).';
     },
     setToday(date) {
       if (date === null || date === undefined || date === '') {

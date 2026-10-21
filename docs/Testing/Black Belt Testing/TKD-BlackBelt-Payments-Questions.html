@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Black Belt payment questions</title>
+<!--
+  Black Belt testing → plans, prices and payments: design questions, one at a time (rule P3).
+  Why: Jeffrey chooses each option from a picture. Each option is drawn at PC
+  and phone size, the part being decided outlined in amber.
+  Styles are copied from the approved Star testing Events mockups so the
+  dashboard looks the same. Self-contained (icons inlined). Sample dates only.
+-->
+<style>
+
+:root{--control-border:#8F8F8A;--page:#EFEFEC;--bg:#FFFFFF;--surface:#F7F7F5;--border:#E5E5E2;--border-strong:#CFCFCA;--text:#1F1F1F;--text2:#6B6B6B;--blue:#003595;--blue-hover:#002A77;--blue-tint:#E6EBF4;--red:#A32D2D;--red-tint:#FCEBEB;--ok:#3B6D11;--ok-tint:#EAF3DE;--warn:#633806;--warn-tint:#FAEEDA}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1340px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:20px;font-weight:500;margin:0 0 4px}
+h2{font-size:16px;font-weight:500;margin:48px 0 4px;padding-top:16px;border-top:1px solid var(--border-strong)}
+h4{font-size:13px;font-weight:500;margin:32px 0 4px}
+.lead{color:var(--text2);font-size:13px;margin:0 0 12px}
+.banner{background:var(--warn-tint);color:var(--warn);padding:8px 12px;border-radius:8px;font-size:13px;display:flex;gap:8px;align-items:flex-start}
+/* explanation block (P1) */
+.explain{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:8px 0 16px;font-size:13px}
+.explain h3{font-size:13px;font-weight:500;margin:8px 0 2px}.explain h3:first-child{margin-top:0}
+.explain ul,.explain ol{margin:0;padding-left:20px}.explain li{margin:2px 0}
+.explain .prop{color:var(--warn)}
+b{font-weight:500}
+/* device frames */
+.cap{font-size:12px;color:var(--text2);margin:16px 0 6px;display:flex;align-items:center;gap:6px}
+.cap i{font-size:16px}
+.scroller{overflow-x:auto;padding-bottom:4px}
+.dev{background:var(--bg);border:1px solid var(--border-strong);overflow:hidden;position:relative;flex:none}
+.dev-pc{width:1282px;height:600px;border-radius:10px}
+.dev-tab{width:832px;height:560px;border-radius:18px;border-width:6px;border-color:#2B2B2B}
+.dev-ph{width:402px;height:700px;border-radius:28px;border-width:6px;border-color:#2B2B2B}
+.pair{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+/* app shell (as approved in the Home / Account files) */
+.app{display:flex;height:100%;background:var(--bg)}
+.app-col{flex:1;min-width:0;display:flex;flex-direction:column}
+.content{flex:1;min-height:0;padding:24px;display:flex;flex-direction:column;overflow:hidden}
+.ph-shell{height:100%;display:flex;flex-direction:column}
+.ph-shell .content{padding:16px}
+.rail{width:52px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;flex:none}
+.rail a{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;color:var(--text2)}
+.rail a i{font-size:18px}
+.rail a.on{background:var(--blue-tint);color:var(--blue)}
+.rail-t{width:72px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;flex:none}
+.rail-t a{display:flex;flex-direction:column;align-items:center;justify-content:center;width:64px;min-height:56px;border-radius:8px;color:var(--text2);font-size:12px;gap:2px}
+.rail-t a i{font-size:20px}
+.rail-t a.on{color:var(--blue)}.rail-t a.on i{background:var(--blue-tint);border-radius:8px;padding:4px 10px}
+.topbar{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 12px;flex:none}
+.topbar .grow{flex:1}
+.loc{display:flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;font-size:12px;height:32px}
+.loc span{display:flex;align-items:center;gap:4px;padding:0 12px;color:var(--text2)}
+.loc span.on{background:var(--blue-tint);color:var(--blue)}
+.loc span+span{border-left:1px solid var(--border)}
+.touch .loc{height:36px}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--surface);border:1px solid var(--control-border);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--text);flex:none}
+.tap{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.phbar{border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:4px 0 10px;flex:none;background:var(--bg)}
+.phbar a{display:flex;flex-direction:column;align-items:center;min-width:64px;min-height:48px;justify-content:center;font-size:12px;color:var(--text2);gap:2px}
+.phbar a i{font-size:20px}.phbar a.on{color:var(--blue)}
+/* controls */
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.field label,.lbl{font-size:12px;color:var(--text2)}
+.input{height:32px;border:1px solid var(--control-border);border-radius:8px;padding:0 12px;display:flex;align-items:center;font-size:13px;color:var(--text);background:var(--bg)}
+.input.focus{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}.input.bad.focus{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn)}
+.input .pre{color:var(--text2);margin-right:4px}
+.input.money{width:120px}
+.input.select{justify-content:space-between}.input.select i{font-size:16px;color:var(--text2)}
+.touch .input{height:36px;font-size:14px}
+.caret{display:inline-block;width:1px;height:16px;background:var(--text);margin-left:1px}
+.btn{height:32px;padding:0 16px;border-radius:8px;font-size:13px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--control-border);background:var(--bg);color:var(--text);flex:none;white-space:nowrap}
+.btn i{font-size:16px}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn-primary.dis{background:var(--surface);border-color:var(--border-strong);color:#8A8A85}
+.btn-sm{height:28px;padding:0 12px}
+.btn-full{width:100%}
+.touch .btn{height:36px}
+.touch .btn-sm{height:36px;padding:0 12px}
+.err{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--warn);background:var(--warn-tint);padding:8px;border-radius:6px}
+.hint{font-size:12px;color:var(--text2)}
+/* dialogs */
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:5}
+.dialog{background:var(--bg);border-radius:12px;width:360px;max-width:calc(100% - 32px);padding:24px;position:relative}
+.dialog h3{font-size:16px;font-weight:500;margin:0 0 4px}
+.dialog .sub{font-size:13px;color:var(--text2);margin:0 0 16px}
+.dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+/* detail view (v0.46): centered dialog showing every field */
+.dialog-detail{width:440px}
+.dialog-detail .meta{margin-top:12px}
+.prices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.prices .input.money{width:100%}
+.fullscreen{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;z-index:5}
+.fullscreen .head{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 4px;font-size:16px;font-weight:500;flex:none}
+.fullscreen .fbody{padding:16px;flex:1;overflow:hidden}
+/* menus */
+.menu{position:absolute;background:var(--bg);border:1px solid var(--border-strong);border-radius:8px;padding:4px 0;width:200px;z-index:5;text-align:left}
+.menu .it{display:flex;align-items:center;gap:8px;padding:0 12px;height:32px;font-size:13px;color:var(--text);white-space:nowrap}
+.touch .menu .it{height:44px}
+.menu .it i{font-size:16px;color:var(--text2)}
+.menu .it.hov{background:var(--surface)}
+.menu .it.sel{background:var(--blue-tint);color:var(--blue)}
+.menu .it.dis{color:#A3A39E}.menu .it.dis i{color:#B8B8B3}
+.menu .it.red,.menu .it.red i{color:var(--red)}
+.menu .it.red.hov{background:var(--red-tint)}
+.menu .sep{border-top:1px solid var(--border);margin:4px 0}
+.menu .grp{font-size:12px;color:var(--text2);padding:8px 12px 4px}
+.sheet-wrap{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;z-index:5}
+.sheet{background:var(--bg);width:100%;border-radius:16px 16px 0 0;padding:8px 0 16px}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--border-strong);margin:4px auto 8px}
+.sheet .stitle{padding:4px 16px 8px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.sheet .stitle b{display:block;font-size:14px}.sheet .stitle span{font-size:12px;color:var(--text2)}
+.sheet .menu{position:static;width:auto;border:none;box-shadow:none;border-radius:0;padding:0}
+.sheet .menu .it{padding:0 16px}
+.sheet .menu .it.cancel{justify-content:center;color:var(--text);font-weight:500}
+.tag{font-size:12px;line-height:16px;padding:2px 8px;border-radius:6px;background:var(--surface);color:var(--text2);border:1px solid var(--border);white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.tag-warn{background:var(--warn-tint);color:var(--warn);border-color:#F2D9B0}
+.tag i{font-size:12px}
+.callout{position:absolute;background:var(--warn-tint);color:var(--warn);border:1px dashed #EF9F27;font-size:12px;padding:4px 8px;border-radius:6px;z-index:7;white-space:nowrap}
+/* ---------- new for Testing ---------- */
+.phead{display:flex;align-items:center;gap:12px;margin-bottom:8px;flex:none}
+.phead .grow{flex:1}
+.ptitle{font-size:20px;font-weight:500;line-height:1.3}
+.psub{font-size:12px;color:var(--text2)}
+.tabs{display:flex;gap:24px;border-bottom:1px solid var(--border);margin-bottom:16px;flex:none}
+.tabs span{height:40px;display:flex;align-items:center;font-size:13px;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs span.on{color:var(--blue);border-bottom-color:var(--blue);font-weight:500}
+.touch .tabs span{height:44px}
+.ph-shell .tabs{gap:0}.ph-shell .tabs span{flex:1;justify-content:center}
+.more-tog{display:inline-flex;align-items:center;gap:4px;height:28px;font-size:13px;color:var(--text2)}
+.more-tog i{font-size:16px}
+.touch .more-tog{min-height:44px}
+.crow.cgap{opacity:.35}
+.crow.clift{background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.10);border:1px solid var(--border-strong);border-radius:8px;margin:4px -4px 4px 8px;position:relative;z-index:2}
+.viewonly{font-size:13px;color:var(--text2);margin:-4px 0 12px;flex:none}
+/* failed-save banner (rule 3.5) */
+.errbar{display:flex;align-items:center;gap:8px;background:var(--warn-tint);color:var(--warn);border-radius:8px;padding:4px 4px 4px 12px;font-size:13px;margin:-4px 0 12px;flex:none}
+.errbar>i{font-size:16px}
+.errbar .grow{flex:1}
+.errbar .btn{border-color:var(--control-border)}
+.touch .errbar{flex-wrap:wrap;padding:8px 4px 4px 12px}
+/* icon buttons: 28px visible square; on touch the outer box is a 44x44 invisible tap area */
+.ib{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;color:var(--text2);flex:none}
+.ib .ibv{width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center}
+.ib i{font-size:16px}
+.ib.hov .ibv{background:var(--surface);color:var(--text)}
+.touch .ib{width:44px;height:44px}
+/* class list */
+.clist{border:1px solid var(--border);border-radius:8px;flex:none}
+.crow{display:flex;align-items:center;gap:8px;height:40px;padding:0 4px 0 8px;font-size:13px;border-top:1px solid var(--border)}
+.clist>.crow:first-child{border-top:none}
+.touch .crow{height:48px;padding:0;gap:4px}
+.crow .nm{font-weight:500}
+.crow .cnt{font-size:12px;color:var(--text2)}
+.crow .grow{flex:1}
+.acts{display:flex;align-items:center;gap:4px;justify-content:flex-end;position:relative}
+.touch .acts{gap:0}
+/* rank table */
+.rhead,.rrow{display:grid;align-items:center;column-gap:12px;border-top:1px solid var(--border)}
+.rhead{height:32px;background:var(--surface);font-size:12px;color:var(--text2)}
+.rrow{min-height:40px;font-size:13px;position:relative;padding-top:4px;padding-bottom:4px}
+.touch .rrow{min-height:48px}
+.g-pc{grid-template-columns:24px minmax(0,1fr) minmax(0,1.6fr) 64px 88px 64px 104px 64px;padding:0 4px 0 40px}
+.g-st{grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) 64px 88px 64px 104px;padding:0 16px 0 44px}
+.g-tab{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 64px 96px 88px;padding:0 0 0 48px}
+.g-tst{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 64px 96px 72px;padding:0 8px 0 48px}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.rk{display:flex;align-items:center;gap:8px;min-width:0}
+.grip{display:inline-flex;align-items:center;justify-content:center;width:24px;height:28px;color:var(--text2);border-radius:8px}
+.grip i{font-size:16px}
+.grip.hov{background:var(--border);color:var(--text)}
+.rrow.sel{background:var(--blue-tint)}
+.rrow.hovrow{background:var(--surface)}
+.rrow.lift{background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.10);z-index:2;margin:4px -4px 4px 32px;padding-left:8px;border:1px solid var(--border-strong);border-radius:8px}
+.rrow.gap{opacity:.35}
+.dropline{height:0;border-top:2px solid var(--blue);margin:-1px 0 -1px 40px;position:relative;z-index:3}
+.addrow{display:flex;align-items:center;gap:12px;padding:8px 8px 8px 76px;border-top:1px solid var(--border)}
+.addrow .grow{flex:1}
+.touch .addrow{padding:4px 4px 4px 48px}
+.emptyrow{display:flex;align-items:center;gap:12px;padding:12px 16px 12px 76px;border-top:1px solid var(--border);font-size:13px;color:var(--text2);flex-wrap:wrap}
+.touch .emptyrow{padding-left:48px}
+/* phone stacked rank rows */
+.bprow{display:flex;align-items:center;gap:0;min-height:56px;padding:4px 0 4px 16px;border-top:1px solid var(--border)}
+.bprow .grow{flex:1;min-width:0}
+.bprow .l1{font-size:13px;font-weight:500;display:flex;align-items:center;column-gap:8px;row-gap:2px;flex-wrap:wrap}
+.bprow .l2{font-size:12px;color:var(--text2)}
+.bprow .l2 span{white-space:nowrap}
+.bprow.sel{background:var(--blue-tint)}
+.bprow>.tapbox{margin-right:8px}
+.grp-lbl{font-size:12px;color:var(--text2);margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--border)}
+.ro{font-size:13px;margin-bottom:12px}
+.ro .lbl{display:block}
+.ro .bsec{color:var(--text2)}
+.meta{font-size:12px;color:var(--text2);margin-top:16px}
+/* checkbox (CSS tick: ti-check is reserved for Save) */
+.cbrow{display:flex;align-items:center;gap:8px;min-height:32px;font-size:13px}
+.touch .cbrow{min-height:44px}
+.cb{width:16px;height:16px;border:1px solid var(--control-border);border-radius:4px;display:inline-block;position:relative;flex:none;background:var(--bg)}
+.cb.on{background:var(--blue);border-color:var(--blue)}
+.cb.on::after{content:"";position:absolute;left:4px;top:1px;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.cb.dis{background:var(--surface);border-color:var(--border-strong)}
+/* toast (Undo) */
+.toast{position:absolute;right:16px;bottom:16px;background:#1F1F1F;color:#fff;border-radius:8px;display:flex;align-items:center;gap:8px;padding:0 4px 0 12px;font-size:13px;z-index:6;min-height:40px;white-space:nowrap}
+.toast .undo{display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 8px;color:#fff;font-weight:500;border-left:1px solid #4A4A4A;flex:none}
+.toast .undo i{font-size:16px}
+.touch .toast{min-height:44px}
+.touch .toast .undo{height:44px}
+.toast.ph{left:50%;right:auto;transform:translateX(-50%);bottom:76px}
+.toast.ph.wide{width:calc(100% - 32px);white-space:normal;line-height:1.4;padding:4px 4px 4px 12px}
+.toast.ph.wide>span:first-child{flex:1}
+/* blocked (Both) */
+.blocked{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;color:var(--text2);font-size:13px;padding:24px}
+.blocked .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+/* top-of-file boxes */
+.okbox{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:16px 0;font-size:13px}
+.okbox h3{font-size:14px;font-weight:500;margin:0 0 4px}
+.okbox ol{margin:0;padding-left:20px}.okbox li{margin:4px 0}
+.toc{font-size:13px;margin:8px 0 0;columns:2}
+.toc a{color:var(--blue);text-decoration:none}
+/* phone: class names and rank rows start at the 16px gutter */
+.touch .ph-shell .crow{padding-left:16px}
+.ctog{display:flex;align-items:center;gap:8px;flex:1;min-width:0;min-height:48px}
+.ctog i{font-size:16px;color:var(--text2)}
+/* compact outline button (staff View): 28px with a mouse, 36px on touch, 44px tap box */
+.tapbox{display:inline-flex;align-items:center;justify-content:center;flex:none}
+.touch .tapbox{min-height:44px;min-width:44px}
+.touch .btn.c28{height:36px}
+/* final award problems shown in the Testing for cell */
+.tfwarn{color:var(--warn);font-size:12px;display:inline-flex;gap:4px;align-items:flex-start;line-height:1.4}
+.tfwarn i{font-size:16px;line-height:1}
+.bprow .l1 .tfwarn{font-weight:400}
+/* dropdown list with scroll cue */
+.menu.scroll{overflow:hidden;padding-right:12px}
+.menu .sbar{position:absolute;right:4px;top:6px;width:4px;height:64px;border-radius:2px;background:var(--border-strong)}
+.touch .ph-shell .addrow,.touch .ph-shell .emptyrow{padding-left:16px}
+code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
+/* ---------- Tabler outline icons, inlined as masks so the file opens offline ---------- */
+.ti{display:inline-flex;align-items:center;justify-content:center;font-style:normal;line-height:1;flex:none;vertical-align:-0.125em}
+.ti::before{content:"";display:block;width:1em;height:1em;background-color:currentColor;-webkit-mask:var(--i) center/contain no-repeat;mask:var(--i) center/contain no-repeat}
+.ti-home{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M5 12l-2 0l9 -9l9 9l-2 0%22 /%3E%3Cpath d=%22M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7%22 /%3E%3Cpath d=%22M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6%22 /%3E%3C/svg%3E")}
+.ti-certificate{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M15 15m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0%22 /%3E%3Cpath d=%22M13 17.5v4.5l2 -1.5l2 1.5v-4.5%22 /%3E%3Cpath d=%22M10 19h-5a2 2 0 0 1 -2 -2v-10c0 -1.1 .9 -2 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -1 1.73%22 /%3E%3Cpath d=%22M6 9l12 0%22 /%3E%3Cpath d=%22M6 12l3 0%22 /%3E%3Cpath d=%22M6 15l2 0%22 /%3E%3C/svg%3E")}
+.ti-map-pin{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0%22 /%3E%3Cpath d=%22M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z%22 /%3E%3C/svg%3E")}
+.ti-arrow-left{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M5 12l14 0%22 /%3E%3Cpath d=%22M5 12l6 6%22 /%3E%3Cpath d=%22M5 12l6 -6%22 /%3E%3C/svg%3E")}
+.ti-chevron-down{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M6 9l6 6l6 -6%22 /%3E%3C/svg%3E")}
+.ti-chevron-up{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M6 15l6 -6l6 6%22 /%3E%3C/svg%3E")}
+.ti-dots{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M19 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3C/svg%3E")}
+.ti-edit{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1%22 /%3E%3Cpath d=%22M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z%22 /%3E%3Cpath d=%22M16 5l3 3%22 /%3E%3C/svg%3E")}
+.ti-trash{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M4 7l16 0%22 /%3E%3Cpath d=%22M10 11l0 6%22 /%3E%3Cpath d=%22M14 11l0 6%22 /%3E%3Cpath d=%22M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12%22 /%3E%3Cpath d=%22M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3%22 /%3E%3C/svg%3E")}
+.ti-plus{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M12 5l0 14%22 /%3E%3Cpath d=%22M5 12l14 0%22 /%3E%3C/svg%3E")}
+.ti-grip-vertical{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M9 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M9 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M9 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M15 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M15 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M15 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3C/svg%3E")}
+.ti-arrow-up{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M12 5l0 14%22 /%3E%3Cpath d=%22M18 11l-6 -6%22 /%3E%3Cpath d=%22M6 11l6 -6%22 /%3E%3C/svg%3E")}
+.ti-arrow-down{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M12 5l0 14%22 /%3E%3Cpath d=%22M18 13l-6 6%22 /%3E%3Cpath d=%22M6 13l6 6%22 /%3E%3C/svg%3E")}
+.ti-check{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M5 12l5 5l10 -10%22 /%3E%3C/svg%3E")}
+.ti-alert-triangle{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M12 9v4%22 /%3E%3Cpath d=%22M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z%22 /%3E%3Cpath d=%22M12 16h.01%22 /%3E%3C/svg%3E")}
+.ti-arrow-back-up{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M9 14l-4 -4l4 -4%22 /%3E%3Cpath d=%22M5 10h11a4 4 0 1 1 0 8h-1%22 /%3E%3C/svg%3E")}
+.ti-refresh{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4%22 /%3E%3Cpath d=%22M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4%22 /%3E%3C/svg%3E")}
+.ti-x{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M18 6l-12 12%22 /%3E%3Cpath d=%22M6 6l12 12%22 /%3E%3C/svg%3E")}
+/* ---------- frames that grow with their content ---------- */
+.dev.auto{height:auto}
+.dev.auto .app{height:auto;min-height:600px}
+.dev.auto .ph-shell{height:auto}
+.dev.auto .content{overflow:visible}
+.intro{font-size:14px;margin:16px 0 0;max-width:860px}
+.cap{flex-wrap:wrap}
+/* ---------- Star testing: page header ---------- */
+.back{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--blue);text-decoration:none;height:24px;margin-bottom:2px}
+.back i{font-size:16px}
+.touch .back{min-height:44px;margin:-10px 0 -8px}
+.viewonly+.viewonly{margin-top:-8px}
+/* ---------- Dan blocks ---------- */
+.crow.dhx{height:auto;min-height:40px;padding-top:4px;padding-bottom:4px}
+.touch .crow.dhx{min-height:48px;padding-top:2px;padding-bottom:2px}
+.dsum{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;flex:1;min-width:0}
+.crow.dh{height:auto;min-height:56px;padding-top:6px;padding-bottom:6px}
+.crow.dh .l1{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px}
+.crow.dh .l2{display:block;font-size:12px;color:var(--text2);line-height:1.4}
+.crow.dh .grow{min-width:0}
+.g-pc{grid-template-columns:24px minmax(0,1fr) 88px 88px 64px;padding:0 4px 0 8px}
+.g-pcs{grid-template-columns:minmax(0,1fr) 88px 88px;padding:0 16px 0 44px}
+.g-tab{grid-template-columns:minmax(0,1fr) 96px 88px 88px;padding:0 0 0 48px}
+.g-tabs{grid-template-columns:minmax(0,1fr) 96px 88px;padding:0 16px 0 48px}
+.rk{flex-wrap:wrap;row-gap:2px}
+.addrow{padding:8px 4px 8px 44px}
+.addrow.ro-add{padding-top:10px;padding-bottom:10px;padding-right:16px}
+.touch .addrow{padding:4px 16px 4px 48px}
+.touch .addrow.ro-add{padding-top:12px;padding-bottom:12px}
+.tot{font-size:12px;color:var(--text2);white-space:nowrap}
+.bprow.ro-row{padding-right:16px;min-height:48px}
+/* ---------- grade scale / assistant table / fees ---------- */
+.blk{border:1px solid var(--border);border-radius:8px;margin-top:24px;flex:none}
+.bhead{display:flex;align-items:center;gap:8px;height:40px;padding:0 4px 0 12px}
+.touch .bhead{height:48px;padding:0 0 0 16px}
+.bhead .nm{font-size:13px;font-weight:500}
+.bbody{padding:12px;border-top:1px solid var(--border)}
+.touch .bbody{padding:12px 16px}
+.gscale{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--border);border-radius:8px;max-width:448px;overflow:hidden}
+.gscale div{display:flex;flex-direction:column;align-items:center;padding:4px 0;font-size:13px;font-variant-numeric:tabular-nums}
+.gscale div+div{border-left:1px solid var(--border)}
+.gscale b{font-weight:500}
+.gscale span{color:var(--text2);font-size:12px}
+.bline{font-size:13px;margin:8px 0 0}
+.bline.bsec{color:var(--text2);font-size:12px;margin-top:4px}
+.bsub{font-size:12px;color:var(--text2);padding:0 12px 8px;margin-top:-4px}
+.touch .bsub{padding:0 16px 8px}
+.thead,.trow{display:grid;align-items:center;column-gap:12px;border-top:1px solid var(--border)}
+.thead{height:32px;background:var(--surface);font-size:12px;color:var(--text2)}
+.trow{min-height:36px;font-size:13px}
+.touch .trow{min-height:44px}
+.trow b{font-weight:500}
+.trow.sel,.bprow.sel{background:var(--blue-tint)}
+.g-as{grid-template-columns:72px 200px minmax(0,1fr);padding:0 12px}
+.touch .g-as{padding:0 16px}
+.g-asp{grid-template-columns:48px minmax(0,1fr) minmax(0,1fr);padding:0 16px}
+.g-fee{grid-template-columns:minmax(0,1fr) 104px 104px 104px 64px;padding:0 4px 0 12px}
+.g-fees{grid-template-columns:minmax(0,1fr) 104px 104px 104px;padding:0 16px 0 12px}
+.g-feet{grid-template-columns:minmax(0,1fr) 88px 88px 88px 52px;padding:0 0 0 16px}
+.g-feets{grid-template-columns:minmax(0,1fr) 88px 88px 88px;padding:0 16px}
+.bfoot{font-size:12px;color:var(--text2);padding:8px 12px;border-top:1px solid var(--border)}
+.touch .bfoot{padding:10px 16px}
+/* ---------- dialogs ---------- */
+.input.num-in{width:140px}
+.input .suf{color:var(--text2);margin-left:auto;padding-left:8px;font-size:12px}
+.preview{background:var(--surface);border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:4px}
+.preview div+div{margin-top:2px}
+.ggrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));column-gap:12px}
+.ggrid .input.num-in,.agrid .input.num-in{width:100%}
+.agrid{display:grid;grid-template-columns:48px minmax(0,1fr) minmax(0,1fr);column-gap:12px;align-items:center;margin-bottom:8px}
+.agrid.ahead{font-size:12px;color:var(--text2);margin-bottom:4px}
+.ag{font-size:13px;font-weight:500}
+.rov{font-size:13px;color:var(--text2);padding-left:12px}
+.lnk{color:var(--blue);text-decoration:underline;font-size:12px;display:inline-flex;align-items:center;min-height:24px}
+.touch .lnk{min-height:44px;margin:-10px 0 -12px}
+.fbody .err+.meta,.dialog .err+.meta{margin-top:12px}
+/* ---------- menus: disabled item with its reason ---------- */
+.menu .it.b2col{height:auto;min-height:32px;padding:8px 12px;align-items:flex-start;white-space:normal}
+.touch .menu .it.b2col{min-height:44px}
+.menu .it.two i{margin-top:2px}
+.menu .it .t{display:block}
+.menu .it .why{display:block;font-size:12px;color:var(--text2);line-height:1.4;margin-top:2px}
+.pair>div{min-width:0;max-width:100%}
+.bhead .grow{flex:1}
+.touch .ph-shell .crow.dh.ro-dh{padding-right:16px}
+.addrow{flex-wrap:wrap;row-gap:4px}
+.addrow .tot{margin-left:auto}
+/* ---------- revision 2 ---------- */
+.menu{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.sheet .menu{box-shadow:none}
+.tip{position:absolute;top:34px;right:0;background:#1F1F1F;color:#fff;font-size:13px;line-height:1.4;padding:4px 8px;border-radius:6px;white-space:nowrap;z-index:6}
+.rrow.g-pc.lift{margin:4px -4px 4px 4px;padding-left:4px}
+.dropline{margin:-1px 0 -1px 8px}
+.ctog .tag i{font-size:12px;color:inherit}
+.crow.dh .l1 .ti-chevron-up,.crow.dh .l1 .ti-chevron-down{font-size:16px;color:var(--text2)}
+.gerr{grid-column:1/-1;margin:-4px 0 12px}
+.input.bad{border-color:var(--warn)}
+.okbox .q{margin:12px 0 0;font-size:13px}
+.okbox .shell-h{margin-top:16px}
+.okbox ul{margin:0;padding-left:20px}
+/* ---------- revision 3: tablet drag ---------- */
+.g-tab{grid-template-columns:36px minmax(0,1fr) 96px 88px 88px;padding:0}
+.touch .grip{width:44px;height:44px;margin-left:-4px;position:relative}
+.rrow.g-tab.lift{margin:4px -4px 4px 4px;padding-left:0}
+.finger{position:absolute;left:8px;top:8px;width:28px;height:28px;border-radius:50%;background:rgba(31,31,31,.14);border:1px solid rgba(31,31,31,.35)}
+/* ---------- revision 4: phone drag ---------- */
+.bprow.hasgrip{padding-left:2px}
+.bprow>.grip{margin:0 2px 0 0}
+.aerr{margin:-4px 0 8px}
+
+/* ---------- Events tab (Star testing) ---------- */
+.g-ev{grid-template-columns:minmax(0,1.6fr) 150px 100px 190px 64px;padding:0 4px 0 16px}
+.g-evt{grid-template-columns:minmax(0,1fr) 124px 84px 150px 88px;padding:0 0 0 16px}
+.g-evs{grid-template-columns:minmax(0,1.6fr) 150px 100px 190px 32px;padding:0 4px 0 16px}
+.evlist{border:1px solid var(--border);border-radius:8px;flex:none}
+.evlist>.rhead{border-top:none;border-radius:8px 8px 0 0}
+.rrow .nm{font-weight:500}
+.tag-ok{background:var(--ok-tint);color:var(--ok);border-color:#CFE3B6}
+.seg{display:inline-flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;font-size:13px;height:32px;align-self:flex-start;flex:none}
+.seg span{display:flex;align-items:center;padding:0 16px;color:var(--text2)}
+.seg span.on{background:var(--blue-tint);color:var(--blue);font-weight:500}
+.seg span+span{border-left:1px solid var(--control-border)}
+.touch .seg{height:36px}
+.seg.neutral span.on{background:var(--surface);color:var(--text)}
+.seg .ct{color:var(--text2);font-weight:400;margin-left:8px}
+.segbar{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex:none}
+.cbline{display:flex;align-items:center;gap:8px;font-size:13px;margin:12px 0 4px}
+.touch .cbline{min-height:44px;margin:4px 0 0}
+.indent{margin-left:24px}
+.b2col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ta{min-height:64px;height:auto;align-items:flex-start;padding:6px 12px;line-height:1.4}
+.opt-lbl{font-weight:400;color:var(--text2)}
+.ferr{display:flex;gap:4px;align-items:flex-start;font-size:12px;color:var(--warn);margin-top:2px}
+.ferr i{font-size:14px;margin-top:1px}
+.input.bad{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn)}
+.menu .it.b2col{height:auto;min-height:32px;padding:8px 12px;align-items:flex-start;white-space:normal}
+.touch .menu .it.b2col{min-height:44px}
+.menu .it.two i{margin-top:2px}
+.menu .it .t{display:block}
+.it .why{display:block;font-size:12px;color:var(--text2);line-height:1.4;margin-top:2px}
+.btn-danger i{color:#fff}
+.placeholder{border:1px dashed var(--border-strong);border-radius:8px;padding:24px;color:var(--text2);font-size:13px;text-align:center;flex:none}
+.qr{display:grid;grid-template-columns:repeat(25,1fr);width:var(--qs,152px);height:var(--qs,152px);background:#fff;padding:8px;border:1px solid var(--border);border-radius:8px}
+.qr i{display:block;background:#1F1F1F}.qr b{display:block}
+.qrwrap{display:flex;justify-content:center;margin:8px 0 12px}
+.url{font-size:13px;color:var(--text);font-family:ui-monospace,Consolas,monospace;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dlg-row{display:flex;gap:8px;flex-wrap:wrap}
+.lk{border:1px solid var(--border);border-radius:8px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.lk .sch{font-size:15px;font-weight:500}
+.lkrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dev-ph .lkrow{grid-template-columns:1fr}
+.dev-ph .fullscreen .fbody{overflow:auto}
+.esum{font-size:14px;color:var(--text);line-height:1.4;margin-top:2px}
+.dev-ph .url{white-space:normal;word-break:break-all}
+.empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:48px 16px;color:var(--text2);font-size:13px;text-align:center;border:1px solid var(--border);border-radius:8px;flex:none}
+.ddlist{position:absolute;background:var(--bg);border:1px solid var(--border-strong);border-radius:8px;padding:4px 0;z-index:6}
+.paper{width:612px;height:792px;background:#fff;border:1px solid var(--border-strong);box-shadow:0 1px 3px rgba(0,0,0,.08);padding:56px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;font-size:14px;color:#1F1F1F}
+.paper h1{font-size:28px;font-weight:500;margin:8px 0 0}
+.paper .big{font-size:18px}
+.paper .note{font-size:14px;color:#3a3a3a;max-width:440px;line-height:1.5}
+.paper .crest{width:72px;height:72px;border-radius:50%;border:2px solid #1F1F1F;display:flex;align-items:center;justify-content:center;font-size:11px;color:#6B6B6B}
+.okbox ol.det li{margin:6px 0}
+.prop{color:var(--warn)}
+.intro{font-size:14px;max-width:900px}
+code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
+.ti-copy{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M7 7m0 2.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667z%22/%3E%3Cpath d=%22M4.012 16.737a2.005 2.005 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1%22/%3E%3C/svg%3E")}
+.ti-qrcode{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z%22/%3E%3Cpath d=%22M7 17l0 .01%22/%3E%3Cpath d=%22M14 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z%22/%3E%3Cpath d=%22M7 7l0 .01%22/%3E%3Cpath d=%22M4 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z%22/%3E%3Cpath d=%22M17 7l0 .01%22/%3E%3Cpath d=%22M14 14l3 0%22/%3E%3Cpath d=%22M20 14l0 .01%22/%3E%3Cpath d=%22M14 14l0 3%22/%3E%3Cpath d=%22M14 20l3 0%22/%3E%3Cpath d=%22M17 17l3 0%22/%3E%3Cpath d=%22M20 17l0 3%22/%3E%3C/svg%3E")}
+.ti-printer{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2%22/%3E%3Cpath d=%22M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4%22/%3E%3Cpath d=%22M7 13m0 2a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2z%22/%3E%3C/svg%3E")}
+
+/* ---- Black Belt question layout ---- */
+.qmain{max-width:2000px;margin:0 auto;padding:24px 16px 40px}
+.qh{font-size:20px;font-weight:500;margin:0 0 4px}
+.qlead{color:var(--text2);margin:0 0 16px;max-width:1500px;font-size:14px}
+.qlead b,.qexp b,.qfoot b{font-weight:600;color:var(--text)}
+.ambtxt{outline:3px solid #E8A317;outline-offset:1px;border-radius:3px;padding:0 3px}
+.qopts{display:flex;gap:16px;align-items:flex-start}
+.qopt{flex:1;background:var(--bg);border:1px solid var(--border-strong);border-radius:10px;padding:14px}
+.qopt.rec{border:2px solid var(--blue)}
+.qot{display:flex;align-items:center;font-size:16px;font-weight:500;margin-bottom:8px}
+.letter{display:inline-flex;width:28px;height:28px;border-radius:50%;background:var(--text);color:#fff;align-items:center;justify-content:center;font-size:14px;margin-right:8px;flex:none}
+.rec-tag{font-size:12px;color:var(--blue);background:var(--blue-tint);border-radius:6px;padding:2px 8px;margin-left:8px;font-weight:400}
+.qexp{font-size:13px;color:var(--text2);margin-bottom:12px;line-height:1.5}
+.pair{display:flex;gap:14px;align-items:flex-start}
+.pair>div:first-child{flex:1;min-width:0}
+.cap{font-size:12px;color:var(--text2);margin:0 0 6px}
+.bbdlg{width:100%;max-width:none;border:1px solid var(--border-strong);box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.bbdlg.sm{margin-bottom:12px}
+.amb{outline:3px solid #E8A317;outline-offset:4px;border-radius:6px;margin:6px 2px 10px}
+.amb2{outline:3px solid #E8A317;outline-offset:2px;border-radius:4px}
+.bsec{font-size:13px;font-weight:600;margin:12px 0 6px;padding-top:8px;border-top:1px solid var(--border)}
+.amb>.bsec:first-child{border-top:0;padding-top:0;margin-top:0}
+.bday{margin-bottom:8px}
+.dn{font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px}
+.b3col{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:8px}
+.b2col{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sub2{margin-top:6px;align-items:center}
+.cbline0{display:flex;align-items:center;gap:6px;font-size:13px}
+.mt{margin-top:6px}.mt2{margin-top:10px}
+.bdrow{display:grid;grid-template-columns:120px 1fr auto 20px 20px;gap:8px;align-items:center;font-size:13px;padding:7px 0;border-bottom:1px solid var(--border)}
+.bdrow .dname{font-weight:500}.bdrow i{color:var(--text2);font-size:16px}
+.chip{font-size:11px;border:1px solid var(--border-strong);border-radius:999px;padding:1px 8px;color:var(--text2);white-space:nowrap}
+.chip.on{background:var(--blue-tint);color:var(--blue);border-color:#C5D0E6}
+.bprow{display:flex;flex-direction:column;gap:2px;font-size:13px;padding:8px 0;border-bottom:1px solid var(--border)}
+.bprow b{font-weight:500}.bprow .chip{align-self:flex-start}
+.pagebox{border:1px solid var(--border-strong);border-radius:10px;padding:14px;background:var(--bg)}
+.back{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--blue)}
+.ptitle{font-size:20px;font-weight:500}
+.tabs{display:flex;gap:18px;border-bottom:1px solid var(--border);margin:8px 0 12px;font-size:13px}
+.tabs span{padding:6px 0;color:var(--text2)}.tabs span.on{color:var(--blue);border-bottom:2px solid var(--blue);margin-bottom:-1px}
+.bdrow2{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border)}
+.muted{color:var(--text2)}
+.dev-ph{width:330px}
+.qfoot{font-size:13px;color:var(--text2);margin:14px 0 0;max-width:1500px}
+
+.qopts{display:flex;flex-direction:column;gap:16px}
+.qopt{display:grid;grid-template-columns:360px 600px 340px;gap:20px;align-items:start;background:var(--bg);border:1px solid var(--border-strong);border-radius:10px;padding:16px}
+.qopt .qot{grid-column:1/-1;margin-bottom:0}
+.qopt .qexp{margin:0}
+.pair{display:contents}
+.bbdlg{width:600px}
+.bprow{align-items:flex-start !important;text-align:left !important}
+.ftab{display:grid;gap:8px 10px;align-items:center;font-size:13px}
+.ftab.f6{grid-template-columns:80px repeat(5,1fr)}
+.ftab.f4{grid-template-columns:80px 1fr 1fr 1fr}
+.ftab .h{font-size:12px;color:var(--text2)}
+.ftab .dn{font-weight:500}
+.ftab .input.money{width:100%}
+.warnt{color:var(--warn) !important}
+.pcard{border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;font-size:13px}
+.pcard b{font-weight:600}.pcard .input.money{width:100%}
+.plan{display:grid;grid-template-columns:1fr auto 20px;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}
+.plan i{color:var(--text2)}
+#b10{border-top:1px solid var(--border-strong);margin-top:24px;padding-top:16px}
+.rrowx{display:grid;grid-template-columns:110px 150px 1fr auto;gap:10px;align-items:center;font-size:13px;background:#fff;border:1px solid var(--border-strong);border-radius:8px;padding:10px 12px;margin-top:12px}
+.rrowx b{font-weight:500}.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag-blue{background:var(--blue-tint);color:var(--blue);border-color:#C5D0E6}
+.rep{font-size:12.5px;margin-top:10px;background:var(--surface);border-radius:8px;padding:8px 10px}
+.rep b{font-weight:600}
+.payl{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:8px 0;border-bottom:1px solid var(--border)}
+.payl b{font-weight:600}.payl.held span{color:var(--blue)}.payl.due span{color:var(--text2)}.payl.due b{color:var(--text2);font-weight:400}
+.seg{display:flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;height:32px;font-size:13px}
+.seg span{flex:1;display:flex;align-items:center;justify-content:center}.seg span.on{background:var(--blue-tint);color:var(--blue)}
+.seg span+span{border-left:1px solid var(--border)}
+#b11{border-top:1px solid var(--border-strong);margin-top:24px;padding-top:16px}
+.tag-red{background:#FCEBEB;color:#A32D2D;border-color:#F0C6C6}
+.cards{display:flex;gap:8px;margin:4px 2px 12px}
+.card{flex:1;border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--text2);background:var(--bg)}
+.card b{display:block;font-size:18px;color:var(--text);font-weight:600}
+.card.warnc b{color:var(--warn)}.card.redc b{color:#A32D2D}
+.rost{display:grid;gap:0;font-size:12.5px}
+.rost>span{padding:7px 6px;border-bottom:1px solid var(--border);display:flex;align-items:center}
+.rost .h{font-size:12px;color:var(--text2);border-bottom:1px solid var(--border-strong)}
+.rost b{font-weight:500}
+.rost.r5{grid-template-columns:1.2fr .7fr .9fr 1.3fr 2fr}
+.rost.r7{grid-template-columns:1.2fr .7fr 1fr 1fr 1fr 1fr 1fr}
+.pm{display:flex;gap:8px;align-items:center;justify-content:space-between}.pm em{font-style:normal;color:var(--text2)}
+.pc{color:var(--text2)}.late{color:var(--warn);font-weight:600}
+.amb3{outline:2px solid #E8A317;outline-offset:2px;border-radius:5px}
+.pills{display:flex;gap:6px;margin:2px 2px 8px}.pill{font-size:12px;border:1px solid var(--border-strong);border-radius:999px;padding:2px 10px}
+.pr{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.pr b{font-weight:500;display:block}.pr span{font-size:12px;color:var(--text2)}
+.pr.col{flex-direction:column;align-items:flex-start}.pcs{font-size:12px}
+#b12{border-top:1px solid var(--border-strong);margin-top:24px;padding-top:16px}
+.qopts3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
+.qcol{background:var(--bg);border:1px solid var(--border-strong);border-radius:10px;padding:14px}
+.qcol.rec{border:2px solid var(--blue)}
+#b12 .qexp{margin:12px 0 0}
+.detail{font-size:13px;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:12px}
+.detail b{font-weight:600}.btnrow{display:flex;gap:6px;margin-top:8px}
+#b12 .rcpt{display:block;width:auto;height:auto;text-align:left;background:#fff;border:1px solid var(--border-strong);box-shadow:0 2px 8px rgba(0,0,0,.08);padding:16px;font-size:12px}
+.rcpt.slip{max-width:240px;margin:10px auto 0;font-family:ui-monospace,Consolas,monospace;font-size:11px}
+.rh1{font-weight:700;font-size:13px}.rh2{color:var(--text2);margin-bottom:8px}
+.rkv{display:flex;justify-content:space-between;gap:8px;padding:3px 0}.rkv span{color:var(--text2)}.rkv b{font-weight:600;text-align:right}
+.rkv.tot{border-top:1px solid var(--border-strong);margin-top:4px;padding-top:6px}
+.rtb{width:100%;border-collapse:collapse;margin:8px 0}.rtb th,.rtb td{border-bottom:1px solid var(--border);padding:4px;text-align:left}.rtb th{color:var(--text2);font-weight:500}.rtb td:last-child,.rtb th:last-child{text-align:right}
+.rft{font-size:10.5px;color:var(--text2);margin-top:10px;border-top:1px solid var(--border);padding-top:6px}
+.toastx{background:#1F1F1F;color:#fff;border-radius:8px;padding:10px 12px;font-size:12.5px}.toastx .lnk{color:#9FC0FF;margin-left:10px;font-weight:600}
+</style>
+</head>
+<body>
+<main class="qmain">
+<section id="b9">
+<h1 class="qh">Black Belt · Question B9: how plans and prices are set (Rubric and prices tab)</h1>
+<p class="qlead">Admins set the prices once on <b>Black Belt → Rubric and prices → Fees</b>. A new cycle <b>copies them</b> (Star's rule: changing the tab later doesn't change cycles that already exist, so recorded payments never shift). The <b>due dates</b> belong to each cycle (B3). Today's Sheet has separate "in full" and "payment 1/2/3" amounts; they used to differ (in full $760 vs 3 payments $790), and this fall they're equal. The question is <b>how much the price table can express</b>. <span class="ambtxt">Amber</span> = the part being decided. Admins edit, staff view only (B4).</p>
+<div class="qopts">
+
+<!-- A -->
+<div class="qopt rec">
+<div class="qot"><span class="letter">A</span>In-full price and three payment amounts per Dan<span class="rec-tag">Recommended</span></div>
+<div class="qexp"><b>What it does:</b> per Dan: the <b>pay-in-full price</b>, the <b>three payment amounts</b> (filled in as equal thirds when you type the total, each editable, e.g. 270 / 270 / 250), and the <b>Kukkiwon fee</b>. The 3-payment total is shown next to the in-full price, so a discount for paying in full is visible.<br>
+<b>Pros:</b> covers everything the Sheet has ever used (equal or uneven payments, an in-full discount); the Kukkiwon fee becomes editable (today it's hard-coded in 4 places); one small table.<br>
+<b>Cons:</b> always exactly 3 payments; a 2- or 4-payment plan would be a design change.</div>
+<div class="pair">
+<div><p class="cap">PC · Fees section</p>
+<div class="pagebox"><a class="back"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Black Belt testing</div>
+<div class="tabs"><span>Cycles</span><span class="on">Rubric and prices</span></div>
+<div class="bsec" style="border:0;padding:0">Fees</div>
+<div class="amb">
+<div class="ftab f6"><span class="h">Dan</span><span class="h">In full</span><span class="h">Payment 1</span><span class="h">Payment 2</span><span class="h">Payment 3</span><span class="h">Kukkiwon</span>
+<span class="dn">1st Dan</span><span class="input money"><span class="pre">$</span>870</span><span class="input money"><span class="pre">$</span>290</span><span class="input money"><span class="pre">$</span>290</span><span class="input money"><span class="pre">$</span>290</span><span class="input money"><span class="pre">$</span>100</span>
+<span></span><span class="hint">3 payments = $870</span><span></span><span></span><span></span><span></span>
+<span class="dn">2nd Dan</span><span class="input money"><span class="pre">$</span>990</span><span class="input money"><span class="pre">$</span>330</span><span class="input money"><span class="pre">$</span>330</span><span class="input money"><span class="pre">$</span>330</span><span class="input money"><span class="pre">$</span>110</span>
+<span class="dn">3rd Dan</span><span class="input money"><span class="pre">$</span>1,450</span><span class="input money"><span class="pre">$</span>500</span><span class="input money"><span class="pre">$</span>500</span><span class="input money"><span class="pre">$</span>500</span><span class="input money"><span class="pre">$</span>140</span>
+<span></span><span class="hint warnt">$50 less than 3 payments</span><span></span><span></span><span></span><span></span>
+<span class="dn">4th Dan</span><span class="input money"><span class="pre">$</span>2,700</span><span class="input money"><span class="pre">$</span>900</span><span class="input money"><span class="pre">$</span>900</span><span class="input money"><span class="pre">$</span>900</span><span class="input money"><span class="pre">$</span>170</span>
+</div></div>
+<div class="hint">New cycles copy these prices. Payment due dates are set on each cycle.</div>
+</div></div>
+<div><p class="cap">Phone · one card per Dan</p>
+<div class="dev dev-ph touch" style="height:560px"><div class="ph-shell"><div class="content">
+<a class="back"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Black Belt testing</div>
+<div class="tabs"><span>Cycles</span><span class="on">Rubric and prices</span></div>
+<div class="amb">
+<div class="pcard"><b>1st Dan</b><div class="b2col"><div class="field"><label>In full</label><div class="input money"><span class="pre">$</span>870</div></div><div class="field"><label>Kukkiwon</label><div class="input money"><span class="pre">$</span>100</div></div></div><label class="lbl">3 payments</label><div class="b3col"><div class="input money"><span class="pre">$</span>290</div><div class="input money"><span class="pre">$</span>290</div><div class="input money"><span class="pre">$</span>290</div></div><div class="hint">3 payments = $870</div></div>
+<div class="pcard"><b>2nd Dan</b> <span class="hint">$990 · 3 × $330 · Kukkiwon $110</span> <i class="ti ti-chevron-down"></i></div>
+</div>
+<div class="hint">3rd and 4th Dan below.</div>
+</div></div></div></div>
+</div>
+</div>
+
+<!-- B -->
+<div class="qopt">
+<div class="qot"><span class="letter">B</span>One price per Dan, split evenly</div>
+<div class="qexp"><b>What it does:</b> per Dan: <b>one testing fee</b> and the <b>Kukkiwon fee</b>. Paying in 3 always means three equal payments (any leftover cents go on the last one). In full and 3 payments always cost the same.<br>
+<b>Pros:</b> simplest table; nothing to keep in step.<br>
+<b>Cons:</b> no discount for paying in full and no uneven payments (both have been used before); changing that later is a design change.</div>
+<div class="pair">
+<div><p class="cap">PC · Fees section</p>
+<div class="pagebox"><a class="back"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Black Belt testing</div>
+<div class="tabs"><span>Cycles</span><span class="on">Rubric and prices</span></div>
+<div class="bsec" style="border:0;padding:0">Fees</div>
+<div class="amb">
+<div class="ftab f4"><span class="h">Dan</span><span class="h">Testing fee</span><span class="h">Paying in 3</span><span class="h">Kukkiwon</span>
+<span class="dn">1st Dan</span><span class="input money"><span class="pre">$</span>870</span><span class="hint">3 × $290</span><span class="input money"><span class="pre">$</span>100</span>
+<span class="dn">2nd Dan</span><span class="input money"><span class="pre">$</span>990</span><span class="hint">3 × $330</span><span class="input money"><span class="pre">$</span>110</span>
+<span class="dn">3rd Dan</span><span class="input money"><span class="pre">$</span>1,500</span><span class="hint">3 × $500</span><span class="input money"><span class="pre">$</span>140</span>
+<span class="dn">4th Dan</span><span class="input money"><span class="pre">$</span>2,700</span><span class="hint">3 × $900</span><span class="input money"><span class="pre">$</span>170</span>
+</div></div>
+<div class="hint">New cycles copy these prices. Payment due dates are set on each cycle.</div>
+</div></div>
+<div><p class="cap">Phone</p>
+<div class="dev dev-ph touch" style="height:560px"><div class="ph-shell"><div class="content">
+<a class="back"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Black Belt testing</div>
+<div class="tabs"><span>Cycles</span><span class="on">Rubric and prices</span></div>
+<div class="amb">
+<div class="pcard"><b>1st Dan</b><div class="b2col"><div class="field"><label>Testing fee</label><div class="input money"><span class="pre">$</span>870</div></div><div class="field"><label>Kukkiwon</label><div class="input money"><span class="pre">$</span>100</div></div></div><div class="hint">Paying in 3: 3 × $290</div></div>
+<div class="pcard"><b>2nd Dan</b> <span class="hint">$990 · Kukkiwon $110</span> <i class="ti ti-chevron-down"></i></div>
+<div class="pcard"><b>3rd Dan</b> <span class="hint">$1,500 · Kukkiwon $140</span> <i class="ti ti-chevron-down"></i></div>
+<div class="pcard"><b>4th Dan</b> <span class="hint">$2,700 · Kukkiwon $170</span> <i class="ti ti-chevron-down"></i></div>
+</div>
+</div></div></div></div>
+</div>
+</div>
+
+<!-- C -->
+<div class="qopt">
+<div class="qot"><span class="letter">C</span>Any payment plans you like</div>
+<div class="qexp"><b>What it does:</b> admins make a <b>list of plans</b> ("In full", "3 payments", "+ Add plan", e.g. "2 payments" or "Monthly, 4"). Each plan has its own number of payments and an amount per payment per Dan. The family form shows every plan; each cycle sets the due dates for every plan's payments.<br>
+<b>Pros:</b> any schedule without a design change.<br>
+<b>Cons:</b> a much bigger table and more for families to choose from; every plan needs its own due dates on every cycle; balances, late flags and receipts get harder; the old system never needed it.</div>
+<div class="pair">
+<div><p class="cap">PC · Fees section</p>
+<div class="pagebox"><a class="back"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Black Belt testing</div>
+<div class="tabs"><span>Cycles</span><span class="on">Rubric and prices</span></div>
+<div class="bsec" style="border:0;padding:0">Payment plans</div>
+<div class="amb">
+<div class="plan"><b>In full</b><span class="hint">1 payment</span><i class="ti ti-edit"></i></div>
+<div class="plan"><b>3 payments</b><span class="hint">3 payments</span><i class="ti ti-edit"></i></div>
+<div class="plan"><b>2 payments</b><span class="hint">2 payments</span><i class="ti ti-edit"></i></div>
+<span class="btn btn-sm" style="margin:6px 0 10px"><i class="ti ti-plus"></i>Add plan</span>
+<div class="ftab f6"><span class="h">2 payments</span><span class="h">1st Dan</span><span class="h">2nd Dan</span><span class="h">3rd Dan</span><span class="h">4th Dan</span><span class="h"></span>
+<span class="dn">Payment 1</span><span class="input money"><span class="pre">$</span>435</span><span class="input money"><span class="pre">$</span>495</span><span class="input money"><span class="pre">$</span>750</span><span class="input money"><span class="pre">$</span>1,350</span><span></span>
+<span class="dn">Payment 2</span><span class="input money"><span class="pre">$</span>435</span><span class="input money"><span class="pre">$</span>495</span><span class="input money"><span class="pre">$</span>750</span><span class="input money"><span class="pre">$</span>1,350</span><span></span>
+</div>
+<div class="hint">…one table like this per plan, plus the Kukkiwon fee per Dan.</div>
+</div>
+</div></div>
+<div><p class="cap">Phone</p>
+<div class="dev dev-ph touch" style="height:560px"><div class="ph-shell"><div class="content">
+<a class="back"><i class="ti ti-arrow-left"></i>Testing</a><div class="ptitle">Black Belt testing</div>
+<div class="tabs"><span>Cycles</span><span class="on">Rubric and prices</span></div>
+<div class="amb">
+<div class="pcard"><b>In full</b> <span class="hint">1 payment</span> <i class="ti ti-chevron-down"></i></div>
+<div class="pcard"><b>3 payments</b> <span class="hint">3 payments</span> <i class="ti ti-chevron-down"></i></div>
+<div class="pcard"><b>2 payments</b> <span class="hint">2 payments · 1st Dan $435 + $435 …</span> <i class="ti ti-chevron-down"></i></div>
+<span class="btn btn-full" style="margin-top:8px"><i class="ti ti-plus"></i>Add plan</span>
+</div>
+</div></div></div></div>
+</div>
+</div>
+
+</div>
+<p class="qfoot"><b>Same in every option:</b> prices are copied into each cycle when it's created; an admin can change a cycle's own prices only until someone has paid (then recorded amounts never change); the Kukkiwon fee is optional per candidate and added to payment 1; the form shows the real amounts and due dates (B5).</p>
+</section>
+</main>
+<main class="qmain">
+<section id="b10">
+<h1 class="qh">Black Belt · Question B10: recording post-dated checks</h1>
+<p class="qlead">On a payment plan, a family hands in <b>all their checks at once</b> by the first due date: here Alex Kim's three checks on Mar 27, two of them dated <b>Apr 24</b> and <b>May 29</b> (they can't be deposited yet). The question is <b>how staff record them</b>, which also decides how they show on the roster and in <b>Finance's Daily report</b> (which counts by payment date, and its drawer count counts the checks in the drawer). Staff record payments with the 5-second Undo; admins fix them later (B4). <span class="ambtxt">Amber</span> = what differs.</p>
+<div class="qopts">
+
+<!-- A -->
+<div class="qopt rec">
+<div class="qot"><span class="letter">A</span>Record all three now; each counts on the date written on it<span class="rec-tag">Recommended</span></div>
+<div class="qexp"><b>What it does:</b> staff record each check when it's handed in, with its <b>check date</b> (and check number, optional). A check dated in the future shows as <b>Held</b> until that date, then counts as paid on that date by itself. The Daily report counts it <b>on its check date</b>, the day it can be deposited, not on the day it was handed in.<br>
+<b>Pros:</b> nothing to remember later; the roster shows exactly what's in hand and what's held; each day's report matches what can go to the bank; a bounced check is found against a known check.<br>
+<b>Cons:</b> one more field (check date) in the dialog; the drawer count must leave out held checks (they're kept aside); different from Color Belt and Star, where every payment counts the day it's recorded.</div>
+<div class="pair">
+<div><p class="cap">PC · Record payment, then the roster row</p>
+<div class="dialog dialog-detail bbdlg"><h3>Record payment · Alex Kim</h3><p class="sub">1st Dan · 3 payments plan · Kukkiwon certificate</p>
+<div class="b3col"><div class="field"><label>Amount</label><div class="input money"><span class="pre">$</span>290</div></div><div class="field"><label>Method</label><div class="seg"><span>Cash</span><span class="on">Check</span><span>Card</span></div></div><div class="field"><label>For</label><div class="input select">Payment 2<i class="ti ti-chevron-down"></i></div></div></div>
+<div class="amb"><div class="b2col"><div class="field"><label>Check date (written on the check)</label><div class="input">Sat, Apr 24, 2027</div></div><div class="field"><label>Check no. (optional)</label><div class="input">1043</div></div></div>
+<div class="hint">Dated later than today: kept as <b>Held</b> and counted as paid on Apr 24.</div></div>
+<div class="actions"><span class="btn">Cancel</span><span class="btn btn-primary"><i class="ti ti-check"></i>Record</span></div></div>
+<div class="rrowx"><b>Kim, Alex</b><span>1st Dan · 3 payments</span><span class="amb2 tags"><span class="tag tag-ok">Paid $390</span> <span class="tag tag-blue">2 checks held · $580</span></span><span class="hint">Balance $0</span></div>
+<div class="rep amb2">Daily report: <b>Mar 27</b> check $290 + check $100 · <b>Apr 24</b> check $290 · <b>May 29</b> check $290</div>
+</div>
+<div><p class="cap">Phone · the candidate's payments</p>
+<div class="dev dev-ph touch" style="height:470px"><div class="ph-shell"><div class="content">
+<div class="ptitle" style="font-size:17px">Kim, Alex · payments</div><div class="hint">3 payments plan · $970 with Kukkiwon</div>
+<div class="amb">
+<div class="payl"><span>Mar 27 · Payment 1 · check 1041</span><b>$290</b></div>
+<div class="payl"><span>Mar 27 · Kukkiwon · check 1042</span><b>$100</b></div>
+<div class="payl held"><span>Held until Apr 24 · Payment 2 · check 1043</span><b>$290</b></div>
+<div class="payl held"><span>Held until May 29 · Payment 3 · check 1044</span><b>$290</b></div>
+</div>
+<div class="hint">Paid $390 · held $580 · balance $0</div>
+</div></div></div></div>
+</div>
+</div>
+
+<!-- B -->
+<div class="qopt">
+<div class="qot"><span class="letter">B</span>Record all three now; all count today</div>
+<div class="qexp"><b>What it does:</b> exactly like Color Belt and Star: each check counts as paid <b>the day it's recorded</b>. The date written on the check isn't recorded (or only in a note).<br>
+<b>Pros:</b> simplest; one rule for every testing type; the roster shows "Paid in full" right away.<br>
+<b>Cons:</b> the Daily report says $970 came in on Mar 27, but only $390 can be deposited that day, so the totals don't match the bank; nothing reminds anyone when a held check can be deposited; a bounce weeks later lands on a day that's already closed.</div>
+<div class="pair">
+<div><p class="cap">PC · Record payment, then the roster row</p>
+<div class="dialog dialog-detail bbdlg"><h3>Record payment · Alex Kim</h3><p class="sub">1st Dan · 3 payments plan · Kukkiwon certificate</p>
+<div class="b3col"><div class="field"><label>Amount</label><div class="input money"><span class="pre">$</span>290</div></div><div class="field"><label>Method</label><div class="seg"><span>Cash</span><span class="on">Check</span><span>Card</span></div></div><div class="field"><label>For</label><div class="input select">Payment 2<i class="ti ti-chevron-down"></i></div></div></div>
+<div class="field amb"><label>Note (optional)</label><div class="input">post-dated Apr 24</div></div>
+<div class="actions"><span class="btn">Cancel</span><span class="btn btn-primary"><i class="ti ti-check"></i>Record</span></div></div>
+<div class="rrowx"><b>Kim, Alex</b><span>1st Dan · 3 payments</span><span class="amb2 tags"><span class="tag tag-ok">Paid in full $970</span></span><span class="hint">Balance $0</span></div>
+<div class="rep amb2">Daily report: <b>Mar 27</b> check $290 + $100 + $290 + $290 = $970</div>
+</div>
+<div><p class="cap">Phone · the candidate's payments</p>
+<div class="dev dev-ph touch" style="height:470px"><div class="ph-shell"><div class="content">
+<div class="ptitle" style="font-size:17px">Kim, Alex · payments</div><div class="hint">3 payments plan · $970 with Kukkiwon</div>
+<div class="amb">
+<div class="payl"><span>Mar 27 · Payment 1 · check</span><b>$290</b></div>
+<div class="payl"><span>Mar 27 · Kukkiwon · check</span><b>$100</b></div>
+<div class="payl"><span>Mar 27 · Payment 2 · check · "post-dated Apr 24"</span><b>$290</b></div>
+<div class="payl"><span>Mar 27 · Payment 3 · check · "post-dated May 29"</span><b>$290</b></div>
+</div>
+<div class="hint">Paid $970 · balance $0</div>
+</div></div></div></div>
+</div>
+</div>
+
+<!-- C -->
+<div class="qopt">
+<div class="qot"><span class="letter">C</span>Record each check only on its date</div>
+<div class="qexp"><b>What it does:</b> on Mar 27 staff record only today's checks. The later checks sit in an envelope; on Apr 24 and May 29 someone records each one. The roster shows the expected schedule meanwhile.<br>
+<b>Pros:</b> the dashboard only ever holds money that's really in hand; no new field.<br>
+<b>Cons:</b> someone must remember to record ~40 checks on each date; a forgotten check shows the family as late when they already paid; nothing in the dashboard says the school is holding their check.</div>
+<div class="pair">
+<div><p class="cap">PC · the roster row on Mar 27, then on Apr 25 if forgotten</p>
+<div class="rrowx"><b>Kim, Alex</b><span>1st Dan · 3 payments</span><span class="tags"><span class="tag tag-ok">Paid $390</span> <span class="tag">Next $290 by Apr 24</span></span><span class="hint">Balance $580</span></div>
+<div class="rrowx amb2"><b>Kim, Alex</b><span>1st Dan · 3 payments</span><span class="tags"><span class="tag tag-warn">Payment 2 late</span></span><span class="hint">…though the check is in the envelope</span></div>
+<div class="rep amb2">Daily report: <b>Mar 27</b> $390 · <b>Apr 24</b> $290 <i>only if someone records it that day</i></div>
+</div>
+<div><p class="cap">Phone · the candidate's payments</p>
+<div class="dev dev-ph touch" style="height:470px"><div class="ph-shell"><div class="content">
+<div class="ptitle" style="font-size:17px">Kim, Alex · payments</div><div class="hint">3 payments plan · $970 with Kukkiwon</div>
+<div class="amb">
+<div class="payl"><span>Mar 27 · Payment 1 · check</span><b>$290</b></div>
+<div class="payl"><span>Mar 27 · Kukkiwon · check</span><b>$100</b></div>
+<div class="payl due"><span>Due Apr 24 · Payment 2</span><b>$290</b></div>
+<div class="payl due"><span>Due May 29 · Payment 3</span><b>$290</b></div>
+</div>
+<div class="hint">Paid $390 · balance $580</div>
+</div></div></div></div>
+</div>
+</div>
+
+</div>
+<p class="qfoot"><b>Same in every option:</b> cash and card count the day they're recorded; Undo within 5 seconds, then admins edit / undo / refund (B4); a bounced (returned) check is its own record by an admin, and the balance comes back; payments never show on grading screens. Whether Black Belt money appears in the school's Daily report at all (checks are made out to Master Jeong) is checked with the Finance session after this answer.</p>
+</section>
+</main>
+<main class="qmain"><section id="b11"><h1 class="qh">Black Belt · Question B11: how money shows on the Candidates roster</h1><p class="qlead">The cycle's Candidates tab, on Apr 25, 2027. Families are on different plans (B9), and every recorded check counts the day it's recorded (B10). The question is <b>how much the roster says about money</b>: just paid / not paid, the next payment and late ones, or every payment. Staff and admins see it on desk devices; never on the grading tablet (B4). <span class="ambtxt">Amber</span> = the money part being decided. Sample names.</p><div class="qopts"><div class="qopt rec"><div class="qot"><span class="letter">A</span>One status per candidate: paid in full, next payment, late<span class="rec-tag">Recommended</span></div><div class="qexp"><b>What it does:</b> one <b>Payments</b> column with a single tag worked out from the plan and the due dates: <b>Paid in full</b>, <b>Next $330 by Apr 24</b>, <b>Late · $500 since Apr 24</b> or <b>Not paid</b>, plus the <b>balance</b>. Cards on top count how many are late or not paid; tapping one filters the list. Opening a candidate shows every payment.<br><b>Pros:</b> the desk sees at a glance who owes what and who is late, for any plan; works with 1, 2, 3 or 4 payments; the Sheet never flagged late payments.<br><b>Cons:</b> a bit more than Star's roster; "Late" depends on the due dates being right on the cycle.</div><div class="pair"><div><p class="cap">PC · Candidates tab</p><div class="pagebox"><a class="back"><i class="ti ti-arrow-left"></i>Black Belt</a><div class="ptitle">Spring 2027</div><div class="hint">First day Sat, Apr 3 · both schools · 42 candidates</div><div class="tabs"><span class="on">Candidates</span><span>Grading</span><span>Results</span></div><div class="cards amb"><div class="card"><b>18</b>Paid in full</div><div class="card"><b>19</b>Paying on schedule</div><div class="card warnc"><b>3</b>Late</div><div class="card redc"><b>2</b>Not paid</div></div><div class="rost r5"><span class="h">Candidate</span><span class="h">Dan</span><span class="h">School</span><span class="h">Plan</span><span class="h amb2">Payments · balance</span><span><b>Kim, Alex</b></span><span>1st Dan</span><span>Shrewsbury</span><span>3 payments · Kukkiwon</span><span class="pm"><span class="tag tag-ok">Paid in full</span><em>$0</em></span><span><b>Lee, Sam</b></span><span>2nd Dan</span><span>Worcester</span><span>3 payments</span><span class="pm"><span class="tag">Next $330 by Apr 24</span><em>$660</em></span><span><b>Patel, Rina</b></span><span>1st Dan</span><span>Worcester</span><span>In full</span><span class="pm"><span class="tag tag-red">Not paid</span><em>$870</em></span><span><b>Nguyen, Bao</b></span><span>3rd Dan</span><span>Shrewsbury</span><span>3 payments · Kukkiwon</span><span class="pm"><span class="tag tag-warn">Late · $500 since Apr 24</span><em>$500</em></span><span><b>Garcia, Leo</b></span><span>4th Dan</span><span>Shrewsbury</span><span>2 payments</span><span class="pm"><span class="tag">Next $1,350 by May 29</span><em>$1,350</em></span><span><b>Chen, Mia</b></span><span>1st Dan</span><span>Worcester</span><span>3 payments</span><span class="pm"><span class="tag tag-ok">Paid in full</span><em>$0</em></span></div></div></div><div><p class="cap">Phone · list</p><div class="dev dev-ph touch" style="height:620px"><div class="ph-shell"><div class="content"><a class="back"><i class="ti ti-arrow-left"></i>Black Belt</a><div class="ptitle">Spring 2027</div><div class="tabs"><span class="on">Candidates</span><span>Grading</span><span>Results</span></div><div class="pills amb"><span class="pill">3 late</span><span class="pill">2 not paid</span></div><div class="pr"><div><b>Kim, Alex</b><span>1st Dan · Shrewsbury · 3 payments</span></div><div class="pm amb3"><span class="tag tag-ok">Paid in full</span><em>$0</em></div></div><div class="pr"><div><b>Lee, Sam</b><span>2nd Dan · Worcester · 3 payments</span></div><div class="pm amb3"><span class="tag">Next $330 by Apr 24</span><em>$660</em></div></div><div class="pr"><div><b>Patel, Rina</b><span>1st Dan · Worcester · In full</span></div><div class="pm amb3"><span class="tag tag-red">Not paid</span><em>$870</em></div></div><div class="pr"><div><b>Nguyen, Bao</b><span>3rd Dan · Shrewsbury · 3 payments</span></div><div class="pm amb3"><span class="tag tag-warn">Late · $500 since Apr 24</span><em>$500</em></div></div><div class="pr"><div><b>Garcia, Leo</b><span>4th Dan · Shrewsbury · 2 payments</span></div><div class="pm amb3"><span class="tag">Next $1,350 by May 29</span><em>$1,350</em></div></div><div class="pr"><div><b>Chen, Mia</b><span>1st Dan · Worcester · 3 payments</span></div><div class="pm amb3"><span class="tag tag-ok">Paid in full</span><em>$0</em></div></div></div></div></div></div></div></div><div class="qopt"><div class="qot"><span class="letter">B</span>Paid / not paid, like Star</div><div class="qexp"><b>What it does:</b> the same as Star's roster: a <b>Paid $… / Not paid</b> tag, nothing about plans or due dates. The candidate's detail shows the payments.<br><b>Pros:</b> identical to Star and Color Belt; simplest.<br><b>Cons:</b> with payment plans "Paid $330" doesn't say whether that's on time or $660 short; nobody sees late payments without opening each candidate or doing the math.</div><div class="pair"><div><p class="cap">PC · Candidates tab</p><div class="pagebox"><a class="back"><i class="ti ti-arrow-left"></i>Black Belt</a><div class="ptitle">Spring 2027</div><div class="hint">First day Sat, Apr 3 · both schools · 42 candidates</div><div class="tabs"><span class="on">Candidates</span><span>Grading</span><span>Results</span></div><div class="cards amb"><div class="card"><b>40</b>Paid something</div><div class="card"><b>2</b>Not paid</div></div><div class="rost r5"><span class="h">Candidate</span><span class="h">Dan</span><span class="h">School</span><span class="h">Plan</span><span class="h amb2">Paid</span><span><b>Kim, Alex</b></span><span>1st Dan</span><span>Shrewsbury</span><span>3 payments · Kukkiwon</span><span class="pm"><span class="tag tag-ok">Paid $970</span></span><span><b>Lee, Sam</b></span><span>2nd Dan</span><span>Worcester</span><span>3 payments</span><span class="pm"><span class="tag tag-ok">Paid $330</span></span><span><b>Patel, Rina</b></span><span>1st Dan</span><span>Worcester</span><span>In full</span><span class="pm"><span class="tag">Not paid</span></span><span><b>Nguyen, Bao</b></span><span>3rd Dan</span><span>Shrewsbury</span><span>3 payments · Kukkiwon</span><span class="pm"><span class="tag tag-ok">Paid $1,140</span></span><span><b>Garcia, Leo</b></span><span>4th Dan</span><span>Shrewsbury</span><span>2 payments</span><span class="pm"><span class="tag tag-ok">Paid $1,350</span></span><span><b>Chen, Mia</b></span><span>1st Dan</span><span>Worcester</span><span>3 payments</span><span class="pm"><span class="tag tag-ok">Paid $870</span></span></div></div></div><div><p class="cap">Phone · list</p><div class="dev dev-ph touch" style="height:620px"><div class="ph-shell"><div class="content"><a class="back"><i class="ti ti-arrow-left"></i>Black Belt</a><div class="ptitle">Spring 2027</div><div class="tabs"><span class="on">Candidates</span><span>Grading</span><span>Results</span></div><div class="pr"><div><b>Kim, Alex</b><span>1st Dan · Shrewsbury · 3 payments</span></div><div class="pm amb3"><span class="tag tag-ok">Paid $970</span></div></div><div class="pr"><div><b>Lee, Sam</b><span>2nd Dan · Worcester · 3 payments</span></div><div class="pm amb3"><span class="tag tag-ok">Paid $330</span></div></div><div class="pr"><div><b>Patel, Rina</b><span>1st Dan · Worcester · In full</span></div><div class="pm amb3"><span class="tag">Not paid</span></div></div><div class="pr"><div><b>Nguyen, Bao</b><span>3rd Dan · Shrewsbury · 3 payments</span></div><div class="pm amb3"><span class="tag tag-ok">Paid $1,140</span></div></div><div class="pr"><div><b>Garcia, Leo</b><span>4th Dan · Shrewsbury · 2 payments</span></div><div class="pm amb3"><span class="tag tag-ok">Paid $1,350</span></div></div><div class="pr"><div><b>Chen, Mia</b><span>1st Dan · Worcester · 3 payments</span></div><div class="pm amb3"><span class="tag tag-ok">Paid $870</span></div></div></div></div></div></div></div></div><div class="qopt"><div class="qot"><span class="letter">C</span>A column for every payment, like the Sheet</div><div class="qexp"><b>What it does:</b> columns <b>Payment 1 · 2 · 3 · Kukkiwon</b>, each showing ✓ and the date, "due", or <b>late</b>, like today's Payments tab.<br><b>Pros:</b> every payment visible without opening anyone; familiar from the Sheet.<br><b>Cons:</b> wide; plans with 1, 2 or 4 payments leave gaps or don't fit (B9 allows any plan); on a phone it becomes a long card per person.</div><div class="pair"><div><p class="cap">PC · Candidates tab</p><div class="pagebox"><a class="back"><i class="ti ti-arrow-left"></i>Black Belt</a><div class="ptitle">Spring 2027</div><div class="hint">First day Sat, Apr 3 · both schools · 42 candidates</div><div class="tabs"><span class="on">Candidates</span><span>Grading</span><span>Results</span></div><div class="rost r7"><span class="h">Candidate</span><span class="h">Dan</span><span class="h">Plan</span><span class="h amb2">Payment 1</span><span class="h amb2">Payment 2</span><span class="h amb2">Payment 3</span><span class="h amb2">Kukkiwon</span><span><b>Kim, Alex</b></span><span>1st Dan</span><span>3 payments</span><span class="pc">✓ Mar 27</span><span class="pc">✓ Mar 27</span><span class="pc">✓ Mar 27</span><span class="pc">✓ Mar 27</span><span><b>Lee, Sam</b></span><span>2nd Dan</span><span>3 payments</span><span class="pc">✓ Mar 27</span><span class="pc">due Apr 24</span><span class="pc">due May 29</span><span class="pc">—</span><span><b>Patel, Rina</b></span><span>1st Dan</span><span>In full</span><span class="pc">due Mar 27</span><span class="pc">—</span><span class="pc">—</span><span class="pc">—</span><span><b>Nguyen, Bao</b></span><span>3rd Dan</span><span>3 payments</span><span class="pc">✓ Mar 27</span><span class="pc"><span class="late">late</span></span><span class="pc">due May 29</span><span class="pc">✓ Mar 27</span><span><b>Garcia, Leo</b></span><span>4th Dan</span><span>2 payments</span><span class="pc">✓ Mar 27</span><span class="pc">due May 29</span><span class="pc">—</span><span class="pc">—</span><span><b>Chen, Mia</b></span><span>1st Dan</span><span>3 payments</span><span class="pc">✓ Mar 27</span><span class="pc">✓ Mar 27</span><span class="pc">✓ Mar 27</span><span class="pc">—</span></div></div></div><div><p class="cap">Phone · list</p><div class="dev dev-ph touch" style="height:620px"><div class="ph-shell"><div class="content"><a class="back"><i class="ti ti-arrow-left"></i>Black Belt</a><div class="ptitle">Spring 2027</div><div class="tabs"><span class="on">Candidates</span><span>Grading</span><span>Results</span></div><div class="pr col"><div><b>Kim, Alex</b><span>1st Dan · 3 payments</span></div><div class="amb3 pcs">1: ✓ Mar 27 · 2: ✓ Mar 27 · 3: ✓ Mar 27 · K: ✓ Mar 27</div></div><div class="pr col"><div><b>Lee, Sam</b><span>2nd Dan · 3 payments</span></div><div class="amb3 pcs">1: ✓ Mar 27 · 2: due Apr 24 · 3: due May 29 · K: —</div></div><div class="pr col"><div><b>Patel, Rina</b><span>1st Dan · In full</span></div><div class="amb3 pcs">1: due Mar 27 · 2: — · 3: — · K: —</div></div><div class="hint">…</div></div></div></div></div></div></div></div><p class="qfoot"><b>Same in every option:</b> opening a candidate shows every payment (date, amount, method, for, note, who recorded it) with Record payment; amounts and payments never appear on the grading tablet; the summary cards follow the location switcher (Worcester / Shrewsbury / Both).</p></section></main><main class="qmain">
+<section id="b12">
+<h1 class="qh">Black Belt · Question B12: receipts</h1>
+<p class="qlead">Today a receipt is emailed from the Sheet's menu: payment history, totals, balance and both schools' contact details. The dashboard <b>can't send email yet</b>, so for now a receipt is <b>printed or saved as a PDF</b> (or the family takes a photo of the screen). Emailing receipts is added once the dashboard can send email. The question is <b>what kind of receipt</b> staff can give. <span class="ambtxt">Amber</span> = what differs. Staff and admins can print (B4).</p>
+<div class="qopts3">
+
+<div class="qcol rec">
+<div class="qot"><span class="letter">A</span>One receipt with the full history<span class="rec-tag">Recommended</span></div>
+<div class="detail"><b>Kim, Alex</b> · 1st Dan · 3 payments<div class="btnrow"><span class="btn btn-sm btn-primary"><i class="ti ti-plus"></i>Record payment</span><span class="btn btn-sm amb3">Print receipt</span></div></div>
+<div class="rcpt amb">
+<div class="rh1">Jae H. Jeong's U.S. Taekwondo Center</div><div class="rh2">Black Belt testing · payment receipt</div>
+<div class="rkv"><span>Candidate</span><b>Alex Kim · 1st Dan</b></div><div class="rkv"><span>Cycle</span><b>Spring 2027 · reference BB-4821</b></div><div class="rkv"><span>Plan</span><b>3 payments + Kukkiwon certificate</b></div>
+<table class="rtb"><tr><th>Date</th><th>For</th><th>How</th><th>Amount</th></tr><tr><td>Mar 27</td><td>Payment 1</td><td>Check</td><td>$290</td></tr><tr><td>Mar 27</td><td>Kukkiwon</td><td>Check</td><td>$100</td></tr><tr><td>Apr 24</td><td>Payment 2</td><td>Cash</td><td>$290</td></tr></table>
+<div class="rkv"><span>Total due</span><b>$970</b></div><div class="rkv"><span>Paid to date</span><b>$680</b></div><div class="rkv tot"><span>Balance</span><b>$290 · next by May 29</b></div>
+<div class="rft">Worcester · 1141 Main St · (508) 767-1717 &nbsp;|&nbsp; Shrewsbury · 370 Boston Turnpike · (508) 792-5534<br>Printed Apr 24, 2027 by Staff. Fees are non-refundable.</div>
+</div>
+<div class="qexp"><b>What it does:</b> <b>Print receipt</b> on the candidate's payments makes one page with every payment so far, total due, paid to date and balance (the same content as today's email). Print it, or save it as a PDF to send yourself.<br>
+<b>Pros:</b> one page answers "what have we paid?"; the same receipt can be printed again any time; matches today's emailed receipt, so it can become the email later.<br>
+<b>Cons:</b> not printed automatically: staff click Print when a family asks.</div>
+</div>
+
+<div class="qcol">
+<div class="qot"><span class="letter">B</span>A slip for each payment</div>
+<div class="toastx amb">Payment recorded · $290 check · Alex Kim <span class="lnk">Undo</span> <span class="lnk">Print slip</span></div>
+<div class="rcpt slip amb">
+<div class="rh1">U.S. Taekwondo Center</div><div class="rh2">Payment slip</div>
+<div class="rkv"><span>Candidate</span><b>Alex Kim</b></div><div class="rkv"><span>For</span><b>Black Belt Spring 2027 · Payment 2</b></div><div class="rkv"><span>Amount</span><b>$290 · cash</b></div><div class="rkv"><span>Date</span><b>Apr 24, 2027</b></div><div class="rkv"><span>Balance after</span><b>$290</b></div>
+</div>
+<div class="qexp"><b>What it does:</b> right after recording a payment, the toast offers <b>Print slip</b>: a small receipt for just that payment, like a shop receipt.<br>
+<b>Pros:</b> a family paying at the desk gets something in hand right away.<br>
+<b>Cons:</b> a family on a plan collects several slips and no single summary; a slip can only be printed in the 5 seconds the toast shows, or from the payment's row; a full history still needs a second kind of receipt.</div>
+</div>
+
+<div class="qcol">
+<div class="qot"><span class="letter">C</span>No receipts until email</div>
+<div class="detail amb"><b>Kim, Alex</b> · 1st Dan · 3 payments<div class="btnrow"><span class="btn btn-sm btn-primary"><i class="ti ti-plus"></i>Record payment</span></div><div class="hint" style="margin-top:6px">Receipts will be emailed once the dashboard can send email.</div></div>
+<div class="qexp"><b>What it does:</b> nothing is printed. Families can see the payment schedule on their confirmation page (B8); staff can read out or show the payments on screen. Emailed receipts come later.<br>
+<b>Pros:</b> nothing to build now.<br>
+<b>Cons:</b> a family paying $1,000+ by check gets no paper proof; today's system gives one (by email), so this is a step backwards until email exists.</div>
+</div>
+
+</div>
+<p class="qfoot"><b>Same in every option:</b> receipts show only that candidate's payments; undone payments don't appear; an edited payment shows its new amount; refunds and returned checks show as their own lines; emailing receipts (to the results email) is added when the dashboard can send email.</p>
+</section>
+</main>
+</body>
+</html>

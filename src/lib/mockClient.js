@@ -74,6 +74,22 @@
 // failNextSave makes the next Finance save fail, e.g. Close the day):
 //   __tkdPreview.setNow('19:30')          pretend the school clock says 7:30 PM (Home reminder); null = real time
 //   __tkdPreview.resetFinance()           back to the sample closings and Star payments, reminder times Off
+// Black Belt testing helpers (contracts 0016-B1 §2.3 + 0016-B2 §2.4, src/lib/blackBelt/mockBlackBelt.js; setRole, setToday and
+// setTestingDelay cover Black Belt too; failNextSave() fails the next save of whichever section comes first):
+//   __tkdPreview.failNextSave('blackBelt') the next Black Belt save fails like a dropped connection
+//   __tkdPreview.simulateOtherAdminEdit() also bumps every Black Belt cycle, candidate and the settings, and saves a new waiver
+//   __tkdPreview.resetBlackBelt()         back to 0016's seed (no cycles, the placeholder waiver)
+//   __tkdPreview.bbSample()               the mockups' sample (Spring 2027 with 6 candidates, Fall 2027)
+//   __tkdPreview.bbLinks()                both family links of every cycle as LOCAL preview addresses
+//   __tkdPreview.setBlackBeltRegistration(false) the Black Belt form's kill switch ("not open" everywhere)
+//   __tkdPreview.bbWaiverChanged()        the waiver was replaced 25 hours ago -> the next Send answers waiver_changed
+//   __tkdPreview.bbSampleRoster()         the Candidates mockups' sample (9 candidates with payments; for Apr 26, 2027)
+//   __tkdPreview.bbSampleEdge()           bbSampleRoster + the edge cases (overpaid, Kukkiwon late, withdrawn, a
+//                                         parent's signature needed, a desk paper waiver)
+//                                         (both fill the schools' street and phone only where they are empty)
+//   __tkdPreview.bbExpireUndo()           the newest Black Belt payment looks 11 s old -> a staff Undo is "too late"
+//   __tkdPreview.bbAddDuplicate()         a second form registration of the newest cycle's first candidate (duplicate box)
+//   (forceVerifyFailed / forceRateLimited above work on the Black Belt form too)
 import { getLastPasswordSignIn, PASSWORD_MAX_AGE_MS, decodeJwtPayload } from './session.js';
 import { setLockedFlag } from './useIdleLock.js';
 import { readStorage, writeStorage, removeStorage } from './storage.js';
@@ -89,6 +105,8 @@ import { createScheduleBackend, SCHEDULE_RPC_NAMES } from './mockSchedule.js';
 import { createCalendarBackend, CALENDAR_RPC_NAMES } from './mockCalendar.js';
 import { createFormsBackend, FORMS_RPC_NAMES } from './mockForms.js';
 import { createFinanceBackend, FINANCE_RPC_NAMES, FINANCE_WRITE_RPC_NAMES } from './mockFinance.js';
+import { createBlackBeltBackend, BB_RPC_NAMES, BB_WRITE_RPC_NAMES, BB_TABLES, BB_STORE_KEY } from './blackBelt/mockBlackBelt.js';
+import { blackBeltPublicHelpers } from './blackBelt/publicApi.preview.js';
 
 const SESSION_KEY = 'tkd.preview.session'; // the fake "signed in" session
 const STAFF_STATE_KEY = 'tkd.preview.staffState'; // fake staff row: PIN, shared flag
@@ -522,6 +540,40 @@ export function createMockClient() {
     newId: newUuid,
     locations: () => events.snapshot().locations,
   });
+  // ----- Black Belt testing (src/lib/blackBelt/mockBlackBelt.js) -----
+  // Its own store; the schools' names and addresses come from the Events store above.
+  const blackBelt = createBlackBeltBackend({
+    loadStore: () => JSON.parse(readStorage(BB_STORE_KEY)), // missing/damaged -> 0016's seed
+    saveStore: (store) => writeStorage(BB_STORE_KEY, JSON.stringify(store)),
+    now: () => Date.now(),
+    today: previewToday, // the real school date, or the one set with setToday
+    newId: newUuid,
+    getLocations: () => events.snapshot().locations,
+  });
+  // The Black Belt samples' school street and phone (the mockups' made-up sample data), written
+  // only where the preview school has none yet, through the Events store's own Schools save
+  // (as an admin would in Settings -> Schools). The receipt's footer shows them.
+  const SAMPLE_SCHOOLS = {
+    worcester: { street: '1141 Main St', city: 'Worcester', state: 'MA', zip: '01603', phone: '(508) 767-1717' },
+    shrewsbury: { street: '370 Boston Turnpike', city: 'Shrewsbury', state: 'MA', zip: '01545', phone: '(508) 792-5534' },
+  };
+  function fillSampleSchools() {
+    const admin = { ...testingContext(), signedIn: true, hasDataAccess: true, isAdmin: true };
+    for (const school of events.snapshot().locations ?? []) {
+      const sample = SAMPLE_SCHOOLS[school.code];
+      if (!sample || (school.address_street && school.phone)) continue;
+      const keepAddress = Boolean(school.address_street);
+      events.rpc('settings_update_school_contact', {
+        p_code: school.code,
+        p_expected_version: school.version,
+        p_street: keepAddress ? school.address_street : sample.street,
+        p_city: keepAddress ? school.address_city : sample.city,
+        p_state: keepAddress ? school.address_state : sample.state,
+        p_zip: keepAddress ? school.address_zip : sample.zip,
+        p_phone: school.phone || sample.phone,
+      }, admin);
+    }
+  }
   // failNextSave arms this; the next Testing or Events save then fails (whichever comes first).
   let failNextTesting = false;
   // failSavesUntilRetry turns this on and reconnect turns it off: while on, every Events save
@@ -583,6 +635,7 @@ export function createMockClient() {
           if (table.startsWith('schedule_')) return schedule.select(table, query.columns, query.filters, query.orders, testingContext());
           if (table.startsWith('calendar_')) return calendar.select(table, query.columns, query.filters, query.orders, testingContext());
           if (table === 'forms' || table.startsWith('form_') || table === 'prospect_statuses') return forms.select(table, query.columns, query.filters, query.orders, testingContext());
+          if (BB_TABLES.includes(table)) return blackBelt.select(table, query.columns, query.filters, query.orders, testingContext());
           // Phase 2 tables (and locations, which gained the address columns) → mockTestingEvents.js.
           if (CAMP_TABLES.includes(table)) return camps.select(table, query.columns, query.filters, query.orders, testingContext());
           if (EVENT_TABLES.includes(table)) return events.select(table, query.columns, query.filters, query.orders, testingContext());
@@ -625,7 +678,8 @@ export function createMockClient() {
     };
   }
 
-  async function rpc(name, args = {}) {
+  // options: supabase-js's third argument ({ get: true } = a read-only GET request).
+  async function rpc(name, args = {}, options = {}) {
     if (STAFF_RPC_NAMES.includes(name)) {
       await wait(FAKE_DELAY_MS);
       return staffAccounts.rpc(name, args, staffContext());
@@ -665,6 +719,14 @@ export function createMockClient() {
         events.failNextSave();
       }
       return events.rpc(name, args, testingContext());
+    }
+    if (BB_RPC_NAMES.includes(name)) {
+      await wait(testingDelay());
+      if (failNextTesting && BB_WRITE_RPC_NAMES.includes(name)) {
+        failNextTesting = false; // failNextSave: the next save fails, whichever section it is in
+        blackBelt.failNextSave();
+      }
+      return blackBelt.rpc(name, args, testingContext(), options);
     }
     if (FINANCE_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
@@ -748,7 +810,11 @@ export function createMockClient() {
       saveStaffState(staff);
       return `The preview account is now ${role === 'admin' ? 'an admin' : 'staff (view only)'}. Reload the page to see it.`;
     },
-    failNextSave() {
+    failNextSave(section) {
+      if (section === 'blackBelt') {
+        blackBelt.failNextSave();
+        return 'The next Black Belt save will fail like a dropped connection and change nothing.';
+      }
       failNextTesting = true;
       staffAccounts.failNext();
       return 'The next Testing or Camps save (and the next Reset password / Reset PIN) will fail like a dropped connection and change nothing.';
@@ -761,7 +827,8 @@ export function createMockClient() {
       testing.simulateOtherAdminEdit();
       events.simulateOtherAdminEdit();
       camps.simulateOtherAdminEdit();
-      return 'Another admin changed every class, rank, event, student, school address, camp, camper and template, and swapped two ranks. Open dialogs and Undo are now out of date.';
+      blackBelt.simulateOtherAdminEdit();
+      return 'Another admin changed every class, rank, event, student, school address, camp, camper and template, and swapped two ranks - and every Black Belt cycle and candidate, the keep-years settings and the waiver. Open dialogs and Undo are now out of date.';
     },
     clearSchool(school) {
       if (!testing.clearSchool(school)) return "Use clearSchool('Worcester') or clearSchool('Shrewsbury').";
@@ -845,6 +912,47 @@ export function createMockClient() {
     resetFinance() {
       finance.reset();
       return 'Finance is back to the sample: a few closed Shrewsbury days, the sample Star payments and refunds, reminder times Off, no exports. Reload to see it.';
+    },
+    // ----- Black Belt testing helpers (mockBlackBelt.js, blackBelt/publicApi.preview.js) -----
+    resetBlackBelt() {
+      blackBelt.reset();
+      return "Black Belt is back to 0016's seed: no cycles, the placeholder waiver (version 2026-1), keep-years empty. Reload to see it.";
+    },
+    bbSample() {
+      blackBelt.loadSample();
+      return "Sample loaded — run __tkdPreview.setToday('2027-02-15') and reload.";
+    },
+    bbLinks() {
+      const origin = window.location.origin; // e.g. http://localhost:5174 - this preview's own address
+      const lines = blackBelt.links().map((c) => `${c.name}\n  Worcester:  ${origin}/black-belt/${c.worcester}\n  Shrewsbury: ${origin}/black-belt/${c.shrewsbury}`);
+      return lines.length > 0 ? lines.join('\n') : 'No Black Belt cycles yet. Add one, or run __tkdPreview.bbSample().';
+    },
+    setBlackBeltRegistration: blackBeltPublicHelpers().setBlackBeltRegistration,
+    bbSampleRoster() {
+      blackBelt.loadSampleRoster();
+      fillSampleSchools();
+      return "Sample loaded — run __tkdPreview.setToday('2027-04-26') and reload.";
+    },
+    bbSampleEdge() {
+      blackBelt.loadSampleEdge();
+      fillSampleSchools();
+      return "Sample loaded (with the edge cases) — run __tkdPreview.setToday('2027-04-26') and reload.";
+    },
+    bbExpireUndo() {
+      const moved = blackBelt.expireUndo();
+      return moved
+        ? 'The newest Black Belt payment row now looks 11 seconds old: a staff Undo of it answers "too late" (admins can still undo).'
+        : 'There is no Black Belt payment yet. Record one first.';
+    },
+    bbAddDuplicate() {
+      const added = blackBelt.addDuplicate();
+      return added
+        ? `Added a second form registration for ${added.name} (${added.reference}). Reload the Candidates tab to see the duplicate box.`
+        : 'No active candidate to copy. Run __tkdPreview.bbSampleRoster() first.';
+    },
+    bbWaiverChanged() {
+      const { from: before, to } = blackBelt.waiverChanged();
+      return `Waiver ${before} was replaced by ${to} 25 hours ago. A family form still showing ${before} now gets "the waiver has changed" on Send.`;
     },
     // ----- Events / family form helpers (publicApi.preview.js) -----
     ...publicPreviewHelpers(),

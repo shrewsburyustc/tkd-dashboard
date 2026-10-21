@@ -16,6 +16,9 @@
 //   showPageBanner(text)  the event page's amber banner (for the answers that aren't retried)
 //   isReadOnly      true when this person can't change results now (before the day; staff after it)
 //   screenLocked    true while the lock screen shows (no retries then)
+//   saveResult / saveNote   optional (phase 4): the functions that save — eventsApi's setResult /
+//                   setResultNote unless given. The private grading page passes privateApi's
+//                   (called with { registrationId, result } / { registrationId, note }).
 //
 // The "overlay": for every row with a tap that the screen shows instead of the loaded value,
 //   { result, state: 'saving' | 'unsaved' | 'retrying' | 'saved', sentResult, wanted,
@@ -33,7 +36,18 @@ const RELOAD_AFTER_SAVES_MS = 500;
 
 let nextToken = 1;
 
-export function useGradingSaves({ roster, classes, loadedAt, reload, onNoAccess, showPageBanner, isReadOnly, screenLocked }) {
+export function useGradingSaves({
+  roster,
+  classes,
+  loadedAt,
+  reload,
+  onNoAccess,
+  showPageBanner,
+  isReadOnly,
+  screenLocked,
+  saveResult = setResult,
+  saveNote: saveNoteCall = setResultNote,
+}) {
   // The overlay lives in a ref (so the async answers always see the newest one); `tick` only
   // makes React draw again after a change.
   const overlayRef = useRef({}); // { [registrationId]: entry }
@@ -91,7 +105,7 @@ export function useGradingSaves({ roster, classes, loadedAt, reload, onNoAccess,
     setEntry(id, { ...start, inFlight: true, sentResult: value, state: retrying ? 'retrying' : 'saving' });
     redraw();
 
-    const answer = await setResult({ registrationId: id, result: value });
+    const answer = await saveResult({ registrationId: id, result: value });
     const now = overlayRef.current[id];
     if (!now || now.token !== token) return; // dropped meanwhile (finished, row gone …)
     const status = answer?.status ?? 'error';
@@ -136,6 +150,10 @@ export function useGradingSaves({ roster, classes, loadedAt, reload, onNoAccess,
     if (status === 'finished' || status === 'not_open') {
       dropAll();
       p.showPageBanner(status === 'finished' ? T.TOO_LATE_RESULTS : T.GRADING_NOT_OPEN);
+    } else if (status === 'cancelled') {
+      // Phase 4: the private testing was cancelled meanwhile (only privateApi answers this).
+      dropEntry(id);
+      p.showPageBanner(T.PRIVATE_IS_CANCELLED);
     } else if (status === 'withdrawn') {
       const name = nameOf(id);
       dropEntry(id);
@@ -209,7 +227,7 @@ export function useGradingSaves({ roster, classes, loadedAt, reload, onNoAccess,
 
   // ----- Notes (no queue: the note dialog waits for the answer) -----
   async function saveNote(row, text) {
-    const answer = await setResultNote({ registrationId: row.id, note: text });
+    const answer = await saveNoteCall({ registrationId: row.id, note: text });
     const status = answer?.status ?? 'error';
     if (status === 'ok') {
       notesRef.current = { ...notesRef.current, [row.id]: { note: answer.note ?? null, answeredAt: Date.now() } };

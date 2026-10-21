@@ -10,7 +10,9 @@
 //   - PC: all columns side by side (they scroll sideways only when there are too many)
 //   - tablet: the columns scroll sideways
 //   - phone: one column at a time — tap a stage tile above, or swipe left / right
-// Side exits (No-show, Not interested) are not columns; their chips show those children in the List.
+// Side exits (No-show, Not interested) are not columns. A No-show stays on the Board as a card in
+// the Booked column, with "Didn't show — call back", until staff change its status (rulebook
+// v0.610, Jeffrey: nothing takes them off by itself). Not interested children show under their chip.
 import { createPortal } from 'react-dom';
 import { useRef } from 'react';
 import { IconAlertTriangle, IconArrowsHorizontal } from '@tabler/icons-react';
@@ -49,7 +51,11 @@ export default function Board({ code, label, headingLevel = 2, stages, items, st
   const Heading = headingLevel === 3 ? 'h3' : 'h2';
   const swipe = useRef(null);
   const byStage = new Map(stages.map((s) => [s.id, []]));
-  for (const p of items) byStage.get(p.statusId)?.push(p);
+  const bookedId = stages.find((s) => s.builtin === 'booked')?.id;
+  for (const p of items) {
+    const noShow = statusById.get(p.statusId)?.builtin === 'no_show';
+    byStage.get(noShow ? bookedId : p.statusId)?.push(p);
+  }
 
   const col = (s) => {
     const list = byStage.get(s.id) ?? [];

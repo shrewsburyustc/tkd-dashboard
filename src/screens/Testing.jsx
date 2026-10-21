@@ -14,6 +14,10 @@
 //   - when an event is open (address #testing/event/<id>): that event's page instead
 // Everything inside a tab lives in testing/events/EventsTab.jsx and testing/ClassesRanksTab.jsx;
 // the event page in testing/event/EventPage.jsx.
+// Phase 4 (contract 0014 §5.1, rulebook v0.401): a third tab, "Private testing", at the far right
+// (testing/private/PrivateTestingTab.jsx), and a private testing's grading page
+// (#testing/private/<id>, testing/private/PrivateGradingPage.jsx). Closing the grading page lands
+// on the Private testing tab. On narrow phones the tab bar scrolls sideways (testing.css).
 //
 // Props (from App.jsx):
 //   location           'Worcester' | 'Shrewsbury' | 'Both' (the top-bar switcher)
@@ -27,17 +31,37 @@
 //   onRefreshProfile   re-read "who am I?" (e.g. after the database said "not allowed")
 //   showToast / clearToast   the toast at the bottom (with Undo)
 //   onModalOpenChange  tells the App a Testing dialog is open (the page behind becomes inert)
-import { useEffect, useId, useRef, useState } from 'react';
+//   privateId          phase 4: the open private testing's id (its grading page), or null
+//   onOpenPrivate(id) / onClosePrivate(options)   open / close that grading page (App.jsx)
+//
+// Black Belt testing (contract CONTRACT-0016-B1 §3): until step C2 brings the Testing chooser and
+// the #testing/black-belt addresses (they wait for Star's chooser, §7 OP-1), Black Belt is reached
+// from a "Black Belt testing ›" link at the top of this page, in EVERY build (Jeffrey, rulebook
+// v0.917: Black Belt goes live without waiting for Star). The screens are loaded with a lazy
+// import, so they're only downloaded when someone opens Black Belt.
+// Black Belt is joint for both schools, so the link shows on Both too.
+import { Suspense, lazy, useEffect, useId, useRef, useState } from 'react';
+import { IconAward, IconChevronRight } from '@tabler/icons-react';
 import BlockedOnBoth from './testing/BlockedOnBoth.jsx';
 import ClassesRanksTab from './testing/ClassesRanksTab.jsx';
 import EventsTab from './testing/events/EventsTab.jsx';
 import EventPage from './testing/event/EventPage.jsx';
-import { PAGE_TITLE, TAB_CLASSES_RANKS, TAB_EVENTS, VIEW_ONLY_LINE } from './testing/text.js';
+import PrivateGradingPage from './testing/private/PrivateGradingPage.jsx';
+import PrivateTestingTab from './testing/private/PrivateTestingTab.jsx';
+import { PAGE_TITLE, TAB_CLASSES_RANKS, TAB_EVENTS, TAB_PRIVATE, VIEW_ONLY_LINE } from './testing/text.js';
 import '../styles/testing-events.css';
+
+// Black Belt testing's staff screens, loaded only when opened (v0.917: every build, until C2
+// moves the way in into the Testing chooser).
+const BlackBeltTesting = lazy(() => import('../blackBelt/staff/BlackBeltTesting.jsx'));
+const BLACK_BELT_LINK = 'Black Belt testing'; // the link's words (Black Belt's own text.js has the rest)
+// Is Black Belt open? Kept while the dashboard is open, like the tab.
+let blackBeltOpen = false;
 
 const TABS = [
   { key: 'events', label: TAB_EVENTS },
   { key: 'classes', label: TAB_CLASSES_RANKS },
+  { key: 'private', label: TAB_PRIVATE }, // phase 4: last, far right
 ];
 
 // The tab last used, kept while the page is open (coming back from an event page or from Home
@@ -49,14 +73,23 @@ let lastTab = 'events';
 //   staffLine  the gray line for staff under the tabs, or null
 function TestingHeader({ school, action, staffLine, tab, onTab, ids }) {
   const tabRefs = useRef({});
+  // ← → move to the next / previous tab (wrapping round), Home / End to the first / last one.
   function handleKeyDown(event) {
-    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
-    event.preventDefault();
     const index = TABS.findIndex((t) => t.key === tab);
-    const next = TABS[(index + (event.key === 'ArrowRight' ? 1 : -1) + TABS.length) % TABS.length];
+    let next = null;
+    if (event.key === 'ArrowRight') next = TABS[(index + 1) % TABS.length];
+    else if (event.key === 'ArrowLeft') next = TABS[(index - 1 + TABS.length) % TABS.length];
+    else if (event.key === 'Home') next = TABS[0];
+    else if (event.key === 'End') next = TABS[TABS.length - 1];
+    if (!next) return;
+    event.preventDefault();
     onTab(next.key);
     tabRefs.current[next.key]?.focus();
   }
+  // Narrow phones: the tab bar scrolls sideways — keep the current tab in view.
+  useEffect(() => {
+    tabRefs.current[tab]?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }, [tab]);
   return (
     <>
       <div className="phead">
@@ -77,7 +110,7 @@ function TestingHeader({ school, action, staffLine, tab, onTab, ids }) {
               }}
               id={ids.tab(t.key)}
               type="button"
-              className={`ttab${current ? ' is-current' : ''}`}
+              className={`ttab${current ? ' is-current' : ''}${t.key === 'private' ? ' ttab--end' : ''}`}
               role="tab"
               aria-selected={current ? 'true' : 'false'}
               aria-controls={ids.panel(t.key)}
@@ -96,8 +129,18 @@ function TestingHeader({ school, action, staffLine, tab, onTab, ids }) {
 
 export default function Testing({ location, onLocationChange, isAdmin, eventId, onOpenEvent, onCloseEvent, ...tabProps }) {
   const baseId = useId();
+  const [showBlackBelt, setShowBlackBeltState] = useState(blackBeltOpen);
+  function setShowBlackBelt(next) {
+    blackBeltOpen = next;
+    setShowBlackBeltState(next);
+  }
   const ids = { tab: (key) => `${baseId}-tab-${key}`, panel: (key) => `${baseId}-panel-${key}` };
   const [tab, setTabState] = useState(lastTab);
+  // Phase 4: while a private testing's grading page is open, the tab underneath becomes Private
+  // testing, so closing the page lands there.
+  useEffect(() => {
+    if (tabProps.privateId) setTabState('private');
+  }, [tabProps.privateId]);
   function setTab(key) {
     lastTab = key;
     setTabState(key);
@@ -116,16 +159,55 @@ export default function Testing({ location, onLocationChange, isAdmin, eventId, 
     document.getElementById(`${baseId}-tab-${lastTab}`)?.focus();
   }, [location, baseId]);
 
+  if (BlackBeltTesting && showBlackBelt && !eventId) {
+    const { screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange } = tabProps;
+    return (
+      <Suspense fallback={null}>
+        <BlackBeltTesting
+          isAdmin={isAdmin}
+          onBack={() => setShowBlackBelt(false)}
+          screenLocked={screenLocked}
+          onNoAccess={onNoAccess}
+          onRefreshProfile={onRefreshProfile}
+          showToast={showToast}
+          clearToast={clearToast}
+          onModalOpenChange={onModalOpenChange}
+          location={location} onLocationChange={onLocationChange}
+        />
+      </Suspense>
+    );
+  }
+  // The preview-only way in (see the header comment).
+  const blackBeltLink = BlackBeltTesting ? (
+    <button type="button" className="link-button ev-back" onClick={() => setShowBlackBelt(true)}>
+      {/* ti-award = Black Belt testing (rulebook icon map); ti-chevron-right = go there */}
+      <IconAward size={16} aria-hidden="true" />
+      {BLACK_BELT_LINK}
+      <IconChevronRight size={16} aria-hidden="true" />
+    </button>
+  ) : null;
+
   if (location === 'Both') {
     // Title only — no school line, no tabs (there's nothing in either tab to show).
     return (
       <div className="testing">
+        {blackBeltLink}
         <div className="phead">
           <div className="phead-titles">
             <h1 className="ptitle">{PAGE_TITLE}</h1>
           </div>
         </div>
         <BlockedOnBoth onChoose={chooseSchool} />
+      </div>
+    );
+  }
+
+  // Phase 4: a private testing's grading page. Closing it lands on the Private testing tab.
+  if (tabProps.privateId) {
+    lastTab = 'private';
+    return (
+      <div className="testing">
+        <PrivateGradingPage key={tabProps.privateId} school={location} isAdmin={isAdmin} {...tabProps} />
       </div>
     );
   }
@@ -144,7 +226,17 @@ export default function Testing({ location, onLocationChange, isAdmin, eventId, 
 
   return (
     <div className="testing">
-      {tab === 'events' ? (
+      {blackBeltLink}
+      {tab === 'private' ? (
+        <PrivateTestingTab
+          school={location}
+          isAdmin={isAdmin}
+          panelId={ids.panel('private')}
+          tabId={ids.tab('private')}
+          renderHeader={(action) => renderHeader(action, null)}
+          {...tabProps}
+        />
+      ) : tab === 'events' ? (
         <EventsTab
           school={location}
           isAdmin={isAdmin}

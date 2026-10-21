@@ -1,0 +1,1594 @@
+/*
+  blackBelt.css — the styles for the Black Belt testing staff screens (Cycles tab, Add / Edit
+  cycle, testing day, Rubric and prices, Registration links, cycle page — contract
+  CONTRACT-0016-B1 §3, mockups Cycles 2–8) and, since phase B2, the cycle page's Candidates tab
+  with its dialogs (contract CONTRACT-0016-B2 §3, mockups Candidates 1–7 and 9).
+  Why it exists: the screens reuse Color Belt's shared pieces (testing.css and testing-events.css:
+  .phead, .ttabs, .ttag, .clist, .ev-row, .tdialog, .money, .segmented …) and add only what Black
+  Belt needs here, with the same tokens (tokens.css — not changed) and the 4px spacing grid. Every
+  class starts with "bb-" so nothing clashes with the other sections.
+
+  Screen sizes (as testing.css):
+    Phone          (max-width: 639.98px)
+    PC             (min-width: 1024px)
+    Touch screens  (pointer: coarse)  → 48px rows, 56px day rows, 44px tap areas
+*/
+
+/* ===== Home: "← Testing", title, tabs ===== */
+.bb-back {
+  margin-bottom: var(--space-4);
+}
+
+/* Cycles list: Cycle · First testing day · Candidates · Status · actions */
+.bb-row {
+  grid-template-columns: minmax(0, 1fr) 150px 96px 180px 64px;
+}
+
+/* ===== Cycle page ===== */
+.bb-cycle-head {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--space-8);
+}
+
+.bb-summary {
+  margin-top: 2px;
+  font-size: var(--text-14);
+  line-height: 1.4;
+}
+
+.bb-head-more {
+  display: inline-flex;
+  flex: none;
+}
+
+/* ===== Dialogs on top of a dialog (testing day, Add plan, Save and delete) ===== */
+.bb-inner {
+  z-index: 42;
+}
+
+/* ===== Custom dropdown (SelectField.jsx, v0.51) ===== */
+.bb-select {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  text-align: left;
+  color: var(--color-text);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.bb-select.is-empty .bb-select-text {
+  color: var(--color-text-secondary);
+}
+
+.bb-select-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bb-select-chevron {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.bb-select[aria-invalid='true'],
+.bb-date[aria-invalid='true'],
+.bb-cycle-form .input[aria-invalid='true'],
+.money.is-invalid {
+  border-color: var(--color-warning-text);
+}
+
+.bb-select-list {
+  position: fixed;
+  z-index: 46; /* above dialogs (40), dialogs on top (42) and menus (45) */
+  margin: 0;
+  padding: var(--space-4) 0;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.bb-select-list[hidden] {
+  display: none;
+}
+
+.bb-select-option {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 var(--space-12);
+  font-size: var(--text-13);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.bb-select-option.is-current {
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+  font-weight: 500;
+}
+
+.bb-select-option.is-active {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+/* ===== Add / Edit cycle ===== */
+.bb-cycle-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.bb-name-input {
+  max-width: 360px;
+}
+
+.bb-section {
+  margin-top: var(--space-16);
+}
+
+.bb-section-title {
+  margin-bottom: var(--space-8);
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.bb-section-hint {
+  margin: calc(-1 * var(--space-4)) 0 var(--space-8);
+}
+
+.bb-section .notice {
+  margin-top: var(--space-8);
+}
+
+.bb-two {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-12);
+}
+
+.bb-date {
+  max-width: 240px;
+  font-family: inherit;
+}
+
+/* Testing days: one line per day with Edit and Delete */
+.bb-days {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.bb-days-empty {
+  padding: var(--space-12);
+}
+
+.bb-day {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  min-height: 48px;
+  padding: var(--space-8) var(--space-4) var(--space-8) var(--space-12);
+}
+
+.bb-day + .bb-day {
+  border-top: 1px solid var(--color-border);
+}
+
+.bb-day-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--text-13);
+}
+
+.bb-day-name {
+  font-weight: 500;
+}
+
+.bb-day-line,
+.bb-day-graded {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.bb-day-text .notice {
+  margin-top: var(--space-4);
+}
+
+.bb-day-acts {
+  display: flex;
+  flex: none;
+}
+
+.bb-add-row {
+  align-self: flex-start;
+  margin-top: var(--space-8);
+}
+
+.bb-section > .bb-add-row {
+  display: inline-flex;
+}
+
+/* Prices: one bordered block per plan */
+.bb-plans {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.bb-plan {
+  padding: var(--space-4) var(--space-12) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+}
+
+.bb-plan.is-dragging {
+  opacity: 0.5;
+}
+
+.bb-plan-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 36px;
+  margin-left: calc(-1 * var(--space-8));
+}
+
+.bb-plan-title {
+  margin-left: var(--space-8);
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.bb-plan-name {
+  width: 200px;
+  max-width: 50%;
+  font-weight: 500;
+}
+
+.bb-plan-count {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  white-space: nowrap;
+}
+
+.bb-plan-acts {
+  display: flex;
+  margin-left: auto;
+}
+
+.bb-plan .notice {
+  margin-top: var(--space-8);
+}
+
+/* The grid of a plan: Payment · Due · 1st–4th Dan (as drawn: 72px · 140px · 4 equal columns) */
+.bb-scroll-x {
+  max-width: 100%;
+  overflow-x: auto; /* only inside the plan block — the page itself never scrolls sideways */
+}
+
+.bb-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-13);
+}
+
+.bb-grid {
+  table-layout: fixed; /* the amount columns share the width equally, as drawn */
+}
+
+.bb-grid th,
+.bb-grid td {
+  padding: 3px var(--space-8) 3px 0;
+  text-align: left;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.bb-grid thead th {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+}
+
+.bb-grid th[scope='row'] {
+  font-weight: 400;
+}
+
+.bb-grid-pay {
+  width: 72px;
+}
+
+.bb-grid-due,
+.bb-grid:not(.bb-grid--phone) thead th:nth-child(2) {
+  width: 160px;
+}
+
+.bb-grid-due .bb-date {
+  width: 152px;
+}
+
+.bb-grid .num {
+  text-align: right;
+}
+
+.bb-grid .money {
+  width: 100%;
+  min-width: 64px;
+  padding: 0 var(--space-8);
+}
+
+/* A price box, as drawn: "$870" at the right of the box, the "$" right next to the number, in
+   the normal text colour. Black Belt only — the shared .money (Color Belt, Finance) is unchanged.
+   bb-price-fit is a one-cell grid: a hidden copy of the typed text (::after, from data-value)
+   sets the cell's width, and the input lies on top of it in the same cell — so the input is
+   exactly as wide as its text, and the "$" sits just before it. */
+.bb-price {
+  justify-content: flex-end;
+  cursor: text;
+}
+
+.bb-price .money-prefix {
+  margin-right: 0;
+  color: var(--color-text);
+}
+
+.bb-price-fit {
+  display: inline-grid;
+  min-width: 1ch;
+  max-width: 100%;
+}
+
+.bb-price-fit::after {
+  content: attr(data-value);
+  grid-area: 1 / 1;
+  visibility: hidden;
+  white-space: pre;
+  font: inherit;
+}
+
+.bb-price-fit .money-input {
+  grid-area: 1 / 1;
+  width: 0; /* the input adds no width of its own … */
+  min-width: 100%; /* … and then fills the cell the hidden text made */
+  text-align: right;
+}
+
+.bb-kuk .money {
+  padding: 0 var(--space-8);
+}
+
+.bb-grid-total th,
+.bb-grid-total td {
+  border-top: 1px solid var(--color-border);
+  font-weight: 500;
+}
+
+.bb-ro-price {
+  font-variant-numeric: tabular-nums;
+}
+
+.bb-locked-line {
+  margin-bottom: var(--space-8);
+  font-size: var(--text-13);
+}
+
+/* Phones: due dates first, then a Dan × payment table */
+.bb-sub-label {
+  margin-top: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bb-due-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: var(--space-4) 0 var(--space-8);
+}
+
+.bb-due-row {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--text-13);
+}
+
+.bb-due-row .bb-date {
+  max-width: none;
+}
+
+.bb-grid--phone th[scope='row'],
+.bb-grid--phone thead th:first-child {
+  width: 44px;
+}
+
+.bb-grid--phone th,
+.bb-grid--phone td {
+  padding-right: var(--space-4);
+}
+
+.bb-grid--phone th:last-child,
+.bb-grid--phone td:last-child {
+  padding-right: 0;
+}
+
+/* Up to 3 payments share the card's width (they fit at 320px, as drawn); the boxes may shrink */
+.bb-grid--phone .money {
+  min-width: 0;
+}
+
+/* Kukkiwon certificate fee: four boxes in a row (two by two on phones) */
+.bb-kuk {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-8);
+  max-width: 480px;
+  margin-bottom: var(--space-8);
+}
+
+.bb-kuk-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  font-size: var(--text-13);
+}
+
+.bb-kuk-dan {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* Registration */
+.bb-auto {
+  margin-top: var(--space-8);
+}
+
+.bb-auto-hint {
+  margin-left: 24px; /* lines up with the words of the tick */
+}
+
+/* Testing day dialog */
+.bb-second {
+  margin: 0 0 var(--space-12) 24px;
+  padding-left: var(--space-12);
+  border-left: 2px solid var(--color-border);
+}
+
+/* "Graded this day", as drawn: a bold heading, then one tick per line */
+.bb-parts-title {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.bb-parts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.bb-also {
+  margin-top: var(--space-4);
+}
+
+.bb-count {
+  max-width: 96px;
+  color: var(--color-text);
+}
+
+/* Add plan on phones: the Add button at the bottom of the screen, like Add cycle's Save */
+.bb-addplan-form--page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.bb-addplan-form--page .dialog-page-submit {
+  margin-top: auto;
+  padding-top: var(--space-16);
+}
+
+/* ===== Rubric and prices ===== */
+.bb-rubric-line {
+  margin-bottom: var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.bb-block {
+  max-width: 760px;
+  margin-bottom: var(--space-12);
+  padding: var(--space-12) var(--space-16);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.bb-block-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 28px;
+  margin-bottom: var(--space-4);
+}
+
+.bb-block-head--plain {
+  align-items: flex-start;
+}
+
+.bb-block-title {
+  font-size: var(--text-14);
+  font-weight: 500;
+}
+
+.bb-block-meta {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bb-block-edit {
+  margin-left: auto;
+}
+
+/* The Waiver block, as drawn: full width; the head ("Waiver [Version 2027-1]" + Edit) above a
+   line; the first lines in a gray box; "Read all" under the box. The Keeping block (OP-8) is
+   also full width so the two line up. */
+.bb-block--waiver,
+.bb-block--waiver + .bb-block {
+  max-width: none;
+}
+
+.bb-block-head--line {
+  margin: 0 calc(-1 * var(--space-16)) var(--space-12);
+  padding: 0 var(--space-16) var(--space-8);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.bb-waiver-start {
+  margin-bottom: var(--space-4);
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.bb-block--waiver .bb-read-all {
+  display: inline-block;
+  margin-bottom: var(--space-8);
+  text-decoration: underline;
+}
+
+.bb-waiver-start,
+.bb-keep-line {
+  font-size: var(--text-13);
+  line-height: 1.5;
+}
+
+.bb-keep-line {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.bb-read-all {
+  white-space: nowrap;
+}
+
+.bb-amber-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
+  padding: var(--space-8);
+  border-radius: var(--radius-tag);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+}
+
+.bb-amber-line svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.bb-waiver-full {
+  max-height: 60vh;
+  overflow-y: auto;
+  font-size: var(--text-13);
+  line-height: 1.5;
+  white-space: pre-wrap; /* the line breaks are kept */
+  overflow-wrap: anywhere;
+}
+
+.tdialog-page .bb-waiver-full {
+  max-height: none;
+}
+
+.bb-waiver-text {
+  height: auto;
+  min-height: 240px;
+  padding: var(--space-8) var(--space-12);
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.bb-keep-sentence {
+  margin-bottom: var(--space-8);
+  font-size: var(--text-13);
+  line-height: 2.6;
+}
+
+.bb-years.input {
+  display: inline-block;
+  width: 56px;
+  text-align: center;
+}
+
+/* ===== Registration links ===== */
+.bb-link-line {
+  line-height: 1.5;
+}
+
+.bb-link-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-12);
+}
+
+/* The registration link, as drawn: a gray box, and the address breaks anywhere (never as two
+   pieces at the hyphen) */
+.bb-link-card .ev-link-url {
+  background: var(--color-surface);
+  word-break: break-all;
+}
+
+.bb-dan-hint {
+  margin-top: var(--space-12);
+}
+
+.bb-dan-hint code {
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}
+
+.tdialog .notice + .bb-link-cards {
+  margin-top: var(--space-12);
+}
+
+/* ===== Touch screens: bigger rows and tap areas (guidelines 2.5) ===== */
+@media (pointer: coarse) {
+  .bb-day {
+    min-height: 56px;
+  }
+
+  .bb-select-option {
+    min-height: var(--tap-size);
+  }
+
+  .bb-select {
+    height: var(--control-height-touch);
+    font-size: var(--text-16);
+  }
+
+  .bb-date {
+    height: var(--control-height-touch);
+    font-size: var(--text-16);
+  }
+
+  .bb-read-all {
+    position: relative;
+    min-height: 0; /* the tap area comes from ::after, so the line spacing stays as drawn */
+    padding: 0;
+  }
+
+  .bb-read-all::after {
+    content: '';
+    position: absolute;
+    inset: -12px -4px;
+  }
+
+  .bb-row {
+    grid-template-columns: minmax(0, 1fr) 140px 88px 160px 96px;
+  }
+}
+
+/* ===== Tablet widths ===== */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .bb-row {
+    /* a FIXED last column (not auto): the header row and every cycle row are separate grids,
+       and auto made each one size its own last column, so the headers stood off their values */
+    grid-template-columns: minmax(0, 1fr) 132px 80px 150px 96px;
+  }
+}
+
+/* ===== Phones (narrower than 640px) ===== */
+@media (max-width: 639.98px) {
+  .bb-row.is-phone {
+    display: flex;
+  }
+
+  .bb-cycle-head {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .bb-two {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .bb-name-input,
+  .bb-date {
+    max-width: none;
+  }
+
+  .bb-plan {
+    padding: var(--space-4) var(--space-8) var(--space-12) var(--space-12);
+  }
+
+  .bb-plan-head {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+
+  .bb-plan-name {
+    flex: 1;
+    width: auto;
+    max-width: none;
+    min-width: 0;
+  }
+
+  /* "1 payment" moves under the name, so the name box keeps its room at 320px */
+  .bb-plan-count {
+    order: 5;
+    flex-basis: 100%;
+    margin: calc(-1 * var(--space-4)) 0 var(--space-4) 52px;
+  }
+
+  .bb-plan-title {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .bb-kuk {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: none;
+  }
+
+  .bb-link-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Phones: the two link buttons stacked, full width, 44px tall */
+  .bb-link-buttons {
+    flex-direction: column;
+    align-self: stretch;
+  }
+
+  .bb-link-buttons .btn {
+    width: 100%;
+    height: var(--tap-size);
+    justify-content: center;
+  }
+
+  .bb-second {
+    margin-left: 0;
+  }
+
+  .bb-block {
+    padding: var(--space-12);
+  }
+
+  .bb-block-head--line {
+    margin-right: calc(-1 * var(--space-12));
+    margin-left: calc(-1 * var(--space-12));
+    padding-right: var(--space-12);
+    padding-left: var(--space-12);
+  }
+}
+
+/* ===================================================================================
+   Phase B2 · the Candidates tab and its dialogs (contract CONTRACT-0016-B2 §3, mockups
+   Candidates 1–7 and 9). Reuses Color Belt's roster pieces (.ev-srow, .ev-cards, .ev-dupbox,
+   .ev-sum, .ev-cmp, .ttag) and adds only what Black Belt needs.
+   =================================================================================== */
+
+/* ----- Cycle page header: "+ Add candidate" (phones: under the summary line) ----- */
+.bb-add-candidate {
+  flex: none;
+}
+
+.bb-phone-add {
+  margin: calc(-1 * var(--space-4)) 0 var(--space-12);
+}
+
+.bb-phone-add .bb-add-candidate {
+  width: 100%;
+}
+
+/* ----- Above the list ----- */
+.bb-school-line,
+.bb-cards-note {
+  margin: 0 0 var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.bb-cards {
+  margin-bottom: var(--space-8);
+}
+
+.bb-cards + .bb-cards-note {
+  margin-top: 0;
+}
+
+/* Phones: the Late / Not paid filter pills (v0.219) */
+.bb-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
+}
+
+.bb-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  height: var(--control-height-touch);
+  padding: 0 var(--space-12);
+  border: 1px solid var(--color-border-control);
+  border-radius: 999px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--text-13);
+}
+
+.bb-pill::after {
+  content: ''; /* 44px tap area around a 36px pill */
+  position: absolute;
+  inset: -4px 0;
+}
+
+.bb-pill.is-selected {
+  border-color: var(--color-blue);
+  box-shadow: inset 0 0 0 1px var(--color-blue);
+}
+
+.bb-pill-count {
+  font-weight: 500;
+}
+
+/* Search candidates · caption (PC: the caption right beside Search; tablet and phone: Search
+   across the full width, no caption — mockup Candidates 1) */
+.bb-list-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-8) var(--space-24);
+  margin-bottom: var(--space-12);
+}
+
+.bb-list-bar:not(.is-wide) .bb-search {
+  width: 100%;
+}
+
+.bb-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 280px;
+  max-width: 100%;
+}
+
+.bb-search-icon {
+  position: absolute;
+  left: var(--space-12);
+  color: var(--color-text-secondary);
+  pointer-events: none;
+}
+
+.bb-search-input {
+  width: 100%;
+  height: var(--control-height);
+  padding: 0 36px 0 36px;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--text-13);
+}
+
+.bb-search-input::-webkit-search-cancel-button {
+  display: none; /* our own ✕ button instead */
+}
+
+.bb-search-clear {
+  position: absolute;
+  right: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-secondary);
+}
+
+.bb-caption {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* ----- The roster ----- */
+/* Tablet: Candidate (Dan · school under it) · Plan · Payments · Balance · ⋯ */
+.bb-roster .bb-crow {
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1.4fr) 80px 44px;
+}
+
+/* PC: Candidate · Dan · School · Plan · Payments · Balance · Record payment + ⋯ */
+.bb-roster.is-wide .bb-crow {
+  grid-template-columns: minmax(0, 1.5fr) 64px 92px minmax(0, 1.1fr) minmax(0, 1.5fr) 72px 176px;
+}
+
+/* Hide payments on: no Payments / Balance; one narrow column for the duplicate / removed tag */
+.bb-roster.is-nomoney .bb-crow {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) 44px;
+}
+
+.bb-roster.is-wide.is-nomoney .bb-crow {
+  grid-template-columns: minmax(0, 1.5fr) 64px 92px minmax(0, 1.2fr) minmax(0, 1fr) 44px;
+}
+
+.bb-roster .ev-shead.bb-crow {
+  min-height: 32px;
+}
+
+.bb-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.bb-cline {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* Tablet: "1st Dan · Shrewsbury" on its own line under the name */
+.bb-cline--under {
+  flex-basis: 100%;
+}
+
+/* A long tag ("Late · $110 Kukkiwon since Mar 27") wraps inside its column instead of being cut */
+.bb-roster .ev-scell .ttag {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.bb-ctagline {
+  justify-content: space-between;
+}
+
+/* The balance stays at the right edge even when a long tag wraps onto two lines (320px) */
+.bb-ctagline .bb-balance {
+  margin-left: auto;
+}
+
+/* The duplicate box: Review at the box's right edge (PC and tablet, as drawn; phones too) */
+.bb-dupbox .ev-dupbox-lines {
+  flex: 1;
+}
+
+.bb-dupbox .ev-dupbox-line {
+  flex-wrap: nowrap;
+  justify-content: space-between;
+}
+
+.bb-dupbox .ev-dupbox-review {
+  flex: none;
+}
+
+.bb-balance.is-over {
+  color: var(--color-warning-text);
+}
+
+/* Red "Not paid" — only once a due date has passed (v0.224). Words AND color. */
+.bb-tag--red {
+  border-color: #f0c8c8;
+  background: var(--color-delete-bg);
+  color: var(--color-delete-text);
+}
+
+.bb-record {
+  white-space: nowrap;
+}
+
+/* ----- Candidate detail ----- */
+.bb-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-12);
+  margin: calc(-1 * var(--space-8)) 0 var(--space-12);
+}
+
+.bb-detail-head:empty {
+  display: none;
+}
+
+.bb-detail-sub {
+  margin: 0;
+}
+
+.bb-detail-section {
+  margin-top: var(--space-16);
+}
+
+.bb-detail-section .bb-section-title {
+  margin-bottom: var(--space-4);
+}
+
+.bb-sum {
+  margin-bottom: var(--space-8);
+}
+
+.bb-sum-row {
+  grid-template-columns: 140px minmax(0, 1fr);
+  align-items: start; /* label and value start on the same line, even when the value wraps */
+}
+
+.bb-inline-link {
+  display: inline;
+  font-size: inherit;
+}
+
+/* "· View signature" stays together on one line */
+.bb-nowrap {
+  white-space: nowrap;
+}
+
+/* The amber "needs a parent's signature" box */
+.bb-parent-box {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-tag-warn-border);
+  border-radius: var(--radius-control);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--text-13);
+}
+
+.bb-parent-icon {
+  flex: none;
+  margin-top: 2px;
+}
+
+.bb-parent-box p {
+  margin: 0 0 var(--space-4);
+}
+
+/* Payments table (Date · For · How · Amount · Note · Recorded by · ⋯) */
+.bb-pay-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-13);
+}
+
+.bb-pay-table th {
+  padding: var(--space-4) var(--space-8);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+  text-align: left;
+}
+
+.bb-pay-table td {
+  padding: var(--space-4) var(--space-8);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.bb-pay-table th.bb-num {
+  text-align: right;
+}
+
+.bb-pay-note {
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.bb-pay-acts {
+  width: 1%;
+  text-align: right;
+}
+
+/* A returned check's line: kept, gray and crossed out (its note says "· returned") */
+.bb-pay-table tr.is-returned td:not(.bb-pay-acts):not(.bb-pay-note),
+.bb-pay-block.is-returned .bb-pay-block-top {
+  color: var(--color-text-secondary);
+  text-decoration: line-through;
+}
+
+.bb-no-payments {
+  margin: var(--space-8) 0;
+}
+
+/* Phones: one two-line block per payment line */
+.bb-pay-blocks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--color-border);
+}
+
+.bb-pay-block {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 48px;
+  padding: var(--space-8) 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-13);
+}
+
+.bb-pay-block-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bb-pay-block-top {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-8);
+  font-weight: 500;
+}
+
+.bb-pay-block-sub {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  overflow-wrap: anywhere;
+}
+
+/* Total due · Paid · Balance · Next due */
+.bb-totals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-12);
+  margin: var(--space-12) 0 0;
+  padding: var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-size: var(--text-13);
+}
+
+.bb-totals dt {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bb-totals dd {
+  margin: 0;
+  font-weight: 500;
+}
+
+/* The detail's buttons: ⋯ on the left, Close · Print receipt · Record payment on the right */
+.bb-detail-actions {
+  justify-content: flex-start;
+}
+
+.bb-grow {
+  flex: 1;
+}
+
+/* Phones: ⋯ sits in the page header, at the right of the title */
+.bb-detail-more--phone {
+  position: fixed;
+  top: max(4px, env(safe-area-inset-top));
+  right: var(--space-8);
+  z-index: 3;
+}
+
+.bb-detail-phone-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* Edit details */
+.bb-readonly {
+  margin: 0;
+  padding: var(--space-4) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.segmented.is-locked .segment {
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+.segmented.is-invalid {
+  border-color: var(--color-warning-text);
+}
+
+/* Joined buttons as drawn: School, Testing for and Kukkiwon fill the dialog's width in equal parts;
+   Method (Cash · Check · Card) is only as wide as its words. (Black Belt only.) */
+.bb-segmented--fill {
+  display: flex;
+  width: 100%;
+}
+
+.bb-segmented--fill .segment {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 var(--space-4);
+}
+
+.bb-segmented--compact {
+  align-self: flex-start;
+}
+
+/* ----- Record payment / Edit payment / Refund / Mark check returned ----- */
+/* "Owes $970 · due today: …" in a gray box */
+.bb-owes {
+  margin: 0 0 var(--space-16);
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-size: var(--text-13);
+}
+
+.bb-checklist {
+  margin: 0 0 var(--space-12);
+  padding: 0;
+  border: none;
+}
+
+.bb-checklist legend {
+  margin-bottom: var(--space-4);
+  padding: 0;
+}
+
+/* The items in a bordered list */
+.bb-check-list {
+  padding: var(--space-4) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.bb-check-list + .notice {
+  margin-top: var(--space-4);
+}
+
+.bb-check-item {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-8) var(--space-12);
+  padding: 7px 0;
+}
+
+/* Amount | Method side by side (phones: stacked, below) */
+.bb-pay-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 var(--space-16);
+}
+
+.bb-pay-pair .bb-amount {
+  width: 100%;
+}
+
+.bb-item-gone {
+  margin-bottom: var(--space-8);
+}
+
+/* Record refund and Mark check returned are small dialogs; they still get the gray line above
+   their buttons like every other Candidates dialog (the shared style leaves it off small ones). */
+.tdialog--small .dialog-footer.bb-footer-divider {
+  margin: var(--space-16) calc(-1 * var(--space-24)) calc(-1 * var(--space-24));
+  padding: var(--space-12) var(--space-24) var(--space-24);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.bb-check-paid {
+  color: var(--color-text-secondary);
+}
+
+.bb-amount {
+  width: 160px;
+}
+
+.money.is-invalid {
+  border-color: var(--color-warning-text);
+}
+
+.bb-counts-today {
+  margin-top: 0;
+}
+
+.bb-returned-text {
+  margin: 0 0 var(--space-12);
+  font-size: var(--text-13);
+}
+
+/* Phones: the primary button, then the other one, both full width */
+.bb-phone-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+/* ----- Plan cards (Change plan, Add candidate's "How they'll pay") ----- */
+.bb-plancards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.bb-plancard {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-12);
+  width: 100%;
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--text-13);
+  text-align: left;
+  cursor: pointer;
+}
+
+.bb-plancard.is-checked {
+  border-color: var(--color-blue);
+  box-shadow: inset 0 0 0 1px var(--color-blue);
+  background: var(--color-blue-tint);
+}
+
+.bb-plancards.is-invalid .bb-plancard {
+  border-color: var(--color-warning-text);
+}
+
+/* The round radio dot at the left of each card (mockups 6 and 7): an empty ring, a blue dot when
+   chosen. (aria-checked on the card says it to screen readers.) */
+.bb-plancard-dot {
+  flex: none;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: var(--color-bg);
+}
+
+.bb-plancard.is-checked .bb-plancard-dot {
+  border: 5px solid var(--color-blue);
+}
+
+.bb-plancard-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bb-plancard-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.bb-plancard-name {
+  font-weight: 500;
+}
+
+.bb-plancard-total {
+  margin-left: auto;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.bb-plancard-line {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bb-plan-hint {
+  margin: 0 0 var(--space-4);
+}
+
+.bb-total-line {
+  margin: 0 0 var(--space-12);
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-size: var(--text-13);
+}
+
+.bb-paper-hint {
+  margin: 0 0 0 24px;
+}
+
+/* Add candidate: First name | Last name side by side, the spelling hint under both */
+.bb-name-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 var(--space-16);
+}
+
+.bb-name-pair .field {
+  margin-bottom: var(--space-4);
+}
+
+.bb-name-hint {
+  margin: 0 0 var(--space-12);
+}
+
+/* Compare: a difference is marked with a small ⚠ and the word, not only the amber color */
+.bb-diff-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: var(--space-8);
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+  white-space: nowrap;
+}
+
+/* ----- Remove: Withdraw / Delete permanently ----- */
+.bb-remove-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.bb-remove-choice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.bb-remove-choice .field-hint {
+  margin: 0;
+}
+
+.bb-btn-gray,
+.bb-btn-gray:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+/* ----- View signature ----- */
+.bb-signature {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: #fff; /* the picture is drawn on white, whatever the page colors */
+}
+
+.bb-signature img {
+  max-width: 100%;
+  height: auto;
+  max-height: 240px;
+}
+
+.bb-signature-line {
+  margin-top: var(--space-8);
+}
+
+/* ----- Touch screens: 44px tap areas, 48px rows ----- */
+@media (pointer: coarse) {
+  .bb-search-input {
+    height: var(--control-height-touch);
+    font-size: var(--text-16);
+  }
+
+  .bb-search-clear {
+    width: var(--tap-size);
+    height: var(--tap-size);
+    right: -4px;
+  }
+
+  .bb-check-item {
+    min-height: var(--tap-size);
+    align-items: center;
+  }
+
+  .bb-plancard {
+    min-height: var(--tap-size);
+  }
+
+  .bb-roster .bb-crow:not(.ev-shead) {
+    min-height: 48px;
+  }
+
+  /* The shared touch style makes a link button 44px tall, which pushed the Waiver value below
+     its label; here it stays one text line high, with the 44px tap area drawn around it. */
+  .link-button.bb-inline-link {
+    position: relative;
+    min-height: 0;
+    padding: 0;
+  }
+
+  .bb-inline-link::after {
+    content: '';
+    position: absolute;
+    inset: -12px -4px;
+  }
+}
+
+/* ----- Phones ----- */
+@media (max-width: 639.98px) {
+  .bb-search {
+    width: 100%;
+  }
+
+  .bb-sum-row {
+    grid-template-columns: 112px minmax(0, 1fr);
+  }
+
+  .bb-totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bb-amount {
+    width: 100%;
+  }
+
+  .bb-detail-head {
+    margin-top: 0;
+  }
+
+  .bb-pay-pair,
+  .bb-name-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bb-name-pair .field {
+    margin-bottom: var(--space-12);
+  }
+
+  .bb-name-pair .field:last-child {
+    margin-bottom: var(--space-4);
+  }
+
+  /* A toast sits just above the bottom bar, where the ⋯ sheet's last items are: while one shows
+     on a Black Belt cycle page, the sheet leaves room under its items so nothing is covered. */
+  body:has(.bb-candidates):has(.toast-region .toast) .tsheet {
+    /* the toast's own place (above the bottom bar) + a two-line toast + a gap */
+    padding-bottom: calc(var(--bottombar-height) + var(--space-8) + 72px + env(safe-area-inset-bottom));
+  }
+}

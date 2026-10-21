@@ -52,7 +52,7 @@ const CODE = /^[a-hjkmnp-z2-9]{8}$/;
 // Is the Function switched on and fully set up? (The "kill switch" is PUBLIC_REGISTRATION.)
 function isSwitchedOn(env) {
   if (!env || env.PUBLIC_REGISTRATION !== 'on') return false;
-  if (!env.HYPERDRIVE || typeof env.HYPERDRIVE.connectionString !== 'string') return false;
+  if (!env.HYPERDRIVE || typeof env.HYPERDRIVE.connectionString !== 'string' || env.HYPERDRIVE.connectionString === '') return false; // blank = not set up
   return REQUIRED_SETTINGS.every((name) => typeof env[name] === 'string' && env[name] !== '');
 }
 
@@ -176,8 +176,9 @@ export async function handlePost(context, deps) {
 // (The database checks the real rules and answers `invalid` when one is broken.)
 function readFields(body) {
   const isText = (value, max) => typeof value === 'string' && value.length <= max;
-  if (!UUID.test(String(body.submission_id ?? ''))) return null;
-  if (!UUID.test(String(body.event_rank_id ?? ''))) return null;
+  // Must really be text (String() would let a one-item list like ["…uuid…"] through).
+  if (typeof body.submission_id !== 'string' || !UUID.test(body.submission_id)) return null;
+  if (typeof body.event_rank_id !== 'string' || !UUID.test(body.event_rank_id)) return null;
   if (!isText(body.first_name, LIMITS.name) || !isText(body.last_name, LIMITS.name)) return null;
   if (!isText(body.paying_by, LIMITS.payingBy)) return null;
   if (typeof body.stripes !== 'boolean') return null;

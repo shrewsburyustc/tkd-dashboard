@@ -1013,7 +1013,9 @@ Run `Start dashboard.bat`, sign in as the admin.
 
 ### 14e. Undo and re-run warnings (only with Jeffrey's OK)
 
-**Re-running 0005 after 0010** puts back the phase 2 versions of the five replaced functions, **without the grading locks** (0005's header says so too). If 0005 is ever re-run, run **0010 again straight after it**. (And if the family-form off switch of 12i is in force, repeat 12i step 1 after re-running 0005, because 0005 grants the two public functions back.) **Once 0019 (school phone) is live, also re-run 0019 after any 0005 re-run** — 0005 takes away the phone's read right and Settings → Schools stops loading (17d).
+If migration 0014 exists, remove it first (§0014e) — 0010 can only be removed after 0014.
+
+**Re-running 0005 after 0010** puts back the phase 2 versions of the five replaced functions, **without the grading locks** (0005's header says so too). If 0005 is ever re-run, run **0010 again straight after it**. (And if the family-form off switch of 12i is in force, repeat 12i step 1 after re-running 0005, because 0005 grants the two public functions back.)
 
 **Rollback without touching data:** put the previous site version back (Cloudflare Pages → Deployments → **Rollback**). 0010 can stay: the phase 2 screens don't read results.
 
@@ -1130,7 +1132,7 @@ The same method as 12d, with its **own** script and its **own** password — nev
 | `TURNSTILE_SITE_KEY` | Text | the Site Key | already there (12a) — shared |
 | `TURNSTILE_SECRET` | Secret | the Secret Key | already there (12a) — shared |
 | `CLIENT_KEY_SECRET` | Secret | — | already there (12a) — shared (Forms adds "forms\|" before hashing, so its keys never match Color Belt's) |
-| `RATE_LIMITER` | Binding | — | optional, already set up or skipped in 12a step 5 — shared (Forms' keys start with "forms:") |
+| ~~`RATE_LIMITER`~~ | — | — | **replaced by rulebook v0.410:** not set up (Pages Functions can't have this binding; Workers only). The Function still uses one if it ever exists (Forms' keys start with "forms:"). Protection meanwhile: the per-server memory counter, Turnstile on Send, `forms_registrar`'s limits and the `PUBLIC_FORMS` off switch; revisit with a WAF rule once the school has its own domain. |
 
 **Turnstile:** the same widget (hostname `tkd-dashboard.pages.dev`) works; the Forms page asks for action **`form`** and the Function refuses any other action (so a Color Belt token can't be reused). If the school later gets its own web address, add that hostname to the widget and change `PUBLIC_ORIGIN` for both Functions together.
 
@@ -1180,6 +1182,496 @@ Color Belt's form (12i) is not affected by any of these, and its off switch does
 ### 17d. If 0005 is ever re-run
 
 The 0010 undo (14e) re-runs 0005, and 0005 starts by removing **all** read rights on `locations` and granting back only its own columns, so the phone can't be read any more (Settings → Schools stops loading). **Re-run 0019 right after**; the phone numbers themselves stay in the table (tested in run.mjs step 18e).
+## Migration 0016: Black Belt testing (cycles, family form, candidates, payments)
+
+**Status: APPLIED to production on 2026-10-21 (CP3)** from commit 5a670d0 (file SHA-256 `74808d79…6afe4f`), following `docs/Testing/Black Belt Testing/TKD-BlackBelt-CP3-RunSheet.md`: 0016's fingerprints equal the tested copy (only `members=postgres` differs), every earlier migration's fingerprints and the whole-database snapshot unchanged, the security advisor shows only the 25 + 2 expected notices, `0016_tests.sql`, `0006`, `0011` and `0018` tests pass on production, the reference counter reset to 5001. Still to do: 0016e (password, CP3b), CP4 waiver, 0016f Hyperdrive (CP5).
+
+**What it does** (`supabase/migrations/0016_black_belt.sql`, contract `docs/Dashboard Docs/Build contracts/CONTRACT-0016.md`, rulebook v0.909):
+- **Rubric and prices:** one settings row with the two **keep-years** numbers for signed waivers (`bb_settings`; both start empty = nothing is ever deleted until the insurer's numbers are entered) and every **waiver text** ever saved (`bb_waiver_versions`; written once, never removed). The seeded text is a **PLACEHOLDER**: registration can't be opened until an admin saves the school's waiver (CP4).
+- **Cycles** (`bb_cycles`): one Black Belt season for both schools, with its testing days and the parts graded on each (`bb_cycle_days`, `bb_cycle_day_parts`), Application / Submissions due, the Open / Closed switch, **two family links** (one per school) and the requirements sheet the family form shows. Each cycle has **its own prices**, set when the cycle is added and never changed afterwards (`bb_cycle_plans`, `bb_cycle_plan_amounts`, `bb_cycle_kukkiwon_fees`); the due dates stay editable (`bb_cycle_plan_payments`). The very first Add cycle is filled in from the Fall 2026 values (`bb_starting_point` — nobody in the app can read it; the plain-English list of every seeded number is `supabase/tests/0016_seed_review.txt`, for the CP1 check).
+- **Candidates** (`bb_candidates`, references BB-5001 …) and their **signed waivers** (`bb_candidate_waivers`: drawn on the form, or ticked as signed on paper at the desk — nobody in the app can read this table).
+- **Payments** (`bb_payments`): **append-only and never removed** — payments, refunds, reversals (Undo / Edit) and **returned checks**; each row keeps the school and the cycle's name of the moment it was recorded (for Finance's Daily report). A candidate or cycle with any payment row can't be deleted (withdraw instead).
+- **The date of birth, the results email, the drawn signature and the signer's name** are never readable through the app's normal rights (only through one-candidate staff functions) and are **never written to the history in plain text** ("on file" / "changed"). Once the keeping time has passed they are removed automatically (the "purge", run inside a few staff calls; nothing runs overnight).
+- A new restricted login **`bb_registrar`** for the Black Belt family form: exactly two functions (`bb_public_cycle`, `bb_public_register`), no table, can't create anything, the same settings as `testing_registrar` and `star_registrar`. None of the three form logins can run another form's functions.
+- **25 staff functions** (19 writes, 6 reads), the same security rules as 0003/0005/0006: RLS with `has_data_access()`, column rights only, nothing for `anon` or `service_role`, every change in `change_log`.
+- 0016 changes **nothing** that 0001–0006, 0010 or 0011 made (tested: their fingerprints are identical before and after).
+- **Known and accepted (as 13):** `bb_registrar` can create *temporary* tables (PostgreSQL's default TEMP right); they live only in its own session and every Black Belt function uses full `public.` names with `search_path = ''`.
+- **Known and accepted:** the starting point and a cycle's requirements sheet can be changed only by hand in the SQL Editor (when a seeded number is wrong, v0.901). The guard allows that only for the `postgres` login with no action tag — a convenience, not a security wall (whoever connects as `postgres` can switch triggers off anyway). CP3 confirms read-only that the SQL Editor's `session_user` is `postgres`.
+
+**Nothing secret goes into chat, git, `.env.local` or a screenshot** (handoff §6).
+
+### 0016a. Before you apply 0016
+
+1. Jeffrey's OK for this paste. The PGlite run passed and the security review of the SQL is done.
+2. **CP1:** Jeffrey has checked `supabase/tests/0016_seed_review.txt` against the old Sheet (days, places, deadlines, prices, due dates, the requirements sheet, the placeholder waiver).
+3. Claude checks read-only (through the connection) that **no `bb_` object exists yet**: no table, sequence or function whose name starts with `bb_`, and no role `bb_registrar`; and that `select session_user` in the SQL Editor answers `postgres` (Jeffrey runs that one line himself).
+
+### 0016b. Apply 0016 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0016_black_belt.sql`.
+2. **SQL Editor → New query**, paste, **Run**.
+3. Supabase will warn about **destructive operations**. That's expected: the words appear inside rules (`on delete cascade`, `on delete restrict`), inside functions that run later (an admin removing a cycle or a fake registration; old rate-limit rows being cleaned up) and in `… if exists` lines that make re-running safe. **Nothing is removed now.** Confirm.
+4. "Success." It's one transaction: on any error nothing is kept. Copy the error to Claude. (A few small result grids may show — the seed sets its "who wrote this" label with `select set_config(…)`. That's fine.)
+
+**Running it again is safe** (tested: a second run changes no row and no fingerprint; the seed never overwrites, and the role's attributes and password are never touched).
+
+### 0016c. Read-only checks (Claude runs these through the connection)
+
+1. The list of new objects: 13 `bb_*` tables and the sequence `bb_candidate_ref_seq`.
+2. **Fingerprints:** `supabase/tests/0016_fingerprints.sql`. Every line must match what `supabase/tests/pglite/run.mjs` printed for the tested copy (every `bb_` function with its code, settings, owner and who may call it; the `bb_registrar` role row; the 14 table / sequence rows; the read rules; the triggers, rules and indexes). **One expected difference:** on Supabase the role row shows `members=postgres` (as 13c). The file is a single read-only SELECT and contains neither of the words the connection refuses (run.mjs checks that).
+3. `0003`–`0006`, `0010` and `0011` fingerprints: **unchanged** from their production records.
+4. **Security advisor:** expected notices — "RLS enabled, no policy" on `bb_candidate_waivers` and `bb_starting_point` (INFO; nobody in the app may read them) and "security definer function executable by authenticated" for the 25 staff functions (each checks access and role itself). Anything else about a `bb_` object is a real problem.
+5. **Size check** (contract CP3): the database size now vs the Free plan's 500 MB, and the expected growth (a drawn signature is at most 70 KB, so about 14 MB a season for 200 registrations, kept for years) — written into the Black Belt status file.
+
+### 0016d. Run the tests (you, in the SQL Editor)
+
+1. Open `supabase/tests/0016_tests.sql`, replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>` (**Authentication → Users**), paste the whole file, **Run**. Supabase may warn about destructive operations (the test removes its own test rows and checks some removals are refused). Everything is rolled back. Confirm.
+2. Expected: one row, **ALL 0016 TESTS PASSED**. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved. Run `rollback;` once on its own, then tell Claude.
+3. Then run `0005_tests.sql` and `0006_tests.sql` again → their PASSED rows (and, if you like, `0011_tests.sql`, `0010_tests.sql`, `0004_tests.sql`, `0003_tests.sql`, `0002_tests.sql`, `verify_pin_tests.sql` — 0016 must not have broken them).
+4. Put the two placeholders back afterwards (don't save the file with the UIDs in it).
+5. **Only the first time, while no Black Belt candidate exists yet:** the rollback undoes the test rows but not the reference-number counter, so the first real family would get e.g. BB-5040 instead of **BB-5001**. Reset it (security review N4); it refuses if any candidate exists:
+   ```sql
+   do $$ begin
+     if exists (select 1 from public.bb_candidates) then
+       raise exception 'Candidates exist - do NOT reset the reference counter';
+     end if;
+   end $$;
+   select setval('public.bb_candidate_ref_seq', 5001, false);
+   ```
+   Once any family has registered, never run this (numbers are never reused, S14).
+6. The test makes its own `zz test …` cycles and candidates, so it works before **and** after real Black Belt cycles exist. On a database where the school's waiver was already saved, it makes a test placeholder current for its first checks (rolled back).
+
+### 0016e. Set the `bb_registrar` password (CP3b — you, on your PC + SQL Editor)
+
+**Done 2026-10-21 (CP3b):** a SCRAM-SHA-256 password is stored for `bb_registrar` (checked read-only, value not shown); it's in Jeffrey's password manager as "Supabase bb_registrar (Hyperdrive)", user `bb_registrar.eozkfbdfxqlcbpewhach`; the script file was deleted.
+
+Same method as 12d / 13e, with its **own** script and its **own** password — never the Color Belt or Star one.
+
+0. **Clipboard history off** first (12a step 0): Windows **Settings → System → Clipboard** → Clipboard history off, Sync across your devices off.
+1. Make a file **outside the repo**, e.g. `C:\Users\jberg\Documents\make-scram-bb.mjs`, with exactly this (the role name `bb_registrar` is written in; there is no password in it — it makes a new random one each time):
+   ```js
+   // Makes a random password for bb_registrar and its SCRAM-SHA-256 verifier.
+   // The password goes to the clipboard (never shown); only the verifier is printed.
+   import { randomBytes, pbkdf2Sync, createHmac, createHash } from 'node:crypto';
+   import { execSync } from 'node:child_process';
+   const role = 'bb_registrar';
+   const password = randomBytes(32).toString('base64url');   // 43 letters, digits, - and _
+   const salt = randomBytes(16);
+   const salted = pbkdf2Sync(password, salt, 4096, 32, 'sha256');
+   const clientKey = createHmac('sha256', salted).update('Client Key').digest();
+   const storedKey = createHash('sha256').update(clientKey).digest();
+   const serverKey = createHmac('sha256', salted).update('Server Key').digest();
+   execSync('clip', { input: password });
+   console.log(`alter role ${role} password 'SCRAM-SHA-256$4096:${salt.toString('base64')}$${storedKey.toString('base64')}:${serverKey.toString('base64')}';`);
+   ```
+   (The same SCRAM code as 12d and 13e; only the role name differs.)
+2. In PowerShell: `node C:\Users\jberg\Documents\make-scram-bb.mjs`. The password is now on the clipboard: **save it in your password manager as a NEW entry**, "Supabase bb_registrar (Hyperdrive)" — not the Color Belt or Star entry.
+3. **Check the printed line says `alter role bb_registrar password 'SCRAM-SHA-256$4096:…';`** — `bb_registrar`, **not** `testing_registrar` or `star_registrar`. If it names any other role, stop and tell Claude.
+4. Copy only that line into a **new** SQL Editor query and **Run**. Then **delete that snippet** in the SQL Editor (handoff §6), copy something harmless, and **delete `make-scram-bb.mjs`**.
+5. If the password ever leaks: run the script again (new password + verifier), update the Hyperdrive config (0016f), and the old one stops working.
+
+### 0016f. Hyperdrive for the Black Belt form (CP5 — later, when the Black Belt Function is built, with Jeffrey's OK)
+
+**Done 2026-10-21 (CP5, Jeffrey):** `tkd-bb-registrar` created (checked read-only: Session pooler host, port 5432, database `postgres`, user `bb_registrar.eozkfbdfxqlcbpewhach`, caching disabled, verify-full with the shared CA `572acb39…`, origin limit 5 — created at 20 and lowered); binding `HYPERDRIVE_BB` (Production) and variable `BB_PUBLIC_REGISTRATION=off` (Production) added; no deployment triggered. The password was made a second time (the first saved copy didn't match); the password manager entry is site `bb-registrar.example.com`.
+
+Not part of the 0016 paste. When the Black Belt family form's Pages Function (`functions/api/black-belt/[code].js`, page `/black-belt/<code>`) is built:
+1. Cloudflare → **Hyperdrive** → a **third** configuration `tkd-bb-registrar`: the same Session pooler host and port as 12g, database `postgres`, user **`bb_registrar.eozkfbdfxqlcbpewhach`**, password from the "Supabase bb_registrar (Hyperdrive)" entry. **Caching: Disabled.** **Origin connection limit: 5 or less.** TLS as 12g (Verify full with the existing Supabase CA certificate).
+2. `tkd-dashboard` → **Settings** → **Bindings** → **Add** → **Hyperdrive**: variable name `HYPERDRIVE_BB`, configuration `tkd-bb-registrar`, **Production only**.
+3. The Black Belt Function has its own kill switch, the Production variable `BB_PUBLIC_REGISTRATION` (default `off`; missing = the form says "not open").
+4. **The shared rate limit** (20 tries an hour per visitor) counts the three forms together only while every Function makes its visitor key with the **same** `CLIENT_KEY_SECRET` (true today). A separate secret would make the limit per form.
+5. Turnstile must accept the action `bb_register` on the production hostname.
+
+### 0016g. Off switch (any time)
+
+In this order (step 1 works in seconds):
+1. **Database off switch (instant):** in the SQL Editor, run
+   ```sql
+   revoke execute on function public.bb_public_cycle(text) from bb_registrar;
+   revoke execute on function public.bb_public_register(text, text, uuid, text, text, date, text, integer, uuid, boolean, boolean, text, text, text) from bb_registrar;
+   ```
+   From the next call on, both are refused for the Black Belt form's login, even on connections Hyperdrive already has open. **To turn it back on:** re-run the whole 0016 file, or `grant execute on function …` the same two lines `to bb_registrar`. While it is off, `0016_tests.sql` (T2a) and `0016_fingerprints.sql` fail — expected.
+2. **Stop the Black Belt form:** set `BB_PUBLIC_REGISTRATION=off` (Production) and **Retry deployment**.
+3. **Lock the login:** `alter role bb_registrar nologin;` (re-running 0016 does **not** turn it back on; `alter role bb_registrar login;` does).
+
+Color Belt's and Star's forms (12i, 13g) are not affected by any of these.
+
+### 0016h. Undo 0016 (only if something is badly wrong, and only BEFORE real data exists)
+
+Only if Jeffrey decides to remove Black Belt testing completely: put the app back to a version without the Black Belt screens **first**, then run this in the SQL Editor (one transaction; tested in a scratch PGlite run: afterwards no `bb_` object or role is left, and `0005_tests.sql`, `0006_tests.sql` and `0011_tests.sql` pass again). **This deletes every Black Belt setting, waiver text, cycle, candidate, signed waiver and payment.** Supabase's destructive-operations warning is real this time.
+
+**Why only before real money exists:** the payment rows can never be removed one by one (the guard refuses every row removal, on purpose); this script removes the payment **table** as a whole, which no app path can do.
+
+**After an undo and a second paste:** because the history is kept, `0016_tests.sql` test T3a then finds the seed recorded twice and fails; adjust T3a (count only the newest seed batch) before re-running the tests.
+
+**What stays:** the `change_log` rows Black Belt wrote (the history is append-only — the DOB, email, signature and signer's name are masked there), and Black Belt's rows in `testing_public_attempts`, which age out within 2 days. Nothing from 0001–0006, 0010 or 0011 is touched.
+
+```sql
+-- Undo migration 0016. change_log (the history) is KEPT.
+begin;
+
+-- safety stop (security review N5): refuse while any payment or any
+-- candidate exists (remove test candidates with Delete permanently first)
+do $$ begin
+  if exists (select 1 from public.bb_payments) or exists (select 1 from public.bb_candidates) then
+    raise exception 'Black Belt still has candidates or payments - undo refused';
+  end if;
+end $$;
+
+-- the family form's two functions first (the instant off switch)
+revoke execute on function public.bb_public_cycle(text) from bb_registrar;
+revoke execute on function public.bb_public_register(text, text, uuid, text, text, date, text, integer, uuid, boolean, boolean, text, text, text) from bb_registrar;
+
+-- the public, staff and helper functions (those naming a 0016 table in
+-- their result must go before the tables)
+drop function if exists public.bb_public_register(text, text, uuid, text, text, date, text, integer, uuid, boolean, boolean, text, text, text);
+drop function if exists public.bb_public_register_core(text, text, uuid, text, text, date, text, integer, uuid, boolean, boolean, text, text, text);
+drop function if exists public.bb_public_cycle(text);
+drop function if exists public.bb_receipt(uuid);
+drop function if exists public.bb_view_signature(uuid);
+drop function if exists public.bb_candidate_detail(uuid);
+drop function if exists public.bb_cycle_roster(uuid);
+drop function if exists public.bb_cycles_list();
+drop function if exists public.bb_cycle_defaults();
+drop function if exists public.bb_mark_check_returned(uuid, text);
+drop function if exists public.bb_record_refund(uuid, integer, integer, text, text);
+drop function if exists public.bb_edit_payment(uuid, integer, text, text[], text, text);
+drop function if exists public.bb_undo_payment(uuid);
+drop function if exists public.bb_record_payment(uuid, integer, integer, text, text[], text);
+drop function if exists public.bb_record_paper_waiver(uuid, integer);
+drop function if exists public.bb_delete_candidate(uuid, integer);
+drop function if exists public.bb_restore_candidate(uuid, integer);
+drop function if exists public.bb_withdraw_candidate(uuid, integer);
+drop function if exists public.bb_resolve_duplicate(uuid, integer, uuid, integer, boolean);
+drop function if exists public.bb_change_plan(uuid, integer, uuid, boolean);
+drop function if exists public.bb_update_candidate(uuid, integer, text, text, date, text, text, integer);
+drop function if exists public.bb_add_candidate(uuid, text, text, date, text, text, integer, uuid, boolean, boolean);
+drop function if exists public.bb_delete_cycle(uuid, integer, integer);
+drop function if exists public.bb_set_registration(uuid, integer, boolean);
+drop function if exists public.bb_update_cycle(uuid, integer, jsonb);
+drop function if exists public.bb_add_cycle(jsonb, uuid);
+drop function if exists public.bb_set_keep_years(integer, integer, integer, integer);
+drop function if exists public.bb_save_waiver(uuid, text);
+drop function if exists public.bb_public_answer(uuid);
+drop function if exists public.bb_purge_due();
+drop function if exists public.bb_recheck_pointing_at(uuid);
+drop function if exists public.bb_recheck_duplicate(uuid);
+drop function if exists public.bb_find_duplicate(uuid, uuid, text, text, date);
+drop function if exists public.bb_lock_payment(uuid);
+drop function if exists public.bb_lock_candidate(uuid);
+drop function if exists public.bb_waiver_version_ok(uuid, timestamptz);
+drop function if exists public.bb_purge_is_due(uuid, date);
+drop function if exists public.bb_purge_due_on(uuid);
+drop function if exists public.bb_candidate_money(uuid, date);
+drop function if exists public.bb_candidate_items(uuid);
+drop function if exists public.bb_cycle_state(uuid, date);
+drop function if exists public.bb_age_on(date, date);
+
+-- the 13 tables (their triggers, rules and indexes go with them), then
+-- the reference counter
+drop table if exists public.bb_payments, public.bb_candidate_waivers, public.bb_candidates,
+                     public.bb_cycle_plan_payments, public.bb_cycle_kukkiwon_fees, public.bb_cycle_plan_amounts,
+                     public.bb_cycle_plans, public.bb_cycle_day_parts, public.bb_cycle_days, public.bb_cycles,
+                     public.bb_starting_point, public.bb_waiver_versions, public.bb_settings;
+drop sequence if exists public.bb_candidate_ref_seq;
+
+-- the trigger functions and the rule helpers the tables used
+drop function if exists public.bb_before_write();
+drop function if exists public.bb_waiver_versions_guard();
+drop function if exists public.bb_starting_point_guard();
+drop function if exists public.bb_cycles_rules();
+drop function if exists public.bb_cycle_day_parts_guard();
+drop function if exists public.bb_cycle_prices_guard();
+drop function if exists public.bb_cycle_plan_payments_guard();
+drop function if exists public.bb_candidates_rules();
+drop function if exists public.bb_candidates_log();
+drop function if exists public.bb_candidate_waivers_rules();
+drop function if exists public.bb_candidate_waivers_log();
+drop function if exists public.bb_payments_guard();
+drop function if exists public.bb_requirements_is_valid(jsonb);
+drop function if exists public.bb_price_is_valid(integer);
+drop function if exists public.bb_email_is_valid(text);
+drop function if exists public.bb_time_is_valid(time);
+
+-- the Black Belt form's login
+revoke usage on schema public from bb_registrar;
+drop role if exists bb_registrar;
+
+commit;
+```
+
+**Then the Cloudflare side** (only if 0016f was done): remove the `HYPERDRIVE_BB` binding, delete the `tkd-bb-registrar` Hyperdrive configuration, delete the `BB_PUBLIC_REGISTRATION` variable, **Retry deployment**, and delete the "Supabase bb_registrar (Hyperdrive)" password-manager entry.
+
+**Why:**
+- **Its own login and its own password:** a leak of one form's password can't reach another form's functions; each can be switched off on its own.
+- **Never readable, only through one-candidate functions, and masked in the history:** dates of birth, emails, signatures and signers' names are mostly about minors (rulebook §5); leaving them out of a list wouldn't protect them, not granting them does — and the history is kept forever, so it never gets them in plain text.
+- **Payments are never removed:** Finance's Daily report and the family's receipt must always add up; corrections are new rows.
+
+---
+
+## Migration 0014: Color Belt private testing (the Private testing tab)
+
+**What it does** (`supabase/migrations/0014_testing_private.sql`, contract `docs/Dashboard Docs/Build contracts/CONTRACT-0014.md` §2):
+- **Private testing is its own record, not part of any event** (rulebook v0.401). Three new tables: `testing_private` (one row per private testing: school, student, a **copy** of their class, belt, what they test for and the private price, paying by, day, time, active / cancelled), `testing_private_payments` (append-only, like event payments) and `testing_private_results` (Pass / Not passed / No show and a note, like the Grading tab). Plus a read view `testing_private_list` (the row + its payment state + what is still owed).
+- **The rules, in the database:** the day from today up to a year ahead, the time 6:00 AM–10:00 PM in 5-minute steps; the private price is copied from Classes and ranks (never typed); **Mark paid** records what is owed (the full price, or just the difference); grading opens on the private day, after it only an admin; Change day or time is refused after Pass / Not passed and clears a No show (logged); Cancel keeps the payments; Restore (admins) only while the day is still ahead; Delete permanently (admins) removes it with its payments and result.
+- **Move to private testing** (from an event roster's ⋯, all staff, any time — v0.404): the student leaves the event (withdrawn) and becomes a private testing; **the money moves with them** — for every live event payment an event reversal and a private payment, both dated on the **original** day (a transfer, not a refund). A testing-day No show is cleared (logged); Pass / Not passed refuse. Undo (only the mover, within 10 seconds) puts everything back — except when the move cleared a No show.
+- **One live function replaced:** `testing_restore_student` (0010's version + one check): a moved registration can't be restored onto the event (new status `moved`). Nothing else that is live changes — no live table, view, trigger or other function.
+- **Same security rules as 0005 / 0010:** RLS with `has_data_access()`, read rights for the app on every column except the login ids, no direct writes for anyone in the app, nothing for `anon`, the secret key or the family form's login; every change is in `change_log` (actions `private_add`, `private_update`, `private_change_day`, `private_change_paying_by`, `private_mark_paid`, `private_undo_payment`, `private_edit_payment`, `private_cancel`, `private_restore`, `private_delete`, `private_set_result`, `private_set_result_note`, `move_to_private`, `undo_move_to_private`, `clear_result`). Private testings are logged in `change_log` like all testing data (v0.400's `family_history` is for Prospects only).
+
+**The order** (build plan §5): **CP2** database (0014a–0014c, Jeffrey's OK) → **CP3** real check from the local app (0014d) → **CP4** deploy (Jeffrey's OK). The live site keeps working between CP2 and CP4: it never reads the new tables, and the replaced Restore behaves as before for every registration that wasn't moved (none can be until phase 4 is deployed).
+
+### 0014a. Apply 0014 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0014_testing_private.sql`.
+2. **SQL Editor → New query**, paste, **Run**.
+3. Supabase will warn about **destructive operations**. That's expected: the words are inside rules (`on delete cascade`: removing a private testing removes its payments and result), inside functions that run later (Delete permanently, clearing a No show, Undo move) and in `drop … if exists` lines that make re-running safe. **Nothing is removed now.** Confirm.
+4. "Success. No rows returned." It's one transaction: on any error nothing is kept. Copy the error to Claude.
+
+**Running it again is safe** (tested: a second run changes no row and no fingerprint). **Never re-run 0005 or 0010 on its own after this** — see 0014e.
+
+### 0014b. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0014_fingerprints.sql`. Every line must match what `supabase/tests/pglite/run.mjs` printed for the tested copy: the 24 functions (4 trigger functions, 5 helpers, 14 staff functions and the replaced `testing_restore_student`: code, settings, owner, who may call them), the 3 tables (RLS, rights per column, read rules), the view, the 9 triggers and every rule.
+2. `0005_fingerprints.sql` and `0010_fingerprints.sql`: **only** the `testing_restore_student` line differs from before — expected. `0004_fingerprints.sql`, `0006_fingerprints.sql` and `0011_fingerprints.sql` (Finance): unchanged. `0003_fingerprints.sql`: identical except the rows of the new `testing_*` functions and `testing_restore_student` — expected (0003's file lists every `testing_*` function).
+3. **Security advisor:** the only new expected notice is "security definer function executable by authenticated" for the 14 new staff functions (each checks access itself, then its rules). Anything else about the three new tables or the view (for example RLS off, or a function without a fixed `search_path`) is a real problem.
+
+### 0014c. Run the tests (you, in the SQL Editor)
+
+1. Open `supabase/tests/0014_tests.sql`, replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>` (**Authentication → Users**), paste the whole file, **Run**. Supabase may warn about destructive operations (the test removes its own test rows, switches one trigger off for a moment to backdate a time, and checks some changes are refused). Everything is rolled back. Confirm.
+2. Expected: one row, **ALL 0014 TESTS PASSED**. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved. Run `rollback;` once on its own, then tell Claude.
+3. Then run `0011_tests.sql`, `0010_tests.sql`, `0005_tests.sql`, `0006_tests.sql`, `0004_tests.sql`, `0003_tests.sql`, `0002_tests.sql` and `verify_pin_tests.sql` again — 0014 must not have broken them.
+4. The test makes its own `zz test …` classes, events and private testings, so it works before **and** after real data exists.
+
+### 0014d. CP3 — the real check (you, with the local app on the real database; Claude watches)
+
+Run `Start dashboard.bat`, sign in as the admin.
+1. On the **Private testing** tab: **Add private testing** for a TEST student, today, a time later today. **Mark paid** (the private price).
+2. Create a **TEST** event and leave its registration **Closed** (so families never see it). Add one student, **Mark paid** (the regular price). Then **⋯ → Move to private testing** (today, another time): the student shows as Removed on the event ("Moved to private testing"), and on the Private testing tab with "Paid $… · $… more to collect"; **Mark paid** records just the difference (the top-up).
+3. Open the first private testing's grading page: record a result and a note (the private day is today, so grading is open); **Print** (print preview is enough).
+4. **Cancel** the moved one, then **Delete permanently** both private testings (admin), and delete the TEST event.
+5. Claude checks through the connection (read-only): the history has the `private_add`, `move_to_private`, `private_mark_paid`, `private_set_result`, `private_cancel` and `private_delete` rows with the right names, the event money of the moved student nets 0, and nothing is left of the TEST data.
+
+### 0014e. Undo and re-run warnings (only with Jeffrey's OK)
+
+**Re-running 0005 after 0014** → re-run **0010**, then **0014**, straight after. **Re-running 0010 after 0014** → re-run **0014** straight after. (0005 and 0010 put back a `testing_restore_student` that ignores moves, so a moved student could be restored onto the event while their private testing exists. If the family-form off switch of 12i is in force, repeat 12i step 1 after re-running 0005.)
+
+**Rollback without touching data:** put the previous site version back (Cloudflare Pages → Deployments → **Rollback**). 0014 can stay: the older screens never read the new tables.
+
+**Removing 0014 completely** (only if Jeffrey decides so, and only **before real private testings exist**: it deletes every private testing **and the money moved into it**). **0014 is removed first, then (if wanted) 0010 (14e)** — never the other way round. **Never after Finance’s migration 0018 is live**: 0018’s Daily report functions read `testing_private` / `testing_private_payments`, so removing 0014 would break the Daily report — 0018 would have to be undone first (Finance’s SETUP §18). Three steps, **in this order**:
+
+1. Put the app back to a version **without the Private testing tab**.
+2. **Re-run the whole 0010 file** (14a). That puts back 0010's `testing_restore_student` (without the `moved` check).
+3. Run this in the SQL Editor (one transaction). **This deletes every private testing with its payments and result.** Each removed row is first logged in `change_log` (action `undo_0014`), and the history keeps all its earlier rows too. Supabase's destructive-operations warning is real this time. It first checks that step 2 was done (if `testing_restore_student` still mentions private testings, it stops with a message and removes nothing). (The two lock helpers are removed before the tables because they return the tables' row types.)
+
+```sql
+-- Undo migration 0014 (step 3; run AFTER re-running 0010). change_log is KEPT.
+begin;
+
+-- safety check: stop here if step 2 (re-running 0010) wasn't done first
+do $$
+begin
+  if pg_get_functiondef('public.testing_restore_student(uuid,integer)'::regprocedure) like '%testing_private%' then
+    raise exception 'Do step 2 first: re-run the whole 0010 file, then run this block again. Nothing was removed.';
+  end if;
+end
+$$;
+
+-- remove the private testings row by row first (their payments and
+-- results go with them), so every removal is in the history
+select set_config('tkd.action', 'undo_0014', true);
+select set_config('tkd.batch_id', gen_random_uuid()::text, true);
+delete from public.testing_private;
+select set_config('tkd.action', '', true);
+select set_config('tkd.batch_id', '', true);
+
+-- the view, the two helpers that return the tables' row types, then the
+-- tables (their triggers, rules and read rules go with them)
+drop view if exists public.testing_private_list;
+drop function if exists public.testing_private_lock(uuid);
+drop function if exists public.testing_private_lock_payment(uuid);
+drop table if exists public.testing_private_results;
+drop table if exists public.testing_private_payments;
+drop table if exists public.testing_private;
+
+-- every other 0014 function
+drop function if exists public.testing_private_add(text, text, text, uuid, boolean, text, date, time);
+drop function if exists public.testing_private_update(uuid, integer, text, text, uuid);
+drop function if exists public.testing_private_change_day(uuid, integer, date, time);
+drop function if exists public.testing_private_change_paying_by(uuid, integer, text);
+drop function if exists public.testing_private_mark_paid(uuid, integer);
+drop function if exists public.testing_private_undo_payment(uuid);
+drop function if exists public.testing_private_edit_payment(uuid, text, integer, date);
+drop function if exists public.testing_private_cancel(uuid, integer);
+drop function if exists public.testing_private_restore(uuid, integer);
+drop function if exists public.testing_private_delete(uuid, integer, uuid[]);
+drop function if exists public.testing_private_set_result(uuid, text);
+drop function if exists public.testing_private_set_result_note(uuid, text);
+drop function if exists public.testing_move_to_private(uuid, integer, date, time);
+drop function if exists public.testing_private_undo_move(uuid, integer);
+drop function if exists public.testing_private_rank_copy(text, uuid);
+drop function if exists public.testing_private_amount_due(uuid);
+drop function if exists public.testing_private_time_is_valid(time);
+drop function if exists public.testing_private_log();
+drop function if exists public.testing_private_payments_guard();
+drop function if exists public.testing_private_results_before_write();
+drop function if exists public.testing_private_before_write();
+
+commit;
+```
+
+Afterwards `0005_fingerprints.sql` and `0010_fingerprints.sql` equal a database that never had 0014. Tested in PGlite on every run (`run.mjs` step 15i, steps 2–3 exactly as written here, then the 0010 removal of 14e on top — the real removal order): the tables, the view and every 0014 function are gone, the 0005 / 0010 / 0003 fingerprints equal the ones from before 0014, `change_log` has one `undo_0014` row per removed row, and `0010_tests.sql` / `0005_tests.sql` pass.
+
+**Why:**
+- **Separate tables, not event registrations:** a registration must belong to an event; bending that would have changed live tables, checks and nine live functions. New tables leave everything live untouched except Restore.
+- **The money moves append-only:** the event side gets reversals and the private side new payments, both on the original day, so nothing is ever edited or lost and a daily money report stays right.
+- **Restore refuses a moved registration:** otherwise the student could be on the event and in a private testing at the same time.
+
+---
+## Migration 0020: session id only from the login token (security fix, rulebook v0.408)
+
+**What it does** (`supabase/migrations/0020_session_id_claims.sql`):
+- **Replaces one live function, `current_session_id()` (0001), and nothing else.** It answers "which sign-in session (device) is this?" for the PIN lock, the server lock and every history row (`change_log.session_id`).
+- **Why:** 0001's version read the session id through Supabase's `auth.jwt()`, which looks at the old (legacy) setting `request.jwt.claim` **before** `request.jwt.claims`. The public form functions empty only `request.jwt.claims` and `request.jwt.claim.sub`, so whoever holds the family form's database login could plant a staff session id in a history row the form writes. No access gain (`auth.uid()` and `has_data_access()` stay empty) — low severity, fixed anyway.
+- **The fix (decision B):** read the session id **only** from `request.jwt.claims` — what Supabase's API server fills for a signed-in user. A missing, empty, non-JSON or non-uuid value gives NULL, never an error. Same language (sql), stable, security definer, `search_path = ''`, same owner, same rights (`create or replace` keeps them; 0001's revoke is repeated).
+- **What the app sees:** nothing. A real signed-in request carries the session id in `request.jwt.claims`, so every answer is the same uuid as before. That is exactly what the live checks in 0020d confirm.
+
+**The order:** 0020a–0020c (Jeffrey's OK to paste) → **0020d live checks right after applying** (the PIN lock and server lock depend on this function). No app deploy is needed — no screen changes.
+
+### 0020a. Before you paste (you, in the SQL Editor; Claude runs one read-only check)
+
+1. **Green start:** run `supabase/tests/verify_pin_tests.sql` (one active staff UID) and `supabase/tests/0002_tests.sql` (admin + desk UIDs). Both must say **ALL PIN TESTS PASSED** / **ALL 0002 TESTS PASSED**. If either fails now, stop — the problem is older than 0020.
+2. Claude runs `supabase/tests/0020_fingerprints.sql` through the read-only connection and writes the row down: that is **0001's version** (the undo below must give it back exactly).
+
+### 0020b. Apply 0020 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0020_session_id_claims.sql`.
+2. **SQL Editor → New query**, paste, **Run**.
+3. Expected: "Success. No rows returned." There should be **no** destructive-operations warning (the file removes nothing). It's one transaction: on any error nothing is kept. If it stops with a message starting `0020:`, an earlier migration is missing — copy the message to Claude.
+
+**Running it again is safe** (tested: a second run changes no fingerprint). **Re-running 0001 after this** puts the old function back → re-run 0020 straight after.
+
+### 0020c. Read-only checks, then the tests
+
+1. **Fingerprint** (Claude, connector): `supabase/tests/0020_fingerprints.sql` — the one row must match what `supabase/tests/pglite/run.mjs` printed for the tested copy (code, `lang=sql`, `volatility=s`, `definer=true`, `settings=search_path=""`, owner, rights).
+2. **Security advisor** (Claude): no new notice. (`current_session_id` is not callable by `anon` or `authenticated`, so it never shows up as "executable by authenticated".)
+3. **Tests** (you): open `supabase/tests/0020_tests.sql`, replace `<paste-admin-UID-here>` (**Authentication → Users**), paste the whole file, **Run**. Supabase may warn about destructive operations (the setup clears the admin's test PIN counters inside the transaction). Everything is rolled back. Confirm. Expected: one row, **ALL 0020 TESTS PASSED**. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved. Run `rollback;` once on its own, then tell Claude.
+4. Then run `verify_pin_tests.sql`, `0002_tests.sql`, `0004_tests.sql` and `0014_tests.sql` again (they use the PIN, the server lock and the history) — all must still pass. If you have time, also `0003`, `0005`, `0010` and `0011_tests.sql`.
+5. `0006_tests.sql` (Star) passes before **and** after 0020: its check C9 (shared helpers Star uses must not change) accepts both the 0001 and the 0020 version of `current_session_id`.
+
+### 0020d. LIVE CHECKS on the real site, right after applying (you; Claude watches)
+
+Do these on **https://tkd-dashboard.pages.dev** (no deploy needed — the live app already uses the database functions). If **any** step fails: do the undo in 0020e straight away, then tell Claude.
+
+1. **Sign in** with your admin password. The PIN screen (or the app) appears as usual.
+2. **Enter your PIN** → the app opens and shows data (e.g. Testing → Classes and ranks lists the classes).
+3. **Wrong PIN counts:** **Lock now** (top bar). Enter a **wrong** PIN **once** → the screen says how many tries are left (4). Then enter the right PIN → the app opens. (Don't go to 5 wrong tries — that signs this device out on purpose.)
+4. **Lock / unlock:** **Lock now** again → the Lock screen; enter the PIN → back in.
+5. **Server lock:** Lock now, then **reload the page** (F5) while locked → it must still ask for the PIN (the database, not just the browser, says "locked"); PIN → back in.
+6. **One small change with a history row:** Testing → Classes and ranks → edit one rank's **testing-day price** up by $1 and save, then put it back (two changes, two history rows). Claude then checks through the read-only connection:
+   `select id, occurred_at, action, table_name, session_id, actor_name from public.change_log order by id desc limit 2;`
+   Both rows must have a **session_id** (not NULL) and your name. (A NULL here means the API server does not put the session id in `request.jwt.claims` — undo 0020e at once.)
+7. On the **front desk** computer (or a private window signed in as the desk account): sign in, PIN → data shows. Same function, second account.
+
+### 0020e. Undo (only with Jeffrey's OK)
+
+Puts back **0001's exact** `current_session_id()` (word for word, same rights). Nothing else changes; no data is touched. Afterwards `0020_fingerprints.sql` must show the row written down in 0020a step 2. Paste in the SQL Editor:
+
+```sql
+-- Undo migration 0020: put back 0001's current_session_id() exactly.
+begin;
+
+-- 4c. current_session_id()
+-- This sign-in session's id from the token's "session_id" claim, or NULL if
+-- it is missing or not a valid uuid (checked with a pattern first, so a bad
+-- value returns NULL instead of crashing the cast).
+create or replace function public.current_session_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select case
+           when (auth.jwt() ->> 'session_id')
+                ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+           then (auth.jwt() ->> 'session_id')::uuid
+         end;   -- no "else" = NULL
+$$;
+
+revoke execute on function public.current_session_id() from public, anon, authenticated;
+
+commit;
+```
+
+Tested in PGlite on every run (`run.mjs` step 19f, this block exactly as written here): afterwards the fingerprint equals the one from before 0020, and `verify_pin_tests.sql` / `0002_tests.sql` pass. Then 0020 is applied again and its tests pass (undo → redo works).
+
+**Why:**
+- **Fix the one reader, not every form:** changing `current_session_id()` covers every current and future public form (Color Belt, Star, Forms, Camps) without touching any of them.
+- **Only `request.jwt.claims`:** that is the setting Supabase's API server fills from the real login token. The legacy `request.jwt.claim` exists only for old setups; nothing in this app needs it.
+- **Never an error:** this function runs inside every logged change. A crash on a strange value would block saving, so every bad value becomes NULL instead (the same as 0001 did for a bad uuid).
+
+---
+
+## Migration 0018: Finance — Color Belt private testing payments in the Daily report
+
+**What it does** (`supabase/migrations/0018_finance_private.sql`, contract `docs/Dashboard Docs/Build contracts/CONTRACT-0018.md`): the Daily report, Close the day, History, Export, the payment detail, the Home reminder and the Both summary include Color Belt **private testing** payments (0014). A **Move to private testing** is a transfer: the payment's line carries on as the private row, and the day's totals, expected cash and fingerprint don't change. A closed day is **not** "changed after closing" because of a move. An **Undo move** leaves the day as it was (no "undone" line). It replaces six Finance functions, adds one index (`finance_testing_private_payments_paid_on_idx`) and changes no table, row, setting or right.
+
+**Order:** 0011 (with its speed fix, §15e) → camps' 0013 + 0017 → 0014 → **0018**. **0018 is forward-only** — there is no undo file. It is built over the Finance functions as camps' 0017 leaves them (git `fb4ec24`; every camp part kept byte for byte). A **guard** at the top of the file stops it — and changes nothing — if 0011's speed fix, 0014 or camps' 0017 is missing, or if the three Finance functions it shares with 0017 aren't exactly what 0017 at `fb4ec24` made (then 0018 must be rebuilt first). Each step needs Jeffrey's OK.
+
+### 0018-0. First: remove the CP3 test private testings (you, then Claude checks)
+Color Belt's CP3 (2026-10-19) left **2 test private testings** on production ("Jeff Berg", Worcester, $70 each = **$140**, paid 2026-10-19). 0011 doesn't count private testing money, so today the Daily report doesn't show them. Once 0018 is in, it **would** count them as real money on Oct 19. So, before 0018:
+1. **Delete both permanently**, the same way as in CP3: the local app on the real database from the `color-belt` worktree (`Start dashboard.bat`), as an admin, private testing → **Delete permanently** (the Color Belt session can walk you through it). Each delete removes the testing, its payments and its result, and is logged.
+2. Nothing else needs removing (checked by the Color Belt session, 2026-10-20): the CP3 test event was already deleted with its payments, so `testing_payments` is empty. The only test money left is these 3 private payment rows (a $50 copy moved in from that event plus a $20 top-up, and one $70). After step 0, Oct 19 has no Color Belt money.
+3. **Claude checks (read-only):** `select count(*) from public.testing_private;` must be **0**. Phase 4 isn't deployed, so there are no real private testings yet. If it isn't 0, stop.
+
+### 0018a. Before you apply 0018 (Claude, read-only)
+1. Run camps' `0017_fingerprints.sql` through the connection and compare it with the record of the PGlite run at git `fb4ec24` (camps' SETUP section for 0017): every line must match. If not, camps' 0017 on production isn't the one 0018 was built over — stop; 0018 must be rebuilt (the guard would refuse it anyway).
+2. Run `supabase/tests/0018_preapply_check.sql` through the connection. It lists the **closed** days that have private testing payments, a payment moved to a private testing **before** the day was closed, or an undone move. After 0018, days with private payments or moves-before-close **will show "Changed after closing"** — correctly: that money wasn't counted when they were closed. Undone moves don't change anything. Show Jeffrey the list; an admin can reopen and close those days again afterwards if wanted. An empty list means no closed day changes.
+
+### 0018b. Apply 0018 (you, in the SQL Editor; outside desk hours)
+1. **Outside desk hours:** building the index briefly holds back private payment writes until the paste finishes (seconds).
+2. Copy the whole file, **SQL Editor → New query**, paste, **Run**. The destructive-operations warning comes from the `drop function if exists` lines (the chain helpers are recreated straight after, with more output columns). One transaction; safe to run again.
+3. **Forward-only — don't re-run earlier Finance files after 0018:** re-running **0011** stops with "cannot change return type of existing function" and is rolled back (nothing changes). Re-running camps' **0017** runs and puts back a chain helper *without* private payments — `finance_chain_items` then fails when called and the Daily report breaks until 0018 is pasted again, so 0018 must follow straight after, in the same sitting.
+
+4. **A Daily report left open during the paste** gets one amber “Someone else changed this just now” when Close the day is pressed (0018 builds the day's fingerprint differently), then reloads — nothing is lost; just close the day again.
+
+### 0018c. Read-only checks (Claude, through the connection)
+1. `0018_fingerprints.sql`: every line matches the PGlite run (6 functions + 1 index). `0011_fingerprints.sql` and camps' `0017_fingerprints.sql` differ from their records only in the functions 0018 replaces (and the new index line). 0003–0006, 0010 and 0014: unchanged.
+2. **Security advisor:** nothing new (no new table; the replaced functions keep their rights).
+
+### 0018d. Run the tests (you, in the SQL Editor)
+1. `supabase/tests/0018_tests.sql` with the two UIDs pasted, **Run** (it finishes in seconds). Expected: **ALL 0018 TESTS PASSED**. It uses the real Color Belt private testing functions and test events named `zz fin18 …`, on days in 2021. A test payment is also recorded **today** in Shrewsbury. Everything is rolled back.
+2. Then `0011_tests.sql` and camps' `0017_tests.sql` again — both must still pass with 0018.
+
+---
+
+## Migration 0021: Not interested families deleted after 6 months (rulebook v0.611)
+
+**What it does** (`supabase/migrations/0021_prospects_not_interested_sooner.sql`): replaces **one** function, `prospects_purge_old` — the clean-up that runs whenever Prospects is opened. A family in which **every** child is Not interested is deleted **6 months** after its last activity (a note, a call, a status change, a booking or a check-in; marking someone Not interested counts, so it restarts the 6 months). Every other family without a Joined child keeps the **2 years** (v0.244); Joined is never deleted. How a deletion happens is unchanged from 0015 (rule checked again at the moment of deleting, the family's history removed with it, one counts-only row in `change_log`). No table, permission or other function changes.
+
+**Each step needs Jeffrey's OK.** Only after 0015 is live (it is).
+
+**Before you paste:** the next time anyone opens Prospects after this, every all-Not-interested family that has been quiet for **6 months or more** is deleted for good. Look at the "Not interested" chip first if that matters.
+
+### 0021a. Apply 0021 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0021_prospects_not_interested_sooner.sql` → **SQL Editor → New query** → paste → **Run**.
+2. Supabase may warn about **destructive operations**: the word is inside the clean-up function, which only runs later. **Nothing is removed now.** Confirm.
+3. "Success." One transaction: on any error nothing is kept. **Running it again is safe.**
+
+### 0021b. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0021_fingerprints.sql` must match what `supabase/tests/pglite/run.mjs` (step0021) printed (2 rows).
+2. **0012's and 0015's fingerprints move by exactly one line each on purpose:** the `prospects_purge_old()` line (both list that function). Everything else: unchanged.
+3. **Security advisor:** nothing new (the function can't be called from the app; only the Prospects list calls it).
+
+### 0021c. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0021_tests.sql` with `<paste-admin-UID-here>` / `<paste-desk-UID-here>` replaced → **ALL 0021 TESTS PASSED**. It makes its own test families and rolls everything back; it only checks its own families.
+2. Then `0015_tests.sql` and `0012_tests.sql` again. (Those two count the clean-up's results exactly. If a real family happens to become due at that very moment they can fail for that reason alone — nothing is harmed, they roll back; run them again, or tell Claude. `0021_tests.sql` only counts its own families.)
+
+### 0021d. Never re-run 0012 or 0015 after this
+
+They would put back the 2-year-only clean-up (0012 also its old history triggers — see 0015's header). If 0015 is ever re-run, re-run 0021 straight after.
 
 ## Admin: change the front-desk PIN or password
 

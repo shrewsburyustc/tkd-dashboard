@@ -1,0 +1,499 @@
+0016_seed_review.txt  -  the Black Belt seed, in plain English (CP1 check)
+==========================================================================
+WHAT THIS IS
+  Everything migration 0016_black_belt.sql writes on its first run, so
+  Jeffrey can check it against the old Google Sheet (Fall 2026) before
+  the migration is pasted. Made from the same data as the migration's
+  seed (supabase/migrations/0016_black_belt.sql, section 11 seed).
+  Nothing here is a cycle: Fall 2026 is only the STARTING POINT the first
+  Add cycle is filled from (the admin types this season's dates).
+
+1. SETTINGS (bb_settings)
+  Keep signed waivers N1 years after the last testing day: (empty)
+  ... and for under-18s until N2 years after they turn 18:   (empty)
+  Both empty = nothing is ever deleted until the insurer's numbers are entered.
+
+2. WAIVER (bb_waiver_versions)
+  Version 2026-1, marked PLACEHOLDER. Registration can't be opened while it
+  is the current waiver. Text: see section 7 of this file.
+
+3. STARTING POINT - testing days (bb_starting_point.schedule)
+  Physical    2026-09-26  12:30-14:30  at worcester  grades: physical
+              second part 14:30-15:30  at Horgan Arena, 403 Oxford St N, Auburn MA 01501
+  Technical   2026-10-24  12:30-15:30  at shrewsbury  grades: technical
+  Curriculum  2026-11-21  14:00-17:00  at shrewsbury  grades: curriculum
+  Application due 2026-09-19 (registration closes automatically at the end of that day: on)
+  Submissions due 2026-11-14
+
+4. STARTING POINT - plans, amounts and due dates
+  Plan "In full" - 1 payment(s)
+    payment 1 due 2026-09-19 (follows Application due)
+    Dan 1: $870 = $870
+    Dan 2: $990 = $990
+    Dan 3: $1,500 = $1,500
+    Dan 4: $2,700 = $2,700
+  Plan "3 payments" - 3 payment(s)
+    payment 1 due 2026-09-19 (follows Application due)
+    payment 2 due 2026-10-17
+    payment 3 due 2026-11-14
+    Dan 1: $290 + $290 + $290 = $870
+    Dan 2: $330 + $330 + $330 = $990
+    Dan 3: $500 + $500 + $500 = $1,500
+    Dan 4: $900 + $900 + $900 = $2,700
+  Kukkiwon certificate fee: Dan 1 $100 / Dan 2 $110 / Dan 3 $140 / Dan 4 $170
+
+5. STARTING POINT - the requirements sheet (what the family form's
+   "What [Dan] is tested on" panel shows)
+  Grade points: physical A+ 4 / A 3.5 / B+ 3 / B 2.5 / C 2 / D 0
+                technical A+ 4 / A 3.5 / A- 3.25 / B+ 3 / B 2.5 / B- 2.25 / C 2 / C- 1 / D 0
+                curriculum A+ 4.5 / A 4 / A- 3.8 / B+ 3.5 / B 3.3 / B- 3 / C 2.5 / C- 2 / D 0  (C+ 2.8 left out: not in the Sheet's dropdown)
+
+  --- Dan 1 ---  To pass: 275 points (children) or 293 (adults), and no D in any subject.
+   Physical: up to 80 points
+     - Stretching: 3 credits
+         graded by inches (at least the number):
+           8 and under                A+ 4  A 3.5  B+ 3  B 2.5  C 2
+           9-12                       A+ 6  A 5  B+ 4  B 3  C 2
+           13 and over                A+ 8  A 6  B+ 5  B 4  C 2
+         points: A+ 12 / A 10.5 / B+ 9 / B 7.5 / C 6 / D 0
+     - Sit-up (20 sec): 2 credits
+         graded by count (at least the number):
+           8 and under                A+ 18  A 16  B+ 11  B 6  C 4
+           9-12                       A+ 20  A 18  B+ 15  B 10  C 4
+           13 and over                A+ 23  A 20  B+ 18  B 15  C 6
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Push-up (1 min): 2 credits
+         graded by count (at least the number):
+           8 and under                A+ 20  A 18  B+ 16  B 14  C 12
+           9-12                       A+ 36  A 30  B+ 25  B 20  C 15
+           13 and over                A+ 50  A 40  B+ 30  B 25  C 20
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Static jump: 2 credits
+         graded by inches (at least the number):
+           8 and under                A+ 12  A 10  B+ 9  B 7  C 3
+           9-12                       A+ 18  A 15  B+ 13  B 10  C 5
+           13 and over                A+ 23  A 20  B+ 18  B 15  C 10
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Long jump: 2 credits
+         graded by inches (feet x 12 + inches) (at least the number):
+           8 and under                A+ 72  A 60  B+ 54  B 48  C 36
+           9-12                       A+ 84  A 72  B+ 66  B 60  C 48
+           13 and over                A+ 96  A 84  B+ 78  B 72  C 60
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Sprint 4x10 m: 2 credits
+         graded by seconds (at most the number):
+           8 and under                A+ 10  A 12  B+ 13  B 14  C 16
+           9-12                       A+ 9  A 11  B+ 12  B 13  C 15
+           13 and over                A+ 8  A 10  B+ 11  B 12  C 14
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Pull-up or hold: 2 credits [outdoor]
+         graded by reps, or seconds for the hold (at least the number):
+           Hold, all ages (seconds)   A+ 31  A 26  B+ 21  B 11  C 9
+           Reps, 12 and under         A+ 6  A 5  B+ 3  B 2  C 1
+           Reps, 13 and over          A+ 10  A 8  B+ 6  B 4  C 2
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Sprint 100 m: 2 credits [outdoor]
+         graded by seconds (under the number):
+           8 and under                A+ 18  A 20  B+ 22  B 24  C 28
+           9-12                       A+ 15  A 17  B+ 19  B 21  C 24
+           13 and over                A+ 14  A 15  B+ 16  B 17  C 23
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - 1/2 or 1 mile: 3 credits [outdoor]
+         graded by minutes (at most the number):
+           8 and under                A+ 5  A 6  B+ 6.5  B 7  C 8
+           9-12                       A+ 4  A 5  B+ 5.5  B 6  C 7
+           13 and over                A+ 8  A 8.5  B+ 9  B 11  C 12
+         points: A+ 12 / A 10.5 / B+ 9 / B 7.5 / C 6 / D 0
+         note: 1/2 mile for 12 and under, 1 mile for 13 and over
+   Technical: up to 44 points
+     - Referee seminar: 2 credits
+         points: A+ 8 / A 7 / A- 6.5 / B+ 6 / B 5 / B- 4.5 / C 4 / C- 2 / D 0
+     - Free sparring: 3 credits
+         points: A+ 12 / A 10.5 / A- 9.75 / B+ 9 / B 7.5 / B- 6.75 / C 6 / C- 3 / D 0
+     - Target kick (30 sec): 2 credits
+         graded by kicks in 30 seconds (at least the number):
+           9 and under                A+ 35  A 31  B+ 26  B 22  C 21
+           10 and over                A+ 39  A 34  B+ 29  B 24  C 23
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Korean terminology: 2 credits
+         points: A+ 8 / A 7 / A- 6.5 / B+ 6 / B 5 / B- 4.5 / C 4 / C- 2 / D 0
+     - TKD knowledge: 2 credits
+         points: A+ 8 / A 7 / A- 6.5 / B+ 6 / B 5 / B- 4.5 / C 4 / C- 2 / D 0
+   Curriculum: up to 135 points (157.5 for adults)
+     - Basic 10 Motions (1-7): 5 credits
+         points: A+ 22.5 / A 20 / A- 19 / B+ 17.5 / B 16.5 / B- 15 / C 12.5 / C- 10 / D 0
+     - Tae-Geuk Poomsae (1-8): 5 credits
+         points: A+ 22.5 / A 20 / A- 19 / B+ 17.5 / B 16.5 / B- 15 / C 12.5 / C- 10 / D 0
+     - Sa Bang Chuck (1-13): 5 credits
+         points: A+ 22.5 / A 20 / A- 19 / B+ 17.5 / B 16.5 / B- 15 / C 12.5 / C- 10 / D 0
+     - One Step Sparring (1-24): 5 credits [adults only]
+         points: A+ 22.5 / A 20 / A- 19 / B+ 17.5 / B 16.5 / B- 15 / C 12.5 / C- 10 / D 0
+     - Technical Break: 5 credits
+         points: A+ 22.5 / A 20 / A- 19 / B+ 17.5 / B 16.5 / B- 15 / C 12.5 / C- 10 / D 0
+     - Power Break: 5 credits
+         points: A+ 22.5 / A 20 / A- 19 / B+ 17.5 / B 16.5 / B- 15 / C 12.5 / C- 10 / D 0
+     - Self-Defense: 5 credits
+         points: A+ 22.5 / A 20 / A- 19 / B+ 17.5 / B 16.5 / B- 15 / C 12.5 / C- 10 / D 0
+   Other requirements: up to 80 points
+     - Egg test: 5 credits [handed in]
+         points: A+ 20 / A 17.5 / A- 16.25 / B+ 15 / B 11 / B- 10.5 / C 10 / C- 5 / D 0
+     - Meditation: 4 credits [handed in]
+         points: A+ 16 / A 14 / A- 13 / B+ 12 / B 9 / B- 8.5 / C 8 / C- 4 / D 0
+     - Assistant instructor course: 5 credits
+         points: A+ 20 / A 17.5 / A- 16.25 / B+ 15 / B 11 / B- 10.5 / C 10 / C- 5 / D 0
+     - Appreciation letter: 2 credits [handed in]
+         points: A+ 8 / A 7 / A- 6.5 / B+ 6 / B 5 / B- 4.5 / C 4 / C- 2 / D 0
+     - TKD project: 4 credits [handed in]
+         points: A+ 16 / A 14 / A- 13 / B+ 12 / B 9 / B- 8.5 / C 8 / C- 4 / D 0
+   Extra points (added to the total, no limit) - TO CONFIRM with Master Jeong:
+     - Extra stripes: 1 point each
+     - Outstanding performance: 5+ -> 5
+     - Competitions: 1+ -> 3 , 2+ -> 5 , 3+ -> 7 , 4+ -> 10 , 5+ -> 15
+     - Attendance (classes): 320+ -> 3 , 375+ -> 5 , 400+ -> 10
+     - Special events: 3+ -> 3 , 6+ -> 5 , 10+ -> 10
+     - Breaking class: 16+ -> 3 , 20+ -> 5 , 25+ -> 10
+   Handed in by Submissions due: Egg test, Meditation, Appreciation letter, TKD project
+
+  --- Dan 2 ---  To pass: 261 points, and no D in any subject.
+   Physical: up to 80 points
+     - Stretching: 3 credits
+         graded by inches (at least the number):
+           8 and under                A+ 4  A 3.5  B+ 3  B 2.5  C 2
+           9-12                       A+ 6  A 5  B+ 4  B 3  C 2
+           13 and over                A+ 8  A 6  B+ 5  B 4  C 2
+         points: A+ 12 / A 10.5 / B+ 9 / B 7.5 / C 6 / D 0
+     - Sit-up (20 sec): 2 credits
+         graded by count (at least the number):
+           8 and under                A+ 18  A 16  B+ 11  B 6  C 4
+           9-12                       A+ 20  A 18  B+ 15  B 10  C 4
+           13 and over                A+ 23  A 20  B+ 18  B 15  C 6
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Push-up (1 min): 2 credits
+         graded by count (at least the number):
+           8 and under                A+ 20  A 18  B+ 16  B 14  C 12
+           9-12                       A+ 36  A 30  B+ 25  B 20  C 15
+           13 and over                A+ 50  A 40  B+ 30  B 25  C 20
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Static jump: 2 credits
+         graded by inches (at least the number):
+           8 and under                A+ 12  A 10  B+ 9  B 7  C 3
+           9-12                       A+ 18  A 15  B+ 13  B 10  C 5
+           13 and over                A+ 23  A 20  B+ 18  B 15  C 10
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Long jump: 2 credits
+         graded by inches (feet x 12 + inches) (at least the number):
+           8 and under                A+ 72  A 60  B+ 54  B 48  C 36
+           9-12                       A+ 84  A 72  B+ 66  B 60  C 48
+           13 and over                A+ 96  A 84  B+ 78  B 72  C 60
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Sprint 4x10 m: 2 credits
+         graded by seconds (at most the number):
+           8 and under                A+ 10  A 12  B+ 13  B 14  C 16
+           9-12                       A+ 9  A 11  B+ 12  B 13  C 15
+           13 and over                A+ 8  A 10  B+ 11  B 12  C 14
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Pull-up or hold: 2 credits [outdoor]
+         graded by reps, or seconds for the hold (at least the number):
+           Hold, all ages (seconds)   A+ 31  A 26  B+ 21  B 11  C 9
+           Reps, 12 and under         A+ 6  A 5  B+ 3  B 2  C 1
+           Reps, 13 and over          A+ 10  A 8  B+ 6  B 4  C 2
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Sprint 100 m: 2 credits [outdoor]
+         graded by seconds (under the number):
+           8 and under                A+ 18  A 20  B+ 22  B 24  C 28
+           9-12                       A+ 15  A 17  B+ 19  B 21  C 24
+           13 and over                A+ 14  A 15  B+ 16  B 17  C 23
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - 1/2 or 1 mile: 3 credits [outdoor]
+         graded by minutes (at most the number):
+           8 and under                A+ 5  A 6  B+ 6.5  B 7  C 8
+           9-12                       A+ 4  A 5  B+ 5.5  B 6  C 7
+           13 and over                A+ 8  A 8.5  B+ 9  B 11  C 12
+         points: A+ 12 / A 10.5 / B+ 9 / B 7.5 / C 6 / D 0
+         note: 1/2 mile for 12 and under, 1 mile for 13 and over
+   Technical: up to 44 points
+     - Referee seminar: 2 credits
+         points: A+ 8 / A 7 / A- 6.5 / B+ 6 / B 5 / B- 4.5 / C 4 / C- 2 / D 0
+     - Free sparring: 3 credits
+         points: A+ 12 / A 10.5 / A- 9.75 / B+ 9 / B 7.5 / B- 6.75 / C 6 / C- 3 / D 0
+     - Target kick (30 sec): 2 credits
+         graded by kicks in 30 seconds (at least the number):
+           9 and under                A+ 35  A 31  B+ 26  B 22  C 21
+           10 and over                A+ 39  A 34  B+ 29  B 24  C 23
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Korean terminology: 2 credits
+         points: A+ 8 / A 7 / A- 6.5 / B+ 6 / B 5 / B- 4.5 / C 4 / C- 2 / D 0
+     - TKD knowledge: 2 credits
+         points: A+ 8 / A 7 / A- 6.5 / B+ 6 / B 5 / B- 4.5 / C 4 / C- 2 / D 0
+   Curriculum: up to 139.5 points
+     - White-Bodan Curriculum: 10 credits
+         points: A+ 45 / A 40 / A- 38 / B+ 35 / B 33 / B- 30 / C 25 / C- 20 / D 0
+     - Go-Ryo Poomsae: 3 credits
+         points: A+ 13.5 / A 12 / A- 11.4 / B+ 10.5 / B 9.9 / B- 9 / C 7.5 / C- 6 / D 0
+     - Advance 10 Motion (1-5): 3 credits
+         points: A+ 13.5 / A 12 / A- 11.4 / B+ 10.5 / B 9.9 / B- 9 / C 7.5 / C- 6 / D 0
+     - Advance Sa Bang Chuck (1-5): 3 credits
+         points: A+ 13.5 / A 12 / A- 11.4 / B+ 10.5 / B 9.9 / B- 9 / C 7.5 / C- 6 / D 0
+     - Step Sa Bang Chuck (1-5): 3 credits
+         points: A+ 13.5 / A 12 / A- 11.4 / B+ 10.5 / B 9.9 / B- 9 / C 7.5 / C- 6 / D 0
+     - Power Break: 3 credits
+         points: A+ 13.5 / A 12 / A- 11.4 / B+ 10.5 / B 9.9 / B- 9 / C 7.5 / C- 6 / D 0
+     - Technical Break: 3 credits
+         points: A+ 13.5 / A 12 / A- 11.4 / B+ 10.5 / B 9.9 / B- 9 / C 7.5 / C- 6 / D 0
+     - Two Step Sparring (1-10): 3 credits
+         points: A+ 13.5 / A 12 / A- 11.4 / B+ 10.5 / B 9.9 / B- 9 / C 7.5 / C- 6 / D 0
+   Other requirements: up to 80 points
+     - Egg test: 5 credits [handed in]
+         points: A+ 20 / A 17.5 / A- 16.25 / B+ 15 / B 11 / B- 10.5 / C 10 / C- 5 / D 0
+     - Meditation: 4 credits [handed in]
+         points: A+ 16 / A 14 / A- 13 / B+ 12 / B 9 / B- 8.5 / C 8 / C- 4 / D 0
+     - Assistant instructor course: 5 credits
+         points: A+ 20 / A 17.5 / A- 16.25 / B+ 15 / B 11 / B- 10.5 / C 10 / C- 5 / D 0
+     - Appreciation letter: 2 credits [handed in]
+         points: A+ 8 / A 7 / A- 6.5 / B+ 6 / B 5 / B- 4.5 / C 4 / C- 2 / D 0
+     - TKD project: 4 credits [handed in]
+         points: A+ 16 / A 14 / A- 13 / B+ 12 / B 9 / B- 8.5 / C 8 / C- 4 / D 0
+   Extra points (added to the total, no limit) - TO CONFIRM with Master Jeong:
+     - Extra stripes: 1 point each
+     - Outstanding performance: 4+ -> 5
+     - Competitions: 1+ -> 3 , 2+ -> 5 , 3+ -> 7 , 4+ -> 10 , 5+ -> 15
+     - Attendance (classes): 250+ -> 3 , 271+ -> 5 , 300+ -> 10
+     - Special events: 3+ -> 3 , 6+ -> 5 , 10+ -> 10
+     - Breaking class: 11+ -> 3 , 17+ -> 5 , 21+ -> 10
+   Handed in by Submissions due: Egg test, Meditation, Appreciation letter, TKD project
+
+  --- Dan 3 ---  To pass: 293 points, and no D in any subject.
+   Physical: up to 80 points
+     - Stretching: 3 credits
+         graded by inches (at least the number):
+           8 and under                A+ 4  A 3.5  B+ 3  B 2.5  C 2
+           9-12                       A+ 6  A 5  B+ 4  B 3  C 2
+           13 and over                A+ 8  A 6  B+ 5  B 4  C 2
+         points: A+ 12 / A 10.5 / B+ 9 / B 7.5 / C 6 / D 0
+     - Sit-up (20 sec): 2 credits
+         graded by count (at least the number):
+           8 and under                A+ 18  A 16  B+ 11  B 6  C 4
+           9-12                       A+ 20  A 18  B+ 15  B 10  C 4
+           13 and over                A+ 23  A 20  B+ 18  B 15  C 6
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Push-up (1 min): 2 credits
+         graded by count (at least the number):
+           8 and under                A+ 20  A 18  B+ 16  B 14  C 12
+           9-12                       A+ 36  A 30  B+ 25  B 20  C 15
+           13 and over                A+ 50  A 40  B+ 30  B 25  C 20
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Static jump: 2 credits
+         graded by inches (at least the number):
+           8 and under                A+ 12  A 10  B+ 9  B 7  C 3
+           9-12                       A+ 18  A 15  B+ 13  B 10  C 5
+           13 and over                A+ 23  A 20  B+ 18  B 15  C 10
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Long jump: 2 credits
+         graded by inches (feet x 12 + inches) (at least the number):
+           8 and under                A+ 72  A 60  B+ 54  B 48  C 36
+           9-12                       A+ 84  A 72  B+ 66  B 60  C 48
+           13 and over                A+ 96  A 84  B+ 78  B 72  C 60
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Sprint 4x10 m: 2 credits
+         graded by seconds (at most the number):
+           8 and under                A+ 10  A 12  B+ 13  B 14  C 16
+           9-12                       A+ 9  A 11  B+ 12  B 13  C 15
+           13 and over                A+ 8  A 10  B+ 11  B 12  C 14
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Pull-up or hold: 2 credits [outdoor]
+         graded by reps, or seconds for the hold (at least the number):
+           Hold, all ages (seconds)   A+ 31  A 26  B+ 21  B 11  C 9
+           Reps, 12 and under         A+ 6  A 5  B+ 3  B 2  C 1
+           Reps, 13 and over          A+ 10  A 8  B+ 6  B 4  C 2
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Sprint 100 m: 2 credits [outdoor]
+         graded by seconds (under the number):
+           8 and under                A+ 18  A 20  B+ 22  B 24  C 28
+           9-12                       A+ 15  A 17  B+ 19  B 21  C 24
+           13 and over                A+ 14  A 15  B+ 16  B 17  C 23
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - 1/2 or 1 mile: 3 credits [outdoor]
+         graded by minutes (at most the number):
+           8 and under                A+ 5  A 6  B+ 6.5  B 7  C 8
+           9-12                       A+ 4  A 5  B+ 5.5  B 6  C 7
+           13 and over                A+ 8  A 8.5  B+ 9  B 11  C 12
+         points: A+ 12 / A 10.5 / B+ 9 / B 7.5 / C 6 / D 0
+         note: 1/2 mile for 12 and under, 1 mile for 13 and over
+   Technical: up to 44 points
+     - Referee seminar: 2 credits
+         points: A+ 8 / A 7 / A- 6.5 / B+ 6 / B 5 / B- 4.5 / C 4 / C- 2 / D 0
+     - Free sparring: 3 credits
+         points: A+ 12 / A 10.5 / A- 9.75 / B+ 9 / B 7.5 / B- 6.75 / C 6 / C- 3 / D 0
+     - Target kick (30 sec): 2 credits
+         graded by kicks in 30 seconds (at least the number):
+           9 and under                A+ 35  A 31  B+ 26  B 22  C 21
+           10 and over                A+ 39  A 34  B+ 29  B 24  C 23
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Korean terminology: 2 credits
+         points: A+ 8 / A 7 / A- 6.5 / B+ 6 / B 5 / B- 4.5 / C 4 / C- 2 / D 0
+     - TKD knowledge: 2 credits
+         points: A+ 8 / A 7 / A- 6.5 / B+ 6 / B 5 / B- 4.5 / C 4 / C- 2 / D 0
+   Curriculum: up to 180 points
+     - White-Bodan Curriculum: 10 credits
+         points: A+ 45 / A 40 / A- 38 / B+ 35 / B 33 / B- 30 / C 25 / C- 20 / D 0
+     - Geum Gang Poomsae: 5 credits
+         points: A+ 22.5 / A 20 / A- 19 / B+ 17.5 / B 16.5 / B- 15 / C 12.5 / C- 10 / D 0
+     - 1st Dan Curriculum: 10 credits
+         points: A+ 45 / A 40 / A- 38 / B+ 35 / B 33 / B- 30 / C 25 / C- 20 / D 0
+     - 2nd Dan Sa Bang Chuck (1-4): 3 credits
+         points: A+ 13.5 / A 12 / A- 11.4 / B+ 10.5 / B 9.9 / B- 9 / C 7.5 / C- 6 / D 0
+     - Creative Poomsae: 3 credits
+         points: A+ 13.5 / A 12 / A- 11.4 / B+ 10.5 / B 9.9 / B- 9 / C 7.5 / C- 6 / D 0
+     - Creative Sa Bang Chuck: 3 credits
+         points: A+ 13.5 / A 12 / A- 11.4 / B+ 10.5 / B 9.9 / B- 9 / C 7.5 / C- 6 / D 0
+     - Technical Break: 3 credits
+         points: A+ 13.5 / A 12 / A- 11.4 / B+ 10.5 / B 9.9 / B- 9 / C 7.5 / C- 6 / D 0
+     - Power Break: 3 credits
+         points: A+ 13.5 / A 12 / A- 11.4 / B+ 10.5 / B 9.9 / B- 9 / C 7.5 / C- 6 / D 0
+   Other requirements: up to 80 points
+     - Egg test: 5 credits [handed in]
+         points: A+ 20 / A 17.5 / A- 16.25 / B+ 15 / B 11 / B- 10.5 / C 10 / C- 5 / D 0
+     - Meditation: 4 credits [handed in]
+         points: A+ 16 / A 14 / A- 13 / B+ 12 / B 9 / B- 8.5 / C 8 / C- 4 / D 0
+     - Assistant instructor course: 5 credits
+         points: A+ 20 / A 17.5 / A- 16.25 / B+ 15 / B 11 / B- 10.5 / C 10 / C- 5 / D 0
+     - Appreciation letter: 2 credits [handed in]
+         points: A+ 8 / A 7 / A- 6.5 / B+ 6 / B 5 / B- 4.5 / C 4 / C- 2 / D 0
+     - TKD project: 4 credits [handed in]
+         points: A+ 16 / A 14 / A- 13 / B+ 12 / B 9 / B- 8.5 / C 8 / C- 4 / D 0
+   Extra points (added to the total, no limit) - TO CONFIRM with Master Jeong:
+     - Extra stripes: 1 point each
+     - Outstanding performance: 3+ -> 5
+     - Competitions: 1+ -> 3 , 2+ -> 5 , 3+ -> 7 , 4+ -> 10 , 5+ -> 15
+     - Attendance (classes): 210+ -> 3 , 231+ -> 5 , 250+ -> 10
+     - Special events: 3+ -> 3 , 6+ -> 5 , 10+ -> 10
+     - Breaking class: 11+ -> 3 , 17+ -> 5 , 21+ -> 10
+   Handed in by Submissions due: Egg test, Meditation, Appreciation letter, TKD project
+
+  --- Dan 4 ---  To pass: 453 points, and no D in any subject.
+   Physical: up to 80 points
+     - Stretching: 3 credits
+         graded by inches (at least the number):
+           8 and under                A+ 4  A 3.5  B+ 3  B 2.5  C 2
+           9-12                       A+ 6  A 5  B+ 4  B 3  C 2
+           13 and over                A+ 8  A 6  B+ 5  B 4  C 2
+         points: A+ 12 / A 10.5 / B+ 9 / B 7.5 / C 6 / D 0
+     - Sit-up (20 sec): 2 credits
+         graded by count (at least the number):
+           8 and under                A+ 18  A 16  B+ 11  B 6  C 4
+           9-12                       A+ 20  A 18  B+ 15  B 10  C 4
+           13 and over                A+ 23  A 20  B+ 18  B 15  C 6
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Push-up (1 min): 2 credits
+         graded by count (at least the number):
+           8 and under                A+ 20  A 18  B+ 16  B 14  C 12
+           9-12                       A+ 36  A 30  B+ 25  B 20  C 15
+           13 and over                A+ 50  A 40  B+ 30  B 25  C 20
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Static jump: 2 credits
+         graded by inches (at least the number):
+           8 and under                A+ 12  A 10  B+ 9  B 7  C 3
+           9-12                       A+ 18  A 15  B+ 13  B 10  C 5
+           13 and over                A+ 23  A 20  B+ 18  B 15  C 10
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Long jump: 2 credits
+         graded by inches (feet x 12 + inches) (at least the number):
+           8 and under                A+ 72  A 60  B+ 54  B 48  C 36
+           9-12                       A+ 84  A 72  B+ 66  B 60  C 48
+           13 and over                A+ 96  A 84  B+ 78  B 72  C 60
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Sprint 4x10 m: 2 credits
+         graded by seconds (at most the number):
+           8 and under                A+ 10  A 12  B+ 13  B 14  C 16
+           9-12                       A+ 9  A 11  B+ 12  B 13  C 15
+           13 and over                A+ 8  A 10  B+ 11  B 12  C 14
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Pull-up or hold: 2 credits [outdoor]
+         graded by reps, or seconds for the hold (at least the number):
+           Hold, all ages (seconds)   A+ 31  A 26  B+ 21  B 11  C 9
+           Reps, 12 and under         A+ 6  A 5  B+ 3  B 2  C 1
+           Reps, 13 and over          A+ 10  A 8  B+ 6  B 4  C 2
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - Sprint 100 m: 2 credits [outdoor]
+         graded by seconds (under the number):
+           8 and under                A+ 18  A 20  B+ 22  B 24  C 28
+           9-12                       A+ 15  A 17  B+ 19  B 21  C 24
+           13 and over                A+ 14  A 15  B+ 16  B 17  C 23
+         points: A+ 8 / A 7 / B+ 6 / B 5 / C 4 / D 0
+     - 1/2 or 1 mile: 3 credits [outdoor]
+         graded by minutes (at most the number):
+           8 and under                A+ 5  A 6  B+ 6.5  B 7  C 8
+           9-12                       A+ 4  A 5  B+ 5.5  B 6  C 7
+           13 and over                A+ 8  A 8.5  B+ 9  B 11  C 12
+         points: A+ 12 / A 10.5 / B+ 9 / B 7.5 / C 6 / D 0
+         note: 1/2 mile for 12 and under, 1 mile for 13 and over
+   Technical: up to 144 points
+     - Referee seminar: 10 credits
+         points: A+ 40 / A 35 / A- 32.5 / B+ 30 / B 25 / B- 22.5 / C 20 / C- 10 / D 0
+     - Free sparring: 4 credits
+         points: A+ 16 / A 14 / A- 13 / B+ 12 / B 9 / B- 8.5 / C 8 / C- 4 / D 0
+     - Target kick (30 sec): 4 credits
+         graded by kicks in 30 seconds (at least the number):
+           9 and under                A+ 35  A 31  B+ 26  B 22  C 21
+           10 and over                A+ 39  A 34  B+ 29  B 24  C 23
+         points: A+ 16 / A 14 / B+ 12 / B 9 / C 8 / D 0
+     - Korean terminology: 4 credits
+         points: A+ 16 / A 14 / A- 13 / B+ 12 / B 9 / B- 8.5 / C 8 / C- 4 / D 0
+     - TKD knowledge: 4 credits
+         points: A+ 16 / A 14 / A- 13 / B+ 12 / B 9 / B- 8.5 / C 8 / C- 4 / D 0
+     - Written test: 10 credits
+         points: A+ 40 / A 35 / A- 32.5 / B+ 30 / B 25 / B- 22.5 / C 20 / C- 10 / D 0
+   Curriculum: up to 243 points
+     - White-Bodan Curriculum: 10 credits
+         points: A+ 45 / A 40 / A- 38 / B+ 35 / B 33 / B- 30 / C 25 / C- 20 / D 0
+     - Tae Baek Poomsae: 4 credits
+         points: A+ 18 / A 16 / A- 15.2 / B+ 14 / B 13.2 / B- 12 / C 10 / C- 8 / D 0
+     - 1st Dan Curriculum: 10 credits
+         points: A+ 45 / A 40 / A- 38 / B+ 35 / B 33 / B- 30 / C 25 / C- 20 / D 0
+     - 2nd Dan Curriculum: 10 credits
+         points: A+ 45 / A 40 / A- 38 / B+ 35 / B 33 / B- 30 / C 25 / C- 20 / D 0
+     - 3rd Dan Sa Bang Chuck (1-6): 4 credits
+         points: A+ 18 / A 16 / A- 15.2 / B+ 14 / B 13.2 / B- 12 / C 10 / C- 8 / D 0
+     - Creative Poomsae: 4 credits
+         points: A+ 18 / A 16 / A- 15.2 / B+ 14 / B 13.2 / B- 12 / C 10 / C- 8 / D 0
+     - Creative Sa Bang Chuck: 4 credits
+         points: A+ 18 / A 16 / A- 15.2 / B+ 14 / B 13.2 / B- 12 / C 10 / C- 8 / D 0
+     - Technical Break: 4 credits
+         points: A+ 18 / A 16 / A- 15.2 / B+ 14 / B 13.2 / B- 12 / C 10 / C- 8 / D 0
+     - Power Break: 4 credits
+         points: A+ 18 / A 16 / A- 15.2 / B+ 14 / B 13.2 / B- 12 / C 10 / C- 8 / D 0
+   Other requirements: up to 128 points
+     - Egg test: 4 credits [handed in]
+         points: A+ 16 / A 14 / A- 13 / B+ 12 / B 9 / B- 8.5 / C 8 / C- 4 / D 0
+     - Meditation: 4 credits [handed in]
+         points: A+ 16 / A 14 / A- 13 / B+ 12 / B 9 / B- 8.5 / C 8 / C- 4 / D 0
+     - Assistant instructor course: 10 credits
+         points: A+ 40 / A 35 / A- 32.5 / B+ 30 / B 25 / B- 22.5 / C 20 / C- 10 / D 0
+     - Appreciation letter: 4 credits [handed in]
+         points: A+ 16 / A 14 / A- 13 / B+ 12 / B 9 / B- 8.5 / C 8 / C- 4 / D 0
+     - TKD project: 10 credits [handed in]
+         points: A+ 40 / A 35 / A- 32.5 / B+ 30 / B 25 / B- 22.5 / C 20 / C- 10 / D 0
+   Extra points (added to the total, no limit) - TO CONFIRM with Master Jeong:
+     - Extra stripes: 1 point each
+     - Outstanding performance: 3+ -> 5
+     - Competitions: 1+ -> 3 , 2+ -> 5 , 3+ -> 7 , 4+ -> 10 , 5+ -> 15
+     - Attendance (classes): 210+ -> 3 , 231+ -> 5 , 250+ -> 10
+     - Special events: 3+ -> 3 , 6+ -> 5 , 10+ -> 10
+     - Breaking class: 11+ -> 3 , 17+ -> 5 , 21+ -> 10
+     note: 4th Dan uses the 3rd Dan numbers for now
+   Handed in by Submissions due: Egg test, Meditation, Appreciation letter, TKD project
+
+6. NOT SEEDED
+  No cycles, no candidates, no payments. Fall 2026 is not a cycle.
+
+7. THE PLACEHOLDER WAIVER TEXT (version 2026-1)
+  PLACEHOLDER — replace with the school's waiver before opening registration.
+
+  Black Belt testing agreement (the points of the old registration page, kept here only until the school's own waiver text is saved on Rubric and prices):
+
+  1. Every subject must be passed. A subject that is not passed is made up at a later testing.
+  2. Testing fees are non-refundable. If the candidate does not pass, the fees are applied to the next test.
+  3. I understand that Taekwondo training and testing are physical activities that carry a risk of injury, and I accept that risk.
+  4. I release Jae H. Jeong's U.S. Taekwondo Center, its owners, instructors and staff from claims for injuries that happen during training or testing.
+
+  By signing below I agree to the above.

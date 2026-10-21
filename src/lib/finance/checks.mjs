@@ -17,6 +17,7 @@ import {
 import { toCsv, guardFormula, quoteCell, centsToCsvNumber, csvFileName, CSV_COLUMNS, CSV_BOM } from './csv.js';
 import { createFinanceBackend, FINANCE_RPC_NAMES, FINANCE_WRITE_RPC_NAMES } from '../mockFinance.js';
 import { addDays } from '../testing/eventRules.js';
+import { newDays, unclosedPairsFrom, monthsToLoad, keepRecent, createSeenStore, pairKey, SEEN_KEY } from './reminderAck.js';
 
 let count = 0;
 function check(label, fn) {
@@ -872,6 +873,79 @@ check('mock: camp payments — Daily report per desk school, edit / undo / mis-c
   const both = withCamps.rpc('finance_day_both', { p_day: T }, ADMIN_CTX).data;
   const bothPlain = without.rpc('finance_day_both', { p_day: T }, ADMIN_CTX).data;
   assert.equal(both.total_cents, bothPlain.total_cents + 16600 + 35000 + 27500);
+});
+
+// ======================= Home reminder "OK" (reminderAck.js, v0.811) =======================
+
+check('reminderAck: newDays, the unclosed pairs from History, the months to read', () => {
+  assert.deepEqual(newDays(['worcester|2026-10-01', 'worcester|2026-10-19'], ['worcester|2026-10-01']), ['worcester|2026-10-19']);
+  assert.deepEqual(newDays(['worcester|2026-10-01'], new Set(['worcester|2026-10-01'])), []);
+  assert.deepEqual(newDays(['shrewsbury|2026-10-01'], ['worcester|2026-10-01']), ['shrewsbury|2026-10-01']); // the school counts
+  assert.deepEqual(newDays(['worcester|2026-10-01'], undefined), ['worcester|2026-10-01']);
+  // Only 'not_closed', only today − 30 … today − 1, oldest first, no duplicates.
+  const today = '2026-10-20';
+  const days = [
+    { day: '2026-10-20', school: 'worcester', tag: 'today_open' },
+    { day: '2026-10-20', school: 'shrewsbury', tag: 'not_closed' }, // today itself never counts
+    { day: '2026-10-19', school: 'worcester', tag: 'not_closed' },
+    { day: '2026-10-18', school: 'worcester', tag: 'closed' },
+    { day: '2026-10-17', school: 'worcester', tag: 'no_payments' },
+    { day: '2026-09-20', school: 'shrewsbury', tag: 'not_closed' }, // today − 30: inside
+    { day: '2026-09-20', school: 'worcester', tag: 'not_closed' },
+    { day: '2026-09-19', school: 'worcester', tag: 'not_closed' }, // today − 31: outside
+    { day: '2026-10-19', school: 'worcester', tag: 'not_closed' },
+  ];
+  assert.deepEqual(unclosedPairsFrom(days, today), ['shrewsbury|2026-09-20', 'worcester|2026-09-20', 'worcester|2026-10-19']);
+  assert.deepEqual(monthsToLoad('2026-10-20'), ['2026-09-01', '2026-10-01']);
+  assert.deepEqual(monthsToLoad('2026-10-01'), ['2026-09-01']); // Sep 1 … Sep 30
+  assert.deepEqual(monthsToLoad('2026-10-31'), ['2026-10-01']); // Oct 1 … Oct 30
+  assert.deepEqual(monthsToLoad('2027-03-01'), ['2027-01-01', '2027-02-01']); // Jan 30 … Feb 28
+  assert.deepEqual(monthsToLoad('2027-01-15'), ['2026-12-01', '2027-01-01']); // across the year
+});
+
+check('reminderAck: prune at the 30-day edge; storage that fails or is damaged never crashes', () => {
+  const fakeStorage = () => {
+    const data = new Map();
+    return { getItem: (k) => (data.has(k) ? data.get(k) : null), setItem: (k, v) => data.set(k, String(v)), data };
+  };
+  // Saved, merged, and pruned: today − 30 stays, today − 31 goes.
+  const mem = fakeStorage();
+  const store = createSeenStore(() => mem);
+  assert.deepEqual(store.getSeen(), []);
+  assert.equal(store.markSeen([pairKey('worcester', '2026-09-19'), pairKey('worcester', '2026-09-20')]), true);
+  assert.equal(store.markSeen([pairKey('worcester', '2026-09-20'), pairKey('shrewsbury', '2026-10-19')]), true);
+  assert.deepEqual(store.getSeen(), ['worcester|2026-09-19', 'worcester|2026-09-20', 'shrewsbury|2026-10-19']);
+  assert.deepEqual(store.pruneSeen('2026-10-20'), ['worcester|2026-09-20', 'shrewsbury|2026-10-19']);
+  assert.deepEqual(JSON.parse(mem.data.get(SEEN_KEY)), ['worcester|2026-09-20', 'shrewsbury|2026-10-19']);
+  assert.deepEqual(keepRecent(['junk', 42, 'worcester|2026-10-19', 'worcester|2026-10-19'], '2026-10-20'), ['worcester|2026-10-19']);
+  // Damaged JSON / not a list → nothing seen.
+  mem.data.set(SEEN_KEY, '{not json');
+  assert.deepEqual(store.getSeen(), []);
+  mem.data.set(SEEN_KEY, '{"a":1}');
+  assert.deepEqual(store.getSeen(), []);
+  // Storage blocked (every call throws, like some private windows): nothing seen, OK kept in memory.
+  const blocked = { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); } };
+  const off = createSeenStore(() => blocked);
+  assert.deepEqual(off.getSeen(), []);
+  assert.equal(off.markSeen(['worcester|2026-10-19']), false);
+  assert.deepEqual(off.getSeen(), ['worcester|2026-10-19']); // the line still goes away until reload
+  assert.deepEqual(off.pruneSeen('2026-12-31'), []);
+  // No storage at all (the getter itself throws).
+  const none = createSeenStore(() => { throw new Error('no localStorage'); });
+  assert.deepEqual(none.getSeen(), []);
+  assert.equal(none.markSeen(['worcester|2026-10-19']), false);
+});
+
+check('reminderAck + mock: History lists exactly the days finance_home counts', () => {
+  const home = call('finance_home', {}).earlier;
+  assert.ok(home.count > 0, 'the sample has unclosed earlier days');
+  for (const code of [null, 'worcester', 'shrewsbury']) {
+    const days = monthsToLoad(T).flatMap((month) => call('finance_history', { p_location_code: code, p_month: month }).days);
+    const pairs = unclosedPairsFrom(days, T);
+    const want = code === null ? home : home.by_school[code] ?? { count: 0, first_day: null };
+    assert.equal(pairs.length, want.count, `count for ${code}`);
+    assert.equal(pairs[0]?.split('|')[1] ?? null, want.first_day, `first day for ${code}`);
+  }
 });
 
 console.log(`${count} groups of checks ran.`);

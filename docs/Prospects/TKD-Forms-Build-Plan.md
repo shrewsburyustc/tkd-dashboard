@@ -50,7 +50,7 @@ A new **Forms** section (rail icon `ti-clipboard-text`, after Calendar, address 
 
   A Hyperdrive config belongs to **one** database login, so Forms needs its own. The plan:
   - **copy** the generic helpers (Origin, size, honeypot, speed, Turnstile, client key) into `functions/_lib/forms/*`, or — only if the Color Belt session agrees — move them into a shared module both use. Color Belt's files are never changed without that agreement;
-  - new Cloudflare settings: Hyperdrive config + binding `HYPERDRIVE_FORMS` (login `forms_registrar`, caching off, connection limit ≤ the role's), kill switch `PUBLIC_FORMS`, Turnstile action `form`, the `RATE_LIMITER` binding;
+  - new Cloudflare settings: Hyperdrive config + binding `HYPERDRIVE_FORMS` (login `forms_registrar`, caching off, connection limit ≤ the role's), kill switch `PUBLIC_FORMS`, Turnstile action `form`, ~~the `RATE_LIMITER` binding~~ (replaced by rulebook v0.410: Pages Functions can't have it; a WAF rule once the school has its own domain);
   - `public/_redirects` (`/f/* /f 200`), a strict CSP block for `/f` in `public/_headers`, and a Vite dev rewrite for `/f/*`. `_routes.json` already covers `/api/*`.
 
 ## 2. Database — migration `0009_forms.sql`

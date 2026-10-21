@@ -8,6 +8,9 @@
 // "camp_signup", passed as expectedAction — so a Color Belt token can't be used for a camp
 // sign-up and the other way round. Color Belt passes nothing and keeps "register".
 // Plan §8: success, hostname = production host, action = register, remoteip.
+//
+// The action is a parameter (expectedAction, CONTRACT-0016 §9.2): Color Belt doesn't pass it, so it
+// stays 'register' exactly as before; the Black Belt Function passes 'bb_register'.
 
 export const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 export const TURNSTILE_ACTION = 'register';
@@ -20,8 +23,9 @@ export const TURNSTILE_ACTION = 'register';
 //   token         what the page sent as turnstile_token
 //   ip            the visitor's IP (Cloudflare uses it as one more signal; never stored)
 //   expectedHost  e.g. "tkd-dashboard.pages.dev" (taken from PUBLIC_ORIGIN)
-//   expectedAction  optional: the action the page named when it asked for the token. Default
-//                 "register" (the Color Belt form, unchanged); the camp form passes "camp_signup".
+//   expectedAction  optional: the action the page started Turnstile with. Default "register"
+//                 (the Color Belt form, unchanged); the camp form passes "camp_signup", the
+//                 Black Belt Function passes "bb_register".
 export async function verifyTurnstile({ fetchImpl, secret, token, ip, expectedHost, expectedAction = TURNSTILE_ACTION }) {
   // Tokens are at most 2048 characters (Cloudflare's documented limit).
   if (typeof token !== 'string' || token.length === 0 || token.length > 2048) return false;
