@@ -6,13 +6,22 @@
 //   - Tablet (640–1023px, or any touch screen ≥640px): 72px wide, label always shown.
 //   - Phone (<640px): hidden — BottomBar.jsx is used instead.
 // All of that switching is done in CSS (src/styles/app.css, "Rail" section).
+// A section with pages of its own (navItems.js "pages" — Testing, once Star testing exists) is
+// drawn by RailMenu.jsx instead: same icon, plus the dark hover menu on mouse devices (v0.59).
 import { NAV_ITEMS } from './navItems.js';
+import RailMenu from './RailMenu.jsx';
 
-export default function Rail({ current, onNavigate, badges = {} }) {
+// currentPage: the open page inside the current section (e.g. Testing's 'star'), or null.
+// badges: { [sectionId]: count } — Prospects' new sign-ups (v0.236).
+export default function Rail({ current, currentPage = null, onNavigate, badges = {} }) {
   return (
     <nav className="rail" aria-label="Sections">
-      {NAV_ITEMS.map(({ id, label, Icon }) => {
+      {NAV_ITEMS.map((item) => {
+        const { id, label, Icon } = item;
         const isCurrent = id === current;
+        if (item.pages) {
+          return <RailMenu key={id} item={item} isCurrent={isCurrent} currentPage={currentPage} onNavigate={onNavigate} />;
+        }
         return (
           <button
             key={id}

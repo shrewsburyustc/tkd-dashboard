@@ -838,6 +838,28 @@ Not part of the 0006 paste. When the Star family form's Pages Function (`functio
 2. `tkd-dashboard` → **Settings** → **Bindings** → **Add** → **Hyperdrive**: variable name `HYPERDRIVE_STAR`, configuration `tkd-star-registrar`, **Production only**.
 3. The Star Function has its own kill switch, the Production variable `STAR_PUBLIC_REGISTRATION` (default `off`).
 
+### 13i. Star Function settings at go-live (you, in Cloudflare — after the final merge into `main` and the push)
+
+The Star family form's Function (`functions/api/star/[code].js`, page `/star/<code>`) reaches production only with the final Star merge into `main` and its push (build plan §2, v0.222). It is deployed with that push **whatever `VITE_STAR_TESTING` says**; its only guards are its own kill switch and failing closed when a setting is missing — with no Star settings at all, every request answers "not open" and no database connection is opened. So these steps can wait until after the push. Each step needs Jeffrey's OK. **No value goes into git, `.env.local`, chat or a screenshot.**
+
+**Before the final push:** Cloudflare → **Workers & Pages** → `tkd-dashboard` → **Settings** → **Variables and Secrets** → **Production**: check `VITE_STAR_TESTING` is **not** `on` (the push starts a production build at once).
+
+**After the push, in this order:**
+1. **The kill switch, off.** Same page (**Production** only; leave **Preview** empty): add
+
+   | Name | Type | Value |
+   |---|---|---|
+   | `STAR_PUBLIC_REGISTRATION` | Text | `off` |
+
+   Only the exact text `on` turns the Star form on; anything else, or no setting, is off.
+2. **Reused, not new — check they are there, don't change them:** `TURNSTILE_SITE_KEY`, `TURNSTILE_SECRET`, `CLIENT_KEY_SECRET`, `PUBLIC_ORIGIN` (from 12a). The Star Function reads the same ones as Color Belt's. **`CLIENT_KEY_SECRET` must stay the same one**: the database's limit of 20 tries an hour per visitor counts both forms together, and that only works when both Functions make the same anonymous key. Don't make a second Turnstile widget either: the same widget serves both pages (the Star page asks for its own action, `star_register`, and the Function refuses a Color Belt token and the other way round).
+3. **No `RATE_LIMITER` step** (rulebook v0.410, 2026-10-21). Pages Functions can't have a Rate Limiting binding (it exists for Workers only), and a Cloudflare WAF rule needs the school's own domain, so Star — like every public form — goes live with the current protections: the per-server memory counter, Turnstile on Send, the database's 20-tries-an-hour limit per visitor, and the off switches (13g). **The risk accepted until then:** the Star link code is printed on flyers, and each Cloudflare server keeps its own count, so a flood of page loads spread over many servers isn't stopped and can use up all 5 of `star_registrar`'s database connections — real families then can't register until it stops. If that happens, use the off switches (13g). **Revisit** with a WAF rate-limiting rule when the school has its own domain. (If a `RATE_LIMITER` binding ever exists, the Function uses it by itself.)
+4. **The `star_registrar` password:** do **13e** first if it isn't set yet (13f needs it).
+5. **Hyperdrive:** **13f** (the second configuration `tkd-star-registrar`, caching disabled, origin connection limit 5 or less, bound as `HYPERDRIVE_STAR`, **Production only**). Preview gets no binding, so a branch preview site can never reach the database.
+6. **Retry deployment** (Deployments → latest → **Retry deployment**): variables and bindings only take effect with the next deployment.
+7. **Check it is off:** open a made-up link `https://tkd-dashboard.pages.dev/star/abcdefgh` — it must say registration isn't open.
+8. **Before `STAR_PUBLIC_REGISTRATION` is ever set to `on`** (for the TEST registration or for families): follow build plan §2 steps 4–6: both street addresses in **Settings → Schools**, one TEST registration with `STAR_PUBLIC_REGISTRATION = on` (+ Retry deployment), and the switches on when families should register. To stop it again: 13g.
+
 ### 13g. Off switch (any time)
 
 In this order (step 1 works in seconds):

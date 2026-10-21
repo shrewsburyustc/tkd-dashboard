@@ -1,0 +1,104 @@
+/*
+  chooser.css — the Testing choice page (TestingChooser.jsx) and Color Belt's "← Testing" link.
+  Why it exists: the look approved in the Phase 1 chooser mockups (v0.177): each testing type is a
+  bordered row with a blue-tint icon tile, its name, an optional gray "Next: …" line and a chevron.
+  The page itself uses Testing's usual frame (.testing, .phead, .ptitle from testing.css).
+*/
+
+/* ===== The rows ===== */
+.tc-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  max-width: 720px;
+  margin: var(--space-8) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tc-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  width: 100%;
+  min-height: 64px;
+  padding: var(--space-12) var(--space-16);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--text-14);
+  text-align: left;
+}
+
+/* The icon tile: blue tint with the blue icon (as drawn). */
+.tc-icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-control);
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+}
+
+.tc-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tc-name {
+  font-weight: 500;
+}
+
+.tc-next {
+  margin-top: 2px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.tc-chevron {
+  flex: none;
+  margin-left: auto;
+  color: var(--color-text-secondary);
+}
+
+/* Mouse: a light gray step under the pointer (never blue — blue means "current", §7). */
+@media (hover: hover) {
+  .tc-row:hover {
+    background: var(--color-surface);
+  }
+}
+
+/* Pressed (a finger on the row, or a mouse button held): the house pressed look — the same light
+   gray as the keypad keys. (The touch pressed look was not drawn; v0.177 "built to the house style".) */
+.tc-row:active {
+  background: var(--color-surface);
+}
+
+/* The keyboard ring (drawn on PC frame 2): the house 2px blue ring, 2px outside the row. */
+.tc-row:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+/* ===== "← Testing" above Color Belt's title (same look as Star's) ===== */
+.tc-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 24px;
+  margin-bottom: 2px;
+}
+
+/* Touch: a 44px tall tap area, pulled back with negative margins so the title doesn't move down. */
+@media (pointer: coarse) {
+  .tc-back {
+    min-height: var(--tap-size);
+    margin: -10px 0 -8px;
+  }
+}
