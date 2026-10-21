@@ -8,7 +8,7 @@
 import SignaturePad from '../register/SignaturePad.jsx';
 import { FieldError, TickBox, TopError } from './parts.jsx';
 import { extraPriceLabel, priceFor } from './form.js';
-import { campDaysShort, campHours, capitalize, childDaysLabel, formatDollars, shortDate } from './format.js';
+import { campDaysShort, campHours, capitalize, childDaysLabel, formatDollars, monthDay, shortDate } from './format.js';
 import { formatPhone, phoneDigits } from '../lib/camps/campRules.js';
 import { normalizeName } from '../lib/testing/names.js';
 import * as T from './text.js';
@@ -72,8 +72,17 @@ export default function StepCheck({
                 {T.dayCount(priced.dayCount)} · {childDaysLabel(days)}
                 <small>{kind === 'early' ? T.earlyPriceNote(shortDate(camp.earlyUntil)) : T.REGULAR_PRICE_NOTE}</small>
               </span>
-              <b>{formatDollars(priced.baseCents ?? 0)}</b>
+              {/* One week: the price on this line. More weeks (weekly pricing, v0.717): one line per week below. */}
+              {(priced.weeks ?? []).length > 1 ? null : <b>{formatDollars(priced.baseCents ?? 0)}</b>}
             </div>
+            {(priced.weeks ?? []).length > 1
+              ? priced.weeks.map((w) => (
+                  <div key={w.monday} className="camp-line">
+                    <span>{T.weekLine(monthDay(w.monday), w.dayCount)}</span>
+                    <b>{formatDollars(w.cents ?? 0)}</b>
+                  </div>
+                ))
+              : null}
             {priced.extras.map((e) => (
               <div key={e.extraId} className="camp-line">
                 <span>{extraPriceLabel(e, camp, child)}</span>

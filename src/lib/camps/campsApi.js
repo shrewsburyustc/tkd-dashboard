@@ -185,6 +185,7 @@ export async function loadCamp(campId) {
 // Camper detail (camp_camper_detail — the ONLY way the app sees phones; staff and admins).
 // → { status:'ok', camper: RosterRow, family: { parentName, parentPhone, parentRelation,
 //     emergencyName, emergencyPhone, emergencyRelation }, breakdown: { dayCount, priceKind, member,
+//     weeks?:[{ monday, dayCount, cents }] (weekly pricing, migration 0022 — may be missing),
 //     baseCents, extras:[{ name, per, days:[date], cents }], totalCents, paidCents, owesCents },
 //     payments: [{ id, kind, amountCents, method, paidOn, recordedAt, recordedByName,
 //     reversesPaymentId }], checkins: [{ day, checkedInAt, checkedInByName }] }
@@ -255,7 +256,8 @@ export async function saveTemplate(campId, name) {
 }
 
 // Edit template (admin).
-//   input = { name, locationCode, bothSchools, dayCount, startTime, endTime, opensDaysBefore,
+//   input = { name, locationCode, bothSchools, dayCount (days per week = the grid's rows, 1–7; weekly
+//             pricing v0.717), startTime, endTime, opensDaysBefore,
 //             closesDaysBefore, earlyDaysBefore, minAge, maxAge, prices, extras, description, waiverText }
 //   (extras: [{ name, priceCents, per, notForAllDays, onlyWeekdays }])
 // → { status:'ok', version } · 'duplicate_name' · 'invalid' (+ field:'offsets' when the three

@@ -14,6 +14,7 @@ function utcDate(dateIso) {
   return new Date(Date.UTC(y, m - 1, d));
 }
 const WEEKDAY = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'short' });
+const MONTH_DAY = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
 const YEAR = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', year: 'numeric' });
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -98,6 +99,9 @@ export function campHours(start, end) {
   const y = clock(b);
   return x.half === y.half ? `${x.text} – ${y.text} ${y.half}` : `${x.text} ${x.half} – ${y.text} ${y.half}`;
 }
+
+// "Jul 6" — the Monday in a "Week of Jul 6" price line (weekly pricing, rulebook v0.717).
+export const monthDay = (dateIso) => MONTH_DAY.format(utcDate(dateIso));
 
 // The first letter in capitals: "cash" → "Cash" (for payment words at the start of a line).
 export const capitalize = (text) => (text ? text[0].toUpperCase() + text.slice(1) : '');

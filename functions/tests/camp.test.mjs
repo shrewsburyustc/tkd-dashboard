@@ -344,7 +344,7 @@ test('POST: every §4.3 field limit → bad_request without a database call', as
     'no children': { children: [] },
     '4 children': { children: [goodChild(), goodChild(), goodChild(), goodChild()] },
     'children not a list': { children: goodChild() },
-    '11 day ids': child({ day_ids: ids(11) }),
+    '61 day ids': child({ day_ids: ids(61) }), // a camp has up to 60 days (weekly pricing R4)
     'no day ids': child({ day_ids: [] }),
     'repeated day id': child({ day_ids: [DAY_1, DAY_1] }),
     'repeated day id (case)': child({ day_ids: [DAY_1, DAY_1.toUpperCase()] }),
@@ -362,7 +362,7 @@ test('POST: every §4.3 field limit → bad_request without a database call', as
     'extra bad uuid': child({ extras: [{ extra_id: 'x', day_ids: [] }] }),
     'extra unknown key': child({ extras: [{ extra_id: EXTRA_1, day_ids: [], price_cents: 0 }] }),
     'extra repeated day': child({ extras: [{ extra_id: EXTRA_1, day_ids: [DAY_1, DAY_1] }] }),
-    'extra 11 days': child({ extras: [{ extra_id: EXTRA_1, day_ids: ids(11) }] }),
+    'extra 61 days': child({ extras: [{ extra_id: EXTRA_1, day_ids: ids(61) }] }),
     'extra day_ids missing': child({ extras: [{ extra_id: EXTRA_1 }] }),
     'phone 21 characters': { parent: { name: 'Laura Rossi', phone: '5'.repeat(21), relation: 'Mother' } },
     'relation 81 characters': { emergency: { name: 'Paul', phone: '5085550187', relation: 'x'.repeat(81) } },
@@ -376,7 +376,7 @@ test('POST: every §4.3 field limit → bad_request without a database call', as
     'signature too long': { signature: 'x'.repeat(70001) },
     'ack_version too long': { ack_version: 'x'.repeat(41) },
     'waiver_version too long': { waiver_version: 'x'.repeat(65) },
-    'expected total 600001': { expected_total_cents: 600001 },
+    'expected total 3000001': { expected_total_cents: 3000001 }, // 3 × $10,000 (weekly pricing R5)
     'expected total -1': { expected_total_cents: -1 },
     'expected total 1.5': { expected_total_cents: 1.5 },
     'expected total missing': { expected_total_cents: undefined },
@@ -466,7 +466,22 @@ test('POST: ok → exactly the allowlist; typed values passed; uuids lower-cased
   assert.equal(db.log.closed, 1, 'client closed through waitUntil');
 });
 
+test('POST: ok with weekly pricing → each child\'s weeks passed on, extra keys inside a week dropped', async () => {
+  const weeks = [
+    { monday: '2027-07-05', day_count: 5, cents: 27500, junk: 1 },
+    { monday: '2027-07-12', day_count: 3, cents: 19500 },
+  ];
+  const fromDb = { ...dbSignupOk, children: [{ ...dbSignupOk.children[0], weeks }] };
+  const r = await run(handlePost, context(), { openDatabase: fakeDb({ signup: fromDb }).openDatabase, fetchImpl: fakeTurnstile().fetchImpl });
+  assert.equal(r.json.status, 'ok');
+  assert.deepEqual(r.json.children[0].weeks, [
+    { monday: '2027-07-05', day_count: 5, cents: 27500 },
+    { monday: '2027-07-12', day_count: 3, cents: 19500 },
+  ]);
+});
+
 test('POST: every database status mapped and reduced to exactly the §4.6 allowlist', async () => {
+
   const cases = [
     [{ status: 'not_found', extra: 1 }, { status: 'not_found' }],
     [{ status: 'not_open', opens_on: '2027-03-01', extra: 1 }, { status: 'not_open', opens_on: '2027-03-01' }],
@@ -484,6 +499,12 @@ test('POST: every database status mapped and reduced to exactly the §4.6 allowl
     [{ status: 'camp_changed', camp: { status: 'not_found' } }, { status: 'unavailable' }],
     [{ status: 'price_changed', new_total_cents: 1, old_total_cents: 2 }, { status: 'unavailable' }],
     [{ status: 'ok', reference: 'CP-1' }, { status: 'unavailable' }], // no children: wrong shape
+    // Weekly pricing (0022): a child's 'weeks' of another shape → unavailable.
+    [{ ...dbSignupOk, children: [{ ...dbSignupOk.children[0], weeks: 'x' }] }, { status: 'unavailable' }],
+    [{ ...dbSignupOk, children: [{ ...dbSignupOk.children[0], weeks: [{ monday: 'Nov 23', day_count: 2, cents: 15000 }] }] }, { status: 'unavailable' }],
+    [{ ...dbSignupOk, children: [{ ...dbSignupOk.children[0], weeks: [{ monday: '2026-11-23', day_count: 8, cents: 15000 }] }] }, { status: 'unavailable' }],
+    [{ ...dbSignupOk, children: [{ ...dbSignupOk.children[0], weeks: [{ monday: '2026-11-23', day_count: 2, cents: '150' }] }] }, { status: 'unavailable' }],
+
     [{ status: 'no_access' }, { status: 'unavailable' }],
     [{ status: 'stale' }, { status: 'unavailable' }],
     [null, { status: 'unavailable' }],

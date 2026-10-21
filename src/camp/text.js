@@ -42,15 +42,21 @@ export const PER_DAY_WHICH = 'which days?'; // "$8 a day · which days?"
 export const onceCost = (amount) => amount; // a once extra just shows its price, e.g. "$5" (not in the mockups)
 // The running price box under each child
 export const dayCount = (n) => (n === 1 ? '1 day' : `${n} days`);
+// Weekly pricing (rulebook v0.717): a child coming in more than one week gets one price line per
+// week, "Week of Jul 6 · 5 days" + the amount, under "member · early price".
+export const weekLine = (monday, days) => `Week of ${monday} · ${dayCount(days)}`;
+// "8 days in 2 weeks" (the "You're signed up" pay lines, more than one week)
+export const daysInWeeks = (days, weeks) => `${dayCount(days)} in ${weeks} weeks`;
 export const MEMBER_WORD = 'member';
 export const NON_MEMBER_WORD = 'non-member';
 export const EARLY_PRICE_WORD = 'early price';
 export const REGULAR_PRICE_WORD = 'regular price'; // after the early-price date (not in the mockups)
 export const extraTimes = (name, count) => `${name} × ${count}`;
 // An extra limited to some days (CP1 2026-10-19): "Pizza party — Wed" in the price lines and
-// "Pizza party: Wed, Fri, included when coming every day" under the day buttons / in the camp info.
+// "Pizza party: Wed, Fri, included in any week they come every day" under the day buttons / in the
+// camp info (weekly pricing R6: included per week).
 export const extraOnDays = (name, days) => `${name} — ${days}`;
-export const onlyOnLine = (name, days, includedForAllDays) => `${name}: ${days}${includedForAllDays ? ', included when coming every day' : ''}`;
+export const onlyOnLine = (name, days, includedForAllDays) => `${name}: ${days}${includedForAllDays ? ', included in any week they come every day' : ''}`;
 export const childTotal = (name) => `${name}’s total`;
 export const ADD_CHILD = 'Add another child';
 export const UP_TO_3 = 'Up to 3 children';

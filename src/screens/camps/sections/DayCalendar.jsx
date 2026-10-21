@@ -1,11 +1,11 @@
 // DayCalendar.jsx — the month calendar where an admin taps a camp's days on or off (C3, section 1).
-// Why it exists: a camp has 1–10 days that don't have to be next to each other (Thanksgiving: Wed
+// Why it exists: a camp has 1–60 days (weekly pricing v0.717; was 10) that don't have to be next to each other (Thanksgiving: Wed
 // & Fri), so a "from – to" pair of dates can't describe it. Tapping days on a month view can.
 //   - a Month and a Year list at the top (as drawn), plus ‹ › buttons for the next / previous month
 //   - Su–Sa columns; each day is a button. Chosen days use the DARK outline, not blue (C3 note:
 //     multi-select day chips use the dark outline, v0.713), with aria-pressed for screen readers
 //   - days before today can't be added (an Edit camp's kept past days stay chosen and can be
-//     taken off); with 10 days chosen, other days can't be added
+//     taken off); with 60 days chosen (maxDays), other days can't be added
 //   - keyboard: the calendar is ONE Tab stop; ← → move a day, ↑ ↓ a week, Enter / Space toggles
 // Phones: no frame or gaps, 44px-tall cells, almost edge to edge (camps.css).
 //

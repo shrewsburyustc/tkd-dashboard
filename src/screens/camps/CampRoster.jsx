@@ -15,6 +15,10 @@
 // Paid and "to collect" stay whole-camp). Below it: the possible-duplicate box, then "Removed".
 // Phones: one card per child — name + Paid on top, the week's day buttons underneath (today
 // outlined), 44px targets. The page (CampPage.jsx) does every write; this file only draws.
+// Live-test fixes (2026-10-21): the grid always spans the full width, even for a 1-day camp (the
+// Camper column takes the spare room); a camp with nobody signed up still shows the grid (headers,
+// week switch, legend) with "No campers yet…" as one row inside it, so a closed or past camp
+// never looks like it lost its roster; and the summary line ends with a quiet "Updated 2:41:07 PM".
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp, IconDots, IconSearch, IconX } from '@tabler/icons-react';
@@ -240,6 +244,7 @@ export default function CampRoster({
   busy,
   menuFor,
   notSavedId,
+  updatedAt = null, // when the page last loaded fresh data (useLiveLoad) — shown as "Updated …"
   handlers, // { onOpen(row, el), onMore(row, el), onMarkPaid(row), onReview(row, el), onReviewPair(pair, el), onCheckIn(row, day), onUndoCheckIn(row, day) }
 }) {
   const [popover, setPopover] = useState(null); // { rowId, anchor }
@@ -378,15 +383,19 @@ export default function CampRoster({
             </div>
           );
         })}
-        {q && rows.length === 0 && <p className="tempty">{T.NO_MATCH_ROSTER}</p>}
+        {q && rows.length === 0 && active.length > 0 && <p className="tempty">{T.NO_MATCH_ROSTER}</p>}
+        {/* Nobody signed up (yet): the sentence takes the cards' place, under the week switch. */}
+        {active.length === 0 && <p className="tempty cp-rempty">{T.NO_CAMPERS}</p>}
       </div>
     );
   } else {
     // ----- PC and tablet: the grid -----
     const columns = 2 + shownDays.length + (showMore ? 1 : 0);
     list = (
-      <div className={`cp-rtable-wrap${shownDays.length <= 2 ? ' is-short' : ''}`}>
-        <table className={`cp-rtable${isTouch ? ' is-touch' : ''}${shownDays.length <= 2 ? ' is-short' : ''}`} aria-label={T.ROSTER_LABEL}>
+      // Always the full content width (Jeffrey, live test 2026-10-21: "make it fit the whole
+      // screen"); with only a few days the Camper column takes the spare room (camps.css).
+      <div className="cp-rtable-wrap">
+        <table className={`cp-rtable${isTouch ? ' is-touch' : ''}`} aria-label={T.ROSTER_LABEL}>
           <thead>
             <tr>
               <th scope="col" className="cp-rcol-name">
@@ -435,10 +444,18 @@ export default function CampRoster({
                 </tr>
               );
             })}
-            {q && rows.length === 0 && (
+            {q && rows.length === 0 && active.length > 0 && (
               <tr>
                 <td colSpan={columns} className="tempty">
                   {T.NO_MATCH_ROSTER}
+                </td>
+              </tr>
+            )}
+            {/* Nobody signed up (yet): one full-width row inside the grid. */}
+            {active.length === 0 && (
+              <tr>
+                <td colSpan={columns} className="tempty cp-rempty">
+                  {T.NO_CAMPERS}
                 </td>
               </tr>
             )}
@@ -478,17 +495,17 @@ export default function CampRoster({
       </div>
     ) : null;
 
-  // A camp nobody signed up for yet: just the empty-state line (review 9).
-  if (active.length === 0 && removed.length === 0) {
-    return (
-      <div className="cp-roster-area">
-        <p className="tempty ev-empty">{T.NO_CAMPERS}</p>
-      </div>
-    );
-  }
+  // (A camp nobody signed up for used to show only the sentence here; since the live test it shows
+  // the grid with the sentence as a row — see the table above.)
+  const hasCampers = active.length > 0 || removed.length > 0;
+  const updated = updatedAt ? <span className="cp-updated">{T.updatedAtLine(updatedAt)}</span> : null;
 
   return (
     <div className="cp-roster-area">
+      {!hasCampers ? (
+        // No campers at all: counts would only read "0 of 0", so the line keeps just "Updated …".
+        updated && <p className="cp-statline">{updated}</p>
+      ) : (
       <p className="cp-statline">
         {first}
         {toCollect === 0 ? (
@@ -505,7 +522,11 @@ export default function CampRoster({
             {T.extraTodayLine(extra.name)} <span className="cp-big">{extraCountOnDay(active, extra, todayDay.dayId, days)}</span>
           </span>
         ))}
+        {updated}
       </p>
+      )}
+      {/* Find a camper only when there is someone to find. */}
+      {hasCampers && (
       <div className="cp-search">
         {/* ti-search = find */}
         <IconSearch size={16} aria-hidden="true" className="cp-search-icon" />
@@ -519,6 +540,7 @@ export default function CampRoster({
           onChange={(event) => onQuery(event.target.value)}
         />
       </div>
+      )}
       <DuplicateBox pairs={pairs} onReview={handlers.onReviewPair} />
       {weekSwitch}
       {list}

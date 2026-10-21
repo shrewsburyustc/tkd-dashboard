@@ -6,7 +6,7 @@
 // The card only draws; CampApp keeps the values and the rules live in form.js / campRules.js.
 import { FieldError, TickBox } from './parts.jsx';
 import { extraPriceLabel, extrasFor, fieldId, isLimited, offeredDayIds, onlyOnLines, priceFor, tidyChild } from './form.js';
-import { formatDollars, shortDate } from './format.js';
+import { formatDollars, monthDay, shortDate } from './format.js';
 import { normalizeName } from '../lib/testing/names.js';
 import * as T from './text.js';
 
@@ -213,13 +213,27 @@ export function TextField({ id, label, value, error, onChange, onBlur, type = 't
 }
 
 // "2 days · non-member · early price $150 / Late pick-up × 2 $16 / Mia's total $166" (C7a).
+// More than one week (weekly pricing, v0.717): "member · early price", then one line per week the
+// child comes, "Week of Jul 6 · 5 days $275", then the extras and the child's total.
 function PriceBox({ priced, member, kind, name, label }) {
+  const weeks = priced.weeks ?? [];
+  const words = `${member ? T.MEMBER_WORD : T.NON_MEMBER_WORD} · ${kind === 'early' ? T.EARLY_PRICE_WORD : T.REGULAR_PRICE_WORD}`;
   return (
     <div className="camp-price" aria-live="polite">
-      <div>
-        {T.dayCount(priced.dayCount)} · {member ? T.MEMBER_WORD : T.NON_MEMBER_WORD} · {kind === 'early' ? T.EARLY_PRICE_WORD : T.REGULAR_PRICE_WORD}{' '}
-        <b>{formatDollars(priced.baseCents ?? 0)}</b>
-      </div>
+      {weeks.length > 1 ? (
+        <>
+          <div>{words.charAt(0).toUpperCase() + words.slice(1)}</div>
+          {weeks.map((w) => (
+            <div key={w.monday}>
+              {T.weekLine(monthDay(w.monday), w.dayCount)} <b>{formatDollars(w.cents ?? 0)}</b>
+            </div>
+          ))}
+        </>
+      ) : (
+        <div>
+          {T.dayCount(priced.dayCount)} · {words} <b>{formatDollars(priced.baseCents ?? 0)}</b>
+        </div>
+      )}
       {priced.extras.map((e) => (
         <div key={e.extraId}>
           {label(e)} <b>{formatDollars(e.cents)}</b>

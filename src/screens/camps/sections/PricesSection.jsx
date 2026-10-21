@@ -1,7 +1,9 @@
 // PricesSection.jsx — section 3 of Add / Edit camp: the price grid (C3, second PC frame).
-// Why it exists: a camper's price depends on HOW MANY days they come, whether they are a member,
+// Why it exists: a camper's price depends on HOW MANY days they come EACH WEEK, whether they are a member,
 // and whether the family signed up early (decision 1 in the status file: price grid + extras).
-// One row per number of days (1 day … "5 days (all days)"), four prices per row: Member early ·
+// Weekly pricing (v0.717): one row per number of days in a week, 1 … W (W = the most camp days in
+// one Monday–Sunday week; the last row is "5 days (full week)"); each week a camper comes is priced
+// by its row and the weeks add up. Four prices per row: Member early ·
 // Member regular · Non-member early · Non-member regular. Whole dollars, $0–$1,000 each (the same
 // money rule as Color Belt, money.js). An empty or wrong box shows its amber message under the
 // row once Save was pressed (and the folded summary turns amber: "1 row needs prices").

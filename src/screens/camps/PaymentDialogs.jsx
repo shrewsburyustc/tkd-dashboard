@@ -5,7 +5,7 @@
 //                     admins). Mark paid then records that method.
 //   EditPaymentDialog "Edit payment" (admins) — fix a recorded payment's method, amount or date.
 //                     The database keeps the old one (a reversal + a new payment, §1.14).
-// The differences from Color Belt: a camper can cost up to $2,000 (not $1,000), and the values
+// The differences from Color Belt: a camper can cost up to $10,000 (not $1,000; weekly pricing v0.717, was $2,000), and the values
 // live in the dialog itself (the camp page passes what it needs and gets the answer back).
 // Small centered dialogs; full screen on phones.
 import { useId, useState } from 'react';
@@ -38,7 +38,7 @@ export function noteFor(status) {
   return 'SAVE_FAILED';
 }
 
-// Reads a payment amount: whole dollars, $1 to $2,000 (Color Belt's money rule, camp limit).
+// Reads a payment amount: whole dollars, $1 to $10,000 (Color Belt's money rule, camp limit).
 function parseAmount(text) {
   let s = String(text ?? '').trim();
   if (s.startsWith('$')) s = s.slice(1);
