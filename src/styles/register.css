@@ -687,11 +687,20 @@ section.reg-card .reg-review {
   margin-top: 12px;
 }
 
-/* ---------- touch screens (tablets): dashboard touch sizes ---------- */
+/* ---------- every touch device, tablets included: 44px buttons and chips, 16px fields (v0.411,
+   following Star's v0.510; was phones only under v0.106) ---------- */
 @media (pointer: coarse) {
   .reg-input {
-    height: var(--control-height-touch);
-    font-size: var(--text-14);
+    height: 40px;
+    font-size: 16px; /* 16px stops phones and tablets zooming in while typing */
+  }
+  .reg-chip {
+    height: var(--tap-size);
+    font-size: 16px;
+  }
+  .reg-btn {
+    height: var(--tap-size);
+    font-size: 15px;
   }
   .reg-label {
     font-size: var(--text-13);
