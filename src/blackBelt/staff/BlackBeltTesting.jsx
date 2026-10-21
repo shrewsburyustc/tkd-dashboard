@@ -24,7 +24,12 @@
 //   onModalOpenChange  tells the App a dialog is open (the page behind becomes inert)
 //   location / onLocationChange   the top bar's location switcher (phase B2: the cycle page's
 //                      Candidates tab follows it — v0.118; Cycles and Rubric don't)
-import { useId, useRef, useState } from 'react';
+//   onLeaveGuardChange (fn | null) — App.jsx asks fn before it leaves this page (the rail, the
+//                      account menu, the browser's Back …). Migration 0024: while a rubric Dan has
+//                      unsaved changes, every way out asks "Discard changes to 1st Dan?" (R10). The
+//                      rubric card registers its question through setGuard; the ways out inside
+//                      Black Belt (the tabs, ← Testing, opening or leaving a cycle) ask it too.
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { IconArrowLeft } from '@tabler/icons-react';
 import CyclesTab from './cycles/CyclesTab.jsx';
 import CyclePage from './cycle/CyclePage.jsx';
@@ -92,8 +97,26 @@ function Header({ action, staffLine, tab, onTab, onBack, ids }) {
   );
 }
 
-export default function BlackBeltTesting({ isAdmin, onBack, location, onLocationChange, ...shared }) {
+export default function BlackBeltTesting({ isAdmin, onBack, location, onLocationChange, onLeaveGuardChange, ...shared }) {
   const baseId = useId();
+
+  // ----- The leave guard (R10) -----
+  // guardRef holds the open rubric card's question (or null). guarded(action) runs the action now,
+  // or — when the question opened — later, from its Discard button.
+  const guardRef = useRef(null);
+  const setGuard = useCallback((fn) => {
+    guardRef.current = fn;
+  }, []);
+  const guarded = useCallback((action) => {
+    if (guardRef.current && guardRef.current(action)) return;
+    action();
+  }, []);
+  const appGuard = useCallback((proceed) => (guardRef.current ? guardRef.current(proceed) : false), []);
+  useEffect(() => {
+    if (!onLeaveGuardChange) return undefined;
+    onLeaveGuardChange(appGuard);
+    return () => onLeaveGuardChange(null);
+  }, [onLeaveGuardChange, appGuard]);
   const ids = { tab: (key) => `${baseId}-tab-${key}`, panel: (key) => `${baseId}-panel-${key}` };
   const [tab, setTabState] = useState(lastTab);
   const [cycleId, setCycleIdState] = useState(lastCycleId);
@@ -114,16 +137,36 @@ export default function BlackBeltTesting({ isAdmin, onBack, location, onLocation
     setTabState('cycles');
   }
 
+  // "Go to the default rubric" on a locked cycle's Rubric tab (R13).
+  function goToDefaultRubric() {
+    lastCycleId = null;
+    setCycleIdState(null);
+    lastTab = 'rubric';
+    setTabState('rubric');
+    window.scrollTo?.(0, 0);
+  }
+
   if (cycleId) {
     return (
       <div className="testing bb">
-        <CyclePage key={cycleId} cycleId={cycleId} isAdmin={isAdmin} onBack={closeCycle} location={location} onLocationChange={onLocationChange} {...shared} />
+        <CyclePage
+          key={cycleId}
+          cycleId={cycleId}
+          isAdmin={isAdmin}
+          onBack={(options) => (options?.unguarded ? closeCycle() : guarded(closeCycle))}
+          onGoToDefaultRubric={() => guarded(goToDefaultRubric)}
+          setGuard={setGuard}
+          guarded={guarded}
+          location={location}
+          onLocationChange={onLocationChange}
+          {...shared}
+        />
       </div>
     );
   }
 
   const renderHeader = (action, staffLine) => (
-    <Header action={action} staffLine={staffLine} tab={tab} onTab={setTab} onBack={onBack} ids={ids} />
+    <Header action={action} staffLine={staffLine} tab={tab} onTab={(key) => guarded(() => setTab(key))} onBack={() => guarded(onBack)} ids={ids} />
   );
 
   return (
@@ -143,6 +186,7 @@ export default function BlackBeltTesting({ isAdmin, onBack, location, onLocation
           panelId={ids.panel('rubric')}
           tabId={ids.tab('rubric')}
           renderHeader={(action) => renderHeader(action, isAdmin ? null : T.VIEW_ONLY)}
+          setGuard={setGuard}
           {...shared}
         />
       )}

@@ -1592,3 +1592,1234 @@
     padding-bottom: calc(var(--bottombar-height) + var(--space-8) + 72px + env(safe-area-inset-bottom));
   }
 }
+
+/* ===== The rubric (migration 0024, mockups R1–R14) =====
+   bbr-  the read view and its card (rubric/RubricReadView.jsx, RubricCard.jsx)
+   bbe-  the editor (rubric/RubricEditor.jsx)
+   bbs-  the dialogs on top of it (SubjectDialog, SplitBracketDialog, CopyDanDialog)
+   Rows changed but not saved are tinted with the app's unsaved colour, --color-warning-bg
+   (rulebook v0.935, which corrects v0.931's #FFF6DD). Tags and amber notes inside a tinted row get
+   a stronger border so they don't blend into it. */
+
+/* ----- The card ----- */
+.bbr-card {
+  margin-bottom: var(--space-12);
+  padding: var(--space-12) var(--space-16) var(--space-16);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.bbr-card.is-editing {
+  padding-top: 0;
+}
+
+.bbr-card-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 28px;
+  margin-bottom: var(--space-8);
+}
+
+.bbr-card-title {
+  font-size: var(--text-14);
+  font-weight: 500;
+}
+
+.bbr-edit {
+  margin-left: auto;
+}
+
+.bbr-sub {
+  margin-bottom: var(--space-8);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbr-switcher {
+  margin-bottom: var(--space-8);
+}
+
+/* A view switch: the selected side is GRAY, not blue (rule 1.2, v0.89) */
+.bbr-gray .segment.is-checked {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.bbr-dans .segment {
+  min-width: 64px;
+}
+
+/* ----- The read view ----- */
+.bbr-pass {
+  margin-bottom: var(--space-12);
+}
+
+.bbr-pass-line {
+  font-size: var(--text-13);
+  line-height: 1.5;
+}
+
+.bbr-most {
+  margin-left: var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbr-makeup {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbr-part {
+  margin-bottom: var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+}
+
+.bbr-part-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-4) var(--space-12);
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-surface);
+}
+
+.bbr-part-name {
+  font-size: var(--text-13);
+  font-weight: 600;
+}
+
+.bbr-part-meta {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbr-hand .bbr-part-name,
+.bbr-hand .bbr-hand-list,
+.bbr-hand .bbr-part-foot {
+  padding-right: var(--space-12);
+  padding-left: var(--space-12);
+}
+
+.bbr-hand .bbr-part-name {
+  padding-top: var(--space-8);
+}
+
+.bbr-hand-list {
+  font-size: var(--text-13);
+}
+
+.bbr-gp {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8) var(--space-16);
+  padding: var(--space-8) var(--space-12);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.bbr-gp-label {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbr-gp-line {
+  font-size: var(--text-13);
+  overflow-wrap: anywhere;
+}
+
+/* Letters over their values: grade points, a subject's points, phone cut-offs */
+.bbr-letters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.bbr-letter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 44px;
+  font-size: var(--text-12);
+}
+
+.bbr-letter dt {
+  font-weight: 500;
+}
+
+.bbr-letter dd {
+  margin: 0;
+  font-size: var(--text-13);
+}
+
+.bbr-letters--boxes .bbr-letter {
+  padding: 2px var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-tag);
+}
+
+.bbr-subjects {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-13);
+}
+
+.bbr-subjects th,
+.bbr-subjects td {
+  padding: var(--space-8) var(--space-12);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+  font-weight: 400;
+}
+
+.bbr-subjects thead th {
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-4);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbr-subjects .num,
+.bbr-cuts .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.bbr-subjects tr.is-open > * {
+  border-bottom: none;
+}
+
+.bbr-sname-line,
+.bbr-sphone-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+}
+
+.bbr-note {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbr-extra-note {
+  padding: var(--space-8) var(--space-12) 0;
+}
+
+/* "Own points": a dashed tag (a subject whose points are typed, not worked out) */
+.bbr-tag-own {
+  border-style: dashed;
+}
+
+.bbr-scoring {
+  color: var(--color-text-secondary);
+}
+
+/* The Cut-offs / Points toggles: text colour with a chevron (not blue — rule 1.2) */
+.bbr-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: var(--space-8);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font-size: var(--text-12);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.bbr-more-row td {
+  padding-top: 0;
+}
+
+.bbr-more-box {
+  display: inline-block;
+  max-width: 100%;
+  margin-bottom: var(--space-8);
+  padding: var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.bbr-way-head {
+  margin: var(--space-4) 0;
+  font-size: var(--text-12);
+  font-weight: 600;
+}
+
+.bbr-cuts {
+  border-collapse: collapse;
+  font-size: var(--text-13);
+}
+
+.bbr-cuts th,
+.bbr-cuts td {
+  padding: var(--space-4) var(--space-12);
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 400;
+  text-align: left;
+}
+
+.bbr-cuts thead th {
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbr-more-foot {
+  margin-top: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbr-part-foot {
+  padding: var(--space-8) var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* Phones: subject rows stack; each cut-off bracket's name above its numbers */
+.bbr-subjects-phone {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bbr-sphone {
+  padding: var(--space-8) var(--space-12);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-13);
+}
+
+.bbr-sphone-line {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbr-toggles {
+  margin-top: var(--space-4);
+}
+
+.bbr-cuts-phone-row {
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.bbr-cuts-phone-label {
+  font-size: var(--text-12);
+  font-weight: 500;
+}
+
+.bbr-extras {
+  margin: 0;
+  padding: 0 var(--space-12);
+  list-style: none;
+}
+
+.bbr-extra {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-4) var(--space-12);
+  padding: var(--space-8) 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-13);
+}
+
+.bbr-extra:last-child {
+  border-bottom: none;
+}
+
+.bbr-extra-rule {
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+/* A cycle's locked Rubric tab: lock icon + line + "Go to the default rubric" */
+.bbr-locked-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+}
+
+.bbr-locked-line svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.bbr-go-default {
+  text-decoration: underline;
+}
+
+/* ----- The editor ----- */
+.bbe {
+  font-size: var(--text-13);
+}
+
+/* The edit bar sticks to the top of the page while it scrolls (R3) */
+.bbe-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8) var(--space-12);
+  margin: 0 calc(-1 * var(--space-16)) var(--space-12);
+  padding: var(--space-8) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.bbe-bar-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.bbe-bar-title {
+  font-weight: 600;
+}
+
+.bbe-bar-sub {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbe-bar-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-8);
+}
+
+.bbe-save-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.bbe-stale-reason {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* A field reached from the "Can't save" list isn't hidden under the sticky edit bar */
+.bbe [data-place],
+.bbe-errors {
+  scroll-margin-top: 80px;
+}
+
+.bbe-gray-line {
+  margin-bottom: var(--space-8);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbe .errbar {
+  margin-bottom: var(--space-12);
+}
+
+/* After Reload: "Your 3 changes weren't saved" in a gray box (R11) */
+.bbe-lost {
+  margin-bottom: var(--space-12);
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-size: var(--text-12);
+}
+
+.bbe-lost ul {
+  margin: var(--space-4) 0 var(--space-8);
+  padding-left: var(--space-16);
+}
+
+/* "Can't save 1st Dan yet. Fix these N things:" (R8, the form-error style) */
+.bbe-errors {
+  margin-bottom: var(--space-12);
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-tag-warn-border);
+  border-radius: var(--radius-tag);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.bbe-errors-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-weight: 600;
+}
+
+.bbe-errors-list {
+  margin: var(--space-4) 0;
+  padding-left: var(--space-24);
+}
+
+.bbe-errors-line {
+  min-height: 24px;
+  color: var(--color-warning-text);
+  text-align: left;
+  text-decoration: underline;
+}
+
+.bbe-errors-foot {
+  font-size: var(--text-12);
+}
+
+.bbe-card {
+  margin-bottom: var(--space-12);
+  padding: var(--space-8) var(--space-12) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.bbe-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-12);
+  margin-bottom: var(--space-8);
+}
+
+.bbe-card-title {
+  font-size: var(--text-13);
+  font-weight: 600;
+}
+
+.bbe-card-meta {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbe-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  margin-top: var(--space-8);
+}
+
+.bbe-credits {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbe-label {
+  display: block;
+  margin-bottom: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbe-label-inline {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbe-hint {
+  margin: var(--space-4) 0 var(--space-8);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbe-add {
+  margin-top: var(--space-8);
+}
+
+.bbe-fieldnote {
+  margin: var(--space-4) 0;
+}
+
+/* The tint of a changed, unsaved row (v0.935) */
+.bbe .is-changed {
+  border-radius: var(--radius-tag);
+  background: var(--color-warning-bg);
+}
+
+.bbe .is-changed .ttag {
+  border-color: var(--color-border-control);
+  background: var(--color-bg);
+}
+
+.bbe .is-changed .ttag--warn,
+.bbe .is-changed .notice {
+  border: 1px solid var(--color-warning-text);
+}
+
+/* Number boxes (with an optional unit after them, "points") */
+.bbe-numwrap {
+  display: inline-flex;
+  min-width: 0;
+}
+
+.bbe-num {
+  width: 72px;
+  text-align: right;
+}
+
+.bbe-numwrap--unit {
+  align-items: center;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+}
+
+.bbe-numwrap--unit .bbe-num {
+  width: 64px;
+  border: none;
+}
+
+.bbe-numwrap--unit:focus-within {
+  border-color: var(--color-blue);
+}
+
+.bbe-numwrap--unit.is-invalid {
+  border-color: var(--color-warning-text);
+}
+
+.bbe-unit {
+  padding-right: var(--space-8);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbe .input[aria-invalid='true'],
+.bbs-form .input[aria-invalid='true'],
+.bbs-split-age .input[aria-invalid='true'] {
+  border-color: var(--color-warning-text);
+}
+
+.bbe-text {
+  min-width: 0;
+}
+
+/* To pass: From age · To age · Bracket · Pass mark · Most points · ⋯ */
+.bbe-brow {
+  display: grid;
+  grid-template-columns: 80px 80px minmax(96px, 1fr) 120px minmax(96px, 1fr) 28px;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-4);
+}
+
+.bbe-brow .bbe-num {
+  width: 100%;
+}
+
+.bbe-brow .bbe-numwrap {
+  width: 100%;
+}
+
+.bbe-brow--head {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbe-bmost {
+  color: var(--color-text-secondary);
+}
+
+.bbe-tick {
+  margin-top: var(--space-4);
+  padding: 0 var(--space-4);
+}
+
+.bbe-makeup .bbe-text {
+  width: 100%;
+}
+
+.bbe-makeup {
+  margin-top: var(--space-8);
+  margin-bottom: 0;
+  padding: var(--space-4);
+}
+
+/* A part's head: its name as a field + "up to 80 → 84 points · 9 subjects" */
+.bbe-part-head {
+  padding: var(--space-4);
+}
+
+.bbe-partname-box {
+  width: 220px;
+  max-width: 100%;
+}
+
+.bbe-gp {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-8) var(--space-16);
+  padding: var(--space-4);
+}
+
+.bbe-gp-label {
+  padding-bottom: var(--space-8);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbe-gp-boxes,
+.bbs-own {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-8);
+}
+
+.bbe-gp-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.bbe-gp-box .bbe-num {
+  width: 52px;
+  text-align: center;
+}
+
+.bbe-gp-letter {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* Subject rows: grip · name · credits · scoring and tags · Up to · Edit ⋯ */
+.bbe-srow {
+  display: grid;
+  grid-template-columns: 28px minmax(120px, 2fr) 56px minmax(0, 3fr) 44px auto;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 40px;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.bbe-srow--head {
+  min-height: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbe-srow .bbe-num {
+  width: 100%;
+  text-align: center;
+}
+
+.bbe-srow .bbe-text {
+  width: 100%;
+}
+
+.bbe-scoring {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbe-upto {
+  text-align: right;
+}
+
+.bbe-acts {
+  display: inline-flex;
+  gap: var(--space-4);
+}
+
+.bbe-srow.is-dragging,
+.bbe-sphone.is-dragging,
+.bbe-item.is-dragging {
+  opacity: 0.5;
+}
+
+/* "Check the cut-offs and age brackets" on a row whose problem is inside its dialog (R8) */
+.bbe-inner-note {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 2px var(--space-8);
+  border: 1px solid var(--color-warning-text);
+  border-radius: var(--radius-tag);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+  cursor: pointer;
+}
+
+/* Extra points (R7) */
+.bbe-extra-settings {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8) var(--space-24);
+  padding: var(--space-4);
+}
+
+.bbe-limit {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.bbe-item {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 28px;
+  align-items: start;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.bbe-item-main {
+  min-width: 0;
+}
+
+.bbe-item-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.bbe-item-name {
+  width: 220px;
+  max-width: 100%;
+}
+
+.bbe-steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8) var(--space-16);
+  margin-top: var(--space-8);
+}
+
+.bbe-step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.bbe-step .bbe-num {
+  width: 60px;
+}
+
+.bbe-step .bbe-add {
+  margin-top: 0;
+}
+
+.bbe-hand {
+  font-size: var(--text-13);
+}
+
+.bbe-two,
+.bbs-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-12);
+}
+
+/* Phone: To pass brackets and subjects as small cards */
+.bbe-bcard,
+.bbs-ccard {
+  margin-bottom: var(--space-8);
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.bbe-bcard-head,
+.bbs-ccard-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+.bbe-bcard-title {
+  font-weight: 600;
+}
+
+.bbe-bcard .bbe-num,
+.bbs-ccard .bbe-num {
+  width: 100%;
+}
+
+.bbe-bcard .bbe-numwrap,
+.bbs-ccard .bbe-numwrap {
+  width: 100%;
+}
+
+.bbe-field-narrow {
+  max-width: 160px;
+}
+
+.bbe-sphone {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.bbe-sphone-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+  overflow-wrap: anywhere;
+}
+
+.bbe-sphone-line {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbe-phone-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
+}
+
+.bbe-phone-where {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* The phone page's footer stays at the bottom: "3 changes not saved" + Save 1st Dan */
+.bbe-phone-foot {
+  position: sticky;
+  bottom: calc(-1 * var(--space-16) - env(safe-area-inset-bottom));
+  z-index: 2;
+  margin: var(--space-16) calc(-1 * var(--space-16)) calc(-1 * var(--space-16) - env(safe-area-inset-bottom));
+  padding: var(--space-8) var(--space-16) calc(var(--space-8) + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.bbe-phone-count {
+  margin-bottom: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  text-align: center;
+}
+
+.bbe-phone-note {
+  margin-bottom: var(--space-8);
+}
+
+/* ----- The subject dialog (R4, R5) and the small dialogs ----- */
+.bbs-form .field {
+  margin-bottom: var(--space-12);
+}
+
+/* The joined buttons (Scoring, Points, Who does it) are only as wide as their words */
+.bbs-form .segmented {
+  align-self: flex-start;
+  width: auto;
+}
+
+.bbs-form > .field-hint {
+  margin-bottom: var(--space-12);
+}
+
+.bbs-two--name {
+  grid-template-columns: minmax(0, 1fr) 160px;
+}
+
+.bbs-credits .bbe-num {
+  width: 100%;
+  text-align: left;
+}
+
+.bbs-credits {
+  width: 100%;
+}
+
+.bbs-graded-hint {
+  margin: calc(-1 * var(--space-8)) 0 var(--space-12);
+}
+
+.bbs-way {
+  margin-bottom: var(--space-8);
+}
+
+.bbs-way--boxed {
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.bbs-way-head {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-8);
+}
+
+.bbs-grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.bbs-way .bbe-text,
+.bbs-form .field > .bbe-text {
+  width: 100%;
+}
+
+.bbs-crow {
+  display: grid;
+  grid-template-columns: 56px 56px minmax(72px, 1fr) repeat(5, 52px) 28px;
+  align-items: center;
+  gap: var(--space-8);
+  margin-bottom: var(--space-4);
+}
+
+.bbs-crow--head {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbs-crow .bbe-num,
+.bbs-crow .bbe-numwrap,
+.bbs-cut,
+.bbs-cut .bbe-numwrap,
+.bbs-cut .bbe-num {
+  width: 100%;
+  text-align: center;
+}
+
+.bbs-cuts-phone {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+}
+
+.bbs-cut {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.bbs-cut-letter {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbs-worked {
+  margin-bottom: var(--space-12);
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.bbs-own {
+  margin-bottom: var(--space-4);
+}
+
+.bbs-who,
+.bbs-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-16);
+}
+
+.bbs-who {
+  margin: calc(-1 * var(--space-8)) 0 var(--space-12);
+}
+
+.bbs-who .field-hint {
+  flex-basis: 100%;
+}
+
+.bbs-split-age .bbe-num {
+  width: 96px;
+  text-align: left;
+}
+
+.bbs-split-preview {
+  margin: 0 0 var(--space-8);
+  padding-left: var(--space-16);
+  font-size: var(--text-13);
+}
+
+.bbs-copy-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+}
+
+.bbs-copy-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  min-height: 44px;
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.bbs-copy-choice.is-checked {
+  border-color: var(--color-blue);
+}
+
+.bbs-radio {
+  flex: none;
+  margin-top: 2px;
+}
+
+.bbs-copy-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.bbs-copy-dan {
+  font-weight: 500;
+}
+
+.bbs-copy-line {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbs-copy-warning {
+  margin-bottom: var(--space-12);
+}
+
+/* ----- Touch screens: 36px fields, 44px tap areas ----- */
+@media (pointer: coarse) {
+  .bbe-brow {
+    grid-template-columns: 80px 80px minmax(80px, 1fr) 120px minmax(80px, 1fr) 44px;
+  }
+
+  .bbe-srow {
+    grid-template-columns: 44px minmax(120px, 2fr) 56px minmax(0, 3fr) 44px auto;
+    min-height: 48px;
+  }
+
+  .bbe-item {
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+  }
+
+  .bbs-crow {
+    grid-template-columns: 56px 56px minmax(64px, 1fr) repeat(5, 52px) 44px;
+  }
+
+  .bbr-toggle,
+  .bbe-errors-line {
+    min-height: var(--tap-size);
+  }
+
+  .bbe-inner-note {
+    min-height: var(--tap-size);
+  }
+
+  .bbs-copy-choice {
+    min-height: 56px;
+  }
+}
+
+/* Tablet (upright, 640–1023px): the subject rows keep one line; the scoring words wrap */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .bbe-srow {
+    grid-template-columns: 44px minmax(120px, 2fr) 52px minmax(0, 2fr) 40px auto;
+  }
+}
+
+/* ----- Phones ----- */
+@media (max-width: 639.98px) {
+  .bbr-card {
+    padding-right: var(--space-12);
+    padding-left: var(--space-12);
+  }
+
+  .bbr-dans {
+    display: flex;
+    width: 100%;
+  }
+
+  .bbr-dans .segment {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 var(--space-4);
+  }
+
+  .bbr-most {
+    display: block;
+    margin-left: 0;
+  }
+
+  .bbe-two {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-8);
+  }
+
+  .bbs-two,
+  .bbs-two--name {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .bbe-item {
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    gap: var(--space-4);
+  }
+
+  .bbe-item-name {
+    width: 100%;
+  }
+
+  .bbe-steps {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .bbe-extra-settings {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+
+  .bbe-partname {
+    width: 100%;
+    margin-bottom: 0;
+  }
+
+  .bbe-partname .bbe-text {
+    width: 100%;
+  }
+
+}
+
+/* Very narrow phones (320px): the five cut-off boxes and grade points stay inside the card */
+@media (max-width: 359.98px) {
+  .bbe-gp-box .bbe-num {
+    width: 48px;
+  }
+
+  .bbe-step .bbe-num {
+    width: 44px;
+  }
+
+  .bbe-step {
+    flex-wrap: wrap;
+  }
+}

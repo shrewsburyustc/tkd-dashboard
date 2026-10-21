@@ -10,9 +10,11 @@
 //
 // How a save works:
 //   Add:  loadCycleDefaults() fills the form (the last cycle, or Fall 2026 the first time) →
-//         addCycle() → if Registration was set to Open, setRegistration() (a second call, OP-4)
+//         addCycle(). The new cycle is ALWAYS saved closed with a copy of the default rubric
+//         (migration 0024, v0.933): no follow-up setRegistration any more.
 //   Edit: loadCycle() fills the form → updateCycle() (days, deadlines, due dates — prices never
-//         change, v0.902) → setRegistration() only if the switch changed
+//         change, v0.902) → setRegistration() only if the switch changed (the switch is shown only
+//         for a cycle opened once — a never-opened cycle is opened from ⋯, contract 0024 OI-11)
 //   If the second call fails, the cycle IS saved: the dialog closes and the screen behind shows
 //   "The cycle was saved, but registration didn't change: …" with Retry.
 // Status words come from text.js; the database decides, the screen only grays Save early.
@@ -167,11 +169,11 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
     let result;
     let switchWanted = false;
     if (d.mode === 'add') {
-      result = await addCycle({ form, sourceCycleId: d.sourceCycleId });
-      switchWanted = form.registrationOpen === true;
+      result = await addCycle({ form: { ...form, registrationOpen: false }, sourceCycleId: d.sourceCycleId });
+      switchWanted = false; // v0.933: Add cycle always saves the cycle closed
     } else {
       result = await updateCycle({ cycleId: d.cycleId, expectedVersion: d.original.version, form });
-      switchWanted = form.registrationOpen !== d.original.registrationOpen;
+      switchWanted = Boolean(d.original.firstOpenedAt) && form.registrationOpen !== d.original.registrationOpen;
     }
 
     if (result.status !== 'ok') {

@@ -8,8 +8,15 @@
 //     "Curriculum isn't graded on any testing day. …" sits under the list (v0.918 detail 1).
 //   - Deadlines: Application due, Submissions due (+ the hand-in hint)
 //   - Prices and payment due dates, Kukkiwon certificate fee (PricesSection.jsx)
-//   - Registration: Open / Closed (Add starts Closed), "Close automatically at the end of
-//     Application due (Sat, Mar 27)" + "11:59 PM, Massachusetts time. …"
+//   - Rubric (migration 0024, mockup R14): "Copied from the default rubric when you save. Change
+//     it on the cycle's Rubric tab until registration first opens." (Edit cycle: the same before
+//     the first opening, "Locked since registration opened on Mar 1, 2027." after). Nothing to fill in.
+//   - Registration: Add cycle has NO Open / Closed switch any more — every new cycle is saved
+//     closed, with "New cycles start closed. Check the rubric, then open registration from the
+//     cycle's ⋯ menu." (v0.933). Edit cycle keeps the Open / Closed switch only for a cycle that
+//     was opened once (a never-opened cycle is opened from ⋯, so the first opening always gets its
+//     own toast and Undo — contract 0024 OI-11). "Close automatically at the end of Application
+//     due (Sat, Mar 27)" + "11:59 PM, Massachusetts time. …" stay.
 //   - Edit: "Last changed by …"; then Cancel · Save (phones: ← and a full-width Save)
 // PC / tablet: a dialog that scrolls inside; phones: a full screen.
 // Errors show as you type, amber under the field; Save stays BLUE when everything is valid and
@@ -97,6 +104,8 @@ export default function CycleDialog({ state, check, isPhone, handlers }) {
   );
 
   const from = T.fromName(v.pricesFrom);
+  // Edit cycle on a cycle whose registration was opened once: the Open / Closed switch stays.
+  const openedOnce = !isAdd && Boolean(state.original?.firstOpenedAt);
 
   return (
     <Dialog title={isAdd ? T.ADD_CYCLE_TITLE : T.EDIT_CYCLE_TITLE} size="wide" fullScreen={isPhone} onRequestClose={onRequestClose}>
@@ -213,20 +222,33 @@ export default function CycleDialog({ state, check, isPhone, handlers }) {
 
         <PricesSection mode={state.mode} values={v} formForRules={check.form} problems={p} triedSave={state.triedSave} isPhone={isPhone} readOnly={readOnly} {...prices} />
 
+        <section className="bb-section" aria-labelledby={`${id}-rubric`}>
+          <h3 id={`${id}-rubric`} className="bb-section-title">
+            {T.RUBRIC_SECTION}
+          </h3>
+          <p className="field-hint bb-section-hint">
+            {isAdd ? T.RUBRIC_ADD_LINE : openedOnce ? T.rubricLockedLine(T.stampDate(state.original.firstOpenedAt)) : T.RUBRIC_EDIT_LINE}
+          </p>
+        </section>
+
         <section className="bb-section" aria-labelledby={`${id}-reg`}>
           <h3 id={`${id}-reg`} className="bb-section-title">
             {T.REGISTRATION}
           </h3>
-          <Choice
-            labelId={`${id}-reg`}
-            options={[
-              { key: 'open', label: T.REG_OPEN },
-              { key: 'closed', label: T.REG_CLOSED },
-            ]}
-            value={v.registrationOpen ? 'open' : 'closed'}
-            readOnly={readOnly}
-            onChange={(key) => onChange({ registrationOpen: key === 'open' })}
-          />
+          {openedOnce ? (
+            <Choice
+              labelId={`${id}-reg`}
+              options={[
+                { key: 'open', label: T.REG_OPEN },
+                { key: 'closed', label: T.REG_CLOSED },
+              ]}
+              value={v.registrationOpen ? 'open' : 'closed'}
+              readOnly={readOnly}
+              onChange={(key) => onChange({ registrationOpen: key === 'open' })}
+            />
+          ) : (
+            <p className="field-hint bb-section-hint">{isAdd ? T.NEW_CYCLES_CLOSED : T.NOT_OPENED_YET_LINE}</p>
+          )}
           <label className="cbrow bb-auto" htmlFor={`${id}-auto`}>
             <input id={`${id}-auto`} type="checkbox" className="cb" checked={v.autoClose} disabled={readOnly} aria-describedby={`${id}-auto-hint`} onChange={(event) => onChange({ autoClose: event.target.checked })} />
             <span>{T.autoCloseLabel(v.applicationDue)}</span>

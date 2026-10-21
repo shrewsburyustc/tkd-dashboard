@@ -8,8 +8,13 @@
 //   - "+ Add candidate" (primary; N on the PC) beside the ⋯ (phones: both under the summary line)
 //     — phase B2, contract CONTRACT-0016-B2 §3.2 / §3.7. Grayed with its reason while the device's
 //     Hide payments switch is on ("Add new candidates at the desk.", OP-B7) or the cycle is past.
-//   - the tabs. Only Candidates exists (candidates/CandidatesTab.jsx, phase B2); Grading and
-//     Results appear when they are built (P7: no placeholders).
+//   - the tabs: Candidates (candidates/CandidatesTab.jsx, phase B2) · Rubric (this cycle's own copy
+//     of the rubric, CycleRubricTab.jsx — migration 0024, mockups R12 / R13). Grading and Results
+//     will go between them when they are built (P7: no placeholders). ← → move between the tabs;
+//     leaving the Rubric tab with unsaved changes asks first (guarded, R10).
+//   - on the Rubric tab, under the tabs: "This cycle's rubric can be changed until registration
+//     first opens…" (admins), "View only…" (staff), and the lock line with "Go to the default
+//     rubric" once registration has opened.
 //   - for staff, once registration has closed by its date: the gray line "Registration closed on
 //     Sat, Mar 27. Ask an admin to reopen it." under the tabs (approved on Candidates 2).
 // A cycle that no longer exists (deleted elsewhere) → "This cycle was deleted." and back to the
@@ -26,11 +31,15 @@ import { usePaymentsHidden } from '../../../screens/finance/usePaymentsHidden.js
 import CandidatesTab from '../candidates/CandidatesTab.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
 import { openNeedsAdmin, useCycleActions } from '../cycles/useCycleActions.js';
+import CycleRubricTab, { CycleRubricLine, useCycleRubricLoad } from './CycleRubricTab.jsx';
 import LinksDialog from './LinksDialog.jsx';
 import { useCycleEditor } from './useCycleEditor.jsx';
 import * as T from '../text.js';
 
 const load = (cycleId) => loadCycle({ cycleId });
+
+// The tab last open on each cycle page (kept while the dashboard is open).
+const lastTab = new Map();
 
 function TwoLines({ label, reason }) {
   return (
@@ -41,7 +50,7 @@ function TwoLines({ label, reason }) {
   );
 }
 
-export default function CyclePage({ cycleId, isAdmin, onBack, location, onLocationChange, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange }) {
+export default function CyclePage({ cycleId, isAdmin, onBack, onGoToDefaultRubric, setGuard, guarded = (action) => action(), location, onLocationChange, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange }) {
   const live = useLiveLoad({ key: cycleId, enabled: !screenLocked, load, refreshMs: LIVE_REFRESH_MS });
   const cycle = live.data?.cycle ?? null;
   const today = schoolToday();
@@ -50,6 +59,14 @@ export default function CyclePage({ cycleId, isAdmin, onBack, location, onLocati
     liveRef.current = live;
   });
   const isPhone = useMediaQuery(PHONE_QUERY);
+  // Candidates · Rubric (migration 0024)
+  const [tab, setTabState] = useState(lastTab.get(cycleId) ?? 'candidates');
+  const setTab = (key) => {
+    lastTab.set(cycleId, key);
+    setTabState(key);
+  };
+  const [rubricModal, setRubricModal] = useState(false);
+  const rubricLive = useCycleRubricLoad({ cycleId, version: cycle?.version ?? null, enabled: !screenLocked && tab === 'rubric', onNoAccess });
 
   const [menu, setMenu] = useState(null); // { anchor }
   const [links, setLinks] = useState(null); // { opener } while Registration links is open
@@ -77,7 +94,7 @@ export default function CyclePage({ cycleId, isAdmin, onBack, location, onLocati
   useEffect(() => {
     if (live.status !== 'notFound') return;
     showToast(T.CYCLE_DELETED, { icon: false });
-    onBack();
+    onBack({ unguarded: true });
   }, [live.status, onBack, showToast]);
 
   useEffect(() => {
@@ -123,7 +140,7 @@ export default function CyclePage({ cycleId, isAdmin, onBack, location, onLocati
     candidatesRef.current?.openAdd(addRef.current);
   }
 
-  const modalShown = (editor.isOpen || links !== null || candidatesModal) && !screenLocked;
+  const modalShown = (editor.isOpen || links !== null || candidatesModal || rubricModal) && !screenLocked;
   useShortcutN({ enabled: Boolean(cycle) && !addBlocked && !modalShown && !screenLocked && !menu && !busy, onPress: pressAdd });
   useEffect(() => {
     onModalOpenChange(modalShown);
@@ -198,12 +215,14 @@ export default function CyclePage({ cycleId, isAdmin, onBack, location, onLocati
       if (state.registration === 'open') {
         items.push({ key: 'close', label: T.CLOSE_REGISTRATION, Icon: IconLock, disabled: busy, onSelect: () => actions.switchRegistration(cycle, false) });
       } else {
-        const allowed = actions.canOpen(cycle);
+        // Grayed with its reason for staff: the first opening (it locks the rubric, v0.930) and
+        // reopening after the application date are admin-only.
+        const blocked = actions.openBlockedReason(cycle);
         items.push({
           key: 'open',
-          label: allowed ? T.OPEN_REGISTRATION : <TwoLines label={T.OPEN_REGISTRATION} reason={T.REOPEN_NEEDS_ADMIN} />,
+          label: blocked ? <TwoLines label={T.OPEN_REGISTRATION} reason={blocked} /> : T.OPEN_REGISTRATION,
           Icon: IconLockOpen,
-          disabled: busy || !allowed,
+          disabled: busy || Boolean(blocked),
           onSelect: () => actions.switchRegistration(cycle, true),
         });
       }
@@ -236,13 +255,64 @@ export default function CyclePage({ cycleId, isAdmin, onBack, location, onLocati
         </span>
       </div>
       {isPhone && <div className="bb-phone-add">{addButton}</div>}
-      <div className="ttabs ev-tabs" role="tablist" aria-label={cycle.name}>
-        <button type="button" id={`bb-cycle-tab-${cycle.id}`} className="ttab is-current" role="tab" aria-selected="true" aria-controls={`bb-cycle-panel-${cycle.id}`} tabIndex={0}>
-          {T.TAB_CANDIDATES}
-        </button>
+      <div
+        className="ttabs ev-tabs"
+        role="tablist"
+        aria-label={cycle.name}
+        onKeyDown={(event) => {
+          if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+          event.preventDefault();
+          const next = tab === 'candidates' ? 'rubric' : 'candidates';
+          guarded(() => setTab(next));
+          document.getElementById(next === 'candidates' ? `bb-cycle-tab-${cycle.id}` : `bb-cycle-tab-rubric-${cycle.id}`)?.focus();
+        }}
+      >
+        {[
+          { key: 'candidates', label: T.TAB_CANDIDATES, id: `bb-cycle-tab-${cycle.id}`, panel: `bb-cycle-panel-${cycle.id}` },
+          { key: 'rubric', label: T.TAB_CYCLE_RUBRIC, id: `bb-cycle-tab-rubric-${cycle.id}`, panel: `bb-cycle-rubric-${cycle.id}` },
+        ].map((t) => (
+          <button
+            key={t.key}
+            type="button"
+            id={t.id}
+            className={`ttab${tab === t.key ? ' is-current' : ''}`}
+            role="tab"
+            aria-selected={tab === t.key ? 'true' : 'false'}
+            aria-controls={t.panel}
+            tabIndex={tab === t.key ? 0 : -1}
+            onClick={() => tab !== t.key && guarded(() => setTab(t.key))}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
-      {staffLine && <p className="viewonly">{staffLine}</p>}
+      {tab === 'candidates' && staffLine && <p className="viewonly">{staffLine}</p>}
+      {tab === 'rubric' && !isAdmin && <p className="viewonly">{T.VIEW_ONLY}</p>}
+      {tab === 'rubric' && rubricLive.status === 'ready' && rubricLive.data && (
+        <CycleRubricLine locked={rubricLive.data.locked} firstOpenedAt={rubricLive.data.firstOpenedAt} isAdmin={isAdmin} onGoToDefaultRubric={onGoToDefaultRubric} />
+      )}
       {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />}
+      {tab === 'rubric' && (
+        <CycleRubricTab
+          cycle={cycle}
+          live={rubricLive}
+          isAdmin={isAdmin}
+          isPhone={isPhone}
+          screenLocked={screenLocked}
+          panelId={`bb-cycle-rubric-${cycle.id}`}
+          tabId={`bb-cycle-tab-rubric-${cycle.id}`}
+          setGuard={setGuard}
+          onModalChange={setRubricModal}
+          onLockedNow={reloadQuiet}
+          showToast={showToast}
+          clearToast={clearToast}
+          onNoAccess={onNoAccess}
+          onRefreshProfile={onRefreshProfile}
+        />
+      )}
+      {/* Candidates stays mounted (hidden) while the Rubric tab is open, so its list and the
+          header's Add candidate keep working. */}
+      <div hidden={tab !== 'candidates'}>
       <CandidatesTab
         cycle={cycle}
         isAdmin={isAdmin}
@@ -259,6 +329,7 @@ export default function CyclePage({ cycleId, isAdmin, onBack, location, onLocati
         panelId={`bb-cycle-panel-${cycle.id}`}
         tabId={`bb-cycle-tab-${cycle.id}`}
       />
+      </div>
 
       {menu && !screenLocked && (
         <RowMenu

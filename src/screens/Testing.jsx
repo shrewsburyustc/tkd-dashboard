@@ -298,6 +298,7 @@ export default function Testing({
           clearToast={clearToast}
           onModalOpenChange={onModalOpenChange}
           location={location} onLocationChange={onLocationChange}
+          onLeaveGuardChange={tabProps.onLeaveGuardChange}
         />
       </Suspense>
     );

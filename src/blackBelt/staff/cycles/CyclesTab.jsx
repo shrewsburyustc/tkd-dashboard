@@ -315,12 +315,14 @@ export default function CyclesTab({
       if (cycle.state?.registration === 'open') {
         items.push({ key: 'close', label: T.CLOSE_REGISTRATION, Icon: IconLock, disabled: busy, onSelect: () => actions.switchRegistration(cycle, false) });
       } else {
-        const allowed = actions.canOpen(cycle);
+        // Grayed with its reason for staff: the first opening (it locks the rubric, v0.930) and
+        // reopening after the application date are admin-only.
+        const blocked = actions.openBlockedReason(cycle);
         items.push({
           key: 'open',
-          label: allowed ? T.OPEN_REGISTRATION : <TwoLines label={T.OPEN_REGISTRATION} reason={T.REOPEN_NEEDS_ADMIN} />,
+          label: blocked ? <TwoLines label={T.OPEN_REGISTRATION} reason={blocked} /> : T.OPEN_REGISTRATION,
           Icon: IconLockOpen,
-          disabled: busy || !allowed,
+          disabled: busy || Boolean(blocked),
           onSelect: () => actions.switchRegistration(cycle, true),
         });
       }

@@ -1,4 +1,5 @@
-// api.js — every call the Black Belt staff screens make to the database (phases B1 and B2).
+// api.js — every call the Black Belt staff screens make to the database (phases B1 and B2, and
+// the rubric editor of migration 0024 — the last section of this file).
 // Why it exists: like src/lib/testing/eventsApi.js does for Color Belt, this keeps table names,
 // column lists and the exact argument names of the database functions (migration 0016, contract
 // 0016-B1 §1) in ONE place. Screens call friendly camelCase functions with one object argument
@@ -8,6 +9,7 @@
 //   'duplicate_name' · 'invalid' · 'part_without_day' (+ parts) · 'waiver_needed' · 'finished' ·
 //   'has_payments' · 'has_waivers' · 'confirm_needed' (+ removeCount) · 'withdrawn' ·
 //   'refund_too_large' (+ paidCents) ·
+//   rubric (0024): 'invalid' (+ problems) · 'locked' (+ firstOpenedAt) · 'has_registrations' ·
 //   'error' (no connection / unexpected answer — { status:'error', error })
 // These functions NEVER throw.
 //
@@ -27,11 +29,12 @@ import { supabase, isPreview } from '../supabase.js';
 import { readStorage } from '../storage.js';
 import { todayInSchoolTime, isIsoDate, shortTime, normalizeNote, PREVIEW_TODAY_KEY } from '../testing/eventRules.js';
 import { cycleState, nextWaiverVersionName, buildAddPayload, buildUpdatePayload, PARTS, DANS } from './rules.js';
+import { normalizeDan, RUBRIC_SCHEMA_VERSION, RUBRIC_DANS } from './rubric.js';
 
 // Every status a call here can return.
 export const BB_STATUSES = [
   'ok', 'no_access', 'not_allowed', 'not_found', 'stale', 'duplicate_name', 'invalid', 'part_without_day', 'waiver_needed',
-  'finished', 'has_payments', 'has_waivers', 'confirm_needed', 'withdrawn', 'refund_too_large', 'error',
+  'finished', 'has_payments', 'has_waivers', 'confirm_needed', 'withdrawn', 'refund_too_large', 'locked', 'has_registrations', 'error',
 ];
 const SERVER_STATUSES = new Set(BB_STATUSES.filter((s) => s !== 'error'));
 
@@ -331,7 +334,8 @@ export async function loadCycleDefaults() {
 }
 
 // Add cycle (admins). form: CycleForm; sourceCycleId: from loadCycleDefaults. The new cycle is
-// Closed — if the dialog's switch says Open, call setRegistration next (OP-4).
+// ALWAYS saved Closed, with a copy of the default rubric (0024 §6.4); opening is its own admin
+// step from the cycle's ⋯ menu (v0.933 — no follow-up setRegistration any more).
 // → { status:'ok', id, version: 1, codes: { worcester, shrewsbury } } · 'part_without_day' + parts ·
 //   'duplicate_name' · 'invalid' · 'not_allowed' · 'no_access' · 'error'
 export async function addCycle({ form, sourceCycleId = null } = {}) {
@@ -361,12 +365,27 @@ export async function updateCycle({ cycleId, expectedVersion, form } = {}) {
     (d) => (isInt(d.version) ? { version: d.version } : null));
 }
 
-// The Open / Closed switch (staff and admins; opening after Application due: admins, which also
+// The Open / Closed switch (staff and admins; the FIRST opening of a cycle: admins only, because
+// it locks the cycle's rubric (0024, v0.930); opening after Application due: admins, which also
 // turns the automatic close off).
-// → { status:'ok', version, state: CycleState } · 'finished' · 'waiver_needed' · 'not_allowed' ·
-//   'stale' · 'not_found' · 'invalid' · 'no_access' · 'error'
+// → { status:'ok', version, state: CycleState, firstOpen } · 'finished' · 'waiver_needed' ·
+//   'not_allowed' · 'stale' · 'not_found' · 'invalid' · 'no_access' · 'error'
+// firstOpen = true only when this call was the cycle's first opening: then the toast's Undo
+// calls undoFirstOpen (back to "never opened"); otherwise Undo sends the opposite switch.
 export async function setRegistration({ cycleId, expectedVersion, open } = {}) {
   return callRpc('bb_set_registration', { p_cycle_id: cycleId, p_expected_version: expectedVersion, p_open: open }, (d) => {
+    const state = toState(d.state);
+    return isInt(d.version) && state ? { version: d.version, state, firstOpen: d.first_open === true } : null;
+  });
+}
+
+// Undo of a FIRST opening (admins; the "Registration opened" toast, within 15 seconds): the cycle
+// goes back to never opened, so its rubric is editable again (v0.929).
+// → { status:'ok', version, state: CycleState } · 'stale' (too late, someone changed it, or it
+//   wasn't this admin's opening) · 'has_registrations' (a family already registered — the lock
+//   stays) · 'not_found' · 'invalid' · 'not_allowed' · 'no_access' · 'error'
+export async function undoFirstOpen({ cycleId, expectedVersion } = {}) {
+  return callRpc('bb_undo_first_open', { p_cycle_id: cycleId ?? null, p_expected_version: expectedVersion ?? null }, (d) => {
     const state = toState(d.state);
     return isInt(d.version) && state ? { version: d.version, state } : null;
   });
@@ -867,4 +886,141 @@ export async function recordRefund({ candidateId, expectedVersion, amountCents, 
 //   'not_allowed' · 'no_access' · 'error'
 export async function markCheckReturned({ paymentId, note = null } = {}) {
   return callRpc('bb_mark_check_returned', { p_payment_id: paymentId ?? null, p_note: tidyNote(note) }, paymentAnswer);
+}
+
+// =====================================================================================
+// ----- The rubric (migration 0024, contract 0024 §10.1) -----
+// =====================================================================================
+// The rubric is ONE JSON document (rubric.js describes it) in two places: the default on Rubric
+// and prices (bb_default_rubric.sheet) and each cycle's own copy (bb_cycles.requirements). The
+// document keeps its stored snake_case keys; only these functions' own fields are camelCase.
+// An admin saves ONE Dan at a time with the rev (revision number) they loaded; a newer save by
+// someone else answers 'stale' instead of overwriting. Saves and undos are admins only.
+
+const RUBRIC_COLUMNS = 'id, sheet, version, updated_at, updated_by_name';
+const CYCLE_RUBRIC_COLUMNS = 'id, name, requirements, first_opened_at, registration_open, created_at';
+const PROBLEM_KEYS = ['code', 'part', 'subject', 'way', 'bracket', 'item', 'step', 'path'];
+
+// Is this a v2 rubric document (outer shape only — the database checked every value)?
+const isRubric = (doc) => Boolean(doc) && typeof doc === 'object' && doc.schema_version === RUBRIC_SCHEMA_VERSION
+  && Array.isArray(doc.dans) && doc.dans.length === RUBRIC_DANS.length;
+
+// The database's problem list → the same objects with only the known keys (at most 100).
+function toProblems(list) {
+  if (!Array.isArray(list)) return [];
+  return list.filter((p) => p && typeof p.code === 'string').slice(0, 100)
+    .map((p) => Object.fromEntries(PROBLEM_KEYS.filter((k) => p[k] !== undefined && p[k] !== null).map((k) => [k, p[k]])));
+}
+
+// The refusals of a rubric save / undo that carry an extra field.
+function rubricRefusal(status, d) {
+  if (status === 'invalid') return { problems: toProblems(d.problems) }; // no list = a wrong argument
+  if (status === 'locked') return isText(d.first_opened_at) ? { firstOpenedAt: d.first_opened_at } : undefined;
+  return null;
+}
+
+// A save's ok answer → { rev, savedAt, savedByName, changed, undoAvailable, previousRev }.
+// undoAvailable is true only when this save wrote an undo slot: show the toast's Undo only then.
+const saveAnswer = (d) => (isInt(d.rev) && isBool(d.changed)
+  ? {
+    rev: d.rev,
+    savedAt: orNull(d.saved_at),
+    savedByName: orNull(d.saved_by_name),
+    changed: d.changed,
+    undoAvailable: d.undo_available === true,
+    previousRev: isInt(d.previous_rev) ? d.previous_rev : null,
+  }
+  : null);
+// An undo's ok answer → { rev, savedAt, savedByName } (the previous version is back, with a new rev).
+const undoAnswer = (d) => (isInt(d.rev) ? { rev: d.rev, savedAt: orNull(d.saved_at), savedByName: orNull(d.saved_by_name) } : null);
+
+// Reads one table for the rubric screens together with the has_data_access check (a locked
+// sign-in gets an empty list, which must not look like "no rubric").
+async function selectWithAccess(table, columns, filter = null) {
+  if (!supabase) return { result: failure(new Error('No connection is set up')) };
+  let query = supabase.from(table).select(columns);
+  if (filter) query = query.eq(filter.col, filter.value);
+  const [res, denied] = await Promise.all([query, accessCheck()]);
+  if (denied) return { result: denied };
+  if (res?.error) return { result: failure(res.error) };
+  if (!Array.isArray(res?.data)) return { result: unexpected(table) };
+  return { rows: res.data };
+}
+
+// The default rubric (Rubric and prices; staff read it too, view only).
+// → { status:'ok', rubric, version, updatedAt, updatedByName } · 'no_access' · 'error'
+// "Last changed by" per Dan = rubric.dans[n].saved_by_name / saved_at (null = never saved: hide it).
+export async function loadDefaultRubric() {
+  try {
+    const { result, rows } = await selectWithAccess('bb_default_rubric', RUBRIC_COLUMNS);
+    if (result) return result;
+    const row = rows[0];
+    if (!row || !isRubric(row.sheet) || !isInt(row.version)) return unexpected('bb_default_rubric');
+    return { status: 'ok', rubric: row.sheet, version: row.version, updatedAt: row.updated_at, updatedByName: row.updated_by_name };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+// One cycle's own copy of the rubric (the cycle page's Rubric tab).
+// → { status:'ok', rubric, locked, firstOpenedAt, registrationOpen, createdAt, name } · 'not_found' ·
+//   'no_access' · 'error'
+// locked = registration has opened once (first_opened_at set): the copy can't change any more.
+export async function loadCycleRubric({ cycleId } = {}) {
+  try {
+    if (!isText(cycleId)) return failure(new Error('No cycle id'));
+    const { result, rows } = await selectWithAccess('bb_cycles', CYCLE_RUBRIC_COLUMNS, { col: 'id', value: cycleId });
+    if (result) return result;
+    if (rows.length === 0) return { status: 'not_found' };
+    const row = rows[0];
+    if (!isRubric(row.requirements)) return unexpected('bb_cycles.requirements');
+    const firstOpenedAt = orNull(row.first_opened_at);
+    return {
+      status: 'ok',
+      rubric: row.requirements,
+      locked: firstOpenedAt !== null,
+      firstOpenedAt,
+      registrationOpen: row.registration_open === true,
+      createdAt: row.created_at,
+      name: row.name,
+    };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+// Save one Dan of the default rubric (admins). sheet = the whole Dan object as edited (it is
+// tidied here first — names and texts normalized, worked-out points recomputed — the same
+// tidying the editor shows). Its rev / saved_at / saved_by_name are replaced by the database.
+// → { status:'ok', rev, savedAt, savedByName, changed, undoAvailable, previousRev } ·
+//   'invalid' + problems (rubric.js danProblems codes; [] = a wrong argument) · 'stale' (another
+//   admin saved this Dan since it was loaded) · 'not_allowed' · 'no_access' · 'error'
+// changed false = the same content as saved (nothing written; undoAvailable false, previousRev null).
+export async function saveDefaultDan({ dan, expectedRev, sheet } = {}) {
+  return callRpc('bb_save_default_dan', { p_dan: dan ?? null, p_expected_rev: expectedRev ?? null, p_sheet: normalizeDan(sheet) ?? null },
+    saveAnswer, rubricRefusal);
+}
+
+// Undo of the last save of one default Dan (the admin who saved, within 15 seconds): the previous
+// version comes back as one more history entry (a new rev).
+// → { status:'ok', rev, savedAt, savedByName } · 'stale' (too late, or someone saved since) ·
+//   'invalid' · 'not_allowed' · 'no_access' · 'error'
+export async function undoDefaultDan({ dan, expectedRev } = {}) {
+  return callRpc('bb_undo_default_dan', { p_dan: dan ?? null, p_expected_rev: expectedRev ?? null }, undoAnswer, rubricRefusal);
+}
+
+// Save one Dan of a cycle's own copy (admins; only while the cycle has never been opened).
+// → as saveDefaultDan, plus 'locked' + firstOpenedAt (registration opened since — reload into
+//   the locked view) and 'not_found'.
+export async function saveCycleDan({ cycleId, dan, expectedRev, sheet } = {}) {
+  return callRpc('bb_save_cycle_dan', {
+    p_cycle_id: cycleId ?? null, p_dan: dan ?? null, p_expected_rev: expectedRev ?? null, p_sheet: normalizeDan(sheet) ?? null,
+  }, saveAnswer, rubricRefusal);
+}
+
+// Undo of the last save of one Dan of a cycle's copy.
+// → as undoDefaultDan, plus 'locked' + firstOpenedAt and 'not_found'.
+export async function undoCycleDan({ cycleId, dan, expectedRev } = {}) {
+  return callRpc('bb_undo_cycle_dan', { p_cycle_id: cycleId ?? null, p_dan: dan ?? null, p_expected_rev: expectedRev ?? null },
+    undoAnswer, rubricRefusal);
 }

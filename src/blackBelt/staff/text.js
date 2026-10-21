@@ -936,3 +936,262 @@ export const SIGNED_ON_PAPER_ONLY = 'Signed on paper. There is no signature pict
 export const signatureDeleted = (stamp) => `The signature and signer's name were deleted on ${stampDate(stamp)} after the keeping time.`;
 export const LOADING_SIGNATURE = 'Loading the signature'; // (not in the mockups)
 export const UNDO_STALE_CANDIDATE = "Couldn't undo. Someone else changed this candidate just now."; // (not in the mockups)
+
+// ===== The rubric: Rubric and prices' Default rubric card, and a cycle's Rubric tab =====
+// (CONTRACT-0024 §10.3, mockups TKD-BlackBelt-Rubric-Mockups.html R1–R14, rulebook v0.921–v0.935.)
+// Wording not in those mockups is marked "new wording, not in the mockups".
+
+// "just now" for a save less than a minute ago (R11)
+function isJustNow(stamp) {
+  const t = new Date(stamp).getTime();
+  return Number.isFinite(t) && Math.abs(Date.now() - t) < 60 * 1000;
+}
+
+// ----- R1 / R2: the read view -----
+export const DEFAULT_RUBRIC = 'Default rubric';
+export const cycleRubricTitle = (cycleName) => `${cycleName} rubric`;
+export const editDan = (dan) => `Edit ${DAN_LABELS[dan] ?? ''}`;
+export const DAN_SWITCHER = 'Dan shown'; // screen readers: the name of the 1st–4th Dan switcher (new wording, not in the mockups)
+export const DEFAULT_USED_BY = 'Used by every new cycle. A cycle’s copy can be changed until its registration first opens.';
+export const LOADING_RUBRIC_CARD = 'Loading the rubric'; // (new wording, not in the mockups)
+export const RUBRIC_LOAD_FAILED = "Couldn't load the rubric. Check the connection, then try again."; // (new wording, not in the mockups)
+export const TO_PASS = 'To pass';
+export const toPassPoints = (points) => `${points} points`;
+export const bracketPoints = (label, points) => `${label} ${points} points`;
+export const NO_D_ANY = 'no D in any subject';
+export const mostPointsOne = (points) => `Most points ${points} before extra points`;
+export const mostPointsItem = (points, label) => `${points} (${label})`;
+export const mostPointsMany = (list) => `Most points ${list} before extra points`; // list = "339 (17 and under) · 361.5 (18 and over)"
+export const partUpTo = (points) => `up to ${points} points`;
+export const forBracket = (points, label) => `${points} for ${label}`;
+export const partUpToMany = (first, rest) => `up to ${first} points (${rest})`; // rest = "157.5 for 18 and over"
+export const subjectsWord = (count) => `${count} ${count === 1 ? 'subject' : 'subjects'}`;
+export const GRADE_POINTS = 'Grade points';
+export const COL_SUBJECT = 'Subject';
+export const COL_CREDITS = 'Credits';
+export const COL_SCORING = 'Scoring';
+export const COL_SCORING_TAGS = 'Scoring and tags';
+export const COL_UP_TO = 'Up to';
+export const GRADED_A_TO_D = 'Graded A+ to D';
+export const DIRECTION_WORDS = { at_least: 'at least', at_most: 'at most', under: 'under' };
+export const DIRECTION_CHOICES = { at_least: 'At least the number', at_most: 'At most the number', under: 'Under the number' };
+export const ageBracketsCount = (count) => `${count} age ${count === 1 ? 'bracket' : 'brackets'}`;
+// "Measured · inches, at least · 3 age brackets"
+export const measuredLine = (unit, direction, count) => `Measured · ${unit}, ${DIRECTION_WORDS[direction] ?? direction} · ${ageBracketsCount(count)}`;
+// "Measured, two ways: Pull-up (reps) or Hold (seconds)"
+export const twoWaysLine = (a, b) => `Measured, two ways: ${a.name ?? ''} (${a.unit}) or ${b.name ?? ''} (${b.unit})`;
+// Phones: "2 credits · up to 8 · count, at least"
+export const phoneSubjectLine = (credits, upTo, how) => `${credits} ${credits === 1 ? 'credit' : 'credits'} · up to ${upTo} · ${how}`;
+export const phoneHowMeasured = (unit, direction) => `${unit}, ${DIRECTION_WORDS[direction] ?? direction}`;
+export const phoneHowTwoWays = (a, b) => `two ways: ${String(a.name ?? '').toLowerCase()} or ${String(b.name ?? '').toLowerCase()}`;
+export const PHONE_HOW_GRADED = 'graded A+ to D';
+export const CUT_OFFS = 'Cut-offs';
+export const POINTS_TOGGLE = 'Points';
+export const showCutOffs = (name) => `Cut-offs for ${name}`; // screen readers (new wording, not in the mockups)
+export const showPoints = (name) => `Points for ${name}`; // screen readers (new wording, not in the mockups)
+export const AGE_BRACKET = 'Age bracket';
+export const wayHeading = (name, unit, direction) => `${name ? `${name} · ` : ''}${unit}, ${DIRECTION_WORDS[direction] ?? direction}`;
+export const cutOffsFoot = (direction, unit) =>
+  `${direction === 'at_most' ? 'At most' : direction === 'under' ? 'Under' : 'At least'} the number (${unit}). Below C is a D. Ages on the cycle’s first testing day.`;
+export const TWO_WAYS_FOOT = 'The candidate does one way; the examiner records which. Below C is a D. Ages on the cycle’s first testing day.';
+export const OWN_POINTS = 'Own points';
+export const OWN_POINTS_FOOT = 'This subject’s own points (typed, not credits × grade points).';
+export const OUTDOOR = 'Outdoor';
+export const HANDED_IN_TAG = 'Handed in';
+export const onlyBrackets = (labels) => `Only ${labels}`; // "Only 18 and over"
+export const noteLine = (note) => `Note: ${note}`;
+export const PART_FOOT = 'The part’s most points: each subject’s A+ points added up.';
+export const partFootLimited = (names, labels) => ` ${names} only ${names.includes(' and ') ? 'count' : 'counts'} for ${labels}.`;
+export const EXTRA_POINTS_TITLE = 'Extra points';
+export const extraHead = (counts, limit) =>
+  `${counts ? 'added to the total' : 'not added to the total'}, ${limit === null || limit === undefined ? 'no limit' : `limit ${limit} points`}`;
+export const TO_CONFIRM_TAG = 'To confirm with Master Jeong';
+export const pointEach = (points) => `${points} ${points === 1 ? 'point' : 'points'} each`;
+export const stepText = (atLeast, points) => `${atLeast}+ → ${points}`;
+export const HANDED_IN_BY = 'Handed in by Submissions due';
+export const HANDED_IN_FOOT = 'Worked out from the subjects tagged Handed in.';
+export const NOTHING_HANDED_IN = 'Nothing is handed in.'; // (new wording, not in the mockups)
+export const lastChangedRubric = (name, stamp) => `Last changed by ${name} · ${isJustNow(stamp) ? 'just now' : stampDate(stamp)}`;
+
+// ----- R3 / R6 / R7: the editor -----
+export const editingDan = (dan) => `Editing ${DAN_LABELS[dan] ?? ''}`;
+export const WHERE_DEFAULT = 'default rubric';
+export const whereCycle = (cycleName) => `${cycleName} only`;
+export const changesNotSaved = (count) => (count === 0 ? 'no changes yet' : `${count} ${count === 1 ? 'change' : 'changes'} not saved`);
+export const changesNotSavedPhone = (count) => (count === 0 ? 'No changes yet' : `${count} ${count === 1 ? 'change' : 'changes'} not saved`);
+export const copiedFrom = (dan) => `Copied from ${DAN_LABELS[dan] ?? ''}`;
+export const COPY_FROM_DAN = 'Copy from Dan…';
+export const saveDan = (dan) => `Save ${DAN_LABELS[dan] ?? ''}`;
+export const phoneEditorSub = (where, dan) => `${where} · ${DAN_LABELS[dan] ?? ''}`; // "Default rubric · 1st Dan"
+export const DEFAULT_RUBRIC_WHERE = 'Default rubric';
+export const cycleOnlyLine = (cycleName) => `Changes here are for ${cycleName} only. The default rubric stays as it is.`;
+export const PASS_MARK_PER_BRACKET = 'pass mark per age bracket';
+export const COL_FROM_AGE = 'From age';
+export const COL_TO_AGE = 'To age';
+export const COL_BRACKET = 'Bracket';
+export const COL_PASS_MARK = 'Pass mark';
+export const COL_MOST_POINTS = 'Most points';
+export const YOUNGEST = 'youngest';
+export const OLDEST = 'oldest';
+export const POINTS_UNIT = 'points';
+export const mostPointsChange = (before, after) => (before === after ? `${after}` : `${before} → ${after}`);
+export const mostPointsBefore = (text) => `Most points ${text} before extra points`;
+export const ADD_BRACKET = 'Add bracket';
+export const BRACKETS_HINT =
+  'Brackets go from age to age with no gaps or overlaps; the last may be open. Ages on the cycle’s first testing day. The bracket name is worked out from the ages.';
+export const NO_D_TICK = 'No D in any subject';
+export const MAKEUP_SENTENCE = 'Make-up sentence';
+export const MAKEUP_HINT = 'Shown under the pass mark on the family form and on the printed requirements.';
+export const bracketMore = (label) => `More for ${label}`; // screen readers (new wording, not in the mockups)
+export const passMarkLabel = (label) => `Pass mark, ${label}`; // screen readers (new wording, not in the mockups)
+export const bracketFromLabel = (n) => `Bracket ${n}, from age`; // screen readers (new wording, not in the mockups)
+export const bracketToLabel = (n) => `Bracket ${n}, to age`; // screen readers (new wording, not in the mockups)
+export const SPLIT_BRACKET = 'Split this bracket…';
+export const REMOVE_BRACKET = 'Remove bracket';
+export const ONLY_BRACKET = 'A Dan needs at least one bracket.';
+export const PART_NAME = 'Part name';
+export const gradePointsHint = (dan, partName) =>
+  `${DAN_LABELS[dan] ?? ''}’s own grade points for ${partName}, from A+ down to D. The letters are fixed for each part; only the points change.`;
+export const gradePointLabel = (partName, letter) => `${partName} grade points, ${letter}`; // screen readers (new wording, not in the mockups)
+export const upToChange = (before, after) => (before === after ? `up to ${after} points` : `up to ${before} → ${after} points`);
+export const ADD_SUBJECT = 'Add subject';
+export const creditsTotal = (count) => `${count} ${count === 1 ? 'credit' : 'credits'}`;
+export const subjectNameLabel = (name) => `Subject name${name ? `, ${name}` : ''}`; // screen readers (new wording, not in the mockups)
+export const creditsLabel = (name) => `Credits${name ? `, ${name}` : ''}`; // screen readers (new wording, not in the mockups)
+export const editSubjectLabel = (name) => `Edit ${name || 'subject'}`;
+export const subjectMore = (name) => `More for ${name || 'subject'}`;
+export const dragSubjectLabel = (name) => `Drag ${name || 'subject'} to reorder`;
+export const REMOVE_SUBJECT = 'Remove subject';
+export const NEW_SUBJECT_NAME = 'New subject'; // the name a new subject starts with (new wording, not in the mockups)
+export const ADDED_TO_TOTAL = 'Added to the total';
+export const LIMIT = 'Limit';
+export const NO_LIMIT = 'No limit';
+export const TO_CONFIRM_TICK = 'To confirm with Master Jeong';
+export const EXTRA_SETTINGS_HINT = 'Unticked “Added to the total”: extra points are still recorded and shown, but not counted. Limit empty = no limit.';
+export const PER_COUNT = 'Per count';
+export const STEPS = 'Steps';
+export const POINT_EACH_UNIT = 'point each';
+export const AT_LEAST = 'At least';
+export const ADD_STEP = 'Add step';
+export const stepAtLeastLabel = (name, n) => `${name || 'Item'}, step ${n}, at least`; // screen readers (new wording, not in the mockups)
+export const stepPointsLabel = (name, n) => `${name || 'Item'}, step ${n}, points`; // screen readers (new wording, not in the mockups)
+export const pointsEachLabel = (name) => `${name || 'Item'}, points each`; // screen readers (new wording, not in the mockups)
+export const removeStepLabel = (n) => `Remove step ${n}`; // screen readers (new wording, not in the mockups)
+export const itemMore = (name) => `More for ${name || 'item'}`;
+export const dragItemLabel = (name) => `Drag ${name || 'item'} to reorder`;
+export const REMOVE_ITEM = 'Remove item';
+export const ADD_EXTRA_ITEM = 'Add extra-points item';
+export const NEW_ITEM_NAME = 'New item'; // (new wording, not in the mockups)
+export const itemNameLabel = (name) => `Extra-points item name${name ? `, ${name}` : ''}`; // (new wording, not in the mockups)
+export const howCountsLabel = (name) => `How ${name || 'it'} counts`; // (new wording, not in the mockups)
+export const STEPS_FOOT = 'Steps: the highest step reached counts (3 competitions → 7 points), not the sum of the steps — to confirm with Master Jeong.';
+export const EXTRA_NOTE = 'Note for families (optional)'; // the extra-points note (new wording, not in the mockups)
+
+// ----- R4 / R5: a subject's dialog -----
+export const subjectDialogSub = (partName, dan, where) => `${partName} · ${DAN_LABELS[dan] ?? ''} · ${where}`;
+export const NAME = 'Name';
+export const CREDITS = 'Credits';
+export const CREDITS_HINT = 'Whole number, 1 to 20.';
+export const SCORING = 'Scoring';
+export const MEASURED = 'Measured';
+export const GRADER_PICKS = 'The grader picks a grade from A+ to D.';
+export const wayName = (n) => `Way ${n} name`;
+export const UNIT = 'Unit';
+export const GRADE_NEEDS = 'A grade needs the result to be';
+export const AGE_BRACKETS_CUTOFFS = 'Age brackets and cut-offs';
+export const ADD_AGE_BRACKET = 'Add age bracket';
+export const ADD_ANOTHER_WAY = 'Add another way';
+export const removeWayLabel = (name) => `Remove ${name || 'this way'}`; // (new wording, not in the mockups)
+export const removeAgeBracketLabel = (label) => `Remove ${label}`; // (new wording, not in the mockups)
+export const cutoffLabel = (label, letter) => `${label}, ${letter}`; // screen readers (new wording, not in the mockups)
+export const fromAgeLabel = (n) => `Age bracket ${n}, from age`; // (new wording, not in the mockups)
+export const toAgeLabel = (n) => `Age bracket ${n}, to age`; // (new wording, not in the mockups)
+export const TWO_WAYS_HINT = 'The candidate does one way; the examiner records which. A subject has at most two ways.';
+export const AGES_HINT =
+  'Ages on the cycle’s first testing day. Leave “from” empty for the youngest and “to” empty for the oldest. No gaps or overlaps. A result below C is a D.';
+export const POINTS_LABEL = 'Points';
+export const WORKED_OUT = 'Worked out';
+export const workedOutWhy = (credits, dan, partName) => `${credits} credits × ${DAN_LABELS[dan] ?? ''}’s ${partName} grade points. Changes when the credits change.`;
+export const ownPointsWhy = (worked) => `Each grade’s points typed for this subject; credits don’t change them. Worked out, they would be ${worked}.`;
+export const ownPointLabel = (letter) => `Own points, ${letter}`; // (new wording, not in the mockups)
+export const WHO_DOES_IT = 'Who does it';
+export const EVERYONE = 'Everyone';
+export const ONLY_SOME_BRACKETS = 'Only some brackets';
+export const WHO_HINT = 'The brackets come from To pass. A candidate outside them skips this subject, and that bracket’s most points leave it out.';
+export const TAGS = 'Tags';
+export const doneKeepsDraft = (dan) => `Done keeps this in the draft. Nothing is saved until Save ${DAN_LABELS[dan] ?? ''}.`;
+export const DONE_KEEPS_PHONE = 'Done keeps this in the draft.';
+export const DONE = 'Done';
+export const NEW_WAY_UNIT = 'count'; // a new way's unit (new wording, not in the mockups)
+
+// ----- R6: Split this bracket… -----
+export const splitTitle = (label) => `Split “${label}”`;
+export const splitSub = (dan, where) => `${DAN_LABELS[dan] ?? ''} · ${where}`;
+export const SPLIT_AT_AGE = 'Split at age';
+export const splitPreview = (label, points) => `${label} → ${points} points`;
+export const SPLIT_HINT = 'Both halves keep the pass mark; change either one after. Subjects limited to this bracket stay limited to both halves.';
+export const SPLIT = 'Split';
+export const splitAgeProblem = (min, max) => `Enter a whole age from ${min} to ${max}.`; // (new wording, not in the mockups)
+
+// ----- R9: Copy from another Dan -----
+export const COPY_TITLE = 'Copy from another Dan';
+export const copyInto = (dan, where) => `Into ${DAN_LABELS[dan] ?? ''} · ${where}`;
+export const copyChoiceLine = (subjects, passText, mostText) => `${subjects} subjects · to pass ${passText} · most ${mostText}`;
+export const copyWarning = (into, from, unsaved) =>
+  `Replaces everything in ${DAN_LABELS[into]}’s draft — part names, grade points, subjects, scoring, pass-mark brackets and extra points — with a copy of ${DAN_LABELS[from]}.${
+    unsaved > 0 ? ` Your ${unsaved} unsaved ${unsaved === 1 ? 'change' : 'changes'} to ${DAN_LABELS[into]} ${unsaved === 1 ? 'is' : 'are'} lost.` : ''
+  } Nothing is saved until you press Save ${DAN_LABELS[into]}.`;
+export const copyDan = (dan) => `Copy ${DAN_LABELS[dan] ?? ''}`;
+
+// ----- R10: leaving with unsaved changes -----
+export const discardTitle = (dan) => `Discard changes to ${DAN_LABELS[dan] ?? ''}?`;
+export const changesArentSaved = (count) => `${count} ${count === 1 ? 'change isn’t' : 'changes aren’t'} saved.`;
+export const DISCARD = 'Discard';
+export const KEEP_EDITING = 'Keep editing';
+
+// ----- R8: errors on Save -----
+export const cantSaveYet = (dan, count) => `Can’t save ${DAN_LABELS[dan] ?? ''} yet. Fix ${count === 1 ? 'this thing' : `these ${count} things`}:`;
+export const ERRORS_FOOT = 'Each line jumps to its field. Nothing was saved.';
+export const CHECK_CUTOFFS = 'Check the cut-offs and age brackets';
+export const CHECK_POINTS = 'Check the points'; // (new wording, not in the mockups)
+export const CHECK_WHO = 'Check who does it'; // (new wording, not in the mockups)
+export const CHECK_SUBJECT = 'Check this subject'; // (new wording, not in the mockups)
+
+// ----- R11: saved, Undo, another admin -----
+export const danRubricSaved = (dan) => `${DAN_LABELS[dan] ?? ''} rubric saved`;
+export const UNDO_RUBRIC_STALE = 'Someone else changed this just now.';
+export const otherAdminSaved = (dan) => `Another admin saved ${DAN_LABELS[dan] ?? ''} just now. Reload to see it — your changes would overwrite theirs.`;
+export const RELOAD = 'Reload';
+export const RELOAD_FIRST = 'Reload first — another admin saved';
+export const nowShowing = (name, time, change) => `Now showing the version ${name || 'another admin'} saved${time ? ` at ${time}` : ''}${change ? `: ${change}.` : '.'}`;
+export const yourChangesLost = (count) =>
+  `Your ${count} ${count === 1 ? 'change wasn’t' : 'changes weren’t'} saved. Make ${count === 1 ? 'it' : 'them'} again if ${count === 1 ? 'it still applies' : 'they still apply'}:`;
+export const HIDE = 'Hide';
+export const RUBRIC_NOT_ALLOWED = "Only an admin can change the rubric. Your changes weren't saved."; // (new wording, not in the mockups)
+export const RUBRIC_INVALID_UNKNOWN = 'The database refused this rubric. Check the fields and try again.'; // a problem the screen can't place (new wording, not in the mockups)
+export const RUBRIC_LOCKED_NOW = "Registration opened, so this rubric is locked now. Your changes weren't saved."; // (new wording, not in the mockups)
+export const RUBRIC_UNDO_FAILED = "Undo didn't save. Check the connection, then retry."; // (new wording, not in the mockups)
+export const timeOfDay = (stamp) => {
+  const date = new Date(stamp);
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
+};
+
+// ----- R12 / R13: a cycle's Rubric tab -----
+export const TAB_CYCLE_RUBRIC = 'Rubric';
+export const CYCLE_RUBRIC_EDITABLE = 'This cycle’s rubric can be changed until registration first opens. Opening registration locks it.';
+export const copiedWhenAdded = (date) => `Copied from the default rubric when the cycle was added (${date}).`;
+export const copiedFromStartingPoint = (date) => `Copied from the Fall 2026 starting point when the cycle was added (${date}).`; // a converted v1 cycle (new wording, not in the mockups)
+export const lockedSince = (date) => `Locked since registration opened on ${date}. Changes go into the default rubric for next season.`;
+export const GO_TO_DEFAULT = 'Go to the default rubric';
+export const FIRST_OPEN_ADMIN = 'An admin opens it the first time (it locks the rubric).';
+export const CANT_UNDO_REGISTERED = "Can't undo: a family has already registered."; // (new wording, not in the mockups)
+export const UNDO_OPEN_TOO_LATE = "Couldn't undo: it's too late, or someone else changed this cycle just now."; // (new wording, not in the mockups)
+
+// ----- R14: Add cycle / Edit cycle -----
+export const RUBRIC_SECTION = 'Rubric';
+export const RUBRIC_ADD_LINE = 'Copied from the default rubric when you save. Change it on the cycle’s Rubric tab until registration first opens.';
+// Edit cycle before the first opening (new wording: the mockup reuses Add's line, which says "when you save")
+export const RUBRIC_EDIT_LINE = 'Copied from the default rubric when the cycle was added. Change it on the cycle’s Rubric tab until registration first opens.';
+export const rubricLockedLine = (date) => `Locked since registration opened on ${date}.`;
+export const NEW_CYCLES_CLOSED = 'New cycles start closed. Check the rubric, then open registration from the cycle’s ⋯ menu.';
+export const NOT_OPENED_YET_LINE = 'Not opened yet. An admin opens registration from the cycle’s ⋯ menu.'; // Edit cycle, never opened (new wording, not in the mockups)

@@ -105,9 +105,11 @@
 //   __tkdPreview.resetFinance()           back to the sample closings and Star payments, reminder times Off
 // Black Belt testing helpers (contracts 0016-B1 §2.3 + 0016-B2 §2.4, src/lib/blackBelt/mockBlackBelt.js; setRole, setToday and
 // setTestingDelay cover Black Belt too; failNextSave() fails the next save of whichever section comes first):
-//   __tkdPreview.failNextSave('blackBelt') the next Black Belt save fails like a dropped connection
-//   __tkdPreview.simulateOtherAdminEdit() also bumps every Black Belt cycle, candidate and the settings, and saves a new waiver
-//   __tkdPreview.resetBlackBelt()         back to 0016's seed (no cycles, the placeholder waiver)
+//   __tkdPreview.failNextSave('blackBelt') the next Black Belt save fails like a dropped connection (rubric saves and undos too)
+//   __tkdPreview.simulateOtherAdminEdit() also bumps every Black Belt cycle, candidate and the settings, and saves a new waiver;
+//                                         and "Sam P." saves 1st Dan of the default rubric and of every never-opened cycle
+//                                         (Long jump credits 2 -> 3), so an open rubric editor / its Undo get "stale" (0024 R11)
+//   __tkdPreview.resetBlackBelt()         back to the seed (no cycles, the placeholder waiver, 0024's default rubric)
 //   __tkdPreview.bbSample()               the mockups' sample (Spring 2027 with 6 candidates, Fall 2027)
 //   __tkdPreview.bbLinks()                both family links of every cycle as LOCAL preview addresses
 //   __tkdPreview.setBlackBeltRegistration(false) the Black Belt form's kill switch ("not open" everywhere)
@@ -116,7 +118,11 @@
 //   __tkdPreview.bbSampleEdge()           bbSampleRoster + the edge cases (overpaid, Kukkiwon late, withdrawn, a
 //                                         parent's signature needed, a desk paper waiver)
 //                                         (both fill the schools' street and phone only where they are empty)
-//   __tkdPreview.bbExpireUndo()           the newest Black Belt payment looks 11 s old -> a staff Undo is "too late"
+//   __tkdPreview.bbExpireUndo()           the newest Black Belt payment looks 11 s old -> a staff Undo is "too late";
+//                                         also the newest rubric undo (a Dan save or a first opening) looks 16 s old -> its
+//                                         Undo answers stale (its message still talks about payments only)
+//   (0024 rubric rules in preview: the first opening of a cycle is admin-only and its toast Undo works for 15 s;
+//    a cycle's rubric is editable until registration first opens; Add cycle copies the default rubric, always closed)
 //   __tkdPreview.bbAddDuplicate()         a second form registration of the newest cycle's first candidate (duplicate box)
 //   (forceVerifyFailed / forceRateLimited above work on the Black Belt form too)
 import { getLastPasswordSignIn, PASSWORD_MAX_AGE_MS, decodeJwtPayload } from './session.js';

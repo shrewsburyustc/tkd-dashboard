@@ -973,6 +973,12 @@ section.bbf-card .bbf-review {
   padding: 8px 0;
   font-size: var(--text-14);
 }
+/* A way's heading when a subject is done one of two ways ("Pull-up · reps, at least", 0024) */
+.bbf-score__way {
+  font-size: var(--text-13);
+  font-weight: 500;
+  margin: 8px 0 4px;
+}
 .bbf-score__text {
   font-size: var(--text-13);
   color: var(--color-text-secondary);
