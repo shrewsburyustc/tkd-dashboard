@@ -24,7 +24,8 @@
 | # | Phase | Status | Output |
 |---|---|---|---|
 | 1 | Inventory: every screen, dialog and public page, owner, rulebook rows, paper task, "same job, different design" list | **Done 2026-10-21** — checked by a separate agent | `Phase 1 inventory/` |
-| 2 | Other systems (martial arts + gym software, modern apps): comparison, sources, copy / avoid | Next — waits for Jeffrey's go | — |
+| 1b | **Walkthrough of the phase 1 findings, one item at a time, each with a today-vs-after picture** (Jeffrey, 2026-10-21: "I cannot understand it all at once") | **In progress** — item 1 of 19 shown | `Walkthrough/` |
+| 2 | Other systems (martial arts + gym software, modern apps): comparison, sources, copy / avoid | **On hold** until the walkthrough is done (Jeffrey, 2026-10-21) | — |
 | 3 | Design review in preview mode at 1280×800, 820×1180 touch, 390×844 touch, 320 wide; Grandmaster walkthroughs | Not started | — |
 | 4 | Code review + bug hunt (all of `src/`, `functions/`, `supabase/`) + separate security review (handoff §6) | Not started | — |
 | 5 | Stress tests (thousands of rows, slow/failed/offline saves, two devices, double taps, bad input, PIN lock mid-dialog, 320 wide, 200% zoom) | Not started | — |
@@ -64,7 +65,9 @@ Files in `Phase 1 inventory/`:
 
 ## 6. Next step
 
-Show Jeffrey the phase 1 result. On his OK, phase 2 (other systems).
+**Walkthrough** (`Walkthrough/README.md` has the order of all 19 items). Item 1 — Black Belt money missing from Finance — was shown 2026-10-21: reproduced in the preview (a $500 Black Belt cash payment never reaches the Daily report; Close the day then says "Over $500.00"), with the fix drawn as rulebook v0.808 already describes it. Fix owner: Finance (prompt given with phase 1). **Next: item 2**, Camps showing money while "Hide private details" is on. Phase 2 waits until the walkthrough is done.
+
+**Tools (on this branch, `tools/`):** `cdp.mjs` (remote control for a hidden Chrome: open, click by label, type, screen size and touch mode, screenshots, element boxes), `shoot.mjs` (one-shot screenshot), `compose.mjs` (combined today/after picture from a `.json` spec), `mock-item01-finance.js` (the item 1 "after" drawing). Preview server: `.claude/launch.json` → "design-review-live-look" (Star switch off, like the live site) and "design-review-preview" (Star on); not committed, like the other sessions' launch files.
 
 ## 7. Shared files touched by this session
 

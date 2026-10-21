@@ -1,0 +1,57 @@
+{
+  "title": "Item 1 · Black Belt money is missing from Finance",
+  "subtitle": "A Black Belt payment taken at the desk never reaches the Daily report, so at closing the drawer holds money Finance doesn't know about. <b>This can happen on the live site today:</b> the Black Belt screens are live, so staff can already record Black Belt payments there. <span style=\"color:#6B6B6B\">(Preview screenshots with the fake database · pretend date Mon, Apr 26, 2027 · Shrewsbury)</span>",
+  "width": 1840,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/01a-blackbelt-payment-recorded.png",
+          "crop": [60, 400, 1210, 390],
+          "scale": 0.71,
+          "caption": "<b>1.</b> At the desk, Bao Nguyen pays his $500 Black Belt payment in cash. The roster takes it: “Payment recorded · $500 · Bao Nguyen”.",
+          "marks": [[77, 511, 1179, 40], [940, 737, 316, 39]]
+        },
+        {
+          "src": "shots/01b-finance-today.png",
+          "crop": [60, 180, 1210, 270],
+          "scale": 0.71,
+          "caption": "<b>2.</b> The same day in Finance: Total $15.00, Cash $0.00. Only a $15 camp card payment is listed. The $500 isn't there.",
+          "marks": [[76, 236, 286, 80], [374, 236, 286, 80]]
+        },
+        {
+          "src": "shots/01c-close-day-over.png",
+          "crop": [380, 80, 520, 480],
+          "scale": 1.0,
+          "caption": "<b>3.</b> At closing, staff count $500 in the drawer. The dashboard expected $0.00, says “Over $500.00”, and makes them type a note explaining money it should already know about.",
+          "marks": [[400, 182, 470, 42]]
+        }
+      ],
+      "note": "The payment <b>is</b> saved in Black Belt. It just never reaches Finance: not the Daily report, not History, not Close the day, not the CSV for the bookkeeper."
+    },
+    {
+      "label": "After the fix (mockup)",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/01d-finance-fixed-MOCKUP.png",
+          "crop": [60, 180, 1210, 350],
+          "scale": 0.71,
+          "caption": "<b>4.</b> The payment shows in Finance as “Black Belt · Spring 2027 · Payment 2”, on the day it was taken, and the Total and Cash cards include it.",
+          "marks": [[76, 236, 286, 80], [374, 236, 286, 80], [76, 376, 1180, 64]]
+        },
+        {
+          "src": "shots/01e-close-day-fixed-MOCKUP.png",
+          "crop": [380, 80, 520, 480],
+          "scale": 1.0,
+          "caption": "<b>5.</b> At closing, the $500 counted matches what Finance expects. Nothing to explain.",
+          "marks": [[400, 182, 476, 42]]
+        }
+      ],
+      "note": "<b>Not a new design.</b> Finance already decided this on Oct 19 (rulebook v0.808: the line “Black Belt · cycle · what it's for”; v0.809: a bounced check gets its own “Returned checks” group). It was waiting for Black Belt payments to exist, and they went live on Oct 21. Pictures 4 and 5 are drawn over the real page; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Who fixes it:</b> the Finance session — one database migration, already planned in its status file. The ready-to-paste prompt is in my phase 1 message. <b>Until then:</b> every Black Belt payment makes that day's count look over by the same amount. <b>Tablet and phone:</b> same screens, only the numbers change."
+}
