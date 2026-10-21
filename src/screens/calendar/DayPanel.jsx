@@ -11,11 +11,16 @@
 //   - free classes booked through Forms (child's first name, class, time, form); one whose class
 //     no longer runs then is amber: "Class cancelled — call the family" (v0.241 answer 6); on
 //     the class day each free class has Check in (ti-user-check) when the family walks in (v0.236)
+//   - prospects' follow-ups (v0.612 / v0.615): "Ruby A." with "Overdue" / "Due today" in amber;
+//     a tap opens that child in Prospects (on Both: each school under its own heading)
+// What the Show menu hides is already gone from `info` (showKinds.js applyShow); a hidden kind's
+// heading goes too (no "No classes" line when Classes are hidden).
 //
 // Props:
 //   date, today, info (buildDay result), schoolLabel, both, typeColor,
-//   isAdmin, onOpenEvent(event, element), onOpenClosure(closure, element)
-import { IconAlertTriangle, IconCertificate, IconChevronRight, IconUserCheck, IconUserPlus } from '@tabler/icons-react';
+//   isAdmin, onOpenEvent(event, element), onOpenClosure(closure, element),
+//   followUpsFailed (true = show "Couldn't load follow-ups."), onOpenFollowUp(follow-up)
+import { IconAlertTriangle, IconCertificate, IconChevronRight, IconClockHour4, IconUserCheck, IconUserPlus } from '@tabler/icons-react';
 import { colorOf } from '../../lib/schedule/colors.js';
 import { eventTimeOn } from '../../lib/calendar/days.js';
 import { formatRange, formatTime, parseTime } from '../../lib/schedule/time.js';
@@ -33,8 +38,28 @@ function Dots({ colorKeys }) {
   );
 }
 
-export default function DayPanel({ date, today, info, schoolLabel, both, typeColor, isAdmin, onOpenEvent, onOpenClosure, checkIns = null, checkInBusy = false, onCheckIn }) {
+function FollowUps({ list, date, today, onOpen }) {
+  const tag = date < today ? T.OVERDUE : date === today ? T.DUE_TODAY : null;
+  return (
+    <ul className="cpanel-list">
+      {list.map((f) => (
+        <li key={f.id}>
+          <button type="button" className="cpanel-row cpanel-row--btn cpanel-follow" data-follow-up={f.id} aria-label={T.openFollowUp(f, tag)} onClick={() => onOpen(f)}>
+            <IconClockHour4 size={16} aria-hidden="true" className="cpanel-icon" />
+            <span className="cpanel-name">{T.followName(f)}</span>
+            {tag && <span className="cpanel-follow-tag">{tag}</span>}
+            <IconChevronRight size={16} aria-hidden="true" />
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export default function DayPanel({ date, today, info, schoolLabel, both, typeColor, isAdmin, onOpenEvent, onOpenClosure, checkIns = null, checkInBusy = false, onCheckIn, followUpsFailed = false, onOpenFollowUp }) {
   const isToday = date === today;
+  const showClasses = info.shows?.classes !== false;
+  const followSchools = both ? info.schools.filter((s) => info.followUps.some((f) => f.code === s.code)) : [];
   const action = isAdmin ? T.editThing : T.viewThing;
   const hasEvents = info.events.length > 0 || info.testing.length > 0;
   return (
@@ -140,7 +165,22 @@ export default function DayPanel({ date, today, info, schoolLabel, both, typeCol
         </>
       )}
 
-      {info.schools.map((school) => (
+      {info.followUpCount > 0 && !both && (
+        <>
+          <h3 className="cpanel-head">{T.FOLLOW_UPS}</h3>
+          <FollowUps list={info.followUps} date={date} today={today} onOpen={onOpenFollowUp} />
+        </>
+      )}
+      {info.followUpCount > 0 &&
+        followSchools.map((school) => (
+          <div key={`f-${school.code}`}>
+            <h3 className="cpanel-head">{T.followUpsOf(school.name)}</h3>
+            <FollowUps list={info.followUps.filter((f) => f.code === school.code)} date={date} today={today} onOpen={onOpenFollowUp} />
+          </div>
+        ))}
+      {followUpsFailed && <p className="cpanel-empty">{T.FOLLOW_UPS_FAILED}</p>}
+
+      {showClasses && info.schools.map((school) => (
         <div key={school.code}>
           <h3 className="cpanel-head">{both ? T.classesOf(school.name) : T.CLASSES}</h3>
           {school.classes.length === 0 ? (

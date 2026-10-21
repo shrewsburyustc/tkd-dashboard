@@ -27,6 +27,8 @@ import { useShortcutN } from '../lib/useShortcutN.js';
 import { addDays } from '../lib/schedule/versions.js';
 import { loadForms } from '../lib/forms/api.js';
 import { useProspects } from '../lib/prospects/useProspects.js';
+import { isDueToday, lastInitial } from '../lib/prospects/followUps.js';
+import { takeOpenProspect } from '../lib/prospects/openRequest.js';
 import {
   addNote, addStatus, bookTime, cancelTime, checkIn, deleteProspect, deleteStatus, getProspect, markOpened, openTimesFor, reorderStatuses,
   searchProspects, setFollowUp, setStatus, undoCheckIn, updateStatus,
@@ -48,17 +50,7 @@ const savedView = (staffId) => (readStorage(viewKey(staffId)) === 'board' ? 'boa
 const localToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
 const emptyNote = () => ({ body: '', when: 'tomorrow', picked: null });
 const usable = (el) => (el && el.isConnected && el.getClientRects().length > 0 ? el : null);
-const lastInitial = (name) => {
-  const parts = String(name ?? '').trim().split(/\s+/);
-  return parts.length > 1 ? parts[parts.length - 1][0].toUpperCase() : '';
-};
-
-// Is this prospect in "Follow up today"?
-function isDueToday(p, builtin, today) {
-  if (['joined', 'not_interested'].includes(builtin ?? '')) return false;
-  return (p.followUpOn && p.followUpOn <= today) || builtin === 'new' || p.askCame
-    || Boolean(p.booking && p.booking.status === 'booked' && !p.booking.classRunning);
-}
+// "Follow up today" and the "Ava R." name come from followUps.js, shared with the Calendar (v0.615).
 
 export default function Prospects({ location, staffId, isAdmin, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange, onBadgeRefresh }) {
   const isPhone = useMediaQuery(PHONE_QUERY);
@@ -199,6 +191,18 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
       onBadgeRefresh?.();
     }
   }
+  // A follow-up tapped in the Calendar (v0.615): once the list has loaded, open that child. If it
+  // was deleted meanwhile (e.g. by the automatic clean-up), say so instead of an empty panel.
+  // (The request is taken only once the list is ready, so it is used exactly once.)
+  useEffect(() => {
+    if (pros.status !== 'ready' || !pros.data) return;
+    const wanted = takeOpenProspect();
+    if (!wanted) return;
+    const code = codes.find((c) => (pros.data.lists[c] ?? []).some((p) => p.id === wanted));
+    const item = code ? pros.data.lists[code].find((p) => p.id === wanted) : null;
+    if (item) openProspect(item, code);
+    else showToast(T.PROSPECT_GONE);
+  }, [pros.status, pros.data]);
   function closePanel() {
     if (noteInTheWay(null)) return;
     const s = ref.current.selected;

@@ -19,7 +19,7 @@
 //
 // Props (from Finance.jsx): location, isAdmin, today, day, onDay(day), onOpenHistory(),
 //   onLocationChange(name), profileName, screenLocked, onNoAccess, onRefreshProfile,
-//   showToast, clearToast, onModalOpenChange, onOpenTesting(schoolName, eventId, source)
+//   showToast, clearToast, onModalOpenChange, onOpenTesting(schoolName, eventId, source, options)
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   IconCalendar,
@@ -656,9 +656,9 @@ export default function DayReport({
             focusOpener();
           }}
           onNoAccess={onNoAccess}
-          onOpenInTesting={(eventId, source) => {
+          onOpenInTesting={(eventId, source, options) => {
             setDetail(null);
-            onOpenTesting(location, eventId, source);
+            onOpenTesting(location, eventId, source, options);
           }}
         />
       )}

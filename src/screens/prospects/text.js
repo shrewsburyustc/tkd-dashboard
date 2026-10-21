@@ -147,6 +147,7 @@ export const fromForm = (form, date) => `from "${form}" · ${shortDate(date).sli
 export const enteredBy = (name) => `Entered by ${name}`;
 export const NO_TIME_YET = 'No time yet — call to set one up';
 export const CLASS_GONE = 'Class cancelled — call the family';
+export const PROSPECT_GONE = 'That prospect no longer exists.';
 export const BOOKING_CANCELLED = 'Booking cancelled';
 export const BOOK = 'Book a free class';
 export const CHANGE_TIME = 'Change time';

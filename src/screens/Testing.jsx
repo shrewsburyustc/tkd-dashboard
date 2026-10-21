@@ -97,6 +97,14 @@ const TABS = [
 // lands on the same tab). Events is the first tab and the default.
 let lastTab = 'events';
 
+// Finance's "Open in Testing" on a private testing payment (rulebook v0.813): the next time Color
+// Belt testing opens, it shows the Private testing tab (and not Black Belt). Testing isn't on screen
+// while Finance is, so the tab is simply chosen before the page opens.
+export function showPrivateTestingTabNext() {
+  lastTab = 'private';
+  blackBeltOpen = false;
+}
+
 // The header + tab bar, drawn by the tab itself (it knows when its add button may show).
 //   action     the add button element, or null
 //   staffLine  the gray line for staff under the tabs, or null

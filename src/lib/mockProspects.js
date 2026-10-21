@@ -456,12 +456,19 @@ export function createProspectsPart({ newId, stamp, today, nowLocal, times, slot
     const [ruby] = family('Jo Allen', '508-555-0145', [['Ruby', 11]], 5);
     void liam;
     if (ethan) updateRow(ethan, { status_id: statusOf(db, 'worcester', 'no_show'), follow_up_on: addDays(today(), -2) }, ctx);
-    if (owen) updateRow(owen, { status_id: statusOf(db, 'worcester', 'joined'), joined_on: addDays(today(), -14) }, ctx);
+    // Owen joined but kept an old follow-up date: the Calendar must NOT show it (v0.615).
+    if (owen) updateRow(owen, { status_id: statusOf(db, 'worcester', 'joined'), joined_on: addDays(today(), -14), follow_up_on: addDays(today(), -1) }, ctx);
     if (mia) updateRow(mia, { status_id: statusOf(db, 'worcester', 'came'), follow_up_on: addDays(today(), 2) }, ctx);
     if (ruby) {
       updateRow(ruby, { status_id: named('worcester', 'Contacted'), follow_up_on: today() }, ctx);
       db.notes.push({ id: newId(), prospect_id: ruby.id, location_code: 'worcester', body: 'Mom asked about the Saturday class. Call back today after 3.', follow_up_on: today(), created_at: daysAgo(1), created_by_name: 'Front Desk' });
     }
+    // For the Calendar's follow-ups (v0.612 / v0.615): one later this week, and a Not interested
+    // child with a follow-up date left on it (must NOT show).
+    const [noah] = family('Chris Nguyen', '508-555-0133', [['Noah', 7]], 3);
+    if (noah) updateRow(noah, { status_id: named('worcester', 'Contacted'), follow_up_on: addDays(today(), 4) }, ctx);
+    const [zoe] = family('Kim Lee', '508-555-0152', [['Zoe', 10]], 15);
+    if (zoe) updateRow(zoe, { status_id: statusOf(db, 'worcester', 'not_interested'), follow_up_on: addDays(today(), 1) }, ctx);
     const byChild = (name) => db.prospects.find((p) => p.child_first_name === name);
     const rohan = byChild('Rohan');
     if (rohan) {

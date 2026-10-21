@@ -905,7 +905,9 @@ begin
 
   -- T5b. a registration: ok answer, the stored row, the history row
   v_key1 := v_tag || ' key1';
-  select count(*) into v_n from public.testing_public_attempts;
+  -- only rows newer than 2 days: the call itself first removes older ones, so on a database with
+  -- old attempts (production) a plain count would not grow by one
+  select count(*) into v_n from public.testing_public_attempts a where a.at >= now() - interval '2 days';
   select coalesce(max(id), 0) into v_mark from public.change_log;
   -- a pretend admin login token must NOT make it look like a staff entry
   perform set_config('request.jwt.claims', v_c_a1, true);
@@ -935,7 +937,7 @@ begin
                     and not (l.after ? 'submission_id')) then
     raise exception 'TEST FAILED: T5b history row for the form registration ("Family form", signature on file, no submission_id)';
   end if;
-  if (select count(*) from public.testing_public_attempts) <> v_n + 1
+  if (select count(*) from public.testing_public_attempts a where a.at >= now() - interval '2 days') <> v_n + 1
      or not exists (select 1 from public.testing_public_attempts a where a.client_key = v_key1 and a.outcome = 'ok' and a.event_id = v_ep) then
     raise exception 'TEST FAILED: T5b an ok call must write one attempts row (outcome ok)';
   end if;

@@ -5,6 +5,7 @@
 // writes nothing for the same day and time). A private testing marked No show gets an amber note
 // first: saving a new day clears that result. No toast after Save — the row shows the new day.
 // PC and tablet: a small centered dialog; phone: a full screen with Save pinned at the bottom.
+// Follows "Hide private details" (v0.506): while `hidden` is on, the "price stays" line is left out.
 // This file only DRAWS; PrivateTestingTab keeps the values and saves.
 import { IconCheck } from '@tabler/icons-react';
 import Dialog from '../../../components/Dialog.jsx';
@@ -33,7 +34,7 @@ const NOTES = {
 };
 
 // props: state, record (the row), today, isPhone, onChange, onTouch, onSave(canSave), onCancel, onRequestClose
-export default function ChangeDayDialog({ state, record, today, isPhone, onChange, onTouch, onSave, onCancel, onRequestClose }) {
+export default function ChangeDayDialog({ state, record, today, hidden = false, isPhone, onChange, onTouch, onSave, onCancel, onRequestClose }) {
   const idBase = `change-day-${state.key}`;
   const check = checkChangeDay(state, { today });
   const toName = record.testingFor?.kind === 'rank' ? record.testingFor.name : T.NO_NEW_RANK;
@@ -73,7 +74,7 @@ export default function ChangeDayDialog({ state, record, today, isPhone, onChang
         className="pv-form"
       >
         <DayTimeFields idBase={idBase} values={state.values} check={check} readOnly={state.saving} today={today} autoFocus onChange={onChange} onTouch={onTouch} />
-        <p className="field-hint pv-stays">{T.priceStays(record.privateCents)}</p>
+        {!hidden && <p className="field-hint pv-stays">{T.priceStays(record.privateCents)}</p>}
         {/* A new day clears a No show (and its note) — said before Save (CP1 wording). */}
         {record.result === 'no_show' && (
           <div className="pv-clearing">

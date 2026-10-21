@@ -1668,7 +1668,7 @@ Color Belt's CP3 (2026-10-19) left **2 test private testings** on production ("J
 
 ## Migration 0021: Not interested families deleted after 6 months (rulebook v0.611)
 
-**What it does** (`supabase/migrations/0021_prospects_not_interested_sooner.sql`): replaces **one** function, `prospects_purge_old` — the clean-up that runs whenever Prospects is opened. A family in which **every** child is Not interested is deleted **6 months** after its last activity (a note, a call, a status change, a booking or a check-in; marking someone Not interested counts, so it restarts the 6 months). Every other family without a Joined child keeps the **2 years** (v0.244); Joined is never deleted. How a deletion happens is unchanged from 0015 (rule checked again at the moment of deleting, the family's history removed with it, one counts-only row in `change_log`). No table, permission or other function changes.
+**What it does** (`supabase/migrations/0021_prospects_not_interested_sooner.sql`): replaces **one** function, `prospects_purge_old` — the clean-up that runs whenever Prospects (and, since v0.615, the Calendar) is loaded. A family in which **every** child is Not interested is deleted **6 months** after its last activity (a note, a call, a status change, a booking or a check-in; marking someone Not interested counts, so it restarts the 6 months). Every other family without a Joined child keeps the **2 years** (v0.244); Joined is never deleted. How a deletion happens is unchanged from 0015 (rule checked again at the moment of deleting, the family's history removed with it, one counts-only row in `change_log`). No table, permission or other function changes.
 
 **Each step needs Jeffrey's OK.** Only after 0015 is live (it is).
 
