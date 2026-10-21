@@ -90,3 +90,10 @@ No High findings. Fixed:
 ## Deployed 2026-10-20
 
 This branch is on `main` and live (the push included `0ccf776`; live `main` = `cc8b095`). Checked on https://tkd-dashboard.pages.dev: `/f/…` and `/forms` have the strict security policy, the dashboard keeps its own, and `GET /api/forms/<slug>` answers `not_open` (PUBLIC_FORMS=off). Next: Jeffrey looks at the new sections signed in; then PUBLIC_FORMS=on + redeploy, one real test sign-up, the two-connection race test.
+
+## 2026-10-21: follow-ups on the Calendar + one "Show" menu (rulebook v0.612-v0.613) - design only, nothing built
+
+- Decided (Jeffrey): prospects' follow-up dates show as one count chip per day (amber = due today or overdue), with a Follow-ups list in the day panel that opens Prospects (v0.612).
+- Rule for every Calendar item, now and later: one compact **Show** menu with a tick box per kind (Classes, Closures, Events, Free classes, Follow-ups). It is remembered per person on that device and everything is on at first (v0.613).
+- Mockups (design-reviewed, fixes applied): `Calendar-show-mockup-PC.png`, `Calendar-show-mockup-tablet-phone.png`. Earlier drafts: `Calendar-followups.png`, `Calendar-toggles.png`, `Calendar-show-menu.png`.
+- Next: Jeffrey approves the mockups -> build plan (expected: no migration; if one is needed, Main reserves the number, next free 0025) -> build in preview -> reviews -> commit.
