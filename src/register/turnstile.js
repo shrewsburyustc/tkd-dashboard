@@ -47,13 +47,15 @@ export function removeTurnstile() {
 // Gets a fresh one-time token. `container` is the empty box above Send where Turnstile may
 // show its check. Resolves to the token, or rejects if the check can't run or fails (the page
 // then shows "We couldn't check this browser…").
-export async function getTurnstileToken(siteKey, container) {
+// `action` names the form the token is for, and the server checks it matches. The Color Belt
+// form passes nothing ("register"); the camp sign-up page passes "camp_signup" (contract 0013 §4.4).
+export async function getTurnstileToken(siteKey, container, action = 'register') {
   const turnstile = await loadScript();
   removeTurnstile();
   return new Promise((resolve, reject) => {
     widgetId = turnstile.render(container, {
       sitekey: siteKey,
-      action: 'register', // the server checks this matches
+      action, // the server checks this matches
       appearance: 'interaction-only', // invisible unless Cloudflare needs a click
       execution: 'execute', // don't start until execute() below
       retry: 'never', // a failure is reported straight away; the next Send tries again

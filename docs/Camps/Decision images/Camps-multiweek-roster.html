@@ -1,0 +1,130 @@
+<!doctype html>
+<!--
+  Camps-multiweek-roster.html — decision picture: the one-roster camp page for a camp that crosses
+  more than one week (up to 10 days). Why it exists: Jeffrey asked "what happens when we have camps
+  that are multiple weeks?" Two options: a week switcher (A) or every day as a column (B).
+  Example: a 2-week camp, Mon, Jul 6 – Fri, Jul 17, 2026, today = Wed, Jul 15 (week 2).
+  The PNG next to it is a screenshot.
+-->
+<html lang="en"><head><meta charset="utf-8"><title>Camps — multi-week roster</title>
+<style>
+  :root{--bg:#fff;--surface:#f7f7f5;--border:#e5e5e2;--ctl:#8f8f8a;--text:#1f1f1f;--muted:#6b6b6b;
+    --blue:#003595;--tint:#e6ebf4;--amber:#c98a1b;--ok:#3b6d11;--okbg:#eaf3de;--wbg:#faeeda;--wt:#633806}
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:#efeee9;font:14px/1.45 "Segoe UI",system-ui,sans-serif;color:var(--text);width:1340px}
+  h1{font-size:20px;font-weight:500;margin:0 0 4px}
+  .lead{color:var(--muted);margin:0 0 16px;max-width:1200px}
+  .opt{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin-bottom:22px}
+  .opt h2{font-size:16px;font-weight:500;margin:0 0 2px}
+  .rec{display:inline-block;font-size:12px;background:var(--okbg);color:var(--ok);border-radius:6px;padding:1px 8px;margin-left:8px;vertical-align:2px}
+  .sub{color:var(--muted);margin:0 0 12px;font-size:13px;max-width:1220px}
+  .cap{font-size:12px;color:var(--muted);margin:10px 0 6px}
+  .row2{display:flex;gap:22px;align-items:flex-start}
+  .pc{border:1px solid #cfcfca;border-radius:10px;padding:14px 16px;width:860px;overflow:hidden}
+  .phone{border:6px solid #2a2a2a;border-radius:28px;padding:12px;width:360px;overflow:hidden}
+  .t{font-size:18px;font-weight:500}.h{font-size:12px;color:var(--muted)}
+  .sum{display:flex;gap:18px;align-items:baseline;margin:8px 0}
+  .sum .big{font-size:22px;font-weight:500}.sum .l{font-size:12px;color:var(--muted)}
+  .weeks{display:inline-flex;border:1px solid var(--ctl);border-radius:8px;overflow:hidden;font-size:13px;margin:6px 0 10px}
+  .weeks span{padding:6px 14px;border-right:1px solid var(--border)}.weeks span:last-child{border:0}
+  .weeks .on{background:var(--tint);color:var(--blue)}
+  table{border-collapse:collapse;font-size:13px}
+  th{background:var(--surface);color:var(--muted);font-weight:400;font-size:12px;text-align:left;padding:6px 6px;border-bottom:1px solid var(--border);white-space:nowrap}
+  th.c,td.c{text-align:center}
+  th.today{background:var(--tint);color:var(--blue);font-weight:500}
+  td{padding:0 6px;height:44px;border-bottom:1px solid var(--border);white-space:nowrap}
+  td.today{background:#fbfbfd}
+  .nm{font-weight:500;text-decoration:underline;text-decoration-color:#cfcfca;text-underline-offset:3px}
+  .tag{font-size:12px;border-radius:6px;padding:2px 8px;background:var(--okbg);color:var(--ok)}
+  .tag.np{background:var(--surface);color:var(--muted);border:1px solid var(--border)}
+  .cell{display:inline-flex;align-items:center;justify-content:center;width:58px;height:32px;border-radius:8px;font-size:12px}
+  .cell.s{width:46px}
+  .in{background:var(--okbg);color:var(--ok)} .tap{border:1px solid var(--ctl);background:#fff} .miss{background:var(--wbg);color:var(--wt)} .none{color:#b8b8b3}
+  .amber{outline:3px solid var(--amber);outline-offset:3px;border-radius:8px}
+  .note{font-size:12px;color:#7a4f00;margin:8px 0 0;font-weight:500}
+  .card{border-bottom:1px solid var(--border);padding:8px 0}
+  .card .r{display:flex;justify-content:space-between;align-items:center}
+  .mini{display:flex;gap:4px;margin-top:6px}
+  .mini .cell{width:56px;height:40px;flex-direction:column;line-height:1.1;font-size:11px;flex:none}
+  .scrollhint{font-size:11px;color:var(--muted);margin-top:4px}
+  .fade{position:relative}
+  .fade:after{content:"";position:absolute;right:0;top:0;bottom:0;width:40px;background:linear-gradient(90deg,rgba(255,255,255,0),#fff)}
+  .pc2{width:1240px}
+  .pcs{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:12px;font-size:13px}
+  .pcs h3{font-size:13px;font-weight:500;margin:0 0 4px}.pcs ul{margin:0;padding-left:18px}
+</style></head><body>
+
+<h1>Camp page — a camp longer than one week</h1>
+<p class="lead">Example: a 2-week camp, <b>Mon, Jul 6 – Fri, Jul 17, 2026</b> (10 days). Today is <b>Wed, Jul 15</b> (week 2). Summer weeks that are separate camps (v0.231) still show 5 days and never need this. Amber = the difference.</p>
+
+<!-- ============ A ============ -->
+<div class="opt">
+  <h2>A. Week switcher — 5 days at a time <span class="rec">Recommended</span></h2>
+  <p class="sub">A "Week 1 · Week 2" switch appears above the roster <b>only</b> when the camp crosses more than one week. It opens on the current week. Each week shows at most 5 day columns, so it looks exactly like a normal one-week camp. <b>Paid</b> and "to collect" are for the whole camp; the "here today" count is today's.</p>
+  <div class="row2">
+    <div>
+      <div class="cap">PC · 1280px (shown narrower here) · Week 2 open</div>
+      <div class="pc">
+        <div class="t">Two-Week Summer Camp</div><div class="h">Mon, Jul 6 – Fri, Jul 17, 2026 · 10 days · Worcester</div>
+        <div class="sum"><span><span class="big">12</span> <span class="l">of 14 here today</span></span><span><span class="big">3</span> <span class="l">to collect · $860</span></span></div>
+        <div class="weeks amber"><span>Week 1 · Jul 6–10</span><span class="on">Week 2 · Jul 13–17</span></div>
+        <table>
+          <tr><th>Camper</th><th>Paid</th><th class="c">Mon 13</th><th class="c">Tue 14</th><th class="c today">Wed 15 · today</th><th class="c">Thu 16</th><th class="c">Fri 17</th></tr>
+          <tr><td><span class="nm">Ava Thompson</span></td><td><span class="tag">Paid</span></td><td class="c"><span class="cell in">✓ 7:40</span></td><td class="c"><span class="cell in">✓ 7:45</span></td><td class="c today"><span class="cell in">✓ 7:42</span></td><td class="c"><span class="cell tap">Check in</span></td><td class="c"><span class="cell tap">Check in</span></td></tr>
+          <tr><td><span class="nm">Noah Patel</span></td><td><span class="tag np">$219 due</span></td><td class="c"><span class="cell in">✓ 8:55</span></td><td class="c"><span class="cell miss">✗</span></td><td class="c today"><span class="cell tap">Check in</span></td><td class="c"><span class="cell none">—</span></td><td class="c"><span class="cell none">—</span></td></tr>
+          <tr><td><span class="nm">Mia Rossi</span></td><td><span class="tag">Paid</span></td><td class="c"><span class="cell none">—</span></td><td class="c"><span class="cell none">—</span></td><td class="c today"><span class="cell tap">Check in</span></td><td class="c"><span class="cell tap">Check in</span></td><td class="c"><span class="cell tap">Check in</span></td></tr>
+        </table>
+        <p class="note">Tap "Week 1" to see / fix last week's check-ins. A child who only comes in week 1 shows "—" in every week-2 column.</p>
+      </div>
+    </div>
+    <div>
+      <div class="cap">Phone · 390px · Week 2 open</div>
+      <div class="phone">
+        <div class="t" style="font-size:16px">Two-Week Summer Camp</div>
+        <div class="sum"><span><span class="big">12</span> <span class="l">of 14 here</span></span><span><span class="big">3</span> <span class="l">to collect</span></span></div>
+        <div class="weeks amber" style="display:flex"><span style="flex:1;text-align:center">Week 1</span><span class="on" style="flex:1;text-align:center">Week 2</span></div>
+        <div class="card"><div class="r"><span class="nm">Ava Thompson</span><span class="tag">Paid</span></div>
+          <div class="mini"><span class="cell in">M<br>✓ 7:40</span><span class="cell in">T<br>✓ 7:45</span><span class="cell in" style="outline:2px solid var(--blue)">W<br>✓ 7:42</span><span class="cell tap">Th<br>Check</span><span class="cell tap">F<br>Check</span></div></div>
+        <div class="card"><div class="r"><span class="nm">Noah Patel</span><span class="tag np">$219 due</span></div>
+          <div class="mini"><span class="cell in">M<br>✓ 8:55</span><span class="cell miss">T<br>✗</span><span class="cell tap" style="outline:2px solid var(--blue)">W<br>Check in</span><span class="cell none">—</span><span class="cell none">—</span></div></div>
+        <p class="note">Still 5 day buttons per card — fits any phone.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pcs">
+    <div><h3>Pros</h3><ul><li>Every camp looks the same: never more than 5 day columns.</li><li>Fits every phone and tablet; nothing slides sideways.</li><li>Opens on this week, which is what the door needs.</li></ul></div>
+    <div><h3>Cons</h3><ul><li>To see the whole camp at once you switch weeks (or print — Print roster prints all weeks).</li><li>One small extra control on longer camps.</li></ul></div>
+  </div>
+</div>
+
+<!-- ============ B ============ -->
+<div class="opt">
+  <h2>B. Every day is a column — slide sideways on small screens</h2>
+  <p class="sub">All 10 days are columns. On the PC they fit side by side (narrower cells). On tablets and phones the day columns slide sideways inside the roster; Name and Paid stay put.</p>
+  <div class="row2">
+    <div>
+      <div class="cap">PC · 1280px · all 10 days</div>
+      <div class="pc pc2 amber">
+        <table>
+          <tr><th>Camper</th><th>Paid</th><th class="c">Mon 6</th><th class="c">Tue 7</th><th class="c">Wed 8</th><th class="c">Thu 9</th><th class="c">Fri 10</th><th class="c">Mon 13</th><th class="c">Tue 14</th><th class="c today">Wed 15</th><th class="c">Thu 16</th><th class="c">Fri 17</th></tr>
+          <tr><td><span class="nm">Ava Thompson</span></td><td><span class="tag">Paid</span></td><td class="c"><span class="cell s in">✓</span></td><td class="c"><span class="cell s in">✓</span></td><td class="c"><span class="cell s in">✓</span></td><td class="c"><span class="cell s in">✓</span></td><td class="c"><span class="cell s in">✓</span></td><td class="c"><span class="cell s in">✓</span></td><td class="c"><span class="cell s in">✓</span></td><td class="c today"><span class="cell s in">✓</span></td><td class="c"><span class="cell s tap">Check</span></td><td class="c"><span class="cell s tap">Check</span></td></tr>
+          <tr><td><span class="nm">Noah Patel</span></td><td><span class="tag np">$219 due</span></td><td class="c"><span class="cell s in">✓</span></td><td class="c"><span class="cell s miss">✗</span></td><td class="c"><span class="cell s in">✓</span></td><td class="c"><span class="cell s none">—</span></td><td class="c"><span class="cell s none">—</span></td><td class="c"><span class="cell s in">✓</span></td><td class="c"><span class="cell s miss">✗</span></td><td class="c today"><span class="cell s tap">Check</span></td><td class="c"><span class="cell s none">—</span></td><td class="c"><span class="cell s none">—</span></td></tr>
+        </table>
+        <p class="note">The whole camp at a glance on the PC, but cells get narrow (no room for check-in times).</p>
+      </div>
+    </div>
+  </div>
+  <div class="cap">Phone · 390px · slides sideways</div>
+  <div class="phone amber">
+    <div class="card"><div class="r"><span class="nm">Ava Thompson</span><span class="tag">Paid</span></div>
+      <div class="mini fade"><span class="cell in">M6<br>✓</span><span class="cell in">T7<br>✓</span><span class="cell in">W8<br>✓</span><span class="cell in">T9<br>✓</span><span class="cell in">F10<br>✓</span><span class="cell in">M13<br>✓</span></div>
+      <div class="scrollhint">← swipe for more days →</div></div>
+    <p class="note">On a phone today (Wed 15) is off-screen until you swipe.</p>
+  </div>
+  <div class="pcs">
+    <div><h3>Pros</h3><ul><li>The whole camp on one PC screen.</li><li>No extra control.</li></ul></div>
+    <div><h3>Cons</h3><ul><li>Narrow cells on the PC (no times); phones need swiping and today can be off-screen.</li><li>Breaks the "never slide sideways" feel of the rest of the dashboard.</li></ul></div>
+  </div>
+</div>
+
+</body></html>

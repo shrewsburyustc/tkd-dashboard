@@ -4,7 +4,7 @@
 // Items are added only as real sections are built.
 // Finance adds the close-the-day reminder lines (mockup D10, v0.202): on a day a school took
 // payments and hasn't closed its drawer, from the reminder time on. The "Nothing on Home yet"
-// line goes away while a reminder shows. With "Hide payments" on (v0.215) the lines have no link.
+// line goes away while a reminder shows. With "Hide private details" on (v0.215, v0.506) the lines have no link.
 // After an admin presses OK on the earlier-days line (v0.811) the line disappears, so the keyboard
 // focus moves to the next reminder line (or the greeting) and a screen reader hears it was hidden.
 import { useEffect, useRef, useState } from 'react';

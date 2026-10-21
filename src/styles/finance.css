@@ -1,7 +1,7 @@
 /*
   finance.css — the look of the Finance section (Daily report, History, Settings, Export, Print),
-  the Home reminder lines, and Finance's two bits of the app frame (the "Payments hidden" chip in
-  the top bar and the Hide payments switch in the account menu).
+  the Home reminder lines, and Finance's two bits of the app frame (the "Private details hidden" chip
+  in the top bar and the Hide private details switch in the account menu; v0.215, renamed v0.506).
   Why it exists: the approved mockups D1–D14 (docs/Finance/TKD-Finance-DailyReport-Mockups.html)
   drawn with the design tokens (tokens.css). Shared pieces (.btn, .input, .ttag, .ttabs, .errbar,
   .segmented, dialogs, sheets) come from app.css and testing.css; everything here starts with
@@ -897,7 +897,7 @@
   }
 }
 
-/* ===== Top bar: the "Payments hidden" chip (v0.215) ===== */
+/* ===== Top bar: the "Private details hidden" chip (v0.215, renamed v0.506) ===== */
 .fin-hidden-chip {
   position: relative;
   display: inline-flex;
@@ -1066,11 +1066,12 @@
     padding: 0 6px;
   }
 
-  /* Icon-only chip (30px wide, 28px tall): an invisible frame makes the tap area 44 × 44 */
+  /* Icon-only chip (30px wide, 28px tall): an invisible frame makes the tap area at least 44 × 44
+     (one spare pixel each side: the chip sits on half pixels, which shaved the edge to 43) */
   .fin-hidden-chip::after {
     content: '';
     position: absolute;
-    inset: -8px -7px;
+    inset: -9px -8px;
   }
 
   .fin-hidden-chip-text {
@@ -1080,6 +1081,20 @@
     overflow: hidden;
     clip: rect(0 0 0 0);
     white-space: nowrap;
+  }
+}
+
+/* ===== Very narrow phones (under 360px): room for the chip in the top bar ===== */
+/* With the chip showing, the 320px bar was 14px too wide (the page scrolled sideways and the
+   account button was cut). Only while the chip shows: smaller gaps between the bar's parts and
+   1px less padding in the location options. "Both" keeps its 44px tap width (app.css). */
+@media (max-width: 359.98px) {
+  .topbar:has(.fin-hidden-chip) {
+    gap: var(--space-4);
+  }
+
+  .topbar:has(.fin-hidden-chip) .loc-option {
+    padding: 0 7px;
   }
 }
 

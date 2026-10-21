@@ -2,7 +2,7 @@
 // Why it exists: it's where staff see who is signed in, lock the screen, change their PIN or
 // password, set this device's default location, and sign out. Order (contract 0002, item 7):
 //   who-line · Lock now · Change PIN (or "Set PIN" if none yet) · Change password · This device
-//   · Hide payments (a switch, Finance v0.215 — anyone signed in; remembered by this device)
+//   · Hide private details (a switch, Finance v0.215, renamed v0.506 — anyone signed in; remembered by this device)
 //   · [admins only: separator · "Admin" label · Staff accounts (v0.15 / v0.70) · Settings (v0.135)]
 //   · separator · Sign out
 // The Admin group is shown to admins only; the database refuses non-admins anyway (0004, 0005).
@@ -31,10 +31,9 @@ import Avatar from './Avatar.jsx';
 import { LOCATIONS } from '../lib/device.js';
 import { PHONE_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
 import { claimBack } from '../lib/backButton.js';
-import { usePaymentsHidden } from '../screens/finance/usePaymentsHidden.js';
-import { HIDE_PAYMENTS } from '../screens/finance/text.js';
+import { usePrivateDetailsHidden, HIDE_PRIVATE_DETAILS } from '../lib/privateDetails.js';
 
-// menuitemcheckbox = the Hide payments switch (it stays checked or unchecked, like a switch).
+// menuitemcheckbox = the Hide private details switch (it stays checked or unchecked, like a switch).
 const ITEM_SELECTOR = '[role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"]';
 const SWIPE_CLOSE_PX = 60; // drag the sheet down further than this and it closes
 
@@ -53,7 +52,7 @@ export default function AccountMenu({
 }) {
   const [open, setOpen] = useState(false);
   const [choosingDevice, setChoosingDevice] = useState(false); // "This device" choices expanded?
-  const [paymentsHidden, setPaymentsHidden] = usePaymentsHidden(); // this device's Hide payments switch
+  const [detailsHidden, setDetailsHidden] = usePrivateDetailsHidden(); // this device's Hide private details switch
 
   const buttonRef = useRef(null); // the initials button
   const panelRef = useRef(null); // the dropdown / sheet
@@ -319,19 +318,19 @@ export default function AccountMenu({
                 </div>
               )}
 
-              {/* Hide payments (v0.215): flips at once and the menu stays open, like a switch. While
-                  on, the top bar shows a gray "Payments hidden" chip (TopBar.jsx). */}
+              {/* Hide private details (v0.215, renamed v0.506): flips at once and the menu stays open, like a
+                  switch. While on, the top bar shows a gray "Private details hidden" chip (TopBar.jsx). */}
               <button
                 type="button"
                 role="menuitemcheckbox"
-                aria-checked={paymentsHidden ? 'true' : 'false'}
+                aria-checked={detailsHidden ? 'true' : 'false'}
                 tabIndex={-1}
                 className="menu-item"
-                onClick={() => setPaymentsHidden(!paymentsHidden)}
+                onClick={() => setDetailsHidden(!detailsHidden)}
               >
                 <IconCurrencyDollarOff size={16} aria-hidden="true" className="menu-icon" />
-                <span>{HIDE_PAYMENTS}</span>
-                <span className={`fin-menu-switch${paymentsHidden ? ' is-on' : ''}`} aria-hidden="true" />
+                <span>{HIDE_PRIVATE_DETAILS}</span>
+                <span className={`fin-menu-switch${detailsHidden ? ' is-on' : ''}`} aria-hidden="true" />
               </button>
 
               {profile.role === 'admin' && (

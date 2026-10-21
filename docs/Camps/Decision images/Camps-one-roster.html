@@ -1,0 +1,134 @@
+<!doctype html>
+<!--
+  Camps-one-roster.html — mockup: the camp page as ONE roster (replaces the Check in / Payments /
+  Attendance tabs of v0.704). Why it exists: Jeffrey (CP5, 2026-10-21): "having check-in and
+  attendance on two different tabs is redundant, and payments as well … first column is the name,
+  another column to let me know that they paid, and then the rest should be the roster —
+  basically the attendance." Shown at PC 1280, tablet 820 touch, phone 390 touch.
+  April Vacation Camp, Wed, Apr 21, 2027, 9:10 AM. The PNG next to it is a screenshot.
+-->
+<html lang="en"><head><meta charset="utf-8"><title>Camps — one roster</title>
+<style>
+  :root{--bg:#fff;--surface:#f7f7f5;--border:#e5e5e2;--ctl:#8f8f8a;--text:#1f1f1f;--muted:#6b6b6b;
+    --blue:#003595;--tint:#e6ebf4;--amber:#c98a1b;--ok:#3b6d11;--okbg:#eaf3de;--wbg:#faeeda;--wt:#633806}
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:#efeee9;font:14px/1.45 "Segoe UI",system-ui,sans-serif;color:var(--text);width:1340px}
+  h1{font-size:20px;font-weight:500;margin:0 0 4px}
+  .lead{color:var(--muted);margin:0 0 16px;max-width:1200px}
+  .explain{background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:13px}
+  .explain h3{font-size:13px;font-weight:500;margin:6px 0 2px}.explain ul{margin:0;padding-left:20px}
+  .cap{font-size:12px;color:var(--muted);margin:14px 0 6px}
+  .pc{border:1px solid #cfcfca;border-radius:10px;background:#fff;width:1282px;padding:18px 22px}
+  .tab{border:6px solid #2a2a2a;border-radius:18px;background:#fff;width:832px;padding:14px 16px}
+  .phone{border:6px solid #2a2a2a;border-radius:28px;background:#fff;width:402px;padding:12px}
+  .row2{display:flex;gap:22px;align-items:flex-start}
+  .back{color:var(--blue);font-size:12px}
+  .t{font-size:20px;font-weight:500}
+  .h{font-size:12px;color:var(--muted)}
+  .hdr{display:flex;justify-content:space-between;align-items:flex-start}
+  .btnp{background:var(--blue);color:#fff;border-radius:8px;font-size:13px;padding:6px 12px;white-space:nowrap}
+  .sum{display:flex;gap:22px;align-items:baseline;margin:12px 0 10px;flex-wrap:wrap}
+  .sum .big{font-size:22px;font-weight:500}.sum .l{font-size:12px;color:var(--muted)}
+  .search{height:32px;border:1px solid var(--ctl);border-radius:8px;padding:0 10px;display:flex;align-items:center;font-size:13px;color:var(--muted);width:280px;margin-bottom:8px}
+  table{border-collapse:collapse;font-size:13px;width:100%}
+  th{background:var(--surface);color:var(--muted);font-weight:400;font-size:12px;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+  th.c,td.c{text-align:center}
+  th.today{background:var(--tint);color:var(--blue);font-weight:500}
+  td{padding:0 8px;height:44px;border-bottom:1px solid var(--border);white-space:nowrap}
+  td.today{background:#fbfbfd}
+  .nm{color:var(--text);font-weight:500;text-decoration:underline;text-decoration-color:#cfcfca;text-underline-offset:3px}
+  .nm small{color:var(--muted);font-weight:400;text-decoration:none}
+  .tag{font-size:12px;border-radius:6px;padding:2px 8px;background:var(--okbg);color:var(--ok);display:inline-block}
+  .tag.owe{background:var(--wbg);color:var(--wt)}
+  .tag.np{background:var(--surface);color:var(--muted);border:1px solid var(--border)}
+  .cell{display:inline-flex;align-items:center;justify-content:center;width:64px;height:32px;border-radius:8px;font-size:12px}
+  .in{background:var(--okbg);color:var(--ok)}
+  .tap{border:1px solid var(--ctl);background:#fff;color:var(--text)}
+  .miss{background:var(--wbg);color:var(--wt)}
+  .none{color:#b8b8b3}
+  .amber{outline:3px solid var(--amber);outline-offset:3px;border-radius:8px}
+  .note{font-size:12px;color:#7a4f00;margin:8px 0 0;font-weight:500}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:8px;align-items:center;flex-wrap:wrap}
+  .legend .cell{width:48px;height:22px}
+  .toast{background:#1f1f1f;color:#fff;border-radius:8px;padding:8px 12px;font-size:13px;display:inline-flex;gap:14px;margin-top:10px}
+  .toast b{font-weight:500;border-left:1px solid #4a4a4a;padding-left:12px}
+  .dup{background:var(--wbg);color:var(--wt);border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:8px}
+  .card{border-bottom:1px solid var(--border);padding:8px 0}
+  .card .r{display:flex;justify-content:space-between;align-items:center}
+  .mini{display:flex;gap:4px;margin-top:6px}
+  .mini .cell{width:56px;height:40px;flex-direction:column;line-height:1.1;font-size:11px}
+  .bar{border-top:1px solid var(--border);display:flex;justify-content:space-around;font-size:12px;color:var(--muted);padding-top:8px;margin-top:8px}
+</style></head><body>
+
+<h1>Camp page — one roster</h1>
+<p class="lead">Jeffrey, CP5 (2026-10-21): one roster instead of three tabs. <b>Name</b> (click → everything about the child) · <b>Paid</b> · then <b>one column per camp day</b> — tap a day to check the child in. Same data and rules as before; nothing in the database changes. Amber = what's new compared with the three tabs.</p>
+
+<div class="explain">
+  <h3>What it does</h3>
+  <ul>
+    <li><b>Summary line:</b> today's attendance and who still has to pay — "9 of 15 here today · 5 to collect · $1,040".</li>
+    <li><b>Name</b> (sorted A–Z): click → Camper detail (days, extras, parent / emergency phones, payments, Edit details, Withdraw …). A small amber note under the name only when it matters <i>today</i>: "Pick-up 3–4", "No pizza party".</li>
+    <li><b>Paid:</b> <span class="tag">Paid</span> · <span class="tag np">$219 due</span> · <span class="tag owe">Owes $15</span> — tap one that isn't Paid → the Mark paid box (one click, this device's school, Undo).</li>
+    <li><b>Day columns</b> (today's column tinted): <span class="cell in" style="width:auto;padding:0 6px;height:22px">✓ 7:42</span> came · <span class="cell tap" style="width:auto;padding:0 6px;height:22px">Check in</span> signed up, tap to check in · <span class="cell miss" style="width:auto;padding:0 6px;height:22px">✗</span> didn't come (past day) · <span class="none">—</span> not signed up. Tap a ✓ to undo it (toast with Undo). Check-in works on any day (v0.706).</li>
+    <li><b>Search</b> finds a child fast. The possible-duplicate box and the <b>Removed</b> group stay at the bottom, as before.</li>
+    <li><b>Print roster</b> prints this same grid.</li>
+  </ul>
+  <h3>Replaces</h3>
+  <ul><li>The three tabs Check in / Payments / Attendance (v0.704). Camps with more than 5 days: the day columns scroll sideways <i>inside</i> the roster on small screens, Name and Paid stay fixed.</li></ul>
+</div>
+
+<div class="cap">PC · mouse · 1280px · Wed, Apr 21 (camp week)</div>
+<div class="pc">
+  <div class="hdr"><div><div class="back">← Camps</div><div class="t">April Vacation Camp <span class="tag np" style="vertical-align:3px">Camp today</span></div><div class="h">Mon, Apr 19 – Fri, Apr 23, 2027 · 9:00 AM – 3:00 PM · Both schools · held at Worcester · 16 campers</div></div><div style="display:flex;gap:10px;align-items:center"><span class="btnp">▦ Registration link</span><span class="h">⋯</span></div></div>
+  <div class="sum amber"><span><span class="big">9</span> <span class="l">of 15 here today</span></span><span><span class="big">5</span> <span class="l">to collect · $1,040</span></span><span class="l">Pizza party today: 11</span></div>
+  <div class="search">🔍 Find a camper</div>
+  <div class="dup">⚠ 1 possible duplicate · Ava Thompson is signed up twice · <u>Review</u></div>
+  <table class="amber">
+    <tr><th>Camper</th><th>Paid</th><th class="c">Mon 19</th><th class="c">Tue 20</th><th class="c today">Wed 21 · today</th><th class="c">Thu 22</th><th class="c">Fri 23</th><th></th></tr>
+    <tr><td><span class="nm">Ava Thompson</span> <small class="h">· 8</small></td><td><span class="tag">Paid</span></td><td class="c"><span class="cell in">✓ 7:40</span></td><td class="c"><span class="cell in">✓ 7:45</span></td><td class="c today"><span class="cell in">✓ 7:42</span></td><td class="c"><span class="cell tap">Check in</span></td><td class="c"><span class="cell tap">Check in</span></td><td class="h">⋯</td></tr>
+    <tr><td><span class="nm">Leo Kim</span> <small class="h">· 11</small></td><td><span class="tag owe">Owes $15</span></td><td class="c"><span class="cell in">✓ 7:51</span></td><td class="c"><span class="cell in">✓ 7:49</span></td><td class="c today"><span class="cell in">✓ 7:51</span></td><td class="c"><span class="cell tap">Check in</span></td><td class="c"><span class="cell tap">Check in</span></td><td class="h">⋯</td></tr>
+    <tr><td><span class="nm">Mia Rossi</span> <small class="h">· 9</small><div class="h" style="color:var(--wt);font-size:11px;line-height:1">Pick-up 3–4 today</div></td><td><span class="tag">Paid</span></td><td class="c"><span class="cell in">✓ 9:01</span></td><td class="c"><span class="cell none">—</span></td><td class="c today"><span class="cell tap">Check in</span></td><td class="c"><span class="cell none">—</span></td><td class="c"><span class="cell none">—</span></td><td class="h">⋯</td></tr>
+    <tr><td><span class="nm">Noah Patel</span> <small class="h">· 10</small></td><td><span class="tag np">$219 due</span></td><td class="c"><span class="cell in">✓ 8:55</span></td><td class="c"><span class="cell miss">✗</span></td><td class="c today"><span class="cell tap">Check in</span></td><td class="c"><span class="cell none">—</span></td><td class="c"><span class="cell none">—</span></td><td class="h">⋯</td></tr>
+    <tr><td><span class="nm">Sofia Nguyen</span> <small class="h">· 6</small></td><td><span class="tag">Paid</span></td><td class="c"><span class="cell in">✓ 8:20</span></td><td class="c"><span class="cell in">✓ 8:25</span></td><td class="c today"><span class="cell none">—</span></td><td class="c"><span class="cell none">—</span></td><td class="c"><span class="cell none">—</span></td><td class="h">⋯</td></tr>
+  </table>
+  <div class="h" style="margin-top:6px">11 more campers below · Removed (1) at the bottom</div>
+  <div class="legend"><span class="cell in">✓ 7:40</span> came <span class="cell tap">Check in</span> signed up — tap <span class="cell miss">✗</span> didn't come <span class="none">—</span> not that day</div>
+  <div class="toast">Mia Rossi checked in · Wed 9:10 AM <b>Undo</b></div>
+  <p class="note">One screen for the door, the money and the week. No tabs.</p>
+</div>
+
+<div class="row2">
+  <div>
+    <div class="cap">Tablet · touch · 820px</div>
+    <div class="tab amber">
+      <div class="t" style="font-size:18px">April Vacation Camp</div>
+      <div class="sum" style="margin:8px 0"><span><span class="big">9</span> <span class="l">of 15 here today</span></span><span><span class="big">5</span> <span class="l">to collect</span></span></div>
+      <table>
+        <tr><th>Camper</th><th>Paid</th><th class="c">Mon</th><th class="c">Tue</th><th class="c today">Wed</th><th class="c">Thu</th><th class="c">Fri</th></tr>
+        <tr><td><span class="nm">Ava Thompson</span></td><td><span class="tag">Paid</span></td><td class="c"><span class="cell in" style="width:52px">✓ 7:40</span></td><td class="c"><span class="cell in" style="width:52px">✓ 7:45</span></td><td class="c today"><span class="cell in" style="width:52px">✓ 7:42</span></td><td class="c"><span class="cell tap" style="width:52px">Check in</span></td><td class="c"><span class="cell tap" style="width:52px">Check in</span></td></tr>
+        <tr><td><span class="nm">Leo Kim</span></td><td><span class="tag owe">Owes $15</span></td><td class="c"><span class="cell in" style="width:52px">✓ 7:51</span></td><td class="c"><span class="cell in" style="width:52px">✓ 7:49</span></td><td class="c today"><span class="cell in" style="width:52px">✓ 7:51</span></td><td class="c"><span class="cell tap" style="width:52px">Check in</span></td><td class="c"><span class="cell tap" style="width:52px">Check in</span></td></tr>
+        <tr><td><span class="nm">Noah Patel</span></td><td><span class="tag np">$219 due</span></td><td class="c"><span class="cell in" style="width:52px">✓ 8:55</span></td><td class="c"><span class="cell miss" style="width:52px">✗</span></td><td class="c today"><span class="cell tap" style="width:52px">Check in</span></td><td class="c"><span class="cell none">—</span></td><td class="c"><span class="cell none">—</span></td></tr>
+      </table>
+      <p class="note">Same grid; ⋯ moves into Camper detail (tap the name) to save room. Cells are 44px tall for fingers.</p>
+    </div>
+  </div>
+  <div>
+    <div class="cap">Phone · touch · 390px</div>
+    <div class="phone amber">
+      <div class="t" style="font-size:16px">April Vacation Camp</div>
+      <div class="sum" style="margin:6px 0"><span><span class="big">9</span> <span class="l">of 15 here</span></span><span><span class="big">5</span> <span class="l">to collect</span></span></div>
+      <div class="search" style="width:100%">🔍 Find a camper</div>
+      <div class="card"><div class="r"><span><span class="nm">Ava Thompson</span> <small class="h">· 8</small></span><span class="tag">Paid</span></div>
+        <div class="mini"><span class="cell in">M<br>✓ 7:40</span><span class="cell in">T<br>✓ 7:45</span><span class="cell in" style="outline:2px solid var(--blue)">W<br>✓ 7:42</span><span class="cell tap">Th<br>Check</span><span class="cell tap">F<br>Check</span></div></div>
+      <div class="card"><div class="r"><span><span class="nm">Noah Patel</span> <small class="h">· 10</small></span><span class="tag np">$219 due</span></div>
+        <div class="mini"><span class="cell in">M<br>✓ 8:55</span><span class="cell miss">T<br>✗</span><span class="cell tap" style="outline:2px solid var(--blue)">W<br>Check in</span><span class="cell none">—</span><span class="cell none">—</span></div></div>
+      <div class="card"><div class="r"><span><span class="nm">Mia Rossi</span> <small class="h">· 9</small></span><span class="tag">Paid</span></div>
+        <div class="h" style="color:var(--wt);font-size:11px">Pick-up 3–4 today</div>
+        <div class="mini"><span class="cell in">M<br>✓ 9:01</span><span class="cell none">—</span><span class="cell tap" style="outline:2px solid var(--blue)">W<br>Check in</span><span class="cell none">—</span><span class="cell none">—</span></div></div>
+      <p class="note">One card per child: name + Paid on top, the week's 5 days underneath (today outlined). Tap a day to check in.</p>
+      <div class="bar"><span>Home</span><span>Calendar</span><span>Prospects</span><span>More</span></div>
+    </div>
+  </div>
+</div>
+
+</body></html>

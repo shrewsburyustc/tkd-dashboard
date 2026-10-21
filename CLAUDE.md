@@ -84,20 +84,26 @@ Color Belt testing and Star testing are built at the same time in separate Claud
   | 0001–0004 | staff + PIN, server lock, Color Belt phase 1, staff accounts | `main` (live) |
   | 0005, 0010 | Color Belt events, results | `main` (live) |
   | 0006 | Star testing | `main` (live) |
-  | 0007–0009 | schedule, calendar, forms | `claude/prospect-form-system-cd893d` |
+  | 0007–0009 | schedule, calendar, forms — applied 2026-10-19 | `main` (live) |
   | 0011 | finance | `main` (live) |
-  | 0012 | prospects | `claude/prospect-form-system-cd893d` |
-  | 0013 | camps | `camps` |
+  | 0012 | prospects — applied 2026-10-19 | `main` (live) |
+  | 0013 | camps — applied 2026-10-20 | `main` (live) |
   | 0014 | Color Belt private testing (phase 4) | `main` (live) |
-  | 0015 | family history | `claude/prospect-form-system-cd893d` |
+  | 0015 | family history — applied 2026-10-19 | `main` (live) |
   | 0016 | black belt (reserved 2026-10-19, CONTRACT-0016) — applied 2026-10-21 | `main` (live) |
-  | 0017 | camps → Finance: camp payments in the Daily report (`0017_finance_camps.sql`, rulebook v0.707) | `camps` |
+  | 0017 | camps → Finance: camp payments in the Daily report (`0017_finance_camps.sql`, rulebook v0.707) — applied 2026-10-20 | `main` (live) |
   | 0018 | Finance: private testing payments in the Daily report (rulebook v0.407) — **runs after 0017 and must build on 0017's version of the Finance functions it replaces** — applied 2026-10-20 | `main` (live) |
-  | 0019 | school phone in Settings → Schools (was an uncommitted `0016_school_phone.sql`) | `claude/prospect-form-system-cd893d` |
+  | 0019 | school phone in Settings → Schools (was an uncommitted `0016_school_phone.sql`) — applied 2026-10-19 | `main` (live) |
   | 0020 | security: `current_session_id()` reads only `request.jwt.claims` (rulebook v0.408; replaces only that 0001 function, closing the gap Black Belt's 0016 review found in the public forms) — reserved and applied 2026-10-20 | `main` (live) |
   | 0021 | Prospects: Not interested families deleted after 6 months (rulebook v0.611; replaces only `prospects_purge_old()` from 0015, runs after 0015) — reserved and applied 2026-10-21 | `main` (live) |
 
-  Next free: **0022**.
+  | 0022 | camps: weekly pricing + camps longer than 10 days (`0022_camps_weekly_pricing.sql`; replaces some 0013 camp functions: price grid of at most 5 rows = days per week, each Mon–Sun week priced separately and added up, 10-day limit → 60 days, "not for all-days campers" extras per week; runs after 0013 and 0017) — reserved 2026-10-21 | `camps` |
+
+  | 0023 | Star testing: result email texts that admins can edit (small table + admin write function, 0006 rules) and M5 — `star_update_event` keeps registration closed in the same transaction (v0.504 case 2; replaces only that 0006 function); applies before Star goes live — reserved 2026-10-21 | `star-testing` |
+
+  | 0024 | Black Belt: rubric editor (+ the family form showing a subject's own points); its plan said "0022", which is camps' — reserved 2026-10-21 | `black-belt` |
+
+  Next free: **0025**.
 - **`supabase/SETUP.md` section names** (decided 2026-10-20, rulebook v0.302): a section for a migration is titled by its **migration number**, `## Migration 00NN: <what it does>`, with sub-steps `### 00NNa.`, `### 00NNb.` … — never "the next free §". A section that isn't about one migration (e.g. a Cloudflare setup) gets a descriptive title with no number. Sections already on `main` (§1–§17) keep their numbers (the test runner finds some by number, e.g. `### 14e.`). If your branch has an unmerged section numbered §16 or higher, rename it to its migration number and update every "SETUP §…" mention and any `run.mjs` lookup with it.
 - **`supabase/tests/pglite/run.mjs` step names** (decided 2026-10-20, rulebook v0.304): a step for a migration is named after its migration number, `step00NN` (e.g. `step0020`); extra checks for the same migration use `step00NN_<what>`. A step that isn't about one migration gets a unique descriptive name. Steps already on `main` (`step11`–`step18`) keep their names, and unique descriptive names already on branches (`stepCamps`, `stepFinanceCamps`, `stepBlackBelt`) may stay. Never rename a step that came from `main`; rename your own unmerged numbered steps to `step00NN`. Add a row here (Main session) when a number is reserved. (Decided 2026-10-19, Jeffrey: 0016 and 0017 had each been claimed by two branches; camps kept 0017.)
 - **Don't archive a worktree session in the app** until its branch is merged into `main` — archiving removes the worktree folder.
