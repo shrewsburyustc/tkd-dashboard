@@ -28,11 +28,12 @@ const GROUP_LABEL = { cash: T.GROUP_CASH, check: T.GROUP_CHECK, card: T.GROUP_CA
 // A stable key for one row (the same chain can show twice on a day only with different rows).
 export const itemKey = (item) => `${item.payment_id}:${item.row_id ?? ''}:${item.state}`;
 
-// "Color belt testing" / "Star testing" / "Star testing, private" / "Camp" (Camps v0.707)
+// "Color belt testing" / "Color belt testing, private" (v0.813) / "Star testing" / "Star testing, private" /
+// "Camp" (Camps v0.707)
 export function whatText(item) {
   if (item.what === 'camp') return T.WHAT_CAMP;
   if (item.what === 'star') return item.is_private ? T.WHAT_STAR_PRIVATE : T.WHAT_STAR;
-  return T.WHAT_COLOR_BELT;
+  return item.is_private ? T.WHAT_COLOR_BELT_PRIVATE : T.WHAT_COLOR_BELT;
 }
 
 // Everything a row shows, as text. Shared with the printed page (PrintPage.jsx), so paper and

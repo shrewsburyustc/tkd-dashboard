@@ -10,8 +10,10 @@
 //   school     the school's name (Worcester / Shrewsbury)
 //   isPhone
 //   onClose    () => void
-//   onOpenInTesting  (eventId, source) => void — the answer's event_id (null until it has loaded);
-//                    for a camp payment (source 'camp', Camps v0.707) it opens the camp's page
+//   onOpenInTesting  (eventId, source, options) => void — the answer's event_id (null until it has loaded);
+//                    for a camp payment (source 'camp', Camps v0.707) it opens the camp's page;
+//                    a Color Belt private testing payment has no event: options.privateTab = true
+//                    opens the Private testing tab (v0.813)
 //   onNoAccess       the database says this sign-in is locked
 import { useEffect, useState } from 'react';
 import { IconAlertTriangle, IconChevronRight } from '@tabler/icons-react';
@@ -48,6 +50,8 @@ export default function PaymentDetailDialog({ item, school, isPhone, onClose, on
   // A camp payment: "Camp · April Vacation Camp", and the camp's days on their own line (v0.707).
   const campName = state.data?.event_name ?? shown.event_name ?? item.event_name ?? '';
   const campDays = state.data?.camp_days ?? state.data?.days ?? [];
+  // A Color Belt private testing payment (migration 0018, v0.813): no event; changed on the Private testing tab.
+  const isPrivateColorBelt = !isCamp && shown.what === 'color_belt' && shown.is_private === true;
   const what = isCamp ? `${T.WHAT_CAMP} · ${campName}` : state.data?.event_name || whatText(shown);
   const edited = shown.state === 'edited' || shown.state === 'moved_in';
   // Oldest first (whatever order the answer used), so each edit can be compared with the line before it.
@@ -112,10 +116,10 @@ export default function PaymentDetailDialog({ item, school, isPhone, onClose, on
               ))}
           </ul>
         )}
-        <p className="fin-hint fin-detail-hint">{isCamp ? T.DETAIL_HINT_CAMP : T.DETAIL_HINT}</p>
+        <p className="fin-hint fin-detail-hint">{isCamp ? T.DETAIL_HINT_CAMP : isPrivateColorBelt ? T.DETAIL_HINT_PRIVATE : T.DETAIL_HINT}</p>
       </div>
       <div className="dialog-actions fin-detail-actions">
-        <button type="button" className={`btn${isPhone ? ' btn-block' : ''}`} onClick={() => onOpenInTesting(state.data?.event_id ?? null, shown.source ?? item.source)}>
+        <button type="button" className={`btn${isPhone ? ' btn-block' : ''}`} onClick={() => onOpenInTesting(state.data?.event_id ?? null, shown.source ?? item.source, { privateTab: isPrivateColorBelt })}>
           {isCamp ? T.OPEN_IN_CAMPS : T.OPEN_IN_TESTING}
           <IconChevronRight size={16} aria-hidden="true" />
         </button>

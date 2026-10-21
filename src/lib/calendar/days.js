@@ -88,6 +88,8 @@ export function recordMatches(record, slot, code) {
 //   ctx.testingEvents  [{ id, locationCode, title, date, start }] — read from Testing (v0.239 answer 1)
 //   ctx.bookings       [{ id, locationCode, classId, className, date, start 'HH:MM', end, childFirstName,
 //                        formName, status, classRunning }] — free classes from Forms (v0.241 answer 6)
+//   ctx.followUps      [{ id, code, childFirstName, initial, followUpOn }] — prospects' open follow-ups
+//                      (v0.612 / v0.615; made by prospects/followUps.js calendarFollowUps)
 // Returns {
 //   date, weekday,
 //   schools:  [{ code, name, classes: [{ slot, name, colorKeys, cancelled }] }]   (by start time)
@@ -99,7 +101,9 @@ export function recordMatches(record, slot, code) {
 //   bookingCount, bookingProblems (how many are on a class that no longer runs then)
 //   classCount, cancelledCount
 //   (each class also has bookings: how many free classes are booked on it)
+//   followUps: [follow-up]  this day's open follow-ups (shown schools), by child's name; followUpCount
 // }
+// What the Show menu hides is taken out afterwards (showKinds.js applyShow).
 export function buildDay(date, ctx) {
   const weekday = weekdayOf(date);
   const closures = ctx.closures.filter((c) => covers(c, date));
@@ -161,6 +165,10 @@ export function buildDay(date, ctx) {
     .filter((b) => b.date === date && b.status === 'booked' && codes.has(b.locationCode))
     .sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.className.localeCompare(b.className)));
 
+  const followUps = (ctx.followUps ?? [])
+    .filter((f) => f.followUpOn === date && codes.has(f.code))
+    .sort((a, b) => a.childFirstName.localeCompare(b.childFirstName) || a.initial.localeCompare(b.initial));
+
   return {
     date,
     weekday,
@@ -174,6 +182,8 @@ export function buildDay(date, ctx) {
     scheduleStarts,
     classCount: schools.reduce((n, s) => n + s.classes.length, 0),
     cancelledCount: schools.reduce((n, s) => n + s.classes.filter((c) => c.cancelled).length, 0),
+    followUps,
+    followUpCount: followUps.length,
   };
 }
 

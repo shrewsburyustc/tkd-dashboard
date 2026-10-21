@@ -16,14 +16,26 @@
 // payment moved with them).
 // v0.195: classes that test together show together — `sections` gives each class its own small
 // heading row ("Group B · 3 students") with its rows under it; one Removed group after them all.
+// Follows "Hide private details" (v0.506), as Star's CandidateRows: while ctx.hidden is on there is
+// no Paying by, Payment or Paid on column, no Paid / Not paid tag, no "Cash · paid Nov 3" line and
+// no Mark paid. A Status column keeps the tags that aren't about money (Possible duplicate, Not
+// saved, Removed / Duplicate copy) and shows only when a shown row has one (ctx.showStatusCol).
 import { Fragment } from 'react';
 import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp, IconDots } from '@tabler/icons-react';
 import IconButton from '../../../components/IconButton.jsx';
 import { TestingForCell } from './StudentDialog.jsx';
 import * as T from '../text.js';
 
-// The one tag of a row.
-function PaymentTag({ row, onReview }) {
+// Does the row have a tag that isn't about money? (Used while private details are hidden: the
+// Status column shows only when a shown row has one, as Star's G4.) A moved row shows "—".
+export function hasStatusTag(row, notSavedId) {
+  if (notSavedId === row.id) return true;
+  if (row.status === 'withdrawn') return !row.movedTo;
+  return row.duplicateState === 'possible';
+}
+
+// The one tag of a row. hidden: the Paid / Not paid tag is left out (null).
+function PaymentTag({ row, onReview, hidden = false }) {
   if (row.status === 'withdrawn') {
     return <span className="ttag">{row.withdrawnReason === 'duplicate_copy' ? T.TAG_DUPLICATE_COPY : T.TAG_REMOVED}</span>;
   }
@@ -44,6 +56,7 @@ function PaymentTag({ row, onReview }) {
       </button>
     );
   }
+  if (hidden) return null; // nothing about money while details are hidden
   if (row.paid) return <span className="ttag ttag--ok">{T.TAG_PAID}</span>;
   return <span className="ttag">{T.TAG_NOT_PAID}</span>;
 }
@@ -59,16 +72,16 @@ function NotSavedTag() {
 
 // One student row. ctx = { layout, nav, rankById, busy, menuFor, selectedId, notSavedId, handlers, canMenu }
 function StudentRow({ row, ctx }) {
-  const { layout, nav, rankById, handlers } = ctx;
+  const { layout, nav, rankById, handlers, hidden } = ctx;
   const rank = rankById.get(row.eventRankId);
   const name = T.studentLabel(row);
   const removed = row.status === 'withdrawn';
-  const showMarkPaid = !removed && !row.paid && row.duplicateState !== 'possible';
+  const showMarkPaid = !hidden && !removed && !row.paid && row.duplicateState !== 'possible';
   const showMenu = !removed || ctx.isAdmin;
   const open = ctx.menuFor === row.id;
   const selected = open || ctx.selectedId === row.id;
   const moved = removed && row.movedTo ? row.movedTo : null;
-  let tag = ctx.notSavedId === row.id ? <NotSavedTag /> : <PaymentTag row={row} onReview={handlers.onReview} />;
+  let tag = ctx.notSavedId === row.id ? <NotSavedTag /> : <PaymentTag row={row} onReview={handlers.onReview} hidden={hidden} />;
   if (moved) tag = <span className="ev-ssub">—</span>;
   // Phase 3 (plan Q1, v0.191): a student an admin added after the testing day gets a gray line
   // "Added Nov 21 by Jeffrey Berg (admin)" under the name, on Students and on Grading.
@@ -127,7 +140,9 @@ function StudentRow({ row, ctx }) {
   };
 
   if (layout.isPhone) {
-    const payLine = row.paid ? T.paidOnPhone(row.paidMethod, row.paidOn) : T.payingByText(row.payingBy);
+    const payLine = hidden ? null : row.paid ? T.paidOnPhone(row.paidMethod, row.paidOn) : T.payingByText(row.payingBy);
+    // While hidden, a moved row's "—" placeholder isn't needed (the moved tag is under the name).
+    const tagShown = hidden && moved ? null : tag;
     return (
       <div {...rowProps}>
         <span className="ev-srow-main" role="cell">
@@ -140,11 +155,13 @@ function StudentRow({ row, ctx }) {
           <span className="ev-sline">
             <TestingForCell rank={rank} />
           </span>
-          <span className="ev-sline l2">{payLine}</span>
-          <span className="ev-sline ev-sline-tag">
-            {tag}
-            {markPaid}
-          </span>
+          {payLine && <span className="ev-sline l2">{payLine}</span>}
+          {(tagShown || markPaid) && (
+            <span className="ev-sline ev-sline-tag">
+              {tagShown}
+              {markPaid}
+            </span>
+          )}
         </span>
         <span className="acts" role="cell">
           {more}
@@ -164,13 +181,17 @@ function StudentRow({ row, ctx }) {
       <span className="ev-scell" role="cell">
         <TestingForCell rank={rank} />
       </span>
-      <span className="ev-scell" role="cell">
-        {T.payingByText(row.payingBy)}
-      </span>
-      <span className="ev-scell" role="cell">
-        {tag}
-      </span>
-      {layout.isWide && (
+      {!hidden && (
+        <span className="ev-scell" role="cell">
+          {T.payingByText(row.payingBy)}
+        </span>
+      )}
+      {(!hidden || ctx.showStatusCol) && (
+        <span className="ev-scell" role="cell">
+          {hidden && moved ? null : tag}
+        </span>
+      )}
+      {!hidden && layout.isWide && (
         <span className="ev-scell nowrap" role="cell">
           {row.paid ? T.monthDay(row.paidOn) : '—'}
         </span>
@@ -186,10 +207,12 @@ function StudentRow({ row, ctx }) {
 // sections (optional): [{ key, heading (text or null), rows }] — the same rows, split per class.
 export default function RosterRows({ rows, sections, removedRows, removedOpen, onToggleRemoved, emptyText, ctx }) {
   const parts = sections ?? [{ key: 'all', heading: null, rows }];
-  const { layout, nav } = ctx;
+  const { layout, nav, hidden } = ctx;
+  // Hide private details: the roster's own class names pick the narrower grid (testing-events.css).
+  const hiddenClass = hidden ? ` is-hidden${ctx.showStatusCol ? '' : ' no-status'}` : '';
   return (
     <div
-      className={`clist ev-roster${layout.isWide ? ' is-wide' : ''}${layout.isPhone ? ' is-phone' : ''}${layout.isTouch ? ' is-touch' : ''}`}
+      className={`clist ev-roster${layout.isWide ? ' is-wide' : ''}${layout.isPhone ? ' is-phone' : ''}${layout.isTouch ? ' is-touch' : ''}${hiddenClass}`}
       role="table"
       aria-label={ctx.tableLabel}
     >
@@ -197,9 +220,9 @@ export default function RosterRows({ rows, sections, removedRows, removedOpen, o
         <div className="ev-srow ev-shead" role="row">
           <span role="columnheader">{T.COL_STUDENT}</span>
           <span role="columnheader">{T.COL_TESTING_FOR}</span>
-          <span role="columnheader">{T.COL_PAYING_BY}</span>
-          <span role="columnheader">{T.COL_PAYMENT}</span>
-          {layout.isWide && <span role="columnheader">{T.COL_PAID_ON}</span>}
+          {!hidden && <span role="columnheader">{T.COL_PAYING_BY}</span>}
+          {(!hidden || ctx.showStatusCol) && <span role="columnheader">{hidden ? T.COL_STATUS : T.COL_PAYMENT}</span>}
+          {!hidden && layout.isWide && <span role="columnheader">{T.COL_PAID_ON}</span>}
           <span role="columnheader" aria-label={T.ACTIONS_COL} />
         </div>
       )}

@@ -408,7 +408,28 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
     if (cb && Array.isArray(cb.payments) && Array.isArray(cb.registrations) && Array.isArray(cb.events)) {
       const regs = new Map(cb.registrations.map((r) => [r.id, r]));
       const events = new Map(cb.events.map((e) => [e.id, e]));
-      for (const it of chainItems(cb.payments.map((p) => ({ ...p, source: 'color_belt' })))) {
+      // Color Belt private testing (migration 0018, rulebook v0.813) — a preview-sized version of its
+      // move rule: an event payment P moved to a private testing (its private copy C points back at
+      // P) and P's move reversal R leave the event side; the money carries on as C, one counted
+      // private line (same amount, method and day, so a move never changes a day's totals).
+      const privates = new Map((Array.isArray(cb.private) ? cb.private : []).map((p) => [p.id, p]));
+      const privPays = Array.isArray(cb.private_payments) ? cb.private_payments : [];
+      const copyOf = new Map(privPays.filter((c) => c.moved_from_payment_id).map((c) => [c.moved_from_payment_id, c]));
+      const eventRows = cb.payments.filter((p) => !copyOf.has(p.id) && !(p.kind === 'reversal' && copyOf.has(p.reverses_payment_id)));
+      const eventById = new Map(cb.payments.map((p) => [p.id, p]));
+      const privById = new Map(privPays.map((p) => [p.id, p]));
+      for (const it of chainItems(privPays.map((p) => ({ ...p, source: 'color_belt', owner_id: p.private_id })))) {
+        const pv = privates.get(it.owner_id);
+        if (!pv) continue;
+        // A moved-in copy is credited to whoever took the money at the event (0018 §2.1), not the mover.
+        const original = eventById.get(privById.get(it.payment_id)?.moved_from_payment_id ?? '') ?? null;
+        out.push({
+          ...it, school: pv.location_code, first_name: pv.first_name, last_name: pv.last_name,
+          what: 'color_belt', event_date: pv.private_date, is_private: true, event_name: null, event_id: null,
+          recorded_by_name: original && it.row_id === it.payment_id ? original.recorded_by_name : it.recorded_by_name,
+        });
+      }
+      for (const it of chainItems(eventRows.map((p) => ({ ...p, source: 'color_belt' })))) {
         const reg = regs.get(it.owner_id);
         const event = reg ? events.get(reg.event_id) : null;
         if (!event) continue;
@@ -458,7 +479,9 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
     else if (source === 'camp') rows = campsStore()?.camp_payments ?? [];
     else {
       try {
-        rows = readColorBelt?.()?.payments ?? [];
+        // Event payments and private testing payments (0018): a private row's owner is its private testing.
+        const cb = readColorBelt?.();
+        rows = [...(cb?.payments ?? []), ...(cb?.private_payments ?? []).map((p) => ({ ...p, owner_id: p.private_id }))];
       } catch {
         rows = [];
       }
@@ -629,7 +652,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
       const main = items.find((it) => ['counted', 'edited', 'moved_in'].includes(it.state))
         ?? items.find((it) => it.state === 'undone' && it.row_id === it.payment_id) ?? items[0];
       // Its history, newest first: recorded / refunded, each edit, the undo.
-      const rows = chainRows(db, a.p_source).map((r) => ({ ...r, owner_id: r.registration_id ?? r.candidate_id ?? r.camper_id }));
+      const rows = chainRows(db, a.p_source).map((r) => ({ ...r, owner_id: r.owner_id ?? r.registration_id ?? r.candidate_id ?? r.camper_id }));
       const ids = new Set();
       const history = [];
       const first = rows.find((r) => r.id === a.p_payment_id);
@@ -650,6 +673,14 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
           ids.add(next.id);
           current = next;
         }
+      }
+      // A moved-in private copy (0018, v0.813): "recorded" names whoever took the money at the event,
+      // and a "moved" line says when and by whom it was moved to private testing.
+      const movedFrom = first?.moved_from_payment_id ? rows.find((r) => r.id === first.moved_from_payment_id) : null;
+      if (movedFrom) {
+        history[0] = { ...history[0], by_name: movedFrom.recorded_by_name };
+        const move = rows.find((r) => r.kind === 'reversal' && r.reverses_payment_id === movedFrom.id);
+        if (move) history.push({ at: move.recorded_at, by_name: move.recorded_by_name, what: 'moved', amount_cents: first.amount_cents, method: first.method, paid_on: first.paid_on });
       }
       history.sort((x, y) => byText(y.at, x.at));
       const answer = { status: 'ok', item: itemOut(main, { withSchool: true, close: currentClose(db, main.school, main.day) }), event_name: main.event_name, event_id: main.event_id, history };
