@@ -17,8 +17,13 @@
 //   onnotice            ignore database notices instead of printing them to the log.
 // Every value goes in as a separate typed parameter (`${value}::type` below). Postgres.js sends
 // them apart from the SQL text, so nothing a family types can ever change the SQL itself.
-// The children list is sent as JSON text and turned into jsonb by the database (`::jsonb`);
-// the database checks its shape before using any of it.
+// The children list is sent as JSON TEXT (`::text`) and only then turned into jsonb by the
+// database (`(…)::jsonb`); the database checks its shape before using any of it.
+// Why not cast the parameter straight to jsonb: Postgres.js then sees a jsonb parameter and runs
+// JSON.stringify on our already-stringified text a second time, so the database gets one
+// long string instead of a list and answers "invalid" (found in the live phone test,
+// 2026-10-21 — the tests use a fake database, so they couldn't see it). functions/_lib/forms/db.js
+// hit the same bug and uses the other correct form, sql.json(value) — don't mix the two up.
 import postgres from 'postgres';
 
 // jsonb answers normally arrive already turned into objects; this also copes with text.
@@ -52,7 +57,7 @@ export function openCampDatabase(env) {
           ${args.code}::text,
           ${args.clientKey}::text,
           ${args.submissionId}::uuid,
-          ${JSON.stringify(args.children)}::jsonb,
+          (${JSON.stringify(args.children)}::text)::jsonb,
           ${args.parentName}::text,
           ${args.parentPhone}::text,
           ${args.parentRelation}::text,

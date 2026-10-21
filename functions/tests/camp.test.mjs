@@ -598,11 +598,14 @@ test('[code].js loads and routes by method (switched off, so nothing real is tou
   assert.equal(put.status, 400);
 });
 
-test('campDb.js: exactly two statements, children sent as JSON.stringify(…)::jsonb, typed parameters', () => {
+test('campDb.js: exactly two statements, children sent as (JSON.stringify(…)::text)::jsonb, typed parameters', () => {
   const source = readFileSync(new URL('../_lib/campDb.js', import.meta.url), 'utf8');
   const calls = source.match(/select public\.[a-z_]+\(/g);
   assert.deepEqual(calls, ['select public.camp_public_camp(', 'select public.camp_public_signup(']);
-  assert.match(source, /\$\{JSON\.stringify\(args\.children\)\}::jsonb/);
+  // ::text first: a ${…}::jsonb parameter makes Postgres.js stringify the text a second time,
+  // so the database got one long string instead of a list (live phone test, 2026-10-21).
+  assert.match(source, /\(\$\{JSON\.stringify\(args\.children\)\}::text\)::jsonb/);
+  assert.doesNotMatch(source, /\$\{[^}]+\}::jsonb/);
   assert.match(source, /HYPERDRIVE_CAMPS/);
   for (const setting of ['prepare: false', 'max: 1', 'fetch_types: false', 'connect_timeout: 5', 'onnotice']) {
     assert.ok(source.includes(setting), setting);
