@@ -69,7 +69,7 @@ const CODE = /^[a-hjkmnp-z2-9]{8}$/;
 // it stays missing / off until CP5, so until then everything answers "not open".)
 function isSwitchedOn(env) {
   if (!env || env.BB_PUBLIC_REGISTRATION !== 'on') return false;
-  if (!env.HYPERDRIVE_BB || typeof env.HYPERDRIVE_BB.connectionString !== 'string') return false;
+  if (!env.HYPERDRIVE_BB || typeof env.HYPERDRIVE_BB.connectionString !== 'string' || env.HYPERDRIVE_BB.connectionString === '') return false; // blank = not set up (as Color Belt's f47d386)
   return REQUIRED_SETTINGS.every((name) => typeof env[name] === 'string' && env[name] !== '');
 }
 
