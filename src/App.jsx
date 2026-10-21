@@ -68,7 +68,7 @@ import Shell from './components/Shell.jsx';
 import Toast from './components/Toast.jsx';
 import SignIn from './screens/SignIn.jsx';
 import Home from './screens/Home.jsx';
-import Testing from './screens/Testing.jsx';
+import Testing, { showPrivateTestingTabNext } from './screens/Testing.jsx';
 import Camps from './screens/Camps.jsx';
 import Schedule from './screens/Schedule.jsx';
 import Calendar from './screens/Calendar.jsx';
@@ -893,7 +893,7 @@ export default function App() {
   // event's roster (a Color Belt event page). A Star payment opens Testing (the chooser while the
   // Star testing switch is on).
   const openTestingFor = useCallback(
-    (school, eventId = null, source = null) => {
+    (school, eventId = null, source = null, options = {}) => {
       // A camp payment's detail opens the camp's page in Camps (Camps v0.707) WITHOUT moving the
       // switcher to the payment's school (see campSchoolFollow above).
       if (source === 'camp') {
@@ -903,7 +903,12 @@ export default function App() {
       }
       if (school && school !== 'Both' && school !== location) changeLocation(school);
       if (source === 'color_belt' && eventId) navigate('testing', { testingPage: 'colorBelt', eventId });
-      else navigate('testing');
+      // A Color Belt private testing payment has no event: Color belt testing's Private testing tab
+      // (rulebook v0.813).
+      else if (source === 'color_belt' && options?.privateTab) {
+        showPrivateTestingTabNext();
+        navigate('testing', { testingPage: 'colorBelt' });
+      } else navigate('testing');
     },
     [location, changeLocation, navigate],
   );
