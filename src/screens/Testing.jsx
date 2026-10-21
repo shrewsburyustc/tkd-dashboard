@@ -51,7 +51,15 @@
 //   privateId          phase 4: the open private testing's id (its grading page), or null.
 //                      Always a Color Belt page: with the switch on, testingPage is 'colorBelt'.
 //   onOpenPrivate(id) / onClosePrivate(options)   open / close that grading page (App.jsx)
+//
+// Black Belt testing (contract CONTRACT-0016-B1 §3): until step C2 brings the Testing chooser and
+// the #testing/black-belt addresses (they wait for Star's chooser, §7 OP-1), Black Belt is reached
+// from a "Black Belt testing ›" link at the top of this page, in EVERY build (Jeffrey, rulebook
+// v0.917: Black Belt goes live without waiting for Star). The screens are loaded with a lazy
+// import, so they're only downloaded when someone opens Black Belt.
+// Black Belt is joint for both schools, so the link shows on Both too.
 import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
+import { IconAward, IconChevronRight } from '@tabler/icons-react';
 import BlockedOnBoth from './testing/BlockedOnBoth.jsx';
 import ClassesRanksTab from './testing/ClassesRanksTab.jsx';
 import EventsTab from './testing/events/EventsTab.jsx';
@@ -71,6 +79,13 @@ const StarTesting = loadStarTesting ? lazy(loadStarTesting) : null;
 
 // Color Belt's page title: "Testing" as before, or "Color belt testing" once the chooser exists.
 const COLOR_BELT_PAGE_TITLE = STAR_TESTING_ON ? COLOR_BELT_TITLE : PAGE_TITLE;
+
+// Black Belt testing's staff screens, loaded only when opened (v0.917: every build, until C2
+// moves the way in into the Testing chooser).
+const BlackBeltTesting = lazy(() => import('../blackBelt/staff/BlackBeltTesting.jsx'));
+const BLACK_BELT_LINK = 'Black Belt testing'; // the link's words (Black Belt's own text.js has the rest)
+// Is Black Belt open? Kept while the dashboard is open, like the tab.
+let blackBeltOpen = false;
 
 const TABS = [
   { key: 'events', label: TAB_EVENTS },
@@ -158,6 +173,11 @@ export default function Testing({
 }) {
   const page = STAR_TESTING_ON ? testingPage : 'colorBelt'; // switch off: Color Belt only
   const baseId = useId();
+  const [showBlackBelt, setShowBlackBeltState] = useState(blackBeltOpen);
+  function setShowBlackBelt(next) {
+    blackBeltOpen = next;
+    setShowBlackBeltState(next);
+  }
   const ids = { tab: (key) => `${baseId}-tab-${key}`, panel: (key) => `${baseId}-panel-${key}` };
   const [tab, setTabState] = useState(lastTab);
   // Phase 4: while a private testing's grading page is open, the tab underneath becomes Private
@@ -253,10 +273,42 @@ export default function Testing({
     );
   }
 
+  // Black Belt testing (v0.917): reached from the link at the top of the Color Belt page,
+  // in every build — with the Star switch on too, until Black Belt's step C2 adds it to the
+  // Testing chooser.
+  if (BlackBeltTesting && showBlackBelt && !eventId) {
+    const { screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange } = tabProps;
+    return (
+      <Suspense fallback={null}>
+        <BlackBeltTesting
+          isAdmin={isAdmin}
+          onBack={() => setShowBlackBelt(false)}
+          screenLocked={screenLocked}
+          onNoAccess={onNoAccess}
+          onRefreshProfile={onRefreshProfile}
+          showToast={showToast}
+          clearToast={clearToast}
+          onModalOpenChange={onModalOpenChange}
+          location={location} onLocationChange={onLocationChange}
+        />
+      </Suspense>
+    );
+  }
+  // The preview-only way in (see the header comment).
+  const blackBeltLink = BlackBeltTesting ? (
+    <button type="button" className="link-button ev-back" onClick={() => setShowBlackBelt(true)}>
+      {/* ti-award = Black Belt testing (rulebook icon map); ti-chevron-right = go there */}
+      <IconAward size={16} aria-hidden="true" />
+      {BLACK_BELT_LINK}
+      <IconChevronRight size={16} aria-hidden="true" />
+    </button>
+  ) : null;
+
   if (location === 'Both') {
     // Title only — no school line, no tabs (there's nothing in either tab to show).
     return (
       <div className="testing">
+        {blackBeltLink}
         <div className="phead">
           <div className="phead-titles">
             {onBack && <BackToTesting onBack={onBack} />}
@@ -292,6 +344,7 @@ export default function Testing({
 
   return (
     <div className="testing">
+      {blackBeltLink}
       {tab === 'private' ? (
         <PrivateTestingTab
           school={location}

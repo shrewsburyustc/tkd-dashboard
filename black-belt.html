@@ -1,0 +1,25 @@
+<!doctype html>
+<!--
+  black-belt.html — the public Black Belt testing registration page (/black-belt/<code>).
+  Why it exists: families open a link or QR code from the school to register a candidate for
+  a Black Belt testing cycle (contract 0016-B1 §4, mockups Form 1–9). It is a fourth page in
+  the same Vite build as the staff dashboard (index.html), Color Belt's register.html and the
+  Forms page (forms.html), but shares none of the dashboard's code; React draws the form inside
+  the empty <div id="root"> below, starting from src/blackBelt/form/main.jsx.
+  public/_redirects serves this page for every /black-belt/<code> address, and public/_headers
+  gives it a strict security policy.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <title>Black Belt testing registration</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/blackBelt/form/main.jsx"></script>
+  </body>
+</html>

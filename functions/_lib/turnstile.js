@@ -6,10 +6,11 @@
 // registration form (action "register"), so a token from some other page can't be reused here.
 // Plan §8: success, hostname = production host, action = register, remoteip.
 //
-// Shared by two Functions: Color Belt's form (functions/_lib/register.js) checks the action
-// "register" — the default, so its behaviour is exactly as before — and the Star family form
-// (functions/_lib/starRegister.js) passes expectedAction "star_register" (CONTRACT-0006 §8.4).
-// So a token made on one form's page can never be used on the other form.
+// Shared by three Functions: Color Belt's form (functions/_lib/register.js) checks the action
+// "register" — the default, so its behaviour is exactly as before; the Star family form
+// (functions/_lib/starRegister.js) passes expectedAction "star_register" (CONTRACT-0006 §8.4); the
+// Black Belt Function passes "bb_register" (CONTRACT-0016 §9.2). So a token made on one form's
+// page can never be used on another form.
 
 export const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 export const TURNSTILE_ACTION = 'register';

@@ -74,8 +74,8 @@ export const needsClassLine = (d) => `Signed up ${shortDate(d).slice(4)} · need
 export const classShort = (b) => `Class ${freeClassLine(b)}`;
 export const classTodayLine = (b) => `Class today · ${formatTime(parseTime(b.start))}`;
 export const CLASS_GONE_CARD = 'Class cancelled — call';
-export const noShowLine = (d) => `No-show ${shortDate(d).slice(4)} · call back`;
-export const NO_SHOW_CALL = 'No-show · call back';
+export const noShowLine = (d) => `Didn't show ${shortDate(d).slice(4)} — call back`;
+export const NO_SHOW_CALL = "Didn't show — call back";
 export const cameAskLine = (d) => `Came ${shortDate(d).slice(4)} · ask to join`;
 export const ASK_TO_JOIN = 'Came · ask to join';
 export const followCard = (text) => (text === 'Today' ? 'Call today' : `Call · ${text}`);
@@ -207,7 +207,7 @@ export const whenLine = (at, who) => `${shortDate(at.slice(0, 10)).slice(4)} · 
 export const STATUS_SAVED = (name) => `Status: ${name}`;
 export const NOTE_SAVED = 'Note saved.';
 export const CHECKED_IN = (name) => `${name} checked in.`;
-export const MARKED_NOSHOW = (name) => `${name}: No-show — call back tomorrow.`;
+export const MARKED_NOSHOW = (name) => `${name} didn't show — call back tomorrow.`; // matches the card line (v0.610)
 export const BOOKED = (name) => `Free class booked for ${name}.`;
 export const CANCELLED_BOOKING = (name) => `${name}'s free class was cancelled.`;
 export const DELETED = (name) => `${name} was deleted.`;

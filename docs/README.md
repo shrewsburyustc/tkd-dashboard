@@ -19,6 +19,7 @@ School management dashboard for Jae H. Jeong's U.S. Taekwondo Center (Worcester 
 | `Testing/Star Testing/` | Star testing: inventory of the old prototype; `Old prototype/` holds the never-used prototype and its notes (feature reference only). |
 | `Dashboard Docs/Build contracts/` | Build contracts for Home (`BUILD-CONTRACT.md`), migration 0002 (`CONTRACT-0002.md`) and Color Belt migrations 0003 (phase 1, `CONTRACT-0003.md`), 0005 (events, `CONTRACT-0005.md`), 0010 (results, `CONTRACT-0010.md`) and 0014 (private testing, `CONTRACT-0014.md`); other sections' contracts sit beside them. |
 | `Prospects/` | New students: approved Schedule mockups (`TKD-Class-Schedule-Mockups.html`, rev 2) Calendar mockups (`TKD-Calendar-Mockups.html`, rev 1) Forms mockups (`TKD-Forms-Mockups.html`, rev 1) and Prospects mockups (`TKD-Prospects-Mockups.html`, rev 2), Oct 17, 2026. All four new-students designs are approved. Schedule screens are built and tried in preview mode (migration 0007, not live yet). |
+| `Testing/Black Belt Testing/` | Black Belt (Dan) testing: **status file (`TKD-BlackBelt-Status.md` — start here)**, the approved plan (`TKD-BlackBelt-Plan.md`), and `Inventory/` (the old Apps Script, spreadsheet and public registration page, read-only research). |
 | `README.md` | This file. |
 
 The school logo used for brand colors lives in `U.S.T.C Projects\Logos\Logo.png` on the school PC (OneDrive).

@@ -24,6 +24,8 @@
 //     when .env.local has no VITE_STAR_TESTING=on. What goes live is decided by Cloudflare's setting.
 //   - `npm run dev` with the switch off still SERVES the file /star.html on this PC (Vite's dev server
 //     serves any page file in the folder); only the /star/<code> rewrite and the build leave it out.
+// A fourth page, black-belt.html (the public Black Belt testing registration form,
+// /black-belt/<code>, contract 0016-B1 §4.1), works the same way again (blackBeltPageRewrite).
 import { fileURLToPath } from 'node:url';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -100,6 +102,28 @@ function starPageRewrite() {
   };
 }
 
+// /black-belt, /black-belt/ and /black-belt/<code> (with or without ?query, e.g. ?dan=2) →
+// black-belt.html, like public/_redirects does on Cloudflare. /black-belt.html itself is left
+// alone (it doesn't match "/black-belt/"), so the page's own file still loads.
+function blackBeltPageRewrite() {
+  const rewrite = (req, _res, next) => {
+    const [path, query] = (req.url ?? '').split('?');
+    if (path === '/black-belt' || path.startsWith('/black-belt/')) {
+      req.url = '/black-belt.html' + (query !== undefined ? `?${query}` : '');
+    }
+    next();
+  };
+  return {
+    name: 'black-belt-page-rewrite',
+    configureServer(server) {
+      server.middlewares.use(rewrite);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(rewrite);
+    },
+  };
+}
+
 // Adds the /star/* line to the BUILT dist/_redirects (Cloudflare reads that copy of public/_redirects):
 //   switch on  → /star/*  /star         200   (star.html, the family form)
 //   switch off → /star and /star/*  /star-closed  200   (public/star-closed.html — no script, no Star code)
@@ -134,14 +158,15 @@ export default defineConfig(({ mode }) => {
   const root = fileURLToPath(new URL('.', import.meta.url));
   const star = starTestingOn(mode, root);
   return {
-    plugins: [react(), registerPageRewrite(), formsPageRewrite(), ...(star ? [starPageRewrite()] : []), starRedirects(star)],
+    plugins: [react(), registerPageRewrite(), formsPageRewrite(), blackBeltPageRewrite(), ...(star ? [starPageRewrite()] : []), starRedirects(star)],
     build: {
       rollupOptions: {
-        // The pages of the build (star.html only while the Star switch is on).
+        // The pages of the build (black-belt.html always; star.html only while the Star switch is on).
         input: {
           main: resolve(root, 'index.html'),
           register: resolve(root, 'register.html'),
           forms: resolve(root, 'forms.html'),
+          blackBelt: resolve(root, 'black-belt.html'),
           ...(star ? { star: resolve(root, 'star.html') } : {}),
         },
       },
@@ -152,7 +177,7 @@ export default defineConfig(({ mode }) => {
     },
     optimizeDeps: {
       // Only look for the app's libraries starting from our own pages.
-      entries: ['index.html', 'register.html', 'forms.html', ...(star ? ['star.html'] : [])],
+      entries: ['index.html', 'register.html', 'forms.html', 'black-belt.html', ...(star ? ['star.html'] : [])],
     },
   };
 });

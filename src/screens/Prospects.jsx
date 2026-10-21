@@ -120,10 +120,20 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
       const all = data.lists[code] ?? [];
       const counts = new Map();
       for (const p of all) counts.set(p.statusId, (counts.get(p.statusId) ?? 0) + 1);
+      // A No-show stays with the Booked children until staff change it (rulebook v0.610): it is a
+      // card in the Booked column and is counted in the Booked tile. (`counts` stays the plain
+      // count per status — deleting a status checks it.)
+      const bookedStage = statuses.find((s) => s.builtin === 'booked') ?? null;
+      const noShowIds = new Set(statuses.filter((s) => s.builtin === 'no_show').map((s) => s.id));
+      const barCounts = new Map(counts);
+      if (bookedStage) {
+        const extra = all.filter((p) => noShowIds.has(p.statusId)).length;
+        barCounts.set(bookedStage.id, (counts.get(bookedStage.id) ?? 0) + extra);
+      }
       const due = all.filter((p) => isDueToday(p, statusById.get(p.statusId)?.builtin, today));
       // "Ava R." - the child's first name and the parent's last initial (as in the mockup)
       const initials = new Map(all.map((p) => [p.id, lastInitial(p.parentName)]));
-      return { code, name: T.SCHOOL_NAME[code], statuses, statusById, all, counts, due, initials };
+      return { code, name: T.SCHOOL_NAME[code], statuses, statusById, all, counts, barCounts, bookedStage, noShowIds, due, initials };
     });
   }, [data, codes, today]);
 
@@ -358,6 +368,8 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     const to = school?.statusById.get(statusId);
     const from = school?.statusById.get(p.statusId);
     if (!to || busy || statusId === p.statusId) return;
+    // a No-show sits in the Booked column (v0.610): letting it go there again changes nothing
+    if (from?.builtin === 'no_show' && to.builtin === 'booked') return;
     clearToast();
     const booked = Boolean(p.booking && p.booking.status === 'booked');
     if (to.builtin === 'booked' && !booked) {
@@ -560,8 +572,12 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
       let items = school.all;
       if (searching) items = items.filter((p) => found[school.code]?.has(p.id));
       else if (filter.kind === 'today') items = school.due;
-      else if (filter.kind === 'status' && !board) items = items.filter((p) => p.statusId === filter.id);
-      const onBoard = (p) => school.statusById.get(p.statusId)?.kind === 'stage';
+      else if (filter.kind === 'status' && !board) {
+        // the Booked tile shows the No-shows too, like the Booked column (v0.610)
+        const withNoShows = filter.id === school.bookedStage?.id;
+        items = items.filter((p) => p.statusId === filter.id || (withNoShows && school.noShowIds.has(p.statusId)));
+      }
+      const onBoard = (p) => school.statusById.get(p.statusId)?.kind === 'stage' || school.noShowIds.has(p.statusId);
       const emptyText = school.all.length === 0 ? T.NO_PROSPECTS : searching ? T.NO_MATCH : filter.kind === 'today' ? T.NOBODY_TODAY : T.NOBODY;
       const panel = !isPhone ? panelFor(school) : null;
       return (
@@ -581,7 +597,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
             onStage={(id) => goToStage(school.code, id)}
             stages={school.statuses.filter((s) => s.kind === 'stage')}
             exits={school.statuses.filter((s) => s.kind === 'exit')}
-            counts={school.counts}
+            counts={school.barCounts}
             todayCount={school.due.length}
             filter={searching ? { kind: 'search' } : filter}
             isPhone={isPhone}

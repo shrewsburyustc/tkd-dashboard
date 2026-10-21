@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Black Belt roles question</title>
+<!--
+  Black Belt testing → who can do what (question B4), one question at a time (rule P3).
+  Why: Jeffrey picks from a picture. Each option is a column; cells that differ
+  from option A (the Star / Color Belt rules staff already use) are outlined in amber.
+  Self-contained so it opens offline and can be screenshotted.
+-->
+<style>
+:root{--page:#EFEFEC;--bg:#FFFFFF;--surface:#F7F7F5;--border:#E5E5E2;--border-strong:#CFCFCA;--text:#1F1F1F;--text2:#6B6B6B;--blue:#003595;--blue-tint:#E6EBF4;--ok:#3B6D11;--ok-tint:#EAF3DE;--warn:#8A5A00;--warn-tint:#FDF0D9;--amber:#E8A317}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:24px 16px 40px}
+h1{font-size:20px;font-weight:500;margin:0 0 4px}
+b{font-weight:600}
+.lead{color:var(--text2);margin:0 0 14px;max-width:1400px}
+table{border-collapse:separate;border-spacing:0;width:100%;background:var(--bg);border:1px solid var(--border-strong);border-radius:10px;overflow:hidden}
+th,td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top;font-size:13px;text-align:left}
+th{background:var(--surface);font-weight:500}
+th.opt{width:22%}
+th.opt.rec{background:var(--blue-tint);color:var(--blue)}
+td.what{width:34%}
+td.what small{display:block;color:var(--text2)}
+.letter{display:inline-flex;width:24px;height:24px;border-radius:50%;background:var(--text);color:#fff;align-items:center;justify-content:center;font-size:13px;margin-right:6px}
+.rec-tag{font-size:11px;color:var(--blue);background:#fff;border-radius:6px;padding:1px 6px;margin-left:6px;font-weight:400;border:1px solid #C5D0E6}
+.who{display:inline-flex;gap:4px;flex-wrap:wrap}
+.p{font-size:12px;border-radius:999px;padding:1px 9px;border:1px solid}
+.adm{background:#EEF0F6;color:#2B3A67;border-color:#C9CFE0}
+.stf{background:var(--ok-tint);color:var(--ok);border-color:#CFE2B8}
+.note{display:block;font-size:12px;color:var(--text2);margin-top:2px}
+td.diff{outline:3px solid var(--amber);outline-offset:-4px;border-radius:6px;background:#FFFBF2}
+tr.grp td{background:var(--surface);font-weight:600;font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.03em;padding:5px 10px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
+.card{background:var(--bg);border:1px solid var(--border-strong);border-radius:10px;padding:12px 14px;font-size:13px}
+.card.rec{border:2px solid var(--blue)}
+.card h3{margin:0 0 6px;font-size:14px;font-weight:600;display:flex;align-items:center}
+.card ul{margin:0;padding-left:18px}.card li{margin:2px 0}
+.card .h{font-weight:600;margin-top:6px}
+.foot{font-size:12px;color:var(--text2);margin-top:12px}
+</style>
+</head>
+<body>
+<main>
+<h1>Black Belt · Question B4: who can do what?</h1>
+<p class="lead">Two roles exist: <b>Admin</b> and <b>Staff</b> (the shared front-desk account is Staff and is logged as "Staff"). Whatever is chosen is <b>enforced by the database</b>, not just hidden on the screen. Option A copies the rules staff already use for Star and Color Belt. Cells that differ from A are <b>outlined in amber</b>.</p>
+<table>
+<tr><th>Action</th><th class="opt rec"><span class="letter">A</span>Same as Star<span class="rec-tag">Recommended</span></th><th class="opt"><span class="letter">B</span>Money: admins only</th><th class="opt"><span class="letter">C</span>Staff do more</th></tr>
+<tr class="grp"><td colspan="4">Setup</td></tr>
+<tr><td class="what">Edit the rubric and prices<small>subjects, credits, scales, physical tables, fees, Kukkiwon fee</small></td><td><span class="who"><span class="p adm">Admin</span></span><span class="note">Staff view only</span></td><td><span class="who"><span class="p adm">Admin</span></span></td><td><span class="who"><span class="p adm">Admin</span></span></td></tr>
+<tr><td class="what">Add or edit a cycle and its testing days<small>dates, times, places, deadlines, payment due dates</small></td><td><span class="who"><span class="p adm">Admin</span></span></td><td><span class="who"><span class="p adm">Admin</span></span></td><td class="diff"><span class="who"><span class="p adm">Admin</span><span class="p stf">Staff</span></span><span class="note">e.g. staff move a day for rain</span></td></tr>
+<tr><td class="what">Open or close registration</td><td><span class="who"><span class="p adm">Admin</span></span><span class="note">any time</span><span class="who" style="margin-top:4px"><span class="p stf">Staff</span></span><span class="note">close any time; open only before the closing date</span></td><td><span class="who"><span class="p adm">Admin</span></span><span class="note">any time</span><span class="who" style="margin-top:4px"><span class="p stf">Staff</span></span><span class="note">same as A</span></td><td class="diff"><span class="who"><span class="p adm">Admin</span><span class="p stf">Staff</span></span><span class="note">any time</span></td></tr>
+<tr class="grp"><td colspan="4">Candidates</td></tr>
+<tr><td class="what">Add a candidate, or fix their details<small>walk-in, make-up, spelling on the belt, school, Dan</small></td><td><span class="who"><span class="p adm">Admin</span><span class="p stf">Staff</span></span></td><td><span class="who"><span class="p adm">Admin</span><span class="p stf">Staff</span></span></td><td><span class="who"><span class="p adm">Admin</span><span class="p stf">Staff</span></span></td></tr>
+<tr><td class="what">Remove a real candidate</td><td><span class="who"><span class="p adm">Admin</span></span></td><td><span class="who"><span class="p adm">Admin</span></span></td><td><span class="who"><span class="p adm">Admin</span></span></td></tr>
+<tr class="grp"><td colspan="4">Money</td></tr>
+<tr><td class="what">Record a payment<small>a check or cash at the desk, with the 5-second Undo</small></td><td><span class="who"><span class="p adm">Admin</span><span class="p stf">Staff</span></span></td><td class="diff"><span class="who"><span class="p adm">Admin</span></span><span class="note">staff see the balance only</span></td><td><span class="who"><span class="p adm">Admin</span><span class="p stf">Staff</span></span></td></tr>
+<tr><td class="what">Change the plan (in full ↔ 3 payments) or add / remove the Kukkiwon certificate</td><td><span class="who"><span class="p adm">Admin</span><span class="p stf">Staff</span></span><span class="note">before anything is paid; after that admins</span></td><td class="diff"><span class="who"><span class="p adm">Admin</span></span></td><td class="diff"><span class="who"><span class="p adm">Admin</span><span class="p stf">Staff</span></span><span class="note">any time</span></td></tr>
+<tr><td class="what">Edit or undo a payment later, record a refund, mark a check returned (bounced)</td><td><span class="who"><span class="p adm">Admin</span></span></td><td><span class="who"><span class="p adm">Admin</span></span></td><td class="diff"><span class="who"><span class="p adm">Admin</span><span class="p stf">Staff</span></span><span class="note">refunds still admins</span></td></tr>
+<tr class="grp"><td colspan="4">Grading and results</td></tr>
+<tr><td class="what">Enter grades on any testing day<small>tablet or typed in from paper</small></td><td><span class="who"><span class="p adm">Admin</span><span class="p stf">Staff</span></span></td><td><span class="who"><span class="p adm">Admin</span><span class="p stf">Staff</span></span></td><td><span class="who"><span class="p adm">Admin</span><span class="p stf">Staff</span></span></td></tr>
+<tr><td class="what">Change a grade later (make-ups, corrections)</td><td><span class="who"><span class="p adm">Admin</span><span class="p stf">Staff</span></span><span class="note">logged; results stay open (v0.139)</span></td><td><span class="who"><span class="p adm">Admin</span><span class="p stf">Staff</span></span></td><td><span class="who"><span class="p adm">Admin</span><span class="p stf">Staff</span></span></td></tr>
+<tr><td class="what">Print results, grading sheets and receipts</td><td><span class="who"><span class="p adm">Admin</span><span class="p stf">Staff</span></span></td><td class="diff"><span class="who"><span class="p adm">Admin</span><span class="p stf">Staff</span></span><span class="note">receipts: admins</span></td><td><span class="who"><span class="p adm">Admin</span><span class="p stf">Staff</span></span></td></tr>
+</table>
+
+<div class="cards">
+<div class="card rec"><h3><span class="letter">A</span>Same as Star (recommended)</h3>
+<div class="h">Pros</div><ul><li>Staff already learn these rules for Star and Color Belt: one set of rules everywhere.</li><li>The front desk can take a check when no admin is in; every payment is logged with who and when.</li><li>Money mistakes after the 5-second Undo, refunds and bounced checks stay with admins.</li></ul>
+<div class="h">Cons</div><ul><li>Black Belt amounts are big ($870–$2,700) and anyone at the desk can record them.</li><li>Moving a testing day (e.g. for rain) needs an admin.</li></ul></div>
+<div class="card"><h3><span class="letter">B</span>Money: admins only</h3>
+<div class="h">Pros</div><ul><li>Tightest control of large amounts and of post-dated checks made out to Master Jeong.</li></ul>
+<div class="h">Cons</div><ul><li>A family handing in checks when no admin is there: staff can't record them, so checks sit unrecorded.</li><li>Different from Star and Color Belt, so staff must remember which testing allows what.</li></ul></div>
+<div class="card"><h3><span class="letter">C</span>Staff do more</h3>
+<div class="h">Pros</div><ul><li>Fewer "ask an admin" moments: staff can move a day, reopen registration late and fix payment mistakes.</li></ul>
+<div class="h">Cons</div><ul><li>Deadlines and the money record can be changed at the desk, which is easier to get wrong and harder to trace to one person while the desk account logs as "Staff".</li><li>Different from Star and Color Belt.</li></ul></div>
+</div>
+<p class="foot">Same in every option: date of birth and email only in a single candidate's detail view on desk devices, never on the grading tablet (it shows the age bracket only) or in lists; payments never on the grading screens (v0.108, v0.110); every change logged.</p>
+</main>
+</body>
+</html>

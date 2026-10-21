@@ -239,6 +239,29 @@
 //   An exact copy of git color-belt:supabase/migrations/0014_testing_private.sql
 //   (live on production 2026-10-19). Never edit it; once the real file is
 //   on this branch, run.mjs uses that instead.
+//   15. 0016 (Black Belt testing) on the main database, after step 14 and
+//       before 13g (contract CONTRACT-0016.md section 11.4):
+//         a. 0016_fingerprints.sql must not contain the words the Supabase
+//            connection refuses
+//         b. the fingerprints of every migration already on main (0003,
+//            0004, 0005, 0006, 0010, 0011) are taken, 0016 is applied, and
+//            they must be IDENTICAL afterwards (0016 changed none of them)
+//         c. 0016_tests.sql, then every earlier test file again - all must
+//            print their PASSED row unchanged
+//         d. live checks AS bb_registrar: every table, the counter, writes,
+//            staff functions, helpers, the register core, Color Belt's and
+//            Star's public functions and CREATE are refused - also with an
+//            admin's login token set in the session (no impersonation:
+//            has_data_access() and every staff function stay refused); and
+//            testing_registrar / star_registrar can't run Black Belt's two
+//            public functions
+//         e. a seeded Black Belt TEST cycle (made through the staff
+//            functions as an unlocked admin), one family registration AS
+//            bb_registrar with an admin's token set (still "Family form",
+//            no login id); then 0016_tests.sql again (it must pass with
+//            real-looking data too)
+//         f. 0016 applied a SECOND time: nothing changed or lost, the 0016
+//            fingerprints identical, 0016_tests.sql passes again
 //
 // THE FIXTURE fixtures/0011_as_applied_2026-10-19.sql
 //   An exact copy of 0011 as it was pasted into production on 2026-10-19
@@ -249,6 +272,9 @@
 //       date), every test file again, re-run safety for 0007/0008/0009/0012,
 //       and a minimal database (only 0003, 0004, 0007-0012) whose
 //       0007/0008/0009/0012 fingerprints must be the same.
+//   step0021. 0021 (Not interested families deleted after 6 months) on its own
+//       live-order database: only prospects_purge_old's fingerprint moves,
+//       0021_tests + 0015/0012 tests pass, re-runs harmless, minimal = live.
 //   17. 0015 (family history) on a database built in the live order
 //       (no family rows in change_log): earlier fingerprints unchanged
 //       (0003's above all), 0015_tests.sql and every earlier test file
@@ -288,6 +314,15 @@
 //            and every earlier test file (0014, 0010, 0006, 0005, 0004,
 //            0003, 0002, PIN) pass. (0011_tests.sql runs in c instead: the
 //            upgrade database holds 14g's big seed, which it refuses.)
+//   step0016_after_new_students. 0016 on a database built in the
+//       PRODUCTION order with EVERY live migration: 0001-0006, 0010, 0007,
+//       0008, 0009, 0012, 0015, 0011 as production got it, 0019, 0014,
+//       0020, camps' 0013 + 0017 (exact copies in fixtures/ until the real
+//       files are on this branch), 0018: the other migrations'
+//       fingerprints don't move, 0016_tests.sql and every earlier test
+//       file pass (0014, camps' 0017, 0018 and 0020 included), the
+//       bb_registrar live checks and a test cycle + registration work,
+//       and 0016's fingerprints equal step 15's.
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -312,7 +347,7 @@
 //   Exit code 0 = everything passed, 1 = something failed.
 // =====================================================================
 
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
@@ -630,6 +665,16 @@ async function main() {
     }
   }
 
+  // 15b. Black Belt testing (0016), on the main database after 0011 and
+  // before 13g (the 0010 down-script must stay the last thing there)
+  let after16 = null;
+  if (after11) {
+    console.log('\nMigration 0016 (Black Belt testing):');
+    after16 = await stepBlackBelt(db);
+  } else {
+    record('0016 (Black Belt testing)', false, 'skipped: 0011 could not be applied (see the lines above)');
+  }
+
   // 13g. the down-script (SETUP section 14e), LAST - the real removal
   // order: 0014 first (15i), then 0010. Only if steps 14 and 15i passed.
   if (after5 && after10) {
@@ -653,6 +698,14 @@ async function main() {
   // 18. 0019 (school phone)
   console.log('\nMigration 0019 (school phone):');
   const after19 = after5 ? await step18() : null;
+
+  // 0016 on top of everything, in the production order (its own database)
+  console.log('\nMigration 0016 on top of every live migration (production order):');
+  await step0016_after_new_students(after16);
+
+  // step0021: Not interested families deleted after 6 months (its own database)
+  console.log('\nMigration 0021 (Not interested families deleted after 6 months):');
+  const after21 = after5 ? await step0021() : null;
 
   // step0020 (named after its migration, not a number other branches use): 0020, LAST
   console.log('\nMigration 0020 (current_session_id reads only request.jwt.claims), last:');
@@ -688,6 +741,10 @@ async function main() {
     console.log('\n0019 fingerprints (kind  item  detail):');
     for (const line of after19) console.log('  ' + line);
   }
+  if (after21) {
+    console.log('\n0021 fingerprints (kind  item  detail):');
+    for (const line of after21) console.log('  ' + line);
+  }
   if (after11) {
     console.log('\n0011 fingerprints (kind  item  detail):');
     for (const line of after11) console.log('  ' + line);
@@ -699,6 +756,10 @@ async function main() {
   if (after20) {
     console.log('\n0020 fingerprints (kind  item  detail):');
     for (const line of after20) console.log('  ' + line);
+  }
+  if (after16) {
+    console.log('\n0016 fingerprints (kind  item  detail):');
+    for (const line of after16) console.log('  ' + line);
   }
   if (after18) {
     console.log('\n0018 fingerprints (kind  item  detail):');
@@ -1823,6 +1884,95 @@ async function step18() {
   return after19;
 }
 
+
+// =====================================================================
+// step0021: 0021 (Not interested families deleted after 6 months,
+// rulebook v0.611), on its own database built in the live order.
+//   a. steps 1-5, 0003, 0004, the seed, 0005 (+ its test event), 0006,
+//      0010, 0007, 0008, 0009, 0012, 0015, 0011, 0019, 0020
+//   b. 0021; every other migration's fingerprints stay the same, except
+//      the ONE line of prospects_purge_old (it is listed by 0012's and
+//      0015's fingerprints too)
+//   c. 0021_tests.sql, then 0015_tests.sql and 0012_tests.sql (their
+//      2-year clean-up tests must still pass) and the other new-students
+//      test files
+//   d. 0021 twice more: fingerprints identical, tests still pass
+//   e. a minimal database (steps 1-5, 0003, 0004, the seed, 0007, 0008,
+//      0009, 0012, 0015, 0021) gives the same 0021 fingerprints
+// Returns 0021's fingerprints.
+// =====================================================================
+async function step0021() {
+  const L = '[0021] ';
+  const db = await buildBase(L);
+  if (!db) return null;
+  for (const [label, file] of [['0003', '0003_testing_classes_ranks.sql'], ['0004', '0004_staff_accounts.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+  await run(db, L + 'apply built-in seed', builtInSeedSql());
+  if (!(await run(db, L + 'apply 0005', read('migrations', '0005_testing_events.sql')))) return null;
+  await seedTestEvent(db);
+  for (const [label, file] of [['0006', '0006_star_testing.sql'], ['0010 (grading results)', '0010_testing_results.sql'],
+    ['0007', '0007_schedule.sql'], ['0008', '0008_calendar.sql'], ['0009', '0009_forms.sql'], ['0012', '0012_prospects.sql'],
+    ['0015', '0015_family_history.sql'], ['0011 (Finance)', '0011_finance.sql'], ['0019', '0019_school_phone.sql'],
+    ['0020', '0020_session_id_claims.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // b. apply 0021; only the clean-up's own fingerprint line may move
+  const prints = ['0003_fingerprints.sql', '0004_fingerprints.sql', '0005_fingerprints.sql', '0006_fingerprints.sql', '0010_fingerprints.sql',
+    '0007_fingerprints.sql', '0008_fingerprints.sql', '0009_fingerprints.sql', '0012_fingerprints.sql', '0015_fingerprints.sql',
+    '0011_fingerprints.sql', '0019_fingerprints.sql'];
+  const before = {};
+  for (const f of prints) before[f] = await fingerprints(db, f);
+  const purgeBefore = await fingerprints(db, '0021_fingerprints.sql');
+  if (!(await run(db, L + 'apply 0021_prospects_not_interested_sooner.sql', read('migrations', '0021_prospects_not_interested_sooner.sql')))) return null;
+  const after21 = await fingerprints(db, '0021_fingerprints.sql');
+  record(L + 'prospects_purge_old really changed (its code fingerprint is new)', JSON.stringify(purgeBefore) !== JSON.stringify(after21), `${after21.length} rows`);
+  for (const f of prints) {
+    const after = await fingerprints(db, f);
+    const gone = before[f].filter((line) => !after.includes(line));
+    const added = after.filter((line) => !before[f].includes(line));
+    const onlyPurge = [...gone, ...added].every((line) => /prospects_purge_old\(\)/.test(line)) && gone.length === added.length;
+    record(`${L}${f.slice(0, 4)} fingerprints: nothing moved except prospects_purge_old`, onlyPurge,
+      gone.length + added.length === 0 ? `${after.length} rows, unchanged` : `${gone.length} line(s) changed: ${added.map((l) => l.slice(0, 60)).join(' | ')}`);
+  }
+
+  // c. its own tests, then the files that test the clean-up and the rest of new students
+  await runTestFile(db, L + '0021_tests.sql', '0021_tests.sql', 'ALL 0021 TESTS PASSED');
+  for (const [file, ok] of [['0015_tests.sql', 'ALL 0015 TESTS PASSED'], ['0012_tests.sql', 'ALL 0012 TESTS PASSED'],
+    ['0009_tests.sql', 'ALL 0009 TESTS PASSED'], ['0008_tests.sql', 'ALL 0008 TESTS PASSED'], ['0007_tests.sql', 'ALL 0007 TESTS PASSED'],
+    ['0019_tests.sql', 'ALL 0019 TESTS PASSED'], ['0003_tests.sql', 'ALL 0003 TESTS PASSED']]) {
+    await runTestFile(db, `${L}${file} (after 0021)`, file, ok);
+  }
+
+  // d. re-run safety (twice)
+  for (const n of ['SECOND', 'THIRD']) {
+    await run(db, `${L}apply 0021 a ${n} time (re-run safety)`, read('migrations', '0021_prospects_not_interested_sooner.sql'));
+  }
+  const again = await fingerprints(db, '0021_fingerprints.sql');
+  record(L + '0021 fingerprints identical before/after the re-runs', JSON.stringify(again) === JSON.stringify(after21), `${again.length} rows`);
+  await runTestFile(db, L + '0021_tests.sql (after re-runs)', '0021_tests.sql', 'ALL 0021 TESTS PASSED');
+
+  // e. a minimal database gives the same fingerprints
+  const M = '[0021 minimal] ';
+  const mini = await buildBase(M);
+  if (mini) {
+    let ok = true;
+    for (const f of ['0003_testing_classes_ranks.sql', '0004_staff_accounts.sql']) ok = ok && (await run(mini, M + 'apply ' + f, read('migrations', f)));
+    if (ok) await run(mini, M + 'apply built-in seed', builtInSeedSql());
+    for (const f of ['0007_schedule.sql', '0008_calendar.sql', '0009_forms.sql', '0012_prospects.sql', '0015_family_history.sql',
+      '0021_prospects_not_interested_sooner.sql']) {
+      ok = ok && (await run(mini, M + 'apply ' + f, read('migrations', f)));
+    }
+    if (ok) {
+      const p = await fingerprints(mini, '0021_fingerprints.sql');
+      record(M + '0021 fingerprints identical to the live-order database', JSON.stringify(p) === JSON.stringify(after21), `${p.length} rows`);
+      await runTestFile(mini, M + '0021_tests.sql', '0021_tests.sql', 'ALL 0021 TESTS PASSED');
+    }
+  }
+  return after21;
+}
+
 // ---------------------------------------------------------------------
 // Step 14: Finance (0011)
 // ---------------------------------------------------------------------
@@ -2245,6 +2395,373 @@ async function financeIcuCheck() {
     if (db) await db.close().catch(() => {});
     rmSync(dir, { recursive: true, force: true });
   }
+}
+
+// ---------------------------------------------------------------------
+// Step 15: Black Belt testing (0016)
+// ---------------------------------------------------------------------
+
+// The 13 Black Belt tables - used for the "re-running changed nothing" md5.
+const BB_TABLES = [
+  'bb_settings', 'bb_waiver_versions', 'bb_starting_point', 'bb_cycles', 'bb_cycle_days', 'bb_cycle_day_parts',
+  'bb_cycle_plans', 'bb_cycle_plan_amounts', 'bb_cycle_kukkiwon_fees', 'bb_cycle_plan_payments',
+  'bb_candidates', 'bb_candidate_waivers', 'bb_payments'];
+
+// Everything 0016 stores, plus the history's row count, as one md5.
+const snapshot16Sql = `select md5(${BB_TABLES.map((t) =>
+  `coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.${t} x), '')`).join(' || ')}
+  || (select count(*) from public.change_log)::text)`;
+
+// The fingerprints of every migration on main before 0016 (15b: 0016 must
+// not change them).
+async function before16Fingerprints(db) {
+  return [
+    ...(await fingerprints(db, '0003_fingerprints.sql')),
+    ...(await fingerprints(db, '0004_fingerprints.sql')),
+    ...(await fingerprints(db, '0005_fingerprints.sql')),
+    ...(await fingerprints(db, '0006_fingerprints.sql')),
+    ...(await fingerprints(db, '0010_fingerprints.sql')),
+    ...(await fingerprints(db, '0011_fingerprints.sql')),
+  ];
+}
+
+// Every test file, 0016's first (15c).
+async function allTestFiles16(db, label) {
+  await runTestFile(db, `0016_tests.sql (${label})`, '0016_tests.sql', 'ALL 0016 TESTS PASSED');
+  await runTestFile(db, `verify_pin_tests.sql (${label})`, 'verify_pin_tests.sql', 'ALL PIN TESTS PASSED');
+  await runTestFile(db, `0002_tests.sql (${label})`, '0002_tests.sql', 'ALL 0002 TESTS PASSED');
+  await runTestFile(db, `0003_tests.sql (${label})`, '0003_tests.sql', 'ALL 0003 TESTS PASSED');
+  await runTestFile(db, `0004_tests.sql (${label})`, '0004_tests.sql', 'ALL 0004 TESTS PASSED');
+  await runTestFile(db, `0005_tests.sql (${label})`, '0005_tests.sql', 'ALL 0005 TESTS PASSED');
+  await runTestFile(db, `0006_tests.sql (${label})`, '0006_tests.sql', 'ALL 0006 TESTS PASSED');
+  await runTestFile(db, `0010_tests.sql (${label})`, '0010_tests.sql', 'ALL 0010 TESTS PASSED');
+  await runTestFile(db, `0011_tests.sql (${label})`, '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+}
+
+// An unlocked admin session with a fresh password sign-in, like the test
+// files make (15d / 15e). Its login token as text.
+const BB_ADMIN_SESSION = '44444444-4444-4444-8444-444444444444';
+async function bbAdminClaims(db) {
+  await db.exec(`insert into auth.sessions (id, user_id) values ('${BB_ADMIN_SESSION}', '${ADMIN_UID}') on conflict do nothing;
+    insert into public.session_unlock (session_id, staff_id, unlocked_until)
+    values ('${BB_ADMIN_SESSION}', '${ADMIN_UID}', now() + interval '1 hour')
+    on conflict (session_id) do update set unlocked_until = excluded.unlocked_until;`);
+  return JSON.stringify({ sub: ADMIN_UID, role: 'authenticated', session_id: BB_ADMIN_SESSION,
+    amr: [{ method: 'password', timestamp: Math.floor(Date.now() / 1000) - 60 }] });
+}
+
+// 15d. Acting AS the Black Belt family form's login. Each statement must
+// be refused (permission denied) - first without, then WITH an admin's
+// login token in the session (no impersonation). Then bb_public_cycle
+// must work, and the other two forms' logins can't run Black Belt's.
+async function bbRegistrarLiveChecks(db) {
+  // every bb_ function the form's login must NOT run (staff functions,
+  // helpers, the register core), called with typed empty arguments; trigger
+  // functions can't be called directly by anyone, so they are left out
+  const fns = (await db.query(`select p.proname, oidvectortypes(p.proargtypes) as types
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname like 'bb\\_%'
+       and p.proname not in ('bb_public_cycle', 'bb_public_register')
+       and p.prorettype <> 'trigger'::regtype
+     order by p.proname`)).rows;
+  const fnCalls = fns.map((f) => [`call ${f.proname}`,
+    `select public.${f.proname}(${f.types ? f.types.split(', ').map((t) => `null::${t}`).join(', ') : ''})`]);
+  const refused = [
+    ...BB_TABLES.map((t) => [`read ${t}`, `select 1 from public.${t} limit 1`]),
+    ['read testing_public_attempts', 'select 1 from public.testing_public_attempts limit 1'],
+    ['read change_log', 'select 1 from public.change_log limit 1'],
+    ['read staff', 'select 1 from public.staff limit 1'],
+    ['read locations', 'select 1 from public.locations limit 1'],
+    ['read auth.users', 'select 1 from auth.users limit 1'],
+    ['use the reference counter', "select nextval('public.bb_candidate_ref_seq')"],
+    ['write bb_candidates', 'update public.bb_candidates set first_name = first_name'],
+    ['write bb_payments', "insert into public.bb_payments (candidate_id, cycle_id, kind, amount_cents, method, paid_on, location_code, cycle_name, recorded_by_name) values (gen_random_uuid(), gen_random_uuid(), 'refund', -1, 'cash', current_date, 'worcester', 'x', 'x')"],
+    ['call has_data_access', 'select public.has_data_access()'],
+    ...fnCalls,
+    ['call testing_public_event', "select public.testing_public_event('abcdefgh')"],
+    ['call testing_public_register', `select public.testing_public_register('abcdefgh', 'k', gen_random_uuid(), 'a', 'b', gen_random_uuid(), 'cash', true, '${TEST_SIGNATURE}', '${ACK_VERSION}')`],
+    ['call star_public_event', "select public.star_public_event('abcdefgh')"],
+    ['call star_public_register', `select public.star_public_register('abcdefgh', 'k', gen_random_uuid(), 'a', 'b', current_date - 4000, 'a@b.co', 1, 0, 'cash', true, '${TEST_SIGNATURE}', '${STAR_ACK_VERSION}')`],
+    ['create a table in public', 'create table public.zz_bb_registrar_probe (x integer)'],
+    ['create a schema', 'create schema zz_bb_registrar_probe'],
+  ];
+  const claims = await bbAdminClaims(db);
+  for (const withToken of [false, true]) {
+    let allRefused = true;
+    const leaks = [];
+    for (const [label, sql] of refused) {
+      try {
+        await db.exec('set role bb_registrar;');
+        if (withToken) await db.query(`select set_config('request.jwt.claims', $1, false)`, [claims]);
+        await db.exec(sql);
+        allRefused = false;
+        leaks.push(label);
+      } catch (error) {
+        if (!/permission denied|must be a member|not allowed/i.test(error.message)) {
+          allRefused = false;
+          leaks.push(`${label} (unexpected error: ${error.message})`);
+        }
+      } finally {
+        await db.exec('reset role;').catch(() => {});
+        await db.query(`select set_config('request.jwt.claims', '', false)`).catch(() => {});
+      }
+    }
+    record(`[bb registrar] every table, the counter, writes, ${fnCalls.length} bb_ functions, has_data_access, the other forms and CREATE refused`
+      + (withToken ? ' - WITH an admin\'s login token set' : ''), allRefused, leaks.join('; '));
+  }
+  try {
+    await db.exec('set role bb_registrar;');
+    const r = await db.query("select public.bb_public_cycle('zzzzzzzz') as r");
+    record('[bb registrar] can call bb_public_cycle', r.rows[0].r?.status === 'not_found', JSON.stringify(r.rows[0].r));
+  } catch (error) {
+    record('[bb registrar] can call bb_public_cycle', false, error.message);
+  } finally {
+    await db.exec('reset role;').catch(() => {});
+  }
+  const crossed = [];
+  for (const role of ['testing_registrar', 'star_registrar']) {
+    for (const sql of ["select public.bb_public_cycle('zzzzzzzz')",
+      `select public.bb_public_register('zzzzzzzz', 'k', gen_random_uuid(), 'a', 'b', current_date - 4000, 'a@b.co', 1, gen_random_uuid(), false, true, '2026-1', 'x', '${TEST_SIGNATURE}')`]) {
+      try {
+        await db.exec(`set role ${role};`);
+        await db.exec(sql);
+        crossed.push(`${role}: ${sql.slice(7, 40)}`);
+      } catch (error) {
+        if (!/permission denied/i.test(error.message)) crossed.push(`${role}: ${sql.slice(7, 40)} (${error.message})`);
+      } finally {
+        await db.exec('reset role;').catch(() => {});
+      }
+    }
+  }
+  record('[bb registrar] testing_registrar and star_registrar can\'t run Black Belt\'s public functions', crossed.length === 0,
+    crossed.join('; '));
+}
+
+// 15e. A Black Belt TEST cycle made through the staff functions as an
+// unlocked admin (the school's waiver saved, a cycle added and opened),
+// then one family registers AS bb_registrar - with an admin's login token
+// set in the session on purpose: the row must still be by "Family form"
+// with no login id.
+async function seedBbTestCycle(db) {
+  const claims = await bbAdminClaims(db);
+  let code = null;
+  try {
+    await db.exec('begin;');
+    await db.query(`select set_config('request.jwt.claims', $1, true)`, [claims]);
+    const w = await db.query(`select public.bb_save_waiver((select v.id from public.bb_waiver_versions v where v.superseded_at is null),
+      'PGlite test waiver: every subject must be passed; fees are applied to the next test.') as r`);
+    const c = await db.query(`select public.bb_add_cycle(jsonb_build_object(
+        'name', 'PGlite Black Belt Testing', 'application_due', public.testing_today() + 20,
+        'submissions_due', public.testing_today() + 40, 'auto_close', true,
+        'days', jsonb_build_array(
+          jsonb_build_object('name', 'Physical', 'day_date', public.testing_today() + 30, 'start_time', '12:30', 'end_time', '14:30',
+                             'place', jsonb_build_object('code', 'worcester'),
+                             'second', jsonb_build_object('start', '14:30', 'end', '15:30', 'place', jsonb_build_object('other', 'Horgan Arena')),
+                             'parts', jsonb_build_array('physical')),
+          jsonb_build_object('name', 'Technical and Curriculum', 'day_date', public.testing_today() + 44, 'start_time', '12:30',
+                             'end_time', '17:00', 'place', jsonb_build_object('code', 'shrewsbury'), 'second', null,
+                             'parts', jsonb_build_array('technical', 'curriculum'))),
+        'plans', jsonb_build_array(jsonb_build_object('name', 'In full',
+          'payments', jsonb_build_array(jsonb_build_object('due_on', public.testing_today() + 20, 'follows_application_due', true)),
+          'amounts', jsonb_build_object('1', jsonb_build_array(87000), '2', jsonb_build_array(99000),
+                                        '3', jsonb_build_array(150000), '4', jsonb_build_array(270000)))),
+        'kukkiwon', jsonb_build_object('1', 10000, '2', 11000, '3', 14000, '4', 17000),
+        'prices_from', 'Fall 2026 starting point'), null) as r`);
+    const cycle = c.rows[0].r;
+    const o = await db.query(`select public.bb_set_registration($1::uuid, 1, true) as r`, [cycle?.id]);
+    await db.query(`select set_config('request.jwt.claims', '', true)`);
+    await db.exec('commit;');
+    const ok = w.rows[0].r?.status === 'ok' && cycle?.status === 'ok' && o.rows[0].r?.status === 'ok';
+    record('[bb cycle] the school\'s waiver saved, a test cycle added and opened (as an unlocked admin)', ok,
+      JSON.stringify([w.rows[0].r, cycle?.status, o.rows[0].r?.status]));
+    if (!ok) return false;
+    code = cycle.public_code_shrewsbury;
+  } catch (error) {
+    record('[bb cycle] seed a Black Belt test cycle', false, error.message);
+    await db.exec('rollback;').catch(() => {});
+    return false;
+  }
+  const before = await one(db, 'select coalesce(max(id), 0)::bigint from public.change_log');
+  try {
+    await db.exec('set role bb_registrar;');
+    await db.query(`select set_config('request.jwt.claims', $1, false)`, [claims]);
+    const plan = await (async () => {
+      const r = await db.query('select public.bb_public_cycle($1) as r', [code]);
+      return r.rows[0].r?.cycle?.plans?.[0]?.id;
+    })();
+    const version = (await db.query('select public.bb_public_cycle($1) as r', [code])).rows[0].r?.waiver?.version_name;
+    const r = await db.query(
+      `select public.bb_public_register($1, $2, gen_random_uuid(), $3, $4, current_date - 5000, $5, 1, $6::uuid, true, true, $7, $8, $9) as r`,
+      [code, 'pglite-bb-client-key', 'Pat', 'Lee', 'pat.bb@example.com', plan, version, 'Jordan Parent', TEST_SIGNATURE]);
+    record('[bb cycle] a family registration AS bb_registrar (with an admin\'s token in the session)',
+      r.rows[0].r?.status === 'ok' && r.rows[0].r?.school?.code === 'shrewsbury', JSON.stringify(r.rows[0].r));
+  } catch (error) {
+    record('[bb cycle] a family registration AS bb_registrar', false, error.message);
+  } finally {
+    await db.exec('reset role;').catch(() => {});
+    await db.query(`select set_config('request.jwt.claims', '', false)`).catch(() => {});
+  }
+  const rows = (await db.query(`select count(*)::int as n,
+      count(*) filter (where actor_name = 'Family form' and actor_id is null and session_id is null)::int as form,
+      count(*) filter (where coalesce(before::text, '') || coalesce(after::text, '') ~ 'data:image|Jordan Parent|pat\\.bb@example')::int as leaked
+      from public.change_log where id > ${before}`)).rows[0];
+  record('[bb cycle] the registration\'s history rows are by "Family form" (no login id) and hold no signature, signer or email',
+    rows.n === 2 && rows.form === 2 && rows.leaked === 0, JSON.stringify(rows));
+  return true;
+}
+
+// Step 15 on the main database. Returns 0016's fingerprints (or null if
+// 0016 could not be applied).
+async function stepBlackBelt(db) {
+  // 15a. the fingerprints file must stay runnable through the connector
+  const printsText = read('tests', '0016_fingerprints.sql');
+  record('0016_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)', !/delete|drop/i.test(printsText));
+  record('0016_cp3_snapshot.sql contains neither "delete" nor "drop" (connector-safe)', !/delete|drop/i.test(read('tests', '0016_cp3_snapshot.sql')));
+
+  // 15b. apply 0016; the earlier migrations' fingerprints don't move
+  const earlierBefore = await before16Fingerprints(db);
+  if (!(await run(db, 'apply 0016_black_belt.sql', read('migrations', '0016_black_belt.sql')))) return null;
+  record('0003 / 0004 / 0005 / 0006 / 0010 / 0011 fingerprints identical before/after 0016',
+    JSON.stringify(earlierBefore) === JSON.stringify(await before16Fingerprints(db)), `${earlierBefore.length} rows`);
+  const seeded = (await db.query(`select (select count(*)::int from public.bb_settings) as settings,
+      (select count(*)::int from public.bb_waiver_versions where is_placeholder) as placeholder,
+      (select count(*)::int from public.bb_starting_point) as starting_point,
+      (select count(*)::int from public.bb_cycles) as cycles,
+      (select count(*)::int from public.change_log where action = 'bb_seed') as seed_rows`)).rows[0];
+  record('[0016] seed: 1 settings row, 1 placeholder waiver, 1 starting point, no cycle, 3 history rows',
+    JSON.stringify(seeded) === JSON.stringify({ settings: 1, placeholder: 1, starting_point: 1, cycles: 0, seed_rows: 3 }),
+    JSON.stringify(seeded));
+
+  // 15c. every test file
+  await allTestFiles16(db, 'after 0016');
+
+  // 15d. live checks as the Black Belt form's login
+  await bbRegistrarLiveChecks(db);
+
+  // 15e. a seeded test cycle and a form registration, then the tests again
+  if (await seedBbTestCycle(db)) {
+    await runTestFile(db, '0016_tests.sql (with the Black Belt test cycle)', '0016_tests.sql', 'ALL 0016 TESTS PASSED');
+    await runTestFile(db, '0011_tests.sql (with the Black Belt test cycle)', '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+    await runTestFile(db, '0006_tests.sql (with the Black Belt test cycle)', '0006_tests.sql', 'ALL 0006 TESTS PASSED');
+  }
+
+  // 15f. re-run safety
+  const before16 = await fingerprints(db, '0016_fingerprints.sql');
+  const data16Before = await one(db, snapshot16Sql);
+  await run(db, 'apply 0016 a SECOND time (re-run safety)', read('migrations', '0016_black_belt.sql'));
+  record('0016 re-run kept every row unchanged (13 Black Belt tables, change_log)', data16Before === (await one(db, snapshot16Sql)));
+  const after16 = await fingerprints(db, '0016_fingerprints.sql');
+  record('0016 fingerprints identical before/after re-run', JSON.stringify(before16) === JSON.stringify(after16), `${after16.length} rows`);
+  record('earlier fingerprints still identical after the 0016 re-run',
+    JSON.stringify(earlierBefore) === JSON.stringify(await before16Fingerprints(db)));
+  await runTestFile(db, '0016_tests.sql (after re-run)', '0016_tests.sql', 'ALL 0016 TESTS PASSED');
+  await bbRegistrarLiveChecks(db);
+  return after16;
+}
+
+// =====================================================================
+// step0016_after_new_students: 0016 (Black Belt) on a database built in
+// the PRODUCTION order. Step 15 tests 0016 on the main database, which
+// has 0001-0006, 0010 and 0011 but none of the new-students files. On
+// production 0016 will be pasted AFTER everything that is live, so this
+// step builds that database and proves 0016 applies and passes on top of
+// it:
+//   a. a database built like production, in the order the migrations
+//      were pasted there (status files: Finance, Color Belt, camps'
+//      go-live page):
+//        2026-10-17/19: steps 1-5, 0003, 0004, the seed, 0005 (+ its test
+//          event), 0006, 0010, 0007, 0008, 0009, 0012, 0015, then 0011
+//          the way production got it (first the copy pasted on
+//          2026-10-19, fixtures/0011_as_applied_2026-10-19.sql, then
+//          today's 0011 - the speed fix - over it), then 0019 and 0014
+//          (Color Belt private testing, the real file = the live copy)
+//        2026-10-20: 0020 (the current_session_id() fix), then camps'
+//          0013 + 0017 (camp payments in Finance; the exact copies in
+//          fixtures/ that step0018 uses, until the real files are on
+//          this branch), then 0018 (private testing money in Finance,
+//          which refuses to run before camps' 0017)
+//   b. the fingerprints of every migration already there are taken,
+//      0016 is applied, and they must be IDENTICAL afterwards (camps'
+//      0013 / 0017 have no fingerprints file on this branch)
+//   c. 0016_tests.sql, then the test files of every migration 0016 sits
+//      on top of (all must still pass; camps' 0017_tests.sql from the
+//      same place as step0018's)
+//   d. the bb_registrar live checks (15d) and a seeded Black Belt test
+//      cycle with a family registration (15e), then 0016's, 0015's,
+//      0011's and 0018's tests again
+//   e. 0016's fingerprints must be IDENTICAL to step 15's (the main
+//      database's): the new-students files change nothing of 0016's
+// "main16" = step 15's 0016 fingerprints (or null if step 15 failed).
+// =====================================================================
+async function step0016_after_new_students(main16) {
+  const L = '[0016 live order] ';
+  const db = await buildBase(L);
+  if (!db) return;
+  // a. what production will have when 0016 is pasted
+  for (const [label, file] of [['0003', '0003_testing_classes_ranks.sql'], ['0004', '0004_staff_accounts.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return;
+  }
+  await run(db, L + 'apply built-in seed', builtInSeedSql());
+  if (!(await run(db, L + 'apply 0005', read('migrations', '0005_testing_events.sql')))) return;
+  await seedTestEvent(db);
+  for (const [label, file] of [['0006', '0006_star_testing.sql'], ['0010 (grading results)', '0010_testing_results.sql'],
+    ['0007', '0007_schedule.sql'], ['0008', '0008_calendar.sql'], ['0009', '0009_forms.sql'], ['0012', '0012_prospects.sql'],
+    ['0015', '0015_family_history.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return;
+  }
+  // 0011 as production got it: the 2026-10-19 copy first, today's over it
+  const old11 = readFileSync(path.join(here, 'fixtures', '0011_as_applied_2026-10-19.sql'), 'utf8');
+  if (!(await run(db, L + 'apply 0011 as pasted on production 2026-10-19 (fixture)', old11))) return;
+  if (!(await run(db, L + 'apply today\'s 0011 over it', read('migrations', '0011_finance.sql')))) return;
+  if (!(await run(db, L + 'apply 0019', read('migrations', '0019_school_phone.sql')))) return;
+  // 0014 (Color Belt private testing), live since 2026-10-19
+  if (!(await run(db, L + 'apply 0014 (private testing)', MIGRATION_0014()))) return;
+  // 2026-10-20: 0020, then camps' 0013 + 0017, then 0018 (in that order)
+  if (!(await run(db, L + 'apply 0020 (current_session_id fix)', read('migrations', '0020_session_id_claims.sql')))) return;
+  const [camps13, camps17] = CAMPS_FILES();
+  if (!(await run(db, `${L}apply camps' 0013 (${path.basename(camps13)})`, CAMPS_0013()))) return;
+  if (!(await run(db, `${L}apply camps' 0017 (${path.basename(camps17)})`, CAMPS_0017()))) return;
+  if (!(await run(db, L + 'apply 0018 (private testing money in Finance)', MIGRATION_0018()))) return;
+
+  // b. apply 0016; nothing earlier moves (every fingerprints file this
+  // branch has for a live migration)
+  const prints = ['0003', '0004', '0005', '0006', '0010', '0007', '0008', '0009', '0012', '0015', '0011', '0019', '0014', '0020', '0018']
+    .map((n) => `${n}_fingerprints.sql`);
+  const before = {};
+  for (const f of prints) before[f] = await fingerprints(db, f);
+  if (!(await run(db, L + 'apply 0016_black_belt.sql', read('migrations', '0016_black_belt.sql')))) return;
+  const moved = [];
+  for (const f of prints) {
+    if (JSON.stringify(before[f]) !== JSON.stringify(await fingerprints(db, f))) moved.push(f.slice(0, 4));
+  }
+  record(`${L}${prints.map((f) => f.slice(0, 4)).join(' / ')} fingerprints identical before/after 0016`, moved.length === 0,
+    moved.length ? `moved: ${moved.join(', ')}` : `${prints.length} files`);
+
+  // c. 0016's tests, then every file it sits on top of
+  const testFiles = [['0016_tests.sql', 'ALL 0016 TESTS PASSED'], ['verify_pin_tests.sql', 'ALL PIN TESTS PASSED'],
+    ['0002_tests.sql', 'ALL 0002 TESTS PASSED'], ['0003_tests.sql', 'ALL 0003 TESTS PASSED'], ['0004_tests.sql', 'ALL 0004 TESTS PASSED'],
+    ['0005_tests.sql', 'ALL 0005 TESTS PASSED'], ['0006_tests.sql', 'ALL 0006 TESTS PASSED'], ['0010_tests.sql', 'ALL 0010 TESTS PASSED'],
+    ['0007_tests.sql', 'ALL 0007 TESTS PASSED'], ['0008_tests.sql', 'ALL 0008 TESTS PASSED'], ['0009_tests.sql', 'ALL 0009 TESTS PASSED'],
+    ['0012_tests.sql', 'ALL 0012 TESTS PASSED'], ['0015_tests.sql', 'ALL 0015 TESTS PASSED'], ['0011_tests.sql', 'ALL 0011 TESTS PASSED'],
+    ['0019_tests.sql', 'ALL 0019 TESTS PASSED'], ['0014_tests.sql', 'ALL 0014 TESTS PASSED'], ['0020_tests.sql', 'ALL 0020 TESTS PASSED'],
+    [CAMPS_TESTS, 'ALL 0017 TESTS PASSED'], ['0018_tests.sql', 'ALL 0018 TESTS PASSED']];
+  for (const [file, ok] of testFiles) {
+    await runTestFile(db, `${L}${file} (after 0016)`, file, ok);
+  }
+
+  // d. the form's login, and a real-looking cycle + registration
+  await bbRegistrarLiveChecks(db);
+  if (await seedBbTestCycle(db)) {
+    await runTestFile(db, L + '0016_tests.sql (with the Black Belt test cycle)', '0016_tests.sql', 'ALL 0016 TESTS PASSED');
+    await runTestFile(db, L + '0015_tests.sql (with the Black Belt test cycle)', '0015_tests.sql', 'ALL 0015 TESTS PASSED');
+    await runTestFile(db, L + '0011_tests.sql (with the Black Belt test cycle)', '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+    await runTestFile(db, L + '0018_tests.sql (with the Black Belt test cycle)', '0018_tests.sql', 'ALL 0018 TESTS PASSED');
+  }
+
+  // e. the same 0016 as on the main database (step 15)
+  const mine = await fingerprints(db, '0016_fingerprints.sql');
+  record(L + '0016 fingerprints identical to step 15 (main database)', !!main16 && JSON.stringify(mine) === JSON.stringify(main16),
+    main16 ? `${mine.length} rows` : 'step 15 gave no fingerprints');
 }
 
 // =====================================================================
