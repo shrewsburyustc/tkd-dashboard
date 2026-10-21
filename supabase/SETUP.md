@@ -1194,7 +1194,7 @@ The 0010 undo (14e) re-runs 0005, and 0005 starts by removing **all** read right
 ### 0018-0. First: remove the CP3 test private testings (you, then Claude checks)
 Color Belt's CP3 (2026-10-19) left **2 test private testings** on production ("Jeff Berg", Worcester, $70 each = **$140**, paid 2026-10-19). 0011 doesn't count private testing money, so today the Daily report doesn't show them. Once 0018 is in, it **would** count them as real money on Oct 19. So, before 0018:
 1. **Delete both permanently**, the same way as in CP3: the local app on the real database from the `color-belt` worktree (`Start dashboard.bat`), as an admin, private testing → **Delete permanently** (the Color Belt session can walk you through it). Each delete removes the testing, its payments and its result, and is logged.
-2. One of them holds a payment **moved in** from a test event. After the delete, that event payment shows as **undone** on Oct 19 under 0018 (CONTRACT-0018, case 2): it adds $0, which is correct. If you also want that test event gone from the Daily report, delete the test event too (Color Belt's call).
+2. Nothing else needs removing (checked by the Color Belt session, 2026-10-20): the CP3 test event was already deleted with its payments, so `testing_payments` is empty. The only test money left is these 3 private payment rows (a $50 copy moved in from that event plus a $20 top-up, and one $70). After step 0, Oct 19 has no Color Belt money.
 3. **Claude checks (read-only):** `select count(*) from public.testing_private;` must be **0**. Phase 4 isn't deployed, so there are no real private testings yet. If it isn't 0, stop.
 
 ### 0018a. Before you apply 0018 (Claude, read-only)
