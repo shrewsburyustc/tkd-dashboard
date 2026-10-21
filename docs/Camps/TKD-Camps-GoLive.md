@@ -29,6 +29,8 @@ Words used below:
 - **Camps longer than a week:** option A, a **week switcher** "Week 1 · Week 2" above the roster, only when the camp crosses calendar weeks, opening on the current week; ≤5 day columns at a time; Paid / to collect whole-camp (`Decision images/Camps-multiweek-roster.html`).
 - Builder D rebuilding the camp page now; then design review; then `git merge main` (main moved: Color Belt merged incl. v0.410 flood protection, Prospects 0021) — 4 conflicts seen (rulebook, App.jsx, finance checks, run.mjs), merge deferred so it doesn't clash with the build.
 
+**2026-10-21 — CP5 DONE.** Jeffrey tested the one roster on the real database with "Test Camp" (Mark paid + Undo, Withdraw / Restore, Camper detail, Finance "Camp · Test Camp", Delete camp) and deleted it. Claude read-only: 0 camps / sign-ups / campers / payments / days left; 33 change_log rows for the test; **no `data:image` in the history**; attempt rows `ok` / `price_changed`. No check-in or added day appeared in the history (step skipped this time) — the app's RPC names/arguments for camp_check_in / camp_undo_check_in / camp_update_details match the live functions exactly and 0013_tests passed on production, so check-in is covered again in the CP6 phone test. Packages updated to main's lockfile (`npm ci`, vite 8.3.4). **Next: CP6 — Main merges `camps`, Jeffrey OKs the push.**
+
 ## CP2 — Cloudflare setting (you, ~2 min) · *your OK needed*
 SETUP 0013a. Cloudflare → `tkd-dashboard` → Settings → Variables and Secrets → **Production**: add `CAMPS_REGISTRATION` = `off`. Nothing visible changes (it takes effect at the next deploy).
 **Done when:** the variable is listed under Production only.
