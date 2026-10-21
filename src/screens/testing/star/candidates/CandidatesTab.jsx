@@ -27,7 +27,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   IconAlertTriangle, IconArrowBackUp, IconCalendar, IconCashEdit, IconCheck, IconSum, IconClock, IconEdit, IconPlus, IconReceiptRefund,
-  IconRepeat, IconTrash, IconUserMinus, IconUserPlus, IconUsers,
+  IconRepeat, IconSchool, IconTrash, IconUserMinus, IconUserPlus, IconUsers,
 } from '@tabler/icons-react';
 import ErrorBanner from '../../../../components/ErrorBanner.jsx';
 import RowMenu from '../../../../components/RowMenu.jsx';
@@ -78,6 +78,9 @@ export default function CandidatesTab({
   panelId,
   tabId,
   renderHeader, // (addButton) => the page header (StarEventPage)
+  openAddMenu = false, // phase 5: Grading's "Add candidate" switched here — open the add menu once
+  onAddMenuOpened, // () => void — the page forgets that request
+  onGradePrivate, // phase 5: (row, opener) => open the private grading page (H5, proposal 18)
   screenLocked,
   onNoAccess,
   onRefreshProfile,
@@ -108,6 +111,20 @@ export default function CandidatesTab({
     dialogRef.current = dialog;
     candidatesRef.current = candidates;
   });
+
+  // Phase 5: "Add candidate" on the Grading tab opens this tab with its add menu open, anchored on
+  // this tab's own Add candidate button (the menu and its dialogs live here).
+  useEffect(() => {
+    if (!openAddMenu) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      const anchor = addEl();
+      if (anchor) setMenu({ id: 'add', anchor });
+      onAddMenuOpened?.();
+    });
+    return () => window.cancelAnimationFrame(frame);
+    // (only when asked)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openAddMenu]);
 
   function setDan(dan) {
     danByEvent.set(eventId, dan);
@@ -929,6 +946,11 @@ export default function CandidatesTab({
       ? [
           { key: 'private', label: T.CHANGE_PRIVATE, Icon: IconEdit, disabled: busy, onSelect: () => openPrivate(row, anchor) },
           { key: 'back', label: T.backToDay(event.testingDate), Icon: IconArrowBackUp, disabled: busy, onSelect: () => backToTestingDay(row) },
+          // Phase 5 (H5, proposal 18): right after the private items, for all staff.
+          // ti-school = grade a private testing (§2.4 icon map, this one meaning)
+          ...(onGradePrivate
+            ? [{ key: 'grade', label: T.GRADE_PRIVATE, Icon: IconSchool, disabled: busy, onSelect: () => onGradePrivate(row, anchor) }]
+            : []),
         ]
       : [{ key: 'private', label: T.SET_PRIVATE, Icon: IconCalendar, disabled: busy, onSelect: () => openPrivate(row, anchor) }];
     const moneyShown = !hidden && !row.isMakeup;

@@ -634,7 +634,11 @@ export default function App() {
       };
       const changed = !sameRoute(next, here);
       // { tkdPage: true } marks the step as "added by the dashboard while signed in" (see below).
-      if (changed && replace) window.history.replaceState({ tkdPage: true }, '', addressForRoute(next));
+      // A Star private grading page's own step ({ tkdStarPrivate }, StarEventPage.jsx — same address
+      // as its event) is replaced, not built on, so Back later never lands on an empty step.
+      // (Star switch off: no such step can exist, and the live build leaves this check out.)
+      const onPrivateStep = STAR_TESTING_ON && Boolean(window.history.state?.tkdStarPrivate);
+      if (changed && (replace || onPrivateStep)) window.history.replaceState({ tkdPage: true }, '', addressForRoute(next));
       else if (changed) window.history.pushState({ tkdPage: true }, '', addressForRoute(next));
       setSection(next.section);
       setTestingPage(next.testingPage);

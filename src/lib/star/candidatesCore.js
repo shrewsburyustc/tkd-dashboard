@@ -194,7 +194,7 @@ function toPayment(row, reversed) {
 }
 
 // The result (§5.5) in camelCase. null stays null.
-function toResult(r) {
+export function toResult(r) {
   if (!r) return null;
   return {
     candidateId: r.candidate_id,
@@ -233,7 +233,7 @@ function toResult(r) {
   };
 }
 
-const toSent = (s) => ({
+export const toSent = (s) => ({
   sent: s?.sent ? { id: s.sent.id, markedAt: s.sent.marked_at, markedByName: s.sent.marked_by_name, resultStatus: s.sent.result_status } : null,
   matches: s?.matches === true,
 });

@@ -3,12 +3,15 @@
 // Why it exists: preview mode (npm run dev:preview-mode) runs without Supabase. This file pretends to
 // be the part of migration 0006 that the Candidates tab uses:
 //   tables   star_candidates (§2.4), star_candidate_signatures (§2.5), star_makeup_subjects (§2.6),
-//            star_payments (§2.7, append-only), star_grades (§2.8, read here; written in phase 5),
+//            star_payments (§2.7, append-only), star_grades (§2.8; written by the grading functions),
 //            star_result_emails (§2.9), and the change log (History)
 //   view     star_roster (§2.12) — fee, paid and overpaid worked out like the database
 //   writes   the 13 functions of §6.3–§6.4 (add, make-up, edit, paying by, duplicates, private,
 //            withdraw, restore, delete, record / undo / edit payment, refund)
 //   reads    star_candidate_detail, star_candidate_history, star_view_signature, star_makeup_list (§7)
+//   grading  star_set_grade, star_set_count, star_set_makeup_subjects, star_event_results,
+//            star_age_groups (§6.5, §7 — phase 5): written in mockStarGrading.js and plugged in here
+//            (handlerFor), so they share this store and its change log
 //   public   star_public_event, star_public_register (§8.2, §8.3 — the family form, phase 4; called
 //            only by src/lib/star/publicApi.preview.js, as publicEvent() / publicRegister())
 // It follows the SAME rules as the SQL: the same order of checks (§1.1), the same answers, the same
@@ -40,9 +43,16 @@
 //       signatures were removed 90 days after the testing day.
 //   Fall Star Testing — UPCOMING (in 26 days), registration open: paid (Mia Patel, Noah Chen, Jordan
 //       Kim), not paid (Lily Brooks, Ethan Lopez, Sam Ortiz — a walk-in with no date of birth),
-//       OVERPAID (Alex Kim: paid the private fee, then Back to the testing day → $20 overpaid), a
+//       OVERPAID (Chris Kim: paid the private fee, then Back to the testing day → $20 overpaid), a
 //       possible DUPLICATE (Ava Reed twice), PRIVATE (Ruby Diaz, paid the private fee), WITHDRAWN (Owen
 //       Hart) and a MAKE-UP (Grace Liu, kept grades + retest Two Step Sparring).
+//       Phase 5 added grading states (appended at the end of the seed, so earlier ids stay the same):
+//       Sofia Reyes (Summer: D in Breaking and Korean Terminology; in Fall a make-up retesting those
+//       two, Breaking graded → "1 of 2 left"), Alex Kim testing privately (half graded), and on Fall's
+//       1st Dan grid: Chris Kim Passed, Noah Chen D in Breaking, Ethan Lopez below 245 (choice
+//       needed), Sam Ortiz below 245 with Breaking and Knowledge chosen, Ava Reed "7 of 11 left";
+//       Mia Patel, Lily Brooks, the desk's Ava Reed and Jordan Kim (2nd Dan) not started. Fall's
+//       make-ups now also show on Spring's make-up list (Fall is earlier than Spring).
 //   Spring Star Testing — UPCOMING (in 180 days), not open yet, no candidates: its make-up list shows
 //       Taylor, Drew and Avery (Grace is already a make-up in Fall, so she is left out).
 // The seed is made by running this file's own functions at past times (so its History, versions and
@@ -54,6 +64,9 @@ import { STAR_EVENTS_SCHEMA, SEED_EVENT_IDS, copyStarTemplateInto } from './mock
 import { paymentSummary, netPaidCents, reversedIds, hasUnreversedRefund } from './star/feeRules.js';
 import { candidateResult, ageOn } from './star/resultRules.js';
 import { starEmailIsValid, trimEmail } from './star/emailRule.js';
+import {
+  createGradingHandlers, GRADING_RPC_ARGS, STAR_GRADING_RPC_NAMES, STAR_GRADING_READ_RPC_NAMES, STAR_GRADING_ADMIN_ONLY,
+} from './mockStarGrading.js';
 
 // Raised whenever the stored shape of the candidates part changes (older data → the seed).
 export const STAR_CANDIDATES_SCHEMA = 1;
@@ -93,7 +106,7 @@ export const STAR_CANDIDATE_TABLES = /*#__PURE__*/ Object.keys(GRANTED);
 
 // ----- The functions' argument lists (name, type) — the same names as migration 0006 -----
 // The real API finds a function by its argument NAMES: a missing or extra one = "no such function".
-const RPC_ARGS = {
+const RPC_ARGS = /*#__PURE__*/ (() => ({
   star_add_candidate: [
     ['p_event_id', 'uuid'], ['p_first', 'text'], ['p_last', 'text'], ['p_date_of_birth', 'date'], ['p_email', 'text'],
     ['p_location_code', 'text'], ['p_dan', 'int'], ['p_stars_from', 'int'], ['p_paying_by', 'text'],
@@ -124,18 +137,22 @@ const RPC_ARGS = {
   star_candidate_history: [['p_candidate_id', 'uuid']],
   star_view_signature: [['p_candidate_id', 'uuid']],
   star_makeup_list: [['p_event_id', 'uuid']],
-};
+  // Phase 5: the grading functions (§6.5) and the grading reads (§7) — mockStarGrading.js.
+  ...GRADING_RPC_ARGS,
+}))();
 export const STAR_CANDIDATE_RPC_NAMES = /*#__PURE__*/ Object.keys(RPC_ARGS);
-// The 13 write functions (§6.3–§6.4) — failNextSave('star') targets these, not the reads.
+// The 13 write functions (§6.3–§6.4) — failNextSave('star') targets these, not the reads. (The three
+// grading writes are listed apart, as mockStarGrading.js's STAR_GRADING_WRITE_RPC_NAMES.)
 const READS = ['star_candidate_detail', 'star_candidate_history', 'star_view_signature', 'star_makeup_list'];
-export const STAR_CANDIDATE_WRITE_RPC_NAMES = /*#__PURE__*/ Object.keys(RPC_ARGS).filter((n) => !READS.includes(n));
+export const STAR_CANDIDATE_WRITE_RPC_NAMES = /*#__PURE__*/ Object.keys(RPC_ARGS)
+  .filter((n) => !READS.includes(n) && !STAR_GRADING_RPC_NAMES.includes(n));
 // Functions that run read-only and so also work as a GET request (§7: "stable"). Every other one
 // writes something (star_makeup_list: the signature clean-up).
-const STABLE = new Set(['star_candidate_detail', 'star_candidate_history', 'star_view_signature']);
+const STABLE = /*#__PURE__*/ (() => new Set(['star_candidate_detail', 'star_candidate_history', 'star_view_signature', ...STAR_GRADING_READ_RPC_NAMES]))();
 // Admin only from the start ("A" in §6.3–§6.4). star_restore_candidate and star_undo_payment have
 // mixed rules (admins, or the same staff member within 10 seconds) checked inside; star_update_candidate
 // checks "a Dan change on a paid row" inside (S8).
-const ADMIN_ONLY = new Set(['star_withdraw_candidate', 'star_delete_candidate', 'star_edit_payment', 'star_record_refund']);
+const ADMIN_ONLY = /*#__PURE__*/ (() => new Set(['star_withdraw_candidate', 'star_delete_candidate', 'star_edit_payment', 'star_record_refund', ...STAR_GRADING_ADMIN_ONLY]))();
 
 // Thrown inside this file only, turned into a { data:null, error } answer.
 class DbError extends Error {
@@ -892,10 +909,22 @@ const HANDLERS = {
   },
 };
 
+// Phase 5: the grading functions (mockStarGrading.js), working on this same store with these same
+// table helpers, so every grade, count and choice is logged like the other writes.
+// (Made on first use, not at load time, so the live build — which never makes the fake — drops it.)
+let gradingHandlers = null;
+function handlerFor(name) {
+  if (name in HANDLERS) return HANDLERS[name];
+  gradingHandlers ??= createGradingHandlers({
+    findCandidate, findEvent, danCopy, resultOf, sentStateOf, newMeta, insertRow, updateRow, deleteRow,
+  });
+  return gradingHandlers[name];
+}
+
 // Runs one function on a private copy of the data, turning a table rule into a status (§1.4).
 function runHandler(name, db, args, x) {
   try {
-    return HANDLERS[name](db, args, x);
+    return handlerFor(name)(db, args, x);
   } catch (error) {
     if (!(error instanceof TableRule)) throw error;
     if (error.kind === 'unique') {
@@ -1152,40 +1181,42 @@ export function defaultStarCandidatesData(base, { today }) {
   call(-104, SEED_ADMIN, 'star_withdraw_candidate', { p_candidate_id: ids.Casey, p_expected_version: versionOf('Casey') });
   pay(-100, SEED_DESK, 'Taylor', 16000, 'check'); // paid on the testing day: the same-day fee
 
-  // Grades on the testing day (star_set_grade and star_set_count are phase 5's; written directly here).
-  // letter: every judged subject's grade; d: subject names graded D instead; ai: the class count
-  // (adult minimums 20 / 18 / 16 / 14 → A+ / A / B+ / B).
-  const grade = (first, letter, d, ai) => {
-    on(-100);
-    const c = findCandidate(work, ids[first]);
-    const meta = newMeta(env, SEED_ADMIN, 'star_set_grade');
-    const subjects = work.event_categories.filter((k) => k.event_id === summer && k.dan === c.dan && !k.from_class_count);
+  // Grades on the testing day, through the grading functions themselves (star_set_grade,
+  // star_set_count, star_set_makeup_subjects — mockStarGrading.js), so History shows exactly what they log.
+  // letter: every judged subject's grade; d: subject names graded D instead; counts: [classes attended,
+  // assistant classes] (adult minimums 20 / 18 / 16 / 14 → A+ / A / B+ / B; null = not entered);
+  // only: grade just these subject names (a half-graded row).
+  const grade = (day, idKey, letter, d, counts, only = null) => {
+    const c = findCandidate(work, ids[idKey]);
+    const subjects = work.event_categories
+      .filter((k) => k.event_id === c.event_id && k.dan === c.dan && !k.from_class_count)
+      .sort((x, y) => x.position - y.position);
     // the D subject: by name when the template still has it, else the last judged subject
     const dNames = d.map((name) => (subjects.some((k) => k.name === name) ? name : subjects.at(-1).name));
     for (const k of subjects) {
-      insertRow(work, env, 'star_grades', {
-        id: env.newId(), candidate_id: c.id, event_category_id: k.id, grade: dNames.includes(k.name) ? 'D' : letter,
-        kept: false, kept_from_event_id: null, kept_from_event_name: null,
-      }, meta);
+      if (only && !only.includes(k.name)) continue;
+      call(day, SEED_ADMIN, 'star_set_grade', {
+        p_candidate_id: c.id, p_event_category_id: k.id, p_grade: dNames.includes(k.name) ? 'D' : letter,
+      });
     }
-    updateRow(work, env, 'star_candidates', c, { classes_attended: 24, assistant_classes: ai }, newMeta(env, SEED_ADMIN, 'star_set_count'));
+    if (counts) {
+      call(day, SEED_ADMIN, 'star_set_count', { p_candidate_id: c.id, p_field: 'classes_attended', p_value: counts[0] });
+      call(day, SEED_ADMIN, 'star_set_count', { p_candidate_id: c.id, p_field: 'assistant_classes', p_value: counts[1] });
+    }
   };
-  grade('Morgan', 'A', [], 18); // 280.0 → passed
-  grade('Grace', 'A+', ['Two Step Sparring'], 20); // 292.5, D → make-up (retests Two Step Sparring)
-  grade('Taylor', 'A', ['Breaking'], 18); // 260.0, D → make-up (retests Breaking)
-  grade('Drew', 'B', [], 14); // 210.0, below 245 → make-up, subjects chosen below
-  grade('Avery', 'B', [], 14); // 210.0, below 245 → make-up, NO subjects chosen yet (choice_needed)
-  {
-    // An admin chose Drew's subjects to retest (star_set_makeup_subjects, phase 5).
-    on(-99);
-    const meta = newMeta(env, SEED_ADMIN, 'star_set_makeup_subjects');
-    const drew = findCandidate(work, ids.Drew);
-    const subjects = work.event_categories.filter((k) => k.event_id === summer && k.dan === drew.dan && !k.from_class_count);
-    const chosen = ['Breaking', 'Knowledge'].map((name) => subjects.find((k) => k.name === name) ?? subjects.at(-1));
-    for (const k of new Set(chosen)) {
-      insertRow(work, env, 'star_makeup_subjects', { id: env.newId(), candidate_id: drew.id, event_category_id: k.id, kind: 'chosen' }, meta);
-    }
-  }
+  // An admin chooses the subjects to retest for a result below the pass mark (v0.130).
+  const choose = (day, idKey, names) => {
+    const c = findCandidate(work, ids[idKey]);
+    const subjects = work.event_categories.filter((k) => k.event_id === c.event_id && k.dan === c.dan && !k.from_class_count);
+    const chosen = [...new Set(names.map((name) => (subjects.find((k) => k.name === name) ?? subjects.at(-1)).id))];
+    call(day, SEED_ADMIN, 'star_set_makeup_subjects', { p_candidate_id: c.id, p_expected_category_ids: [], p_category_ids: chosen });
+  };
+  grade(-100, 'Morgan', 'A', [], [24, 18]); // 280.0 → passed
+  grade(-100, 'Grace', 'A+', ['Two Step Sparring'], [24, 20]); // 292.5, D → make-up (retests Two Step Sparring)
+  grade(-100, 'Taylor', 'A', ['Breaking'], [24, 18]); // 260.0, D → make-up (retests Breaking)
+  grade(-100, 'Drew', 'B', [], [24, 14]); // 210.0, below 245 → make-up, subjects chosen below
+  grade(-100, 'Avery', 'B', [], [24, 14]); // 210.0, below 245 → make-up, NO subjects chosen yet (choice_needed)
+  choose(-99, 'Drew', ['Breaking', 'Knowledge']);
 
   // ----- Fall Star Testing (in 26 days) -----
   form(-9, 'fall', 'Owen', 'Hart', '2012-02-14', 'worcester', 1, 0, 'cash');
@@ -1197,15 +1228,15 @@ export function defaultStarCandidatesData(base, { today }) {
   form(-6, 'fall', 'Noah', 'Chen', '2012-10-30', 'worcester', 1, 0, 'check');
   form(-6, 'fall', 'Ava', 'Reed', '2013-05-09', 'worcester', 1, 0, 'cash');
   pay(-6, SEED_DESK, 'Noah', 14000, 'check'); // also removes Summer's signatures (more than 90 days after its testing day)
-  form(-5, 'fall', 'Alex', 'Kim', '2011-12-01', 'shrewsbury', 1, 1, 'check');
+  form(-5, 'fall', 'Chris', 'Kim', '2011-12-01', 'shrewsbury', 1, 1, 'check');
   call(-5, SEED_DESK, 'star_set_private', {
-    p_candidate_id: ids.Alex, p_expected_version: versionOf('Alex'), p_private_on: addDays(today, 26 + 10), p_private_time: '14:00',
+    p_candidate_id: ids.Chris, p_expected_version: versionOf('Chris'), p_private_on: addDays(today, 26 + 10), p_private_time: '14:00',
   });
   form(-5, 'fall', 'Lily', 'Brooks', '2016-08-01', 'worcester', 1, 1, 'cash');
   desk(-4, 'fall', 'Jordan', 'Kim', '2010-03-18', 'shrewsbury', 2, 0, 'cash');
   pay(-4, SEED_DESK, 'Mia', 14000, 'cash');
   pay(-4, SEED_DESK, 'Jordan', 15000, 'cash');
-  pay(-4, SEED_DESK, 'Alex', 16000, 'check'); // the private fee
+  pay(-4, SEED_DESK, 'Chris', 16000, 'check'); // the private fee
   form(-3, 'fall', 'Ethan', 'Lopez', '2012-07-07', 'worcester', 1, 2, 'check');
   pay(-3, SEED_DESK, 'Ruby', 18000, 'cash'); // 3rd Dan private fee
   {
@@ -1217,7 +1248,7 @@ export function defaultStarCandidatesData(base, { today }) {
     ids.Ava2 = r.id;
   }
   call(-2, SEED_ADMIN, 'star_withdraw_candidate', { p_candidate_id: ids.Owen, p_expected_version: versionOf('Owen') });
-  call(-1, SEED_DESK, 'star_set_private', { p_candidate_id: ids.Alex, p_expected_version: versionOf('Alex'), p_private_on: null, p_private_time: null }); // Back to the testing day → $20 overpaid
+  call(-1, SEED_DESK, 'star_set_private', { p_candidate_id: ids.Chris, p_expected_version: versionOf('Chris'), p_private_on: null, p_private_time: null }); // Back to the testing day → $20 overpaid
   call(-1, SEED_DESK, 'star_add_makeup', { p_event_id: SEED_CANDIDATE_EVENT_IDS.fall, p_earlier_candidate_id: ids.Grace });
   {
     // Sam Ortiz: a walk-in whose family didn't give a date of birth (S3).
@@ -1227,6 +1258,41 @@ export function defaultStarCandidatesData(base, { today }) {
     });
     ids.Sam = r.id;
   }
+
+  // ----- Phase 5: grading states for the Grading tab and the private grading page -----
+  // (Added after everything above, so the earlier rows keep their ids and references.)
+  // Sofia Reyes: a desk row at Summer (no family form, so no signature), D in Breaking and Korean
+  // Terminology, then added to Fall as a make-up: kept grades + retests Breaking and Korean Terminology.
+  on(-113);
+  {
+    const meta = newMeta(env, SEED_DESK, 'star_add_candidate');
+    const row = insertRow(work, env, 'star_candidates', candidateRow({
+      id: env.newId(), event_id: summer, first_name: 'Sofia', last_name: 'Reyes', date_of_birth: '2012-04-20',
+      email_for_results: 'reyes.desk@example.com', location_code: 'worcester', dan: 1, stars_from: 1, paying_by: 'cash',
+      source: 'desk', registered_at: meta.at,
+    }), meta);
+    ids.Sofia = row.id;
+  }
+  pay(-111, SEED_DESK, 'Sofia', 14000, 'cash');
+  grade(-100, 'Sofia', 'A', ['Breaking', 'Korean Terminology'], [22, 16]); // 237.5, two D's → make-up
+  ids.SofiaFall = call(-1, SEED_DESK, 'star_add_makeup', { p_event_id: SEED_CANDIDATE_EVENT_IDS.fall, p_earlier_candidate_id: ids.Sofia }).id;
+  grade(0, 'SofiaFall', 'A', [], null, ['Breaking']); // 1 of 2 retests graded → "1 of 2 left", "257.5 so far"
+  // Alex Kim: testing privately (1st Dan, 1 → 2, Shrewsbury), paid the private fee, half graded.
+  form(-2, 'fall', 'Alex', 'Kim', '2012-09-15', 'shrewsbury', 1, 1, 'card');
+  call(-2, SEED_DESK, 'star_set_private', {
+    p_candidate_id: ids.Alex, p_expected_version: versionOf('Alex'), p_private_on: addDays(today, 26 + 17), p_private_time: '16:00',
+  });
+  pay(-2, SEED_DESK, 'Alex', 16000, 'card');
+  grade(0, 'Alex', 'A', [], null, ['White–Deputy Curriculum', 'Go-Ryo Poomse', 'Advanced Motion']);
+  // The Fall grid's other states (graded ahead of the day so the preview shows them):
+  grade(0, 'Chris', 'A', [], [22, 18]); // 280 → Passed
+  grade(0, 'Noah', 'A', ['Breaking'], [22, 12]); // D in Breaking → "⚠ Make-up · D in Breaking"
+  grade(0, 'Ethan', 'B', [], [19, 14]); // 210, no D → "⚠ Make-up · below 245" (an admin chooses)
+  grade(0, 'Sam', 'B', [], [20, 14]); // 210, no D…
+  choose(0, 'Sam', ['Breaking', 'Knowledge']); // …chosen → "⚠ Make-up · retests Breaking, Knowledge"
+  // The family-form Ava Reed: 4 subjects → "7 of 11 left". Mia Patel, Lily Brooks, the desk's Ava Reed
+  // and Jordan Kim (2nd Dan) stay "Not started".
+  grade(0, 'Ava', 'B+', [], null, ['White–Deputy Curriculum', 'Go-Ryo Poomse', 'Advanced Motion', 'Advance Sa-Bang Chuck']);
 
   return Object.fromEntries(Object.keys(db).map((k) => [k, work[k]]));
 }
@@ -1293,7 +1359,7 @@ export function createStarCandidatesBackend({ readBase, saveStore, now = () => D
 
   // supabase.rpc(name, args, options) for the candidate functions.
   function rpc(name, args = {}, ctx = {}, options = {}) {
-    if (!(name in HANDLERS)) return fail('PGRST202', `Could not find the function public.${name} in the schema cache`, 404);
+    if (!(name in RPC_ARGS)) return fail('PGRST202', `Could not find the function public.${name} in the schema cache`, 404);
     if (failNext) {
       failNext = false; // pretend the connection dropped: nothing changes (failNextSave helper)
       return { data: null, error: { message: 'Failed to fetch (preview: failNextSave)' }, count: null, status: 0, statusText: '' };
@@ -1366,6 +1432,28 @@ export function createStarCandidatesBackend({ readBase, saveStore, now = () => D
     failNext = true;
   }
 
+  // Preview helper (phase 5, __tkdPreview.simulateStarDanChange): "another device" moves the first
+  // ACTIVE candidate called firstName in the upcoming Fall seed event (or eventId) to another Dan, the
+  // way Edit details does after its confirmation (grades cleared, v0.164). A grid still showing the
+  // old Dan then gets `stale` for its next grade save. Returns a sentence for the console.
+  function simulateDanChange(firstName = 'Noah', dan = 2, eventId = SEED_CANDIDATE_EVENT_IDS.fall) {
+    const db = read();
+    const c = db.candidates.find((x) => x.event_id === eventId && x.status === 'active' && x.first_name === firstName);
+    if (!c) return `No active candidate called ${firstName} in that event.`;
+    const d = danCopy(db, c.event_id, Number(dan));
+    if (!d || c.dan === d.dan) return `Pick a Dan the event has, other than ${c.dan}.`;
+    const ctx = { isAdmin: true, actorName: 'Other Admin', userId: '00000000-0000-4000-8000-0000000000aa' };
+    const answer = runHandler('star_update_candidate', db, {
+      p_candidate_id: c.id, p_expected_version: c.version, p_first: c.first_name, p_last: c.last_name,
+      p_date_of_birth: c.date_of_birth, p_email: c.email_for_results, p_location_code: c.location_code, p_dan: d.dan,
+      p_stars_from: Math.min(c.stars_from, d.star_limit - 1),
+      p_clear_grade_count: db.candidate_grades.filter((g) => g.candidate_id === c.id).length,
+    }, { ctx, env });
+    if (answer.status !== 'ok') return `Couldn't move ${firstName}: ${answer.status}.`;
+    write(db);
+    return `${c.first_name} ${c.last_name} was moved to ${d.label} on "another device" (${answer.cleared_grade_count} grades cleared). The next grade saved for them on the old grid answers stale.`;
+  }
+
   // Back to the seed (events and candidates; the rubric template is kept).
   function reset() {
     const base = clone(readBase());
@@ -1373,5 +1461,5 @@ export function createStarCandidatesBackend({ readBase, saveStore, now = () => D
     write(base);
   }
 
-  return { select, rpc, publicEvent, publicRegister, failNextSave, reset, snapshot: read };
+  return { select, rpc, publicEvent, publicRegister, failNextSave, simulateDanChange, reset, snapshot: read };
 }

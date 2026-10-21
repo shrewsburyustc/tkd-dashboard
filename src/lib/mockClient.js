@@ -75,6 +75,15 @@
 //   Events saves only. Star's seed (resetTesting): a finished Summer event with make-ups owed, the
 //   upcoming Fall event (paid, not paid, overpaid, duplicate, private, withdrawn, make-up) and a later
 //   Spring event that can pick make-ups.
+// Star testing GRADING (phase 5; mockStarGrading.js, plugged into the candidates fake):
+//   __tkdPreview.failNextSave() or failNextSave('star')  also make the next Star grade / count save fail
+//   __tkdPreview.setStarOffline(true)     every Star grading call fails like a dropped connection and the
+//                                         page hears "offline"; setStarOffline(false) → "online" again
+//   __tkdPreview.simulateStarDanChange('Noah', 2)  "another device" moves Noah Chen (Fall) to 2nd Dan —
+//                                         his next grade saved on the old grid answers stale
+//   Seed: Fall's 1st Dan grid has Passed (Chris Kim), D (Noah Chen), below 245 needing a choice (Ethan
+//   Lopez), chosen (Sam Ortiz), "7 of 11 left" (Ava Reed), Not started (Mia Patel …), a make-up with
+//   kept grades (Sofia Reyes, retests Breaking and Korean Terminology) and Alex Kim testing privately.
 // Staff accounts helpers (account menu → Admin → Staff accounts; mockStaff.js):
 //   __tkdPreview.failNextSave()           also makes the next Reset password / Reset PIN fail
 //   __tkdPreview.resetStaffAccounts()     the fake desk is signed in on 3 devices again
@@ -115,6 +124,7 @@ import {
   createStarCandidatesBackend, defaultStarCandidatesData, starCandidatesSeedIsCurrent, STAR_CANDIDATE_RPC_NAMES,
   STAR_CANDIDATE_WRITE_RPC_NAMES, STAR_CANDIDATE_TABLES,
 } from './mockStarCandidates.js';
+import { STAR_GRADING_RPC_NAMES, STAR_GRADING_WRITE_RPC_NAMES } from './mockStarGrading.js';
 import { createScheduleBackend, SCHEDULE_RPC_NAMES } from './mockSchedule.js';
 import { createCalendarBackend, CALENDAR_RPC_NAMES } from './mockCalendar.js';
 import { createFormsBackend, FORMS_RPC_NAMES } from './mockForms.js';
@@ -616,6 +626,8 @@ export function createMockClient() {
   // failNextSave('star') arms this; the next Star save then fails (rubrics, events or candidates,
   // whichever comes first).
   let failNextStar = false;
+  // setStarOffline(true): every Star grading call fails like a dropped connection (phase 5).
+  let starGradingOffline = false;
 
   // The fake network time for Testing calls (setTestingDelay saves it so it survives a reload).
   function testingDelay() {
@@ -725,6 +737,15 @@ export function createMockClient() {
   async function rpc(name, args = {}, options = {}) {
     if (STAR_CANDIDATE_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
+      if (starGradingOffline && STAR_GRADING_RPC_NAMES.includes(name)) {
+        return { data: null, error: { message: 'Failed to fetch (preview: setStarOffline)' }, status: 0 };
+      }
+      if ((failNextStar || failNextTesting) && STAR_GRADING_WRITE_RPC_NAMES.includes(name)) {
+        // failNextSave() / failNextSave('star'): the next save fails, whichever section it is in
+        failNextStar = false;
+        failNextTesting = false;
+        starCandidates.failNextSave();
+      }
       if (failNextStar && STAR_CANDIDATE_WRITE_RPC_NAMES.includes(name)) {
         failNextStar = false;
         starCandidates.failNextSave(); // this one save fails like a dropped connection
@@ -963,6 +984,17 @@ export function createMockClient() {
       // The page's automatic retry listens for the browser's "online" event; fire it now.
       window.dispatchEvent(new Event('online'));
       return 'Saves work again. Unsaved results save by themselves now (or press Retry).';
+    },
+    // ----- Star grading helpers (phase 5) -----
+    setStarOffline(on = true) {
+      starGradingOffline = Boolean(on);
+      window.dispatchEvent(new Event(starGradingOffline ? 'offline' : 'online'));
+      return starGradingOffline
+        ? 'Star grading is now "offline": every grade, count and grid read fails. Run __tkdPreview.setStarOffline(false) to come back.'
+        : 'Star grading is back online. The page refreshes, then Not saved grades save by themselves.';
+    },
+    simulateStarDanChange(firstName = 'Noah', dan = 2) {
+      return starCandidates.simulateDanChange(firstName, dan);
     },
     // ----- Finance helpers (mockFinance.js) -----
     setNow(hhmm) {

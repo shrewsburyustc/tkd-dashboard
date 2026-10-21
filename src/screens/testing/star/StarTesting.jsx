@@ -20,8 +20,11 @@
 // Props (from Testing.jsx / App.jsx):
 //   isAdmin            show edit controls? (only for the screen — the database enforces the rule)
 //   onBack()           "← Testing": back to the Testing choice page
-//   eventTab           the home's tab from the address: 'events' | 'rubrics'
+//   eventTab           the home's tab from the address: 'events' | 'rubrics'; on an event's page its
+//                      tab: 'students' (Candidates) | 'grading' (build phase 5)
 //   onEventTab(tab)    switch the tab (App.jsx updates the address without a new history step)
+//   onLeaveGuardChange(fn|null)   the event page's leave guard while grades aren't saved (phase 5;
+//                      App.jsx asks fn before leaving, contract 0010 §4.9)
 //   eventId            the open Star event's id (#testing/star/event/<id>), or null for the home
 //   onOpenEvent(id)    open an event's page (App.jsx adds a browser history step)
 //   onCloseEvent()     "← Star testing": back to the Events tab
@@ -62,6 +65,7 @@ export default function StarTesting({
   showToast,
   clearToast,
   onModalOpenChange,
+  onLeaveGuardChange,
 }) {
   const baseId = useId();
   const tabRefs = useRef({});
@@ -74,6 +78,9 @@ export default function StarTesting({
       <StarEventPage
         key={eventId}
         eventId={eventId}
+        eventTab={eventTab}
+        onEventTab={onEventTab}
+        onLeaveGuardChange={onLeaveGuardChange}
         onBack={(id) => {
           returnFocusTo(id); // the list focuses this event's row again
           onCloseEvent?.();

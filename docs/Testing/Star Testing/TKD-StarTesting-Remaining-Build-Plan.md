@@ -1,7 +1,7 @@
 # Star testing — remaining build plan (phases 2–7)
 
 **Status:** DRAFT 2026-10-18 for Jeffrey (reviewed once; fixes applied). Nothing is built yet. Nothing is merged into `main`, pushed or deployed, and nothing touches the live database or Cloudflare, without Jeffrey's OK for that item (rule P2).
-**Built from:** rulebook (Star rows v0.58–v0.177 as listed in the status file, v0.222, v0.223, v0.248–v0.253, v0.500–v0.512; §0, §5); the approved mockups (Events v0.92 with the two-link updates of v0.99/v0.107, Form v0.107, Candidates v0.121, Grading v0.137, Results v0.146, Private v0.153, Home v0.155); `CONTRACT-0006.md` (live 0006, applied 2026-10-18); `supabase/SETUP.md` §13; the phase 1 code (`src/screens/testing/star/*`, `src/lib/star/*`, `src/lib/mockStarTesting.js`, build switch in `src/lib/features.js`); how Color Belt built the same things (`src/screens/testing/events/`, `event/`, `src/lib/testing/*`, `src/lib/mockTesting*.js`, `src/register/`, `functions/`).
+**Built from:** rulebook (Star rows v0.58–v0.177 as listed in the status file, v0.222, v0.223, v0.248–v0.253, v0.500–v0.513; §0, §5); the approved mockups (Events v0.92 with the two-link updates of v0.99/v0.107, Form v0.107, Candidates v0.121, Grading v0.137, Results v0.146, Private v0.153, Home v0.155); `CONTRACT-0006.md` (live 0006, applied 2026-10-18); `supabase/SETUP.md` §13; the phase 1 code (`src/screens/testing/star/*`, `src/lib/star/*`, `src/lib/mockStarTesting.js`, build switch in `src/lib/features.js`); how Color Belt built the same things (`src/screens/testing/events/`, `event/`, `src/lib/testing/*`, `src/lib/mockTesting*.js`, `src/register/`, `functions/`).
 
 Words used: **fake backend** = the preview database in the browser (`mockClient.js` + Star's mock files). **Pure rules file** = plain JavaScript with no React or database, so Node checks and the fake can use it. **Kill switch** = a Cloudflare setting that turns the family form off without a code change.
 
@@ -104,7 +104,7 @@ Drawn at PC, tablet and phone in one small "gap mockups" file per phase, reviewe
 
 ## 4. Contract mismatches (checked; one (M5) needs a migration before go-live — any migration needs a contract and Jeffrey's OK)
 
-**Migration number (only if a later question needs one): 0021 at the earliest (0001–0020 are taken or reserved — CLAUDE.md's migration table, 2026-10-20); ask the Main session to reserve it before writing.** Only M5 (§4) needs one, before go-live. Re-check `git log --all --name-only -- supabase/migrations` **and every worktree folder** right before writing one.
+**Migration number (only if a later question needs one): 0022 at the earliest (0001–0021 are taken or reserved — CLAUDE.md's migration table, 2026-10-21; reserve through the Main session); ask the Main session to reserve it before writing.** Only M5 (§4) needs one, before go-live. Re-check `git log --all --name-only -- supabase/migrations` **and every worktree folder** right before writing one.
 
 | # | Mismatch | Effect | Fix |
 |---|---|---|---|

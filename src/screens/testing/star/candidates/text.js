@@ -125,6 +125,7 @@ export const EDIT_CANDIDATE = 'Edit candidate';
 export const SET_PRIVATE = 'Set private testing';
 export const CHANGE_PRIVATE = 'Change private day or time';
 export const backToDay = (iso) => `Back to the testing day (${weekdayMonthDay(iso)})`;
+export const GRADE_PRIVATE = 'Grade private testing'; // phase 5, H5 proposal 18
 export const CHANGE_PAYING_BY = 'Change how they’ll pay';
 export const EDIT_PAYMENT = 'Edit payment';
 export const UNDO_PAYMENT = 'Undo payment';

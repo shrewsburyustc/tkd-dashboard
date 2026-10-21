@@ -1196,6 +1196,19 @@
   white-space: normal;
 }
 
+/* ----- A row's ⋯ dropdown on a Star event page: grows to fit its longest item ----- */
+/* "Back to the testing day (Mon, Nov 16)" is longer than the shared menu's 200px. The shared
+   RowMenu places the menu's LEFT edge at (⋯ button's right edge − 200px), so a wider menu is
+   slid left by the extra width (translateX(200px − its own width)): its right edge still lines up
+   with the ⋯ button, and a short menu (exactly 200px) doesn't move at all. Scoped with :has() to
+   pages that show a Star event header, so other sections' menus are untouched. */
+body:has(.st-event-head) > .tmenu {
+  width: max-content;
+  min-width: 200px;
+  max-width: calc(100vw - 16px);
+  transform: translateX(calc(200px - 100%));
+}
+
 /* ----- The make-up list (screen 7, G10) ----- */
 .st-mk-search {
   position: relative;

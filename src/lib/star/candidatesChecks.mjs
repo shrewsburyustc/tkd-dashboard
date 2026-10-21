@@ -255,10 +255,10 @@ await check('the seed: Summer finished with make-ups owed, Fall with every kind 
   const summer = await roster(rig, 'summer');
   assert.equal((await roster(rig, 'spring')).length, 0);
   const row = (list, first, n = 0) => list.filter((c) => c.firstName === first)[n];
-  assert.deepEqual(fall.map((c) => c.firstName).sort(), ['Alex', 'Ava', 'Ava', 'Ethan', 'Grace', 'Jordan', 'Lily', 'Mia', 'Noah', 'Owen', 'Ruby', 'Sam']);
+  assert.deepEqual(fall.map((c) => c.firstName).sort(), ['Alex', 'Ava', 'Ava', 'Chris', 'Ethan', 'Grace', 'Jordan', 'Lily', 'Mia', 'Noah', 'Owen', 'Ruby', 'Sam', 'Sofia']);
   assert.deepEqual([row(fall, 'Mia').paid, row(fall, 'Mia').paidCents, row(fall, 'Mia').feeKind], [true, 14000, 'standard']);
   assert.deepEqual([row(fall, 'Lily').paid, row(fall, 'Lily').expectedFeeCents], [false, 14000]);
-  assert.deepEqual([row(fall, 'Alex').overpaidCents, row(fall, 'Alex').privateOn, row(fall, 'Alex').paidCents], [2000, null, 16000]);
+  assert.deepEqual([row(fall, 'Chris').overpaidCents, row(fall, 'Chris').privateOn, row(fall, 'Chris').paidCents], [2000, null, 16000]);
   assert.deepEqual([row(fall, 'Ruby').feeKind, row(fall, 'Ruby').expectedFeeCents, row(fall, 'Ruby').privateTime], ['private', 18000, '16:00']);
   assert.deepEqual([row(fall, 'Ava', 0).duplicateState, row(fall, 'Ava', 1).duplicateState], ['possible', 'possible']);
   assert.equal(row(fall, 'Ava', 0).duplicateOf, row(fall, 'Ava', 1).id);
@@ -337,13 +337,18 @@ await check('the make-up list (§5.8, OPEN-11): newest earlier event first, alre
   const rig = makeRig();
   const spring = await rig.api.loadMakeupList(IDS.spring);
   assert.deepEqual(spring.rows.map((r) => [r.firstName, r.needs, r.choiceNeeded, r.alreadyAdded]), [
+    // Fall (phase 5's graded seed) is earlier than Spring, so its make-ups come first
+    ['Noah', ['Breaking'], false, false],
+    ['Sam', ['Breaking', 'Knowledge'], false, false],
+    ['Ethan', [], true, false],
     ['Drew', ['Breaking', 'Knowledge'], false, false],
     ['Taylor', ['Breaking'], false, false],
     ['Avery', [], true, false], // "Can't add yet"
-  ]); // Grace is left out: she is already a make-up in Fall; Morgan passed; Casey withdrew
-  assert.deepEqual([spring.rows[0].earlierEventName, spring.rows[0].earlierTestingDate, spring.rows[0].starsTo], ['Summer Star Testing', '2026-07-11', 1]);
+  ]); // Grace and Sofia are left out: they are already make-ups in Fall; Morgan passed; Casey withdrew
+  assert.deepEqual([spring.rows[3].earlierEventName, spring.rows[3].earlierTestingDate, spring.rows[3].starsTo], ['Summer Star Testing', '2026-07-11', 1]);
+  assert.deepEqual([spring.rows[0].earlierEventName, spring.rows[0].earlierTestingDate], ['Fall Star Testing', '2026-11-14']);
   const fall = await rig.api.loadMakeupList(IDS.fall);
-  assert.deepEqual(fall.rows.map((r) => [r.firstName, r.alreadyAdded]), [['Drew', false], ['Grace', true], ['Taylor', false], ['Avery', false]]);
+  assert.deepEqual(fall.rows.map((r) => [r.firstName, r.alreadyAdded]), [['Drew', false], ['Sofia', true], ['Grace', true], ['Taylor', false], ['Avery', false]]);
   assert.deepEqual((await rig.api.loadMakeupList(IDS.summer)).rows, []); // nothing earlier
   assert.equal(statusOf(await rig.api.loadMakeupList(randomUUID())), 'not_found');
   // the data layer never sends { get: true }; a GET would fail (it writes: the signature clean-up)
@@ -364,7 +369,7 @@ await check('detail: payments oldest first with "reversed", the fee, the make-up
   assert.deepEqual(grace.makeupSubjects, [{ eventCategoryId: grace.result.subjects.find((s) => s.retest).eventCategoryId, name: 'Two Step Sparring', kind: 'retest' }]);
   assert.deepEqual([grace.candidate.assistantClasses, grace.result.ai.grade], [20, 'A+']); // counts copied (OPEN-10)
   assert.deepEqual([grace.feeKind, grace.expectedFeeCents, grace.signature.state], ['none', 0, 'none']);
-  const alex = await detailOf(rig, await cand(rig, 'fall', 'Alex'));
+  const alex = await detailOf(rig, await cand(rig, 'fall', 'Chris'));
   assert.deepEqual(alex.payments.map((p) => [p.kind, p.amountCents, p.method, p.reversed]), [['payment', 16000, 'check', false]]);
   assert.deepEqual([alex.overpaidCents, alex.feeKind, alex.signature.state], [2000, 'standard', 'on_file']);
   const morgan = await detailOf(rig, await cand(rig, 'summer', 'Morgan'));
@@ -410,10 +415,12 @@ await check('the 90-day signature clean-up: 91 days after the testing day remove
 
 await check('History (v0.169): this candidate and its own child rows, newest first, no login ids; DOB / email in full; the signature only "on file"', async () => {
   const rig = makeRig();
-  const alex = await cand(rig, 'fall', 'Alex');
+  const alex = await cand(rig, 'fall', 'Chris');
   const h = await rig.api.loadCandidateHistory(alex.id);
   assert.equal(h.status, 'ok');
-  const actions = h.rows.map((r) => r.action);
+  // (phase 5's seed then graded Chris: those rows are the newest — the grading checks cover them)
+  assert.deepEqual(h.rows.slice(0, 3).map((r) => r.action), ['star_set_count', 'star_set_count', 'star_set_grade']);
+  const actions = h.rows.map((r) => r.action).filter((a) => a !== 'star_set_grade' && a !== 'star_set_count');
   assert.deepEqual(actions.slice(0, 3), ['star_clear_private', 'star_record_payment', 'star_record_payment']); // newest first
   assert.ok(actions.includes('star_set_private') && actions.includes('star_public_register'));
   const insert = h.rows.find((r) => r.tableName === 'star_candidates' && r.op === 'insert');
@@ -422,7 +429,7 @@ await check('History (v0.169): this candidate and its own child rows, newest fir
   assert.deepEqual([sig.after.signature, 'submission_id' in sig.after], ['on file', false]);
   const text = JSON.stringify(h.rows);
   for (const key of ['created_by"', 'updated_by"', 'recorded_by"', 'withdrawn_by"', 'actor_id', 'session_id', 'batch_id', 'data:image']) assert.equal(text.includes(key), false, key);
-  // nobody else's rows: Jordan Kim (same last name) and his payment are not in Alex's history
+  // nobody else's rows: Jordan Kim (same last name) and his payment are not in Chris's history
   const jordan = await cand(rig, 'fall', 'Jordan');
   assert.equal(text.includes(jordan.id), false);
   assert.equal(h.rows.filter((r) => r.tableName === 'star_payments').length, 1);
@@ -877,7 +884,7 @@ await check('star_undo_payment: the 10-second staff window (own payment only), a
 
 await check('star_record_refund (A, S7): no_access → not_allowed → invalid → not_found → stale → withdrawn → invalid (date) → refund_too_large (+ overpaidCents) → ok; Undo refused while a refund stands', async () => {
   const rig = makeRig();
-  const alex = await cand(rig, 'fall', 'Alex'); // paid $160, owes $140 → $20 overpaid
+  const alex = await cand(rig, 'fall', 'Chris'); // paid $160, owes $140 → $20 overpaid
   const refund = (c, over = {}) => rig.api.recordRefund({ candidateId: c.id, expectedVersion: c.version, method: 'cash', amountCents: 2000, refundedOn: TODAY, ...over });
   rig.lock();
   assert.equal(statusOf(await rig.api.recordRefund({})), 'no_access');
@@ -898,7 +905,7 @@ await check('star_record_refund (A, S7): no_access → not_allowed → invalid �
   const r = await refund(alex, { amountCents: 2000, method: 'check' });
   assert.deepEqual([r.status, r.version], ['ok', alex.version + 1]);
   rig.later(1000);
-  const a = await cand(rig, 'fall', 'Alex');
+  const a = await cand(rig, 'fall', 'Chris');
   assert.deepEqual([a.paidCents, a.overpaidCents, a.refundedCents, a.paid, a.lastPaymentId], [14000, 0, 2000, true, alex.lastPaymentId]);
   assert.deepEqual(await refund(a, { amountCents: 1 }), { status: 'refund_too_large', overpaidCents: 0 }); // someone else refunded first
   // while the refund stands: Undo / Edit payment are refused ("Undo the refund first.")
@@ -907,10 +914,10 @@ await check('star_record_refund (A, S7): no_access → not_allowed → invalid �
   // undo the refund (admin): overpaid again; then the payment can be undone
   assert.equal(statusOf(await rig.api.undoPayment({ paymentId: r.paymentId })), 'ok');
   rig.later(1000);
-  const a2 = await cand(rig, 'fall', 'Alex');
+  const a2 = await cand(rig, 'fall', 'Chris');
   assert.deepEqual([a2.overpaidCents, a2.refundedCents], [2000, 0]);
   assert.equal(statusOf(await rig.api.undoPayment({ paymentId: a2.lastPaymentId })), 'ok');
-  assert.equal((await cand(rig, 'fall', 'Alex')).paidCents, 0);
+  assert.equal((await cand(rig, 'fall', 'Chris')).paidCents, 0);
   // the detail's payment rows tell the story
   const d = await detailOf(rig, a2);
   assert.deepEqual(d.payments.map((p) => [p.kind, p.amountCents, p.reversed]), [
@@ -942,7 +949,7 @@ await check('star_edit_payment (A): not_allowed → invalid → not_found → in
 
 await check('the payments table rule: the net total never goes below zero (star_payments_net_check → invalid, nothing saved)', async () => {
   const rig = makeRig();
-  const alex = await cand(rig, 'fall', 'Alex');
+  const alex = await cand(rig, 'fall', 'Chris');
   // A damaged store where the refund-first rule can't see the refund (kind written wrongly): the
   // table rule still refuses an undo that would leave the total below zero.
   rig.editStore((s) => {
@@ -964,18 +971,18 @@ await check('Events counts after the takeover: the Events list and Delete event 
   const by = Object.fromEntries(r.events.map((e) => [e.name, e]));
   assert.deepEqual(Object.keys(by).sort(), ['Fall Star Testing', 'Spring Star Testing', 'Summer Star Testing']);
   const nums = (e) => [e.activeCount, e.withdrawnCount, e.registrationCount, e.paymentTotalCents];
-  assert.deepEqual(nums(by['Fall Star Testing']), [11, 1, 12, 77000]);
-  assert.deepEqual(nums(by['Summer Star Testing']), [5, 1, 6, 74000]);
+  assert.deepEqual(nums(by['Fall Star Testing']), [13, 1, 14, 93000]);
+  assert.deepEqual(nums(by['Summer Star Testing']), [6, 1, 7, 88000]);
   assert.deepEqual(nums(by['Spring Star Testing']), [0, 0, 0, 0]);
   assert.deepEqual([by['Summer Star Testing'].state, by['Fall Star Testing'].state, by['Spring Star Testing'].state], ['finished', 'open', 'not_open_yet']);
   // the counts follow the candidates fake's writes
   const lily = await cand(rig, 'fall', 'Lily');
   await rig.api.recordPayment(pay(lily));
   const fall = (await rig.eventsApi.loadStarEvent(IDS.fall)).event;
-  assert.deepEqual(nums(fall), [11, 1, 12, 91000]);
+  assert.deepEqual(nums(fall), [13, 1, 14, 107000]);
   // Delete event with the counted numbers: candidates, payments, signatures, grades all go
-  assert.equal(statusOf(await rig.eventsApi.deleteStarEvent({ eventId: fall.id, expectedVersion: fall.version, expectedCandidateCount: 11, expectedPaymentTotalCents: 91000 })), 'stale');
-  assert.equal(statusOf(await rig.eventsApi.deleteStarEvent({ eventId: fall.id, expectedVersion: fall.version, expectedCandidateCount: 12, expectedPaymentTotalCents: 91000 })), 'ok');
+  assert.equal(statusOf(await rig.eventsApi.deleteStarEvent({ eventId: fall.id, expectedVersion: fall.version, expectedCandidateCount: 13, expectedPaymentTotalCents: 107000 })), 'stale');
+  assert.equal(statusOf(await rig.eventsApi.deleteStarEvent({ eventId: fall.id, expectedVersion: fall.version, expectedCandidateCount: 14, expectedPaymentTotalCents: 107000 })), 'ok');
   const s = rig.snap();
   const fallIds = new Set(s.candidates.filter((c) => c.event_id === IDS.fall).map((c) => c.id));
   assert.equal(fallIds.size, 0);
@@ -1073,8 +1080,8 @@ await check('dialogs send the version / payment id they OPENED with: after a 15-
   const form = editOf(ethan2, ethanDetail, { lastName: 'Changed' });
   assert.equal(statusOf(await rig.api.updateCandidate(writeArgs('edit', editSnap, form))), 'stale');
 
-  // Record refund (admin): Alex is $20 overpaid
-  const alex = await cand(rig, 'fall', 'Alex');
+  // Record refund (admin): Chris is $20 overpaid
+  const alex = await cand(rig, 'fall', 'Chris');
   const refundSnap = takeSnapshot(alex);
   await otherRenames(alex);
   assert.equal(statusOf(await rig.api.recordRefund(writeArgs('refund', refundSnap, { method: 'cash', amountCents: 2000, paidOn: TODAY }))), 'stale');
