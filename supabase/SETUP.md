@@ -1274,6 +1274,8 @@ Same method as 12d / 13e, with its **own** script and its **own** password — n
 
 ### 0016f. Hyperdrive for the Black Belt form (CP5 — later, when the Black Belt Function is built, with Jeffrey's OK)
 
+**Done 2026-10-21 (CP5, Jeffrey):** `tkd-bb-registrar` created (checked read-only: Session pooler host, port 5432, database `postgres`, user `bb_registrar.eozkfbdfxqlcbpewhach`, caching disabled, verify-full with the shared CA `572acb39…`, origin limit 5 — created at 20 and lowered); binding `HYPERDRIVE_BB` (Production) and variable `BB_PUBLIC_REGISTRATION=off` (Production) added; no deployment triggered. The password was made a second time (the first saved copy didn't match); the password manager entry is site `bb-registrar.example.com`.
+
 Not part of the 0016 paste. When the Black Belt family form's Pages Function (`functions/api/black-belt/[code].js`, page `/black-belt/<code>`) is built:
 1. Cloudflare → **Hyperdrive** → a **third** configuration `tkd-bb-registrar`: the same Session pooler host and port as 12g, database `postgres`, user **`bb_registrar.eozkfbdfxqlcbpewhach`**, password from the "Supabase bb_registrar (Hyperdrive)" entry. **Caching: Disabled.** **Origin connection limit: 5 or less.** TLS as 12g (Verify full with the existing Supabase CA certificate).
 2. `tkd-dashboard` → **Settings** → **Bindings** → **Add** → **Hyperdrive**: variable name `HYPERDRIVE_BB`, configuration `tkd-bb-registrar`, **Production only**.
