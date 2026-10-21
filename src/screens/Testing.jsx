@@ -36,9 +36,9 @@
 //
 // Black Belt testing (contract CONTRACT-0016-B1 §3): until step C2 brings the Testing chooser and
 // the #testing/black-belt addresses (they wait for Star's chooser, §7 OP-1), Black Belt is reached
-// from a "Black Belt testing ›" link at the top of this page, in PREVIEW MODE ONLY. The screens
-// are loaded with a lazy import behind that check, so the live build doesn't contain them at all
-// (Vite replaces import.meta.env.MODE with a fixed text when it builds, and drops dead code).
+// from a "Black Belt testing ›" link at the top of this page, in EVERY build (Jeffrey, rulebook
+// v0.917: Black Belt goes live without waiting for Star). The screens are loaded with a lazy
+// import, so they're only downloaded when someone opens Black Belt.
 // Black Belt is joint for both schools, so the link shows on Both too.
 import { Suspense, lazy, useEffect, useId, useRef, useState } from 'react';
 import { IconAward, IconChevronRight } from '@tabler/icons-react';
@@ -51,9 +51,9 @@ import PrivateTestingTab from './testing/private/PrivateTestingTab.jsx';
 import { PAGE_TITLE, TAB_CLASSES_RANKS, TAB_EVENTS, TAB_PRIVATE, VIEW_ONLY_LINE } from './testing/text.js';
 import '../styles/testing-events.css';
 
-// Black Belt testing's staff screens: preview builds only, until the build switch of step C2.
-const BLACK_BELT_PREVIEW = import.meta.env.MODE === 'preview';
-const BlackBeltTesting = BLACK_BELT_PREVIEW ? lazy(() => import('../blackBelt/staff/BlackBeltTesting.jsx')) : null;
+// Black Belt testing's staff screens, loaded only when opened (v0.917: every build, until C2
+// moves the way in into the Testing chooser).
+const BlackBeltTesting = lazy(() => import('../blackBelt/staff/BlackBeltTesting.jsx'));
 const BLACK_BELT_LINK = 'Black Belt testing'; // the link's words (Black Belt's own text.js has the rest)
 // Is Black Belt open? Kept while the dashboard is open, like the tab.
 let blackBeltOpen = false;
