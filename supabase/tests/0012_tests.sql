@@ -396,8 +396,14 @@ begin
     raise exception 'TEST FAILED: 6f Undo puts the status back: %', v_r;
   end if;
   reset role;
-  -- the class at 00:00 today is over: "did they come?" -> No-show + call back tomorrow
-  update public.class_bookings set starts_at = '00:00', ends_at = '00:15' where submission_id = v_s1 and child_index = 1;
+  -- the class at 00:00 today is over: "did they come?" -> No-show + call back tomorrow.
+  -- It must be TODAY (6h checks in on the class day) and already OVER, so the booking ends at
+  -- 00:01; run in the first two minutes after midnight, the test waits until 00:02 (at most two
+  -- minutes) instead of failing (it used to end at 00:15 and failed from 12:00 to 12:15 AM).
+  if (now() at time zone 'America/New_York')::time < time '00:02' then
+    perform pg_sleep(extract(epoch from (time '00:02' - (now() at time zone 'America/New_York')::time)) + 1);
+  end if;
+  update public.class_bookings set starts_at = '00:00', ends_at = '00:01' where submission_id = v_s1 and child_index = 1;
   perform set_config('request.jwt.claims', v_c_d1, true);
   v_r := public.prospects_list('worcester');
   if (select (e ->> 'ask_came')::boolean from jsonb_array_elements(v_r -> 'prospects') e where (e ->> 'id')::uuid = v_p1) is not true then
