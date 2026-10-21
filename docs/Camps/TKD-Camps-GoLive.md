@@ -18,6 +18,8 @@ Words used below:
 
 **2026-10-20 — Jeffrey: "Yes, but quickly. Do all of them at once"** (CP2 + CP3 now, to unblock Finance's 0018; Camps stays undeployed). Pre-checks done read-only: no camp object on production; live = 0005–0012, 0014, 0015, 0019 (not 0016, 0018); the six Finance functions 0017 replaces/reads are byte-identical to the tested 0011 (0014 didn't touch them). Shortened run sheet: before = 0011/0005/0006 tests; apply 0013; password (0013d); apply 0017; after = 0013/0017/0011 tests; then Claude's full fingerprint + advisor checks.
 
+**2026-10-20 — production-order check PASSED (71/0):** fresh PGlite built like production (0001–0006, 0010, 0007–0009, 0012, 0015, 0011, 0019, 0014, 0020) + 0013 + 0017: every test file passes before and after (0014/0020 files and `0006_tests.sql` taken from `color-belt` — camps' copy of `0006_tests.sql` predates 0020 and fails on production even without Camps); all earlier fingerprints unchanged except the 7 intended 0011 lines; 0013 = 115 rows, 0017 = 96 rows, identical to run.mjs (saved in the scratchpad `prodorder/`). 0017 unchanged = fb4ec24's text (Finance's 0018 guard depends on it). **GO given to Jeffrey for the paste.**
+
 ## CP2 — Cloudflare setting (you, ~2 min) · *your OK needed*
 SETUP 0013a. Cloudflare → `tkd-dashboard` → Settings → Variables and Secrets → **Production**: add `CAMPS_REGISTRATION` = `off`. Nothing visible changes (it takes effect at the next deploy).
 **Done when:** the variable is listed under Production only.
