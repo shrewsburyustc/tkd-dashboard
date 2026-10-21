@@ -96,4 +96,5 @@ This branch is on `main` and live (the push included `0ccf776`; live `main` = `c
 - Decided (Jeffrey): prospects' follow-up dates show as one count chip per day (amber = due today or overdue), with a Follow-ups list in the day panel that opens Prospects (v0.612).
 - Rule for every Calendar item, now and later: one compact **Show** menu with a tick box per kind (Classes, Closures, Events, Free classes, Follow-ups). It is remembered per person on that device and everything is on at first (v0.613).
 - Mockups (design-reviewed, fixes applied): `Calendar-show-mockup-PC.png`, `Calendar-show-mockup-tablet-phone.png`. Earlier drafts: `Calendar-followups.png`, `Calendar-toggles.png`, `Calendar-show-menu.png`.
-- Next: Jeffrey approves the mockups -> build plan (expected: no migration; if one is needed, Main reserves the number, next free 0025) -> build in preview -> reviews -> commit.
+- Mockups approved by Jeffrey 2026-10-21 (v0.614). Build plan written and reviewed: `TKD-Calendar-Show-Build-Plan.md`.
+- Next: Jeffrey answers Q1 (A = reuse prospects_list, no migration, recommended; B = new function, migration 0025 via Main) and OKs the plan's corrections ("Ruby A." naming, Overdue / Due today tags) -> build B1-B8 in preview -> reviews -> Jeffrey tries it -> commit.
