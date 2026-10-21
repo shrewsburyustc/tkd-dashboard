@@ -19,7 +19,8 @@
 //   view           'report' | 'history' | 'settings';  onView(view) changes it (and the address)
 //   profileName    the signed-in person's name (printed on the paper copy, D8)
 //   screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange
-//   onOpenTesting(schoolName)   "Open in Testing" in a payment's detail
+//   onOpenTesting(schoolName, eventId, source, options)   "Open in Testing" in a payment's detail
+//                (options.privateTab: a Color Belt private testing payment → the Private testing tab, v0.813)
 import { useEffect, useRef, useState } from 'react';
 // eventsApi's schoolToday also follows the preview's __tkdPreview.setToday (the fake database does too).
 import { schoolToday } from '../lib/testing/eventsApi.js';

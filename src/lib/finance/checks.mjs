@@ -18,6 +18,7 @@ import { toCsv, guardFormula, quoteCell, centsToCsvNumber, csvFileName, CSV_COLU
 import { createFinanceBackend, FINANCE_RPC_NAMES, FINANCE_WRITE_RPC_NAMES } from '../mockFinance.js';
 import { addDays } from '../testing/eventRules.js';
 import { newDays, unclosedPairsFrom, monthsToLoad, keepRecent, createSeenStore, pairKey, SEEN_KEY } from './reminderAck.js';
+import * as FT from '../../screens/finance/text.js';
 
 let count = 0;
 function check(label, fn) {
@@ -946,6 +947,62 @@ check('reminderAck + mock: History lists exactly the days finance_home counts', 
     assert.equal(pairs.length, want.count, `count for ${code}`);
     assert.equal(pairs[0]?.split('|')[1] ?? null, want.first_day, `first day for ${code}`);
   }
+});
+
+// Color Belt private testing payments (migration 0018, rulebook v0.813): the words, and the preview
+// database's move rule — a moved payment is ONE counted private line, totals unchanged.
+check('private testing: words; preview move = one counted private line, credited to the desk; detail history', () => {
+  assert.equal(FT.WHAT_COLOR_BELT_PRIVATE, 'Color belt testing, private');
+  assert.equal(FT.historyLine({ what: 'moved', by_name: 'Jeffrey' }, null), 'Jeffrey moved it to private testing');
+  assert.equal(FT.historyLine({ what: 'move_undone', by_name: 'Jeffrey' }, null), 'Jeffrey undid the move');
+  assert.match(FT.DETAIL_HINT_PRIVATE, /Private testing tab/);
+  const d = addDays(T, -1);
+  // Noah's $65 card event payment (c3, yesterday, by the desk) is moved today by an admin to a
+  // private testing; Ava pays $85 cash directly for her own private testing today.
+  // Its own small store (earlier checks change cbStore's payments).
+  const plain = {
+    events: [{ id: 'e2', location_code: 'worcester', name: 'Worcester Testing', testing_date: '2026-11-20' }],
+    registrations: [{ id: 'g3', event_id: 'e2', first_name: 'Noah', last_name: 'Kim' }],
+    payments: [{ id: 'c3', registration_id: 'g3', kind: 'payment', amount_cents: 6500, method: 'card', paid_on: d, recorded_at: at(d, '18:00'), recorded_by: 'desk', recorded_by_name: 'Staff', reverses_payment_id: null }],
+  };
+  const withPrivate = JSON.parse(JSON.stringify(plain));
+  withPrivate.payments.push({ id: 'c9', registration_id: 'g3', kind: 'reversal', amount_cents: -6500, method: 'card', paid_on: d, recorded_at: at(T, '09:00'), recorded_by: 'admin-1', recorded_by_name: 'Jeffrey Berg', reverses_payment_id: 'c3' });
+  withPrivate.private = [
+    { id: 'p1', location_code: 'worcester', first_name: 'Noah', last_name: 'Kim', private_date: '2026-11-03', moved_from_registration_id: 'g3' },
+    { id: 'p2', location_code: 'worcester', first_name: 'Ava', last_name: 'Lopez', private_date: '2026-11-05', moved_from_registration_id: null },
+  ];
+  withPrivate.private_payments = [
+    { id: '00000000-0000-4000-8000-0000000000b1', private_id: 'p1', kind: 'payment', amount_cents: 6500, method: 'card', paid_on: d, recorded_at: at(d, '18:00'), recorded_by: 'admin-1', recorded_by_name: 'Jeffrey Berg', reverses_payment_id: null, moved_from_payment_id: 'c3' },
+    { id: '00000000-0000-4000-8000-0000000000b2', private_id: 'p2', kind: 'payment', amount_cents: 8500, method: 'cash', paid_on: T, recorded_at: at(T, '11:00'), recorded_by: 'desk', recorded_by_name: 'Staff', reverses_payment_id: null, moved_from_payment_id: null },
+  ];
+  const make = (cb) => {
+    let store = null;
+    return createFinanceBackend({
+      loadStore: () => store, saveStore: (x) => { store = JSON.parse(JSON.stringify(x)); },
+      readColorBelt: () => JSON.parse(JSON.stringify(cb)), now: () => clock, today: () => T, newId: () => randomUUID(),
+    });
+  };
+  const before = make(plain).rpc('finance_day', dayArgs('worcester', d), ADMIN_CTX).data;
+  const moved = make(withPrivate);
+  const after = moved.rpc('finance_day', dayArgs('worcester', d), ADMIN_CTX).data;
+  assertClean(after, 'finance_day with private payments');
+  // Yesterday: still one counted $65 card line (now Noah's private testing), same totals.
+  assert.deepEqual(after.totals, before.totals);
+  const noah = after.items.filter((it) => it.last_name === 'Kim');
+  assert.deepEqual(noah.map((it) => [it.state, it.amount_cents, it.method, it.is_private, it.event_date, it.recorded_by_name]),
+    [['counted', 6500, 'card', true, '2026-11-03', 'Staff']]);
+  // Today: Ava's direct private payment counts in Worcester's cash.
+  const today = moved.rpc('finance_day', dayArgs('worcester', T), ADMIN_CTX).data;
+  const ava = today.items.find((it) => it.last_name === 'Lopez');
+  assert.deepEqual([ava.state, ava.amount_cents, ava.is_private, ava.what], ['counted', 8500, true, 'color_belt']);
+  // Noah's detail: no event; recorded by the desk, then moved by the admin.
+  const det = moved.rpc('finance_payment_detail', { p_source: 'color_belt', p_payment_id: noah[0].payment_id }, ADMIN_CTX).data;
+  assertClean(det, 'finance_payment_detail of a moved private payment');
+  assert.equal(det.status, 'ok');
+  assert.equal(det.event_id ?? null, null);
+  assert.equal(det.item.is_private, true);
+  assert.deepEqual(det.history.map((h) => [h.what, h.by_name]), [['moved', 'Jeffrey Berg'], ['recorded', 'Staff']]);
+  assert.deepEqual(det.history.map((h) => FT.historyLine(h, null)), ['Jeffrey Berg moved it to private testing', 'Staff recorded $65.00 by card']);
 });
 
 console.log(`${count} groups of checks ran.`);
