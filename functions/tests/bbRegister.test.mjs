@@ -198,7 +198,7 @@ test('BB: a missing binding or setting → not_open (fail closed)', async () => 
     }
   }
   // An empty setting or a binding without a connection string counts as missing.
-  for (const env of [goodEnv({ TURNSTILE_SECRET: '' }), goodEnv({ HYPERDRIVE_BB: {} }), goodEnv({ HYPERDRIVE_BB: { connectionString: 42 } })]) {
+  for (const env of [goodEnv({ TURNSTILE_SECRET: '' }), goodEnv({ HYPERDRIVE_BB: {} }), goodEnv({ HYPERDRIVE_BB: { connectionString: 42 } }), goodEnv({ HYPERDRIVE_BB: { connectionString: '' } })]) {
     const r = await run(handleGet, context({ method: 'GET', env }), { openDatabase: fakeDb({ cycle: okCycle }).openDatabase });
     assert.deepEqual(r.json, { status: 'not_open' });
   }
