@@ -248,6 +248,8 @@ async function expectRefused(ctx, expected) {
 test('POST: kill switch off / missing binding → not_open', async () => {
   await expectRefused(context({ env: goodEnv({ PUBLIC_REGISTRATION: 'off' }) }), { status: 'not_open' });
   await expectRefused(context({ env: goodEnv({ HYPERDRIVE: undefined }) }), { status: 'not_open' });
+  // a blank connection string counts as not set up (refused before Turnstile is asked)
+  await expectRefused(context({ env: goodEnv({ HYPERDRIVE: { connectionString: '' } }) }), { status: 'not_open' });
 });
 
 test('POST: wrong or missing Origin → bad_request (HTTP 400)', async () => {
@@ -291,7 +293,9 @@ test('POST: sent in under 4 seconds (or no times) → bad_request', async () => 
 test('POST: fields of the wrong type → bad_request', async () => {
   for (const bad of [
     { submission_id: 'not-a-uuid' },
+    { submission_id: [goodBody().submission_id] }, // a one-item list is not text
     { event_rank_id: 42 },
+    { event_rank_id: [goodBody().event_rank_id] },
     { first_name: null },
     { last_name: 'x'.repeat(201) },
     { stripes: 'true' },
