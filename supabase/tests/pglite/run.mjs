@@ -249,6 +249,9 @@
 //       date), every test file again, re-run safety for 0007/0008/0009/0012,
 //       and a minimal database (only 0003, 0004, 0007-0012) whose
 //       0007/0008/0009/0012 fingerprints must be the same.
+//   step0021. 0021 (Not interested families deleted after 6 months) on its own
+//       live-order database: only prospects_purge_old's fingerprint moves,
+//       0021_tests + 0015/0012 tests pass, re-runs harmless, minimal = live.
 //   17. 0015 (family history) on a database built in the live order
 //       (no family rows in change_log): earlier fingerprints unchanged
 //       (0003's above all), 0015_tests.sql and every earlier test file
@@ -654,6 +657,10 @@ async function main() {
   console.log('\nMigration 0019 (school phone):');
   const after19 = after5 ? await step18() : null;
 
+  // step0021: Not interested families deleted after 6 months (its own database)
+  console.log('\nMigration 0021 (Not interested families deleted after 6 months):');
+  const after21 = after5 ? await step0021() : null;
+
   // step0020 (named after its migration, not a number other branches use): 0020, LAST
   console.log('\nMigration 0020 (current_session_id reads only request.jwt.claims), last:');
   const after20 = after5 ? await step0020(db, upgradeDb) : null;
@@ -687,6 +694,10 @@ async function main() {
   if (after19) {
     console.log('\n0019 fingerprints (kind  item  detail):');
     for (const line of after19) console.log('  ' + line);
+  }
+  if (after21) {
+    console.log('\n0021 fingerprints (kind  item  detail):');
+    for (const line of after21) console.log('  ' + line);
   }
   if (after11) {
     console.log('\n0011 fingerprints (kind  item  detail):');
@@ -1821,6 +1832,95 @@ async function step18() {
     }
   }
   return after19;
+}
+
+
+// =====================================================================
+// step0021: 0021 (Not interested families deleted after 6 months,
+// rulebook v0.611), on its own database built in the live order.
+//   a. steps 1-5, 0003, 0004, the seed, 0005 (+ its test event), 0006,
+//      0010, 0007, 0008, 0009, 0012, 0015, 0011, 0019, 0020
+//   b. 0021; every other migration's fingerprints stay the same, except
+//      the ONE line of prospects_purge_old (it is listed by 0012's and
+//      0015's fingerprints too)
+//   c. 0021_tests.sql, then 0015_tests.sql and 0012_tests.sql (their
+//      2-year clean-up tests must still pass) and the other new-students
+//      test files
+//   d. 0021 twice more: fingerprints identical, tests still pass
+//   e. a minimal database (steps 1-5, 0003, 0004, the seed, 0007, 0008,
+//      0009, 0012, 0015, 0021) gives the same 0021 fingerprints
+// Returns 0021's fingerprints.
+// =====================================================================
+async function step0021() {
+  const L = '[0021] ';
+  const db = await buildBase(L);
+  if (!db) return null;
+  for (const [label, file] of [['0003', '0003_testing_classes_ranks.sql'], ['0004', '0004_staff_accounts.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+  await run(db, L + 'apply built-in seed', builtInSeedSql());
+  if (!(await run(db, L + 'apply 0005', read('migrations', '0005_testing_events.sql')))) return null;
+  await seedTestEvent(db);
+  for (const [label, file] of [['0006', '0006_star_testing.sql'], ['0010 (grading results)', '0010_testing_results.sql'],
+    ['0007', '0007_schedule.sql'], ['0008', '0008_calendar.sql'], ['0009', '0009_forms.sql'], ['0012', '0012_prospects.sql'],
+    ['0015', '0015_family_history.sql'], ['0011 (Finance)', '0011_finance.sql'], ['0019', '0019_school_phone.sql'],
+    ['0020', '0020_session_id_claims.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // b. apply 0021; only the clean-up's own fingerprint line may move
+  const prints = ['0003_fingerprints.sql', '0004_fingerprints.sql', '0005_fingerprints.sql', '0006_fingerprints.sql', '0010_fingerprints.sql',
+    '0007_fingerprints.sql', '0008_fingerprints.sql', '0009_fingerprints.sql', '0012_fingerprints.sql', '0015_fingerprints.sql',
+    '0011_fingerprints.sql', '0019_fingerprints.sql'];
+  const before = {};
+  for (const f of prints) before[f] = await fingerprints(db, f);
+  const purgeBefore = await fingerprints(db, '0021_fingerprints.sql');
+  if (!(await run(db, L + 'apply 0021_prospects_not_interested_sooner.sql', read('migrations', '0021_prospects_not_interested_sooner.sql')))) return null;
+  const after21 = await fingerprints(db, '0021_fingerprints.sql');
+  record(L + 'prospects_purge_old really changed (its code fingerprint is new)', JSON.stringify(purgeBefore) !== JSON.stringify(after21), `${after21.length} rows`);
+  for (const f of prints) {
+    const after = await fingerprints(db, f);
+    const gone = before[f].filter((line) => !after.includes(line));
+    const added = after.filter((line) => !before[f].includes(line));
+    const onlyPurge = [...gone, ...added].every((line) => /prospects_purge_old\(\)/.test(line)) && gone.length === added.length;
+    record(`${L}${f.slice(0, 4)} fingerprints: nothing moved except prospects_purge_old`, onlyPurge,
+      gone.length + added.length === 0 ? `${after.length} rows, unchanged` : `${gone.length} line(s) changed: ${added.map((l) => l.slice(0, 60)).join(' | ')}`);
+  }
+
+  // c. its own tests, then the files that test the clean-up and the rest of new students
+  await runTestFile(db, L + '0021_tests.sql', '0021_tests.sql', 'ALL 0021 TESTS PASSED');
+  for (const [file, ok] of [['0015_tests.sql', 'ALL 0015 TESTS PASSED'], ['0012_tests.sql', 'ALL 0012 TESTS PASSED'],
+    ['0009_tests.sql', 'ALL 0009 TESTS PASSED'], ['0008_tests.sql', 'ALL 0008 TESTS PASSED'], ['0007_tests.sql', 'ALL 0007 TESTS PASSED'],
+    ['0019_tests.sql', 'ALL 0019 TESTS PASSED'], ['0003_tests.sql', 'ALL 0003 TESTS PASSED']]) {
+    await runTestFile(db, `${L}${file} (after 0021)`, file, ok);
+  }
+
+  // d. re-run safety (twice)
+  for (const n of ['SECOND', 'THIRD']) {
+    await run(db, `${L}apply 0021 a ${n} time (re-run safety)`, read('migrations', '0021_prospects_not_interested_sooner.sql'));
+  }
+  const again = await fingerprints(db, '0021_fingerprints.sql');
+  record(L + '0021 fingerprints identical before/after the re-runs', JSON.stringify(again) === JSON.stringify(after21), `${again.length} rows`);
+  await runTestFile(db, L + '0021_tests.sql (after re-runs)', '0021_tests.sql', 'ALL 0021 TESTS PASSED');
+
+  // e. a minimal database gives the same fingerprints
+  const M = '[0021 minimal] ';
+  const mini = await buildBase(M);
+  if (mini) {
+    let ok = true;
+    for (const f of ['0003_testing_classes_ranks.sql', '0004_staff_accounts.sql']) ok = ok && (await run(mini, M + 'apply ' + f, read('migrations', f)));
+    if (ok) await run(mini, M + 'apply built-in seed', builtInSeedSql());
+    for (const f of ['0007_schedule.sql', '0008_calendar.sql', '0009_forms.sql', '0012_prospects.sql', '0015_family_history.sql',
+      '0021_prospects_not_interested_sooner.sql']) {
+      ok = ok && (await run(mini, M + 'apply ' + f, read('migrations', f)));
+    }
+    if (ok) {
+      const p = await fingerprints(mini, '0021_fingerprints.sql');
+      record(M + '0021 fingerprints identical to the live-order database', JSON.stringify(p) === JSON.stringify(after21), `${p.length} rows`);
+      await runTestFile(mini, M + '0021_tests.sql', '0021_tests.sql', 'ALL 0021 TESTS PASSED');
+    }
+  }
+  return after21;
 }
 
 // ---------------------------------------------------------------------

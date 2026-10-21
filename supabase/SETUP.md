@@ -1421,6 +1421,35 @@ Color Belt's CP3 (2026-10-19) left **2 test private testings** on production ("J
 
 ---
 
+## Migration 0021: Not interested families deleted after 6 months (rulebook v0.611)
+
+**What it does** (`supabase/migrations/0021_prospects_not_interested_sooner.sql`): replaces **one** function, `prospects_purge_old` — the clean-up that runs whenever Prospects is opened. A family in which **every** child is Not interested is deleted **6 months** after its last activity (a note, a call, a status change, a booking or a check-in; marking someone Not interested counts, so it restarts the 6 months). Every other family without a Joined child keeps the **2 years** (v0.244); Joined is never deleted. How a deletion happens is unchanged from 0015 (rule checked again at the moment of deleting, the family's history removed with it, one counts-only row in `change_log`). No table, permission or other function changes.
+
+**Each step needs Jeffrey's OK.** Only after 0015 is live (it is).
+
+**Before you paste:** the next time anyone opens Prospects after this, every all-Not-interested family that has been quiet for **6 months or more** is deleted for good. Look at the "Not interested" chip first if that matters.
+
+### 0021a. Apply 0021 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0021_prospects_not_interested_sooner.sql` → **SQL Editor → New query** → paste → **Run**.
+2. Supabase may warn about **destructive operations**: the word is inside the clean-up function, which only runs later. **Nothing is removed now.** Confirm.
+3. "Success." One transaction: on any error nothing is kept. **Running it again is safe.**
+
+### 0021b. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0021_fingerprints.sql` must match what `supabase/tests/pglite/run.mjs` (step0021) printed (2 rows).
+2. **0012's and 0015's fingerprints move by exactly one line each on purpose:** the `prospects_purge_old()` line (both list that function). Everything else: unchanged.
+3. **Security advisor:** nothing new (the function can't be called from the app; only the Prospects list calls it).
+
+### 0021c. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0021_tests.sql` with `<paste-admin-UID-here>` / `<paste-desk-UID-here>` replaced → **ALL 0021 TESTS PASSED**. It makes its own test families and rolls everything back; it only checks its own families.
+2. Then `0015_tests.sql` and `0012_tests.sql` again. (Those two count the clean-up's results exactly. If a real family happens to become due at that very moment they can fail for that reason alone — nothing is harmed, they roll back; run them again, or tell Claude. `0021_tests.sql` only counts its own families.)
+
+### 0021d. Never re-run 0012 or 0015 after this
+
+They would put back the 2-year-only clean-up (0012 also its old history triggers — see 0015's header). If 0015 is ever re-run, re-run 0021 straight after.
+
 ## Admin: change the front-desk PIN or password
 
 The front desk (`shrewsburyustc@gmail.com`) is a **shared account**, so the app hides Change PIN and Change password for it. Only an admin changes them, here in Supabase, until the Staff accounts screen exists.

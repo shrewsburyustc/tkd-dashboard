@@ -85,3 +85,12 @@ The list as it was asked:
 ## Deployed 2026-10-20
 
 This branch is on `main` and live (the push included `0ccf776`; live `main` = `cc8b095`). Checked on https://tkd-dashboard.pages.dev: `/f/…` and `/forms` have the strict security policy, the dashboard keeps its own, and `GET /api/forms/<slug>` answers `not_open` (PUBLIC_FORMS=off). Next: Jeffrey looks at the new sections signed in; then PUBLIC_FORMS=on + redeploy, one real test sign-up, the two-connection race test.
+
+## 2026-10-21: No-shows stay on the Board (rulebook v0.610) — built in preview, not committed yet
+
+Jeffrey noticed the List (8) and Board (7) didn't add up: the No-show had no Board column. Decided: a No-show is a card in the Booked column with "Didn't show — call back", counted in the Booked tile (and shown with Booked in the List), until staff change its status or delete it. The 2-year clean-up stays as v0.244. Not interested: stays under its chip (decided, see below).
+
+## 2026-10-21: Not interested families deleted after 6 months (rulebook v0.611) — migration 0021, NOT live yet
+
+Jeffrey: Not interested families shouldn't pile up for 2 years. A family whose children are ALL Not interested is deleted 6 months after its last activity; others keep 2 years; Joined never. Delete prospect (admins) stays for mistakes / requests. Migration **0021** (number reserved by Main, 6273f8c) replaces only `prospects_purge_old`; tests `0021_tests.sql`, `0021_fingerprints.sql`, PGlite `step0021`; preview copy updated (`mockProspects.js`, checks 8/8); SETUP "Migration 0021". Security review: no High / Medium; all Lows fixed (the clean-up now also locks the children so a save in progress is seen; stronger tests: NI + Joined sibling, No-show 7 months, the 6-month boundary ± 1 day, history present before; SETUP note on exact-count tests; 0015's header says to re-run 0021 after it). PGlite 650/650. Waiting: Jeffrey's OK to commit, then to paste 0021 live, checks, tests.
+

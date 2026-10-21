@@ -163,4 +163,32 @@ group('deleting (admins; the sign-up goes with its last child) and the 2-year cl
   assert.equal(store.prospects.length, 0);
 });
 
+group('Not interested families go after 6 months (migration 0021, rulebook v0.611)', () => {
+  const famOf = (r) => store.prospects.filter((p) => p.submission_id === r.id);
+  const quiet = (r, iso, builtin = null, index = null) => {
+    for (const p of famOf(r)) {
+      if (index !== null && p.child_index !== index) continue;
+      p.last_activity_at = iso;
+      if (builtin) p.status_id = statusId(builtin);
+    }
+  };
+  const sevenMonths = '2026-06-01T00:00:00.000Z'; // NOW is 2027-01-11
+  const fiveMonths = '2026-08-15T00:00:00.000Z';
+  const niOld = send([{ first_name: 'Nina', age: 8 }]);
+  const niRecent = send([{ first_name: 'Remy', age: 7 }]);
+  const mixed = send([{ first_name: 'Mona', age: 9 }, { first_name: 'Milo', age: 6 }]);
+  const newMid = send([{ first_name: 'Nate', age: 8 }]);
+  quiet(niOld, sevenMonths, 'not_interested');
+  quiet(niRecent, fiveMonths, 'not_interested');
+  quiet(mixed, sevenMonths, 'not_interested', 0);
+  quiet(mixed, sevenMonths, null, 1); // the brother is still New
+  quiet(newMid, sevenMonths);
+  call('prospects_list', { p_location_code: 'worcester' });
+  const kept = (r) => store.submissions.some((s) => s.id === r.id);
+  assert.equal(kept(niOld), false, 'all Not interested, quiet 7 months: deleted');
+  assert.equal(kept(niRecent), true, 'Not interested 5 months: kept');
+  assert.equal(kept(mixed), true, 'one child not Not interested: the 2 years apply');
+  assert.equal(kept(newMid), true, 'New, quiet 7 months: kept (2 years)');
+});
+
 console.log(`ALL PROSPECTS LIB CHECKS PASSED (${groups} groups)`);
