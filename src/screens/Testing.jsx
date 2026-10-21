@@ -15,6 +15,11 @@
 //     that event's page instead (with the switch on: #testing/color-belt/event/<id>…)
 // Everything inside a tab lives in testing/events/EventsTab.jsx and testing/ClassesRanksTab.jsx;
 // the event page in testing/event/EventPage.jsx.
+// Phase 4 (contract 0014 §5.1, rulebook v0.401): a third tab, "Private testing", at the far right
+// (testing/private/PrivateTestingTab.jsx), and a private testing's grading page
+// (#testing/private/<id>; with the switch on #testing/color-belt/private/<id>, still inside the
+// Color Belt page — testing/private/PrivateGradingPage.jsx). Closing the grading page lands
+// on the Private testing tab. On narrow phones the tab bar scrolls sideways (testing.css).
 //
 // Star testing (v0.59, v0.177) — only while its build switch is on (lib/features.js):
 //   - Testing has three pages: the CHOOSER (#testing, testing/chooser/TestingChooser.jsx), COLOR BELT
@@ -43,15 +48,20 @@
 //   onRefreshProfile   re-read "who am I?" (e.g. after the database said "not allowed")
 //   showToast / clearToast   the toast at the bottom (with Undo)
 //   onModalOpenChange  tells the App a Testing dialog is open (the page behind becomes inert)
+//   privateId          phase 4: the open private testing's id (its grading page), or null.
+//                      Always a Color Belt page: with the switch on, testingPage is 'colorBelt'.
+//   onOpenPrivate(id) / onClosePrivate(options)   open / close that grading page (App.jsx)
 import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
 import BlockedOnBoth from './testing/BlockedOnBoth.jsx';
 import ClassesRanksTab from './testing/ClassesRanksTab.jsx';
 import EventsTab from './testing/events/EventsTab.jsx';
 import EventPage from './testing/event/EventPage.jsx';
+import PrivateGradingPage from './testing/private/PrivateGradingPage.jsx';
+import PrivateTestingTab from './testing/private/PrivateTestingTab.jsx';
 import TestingChooser from './testing/chooser/TestingChooser.jsx';
 import BackToTesting from './testing/chooser/BackToTesting.jsx';
 import { COLOR_BELT_TITLE } from './testing/chooser/text.js';
-import { PAGE_TITLE, TAB_CLASSES_RANKS, TAB_EVENTS, VIEW_ONLY_LINE } from './testing/text.js';
+import { PAGE_TITLE, TAB_CLASSES_RANKS, TAB_EVENTS, TAB_PRIVATE, VIEW_ONLY_LINE } from './testing/text.js';
 import { loadStarTesting, STAR_TESTING_ON } from '../lib/features.js';
 import '../styles/testing-events.css';
 
@@ -65,6 +75,7 @@ const COLOR_BELT_PAGE_TITLE = STAR_TESTING_ON ? COLOR_BELT_TITLE : PAGE_TITLE;
 const TABS = [
   { key: 'events', label: TAB_EVENTS },
   { key: 'classes', label: TAB_CLASSES_RANKS },
+  { key: 'private', label: TAB_PRIVATE }, // phase 4: last, far right
 ];
 
 // The tab last used, kept while the page is open (coming back from an event page or from Home
@@ -77,14 +88,23 @@ let lastTab = 'events';
 //   onBack     "← Testing" (only while the Star testing switch is on), or null for no back link
 function TestingHeader({ school, action, staffLine, tab, onTab, ids, onBack }) {
   const tabRefs = useRef({});
+  // ← → move to the next / previous tab (wrapping round), Home / End to the first / last one.
   function handleKeyDown(event) {
-    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
-    event.preventDefault();
     const index = TABS.findIndex((t) => t.key === tab);
-    const next = TABS[(index + (event.key === 'ArrowRight' ? 1 : -1) + TABS.length) % TABS.length];
+    let next = null;
+    if (event.key === 'ArrowRight') next = TABS[(index + 1) % TABS.length];
+    else if (event.key === 'ArrowLeft') next = TABS[(index - 1 + TABS.length) % TABS.length];
+    else if (event.key === 'Home') next = TABS[0];
+    else if (event.key === 'End') next = TABS[TABS.length - 1];
+    if (!next) return;
+    event.preventDefault();
     onTab(next.key);
     tabRefs.current[next.key]?.focus();
   }
+  // Narrow phones: the tab bar scrolls sideways — keep the current tab in view.
+  useEffect(() => {
+    tabRefs.current[tab]?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }, [tab]);
   return (
     <>
       <div className="phead">
@@ -106,7 +126,7 @@ function TestingHeader({ school, action, staffLine, tab, onTab, ids, onBack }) {
               }}
               id={ids.tab(t.key)}
               type="button"
-              className={`ttab${current ? ' is-current' : ''}`}
+              className={`ttab${current ? ' is-current' : ''}${t.key === 'private' ? ' ttab--end' : ''}`}
               role="tab"
               aria-selected={current ? 'true' : 'false'}
               aria-controls={ids.panel(t.key)}
@@ -140,6 +160,11 @@ export default function Testing({
   const baseId = useId();
   const ids = { tab: (key) => `${baseId}-tab-${key}`, panel: (key) => `${baseId}-panel-${key}` };
   const [tab, setTabState] = useState(lastTab);
+  // Phase 4: while a private testing's grading page is open, the tab underneath becomes Private
+  // testing, so closing the page lands there.
+  useEffect(() => {
+    if (tabProps.privateId) setTabState('private');
+  }, [tabProps.privateId]);
   function setTab(key) {
     lastTab = key;
     setTabState(key);
@@ -243,6 +268,16 @@ export default function Testing({
     );
   }
 
+  // Phase 4: a private testing's grading page. Closing it lands on the Private testing tab.
+  if (tabProps.privateId) {
+    lastTab = 'private';
+    return (
+      <div className="testing">
+        <PrivateGradingPage key={tabProps.privateId} school={location} isAdmin={isAdmin} {...tabProps} />
+      </div>
+    );
+  }
+
   if (eventId) {
     return (
       <div className="testing">
@@ -257,7 +292,16 @@ export default function Testing({
 
   return (
     <div className="testing">
-      {tab === 'events' ? (
+      {tab === 'private' ? (
+        <PrivateTestingTab
+          school={location}
+          isAdmin={isAdmin}
+          panelId={ids.panel('private')}
+          tabId={ids.tab('private')}
+          renderHeader={(action) => renderHeader(action, null)}
+          {...tabProps}
+        />
+      ) : tab === 'events' ? (
         <EventsTab
           school={location}
           isAdmin={isAdmin}

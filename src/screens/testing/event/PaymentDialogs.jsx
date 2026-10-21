@@ -78,12 +78,14 @@ export function isPayingByDirty(state) {
   return state.values.payingBy !== state.initial.payingBy;
 }
 
-export function PayingByDialog({ state, name, isPhone, onChange, onSave, onCancel, onRequestClose }) {
+// subtitle (phase 4, optional): the Private testing tab passes "Liam Park · $20 more to collect"
+// while a private testing still owes more.
+export function PayingByDialog({ state, name, subtitle = null, isPhone, onChange, onSave, onCancel, onRequestClose }) {
   const idBase = `paying-dialog-${state.key}`;
   const canSave = !state.saving && !state.blocked;
   return (
     <Dialog title={T.CHANGE_PAYING_BY_TITLE} fullScreen={isPhone} onRequestClose={onRequestClose}>
-      <p className="tdialog-sub">{T.changePayingBySub(name)}</p>
+      <p className="tdialog-sub">{subtitle ?? T.changePayingBySub(name)}</p>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -139,13 +141,15 @@ export function checkEditPayment(state) {
   };
 }
 
-export function EditPaymentDialog({ state, name, isPhone, onChange, onTouch, onSave, onCancel, onRequestClose }) {
+// subtitle (phase 4, optional): with two or more payments the Private testing tab names them all
+// and the one being edited ("Ava Chen · $65 cash Nov 2 + $20 card Dec 1 — editing the $20").
+export function EditPaymentDialog({ state, name, subtitle = null, isPhone, onChange, onTouch, onSave, onCancel, onRequestClose }) {
   const idBase = `payment-dialog-${state.key}`;
   const check = checkEditPayment(state);
   const readOnly = state.saving;
   return (
     <Dialog title={T.EDIT_PAYMENT_TITLE} fullScreen={isPhone} onRequestClose={onRequestClose}>
-      <p className="tdialog-sub">{T.editPaymentSub(name)}</p>
+      <p className="tdialog-sub">{subtitle ?? T.editPaymentSub(name)}</p>
       <form
         onSubmit={(event) => {
           event.preventDefault();

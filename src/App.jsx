@@ -20,6 +20,8 @@
 // "#testing/color-belt/event/<id>" and its Grading tab at ".../grading"). Star testing phase 2 adds
 // Star's tabs ("#testing/star" = Events, "#testing/star/rubrics") and a Star event's page
 // ("#testing/star/event/<id>").
+// Color Belt phase 4 adds a private testing's grading page ("#testing/private/<id>", or with the
+// switch on "#testing/color-belt/private/<id>"; contract 0014 §5.1); leaving it is guarded the same way.
 // Finance (contract 0011 §4) adds three: the Daily report ("#finance"), History ("#finance/history")
 // and Finance → Settings ("#finance/settings") — the last two for admins only (staff are sent to
 // "#finance"). While "Hide private details" is on for this device (v0.215, renamed v0.506), every "#finance…" address
@@ -131,8 +133,9 @@ const TOASTS = {
 
 // ----- Page addresses -----
 // lib/pageAddress.js reads and writes every address (Home, Testing and its pages, a Color Belt
-// event and its Grading tab, a Star event, Staff accounts, Settings, Finance and its views). A
-// "route" is { section, testingPage, eventId, eventTab } — see the top of that file. (Finance keeps
+// event and its Grading tab, a private testing's grading page (Color Belt phase 4), a Star event,
+// Staff accounts, Settings, Finance and its views). A "route" is
+// { section, testingPage, eventId, eventTab, privateId } — see the top of that file. (Finance keeps
 // its view, 'report' | 'history' | 'settings', in the eventTab slot.)
 
 // If telling the database "lock this sign-in" fails (offline), try again this often until it works.
@@ -178,6 +181,8 @@ export default function App() {
   const [eventId, setEventId] = useState(() => routeFromAddress().eventId);
   // The event page's tab: 'students' | 'grading' (phase 3).
   const [eventTab, setEventTab] = useState(() => routeFromAddress().eventTab);
+  // Phase 4: the open private testing (#testing/private/<id>), or null.
+  const [privateId, setPrivateId] = useState(() => routeFromAddress().privateId);
   const [accountDialog, setAccountDialog] = useState(null); // null | 'changePin' | 'changePassword'
   const [testingModalOpen, setTestingModalOpen] = useState(false); // a Testing dialog is showing
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false); // a Schedule dialog is showing
@@ -202,6 +207,7 @@ export default function App() {
   const testingPageRef = useRef(testingPage);
   const eventIdRef = useRef(eventId);
   const eventTabRef = useRef(eventTab);
+  const privateIdRef = useRef(privateId);
   // The leave guard (contract 0010 §4.9): the open event page puts a function here while it is
   // open. fn(proceed) answers false = "nothing unsaved, go ahead", or true = "I asked the person
   // first" — the page then calls proceed() itself if they choose Leave anyway.
@@ -234,6 +240,7 @@ export default function App() {
       setSection('home');
       setTestingPage(null);
       setEventId(null);
+      setPrivateId(null);
     }
     // A new id each time makes the SignIn screen start fresh (see `key` below).
     clearKiosk(); // a signed-out tablet is never a kiosk any more
@@ -350,6 +357,7 @@ export default function App() {
           setSection('home');
           setTestingPage(null);
           setEventId(null);
+          setPrivateId(null);
         }
         setProfile(null);
         setAccountDialog(null);
@@ -592,29 +600,37 @@ export default function App() {
   //                home, 'events' (the default) | 'rubrics'; on Finance its view, 'report' (the
   //                default — the rail opens the Daily report) | 'history' | 'settings'.
   //                `tab` is the same thing.
-  //   replace:     true swaps the current step instead of adding one (used when an event page
-  //                closes by itself because the event belongs to the other school — Back then
-  //                doesn't bring it back).
+  //   privateId:   Color Belt phase 4 — the private testing whose grading page opens (null = none).
+  //                It is always a Color Belt page, so asking for it opens Color Belt (an event id
+  //                given with it wins: a page is either an event or a private testing, never both).
+  //   replace:     true swaps the current step instead of adding one (used when an event page or a
+  //                private testing's grading page closes by itself because it belongs to the other
+  //                school — Back then doesn't bring it back).
   const navigate = useCallback(
-    (id, { testingPage: nextPage = null, eventId: nextEventId = null, eventTab: nextTab, tab, replace = false } = {}) => {
+    (id, { testingPage: nextPage = null, eventId: nextEventId = null, eventTab: nextTab, tab, privateId: nextPrivateId = null, replace = false } = {}) => {
       setToast(null);
       // Switch off: Testing has only the Color Belt page, whatever was asked for — and a Star event's
       // id is dropped, so it can never become a Color Belt event address.
       const starAskedWhileOff = !STAR_TESTING_ON && nextPage === 'star';
       const nextEvent = id === 'testing' && !starAskedWhileOff ? nextEventId : null;
-      const page = id === 'testing' ? (STAR_TESTING_ON ? (nextPage ?? DEFAULT_TESTING_PAGE) : 'colorBelt') : null;
+      // A private testing only opens on Testing, and never together with an event.
+      const nextPrivate = id === 'testing' && !nextEvent && !starAskedWhileOff ? nextPrivateId : null;
+      const askedPage = nextPrivate ? 'colorBelt' : nextPage;
+      const page = id === 'testing' ? (STAR_TESTING_ON ? (askedPage ?? DEFAULT_TESTING_PAGE) : 'colorBelt') : null;
       const next = {
         section: id,
         testingPage: page,
         eventId: nextEvent,
         // The tab only means something on a page that has tabs (pageAddress.routeTab).
         eventTab: routeTab(id, page, nextEvent, nextTab ?? tab),
+        privateId: nextPrivate,
       };
       const here = {
         section: sectionRef.current,
         testingPage: testingPageRef.current,
         eventId: eventIdRef.current,
         eventTab: eventTabRef.current,
+        privateId: privateIdRef.current,
       };
       const changed = !sameRoute(next, here);
       // { tkdPage: true } marks the step as "added by the dashboard while signed in" (see below).
@@ -624,6 +640,7 @@ export default function App() {
       setTestingPage(next.testingPage);
       setEventId(next.eventId);
       setEventTab(next.eventTab);
+      setPrivateId(next.privateId);
     },
     [],
   );
@@ -653,6 +670,19 @@ export default function App() {
     },
     [navigate, guarded],
   );
+  // Color Belt phase 4: a private testing's grading page (always on the Color Belt page). Opening it
+  // is a normal step; closing it is guarded like closing the event page ({ replace: true } = the
+  // page closes itself after a guarded school change — not asked again). Closing lands back on
+  // Color Belt (Testing.jsx shows its Private testing tab).
+  const openPrivate = useCallback((id) => navigate('testing', { testingPage: 'colorBelt', privateId: id }), [navigate]);
+  const closePrivate = useCallback(
+    (options) => {
+      const go = () => navigate('testing', { ...options, testingPage: 'colorBelt', eventId: null, privateId: null });
+      if (options?.replace) go();
+      else guarded(go);
+    },
+    [navigate, guarded],
+  );
   // Star testing's event page (phase 2): in and out, the same way.
   const openStarEvent = useCallback((id) => navigate('testing', { testingPage: 'star', eventId: id }), [navigate]);
   const closeStarEvent = useCallback(() => guarded(() => navigate('testing', { testingPage: 'star', eventId: null })), [navigate, guarded]);
@@ -660,7 +690,13 @@ export default function App() {
   // home): the same page, so never guarded, and no new history step (Back still leaves the page;
   // a reload keeps the tab).
   const changeEventTab = useCallback((tab) => {
-    const route = { section: 'testing', testingPage: testingPageRef.current, eventId: eventIdRef.current, eventTab: tab };
+    const route = {
+      section: 'testing',
+      testingPage: testingPageRef.current,
+      eventId: eventIdRef.current,
+      eventTab: tab,
+      privateId: privateIdRef.current,
+    };
     const nextTab = normalEventTab(route.testingPage, route.eventId, tab);
     if (hasAddressTabs(route)) {
       window.history.replaceState(window.history.state, '', addressForRoute({ ...route, eventTab: nextTab }));
@@ -686,7 +722,8 @@ export default function App() {
     testingPageRef.current = testingPage;
     eventIdRef.current = eventId;
     eventTabRef.current = eventTab;
-  }, [section, testingPage, eventId, eventTab]);
+    privateIdRef.current = privateId;
+  }, [section, testingPage, eventId, eventTab, privateId]);
   // Once someone is in the dashboard, the step they're on counts as "added while signed in" too —
   // also when they arrived by a bookmark or a link — so Back on a later sign-in screen can't
   // return to it (see below).
@@ -694,7 +731,7 @@ export default function App() {
     if (phase === 'home' && !window.history.state?.tkdPage && !window.history.state?.tkdDialog) {
       window.history.replaceState({ ...(window.history.state ?? {}), tkdPage: true }, '');
     }
-  }, [phase, section, testingPage, eventId]);
+  }, [phase, section, testingPage, eventId, privateId]);
   useEffect(() => {
     // An address we don't know (e.g. "#xyz") shows Home; tidy the bar to match.
     if (routeIsUnknown()) window.history.replaceState(null, '', addressFor('home'));
@@ -722,8 +759,10 @@ export default function App() {
         testingPage: testingPageRef.current,
         eventId: eventIdRef.current,
         eventTab: eventTabRef.current,
+        privateId: privateIdRef.current,
       };
-      // (samePage: on Finance a different view — Daily report / History / Settings — is a different page.)
+      // (samePage: on Finance a different view — Daily report / History / Settings — is a different page;
+      // a private testing's grading page is a page of its own, apart from the Color Belt tabs.)
       if (samePage(route, current)) {
         // Same page; only the event tab may differ (an address typed by hand): switch it, never asked.
         if (hasAddressTabs(route) && route.eventTab !== eventTabRef.current && phaseRef.current === 'home') setEventTab(route.eventTab);
@@ -739,7 +778,7 @@ export default function App() {
         // Leaving an event page with unsaved grading results: ask first, and put the current
         // address back (contract 0010 §4.9). "Leave anyway" goes where Back / Forward pointed.
         const fn = leaveGuardRef.current;
-        if (fn && fn(() => navigate(target, route))) {
+        if (fn && fn(() => navigate(target, route))) { // route carries testingPage, eventId, eventTab, privateId
           window.history.pushState({ tkdPage: true }, '', here);
           return;
         }
@@ -748,6 +787,7 @@ export default function App() {
         setTestingPage(route.testingPage);
         setEventId(route.eventId);
         setEventTab(route.eventTab);
+        setPrivateId(route.privateId);
       } else if (phaseRef.current === 'locked') {
         window.history.pushState({ tkdPage: true }, '', here);
       } else if (window.history.state?.tkdPage) {
@@ -755,11 +795,13 @@ export default function App() {
         setSection('home');
         setTestingPage(null);
         setEventId(null);
+        setPrivateId(null);
       } else {
         setSection(target); // a link or typed address: opens after signing in
         setTestingPage(route.testingPage);
         setEventId(route.eventId);
         setEventTab(route.eventTab);
+        setPrivateId(route.privateId);
       }
     }
     window.addEventListener('popstate', handlePopState);
@@ -924,6 +966,10 @@ export default function App() {
                 onCloseEvent={closeEvent}
                 onOpenStarEvent={openStarEvent}
                 onCloseStarEvent={closeStarEvent}
+                // Color Belt phase 4: the private testing grading page and its ways in and out
+                privateId={privateId}
+                onOpenPrivate={openPrivate}
+                onClosePrivate={closePrivate}
                 screenLocked={phase === 'locked'}
                 onNoAccess={handleNoAccess}
                 onRefreshProfile={refreshProfile}

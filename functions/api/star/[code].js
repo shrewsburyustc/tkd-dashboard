@@ -29,9 +29,9 @@
 //   CLIENT_KEY_SECRET         secret for the anonymous client key    (reused — it MUST be the
 //                             same one, so the shared 20-an-hour limit counts both forms)
 //   PUBLIC_ORIGIN             e.g. https://tkd-dashboard.pages.dev   (reused)
-//   RATE_LIMITER              Cloudflare Rate Limiting binding (reused). The code still runs
-//                             without it (a per-server memory counter), but SETUP §13i makes it
-//                             REQUIRED before STAR_PUBLIC_REGISTRATION is turned on
+//   RATE_LIMITER              OPTIONAL Cloudflare Rate Limiting binding. Pages Functions can't
+//                             have one today (Workers only), so Star goes live without it and
+//                             counts per server in memory (rulebook v0.410); used if it's there
 import { handleGet, handlePost, handleOther } from '../../_lib/starRegister.js';
 import { openDatabase } from '../../_lib/starDb.js';
 
