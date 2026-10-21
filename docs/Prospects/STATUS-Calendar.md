@@ -86,3 +86,7 @@ No High findings. Fixed:
 4. No school line under the dialog title: kept.
 5. **Event types: drag grip and ⋯ → Edit / Move up / Move down / Delete type**, like Testing (built; replaces the arrows). Delete from the ⋯ menu looks up how many events use the type first.
 6. Icons `ti-calendar-event` (Add → Event) and `ti-palette` (Event types) were added to the icon map.
+
+## Deployed 2026-10-20
+
+This branch is on `main` and live (the push included `0ccf776`; live `main` = `cc8b095`). Checked on https://tkd-dashboard.pages.dev: `/f/…` and `/forms` have the strict security policy, the dashboard keeps its own, and `GET /api/forms/<slug>` answers `not_open` (PUBLIC_FORMS=off). Next: Jeffrey looks at the new sections signed in; then PUBLIC_FORMS=on + redeploy, one real test sign-up, the two-connection race test.
