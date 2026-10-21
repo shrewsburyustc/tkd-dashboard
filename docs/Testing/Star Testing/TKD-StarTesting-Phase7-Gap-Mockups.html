@@ -1,0 +1,1246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Star phase 7 gaps</title>
+<style>
+
+
+
+:root{--control-border:#8F8F8A;--page:#EFEFEC;--bg:#FFFFFF;--surface:#F7F7F5;--border:#E5E5E2;--border-strong:#CFCFCA;--text:#1F1F1F;--text2:#6B6B6B;--blue:#003595;--blue-hover:#002A77;--blue-tint:#E6EBF4;--red:#A32D2D;--red-tint:#FCEBEB;--ok:#3B6D11;--ok-tint:#EAF3DE;--warn:#633806;--warn-tint:#FAEEDA}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1340px;margin:0 auto;padding:24px 16px 80px}
+h1{font-size:20px;font-weight:500;margin:0 0 4px}
+h2{font-size:16px;font-weight:500;margin:48px 0 4px;padding-top:16px;border-top:1px solid var(--border-strong)}
+h4{font-size:13px;font-weight:500;margin:32px 0 4px}
+.lead{color:var(--text2);font-size:13px;margin:0 0 12px}
+.banner{background:var(--warn-tint);color:var(--warn);padding:8px 12px;border-radius:8px;font-size:13px;display:flex;gap:8px;align-items:flex-start}
+/* explanation block (P1) */
+.explain{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:8px 0 16px;font-size:13px}
+.explain h3{font-size:13px;font-weight:500;margin:8px 0 2px}.explain h3:first-child{margin-top:0}
+.explain ul,.explain ol{margin:0;padding-left:20px}.explain li{margin:2px 0}
+.explain .prop{color:var(--warn)}
+b{font-weight:500}
+/* device frames */
+.cap{font-size:12px;color:var(--text2);margin:16px 0 6px;display:flex;align-items:center;gap:6px}
+.cap i{font-size:16px}
+.scroller{overflow-x:auto;padding-bottom:4px}
+.dev{background:var(--bg);border:1px solid var(--border-strong);overflow:hidden;position:relative;flex:none}
+.dev-pc{width:1282px;height:600px;border-radius:10px}
+.dev-tab{width:832px;height:560px;border-radius:18px;border-width:6px;border-color:#2B2B2B}
+.dev-ph{width:402px;height:700px;border-radius:28px;border-width:6px;border-color:#2B2B2B}
+.pair{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+/* app shell (as approved in the Home / Account files) */
+.app{display:flex;height:100%;background:var(--bg)}
+.app-col{flex:1;min-width:0;display:flex;flex-direction:column}
+.content{flex:1;min-height:0;padding:24px;display:flex;flex-direction:column;overflow:hidden}
+.ph-shell{height:100%;display:flex;flex-direction:column}
+.ph-shell .content{padding:16px}
+.rail{width:52px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;flex:none}
+.rail a{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;color:var(--text2)}
+.rail a i{font-size:18px}
+.rail a.on{background:var(--blue-tint);color:var(--blue)}
+.rail-t{width:72px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;flex:none}
+.rail-t a{display:flex;flex-direction:column;align-items:center;justify-content:center;width:64px;min-height:56px;border-radius:8px;color:var(--text2);font-size:12px;gap:2px}
+.rail-t a i{font-size:20px}
+.rail-t a.on{color:var(--blue)}.rail-t a.on i{background:var(--blue-tint);border-radius:8px;padding:4px 10px}
+.topbar{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 12px;flex:none}
+.topbar .grow{flex:1}
+.loc{display:flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;font-size:12px;height:32px}
+.loc span{display:flex;align-items:center;gap:4px;padding:0 12px;color:var(--text2)}
+.loc span.on{background:var(--blue-tint);color:var(--blue)}
+.loc span+span{border-left:1px solid var(--border)}
+.touch .loc{height:36px}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--surface);border:1px solid var(--control-border);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--text);flex:none}
+.tap{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.phbar{border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:4px 0 10px;flex:none;background:var(--bg)}
+.phbar a{display:flex;flex-direction:column;align-items:center;min-width:64px;min-height:48px;justify-content:center;font-size:12px;color:var(--text2);gap:2px}
+.phbar a i{font-size:20px}.phbar a.on{color:var(--blue)}
+/* controls */
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.field label,.lbl{font-size:12px;color:var(--text2)}
+.input{height:32px;border:1px solid var(--control-border);border-radius:8px;padding:0 12px;display:flex;align-items:center;font-size:13px;color:var(--text);background:var(--bg)}
+.input.focus{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}.input.bad.focus{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn)}
+.input .pre{color:var(--text2);margin-right:4px}
+.input.money{width:120px}
+.input.select{justify-content:space-between}.input.select i{font-size:16px;color:var(--text2)}
+.touch .input{height:36px;font-size:14px}
+.caret{display:inline-block;width:1px;height:16px;background:var(--text);margin-left:1px}
+.btn{height:32px;padding:0 16px;border-radius:8px;font-size:13px;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--control-border);background:var(--bg);color:var(--text);flex:none;white-space:nowrap}
+.btn i{font-size:16px}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn-danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn-primary.dis{background:var(--surface);border-color:var(--border-strong);color:#8A8A85}
+.btn-sm{height:28px;padding:0 12px}
+.btn-full{width:100%}
+.touch .btn{height:36px}
+.touch .btn-sm{height:36px;padding:0 12px}
+.err{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--warn);background:var(--warn-tint);padding:8px;border-radius:6px}
+.hint{font-size:12px;color:var(--text2)}
+/* dialogs */
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:5}
+.dialog{background:var(--bg);border-radius:12px;width:360px;max-width:calc(100% - 32px);padding:24px;position:relative}
+.dialog h3{font-size:16px;font-weight:500;margin:0 0 4px}
+.dialog .sub{font-size:13px;color:var(--text2);margin:0 0 16px}
+.dialog .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+/* detail view (v0.46): centered dialog showing every field */
+.dialog-detail{width:440px}
+.dialog-detail .meta{margin-top:12px}
+.prices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.prices .input.money{width:100%}
+.fullscreen{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;z-index:5}
+.fullscreen .head{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 4px;font-size:16px;font-weight:500;flex:none}
+.fullscreen .fbody{padding:16px;flex:1;overflow:hidden}
+/* menus */
+.menu{position:absolute;background:var(--bg);border:1px solid var(--border-strong);border-radius:8px;padding:4px 0;width:200px;z-index:5;text-align:left}
+.menu .it{display:flex;align-items:center;gap:8px;padding:0 12px;height:32px;font-size:13px;color:var(--text);white-space:nowrap}
+.touch .menu .it{height:44px}
+.menu .it i{font-size:16px;color:var(--text2)}
+.menu .it.hov{background:var(--surface)}
+.menu .it.sel{background:var(--blue-tint);color:var(--blue)}
+.menu .it.dis{color:#A3A39E}.menu .it.dis i{color:#B8B8B3}
+.menu .it.red,.menu .it.red i{color:var(--red)}
+.menu .it.red.hov{background:var(--red-tint)}
+.menu .sep{border-top:1px solid var(--border);margin:4px 0}
+.menu .grp{font-size:12px;color:var(--text2);padding:8px 12px 4px}
+.sheet-wrap{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;z-index:5}
+.sheet{background:var(--bg);width:100%;border-radius:16px 16px 0 0;padding:8px 0 16px}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--border-strong);margin:4px auto 8px}
+.sheet .stitle{padding:4px 16px 8px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.sheet .stitle b{display:block;font-size:14px}.sheet .stitle span{font-size:12px;color:var(--text2)}
+.sheet .menu{position:static;width:auto;border:none;box-shadow:none;border-radius:0;padding:0}
+.sheet .menu .it{padding:0 16px}
+.sheet .menu .it.cancel{justify-content:center;color:var(--text);font-weight:500}
+.tag{font-size:12px;line-height:16px;padding:2px 8px;border-radius:6px;background:var(--surface);color:var(--text2);border:1px solid var(--border);white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.tag-warn{background:var(--warn-tint);color:var(--warn);border-color:#F2D9B0}
+.tag i{font-size:12px}
+.callout{position:absolute;background:var(--warn-tint);color:var(--warn);border:1px dashed #EF9F27;font-size:12px;padding:4px 8px;border-radius:6px;z-index:7;white-space:nowrap}
+/* ---------- new for Testing ---------- */
+.phead{display:flex;align-items:center;gap:12px;margin-bottom:8px;flex:none}
+.phead .grow{flex:1}
+.ptitle{font-size:20px;font-weight:500;line-height:1.3}
+.psub{font-size:12px;color:var(--text2)}
+.tabs{display:flex;gap:24px;border-bottom:1px solid var(--border);margin-bottom:16px;flex:none}
+.tabs span{height:40px;display:flex;align-items:center;font-size:13px;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs span.on{color:var(--blue);border-bottom-color:var(--blue);font-weight:500}
+.touch .tabs span{height:44px}
+.ph-shell .tabs{gap:0}.ph-shell .tabs span{flex:1;justify-content:center}
+.more-tog{display:inline-flex;align-items:center;gap:4px;height:28px;font-size:13px;color:var(--text2)}
+.more-tog i{font-size:16px}
+.touch .more-tog{min-height:44px}
+.crow.cgap{opacity:.35}
+.crow.clift{background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.10);border:1px solid var(--border-strong);border-radius:8px;margin:4px -4px 4px 8px;position:relative;z-index:2}
+.viewonly{font-size:13px;color:var(--text2);margin:-4px 0 12px;flex:none}
+/* failed-save banner (rule 3.5) */
+.errbar{display:flex;align-items:center;gap:8px;background:var(--warn-tint);color:var(--warn);border-radius:8px;padding:4px 4px 4px 12px;font-size:13px;margin:-4px 0 12px;flex:none}
+.errbar>i{font-size:16px}
+.errbar .grow{flex:1}
+.errbar .btn{border-color:var(--control-border)}
+.touch .errbar{flex-wrap:wrap;padding:8px 4px 4px 12px}
+/* icon buttons: 28px visible square; on touch the outer box is a 44x44 invisible tap area */
+.ib{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;color:var(--text2);flex:none}
+.ib .ibv{width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center}
+.ib i{font-size:16px}
+.ib.hov .ibv{background:var(--surface);color:var(--text)}
+.touch .ib{width:44px;height:44px}
+/* class list */
+.clist{border:1px solid var(--border);border-radius:8px;flex:none}
+.crow{display:flex;align-items:center;gap:8px;height:40px;padding:0 4px 0 8px;font-size:13px;border-top:1px solid var(--border)}
+.clist>.crow:first-child{border-top:none}
+.touch .crow{height:48px;padding:0;gap:4px}
+.crow .nm{font-weight:500}
+.crow .cnt{font-size:12px;color:var(--text2)}
+.crow .grow{flex:1}
+.acts{display:flex;align-items:center;gap:4px;justify-content:flex-end;position:relative}
+.touch .acts{gap:0}
+/* rank table */
+.rhead,.rrow{display:grid;align-items:center;column-gap:12px;border-top:1px solid var(--border)}
+.rhead{height:32px;background:var(--surface);font-size:12px;color:var(--text2)}
+.rrow{min-height:40px;font-size:13px;position:relative;padding-top:4px;padding-bottom:4px}
+.touch .rrow{min-height:48px}
+.g-pc{grid-template-columns:24px minmax(0,1fr) minmax(0,1.6fr) 64px 88px 64px 104px 64px;padding:0 4px 0 40px}
+.g-st{grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) 64px 88px 64px 104px;padding:0 16px 0 44px}
+.g-tab{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 64px 96px 88px;padding:0 0 0 48px}
+.g-tst{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 64px 96px 72px;padding:0 8px 0 48px}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.rk{display:flex;align-items:center;gap:8px;min-width:0}
+.grip{display:inline-flex;align-items:center;justify-content:center;width:24px;height:28px;color:var(--text2);border-radius:8px}
+.grip i{font-size:16px}
+.grip.hov{background:var(--border);color:var(--text)}
+.rrow.sel{background:var(--blue-tint)}
+.rrow.hovrow{background:var(--surface)}
+.rrow.lift{background:var(--surface);box-shadow:0 2px 8px rgba(0,0,0,.10);z-index:2;margin:4px -4px 4px 32px;padding-left:8px;border:1px solid var(--border-strong);border-radius:8px}
+.rrow.gap{opacity:.35}
+.dropline{height:0;border-top:2px solid var(--blue);margin:-1px 0 -1px 40px;position:relative;z-index:3}
+.addrow{display:flex;align-items:center;gap:12px;padding:8px 8px 8px 76px;border-top:1px solid var(--border)}
+.addrow .grow{flex:1}
+.touch .addrow{padding:4px 4px 4px 48px}
+.emptyrow{display:flex;align-items:center;gap:12px;padding:12px 16px 12px 76px;border-top:1px solid var(--border);font-size:13px;color:var(--text2);flex-wrap:wrap}
+.touch .emptyrow{padding-left:48px}
+/* phone stacked rank rows */
+.prow{display:flex;align-items:center;gap:0;min-height:56px;padding:4px 0 4px 16px;border-top:1px solid var(--border)}
+.prow .grow{flex:1;min-width:0}
+.prow .l1{font-size:13px;font-weight:500;display:flex;align-items:center;column-gap:8px;row-gap:2px;flex-wrap:wrap}
+.prow .l2{font-size:12px;color:var(--text2)}
+.prow .l2 span{white-space:nowrap}
+.prow.sel{background:var(--blue-tint)}
+.prow>.tapbox{margin-right:8px}
+.grp-lbl{font-size:12px;color:var(--text2);margin:16px 0 8px;padding-top:12px;border-top:1px solid var(--border)}
+.ro{font-size:13px;margin-bottom:12px}
+.ro .lbl{display:block}
+.ro .sec{color:var(--text2)}
+.meta{font-size:12px;color:var(--text2);margin-top:16px}
+/* checkbox (CSS tick: ti-check is reserved for Save) */
+.cbrow{display:flex;align-items:center;gap:8px;min-height:32px;font-size:13px}
+.touch .cbrow{min-height:44px}
+.cb{width:16px;height:16px;border:1px solid var(--control-border);border-radius:4px;display:inline-block;position:relative;flex:none;background:var(--bg)}
+.cb.on{background:var(--blue);border-color:var(--blue)}
+.cb.on::after{content:"";position:absolute;left:4px;top:1px;width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.cb.dis{background:var(--surface);border-color:var(--border-strong)}
+/* toast (Undo) */
+.toast{position:absolute;right:16px;bottom:16px;background:#1F1F1F;color:#fff;border-radius:8px;display:flex;align-items:center;gap:8px;padding:0 4px 0 12px;font-size:13px;z-index:6;min-height:40px;white-space:nowrap}
+.toast .undo{display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 8px;color:#fff;font-weight:500;border-left:1px solid #4A4A4A;flex:none}
+.toast .undo i{font-size:16px}
+.touch .toast{min-height:44px}
+.touch .toast .undo{height:44px}
+.toast.ph{left:50%;right:auto;transform:translateX(-50%);bottom:76px}
+.toast.ph.wide{width:calc(100% - 32px);white-space:normal;line-height:1.4;padding:4px 4px 4px 12px}
+.toast.ph.wide>span:first-child{flex:1}
+/* blocked (Both) */
+.blocked{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;color:var(--text2);font-size:13px;padding:24px}
+.blocked .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+/* top-of-file boxes */
+.okbox{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:16px 0;font-size:13px}
+.okbox h3{font-size:14px;font-weight:500;margin:0 0 4px}
+.okbox ol{margin:0;padding-left:20px}.okbox li{margin:4px 0}
+.toc{font-size:13px;margin:8px 0 0;columns:2}
+.toc a{color:var(--blue);text-decoration:none}
+/* phone: class names and rank rows start at the 16px gutter */
+.touch .ph-shell .crow{padding-left:16px}
+.ctog{display:flex;align-items:center;gap:8px;flex:1;min-width:0;min-height:48px}
+.ctog i{font-size:16px;color:var(--text2)}
+/* compact outline button (staff View): 28px with a mouse, 36px on touch, 44px tap box */
+.tapbox{display:inline-flex;align-items:center;justify-content:center;flex:none}
+.touch .tapbox{min-height:44px;min-width:44px}
+.touch .btn.c28{height:36px}
+/* final award problems shown in the Testing for cell */
+.tfwarn{color:var(--warn);font-size:12px;display:inline-flex;gap:4px;align-items:flex-start;line-height:1.4}
+.tfwarn i{font-size:16px;line-height:1}
+.prow .l1 .tfwarn{font-weight:400}
+/* dropdown list with scroll cue */
+.menu.scroll{overflow:hidden;padding-right:12px}
+.menu .sbar{position:absolute;right:4px;top:6px;width:4px;height:64px;border-radius:2px;background:var(--border-strong)}
+.touch .ph-shell .addrow,.touch .ph-shell .emptyrow{padding-left:16px}
+code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
+/* ---------- Tabler outline icons, inlined as masks so the file opens offline ---------- */
+.ti{display:inline-flex;align-items:center;justify-content:center;font-style:normal;line-height:1;flex:none;vertical-align:-0.125em}
+.ti::before{content:"";display:block;width:1em;height:1em;background-color:currentColor;-webkit-mask:var(--i) center/contain no-repeat;mask:var(--i) center/contain no-repeat}
+.ti-home{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M5 12l-2 0l9 -9l9 9l-2 0%22 /%3E%3Cpath d=%22M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7%22 /%3E%3Cpath d=%22M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6%22 /%3E%3C/svg%3E")}
+.ti-certificate{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M15 15m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0%22 /%3E%3Cpath d=%22M13 17.5v4.5l2 -1.5l2 1.5v-4.5%22 /%3E%3Cpath d=%22M10 19h-5a2 2 0 0 1 -2 -2v-10c0 -1.1 .9 -2 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -1 1.73%22 /%3E%3Cpath d=%22M6 9l12 0%22 /%3E%3Cpath d=%22M6 12l3 0%22 /%3E%3Cpath d=%22M6 15l2 0%22 /%3E%3C/svg%3E")}
+.ti-map-pin{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0%22 /%3E%3Cpath d=%22M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z%22 /%3E%3C/svg%3E")}
+.ti-arrow-left{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M5 12l14 0%22 /%3E%3Cpath d=%22M5 12l6 6%22 /%3E%3Cpath d=%22M5 12l6 -6%22 /%3E%3C/svg%3E")}
+.ti-chevron-down{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M6 9l6 6l6 -6%22 /%3E%3C/svg%3E")}
+.ti-chevron-up{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M6 15l6 -6l6 6%22 /%3E%3C/svg%3E")}
+.ti-dots{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M19 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3C/svg%3E")}
+.ti-edit{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1%22 /%3E%3Cpath d=%22M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z%22 /%3E%3Cpath d=%22M16 5l3 3%22 /%3E%3C/svg%3E")}
+.ti-trash{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M4 7l16 0%22 /%3E%3Cpath d=%22M10 11l0 6%22 /%3E%3Cpath d=%22M14 11l0 6%22 /%3E%3Cpath d=%22M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12%22 /%3E%3Cpath d=%22M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3%22 /%3E%3C/svg%3E")}
+.ti-plus{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M12 5l0 14%22 /%3E%3Cpath d=%22M5 12l14 0%22 /%3E%3C/svg%3E")}
+.ti-grip-vertical{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M9 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M9 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M9 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M15 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M15 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3Cpath d=%22M15 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E%3C/svg%3E")}
+.ti-arrow-up{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M12 5l0 14%22 /%3E%3Cpath d=%22M18 11l-6 -6%22 /%3E%3Cpath d=%22M6 11l6 -6%22 /%3E%3C/svg%3E")}
+.ti-arrow-down{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M12 5l0 14%22 /%3E%3Cpath d=%22M18 13l-6 6%22 /%3E%3Cpath d=%22M6 13l6 6%22 /%3E%3C/svg%3E")}
+.ti-check{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M5 12l5 5l10 -10%22 /%3E%3C/svg%3E")}
+.ti-alert-triangle{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M12 9v4%22 /%3E%3Cpath d=%22M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z%22 /%3E%3Cpath d=%22M12 16h.01%22 /%3E%3C/svg%3E")}
+.ti-arrow-back-up{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M9 14l-4 -4l4 -4%22 /%3E%3Cpath d=%22M5 10h11a4 4 0 1 1 0 8h-1%22 /%3E%3C/svg%3E")}
+.ti-refresh{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4%22 /%3E%3Cpath d=%22M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4%22 /%3E%3C/svg%3E")}
+.ti-x{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E%3Cpath d=%22M18 6l-12 12%22 /%3E%3Cpath d=%22M6 6l12 12%22 /%3E%3C/svg%3E")}
+/* ---------- frames that grow with their content ---------- */
+.dev.auto{height:auto}
+.dev.auto .app{height:auto;min-height:600px}
+.dev.auto .ph-shell{height:auto}
+.dev.auto .content{overflow:visible}
+.intro{font-size:14px;margin:16px 0 0;max-width:860px}
+.cap{flex-wrap:wrap}
+/* ---------- Star testing: page header ---------- */
+.back{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--blue);text-decoration:none;height:24px;margin-bottom:2px}
+.back i{font-size:16px}
+.touch .back{min-height:44px;margin:-10px 0 -8px}
+.viewonly+.viewonly{margin-top:-8px}
+/* ---------- Dan blocks ---------- */
+.crow.dhx{height:auto;min-height:40px;padding-top:4px;padding-bottom:4px}
+.touch .crow.dhx{min-height:48px;padding-top:2px;padding-bottom:2px}
+.dsum{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;flex:1;min-width:0}
+.crow.dh{height:auto;min-height:56px;padding-top:6px;padding-bottom:6px}
+.crow.dh .l1{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px}
+.crow.dh .l2{display:block;font-size:12px;color:var(--text2);line-height:1.4}
+.crow.dh .grow{min-width:0}
+.g-pc{grid-template-columns:24px minmax(0,1fr) 88px 88px 64px;padding:0 4px 0 8px}
+.g-pcs{grid-template-columns:minmax(0,1fr) 88px 88px;padding:0 16px 0 44px}
+.g-tab{grid-template-columns:minmax(0,1fr) 96px 88px 88px;padding:0 0 0 48px}
+.g-tabs{grid-template-columns:minmax(0,1fr) 96px 88px;padding:0 16px 0 48px}
+.rk{flex-wrap:wrap;row-gap:2px}
+.addrow{padding:8px 4px 8px 44px}
+.addrow.ro-add{padding-top:10px;padding-bottom:10px;padding-right:16px}
+.touch .addrow{padding:4px 16px 4px 48px}
+.touch .addrow.ro-add{padding-top:12px;padding-bottom:12px}
+.tot{font-size:12px;color:var(--text2);white-space:nowrap}
+.prow.ro-row{padding-right:16px;min-height:48px}
+/* ---------- grade scale / assistant table / fees ---------- */
+.blk{border:1px solid var(--border);border-radius:8px;margin-top:24px;flex:none}
+.bhead{display:flex;align-items:center;gap:8px;height:40px;padding:0 4px 0 12px}
+.touch .bhead{height:48px;padding:0 0 0 16px}
+.bhead .nm{font-size:13px;font-weight:500}
+.bbody{padding:12px;border-top:1px solid var(--border)}
+.touch .bbody{padding:12px 16px}
+.gscale{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--border);border-radius:8px;max-width:448px;overflow:hidden}
+.gscale div{display:flex;flex-direction:column;align-items:center;padding:4px 0;font-size:13px;font-variant-numeric:tabular-nums}
+.gscale div+div{border-left:1px solid var(--border)}
+.gscale b{font-weight:500}
+.gscale span{color:var(--text2);font-size:12px}
+.bline{font-size:13px;margin:8px 0 0}
+.bline.sec{color:var(--text2);font-size:12px;margin-top:4px}
+.bsub{font-size:12px;color:var(--text2);padding:0 12px 8px;margin-top:-4px}
+.touch .bsub{padding:0 16px 8px}
+.thead,.trow{display:grid;align-items:center;column-gap:12px;border-top:1px solid var(--border)}
+.thead{height:32px;background:var(--surface);font-size:12px;color:var(--text2)}
+.trow{min-height:36px;font-size:13px}
+.touch .trow{min-height:44px}
+.trow b{font-weight:500}
+.trow.sel,.prow.sel{background:var(--blue-tint)}
+.g-as{grid-template-columns:72px 200px minmax(0,1fr);padding:0 12px}
+.touch .g-as{padding:0 16px}
+.g-asp{grid-template-columns:48px minmax(0,1fr) minmax(0,1fr);padding:0 16px}
+.g-fee{grid-template-columns:minmax(0,1fr) 104px 104px 104px 64px;padding:0 4px 0 12px}
+.g-fees{grid-template-columns:minmax(0,1fr) 104px 104px 104px;padding:0 16px 0 12px}
+.g-feet{grid-template-columns:minmax(0,1fr) 88px 88px 88px 52px;padding:0 0 0 16px}
+.g-feets{grid-template-columns:minmax(0,1fr) 88px 88px 88px;padding:0 16px}
+.bfoot{font-size:12px;color:var(--text2);padding:8px 12px;border-top:1px solid var(--border)}
+.touch .bfoot{padding:10px 16px}
+/* ---------- dialogs ---------- */
+.input.num-in{width:140px}
+.input .suf{color:var(--text2);margin-left:auto;padding-left:8px;font-size:12px}
+.preview{background:var(--surface);border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:4px}
+.preview div+div{margin-top:2px}
+.ggrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));column-gap:12px}
+.ggrid .input.num-in,.agrid .input.num-in{width:100%}
+.agrid{display:grid;grid-template-columns:48px minmax(0,1fr) minmax(0,1fr);column-gap:12px;align-items:center;margin-bottom:8px}
+.agrid.ahead{font-size:12px;color:var(--text2);margin-bottom:4px}
+.ag{font-size:13px;font-weight:500}
+.rov{font-size:13px;color:var(--text2);padding-left:12px}
+.lnk{color:var(--blue);text-decoration:underline;font-size:12px;display:inline-flex;align-items:center;min-height:24px}
+.touch .lnk{min-height:44px;margin:-10px 0 -12px}
+.fbody .err+.meta,.dialog .err+.meta{margin-top:12px}
+/* ---------- menus: disabled item with its reason ---------- */
+.menu .it.two{height:auto;min-height:32px;padding:8px 12px;align-items:flex-start;white-space:normal}
+.touch .menu .it.two{min-height:44px}
+.menu .it.two i{margin-top:2px}
+.menu .it .t{display:block}
+.menu .it .why{display:block;font-size:12px;color:var(--text2);line-height:1.4;margin-top:2px}
+.pair>div{min-width:0;max-width:100%}
+.bhead .grow{flex:1}
+.touch .ph-shell .crow.dh.ro-dh{padding-right:16px}
+.addrow{flex-wrap:wrap;row-gap:4px}
+.addrow .tot{margin-left:auto}
+/* ---------- revision 2 ---------- */
+.menu{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.sheet .menu{box-shadow:none}
+.tip{position:absolute;top:34px;right:0;background:#1F1F1F;color:#fff;font-size:13px;line-height:1.4;padding:4px 8px;border-radius:6px;white-space:nowrap;z-index:6}
+.rrow.g-pc.lift{margin:4px -4px 4px 4px;padding-left:4px}
+.dropline{margin:-1px 0 -1px 8px}
+.ctog .tag i{font-size:12px;color:inherit}
+.crow.dh .l1 .ti-chevron-up,.crow.dh .l1 .ti-chevron-down{font-size:16px;color:var(--text2)}
+.gerr{grid-column:1/-1;margin:-4px 0 12px}
+.input.bad{border-color:var(--warn)}
+.okbox .q{margin:12px 0 0;font-size:13px}
+.okbox .shell-h{margin-top:16px}
+.okbox ul{margin:0;padding-left:20px}
+/* ---------- revision 3: tablet drag ---------- */
+.g-tab{grid-template-columns:36px minmax(0,1fr) 96px 88px 88px;padding:0}
+.touch .grip{width:44px;height:44px;margin-left:-4px;position:relative}
+.rrow.g-tab.lift{margin:4px -4px 4px 4px;padding-left:0}
+.finger{position:absolute;left:8px;top:8px;width:28px;height:28px;border-radius:50%;background:rgba(31,31,31,.14);border:1px solid rgba(31,31,31,.35)}
+/* ---------- revision 4: phone drag ---------- */
+.prow.hasgrip{padding-left:2px}
+.prow>.grip{margin:0 2px 0 0}
+.aerr{margin:-4px 0 8px}
+
+/* ---------- Events tab (Star testing) ---------- */
+.g-ev{grid-template-columns:minmax(0,1.6fr) 150px 100px 190px 64px;padding:0 4px 0 16px}
+.g-evt{grid-template-columns:minmax(0,1fr) 124px 84px 150px 88px;padding:0 0 0 16px}
+.g-evs{grid-template-columns:minmax(0,1.6fr) 150px 100px 190px 32px;padding:0 4px 0 16px}
+.evlist{border:1px solid var(--border);border-radius:8px;flex:none}
+.evlist>.rhead{border-top:none;border-radius:8px 8px 0 0}
+.rrow .nm{font-weight:500}
+.tag-ok{background:var(--ok-tint);color:var(--ok);border-color:#CFE3B6}
+.seg{display:inline-flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;font-size:13px;height:32px;align-self:flex-start;flex:none}
+.seg span{display:flex;align-items:center;padding:0 16px;color:var(--text2)}
+.seg span.on{background:var(--blue-tint);color:var(--blue);font-weight:500}
+.seg span+span{border-left:1px solid var(--control-border)}
+.touch .seg{height:36px}
+.seg.neutral span.on{background:var(--surface);color:var(--text)}
+.seg .ct{color:var(--text2);font-weight:400;margin-left:8px}
+.segbar{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex:none}
+.cbline{display:flex;align-items:center;gap:8px;font-size:13px;margin:12px 0 4px}
+.touch .cbline{min-height:44px;margin:4px 0 0}
+.indent{margin-left:24px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ta{min-height:64px;height:auto;align-items:flex-start;padding:6px 12px;line-height:1.4}
+.opt-lbl{font-weight:400;color:var(--text2)}
+.ferr{display:flex;gap:4px;align-items:flex-start;font-size:12px;color:var(--warn);margin-top:2px}
+.ferr i{font-size:14px;margin-top:1px}
+.input.bad{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn)}
+.menu .it.two{height:auto;min-height:32px;padding:8px 12px;align-items:flex-start;white-space:normal}
+.touch .menu .it.two{min-height:44px}
+.menu .it.two i{margin-top:2px}
+.menu .it .t{display:block}
+.it .why{display:block;font-size:12px;color:var(--text2);line-height:1.4;margin-top:2px}
+.btn-danger i{color:#fff}
+.placeholder{border:1px dashed var(--border-strong);border-radius:8px;padding:24px;color:var(--text2);font-size:13px;text-align:center;flex:none}
+.qr{display:grid;grid-template-columns:repeat(25,1fr);width:var(--qs,152px);height:var(--qs,152px);background:#fff;padding:8px;border:1px solid var(--border);border-radius:8px}
+.qr i{display:block;background:#1F1F1F}.qr b{display:block}
+.qrwrap{display:flex;justify-content:center;margin:8px 0 12px}
+.url{font-size:13px;color:var(--text);font-family:ui-monospace,Consolas,monospace;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dlg-row{display:flex;gap:8px;flex-wrap:wrap}
+.lk{border:1px solid var(--border);border-radius:8px;padding:12px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.lk .sch{font-size:15px;font-weight:500}
+.lkrow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dev-ph .lkrow{grid-template-columns:1fr}
+.dev-ph .fullscreen .fbody{overflow:auto}
+.esum{font-size:14px;color:var(--text);line-height:1.4;margin-top:2px}
+.dev-ph .url{white-space:normal;word-break:break-all}
+.empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:48px 16px;color:var(--text2);font-size:13px;text-align:center;border:1px solid var(--border);border-radius:8px;flex:none}
+.ddlist{position:absolute;background:var(--bg);border:1px solid var(--border-strong);border-radius:8px;padding:4px 0;z-index:6}
+.paper{width:612px;height:792px;background:#fff;border:1px solid var(--border-strong);box-shadow:0 1px 3px rgba(0,0,0,.08);padding:56px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;font-size:14px;color:#1F1F1F}
+.paper h1{font-size:28px;font-weight:500;margin:8px 0 0}
+.paper .big{font-size:18px}
+.paper .note{font-size:14px;color:#3a3a3a;max-width:440px;line-height:1.5}
+.paper .crest{width:72px;height:72px;border-radius:50%;border:2px solid #1F1F1F;display:flex;align-items:center;justify-content:center;font-size:11px;color:#6B6B6B}
+.okbox ol.det li{margin:6px 0}
+.prop{color:var(--warn)}
+.intro{font-size:14px;max-width:900px}
+code{font-size:12px;background:var(--surface);padding:0 4px;border-radius:4px}
+.ti-copy{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M7 7m0 2.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667z%22/%3E%3Cpath d=%22M4.012 16.737a2.005 2.005 0 0 1 -1.012 -1.737v-10c0 -1.1 .9 -2 2 -2h10c.75 0 1.158 .385 1.5 1%22/%3E%3C/svg%3E")}
+.ti-qrcode{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z%22/%3E%3Cpath d=%22M7 17l0 .01%22/%3E%3Cpath d=%22M14 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z%22/%3E%3Cpath d=%22M7 7l0 .01%22/%3E%3Cpath d=%22M4 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z%22/%3E%3Cpath d=%22M17 7l0 .01%22/%3E%3Cpath d=%22M14 14l3 0%22/%3E%3Cpath d=%22M20 14l0 .01%22/%3E%3Cpath d=%22M14 14l0 3%22/%3E%3Cpath d=%22M14 20l3 0%22/%3E%3Cpath d=%22M17 17l3 0%22/%3E%3Cpath d=%22M20 17l0 3%22/%3E%3C/svg%3E")}
+.ti-printer{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2%22/%3E%3Cpath d=%22M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4%22/%3E%3Cpath d=%22M7 13m0 2a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2z%22/%3E%3C/svg%3E")}
+
+.g-cd{grid-template-columns:minmax(0,1.4fr) 140px minmax(0,1.2fr) 40px;padding:0 4px 0 16px}
+.g-cdf{grid-template-columns:minmax(0,1.4fr) 110px 140px minmax(0,1.2fr) 40px;padding:0 4px 0 16px}
+.secrow{display:flex;align-items:center;gap:8px;min-height:36px;padding:0 16px;font-size:13px;font-weight:500;background:var(--bg);border-top:1px solid var(--border)}
+.secrow .ct{font-weight:400;color:var(--text2)}
+.sub2{min-height:28px;font-size:12px;color:var(--text2);font-weight:400}
+.q{outline:2px dashed #EF9F27;outline-offset:4px;border-radius:6px}
+.opt{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:8px 0 16px;font-size:13px}
+.opt h3{font-size:13px;font-weight:500;margin:8px 0 2px}.opt h3:first-child{margin-top:0}
+.opt ul{margin:0;padding-left:20px}.opt li{margin:2px 0}
+.rec{border-color:var(--blue)}
+.rec-tag{display:inline-block;font-size:12px;color:var(--blue);background:var(--blue-tint);border-radius:6px;padding:2px 8px;margin-left:8px;font-weight:400;vertical-align:1px}
+table.plan{border-collapse:collapse;font-size:13px;margin:8px 0}
+table.plan td,table.plan th{border-top:1px solid var(--border);padding:6px 12px 6px 0;text-align:left;vertical-align:top}
+table.plan th{font-weight:500;color:var(--text2);font-size:12px}
+.dev-ph .seg span{padding:0 10px}
+.dev-ph .seg .ct{margin-left:6px}
+.srch{display:flex;align-items:center;gap:8px;height:32px;border:1px solid var(--control-border);border-radius:8px;padding:0 10px;font-size:13px;color:var(--text2);width:260px;margin-bottom:12px}
+.touch .srch{height:36px;width:100%}
+.ti-search{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0%22/%3E%3Cpath d=%22M21 21l-6 -6%22/%3E%3C/svg%3E")}
+
+.g-ro{grid-template-columns:minmax(0,1.3fr) 150px 110px 90px 110px 100px 40px;padding:0 4px 0 16px}
+.g-rot{grid-template-columns:minmax(0,1.2fr) 120px 72px 96px 84px 44px;padding:0 0 0 16px}
+.tag-ok{background:var(--ok-tint);color:var(--ok);border-color:#CFE3B6}
+
+.g-r2{grid-template-columns:minmax(0,1.5fr) 150px 90px 100px 90px 190px;padding:0 4px 0 16px}
+.g-r2t{grid-template-columns:minmax(0,1.3fr) 118px 70px 90px 168px;padding:0 0 0 16px}
+.regd{font-weight:400;color:var(--text2);font-size:12px;margin-left:8px;white-space:nowrap}
+.rowbtns{display:flex;align-items:center;gap:4px;justify-content:flex-end}
+
+table.perm{border-collapse:collapse;font-size:13px;margin:8px 0;background:#fff;border:1px solid var(--border);border-radius:8px}
+table.perm th,table.perm td{border-top:1px solid var(--border);padding:8px 12px;text-align:left;vertical-align:top}
+table.perm th{font-weight:500;background:var(--surface);font-size:12px;color:var(--text2)}
+table.perm td.y{color:var(--ok)}
+table.perm td.n{color:var(--text2)}
+table.perm .recc{background:var(--blue-tint)}
+
+.mk{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--border);font-size:13px}
+.mk .grow{flex:1;min-width:0}
+.mk .l2{font-size:12px;color:var(--text2);margin-top:2px}
+.mklist{border-bottom:1px solid var(--border);margin-top:4px}
+.cats{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;margin:4px 0 0 24px}
+.cats .cbline{margin:4px 0}
+.optnote{font-size:12px;color:var(--text2);margin-top:4px}
+.ti-user-plus{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0%22/%3E%3Cpath d=%22M16 19h6%22/%3E%3Cpath d=%22M19 16v6%22/%3E%3Cpath d=%22M6 21v-2a4 4 0 0 1 4 -4h4%22/%3E%3C/svg%3E")}
+.ti-repeat{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 12v-3a3 3 0 0 1 3 -3h13m-3 -3l3 3l-3 3%22/%3E%3Cpath d=%22M20 12v3a3 3 0 0 1 -3 3h-13m3 3l-3 -3l3 -3%22/%3E%3C/svg%3E")}
+
+.dl{display:grid;grid-template-columns:130px minmax(0,1fr);gap:6px 12px;font-size:13px;margin:4px 0 0}
+.dl dt{color:var(--text2)}.dl dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.dsec{font-size:12px;font-weight:500;color:var(--text2);text-transform:none;margin:16px 0 4px;padding-top:12px;border-top:1px solid var(--border)}
+.dsec:first-of-type{border-top:none;padding-top:0;margin-top:8px}
+.pen{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;color:var(--text2);margin-left:6px;vertical-align:-6px}
+.pen i{font-size:14px}
+.logl{font-size:12px;color:var(--text2);margin:2px 0}
+.dlg-wide{width:560px}
+.dev-ph .dl{grid-template-columns:110px minmax(0,1fr)}
+
+.rrow.gone span{color:var(--text2)}
+.rrow.gone .nm{font-weight:400;text-decoration:none}
+.ti-user-minus{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0%22/%3E%3Cpath d=%22M6 21v-2a4 4 0 0 1 4 -4h4%22/%3E%3Cpath d=%22M16 19h6%22/%3E%3C/svg%3E")}
+
+.g-r2d{grid-template-columns:minmax(0,1.3fr) 130px 76px 150px 64px 190px;padding:0 4px 0 16px}
+table.cmp{border-collapse:collapse;font-size:13px;width:100%;margin-top:8px}
+table.cmp th,table.cmp td{border-top:1px solid var(--border);padding:6px 8px;text-align:left;vertical-align:top}
+table.cmp th{font-weight:500;font-size:12px;color:var(--text2)}
+table.cmp td.k{color:var(--text2);width:120px}
+table.cmp td.diff{background:#FFF4E0}
+.attn{border:1px solid #F2C46D;background:#FFF8EC;border-radius:8px;padding:10px 16px;margin-bottom:12px;font-size:13px}
+.attn .pr{display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid #F2DDB3}
+.attn .pr:first-of-type{border-top:none}
+
+.sumline{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:13px;margin:0 0 12px;color:var(--text)}
+.sumline span{white-space:nowrap}.sumline .mut{color:var(--text2)}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:12px}
+.tile{border:1px solid var(--border);border-radius:8px;padding:10px 14px;background:var(--surface);cursor:pointer}
+.tile .n{font-size:22px;font-weight:500;margin-top:2px}.tile .l{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px}.tile .l i{font-size:14px}
+.dev-ph .tiles{grid-template-columns:1fr 1fr}
+.ti-users{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0%22/%3E%3Cpath d=%22M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2%22/%3E%3Cpath d=%22M16 3.13a4 4 0 0 1 0 7.75%22/%3E%3Cpath d=%22M21 21v-2a4 4 0 0 0 -3 -3.85%22/%3E%3C/svg%3E")}
+.ti-clock{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0%22/%3E%3Cpath d=%22M12 7v5l3 3%22/%3E%3C/svg%3E")}
+.ti-cash{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M7 9m0 2a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2z%22/%3E%3Cpath d=%22M14 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0%22/%3E%3Cpath d=%22M17 9v-2a2 2 0 0 0 -2 -2h-10a2 2 0 0 0 -2 2v6a2 2 0 0 0 2 2h2%22/%3E%3C/svg%3E")}
+
+.mkline{display:block;font-size:12px;color:var(--text2);margin-top:2px;font-weight:400}
+.rrow .rk.two{display:flex;flex-direction:column;align-items:flex-start;justify-content:center}
+
+.g-ord{grid-template-columns:minmax(0,1.3fr) 110px 130px 76px 96px 64px 190px;padding:0 4px 0 16px}
+.g-ord1{grid-template-columns:70px minmax(0,1.3fr) 110px 130px 76px 96px 64px 190px;padding:0 4px 0 16px}
+
+.dimrow span{color:var(--text2)!important}
+.dimrow .tag{opacity:.6}
+.scopeline{font-size:13px;color:var(--text2);margin:0 0 12px;display:flex;gap:8px;align-items:center}
+.scopeline a{color:var(--blue)}
+
+.flow{display:flex;align-items:stretch;gap:8px;margin:8px 0 12px;flex-wrap:wrap}
+.step{flex:1 1 200px;border:1px solid var(--border);border-radius:8px;background:#fff;padding:10px 12px;font-size:13px}
+.step b{font-weight:500}
+.step .who{font-size:12px;color:var(--text2);margin-bottom:4px}
+.arrow{display:flex;align-items:center;color:var(--text2);font-size:18px}
+.gpaper{background:#fff;border:1px solid #bbb;box-shadow:0 1px 3px rgba(0,0,0,.12);padding:14px 16px;width:1000px;font-size:11px}
+.gpaper h4{margin:0 0 2px;font-size:14px;font-weight:600}
+.gpaper table{border-collapse:collapse;width:100%;margin-top:8px}
+.gpaper th,.gpaper td{border:1px solid #888;padding:4px 5px;text-align:center}
+.gpaper th{font-weight:500;font-size:10px;vertical-align:bottom}
+.gpaper td.n{text-align:left;white-space:nowrap}
+.hand{font-family:'Segoe Print','Comic Sans MS',cursive;font-size:13px;color:#1f3a93}
+.gcard{border:1px solid var(--border);border-radius:8px;background:#fff;padding:12px 16px}
+.gline{display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--border);font-size:14px}
+.gline:first-of-type{border-top:none}
+.gline .c{flex:1;min-width:0}
+.gline .c small{display:block;color:var(--text2);font-size:12px}
+.gbtns{display:flex;gap:4px}
+.gbtns span{min-width:44px;height:44px;border:1px solid var(--control-border);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;background:#fff}
+.gbtns span.on{background:var(--blue-tint);border-color:var(--blue);color:var(--blue);font-weight:500}
+.gbtns span.d.on{background:#FFF4E0;border-color:var(--warn);color:var(--warn)}
+.gtot{display:flex;justify-content:space-between;font-size:14px;padding-top:10px;border-top:1px solid var(--border);margin-top:4px}
+
+.pick{display:flex;align-items:center;gap:8px;margin:0 0 12px;flex-wrap:wrap}
+.pick .sel{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:260px;height:44px;border:1px solid var(--control-border);border-radius:8px;padding:0 12px;background:#fff;font-size:14px}
+.pick .nav{width:44px;height:44px;border:1px solid var(--control-border);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:#fff}
+.pick .st{font-size:13px;color:var(--text2)}
+.gline .c .mk{color:var(--text2);font-size:12px}
+.gline.na{color:var(--text2)}
+.ti-chevron-left{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M15 6l-6 6l6 6%22/%3E%3C/svg%3E")}
+.ti-chevron-right{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M9 6l6 6l-6 6%22/%3E%3C/svg%3E")}
+
+.gtab{border:1px solid var(--border);border-radius:8px;background:#fff;position:relative;width:100%;align-self:stretch;flex:none;box-sizing:border-box}
+.gtab table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:13px;margin:0}
+.gtab th{font-weight:400;color:var(--text2);font-size:12px;vertical-align:bottom;padding:8px 2px;border-bottom:2px solid var(--text2);text-align:center;line-height:1.25;background:var(--surface)}
+.gtab th.cat{color:var(--text);font-weight:500;font-size:13px;border-left:1px solid var(--border)}
+.gtab th.cat .cr{font-weight:400}
+.gtab tr:first-child th:first-child{border-top-left-radius:8px}
+.gtab tr:first-child th:last-child{border-top-right-radius:8px}
+.gtab th.nm,.gtab td.nm{text-align:left;padding-left:12px}
+.gtab th .cr{display:block;color:var(--text2);font-size:11px;margin-top:2px}
+.gtab th.rot{height:175px;white-space:nowrap;padding:0}
+.gtab th.rot>div{transform:rotate(-60deg);transform-origin:left bottom;width:28px;margin-left:50%;text-align:left;color:var(--text);font-weight:500;font-size:13px}
+.gtab td{border-top:1px solid var(--border);text-align:center;height:44px;padding:0}
+.gtab td.g{border-left:1px solid #F0F0EE;cursor:pointer}
+.gtab td.g.d{color:var(--warn);background:#FFF4E0;font-weight:500}
+.gtab td.g.e{color:#C9C9C4}
+.gtab td.g.k{color:var(--text2);background:#F7F7F5;font-size:11px}
+.gtab td.g.sel{box-shadow:inset 0 0 0 2px var(--blue)}
+.gtab td.nm small{display:block;color:var(--text2);font-size:12px}
+.gtab td.tot{font-weight:500}
+.gtab td.st{font-size:12px;text-align:left;padding-left:8px}
+.gpop{position:absolute;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.14);padding:8px;z-index:5}
+.gpop .t{font-size:12px;color:var(--text2);margin:0 0 6px 2px}
+
+.kbd{display:inline-block;border:1px solid var(--control-border);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:12px;background:#fff;margin:0 1px}
+.khint{font-size:13px;color:var(--text2);margin:0 0 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.cdrop{position:absolute;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.14);width:72px;font-size:14px;z-index:5}
+.cdrop div{padding:5px 10px}.cdrop div.on{background:var(--blue-tint);color:var(--blue)}
+.ti-keyboard{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M2 6m0 2a2 2 0 0 1 2 -2h16a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-16a2 2 0 0 1 -2 -2z%22/%3E%3Cpath d=%22M6 10l0 .01%22/%3E%3Cpath d=%22M10 10l0 .01%22/%3E%3Cpath d=%22M14 10l0 .01%22/%3E%3Cpath d=%22M18 10l0 .01%22/%3E%3Cpath d=%22M6 14l0 .01%22/%3E%3Cpath d=%22M18 14l0 .01%22/%3E%3Cpath d=%22M10 14l4 .01%22/%3E%3C/svg%3E")}
+
+.gtab td.num{border-left:1px solid #F0F0EE}
+.gtab td.num .in{display:inline-flex;align-items:center;justify-content:center;width:44px;height:30px;border:1px solid var(--control-border);border-radius:6px;background:#fff}
+.gtab td.num small{display:block;font-size:11px;color:var(--text2)}
+.gtab th.ex{background:#EEF2F8;color:var(--text);font-weight:500;font-size:12px}
+.clist2 td{height:48px}
+
+.lockbar{display:flex;align-items:center;gap:8px;border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:12px}
+.lockbar .grow{flex:1}
+.gtab.ro td.g{cursor:default;color:var(--text)}
+.ti-lock{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z%22/%3E%3Cpath d=%22M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0%22/%3E%3Cpath d=%22M8 11v-4a4 4 0 1 1 8 0v4%22/%3E%3C/svg%3E")}
+
+.pg{background:#fff;border:1px solid #bbb;box-shadow:0 1px 4px rgba(0,0,0,.15);padding:18px 20px;font-size:11px;margin:4px 0 16px;box-sizing:border-box}
+.pg.land{width:1056px;min-height:420px}
+.pg.port{width:640px;min-height:420px}
+.pg h4{margin:0;font-size:15px;font-weight:600}
+.pg .meta{display:flex;justify-content:space-between;margin:4px 0 8px;font-size:11px}
+.pg table{border-collapse:collapse;width:100%}
+.pg th,.pg td{border:1px solid #777;padding:3px 4px;text-align:center}
+.pg th{font-weight:600;font-size:10px;vertical-align:bottom;background:#F2F2F0}
+.pg td{height:30px}
+.pg td.n{text-align:left;white-space:nowrap;font-size:11px}
+.pg td.n small{display:block;color:#555;font-size:9px}
+.pg td.kept{background:#E6E6E3;color:#666;font-size:9px}
+.pg .foot{display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:#555}
+.pages{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+
+.gtab td.g.k2{color:var(--text2);background:#F7F7F5}
+.gtab td.g.k2 small{display:block;font-size:10px;color:var(--text2)}
+.gtab td.g.hatch{background:repeating-linear-gradient(135deg,#F3F3F1 0 6px,#FAFAF8 6px 12px);color:transparent}
+.gtab td.g.rt{box-shadow:inset 0 0 0 1px var(--blue)}
+
+.gtab td.g.pick{box-shadow:inset 0 0 0 2px #EF9F27;background:#FFF8EC}
+.ckl{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--border);font-size:14px}
+.ckl:first-of-type{border-top:none}
+.ckl .grow{flex:1}
+.ckl .gr{width:36px;text-align:center;color:var(--text2)}
+
+.gtab td.g{position:relative}
+.gtab td.cnt{border-left:1px solid #F0F0EE;position:relative}
+.gtab td.cnt .in{display:inline-flex;align-items:center;justify-content:center;width:44px;height:30px;border:1px solid var(--control-border);border-radius:6px;background:#fff}
+.gtab td.cnt .in.f{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+.gtab td.cnt small{display:block;font-size:11px;color:var(--text2)}
+.gtab td.g .dd{position:absolute;left:0;top:44px;z-index:6;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.16);min-width:72px;text-align:left;font-size:14px;color:var(--text)}
+.gtab td.g .dd div{padding:4px 12px;height:28px;display:flex;align-items:center}
+.touch .gtab td.g .dd div{height:44px;padding:0 16px}
+.gtab td.g .dd div.d{color:var(--warn)}
+.gtab td.g .dd div.hov{background:var(--blue-tint);color:var(--blue)}
+.gtab.ro td{color:var(--text)}
+.gtab th.cat{font-size:12px;padding:8px 3px}
+.gtab th.ex{background:var(--surface)!important}
+.land .gtab td.g{min-width:44px}
+.land .gtab td.cnt .in{width:44px;height:36px}
+.touch .gtab td.cnt .in{width:34px;height:32px}
+.gtab td.tot small{display:block;font-size:11px;color:var(--text2);font-weight:400}
+.gbar{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.gbar .grow{flex:1}
+.pcard{border:1px solid var(--border);border-radius:8px;background:#fff;padding:4px 14px 10px}
+.pline{display:flex;align-items:center;gap:10px;min-height:52px;border-top:1px solid var(--border);font-size:14px}
+.pline:first-child{border-top:none}
+.pline .grow{flex:1;min-width:0}.pline small{display:block;font-size:12px;color:var(--text2)}
+.psel{width:92px;height:40px;border:1px solid var(--control-border);border-radius:8px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;background:#fff}
+.psel.d{color:var(--warn);border-color:var(--warn);background:#FFF8EC}
+.psel.k{background:#F7F7F5;color:var(--text2);border-color:var(--border)}
+.ti-printer{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2%22/%3E%3Cpath d=%22M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4%22/%3E%3Cpath d=%22M7 13m0 2a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2z%22/%3E%3C/svg%3E")}
+
+
+/* ---------- added from the Phase 3 gap file, the Private mockups and the Results mockups (copied) ---------- */
+.g-res{grid-template-columns:minmax(0,1.2fr) 200px 100px minmax(0,2fr) 44px;padding:0 4px 0 16px}
+.rline{font-size:12px;color:var(--text2);display:block;margin-top:2px}
+.g-res .rk.two{justify-content:center;gap:0}
+.g-res .rk.two .rline{margin-top:0}
+.secrow .ct2{font-weight:400;color:var(--text2);margin-left:6px}
+.compose{position:absolute;right:24px;bottom:16px;width:520px;background:#fff;border:1px solid #bbb;border-radius:8px 8px 0 0;box-shadow:0 6px 20px rgba(0,0,0,.2);font-size:13px;z-index:7}
+.compose .ch{background:#404040;color:#fff;padding:8px 12px;border-radius:8px 8px 0 0}
+.compose .cf{border-bottom:1px solid #eee;padding:6px 12px;color:#555}
+.compose .cb2{padding:10px 12px;line-height:1.5;min-height:180px}
+.letter{background:#fff;border:1px solid #bbb;box-shadow:0 1px 4px rgba(0,0,0,.15);width:612px;padding:36px 44px;font-size:13px;line-height:1.55;margin:4px 0 16px;box-sizing:border-box}
+.letter h4{margin:0 0 4px;font-size:17px;font-weight:600}
+.sentl{font-size:12px;color:var(--text2);display:block}
+.ti-mail{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10z%22/%3E%3Cpath d=%22M3 7l9 6l9 -6%22/%3E%3C/svg%3E")}
+.msgs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:8px 0 16px}
+.msg{background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.5}
+.msg .sj{font-weight:500;margin-bottom:6px}
+.msg .to{color:var(--text2);font-size:12px;margin-bottom:6px}
+.fs{background:#fff;border:1px solid #bbb;box-shadow:0 1px 4px rgba(0,0,0,.15);width:640px;padding:28px 34px;font-size:11.5px;margin:4px 0 16px;box-sizing:border-box}
+.fs h4{margin:0;font-size:15px;font-weight:600}
+.fs table{border-collapse:collapse;width:100%;margin-top:10px}
+.fs th,.fs td{border-bottom:1px solid #999;padding:5px 4px;text-align:left;vertical-align:top}
+.fs th{font-size:10.5px;font-weight:600;border-bottom:1.5px solid #333}
+.fs .sec td{background:#EFEFEC;font-weight:600}
+.fs .foot{display:flex;justify-content:space-between;margin-top:10px;font-size:10px;color:#555}
+.post{background:#fff;border:1px solid #bbb;box-shadow:0 1px 4px rgba(0,0,0,.15);width:640px;padding:30px 34px;font-size:13px;margin:4px 0 16px;box-sizing:border-box}
+.post h3{margin:0;font-size:20px;font-weight:700}
+.post .sub{color:#444;margin:2px 0 14px}
+.post .dan{background:#1f2a44;color:#fff;font-size:16px;font-weight:700;padding:6px 10px;margin:16px 0 0;border-radius:4px}
+.post .grp{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#333;border-bottom:2px solid #333;padding:8px 0 3px;margin-top:6px}
+.post table{border-collapse:collapse;width:100%;table-layout:fixed}
+.post td:nth-child(2){width:22%}
+.post td{padding:5px 2px;border-bottom:1px solid #ddd;vertical-align:top}
+.post td.n{font-weight:600;width:30%}
+.post .foot{margin-top:14px;font-size:10px;color:#555;display:flex;justify-content:space-between}
+.post2 td{padding:8px 4px;border-bottom:1px solid #ccc;vertical-align:middle}
+.post2 td.n{font-weight:600;font-size:14px;width:34%}
+.post2 td.n small{display:block;font-weight:400;font-size:11px;color:#555}
+.post2 td.sc{font-size:22px;font-weight:800;width:22%;text-align:center;white-space:nowrap}
+.post2 td.sc small{display:block;font-size:10px;font-weight:400;color:#555}
+.post2 td.r{font-size:13px}
+.post2 .need{display:block;margin-top:4px;padding:4px 8px;border:2px solid #111;border-radius:4px;font-weight:700;font-size:13px}
+.post2 .need b{font-weight:800}
+.post2 .earn{font-weight:700;font-size:14px}
+.post2 .grp.hl{background:#111;color:#fff;border:none;padding:6px 10px;border-radius:3px;margin-top:10px;font-size:13px}
+.post2 table.hl{border:3px solid #111;border-top:none}
+.post2 table.hl td{background:#EDEDED}
+.post2 table.hl .need{border-width:3px;background:#fff}
+.post3{background:#fff;border:1px solid #bbb;box-shadow:0 1px 4px rgba(0,0,0,.15);width:640px;min-height:828px;padding:26px 30px;box-sizing:border-box;display:flex;flex-direction:column;margin:4px 0 16px}
+.post3 h3{margin:0;font-size:24px;font-weight:800}
+.post3 .sub{color:#333;margin:2px 0 10px;font-size:13px}
+.post3 .body{flex:1;display:flex;flex-direction:column;justify-content:space-between}
+.post3 .dan{background:#1f2a44;color:#fff;font-size:16px;font-weight:800;padding:4px 12px;border-radius:4px}
+.post3 .grp{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;border-bottom:2px solid #111;padding:6px 0 2px}
+.post3 .grp.nf{background:#FFD400;color:#111;border:2px solid #111;padding:5px 10px;border-radius:3px}
+.post3 table{border-collapse:collapse;width:100%;table-layout:fixed}
+.post3 td{padding:3px 4px;border-bottom:1px solid #ccc;vertical-align:middle}
+.post3 table.nf td{background:#FFF3A6}
+.post3 table.nf{border:2px solid #111;border-top:none}
+.post3 td.n{font-weight:700;font-size:15px;width:36%}
+.post3 td.n small{display:block;font-weight:400;font-size:11px;color:#444}
+.post3 td.sc{font-size:24px;font-weight:900;width:24%;text-align:center;white-space:nowrap;line-height:1}
+.post3 td.sc small{display:block;font-size:10px;font-weight:400;color:#444;margin-top:2px}
+.post3 td.r{font-size:14px;text-align:right;width:40%}
+.post3 .pass{font-size:20px;font-weight:900;letter-spacing:.06em}
+.post3 .need{display:inline-block;padding:3px 8px;border:2.5px solid #111;border-radius:4px;font-weight:800;font-size:13px;text-align:left;background:#fff}
+.post3 .foot{margin-top:8px;font-size:10px;color:#555;display:flex;justify-content:space-between}
+.xl{background:#fff;border:1px solid #bbb;font-size:12px;margin:4px 0 16px;overflow:hidden;max-width:1300px}
+.xl table{border-collapse:collapse;width:100%}
+.xl th,.xl td{border:1px solid #d6d6d6;padding:3px 6px;white-space:nowrap;text-align:left}
+.xl th{background:#f1f1f1;font-weight:600}
+.xl .bar{background:#217346;color:#fff;padding:4px 10px;font-size:12px}
+.ti-download{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2%22/%3E%3Cpath d=%22M7 11l5 5l5 -5%22/%3E%3Cpath d=%22M12 4l0 12%22/%3E%3C/svg%3E")}
+.post3 .grp.mko{background:#FF9F1C;color:#111;border:2px solid #111;padding:5px 10px;border-radius:3px}
+.post3 table.mko td{background:#FFE2BF}
+.post3 table.mko{border:2px solid #111;border-top:none}
+.g-rf{grid-template-columns:minmax(0,1.1fr) 140px 90px minmax(0,2fr) 190px;padding:0 4px 0 16px}
+.g-rft{grid-template-columns:minmax(0,1.3fr) 76px minmax(0,1.6fr) 160px;padding:0 0 0 16px}
+.g-rf .rk.two,.g-rft .rk.two{justify-content:center!important;gap:2px!important}
+.g-pv{grid-template-columns:minmax(0,1.3fr) 170px 180px 130px minmax(0,1fr) 44px;padding:0 4px 0 16px}
+.pvt{background:#EEEDFE;color:#3C3489;border:1px solid #CECBF6}
+.fcard{background:#fff;border:1px solid #bbb;border-radius:14px;width:360px;padding:18px 18px 22px;font-size:14px;box-sizing:border-box;margin:4px 0 16px}
+.fcard h4{margin:0 0 4px;font-size:16px;font-weight:600}
+.fcard .muted{color:#555;font-size:13px}
+.fcard .rd{display:flex;gap:10px;align-items:center;min-height:44px;border:1px solid #8F8F8A;border-radius:8px;padding:0 12px;margin-top:8px}
+.fcard .rd .dot{width:18px;height:18px;border-radius:50%;border:2px solid #8F8F8A;box-sizing:border-box;flex:none}
+.fcard .rd.on{border-color:#0A3D91;background:#F2F6FC}
+.fcard .rd.on .dot{border:6px solid #0A3D91}
+.fcard .note{margin-top:10px;background:#F2F6FC;border-radius:8px;padding:10px 12px;font-size:13px}
+.pvset{color:var(--warn)}
+.g-f{grid-template-columns:minmax(0,1.5fr) 100px 120px 70px 146px 60px 180px;padding:0 4px 0 16px}
+.g-ft{grid-template-columns:minmax(0,1fr) 116px 66px 100px 168px;padding:0 0 0 16px}
+.tile .sub{font-size:12px;color:var(--text2);margin-top:2px}
+.tile.sel{border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue);background:var(--blue-tint)}
+.dev-ph .tile .n{font-size:20px}
+.segbar.wrap{flex-wrap:wrap}
+.explain ul{margin:4px 0 8px;padding-left:20px}
+.cmpcard{border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+.cmpcard .h{font-weight:500;margin-bottom:4px}
+.cmpcard .dl{grid-template-columns:96px minmax(0,1fr)}
+.cmpcard .df{background:#FFF4E0;border-radius:4px;padding:0 4px}
+.rrow:has(.pvline){min-height:66px;padding-top:6px;padding-bottom:6px}
+.pvline{display:flex;gap:6px;align-items:center;margin:5px 0 6px;font-size:12px;color:var(--text2);font-weight:400}
+.pvpage{max-width:520px}
+.qtag{display:inline-block;margin-bottom:6px}
+.rrow:has(.ovp){min-height:64px;padding-top:6px;padding-bottom:6px}
+.ti-calendar{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12z%22/%3E%3Cpath d=%22M16 3v4%22/%3E%3Cpath d=%22M8 3v4%22/%3E%3Cpath d=%22M4 11h16%22/%3E%3C/svg%3E")}
+.ti-school{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M22 9l-10 -4l-10 4l10 4l10 -4v6%22/%3E%3Cpath d=%22M6 10.6v5.4a6 3 0 0 0 12 0v-5.4%22/%3E%3C/svg%3E")}
+.qn{position:absolute;top:-10px;right:-2px;font-size:12px;line-height:16px;padding:0 6px;background:var(--warn-tint);color:var(--warn);border:1px solid #EF9F27;border-radius:6px;white-space:nowrap;z-index:8;font-weight:400}
+.qn.l{right:auto;left:-2px}
+.qn.st{position:static;display:inline-block;align-self:center}
+.qi{display:inline;padding:0 2px;outline-offset:2px;white-space:nowrap}
+.qi>.qn{top:-22px;left:-2px;right:auto}
+.qi>.qn.r{top:-1px;left:calc(100% + 10px)}
+.dev-ph .qi>.qn:not(.r){left:-76px}
+.skl{border:1px solid var(--border);border-radius:8px;flex:none}
+.skl-row{display:flex;align-items:center;height:40px;padding:0 16px}
+.skl-row+.skl-row{border-top:1px solid var(--border)}
+.touch .skl-row{height:48px}
+.skl-bar{display:block;width:40%;height:12px;border-radius:6px;background:var(--surface)}
+.skh{display:flex;flex-direction:column;gap:8px;padding:4px 0 8px;flex:none}
+.tempty{padding:32px 16px;color:var(--text2);font-size:13px;text-align:center;margin:0}
+.okbox .pl li{margin:6px 0}
+.rowlbl{font-size:13px;font-weight:500;margin:24px 0 0}
+.cal{background:#fff;border:1px solid var(--border-strong);border-radius:8px;padding:12px;margin-top:4px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.cal .top{display:flex;gap:8px;margin-bottom:8px}
+.cal .top .input{flex:1}
+.cal .dow,.cal .days{display:grid;grid-template-columns:repeat(7,1fr);text-align:center}
+.cal .dow span{font-size:12px;color:var(--text2);padding:4px 0}
+.cal .days span{height:36px;display:flex;align-items:center;justify-content:center;font-size:14px;border-radius:8px}
+.dev-ph .cal .days span{height:44px;font-size:16px}
+.cal .days span.sel{background:var(--blue-tint);color:var(--blue);font-weight:500}
+.cal .days span.off{color:#B8B8B3}
+.cal .hint{margin-top:6px}
+.calpop{position:absolute;left:0;top:100%;width:304px;z-index:9}
+.calpop.up{top:auto;bottom:100%;margin:0 0 4px}
+.touch .calpop{width:336px}
+.touch .cal .days span{height:44px}
+.cal.inl{position:relative;margin:4px -16px 16px;border-left:0;border-right:0;border-radius:0;padding:12px 0}
+.cal.inl .top,.cal.inl .hint,.cal.inl .dow{padding-left:16px;padding-right:16px}
+.cal.inl .dow{padding:4px 0}
+.cal .ddw{position:relative;flex:1;display:flex;min-width:0}
+.cal .ddw .menu{z-index:10}
+.cal .days span.today{box-shadow:inset 0 0 0 1px var(--control-border)}
+.cal .days span.hov{background:var(--surface)}
+.cal .days span.kf{box-shadow:0 0 0 2px var(--blue);position:relative;z-index:1}
+.cal .days span.lim{flex-direction:column;line-height:1.1}
+.cal .days span.lim::after{content:"";width:4px;height:4px;border-radius:50%;background:currentColor;margin-top:3px}
+.dot{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--text);vertical-align:2px;margin:0 2px}
+.input.open{border-color:var(--text)}
+.input.dis{background:var(--surface);border-color:var(--border-strong);color:#8A8A85}
+.cbline.cbdis{color:#8A8A85}
+.ti-device-tablet{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M5 4a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v16a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1v-16z%22/%3E%3Cpath d=%22M11 17a1 1 0 1 0 2 0a1 1 0 0 0 -2 0%22/%3E%3C/svg%3E")}
+.ti-receipt-refund{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2%22/%3E%3Cpath d=%22M15 14v-2a2 2 0 0 0 -2 -2h-4l2 -2m0 4l-2 -2%22/%3E%3C/svg%3E")}
+.ti-key{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z%22/%3E%3Cpath d=%22M15 9h.01%22/%3E%3C/svg%3E")}
+.ti-password{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 10v4%22/%3E%3Cpath d=%22M10 13l4 -2%22/%3E%3Cpath d=%22M10 11l4 2%22/%3E%3Cpath d=%22M5 10v4%22/%3E%3Cpath d=%22M3 13l4 -2%22/%3E%3Cpath d=%22M3 11l4 2%22/%3E%3Cpath d=%22M19 10v4%22/%3E%3Cpath d=%22M17 13l4 -2%22/%3E%3Cpath d=%22M17 11l4 2%22/%3E%3C/svg%3E")}
+.ti-currency-dollar-off{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M16.7 8a3 3 0 0 0 -2.7 -2h-4m-2.557 1.431a3 3 0 0 0 2.557 4.569h2m4.564 4.558a3 3 0 0 1 -2.564 1.442h-4a3 3 0 0 1 -2.7 -2%22/%3E%3Cpath d=%22M12 3v3m0 12v3%22/%3E%3Cpath d=%22M3 3l18 18%22/%3E%3C/svg%3E")}
+.ti-logout{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2%22/%3E%3Cpath d=%22M9 12h12l-3 -3%22/%3E%3Cpath d=%22M18 15l3 -3%22/%3E%3C/svg%3E")}
+.qx{outline:2px dashed #EF9F27;outline-offset:3px;border-radius:6px;position:relative;display:inline-flex;align-items:center;gap:6px}
+.qx>.qn{top:-22px;left:-2px;right:auto}
+.qn.in{top:88px!important;right:10px!important;left:auto!important}
+.qn.b{top:auto!important;bottom:-24px}
+.qn.r{right:-2px!important;left:auto!important}
+.sw{display:inline-block;width:34px;height:20px;border-radius:10px;background:#8F8F8A;position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff}
+.sw.on{background:var(--blue)}
+.sw.on::after{left:16px}
+.matlbl{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:6px;background:var(--surface);border:1px solid var(--border-strong);font-size:12px;color:var(--text);white-space:nowrap}
+.matlbl i{font-size:14px}
+.matstrip{display:flex;align-items:center;gap:6px;min-height:28px;padding:4px 16px;background:var(--surface);border-bottom:1px solid var(--border);font-size:12px;color:var(--text);flex:none}
+.matstrip i{font-size:14px}
+.acct{position:absolute;right:8px;top:44px;width:248px;background:#fff;border:1px solid var(--border-strong);border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.08);z-index:6;padding:4px 0}
+.acct .who{padding:8px 12px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.acct .who b{display:block;font-size:13px;font-weight:500}
+.acct .who span{font-size:12px;color:var(--text2)}
+.acct .it{display:flex;align-items:center;gap:8px;height:32px;padding:0 12px;font-size:13px;position:relative}
+.touch .acct .it{height:44px}
+.acct .it>i{font-size:16px;color:var(--text2)}
+.acct .it .v{margin-left:auto;color:var(--text2)}
+.acct .it .sw{margin-left:auto}
+.acct .it.hov{background:var(--surface)}
+.acct .sep{border-top:1px solid var(--border);margin:4px 0}
+.acct.sheetv{position:static;width:auto;border:none;box-shadow:none;border-radius:0}
+.acct.sheetv .it{padding:0 16px}
+.hid{color:var(--text2)}
+.hist .h{display:grid;grid-template-columns:150px minmax(0,1fr);gap:2px 12px;padding:6px 0;border-top:1px solid var(--border);font-size:12px}
+.hist .h:first-child{border-top:none}
+.hist .h .w{color:var(--text2)}
+.hist .h .x{color:var(--text);font-size:13px;overflow-wrap:anywhere}
+.dev-ph .hist .h{grid-template-columns:1fr}
+.sigpad{border:1px solid var(--border);border-radius:8px;background:#fff;height:150px;display:flex;align-items:center;justify-content:center;margin:4px 0 8px}
+.lnk2{color:var(--blue);text-decoration:underline}
+.touch .lnk2{display:inline-flex;align-items:center;min-height:44px;margin:-12px 0}
+.g-m{grid-template-columns:minmax(0,1.6fr) 130px 170px 190px 60px;padding:0 4px 0 16px}
+.g-mt{grid-template-columns:minmax(0,1fr) 150px 180px 60px;padding:0 0 0 16px}
+.g-f1{grid-template-columns:minmax(0,1.5fr) 130px 80px 160px 70px 180px;padding:0 4px 0 16px}
+.touch .secrow{min-height:44px}
+.tile.seln{border-color:var(--text);box-shadow:inset 0 0 0 1px var(--text)}
+.dev-ph.w320{width:332px}
+.w320 .seg span{padding:0 8px}
+.g-m0{grid-template-columns:minmax(0,1.6fr) 130px 170px 60px;padding:0 4px 0 16px}
+.g-mt0{grid-template-columns:minmax(0,1fr) 150px 60px;padding:0 0 0 16px}
+.hidchip{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 8px;border:1px solid var(--control-border);border-radius:6px;background:var(--surface);color:var(--text2);font-size:12px;white-space:nowrap;flex:none}
+.hidchip i{font-size:16px}
+.hidchip.icononly{padding:0 6px}
+.dev-ph .loc span{padding:0 8px}
+.qx>.qn.rr{top:-1px;left:calc(100% + 8px);right:auto}
+.fullscreen .two{grid-template-columns:1fr;column-gap:0}
+.toast .nou{padding-right:8px}
+.overlay.top{align-items:flex-start;padding-top:32px}
+.overlay.top2{align-items:flex-start;padding-top:16px}
+.dialog .err,.fbody .err{margin-top:12px}
+.dlg-tall{max-height:none}
+.fbody{overflow:hidden}
+.optcol{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:8px 0}
+.optcol.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.qcard{background:#fff;border:1px solid var(--border-strong);border-radius:10px;padding:14px 16px;font-size:13px}
+.qcard.rec{border:2px solid var(--blue)}
+.qcard h4{font-size:15px;font-weight:500;margin:0 0 2px}
+.qcard .lead2{color:var(--text2);font-size:12px;margin:0 0 8px}
+.qcard .mini{border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin:8px 0;background:#fff;font-size:12px}
+.qcard ul{margin:4px 0 0;padding-left:18px}
+.qcard li{margin:3px 0}
+.good{color:var(--ok);font-weight:500}
+.bad{color:var(--red);font-weight:500}
+.rectag{display:inline-block;font-size:12px;color:var(--blue);background:var(--blue-tint);border-radius:6px;padding:2px 8px;margin:2px 0 4px}
+.qbox{background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin:16px 0;font-size:13px}
+.qbox h3{font-size:14px;font-weight:500;margin:0 0 4px}
+.qbox h4{font-size:14px;font-weight:500;margin:16px 0 4px}
+.mini .mrow{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-top:1px solid var(--border)}
+.mini .mrow:first-child{border-top:none}
+.mini .mk2{color:var(--text2)}
+.pair.nowrap{flex-wrap:nowrap}
+.imgpage{padding:16px;background:var(--page);width:max-content}
+.imgpage h1{font-size:15px;margin:0 0 4px}
+.imgpage .rowlbl{margin:20px 0 0}
+.mini .chip{height:28px;font-size:12px;min-width:32px;padding:0 8px}
+.mini .mh{font-size:12px;color:var(--text2);margin-top:4px;line-height:1.4}
+.mtick{width:14px;height:14px;border-radius:3px;background:var(--blue);flex:none;margin-top:2px;position:relative}
+.mtick::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+
+/* ---------- Phase 5 gap mockups: new parts (all proposals) ---------- */
+.q{position:relative}
+.gtab td.g.ns{background:var(--warn-tint);color:var(--warn);font-weight:500;box-shadow:inset 0 0 0 1px #EF9F27}
+.gtab td.g.ns i{font-size:12px;margin-left:2px}
+.gtab td.cnt .in.ns{border-color:var(--warn);background:var(--warn-tint);color:var(--warn);box-shadow:0 0 0 1px var(--warn)}
+.nsr{color:var(--warn);display:inline-flex;gap:4px;align-items:center;white-space:nowrap}
+.nsr i{font-size:14px}
+.svs{color:var(--text2)}
+.seg .wm{color:var(--warn);margin-left:6px;font-size:14px}
+.kpop{position:absolute;left:-2px;top:46px;z-index:7;width:300px;background:#fff;border:1px solid var(--border-strong);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.14);padding:8px 12px;font-size:13px;color:var(--text);text-align:left;white-space:normal;line-height:1.4;font-weight:400}
+.kpop.r{left:auto;right:-2px}
+.kpop b{display:block}
+.kpop .k2l{color:var(--text2);font-size:12px;margin-top:2px}
+.psel.ns{border-color:var(--warn);background:var(--warn-tint);color:var(--warn);font-weight:500}
+.psel.rt{border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue)}
+.psel.k{justify-content:center}
+.pline small.nsl{color:var(--warn)}
+.pline small.nsl i,.pline small.kl i{font-size:12px}
+.kline{font-size:12px;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin:-4px 0 8px;line-height:1.4}
+.pg.land.sheet{width:1056px;height:816px;min-height:0;padding:48px;display:flex;flex-direction:column}
+.pg.sheet table{table-layout:fixed}
+.pg.sheet td{height:34px}
+.pg.sheet .grow{flex:1}
+.pg.sheet td.blank{text-align:left;color:#555;font-size:10px}
+.pg.mini1{width:1056px;height:auto;min-height:0}
+.abar{display:flex;align-items:center;gap:0;height:32px;border:1px solid var(--border-strong);border-radius:16px;padding:0 12px;font-family:ui-monospace,Consolas,monospace;font-size:12px;background:var(--surface);color:var(--text);overflow:hidden;white-space:nowrap;margin:4px 0}
+.abar .dim{color:var(--text2)}
+.abar .hl{background:#FFF4E0;border-radius:4px;padding:0 2px}
+.qcard .zoomwrap{overflow:hidden;border:1px solid var(--border);border-radius:8px;background:var(--page);padding:8px;margin:8px 0}
+.qcard .zoomwrap .dev{zoom:.34}
+.qcard .zoomwrap .scroller{overflow:hidden}
+.ti-device-tablet{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M5 4a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v16a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1v-16z%22/%3E%3Cpath d=%22M11 17a1 1 0 1 0 2 0a1 1 0 0 0 -2 0%22/%3E%3C/svg%3E")}
+.annot{font-size:12px;color:var(--text2);margin:4px 0 0}
+.wordtab{border-collapse:collapse;font-size:13px;margin:8px 0;background:#fff;border:1px solid var(--border)}
+.wordtab th,.wordtab td{border-top:1px solid var(--border);padding:6px 12px;text-align:left;vertical-align:top}
+.wordtab th{background:var(--surface);font-weight:500;font-size:12px;color:var(--text2)}
+.sheetrow{display:flex;align-items:center;gap:8px;min-height:52px;padding:0 16px;border-top:1px solid var(--border);font-size:14px}
+.sheetrow .grow{flex:1;min-width:130px}
+.sheetrow>span:last-child{text-align:right;font-size:12px!important;max-width:190px}.sheetrow small{display:block;font-size:12px;color:var(--text2)}
+.pick .sel .pn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.seg .dw{font-weight:inherit}
+.w320 .seg .dw{display:none}
+.sheetrow.on{background:var(--blue-tint)}
+body.only main>*{display:none}
+body.only main>.keep{display:block}
+body.only main{padding-top:8px;padding-bottom:24px}
+body.only main>.keep>h2:first-child{margin-top:0}
+
+/* ---------- Phase 6 gap mockups: new parts (all proposals) ---------- */
+.q{position:relative}
+.rrow .menu{right:8px;top:56px}
+.gtab tr.selrow td{background:var(--surface)}
+.gtab tr.selrow td.nm{box-shadow:inset 3px 0 0 #1F1F1F}
+.lnk{color:var(--blue);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.sentl .btn{margin-left:6px;vertical-align:middle}
+.sentl .cpd{display:block;color:var(--text2);margin-bottom:2px}
+.sentl .cpd i{font-size:12px;vertical-align:-1px}
+.btn.dis{color:#A3A39E;border-color:#D6D6D2;background:#fff}
+.btn.dis i{color:#B8B8B3}
+.skel{display:block;height:12px;border-radius:6px;background:#ECECEA;margin:4px 0}
+.mailwin{background:#fff;border:1px solid #bbb;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.18);font-size:13px;width:560px;max-width:100%;overflow:hidden}
+.mailwin .mwh{background:#404040;color:#fff;padding:8px 12px;display:flex;align-items:center;gap:8px}
+.mailwin .mwh .grow{flex:1}
+.mailwin .mwf{border-bottom:1px solid #eee;padding:7px 12px;color:#555}
+.mailwin .mwf b{color:#1f1f1f;font-weight:400}
+.mailwin .mwb{padding:10px 12px;line-height:1.5;min-height:200px;white-space:pre-wrap;color:#1f1f1f}
+.mailwin .mwb .caret{display:inline-block;width:1px;height:16px;background:#1f1f1f;vertical-align:-3px}
+.mailwin .mwb .ghost{color:#9a9a9a}
+.mailwin .mwsend{background:#0b57d0;color:#fff;border-radius:16px;padding:6px 16px;display:inline-block;margin:0 12px 12px}
+.browserbar{background:#e9e9e6;border:1px solid #bbb;border-bottom:none;border-radius:8px 8px 0 0;padding:6px 10px;font-family:ui-monospace,Consolas,monospace;font-size:12px;color:#444;width:560px;max-width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.browserbar+.mailwin{border-radius:0 0 8px 8px}
+.phmail{display:flex;flex-direction:column;height:100%;font-size:14px;background:#fff}
+.phmail .pmh{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #eee}
+.phmail .pmh .grow{flex:1;font-weight:500}
+.phmail .pmf{padding:12px 16px;border-bottom:1px solid #eee;color:#555}
+.phmail .pmf b{color:#1f1f1f;font-weight:400}
+.phmail .pmb{padding:12px 16px;white-space:pre-wrap;line-height:1.5;flex:1;position:relative}
+.phmail .pmbub{position:absolute;left:16px;top:44px;background:#1f1f1f;color:#fff;border-radius:8px;padding:8px 14px;font-size:13px}
+.phmail .pmbub:after{content:"";position:absolute;left:18px;top:-6px;border:6px solid transparent;border-top:none;border-bottom-color:#1f1f1f}
+.plain{white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.55;background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin:0}
+.msgs3{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:8px 0 16px}
+.msgcard{background:#fff;border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:13px}
+.msgcard .k{font-size:12px;color:var(--text2);margin-bottom:6px}
+.msgcard .sj{font-size:12px;color:var(--text2);margin-bottom:8px}
+.msgcard .sj b{color:var(--text);font-weight:500}
+.msgcard .plain{border:none;padding:0}
+.cprow{display:flex;align-items:center;gap:8px;border:1px solid var(--border-strong);border-radius:8px;padding:0 4px 0 10px;min-height:36px;font-size:13px;margin:4px 0 10px}
+.cprow .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cplbl{font-size:12px;color:var(--text2)}
+.cpmsg{border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.5;white-space:pre-wrap;height:150px;overflow:hidden;margin:4px 0 6px;background:#fff}
+.cpmsg.selall{background:#D5E0F2}
+.dialog .warnline{display:flex;gap:6px;align-items:flex-start;background:var(--warn-tint);color:var(--warn);border-radius:8px;padding:6px 10px;font-size:13px;margin:0 0 12px}
+.dialog .warnline i{font-size:16px;margin-top:1px}
+.fullsheet{position:absolute;inset:0;background:#fff;z-index:6;display:flex;flex-direction:column}
+.fullsheet .fh{display:flex;align-items:center;gap:8px;padding:12px 8px 12px 16px;border-bottom:1px solid var(--border);font-weight:500;font-size:15px}
+.fullsheet .fh .grow{flex:1}
+.fullsheet .fb{padding:16px;overflow:hidden;flex:1}
+.fullsheet .ff{display:flex;gap:8px;justify-content:flex-end;padding:12px 16px 16px;border-top:1px solid var(--border)}
+.post3.big{width:816px;height:1056px;min-height:0;padding:48px;box-sizing:border-box;display:flex;flex-direction:column}
+.post3.big .body{flex:none;display:block}
+.post3.big .dan{margin-top:6px;height:28px;line-height:20px;box-sizing:border-box}
+.post3.big .grp{height:26px;box-sizing:border-box;margin-top:4px}
+.post3.big td{height:38px;box-sizing:border-box}
+.post3.big table.nf{border-style:dashed}
+.post3.big .grp.nf{border-style:dashed}
+.post3.big .grp.pv{border-bottom:1px solid #111;font-weight:700}
+.post3.big .grow{flex:1}
+.post3.big .foot{margin-top:0}
+.post3.bw{filter:grayscale(1)}
+.xl td.dim{color:#888}
+.xl .bar{display:flex;gap:12px}
+.dlbar{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--border-strong);border-radius:8px;padding:8px 12px;font-size:13px;max-width:640px;margin:8px 0}
+.dlbar i{font-size:20px;color:var(--text2)}
+.dlbar small{display:block;color:var(--text2);font-size:12px}
+.statetab{border-collapse:collapse;font-size:13px;margin:8px 0;background:#fff;border:1px solid var(--border);max-width:1180px}
+.statetab th,.statetab td{border-top:1px solid var(--border);padding:6px 12px;text-align:left;vertical-align:top}
+.statetab th{background:var(--surface);font-weight:500;font-size:12px;color:var(--text2)}
+.w320 .gbar{flex-wrap:wrap;row-gap:8px}
+.prow .acts2{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.prow .sentl{margin-top:4px}
+.toast.ph.wide{max-width:calc(100% - 32px);box-sizing:border-box}
+.rrow .rk .nm{font-weight:500}
+.g-rem{grid-template-columns:170px minmax(0,1fr) 44px;padding:0 4px 0 16px}
+.g-remp{grid-template-columns:minmax(0,1fr) 48px;padding:6px 4px 6px 16px}
+.remtx{display:block;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.g-remp .remtx{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:12px;margin-top:2px}
+.tmplbox{border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;font-size:13px;line-height:1.55;white-space:pre-wrap;background:#fff;margin:4px 0 0}
+.tmplbox.tmplbad{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn)}
+.blkn{background:#EFEFEC;border-radius:4px;padding:0 2px;color:var(--text)}
+.blk-bad{background:var(--warn-tint);color:var(--warn);border-radius:4px;padding:0 2px;text-decoration:underline wavy #EF9F27}
+.ferr{display:flex;gap:6px;align-items:flex-start;color:var(--warn);font-size:13px;margin:6px 0 0}
+.ferr i{font-size:16px;margin-top:1px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.chip{font-size:12px;line-height:16px;padding:3px 8px;border:1px solid var(--border-strong);border-radius:6px;background:#fff;color:var(--text);white-space:nowrap}
+.touch .chip{padding:9px 10px}
+.selbox{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border-strong);border-radius:6px;padding:2px 8px;color:var(--text);font-size:12px}
+.prevbox{height:auto;max-height:none;background:var(--surface)}
+.btn.btn-primary.dis{background:#C9CDD6;border-color:#C9CDD6;color:#fff}
+.btn.btn-primary.dis i{color:#fff}
+.fullsheet .fb .cpmsg{height:auto}
+.chosen{background:var(--ok-tint);color:var(--ok);border:1px solid #CFE3B6;border-radius:8px;padding:8px 12px;font-size:14px;margin:0 0 10px}
+.chtag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:6px;margin:0 0 6px 6px;background:var(--ok-tint);color:var(--ok);border:1px solid #CFE3B6}
+.nctag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:6px;margin:0 0 6px 6px;background:var(--surface);color:var(--text2);border:1px solid var(--border)}
+.qcard.pick{border:2px solid var(--ok)}
+.lnk2{color:var(--text2);text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.touch .lnk2{display:inline-flex;align-items:center;min-height:44px;padding-right:8px}
+.touch .sentl .cpd.tap44{margin-top:0!important}
+.hideline{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--text2);margin:0 0 12px}
+.hideline i{font-size:16px}
+[data-q]{outline:2px dashed #EF9F27;outline-offset:4px}
+.xl.wrap th,.xl.wrap td{white-space:normal;vertical-align:top}
+.xl.wrap td.nw{white-space:nowrap}
+.ti-calendar-event{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12%22/%3E%3Cpath d=%22M16 3l0 4%22/%3E%3Cpath d=%22M8 3l0 4%22/%3E%3Cpath d=%22M4 11l16 0%22/%3E%3Cpath d=%22M8 15h2v2h-2l0 -2%22/%3E%3C/svg%3E")}
+.ti-mail-check{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M11 19h-6a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v6%22/%3E%3Cpath d=%22M3 7l9 6l9 -6%22/%3E%3Cpath d=%22M15 19l2 2l4 -4%22/%3E%3C/svg%3E")}
+.ti-file-spreadsheet{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M14 3v4a1 1 0 0 0 1 1h4%22/%3E%3Cpath d=%22M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2%22/%3E%3Cpath d=%22M8 11h8v7h-8l0 -7%22/%3E%3Cpath d=%22M8 15h8%22/%3E%3Cpath d=%22M11 11v7%22/%3E%3C/svg%3E")}
+.ti-send{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M10 14l11 -11%22/%3E%3Cpath d=%22M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5%22/%3E%3C/svg%3E")}
+.ti-paperclip{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M15 7l-6.5 6.5a1.5 1.5 0 0 0 3 3l6.5 -6.5a3 3 0 0 0 -6 -6l-6.5 6.5a4.5 4.5 0 0 0 9 9l6.5 -6.5%22/%3E%3C/svg%3E")}
+.ti-minus{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M5 12l14 0%22/%3E%3C/svg%3E")}
+
+
+/* ---------- added from the approved Home mockups (v0.155, copied) ---------- */
+.welcome{display:flex;gap:12px;align-items:center;margin:4px 0 20px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.wlogo{width:40px;height:40px;border-radius:50%;background:#0A3D91;color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+.wtitle{font-size:20px;font-weight:500;margin:0;line-height:1.3}
+.wsub{font-size:12px;color:var(--text2)}
+.hempty{font-size:13px;color:var(--text2);text-align:center;padding:24px;margin-top:90px}
+.hsec{font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin:0 0 8px}
+.hcard{border:1px solid var(--border);border-radius:8px;padding:14px 16px;display:flex;gap:14px;align-items:center;margin-bottom:10px;background:var(--bg,#fff);max-width:720px}
+.hcard .hi{width:36px;height:36px;border-radius:8px;background:var(--blue-tint,#EEF3FB);color:var(--blue);display:flex;align-items:center;justify-content:center;flex:none}
+.hcard .t{font-weight:500}
+.hcard .m{font-size:13px;color:var(--text2);margin-top:2px}
+.hcard .warnm{color:var(--warn)}
+.hcard .grow{flex:1 1 0;min-width:0}
+.hcard .btn{margin-left:auto;flex:none}
+.dev-ph .hcard{flex-wrap:wrap;align-items:flex-start}
+.dev-ph .hcard .btn{margin-left:50px}
+.hsec .q{display:inline-block;padding:0 4px}
+.ti-star{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpath d=%22M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873z%22/%3E%3C/svg%3E")}
+
+/* ---------- Phase 7: Finance's Home reminder line (copied from src/styles/finance.css .fin-home-line) ---------- */
+.finl{display:flex;align-items:center;gap:8px;max-width:640px;min-height:36px;padding:8px 12px;border:1px solid #F2C98A;border-radius:8px;background:var(--warn-tint);color:var(--warn);font-size:13px;margin:0 0 8px;box-sizing:border-box}
+.touch .finl{min-height:44px}
+.finl i{font-size:16px}
+.finl .grow{flex:1;min-width:0}
+.finl .flk{text-decoration:underline;white-space:nowrap}
+.finls{margin:0 0 16px}
+/* ---------- Phase 7 gap mockups: new parts (all proposals) ---------- */
+.q{position:relative}
+.hsec.q{display:inline-block;padding:0 4px;margin-top:4px}
+.hsec .qn{text-transform:none;letter-spacing:0}
+.hcard.hov .btn{background:var(--surface)}
+.hline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--text2);max-width:720px;margin:0 0 12px}
+.hline i{font-size:16px}
+.hline .grow{flex:1;min-width:0}
+.touch .hline{min-height:44px}
+.skel{display:block;height:12px;border-radius:6px;background:#ECECEA;margin:4px 0}
+.pgcard{max-width:520px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.pgcard .pl2{display:flex;align-items:center;gap:8px;padding:0 12px;min-height:40px;border-top:1px solid var(--border);font-size:13px}
+.pgcard .pl2:first-child{border-top:none}
+.pgcard .pl2 .grow{flex:1;min-width:0}
+.pgcard .sel{display:inline-flex;align-items:center;justify-content:space-between;width:72px;height:28px;border:1px solid var(--control-border);border-radius:6px;padding:0 6px;font-size:13px;color:var(--text2);box-sizing:border-box}
+.pgcard .sel i{font-size:14px}
+.ghostrows .gr{display:flex;gap:16px;align-items:center;min-height:52px;border-top:1px solid var(--border);padding:0 12px}
+.ghostrows{border:1px solid var(--border);border-radius:8px}
+.ghostrows .gr:first-child{border-top:none}
+.flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+.flow .zoomwrap{overflow:hidden;border:1px solid var(--border);border-radius:8px;background:var(--page);padding:8px}
+.flow .zoomwrap .dev{zoom:.32}
+.flow .zoomwrap .scroller{overflow:hidden}
+.flow .step{font-size:13px;margin:0 0 6px}
+.flow .step b{font-weight:500}
+.qcard .zoomwrap.zph .dev{zoom:.62}
+.statetab{border-collapse:collapse;font-size:13px;margin:8px 0;background:#fff;border:1px solid var(--border);max-width:1180px}
+.statetab th,.statetab td{border-top:1px solid var(--border);padding:6px 12px;text-align:left;vertical-align:top}
+.statetab th{background:var(--surface);font-weight:500;font-size:12px;color:var(--text2)}
+.chosen{background:var(--ok-tint);color:var(--ok);border:1px solid #CFE3B6;border-radius:8px;padding:8px 12px;font-size:14px;margin:0 0 10px}
+.dev-ph .hcard .grow{flex:1 1 calc(100% - 50px)}
+.w320 .hcard{padding:12px}
+.w320 .hcard .btn{margin-left:50px}
+.w320 .wtitle{font-size:18px}
+.dev-ph .welcome{margin-top:0}
+.cursor{position:absolute;width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:14px solid #1f1f1f;transform:rotate(-30deg)}
+
+</style>
+</head>
+<body>
+<main><div class="keep-intro"><h1>Star testing · Phase 7 gap mockups</h1><p class="lead">Jae H. Jeong's U.S. Taekwondo Center · Star testing, build phase 7 (Home “Today” card) · guidelines v0.514 · October 21, 2026 · <b>Approved 2026-10-21 (v0.515) after a design review and Jeffrey's screen-by-screen pass; Q1 A, Q2 B.</b></p><div class="banner"><i class="ti ti-alert-triangle"></i><div><b>Design only — not a working app.</b> Nothing here is built or deployed. Small buttons are 36px on touch with a 44px tap area (§2.5). Screens at PC (1280px, mouse), the tablet <b>held sideways</b> (1180 × 820, touch) and upright (820px), phone (390px, touch), and 320px check frames. The rail is shortened to Home and Testing, as in the approved Home mockups. All names and counts are made up. <span class="prop">Parts with a <span style="outline:2px dashed #EF9F27;outline-offset:2px;border-radius:4px;padding:0 4px">dashed amber outline</span> and a “Proposed: see N” label are proposals (approved v0.515).</span></div></div>
+<p class="intro">The approved Home mockups (v0.155) left these amber: the card’s look, the “Today” heading, how long the card shows, several private testings as separate cards, Grade opening the student’s own grading page, and the location-switcher counts. The build plan (<code>TKD-StarTesting-Remaining-Build-Plan.md</code> §3, row 7) adds Home while loading or offline. Since then the private grading page was built with no address (v0.512, v0.513), so how Home hands off to it matters, and Finance put its reminder on Home (v0.202). S1–S4 draw each one.</p>
+<div class="okbox"><h3>Already decided — drawn this way below</h3><ol class="det">
+<li><b>Star on Home, only on the day (v0.154):</b> a “Today” card for the testing (Open grading) or each private testing (Grade); nothing on other days.</li>
+<li><b>Home mockups approved (v0.155):</b> <code>TKD-StarTesting-Home-Mockups.html</code> screens 1–4; this file reuses its look and data. Its amber items are the proposals below.</li>
+<li><b>Home itself (v0.10, v0.11, built):</b> “today at a glance”; the welcome header; “Nothing on Home yet. Items appear here as sections are added.” while there is nothing else.</li>
+<li><b>Finance on Home (v0.202, v0.207, v0.811, built):</b> the amber close-the-day lines under the header; no amounts; no link with Hide private details on.</li>
+<li><b>Private grading page (v0.512 Q1 A, v0.513):</b> no address of its own; ← and Back go to Candidates; reload → Candidates; the three “page closed” banners; Hide private details changes nothing there.</li>
+<li><b>Hide private details (v0.506):</b> one switch hides dates of birth, emails and payments on every screen.</li>
+<li><b>Database (contract 0006 §7):</b> <code>star_home_today()</code> answers the events whose testing day is today (name, start time, where, counts per school of active candidates without a private day) and the private testings whose day is today (name, school, Dan, stars, time), by time; no payment, date of birth or email; the browser filters by school. It is a POST (it runs the signature purge). <b>Nothing in this file needs a database change</b> (only Q1’s B and C would).</li>
+<li><b>Dates used:</b> Sat, Nov 14, 2026 (testing day); Tue, Dec 1, 2026 (private testings). Names and counts are made up and match the Home mockups.</li></ol></div>
+<div class="okbox"><h3>Proposals (18) — approved v0.515</h3><ol class="pl"><li>S1 · <b>The card’s look, as the approved drawing</b> (v0.155’s first amber item): a <code>ti-star</code> in a blue-tint square, the title “<b>Fall 2026 Star Testing · 10:00 AM</b>”, one gray line “Shrewsbury school · 22 candidates testing today”, and a small outline button at the right (phone and 320px: under the text, lined up with it). The card is at most 720px wide. The whole card is <b>not</b> a link — only the button acts (one clear target on the mat tablet).</li><li>S1 · <b>The “Today” heading</b> (small gray capitals, as drawn) sits above the Star cards. For now only Star’s cards go under it; another section can put its own day items there later (its own design pass). <b>Finance’s reminder lines stay where they are</b>, straight under the welcome header and above “Today” — amber nudges first, as built (<code>HomeReminders.jsx</code>, v0.202).</li><li>S1 · <b>Open grading</b> goes to the event’s Grading tab address, <code>#testing/star/event/&lt;id&gt;/grading</code>, and the tab opens exactly as when it is picked on the event page (its usual Dan, following the location switcher, v0.512). Browser Back returns to Home. Nothing is passed but the event id, which is already in addresses (v0.83).</li><li>S1 · <b>Count wording</b>: “22 candidates testing today”, one: “1 candidate testing today”, none: “<b>No candidates testing today</b>” (the card and Open grading stay — the event is still today). The number is <code>star_home_today</code>’s count: active candidates <b>without</b> a private day, make-ups included, withdrawn never (contract §7) — Home never counts anything itself.</li><li>S1 · <b>How long the card shows</b> (v0.154’s open item): <b>all day</b>, from midnight to midnight Massachusetts time (America/New_York, contract §1.6), whatever the grading state — the only option the database can tell without a change (Question Q1). The same for a private card.</li><li>S1 · <b>Several items on one day</b>: every Star card in time order; at the same time the event comes first, then private testings by last name. Two events on one day: one card each. A private testing on the event’s day: its own card, as on any other day.</li><li>S1 · <b>When Home asks — copied from Finance’s Home reminders</b> (<code>useHomeReminders</code>): on opening Home, every minute, when the browser tab becomes visible again, when the school is switched, and after unlocking; never behind the lock screen. So the card appears and goes away by itself at midnight (within a minute). <code>star_home_today</code> is a POST (it runs the 90-day signature purge, contract §5.7) — each call also does that check; it does nothing when nothing is due.</li><li>S1 · <b>“Nothing on Home yet”</b> — <b>proposed (new), not a copy</b>: Finance alone shows the empty line at once, before its first answer. With Star’s card, the empty line waits until <b>Star has answered at least once</b>, then shows only when neither Finance nor Star has anything; it never shows next to a card. This is Question Q2’s option B (chosen, v0.515); with Q2 A it would show at once, as Finance does.</li><li>S2 · <b>Private cards</b> as approved: title “<b>Private star testing · 4:00 PM</b>”, line “Alex Kim · 1st Dan · 1 star → 2 stars”, button <b>Grade</b>. One card per private testing (v0.155’s amber item), sorted by time. The name, Dan and stars are what <code>star_home_today</code> sends — never date of birth, email, fee or payment (§5).</li><li>S2 · <b>How Grade hands off</b> (follows from v0.512 Q1 A and v0.513): Grade sets the address to the event, <code>#testing/star/event/&lt;id&gt;</code> (its Candidates tab — no candidate id), and hands the candidate id over <b>in page memory only</b>; the event page then opens the private grading page straight away, the same as Candidates ⋯ → Grade private testing, adding its one history step with the same address (v0.513). While it loads: the event page’s loading look, then the approved “Loading the private testing…”. Afterwards ← and Back go to the event’s Candidates tab, and one more Back returns Home.</li><li>S2 · <b>Changed since Home loaded</b> (moved back to the testing day, withdrawn or deleted on another device): the event page opens on Candidates with the approved v0.513 banner (“Alex Kim was moved back to the testing day on another device. Grade them on the Grading tab.” and the two others). A reload on the private page goes to Candidates (v0.512). Home’s card goes on its next ask (within a minute).</li><li>S3 · <b>Location switcher on one school</b> (v0.155 amber): the event card still shows (the event takes both schools), with that school’s count — “<b>12 Worcester candidates testing today</b>”, “1 Worcester candidate testing today”, none: “<b>No Worcester candidates testing today</b>” (card and Open grading stay). On Both: the total only, no split, as approved.</li><li>S3 · “Shrewsbury school” (where the testing is) shows on every device — it says where, not whose.</li><li>S3 · <b>Private cards follow the switcher</b>: only private students of that school (the candidate’s school, <code>location_code</code>); Both shows all. The filtering is done in the browser on <code>star_home_today</code>’s answer (contract §7: “the location switcher filters in the client”) — no new call when the school is switched, only the usual ask.</li><li>S4 · <b>Loading</b>: no gray bars, no spinner (copied: Finance’s reminder has no loading look). The welcome header shows at once; the card appears when the answer arrives (usually well under a second). <b>Proposed (new):</b> until Star’s first answer, “Nothing on Home yet” isn’t shown (proposal 8) — so a slow or failed first ask never claims there’s nothing on the testing day (Question Q2 B, recommended).</li><li>S4 · <b>A failed ask keeps what was shown</b> (copied from Finance: “a failed call keeps what was shown — a reminder is a nudge, not an error to report”). The next minute’s ask tries again. A lost connection and the answers <code>stale</code> and <code>invalid</code> all count as a failed ask; <code>no_access</code> locks the screen, as everywhere. What shows when the <b>first</b> ask fails: Question Q2.</li><li>S4 · <b>Hide private details on</b> (v0.506): the cards are unchanged and both buttons work (grading works with the switch on, v0.512 H7) — they never had a date of birth, email or payment. Only the chip shows; Finance’s line loses its link, as built. Nothing new is hidden.</li><li>S4 · <b>Star build switch off</b> (the live site until Star’s go-live): no <code>star_home_today</code> call and no card — Home is exactly today’s (build plan phase 7 check).</li></ol></div>
+<div class="okbox"><h3>Questions (Q1–Q2, chosen v0.515)</h3><ol>
+<li><a href="#q1" style="color:var(--blue)">Q1 — Does the card stay after grading ends?</a> All day / change to Open results / go away. <b>Chosen: A, all day (v0.515).</b> Image <code>Phase 7 images/StarP7-Q1.png</code>.</li>
+<li><a href="#q2" style="color:var(--blue)">Q2 — When Home’s first ask fails</a>: silent like Finance / silent, but the empty line waits for Star / one gray line with Retry. <b>Chosen: B, the empty line waits (v0.515).</b> Image <code>Phase 7 images/StarP7-Q2.png</code>.</li></ol>
+<p style="margin:12px 0 0">Not asked (decided already, copied, or no real cost either way, so they are proposals): the card’s look and the “Today” heading, the count wording, Open grading’s target, the order of several cards, the switcher filtering, the Grade hand-off and where ← / Back go afterwards (follows from v0.512 Q1 A and v0.513), loading and a failed later ask (copied from Finance), Hide private details.</p></div>
+<div class="okbox"><h3>Screens in this file</h3><div class="toc"><div><a href="#s1">P7-S1. The testing day: the card, all day, next to Finance</a></div><div><a href="#s2">P7-S2. A private testing day: Grade and the hand-off</a></div><div><a href="#s3">P7-S3. The location switcher</a></div><div><a href="#s4">P7-S4. Loading, offline, midnight, Hide private details, build switch</a></div><div><a href="#questions">Questions (Q1–Q2, chosen v0.515)</a></div></div></div></div>
+<section id="s1"><h2>P7-S1. The testing day: the “Today” card, all day, next to Finance</h2><p class="lead">Sat, Nov 14 — the Fall 2026 Star Testing is today. The approved screen 1, with its amber items settled, and the evening, when Finance’s reminder joins it.</p>
+<div class="explain"><h3>What it shows</h3><ul>
+<li><b>Decided (v0.154, v0.155):</b> Star adds to Home only on the day; one “Today” card for the testing with Open grading; the count leaves out private students (v0.151); nothing on other days (Home keeps its empty line, v0.11).</li>
+<li><b>Decided (v0.202, v0.811 — Finance, built):</b> from the reminder time an amber line “Shrewsbury’s drawer isn’t closed yet. Close the day ›” under the welcome header; the empty line goes while it shows.</li>
+<li><span class="prop">Proposed (see 1): the card’s look exactly as approved; only the button acts.</span></li>
+<li><span class="prop">Proposed (see 2): the “Today” heading; Finance’s lines stay above it.</span></li>
+<li><span class="prop">Proposed (see 3): Open grading → the Grading tab’s address; Back returns Home.</span></li>
+<li><span class="prop">Proposed (see 4): count wording for one and none.</span></li>
+<li><span class="prop">Proposed (see 5): the card shows all day (Question Q1).</span></li>
+<li><span class="prop">Proposed (see 6): several cards in time order.</span></li>
+<li><span class="prop">Proposed (see 7): when Home asks (copied from Finance).</span></li>
+<li><span class="prop">Proposed (new, see 8): the empty line waits for Star’s first answer (Question Q2 B).</span></li>
+<li><b>Touch (§2.5):</b> the small buttons (Open grading, Grade) are 36px tall on touch with a 44px tap area, as in the approved v0.155 file.</li>
+<li><b>320px check:</b> a long event name wraps to two lines; the button drops under the text, as on the phone; nothing is cut off.</li></ul></div>
+<p class="rowlbl">Morning of the testing day</p><p class="cap">PC · mouse · 1280px · staff · Both</p><div class="scroller"><div class="dev dev-pc" style="height:400px"><div class="app"><nav class="rail" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i></a><a aria-label="Testing"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good morning</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div><div style="margin:0 0 8px"><span class="hsec q" style="margin:0"><span class="qn" style="top:-10px;left:calc(100% + 10px);right:auto">Proposed: see 2</span>Today</span></div><div class="hcard q"><span class="qn">Proposed: see 1, 3, 4, 5</span><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Fall 2026 Star Testing · 10:00 AM</div><div class="m">Shrewsbury school · 22 candidates testing today</div></div><span class="btn btn-sm">Open grading</span></div></div></div></div></div></div>
+<p class="cap">Tablet · touch · <b>held sideways</b> · 1180 × 820 · Both</p><div class="scroller"><div class="dev dev-tab touch land" style="width:1180px;max-width:none;height:520px"><div class="app"><nav class="rail-t" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i>Home</a><a aria-label="Testing"><i class="ti ti-certificate"></i>Testing</a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good morning</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div><div class="hsec">Today</div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Fall 2026 Star Testing · 10:00 AM</div><div class="m">Shrewsbury school · 22 candidates testing today</div></div><span class="btn btn-sm">Open grading</span></div></div></div></div></div></div>
+<p class="cap">Tablet · touch · upright · 820px · Both</p><div class="scroller"><div class="dev dev-tab touch" style="height:520px"><div class="app"><nav class="rail-t" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i>Home</a><a aria-label="Testing"><i class="ti ti-certificate"></i>Testing</a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good morning</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div><div class="hsec">Today</div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Fall 2026 Star Testing · 10:00 AM</div><div class="m">Shrewsbury school · 22 candidates testing today</div></div><span class="btn btn-sm">Open grading</span></div></div></div></div></div></div>
+<div class="pair"><div><p class="cap">Phone · touch · 390px · Both</p><div class="scroller"><div class="dev dev-ph touch" style="height:640px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good morning</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div><div class="hsec">Today</div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Fall 2026 Star Testing · 10:00 AM</div><div class="m">Shrewsbury school · 22 candidates testing today</div></div><span class="btn btn-sm">Open grading</span></div></div><nav class="phbar" aria-label="Sections"><a class="on" aria-current="page"><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div></div><div><p class="cap">Phone · touch · <b>320px</b> · long event name · check</p><div class="scroller"><div class="dev dev-ph touch w320" style="width:332px;height:640px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good morning</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div><div class="hsec">Today</div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Spring 2027 Star Testing for Both Schools · 10:00 AM</div><div class="m">Shrewsbury school · 1 candidate testing today</div></div><span class="btn btn-sm">Open grading</span></div></div><nav class="phbar" aria-label="Sections"><a class="on" aria-current="page"><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div></div></div>
+<p class="rowlbl">Evening of the testing day — Finance’s reminder and the card</p><p class="cap">PC · mouse · 1280px · 6:30 PM · Both · Shrewsbury hasn’t closed its drawer</p><div class="scroller"><div class="dev dev-pc" style="height:440px"><div class="app"><nav class="rail" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i></a><a aria-label="Testing"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good evening</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div><div class="q" style="max-width:640px;margin:0 0 16px"><span class="qn">Proposed: see 2</span><div class="finl" style="margin:0"><i class="ti ti-alert-triangle"></i><span class="grow">Shrewsbury’s drawer isn’t closed yet.</span><span class="flk">Close the day</span><i class="ti ti-chevron-right"></i></div></div><div class="hsec">Today</div><div class="hcard q"><span class="qn">Proposed: see 5</span><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Fall 2026 Star Testing · 10:00 AM</div><div class="m">Shrewsbury school · 22 candidates testing today</div></div><span class="btn btn-sm">Open grading</span></div></div></div></div></div></div>
+<p class="cap">Phone · touch · 390px · the same</p><div class="scroller"><div class="dev dev-ph touch" style="height:700px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good evening</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div><div class="finls"><div class="finl"><i class="ti ti-alert-triangle"></i><span class="grow">Shrewsbury’s drawer isn’t closed yet.</span><span class="flk">Close the day</span><i class="ti ti-chevron-right"></i></div></div><div class="hsec">Today</div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Fall 2026 Star Testing · 10:00 AM</div><div class="m">Shrewsbury school · 22 candidates testing today</div></div><span class="btn btn-sm">Open grading</span></div></div><nav class="phbar" aria-label="Sections"><a class="on" aria-current="page"><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div>
+<p class="rowlbl">Several cards, and the count wording</p><p class="cap">PC · mouse · 1280px · a private testing on the event’s day (made-up example)</p><div class="scroller"><div class="dev dev-pc" style="height:470px"><div class="app"><nav class="rail" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i></a><a aria-label="Testing"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good morning</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div><div class="hsec">Today</div><div class="hcard q"><span class="qn">Proposed: see 6</span><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Fall 2026 Star Testing · 10:00 AM</div><div class="m">Shrewsbury school · 22 candidates testing today</div></div><span class="btn btn-sm">Open grading</span></div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 4:00 PM</div><div class="m">Lily Nguyen · 1st Dan · 2 stars → 3 stars</div></div><span class="btn btn-sm">Grade</span></div></div></div></div></div></div>
+<p class="cap">PC · mouse · 1280px · one candidate / none (two separate days, drawn together)</p><div class="scroller"><div class="dev dev-pc" style="height:470px"><div class="app"><nav class="rail" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i></a><a aria-label="Testing"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good morning</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div><div class="hsec">Today</div><div class="hcard q"><span class="qn">Proposed: see 4</span><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Fall 2026 Star Testing · 10:00 AM</div><div class="m">Shrewsbury school · 1 candidate testing today</div></div><span class="btn btn-sm">Open grading</span></div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Fall 2026 Star Testing · 10:00 AM</div><div class="m">Shrewsbury school · No candidates testing today</div></div><span class="btn btn-sm">Open grading</span></div></div></div></div></div></div>
+</section><section id="s2"><h2>P7-S2. A private testing day: Grade, and how Home hands off to the private grading page</h2><p class="lead">Tue, Dec 1 — two private star testings today. The approved screen 2, then what happens after Grade.</p>
+<div class="explain"><h3>What it shows</h3><ul>
+<li><b>Decided (v0.154, v0.155):</b> one card per private testing, with Grade. <b>Decided (v0.512 Q1 A, v0.513):</b> the private grading page has no address of its own (page state only, no candidate id in the address); ← and browser Back on it return to the event’s Candidates tab, <b>whatever opened it</b>; a reload goes to Candidates; the three “page closed” banners.</li>
+<li><b>Decided (v0.512 Q1 A, v0.513) — so from Home:</b> Home → Grade → the private page (the event’s address, one same-address step) → ← / Back → the event’s Candidates tab → Back → Home. Not a question.</li>
+<li><span class="prop">Proposed (see 9): private cards as approved, one per testing, by time.</span></li>
+<li><span class="prop">Proposed (see 10): Grade sets the event’s address and passes the candidate id in page memory; the event page opens the private page at once.</span></li>
+<li><span class="prop">Proposed (see 11): a student who changed since Home loaded lands on Candidates with the approved banner.</span></li>
+<li><b>320px check:</b> both cards fit; “2 stars → 3 stars” wraps under the name; Grade sits under the text.</li>
+<li><b>Touch (§2.5):</b> the small buttons (Open grading, Grade) are 36px tall on touch with a 44px tap area, as in the approved v0.155 file.</li></ul></div>
+<p class="cap">PC · mouse · 1280px · staff · Both</p><div class="scroller"><div class="dev dev-pc" style="height:470px"><div class="app"><nav class="rail" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i></a><a aria-label="Testing"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good afternoon</div><div class="wsub">Tuesday, December 1, 2026 · Worcester and Shrewsbury</div></div></div><div class="hsec">Today</div><div class="hcard q"><span class="qn">Proposed: see 9, 10</span><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 4:00 PM</div><div class="m">Alex Kim · 1st Dan · 1 star → 2 stars</div></div><span class="btn btn-sm">Grade</span></div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 5:30 PM</div><div class="m">Ethan Lopez · 1st Dan · 2 stars → 3 stars</div></div><span class="btn btn-sm">Grade</span></div></div></div></div></div></div>
+<p class="cap">Tablet · touch · <b>held sideways</b> · 1180 × 820 · Both</p><div class="scroller"><div class="dev dev-tab touch land" style="width:1180px;max-width:none;height:560px"><div class="app"><nav class="rail-t" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i>Home</a><a aria-label="Testing"><i class="ti ti-certificate"></i>Testing</a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good afternoon</div><div class="wsub">Tuesday, December 1, 2026 · Worcester and Shrewsbury</div></div></div><div class="hsec">Today</div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 4:00 PM</div><div class="m">Alex Kim · 1st Dan · 1 star → 2 stars</div></div><span class="btn btn-sm">Grade</span></div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 5:30 PM</div><div class="m">Ethan Lopez · 1st Dan · 2 stars → 3 stars</div></div><span class="btn btn-sm">Grade</span></div></div></div></div></div></div>
+<p class="cap">Tablet · touch · upright · 820px · Both</p><div class="scroller"><div class="dev dev-tab touch" style="height:580px"><div class="app"><nav class="rail-t" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i>Home</a><a aria-label="Testing"><i class="ti ti-certificate"></i>Testing</a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good afternoon</div><div class="wsub">Tuesday, December 1, 2026 · Worcester and Shrewsbury</div></div></div><div class="hsec">Today</div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 4:00 PM</div><div class="m">Alex Kim · 1st Dan · 1 star → 2 stars</div></div><span class="btn btn-sm">Grade</span></div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 5:30 PM</div><div class="m">Ethan Lopez · 1st Dan · 2 stars → 3 stars</div></div><span class="btn btn-sm">Grade</span></div></div></div></div></div></div>
+<div class="pair"><div><p class="cap">Phone · touch · 390px · Both</p><div class="scroller"><div class="dev dev-ph touch" style="height:760px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good afternoon</div><div class="wsub">Tuesday, December 1, 2026 · Worcester and Shrewsbury</div></div></div><div class="hsec">Today</div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 4:00 PM</div><div class="m">Alex Kim · 1st Dan · 1 star → 2 stars</div></div><span class="btn btn-sm">Grade</span></div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 5:30 PM</div><div class="m">Ethan Lopez · 1st Dan · 2 stars → 3 stars</div></div><span class="btn btn-sm">Grade</span></div></div><nav class="phbar" aria-label="Sections"><a class="on" aria-current="page"><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div></div><div><p class="cap">Phone · touch · <b>320px</b> · check</p><div class="scroller"><div class="dev dev-ph touch w320" style="width:332px;height:760px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good afternoon</div><div class="wsub">Tuesday, December 1, 2026 · Worcester and Shrewsbury</div></div></div><div class="hsec">Today</div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 4:00 PM</div><div class="m">Alex Kim · 1st Dan · 1 star → 2 stars</div></div><span class="btn btn-sm">Grade</span></div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 5:30 PM</div><div class="m">Ethan Lopez · 1st Dan · 2 stars → 3 stars</div></div><span class="btn btn-sm">Grade</span></div></div><nav class="phbar" aria-label="Sections"><a class="on" aria-current="page"><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div></div></div>
+<p class="rowlbl">After Grade (decided by v0.512 Q1 A and v0.513)</p>
+<div class="flow"><div><p class="step"><b>1 · Home</b> — Grade on Alex Kim’s card. Address: <code>tkd-dashboard.pages.dev/</code></p><div class="zoomwrap"><div class="scroller"><div class="dev dev-pc" style="height:640px"><div class="app"><nav class="rail" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i></a><a aria-label="Testing"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good afternoon</div><div class="wsub">Tuesday, December 1, 2026 · Worcester and Shrewsbury</div></div></div><div class="hsec">Today</div><div class="hcard hov"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 4:00 PM</div><div class="m">Alex Kim · 1st Dan · 1 star → 2 stars</div></div><span class="btn btn-sm">Grade</span></div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 5:30 PM</div><div class="m">Ethan Lopez · 1st Dan · 2 stars → 3 stars</div></div><span class="btn btn-sm">Grade</span></div></div></div></div></div></div></div></div>
+<div><p class="step"><b>2 · Private grading page</b> (as built). Address: <code>…/#testing/star/event/&lt;id&gt;</code> — no candidate id.</p><div class="zoomwrap"><div class="scroller"><div class="dev dev-pc" style="height:640px"><div class="app"><nav class="rail" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i></a><a class="on" aria-current="page" aria-label="Testing"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Fall 2026 Star Testing</a><div class="ptitle">Private testing · Alex Kim</div><div class="esum">Tue, Dec 1, 2026 · 4:00 PM · 1st Dan · 1 star → 2 stars · Shrewsbury</div></div><span class="grow"></span><span class="btn"><i class="ti ti-printer"></i>Print grading sheet</span></div><div style="font-size:13px;font-weight:500;margin:8px 0 6px">Alex Kim’s grades</div><div class="pgcard"><div class="pl2"><span class="grow">White–Deputy Curriculum</span><span class="sel">—<i class="ti ti-chevron-down"></i></span></div><div class="pl2"><span class="grow">Go-Ryo Poomse</span><span class="sel">—<i class="ti ti-chevron-down"></i></span></div><div class="pl2"><span class="grow">Advanced Motion</span><span class="sel">—<i class="ti ti-chevron-down"></i></span></div><div class="pl2"><span class="grow">Advance Sa-Bang Chuck</span><span class="sel">—<i class="ti ti-chevron-down"></i></span></div><div class="pl2"><span class="grow">Step Sa-Bang Chuck</span><span class="sel">—<i class="ti ti-chevron-down"></i></span></div><div class="pl2"><span class="grow">Two Step Sparring</span><span class="sel">—<i class="ti ti-chevron-down"></i></span></div><div class="pl2" style="color:var(--text2)">… (as built, v0.513)</div></div></div></div></div></div></div></div></div>
+<div><p class="step"><b>3 · ← or browser Back</b> → the event’s Candidates tab (v0.513). One more Back → Home. <span class="annot" style="display:block">The header says 23 candidates — it counts the private student; Home’s testing-day card says 22 because it leaves private students out (v0.151).</span></p><div class="zoomwrap"><div class="scroller"><div class="dev dev-pc" style="height:640px"><div class="app"><nav class="rail" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i></a><a class="on" aria-current="page" aria-label="Testing"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Star testing</a><div class="ptitle">Fall 2026 Star Testing</div><div class="esum">Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 23 candidates</div></div><span class="grow"></span><span style="display:flex;gap:8px"><span class="btn btn-primary"><i class="ti ti-plus"></i>Add candidate</span><span class="btn"><i class="ti ti-qrcode"></i>Registration link</span></span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Candidates</span><span role="tab">Grading</span><span role="tab">Results</span></div><p class="annot" style="margin:0 0 6px">(the Candidates tab as built — not redrawn)</p><div class="ghostrows"><div class="gr"><span class="skel" style="width:150px"></span><span class="skel" style="width:90px"></span><span class="skel" style="width:70px"></span></div><div class="gr"><span class="skel" style="width:187px"></span><span class="skel" style="width:90px"></span><span class="skel" style="width:70px"></span></div><div class="gr"><span class="skel" style="width:164px"></span><span class="skel" style="width:90px"></span><span class="skel" style="width:70px"></span></div><div class="gr"><span class="skel" style="width:201px"></span><span class="skel" style="width:90px"></span><span class="skel" style="width:70px"></span></div></div></div></div></div></div></div></div></div></div>
+<p class="cap">PC · mouse · 1280px · step 2 at full size</p><div class="scroller"><div class="dev dev-pc" style="height:560px"><div class="app"><nav class="rail" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i></a><a class="on" aria-current="page" aria-label="Testing"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="q" style="padding:14px 0 0;margin-bottom:8px"><span class="qn">Proposed: see 10</span><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Fall 2026 Star Testing</a><div class="ptitle">Private testing · Alex Kim</div><div class="esum">Tue, Dec 1, 2026 · 4:00 PM · 1st Dan · 1 star → 2 stars · Shrewsbury</div></div><span class="grow"></span><span class="btn"><i class="ti ti-printer"></i>Print grading sheet</span></div></div><div style="font-size:13px;font-weight:500;margin:8px 0 6px">Alex Kim’s grades</div><div class="pgcard"><div class="pl2"><span class="grow">White–Deputy Curriculum</span><span class="sel">—<i class="ti ti-chevron-down"></i></span></div><div class="pl2"><span class="grow">Go-Ryo Poomse</span><span class="sel">—<i class="ti ti-chevron-down"></i></span></div><div class="pl2"><span class="grow">Advanced Motion</span><span class="sel">—<i class="ti ti-chevron-down"></i></span></div><div class="pl2"><span class="grow">Advance Sa-Bang Chuck</span><span class="sel">—<i class="ti ti-chevron-down"></i></span></div><div class="pl2"><span class="grow">Step Sa-Bang Chuck</span><span class="sel">—<i class="ti ti-chevron-down"></i></span></div><div class="pl2"><span class="grow">Two Step Sparring</span><span class="sel">—<i class="ti ti-chevron-down"></i></span></div><div class="pl2" style="color:var(--text2)">… (as built, v0.513)</div></div></div></div></div></div></div>
+<div class="pair"><div><p class="cap">Phone · touch · 390px · step 2 (as built)</p><div class="scroller"><div class="dev dev-ph touch" style="height:760px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Fall 2026 Star Testing</a><div class="ptitle">Private testing · Alex Kim</div><div class="esum">Tue, Dec 1, 2026 · 4:00 PM · 1st Dan · 1 star → 2 stars · Shrewsbury</div><div style="margin-top:8px"><span class="btn"><i class="ti ti-printer"></i>Print grading sheet</span></div></div></div><div style="font-size:13px;font-weight:500;margin:8px 0 6px">Alex Kim’s grades</div><div class="pgcard"><div class="pl2"><span class="grow">White–Deputy Curriculum</span><span class="sel">—<i class="ti ti-chevron-down"></i></span></div><div class="pl2"><span class="grow">Go-Ryo Poomse</span><span class="sel">—<i class="ti ti-chevron-down"></i></span></div><div class="pl2"><span class="grow">Advanced Motion</span><span class="sel">—<i class="ti ti-chevron-down"></i></span></div><div class="pl2"><span class="grow">Advance Sa-Bang Chuck</span><span class="sel">—<i class="ti ti-chevron-down"></i></span></div><div class="pl2"><span class="grow">Step Sa-Bang Chuck</span><span class="sel">—<i class="ti ti-chevron-down"></i></span></div><div class="pl2"><span class="grow">Two Step Sparring</span><span class="sel">—<i class="ti ti-chevron-down"></i></span></div><div class="pl2" style="color:var(--text2)">… (as built, v0.513)</div></div></div><nav class="phbar" aria-label="Sections"><a><i class="ti ti-home"></i>Home</a><a class="on" aria-current="page"><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div></div></div>
+<p class="rowlbl">The student changed since Home loaded</p><p class="cap">PC · mouse · 1280px · Alex Kim was moved back to the testing day on another device</p><div class="scroller"><div class="dev dev-pc" style="height:520px"><div class="app"><nav class="rail" aria-label="Sections"><a aria-label="Home"><i class="ti ti-home"></i></a><a class="on" aria-current="page" aria-label="Testing"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="phead"><div><a class="back" role="link"><i class="ti ti-arrow-left"></i>Star testing</a><div class="ptitle">Fall 2026 Star Testing</div><div class="esum">Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 23 candidates</div></div><span class="grow"></span><span style="display:flex;gap:8px"><span class="btn btn-primary"><i class="ti ti-plus"></i>Add candidate</span><span class="btn"><i class="ti ti-qrcode"></i>Registration link</span></span></div><div class="tabs" role="tablist"><span class="on" role="tab" aria-selected="true">Candidates</span><span role="tab">Grading</span><span role="tab">Results</span></div><div class="q" style="padding:14px 0 0;margin-bottom:12px"><span class="qn">Proposed: see 11</span><div class="errbar" role="alert" style="margin:0"><i class="ti ti-alert-triangle"></i><span class="grow">Alex Kim was moved back to the testing day on another device. Grade them on the Grading tab.</span><span class="ib" role="button" aria-label="Dismiss"><span class="ibv"><i class="ti ti-x"></i></span></span></div></div><p class="annot" style="margin:0 0 6px">(the Candidates tab as built — not redrawn)</p><div class="ghostrows"><div class="gr"><span class="skel" style="width:150px"></span><span class="skel" style="width:90px"></span><span class="skel" style="width:70px"></span></div><div class="gr"><span class="skel" style="width:187px"></span><span class="skel" style="width:90px"></span><span class="skel" style="width:70px"></span></div><div class="gr"><span class="skel" style="width:164px"></span><span class="skel" style="width:90px"></span><span class="skel" style="width:70px"></span></div></div></div></div></div></div></div>
+</section><section id="s3"><h2>P7-S3. The location switcher: school counts and that school’s private students</h2><p class="lead">The approved screen 4, with its amber items settled, plus a Shrewsbury device and a school with no candidates.</p>
+<div class="explain"><h3>What it shows</h3><ul>
+<li><b>Decided (v0.155):</b> the switcher filters Home like everything else (screen 4 drawn). <b>Contract §7:</b> <code>star_home_today</code> sends counts per school and each private student’s school; the browser does the filtering.</li>
+<li><span class="prop">Proposed (see 12): the event card stays on a one-school device, with that school’s count; none → “No Worcester candidates testing today”.</span></li>
+<li><span class="prop">Proposed (see 13): “Shrewsbury school” shows everywhere.</span></li>
+<li><span class="prop">Proposed (see 14): only that school’s private students.</span></li>
+<li><b>320px check:</b> “10 Shrewsbury candidates testing today” wraps to two lines; nothing cut.</li>
+<li><b>Touch (§2.5):</b> the small buttons (Open grading, Grade) are 36px tall on touch with a 44px tap area, as in the approved v0.155 file.</li></ul></div>
+<table class="statetab"><tr><th>Switcher</th><th>Sat, Nov 14 (event: 12 Worcester + 10 Shrewsbury, 1 private)</th><th>Tue, Dec 1 (Alex Kim, Shrewsbury · Ethan Lopez, Worcester)</th></tr>
+<tr><td>Both</td><td>“22 candidates testing today”</td><td>Alex Kim 4:00 PM, Ethan Lopez 5:30 PM</td></tr>
+<tr><td>Worcester</td><td>“12 Worcester candidates testing today”</td><td>Ethan Lopez only</td></tr>
+<tr><td>Shrewsbury</td><td>“10 Shrewsbury candidates testing today”</td><td>Alex Kim only</td></tr>
+<tr><td>Worcester, no Worcester candidates</td><td>“No Worcester candidates testing today” (card stays)</td><td>no private card → “Nothing on Home yet” if Finance has nothing either</td></tr></table>
+<p class="rowlbl">Testing day, one school</p><p class="cap">PC · mouse · 1280px · Worcester</p><div class="scroller"><div class="dev dev-pc" style="height:400px"><div class="app"><nav class="rail" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i></a><a aria-label="Testing"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span class="on"><i class="ti ti-map-pin"></i>Worcester</span><span>Shrewsbury</span><span>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good morning</div><div class="wsub">Saturday, November 14, 2026 · Worcester</div></div></div><div class="hsec">Today</div><div class="hcard q"><span class="qn">Proposed: see 12, 13</span><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Fall 2026 Star Testing · 10:00 AM</div><div class="m">Shrewsbury school · 12 Worcester candidates testing today</div></div><span class="btn btn-sm">Open grading</span></div></div></div></div></div></div>
+<p class="cap">Tablet · touch · upright · 820px · Worcester</p><div class="scroller"><div class="dev dev-tab touch" style="height:520px"><div class="app"><nav class="rail-t" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i>Home</a><a aria-label="Testing"><i class="ti ti-certificate"></i>Testing</a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span class="on"><i class="ti ti-map-pin"></i>Worcester</span><span>Shrewsbury</span><span>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good morning</div><div class="wsub">Saturday, November 14, 2026 · Worcester</div></div></div><div class="hsec">Today</div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Fall 2026 Star Testing · 10:00 AM</div><div class="m">Shrewsbury school · 12 Worcester candidates testing today</div></div><span class="btn btn-sm">Open grading</span></div></div></div></div></div></div>
+<div class="pair"><div><p class="cap">Phone · touch · 390px · Shrewsbury</p><div class="scroller"><div class="dev dev-ph touch" style="height:640px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span class="on"><i class="ti ti-map-pin"></i>Shrewsbury</span><span>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good morning</div><div class="wsub">Saturday, November 14, 2026 · Shrewsbury</div></div></div><div class="hsec">Today</div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Fall 2026 Star Testing · 10:00 AM</div><div class="m">Shrewsbury school · 10 Shrewsbury candidates testing today</div></div><span class="btn btn-sm">Open grading</span></div></div><nav class="phbar" aria-label="Sections"><a class="on" aria-current="page"><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div></div><div><p class="cap">Phone · touch · <b>320px</b> · Shrewsbury · check</p><div class="scroller"><div class="dev dev-ph touch w320" style="width:332px;height:640px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span class="on"><i class="ti ti-map-pin"></i>Shrewsbury</span><span>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good morning</div><div class="wsub">Saturday, November 14, 2026 · Shrewsbury</div></div></div><div class="hsec">Today</div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Fall 2026 Star Testing · 10:00 AM</div><div class="m">Shrewsbury school · 10 Shrewsbury candidates testing today</div></div><span class="btn btn-sm">Open grading</span></div></div><nav class="phbar" aria-label="Sections"><a class="on" aria-current="page"><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div></div></div>
+<p class="cap">PC · mouse · 1280px · Worcester · an event with no Worcester candidates (made-up example)</p><div class="scroller"><div class="dev dev-pc" style="height:400px"><div class="app"><nav class="rail" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i></a><a aria-label="Testing"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span class="on"><i class="ti ti-map-pin"></i>Worcester</span><span>Shrewsbury</span><span>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good morning</div><div class="wsub">Saturday, November 14, 2026 · Worcester</div></div></div><div class="hsec">Today</div><div class="hcard q"><span class="qn">Proposed: see 12</span><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Fall 2026 Star Testing · 10:00 AM</div><div class="m">Shrewsbury school · No Worcester candidates testing today</div></div><span class="btn btn-sm">Open grading</span></div></div></div></div></div></div>
+<p class="rowlbl">Private testing day, one school</p><p class="cap">PC · mouse · 1280px · Worcester · Tue, Dec 1 (approved)</p><div class="scroller"><div class="dev dev-pc" style="height:400px"><div class="app"><nav class="rail" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i></a><a aria-label="Testing"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span class="on"><i class="ti ti-map-pin"></i>Worcester</span><span>Shrewsbury</span><span>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good afternoon</div><div class="wsub">Tuesday, December 1, 2026 · Worcester</div></div></div><div class="hsec">Today</div><div class="hcard q"><span class="qn">Proposed: see 14</span><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 5:30 PM</div><div class="m">Ethan Lopez · 1st Dan · 2 stars → 3 stars</div></div><span class="btn btn-sm">Grade</span></div></div></div></div></div></div>
+<p class="cap">Tablet · touch · <b>held sideways</b> · 1180 × 820 · Worcester · Tue, Dec 1</p><div class="scroller"><div class="dev dev-tab touch land" style="width:1180px;max-width:none;height:480px"><div class="app"><nav class="rail-t" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i>Home</a><a aria-label="Testing"><i class="ti ti-certificate"></i>Testing</a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span class="on"><i class="ti ti-map-pin"></i>Worcester</span><span>Shrewsbury</span><span>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good afternoon</div><div class="wsub">Tuesday, December 1, 2026 · Worcester</div></div></div><div class="hsec">Today</div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 5:30 PM</div><div class="m">Ethan Lopez · 1st Dan · 2 stars → 3 stars</div></div><span class="btn btn-sm">Grade</span></div></div></div></div></div></div>
+<p class="cap">Phone · touch · 390px · Worcester · Tue, Dec 1</p><div class="scroller"><div class="dev dev-ph touch" style="height:640px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span class="on"><i class="ti ti-map-pin"></i>Worcester</span><span>Shrewsbury</span><span>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good afternoon</div><div class="wsub">Tuesday, December 1, 2026 · Worcester</div></div></div><div class="hsec">Today</div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 5:30 PM</div><div class="m">Ethan Lopez · 1st Dan · 2 stars → 3 stars</div></div><span class="btn btn-sm">Grade</span></div></div><nav class="phbar" aria-label="Sections"><a class="on" aria-current="page"><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div>
+</section><section id="s4"><h2>P7-S4. Loading, offline, midnight, Hide private details, and the build switch</h2><p class="lead">The states the build needs; most copied from Finance’s Home reminders, one new (the empty line waits for Star).</p>
+<div class="explain"><h3>What it shows</h3><ul>
+<li><b>Copied: Finance’s Home reminders</b> (<code>src/screens/finance/HomeReminders.jsx</code>, built and live): no loading look, a failed ask keeps what was shown, when Home asks. <b>Not copied:</b> Finance shows “Nothing on Home yet” at once, before its first answer — waiting for Star is new (proposal 8). No other section has a Home item yet (checked: Color Belt, Camps, Black Belt and the new-students branch don’t touch <code>Home.jsx</code>).</li>
+<li><b>Decided (v0.506):</b> Hide private details hides dates of birth, emails and payments on every screen; the chip shows in the top bar; Finance’s Home line has no link (as built).</li>
+<li><span class="prop">Proposed (see 15): no loading look (copied); the empty line waits for Star (new).</span></li>
+<li><span class="prop">Proposed (see 16): a failed ask (also <code>stale</code> / <code>invalid</code>) keeps the card; <code>no_access</code> locks. The first ask failing is Question Q2.</span></li>
+<li><span class="prop">Proposed (see 17): with Hide private details on, the cards are unchanged.</span></li>
+<li><span class="prop">Proposed (see 18): build switch off — no call, no card.</span></li>
+<li><b>320px check</b> (Hide private details on): the chip shows as an icon only; both cards fit. <b>The top bar’s “Both” is cut off</b> at 320px with the chip on — the known open item from v0.508, not new here.</li>
+<li><b>Touch (§2.5):</b> the small buttons (Open grading, Grade) are 36px tall on touch with a 44px tap area, as in the approved v0.155 file.</li></ul></div>
+<table class="statetab"><tr><th>State</th><th>What Home shows (Star’s part)</th><th>Where from</th></tr>
+<tr><td>Asking (first time)</td><td>No gray bars or spinner; the empty line waits for Star’s first answer</td><td>No loading look: copied from Finance. The waiting empty line: <b>Proposed (new)</b> — Finance shows it at once (Q2 B)</td></tr>
+<tr><td>Answer: nothing today</td><td>Nothing (empty line if Finance has nothing either)</td><td>v0.154, v0.11</td></tr>
+<tr><td>Answer: a card</td><td>The card(s)</td><td>v0.154, v0.155</td></tr>
+<tr><td>A later ask fails (offline, <code>stale</code>, <code>invalid</code>)</td><td>The last card(s), unchanged; tries again next minute</td><td>Copied: Finance’s reminders</td></tr>
+<tr><td>The first ask fails</td><td>Question Q2 (chosen B: nothing below the header, no empty line; tries again next minute)</td><td>Q2</td></tr>
+<tr><td><code>no_access</code></td><td>The screen locks</td><td>As everywhere</td></tr>
+<tr><td>Midnight passes</td><td>The next ask (within a minute) returns nothing → the card goes</td><td>Copied: Finance’s every-minute ask</td></tr>
+<tr><td>Locked</td><td>No asks behind the lock screen; asks again after unlocking</td><td>Copied: Finance’s reminders</td></tr></table>
+<p class="rowlbl">Loading and a failed ask</p><p class="cap">PC · mouse · 1280px · the first moment after opening Home</p><div class="scroller"><div class="dev dev-pc" style="height:360px"><div class="app"><nav class="rail" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i></a><a aria-label="Testing"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good morning</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div><div class="q" style="padding:14px 0 0;min-height:60px"><span class="qn">Proposed: see 15, 8</span><p class="annot" style="margin:0">(nothing yet: no gray bars — copied from Finance; no “Nothing on Home yet” until Star has answered — proposed, new; the card appears when the answer arrives)</p></div></div></div></div></div></div>
+<p class="cap">PC · mouse · 1280px · offline after the card had loaded — unchanged</p><div class="scroller"><div class="dev dev-pc" style="height:400px"><div class="app"><nav class="rail" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i></a><a aria-label="Testing"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good morning</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div><div class="hsec">Today</div><div class="hcard q"><span class="qn">Proposed: see 16</span><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Fall 2026 Star Testing · 10:00 AM</div><div class="m">Shrewsbury school · 22 candidates testing today</div></div><span class="btn btn-sm">Open grading</span></div></div></div></div></div></div>
+<p class="rowlbl">Hide private details on</p><p class="cap">PC · mouse · 1280px · evening of the testing day</p><div class="scroller"><div class="dev dev-pc" style="height:440px"><div class="app"><nav class="rail" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i></a><a aria-label="Testing"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="hidchip" role="button" aria-label="Private details hidden. Tap to show them again."><i class="ti ti-currency-dollar-off"></i><span>Private details hidden</span></span><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good evening</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div><div class="finls"><div class="finl"><i class="ti ti-alert-triangle"></i><span class="grow">Shrewsbury’s drawer isn’t closed yet.</span></div></div><div class="hsec">Today</div><div class="hcard q"><span class="qn">Proposed: see 17</span><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Fall 2026 Star Testing · 10:00 AM</div><div class="m">Shrewsbury school · 22 candidates testing today</div></div><span class="btn btn-sm">Open grading</span></div></div></div></div></div></div>
+<p class="cap">Tablet · touch · <b>held sideways</b> · 1180 × 820 · the same</p><div class="scroller"><div class="dev dev-tab touch land" style="width:1180px;max-width:none;height:540px"><div class="app"><nav class="rail-t" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i>Home</a><a aria-label="Testing"><i class="ti ti-certificate"></i>Testing</a></nav><div class="app-col"><div class="topbar"><span class="hidchip" role="button" aria-label="Private details hidden. Tap to show them again."><i class="ti ti-currency-dollar-off"></i><span>Private details hidden</span></span><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good evening</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div><div class="finls"><div class="finl"><i class="ti ti-alert-triangle"></i><span class="grow">Shrewsbury’s drawer isn’t closed yet.</span></div></div><div class="hsec">Today</div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Fall 2026 Star Testing · 10:00 AM</div><div class="m">Shrewsbury school · 22 candidates testing today</div></div><span class="btn btn-sm">Open grading</span></div></div></div></div></div></div>
+<div class="pair"><div><p class="cap">Phone · touch · 390px · Tue, Dec 1</p><div class="scroller"><div class="dev dev-ph touch" style="height:760px"><div class="ph-shell"><div class="topbar"><span class="tap"><span class="hidchip icononly" role="button" aria-label="Private details hidden. Tap to show them again."><i class="ti ti-currency-dollar-off"></i></span></span><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good afternoon</div><div class="wsub">Tuesday, December 1, 2026 · Worcester and Shrewsbury</div></div></div><div class="hsec">Today</div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 4:00 PM</div><div class="m">Alex Kim · 1st Dan · 1 star → 2 stars</div></div><span class="btn btn-sm">Grade</span></div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 5:30 PM</div><div class="m">Ethan Lopez · 1st Dan · 2 stars → 3 stars</div></div><span class="btn btn-sm">Grade</span></div></div><nav class="phbar" aria-label="Sections"><a class="on" aria-current="page"><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div></div><div><p class="cap">Phone · touch · <b>320px</b> · Tue, Dec 1 · check</p><div class="scroller"><div class="dev dev-ph touch w320" style="width:332px;height:760px"><div class="ph-shell"><div class="topbar"><span class="tap"><span class="hidchip icononly" role="button" aria-label="Private details hidden. Tap to show them again."><i class="ti ti-currency-dollar-off"></i></span></span><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good afternoon</div><div class="wsub">Tuesday, December 1, 2026 · Worcester and Shrewsbury</div></div></div><div class="hsec">Today</div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 4:00 PM</div><div class="m">Alex Kim · 1st Dan · 1 star → 2 stars</div></div><span class="btn btn-sm">Grade</span></div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Private star testing · 5:30 PM</div><div class="m">Ethan Lopez · 1st Dan · 2 stars → 3 stars</div></div><span class="btn btn-sm">Grade</span></div></div><nav class="phbar" aria-label="Sections"><a class="on" aria-current="page"><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div></div></div>
+<p class="rowlbl">Star build switch off</p><p class="cap">PC · mouse · 1280px · Sat, Nov 14 on the live site before Star’s go-live — Home exactly as today</p><div class="scroller"><div class="dev dev-pc" style="height:380px"><div class="app"><nav class="rail" aria-label="Sections"><a class="on" aria-current="page" aria-label="Home"><i class="ti ti-home"></i></a><a aria-label="Testing"><i class="ti ti-certificate"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="avatar" aria-label="Account menu">S</span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good morning</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div><div class="q" style="padding:14px 0 0"><span class="qn">Proposed: see 18</span><p class="hempty">Nothing on Home yet. Items appear here as sections are added.</p></div></div></div></div></div></div>
+</section>
+<section id="questions"><h2>Questions</h2><div class="qbox" id="q1"><h3 style="font-size:18px;font-weight:500;margin:0 0 4px">Question Q1 — Does the card stay after grading ends?</h3><div class="chosen"><b>Chosen: A</b> — all day (v0.515).</div><p style="color:var(--text2);margin:0 0 8px">v0.154 left open “whether the card stays after grading ends”; the build plan proposes all day. The database knows nothing called “grading ended” — results stay open (v0.139) and <code>star_home_today</code> sends no grading progress (contract §7).</p>
+<div class="optcol"><div class="qcard rec pick"><h4>A — All day</h4><span class="rectag">Recommended · Chosen</span><p class="lead2">The card shows from midnight to midnight, whatever the grading state. Drawn: 7 PM, everyone graded.</p><div class="zoomwrap zph"><div class="scroller"><div class="dev dev-ph touch" style="height:560px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good evening</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div><div class="hsec">Today</div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Fall 2026 Star Testing · 10:00 AM</div><div class="m">Shrewsbury school · 22 candidates testing today</div></div><span class="btn btn-sm">Open grading</span></div></div><nav class="phbar" aria-label="Sections"><a class="on" aria-current="page"><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div></div>
+<ul><li><span class="good">Good:</span> needs nothing new — <code>star_home_today</code> already answers it</li><li><span class="good">Good:</span> predictable: the card is there all day, so nobody wonders where it went; Open grading still reaches late grading and Results is one tab away</li><li><span class="good">Good:</span> same rule for a private card</li><li><span class="bad">Bad:</span> after the testing the card stays until midnight although there is nothing left to do</li></ul></div><div class="qcard"><h4>B — Change to “Open results” once everyone is graded</h4><p class="lead2">When every candidate has a final result, the line says so and the button opens Results</p><div class="zoomwrap zph"><div class="scroller"><div class="dev dev-ph touch" style="height:560px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good evening</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div><div class="hsec">Today</div><div class="hcard"><div class="hi"><i class="ti ti-star"></i></div><div class="grow"><div class="t">Fall 2026 Star Testing · 10:00 AM</div><div class="m">Shrewsbury school · every candidate graded</div></div><span class="btn btn-sm">Open results</span></div></div><nav class="phbar" aria-label="Sections"><a class="on" aria-current="page"><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div></div>
+<ul><li><span class="good">Good:</span> the card points at the next job (sending results)</li><li><span class="bad">Bad:</span> Home must know the grading state — <code>star_home_today</code> doesn’t send it: <b>a migration</b> (a new version of <code>star_home_today</code>), or Home reads <code>star_event_results</code> for each Dan every minute on every device (heavier, and it carries more than Home needs)</li><li><span class="bad">Bad:</span> a late grade changed after 7 PM flips it back — the card changes under people</li><li><span class="bad">Bad:</span> results are sent days later at the desk (v0.139), not from Home</li></ul></div><div class="qcard"><h4>C — Go away once everyone is graded</h4><p class="lead2">The card disappears when every candidate has a final result; Home shows its usual lines</p><div class="zoomwrap zph"><div class="scroller"><div class="dev dev-ph touch" style="height:560px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good evening</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div><p class="hempty">Nothing on Home yet. Items appear here as sections are added.</p></div><nav class="phbar" aria-label="Sections"><a class="on" aria-current="page"><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div></div>
+<ul><li><span class="good">Good:</span> Home shows only what still needs doing</li><li><span class="bad">Bad:</span> the same database cost as B (a migration, or heavy reads)</li><li><span class="bad">Bad:</span> a card that vanishes mid-afternoon looks like a fault; staff who want to fix a grade must go through Testing</li><li><span class="bad">Bad:</span> a private student graded early loses their card too</li></ul></div></div>
+<p style="margin:8px 0 0"><b>Recommendation:</b> A. It costs nothing, it’s what the approved drawing already shows, and Home stays predictable on the mat tablet. B and C both need a database change for a small gain on one evening a season. Pick B if you’d like Home to steer staff towards Results after the testing.</p></div><div class="qbox" id="q2"><h3 style="font-size:18px;font-weight:500;margin:0 0 4px">Question Q2 — When Home’s first ask fails (offline)</h3><div class="chosen"><b>Chosen: B</b> — silent, and the empty line waits for Star (v0.515).</div><p style="color:var(--text2);margin:0 0 8px">Loading and a failed <b>later</b> ask are copied from Finance’s Home reminders (S4). Finance shows “Nothing on Home yet” at once, before its first answer, and stays silent when it fails. For Star that matters more: if the very first ask fails, Home doesn’t know whether today is a testing day.</p>
+<div class="optcol"><div class="qcard"><h4>A — Copy Finance: silent</h4><p class="lead2">Exactly as Finance’s reminder: nothing is said, and “Nothing on Home yet” shows at once and stays while the ask fails. Retried every minute.</p><div class="zoomwrap zph"><div class="scroller"><div class="dev dev-ph touch" style="height:560px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good morning</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div><p class="hempty">Nothing on Home yet. Items appear here as sections are added.</p></div><nav class="phbar" aria-label="Sections"><a class="on" aria-current="page"><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div></div>
+<ul><li><span class="good">Good:</span> a true copy of Finance’s live behaviour — nothing new to build or look at</li><li><span class="good">Good:</span> Home stays calm; a dropped connection shows everywhere else anyway</li><li><span class="bad">Bad:</span> on the testing day, with a bad connection, Home says “Nothing on Home yet” — which is wrong</li><li><span class="bad">Bad:</span> on a normal open, the empty line can flash for a moment before the card appears</li></ul></div><div class="qcard rec pick"><h4>B — Silent like Finance, but the empty line waits for Star</h4><span class="rectag">Recommended · Chosen</span><p class="lead2">Nothing is said, as Finance; “Nothing on Home yet” isn’t shown until Star has answered at least once. A failed first ask leaves Home with just its header. Retried every minute.</p><div class="zoomwrap zph"><div class="scroller"><div class="dev dev-ph touch" style="height:560px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good morning</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div></div><nav class="phbar" aria-label="Sections"><a class="on" aria-current="page"><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div></div>
+<ul><li><span class="good">Good:</span> never claims “nothing” on the testing day just because it couldn’t ask</li><li><span class="good">Good:</span> nothing new to look at — no new line, wording or button; one small rule in the code</li><li><span class="good">Good:</span> no flash of the empty line before the card on a normal open</li><li><span class="bad">Bad:</span> while offline, Home below the header is blank with no reason given</li><li><span class="bad">Bad:</span> differs from Finance in one detail (when the empty line appears)</li></ul></div><div class="qcard"><h4>C — One gray line with Retry</h4><p class="lead2">Only when the <b>first</b> ask fails (a card already shown stays, proposal 16): a gray line in place of the empty line. Gone on the next good answer.</p><div class="zoomwrap zph"><div class="scroller"><div class="dev dev-ph touch" style="height:560px"><div class="ph-shell"><div class="topbar"><span class="grow"></span><div class="loc" role="group" aria-label="Location"><span>Worcester</span><span>Shrewsbury</span><span class="on"><i class="ti ti-map-pin"></i>Both</span></div><span class="tap"><span class="avatar" aria-label="Account menu">S</span></span></div><div class="content"><div class="welcome"><div class="wlogo">U.S.T.C.</div><div><div class="wtitle">Good morning</div><div class="wsub">Saturday, November 14, 2026 · Worcester and Shrewsbury</div></div></div><div class="hline"><i class="ti ti-alert-triangle"></i><span class="grow">Couldn’t check for star testing today. Check the connection, then try again.</span><span class="btn btn-sm"><i class="ti ti-refresh"></i>Retry</span></div></div><nav class="phbar" aria-label="Sections"><a class="on" aria-current="page"><i class="ti ti-home"></i>Home</a><a><i class="ti ti-certificate"></i>Testing</a></nav></div></div></div></div>
+<ul><li><span class="good">Good:</span> never claims “nothing”, and tells staff why Home is empty</li><li><span class="good">Good:</span> the dashboard’s usual “Couldn’t … Check the connection, then try again.” wording and Retry</li><li><span class="bad">Bad:</span> a new element to build and test; Finance’s reminder stays silent</li><li><span class="bad">Bad:</span> on any ordinary day with a bad connection, the line shows although there’d be no card anyway</li></ul></div></div>
+<p style="margin:8px 0 0"><b>Recommendation:</b> B. It keeps Finance’s silence and adds nothing to look at, yet Home never says “nothing” on the one day the card matters. C explains the blank Home, but it is a new element for a rare case and shows on ordinary offline days too. Pick C if you’d rather staff are told why Home is blank; pick A to keep Home exactly like Finance.</p></div></section>
+</main>
+<script>
+(function(){
+  var m=location.hash.match(/^#only=(.+)$/);
+  if(m){ document.body.classList.add('only'); var el=document.getElementById(m[1]); if(el){ var host=el; while(host.parentElement && host.parentElement.tagName!=='MAIN') host=host.parentElement; host.classList.add('keep'); if(host!==el){ var kids=host.children; for(var i=0;i<kids.length;i++){ if(kids[i]!==el) kids[i].style.display='none'; } } } }
+  function fit(){
+    var list=document.querySelectorAll('.scroller');
+    for(var k=0;k<list.length;k++){
+      var s=list[k], d=s.firstElementChild; if(!d) continue;
+      if(s.closest('.zoomwrap')) continue;
+      d.style.zoom=''; var w=d.offsetWidth, a=s.clientWidth;
+      if(a<w && a/w>=0.6){ d.style.zoom=(a/w).toFixed(4); }
+    }
+  }
+  window.addEventListener('resize',fit); fit();
+})();
+</script>
+</body>
+</html>
