@@ -599,7 +599,7 @@ After step 11 (0005), on the main database: print the 0003, 0004 and 0005 finger
 |---|---|---|
 | OPEN-1 | v0.85 / v0.88 say the automatic close is "recorded in the change log" ("Closed automatically at the end of Feb 6"), but the state is worked out, never stored, and nothing runs overnight (0005 doesn't log it either) | **Not logged**; the History / Edit event screens can show a worked-out line instead |
 | OPEN-2 | The Star form's web address and Pages Function route (v0.159 "still to confirm") | `/star/<code>` and `functions/api/star/[code].js` (no database effect) |
-| OPEN-3 | The school's acknowledgement wording (v0.102, v0.107) and so the `ack_version` value | Placeholder constant `'st-2026-10-18'`; it changes with the wording |
+| OPEN-3 | The school's acknowledgement wording (v0.102, v0.107) and so the `ack_version` value | Placeholder constant `'st-2026-10-18'`; it changes with the wording. **Update 2026-10-20 (rulebook v0.510):** the label `'st-2026-10-18'` is **kept** for v0.510's wording (no registration exists yet); the final words must be set before the first real registration — any later change needs a migration and a new label. |
 | OPEN-4 | May staff edit other details (name, school, DOB, email, stars) on a **paid** row? (v0.110 "Edit candidate on unpaid rows", v0.160 "still to confirm"; only the Dan change is decided, S8) | Allowed for staff; only the Dan change on a paid row is admin-only |
 | OPEN-5 | The fee owed after a Dan change on a paid row (v0.164) | Worked out from the new Dan; the payment is untouched (Paid stays Paid, any overpaid shows) |
 | OPEN-6 | Are class counts kept on a Dan change? (v0.164) | Kept |

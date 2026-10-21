@@ -1,0 +1,96 @@
+/*
+  rail-menu.css — the dark hover menu beside a rail icon (RailMenu.jsx, rulebook v0.59).
+  Why it exists: Testing's rail icon opens a small dark menu on mouse devices once Star testing
+  exists ("Testing" heading, then Color belt testing and Star testing). The look follows the
+  approved Phase 1 chooser mockups (screen 2, v0.177): the same near-black as the rail's label
+  bubble, white 14px names in 36px rows, a lighter gray step under the pointer, a blue tint on the
+  page you're on, a light-blue keyboard ring (the school blue would be invisible on near-black).
+  Only drawn on devices that can hover — RailMenu.jsx never draws it on touch screens.
+*/
+
+/* Colours used only on this dark menu (from the approved mockup). */
+.rail-menu {
+  --rail-menu-hover: #3a3a37; /* the gray step under the pointer */
+  --rail-menu-heading: #b8b6b0; /* the small "Testing" heading */
+  --rail-menu-ring: #8fb2f0; /* keyboard focus ring on the dark background */
+}
+
+/* The icon and its menu together: the menu is placed against this box. */
+.rail-menu-wrap {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.rail-menu {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 20px);
+  z-index: 30; /* the same layer as the label bubble: above the page */
+  width: 220px;
+  padding: 6px 0;
+  border-radius: var(--radius-control);
+  background: var(--color-tooltip-bg);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  color: var(--color-on-blue);
+  text-align: left;
+}
+
+/* An invisible bridge over the gap between icon and menu, so moving the mouse across it counts as
+   "still on the menu" (the ~300ms close delay is a second safety net). */
+.rail-menu::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 100%;
+  width: 20px;
+  height: 100%;
+}
+
+.rail-menu-heading {
+  padding: var(--space-4) var(--space-12);
+  color: var(--rail-menu-heading);
+  font-size: var(--text-12);
+  line-height: 1.5;
+}
+
+.rail-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 36px;
+  padding: 0 var(--space-12);
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: var(--text-14);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.rail-menu-item:hover {
+  background: var(--rail-menu-hover);
+}
+
+/* The page you're on (e.g. Star testing while Star testing is open): blue tint, blue text. */
+.rail-menu-item.is-current,
+.rail-menu-item.is-current:hover {
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+}
+
+/* Keyboard ring drawn just inside the row, so the menu's edge never cuts it off. */
+.rail-menu-item:focus-visible {
+  outline: 2px solid var(--rail-menu-ring);
+  outline-offset: -2px;
+}
+
+/* PC rail: the menu replaces the plain label bubble for this icon (v0.59, exception to 2.3). On the
+   tablet rail the label sits under the icon and stays. */
+@media (min-width: 1024px) and (pointer: fine) {
+  .rail-item.has-menu:hover .rail-label,
+  .rail-item.has-menu:focus-visible .rail-label {
+    display: none;
+  }
+}

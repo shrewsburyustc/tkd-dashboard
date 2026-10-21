@@ -3,6 +3,8 @@
 // Color Belt's answers Q8–Q9) and the later changes (plan answers 6–8): Mark paid replaces the
 // Record payment dialog; Add student is the blue button in the page header.
 // Address: #testing/event/<id> (App.jsx), so browser Back returns to the Events list.
+// (With the Star testing build switch on, the address is #testing/color-belt/event/<id> instead —
+// lib/pageAddress.js decides; this page doesn't need to know.)
 //
 // What's on the page, top to bottom:
 //   - "← Color belt testing", the event name, and the summary line
