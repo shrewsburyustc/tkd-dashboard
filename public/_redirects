@@ -7,9 +7,22 @@
 # /register by itself ("pretty URLs"), and pointing at the .html name can cause a redirect loop.
 /register/*  /register  200
 
+# The camp sign-up page works the same way (contract 0013 §4.1): every /camp/<code> address
+# serves the ONE camp page, camp.html (Pages calls it /camp), and the page reads the code.
+/camp/*  /camp  200
+
 # The public Forms page (build plan §3): every family link looks like /f/<name> (e.g.
 # /f/free-class-instagram), served by the one page forms.html in the same way. Pages serves
 # forms.html at /forms by itself ("pretty URLs"), so both lines point at /forms. (/f alone, with
 # no name, shows the page's "This form was not found".)
 /f  /forms  200
 /f/*  /forms  200
+
+# The Star testing family links (/star/<code>) get their line from the BUILD, not from this file:
+# vite.config.js (starRedirects) adds "/star/*  /star  200" to dist/_redirects while the Star build
+# switch is on, and "/star" + "/star/*  /star-closed  200" (a plain "isn't open yet" page) while it is off.
+
+# The public Black Belt testing registration page (CONTRACT-0016 §9.1): every family link looks
+# like /black-belt/<code> (one per school per cycle), served by the one page black-belt.html in
+# the same way. Pages serves black-belt.html at /black-belt by itself ("pretty URLs").
+/black-belt/*  /black-belt  200

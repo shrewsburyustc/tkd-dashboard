@@ -1,0 +1,125 @@
+<!doctype html>
+<!--
+  Camps-summer-options.html — decision picture for Camps question 3: how the 8-week summer program is set up.
+  Why it exists: Jeffrey picks by looking (rule P3). Uses the summer 2026 form (8 weeks, April prices)
+  and the price grid chosen in question 2. The PNG next to it is a screenshot of this page.
+-->
+<html lang="en"><head><meta charset="utf-8"><title>Camps — summer options</title>
+<style>
+  :root{--bg:#fff;--surface:#f7f7f5;--border:#e5e5e2;--ctl:#8f8f8a;--text:#1f1f1f;--muted:#6b6b6b;
+    --blue:#003595;--tint:#e6ebf4;--amber:#c98a1b;--ok:#3b6d11;--okbg:#eaf3de}
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:#efeee9;font:14px/1.45 "Segoe UI",system-ui,sans-serif;color:var(--text);width:1320px}
+  h1{font-size:20px;font-weight:500;margin:0 0 4px}
+  .lead{color:var(--muted);margin:0 0 20px;max-width:1040px}
+  .opt{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:24px}
+  .opt h2{font-size:16px;font-weight:500;margin:0 0 2px}
+  .rec{display:inline-block;font-size:12px;background:var(--okbg);color:var(--ok);border-radius:6px;padding:1px 8px;margin-left:8px;vertical-align:2px}
+  .sub{color:var(--muted);margin:0 0 16px;font-size:13px}
+  .cols{display:grid;grid-template-columns:1.15fr 1fr;gap:24px;align-items:start}
+  .panel{border:1px solid var(--border);border-radius:12px;padding:16px}
+  .panel .t{font-size:16px;font-weight:500;margin-bottom:2px;display:flex;justify-content:space-between;align-items:center}
+  .panel .h{font-size:12px;color:var(--muted);margin-bottom:12px}
+  .btn{background:var(--blue);color:#fff;border-radius:8px;font-size:13px;padding:5px 12px;font-weight:400}
+  .amber{outline:3px solid var(--amber);outline-offset:4px;border-radius:8px}
+  .note{font-size:12px;color:#7a4f00;margin:10px 0 0;font-weight:500}
+  label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{background:var(--surface);color:var(--muted);font-weight:400;font-size:12px;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+  td{padding:0 8px;height:36px;border-bottom:1px solid var(--border)}
+  td.n,th.n{text-align:right}
+  .tag{font-size:12px;border-radius:6px;padding:1px 8px;background:var(--okbg);color:var(--ok)}
+  .tag.g{background:var(--surface);color:var(--muted);border:1px solid var(--border)}
+  .days{display:flex;gap:6px;flex-wrap:wrap}
+  .day{border:1px solid var(--ctl);border-radius:8px;padding:3px 8px;font-size:12px}
+  .day.on{background:var(--tint);border-color:var(--blue);color:var(--blue)}
+  .wk{font-size:12px;color:var(--muted);width:56px;display:inline-block}
+  .row{display:flex;align-items:center;margin-bottom:6px}
+  .line{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+  .total{display:flex;justify-content:space-between;font-weight:500;padding-top:10px;font-size:14px}
+  .muted{color:var(--muted)}
+  .pc{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:16px;font-size:13px}
+  .pc h3{font-size:13px;font-weight:500;margin:0 0 4px}
+  .pc ul{margin:0;padding-left:18px}
+</style></head><body>
+
+<h1>Camps — question 3: how is the 8-week summer program set up?</h1>
+<p class="lead">Summer 2026 has 8 weeks (Jun 22 – Aug 21), each priced like April vacation (full week $275 member early, single days by the day grid). Left: the Camps list. Right: adding a camper who comes Week 2 (full week) and Week 3 (Tue + Thu). Amber = where the options differ.</p>
+
+<!-- ============ OPTION A ============ -->
+<div class="opt">
+  <h2>A. One camp per week <span class="rec">Recommended</span></h2>
+  <p class="sub">Each summer week is its own camp, made from a "Summer week" template (only the dates change). The price grid is always rows 1–5 days. A family coming 2 weeks is added to 2 camps.</p>
+  <div class="cols">
+    <div class="panel">
+      <div class="t">Camps <span class="btn">+ Add camp</span></div><div class="h">Upcoming · Worcester</div>
+      <div class="amber">
+      <table>
+        <tr><th>Camp</th><th>Dates</th><th class="n">Campers</th><th>Status</th></tr>
+        <tr><td>Summer week 1</td><td>Jun 22 – 26</td><td class="n">14</td><td><span class="tag">Open</span></td></tr>
+        <tr><td>Summer week 2</td><td>Jul 6 – 10</td><td class="n">18</td><td><span class="tag">Open</span></td></tr>
+        <tr><td>Summer week 3</td><td>Jul 13 – 17</td><td class="n">11</td><td><span class="tag">Open</span></td></tr>
+        <tr><td>Summer week 4</td><td>Jul 20 – 24</td><td class="n">9</td><td><span class="tag">Open</span></td></tr>
+        <tr><td class="muted">… weeks 5–8</td><td></td><td></td><td></td></tr>
+      </table>
+      </div>
+      <p class="note">8 rows in the list. Making them: "Add camp" → pick template "Summer week" → pick the 5 dates. About 30 seconds each.</p>
+    </div>
+    <div class="panel">
+      <div class="t">Add camper — Leo K.</div><div class="h">Done twice: once in Summer week 2, once in Summer week 3</div>
+      <div class="amber">
+        <div class="muted" style="font-size:12px;margin-bottom:4px">Summer week 2</div>
+        <div class="days" style="margin-bottom:6px"><span class="day on">Mon</span><span class="day on">Tue</span><span class="day on">Wed</span><span class="day on">Thu</span><span class="day on">Fri</span></div>
+        <div class="line"><span>5 days · member · early <span class="muted">(automatic)</span></span><span>$275</span></div>
+        <div class="muted" style="font-size:12px;margin:12px 0 4px">Summer week 3</div>
+        <div class="days" style="margin-bottom:6px"><span class="day">Mon</span><span class="day on">Tue</span><span class="day">Wed</span><span class="day on">Thu</span><span class="day">Fri</span></div>
+        <div class="line"><span>2 days · member · early <span class="muted">(automatic)</span></span><span>$140</span></div>
+        <div class="total"><span>Paid separately per week</span><span>$275 + $140</span></div>
+      </div>
+      <p class="note">Each week's roster is exactly who's in the building that week.</p>
+    </div>
+  </div>
+  <div class="pc">
+    <div><h3>Pros</h3><ul><li>Same screens as every other camp — nothing special for summer.</li><li>Grid stays small (5 rows).</li><li>Each week's roster and payments stand alone; a week can be changed or closed on its own.</li></ul></div>
+    <div><h3>Cons</h3><ul><li>A child doing 4 weeks is entered 4 times (parent details can be copied from their last entry).</li><li>8 summer camps to create each year (from one template).</li><li>No "family's whole summer" total on one screen.</li></ul></div>
+  </div>
+</div>
+
+<!-- ============ OPTION B ============ -->
+<div class="opt">
+  <h2>B. One summer camp with 8 weeks inside</h2>
+  <p class="sub">One camp covers the whole summer. Its days are grouped into weeks, and the price grid is applied to each week separately. A family coming 2 weeks is one entry.</p>
+  <div class="cols">
+    <div class="panel">
+      <div class="t">Camps <span class="btn">+ Add camp</span></div><div class="h">Upcoming · Worcester</div>
+      <div class="amber">
+      <table>
+        <tr><th>Camp</th><th>Dates</th><th class="n">Campers</th><th>Status</th></tr>
+        <tr><td>Summer program 2026</td><td>Jun 22 – Aug 21 · 8 weeks</td><td class="n">31</td><td><span class="tag">Open</span></td></tr>
+      </table>
+      <label>Roster (camp page)</label>
+      <div class="days"><span class="day">All weeks</span><span class="day">Wk 1</span><span class="day on">Wk 2</span><span class="day">Wk 3</span><span class="day">Wk 4</span><span class="day">Wk 5</span><span class="day">Wk 6</span><span class="day">Wk 7</span><span class="day">Wk 8</span></div>
+      </div>
+      <p class="note">One row in the list, but the camp page needs a week filter, and the app needs "week" as a new idea.</p>
+    </div>
+    <div class="panel">
+      <div class="t">Add camper — Leo K.</div><div class="h">Summer program 2026 · once</div>
+      <div class="amber">
+        <div class="row"><span class="wk">Week 1</span><span class="days"><span class="day">M</span><span class="day">T</span><span class="day">W</span><span class="day">T</span><span class="day">F</span></span></div>
+        <div class="row"><span class="wk">Week 2</span><span class="days"><span class="day on">M</span><span class="day on">T</span><span class="day on">W</span><span class="day on">T</span><span class="day on">F</span></span></div>
+        <div class="row"><span class="wk">Week 3</span><span class="days"><span class="day">M</span><span class="day on">T</span><span class="day">W</span><span class="day on">T</span><span class="day">F</span></span></div>
+        <div class="row muted" style="font-size:12px">… weeks 4–8 (40 day boxes in all)</div>
+        <div class="line"><span>Week 2 · 5 days · member · early</span><span>$275</span></div>
+        <div class="line"><span>Week 3 · 2 days · member · early</span><span>$140</span></div>
+        <div class="total"><span>Total</span><span>$415</span></div>
+      </div>
+      <p class="note">One entry, one total — but 40 day boxes on a phone, and a single camper record spanning 2 months.</p>
+    </div>
+  </div>
+  <div class="pc">
+    <div><h3>Pros</h3><ul><li>A child is entered once for the whole summer; one total for the family.</li><li>One camp to create each year.</li></ul></div>
+    <div><h3>Cons</h3><ul><li>New idea "weeks" everywhere: Add camp, the price math (grid per week), the roster (week filter), payments (paying week by week).</li><li>Add camper gets big: 40 day boxes, hard on a phone.</li><li>Only summer needs it — the other camps are 1–5 days.</li></ul></div>
+  </div>
+</div>
+
+</body></html>

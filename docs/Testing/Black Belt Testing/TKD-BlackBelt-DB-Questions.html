@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Black Belt database questions</title>
+<!--
+  Black Belt testing → database plan questions (TKD-BlackBelt-DB-Plan.md §7), one at a time (rule P3).
+  Why: Jeffrey decides each database choice from a picture, in plain words.
+  Each option is drawn as "where the information lives → what families and staff see".
+  Self-contained so it opens offline and can be screenshotted.
+-->
+<style>
+:root{--page:#EFEFEC;--bg:#FFFFFF;--surface:#F7F7F5;--border:#E5E5E2;--border-strong:#CFCFCA;--text:#1F1F1F;--text2:#6B6B6B;--blue:#003595;--blue-tint:#E6EBF4;--ok:#3B6D11;--ok-tint:#EAF3DE;--warn:#8A5A00;--warn-tint:#FDF0D9;--amber:#E8A317;--bad:#A32D2D;--bad-tint:#FBE9E9}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1440px;margin:0 auto;padding:24px 16px 40px}
+section+section{border-top:1px solid var(--border-strong);margin-top:28px;padding-top:20px}
+h1{font-size:20px;font-weight:500;margin:0 0 4px}
+b{font-weight:600}
+.lead{color:var(--text2);margin:0 0 16px;max-width:1300px}
+.opts{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
+.opt{background:var(--bg);border:1px solid var(--border-strong);border-radius:10px;padding:14px}
+.opt.rec{border:2px solid var(--blue)}
+.ot{display:flex;align-items:center;font-size:16px;font-weight:500;margin-bottom:10px}
+.letter{display:inline-flex;width:28px;height:28px;border-radius:50%;background:var(--text);color:#fff;align-items:center;justify-content:center;font-size:14px;margin-right:8px;flex:none}
+.rec-tag{font-size:12px;color:var(--blue);background:var(--blue-tint);border-radius:6px;padding:2px 8px;margin-left:8px;font-weight:400}
+.flow{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.box{border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;background:var(--surface);font-size:13px}
+.box .t{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--text2);margin-bottom:2px}
+.box.amb{outline:3px solid var(--amber);outline-offset:2px;background:#FFFBF2}
+.box.db{background:#EEF0F6;border-color:#C9CFE0}
+.box.old{background:var(--bad-tint);border-color:#E9C2C2}
+.arrow{font-size:12px;color:var(--text2);padding-left:12px}
+.when{font-size:12px;font-weight:600;color:var(--text);margin-top:4px}
+.exp{font-size:13px;color:var(--text2)}
+.exp b{color:var(--text)}
+.mini{background:#fff;border:1px solid var(--border-strong);border-radius:8px;padding:6px 10px;font-size:12px}
+.mini .r{display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:3px 0}
+.foot{font-size:13px;color:var(--text2);margin-top:14px}
+.ambtxt{outline:3px solid var(--amber);outline-offset:1px;border-radius:3px;padding:0 3px}
+
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.col{background:var(--bg);border:1px solid var(--border-strong);border-radius:10px;padding:14px}
+.col.rec{border:2px solid var(--blue)}
+.step{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--text2);margin:14px 0 6px}
+.tbls{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tb{border:1px solid #C9CFE0;border-radius:6px;overflow:hidden;font-size:11.5px;background:#fff}
+.tb .h{background:#EEF0F6;color:#2B3A67;font-weight:600;padding:4px 8px;font-size:12px}
+.tb table{width:100%;border-collapse:collapse}
+.tb td,.tb th{border-top:1px solid var(--border);padding:3px 6px;text-align:left}
+.tb th{color:var(--text2);font-weight:500;background:var(--surface)}
+.link{font-size:11px;color:var(--blue);padding:2px 8px 6px}
+.doc{border:1px solid #C9CFE0;border-radius:6px;background:#fff;padding:10px 12px;font-size:12px;line-height:1.55}
+.doc .tag{display:inline-block;font-size:11px;background:#EEF0F6;color:#2B3A67;border-radius:4px;padding:0 6px;margin-bottom:6px}
+.doc .ind{padding-left:14px}.doc .ind2{padding-left:28px;color:var(--text2)}
+.panelx{border:1px solid var(--border-strong);border-radius:8px;background:#fff;padding:8px 12px;font-size:12.5px}
+.panelx .r{display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:4px 0}
+.panelx .hh{font-weight:600}
+.same{font-size:12px;color:var(--ok);font-weight:600;margin-top:4px}
+.grade{border:1px dashed var(--border-strong);border-radius:8px;padding:8px 10px;font-size:12.5px}
+.grade.yes{border-color:#9DBE7A;background:var(--ok-tint)}
+.grade.no{border-color:#E9C2C2;background:var(--bad-tint)}
+.amb{outline:3px solid var(--amber);outline-offset:3px;border-radius:6px}
+
+.dlg{background:#fff;border:1px solid var(--border-strong);border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.10);padding:14px;font-size:12.5px}
+.dlg h4{margin:0 0 2px;font-size:14px;font-weight:600}
+.dlg .sub{color:var(--text2);font-size:12px;margin-bottom:10px}
+.dlg .row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border)}
+.dlg .btnx{display:inline-block;border:1px solid #8F8F8A;border-radius:7px;padding:3px 10px;font-size:12px;background:#fff;white-space:nowrap}
+.dlg .btnx.p{background:var(--blue);border-color:var(--blue);color:#fff}
+.dlg .btnx.r{background:#A32D2D;border-color:#A32D2D;color:#fff}
+.dlg .acts{display:flex;justify-content:flex-end;gap:6px;margin-top:10px}
+.warnbox{background:var(--warn-tint);color:var(--warn);border-radius:6px;padding:6px 8px;font-size:12px;margin:6px 0}
+.grid{display:grid;grid-template-columns:70px repeat(4,1fr);gap:4px;font-size:11.5px;align-items:center}
+.grid .h{color:var(--text2)}
+.grid .in{border:1px solid #8F8F8A;border-radius:5px;padding:2px 5px;background:#fff}
+.gl{font-size:12px;font-weight:600;margin:8px 0 4px}
+.arrowd{text-align:center;color:var(--text2);font-size:12px;margin:6px 0}
+
+.story{display:flex;gap:10px;margin:0 0 14px;flex-wrap:wrap}
+.st{flex:1;min-width:220px;background:#fff;border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;font-size:12.5px}
+.st .lab{display:block;font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.03em;margin-bottom:2px}
+.rep{border:1px solid var(--border-strong);border-radius:8px;background:#fff;font-size:12px;margin-top:6px}
+.rep .hd{display:flex;justify-content:space-between;background:var(--surface);padding:5px 8px;font-weight:600;border-bottom:1px solid var(--border)}
+.rep .ln{display:flex;justify-content:space-between;padding:4px 8px;border-bottom:1px solid var(--border)}
+.tg{font-size:11px;border-radius:999px;padding:0 7px;border:1px solid}
+.tg.ok{background:var(--ok-tint);color:var(--ok);border-color:#CFE2B8}
+.tg.wa{background:var(--warn-tint);color:var(--warn);border-color:#F2D9B0}
+.strike{text-decoration:line-through;color:var(--text2)}
+
+.choice{border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:6px;font-size:12.5px}
+.choice.dis{color:#8A8A85;background:var(--surface)}
+.choice .why{font-size:11.5px;color:var(--text2);margin-top:2px}
+
+.opts2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.phone{width:300px;border:6px solid #2B2B2B;border-radius:24px;background:#F7F7F5;padding:10px;font-size:12px;margin:0 auto}
+.phone .card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px;margin-top:8px}
+.phone .wv{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px;font-size:11px;color:var(--text2)}
+.phone .ck{display:flex;gap:6px;align-items:center;margin-top:6px}
+.phone .box{width:14px;height:14px;border:1px solid #8F8F8A;border-radius:3px;display:inline-block;background:#fff}
+.phone .box.on{background:var(--blue);border-color:var(--blue)}
+.phone .send{background:var(--blue);color:#fff;text-align:center;border-radius:7px;padding:6px;margin-top:8px}
+.phone .banner{background:var(--warn-tint);color:var(--warn);border-radius:6px;padding:6px;font-size:11.5px;margin-top:6px}
+.pair2{display:flex;gap:14px;align-items:flex-start}
+.after{flex:1;font-size:12.5px}
+
+.wline{background:#fff;border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;font-size:12.5px;margin-top:6px}
+.wline .k{color:var(--text2);font-size:11.5px}
+.gone{color:#A32D2D;text-decoration:line-through}
+.keep{color:var(--ok)}
+.sig{font-family:'Segoe Script','Brush Script MT',cursive;font-size:16px}
+
+.tl7{display:flex;height:30px;gap:2px;font-size:11px;margin:6px 0}
+.tl7 .s{display:flex;align-items:center;justify-content:center;text-align:center;border-radius:4px;padding:0 4px;line-height:1.15}
+.tl7 .kp{background:var(--blue-tint);color:var(--blue)}
+.tl7 .gn{background:#F3E3E3;color:#8A2B2B}
+.det{background:#fff;border:1px solid var(--border-strong);border-radius:8px;font-size:12px;margin-top:6px}
+.det .ln{display:flex;justify-content:space-between;padding:4px 8px;border-bottom:1px solid var(--border)}
+.det .ln span:first-child{color:var(--text2)}
+.det .rm{color:#A32D2D;font-style:italic}
+
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.dcard{background:#fff;border:1px solid var(--border-strong);border-radius:10px;padding:12px 14px}
+.dcard h3{margin:0 0 6px;font-size:15px;font-weight:600}
+.dl{display:grid;grid-template-columns:40px 1fr;gap:4px 8px;font-size:12.5px;padding:6px 0;border-top:1px solid var(--border)}
+.dl .n{color:var(--text2);font-weight:600}
+.dl .eg{grid-column:2;color:var(--text2);font-size:11.5px}
+</style>
+</head>
+<body>
+<main>
+
+<section id="qb1">
+<h1>Black Belt · Database question 1 of 7: where the "What 1st Dan is tested on" panel gets its numbers</h1>
+<p class="lead">The family form's requirements panel (approved, v0.919) must work by <b>February</b>. Normally it reads the cycle's <b>rubric</b>: the subjects, credits, scoring tables and pass marks that grading also uses. But the rubric's final shape waits for <b>Master Jeong's answers</b> (child/adult age, the B and B− points, extra points…). The question is what the panel reads <b>until grading is built</b>. <span class="ambtxt">Amber</span> = where the numbers live in each option.</p>
+<div class="opts">
+
+<div class="opt">
+<div class="ot"><span class="letter">A</span>Build the real rubric tables now</div>
+<div class="flow">
+<div class="box db amb"><div class="t">Database, now</div>Rubric tables: parts → subjects → credits → scoring tables → pass marks, loaded with the Fall 2026 numbers. Each cycle gets its own copy.</div>
+<div class="arrow">↓ the panel reads them</div>
+<div class="box"><div class="t">Family form, February</div>"What 1st Dan is tested on" panel</div>
+<div class="when">When grading is built (spring):</div>
+<div class="box">Grading adds grades on top of the same tables. If Master Jeong's answers change their shape, the tables are rebuilt.</div>
+</div>
+<div class="exp"><b>Pros:</b> one source from day one, exactly as v0.919 says.<br><b>Cons:</b> the biggest piece of work, designed <b>before</b> the rules are known, so it's likely to be reshaped; it slows down the part needed for February.</div>
+</div>
+
+<div class="opt rec">
+<div class="ot"><span class="letter">B</span>A requirements sheet per cycle, for now<span class="rec-tag">Recommended</span></div>
+<div class="flow">
+<div class="box db amb"><div class="t">Database, now</div>One <b>requirements sheet</b> stored with each cycle (a single block of text in a fixed layout), copied from a starting sheet loaded with the Fall 2026 numbers. No editor screen.</div>
+<div class="arrow">↓ the panel reads it</div>
+<div class="box"><div class="t">Family form, February</div>"What 1st Dan is tested on" panel: looks exactly as approved</div>
+<div class="when">When grading is built (spring):</div>
+<div class="box">The real rubric tables are built <b>once</b>, from Master Jeong's answers. The panel switches to them and the sheet is dropped.</div>
+</div>
+<div class="exp"><b>Pros:</b> small; nothing is locked in before the rules are known; the form ships on time; families see no difference.<br><b>Cons:</b> until grading exists, changing a number (e.g. a credit) means a short database update that you paste in; two sources for a few months, though they can't disagree because grading doesn't exist yet.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">C</span>No panel until grading</div>
+<div class="flow">
+<div class="box old amb"><div class="t">Old website, now</div>Today's <code>requirements.html</code> on the old Worker stays online.</div>
+<div class="arrow">↓ the form links to it</div>
+<div class="box"><div class="t">Family form, February</div>A "Testing requirements ↗" link that opens the old page</div>
+<div class="when">When grading is built (spring):</div>
+<div class="box">The approved panel is built then, from the real rubric.</div>
+</div>
+<div class="exp"><b>Pros:</b> nothing to build now.<br><b>Cons:</b> goes against what you approved for the form (v0.919, screen 11); the old website stays online longer; the old page has no dates and can disagree with the school's real numbers.</div>
+</div>
+
+</div>
+<p class="foot"><b>Same in every option:</b> grading itself (scores, results, make-ups) comes in the next migration, after Master Jeong's answers; the numbers families see in February are the Fall 2026 ones unless he changes them first.</p>
+</section>
+
+
+<section id="qb1-explain">
+<h1>Database question 1, explained: the rubric vs the requirements sheet</h1>
+<p class="lead">Both hold the <b>same numbers</b> and families see the <b>same panel</b>. The difference is <b>how the numbers are stored</b> (row 1) and therefore <b>what grading can do with them later</b> (row 3). <span class="ambtxt">Amber</span> = the part that's different. Example: 1st Dan, Physical, Push-up.</p>
+<div class="vs">
+
+<div class="col">
+<div class="ot"><span class="letter">A</span>The rubric (build now)</div>
+<div class="step">1 · What's stored in the database</div>
+<div class="amb"><div class="tbls">
+<div class="tb"><div class="h">Parts</div><table><tr><th>Part</th><th>Max</th></tr><tr><td>Physical</td><td>80</td></tr><tr><td>Technical</td><td>44</td></tr><tr><td>Curriculum</td><td>135</td></tr></table></div>
+<div class="tb"><div class="h">Subjects</div><table><tr><th>Subject</th><th>Part</th><th>Credits</th></tr><tr><td>Push-up</td><td>Physical</td><td>2</td></tr><tr><td>Sit-up</td><td>Physical</td><td>2</td></tr><tr><td>Free sparring</td><td>Technical</td><td>3</td></tr></table></div>
+<div class="tb"><div class="h">Scoring cut-offs</div><table><tr><th>Subject</th><th>Age</th><th>A+</th><th>A</th><th>…</th></tr><tr><td>Push-up</td><td>≤8</td><td>20</td><td>18</td><td>…</td></tr><tr><td>Push-up</td><td>9–12</td><td>36</td><td>30</td><td>…</td></tr><tr><td>Push-up</td><td>13+</td><td>50</td><td>40</td><td>…</td></tr></table></div>
+<div class="tb"><div class="h">Pass marks</div><table><tr><th>Dan</th><th>Child</th><th>Adult</th></tr><tr><td>1st</td><td>275</td><td>293</td></tr><tr><td>2nd</td><td>261</td><td>261</td></tr></table><div class="link">…plus grade points, extra points</div></div>
+</div>
+<div class="exp" style="margin-top:8px">Many small tables, linked to each other. <b>Every number is its own entry</b>, so the dashboard can calculate with it.</div></div>
+<div class="step">2 · What families see on the form (February)</div>
+<div class="panelx"><div class="r hh"><span>1 · Physical</span><span>80 pts</span></div><div class="r"><span>Push-up (1 min)</span><span>2 credits</span></div><div class="r" style="color:var(--text2)"><span>13 and over: A+ 50 · A 40 · B+ 30 · B 25 · C 20</span><span></span></div></div><div class="same">✓ identical panel</div>
+<div class="step">3 · What grading can do with it (spring)</div>
+<div class="grade yes">Grades attach straight to these entries ("Alex · Push-up · 42 → A"), and the dashboard adds up totals and decides pass / make-up.<br><b>But:</b> these tables are designed <b>now</b>, before Master Jeong answers. If his answers change how scoring works (child/adult, the B points, extra points), they're rebuilt.</div>
+</div>
+
+<div class="col rec">
+<div class="ot"><span class="letter">B</span>The requirements sheet (for now)<span class="rec-tag">Recommended</span></div>
+<div class="step">1 · What's stored in the database</div>
+<div class="amb"><div class="doc"><span class="tag">Spring 2027 · requirements sheet · 1st Dan</span>
+<div><b>1 · Physical</b> — up to 80 points</div>
+<div class="ind">Push-up (1 min) — 2 credits</div>
+<div class="ind2">8 and under: A+ 20 · A 18 · B+ 16 · B 14 · C 12</div>
+<div class="ind2">9–12: A+ 36 · A 30 · B+ 25 · B 20 · C 15</div>
+<div class="ind2">13 and over: A+ 50 · A 40 · B+ 30 · B 25 · C 20</div>
+<div class="ind">Sit-up (20 sec) — 2 credits …</div>
+<div><b>2 · Technical</b> — Free sparring 3 credits …</div>
+<div><b>To pass:</b> 275 (children) / 293 (adults), no D</div>
+</div>
+<div class="exp" style="margin-top:8px"><b>One document</b> saved with the cycle, like a handout typed into the database. Good for showing; nothing is calculated from it.</div></div>
+<div class="step">2 · What families see on the form (February)</div>
+<div class="panelx"><div class="r hh"><span>1 · Physical</span><span>80 pts</span></div><div class="r"><span>Push-up (1 min)</span><span>2 credits</span></div><div class="r" style="color:var(--text2)"><span>13 and over: A+ 50 · A 40 · B+ 30 · B 25 · C 20</span><span></span></div></div><div class="same">✓ identical panel</div>
+<div class="step">3 · What grading can do with it (spring)</div>
+<div class="grade no">Nothing: grading can't calculate from a handout. So in spring, <b>after</b> Master Jeong's answers, the real rubric tables (left) are built <b>once</b>, the panel switches to them, and this sheet is deleted.<br><b>Until then:</b> if a number changes, I write a small update and you paste it into Supabase (the sheet has no edit screen).</div>
+</div>
+
+</div>
+<p class="foot"><b>The decision in one line:</b> build the scoring tables now, before the rules are confirmed (A), or show families a handout copy now and build the scoring tables once, after the rules are confirmed (B).</p>
+</section>
+
+<section id="qb2">
+<h1>Black Belt · Database question 2 of 7: changing a cycle's prices before anyone has paid</h1>
+<p class="lead">When an admin adds a cycle, it <b>copies</b> the plans, amounts and Kukkiwon fees from <b>Rubric and prices</b> (v0.217). Once someone pays, they can never change. The question is <b>how an admin changes them before that</b>, e.g. prices go up after Spring 2027 was added and 6 families have already registered (their confirmation pages showed the old amounts). <span class="ambtxt">Amber</span> = what each option adds.</p>
+<div class="opts">
+
+<div class="opt rec">
+<div class="ot"><span class="letter">A</span>"Copy prices again"<span class="rec-tag">Recommended</span></div>
+<div class="dlg"><h4>Edit cycle · Spring 2027</h4><div class="sub">…testing days, deadlines, due dates…</div>
+<div class="row amb"><span>Plans and prices copied from Rubric and prices on Feb 1, 2027.</span><span class="btnx">Copy prices again</span></div></div>
+<div class="arrowd">↓ after changing the prices on Rubric and prices</div>
+<div class="dlg amb"><h4>Copy prices again?</h4>
+<div class="warnbox">6 families have registered and saw the old amounts on their confirmation page. Tell them the new amounts.</div>
+<div style="font-size:12px">Every plan, amount and Kukkiwon fee is copied again from Rubric and prices. This cycle's due dates and "Offer this plan" ticks stay.</div>
+<div class="acts"><span class="btnx">Cancel</span><span class="btnx p">Copy prices again</span></div></div>
+<div class="exp" style="margin-top:10px"><b>What it does:</b> one button in Edit cycle, only while <b>nobody has paid</b>. It copies all the prices again from Rubric and prices.<br><b>Pros:</b> prices are only ever typed in one place; small to build.<br><b>Cons:</b> all or nothing: one season can't have its own special price without changing Rubric and prices too (you could change it back afterwards).</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">B</span>Edit the amounts on each cycle</div>
+<div class="dlg"><h4>Edit cycle · Spring 2027</h4><div class="sub">…testing days, deadlines, due dates…</div>
+<div class="amb" style="padding:4px">
+<div class="gl">3 payments</div>
+<div class="grid"><span class="h"></span><span class="h">1st Dan</span><span class="h">2nd Dan</span><span class="h">3rd Dan</span><span class="h">4th Dan</span>
+<span class="h">Payment 1</span><span class="in">$300</span><span class="in">$340</span><span class="in">$510</span><span class="in">$920</span>
+<span class="h">Payment 2</span><span class="in">$300</span><span class="in">$340</span><span class="in">$510</span><span class="in">$920</span>
+<span class="h">Payment 3</span><span class="in">$300</span><span class="in">$340</span><span class="in">$510</span><span class="in">$920</span></div>
+<div class="gl">In full · 2 payments · Kukkiwon…</div>
+<div style="font-size:11.5px;color:var(--text2)">(the same grid for every plan)</div></div>
+<div class="acts"><span class="btnx">Cancel</span><span class="btnx p">Save</span></div></div>
+<div class="exp" style="margin-top:10px"><b>What it does:</b> Edit cycle gets the full price grid for every plan and Dan, editable until someone pays.<br><b>Pros:</b> a season can have its own prices without touching Rubric and prices.<br><b>Cons:</b> a second big grid to build, check and keep right; prices typed in two places, so they can drift apart.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">C</span>Delete the cycle and add it again</div>
+<div class="dlg"><h4>Delete Spring 2027?</h4>
+<div class="warnbox amb">6 registrations and their signed waivers are deleted. The registration links stop working.</div>
+<div class="acts"><span class="btnx">Cancel</span><span class="btnx r">Delete cycle</span></div></div>
+<div class="arrowd">↓ then + Add cycle again (new prices copied)</div>
+<div class="dlg"><h4>Add cycle</h4><div class="sub">New link codes and QR codes for both schools</div></div>
+<div class="exp" style="margin-top:10px"><b>What it does:</b> nothing new is built. To change prices, delete the cycle and add it again.<br><b>Pros:</b> no extra work.<br><b>Cons:</b> families must register again; new links and QR codes; and the database plan already refuses Delete cycle once any signed waiver exists, so this only works before anyone registers.</div>
+</div>
+
+</div>
+<p class="foot"><b>Same in every option:</b> once anyone has paid, a cycle's prices can't change (v0.217); changing a single family's plan stays as approved (screen 23).</p>
+</section>
+
+<section id="qb3">
+<h1>Black Belt · Database question 3 of 7: what each payment remembers, for the Daily report</h1>
+<p class="lead">Finance's <b>Daily report</b> totals each school's money per day, and a day can be <b>closed</b> (cash counted, v0.194). The question: when staff <b>fix a candidate's school later</b>, does money already recorded stay with the school it was paid at, or move? It depends on whether each payment row <b>remembers</b> the school (and the cycle's name) <b>as it was when paid</b>, or looks them up fresh each time. <span class="ambtxt">Amber</span> = what the report shows afterwards.</p>
+<div class="story">
+<div class="st"><span class="lab">Sat, Mar 27</span>Alex Kim registered through the <b>Shrewsbury</b> link and pays <b>$390</b> at the Shrewsbury desk.</div>
+<div class="st"><span class="lab">Sat, Mar 27, evening</span>Shrewsbury <b>closes the day</b>: $390 counted, matches.</div>
+<div class="st"><span class="lab">Fri, Apr 2</span>Staff notice Alex actually trains at <b>Worcester</b> and fix his school.</div>
+</div>
+<div class="opts">
+
+<div class="opt rec">
+<div class="ot"><span class="letter">A</span>Remember school and cycle name<span class="rec-tag">Recommended</span></div>
+<div class="exp" style="margin-bottom:6px">Each payment row keeps <b>"Shrewsbury · Spring 2027"</b> as it was when paid.</div>
+<div class="amb">
+<div class="rep"><div class="hd"><span>Shrewsbury · Sat, Mar 27</span><span class="tg ok">Closed</span></div><div class="ln"><span>Alex Kim · Black Belt · Spring 2027 · Payment 1 + Kukkiwon</span><span>$390</span></div><div class="ln"><span>Total</span><span>$390</span></div></div>
+<div class="rep"><div class="hd"><span>Worcester · Sat, Mar 27</span><span class="tg ok">Closed</span></div><div class="ln"><span style="color:var(--text2)">nothing from Alex</span><span></span></div></div>
+</div>
+<div class="exp" style="margin-top:8px"><b>After the fix:</b> Mar 27 stays exactly as it was counted. Alex's <b>next</b> payments count for Worcester.<br><b>Pros:</b> a closed day never changes because of a correction; matches the note already sent to Finance.<br><b>Cons:</b> old money doesn't follow the fix; if it really should, an admin undoes and re-records it.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">B</span>Remember the school only</div>
+<div class="exp" style="margin-bottom:6px">The row keeps the school; the cycle's <b>name</b> is looked up fresh.</div>
+<div class="amb">
+<div class="rep"><div class="hd"><span>Shrewsbury · Sat, Mar 27</span><span class="tg ok">Closed</span></div><div class="ln"><span>Alex Kim · Black Belt · <b>Spring 2027 (renamed later)</b> · Payment 1 + Kukkiwon</span><span>$390</span></div></div>
+</div>
+<div class="exp" style="margin-top:8px"><b>After the fix:</b> same as A for the school. But if the cycle is renamed later, every old report line shows the new name.<br><b>Pros:</b> a renamed cycle reads the same everywhere.<br><b>Cons:</b> old printed reports and the screen can disagree; differs from the Finance note.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">C</span>Remember neither (Star's way)</div>
+<div class="exp" style="margin-bottom:6px">The row looks up the candidate's school every time.</div>
+<div class="amb">
+<div class="rep"><div class="hd"><span>Shrewsbury · Sat, Mar 27</span><span class="tg wa">Changed after closing</span></div><div class="ln"><span class="strike">Alex Kim · $390</span><span class="strike">$390</span></div><div class="ln"><span>Total</span><span>$0 (counted $390)</span></div></div>
+<div class="rep"><div class="hd"><span>Worcester · Sat, Mar 27</span><span class="tg wa">Changed after closing</span></div><div class="ln"><span>Alex Kim · $390</span><span>$390</span></div></div>
+</div>
+<div class="exp" style="margin-top:8px"><b>After the fix:</b> the $390 <b>moves</b> to Worcester's Mar 27, though it was counted in Shrewsbury's drawer. Both closed days are flagged.<br><b>Pros:</b> fewest things stored.<br><b>Cons:</b> closed days change after the fact; reports stop matching the cash that was counted.</div>
+</div>
+
+</div>
+<p class="foot"><b>Same in every option:</b> fixing a candidate's school is allowed (staff, v0.210); undos, refunds and returned checks belong to the same school as the payment they correct, so one family's money never splits between two reports.</p>
+</section>
+
+<section id="qb4">
+<h1>Black Belt · Database question 4 of 7: can payment records ever be deleted?</h1>
+<p class="lead">An admin removes a candidate (⋯ → Remove candidate). Star offers two choices: <b>Withdraw</b> (hidden under "Removed", can be restored) and <b>Delete permanently</b>, which also wipes the candidate's payments. The question is whether Black Belt <b>ever</b> deletes payment records. Example: Ethan Park, added at the desk by mistake on Mar 27; a $290 check was recorded and then undone. <span class="ambtxt">Amber</span> = what happens.</p>
+<div class="opts">
+
+<div class="opt rec">
+<div class="ot"><span class="letter">A</span>Never<span class="rec-tag">Recommended</span></div>
+<div class="dlg"><h4>Remove Ethan Park?</h4>
+<div class="choice">◉ <b>Withdraw</b><div class="why">Hidden under "Removed". Can be restored. Payments stay on record.</div></div>
+<div class="choice dis amb">○ Delete permanently<div class="why">Ethan has payment records (even undone ones), so he can't be deleted. Withdraw him instead.</div></div>
+<div class="acts"><span class="btnx">Cancel</span><span class="btnx p">Withdraw</span></div></div>
+<div class="rep"><div class="hd"><span>Shrewsbury · Sat, Mar 27</span><span class="tg ok">Closed</span></div><div class="ln"><span class="strike">Ethan Park · Payment 1 · check $290</span><span>Undone</span></div></div>
+<div class="exp" style="margin-top:8px"><b>What it does:</b> once a candidate or cycle has <b>any</b> payment record, it can only be withdrawn, never deleted. The database itself refuses to delete payment records, even by mistake.<br><b>Pros:</b> the money record is complete forever; closed days never lose lines.<br><b>Cons:</b> a mistaken test payment means that candidate can only be withdrawn, not deleted.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">B</span>Star's way: delete with a warning</div>
+<div class="dlg"><h4>Remove Ethan Park?</h4>
+<div class="choice">○ Withdraw<div class="why">Hidden under "Removed". Can be restored.</div></div>
+<div class="choice amb">◉ <b>Delete permanently</b><div class="why">Also deletes 2 payment records ($290 check and its undo). This can't be undone.</div></div>
+<div class="acts"><span class="btnx">Cancel</span><span class="btnx r">Delete permanently</span></div></div>
+<div class="rep"><div class="hd"><span>Shrewsbury · Sat, Mar 27</span><span class="tg wa">Changed after closing</span></div><div class="ln"><span style="color:var(--text2)">(Ethan's lines are gone)</span><span></span></div></div>
+<div class="exp" style="margin-top:8px"><b>What it does:</b> Delete permanently removes the candidate and their payment records after a warning.<br><b>Pros:</b> same as Star; mistakes can be cleaned away completely.<br><b>Cons:</b> real money can vanish from the record; a closed day is flagged changed with nothing left to see why.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">C</span>Only when nothing is left owing or paid</div>
+<div class="dlg"><h4>Remove Ethan Park?</h4>
+<div class="choice">○ Withdraw</div>
+<div class="choice amb">◉ <b>Delete permanently</b><div class="why">Allowed: Ethan's payments add up to $0 (the check was undone).</div></div>
+<div class="acts"><span class="btnx">Cancel</span><span class="btnx r">Delete permanently</span></div></div>
+<div class="rep"><div class="hd"><span>Shrewsbury · Sat, Mar 27</span><span class="tg wa">Changed after closing</span></div><div class="ln"><span style="color:var(--text2)">(the undone check is gone)</span><span></span></div></div>
+<div class="exp" style="margin-top:8px"><b>What it does:</b> deleting is allowed only if the candidate's payments add up to $0 (all undone or refunded).<br><b>Pros:</b> a mistake that was undone doesn't block a clean delete.<br><b>Cons:</b> the undone lines still vanish from the closed day's history; a rule staff must remember.</div>
+</div>
+
+</div>
+<p class="foot"><b>Same in every option:</b> only admins remove candidates (v0.210); a cycle can't be deleted once any payment or signed waiver exists (screen 2); Withdraw is always available and keeps everything.</p>
+</section>
+
+<section id="qb5">
+<h1>Black Belt · Database question 5 of 7: the waiver text changes while a family is filling in the form</h1>
+<p class="lead">At 7:40 PM a parent opens the form; the waiver on screen is <b>version 2027-1</b>. At 7:45 an admin saves a corrected waiver, <b>version 2027-2</b> (v0.213). At 7:50 the parent ticks, signs and presses <b>Send</b>. The signed record must say exactly which text they agreed to. What happens? <span class="ambtxt">Amber</span> = what differs.</p>
+<div class="opts2">
+
+<div class="opt rec">
+<div class="ot"><span class="letter">A</span>Accept the version they saw<span class="rec-tag">Recommended</span></div>
+<div class="pair2">
+<div class="phone"><div style="font-weight:600">Step 2 of 2 · Check and send</div>
+<div class="card"><div class="wv"><b>Waiver and agreement</b> · Version 2027-1<br>Every subject must be passed; … I release the school …</div>
+<div class="ck"><span class="box on"></span>I have read and agree to the waiver.</div>
+<div style="margin-top:6px">Signed by: Jordan Kim ✍</div></div>
+<div class="send">Send registration</div></div>
+<div class="after"><div class="step">After Send</div>
+<div class="box amb" style="background:#FFFBF2">✓ Registered. The record says <b>"Signed by Jordan Kim (parent) · version 2027-1"</b>, the exact text they saw.</div>
+<div class="step">In the candidate detail</div>
+<div class="box">Waiver: signed · version 2027-1 · on file</div>
+<div class="exp" style="margin-top:8px">Accepted if their version was the current one <b>within the last 24 hours</b>. A page left open for days (an older version) is refused with "Please reload the page".</div></div>
+</div>
+<div class="exp" style="margin-top:10px"><b>Pros:</b> nothing new for families; the record is always exact.<br><b>Cons:</b> for up to a day after a change, someone can still sign the previous text.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">B</span>Stop them and show the new text</div>
+<div class="pair2">
+<div class="phone"><div style="font-weight:600">Step 2 of 2 · Check and send</div>
+<div class="banner amb">The waiver was updated while you were filling this in. Please read it and tick again.</div>
+<div class="card"><div class="wv"><b>Waiver and agreement</b> · Version 2027-2<br>Every subject must be passed; … (updated text) …</div>
+<div class="ck"><span class="box"></span>I have read and agree to the waiver.</div>
+<div style="margin-top:6px">Signed by: Jordan Kim ✍ (kept)</div></div>
+<div class="send">Send registration</div></div>
+<div class="after"><div class="step">After ticking again and Send</div>
+<div class="box">✓ Registered with <b>version 2027-2</b>.</div>
+<div class="exp" style="margin-top:8px">Send is refused once; the page reloads the new text and clears the tick.</div></div>
+</div>
+<div class="exp" style="margin-top:10px"><b>Pros:</b> everyone always signs the newest text.<br><b>Cons:</b> a new message and screen state to build; families who were nearly done must read and tick again.</div>
+</div>
+
+</div>
+<p class="foot"><b>Same in every option:</b> each signed waiver stores its exact version; admins change the text on Rubric and prices, which makes a new version (v0.213); registrations already sent keep their version.</p>
+</section>
+
+<section id="qb6">
+<h1>Black Belt · Database question 6 of 7: what is removed when a signed waiver's keeping time ends</h1>
+<p class="lead">Signed waivers are kept for a set time (v0.213 / v0.900): until the <b>later</b> of the last testing day + N1 years and the candidate's 18th birthday + N2 years (both numbers from the insurer). On that date the dashboard removes it <b>automatically</b>. The question is <b>how much</b> is removed. Example: Alex Kim (born 2012), signed by his parent Jordan Kim. <span class="ambtxt">Amber</span> = what's left afterwards, in the candidate detail.</p>
+<div class="opts">
+
+<div class="opt rec">
+<div class="ot"><span class="letter">A</span>The signature and the signer's name<span class="rec-tag">Recommended</span></div>
+<div class="step">Before (any time until the deletion date)</div>
+<div class="wline"><div class="k">Waiver</div>Signed by <b>Jordan Kim (parent)</b> · Mar 10, 2027 · version 2027-1 · <span class="sig">J. Kim</span> (View signature)</div>
+<div class="step">After the deletion date</div>
+<div class="wline amb"><div class="k">Waiver</div>Signed on Mar 10, 2027 · version 2027-1 · <i>signature and signer's name deleted on Mar 4, 2033 after the keeping time</i></div>
+<div class="exp" style="margin-top:8px"><b>Removed:</b> <span class="gone">the drawn signature</span>, <span class="gone">"Jordan Kim"</span> (also hidden in the change log).<br><b>Kept:</b> <span class="keep">that a waiver was signed, when, and which version</span>.<br><b>Pros:</b> the personal parts go; the school can still show a waiver existed.<br><b>Cons:</b> none important.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">B</span>The whole waiver record</div>
+<div class="step">Before (any time until the deletion date)</div>
+<div class="wline"><div class="k">Waiver</div>Signed by <b>Jordan Kim (parent)</b> · Mar 10, 2027 · version 2027-1 · <span class="sig">J. Kim</span> (View signature)</div>
+<div class="step">After the deletion date</div>
+<div class="wline amb"><div class="k">Waiver</div><i>(nothing shown)</i></div>
+<div class="exp" style="margin-top:8px"><b>Removed:</b> <span class="gone">everything about the waiver</span>.<br><b>Pros:</b> nothing at all is left.<br><b>Cons:</b> the dashboard can no longer say a waiver was ever signed; an old candidate looks like they registered without one.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">C</span>The signature only (Star's way)</div>
+<div class="step">Before (any time until the deletion date)</div>
+<div class="wline"><div class="k">Waiver</div>Signed by <b>Jordan Kim (parent)</b> · Mar 10, 2027 · version 2027-1 · <span class="sig">J. Kim</span> (View signature)</div>
+<div class="step">After the deletion date</div>
+<div class="wline amb"><div class="k">Waiver</div>Signed by <b>Jordan Kim (parent)</b> · Mar 10, 2027 · version 2027-1 · <i>signature deleted</i></div>
+<div class="exp" style="margin-top:8px"><b>Removed:</b> <span class="gone">the drawn signature</span> only.<br><b>Pros:</b> simplest; same as Star.<br><b>Cons:</b> the parent's name stays forever, though the signature it belonged to is gone.</div>
+</div>
+
+</div>
+<p class="foot"><b>Same in every option:</b> removal happens by itself on the date, with nothing to click; changing the number of years warns first ("this will delete X signed waivers now", floor 3 years); payments, Dan and results are never removed by this. Whether the candidate's date of birth and email are removed too is the next question (7).</p>
+</section>
+
+<section id="qb7">
+<h1>Black Belt · Database question 7 of 7: how long a candidate's date of birth and email are kept</h1>
+<p class="lead">Most Black Belt candidates are <b>minors</b>. Their <b>date of birth</b> is needed for this cycle (age groups, child/adult, who signs the waiver) and for a make-up the next season; the <b>email</b> is for results. After that they mostly sit there. Color Belt and Star keep them <b>forever</b>. <b>Names, Dan, results and payments are kept in every option</b> (rank history and the money record). Example: Alex Kim, born Mar 4, 2012, last testing day Jun 5, 2027. <span class="ambtxt">Amber</span> = when the date of birth and email are removed, and what the candidate detail shows afterwards.</p>
+<div class="opts">
+
+<div class="opt">
+<div class="ot"><span class="letter">A</span>Keep forever (like Color Belt and Star)</div>
+<div class="tl7 amb"><span class="s kp" style="flex:1">kept forever</span></div>
+<div class="det"><div class="ln"><span>Name</span><span>Alex Kim</span></div><div class="ln"><span>Date of birth</span><span>Mar 4, 2012</span></div><div class="ln"><span>Email for results</span><span>kim.family@example.com</span></div><div class="ln"><span>Dan · result · payments</span><span>1st Dan · Passed · $970 paid</span></div></div>
+<div class="exp" style="margin-top:8px"><b>Pros:</b> one rule across all testing; old cycles stay complete (e.g. a Kukkiwon question years later).<br><b>Cons:</b> minors' birth dates and emails stay indefinitely, also in the change log.</div>
+</div>
+
+<div class="opt">
+<div class="ot"><span class="letter">B</span>Remove a few years after the cycle</div>
+<div class="tl7 amb"><span class="s kp" style="flex:1.2">kept until Jun 5, 2030 (3 years)</span><span class="s gn" style="flex:1">removed</span></div>
+<div class="det"><div class="ln"><span>Name</span><span>Alex Kim</span></div><div class="ln"><span>Date of birth</span><span><span class="rm">removed Jun 5, 2030</span></span></div><div class="ln"><span>Email for results</span><span><span class="rm">removed Jun 5, 2030</span></span></div><div class="ln"><span>Dan · result · payments</span><span>1st Dan · Passed · $970 paid</span></div></div>
+<div class="exp" style="margin-top:8px">A third setting: "remove date of birth and email N years after the cycle's last testing day" (e.g. 3).<br><b>Pros:</b> a short, clear limit, shortest for young children.<br><b>Cons:</b> one more number to set; for a young child, the waiver (kept until after they turn 18) outlives their date of birth.</div>
+</div>
+
+<div class="opt rec">
+<div class="ot"><span class="letter">C</span>Remove together with the waiver signature<span class="rec-tag">Recommended</span></div>
+<div class="tl7 amb"><span class="s kp" style="flex:2">kept until Mar 4, 2033 (with the waiver)</span><span class="s gn" style="flex:1">removed</span></div>
+<div class="det"><div class="ln"><span>Name</span><span>Alex Kim</span></div><div class="ln"><span>Date of birth</span><span><span class="rm">removed Mar 4, 2033</span></span></div><div class="ln"><span>Email for results</span><span><span class="rm">removed Mar 4, 2033</span></span></div><div class="ln"><span>Dan · result · payments</span><span>1st Dan · Passed · $970 paid</span></div></div>
+<div class="exp" style="margin-top:8px">One date per candidate: the same day the waiver's signature and signer's name go (v0.906).<br><b>Pros:</b> one simple promise: "personal details are kept as long as the insurer needs the waiver, then removed"; no extra setting.<br><b>Cons:</b> kept longer than B for young children (until a few years after they turn 18).</div>
+</div>
+
+</div>
+<p class="foot"><b>Same in B and C:</b> the date of birth and email are also hidden in the change log (shown as "changed"), otherwise the log would keep the old values forever. <b>In every option:</b> date of birth and email are never in lists or on the grading tablet (§5), only in one candidate's detail on desk devices.</p>
+</section>
+
+<section id="defaults">
+<h1>Black Belt · Database plan: the smaller defaults to OK together</h1>
+<p class="lead">These follow from screens you already approved or from Star's and Color Belt's rules, so they're grouped for <b>one OK</b> instead of one question each. Anything you want changed, name its number (e.g. "S5: keep date of birth optional at the desk").</p>
+<div class="dgrid">
+<div class="dcard"><h3>Money</h3><div class="dl"><span class="n">S1</span><span>A payment pays the items ticked in <b>For</b> first; anything extra goes to the earliest unpaid item, and only then counts as overpaid.</span><div class="eg">This is what makes "Late · $110 Kukkiwon since Mar 27" possible.</div></div><div class="dl"><span class="n">S2</span><span>Four kinds of money lines: <b>payment</b>, <b>refund</b> (never more than what's been paid), <b>undo</b>, and <b>returned check</b>. No new payment on a withdrawn candidate (refunds still OK). Editing a payment is refused while a refund is active. A returned-check mark that was undone can't be marked again (undo and re-record instead).</span></div><div class="dl"><span class="n">S3</span><span>Limit per payment: <b>$5,000</b>. Prices are whole dollars, $1–$5,000.</span><div class="eg">Fits a 4th Dan paid in full with Kukkiwon ($2,870); catches an extra zero.</div></div><div class="dl"><span class="n">S4</span><span>A late family (desk or online): due dates already passed count as <b>due the day they registered</b>. A Kukkiwon fee added late is due that day (gray), Late from the next day.</span></div><div class="dl"><span class="n">S8</span><span>Changing a candidate's Dan: staff before any payment, <b>admins only after</b> (the price changes).</span></div></div>
+<div class="dcard"><h3>Registration and candidates</h3><div class="dl"><span class="n">S5</span><span>At the desk, date of birth and email are <b>required</b>, same as the form.</span><div class="eg">Grading needs the age; Star allowed it blank.</div></div><div class="dl"><span class="n">S7</span><span>Possible duplicate = same cycle, same first + last name and same date of birth. "Keep this one" withdraws the other copy (restorable).</span></div><div class="dl"><span class="n">S9</span><span>The first Add cycle starts from the Fall 2026 schedule from the Sheet; Fall 2026 itself is not a cycle in the dashboard.</span></div><div class="dl"><span class="n">S10</span><span>No link to Color Belt / Star students yet; added when a Students section exists.</span></div><div class="dl"><span class="n">S14</span><span>Reference numbers <b>BB-5001</b> upward, one counter for form and desk, never reused.</span></div><div class="dl"><span class="n">S15</span><span>Delete cycle is refused once there is any payment <b>or any waiver signed online</b>.</span></div></div>
+<div class="dcard"><h3>Privacy and waivers</h3><div class="dl"><span class="n">S11</span><span>The change log hides date of birth, email and signer names ("changed" / "on file"), so the deletions are real.</span></div><div class="dl"><span class="n">S12</span><span><b>Nothing is deleted until the insurer's numbers are entered.</b> Then: whole years, between 3 and 20, changed only with the "this will delete X waivers now" confirm, and logged.</span></div><div class="dl"><span class="n">S13</span><span>Deletions run by themselves in the background when staff open Black Belt; never during a family's registration.</span></div><div class="dl"><span class="n">S18</span><span>Only admins can open a signature, one candidate at a time. Paper waivers show "Signed on paper · date · version · ticked by"; the paper stays in the testing folder.</span></div></div>
+<div class="dcard"><h3>Finance and the rest</h3><div class="dl"><span class="n">S6</span><span>Black Belt has its own tables; each cycle's prices are stored as checked rows, locked once the cycle is saved (v0.902).</span></div><div class="dl"><span class="n">S17</span><span>Finance's report can read only: the payment lines, the school and cycle saved on them, and the candidate's first and last name. <b>Never</b> date of birth, email, notes or waivers.</span></div><div class="dl"><span class="n">S19</span><span>Reuses Color Belt's date and name helpers; its own checks for amounts and emails.</span></div><div class="dl"><span class="n">S20</span><span>Printing receipts and downloading QR codes aren't logged; the QR code is made in the browser.</span></div></div>
+</div>
+</section>
+</main>
+</body>
+</html>

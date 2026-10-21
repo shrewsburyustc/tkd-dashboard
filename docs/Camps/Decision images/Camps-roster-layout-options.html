@@ -1,0 +1,171 @@
+<!doctype html>
+<!--
+  Camps-roster-layout-options.html — decision picture: making the camp roster (C4) less cluttered.
+  Why it exists: Jeffrey said the roster has "way too much information in one place"; when a kid
+  walks in, staff must decide fast. Two ways to split it into digestible pieces. Same camp and time
+  as the attendance mockup (April Vacation Camp, Wed, Apr 21, 2027, 9:10 AM). PNG = screenshot.
+-->
+<html lang="en"><head><meta charset="utf-8"><title>Camps — roster layout options</title>
+<style>
+  :root{--bg:#fff;--surface:#f7f7f5;--border:#e5e5e2;--ctl:#8f8f8a;--text:#1f1f1f;--muted:#6b6b6b;
+    --blue:#003595;--tint:#e6ebf4;--amber:#c98a1b;--ok:#3b6d11;--okbg:#eaf3de;--wbg:#faeeda;--wt:#633806}
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:#efeee9;font:14px/1.45 "Segoe UI",system-ui,sans-serif;color:var(--text);width:1320px}
+  h1{font-size:20px;font-weight:500;margin:0 0 4px}
+  .lead{color:var(--muted);margin:0 0 18px;max-width:1150px}
+  .opt{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:24px}
+  .opt h2{font-size:16px;font-weight:500;margin:0 0 2px}
+  .rec{display:inline-block;font-size:12px;background:var(--okbg);color:var(--ok);border-radius:6px;padding:1px 8px;margin-left:8px;vertical-align:2px}
+  .sub{color:var(--muted);margin:0 0 14px;font-size:13px;max-width:1200px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+  .cols3{display:grid;grid-template-columns:1fr 1fr 330px;gap:18px;align-items:start}
+  .cap{font-size:12px;color:var(--muted);margin:0 0 6px}
+  .frame{border:1px solid #cfcfca;border-radius:10px;padding:14px 16px;background:#fff}
+  .phone{border:6px solid #2a2a2a;border-radius:28px;padding:12px;background:#fff}
+  .back{color:var(--blue);font-size:12px}
+  .t{font-size:18px;font-weight:500}
+  .h{font-size:12px;color:var(--muted)}
+  .tabs{display:flex;gap:18px;border-bottom:1px solid var(--border);margin:10px 0 10px;font-size:13px}
+  .tabs span{padding:6px 0;color:var(--muted)}
+  .tabs .on{color:var(--blue);border-bottom:2px solid var(--blue)}
+  .big{font-size:22px;font-weight:500}
+  .stat{display:flex;gap:24px;align-items:baseline;margin-bottom:8px}
+  .stat .l{font-size:12px;color:var(--muted)}
+  .search{height:32px;border:1px solid var(--ctl);border-radius:8px;padding:0 10px;display:flex;align-items:center;font-size:13px;color:var(--muted);margin-bottom:8px}
+  .grp{font-size:12px;color:var(--muted);margin:10px 0 2px}
+  .row{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);height:44px;font-size:14px;gap:8px}
+  .row .nm{flex:1}
+  .row .nm small{color:var(--muted);font-size:12px}
+  .btn{height:32px;padding:0 12px;border-radius:8px;font-size:13px;display:inline-flex;align-items:center;gap:4px;border:1px solid var(--ctl);background:#fff;white-space:nowrap}
+  .btn.s{height:28px;font-size:12px;padding:0 10px}
+  .in{color:var(--ok);font-size:12px}
+  .flag{font-size:12px;border-radius:6px;padding:1px 6px;background:var(--wbg);color:var(--wt)}
+  .tag{font-size:12px;border-radius:6px;padding:1px 8px;background:var(--okbg);color:var(--ok)}
+  .tag.g{background:var(--surface);color:var(--muted);border:1px solid var(--border)}
+  .tag.w{background:var(--wbg);color:var(--wt)}
+  .muted{color:var(--muted)}
+  .amber{outline:3px solid var(--amber);outline-offset:4px;border-radius:8px}
+  .note{font-size:12px;color:#7a4f00;margin:10px 0 0;font-weight:500}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{background:var(--surface);color:var(--muted);font-weight:400;font-size:12px;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+  td{padding:0 8px;height:40px;border-bottom:1px solid var(--border);white-space:nowrap}
+  td.n,th.n{text-align:right} td.c,th.c{text-align:center}
+  .cell{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:26px;border-radius:6px;font-size:12px}
+  .came{background:var(--okbg);color:var(--ok)} .miss{background:var(--wbg);color:var(--wt)} .exp{border:1px dashed var(--ctl);color:var(--muted)} .none{color:#b8b8b3}
+  .detail{border-top:1px solid var(--border);background:var(--surface);padding:10px 12px;font-size:13px;border-radius:0 0 8px 8px}
+  .detail .ln{display:flex;justify-content:space-between;padding:2px 0}
+  .pc{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:14px;font-size:13px}
+  .pc h3{font-size:13px;font-weight:500;margin:0 0 4px}
+  .pc ul{margin:0;padding-left:18px}
+</style></head><body>
+
+<h1>Camp roster — less on screen, faster decisions</h1>
+<p class="lead">Same camp, same moment (April Vacation Camp, Wed, Apr 21, 9:10 AM). Nothing is lost in either option — prices, extras, paying method and phones stay one tap away. The difference is how the roster is split.</p>
+
+<!-- ============ OPTION A ============ -->
+<div class="opt">
+  <h2>A. Three tabs, one job each: Check in · Payments · Attendance <span class="rec">Recommended</span></h2>
+  <p class="sub">The camp page gets three tabs. <b>Check in</b> is the door list: only today's kids, big name, one button, a small amber note only when something needs attention (drop-off, pick-up, not paid). <b>Payments</b> is who owes what, with Mark paid. <b>Attendance</b> is the week grid. During camp week the page opens on Check in; before camp it opens on Payments. Tap a name anywhere → Camper detail (everything else).</p>
+  <div class="cols3">
+    <div>
+      <div class="cap">Check in tab · PC (opens here during camp)</div>
+      <div class="frame amber">
+        <div class="back">← Camps</div><div class="t">April Vacation Camp</div><div class="h">Wed, Apr 21 · 9:00 AM – 3:00 PM · held at Worcester</div>
+        <div class="tabs"><span class="on">Check in</span><span>Payments · 5</span><span>Attendance</span></div>
+        <div class="stat"><span><span class="big">9</span> <span class="l">of 15 here</span></span><span><span class="big" style="color:var(--muted)">6</span> <span class="l">not here yet</span></span></div>
+        <div class="search">🔍 Find a camper</div>
+        <div class="grp">Not here yet · 6</div>
+        <div class="row"><span class="nm">Noah Patel <small>· 10</small> <span class="flag">Not paid</span></span><span class="btn">Check in</span></div>
+        <div class="row"><span class="nm">Mia Rossi <small>· 9</small> <span class="flag">Pick-up 3–4</span></span><span class="btn">Check in</span></div>
+        <div class="row"><span class="nm">Sofia Nguyen <small>· 6</small></span><span class="btn">Check in</span></div>
+        <div class="grp">Here · 9</div>
+        <div class="row muted"><span class="nm">Ava Thompson <small>· 8</small></span><span class="in">✓ 7:42 AM</span></div>
+        <div class="row muted"><span class="nm">Leo Kim <small>· 11</small></span><span class="in">✓ 7:51 AM</span></div>
+        <p class="note">One button per row. Kids move from "Not here yet" to "Here" as they're checked in. At most one small note per child.</p>
+      </div>
+    </div>
+    <div>
+      <div class="cap">Payments tab · PC</div>
+      <div class="frame amber">
+        <div class="tabs" style="margin-top:0"><span>Check in</span><span class="on">Payments · 5</span><span>Attendance</span></div>
+        <div class="stat"><span><span class="big">13</span> <span class="l">paid</span></span><span><span class="big" style="color:var(--wt)">5</span> <span class="l">to collect · $1,040</span></span></div>
+        <div class="grp">To collect · 5</div>
+        <div class="row"><span class="nm">Noah Patel <small>· Mon, Tue, Wed · cash</small></span><span>$219</span><span class="btn s">✓ Mark paid</span></div>
+        <div class="row"><span class="nm">Leo Kim <small>· all days · card</small></span><span class="tag w">Owes $15</span><span class="btn s">✓ Mark paid $15</span></div>
+        <div class="row"><span class="nm">Ethan Brooks <small>· Mon, Thu, Fri · check</small></span><span>$245</span><span class="btn s">✓ Mark paid</span></div>
+        <div class="grp">Paid · 13</div>
+        <div class="row muted"><span class="nm">Ava Thompson</span><span>$390</span><span class="tag">Paid</span></div>
+        <p class="note">Who owes is on top. Days and how they'll pay in one gray line.</p>
+      </div>
+      <div class="cap" style="margin-top:14px">Attendance tab · PC</div>
+      <div class="frame amber">
+        <div class="tabs" style="margin-top:0"><span>Check in</span><span>Payments · 5</span><span class="on">Attendance</span></div>
+        <table>
+          <tr><th>Camper</th><th class="c">M</th><th class="c">T</th><th class="c">W</th><th class="c">T</th><th class="c">F</th><th class="n">Came</th></tr>
+          <tr><td>Ava Thompson</td><td class="c"><span class="cell came">✓</span></td><td class="c"><span class="cell came">✓</span></td><td class="c"><span class="cell came">✓</span></td><td class="c"><span class="cell exp"></span></td><td class="c"><span class="cell exp"></span></td><td class="n">3 of 3</td></tr>
+          <tr><td>Noah Patel</td><td class="c"><span class="cell came">✓</span></td><td class="c"><span class="cell miss">✗</span></td><td class="c"><span class="cell exp"></span></td><td class="c"><span class="cell none">—</span></td><td class="c"><span class="cell none">—</span></td><td class="n">1 of 2</td></tr>
+          <tr><td>Mia Rossi</td><td class="c"><span class="cell came">✓</span></td><td class="c"><span class="cell none">—</span></td><td class="c"><span class="cell came">✓</span></td><td class="c"><span class="cell none">—</span></td><td class="c"><span class="cell none">—</span></td><td class="n">2 of 2</td></tr>
+        </table>
+        <p class="note">Just ticks and the count; times are in Camper detail.</p>
+      </div>
+    </div>
+    <div>
+      <div class="cap">Check in tab · phone</div>
+      <div class="phone amber">
+        <div class="t" style="font-size:16px">April Vacation Camp</div>
+        <div class="tabs"><span class="on">Check in</span><span>Payments · 5</span><span>Attendance</span></div>
+        <div class="stat"><span><span class="big">9</span> <span class="l">of 15 here</span></span></div>
+        <div class="search">🔍 Find a camper</div>
+        <div class="grp">Not here yet · 6</div>
+        <div class="row"><span class="nm">Noah Patel <small>· 10</small><br><span class="flag">Not paid</span></span><span class="btn">Check in</span></div>
+        <div class="row"><span class="nm">Mia Rossi <small>· 9</small><br><span class="flag">Pick-up 3–4</span></span><span class="btn">Check in</span></div>
+        <div class="row"><span class="nm">Sofia Nguyen <small>· 6</small></span><span class="btn">Check in</span></div>
+        <div class="grp">Here · 9</div>
+        <div class="row muted"><span class="nm">Ava Thompson <small>· 8</small></span><span class="in">✓ 7:42</span></div>
+        <p class="note">Works the same on the mat-side tablet.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pc">
+    <div><h3>Pros</h3><ul><li>At the door you see only names and one button; decide in a glance.</li><li>Each tab answers one question: who's here? who owes? who came this week?</li><li>Busy morning and quiet bookkeeping don't fight for space.</li></ul></div>
+    <div><h3>Cons</h3><ul><li>Collecting money from a parent at drop-off means switching to Payments (or tapping the "Not paid" note, which opens Mark paid).</li><li>Three tabs to build instead of one list.</li></ul></div>
+  </div>
+</div>
+
+<!-- ============ OPTION B ============ -->
+<div class="opt">
+  <h2>B. One slim list; tap a child to see the rest</h2>
+  <p class="sub">Keep one roster, but each row shows only <b>name · one status · one button</b>. Tapping the row opens a small panel under it with days, extras, total, paying method and Mark paid. The week grid stays as the "All days" view.</p>
+  <div class="cols">
+    <div>
+      <div class="cap">PC · Wed picked · Mia's row opened</div>
+      <div class="frame amber">
+        <div class="t">April Vacation Camp</div>
+        <div class="stat" style="margin-top:6px"><span><span class="big">9</span> <span class="l">of 15 here</span></span><span><span class="big" style="color:var(--wt)">5</span> <span class="l">not paid</span></span></div>
+        <div class="row"><span class="nm">Noah Patel <small>· 10</small></span><span class="tag g">Not paid</span><span class="btn">Check in</span></div>
+        <div class="row" style="border-bottom:0"><span class="nm">Mia Rossi <small>· 9</small></span><span class="tag">Paid</span><span class="btn">Check in</span></div>
+        <div class="detail"><div class="ln"><span class="muted">Days</span><span>Mon, Wed</span></div><div class="ln"><span class="muted">Today</span><span>Late pick-up 3–4</span></div><div class="ln"><span class="muted">Total</span><span>$166 · cash · Paid</span></div></div>
+        <div class="row muted"><span class="nm">Ava Thompson <small>· 8</small></span><span class="tag">Paid</span><span class="in">✓ 7:42 AM</span></div>
+        <div class="row muted"><span class="nm">Leo Kim <small>· 11</small></span><span class="tag w">Owes $15</span><span class="in">✓ 7:51 AM</span></div>
+        <p class="note">Everything on one list; details only for the child you tap.</p>
+      </div>
+    </div>
+    <div>
+      <div class="cap">Phone</div>
+      <div class="phone amber" style="width:330px">
+        <div class="t" style="font-size:16px">April Vacation Camp</div>
+        <div class="stat" style="margin-top:6px"><span><span class="big">9</span> <span class="l">of 15 here</span></span></div>
+        <div class="row"><span class="nm">Noah Patel <small>· 10</small><br><span class="tag g">Not paid</span></span><span class="btn">Check in</span></div>
+        <div class="row"><span class="nm">Mia Rossi <small>· 9</small><br><span class="tag">Paid</span></span><span class="btn">Check in</span></div>
+        <div class="row muted"><span class="nm">Ava Thompson <small>· 8</small></span><span class="in">✓ 7:42</span></div>
+        <p class="note">Tap a row → days, extras, total, Mark paid.</p>
+      </div>
+    </div>
+  </div>
+  <div class="pc">
+    <div><h3>Pros</h3><ul><li>One place for everything; no tabs to switch.</li><li>Rows are short; details on demand.</li></ul></div>
+    <div><h3>Cons</h3><ul><li>Still mixes check-in and payment on every row (two signals per child).</li><li>Finding who owes means scanning the whole list or filtering.</li><li>Expanding rows one by one is slow for bookkeeping.</li></ul></div>
+  </div>
+</div>
+
+</body></html>

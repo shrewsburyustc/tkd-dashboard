@@ -5,7 +5,10 @@
 // getSession / onAuthStateChange / signOut / updateUser, rpc, and from(table).select().eq().order()
 // — and follows the same rules as the real database (migrations 0001 + 0002 + 0003).
 // Testing → Classes and ranks lives in its own file, mockTesting.js; Events, the roster with
-// payments and Settings → Schools live in mockTestingEvents.js (phase 2); this file plugs both in.
+// payments and Settings → Schools live in mockTestingEvents.js (phase 2); Star testing → Rubrics and
+// prices lives in mockStarTesting.js (Star phase 1), Star testing events in mockStarEvents.js
+// (Star phase 2) and Star candidates and payments in mockStarCandidates.js (Star phase 3); this file
+// plugs them all in.
 //
 // Try it:  any email + password "preview" signs in as Jeffrey Berg (admin). PIN is 2580.
 // Test helpers in the browser console (F12 → Console):
@@ -19,6 +22,8 @@
 // Testing helpers:
 //   __tkdPreview.setRole('staff')         view-only account ('admin' to switch back; then reload)
 //   __tkdPreview.failNextSave()           the next Testing save fails like a dropped connection
+//   __tkdPreview.failNextSave('star')     the next Star testing save (Rubrics and prices, events or
+//                                         candidates and payments) fails instead
 //   __tkdPreview.simulateOtherAdminEdit() "another admin" changes everything (open dialogs go stale)
 //   __tkdPreview.clearSchool('Shrewsbury') remove that school's classes (to see the empty state)
 //   __tkdPreview.resetTesting()           back to the default classes and ranks
@@ -50,19 +55,70 @@
 //   __tkdPreview.forceTimeTaken()         the next forms Submit with a time answers "time taken"
 //   __tkdPreview.forceFormChanged()       the next forms Submit answers "form changed"
 //   __tkdPreview.forceFormsRateLimited(true) every forms Submit answers "too many tries"
-// Grading helpers (phase 3, contract 0010 §3.4; setToday and failNextSave cover grading too):
+// Star family form helpers (src/lib/star/publicApi.preview.js; open /star/<code> on the same port):
+//   __tkdPreview.setStarPublicRegistration(false) the Star form's kill switch ("not open" everywhere)
+//   __tkdPreview.forceStarVerifyFailed(true)   the next Star Send fails the human check
+//   __tkdPreview.forceStarRateLimited(true)    Star Sends answer "too many tries" until set false
+//   __tkdPreview.forceStarPageRateLimited(true) opening the Star page answers "too many tries"
+//   __tkdPreview.failNextStarLoad() / failNextStarSend()  the next page load / Send fails
+//   __tkdPreview.setStarPublicDelay(3000)      slow the Star page's answers down
+// Grading helpers (phase 3, contract 0010 §3.4; setToday and failNextSave() cover grading too):
 //   __tkdPreview.failSavesUntilRetry()    from now on EVERY Events save fails like a dropped
 //                                         Wi-Fi connection (reads still work) — "Not saved"
 //   __tkdPreview.reconnect()              saves work again, and the browser's "online" event
 //                                         fires, so unsaved results save by themselves
+// Star testing (Rubrics and prices, mockStarTesting.js; events, mockStarEvents.js; candidates and
+// payments, mockStarCandidates.js):
+//   simulateOtherAdminEdit() and resetTesting() cover Star's rubrics and prices, events and
+//   candidates too; setRole, setTestingDelay and setToday work the same; failNextSave('star') targets
+//   Star (see above). The grading helpers above (failSavesUntilRetry / reconnect) touch Color Belt's
+//   Events saves only. Star's seed (resetTesting): a finished Summer event with make-ups owed, the
+//   upcoming Fall event (paid, not paid, overpaid, duplicate, private, withdrawn, make-up) and a later
+//   Spring event that can pick make-ups.
+// Star testing GRADING (phase 5; mockStarGrading.js, plugged into the candidates fake):
+//   __tkdPreview.failNextSave() or failNextSave('star')  also make the next Star grade / count save fail
+//   __tkdPreview.setStarOffline(true)     every Star grading call fails like a dropped connection and the
+//                                         page hears "offline"; setStarOffline(false) → "online" again
+//   __tkdPreview.simulateStarDanChange('Noah', 2)  "another device" moves Noah Chen (Fall) to 2nd Dan —
+//                                         his next grade saved on the old grid answers stale
+//   Seed: Fall's 1st Dan grid has Passed (Chris Kim), D (Noah Chen), below 245 needing a choice (Ethan
+//   Lopez), chosen (Sam Ortiz), "7 of 11 left" (Ava Reed), Not started (Mia Patel …), a make-up with
+//   kept grades (Sofia Reyes, retests Breaking and Korean Terminology) and Alex Kim testing privately.
 // Staff accounts helpers (account menu → Admin → Staff accounts; mockStaff.js):
 //   __tkdPreview.failNextSave()           also makes the next Reset password / Reset PIN fail
 //   __tkdPreview.resetStaffAccounts()     the fake desk is signed in on 3 devices again
 //   __tkdPreview.setPasswordAgeMinutes(11) → a reset asks for "Confirm it's you" again
+// Camps helpers (contract 0013 §5.4; mockCamps.js + camps/publicApi.preview.js; data in
+// localStorage 'tkd.preview.camps'; setRole, failNextSave, failSavesUntilRetry, reconnect,
+// setTestingDelay, setToday and simulateOtherAdminEdit cover Camps too):
+//   __tkdPreview.resetCamps()             back to the default camps, campers and templates
+//   __tkdPreview.campWeek()               today = Wed, Apr 21, 2027 (April Vacation Camp week),
+//                                         camps reset + reload — to see Check in
+//   __tkdPreview.setCampsRegistration(false) the camp form's kill switch
+//   __tkdPreview.simulateFamilySignup()   a sign-up as if from a phone (first open camp; or pass a
+//                                         code, and { duplicateOf: 'Ava Thompson' } for a duplicate)
+//   __tkdPreview.forcePriceChanged(true)  the next camp Send answers price_changed (+$5)
+//   __tkdPreview.forceCampChanged(true)   the next camp Send answers camp_changed
 // Finance helpers (contract 0011 §3, mockFinance.js; setToday, setRole and failNextSave cover Finance too —
 // failNextSave makes the next Finance save fail, e.g. Close the day):
 //   __tkdPreview.setNow('19:30')          pretend the school clock says 7:30 PM (Home reminder); null = real time
 //   __tkdPreview.resetFinance()           back to the sample closings and Star payments, reminder times Off
+// Black Belt testing helpers (contracts 0016-B1 §2.3 + 0016-B2 §2.4, src/lib/blackBelt/mockBlackBelt.js; setRole, setToday and
+// setTestingDelay cover Black Belt too; failNextSave() fails the next save of whichever section comes first):
+//   __tkdPreview.failNextSave('blackBelt') the next Black Belt save fails like a dropped connection
+//   __tkdPreview.simulateOtherAdminEdit() also bumps every Black Belt cycle, candidate and the settings, and saves a new waiver
+//   __tkdPreview.resetBlackBelt()         back to 0016's seed (no cycles, the placeholder waiver)
+//   __tkdPreview.bbSample()               the mockups' sample (Spring 2027 with 6 candidates, Fall 2027)
+//   __tkdPreview.bbLinks()                both family links of every cycle as LOCAL preview addresses
+//   __tkdPreview.setBlackBeltRegistration(false) the Black Belt form's kill switch ("not open" everywhere)
+//   __tkdPreview.bbWaiverChanged()        the waiver was replaced 25 hours ago -> the next Send answers waiver_changed
+//   __tkdPreview.bbSampleRoster()         the Candidates mockups' sample (9 candidates with payments; for Apr 26, 2027)
+//   __tkdPreview.bbSampleEdge()           bbSampleRoster + the edge cases (overpaid, Kukkiwon late, withdrawn, a
+//                                         parent's signature needed, a desk paper waiver)
+//                                         (both fill the schools' street and phone only where they are empty)
+//   __tkdPreview.bbExpireUndo()           the newest Black Belt payment looks 11 s old -> a staff Undo is "too late"
+//   __tkdPreview.bbAddDuplicate()         a second form registration of the newest cycle's first candidate (duplicate box)
+//   (forceVerifyFailed / forceRateLimited above work on the Black Belt form too)
 import { getLastPasswordSignIn, PASSWORD_MAX_AGE_MS, decodeJwtPayload } from './session.js';
 import { setLockedFlag } from './useIdleLock.js';
 import { readStorage, writeStorage, removeStorage } from './storage.js';
@@ -71,11 +127,23 @@ import { createTestingBackend, TESTING_RPC_NAMES } from './mockTesting.js';
 import { createEventsBackend, EVENT_RPC_NAMES, EVENT_RESTRICTED_RPC_NAMES, EVENT_TABLES } from './mockTestingEvents.js';
 import { previewToday, publicPreviewHelpers } from './testing/publicApi.preview.js';
 import { formsPublicPreviewHelpers } from '../forms/publicApi.preview.js';
+import { starPublicPreviewHelpers } from './star/publicApi.preview.js';
 import { createStaffBackend, STAFF_RPC_NAMES } from './mockStaff.js';
+import { createStarBackend, STAR_RPC_NAMES, STAR_TABLES, STAR_STORE_KEY } from './mockStarTesting.js';
+import { createStarEventsBackend, STAR_EVENT_RPC_NAMES, STAR_EVENT_TABLES } from './mockStarEvents.js';
+import {
+  createStarCandidatesBackend, defaultStarCandidatesData, starCandidatesSeedIsCurrent, STAR_CANDIDATE_RPC_NAMES,
+  STAR_CANDIDATE_WRITE_RPC_NAMES, STAR_CANDIDATE_TABLES,
+} from './mockStarCandidates.js';
+import { STAR_GRADING_RPC_NAMES, STAR_GRADING_WRITE_RPC_NAMES } from './mockStarGrading.js';
+import { createCampsBackend, CAMP_RPC_NAMES, CAMP_RESTRICTED_RPC_NAMES, CAMP_READ_RPC_NAMES, CAMP_TABLES } from './mockCamps.js';
+import { publicCampHelpers } from './camps/publicApi.preview.js';
 import { createScheduleBackend, SCHEDULE_RPC_NAMES } from './mockSchedule.js';
 import { createCalendarBackend, CALENDAR_RPC_NAMES } from './mockCalendar.js';
 import { createFormsBackend, FORMS_RPC_NAMES } from './mockForms.js';
 import { createFinanceBackend, FINANCE_RPC_NAMES, FINANCE_WRITE_RPC_NAMES } from './mockFinance.js';
+import { createBlackBeltBackend, BB_RPC_NAMES, BB_WRITE_RPC_NAMES, BB_TABLES, BB_STORE_KEY } from './blackBelt/mockBlackBelt.js';
+import { blackBeltPublicHelpers } from './blackBelt/publicApi.preview.js';
 
 const SESSION_KEY = 'tkd.preview.session'; // the fake "signed in" session
 const STAFF_STATE_KEY = 'tkd.preview.staffState'; // fake staff row: PIN, shared flag
@@ -84,6 +152,7 @@ const OLD_PIN_STATE_KEY = 'tkd.preview.pinState'; // used by the first build; cl
 const TESTING_KEY = 'tkd.preview.testing'; // fake Testing tables (classes + ranks)
 const TESTING_DELAY_KEY = 'tkd.preview.testingDelay'; // setTestingDelay(ms), kept across reloads
 const STAFF_ACCOUNTS_KEY = 'tkd.preview.staffAccounts'; // fake Staff accounts (mockStaff.js)
+const CAMPS_KEY = 'tkd.preview.camps'; // fake Camps tables (mockCamps.js)
 const SCHEDULE_KEY = 'tkd.preview.schedule'; // fake Schedule tables (mockSchedule.js)
 const CALENDAR_KEY = 'tkd.preview.calendar'; // fake Calendar tables (mockCalendar.js)
 const FORMS_KEY = 'tkd.preview.forms'; // fake Forms tables (mockForms.js)
@@ -499,11 +568,89 @@ export function createMockClient() {
     today: previewToday, // the real school date, or the one set with setToday
     newId: newUuid,
   });
+  // ----- Camps (mockCamps.js) — its own store; the schools' names / addresses come from Testing -----
+  const camps = createCampsBackend({
+    loadStore: () => JSON.parse(readStorage(CAMPS_KEY)), // missing/damaged → default data
+    saveStore: (store) => writeStorage(CAMPS_KEY, JSON.stringify(store)),
+    now: () => Date.now(),
+    today: previewToday,
+    newId: newUuid,
+    locations: () => events.snapshot().locations,
+  });
+  // ----- Black Belt testing (src/lib/blackBelt/mockBlackBelt.js) -----
+  // Its own store; the schools' names and addresses come from the Events store above.
+  const blackBelt = createBlackBeltBackend({
+    loadStore: () => JSON.parse(readStorage(BB_STORE_KEY)), // missing/damaged -> 0016's seed
+    saveStore: (store) => writeStorage(BB_STORE_KEY, JSON.stringify(store)),
+    now: () => Date.now(),
+    today: previewToday, // the real school date, or the one set with setToday
+    newId: newUuid,
+    getLocations: () => events.snapshot().locations,
+  });
+  // The Black Belt samples' school street and phone (the mockups' made-up sample data), written
+  // only where the preview school has none yet, through the Events store's own Schools save
+  // (as an admin would in Settings -> Schools). The receipt's footer shows them.
+  const SAMPLE_SCHOOLS = {
+    worcester: { street: '1141 Main St', city: 'Worcester', state: 'MA', zip: '01603', phone: '(508) 767-1717' },
+    shrewsbury: { street: '370 Boston Turnpike', city: 'Shrewsbury', state: 'MA', zip: '01545', phone: '(508) 792-5534' },
+  };
+  function fillSampleSchools() {
+    const admin = { ...testingContext(), signedIn: true, hasDataAccess: true, isAdmin: true };
+    for (const school of events.snapshot().locations ?? []) {
+      const sample = SAMPLE_SCHOOLS[school.code];
+      if (!sample || (school.address_street && school.phone)) continue;
+      const keepAddress = Boolean(school.address_street);
+      events.rpc('settings_update_school_contact', {
+        p_code: school.code,
+        p_expected_version: school.version,
+        p_street: keepAddress ? school.address_street : sample.street,
+        p_city: keepAddress ? school.address_city : sample.city,
+        p_state: keepAddress ? school.address_state : sample.state,
+        p_zip: keepAddress ? school.address_zip : sample.zip,
+        p_phone: school.phone || sample.phone,
+      }, admin);
+    }
+  }
   // failNextSave arms this; the next Testing or Events save then fails (whichever comes first).
   let failNextTesting = false;
   // failSavesUntilRetry turns this on and reconnect turns it off: while on, every Events save
   // fails like a dropped connection. Kept in memory only (a reload brings the "connection" back).
   let eventSavesOffline = false;
+
+  // ----- Star testing → Rubrics and prices (mockStarTesting.js) -----
+  // Its own store (STAR_STORE_KEY), apart from Color Belt's. failNextSave('star') arms its own flag.
+  const star = createStarBackend({
+    loadStore: () => JSON.parse(readStorage(STAR_STORE_KEY)), // missing/damaged → the seed (0006)
+    saveStore: (store) => writeStorage(STAR_STORE_KEY, JSON.stringify(store)),
+    now: () => Date.now(),
+    newId: newUuid,
+  });
+  // Star testing events (mockStarEvents.js): the same store as Rubrics and prices, so Add event can
+  // copy the template as it is at that moment. Its seed is the candidates fake's (phase 3), so the
+  // events and the candidates always come from the same seed.
+  const starEvents = createStarEventsBackend({
+    readBase: () => star.snapshot(),
+    saveStore: (store) => writeStorage(STAR_STORE_KEY, JSON.stringify(store)),
+    now: () => Date.now(),
+    today: previewToday, // the real school date, or the one set with setToday
+    newId: newUuid,
+    seed: defaultStarCandidatesData,
+    seedIsCurrent: starCandidatesSeedIsCurrent,
+  });
+  // Star testing candidates and payments (mockStarCandidates.js): the same store again; it also
+  // answers the star_roster view (the Events counts and Delete event read it too).
+  const starCandidates = createStarCandidatesBackend({
+    readBase: () => starEvents.snapshot(),
+    saveStore: (store) => writeStorage(STAR_STORE_KEY, JSON.stringify(store)),
+    now: () => Date.now(),
+    today: previewToday,
+    newId: newUuid,
+  });
+  // failNextSave('star') arms this; the next Star save then fails (rubrics, events or candidates,
+  // whichever comes first).
+  let failNextStar = false;
+  // setStarOffline(true): every Star grading call fails like a dropped connection (phase 5).
+  let starGradingOffline = false;
 
   // The fake network time for Testing calls (setTestingDelay saves it so it survives a reload).
   function testingDelay() {
@@ -560,8 +707,17 @@ export function createMockClient() {
           if (table.startsWith('schedule_')) return schedule.select(table, query.columns, query.filters, query.orders, testingContext());
           if (table.startsWith('calendar_')) return calendar.select(table, query.columns, query.filters, query.orders, testingContext());
           if (table === 'forms' || table.startsWith('form_') || table === 'prospect_statuses') return forms.select(table, query.columns, query.filters, query.orders, testingContext());
+          if (BB_TABLES.includes(table)) return blackBelt.select(table, query.columns, query.filters, query.orders, testingContext());
           // Phase 2 tables (and locations, which gained the address columns) → mockTestingEvents.js.
+          if (CAMP_TABLES.includes(table)) return camps.select(table, query.columns, query.filters, query.orders, testingContext());
           if (EVENT_TABLES.includes(table)) return events.select(table, query.columns, query.filters, query.orders, testingContext());
+          // Star testing's roster view and make-up subjects → mockStarCandidates.js (checked before
+          // the events, which list star_roster too for their own phase 2 checks).
+          if (STAR_CANDIDATE_TABLES.includes(table)) return starCandidates.select(table, query.columns, query.filters, query.orders, testingContext());
+          // Star testing's events and their copies → mockStarEvents.js.
+          if (STAR_EVENT_TABLES.includes(table)) return starEvents.select(table, query.columns, query.filters, query.orders, testingContext());
+          // Star testing's four rubric tables → mockStarTesting.js.
+          if (STAR_TABLES.includes(table)) return star.select(table, query.columns, query.filters, query.orders, testingContext());
           return testing.select(table, query.columns, query.filters, query.orders, testingContext());
         };
         return run().then(resolve, reject);
@@ -576,6 +732,7 @@ export function createMockClient() {
     loadStore: () => JSON.parse(readStorage(FINANCE_KEY)), // missing/damaged → the default sample
     saveStore: (store) => writeStorage(FINANCE_KEY, JSON.stringify(store)),
     readColorBelt: () => events.snapshot(),
+    readCamps: () => camps.snapshot(), // camp payments are Finance's third source (v0.707)
     now: () => Date.now(),
     today: previewToday, // the real school date, or the one set with setToday
     newId: newUuid,
@@ -600,10 +757,41 @@ export function createMockClient() {
     };
   }
 
-  async function rpc(name, args = {}) {
+  // options: the real client's third argument; { get: true } sends a read-only GET request, which
+  // the Star candidates fake refuses for functions that write (contract §7).
+  async function rpc(name, args = {}, options = {}) {
+    if (STAR_CANDIDATE_RPC_NAMES.includes(name)) {
+      await wait(testingDelay());
+      if (starGradingOffline && STAR_GRADING_RPC_NAMES.includes(name)) {
+        return { data: null, error: { message: 'Failed to fetch (preview: setStarOffline)' }, status: 0 };
+      }
+      if ((failNextStar || failNextTesting) && STAR_GRADING_WRITE_RPC_NAMES.includes(name)) {
+        // failNextSave() / failNextSave('star'): the next save fails, whichever section it is in
+        failNextStar = false;
+        failNextTesting = false;
+        starCandidates.failNextSave();
+      }
+      if (failNextStar && STAR_CANDIDATE_WRITE_RPC_NAMES.includes(name)) {
+        failNextStar = false;
+        starCandidates.failNextSave(); // this one save fails like a dropped connection
+      }
+      return starCandidates.rpc(name, args, testingContext(), options);
+    }
     if (STAFF_RPC_NAMES.includes(name)) {
       await wait(FAKE_DELAY_MS);
       return staffAccounts.rpc(name, args, staffContext());
+    }
+    if (CAMP_RPC_NAMES.includes(name) || CAMP_RESTRICTED_RPC_NAMES.includes(name)) {
+      await wait(testingDelay());
+      const isSave = CAMP_RPC_NAMES.includes(name) && !CAMP_READ_RPC_NAMES.includes(name);
+      if (eventSavesOffline && isSave) {
+        return { data: null, error: { message: 'Failed to fetch (preview: failSavesUntilRetry)' }, status: 0 };
+      }
+      if (failNextTesting && isSave) {
+        failNextTesting = false;
+        camps.failNextSave();
+      }
+      return camps.rpc(name, args, testingContext());
     }
     if (SCHEDULE_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
@@ -628,6 +816,23 @@ export function createMockClient() {
         events.failNextSave();
       }
       return events.rpc(name, args, testingContext());
+    }
+    if (STAR_RPC_NAMES.includes(name) || STAR_EVENT_RPC_NAMES.includes(name)) {
+      await wait(testingDelay());
+      const backend = STAR_RPC_NAMES.includes(name) ? star : starEvents;
+      if (failNextStar) {
+        failNextStar = false;
+        backend.failNextSave(); // this one call fails like a dropped connection
+      }
+      return backend.rpc(name, args, testingContext());
+    }
+    if (BB_RPC_NAMES.includes(name)) {
+      await wait(testingDelay());
+      if (failNextTesting && BB_WRITE_RPC_NAMES.includes(name)) {
+        failNextTesting = false; // failNextSave: the next save fails, whichever section it is in
+        blackBelt.failNextSave();
+      }
+      return blackBelt.rpc(name, args, testingContext(), options);
     }
     if (FINANCE_RPC_NAMES.includes(name)) {
       await wait(testingDelay());
@@ -711,10 +916,23 @@ export function createMockClient() {
       saveStaffState(staff);
       return `The preview account is now ${role === 'admin' ? 'an admin' : 'staff (view only)'}. Reload the page to see it.`;
     },
-    failNextSave() {
+    // failNextSave()            → the next Color Belt Testing/Events, Camps, Black Belt or Finance save
+    //                            (and Reset password / PIN) fails.
+    // failNextSave('star')      → the next Star testing save (Rubrics and prices, events or candidates) fails.
+    // failNextSave('blackBelt') → the next Black Belt save fails.
+    failNextSave(target) {
+      if (target === 'star') {
+        failNextStar = true;
+        return 'The next Star testing save (Rubrics and prices, events, or candidates and payments) will fail like a dropped connection and change nothing.';
+      }
+      if (target === 'blackBelt') {
+        blackBelt.failNextSave();
+        return 'The next Black Belt save will fail like a dropped connection and change nothing.';
+      }
+      if (target !== undefined) return "Use failNextSave() for Color Belt, Camps, Black Belt, Finance and Staff accounts, failNextSave('blackBelt') for Black Belt only, or failNextSave('star') for Star testing.";
       failNextTesting = true;
       staffAccounts.failNext();
-      return 'The next Testing save (and the next Reset password / Reset PIN) will fail like a dropped connection and change nothing.';
+      return 'The next Testing or Camps save (and the next Reset password / Reset PIN) will fail like a dropped connection and change nothing.';
     },
     resetStaffAccounts() {
       staffAccounts.reset();
@@ -723,7 +941,11 @@ export function createMockClient() {
     simulateOtherAdminEdit() {
       testing.simulateOtherAdminEdit();
       events.simulateOtherAdminEdit();
-      return 'Another admin changed every class, rank, event, student and school address, and swapped two ranks. Open dialogs and Undo are now out of date.';
+      star.simulateOtherAdminEdit();
+      starEvents.simulateOtherAdminEdit();
+      camps.simulateOtherAdminEdit();
+      blackBelt.simulateOtherAdminEdit();
+      return 'Another admin changed every class, rank, event, student, school address, camp, camper and template, and swapped two ranks — and changed Star testing\'s rubrics and prices, events and candidates, and every Black Belt cycle and candidate, the keep-years settings and the waiver. Open dialogs and Undo are now out of date.';
     },
     clearSchool(school) {
       if (!testing.clearSchool(school)) return "Use clearSchool('Worcester') or clearSchool('Shrewsbury').";
@@ -780,7 +1002,9 @@ export function createMockClient() {
     resetTesting() {
       testing.reset();
       events.reset();
-      return 'Testing is back to the default classes and ranks, the November Children Testing event with its students, and empty school addresses. Reload to see them.';
+      star.reset();
+      starEvents.reset(); // after star.reset(): it adds the seeded events and candidates to the fresh template
+      return 'Testing is back to the default classes and ranks, the November Children Testing event with its students, and empty school addresses — and Star testing to its seed rubrics and prices, its three seeded events and their candidates and payments. Reload to see them.';
     },
     setTestingDelay(ms) {
       const value = Number(ms);
@@ -799,6 +1023,17 @@ export function createMockClient() {
       window.dispatchEvent(new Event('online'));
       return 'Saves work again. Unsaved results save by themselves now (or press Retry).';
     },
+    // ----- Star grading helpers (phase 5) -----
+    setStarOffline(on = true) {
+      starGradingOffline = Boolean(on);
+      window.dispatchEvent(new Event(starGradingOffline ? 'offline' : 'online'));
+      return starGradingOffline
+        ? 'Star grading is now "offline": every grade, count and grid read fails. Run __tkdPreview.setStarOffline(false) to come back.'
+        : 'Star grading is back online. The page refreshes, then Not saved grades save by themselves.';
+    },
+    simulateStarDanChange(firstName = 'Noah', dan = 2) {
+      return starCandidates.simulateDanChange(firstName, dan);
+    },
     // ----- Finance helpers (mockFinance.js) -----
     setNow(hhmm) {
       if (!finance.setNow(hhmm ?? null)) return "Use setNow('19:30') (school time, 24-hour), or setNow(null) for the real time.";
@@ -808,8 +1043,51 @@ export function createMockClient() {
       finance.reset();
       return 'Finance is back to the sample: a few closed Shrewsbury days, the sample Star payments and refunds, reminder times Off, no exports. Reload to see it.';
     },
+    // ----- Black Belt testing helpers (mockBlackBelt.js, blackBelt/publicApi.preview.js) -----
+    resetBlackBelt() {
+      blackBelt.reset();
+      return "Black Belt is back to 0016's seed: no cycles, the placeholder waiver (version 2026-1), keep-years empty. Reload to see it.";
+    },
+    bbSample() {
+      blackBelt.loadSample();
+      return "Sample loaded — run __tkdPreview.setToday('2027-02-15') and reload.";
+    },
+    bbLinks() {
+      const origin = window.location.origin; // e.g. http://localhost:5174 - this preview's own address
+      const lines = blackBelt.links().map((c) => `${c.name}\n  Worcester:  ${origin}/black-belt/${c.worcester}\n  Shrewsbury: ${origin}/black-belt/${c.shrewsbury}`);
+      return lines.length > 0 ? lines.join('\n') : 'No Black Belt cycles yet. Add one, or run __tkdPreview.bbSample().';
+    },
+    setBlackBeltRegistration: blackBeltPublicHelpers().setBlackBeltRegistration,
+    bbSampleRoster() {
+      blackBelt.loadSampleRoster();
+      fillSampleSchools();
+      return "Sample loaded — run __tkdPreview.setToday('2027-04-26') and reload.";
+    },
+    bbSampleEdge() {
+      blackBelt.loadSampleEdge();
+      fillSampleSchools();
+      return "Sample loaded (with the edge cases) — run __tkdPreview.setToday('2027-04-26') and reload.";
+    },
+    bbExpireUndo() {
+      const moved = blackBelt.expireUndo();
+      return moved
+        ? 'The newest Black Belt payment row now looks 11 seconds old: a staff Undo of it answers "too late" (admins can still undo).'
+        : 'There is no Black Belt payment yet. Record one first.';
+    },
+    bbAddDuplicate() {
+      const added = blackBelt.addDuplicate();
+      return added
+        ? `Added a second form registration for ${added.name} (${added.reference}). Reload the Candidates tab to see the duplicate box.`
+        : 'No active candidate to copy. Run __tkdPreview.bbSampleRoster() first.';
+    },
+    bbWaiverChanged() {
+      const { from: before, to } = blackBelt.waiverChanged();
+      return `Waiver ${before} was replaced by ${to} 25 hours ago. A family form still showing ${before} now gets "the waiver has changed" on Send.`;
+    },
     // ----- Events / family form helpers (publicApi.preview.js) -----
     ...publicPreviewHelpers(),
+    // ----- Camps helpers (camps/publicApi.preview.js) -----
+    ...publicCampHelpers(),
     // ----- Public Forms page helpers (src/forms/publicApi.preview.js). forceRateLimited above
     // stays Color Belt's; the forms one is called forceFormsRateLimited here (on the /f/<name>
     // page itself it is plain forceRateLimited). -----
@@ -817,6 +1095,8 @@ export function createMockClient() {
     forceTimeTaken: formsPublicPreviewHelpers().forceTimeTaken,
     forceFormChanged: formsPublicPreviewHelpers().forceFormChanged,
     forceFormsRateLimited: formsPublicPreviewHelpers().forceRateLimited,
+    // ----- Star family form helpers (src/lib/star/publicApi.preview.js; all named "…Star…") -----
+    ...starPublicPreviewHelpers(),
   };
 
   return { auth, rpc, from };

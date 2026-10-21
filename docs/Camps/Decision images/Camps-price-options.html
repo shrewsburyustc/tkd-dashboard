@@ -1,0 +1,144 @@
+<!doctype html>
+<!--
+  Camps-price-options.html — decision picture for Camps question 2: how a camp's prices are set up.
+  Why it exists: Jeffrey picks between two price setups by looking at them (rule P3). Uses the
+  April Vacation 2026 prices from the paper form so both options show the same real camp.
+  Self-contained: open it in any browser. The PNG next to it is a screenshot of this page.
+-->
+<html lang="en"><head><meta charset="utf-8"><title>Camps — price setup options</title>
+<style>
+  :root{--bg:#fff;--surface:#f7f7f5;--border:#e5e5e2;--ctl:#8f8f8a;--text:#1f1f1f;--muted:#6b6b6b;
+    --blue:#003595;--tint:#e6ebf4;--amber:#c98a1b;--ok:#3b6d11;--okbg:#eaf3de}
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:#efeee9;font:14px/1.45 "Segoe UI",system-ui,sans-serif;color:var(--text);width:1320px}
+  h1{font-size:20px;font-weight:500;margin:0 0 4px}
+  .lead{color:var(--muted);margin:0 0 20px;max-width:1000px}
+  .opt{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:24px}
+  .opt h2{font-size:16px;font-weight:500;margin:0 0 2px}
+  .rec{display:inline-block;font-size:12px;background:var(--okbg);color:var(--ok);border-radius:6px;padding:1px 8px;margin-left:8px;vertical-align:2px}
+  .sub{color:var(--muted);margin:0 0 16px;font-size:13px}
+  .cols{display:grid;grid-template-columns:1.25fr 1fr;gap:24px;align-items:start}
+  .panel{border:1px solid var(--border);border-radius:12px;padding:16px}
+  .panel .t{font-size:16px;font-weight:500;margin-bottom:2px}
+  .panel .h{font-size:12px;color:var(--muted);margin-bottom:12px}
+  .amber{outline:3px solid var(--amber);outline-offset:4px;border-radius:8px}
+  .note{font-size:12px;color:#7a4f00;margin:10px 0 0;font-weight:500}
+  label{display:block;font-size:12px;color:var(--muted);margin:0 0 4px}
+  .field{height:32px;border:1px solid var(--ctl);border-radius:8px;padding:0 10px;display:flex;align-items:center;font-size:13px;width:200px;margin-bottom:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{background:var(--surface);color:var(--muted);font-weight:400;font-size:12px;text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+  td{padding:0 8px;height:36px;border-bottom:1px solid var(--border)}
+  td.n,th.n{text-align:right}
+  .in{display:inline-block;border:1px solid var(--ctl);border-radius:6px;padding:2px 8px;min-width:58px;text-align:right}
+  .chip{display:inline-block;font-size:12px;border:1px solid var(--ctl);border-radius:6px;padding:1px 8px}
+  .ico{color:var(--muted);font-size:13px}
+  .link{color:var(--blue);font-size:13px;margin-top:10px;display:inline-block}
+  .days{display:flex;gap:6px;margin-bottom:12px}
+  .day{border:1px solid var(--ctl);border-radius:8px;padding:4px 10px;font-size:12px}
+  .day.on{background:var(--tint);border-color:var(--blue);color:var(--blue)}
+  .line{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+  .cb{display:inline-block;width:14px;height:14px;border:1px solid var(--ctl);border-radius:3px;margin-right:8px;vertical-align:-2px}
+  .cb.on{background:var(--blue);border-color:var(--blue)}
+  .total{display:flex;justify-content:space-between;font-weight:500;padding-top:10px;font-size:14px}
+  .muted{color:var(--muted)}
+  .pc{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:16px;font-size:13px}
+  .pc h3{font-size:13px;font-weight:500;margin:0 0 4px}
+  .pc ul{margin:0;padding-left:18px}
+</style></head><body>
+
+<h1>Camps — question 2: how is a camp's price set up?</h1>
+<p class="lead">Both options use the April Vacation 2026 prices from the paper form. Left: the price part of <b>Add / Edit camp</b>. Right: what staff see when adding a camper (Mia, non-member, Tue + Thu, late pick-up both days, signed up before Apr 12). Amber outlines = the part that differs between the options.</p>
+
+<!-- ============ OPTION A ============ -->
+<div class="opt">
+  <h2>A. Price list — one line per thing you charge for <span class="rec">Recommended</span></h2>
+  <p class="sub">Every price is a line: name, early price, regular price, and whether it's charged once or per day. Full week, day bundles, non-member fee, pizza day, drop-off, pick-up — all just lines. A new service later = Add price line.</p>
+  <div class="cols">
+    <div class="panel">
+      <div class="t">Prices</div><div class="h">Part of Add / Edit camp · saved with the template</div>
+      <label>Early price until</label><div class="field">Sun, Apr 12, 2026</div>
+      <div class="amber">
+      <table>
+        <tr><th>Price line</th><th class="n">Early</th><th class="n">Regular</th><th>Charged</th><th></th></tr>
+        <tr><td>Full week (pizza parties included)</td><td class="n"><span class="in">$275</span></td><td class="n"><span class="in">$325</span></td><td><span class="chip">Once</span></td><td class="ico">⋮⋮ ✕</td></tr>
+        <tr><td>1 day</td><td class="n"><span class="in">$75</span></td><td class="n"><span class="in">$80</span></td><td><span class="chip">Once</span></td><td class="ico">⋮⋮ ✕</td></tr>
+        <tr><td>2 days</td><td class="n"><span class="in">$140</span></td><td class="n"><span class="in">$150</span></td><td><span class="chip">Once</span></td><td class="ico">⋮⋮ ✕</td></tr>
+        <tr><td>3 days</td><td class="n"><span class="in">$195</span></td><td class="n"><span class="in">$210</span></td><td><span class="chip">Once</span></td><td class="ico">⋮⋮ ✕</td></tr>
+        <tr><td>Non-member</td><td class="n"><span class="in">$10</span></td><td class="n"><span class="in">$10</span></td><td><span class="chip">Once</span></td><td class="ico">⋮⋮ ✕</td></tr>
+        <tr><td>Pizza party day (single days)</td><td class="n"><span class="in">$5</span></td><td class="n"><span class="in">$5</span></td><td><span class="chip">Per day</span></td><td class="ico">⋮⋮ ✕</td></tr>
+        <tr><td>Early drop-off 7:30–9:00</td><td class="n"><span class="in">$15</span></td><td class="n"><span class="in">$15</span></td><td><span class="chip">Per day</span></td><td class="ico">⋮⋮ ✕</td></tr>
+        <tr><td>Late pick-up 3:00–4:00</td><td class="n"><span class="in">$8</span></td><td class="n"><span class="in">$8</span></td><td><span class="chip">Per day</span></td><td class="ico">⋮⋮ ✕</td></tr>
+      </table>
+      <span class="link">+ Add price line</span>
+      </div>
+      <p class="note">One table for everything. Same layout for a 1-day, 2-day or 8-week camp.</p>
+    </div>
+    <div class="panel">
+      <div class="t">Add camper — Mia R.</div><div class="h">April Vacation Camp · early prices (before Apr 12)</div>
+      <label>Days</label>
+      <div class="days"><span class="day">Mon 20</span><span class="day on">Tue 21</span><span class="day">Wed 22</span><span class="day on">Thu 23</span><span class="day">Fri 24</span></div>
+      <div class="amber">
+        <div class="line"><span><span class="cb on"></span>2 days</span><span>$140</span></div>
+        <div class="line"><span><span class="cb on"></span>Non-member</span><span>$10</span></div>
+        <div class="line"><span><span class="cb on"></span>Late pick-up <span class="muted">× 2 days</span></span><span>$16</span></div>
+        <div class="line muted"><span><span class="cb"></span>Early drop-off</span><span>—</span></div>
+        <div class="line muted"><span><span class="cb"></span>Pizza party day</span><span>—</span></div>
+        <div class="total"><span>Total</span><span>$166</span></div>
+      </div>
+      <p class="note">Staff tick the lines that apply. "Per day" lines count the days ticked (changeable). Early or regular price is picked by the signup date.</p>
+    </div>
+  </div>
+  <div class="pc">
+    <div><h3>Pros</h3><ul><li>Handles every form you sent: flat price (Columbus), bundles (Thanksgiving), full week + single days (April, summer).</li><li>Adding a service later (T-shirt, lunch, a field trip) is one new line — no code change.</li><li>Easy to read and change; one table per camp.</li></ul></div>
+    <div><h3>Cons</h3><ul><li>Staff choose "2 days" themselves — the app doesn't pick the bundle for them (it can warn if days ticked ≠ bundle).</li><li>Non-member is a line staff tick, not automatic from the member box (it can be pre-ticked when "Non-member" is chosen).</li></ul></div>
+  </div>
+</div>
+
+<!-- ============ OPTION B ============ -->
+<div class="opt">
+  <h2>B. Price grid by number of days + extras list</h2>
+  <p class="sub">Like the old tkd-camps app: a grid with one row per number of days and four price columns (member / non-member × early / regular), plus a separate list of extras. The app picks the price from the days ticked.</p>
+  <div class="cols">
+    <div class="panel">
+      <div class="t">Prices</div><div class="h">Part of Add / Edit camp · saved with the template</div>
+      <label>Early price until</label><div class="field">Sun, Apr 12, 2026</div>
+      <div class="amber">
+      <table>
+        <tr><th>Days</th><th class="n">Member early</th><th class="n">Member regular</th><th class="n">Non-mem. early</th><th class="n">Non-mem. regular</th></tr>
+        <tr><td>1</td><td class="n"><span class="in">$75</span></td><td class="n"><span class="in">$80</span></td><td class="n"><span class="in">$85</span></td><td class="n"><span class="in">$90</span></td></tr>
+        <tr><td>2</td><td class="n"><span class="in">$140</span></td><td class="n"><span class="in">$150</span></td><td class="n"><span class="in">$150</span></td><td class="n"><span class="in">$160</span></td></tr>
+        <tr><td>3</td><td class="n"><span class="in">$195</span></td><td class="n"><span class="in">$210</span></td><td class="n"><span class="in">$205</span></td><td class="n"><span class="in">$220</span></td></tr>
+        <tr><td>4</td><td class="n"><span class="in">$260</span></td><td class="n"><span class="in">$280</span></td><td class="n"><span class="in">$270</span></td><td class="n"><span class="in">$290</span></td></tr>
+        <tr><td>5 (full week)</td><td class="n"><span class="in">$275</span></td><td class="n"><span class="in">$325</span></td><td class="n"><span class="in">$285</span></td><td class="n"><span class="in">$335</span></td></tr>
+      </table>
+      <div style="margin-top:14px;font-size:13px;font-weight:500">Extras</div>
+      <table>
+        <tr><td>Pizza party day <span class="muted">(not for full week)</span></td><td class="n"><span class="in">$5</span></td><td><span class="chip">Per day</span></td></tr>
+        <tr><td>Early drop-off 7:30–9:00</td><td class="n"><span class="in">$15</span></td><td><span class="chip">Per day</span></td></tr>
+        <tr><td>Late pick-up 3:00–4:00</td><td class="n"><span class="in">$8</span></td><td><span class="chip">Per day</span></td></tr>
+      </table>
+      <span class="link">+ Add extra</span>
+      </div>
+      <p class="note">20 boxes to fill for a 5-day camp; an 8-week summer camp needs a much bigger grid.</p>
+    </div>
+    <div class="panel">
+      <div class="t">Add camper — Mia R.</div><div class="h">April Vacation Camp · early prices (before Apr 12)</div>
+      <label>Days</label>
+      <div class="days"><span class="day">Mon 20</span><span class="day on">Tue 21</span><span class="day">Wed 22</span><span class="day on">Thu 23</span><span class="day">Fri 24</span></div>
+      <div class="amber">
+        <div class="line"><span>2 days · non-member · early <span class="muted">(automatic)</span></span><span>$150</span></div>
+        <div class="line"><span><span class="cb on"></span>Late pick-up <span class="muted">× 2 days</span></span><span>$16</span></div>
+        <div class="line muted"><span><span class="cb"></span>Early drop-off</span><span>—</span></div>
+        <div class="line muted"><span><span class="cb"></span>Pizza party day</span><span>—</span></div>
+        <div class="total"><span>Total</span><span>$166</span></div>
+      </div>
+      <p class="note">Fewer clicks per camper: the base price fills itself in from the days and the member box.</p>
+    </div>
+  </div>
+  <div class="pc">
+    <div><h3>Pros</h3><ul><li>The base price is automatic — staff can't pick the wrong bundle.</li><li>Member / non-member handled by the grid.</li></ul></div>
+    <div><h3>Cons</h3><ul><li>Rigid: anything that isn't "price by number of days" (a field-trip fee, a T-shirt, a sibling discount) needs new columns or code.</li><li>Many boxes to fill and check, even for a 1-day camp; bigger for summer.</li><li>Two places for prices (grid + extras) instead of one; more rules hidden in the app ("pizza not for full week").</li></ul></div>
+  </div>
+</div>
+
+</body></html>

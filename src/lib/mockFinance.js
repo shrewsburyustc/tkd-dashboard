@@ -9,6 +9,10 @@
 // Where the money comes from:
 //   - Color Belt payments: READ from the Testing preview store ('tkd.preview.testing'), the same
 //     rows the roster's Mark paid / Undo / Edit payment write. Finance never changes them.
+//   - Camp payments (v0.707): READ from the Camps preview store ('tkd.preview.camps', mockCamps.js),
+//     a third source 'camp' exactly like the database's camp rows: what = 'camp', the event = the
+//     camp's name, event_date = the camp's first day, school = the school whose desk took the
+//     payment (each row's own school), the same edit / undo / mis-click chain rules.
 //   - Star payments: Star testing has no preview database in this branch, so this file keeps a
 //     few sample Star candidates and payments of its own (shown in the list below), including a
 //     cash refund, a check refund, a refund-only day, an edit, a moved edit, an undone payment
@@ -18,10 +22,11 @@
 // clock time. A few earlier Shrewsbury days start closed so History shows every tag.
 //
 // Like mockTestingEvents.js it is a "pure core": it never touches the browser by itself.
-//   const finance = createFinanceBackend({ loadStore, saveStore, readColorBelt, now, today, newId });
+//   const finance = createFinanceBackend({ loadStore, saveStore, readColorBelt, readCamps, now, today, newId });
 //     loadStore()     → the saved finance store (missing / damaged → the default sample)
 //     saveStore(s)    → saves it
 //     readColorBelt() → the Testing preview store (events, registrations, payments)
+//     readCamps()     → the Camps preview store (camps, camp_days, camp_campers, camp_payments); optional
 //     now()           → milliseconds (timestamps, the 10-second windows)
 //     today()         → 'YYYY-MM-DD' in school time (setToday can pretend another date)
 //   finance.rpc(name, args, ctx)   ctx = { signedIn, hasDataAccess, isAdmin, actorName, userId }
@@ -347,7 +352,7 @@ function storeIsUsable(s) {
 
 // ----- The backend -----
 
-export function createFinanceBackend({ loadStore, saveStore, readColorBelt, now = () => Date.now(), today, newId }) {
+export function createFinanceBackend({ loadStore, saveStore, readColorBelt, readCamps, now = () => Date.now(), today, newId }) {
   let failNext = false; // set by failNextSave()
   const stamp = () => new Date(now()).toISOString();
   // The day the sample counts back from: the pretend date, but never later than the real date
@@ -378,7 +383,19 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, now 
 
   // ----- The money items (§1.3), built from WHOLE histories, then filtered -----
 
-  // Every item of both sources, with the owner's name, school and event. Owners that no longer
+  // The Camps preview store, or null when there is none (or it can't be read).
+  function campsStore() {
+    let cp = null;
+    try {
+      cp = readCamps?.() ?? null;
+    } catch {
+      cp = null;
+    }
+    const ok = cp && ['camps', 'camp_days', 'camp_campers', 'camp_payments'].every((k) => Array.isArray(cp[k]));
+    return ok ? cp : null;
+  }
+
+  // Every item of all three sources, with the owner's name, school and event. Owners that no longer
   // exist (a deleted student or event) take their rows with them, like the database's cascades.
   function allItems(db) {
     let cb = null;
@@ -401,6 +418,24 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, now 
         });
       }
     }
+    // Camps (v0.707): the school is the shown row's own school (the desk that took the money).
+    const cp = campsStore();
+    if (cp) {
+      const campers = new Map(cp.camp_campers.map((c) => [c.id, c]));
+      const camps = new Map(cp.camps.map((c) => [c.id, c]));
+      const rowsById = new Map(cp.camp_payments.map((p) => [p.id, p]));
+      const firstDay = new Map();
+      for (const d of cp.camp_days) if (!firstDay.has(d.camp_id) || d.day < firstDay.get(d.camp_id)) firstDay.set(d.camp_id, d.day);
+      for (const it of chainItems(cp.camp_payments.map((p) => ({ ...p, source: 'camp' })))) {
+        const camper = campers.get(it.owner_id);
+        const camp = camper ? camps.get(camper.camp_id) : null;
+        if (!camp) continue;
+        out.push({
+          ...it, school: rowsById.get(it.row_id)?.school ?? camp.location_code, first_name: camper.first_name, last_name: camper.last_name,
+          what: 'camp', event_date: firstDay.get(camp.id) ?? null, is_private: false, event_name: camp.name, event_id: camp.id,
+        });
+      }
+    }
     const cands = new Map(db.star.candidates.map((c) => [c.id, c]));
     const starEvents = new Map(db.star.events.map((e) => [e.id, e]));
     for (const it of chainItems(db.star.payments.map((p) => ({ ...p, source: 'star' })))) {
@@ -420,6 +455,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, now 
   function chainRows(db, source) {
     let rows = [];
     if (source === 'star') rows = db.star.payments;
+    else if (source === 'camp') rows = campsStore()?.camp_payments ?? [];
     else {
       try {
         rows = readColorBelt?.()?.payments ?? [];
@@ -490,6 +526,9 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, now 
       // "Added after closing": counted on a closed day, and its chain began after the close.
       added_after_closing: Boolean(close) && countsInTotals(it.state) && Date.parse(it.chain_started_at) > Date.parse(close.recorded_at),
     };
+    // Camp rows also carry the camp's name ('Camp · April Vacation Camp', v0.707). Color Belt and
+    // Star rows are unchanged (their screens show the event date).
+    if (it.source === 'camp') out.event_name = it.event_name;
     return withSchool ? { ...out, school: it.school } : out;
   }
 
@@ -582,7 +621,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, now 
     },
 
     finance_payment_detail(db, a, ctx) {
-      if (a.p_source === null || a.p_payment_id === null || !['color_belt', 'star'].includes(a.p_source)) return st('invalid');
+      if (a.p_source === null || a.p_payment_id === null || !['color_belt', 'star', 'camp'].includes(a.p_source)) return st('invalid');
       const items = allItems(db).filter((it) => it.source === a.p_source && it.payment_id === a.p_payment_id && it.state !== 'hidden');
       if (items.length === 0) return st('not_found'); // not a chain's first row (or a hidden mis-click)
       if (!ctx.isAdmin && !items.some((it) => it.day === today())) return st('not_allowed');
@@ -590,7 +629,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, now 
       const main = items.find((it) => ['counted', 'edited', 'moved_in'].includes(it.state))
         ?? items.find((it) => it.state === 'undone' && it.row_id === it.payment_id) ?? items[0];
       // Its history, newest first: recorded / refunded, each edit, the undo.
-      const rows = chainRows(db, a.p_source).map((r) => ({ ...r, owner_id: r.registration_id ?? r.candidate_id }));
+      const rows = chainRows(db, a.p_source).map((r) => ({ ...r, owner_id: r.registration_id ?? r.candidate_id ?? r.camper_id }));
       const ids = new Set();
       const history = [];
       const first = rows.find((r) => r.id === a.p_payment_id);
@@ -613,7 +652,14 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, now 
         }
       }
       history.sort((x, y) => byText(y.at, x.at));
-      return { status: 'ok', item: itemOut(main, { withSchool: true, close: currentClose(db, main.school, main.day) }), event_name: main.event_name, event_id: main.event_id, history };
+      const answer = { status: 'ok', item: itemOut(main, { withSchool: true, close: currentClose(db, main.school, main.day) }), event_name: main.event_name, event_id: main.event_id, history };
+      if (a.p_source === 'camp') {
+        // A camp payment's detail also lists the camper's camp days (v0.707: camper, camp, days).
+        const cp = campsStore();
+        const dayOf = new Map((cp?.camp_days ?? []).map((d) => [d.id, d.day]));
+        answer.camp_days = (cp?.camp_camper_days ?? []).filter((r) => r.camper_id === main.owner_id).map((r) => dayOf.get(r.day_id)).filter(Boolean).sort();
+      }
+      return answer;
     },
 
     finance_home(db, a, ctx) {
@@ -707,6 +753,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, now 
           what: it.what, event_date: it.event_date, kind: it.kind, method: it.method, amount_cents: it.amount_cents,
           counted_cents: countsInTotals(it.state) ? it.amount_cents : 0, recorded_by_name: it.recorded_by_name, state: it.state,
           note: exportNote(it),
+          ...(it.source === 'camp' ? { event_name: it.event_name } : {}), // camp rows: the camp's name (not a CSV column)
         }));
       db.exports.push({
         id: newId(), location_code: a.p_location_code, from_day: a.p_from, to_day: a.p_to, row_count: rows.length,

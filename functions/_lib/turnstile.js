@@ -5,6 +5,14 @@
 // ("siteverify"). We also check that the token was made on our own site (hostname) and for the
 // registration form (action "register"), so a token from some other page can't be reused here.
 // Plan §8: success, hostname = production host, action = register, remoteip.
+//
+// Shared by four Functions, each with its own action:
+//   register       Color Belt's form (functions/_lib/register.js) — the default, so its behaviour
+//                  is exactly as before (it passes nothing)
+//   star_register  the Star family form (functions/_lib/starRegister.js, CONTRACT-0006 §8.4)
+//   bb_register    the Black Belt Function (CONTRACT-0016 §9.2)
+//   camp_signup    the camp sign-up form (contract 0013 §4.4)
+// So a token made on one form's page can never be used on another form.
 
 export const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 export const TURNSTILE_ACTION = 'register';
@@ -17,7 +25,12 @@ export const TURNSTILE_ACTION = 'register';
 //   token         what the page sent as turnstile_token
 //   ip            the visitor's IP (Cloudflare uses it as one more signal; never stored)
 //   expectedHost  e.g. "tkd-dashboard.pages.dev" (taken from PUBLIC_ORIGIN)
-export async function verifyTurnstile({ fetchImpl, secret, token, ip, expectedHost }) {
+//   expectedAction  the action the page started Turnstile with. Left out = "register"
+//                   (Color Belt, unchanged); the Star form passes "star_register", the Black Belt
+//                   Function "bb_register", the camp form "camp_signup". An empty or non-text
+//                   value never matches (fail closed).
+export async function verifyTurnstile({ fetchImpl, secret, token, ip, expectedHost, expectedAction = TURNSTILE_ACTION }) {
+  if (typeof expectedAction !== 'string' || expectedAction === '') return false;
   // Tokens are at most 2048 characters (Cloudflare's documented limit).
   if (typeof token !== 'string' || token.length === 0 || token.length > 2048) return false;
   try {
@@ -31,7 +44,7 @@ export async function verifyTurnstile({ fetchImpl, secret, token, ip, expectedHo
     return (
       result?.success === true &&
       result.hostname === expectedHost &&
-      result.action === TURNSTILE_ACTION
+      result.action === expectedAction
     );
   } catch {
     return false;

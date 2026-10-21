@@ -209,6 +209,8 @@ export function refundsHead(count, cents, cashCents, checkCents) {
 export const WHAT_COLOR_BELT = 'Color belt testing';
 export const WHAT_STAR = 'Star testing';
 export const WHAT_STAR_PRIVATE = 'Star testing, private'; // NOT IN MOCKUPS — for CP1 (contract §1.3 is_private)
+// Camp payments (Camps v0.707): the row reads "Camp · April Vacation Camp".
+export const WHAT_CAMP = 'Camp';
 export const METHOD = { cash: 'Cash', check: 'Check', card: 'Card' };
 export const methodLower = (m) => (METHOD[m] ?? m ?? '').toLowerCase();
 
@@ -231,7 +233,7 @@ export const refundMethodNote = (method) => methodLower(method); // Own group: "
 // ----- Empty day (D11) -----
 export const NO_PAYMENTS_TODAY = 'No payments recorded today.';
 export const NO_PAYMENTS_DAY = 'No payments recorded on this day.'; // NOT IN MOCKUPS — for CP1 (admin, earlier day)
-export const NOTHING_TO_CLOSE = 'Nothing to close. Payments recorded in Testing appear here.';
+export const NOTHING_TO_CLOSE = 'Nothing to close. Payments recorded in Testing and Camps appear here.'; // "and Camps" (not in the mockups, Camps v0.707)
 
 // ----- Both (D6) -----
 export const NOT_CLOSED_YET = 'Not closed yet';
@@ -307,6 +309,11 @@ export const detailFor = (what, eventDate, school) => `${what} · ${eventDate}${
 export const recordedAt = (whenText, name) => `${whenText} by ${name}`;
 export const DETAIL_HINT = 'Payments are changed on the event’s page in Testing, not here.';
 export const OPEN_IN_TESTING = 'Open in Testing';
+// A camp payment's detail (Camps v0.707): the camp's days, and the way to the camp's page.
+export const D_CAMP_DAYS = 'Camp days'; // (not in the mockups)
+export const D_PAID_AT = 'Paid at'; // (not in the mockups) the school whose drawer has a camp payment
+export const DETAIL_HINT_CAMP = 'Payments are changed on the camp’s page in Camps, not here.'; // (not in the mockups)
+export const OPEN_IN_CAMPS = 'Open in Camps'; // (not in the mockups)
 export const DETAIL_LOAD_FAILED = 'Couldn’t load this payment. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
 export const DETAIL_LOADING = 'Loading…'; // NOT IN MOCKUPS — for CP1
 // History lines: "Mon, Oct 26, 9:07 AM · Jeffrey changed the amount $70.00 → $65.00"
@@ -362,7 +369,6 @@ export function earlierNotClosedAt(school, count, firstDay) {
 }
 export const OPEN_HISTORY = 'Open History';
 
-// ----- Hide payments (Questions #q14, v0.215) -----
-export const HIDE_PAYMENTS = 'Hide payments';
-export const PAYMENTS_HIDDEN = 'Payments hidden';
-export const SHOW_PAYMENTS = 'Payments hidden. Tap to show payments again.'; // the chip's screen-reader name. NOT IN MOCKUPS — for CP1
+// ----- Hide private details (was Hide payments, Questions #q14, v0.215; renamed v0.506) -----
+// The switch is dashboard-wide now, so its words live with it in src/lib/privateDetails.js
+// (HIDE_PRIVATE_DETAILS, PRIVATE_DETAILS_HIDDEN, SHOW_PRIVATE_DETAILS).

@@ -1,0 +1,122 @@
+<!doctype html>
+<!--
+  Camps-pizza-days-options.html — decision picture: pizza on specific camp days.
+  Why it exists: Jeffrey (CP1, 2026-10-19): a week camp has pizza on e.g. Wednesday and Friday, and families
+  must see which days are pizza days when they sign up. Shows where the days are set (Add camp → Extras),
+  how the family form marks them, the price, and the staff Check in line — with two charging options.
+  The PNG next to it is a screenshot.
+-->
+<html lang="en"><head><meta charset="utf-8"><title>Camps — pizza days</title>
+<style>
+  :root{--bg:#fff;--surface:#f7f7f5;--border:#e5e5e2;--ctl:#8f8f8a;--text:#1f1f1f;--muted:#6b6b6b;
+    --blue:#003595;--tint:#e6ebf4;--amber:#c98a1b;--ok:#3b6d11;--okbg:#eaf3de;--wbg:#faeeda;--wt:#633806}
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:#efeee9;font:14px/1.45 "Segoe UI",system-ui,sans-serif;color:var(--text);width:1320px}
+  h1{font-size:20px;font-weight:500;margin:0 0 4px}
+  .lead{color:var(--muted);margin:0 0 18px;max-width:1150px}
+  .sec{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:24px}
+  .sec h2{font-size:16px;font-weight:500;margin:0 0 2px}
+  .rec{display:inline-block;font-size:12px;background:var(--okbg);color:var(--ok);border-radius:6px;padding:1px 8px;margin-left:8px;vertical-align:2px}
+  .sub{color:var(--muted);margin:0 0 14px;font-size:13px;max-width:1200px}
+  .cols{display:grid;grid-template-columns:1fr 1fr 340px;gap:20px;align-items:start}
+  .cap{font-size:12px;color:var(--muted);margin:0 0 6px}
+  .frame{border:1px solid #cfcfca;border-radius:10px;padding:14px 16px;background:#fff}
+  .phone{border:6px solid #2a2a2a;border-radius:28px;padding:12px;background:#fff}
+  .t{font-size:16px;font-weight:500}
+  .h{font-size:12px;color:var(--muted)}
+  label{display:block;font-size:12px;color:var(--muted);margin:8px 0 4px}
+  .f{height:32px;border:1px solid var(--ctl);border-radius:8px;padding:0 10px;display:inline-flex;align-items:center;font-size:13px}
+  .chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--ctl);border-radius:8px;padding:4px 10px;font-size:12px;margin-right:4px}
+  .chip.on{outline:2px solid #1f1f1f;outline-offset:-2px;font-weight:500}
+  .pz{font-size:11px;color:var(--wt);background:var(--wbg);border-radius:6px;padding:0 6px;margin-left:2px}
+  .seg{display:inline-flex;border:1px solid var(--ctl);border-radius:8px;overflow:hidden;font-size:12px}
+  .seg span{padding:5px 10px;border-right:1px solid var(--border)}.seg span:last-child{border:0}.seg .on{background:var(--tint);color:var(--blue)}
+  .cb{display:inline-block;width:14px;height:14px;border:1px solid var(--ctl);border-radius:3px;margin-right:6px;vertical-align:-2px}
+  .cb.on{background:var(--blue);border-color:var(--blue)}
+  .line{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px}
+  .tot{display:flex;justify-content:space-between;font-weight:500;padding-top:8px}
+  .muted{color:var(--muted)}
+  .amber{outline:3px solid var(--amber);outline-offset:3px;border-radius:8px}
+  .note{font-size:12px;color:#7a4f00;margin:10px 0 0;font-weight:500}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .pc{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:14px;font-size:13px}
+  .pc h3{font-size:13px;font-weight:500;margin:0 0 4px}
+  .pc ul{margin:0;padding-left:18px}
+  .big{font-size:22px;font-weight:500}
+</style></head><body>
+
+<h1>Camps — pizza on specific days</h1>
+<p class="lead">April Vacation Camp, Mon, Apr 19 – Fri, Apr 23. Pizza on <b>Wednesday and Friday</b>. All-days campers: pizza included. The only question is what happens for a child who comes on <b>some</b> days. Amber = new.</p>
+
+<div class="sec">
+  <h2>What's the same in both options</h2>
+  <p class="sub">The pizza extra gets <b>"Only on these days"</b> (tap the camp's days). The family form marks those days with "Pizza". The Check in tab tells you how many pizzas to order today. The same "only on these days" works for any future one-day extra (e.g. a field trip on Thursday).</p>
+  <div class="cols">
+    <div>
+      <div class="cap">Add / Edit camp → 4. Extras (PC)</div>
+      <div class="frame amber">
+        <div class="t" style="font-size:14px">Pizza party</div>
+        <div class="row" style="margin-top:6px"><span class="f" style="width:150px">Pizza party</span><span class="f" style="width:70px">$5</span><span class="seg"><span>Once</span><span class="on">Per day</span></span></div>
+        <label>Only on these days</label>
+        <div><span class="chip">Mon 19</span><span class="chip">Tue 20</span><span class="chip on">Wed 21</span><span class="chip">Thu 22</span><span class="chip on">Fri 23</span></div>
+        <div style="font-size:13px;margin-top:8px"><span class="cb on"></span>Not charged to all-days campers</div>
+        <p class="note">Leave "Only on these days" empty = every day (drop-off, pick-up work as now).</p>
+      </div>
+    </div>
+    <div>
+      <div class="cap">Family form → Which days? (phone and PC)</div>
+      <div class="frame amber">
+        <div class="h">Which days?</div>
+        <div style="margin-top:6px"><span class="chip">Mon 19</span><span class="chip on">Tue 20</span><span class="chip on">Wed 21 <span class="pz">Pizza</span></span><span class="chip">Thu 22</span><span class="chip">Fri 23 <span class="pz">Pizza</span></span></div>
+        <div class="h" style="margin-top:6px">Pizza party on Wed and Fri — included when coming every day.</div>
+        <p class="note">The days list at the top of the form and the "You're signed up" page also say "Pizza: Wed, Fri".</p>
+      </div>
+    </div>
+    <div>
+      <div class="cap">Staff → Check in tab (Wed)</div>
+      <div class="phone amber">
+        <div class="t" style="font-size:15px">April Vacation Camp</div>
+        <div style="margin-top:6px"><span class="big">9</span> <span class="h">of 15 here</span></div>
+        <div style="font-size:13px;margin-top:4px">Pizza today: <b style="font-weight:500">15 campers</b></div>
+        <p class="note">Count = everyone coming today (all-days + pizza paid), for ordering.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>A. Automatic — a child coming on a pizza day gets pizza and pays for it <span class="rec">Recommended</span></h2>
+  <p class="sub">Matches the paper forms ("Pizza party day $5 more", "Full week pizza parties included"). No box to tick: Mia picks Tue + Wed → Wed is a pizza day → $5 is added. Every child in the building on a pizza day eats.</p>
+  <div class="cols" style="grid-template-columns:1fr 1fr">
+    <div class="frame amber">
+      <div class="t" style="font-size:14px">Mia R. — Tue, Wed · non-member · early</div>
+      <div class="line"><span>2 days</span><span>$150</span></div>
+      <div class="line"><span>Pizza party — Wed <span class="muted">(automatic)</span></span><span>$5</span></div>
+      <div class="line"><span>Late pick-up × 2</span><span>$16</span></div>
+      <div class="tot"><span>Total</span><span>$171</span></div>
+    </div>
+    <div class="pc" style="margin-top:0;grid-template-columns:1fr">
+      <div><h3>Pros</h3><ul><li>Same as your paper form; nothing for parents to forget.</li><li>Pizza count = everyone there that day.</li></ul></div>
+      <div><h3>Cons</h3><ul><li>A child who doesn't want pizza still pays (staff can adjust with Edit details).</li></ul></div>
+    </div>
+  </div>
+</div>
+
+<div class="sec">
+  <h2>B. Optional — parents tick "Pizza party" for the pizza days</h2>
+  <p class="sub">The pizza extra appears as a choice for the child's pizza days only. Parents can leave it off.</p>
+  <div class="cols" style="grid-template-columns:1fr 1fr">
+    <div class="frame amber">
+      <div class="t" style="font-size:14px">Mia R. — Tue, Wed</div>
+      <div class="line"><span><span class="cb on"></span>Pizza party — Wed</span><span>$5</span></div>
+      <div class="line muted"><span><span class="cb"></span>Early drop-off</span><span>—</span></div>
+      <div class="tot"><span>Total</span><span>$171</span></div>
+    </div>
+    <div class="pc" style="margin-top:0;grid-template-columns:1fr">
+      <div><h3>Pros</h3><ul><li>Families choose; nobody pays for pizza they don't eat.</li></ul></div>
+      <div><h3>Cons</h3><ul><li>Kids without pizza at the pizza party — staff must know who didn't pay (a note on Check in).</li><li>One more choice on the form.</li></ul></div>
+    </div>
+  </div>
+</div>
+
+</body></html>

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Black Belt questions</title>
+<!--
+  Black Belt testing: design questions, one at a time (rule P3).
+  Why: Jeffrey chooses each option from a picture. Each question shows every
+  option side by side, with the part being chosen outlined in amber, plus what
+  it does, pros, cons and a recommendation.
+  Self-contained (no external files) so it opens offline and can be screenshotted.
+  Dates are planning estimates, not promises.
+-->
+<style>
+:root{--page:#EFEFEC;--bg:#FFFFFF;--surface:#F7F7F5;--border:#E5E5E2;--border-strong:#CFCFCA;--text:#1F1F1F;--text2:#6B6B6B;--blue:#003595;--blue-tint:#E6EBF4;--ok:#3B6D11;--ok-tint:#EAF3DE;--warn:#8A5A00;--warn-tint:#FDF0D9;--amber:#E8A317;--bad:#A32D2D;--bad-tint:#FBE9E9;--gray-bar:#D9D9D4}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1500px;margin:0 auto;padding:24px 16px 40px}
+h1{font-size:20px;font-weight:500;margin:0 0 4px}
+h2{font-size:18px;font-weight:500;margin:0 0 4px}
+b{font-weight:600}
+.lead{color:var(--text2);margin:0 0 16px;max-width:1150px}
+.opt{display:flex;gap:20px;align-items:stretch;background:var(--bg);border:1px solid var(--border-strong);border-radius:10px;padding:16px;margin-bottom:16px}
+.opt.rec{border:2px solid var(--blue)}
+.letter{display:inline-flex;width:28px;height:28px;border-radius:50%;background:var(--text);color:#fff;align-items:center;justify-content:center;font-size:14px;margin-right:8px;flex:none}
+.rec-tag{font-size:12px;color:var(--blue);background:var(--blue-tint);border-radius:6px;padding:2px 8px;margin-left:8px;font-weight:400}
+.otitle{display:flex;align-items:center;font-size:16px;font-weight:500;margin:0 0 10px}
+.tl{flex:1;min-width:0}
+.explain{width:400px;flex:none;font-size:13px;border-left:1px solid var(--border);padding-left:16px}
+.explain h3{font-size:13px;font-weight:600;margin:8px 0 2px}.explain h3:first-child{margin-top:0}
+.explain ul{margin:0;padding-left:18px}.explain li{margin:2px 0}
+/* timeline */
+.months{position:relative;height:20px;margin-left:150px;font-size:12px;color:var(--text2)}
+.months span{position:absolute;top:0;transform:translateX(2px)}
+.lane{display:flex;align-items:center;height:40px}
+.lane .name{width:150px;flex:none;font-size:13px;color:var(--text);padding-right:8px}
+.track{position:relative;flex:1;height:30px;background:var(--surface);border-radius:6px;
+  background-image:repeating-linear-gradient(to right,transparent 0,transparent calc(var(--m) - 1px),var(--border) calc(var(--m) - 1px),var(--border) var(--m))}
+.bar{position:absolute;top:3px;height:24px;border-radius:5px;font-size:12px;line-height:24px;padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.b-design{background:var(--gray-bar)}
+.b-build{background:var(--blue);color:#fff}
+.b-bb{background:var(--blue);color:#fff;outline:3px solid var(--amber);outline-offset:1px}
+.b-bbd{background:var(--gray-bar);outline:3px solid var(--amber);outline-offset:1px}
+.b-other{background:#8FA7D1;color:#fff}
+.b-old{background:var(--bad-tint);color:var(--bad);border:1px dashed var(--bad)}
+.lines{position:relative;margin-left:150px;height:0}
+.vline{position:absolute;top:-148px;height:150px;border-left:2px dashed var(--amber)}
+.vline.test{border-left-color:var(--text2)}
+.vlab{position:absolute;top:4px;font-size:12px;white-space:nowrap;transform:translateX(-50%);background:var(--bg);padding:0 3px}
+.vlab.amber{color:var(--warn);font-weight:600}
+.note{margin:26px 0 0 150px;font-size:13px;border-radius:6px;padding:6px 10px}
+.note.ok{background:var(--ok-tint);color:var(--ok)}
+.note.bad{background:var(--bad-tint);color:var(--bad)}
+.note.warn{background:var(--warn-tint);color:var(--warn)}
+.key{display:flex;gap:16px;font-size:12px;color:var(--text2);margin:0 0 14px;flex-wrap:wrap}
+.key i{display:inline-block;width:22px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:4px}
+</style>
+</head>
+<body>
+<main>
+
+<section id="q1">
+<h1>Black Belt · Question B1: when does Black Belt get built? <span class="rec-tag">Withdrawn (v0.205): Black Belt is built now, in its own session</span></h1>
+<p class="lead">Black Belt's <b>registration and payments must be live by about Feb 1, 2027</b>: registrations for Spring started in June last time and the application is due late March. Grading must be live by the first testing day (around early April). Other work is waiting for its own build too: <b>Star testing screens</b> (database already live), <b>Color Belt phase 3</b> (grading), <b>Finance</b> (Daily report, design done), <b>Camps</b>, and Schedule / Calendar / Forms / Prospects going live. Each build needs your checks at its checkpoints, and each live database change needs you to paste it. The question is where Black Belt goes in that line.</p>
+<div class="key"><span><i style="background:var(--gray-bar)"></i>design (questions, mockups)</span><span><i style="background:var(--blue)"></i>build + your checkpoints</span><span><i style="background:#8FA7D1"></i>other sections' builds</span><span><i style="background:var(--bg);outline:3px solid var(--amber)"></i>Black Belt</span></div>
+
+<!-- Timeline: Oct 15 2026 = 0 %, Apr 30 2027 = 100 % (197 days). Month starts: Nov 8.6, Dec 23.9, Jan 39.6, Feb 55.3, Mar 69.5, Apr 85.3 -->
+<div class="opt rec">
+  <div class="tl" style="--m:15.3%">
+    <div class="otitle"><span class="letter">A</span>Black Belt next in line<span class="rec-tag">Recommended</span></div>
+    <div class="months"><span style="left:0">Oct</span><span style="left:8.6%">Nov</span><span style="left:23.9%">Dec</span><span style="left:39.6%">Jan 2027</span><span style="left:55.3%">Feb</span><span style="left:69.5%">Mar</span><span style="left:85.3%">Apr</span></div>
+    <div class="lane"><div class="name">Star testing</div><div class="track"><div class="bar b-build" style="left:2%;width:29%">screens: form + payments</div><div class="bar b-build" style="left:52%;width:46%">grading + results</div></div></div>
+    <div class="lane"><div class="name">Black Belt</div><div class="track"><div class="bar b-bbd" style="left:2%;width:21.5%">design</div><div class="bar b-bb" style="left:31%;width:21%">build: form + payments</div><div class="bar b-bb" style="left:55.5%;width:28%">build: grading + results</div></div></div>
+    <div class="lane"><div class="name">Finance, Color Belt 3, Camps</div><div class="track"><div class="bar b-design" style="left:2%;width:50%">design + mockups continue</div><div class="bar b-other" style="left:52%;width:46%">builds, one after another</div></div></div>
+    <div class="lines"><div class="vline" style="left:55.3%"></div><div class="vlab amber" style="left:55.3%">Feb 1: registration open</div><div class="vline test" style="left:86.3%"></div><div class="vlab" style="left:86.3%">~Apr 3: 1st testing day</div></div>
+    <div class="note ok">Black Belt is live by Feb 1 with about a week to spare, and grading is ready before the first testing day.</div>
+  </div>
+  <div class="explain">
+    <h3>What it does</h3>
+    <ul><li>Star's form and payment screens finish first (already next). Black Belt's form and payments are built straight after, reusing that code.</li><li>Finance, Color Belt phase 3 and Camps keep designing, and build after Black Belt's form and payments are live.</li></ul>
+    <h3>Pros</h3>
+    <ul><li>Meets the February date with some room.</li><li>Builds on Star's finished form and payments, so less new code and fewer bugs.</li><li>One main build at a time: your checkpoints don't stack up.</li></ul>
+    <h3>Cons</h3>
+    <ul><li>Finance, Color Belt phase 3 and Camps builds start around late January instead of December.</li><li>Finance won't show Black Belt money until Finance is built (it adds Black Belt then).</li></ul>
+  </div>
+</div>
+
+<div class="opt">
+  <div class="tl" style="--m:15.3%">
+    <div class="otitle"><span class="letter">B</span>Black Belt last in line</div>
+    <div class="months"><span style="left:0">Oct</span><span style="left:8.6%">Nov</span><span style="left:23.9%">Dec</span><span style="left:39.6%">Jan 2027</span><span style="left:55.3%">Feb</span><span style="left:69.5%">Mar</span><span style="left:85.3%">Apr</span></div>
+    <div class="lane"><div class="name">Star testing</div><div class="track"><div class="bar b-build" style="left:2%;width:50%">all screens</div></div></div>
+    <div class="lane"><div class="name">Black Belt</div><div class="track"><div class="bar b-bbd" style="left:2%;width:21.5%">design</div><div class="bar b-old" style="left:31%;width:54%">Spring 2027 runs on the old Sheet + page</div><div class="bar b-bb" style="left:85.5%;width:13%">build</div></div></div>
+    <div class="lane"><div class="name">Finance, Color Belt 3, Camps</div><div class="track"><div class="bar b-design" style="left:2%;width:50%">design + mockups</div><div class="bar b-other" style="left:52%;width:33%">builds</div></div></div>
+    <div class="lines"><div class="vline" style="left:55.3%"></div><div class="vlab amber" style="left:55.3%">Feb 1: registration open</div><div class="vline test" style="left:86.3%"></div><div class="vlab" style="left:86.3%">~Apr 3: 1st testing day</div></div>
+    <div class="note bad">Misses Feb 1. Black Belt goes live for Fall 2027 instead.</div>
+  </div>
+  <div class="explain">
+    <h3>What it does</h3>
+    <ul><li>Everything already waiting is built first. Black Belt's build starts around April, for the <b>Fall 2027</b> cycle.</li><li>Spring 2027 runs on the old Google Sheet and page again.</li></ul>
+    <h3>Pros</h3>
+    <ul><li>Nobody else's plans move.</li><li>More time to design grading carefully.</li></ul>
+    <h3>Cons</h3>
+    <ul><li>One more cycle on a system that links grades to people by row position and lets anyone change prices (unless the stopgap is applied).</li><li>The Sheet bugs (20-row results, blank = pass) need fixing by hand before spring.</li><li>Payments for Spring 2027 won't be in Finance's Daily report.</li></ul>
+  </div>
+</div>
+
+<div class="opt">
+  <div class="tl" style="--m:15.3%">
+    <div class="otitle"><span class="letter">C</span>Everything at once</div>
+    <div class="months"><span style="left:0">Oct</span><span style="left:8.6%">Nov</span><span style="left:23.9%">Dec</span><span style="left:39.6%">Jan 2027</span><span style="left:55.3%">Feb</span><span style="left:69.5%">Mar</span><span style="left:85.3%">Apr</span></div>
+    <div class="lane"><div class="name">Star testing</div><div class="track"><div class="bar b-build" style="left:2%;width:50%">all screens</div></div></div>
+    <div class="lane"><div class="name">Black Belt</div><div class="track"><div class="bar b-bbd" style="left:2%;width:21.5%">design</div><div class="bar b-bb" style="left:23.9%;width:28%">build: form + payments</div><div class="bar b-bb" style="left:55.5%;width:28%">build: grading</div></div></div>
+    <div class="lane"><div class="name">Finance, Color Belt 3, Camps</div><div class="track"><div class="bar b-design" style="left:2%;width:22%">design</div><div class="bar b-other" style="left:23.9%;width:50%">builds, in parallel</div></div></div>
+    <div class="lines"><div class="vline" style="left:55.3%"></div><div class="vlab amber" style="left:55.3%">Feb 1: registration open</div><div class="vline test" style="left:86.3%"></div><div class="vlab" style="left:86.3%">~Apr 3: 1st testing day</div></div>
+    <div class="note warn">Meets Feb 1 only if you can check 3–4 builds at the same time in December and January.</div>
+  </div>
+  <div class="explain">
+    <h3>What it does</h3>
+    <ul><li>Black Belt starts building on Dec 1 in its own worktree, while Star, Finance and Color Belt phase 3 build alongside (as Schedule / Forms / Prospects did).</li></ul>
+    <h3>Pros</h3>
+    <ul><li>Nothing waits; every section moves.</li><li>Finance could show Black Belt money sooner.</li></ul>
+    <h3>Cons</h3>
+    <ul><li>Your checkpoints, previews and database pastes pile up in Dec–Jan, around the holidays.</li><li>More merge conflicts in shared files (the Testing screen, the public-form code).</li><li>Black Belt can't reuse Star's finished form code because both are built at the same time.</li></ul>
+  </div>
+</div>
+</section>
+
+</main>
+</body>
+</html>

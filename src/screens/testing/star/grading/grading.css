@@ -1,0 +1,847 @@
+/*
+  grading.css — the styles of Star testing's Grading tab (build phase 5): the Dan bar, the grid
+  (GradeGrid.jsx), the grade dropdown (GradeCell.jsx), the count boxes, the one-candidate card
+  (GradeCard.jsx — also the private grading page's), the phone picker and its sheet, the kept note
+  and the Choose subjects dialog.
+  Why it exists: Star's grading pieces, kept apart from star.css (phase 1–3) and from Color Belt's
+  testing.css so parallel work doesn't edit the same lines. It is imported by GradingTab.jsx, so it
+  only loads with Star testing's screens (never in the live build while the switch is off).
+  It REUSES testing.css: the dropdown list (.fa-list / .fa-option, 44px items on touch), the sheet
+  (.tsheet), the segmented switch (.segment, .ev-side), fields (.input), buttons (.btn).
+  Every class here starts with "stg-". Every value comes from tokens.css or the 4px grid.
+
+  Sources: Grading mockups (v0.124–v0.130, v0.137) and the Phase 5 gap mockups H1, H2, H6 (v0.512).
+  Sizes (GradeGrid's `size`, chosen in GradingTab from useMediaQuery.js):
+    pc      ≥1024px with a mouse      36px cells
+    touch   ≥1024px touch (sideways)  44px tall cells (§2.5)
+    narrow  640–1023px (an upright tablet): the full grid, squeezed — grade cells ~32px wide (Q3 = B,
+            a named exception to the 44px tap-area rule)
+    phones  (< 640px) one candidate at a time: the card
+  Blue: the selected cell (2px inset) and a make-up's retest cells (1px outline) are a named
+  exception to §1.2's 5-blue limit for the grading grid (v0.512, proposal 29).
+*/
+
+/* ===== The bar: Dan switch + Print grading sheet ===== */
+.stg-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-8) var(--space-12);
+  margin-bottom: var(--space-12);
+}
+
+.stg-bar .ev-side {
+  margin-bottom: 0;
+}
+
+/* Phones: Print under the switch (proposal 13) */
+.stg-bar--phone {
+  flex-direction: column;
+}
+
+.stg-dan-switch .segment {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.stg-dan-switch .ev-side-count {
+  margin-left: var(--space-8);
+}
+
+/* Not saved cells in this Dan (proposal 5): amber triangle, the word is in the accessible name */
+.stg-dan-warn {
+  flex: none;
+  margin-left: var(--space-4);
+  color: var(--color-warning-text);
+}
+
+.stg-print {
+  flex: none;
+}
+
+.stg-empty {
+  margin-top: var(--space-4);
+}
+
+/* ===== The grid ===== */
+.stg-grid {
+  /* The table has a minimum width (GradeGrid: grade cells never narrower than 32px upright, 36px PC,
+     44px sideways touch). When the columns don't fit — an upright tablet on a Dan with many subjects —
+     the grid scrolls sideways inside this box; the PAGE never does. */
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+}
+
+.stg-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: var(--text-13);
+}
+
+/* Header: a gray band with a heavier line under it (v0.124 "highlighted subjects") */
+.stg-table thead th {
+  padding: var(--space-8) 2px;
+  border-bottom: 2px solid var(--color-text-secondary);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+  line-height: 1.25;
+  text-align: center;
+  vertical-align: bottom;
+}
+
+.stg-table thead th.stg-h-name {
+  padding-left: var(--space-12);
+  text-align: left;
+}
+
+.stg-table thead th.stg-h-res {
+  padding-left: var(--space-8);
+  text-align: left;
+}
+
+.stg-h-total small {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--text-12);
+}
+
+/* Subject names tilted 60° (proposal 23), so long names never wrap mid-word */
+/* (No position on the th: a positioned header cell would paint its gray band over the tilted name
+   of the column before it.) */
+.stg-table thead th.stg-h-rot {
+  height: 172px;
+  padding: 0 0 var(--space-8);
+  border-left: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.stg-h-rot > div {
+  width: 28px;
+  margin-left: 50%;
+  color: var(--color-text);
+  font-size: var(--text-13);
+  font-weight: 500;
+  text-align: left;
+  transform: rotate(-60deg);
+  transform-origin: left bottom;
+}
+
+.stg-cr {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+/* The two count columns: a lighter band of their own (as drawn) */
+.stg-table thead th.stg-h-ex {
+  background: var(--color-blue-tint);
+}
+
+.stg-h-ex > div {
+  font-size: var(--text-12);
+}
+
+/* Body rows */
+.stg-table tbody td,
+.stg-table tbody th {
+  height: 44px;
+  padding: 0;
+  border-top: 1px solid var(--color-border);
+  text-align: center;
+  vertical-align: middle;
+}
+
+.stg-name {
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-12) !important;
+  font-weight: 400;
+  text-align: left !important;
+  overflow-wrap: anywhere;
+}
+
+.stg-name-text {
+  display: block;
+}
+
+.stg-name small {
+  display: block;
+  /* break only between words: "0 → 1" (non-breaking spaces) stays on one line */
+  overflow-wrap: break-word;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* "Knowledge: Changed on another device — your grade wasn't saved." (proposal 4) */
+.stg-cellnote {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.stg-td {
+  border-left: 1px solid var(--color-border);
+}
+
+/* One grade cell: fills its table cell */
+.stg-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 36px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+  user-select: none;
+}
+
+.stg-cell:focus {
+  outline: none;
+}
+
+/* D: amber (v0.124) */
+.stg-cell.is-d {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-weight: 500;
+}
+
+.stg-cell-dot {
+  color: var(--color-border-strong);
+}
+
+/* Not saved (proposal 2): amber with a small ⚠ */
+.stg-cell.is-unsaved {
+  flex-direction: row;
+  gap: 2px;
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-weight: 500;
+  box-shadow: inset 0 0 0 1px var(--color-warning-text);
+}
+
+.stg-cell-warn {
+  flex: none;
+}
+
+/* A make-up's retest subject: 1px blue outline (v0.129, proposal 29) */
+.stg-cell.is-retest {
+  box-shadow: inset 0 0 0 1px var(--color-blue);
+}
+
+/* The selected cell (keyboard focus): 2px blue inset (proposal 29) */
+.stg-cell:focus-visible,
+.stg-cell:focus,
+.stg-cell.is-open {
+  box-shadow: inset 0 0 0 2px var(--color-blue);
+}
+
+/* A kept make-up grade: gray, "kept" under it, no dropdown (v0.129, proposal 9) */
+.stg-cell.is-kept {
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+}
+
+.stg-cell.is-kept small {
+  font-size: var(--text-12);
+  line-height: 1;
+}
+
+/* The dropdown list: D in amber (v0.125) */
+.stg-list .stg-option-d {
+  color: var(--color-warning-text);
+}
+
+/* ===== Count boxes (v0.126; empty until entered, proposal 30) ===== */
+.stg-num {
+  border-left: 1px solid var(--color-border);
+}
+
+.stg-count {
+  width: 44px;
+  height: 28px;
+  padding: 0 var(--space-4);
+  text-align: center;
+}
+
+.stg-count.is-unsaved {
+  border-color: var(--color-warning-text);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  box-shadow: 0 0 0 1px var(--color-warning-text);
+}
+
+.stg-ai {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  line-height: 1.2;
+}
+
+/* ===== Total and Result ===== */
+.stg-total {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.stg-sofar {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+}
+
+.stg-table tbody td.stg-res {
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-8);
+  font-size: var(--text-12);
+  text-align: left;
+}
+
+.stg-result--green {
+  color: var(--color-success-text);
+}
+
+.stg-result--amber {
+  color: var(--color-warning-text);
+}
+
+.stg-result--gray,
+.stg-result-after {
+  color: var(--color-text-secondary);
+}
+
+.stg-choose-link {
+  font-size: inherit;
+}
+
+/* "Choose subjects" inside a picker-sheet row (the row is the button): link blue, not a link */
+.stg-choose-text {
+  color: var(--color-blue);
+}
+
+/* ===== Sizes ===== */
+.stg-grid--pc .stg-table tbody td,
+.stg-grid--pc .stg-table tbody th {
+  height: 36px;
+}
+
+.stg-grid--narrow .stg-table thead th.stg-h-rot {
+  height: 160px;
+}
+
+.stg-grid--narrow .stg-h-rot > div,
+.stg-grid--narrow .stg-h-ex > div {
+  font-size: var(--text-12);
+}
+
+.stg-grid--narrow .stg-count {
+  width: 40px;
+}
+
+.stg-grid--touch .stg-count,
+.stg-grid--narrow .stg-count {
+  height: var(--control-height-touch);
+  font-size: var(--text-16); /* 16px stops iPads zooming in on the field */
+}
+
+/* Touch screens (§2.5: every tap area at least 44px). The count boxes are <input>s, which can't
+   carry an invisible ::after tap area, so on touch they — and the card's grade fields next to them,
+   to match — are simply 44px tall. The ONLY exception is the upright tablet's squeezed grid
+   ('narrow', ~32px cells, v0.512 Q3 = B), which keeps its 36px boxes. */
+@media (pointer: coarse) {
+  .stg-grid--touch .stg-count,
+  .stg-card .stg-linefield,
+  .stg-card .stg-count--line {
+    height: var(--tap-size);
+  }
+}
+
+/* ===== The kept note (proposal 9) ===== */
+.stg-keptpop {
+  position: fixed;
+  z-index: 50;
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  font-size: var(--text-13);
+  line-height: 1.4;
+  text-align: left;
+}
+
+.stg-keptpop b,
+.stg-keptline b {
+  display: block;
+  font-weight: 500;
+}
+
+.stg-keptline {
+  margin: 0 0 var(--space-8);
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-size: var(--text-12);
+  line-height: 1.4;
+}
+
+/* ===== One candidate at a time: the card (phones, the private grading page) ===== */
+.stg-card {
+  padding: var(--space-4) var(--space-16) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+}
+
+/* A line between lines; none above the first */
+.stg-card .stg-line {
+  border-top: 1px solid var(--color-border);
+}
+
+.stg-card > :first-child.stg-line,
+.stg-card > :first-child > .stg-line {
+  border-top: none;
+}
+
+.stg-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-height: 52px;
+  font-size: var(--text-14);
+}
+
+.stg-line-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.stg-line-text small {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.stg-warn-text {
+  color: var(--color-warning-text);
+}
+
+.stg-warn-text svg {
+  vertical-align: -1px;
+}
+
+/* The dropdown field on a line: 116px — wide enough that the empty field's "Grade…" (16px on touch)
+   plus a ⚠ never runs into the chevron (drawn at 92px; the words need more) */
+.stg-linefield {
+  flex: none;
+  width: 116px;
+  height: var(--control-height-touch);
+}
+
+.stg-linefield.is-d {
+  border-color: var(--color-warning-text);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.stg-linefield.is-unsaved {
+  border-color: var(--color-warning-text);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-weight: 500;
+}
+
+.stg-linefield.is-retest {
+  border-color: var(--color-blue);
+  box-shadow: inset 0 0 0 1px var(--color-blue);
+}
+
+.stg-linefield .stg-cell-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stg-linefield .stg-cell-warn {
+  margin-right: var(--space-4);
+}
+
+.stg-choose {
+  color: var(--color-text-secondary);
+}
+
+/* "B+ kept": gray, no ▾ (proposal 9) */
+.stg-keptfield {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+.stg-count--line {
+  flex: none;
+  width: 116px; /* the same width as the grade fields above it */
+  height: var(--control-height-touch);
+}
+
+.stg-card-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4) var(--space-12);
+  margin-top: var(--space-4);
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-14);
+}
+
+.stg-card-totaltext {
+  font-weight: 500;
+}
+
+.stg-card-total .stg-result {
+  font-size: var(--text-13);
+  text-align: right;
+}
+
+/* ===== The phone picker: ◀ [Mia Patel · 0 → 1 ▾] ▶ (proposal 24) ===== */
+.stg-pick {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+}
+
+.stg-pick-nav {
+  flex: none;
+  justify-content: center;
+  width: var(--tap-size);
+  height: var(--tap-size);
+  padding: 0;
+}
+
+.stg-pick-nav[aria-disabled='true'] {
+  color: var(--color-disabled-text);
+  cursor: default;
+}
+
+.stg-pick-sel {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  min-width: 0;
+  height: var(--tap-size);
+  font: inherit;
+  font-size: var(--text-14);
+  text-align: left;
+  cursor: pointer;
+}
+
+/* A long name ends with "…" */
+.stg-pick-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The sheet's rows: name and stars, school under it, the Result on the right */
+.stg-sheetrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  min-height: 52px;
+  padding: var(--space-4) var(--space-16);
+  border: none;
+  border-top: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-14);
+  text-align: left;
+  cursor: pointer;
+}
+
+.stg-sheetrow:first-child {
+  border-top: none;
+}
+
+.stg-sheetrow.is-current {
+  background: var(--color-blue-tint);
+}
+
+.stg-sheetrow:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+.stg-sheetrow-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word; /* between words only: "0 → 1" stays together */
+}
+
+.stg-sheetrow-name small {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.stg-sheetrow-result {
+  flex: none;
+  max-width: 50%;
+  font-size: var(--text-12);
+  text-align: right;
+}
+
+/* ===== Choose subjects (v0.130) ===== */
+.stg-choose-list {
+  margin: var(--space-8) 0;
+  padding: 0;
+  border: none;
+}
+
+.stg-choose-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.stg-choose-row:first-of-type {
+  border-top: none;
+}
+
+.stg-choose-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.stg-choose-grade {
+  flex: none;
+  min-width: 32px;
+  font-weight: 500;
+  text-align: right;
+}
+
+/* ===== Hover — mouse only ===== */
+@media (hover: hover) and (pointer: fine) {
+  .stg-cell:hover:not(.is-unsaved):not(.is-d):not(.is-kept) {
+    background: var(--color-surface);
+  }
+
+  .stg-sheetrow:hover {
+    background: var(--color-surface);
+  }
+}
+
+/* ===== Below 360px: the Dan switch drops the word "Dan" (proposal 24) ===== */
+@media (max-width: 359.98px) {
+  .stg-dw {
+    display: none;
+  }
+
+  .stg-dan-switch .segment {
+    padding: 0 var(--space-8);
+  }
+}
+
+/* ===== The private grading page (H5, proposals 18–21): one column, at most 520px, every device ===== */
+.stg-private-head .st-event-buttons {
+  align-self: flex-start;
+}
+
+.stg-private-body {
+  max-width: 520px;
+}
+
+.stg-private-body .stg-card {
+  margin-top: var(--space-8);
+}
+
+.stg-private-skeleton {
+  max-width: 520px;
+}
+
+/* ===== The printed grading sheet (H3, proposals 13–17; StarGradingSheet.jsx) ===== */
+/* Hidden on screen. On paper, Color Belt's print rule (testing-events.css) already shows only
+   .flyer-print / .grading-print; the :has() rule below does the same on its own, in case that
+   stylesheet isn't loaded. */
+.stp-print {
+  display: none;
+}
+
+/* A NAMED page: landscape letter with 0.5-inch margins, only for this sheet — Color Belt's global
+   @page (portrait, 0.75in) stays as it is for its own sheet and the flyers. */
+@page star-sheet {
+  size: letter landscape;
+  margin: 0.5in;
+}
+
+@media print {
+  body:has(> .stp-print) > *:not(.stp-print) {
+    display: none !important;
+  }
+
+  body > div.stp-print.stp-print {
+    display: block;
+    page: star-sheet;
+    color: #000;
+    background: #fff;
+    font-family: var(--font-family);
+    font-size: 9pt;
+    line-height: 1.3;
+  }
+
+  /* One sheet page = one paper page: 7.5in tall inside the margins (a little less, so rounding never
+     spills a blank page), the footer pushed to the bottom. */
+  .stp-page {
+    display: flex;
+    flex-direction: column;
+    height: 7.4in;
+    break-inside: avoid;
+  }
+
+  .stp-page + .stp-page {
+    break-before: page;
+  }
+
+  .stp-title {
+    margin: 0 0 4pt;
+    font-size: 13pt;
+    font-weight: 500;
+  }
+
+  .stp-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 24pt;
+    margin-bottom: 4pt;
+    font-size: 9.5pt;
+  }
+
+  .stp-judge {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4pt;
+    white-space: nowrap;
+  }
+
+  .stp-judge-line {
+    display: inline-block;
+    width: 2.2in;
+    border-bottom: 0.75pt solid #000;
+  }
+
+  .stp-scale {
+    margin: 0 0 6pt;
+    font-size: 8.5pt;
+  }
+
+  .stp-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .stp-col-name {
+    width: 1.45in;
+  }
+
+  .stp-col-count {
+    width: 0.6in;
+  }
+
+  .stp-table th,
+  .stp-table td {
+    border: 0.75pt solid #000;
+    padding: 2pt 3pt;
+    overflow-wrap: break-word;
+  }
+
+  /* Subject names wrap between words; a word too long for its column is hyphenated
+     ("Apprecia-tion"), never cut at a random letter (lang="en" on the sheet). */
+  .stp-table th {
+    padding: 2pt 1.5pt;
+    font-size: 7.5pt;
+    font-weight: 500;
+    text-align: center;
+    vertical-align: bottom;
+    overflow-wrap: normal;
+    hyphens: auto;
+  }
+
+  .stp-table .stp-th-name {
+    text-align: left;
+  }
+
+  .stp-credits {
+    display: block;
+    font-weight: 400;
+  }
+
+  .stp-table td {
+    height: 26pt;
+    vertical-align: middle;
+  }
+
+  .stp-table tr {
+    break-inside: avoid;
+  }
+
+  .stp-name {
+    font-weight: 500;
+    font-size: 9pt;
+  }
+
+  .stp-name small {
+    display: block;
+    font-size: 7.5pt;
+    font-weight: 400;
+    color: #444;
+  }
+
+  .stp-table td.stp-added {
+    font-weight: 400;
+    font-size: 8pt;
+    color: #444;
+  }
+
+  /* A make-up's kept grade: gray "kept" (proposal 15) */
+  .stp-table td.stp-kept {
+    background: #e6e6e6;
+    color: #444;
+    font-size: 8pt;
+    text-align: center;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .stp-foot {
+    display: flex;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 6pt;
+    font-size: 8.5pt;
+  }
+}
