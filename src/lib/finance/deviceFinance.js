@@ -2,8 +2,12 @@
 // Why it exists (contract 0011 §1.5, §3, §4):
 //   - Refund layout (v0.209): how the Daily report shows Star refunds on this device —
 //     'own' (a Refunds group at the end, the default) or 'in' (inside the Cash / Check groups).
-//   - Hide payments (v0.215): a switch anyone can flip in the account menu when students or parents
-//     can see the screen. While on, Finance and the Home reminder link are hidden on this device.
+//   - Hide private details (v0.215 "Hide payments", renamed and made dashboard-wide v0.506): a switch
+//     anyone can flip in the account menu when students or parents can see the screen. While on,
+//     Finance and the Home reminder link are hidden on this device (and, v0.506, every section
+//     hides date of birth, email and payment details). Other sections use src/lib/privateDetails.js.
+//     The key and event names below keep their old "hide payments" spelling ON PURPOSE: renaming
+//     them would switch every device that has it on back to off.
 // Both are kept in this browser's localStorage (like device.js keeps the default school), so the
 // database never sees them. If storage is blocked, the defaults are used and nothing crashes.
 // Every change tells open screens through window events, so they update without a reload:

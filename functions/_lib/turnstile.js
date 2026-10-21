@@ -4,13 +4,15 @@
 // token proves nothing until OUR server shows it to Cloudflare together with the secret key
 // ("siteverify"). We also check that the token was made on our own site (hostname) and for the
 // registration form (action "register"), so a token from some other page can't be reused here.
-// The camp sign-up form (contract 0013 §4.4) uses the same check with its own action,
-// "camp_signup", passed as expectedAction — so a Color Belt token can't be used for a camp
-// sign-up and the other way round. Color Belt passes nothing and keeps "register".
 // Plan §8: success, hostname = production host, action = register, remoteip.
 //
-// The action is a parameter (expectedAction, CONTRACT-0016 §9.2): Color Belt doesn't pass it, so it
-// stays 'register' exactly as before; the Black Belt Function passes 'bb_register'.
+// Shared by four Functions, each with its own action:
+//   register       Color Belt's form (functions/_lib/register.js) — the default, so its behaviour
+//                  is exactly as before (it passes nothing)
+//   star_register  the Star family form (functions/_lib/starRegister.js, CONTRACT-0006 §8.4)
+//   bb_register    the Black Belt Function (CONTRACT-0016 §9.2)
+//   camp_signup    the camp sign-up form (contract 0013 §4.4)
+// So a token made on one form's page can never be used on another form.
 
 export const SITEVERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 export const TURNSTILE_ACTION = 'register';
@@ -23,10 +25,12 @@ export const TURNSTILE_ACTION = 'register';
 //   token         what the page sent as turnstile_token
 //   ip            the visitor's IP (Cloudflare uses it as one more signal; never stored)
 //   expectedHost  e.g. "tkd-dashboard.pages.dev" (taken from PUBLIC_ORIGIN)
-//   expectedAction  optional: the action the page started Turnstile with. Default "register"
-//                 (the Color Belt form, unchanged); the camp form passes "camp_signup", the
-//                 Black Belt Function passes "bb_register".
+//   expectedAction  the action the page started Turnstile with. Left out = "register"
+//                   (Color Belt, unchanged); the Star form passes "star_register", the Black Belt
+//                   Function "bb_register", the camp form "camp_signup". An empty or non-text
+//                   value never matches (fail closed).
 export async function verifyTurnstile({ fetchImpl, secret, token, ip, expectedHost, expectedAction = TURNSTILE_ACTION }) {
+  if (typeof expectedAction !== 'string' || expectedAction === '') return false;
   // Tokens are at most 2048 characters (Cloudflare's documented limit).
   if (typeof token !== 'string' || token.length === 0 || token.length > 2048) return false;
   try {

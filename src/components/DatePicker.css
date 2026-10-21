@@ -1,0 +1,286 @@
+/*
+  DatePicker.css — the look of the dashboard's calendar (components/DatePicker.jsx).
+  Why it exists: the calendar is shared (Star's Add / Edit event now, the family form in Star
+  phase 4, which doesn't load the dashboard's testing styles), so it carries its own styles. The
+  look is copied exactly from the approved Form mockups screen 4 (v0.107) and the calendar mockups
+  C1–C4 (v0.503): white box, 1px border, 8px corners, a light shadow, Month and Year side by side,
+  Su–Sa, 36px days with a mouse, 44px on touch (16px numbers on phones), blue-tinted chosen day,
+  gray days that can't be chosen, today with a thin gray outline, a dot under the "dot" day.
+  Every class starts with "dp-". Values come from tokens.css, except the gray of an unavailable day,
+  which is the approved mockups' #B8B8B3 (a day that can't be chosen is ALSO read "unavailable" and
+  can't be picked, so the color is never the only sign — rule 4).
+
+  Screen-size rules used below (the same as the rest of the app):
+    Touch screens  (pointer: coarse)  → 44px days and list rows, the 336px box
+    Hover          (hover: hover)     → mouse-only highlights
+*/
+
+/* ===== The date field: a button that looks like a field ===== */
+.dp-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  color: var(--color-text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dp-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Nothing chosen yet: a gray "Choose…" */
+.dp-field.is-empty .dp-value {
+  color: var(--color-text-secondary);
+}
+
+/* Can't be used yet (e.g. no testing date): dimmed, but still reachable so its reason is read */
+.dp-field.is-disabled {
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+  cursor: default;
+}
+
+.dp-field.is-disabled .dp-value {
+  color: var(--color-disabled-text);
+}
+
+/* Open: a dark border, not the blue focus border (v0.503 item 3) — the same for an open list */
+.dp-field.is-open,
+.dp-sel.is-open,
+.dp-sel.is-open:focus-visible {
+  border-color: var(--color-text);
+  outline: none;
+  box-shadow: none;
+}
+
+/* ===== The calendar box ===== */
+.dp-pop {
+  position: fixed;
+  z-index: 50; /* above the dialog backdrop (40); its lists above it (60) */
+  width: 304px;
+  padding: var(--space-12);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Phones: in the page under the field, edge to edge (the Month / Year row and the hint keep the
+   16px gutter of the full-screen page) */
+.dp-pop.is-inline {
+  position: relative;
+  z-index: auto;
+  width: auto;
+  margin: var(--space-4) calc(-1 * var(--space-16)) var(--space-16);
+  padding: var(--space-12) 0;
+  border-right: 0;
+  border-left: 0;
+  border-radius: 0;
+}
+
+/* When it scrolls into view it clears a sticky bar at the bottom of the page (e.g. the phone
+   dialog's Save bar): the page sets --dp-scroll-bottom to that bar's height */
+.dp-pop.is-inline {
+  scroll-margin-bottom: var(--dp-scroll-bottom, 0px);
+}
+
+.dp-pop.is-inline .dp-top,
+.dp-pop.is-inline .dp-hint {
+  padding-right: var(--space-16);
+  padding-left: var(--space-16);
+}
+
+.dp-top {
+  display: flex;
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
+}
+
+.dp-selwrap {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.dp-sel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  cursor: pointer;
+}
+
+.dp-sel-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===== The days ===== */
+.dp-grid {
+  width: 100%;
+  border-collapse: separate; /* "collapse" would square off the days' rounded corners and rings */
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.dp-grid th {
+  padding: var(--space-4) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+  text-align: center;
+}
+
+.dp-day,
+.dp-empty {
+  height: 36px;
+  padding: 0;
+  text-align: center;
+}
+
+.dp-day {
+  position: relative;
+  border-radius: var(--radius-control);
+  font-size: var(--text-14);
+  cursor: pointer;
+}
+
+.dp-num {
+  display: block;
+  line-height: 1;
+}
+
+/* The dot day (the testing date in the closing date's calendar): a small dot under the number */
+.dp-dot {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.dp-day.is-today {
+  box-shadow: inset 0 0 0 1px var(--color-border-control);
+}
+
+.dp-day.is-selected {
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+  font-weight: 500;
+}
+
+.dp-day.is-off {
+  color: #b8b8b3; /* the approved mockups' gray for a day that can't be chosen */
+  cursor: default;
+}
+
+/* Keyboard focus: the 2px school-blue ring (rule 4) — only when the keyboard is used */
+.dp-day:focus {
+  outline: none;
+}
+
+.dp-day:focus-visible {
+  z-index: 1;
+  box-shadow: 0 0 0 2px var(--color-blue);
+}
+
+.dp-hint {
+  margin-top: 6px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  line-height: 1.4;
+}
+
+.dp-hint-dot {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  margin: 0 4px 2px 0;
+  border-radius: 50%;
+  background: var(--color-text);
+  vertical-align: middle;
+}
+
+/* ===== The Month / Year lists ===== */
+.dp-list {
+  position: fixed;
+  z-index: 60;
+  max-height: 244px;
+  margin: 0;
+  padding: var(--space-4) 0;
+  overflow-y: auto;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  list-style: none;
+}
+
+.dp-option {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 var(--space-12);
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+.dp-option.is-active {
+  background: var(--color-surface);
+}
+
+.dp-option.is-selected {
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+}
+
+/* The outline on the highlighted option shows only while the keyboard moves it (a tap shows the
+   blue tint alone) */
+.dp-list.is-keyboard .dp-option.is-selected.is-active {
+  box-shadow: inset 0 0 0 1px var(--color-blue);
+}
+
+.dp-option.is-off {
+  color: #b8b8b3;
+  cursor: default;
+}
+
+/* ===== Hover — mouse only: the day under the pointer is light gray ===== */
+@media (hover: hover) {
+  .dp-day:not(.is-off):not(.is-selected):hover {
+    background: var(--color-surface);
+  }
+}
+
+/* ===== Touch screens: 44px days and list rows, the wider box (rule 2.5) ===== */
+@media (pointer: coarse) {
+  .dp-pop:not(.is-inline) {
+    width: 336px;
+  }
+
+  .dp-day,
+  .dp-empty {
+    height: 44px;
+  }
+
+  .dp-option {
+    min-height: var(--tap-size);
+  }
+}
+
+/* ===== Phones: 16px numbers ===== */
+.dp-pop.is-inline .dp-day {
+  height: 44px;
+  font-size: var(--text-16);
+}

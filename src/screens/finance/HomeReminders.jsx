@@ -7,7 +7,7 @@
 // many earlier days (last 30) weren't closed, linking to History: with one school chosen, that
 // school's days only ("…at Shrewsbury…"); on Both, one line for both schools. The link opens
 // History for the same school choice, at the month of the first unclosed day.
-// While "Hide payments" is on for this device (v0.215) the lines still show, but without a link.
+// While "Hide private details" is on for this device (v0.215, v0.506) the lines still show, but without a link.
 // The earlier-days line has an OK button (v0.811): OK remembers on this device which unclosed
 // (school, day) pairs were seen (lib/finance/reminderAck.js). The line then stays away while only
 // seen days are unclosed, and comes back for NEW ones: "1 new earlier day at Worcester wasn't
