@@ -13,7 +13,10 @@
 //     then Removed
 // Every name opens Camper detail (CamperDialog.jsx; on touch screens it also holds the row's ⋯
 // actions). The page reloads quietly every 15 seconds (useLiveLoad), so family sign-ups and
-// check-ins on another device show up by themselves. Every change goes to the database
+// check-ins on another device show up by themselves. If those quiet reloads keep failing (2 in a
+// row — e.g. the Wi-Fi dropped), an amber "Couldn't refresh the roster." bar with Retry appears
+// above the roster, so the page never just looks frozen (live test 2026-10-21); the roster's
+// summary line also says when it was last updated. Every change goes to the database
 // (src/lib/camps/campsApi.js) and the page reloads after it. Reversible changes get a 5-second Undo
 // toast; permanent ones ask first (rule 1.4). Staff and admins see different ⋯ items
 // (CamperRowMenu.jsx); the database enforces the same rules.
@@ -129,6 +132,7 @@ export default function CampPage({
   const [removedOpen, setRemovedOpenState] = useState(() => removedOpenByCamp.get(campId) ?? true);
   const [chosenWeek, setChosenWeekState] = useState(() => weekByCamp.get(campId) ?? null); // null = the default week
   const busyRef = useRef(false);
+  const [refreshing, setRefreshing] = useState(false); // the "Couldn't refresh" bar's Retry is on its way
 
   function setRemovedOpen(open) {
     removedOpenByCamp.set(campId, open);
@@ -815,6 +819,20 @@ export default function CampPage({
       )}
 
       {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy || actions.busy} onDismiss={() => setBanner(null)} />}
+      {/* The automatic reload keeps failing: say so (same amber bar as every other problem). It
+          goes away by itself after the next good reload — automatic or this Retry. */}
+      {live.refreshFailing && (
+        <ErrorBanner
+          text={T.REFRESH_FAILED}
+          onRetry={async () => {
+            if (refreshing) return;
+            setRefreshing(true);
+            await liveRef.current.reload();
+            setRefreshing(false);
+          }}
+          retrying={refreshing}
+        />
+      )}
 
       <CampRoster
         days={days}
@@ -835,6 +853,7 @@ export default function CampPage({
         busy={busy}
         menuFor={menu?.kind === 'camper' ? menu.id : null}
         notSavedId={notSavedId}
+        updatedAt={live.updatedAt}
         handlers={{
           onOpen: (row, el) => openCamper(row, el),
           onMore: (row, anchor) => openMenu('camper', row, anchor),

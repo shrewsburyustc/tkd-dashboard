@@ -2,8 +2,8 @@
 // Why it exists: camps sell add-ons (early drop-off, late pick-up, a pizza party). Each extra is
 // one line: name · price · Once or Per day · "Not charged to all-days campers" · remove; then
 // + Add extra (up to 10). Families choose extras on the sign-up form; a per-day extra asks which
-// days. "Not charged to all-days campers" hides that extra from a child who comes every day (the
-// pizza party is included in the all-days price).
+// days. "Not charged to all-days campers" hides that extra in any WEEK a child comes every camp day
+// (weekly pricing v0.717: the pizza party is included in that week's full-week price).
 // Removing an extra that an active camper chose is refused by the database; its message shows
 // here ("Can't remove Pizza party: 3 campers picked it. Change their extras first.").
 import { IconPlus, IconX } from '@tabler/icons-react';
@@ -129,7 +129,12 @@ export default function ExtrasSection({ values, errors, show, readOnly, idBase, 
                 disabled={readOnly}
                 onChange={(event) => onExtra(extra.key, { notForAllDays: event.target.checked })}
               />
-              <span>{T.NOT_FOR_ALL_DAYS}</span>
+              {/* Weekly pricing (v0.717): the extra is included per week, so the hint says so. */}
+              <span>
+                {T.NOT_FOR_ALL_DAYS}
+                <br />
+                <span className="field-hint">{T.NOT_FOR_ALL_DAYS_HINT}</span>
+              </span>
             </label>
             {nameError && <Notice>{nameError}</Notice>}
             {priceError && <Notice>{priceError}</Notice>}

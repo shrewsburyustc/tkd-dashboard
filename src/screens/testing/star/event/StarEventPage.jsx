@@ -1,5 +1,5 @@
-// StarEventPage.jsx — one Star testing event's page (address #testing/star/event/<id>, and its
-// Grading tab #testing/star/event/<id>/grading).
+// StarEventPage.jsx — one Star testing event's page (address #testing/star/event/<id>, its
+// Grading tab #testing/star/event/<id>/grading and its Results tab #testing/star/event/<id>/results).
 // Why it exists: Events mockup screen 11 (v0.90, v0.92), gap mockups G2–G3 (v0.500), from build
 // phase 3 the Candidates tab (Candidates mockups v0.121, gap mockups G1–G16, v0.508) and from build
 // phase 5 the Grading tab (Grading mockups v0.137, Phase 5 gap mockups H1–H7, v0.512):
@@ -7,11 +7,12 @@
 //   Fall 2026 Star Testing                [+ Add candidate] [Registration link]
 //   Sat, Nov 14, 2026 · 10:00 AM at Shrewsbury school · both schools · 23 candidates
 //   (14px in the normal text color, v0.92; on phones the buttons sit under this line)
-//   [Candidates] [Grading]                the tab bar — Results joins in phase 6: no placeholder tab
-//                                         (rule P7, v0.50, v0.177). Switching tabs changes the
+//   [Candidates] [Grading] [Results]      the tab bar (Results joined in phase 6, gap mockups R1,
+//                                         rulebook v0.514). Switching tabs changes the
 //                                         address in place (App.jsx: no new Back step, a reload
 //                                         keeps the tab), as Color Belt's Students | Grading.
-//   the Candidates tab (candidates/CandidatesTab.jsx) or the Grading tab (grading/GradingTab.jsx)
+//   the Candidates tab (candidates/CandidatesTab.jsx), the Grading tab (grading/GradingTab.jsx) or
+//   the Results tab (results/ResultsTab.jsx)
 //
 // Grading's data and its save engine live HERE, not in the Grading tab (proposal 8): the grades
 // are read with the page (gradingApi.loadGrading, every Dan, on the same 15-second refresh — paused
@@ -49,6 +50,18 @@
 //     page, printed, removed again (as Color Belt's sheet and the Star flyer). The Grading tab prints
 //     the selected Dan, both schools, never private students; the private page prints its one row.
 //
+// Phase 6 adds (Builder B, Phase 6 gap mockups R1–R10, rulebook v0.514):
+//   * the RESULTS tab: its data (resultsApi.loadResults for every Dan + the three result email texts,
+//     so Email result always uses the current text — Q5 = A) is read only while the tab is open, on
+//     the same quiet 15-second refresh (v0.507). It follows the location switcher like Grading.
+//   * OPEN GRADES (proposal 29): Results' ⋯ → Open grades (or a row click) adds ONE history step and
+//     switches to Grading with that Dan selected and that row marked (gray tint + dark bar, scrolled
+//     into view; phones: the picker on that candidate) — `gradingMark` below, handed to GradingTab.
+//     Browser Back returns to Results (each tab has its own address). The mark goes when Grading is
+//     left. A private student's row opens the private grading page instead (Grade private testing).
+//   * PRINT RESULTS (R9): results/StarResultsSheet.jsx, the whole event, both schools, printed the
+//     same way as the grading sheet.
+//
 // The event's details and the candidate count only in the header; the roster's privacy rules are
 // in the Candidates tab (no date of birth or email in a list, v0.160; Hide private details, v0.506).
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
@@ -58,6 +71,8 @@ import ErrorBanner from '../../../../components/ErrorBanner.jsx';
 import { loadStarEvent } from '../../../../lib/star/eventsApi.js';
 import { loadCandidates } from '../../../../lib/star/candidatesApi.js';
 import { loadGrading, loadPrivateGrading, judgedSubjects } from '../../../../lib/star/gradingApi.js';
+import { loadResults, loadResultTexts } from '../../../../lib/star/resultsApi.js';
+import { longDate } from '../../../../lib/star/resultEmail.js';
 import { shortDate, whereText } from '../../../../lib/star/eventsText.js';
 import { startTimeLabel } from '../../../../lib/star/starEventRules.js';
 import * as G from '../../../../lib/star/gradingText.js';
@@ -73,6 +88,9 @@ import * as GT from '../grading/text.js';
 import PrivateGradingPage from '../grading/PrivateGradingPage.jsx';
 import StarGradingSheet from '../grading/StarGradingSheet.jsx';
 import { useStarGradingSaves } from '../grading/useStarGradingSaves.js';
+import ResultsTab from '../results/ResultsTab.jsx';
+import StarResultsSheet from '../results/StarResultsSheet.jsx';
+import { TAB_RESULTS, danBandWithMark, sheetSubLine } from '../results/text.js';
 import StarLinksDialog from './StarLinksDialog.jsx';
 import * as T from '../events/text.js';
 
@@ -104,8 +122,10 @@ async function loadPrivateRows(key) {
   return { status: 'ok', loadedAt: Number.isFinite(loadedAt) ? loadedAt : Date.now(), rows, gone };
 }
 
-// The two tabs: the address's 'students' is the Candidates tab (pageAddress.js).
-const TABS = ['candidates', 'grading'];
+// The three tabs: the address's 'students' is the Candidates tab (pageAddress.js).
+const TABS = ['candidates', 'grading', 'results'];
+const TAB_LABEL = { candidates: TAB_CANDIDATES, grading: TAB_GRADING, results: TAB_RESULTS };
+const ADDRESS_TAB = { candidates: 'students', grading: 'grading', results: 'results' };
 const browserOnline = () => typeof navigator === 'undefined' || navigator.onLine !== false;
 
 export default function StarEventPage({
@@ -131,7 +151,7 @@ export default function StarEventPage({
   const [tabModal, setTabModal] = useState(false); // a Candidates or Grading dialog is open
   const baseId = useId();
   const liveRef = useRef(live);
-  const tab = eventTab === 'grading' ? 'grading' : 'candidates';
+  const tab = eventTab === 'grading' || eventTab === 'results' ? eventTab : 'candidates';
 
   // ----- Grading's data (every Dan of the event copy) and its ONE save engine (proposal 8) -----
   // Read once the event (and so its copy) has loaded, then every 15 seconds like the event —
@@ -166,6 +186,40 @@ export default function StarEventPage({
   useEffect(() => {
     if (gradingLive.status === 'noAccess') onNoAccess();
   }, [gradingLive.status, onNoAccess]);
+
+  // ----- Results' data (phase 6): read only while the Results tab shows -----
+  // Every Dan's results (both schools; the tab filters by school) and the three result email texts
+  // together, on the same 15-second refresh. Texts that couldn't be read leave `texts` null (Email
+  // result then says it couldn't build the message); a locked session answers no_access.
+  const loadResultsNow = useCallback(async (id) => {
+    const dans = copyRef.current?.dans?.map((d) => d.dan);
+    if (!dans) return { status: 'error' };
+    const [res, texts] = await Promise.all([loadResults(id, dans), loadResultTexts()]);
+    if (res.status !== 'ok') return res;
+    if (texts.status === 'no_access') return texts;
+    return { ...res, texts: texts.status === 'ok' ? texts.texts : null };
+  }, []);
+  const resultsLive = useLiveLoad({
+    key: copy && tab === 'results' ? eventId : null,
+    enabled: !screenLocked,
+    load: loadResultsNow,
+    refreshMs: LIVE_REFRESH_MS,
+  });
+  const resultsLiveRef = useRef(resultsLive);
+  useLayoutEffect(() => {
+    resultsLiveRef.current = resultsLive;
+  });
+  useEffect(() => {
+    if (resultsLive.status === 'noAccess') onNoAccess();
+  }, [resultsLive.status, onNoAccess]);
+  const reloadResults = useCallback(() => resultsLiveRef.current.reload(), []);
+
+  // ----- Open grades (proposal 29): Results → Grading with that Dan and that row marked -----
+  // { id, dan, key } while Grading shows it; cleared when Grading is left.
+  const [gradingMark, setGradingMark] = useState(null);
+  useEffect(() => {
+    if (tab !== 'grading') setGradingMark(null);
+  }, [tab]);
   // ----- The private grading page (H5, Q1 = A: page state only, never in the address) -----
   // privatePage: { id } while it shows. privateIds: the rows the save engine keeps — the open one,
   // plus any earlier one that still has a save on its way or Not saved cells (pruned on refresh).
@@ -358,11 +412,13 @@ export default function StarEventPage({
       }, 0);
     };
   }, [privateOpenId]);
-  // A reload (or Forward) can land on a private step whose page is closed: step off it to the
-  // plain step under it (the same address, so nothing changes on screen), so the next Back
-  // isn't spent on it. (Leaving the event page replaces the step instead — App.jsx's navigate.)
+  // A reload can land on a private step whose page is closed: it becomes a plain page step (the
+  // same address, so nothing changes on screen). Replacing — not stepping back — is safe even when
+  // React runs this twice while developing (two history.back() calls would leave the event page).
+  // The cost: after such a reload one Back press stays on the same page. Forward onto a leftover
+  // step steps off it again (below). (Leaving the event page replaces the step — App.jsx's navigate.)
   useEffect(() => {
-    if (window.history.state?.tkdStarPrivate) window.history.back();
+    if (window.history.state?.tkdStarPrivate) window.history.replaceState({ tkdPage: true }, '');
     function handleForward() {
       const step = window.history.state?.tkdStarPrivate;
       if (step && step !== privateStepRef.current) window.history.back();
@@ -377,7 +433,7 @@ export default function StarEventPage({
     if (!printing) return undefined;
     const done = () => {
       setPrinting(null);
-      focusSoon(() => (printing.opener?.isConnected ? printing.opener : document.querySelector('.stg-print')));
+      focusSoon(() => (printing.opener?.isConnected ? printing.opener : document.querySelector('.stg-print, .str-print')));
     };
     window.addEventListener('afterprint', done);
     // Wait one frame so the sheet is on the page before the print window opens.
@@ -471,7 +527,16 @@ export default function StarEventPage({
   const [addMenu, setAddMenu] = useState(false); // Grading's "Add candidate": open Candidates' add menu
   function switchTab(next) {
     if (next === tab) return;
-    onEventTab?.(next === 'grading' ? 'grading' : 'students');
+    onEventTab?.(ADDRESS_TAB[next]);
+  }
+  // Results' Open grades: one NEW history step (switching tabs normally replaces the step), so the
+  // browser's Back comes back to Results (proposal 29). The step is pushed with the Results address
+  // and then turned into Grading's by App.jsx's tab switch (replaceState).
+  function openGradesFromResults(row) {
+    window.history.pushState({ tkdPage: true }, '', window.location.href);
+    setGradingMark({ id: row.id, dan: row.dan, key: Date.now() });
+    onEventTab?.('grading');
+    window.scrollTo(0, 0);
   }
   function handleTabKeyDown(keyEvent) {
     const index = TABS.indexOf(tab);
@@ -611,6 +676,27 @@ export default function StarEventPage({
     });
   }
 
+  // Print results (R9, proposals 34–38): the WHOLE event — every Dan, both schools, whatever Dan or
+  // school is showing. The pass mark goes in the line under the title when every Dan has the same one
+  // (the approved drawing); otherwise each Dan's band names its own (not in the mockups).
+  function printResults(opener = null) {
+    const data = resultsLive.data;
+    if (!event || !copy || !data) return;
+    const dans = (copy.dans ?? []).map((d) => ({ dan: d.dan, label: d.label, data: data.dans?.[d.dan] ?? null })).filter((d) => d.data);
+    const marks = new Set(dans.map((d) => `${d.data.passMark}|${d.data.maxScore}`));
+    const oneMark = marks.size <= 1 && dans.length > 0;
+    setPrinting({
+      opener,
+      kind: 'results',
+      sheet: {
+        eventName: event.name,
+        subLine: sheetSubLine(longDate(event.testingDate), whereText(event.whereCode), oneMark ? dans[0].data.passMark : null, oneMark ? dans[0].data.maxScore : null),
+        dans: dans.map((d) => ({ dan: d.dan, band: oneMark ? d.label : danBandWithMark(d.label, d.data.passMark, d.data.maxScore), rows: d.data.rows })),
+        printedAt: new Date(),
+      },
+    });
+  }
+
   const backLink = (
     <button type="button" className="link-button st-back" aria-label={T.BACK_TO_STAR_LABEL} onClick={() => onBack(eventId)}>
       {/* ti-arrow-left = back */}
@@ -636,8 +722,11 @@ export default function StarEventPage({
         </div>
         {/* G11: the tab bar and 4 gray rows under it */}
         <div className="ttabs" aria-hidden="true">
-          <span className={`ttab${tab === 'candidates' ? ' is-current' : ''}`}>{TAB_CANDIDATES}</span>
-          <span className={`ttab${tab === 'grading' ? ' is-current' : ''}`}>{TAB_GRADING}</span>
+          {TABS.map((key) => (
+            <span key={key} className={`ttab${tab === key ? ' is-current' : ''}`}>
+              {TAB_LABEL[key]}
+            </span>
+          ))}
         </div>
         <div className="clist tskeleton" aria-hidden="true">
           {[0, 1, 2, 3].map((index) => (
@@ -693,7 +782,7 @@ export default function StarEventPage({
           </button>
         </div>
       </div>
-      {/* Candidates | Grading (Results joins in phase 6, P7). ← → Home End move and switch. */}
+      {/* Candidates | Grading | Results. ← → Home End move and switch. */}
       <div className="ttabs" role="tablist" aria-label={event.name} onKeyDown={handleTabKeyDown}>
         {TABS.map((key) => {
           const current = key === tab;
@@ -709,7 +798,7 @@ export default function StarEventPage({
               tabIndex={current ? 0 : -1}
               onClick={() => switchTab(key)}
             >
-              {key === 'grading' ? TAB_GRADING : TAB_CANDIDATES}
+              {TAB_LABEL[key]}
             </button>
           );
         })}
@@ -742,6 +831,33 @@ export default function StarEventPage({
           onNoAccess={onNoAccess}
           onModalOpenChange={setTabModal}
         />
+      ) : tab === 'results' ? (
+        <ResultsTab
+          event={event}
+          copy={copy}
+          results={{ status: resultsLive.status, data: resultsLive.data }}
+          isAdmin={isAdmin}
+          hidden={hidden}
+          location={location}
+          onLocationChange={onLocationChange}
+          panelId={panelId}
+          tabId={tabId}
+          renderHeader={renderHeader}
+          onAddCandidate={() => {
+            setAddMenu(true);
+            switchTab('candidates');
+          }}
+          onPrint={printResults}
+          onOpenGrades={openGradesFromResults}
+          onGradePrivate={(row) => openPrivatePage(row)}
+          reload={reloadResults}
+          onGradesChanged={reloadGrading}
+          screenLocked={screenLocked}
+          onNoAccess={onNoAccess}
+          showToast={showToast}
+          clearToast={clearToast}
+          onModalOpenChange={setTabModal}
+        />
       ) : tab === 'grading' ? (
         <GradingTab
           event={event}
@@ -759,6 +875,7 @@ export default function StarEventPage({
             switchTab('candidates');
           }}
           onPrint={printSheet}
+          mark={gradingMark}
           pageBanner={pageBanner}
           onDismissPageBanner={() => setPageBanner(null)}
           onRetryLoad={reloadGrading}
@@ -813,7 +930,8 @@ export default function StarEventPage({
           </div>
         </Dialog>
       )}
-      {printing && <StarGradingSheet {...printing.sheet} grades={copy?.grades ?? []} />}
+      {printing && printing.kind === 'results' && <StarResultsSheet {...printing.sheet} />}
+      {printing && printing.kind !== 'results' && <StarGradingSheet {...printing.sheet} grades={copy?.grades ?? []} />}
       {dialog && !screenLocked && (
         <StarLinksDialog
           key={dialog.key}

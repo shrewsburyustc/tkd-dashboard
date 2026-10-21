@@ -74,7 +74,8 @@ Color Belt testing and Star testing are built at the same time in separate Claud
   | `camps` | 0.700–0.799 |
   | `finance` | 0.800–0.899 |
   | `black-belt` | 0.900–0.999 |
-  | any new branch | the next free block (1.000+) — ask Jeffrey first |
+  | `design-review` (dashboard-wide design consistency; decided 2026-10-21) | 1.000–1.099 |
+  | any new branch | the next free block (1.100+) — ask Jeffrey first |
 
   A new 10b row and its changelog line take the next unused number in your block; the header's `**Version:**` shows the number you just used. Before any rulebook edit in a worktree, `git merge main` first. **Rows numbered before this rule keep their numbers until that branch merges into `main`; at that merge, renumber only that branch's rows that clash with a number already on `main`, into the branch's own block** (10b row, changelog line, and any "vX.XX" mention in that branch's docs). The changelog therefore has gaps and is no longer in strict number order; the check is "no number used twice", not "1…N with no gaps". If a block runs out, ask Jeffrey for the next free block.
 - **Migration numbers:** one number per migration, reserved through the **Main session** before the file is written. Before asking, check every branch and every worktree folder (including uncommitted files and contracts/plans). Taken or reserved (checked 2026-10-19):
@@ -97,7 +98,7 @@ Color Belt testing and Star testing are built at the same time in separate Claud
   | 0020 | security: `current_session_id()` reads only `request.jwt.claims` (rulebook v0.408; replaces only that 0001 function, closing the gap Black Belt's 0016 review found in the public forms) — reserved and applied 2026-10-20 | `main` (live) |
   | 0021 | Prospects: Not interested families deleted after 6 months (rulebook v0.611; replaces only `prospects_purge_old()` from 0015, runs after 0015) — reserved and applied 2026-10-21 | `main` (live) |
 
-  | 0022 | camps: weekly pricing + camps longer than 10 days (`0022_camps_weekly_pricing.sql`; replaces some 0013 camp functions: price grid of at most 5 rows = days per week, each Mon–Sun week priced separately and added up, 10-day limit → 60 days, "not for all-days campers" extras per week; runs after 0013 and 0017) — reserved 2026-10-21 | `camps` |
+  | 0022 | camps: weekly pricing + camps longer than 10 days (`0022_camps_weekly_pricing.sql`; replaces some 0013 camp functions: price grid of at most 5 rows = days per week, each Mon–Sun week priced separately and added up, 10-day limit → 60 days, "not for all-days campers" extras per week; runs after 0013 and 0017) — reserved 2026-10-21, applied 2026-10-21 | `main` (live) |
 
   | 0023 | Star testing: result email texts that admins can edit (small table + admin write function, 0006 rules) and M5 — `star_update_event` keeps registration closed in the same transaction (v0.504 case 2; replaces that 0006 function), and the results CSV columns — `star_results_csv` (0006, same signature, admin only) adds `candidate_id`, `paid_on` and `result_status` to each row so the app matches rows to candidates by id; applies before Star goes live — reserved 2026-10-21 | `star-testing` |
 

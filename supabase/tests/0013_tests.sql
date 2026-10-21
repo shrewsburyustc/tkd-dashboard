@@ -31,6 +31,10 @@
 --     T14 templates; T14a the roster actions' roles
 --     T15 the history (change_log): action, actor, one batch per call
 --     T16 catalog: RLS, search_path, security definer, owners, rights
+--   (changed by 0022, rulebook v0.717) It passes before AND after 0022
+--   (weekly pricing): where a rule changed, the check takes the rule of
+--   the database it runs on (v_w22), and the multi-day test camps that
+--   don't need "today" start on a Monday, so their days are one week.
 --   It makes its own camps with unusual names ("zz test 1a2b3c4d ..."),
 --   so it works whatever is already in the database (run it before AND
 --   after the first real camp exists).
@@ -93,6 +97,11 @@ declare
 
   v_tag   text := 'zz test ' || left(gen_random_uuid()::text, 8);
   v_today date := public.testing_today();
+  -- (changed by 0022, rulebook v0.717) is 0022 applied? the most one
+  -- camper may cost; a Monday 30-36 days from now (camp A's first day)
+  v_w22   boolean := to_regprocedure('public.camp_week_size(date[])') is not null;
+  v_cap   integer := case when to_regprocedure('public.camp_week_size(date[])') is not null then 1000000 else 200000 end;
+  v_mon30 date := date_trunc('week', (public.testing_today() + 36)::timestamp)::date;
   v_rand  uuid := gen_random_uuid();
   v_rand2 uuid := gen_random_uuid();
   v_role  text;
@@ -256,6 +265,14 @@ begin
   --   cmp(ref, pos)  the camper at position pos of sign-up ref
   --   cv(camper)     its version;  ro(camper)  its camp_roster row
   --   st(label, answer, status)  fails unless answer.status = status
+  --   (changed by 0022, rulebook v0.717:)
+  --   gn(days)       the grid's number of rows for these days: W (the most
+  --                  days in one Monday-Sunday week) after 0022, else the
+  --                  number of days;  gw(days) = grid(gn(days))
+  --   wb(camp, day ids, member, kind)  a camper's base price: per week
+  --                  after 0022, else the row for the number of days
+  --   fixgrid(camp)  adds any missing grid rows 1 ... gn (for a camp whose
+  --                  days a test moved directly)
   execute $f$
     create function pg_temp.grid(p_n integer) returns jsonb language sql as $b$
       select jsonb_agg(jsonb_build_object(
@@ -266,6 +283,41 @@ begin
                'nonmember_regular_cents', case k when 1 then 9000 when 2 then 16000 when 3 then 22000 when 4 then 29000 when 5 then 33500 else k * 7000 end)
              order by k)
         from generate_series(1, p_n) as k;
+    $b$;
+  $f$;
+  execute $f$
+    create function pg_temp.gn(p_days date[]) returns integer language plpgsql as $b$
+    begin
+      if to_regprocedure('public.camp_week_size(date[])') is null then
+        return cardinality(p_days);
+      end if;
+      return public.camp_week_size(p_days);
+    end;
+    $b$;
+  $f$;
+  execute $f$
+    create function pg_temp.gw(p_days date[]) returns jsonb language sql as $b$
+      select pg_temp.grid(pg_temp.gn(p_days));
+    $b$;
+  $f$;
+  execute $f$
+    create function pg_temp.wb(p_camp uuid, p_days uuid[], p_member boolean, p_kind text) returns integer language plpgsql as $b$
+    begin
+      if to_regprocedure('public.camp_week_size(date[])') is null then
+        return public.camp_base_cents(p_camp, cardinality(p_days), p_member, p_kind);
+      end if;
+      return public.camp_weekly_base_cents(p_camp, p_days, p_member, p_kind);
+    end;
+    $b$;
+  $f$;
+  execute $f$
+    create function pg_temp.fixgrid(p_camp uuid) returns void language sql as $b$
+      insert into public.camp_prices (camp_id, day_count, member_early_cents, member_regular_cents, nonmember_early_cents,
+                                      nonmember_regular_cents)
+      select p_camp, (x ->> 'day_count')::smallint, (x ->> 'member_early_cents')::integer, (x ->> 'member_regular_cents')::integer,
+             (x ->> 'nonmember_early_cents')::integer, (x ->> 'nonmember_regular_cents')::integer
+        from jsonb_array_elements(pg_temp.gw(array(select d.day from public.camp_days d where d.camp_id = p_camp))) as x
+       where not exists (select 1 from public.camp_prices p where p.camp_id = p_camp and p.day_count = (x ->> 'day_count')::integer);
     $b$;
   $f$;
   execute $f$
@@ -282,7 +334,7 @@ begin
       v_r jsonb;
     begin
       v_r := public.camp_add_camp(p_loc, p_both, p_name, p_days, '09:00', '15:00', p_opens, p_closes, p_early, 5, 12,
-                                  pg_temp.grid(cardinality(p_days)), pg_temp.xtr(), 'Bring a lunch.', 'I agree to the camp rules.');
+                                  pg_temp.gw(p_days), pg_temp.xtr(), 'Bring a lunch.', 'I agree to the camp rules.');   -- (changed by 0022: grid 1 ... gn)
       if v_r ->> 'status' is distinct from 'ok' then
         raise exception 'TEST SETUP: camp_add_camp % answered %', p_name, v_r;
       end if;
@@ -390,11 +442,12 @@ begin
   $f$;
 
   -- The test camps (made by the admin through camp_add_camp):
-  --   A  "April": the price case camp - 5 days in a row, 30 days from now,
+  --   A  "April": the price case camp - Mon-Fri, 30-36 days from now (changed
+  --      by 0022, rulebook v0.717: was "today + 30", which could span a weekend),
   --      early price until 5 days from now, held at Worcester, Both schools
   --   R  the same camp with the early price already over (regular)
   perform set_config('request.jwt.claims', v_c_a1, true);
-  v_dates := array(select v_today + 30 + x from generate_series(0, 4) as x);
+  v_dates := array(select v_mon30 + x from generate_series(0, 4) as x);
   v_ca := pg_temp.mk(v_tag || ' April', 'worcester', true, v_dates, v_today - 1, v_today + 20, v_today + 5);
   v_cr := pg_temp.mk(v_tag || ' April Late', 'worcester', true, v_dates, v_today - 3, v_today + 20, v_today - 1);
   v_ca_code := pg_temp.code(v_ca);  v_cr_code := pg_temp.code(v_cr);
@@ -844,7 +897,8 @@ begin
       jsonb_set(pg_temp.grid(2), '{1,extra}', '1'),                    -- unknown key
       jsonb_set(pg_temp.grid(2), '{1,day_count}', '3'),                -- day count out of range
       '{"day_count": 1}'::jsonb, 'null'::jsonb] loop
-    v_r := public.camp_add_camp('worcester', false, v_tag || ' bad grid', array[v_today + 40, v_today + 41], '09:00', '15:00',
+    -- (changed by 0022, rulebook v0.717: a Mon + Tue, so 2 rows either way)
+    v_r := public.camp_add_camp('worcester', false, v_tag || ' bad grid', array[v_mon30 + 14, v_mon30 + 15], '09:00', '15:00',
                                 v_today, v_today + 1, v_today, 5, 12, v_j1, '[]'::jsonb, null, 'W');
     if v_r is distinct from '{"status": "invalid"}'::jsonb then
       raise exception 'TEST FAILED: T3e bad grid % answered %', v_j1, v_r;
@@ -859,7 +913,10 @@ begin
     v_r := case v_txt
       when 'days in the past' then public.camp_add_camp('worcester', false, v_tag || ' x', array[v_today - 1], '09:00', '15:00', v_today - 3, v_today - 1, v_today - 3, 5, 12, pg_temp.grid(1), '[]', null, 'W')
       when 'no days' then public.camp_add_camp('worcester', false, v_tag || ' x', '{}'::date[], '09:00', '15:00', v_today, v_today, v_today, 5, 12, '[]', '[]', null, 'W')
-      when '11 days' then public.camp_add_camp('worcester', false, v_tag || ' x', array(select v_today + 40 + x from generate_series(0, 10) as x), '09:00', '15:00', v_today, v_today, v_today, 5, 12, pg_temp.grid(10), '[]', null, 'W')
+      -- (changed by 0022, rulebook v0.717: the limit is 60 days - 61 are refused)
+      when '11 days' then case when v_w22
+        then public.camp_add_camp('worcester', false, v_tag || ' x', array(select v_mon30 + x from generate_series(0, 60) as x), '09:00', '15:00', v_today, v_today, v_today, 5, 12, pg_temp.grid(7), '[]', null, 'W')
+        else public.camp_add_camp('worcester', false, v_tag || ' x', array(select v_today + 40 + x from generate_series(0, 10) as x), '09:00', '15:00', v_today, v_today, v_today, 5, 12, pg_temp.grid(10), '[]', null, 'W') end
       when 'a day twice' then public.camp_add_camp('worcester', false, v_tag || ' x', array[v_today + 40, v_today + 40], '09:00', '15:00', v_today, v_today, v_today, 5, 12, pg_temp.grid(2), '[]', null, 'W')
       when 'closing after the last day' then public.camp_add_camp('worcester', false, v_tag || ' x', array[v_today + 40], '09:00', '15:00', v_today, v_today + 41, v_today, 5, 12, pg_temp.grid(1), '[]', null, 'W')
       when 'early after closing' then public.camp_add_camp('worcester', false, v_tag || ' x', array[v_today + 40], '09:00', '15:00', v_today, v_today + 10, v_today + 11, 5, 12, pg_temp.grid(1), '[]', null, 'W')
@@ -925,7 +982,7 @@ begin
   --      the pizza (per day, $5, not for all-days campers) only on days 3
   --      and 5 (sent in the wrong order: stored sorted)
   perform set_config('request.jwt.claims', v_c_a1, true);
-  v_dz := array(select v_today + 80 + x from generate_series(0, 4) as x);
+  v_dz := array(select date_trunc('week', (v_today + 86)::timestamp)::date + x from generate_series(0, 4) as x);   -- Mon-Fri (changed by 0022, rulebook v0.717)
   v_j2 := jsonb_build_array(
             '{"name": "Early drop-off", "price_cents": 1500, "per": "day", "not_for_all_days": false}'::jsonb,
             jsonb_build_object('name', 'Pizza', 'price_cents', 500, 'per', 'day', 'not_for_all_days', true,
@@ -1061,7 +1118,7 @@ begin
   -- Edit camp: a removed day leaves the lists; a list whose days would
   -- ALL go is refused; camp Z2 (no campers): 3 days, pizza only on day 3
   perform set_config('request.jwt.claims', v_c_a1, true);
-  v_dates := array[v_today + 85, v_today + 86, v_today + 87];
+  v_dates := array(select date_trunc('week', (v_today + 91)::timestamp)::date + x from generate_series(0, 2) as x);   -- Mon-Wed (changed by 0022, rulebook v0.717)
   v_r := pg_temp.st('T4d add camp Z2', public.camp_add_camp('worcester', false, v_tag || ' Pizza 2', v_dates, '09:00', '15:00',
            v_today - 1, v_today + 20, v_today + 5, 5, 12, pg_temp.grid(3),
            jsonb_build_array(jsonb_build_object('name', 'Pizza', 'price_cents', 500, 'per', 'day', 'not_for_all_days', false,
@@ -1096,7 +1153,7 @@ begin
     raise exception 'TEST FAILED: T4d template weekdays: %', v_j1;
   end if;
   -- (the app's "Use template": the new camp's days with those weekdays)
-  v_dates := array(select v_today + 100 + x from generate_series(0, 6) as x);
+  v_dates := array(select date_trunc('week', (v_today + 106)::timestamp)::date + x from generate_series(0, 6) as x);   -- Mon-Sun (changed by 0022, rulebook v0.717)
   v_j2 := jsonb_build_array(
             (v_j1 -> 0) - 'only_weekdays',
             ((v_j1 -> 1) - 'only_weekdays')
@@ -1131,7 +1188,7 @@ begin
   if (select t.extras -> 0 -> 'only_weekdays' from public.camp_templates t where t.id = v_tpl) <> '[1, 5]'::jsonb then
     raise exception 'TEST FAILED: T4d template weekdays must be stored sorted';
   end if;
-  v_dates := array(select v_today + 30 + x from generate_series(0, 4) as x);   -- camp A's days again (used below)
+  v_dates := array(select v_mon30 + x from generate_series(0, 4) as x);   -- camp A's days again (used below)
 
   -- ===================================================================
   -- T5. Snapshots, the re-price rule, Owes, overpaid
@@ -1226,6 +1283,8 @@ begin
 
   -- T5f. a camper total over $2,000 -> invalid, on the form and in Edit
   --      details: camp X has a $1,000 day and two $1,000 extras
+  --      (changed by 0022, rulebook v0.717: after 0022 the limit is $10,000,
+  --      so $3,000 is fine - 0022_tests.sql checks the new limit)
   perform set_config('request.jwt.claims', v_c_a1, true);
   v_r := pg_temp.st('T5f camp X', public.camp_add_camp('shrewsbury', false, v_tag || ' Big', array[v_today + 30], '09:00', '15:00',
            v_today, v_today + 10, v_today + 10, 5, 12,
@@ -1236,14 +1295,16 @@ begin
   perform set_config('request.jwt.claims', '', true);
   perform pg_temp.st('T5f form over $2,000', pg_temp.su(v_cx_code, v_key, jsonb_build_array(
            pg_temp.ch('Max', 'Big', 8, true, array[pg_temp.dy(v_cx, 1)],
-                      jsonb_build_array(pg_temp.ex(pg_temp.xid(v_cx, 'Big A'), null), pg_temp.ex(pg_temp.xid(v_cx, 'Big B'), null)))), 300000), 'invalid');
+                      jsonb_build_array(pg_temp.ex(pg_temp.xid(v_cx, 'Big A'), null), pg_temp.ex(pg_temp.xid(v_cx, 'Big B'), null)))), 300000),
+           case when v_w22 then 'ok' else 'invalid' end);
   v_r := pg_temp.st('T5f form at exactly $2,000', pg_temp.su(v_cx_code, v_key, jsonb_build_array(
            pg_temp.ch('Max', 'Big', 8, true, array[pg_temp.dy(v_cx, 1)],
                       jsonb_build_array(pg_temp.ex(pg_temp.xid(v_cx, 'Big A'), null)))), 200000), 'ok');
   v_k1 := pg_temp.cmp(v_r ->> 'reference', 1);
   perform set_config('request.jwt.claims', v_c_d1, true);
   perform pg_temp.st('T5f edit over $2,000', pg_temp.ud(v_k1, 'Max', 'Big', 8, true, array[pg_temp.dy(v_cx, 1)],
-           jsonb_build_array(pg_temp.ex(pg_temp.xid(v_cx, 'Big A'), null), pg_temp.ex(pg_temp.xid(v_cx, 'Big B'), null)), '5085550100'), 'invalid');
+           jsonb_build_array(pg_temp.ex(pg_temp.xid(v_cx, 'Big A'), null), pg_temp.ex(pg_temp.xid(v_cx, 'Big B'), null)), '5085550100'),
+           case when v_w22 then 'ok' else 'invalid' end);
 
   -- ===================================================================
   -- T6. Dates in America/New_York (11:59:59 PM vs midnight), Close /
@@ -1346,18 +1407,23 @@ begin
   for v_d in select d.day from public.camp_days d where d.camp_id = v_ct order by d.day loop
     update public.camp_days set day = v_d - 1 where camp_id = v_ct and day = v_d;
   end loop;
+  perform pg_temp.fixgrid(v_ct);   -- (changed by 0022, rulebook v0.717: the moved days may need another row)
   -- T6d (walk-in on a camp day): sign-up is still open today (closing
   -- date today) - two children, regular prices: Tess all 3 days + drop-off
   -- today ($210 + $15), Tom today only ($80)
+  -- (changed by 0022, rulebook v0.717: the base prices from wb - per week
+  -- after 0022 - since yesterday .. tomorrow may be two weeks)
   perform set_config('request.jwt.claims', '', true);
+  v_n := pg_temp.wb(v_ct, pg_temp.dys(v_ct, array[1, 2, 3]), true, 'regular') + 1500
+         + pg_temp.wb(v_ct, array[pg_temp.dy(v_ct, 2)], true, 'regular');
   v_r := pg_temp.st('T6d walk-in sign-up on a camp day', pg_temp.su(v_ct_code, v_key, jsonb_build_array(
            pg_temp.ch('Tess', 'Gate', 8, true, pg_temp.dys(v_ct, array[1, 2, 3]),
                       jsonb_build_array(pg_temp.ex(pg_temp.xid(v_ct, 'Early drop-off'), array[pg_temp.dy(v_ct, 2)]))),
-           pg_temp.ch('Tom', 'Gate', 6, true, array[pg_temp.dy(v_ct, 2)], '[]'::jsonb)), 22500 + 8000), 'ok');
+           pg_temp.ch('Tom', 'Gate', 6, true, array[pg_temp.dy(v_ct, 2)], '[]'::jsonb)), v_n), 'ok');
   v_k1 := pg_temp.cmp(v_r ->> 'reference', 1);   -- Tess
   v_k2 := pg_temp.cmp(v_r ->> 'reference', 2);   -- Tom
   if v_r -> 'children' -> 0 ->> 'price_kind' <> 'regular' or jsonb_array_length(v_r -> 'children') <> 2
-     or (v_r ->> 'family_total_cents')::integer <> 30500 or v_r ->> 'paying_by' <> 'cash' then
+     or (v_r ->> 'family_total_cents')::integer <> v_n or v_r ->> 'paying_by' <> 'cash' then
     raise exception 'TEST FAILED: T6d walk-in answer %', v_r;
   end if;
 
@@ -1539,7 +1605,7 @@ begin
   end;
   begin
     insert into public.camp_payments (camper_id, kind, amount_cents, method, paid_on, school, recorded_by_name)
-    values (v_noah, 'payment', 200001, 'cash', v_today, 'worcester', 'x');
+    values (v_noah, 'payment', v_cap + 1, 'cash', v_today, 'worcester', 'x');   -- (changed by 0022, rulebook v0.717: $10,000 after 0022)
     raise exception 'TEST FAILED: T9a a payment over $2,000 was written';
   exception when check_violation then null;
   end;
@@ -1585,7 +1651,7 @@ begin
   perform pg_temp.st('T9c staff edit payment', public.camp_edit_payment(v_p3, 'check', 15000, v_today, 'worcester'), 'not_allowed');
   perform set_config('request.jwt.claims', v_c_a1, true);
   perform pg_temp.st('T9c amount 0', public.camp_edit_payment(v_p3, 'check', 0, v_today, 'worcester'), 'invalid');
-  perform pg_temp.st('T9c amount over $2,000', public.camp_edit_payment(v_p3, 'check', 200001, v_today, 'worcester'), 'invalid');
+  perform pg_temp.st('T9c amount over $2,000', public.camp_edit_payment(v_p3, 'check', v_cap + 1, v_today, 'worcester'), 'invalid');   -- (changed by 0022, rulebook v0.717)
   perform pg_temp.st('T9c a future date', public.camp_edit_payment(v_p3, 'check', 15000, v_today + 1, 'worcester'), 'invalid');
   perform pg_temp.st('T9c bad method', public.camp_edit_payment(v_p3, 'gold', 15000, v_today, 'worcester'), 'invalid');
   perform pg_temp.st('T9c unknown payment', public.camp_edit_payment(v_rand, 'check', 15000, v_today, 'worcester'), 'not_found');
@@ -1653,6 +1719,8 @@ begin
   -- Camp K: today, +1, +2; one family: K1 (days 1-2, drop-off both,
   -- pizza) $140 + $30 + $5 = $175; K2 (days 1-3, drop-off day 3, pick-up
   -- day 1) $195 + $15 + $8 = $218
+  -- (changed by 0022, rulebook v0.717: the base prices and grids from wb /
+  -- gw / gn - today .. +2 may be two weeks)
   perform set_config('request.jwt.claims', v_c_a1, true);
   v_ck := pg_temp.mk(v_tag || ' Kill', 'worcester', false, array[v_today, v_today + 1, v_today + 2], v_today - 1, v_today, v_today);
   v_ck_code := pg_temp.code(v_ck);
@@ -1663,7 +1731,9 @@ begin
                                         pg_temp.ex(pg_temp.xid(v_ck, 'Pizza party'), null))),
            pg_temp.ch('Kay', 'Two', 9, true, pg_temp.dys(v_ck, array[1, 2, 3]),
                       jsonb_build_array(pg_temp.ex(pg_temp.xid(v_ck, 'Early drop-off'), pg_temp.dys(v_ck, array[3])),
-                                        pg_temp.ex(pg_temp.xid(v_ck, 'Late pick-up'), pg_temp.dys(v_ck, array[1]))))), 17500 + 21800), 'ok');
+                                        pg_temp.ex(pg_temp.xid(v_ck, 'Late pick-up'), pg_temp.dys(v_ck, array[1]))))),
+           pg_temp.wb(v_ck, pg_temp.dys(v_ck, array[1, 2]), true, 'early') + 3000 + 500
+           + pg_temp.wb(v_ck, pg_temp.dys(v_ck, array[1, 2, 3]), true, 'early') + 1500 + 800), 'ok');
   v_k1 := pg_temp.cmp(v_r ->> 'reference', 1);
   v_k2 := pg_temp.cmp(v_r ->> 'reference', 2);
   perform set_config('request.jwt.claims', v_c_d1, true);
@@ -1678,18 +1748,20 @@ begin
   --       counts the others); nothing changes
   select c.version into v_v from public.camps c where c.id = v_ck;
   v_r := pg_temp.st('T10a remove day 3', public.camp_update_camp(v_ck, v_v, 'worcester', false, v_tag || ' Kill',
-           array[v_today, v_today + 1], '09:00', '15:00', v_today - 1, v_today, v_today, 5, 12, pg_temp.grid(2), pg_temp.xtr_ids(v_ck),
-           'Bring a lunch.', 'I agree to the camp rules.'), 'not_empty');
+           array[v_today, v_today + 1], '09:00', '15:00', v_today - 1, v_today, v_today, 5, 12, pg_temp.gw(array[v_today, v_today + 1]),
+           pg_temp.xtr_ids(v_ck), 'Bring a lunch.', 'I agree to the camp rules.'), 'not_empty');
   if v_r ->> 'kind' <> 'day' or (v_r ->> 'day')::date <> v_today + 2 or v_r ->> 'first_name' <> 'Kay' or v_r ->> 'last_name' <> 'Two'
      or (v_r ->> 'more')::integer <> 0 then
     raise exception 'TEST FAILED: T10a not_empty answer %', v_r;
   end if;
   v_r := pg_temp.st('T10a remove day 1', public.camp_update_camp(v_ck, v_v, 'worcester', false, v_tag || ' Kill',
-           array[v_today + 1, v_today + 2], '09:00', '15:00', v_today - 1, v_today, v_today, 5, 12, pg_temp.grid(2), pg_temp.xtr_ids(v_ck),
+           array[v_today + 1, v_today + 2], '09:00', '15:00', v_today - 1, v_today, v_today, 5, 12, pg_temp.gw(array[v_today + 1, v_today + 2]),
+           pg_temp.xtr_ids(v_ck),
            'Bring a lunch.', 'I agree to the camp rules.'), 'not_empty');
   if v_r ->> 'last_name' <> 'One' or (v_r ->> 'more')::integer <> 1 then raise exception 'TEST FAILED: T10a not_empty "and 1 more": %', v_r; end if;
   v_r := pg_temp.st('T10a remove the pizza party', public.camp_update_camp(v_ck, v_v, 'worcester', false, v_tag || ' Kill',
-           array[v_today, v_today + 1, v_today + 2], '09:00', '15:00', v_today - 1, v_today, v_today, 5, 12, pg_temp.grid(3),
+           array[v_today, v_today + 1, v_today + 2], '09:00', '15:00', v_today - 1, v_today, v_today, 5, 12,
+           pg_temp.gw(array[v_today, v_today + 1, v_today + 2]),
            (select jsonb_agg(x) from jsonb_array_elements(pg_temp.xtr_ids(v_ck)) as x where x ->> 'name' <> 'Pizza party'),
            'Bring a lunch.', 'I agree to the camp rules.'), 'not_empty');
   if v_r ->> 'kind' <> 'extra' or v_r ->> 'extra_name' <> 'Pizza party' or (v_r ->> 'count')::integer <> 1 then
@@ -1705,12 +1777,12 @@ begin
   perform set_config('request.jwt.claims', v_c_a1, true);
   select max(id) into v_mark from public.change_log;
   v_r := pg_temp.st('T10b remove day 3 and the pick-up', public.camp_update_camp(v_ck, v_v, 'worcester', false, v_tag || ' Kill',
-           array[v_today, v_today + 1], '09:00', '15:00', v_today - 1, v_today, v_today, 5, 12, pg_temp.grid(2),
+           array[v_today, v_today + 1], '09:00', '15:00', v_today - 1, v_today, v_today, 5, 12, pg_temp.gw(array[v_today, v_today + 1]),
            (select jsonb_agg(x) from jsonb_array_elements(pg_temp.xtr_ids(v_ck)) as x where x ->> 'name' <> 'Late pick-up'),
            'Bring a lunch.', 'I agree to the camp rules.'), 'ok');
   if (v_r ->> 'version')::integer <> v_v + 1
      or public.camp_day_count(v_ck) <> 2
-     or (select count(*) from public.camp_prices p where p.camp_id = v_ck) <> 2
+     or (select count(*) from public.camp_prices p where p.camp_id = v_ck) <> pg_temp.gn(array[v_today, v_today + 1])
      or exists (select 1 from public.camp_extras e where e.camp_id = v_ck and e.name = 'Late pick-up')
      or (select count(*) from public.camp_camper_days cd where cd.camper_id = v_k2) <> 2
      or exists (select 1 from public.camp_camper_extras x where x.camper_id = v_k2)
@@ -1720,8 +1792,8 @@ begin
   perform pg_temp.t15(v_mark, 'camp_update_camp', v_an, 'update camp');
   if (select count(*) from public.change_log l
        where l.id > v_mark and l.op = 'delete' and l.table_name in ('camp_camper_days', 'camp_camper_extras', 'camp_days', 'camp_extras', 'camp_prices'))
-     <> 1 + 2 + 1 + 1 + 1 then
-    raise exception 'TEST FAILED: T10b expected 6 logged removals (1 day row, 2 extra rows, the day, the extra, a grid row)';
+     <> 1 + 2 + 1 + 1 + (pg_temp.gn(array[v_today, v_today + 1, v_today + 2]) - pg_temp.gn(array[v_today, v_today + 1])) then
+    raise exception 'TEST FAILED: T10b expected 6 logged removals (1 day row, 2 extra rows, the day, the extra, a grid row - after 0022 the grid rows above the new W)';
   end if;
   v_v := (v_r ->> 'version')::integer;
 
@@ -1810,6 +1882,7 @@ begin
        <> array['camp', 'children', 'family_total_cents', 'paying_by', 'reference', 'status']
      or (select array_agg(k order by k) from jsonb_object_keys(v_r -> 'children' -> 0) as k)
        <> array['base_cents', 'day_count', 'days', 'extras', 'first_name', 'last_name', 'price_kind', 'total_cents']
+          || (array['weeks'])[1:v_w22::integer]   -- (changed by 0022, rulebook v0.717: + "weeks" after 0022)
      or (select array_agg(k order by k) from jsonb_object_keys(v_r -> 'camp') as k)
        <> array['address', 'both_schools', 'days', 'description', 'end_time', 'name', 'school_name', 'start_time']
      or v_r ->> 'reference' !~ '^CP-[0-9]{4,}$' or v_r ->> 'paying_by' <> 'check' then
@@ -1946,7 +2019,8 @@ begin
     jsonb_build_array(jsonb_set(v_j1, '{extras}', jsonb_build_array(pg_temp.ex(v_rand, null), pg_temp.ex(v_rand, null))))::text,
     jsonb_build_array(v_j1 || '{"nick": "J"}')::text,
     jsonb_build_array(v_j1 - 'member')::text,
-    jsonb_build_array(jsonb_set(v_j1, '{day_ids}', to_jsonb(array(select gen_random_uuid() from generate_series(1, 11)))))::text,
+    -- (changed by 0022, rulebook v0.717: up to 60 days after 0022)
+    jsonb_build_array(jsonb_set(v_j1, '{day_ids}', to_jsonb(array(select gen_random_uuid() from generate_series(1, case when v_w22 then 61 else 11 end)))))::text,
     jsonb_build_array(jsonb_set(v_j1, '{day_ids}', to_jsonb(array[pg_temp.dy(v_cp, 1), pg_temp.dy(v_cp, 1)])))::text,
     jsonb_build_array(jsonb_set(v_j1, '{day_ids}', jsonb_build_array(upper(pg_temp.dy(v_cp, 1)::text), pg_temp.dy(v_cp, 1))))::text,
     '{"first_name": "Jay"}', '"x"', '[1, 2]', 'null'];
@@ -2288,13 +2362,15 @@ begin
                     || coalesce((select string_agg(to_jsonb(x)::text, '','' order by x.id) from public.camp_extras x), ''''))';
   execute v_txt into v_snap;
   -- T14a. Save as template from camp A: everything but dates and campers;
-  --       the dates as days before the first day (first = today + 30)
+  --       the dates as days before the first day (first = v_mon30 -
+  --       changed by 0022, rulebook v0.717: was today + 30)
   v_r := pg_temp.st('T14a save template', public.camp_save_template(v_ca, '  ' || v_tag || '   Vacation   week '), 'ok');
   v_tpl := (v_r ->> 'id')::uuid;  v_tplv := (v_r ->> 'version')::integer;
   if not exists (select 1 from public.camp_templates t
                   where t.id = v_tpl and t.name = v_tag || ' Vacation week' and t.location_code = 'worcester' and t.both_schools
                     and t.day_count = 5 and t.start_time = '09:00' and t.end_time = '15:00'
-                    and t.opens_days_before = 31 and t.closes_days_before = 10 and t.early_days_before = 25
+                    and t.opens_days_before = (v_mon30 - v_today) + 1 and t.closes_days_before = (v_mon30 - v_today) - 20
+                    and t.early_days_before = (v_mon30 - v_today) - 5
                     and t.min_age = 5 and t.max_age = 12 and t.description = 'Bring a lunch.'
                     and t.waiver_text = 'I agree to the camp rules.'
                     and jsonb_array_length(t.prices) = 5 and (t.prices -> 2 ->> 'member_early_cents')::integer = 20000
@@ -2499,6 +2575,11 @@ begin
   -- ===================================================================
   -- T16a. every camp function is in exactly one of the three lists; no
   --       stray or extra versions
+  --       (changed by 0022, rulebook v0.717: after 0022 its 4 internal
+  --       helpers are helpers too)
+  if v_w22 then
+    v_helper_fns := v_helper_fns || array['camp_week_size', 'camp_weekly_base_cents', 'camp_comes_whole_week', 'camp_weeks_breakdown'];
+  end if;
   select string_agg(p.oid::regprocedure::text, ', ') into v_txt
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and (p.proname like 'camp\_%' or p.proname like 'camps\_%')

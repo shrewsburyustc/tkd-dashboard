@@ -2305,3 +2305,161 @@ Tested in PGlite on every run (both steps exactly as written here): afterwards t
 - **Camp lines only get new keys:** the Color Belt and Star answers stay byte-for-byte the same, which run.mjs proves.
 
 ---
+
+## Migration 0022: camps weekly pricing and longer camps
+
+**Status: APPLIED 2026-10-21** (Jeffrey, SQL Editor; production had no camps or templates, so section 6 changed no rows). Claude read-only: 0022 fingerprints 71/71 identical to the tested copy (md5 d849cf8b…), security advisor nothing new; Jeffrey ran 0022_tests → ALL 0022 TESTS PASSED, 0 camps left. (Built on `camps`, rulebook v0.717.) Apply it only with Jeffrey's OK, **together with the app version that knows the weekly grid** (the Camps screens, the family form and its Function change with it — see `docs/Camps/TKD-Camps-Weekly-Pricing.md`). The app before 0022 still loads after it (every old answer key is kept), but its Add / Edit camp would send a grid of the old size, which 0022 refuses.
+
+**Production order:** … 0013 + 0017 (camps, live) → 0018 → 0016 → 0021 (live) → **0022**. It needs 0013 (it stops with a clear message if 0013 is missing) and does not touch 0017's or 0018's Finance functions.
+
+**What it does** (`supabase/migrations/0022_camps_weekly_pricing.sql`, spec `docs/Camps/TKD-Camps-Weekly-Pricing.md`, rules R1–R8):
+- **Per-week prices:** a camp's days are grouped into Monday–Sunday weeks. The grid has rows 1 … **W** (W = the most camp days in one week, 1–7). A camper pays, for each week they come, the row for the number of days they come that week; the weeks add up (5 + 3 days = row 5 + row 3). Early / regular and member / non-member work as before. Prices stay snapshots.
+- **Longer camps:** 1–60 days (was 10). Extras per camp / per child stay 10; children per sign-up stay 1–3.
+- **$10,000 per camper** (was $2,000): base price, total, a payment (reversal down to −$10,000), Edit payment, and Finance's copy of a closed day (`finance_day_closing_items`, only widened).
+- **Pizza (not for all-days campers) per week:** a per-day extra can't be chosen on a day in a week the camper comes every day of; a once extra keeps the whole-camp meaning. Checked by the functions and by the table's own trigger.
+- **Templates:** `day_count` now means days in a week (1–7); Save as template stores W.
+- **Answers:** the family form's "You're signed up" (each child) and Camper detail (breakdown) get a new key `weeks`: `[{monday, day_count, cents}]`, one per week the child comes. `cents` = the camp's current grid row for that week's days, at the sign-up's early / regular and the camper's member box (`null` if that row is missing); listed earliest first. All old keys stay (`day_count` = total days, `base_cents` = the stored price).
+- How: 4 new internal helpers (`camp_week_size`, `camp_weekly_base_cents`, `camp_comes_whole_week`, `camp_weeks_breakdown` — nobody in the app can call them), **18 of 0013's functions replaced** with `create or replace` (same names, arguments, rights, security definer and `search_path`), 5 table rules replaced (`drop constraint if exists` + add). `camps_registrar` still runs only `camp_public_camp` and `camp_public_signup`; nothing goes to `anon`.
+
+**What it does to the existing data (once, logged in the history as "Migration 0022", action `0022_weekly_pricing`):**
+- A camp's grid rows **above its W are removed** and the camp's version goes up (an Edit camp screen open at that moment answers "stale"). On production that is camp **Test 2** (10 days: Oct 26–30, Nov 9–11, Nov 16–17 → W = 5): its rows 6–10 go, rows 1–5 keep their prices. Camp **Test** (1 day) keeps its one row.
+- A **template with day_count over 7** (the old "days of the camp") becomes **7 days a week** (`least(day_count, 7)`) with its grid rows 1–7. Templates of 1–7 days are kept as they are (their number now reads "days a week" — check them in Edit template).
+- **No camper's price changes** (snapshots, R8): campers who signed up under the old rule keep what they were shown. Only a later Edit details that changes their days, member box or extras re-prices them, by the new rule.
+
+### 0022a. Before you apply 0022 (Claude, read-only)
+
+Claude runs through the connection: the camps with their number of days and W, and how many grid rows each has (`select c.name, count(distinct d.id), …`), and the templates' `day_count` — so you know exactly which rows section 6 will remove. Expected on production today: Test (1 day, 1 row), Test 2 (10 days, W = 5, 10 rows → 5).
+
+### 0022b. Apply 0022 (you, in the SQL Editor; outside camp sign-up hours if you can)
+
+1. Copy **the whole file** `supabase/migrations/0022_camps_weekly_pricing.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Supabase **will** warn about destructive operations: the words are in `drop constraint if exists` lines (each rule is added again at once), inside functions copied from 0013 that run later, and in section 6, which **removes the grid rows above each camp's W** (above). Confirm.
+3. "Success." One transaction: on any error nothing is kept (e.g. "0022 needs migration 0013 (Camps) first"). Copy the error to Claude.
+
+**Running it again is safe** (tested: the second run changes no row, no history and no fingerprint). **If 0013 is ever re-run after 0022, re-run 0022 straight after it** (re-running 0013 alone puts the old functions back — that is exactly the undo's step 2).
+
+### 0022c. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0022_fingerprints.sql`. Every line must match what `run.mjs` printed ("0022 fingerprints"). The file contains neither of the words the connection refuses.
+2. `0013_fingerprints.sql`: **only** the lines of the 18 replaced functions differ from 0013e's record — expected (`run.mjs` checks exactly that list). `0011_fingerprints.sql` and `0017_fingerprints.sql`: **only** the `finance_day_closing_items_amount_check` line differs (now ±1000000). Every other migration's fingerprints: unchanged.
+3. The data: Test 2 has grid rows 1–5 (same prices as before), no template has `day_count` over 7, every camper's `base_cents` and every payment as before.
+4. **Security advisor:** nothing new (the 4 helpers are internal, `search_path = ''`, executable by nobody but the owner).
+
+### 0022d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0022_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0022 TESTS PASSED**. It makes its own `zz test …` camps (two Mon–Fri weeks, Thanksgiving, one day, 60 days, a $10,000 camp) and rolls everything back.
+2. Then `0013_tests.sql`, `0017_tests.sql`, `0011_tests.sql` and `0018_tests.sql` again — all must still pass. (`0013_tests.sql` and `0017_tests.sql` were updated where a rule changed — marked "changed by 0022, rulebook v0.717"; they pass before and after 0022.)
+3. Put the placeholders back afterwards.
+4. **Live check** (with the new app version, Jeffrey's OK): open Test 2 in Edit camp — 5 grid rows ("5 days (full week)"); a family-form sign-up of 5 + 3 days shows two "Week of …" lines and the sum.
+
+### 0022e. Undo 0022 (only if something is badly wrong)
+
+Put the app back to the version without weekly pricing first. Only possible while **no camp has more than 10 days and no camper, payment or closed-day amount is over $2,000** — step 1 checks that. The grid rows section 6 removed do **not** come back (re-enter them in Edit camp if needed); campers keep their prices. Three steps, **in this order**:
+
+1. Run this check in the SQL Editor (changes nothing; if it stops, don't go on — tell Claude):
+
+```sql
+-- Undo 0022, step 1: can it be undone? (reads only)
+do $$
+begin
+  if exists (select 1 from public.camp_days d group by d.camp_id having count(*) > 10)
+     or exists (select 1 from public.camp_campers c where c.base_cents > 200000)
+     or exists (select 1 from public.camp_payments p where abs(p.amount_cents) > 200000)
+     or exists (select 1 from public.finance_day_closing_items i where abs(i.amount_cents) > 200000) then
+    raise exception 'Undo 0022 is not possible: a camp has more than 10 days or an amount is over $2,000. Nothing was changed. Tell Claude.';
+  end if;
+end
+$$;
+```
+
+2. **Re-run the whole 0013 file** (section 0013c) — that puts back 0013's versions of the 18 functions (the old rules).
+3. Run this in the SQL Editor (one transaction; the same check again first):
+
+```sql
+-- Undo 0022, step 3 (run AFTER re-running 0013). change_log is KEPT.
+begin;
+
+do $$
+begin
+  if exists (select 1 from public.camp_days d group by d.camp_id having count(*) > 10)
+     or exists (select 1 from public.camp_campers c where c.base_cents > 200000)
+     or exists (select 1 from public.camp_payments p where abs(p.amount_cents) > 200000)
+     or exists (select 1 from public.finance_day_closing_items i where abs(i.amount_cents) > 200000) then
+    raise exception 'Undo 0022 is not possible: a camp has more than 10 days or an amount is over $2,000. Nothing was changed. Tell Claude.';
+  end if;
+end
+$$;
+
+-- the 4 helpers 0022 added (nothing uses them after 0013's re-run)
+drop function if exists public.camp_weeks_breakdown(uuid, uuid[], boolean, text);
+drop function if exists public.camp_comes_whole_week(uuid, uuid[], uuid);
+drop function if exists public.camp_weekly_base_cents(uuid, uuid[], boolean, text);
+drop function if exists public.camp_week_size(date[]);
+
+-- the table rules back to 0013's (and 0017's for Finance's snapshot)
+alter table public.camp_prices drop constraint if exists camp_prices_day_count_check;
+alter table public.camp_prices add constraint camp_prices_day_count_check check (day_count between 1 and 10);
+alter table public.camp_templates drop constraint if exists camp_templates_day_count_check;
+alter table public.camp_templates add constraint camp_templates_day_count_check check (day_count between 1 and 10);
+alter table public.camp_campers drop constraint if exists camp_campers_base_check;
+alter table public.camp_campers add constraint camp_campers_base_check check (base_cents between 0 and 200000);
+alter table public.camp_payments drop constraint if exists camp_payments_kind_check;
+alter table public.camp_payments add constraint camp_payments_kind_check
+  check ((kind = 'payment' and amount_cents between 1 and 200000 and reverses_payment_id is null)
+         or (kind = 'reversal' and amount_cents between -200000 and -1 and reverses_payment_id is not null));
+alter table public.finance_day_closing_items drop constraint if exists finance_day_closing_items_amount_check;
+alter table public.finance_day_closing_items add constraint finance_day_closing_items_amount_check
+  check (amount_cents between -200000 and 200000 and amount_cents <> 0);
+
+commit;
+```
+
+Tested in PGlite on every run (all three steps exactly as written here): afterwards the 0013, 0011, 0017 and 0018 fingerprints equal the ones before 0022, no helper is left, and `0013_tests.sql`, `0017_tests.sql` and `0011_tests.sql` pass. Undo 0022 always comes **before** Undo 0017 (0017d) and Undo 0013 (0013k).
+
+**Why:**
+- **Per week, not per camp:** the school charges by the week ("max per week"); a 2-week camp costs two weeks. W keeps the grid as small as the camp's busiest week (Thanksgiving: 2 rows).
+- **Snapshots stay:** a family is never charged differently from what the form showed them; only an Edit details that changes days / member / extras re-prices (rulebook v0.700's rule, unchanged).
+- **The old grid rows are removed, not kept:** a row above W could never be used again and would make Edit camp refuse the camp (the grid must be exactly 1 … W).
+- **A new migration, not an edit of 0013:** 0013 is live; replacing its functions in a later file keeps the history clear and the undo simple (re-run 0013).
+
+## Migration 0023: Star result email texts, registration stays closed on edit, CSV row keys
+
+**What it does** (`supabase/migrations/0023_star_result_texts.sql`, contract `docs/Dashboard Docs/Build contracts/CONTRACT-0023.md`, rulebook v0.514 and v0.504):
+- **Result email texts (R11):** a new table `star_result_texts` with the three texts Email result fills in (Passed · Make-up with a D · Make-up below the pass mark — kinds `passed`, `makeup_d`, `makeup_below`), seeded with the approved starting texts (R3). Every signed-in staff member can read them (Rubrics and prices shows them read-only to staff); only admins change them, through one function `star_set_result_text` (version check, the blank rules, every change in the history). Nothing for `anon` or the family form's login.
+- **M5:** replaces **one** 0006 function, `star_update_event`, so moving a finished event into the future (or removing / moving a passed closing date) keeps registration **closed in the same save**, instead of a second call closing it afterwards. Same arguments, answers and rights; the app needs no change.
+- **The results CSV:** replaces a second 0006 function, `star_results_csv` (admins only, still writes the download log first). Each row gains `candidate_id`, `paid_on` (the newest payment that still counts: reversed payments skipped, refunds never change it — the same rule as the Candidates tab) and, inside `sent`, `result_status` (which result that send was for). So the Results screen matches CSV rows to candidates by id, never by look-alike values. Same arguments, checks and rights; the extra keys are ignored by anything that doesn't use them.
+- Removes nothing. Supabase **will** probably warn about destructive operations: the word delete appears only in the new table's history trigger ("after insert or update or delete", so removals are logged too, as 0006 does). Nothing is removed now.
+
+**Each step needs Jeffrey's OK.** Before the Star family form goes live (M5 must be in place by then).
+
+### 0023a. Before you paste (Claude, read-only)
+
+1. Claude runs `supabase/tests/0006_fingerprints.sql` through the read-only connection and keeps the result: after 0023 **only** the `star_update_event(...)` and `star_results_csv(...)` lines may differ.
+
+### 0023b. Apply 0023 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0023_star_result_texts.sql` → **SQL Editor → New query** → paste → **Run**.
+2. Supabase may warn about **destructive operations** (the history trigger's "or delete", see above). Nothing is removed. Confirm.
+3. Expected: "Success. No rows returned." One transaction: on any error nothing is kept. If it stops with a message starting `0023:`, an earlier migration is missing — copy the message to Claude.
+4. **Running it again is safe** (tested: no fingerprint changes, and a text an admin already changed is never overwritten). **Re-running 0006 after this** puts 0006's old `star_update_event` and `star_results_csv` back → re-run 0023 straight after.
+
+### 0023c. Read-only checks (Claude, through the connection)
+
+1. **Fingerprints:** `supabase/tests/0023_fingerprints.sql` — every `function`, `table`, `policy` and `trigger` line must match what `supabase/tests/pglite/run.mjs` printed ("0023 fingerprints"); the three `seed` lines too (version 1 and the same md5) while no admin has changed a text.
+2. `supabase/tests/0006_fingerprints.sql`: **only** the `star_update_event(...)` (M5) and `star_results_csv(...)` (the CSV keys) lines differ from 0023a's — expected. Everything else unchanged.
+3. **Security advisor:** nothing new. (`star_set_result_text` is callable by `authenticated` on purpose — it checks data access and admin first; the helper `star_result_text_problem` is callable by nobody.)
+
+### 0023d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0023_tests.sql` with `<paste-admin-UID-here>` / `<paste-desk-UID-here>` replaced → **ALL 0023 TESTS PASSED**. Supabase may warn about destructive operations: the test really runs a `delete` of the Make-up below text inside its transaction (to check the `not_found` answer) and checks that emptying the table is refused. Everything is rolled back, so the text is back afterwards. Confirm. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved — run `rollback;` once on its own, then tell Claude.
+2. Then `0006_tests.sql` again — every old Edit event and CSV test must still pass. (Its CSV key check accepts 0006's keys and 0023's.)
+3. Put the placeholders back afterwards.
+
+### 0023e. Undo (only with Jeffrey's OK)
+
+1. Paste **the whole file** `supabase/manual/0023u_undo_star_update_event.sql` in the SQL Editor → **Run**. It holds only 0006's exact `star_update_event` and `star_results_csv`, each with 0006's revoke and grant (one transaction). M5 is undone (moving a finished event into the future again relies on the app's second call to close registration) and the CSV rows lose the three new keys — **put the app back to a version that doesn't need them first.**
+2. Claude checks `supabase/tests/0006_fingerprints.sql`: the `star_update_event(...)` and `star_results_csv(...)` lines must equal 0023a's again (tested in PGlite, step0023). Then run `0006_tests.sql`.
+3. **Not undone, on purpose:** the table `star_result_texts` (its rule, triggers and the three texts) and the functions `star_set_result_text` / `star_result_text_problem`. They are harmless while the app doesn't use them (staff can only read three email texts; only admins can change them). Before the Results screens use them, removing them would need its own reviewed script and Jeffrey's OK — and once the app uses them, the app must go back first.
+4. To redo: paste 0023 again (safe; tested).
+
+---

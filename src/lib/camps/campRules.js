@@ -41,10 +41,11 @@ export const CAMP_ACK_VERSION = 'camp-2026-10-18';
 // A blank camp accepts ages 3 to 17; any range must stay inside 1 to 99 (v0.703).
 export const DEFAULT_AGES = { min: 3, max: 17 };
 export const AGE_LIMITS = { min: 1, max: 99 };
-export const MAX_DAYS = 10; // days in one camp
+export const MAX_DAYS = 60; // days in one camp (was 10 before weekly pricing, rulebook v0.717)
+export const MAX_WEEK_DAYS = 7; // rows in a price grid at most (days in one Monday–Sunday week)
 export const MAX_EXTRAS = 10; // extras in one camp
 export const MAX_CHILDREN = 3; // children on one family sign-up
-export const MAX_CAMPER_CENTS = 200000; // the most one camper can cost ($2,000)
+export const MAX_CAMPER_CENTS = 1000000; // the most one camper can cost ($10,000; was $2,000)
 export const SIGNATURE_KEEP_YEARS = 3; // drawn signatures are deleted 3 years after the camp
 export const CAMP_TRIES_PER_HOUR = 30; // family-form tries per connection per hour (v0.700)
 export const UNDO_WINDOW_MS = 10000; // staff may undo their own Mark paid / Keep this one this long
@@ -192,9 +193,27 @@ export function baseCents(prices, dayCount, member, kind) {
 }
 
 // Does this list of day ids cover every day of the camp? (An empty camp never counts.)
+// Used for "once" extras marked not-for-all-days (rule R6: whole camp). Per-day extras use
+// comesAllWeek below instead.
 export function isAllDays(dayIds, days) {
   const ids = new Set(dayIds ?? []);
   return (days ?? []).length > 0 && days.every((d) => ids.has(d.dayId));
+}
+
+// The Monday of the calendar week (Monday–Sunday) a date is in: '2027-04-21' (Wed) → '2027-04-19'.
+export function mondayOf(dateIso) {
+  return addDays(dateIso, -(isoWeekday(dateIso) - 1));
+}
+
+// Does the child come on EVERY camp day of the week that `dateIso` falls in? (Weekly pricing R6:
+// a "not charged to all-days campers" per-day extra, e.g. pizza, is included in such a week.)
+// dayIds = the child's day ids; days = the camp's Day[]. false when that week has no camp day.
+export function comesAllWeek(dayIds, days, dateIso) {
+  if (!isIsoDate(dateIso)) return false;
+  const monday = mondayOf(dateIso);
+  const weekDays = (days ?? []).filter((d) => isIsoDate(d?.day) && mondayOf(d.day) === monday);
+  const ids = new Set(dayIds ?? []);
+  return weekDays.length > 0 && weekDays.every((d) => ids.has(d.dayId));
 }
 
 const bySort = (a, b) => (a.sort ?? 0) - (b.sort ?? 0);
@@ -212,8 +231,15 @@ export function extraOfferedOn(extra, dateIso) {
 
 // The days a child could take this extra on: the child's days that the extra is offered on.
 // childDays = the child's Day objects ({ dayId, day }). Returns Day objects, earliest first.
-export function extraDaysFor(extra, childDays) {
-  return [...(childDays ?? [])].filter((d) => extraOfferedOn(extra, d.day)).sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
+// campDays (optional) = the camp's Day[]: when given and the extra is "not charged to all-days
+// campers", the days of weeks the child comes every day are left out too (weekly pricing R6: the
+// extra is already included that week, so it can't be bought there).
+export function extraDaysFor(extra, childDays, campDays = null) {
+  const ids = (childDays ?? []).map((d) => d.dayId);
+  return [...(childDays ?? [])]
+    .filter((d) => extraOfferedOn(extra, d.day))
+    .filter((d) => !(campDays && extra?.notForAllDays && extra?.per === 'day' && comesAllWeek(ids, campDays, d.day)))
+    .sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
 }
 
 // ISO weekday of a date: 1 = Monday … 7 = Sunday ('2027-04-21' → 3).
@@ -231,12 +257,20 @@ export function campWeeks(days) {
   const weeks = [];
   const sorted = [...(days ?? [])].filter((d) => isIsoDate(d?.day)).sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
   for (const d of sorted) {
-    const monday = addDays(d.day, -(isoWeekday(d.day) - 1));
+    const monday = mondayOf(d.day);
     const last = weeks[weeks.length - 1];
     if (last && last.monday === monday) last.days.push(d);
     else weeks.push({ monday, days: [d] });
   }
   return weeks;
+}
+
+// The price grid's size W (weekly pricing R2): the most camp days in any one Monday–Sunday week,
+// 0 when there are no days. Accepts Day objects or plain 'YYYY-MM-DD' dates (duplicates count once).
+// Mon–Fri × 2 weeks → 5; Thanksgiving Wed + Fri → 2.
+export function gridSizeFor(days) {
+  const dates = [...new Set(dayDates(days))];
+  return campWeeks(dates.map((day) => ({ day }))).reduce((most, w) => Math.max(most, w.days.length), 0);
 }
 
 // Which week the roster opens on: the week containing today, else the first week with a day on or
@@ -262,18 +296,28 @@ export function weekdaysToOnlyOn(weekdays, campDays) {
   return dayDates(campDays).filter((day) => wanted.has(isoWeekday(day)));
 }
 
-// What one child costs: { dayCount, baseCents, extras:[{ extraId, name, per, count, cents }], totalCents }.
+// What one child costs:
+//   { dayCount, baseCents, weeks:[{ monday, dayCount, cents }], extras:[{ extraId, name, per, count, cents }], totalCents }.
+// Weekly pricing (R3): the child's days are split into Monday–Sunday weeks; each week the child
+// comes is priced by the grid row for how many days they come THAT week, and the weeks add up
+// (5 + 5 days = 2 × row 5; 2 + 2 = 2 × row 2). weeks lists only the weeks the child comes, earliest
+// first; a week's cents is null when the grid has no row for that many days.
 // Only the child's days that are days of this camp count. A per-day extra counts the chosen days
 // that are also the child's days AND days the extra is offered on (onlyOn); a once extra counts 1.
 // Extras are only charged when chosen. Unknown extra ids are skipped. Extras come out in the
 // camp's order (sort). This is plain arithmetic: whether the choice is ALLOWED (e.g. a
-// not-for-all-days extra on an all-days child, §1.20 P8) is childProblem's job.
-// baseCents is null when the grid has no row for that many days (totalCents then counts it as 0).
+// not-for-all-days extra in a week the child comes every day, R6) is childProblem's job.
+// baseCents is null when some week has no grid row (totalCents then counts the base as 0).
 export function priceChild(child, prices, extras, days, kind) {
   const dateOf = new Map((days ?? []).map((d) => [d.dayId, d.day]));
   const childDays = new Set((child?.dayIds ?? []).filter((id) => dateOf.has(id)));
   const dayCount = childDays.size;
-  const base = dayCount > 0 ? baseCents(prices, dayCount, child?.member === true, kind) : null;
+  const member = child?.member === true;
+  const weeks = campWeeks((days ?? []).filter((d) => childDays.has(d.dayId)))
+    .map((w) => ({ monday: w.monday, dayCount: w.days.length, cents: baseCents(prices, w.days.length, member, kind) }));
+  const base = dayCount > 0 && weeks.every((w) => w.cents !== null && w.cents !== undefined)
+    ? weeks.reduce((sum, w) => sum + w.cents, 0)
+    : null;
   const chosen = [];
   for (const extra of [...(extras ?? [])].sort(bySort)) {
     const pick = (child?.extras ?? []).find((e) => e.extraId === extra.extraId);
@@ -285,7 +329,7 @@ export function priceChild(child, prices, extras, days, kind) {
     chosen.push({ extraId: extra.extraId, name: extra.name, per: extra.per, count, cents: count * extra.priceCents });
   }
   const totalCents = (base ?? 0) + chosen.reduce((sum, e) => sum + e.cents, 0);
-  return { dayCount, baseCents: base, extras: chosen, totalCents };
+  return { dayCount, baseCents: base, weeks, extras: chosen, totalCents };
 }
 
 // The family total: the sum of each child's totalCents.
@@ -302,8 +346,10 @@ export function familyTotal(priced) {
 //   'no_extra_days'    a per-day extra with no day chosen ("Choose which days.")
 //   'extra_day_not_child_day'  a per-day extra on a day the child doesn't come
 //   'extra_day_not_offered'    a per-day extra on a day it isn't offered on (onlyOn)
-//   'not_for_all_days' a "not charged to all-days campers" extra for a child who comes every day
-//   'too_expensive'    the child's total is over $2,000
+//   'not_for_all_days' a "not charged to all-days campers" extra the child can't buy (weekly pricing
+//                      R6): a per-day one on a day of a week the child comes every camp day; a once
+//                      one when the child comes every day of the whole camp
+//   'too_expensive'    the child's total is over $10,000
 export function childProblem(child, prices, extras, days, kind) {
   const dateOf = new Map((days ?? []).map((d) => [d.dayId, d.day]));
   const dayIds = child?.dayIds ?? [];
@@ -319,7 +365,9 @@ export function childProblem(child, prices, extras, days, kind) {
     if (extra.per === 'day' && pickDays.length === 0) return 'no_extra_days';
     if (pickDays.some((id) => !childDays.has(id))) return 'extra_day_not_child_day';
     if (pickDays.some((id) => !extraOfferedOn(extra, dateOf.get(id)))) return 'extra_day_not_offered';
-    if (extra.notForAllDays && allDays) return 'not_for_all_days';
+    if (extra.notForAllDays && extra.per === 'once' && allDays) return 'not_for_all_days';
+    if (extra.notForAllDays && extra.per === 'day'
+      && pickDays.some((id) => comesAllWeek(dayIds, days, dateOf.get(id)))) return 'not_for_all_days';
   }
   if (priceChild(child, prices, extras, days, kind).totalCents > MAX_CAMPER_CENTS) return 'too_expensive';
   return null;
@@ -334,12 +382,14 @@ const dateOfDay = (days, dayId) => (days ?? []).find((d) => d.dayId === dayId)?.
 
 // "Pizza party today: N" — how many ACTIVE campers get this per-day extra on that day: the ones
 // coming that day who chose it that day, plus (for a "not charged to all-days campers" extra)
-// every active all-days camper. 0 when the extra isn't offered that day.
-// rows = RosterRow[], days = the camp's Day[] (needed to know who comes every day).
+// every active camper who comes every camp day of THAT DAY'S WEEK (weekly pricing R6). 0 when the
+// extra isn't offered that day.
+// rows = RosterRow[], days = the camp's Day[] (needed to know who comes every day of the week).
 export function extraCountOnDay(rows, extra, dayId, days) {
-  if (extra?.per !== 'day' || !extraOfferedOn(extra, dateOfDay(days, dayId))) return 0;
+  const date = dateOfDay(days, dayId);
+  if (extra?.per !== 'day' || !extraOfferedOn(extra, date)) return 0;
   return (rows ?? []).filter((r) => r.status === 'active' && comesOn(r, dayId)
-    && (choseOn(r, extra, dayId) || (extra.notForAllDays && isAllDays(rowDayIds(r), days)))).length;
+    && (choseOn(r, extra, dayId) || (extra.notForAllDays && comesAllWeek(rowDayIds(r), days, date)))).length;
 }
 
 // The dates an extra is no longer offered on after an edit, among the camp days that remain:
@@ -353,11 +403,13 @@ export function extraDaysRemoved(before, after, campDays) {
   return offered(before).filter((d) => !now.has(d));
 }
 
-// The Check in "No pizza party" note: true when the child comes that day, doesn't come every day,
-// the extra is offered that day, and the child didn't choose it for that day.
+// The Check in "No pizza party" note: true when the child comes that day, doesn't come every camp
+// day of that day's week (weekly pricing R6 — such a week includes it), the extra is offered that
+// day, and the child didn't choose it for that day.
 export function missingExtraOnDay(row, extra, dayId, days) {
-  if (extra?.per !== 'day' || !extraOfferedOn(extra, dateOfDay(days, dayId))) return false;
-  if (!comesOn(row, dayId) || isAllDays(rowDayIds(row), days)) return false;
+  const date = dateOfDay(days, dayId);
+  if (extra?.per !== 'day' || !extraOfferedOn(extra, date)) return false;
+  if (!comesOn(row, dayId) || comesAllWeek(rowDayIds(row), days, date)) return false;
   return !choseOn(row, extra, dayId);
 }
 
@@ -521,7 +573,8 @@ export function offsetsAreValid({ opensDaysBefore, closesDaysBefore, earlyDaysBe
     && opensDaysBefore >= closesDaysBefore && earlyDaysBefore >= closesDaysBefore;
 }
 
-// The price grid for a number of days: rows 1…dayCount, keeping the prices of rows that already
+// The price grid for a number of rows: rows 1…dayCount (weekly pricing: dayCount = W, see
+// gridSizeFor), keeping the prices of rows that already
 // exist (by dayCount) and adding empty rows (every price null → "Enter a price") for new ones.
 // Picking fewer days drops the extra rows.
 export function gridRowsFor(dayCount, rows) {
@@ -537,10 +590,17 @@ export function gridRowsFor(dayCount, rows) {
 
 // ----- The public link (§5.3; qr.js re-exports it) -----
 
-// The family sign-up address for a camp's public code — always the production address, so a QR
-// code made in preview still points at the real form. '' for a code that isn't a valid code.
+// The family sign-up address for a camp's public code — the production address, so a link or QR
+// code always points at the real form. Exception: in preview mode (fake database) its camps don't
+// exist on the real site, so the link uses the preview's own address (e.g. http://localhost:5176)
+// and opens the preview's family form instead (Jeffrey, 2026-10-21: the preview link opened the
+// live site's "This link isn't working"). '' for a code that isn't a valid code.
+function linkOrigin() {
+  const previewMode = typeof import.meta !== 'undefined' && import.meta.env?.MODE === 'preview';
+  return previewMode && typeof window !== 'undefined' ? window.location.origin : PUBLIC_ORIGIN;
+}
 export function campLink(code) {
-  return typeof code === 'string' && PUBLIC_CODE_PATTERN.test(code) ? `${PUBLIC_ORIGIN}/camp/${code}` : '';
+  return typeof code === 'string' && PUBLIC_CODE_PATTERN.test(code) ? `${linkOrigin()}/camp/${code}` : '';
 }
 
 // ----- Text rules shared with the preview database (the SQL helpers' twins) -----

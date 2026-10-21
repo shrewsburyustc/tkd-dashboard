@@ -658,7 +658,9 @@ await check('v0.504 case 2: a finished event (switch Open, no closing date) move
   const r = await rig.api.saveStarEventEdit(editSave(spring, { testingDate: addDays(TODAY, 30) }));
   // details first (it stays "finished" until the new date is saved), then the close
   assert.deepEqual(rig.calls.map(([n]) => n), ['star_update_event', 'star_set_registration']);
-  assert.deepEqual(r, { status: 'ok', version: spring.version + 2, registration: null, keptClosed: { status: 'ok', state: 'closed' } });
+  // M5 (migration 0023): the save itself already turned the switch to Closed (one write, one version
+  // step), so the follow-up close finds it closed and writes nothing
+  assert.deepEqual(r, { status: 'ok', version: spring.version + 1, registration: null, keptClosed: { status: 'ok', state: 'closed' } });
   assert.equal((await loaded(rig, 'Spring Star Testing')).state, 'closed');
 });
 
@@ -691,11 +693,15 @@ await check('v0.504 case 2, the close fails after the save → reported (registr
   assert.equal(r.status, 'ok');
   assert.equal(r.version, spring.version + 1);
   assert.deepEqual(r.keptClosed, { status: 'error' });
-  assert.equal((await loaded(rig, 'Spring Star Testing')).state, 'open'); // the banner must say so
+  // M5 (migration 0023): the save turned the switch to Closed in the same write, so registration is
+  // closed even though the follow-up call failed (before 0023 it stayed open here)
+  assert.equal((await loaded(rig, 'Spring Star Testing')).state, 'closed');
   // A stale close is reported the same way.
   rig.client.rpc = async (name, args) => (name === 'star_set_registration' ? { data: { status: 'stale' }, error: null } : realRpc(name, args));
   rig.editStore((s) => {
-    s.events.find((x) => x.id === spring.id).testing_date = addDays(TODAY, -20); // finished again
+    const e = s.events.find((x) => x.id === spring.id);
+    e.testing_date = addDays(TODAY, -20); // finished again…
+    e.registration_open = true; // …with the switch Open again (M5 closed it in the save above)
   });
   spring = await loaded(rig, 'Spring Star Testing');
   assert.equal(spring.state, 'finished');
@@ -704,7 +710,7 @@ await check('v0.504 case 2, the close fails after the save → reported (registr
   rig.client.rpc = realRpc;
   // "Close registration" (the screen re-reads the event, then closes it with its current version)
   spring = await loaded(rig, 'Spring Star Testing');
-  assert.equal(spring.state, 'open');
+  assert.equal(spring.state, 'closed'); // M5: already closed by the save; the close below writes nothing
   const retry = await rig.api.setStarRegistration({ eventId: spring.id, expectedVersion: spring.version, open: false });
   assert.equal(retry.status, 'ok');
   assert.equal((await loaded(rig, 'Spring Star Testing')).state, 'closed');

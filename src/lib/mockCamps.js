@@ -24,9 +24,12 @@
 // The store is RE-READ ON EVERY CALL (no copy is kept in memory), so the staff tab and the family
 // page open in another tab always see each other's changes.
 //
-// Store (schema version 3 — version 2 added the extras' only_on / only_weekdays, owner decision
-// 2026-10-19 "pizza on Wed and Fri"; version 3 the payments' school, v0.707; an older saved store
-// is replaced by the default data), column
+// Store (schema version 4 — version 2 added the extras' only_on / only_weekdays, owner decision
+// 2026-10-19 "pizza on Wed and Fri"; version 3 the payments' school, v0.707; version 4 weekly
+// pricing, rulebook v0.717: a camp's price grid has rows 1…W, W = the most camp days in one
+// Monday–Sunday week, and a template's day_count means "days per week" 1–7. A saved version-3
+// store is UPGRADED (grids cut to 1…W, see upgradeStore); anything older is replaced by the
+// default data), column
 // names are the database's (snake_case):
 //   camps, camp_days, camp_prices, camp_extras, camp_templates, camp_signups, camp_campers,
 //   camp_camper_days, camp_camper_extras, camp_payments, camp_public_attempts,
@@ -36,12 +39,13 @@ import { signatureIsValid } from './testing/eventRules.js';
 import {
   CAMP_ACK_VERSION, PAYING_BY, MAX_CAMPER_CENTS, CAMP_TRIES_PER_HOUR, UNDO_WINDOW_MS, SIGNATURE_KEEP_YEARS,
   MAX_DAYS, MAX_EXTRAS, MAX_CHILDREN, AGE_LIMITS, DESCRIPTION_MAX, WAIVER_MAX, EXTRA_NAME_MAX, RELATION_MAX,
-  signupState, priceKind, baseCents, priceChild, childProblem, isAllDays, offsetsAreValid, templateFromCamp,
+  signupState, priceKind, priceChild, childProblem, offsetsAreValid, templateFromCamp, gridSizeFor, campWeeks, baseCents,
+  MAX_WEEK_DAYS,
   extraOfferedOn, onlyOnToWeekdays, weekdaysToOnlyOn, extraDaysRemoved,
   normalizeCampText, campTextIsValid, isIsoDate, addDays, todayInSchoolTime, lastDay, firstDay, SCHOOL_TIME_ZONE,
 } from './camps/campRules.js';
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 const LOCATION_CODES = ['worcester', 'shrewsbury'];
 const REFERENCE_START = 4001; // CP-4001 is the first reference the database makes (§1.7)
 const ATTEMPT_KEEP_MS = 2 * 24 * 60 * 60 * 1000; // rate-limit rows older than 2 days are removed
@@ -50,7 +54,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 const CODE_PATTERN = /^[a-hjkmnp-z2-9]{8}$/;
 const CODE_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789'; // no i, l, o, 0, 1 (look-alikes)
 const INT_MAX = 2147483647;
-const MAX_PAYMENT_CENTS = 200000; // one payment: 1 … $2,000 (§1.11)
+const MAX_PAYMENT_CENTS = MAX_CAMPER_CENTS; // one payment: 1 … $10,000 (§1.11; weekly pricing R5, was $2,000)
 const FAMILY_FORM = 'Family form'; // the actor label of the public sign-up
 
 // ----- MD5 (the waiver_version is md5(waiver_text), 32 hex characters, §1.16) -----
@@ -132,8 +136,6 @@ const GRID_ONE = [[1, 70, 75, 80, 85]];
 const GRID_TWO = [[1, 75, 80, 85, 90], [2, 140, 150, 150, 160]];
 const GRID_THREE = [...GRID_TWO, [3, 195, 210, 205, 220]];
 const GRID_WEEK = [...GRID_THREE, [4, 260, 280, 270, 290], [5, 275, 325, 285, 335]];
-// A two-week camp (CP5, 2026-10-21: so the roster's week switcher can be seen in the preview).
-const GRID_TWO_WEEKS = [...GRID_WEEK, [6, 330, 390, 342, 402], [7, 385, 455, 399, 469], [8, 440, 520, 456, 536], [9, 495, 585, 513, 603], [10, 550, 650, 570, 670]];
 // Extras: [name, dollars, per, not charged to all-days campers, offered only on these ISO weekdays
 // (1 = Mon … 7 = Sun; [] = every day)].
 const DROP = ['Early drop-off, 7:30–9:00 AM', 15, 'day', false, []];
@@ -184,7 +186,8 @@ const DEFAULT_CAMPS = [
     // Crosses two calendar weeks (Mon Jul 5 – Fri Jul 16, 2027): the roster shows Week 1 | Week 2.
     key: 'summer', name: 'Two-Week Summer Camp', location: 'worcester', both: false,
     days: ['2027-07-05', '2027-07-06', '2027-07-07', '2027-07-08', '2027-07-09', '2027-07-12', '2027-07-13', '2027-07-14', '2027-07-15', '2027-07-16'],
-    opens: '2027-05-03', closes: '2027-07-04', early: '2027-06-14', ages: [5, 12], grid: GRID_TWO_WEEKS,
+    // Weekly pricing (v0.717): 5 rows (Mon–Fri), each week priced on its own and the weeks added up.
+    opens: '2027-05-03', closes: '2027-07-04', early: '2027-06-14', ages: [5, 12], grid: GRID_WEEK,
     extras: [DROP, PICK, PIZZA], description: 'Two weeks of Taekwondo, games, crafts and outdoor play. Bring a lunch, a water bottle, sunscreen and comfortable clothes.',
     made: ['2026-10-20', '10:00'],
   },
@@ -344,10 +347,11 @@ export function defaultCampsData({ today = todayInSchoolTime(new Date()) } = {})
       };
       db.camp_signups.push(signup);
       maxRef = Math.max(maxRef, ref);
-      const base = baseCents(grid.map((g) => ({
+      // Weekly pricing (R3): each week the child comes is priced by its own grid row, weeks add up.
+      const base = priceChild({ member, dayIds: camperDays.map((d) => d.id), extras: [] }, grid.map((g) => ({
         dayCount: g.day_count, memberEarlyCents: g.member_early_cents, memberRegularCents: g.member_regular_cents,
         nonmemberEarlyCents: g.nonmember_early_cents, nonmemberRegularCents: g.nonmember_regular_cents,
-      })), camperDays.length, member, kind);
+      })), [], days.map((d) => ({ dayId: d.id, day: d.day })), kind).baseCents;
       const camper = {
         id: id('c6'), signup_id: signup.id, camp_id: camp.id, position: 1, first_name: first, last_name: last, age, member,
         paying_by: payingBy, base_cents: base, status: 'active', withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null,
@@ -419,6 +423,28 @@ export function defaultCampsData({ today = todayInSchoolTime(new Date()) } = {})
   });
   db.next_reference = maxRef + 1;
   return db;
+}
+
+// A saved version-3 store (before weekly pricing) → version 4, the way migration 0022 leaves the
+// real tables: each camp's grid keeps only rows 1…W (W = gridSizeFor its days; the old grid had a
+// row for every day count up to the camp's number of days, so rows 1…W are always there), and a
+// template's day_count (was "days in the camp") becomes at most 7 with its grid cut to match.
+// Campers' stored prices (base_cents) are NOT changed — they are snapshots (R3, R8).
+function upgradeStore(store) {
+  if (!store || typeof store !== 'object' || store.schema !== 3) return store;
+  if (!Array.isArray(store.camp_prices) || !Array.isArray(store.camp_days) || !Array.isArray(store.camp_templates)) return store;
+  const sizeOf = new Map();
+  for (const d of store.camp_days) {
+    if (!sizeOf.has(d.camp_id)) sizeOf.set(d.camp_id, gridSizeFor(store.camp_days.filter((x) => x.camp_id === d.camp_id).map((x) => x.day)));
+  }
+  store.camp_prices = store.camp_prices.filter((p) => p.day_count <= (sizeOf.get(p.camp_id) ?? MAX_WEEK_DAYS));
+  for (const t of store.camp_templates) {
+    const rows = Math.min(t.day_count, MAX_WEEK_DAYS);
+    t.day_count = rows;
+    t.prices = (t.prices ?? []).filter((p) => p.day_count <= rows);
+  }
+  store.schema = 4;
+  return store;
 }
 
 // Is a loaded store usable? (Missing, damaged or another schema version → the default data.)
@@ -616,9 +642,10 @@ const ageOk = (n) => Number.isInteger(n) && n >= AGE_LIMITS.min && n <= AGE_LIMI
 const PRICE_KEYS = ['day_count', 'member_early_cents', 'member_regular_cents', 'nonmember_early_cents', 'nonmember_regular_cents'];
 const EXTRA_KEYS = ['name', 'price_cents', 'per', 'not_for_all_days'];
 
-// camp_prices_arg_is_valid(p_prices, p_day_count): exactly one row per day count 1…N.
+// camp_prices_arg_is_valid(p_prices, p_day_count): exactly one row per day count 1…N. Weekly pricing
+// (R2): for a camp N = W (gridSizeFor its days), for a template N = its "days per week"; 1–7.
 function pricesArgValid(prices, dayCount) {
-  if (!Array.isArray(prices) || !Number.isInteger(dayCount) || dayCount < 1 || dayCount > MAX_DAYS || prices.length !== dayCount) return false;
+  if (!Array.isArray(prices) || !Number.isInteger(dayCount) || dayCount < 1 || dayCount > MAX_WEEK_DAYS || prices.length !== dayCount) return false;
   const counts = [];
   for (const row of prices) {
     if (!isObj(row) || !exactKeys(row, PRICE_KEYS)) return false;
@@ -676,7 +703,7 @@ function camperExtrasArgValid(extras) {
   return !hasDuplicates(extras.map((e) => e.extra_id.toLowerCase()));
 }
 
-// camp_days_arg_is_valid(p_days): 1–10 dates, no nulls, no repeats.
+// camp_days_arg_is_valid(p_days): 1–60 dates, no nulls, no repeats (weekly pricing R4; was 10).
 const daysArgValid = (days) => Array.isArray(days) && days.length >= 1 && days.length <= MAX_DAYS && days.every((d) => d !== null) && !hasDuplicates(days);
 
 // A description: no description (null / blank) is fine; otherwise camp_text_is_valid(…, 2000).
@@ -704,7 +731,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
   function read() {
     let store = null;
     try {
-      store = clone(loadStore());
+      store = upgradeStore(clone(loadStore()));
     } catch {
       store = null;
     }
@@ -778,6 +805,18 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
     const total = camper.base_cents + sum(camperExtraRows(db, camper.id).map((r) => r.price_cents));
     const paid = sum(paymentsOf(db, camper.id).map((p) => p.amount_cents));
     return { total, paid, owes: total - paid };
+  }
+
+  // The 'weeks' key of Camper detail's breakdown and of a sign-up answer's children (weekly pricing,
+  // migration 0022): one item per Monday–Sunday week the camper comes, earliest first,
+  // { monday, day_count, cents }, cents = the camp's CURRENT grid row for that many days at the
+  // sign-up's price kind and the camper's member box (null when the grid has no such row).
+  // row = the camper's rosterRow (its days).
+  function weeksOf(db, camper, row, kind) {
+    const prices = pricesView(db, camper.camp_id);
+    return campWeeks(row.days.filter((d) => d.day).map((d) => ({ dayId: d.day_id, day: d.day }))).map((w) => ({
+      monday: w.monday, day_count: w.days.length, cents: baseCents(prices, w.days.length, camper.member, kind),
+    }));
   }
 
   // The latest payment that isn't reversed (the same "latest payment row" as 0005's testing_roster).
@@ -882,7 +921,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
     const days = [...a.p_days].sort();
     if (a.p_signup_closes_on > days[days.length - 1]) return null;
     if (!ageOk(a.p_min_age) || !ageOk(a.p_max_age) || a.p_min_age > a.p_max_age) return null;
-    if (!pricesArgValid(a.p_prices, days.length)) return null;
+    if (!pricesArgValid(a.p_prices, gridSizeFor(days))) return null; // rows 1…W (R2)
     if (!extrasArgValid(a.p_extras, withIds)) return EXTRAS_INVALID;
     if (a.p_extras.some((e) => (e.only_on ?? []).some((d) => !days.includes(d)))) return EXTRAS_INVALID; // not a camp day
     if (!descriptionOk(a.p_description) || !campTextIsValid(a.p_waiver_text, WAIVER_MAX)) return null;
@@ -903,7 +942,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
   function readTemplateFields(a) {
     const offsets = { opensDaysBefore: a.p_opens_days_before, closesDaysBefore: a.p_closes_days_before, earlyDaysBefore: a.p_early_days_before };
     if (!nameIsValid(a.p_name) || !LOCATION_CODES.includes(a.p_location_code) || typeof a.p_both_schools !== 'boolean') return st('invalid');
-    if (!Number.isInteger(a.p_day_count) || a.p_day_count < 1 || a.p_day_count > MAX_DAYS) return st('invalid');
+    if (!Number.isInteger(a.p_day_count) || a.p_day_count < 1 || a.p_day_count > MAX_WEEK_DAYS) return st('invalid'); // days per week (R7)
     if (!timeOnStep(a.p_start_time) || !timeOnStep(a.p_end_time) || a.p_end_time <= a.p_start_time) return st('invalid');
     if (!offsetsAreValid(offsets)) return { status: 'invalid', field: 'offsets' };
     if (!ageOk(a.p_min_age) || !ageOk(a.p_max_age) || a.p_min_age > a.p_max_age) return st('invalid');
@@ -1085,7 +1124,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       if (!offsetsAreValid(offsets)) return { status: 'invalid', field: 'offsets' };
       if (templateNameTaken(db, name, null)) return st('duplicate_name');
       const template = insertRow(db.camp_templates, {
-        id: newId(), name, location_code: camp.location_code, both_schools: camp.both_schools, day_count: days.length,
+        id: newId(), name, location_code: camp.location_code, both_schools: camp.both_schools, day_count: gridSizeFor(days), // W (R7)
         start_time: camp.start_time, end_time: camp.end_time, opens_days_before: offsets.opensDaysBefore,
         closes_days_before: offsets.closesDaysBefore, early_days_before: offsets.earlyDaysBefore, min_age: camp.min_age, max_age: camp.max_age,
         description: camp.description, waiver_text: camp.waiver_text,
@@ -1377,6 +1416,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
         },
         breakdown: {
           day_count: row.days.length, price_kind: signup.price_kind, member: camper.member, base_cents: camper.base_cents,
+          weeks: weeksOf(db, camper, row, signup.price_kind),
           extras: extras.map(({ extra_id, ...rest }) => rest),
           total_cents: row.total_cents, paid_cents: row.paid_cents, owes_cents: row.owes_cents,
         },
@@ -1440,7 +1480,9 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       }
       return {
         first_name: c.first_name, last_name: c.last_name, day_count: row.days.length, days: row.days.map((d) => d.day),
-        price_kind: signup.price_kind, base_cents: c.base_cents, extras: extras.map(({ extra_id, ...rest }) => rest),
+        price_kind: signup.price_kind, base_cents: c.base_cents, weeks: weeksOf(db, c, row, signup.price_kind),
+        extras: extras.map(({ extra_id, ...rest }) => rest),
+
         total_cents: row.total_cents,
       };
     });
@@ -1506,7 +1548,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
     const kind = priceKind(today(), camp.early_until); // 9 + 10
     for (const c of children) {
       const problem = childProblem(c, prices, extras, days, kind);
-      if (problem !== null) return out(st('invalid')); // the §1.10 rules, and over $2,000
+      if (problem !== null) return out(st('invalid')); // the §1.10 rules, and over $10,000
     }
     const priced = children.map((c) => priceChild(c, prices, extras, days, kind));
     if (priced.some((p) => p.baseCents === null)) return out(st('invalid'));

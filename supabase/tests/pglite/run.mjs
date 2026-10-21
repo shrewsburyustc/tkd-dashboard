@@ -275,6 +275,16 @@
 //   step0021. 0021 (Not interested families deleted after 6 months) on its own
 //       live-order database: only prospects_purge_old's fingerprint moves,
 //       0021_tests + 0015/0012 tests pass, re-runs harmless, minimal = live.
+//   step0023. 0023 (Star result email texts + M5: star_update_event keeps
+//       registration closed, rulebook v0.514 / v0.504) on its own
+//       live-order database: 0023_fingerprints.sql is connector-safe;
+//       only the star_update_event and star_results_csv lines of 0006's
+//       fingerprints moves; 0023_tests + 0006_tests (+ 0003/0005) pass;
+//       re-runs keep an admin's changed text and change no fingerprint;
+//       the undo file (manual/0023u) gives back 0006's star_update_event
+//       fingerprint, 0023 again restores it; a 0006 re-run then 0023
+//       again gives the same fingerprints; a
+//       minimal database (0003-0006 + 0023) gives the same fingerprints.
 //   17. 0015 (family history) on a database built in the live order
 //       (no family rows in change_log): earlier fingerprints unchanged
 //       (0003's above all), 0015_tests.sql and every earlier test file
@@ -330,6 +340,13 @@
 //       SETUP.md; then two fresh databases with 0011's big seed + a big
 //       camp seed for speed and right answers (one sorting text like
 //       production) - see stepFinanceCamps below.
+//   step0022. 0022 (camps weekly pricing and longer camps, v0.717) on its
+//       own database in the production order with every live migration
+//       and live-like camps made under the old rules: the data tidy-up,
+//       which fingerprints may move, 0022's tests and the camps / Finance
+//       tests after it, the camp form's login, re-run safety and the Undo
+//       of SETUP.md 0022e - see step0022 below. Run only this step with
+//       node run.mjs --only-step0022
 //   step0016_after_new_students. 0016 on a database built in the
 //       PRODUCTION order with EVERY live migration: 0001-0006, 0010, 0007,
 //       0008, 0009, 0012, 0015, 0011 as production got it, 0019, 0014,
@@ -392,6 +409,7 @@ const supabaseDir = path.resolve(here, '..', '..');
 const read = (...parts) => readFileSync(path.join(supabaseDir, ...parts), 'utf8');
 
 const useFixtureSeed = process.argv.includes('--fixture-seed');
+const onlyStep0022 = process.argv.includes('--only-step0022');
 
 // Fixed ids for the two pretend logins (any uuid works).
 const ADMIN_UID = '11111111-1111-4111-8111-111111111111';
@@ -537,6 +555,12 @@ async function buildBase(label = '', existing = null) {
 }
 
 async function main() {
+  // --only-step0022: just the camps weekly-pricing step (a quick check while
+  // working on 0022); a normal run does everything below, step0022 included
+  if (onlyStep0022) {
+    await step0022();
+    return finish();
+  }
   console.log('Starting PGlite...');
   const db = await buildBase();
   if (!db) return finish();
@@ -766,6 +790,13 @@ async function main() {
   console.log('\nMigration 0024 on top of every live migration (production order):');
   await step0024_production_order(after24);
 
+  // step0022: camps weekly pricing and longer camps (its own database, production order)
+  console.log('\nMigration 0022 (camps weekly pricing and longer camps):');
+  const after22 = after5 ? await step0022() : null;
+  // step0023: Star result email texts + M5 (its own database)
+  console.log('\nMigration 0023 (Star result email texts + registration stays closed on edit):');
+  const after23 = after5 ? await step0023() : null;
+
   // step0020 (named after its migration, not a number other branches use): 0020, LAST
   console.log('\nMigration 0020 (current_session_id reads only request.jwt.claims), last:');
   const after20 = after5 ? await step0020(db, upgradeDb) : null;
@@ -804,6 +835,10 @@ async function main() {
     console.log('\n0021 fingerprints (kind  item  detail):');
     for (const line of after21) console.log('  ' + line);
   }
+  if (after23) {
+    console.log('\n0023 fingerprints (kind  item  detail):');
+    for (const line of after23) console.log('  ' + line);
+  }
   if (after11) {
     console.log('\n0011 fingerprints (kind  item  detail):');
     for (const line of after11) console.log('  ' + line);
@@ -827,6 +862,10 @@ async function main() {
   if (after13) {
     console.log('\n0013 fingerprints (kind  item  detail):');
     for (const line of after13) console.log('  ' + line);
+  }
+  if (after22) {
+    console.log('\n0022 fingerprints (kind  item  detail):');
+    for (const line of after22) console.log('  ' + line);
   }
   if (after17) {
     console.log('\n0017 fingerprints (Finance after 0017; kind  item  detail):');
@@ -2038,6 +2077,159 @@ async function step0021() {
     }
   }
   return after21;
+}
+
+
+// =====================================================================
+// step0023: 0023 (Star result email texts, rulebook v0.514 R11; M5,
+// v0.504: star_update_event keeps registration closed in the same save),
+// on its own database built in the live order.
+//   a. steps 1-5, 0003, 0004, the seed, 0005 (+ its test event), 0006,
+//      0010, 0007, 0008, 0009, 0012, 0015, 0011, 0014, 0019, 0020, 0021;
+//      0023_fingerprints.sql contains neither "delete" nor "drop" (it
+//      goes through the connector; the migration is pasted by hand)
+//   b. 0023; every other migration's fingerprints stay the same, except
+//      the TWO lines of star_update_event (M5) and star_results_csv (the
+//      CSV keys) in 0006's, on purpose
+//   c. 0023_tests.sql, then 0006_tests.sql (every old star_update_event
+//      test must still pass), 0005_tests.sql and 0003_tests.sql
+//   d. an admin's changed text survives 0023 applied twice more; the
+//      function / table / rule / trigger fingerprints stay identical;
+//      0023_tests.sql again
+//   e. the undo file supabase/manual/0023u_undo_star_update_event.sql:
+//      star_update_event's and star_results_csv's fingerprints equal the
+//      ones before 0023, every other 0006 line unchanged; the table and its function stay;
+//      0006_tests pass; 0023 again restores the tested fingerprints
+//   e2. 0006 re-run (puts 0006's star_update_event back), then 0023 again:
+//      the fingerprints are 0023's again; 0023 + 0006 tests pass
+//   f. a minimal database (steps 1-5, 0003, 0004, 0005, 0006, 0023) gives
+//      the same 0023 fingerprints
+// Returns 0023's fingerprints.
+// =====================================================================
+async function step0023() {
+  const L = '[0023] ';
+  const migration = read('migrations', '0023_star_result_texts.sql');
+  record(L + '0023_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)',
+    !/delete|drop/i.test(read('tests', '0023_fingerprints.sql')));
+
+  const db = await buildBase(L);
+  if (!db) return null;
+  for (const [label, file] of [['0003', '0003_testing_classes_ranks.sql'], ['0004', '0004_staff_accounts.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+  await run(db, L + 'apply built-in seed', builtInSeedSql());
+  if (!(await run(db, L + 'apply 0005', read('migrations', '0005_testing_events.sql')))) return null;
+  await seedTestEvent(db);
+  for (const [label, file] of [['0006', '0006_star_testing.sql'], ['0010 (grading results)', '0010_testing_results.sql'],
+    ['0007', '0007_schedule.sql'], ['0008', '0008_calendar.sql'], ['0009', '0009_forms.sql'], ['0012', '0012_prospects.sql'],
+    ['0015', '0015_family_history.sql'], ['0011 (Finance)', '0011_finance.sql'], ['0014', '0014_testing_private.sql'],
+    ['0019', '0019_school_phone.sql'], ['0020', '0020_session_id_claims.sql'],
+    ['0021', '0021_prospects_not_interested_sooner.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // b. apply 0023; only star_update_event's line of 0006's fingerprints may move
+  const prints = ['0003_fingerprints.sql', '0004_fingerprints.sql', '0005_fingerprints.sql', '0006_fingerprints.sql', '0010_fingerprints.sql',
+    '0007_fingerprints.sql', '0008_fingerprints.sql', '0009_fingerprints.sql', '0012_fingerprints.sql', '0015_fingerprints.sql',
+    '0011_fingerprints.sql', '0014_fingerprints.sql', '0019_fingerprints.sql', '0020_fingerprints.sql', '0021_fingerprints.sql'];
+  const before = {};
+  for (const f of prints) before[f] = await fingerprints(db, f);
+  if (!(await run(db, L + 'apply 0023_star_result_texts.sql', migration))) return null;
+  const after23 = await fingerprints(db, '0023_fingerprints.sql');
+  for (const f of prints) {
+    const after = await fingerprints(db, f);
+    const gone = before[f].filter((line) => !after.includes(line));
+    const added = after.filter((line) => !before[f].includes(line));
+    const moved = [...gone, ...added];
+    const ok = f === '0006_fingerprints.sql'
+      ? gone.length === 2 && added.length === 2 && moved.every((line) => /^function {2}star_(update_event|results_csv)\(/.test(line))
+      : moved.length === 0;
+    record(`${L}${f.slice(0, 4)} fingerprints: ${f === '0006_fingerprints.sql' ? 'only star_update_event (M5) and star_results_csv moved' : 'unchanged'}`, ok,
+      moved.length === 0 ? `${after.length} rows, unchanged` : `${gone.length} line(s) changed: ${added.map((l) => l.slice(0, 60)).join(' | ')}`);
+  }
+  const updateEventLine = after23.find((line) => /^function {2}star_update_event\(/.test(line));
+  record(L + 'star_update_event: 0023_fingerprints.sql and 0006_fingerprints.sql agree on the new code',
+    !!updateEventLine && (await fingerprints(db, '0006_fingerprints.sql')).some((line) => line.split('  ')[2]?.split(' ')[0] === updateEventLine.split('  ')[2].split(' ')[0]));
+
+  // c. its own tests, then Star's and the files 0006's tests sit on
+  await runTestFile(db, L + '0023_tests.sql', '0023_tests.sql', 'ALL 0023 TESTS PASSED');
+  for (const [file, ok] of [['0006_tests.sql', 'ALL 0006 TESTS PASSED'], ['0005_tests.sql', 'ALL 0005 TESTS PASSED'],
+    ['0003_tests.sql', 'ALL 0003 TESTS PASSED']]) {
+    await runTestFile(db, `${L}${file} (after 0023)`, file, ok);
+  }
+
+  // d. an admin's changed text survives re-runs; nothing else moves
+  const structural = (lines) => lines.filter((line) => !line.startsWith('seed  '));
+  const changed = 'Hello, changed by an admin: {total} of {pass mark}. {first name}';
+  await run(db, L + 'an admin changes the Passed text (as the SQL Editor, tagged)', `
+    begin;
+    select set_config('tkd.action', 'star_set_result_text', true);
+    update public.star_result_texts set body = '${changed}' where kind = 'passed';
+    commit;`);
+  const changedVersion = await one(db, `select version from public.star_result_texts where kind = 'passed'`);
+  for (const n of ['SECOND', 'THIRD']) {
+    await run(db, `${L}apply 0023 a ${n} time (re-run safety)`, migration);
+  }
+  const again = await fingerprints(db, '0023_fingerprints.sql');
+  record(L + '0023 function / table / rule / trigger fingerprints identical before/after the re-runs',
+    JSON.stringify(structural(again)) === JSON.stringify(structural(after23)), `${again.length} rows`);
+  record(L + 'the re-runs kept the admin\'s text and its version (the seed never overwrites)',
+    (await one(db, `select body from public.star_result_texts where kind = 'passed'`)) === changed
+      && (await one(db, `select version from public.star_result_texts where kind = 'passed'`)) === changedVersion
+      && (await one(db, `select count(*)::int from public.star_result_texts`)) === 3);
+  await runTestFile(db, L + '0023_tests.sql (after re-runs)', '0023_tests.sql', 'ALL 0023 TESTS PASSED');
+
+  // e. the undo file gives back 0006's star_update_event exactly
+  const ueRe = /^function {2}star_(update_event|results_csv)\(/;
+  const before6 = before['0006_fingerprints.sql'];
+  const before6Lines = before6.filter((line) => ueRe.test(line));
+  const undoSql = readFileSync(path.join(supabaseDir, 'manual', '0023u_undo_star_update_event.sql'), 'utf8');
+  if (await run(db, L + 'apply the undo file manual/0023u_undo_star_update_event.sql', undoSql)) {
+    const undone = await fingerprints(db, '0006_fingerprints.sql');
+    record(L + 'after the undo star_update_event and star_results_csv have 0006\'s fingerprints again',
+      before6Lines.length === 2 && JSON.stringify(undone.filter((line) => ueRe.test(line))) === JSON.stringify(before6Lines));
+    record(L + 'after the undo every other 0006 line is unchanged',
+      JSON.stringify(undone.filter((line) => !ueRe.test(line))) === JSON.stringify(before6.filter((line) => !ueRe.test(line))));
+    record(L + 'after the undo the texts table and its function stay',
+      (await one(db, 'select count(*)::int from public.star_result_texts')) === 3
+        && (await one(db, "select to_regprocedure('public.star_set_result_text(text, integer, text)') is not null")) === true);
+    await runTestFile(db, L + '0006_tests.sql (after the undo)', '0006_tests.sql', 'ALL 0006 TESTS PASSED');
+    if (await run(db, L + 'apply 0023 again after the undo', migration)) {
+      const redo = await fingerprints(db, '0023_fingerprints.sql');
+      record(L + '0023 fingerprints back to the tested ones after undo + 0023',
+        JSON.stringify(structural(redo)) === JSON.stringify(structural(after23)), `${redo.length} rows`);
+    }
+  }
+
+  // e2. 0006 re-run (old star_update_event back), then 0023 again
+  if (await run(db, L + 're-run 0006 (puts 0006\'s star_update_event back)', read('migrations', '0006_star_testing.sql'))) {
+    const old = await fingerprints(db, '0023_fingerprints.sql');
+    record(L + 'after the 0006 re-run star_update_event is 0006\'s again (fingerprint differs)',
+      JSON.stringify(structural(old)) !== JSON.stringify(structural(after23)));
+    if (await run(db, L + 'apply 0023 again after the 0006 re-run', migration)) {
+      const back = await fingerprints(db, '0023_fingerprints.sql');
+      record(L + '0023 fingerprints back to the tested ones', JSON.stringify(structural(back)) === JSON.stringify(structural(after23)), `${back.length} rows`);
+      await runTestFile(db, L + '0023_tests.sql (after 0006 re-run + 0023)', '0023_tests.sql', 'ALL 0023 TESTS PASSED');
+      await runTestFile(db, L + '0006_tests.sql (after 0006 re-run + 0023)', '0006_tests.sql', 'ALL 0006 TESTS PASSED');
+    }
+  }
+
+  // f. a minimal database gives the same fingerprints (seed lines included)
+  const M = '[0023 minimal] ';
+  const mini = await buildBase(M);
+  if (mini) {
+    let ok = true;
+    for (const f of ['0003_testing_classes_ranks.sql', '0004_staff_accounts.sql', '0005_testing_events.sql', '0006_star_testing.sql',
+      '0023_star_result_texts.sql']) {
+      ok = ok && (await run(mini, M + 'apply ' + f, read('migrations', f)));
+    }
+    if (ok) {
+      const p = await fingerprints(mini, '0023_fingerprints.sql');
+      record(M + '0023 fingerprints identical to the live-order database', JSON.stringify(p) === JSON.stringify(after23), `${p.length} rows`);
+      await runTestFile(mini, M + '0023_tests.sql', '0023_tests.sql', 'ALL 0023 TESTS PASSED');
+    }
+  }
+  return after23;
 }
 
 // ---------------------------------------------------------------------
@@ -4318,6 +4510,291 @@ async function step0024_production_order(main24) {
   const mine = await fingerprints(db, '0024_fingerprints.sql');
   record(L + '0024 fingerprints identical to step0024 (main database)', !!main24 && JSON.stringify(mine) === JSON.stringify(main24),
     main24 ? `${mine.length} rows` : 'step0024 gave no fingerprints');
+}
+
+// =====================================================================
+// step0022: camps weekly pricing and longer camps (0022, rulebook v0.717)
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order (every live
+// migration: 0001-0006, 0010, 0007, 0008, 0009, 0012, 0015, 0011 as
+// production got it, 0019, 0014, 0020, 0013, 0017, 0018, 0016, 0021):
+//   a. live-like camp data made under the OLD rules: camp "Test" (1 day)
+//      and camp "Test 2" (10 days in 3 weeks: 5 + 3 + 2, a 10-row grid),
+//      three campers signed up AS camps_registrar, one payment, and two
+//      templates (10 days and 3 days)
+//   b. apply 0022: the data is tidied exactly as its section 6 says (Test
+//      2's grid rows 6-10 go, its version +1; the 10-day template becomes
+//      7 days a week (rows 1-7); nothing else - campers' prices, payments, Test,
+//      the 3-day template - changes; 7 history rows, one batch, "Migration
+//      0022"); the other migrations' fingerprints move ONLY where 0022
+//      says (0013: exactly the 18 replaced functions; 0011 / 0017: only
+//      the finance_day_closing_items amount rule; the rest: nothing)
+//   c. 0022_tests.sql, then camps' and Finance's tests again (0013, 0017,
+//      0011, 0018) plus 0014 / 0016 / 0020 / 0021
+//   d. AS camps_registrar: the 4 new helpers are refused, camp_public_camp
+//      works, a new sign-up on Test 2 is priced per week (5 + 3), and the
+//      old rule's total is answered price_changed
+//   e. 0022 applied a SECOND time: no row, history or fingerprint change
+//   f. the Undo of SETUP.md 0022e exactly as written (check, re-run 0013,
+//      the block): the 0013 / 0011 / 0017 / 0018 fingerprints equal the
+//      ones before 0022, the helpers are gone, 0013 / 0017 tests pass
+// =====================================================================
+async function step0022() {
+  const L = '[0022] ';
+  record(`${L}0022_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)`,
+    !/delete|drop/i.test(read('tests', '0022_fingerprints.sql')));
+  const db = await buildBase(L);
+  if (!db) return null;
+  for (const [label, file] of [['0003', '0003_testing_classes_ranks.sql'], ['0004', '0004_staff_accounts.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+  await run(db, L + 'apply built-in seed', builtInSeedSql());
+  for (const [label, file] of [['0005', '0005_testing_events.sql'], ['0006', '0006_star_testing.sql'],
+    ['0010 (grading results)', '0010_testing_results.sql'], ['0007', '0007_schedule.sql'], ['0008', '0008_calendar.sql'],
+    ['0009', '0009_forms.sql'], ['0012', '0012_prospects.sql'], ['0015', '0015_family_history.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+  if (!(await run(db, L + 'apply 0011 as pasted on production 2026-10-19 (fixture)',
+    readFileSync(path.join(here, 'fixtures', '0011_as_applied_2026-10-19.sql'), 'utf8')))) return null;
+  for (const [label, file] of [['today\'s 0011 over it', '0011_finance.sql'], ['0019', '0019_school_phone.sql'],
+    ['0014', '0014_testing_private.sql'], ['0020', '0020_session_id_claims.sql'], ['0013 (camps)', '0013_camps.sql'],
+    ['0017 (camps in Finance)', '0017_finance_camps.sql'], ['0018 (private testing in Finance)', '0018_finance_private.sql'],
+    ['0016 (Black Belt)', '0016_black_belt.sql'], ['0021', '0021_prospects_not_interested_sooner.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // a. live-like data under the old rules. Grid row k: member early
+  // 7000k + 500 cents (not straight-line, so the old and new totals differ)
+  const m = await one(db, `select (date_trunc('week', (public.testing_today() + 7)::timestamp)::date + 7)::text`);
+  const seeded = await run(db, `${L}seed live-like camps "Test" and "Test 2", two templates (old rules)`, `
+    begin;
+    select set_config('request.jwt.claims', '', true);
+    select set_config('tkd.actor_label', 'PGlite live-like camps', true);
+    select set_config('tkd.action', 'seed', true);
+    select set_config('tkd.batch_id', gen_random_uuid()::text, true);
+    insert into public.camps (location_code, both_schools, name, start_time, end_time, signup_opens_on, signup_closes_on,
+                              early_until, min_age, max_age, description, waiver_text, public_code, created_by_name, updated_by_name)
+    values ('worcester', false, 'Test', '09:00', '15:00', public.testing_today() - 1, public.testing_today() + 3,
+            public.testing_today() + 3, 5, 12, null, 'I agree.', 'pgte2345', '', ''),
+           ('shrewsbury', true, 'Test 2', '09:00', '15:00', public.testing_today() - 1, public.testing_today() + 3,
+            public.testing_today() + 3, 5, 12, null, 'I agree.', 'pgtt2345', '', '');
+    insert into public.camp_days (camp_id, day)
+    select c.id, date '${m}' + 2 from public.camps c where c.public_code = 'pgte2345'
+    union all
+    select c.id, date '${m}' + x from public.camps c, unnest(array[0, 1, 2, 3, 4, 14, 15, 16, 21, 22]) as x
+     where c.public_code = 'pgtt2345';
+    insert into public.camp_prices (camp_id, day_count, member_early_cents, member_regular_cents, nonmember_early_cents, nonmember_regular_cents)
+    select c.id, k, 7000 * k + 500, 7500 * k + 500, 8000 * k + 500, 8500 * k + 500
+      from public.camps c, generate_series(1, 10) as k
+     where (c.public_code = 'pgte2345' and k = 1) or c.public_code = 'pgtt2345';
+    insert into public.camp_templates (name, location_code, both_schools, day_count, start_time, end_time, opens_days_before,
+                                       closes_days_before, early_days_before, min_age, max_age, description, waiver_text,
+                                       prices, extras, created_by_name, updated_by_name)
+    select n, 'worcester', false, d, '09:00', '15:00', 30, 1, 10, 5, 12, null, 'I agree.',
+           (select jsonb_agg(jsonb_build_object('day_count', k, 'member_early_cents', 7000 * k + 500,
+                                                'member_regular_cents', 7500 * k + 500, 'nonmember_early_cents', 8000 * k + 500,
+                                                'nonmember_regular_cents', 8500 * k + 500) order by k)
+              from generate_series(1, d) as k), '[]'::jsonb, '', ''
+      from (values ('Old ten days', 10), ('Old three days', 3)) as t(n, d);
+    select set_config('tkd.actor_label', '', true);
+    select set_config('tkd.action', '', true);
+    select set_config('tkd.batch_id', '', true);
+    commit;`);
+  if (!seeded) return null;
+  const days = async (code) => (await db.query(`select array_agg(d.id::text order by d.day) as a from public.camp_days d
+      join public.camps c on c.id = d.camp_id where c.public_code = $1`, [code])).rows[0].a;
+  const waiver = await one(db, `select md5('I agree.')`);
+  const signUp = async (code, children, total) => {
+    try {
+      await db.exec('set role camps_registrar;');
+      const r = await db.query(
+        `select public.camp_public_signup($1, $2, gen_random_uuid(), $3::jsonb, 'Test Parent', '5085550100', 'Parent',
+                'Test Contact', '5085550101', 'Friend', 'cash', true, $4, 'camp-2026-10-18', $5, $6) as r`,
+        [code, 'pglite-0022-client', JSON.stringify(children), TEST_SIGNATURE, waiver, total]);
+      return r.rows[0].r;
+    } catch (error) {
+      return { status: 'error', message: error.message };
+    } finally {
+      await db.exec('reset role;').catch(() => {});
+    }
+  };
+  const t2 = await days('pgtt2345');
+  const t1 = await days('pgte2345');
+  const child = (first, member, dayIds) => ({ first_name: first, last_name: 'Live', age: 8, member, day_ids: dayIds, extras: [] });
+  // old rules: all 10 days = row 10 (70500); 2 days = row 2 (14500); Test 1 day = 7500
+  const old1 = await signUp('pgtt2345', [child('Ten', true, t2), child('Two', true, t2.slice(0, 2))], 70500 + 14500);
+  const old2 = await signUp('pgte2345', [child('One', true, t1)], 7500);
+  record(`${L}three campers signed up under the OLD rules AS camps_registrar`, old1?.status === 'ok' && old2?.status === 'ok',
+    `${old1?.status} ${old2?.status}`);
+  await run(db, `${L}one payment for the 10-day camper`, `
+    begin;
+    select set_config('tkd.actor_label', 'PGlite live-like camps', true);
+    insert into public.camp_payments (camper_id, kind, amount_cents, method, paid_on, school, recorded_by_name)
+    select c.id, 'payment', 70500, 'cash', public.testing_today(), 'shrewsbury', 'PGlite' from public.camp_campers c where c.first_name = 'Ten';
+    select set_config('tkd.actor_label', '', true);
+    commit;`);
+
+  // b. apply 0022
+  const CAMP_DATA = `select md5(coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.camp_campers x), '')
+      || coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.camp_payments x), '')
+      || coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.camp_camper_days x), '')
+      || coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.camp_signups x), ''))`;
+  const ALL_DATA = `select md5((${CAMP_DATA}) || coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.camp_prices x), '')
+      || coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.camps x), '')
+      || coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.camp_templates x), '')
+      || coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.finance_day_closing_items x), '')
+      || (select count(*) from public.change_log)::text)`;
+  const campersBefore = await one(db, CAMP_DATA);
+  const state = async () => (await db.query(`select
+      (select array_agg(p.day_count::int || ':' || p.member_early_cents order by p.day_count) from public.camp_prices p
+         join public.camps c on c.id = p.camp_id where c.public_code = 'pgtt2345') as t2_grid,
+      (select array_agg(p.day_count::int order by p.day_count) from public.camp_prices p
+         join public.camps c on c.id = p.camp_id where c.public_code = 'pgte2345') as t1_grid,
+      (select c.version from public.camps c where c.public_code = 'pgtt2345') as t2_version,
+      (select c.version from public.camps c where c.public_code = 'pgte2345') as t1_version,
+      (select t.day_count || '/' || jsonb_array_length(t.prices) || '/' || t.version from public.camp_templates t where t.name = 'Old ten days') as tpl10,
+      (select t.day_count || '/' || jsonb_array_length(t.prices) || '/' || t.version from public.camp_templates t where t.name = 'Old three days') as tpl3,
+      (select (t.prices -> 4)::text from public.camp_templates t where t.name = 'Old ten days') as tpl10_row5`)).rows[0];
+  const sBefore = await state();
+  const printFiles = ['0003', '0004', '0005', '0006', '0010', '0007', '0008', '0009', '0012', '0015', '0011', '0019', '0014', '0020',
+    '0013', '0017', '0018', '0016', '0021'].map((n) => `${n}_fingerprints.sql`);
+  const before = {};
+  for (const f of printFiles) before[f] = await fingerprints(db, f);
+  const markBefore = await one(db, 'select coalesce(max(id), 0)::bigint from public.change_log');
+  if (!(await run(db, `${L}apply 0022_camps_weekly_pricing.sql`, read('migrations', '0022_camps_weekly_pricing.sql')))) return null;
+  const sAfter = await state();
+  record(`${L}Test 2 keeps grid rows 1-5 with their prices, its version +1; camp Test unchanged`,
+    JSON.stringify(sAfter.t2_grid) === JSON.stringify(sBefore.t2_grid.slice(0, 5)) && sAfter.t2_version === sBefore.t2_version + 1
+      && JSON.stringify(sAfter.t1_grid) === JSON.stringify([1]) && sAfter.t1_version === sBefore.t1_version,
+    JSON.stringify({ before: sBefore.t2_grid, after: sAfter.t2_grid, v: [sBefore.t2_version, sAfter.t2_version] }));
+  const [d10, , v10] = sBefore.tpl10.split('/').map(Number);
+  record(`${L}the 10-day template becomes 7 days a week (rows 1-7 kept), the 3-day template is untouched`,
+    d10 === 10 && sAfter.tpl10 === `7/7/${v10 + 1}` && sAfter.tpl3 === sBefore.tpl3 && sAfter.tpl10_row5 === sBefore.tpl10_row5,
+    JSON.stringify({ before: [sBefore.tpl10, sBefore.tpl3], after: [sAfter.tpl10, sAfter.tpl3] }));
+  record(`${L}campers, their days, sign-ups and payments unchanged (prices are snapshots)`, campersBefore === (await one(db, CAMP_DATA)));
+  const hist = (await db.query(`select count(*)::int as n, count(distinct batch_id)::int as batches,
+      string_agg(distinct action, ',') as actions, string_agg(distinct actor_name, ',') as actors,
+      string_agg(table_name || ':' || op, ',' order by table_name, op) as what
+      from public.change_log where id > $1`, [markBefore])).rows[0];
+  record(`${L}history: 5 grid rows removed + 1 camp + 1 template, one batch, "Migration 0022"`,
+    hist.n === 7 && hist.batches === 1 && hist.actions === '0022_weekly_pricing' && hist.actors === 'Migration 0022',
+    JSON.stringify(hist));
+  // the other migrations' fingerprints: only what 0022 says may move
+  const replaced = ['camp_days_arg_is_valid', 'camp_prices_arg_is_valid', 'camp_dates_are_sorted_set', 'camp_camper_extras_arg_is_valid',
+    'camp_children_arg_is_valid', 'camp_template_setup_is_valid', 'camp_setup_args_are_valid', 'camp_camper_extras_are_ok',
+    'camp_extras_only_on_ok', 'camp_camper_extras_before_write', 'camp_public_signup_answer', 'camp_camper_detail', 'camp_update_camp',
+    'camp_save_template', 'camp_update_template', 'camp_update_details', 'camp_edit_payment', 'camp_public_signup_core'];
+  const after = {};
+  const wrong = [];
+  let moved13 = [];
+  for (const f of printFiles) {
+    after[f] = await fingerprints(db, f);
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    if (f === '0013_fingerprints.sql') {
+      moved13 = gone.map((line) => line.split('  ')[1].split('(')[0]).sort();
+      const addedNames = added.map((line) => line.split('  ')[1].split('(')[0]).sort();
+      if (JSON.stringify(moved13) !== JSON.stringify([...replaced].sort()) || JSON.stringify(addedNames) !== JSON.stringify(moved13)
+        || gone.some((line) => !line.startsWith('function'))) wrong.push(`0013: ${moved13.join(',')}`);
+    } else if (['0011_fingerprints.sql', '0017_fingerprints.sql'].includes(f)) {
+      if (gone.length !== 1 || added.length !== 1 || !gone[0].includes('finance_day_closing_items_amount_check')
+        || !added[0].includes('1000000')) wrong.push(`${f.slice(0, 4)}: ${JSON.stringify({ gone, added })}`);
+    } else if (gone.length || added.length) {
+      wrong.push(`${f.slice(0, 4)} moved`);
+    }
+  }
+  record(`${L}fingerprints: 0013 moved exactly the 18 replaced functions, 0011 / 0017 only the amount rule, the rest nothing`,
+    wrong.length === 0, wrong.join('; ') || `${printFiles.length} files`);
+  const prints22 = await fingerprints(db, '0022_fingerprints.sql');
+  record(`${L}0022 fingerprints: 22 functions + camp_public_camp / camp_public_signup, camps_registrar runs exactly those two`,
+    prints22.filter((l) => l.startsWith('function')).length === 24
+      && prints22.some((l) => l.startsWith('role  camps_registrar') && l.endsWith('runs=camp_public_camp,camp_public_signup'))
+      && prints22.filter((l) => l.startsWith('function')).every((l) => l.includes('settings=search_path=""')),
+    `${prints22.length} rows`);
+
+  // c. the tests
+  const tests = async (label) => {
+    for (const [file, ok] of [['0022_tests.sql', 'ALL 0022 TESTS PASSED'], ['0013_tests.sql', 'ALL 0013 TESTS PASSED'],
+      ['0017_tests.sql', 'ALL 0017 TESTS PASSED'], ['0011_tests.sql', 'ALL 0011 TESTS PASSED'], ['0018_tests.sql', 'ALL 0018 TESTS PASSED'],
+      ['0014_tests.sql', 'ALL 0014 TESTS PASSED'], ['0016_tests.sql', 'ALL 0016 TESTS PASSED'], ['0020_tests.sql', 'ALL 0020 TESTS PASSED'],
+      ['0021_tests.sql', 'ALL 0021 TESTS PASSED']]) {
+      await runTestFile(db, `${L}${file} (${label})`, file, ok);
+    }
+  };
+  await tests('after 0022');
+
+  // d. AS camps_registrar
+  const refused = [];
+  for (const sql of ["select public.camp_week_size(array[current_date])",
+    'select public.camp_weekly_base_cents(gen_random_uuid(), array[gen_random_uuid()], true, \'early\')',
+    'select public.camp_comes_whole_week(gen_random_uuid(), array[gen_random_uuid()], gen_random_uuid())',
+    'select public.camp_weeks_breakdown(gen_random_uuid(), array[gen_random_uuid()], true, \'early\')']) {
+    try {
+      await db.exec('set role camps_registrar;');
+      await db.exec(sql);
+      refused.push(sql.slice(14, 40));
+    } catch (error) {
+      if (!/permission denied/i.test(error.message)) refused.push(`${sql.slice(14, 40)} (${error.message})`);
+    } finally {
+      await db.exec('reset role;').catch(() => {});
+    }
+  }
+  record(`${L}[camps registrar] the 4 new helpers are refused`, refused.length === 0, refused.join('; '));
+  let pub = null;
+  try {
+    await db.exec('set role camps_registrar;');
+    pub = (await db.query("select public.camp_public_camp('pgtt2345') as r")).rows[0].r;
+  } catch (error) {
+    pub = { status: error.message };
+  } finally {
+    await db.exec('reset role;').catch(() => {});
+  }
+  record(`${L}[camps registrar] camp_public_camp shows Test 2 with grid rows 1-5`,
+    pub?.status === 'ok' && pub.camp.prices.length === 5 && pub.camp.days.length === 10, JSON.stringify(pub?.camp?.prices?.length ?? pub));
+  // 5 + 3 days on Test 2, member early: row 5 (35500) + row 3 (21500) = 57000; the old rule's 8-day row would be 56500
+  const t2days = [...t2.slice(0, 5), ...t2.slice(5, 8)];
+  const stale = await signUp('pgtt2345', [child('Eight', true, t2days)], 56500);
+  const fresh = await signUp('pgtt2345', [child('Eight', true, t2days)], 57000);
+  record(`${L}[camps registrar] a 5 + 3 sign-up on Test 2: the old total -> price_changed (57000), the new one -> ok with two week lines`,
+    stale?.status === 'price_changed' && stale.new_total_cents === 57000 && fresh?.status === 'ok'
+      && fresh.children[0].base_cents === 57000 && fresh.children[0].weeks.length === 2
+      && fresh.children[0].weeks[0].cents === 35500 && fresh.children[0].weeks[1].cents === 21500,
+    JSON.stringify({ stale: stale?.status, fresh: fresh?.children?.[0] ?? fresh }));
+
+  // e. re-run safety
+  const dataBefore = await one(db, ALL_DATA);
+  const p13 = await fingerprints(db, '0013_fingerprints.sql');
+  await run(db, `${L}apply 0022 a SECOND time (re-run safety)`, read('migrations', '0022_camps_weekly_pricing.sql'));
+  record(`${L}0022 re-run: no row, history or fingerprint change`,
+    dataBefore === (await one(db, ALL_DATA)) && JSON.stringify(prints22) === JSON.stringify(await fingerprints(db, '0022_fingerprints.sql'))
+      && JSON.stringify(p13) === JSON.stringify(await fingerprints(db, '0013_fingerprints.sql')));
+  await tests('after the re-run');
+
+  // f. Undo 0022, exactly as SETUP.md has it: its first sql block (the
+  // check), re-run 0013, its second sql block
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### 0022e\. Undo 0022/m);
+  const blocks = at < 0 ? [] : [...setup.slice(at).matchAll(/```sql\n([\s\S]*?)```/g)].map((x) => x[1]).slice(0, 2);
+  if (blocks.length !== 2) {
+    record(`${L}[undo 0022] find the two sql blocks in SETUP.md`, false, 'no "### 0022e. Undo 0022" heading with two sql blocks');
+  } else if (await run(db, `${L}[undo 0022] step 1: the check`, blocks[0])
+    && await run(db, `${L}[undo 0022] step 2: re-run 0013_camps.sql`, read('migrations', '0013_camps.sql'))
+    && await run(db, `${L}[undo 0022] step 3: the SQL block`, blocks[1])) {
+    const back = [];
+    for (const f of ['0013_fingerprints.sql', '0011_fingerprints.sql', '0017_fingerprints.sql', '0018_fingerprints.sql']) {
+      if (JSON.stringify(before[f]) !== JSON.stringify(await fingerprints(db, f))) back.push(f.slice(0, 4));
+    }
+    const left = await one(db, `select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public' and p.proname in ('camp_week_size', 'camp_weekly_base_cents', 'camp_comes_whole_week', 'camp_weeks_breakdown')`);
+    record(`${L}[undo 0022] 0013 / 0011 / 0017 / 0018 fingerprints equal the ones before 0022; no 0022 helper left`,
+      back.length === 0 && left === 0, back.length ? `differ: ${back.join(', ')}` : `${left} helpers left`);
+    for (const [file, ok] of [['0013_tests.sql', 'ALL 0013 TESTS PASSED'], ['0017_tests.sql', 'ALL 0017 TESTS PASSED'],
+      ['0011_tests.sql', 'ALL 0011 TESTS PASSED']]) {
+      await runTestFile(db, `${L}[undo 0022] ${file}`, file, ok);
+    }
+  }
+  await db.close().catch(() => {});
+  return prints22;
 }
 
 function finish() {

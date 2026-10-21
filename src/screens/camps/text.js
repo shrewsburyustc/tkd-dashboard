@@ -277,7 +277,8 @@ export const TEMPLATES_NOTE =
   'Templates are made from a camp: open the camp’s ⋯ menu and choose Save as template. Templates are shared by both schools.';
 export const LOAD_TEMPLATES_FAILED = "Couldn't load templates. Check the connection, then retry."; // (not in the mockups)
 export const TOAST_TEMPLATE_SAVED_EDIT = 'Template saved'; // (not in the mockups)
-// "1 day · $70 (member early)" / "5 days · from $75 (1 day, member early)"
+// A template's dayCount is its "days per week" (weekly pricing, v0.717):
+// "1 day a week · $70 (member early)" / "5 days a week · from $75 (1 day, member early)"
 export function templateDaysPrice(dayCount, oneDayMemberEarlyCents) {
   if (dayCount === 1) return `1 day · ${dollars(oneDayMemberEarlyCents)} (member early)`;
   return `${daysCount(dayCount)} · from ${dollars(oneDayMemberEarlyCents)} (1 day, member early)`;
@@ -317,13 +318,15 @@ export const YEAR = 'Year'; // (not in the mockups) screen readers only
 export const PREV_MONTH = 'Previous month'; // (not in the mockups)
 export const NEXT_MONTH = 'Next month'; // (not in the mockups)
 export const DAYS_HINT = 'Tap a day to add or remove it. Days don’t have to be next to each other (Thanksgiving: Wed & Fri).';
-export const NUMBER_OF_DAYS = 'Number of days'; // (not in the mockups) Edit template
+export const DAYS_PER_WEEK = 'Days per week'; // Edit template (weekly pricing v0.717: the price grid's rows, 1–7)
 export const WEEKDAY_HEADS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 export const dayCellLabel = (iso, picked) => `${shortDate(iso)}${picked ? ', chosen' : ''}`; // screen readers
 // Section 1's folded summary: "April Vacation Camp · Both schools, held at Worcester · 5 days"
-export function campSectionSummary(name, school, heldAt, dayCount) {
+// (a template: "… · 5 days a week" — perWeek true)
+export function campSectionSummary(name, school, heldAt, dayCount, perWeek = false) {
   const where = school === 'both' ? `Both schools, held at ${schoolName(heldAt)}` : schoolName(school);
-  return [name || null, where || null, dayCount > 0 ? daysCount(dayCount) : null].filter(Boolean).join(' · ');
+  const days = dayCount > 0 ? `${daysCount(dayCount)}${perWeek ? ' a week' : ''}` : null;
+  return [name || null, where || null, days].filter(Boolean).join(' · ');
 }
 
 // Times
@@ -352,26 +355,26 @@ export const OFFSET_PROBLEM = 'Enter a whole number from −365 to 365.'; // (no
 export const OFFSETS_ORDER = 'Sign-up must open before it closes, and the early price must end before sign-up closes.'; // (not in the mockups)
 export const TIMES_PROBLEM = 'Check the times and dates'; // (not in the mockups) folded summary
 
-// Prices
+// Prices (weekly pricing, rulebook v0.717: the grid is per week, rows 1…W)
 export function pricesHint(earlyUntil) {
   const until = earlyUntil ? weekdayMonthDay(earlyUntil) : 'the early-price date';
-  return `One row for each number of days, made from the chosen days. A camper’s price is the row for how many days they come. Early prices apply to sign-ups up to the end of ${until}.`;
+  return `Prices are per week. Each week a camper comes is priced by the row for how many days they come that week, and the weeks add up. Early prices apply to sign-ups up to the end of ${until}.`;
 }
 export const COL_MEMBER_EARLY = 'Member early';
 export const COL_MEMBER_REGULAR = 'Member regular';
 export const COL_NONMEMBER_EARLY = 'Non-member early';
 export const COL_NONMEMBER_REGULAR = 'Non-member regular';
-export const gridRowLabel = (dayCount, total) => (dayCount === total && total > 1 ? `${daysCount(dayCount)} (all days)` : daysCount(dayCount));
+export const gridRowLabel = (dayCount, total) => (dayCount === total && total > 1 ? `${daysCount(dayCount)} (full week)` : daysCount(dayCount));
 export const priceCellLabel = (rowLabel, column) => `${column}, ${rowLabel}`; // screen readers
 export const rowsNeedPrices = (n) => (n === 1 ? '1 row needs prices' : `${n} rows need prices`);
 export const PICK_DAYS_FIRST = 'Pick the camp days first.'; // (not in the mockups)
-// "5 rows · 1 day $75 … all days $275 (member early)"
+// "5 rows · 1 day $75 … full week $275 (member early)"
 export function pricesSummary(rows) {
   if (rows.length === 0) return PICK_DAYS_FIRST;
   const first = rows[0];
   const last = rows[rows.length - 1];
   if (rows.length === 1) return `1 row · 1 day ${dollars(first.memberEarlyCents)} (member early)`;
-  return `${rows.length} rows · 1 day ${dollars(first.memberEarlyCents)} … all days ${dollars(last.memberEarlyCents)} (member early)`;
+  return `${rows.length} rows · 1 day ${dollars(first.memberEarlyCents)} … full week ${dollars(last.memberEarlyCents)} (member early)`;
 }
 
 // Extras
@@ -381,6 +384,7 @@ export const EXTRA_PER = 'How it’s charged'; // (not in the mockups) screen re
 export const ONCE = 'Once';
 export const PER_DAY = 'Per day';
 export const NOT_FOR_ALL_DAYS = 'Not charged to all-days campers';
+export const NOT_FOR_ALL_DAYS_HINT = 'Included in any week the camper comes every day.'; // weekly pricing R6
 export const ADD_EXTRA = 'Add extra';
 // Owner decision 2026-10-19 (Camps-pizza-days-options.html): a per-day extra offered only on some days.
 export const ONLY_ON_DAYS = 'Only on these days';
@@ -437,7 +441,7 @@ export const ENTER_TEMPLATE_NAME = 'Enter a template name.'; // (not in the mock
 export const NAME_TOO_LONG = 'Use 60 characters or fewer.'; // (not in the mockups)
 export const NAME_BAD_CHARACTER = 'Remove the hidden character from the name.'; // (not in the mockups)
 export const PICK_A_DAY = 'Pick at least one day.'; // (not in the mockups)
-export const TOO_MANY_DAYS = 'A camp can have up to 10 days.'; // (not in the mockups)
+export const TOO_MANY_DAYS = 'A camp can have up to 60 days.'; // (not in the mockups) weekly pricing R4
 export const PAST_DAY = 'New days can’t be in the past.'; // (not in the mockups)
 // "Can't remove Wed, Dec 30: Mia Rossi and 2 more picked it. Change their days or withdraw them first."
 export function cantRemoveDay(day, first, last, more) {
@@ -592,19 +596,36 @@ export function detailDaysLine(isoDays, allDays) {
   return `${isoDays.map(dayLong).join(' · ')} · ${daysCount(isoDays.length)}`;
 }
 // "Late pick-up (3:00–4:00 PM) on Mon, Wed" / "on all days" / once extras: just the name
+// True when the days fall in more than one Monday–Sunday week.
+function spansWeeks(isoDays) {
+  const mondays = new Set();
+  for (const iso of isoDays ?? []) {
+    const d = parseDay(iso);
+    if (!d) continue;
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); // back to that week's Monday
+    mondays.add(d.toDateString());
+  }
+  return mondays.size > 1;
+}
 export function detailExtraLine(extra, allCampDays) {
   if (extra.per !== 'day') return extra.name;
   const days = [...(extra.days ?? [])].sort();
   const all = allCampDays.length > 0 && days.length === allCampDays.length;
-  return `${extra.name} on ${all ? 'all days' : days.map(weekdayShort).join(', ')}`;
+  // A camp longer than one Mon–Sun week names the dates too ("Mon 5, Tue 6"), so staff can tell
+  // which week the extra is on (design review 2026-10-21, weekly pricing v0.717).
+  const label = spansWeeks(allCampDays) ? dayChip : weekdayShort;
+  return `${extra.name} on ${all ? 'all days' : days.map(label).join(', ')}`;
 }
 export const NO_EXTRAS_DETAIL = 'None'; // (not in the mockups)
 // An extra offered only on some days, with the child's days: "Pizza party — Wed" (owner decision 2026-10-19)
 export const detailExtraOnlyLine = (name, isoDays) => `${name} — ${shortDayLabels([...isoDays].sort()).join(', ')}`;
-// "Early price, 2 days $150 + late pick-up × 2 $16 = $166"
-export function priceBreakdownLine(b, allDays) {
+// One line per week a camper comes (weekly pricing, more than one week): "Week of Jul 5 · 5 days $275"
+export const weekPriceLine = (w) => `Week of ${monthDay(w.monday)} · ${daysCount(w.dayCount)} ${dollars(w.cents)}`;
+// "Early price, 2 days $150 + late pick-up × 2 $16 = $166"; more than one week (weekly pricing,
+// shown under the week lines): "Early price, 2 weeks $470 + late pick-up × 2 $16 = $486"
+export function priceBreakdownLine(b, allDays, weekCount = 1) {
   const kind = b.priceKind === 'early' ? 'Early price' : 'Regular price';
-  const days = allDays ? 'all days' : daysCount(b.dayCount);
+  const days = weekCount > 1 ? `${weekCount} weeks` : allDays ? 'all days' : daysCount(b.dayCount);
   const parts = [`${kind}, ${days} ${dollars(b.baseCents)}`];
   for (const extra of b.extras ?? []) {
     const count = extra.per === 'day' ? (extra.days ?? []).length : 1;
@@ -661,7 +682,14 @@ export const ENTER_PHONE = 'Enter a 10-digit phone number.';
 export const ENTER_RELATION = 'Enter the relationship.';
 export const newTotalLine = (cents) => `Total now ${dollars(cents)}`; // (not in the mockups) live price while editing
 export const REPRICE_NOTE = 'Changing days, member or extras prices the camper at the camp’s current prices.'; // (not in the mockups)
-export const TOTAL_TOO_HIGH = 'A camper’s total can be $2,000 at most.'; // (not in the mockups)
+export const TOTAL_TOO_HIGH = 'A camper’s total can be $10,000 at most.'; // (not in the mockups) weekly pricing R5
 export const checkedInCantRemove = (day) => `This camper was checked in on ${dayLong(day)}. Undo that check-in first.`; // (§7.3, the camper's name is the dialog title)
 export const PAYMENT_NOT_HERE = 'Payments are changed from the roster’s ⋯ menu.'; // (not in the mockups)
-export const AMOUNT_TOO_HIGH = 'Enter $2,000 or less.'; // (not in the mockups)
+export const AMOUNT_TOO_HIGH = 'Enter $10,000 or less.'; // (not in the mockups) weekly pricing R5
+
+
+// ----- Live-test fixes (2026-10-21): the camp page's automatic reload -----
+// The amber bar when the 15-second reload failed twice in a row (CampPage.jsx). (not in the mockups)
+export const REFRESH_FAILED = 'Couldn’t refresh the roster. Check the connection, then retry.';
+// The quiet time at the end of the summary line, e.g. "Updated 2:41:07 PM" (CampRoster.jsx). (not in the mockups)
+export const updatedAtLine = (ms) => `Updated ${new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}`;

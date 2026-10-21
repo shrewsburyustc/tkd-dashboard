@@ -18,12 +18,19 @@
 //                'notFound' (the thing doesn't exist, e.g. a deleted event)
 //   live.data    the last good answer for this key (the whole { status:'ok', ... } object) or null
 //   live.reload()  quiet reload. Resolves 'ok' | 'error' | 'noAccess' | 'notFound'.
+//   live.refreshFailing  true after 2 reloads IN A ROW failed while something is on screen (the
+//                page would otherwise look frozen); back to false after the next good answer.
+//   live.updatedAt  when the last good answer for this key arrived (a Date.now() number) or null.
+//   (refreshFailing and updatedAt were added for the camp roster, 2026-10-21; screens that don't
+//   read them behave exactly as before.)
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 // How often the Events list and the event page reload on their own (rulebook v0.157).
 export const LIVE_REFRESH_MS = 15 * 1000;
 // A request still unanswered after this long is treated as lost; the timer asks again.
 const HUNG_MS = 60 * 1000;
+// How many failed reloads in a row before refreshFailing turns true (one blip is ignored).
+const FAILS_BEFORE_WARNING = 2;
 
 export function useLiveLoad({ key, enabled, load, refreshMs }) {
   const [state, setState] = useState({ key: null, data: null, status: 'idle' });
@@ -37,6 +44,8 @@ export function useLiveLoad({ key, enabled, load, refreshMs }) {
   const keyRef = useRef(key);
   const enabledRef = useRef(enabled);
   const loadRef = useRef(load);
+  // Failed reloads in a row for the current key ({ key, count }); a good answer resets it.
+  const [fails, setFails] = useState({ key: null, count: 0 });
 
   useEffect(() => {
     keyRef.current = key;
@@ -69,7 +78,10 @@ export function useLiveLoad({ key, enabled, load, refreshMs }) {
       if (seq !== seqRef.current) return latestRef.current; // a newer request took over
       if (result?.status === 'ok') {
         cache.set(current, result);
-        setState({ key: current, data: result, status: 'ready' });
+        setState({ key: current, data: result, status: 'ready', okAt: Date.now() });
+        // Reset the failure count. Returning the same object when it is already 0 tells React
+        // nothing changed, so screens that don't use it get no extra redraw.
+        setFails((prev) => (prev.key === current && prev.count === 0 ? prev : { key: current, count: 0 }));
         return 'ok';
       }
       if (result?.status === 'no_access') {
@@ -84,8 +96,10 @@ export function useLiveLoad({ key, enabled, load, refreshMs }) {
       // Failed: keep what we have on screen ('ready'); with nothing to show it's 'error'.
       setState((prev) => {
         const data = prev.key === current ? prev.data : (cache.get(current) ?? null);
-        return { key: current, data, status: data ? 'ready' : 'error' };
+        return { key: current, data, status: data ? 'ready' : 'error', okAt: prev.key === current ? prev.okAt : null };
       });
+      // Count it (only the newest request gets here, so a replaced one never counts).
+      setFails((prev) => ({ key: current, count: prev.key === current ? prev.count + 1 : 1 }));
       return 'error';
     };
 
@@ -131,16 +145,18 @@ export function useLiveLoad({ key, enabled, load, refreshMs }) {
   const setLocal = useCallback((data) => {
     const current = keyRef.current;
     cacheRef.current.set(current, data);
-    setState({ key: current, data, status: 'ready' });
+    setState({ key: current, data, status: 'ready', okAt: Date.now() });
   }, []);
 
   // What the screen sees for THIS key — never another key's answer.
   let data = null;
   let status;
+  let updatedAt = null;
   if (key === null || key === undefined) status = 'idle';
   else if (state.key === key) {
     data = state.data;
     status = state.status;
+    updatedAt = state.okAt ?? null;
   } else if (cacheRef.current.has(key)) {
     data = cacheRef.current.get(key);
     status = 'ready';
@@ -150,5 +166,9 @@ export function useLiveLoad({ key, enabled, load, refreshMs }) {
     statusRef.current = status;
   });
 
-  return { status, data, reload, setLocal };
+  // Only a warning while there IS something on screen ('ready'); a first load that failed already
+  // shows its own error screen.
+  const refreshFailing = status === 'ready' && fails.key === key && fails.count >= FAILS_BEFORE_WARNING;
+
+  return { status, data, reload, setLocal, refreshFailing, updatedAt };
 }

@@ -12,6 +12,8 @@
 // numbers only in the payload. Prices are kept in a "bank" by number of days, so picking fewer
 // days and then more again doesn't lose prices already typed (C2: "picking fewer days drops the
 // extra price-grid rows; picking more days adds empty rows").
+// Weekly pricing (rulebook v0.717): prices are PER WEEK, so the grid has rows 1…W, where W = the
+// most picked days in one Monday–Sunday week (Mon–Fri × 2 weeks → 5 rows), not one row per day.
 import { centsToInputText, parseDollars } from '../../../lib/money.js';
 import {
   AGE_LIMITS,
@@ -21,11 +23,13 @@ import {
   DESCRIPTION_MAX,
   MAX_DAYS,
   MAX_EXTRAS,
+  MAX_WEEK_DAYS,
   OFFSET_LIMITS,
   WAIVER_MAX,
   addDays,
   campDatesFromTemplate,
   campTextIsValid,
+  gridSizeFor,
   isIsoDate,
   normalizeCampText,
   validateAges,
@@ -192,7 +196,7 @@ export function valuesFromCamp(camp, days, prices, extras) {
   };
 }
 
-// Edit template: the saved template (no days; a number of days instead).
+// Edit template: the saved template (no days; "days per week" instead — the grid's rows, 1–7).
 export function valuesFromTemplate(template) {
   return {
     ...blankValues('2026-01-01', template.locationCode),
@@ -222,13 +226,14 @@ export function formSnapshot(values) {
 
 // ----- Checking -----
 
-// How many grid rows the form has: the number of picked days (camp), or the template's number.
+// How many grid rows the form has (weekly pricing R2): for a camp W = the most picked days in one
+// Monday–Sunday week (0 before any day is picked); for a template its "days per week" (1–7).
 export function gridSize(values, mode) {
   if (mode === 'template') {
     const n = Number(values.dayCount);
-    return Number.isInteger(n) && n >= 1 && n <= MAX_DAYS ? n : 0;
+    return Number.isInteger(n) && n >= 1 && n <= MAX_WEEK_DAYS ? n : 0;
   }
-  return Math.min(values.days.length, MAX_DAYS);
+  return gridSizeFor(values.days);
 }
 
 const NAME_TEXT = { tooLong: T.NAME_TOO_LONG, badCharacter: T.NAME_BAD_CHARACTER };
@@ -275,7 +280,7 @@ export function checkForm(values, ctx) {
   sections[1] = {
     problem: Boolean(campProblem),
     // Amber: the first problem in words ('1 extra has no price' style, C3); else the summary.
-    summary: campProblem ?? T.campSectionSummary(normalizeName(values.name), values.school, values.heldAt, isTemplate ? n : isoDays.length),
+    summary: campProblem ?? T.campSectionSummary(normalizeName(values.name), values.school, values.heldAt, isTemplate ? n : isoDays.length, isTemplate),
   };
 
   // ----- 2. Times -----
@@ -438,4 +443,5 @@ export function checkForm(values, ctx) {
 }
 
 // Re-exported for the section files (one import place for the form's limits).
-export { AGE_LIMITS, MAX_EXTRAS, MAX_DAYS };
+export { AGE_LIMITS, MAX_EXTRAS, MAX_DAYS, MAX_WEEK_DAYS };
+

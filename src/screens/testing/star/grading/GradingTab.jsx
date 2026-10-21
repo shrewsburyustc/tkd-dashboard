@@ -38,6 +38,9 @@
 //   panelId, tabId, renderHeader(addButton)
 //   onAddCandidate(opener)   "Add candidate" in the header: opens the Candidates tab's add menu
 //   onPrint({ dan, danLabel, opener })   Print grading sheet (Builder C wires the printout)
+//   mark                  phase 6: { id, dan, key } from Results' Open grades (proposal 29) — that Dan
+//                         is selected and that row marked (gray tint + dark bar, scrolled into view);
+//                         on a phone the picker is set to that candidate. null = nothing marked.
 //   pageBanner, onDismissPageBanner   the never-retried answers' banner text (✕ only)
 //   onRetryLoad()         Retry when the grades couldn't be read
 //   onGradingChanged()    after Choose subjects saved: reload
@@ -61,6 +64,8 @@ import './grading.css';
 const danByEvent = new Map();
 // The phone's candidate per event and Dan.
 const pickByEventDan = new Map();
+// Results' Open grades marks already applied (each mark selects its Dan and candidate once).
+const markSeen = new Set();
 
 export default function GradingTab({
   event,
@@ -75,6 +80,7 @@ export default function GradingTab({
   renderHeader,
   onAddCandidate,
   onPrint,
+  mark = null,
   pageBanner,
   onDismissPageBanner,
   onRetryLoad,
@@ -91,6 +97,12 @@ export default function GradingTab({
 
   const dans = copy?.dans ?? [];
   const letters = gradeLetters(copy);
+  // Opened from Results' Open grades (phase 6, proposal 29): start on that Dan and that candidate.
+  if (mark && !markSeen.has(mark.key)) {
+    markSeen.add(mark.key);
+    danByEvent.set(eventId, mark.dan);
+    pickByEventDan.set(`${eventId}|${mark.dan}`, mark.id);
+  }
   const [danSel, setDanSelState] = useState(() => danByEvent.get(eventId) ?? dans[0]?.dan ?? 1);
   const [pick, setPickState] = useState(() => pickByEventDan.get(`${eventId}|${danSel}`) ?? null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -105,6 +117,20 @@ export default function GradingTab({
     pickByEventDan.set(`${eventId}|${danSel}`, rowId);
     setPickState(rowId);
   }
+
+  // Results' Open grades (phase 6, proposal 29): scroll the marked row into view once the grid has
+  // drawn it.
+  const markKey = mark?.key ?? null;
+  const markDrawn = Boolean(mark && grading.data);
+  useEffect(() => {
+    if (!markDrawn) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      document.querySelector(`[data-grade-row="${mark.id}"]`)?.scrollIntoView({ block: 'center' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+    // (once per mark, when the grid is there)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [markKey, markDrawn]);
 
   // The dialog makes the page behind it inert (App.jsx).
   const dialogOpen = choose !== null && !screenLocked;
@@ -285,6 +311,7 @@ export default function GradingTab({
         size={size}
         typing={!isTouch}
         onChooseSubjects={isAdmin ? openChoose : undefined}
+        markedId={mark?.dan === danSel ? mark.id : null}
       />
     );
   }

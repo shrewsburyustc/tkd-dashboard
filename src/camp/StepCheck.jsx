@@ -8,8 +8,9 @@
 import SignaturePad from '../register/SignaturePad.jsx';
 import { FieldError, TickBox, TopError } from './parts.jsx';
 import { extraPriceLabel, priceFor } from './form.js';
-import { campDaysShort, campHours, capitalize, childDaysLabel, formatDollars, shortDate } from './format.js';
+import { campDaysShort, campHours, capitalize, childDaysLabel, formatDollars, monthDay, shortDate, weekdaysCompact } from './format.js';
 import { formatPhone, phoneDigits } from '../lib/camps/campRules.js';
+import { addDays } from '../lib/testing/eventRules.js';
 import { normalizeName } from '../lib/testing/names.js';
 import * as T from './text.js';
 
@@ -62,6 +63,10 @@ export default function StepCheck({
       {form.children.map((child, index) => {
         const priced = priceFor(child, camp, kind);
         const days = camp.days.filter((d) => child.dayIds.includes(d.dayId)).map((d) => d.day);
+        // More than one week (weekly pricing, v0.717): the first line says "25 days in 5 weeks" and
+        // each week's price line names its weekdays, "Week of Nov 2 · 2 days (Mon, Wed)" (2026-10-21).
+        const manyWeeks = (priced.weeks ?? []).length > 1;
+        const weekdaysOf = (monday) => weekdaysCompact(days.filter((d) => d >= monday && d <= addDays(monday, 6)));
         const last = index === form.children.length - 1;
         const name = `${normalizeName(child.first)} ${normalizeName(child.last)}`;
         return (
@@ -69,11 +74,20 @@ export default function StepCheck({
             <h3 className="reg-card__title">{T.childHeading(name, child.age.trim(), child.member)}</h3>
             <div className="camp-line">
               <span>
-                {T.dayCount(priced.dayCount)} · {childDaysLabel(days)}
+                {manyWeeks ? T.daysInWeeks(priced.dayCount, priced.weeks.length) : `${T.dayCount(priced.dayCount)} · ${childDaysLabel(days)}`}
                 <small>{kind === 'early' ? T.earlyPriceNote(shortDate(camp.earlyUntil)) : T.REGULAR_PRICE_NOTE}</small>
               </span>
-              <b>{formatDollars(priced.baseCents ?? 0)}</b>
+              {/* One week: the price on this line. More weeks (weekly pricing, v0.717): one line per week below. */}
+              {manyWeeks ? null : <b>{formatDollars(priced.baseCents ?? 0)}</b>}
             </div>
+            {manyWeeks
+              ? priced.weeks.map((w) => (
+                  <div key={w.monday} className="camp-line">
+                    <span>{T.weekDaysLine(monthDay(w.monday), w.dayCount, weekdaysOf(w.monday))}</span>
+                    <b>{formatDollars(w.cents ?? 0)}</b>
+                  </div>
+                ))
+              : null}
             {priced.extras.map((e) => (
               <div key={e.extraId} className="camp-line">
                 <span>{extraPriceLabel(e, camp, child)}</span>

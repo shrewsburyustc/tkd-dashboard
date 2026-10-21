@@ -194,9 +194,10 @@ export default function CampDialog({
     // Extras from a template follow its weekdays onto the picked days (Wed, Fri → the Wednesdays …).
     next = withExtraDays(next);
     setValues(next);
-    // From a template or on Edit camp, a different number of days adds or drops grid rows: the
+    // From a template or on Edit camp, a different grid size W (the most days in one week, weekly
+    // pricing v0.717) adds or drops grid rows: the
     // Prices summary shows it at once ("1 row needs prices", C2).
-    const rowsChanged = Math.min(days.length, 10) !== Math.min(values.days.length, 10);
+    const rowsChanged = gridSize({ ...values, days }, mode) !== gridSize(values, mode);
     const fromSaved = values.startFrom !== 'blank' || mode === 'edit';
     setTouched((current) => ({ ...current, 1: true, ...(rowsChanged && fromSaved ? { 3: true } : {}) }));
     setServer((current) => ({ ...current, dayError: null }));

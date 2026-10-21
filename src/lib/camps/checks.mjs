@@ -13,6 +13,7 @@ import {
   priceChild, familyTotal, isAllDays, payTag, toCollectCents, checkInRule, checkInNote, attendanceCell, cameCount, validateAges,
   ageAllowed, phoneDigits, formatPhone, templateFromCamp, campDatesFromTemplate, gridRowsFor, campLink, toCamel, toSnake,
   childProblem, offsetsAreValid, todayInSchoolTime, campTextIsValid, normalizeCampText, extraDaysRemoved,
+  gridSizeFor, comesAllWeek, MAX_WEEK_DAYS,
   campWeeks, defaultWeekIndex, paymentSchoolFor, extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
 } from './campRules.js';
 import { qrFileName, campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
@@ -38,10 +39,10 @@ check('constants (§5.1)', () => {
   assert.equal(CAMP_ACK_VERSION, 'camp-2026-10-18');
   assert.deepEqual(DEFAULT_AGES, { min: 3, max: 17 });
   assert.deepEqual(AGE_LIMITS, { min: 1, max: 99 });
-  assert.equal(MAX_DAYS, 10);
+  assert.equal(MAX_DAYS, 60); // weekly pricing R4 (was 10)
   assert.equal(MAX_EXTRAS, 10);
   assert.equal(MAX_CHILDREN, 3);
-  assert.equal(MAX_CAMPER_CENTS, 200000);
+  assert.equal(MAX_CAMPER_CENTS, 1000000); // weekly pricing R5 (was 200000)
   assert.equal(SIGNATURE_KEEP_YEARS, 3);
   assert.equal(CAMP_TRIES_PER_HOUR, 30);
   assert.equal(UNDO_WINDOW_MS, 10000);
@@ -148,8 +149,8 @@ check('extras rules (childProblem)', () => {
   assert.equal(isAllDays(DAY_IDS, APRIL_DAYS), true);
   assert.equal(isAllDays([MON, TUE], APRIL_DAYS), false);
   assert.equal(isAllDays([], []), false);
-  // Over $2,000 for one camper
-  const costly = [{ extraId: DROP, name: 'Costly', priceCents: 100000, per: 'day', notForAllDays: false, sort: 0 }];
+  // Over $10,000 for one camper (weekly pricing R5)
+  const costly = [{ extraId: DROP, name: 'Costly', priceCents: 500000, per: 'day', notForAllDays: false, sort: 0 }];
   assert.equal(childProblem(child([MON, TUE], true, [{ extraId: DROP, dayIds: [MON, TUE] }]), APRIL_PRICES, costly, APRIL_DAYS, 'early'), 'too_expensive');
 });
 
@@ -669,7 +670,7 @@ check('mock: scripted run — add camp → sign up → check in → mark paid �
   assert.equal(more.total_cents, 30000 + 2000); // 3 days non-member early at the new grid + drop-off at the new price
   assert.equal(more.owes_cents, 32000 - 18500); // "Owes $135"
   assert.equal(payTag(roster()[0]), 'owes');
-  // Removing a checked-in day → checked_in; a pizza for an all-days camper → invalid; > $2,000 → invalid.
+  // Removing a checked-in day → checked_in; a pizza for an all-days camper → invalid; > $10,000 → invalid.
   assert.deepEqual(rpcOk(b, 'camp_update_details', details(more.camper_version, more.signup_version, { p_day_ids: [d1, d3] }), STAFF), { status: 'checked_in', day: '2027-06-08' });
   assert.equal(rpcOk(b, 'camp_update_details', details(more.camper_version, more.signup_version, { p_day_ids: [d1, d2, d3], p_extras: [{ extra_id: pizza, day_ids: [] }] }), STAFF).status, 'invalid');
   assert.equal(rpcOk(b, 'camp_update_details', details(more.camper_version, more.signup_version, { p_parent_phone: '508-555' }), STAFF).status, 'invalid');
@@ -960,6 +961,200 @@ check('weeks (CP5 roster week switcher): campWeeks, defaultWeekIndex', () => {
   assert.equal(defaultWeekIndex([], '2027-01-02'), 0);
 });
 
+// ======================= weekly pricing (rulebook v0.717, migration 0022) =======================
+// Each Monday–Sunday week a camper comes is priced by the grid row for that week's days; the
+// weeks add up. The grid has rows 1…W (W = the most camp days in one week). Pizza (not charged to
+// all-days campers) is included per week. Same price grid as the April camp (5 rows).
+
+// Two weeks, Mon Jul 5 – Fri Jul 16, 2027 (ids w1…w10).
+const TWO_WEEKS = ['2027-07-05', '2027-07-06', '2027-07-07', '2027-07-08', '2027-07-09', '2027-07-12', '2027-07-13', '2027-07-14', '2027-07-15', '2027-07-16']
+  .map((day, i) => ({ dayId: `w${i + 1}`, day }));
+const W = TWO_WEEKS.map((d) => d.dayId);
+const WEEK1 = W.slice(0, 5);
+const WEEK2 = W.slice(5);
+// Pizza on the Wednesdays and Fridays of both weeks.
+const W_PIZZA = { extraId: 'pz', name: 'Pizza party', priceCents: 500, per: 'day', notForAllDays: true, onlyOn: ['2027-07-07', '2027-07-09', '2027-07-14', '2027-07-16'], sort: 0 };
+const W_LUNCH = { extraId: 'ln', name: 'Lunch', priceCents: 600, per: 'once', notForAllDays: true, onlyOn: [], sort: 1 };
+const W_EXTRAS = [W_PIZZA, W_LUNCH];
+const wPrice = (c, kind = 'early') => priceChild(c, APRIL_PRICES, W_EXTRAS, TWO_WEEKS, kind);
+const wProblem = (c, kind = 'early') => childProblem(c, APRIL_PRICES, W_EXTRAS, TWO_WEEKS, kind);
+
+check('weekly pricing: grid size W (R2)', () => {
+  assert.equal(MAX_WEEK_DAYS, 7);
+  assert.equal(gridSizeFor([]), 0);
+  assert.equal(gridSizeFor(['2026-10-12']), 1); // a 1-day camp → 1 row
+  assert.equal(gridSizeFor(TWO_WEEKS), 5); // Mon–Fri × 2 → 5 rows
+  assert.equal(gridSizeFor(['2026-11-25', '2026-11-27']), 2); // Thanksgiving Wed + Fri → 2 rows
+  // Test 2: Oct 26–30, Nov 9–11, Nov 16–17 (2026) → 5 rows
+  const test2 = ['2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-11-09', '2026-11-10', '2026-11-11', '2026-11-16', '2026-11-17'];
+  assert.equal(gridSizeFor(test2), 5);
+  assert.equal(gridSizeFor([...test2].reverse()), 5); // order doesn't matter
+  assert.equal(gridSizeFor(['2027-07-10', '2027-07-11']), 2); // Sat + Sun: the same Mon–Sun week
+  assert.equal(gridSizeFor(['2027-07-11', '2027-07-12']), 1); // Sun + Mon: two weeks
+  // A 3-week camp with 12 days (5 + 5 + 2) → 5 rows.
+  assert.equal(gridSizeFor([...TWO_WEEKS.map((d) => d.day), '2027-07-19', '2027-07-20']), 5);
+  // gridRowsFor makes rows 1…W.
+  assert.deepEqual(gridRowsFor(gridSizeFor(TWO_WEEKS), APRIL_PRICES).map((r) => r.dayCount), [1, 2, 3, 4, 5]);
+});
+
+check('weekly pricing: price of a camper (R3)', () => {
+  // 5 + 5 = 2 × row 5
+  const both = wPrice(child(W, true));
+  assert.equal(both.baseCents, 2 * 27500);
+  assert.deepEqual(both.weeks, [{ monday: '2027-07-05', dayCount: 5, cents: 27500 }, { monday: '2027-07-12', dayCount: 5, cents: 27500 }]);
+  assert.equal(both.dayCount, 10);
+  // 5 + 3 = row 5 + row 3
+  assert.equal(wPrice(child([...WEEK1, W[5], W[6], W[7]], true)).baseCents, 27500 + 19500);
+  // 2 + 2 = 2 × row 2 (member regular, non-member early too)
+  const twoTwo = child([W[0], W[1], W[5], W[6]], true);
+  assert.equal(wPrice(twoTwo).baseCents, 2 * 14000);
+  assert.equal(wPrice(twoTwo, 'regular').baseCents, 2 * 15000);
+  assert.equal(wPrice({ ...twoTwo, member: false }).baseCents, 2 * 15000);
+  // One week only: exactly as before (one item in weeks).
+  assert.deepEqual(wPrice(child(WEEK2.slice(0, 3), false), 'regular').weeks, [{ monday: '2027-07-12', dayCount: 3, cents: 22000 }]);
+  // Thanksgiving Wed + Fri: one week of 2 days.
+  const tg = [{ dayId: 'a', day: '2026-11-25' }, { dayId: 'b', day: '2026-11-27' }];
+  assert.equal(priceChild(child(['a', 'b'], true), APRIL_PRICES.slice(0, 2), [], tg, 'early').totalCents, 14000);
+  // A week with no grid row → baseCents null (the base then counts 0; the database refuses it).
+  const short = priceChild(child(W, true), APRIL_PRICES.slice(0, 4), [], TWO_WEEKS, 'early');
+  assert.equal(short.baseCents, null);
+  assert.equal(short.weeks[0].cents, null);
+  assert.equal(short.totalCents, 0);
+  // The family total adds children up.
+  assert.equal(familyTotal([both, wPrice(twoTwo)]), 55000 + 28000);
+});
+
+check('weekly pricing: "not charged to all-days campers" is per week (R6)', () => {
+  // Every day of week 1, Mon + Wed of week 2.
+  const kid = (extras) => child([...WEEK1, W[5], W[7]], true, extras);
+  const [wed1, fri1, wed2, fri2] = [W[2], W[4], W[7], W[9]];
+  assert.equal(wProblem(kid([{ extraId: 'pz', dayIds: [wed2] }])), null); // week 2 not full: may buy
+  assert.equal(wPrice(kid([{ extraId: 'pz', dayIds: [wed2] }])).totalCents, 27500 + 14000 + 500);
+  assert.equal(wProblem(kid([{ extraId: 'pz', dayIds: [wed1] }])), 'not_for_all_days'); // week 1 full: included
+  assert.equal(wProblem(kid([{ extraId: 'pz', dayIds: [fri1, wed2] }])), 'not_for_all_days');
+  assert.equal(wProblem(kid([{ extraId: 'pz', dayIds: [fri2] }])), 'extra_day_not_child_day');
+  assert.equal(comesAllWeek([...WEEK1, W[5]], TWO_WEEKS, '2027-07-07'), true);
+  assert.equal(comesAllWeek([...WEEK1, W[5]], TWO_WEEKS, '2027-07-14'), false);
+  assert.equal(comesAllWeek([], [], '2027-07-14'), false);
+  // extraDaysFor with the camp's days leaves out the days of full weeks.
+  const kidDays = TWO_WEEKS.filter((d) => [...WEEK1, W[5], W[7]].includes(d.dayId));
+  assert.deepEqual(extraDaysFor(W_PIZZA, kidDays, TWO_WEEKS).map((d) => d.day), ['2027-07-14']);
+  assert.deepEqual(extraDaysFor(W_PIZZA, kidDays).map((d) => d.day), ['2027-07-07', '2027-07-09', '2027-07-14']); // without: as before
+  // A once not-for-all-days extra: refused only for a child coming every day of the whole camp.
+  assert.equal(wProblem(child(WEEK1, true, [{ extraId: 'ln', dayIds: [] }])), null);
+  assert.equal(wProblem(child(W, true, [{ extraId: 'ln', dayIds: [] }])), 'not_for_all_days');
+  // Roster count = chose it that day + comes every day of that day's week (and is on that day).
+  const r = (id, dayIds, picks = []) => ({
+    id, status: 'active', duplicateState: 'none', paidCents: 0, owesCents: 0,
+    days: dayIds.map((dayId) => ({ dayId, day: TWO_WEEKS.find((d) => d.dayId === dayId).day, checkedInAt: null })),
+    extras: picks.map((dayId) => ({ extraId: 'pz', name: 'Pizza party', per: 'day', dayId })),
+  });
+  const rows = [
+    r('a', [...WEEK1, W[5], W[7]]), // full week 1 only
+    r('b', [W[0], W[2], W[7]], [wed2]), // chose pizza on week-2 Wednesday
+    r('c', W), // both weeks full
+    r('d', WEEK2.slice(0, 4)), // Mon–Thu of week 2: not full
+  ];
+  assert.equal(extraCountOnDay(rows, W_PIZZA, wed1, TWO_WEEKS), 2); // a + c (b comes but week 1 not full, didn't choose)
+  assert.equal(extraCountOnDay(rows, W_PIZZA, wed2, TWO_WEEKS), 2); // b (chose) + c (full week 2)
+  assert.equal(extraCountOnDay(rows, W_PIZZA, fri2, TWO_WEEKS), 1); // c only
+  assert.equal(missingExtraOnDay(rows[0], W_PIZZA, wed1, TWO_WEEKS), false); // included that week
+  assert.equal(missingExtraOnDay(rows[0], W_PIZZA, wed2, TWO_WEEKS), true); // "No pizza party"
+  assert.equal(missingExtraOnDay(rows[1], W_PIZZA, wed2, TWO_WEEKS), false); // chose it
+  assert.equal(missingExtraOnDay(rows[3], W_PIZZA, wed2, TWO_WEEKS), true);
+});
+
+check('weekly pricing: 60 days and the $10,000 cap (R4, R5)', () => {
+  // 12 weeks of Mon–Fri = 60 days.
+  const sixty = [];
+  for (let wk = 0; wk < 12; wk += 1) for (let d = 0; d < 5; d += 1) sixty.push({ dayId: `s${wk}-${d}`, day: addD('2027-01-04', wk * 7 + d) });
+  assert.equal(sixty.length, MAX_DAYS);
+  assert.equal(gridSizeFor(sixty), 5);
+  const ids = sixty.map((d) => d.dayId);
+  const full = priceChild(child(ids, true), APRIL_PRICES, [], sixty, 'early');
+  assert.equal(full.baseCents, 12 * 27500);
+  assert.equal(full.weeks.length, 12);
+  // $3,300 base + 60 × $110 + $100 once = $10,000 exactly → allowed; $1 more → too_expensive.
+  const extras = (onceCents) => [
+    { extraId: 'x1', name: 'Care', priceCents: 11000, per: 'day', notForAllDays: false, onlyOn: [], sort: 0 },
+    { extraId: 'x2', name: 'Kit', priceCents: onceCents, per: 'once', notForAllDays: false, onlyOn: [], sort: 1 },
+  ];
+  const big = child(ids, true, [{ extraId: 'x1', dayIds: ids }, { extraId: 'x2', dayIds: [] }]);
+  assert.equal(priceChild(big, APRIL_PRICES, extras(10000), sixty, 'early').totalCents, MAX_CAMPER_CENTS);
+  assert.equal(childProblem(big, APRIL_PRICES, extras(10000), sixty, 'early'), null);
+  assert.equal(childProblem(big, APRIL_PRICES, extras(10100), sixty, 'early'), 'too_expensive');
+});
+
+check('mock: weekly pricing — Add / Edit camp grids, 60 days, templates, detail, sign-up, old store', () => {
+  const { backend: b, env } = makeBackend({ today: '2027-05-20' });
+  const weekdays = (monday, n) => Array.from({ length: n }, (_, i) => addD(monday, i));
+  const gridArg = (n) => Array.from({ length: n }, (_, i) => ({ day_count: i + 1, member_early_cents: 7500 * (i + 1), member_regular_cents: 8000 * (i + 1), nonmember_early_cents: 8500 * (i + 1), nonmember_regular_cents: 9000 * (i + 1) }));
+  const campArgsFor = (days, rowsCount, o = {}) => addCampArgs(days[0], { p_days: days, p_signup_opens_on: '2027-05-20', p_signup_closes_on: addD(days[0], -1), p_early_until: '2027-05-31', p_prices: gridArg(rowsCount), ...o });
+  // Two weeks Mon–Fri: a 5-row grid is right; the old 10-row grid and a 4-row grid are refused.
+  const twoWeeks = [...weekdays('2027-06-07', 5), ...weekdays('2027-06-14', 5)];
+  assert.equal(rpcOk(b, 'camp_add_camp', campArgsFor(twoWeeks, 10)).status, 'invalid');
+  assert.equal(rpcOk(b, 'camp_add_camp', campArgsFor(twoWeeks, 4)).status, 'invalid');
+  const added = rpcOk(b, 'camp_add_camp', campArgsFor(twoWeeks, 5));
+  assert.equal(added.status, 'ok');
+  // A 3-week camp with 12 days (5 + 5 + 2) → 5 rows, saved.
+  const twelve = [...twoWeeks, ...weekdays('2027-06-21', 2)];
+  assert.equal(rpcOk(b, 'camp_add_camp', campArgsFor(twelve, 5)).status, 'ok');
+  // Thanksgiving-like Wed + Fri → 2 rows.
+  assert.equal(rpcOk(b, 'camp_add_camp', campArgsFor(['2027-06-09', '2027-06-11'], 2)).status, 'ok');
+  // 60 days ok, 61 refused (R4).
+  const sixty = [];
+  for (let wk = 0; wk < 12; wk += 1) sixty.push(...weekdays(addD('2027-06-07', wk * 7), 5));
+  assert.equal(rpcOk(b, 'camp_add_camp', campArgsFor(sixty, 5, { p_early_until: '2027-05-31' })).status, 'ok');
+  assert.equal(rpcOk(b, 'camp_add_camp', campArgsFor([...sixty, '2027-06-12'], 6)).status, 'invalid'); // 61 days (a Saturday added)
+  // Edit camp: adding week 3's Mon + Tue keeps W = 5 → the same 5 rows are accepted.
+  const camp = rows(b, 'camps', 'id, version', [{ col: 'id', value: added.id }])[0];
+  assert.equal(rpcOk(b, 'camp_update_camp', { p_camp_id: added.id, p_expected_version: camp.version, ...campArgsFor(twelve, 5) }).status, 'ok');
+  // Sign-up 5 + 3 days: the price is row 5 + row 3 (member early 37500 + 22500).
+  const pub = b.publicCamp(added.public_code);
+  const dayIds = pub.camp.days.map((d) => d.day_id);
+  const kid = { first_name: 'Ava', last_name: 'Lee', age: 8, member: true, day_ids: [...dayIds.slice(0, 5), ...dayIds.slice(5, 8)], extras: [] };
+  const priced = b.publicSignup(signupArgs(b, added.public_code, [kid]));
+  assert.equal(priced.status, 'price_changed');
+  assert.equal(priced.new_total_cents, 37500 + 22500);
+  const ok = b.publicSignup(signupArgs(b, added.public_code, [kid], { expected_total_cents: 60000 }));
+  assert.equal(ok.status, 'ok');
+  assert.deepEqual(ok.children[0].weeks, [{ monday: '2027-06-07', day_count: 5, cents: 37500 }, { monday: '2027-06-14', day_count: 3, cents: 22500 }]);
+  assert.equal(ok.children[0].base_cents, 60000);
+  assert.equal(ok.children[0].day_count, 8);
+  // Camper detail: breakdown.weeks.
+  const camper = rows(b, 'camp_roster', 'id, first_name', [{ col: 'camp_id', value: added.id }])[0];
+  const detail = rpcOk(b, 'camp_camper_detail', { p_camper_id: camper.id });
+  assert.deepEqual(detail.breakdown.weeks.map((w) => [w.monday, w.day_count, w.cents]), [['2027-06-07', 5, 37500], ['2027-06-14', 3, 22500]]);
+  assert.equal(detail.breakdown.base_cents, 60000);
+  // Save as template stores W and the 1…W grid (R7).
+  const saved = rpcOk(b, 'camp_save_template', { p_camp_id: added.id, p_name: 'Two-week template' });
+  const tpl = toTemplate(rows(b, 'camp_templates', TEMPLATE_COLUMNS, [{ col: 'id', value: saved.id }])[0]);
+  assert.equal(tpl.dayCount, 5);
+  assert.equal(tpl.prices.length, 5);
+  // Edit template: Days per week 1–7; the grid must match.
+  const tplArgs = (n) => ({ p_template_id: tpl.id, p_expected_version: tpl.version, ...templateArgs({ ...tpl, dayCount: n, prices: gridArg(n).map((p) => toCamel(p)) }) });
+  assert.equal(rpcOk(b, 'camp_update_template', tplArgs(8)).status, 'invalid');
+  assert.equal(rpcOk(b, 'camp_update_template', tplArgs(7)).status, 'ok');
+  // The default data: the Two-Week Summer Camp has a 5-row grid; Noah (3 + 3 days) = 2 × row 3.
+  env.today = '2027-05-20';
+  const summer = rows(b, 'camps', 'id, name').find((c) => c.name === 'Two-Week Summer Camp');
+  assert.equal(rows(b, 'camp_prices', 'day_count', [{ col: 'camp_id', value: summer.id }]).length, 5);
+  const noah = toCamel(rows(b, 'camp_roster', ROSTER + ', base_cents', [{ col: 'camp_id', value: summer.id }])).find((x) => x.firstName === 'Noah');
+  assert.equal(noah.baseCents, 2 * 19500);
+  // A saved store from before weekly pricing (schema 3, 10-row summer grid) is upgraded, not thrown away.
+  const old = defaultCampsData({ today: '2027-05-20' });
+  old.schema = 3;
+  const summerId = old.camps.find((c) => c.name === 'Two-Week Summer Camp').id;
+  for (let n = 6; n <= 10; n += 1) old.camp_prices.push({ id: randomUUID(), camp_id: summerId, day_count: n, member_early_cents: 100, member_regular_cents: 100, nonmember_early_cents: 100, nonmember_regular_cents: 100 });
+  old.camp_templates[0].day_count = 10;
+  old.camps[0].name = 'Kept by the upgrade';
+  let saved3 = old;
+  const b3 = createCampsBackend({ loadStore: () => saved3, saveStore: (s) => { saved3 = s; }, now: () => Date.parse('2027-05-20T14:00:00Z'), today: () => '2027-05-20', newId: () => randomUUID() });
+  assert.equal(rows(b3, 'camps', 'name')[0].name, 'Kept by the upgrade');
+  assert.equal(rows(b3, 'camp_prices', 'day_count', [{ col: 'camp_id', value: summerId }]).length, 5);
+  assert.equal(Math.max(...rows(b3, 'camp_templates', 'day_count').map((t) => t.day_count)) <= 7, true);
+});
+
 check('payment school (v0.707): paymentSchoolFor, Mark paid / Undo / Edit payment, detail, seed', () => {
   // This device's home school, whatever the camp or the switcher (owner decision 2026-10-19).
   assert.equal(paymentSchoolFor('Worcester'), 'worcester');
@@ -1062,11 +1257,14 @@ await (async () => {
     // The Function's field limits → bad_request (no database).
     for (const bad of [
       { extra_key: 1 }, { website: 'bot' }, { sent_at: 2000 }, { submission_id: 'nope' },
-      { children: [] }, { expected_total_cents: 700000 }, { parent: { name: 'x', phone: '1'.repeat(21), relation: 'y' } },
+      { children: [] }, { expected_total_cents: 3000001 /* 3 × $10,000 + 1, R5 */ }, { parent: { name: 'x', phone: '1'.repeat(21), relation: 'y' } },
     ]) assert.equal((await previewApi.signUp(code, body(bad))).status, 'bad_request', JSON.stringify(bad));
     const bigKid = body().children[0];
     assert.equal((await previewApi.signUp(code, body({ children: [bigKid, bigKid, bigKid, bigKid] }))).status, 'bad_request');
     assert.equal((await previewApi.signUp(code, body({ children: [{ ...bigKid, age: 9.5 }] }))).status, 'bad_request');
+    const ids61 = Array.from({ length: 61 }, () => randomUUID()); // a camp has up to 60 days (R4)
+    assert.equal((await previewApi.signUp(code, body({ children: [{ ...bigKid, day_ids: ids61, extras: [] }] }))).status, 'bad_request');
+    assert.notEqual((await previewApi.signUp(code, body({ children: [{ ...bigKid, day_ids: ids61.slice(1), extras: [] }] }))).status, 'bad_request');
     assert.equal((await previewApi.signUp(code, body({ children: [{ ...bigKid, member: 'yes' }] }))).status, 'bad_request');
     // Database refusals reduced to the allowlist.
     const changedPrice = await previewApi.signUp(code, body({ expected_total_cents: 100 }));
