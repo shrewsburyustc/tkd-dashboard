@@ -1,7 +1,7 @@
 // CamperRowMenu.jsx — the items of a camper's ⋯ menu on the camp page (contract §6.4).
 // Why it exists: who may do what differs between staff and admins (v0.700), and the menu must
-// show only what the person can do (Star v0.110). One function builds the list so the Payments
-// tab, the Removed group and the Check in tab all agree:
+// show only what the person can do (Star v0.110). One function builds the list so the roster's ⋯
+// (mouse) and Camper detail's "More" (touch, CP5) always agree:
 //   Active camper — staff and admins: Change how they'll pay (while they still owe), Edit details,
 //     Review possible duplicate (when flagged), Withdraw (ti-user-minus, instant with Undo)
 //     — admins only, under "Admin": Edit payment, Undo payment (when something is paid),
@@ -9,7 +9,6 @@
 //   Removed camper — Restore (staff and admins for an ordinary withdrawal; a "Duplicate copy"
 //     only for admins — staff get the 5-second Undo right after Keep this one), and for admins
 //     Delete permanently
-//   Check in tab, a camper who is Here — Undo check-in (when the day rule allows it)
 import { IconAlertTriangle, IconArrowBackUp, IconCashEdit, IconEdit, IconTrash, IconUserMinus } from '@tabler/icons-react';
 import { NoIcon } from './CampRowMenu.jsx';
 import * as T from './text.js';
@@ -48,7 +47,3 @@ export function camperMenuItems(row, { isAdmin, busy, anchor, h }) {
   return items;
 }
 
-// The Check in tab's ⋯ on a camper who is Here.
-export function checkInMenuItems(row, { busy, onUndoCheckIn }) {
-  return [{ key: 'undo-checkin', label: T.UNDO_CHECK_IN, Icon: IconArrowBackUp, disabled: busy, onSelect: () => onUndoCheckIn(row) }];
-}

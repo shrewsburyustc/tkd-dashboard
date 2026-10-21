@@ -175,7 +175,7 @@ function isRun(days) {
 // The camp's days in one line, as in C1:
 //   1 day            "Wed, Nov 11, 2026"
 //   a run of days    "Mon, Apr 19 – Fri, Apr 23, 2027"
-//   days with gaps   "Wed, Nov 25 & Fri, Nov 27, 2026"  (3+: "Mon, Dec 28, Tue, Dec 29 & Thu, Dec 31, 2026")
+//   days with gaps   "Wed, Nov 25 & Fri, Nov 27, 2026"; runs of 3+ days become ranges  (3+: "Mon, Dec 28, Tue, Dec 29 & Thu, Dec 31, 2026")
 // The year is written once, at the end (each day gets its own year if the days span two years).
 export function campDatesText(isoDays) {
   const days = [...isoDays].sort();
@@ -185,7 +185,21 @@ export function campDatesText(isoDays) {
   const label = (iso, withYear) => (withYear ? shortDate(iso) : dayLong(iso));
   if (days.length === 1) return shortDate(days[0]);
   if (isRun(days)) return `${label(days[0], !oneYear)} – ${shortDate(days[days.length - 1])}`;
-  const parts = days.map((d, i) => label(d, !oneYear || i === days.length - 1));
+  // Days with gaps: each unbroken run of 3+ days becomes a range, so a two-week camp reads
+  // "Mon, Jul 5 – Fri, Jul 9 & Mon, Jul 12 – Fri, Jul 16, 2027" (CP5).
+  const runs = [];
+  for (const d of days) {
+    const last = runs[runs.length - 1];
+    if (last && isRun([last[last.length - 1], d])) last.push(d);
+    else runs.push([d]);
+  }
+  const parts = [];
+  runs.forEach((run, r) => {
+    const isLastRun = r === runs.length - 1;
+    if (run.length >= 3) parts.push(`${label(run[0], !oneYear)} – ${label(run[run.length - 1], !oneYear || isLastRun)}`);
+    else run.forEach((d, i) => parts.push(label(d, !oneYear || (isLastRun && i === run.length - 1))));
+  });
+  if (parts.length === 1) return parts[0];
   return `${parts.slice(0, -1).join(', ')} & ${parts[parts.length - 1]}`;
 }
 // "Mon, Apr 19 – Fri, Apr 23, 2027 · 5 days"
@@ -432,12 +446,8 @@ export function cantRemoveDay(day, first, last, more) {
   return `Can’t remove ${dayLong(day)}: ${names} picked it. Change their days or withdraw them first.`;
 }
 
-// ----- Camp page (v0.704 option A) -----
+// ----- Camp page -----
 export const BACK_TO_CAMPS = 'Camps';
-export const TAB_CHECK_IN = 'Check in';
-export const TAB_PAYMENTS = 'Payments';
-export const TAB_ATTENDANCE = 'Attendance';
-export const paymentsTabLabel = (n) => (n > 0 ? `Payments · ${n}` : 'Payments'); // the tab's screen-reader name
 // "Mon, Apr 19 – Fri, Apr 23, 2027 · 9:00 AM – 3:00 PM · Both schools · held at Worcester · 18 campers"
 export const campSummaryLine = (camp, days, count) =>
   [campDatesText(days), timeRange(camp.startTime, camp.endTime), campSchoolLine(camp), campersCount(count)].join(' · ');
@@ -447,50 +457,68 @@ export const CAMP_GONE = 'This camp was deleted.'; // (not in the mockups)
 export const MORE_CAMP_ACTIONS = 'More actions for this camp'; // (not in the mockups) screen readers + tooltip
 export const NO_CAMPERS = 'No campers yet. Families sign up with the Registration link.'; // (§7.3)
 
-// Check in
-export const DAY_SWITCH_LABEL = 'Camp day'; // (not in the mockups) screen readers only
-// The big-number line (option A): the number is drawn large, the words after it normal.
-export const hereOf = (total) => `of ${total} here`;
-export const NOT_HERE_WORDS = 'not here yet';
-export const PAID_WORDS = 'paid';
-export const toCollectWords = (cents) => `to collect · ${dollars(cents)}`;
+// ----- The one roster (CP5, 2026-10-21, Camps-one-roster.html + Camps-multiweek-roster.html option A) -----
+// Summary line: "9 of 15 here today  5 to collect · $1,040  Pizza party today: 11" (the numbers are drawn big)
+export const hereTodayOf = (total, short) => (short ? `of ${total} here` : `of ${total} here today`);
+export const comingOnDay = (day) => `coming on ${dayLong(day)}`; // (not in the mockups) no camp today: the next camp day
+export const toCollectShort = 'to collect';
+export const ROSTER_LABEL = 'Campers'; // (not in the mockups) screen readers: the roster table
+export const COL_PAID = 'Paid';
+export const dueTag = (cents) => `${dollars(cents)} due`;
+export const dayHead = (iso, today, wide) => (wide ? `${dayChip(iso)}${iso === today ? ' · today' : ''}` : weekdayShort(iso));
+export const weekdayLetter = (iso) => ({ Mon: 'M', Tue: 'T', Wed: 'W', Thu: 'Th', Fri: 'F', Sat: 'Sa', Sun: 'Su' })[weekdayShort(iso)] ?? weekdayShort(iso);
+// The note under a name, today only — short, one line (review: less clutter): the extra's name
+// before any comma, without "Early " / "Late ": "Early drop-off, 7:30–9:00 AM" → "Drop-off",
+// "Late pick-up, 3:00–4:00 PM" → "Pick-up"; a missing pizza party → "No pizza". (not in the mockups)
+export function extraShort(name) {
+  const base = String(name).split(',')[0].trim().replace(/^(early|late)\s+/i, '');
+  return base.charAt(0).toUpperCase() + base.slice(1);
+}
+export const noExtraShort = (name) => `No ${String(name).trim().split(/\s+/)[0].toLowerCase()}`; // (not in the mockups)
+export const checkInDayLabel = (name, day) => `Check in ${name}, ${dayLong(day)}`; // screen readers
+export const undoCheckInDayLabel = (name, day, stamp) => `${name} checked in ${dayLong(day)} at ${clockTime(stamp)}. Undo check-in`; // screen readers
+export const missedDayLabel = (name, day) => `${name} didn’t come ${dayLong(day)}. Check in`; // (not in the mockups) a past day can still be checked in (v0.706)
+export const notSignedUpLabel = (day) => `Not signed up ${dayLong(day)}`; // screen readers
+export const payTagLabel = (name, text) => `${name}: ${text}. Mark paid`; // screen readers on the $ due / Owes tag
+export const NO_MATCH_ROSTER = 'No camper with that name.'; // (not in the mockups)
+export const WEEK_SWITCH_LABEL = 'Week'; // (not in the mockups) screen readers
+// "Week 1 · Jul 6–10" (phones: "Week 1")
+export function weekLabel(index, week, short) {
+  const first = week.days[0].day;
+  const last = week.days[week.days.length - 1].day;
+  if (short) return `Week ${index + 1}`;
+  const sameMonth = first.slice(0, 7) === last.slice(0, 7);
+  const range = first === last ? monthDay(first) : sameMonth ? `${monthDay(first)}–${Number(last.slice(8))}` : `${monthDay(first)}–${monthDay(last)}`;
+  return `Week ${index + 1} · ${range}`;
+}
+// The legend under the grid (as in the mockup); "click" with a mouse, "tap" on touch. (not in the mockups)
+export const rosterLegend = (touch) => `✓ came (check-in time) · Check in: signed up — ${touch ? 'tap' : 'click'} to check in · ✗ didn’t come · — not signed up that day`;
+// A finished camp's summary: "Came 142 of 150 days"; nothing owed: "All paid". (not in the mockups)
+export const CAME_WORD = 'Came';
+export const ofDays = (n) => ` of ${n} ${n === 1 ? 'day' : 'days'}`;
+export const ALL_PAID = 'All paid';
 export const FIND_CAMPER = 'Find a camper';
-export const NOT_HERE_YET = (n) => `Not here yet · ${n}`;
-export const HERE = (n) => `Here · ${n}`;
 export const CHECK_IN = 'Check in';
-export const checkInLabel = (name) => `Check in ${name}`;
 export const checkedInToast = (name, stamp) => `${name} checked in · ${clockTime(stamp)}`;
-export const UNDO_CHECK_IN = 'Undo check-in';
 export const checkInUndoneToast = (name) => `Check-in undone for ${name}`; // (not in the mockups)
-export const noCampersOn = (day) => `No campers on ${dayLong(day)}.`; // (§7.3)
-export const NO_MATCH = 'No camper with that name on this day.'; // (not in the mockups)
-export const checkedInAt = (stamp) => `Checked in at ${clockTime(stamp)}`; // screen readers
 export const checkInFailed = (name) => `${name} wasn't checked in. Check the connection and try again.`; // (not in the mockups)
 export const undoCheckInFailed = (name) => `${name}'s check-in wasn't undone. Check the connection and try again.`; // (not in the mockups)
 export const isWithdrawn = (name) => `${name} was withdrawn. Restore them first.`; // (§7.2, "an admin can" dropped: staff restore too)
-export const NOTE_NOT_PAID = 'Not paid';
-export const noExtraNote = (name) => `No ${name.charAt(0).toLowerCase()}${name.slice(1)}`; // "No pizza party" (owner decision 2026-10-19)
 // "Pizza party today: 15" — the number is drawn big. Another day: "Pizza party: 12" (not in the mockups).
 export const extraTodayLine = (name, isToday = true) => (isToday ? `${name} today:` : `${name}:`);
-export const noteOwes = (cents) => `Owes ${dollars(cents)}`;
 export const notePopoverLine = (name, kind, cents) => (kind === 'owes' ? `${name} owes ${dollars(cents)}` : `${name} · not paid · ${dollars(cents)}`); // (not in the mockups)
 export const PAYMENT_NOTE_LABEL = (name) => `Payment for ${name}`; // (not in the mockups) screen readers
 
-// Payments
-export const TO_COLLECT = (n) => `To collect · ${n}`;
-export const PAID_GROUP = (n) => `Paid · ${n}`;
+// Paid tags, Mark paid, the camper menu
 export const tagOwes = (cents) => `Owes ${dollars(cents)}`;
 export const markPaidAmount = (cents) => `Mark paid ${dollars(cents)}`;
-export const markPaidLabel = (name, cents) => `Mark ${name} paid, ${dollars(cents)}`;
 export const reviewDuplicateLabel = (name) => `Possible duplicate: review ${name}`;
 export const ADMIN_GROUP = 'Admin';
 export const SCHOOL_REFUSED = 'Pick the school where it was paid.'; // (not in the mockups) database: invalid, field school
 export const PAID_AT = 'Paid at'; // (not in the mockups) Edit payment's school choice
 export const COL_CAMPER = 'Camper';
-export const COL_TOTAL = 'Total';
 export const camperNameAge = (row) => `${row.firstName} ${row.lastName} · ${row.age}`;
 export const camperLabel = (row) => `${row.firstName} ${row.lastName}`;
-export const nonMember = 'non-member';
 export const camperPayLine = (daysText, payingBy) => `${daysText} · ${payingByLower(payingBy)}`;
 export const duplicateBoxLine = (n) => (n === 1 ? '1 possible duplicate' : `${n} possible duplicates`);
 export const signedUpTwice = (name) => `${name} is signed up twice`;
@@ -505,14 +533,10 @@ export const KEEP_CAMPER = 'Keep camper';
 export const TOAST_KEPT_BOTH = 'Kept both sign-ups';
 export const duplicateRemovedToast = (name) => `${name}’s extra copy moved to Removed`;
 
-// Attendance
+// The printed roster (the attendance grid, all weeks)
 export const COL_CAME = 'Came';
 export const cameText = (came, soFar) => `${came} of ${soFar}`;
-export const CELL_CAME = (stamp) => `came, ${clockTime(stamp)}`; // screen readers
-export const CELL_MISSED = 'didn’t come';
-export const CELL_UPCOMING = 'signed up, still to come';
-export const CELL_NOT_SIGNED_UP = 'not signed up that day';
-export const ATTENDANCE_LEGEND = '✓ came (check-in time) · ✗ signed up, didn’t come · dashed: still to come · — not signed up that day'; // (not in the mockups) short legend
+export const PRINT_LEGEND = '✓ came (check-in time) · ✗ didn’t come · blank: still to come · — not signed up that day'; // (not in the mockups)
 
 // Print roster
 export const printedOn = (stamp) => `Printed ${stampDayTime(stamp)}`; // (not in the mockups)
@@ -560,6 +584,7 @@ export const DETAIL_REMOVED = 'Removed'; // (not in the mockups)
 export const HEAD_PAYMENTS = 'Payments';
 export const HEAD_FAMILY = 'Family';
 export const HEAD_SIGNUP = 'Sign-up';
+export const MORE_ACTIONS_HEAD = 'More'; // (not in the mockups) touch: the roster row's ⋯ items in Camper detail
 export const NONE_YET = 'None yet';
 // "Mon, Apr 19 · Wed, Apr 21 · 2 days" / "All days · 5 days"
 export function detailDaysLine(isoDays, allDays) {

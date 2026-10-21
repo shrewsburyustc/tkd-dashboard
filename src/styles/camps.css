@@ -390,26 +390,6 @@
   font-weight: 400;
 }
 
-/* "Payments · 5": the to-collect count on the tab */
-.cp-tabcount {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 18px;
-  margin-left: var(--space-8);
-  padding: 0 var(--space-4);
-  border-radius: 9px;
-  background: var(--color-surface);
-  color: var(--color-text-secondary);
-  font-size: var(--text-12);
-}
-
-.cp-pagetabs .ttab {
-  display: inline-flex;
-  align-items: center;
-}
-
 /* "9 of 15 here · 6 not here yet" / "13 paid · 5 to collect · $1,040" */
 .cp-statline {
   margin: 0 0 var(--space-12);
@@ -423,21 +403,12 @@
   gap: var(--space-4) var(--space-24);
 }
 
-/* The chosen check-in day, written out first ("Wed, Apr 21") */
-.cp-statday {
-  font-weight: 500;
-}
-
 /* The big numbers of option A: "9 of 15 here", "13 paid" */
 .cp-big {
   margin-right: var(--space-4);
   font-size: 22px; /* the option A summary numbers (approved image) */
   font-weight: 500;
   line-height: 1.2;
-}
-
-.cp-subhead {
-  border-top: 1px solid var(--color-border);
 }
 
 .cp-name {
@@ -451,56 +422,6 @@
 
 .cp-gray-line {
   display: block;
-}
-
-.cp-total {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-/* --- Payments rows: Camper · Total · Status · Mark paid + ⋯ --- */
-.cp-roster .cp-prow,
-.cp-roster.is-wide .cp-prow {
-  grid-template-columns: minmax(0, 1fr) 72px 152px 184px;
-}
-
-.cp-roster .cp-prow.is-phone {
-  display: flex;
-}
-
-.cp-prow.is-phone .cp-total {
-  margin-left: auto;
-}
-
-/* --- Check in --- */
-.cp-dayswitch .segment {
-  min-width: 72px;
-}
-
-/* Phones: the day switch wraps into a 3-column grid, 44px cells (no sideways scrolling) */
-.cp-dayswitch.is-phone .segmented {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  width: 100%;
-}
-
-.cp-dayswitch.is-phone .segment {
-  height: var(--tap-size);
-  justify-content: center;
-  border-radius: 0;
-}
-
-.cp-dayswitch.is-phone .segment + .segment {
-  border-left: none;
-}
-
-.cp-dayswitch.is-phone .segment:nth-child(3n + 2),
-.cp-dayswitch.is-phone .segment:nth-child(3n + 3) {
-  border-left: 1px solid var(--color-border);
-}
-
-.cp-dayswitch.is-phone .segment:nth-child(n + 4) {
-  border-top: 1px solid var(--color-border);
 }
 
 .cp-search {
@@ -522,70 +443,6 @@
   padding-left: 36px;
 }
 
-.cp-crow,
-.cp-crow.is-phone {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  column-gap: var(--space-12);
-  min-height: 48px;
-}
-
-.cp-crow-name {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  min-width: 0;
-}
-
-/* The note pill stays on the name line; a long name is cut with … instead */
-.cp-crow-name .cp-name-btn {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.cp-crow-name .ttag {
-  flex: none;
-}
-
-/* The name is a plain-looking button (opens Camper detail) */
-.cp-name-btn {
-  padding: 0;
-  border: none;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-}
-
-.cp-name-btn:focus-visible {
-  outline: 2px solid var(--color-blue);
-  outline-offset: 2px;
-  border-radius: 2px;
-}
-
-.cp-crow-acts {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-}
-
-/* Check in: the one big button per row */
-.cp-checkin {
-  min-width: 96px;
-}
-
-.cp-here-time {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-4);
-  color: var(--color-success-text);
-  font-size: var(--text-13);
-  font-variant-numeric: tabular-nums;
-}
-
 /* The small box with Mark paid under a Not paid / Owes note */
 .cp-popover {
   position: fixed;
@@ -605,141 +462,6 @@
 .cp-popover-line {
   margin: 0;
   font-size: var(--text-13);
-}
-
-/* --- Attendance --- */
-.cp-att-scroll {
-  overflow-x: auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-control);
-}
-
-.cp-att-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-13);
-}
-
-.cp-att-table th,
-.cp-att-table td {
-  padding: var(--space-8) var(--space-12);
-  border-top: 1px solid var(--color-border);
-  text-align: left;
-  white-space: nowrap;
-}
-
-.cp-att-table thead th {
-  border-top: none;
-  background: var(--color-surface);
-  color: var(--color-text-secondary);
-  font-size: var(--text-12);
-  font-weight: 400;
-}
-
-.cp-att-table thead th.is-today {
-  color: var(--color-text);
-  font-weight: 500;
-}
-
-.cp-att-table tbody th {
-  font-weight: 500;
-}
-
-.cp-att-name {
-  color: var(--color-text);
-  font-weight: 500;
-  text-align: left;
-}
-
-.cp-att {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  min-width: 28px;
-  min-height: 20px;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Came: ✓ (and the time) in a green box · didn't come: ✗ in an amber box (attendance picture) */
-.cp-att--came,
-.cp-att--missed {
-  justify-content: center;
-  padding: 0 var(--space-4);
-  border: 1px solid;
-  border-radius: var(--radius-tag);
-}
-
-.cp-att--came {
-  border-color: #cfe3b8; /* the green tag colors of .ttag--ok */
-  background: #eaf3de;
-  color: var(--color-success-text);
-}
-
-.cp-att--missed {
-  border-color: var(--color-tag-warn-border);
-  background: var(--color-warning-bg);
-  color: var(--color-warning-text);
-}
-
-/* Signed up, still to come: a dashed box */
-.cp-att--upcoming {
-  width: 28px;
-  height: 20px;
-  border: 1px dashed var(--color-border-control);
-  border-radius: var(--radius-tag);
-}
-
-.cp-att--none {
-  color: var(--color-text-secondary);
-}
-
-.cp-came {
-  font-variant-numeric: tabular-nums;
-}
-
-/* Phones: one card per camper with small day boxes */
-.cp-att-cards {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-8);
-}
-
-.cp-att-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-8);
-  width: 100%;
-  padding: var(--space-12);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-control);
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-size: var(--text-13);
-  text-align: left;
-}
-
-.cp-att-card-top {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-8);
-}
-
-.cp-att-boxes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-8);
-}
-
-.cp-att-box {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.cp-att-day {
-  color: var(--color-text-secondary);
-  font-size: var(--text-12);
 }
 
 /* ===== C6 Camper detail / Edit details ===== */
@@ -852,8 +574,368 @@
   justify-content: center;
 }
 
+/* ===== The one roster (CP5, 2026-10-21: Camps-one-roster.html, multi-week option A) ===== */
+
+/* Camps longer than one calendar week: Week 1 · Jul 6–10 | Week 2 · Jul 13–17 */
+.cp-weekswitch {
+  margin-bottom: var(--space-12);
+}
+
+/* Always one row of joined buttons, sized to their words (never the class switch's phone grid) */
+.ev-class-switch.cp-weekswitch .segmented {
+  display: inline-flex;
+  width: auto;
+  flex-wrap: wrap;
+}
+
+.ev-class-switch.cp-weekswitch .segment {
+  min-width: 88px;
+  justify-content: center;
+}
+
+.ev-class-switch.cp-weekswitch .segment:first-child {
+  border-radius: 7px 0 0 7px;
+}
+
+.ev-class-switch.cp-weekswitch .segment:last-child {
+  border-radius: 0 7px 7px 0;
+}
+
+/* The grid: Camper · Paid · one column per day · ⋯. It never makes the PAGE scroll sideways;
+   only a very long week could scroll inside this box (rule: no page sideways scroll). */
+.cp-rtable-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.cp-rtable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-13);
+}
+
+.cp-rtable th,
+.cp-rtable td {
+  padding: var(--space-4) var(--space-8);
+  border-top: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.cp-rtable thead th {
+  height: 32px;
+  border-top: none;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.cp-rtable tbody tr {
+  height: 44px;
+}
+
+.cp-rtable tbody tr.is-selected > * {
+  background: var(--color-blue-tint);
+}
+
+.cp-rcol-name {
+  min-width: 160px;
+  text-align: left;
+  font-weight: 400;
+}
+
+.cp-rcol-paid {
+  width: 128px;
+  text-align: left;
+}
+
+.cp-rcol-day {
+  text-align: center;
+}
+
+/* The column of today is tinted (its header in blue words) */
+.cp-rtable .cp-rcol-day.is-today {
+  background: var(--color-blue-tint);
+}
+
+.cp-rtable thead .cp-rcol-day.is-today {
+  color: var(--color-blue);
+  font-weight: 500;
+}
+
+.cp-rcol-more {
+  width: 44px;
+  text-align: right;
+}
+
+/* A child's name: a link-looking button that opens Camper detail */
+.cp-name-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: var(--color-border-strong);
+  text-underline-offset: 3px;
+}
+
+.cp-name-link:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* The small amber note under a name, today only ("Late pick-up … today", "No pizza party") */
+.cp-rnote {
+  display: block;
+  max-width: 100%;
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* "⚠ Not saved" next to the name; the Paid tag stays as it is (review 3) */
+.cp-notsaved {
+  margin-left: var(--space-8);
+  vertical-align: middle;
+}
+
+/* "All paid" in the summary line when nothing is owed */
+.cp-allpaid {
+  font-weight: 500;
+}
+
+/* Short camps (1–2 days in the week): the table is only as wide as it needs (review 13) */
+.cp-rtable.is-short {
+  width: auto;
+}
+
+/* …and its border box shrinks with it */
+.cp-rtable-wrap.is-short {
+  width: fit-content;
+  max-width: 100%;
+}
+
+.cp-rtable.is-short .cp-rcol-name {
+  min-width: 220px;
+}
+
+.cp-rtable.is-short .cp-rcol-day {
+  width: 112px;
+}
+
+/* The "$ due" / "Owes" / "Possible duplicate" tags are buttons (Mark paid box / compare) */
+.cp-paybtn {
+  cursor: pointer;
+}
+
+/* One day of one child: ✓ time · Check in · ✗ · — */
+.cp-dc {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 68px;
+  height: 28px;
+  padding: 0 var(--space-8);
+  border: 1px solid transparent;
+  border-radius: var(--radius-tag);
+  background: none;
+  color: var(--color-text);
+  font-size: var(--text-12);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cp-dc-val {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.cp-dc--came {
+  border-color: #cfe3b8; /* the green tag colors of .ttag--ok */
+  background: #eaf3de;
+  color: var(--color-success-text);
+}
+
+.cp-dc--checkin {
+  border-color: var(--color-border-control);
+  background: var(--color-bg);
+}
+
+.cp-dc--missed {
+  border-color: var(--color-tag-warn-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.cp-dc--none {
+  color: var(--color-text-secondary);
+}
+
+button.cp-dc:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 1px;
+}
+
+/* Touch: 36px cells with a 44px tap area */
+.cp-rtable.is-touch .cp-dc {
+  height: var(--control-height-touch);
+}
+
+.cp-rtable.is-touch button.cp-dc::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
+/* Phones: one card per child */
+.cp-rcards {
+  border-top: 1px solid var(--color-border);
+}
+
+.cp-rcard {
+  padding: var(--space-12) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cp-rcard-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+.cp-rcard-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cp-rcard-name .cp-name-link {
+  min-height: var(--tap-size);
+}
+
+/* The day buttons of the week under the name: equal columns, 44px tall */
+.cp-rdays {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+}
+
+.cp-rdays .cp-dc {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+  height: auto;
+  min-height: var(--tap-size);
+  padding: 2px var(--space-4);
+  overflow: hidden;
+}
+
+.cp-rdays .cp-dc--none {
+  align-items: center;
+}
+
+/* Today is outlined on the card */
+.cp-rdays .cp-dc.is-today {
+  box-shadow: 0 0 0 2px var(--color-text);
+}
+
+/* …but not a day the child isn't signed up for */
+.cp-rdays .cp-dc--none.is-today {
+  box-shadow: none;
+}
+
+.cp-dc-day {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  line-height: 1.2;
+}
+
+.cp-rdays .cp-dc--came .cp-dc-day,
+.cp-rdays .cp-dc--missed .cp-dc-day {
+  color: inherit;
+}
+
+/* Removed (withdrawn / duplicate copy): under the roster, not in the counts */
+.cp-removed {
+  margin-top: var(--space-16);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.cp-removed-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-height: 44px;
+  padding: var(--space-4) var(--space-8) var(--space-4) var(--space-12);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-13);
+}
+
+.cp-removed-row.is-selected {
+  background: var(--color-blue-tint);
+}
+
+.cp-removed-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.cp-removed-name .cp-name-link {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+/* Camper detail on touch screens: the roster's ⋯ items as buttons */
+.cp-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
+}
+
+.cp-detail-sublabel {
+  flex-basis: 100%;
+  margin: var(--space-4) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* Red only for delete: red words and outline, not a filled red button (review 8) */
+.btn.cp-btn-danger {
+  border-color: var(--color-delete-text);
+  color: var(--color-delete-text);
+}
+
 /* ===== Touch screens: 36px controls, 44px tap areas ===== */
 @media (pointer: coarse) {
+  .cp-rtable .cp-name-link,
+  .cp-removed .cp-name-link {
+    position: relative;
+  }
+
+  .cp-rtable .cp-name-link::after,
+  .cp-removed .cp-name-link::after {
+    content: '';
+    position: absolute;
+    inset: -12px -4px; /* about 20px of text + 2 × 12px = 44px tall */
+  }
+
   .cp-cal-day {
     height: var(--tap-size);
   }
@@ -871,22 +953,29 @@
   .cp-fold-head {
     min-height: var(--tap-size);
   }
-
-  .cp-crow {
-    min-height: 56px;
-  }
-
-  .cp-name-btn {
-    min-height: var(--tap-size);
-  }
-
-  .cp-att-name {
-    min-height: var(--tap-size);
-  }
 }
 
 /* ===== Tablets and phones (below the PC width) ===== */
 @media (max-width: 1023.98px) {
+  /* The roster fits a tablet without scrolling: narrower day cells and padding */
+  .cp-rtable th,
+  .cp-rtable td {
+    padding: var(--space-4) 6px;
+  }
+
+  .cp-rcol-name {
+    min-width: 132px;
+  }
+
+  .cp-rcol-paid {
+    width: auto;
+  }
+
+  .cp-dc {
+    min-width: 60px;
+    padding: 0 var(--space-4);
+  }
+
   .cp-list .cp-row {
     grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) 64px 128px 64px;
   }
@@ -978,10 +1067,6 @@
 
   .cp-dup-sep {
     display: none;
-  }
-
-  .cp-checkin {
-    min-width: 88px;
   }
 }
 

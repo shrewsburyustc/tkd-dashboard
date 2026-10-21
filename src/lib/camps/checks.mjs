@@ -13,7 +13,7 @@ import {
   priceChild, familyTotal, isAllDays, payTag, toCollectCents, checkInRule, checkInNote, attendanceCell, cameCount, validateAges,
   ageAllowed, phoneDigits, formatPhone, templateFromCamp, campDatesFromTemplate, gridRowsFor, campLink, toCamel, toSnake,
   childProblem, offsetsAreValid, todayInSchoolTime, campTextIsValid, normalizeCampText, extraDaysRemoved,
-  paymentSchoolFor, extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
+  campWeeks, defaultWeekIndex, paymentSchoolFor, extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
 } from './campRules.js';
 import { qrFileName, campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
 import { campArgs, templateArgs, toExtra, toTemplate, EXTRA_COLUMNS, TEMPLATE_COLUMNS } from './campsArgs.js';
@@ -453,7 +453,7 @@ const ROSTER = 'id, camp_id, signup_id, first_name, last_name, member, status, d
 check('mock: the default data matches the approved mockups', () => {
   const { backend: b } = makeBackend({ today: '2027-04-21' }); // campWeek
   const camps = rows(b, 'camps', 'id, name, location_code, both_schools, public_code, closed_by_hand');
-  assert.deepEqual(camps.map((c) => c.name), ['Columbus Day Camp', 'Veterans Day Camp', 'Thanksgiving Camp', 'Winter Break Camp', 'April Vacation Camp']);
+  assert.deepEqual(camps.map((c) => c.name), ['Columbus Day Camp', 'Veterans Day Camp', 'Thanksgiving Camp', 'Winter Break Camp', 'April Vacation Camp', 'Two-Week Summer Camp']);
   const april = camps.find((c) => c.name === 'April Vacation Camp');
   assert.equal(april.both_schools, true);
   assert.equal(april.public_code, DEFAULT_CAMP_CODES.april);
@@ -480,9 +480,10 @@ check('mock: the default data matches the approved mockups', () => {
   const { backend: b2 } = makeBackend({ today: '2026-10-19' });
   const roster2 = toCamel(rows(b2, 'camp_roster', ROSTER, [{ col: 'camp_id', value: april.id }]));
   assert.equal(roster2.filter((r) => r.days.some((d) => d.checkedInAt)).length, 0);
-  // Columbus Day (Oct 12, past): 9 campers, all checked in. Veterans 16, Thanksgiving 12, Winter 0.
+  // Columbus Day (Oct 12, past): 9 campers, all checked in. Veterans 16, Thanksgiving 12, Winter 0,
+  // April 19, Two-Week Summer Camp 6 (added 2026-10-21 for the roster's week switcher).
   const counts = campCounts(toCamel(rows(b2, 'camp_roster', 'camp_id, status')));
-  assert.deepEqual(camps.map((c) => counts[c.id] ?? 0), [9, 16, 12, 0, 19]);
+  assert.deepEqual(camps.map((c) => counts[c.id] ?? 0), [9, 16, 12, 0, 19, 6]);
   const columbus = toCamel(rows(b2, 'camp_roster', ROSTER, [{ col: 'camp_id', value: camps[0].id }]));
   assert.equal(columbus.every((r) => r.days[0].checkedInAt), true);
   assert.equal(rows(b2, 'camp_templates', 'name').length, 4);
@@ -938,6 +939,25 @@ check('campsArgs round trip: onlyOn through Add / Edit camp, onlyWeekdays throug
   assert.equal(rpcOk(b, 'camp_update_template', { p_template_id: tpl.id, p_expected_version: tpl.version, ...templateArgs(tInput) }).status, 'ok');
   tpl = loadTpl();
   assert.deepEqual(tpl.extras.map((e) => e.onlyWeekdays), [[], [3, 5]]);
+});
+
+check('weeks (CP5 roster week switcher): campWeeks, defaultWeekIndex', () => {
+  const mk = (list) => list.map((day, i) => ({ dayId: `d${i}`, day }));
+  const april = mk(['2027-04-19', '2027-04-20', '2027-04-21', '2027-04-22', '2027-04-23']);
+  assert.equal(campWeeks(april).length, 1);
+  const two = mk(['2027-07-05', '2027-07-06', '2027-07-07', '2027-07-08', '2027-07-09', '2027-07-12', '2027-07-13', '2027-07-14', '2027-07-15', '2027-07-16']);
+  const weeks = campWeeks(two);
+  assert.deepEqual(weeks.map((w) => [w.monday, w.days.length]), [['2027-07-05', 5], ['2027-07-12', 5]]);
+  assert.equal(defaultWeekIndex(weeks, '2027-07-14'), 1); // the week containing today
+  assert.equal(defaultWeekIndex(weeks, '2027-07-10'), 0); // Saturday of week 1 still counts as week 1
+  assert.equal(defaultWeekIndex(weeks, '2027-07-11'), 0); // Sunday too (Mon–Sun weeks)
+  assert.equal(defaultWeekIndex(weeks, '2027-06-01'), 0); // before the camp: the first week
+  assert.equal(defaultWeekIndex(weeks, '2027-08-01'), 1); // after it: the last week
+  // A Sunday camp day belongs to the week that started the Monday before it; gaps are fine.
+  const odd = campWeeks(mk(['2026-12-27', '2026-12-28', '2027-01-04']));
+  assert.deepEqual(odd.map((w) => w.monday), ['2026-12-21', '2026-12-28', '2027-01-04']);
+  assert.equal(defaultWeekIndex(odd, '2027-01-02'), 1);
+  assert.equal(defaultWeekIndex([], '2027-01-02'), 0);
 });
 
 check('payment school (v0.707): paymentSchoolFor, Mark paid / Undo / Edit payment, detail, seed', () => {

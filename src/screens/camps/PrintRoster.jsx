@@ -1,18 +1,29 @@
-// PrintRoster.jsx — "Print roster": the camp's attendance grid on paper (contract §6.4).
-// Why it exists: staff want a paper list at the door or on the mat — the camp name, its dates,
-// one row per camper and a column per camp day with the check-in times. No phones and no prices
-// on paper (privacy, rulebook §5: lists never show contact or payment details).
+// PrintRoster.jsx — "Print roster": the camp page's roster on paper (CP5, 2026-10-21).
+// Why it exists: staff want a paper list at the door or on the mat — the same grid as the screen:
+// the camp name, its dates, one row per camper (A–Z by first name), Paid (Paid / $X due /
+// Owes $X — the staff's own printout, design review CP5), a column per camp day with the check-in
+// times (every week of a longer camp) and "Came X of Y". No phones on paper (rulebook §5).
 // It is drawn into the page only while printing; the print rules in camps.css hide everything
 // else, and it removes itself when the browser's print window closes ('afterprint').
 //
 // Props: data = a loaded camp ({ camp, days, roster, today, printedAt }), onDone()
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { attendanceCell, cameCount } from '../../lib/camps/campRules.js';
+import { attendanceCell, cameCount, payTag } from '../../lib/camps/campRules.js';
 import { campToday } from '../../lib/camps/campsApi.js';
+import { byFirstName } from './CampRoster.jsx';
 import * as T from './text.js';
 
-// What one cell prints: "✓ 7:42", "✗", "–" (still to come) or "—" (not signed up).
+// The Paid column as words (the screen's tag): Paid · $245 due · Owes $15 · Possible duplicate.
+function paidText(row) {
+  const tag = payTag(row);
+  if (tag === 'paid') return T.TAG_PAID;
+  if (tag === 'owes') return T.tagOwes(row.owesCents);
+  if (tag === 'duplicate') return T.TAG_POSSIBLE_DUPLICATE;
+  return T.dueTag(row.owesCents);
+}
+
+// What one cell prints: "✓ 7:42", "✗", blank (still to come) or "—" (not signed up).
 function cellText(row, day, today) {
   const cell = attendanceCell(row, day, today);
   if (cell === 'came') {
@@ -46,7 +57,7 @@ export default function PrintRoster({ data, onDone }) {
   const today = data.today ?? campToday();
   const rows = (data.roster ?? [])
     .filter((r) => r.status === 'active')
-    .sort((a, b) => a.lastName.localeCompare(b.lastName, 'en', { sensitivity: 'base' }) || a.firstName.localeCompare(b.firstName, 'en', { sensitivity: 'base' }));
+    .sort(byFirstName);
 
   return createPortal(
     <div className="camp-print">
@@ -56,6 +67,7 @@ export default function PrintRoster({ data, onDone }) {
         <thead>
           <tr>
             <th scope="col">{T.COL_CAMPER}</th>
+            <th scope="col">{T.COL_PAID}</th>
             {days.map((d) => (
               <th key={d.dayId} scope="col">
                 {T.dayChip(d.day)}
@@ -70,6 +82,7 @@ export default function PrintRoster({ data, onDone }) {
             return (
               <tr key={row.id}>
                 <th scope="row">{T.camperNameAge(row)}</th>
+                <td>{paidText(row)}</td>
                 {days.map((d) => (
                   <td key={d.dayId}>{cellText(row, d, today)}</td>
                 ))}
@@ -80,7 +93,7 @@ export default function PrintRoster({ data, onDone }) {
         </tbody>
       </table>
       <p className="cpr-foot">
-        {T.ATTENDANCE_LEGEND} · {T.printedOn(data.printedAt)}
+        {T.PRINT_LEGEND} · {T.printedOn(data.printedAt)}
       </p>
     </div>,
     document.body,

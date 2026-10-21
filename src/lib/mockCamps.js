@@ -118,6 +118,7 @@ const SAMPLE_SIGNATURE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB
 
 export const DEFAULT_CAMP_CODES = {
   columbus: 'cb8d2wqr', veterans: 'vt4n7hzs', thanksgiving: 'thx9kv3m', winter: 'wn6y3fjr', april: 'k7m2qp4x',
+  summer: 'sm2w8kxe',
 };
 
 const WAIVER = 'I give permission for my child to take part in camp at Jae H. Jeong’s U.S. Taekwondo Center, including Taekwondo, games and outdoor play. I understand that physical activity can lead to injury, and I release the school and its staff from claims arising from normal camp activities. In an emergency, I allow staff to get medical care for my child if I can’t be reached.';
@@ -131,6 +132,8 @@ const GRID_ONE = [[1, 70, 75, 80, 85]];
 const GRID_TWO = [[1, 75, 80, 85, 90], [2, 140, 150, 150, 160]];
 const GRID_THREE = [...GRID_TWO, [3, 195, 210, 205, 220]];
 const GRID_WEEK = [...GRID_THREE, [4, 260, 280, 270, 290], [5, 275, 325, 285, 335]];
+// A two-week camp (CP5, 2026-10-21: so the roster's week switcher can be seen in the preview).
+const GRID_TWO_WEEKS = [...GRID_WEEK, [6, 330, 390, 342, 402], [7, 385, 455, 399, 469], [8, 440, 520, 456, 536], [9, 495, 585, 513, 603], [10, 550, 650, 570, 670]];
 // Extras: [name, dollars, per, not charged to all-days campers, offered only on these ISO weekdays
 // (1 = Mon … 7 = Sun; [] = every day)].
 const DROP = ['Early drop-off, 7:30–9:00 AM', 15, 'day', false, []];
@@ -176,6 +179,14 @@ const DEFAULT_CAMPS = [
     days: ['2027-04-19', '2027-04-20', '2027-04-21', '2027-04-22', '2027-04-23'],
     opens: '2027-03-01', closes: '2027-04-18', early: '2027-04-12', ages: [5, 12], grid: GRID_WEEK,
     extras: [DROP, PICK, PIZZA], description: DESC_WEEK, made: ['2026-10-16', '10:00'],
+  },
+  {
+    // Crosses two calendar weeks (Mon Jul 5 – Fri Jul 16, 2027): the roster shows Week 1 | Week 2.
+    key: 'summer', name: 'Two-Week Summer Camp', location: 'worcester', both: false,
+    days: ['2027-07-05', '2027-07-06', '2027-07-07', '2027-07-08', '2027-07-09', '2027-07-12', '2027-07-13', '2027-07-14', '2027-07-15', '2027-07-16'],
+    opens: '2027-05-03', closes: '2027-07-04', early: '2027-06-14', ages: [5, 12], grid: GRID_TWO_WEEKS,
+    extras: [DROP, PICK, PIZZA], description: 'Two weeks of Taekwondo, games, crafts and outdoor play. Bring a lunch, a water bottle, sunscreen and comfortable clothes.',
+    made: ['2026-10-20', '10:00'],
   },
 ];
 
@@ -227,6 +238,21 @@ const DEFAULT_CAMPERS = {
       { duplicateOfRef: 4815, family: ['Karen Thompson', 'Mother', '5085550108', 'Jim Thompson', 'Grandfather', '5085550164'] }],
     // Removed (C4): withdrawn on Apr 2 by Jeffrey.
     ['Owen', 'Walsh', 9, true, D(1, 2), [], 'cash', ['2027-03-20', '18:30'], 4817, { withdrawn: ['2027-04-02', '10:15'] }],
+  ],
+  // Two-Week Summer Camp: some children both weeks, some only one (check-ins appear once the
+  // preview's today reaches those days, e.g. __tkdPreview.setToday('2027-07-14')).
+  summer: [
+    ['Ava', 'Thompson', 8, true, 'all', [[1, 'all']], 'check', ['2027-05-04', '19:20'], 4901,
+      { paid: { on: '2027-05-10', at: '16:00', desk: true }, checkins: { 0: '07:40', 1: '07:45', 2: '07:42', 3: '07:44', 4: '07:41', 5: '07:39', 6: '07:43' } }],
+    ['Noah', 'Patel', 10, true, D(0, 1, 2, 5, 6, 7), [[1, D(0, 1, 2)]], 'check', ['2027-05-06', '20:10'], 4902,
+      { checkins: { 0: '08:55', 2: '08:50', 5: '08:52' } }],
+    ['Mia', 'Rossi', 9, false, D(5, 6, 7, 8, 9), [], 'cash', ['2027-05-08', '21:00'], 4903,
+      { paid: { on: '2027-05-15', at: '11:20', desk: true }, checkins: { 5: '09:01', 6: '09:05' } }],
+    ['Liam', 'Ortiz', 7, true, D(0, 1, 2, 3, 4), [], 'cash', ['2027-05-09', '18:30'], 4904,
+      { paid: { on: '2027-05-16', at: '10:05', desk: true }, checkins: { 0: '08:59', 1: '09:02', 2: '08:58', 3: '09:00', 4: '08:57' } }],
+    ['Sofia', 'Nguyen', 6, true, 'all', [[2, 'all']], 'cash', ['2027-05-12', '19:45'], 4905,
+      { checkins: { 0: '08:40', 1: '08:44', 2: '08:41', 3: '08:39', 4: '08:42', 5: '08:38' } }],
+    ['Leo', 'Kim', 11, true, D(5, 6, 7, 8, 9), [[0, D(5, 6, 7, 8, 9)]], 'card', ['2027-05-14', '09:10'], 4906, {}],
   ],
   thanksgiving: [
     ['Mia', 'Rossi', 9, false, 'all', [[1, 'all']], 'cash', ['2026-10-17', '20:45'], 4421,

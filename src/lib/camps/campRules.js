@@ -223,6 +223,32 @@ export function isoWeekday(dateIso) {
   return js === 0 ? 7 : js;
 }
 
+// ----- Weeks (the roster's week switcher, CP5 2026-10-21, multi-week option A) -----
+
+// The camp's days split into calendar weeks (Monday–Sunday), earliest first:
+// [{ monday: 'YYYY-MM-DD', days: Day[] }]. A one-week camp gives one week (no switcher shown).
+export function campWeeks(days) {
+  const weeks = [];
+  const sorted = [...(days ?? [])].filter((d) => isIsoDate(d?.day)).sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
+  for (const d of sorted) {
+    const monday = addDays(d.day, -(isoWeekday(d.day) - 1));
+    const last = weeks[weeks.length - 1];
+    if (last && last.monday === monday) last.days.push(d);
+    else weeks.push({ monday, days: [d] });
+  }
+  return weeks;
+}
+
+// Which week the roster opens on: the week containing today, else the first week with a day on or
+// after today, else the last week. Returns an index into campWeeks(days) (0 when there are none).
+export function defaultWeekIndex(weeks, today) {
+  if (!weeks?.length) return 0;
+  const containing = weeks.findIndex((w) => w.monday <= today && today <= addDays(w.monday, 6));
+  if (containing !== -1) return containing;
+  const next = weeks.findIndex((w) => w.days.some((d) => d.day >= today));
+  return next !== -1 ? next : weeks.length - 1;
+}
+
 // Camp dates → weekdays, for Save as template: ['2027-04-21', '2027-04-23'] → [3, 5].
 export function onlyOnToWeekdays(onlyOn) {
   return [...new Set((onlyOn ?? []).filter(isIsoDate).map(isoWeekday))].sort((a, b) => a - b);

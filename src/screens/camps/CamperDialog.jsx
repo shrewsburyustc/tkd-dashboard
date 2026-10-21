@@ -18,7 +18,9 @@
 // A day the camper was already checked in on can't be taken off (Undo that check-in first).
 // PC / tablet: a centered dialog; phones: full screen with a back arrow.
 //
-// Props: camperId, camperName (shown while loading), camp, days (Day[]), prices, extras (the camp's current ones), isPhone,
+// On touch screens the roster has no ⋯, so its items (Change how they'll pay, Withdraw / Restore,
+// and for admins Edit payment, Undo payment, Delete permanently) are listed here under "More" (CP5).
+// Props: camperId, camperName (shown while loading), actions (RowMenu items, touch only, or null), camp, days (Day[]), prices, extras (the camp's current ones), isPhone,
 //        hidden, startInEdit, onClose(), onSaved(), onNoAccess, onRefreshProfile
 import { useEffect, useId, useState } from 'react';
 import { IconCheck, IconEdit } from '@tabler/icons-react';
@@ -28,7 +30,8 @@ import { loadCamperDetail, updateDetails } from '../../lib/camps/campsApi.js';
 import { AGE_LIMITS, MAX_CAMPER_CENTS, RELATION_MAX, extraDaysFor, formatPhone, isAllDays, phoneDigits, priceChild } from '../../lib/camps/campRules.js';
 import { nameProblem, normalizeName } from '../../lib/testing/names.js';
 import ChoiceGroup from '../testing/events/ChoiceGroup.jsx';
-import { CamperTag } from './CamperRows.jsx';
+import { CamperTag } from './CampRoster.jsx';
+import { NoIcon } from './CampRowMenu.jsx';
 import * as T from './text.js';
 
 const NOTES = {
@@ -95,7 +98,7 @@ function childOf(values, campExtras, campDays) {
 
 const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
 
-export default function CamperDialog({ camperId, camperName, camp, days, prices, extras, isPhone, hidden, startInEdit, onClose, onSaved, onNoAccess, onRefreshProfile }) {
+export default function CamperDialog({ camperId, camperName, actions = null, camp, days, prices, extras, isPhone, hidden, startInEdit, onClose, onSaved, onNoAccess, onRefreshProfile }) {
   const idBase = useId();
   const [load, setLoad] = useState({ status: 'loading', detail: null });
   const [mode, setMode] = useState(startInEdit ? 'edit' : 'view');
@@ -236,6 +239,42 @@ export default function CamperDialog({ camperId, camperName, camp, days, prices,
 
         <h3 className="cp-detail-head">{T.HEAD_SIGNUP}</h3>
         <p className="cp-signup-line">{T.signupLine(camper)}</p>
+
+        {/* Touch screens: the roster row's ⋯ items (Edit details is the button below). */}
+        {actions && actions.some((item) => item.key !== 'edit' && !item.disabled) && (
+          <>
+            <h3 className="cp-detail-head">{T.MORE_ACTIONS_HEAD}</h3>
+            <div className="cp-detail-actions">
+              {actions
+                .filter((item) => item.key !== 'edit')
+                .map((item) =>
+                  // "Admin": a small label over the admin-only items (review 8)
+                  item.key === 'admin-heading' ? (
+                    <p key={item.key} className="cp-detail-sublabel">
+                      {T.ADMIN_GROUP}
+                    </p>
+                  ) : (
+                  <button
+                    key={item.key}
+                    type="button"
+                    // Delete permanently: red words and outline, never a filled red button next to
+                    // the blue Edit details (review 8; red only for delete).
+                    className={`btn btn-sm${item.danger ? ' cp-btn-danger' : ''}`}
+                    aria-disabled={item.disabled ? 'true' : undefined}
+                    onClick={() => {
+                      if (item.disabled) return;
+                      onClose();
+                      item.onSelect();
+                    }}
+                  >
+                    {item.Icon && item.Icon !== NoIcon && <item.Icon size={16} aria-hidden="true" className="menu-icon" />}
+                    {item.label}
+                  </button>
+                  ),
+                )}
+            </div>
+          </>
+        )}
 
         {isPhone ? (
           editButton && <div className="dialog-page-submit">{editButton}</div>

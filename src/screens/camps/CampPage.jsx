@@ -1,22 +1,25 @@
-// CampPage.jsx — one camp's page (C4 header + v0.704 option A: three tabs, one job each).
+// CampPage.jsx — one camp's page: the C4 header and ONE roster (CP5, 2026-10-21).
 // Why it exists: the camp is where the desk works — at the door (who's here?), at the counter (who
-// owes?) and at the end of the week (who came?). Address #camps/camp/<id> (App.jsx), so browser
-// Back returns to the Camps list. Top to bottom:
+// owes?) and across the week (who came?). Jeffrey's CP5 decision puts all three on one roster
+// (Camps-one-roster.html; the three tabs of v0.704 are gone). Address #camps/camp/<id> (App.jsx), so
+// browser Back returns to the Camps list; the old tab addresses (…/checkin, /payments, /attendance)
+// still work and are tidied to the plain address. Top to bottom:
 //   - "← Camps", the camp name and its status tag, and one line: days · hours · school · campers
 //   - header buttons: Registration link (the one blue button, ti-qrcode → CampLinkDialog) and ⋯
 //     (Edit camp (admin) · Close / Reopen sign-up · Save as template (admin) · Print roster ·
 //     Delete camp (admin) — CampRowMenu.jsx)
-//   - tabs: Check in · Payments · <to-collect count> · Attendance. The page opens on Check in during
-//     camp week, otherwise on Payments (campRules.defaultCampTab); the address keeps the tab.
-//   - the tab: CheckInTab.jsx, PaymentsTab.jsx or AttendanceTab.jsx
-// Every name opens Camper detail (CamperDialog.jsx). The page reloads quietly every 15 seconds
-// (useLiveLoad), so family sign-ups and check-ins on another device show up by themselves.
-// Every change goes to the database (src/lib/camps/campsApi.js) and the page reloads after it.
-// Reversible changes get a 5-second Undo toast; permanent ones ask first (rule 1.4). Staff and
-// admins see different ⋯ items (CamperRowMenu.jsx); the database enforces the same rules.
+//   - the roster (CampRoster.jsx): summary line, Find a camper, possible duplicates, the week switch
+//     for camps longer than one calendar week, one row per child with Paid and a column per day,
+//     then Removed
+// Every name opens Camper detail (CamperDialog.jsx; on touch screens it also holds the row's ⋯
+// actions). The page reloads quietly every 15 seconds (useLiveLoad), so family sign-ups and
+// check-ins on another device show up by themselves. Every change goes to the database
+// (src/lib/camps/campsApi.js) and the page reloads after it. Reversible changes get a 5-second Undo
+// toast; permanent ones ask first (rule 1.4). Staff and admins see different ⋯ items
+// (CamperRowMenu.jsx); the database enforces the same rules.
 //
 // There is no Add camper button: campers only come in through the family form (C4).
-import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconArrowLeft, IconDots, IconQrcode } from '@tabler/icons-react';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
 import { LOCATION_NAME } from '../../lib/device.js';
@@ -37,31 +40,26 @@ import {
   withdrawCamper,
   campToday,
 } from '../../lib/camps/campsApi.js';
-import { paymentSchoolFor, campTag, defaultCampTab, defaultCheckInDay, lastDay, payTag, signupState } from '../../lib/camps/campRules.js';
+import { campTag, campWeeks, defaultWeekIndex, lastDay, paymentSchoolFor, signupState } from '../../lib/camps/campRules.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../lib/useMediaQuery.js';
-import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
 import ConfirmDeleteDialog from '../testing/events/ConfirmDeleteDialog.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../testing/events/useLiveLoad.js';
-import AttendanceTab from './AttendanceTab.jsx';
 import CampDialog from './CampDialog.jsx';
 import CampLinkDialog from './CampLinkDialog.jsx';
+import CampRoster, { byFirstName } from './CampRoster.jsx';
 import CamperDialog from './CamperDialog.jsx';
-import { camperMenuItems, checkInMenuItems } from './CamperRowMenu.jsx';
+import { camperMenuItems } from './CamperRowMenu.jsx';
 import { useCampActions } from './CampRowMenu.jsx';
-import CheckInTab from './CheckInTab.jsx';
 import CompareDialog from './CompareDialog.jsx';
 import { findPairs } from './DuplicateBox.jsx';
 import { EditPaymentDialog, PayingByDialog } from './PaymentDialogs.jsx';
-import PaymentsTab from './PaymentsTab.jsx';
 import * as T from './text.js';
 
-const TABS = ['checkin', 'payments', 'attendance'];
-// The chosen check-in day and the Removed group open / closed, per camp, while the page is open.
-const dayByCamp = new Map();
+// The old tab addresses (v0.704): they now open the one roster (and are tidied away).
+const OLD_TABS = ['checkin', 'payments', 'attendance'];
+// The chosen week and the Removed group open / closed, per camp, while the page is open.
+const weekByCamp = new Map();
 const removedOpenByCamp = new Map();
-
-const byName = (a, b) =>
-  a.lastName.localeCompare(b.lastName, 'en', { sensitivity: 'base' }) || a.firstName.localeCompare(b.firstName, 'en', { sensitivity: 'base' });
 const byDay = (a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0);
 
 // The payment that counts right now: the camper's latest payment that hasn't been reversed.
@@ -91,7 +89,7 @@ export default function CampPage({
   campId,
   locationKey,
   isAdmin,
-  tab: requestedTab,
+  tab: requestedTab, // from the address: an old tab name is tidied to the plain address
   onTab,
   onBack,
   deviceLocation, // 'Worcester' | 'Shrewsbury' — this device's home school (where Mark paid's money goes)
@@ -121,28 +119,31 @@ export default function CampPage({
   const isTouch = useMediaQuery(TOUCH_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const layout = { isPhone, isTouch, isWide };
-  const baseId = useId();
-  const tabIds = { tab: (key) => `${baseId}-tab-${key}`, panel: (key) => `${baseId}-panel-${key}` };
 
   const [dialog, setDialog] = useState(null);
-  const [menu, setMenu] = useState(null); // { id, anchor, row, kind: 'camper' | 'checkin' | 'header' }
+  const [menu, setMenu] = useState(null); // { id, anchor, row, kind: 'camper' | 'header' }
   const [banner, setBanner] = useState(null);
   const [busy, setBusy] = useState(false);
   const [notSavedId, setNotSavedId] = useState(null);
   const [query, setQuery] = useState('');
   const [removedOpen, setRemovedOpenState] = useState(() => removedOpenByCamp.get(campId) ?? true);
-  const [checkInDayId, setCheckInDayIdState] = useState(() => dayByCamp.get(campId) ?? null);
+  const [chosenWeek, setChosenWeekState] = useState(() => weekByCamp.get(campId) ?? null); // null = the default week
   const busyRef = useRef(false);
 
   function setRemovedOpen(open) {
     removedOpenByCamp.set(campId, open);
     setRemovedOpenState(open);
   }
-  function setCheckInDayId(id) {
-    dayByCamp.set(campId, id);
-    setCheckInDayIdState(id);
-    setQuery('');
+  function setChosenWeek(index) {
+    weekByCamp.set(campId, index);
+    setChosenWeekState(index);
+    setMenu(null);
   }
+
+  // An old tab address (#…/checkin, /payments, /attendance): show the roster, tidy the address.
+  useEffect(() => {
+    if (OLD_TABS.includes(requestedTab) && onTab) onTab('default');
+  }, [requestedTab, onTab]);
 
   // ----- One change at a time -----
   function begin() {
@@ -214,31 +215,13 @@ export default function CampPage({
   }, [live.status]);
 
   // ===== Derived =====
-  const active = roster.filter((r) => r.status === 'active').sort(byName);
-  const removed = roster.filter((r) => r.status !== 'active').sort(byName);
+  const active = roster.filter((r) => r.status === 'active').sort(byFirstName);
+  const removed = roster.filter((r) => r.status !== 'active').sort(byFirstName);
   const pairs = findPairs(active);
-  const toCollectCount = active.filter((r) => payTag(r) !== 'paid').length;
-  const tab = TABS.includes(requestedTab) ? requestedTab : camp ? defaultCampTab(days, today) : 'payments';
-  const checkDay = days.find((d) => d.dayId === checkInDayId) ?? defaultCheckInDay(days, today);
+  // Weeks (multi-week option A): the week containing today, else the next, else the last.
+  const weeks = campWeeks(days);
+  const weekIndex = chosenWeek !== null && chosenWeek < weeks.length ? chosenWeek : defaultWeekIndex(weeks, today);
   const state = camp ? signupState(camp, days, today) : null;
-
-  function switchTab(next) {
-    if (next === tab) return;
-    setMenu(null);
-    onTab(next);
-  }
-  function handleTabKeyDown(event) {
-    const index = TABS.indexOf(tab);
-    let next = null;
-    if (event.key === 'ArrowRight') next = TABS[(index + 1) % TABS.length];
-    else if (event.key === 'ArrowLeft') next = TABS[(index - 1 + TABS.length) % TABS.length];
-    else if (event.key === 'Home') next = TABS[0];
-    else if (event.key === 'End') next = TABS[TABS.length - 1];
-    if (!next) return;
-    event.preventDefault();
-    switchTab(next);
-    document.getElementById(tabIds.tab(next))?.focus();
-  }
 
   // ===== Dialogs =====
   function openDialog(next) {
@@ -364,7 +347,7 @@ export default function CampPage({
     showToast(T.paymentUndoneToast(T.camperLabel(row)), { icon: false });
   }
 
-  // ===== Check in / Undo check-in (v0.704) =====
+  // ===== Check in / Undo check-in (any day, v0.706): a day cell of the roster =====
   async function doCheckIn(row, day) {
     if (!begin()) return;
     const result = await checkIn(row.id, day.dayId);
@@ -380,21 +363,26 @@ export default function CampPage({
       icon: false,
       action: { label: T.UNDO, onAction: () => runUndo(() => undoCheckIn(row.id, day.dayId)) },
     });
-    // Keyboard: the next "Not here yet" Check in button, so a queue at the door is quick.
-    focusSoon(() => document.querySelector('[data-checkin-btn]'));
+    // Keyboard: stay on the same day cell (it turns from Check in into ✓ time).
+    focusSoon(() => document.querySelector(`[data-day-cell="${row.id}:${day.dayId}"]`));
   }
-  async function doUndoCheckIn(row) {
-    const day = checkDay;
+  // Tapping a ✓ undoes that check-in at once, with an Undo toast that checks the child in again.
+  async function doUndoCheckIn(row, day) {
     if (!day || !begin()) return;
     const result = await undoCheckIn(row.id, day.dayId);
     end(result.status);
+    const name = T.camperLabel(row);
     if (result.status !== 'ok') {
-      rowProblem(result.status, row, { text: T.undoCheckInFailed(T.camperLabel(row)), run: () => doUndoCheckIn(row) });
+      rowProblem(result.status, row, { text: T.undoCheckInFailed(name), run: () => doUndoCheckIn(row, day) });
       return;
     }
     rowDone();
     reloadQuiet();
-    showToast(T.checkInUndoneToast(T.camperLabel(row)), { icon: false });
+    showToast(T.checkInUndoneToast(name), {
+      icon: false,
+      action: { label: T.UNDO, onAction: () => runUndo(() => checkIn(row.id, day.dayId)) },
+    });
+    focusSoon(() => document.querySelector(`[data-day-cell="${row.id}:${day.dayId}"]`));
   }
 
   // ===== Dialog openers =====
@@ -567,24 +555,9 @@ export default function CampPage({
     }
     const row = menu.row;
     const name = T.camperLabel(row);
-    const items =
-      menu.kind === 'checkin'
-        ? checkInMenuItems(row, { busy, onUndoCheckIn: doUndoCheckIn })
-        : camperMenuItems(row, { isAdmin, busy, anchor: menu.anchor, h: camperHandlers });
+    const items = camperMenuItems(row, { isAdmin, busy, anchor: menu.anchor, h: camperHandlers });
     return { title: name, subtitle: T.camperPayLine(T.camperDaysText(row, days), row.payingBy), label: T.moreFor(name), items };
   }
-
-  // ===== Keyboard on the Payments rows =====
-  const toCollect = active.filter((r) => payTag(r) !== 'paid');
-  const paid = active.filter((r) => payTag(r) === 'paid');
-  const navKeys = [...toCollect, ...paid, ...(removedOpen ? removed : [])].map((r) => r.id);
-  const nav = useRowArrowNav({
-    rowKeys: navKeys,
-    onOpen: (id) => {
-      const row = roster.find((r) => r.id === id);
-      if (row) openCamper(row, document.activeElement);
-    },
-  });
 
   // ===== Drawing =====
   const backLink = (
@@ -627,23 +600,6 @@ export default function CampPage({
   }
 
   const tag = campTag(camp, days, today);
-  const ctx = {
-    layout,
-    nav,
-    isAdmin,
-    busy,
-    menuFor: menu?.kind === 'camper' ? menu.id : null,
-    selectedId: dialog && !screenLocked ? (dialog.camperId ?? dialog.row?.id ?? null) : null,
-    notSavedId,
-    campDays: days,
-    handlers: {
-      onOpen: (row) => openCamper(row),
-      onMore: (row, anchor) => openMenu('camper', row, anchor),
-      onMarkPaid: (row) => doMarkPaid(row),
-      onReview: (row, anchor) => openCompareFor(row, anchor),
-    },
-  };
-
   // ----- The open dialog (never while locked: it comes back after unlocking) -----
   let dialogElement = null;
   if (dialog) {
@@ -662,6 +618,12 @@ export default function CampPage({
           isPhone={isPhone}
           hidden={hidden}
           startInEdit={dialog.startInEdit}
+          // Touch screens have no ⋯ on the roster: its items are in the detail instead (CP5).
+          actions={(() => {
+            if (!isTouch) return null;
+            const row = roster.find((r) => r.id === dialog.camperId);
+            return row ? camperMenuItems(row, { isAdmin, busy, anchor: null, h: camperHandlers }) : null;
+          })()}
           onClose={closeDialog}
           onSaved={() => {
             closeDialog();
@@ -790,7 +752,6 @@ export default function CampPage({
   }
 
   const content = menuContent();
-  const tabLabel = (key) => (key === 'checkin' ? T.TAB_CHECK_IN : key === 'payments' ? T.TAB_PAYMENTS : T.TAB_ATTENDANCE);
 
   return (
     <>
@@ -853,85 +814,37 @@ export default function CampPage({
       </div>
       )}
 
-      {/* Check in | Payments · 5 | Attendance — real tabs: one Tab stop, ← → Home End. */}
-      <div className={`ttabs ev-tabs cp-pagetabs${isPhone ? ' is-phone' : ''}`} role="tablist" aria-label={camp.name} onKeyDown={handleTabKeyDown}>
-        {TABS.map((key) => {
-          const current = key === tab;
-          return (
-            <button
-              key={key}
-              id={tabIds.tab(key)}
-              type="button"
-              className={`ttab${current ? ' is-current' : ''}`}
-              role="tab"
-              aria-selected={current ? 'true' : 'false'}
-              aria-controls={tabIds.panel(key)}
-              aria-label={key === 'payments' ? T.paymentsTabLabel(toCollectCount) : undefined}
-              tabIndex={current ? 0 : -1}
-              onClick={() => switchTab(key)}
-            >
-              {tabLabel(key)}
-              {key === 'payments' && toCollectCount > 0 && (
-                <span className="cp-tabcount" aria-hidden="true">
-                  {toCollectCount}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
       {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy || actions.busy} onDismiss={() => setBanner(null)} />}
 
-      {tab === 'checkin' && (
-        <CheckInTab
-          days={days}
-          dayId={checkDay?.dayId ?? null}
-          onDay={setCheckInDayId}
-          today={today}
-          active={active}
-          extras={extras}
-          query={query}
-          onQuery={setQuery}
-          busy={busy}
-          layout={layout}
-          menuFor={menu?.kind === 'checkin' ? menu.id : null}
-          notSavedId={notSavedId}
-          handlers={{
-            onOpen: (row) => openCamper(row),
-            onCheckIn: doCheckIn,
-            onMore: (row, anchor) => openMenu('checkin', row, anchor),
-            onMarkPaid: doMarkPaid,
-            onReview: (row, anchor) => openCompareFor(row, anchor),
-          }}
-          panelId={tabIds.panel('checkin')}
-          tabId={tabIds.tab('checkin')}
-        />
-      )}
-      {tab === 'payments' && (
-        <PaymentsTab
-          active={active}
-          removed={removed}
-          pairs={pairs}
-          removedOpen={removedOpen}
-          onToggleRemoved={() => setRemovedOpen(!removedOpen)}
-          onReview={(pair, opener) => openDialog({ type: 'compare', pair, saving: false, failed: false, opener })}
-          ctx={ctx}
-          panelId={tabIds.panel('payments')}
-          tabId={tabIds.tab('payments')}
-        />
-      )}
-      {tab === 'attendance' && (
-        <AttendanceTab
-          days={days}
-          active={active}
-          today={today}
-          layout={layout}
-          onOpen={(row) => openCamper(row)}
-          panelId={tabIds.panel('attendance')}
-          tabId={tabIds.tab('attendance')}
-        />
-      )}
+      <CampRoster
+        days={days}
+        weeks={weeks}
+        weekIndex={weekIndex}
+        onWeek={setChosenWeek}
+        today={today}
+        active={active}
+        removed={removed}
+        extras={extras}
+        pairs={pairs}
+        query={query}
+        onQuery={setQuery}
+        removedOpen={removedOpen}
+        onToggleRemoved={() => setRemovedOpen(!removedOpen)}
+        layout={layout}
+        isAdmin={isAdmin}
+        busy={busy}
+        menuFor={menu?.kind === 'camper' ? menu.id : null}
+        notSavedId={notSavedId}
+        handlers={{
+          onOpen: (row, el) => openCamper(row, el),
+          onMore: (row, anchor) => openMenu('camper', row, anchor),
+          onMarkPaid: (row) => doMarkPaid(row),
+          onReview: (row, anchor) => openCompareFor(row, anchor),
+          onReviewPair: (pair, opener) => openDialog({ type: 'compare', pair, saving: false, failed: false, opener }),
+          onCheckIn: doCheckIn,
+          onUndoCheckIn: doUndoCheckIn,
+        }}
+      />
 
       {content && <RowMenu anchor={menu.anchor} isSheet={isPhone} title={content.title} subtitle={content.subtitle} label={content.label} items={content.items} onClose={closeMenu} />}
       {dialogElement}
