@@ -47,6 +47,7 @@ import { lockSession, touchSession } from './lib/serverLock.js';
 import { useSessionHeartbeat } from './lib/useSessionHeartbeat.js';
 import { LOCATION_CODE, loadDeviceLocation, saveDeviceLocation } from './lib/device.js';
 import { prospectsBadge } from './lib/prospects/api.js';
+import { clearOpenProspect, requestOpenProspect } from './lib/prospects/openRequest.js';
 import {
   addressFor,
   addressForRoute,
@@ -238,6 +239,7 @@ export default function App() {
 
   // ----- Signing out (used by the menu, the lock screen, and the rules below) -----
   const signOut = useCallback(async (noticeText = null) => {
+    clearOpenProspect(); // a Calendar → Prospects hand-over never carries over to the next person
     // Signing out on purpose (the menu's Sign out, "Not you? Sign out" — no notice) or because the
     // account has no access: the address goes back to Home, so the next person at this device
     // starts on Home and Back can't bring the previous person's page back (v0.83). An automatic
@@ -878,6 +880,11 @@ export default function App() {
     },
     [location, changeLocation, navigate],
   );
+  // The Calendar's follow-ups (v0.615): open that child in Prospects (handed over in memory).
+  const openProspectFromCalendar = useCallback((id) => {
+    requestOpenProspect(id);
+    navigate('prospects');
+  }, [navigate]);
   const openFinanceHistory = useCallback((firstDay) => {
     showMonthOf(firstDay);
     navigate('finance', { tab: 'history' });
@@ -1067,6 +1074,8 @@ export default function App() {
             {section === 'calendar' && (
               <Calendar
                 location={location}
+                staffId={profile.id}
+                onOpenProspect={openProspectFromCalendar}
                 // For showing or hiding controls only — the database decides what may change.
                 isAdmin={profile.role === 'admin'}
                 screenLocked={phase === 'locked'}

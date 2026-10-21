@@ -98,3 +98,12 @@ This branch is on `main` and live (the push included `0ccf776`; live `main` = `c
 - Mockups (design-reviewed, fixes applied): `Calendar-show-mockup-PC.png`, `Calendar-show-mockup-tablet-phone.png`. Earlier drafts: `Calendar-followups.png`, `Calendar-toggles.png`, `Calendar-show-menu.png`.
 - Mockups approved by Jeffrey 2026-10-21 (v0.614). Build plan written and reviewed: `TKD-Calendar-Show-Build-Plan.md`.
 - Next: Jeffrey answers Q1 (A = reuse prospects_list, no migration, recommended; B = new function, migration 0025 via Main) and OKs the plan's corrections ("Ruby A." naming, Overdue / Due today tags) -> build B1-B8 in preview -> reviews -> Jeffrey tries it -> commit.
+
+## 2026-10-21: follow-ups + Show menu BUILT in preview (rulebook v0.615) - not committed, nothing live
+
+- Q1 = A (Jeffrey): reads through prospects_list, no migration. Built steps B1-B8 of `TKD-Calendar-Show-Build-Plan.md`.
+- New files: `src/lib/prospects/followUps.js` (shared rule, also used by Prospects), `openRequest.js`, `src/lib/calendar/showKinds.js`, `useFollowUps.js`, `src/screens/calendar/ShowMenu.jsx`. Changed: Calendar.jsx, MonthGrid/WeekView/PhoneMonth/DayPanel, calendar text.js + calendar.css, Prospects.jsx, prospects text.js, App.jsx (shared: staff id + hand-over + clear at sign-out), mockProspects.js, SETUP wording.
+- Checks: all checks.mjs pass (calendar 15 groups), both builds pass, forms dist check passes after `npm run build`.
+- Design review: no must-fix; 3 should-fix applied (quieter blue chip edge, bigger darker ring, menu heading hidden from screen readers). Security review: no must-fix; 3 should-fix applied (hand-over expires after 1 min and clears at sign-out, one shared empty list, loader can't hang).
+- Screens: `Calendar-show-built-PC.png`, `Calendar-show-built-tablet-phone.png`.
+- Next: Jeffrey tries it in preview -> commit on this branch -> Main merges -> Jeffrey OKs deploy. Later: a Testing line in the menu once Testing events load into the Calendar.

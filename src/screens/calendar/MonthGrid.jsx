@@ -6,6 +6,9 @@
 //   - events in their type's color; Color Belt / Star testing events (purple, ti-certificate)
 //   - "4 classes" in gray (crossed out when the whole day is closed)
 //   - "2 free classes" (ti-user-plus) booked through Forms; amber when one is on a cancelled class
+//   - "2 follow-ups" (ti-clock-hour-4): prospects to call that day; amber when due today or
+//     overdue, blue when still ahead (v0.612 / v0.615); on Both one chip per school
+// What the Show menu hides is already gone from `info` (showKinds.js applyShow, v0.613).
 // Busy days show "+N more" instead of growing. Days of the months before and after are grayed.
 // On Both, each chip starts with W or S (W S for both schools) and class counts add up.
 // The chips are drawn for the eye; the button's label reads the same summary out loud.
@@ -18,7 +21,7 @@
 //   typeColor   (typeId) => color record (schedule/colors.js)
 //   both        true on "Both" (school letters)
 //   onPick      (date, element) => void
-import { IconAlertTriangle, IconCalendarEvent, IconCertificate, IconUserPlus } from '@tabler/icons-react';
+import { IconAlertTriangle, IconCalendarEvent, IconCertificate, IconClockHour4, IconUserPlus } from '@tabler/icons-react';
 import { colorOf } from '../../lib/schedule/colors.js';
 import * as T from './text.js';
 
@@ -50,6 +53,25 @@ export function dayChips(info, typeColor, both) {
     chips.push({ key: `t${t.id}`, kind: 'testing', color: colorOf('purple'), letters: both ? schoolLetters(t.locationCode) : '', text: t.title });
   }
   return chips;
+}
+
+// The follow-up chips of one day: one per school on Both, else one. Also used by the week view.
+export function followChips(info, date, today, both) {
+  if (!info.followUpCount) return [];
+  const due = date <= today;
+  if (!both) return [{ key: 'f', letters: '', count: info.followUpCount, due }];
+  const codes = [...new Set(info.followUps.map((f) => f.code))];
+  return codes.map((code) => ({ key: `f${code}`, letters: T.SCHOOL_LETTER[code], count: info.followUps.filter((f) => f.code === code).length, due }));
+}
+
+export function FollowChip({ chip }) {
+  return (
+    <span className={`cchip cchip--follow${chip.due ? ' is-due' : ''}`}>
+      <IconClockHour4 size={12} aria-hidden="true" />
+      {chip.letters && <b className="cchip-letters">{chip.letters}</b>}
+      <span className="cchip-text">{T.followUpCount(chip.count)}</span>
+    </span>
+  );
 }
 
 export function Chip({ chip }) {
@@ -116,6 +138,9 @@ export default function MonthGrid({ weeks, month, today, selected, infoFor, type
                         <span className="cchip-text">{T.freeChip(info.bookingCount, info.bookingProblems)}</span>
                       </span>
                     )}
+                    {followChips(info, date, today, both).map((chip) => (
+                      <FollowChip key={chip.key} chip={chip} />
+                    ))}
                   </span>
                 </button>
               </div>

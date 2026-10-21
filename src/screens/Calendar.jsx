@@ -11,6 +11,9 @@
 //   - sends every change to the database (src/lib/calendar/api.js) and reacts to the answer
 //   - offers Undo for adding, editing and removing events and closures; deleting an event type
 //     is permanent and asks first
+//   - shows prospects' follow-ups (v0.612 / v0.615, loaded apart by useFollowUps) — a tap opens
+//     the child in Prospects — and the "Show" menu that hides any kind of item (v0.613),
+//     remembered per person on this device (showKinds.js)
 //
 // Rules worth knowing (same as Testing and the Schedule):
 //   - ONE change at a time; dialog saves WAIT for the database.
@@ -28,6 +31,8 @@ import { toTimeText } from '../lib/schedule/time.js';
 import { addDays } from '../lib/schedule/versions.js';
 import { addMonths, buildDay, firstOfMonth, monthKey, monthWeeks, recordMatches, weekDates } from '../lib/calendar/days.js';
 import { useCalendar } from '../lib/calendar/useCalendar.js';
+import { useFollowUps } from '../lib/calendar/useFollowUps.js';
+import { KINDS, applyShow, loadHidden, saveHidden, toggleKind } from '../lib/calendar/showKinds.js';
 import {
   addClosure,
   addEvent,
@@ -46,6 +51,7 @@ import MonthGrid from './calendar/MonthGrid.jsx';
 import PhoneMonth from './calendar/PhoneMonth.jsx';
 import DayPanel from './calendar/DayPanel.jsx';
 import WeekView from './calendar/WeekView.jsx';
+import ShowMenu from './calendar/ShowMenu.jsx';
 import EventDialog, { checkEventForm, isEventFormDirty } from './calendar/EventDialog.jsx';
 import ClosureDialog, { checkClosureForm, isClosureFormDirty } from './calendar/ClosureDialog.jsx';
 import EventTypesDialog, { checkTypeForm, isTypeFormDirty } from './calendar/EventTypesDialog.jsx';
@@ -57,7 +63,7 @@ const usable = (el) => (el && el.isConnected && el.getClientRects().length > 0 ?
 // Today in Massachusetts, until the database's own answer arrives ('YYYY-MM-DD').
 const localToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
 
-export default function Calendar({ location, isAdmin, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange }) {
+export default function Calendar({ location, staffId, isAdmin, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange, onOpenProspect }) {
   const isPhone = useMediaQuery(PHONE_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const both = location === 'Both';
@@ -82,6 +88,15 @@ export default function Calendar({ location, isAdmin, screenLocked, onNoAccess, 
   const loaded = cal.data;
   const today = loaded?.today ?? fallbackToday;
   const selectedDate = selected ?? today;
+
+  // ----- The Show menu (v0.613): the kinds this person hid on this device -----
+  const [hidden, setHidden] = useState(() => loadHidden(staffId));
+  const changeHidden = (next) => {
+    setHidden(next);
+    saveHidden(staffId, next);
+  };
+  // Prospects' follow-ups — loaded apart (not on every month / week click), only while shown.
+  const fu = useFollowUps({ codes: shownCodes, enabled: !screenLocked && !hidden.has('followUps') });
 
   // ----- Derived data -----
   const types = useMemo(() => loaded?.types ?? [], [loaded]);
@@ -112,14 +127,17 @@ export default function Calendar({ location, isAdmin, screenLocked, onNoAccess, 
     };
     return (codes) => ({ ...base, schools: allSchools.filter((s) => codes.includes(s.code)) });
   }, [loaded, allSchools]);
+  // What the screen draws: each day with the follow-ups added and the hidden kinds taken out.
+  // (Dialogs use ctxFor directly, so hiding never changes what a closure or event dialog sees.)
+  const followUps = fu.followUps;
   const infoFor = useMemo(() => {
-    const ctx = ctxFor(shownCodes);
+    const ctx = { ...ctxFor(shownCodes), followUps };
     const cache = new Map();
     return (date) => {
-      if (!cache.has(date)) cache.set(date, buildDay(date, ctx));
+      if (!cache.has(date)) cache.set(date, applyShow(buildDay(date, ctx), hidden));
       return cache.get(date);
     };
-  }, [ctxFor, shownCodes]);
+  }, [ctxFor, shownCodes, followUps, hidden]);
 
   // Newest values for callbacks that run later (after a save, from a toast's Undo …).
   const ref = useRef({});
@@ -629,6 +647,16 @@ export default function Calendar({ location, isAdmin, screenLocked, onNoAccess, 
     ) : null;
 
   const title = shownView === 'month' ? T.monthTitle(firstOfMonth(anchorDate)) : T.weekTitle(week[0], week[6], isWide);
+  const showMenu = (
+    <ShowMenu
+      kinds={KINDS}
+      hidden={hidden}
+      isSheet={isPhone}
+      full={isPhone}
+      onToggle={(key) => changeHidden(toggleKind(hidden, key))}
+      onShowAll={() => changeHidden(new Set())}
+    />
+  );
   const toolbar = (
     <div className="ctoolbar">
       <div className="ctoolbar-nav">
@@ -645,6 +673,7 @@ export default function Calendar({ location, isAdmin, screenLocked, onNoAccess, 
           {T.TODAY}
         </button>
       </div>
+      {!isPhone && showMenu}
       {!isPhone && (
         <div className="cseg cseg--view" role="group" aria-label={T.VIEW}>
           {[['month', T.MONTH], ['week', T.WEEK]].map(([key, label]) => (
@@ -701,6 +730,8 @@ export default function Calendar({ location, isAdmin, screenLocked, onNoAccess, 
         isAdmin={isAdmin}
         onOpenEvent={openEvent}
         onOpenClosure={openClosure}
+        followUpsFailed={fu.status === 'error'}
+        onOpenFollowUp={(f) => onOpenProspect?.(f.id)}
       />
     );
     const gridProps = { weeks, month, today, selected: selectedDate, infoFor, typeColor, onPick: pickDay };
@@ -774,6 +805,7 @@ export default function Calendar({ location, isAdmin, screenLocked, onNoAccess, 
       {!isAdmin && <p className="viewonly">{T.VIEW_ONLY_LINE}</p>}
       {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />}
       {toolbar}
+      {isPhone && ready && <div className="cshow-row">{showMenu}</div>}
       {body}
       {menu && !screenLocked && (
         <RowMenu

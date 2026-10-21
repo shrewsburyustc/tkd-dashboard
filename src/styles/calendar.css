@@ -936,3 +936,117 @@ button.cchip--btn:focus-visible {
   font-size: var(--text-12);
   font-weight: 600;
 }
+
+/* ----- Prospects' follow-ups (v0.612 / v0.615): amber when due today or overdue, blue ahead ----- */
+.cchip--follow {
+  border: 1px solid #b3c2df; /* a light blue edge: as quiet as the amber one (design review) */
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+}
+
+.cchip--follow.is-due {
+  border-color: var(--color-tag-warn-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+/* One line, never broken mid-word: "2 follow-…" in a narrow day box. */
+.cchip--follow .cchip-text {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The phone month's hollow ring (not a filled dot, so it isn't read as an event or closure).
+   A little bigger than a dot so the hole shows (design review). */
+.cmini-dots i.is-ring {
+  box-sizing: border-box;
+  width: 7px;
+  height: 7px;
+  margin-top: -1px;
+  border: 1.5px solid;
+  background: transparent;
+}
+
+.cpanel-follow-tag {
+  flex: none;
+  color: var(--color-warning-text);
+  font-size: var(--text-14);
+  font-weight: 500;
+}
+
+/* ----- The Show menu (v0.613): one button, a list of tick boxes ----- */
+.cshow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  margin-left: auto;
+}
+
+.cshow-btn-main,
+.cshow-btn-end {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.cshow-btn--full {
+  width: 100%;
+}
+
+.cshow-row {
+  margin-bottom: var(--space-12);
+}
+
+.cshow-badge {
+  padding: 1px var(--space-8);
+  border-radius: 10px;
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+  font-size: var(--text-12);
+  font-weight: 500;
+}
+
+.cshow-head {
+  margin: 0;
+  padding: var(--space-4) var(--space-16) var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.cshow-item {
+  min-height: 44px;
+}
+
+/* Unticked kinds keep a full-color label: the box shows the state (v0.614 review). */
+.cshow-box {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  border: 2px solid var(--color-border-control);
+  border-radius: 4px;
+  color: var(--color-on-blue);
+}
+
+.cshow-box.is-on {
+  border-color: var(--color-blue);
+  background: var(--color-blue);
+}
+
+.cshow-all {
+  min-height: 44px;
+  color: var(--color-blue);
+}
+
+.cshow-done {
+  min-height: 44px;
+  justify-content: center;
+  color: var(--color-blue);
+  font-weight: 600;
+}

@@ -7,6 +7,10 @@
 //     is striped amber
 //   - timed one-day events in their type's color with a thicker left edge
 //   - a class with free-class bookings shows ti-user-plus and how many (Forms)
+//   - prospects' follow-ups as a count chip in the "All day" row (they have a date, no time;
+//     v0.612 / v0.615)
+// What the Show menu hides is already gone from each day's info (showKinds.js applyShow); with
+// Closures hidden the closed-hour stripes go too, but cancelled classes stay crossed out (v0.615).
 // Clicking an event or a closure opens it (edit for admins, view for staff). Class boxes are
 // not buttons here — classes are changed in the Schedule.
 //
@@ -16,7 +20,7 @@ import { colorOf } from '../../lib/schedule/colors.js';
 import { eventTimeOn } from '../../lib/calendar/days.js';
 import { formatRange, hourLabel } from '../../lib/schedule/time.js';
 import { layoutDay } from '../schedule/TimeGrid.jsx';
-import { schoolLetters } from './MonthGrid.jsx';
+import { FollowChip, followChips, schoolLetters } from './MonthGrid.jsx';
 import * as T from './text.js';
 
 const PX_PER_MIN = 0.85;
@@ -116,6 +120,9 @@ export default function WeekView({ dates, today, infoFor, typeColor, both, onOpe
                   </span>
                 );
               })}
+              {followChips(info, d, today, both).map((chip) => (
+                <FollowChip key={chip.key} chip={chip} />
+              ))}
             </div>
           );
         })}
@@ -133,6 +140,7 @@ export default function WeekView({ dates, today, infoFor, typeColor, both, onOpe
           {dates.map((d, i) => {
             const info = infos[i];
             const closedAll = info.closures.some((c) => c.closure.wholeDay) && info.classCount > 0 && info.cancelledCount === info.classCount;
+            const stripes = info.shows?.closures !== false;
             return (
               <div key={d} className={`sgrid-col${closedAll ? ' is-closed' : ''}`} role="list" aria-label={T.longDate(d)}>
                 {hours.map((m) => (
@@ -141,7 +149,7 @@ export default function WeekView({ dates, today, infoFor, typeColor, both, onOpe
                 {(() => {
                   // "Some classes" closed: stripe the hours from the first to the last cancelled class.
                   const off = items[i].filter((x) => x.kind === 'class' && x.c.cancelled);
-                  if (closedAll || off.length === 0) return null;
+                  if (!stripes || closedAll || off.length === 0) return null;
                   const a = Math.min(...off.map((x) => x.start));
                   const b = Math.max(...off.map((x) => x.end));
                   return <span className="cweek-closedband" style={{ top: (a - from) * PX_PER_MIN, height: (b - a) * PX_PER_MIN }} aria-hidden="true" />;
