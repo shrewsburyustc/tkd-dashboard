@@ -312,10 +312,12 @@
 //            0003, 0002, PIN) pass. (0011_tests.sql runs in c instead: the
 //            upgrade database holds 14g's big seed, which it refuses.)
 //   step0016_after_new_students. 0016 on a database built in the
-//       PRODUCTION order (everything live: 0001-0006, 0010, 0007, 0008,
-//       0009, 0012, 0015, 0011 as production got it, 0019, and 0020 once
-//       this branch has it): the other migrations' fingerprints don't
-//       move, 0016_tests.sql and every earlier test file pass, the
+//       PRODUCTION order with EVERY live migration: 0001-0006, 0010, 0007,
+//       0008, 0009, 0012, 0015, 0011 as production got it, 0019, 0014,
+//       0020, camps' 0013 + 0017 (exact copies in fixtures/ until the real
+//       files are on this branch), 0018: the other migrations'
+//       fingerprints don't move, 0016_tests.sql and every earlier test
+//       file pass (0014, camps' 0017, 0018 and 0020 included), the
 //       bb_registrar live checks and a test cycle + registration work,
 //       and 0016's fingerprints equal step 15's.
 //
@@ -342,7 +344,7 @@
 //   Exit code 0 = everything passed, 1 = something failed.
 // =====================================================================
 
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
@@ -695,7 +697,7 @@ async function main() {
   const after19 = after5 ? await step18() : null;
 
   // 0016 on top of everything, in the production order (its own database)
-  console.log('\nMigration 0016 on top of the new-students migrations (production order):');
+  console.log('\nMigration 0016 on top of every live migration (production order):');
   await step0016_after_new_students(after16);
 
   // step0020 (named after its migration, not a number other branches use): 0020, LAST
@@ -2560,21 +2562,32 @@ async function stepBlackBelt(db) {
 // step0016_after_new_students: 0016 (Black Belt) on a database built in
 // the PRODUCTION order. Step 15 tests 0016 on the main database, which
 // has 0001-0006, 0010 and 0011 but none of the new-students files. On
-// production 0016 will be pasted AFTER all of these, so this step builds
-// that database and proves 0016 applies and passes on top of it:
-//   a. a database built like production: steps 1-5, 0003, 0004, the
-//      seed, 0005 (+ its test event), 0006, 0010, 0007, 0008, 0009,
-//      0012, 0015, then 0011 the way production got it (first the copy
-//      pasted on 2026-10-19, fixtures/0011_as_applied_2026-10-19.sql,
-//      then today's 0011 over it), then 0019 - the order of step 18 -
-//      and 0020 (the current_session_id() fix) once this branch has it
+// production 0016 will be pasted AFTER everything that is live, so this
+// step builds that database and proves 0016 applies and passes on top of
+// it:
+//   a. a database built like production, in the order the migrations
+//      were pasted there (status files: Finance, Color Belt, camps'
+//      go-live page):
+//        2026-10-17/19: steps 1-5, 0003, 0004, the seed, 0005 (+ its test
+//          event), 0006, 0010, 0007, 0008, 0009, 0012, 0015, then 0011
+//          the way production got it (first the copy pasted on
+//          2026-10-19, fixtures/0011_as_applied_2026-10-19.sql, then
+//          today's 0011 - the speed fix - over it), then 0019 and 0014
+//          (Color Belt private testing, the real file = the live copy)
+//        2026-10-20: 0020 (the current_session_id() fix), then camps'
+//          0013 + 0017 (camp payments in Finance; the exact copies in
+//          fixtures/ that step0018 uses, until the real files are on
+//          this branch), then 0018 (private testing money in Finance,
+//          which refuses to run before camps' 0017)
 //   b. the fingerprints of every migration already there are taken,
-//      0016 is applied, and they must be IDENTICAL afterwards
+//      0016 is applied, and they must be IDENTICAL afterwards (camps'
+//      0013 / 0017 have no fingerprints file on this branch)
 //   c. 0016_tests.sql, then the test files of every migration 0016 sits
-//      on top of (all must still pass)
+//      on top of (all must still pass; camps' 0017_tests.sql from the
+//      same place as step0018's)
 //   d. the bb_registrar live checks (15d) and a seeded Black Belt test
-//      cycle with a family registration (15e), then 0016's, 0015's and
-//      0011's tests again
+//      cycle with a family registration (15e), then 0016's, 0015's,
+//      0011's and 0018's tests again
 //   e. 0016's fingerprints must be IDENTICAL to step 15's (the main
 //      database's): the new-students files change nothing of 0016's
 // "main16" = step 15's 0016 fingerprints (or null if step 15 failed).
@@ -2600,19 +2613,19 @@ async function step0016_after_new_students(main16) {
   if (!(await run(db, L + 'apply 0011 as pasted on production 2026-10-19 (fixture)', old11))) return;
   if (!(await run(db, L + 'apply today\'s 0011 over it', read('migrations', '0011_finance.sql')))) return;
   if (!(await run(db, L + 'apply 0019', read('migrations', '0019_school_phone.sql')))) return;
-  // 0020 is on the color-belt branch; once it reaches this branch (through
-  // a merge of main) this step applies it and runs its tests by itself
-  const file0020 = readdirSync(path.join(supabaseDir, 'migrations')).find((f) => f.startsWith('0020_'));
-  if (file0020) {
-    if (!(await run(db, `${L}apply ${file0020}`, read('migrations', file0020)))) return;
-  } else {
-    console.log(`  ${L}no 0020 migration in this branch yet - not applied`);
-  }
+  // 0014 (Color Belt private testing), live since 2026-10-19
+  if (!(await run(db, L + 'apply 0014 (private testing)', MIGRATION_0014()))) return;
+  // 2026-10-20: 0020, then camps' 0013 + 0017, then 0018 (in that order)
+  if (!(await run(db, L + 'apply 0020 (current_session_id fix)', read('migrations', '0020_session_id_claims.sql')))) return;
+  const [camps13, camps17] = CAMPS_FILES();
+  if (!(await run(db, `${L}apply camps' 0013 (${path.basename(camps13)})`, CAMPS_0013()))) return;
+  if (!(await run(db, `${L}apply camps' 0017 (${path.basename(camps17)})`, CAMPS_0017()))) return;
+  if (!(await run(db, L + 'apply 0018 (private testing money in Finance)', MIGRATION_0018()))) return;
 
-  // b. apply 0016; nothing earlier moves
-  const prints = ['0003', '0004', '0005', '0006', '0010', '0007', '0008', '0009', '0012', '0015', '0011', '0019', '0020']
-    .map((n) => `${n}_fingerprints.sql`)
-    .filter((f) => (f !== '0020_fingerprints.sql' || file0020) && existsSync(path.join(supabaseDir, 'tests', f)));
+  // b. apply 0016; nothing earlier moves (every fingerprints file this
+  // branch has for a live migration)
+  const prints = ['0003', '0004', '0005', '0006', '0010', '0007', '0008', '0009', '0012', '0015', '0011', '0019', '0014', '0020', '0018']
+    .map((n) => `${n}_fingerprints.sql`);
   const before = {};
   for (const f of prints) before[f] = await fingerprints(db, f);
   if (!(await run(db, L + 'apply 0016_black_belt.sql', read('migrations', '0016_black_belt.sql')))) return;
@@ -2629,8 +2642,8 @@ async function step0016_after_new_students(main16) {
     ['0005_tests.sql', 'ALL 0005 TESTS PASSED'], ['0006_tests.sql', 'ALL 0006 TESTS PASSED'], ['0010_tests.sql', 'ALL 0010 TESTS PASSED'],
     ['0007_tests.sql', 'ALL 0007 TESTS PASSED'], ['0008_tests.sql', 'ALL 0008 TESTS PASSED'], ['0009_tests.sql', 'ALL 0009 TESTS PASSED'],
     ['0012_tests.sql', 'ALL 0012 TESTS PASSED'], ['0015_tests.sql', 'ALL 0015 TESTS PASSED'], ['0011_tests.sql', 'ALL 0011 TESTS PASSED'],
-    ['0019_tests.sql', 'ALL 0019 TESTS PASSED']];
-  if (file0020 && existsSync(path.join(supabaseDir, 'tests', '0020_tests.sql'))) testFiles.push(['0020_tests.sql', 'ALL 0020 TESTS PASSED']);
+    ['0019_tests.sql', 'ALL 0019 TESTS PASSED'], ['0014_tests.sql', 'ALL 0014 TESTS PASSED'], ['0020_tests.sql', 'ALL 0020 TESTS PASSED'],
+    [CAMPS_TESTS, 'ALL 0017 TESTS PASSED'], ['0018_tests.sql', 'ALL 0018 TESTS PASSED']];
   for (const [file, ok] of testFiles) {
     await runTestFile(db, `${L}${file} (after 0016)`, file, ok);
   }
@@ -2641,6 +2654,7 @@ async function step0016_after_new_students(main16) {
     await runTestFile(db, L + '0016_tests.sql (with the Black Belt test cycle)', '0016_tests.sql', 'ALL 0016 TESTS PASSED');
     await runTestFile(db, L + '0015_tests.sql (with the Black Belt test cycle)', '0015_tests.sql', 'ALL 0015 TESTS PASSED');
     await runTestFile(db, L + '0011_tests.sql (with the Black Belt test cycle)', '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+    await runTestFile(db, L + '0018_tests.sql (with the Black Belt test cycle)', '0018_tests.sql', 'ALL 0018 TESTS PASSED');
   }
 
   // e. the same 0016 as on the main database (step 15)
