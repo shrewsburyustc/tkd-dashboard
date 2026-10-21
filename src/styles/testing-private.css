@@ -1,0 +1,388 @@
+/*
+  testing-private.css — the Private testing tab, its dialogs, the Move to private testing dialog
+  and the private grading page (Color Belt phase 4, contract 0014 §5, mockups P1–P8).
+  Why it exists: these screens are new, so their styles live in their own file instead of growing
+  testing-events.css. They reuse the shared pieces (.clist, .ttag, .ev-card, .ev-side, .ev-sum,
+  .gr-res …) and add only what is new. Imported by PrivateTestingTab.jsx and PrivateGradingPage.jsx.
+  Colors only from tokens.css. Touch targets at least 44px; nothing scrolls sideways at 320px.
+*/
+
+/* ===== The rows (P1, P7) ===== */
+.pv-list {
+  border-radius: var(--radius-control);
+}
+
+.pv-list [role='rowgroup'] > * + * {
+  border-top: 1px solid var(--color-border);
+}
+
+.pv-row {
+  display: grid;
+  /* Tablet: Student · Testing for · price · Paying by · Payment · actions */
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.5fr) 64px 84px 152px;
+  align-items: center;
+  column-gap: var(--space-8);
+  min-height: 40px;
+  padding: var(--space-4) var(--space-8) var(--space-4) var(--space-12);
+  font-size: var(--text-13);
+}
+
+/* PC: + Day · time first, + Paid on */
+.pv-list.is-wide .pv-row {
+  grid-template-columns: 88px minmax(0, 1.2fr) minmax(0, 1.6fr) 72px 72px 64px 152px;
+  column-gap: var(--space-12);
+}
+
+.pv-head {
+  min-height: 32px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.pv-row.is-selected {
+  background: var(--color-blue-tint);
+}
+
+.pv-row > [role='cell'] {
+  min-width: 0;
+}
+
+.pv-row .acts {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
+}
+
+.pv-day,
+.pv-student {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pv-day-date {
+  font-weight: 500;
+}
+
+.pv-name-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+}
+
+/* The class name and other small gray lines (12px) */
+.pv-class,
+.pv-sub {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* "[belt] Yellow → [belt] Orange · $85" */
+.pv-tf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-4);
+}
+
+.pv-tf-price {
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+/* The amber owed line and the gray moved line under the name */
+.pv-lines {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+/* Tablet: the lines run the full row width (a second line of the row's grid) */
+.pv-lines--full {
+  grid-column: 1 / -1;
+  padding-bottom: var(--space-4);
+}
+
+.pv-lines--full .pv-lines {
+  margin-top: 0;
+}
+
+.pv-owed-line,
+.pv-moved-line {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--text-12);
+}
+
+/* "⚠ Paid $65 · $20 more to collect" — amber, one line, never broken mid-phrase */
+.pv-owed-line {
+  color: var(--color-warning-text);
+  white-space: nowrap;
+}
+
+/* "→ Moved from November Children Testing" — gray; a long event name may wrap */
+.pv-moved-line {
+  color: var(--color-text-secondary);
+}
+
+.pv-owed-line svg,
+.pv-moved-line svg {
+  flex: none;
+}
+
+/* A cancelled row is grayed entirely (P7) */
+.pv-row.is-cancelled,
+.pv-row.is-cancelled .ev-sname,
+.pv-row.is-cancelled .pv-day-date {
+  color: var(--color-disabled-text);
+}
+
+.pv-row.is-cancelled .ev-sname,
+.pv-row.is-cancelled .pv-day-date {
+  font-weight: 400;
+}
+
+.pv-row.is-cancelled .belt,
+.pv-row.is-cancelled .ttag {
+  opacity: 0.6;
+}
+
+/* Phone rows: stacked lines, ⋯ on the right (P1 phone / 320) */
+.pv-row.is-phone {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-4) var(--space-8) var(--space-12);
+}
+
+.pv-phone-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pv-daytime-line {
+  font-size: var(--text-12);
+  font-weight: 500;
+}
+
+/* "1 owes more" under the Paid card's number */
+.ev-card-note.pv-card-warn {
+  color: var(--color-warning-text);
+}
+
+/* No private testings at all: one line and the Add button in a box (P1 tablet) */
+.pv-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-32, 32px) var(--space-16);
+  text-align: center;
+}
+
+.pv-empty-text {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* ===== Dialogs (P2, P4, P5) ===== */
+.pv-date {
+  width: 100%;
+}
+
+.pv-time {
+  width: 100%;
+  padding-right: var(--space-4);
+  font-family: inherit; /* a select doesn't take the page font by itself */
+}
+
+/* The gray box: "$95 private price" + where it comes from (P2), the move money (P5) */
+.pv-price {
+  margin-bottom: var(--space-8);
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.pv-price-line {
+  margin: 0;
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.pv-price-hint {
+  margin: 2px 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.pv-stays {
+  margin-top: 0;
+}
+
+.pv-intro {
+  margin-top: 0;
+  margin-bottom: var(--space-12);
+}
+
+.pv-clearing {
+  margin-bottom: var(--space-8);
+}
+
+/* Phone: the full-screen dialog keeps Save pinned to the bottom edge even when the form is short */
+.tdialog-page .dialog-page-body:has(.pv-form) {
+  display: flex;
+  flex-direction: column;
+}
+
+.tdialog-page .pv-form {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.tdialog-page .pv-form .dialog-page-submit {
+  margin-top: auto;
+}
+
+/* ===== The grading page (P6) ===== */
+.pg-head {
+  margin-bottom: var(--space-12);
+}
+
+.pg-titleline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+}
+
+.pg-print {
+  flex: none;
+}
+
+.pg-lockline {
+  margin-top: var(--space-4);
+}
+
+/* The card: details, then Result */
+.pg-card {
+  max-width: 680px;
+  padding: var(--space-4) var(--space-16) var(--space-12);
+}
+
+.pg-sum {
+  margin-bottom: 0;
+}
+
+/* The card's detail lines have no dividers (P6) */
+.pg-sum .ev-sum-row {
+  padding: var(--space-4) 0;
+  border-top: none;
+}
+
+.pg-result {
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--color-border);
+}
+
+.pg-result-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+  margin-bottom: var(--space-8);
+}
+
+.pg-result-label {
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.pg-result-note {
+  margin-left: auto;
+}
+
+.pg-result-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.pg-note {
+  margin: var(--space-8) 0 0;
+}
+
+/* ===== Touch screens: 48px rows, 44px tap areas (guidelines 2.5) ===== */
+@media (pointer: coarse) {
+  .pv-row {
+    min-height: 48px;
+  }
+
+  .pv-head {
+    min-height: 36px;
+  }
+
+  .pv-list.is-wide .pv-row,
+  .pv-row {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) 56px 84px 160px;
+  }
+
+  .pv-list.is-wide .pv-row {
+    grid-template-columns: 88px minmax(0, 1.2fr) minmax(0, 1.5fr) 64px 72px 56px 160px;
+  }
+
+  .pv-time {
+    height: var(--control-height-touch);
+    font-size: var(--text-16); /* 16px stops iPads zooming into the field */
+  }
+
+  /* Print: a 36px button with the app's invisible 44px tap area (app.css .btn::after) */
+  .pg-print {
+    height: var(--control-height-touch);
+  }
+}
+
+/* Tablet and phone: the grading page's card uses the full width (P6) */
+@media (max-width: 1023.98px) {
+  .pg-card {
+    max-width: none;
+  }
+}
+
+/* ===== Phones ===== */
+@media (max-width: 639.98px) {
+  /* Print on its own line under the title (P6) */
+  .pg-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-8);
+  }
+
+  .pg-card {
+    padding: var(--space-4) var(--space-12) var(--space-12);
+  }
+
+  /* The three result buttons full width */
+  .pg-result-line {
+    display: block;
+  }
+
+  /* Day and Time one under the other (P2 phone) */
+  .pv-daytime.ev-two {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}

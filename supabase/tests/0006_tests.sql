@@ -3459,9 +3459,12 @@ begin
   -- C9. the 0001-0005 helpers Star calls still have the fingerprints they
   --     had when 0006 was written (0006 replaced none of them; if a later
   --     migration changes one, Star's behaviour may change - re-run this file)
+  --     current_session_id: 0001's OR 0020's version is accepted (0020 only
+  --     changed where it reads the session id from, rulebook v0.408, so the
+  --     file passes before and after 0020); "a|b" lists the accepted md5s.
   select string_agg(x.f, ', ') into v_txt
     from (values ('change_log_actor_name', 'dfaaf9fd240a31fad052fa49e9909c96'), ('change_log_write', '0dbd01d2fb6cb41108f126bfe1a44f2d'),
-                 ('current_session_id', '32c5f96f3adc387fd022a040fcbc2a4e'), ('has_data_access', '950515a63adf44c7f70449441cad0a8a'),
+                 ('current_session_id', '32c5f96f3adc387fd022a040fcbc2a4e|1429eed0526fc8ba7ef6cc98c54d9cba'), ('has_data_access', '950515a63adf44c7f70449441cad0a8a'),
                  ('is_admin', '497cd39cbd84bfb2233bde0198713c12'), ('testing_cents_is_valid', '66ae9dc59cf5401c01bbe66b0abacfdb'),
                  ('testing_location_address', '4cae0f1d89755becac314c91b7272ab8'), ('testing_name_is_valid', 'ab59348605c54a7fc76c4f69e4c8a6b4'),
                  ('testing_new_public_code', 'b85a828150a0dbad98e10c9bc77d184f'), ('testing_normalize_name', 'd91c6d79a9d50cf9752ecf6ec6a278fe'),
@@ -3469,9 +3472,9 @@ begin
                  ('testing_refuse_truncate', '4522d11dc0517ac24c23b50b1bd394cc'), ('testing_school_date', '339e368e7cf3b65fc101646373a2dba8'),
                  ('testing_signature_is_valid', '9e6edc36c547a52462895557449bc33a'), ('testing_today', '015ce0e17fd701bedf8b11ed20b86816'))
            as x(f, m)
-   where (select string_agg(md5(regexp_replace(regexp_replace(p.prosrc, '--[^\n]*', '', 'g'), '\s+', '', 'g')), ',')
+   where not coalesce((select string_agg(md5(regexp_replace(regexp_replace(p.prosrc, '--[^\n]*', '', 'g'), '\s+', '', 'g')), ',')
             from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-           where n.nspname = 'public' and p.proname = x.f) is distinct from x.m;
+           where n.nspname = 'public' and p.proname = x.f) = any (string_to_array(x.m, '|')), false);
   if v_txt is not null then raise exception 'TEST FAILED: C9 shared helper(s) changed since 0006: %', v_txt; end if;
 
   reset role;

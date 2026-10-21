@@ -14,6 +14,10 @@
 //   - when an event is open (address #testing/event/<id>): that event's page instead
 // Everything inside a tab lives in testing/events/EventsTab.jsx and testing/ClassesRanksTab.jsx;
 // the event page in testing/event/EventPage.jsx.
+// Phase 4 (contract 0014 §5.1, rulebook v0.401): a third tab, "Private testing", at the far right
+// (testing/private/PrivateTestingTab.jsx), and a private testing's grading page
+// (#testing/private/<id>, testing/private/PrivateGradingPage.jsx). Closing the grading page lands
+// on the Private testing tab. On narrow phones the tab bar scrolls sideways (testing.css).
 //
 // Props (from App.jsx):
 //   location           'Worcester' | 'Shrewsbury' | 'Both' (the top-bar switcher)
@@ -27,6 +31,8 @@
 //   onRefreshProfile   re-read "who am I?" (e.g. after the database said "not allowed")
 //   showToast / clearToast   the toast at the bottom (with Undo)
 //   onModalOpenChange  tells the App a Testing dialog is open (the page behind becomes inert)
+//   privateId          phase 4: the open private testing's id (its grading page), or null
+//   onOpenPrivate(id) / onClosePrivate(options)   open / close that grading page (App.jsx)
 //
 // Black Belt testing (contract CONTRACT-0016-B1 §3): until step C2 brings the Testing chooser and
 // the #testing/black-belt addresses (they wait for Star's chooser, §7 OP-1), Black Belt is reached
@@ -40,7 +46,9 @@ import BlockedOnBoth from './testing/BlockedOnBoth.jsx';
 import ClassesRanksTab from './testing/ClassesRanksTab.jsx';
 import EventsTab from './testing/events/EventsTab.jsx';
 import EventPage from './testing/event/EventPage.jsx';
-import { PAGE_TITLE, TAB_CLASSES_RANKS, TAB_EVENTS, VIEW_ONLY_LINE } from './testing/text.js';
+import PrivateGradingPage from './testing/private/PrivateGradingPage.jsx';
+import PrivateTestingTab from './testing/private/PrivateTestingTab.jsx';
+import { PAGE_TITLE, TAB_CLASSES_RANKS, TAB_EVENTS, TAB_PRIVATE, VIEW_ONLY_LINE } from './testing/text.js';
 import '../styles/testing-events.css';
 
 // Black Belt testing's staff screens: preview builds only, until the build switch of step C2.
@@ -53,6 +61,7 @@ let blackBeltOpen = false;
 const TABS = [
   { key: 'events', label: TAB_EVENTS },
   { key: 'classes', label: TAB_CLASSES_RANKS },
+  { key: 'private', label: TAB_PRIVATE }, // phase 4: last, far right
 ];
 
 // The tab last used, kept while the page is open (coming back from an event page or from Home
@@ -64,14 +73,23 @@ let lastTab = 'events';
 //   staffLine  the gray line for staff under the tabs, or null
 function TestingHeader({ school, action, staffLine, tab, onTab, ids }) {
   const tabRefs = useRef({});
+  // ← → move to the next / previous tab (wrapping round), Home / End to the first / last one.
   function handleKeyDown(event) {
-    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
-    event.preventDefault();
     const index = TABS.findIndex((t) => t.key === tab);
-    const next = TABS[(index + (event.key === 'ArrowRight' ? 1 : -1) + TABS.length) % TABS.length];
+    let next = null;
+    if (event.key === 'ArrowRight') next = TABS[(index + 1) % TABS.length];
+    else if (event.key === 'ArrowLeft') next = TABS[(index - 1 + TABS.length) % TABS.length];
+    else if (event.key === 'Home') next = TABS[0];
+    else if (event.key === 'End') next = TABS[TABS.length - 1];
+    if (!next) return;
+    event.preventDefault();
     onTab(next.key);
     tabRefs.current[next.key]?.focus();
   }
+  // Narrow phones: the tab bar scrolls sideways — keep the current tab in view.
+  useEffect(() => {
+    tabRefs.current[tab]?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }, [tab]);
   return (
     <>
       <div className="phead">
@@ -92,7 +110,7 @@ function TestingHeader({ school, action, staffLine, tab, onTab, ids }) {
               }}
               id={ids.tab(t.key)}
               type="button"
-              className={`ttab${current ? ' is-current' : ''}`}
+              className={`ttab${current ? ' is-current' : ''}${t.key === 'private' ? ' ttab--end' : ''}`}
               role="tab"
               aria-selected={current ? 'true' : 'false'}
               aria-controls={ids.panel(t.key)}
@@ -118,6 +136,11 @@ export default function Testing({ location, onLocationChange, isAdmin, eventId, 
   }
   const ids = { tab: (key) => `${baseId}-tab-${key}`, panel: (key) => `${baseId}-panel-${key}` };
   const [tab, setTabState] = useState(lastTab);
+  // Phase 4: while a private testing's grading page is open, the tab underneath becomes Private
+  // testing, so closing the page lands there.
+  useEffect(() => {
+    if (tabProps.privateId) setTabState('private');
+  }, [tabProps.privateId]);
   function setTab(key) {
     lastTab = key;
     setTabState(key);
@@ -179,6 +202,16 @@ export default function Testing({ location, onLocationChange, isAdmin, eventId, 
     );
   }
 
+  // Phase 4: a private testing's grading page. Closing it lands on the Private testing tab.
+  if (tabProps.privateId) {
+    lastTab = 'private';
+    return (
+      <div className="testing">
+        <PrivateGradingPage key={tabProps.privateId} school={location} isAdmin={isAdmin} {...tabProps} />
+      </div>
+    );
+  }
+
   if (eventId) {
     return (
       <div className="testing">
@@ -194,7 +227,16 @@ export default function Testing({ location, onLocationChange, isAdmin, eventId, 
   return (
     <div className="testing">
       {blackBeltLink}
-      {tab === 'events' ? (
+      {tab === 'private' ? (
+        <PrivateTestingTab
+          school={location}
+          isAdmin={isAdmin}
+          panelId={ids.panel('private')}
+          tabId={ids.tab('private')}
+          renderHeader={(action) => renderHeader(action, null)}
+          {...tabProps}
+        />
+      ) : tab === 'events' ? (
         <EventsTab
           school={location}
           isAdmin={isAdmin}

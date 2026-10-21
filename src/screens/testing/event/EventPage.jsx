@@ -25,12 +25,20 @@
 // the class choice are shared by both tabs. Result taps save by themselves (useGradingSaves.js);
 // while a result is "Not saved", leaving the page asks first (the leave guard, §4.9: App.jsx asks
 // this page before it navigates away) and closing the browser tab shows the browser's question.
+//
+// Phase 4 (contract 0014 §5.5, mockup P5, rulebook v0.402–v0.404) adds one thing here: ⋯ → Move to
+// private testing (all staff, right after Edit details) for a student without a Pass / Not passed
+// on the testing day. The student leaves the event (listed under Removed as "Moved to private
+// testing, Tue, Dec 1") and their payment moves with them to the Private testing tab. A moved
+// Removed row has no ⋯ for staff; admins get Open private testing and a grayed Restore (with the
+// reason) — no Delete permanently. Everything else on this page is phase 3 exactly.
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import {
   IconAlertTriangle,
   IconArrowBackUp,
   IconArrowLeft,
-  IconCash,
+  IconArrowRight,
+  IconSum,
   IconCashEdit,
   IconCheck,
   IconClock,
@@ -47,7 +55,10 @@ import RowMenu from '../../../components/RowMenu.jsx';
 import { LOCATION_CODE } from '../../../lib/device.js';
 import { centsToInputText } from '../../../lib/money.js';
 import { loadSchools } from '../../../lib/settings/schoolsApi.js';
+import { loadClassesAndRanks } from '../../../lib/testing/api.js';
 import { classTimeLabel } from '../../../lib/testing/eventRules.js';
+import { moveToPrivate, undoMoveToPrivate } from '../../../lib/testing/privateApi.js';
+import { canMoveToPrivate } from '../../../lib/testing/privateRules.js';
 import {
   addStudent,
   changePayingBy,
@@ -82,6 +93,7 @@ import GradingSheet from './GradingSheet.jsx';
 import GradingTab, { groupGearTags } from './GradingTab.jsx';
 import NoteDialog, { checkNote, isNoteDirty } from './NoteDialog.jsx';
 import { EditPaymentDialog, PayingByDialog, checkEditPayment, isEditPaymentDirty, isPayingByDirty } from './PaymentDialogs.jsx';
+import MoveToPrivateDialog, { checkMove, isMoveDirty } from './MoveToPrivateDialog.jsx';
 import RegistrationLinkDialog from './RegistrationLinkDialog.jsx';
 import RosterRows from './RosterRows.jsx';
 import StudentDialog, { checkStudentForm, isStudentFormDirty } from './StudentDialog.jsx';
@@ -96,7 +108,7 @@ const removedOpenByEvent = new Map();
 // happens once, after that the person's own class choice is kept.
 const gradingClassPicked = new Set();
 
-const BLOCKING_NOTES = ['STALE_DIALOG', 'NOT_ALLOWED', 'FINISHED', 'ALREADY_PAID', 'STUDENT_LOCKED'];
+const BLOCKING_NOTES = ['STALE_DIALOG', 'NOT_ALLOWED', 'FINISHED', 'ALREADY_PAID', 'STUDENT_LOCKED', 'MOVE_HAS_RESULT'];
 const TABS = ['students', 'grading'];
 
 const find = (selector) => document.querySelector(selector);
@@ -143,6 +155,7 @@ export default function EventPage({
   eventTab, // 'students' | 'grading' (from the address, App.jsx)
   onEventTab, // (tab) => void — switches the tab (App.jsx updates the address without a new step)
   onLeaveGuardChange, // (fn | null) => void — App.jsx asks fn before leaving this page (§4.9)
+  onOpenPrivate, // phase 4: (privateId) => void — opens a private testing's grading page
 }) {
   const live = useLiveLoad({ key: eventId, enabled: !screenLocked, load: loadEvent, refreshMs: LIVE_REFRESH_MS });
   const data = live.data;
@@ -533,6 +546,76 @@ export default function EventPage({
     }
   }
 
+  // ----- Phase 4: Move to private testing (P5) -----
+  // The live payments of a registration (not reversed), oldest first: they move with the student.
+  function livePaymentsOf(registrationId) {
+    const mine = payments.filter((p) => p.registrationId === registrationId);
+    const reversed = new Set(mine.filter((p) => p.kind === 'reversal').map((p) => p.reversesPaymentId));
+    return mine.filter((p) => p.kind === 'payment' && !reversed.has(p.id));
+  }
+  async function openMove(row, opener) {
+    // The private price is TODAY's price in Classes and ranks for the student's rank (v0.404); only
+    // when that rank no longer exists there, the event's own copy. Read fresh before the dialog opens.
+    const copy = rankById.get(row.eventRankId);
+    if (!copy || !beginWrite()) return;
+    const result = await loadClassesAndRanks(event.locationCode);
+    endWrite(result.status === 'ok' ? 'ok' : result.status);
+    if (result.status === 'no_access') {
+      onNoAccess();
+      return;
+    }
+    if (result.status !== 'ok') {
+      setBanner({ text: T.LOAD_EVENT_FAILED, retry: retryLoad });
+      return;
+    }
+    const liveRank = result.classes.flatMap((c) => c.ranks).find((r) => r.id === copy.rankId);
+    const priceCents = liveRank ? liveRank.privateCents : copy.privateCents;
+    const values = { day: '', time: '' };
+    const moved = livePaymentsOf(row.id).map((p) => ({ cents: p.amountCents, method: p.method }));
+    openDialog({ type: 'move', rowId: row.id, snapshot: row, values, initial: values, priceCents, payments: moved, pastDay: null, opener });
+  }
+  async function saveMove(canSave) {
+    const d = dialogRef.current;
+    if (!d || d.saving || d.type !== 'move') return;
+    if (!canSave || !checkMove(d, { today }).canSave) {
+      patchDialog({ triedSave: true });
+      return;
+    }
+    if (!beginWrite()) return;
+    patchDialog({ saving: true, note: null });
+    const result = await moveToPrivate({ registrationId: d.rowId, expectedVersion: d.snapshot.version, privateDate: d.values.day, privateTime: d.values.time });
+    endWrite(result.status);
+    const status = result.status;
+    const name = T.studentLabel(d.snapshot);
+    if (status === 'ok') {
+      setDialog(null);
+      const reloaded = reloadQuiet();
+      // Undo only when no testing-day result was cleared (the No show can't come back, §10 point 5).
+      const privateId = result.privateId;
+      const action = result.resultCleared
+        ? null
+        : {
+            label: T.UNDO,
+            onAction: () =>
+              runUndo(() => undoMoveToPrivate({ privateId, expectedVersion: 1 }), { find: () => rowEl(d.rowId) }, { notAllowedText: T.UNDO_MOVE_TOO_LATE }),
+          };
+      showToast(T.movedToast(name), action ? { icon: false, action } : { icon: false });
+      focusLater(() => rowEl(d.rowId), addStudentEl, reloaded);
+    } else if (status === 'past_day') {
+      patchDialog({ saving: false, pastDay: d.values.day });
+    } else if (status === 'has_result') {
+      patchDialog({ saving: false, note: 'MOVE_HAS_RESULT', blocked: true });
+      reloadQuiet();
+    } else if (status === 'withdrawn') {
+      setDialog(null);
+      setBanner({ text: T.isWithdrawn(name) });
+      reloadQuiet();
+      focusAfterClose(d);
+    } else {
+      handleDialogProblem(status);
+    }
+  }
+
   // ----- Grading: the note dialog (G2) -----
   function openNote(row, opener) {
     const saved = grading.view(row).note;
@@ -570,6 +653,7 @@ export default function EventPage({
     if (d.type === 'paying') return isPayingByDirty(d);
     if (d.type === 'payment') return isEditPaymentDirty(d);
     if (d.type === 'note') return isNoteDirty(d);
+    if (d.type === 'move') return isMoveDirty(d);
     return false;
   }
   function requestClose() {
@@ -862,6 +946,10 @@ export default function EventPage({
     } else if (status === 'withdrawn') {
       setBanner({ text: T.isWithdrawn(name) });
       reloadQuiet();
+    } else if (status === 'moved') {
+      // Phase 4: Restore of a student who was moved to private testing (contract 0014 §2.6).
+      setBanner({ text: T.RESTORE_MOVED(row.firstName) });
+      reloadQuiet();
     } else if (status === 'error') {
       setNotSavedId(row.id);
       setBanner({ kind: 'row', text: retry.text, retry: retry.run });
@@ -1109,8 +1197,29 @@ export default function EventPage({
     // Delete permanently. Items that don't apply are left out; the rest keep their order. A
     // divider starts each later group, but never the menu itself.
     const groupStart = () => items.length > 0;
+    // Phase 4: a student moved to private testing (P5) — admins only: Open private testing, and
+    // Restore shown grayed with the reason; no Delete permanently. (Staff see no ⋯ on it.)
+    if (row.status !== 'active' && row.movedTo) {
+      if (!isAdmin) return null;
+      items.push({ key: 'openprivate', label: T.OPEN_PRIVATE, Icon: IconArrowRight, onSelect: () => onOpenPrivate?.(row.movedTo.privateId) });
+      items.push({
+        key: 'restore',
+        label: (
+          <span className="ev-menu-two">
+            <span>{T.RESTORE}</span>
+            <span className="ev-menu-reason">{T.restoreMovedReason(row.firstName)}</span>
+          </span>
+        ),
+        Icon: IconArrowBackUp,
+        disabled: true,
+        onSelect: () => {},
+      });
+      return { title: name, subtitle: T.movedTag(row.movedTo.privateDate), label: T.moreForStudent(name), items };
+    }
     if (row.status === 'active') {
       items.push({ key: 'edit', label: T.EDIT_DETAILS, Icon: IconEdit, onSelect: () => openEdit(row, anchor) });
+      // Phase 4: right after Edit details, all staff (P5)
+      if (canMoveToPrivate(row)) items.push({ key: 'move', label: T.MOVE_TO_PRIVATE, Icon: IconArrowRight, onSelect: () => openMove(row, anchor) });
       if (!row.paid) items.push({ key: 'paying', label: T.CHANGE_PAYING_BY, Icon: NoIcon, onSelect: () => openPayingBy(row, anchor) });
       if (row.duplicateState === 'possible') items.push({ key: 'review', label: T.REVIEW_DUPLICATE, Icon: IconAlertTriangle, onSelect: () => openCompareFor(row, anchor) });
       if (isAdmin && row.paid) {
@@ -1207,7 +1316,7 @@ export default function EventPage({
     { key: null, label: T.CARD_STUDENTS, Icon: IconUsers, value: active.length },
     { key: 'paid', label: T.CARD_PAID, Icon: IconCheck, value: paidCount },
     { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconClock, value: active.length - paidCount },
-    { key: 'money', label: T.CARD_PAYMENTS, Icon: IconCash, value: T.dollars(paymentsTotal) },
+    { key: 'money', label: T.CARD_PAYMENTS, Icon: IconSum, value: T.dollars(paymentsTotal) }, // ti-sum = a money total (v0.303)
   ];
 
   const ctx = {
@@ -1260,6 +1369,23 @@ export default function EventPage({
       dialogElement = <PayingByDialog key={dialog.key} state={dialog} name={T.studentLabel(dialog.snapshot)} onSave={savePayingBy} {...common} />;
     } else if (dialog.type === 'payment') {
       dialogElement = <EditPaymentDialog key={dialog.key} state={dialog} name={T.studentLabel(dialog.snapshot)} onTouch={touch} onSave={savePayment} {...common} />;
+    } else if (dialog.type === 'move') {
+      const rank = rankById.get(dialog.snapshot.eventRankId);
+      dialogElement = (
+        <MoveToPrivateDialog
+          key={dialog.key}
+          state={dialog}
+          record={dialog.snapshot}
+          className={classById.get(dialog.snapshot.eventClassId)?.className ?? ''}
+          rankName={rank?.name ?? ''}
+          toName={rank?.testingFor?.name ?? T.NO_NEW_RANK}
+          event={event}
+          today={today}
+          onTouch={touch}
+          onSave={saveMove}
+          {...common}
+        />
+      );
     } else if (dialog.type === 'compare') {
       const first = roster.find((r) => r.id === dialog.firstId) ?? dialog.pair.first;
       const second = roster.find((r) => r.id === dialog.secondId) ?? dialog.pair.second;

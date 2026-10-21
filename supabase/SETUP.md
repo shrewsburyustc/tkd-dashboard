@@ -1013,7 +1013,9 @@ Run `Start dashboard.bat`, sign in as the admin.
 
 ### 14e. Undo and re-run warnings (only with Jeffrey's OK)
 
-**Re-running 0005 after 0010** puts back the phase 2 versions of the five replaced functions, **without the grading locks** (0005's header says so too). If 0005 is ever re-run, run **0010 again straight after it**. (And if the family-form off switch of 12i is in force, repeat 12i step 1 after re-running 0005, because 0005 grants the two public functions back.) **Once 0019 (school phone) is live, also re-run 0019 after any 0005 re-run** — 0005 takes away the phone's read right and Settings → Schools stops loading (17d).
+If migration 0014 exists, remove it first (§0014e) — 0010 can only be removed after 0014.
+
+**Re-running 0005 after 0010** puts back the phase 2 versions of the five replaced functions, **without the grading locks** (0005's header says so too). If 0005 is ever re-run, run **0010 again straight after it**. (And if the family-form off switch of 12i is in force, repeat 12i step 1 after re-running 0005, because 0005 grants the two public functions back.)
 
 **Rollback without touching data:** put the previous site version back (Cloudflare Pages → Deployments → **Rollback**). 0010 can stay: the phase 2 screens don't read results.
 
@@ -1402,6 +1404,208 @@ commit;
 
 ---
 
+## Migration 0014: Color Belt private testing (the Private testing tab)
+
+**What it does** (`supabase/migrations/0014_testing_private.sql`, contract `docs/Dashboard Docs/Build contracts/CONTRACT-0014.md` §2):
+- **Private testing is its own record, not part of any event** (rulebook v0.401). Three new tables: `testing_private` (one row per private testing: school, student, a **copy** of their class, belt, what they test for and the private price, paying by, day, time, active / cancelled), `testing_private_payments` (append-only, like event payments) and `testing_private_results` (Pass / Not passed / No show and a note, like the Grading tab). Plus a read view `testing_private_list` (the row + its payment state + what is still owed).
+- **The rules, in the database:** the day from today up to a year ahead, the time 6:00 AM–10:00 PM in 5-minute steps; the private price is copied from Classes and ranks (never typed); **Mark paid** records what is owed (the full price, or just the difference); grading opens on the private day, after it only an admin; Change day or time is refused after Pass / Not passed and clears a No show (logged); Cancel keeps the payments; Restore (admins) only while the day is still ahead; Delete permanently (admins) removes it with its payments and result.
+- **Move to private testing** (from an event roster's ⋯, all staff, any time — v0.404): the student leaves the event (withdrawn) and becomes a private testing; **the money moves with them** — for every live event payment an event reversal and a private payment, both dated on the **original** day (a transfer, not a refund). A testing-day No show is cleared (logged); Pass / Not passed refuse. Undo (only the mover, within 10 seconds) puts everything back — except when the move cleared a No show.
+- **One live function replaced:** `testing_restore_student` (0010's version + one check): a moved registration can't be restored onto the event (new status `moved`). Nothing else that is live changes — no live table, view, trigger or other function.
+- **Same security rules as 0005 / 0010:** RLS with `has_data_access()`, read rights for the app on every column except the login ids, no direct writes for anyone in the app, nothing for `anon`, the secret key or the family form's login; every change is in `change_log` (actions `private_add`, `private_update`, `private_change_day`, `private_change_paying_by`, `private_mark_paid`, `private_undo_payment`, `private_edit_payment`, `private_cancel`, `private_restore`, `private_delete`, `private_set_result`, `private_set_result_note`, `move_to_private`, `undo_move_to_private`, `clear_result`). Private testings are logged in `change_log` like all testing data (v0.400's `family_history` is for Prospects only).
+
+**The order** (build plan §5): **CP2** database (0014a–0014c, Jeffrey's OK) → **CP3** real check from the local app (0014d) → **CP4** deploy (Jeffrey's OK). The live site keeps working between CP2 and CP4: it never reads the new tables, and the replaced Restore behaves as before for every registration that wasn't moved (none can be until phase 4 is deployed).
+
+### 0014a. Apply 0014 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0014_testing_private.sql`.
+2. **SQL Editor → New query**, paste, **Run**.
+3. Supabase will warn about **destructive operations**. That's expected: the words are inside rules (`on delete cascade`: removing a private testing removes its payments and result), inside functions that run later (Delete permanently, clearing a No show, Undo move) and in `drop … if exists` lines that make re-running safe. **Nothing is removed now.** Confirm.
+4. "Success. No rows returned." It's one transaction: on any error nothing is kept. Copy the error to Claude.
+
+**Running it again is safe** (tested: a second run changes no row and no fingerprint). **Never re-run 0005 or 0010 on its own after this** — see 0014e.
+
+### 0014b. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0014_fingerprints.sql`. Every line must match what `supabase/tests/pglite/run.mjs` printed for the tested copy: the 24 functions (4 trigger functions, 5 helpers, 14 staff functions and the replaced `testing_restore_student`: code, settings, owner, who may call them), the 3 tables (RLS, rights per column, read rules), the view, the 9 triggers and every rule.
+2. `0005_fingerprints.sql` and `0010_fingerprints.sql`: **only** the `testing_restore_student` line differs from before — expected. `0004_fingerprints.sql`, `0006_fingerprints.sql` and `0011_fingerprints.sql` (Finance): unchanged. `0003_fingerprints.sql`: identical except the rows of the new `testing_*` functions and `testing_restore_student` — expected (0003's file lists every `testing_*` function).
+3. **Security advisor:** the only new expected notice is "security definer function executable by authenticated" for the 14 new staff functions (each checks access itself, then its rules). Anything else about the three new tables or the view (for example RLS off, or a function without a fixed `search_path`) is a real problem.
+
+### 0014c. Run the tests (you, in the SQL Editor)
+
+1. Open `supabase/tests/0014_tests.sql`, replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>` (**Authentication → Users**), paste the whole file, **Run**. Supabase may warn about destructive operations (the test removes its own test rows, switches one trigger off for a moment to backdate a time, and checks some changes are refused). Everything is rolled back. Confirm.
+2. Expected: one row, **ALL 0014 TESTS PASSED**. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved. Run `rollback;` once on its own, then tell Claude.
+3. Then run `0011_tests.sql`, `0010_tests.sql`, `0005_tests.sql`, `0006_tests.sql`, `0004_tests.sql`, `0003_tests.sql`, `0002_tests.sql` and `verify_pin_tests.sql` again — 0014 must not have broken them.
+4. The test makes its own `zz test …` classes, events and private testings, so it works before **and** after real data exists.
+
+### 0014d. CP3 — the real check (you, with the local app on the real database; Claude watches)
+
+Run `Start dashboard.bat`, sign in as the admin.
+1. On the **Private testing** tab: **Add private testing** for a TEST student, today, a time later today. **Mark paid** (the private price).
+2. Create a **TEST** event and leave its registration **Closed** (so families never see it). Add one student, **Mark paid** (the regular price). Then **⋯ → Move to private testing** (today, another time): the student shows as Removed on the event ("Moved to private testing"), and on the Private testing tab with "Paid $… · $… more to collect"; **Mark paid** records just the difference (the top-up).
+3. Open the first private testing's grading page: record a result and a note (the private day is today, so grading is open); **Print** (print preview is enough).
+4. **Cancel** the moved one, then **Delete permanently** both private testings (admin), and delete the TEST event.
+5. Claude checks through the connection (read-only): the history has the `private_add`, `move_to_private`, `private_mark_paid`, `private_set_result`, `private_cancel` and `private_delete` rows with the right names, the event money of the moved student nets 0, and nothing is left of the TEST data.
+
+### 0014e. Undo and re-run warnings (only with Jeffrey's OK)
+
+**Re-running 0005 after 0014** → re-run **0010**, then **0014**, straight after. **Re-running 0010 after 0014** → re-run **0014** straight after. (0005 and 0010 put back a `testing_restore_student` that ignores moves, so a moved student could be restored onto the event while their private testing exists. If the family-form off switch of 12i is in force, repeat 12i step 1 after re-running 0005.)
+
+**Rollback without touching data:** put the previous site version back (Cloudflare Pages → Deployments → **Rollback**). 0014 can stay: the older screens never read the new tables.
+
+**Removing 0014 completely** (only if Jeffrey decides so, and only **before real private testings exist**: it deletes every private testing **and the money moved into it**). **0014 is removed first, then (if wanted) 0010 (14e)** — never the other way round. **Never after Finance’s migration 0018 is live**: 0018’s Daily report functions read `testing_private` / `testing_private_payments`, so removing 0014 would break the Daily report — 0018 would have to be undone first (Finance’s SETUP §18). Three steps, **in this order**:
+
+1. Put the app back to a version **without the Private testing tab**.
+2. **Re-run the whole 0010 file** (14a). That puts back 0010's `testing_restore_student` (without the `moved` check).
+3. Run this in the SQL Editor (one transaction). **This deletes every private testing with its payments and result.** Each removed row is first logged in `change_log` (action `undo_0014`), and the history keeps all its earlier rows too. Supabase's destructive-operations warning is real this time. It first checks that step 2 was done (if `testing_restore_student` still mentions private testings, it stops with a message and removes nothing). (The two lock helpers are removed before the tables because they return the tables' row types.)
+
+```sql
+-- Undo migration 0014 (step 3; run AFTER re-running 0010). change_log is KEPT.
+begin;
+
+-- safety check: stop here if step 2 (re-running 0010) wasn't done first
+do $$
+begin
+  if pg_get_functiondef('public.testing_restore_student(uuid,integer)'::regprocedure) like '%testing_private%' then
+    raise exception 'Do step 2 first: re-run the whole 0010 file, then run this block again. Nothing was removed.';
+  end if;
+end
+$$;
+
+-- remove the private testings row by row first (their payments and
+-- results go with them), so every removal is in the history
+select set_config('tkd.action', 'undo_0014', true);
+select set_config('tkd.batch_id', gen_random_uuid()::text, true);
+delete from public.testing_private;
+select set_config('tkd.action', '', true);
+select set_config('tkd.batch_id', '', true);
+
+-- the view, the two helpers that return the tables' row types, then the
+-- tables (their triggers, rules and read rules go with them)
+drop view if exists public.testing_private_list;
+drop function if exists public.testing_private_lock(uuid);
+drop function if exists public.testing_private_lock_payment(uuid);
+drop table if exists public.testing_private_results;
+drop table if exists public.testing_private_payments;
+drop table if exists public.testing_private;
+
+-- every other 0014 function
+drop function if exists public.testing_private_add(text, text, text, uuid, boolean, text, date, time);
+drop function if exists public.testing_private_update(uuid, integer, text, text, uuid);
+drop function if exists public.testing_private_change_day(uuid, integer, date, time);
+drop function if exists public.testing_private_change_paying_by(uuid, integer, text);
+drop function if exists public.testing_private_mark_paid(uuid, integer);
+drop function if exists public.testing_private_undo_payment(uuid);
+drop function if exists public.testing_private_edit_payment(uuid, text, integer, date);
+drop function if exists public.testing_private_cancel(uuid, integer);
+drop function if exists public.testing_private_restore(uuid, integer);
+drop function if exists public.testing_private_delete(uuid, integer, uuid[]);
+drop function if exists public.testing_private_set_result(uuid, text);
+drop function if exists public.testing_private_set_result_note(uuid, text);
+drop function if exists public.testing_move_to_private(uuid, integer, date, time);
+drop function if exists public.testing_private_undo_move(uuid, integer);
+drop function if exists public.testing_private_rank_copy(text, uuid);
+drop function if exists public.testing_private_amount_due(uuid);
+drop function if exists public.testing_private_time_is_valid(time);
+drop function if exists public.testing_private_log();
+drop function if exists public.testing_private_payments_guard();
+drop function if exists public.testing_private_results_before_write();
+drop function if exists public.testing_private_before_write();
+
+commit;
+```
+
+Afterwards `0005_fingerprints.sql` and `0010_fingerprints.sql` equal a database that never had 0014. Tested in PGlite on every run (`run.mjs` step 15i, steps 2–3 exactly as written here, then the 0010 removal of 14e on top — the real removal order): the tables, the view and every 0014 function are gone, the 0005 / 0010 / 0003 fingerprints equal the ones from before 0014, `change_log` has one `undo_0014` row per removed row, and `0010_tests.sql` / `0005_tests.sql` pass.
+
+**Why:**
+- **Separate tables, not event registrations:** a registration must belong to an event; bending that would have changed live tables, checks and nine live functions. New tables leave everything live untouched except Restore.
+- **The money moves append-only:** the event side gets reversals and the private side new payments, both on the original day, so nothing is ever edited or lost and a daily money report stays right.
+- **Restore refuses a moved registration:** otherwise the student could be on the event and in a private testing at the same time.
+
+---
+## Migration 0020: session id only from the login token (security fix, rulebook v0.408)
+
+**What it does** (`supabase/migrations/0020_session_id_claims.sql`):
+- **Replaces one live function, `current_session_id()` (0001), and nothing else.** It answers "which sign-in session (device) is this?" for the PIN lock, the server lock and every history row (`change_log.session_id`).
+- **Why:** 0001's version read the session id through Supabase's `auth.jwt()`, which looks at the old (legacy) setting `request.jwt.claim` **before** `request.jwt.claims`. The public form functions empty only `request.jwt.claims` and `request.jwt.claim.sub`, so whoever holds the family form's database login could plant a staff session id in a history row the form writes. No access gain (`auth.uid()` and `has_data_access()` stay empty) — low severity, fixed anyway.
+- **The fix (decision B):** read the session id **only** from `request.jwt.claims` — what Supabase's API server fills for a signed-in user. A missing, empty, non-JSON or non-uuid value gives NULL, never an error. Same language (sql), stable, security definer, `search_path = ''`, same owner, same rights (`create or replace` keeps them; 0001's revoke is repeated).
+- **What the app sees:** nothing. A real signed-in request carries the session id in `request.jwt.claims`, so every answer is the same uuid as before. That is exactly what the live checks in 0020d confirm.
+
+**The order:** 0020a–0020c (Jeffrey's OK to paste) → **0020d live checks right after applying** (the PIN lock and server lock depend on this function). No app deploy is needed — no screen changes.
+
+### 0020a. Before you paste (you, in the SQL Editor; Claude runs one read-only check)
+
+1. **Green start:** run `supabase/tests/verify_pin_tests.sql` (one active staff UID) and `supabase/tests/0002_tests.sql` (admin + desk UIDs). Both must say **ALL PIN TESTS PASSED** / **ALL 0002 TESTS PASSED**. If either fails now, stop — the problem is older than 0020.
+2. Claude runs `supabase/tests/0020_fingerprints.sql` through the read-only connection and writes the row down: that is **0001's version** (the undo below must give it back exactly).
+
+### 0020b. Apply 0020 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0020_session_id_claims.sql`.
+2. **SQL Editor → New query**, paste, **Run**.
+3. Expected: "Success. No rows returned." There should be **no** destructive-operations warning (the file removes nothing). It's one transaction: on any error nothing is kept. If it stops with a message starting `0020:`, an earlier migration is missing — copy the message to Claude.
+
+**Running it again is safe** (tested: a second run changes no fingerprint). **Re-running 0001 after this** puts the old function back → re-run 0020 straight after.
+
+### 0020c. Read-only checks, then the tests
+
+1. **Fingerprint** (Claude, connector): `supabase/tests/0020_fingerprints.sql` — the one row must match what `supabase/tests/pglite/run.mjs` printed for the tested copy (code, `lang=sql`, `volatility=s`, `definer=true`, `settings=search_path=""`, owner, rights).
+2. **Security advisor** (Claude): no new notice. (`current_session_id` is not callable by `anon` or `authenticated`, so it never shows up as "executable by authenticated".)
+3. **Tests** (you): open `supabase/tests/0020_tests.sql`, replace `<paste-admin-UID-here>` (**Authentication → Users**), paste the whole file, **Run**. Supabase may warn about destructive operations (the setup clears the admin's test PIN counters inside the transaction). Everything is rolled back. Confirm. Expected: one row, **ALL 0020 TESTS PASSED**. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved. Run `rollback;` once on its own, then tell Claude.
+4. Then run `verify_pin_tests.sql`, `0002_tests.sql`, `0004_tests.sql` and `0014_tests.sql` again (they use the PIN, the server lock and the history) — all must still pass. If you have time, also `0003`, `0005`, `0010` and `0011_tests.sql`.
+5. `0006_tests.sql` (Star) passes before **and** after 0020: its check C9 (shared helpers Star uses must not change) accepts both the 0001 and the 0020 version of `current_session_id`.
+
+### 0020d. LIVE CHECKS on the real site, right after applying (you; Claude watches)
+
+Do these on **https://tkd-dashboard.pages.dev** (no deploy needed — the live app already uses the database functions). If **any** step fails: do the undo in 0020e straight away, then tell Claude.
+
+1. **Sign in** with your admin password. The PIN screen (or the app) appears as usual.
+2. **Enter your PIN** → the app opens and shows data (e.g. Testing → Classes and ranks lists the classes).
+3. **Wrong PIN counts:** **Lock now** (top bar). Enter a **wrong** PIN **once** → the screen says how many tries are left (4). Then enter the right PIN → the app opens. (Don't go to 5 wrong tries — that signs this device out on purpose.)
+4. **Lock / unlock:** **Lock now** again → the Lock screen; enter the PIN → back in.
+5. **Server lock:** Lock now, then **reload the page** (F5) while locked → it must still ask for the PIN (the database, not just the browser, says "locked"); PIN → back in.
+6. **One small change with a history row:** Testing → Classes and ranks → edit one rank's **testing-day price** up by $1 and save, then put it back (two changes, two history rows). Claude then checks through the read-only connection:
+   `select id, occurred_at, action, table_name, session_id, actor_name from public.change_log order by id desc limit 2;`
+   Both rows must have a **session_id** (not NULL) and your name. (A NULL here means the API server does not put the session id in `request.jwt.claims` — undo 0020e at once.)
+7. On the **front desk** computer (or a private window signed in as the desk account): sign in, PIN → data shows. Same function, second account.
+
+### 0020e. Undo (only with Jeffrey's OK)
+
+Puts back **0001's exact** `current_session_id()` (word for word, same rights). Nothing else changes; no data is touched. Afterwards `0020_fingerprints.sql` must show the row written down in 0020a step 2. Paste in the SQL Editor:
+
+```sql
+-- Undo migration 0020: put back 0001's current_session_id() exactly.
+begin;
+
+-- 4c. current_session_id()
+-- This sign-in session's id from the token's "session_id" claim, or NULL if
+-- it is missing or not a valid uuid (checked with a pattern first, so a bad
+-- value returns NULL instead of crashing the cast).
+create or replace function public.current_session_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select case
+           when (auth.jwt() ->> 'session_id')
+                ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+           then (auth.jwt() ->> 'session_id')::uuid
+         end;   -- no "else" = NULL
+$$;
+
+revoke execute on function public.current_session_id() from public, anon, authenticated;
+
+commit;
+```
+
+Tested in PGlite on every run (`run.mjs` step 19f, this block exactly as written here): afterwards the fingerprint equals the one from before 0020, and `verify_pin_tests.sql` / `0002_tests.sql` pass. Then 0020 is applied again and its tests pass (undo → redo works).
+
+**Why:**
+- **Fix the one reader, not every form:** changing `current_session_id()` covers every current and future public form (Color Belt, Star, Forms, Camps) without touching any of them.
+- **Only `request.jwt.claims`:** that is the setting Supabase's API server fills from the real login token. The legacy `request.jwt.claim` exists only for old setups; nothing in this app needs it.
+- **Never an error:** this function runs inside every logged change. A crash on a strange value would block saving, so every bad value becomes NULL instead (the same as 0001 did for a bad uuid).
+
+---
 ## Admin: change the front-desk PIN or password
 
 The front desk (`shrewsburyustc@gmail.com`) is a **shared account**, so the app hides Change PIN and Change password for it. Only an admin changes them, here in Supabase, until the Staff accounts screen exists.

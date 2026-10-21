@@ -112,4 +112,7 @@ export const NOT_FOUND_TEXT = 'Please ask at the front desk for the current regi
 // The page itself couldn't load the event (no internet, server trouble) — not in the mockups.
 export const LOAD_FAILED_TITLE = 'This page didn’t load';
 export const LOAD_FAILED_TEXT = 'Check your internet connection and try again.';
+// The page was reloaded too often (the Function's 60-a-minute limit) — the same reason as RATE_LIMITED.
+export const RATE_LIMITED_TITLE = 'Too many tries';
+export const RATE_LIMITED_TEXT = 'Please wait a few minutes and try again, or ask at the front desk.';
 export const LOADING = 'Loading…';

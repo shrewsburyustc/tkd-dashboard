@@ -15,6 +15,8 @@
 // Phase 2 adds two: a testing event's page ("#testing/event/<id>") and Settings ("#settings").
 // Phase 3 adds the event page's Grading tab ("#testing/event/<id>/grading") and the leave guard:
 // while grading results are "Not saved", leaving the event page asks first (contract 0010 §4.9).
+// Phase 4 adds a private testing's grading page ("#testing/private/<id>", contract 0014 §5.1);
+// leaving it is guarded the same way.
 // Finance (contract 0011 §4) adds three: the Daily report ("#finance"), History ("#finance/history")
 // and Finance → Settings ("#finance/settings") — the last two for admins only (staff are sent to
 // "#finance"). While "Hide payments" is on for this device (v0.215), every "#finance…" address
@@ -109,38 +111,45 @@ const TOASTS = {
 // pageAddress.js knows Home, Testing and Staff accounts. Two more addresses are read here:
 //   #testing/event/<id>   one testing event's page (contract 0005 §6) — section 'testing' + eventId
 //   #testing/event/<id>/grading   the same page on its Grading tab (contract 0010 §4.1)
+//   #testing/private/<id> a private testing's grading page (phase 4, contract 0014 §5.1)
 //   #settings             Settings (admins, rulebook v0.135)
 // An event id is the database's uuid; the pattern only allows letters, digits and dashes, so
 // nothing odd from the address bar ever reaches the page.
 const EVENT_HASH = /^#testing\/event\/([A-Za-z0-9-]{1,64})(\/grading)?$/;
+const PRIVATE_HASH = /^#testing\/private\/([A-Za-z0-9-]{1,64})$/;
 const SETTINGS_HASH = '#settings';
 // Finance (contract 0011 §4): #finance, #finance/history, #finance/settings. The view is kept in
 // the `eventTab` slot of a route ('report' | 'history' | 'settings'), since Finance has no events.
 const FINANCE_HASH = /^#finance(?:\/(history|settings))?$/;
 
-// The page (and event, and its tab) the address bar points at: { section, eventId, eventTab }.
+// The page (and event, its tab, or the private testing) the address bar points at:
+// { section, eventId, eventTab, privateId }.
 function routeFromAddress() {
   const hash = window.location.hash;
-  if (hash === SETTINGS_HASH) return { section: 'settings', eventId: null, eventTab: 'students' };
+  if (hash === SETTINGS_HASH) return { section: 'settings', eventId: null, eventTab: 'students', privateId: null };
   const finance = FINANCE_HASH.exec(hash);
-  if (finance) return { section: 'finance', eventId: null, eventTab: finance[1] ?? 'report' };
+  if (finance) return { section: 'finance', eventId: null, eventTab: finance[1] ?? 'report', privateId: null };
   const match = EVENT_HASH.exec(hash);
-  if (match) return { section: 'testing', eventId: match[1], eventTab: match[2] ? 'grading' : 'students' };
-  return { section: pageFromAddress(), eventId: null, eventTab: 'students' };
+  if (match) return { section: 'testing', eventId: match[1], eventTab: match[2] ? 'grading' : 'students', privateId: null };
+  const privateMatch = PRIVATE_HASH.exec(hash);
+  if (privateMatch) return { section: 'testing', eventId: null, eventTab: 'students', privateId: privateMatch[1] };
+  return { section: pageFromAddress(), eventId: null, eventTab: 'students', privateId: null };
 }
 
 // true when the address bar shows something no page knows (it is then tidied to Home).
 function routeIsUnknown() {
   const hash = window.location.hash;
-  return addressIsUnknown() && hash !== SETTINGS_HASH && !EVENT_HASH.test(hash) && !FINANCE_HASH.test(hash);
+  return addressIsUnknown() && hash !== SETTINGS_HASH && !EVENT_HASH.test(hash) && !PRIVATE_HASH.test(hash) && !FINANCE_HASH.test(hash);
 }
 
-// The address for a page (and, on Testing, an open event and its tab; on Finance, its view).
-function addressForRoute(section, eventId = null, eventTab = 'students') {
+// The address for a page (and, on Testing, an open event and its tab, or a private testing; on
+// Finance, its view).
+function addressForRoute(section, eventId = null, eventTab = 'students', privateId = null) {
   const base = `${window.location.pathname}${window.location.search}`;
   if (section === 'settings') return `${base}${SETTINGS_HASH}`;
   if (section === 'finance') return `${base}#finance${eventTab === 'history' || eventTab === 'settings' ? `/${eventTab}` : ''}`;
   if (section === 'testing' && eventId) return `${base}#testing/event/${eventId}${eventTab === 'grading' ? '/grading' : ''}`;
+  if (section === 'testing' && privateId) return `${base}#testing/private/${privateId}`;
   return addressFor(section);
 }
 
@@ -184,6 +193,8 @@ export default function App() {
   const [eventId, setEventId] = useState(() => routeFromAddress().eventId);
   // The event page's tab: 'students' | 'grading' (phase 3).
   const [eventTab, setEventTab] = useState(() => routeFromAddress().eventTab);
+  // Phase 4: the open private testing (#testing/private/<id>), or null.
+  const [privateId, setPrivateId] = useState(() => routeFromAddress().privateId);
   const [accountDialog, setAccountDialog] = useState(null); // null | 'changePin' | 'changePassword'
   const [testingModalOpen, setTestingModalOpen] = useState(false); // a Testing dialog is showing
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false); // a Schedule dialog is showing
@@ -207,6 +218,7 @@ export default function App() {
   const sectionRef = useRef(section); // same idea, for the Back / Forward listener below
   const eventIdRef = useRef(eventId);
   const eventTabRef = useRef(eventTab);
+  const privateIdRef = useRef(privateId);
   // The leave guard (contract 0010 §4.9): the open event page puts a function here while it is
   // open. fn(proceed) answers false = "nothing unsaved, go ahead", or true = "I asked the person
   // first" — the page then calls proceed() itself if they choose Leave anyway.
@@ -238,6 +250,7 @@ export default function App() {
       window.history.replaceState(null, '', addressFor('home'));
       setSection('home');
       setEventId(null);
+      setPrivateId(null);
     }
     // A new id each time makes the SignIn screen start fresh (see `key` below).
     clearKiosk(); // a signed-out tablet is never a kiosk any more
@@ -353,6 +366,7 @@ export default function App() {
           window.history.replaceState(null, '', addressFor('home'));
           setSection('home');
           setEventId(null);
+          setPrivateId(null);
         }
         setProfile(null);
         setAccountDialog(null);
@@ -590,20 +604,23 @@ export default function App() {
   // replace: true swaps the current step instead of adding one (used when an event page closes by
   // itself because the event belongs to the other school — Back then doesn't bring it back).
   // tab: the event page's tab ('students' unless said otherwise — opening an event lands on Students).
+  // privateId (phase 4): the private testing whose grading page opens (null = none).
   // On Finance, `tab` is its view ('report' unless said otherwise — the rail opens the Daily report).
-  const navigate = useCallback((id, nextEventId = null, { replace = false, tab = id === 'finance' ? 'report' : 'students' } = {}) => {
+  const navigate = useCallback((id, nextEventId = null, { replace = false, tab = id === 'finance' ? 'report' : 'students', privateId: nextPrivateId = null } = {}) => {
     setToast(null);
     const changed =
       id !== sectionRef.current ||
       nextEventId !== eventIdRef.current ||
+      nextPrivateId !== privateIdRef.current ||
       (nextEventId !== null && tab !== eventTabRef.current) ||
       (id === 'finance' && tab !== eventTabRef.current);
     // { tkdPage: true } marks the step as "added by the dashboard while signed in" (see below).
-    if (changed && replace) window.history.replaceState({ tkdPage: true }, '', addressForRoute(id, nextEventId, tab));
-    else if (changed) window.history.pushState({ tkdPage: true }, '', addressForRoute(id, nextEventId, tab));
+    if (changed && replace) window.history.replaceState({ tkdPage: true }, '', addressForRoute(id, nextEventId, tab, nextPrivateId));
+    else if (changed) window.history.pushState({ tkdPage: true }, '', addressForRoute(id, nextEventId, tab, nextPrivateId));
     setSection(id);
     setEventId(nextEventId);
     setEventTab(tab);
+    setPrivateId(nextPrivateId);
   }, []);
 
   // ----- The leave guard (contract 0010 §4.9) -----
@@ -627,6 +644,14 @@ export default function App() {
     (options) => (options?.replace ? navigate('testing', null, options) : guarded(() => navigate('testing', null, options))),
     [navigate, guarded],
   );
+  // Phase 4: a private testing's grading page. Opening it is a normal step; closing it is guarded
+  // like closing the event page ({ replace: true } = the page closes itself after a guarded
+  // school change — not asked again).
+  const openPrivate = useCallback((id) => navigate('testing', null, { privateId: id }), [navigate]);
+  const closePrivate = useCallback(
+    (options) => (options?.replace ? navigate('testing', null, options) : guarded(() => navigate('testing'))),
+    [navigate, guarded],
+  );
   // Students ↔ Grading: the same page, so never guarded, and no new history step (Back still
   // leaves the event page; a reload keeps the tab).
   const changeEventTab = useCallback((tab) => {
@@ -648,7 +673,8 @@ export default function App() {
     sectionRef.current = section;
     eventIdRef.current = eventId;
     eventTabRef.current = eventTab;
-  }, [section, eventId, eventTab]);
+    privateIdRef.current = privateId;
+  }, [section, eventId, eventTab, privateId]);
   // Once someone is in the dashboard, the step they're on counts as "added while signed in" too —
   // also when they arrived by a bookmark or a link — so Back on a later sign-in screen can't
   // return to it (see below).
@@ -674,12 +700,12 @@ export default function App() {
       const target = route.section;
       if (routeIsUnknown()) window.history.replaceState(null, '', addressFor(target));
       // (On Finance a different view — Daily report / History / Settings — is a different page.)
-      if (target === sectionRef.current && route.eventId === eventIdRef.current && (target !== 'finance' || route.eventTab === eventTabRef.current)) {
+      if (target === sectionRef.current && route.eventId === eventIdRef.current && route.privateId === privateIdRef.current && (target !== 'finance' || route.eventTab === eventTabRef.current)) {
         // Same page; only the tab may differ (an address typed by hand): switch it, never asked.
         if (route.eventId && route.eventTab !== eventTabRef.current && phaseRef.current === 'home') setEventTab(route.eventTab);
         return;
       }
-      const here = addressForRoute(sectionRef.current, eventIdRef.current, eventTabRef.current);
+      const here = addressForRoute(sectionRef.current, eventIdRef.current, eventTabRef.current, privateIdRef.current);
       // The account menu is open: Back closes it (AccountMenu.jsx) and the page stays.
       if (backIsClaimed()) {
         window.history.pushState({ tkdPage: true }, '', here);
@@ -689,7 +715,7 @@ export default function App() {
         // Leaving an event page with unsaved grading results: ask first, and put the current
         // address back (contract 0010 §4.9). "Leave anyway" goes where Back / Forward pointed.
         const fn = leaveGuardRef.current;
-        if (fn && fn(() => navigate(target, route.eventId, { tab: route.eventTab }))) {
+        if (fn && fn(() => navigate(target, route.eventId, { tab: route.eventTab, privateId: route.privateId }))) {
           window.history.pushState({ tkdPage: true }, '', here);
           return;
         }
@@ -697,16 +723,19 @@ export default function App() {
         setSection(target);
         setEventId(route.eventId);
         setEventTab(route.eventTab);
+        setPrivateId(route.privateId);
       } else if (phaseRef.current === 'locked') {
         window.history.pushState({ tkdPage: true }, '', here);
       } else if (window.history.state?.tkdPage) {
         window.history.replaceState(null, '', addressFor('home'));
         setSection('home');
         setEventId(null);
+        setPrivateId(null);
       } else {
         setSection(target); // a link or typed address: opens after signing in
         setEventId(route.eventId);
         setEventTab(route.eventTab);
+        setPrivateId(route.privateId);
       }
     }
     window.addEventListener('popstate', handlePopState);
@@ -864,6 +893,10 @@ export default function App() {
                 onLeaveGuardChange={setLeaveGuard}
                 onOpenEvent={openEvent}
                 onCloseEvent={closeEvent}
+                // Phase 4: the private testing grading page and its ways in and out
+                privateId={privateId}
+                onOpenPrivate={openPrivate}
+                onClosePrivate={closePrivate}
                 screenLocked={phase === 'locked'}
                 onNoAccess={handleNoAccess}
                 onRefreshProfile={refreshProfile}
