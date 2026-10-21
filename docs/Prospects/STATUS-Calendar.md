@@ -108,3 +108,4 @@ This branch is on `main` and live (the push included `0ccf776`; live `main` = `c
 - Screens: `Calendar-show-built-PC.png`, `Calendar-show-built-tablet-phone.png`.
 - Next: Jeffrey tries it in preview -> commit on this branch -> Main merges -> Jeffrey OKs deploy. Later: a Testing line in the menu once Testing events load into the Calendar.
 - **Deployed 2026-10-21** (main 09f0b95, live 09:53 UTC). Left for Jeffrey: on the live site, check the Calendar's follow-ups match Prospects' "Follow up today".
+- **Live check passed 2026-10-21 (Jeffrey):** the Calendar's follow-ups match Prospects' "Follow up today", and tapping one opens the child. Done.
