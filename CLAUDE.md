@@ -98,7 +98,7 @@ Color Belt testing and Star testing are built at the same time in separate Claud
   | 0020 | security: `current_session_id()` reads only `request.jwt.claims` (rulebook v0.408; replaces only that 0001 function, closing the gap Black Belt's 0016 review found in the public forms) — reserved and applied 2026-10-20 | `main` (live) |
   | 0021 | Prospects: Not interested families deleted after 6 months (rulebook v0.611; replaces only `prospects_purge_old()` from 0015, runs after 0015) — reserved and applied 2026-10-21 | `main` (live) |
 
-  | 0022 | camps: weekly pricing + camps longer than 10 days (`0022_camps_weekly_pricing.sql`; replaces some 0013 camp functions: price grid of at most 5 rows = days per week, each Mon–Sun week priced separately and added up, 10-day limit → 60 days, "not for all-days campers" extras per week; runs after 0013 and 0017) — reserved 2026-10-21 | `camps` |
+  | 0022 | camps: weekly pricing + camps longer than 10 days (`0022_camps_weekly_pricing.sql`; replaces some 0013 camp functions: price grid of at most 5 rows = days per week, each Mon–Sun week priced separately and added up, 10-day limit → 60 days, "not for all-days campers" extras per week; runs after 0013 and 0017) — reserved 2026-10-21, applied 2026-10-21 | `main` (live) |
 
   | 0023 | Star testing: result email texts that admins can edit (small table + admin write function, 0006 rules) and M5 — `star_update_event` keeps registration closed in the same transaction (v0.504 case 2; replaces that 0006 function), and the results CSV columns — `star_results_csv` (0006, same signature, admin only) adds `candidate_id`, `paid_on` and `result_status` to each row so the app matches rows to candidates by id; applies before Star goes live — reserved 2026-10-21 | `star-testing` |
 
