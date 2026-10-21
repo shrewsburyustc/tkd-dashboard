@@ -94,7 +94,7 @@ Color Belt testing and Star testing are built at the same time in separate Claud
   | 0018 | Finance: private testing payments in the Daily report (rulebook v0.407) — **runs after 0017 and must build on 0017's version of the Finance functions it replaces** — applied 2026-10-20 | `main` (live) |
   | 0019 | school phone in Settings → Schools (was an uncommitted `0016_school_phone.sql`) | `claude/prospect-form-system-cd893d` |
   | 0020 | security: `current_session_id()` reads only `request.jwt.claims` (rulebook v0.408; replaces only that 0001 function, closing the gap Black Belt's 0016 review found in the public forms) — reserved and applied 2026-10-20 | `main` (live) |
-  | 0021 | Prospects: Not interested families deleted after 6 months (rulebook v0.611; replaces only `prospects_purge_old()` from 0015, runs after 0015) — reserved 2026-10-21 | `claude/prospect-form-system-cd893d` |
+  | 0021 | Prospects: Not interested families deleted after 6 months (rulebook v0.611; replaces only `prospects_purge_old()` from 0015, runs after 0015) — reserved and applied 2026-10-21 | `main` (live) |
 
   Next free: **0022**.
 - **`supabase/SETUP.md` section names** (decided 2026-10-20, rulebook v0.302): a section for a migration is titled by its **migration number**, `## Migration 00NN: <what it does>`, with sub-steps `### 00NNa.`, `### 00NNb.` … — never "the next free §". A section that isn't about one migration (e.g. a Cloudflare setup) gets a descriptive title with no number. Sections already on `main` (§1–§17) keep their numbers (the test runner finds some by number, e.g. `### 14e.`). If your branch has an unmerged section numbered §16 or higher, rename it to its migration number and update every "SETUP §…" mention and any `run.mjs` lookup with it.
