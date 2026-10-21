@@ -1,7 +1,7 @@
 # TKD Dashboard — Design Guidelines
 
 **School:** Jae H. Jeong's U.S. Taekwondo Center (U.S.T.C.) — Worcester and Shrewsbury, MA
-**Version:** 0.920 (draft) · **Last updated:** 2026-10-21
+**Version:** 0.307 (draft) · **Last updated:** 2026-10-21
 **Status:** Design outline only. Nothing in this document authorizes building or deploying.
 
 > **How to use this file:** Upload it at the start of any chat about the dashboard. Every screen, component, or feature built for the dashboard must follow the rules below. If a request conflicts with a rule, flag the conflict before building. Rules marked **(provisional)** depend on an open decision in section 10.
@@ -163,7 +163,6 @@ Section icons are added to this table only when that section is added (rule P7).
 | Close the day… (Finance: opens the counting dialog; decided v0.207 / v0.800, added to the map v0.301) | `ti-cash-register` |
 | Close the day (the dialog's button) / Day closed (decided v0.207, added to the map v0.301) | `ti-lock-check` |
 | Reopen day (Finance, admins; decided v0.207, added to the map v0.301) | `ti-lock-open` |
-| Edit payment (roster ⋯ menu: Color Belt events and Private testing; decided v0.409, added to the map v0.305) | `ti-cash-edit` |
 | Refunds layout switch (Finance Daily report, phone ⋯ menu; decided v0.812, added to the map v0.306) | `ti-receipt-refund` |
 | Edit payment (roster ⋯ menu: Color Belt events and Private testing; decided v0.409, added to the map v0.305; also Black Belt, v0.914) | `ti-cash-edit` |
 | Record payment (Black Belt Candidates: row button, detail, ⋯; decided v0.914) | `ti-cash-plus` — not `ti-cash` (cash only) and not `ti-plus` (Add new) |
@@ -996,3 +995,4 @@ To be decided one at a time, each with visual options (rule P3):
 | 0.916 | 2026-10-21 | Black Belt testing CP3: migration 0016 live on production, all checks clean (10b). |
 | 0.917 | 2026-10-21 | Black Belt testing: the temporary Black Belt link shows in every build, live site included (changes v0.911) (10b). |
 | 0.920 | 2026-10-21 | Black Belt testing CP3b + CP5: bb_registrar password, Hyperdrive tkd-bb-registrar, HYPERDRIVE_BB binding, BB_PUBLIC_REGISTRATION=off; nothing deployed (10b). |
+| 0.307 | 2026-10-21 | Icon map (2.4): removed the duplicate Edit payment `ti-cash-edit` row left by the black-belt merge (the remaining row includes Black Belt, v0.914). |
