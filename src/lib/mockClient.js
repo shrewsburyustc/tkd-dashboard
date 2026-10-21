@@ -84,6 +84,16 @@
 //   Seed: Fall's 1st Dan grid has Passed (Chris Kim), D (Noah Chen), below 245 needing a choice (Ethan
 //   Lopez), chosen (Sam Ortiz), "7 of 11 left" (Ava Reed), Not started (Mia Patel …), a make-up with
 //   kept grades (Sofia Reyes, retests Breaking and Korean Terminology) and Alex Kim testing privately.
+// Star testing RESULTS (phase 6; mockStarResults.js, plugged into the candidates fake):
+//   __tkdPreview.failNextSave('star')     also makes the next Mark as sent / Undo / CSV / text save fail
+//   __tkdPreview.simulateStarResultChange('Noah')  "another device" changes one of Noah Chen's grades —
+//                                         a Mark as sent for the result on screen then answers stale
+//   __tkdPreview.starDownloads()          the CSV download log (star_downloads) as a table
+//   Seed (the finished Summer event; resetTesting() if your preview data is older): Sent then re-sent
+//   (Morgan Hale), Passed not sent (Lucas Grant), a late grade (Nina Ford), Not finished (Ben Ward),
+//   testing privately before the day (Zoe Bell), graded on a private day after the testing day (Ivy
+//   Cole), changed after sending (Ella Moss), a sent make-up (Taylor Quinn), D (Grace Liu), D and below 245 (Sofia Reyes), below
+//   with chosen subjects (Drew Park), below with an admin to choose (Avery Lin, 3rd Dan).
 // Staff accounts helpers (account menu → Admin → Staff accounts; mockStaff.js):
 //   __tkdPreview.failNextSave()           also makes the next Reset password / Reset PIN fail
 //   __tkdPreview.resetStaffAccounts()     the fake desk is signed in on 3 devices again
@@ -136,6 +146,7 @@ import {
   STAR_CANDIDATE_WRITE_RPC_NAMES, STAR_CANDIDATE_TABLES,
 } from './mockStarCandidates.js';
 import { STAR_GRADING_RPC_NAMES, STAR_GRADING_WRITE_RPC_NAMES } from './mockStarGrading.js';
+import { STAR_RESULTS_RPC_NAMES } from './mockStarResults.js';
 import { createCampsBackend, CAMP_RPC_NAMES, CAMP_RESTRICTED_RPC_NAMES, CAMP_READ_RPC_NAMES, CAMP_TABLES } from './mockCamps.js';
 import { publicCampHelpers } from './camps/publicApi.preview.js';
 import { createScheduleBackend, SCHEDULE_RPC_NAMES } from './mockSchedule.js';
@@ -771,7 +782,7 @@ export function createMockClient() {
         failNextTesting = false;
         starCandidates.failNextSave();
       }
-      if (failNextStar && STAR_CANDIDATE_WRITE_RPC_NAMES.includes(name)) {
+      if (failNextStar && (STAR_CANDIDATE_WRITE_RPC_NAMES.includes(name) || STAR_RESULTS_RPC_NAMES.includes(name))) {
         failNextStar = false;
         starCandidates.failNextSave(); // this one save fails like a dropped connection
       }
@@ -1033,6 +1044,16 @@ export function createMockClient() {
     },
     simulateStarDanChange(firstName = 'Noah', dan = 2) {
       return starCandidates.simulateDanChange(firstName, dan);
+    },
+    // ----- Star results helpers (phase 6; mockStarResults.js, plugged into the candidates fake) -----
+    simulateStarResultChange(firstName = 'Noah') {
+      return starCandidates.simulateResultChange(firstName);
+    },
+    starDownloads() {
+      const rows = starCandidates.downloads();
+      if (rows.length === 0) return 'No Star CSV downloads yet.';
+      console.table(rows.map((d) => ({ when: d.downloaded_at, who: d.downloaded_by_name, event: d.event_name, dan: d.dan ?? 'whole event', rows: d.row_count })));
+      return `${rows.length} Star CSV download${rows.length === 1 ? '' : 's'} logged (the real log is star_downloads, read in the SQL Editor only).`;
     },
     // ----- Finance helpers (mockFinance.js) -----
     setNow(hhmm) {

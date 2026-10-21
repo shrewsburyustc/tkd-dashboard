@@ -27,7 +27,7 @@ export const NO_FEE = 'Make-ups have no fee, so there’s nothing to pay.'; // n
 export const EVENT_FINISHED_ADD = 'This testing has finished, so candidates can’t be added any more.'; // Color Belt's line, for Star
 
 // ----- Dialog notes (under the buttons) -----
-export const DIALOG_STALE = "Someone else changed this just now. Your change wasn't saved. Cancel, then open it again to see the latest.";
+export const DIALOG_STALE = "Someone else changed this just now. Your change wasn’t saved. Cancel, then open it again to see the latest.";
 export const DIALOG_STALE_PHONE = "Someone else changed this just now. Your change wasn't saved. Discard changes, then open it again to see the latest.";
 export const DIALOG_INVALID = "That didn't save. Check the fields and try again.";
 export const DIALOG_FAILED = "Couldn't save. Check the connection, then try again."; // G11

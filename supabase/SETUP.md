@@ -2325,4 +2325,44 @@ Tested in PGlite on every run (all three steps exactly as written here): afterwa
 - **The old grid rows are removed, not kept:** a row above W could never be used again and would make Edit camp refuse the camp (the grid must be exactly 1 … W).
 - **A new migration, not an edit of 0013:** 0013 is live; replacing its functions in a later file keeps the history clear and the undo simple (re-run 0013).
 
+## Migration 0023: Star result email texts, registration stays closed on edit, CSV row keys
+
+**What it does** (`supabase/migrations/0023_star_result_texts.sql`, contract `docs/Dashboard Docs/Build contracts/CONTRACT-0023.md`, rulebook v0.514 and v0.504):
+- **Result email texts (R11):** a new table `star_result_texts` with the three texts Email result fills in (Passed · Make-up with a D · Make-up below the pass mark — kinds `passed`, `makeup_d`, `makeup_below`), seeded with the approved starting texts (R3). Every signed-in staff member can read them (Rubrics and prices shows them read-only to staff); only admins change them, through one function `star_set_result_text` (version check, the blank rules, every change in the history). Nothing for `anon` or the family form's login.
+- **M5:** replaces **one** 0006 function, `star_update_event`, so moving a finished event into the future (or removing / moving a passed closing date) keeps registration **closed in the same save**, instead of a second call closing it afterwards. Same arguments, answers and rights; the app needs no change.
+- **The results CSV:** replaces a second 0006 function, `star_results_csv` (admins only, still writes the download log first). Each row gains `candidate_id`, `paid_on` (the newest payment that still counts: reversed payments skipped, refunds never change it — the same rule as the Candidates tab) and, inside `sent`, `result_status` (which result that send was for). So the Results screen matches CSV rows to candidates by id, never by look-alike values. Same arguments, checks and rights; the extra keys are ignored by anything that doesn't use them.
+- Removes nothing. Supabase **will** probably warn about destructive operations: the word delete appears only in the new table's history trigger ("after insert or update or delete", so removals are logged too, as 0006 does). Nothing is removed now.
+
+**Each step needs Jeffrey's OK.** Before the Star family form goes live (M5 must be in place by then).
+
+### 0023a. Before you paste (Claude, read-only)
+
+1. Claude runs `supabase/tests/0006_fingerprints.sql` through the read-only connection and keeps the result: after 0023 **only** the `star_update_event(...)` and `star_results_csv(...)` lines may differ.
+
+### 0023b. Apply 0023 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0023_star_result_texts.sql` → **SQL Editor → New query** → paste → **Run**.
+2. Supabase may warn about **destructive operations** (the history trigger's "or delete", see above). Nothing is removed. Confirm.
+3. Expected: "Success. No rows returned." One transaction: on any error nothing is kept. If it stops with a message starting `0023:`, an earlier migration is missing — copy the message to Claude.
+4. **Running it again is safe** (tested: no fingerprint changes, and a text an admin already changed is never overwritten). **Re-running 0006 after this** puts 0006's old `star_update_event` and `star_results_csv` back → re-run 0023 straight after.
+
+### 0023c. Read-only checks (Claude, through the connection)
+
+1. **Fingerprints:** `supabase/tests/0023_fingerprints.sql` — every `function`, `table`, `policy` and `trigger` line must match what `supabase/tests/pglite/run.mjs` printed ("0023 fingerprints"); the three `seed` lines too (version 1 and the same md5) while no admin has changed a text.
+2. `supabase/tests/0006_fingerprints.sql`: **only** the `star_update_event(...)` (M5) and `star_results_csv(...)` (the CSV keys) lines differ from 0023a's — expected. Everything else unchanged.
+3. **Security advisor:** nothing new. (`star_set_result_text` is callable by `authenticated` on purpose — it checks data access and admin first; the helper `star_result_text_problem` is callable by nobody.)
+
+### 0023d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0023_tests.sql` with `<paste-admin-UID-here>` / `<paste-desk-UID-here>` replaced → **ALL 0023 TESTS PASSED**. Supabase may warn about destructive operations: the test really runs a `delete` of the Make-up below text inside its transaction (to check the `not_found` answer) and checks that emptying the table is refused. Everything is rolled back, so the text is back afterwards. Confirm. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved — run `rollback;` once on its own, then tell Claude.
+2. Then `0006_tests.sql` again — every old Edit event and CSV test must still pass. (Its CSV key check accepts 0006's keys and 0023's.)
+3. Put the placeholders back afterwards.
+
+### 0023e. Undo (only with Jeffrey's OK)
+
+1. Paste **the whole file** `supabase/manual/0023u_undo_star_update_event.sql` in the SQL Editor → **Run**. It holds only 0006's exact `star_update_event` and `star_results_csv`, each with 0006's revoke and grant (one transaction). M5 is undone (moving a finished event into the future again relies on the app's second call to close registration) and the CSV rows lose the three new keys — **put the app back to a version that doesn't need them first.**
+2. Claude checks `supabase/tests/0006_fingerprints.sql`: the `star_update_event(...)` and `star_results_csv(...)` lines must equal 0023a's again (tested in PGlite, step0023). Then run `0006_tests.sql`.
+3. **Not undone, on purpose:** the table `star_result_texts` (its rule, triggers and the three texts) and the functions `star_set_result_text` / `star_result_text_problem`. They are harmless while the app doesn't use them (staff can only read three email texts; only admins can change them). Before the Results screens use them, removing them would need its own reviewed script and Jeffrey's OK — and once the app uses them, the app must go back first.
+4. To redo: paste 0023 again (safe; tested).
+
 ---

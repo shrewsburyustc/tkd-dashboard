@@ -972,7 +972,9 @@ await check('Events counts after the takeover: the Events list and Delete event 
   assert.deepEqual(Object.keys(by).sort(), ['Fall Star Testing', 'Spring Star Testing', 'Summer Star Testing']);
   const nums = (e) => [e.activeCount, e.withdrawnCount, e.registrationCount, e.paymentTotalCents];
   assert.deepEqual(nums(by['Fall Star Testing']), [13, 1, 14, 93000]);
-  assert.deepEqual(nums(by['Summer Star Testing']), [6, 1, 7, 88000]);
+  // (phase 6 added six Summer desk rows for the Results states: Lucas, Nina, Ben, Zoe, Ivy, Ella —
+  // four paid: 14000 + 14000 + 16000 + 14000)
+  assert.deepEqual(nums(by['Summer Star Testing']), [12, 1, 13, 146000]);
   assert.deepEqual(nums(by['Spring Star Testing']), [0, 0, 0, 0]);
   assert.deepEqual([by['Summer Star Testing'].state, by['Fall Star Testing'].state, by['Spring Star Testing'].state], ['finished', 'open', 'not_open_yet']);
   // the counts follow the candidates fake's writes
