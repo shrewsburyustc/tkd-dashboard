@@ -1370,7 +1370,7 @@ These were looked at and accepted. They're written down so nobody mistakes them 
 
 ## Migration 0013: Camps (camps, templates, family sign-up form, check-in, payments)
 
-**Status: not applied yet.** (The section number is final only at the merge into `main`.)
+**Status: APPLIED to production 2026-10-20** (from camps a2d1f4e; fingerprints + tests verified). Hyperdrive (0013g) and later steps not done yet.
 
 **What it does** (`supabase/migrations/0013_camps.sql`, contract `docs/Dashboard Docs/Build contracts/CONTRACT-0013.md` §1):
 - **Camps** (`camps`): held at one school, optionally **for both schools**; 1–10 days (`camp_days`, any dates); daily hours; sign-up opening / closing dates, an early-price date and a **Close sign-up** switch; the ages the family form accepts; a description and a waiver; a random 8-character link code (`/camp/<code>`, never changes).
@@ -1630,7 +1630,7 @@ commit;
 
 ## Migration 0017: camp payments in Finance
 
-**Status: not applied yet.** Apply it **right after 0013** (section 0013), in the same CP3 session — Camps and this go live together (rulebook v0.707), or camp days would close short.
+**Status: APPLIED to production 2026-10-20** (from camps a2d1f4e = fb4ec24). Apply it **right after 0013** (section 0013), in the same CP3 session — Camps and this go live together (rulebook v0.707), or camp days would close short.
 
 **Production order:** 0011 (Finance, live) → **0013 + 0017** (Camps, together) → Color Belt 0014 (already live; it doesn't touch these Finance functions) → **Finance 0018** (private Color Belt payments), which is built on 0017's text of the Finance functions.
 
