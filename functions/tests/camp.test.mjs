@@ -314,6 +314,8 @@ async function expectRefused(ctx, expected) {
 test('POST: kill switch off / missing binding → not_open', async () => {
   await expectRefused(context({ env: goodEnv({ CAMPS_REGISTRATION: 'off' }) }), { status: 'not_open' });
   await expectRefused(context({ env: goodEnv({ HYPERDRIVE_CAMPS: undefined }) }), { status: 'not_open' });
+  // a binding whose connection string is blank counts as missing (same as register.js, f47d386)
+  await expectRefused(context({ env: goodEnv({ HYPERDRIVE_CAMPS: { connectionString: '' } }) }), { status: 'not_open' });
 });
 
 test('POST: wrong Origin / Content-Type → bad_request (HTTP 400)', async () => {

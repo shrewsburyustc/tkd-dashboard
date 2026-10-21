@@ -24,7 +24,7 @@ Words used below:
 
 **2026-10-21 — CP4 DONE:** Hyperdrive `tkd-camps-registrar` created by Jeffrey (checked read-only: user `camps_registrar.eozkfbdfxqlcbpewhach`, database `postgres`, caching disabled, verify-full with the shared Supabase CA, limit 5) and bound as `HYPERDRIVE_CAMPS` (Production).
 **CP5 started 2026-10-21** (`npm run dev` on this PC against the real database): Jeffrey made "Test Camp" (code `28n45pk7`, Worcester/both, Oct 26/28/30); test sign-up via the real `camp_public_signup` in the SQL Editor → `ok`, **CP-4048**, 2 children, $150. **Paused:** Jeffrey asked for **one roster** instead of the Check in / Payments / Attendance tabs (decision below) — CP5 continues on the new roster; Test Camp kept for that.
-**Decisions 2026-10-21 (rulebook rows pending until `main` is merged — 0.715, 0.716):**
+**Decisions 2026-10-21 (rulebook v0.715, v0.716):**
 - **One roster (changes v0.704):** Jeffrey: "having check-in and attendance on two different tabs is redundant, and payments as well … one roster … first column is the name … another column to let me know that they paid … the rest should be the roster, basically the attendance." Approved mockup `Decision images/Camps-one-roster.html` ("Okay, this looks good"): summary line (here today · to collect · pizza today) · search · Camper (click → detail; today's note under the name) · Paid (tag; tap → Mark paid) · one column per camp day (✓ time / Check in / ✗ / —; tap to check in or undo) · duplicate box · Removed · Print roster prints it. Phone: one card per child with the day buttons.
 - **Camps longer than a week:** option A, a **week switcher** "Week 1 · Week 2" above the roster, only when the camp crosses calendar weeks, opening on the current week; ≤5 day columns at a time; Paid / to collect whole-camp (`Decision images/Camps-multiweek-roster.html`).
 - Builder D rebuilding the camp page now; then design review; then `git merge main` (main moved: Color Belt merged incl. v0.410 flood protection, Prospects 0021) — 4 conflicts seen (rulebook, App.jsx, finance checks, run.mjs), merge deferred so it doesn't clash with the build.
@@ -70,7 +70,7 @@ SETUP 0013h. `Start dashboard.bat` (real database, only on this PC — still not
 - [ ] Paste the school's **real waiver** into the camp templates (Edit template → 5. Family form). The preview text is a placeholder.
 - [ ] On **every desk device**, account menu → **This device** = its school (Mark paid uses it; an unset device counts as Worcester).
 - [ ] Confirm the **3-year signature retention** with the school's insurer (v0.700).
-- [ ] Optional: bind Cloudflare's `RATE_LIMITER` (security review note) before heavy sign-up days.
+- [x] ~~Optional: bind Cloudflare's `RATE_LIMITER`~~ — **not needed / not possible** (rulebook v0.410: Pages Functions can't have it; the per-server limiter, Turnstile, `camps_registrar`'s limits and `CAMPS_REGISTRATION` protect the form; a WAF rule comes later with the school's own domain).
 
 ## If something goes wrong (any time)
 SETUP 0013j: (1) instant database off switch (two `revoke` lines), (2) `CAMPS_REGISTRATION=off` + Retry deployment, (3) lock the login. Color Belt's and Star's forms aren't affected. Cloudflare → Deployments → **Rollback** puts the previous site back. Removing Camps completely (0017d then 0013k) only before real camp data exists.

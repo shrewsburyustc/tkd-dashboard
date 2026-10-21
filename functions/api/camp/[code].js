@@ -19,7 +19,8 @@
 //   TURNSTILE_SITE_KEY   Turnstile's PUBLIC key, handed to the page (same as Color Belt)
 //   CLIENT_KEY_SECRET    secret for the anonymous client key (same as Color Belt)
 //   PUBLIC_ORIGIN        e.g. https://tkd-dashboard.pages.dev (POSTs must come from here)
-//   RATE_LIMITER         OPTIONAL Cloudflare Rate Limiting binding (shared with Color Belt)
+//   RATE_LIMITER         not set up on purpose (rulebook v0.410: Pages Functions can't have it);
+//                        the per-server limiter, Turnstile, the login's limits and the off switch protect it
 import { handleGet, handlePost, handleOther } from '../../_lib/camp.js';
 import { openCampDatabase } from '../../_lib/campDb.js';
 

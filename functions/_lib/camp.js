@@ -77,7 +77,9 @@ const PERSON_KEYS = ['name', 'phone', 'relation'];
 // Camps' own, so switching Camps off never touches Color Belt's PUBLIC_REGISTRATION.)
 function isSwitchedOn(env) {
   if (!env || env.CAMPS_REGISTRATION !== 'on') return false;
-  if (!env.HYPERDRIVE_CAMPS || typeof env.HYPERDRIVE_CAMPS.connectionString !== 'string') return false;
+  // A binding with a blank connection string counts as "not set up" too (same fix as register.js, f47d386).
+  if (!env.HYPERDRIVE_CAMPS || typeof env.HYPERDRIVE_CAMPS.connectionString !== 'string'
+      || env.HYPERDRIVE_CAMPS.connectionString === '') return false;
   return REQUIRED_SETTINGS.every((name) => typeof env[name] === 'string' && env[name] !== '');
 }
 
