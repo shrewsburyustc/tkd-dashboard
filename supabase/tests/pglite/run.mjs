@@ -140,12 +140,28 @@
 //            an unlocked admin: each must answer "ok" in under 2 seconds,
 //            and the answers must be right (a busy day has items whose
 //            totals add up; the year export has both sources)
-//         h. OLD vs NEW, on a third database: the big seed with the
-//            PRODUCTION copy of 0011 (whose chain builder is the slow but
-//            proven one): every 7th day of the 5 years, both schools, the
-//            items and figures are written down; today's 0011 is applied
-//            over it and every one of those days must give exactly the
-//            same items and figures
+//         h. OLD vs NEW: the PRODUCTION copy of 0011 (fixtures/, whose
+//            chain builder is the slow but proven one) and today's 0011
+//            must give exactly the same answers on the same data. Before /
+//            after: the data is loaded with the old 0011, the answers are
+//            written down, today's 0011 is applied over it, and the same
+//            questions are asked again.
+//            * the big database: finance_perf_seed.sql + finance_chain_seed
+//              .sql (longer chains: edited twice and moved back, edited then
+//              undone, several chains per person, refunds then undone, on
+//              both sources). Compared: every 7th day of 5 years AND every
+//              day a chain-seed payment touches (items + figures, both
+//              schools), and finance_payment_detail for about 50 chain
+//              starts of both sources (as an unlocked admin)
+//            * a second, small database: the chain seed's LONG chains only
+//              (people 17, 19 and 23 of each kind, Worcester, all within
+//              the last year - about 27 payment rows). The old builder's
+//              time explodes with the number of rows in a range (measured:
+//              32 rows 0.9 s, 64 rows 27 s, 96 rows over 10 minutes, a
+//              year of the big seed over 20 minutes), so a year can only
+//              be compared on a small set. Compared: one 366-day
+//              finance_money_rows (every item) + the figures of every day,
+//              and the 366-day Worcester export (as an unlocked admin)
 //         i. COLLATION, on a fourth database whose text sorting is ICU
 //            "en-US" like production's (punctuation is ignored, so e.g.
 //            '~end' sorts BEFORE 'color_belt'; PGlite's normal databases
@@ -185,6 +201,44 @@
 //            0010 / 0003 / 0011 fingerprints equal 15a's, change_log has one
 //            undo_0014 row per removed row, and 0010_tests.sql /
 //            0005_tests.sql pass. Then 13g runs.
+//   ===== Finance 0018 (step0018; camps' run.mjs has its own steps 15-16) =====
+//   0018. (Finance: Color Belt PRIVATE testing payments), after 14 and
+//       before 13g, in production order: 0011 -> camps' 0013 + 0017 ->
+//       0014 -> 0018. Until the real files are on this branch, exact
+//       copies are used: fixtures/0013_camps_at_fb4ec24.sql,
+//       fixtures/0017_finance_camps_at_fb4ec24.sql (and camps' tests
+//       fixtures/0017_tests_at_fb4ec24.sql) from git fb4ec24, and
+//       fixtures/0014_testing_private_as_live.sql (live 0014).
+//         a. 0018_fingerprints.sql must not contain the words the Supabase
+//            connection refuses
+//         b. database 1 (no payments): 0011 + 0014 first - 0018's GUARD
+//            must refuse to run (no camps' 0017 yet); then camps' 0013 +
+//            0017 (camps' 0017_tests.sql passes), then 0018; the 0003 /
+//            0004 / 0005 / 0006 / 0010 fingerprints don't move;
+//            0011_tests.sql, camps' 0017_tests.sql and 0018_tests.sql pass;
+//            0018 applied a SECOND time changes no row and no fingerprint;
+//            0018's camp blocks are byte-identical to 0017's
+//         c. database 2 (production order): the big seed + the chain seed +
+//            camps' big seed (no private rows yet) with 0017, the answers
+//            written down; 0018 applied: every 7th day of 5 years + every
+//            chain-seed day (items, and figures without the fingerprint -
+//            0018 builds it from the chain id now) and ~60 payment details
+//            (Color Belt, Star and camp) must be identical
+//         d. then the private seed (finance_private_perf_seed.sql: 2,000
+//            private testings, ~400 moves) on database 2: 0018_tests.sql
+//            passes there too, and every app function answers in < 2 s
+//         e. the ICU database (14i) also gets 0014 + 0018 and runs
+//            0018_tests.sql
+//         f. days closed UNDER 0011 (a move, a move + undo move, a private
+//            payment), then 0018: only real money differences show as
+//            "changed after closing"; and an event deleted after a move
+//            on a day closed under 0018 doesn't
+//   ===== end Finance 0018 =====
+//
+// THE FIXTURE fixtures/0014_testing_private_as_live.sql
+//   An exact copy of git color-belt:supabase/migrations/0014_testing_private.sql
+//   (live on production 2026-10-19). Never edit it; once the real file is
+//   on this branch, run.mjs uses that instead.
 //
 // THE FIXTURE fixtures/0011_as_applied_2026-10-19.sql
 //   An exact copy of 0011 as it was pasted into production on 2026-10-19
@@ -258,7 +312,7 @@
 //   Exit code 0 = everything passed, 1 = something failed.
 // =====================================================================
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
@@ -542,6 +596,15 @@ async function main() {
     record('0011 (Finance)', false, 'skipped: 0006 or 0010 could not be applied (see the lines above)');
   }
 
+  // ===== Finance 0018 (step0018, rule v0.304) =====
+  // 0018. Finance + Color Belt private testing
+  let after18 = null;
+  if (after11) {
+    console.log('\nMigration 0018 (Finance: Color Belt private testing payments):');
+    after18 = await step0018();
+  }
+  // ===== end Finance 0018 =====
+
   // 14h + 14i. old vs new chain builder; the ICU-collation database
   if (after11) {
     console.log('\n0011 old vs new chain builder (big seed):');
@@ -636,6 +699,10 @@ async function main() {
   if (after20) {
     console.log('\n0020 fingerprints (kind  item  detail):');
     for (const line of after20) console.log('  ' + line);
+  }
+  if (after18) {
+    console.log('\n0018 fingerprints (kind  item  detail):');
+    for (const line of after18) console.log('  ' + line);
   }
 
   return finish();
@@ -1894,9 +1961,9 @@ async function step14(db, upgradeDb) {
 // 14g. The big seed, then every app function timed as an unlocked admin
 // (a session + a fresh password sign-in, like the test files do). Each
 // call must answer "ok" in under 2 seconds.
-async function financeSpeedCheck(db, tag = '[speed]') {
+async function financeSpeedCheck(db, tag = '[speed]', seed = true) {
   const t0 = Date.now();
-  if (!(await run(db, `${tag} big seed (finance_perf_seed.sql)`, readFileSync(path.join(here, 'finance_perf_seed.sql'), 'utf8')))) return;
+  if (seed && !(await run(db, `${tag} big seed (finance_perf_seed.sql)`, readFileSync(path.join(here, 'finance_perf_seed.sql'), 'utf8')))) return;
   const rows = await one(db, 'select (select count(*) from public.testing_payments) + (select count(*) from public.star_payments)');
   record(`${tag} the big seed has about 11,000 payment rows`, Number(rows) > 10000, `${rows} rows in ${Date.now() - t0} ms`);
   const sid = '33333333-3333-4333-8333-333333333333';
@@ -1945,7 +2012,12 @@ async function financeSpeedCheck(db, tag = '[speed]') {
   const counting = items.filter((i) => ['counted', 'edited', 'moved_in'].includes(i.state));
   const paySum = counting.filter((i) => i.kind === 'payment').reduce((n, i) => n + i.amount_cents, 0);
   const allSum = counting.reduce((n, i) => n + i.amount_cents, 0);
-  const expectedRows = Number(await one(db, `select count(*) from public.testing_payments p
+  // (0018: private testing payments of that school and day too, when 0014 is there)
+  const hasPrivate = await one(db, `select to_regclass('public.testing_private_payments') is not null`);
+  const privateRows = hasPrivate ? Number(await one(db, `select count(*) from public.testing_private_payments p
+      join public.testing_private t on t.id = p.private_id
+     where t.location_code = 'worcester' and p.kind = 'payment' and p.moved_from_payment_id is null and p.paid_on = '${busy}'`)) : 0;
+  const expectedRows = privateRows + Number(await one(db, `select count(*) from public.testing_payments p
       join public.testing_registrations r on r.id = p.registration_id join public.testing_events e on e.id = r.event_id
      where e.location_code = 'worcester' and p.kind = 'payment' and p.paid_on = '${busy}'`))
     + Number(await one(db, `select count(*) from public.star_payments p join public.star_candidates c on c.id = p.candidate_id
@@ -1969,47 +2041,173 @@ async function financeSpeedCheck(db, tag = '[speed]') {
 }
 
 
-// 14h. Old vs new: the same big seed through the production copy of 0011
-// and then through today's 0011 must give the same items and figures.
-// One line per (day, both schools); the items and the figures of the day
-// written as text (sorted byte by byte, collate "C").
-const DAY_SIGNATURE_SQL = `
-  select d.d::date::text as day,
-         (select coalesce(string_agg(concat_ws('|', m.school, m.source, m.payment_id, m.row_id, m.day, m."time", m.state, m.kind,
+// 14h. Old vs new: the same data through the production copy of 0011 and
+// then through today's 0011 must give the same answers. Items are written
+// as text, sorted byte by byte (collate "C").
+const ITEM_TEXT = `concat_ws('|', m.school, m.source, m.payment_id, m.row_id, m.day, m."time", m.state, m.kind,
                     m.method, m.amount_cents, m.was_amount_cents, m.was_method, m.moved_to, m.moved_from, m.changed_by_name,
                     m.changed_on, m.recorded_by_name, m.first_name, m.last_name, m.what, m.event_date, m.is_private, m.counts,
-                    m.first_recorded_at, m.event_id),
-                    ',' order by concat_ws('|', m.school, m.payment_id, m.row_id, m.state) collate "C"), '')
-            from public.finance_money_rows(null, d.d::date, d.d::date) m) as items,
+                    m.first_recorded_at, m.event_id)`;
+const ITEM_ORDER = `concat_ws('|', m.school, m.payment_id, m.row_id, m.state, m.day) collate "C"`;
+
+// One line per day: every 7th day of 5 years, plus every day on which a
+// chain-seed payment or refund is dated.
+const DAY_SIGNATURE_SQL = `
+  with days as (
+    select d.d::date as day
+      from generate_series(public.testing_today() - 1825, public.testing_today(), interval '7 days') as d(d)
+    union
+    select p.paid_on from public.testing_payments p join public.testing_registrations r on r.id = p.registration_id
+     where r.first_name = 'Chain' and p.kind <> 'reversal'
+    union
+    select p.paid_on from public.star_payments p join public.star_candidates c on c.id = p.candidate_id
+     where c.first_name = 'Chain' and p.kind <> 'reversal'
+  )
+  select x.day::text as day,
+         (select coalesce(string_agg(${ITEM_TEXT}, ',' order by ${ITEM_ORDER}), '')
+            from public.finance_money_rows(null, x.day, x.day) m) as items,
+         (select count(*)::int from public.finance_money_rows(null, x.day, x.day) m) as n,
          (select string_agg(to_jsonb(f)::text, ',' order by f.school collate "C")
-            from public.finance_figures(null, d.d::date, d.d::date) f) as figures
-    from generate_series(public.testing_today() - 1825, public.testing_today(), interval '7 days') as d(d)
-   order by 1`;
+            from public.finance_figures(null, x.day, x.day) f) as figures
+    from days x
+   order by x.day`;
+
+// One 366-day range: every item, and the figures of every school day.
+const RANGE_SIGNATURE_SQL = `
+  with m as materialized (
+    select * from public.finance_money_rows(null, public.testing_today() - 365, public.testing_today())
+  )
+  select (select coalesce(string_agg(${ITEM_TEXT}, ',' order by ${ITEM_ORDER}), '') from m) as items,
+         (select count(*)::int from m) as n,
+         (select string_agg(to_jsonb(f)::text, ',' order by f.day, f.school collate "C")
+            from public.finance_figures(null, public.testing_today() - 365, public.testing_today()) f) as figures`;
+
+// About 50 chain starts of both sources, mostly the long chains (and the
+// hidden mis-click, which must be not_found both times).
+const DETAIL_IDS_SQL = `
+  (select 'color_belt' as src, p.id::text as id
+     from public.testing_payments p join public.testing_registrations r on r.id = p.registration_id
+    where r.first_name = 'Chain' and p.kind = 'payment' and p.recorded_by_name = 'Staff'
+      and (split_part(r.last_name, ' ', 2)::integer % 17 = 0 or split_part(r.last_name, ' ', 2)::integer % 19 = 0
+           or split_part(r.last_name, ' ', 2)::integer % 23 = 0)
+    order by p.id limit 26)
+  union all
+  (select 'star', p.id::text
+     from public.star_payments p join public.star_candidates c on c.id = p.candidate_id
+    where c.first_name = 'Chain'
+      and ((p.kind = 'payment' and p.recorded_by_name = 'Staff'
+            and (split_part(c.last_name, ' ', 2)::integer % 17 = 0 or split_part(c.last_name, ' ', 2)::integer % 19 = 0
+                 or split_part(c.last_name, ' ', 2)::integer % 23 = 0 or split_part(c.last_name, ' ', 2)::integer % 29 = 0))
+           or p.kind = 'refund')
+    order by p.id limit 26)`;
+
+// Sign in as the pretend admin on this database: a session, unlocked, with
+// a fresh password sign-in (the same as the test files do).
+async function adminSession(db) {
+  const sid = '44444444-4444-4444-8444-444444444444';
+  await db.exec(`insert into auth.sessions (id, user_id) values ('${sid}', '${ADMIN_UID}');
+    insert into public.session_unlock (session_id, staff_id, unlocked_until) values ('${sid}', '${ADMIN_UID}', now() + interval '1 hour');`);
+  await db.query(`select set_config('request.jwt.claims', $1, false)`, [JSON.stringify({ sub: ADMIN_UID, role: 'authenticated',
+    session_id: sid, amr: [{ method: 'password', timestamp: Math.floor(Date.now() / 1000) - 60 }] })]);
+}
+
+// One function call as the signed-in admin (role authenticated).
+async function asAdmin(db, sql, params = []) {
+  await db.exec('set role authenticated;');
+  try {
+    return (await db.query(sql, params)).rows[0].r;
+  } finally {
+    await db.exec('reset role;').catch(() => {});
+  }
+}
+
+const SETUP_TO_0010 = () => read('migrations', '0003_testing_classes_ranks.sql') + '\n' + builtInSeedSql() + '\n'
+  + read('migrations', '0004_staff_accounts.sql') + '\n' + read('migrations', '0005_testing_events.sql') + '\n'
+  + read('migrations', '0006_star_testing.sql') + '\n' + read('migrations', '0010_testing_results.sql') + '\n';
+const OLD_0011 = () => readFileSync(path.join(here, 'fixtures', '0011_as_applied_2026-10-19.sql'), 'utf8');
+const PERF_SEED = () => readFileSync(path.join(here, 'finance_perf_seed.sql'), 'utf8');
+const CHAIN_SEED = () => readFileSync(path.join(here, 'finance_chain_seed.sql'), 'utf8');
 
 async function financeOldVsNew() {
+  // --- the big database: days + payment details
   const db = await buildBase('[old vs new] ');
   if (!db) return;
-  const ok = await run(db, '[old vs new] 0003 + seed + 0004 + 0005 + 0006 + 0010 + the PRODUCTION copy of 0011 + the big seed',
-    read('migrations', '0003_testing_classes_ranks.sql') + '\n' + builtInSeedSql() + '\n'
-    + read('migrations', '0004_staff_accounts.sql') + '\n' + read('migrations', '0005_testing_events.sql') + '\n'
-    + read('migrations', '0006_star_testing.sql') + '\n' + read('migrations', '0010_testing_results.sql') + '\n'
-    + readFileSync(path.join(here, 'fixtures', '0011_as_applied_2026-10-19.sql'), 'utf8') + '\n'
-    + readFileSync(path.join(here, 'finance_perf_seed.sql'), 'utf8'));
-  if (!ok) return;
+  if (!(await run(db, '[old vs new] 0003 - 0010 + the PRODUCTION copy of 0011 + the big seed + the chain seed',
+    SETUP_TO_0010() + OLD_0011() + '\n' + PERF_SEED() + '\n' + CHAIN_SEED()))) return;
+  const chainRows = await one(db, `select (select count(*) from public.testing_payments p join public.testing_registrations r
+      on r.id = p.registration_id where r.first_name = 'Chain') + (select count(*) from public.star_payments p
+      join public.star_candidates c on c.id = p.candidate_id where c.first_name = 'Chain')`);
+  await adminSession(db);
+  const ids = (await db.query(DETAIL_IDS_SQL)).rows;
+  const detail = async () => {
+    const out = [];
+    for (const { src, id } of ids) {
+      out.push(JSON.stringify(await asAdmin(db, 'select public.finance_payment_detail($1, $2::uuid) as r', [src, id])));
+    }
+    return out;
+  };
   const t0 = Date.now();
-  const before = (await db.query(DAY_SIGNATURE_SQL)).rows;
+  const daysBefore = (await db.query(DAY_SIGNATURE_SQL)).rows;
+  const detailsBefore = await detail();
   const oldMs = Date.now() - t0;
   if (!(await run(db, '[old vs new] apply today\'s 0011 over it', read('migrations', '0011_finance.sql')))) return;
   const t1 = Date.now();
-  const after = (await db.query(DAY_SIGNATURE_SQL)).rows;
+  const daysAfter = (await db.query(DAY_SIGNATURE_SQL)).rows;
+  const detailsAfter = await detail();
   const newMs = Date.now() - t1;
-  const items = before.reduce((n, r) => n + (r.items ? r.items.split(',').length : 0), 0);
-  const differ = before.filter((r, i) => JSON.stringify(r) !== JSON.stringify(after[i])).map((r) => r.day);
-  record('[old vs new] the same items and figures on every 7th day of 5 years (both schools)',
-    before.length > 250 && items > 1000 && after.length === before.length && differ.length === 0,
-    `${before.length} days, ${items} items; old builder ${oldMs} ms, new ${newMs} ms`
-      + (differ.length ? `; differ on ${differ.slice(0, 5).join(', ')}` : ''));
+  const items = daysBefore.reduce((n, r) => n + r.n, 0);
+  const differ = daysBefore.filter((r, i) => JSON.stringify(r) !== JSON.stringify(daysAfter[i])).map((r) => r.day);
+  record('[old vs new] the same items and figures on every 7th day of 5 years + every chain-seed day (both schools)',
+    daysBefore.length > 300 && items > 1200 && daysAfter.length === daysBefore.length && differ.length === 0,
+    `${daysBefore.length} days, ${items} items (chain seed: ${chainRows} payment rows); old ${oldMs} ms, new ${newMs} ms (incl. details)`
+      + (differ.length ? `; DIFFER on ${differ.slice(0, 5).join(', ')}` : ''));
+  const statuses = {};
+  for (const d of detailsBefore) { const st = JSON.parse(d).status; statuses[st] = (statuses[st] ?? 0) + 1; }
+  const detailDiffer = ids.filter((x, i) => detailsBefore[i] !== detailsAfter[i]).map((x) => `${x.src} ${x.id}`);
+  const steps = detailsBefore.reduce((n, d) => n + (JSON.parse(d).history?.length ?? 0), 0);
+  record('[old vs new] the same finance_payment_detail answers for about 50 chain starts (both sources)',
+    ids.length >= 45 && (statuses.ok ?? 0) >= 40 && detailDiffer.length === 0,
+    `${ids.length} ids (${ids.filter((x) => x.src === 'star').length} Star), statuses ${JSON.stringify(statuses)}, ${steps} history lines`
+      + (detailDiffer.length ? `; DIFFER: ${detailDiffer.slice(0, 5).join(', ')}` : ''));
   await db.close();
+
+  // --- the small database: the long chains only, Worcester, within a year
+  const smallSeed = CHAIN_SEED().replace(/\r\n/g, '\n')
+    .replaceAll('generate_series(1, 120) as g', 'unnest(array[17, 19, 23]) as g')
+    .replaceAll('* 1820 / 120)', '* 10)')
+    .replace("public.testing_new_public_code()\n  from public.locations l;",
+             "public.testing_new_public_code()\n  from public.locations l where l.code = 'worcester';")
+    .replace("as g\n where e.name = 'PGlite chain Star';", "as g\n where e.name = 'PGlite chain Star' and l.code = 'worcester';");
+  const sp = await buildBase('[old vs new, small] ');
+  if (!sp) return;
+  if (!(await run(sp, '[old vs new, small] 0003 - 0010 + the PRODUCTION copy of 0011 + the long chains only (Worcester)',
+    SETUP_TO_0010() + OLD_0011() + '\n' + smallSeed))) return;
+  const smallRows = await one(sp, 'select (select count(*) from public.testing_payments) + (select count(*) from public.star_payments)');
+  record('[old vs new, small] the small seed is small (the old builder can only handle a few dozen rows)',
+    Number(smallRows) >= 20 && Number(smallRows) <= 40, `${smallRows} payment rows`);
+  await adminSession(sp);
+  // (the app's role may not call testing_today(), so the dates are looked up first)
+  const spToday = await one(sp, 'select public.testing_today()::text');
+  const exportSql = `select public.finance_export('worcester', date '${spToday}' - 365, '${spToday}') as r`;
+  const t2 = Date.now();
+  const rangeBefore = (await sp.query(RANGE_SIGNATURE_SQL)).rows[0];
+  const exportBefore = await asAdmin(sp, exportSql);
+  const oldRangeMs = Date.now() - t2;
+  if (!(await run(sp, '[old vs new, small] apply today\'s 0011 over it', read('migrations', '0011_finance.sql')))) return;
+  const t3 = Date.now();
+  const rangeAfter = (await sp.query(RANGE_SIGNATURE_SQL)).rows[0];
+  const exportAfter = await asAdmin(sp, exportSql);
+  const newRangeMs = Date.now() - t3;
+  const states = {};
+  for (const r of exportBefore?.rows ?? []) states[r.state] = (states[r.state] ?? 0) + 1;
+  record('[old vs new] the same items and figures for one 366-day range (both schools)',
+    rangeBefore.n >= 10 && JSON.stringify(rangeBefore) === JSON.stringify(rangeAfter),
+    `${smallRows} payment rows, ${rangeBefore.n} items before, ${rangeAfter.n} after`);
+  record('[old vs new] the same 366-day Worcester export rows',
+    exportBefore?.status === 'ok' && (exportBefore.rows?.length ?? 0) >= 10
+      && JSON.stringify(exportBefore.rows) === JSON.stringify(exportAfter?.rows),
+    `${exportBefore?.rows?.length} rows, states ${JSON.stringify(states)}; old ${oldRangeMs} ms, new ${newRangeMs} ms`);
+  await sp.close();
 }
 
 // 14i. A database that sorts text like production (ICU "en-US").
@@ -2035,6 +2233,11 @@ async function financeIcuCheck() {
       + read('migrations', '0011_finance.sql'));
     if (!ok) return;
     await runTestFile(db, '[icu] 0011_tests.sql', '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+    if (await run(db, '[icu] 0013 + 0017 + 0014 + 0018', CAMPS_SQL() + MIGRATION_0014() + '\n' + MIGRATION_0018())) {
+      await runTestFile(db, '[icu] 0018_tests.sql', '0018_tests.sql', 'ALL 0018 TESTS PASSED');
+      await runTestFile(db, '[icu] 0011_tests.sql (after 0018)', '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+      await runTestFile(db, '[icu] camps\' 0017_tests.sql (after 0018)', CAMPS_TESTS, 'ALL 0017 TESTS PASSED');
+    }
     await financeSpeedCheck(db, '[icu speed]');
   } catch (error) {
     record('[icu] the ICU-collation database', false, error.message);
@@ -2171,6 +2374,282 @@ async function step0020(db, upgradeDb) {
     }
   }
   return after;
+}
+
+// ---------------------------------------------------------------------
+// Step 16: Finance + Color Belt private testing (0018)
+// ---------------------------------------------------------------------
+
+// 0014: the real file once it is on this branch, else the live copy.
+const MIGRATION_0014 = () => existsSync(path.join(supabaseDir, 'migrations', '0014_testing_private.sql'))
+  ? read('migrations', '0014_testing_private.sql')
+  : readFileSync(path.join(here, 'fixtures', '0014_testing_private_as_live.sql'), 'utf8');
+
+// Camps' 0013 + 0017 (camp payments in Finance): on production they come
+// between 0011 and 0014. The real files once they are on this branch, else
+// the exact copies from git fb4ec24.
+const CAMPS_FILES = () => [
+  ['0013_camps.sql', '0013_camps_at_fb4ec24.sql'],
+  ['0017_finance_camps.sql', '0017_finance_camps_at_fb4ec24.sql'],
+].map(([real, copy]) => (existsSync(path.join(supabaseDir, 'migrations', real))
+  ? path.join(supabaseDir, 'migrations', real) : path.join(here, 'fixtures', copy)));
+const CAMPS_SQL = () => CAMPS_FILES().map((f) => readFileSync(f, 'utf8') + '\n').join('');
+const CAMPS_0013 = () => readFileSync(CAMPS_FILES()[0], 'utf8');
+const CAMPS_0017 = () => readFileSync(CAMPS_FILES()[1], 'utf8');
+// camps' 0017_tests.sql (relative to supabase/tests, as runTestFile wants)
+const CAMPS_TESTS = existsSync(path.join(supabaseDir, 'tests', '0017_tests.sql'))
+  ? '0017_tests.sql' : path.join('pglite', 'fixtures', '0017_tests_at_fb4ec24.sql');
+const CAMPS_PERF_SEED = () => readFileSync(existsSync(path.join(here, 'finance_camps_perf_seed.sql'))
+  ? path.join(here, 'finance_camps_perf_seed.sql') : path.join(here, 'fixtures', 'finance_camps_perf_seed_at_fb4ec24.sql'), 'utf8');
+
+// 0018 (it refuses to run before camps' 0017 - its guard)
+const MIGRATION_0018 = () => read('migrations', '0018_finance_private.sql');
+
+// The 0014 + 0018 tables, plus the history's row count, as one md5.
+const snapshot18Sql = `select md5(${['testing_private', 'testing_private_payments', ...FINANCE_TABLES].map((t) =>
+  `coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.${t} x), '')`).join(' || ')}
+  || (select count(*) from public.change_log)::text)`;
+
+async function step0018() {
+  // 0018a.
+  record('0018_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)',
+    !/delete|drop/i.test(read('tests', '0018_fingerprints.sql')));
+  record('[0018] camps 0013 + 0017 from ' + CAMPS_FILES().map((f) => path.basename(f)).join(', '), true);
+
+  // 0018b. database 1, no payments
+  const db = await buildBase('[0018] ');
+  if (!db) return null;
+  if (!(await run(db, '[0018] 0003 - 0010 + 0011 + 0014', SETUP_TO_0010() + read('migrations', '0011_finance.sql') + '\n'
+    + MIGRATION_0014()))) return null;
+  // the guard: without camps' 0017, 0018 stops and changes nothing
+  let refused = '';
+  try {
+    await db.exec(MIGRATION_0018());
+  } catch (error) {
+    refused = error.message;
+    await db.exec('rollback;').catch(() => {});
+  }
+  record('[0018] the guard refuses 0018 before camps\' 0017 (it stops, nothing changes)',
+    refused.includes("must be applied after camps' 0017")
+      && (await one(db, `select to_regclass('public.finance_testing_private_payments_paid_on_idx') is null`)) === true,
+    refused || 'it ran');
+  if (!(await run(db, '[0018] camps\' 0013 + 0017', CAMPS_SQL()))) return null;
+  await runTestFile(db, '[0018] camps\' 0017_tests.sql (before 0018)', CAMPS_TESTS, 'ALL 0017 TESTS PASSED');
+  // the guard's other branches, each inside a transaction that is rolled
+  // back: (1) 0011 without its speed fix (its paid_on index missing);
+  // (2) one of the three shared functions not what camps' 0017 at fb4ec24
+  // made (here finance_payment_detail with one word changed)
+  const guardTry = async (label, before, wanted) => {
+    const detailBefore = await one(db, `select md5(p.prosrc) from pg_proc p where p.proname = 'finance_payment_detail'`);
+    let message = '';
+    try {
+      await db.exec('begin;\n' + before + '\n' + MIGRATION_0018());
+    } catch (error) {
+      message = error.message;
+    }
+    await db.exec('rollback;').catch(() => {});
+    record(`[0018] the guard refuses 0018 when ${label} (it stops, nothing changes)`,
+      message.includes(wanted)
+        && (await one(db, `select to_regclass('public.finance_testing_private_payments_paid_on_idx') is null`)) === true
+        && (await one(db, `select to_regclass('public.finance_testing_payments_paid_on_idx') is not null`)) === true
+        && (await one(db, `select md5(p.prosrc) from pg_proc p where p.proname = 'finance_payment_detail'`)) === detailBefore,
+      message || 'it ran');
+  };
+  await guardTry('0011 has no speed fix', 'drop index public.finance_testing_payments_paid_on_idx;', 'speed fix');
+  const t17 = CAMPS_0017().replace(/\r\n/g, '\n');
+  const at = t17.indexOf('create or replace function public.finance_payment_detail(');
+  const changedDetail = t17.slice(at, t17.indexOf('$$;', t17.indexOf('as $$', at)) + 3)
+    .replace("'status', 'no_access'", "'status', 'no_access_changed'");
+  await guardTry('the live 0017 differs from fb4ec24 (finance_payment_detail changed)', changedDetail, 'rebuild 0018 first');
+  const earlier = async () => [
+    ...(await fingerprints(db, '0003_fingerprints.sql')), ...(await fingerprints(db, '0004_fingerprints.sql')),
+    ...(await fingerprints(db, '0005_fingerprints.sql')), ...(await fingerprints(db, '0006_fingerprints.sql')),
+    ...(await fingerprints(db, '0010_fingerprints.sql'))];
+  const earlierBefore = await earlier();
+  if (!(await run(db, '[0018] apply 0018_finance_private.sql', MIGRATION_0018()))) return null;
+  record('[0018] 0003 / 0004 / 0005 / 0006 / 0010 fingerprints identical before/after 0018',
+    JSON.stringify(earlierBefore) === JSON.stringify(await earlier()), `${earlierBefore.length} rows`);
+  const t0 = Date.now();
+  await runTestFile(db, '[0018] 0018_tests.sql (no payments)', '0018_tests.sql', 'ALL 0018 TESTS PASSED');
+  record('[0018] 0018_tests.sql finished in under 60 seconds', Date.now() - t0 < 60000, `${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  await runTestFile(db, '[0018] 0011_tests.sql (after 0018)', '0011_tests.sql', 'ALL 0011 TESTS PASSED');
+  await runTestFile(db, '[0018] camps\' 0017_tests.sql (after 0018)', CAMPS_TESTS, 'ALL 0017 TESTS PASSED');
+  // 0018's camp blocks = 0017's, byte for byte (also checked by build_0018.py)
+  const campBlocks = (text) => (text.replace(/\r\n/g, '\n').match(/-- ===== source: camp \(0017\) =====[\s\S]*?-- ===== end camp =====/g) ?? []);
+  const in17 = campBlocks(CAMPS_0017());
+  const in18 = campBlocks(MIGRATION_0018());
+  record('[0018] every camp block of 0018 is one of 0017\'s, byte for byte',
+    in18.length > 0 && in18.every((b) => in17.includes(b)), `${in18.length} camp blocks in 0018, ${in17.length} in 0017`);
+  const before18 = await fingerprints(db, '0018_fingerprints.sql');
+  const dataBefore = await one(db, snapshot18Sql);
+  await run(db, '[0018] apply 0018 a SECOND time (re-run safety)', MIGRATION_0018());
+  record('[0018] re-run kept every row unchanged (private testings + payments, finance tables, change_log)',
+    dataBefore === (await one(db, snapshot18Sql)));
+  const after18 = await fingerprints(db, '0018_fingerprints.sql');
+  record('[0018] 0018 fingerprints identical before/after re-run', JSON.stringify(before18) === JSON.stringify(after18),
+    `${after18.length} rows`);
+  await runTestFile(db, '[0018] 0018_tests.sql (after re-run)', '0018_tests.sql', 'ALL 0018 TESTS PASSED');
+  await db.close();
+
+  // 0018c. database 2: 0017 vs 0018 on the big seed + chain seed + camps (no private rows)
+  const db2 = await buildBase('[0018 vs 0017] ');
+  if (!db2) return after18;
+  if (!(await run(db2, '[0018 vs 0017] 0003 - 0010 + 0011 + 0013 + 0017 + 0014 + the big seed + the chain seed + camps\' big seed',
+    SETUP_TO_0010() + read('migrations', '0011_finance.sql') + '\n' + CAMPS_SQL() + MIGRATION_0014() + '\n'
+    + PERF_SEED() + '\n' + CHAIN_SEED() + '\n' + CAMPS_PERF_SEED()))) return after18;
+  await adminSession(db2);
+  const signatureSql = DAY_SIGNATURE_SQL.replace('to_jsonb(f)::text', `(to_jsonb(f) - 'fingerprint')::text`);
+  const ids = (await db2.query(DETAIL_IDS_SQL + `
+  union all
+  (select 'camp', p.id::text from public.camp_payments p where p.kind = 'payment' order by p.id limit 12)`)).rows;
+  const campDays = await one(db2, `select count(distinct p.paid_on) from public.camp_payments p`);
+  const details = async () => {
+    const out = [];
+    for (const { src, id } of ids) out.push(JSON.stringify(await asAdmin(db2, 'select public.finance_payment_detail($1, $2::uuid) as r', [src, id])));
+    return out;
+  };
+  const daysBefore = (await db2.query(signatureSql)).rows;
+  const detailsBefore = await details();
+  if (!(await run(db2, '[0018 vs 0017] apply 0018 over it', MIGRATION_0018()))) return after18;
+  const daysAfter = (await db2.query(signatureSql)).rows;
+  const detailsAfter = await details();
+  const items = daysBefore.reduce((n, r) => n + r.n, 0);
+  const differ = daysBefore.filter((r, i) => JSON.stringify(r) !== JSON.stringify(daysAfter[i])).map((r) => r.day);
+  const campItems = daysBefore.reduce((n, r) => n + (r.items.match(/\|camp\|/g) ?? []).length, 0);
+  record('[0018 vs 0017] the same items and figures (without the fingerprint) on 5 years of days, camps included, no private rows',
+    daysBefore.length > 300 && items > 1200 && campItems > 100 && differ.length === 0,
+    `${daysBefore.length} days, ${items} items (${campItems} camp items; camp payments on ${campDays} days)`
+      + (differ.length ? `; DIFFER on ${differ.slice(0, 5).join(', ')}` : ''));
+  const detailDiffer = ids.filter((x, i) => detailsBefore[i] !== detailsAfter[i]).map((x) => `${x.src} ${x.id}`);
+  record('[0018 vs 0017] the same payment details for about 60 chain starts (Color Belt, Star, camp)',
+    ids.length >= 55 && ids.some((x) => x.src === 'camp') && detailDiffer.length === 0,
+    `${ids.length} ids (${ids.filter((x) => x.src === 'camp').length} camp)` + (detailDiffer.length ? `; DIFFER: ${detailDiffer.slice(0, 5).join(', ')}` : ''));
+
+  // 0018d. private rows on database 2: the tests, then speed
+  if (!(await run(db2, '[0018 speed] private seed (finance_private_perf_seed.sql)',
+    readFileSync(path.join(here, 'finance_private_perf_seed.sql'), 'utf8')))) return after18;
+  const counts = (await db2.query(`select (select count(*)::int from public.testing_private_payments) as private_rows,
+      (select count(*)::int from public.testing_private_payments where moved_from_payment_id is not null) as moved`)).rows[0];
+  record('[0018 speed] the private seed: ~3,000 private payment rows, ~400 of them moves',
+    counts.private_rows > 2000 && counts.moved > 300, JSON.stringify(counts));
+  await db2.query(`select set_config('request.jwt.claims', '', false)`);
+  await runTestFile(db2, '[0018] 0018_tests.sql (with the big seed and private rows)', '0018_tests.sql', 'ALL 0018 TESTS PASSED');
+  await financeSpeedCheck(db2, '[0018 speed]', false);
+  await db2.close();
+
+  // 0018f. days closed BEFORE 0018 (under 0011's rules), then 0018
+  await closesUnder0011();
+  return after18;
+}
+
+// 0018f. Days closed while 0011 / 0017 (without private payments) were in force,
+// then 0018 applied: which of them must show "changed after closing"?
+//   A  a move BEFORE the close: under 0011 the money had left the event
+//      and private money wasn't counted, so the close left it out; 0018
+//      counts it -> a real difference -> changed
+//   B  move + undo move BEFORE the close: under 0011 the payment showed
+//      undone and the recreated row counted; 0018 joins them into one
+//      chain, paired by the row id -> NOT changed
+//   C  a private payment (no move) on a day closed under 0011 -> changed
+//   D  (under 0018) a move, a close, then the EVENT deleted: the private
+//      copy carries on as its own chain, paired by the row id -> NOT changed
+async function closesUnder0011() {
+  const db = await buildBase('[0018 closes] ');
+  if (!db) return;
+  if (!(await run(db, '[0018 closes] 0003 - 0010 + 0011 + (0013 + 0017) + 0014',
+    SETUP_TO_0010() + read('migrations', '0011_finance.sql') + '\n' + CAMPS_SQL() + MIGRATION_0014()))) return;
+  // test data written as the SQL Editor would: two Worcester events copied
+  // from the seed's first class, five students, payments on past days
+  const ok = await run(db, '[0018 closes] events, students, payments on four past days', `
+    begin;
+    select set_config('request.jwt.claims', '', true);
+    select set_config('tkd.actor_label', 'PGlite closes', true);
+    insert into public.testing_events (location_code, name, testing_date, registration_open, public_code)
+    select 'worcester', 'PGlite closes ' || n, public.testing_today() + 30, false, public.testing_new_public_code()
+      from generate_series(1, 2) as n;
+    select public.testing_copy_class_into_event(e.id,
+             (select c.id from public.testing_classes c where c.location_code = 'worcester'
+                and (c.final_award_none or c.final_award_rank_id is not null) order by c.position limit 1),
+             time '16:00', time '17:00')
+      from public.testing_events e where e.name like 'PGlite closes %';
+    insert into public.testing_registrations (event_id, event_rank_id, first_name, last_name, paying_by, stripes_confirmed, source)
+    select e.id, (select k.id from public.testing_event_ranks k join public.testing_event_classes c on c.id = k.event_class_id
+                   where c.event_id = e.id order by k.position limit 1),
+           'Close', v.last, 'cash', true, 'staff'
+      from (values ('A', 1), ('B', 1), ('Q', 1), ('D', 2)) as v(last, ev)
+      join public.testing_events e on e.name = 'PGlite closes ' || v.ev;
+    insert into public.testing_payments (registration_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by, recorded_by_name)
+    select r.id, 'payment', v.amount, 'cash', public.testing_today() - v.ago,
+           ((public.testing_today() - v.ago) + time '15:00') at time zone 'America/New_York',
+           '22222222-2222-4222-8222-222222222222', 'Staff'
+      from (values ('A', 7000, 40), ('Q', 5000, 40), ('B', 6000, 41), ('Q', 5000, 42), ('D', 6600, 43)) as v(last, amount, ago)
+      join public.testing_registrations r on r.first_name = 'Close' and r.last_name = v.last;
+    -- C: a private testing added by hand with a payment on day 42
+    insert into public.testing_private (location_code, first_name, last_name, class_name, rank_name, belt_pattern, belt_color,
+                                        belt_end_stripes, belt_end_stripe_color, to_kind, private_cents, paying_by,
+                                        stripes_confirmed, private_date, private_time, created_by_name, updated_by_name)
+    values ('worcester', 'Close', 'C', 'Perf class', 'White', 'solid', 'white', 0, 'yellow', 'none', 8500, 'cash', true,
+            public.testing_today() + 3, time '10:00', '', '');
+    insert into public.testing_private_payments (private_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by, recorded_by_name)
+    select t.id, 'payment', 8500, 'cash', public.testing_today() - 42,
+           ((public.testing_today() - 42) + time '12:00') at time zone 'America/New_York',
+           '22222222-2222-4222-8222-222222222222', 'Staff'
+      from public.testing_private t where t.first_name = 'Close' and t.last_name = 'C';
+    select set_config('tkd.actor_label', '', true);
+    commit;`);
+  if (!ok) return;
+  await adminSession(db);
+  const today = await one(db, 'select public.testing_today()::text');
+  const reg = async (last) => (await db.query(`select id::text, version from public.testing_registrations
+      where first_name = 'Close' and last_name = $1`, [last])).rows[0];
+  const day = (ago) => `date '${today}' - ${ago}`;
+  const closeDay = async (ago) => {
+    const d = await asAdmin(db, `select public.finance_day('worcester', ${day(ago)}) as r`);
+    return asAdmin(db, `select public.finance_close_day('worcester', ${day(ago)}, $1, $2, $3, $4, $5, null) as r`,
+      [d.fingerprint, d.totals.cash.cents + d.refunds.cash_cents, d.totals.check.count, d.totals.check.cents, d.totals.card.cents]);
+  };
+  const changed = async (ago) => {
+    const d = await asAdmin(db, `select public.finance_day('worcester', ${day(ago)}) as r`);
+    return `${d.closing?.changed_after}:${d.closing?.changed_count}`;
+  };
+  // A: move, then close (0011)
+  let r = await reg('A');
+  const movedA = await asAdmin(db, `select public.testing_move_to_private($1::uuid, $2, date '${today}' + 7, '17:00') as r`, [r.id, r.version]);
+  // B: move + undo move, then close (0011)
+  r = await reg('B');
+  const movedB = await asAdmin(db, `select public.testing_move_to_private($1::uuid, $2, date '${today}' + 7, '17:00') as r`, [r.id, r.version]);
+  const undoneB = await asAdmin(db, `select public.testing_private_undo_move($1::uuid, 1) as r`, [movedB?.private_id]);
+  const closes = [await closeDay(40), await closeDay(41), await closeDay(42)];
+  record('[0018 closes] moves and closes under 0011',
+    movedA?.status === 'ok' && movedB?.status === 'ok' && undoneB?.status === 'ok' && closes.every((c) => c?.status === 'ok'),
+    JSON.stringify([movedA?.status, movedB?.status, undoneB?.status, ...closes.map((c) => c?.status)]));
+  // the pre-apply check (read-only) lists exactly those closed days,
+  // oldest first: C (42 days ago, a private payment), B (41, an undone
+  // move - no change), A (40, a move before the close)
+  record('0018_preapply_check.sql contains neither "delete" nor "drop" (connector-safe)',
+    !/delete|drop/i.test(read('tests', '0018_preapply_check.sql')));
+  const pre = (await db.query(read('tests', '0018_preapply_check.sql'))).rows
+    .map((x) => `${x.private_payments}/${x.moved_before_close}/${x.undone_moves}`);
+  record('[0018 closes] the pre-apply check lists the three closed days (private / moved before close / undone moves)',
+    JSON.stringify(pre) === JSON.stringify(['1/0/0', '0/0/1', '0/1/0']), JSON.stringify(pre));
+  if (!(await run(db, '[0018 closes] apply 0018', MIGRATION_0018()))) return;
+  record('[0018 closes] A: a move before a close of 0011\'s time -> changed (that close left the money out)',
+    (await changed(40)) === 'true:1', await changed(40));
+  record('[0018 closes] B: move + undo move before a close of 0011\'s time -> NOT changed', (await changed(41)) === 'false:0', await changed(41));
+  record('[0018 closes] C: a private payment on a day closed under 0011 -> changed', (await changed(42)) === 'true:1', await changed(42));
+  // D: under 0018 - move, close, then the event is deleted
+  r = await reg('D');
+  const movedD = await asAdmin(db, `select public.testing_move_to_private($1::uuid, $2, date '${today}' + 7, '17:00') as r`, [r.id, r.version]);
+  const closeD = await closeDay(43);
+  await run(db, '[0018 closes] D: the event is deleted after the move', `
+    begin;
+    select set_config('tkd.action', 'delete_event', true);
+    delete from public.testing_events where name = 'PGlite closes 2';
+    select set_config('tkd.action', '', true);
+    commit;`);
+  record('[0018 closes] D: an event deleted after a move (closed under 0018) -> NOT changed',
+    movedD?.status === 'ok' && closeD?.status === 'ok' && (await changed(43)) === 'false:0', await changed(43));
+  await db.close();
 }
 
 function finish() {

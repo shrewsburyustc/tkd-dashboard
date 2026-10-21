@@ -1014,5 +1014,90 @@ if (location.hash === '#q15') {
     </section>`).join('');
 }
 </script>
+
+<script>
+// ---------- Question 16: a Black Belt check that bounces weeks later ----------
+// From the Black Belt session (2026-10-19). Black Belt stores "returned check" rows; v0.218 there:
+// every payment (incl. a post-dated check) counts on the day it's handed in.
+if (location.hash === '#q16') {
+  document.getElementById('qtitle').innerHTML = 'Finance → Daily report · Question 16: a check that bounces weeks later';
+  document.getElementById('qlead').innerHTML = '<b>The story:</b> on <b>Monday, March 2</b> a family hands in a <b>$900 check</b> for Black Belt testing. The desk records it, counts the drawer (the check is there), and closes the day: everything matches. On <b>Friday, March 20</b> the bank says the check <b>bounced</b> (no money behind it). Staff record “Returned check” in Black Belt. <b>Which day’s report should show the bounce?</b> Amber marks where it shows.';
+  const frame = (title, body) => `<div class="dev dev-pc" style="width:600px"><div class="app"><nav class="rail"><a><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a><a class="on"><i class="ti ti-report-money"></i></a></nav>
+    <div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc"><span class="on">Shrewsbury</span><span>Both</span></div><span class="avatar">JB</span></div>
+    <div class="content"><h1 class="ptitle">Finance</h1><div class="tabs"><span class="on">Daily report</span><span>Settings</span></div><div class="dayrow"><span class="day">${title}</span></div>${body}</div></div></div></div>`;
+  const cardsB = (total, check, sub) => `<div class="cards" style="grid-template-columns:1fr 1fr"><div class="card"><div class="l"><i class="ti ti-sum"></i>Total</div><div class="n">${total}</div>${sub ? `<div class="s">${sub}</div>` : ''}</div><div class="card"><div class="l"><i class="ti ti-receipt"></i>Check</div><div class="n">${check}</div></div></div>`;
+  const closedOk = `<div class="box" style="margin-bottom:12px"><h4><i class="ti ti-lock-check"></i>Day closed<span class="grow"></span><span class="tag ok">Matches</span></h4><div style="font-size:13px">Closed by Staff · checks counted: 1, $900.00</div></div>`;
+  const closedChanged = `<div class="box q" style="margin-bottom:12px"><h4><i class="ti ti-lock-check"></i>Day closed<span class="grow"></span><span class="tag warn"><i class="ti ti-alert-triangle"></i>Changed after closing</span></h4><div style="font-size:13px">Closed by Staff · checks counted: 1, $900.00</div><div class="banner" style="margin:8px 0 0"><i class="ti ti-alert-triangle"></i><span>1 payment changed after closing. The totals no longer match this count.</span></div></div>`;
+  const row = (name, amt, extra, q, strike) => `<table><tbody><tr class="${q ? 'q' : ''}"><td>${strike ? `<span style="text-decoration:line-through;color:var(--text2)">${name}</span>` : name}${extra}</td><td class="sub">Black Belt · Spring 2027 · Payment 2</td><td class="r">${strike ? `<span style="text-decoration:line-through;color:var(--text2)">${amt}</span>` : amt}</td></tr></tbody></table>`;
+
+  const Q16 = [
+    ['A', 'On the day it was handed in (March 2)', false,
+      `<h3>What happens</h3><ul><li>March 2’s report changes: the $900 check is <b>struck through</b> with “Returned by the bank · Mar 20”, and March 2’s total drops by $900.</li><li>March 2 was already closed, so it gets the amber <b>Changed after closing</b> warning: the count staff signed no longer matches the report.</li><li>March 20’s report shows nothing about it.</li></ul>
+       <h3>Pros</h3><ul><li>March 2 shows what the school really ended up keeping that day.</li><li>Same rule as undoing a payment by mistake (v0.199).</li></ul>
+       <h3>Cons</h3><ul><li>A day that was counted correctly shows a warning weeks later, though nobody made a mistake: the check really was in the drawer.</li><li>Easy to miss: nobody looks at March 2 again, and March 20 shows nothing.</li></ul>`,
+      `<div style="display:flex;gap:16px;flex-wrap:wrap"><div><div class="cap">March 2 (opened again after March 20)</div>${frame('Monday, March 2', cardsB('$0.00', '$0.00') + closedChanged + row('Maya Patel', '$900.00', ' <span class="tag neutral">Returned</span><div class="sub" style="font-size:12px">Returned by the bank · recorded Mar 20 by Jeffrey · not counted</div>', true, true))}</div>
+        <div><div class="cap">March 20</div>${frame('Friday, March 20', cardsB('$0.00', '$0.00') + '<div class="box" style="text-align:center"><div style="font-size:14px">No payments recorded today.</div></div>')}</div></div>`],
+    ['B', 'On the day it bounced (March 20)', true,
+      `<h3>What happens</h3><ul><li>March 2 <b>stays exactly as counted</b>: the check shows as paid, the day stays closed and matching.</li><li>March 20’s report gets a <b>Returned checks</b> group: “Maya Patel · −$900.00 · returned by the bank (handed in Mar 2)”. March 20’s Total drops by $900.</li><li>Close the day on March 20 is <b>not affected</b>: no cash or check moved in the drawer that day.</li></ul>
+       <h3>Pros</h3><ul><li>Every closed day stays true to what was really in the drawer; warnings only mean a real counting problem.</li><li>The bounce shows up on the day the school found out, where staff are looking, and it can be followed up with the family.</li><li>Matches how a bank statement shows it.</li></ul>
+       <h3>Cons</h3><ul><li>March 2’s total still includes $900 the school never got. To see what a day finally kept, look at the export (it lists the return too).</li><li>A new group type on the report (only on days with returned checks).</li></ul>`,
+      `<div style="display:flex;gap:16px;flex-wrap:wrap"><div><div class="cap">March 2 — unchanged</div>${frame('Monday, March 2', cardsB('$900.00', '$900.00') + closedOk + row('Maya Patel', '$900.00', '', false, false))}</div>
+        <div><div class="cap">March 20</div>${frame('Friday, March 20', cardsB('−$900.00', '$0.00', 'after a $900.00 returned check') + `<div class="q" style="padding:2px"><div style="font-size:13px;font-weight:500;padding:6px 0">Returned checks <span class="sub" style="font-weight:400">· 1 · −$900.00</span></div>${row('Maya Patel', '−$900.00', ' <span class="tag warn"><i class="ti ti-alert-triangle"></i>Returned check</span><div class="sub" style="font-size:12px">Returned by the bank · handed in Mon, Mar 2 · recorded by Jeffrey</div>', false, false)}</div>`)}</div></div>`],
+  ];
+  document.getElementById('opts').innerHTML = Q16.map(([k, title, rec, ex, html]) => `
+    <section class="${rec ? 'rec' : ''}">
+      <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+      <div class="explain" style="max-width:1280px;margin-bottom:12px">${ex}</div>${html}
+    </section>`).join('');
+}
+</script>
+
+<script>
+// ---------- Question 17: acknowledging the admin's "earlier days weren't closed" line on Home ----------
+// Jeffrey (2026-10-20): the admin line on Home has no way to say "OK".
+if (location.hash === '#q17') {
+  document.getElementById('qtitle').innerHTML = 'Finance → Home · Question 17: an “OK” for the unclosed-days reminder';
+  document.getElementById('qlead').innerHTML = 'Admins see on Home: “21 earlier days at Worcester weren’t closed, the first on Fri, Sep 25. Open History ›”. Today it can’t be dismissed. <b>What should “OK” do?</b> Left: Home with the new OK. Right: what you see afterwards. Amber marks the change. (Staff never see this line; today’s own reminder “Today’s drawer isn’t closed yet” is not affected.)';
+  const line = (q, extra) => `<div class="${q ? 'q' : ''}" style="padding:2px;max-width:640px"><div class="banner" style="margin:0;min-height:44px"><i class="ti ti-alert-triangle"></i><span class="grow">21 earlier days at Worcester weren’t closed, the first on Fri, Sep 25.</span><span style="text-decoration:underline;white-space:nowrap">Open History</span><i class="ti ti-chevron-right"></i>${extra || ''}</div></div>`;
+  const okBtn = (label) => `<span class="btn" style="height:28px;margin-left:8px;background:#fff">${label}</span>`;
+  const home = (body, note) => `<div class="dev dev-pc" style="width:600px"><div class="app" style="min-height:250px"><nav class="rail"><a class="on"><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a><a><i class="ti ti-report-money"></i></a></nav>
+    <div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc"><span class="on">Worcester</span><span>Both</span></div><span class="avatar">JB</span></div>
+    <div class="content"><div style="font-size:20px;font-weight:500">Good morning</div><div class="hint" style="font-size:13px;margin-bottom:16px">Tuesday, October 20, 2026 · Worcester</div>${body}${note ? `<div class="hint" style="margin-top:10px">${note}</div>` : ''}</div></div></div></div>`;
+  const hist = `<div class="dev dev-pc" style="width:600px"><div class="app"><nav class="rail"><a><i class="ti ti-home"></i></a><a><i class="ti ti-certificate"></i></a><a class="on"><i class="ti ti-report-money"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><div class="loc"><span class="on">Worcester</span><span>Both</span></div><span class="avatar">JB</span></div>
+    <div class="content"><h1 class="ptitle">Finance</h1><div class="tabs"><span class="on">Daily report</span><span>Settings</span></div><div class="dayrow"><span class="day">History · September 2026</span></div>
+    <table><thead><tr><th>Day</th><th class="r">Total</th><th>Status</th></tr></thead><tbody>
+    <tr><td>Mon, Sep 28</td><td class="r">$140.00</td><td class="q"><span class="tag neutral">Won’t be closed</span><div class="hint">Marked by Jeffrey · Oct 20 · “Before Finance was used”</div></td></tr>
+    <tr><td>Fri, Sep 25</td><td class="r">$65.00</td><td class="q"><span class="tag neutral">Won’t be closed</span><div class="hint">Marked by Jeffrey · Oct 20 · “Before Finance was used”</div></td></tr>
+    </tbody></table></div></div></div></div>`;
+  const dlg = `<div class="dev dev-pc" style="width:600px;position:relative"><div class="app" style="min-height:300px"><nav class="rail"><a class="on"><i class="ti ti-home"></i></a></nav><div class="app-col"><div class="topbar"><span class="grow"></span><span class="avatar">JB</span></div><div class="content">${line(false)}</div></div></div>
+    <div style="position:absolute;inset:0;background:rgba(0,0,0,.35)"></div><div class="q" style="position:absolute;left:60px;right:40px;top:60px;background:#fff;border-radius:12px;padding:16px"><b style="font-size:16px">Mark 21 days as won’t be closed?</b>
+    <div style="font-size:13px;margin:8px 0">Worcester · Sep 25 – Oct 16. They leave this reminder and show “Won’t be closed” in History. Their payments don’t change. You can still close or reopen any of them later.</div>
+    <div class="lbl">Reason (shown in History)</div><div class="input" style="width:100%;margin-bottom:12px">Before Finance was used</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><span class="btn">Cancel</span><span class="btn btn-primary">Mark 21 days</span></div></div></div>`;
+
+  const Q17 = [
+    ['A', 'OK hides it until tomorrow', false,
+      `<h3>What it does</h3><ul><li>An <b>OK</b> button on the line. Pressed, the line goes away for the rest of today on this device. Tomorrow it comes back if any of those days are still not closed.</li></ul>
+       <h3>Pros</h3><ul><li>Simplest. No database change, nothing to build beyond the button.</li><li>The reminder never disappears for good, so missed days aren’t forgotten.</li></ul>
+       <h3>Cons</h3><ul><li>Old days you’ll never close keep coming back every morning — the nagging you want to stop.</li><li>Only on this device (another PC or phone still shows it).</li></ul>`,
+      `<div style="display:flex;gap:16px;flex-wrap:wrap"><div><div class="cap">Home, before</div>${home(line(true, okBtn('OK')))}</div><div><div class="cap">After OK (today)</div>${home('', 'The line is gone until tomorrow.')}</div></div>`],
+    ['B', 'OK hides it until a NEW unclosed day appears', true,
+      `<h3>What it does</h3><ul><li><b>OK</b> remembers which days you’ve seen. The line stays away while those are the only unclosed days.</li><li>As soon as a <b>new</b> day isn’t closed (e.g. tomorrow’s drawer is missed), the line comes back, saying how many are new: “1 new earlier day at Worcester wasn’t closed (21 seen before)”.</li><li>Closing old days later still works as now; History is unchanged and still shows “Not closed” for them.</li></ul>
+       <h3>Pros</h3><ul><li>Stops the daily nagging, but never hides a <b>new</b> missed close.</li><li>No database change: quick to build and nothing to paste.</li></ul>
+       <h3>Cons</h3><ul><li>Remembered on this device / browser (like the default location), so each admin PC says OK once.</li><li>No record of the decision; History still says “Not closed” for those days.</li></ul>`,
+      `<div style="display:flex;gap:16px;flex-wrap:wrap"><div><div class="cap">Home, before</div>${home(line(true, okBtn('OK')))}</div><div><div class="cap">Later, when a new day isn’t closed</div>${home(`<div class="q" style="padding:2px;max-width:640px"><div class="banner" style="margin:0;min-height:44px"><i class="ti ti-alert-triangle"></i><span class="grow">1 new earlier day at Worcester wasn’t closed: Mon, Oct 19 (21 seen before).</span><span style="text-decoration:underline;white-space:nowrap">Open History</span><i class="ti ti-chevron-right"></i>${okBtn('OK')}</div></div>`)}</div></div>`],
+    ['C', 'Mark old days as “Won’t be closed” (recorded, everyone sees it)', false,
+      `<h3>What it does</h3><ul><li>The line gets <b>Mark as won’t be closed…</b> (and History gets it per day). A dialog asks for a short reason, then marks those days for <b>everyone</b>: they leave the reminder and History shows a gray <b>Won’t be closed</b> tag with who, when and why. Logged in the change log.</li><li>Payments are untouched; an admin can still close or reopen those days later.</li></ul>
+       <h3>Pros</h3><ul><li>A real, shared, recorded decision; History tells the true story.</li><li>Works on every device and for every admin at once.</li></ul>
+       <h3>Cons</h3><ul><li>Needs a database change: a new migration (number from Main), which must come after camps’ 0017 and Finance’s 0018 because it touches the same functions — so it can only go live after those.</li><li>More to build, review and test; one more dialog.</li></ul>`,
+      `<div style="display:flex;gap:16px;flex-wrap:wrap"><div><div class="cap">Mark as won’t be closed…</div>${dlg}</div><div><div class="cap">History afterwards</div>${hist}</div></div>`],
+  ];
+  document.getElementById('opts').innerHTML = Q17.map(([k, title, rec, ex, html]) => `
+    <section class="${rec ? 'rec' : ''}">
+      <h2><span class="letter">${k}</span>${title}${rec ? '<span class="rec-tag">Recommended</span>' : ''}</h2>
+      <div class="explain" style="max-width:1280px;margin-bottom:12px">${ex}</div>${html}
+    </section>`).join('');
+}
+</script>
 </body>
 </html>

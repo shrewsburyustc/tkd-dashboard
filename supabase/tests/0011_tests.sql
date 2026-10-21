@@ -1670,7 +1670,8 @@ begin
   -- the two date indexes on the payment tables (speed, 0011 section 3)
   perform pg_temp.t_eq('F11 the paid_on indexes', (select string_agg(i.indexname || ' on ' || i.tablename || ': '
       || regexp_replace(i.indexdef, '^.* USING ', ''), ', ' order by i.indexname collate "C")
-      from pg_indexes i where i.schemaname = 'public' and i.indexname like 'finance\_%\_paid\_on\_idx'),
+      from pg_indexes i where i.schemaname = 'public'
+        and i.indexname in ('finance_star_payments_paid_on_idx', 'finance_testing_payments_paid_on_idx')),   -- (later migrations may add more)
     'finance_star_payments_paid_on_idx on star_payments: btree (paid_on), '
     || 'finance_testing_payments_paid_on_idx on testing_payments: btree (paid_on)');
   -- the seed
