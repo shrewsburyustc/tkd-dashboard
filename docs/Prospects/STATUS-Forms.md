@@ -139,3 +139,5 @@ Jeffrey made a test form ("Test - Delete Me", `/f/test-delete-me`, Live), set `P
 
 After the `db.js` fix went live (in `main`), Jeffrey's test sign-ups on `/f/test-delete-me` were saved (two `ok` attempts), and an admin then deleted the two test prospects in the dashboard (family history removed with them; two counts-only rows in change_log, as 0015 intends). **Rate limiting (2026-10-21, rulebook v0.410, Color Belt branch):** no `RATE_LIMITER` binding — Pages Functions can't have one — so it is not a go-live step; protection = memory counter, Turnstile, `forms_registrar` limits, `PUBLIC_FORMS`; WAF rule once the school has its own domain. Still open: the two-connection race test (two phones taking the last spot at the same moment); the real (non-test) form with the school's waiver wording; Shrewsbury's schedule.
 
+**2026-10-21 (Jeffrey):** the remaining tests (the two-connection race test, the kiosk on the real tablet) are done as the system is used; no separate test session. Building for this branch is finished.
+
