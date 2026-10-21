@@ -1,7 +1,7 @@
 # TKD Dashboard — Design Guidelines
 
 **School:** Jae H. Jeong's U.S. Taekwondo Center (U.S.T.C.) — Worcester and Shrewsbury, MA
-**Version:** 0.911 (draft) · **Last updated:** 2026-10-20
+**Version:** 0.914 (draft) · **Last updated:** 2026-10-21
 **Status:** Design outline only. Nothing in this document authorizes building or deploying.
 
 > **How to use this file:** Upload it at the start of any chat about the dashboard. Every screen, component, or feature built for the dashboard must follow the rules below. If a request conflicts with a rule, flag the conflict before building. Rules marked **(provisional)** depend on an open decision in section 10.
@@ -163,7 +163,12 @@ Section icons are added to this table only when that section is added (rule P7).
 | Close the day… (Finance: opens the counting dialog; decided v0.207 / v0.800, added to the map v0.301) | `ti-cash-register` |
 | Close the day (the dialog's button) / Day closed (decided v0.207, added to the map v0.301) | `ti-lock-check` |
 | Reopen day (Finance, admins; decided v0.207, added to the map v0.301) | `ti-lock-open` |
-| Edit payment (roster ⋯ menu: Color Belt events and Private testing; decided v0.409, added to the map v0.305) | `ti-cash-edit` |
+| Edit payment (roster ⋯ menu: Color Belt events and Private testing; decided v0.409, added to the map v0.305; also Black Belt, v0.914) | `ti-cash-edit` |
+| Record payment (Black Belt Candidates: row button, detail, ⋯; decided v0.914) | `ti-cash-plus` — not `ti-cash` (cash only) and not `ti-plus` (Add new) |
+| Change plan or Kukkiwon (Black Belt; decided v0.914) | `ti-switch-horizontal` |
+| Record refund (Black Belt, admins; decided v0.914) | `ti-receipt-refund` |
+| Mark check returned (Black Belt, admins; decided v0.914) | `ti-ban` |
+| Remove / withdraw a candidate (Color Belt Withdraw, Black Belt Remove candidate; added to the map v0.914) | `ti-user-minus` |
 
 **Objects**
 
@@ -172,6 +177,7 @@ Section icons are added to this table only when that section is added (rule P7).
 | Single student / profile | `ti-user` |
 | Location (Worcester / Shrewsbury) | `ti-map-pin` |
 | Unsaved / error | `ti-alert-triangle` |
+| Not paid card (Black Belt Candidates roster; decided v0.914) | `ti-circle-x` |
 | Staff accounts (admin) | `ti-user-cog` — not `ti-users`, which is kept free |
 | Settings (admin) | `ti-settings` |
 | A money total — Finance's **Total** card and every **Payments recorded** card (Color Belt, Star, Camps, Black Belt rosters) (decided v0.207 / v0.303) | `ti-sum` |
@@ -665,6 +671,9 @@ To be decided one at a time, each with visual options (rule P3):
 | Black Belt testing database: build contract approved (decided v0.909) | Jeffrey approved `docs/Dashboard Docs/Build contracts/CONTRACT-0016.md` (2026-10-19) after its security review: migration `0016_black_belt.sql` (number still to be reserved with the Main session), its tests, fingerprints and PGlite step, built and tested locally only. Open items: **OI-7** no hard daily cap on online registrations per cycle (the 20-an-hour-per-connection limit and the bot check stay; the daily count is logged and the database size is checked at CP3 / CP5). **OI-8** Delete permanently (only for a candidate with no payments, meant for fake and test registrations) also deletes their online-signed waiver; real families are withdrawn, which keeps everything. OI-1–OI-6 use the contract's defaults (opening registration waits for the real waiver text; a "Waiver signed on paper" tick for the parent's-signature warning, shown at CP2; school phones as constants; a refund copies the school and cycle from the latest live payment; Turnstile action made a parameter; two keep-years fields, shown at CP2). Nothing is applied to Supabase without Jeffrey's OK. |
 | Black Belt testing CP1: starting data checked (v0.910) | Jeffrey checked the seed of migration 0016 (`supabase/tests/0016_seed_review.txt`, shown as pictures `docs/Testing/Black Belt Testing/images/BB-CP1-Seed-1…3.png`) against the Fall 2026 Sheet on 2026-10-20 and OK'd it: testing days, places and deadlines, the two payment plans with Dan 1–4 prices, Kukkiwon fees, the requirements sheet (grade scales without C+, Physical, Technical, Curriculum, Other requirements, pass marks), the placeholder waiver and empty keep-years. Extra points stay marked "to confirm with Master Jeong" (4th Dan uses the 3rd Dan numbers for now). Next: CP2, the preview build (B1 cycles, Rubric and prices, family form; B2 candidates and payments) on the fake database. Nothing applied to Supabase. |
 | Black Belt testing CP2 for B1, and the temporary way in (decided v0.911) | Jeffrey (2026-10-20) walked through B1 in the preview and OK'd it: Cycles (list, Add/Edit cycle with prices set at save, testing days, Delete), Rubric and prices (waiver versions, keep-years), Registration links with QR codes, the cycle page, and the family form (Form 1–9) with its public Function (off until CP5), as built from `CONTRACT-0016-B1.md` after its security and design reviews. Accepted differences: browser date fields until Star's date picker is on `main`; plan names typed only in Add plan (no rename); wording not in the mockups marked in the two `text.js` files. **OP-1: option A.** Until Star's Testing chooser is on `main`, Black Belt is reached from a temporary "Black Belt testing ›" link at the top of Testing, shown in the preview only; when Star merges, step C2 swaps it for the chooser's third row, hover-menu item and page addresses, reviewed and shown to Jeffrey then. Next: B2 (candidates and payments). |
+| Black Belt testing: Undo payment asks first (decided v0.912; changes Candidates 5) | B2 open point OP-B1, Jeffrey chose **A** (2026-10-21). Payments are never deleted (v0.904) and the database refuses to undo an undo, so the toast's Undo can't take an undo back. An admin's **Undo payment** (payment line ⋯) first asks "Undo Payment 2 · $290? It stays in the history, crossed out, with a −$290 line. This can't be taken back; if it was right, record it again." → **Undo payment** / Cancel; then the toast "Payment 2 undone · $290 · Alex Kim" **without Undo**. Recording a payment keeps its 10-second Undo in the toast (staff and admins), and Edit payment keeps its Undo. Rejected: B, undo at once and let the toast's Undo record the payment again (three lines, and the payment's date moves to today on the Daily report). |
+| Black Belt testing: Undo after Add candidate is for admins only (decided v0.913; changes Candidates 7) | B2 open point OP-B2, Jeffrey chose **A** (2026-10-21). Removing a candidate is admin-only (v0.210), so after **Add candidate** at the desk admins see "Ethan Park added · BB-5107 · **Undo**" (Delete permanently; nothing is paid yet) and staff see "Ethan Park added · BB-5107" without Undo. Staff fix a mistake with Edit details; a double entry shows in the amber possible-duplicate box for an admin. Rejected: B, a 10-second Undo for staff too (a database change to 0016 and a new exception to the admin-only rule). |
+| Black Belt testing: payment icons (decided v0.914; changes the Candidates mockups) | B2 open point OP-B3, Jeffrey chose **A** (2026-10-21). `ti-cash` means cash only (v0.303), so the mockups' `ti-cash` goes: **Record payment** `ti-cash-plus`, **Edit payment** `ti-cash-edit` (as Color Belt, v0.409), **Not paid** card `ti-circle-x`. Also in the icon map now: Change plan or Kukkiwon `ti-switch-horizontal`, Record refund `ti-receipt-refund`, Mark check returned `ti-ban`, Remove candidate `ti-user-minus`. The cards keep `ti-check` (Paid in full) and `ti-clock` (Paying on schedule). Rejected: B, plain `ti-plus` / `ti-edit` (Record payment would look like Add candidate). |
 | Approved 2026-10-16 (v0.26) | (1) **No PIN set:** when the 45-minute lock (or Lock now) happens to someone without a PIN, there is no lock screen — they are signed out to the sign-in screen with an amber note "Signed out after 45 minutes idle. Set a PIN to unlock faster." (2) **This device:** clicking it expands a Worcester / Shrewsbury choice inside the account menu; one click saves and closes (reversible, so no Save step). Sets the device's default school only; the top switcher still offers Both. (3) **Borders:** control borders use `#8F8F8A` (3:1); dividers stay `#E5E5E2`. Items (1) and (3) are coded with the Set PIN build. |
 
 ## 11. Changelog
@@ -955,3 +964,6 @@ To be decided one at a time, each with visual options (rule P3):
 | 0.909 | 2026-10-19 | Black Belt testing database: CONTRACT-0016 approved; OI-7 no daily cap, OI-8 Delete permanently also deletes the online waiver (10b). |
 | 0.910 | 2026-10-20 | Black Belt testing CP1: migration 0016's starting data checked against the Fall 2026 Sheet and OK'd (10b). |
 | 0.911 | 2026-10-20 | Black Belt testing: CP2 for B1 OK'd; OP-1 = A, a temporary preview-only way in until Star's chooser is on `main` (10b). |
+| 0.912 | 2026-10-21 | Black Belt testing OP-B1: Undo payment asks first; its toast has no Undo (10b). |
+| 0.913 | 2026-10-21 | Black Belt testing OP-B2: Undo after Add candidate for admins only (10b). |
+| 0.914 | 2026-10-21 | Black Belt testing OP-B3: Record payment ti-cash-plus, Edit payment ti-cash-edit, Not paid ti-circle-x; Black Belt's new icons added to the icon map (10b). |

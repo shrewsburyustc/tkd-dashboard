@@ -1,19 +1,22 @@
 // icons.js — every icon the Black Belt Candidates screens use, in one place.
 // Why it exists: contract CONTRACT-0016-B2 §3.11 and open point OP-B3. The approved mockups drew
 // ti-cash on Record payment and the Not paid card, but the rulebook's icon map (v0.303) now says
-// ti-cash means CASH ONLY. The working default below uses ti-plus and ti-circle-x instead; if
-// Jeffrey decides differently at CP2, only this file changes.
+// ti-cash means CASH ONLY. Jeffrey chose OP-B3 option A (rulebook v0.914): payment actions use the
+// banknote family like Color Belt (ti-cash-plus to record, ti-cash-edit to edit, as v0.409) and
+// the Not paid card uses ti-circle-x. Only this file decides the icons.
 // Tabler outline icons only (rulebook 2.3). The comment after each line is its map name.
 import {
   IconAlertTriangle, // ti-alert-triangle — Late card, warnings
   IconArrowBackUp, // ti-arrow-back-up — Undo, Restore
   IconBan, // ti-ban — Mark check returned
+  IconCashEdit, // ti-cash-edit — Edit payment (as Color Belt, v0.409)
+  IconCashPlus, // ti-cash-plus — Record payment (OP-B3, v0.914)
   IconCheck, // ti-check — Save / done, Paid in full card
-  IconCircleX, // ti-circle-x — Not paid card (OP-B3, in place of ti-cash)
+  IconCircleX, // ti-circle-x — Not paid card (OP-B3, v0.914)
   IconClock, // ti-clock — Paying on schedule card
   IconDots, // ti-dots — More actions (⋯)
-  IconEdit, // ti-edit — Edit details, Edit payment
-  IconPlus, // ti-plus — Add candidate, Record payment (OP-B3, in place of ti-cash)
+  IconEdit, // ti-edit — Edit details
+  IconPlus, // ti-plus — Add candidate
   IconPrinter, // ti-printer — Print receipt
   IconReceiptRefund, // ti-receipt-refund — Record refund
   IconSearch, // ti-search — Search candidates
@@ -25,9 +28,9 @@ import {
 
 export const ICONS = {
   add: IconPlus,
-  recordPayment: IconPlus,
+  recordPayment: IconCashPlus,
   editDetails: IconEdit,
-  editPayment: IconEdit,
+  editPayment: IconCashEdit,
   changePlan: IconSwitchHorizontal,
   refund: IconReceiptRefund,
   returned: IconBan,
