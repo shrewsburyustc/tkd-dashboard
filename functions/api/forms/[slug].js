@@ -26,7 +26,10 @@
 //   CLIENT_KEY_SECRET    secret for the anonymous client key (functions/_lib/forms/clientKey.js)
 //   RATE_LIMITER         OPTIONAL Cloudflare Rate Limiting binding. If it's there, it counts
 //                        requests per client; if not, a best-effort counter in memory does
-//                        (functions/_lib/forms/rateLimit.js explains the difference)
+//                        (functions/_lib/forms/rateLimit.js explains the difference).
+//                        Not set up, on purpose (rulebook v0.410): Pages Functions can't have
+//                        this binding (Workers only); the memory counter, Turnstile, the
+//                        database's per-client limit and PUBLIC_FORMS are the protection.
 // Any missing setting = every answer is "not open" (fail closed).
 //
 // Emails: none for now (rulebook v0.601). They would be added later in forms.js (a Cloudflare
