@@ -90,7 +90,7 @@ Color Belt testing and Star testing are built at the same time in separate Claud
   | 0013 | camps | `camps` |
   | 0014 | Color Belt private testing (phase 4) | `main` (live) |
   | 0015 | family history | `claude/prospect-form-system-cd893d` |
-  | 0016 | black belt (reserved 2026-10-19, CONTRACT-0016) | `black-belt` |
+  | 0016 | black belt (reserved 2026-10-19, CONTRACT-0016) — applied 2026-10-21 | `main` (live) |
   | 0017 | camps → Finance: camp payments in the Daily report (`0017_finance_camps.sql`, rulebook v0.707) | `camps` |
   | 0018 | Finance: private testing payments in the Daily report (rulebook v0.407) — **runs after 0017 and must build on 0017's version of the Finance functions it replaces** — applied 2026-10-20 | `main` (live) |
   | 0019 | school phone in Settings → Schools (was an uncommitted `0016_school_phone.sql`) | `claude/prospect-form-system-cd893d` |
