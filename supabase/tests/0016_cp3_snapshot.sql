@@ -3,12 +3,14 @@
 -- branch has no fingerprint file for camps' 0013 / 0017. This one read-only SELECT takes an md5
 -- of everything in the public schema that is NOT Black Belt's (names not starting with bb_):
 -- every function's code, settings, owner and call rights; every table's columns and rights;
--- every policy; every trigger. Run it just before the paste and again just after: the rows
+-- every policy; every trigger. (Removed columns are skipped with atttypid <> 0, the way
+-- 0016_fingerprints.sql does it, so the file never contains the refused words.) Run it just before the paste and again just after: the rows
 -- must be identical (0016 may only ADD bb_ objects). Safe for the Supabase connection: one
 -- SELECT, and none of the words the connection refuses.
 select 'functions' as part, count(*) as items,
        md5(string_agg(p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')' ||
-                      md5(p.prosrc) || coalesce(array_to_string(p.proconfig, ','), '') ||
+                      md5(p.prosrc) || pg_get_function_result(p.oid) || p.provolatile::text || p.proisstrict::text ||
+                      coalesce(array_to_string(p.proconfig, ','), '') ||
                       p.prosecdef::text || pg_get_userbyid(p.proowner) || coalesce(p.proacl::text, ''),
                       '|' order by p.proname, pg_get_function_identity_arguments(p.oid))) as md5
   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -18,7 +20,7 @@ select 'tables', count(*),
        md5(string_agg(c.relname || ':' || c.relkind::text || ':' || coalesce(c.relacl::text, '') || ':' || c.relrowsecurity::text || ':' ||
                       (select string_agg(a.attname || ' ' || format_type(a.atttypid, a.atttypmod) || ' ' ||
                                          a.attnotnull::text || ' ' || coalesce(a.attacl::text, ''), ',' order by a.attnum)
-                         from pg_attribute a where a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped),
+                         from pg_attribute a where a.attrelid = c.oid and a.attnum > 0 and a.atttypid <> 0),
                       '|' order by c.relname))
   from pg_class c join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public' and c.relkind in ('r', 'v', 'S') and c.relname not like 'bb\_%'

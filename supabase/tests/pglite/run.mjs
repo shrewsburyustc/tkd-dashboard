@@ -2516,6 +2516,7 @@ async function stepBlackBelt(db) {
   // 15a. the fingerprints file must stay runnable through the connector
   const printsText = read('tests', '0016_fingerprints.sql');
   record('0016_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)', !/delete|drop/i.test(printsText));
+  record('0016_cp3_snapshot.sql contains neither "delete" nor "drop" (connector-safe)', !/delete|drop/i.test(read('tests', '0016_cp3_snapshot.sql')));
 
   // 15b. apply 0016; the earlier migrations' fingerprints don't move
   const earlierBefore = await before16Fingerprints(db);

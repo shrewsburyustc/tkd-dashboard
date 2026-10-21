@@ -1299,6 +1299,8 @@ Only if Jeffrey decides to remove Black Belt testing completely: put the app bac
 
 **Why only before real money exists:** the payment rows can never be removed one by one (the guard refuses every row removal, on purpose); this script removes the payment **table** as a whole, which no app path can do.
 
+**After an undo and a second paste:** because the history is kept, `0016_tests.sql` test T3a then finds the seed recorded twice and fails; adjust T3a (count only the newest seed batch) before re-running the tests.
+
 **What stays:** the `change_log` rows Black Belt wrote (the history is append-only — the DOB, email, signature and signer's name are masked there), and Black Belt's rows in `testing_public_attempts`, which age out within 2 days. Nothing from 0001–0006, 0010 or 0011 is touched.
 
 ```sql
