@@ -2211,7 +2211,7 @@ Tested in PGlite on every run (both steps exactly as written here): afterwards t
 
 ## Migration 0022: camps weekly pricing and longer camps
 
-**Status: NOT applied yet** (built on `camps`, rulebook v0.717). Apply it only with Jeffrey's OK, **together with the app version that knows the weekly grid** (the Camps screens, the family form and its Function change with it — see `docs/Camps/TKD-Camps-Weekly-Pricing.md`). The app before 0022 still loads after it (every old answer key is kept), but its Add / Edit camp would send a grid of the old size, which 0022 refuses.
+**Status: APPLIED 2026-10-21** (Jeffrey, SQL Editor; production had no camps or templates, so section 6 changed no rows). Claude read-only: 0022 fingerprints 71/71 identical to the tested copy (md5 d849cf8b…), security advisor nothing new; Jeffrey ran 0022_tests → ALL 0022 TESTS PASSED, 0 camps left. (Built on `camps`, rulebook v0.717.) Apply it only with Jeffrey's OK, **together with the app version that knows the weekly grid** (the Camps screens, the family form and its Function change with it — see `docs/Camps/TKD-Camps-Weekly-Pricing.md`). The app before 0022 still loads after it (every old answer key is kept), but its Add / Edit camp would send a grid of the old size, which 0022 refuses.
 
 **Production order:** … 0013 + 0017 (camps, live) → 0018 → 0016 → 0021 (live) → **0022**. It needs 0013 (it stops with a clear message if 0013 is missing) and does not touch 0017's or 0018's Finance functions.
 
