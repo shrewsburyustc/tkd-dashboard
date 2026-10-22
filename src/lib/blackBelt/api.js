@@ -55,6 +55,9 @@ const IN_CHUNK = 80;
 const failure = (error) => ({ status: 'error', error });
 const unexpected = (what) => failure(new Error(`Unexpected answer from ${what}`));
 const isText = (v) => typeof v === 'string' && v.length > 0;
+// A database id (uuid). A cycle address typed or bookmarked wrong (C2, v0.937) is "not found"
+// instead of a database error.
+const isUuid = (v) => typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 const isInt = (v) => Number.isInteger(v);
 const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
@@ -246,6 +249,7 @@ export async function loadCycles() {
 export async function loadCycle({ cycleId } = {}) {
   try {
     if (!isText(cycleId)) return failure(new Error('No cycle id'));
+    if (!isUuid(cycleId)) return { status: 'not_found' };
     if (!supabase) return failure(new Error('No connection is set up'));
     const today = schoolToday();
     const [cycleRes, dayRes, planRes, feeRes, candRes, denied] = await Promise.all([
@@ -459,27 +463,6 @@ export async function setKeepYears({ expectedVersion, afterLastDay, after18, con
     (d) => (isInt(d.version) && isInt(d.removed_count) ? { version: d.version, removedCount: d.removed_count } : null),
     (status, d) => (status === 'confirm_needed' ? (isInt(d.remove_count) ? { removeCount: d.remove_count } : undefined) : null),
   );
-}
-
-// The Testing chooser's "Next: Apr 3 · both schools" line: the earliest testing day of any cycle
-// from today on. Reads only the dates (no names, and no purge from the chooser).
-// → { status:'ok', next: { date } | null } · 'no_access' · 'error'
-export async function loadNextBlackBeltDay() {
-  try {
-    if (!supabase) return failure(new Error('No connection is set up'));
-    const today = schoolToday();
-    const [dayRes, denied] = await Promise.all([
-      supabase.from('bb_cycle_days').select('day_date').gte('day_date', today).order('day_date', { ascending: true }),
-      accessCheck(),
-    ]);
-    if (denied) return denied;
-    if (dayRes?.error) return failure(dayRes.error);
-    if (!Array.isArray(dayRes.data)) return unexpected('bb_cycle_days');
-    const dates = dayRes.data.map((d) => d.day_date).filter((d) => isIsoDate(d) && d >= today).sort();
-    return { status: 'ok', next: dates.length > 0 ? { date: dates[0] } : null };
-  } catch (error) {
-    return failure(error);
-  }
 }
 
 // =====================================================================================
