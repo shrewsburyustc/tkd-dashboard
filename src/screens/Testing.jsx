@@ -221,12 +221,44 @@ export default function Testing({
     if (next === 'star') loadStarTesting?.(); // start loading Star's screens straight away
     focusBackLinkRef.current = true;
     setChooserFocus(null);
+    // Black Belt testing (Jeffrey, 2026-10-22: the chooser's third row) has no address of its own
+    // yet: it shows on Color Belt's page step, the same way its old link opened it, so browser Back
+    // comes back to the chooser. Color belt testing never opens on top of Black Belt.
+    if (next === 'blackBelt') {
+      setShowBlackBelt(true);
+      onOpenTestingPage('colorBelt');
+      return;
+    }
+    if (next === 'colorBelt') setShowBlackBelt(false);
     onOpenTestingPage(next);
   }
   function backToChooser() {
     setChooserFocus(page);
     onOpenTestingPage('chooser');
   }
+  // Black Belt's own ← (switch on): back to the chooser, its row focused.
+  function blackBeltBack() {
+    setShowBlackBelt(false);
+    if (!STAR_TESTING_ON) return;
+    setChooserFocus('blackBelt');
+    onOpenTestingPage('chooser');
+  }
+  // Leaving the Color Belt page step (Back to the chooser, or Star testing) closes Black Belt, so
+  // coming back to Color belt testing later shows Color Belt, not Black Belt.
+  // (Also when a guarded move to Color Belt was refused and the chooser is still showing.)
+  useEffect(() => {
+    if (STAR_TESTING_ON && page !== 'colorBelt' && showBlackBelt) setShowBlackBelt(false);
+    // (setShowBlackBelt only changes this component's own state)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, showBlackBelt]);
+  // Leaving Testing altogether (Home, another section) with the switch on: Black Belt is closed, so
+  // Color belt testing never reopens as Black Belt (the chooser is the way back into Black Belt).
+  useEffect(
+    () => () => {
+      if (STAR_TESTING_ON) blackBeltOpen = false;
+    },
+    [],
+  );
   useEffect(() => {
     if (page === 'chooser' || !focusBackLinkRef.current) return undefined;
     // Star's page may still be loading its screens: look for its back link every 50ms, up to 3s.
@@ -281,16 +313,15 @@ export default function Testing({
     );
   }
 
-  // Black Belt testing (v0.917): reached from the link at the top of the Color Belt page,
-  // in every build — with the Star switch on too, until Black Belt's step C2 adds it to the
-  // Testing chooser.
+  // Black Belt testing (v0.917): with the Star switch off, reached from the link at the top of the
+  // Color Belt page (every build); with it on, from the chooser's third row (Jeffrey, 2026-10-22).
   if (BlackBeltTesting && showBlackBelt && !eventId) {
     const { screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange } = tabProps;
     return (
       <Suspense fallback={null}>
         <BlackBeltTesting
           isAdmin={isAdmin}
-          onBack={() => setShowBlackBelt(false)}
+          onBack={blackBeltBack}
           screenLocked={screenLocked}
           onNoAccess={onNoAccess}
           onRefreshProfile={onRefreshProfile}
@@ -302,8 +333,9 @@ export default function Testing({
       </Suspense>
     );
   }
-  // The preview-only way in (see the header comment).
-  const blackBeltLink = BlackBeltTesting ? (
+  // The way in from the Color Belt page (see the header comment) — only while the Star switch is
+  // off; with it on, the chooser has a Black Belt row instead.
+  const blackBeltLink = BlackBeltTesting && !STAR_TESTING_ON ? (
     <button type="button" className="link-button ev-back" onClick={() => setShowBlackBelt(true)}>
       {/* ti-award = Black Belt testing (rulebook icon map); ti-chevron-right = go there */}
       <IconAward size={16} aria-hidden="true" />

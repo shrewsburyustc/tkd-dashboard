@@ -9,6 +9,7 @@
 //   [ti-star]        Star testing               >  (+ "Next: Nov 14 · both schools" once Star has an
 //                                                   upcoming event — Star phase 2; v0.59's example:
 //                                                   every Star event is for both schools, v0.58)
+//   [ti-award]       Black Belt testing         >  (Jeffrey, 2026-10-22; no "Next:" line yet)
 // No line at all when a testing has no upcoming event (v0.59, v0.177 — no filler text).
 // The same for staff and admins, and it works on Both (it reads Color Belt's events of both schools;
 // Star events are joint for both schools, so the switcher doesn't change Star's line).
@@ -19,13 +20,13 @@
 //   screenLocked    true while the lock screen shows (nothing is read then)
 //   onNoAccess()    the database said this sign-in is locked: lock the screen (App.jsx), like every
 //                   other Testing read
-//   onOpen(page)    open 'colorBelt' or 'star' (App.jsx adds a browser Back step)
+//   onOpen(page)    open 'colorBelt', 'star' or 'blackBelt' (App.jsx adds a browser Back step)
 //   focusPage       the row to give keyboard focus to when this page appears (e.g. after "← Testing"
 //                   from Star testing, focus lands back on the Star row), or null
 import { useEffect, useRef, useState } from 'react';
-import { IconCertificate, IconChevronRight, IconStar } from '@tabler/icons-react';
+import { IconAward, IconCertificate, IconChevronRight, IconStar } from '@tabler/icons-react';
 import { loadNextColorBeltEvent, loadNextStarEvent } from '../../../lib/testingChooserApi.js';
-import { CHOOSER_TITLE, COLOR_BELT_ROW, STAR_ROW, STAR_BOTH_SCHOOLS, nextEventLine } from './text.js';
+import { BLACK_BELT_ROW, CHOOSER_TITLE, COLOR_BELT_ROW, STAR_ROW, STAR_BOTH_SCHOOLS, nextEventLine } from './text.js';
 import './chooser.css';
 
 // The last answer per switcher value, kept while the app is open: coming back to the chooser
@@ -86,6 +87,9 @@ export default function TestingChooser({ location, screenLocked = false, onNoAcc
   const rows = [
     { key: 'colorBelt', label: COLOR_BELT_ROW, Icon: IconCertificate, line: next ? nextEventLine(next.date, next.school) : null },
     { key: 'star', label: STAR_ROW, Icon: IconStar, line: starNext ? nextEventLine(starNext.date, STAR_BOTH_SCHOOLS) : null },
+    // Black Belt testing (Jeffrey, 2026-10-22): its third row, no "Next:" line for now (Black Belt's
+    // cycles aren't read here — its own session can add that).
+    { key: 'blackBelt', label: BLACK_BELT_ROW, Icon: IconAward, line: null },
   ];
 
   return (
@@ -106,7 +110,8 @@ export default function TestingChooser({ location, screenLocked = false, onNoAcc
               className="tc-row"
               onClick={() => onOpen(key)}
             >
-              {/* ti-certificate = Color belt testing, ti-star = Star testing (icon map, v0.59) */}
+              {/* ti-certificate = Color belt testing, ti-star = Star testing (icon map, v0.59),
+                  ti-award = Black Belt testing (icon map) */}
               <span className="tc-icon" aria-hidden="true">
                 <Icon size={18} />
               </span>
