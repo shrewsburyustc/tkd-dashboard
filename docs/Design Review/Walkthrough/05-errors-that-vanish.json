@@ -1,0 +1,60 @@
+{
+  "title": "Item 5 · Problem messages that vanish",
+  "subtitle": "<b>Drift in Black Belt.</b> The rulebook says a problem message never closes by itself (§3.5, §8). Color Belt, Star, Camps and Finance follow it with the amber bar that stays. Black Belt shows its refusals in the 5-second toast instead — “Too late to undo here. Ask an admin.”, “Only an admin can do that…”, “This candidate was deleted.”, and why a button is grayed. Its own plan said banners; nobody decided toasts. (Prospects' “That prospect no longer exists.” was approved as a toast, v0.615.) <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/05a-blackbelt-reason-toast.png",
+              "crop": [700, 100, 560, 80],
+              "scale": 1.0,
+              "caption": "<b>1. Black Belt:</b> with private details hidden, Add candidate is grayed…",
+              "marks": [[1078, 130, 142, 32]]
+            },
+            {
+              "src": "shots/05a-blackbelt-reason-toast.png",
+              "crop": [960, 720, 300, 70],
+              "scale": 1.0,
+              "caption": "<b>2.</b> …tapping it explains why in a toast that is gone after 5 seconds. Its “Too late to undo here” and “Only an admin can do that” messages work the same way.",
+              "marks": [[1046, 741, 210, 36]]
+            }
+          ]
+        },
+        {
+          "src": "shots/05b-colorbelt-banner-stays.png",
+          "crop": [76, 225, 1180, 480],
+          "scale": 0.75,
+          "caption": "<b>3. Color Belt (Star, Camps, Finance the same):</b> a problem stays on screen in the amber bar — “Lily Brooks wasn't marked paid. Check the connection and try again.” with Retry and ×, and the row says “Not saved”.",
+          "marks": [[76, 240, 1180, 40], [77, 651, 1178, 40]]
+        }
+      ]
+    },
+    {
+      "label": "Proposed (option B) · problems stay on screen",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/05c-blackbelt-banner-MOCKUP.png",
+          "crop": [76, 90, 1180, 200],
+          "scale": 0.75,
+          "caption": "<b>4.</b> Black Belt's refusals use the same amber bar, which stays until it's closed — here “Too late to undo here. Ask an admin to undo the payment.”",
+          "marks": [[76, 186, 1180, 36]]
+        },
+        {
+          "src": "shots/05d-blackbelt-reason-line-MOCKUP.png",
+          "crop": [700, 100, 560, 100],
+          "scale": 1.0,
+          "caption": "<b>5.</b> Why a button is grayed sits right next to it in gray, as Star and Color Belt already explain things.",
+          "marks": [[823, 130, 397, 56]]
+        }
+      ],
+      "note": "<b>Copies what's already there:</b> the shared amber bar (Retry when the thing can be tried again, × to close) and Star's and Color Belt's gray explanation lines. Toasts stay for “done” messages only. Pictures 4 and 5 are drawn over the real page; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> the Grandmaster can miss why something didn't happen; Black Belt breaks the rule the other sections follow.<br><b>B · Recommended: problems always stay on screen.</b> Refusals and errors use the amber bar until closed (rules §3.5, §8); the reason a button is grayed is a gray line next to it; toasts only say something was done. Prospects' approved “That prospect no longer exists.” toast would move to the bar too. <i>+</i> one way everywhere; nothing important disappears. <i>−</i> small rework in Black Belt (and one Prospects message).<br><b>C · Keep the toasts, but problem toasts stay until tapped.</b> <i>+</i> less rework. <i>−</i> a third kind of message; a toast in the corner is easy to overlook on a tablet."
+}
