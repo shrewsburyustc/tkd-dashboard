@@ -1237,6 +1237,8 @@ The 0010 undo (14e) re-runs 0005, and 0005 starts by removing **all** read right
 
 **Running it again is safe** (tested: a second run changes no row and no fingerprint; the seed never overwrites, and the role's attributes and password are never touched).
 
+**After migration 0024, never re-run this file except as step 0024f:** it silently undoes 0024's rubric lock and copy rules (0024's fingerprints then show `0016 RE-RUN`).
+
 ### 0016c. Read-only checks (Claude runs these through the connection)
 
 1. The list of new objects: 13 `bb_*` tables and the sequence `bb_candidate_ref_seq`.
@@ -1694,6 +1696,105 @@ Color Belt's CP3 (2026-10-19) left **2 test private testings** on production ("J
 ### 0021d. Never re-run 0012 or 0015 after this
 
 They would put back the 2-year-only clean-up (0012 also its old history triggers — see 0015's header). If 0015 is ever re-run, re-run 0021 straight after.
+
+## Migration 0024: Black Belt rubric editor (rulebook v0.921–v0.933)
+
+**Status: built and tested locally (PGlite), NOT applied.** Each step below needs Jeffrey's OK for that step. Contract: `docs/Dashboard Docs/Build contracts/CONTRACT-0024.md`; the paste follows the run sheet `docs/Testing/Black Belt Testing/TKD-BlackBelt-0024-RunSheet.md` (CP2).
+
+**What it does** (`supabase/migrations/0024_black_belt_rubric.sql`):
+- **The default rubric** (`bb_default_rubric`, one row): what each Dan is tested on — the four parts, subjects, how each is scored, points, pass marks, extra points. Admins edit it **one Dan at a time** (Save [Dan]); every new cycle starts from a copy of it (v0.921). Staff can read it.
+- **A cycle's own copy** (`bb_cycles.requirements`): copied from the default when the cycle is added, editable until registration **first** opens, then **locked** — by the functions and by the table itself (only a hand fix in the SQL Editor can change a locked copy).
+- **The first opening is admins only** (v0.930); its toast Undo (15 seconds, same admin, nothing changed since, no family registered) makes the cycle "never opened" again (v0.929). Closing and later reopening stay as 0016 (staff may).
+- **Undo of a save** (R11): the last save of each Dan can be undone for 15 seconds by the admin who saved, as one more save. The "undo slots" live in `bb_rubric_undo` (nobody in the app can read it).
+- **Every value is checked by the database** before it is stored (the "validator", contract §3; the screen checks the same rules while typing — both are run against `supabase/tests/0024_rubric_cases.json`).
+- **The family form** gets a *public view* of the rubric: no revision numbers, no "saved by" names, no source, and nothing at all while the cycle has never opened.
+- **One-time conversion:** every existing cycle's sheet (version 1) is converted to the new shape (version 2) **without changing any number** (tested), and the default is made from the Fall 2026 starting point (the CP1-approved numbers). The starting point itself stays as it is.
+- Changes **no object of 0001–0023** except six 0016 objects, each replaced (never by editing 0016): `bb_cycles_rules()`, the trigger `bb_cycles_before_write` (the rubric column no longer raises the cycle's version), the rule `bb_cycles_requirements_check` (now version 2 only), `bb_set_registration`, `bb_add_cycle` (copies the default) and `bb_public_cycle`.
+- **Known and accepted (contract §2.4, OI-15):** the rubric's table rule runs on *every* update of a cycle (a few milliseconds; timed in PGlite). It calls the shared character rules of 0003 / 0005: a later migration that makes those stricter must first re-check every stored rubric.
+
+### 0024a. Before you apply (Claude, read-only through the connection)
+1. **No `bb_default_rubric` yet** (`select to_regclass('public.bb_default_rubric')` is empty).
+2. **How many cycles exist, and how many hold a version 1 sheet** (`select count(*), count(*) filter (where requirements -> 'schema_version' = '1') from public.bb_cycles`). Expected on production: none. If any exist, they are converted by 0024 — report them to Jeffrey first (OI-14) and snapshot their sheets (the run sheet says how).
+3. `0016_fingerprints.sql` = the live record (0016's CP3). Take the baseline of **every** fingerprint file (0003 … 0022) for step 0024c.
+
+### 0024b. Apply 0024 (you, in the SQL Editor)
+1. Copy **the whole file** `supabase/migrations/0024_black_belt_rubric.sql` → **SQL Editor → New query** → paste → **Run**.
+2. Supabase will warn about **destructive operations**: the words are in rules (`on delete cascade`), inside functions that run later (removing an undo slot) and in `… if exists` lines that make re-running safe. **Nothing is removed now.** Confirm.
+3. "Success." One transaction: on any error nothing is kept — copy the error to Claude. **Running it again is safe** (tested: no second seed, no second conversion, nothing logged).
+4. **Never re-run `0016_black_belt.sql` after this** (except as part of 0024f): it would silently put back 0016's Add cycle, opening and lock rules. `0024_fingerprints.sql` then shows `check | 0016_rerun | 0016 RE-RUN OVER 0024`; the fix is to paste 0024 again.
+
+### 0024c. Read-only checks (Claude runs these through the connection)
+1. **`supabase/tests/0024_fingerprints.sql`**: every line equals what `supabase/tests/pglite/run.mjs` (step0024) printed, including **`check | 0016_rerun | ok`**. (A single read-only SELECT without the words the connection refuses; run.mjs checks that.)
+2. **Every earlier fingerprint file** is byte-identical to the 0024a baseline, **except `0016_fingerprints.sql`**, which differs by exactly this (contract §11.3) and nothing else:
+   - the `function` rows of `bb_add_cycle`, `bb_set_registration`, `bb_public_cycle` and `bb_cycles_rules()`: only the md5 changes (definer, volatility, settings, owner, rights identical);
+   - the `trigger` row `bb_cycles.bb_cycles_before_write`: its arguments end in `'requirements')` (was `'')`);
+   - the `constraint` row `bb_cycles.bb_cycles_requirements_check`: `CHECK (bb_rubric_is_valid(requirements))` (was `bb_requirements_is_valid`);
+   - 19 **added** `function` rows: `bb_save_default_dan`, `bb_undo_default_dan`, `bb_save_cycle_dan`, `bb_undo_cycle_dan`, `bb_undo_first_open` and the 14 internal ones (`bb_rubric_num_ok`, `bb_rubric_int_ok`, `bb_rubric_letters`, `bb_rubric_brackets_problems`, `bb_rubric_dan_problems`, `bb_rubric_is_valid`, `bb_rubric_part_max`, `bb_rubric_most_points`, `bb_rubric_from_v1`, `bb_rubric_fresh_copy`, `bb_rubric_public`, `bb_rubric_put_dan`, `bb_default_rubric_guard`, `bb_rubric_undo_guard`).
+3. **Security advisor:** exactly **+5** "security definer function executable by authenticated" (the five new functions; each checks access and role itself) and **+1** "RLS enabled, no policy" (`bb_rubric_undo`, INFO: nobody in the app may read it). Nothing else new.
+4. If cycles existed (0024a step 2): their converted sheets give the same numbers as their snapshots (the run sheet's comparison) and their `version` did not change.
+
+### 0024d. Run the tests (you, in the SQL Editor)
+1. `supabase/tests/0024_tests.sql` with `<paste-admin-UID-here>` / `<paste-desk-UID-here>` replaced → **ALL 0024 TESTS PASSED**. It makes its own `zz test …` cycles, saves the default and takes one rule off for a moment (U8) — everything is rolled back. Supabase may warn about destructive operations: confirm.
+2. Then `0016_tests.sql` (it knows about 0024 and checks the new behaviour where 0024 changed it) → **ALL 0016 TESTS PASSED**. Put the UIDs back to the placeholders afterwards (never commit real UIDs).
+
+### 0024e. What the app needs
+Deploy the new front end (rubric editor, the cycle's Rubric tab, admin-only first opening with its Undo, the family form's new requirements panel) **right after** the paste — with Jeffrey's OK for the push. Until then the old screens keep working: Add cycle copies the default, a staff first opening is refused (`not_allowed`), nothing old reads the new sheet shape (no cycle exists, and the family form stays off, `BB_PUBLIC_REGISTRATION=off`).
+
+### 0024f. Undo 0024 (only with Jeffrey's OK, and only while NO Black Belt cycle exists)
+Removes 0024's tables and functions and puts 0016's rule back; then **paste `0016_black_belt.sql` again** straight after — it is re-run safe and puts back its `bb_add_cycle`, `bb_set_registration`, `bb_public_cycle`, `bb_cycles_rules` and the trigger exactly. The script refuses (and changes nothing) if any cycle exists, because a cycle's sheet is version 2 by then.
+
+**Paste the two straight after each other, with nothing in between** (or put both in one SQL Editor tab, this block first and 0016 under it, and run them together). Why: between the two, the database is half-undone. 0024's versions of `bb_add_cycle`, `bb_set_registration`, `bb_public_cycle` and `bb_cycles_rules` are still in place, but the table and helper functions they use are gone, so **Add cycle, opening registration and the family form's cycle page give errors** until 0016 puts its own versions back. Nobody should be using the Black Belt screens while you do this.
+
+Paste in the SQL Editor:
+
+```sql
+-- Undo migration 0024 (the Black Belt rubric editor). Then paste 0016_black_belt.sql again.
+begin;
+
+-- refuse while any Black Belt cycle exists (its rubric is version 2 now)
+do $$
+begin
+  if exists (select 1 from public.bb_cycles) then
+    raise exception 'Undo 0024 refused: a Black Belt cycle exists. Nothing was changed. Tell Claude.';
+  end if;
+end
+$$;
+
+-- 0016's rule on the cycles' sheet back (before its 0024 function goes)
+alter table public.bb_cycles drop constraint if exists bb_cycles_requirements_check;
+alter table public.bb_cycles add constraint bb_cycles_requirements_check check (public.bb_requirements_is_valid(requirements));
+
+-- the two tables (their triggers, rules and rights go with them)
+drop table if exists public.bb_rubric_undo;
+drop table if exists public.bb_default_rubric;
+
+-- the five staff functions and 0024's internal helpers
+drop function if exists public.bb_save_default_dan(integer, integer, jsonb);
+drop function if exists public.bb_undo_default_dan(integer, integer);
+drop function if exists public.bb_save_cycle_dan(uuid, integer, integer, jsonb);
+drop function if exists public.bb_undo_cycle_dan(uuid, integer, integer);
+drop function if exists public.bb_undo_first_open(uuid, integer);
+drop function if exists public.bb_rubric_num_ok(jsonb, numeric, numeric);
+drop function if exists public.bb_rubric_int_ok(jsonb, integer, integer);
+drop function if exists public.bb_rubric_letters(text, text);
+drop function if exists public.bb_rubric_brackets_problems(jsonb, jsonb);
+drop function if exists public.bb_rubric_dan_problems(jsonb, integer);
+drop function if exists public.bb_rubric_is_valid(jsonb);
+drop function if exists public.bb_rubric_part_max(jsonb, integer, integer);
+drop function if exists public.bb_rubric_most_points(jsonb, integer, integer);
+drop function if exists public.bb_rubric_from_v1(jsonb);
+drop function if exists public.bb_rubric_fresh_copy(jsonb);
+drop function if exists public.bb_rubric_public(jsonb);
+drop function if exists public.bb_rubric_put_dan(jsonb, integer, jsonb, integer);
+drop function if exists public.bb_default_rubric_guard();
+drop function if exists public.bb_rubric_undo_guard();
+
+commit;
+```
+
+Then **paste `supabase/migrations/0016_black_belt.sql` again** (0016b; its re-run changes no row). Tested in PGlite on every run (`run.mjs` step0024 (k), this block exactly as written here, then 0016): with a cycle the block refuses and changes nothing; without one, 0016's fingerprints afterwards equal those from before 0024 and `0016_tests.sql` passes; then 0024 applies again. The history (`change_log`) keeps 0024's rows (it is append-only).
+
+---
 
 ## Admin: change the front-desk PIN or password
 

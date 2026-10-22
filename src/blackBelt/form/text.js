@@ -131,8 +131,6 @@ export const EXTRA_POINTS = 'Extra points';
 export const EXTRA_POINTS_LINE = 'Stripes, competitions, attendance and more';
 export const PASS_TO = 'To pass: ';
 export const passPoints = (points) => [points, ' points'];
-export const passAdult = (points) => [' (children) or ', points, ' (adults)'];
-export const PASS_NO_D = ', and no D in any subject. A subject graded D is made up at the next testing.';
 export const PASS_END = '.'; // when there is no "no D" rule (not in the mockups)
 export const EXTRA_COUNT = ' Extra points count toward the total.';
 // Level 2
@@ -142,10 +140,7 @@ export const EACH_SUBJECT = ' Each subject graded A+ to D.';
 export const EACH_ITEM = ' Each item is graded A+ to D.';
 export const creditsCount = (count) => `${count} ${count === 1 ? 'credit' : 'credits'}`;
 export const OUTDOOR_PREFIX = 'Outdoor: ';
-export const ADULTS_ONLY = 'Adults only';
 export const upToPoints = (partName, points) => `${partName}: up to ${points} points.`;
-export const upToPointsAdult = (partName, points, adultPoints, adultSubjects) =>
-  `${partName}: up to ${points} points (${adultPoints} for adults${adultSubjects ? `, with ${adultSubjects}` : ''}).`;
 export const openSubject = (name) => `Show how ${name} is graded`; // screen-reader names of + / − (not in the mockups)
 export const closeSubject = (name) => `Hide how ${name} is graded`;
 // Level 3
@@ -154,7 +149,6 @@ export const MEET_AT_MOST = 'At most the number to get the grade; over C is D.';
 export const MEET_UNDER = 'Under the number to get the grade; otherwise D.'; // (not in the mockups)
 export const measuredIn = (unit) => `Measured in ${unit}. `; // (not in the mockups)
 export const AGE = 'Age';
-export const pointsLine = (credits, scale) => `Points: ${credits} credits × ${scale}.`;
 export const pointsLinePlain = (scale) => `Points: ${scale}.`; // no grade scale for the part (not in the mockups)
 export const GRADED_BY_EXAMINER = 'Graded by the examiner. Points for each grade:';
 export const GRADE = 'Grade';
@@ -166,6 +160,20 @@ export const pointEach = (points) => `${points} ${points === 1 ? 'point' : 'poin
 export const pointsWith = (points, atLeast) => `${points} points with ${atLeast} or more`;
 export const OR_MORE = ' or more';
 export const POINTS_WORD = ' points';
+// Requirements panel, rubric v2 (migration 0024, contract 0024 §10.4). New wording, not in the
+// form mockups, is marked.
+export const passBracket = (label, points) => [`${label} `, points, ' points']; // "17 and under 275 points"
+export const PASS_BRACKET_JOIN = ' · ';
+export const PASS_NO_D_ONLY = ', and no D in any subject.';
+export const onlyFor = (labels) => `Only ${labels}`; // replaces "Adults only" (v0.926)
+export const upToPointsBrackets = (partName, points, rest) => `${partName}: up to ${points} points (${rest}).`;
+export const forBrackets = (points, labels) => `${points} for ${labels}`;
+export const wayHeading = (name, unit, direction) =>
+  `${name ? `${name} · ` : ''}${unit}, ${direction === 'at_most' ? 'at most' : direction === 'under' ? 'under' : 'at least'}`; // "Pull-up · reps, at least"
+export const ONE_OF_TWO_WAYS = 'Done one of two ways; the examiner records which.'; // (new wording, not in the mockups)
+export const EXTRA_NOT_COUNTED = 'Recorded, but not added to your total.'; // (new wording, not in the mockups)
+export const extraLimit = (points) => ` Up to ${points} points.`; // (new wording, not in the mockups)
+
 // Read all
 export const ARROW = '→';
 

@@ -973,6 +973,12 @@ section.bbf-card .bbf-review {
   padding: 8px 0;
   font-size: var(--text-14);
 }
+/* A way's heading when a subject is done one of two ways ("Pull-up · reps, at least", 0024) */
+.bbf-score__way {
+  font-size: var(--text-13);
+  font-weight: 500;
+  margin: 8px 0 4px;
+}
 .bbf-score__text {
   font-size: var(--text-13);
   color: var(--color-text-secondary);
@@ -1005,6 +1011,28 @@ section.bbf-card .bbf-review {
 }
 .bbf-grid thead th:first-child {
   text-align: left;
+}
+/* cut-off tables: fixed widths, so a subject's two ways (Pull-up, Hold) line up */
+.bbf-grid--ways {
+  table-layout: fixed;
+}
+.bbf-grid--ways thead th:first-child {
+  width: 34%;
+}
+/* a graded subject's points: one table, or two shorter ones on very narrow phones */
+.bbf-grid--split {
+  display: none;
+}
+@media (max-width: 359.98px) {
+  .bbf-grid--whole {
+    display: none;
+  }
+  .bbf-grid--split {
+    display: block;
+  }
+  .bbf-grid--split .bbf-grid + .bbf-grid {
+    margin-top: var(--space-4);
+  }
 }
 
 /* ---------- touch screens (tablets): dashboard touch sizes ---------- */
