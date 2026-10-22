@@ -102,6 +102,10 @@ declare
   v_w22   boolean := to_regprocedure('public.camp_week_size(date[])') is not null;
   v_cap   integer := case when to_regprocedure('public.camp_week_size(date[])') is not null then 1000000 else 200000 end;
   v_mon30 date := date_trunc('week', (public.testing_today() + 36)::timestamp)::date;
+  -- (weekday-proof, 2026-10-22) a Monday 8-14 days from now: camp P's two
+  -- days are this Monday and Tuesday, so they are always ONE week
+  v_mon14 date := date_trunc('week', (public.testing_today() + 14)::timestamp)::date;
+  v_kt    integer;   -- (weekday-proof, 2026-10-22) what camp K's two campers paid
   v_rand  uuid := gen_random_uuid();
   v_rand2 uuid := gen_random_uuid();
   v_role  text;
@@ -1725,6 +1729,10 @@ begin
   v_ck := pg_temp.mk(v_tag || ' Kill', 'worcester', false, array[v_today, v_today + 1, v_today + 2], v_today - 1, v_today, v_today);
   v_ck_code := pg_temp.code(v_ck);
   perform set_config('request.jwt.claims', '', true);
+  -- (weekday-proof, 2026-10-22) what both pay (T10c's dialog total): with
+  -- 0022, today .. +2 may be two weeks, so not always $175 + $218 = $393
+  v_kt := pg_temp.wb(v_ck, pg_temp.dys(v_ck, array[1, 2]), true, 'early') + 3000 + 500
+          + pg_temp.wb(v_ck, pg_temp.dys(v_ck, array[1, 2, 3]), true, 'early') + 1500 + 800;
   v_r := pg_temp.st('T10 sign-up', pg_temp.su(v_ck_code, v_key, jsonb_build_array(
            pg_temp.ch('Kay', 'One', 8, true, pg_temp.dys(v_ck, array[1, 2]),
                       jsonb_build_array(pg_temp.ex(pg_temp.xid(v_ck, 'Early drop-off'), pg_temp.dys(v_ck, array[1, 2])),
@@ -1799,14 +1807,16 @@ begin
 
   -- T10c. Delete camp: the dialog's numbers must match (ALL campers,
   --       withdrawn too; NET payments); then everything goes, logged
+  --       (weekday-proof, 2026-10-22: the total is v_kt, not always 39300;
+  --       the grid rows removed are camp K's real W)
   perform set_config('request.jwt.claims', v_c_d1, true);
-  perform pg_temp.st('T10c staff delete camp', public.camp_delete_camp(v_ck, v_v, 2, 39300), 'not_allowed');
+  perform pg_temp.st('T10c staff delete camp', public.camp_delete_camp(v_ck, v_v, 2, v_kt), 'not_allowed');
   perform set_config('request.jwt.claims', v_c_a1, true);
-  perform pg_temp.st('T10c wrong camper count', public.camp_delete_camp(v_ck, v_v, 1, 39300), 'stale');
-  perform pg_temp.st('T10c wrong payment total', public.camp_delete_camp(v_ck, v_v, 2, 56800), 'stale');
-  perform pg_temp.st('T10c old version', public.camp_delete_camp(v_ck, v_v - 1, 2, 39300), 'stale');
+  perform pg_temp.st('T10c wrong camper count', public.camp_delete_camp(v_ck, v_v, 1, v_kt), 'stale');
+  perform pg_temp.st('T10c wrong payment total', public.camp_delete_camp(v_ck, v_v, 2, v_kt + 17500), 'stale');
+  perform pg_temp.st('T10c old version', public.camp_delete_camp(v_ck, v_v - 1, 2, v_kt), 'stale');
   select max(id) into v_mark from public.change_log;
-  perform pg_temp.st('T10c delete camp', public.camp_delete_camp(v_ck, v_v, 2, 39300), 'ok');
+  perform pg_temp.st('T10c delete camp', public.camp_delete_camp(v_ck, v_v, 2, v_kt), 'ok');
   if exists (select 1 from public.camps c where c.id = v_ck)
      or exists (select 1 from public.camp_days d where d.camp_id = v_ck)
      or exists (select 1 from public.camp_prices p where p.camp_id = v_ck)
@@ -1820,21 +1830,23 @@ begin
   end if;
   perform pg_temp.t15(v_mark, 'camp_delete_camp', v_an, 'delete camp');
   select string_agg(t.n || '=' || coalesce(x.cnt, 0), ', ') into v_txt
-    from unnest(array['camps=1', 'camp_days=2', 'camp_prices=2', 'camp_extras=2', 'camp_signups=1', 'camp_campers=2',
+    from unnest(array['camps=1', 'camp_days=2', 'camp_prices=' || pg_temp.gn(array[v_today, v_today + 1]), 'camp_extras=2', 'camp_signups=1', 'camp_campers=2',
                       'camp_camper_days=4', 'camp_camper_extras=3', 'camp_payments=4']) as w(s)
     cross join lateral (select split_part(w.s, '=', 1) as n, split_part(w.s, '=', 2)::integer as want) as t
     left join lateral (select count(*)::integer as cnt from public.change_log l
                         where l.id > v_mark and l.op = 'delete' and l.table_name = t.n) as x on true
    where coalesce(x.cnt, 0) <> t.want;
   if v_txt is not null then raise exception 'TEST FAILED: T10c logged removals per table differ: %', v_txt; end if;
-  perform pg_temp.st('T10c delete again', public.camp_delete_camp(v_ck, v_v, 2, 39300), 'not_found');
+  perform pg_temp.st('T10c delete again', public.camp_delete_camp(v_ck, v_v, 2, v_kt), 'not_found');
 
   -- ===================================================================
   -- T11. The family form (camp_public_camp / camp_public_signup)
   -- ===================================================================
-  -- Camp P: two days 10-11 days from now, open, early price, ages 5-12.
+  -- Camp P: two days 8-15 days from now, open, early price, ages 5-12.
+  -- (weekday-proof, 2026-10-22: a Monday + Tuesday, v_mon14 and the day
+  -- after - today + 10 / + 11 were two weeks when they were a Sun + Mon)
   perform set_config('request.jwt.claims', v_c_a1, true);
-  v_cp := pg_temp.mk(v_tag || ' Public', 'shrewsbury', false, array[v_today + 10, v_today + 11], v_today - 1, v_today + 5, v_today + 5);
+  v_cp := pg_temp.mk(v_tag || ' Public', 'shrewsbury', false, array[v_mon14, v_mon14 + 1], v_today - 1, v_today + 5, v_today + 5);
   v_cp_code := pg_temp.code(v_cp);
   perform set_config('request.jwt.claims', '', true);
   select count(*) into v_n2 from public.testing_public_attempts;   -- Camps must never write here
@@ -2124,7 +2136,7 @@ begin
   perform set_config('request.jwt.claims', v_c_a1, true);
   select c.version into v_v from public.camps c where c.id = v_cp;
   perform pg_temp.st('T11f remove day 2, ages 6-12', public.camp_update_camp(v_cp, v_v, 'shrewsbury', false, v_tag || ' Public',
-           array[v_today + 10], '09:00', '15:00', v_today - 1, v_today + 5, v_today + 5, 6, 12, pg_temp.grid(1), pg_temp.xtr_ids(v_cp),
+           array[v_mon14], '09:00', '15:00', v_today - 1, v_today + 5, v_today + 5, 6, 12, pg_temp.grid(1), pg_temp.xtr_ids(v_cp),
            'Bring a lunch.', 'I agree to the camp rules.'), 'ok');
   perform set_config('request.jwt.claims', '', true);
   v_r := pg_temp.su(v_cp_code, v_key, jsonb_build_array(pg_temp.ch('Cam', 'Changed', 8, true, array[v_k3], '[]'::jsonb)), 7500);
@@ -2141,7 +2153,7 @@ begin
   perform set_config('request.jwt.claims', v_c_a1, true);
   select c.version into v_v from public.camps c where c.id = v_cp;
   perform pg_temp.st('T11g raise the 1-day member early price', public.camp_update_camp(v_cp, v_v, 'shrewsbury', false, v_tag || ' Public',
-           array[v_today + 10], '09:00', '15:00', v_today - 1, v_today + 5, v_today + 5, 6, 12,
+           array[v_mon14], '09:00', '15:00', v_today - 1, v_today + 5, v_today + 5, 6, 12,
            jsonb_set(pg_temp.grid(1), '{0,member_early_cents}', '8000'), pg_temp.xtr_ids(v_cp),
            'Bring a lunch.', 'I agree to the camp rules.'), 'ok');
   perform set_config('request.jwt.claims', '', true);

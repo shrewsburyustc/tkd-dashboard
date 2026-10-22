@@ -62,6 +62,10 @@
 //   * PRINT RESULTS (R9): results/StarResultsSheet.jsx, the whole event, both schools, printed the
 //     same way as the grading sheet.
 //
+// Phase 7 adds (Home's "Today" cards, rulebook v0.515, proposal 10): Home's Grade opens this page's
+// address and hands the candidate id over in page memory (lib/star/homeHandoff.js); the page takes it
+// once when it opens and opens the private grading page at once, as ⋯ → Grade private testing.
+//
 // The event's details and the candidate count only in the header; the roster's privacy rules are
 // in the Candidates tab (no date of birth or email in a list, v0.160; Hide private details, v0.506).
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
@@ -71,6 +75,7 @@ import ErrorBanner from '../../../../components/ErrorBanner.jsx';
 import { loadStarEvent } from '../../../../lib/star/eventsApi.js';
 import { loadCandidates } from '../../../../lib/star/candidatesApi.js';
 import { loadGrading, loadPrivateGrading, judgedSubjects } from '../../../../lib/star/gradingApi.js';
+import { peekPrivateHandoff, takePrivateHandoff } from '../../../../lib/star/homeHandoff.js';
 import { loadResults, loadResultTexts } from '../../../../lib/star/resultsApi.js';
 import { longDate } from '../../../../lib/star/resultEmail.js';
 import { shortDate, whereText } from '../../../../lib/star/eventsText.js';
@@ -223,8 +228,12 @@ export default function StarEventPage({
   // ----- The private grading page (H5, Q1 = A: page state only, never in the address) -----
   // privatePage: { id } while it shows. privateIds: the rows the save engine keeps — the open one,
   // plus any earlier one that still has a save on its way or Not saved cells (pruned on refresh).
-  const [privatePage, setPrivatePage] = useState(null);
-  const [privateIds, setPrivateIds] = useState([]);
+  // Home's Grade (Star phase 7, proposal 10): a candidate id handed over in page memory opens the
+  // private page from the very first draw (see "Home's Grade" below). Only LOOKED at here — a draw
+  // may run twice while developing; the effect below takes it, once.
+  const [homeHandoff] = useState(() => peekPrivateHandoff(eventId));
+  const [privatePage, setPrivatePage] = useState(() => (homeHandoff ? { id: homeHandoff.candidateId } : null));
+  const [privateIds, setPrivateIds] = useState(() => (homeHandoff ? [homeHandoff.candidateId] : []));
   const [privateNotice, setPrivateNotice] = useState(null); // the banner back on Candidates (✕ only)
   const privateKey = privateIds.length > 0 ? privateIds.join('|') : null;
   const privateLive = useLiveLoad({ key: privateKey, enabled: !screenLocked && online, load: loadPrivateRows, refreshMs: LIVE_REFRESH_MS });
@@ -316,7 +325,7 @@ export default function StarEventPage({
   // deleted): back to Candidates with a short banner. Its Not saved cells stay with the engine only
   // while the candidate is still in the testing (the engine refuses saves for the others anyway).
   // Every other refresh lets go of earlier private rows that have nothing left to save.
-  const privateNameRef = useRef('');
+  const privateNameRef = useRef(homeHandoff?.name ?? ''); // Home's Grade knows the name already
   useEffect(() => {
     const open = privatePageRef.current;
     if (!open) {
@@ -371,6 +380,20 @@ export default function StarEventPage({
     focusSoon(() => document.querySelector(`[data-star-cand-more="${id}"]`) ?? document.querySelector(`[data-nav-row="${id}"]`));
   }
 
+  // ----- Home's Grade (Star phase 7, proposal 10, v0.515) -----
+  // Home opened this page's address (Candidates, no candidate id) and left the candidate id in page
+  // memory (lib/star/homeHandoff.js). The page starts with the private grading page open on that
+  // candidate (privatePage / privateIds above, and the name for the v0.513 banners), exactly as
+  // Candidates ⋯ → Grade private testing opens it — its own Back step is added by the effect below.
+  // Here the hand-off is TAKEN (emptied), once, so nothing else can pick it up. If the student was
+  // moved back to the testing day, withdrawn or deleted meanwhile, the effect above closes the page
+  // with its banner. A reload starts with empty page memory, so it never reopens the page (v0.512).
+  useEffect(() => {
+    takePrivateHandoff(eventId);
+    // Only when the page opens (eventId never changes: App.jsx keys this page by it).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ----- Browser / phone Back on the private grading page (Jeffrey, rulebook v0.513: B) -----
   // The private page has no address of its own (Q1 = A), so on its own the browser's Back would
   // leave the whole event. Instead, while the page is open it adds ONE history step with the SAME
@@ -418,7 +441,10 @@ export default function StarEventPage({
   // The cost: after such a reload one Back press stays on the same page. Forward onto a leftover
   // step steps off it again (below). (Leaving the event page replaces the step — App.jsx's navigate.)
   useEffect(() => {
-    if (window.history.state?.tkdStarPrivate) window.history.replaceState({ tkdPage: true }, '');
+    // (Not our own step: Home's Grade opens the private page from the first draw, so the effect
+    // above has already added its step — phase 7.)
+    const leftover = window.history.state?.tkdStarPrivate;
+    if (leftover && leftover !== privateStepRef.current) window.history.replaceState({ tkdPage: true }, '');
     function handleForward() {
       const step = window.history.state?.tkdStarPrivate;
       if (step && step !== privateStepRef.current) window.history.back();

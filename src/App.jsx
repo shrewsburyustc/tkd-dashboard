@@ -240,6 +240,9 @@ export default function App() {
   // ----- Signing out (used by the menu, the lock screen, and the rules below) -----
   const signOut = useCallback(async (noticeText = null) => {
     clearOpenProspect(); // a Calendar → Prospects hand-over never carries over to the next person
+    // The same for any other hand-over that lives outside this file (e.g. Star's Home → Grade,
+    // src/lib/star/homeHandoff.js): a plain signal, so App needs no import of that code.
+    window.dispatchEvent(new Event('tkd:signed-out'));
     // Signing out on purpose (the menu's Sign out, "Not you? Sign out" — no notice) or because the
     // account has no access: the address goes back to Home, so the next person at this device
     // starts on Home and Back can't bring the previous person's page back (v0.83). An automatic
@@ -704,6 +707,9 @@ export default function App() {
   // Star testing's event page (phase 2): in and out, the same way.
   const openStarEvent = useCallback((id) => navigate('testing', { testingPage: 'star', eventId: id }), [navigate]);
   const closeStarEvent = useCallback(() => guarded(() => navigate('testing', { testingPage: 'star', eventId: null })), [navigate, guarded]);
+  // Home's Star "Today" cards (Star phase 7, v0.515): Open grading opens the event on its Grading
+  // tab, Grade on its Candidates tab ('students'). A normal step, so Back returns Home.
+  const openStarEventTab = useCallback((id, tab) => navigate('testing', { testingPage: 'star', eventId: id, eventTab: tab }), [navigate]);
   // Students ↔ Grading (a Color Belt event page) and Events ↔ Rubrics and prices (Star testing's
   // home): the same page, so never guarded, and no new history step (Back still leaves the page;
   // a reload keeps the tab).
@@ -1008,6 +1014,8 @@ export default function App() {
                 paymentsHidden={paymentsHidden}
                 onOpenFinance={openFinanceReport}
                 onOpenFinanceHistory={openFinanceHistory}
+                onOpenStarEvent={openStarEventTab}
+                onNoAccess={handleNoAccess}
               />
             )}
             {section === 'testing' && (

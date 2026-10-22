@@ -100,7 +100,7 @@ Color Belt testing and Star testing are built at the same time in separate Claud
 
   | 0022 | camps: weekly pricing + camps longer than 10 days (`0022_camps_weekly_pricing.sql`; replaces some 0013 camp functions: price grid of at most 5 rows = days per week, each Mon–Sun week priced separately and added up, 10-day limit → 60 days, "not for all-days campers" extras per week; runs after 0013 and 0017) — reserved 2026-10-21, applied 2026-10-21 | `main` (live) |
 
-  | 0023 | Star testing: result email texts that admins can edit (small table + admin write function, 0006 rules) and M5 — `star_update_event` keeps registration closed in the same transaction (v0.504 case 2; replaces that 0006 function), and the results CSV columns — `star_results_csv` (0006, same signature, admin only) adds `candidate_id`, `paid_on` and `result_status` to each row so the app matches rows to candidates by id; applies before Star goes live — reserved 2026-10-21 | `star-testing` |
+  | 0023 | Star testing: result email texts that admins can edit (small table + admin write function, 0006 rules) and M5 — `star_update_event` keeps registration closed in the same transaction (v0.504 case 2; replaces that 0006 function), and the results CSV columns — `star_results_csv` (0006, same signature, admin only) adds `candidate_id`, `paid_on` and `result_status` to each row so the app matches rows to candidates by id; applies before Star goes live — reserved 2026-10-21, applied 2026-10-22 | `main` (live) |
 
   | 0024 | Black Belt: rubric editor (+ the family form showing a subject's own points); its plan said "0022", which is camps' — reserved 2026-10-21 | `black-belt` |
 

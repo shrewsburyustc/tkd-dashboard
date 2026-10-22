@@ -9,6 +9,7 @@
 //   writes   the 13 functions of §6.3–§6.4 (add, make-up, edit, paying by, duplicates, private,
 //            withdraw, restore, delete, record / undo / edit payment, refund)
 //   reads    star_candidate_detail, star_candidate_history, star_view_signature, star_makeup_list (§7)
+//   Home     star_home_today (§7 — phase 7: Home's "Today" cards; a POST, it runs the signature clean-up)
 //   grading  star_set_grade, star_set_count, star_set_makeup_subjects, star_event_results,
 //            star_age_groups (§6.5, §7 — phase 5): written in mockStarGrading.js and plugged in here
 //            (handlerFor), so they share this store and its change log
@@ -167,6 +168,7 @@ const RPC_ARGS = /*#__PURE__*/ (() => ({
   star_candidate_history: [['p_candidate_id', 'uuid']],
   star_view_signature: [['p_candidate_id', 'uuid']],
   star_makeup_list: [['p_event_id', 'uuid']],
+  star_home_today: [], // phase 7: Home's "Today" cards (no arguments)
   // Phase 5: the grading functions (§6.5) and the grading reads (§7) — mockStarGrading.js.
   ...GRADING_RPC_ARGS,
   // Phase 6: Mark as sent, its Undo, the CSV (§6.6) and the result email texts (0023) — mockStarResults.js.
@@ -176,11 +178,11 @@ export const STAR_CANDIDATE_RPC_NAMES = /*#__PURE__*/ Object.keys(RPC_ARGS);
 // The 13 write functions (§6.3–§6.4) — failNextSave('star') targets these, not the reads. (The three
 // grading writes are listed apart, as mockStarGrading.js's STAR_GRADING_WRITE_RPC_NAMES, and the four
 // results writes as mockStarResults.js's STAR_RESULTS_RPC_NAMES.)
-const READS = ['star_candidate_detail', 'star_candidate_history', 'star_view_signature', 'star_makeup_list'];
+const READS = ['star_candidate_detail', 'star_candidate_history', 'star_view_signature', 'star_makeup_list', 'star_home_today'];
 export const STAR_CANDIDATE_WRITE_RPC_NAMES = /*#__PURE__*/ Object.keys(RPC_ARGS)
   .filter((n) => !READS.includes(n) && !STAR_GRADING_RPC_NAMES.includes(n) && !STAR_RESULTS_RPC_NAMES.includes(n));
 // Functions that run read-only and so also work as a GET request (§7: "stable"). Every other one
-// writes something (star_makeup_list: the signature clean-up).
+// writes something (star_makeup_list and star_home_today: the signature clean-up).
 const STABLE = /*#__PURE__*/ (() => new Set(['star_candidate_detail', 'star_candidate_history', 'star_view_signature', ...STAR_GRADING_READ_RPC_NAMES]))();
 // Admin only from the start ("A" in §6.3–§6.4). star_restore_candidate and star_undo_payment have
 // mixed rules (admins, or the same staff member within 10 seconds) checked inside; star_update_candidate
@@ -941,6 +943,37 @@ const HANDLERS = {
     purgeOldSignatures(db, env, ctx); // the last step (§5.7) — why this read is a POST
     return { status: 'ok', rows };
   },
+
+  // Phase 7 (Home's "Today" cards, v0.154, v0.155, v0.515) — the same answer as 0006's 19g:
+  // the events whose testing date is today, with the ACTIVE candidates WITHOUT a private day counted
+  // per school, and the active private testings whose day is today, by time, then last and first name.
+  // No payment, date of birth or email. The app filters by the location switcher.
+  star_home_today(db, a, { ctx, env }) {
+    const today = env.today();
+    const cmp = (x, y) => (x < y ? -1 : x > y ? 1 : 0);
+    const hhmm = (t) => String(t ?? '').slice(0, 5); // '10:00:00' → '10:00' (like left(…::text, 5))
+    const countAt = (e, code) => db.candidates.filter((c) => c.event_id === e.id && c.status === 'active'
+      && c.private_on === null && c.location_code === code).length;
+    const events = db.events
+      .filter((e) => e.testing_date === today)
+      .sort((x, y) => cmp(hhmm(x.start_time), hhmm(y.start_time)) || cmp(x.name, y.name) || cmp(x.id, y.id))
+      .map((e) => ({
+        id: e.id, name: e.name, start_time: hhmm(e.start_time), where_code: e.where_code,
+        where_name: SCHOOL_NAMES[e.where_code] ?? null,
+        counts: { worcester: countAt(e, 'worcester'), shrewsbury: countAt(e, 'shrewsbury') },
+      }));
+    const privates = db.candidates
+      .filter((c) => c.private_on === today && c.status === 'active' && findEvent(db, c.event_id))
+      .sort((x, y) => cmp(hhmm(x.private_time), hhmm(y.private_time)) || cmp(x.last_name.toLowerCase(), y.last_name.toLowerCase())
+        || cmp(x.first_name.toLowerCase(), y.first_name.toLowerCase()) || cmp(x.id, y.id))
+      .map((c) => ({
+        candidate_id: c.id, event_id: c.event_id, event_name: findEvent(db, c.event_id).name, private_time: hhmm(c.private_time),
+        first_name: c.first_name, last_name: c.last_name, location_code: c.location_code, dan: c.dan,
+        stars_from: c.stars_from, stars_to: c.stars_from + 1,
+      }));
+    purgeOldSignatures(db, env, ctx); // the last step (§5.7) — why this read is a POST
+    return { status: 'ok', today, events, private: privates };
+  },
 };
 
 // Phase 5: the grading functions (mockStarGrading.js), working on this same store with these same
@@ -1586,6 +1619,57 @@ export function createStarCandidatesBackend({ readBase, saveStore, now = () => D
     return (read().downloads ?? []).map((d) => ({ ...d }));
   }
 
+  // Preview helper (phase 7, __tkdPreview.starHomeToday): makes TODAY a Star day so Home's "Today"
+  // cards can be seen without waiting for the seed's dates. Returns a sentence for the console.
+  //   'event'    the upcoming Fall seed event's testing date becomes today (its closing date too, if
+  //              it was later) → Home shows the event card
+  //   'private'  Alex Kim (Shrewsbury) gets a private testing today at 4:00 PM and Ethan Lopez
+  //              (Worcester) one at 5:30 PM, as in the approved drawings → two private cards. Done
+  //              through star_set_private, so History shows them like a change made at the desk.
+  //   'none'     undoes both: an event dated today moves 26 days ahead (closing date 7 days before),
+  //              Ethan Lopez goes back to the testing day, any other private day today moves 17 days
+  //              ahead → no Star cards (Home shows "Nothing on Home yet" if Finance has nothing)
+  function homeToday(kind = 'event') {
+    const db = read();
+    const day = today();
+    const ctx = { isAdmin: true, actorName: 'Jeffrey Berg', userId: '00000000-0000-4000-8000-000000000001' };
+    const named = (first, last) => db.candidates.find((c) => c.event_id === SEED_CANDIDATE_EVENT_IDS.fall && c.status === 'active'
+      && c.first_name === first && c.last_name === last);
+    const setPrivate = (c, on, time) => runHandler('star_set_private', db, {
+      p_candidate_id: c.id, p_expected_version: c.version, p_private_on: on, p_private_time: time,
+    }, { ctx, env });
+    const moveEvent = (e, fields) => Object.assign(e, fields, { version: e.version + 1, updated_at: new Date(now()).toISOString(), updated_by_name: ctx.actorName });
+    if (kind === 'event') {
+      const e = findEvent(db, SEED_CANDIDATE_EVENT_IDS.fall);
+      if (!e) return 'The Fall seed event is gone — run __tkdPreview.resetTesting() first.';
+      moveEvent(e, { testing_date: day, auto_close_on: e.auto_close_on && e.auto_close_on > day ? day : e.auto_close_on });
+      write(db);
+      return `${e.name} is now today (${day}). Open Home (or wait up to a minute) to see its card.`;
+    }
+    if (kind === 'private') {
+      const done = [];
+      for (const [first, last, time] of [['Alex', 'Kim', '16:00:00'], ['Ethan', 'Lopez', '17:30:00']]) {
+        const c = named(first, last);
+        if (c && setPrivate(c, day, time).status === 'ok') done.push(`${first} ${last}`);
+      }
+      if (done.length === 0) return 'Neither Alex Kim nor Ethan Lopez is active in the Fall seed event — run __tkdPreview.resetTesting() first.';
+      write(db);
+      return `${done.join(' and ')} now test privately today (${day}). Open Home (or wait up to a minute) to see the cards.`;
+    }
+    if (kind === 'none') {
+      for (const e of db.events.filter((x) => x.testing_date === day)) {
+        moveEvent(e, { testing_date: addDays(day, 26), auto_close_on: e.auto_close_on ? addDays(day, 26 - 7) : null });
+      }
+      for (const c of db.candidates.filter((x) => x.private_on === day && x.status === 'active')) {
+        if (c.first_name === 'Ethan' && c.last_name === 'Lopez') setPrivate(c, null, null);
+        else setPrivate(c, addDays(day, 17), c.private_time);
+      }
+      write(db);
+      return 'Nothing is on today any more. Home drops its Star cards on its next ask (within a minute).';
+    }
+    return "Use starHomeToday('event'), starHomeToday('private') or starHomeToday('none').";
+  }
+
   // Back to the seed (events and candidates; the rubric template is kept).
   function reset() {
     const base = clone(readBase());
@@ -1593,5 +1677,7 @@ export function createStarCandidatesBackend({ readBase, saveStore, now = () => D
     write(base);
   }
 
-  return { select, rpc, publicEvent, publicRegister, failNextSave, simulateDanChange, simulateResultChange, downloads, reset, snapshot: read };
+  return {
+    select, rpc, publicEvent, publicRegister, failNextSave, simulateDanChange, simulateResultChange, homeToday, downloads, reset, snapshot: read,
+  };
 }

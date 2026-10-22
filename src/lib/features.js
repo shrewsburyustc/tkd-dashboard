@@ -34,3 +34,8 @@ export const STAR_TESTING_ON =
 // that the import is never used, and leave Star out of the live build, when the switch's test and
 // the import are in the same file. Switch off → null, and Star's screens are not in the build.
 export const loadStarTesting = STAR_TESTING_ON ? () => import('../screens/testing/star/StarTesting.jsx') : null;
+
+// Loads Star's "Today" cards for Home (Star phase 7, rulebook v0.515). Home.jsx calls it when Home
+// opens. Here for the same reason as loadStarTesting: switch off → null, so the live build has no
+// Star code on Home and Home never asks the database about Star (build plan phase 7 check).
+export const loadStarHome = STAR_TESTING_ON ? () => import('../screens/testing/star/home/StarHomeToday.jsx') : null;
