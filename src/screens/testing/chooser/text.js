@@ -8,6 +8,9 @@ export const CHOOSER_TITLE = 'Testing';
 // The two rows (and the rail menu's names — navItems.js uses the same words).
 export const COLOR_BELT_ROW = 'Color belt testing';
 export const STAR_ROW = 'Star testing';
+// Black Belt testing's row (Jeffrey, 2026-10-22: all three testings on the chooser) — the same
+// words as Black Belt's own link and page title.
+export const BLACK_BELT_ROW = 'Black Belt testing';
 // "Next: Jan 9 · Shrewsbury" — Color Belt's next event (v0.177). date is 'YYYY-MM-DD'.
 export const nextEventLine = (date, school) => `Next: ${monthDay(date)} · ${school}`;
 // Star testing's row (Star phase 2, v0.59's example "Next: Nov 14 · both schools"): Star events are
