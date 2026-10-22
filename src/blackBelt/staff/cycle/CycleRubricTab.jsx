@@ -4,7 +4,7 @@
 // read view and editor as the default rubric (RubricCard.jsx), titled "Fall 2027 rubric" with
 // "Copied from the default rubric when the cycle was added (Mar 22, 2027)." Under the tabs:
 //   - before registration first opens: "This cycle's rubric can be changed until registration
-//     first opens. Opening registration locks it." — admins get Edit 1st Dan (the edit bar says
+//     first opens. Opening registration locks it." (admins and staff) — admins get Edit 1st Dan (the edit bar says
 //     "Fall 2027 only" and "Changes here are for Fall 2027 only. The default rubric stays as it is.")
 //   - once registration has opened (even if it closed again): locked for everyone, admins
 //     included — a lock icon, "Locked since registration opened on Mar 1, 2027. Changes go into
@@ -23,7 +23,7 @@ import * as T from '../text.js';
 const load = (cycleId) => loadCycleRubric({ cycleId });
 
 // The gray line under the cycle page's tabs while the Rubric tab is open (admins and staff).
-export function CycleRubricLine({ locked, firstOpenedAt, isAdmin, onGoToDefaultRubric }) {
+export function CycleRubricLine({ locked, firstOpenedAt, onGoToDefaultRubric }) {
   if (locked) {
     return (
       <p className="viewonly bbr-locked-line">
@@ -38,7 +38,8 @@ export function CycleRubricLine({ locked, firstOpenedAt, isAdmin, onGoToDefaultR
       </p>
     );
   }
-  return isAdmin ? <p className="viewonly">{T.CYCLE_RUBRIC_EDITABLE}</p> : null;
+  // Admins AND staff see it (R13: staff learn when the rubric stops changing).
+  return <p className="viewonly">{T.CYCLE_RUBRIC_EDITABLE}</p>;
 }
 
 export default function CycleRubricTab({

@@ -4,7 +4,7 @@
 -- WHAT THIS FILE IS
 --   The database migration for the Black Belt RUBRIC EDITOR (rulebook
 --   v0.921-v0.934). Build contract: docs/Dashboard Docs/Build contracts/
---   CONTRACT-0024.md. It runs after every live migration (0001-0021) and
+--   CONTRACT-0024.md. It runs after every live migration (0001-0022) and
 --   after 0016 (Black Belt testing) in particular. It changes no object of
 --   0001-0023 except six 0016 objects, each REPLACED here ("create or
 --   replace" / "drop ... if exists" + create), never by editing 0016:
@@ -307,9 +307,14 @@ set search_path = ''
 as $$
 declare
   -- the extra invisible characters 0024 refuses on top of 0003 / 0005's
-  -- rules (contract 2.2): U+061C, U+2028, U+2029, U+00AD, U+180E and the
-  -- "tag characters" U+E0000-U+E007F
-  v_extra   constant text := '[؜  ­᠎\U000e0000-\U000e007f]';
+  -- rules (contract 2.2): U+061C, U+2028, U+2029, U+00AD, U+180E, the
+  -- "tag characters" U+E0000-U+E007F, and characters that show as
+  -- nothing or as a blank: the Hangul fillers U+3164, U+115F, U+1160,
+  -- U+FFA0, the blank Braille cell U+2800, U+034F, U+17B4, U+206A-U+206F,
+  -- U+FFF9-U+FFFB, the music-formatting U+1D173-U+1D17A, the variation
+  -- selectors U+FE00-U+FE0F and U+E0100-U+E01EF, and the wide space
+  -- U+3000. (Written as backslash-u escapes so they can be read.)
+  v_extra   constant text := '[\u061c\u2028\u2029\u00ad\u180e\u3164\u115f\u1160\uffa0\u2800\u034f\u17b4\u206a-\u206f\ufff9-\ufffb\u3000\ufe00-\ufe0f\U0001d173-\U0001d17a\U000e0000-\U000e007f\U000e0100-\U000e01ef]';
   v_codes   constant text[] := array['physical', 'technical', 'curriculum', 'other'];
   v_out     jsonb := '[]'::jsonb;
   v_x       jsonb;
@@ -850,7 +855,11 @@ begin
   -- subject, and its pass mark is at most the most points it can get
   if v_out = '[]'::jsonb then
     for v_b, v_bi in select t.e, (t.o - 1)::integer from jsonb_array_elements(v_plist) with ordinality as t(e, o) loop
-      v_most := public.bb_rubric_most_points(p_dan, (v_b ->> 'from')::integer, (v_b ->> 'to')::integer);
+      -- (the ends go through numeric first: a whole number may be written
+      -- 18.0, which a direct text -> integer cast refuses with an error)
+      v_most := public.bb_rubric_most_points(p_dan,
+                  case when jsonb_typeof(v_b -> 'from') = 'number' then (v_b -> 'from')::numeric::integer end,
+                  case when jsonb_typeof(v_b -> 'to') = 'number' then (v_b -> 'to')::numeric::integer end);
       if v_most = 0 then
         v_out := v_out || jsonb_build_array(jsonb_build_object('code', 'bracket_empty', 'bracket', v_bi));
       elsif (v_b -> 'pass_mark')::numeric > v_most then
@@ -881,7 +890,7 @@ immutable
 set search_path = ''
 as $$
 declare
-  v_extra constant text := '[؜  ­᠎\U000e0000-\U000e007f]';
+  v_extra constant text := '[\u061c\u2028\u2029\u00ad\u180e\u3164\u115f\u1160\uffa0\u2800\u034f\u17b4\u206a-\u206f\ufff9-\ufffb\u3000\ufe00-\ufe0f\U0001d173-\U0001d17a\U000e0000-\U000e007f\U000e0100-\U000e01ef]';
   v_s     text;
   v_d     jsonb;
   v_i     integer;
@@ -1211,6 +1220,10 @@ revoke execute on function public.bb_rubric_fresh_copy(jsonb) from public, anon,
 --   Extra   counts_toward_total, limit, to_confirm, note,
 --           items (name, rule: kind, points_each | steps (at_least, points))
 -- Grade points, points and cut-offs keep only the grade letters.
+-- Every copied value must also be of the TYPE its place needs (a number,
+-- text, yes/no, or empty where empty is allowed); anything else becomes
+-- empty (JSON null), so not even a wrongly typed value can carry
+-- something odd to the public form.
 create or replace function public.bb_rubric_public(p_doc jsonb)
 returns jsonb
 language sql
@@ -1219,35 +1232,35 @@ set search_path = ''
 as $$
   with letters(g) as (values ('A+'), ('A'), ('A-'), ('B+'), ('B'), ('B-'), ('C'), ('C-'), ('D'))
   select case when jsonb_typeof(p_doc) = 'object' then jsonb_build_object(
-    'schema_version', p_doc -> 'schema_version',
+    'schema_version', (case when jsonb_typeof(p_doc -> 'schema_version') in ('number') then p_doc -> 'schema_version' end),
     'dans', coalesce((
       select jsonb_agg(jsonb_build_object(
-               'dan', d.e -> 'dan',
+               'dan', (case when jsonb_typeof(d.e -> 'dan') in ('number') then d.e -> 'dan' end),
                'pass', jsonb_build_object(
-                 'brackets', coalesce((select jsonb_agg(jsonb_build_object('from', b.e -> 'from', 'to', b.e -> 'to',
-                                                                           'pass_mark', b.e -> 'pass_mark') order by b.o)
+                 'brackets', coalesce((select jsonb_agg(jsonb_build_object('from', (case when jsonb_typeof(b.e -> 'from') in ('number', 'null') then b.e -> 'from' end), 'to', (case when jsonb_typeof(b.e -> 'to') in ('number', 'null') then b.e -> 'to' end),
+                                                                           'pass_mark', (case when jsonb_typeof(b.e -> 'pass_mark') in ('number') then b.e -> 'pass_mark' end)) order by b.o)
                                          from jsonb_array_elements(case when jsonb_typeof(d.e -> 'pass' -> 'brackets') = 'array'
                                                                         then d.e -> 'pass' -> 'brackets' else '[]'::jsonb end)
                                               with ordinality as b(e, o)), '[]'::jsonb),
-                 'no_d',   d.e -> 'pass' -> 'no_d',
-                 'makeup', d.e -> 'pass' -> 'makeup'),
+                 'no_d',   (case when jsonb_typeof(d.e -> 'pass' -> 'no_d') in ('boolean') then d.e -> 'pass' -> 'no_d' end),
+                 'makeup', (case when jsonb_typeof(d.e -> 'pass' -> 'makeup') in ('string', 'null') then d.e -> 'pass' -> 'makeup' end)),
                'parts', coalesce((
                  select jsonb_agg(jsonb_build_object(
-                          'code', p.e -> 'code',
-                          'name', p.e -> 'name',
-                          'grade_points', coalesce((select jsonb_object_agg(l.g, p.e -> 'grade_points' -> l.g) from letters l
+                          'code', (case when jsonb_typeof(p.e -> 'code') in ('string') then p.e -> 'code' end),
+                          'name', (case when jsonb_typeof(p.e -> 'name') in ('string') then p.e -> 'name' end),
+                          'grade_points', coalesce((select jsonb_object_agg(l.g, (case when jsonb_typeof(p.e -> 'grade_points' -> l.g) in ('number', 'null') then p.e -> 'grade_points' -> l.g end)) from letters l
                                                      where jsonb_typeof(p.e -> 'grade_points') = 'object' and p.e -> 'grade_points' ? l.g), '{}'::jsonb),
                           'subjects', coalesce((
                             select jsonb_agg(jsonb_build_object(
-                                     'id', s.e -> 'id', 'name', s.e -> 'name', 'credits', s.e -> 'credits',
-                                     'scoring', s.e -> 'scoring',
+                                     'id', (case when jsonb_typeof(s.e -> 'id') in ('string') then s.e -> 'id' end), 'name', (case when jsonb_typeof(s.e -> 'name') in ('string') then s.e -> 'name' end), 'credits', (case when jsonb_typeof(s.e -> 'credits') in ('number') then s.e -> 'credits' end),
+                                     'scoring', (case when jsonb_typeof(s.e -> 'scoring') in ('string') then s.e -> 'scoring' end),
                                      'ways', coalesce((
                                        select jsonb_agg(jsonb_build_object(
-                                                'name', w.e -> 'name', 'unit', w.e -> 'unit', 'direction', w.e -> 'direction',
+                                                'name', (case when jsonb_typeof(w.e -> 'name') in ('string', 'null') then w.e -> 'name' end), 'unit', (case when jsonb_typeof(w.e -> 'unit') in ('string', 'null') then w.e -> 'unit' end), 'direction', (case when jsonb_typeof(w.e -> 'direction') in ('string') then w.e -> 'direction' end),
                                                 'brackets', coalesce((
                                                   select jsonb_agg(jsonb_build_object(
-                                                           'from', wb.e -> 'from', 'to', wb.e -> 'to',
-                                                           'cutoffs', coalesce((select jsonb_object_agg(l.g, wb.e -> 'cutoffs' -> l.g) from letters l
+                                                           'from', (case when jsonb_typeof(wb.e -> 'from') in ('number', 'null') then wb.e -> 'from' end), 'to', (case when jsonb_typeof(wb.e -> 'to') in ('number', 'null') then wb.e -> 'to' end),
+                                                           'cutoffs', coalesce((select jsonb_object_agg(l.g, (case when jsonb_typeof(wb.e -> 'cutoffs' -> l.g) in ('number', 'null') then wb.e -> 'cutoffs' -> l.g end)) from letters l
                                                                                  where jsonb_typeof(wb.e -> 'cutoffs') = 'object' and wb.e -> 'cutoffs' ? l.g), '{}'::jsonb))
                                                          order by wb.o)
                                                     from jsonb_array_elements(case when jsonb_typeof(w.e -> 'brackets') = 'array'
@@ -1256,14 +1269,14 @@ as $$
                                               order by w.o)
                                          from jsonb_array_elements(case when jsonb_typeof(s.e -> 'ways') = 'array' then s.e -> 'ways' else '[]'::jsonb end)
                                               with ordinality as w(e, o)), '[]'::jsonb),
-                                     'points_mode', s.e -> 'points_mode',
-                                     'points', coalesce((select jsonb_object_agg(l.g, s.e -> 'points' -> l.g) from letters l
+                                     'points_mode', (case when jsonb_typeof(s.e -> 'points_mode') in ('string') then s.e -> 'points_mode' end),
+                                     'points', coalesce((select jsonb_object_agg(l.g, (case when jsonb_typeof(s.e -> 'points' -> l.g) in ('number', 'null') then s.e -> 'points' -> l.g end)) from letters l
                                                           where jsonb_typeof(s.e -> 'points') = 'object' and s.e -> 'points' ? l.g), '{}'::jsonb),
                                      'limited_to', case when jsonb_typeof(s.e -> 'limited_to') = 'array'
-                                                        then coalesce((select jsonb_agg(jsonb_build_object('from', lt.e -> 'from', 'to', lt.e -> 'to') order by lt.o)
+                                                        then coalesce((select jsonb_agg(jsonb_build_object('from', (case when jsonb_typeof(lt.e -> 'from') in ('number', 'null') then lt.e -> 'from' end), 'to', (case when jsonb_typeof(lt.e -> 'to') in ('number', 'null') then lt.e -> 'to' end)) order by lt.o)
                                                                          from jsonb_array_elements(s.e -> 'limited_to') with ordinality as lt(e, o)), '[]'::jsonb)
                                                         else 'null'::jsonb end,
-                                     'outdoor', s.e -> 'outdoor', 'handed_in', s.e -> 'handed_in', 'note', s.e -> 'note')
+                                     'outdoor', (case when jsonb_typeof(s.e -> 'outdoor') in ('boolean') then s.e -> 'outdoor' end), 'handed_in', (case when jsonb_typeof(s.e -> 'handed_in') in ('boolean') then s.e -> 'handed_in' end), 'note', (case when jsonb_typeof(s.e -> 'note') in ('string', 'null') then s.e -> 'note' end))
                                    order by s.o)
                               from jsonb_array_elements(case when jsonb_typeof(p.e -> 'subjects') = 'array' then p.e -> 'subjects' else '[]'::jsonb end)
                                    with ordinality as s(e, o)), '[]'::jsonb))
@@ -1271,22 +1284,22 @@ as $$
                    from jsonb_array_elements(case when jsonb_typeof(d.e -> 'parts') = 'array' then d.e -> 'parts' else '[]'::jsonb end)
                         with ordinality as p(e, o)), '[]'::jsonb),
                'extra_points', jsonb_build_object(
-                 'counts_toward_total', d.e -> 'extra_points' -> 'counts_toward_total',
-                 'limit',               d.e -> 'extra_points' -> 'limit',
-                 'to_confirm',          d.e -> 'extra_points' -> 'to_confirm',
-                 'note',                d.e -> 'extra_points' -> 'note',
+                 'counts_toward_total', (case when jsonb_typeof(d.e -> 'extra_points' -> 'counts_toward_total') in ('boolean') then d.e -> 'extra_points' -> 'counts_toward_total' end),
+                 'limit',               (case when jsonb_typeof(d.e -> 'extra_points' -> 'limit') in ('number', 'null') then d.e -> 'extra_points' -> 'limit' end),
+                 'to_confirm',          (case when jsonb_typeof(d.e -> 'extra_points' -> 'to_confirm') in ('boolean') then d.e -> 'extra_points' -> 'to_confirm' end),
+                 'note',                (case when jsonb_typeof(d.e -> 'extra_points' -> 'note') in ('string', 'null') then d.e -> 'extra_points' -> 'note' end),
                  'items', coalesce((
                    select jsonb_agg(jsonb_build_object(
-                            'name', i.e -> 'name',
+                            'name', (case when jsonb_typeof(i.e -> 'name') in ('string') then i.e -> 'name' end),
                             'rule', case when i.e -> 'rule' ->> 'kind' = 'per_count'
-                                         then jsonb_build_object('kind', 'per_count', 'points_each', i.e -> 'rule' -> 'points_each')
+                                         then jsonb_build_object('kind', 'per_count', 'points_each', (case when jsonb_typeof(i.e -> 'rule' -> 'points_each') in ('number') then i.e -> 'rule' -> 'points_each' end))
                                          when i.e -> 'rule' ->> 'kind' = 'steps'
                                          then jsonb_build_object('kind', 'steps', 'steps', coalesce((
-                                                select jsonb_agg(jsonb_build_object('at_least', st.e -> 'at_least', 'points', st.e -> 'points') order by st.o)
+                                                select jsonb_agg(jsonb_build_object('at_least', (case when jsonb_typeof(st.e -> 'at_least') in ('number') then st.e -> 'at_least' end), 'points', (case when jsonb_typeof(st.e -> 'points') in ('number') then st.e -> 'points' end)) order by st.o)
                                                   from jsonb_array_elements(case when jsonb_typeof(i.e -> 'rule' -> 'steps') = 'array'
                                                                                  then i.e -> 'rule' -> 'steps' else '[]'::jsonb end)
                                                        with ordinality as st(e, o)), '[]'::jsonb))
-                                         else jsonb_build_object('kind', i.e -> 'rule' -> 'kind') end)
+                                         else jsonb_build_object('kind', (case when jsonb_typeof(i.e -> 'rule' -> 'kind') in ('string', 'null') then i.e -> 'rule' -> 'kind' end)) end)
                           order by i.o)
                      from jsonb_array_elements(case when jsonb_typeof(d.e -> 'extra_points' -> 'items') = 'array'
                                                     then d.e -> 'extra_points' -> 'items' else '[]'::jsonb end)
@@ -1317,7 +1330,7 @@ declare
 begin
   v_name := public.testing_normalize_name(left(public.testing_normalize_name(public.change_log_actor_name()), 60));
   if not coalesce(public.testing_name_is_valid(v_name)
-                  and v_name !~ '[؜  ­᠎\U000e0000-\U000e007f]', false) then
+                  and v_name !~ '[\u061c\u2028\u2029\u00ad\u180e\u3164\u115f\u1160\uffa0\u2800\u034f\u17b4\u206a-\u206f\ufff9-\ufffb\u3000\ufe00-\ufe0f\U0001d173-\U0001d17a\U000e0000-\U000e007f\U000e0100-\U000e01ef]', false) then
     v_name := null;
   end if;
   return jsonb_set(p_doc, array['dans', (p_dan - 1)::text],

@@ -289,7 +289,7 @@ export default function CyclePage({ cycleId, isAdmin, onBack, onGoToDefaultRubri
       {tab === 'candidates' && staffLine && <p className="viewonly">{staffLine}</p>}
       {tab === 'rubric' && !isAdmin && <p className="viewonly">{T.VIEW_ONLY}</p>}
       {tab === 'rubric' && rubricLive.status === 'ready' && rubricLive.data && (
-        <CycleRubricLine locked={rubricLive.data.locked} firstOpenedAt={rubricLive.data.firstOpenedAt} isAdmin={isAdmin} onGoToDefaultRubric={onGoToDefaultRubric} />
+        <CycleRubricLine locked={rubricLive.data.locked} firstOpenedAt={rubricLive.data.firstOpenedAt} onGoToDefaultRubric={onGoToDefaultRubric} />
       )}
       {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />}
       {tab === 'rubric' && (

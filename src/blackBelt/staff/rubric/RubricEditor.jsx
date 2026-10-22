@@ -24,6 +24,7 @@ import IconButton from '../../../components/IconButton.jsx';
 import Notice from '../../../components/Notice.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { bracketLabel, handedIn, mostPoints, partLetters, partMaxByBracket } from '../../../lib/blackBelt/rubric.js';
+import { nameKey as nameMatchKey } from '../../../lib/testing/names.js';
 import { useReorderDrag } from '../../../lib/useReorderDrag.js';
 import Choice from '../parts/Choice.jsx';
 import Grip from '../parts/Grip.jsx';
@@ -91,6 +92,28 @@ export default function RubricEditor({
     if (!byPlace.has(key)) byPlace.set(key, []);
     byPlace.get(key).push(p);
   }
+  // A name used twice is marked on BOTH rows (D3). The problem list names only the second
+  // one (as the database does), so the first row with the same name gets the same reason here.
+  const sameName = (a, b) => typeof a === 'string' && typeof b === 'string' && nameMatchKey(a) === nameMatchKey(b);
+  const echo = (key, p) => {
+    if (!byPlace.has(key)) byPlace.set(key, [p]);
+  };
+  for (const p of shown) {
+    if (p.code === 'subject_name_duplicate') {
+      const part = now.parts?.find((x) => x.code === p.part);
+      const me = part?.subjects?.find((x) => x.id === p.subject);
+      for (const o of me ? part.subjects : []) if (o.id !== me.id && sameName(o.name, me.name)) echo(`subject:${o.id}:name`, p);
+    } else if (p.code === 'part_name_duplicate') {
+      const me = now.parts?.find((x) => x.code === p.part);
+      for (const o of me ? now.parts : []) if (o.code !== me.code && sameName(o.name, me.name)) echo(`part:${o.code}:name`, p);
+    } else if (p.code === 'extra_item_name_duplicate') {
+      const items = now.extra_points?.items ?? [];
+      const me = items[p.item];
+      items.forEach((o, j) => {
+        if (me && j !== p.item && sameName(o?.name, me.name)) echo(`extra:item:${j}`, p);
+      });
+    }
+  }
   const fieldText = (key) => {
     const list = byPlace.get(key);
     return list ? describe(list[0], now).field : null;
@@ -150,7 +173,9 @@ export default function RubricEditor({
           <IconAlertTriangle size={16} aria-hidden="true" />
           {T.cantSaveYet(danNo, problems.length)}
         </p>
-        <ul className="bbe-errors-list">
+        {/* numbered 1., 2., ... like the mockup; the number stays beside the FIRST line of a
+            wrapped line on phones (blackBelt.css .bbe-errors-list) */}
+        <ol className="bbe-errors-list">
           {problems.map((p, i) => (
             <li key={i}>
               <button type="button" className="link-button bbe-errors-line" onClick={() => jump(p)}>
@@ -158,7 +183,7 @@ export default function RubricEditor({
               </button>
             </li>
           ))}
-        </ul>
+        </ol>
         <p className="bbe-errors-foot">{T.ERRORS_FOOT}</p>
       </div>
     ) : null;
@@ -279,15 +304,35 @@ export default function RubricEditor({
         <label htmlFor={`${baseId}-makeup`} className="bbe-label">
           {T.MAKEUP_SENTENCE}
         </label>
-        <TextBox
-          id={`${baseId}-makeup`}
-          value={draft.pass.makeup ?? ''}
-          onChange={(text) => d.setMakeup(text)}
-          invalid={Boolean(fieldText('pass:makeup'))}
-          describedBy={`${baseId}-makeup-hint`}
-          place="pass:makeup"
-          maxLength={300}
-        />
+        {isPhone ? (
+          // Phones: a box that wraps, so the whole sentence can be read while typing (D7).
+          // It is still one line of text: Enter does nothing, and a pasted line break is
+          // turned into a space when the Dan is tidied for saving.
+          <textarea
+            id={`${baseId}-makeup`}
+            className="input bbe-text bbe-makeup-area"
+            rows={3}
+            value={draft.pass.makeup ?? ''}
+            onChange={(event) => d.setMakeup(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') event.preventDefault();
+            }}
+            aria-invalid={fieldText('pass:makeup') ? 'true' : undefined}
+            aria-describedby={`${baseId}-makeup-hint`}
+            data-place="pass:makeup"
+            maxLength={300}
+          />
+        ) : (
+          <TextBox
+            id={`${baseId}-makeup`}
+            value={draft.pass.makeup ?? ''}
+            onChange={(text) => d.setMakeup(text)}
+            invalid={Boolean(fieldText('pass:makeup'))}
+            describedBy={`${baseId}-makeup-hint`}
+            place="pass:makeup"
+            maxLength={300}
+          />
+        )}
         <FieldNote text={fieldText('pass:makeup')} />
         <p id={`${baseId}-makeup-hint`} className="bbe-hint">
           {T.MAKEUP_HINT}

@@ -393,20 +393,26 @@ export default function SubjectDialog({ draft, partCode, subject: original, isNe
       </div>
 
       <p className="field-hint">{isPhone ? T.DONE_KEEPS_PHONE : T.doneKeepsDraft(draft.dan)}</p>
-      {note && (
+      {/* PC / tablet: the unsaved note sits just above Cancel and Done */}
+      {note && !isPhone && (
         <div className="tdialog-note">
-          <Notice>
-            {T.UNSAVED}
-            {isPhone && (
-              <button type="button" className="note-action" onClick={onCancel}>
-                {T.DISCARD_CHANGES}
-              </button>
-            )}
-          </Notice>
+          <Notice>{T.UNSAVED}</Notice>
         </div>
       )}
       {isPhone ? (
         <div className="dialog-page-submit">
+          {/* Phone: the note lives in the pinned bottom bar, right above Done, so it is seen
+              wherever the page is scrolled (v0.56, like the Edit Dan page) */}
+          {note && (
+            <div className="tdialog-note bbe-phone-note">
+              <Notice>
+                {T.UNSAVED}
+                <button type="button" className="note-action" onClick={onCancel}>
+                  {T.DISCARD_CHANGES}
+                </button>
+              </Notice>
+            </div>
+          )}
           <button type="submit" className="btn btn-primary btn-block">
             <IconCheck size={16} aria-hidden="true" />
             {T.DONE}

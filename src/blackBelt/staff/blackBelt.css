@@ -1766,7 +1766,18 @@
 .bbr-subjects {
   width: 100%;
   border-collapse: collapse;
+  /* fixed column widths, so Credits, Scoring and Up to line up across all four parts (D5) */
+  table-layout: fixed;
   font-size: var(--text-13);
+}
+
+.bbr-subjects thead th:nth-child(2),
+.bbr-subjects thead th:nth-child(4) {
+  width: 72px;
+}
+
+.bbr-subjects thead th:nth-child(3) {
+  width: 38%;
 }
 
 .bbr-subjects th,
@@ -2061,14 +2072,40 @@
   font-weight: 600;
 }
 
+/* The "Can't save" lines, numbered 1., 2., ... (mockup R8). The number is drawn by the list
+   item itself, at the same top and line height as the line's text, so on a phone it stays
+   beside the FIRST line of a line that wraps (a browser's own marker sat in the middle). */
 .bbe-errors-list {
   margin: var(--space-4) 0;
-  padding-left: var(--space-24);
+  padding-left: 0;
+  list-style: none;
+  counter-reset: bbe-error;
+}
+
+.bbe-errors-list > li {
+  display: flex;
+  gap: var(--space-4);
+  counter-increment: bbe-error;
+}
+
+.bbe-errors-list > li::before {
+  flex: none;
+  min-width: var(--space-24);
+  padding-top: var(--space-4);
+  content: counter(bbe-error) '.';
+  color: var(--color-warning-text);
+  font-size: var(--text-13);
+  line-height: 1.4;
+  text-align: right;
 }
 
 .bbe-errors-line {
+  display: flex;
+  align-items: flex-start;
   min-height: 24px;
+  padding-top: var(--space-4);
   color: var(--color-warning-text);
+  line-height: 1.4;
   text-align: left;
   text-decoration: underline;
 }
@@ -2165,6 +2202,8 @@
 
 .bbe-num {
   width: 72px;
+  /* small side padding: the boxes are narrow, and 12px each side cut "16.25" to "16." */
+  padding: 0 var(--space-4);
   text-align: right;
 }
 
@@ -2237,6 +2276,15 @@
 
 .bbe-makeup .bbe-text {
   width: 100%;
+}
+
+/* Phones: the make-up sentence in a box that wraps (it is still one line of text) */
+.bbe-makeup .bbe-makeup-area {
+  height: auto;
+  padding: var(--space-8) var(--space-12);
+  font-family: inherit;
+  line-height: 1.5;
+  resize: none;
 }
 
 .bbe-makeup {
@@ -2371,6 +2419,11 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-8);
+}
+
+/* wide enough for its gray "No limit" */
+.bbe-limit .bbe-num {
+  width: 80px;
 }
 
 .bbe-item {
@@ -2739,8 +2792,10 @@
 
 /* Tablet (upright, 640–1023px): the subject rows keep one line; the scoring words wrap */
 @media (min-width: 640px) and (max-width: 1023.98px) {
+  /* the name column is wide enough for "Assistant instructor course" and
+     "One Step Sparring (1-24)"; the scoring words take what is left */
   .bbe-srow {
-    grid-template-columns: 44px minmax(120px, 2fr) 52px minmax(0, 2fr) 40px auto;
+    grid-template-columns: 44px minmax(216px, 3fr) 52px minmax(0, 2fr) 40px auto;
   }
 }
 
@@ -2816,10 +2871,12 @@
   }
 
   .bbe-step .bbe-num {
-    width: 44px;
+    width: 48px;
   }
 
+  /* one step stays on one line: "at least [320] → [5] points 🗑" (no wrap, smaller gaps) */
   .bbe-step {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    gap: 2px;
   }
 }

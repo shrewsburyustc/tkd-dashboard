@@ -7,6 +7,7 @@
   "then the sorted, de-duplicated list of problem codes must equal \"expect\" ([] = valid).",
   "A case with \"dan_no\": null and \"base\": \"default\": the ops apply to the WHOLE default rubric document; \"expect_valid\" is what bb_rubric_is_valid must answer.",
   "ops: {\"op\": \"set\", \"path\": [...], \"value\": ...} sets (or adds) the value at the path (keys are strings, list positions are numbers; like jsonb_set);",
+  "     A \"set\" may give \"value_json\" (the value as raw JSON text, e.g. \"18.0\") instead of \"value\": JSON.parse would turn 18.0 into 18, so the SQL runner casts the text straight to jsonb (keeping 18.0) and the JS runner parses it.",
   "     {\"op\": \"remove\", \"path\": [...]} removes it (like the #- operator).",
   "Problem codes for fields without their own code (yes/no fields, the stamps, scoring, points_mode, missing or unknown keys) are \"shape\"."
  ],
@@ -5074,6 +5075,3323 @@
    "expect": [
     "shape"
    ]
+  },
+  {
+   "name": "part name with U+3164 Hangul filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "name"
+     ],
+     "value": "Physㅤical"
+    }
+   ],
+   "expect": [
+    "part_name"
+   ]
+  },
+  {
+   "name": "subject name with U+3164 Hangul filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "name"
+     ],
+     "value": "Stretㅤching"
+    }
+   ],
+   "expect": [
+    "subject_name"
+   ]
+  },
+  {
+   "name": "way name with U+3164 Hangul filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      6,
+      "ways",
+      0,
+      "name"
+     ],
+     "value": "Pullㅤ-up"
+    }
+   ],
+   "expect": [
+    "way_name"
+   ]
+  },
+  {
+   "name": "extra-points item name with U+3164 Hangul filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "items",
+      0,
+      "name"
+     ],
+     "value": "Extra ㅤstripes"
+    }
+   ],
+   "expect": [
+    "extra_item_name"
+   ]
+  },
+  {
+   "name": "unit with U+3164 Hangul filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "ways",
+      0,
+      "unit"
+     ],
+     "value": "incㅤhes"
+    }
+   ],
+   "expect": [
+    "unit"
+   ]
+  },
+  {
+   "name": "subject note with U+3164 Hangul filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      8,
+      "note"
+     ],
+     "value": "1/2 mile ㅤfor 12 and under"
+    }
+   ],
+   "expect": [
+    "note"
+   ]
+  },
+  {
+   "name": "make-up with U+3164 Hangul filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "makeup"
+     ],
+     "value": "Made up at the ㅤnext testing."
+    }
+   ],
+   "expect": [
+    "makeup"
+   ]
+  },
+  {
+   "name": "extra-points note with U+3164 Hangul filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "note"
+     ],
+     "value": "To be ㅤconfirmed"
+    }
+   ],
+   "expect": [
+    "extra_note"
+   ]
+  },
+  {
+   "name": "source with U+3164 Hangul filler",
+   "dan_no": null,
+   "base": "default",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "source"
+     ],
+     "value": "Fall 2026 ㅤ(old Sheet)"
+    }
+   ],
+   "expect_valid": false
+  },
+  {
+   "name": "part name with U+115F Hangul choseong filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "name"
+     ],
+     "value": "Physᅟical"
+    }
+   ],
+   "expect": [
+    "part_name"
+   ]
+  },
+  {
+   "name": "subject name with U+115F Hangul choseong filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "name"
+     ],
+     "value": "Stretᅟching"
+    }
+   ],
+   "expect": [
+    "subject_name"
+   ]
+  },
+  {
+   "name": "way name with U+115F Hangul choseong filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      6,
+      "ways",
+      0,
+      "name"
+     ],
+     "value": "Pullᅟ-up"
+    }
+   ],
+   "expect": [
+    "way_name"
+   ]
+  },
+  {
+   "name": "extra-points item name with U+115F Hangul choseong filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "items",
+      0,
+      "name"
+     ],
+     "value": "Extra ᅟstripes"
+    }
+   ],
+   "expect": [
+    "extra_item_name"
+   ]
+  },
+  {
+   "name": "unit with U+115F Hangul choseong filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "ways",
+      0,
+      "unit"
+     ],
+     "value": "incᅟhes"
+    }
+   ],
+   "expect": [
+    "unit"
+   ]
+  },
+  {
+   "name": "subject note with U+115F Hangul choseong filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      8,
+      "note"
+     ],
+     "value": "1/2 mile ᅟfor 12 and under"
+    }
+   ],
+   "expect": [
+    "note"
+   ]
+  },
+  {
+   "name": "make-up with U+115F Hangul choseong filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "makeup"
+     ],
+     "value": "Made up at the ᅟnext testing."
+    }
+   ],
+   "expect": [
+    "makeup"
+   ]
+  },
+  {
+   "name": "extra-points note with U+115F Hangul choseong filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "note"
+     ],
+     "value": "To be ᅟconfirmed"
+    }
+   ],
+   "expect": [
+    "extra_note"
+   ]
+  },
+  {
+   "name": "source with U+115F Hangul choseong filler",
+   "dan_no": null,
+   "base": "default",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "source"
+     ],
+     "value": "Fall 2026 ᅟ(old Sheet)"
+    }
+   ],
+   "expect_valid": false
+  },
+  {
+   "name": "part name with U+1160 Hangul jungseong filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "name"
+     ],
+     "value": "Physᅠical"
+    }
+   ],
+   "expect": [
+    "part_name"
+   ]
+  },
+  {
+   "name": "subject name with U+1160 Hangul jungseong filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "name"
+     ],
+     "value": "Stretᅠching"
+    }
+   ],
+   "expect": [
+    "subject_name"
+   ]
+  },
+  {
+   "name": "way name with U+1160 Hangul jungseong filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      6,
+      "ways",
+      0,
+      "name"
+     ],
+     "value": "Pullᅠ-up"
+    }
+   ],
+   "expect": [
+    "way_name"
+   ]
+  },
+  {
+   "name": "extra-points item name with U+1160 Hangul jungseong filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "items",
+      0,
+      "name"
+     ],
+     "value": "Extra ᅠstripes"
+    }
+   ],
+   "expect": [
+    "extra_item_name"
+   ]
+  },
+  {
+   "name": "unit with U+1160 Hangul jungseong filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "ways",
+      0,
+      "unit"
+     ],
+     "value": "incᅠhes"
+    }
+   ],
+   "expect": [
+    "unit"
+   ]
+  },
+  {
+   "name": "subject note with U+1160 Hangul jungseong filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      8,
+      "note"
+     ],
+     "value": "1/2 mile ᅠfor 12 and under"
+    }
+   ],
+   "expect": [
+    "note"
+   ]
+  },
+  {
+   "name": "make-up with U+1160 Hangul jungseong filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "makeup"
+     ],
+     "value": "Made up at the ᅠnext testing."
+    }
+   ],
+   "expect": [
+    "makeup"
+   ]
+  },
+  {
+   "name": "extra-points note with U+1160 Hangul jungseong filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "note"
+     ],
+     "value": "To be ᅠconfirmed"
+    }
+   ],
+   "expect": [
+    "extra_note"
+   ]
+  },
+  {
+   "name": "source with U+1160 Hangul jungseong filler",
+   "dan_no": null,
+   "base": "default",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "source"
+     ],
+     "value": "Fall 2026 ᅠ(old Sheet)"
+    }
+   ],
+   "expect_valid": false
+  },
+  {
+   "name": "part name with U+FFA0 halfwidth Hangul filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "name"
+     ],
+     "value": "Physﾠical"
+    }
+   ],
+   "expect": [
+    "part_name"
+   ]
+  },
+  {
+   "name": "subject name with U+FFA0 halfwidth Hangul filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "name"
+     ],
+     "value": "Stretﾠching"
+    }
+   ],
+   "expect": [
+    "subject_name"
+   ]
+  },
+  {
+   "name": "way name with U+FFA0 halfwidth Hangul filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      6,
+      "ways",
+      0,
+      "name"
+     ],
+     "value": "Pullﾠ-up"
+    }
+   ],
+   "expect": [
+    "way_name"
+   ]
+  },
+  {
+   "name": "extra-points item name with U+FFA0 halfwidth Hangul filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "items",
+      0,
+      "name"
+     ],
+     "value": "Extra ﾠstripes"
+    }
+   ],
+   "expect": [
+    "extra_item_name"
+   ]
+  },
+  {
+   "name": "unit with U+FFA0 halfwidth Hangul filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "ways",
+      0,
+      "unit"
+     ],
+     "value": "incﾠhes"
+    }
+   ],
+   "expect": [
+    "unit"
+   ]
+  },
+  {
+   "name": "subject note with U+FFA0 halfwidth Hangul filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      8,
+      "note"
+     ],
+     "value": "1/2 mile ﾠfor 12 and under"
+    }
+   ],
+   "expect": [
+    "note"
+   ]
+  },
+  {
+   "name": "make-up with U+FFA0 halfwidth Hangul filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "makeup"
+     ],
+     "value": "Made up at the ﾠnext testing."
+    }
+   ],
+   "expect": [
+    "makeup"
+   ]
+  },
+  {
+   "name": "extra-points note with U+FFA0 halfwidth Hangul filler",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "note"
+     ],
+     "value": "To be ﾠconfirmed"
+    }
+   ],
+   "expect": [
+    "extra_note"
+   ]
+  },
+  {
+   "name": "source with U+FFA0 halfwidth Hangul filler",
+   "dan_no": null,
+   "base": "default",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "source"
+     ],
+     "value": "Fall 2026 ﾠ(old Sheet)"
+    }
+   ],
+   "expect_valid": false
+  },
+  {
+   "name": "part name with U+2800 blank Braille cell",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "name"
+     ],
+     "value": "Phys⠀ical"
+    }
+   ],
+   "expect": [
+    "part_name"
+   ]
+  },
+  {
+   "name": "subject name with U+2800 blank Braille cell",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "name"
+     ],
+     "value": "Stret⠀ching"
+    }
+   ],
+   "expect": [
+    "subject_name"
+   ]
+  },
+  {
+   "name": "way name with U+2800 blank Braille cell",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      6,
+      "ways",
+      0,
+      "name"
+     ],
+     "value": "Pull⠀-up"
+    }
+   ],
+   "expect": [
+    "way_name"
+   ]
+  },
+  {
+   "name": "extra-points item name with U+2800 blank Braille cell",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "items",
+      0,
+      "name"
+     ],
+     "value": "Extra ⠀stripes"
+    }
+   ],
+   "expect": [
+    "extra_item_name"
+   ]
+  },
+  {
+   "name": "unit with U+2800 blank Braille cell",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "ways",
+      0,
+      "unit"
+     ],
+     "value": "inc⠀hes"
+    }
+   ],
+   "expect": [
+    "unit"
+   ]
+  },
+  {
+   "name": "subject note with U+2800 blank Braille cell",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      8,
+      "note"
+     ],
+     "value": "1/2 mile ⠀for 12 and under"
+    }
+   ],
+   "expect": [
+    "note"
+   ]
+  },
+  {
+   "name": "make-up with U+2800 blank Braille cell",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "makeup"
+     ],
+     "value": "Made up at the ⠀next testing."
+    }
+   ],
+   "expect": [
+    "makeup"
+   ]
+  },
+  {
+   "name": "extra-points note with U+2800 blank Braille cell",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "note"
+     ],
+     "value": "To be ⠀confirmed"
+    }
+   ],
+   "expect": [
+    "extra_note"
+   ]
+  },
+  {
+   "name": "source with U+2800 blank Braille cell",
+   "dan_no": null,
+   "base": "default",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "source"
+     ],
+     "value": "Fall 2026 ⠀(old Sheet)"
+    }
+   ],
+   "expect_valid": false
+  },
+  {
+   "name": "part name with U+034F combining grapheme joiner",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "name"
+     ],
+     "value": "Phys͏ical"
+    }
+   ],
+   "expect": [
+    "part_name"
+   ]
+  },
+  {
+   "name": "subject name with U+034F combining grapheme joiner",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "name"
+     ],
+     "value": "Stret͏ching"
+    }
+   ],
+   "expect": [
+    "subject_name"
+   ]
+  },
+  {
+   "name": "way name with U+034F combining grapheme joiner",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      6,
+      "ways",
+      0,
+      "name"
+     ],
+     "value": "Pull͏-up"
+    }
+   ],
+   "expect": [
+    "way_name"
+   ]
+  },
+  {
+   "name": "extra-points item name with U+034F combining grapheme joiner",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "items",
+      0,
+      "name"
+     ],
+     "value": "Extra ͏stripes"
+    }
+   ],
+   "expect": [
+    "extra_item_name"
+   ]
+  },
+  {
+   "name": "unit with U+034F combining grapheme joiner",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "ways",
+      0,
+      "unit"
+     ],
+     "value": "inc͏hes"
+    }
+   ],
+   "expect": [
+    "unit"
+   ]
+  },
+  {
+   "name": "subject note with U+034F combining grapheme joiner",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      8,
+      "note"
+     ],
+     "value": "1/2 mile ͏for 12 and under"
+    }
+   ],
+   "expect": [
+    "note"
+   ]
+  },
+  {
+   "name": "make-up with U+034F combining grapheme joiner",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "makeup"
+     ],
+     "value": "Made up at the ͏next testing."
+    }
+   ],
+   "expect": [
+    "makeup"
+   ]
+  },
+  {
+   "name": "extra-points note with U+034F combining grapheme joiner",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "note"
+     ],
+     "value": "To be ͏confirmed"
+    }
+   ],
+   "expect": [
+    "extra_note"
+   ]
+  },
+  {
+   "name": "source with U+034F combining grapheme joiner",
+   "dan_no": null,
+   "base": "default",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "source"
+     ],
+     "value": "Fall 2026 ͏(old Sheet)"
+    }
+   ],
+   "expect_valid": false
+  },
+  {
+   "name": "part name with U+17B4 Khmer vowel inherent aq",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "name"
+     ],
+     "value": "Phys឴ical"
+    }
+   ],
+   "expect": [
+    "part_name"
+   ]
+  },
+  {
+   "name": "subject name with U+17B4 Khmer vowel inherent aq",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "name"
+     ],
+     "value": "Stret឴ching"
+    }
+   ],
+   "expect": [
+    "subject_name"
+   ]
+  },
+  {
+   "name": "way name with U+17B4 Khmer vowel inherent aq",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      6,
+      "ways",
+      0,
+      "name"
+     ],
+     "value": "Pull឴-up"
+    }
+   ],
+   "expect": [
+    "way_name"
+   ]
+  },
+  {
+   "name": "extra-points item name with U+17B4 Khmer vowel inherent aq",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "items",
+      0,
+      "name"
+     ],
+     "value": "Extra ឴stripes"
+    }
+   ],
+   "expect": [
+    "extra_item_name"
+   ]
+  },
+  {
+   "name": "unit with U+17B4 Khmer vowel inherent aq",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "ways",
+      0,
+      "unit"
+     ],
+     "value": "inc឴hes"
+    }
+   ],
+   "expect": [
+    "unit"
+   ]
+  },
+  {
+   "name": "subject note with U+17B4 Khmer vowel inherent aq",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      8,
+      "note"
+     ],
+     "value": "1/2 mile ឴for 12 and under"
+    }
+   ],
+   "expect": [
+    "note"
+   ]
+  },
+  {
+   "name": "make-up with U+17B4 Khmer vowel inherent aq",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "makeup"
+     ],
+     "value": "Made up at the ឴next testing."
+    }
+   ],
+   "expect": [
+    "makeup"
+   ]
+  },
+  {
+   "name": "extra-points note with U+17B4 Khmer vowel inherent aq",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "note"
+     ],
+     "value": "To be ឴confirmed"
+    }
+   ],
+   "expect": [
+    "extra_note"
+   ]
+  },
+  {
+   "name": "source with U+17B4 Khmer vowel inherent aq",
+   "dan_no": null,
+   "base": "default",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "source"
+     ],
+     "value": "Fall 2026 ឴(old Sheet)"
+    }
+   ],
+   "expect_valid": false
+  },
+  {
+   "name": "part name with U+206A inhibit symmetric swapping",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "name"
+     ],
+     "value": "Phys⁪ical"
+    }
+   ],
+   "expect": [
+    "part_name"
+   ]
+  },
+  {
+   "name": "subject name with U+206A inhibit symmetric swapping",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "name"
+     ],
+     "value": "Stret⁪ching"
+    }
+   ],
+   "expect": [
+    "subject_name"
+   ]
+  },
+  {
+   "name": "way name with U+206A inhibit symmetric swapping",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      6,
+      "ways",
+      0,
+      "name"
+     ],
+     "value": "Pull⁪-up"
+    }
+   ],
+   "expect": [
+    "way_name"
+   ]
+  },
+  {
+   "name": "extra-points item name with U+206A inhibit symmetric swapping",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "items",
+      0,
+      "name"
+     ],
+     "value": "Extra ⁪stripes"
+    }
+   ],
+   "expect": [
+    "extra_item_name"
+   ]
+  },
+  {
+   "name": "unit with U+206A inhibit symmetric swapping",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "ways",
+      0,
+      "unit"
+     ],
+     "value": "inc⁪hes"
+    }
+   ],
+   "expect": [
+    "unit"
+   ]
+  },
+  {
+   "name": "subject note with U+206A inhibit symmetric swapping",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      8,
+      "note"
+     ],
+     "value": "1/2 mile ⁪for 12 and under"
+    }
+   ],
+   "expect": [
+    "note"
+   ]
+  },
+  {
+   "name": "make-up with U+206A inhibit symmetric swapping",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "makeup"
+     ],
+     "value": "Made up at the ⁪next testing."
+    }
+   ],
+   "expect": [
+    "makeup"
+   ]
+  },
+  {
+   "name": "extra-points note with U+206A inhibit symmetric swapping",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "note"
+     ],
+     "value": "To be ⁪confirmed"
+    }
+   ],
+   "expect": [
+    "extra_note"
+   ]
+  },
+  {
+   "name": "source with U+206A inhibit symmetric swapping",
+   "dan_no": null,
+   "base": "default",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "source"
+     ],
+     "value": "Fall 2026 ⁪(old Sheet)"
+    }
+   ],
+   "expect_valid": false
+  },
+  {
+   "name": "part name with U+206F nominal digit shapes",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "name"
+     ],
+     "value": "Phys⁯ical"
+    }
+   ],
+   "expect": [
+    "part_name"
+   ]
+  },
+  {
+   "name": "subject name with U+206F nominal digit shapes",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "name"
+     ],
+     "value": "Stret⁯ching"
+    }
+   ],
+   "expect": [
+    "subject_name"
+   ]
+  },
+  {
+   "name": "way name with U+206F nominal digit shapes",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      6,
+      "ways",
+      0,
+      "name"
+     ],
+     "value": "Pull⁯-up"
+    }
+   ],
+   "expect": [
+    "way_name"
+   ]
+  },
+  {
+   "name": "extra-points item name with U+206F nominal digit shapes",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "items",
+      0,
+      "name"
+     ],
+     "value": "Extra ⁯stripes"
+    }
+   ],
+   "expect": [
+    "extra_item_name"
+   ]
+  },
+  {
+   "name": "unit with U+206F nominal digit shapes",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "ways",
+      0,
+      "unit"
+     ],
+     "value": "inc⁯hes"
+    }
+   ],
+   "expect": [
+    "unit"
+   ]
+  },
+  {
+   "name": "subject note with U+206F nominal digit shapes",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      8,
+      "note"
+     ],
+     "value": "1/2 mile ⁯for 12 and under"
+    }
+   ],
+   "expect": [
+    "note"
+   ]
+  },
+  {
+   "name": "make-up with U+206F nominal digit shapes",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "makeup"
+     ],
+     "value": "Made up at the ⁯next testing."
+    }
+   ],
+   "expect": [
+    "makeup"
+   ]
+  },
+  {
+   "name": "extra-points note with U+206F nominal digit shapes",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "note"
+     ],
+     "value": "To be ⁯confirmed"
+    }
+   ],
+   "expect": [
+    "extra_note"
+   ]
+  },
+  {
+   "name": "source with U+206F nominal digit shapes",
+   "dan_no": null,
+   "base": "default",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "source"
+     ],
+     "value": "Fall 2026 ⁯(old Sheet)"
+    }
+   ],
+   "expect_valid": false
+  },
+  {
+   "name": "part name with U+FFF9 interlinear annotation anchor",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "name"
+     ],
+     "value": "Phys￹ical"
+    }
+   ],
+   "expect": [
+    "part_name"
+   ]
+  },
+  {
+   "name": "subject name with U+FFF9 interlinear annotation anchor",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "name"
+     ],
+     "value": "Stret￹ching"
+    }
+   ],
+   "expect": [
+    "subject_name"
+   ]
+  },
+  {
+   "name": "way name with U+FFF9 interlinear annotation anchor",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      6,
+      "ways",
+      0,
+      "name"
+     ],
+     "value": "Pull￹-up"
+    }
+   ],
+   "expect": [
+    "way_name"
+   ]
+  },
+  {
+   "name": "extra-points item name with U+FFF9 interlinear annotation anchor",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "items",
+      0,
+      "name"
+     ],
+     "value": "Extra ￹stripes"
+    }
+   ],
+   "expect": [
+    "extra_item_name"
+   ]
+  },
+  {
+   "name": "unit with U+FFF9 interlinear annotation anchor",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "ways",
+      0,
+      "unit"
+     ],
+     "value": "inc￹hes"
+    }
+   ],
+   "expect": [
+    "unit"
+   ]
+  },
+  {
+   "name": "subject note with U+FFF9 interlinear annotation anchor",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      8,
+      "note"
+     ],
+     "value": "1/2 mile ￹for 12 and under"
+    }
+   ],
+   "expect": [
+    "note"
+   ]
+  },
+  {
+   "name": "make-up with U+FFF9 interlinear annotation anchor",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "makeup"
+     ],
+     "value": "Made up at the ￹next testing."
+    }
+   ],
+   "expect": [
+    "makeup"
+   ]
+  },
+  {
+   "name": "extra-points note with U+FFF9 interlinear annotation anchor",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "note"
+     ],
+     "value": "To be ￹confirmed"
+    }
+   ],
+   "expect": [
+    "extra_note"
+   ]
+  },
+  {
+   "name": "source with U+FFF9 interlinear annotation anchor",
+   "dan_no": null,
+   "base": "default",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "source"
+     ],
+     "value": "Fall 2026 ￹(old Sheet)"
+    }
+   ],
+   "expect_valid": false
+  },
+  {
+   "name": "part name with U+FFFB interlinear annotation terminator",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "name"
+     ],
+     "value": "Phys￻ical"
+    }
+   ],
+   "expect": [
+    "part_name"
+   ]
+  },
+  {
+   "name": "subject name with U+FFFB interlinear annotation terminator",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "name"
+     ],
+     "value": "Stret￻ching"
+    }
+   ],
+   "expect": [
+    "subject_name"
+   ]
+  },
+  {
+   "name": "way name with U+FFFB interlinear annotation terminator",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      6,
+      "ways",
+      0,
+      "name"
+     ],
+     "value": "Pull￻-up"
+    }
+   ],
+   "expect": [
+    "way_name"
+   ]
+  },
+  {
+   "name": "extra-points item name with U+FFFB interlinear annotation terminator",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "items",
+      0,
+      "name"
+     ],
+     "value": "Extra ￻stripes"
+    }
+   ],
+   "expect": [
+    "extra_item_name"
+   ]
+  },
+  {
+   "name": "unit with U+FFFB interlinear annotation terminator",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "ways",
+      0,
+      "unit"
+     ],
+     "value": "inc￻hes"
+    }
+   ],
+   "expect": [
+    "unit"
+   ]
+  },
+  {
+   "name": "subject note with U+FFFB interlinear annotation terminator",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      8,
+      "note"
+     ],
+     "value": "1/2 mile ￻for 12 and under"
+    }
+   ],
+   "expect": [
+    "note"
+   ]
+  },
+  {
+   "name": "make-up with U+FFFB interlinear annotation terminator",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "makeup"
+     ],
+     "value": "Made up at the ￻next testing."
+    }
+   ],
+   "expect": [
+    "makeup"
+   ]
+  },
+  {
+   "name": "extra-points note with U+FFFB interlinear annotation terminator",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "note"
+     ],
+     "value": "To be ￻confirmed"
+    }
+   ],
+   "expect": [
+    "extra_note"
+   ]
+  },
+  {
+   "name": "source with U+FFFB interlinear annotation terminator",
+   "dan_no": null,
+   "base": "default",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "source"
+     ],
+     "value": "Fall 2026 ￻(old Sheet)"
+    }
+   ],
+   "expect_valid": false
+  },
+  {
+   "name": "part name with U+1D173 musical symbol begin beam",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "name"
+     ],
+     "value": "Phys𝅳ical"
+    }
+   ],
+   "expect": [
+    "part_name"
+   ]
+  },
+  {
+   "name": "subject name with U+1D173 musical symbol begin beam",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "name"
+     ],
+     "value": "Stret𝅳ching"
+    }
+   ],
+   "expect": [
+    "subject_name"
+   ]
+  },
+  {
+   "name": "way name with U+1D173 musical symbol begin beam",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      6,
+      "ways",
+      0,
+      "name"
+     ],
+     "value": "Pull𝅳-up"
+    }
+   ],
+   "expect": [
+    "way_name"
+   ]
+  },
+  {
+   "name": "extra-points item name with U+1D173 musical symbol begin beam",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "items",
+      0,
+      "name"
+     ],
+     "value": "Extra 𝅳stripes"
+    }
+   ],
+   "expect": [
+    "extra_item_name"
+   ]
+  },
+  {
+   "name": "unit with U+1D173 musical symbol begin beam",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "ways",
+      0,
+      "unit"
+     ],
+     "value": "inc𝅳hes"
+    }
+   ],
+   "expect": [
+    "unit"
+   ]
+  },
+  {
+   "name": "subject note with U+1D173 musical symbol begin beam",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      8,
+      "note"
+     ],
+     "value": "1/2 mile 𝅳for 12 and under"
+    }
+   ],
+   "expect": [
+    "note"
+   ]
+  },
+  {
+   "name": "make-up with U+1D173 musical symbol begin beam",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "makeup"
+     ],
+     "value": "Made up at the 𝅳next testing."
+    }
+   ],
+   "expect": [
+    "makeup"
+   ]
+  },
+  {
+   "name": "extra-points note with U+1D173 musical symbol begin beam",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "note"
+     ],
+     "value": "To be 𝅳confirmed"
+    }
+   ],
+   "expect": [
+    "extra_note"
+   ]
+  },
+  {
+   "name": "source with U+1D173 musical symbol begin beam",
+   "dan_no": null,
+   "base": "default",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "source"
+     ],
+     "value": "Fall 2026 𝅳(old Sheet)"
+    }
+   ],
+   "expect_valid": false
+  },
+  {
+   "name": "part name with U+1D17A musical symbol end phrase",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "name"
+     ],
+     "value": "Phys𝅺ical"
+    }
+   ],
+   "expect": [
+    "part_name"
+   ]
+  },
+  {
+   "name": "subject name with U+1D17A musical symbol end phrase",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "name"
+     ],
+     "value": "Stret𝅺ching"
+    }
+   ],
+   "expect": [
+    "subject_name"
+   ]
+  },
+  {
+   "name": "way name with U+1D17A musical symbol end phrase",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      6,
+      "ways",
+      0,
+      "name"
+     ],
+     "value": "Pull𝅺-up"
+    }
+   ],
+   "expect": [
+    "way_name"
+   ]
+  },
+  {
+   "name": "extra-points item name with U+1D17A musical symbol end phrase",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "items",
+      0,
+      "name"
+     ],
+     "value": "Extra 𝅺stripes"
+    }
+   ],
+   "expect": [
+    "extra_item_name"
+   ]
+  },
+  {
+   "name": "unit with U+1D17A musical symbol end phrase",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "ways",
+      0,
+      "unit"
+     ],
+     "value": "inc𝅺hes"
+    }
+   ],
+   "expect": [
+    "unit"
+   ]
+  },
+  {
+   "name": "subject note with U+1D17A musical symbol end phrase",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      8,
+      "note"
+     ],
+     "value": "1/2 mile 𝅺for 12 and under"
+    }
+   ],
+   "expect": [
+    "note"
+   ]
+  },
+  {
+   "name": "make-up with U+1D17A musical symbol end phrase",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "makeup"
+     ],
+     "value": "Made up at the 𝅺next testing."
+    }
+   ],
+   "expect": [
+    "makeup"
+   ]
+  },
+  {
+   "name": "extra-points note with U+1D17A musical symbol end phrase",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "note"
+     ],
+     "value": "To be 𝅺confirmed"
+    }
+   ],
+   "expect": [
+    "extra_note"
+   ]
+  },
+  {
+   "name": "source with U+1D17A musical symbol end phrase",
+   "dan_no": null,
+   "base": "default",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "source"
+     ],
+     "value": "Fall 2026 𝅺(old Sheet)"
+    }
+   ],
+   "expect_valid": false
+  },
+  {
+   "name": "part name with U+FE00 variation selector-1",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "name"
+     ],
+     "value": "Phys︀ical"
+    }
+   ],
+   "expect": [
+    "part_name"
+   ]
+  },
+  {
+   "name": "subject name with U+FE00 variation selector-1",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "name"
+     ],
+     "value": "Stret︀ching"
+    }
+   ],
+   "expect": [
+    "subject_name"
+   ]
+  },
+  {
+   "name": "way name with U+FE00 variation selector-1",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      6,
+      "ways",
+      0,
+      "name"
+     ],
+     "value": "Pull︀-up"
+    }
+   ],
+   "expect": [
+    "way_name"
+   ]
+  },
+  {
+   "name": "extra-points item name with U+FE00 variation selector-1",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "items",
+      0,
+      "name"
+     ],
+     "value": "Extra ︀stripes"
+    }
+   ],
+   "expect": [
+    "extra_item_name"
+   ]
+  },
+  {
+   "name": "unit with U+FE00 variation selector-1",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "ways",
+      0,
+      "unit"
+     ],
+     "value": "inc︀hes"
+    }
+   ],
+   "expect": [
+    "unit"
+   ]
+  },
+  {
+   "name": "subject note with U+FE00 variation selector-1",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      8,
+      "note"
+     ],
+     "value": "1/2 mile ︀for 12 and under"
+    }
+   ],
+   "expect": [
+    "note"
+   ]
+  },
+  {
+   "name": "make-up with U+FE00 variation selector-1",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "makeup"
+     ],
+     "value": "Made up at the ︀next testing."
+    }
+   ],
+   "expect": [
+    "makeup"
+   ]
+  },
+  {
+   "name": "extra-points note with U+FE00 variation selector-1",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "note"
+     ],
+     "value": "To be ︀confirmed"
+    }
+   ],
+   "expect": [
+    "extra_note"
+   ]
+  },
+  {
+   "name": "source with U+FE00 variation selector-1",
+   "dan_no": null,
+   "base": "default",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "source"
+     ],
+     "value": "Fall 2026 ︀(old Sheet)"
+    }
+   ],
+   "expect_valid": false
+  },
+  {
+   "name": "part name with U+FE0F variation selector-16",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "name"
+     ],
+     "value": "Phys️ical"
+    }
+   ],
+   "expect": [
+    "part_name"
+   ]
+  },
+  {
+   "name": "subject name with U+FE0F variation selector-16",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "name"
+     ],
+     "value": "Stret️ching"
+    }
+   ],
+   "expect": [
+    "subject_name"
+   ]
+  },
+  {
+   "name": "way name with U+FE0F variation selector-16",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      6,
+      "ways",
+      0,
+      "name"
+     ],
+     "value": "Pull️-up"
+    }
+   ],
+   "expect": [
+    "way_name"
+   ]
+  },
+  {
+   "name": "extra-points item name with U+FE0F variation selector-16",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "items",
+      0,
+      "name"
+     ],
+     "value": "Extra ️stripes"
+    }
+   ],
+   "expect": [
+    "extra_item_name"
+   ]
+  },
+  {
+   "name": "unit with U+FE0F variation selector-16",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "ways",
+      0,
+      "unit"
+     ],
+     "value": "inc️hes"
+    }
+   ],
+   "expect": [
+    "unit"
+   ]
+  },
+  {
+   "name": "subject note with U+FE0F variation selector-16",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      8,
+      "note"
+     ],
+     "value": "1/2 mile ️for 12 and under"
+    }
+   ],
+   "expect": [
+    "note"
+   ]
+  },
+  {
+   "name": "make-up with U+FE0F variation selector-16",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "makeup"
+     ],
+     "value": "Made up at the ️next testing."
+    }
+   ],
+   "expect": [
+    "makeup"
+   ]
+  },
+  {
+   "name": "extra-points note with U+FE0F variation selector-16",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "note"
+     ],
+     "value": "To be ️confirmed"
+    }
+   ],
+   "expect": [
+    "extra_note"
+   ]
+  },
+  {
+   "name": "source with U+FE0F variation selector-16",
+   "dan_no": null,
+   "base": "default",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "source"
+     ],
+     "value": "Fall 2026 ️(old Sheet)"
+    }
+   ],
+   "expect_valid": false
+  },
+  {
+   "name": "part name with U+E0100 variation selector-17",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "name"
+     ],
+     "value": "Phys󠄀ical"
+    }
+   ],
+   "expect": [
+    "part_name"
+   ]
+  },
+  {
+   "name": "subject name with U+E0100 variation selector-17",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "name"
+     ],
+     "value": "Stret󠄀ching"
+    }
+   ],
+   "expect": [
+    "subject_name"
+   ]
+  },
+  {
+   "name": "way name with U+E0100 variation selector-17",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      6,
+      "ways",
+      0,
+      "name"
+     ],
+     "value": "Pull󠄀-up"
+    }
+   ],
+   "expect": [
+    "way_name"
+   ]
+  },
+  {
+   "name": "extra-points item name with U+E0100 variation selector-17",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "items",
+      0,
+      "name"
+     ],
+     "value": "Extra 󠄀stripes"
+    }
+   ],
+   "expect": [
+    "extra_item_name"
+   ]
+  },
+  {
+   "name": "unit with U+E0100 variation selector-17",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "ways",
+      0,
+      "unit"
+     ],
+     "value": "inc󠄀hes"
+    }
+   ],
+   "expect": [
+    "unit"
+   ]
+  },
+  {
+   "name": "subject note with U+E0100 variation selector-17",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      8,
+      "note"
+     ],
+     "value": "1/2 mile 󠄀for 12 and under"
+    }
+   ],
+   "expect": [
+    "note"
+   ]
+  },
+  {
+   "name": "make-up with U+E0100 variation selector-17",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "makeup"
+     ],
+     "value": "Made up at the 󠄀next testing."
+    }
+   ],
+   "expect": [
+    "makeup"
+   ]
+  },
+  {
+   "name": "extra-points note with U+E0100 variation selector-17",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "note"
+     ],
+     "value": "To be 󠄀confirmed"
+    }
+   ],
+   "expect": [
+    "extra_note"
+   ]
+  },
+  {
+   "name": "source with U+E0100 variation selector-17",
+   "dan_no": null,
+   "base": "default",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "source"
+     ],
+     "value": "Fall 2026 󠄀(old Sheet)"
+    }
+   ],
+   "expect_valid": false
+  },
+  {
+   "name": "part name with U+E01EF variation selector-256",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "name"
+     ],
+     "value": "Phys󠇯ical"
+    }
+   ],
+   "expect": [
+    "part_name"
+   ]
+  },
+  {
+   "name": "subject name with U+E01EF variation selector-256",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "name"
+     ],
+     "value": "Stret󠇯ching"
+    }
+   ],
+   "expect": [
+    "subject_name"
+   ]
+  },
+  {
+   "name": "way name with U+E01EF variation selector-256",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      6,
+      "ways",
+      0,
+      "name"
+     ],
+     "value": "Pull󠇯-up"
+    }
+   ],
+   "expect": [
+    "way_name"
+   ]
+  },
+  {
+   "name": "extra-points item name with U+E01EF variation selector-256",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "items",
+      0,
+      "name"
+     ],
+     "value": "Extra 󠇯stripes"
+    }
+   ],
+   "expect": [
+    "extra_item_name"
+   ]
+  },
+  {
+   "name": "unit with U+E01EF variation selector-256",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "ways",
+      0,
+      "unit"
+     ],
+     "value": "inc󠇯hes"
+    }
+   ],
+   "expect": [
+    "unit"
+   ]
+  },
+  {
+   "name": "subject note with U+E01EF variation selector-256",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      8,
+      "note"
+     ],
+     "value": "1/2 mile 󠇯for 12 and under"
+    }
+   ],
+   "expect": [
+    "note"
+   ]
+  },
+  {
+   "name": "make-up with U+E01EF variation selector-256",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "makeup"
+     ],
+     "value": "Made up at the 󠇯next testing."
+    }
+   ],
+   "expect": [
+    "makeup"
+   ]
+  },
+  {
+   "name": "extra-points note with U+E01EF variation selector-256",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "note"
+     ],
+     "value": "To be 󠇯confirmed"
+    }
+   ],
+   "expect": [
+    "extra_note"
+   ]
+  },
+  {
+   "name": "source with U+E01EF variation selector-256",
+   "dan_no": null,
+   "base": "default",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "source"
+     ],
+     "value": "Fall 2026 󠇯(old Sheet)"
+    }
+   ],
+   "expect_valid": false
+  },
+  {
+   "name": "part name with U+3000 ideographic (wide) space",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "name"
+     ],
+     "value": "Phys　ical"
+    }
+   ],
+   "expect": [
+    "part_name"
+   ]
+  },
+  {
+   "name": "subject name with U+3000 ideographic (wide) space",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "name"
+     ],
+     "value": "Stret　ching"
+    }
+   ],
+   "expect": [
+    "subject_name"
+   ]
+  },
+  {
+   "name": "way name with U+3000 ideographic (wide) space",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      6,
+      "ways",
+      0,
+      "name"
+     ],
+     "value": "Pull　-up"
+    }
+   ],
+   "expect": [
+    "way_name"
+   ]
+  },
+  {
+   "name": "extra-points item name with U+3000 ideographic (wide) space",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "items",
+      0,
+      "name"
+     ],
+     "value": "Extra 　stripes"
+    }
+   ],
+   "expect": [
+    "extra_item_name"
+   ]
+  },
+  {
+   "name": "unit with U+3000 ideographic (wide) space",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      0,
+      "ways",
+      0,
+      "unit"
+     ],
+     "value": "inc　hes"
+    }
+   ],
+   "expect": [
+    "unit"
+   ]
+  },
+  {
+   "name": "subject note with U+3000 ideographic (wide) space",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      0,
+      "subjects",
+      8,
+      "note"
+     ],
+     "value": "1/2 mile 　for 12 and under"
+    }
+   ],
+   "expect": [
+    "note"
+   ]
+  },
+  {
+   "name": "make-up with U+3000 ideographic (wide) space",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "makeup"
+     ],
+     "value": "Made up at the 　next testing."
+    }
+   ],
+   "expect": [
+    "makeup"
+   ]
+  },
+  {
+   "name": "extra-points note with U+3000 ideographic (wide) space",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "extra_points",
+      "note"
+     ],
+     "value": "To be 　confirmed"
+    }
+   ],
+   "expect": [
+    "extra_note"
+   ]
+  },
+  {
+   "name": "source with U+3000 ideographic (wide) space",
+   "dan_no": null,
+   "base": "default",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "source"
+     ],
+     "value": "Fall 2026 　(old Sheet)"
+    }
+   ],
+   "expect_valid": false
+  },
+  {
+   "name": "pass brackets written 17.0 / 18.0: valid, no error",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "brackets",
+      0,
+      "to"
+     ],
+     "value_json": "17.0"
+    },
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "brackets",
+      1,
+      "from"
+     ],
+     "value_json": "18.0"
+    },
+    {
+     "op": "set",
+     "path": [
+      "parts",
+      2,
+      "subjects",
+      3,
+      "limited_to",
+      0,
+      "from"
+     ],
+     "value_json": "18.0"
+    }
+   ],
+   "expect": []
+  },
+  {
+   "name": "pass brackets written 17.0 / 18.0 with a pass mark too high: a problem, not an error",
+   "dan_no": 1,
+   "base": "default:1",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "brackets",
+      0,
+      "to"
+     ],
+     "value_json": "17.0"
+    },
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "brackets",
+      1,
+      "from"
+     ],
+     "value_json": "18.0"
+    },
+    {
+     "op": "set",
+     "path": [
+      "pass",
+      "brackets",
+      1,
+      "pass_mark"
+     ],
+     "value_json": "9999.0"
+    }
+   ],
+   "expect": [
+    "pass_mark_too_high"
+   ]
+  },
+  {
+   "name": "whole rubric with pass brackets 17.0 / 18.0 is valid",
+   "dan_no": null,
+   "base": "default",
+   "ops": [
+    {
+     "op": "set",
+     "path": [
+      "dans",
+      0,
+      "pass",
+      "brackets",
+      0,
+      "to"
+     ],
+     "value_json": "17.0"
+    },
+    {
+     "op": "set",
+     "path": [
+      "dans",
+      0,
+      "pass",
+      "brackets",
+      1,
+      "from"
+     ],
+     "value_json": "18.0"
+    }
+   ],
+   "expect_valid": true
   }
  ]
 }

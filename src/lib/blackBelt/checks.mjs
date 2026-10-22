@@ -2270,12 +2270,15 @@ check('rubric: numbers — 2 decimals, whole numbers, the decimal edge cases (§
 function applyOps(target, ops) {
   const doc = JSON.parse(JSON.stringify(target));
   let root = { v: doc };
-  for (const { op, path, value } of ops) {
+  for (const { op, path, value, value_json: valueJson } of ops) {
     const keys = ['v', ...path];
     let at = root;
     for (const k of keys.slice(0, -1)) at = at[k];
     const last = keys[keys.length - 1];
-    if (op === 'set') at[last] = JSON.parse(JSON.stringify(value === undefined ? null : value));
+    // "value_json" is the value as raw JSON text (e.g. "18.0", which the SQL side keeps as 18.0;
+    // in JavaScript it is simply the number 18)
+    if (op === 'set' && typeof valueJson === 'string') at[last] = JSON.parse(valueJson);
+    else if (op === 'set') at[last] = JSON.parse(JSON.stringify(value === undefined ? null : value));
     else if (Array.isArray(at)) at.splice(last, 1);
     else delete at[last];
   }

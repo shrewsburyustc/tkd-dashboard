@@ -1715,7 +1715,7 @@ They would put back the 2-year-only clean-up (0012 also its old history triggers
 ### 0024a. Before you apply (Claude, read-only through the connection)
 1. **No `bb_default_rubric` yet** (`select to_regclass('public.bb_default_rubric')` is empty).
 2. **How many cycles exist, and how many hold a version 1 sheet** (`select count(*), count(*) filter (where requirements -> 'schema_version' = '1') from public.bb_cycles`). Expected on production: none. If any exist, they are converted by 0024 — report them to Jeffrey first (OI-14) and snapshot their sheets (the run sheet says how).
-3. `0016_fingerprints.sql` = the live record (0016's CP3). Take the baseline of **every** fingerprint file (0003 … 0021) for step 0024c.
+3. `0016_fingerprints.sql` = the live record (0016's CP3). Take the baseline of **every** fingerprint file (0003 … 0022) for step 0024c.
 
 ### 0024b. Apply 0024 (you, in the SQL Editor)
 1. Copy **the whole file** `supabase/migrations/0024_black_belt_rubric.sql` → **SQL Editor → New query** → paste → **Run**.
@@ -1741,7 +1741,11 @@ They would put back the 2-year-only clean-up (0012 also its old history triggers
 Deploy the new front end (rubric editor, the cycle's Rubric tab, admin-only first opening with its Undo, the family form's new requirements panel) **right after** the paste — with Jeffrey's OK for the push. Until then the old screens keep working: Add cycle copies the default, a staff first opening is refused (`not_allowed`), nothing old reads the new sheet shape (no cycle exists, and the family form stays off, `BB_PUBLIC_REGISTRATION=off`).
 
 ### 0024f. Undo 0024 (only with Jeffrey's OK, and only while NO Black Belt cycle exists)
-Removes 0024's tables and functions and puts 0016's rule back; then **paste `0016_black_belt.sql` again** straight after — it is re-run safe and puts back its `bb_add_cycle`, `bb_set_registration`, `bb_public_cycle`, `bb_cycles_rules` and the trigger exactly. The script refuses (and changes nothing) if any cycle exists, because a cycle's sheet is version 2 by then. Paste in the SQL Editor:
+Removes 0024's tables and functions and puts 0016's rule back; then **paste `0016_black_belt.sql` again** straight after — it is re-run safe and puts back its `bb_add_cycle`, `bb_set_registration`, `bb_public_cycle`, `bb_cycles_rules` and the trigger exactly. The script refuses (and changes nothing) if any cycle exists, because a cycle's sheet is version 2 by then.
+
+**Paste the two straight after each other, with nothing in between** (or put both in one SQL Editor tab, this block first and 0016 under it, and run them together). Why: between the two, the database is half-undone. 0024's versions of `bb_add_cycle`, `bb_set_registration`, `bb_public_cycle` and `bb_cycles_rules` are still in place, but the table and helper functions they use are gone, so **Add cycle, opening registration and the family form's cycle page give errors** until 0016 puts its own versions back. Nobody should be using the Black Belt screens while you do this.
+
+Paste in the SQL Editor:
 
 ```sql
 -- Undo migration 0024 (the Black Belt rubric editor). Then paste 0016_black_belt.sql again.

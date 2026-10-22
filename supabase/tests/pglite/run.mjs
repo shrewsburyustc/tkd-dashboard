@@ -4089,12 +4089,15 @@ async function flatDiff(db, v1, v2) {
 // (i) one case of 0024_rubric_cases.json through the SQL validator: the
 // changes applied to Dan <dan_no> of the stored default (or to the whole
 // document), then the sorted, de-duplicated codes / bb_rubric_is_valid.
+// (A "value_json" op is cast from its text straight to jsonb, so 18.0 stays
+// 18.0 - JSON.stringify would have written it as 18.)
 async function rubricCase(db, c) {
   const sql = `with recursive o as (select e, n from jsonb_array_elements($1::jsonb) with ordinality as t(e, n)),
     w(i, d) as (select 0::bigint, ${c.dan_no ? `r.sheet -> 'dans' -> ($2::int - 1)` : `r.sheet || jsonb_build_object('zz', $2::int) - 'zz'`}
                   from public.bb_default_rubric r
       union all select w.i + 1,
-             case when o.e ->> 'op' = 'set' then jsonb_set(w.d, array(select jsonb_array_elements_text(o.e -> 'path')), o.e -> 'value', true)
+             case when o.e ->> 'op' = 'set' then jsonb_set(w.d, array(select jsonb_array_elements_text(o.e -> 'path')),
+                    case when o.e ? 'value_json' then (o.e ->> 'value_json')::jsonb else o.e -> 'value' end, true)
                   else w.d #- array(select jsonb_array_elements_text(o.e -> 'path')) end
         from w join o on o.n = w.i + 1)
     select ${c.dan_no ? `(select coalesce(jsonb_agg(distinct p ->> 'code' order by p ->> 'code'), '[]')
@@ -4335,6 +4338,36 @@ async function step0024(db) {
   }
   const median = times.sort((x, y) => x - y)[2];
   record(L + 'm. bb_rubric_is_valid on the default rubric <= 50 ms', median <= 50, `${median.toFixed(1)} ms (median of 5)`);
+  // the same on a NEAR-LIMIT rubric: every Dan grown to about 37 KB (20 more
+  // graded subjects with a 200-character note in each of Technical,
+  // Curriculum and Other; the Dan limit is 50 KB, the rubric's 240 KB)
+  try {
+    const sheet = (await db.query('select sheet from public.bb_default_rubric')).rows[0].sheet;
+    const big = JSON.parse(JSON.stringify(sheet));
+    for (const d of big.dans) {
+      for (let pi = 1; pi <= 3; pi++) {
+        // a copy of the part's own first graded subject with worked-out points
+        const model = d.parts[pi].subjects.find((x) => x.scoring === 'graded' && x.points_mode === 'worked' && !x.limited_to);
+        for (let k = 0; k < 20; k++) {
+          d.parts[pi].subjects.push({ ...JSON.parse(JSON.stringify(model)), id: `z${d.dan}${pi}${String(k).padStart(5, '0')}`,
+            name: `Added subject number ${k + 1}`, note: 'x'.repeat(200) });
+        }
+      }
+    }
+    const sizes = big.dans.map((d) => Buffer.byteLength(JSON.stringify(d)));
+    const valid = (await db.query('select public.bb_rubric_is_valid($1::jsonb) as v', [JSON.stringify(big)])).rows[0].v;
+    const bigTimes = [];
+    for (let i = 0; i < 5; i++) {
+      const t0 = performance.now();
+      await db.query('select public.bb_rubric_is_valid($1::jsonb)', [JSON.stringify(big)]);
+      bigTimes.push(performance.now() - t0);
+    }
+    const bigMedian = bigTimes.sort((x, y) => x - y)[2];
+    record(L + 'm. bb_rubric_is_valid on a near-limit rubric (about 37 KB per Dan, valid) <= 250 ms', valid === true && bigMedian <= 250,
+      `${valid ? 'valid' : 'NOT valid'}, Dans ${sizes.map((n) => `${(n / 1000).toFixed(1)} KB`).join(' / ')}, ${bigMedian.toFixed(1)} ms (median of 5)`);
+  } catch (error) {
+    record(L + 'm. bb_rubric_is_valid on a near-limit rubric <= 250 ms', false, error.message);
+  }
   try {
     const ms = await asBbAdmin(db, async () => {
       let v = (await db.query(`select version from public.bb_cycles where public_code_worcester = $1`, [opened.code])).rows[0].version;
@@ -4357,7 +4390,8 @@ async function step0024(db) {
     for (const c of cases.filter((x) => x.dan_no && x.expect.length === 0)) {
       const d = (await db.query(`with recursive o as (select e, n from jsonb_array_elements($1::jsonb) with ordinality as t(e, n)),
           w(i, d) as (select 0::bigint, r.sheet -> 'dans' -> ($2::int - 1) from public.bb_default_rubric r
-            union all select w.i + 1, case when o.e ->> 'op' = 'set' then jsonb_set(w.d, array(select jsonb_array_elements_text(o.e -> 'path')), o.e -> 'value', true)
+            union all select w.i + 1, case when o.e ->> 'op' = 'set' then jsonb_set(w.d, array(select jsonb_array_elements_text(o.e -> 'path')),
+                                             case when o.e ? 'value_json' then (o.e ->> 'value_json')::jsonb else o.e -> 'value' end, true)
                                            else w.d #- array(select jsonb_array_elements_text(o.e -> 'path')) end
               from w join o on o.n = w.i + 1)
           select d, octet_length(d::text) as n from w order by i desc limit 1`, [JSON.stringify(c.ops), c.dan_no])).rows[0];
@@ -4443,8 +4477,8 @@ async function step0024(db) {
 // PRODUCTION order with every migration live at build time (the status
 // files and SETUP, 2026-10-21): 0001-0006, 0010, 0007, 0008, 0009, 0012,
 // 0015, 0011 as production got it, 0019, 0014, 0020, camps' 0013 + 0017,
-// 0018, 0016 (CP3), 0021. (0022 / 0023 are not on this branch yet; when
-// they are live and merged, add them here.) Then 0024: every other
+// 0018, 0016 (CP3), 0021, 0022 (camps weekly pricing, live 2026-10-21).
+// (0023 is not live yet; when it is, add it here.) Then 0024: every other
 // fingerprint file unchanged (0016's by exactly 11.3), every test file
 // passes, 0024's fingerprints equal step0024's.
 // "main24" = step0024's 0024 fingerprints (or null if it failed).
@@ -4476,10 +4510,11 @@ async function step0024_production_order(main24) {
   if (!(await run(db, L + 'apply 0018 (private testing money in Finance)', MIGRATION_0018()))) return;
   if (!(await run(db, L + 'apply 0016 (Black Belt testing, live since CP3)', read('migrations', '0016_black_belt.sql')))) return;
   if (!(await run(db, L + 'apply 0021', read('migrations', '0021_prospects_not_interested_sooner.sql')))) return;
+  if (!(await run(db, L + 'apply 0022 (camps weekly pricing)', read('migrations', '0022_camps_weekly_pricing.sql')))) return;
 
   // every fingerprint file of a live migration, before and after 0024
   const numbers = ['0003', '0004', '0005', '0006', '0010', '0007', '0008', '0009', '0012', '0015', '0011', '0019', '0014', '0020',
-    '0013', '0017', '0018', '0016', '0021'].filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+    '0013', '0017', '0018', '0016', '0021', '0022'].filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
   const before = await printsOf(db, numbers);
   if (!(await run(db, L + 'apply 0024_black_belt_rubric.sql', MIGRATION_0024()))) return;
   const after = await printsOf(db, numbers);
@@ -4497,7 +4532,7 @@ async function step0024_production_order(main24) {
     ['0009_tests.sql', 'ALL 0009 TESTS PASSED'], ['0012_tests.sql', 'ALL 0012 TESTS PASSED'], ['0015_tests.sql', 'ALL 0015 TESTS PASSED'],
     ['0011_tests.sql', 'ALL 0011 TESTS PASSED'], ['0019_tests.sql', 'ALL 0019 TESTS PASSED'], ['0014_tests.sql', 'ALL 0014 TESTS PASSED'],
     ['0020_tests.sql', 'ALL 0020 TESTS PASSED'], [CAMPS_TESTS, 'ALL 0017 TESTS PASSED'], ['0018_tests.sql', 'ALL 0018 TESTS PASSED'],
-    ['0021_tests.sql', 'ALL 0021 TESTS PASSED']];
+    ['0021_tests.sql', 'ALL 0021 TESTS PASSED'], ['0022_tests.sql', 'ALL 0022 TESTS PASSED']];
   for (const [file, ok] of testFiles) {
     await runTestFile(db, `${L}${file} (after 0024)`, file, ok);
   }

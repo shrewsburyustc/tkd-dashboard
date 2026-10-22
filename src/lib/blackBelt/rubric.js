@@ -83,9 +83,12 @@ const STAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/; // 'YYYY-MM-DDTH
 // Invisible characters a note may not contain — the same list as testing_note_is_valid (0005).
 const NOTE_BAD_CHARACTER = /[\u0001-\u0008\u000b-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/;
 // The few extra invisible characters 0024 refuses in every rubric name and text (§2.2):
-// Arabic letter mark, soft hyphen, Mongolian vowel separator, line / paragraph separator and
-// the "tag" characters U+E0000–U+E007F.
-const RUBRIC_EXTRA_BAD = /[\u061c\u00ad\u180e\u2028\u2029]|[\u{E0000}-\u{E007F}]/u;
+// Arabic letter mark, soft hyphen, Mongolian vowel separator, line / paragraph separator,
+// the "tag" characters U+E0000–U+E007F, and characters that show as nothing or as a blank:
+// the Hangul fillers (U+3164, U+115F, U+1160, U+FFA0), the blank Braille cell U+2800, U+034F,
+// U+17B4, U+206A–U+206F, U+FFF9–U+FFFB, U+1D173–U+1D17A, the variation selectors
+// (U+FE00–U+FE0F, U+E0100–U+E01EF) and the wide space U+3000. Same list as the SQL's.
+const RUBRIC_EXTRA_BAD = /[\u061c\u00ad\u180e\u2028\u2029\u3164\u115f\u1160\uffa0\u2800\u034f\u17b4\u206a-\u206f\ufff9-\ufffb\u3000\ufe00-\ufe0f]|[\u{1D173}-\u{1D17A}\u{E0000}-\u{E007F}\u{E0100}-\u{E01EF}]/u;
 // A rubric text is one line: no line break or tab.
 const LINE_BREAK_OR_TAB = /[\n\r\t]/;
 
