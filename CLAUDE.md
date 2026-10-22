@@ -102,7 +102,7 @@ Color Belt testing and Star testing are built at the same time in separate Claud
 
   | 0023 | Star testing: result email texts that admins can edit (small table + admin write function, 0006 rules) and M5 — `star_update_event` keeps registration closed in the same transaction (v0.504 case 2; replaces that 0006 function), and the results CSV columns — `star_results_csv` (0006, same signature, admin only) adds `candidate_id`, `paid_on` and `result_status` to each row so the app matches rows to candidates by id; applies before Star goes live — reserved 2026-10-21, applied 2026-10-22 | `main` (live) |
 
-  | 0024 | Black Belt: rubric editor (+ the family form showing a subject's own points); its plan said "0022", which is camps' — reserved 2026-10-21 | `black-belt` |
+  | 0024 | Black Belt: rubric editor (+ the family form showing a subject's own points); its plan said "0022", which is camps' — reserved 2026-10-21, applied 2026-10-22 | `main` (live) |
 
   Next free: **0025**.
 - **`supabase/SETUP.md` section names** (decided 2026-10-20, rulebook v0.302): a section for a migration is titled by its **migration number**, `## Migration 00NN: <what it does>`, with sub-steps `### 00NNa.`, `### 00NNb.` … — never "the next free §". A section that isn't about one migration (e.g. a Cloudflare setup) gets a descriptive title with no number. Sections already on `main` (§1–§17) keep their numbers (the test runner finds some by number, e.g. `### 14e.`). If your branch has an unmerged section numbered §16 or higher, rename it to its migration number and update every "SETUP §…" mention and any `run.mjs` lookup with it.
