@@ -39,6 +39,11 @@
 //   #testing/star/event/<id>                a Star testing event (its Candidates tab)
 //   #testing/star/event/<id>/grading        its Grading tab (Star phase 5)
 //   #testing/star/event/<id>/results        its Results tab (Star phase 6)
+// Black Belt testing (C2, rulebook v0.937) — the same addresses with the switch on or off:
+//   #testing/black-belt                       Black Belt testing, Cycles tab
+//   #testing/black-belt/rubric                its Rubric and prices tab
+//   #testing/black-belt/cycle/<id>            a cycle's page (its Candidates tab)
+//   #testing/black-belt/cycle/<id>/rubric     that cycle's Rubric tab
 // Old or "other switch" addresses are sent to the right one (the address bar is quietly corrected,
 // replacing the step instead of adding one), so bookmarks keep working:
 //   switch ON:  #testing/event/<id>          → #testing/color-belt/event/<id>
@@ -53,12 +58,14 @@
 // A "route" is a small object saying which page is open:
 //   { section: 'home' | 'testing' | 'camps' | 'schedule' | 'calendar' | 'forms' | 'prospects' |
 //              'finance' | 'staffAccounts' | 'settings',
-//     testingPage: 'chooser' | 'colorBelt' | 'star' | null   (null when section isn't 'testing'),
+//     testingPage: 'chooser' | 'colorBelt' | 'star' | 'blackBelt' | null   (null when section isn't
+//              'testing'; 'blackBelt' works with the switch on or off),
 //     eventId: the open event's id (a Color Belt event, or a Star event when testingPage is
-//              'star'), or on Camps the open camp's id, or null,
+//              'star'), on Black Belt the open cycle's id, or on Camps the open camp's id, or null,
 //     eventTab: the tab. On a Color Belt event page 'students' | 'grading'; on a Star event page
 //               'students' (= its Candidates tab) | 'grading' (Star phase 5) | 'results' (Star phase 6); on Star's home (no
-//               event) 'events' | 'rubrics'; on Finance its view 'report' | 'history' | 'settings'
+//               event) 'events' | 'rubrics'; on Black Belt 'cycles' | 'rubric' (no cycle open) or
+//               'candidates' | 'rubric' (a cycle's page); on Finance its view 'report' | 'history' | 'settings'
 //               (a different Finance view is a different page); on the Camps list 'camps' |
 //               'templates', on a camp's page 'default' | 'checkin' | 'payments' | 'attendance'
 //               ('default' = Check in during camp week, else Payments — CampPage decides); otherwise
@@ -100,6 +107,10 @@ export const FINANCE_VIEWS = ['report', 'history', 'settings'];
 const CAMPS_HASH = new RegExp(`^#camps(?:/templates|/camp/${ID}(?:/(checkin|payments|attendance))?)?$`);
 const CAMPS_TEMPLATES_HASH = '#camps/templates';
 const CAMP_TABS = ['checkin', 'payments', 'attendance'];
+// Black Belt testing (C2, v0.937): its two tabs, and a cycle's page on one of its two tabs.
+const BLACK_BELT_HASH = '#testing/black-belt';
+const BLACK_BELT_ADDRESS = new RegExp(`^#testing/black-belt(?:/(rubric)|/cycle/${ID}(/rubric)?)?$`);
+const RUBRIC_SUFFIX = '/rubric';
 const STAR_RUBRICS_HASH = '#testing/star/rubrics';
 // "(/grading|/results)?" = the Star event page's Grading tab (Star phase 5), as Color Belt's, or its
 // Results tab (Star phase 6).
@@ -116,8 +127,11 @@ export const DEFAULT_TESTING_PAGE = STAR_TESTING_ON ? 'chooser' : 'colorBelt';
 //   a Color Belt event page           'grading' when asked, otherwise 'students'
 //   a Star event page                 'grading' or 'results' when asked, otherwise 'students' (its
 //                                     Candidates tab; Star phases 5 and 6)
+//   Black Belt without a cycle        'rubric' when asked, otherwise 'cycles'
+//   a Black Belt cycle's page         'rubric' when asked, otherwise 'candidates'
 //   anything else                     'students'
 export function normalEventTab(testingPage, eventId, tab) {
+  if (testingPage === 'blackBelt') return tab === 'rubric' ? 'rubric' : eventId ? 'candidates' : 'cycles';
   if (testingPage === 'star' && !eventId) return tab === 'rubrics' ? 'rubrics' : 'events';
   if (testingPage === 'star' && eventId && (tab === 'grading' || tab === 'results')) return tab;
   if (testingPage === 'colorBelt' && eventId && tab === 'grading') return 'grading';
@@ -153,6 +167,12 @@ function readHash(hash) {
   match = COLOR_BELT_PRIVATE_HASH.exec(hash) ?? OLD_PRIVATE_HASH.exec(hash);
   if (match) return { route: route('testing', 'colorBelt', null, 'students', match[1]), known: true };
   if (hash === COLOR_BELT_HASH) return { route: route('testing', 'colorBelt'), known: true };
+  // Black Belt testing (C2): the same with the switch on or off.
+  match = BLACK_BELT_ADDRESS.exec(hash);
+  if (match) {
+    if (match[2]) return { route: route('testing', 'blackBelt', match[2], match[3] ? 'rubric' : 'candidates'), known: true };
+    return { route: route('testing', 'blackBelt', null, match[1] ? 'rubric' : 'cycles'), known: true };
+  }
   // Star testing (switch off: every Star address shows Color Belt, as in phase 1).
   if (!STAR_TESTING_ON && ANY_STAR_HASH.test(hash)) return { route: route('testing', 'colorBelt'), known: true };
   match = STAR_EVENT_HASH.exec(hash);
@@ -192,6 +212,10 @@ function hashForRoute({ section, testingPage = null, eventId = null, eventTab = 
     return eventTab === 'templates' ? CAMPS_TEMPLATES_HASH : HASH_BY_PAGE.camps;
   }
   if (section !== 'testing') return HASH_BY_PAGE[section] ?? '';
+  if (testingPage === 'blackBelt') {
+    const rubricPart = eventTab === 'rubric' ? RUBRIC_SUFFIX : ''; // Cycles / Candidates have no ending
+    return eventId ? `${BLACK_BELT_HASH}/cycle/${eventId}${rubricPart}` : `${BLACK_BELT_HASH}${rubricPart}`;
+  }
   const tabPart = eventTab === 'grading' ? GRADING_SUFFIX : ''; // Students has no ending of its own
   if (!STAR_TESTING_ON) {
     if (eventId) return `#testing/event/${eventId}${tabPart}`;
@@ -247,7 +271,7 @@ export function samePage(a, b) {
 export function sameRoute(a, b) {
   if (!samePage(a, b)) return false;
   if (a.section === 'camps') return routeTab('camps', null, a.eventId, a.eventTab) === routeTab('camps', null, b.eventId, b.eventTab);
-  if (!a.eventId && a.testingPage !== 'star') return true;
+  if (!a.eventId && a.testingPage !== 'star' && a.testingPage !== 'blackBelt') return true;
   return normalEventTab(a.testingPage, a.eventId, a.eventTab) === normalEventTab(b.testingPage, b.eventId, b.eventTab);
 }
 
@@ -255,5 +279,5 @@ export function sameRoute(a, b) {
 // home, and every Camps page: the list's Camps | Templates and a camp's Check in | Payments | Attendance).
 export function hasAddressTabs(r) {
   if (r.section === 'camps') return true;
-  return r.section === 'testing' && (Boolean(r.eventId) || r.testingPage === 'star');
+  return r.section === 'testing' && (Boolean(r.eventId) || r.testingPage === 'star' || r.testingPage === 'blackBelt');
 }

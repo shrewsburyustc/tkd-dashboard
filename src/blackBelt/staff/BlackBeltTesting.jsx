@@ -10,13 +10,20 @@
 //   - when a cycle is open: that cycle's page instead (CyclePage.jsx)
 // Everything inside a tab lives in cycles/CyclesTab.jsx and rubric/RubricTab.jsx.
 //
-// Until step C2 (the Testing chooser and the #testing/black-belt addresses, which wait for Star's
-// chooser to reach main — contract §7 OP-1) the open tab and the open cycle are kept here in
-// memory instead of in the page address.
+// Step C2 (rulebook v0.937): the open tab and the open cycle live in the page address
+// (#testing/black-belt, /rubric, /cycle/<id>, /cycle/<id>/rubric — lib/pageAddress.js), so a
+// reload, a bookmark and the browser's Back / Forward all land on the right page. App.jsx keeps
+// them; this file only asks for changes.
 //
 // Props (from src/screens/Testing.jsx):
 //   isAdmin            show admin controls? (the database enforces the real rule)
-//   onBack()           "← Testing"
+//   onBack()           "← Testing" (App.jsx asks the unsaved-rubric question for it, through
+//                      onLeaveGuardChange — so it isn't asked here as well)
+//   cycleId            the open cycle's id, or null for the tabs
+//   tab                without a cycle 'cycles' | 'rubric'; on a cycle's page 'candidates' | 'rubric'
+//   onTab(key)         switch tab on the same page (no new history step)
+//   onOpen({ cycleId, tab, replace })   go to another Black Belt page (a history step; replace:
+//                      true swaps the step, used when the open cycle was deleted)
 //   screenLocked       true while the lock screen shows (no requests, dialogs hidden)
 //   onNoAccess         the database refused data because this sign-in is locked
 //   onRefreshProfile   re-read "who am I?" (after the database said "not allowed")
@@ -29,7 +36,7 @@
 //                      unsaved changes, every way out asks "Discard changes to 1st Dan?" (R10). The
 //                      rubric card registers its question through setGuard; the ways out inside
 //                      Black Belt (the tabs, ← Testing, opening or leaving a cycle) ask it too.
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef } from 'react';
 import { IconArrowLeft } from '@tabler/icons-react';
 import CyclesTab from './cycles/CyclesTab.jsx';
 import CyclePage from './cycle/CyclePage.jsx';
@@ -41,10 +48,6 @@ const TABS = [
   { key: 'cycles', label: T.TAB_CYCLES },
   { key: 'rubric', label: T.TAB_RUBRIC },
 ];
-
-// The tab and cycle last used, kept while the dashboard is open (coming back lands there).
-let lastTab = 'cycles';
-let lastCycleId = null;
 
 function Header({ action, staffLine, tab, onTab, onBack, ids }) {
   const tabRefs = useRef({});
@@ -97,7 +100,7 @@ function Header({ action, staffLine, tab, onTab, onBack, ids }) {
   );
 }
 
-export default function BlackBeltTesting({ isAdmin, onBack, location, onLocationChange, onLeaveGuardChange, ...shared }) {
+export default function BlackBeltTesting({ isAdmin, onBack, cycleId = null, tab: askedTab, onTab, onOpen, location, onLocationChange, onLeaveGuardChange, ...shared }) {
   const baseId = useId();
 
   // ----- The leave guard (R10) -----
@@ -118,31 +121,21 @@ export default function BlackBeltTesting({ isAdmin, onBack, location, onLocation
     return () => onLeaveGuardChange(null);
   }, [onLeaveGuardChange, appGuard]);
   const ids = { tab: (key) => `${baseId}-tab-${key}`, panel: (key) => `${baseId}-panel-${key}` };
-  const [tab, setTabState] = useState(lastTab);
-  const [cycleId, setCycleIdState] = useState(lastCycleId);
-
-  function setTab(key) {
-    lastTab = key;
-    setTabState(key);
-  }
+  // The page's tab (without a cycle: Cycles unless Rubric and prices was asked for).
+  const tab = askedTab === 'rubric' ? 'rubric' : 'cycles';
+  const setTab = (key) => onTab(key);
   function openCycle(id) {
-    lastCycleId = id;
-    setCycleIdState(id);
+    onOpen({ cycleId: id });
     window.scrollTo?.(0, 0);
   }
-  function closeCycle() {
-    lastCycleId = null;
-    setCycleIdState(null);
-    lastTab = 'cycles';
-    setTabState('cycles');
+  // { replace: true } when the cycle closes by itself (deleted): Back then doesn't return to it.
+  function closeCycle(replace = false) {
+    onOpen({ cycleId: null, tab: 'cycles', replace });
   }
 
   // "Go to the default rubric" on a locked cycle's Rubric tab (R13).
   function goToDefaultRubric() {
-    lastCycleId = null;
-    setCycleIdState(null);
-    lastTab = 'rubric';
-    setTabState('rubric');
+    onOpen({ cycleId: null, tab: 'rubric' });
     window.scrollTo?.(0, 0);
   }
 
@@ -153,7 +146,9 @@ export default function BlackBeltTesting({ isAdmin, onBack, location, onLocation
           key={cycleId}
           cycleId={cycleId}
           isAdmin={isAdmin}
-          onBack={(options) => (options?.unguarded ? closeCycle() : guarded(closeCycle))}
+          tab={askedTab === 'rubric' ? 'rubric' : 'candidates'}
+          onTab={onTab}
+          onBack={(options) => (options?.unguarded ? closeCycle(true) : guarded(() => closeCycle()))}
           onGoToDefaultRubric={() => guarded(goToDefaultRubric)}
           setGuard={setGuard}
           guarded={guarded}
@@ -166,7 +161,7 @@ export default function BlackBeltTesting({ isAdmin, onBack, location, onLocation
   }
 
   const renderHeader = (action, staffLine) => (
-    <Header action={action} staffLine={staffLine} tab={tab} onTab={(key) => guarded(() => setTab(key))} onBack={() => guarded(onBack)} ids={ids} />
+    <Header action={action} staffLine={staffLine} tab={tab} onTab={(key) => guarded(() => setTab(key))} onBack={onBack} ids={ids} />
   );
 
   return (

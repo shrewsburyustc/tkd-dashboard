@@ -16,6 +16,8 @@ export const nextEventLine = (date, school) => `Next: ${monthDay(date)} · ${sch
 // Star testing's row (Star phase 2, v0.59's example "Next: Nov 14 · both schools"): Star events are
 // joint for both schools (v0.58), so the place is always this.
 export const STAR_BOTH_SCHOOLS = 'both schools';
+// Black Belt testing's row (C2, v0.937): a cycle is for both schools too — the same words.
+export const BOTH_SCHOOLS = STAR_BOTH_SCHOOLS;
 
 // Color Belt's page while the Star testing switch is on (v0.177): its own title, and the back link.
 export const COLOR_BELT_TITLE = 'Color belt testing';

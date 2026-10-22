@@ -38,9 +38,6 @@ import * as T from '../text.js';
 
 const load = (cycleId) => loadCycle({ cycleId });
 
-// The tab last open on each cycle page (kept while the dashboard is open).
-const lastTab = new Map();
-
 function TwoLines({ label, reason }) {
   return (
     <span className="ev-menu-two">
@@ -50,7 +47,7 @@ function TwoLines({ label, reason }) {
   );
 }
 
-export default function CyclePage({ cycleId, isAdmin, onBack, onGoToDefaultRubric, setGuard, guarded = (action) => action(), location, onLocationChange, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange }) {
+export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab, onBack, onGoToDefaultRubric, setGuard, guarded = (action) => action(), location, onLocationChange, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange }) {
   const live = useLiveLoad({ key: cycleId, enabled: !screenLocked, load, refreshMs: LIVE_REFRESH_MS });
   const cycle = live.data?.cycle ?? null;
   const today = schoolToday();
@@ -59,12 +56,9 @@ export default function CyclePage({ cycleId, isAdmin, onBack, onGoToDefaultRubri
     liveRef.current = live;
   });
   const isPhone = useMediaQuery(PHONE_QUERY);
-  // Candidates · Rubric (migration 0024)
-  const [tab, setTabState] = useState(lastTab.get(cycleId) ?? 'candidates');
-  const setTab = (key) => {
-    lastTab.set(cycleId, key);
-    setTabState(key);
-  };
+  // Candidates · Rubric (migration 0024). The tab lives in the page address (C2, v0.937):
+  // #testing/black-belt/cycle/<id>(/rubric) — BlackBeltTesting.jsx passes it in.
+  const setTab = (key) => onTab(key);
   const [rubricModal, setRubricModal] = useState(false);
   const rubricLive = useCycleRubricLoad({ cycleId, version: cycle?.version ?? null, enabled: !screenLocked && tab === 'rubric', onNoAccess });
 
@@ -90,11 +84,12 @@ export default function CyclePage({ cycleId, isAdmin, onBack, onGoToDefaultRubri
     if (live.status === 'noAccess') onNoAccess();
   }, [live.status, onNoAccess]);
 
-  // Deleted (here or elsewhere): say so and go back to the Cycles tab.
+  // Deleted (here or elsewhere), or an address with a wrong id: go back to the Cycles tab and say
+  // so. In this order: going back is a page change, and a page change clears the toast (App.jsx).
   useEffect(() => {
     if (live.status !== 'notFound') return;
-    showToast(T.CYCLE_DELETED, { icon: false });
     onBack({ unguarded: true });
+    showToast(T.CYCLE_DELETED, { icon: false });
   }, [live.status, onBack, showToast]);
 
   useEffect(() => {
