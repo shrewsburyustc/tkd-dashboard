@@ -10,7 +10,8 @@
 --     W2  Add / Edit camp: the grid must be exactly 1 ... W; 60 days are
 --         fine, 61 are not; only_on lists and children of more than 10 days
 --     W3  prices through the family form: 5+5, 5+3, 2+2, one day,
---         Thanksgiving (Wed + Fri = one week of 2 days), early / regular,
+--         Thanksgiving (Wed + Fri = one week of 2 days), a Sunday + the
+--         Monday after (two weeks of 1 day), early / regular,
 --         member / non-member; the answer's new "weeks" lines;
 --         price_changed still works
 --     W4  "not charged to all-days campers" per week (a per-day pizza),
@@ -91,8 +92,8 @@ declare
 
   -- camps: TW two Mon-Fri weeks (early), TR the same at regular prices,
   -- TG Thanksgiving (Wed + Fri), T1 one day, TL 60 days, TE Edit camp,
-  -- TX the $10,000 camp
-  v_tw uuid; v_tr uuid; v_tg uuid; v_t1 uuid; v_tl uuid; v_te uuid; v_tx uuid;
+  -- TX the $10,000 camp; TS a Sunday + the Monday after (weekday-proof, 2026-10-22)
+  v_tw uuid; v_tr uuid; v_tg uuid; v_t1 uuid; v_tl uuid; v_te uuid; v_tx uuid; v_ts uuid;
   v_pizza uuid; v_party uuid;
   -- campers
   v_c55 uuid; v_c53 uuid; v_c22 uuid; v_c52 uuid; v_cx uuid; v_pay uuid;
@@ -376,6 +377,37 @@ begin
   perform pg_temp.st('W3 Thanksgiving both days', pg_temp.su(v_tg, v_key, jsonb_build_array(
            pg_temp.ch('Turkey', true, pg_temp.dys(v_tg, array[1, 2]), '[]'),
            pg_temp.ch('Pie', true, pg_temp.dys(v_tg, array[2]), '[]')), 14000 + 7500), 'ok');
+  -- (weekday-proof, 2026-10-22) camp TS: a Sunday and the Monday right
+  -- after it are TWO weeks of 1 day: grid 1 ... 1 (2 rows refused), and
+  -- a camper of both days pays 2 x the 1-day price ($75 + $75), not the
+  -- 2-day row ($140). Fixed dates from v_mon, so it is tested every day
+  -- of the week the file is run.
+  if extract(isodow from v_mon + 13) <> 7 or public.camp_week_size(array[v_mon + 13, v_mon + 14]) <> 1 then
+    raise exception 'TEST FAILED: W3 a Sunday + Monday must be W = 1';
+  end if;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  perform pg_temp.st('W3 Sunday + Monday with 2 rows',
+    public.camp_add_camp('worcester', false, v_tag || ' bad', array[v_mon + 13, v_mon + 14], '09:00', '15:00', v_today - 3, v_today + 5,
+                         v_today + 5, 5, 12, pg_temp.g(2), '[]', null, 'W'), 'invalid');
+  v_ts := pg_temp.mk(v_tag || ' Sun Mon', array[v_mon + 13, v_mon + 14], v_today + 5, '[]');
+  perform set_config('request.jwt.claims', '', true);
+  if (select array_agg(p.day_count order by p.day_count) from public.camp_prices p where p.camp_id = v_ts) <> array[1]::smallint[] then
+    raise exception 'TEST FAILED: W3 camp TS (Sun + Mon) must have the grid row 1 only';
+  end if;
+  v_r := pg_temp.st('W3 Sunday + Monday old 2-day total', pg_temp.su(v_ts, v_key, jsonb_build_array(
+           pg_temp.ch('Straddle', true, pg_temp.dys(v_ts, array[1, 2]), '[]')), 14000), 'price_changed');
+  if (v_r ->> 'new_total_cents')::integer <> 2 * 7500 then
+    raise exception 'TEST FAILED: W3 Sunday + Monday price_changed answer %', v_r;
+  end if;
+  v_r := pg_temp.st('W3 Sunday + Monday', pg_temp.su(v_ts, v_key, jsonb_build_array(
+           pg_temp.ch('Straddle', true, pg_temp.dys(v_ts, array[1, 2]), '[]')), 2 * 7500), 'ok');
+  if (v_r -> 'children' -> 0 ->> 'base_cents')::integer <> 2 * 7500
+     or (v_r -> 'children' -> 0 ->> 'day_count')::integer <> 2
+     or v_r -> 'children' -> 0 -> 'weeks' <> jsonb_build_array(
+          jsonb_build_object('monday', v_mon + 7, 'day_count', 1, 'cents', 7500),
+          jsonb_build_object('monday', v_mon + 14, 'day_count', 1, 'cents', 7500)) then
+    raise exception 'TEST FAILED: W3 Sunday + Monday answer %', v_r;
+  end if;
   -- a one-day camp: $75
   perform pg_temp.st('W3 one-day camp', pg_temp.su(v_t1, v_key, jsonb_build_array(
            pg_temp.ch('Solo', true, pg_temp.dys(v_t1, array[1]), '[]')), 7500), 'ok');
