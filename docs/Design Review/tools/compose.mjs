@@ -57,7 +57,7 @@ const html = `<!doctype html>
   .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
   .today .note { background: #FDF6EA; }
   .after .note { background: #F1F8EE; }
-  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #4A4A4A; font-size: 14px; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
 </style></head><body>
 <h1>${esc(spec.title)}</h1>
 <p class="sub">${spec.subtitle ?? ''}</p>

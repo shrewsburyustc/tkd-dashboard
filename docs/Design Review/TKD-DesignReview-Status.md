@@ -38,7 +38,7 @@
 
 - Branch renamed to `design-review`; fast-forwarded to `main` 45a8b79 during phase 1 (no merge commit). `npm ci` done in the root and in `supabase/tests/pglite`. `npm run build` and `npm run build:preview-mode` pass. The preview build warns that one JavaScript chunk is over 500 kB — check first-load time on the tablet in phase 4/5.
 - `/claudex:review` was **not** used for phase 1: it hands Codex a fixed "review the git diff" prompt (ignores this brief), the diff was empty, and it runs Codex with its sandbox and approvals turned off. It can be run later on a phase's output if Jeffrey wants.
-- Screenshot tool (scratchpad for now, added to this branch in phase 3): `shoot.mjs` drives headless Chrome over the DevTools protocol with Node 24's built-in WebSocket — no downloads. Exact sizes, touch emulation (`pointer: coarse`, `hover: none`), full-page captures.
+- Screenshot tool (now in `tools/`): `shoot.mjs` drives headless Chrome over the DevTools protocol with Node 24's built-in WebSocket — no downloads. Exact sizes, touch emulation (`pointer: coarse`, `hover: none`), full-page captures.
 
 ## 4. Phase 1 result
 
@@ -65,7 +65,7 @@ Files in `Phase 1 inventory/`:
 
 ## 6. Next step
 
-**Walkthrough** (`Walkthrough/README.md` has the order of all 19 items; `Walkthrough/Decisions.md` is the decision log).
+**Walkthrough** (`Walkthrough/README.md` has the order of all 20 items; `Walkthrough/Decisions.md` is the decision log).
 
 **Jeffrey's rules for it (2026-10-22):** no changes for now — nothing in the app, no prompts sent to other sessions, no rulebook edits; record each decision, and at the end go over everything that will be changed (including the rulebook rows to write). **Planned is not missing:** the system is still incomplete, so before anything is called missing, check the owning session's status file, plans, contracts, rulebook rows and unmerged branches; each finding gets a label (planned — not built yet / approved this way / drift / missing — not planned / unclear).
 
@@ -73,9 +73,11 @@ Item 1 — Black Belt money in Finance — was shown 2026-10-21 (reproduced in t
 
 **Re-check done (2026-10-22):** two checker agents labelled every phase 1 finding (`Phase 1 inventory/Planned-vs-missing-A.md`, `-B.md`; summary in `TKD-DesignReview-Inventory.md` §1b; the overview picture is relabelled). Most "different design" findings were **approved separately in each section**, so those walkthrough items ask "make them match?" rather than reporting mistakes. Missing and not planned: Camps and the switch, the Prospects email under the switch, the offline bar, offline check-ins, Color Belt private detail view, Color Belt/Camps history, top-bar search, 7 icon-map rows. Seven open questions are listed in §1b. The walkthrough now has 20 items (item 20: rules no section has built).
 
-Item 2 — Camps and "Hide private details" — shown 2026-10-22 (tablet-size picture; label: missing, not planned); **waiting for Jeffrey's decision**. Phase 2 waits until the walkthrough is done.
+Item 2 — Camps and "Hide private details" — shown 2026-10-22 (tablet-size picture; label: missing, not planned); **decided 2026-10-22: yes**, Camps hides money as drawn.
 
-**Tools (on this branch, `tools/`):** `cdp.mjs` (remote control for a hidden Chrome: open, click by label, type, screen size and touch mode, screenshots, element boxes), `shoot.mjs` (one-shot screenshot), `compose.mjs` (combined today/after picture from a `.json` spec), `mock-item01-finance.js` (the item 1 "after" drawing). Preview server: `.claude/launch.json` → "design-review-live-look" (Star switch off, like the live site) and "design-review-preview" (Star on); not committed, like the other sessions' launch files.
+Item 3 — taking a payment — shown 2026-10-22 (label: approved in each section; four ways side by side, then option C drawn: the same small Mark paid box with Paid by everywhere, Black Belt keeps its dialog with the same words); **waiting for Jeffrey: A / B / C**. Then 3b: receipts. Phase 2 waits until the walkthrough is done.
+
+**Tools (on this branch, `tools/`):** `cdp.mjs` (remote control for a hidden Chrome: open, click by label, type, screen size and touch mode, screenshots, element boxes), `shoot.mjs` (one-shot screenshot), `compose.mjs` (combined today/after picture from a `.json` spec), `mock-item*.js` (the "after" drawings per item). Preview server: `.claude/launch.json` → "design-review-live-look" (Star switch off, like the live site) and "design-review-preview" (Star on); not committed, like the other sessions' launch files.
 
 ## 7. Shared files touched by this session
 
