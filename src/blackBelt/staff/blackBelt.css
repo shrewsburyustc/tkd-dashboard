@@ -1972,6 +1972,14 @@
   text-decoration: underline;
 }
 
+/* inside the sentence it flows as text: no tall tap box that leaves a blank line above it on
+   narrow phones (the sentence's own line height gives the link its tap height) */
+.bbr-locked-line .bbr-go-default {
+  display: inline;
+  min-height: 0;
+  line-height: inherit;
+}
+
 /* ----- The editor ----- */
 .bbe {
   font-size: var(--text-13);
@@ -2757,6 +2765,17 @@
   margin-bottom: var(--space-12);
 }
 
+/* Phone "Copy from Dan" page (R9): the Copy button sits at the bottom of the screen, not
+   right under the short list */
+.dialog-page-body:has(> .bbs-copy-submit) {
+  display: flex;
+  flex-direction: column;
+}
+
+.dialog-page-body > .bbs-copy-submit {
+  margin-top: auto;
+}
+
 /* ----- Touch screens: 36px fields, 44px tap areas ----- */
 @media (pointer: coarse) {
   .bbe-brow {
@@ -2871,12 +2890,18 @@
   }
 
   .bbe-step .bbe-num {
-    width: 48px;
+    width: 40px; /* "9999" still fits (4px side padding) */
   }
 
-  /* one step stays on one line: "at least [320] → [5] points 🗑" (no wrap, smaller gaps) */
+  /* one step stays on one line: "At least [320] → [5] points 🗑". The steps also use the
+     width under the item's ⋯ button, so the words and the trash icon fit beside the boxes */
+  .bbe-steps {
+    margin-right: calc(-1 * var(--space-24));
+  }
+
   .bbe-step {
     flex-wrap: nowrap;
-    gap: 2px;
+    gap: var(--space-4);
+    white-space: nowrap;
   }
 }

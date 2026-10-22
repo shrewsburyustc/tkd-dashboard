@@ -129,7 +129,8 @@ function WayTable({ way, showHeading }) {
         {meet}
       </p>
       <div className="bbf-tablewrap">
-        <table className="bbf-grid">
+        {/* fixed column widths: a subject's two ways (Pull-up, Hold) line up */}
+        <table className="bbf-grid bbf-grid--ways">
           <thead>
             <tr>
               <th scope="col">{T.AGE}</th>
@@ -156,6 +157,28 @@ function WayTable({ way, showHeading }) {
   );
 }
 
+// A graded subject's grades and their points, as a two-row table.
+function GradeTable({ letters, points }) {
+  return (
+    <table className="bbf-grid">
+      <tbody>
+        <tr>
+          <th scope="row">{T.GRADE}</th>
+          {letters.map((grade) => (
+            <td key={grade}>{grade}</td>
+          ))}
+        </tr>
+        <tr>
+          <th scope="row">{T.POINTS}</th>
+          {letters.map((grade) => (
+            <td key={grade}>{num(points?.[grade])}</td>
+          ))}
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
 // Level 3: how one subject is graded.
 function Scoring({ subject, part }) {
   const letters = subjectLetters(part.code, subject?.scoring);
@@ -176,24 +199,18 @@ function Scoring({ subject, part }) {
   return (
     <div className="bbf-score">
       <p className="bbf-score__text">{T.GRADED_BY_EXAMINER}</p>
-      <div className="bbf-tablewrap">
-        <table className="bbf-grid">
-          <tbody>
-            <tr>
-              <th scope="row">{T.GRADE}</th>
-              {letters.map((grade) => (
-                <td key={grade}>{grade}</td>
-              ))}
-            </tr>
-            <tr>
-              <th scope="row">{T.POINTS}</th>
-              {letters.map((grade) => (
-                <td key={grade}>{num(subject.points?.[grade])}</td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
+      {/* One table of every grade; on very narrow phones (under 360px) nine grades don't fit, so
+          the same points show as two shorter tables instead (form.css .bbf-grid--split), and
+          the page never scrolls sideways. */}
+      <div className={`bbf-tablewrap${letters.length > 6 ? ' bbf-grid--whole' : ''}`}>
+        <GradeTable letters={letters} points={subject.points} />
       </div>
+      {letters.length > 6 ? (
+        <div className="bbf-tablewrap bbf-grid--split">
+          <GradeTable letters={letters.slice(0, 5)} points={subject.points} />
+          <GradeTable letters={letters.slice(5)} points={subject.points} />
+        </div>
+      ) : null}
       <p className="bbf-score__text">{T.D_MAKEUP}</p>
     </div>
   );

@@ -105,6 +105,7 @@ export function switchProblem(status) {
 // ===== Toasts =====
 export const TOAST_REG_CLOSED = 'Registration closed';
 export const TOAST_REG_OPEN = 'Registration open';
+export const TOAST_REG_OPENED_FIRST = 'Registration opened'; // the first opening (R13)
 export const TOAST_REG_OPEN_DATE_REMOVED = 'Registration open. The automatic closing date was removed.';
 export const TOAST_LINK_COPIED = 'Link copied';
 export const TOAST_QR_DOWNLOADED = 'QR code downloaded';

@@ -52,7 +52,8 @@ export default function CopyDanDialog({ rubric, danNo, where, unsaved, isPhone, 
       {choices}
       {warning}
       {isPhone ? (
-        <div className="dialog-page-submit">
+        // pinned to the bottom of the phone page (blackBelt.css .bbs-copy-submit)
+        <div className="dialog-page-submit bbs-copy-submit">
           <button type="button" className="btn btn-primary btn-block" onClick={() => onCopy(from)}>
             {T.copyDan(from)}
           </button>

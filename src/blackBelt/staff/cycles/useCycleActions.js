@@ -101,9 +101,12 @@ export function useCycleActions({ isAdmin, today, beginWrite, endWrite, reload, 
         return;
       }
       const removedDate = open && openNeedsAdmin(cycle, a.today);
-      const text = open ? (removedDate ? T.TOAST_REG_OPEN_DATE_REMOVED : T.TOAST_REG_OPEN) : T.TOAST_REG_CLOSED;
       const newVersion = result.version;
       const firstOpen = open && result.firstOpen === true;
+      // The FIRST opening says "Registration opened" (mockup R13: it also locks the rubric);
+      // a later reopen keeps "Registration open".
+      const openText = firstOpen ? T.TOAST_REG_OPENED_FIRST : T.TOAST_REG_OPEN;
+      const text = open ? (removedDate ? T.TOAST_REG_OPEN_DATE_REMOVED : openText) : T.TOAST_REG_CLOSED;
       a.showToast(text, {
         icon: false,
         action: {

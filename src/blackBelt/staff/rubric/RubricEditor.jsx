@@ -53,6 +53,24 @@ function upToLine(base, now, part, basePart) {
   return partUpToText(now, part);
 }
 
+// "339 → 343" / "up to 80 → 84 points": the NEW number after the arrow in bold, so a change
+// stands out (mockups R3, R6). A text without an arrow comes back as it is.
+function boldNew(text) {
+  if (typeof text !== 'string') return text;
+  const at = text.lastIndexOf('→ ');
+  if (at < 0) return text;
+  const rest = text.slice(at + 2);
+  const number = /^[\d.,]+/.exec(rest);
+  if (!number) return text;
+  return (
+    <>
+      {text.slice(0, at + 2)}
+      <strong>{number[0]}</strong>
+      {rest.slice(number[0].length)}
+    </>
+  );
+}
+
 export default function RubricEditor({
   d, // the draft (useRubricDraft)
   isPhone,
@@ -271,7 +289,7 @@ export default function RubricEditor({
                 {markBox}
               </label>
               <FieldNote id={noteId(key)} text={message} />
-              <p className="bbe-hint">{T.mostPointsBefore(bracketMost(i))}</p>
+              <p className="bbe-hint">{boldNew(T.mostPointsBefore(bracketMost(i)))}</p>
             </div>
           );
         }
@@ -282,7 +300,7 @@ export default function RubricEditor({
               {toBox}
               <span className="bbe-blabel">{label}</span>
               {markBox}
-              <span className="bbe-bmost">{bracketMost(i)}</span>
+              <span className="bbe-bmost">{boldNew(bracketMost(i))}</span>
               {more}
             </div>
             <FieldNote id={noteId(key)} text={message} />
@@ -365,7 +383,7 @@ export default function RubricEditor({
             <TextBox label={T.PART_NAME} value={part.name} onChange={(text) => d.setPartName(part.code, text)} invalid={Boolean(nameMsg)} place={nameKey} className="bbe-partname-box" maxLength={60} />
           )}
           <span className="bbe-card-meta">
-            {upToLine(base, now, nowPart, basePart)} · {T.subjectsWord(part.subjects.length)}
+            {boldNew(upToLine(base, now, nowPart, basePart))} · {T.subjectsWord(part.subjects.length)}
           </span>
         </div>
         <FieldNote text={nameMsg} />
