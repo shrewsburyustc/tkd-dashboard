@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Item 6 · Undo after a change</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2000px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Item 6 · Undo after a change</h1>
+<p class="sub"><b>Mostly drift.</b> Rule 1.4: a change that can be reversed happens at once and its toast offers <b>Undo for 5 seconds</b>. Color Belt, Schedule and Calendar do this. Camps' saves, Restore in Star / Black Belt / Color Belt private testing, Star's “Change how they'll pay”, Prospects' status from the panel and Forms' Close / Open don't — nobody decided that. Approved without Undo: Black Belt's Edit details and cycle saves (drawn that way), and Finance's “Day reopened” (you can close it again). <span style="color:#6B6B6B">(Preview screenshots · fake data · each pair is the same kind of change)</span></p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today · left with Undo, right without</div>
+  <div class="row"><figure style="width:390px">
+    <div class="shot" style="width:390px;height:91px">
+      <img src="shots/06a-colorbelt-event-saved-undo.png" style="left:-1248px;top:-936px;width:1664px">
+      <div class="mark" style="left:171.5px;top:16.8px;width:217.3px;height:60px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>1.</b> Edit an event in Color Belt → “Event saved · Undo”.</figcaption>
+  </figure><figure style="width:390px">
+    <div class="shot" style="width:390px;height:91px">
+      <img src="shots/06b-camps-camp-saved-no-undo.png" style="left:-1248px;top:-936px;width:1664px">
+      <div class="mark" style="left:258.6px;top:23.3px;width:130.2px;height:54.800000000000004px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>2.</b> Edit a camp in Camps → “Camp saved”, no Undo.</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:390px">
+    <div class="shot" style="width:390px;height:91px">
+      <img src="shots/06c-colorbelt-restored-undo.png" style="left:-1248px;top:-936px;width:1664px">
+      <div class="mark" style="left:107.8px;top:16.8px;width:281px;height:60px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>3.</b> Restore a withdrawn student in Color Belt → “Owen Reed restored · Undo”.</figcaption>
+  </figure><figure style="width:390px">
+    <div class="shot" style="width:390px;height:91px">
+      <img src="shots/06d-star-restored-no-undo.png" style="left:-1248px;top:-936px;width:1664px">
+      <div class="mark" style="left:210.5px;top:23.3px;width:178.3px;height:54.800000000000004px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>4.</b> Restore in Star → “Sam Ortiz restored”, no Undo.</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:390px">
+    <div class="shot" style="width:390px;height:91px">
+      <img src="shots/06e-prospects-board-undo.png" style="left:-1248px;top:-936px;width:1664px">
+      <div class="mark" style="left:63.60000000000001px;top:16.8px;width:325.2px;height:60px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>5.</b> Prospects, drag a card on the Board → “Liam moved to Contacted. · Undo”.</figcaption>
+  </figure><figure style="width:390px">
+    <div class="shot" style="width:390px;height:91px">
+      <img src="shots/06f-prospects-panel-no-undo.png" style="left:-1248px;top:-936px;width:1664px">
+      <div class="mark" style="left:157.20000000000002px;top:23.3px;width:231.6px;height:54.800000000000004px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>6.</b> The same change from the prospect's panel → “Status: Not interested”, no Undo.</figcaption>
+  </figure></div>
+  <div class="note">Also without Undo today: Color Belt private testing “Changes saved”, Star “Change how they'll pay”, Forms Close / Open form, Camps “Template saved” and a camper's “Changes saved”.</div>
+</div>
+<div class="col after">
+  <div class="label">Proposed (option B) · Undo after every change that can be undone</div>
+  <figure style="width:390px">
+    <div class="shot" style="width:390px;height:91px">
+      <img src="shots/06g-camp-saved-undo-MOCKUP.png" style="left:-1248px;top:-936px;width:1664px">
+      <div class="mark" style="left:168.9px;top:16.8px;width:219.9px;height:60px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>7.</b> Camps' save ends like Color Belt's: “Camp saved · Undo” — and the same for every change listed on the left.</figcaption>
+  </figure>
+  <div class="note"><b>Copies what's already there:</b> the shared toast's Undo, which Color Belt, Schedule and Calendar already use (and item 4 already gave Edit payment). Things that can't be brought back keep asking first instead (rule 1.4). Picture 7 is a real toast with its words changed; nothing in the app was changed.</div>
+</div>
+</div>
+<div class="foot"><b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> the same kind of change sometimes can be undone and sometimes can't — even inside one section (Prospects).<br><b>B · Recommended: rule 1.4 everywhere.</b> Every change that can be reversed shows its Undo for 5 seconds — including Black Belt's Edit details and cycle saves (drawn without Undo but never argued). Only Finance's “Day reopened” stays as it is, because closing the day again is its undo. <i>+</i> one habit: “if I made a mistake, press Undo”. <i>−</i> small rework in Camps, Star, Black Belt, Color Belt private, Prospects, Forms.<br><b>C · Fix only the drift.</b> Same as B, but Black Belt's approved saves keep no Undo as recorded exceptions. <i>+</i> doesn't reopen approved Black Belt drawings. <i>−</i> a mistake in Black Belt's Edit details can't be undone the way it can everywhere else.</div>
+</body></html>

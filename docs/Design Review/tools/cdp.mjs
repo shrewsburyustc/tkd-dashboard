@@ -20,6 +20,7 @@
 //   node cdp.mjs clicksel "<css>"         click the first visible element matching a CSS selector
 //   node cdp.mjs type "<css>" "<text>"    replace the text in a field, like a person typing it
 //   node cdp.mjs key <Key>                press a key (Escape, Enter, Tab, ArrowDown …)
+//   node cdp.mjs drag x1 y1 x2 y2         press, move in steps, release (a mouse drag)
 //   node cdp.mjs wait "<text>" [ms]       wait until that text is on the page (default 8000 ms)
 //   node cdp.mjs shot <out.png> [full]    screenshot (full = the whole page height); with
 //                                         TKD_NET_OFFLINE=1 the network is cut first (the page hears "offline")
@@ -171,6 +172,19 @@ async function main() {
       await c.send('Input.insertText', { text: args[1] });
       await sleep(250);
       console.log(`typed into ${args[0]}`);
+    }
+    else if (cmd === 'drag') {
+      // drag x1 y1 x2 y2 — press at one point, move there in small steps, release (like a mouse drag).
+      const [x1, y1, x2, y2] = args.map(Number);
+      await c.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: x1, y: y1 });
+      await c.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: x1, y: y1, button: 'left', clickCount: 1 });
+      for (let i = 1; i <= 12; i++) {
+        await c.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: x1 + ((x2 - x1) * i) / 12, y: y1 + ((y2 - y1) * i) / 12, button: 'left', buttons: 1 });
+        await sleep(30);
+      }
+      await c.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: x2, y: y2, button: 'left', clickCount: 1 });
+      await sleep(Number(args[4] || 600));
+      console.log(`dragged ${x1},${y1} → ${x2},${y2}`);
     }
     else if (cmd === 'key') {
       const key = args[0];
