@@ -75,9 +75,11 @@ Item 1 — Black Belt money in Finance — was shown 2026-10-21 (reproduced in t
 
 Item 2 — Camps and "Hide private details" — shown 2026-10-22 (tablet-size picture; label: missing, not planned); **decided 2026-10-22: yes**, Camps hides money as drawn.
 
-Item 3 — taking a payment — shown 2026-10-22 (label: approved in each section; four ways side by side, then option C drawn: the same small Mark paid box with Paid by everywhere, Black Belt keeps its dialog with the same words); **waiting for Jeffrey: A / B / C**. Then 3b: receipts. Phase 2 waits until the walkthrough is done.
+Item 3 — taking a payment — shown 2026-10-22 (label: approved in each section; four ways side by side, then option C drawn: the same small Mark paid box with Paid by everywhere, Black Belt keeps its dialog with the same words); **decided 2026-10-22: C** (one small Mark paid box with Paid by everywhere; Black Belt keeps its dialog with the same words). Item 3b — receipts — shown 2026-10-22 (only Black Belt prints one; option B = Black Belt's approved receipt in every section); **waiting for Jeffrey: A / B / C**. Phase 2 waits until the walkthrough is done.
 
-**Tools (on this branch, `tools/`):** `cdp.mjs` (remote control for a hidden Chrome: open, click by label, type, screen size and touch mode, screenshots, element boxes), `shoot.mjs` (one-shot screenshot), `compose.mjs` (combined today/after picture from a `.json` spec), `mock-item*.js` (the "after" drawings per item). Preview server: `.claude/launch.json` → "design-review-live-look" (Star switch off, like the live site) and "design-review-preview" (Star on); not committed, like the other sessions' launch files.
+**Found during the walkthrough (check in phase 3, not yet labelled):** in the preview with the Star switch on, after opening Black Belt from Color Belt's page, the Testing choice page's "Color belt testing" row and a reload of `#testing/color-belt` both kept showing Black Belt; only Black Belt's own "← Testing" link returned to Color Belt. Possibly temporary until Black Belt moves into the choice page (step C2, planned).
+
+**Tools (on this branch, `tools/`):** `cdp.mjs` (remote control for a hidden Chrome: open, click by label, type, screen size and touch mode, screenshots, element boxes), `shoot.mjs` (one-shot screenshot), `compose.mjs` (combined today/after picture from a `.json` spec), `mock-item*.js` (the "after" drawings per item: 01 Finance, 02 Camps hidden, 03 pay box, 03b receipt). Preview server: `.claude/launch.json` → "design-review-live-look" (Star switch off, like the live site) and "design-review-preview" (Star on); not committed, like the other sessions' launch files.
 
 ## 7. Shared files touched by this session
 

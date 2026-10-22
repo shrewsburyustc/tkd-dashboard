@@ -14,7 +14,7 @@ Jeffrey asked (2026-10-21) to go through the phase 1 findings one by one, each w
 |---|---|---|---|---|---|
 | 1 | Black Belt money in Finance | **Planned — not built yet** (Finance, v0.808) | early warning 1 | `01-blackbelt-money-in-finance.png` | Shown 2026-10-21; relabelled 2026-10-22 — no decision needed |
 | 2 | Camps shows money while "Hide private details" is on | **Missing — not planned** (+ Prospects email; one question) | early warning 2, G16 | `02-camps-hide-private-details.png` | **Decided 2026-10-22: yes** — Camps hides money as drawn |
-| 3 | Taking a payment: four different ways, and receipts | Approved in each section; receipts: question | G1, early warning 3 | `03-taking-a-payment.png` | Shown 2026-10-22 — waiting for Jeffrey (A / B / C); then 3b receipts |
+| 3 | Taking a payment: four different ways, and receipts | Approved in each section; receipts: question | G1, early warning 3 | `03-taking-a-payment.png`, `03b-receipts.png` | **Decided 2026-10-22: C** — one small Mark paid box everywhere. 3b receipts shown — waiting for Jeffrey (A / B / C) |
 | 4 | Fixing a payment: undo, edit, refund | Mixed: undo-at-once is drift; asking first and each refund rule approved | G2 | — | |
 | 5 | Errors that vanish, and Wi-Fi drops | Black Belt toasts: drift; offline bar: missing — not planned | G13, early warnings 5–6 | — | |
 | 6 | Undo after a change | Mostly drift | G13 | — | |
