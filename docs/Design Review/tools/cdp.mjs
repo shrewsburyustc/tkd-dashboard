@@ -148,9 +148,12 @@ async function main() {
     }
     else if (cmd === 'eval') { console.log(JSON.stringify(await c.evaluate(args[0]), null, 1)); }
     else if (cmd === 'click' || cmd === 'clicksel') {
-      const expr = cmd === 'click'
-        ? `(${FIND})(${JSON.stringify(args[0])}, false).map((el) => { el.scrollIntoView({ block: 'center' }); const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, text: (el.getAttribute('aria-label') || el.innerText || '').slice(0, 60) }; })`
-        : `[...document.querySelectorAll(${JSON.stringify(args[0])})].filter((el) => el.getBoundingClientRect().width > 0).map((el) => { el.scrollIntoView({ block: 'center' }); const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, text: (el.getAttribute('aria-label') || el.innerText || '').slice(0, 60) }; })`;
+      // Scroll the first match into view instantly (the app scrolls smoothly, which would move the
+      // target after we measured it), wait two frames, then measure where to click.
+      const list = cmd === 'click'
+        ? `(${FIND})(${JSON.stringify(args[0])}, false)`
+        : `[...document.querySelectorAll(${JSON.stringify(args[0])})].filter((el) => el.getBoundingClientRect().width > 0)`;
+      const expr = `(async () => { const els = ${list}; if (!els.length) return []; els[0].scrollIntoView({ block: 'center', behavior: 'instant' }); await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); return els.map((el) => { const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, text: (el.getAttribute('aria-label') || el.innerText || '').slice(0, 60) }; }); })()`;
       const hits = await c.evaluate(expr);
       if (!hits?.length) {
         const names = await c.evaluate(`[...document.querySelectorAll('button, a, [role=menuitem], [role=tab]')].filter((e) => e.getBoundingClientRect().width > 0).map((e) => (e.getAttribute('aria-label') || e.innerText || '').trim().slice(0, 40)).filter(Boolean)`);

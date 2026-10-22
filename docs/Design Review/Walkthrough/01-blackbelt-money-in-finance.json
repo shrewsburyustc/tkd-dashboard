@@ -1,10 +1,10 @@
 {
-  "title": "Item 1 · Black Belt money is missing from Finance",
-  "subtitle": "A Black Belt payment taken at the desk never reaches the Daily report, so at closing the drawer holds money Finance doesn't know about. <b>This can happen on the live site today:</b> the Black Belt screens are live, so staff can already record Black Belt payments there. <span style=\"color:#6B6B6B\">(Preview screenshots with the fake database · pretend date Mon, Apr 26, 2027 · Shrewsbury)</span>",
+  "title": "Item 1 · Black Belt money in Finance — planned, not built yet",
+  "subtitle": "<b>Not a defect: this is planned work.</b> Finance decided on Oct 19 (rulebook v0.808) to add Black Belt payments to the Daily report “once Black Belt payments exist” — it's in Finance's status file (§8, “Later: Black Belt payments”) and Black Belt's. Black Belt's payments went live Oct 21, so until Finance's step is built, a Black Belt payment taken at the desk won't show in that day's report. <span style=\"color:#6B6B6B\">(Preview screenshots with the fake database · pretend date Mon, Apr 26, 2027 · Shrewsbury)</span>",
   "width": 1840,
   "columns": [
     {
-      "label": "Today",
+      "label": "Today, until Finance's step is built",
       "tone": "today",
       "items": [
         {
@@ -29,10 +29,10 @@
           "marks": [[400, 182, 470, 42]]
         }
       ],
-      "note": "The payment <b>is</b> saved in Black Belt. It just never reaches Finance: not the Daily report, not History, not Close the day, not the CSV for the bookkeeper."
+      "note": "The payment <b>is</b> saved in Black Belt. It just doesn't reach Finance yet: not the Daily report, not History, not Close the day, not the CSV for the bookkeeper."
     },
     {
-      "label": "After the fix (mockup)",
+      "label": "When it's built (mockup of rule v0.808)",
       "tone": "after",
       "items": [
         {
@@ -50,8 +50,8 @@
           "marks": [[400, 182, 476, 42]]
         }
       ],
-      "note": "<b>Not a new design.</b> Finance already decided this on Oct 19 (rulebook v0.808: the line “Black Belt · cycle · what it's for”; v0.809: a bounced check gets its own “Returned checks” group). It was waiting for Black Belt payments to exist, and they went live on Oct 21. Pictures 4 and 5 are drawn over the real page; nothing in the app was changed."
+      "note": "<b>Already decided.</b> Rulebook v0.808 (Oct 19): the line “Black Belt · cycle · what it's for”, counted on the day it was taken; v0.809: a bounced check gets its own “Returned checks” group. Pictures 4 and 5 are drawn over the real page; nothing in the app was changed."
     }
   ],
-  "footer": "<b>Who fixes it:</b> the Finance session — one database migration, already planned in its status file. The ready-to-paste prompt is in my phase 1 message. <b>Until then:</b> every Black Belt payment makes that day's count look over by the same amount. <b>Tablet and phone:</b> same screens, only the numbers change."
+  "footer": "<b>Owner:</b> Finance (one database migration, listed in its status file §8). <b>Decision:</b> none needed — it's planned. <b>Noted for the end of the walkthrough:</b> Black Belt's payment screens went live before Finance reads them, so a Black Belt payment taken before Finance's step is built makes that day's count look over by the same amount. <b>Tablet and phone:</b> same screens, only the numbers change."
 }

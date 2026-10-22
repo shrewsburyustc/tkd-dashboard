@@ -3,7 +3,8 @@
 // what changes. Why: Jeffrey reviews one picture per item (HTML in the side panel didn't show for him).
 // Usage: node compose.mjs <spec.json>   → writes <spec>.html next to the spec and <spec>.png
 // Spec: { title, subtitle, columns: [{ label, tone: 'today'|'after', items: [{ src, crop: [x,y,w,h],
-//         scale, caption, marks: [[x,y,w,h], …] }], note }], footer }  (boxes in screenshot pixels)
+//         scale, caption, marks: [[x,y,w,h], …], shotWidth (default 1280) } or { row: [item, …] }],
+//         note }], footer, width }  (crops and boxes in screenshot pixels)
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve, join } from 'node:path';
@@ -17,14 +18,16 @@ const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').
 const toneColor = { today: '#F59E0B', after: '#3B8F2A' };
 
 function item(it, tone) {
+  // { row: [item, item] } puts screenshots side by side (e.g. a roster next to its detail dialog).
+  if (it.row) return `<div class="row">${it.row.map((sub) => item(sub, tone)).join('')}</div>`;
   const [cx, cy, cw, ch] = it.crop;
   const s = it.scale ?? 1;
   const src = it.src.split('/').map(encodeURIComponent).join('/'); // relative to the spec, so the .html works on any PC
   const marks = (it.marks ?? []).map(([x, y, w, h]) =>
     `<div class="mark" style="left:${(x - cx) * s - 4}px;top:${(y - cy) * s - 4}px;width:${w * s + 8}px;height:${h * s + 8}px;border-color:${toneColor[tone]}"></div>`).join('');
-  return `<figure>
+  return `<figure style="width:${cw * s}px">
     <div class="shot" style="width:${cw * s}px;height:${ch * s}px">
-      <img src="${src}" style="left:${-cx * s}px;top:${-cy * s}px;width:${1280 * s}px">
+      <img src="${src}" style="left:${-cx * s}px;top:${-cy * s}px;width:${(it.shotWidth ?? 1280) * s}px">
       ${marks}
     </div>
     <figcaption>${it.caption}</figcaption>
@@ -43,6 +46,9 @@ const html = `<!doctype html>
   .today .label { background: #FDF0D9; color: #7A4A06; }
   .after .label { background: #E5F2DF; color: #2E6B1F; }
   figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
   .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
   .shot img { position: absolute; max-width: none; }
   .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }

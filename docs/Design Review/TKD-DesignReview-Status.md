@@ -1,7 +1,7 @@
 # Design & Quality Review — status
 
-**Updated:** 2026-10-21 (Design Review worktree session, branch `design-review`)
-**Rulebook at this update:** v0.719 on `main`. Design Review rows: none yet — block **1.000–1.099**, next free **1.000** (`git merge main` before any rulebook edit).
+**Updated:** 2026-10-22 (Design Review worktree session, branch `design-review`)
+**Rulebook at this update:** 0.515 on `main`. Design Review rows: none yet — block **1.000–1.099**, next free **1.000** (`git merge main` before any rulebook edit).
 **Branch:** `design-review` = `main` (dbbacc2) + this folder. Never pushed. Phase 1 covers `main` up to **45a8b79**; `main` keeps moving while other sessions merge, so each phase states its cut-off commit and picks up later merges at the start of the next phase (next: dbbacc2, Star's Home "Today" card, v0.515).
 
 > Read `CLAUDE.md` first. This file says where the Design & Quality Review stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
@@ -65,7 +65,15 @@ Files in `Phase 1 inventory/`:
 
 ## 6. Next step
 
-**Walkthrough** (`Walkthrough/README.md` has the order of all 19 items). Item 1 — Black Belt money missing from Finance — was shown 2026-10-21: reproduced in the preview (a $500 Black Belt cash payment never reaches the Daily report; Close the day then says "Over $500.00"), with the fix drawn as rulebook v0.808 already describes it. Fix owner: Finance (prompt given with phase 1). **Next: item 2**, Camps showing money while "Hide private details" is on. Phase 2 waits until the walkthrough is done.
+**Walkthrough** (`Walkthrough/README.md` has the order of all 19 items; `Walkthrough/Decisions.md` is the decision log).
+
+**Jeffrey's rules for it (2026-10-22):** no changes for now — nothing in the app, no prompts sent to other sessions, no rulebook edits; record each decision, and at the end go over everything that will be changed (including the rulebook rows to write). **Planned is not missing:** the system is still incomplete, so before anything is called missing, check the owning session's status file, plans, contracts, rulebook rows and unmerged branches; each finding gets a label (planned — not built yet / approved this way / drift / missing — not planned / unclear).
+
+Item 1 — Black Belt money in Finance — was shown 2026-10-21 (reproduced in the preview: a $500 Black Belt cash payment doesn't reach the Daily report; Close the day says "Over $500.00") and **relabelled 2026-10-22 as planned, not built yet**: Finance owns it (v0.808 / v0.809; Finance status §8). No decision needed; one note kept for the end (Black Belt's payment screens went live before Finance reads them). The ready-to-paste Finance prompt from phase 1 is **not** to be sent during the walkthrough.
+
+**Re-check done (2026-10-22):** two checker agents labelled every phase 1 finding (`Phase 1 inventory/Planned-vs-missing-A.md`, `-B.md`; summary in `TKD-DesignReview-Inventory.md` §1b; the overview picture is relabelled). Most "different design" findings were **approved separately in each section**, so those walkthrough items ask "make them match?" rather than reporting mistakes. Missing and not planned: Camps and the switch, the Prospects email under the switch, the offline bar, offline check-ins, Color Belt private detail view, Color Belt/Camps history, top-bar search, 7 icon-map rows. Seven open questions are listed in §1b. The walkthrough now has 20 items (item 20: rules no section has built).
+
+Item 2 — Camps and "Hide private details" — shown 2026-10-22 (tablet-size picture; label: missing, not planned); **waiting for Jeffrey's decision**. Phase 2 waits until the walkthrough is done.
 
 **Tools (on this branch, `tools/`):** `cdp.mjs` (remote control for a hidden Chrome: open, click by label, type, screen size and touch mode, screenshots, element boxes), `shoot.mjs` (one-shot screenshot), `compose.mjs` (combined today/after picture from a `.json` spec), `mock-item01-finance.js` (the item 1 "after" drawing). Preview server: `.claude/launch.json` → "design-review-live-look" (Star switch off, like the live site) and "design-review-preview" (Star on); not committed, like the other sessions' launch files.
 
