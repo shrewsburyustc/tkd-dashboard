@@ -21,7 +21,8 @@
 //   node cdp.mjs type "<css>" "<text>"    replace the text in a field, like a person typing it
 //   node cdp.mjs key <Key>                press a key (Escape, Enter, Tab, ArrowDown …)
 //   node cdp.mjs wait "<text>" [ms]       wait until that text is on the page (default 8000 ms)
-//   node cdp.mjs shot <out.png> [full]    screenshot (full = the whole page height)
+//   node cdp.mjs shot <out.png> [full]    screenshot (full = the whole page height); with
+//                                         TKD_NET_OFFLINE=1 the network is cut first (the page hears "offline")
 //   node cdp.mjs rects "<css>" ...        print the boxes of matching elements (for amber outlines)
 //   node cdp.mjs textrects "<text>" ...   print the boxes of the smallest elements containing the text
 //
@@ -190,6 +191,12 @@ async function main() {
     }
     else if (cmd === 'shot') {
       const out = args[0]; const full = args[1] === 'full';
+      if (process.env.TKD_NET_OFFLINE === '1') {
+        // Pull the network plug for this picture: the page gets the browser's "offline" signal.
+        await c.send('Network.enable');
+        await c.send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });
+        await sleep(Number(process.env.TKD_NET_OFFLINE_WAIT || 1500));
+      }
       let clip;
       if (full) {
         const { cssContentSize } = await c.send('Page.getLayoutMetrics');
