@@ -27,8 +27,12 @@ function icon(name, size) {
   return svg.replace(/width="24"/, `width="${size}"`).replace(/height="24"/, `height="${size}"`).replace(/class="[^"]*"/, 'class="ic"');
 }
 
+// A chip may also say "size" (draw the icon at that many px and say so) and "badge": true (the icon at 24px
+// in the family thank-you page's pale-green circle, forms-public.css .fp-done__ok); "color" tints the icon.
 function chip(c, tone) {
-  return `<span class="chip ${tone}">${icon(c.icon, 24)}<span class="chip-text"><b>${c.icon ? 'ti-' + esc(c.icon) : 'no icon'}</b><br>${esc(c.where)}</span></span>`;
+  const drawn = c.badge ? `<span class="badge">${icon(c.icon, 24)}</span>` : icon(c.icon, c.size ?? 24);
+  const name = c.icon ? `ti-${esc(c.icon)}${c.size ? ` · ${c.size}px` : ''}` : 'no icon';
+  return `<span class="chip ${tone}"><span class="draw"${c.color ? ` style="color:${c.color}"` : ''}>${drawn}</span><span class="chip-text"><b>${name}</b><br>${esc(c.where)}</span></span>`;
 }
 
 function board(which) {
@@ -50,6 +54,8 @@ function board(which) {
     .chip-text { font-size: 12.5px; line-height: 1.25; color: #3A3A3A; white-space: nowrap; }
     .chip-text b { font-weight: 600; color: #1F1F1F; }
     .ic { flex: 0 0 auto; }
+    .draw { display: inline-flex; flex: 0 0 auto; }
+    .badge { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%; background: #EAF3DE; color: #3B6D11; }
     .none { display: inline-block; border: 1.5px dashed #9A9A9A; border-radius: 4px; box-sizing: border-box; flex: 0 0 auto; }
     .note { font-size: 12.5px; color: #4A4A4A; line-height: 1.3; min-width: 0; }
   </style></head><body>${rows}</body></html>`;
