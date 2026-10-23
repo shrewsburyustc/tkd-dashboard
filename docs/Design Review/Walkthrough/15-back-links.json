@@ -1,0 +1,55 @@
+{
+  "title": "Item 15a · Going back: the back link",
+  "subtitle": "<b>Approved in each section — and a rule already exists.</b> Rule v0.59: a back link “← [place]” sits above the page title, and “any rail section with sub-pages uses this same pattern.” Color Belt, Star, Black Belt and Camps follow it. Two approved screens don't: Forms' builder has a bare arrow button beside the title (its mockup, v0.235), and Finance's History has an outline “Back to the day” button (v0.197). (Color Belt's “← Color belt testing” under a “Testing” title goes away when Star goes live — already planned.) The rest of the page frame — the “view only” line, “Both schools”, and where settings live — comes next as 15b–15d. <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/15a-camps-back-link.png",
+          "crop": [70, 92, 620, 86],
+          "scale": 1.15,
+          "caption": "<b>1. Camps</b> (Color Belt, Star and Black Belt the same): “← Camps” above the title — the rule."
+        },
+        {
+          "src": "shots/15b-forms-builder-arrow.png",
+          "crop": [70, 92, 620, 86],
+          "scale": 1.15,
+          "caption": "<b>2. Forms' builder:</b> a bare arrow beside the title — no words.",
+          "marks": [[76, 98, 44, 44]]
+        },
+        {
+          "src": "shots/15c-finance-back-to-the-day.png",
+          "crop": [70, 92, 620, 140],
+          "scale": 1.15,
+          "caption": "<b>3. Finance's History:</b> an outline “Back to the day” button beside the heading.",
+          "marks": [[76, 188, 146, 32]]
+        }
+      ]
+    },
+    {
+      "label": "Proposed (option B) · the v0.59 rule everywhere",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/15d-forms-back-link-MOCKUP.png",
+          "crop": [70, 92, 620, 100],
+          "scale": 1.15,
+          "caption": "<b>4. Forms' builder:</b> “← Forms” above the title.",
+          "marks": [[76, 100, 62, 26]]
+        },
+        {
+          "src": "shots/15e-finance-back-link-MOCKUP.png",
+          "crop": [70, 92, 620, 176],
+          "scale": 1.15,
+          "caption": "<b>5. Finance's History:</b> “← Back to the day” above “History”.",
+          "marks": [[76, 190, 114, 26]]
+        }
+      ],
+      "note": "<b>Copies what's already there:</b> the back link Color Belt, Star, Black Belt and Camps use. Pictures 4–5 are drawn over the real pages; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> “go back” looks three different ways; Forms' bare arrow has no words.<br><b>B · Recommended: the v0.59 rule everywhere (pictures 4–5).</b> Forms' builder gets “← Forms” above its title; Finance's History gets “← Back to the day” above its heading. <i>+</i> “go back” is always in the same place and looks the same; the arrow gets its words. <i>−</i> two small changes (Forms, Finance)."
+}
