@@ -1,0 +1,61 @@
+{
+  "title": "Open detail D1b · The box's two buttons on a small phone",
+  "subtitle": "<b>From item 8; for Main's shared confirm box.</b> Item 8's words (the safe button says “Keep …”, the other repeats the pressed words) make the labels longer. On a 320 px phone, Color Belt's “Keep student” and “Delete permanently” already squeeze onto two lines each; longer pairs will too. Rule §2.1 allows a full-width button on a phone only for a form's single submit button, so stacking needs a small exception written into §2.1. Which button goes first is the next question (D1c); here they keep today's order. <span style=\"color:#6B6B6B\">(Preview screenshots as a touch screen · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "../Walkthrough/shots/d1b-delete-320.png",
+              "crop": [0, 40, 320, 345],
+              "scale": 1.2,
+              "shotWidth": 320,
+              "caption": "<b>1. 320 px wide (small phones):</b> “Keep student” and “Delete permanently” squeeze onto two lines each.",
+              "marks": [[36, 265, 248, 44]]
+            },
+            {
+              "src": "../Walkthrough/shots/d1b-delete-390.png",
+              "crop": [0, 60, 390, 270],
+              "scale": 1.2,
+              "shotWidth": 390,
+              "caption": "<b>2. 390 px wide:</b> they fit side by side.",
+              "marks": [[58, 252, 296, 44]]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Option B (recommended) and option C, drawn",
+      "tone": "after",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "../Walkthrough/shots/d1b-stack-320-MOCKUP.png",
+              "crop": [0, 40, 320, 345],
+              "scale": 1.2,
+              "shotWidth": 320,
+              "caption": "<b>3. Option B at 320 px:</b> when they don't fit, the two buttons stack, each the full width of the box, in the row's order. At 390 px they stay side by side (picture 2).",
+              "marks": [[36, 265, 248, 88]]
+            },
+            {
+              "src": "../Walkthrough/shots/d1b-stack-390-MOCKUP.png",
+              "crop": [0, 60, 390, 310],
+              "scale": 1.2,
+              "shotWidth": 390,
+              "caption": "<b>4. Option C:</b> stacked on every phone, even when they would fit (390 px here).",
+              "marks": [[36, 252, 318, 88]]
+            }
+          ]
+        }
+      ],
+      "note": "Pictures 3–4 are drawn over the real box; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question: what happens when a box's two buttons don't fit on one line?</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> on small phones the words break onto two lines each, and item 8's longer “Keep …” pairs make it worse.<br><b>B · Recommended: stack them only when they don't fit (picture 3).</b> <i>+</i> every label on one line and big targets on the smallest phones; everywhere else the box looks as today. <i>−</i> the box looks a little different on a 320 px phone; §2.1 gets a small exception.<br><b>C · Stack them on every phone (picture 4).</b> <i>+</i> one look on every phone; the biggest targets. <i>−</i> taller boxes on phones where the buttons fit side by side; a bigger §2.1 exception."
+}
