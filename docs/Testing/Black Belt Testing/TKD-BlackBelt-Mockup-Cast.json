@@ -1,0 +1,825 @@
+{
+  "note": "Black Belt grading mockups — shared cast. State as of Wed, Jun 9, 2027 (Spring 2027; all of 1st–4th Dan). Every grade, points value and total is worked out from src/lib/blackBelt/rubricDefault.js (the default rubric = Spring 2027's copy). Ages are on the first testing day, Sat, Apr 3, 2027; screens never show an age or DOB, only the age group.",
+  "cycle": {
+    "name": "Spring 2027",
+    "days": [
+      {
+        "date": "2027-04-03",
+        "parts": [
+          "Physical"
+        ],
+        "place": "Worcester school 12:30–2:30 PM; second part 2:30–3:30 PM Horgan Arena, Auburn"
+      },
+      {
+        "date": "2027-05-01",
+        "parts": [
+          "Technical"
+        ],
+        "place": "Shrewsbury school 12:30–3:30 PM"
+      },
+      {
+        "date": "2027-06-05",
+        "parts": [
+          "Curriculum"
+        ],
+        "place": "Shrewsbury school 2:00–5:00 PM"
+      }
+    ],
+    "applicationDue": "2027-03-27",
+    "submissionsDue": "2027-05-29",
+    "extraPointsEnteredBy": "before 2027-06-05"
+  },
+  "danCounts": {
+    "both": {
+      "1st": 5,
+      "2nd": 3,
+      "3rd": 1,
+      "4th": 1
+    },
+    "worcester": {
+      "1st": 3,
+      "2nd": 2,
+      "3rd": 0,
+      "4th": 0
+    },
+    "shrewsbury": {
+      "1st": 2,
+      "2nd": 1,
+      "3rd": 1,
+      "4th": 1
+    }
+  },
+  "candidates": [
+    {
+      "key": "alex",
+      "name": "Alex Kim",
+      "school": "Shrewsbury",
+      "dan": 1,
+      "age": 15,
+      "ageGroup": "13–17",
+      "source": "approved roster (born Mar 4, 2012)",
+      "partPoints": {
+        "Physical": 65.5,
+        "Technical": 37.25,
+        "Curriculum": 118,
+        "Other requirements": 69
+      },
+      "extraPoints": 16,
+      "extraCounts": {
+        "Extra stripes": {
+          "count": 2,
+          "points": 2
+        },
+        "Outstanding performance": null,
+        "Competitions": {
+          "count": 1,
+          "points": 3
+        },
+        "Attendance (classes)": {
+          "count": 380,
+          "points": 5
+        },
+        "Special events": {
+          "count": 3,
+          "points": 3
+        },
+        "Breaking class": {
+          "count": 16,
+          "points": 3
+        }
+      },
+      "total": 305.75,
+      "finished": true,
+      "maxBeforeExtra": 339,
+      "passMark": 275,
+      "resultGrid": "Passed",
+      "resultResultsTab": "Passed",
+      "grades": {
+        "Stretching": "7 in = A",
+        "Sit-up (20 sec)": "21 count = A",
+        "Push-up (1 min)": "41 count = A",
+        "Static jump": "19 in = B+",
+        "Long jump": "85 in = A",
+        "Sprint 4x10 m": "10.6 sec = B+",
+        "Pull-up or hold": "Pull-up 8 reps = A",
+        "Sprint 100 m": "15.4 sec = B+",
+        "1/2 or 1 mile": "8:40 min = B+",
+        "Referee seminar": "A",
+        "Free sparring": "A-",
+        "Target kick (30 sec)": "35 kicks = A",
+        "Korean terminology": "A",
+        "TKD knowledge": "A-",
+        "Basic 10 Motions (1-7)": "A",
+        "Tae-Geuk Poomsae (1-8)": "A",
+        "Sa Bang Chuck (1-13)": "A-",
+        "One Step Sparring (1-24)": "not for this age group",
+        "Technical Break": "A",
+        "Power Break": "A-",
+        "Self-Defense": "A",
+        "Egg test": "A",
+        "Meditation": "A-",
+        "Assistant instructor course": "A",
+        "Appreciation letter": "A",
+        "TKD project": "A"
+      }
+    },
+    {
+      "key": "zoe",
+      "name": "Zoe Martin",
+      "school": "Shrewsbury",
+      "dan": 1,
+      "age": 16,
+      "ageGroup": "13–17",
+      "source": "preview edge sample (born Aug 15, 2010)",
+      "partPoints": {
+        "Physical": 58.5,
+        "Technical": 30.5,
+        "Curriculum": 105.5,
+        "Other requirements": 65.5
+      },
+      "extraPoints": 3,
+      "extraCounts": {
+        "Extra stripes": {
+          "count": 0,
+          "points": 0
+        },
+        "Outstanding performance": null,
+        "Competitions": {
+          "count": 0,
+          "points": 0
+        },
+        "Attendance (classes)": {
+          "count": 322,
+          "points": 3
+        },
+        "Special events": {
+          "count": 1,
+          "points": 0
+        },
+        "Breaking class": {
+          "count": 8,
+          "points": 0
+        }
+      },
+      "total": 263,
+      "finished": true,
+      "maxBeforeExtra": 339,
+      "passMark": 275,
+      "resultGrid": "Make-up · below 275",
+      "resultResultsTab": "Make-up · below 275",
+      "grades": {
+        "Stretching": "6 in = A",
+        "Sit-up (20 sec)": "20 count = A",
+        "Push-up (1 min)": "32 count = B+",
+        "Static jump": "18 in = B+",
+        "Long jump": "80 in = B+",
+        "Sprint 4x10 m": "11.4 sec = B",
+        "Pull-up or hold": "Pull-up 6 reps = B+",
+        "Sprint 100 m": "15.6 sec = B+",
+        "1/2 or 1 mile": "11:30 min = C",
+        "Referee seminar": "A",
+        "Free sparring": "B+",
+        "Target kick (30 sec)": "31 kicks = B+",
+        "Korean terminology": "C",
+        "TKD knowledge": "B-",
+        "Basic 10 Motions (1-7)": "A",
+        "Tae-Geuk Poomsae (1-8)": "A-",
+        "Sa Bang Chuck (1-13)": "B+",
+        "One Step Sparring (1-24)": "not for this age group",
+        "Technical Break": "A",
+        "Power Break": "C-",
+        "Self-Defense": "A-",
+        "Egg test": "A",
+        "Meditation": "A-",
+        "Assistant instructor course": "B+",
+        "Appreciation letter": "A",
+        "TKD project": "A-"
+      },
+      "makeupChoiceIfAdminSaves": {
+        "chosenByAdminOn": "2027-06-14 (after the Jun 9 state above; Fall 2027 picker shows it)",
+        "retests": [
+          "1/2 or 1 mile",
+          "Korean terminology",
+          "TKD knowledge",
+          "Power Break"
+        ],
+        "bestCaseIfAllAPlus": 289
+      }
+    },
+    {
+      "key": "mia",
+      "name": "Mia Chen",
+      "school": "Worcester",
+      "dan": 1,
+      "age": 32,
+      "ageGroup": "18 and over",
+      "source": "approved roster (born Feb 11, 1995)",
+      "partPoints": {
+        "Physical": 71,
+        "Technical": 27,
+        "Curriculum": 141.5,
+        "Other requirements": 70
+      },
+      "extraPoints": 15,
+      "extraCounts": {
+        "Extra stripes": {
+          "count": 2,
+          "points": 2
+        },
+        "Outstanding performance": {
+          "count": 5,
+          "points": 5
+        },
+        "Competitions": {
+          "count": 0,
+          "points": 0
+        },
+        "Attendance (classes)": {
+          "count": 290,
+          "points": 0
+        },
+        "Special events": {
+          "count": 6,
+          "points": 5
+        },
+        "Breaking class": {
+          "count": 16,
+          "points": 3
+        }
+      },
+      "total": 324.5,
+      "finished": true,
+      "maxBeforeExtra": 361.5,
+      "passMark": 293,
+      "resultGrid": "Make-up · D in Free sparring",
+      "resultResultsTab": "Make-up · D in Free sparring",
+      "grades": {
+        "Stretching": "7 in = A",
+        "Sit-up (20 sec)": "22 count = A",
+        "Push-up (1 min)": "45 count = A",
+        "Static jump": "20 in = A",
+        "Long jump": "88 in = A",
+        "Sprint 4x10 m": "9.8 sec = A",
+        "Pull-up or hold": "Hold 35 sec = A+",
+        "Sprint 100 m": "14.6 sec = A",
+        "1/2 or 1 mile": "8:15 min = A",
+        "Referee seminar": "A",
+        "Free sparring": "D",
+        "Target kick (30 sec)": "37 kicks = A",
+        "Korean terminology": "B+",
+        "TKD knowledge": "A",
+        "Basic 10 Motions (1-7)": "A",
+        "Tae-Geuk Poomsae (1-8)": "A",
+        "Sa Bang Chuck (1-13)": "A-",
+        "One Step Sparring (1-24)": "A",
+        "Technical Break": "A",
+        "Power Break": "A+",
+        "Self-Defense": "A",
+        "Egg test": "A",
+        "Meditation": "A",
+        "Assistant instructor course": "A",
+        "Appreciation letter": "A",
+        "TKD project": "A"
+      }
+    },
+    {
+      "key": "lucas",
+      "name": "Lucas Ferreira",
+      "school": "Worcester",
+      "dan": 1,
+      "age": 11,
+      "ageGroup": "10–12",
+      "source": "NEW child for these mockups (not in the Apr 26 roster drawing)",
+      "partPoints": {
+        "Physical": 60,
+        "Technical": 35.5,
+        "Curriculum": 115.5,
+        "Other requirements": 52.5
+      },
+      "extraPoints": 12,
+      "extraCounts": {
+        "Extra stripes": {
+          "count": 1,
+          "points": 1
+        },
+        "Outstanding performance": null,
+        "Competitions": {
+          "count": 1,
+          "points": 3
+        },
+        "Attendance (classes)": {
+          "count": 380,
+          "points": 5
+        },
+        "Special events": {
+          "count": 3,
+          "points": 3
+        },
+        "Breaking class": {
+          "count": 10,
+          "points": 0
+        }
+      },
+      "total": 275.5,
+      "finished": false,
+      "maxBeforeExtra": 339,
+      "passMark": 275,
+      "resultGrid": "TKD project late (due May 29)",
+      "resultResultsTab": "Not finished · TKD project late (due May 29)",
+      "grades": {
+        "Stretching": "5 in = A",
+        "Sit-up (20 sec)": "17 count = B+",
+        "Push-up (1 min)": "27 count = B+",
+        "Static jump": "14 in = B+",
+        "Long jump": "70 in = B+",
+        "Sprint 4x10 m": "11.8 sec = B+",
+        "Pull-up or hold": "Pull-up 4 reps = B+",
+        "Sprint 100 m": "18.6 sec = B+",
+        "1/2 or 1 mile": "5:42 min = B",
+        "Referee seminar": "A",
+        "Free sparring": "B+",
+        "Target kick (30 sec)": "30 kicks = B+",
+        "Korean terminology": "A",
+        "TKD knowledge": "A-",
+        "Basic 10 Motions (1-7)": "A",
+        "Tae-Geuk Poomsae (1-8)": "A-",
+        "Sa Bang Chuck (1-13)": "B+",
+        "One Step Sparring (1-24)": "not for this age group",
+        "Technical Break": "A",
+        "Power Break": "A",
+        "Self-Defense": "A-",
+        "Egg test": "A",
+        "Meditation": "A-",
+        "Assistant instructor course": "B+",
+        "Appreciation letter": "A",
+        "TKD project": "Late (not handed in)"
+      }
+    },
+    {
+      "key": "rina",
+      "name": "Rina Patel",
+      "school": "Worcester",
+      "dan": 1,
+      "age": 29,
+      "ageGroup": "18 and over",
+      "source": "approved roster (born Apr 30, 1997)",
+      "partPoints": {
+        "Physical": 49,
+        "Technical": 29.5,
+        "Curriculum": 121,
+        "Other requirements": 50
+      },
+      "extraPoints": 3,
+      "extraCounts": {
+        "Extra stripes": null,
+        "Outstanding performance": null,
+        "Competitions": null,
+        "Attendance (classes)": {
+          "count": 344,
+          "points": 3
+        },
+        "Special events": null,
+        "Breaking class": null
+      },
+      "total": 252.5,
+      "finished": true,
+      "maxBeforeExtra": 361.5,
+      "passMark": 293,
+      "resultGrid": "Make-up · D in 1/2 or 1 mile",
+      "resultResultsTab": "Make-up · D in 1/2 or 1 mile",
+      "grades": {
+        "Stretching": "5 in = B+",
+        "Sit-up (20 sec)": "18 count = B+",
+        "Push-up (1 min)": "31 count = B+",
+        "Static jump": "16 in = B",
+        "Long jump": "79 in = B+",
+        "Sprint 4x10 m": "11.6 sec = B",
+        "Pull-up or hold": "Pull-up 6 reps = B+",
+        "Sprint 100 m": "15.7 sec = B+",
+        "1/2 or 1 mile": "12:40 min = D",
+        "Referee seminar": "B+",
+        "Free sparring": "B",
+        "Target kick (30 sec)": "28 kicks = B",
+        "Korean terminology": "B+",
+        "TKD knowledge": "B",
+        "Basic 10 Motions (1-7)": "B+",
+        "Tae-Geuk Poomsae (1-8)": "B",
+        "Sa Bang Chuck (1-13)": "B+",
+        "One Step Sparring (1-24)": "B",
+        "Technical Break": "B",
+        "Power Break": "A-",
+        "Self-Defense": "B+",
+        "Egg test": "B+",
+        "Meditation": "B",
+        "Assistant instructor course": "B",
+        "Appreciation letter": "B+",
+        "TKD project": "B"
+      }
+    },
+    {
+      "key": "ava",
+      "name": "Ava Brooks",
+      "school": "Shrewsbury",
+      "dan": 2,
+      "age": 35,
+      "ageGroup": "13 and over",
+      "source": "approved roster (born May 23, 1991)",
+      "partPoints": {
+        "Physical": 63.5,
+        "Technical": 36.75,
+        "Curriculum": 120.7,
+        "Other requirements": 70
+      },
+      "extraPoints": 10,
+      "extraCounts": {
+        "Extra stripes": {
+          "count": 1,
+          "points": 1
+        },
+        "Outstanding performance": null,
+        "Competitions": {
+          "count": 0,
+          "points": 0
+        },
+        "Attendance (classes)": {
+          "count": 260,
+          "points": 3
+        },
+        "Special events": {
+          "count": 3,
+          "points": 3
+        },
+        "Breaking class": {
+          "count": 12,
+          "points": 3
+        }
+      },
+      "total": 300.95,
+      "finished": true,
+      "maxBeforeExtra": 343.5,
+      "passMark": 261,
+      "resultGrid": "Passed",
+      "resultResultsTab": "Passed",
+      "grades": {
+        "Stretching": "6 in = A",
+        "Sit-up (20 sec)": "20 count = A",
+        "Push-up (1 min)": "35 count = B+",
+        "Static jump": "18 in = B+",
+        "Long jump": "80 in = B+",
+        "Sprint 4x10 m": "10.5 sec = B+",
+        "Pull-up or hold": "Hold 27 sec = A",
+        "Sprint 100 m": "15.5 sec = B+",
+        "1/2 or 1 mile": "8:50 min = B+",
+        "Referee seminar": "A",
+        "Free sparring": "A-",
+        "Target kick (30 sec)": "30 kicks = B+",
+        "Korean terminology": "A",
+        "TKD knowledge": "A",
+        "White-Bodan Curriculum": "A",
+        "Go-Ryo Poomsae": "A-",
+        "Advance 10 Motion (1-5)": "A",
+        "Advance Sa Bang Chuck (1-5)": "B+",
+        "Step Sa Bang Chuck (1-5)": "A-",
+        "Power Break": "A",
+        "Technical Break": "A",
+        "Two Step Sparring (1-10)": "A-",
+        "Egg test": "A",
+        "Meditation": "A",
+        "Assistant instructor course": "A",
+        "Appreciation letter": "A",
+        "TKD project": "A"
+      }
+    },
+    {
+      "key": "sam",
+      "name": "Sam Lee",
+      "school": "Worcester",
+      "dan": 2,
+      "age": 43,
+      "ageGroup": "13 and over",
+      "source": "approved roster (born Oct 2, 1983)",
+      "partPoints": {
+        "Physical": 53.5,
+        "Technical": 29.5,
+        "Curriculum": 106.1,
+        "Other requirements": 48.5
+      },
+      "extraPoints": 6,
+      "extraCounts": {
+        "Extra stripes": {
+          "count": 0,
+          "points": 0
+        },
+        "Outstanding performance": null,
+        "Competitions": {
+          "count": 0,
+          "points": 0
+        },
+        "Attendance (classes)": {
+          "count": 255,
+          "points": 3
+        },
+        "Special events": {
+          "count": 2,
+          "points": 0
+        },
+        "Breaking class": {
+          "count": 11,
+          "points": 3
+        }
+      },
+      "total": 243.6,
+      "finished": false,
+      "maxBeforeExtra": 343.5,
+      "passMark": 261,
+      "resultGrid": "Meditation late (due May 29)",
+      "resultResultsTab": "Not finished · Meditation late (due May 29)",
+      "grades": {
+        "Stretching": "5 in = B+",
+        "Sit-up (20 sec)": "18 count = B+",
+        "Push-up (1 min)": "30 count = B+",
+        "Static jump": "16 in = B",
+        "Long jump": "75 in = B",
+        "Sprint 4x10 m": "11.8 sec = B",
+        "Pull-up or hold": "Pull-up 5 reps = B",
+        "Sprint 100 m": "16.4 sec = B",
+        "1/2 or 1 mile": "10:30 min = B",
+        "Referee seminar": "B+",
+        "Free sparring": "B",
+        "Target kick (30 sec)": "27 kicks = B",
+        "Korean terminology": "B+",
+        "TKD knowledge": "B",
+        "White-Bodan Curriculum": "B+",
+        "Go-Ryo Poomsae": "B",
+        "Advance 10 Motion (1-5)": "B+",
+        "Advance Sa Bang Chuck (1-5)": "B",
+        "Step Sa Bang Chuck (1-5)": "B",
+        "Power Break": "B+",
+        "Technical Break": "B",
+        "Two Step Sparring (1-10)": "B+",
+        "Egg test": "B+",
+        "Meditation": "Late (not handed in)",
+        "Assistant instructor course": "B+",
+        "Appreciation letter": "A-",
+        "TKD project": "B+"
+      }
+    },
+    {
+      "key": "noah",
+      "name": "Noah Silva",
+      "school": "Worcester",
+      "dan": 2,
+      "age": 27,
+      "ageGroup": "13 and over",
+      "source": "approved roster (born Sep 14, 1999; the duplicate row resolved)",
+      "partPoints": {
+        "Physical": 70,
+        "Technical": 38,
+        "Curriculum": 124.9,
+        "Other requirements": 68
+      },
+      "extraPoints": 23,
+      "extraCounts": {
+        "Extra stripes": {
+          "count": 3,
+          "points": 3
+        },
+        "Outstanding performance": null,
+        "Competitions": {
+          "count": 2,
+          "points": 5
+        },
+        "Attendance (classes)": {
+          "count": 280,
+          "points": 5
+        },
+        "Special events": {
+          "count": 6,
+          "points": 5
+        },
+        "Breaking class": {
+          "count": 18,
+          "points": 5
+        }
+      },
+      "total": 323.9,
+      "finished": true,
+      "maxBeforeExtra": 343.5,
+      "passMark": 261,
+      "resultGrid": "Passed",
+      "resultResultsTab": "Passed",
+      "grades": {
+        "Stretching": "7 in = A",
+        "Sit-up (20 sec)": "22 count = A",
+        "Push-up (1 min)": "44 count = A",
+        "Static jump": "21 in = A",
+        "Long jump": "90 in = A",
+        "Sprint 4x10 m": "9.6 sec = A",
+        "Pull-up or hold": "Pull-up 9 reps = A",
+        "Sprint 100 m": "14.4 sec = A",
+        "1/2 or 1 mile": "8:05 min = A",
+        "Referee seminar": "A",
+        "Free sparring": "A",
+        "Target kick (30 sec)": "36 kicks = A",
+        "Korean terminology": "A-",
+        "TKD knowledge": "A",
+        "White-Bodan Curriculum": "A",
+        "Go-Ryo Poomsae": "A",
+        "Advance 10 Motion (1-5)": "A-",
+        "Advance Sa Bang Chuck (1-5)": "A",
+        "Step Sa Bang Chuck (1-5)": "A",
+        "Power Break": "A+",
+        "Technical Break": "A",
+        "Two Step Sparring (1-10)": "A",
+        "Egg test": "A",
+        "Meditation": "A-",
+        "Assistant instructor course": "A",
+        "Appreciation letter": "A",
+        "TKD project": "A-"
+      }
+    },
+    {
+      "key": "bao",
+      "name": "Bao Nguyen",
+      "school": "Shrewsbury",
+      "dan": 3,
+      "age": 38,
+      "ageGroup": "13 and over",
+      "source": "approved roster (born Jul 19, 1988)",
+      "partPoints": {
+        "Physical": 65.5,
+        "Technical": 38.5,
+        "Curriculum": 158.8,
+        "Other requirements": 70
+      },
+      "extraPoints": 21,
+      "extraCounts": {
+        "Extra stripes": {
+          "count": 2,
+          "points": 2
+        },
+        "Outstanding performance": {
+          "count": 3,
+          "points": 5
+        },
+        "Competitions": {
+          "count": 1,
+          "points": 3
+        },
+        "Attendance (classes)": {
+          "count": 240,
+          "points": 5
+        },
+        "Special events": {
+          "count": 4,
+          "points": 3
+        },
+        "Breaking class": {
+          "count": 15,
+          "points": 3
+        }
+      },
+      "total": 353.8,
+      "finished": true,
+      "maxBeforeExtra": 384,
+      "passMark": 293,
+      "resultGrid": "Passed",
+      "resultResultsTab": "Passed",
+      "grades": {
+        "Stretching": "6 in = A",
+        "Sit-up (20 sec)": "21 count = A",
+        "Push-up (1 min)": "40 count = A",
+        "Static jump": "19 in = B+",
+        "Long jump": "84 in = A",
+        "Sprint 4x10 m": "10.4 sec = B+",
+        "Pull-up or hold": "Pull-up 8 reps = A",
+        "Sprint 100 m": "15.2 sec = B+",
+        "1/2 or 1 mile": "8:45 min = B+",
+        "Referee seminar": "A",
+        "Free sparring": "A",
+        "Target kick (30 sec)": "35 kicks = A",
+        "Korean terminology": "A",
+        "TKD knowledge": "A",
+        "White-Bodan Curriculum": "A",
+        "Geum Gang Poomsae": "A",
+        "1st Dan Curriculum": "A",
+        "2nd Dan Sa Bang Chuck (1-4)": "A-",
+        "Creative Poomsae": "A",
+        "Creative Sa Bang Chuck": "A-",
+        "Technical Break": "A",
+        "Power Break": "A",
+        "Egg test": "A",
+        "Meditation": "A",
+        "Assistant instructor course": "A",
+        "Appreciation letter": "A",
+        "TKD project": "A"
+      }
+    },
+    {
+      "key": "leo",
+      "name": "Leo Garcia",
+      "school": "Shrewsbury",
+      "dan": 4,
+      "age": 50,
+      "ageGroup": "13 and over",
+      "source": "approved roster (born Dec 8, 1976)",
+      "partPoints": {
+        "Physical": 65.5,
+        "Technical": 128,
+        "Curriculum": 218,
+        "Other requirements": 112
+      },
+      "extraPoints": 34,
+      "extraCounts": {
+        "Extra stripes": {
+          "count": 4,
+          "points": 4
+        },
+        "Outstanding performance": {
+          "count": 3,
+          "points": 5
+        },
+        "Competitions": {
+          "count": 2,
+          "points": 5
+        },
+        "Attendance (classes)": {
+          "count": 260,
+          "points": 10
+        },
+        "Special events": {
+          "count": 6,
+          "points": 5
+        },
+        "Breaking class": {
+          "count": 20,
+          "points": 5
+        }
+      },
+      "total": 557.5,
+      "finished": true,
+      "maxBeforeExtra": 595,
+      "passMark": 453,
+      "resultGrid": "Passed",
+      "resultResultsTab": "Passed",
+      "grades": {
+        "Stretching": "6 in = A",
+        "Sit-up (20 sec)": "20 count = A",
+        "Push-up (1 min)": "40 count = A",
+        "Static jump": "18 in = B+",
+        "Long jump": "80 in = B+",
+        "Sprint 4x10 m": "10.8 sec = B+",
+        "Pull-up or hold": "Hold 32 sec = A+",
+        "Sprint 100 m": "15.6 sec = B+",
+        "1/2 or 1 mile": "8:55 min = B+",
+        "Referee seminar": "A",
+        "Free sparring": "A",
+        "Target kick (30 sec)": "36 kicks = A",
+        "Korean terminology": "A",
+        "TKD knowledge": "A+",
+        "Written test": "A",
+        "White-Bodan Curriculum": "A",
+        "Tae Baek Poomsae": "A",
+        "1st Dan Curriculum": "A",
+        "2nd Dan Curriculum": "A",
+        "3rd Dan Sa Bang Chuck (1-6)": "A",
+        "Creative Poomsae": "A+",
+        "Creative Sa Bang Chuck": "A",
+        "Technical Break": "A",
+        "Power Break": "A",
+        "Egg test": "A",
+        "Meditation": "A",
+        "Assistant instructor course": "A",
+        "Appreciation letter": "A",
+        "TKD project": "A"
+      }
+    }
+  ],
+  "laterCycle": {
+    "name": "Fall 2027",
+    "days": [
+      "2027-10-02 Physical",
+      "2027-10-30 Technical",
+      "2027-11-20 Curriculum"
+    ],
+    "submissionsDue": "2027-11-13",
+    "makeup": {
+      "name": "Mia Chen",
+      "from": "Spring 2027",
+      "addedOn": "2027-10-28",
+      "retests": [
+        "Free sparring"
+      ],
+      "keptExtraPoints": 15,
+      "totalBeforeRetest": 324.5,
+      "afterFreeSparringBPlus": {
+        "total": 333.5,
+        "result": "Passed"
+      }
+    },
+    "otherCandidates": [
+      "Chloe Bennett (Shrewsbury, 12, NEW)",
+      "Marcus Hall (Worcester, 41, NEW)"
+    ]
+  }
+}
