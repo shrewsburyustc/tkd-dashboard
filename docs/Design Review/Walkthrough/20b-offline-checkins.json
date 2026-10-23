@@ -1,0 +1,43 @@
+{
+  "title": "Item 20b · Checking in when the Wi-Fi drops",
+  "subtitle": "<b>Missing — not planned.</b> Rule §3.5 promises: “Check-ins made offline are queued and sent when the connection returns; nothing is discarded.” No section does this — Camps' roster and Prospects' / Calendar's “Came?” need the connection. Item 5b already decided the offline bar (its words stop promising “will sync”). Today a check-in that can't save fails honestly, but nothing is kept on the tablet. Precedent: for grading you chose a printed sheet over an offline queue (v0.188); Camps already has Print roster. <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data; the preview's date moved into April Vacation Camp week to show Check in)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/20b-camps-checkin-failed.png",
+          "crop": [52, 96, 1228, 400],
+          "scale": 0.75,
+          "caption": "<b>1. Today, when a check-in can't save</b> (tested in the preview): “Ava Thompson wasn't checked in. Check the connection and try again.” with Retry, a “Not saved” tag, and the cell goes back to “Check in”. Nothing is kept on the tablet.",
+          "marks": [[74, 149, 1184, 44], [194, 428, 96, 27], [913, 433, 76, 36]]
+        }
+      ],
+      "note": "Prospects' and Calendar's “Came?” behave the same way. Rule §3.5 still says the check-in would be kept and sent later."
+    },
+    {
+      "label": "Option B (recommended) and option C, drawn",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/20b-option-b-MOCKUP.png",
+          "crop": [52, 70, 1228, 420],
+          "scale": 0.75,
+          "caption": "<b>2. Option B — check-ins need the connection:</b> item 5b's offline bar says so on every page; a tap that fails says so with Retry (as today); the paper backup is the camp's ⋯ → Print roster, as the printed grading sheet is for testing (v0.188).",
+          "marks": [[54, 76, 1224, 32], [1053, 307, 206, 40]]
+        },
+        {
+          "src": "shots/20b-option-c-MOCKUP.png",
+          "crop": [52, 70, 1228, 460],
+          "scale": 0.75,
+          "caption": "<b>3. Option C — the queue §3.5 promises:</b> a check-in made offline is kept on this tablet (“Not sent yet”) and sent when the connection is back.",
+          "marks": [[54, 76, 1224, 32], [913, 454, 76, 48]]
+        }
+      ],
+      "note": "Pictures 2–3 are drawn over the real camp page; nothing in the app was changed. Prospects' and Calendar's “Came?” would follow the same choice."
+    }
+  ],
+  "footer": "<b>Your choice — one question: what happens to a check-in when the Wi-Fi drops?</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> §3.5 promises a queue nobody builds.<br><b>B · Recommended: check-ins need the connection (picture 2).</b> §3.5's queue line is dropped; the offline bar (5b), the failed tap's Retry and Print roster cover a Wi-Fi drop — the same choice you made for grading (v0.188). <i>+</i> honest: nothing waits silently on one tablet; no new build. <i>−</i> at a morning drop-off with no Wi-Fi, staff tick the printed roster and type the check-ins in later.<br><b>C · Build the queue (picture 3).</b> Check-ins are kept on the tablet and sent later, in Camps and in Prospects / Calendar. <i>+</i> taps never fail at the door. <i>−</i> a real build in two sections and the app's first offline queue: two tablets can disagree, closing the page loses the kept check-ins, and a late send can land after someone else's change."
+}
