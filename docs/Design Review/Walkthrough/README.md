@@ -20,8 +20,8 @@ Jeffrey asked (2026-10-21) to go through the phase 1 findings one by one, each w
 | 6 | Undo after a change | Mostly drift | G13 | `06-undo-after-a-change.png` | **Decided 2026-10-22: B** — Undo after every reversible change |
 | 7 | Removing a person: Withdraw, Remove, Cancel | Question (rule says red, mockups plain); Black Belt plain "Remove": drift | G3, early warning 7 | `07-removing-a-person.png` | **Decided 2026-10-22: C** — red means "gone for good"; Black Belt gets Withdraw + Delete permanently |
 | 8 | "Are you sure?" boxes: "Keep …" or "Cancel" | Approved in each section; some drift; one question | G4 | `08-are-you-sure-boxes.png` | **Decided 2026-10-22: B** — "Keep …" everywhere; the other button repeats the words he pressed |
-| 9 | Opening a person, and the change history | Color Belt private detail and Color Belt/Camps history: missing — not planned | G6 | `09-opening-a-person.png` | **9a decided 2026-10-22: B** — private testing rows open the event roster's summary. **9b shown 2026-10-22 — waiting for Jeffrey** (`09b-change-history.png`; recommended B: Prospects' one History line in every summary) |
-| 10 | The ⋯ menu: order and admin-only items | Approved in each section | G5 | — | |
+| 9 | Opening a person, and the change history | Color Belt private detail and Color Belt/Camps history: missing — not planned | G6 | `09-opening-a-person.png` | **9a decided 2026-10-22: B** — private testing rows open the event roster's summary. **9b decided 2026-10-22: B** (`09b-change-history.png`) — Prospects' one "History · N changes" line in every summary |
+| 10 | The ⋯ menu: order and admin-only items | Approved in each section | G5 | `10-menu-order.png` | **10a shown 2026-10-22 — waiting for Jeffrey** (recommended B: Color Belt's order everywhere). 10b (admin-only items) next |
 | 11 | Count cards above a roster | Approved; Color Belt private cards: drift | G11 | — | |
 | 12 | Registration link, and opening / closing sign-up | Approved; Forms wording and icons: drift; one question | G8, G9 | — | |
 | 13 | The five family sign-up pages | Approved in each section | G10 | — | |
