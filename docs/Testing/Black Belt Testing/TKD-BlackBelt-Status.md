@@ -175,3 +175,4 @@ All the items below were applied to the plan.
 **G1 = A (v0.938):** Star's rule only, no hand override. **G2 asked** (a missing Other requirement after the hand-in date: A = flagged Late, a person decides, recommended; B = automatic D).
 **G2 = A (v0.939):** a late Other requirement shows Late, Not finished; a person decides on a D. **G3 asked** (what a make-up retests).
 **G3 = A (v0.940):** D retests the D subjects; below the mark an admin picks subjects (Star v0.130). **G4 asked** (where the make-up is graded).
+**G4 = A (v0.941):** make-ups graded at a later cycle (Add candidate → Make-up from an earlier cycle), as Star. **G5 asked** (examiners).
