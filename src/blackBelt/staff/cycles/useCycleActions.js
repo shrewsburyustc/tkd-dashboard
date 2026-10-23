@@ -9,16 +9,23 @@
 //     database decides.
 //   - Undo sends the opposite switch with the version the first change returned (OP-17: after a
 //     reopen, Undo closes again; the automatic close stays off).
+//   - Migration 0024 (rulebook v0.929 / v0.930): the FIRST opening of a cycle locks its rubric, so
+//     only admins may do it — staff see Open registration grayed with "An admin opens it the first
+//     time (it locks the rubric)." The toast's Undo of a first opening calls undoFirstOpen, which
+//     puts the cycle back to "never opened" (its rubric editable again). If a family registered in
+//     those seconds the database refuses: "Can't undo: a family has already registered."
 //   - ONE change at a time: beginWrite() / endWrite() come from the screen.
 //
 //   const actions = useCycleActions({ isAdmin, today, beginWrite, endWrite, reload, setBanner,
 //                                      showToast, clearToast, onNoAccess, onRefreshProfile });
 //   actions.canOpen(cycle)      → may this person open it now?
+//   actions.openBlockedReason(cycle) → why not (the gray words under the item), or null
 //   actions.switchRegistration(cycle, open)    cycle = { id, name, version, autoClose, applicationDue }
 //   actions.copyLink(code)
 import { useRef } from 'react';
-import { setRegistration } from '../../../lib/blackBelt/api.js';
+import { setRegistration, undoFirstOpen } from '../../../lib/blackBelt/api.js';
 import { blackBeltLink } from '../../../lib/blackBelt/qr.js';
+import { canOpenRegistration } from '../../../lib/blackBelt/rules.js';
 import * as T from '../text.js';
 
 // Opening after the application date (with the automatic close on) needs an admin.
@@ -26,13 +33,58 @@ export function openNeedsAdmin(cycle, today) {
   return Boolean(cycle.autoClose) && typeof cycle.applicationDue === 'string' && today > cycle.applicationDue;
 }
 
+// Has this cycle's registration never been opened? A cycle page's CycleDetail knows
+// firstOpenedAt; a Cycles-tab row (CycleSummary) only knows its state ("not_open_yet").
+export function neverOpened(cycle) {
+  if (cycle && Object.hasOwn(cycle, 'firstOpenedAt')) return cycle.firstOpenedAt === null;
+  return cycle?.state?.registration === 'not_open_yet';
+}
+
 export function useCycleActions({ isAdmin, today, beginWrite, endWrite, reload, setBanner, showToast, onNoAccess, onRefreshProfile }) {
   // The newest callbacks for a toast's Undo, which runs seconds later.
   const latest = useRef({});
   latest.current = { isAdmin, today, beginWrite, endWrite, reload, setBanner, showToast, onNoAccess, onRefreshProfile };
 
+  // Why this person can't open the cycle now (null = they can). The first opening is admin-only
+  // (it locks the rubric, v0.930); after the application date only admins reopen (v0.210).
+  // (rules.js canOpenRegistration decides; a Cycles-tab row has no firstOpenedAt, so it is
+  // filled in from the row's state.)
+  function openBlockedReason(cycle) {
+    const withFirst = { ...cycle, firstOpenedAt: neverOpened(cycle) ? null : cycle.firstOpenedAt ?? 'opened' };
+    const { reason } = canOpenRegistration(withFirst, isAdmin, today);
+    if (reason === 'firstOpenNeedsAdmin') return T.FIRST_OPEN_ADMIN;
+    if (reason === 'reopenNeedsAdmin') return T.REOPEN_NEEDS_ADMIN;
+    return null;
+  }
   function canOpen(cycle) {
-    return isAdmin || !openNeedsAdmin(cycle, today);
+    return openBlockedReason(cycle) === null;
+  }
+
+  // Undo of a FIRST opening (the toast's Undo): back to never opened, rubric editable again.
+  async function undoFirstOpening(cycle, expectedVersion) {
+    const a = latest.current;
+    if (!a.beginWrite()) return;
+    const result = await undoFirstOpen({ cycleId: cycle.id, expectedVersion });
+    a.endWrite(result.status);
+    const status = result.status;
+    if (status === 'ok') {
+      a.reload();
+      a.showToast(T.TOAST_UNDONE, { icon: false });
+    } else if (status === 'no_access') {
+      a.onNoAccess();
+    } else if (status === 'has_registrations') {
+      a.setBanner({ text: T.CANT_UNDO_REGISTERED });
+      a.reload();
+    } else if (status === 'not_allowed') {
+      a.setBanner({ text: T.NOT_ALLOWED });
+      a.onRefreshProfile();
+      a.reload();
+    } else if (status === 'stale' || status === 'not_found' || status === 'invalid') {
+      a.setBanner({ text: T.UNDO_OPEN_TOO_LATE });
+      a.reload();
+    } else {
+      a.setBanner({ kind: 'switch', text: T.UNDO_FAILED, retry: () => undoFirstOpening(cycle, expectedVersion) });
+    }
   }
 
   async function switchRegistration(cycle, open, { isUndo = false, expectedVersion = cycle.version } = {}) {
@@ -49,16 +101,23 @@ export function useCycleActions({ isAdmin, today, beginWrite, endWrite, reload, 
         return;
       }
       const removedDate = open && openNeedsAdmin(cycle, a.today);
-      const text = open ? (removedDate ? T.TOAST_REG_OPEN_DATE_REMOVED : T.TOAST_REG_OPEN) : T.TOAST_REG_CLOSED;
       const newVersion = result.version;
+      const firstOpen = open && result.firstOpen === true;
+      // The FIRST opening says "Registration opened" (mockup R13: it also locks the rubric);
+      // a later reopen keeps "Registration open".
+      const openText = firstOpen ? T.TOAST_REG_OPENED_FIRST : T.TOAST_REG_OPEN;
+      const text = open ? (removedDate ? T.TOAST_REG_OPEN_DATE_REMOVED : openText) : T.TOAST_REG_CLOSED;
       a.showToast(text, {
         icon: false,
-        action: { label: T.UNDO, onAction: () => switchRegistration(cycle, !open, { isUndo: true, expectedVersion: newVersion }) },
+        action: {
+          label: T.UNDO,
+          onAction: () => (firstOpen ? undoFirstOpening(cycle, newVersion) : switchRegistration(cycle, !open, { isUndo: true, expectedVersion: newVersion })),
+        },
       });
     } else if (status === 'no_access') {
       a.onNoAccess();
     } else if (status === 'not_allowed') {
-      a.setBanner({ text: open ? T.REOPEN_NEEDS_ADMIN : T.NOT_ALLOWED });
+      a.setBanner({ text: open ? (neverOpened(cycle) ? T.FIRST_OPEN_ADMIN : T.REOPEN_NEEDS_ADMIN) : T.NOT_ALLOWED });
       a.onRefreshProfile();
       a.reload();
     } else if (status === 'waiver_needed' || status === 'finished') {
@@ -89,5 +148,5 @@ export function useCycleActions({ isAdmin, today, beginWrite, endWrite, reload, 
     }
   }
 
-  return { canOpen, switchRegistration, copyLink };
+  return { canOpen, openBlockedReason, switchRegistration, copyLink };
 }

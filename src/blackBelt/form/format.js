@@ -13,6 +13,7 @@
 // on its own would show the day before for anyone west of London.)
 import { formatDollars } from '../../lib/money.js';
 import { ageOn, emailIsValid, firstDayOf, kukkiwonRange, planSummary, scheduleFor } from '../../lib/blackBelt/rules.js';
+import { handedIn } from '../../lib/blackBelt/rubric.js';
 import * as T from './text.js';
 
 export { formatDollars, ageOn, emailIsValid, firstDayOf, kukkiwonRange, scheduleFor };
@@ -116,12 +117,13 @@ export function lowerFirst(text) {
 }
 
 // What the candidate hands in, as one list: "egg test, meditation, appreciation letter, TKD project".
+// Rubric v2 (migration 0024): worked out from the subjects tagged handed_in, in part order
+// (rubric.js handedIn) — the same list the staff screens show under "Handed in by Submissions due".
 export function handInList(danSheet) {
-  const items = Array.isArray(danSheet?.hand_in) ? danSheet.hand_in : [];
-  return items.map((item) => lowerFirst(item?.name)).filter(Boolean).join(', ');
+  return handedIn(danSheet).map((item) => lowerFirst(item.subject?.name)).filter(Boolean).join(', ');
 }
 
-// 2.5 → "2.5", 22.5 → "22.5", 10 → "10" (numbers from the requirements sheet).
+// 2.5 → "2.5", 22.5 → "22.5", 10 → "10" (numbers from the rubric).
 export const num = (value) => (typeof value === 'number' && Number.isFinite(value) ? String(value) : String(value ?? ''));
 
 // ----- Prices and plans -----

@@ -1,21 +1,30 @@
 // RequirementsPanel.jsx — "What 1st Dan is tested on" (mockup Form 3, rulebook v0.919, B8
-// compact A; contract 0016-B1 §4.5).
-// Why it exists: families see what the chosen Dan is tested on, from the cycle's own
-// requirements sheet and testing days (the same data grading uses, so it can't disagree):
+// compact A; contract 0016-B1 §4.5; rubric v2 since migration 0024, contract 0024 §10.4).
+// Why it exists: families see what the chosen Dan is tested on, from the cycle's own rubric and
+// testing days (the same data grading uses, so it can't disagree):
 //   Level 1  one row per testing part ("1 · Physical", its day(s) and place, how many events or
 //            subjects), Other requirements (what is handed in, by the Submissions due date),
-//            Extra points, and the pass rule.
+//            Extra points, and the pass rule — one pass mark per age bracket ("17 and under 275
+//            points · 18 and over 293 points"), the no-D rule and the make-up sentence.
 //   Level 2  one part: when and where, each subject with its credits ("Outdoor:" before an
-//            outdoor subject, "Adults only", a note under its name), and the part's maximum.
-//   Level 3  + / − opens one subject in place: the cut-offs per age group, or the points for
-//            each grade.
+//            outdoor subject, "Only 18 and over", a note under its name), and the part's maximum
+//            per bracket ("Curriculum: up to 135 points (157.5 for 18 and over).").
+//   Level 3  + / − opens one subject in place: the cut-offs per age bracket — one table per way
+//            for a subject done two ways ("Pull-up · reps, at least", "Hold · seconds, at least")
+//            — and the points for each grade.
+// Every number comes from the stored rubric: a subject's points are its stored `points` (worked
+// out or its own, rubric v0.924) — never recomputed here. (This fixes the live bug where 4th Dan
+// Target kick B showed credits × 2.5 = 10 instead of its own 9.)
 // It is shown inside Panel.jsx (full screen on phones, a dialog on tablets and PCs).
+// The cycle's `requirements` is null until the cycle's registration first opens (0024 §7): then
+// there is nothing to show.
 //
 // RequirementsPrint (below) draws the SAME content with every level opened, for the printout of
 // the Registered page (Form 7: "the printout adds the chosen Dan's requirements").
 //
-// Everything is drawn as React text (no innerHTML), so nothing in the sheet can run as code.
+// Everything is drawn as React text (no innerHTML), so nothing in the rubric can run as code.
 import { useState } from 'react';
+import { bracketLabel, CUTOFF_LETTERS, partMaxByBracket, subjectLetters } from '../../lib/blackBelt/rubric.js';
 import Panel from './Panel.jsx';
 import { Icon } from './parts.jsx';
 import { handInList, num, placeMedium, placeShort, secondPlaceDiffers, shortDay, timeLabel, timeRange } from './format.js';
@@ -23,22 +32,22 @@ import * as T from './text.js';
 
 const TESTING_PARTS = ['physical', 'technical', 'curriculum'];
 
-// The chosen Dan's sheet and the parts in the order they are drawn (testing parts numbered
+// The chosen Dan's rubric and the parts in the order they are drawn (testing parts numbered
 // 1, 2, 3 …; the "other" part — Other requirements — after them).
 function sheetFor(cycle, dan) {
-  const requirements = cycle?.requirements ?? {};
-  const sheet = (requirements.dans ?? []).find((d) => d?.dan === dan) ?? null;
+  const requirements = cycle?.requirements ?? null;
+  const sheet = requirements?.schema_version === 2 ? (requirements.dans ?? []).find((d) => d?.dan === dan) ?? null : null;
   const parts = Array.isArray(sheet?.parts) ? sheet.parts : [];
   const days = cycle?.days ?? [];
   const testing = parts
     .filter((p) => TESTING_PARTS.includes(p.code))
     .map((part, i) => ({ part, number: i + 1, days: days.filter((d) => (d.parts ?? []).includes(part.code)) }));
   const other = parts.find((p) => p.code === 'other') ?? null;
-  return { sheet, testing, other, scales: requirements.grade_scales ?? {} };
+  return { sheet, testing, other };
 }
 
 const subjectsOf = (part) => (Array.isArray(part?.subjects) ? part.subjects : []);
-const allByAge = (part) => subjectsOf(part).length > 0 && subjectsOf(part).every((s) => s?.scoring?.kind === 'table');
+const allByAge = (part) => subjectsOf(part).length > 0 && subjectsOf(part).every((s) => s?.scoring === 'measured');
 
 // Level 1, the line under a part's name: "Sat, Apr 3 · Worcester + Horgan Arena (outdoor)".
 function daysShortLine(days) {
@@ -61,16 +70,12 @@ function daysLongLine(part, days) {
   return when ? `${when}.${each}` : each.trim();
 }
 
-// "Physical: up to 80 points." / "Curriculum: up to 135 points (157.5 for adults, with One Step Sparring)."
-function maxLine(part) {
-  if (typeof part.max_points_adult === 'number') {
-    const adultOnly = subjectsOf(part)
-      .filter((s) => s.adults_only)
-      .map((s) => s.name.replace(/\s*\([^)]*\)\s*$/, ''))
-      .join(' and ');
-    return T.upToPointsAdult(part.name, num(part.max_points), num(part.max_points_adult), adultOnly);
-  }
-  return T.upToPoints(part.name, num(part.max_points));
+// "Physical: up to 80 points." / "Curriculum: up to 135 points (157.5 for 18 and over)."
+function maxLine(sheet, part) {
+  const groups = partMaxByBracket(sheet, part);
+  if (groups.length <= 1) return T.upToPoints(part.name, num(groups[0]?.max ?? 0));
+  const [first, ...rest] = groups;
+  return T.upToPointsBrackets(part.name, num(first.max), rest.map((g) => T.forBrackets(num(g.max), g.brackets.map(bracketLabel).join(', '))).join('; '));
 }
 
 // "Hand in by Sat, May 29: egg test, meditation, appreciation letter, TKD project"
@@ -82,128 +87,160 @@ function handInLine(cycle, sheet) {
 
 // ----- Pieces -----
 
+// "To pass: 17 and under 275 points · 18 and over 293 points, and no D in any subject." + the
+// make-up sentence (its own line) + "Extra points count toward the total."
 function PassRule({ sheet }) {
-  const rule = sheet?.pass_rule;
-  if (!rule || typeof rule.points !== 'number') return null;
-  const [points, pointsWord] = T.passPoints(num(rule.points));
+  const pass = sheet?.pass;
+  const brackets = Array.isArray(pass?.brackets) ? pass.brackets : [];
+  if (brackets.length === 0) return null;
+  const marks =
+    brackets.length === 1
+      ? T.passPoints(num(brackets[0].pass_mark)).map((piece, i) => (i === 0 ? <b key={i}>{piece}</b> : piece))
+      : brackets.map((b, k) => (
+          <span key={k}>
+            {k > 0 ? T.PASS_BRACKET_JOIN : null}
+            {T.passBracket(bracketLabel(b), num(b.pass_mark)).map((piece, i) => (i === 1 ? <b key={i}>{piece}</b> : piece))}
+          </span>
+        ));
   return (
     <div className="bbf-pass">
       {T.PASS_TO}
-      <b>{points}</b>
-      {pointsWord}
-      {typeof rule.points_adult === 'number'
-        ? T.passAdult(num(rule.points_adult)).map((piece, i) => (i === 1 ? <b key={i}>{piece}</b> : piece))
-        : null}
-      {rule.no_d ? T.PASS_NO_D : T.PASS_END}
+      {marks}
+      {pass.no_d ? T.PASS_NO_D_ONLY : T.PASS_END}
+      {pass.makeup ? ` ${pass.makeup}` : null}
       {sheet?.extra_points?.counts_toward_total ? T.EXTRA_COUNT : null}
     </div>
   );
 }
 
-// "A+ 4 · A 3.5 · B+ 3 · B 2.5 · C 2 · D 0"
-const scaleText = (scale) =>
-  Object.entries(scale ?? {})
-    .map(([grade, points]) => `${grade} ${num(points)}`)
-    .join(' · ');
+// "A+ 8 · A 7 · B+ 6 · B 5 · C 4 · D 0" — a subject's stored points, in letter order.
+const pointsText = (letters, points) => letters.map((l) => `${l} ${num(points?.[l])}`).join(' · ');
 
-// Level 3: how one subject is graded.
-function Scoring({ subject, part, scales }) {
-  const scoring = subject?.scoring ?? {};
-  if (scoring.kind === 'table') {
-    const groups = Array.isArray(scoring.groups) ? scoring.groups : [];
-    const grades = (groups[0]?.cutoffs ?? []).map((c) => c.grade);
-    const meet = scoring.direction === 'at_most' ? T.MEET_AT_MOST : scoring.direction === 'under' ? T.MEET_UNDER : T.MEET_AT_LEAST;
-    const unit = scoring.unit && scoring.unit !== 'count' ? T.measuredIn(scoring.unit) : '';
-    const scale = scales?.[part.code];
-    return (
-      <div className="bbf-score">
-        <p className="bbf-score__text">
-          {unit}
-          {meet}
-        </p>
-        <div className="bbf-tablewrap">
-          <table className="bbf-grid">
-            <thead>
-              <tr>
-                <th scope="col">{T.AGE}</th>
-                {grades.map((g) => (
-                  <th scope="col" key={g}>
-                    {g}
-                  </th>
+// One way's cut-offs: "Meet the number …" and a table of age brackets × A+ A B+ B C.
+function WayTable({ way, showHeading }) {
+  const meet = way.direction === 'at_most' ? T.MEET_AT_MOST : way.direction === 'under' ? T.MEET_UNDER : T.MEET_AT_LEAST;
+  const unit = way.unit && way.unit !== 'count' ? T.measuredIn(way.unit) : '';
+  const brackets = Array.isArray(way.brackets) ? way.brackets : [];
+  return (
+    <>
+      {showHeading ? <p className="bbf-score__way">{T.wayHeading(way.name, way.unit, way.direction)}</p> : null}
+      <p className="bbf-score__text">
+        {showHeading ? '' : unit}
+        {meet}
+      </p>
+      <div className="bbf-tablewrap">
+        {/* fixed column widths: a subject's two ways (Pull-up, Hold) line up */}
+        <table className="bbf-grid bbf-grid--ways">
+          <thead>
+            <tr>
+              <th scope="col">{T.AGE}</th>
+              {CUTOFF_LETTERS.map((g) => (
+                <th scope="col" key={g}>
+                  {g}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {brackets.map((b, i) => (
+              <tr key={i}>
+                <th scope="row">{bracketLabel(b)}</th>
+                {CUTOFF_LETTERS.map((g) => (
+                  <td key={g}>{num(b.cutoffs?.[g])}</td>
                 ))}
               </tr>
-            </thead>
-            <tbody>
-              {groups.map((group, i) => (
-                <tr key={i}>
-                  <th scope="row">{group?.ages?.label ?? ''}</th>
-                  {grades.map((g) => (
-                    <td key={g}>{num((group.cutoffs ?? []).find((c) => c.grade === g)?.value ?? '')}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="bbf-score__text">
-          {scale ? T.pointsLine(num(subject.credits), scaleText(scale)) : T.pointsLinePlain(scaleText(scoring.points))}
-        </p>
-      </div>
-    );
-  }
-  // 'grades': the examiner gives a grade; each grade is worth some points.
-  const entries = Object.entries(scoring.points ?? {});
-  return (
-    <div className="bbf-score">
-      <p className="bbf-score__text">{T.GRADED_BY_EXAMINER}</p>
-      <div className="bbf-tablewrap">
-        <table className="bbf-grid">
-          <tbody>
-            <tr>
-              <th scope="row">{T.GRADE}</th>
-              {entries.map(([grade]) => (
-                <td key={grade}>{grade}</td>
-              ))}
-            </tr>
-            <tr>
-              <th scope="row">{T.POINTS}</th>
-              {entries.map(([grade, points]) => (
-                <td key={grade}>{num(points)}</td>
-              ))}
-            </tr>
+            ))}
           </tbody>
         </table>
       </div>
+    </>
+  );
+}
+
+// A graded subject's grades and their points, as a two-row table.
+function GradeTable({ letters, points }) {
+  return (
+    <table className="bbf-grid">
+      <tbody>
+        <tr>
+          <th scope="row">{T.GRADE}</th>
+          {letters.map((grade) => (
+            <td key={grade}>{grade}</td>
+          ))}
+        </tr>
+        <tr>
+          <th scope="row">{T.POINTS}</th>
+          {letters.map((grade) => (
+            <td key={grade}>{num(points?.[grade])}</td>
+          ))}
+        </tr>
+      </tbody>
+    </table>
+  );
+}
+
+// Level 3: how one subject is graded.
+function Scoring({ subject, part }) {
+  const letters = subjectLetters(part.code, subject?.scoring);
+  if (subject?.scoring === 'measured') {
+    const ways = Array.isArray(subject.ways) ? subject.ways : [];
+    const two = ways.length > 1;
+    return (
+      <div className="bbf-score">
+        {two ? <p className="bbf-score__text">{T.ONE_OF_TWO_WAYS}</p> : null}
+        {ways.map((way, i) => (
+          <WayTable key={i} way={way} showHeading={two || Boolean(way.name)} />
+        ))}
+        <p className="bbf-score__text">{T.pointsLinePlain(pointsText(letters, subject.points))}</p>
+      </div>
+    );
+  }
+  // graded: the examiner gives a grade; each grade is worth the subject's stored points.
+  return (
+    <div className="bbf-score">
+      <p className="bbf-score__text">{T.GRADED_BY_EXAMINER}</p>
+      {/* One table of every grade; on very narrow phones (under 360px) nine grades don't fit, so
+          the same points show as two shorter tables instead (form.css .bbf-grid--split), and
+          the page never scrolls sideways. */}
+      <div className={`bbf-tablewrap${letters.length > 6 ? ' bbf-grid--whole' : ''}`}>
+        <GradeTable letters={letters} points={subject.points} />
+      </div>
+      {letters.length > 6 ? (
+        <div className="bbf-tablewrap bbf-grid--split">
+          <GradeTable letters={letters.slice(0, 5)} points={subject.points} />
+          <GradeTable letters={letters.slice(5)} points={subject.points} />
+        </div>
+      ) : null}
       <p className="bbf-score__text">{T.D_MAKEUP}</p>
     </div>
   );
 }
 
-// The name side of a subject row: "Outdoor: Sprint 100 m", a note and "Adults only" under it.
+// The name side of a subject row: "Outdoor: Sprint 100 m", a note and "Only 18 and over" under it.
 function SubjectName({ subject }) {
-  const note = subject.note ?? subject.scoring?.note ?? null;
+  const only = Array.isArray(subject.limited_to) ? T.onlyFor(subject.limited_to.map(bracketLabel).join(', ')) : null;
   return (
     <span className="bbf-subj__name">
       <span>
         {subject.outdoor ? T.OUTDOOR_PREFIX : ''}
         {subject.name}
       </span>
-      {note ? <span className="bbf-subj__note">{note}</span> : null}
-      {subject.adults_only ? <span className="bbf-subj__note">{T.ADULTS_ONLY}</span> : null}
+      {subject.note ? <span className="bbf-subj__note">{subject.note}</span> : null}
+      {only ? <span className="bbf-subj__note">{only}</span> : null}
     </span>
   );
 }
 
 // Level 2's subject list. `opened` = the set of open subject indexes; `printAll` opens every one
 // and draws no buttons.
-function SubjectList({ part, scales, opened, onToggle, printAll, idPrefix }) {
+function SubjectList({ part, opened, onToggle, printAll, idPrefix }) {
   return (
     <ul className="bbf-subjs">
       {subjectsOf(part).map((subject, i) => {
         const open = printAll || opened.has(i);
         const moreId = `${idPrefix}-${i}`;
         return (
-          <li key={i} className="bbf-subj">
+          <li key={subject.id ?? i} className="bbf-subj">
             {printAll ? (
               <div className="bbf-subj__row">
                 <SubjectName subject={subject} />
@@ -227,7 +264,7 @@ function SubjectList({ part, scales, opened, onToggle, printAll, idPrefix }) {
             )}
             {open ? (
               <div id={moreId} className="bbf-subj__more">
-                <Scoring subject={subject} part={part} scales={scales} />
+                <Scoring subject={subject} part={part} />
               </div>
             ) : null}
           </li>
@@ -323,33 +360,38 @@ function PartsList({ cycle, data, onOpen }) {
 }
 
 // One part's level 2 content (also used, fully opened, for the printout).
-function PartDetail({ part, days, scales, opened, onToggle, printAll, idPrefix }) {
+function PartDetail({ sheet, part, days, opened, onToggle, printAll, idPrefix }) {
   return (
     <>
       <p className="bbf-panel__intro">{daysLongLine(part, days)}</p>
-      <SubjectList part={part} scales={scales} opened={opened} onToggle={onToggle} printAll={printAll} idPrefix={idPrefix} />
-      {typeof part.max_points === 'number' ? <p className="bbf-panel__foot">{maxLine(part)}</p> : null}
+      <SubjectList part={part} opened={opened} onToggle={onToggle} printAll={printAll} idPrefix={idPrefix} />
+      <p className="bbf-panel__foot">{maxLine(sheet, part)}</p>
     </>
   );
 }
 
 function OtherDetail({ cycle, data, opened, onToggle, printAll }) {
-  const { sheet, other, scales } = data;
+  const { sheet, other } = data;
   const line = handInLine(cycle, sheet);
   return (
     <>
       <p className="bbf-panel__intro">{line ? `${line}.${T.EACH_ITEM}` : T.EACH_ITEM.trim()}</p>
-      <SubjectList part={other} scales={scales} opened={opened} onToggle={onToggle} printAll={printAll} idPrefix="bbf-other" />
-      {typeof other.max_points === 'number' ? <p className="bbf-panel__foot">{maxLine(other)}</p> : null}
+      <SubjectList part={other} opened={opened} onToggle={onToggle} printAll={printAll} idPrefix="bbf-other" />
+      <p className="bbf-panel__foot">{maxLine(sheet, other)}</p>
     </>
   );
 }
 
 function ExtraDetail({ data, dan }) {
   const extra = data.sheet?.extra_points ?? {};
+  const hasLimit = typeof extra.limit === 'number';
   return (
     <>
-      <p className="bbf-panel__intro">{T.extraIntro(T.DAN[dan], extra.limit !== null && extra.limit !== undefined)}</p>
+      <p className="bbf-panel__intro">
+        {extra.counts_toward_total === false ? T.EXTRA_NOT_COUNTED : T.extraIntro(T.DAN[dan], hasLimit)}
+        {hasLimit ? T.extraLimit(num(extra.limit)) : null}
+      </p>
+      {extra.note ? <p className="bbf-panel__intro">{extra.note}</p> : null}
       <ExtraList sheet={data.sheet} />
     </>
   );
@@ -376,18 +418,18 @@ export default function RequirementsPanel({ cycle, dan, onClose }) {
   const back = () => open({ view: 'parts' });
 
   let title = T.whatDanTested(T.DAN[dan]);
-  let content = <PartsList cycle={cycle} data={data} onOpen={open} />;
+  let content = data.sheet ? <PartsList cycle={cycle} data={data} onOpen={open} /> : null;
   let levelKey = 'parts';
-  if (level.view === 'part' && data.testing[level.index]) {
+  if (data.sheet && level.view === 'part' && data.testing[level.index]) {
     const { part, number, days } = data.testing[level.index];
     title = T.partTitle(number, part.name);
     levelKey = `part-${level.index}`;
-    content = <PartDetail part={part} days={days} scales={data.scales} opened={opened} onToggle={toggle} idPrefix={`bbf-part-${level.index}`} />;
-  } else if (level.view === 'other' && data.other) {
+    content = <PartDetail sheet={data.sheet} part={part} days={days} opened={opened} onToggle={toggle} idPrefix={`bbf-part-${level.index}`} />;
+  } else if (data.sheet && level.view === 'other' && data.other) {
     title = data.other.name;
     levelKey = 'other';
     content = <OtherDetail cycle={cycle} data={data} opened={opened} onToggle={toggle} />;
-  } else if (level.view === 'extra') {
+  } else if (data.sheet && level.view === 'extra') {
     title = T.EXTRA_POINTS;
     levelKey = 'extra';
     content = <ExtraDetail data={data} dan={dan} />;
@@ -412,7 +454,7 @@ export function RequirementsPrint({ cycle, dan }) {
       {data.testing.map(({ part, number, days }) => (
         <div key={part.code} className="bbf-printreq__part">
           <h3 className="bbf-printreq__title">{T.partTitle(number, part.name)}</h3>
-          <PartDetail part={part} days={days} scales={data.scales} opened={none} onToggle={() => {}} printAll idPrefix={`bbf-print-${part.code}`} />
+          <PartDetail sheet={data.sheet} part={part} days={days} opened={none} onToggle={() => {}} printAll idPrefix={`bbf-print-${part.code}`} />
         </div>
       ))}
       {data.other ? (

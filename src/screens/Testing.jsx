@@ -34,7 +34,7 @@
 //   location           'Worcester' | 'Shrewsbury' | 'Both' (the top-bar switcher)
 //   onLocationChange   switches the whole dashboard (used by the Both buttons)
 //   isAdmin            show edit controls? (only for the screen — the database enforces the rule)
-//   testingPage        'chooser' | 'colorBelt' | 'star' (always 'colorBelt' with the switch off)
+//   testingPage        'chooser' | 'colorBelt' | 'star' | 'blackBelt' (switch off: 'colorBelt' or 'blackBelt')
 //   onOpenTestingPage(page)  go to another Testing page (App.jsx adds a browser history step)
 //   eventId            the open event's id, or null for the tabs
 //   onOpenEvent(id)    open an event's page (App.jsx adds a browser history step)
@@ -52,12 +52,14 @@
 //                      Always a Color Belt page: with the switch on, testingPage is 'colorBelt'.
 //   onOpenPrivate(id) / onClosePrivate(options)   open / close that grading page (App.jsx)
 //
-// Black Belt testing (contract CONTRACT-0016-B1 §3): until step C2 brings the Testing chooser and
-// the #testing/black-belt addresses (they wait for Star's chooser, §7 OP-1), Black Belt is reached
-// from a "Black Belt testing ›" link at the top of this page, in EVERY build (Jeffrey, rulebook
-// v0.917: Black Belt goes live without waiting for Star). The screens are loaded with a lazy
-// import, so they're only downloaded when someone opens Black Belt.
-// Black Belt is joint for both schools, so the link shows on Both too.
+// Black Belt testing (contract CONTRACT-0016-B1 §3; C2, rulebook v0.937): a Testing page of its own,
+// testingPage 'blackBelt', with its own addresses (#testing/black-belt…, lib/pageAddress.js) — with
+// the Star switch on OR off. Ways in: with the switch on, the chooser's third row and the rail's
+// Testing menu; with it off, the "Black Belt testing ›" link at the top of the Color Belt page
+// (v0.917). The screens are loaded with a lazy import, so they're only downloaded when someone opens
+// Black Belt. Black Belt is joint for both schools, so the link shows on Both too.
+//   onOpenBlackBelt({ cycleId, tab, replace })   open a Black Belt page (App.jsx; a history step)
+//   (eventId / eventTab / onEventTab carry Black Belt's open cycle and tab while it is the page)
 import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
 import { IconAward, IconChevronRight } from '@tabler/icons-react';
 import BlockedOnBoth from './testing/BlockedOnBoth.jsx';
@@ -80,12 +82,9 @@ const StarTesting = loadStarTesting ? lazy(loadStarTesting) : null;
 // Color Belt's page title: "Testing" as before, or "Color belt testing" once the chooser exists.
 const COLOR_BELT_PAGE_TITLE = STAR_TESTING_ON ? COLOR_BELT_TITLE : PAGE_TITLE;
 
-// Black Belt testing's staff screens, loaded only when opened (v0.917: every build, until C2
-// moves the way in into the Testing chooser).
+// Black Belt testing's staff screens, loaded only when opened (every build, v0.917).
 const BlackBeltTesting = lazy(() => import('../blackBelt/staff/BlackBeltTesting.jsx'));
 const BLACK_BELT_LINK = 'Black Belt testing'; // the link's words (Black Belt's own text.js has the rest)
-// Is Black Belt open? Kept while the dashboard is open, like the tab.
-let blackBeltOpen = false;
 
 const TABS = [
   { key: 'events', label: TAB_EVENTS },
@@ -98,11 +97,10 @@ const TABS = [
 let lastTab = 'events';
 
 // Finance's "Open in Testing" on a private testing payment (rulebook v0.813): the next time Color
-// Belt testing opens, it shows the Private testing tab (and not Black Belt). Testing isn't on screen
-// while Finance is, so the tab is simply chosen before the page opens.
+// Belt testing opens, it shows the Private testing tab. Testing isn't on screen while Finance is,
+// so the tab is simply chosen before the page opens.
 export function showPrivateTestingTabNext() {
   lastTab = 'private';
-  blackBeltOpen = false;
 }
 
 // The header + tab bar, drawn by the tab itself (it knows when its add button may show).
@@ -177,15 +175,12 @@ export default function Testing({
   onCloseEvent,
   onOpenStarEvent,
   onCloseStarEvent,
+  onOpenBlackBelt,
   ...tabProps
 }) {
-  const page = STAR_TESTING_ON ? testingPage : 'colorBelt'; // switch off: Color Belt only
+  // Switch off: Color Belt, or Black Belt (reached from the Color Belt page's link, C2).
+  const page = STAR_TESTING_ON ? testingPage : testingPage === 'blackBelt' ? 'blackBelt' : 'colorBelt';
   const baseId = useId();
-  const [showBlackBelt, setShowBlackBeltState] = useState(blackBeltOpen);
-  function setShowBlackBelt(next) {
-    blackBeltOpen = next;
-    setShowBlackBeltState(next);
-  }
   const ids = { tab: (key) => `${baseId}-tab-${key}`, panel: (key) => `${baseId}-panel-${key}` };
   const [tab, setTabState] = useState(lastTab);
   // Phase 4: while a private testing's grading page is open, the tab underneath becomes Private
@@ -217,6 +212,14 @@ export default function Testing({
   // focus the chooser row of the page we came from. (Browser Back/Forward leave focus alone.)
   const [chooserFocus, setChooserFocus] = useState(null); // the row to focus on the chooser
   const focusBackLinkRef = useRef(false);
+  // Switch off: coming back from Black Belt focuses the Color Belt page's "Black Belt testing ›".
+  const focusBlackBeltLinkRef = useRef(false);
+  const blackBeltLinkRef = useRef(null);
+  useEffect(() => {
+    if (page !== 'colorBelt' || !focusBlackBeltLinkRef.current) return;
+    focusBlackBeltLinkRef.current = false;
+    blackBeltLinkRef.current?.focus();
+  }, [page]);
   function openFromChooser(next) {
     if (next === 'star') loadStarTesting?.(); // start loading Star's screens straight away
     focusBackLinkRef.current = true;
@@ -227,13 +230,25 @@ export default function Testing({
     setChooserFocus(page);
     onOpenTestingPage('chooser');
   }
+  // Black Belt's own "← Testing": with the switch on, back to the chooser with its row focused;
+  // with it off, back to the Color Belt page it was opened from.
+  function blackBeltBack() {
+    if (!STAR_TESTING_ON) {
+      focusBlackBeltLinkRef.current = true; // the "Black Belt testing ›" link gets keyboard focus
+      onOpenTestingPage('colorBelt');
+      return;
+    }
+    setChooserFocus('blackBelt');
+    onOpenTestingPage('chooser');
+  }
   useEffect(() => {
     if (page === 'chooser' || !focusBackLinkRef.current) return undefined;
-    // Star's page may still be loading its screens: look for its back link every 50ms, up to 3s.
+    // Star's and Black Belt's pages may still be loading their screens: look for the back link
+    // every 50ms, up to 3s.
     let timer = 0;
     let tries = 0;
     function tryFocus() {
-      const link = document.querySelector('.tc-back, .st-back');
+      const link = document.querySelector('.tc-back, .st-back, .bb-back');
       if (link) {
         focusBackLinkRef.current = false;
         link.focus();
@@ -281,16 +296,18 @@ export default function Testing({
     );
   }
 
-  // Black Belt testing (v0.917): reached from the link at the top of the Color Belt page,
-  // in every build — with the Star switch on too, until Black Belt's step C2 adds it to the
-  // Testing chooser.
-  if (BlackBeltTesting && showBlackBelt && !eventId) {
+  // Black Belt testing (C2, v0.937): its own page. eventId = the open cycle, eventTab = its tab.
+  if (page === 'blackBelt') {
     const { screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange } = tabProps;
     return (
       <Suspense fallback={null}>
         <BlackBeltTesting
           isAdmin={isAdmin}
-          onBack={() => setShowBlackBelt(false)}
+          onBack={blackBeltBack}
+          cycleId={eventId}
+          tab={tabProps.eventTab}
+          onTab={tabProps.onEventTab}
+          onOpen={onOpenBlackBelt}
           screenLocked={screenLocked}
           onNoAccess={onNoAccess}
           onRefreshProfile={onRefreshProfile}
@@ -298,13 +315,23 @@ export default function Testing({
           clearToast={clearToast}
           onModalOpenChange={onModalOpenChange}
           location={location} onLocationChange={onLocationChange}
+          onLeaveGuardChange={tabProps.onLeaveGuardChange}
         />
       </Suspense>
     );
   }
-  // The preview-only way in (see the header comment).
-  const blackBeltLink = BlackBeltTesting ? (
-    <button type="button" className="link-button ev-back" onClick={() => setShowBlackBelt(true)}>
+  // The way in from the Color Belt page (see the header comment) — only while the Star switch is
+  // off; with it on, the chooser has a Black Belt row instead.
+  const blackBeltLink = BlackBeltTesting && !STAR_TESTING_ON ? (
+    <button
+      ref={blackBeltLinkRef}
+      type="button"
+      className="link-button ev-back"
+      onClick={() => {
+        focusBackLinkRef.current = true; // Black Belt's "← Testing" gets keyboard focus
+        onOpenTestingPage('blackBelt');
+      }}
+    >
       {/* ti-award = Black Belt testing (rulebook icon map); ti-chevron-right = go there */}
       <IconAward size={16} aria-hidden="true" />
       {BLACK_BELT_LINK}

@@ -7,8 +7,13 @@
 // database test cases (0016_tests.sql T3–T8) that don't need real sign-in sessions, check that
 // startingPoint.js holds exactly the migration's seed, and check that no preview function ever
 // changes or removes a payment row (payments are append-only).
+// Migration 0024 (the rubric editor, contract 0024 §10.2) adds: the v1 → v2 conversion keeps every
+// number (rubricDefault.js = rubricFromV1 of the starting point, with the CP1-approved numbers
+// typed in), the maxima, the validator (rubric.js danProblems) against its own cases and the
+// shared supabase/tests/0024_rubric_cases.json, the editing helpers, and the preview store's
+// rubric rules (saves, 15-second undos, the lock at first opening, first opening admin-only).
 import assert from 'node:assert/strict';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { parsePrice, priceIsValid, PRICE_MAX_CENTS, PRICE_MIN_CENTS, parseAmount, formatCents, amountInputText } from './money.js';
 import {
@@ -26,6 +31,14 @@ import {
 } from './startingPoint.js';
 import { todayInSchoolTime } from '../testing/eventRules.js';
 import { createBlackBeltBackend, BB_RPC_NAMES, BB_WRITE_RPC_NAMES, BB_TABLES, BB_STORE_KEY } from './mockBlackBelt.js';
+import {
+  danProblems, problemCodes, rubricProblems, rubricIsValid, rubricFromV1, md5Hex, workedPoints, partMax, mostPoints, partMaxByBracket,
+  bracketLabel, handedIn, normalizeDan, splitBracket, removeBracket, splitBrackets, copyFromDan, danDiff, newSubjectId, freshCopy,
+  rubricPublic, putDan, stripStamps, sameDanContent, numOk, intOk, round2, rubricNameOk, rubricTextOk, subjectCountsFor,
+  SHORT_LETTERS, LONG_LETTERS, CUTOFF_LETTERS, RUBRIC_PART_CODES, RUBRIC_UNDO_WINDOW_MS,
+} from './rubric.js';
+import { DEFAULT_RUBRIC } from './rubricDefault.js';
+import { canOpenRegistration } from './rules.js';
 
 let count = 0;
 function check(label, fn) {
@@ -498,7 +511,9 @@ check('store: the seed = 0016 section 11n', () => {
   saved = null;
   assert.ok(BB_RPC_NAMES.includes('bb_cycles_list') && BB_WRITE_RPC_NAMES.includes('bb_add_cycle'));
   assert.equal(BB_STORE_KEY, 'tkd.preview.blackBelt');
-  assert.equal(BB_TABLES.length, 13);
+  assert.equal(BB_TABLES.length, 15); // 0016's 13 + 0024's bb_default_rubric and bb_rubric_undo
+  assert.deepEqual(s.bb_default_rubric[0].sheet, DEFAULT_RUBRIC); // 0024's seed
+  assert.deepEqual(s.bb_rubric_undo, []);
 });
 
 check('store: who may call what (no_access before not_allowed; staff refused A functions)', () => {
@@ -577,7 +592,7 @@ check('store: cycles list, defaults, add cycle', () => {
   const c = s.bb_cycles[0];
   assert.equal(c.registration_open, false); // starts Closed
   assert.equal(c.first_opened_at, null);
-  assert.deepEqual(c.requirements, STARTING_POINT_REQUIREMENTS); // copied from the starting point
+  assert.deepEqual(c.requirements, freshCopy(DEFAULT_RUBRIC)); // 0024: a fresh copy of the default rubric
   assert.equal(c.prices_from, STARTING_POINT_NAME);
   assert.equal(c.created_by_name, 'Jeffrey Berg');
   assert.equal(s.bb_cycle_days.length, 3);
@@ -608,10 +623,10 @@ check('store: cycles list, defaults, add cycle', () => {
   // duplicate name (case and spaces) → duplicate_name; a source cycle that doesn't exist → invalid
   assert.deepEqual(call('bb_add_cycle', addArgs({ ...goodForm(), name: '  spring   2027 ' })), { status: 'duplicate_name' });
   assert.deepEqual(call('bb_add_cycle', addArgs({ ...goodForm(), name: 'Fall 2027' }, randomUUID())), { status: 'invalid' });
-  // copying from a cycle copies ITS requirements
+  // 0024: filled in from a cycle, the rubric is still the DEFAULT's (never the source cycle's)
   const fromSpring = call('bb_add_cycle', addArgs({ ...goodForm(), name: 'Summer 2027', pricesFrom: 'Spring 2027' }, c.id));
   assert.equal(fromSpring.status, 'ok');
-  assert.deepEqual(db().bb_cycles.find((x) => x.id === fromSpring.id).requirements, c.requirements);
+  assert.deepEqual(db().bb_cycles.find((x) => x.id === fromSpring.id).requirements, freshCopy(DEFAULT_RUBRIC));
   const codes = db().bb_cycles.flatMap((x) => [x.public_code_worcester, x.public_code_shrewsbury]);
   assert.equal(new Set(codes).size, 4); // four different codes
 });
@@ -767,7 +782,9 @@ check('store: registration switch (T4e)', () => {
   assert.equal(call('bb_save_waiver', { p_expected_current_id: current.id, p_body: 'The school waiver.' }).version_name, '2027-1');
   // closing works even now; same value → no write
   assert.equal(sw(false, 1).version, 1);
-  const opened = sw(true, 1, STAFF); // staff may open before Application due
+  assert.deepEqual(sw(true, 1, STAFF), { status: 'not_allowed' }); // 0024: the first opening is admin-only
+  const opened = sw(true, 1);
+  assert.equal(opened.first_open, true);
   assert.equal(opened.status, 'ok');
   assert.equal(opened.version, 2);
   assert.equal(opened.state.state, 'open');
@@ -2010,6 +2027,964 @@ check('B2 store: the keeping time (T6f) — purged candidates: invalid where the
   assert.equal(w('bb_withdraw_candidate', { p_candidate_id: alex.id, p_expected_version: v() }).status, 'ok');
   assert.equal(w('bb_restore_candidate', { p_candidate_id: alex.id, p_expected_version: v() }).status, 'ok');
   setDay('2027-02-15');
+});
+
+// =====================================================================================
+// ======================= The rubric editor (migration 0024, contract 0024 §10.2) =======================
+// =====================================================================================
+
+// ----- rubric.js: the MD5 fingerprint (the converted subjects' ids) -----
+
+check('rubric: md5Hex = Postgres md5() (checked against Node\'s own MD5)', () => {
+  for (const text of ['', 'abc', '1/physical/Long jump', '4/other/Egg test', 'é ü 漢字 😀', 'x'.repeat(500)]) {
+    assert.equal(md5Hex(text), createHash('md5').update(text, 'utf8').digest('hex'), text.slice(0, 20));
+  }
+});
+
+// ----- rubric.js: the v1 → v2 conversion keeps every number (contract §4.3) -----
+
+const V2 = rubricFromV1(STARTING_POINT_REQUIREMENTS);
+const danOf = (doc, n) => doc.dans[n - 1];
+const partOf = (dan, code) => dan.parts.find((p) => p.code === code);
+const subjectOf = (dan, code, name) => partOf(dan, code).subjects.find((s) => s.name === name);
+
+check('rubric: rubricFromV1(starting point) = rubricDefault.js, and it is valid', () => {
+  assert.deepEqual(V2, DEFAULT_RUBRIC);
+  assert.equal(V2.schema_version, 2);
+  assert.equal(V2.source, 'Fall 2026 (old Sheet)');
+  assert.deepEqual(rubricProblems(V2), []);
+  assert.equal(rubricIsValid(V2), true);
+  for (const n of [1, 2, 3, 4]) assert.deepEqual(danProblems(danOf(V2, n), n), [], `Dan ${n}`);
+  for (const d of V2.dans) {
+    assert.equal(d.rev, 1);
+    assert.equal(d.saved_at, null);
+    assert.equal(d.saved_by_name, null);
+    assert.deepEqual(d.parts.map((p) => p.code), RUBRIC_PART_CODES);
+  }
+  // the ids: left(md5(dan || '/' || code || '/' || name), 8), unique in each Dan
+  assert.equal(subjectOf(danOf(V2, 1), 'physical', 'Long jump').id, md5Hex('1/physical/Long jump').slice(0, 8));
+  for (const d of V2.dans) {
+    const ids = d.parts.flatMap((p) => p.subjects.map((s) => s.id));
+    assert.equal(new Set(ids).size, ids.length);
+    assert.ok(ids.every((id) => /^[a-z0-9]{8}$/.test(id)));
+  }
+  // a surprise shape stops the conversion instead of guessing
+  const odd = JSON.parse(JSON.stringify(STARTING_POINT_REQUIREMENTS));
+  odd.dans[0].parts[0].subjects[6].scoring.groups[0].method = 'swing';
+  assert.throws(() => rubricFromV1(odd), /unknown method/);
+  const odd2 = JSON.parse(JSON.stringify(STARTING_POINT_REQUIREMENTS));
+  odd2.dans[1].parts[2].subjects[0].colour = 'red';
+  assert.throws(() => rubricFromV1(odd2), /unknown key/);
+  assert.throws(() => rubricFromV1(V2), /not a v1 sheet/);
+});
+
+check('rubric: no number changed — every v1 value is in v2 and the other way round (§4.3)', () => {
+  const v1 = STARTING_POINT_REQUIREMENTS;
+  const rows = { points: [[], []], cutoffs: [[], []], facts: [[], []], units: [[], []], max: [[], []], pass: [[], []] };
+  // "Pull-up or hold": reps ↔ the way "Pull-up" (unit reps), hold ↔ "Hold" (unit seconds)
+  const wayOfMethod = { reps: 'Pull-up', hold: 'Hold' };
+  const unitOfMethod = { reps: 'reps', hold: 'seconds' };
+  for (const d of v1.dans) {
+    for (const p of d.parts) {
+      for (const s of p.subjects) {
+        for (const [g, v] of Object.entries(s.scoring.points)) rows.points[0].push([d.dan, p.code, s.name, g, v]);
+        rows.facts[0].push([d.dan, p.code, s.name, s.credits, s.outdoor === true, s.hand_in === true, s.scoring.note ?? null, s.scoring.kind === 'grades' ? 'graded' : 'measured']);
+        for (const grp of s.scoring.groups ?? []) {
+          const way = grp.method ? wayOfMethod[grp.method] : null;
+          for (const c of grp.cutoffs) rows.cutoffs[0].push([d.dan, p.code, s.name, way, grp.ages.min, grp.ages.max, c.grade, c.value]);
+        }
+        if (s.scoring.kind === 'table') {
+          const methods = [...new Set(s.scoring.groups.map((g) => g.method ?? null))];
+          for (const m of methods) rows.units[0].push([d.dan, p.code, s.name, m ? wayOfMethod[m] : null, m ? unitOfMethod[m] : s.scoring.unit, s.scoring.direction]);
+        }
+      }
+      rows.max[0].push([d.dan, p.code, null, 17, p.max_points]);
+      rows.max[0].push([d.dan, p.code, 18, null, p.max_points_adult ?? p.max_points]);
+    }
+    rows.pass[0].push([d.dan, null, 17, d.pass_rule.points], [d.dan, 18, null, d.pass_rule.points_adult ?? d.pass_rule.points]);
+  }
+  for (const d of V2.dans) {
+    for (const p of d.parts) {
+      for (const s of p.subjects) {
+        for (const [g, v] of Object.entries(s.points)) rows.points[1].push([d.dan, p.code, s.name, g, v]);
+        rows.facts[1].push([d.dan, p.code, s.name, s.credits, s.outdoor, s.handed_in, s.note, s.scoring]);
+        for (const w of s.ways) {
+          for (const b of w.brackets) for (const [g, v] of Object.entries(b.cutoffs)) rows.cutoffs[1].push([d.dan, p.code, s.name, w.name, b.from, b.to, g, v]);
+          rows.units[1].push([d.dan, p.code, s.name, w.name, w.unit, w.direction]);
+        }
+      }
+      // the v1 maxima (children / adults) = the worked-out maximum of the matching bracket
+      rows.max[1].push([d.dan, p.code, null, 17, partMax(p, { from: null, to: 17 })]);
+      rows.max[1].push([d.dan, p.code, 18, null, partMax(p, { from: 18, to: null })]);
+    }
+    // a Dan with one bracket passes children and adults at the same mark
+    const markFor = (age) => d.pass.brackets.find((b) => (b.from ?? 0) <= age && (b.to ?? 99) >= age).pass_mark;
+    rows.pass[1].push([d.dan, null, 17, markFor(17)], [d.dan, 18, null, markFor(18)]);
+  }
+  const key = (r) => JSON.stringify(r);
+  for (const [name, [a, b]] of Object.entries(rows)) {
+    const inB = new Set(b.map(key));
+    const inA = new Set(a.map(key));
+    assert.deepEqual(a.filter((r) => !inB.has(key(r))), [], `${name}: in v1, not in v2`);
+    assert.deepEqual(b.filter((r) => !inA.has(key(r))), [], `${name}: in v2, not in v1`);
+    assert.equal(a.length, b.length, name);
+  }
+  // no_d, makeup, extra points (equal apart from the added null note), the hand-in list
+  for (const d of v1.dans) {
+    const n = danOf(V2, d.dan);
+    assert.equal(n.pass.no_d, d.pass_rule.no_d);
+    assert.equal(n.pass.makeup, d.pass_rule.makeup);
+    assert.deepEqual(n.extra_points, { note: null, ...d.extra_points });
+    assert.deepEqual(handedIn(n).map((x) => x.subject.name), d.hand_in.map((x) => x.name));
+    // each Dan's grade points = the v1 scales (Other = a copy of Technical's)
+    for (const code of ['physical', 'technical', 'curriculum']) assert.deepEqual(partOf(n, code).grade_points, v1.grade_scales[code]);
+    assert.deepEqual(partOf(n, 'other').grade_points, v1.grade_scales.technical);
+  }
+});
+
+check('rubric: the CP1-approved numbers, typed from supabase/tests/0016_seed_review.txt', () => {
+  const d1 = danOf(V2, 1);
+  const d4 = danOf(V2, 4);
+  // the 19 subjects with their own points (v0.924): Dans 1–3 four each, Dan 4 seven
+  const own = V2.dans.flatMap((d) => d.parts.flatMap((p) => p.subjects.filter((s) => s.points_mode === 'own').map((s) => `${d.dan}:${s.name}`)));
+  const expected = [];
+  for (const n of [1, 2, 3]) expected.push(...['Egg test', 'Meditation', 'Assistant instructor course', 'TKD project'].map((s) => `${n}:${s}`));
+  expected.push(...['Free sparring', 'Target kick (30 sec)', 'Korean terminology', 'TKD knowledge', 'Egg test', 'Meditation', 'Appreciation letter'].map((s) => `4:${s}`));
+  assert.deepEqual(own.sort(), expected.sort());
+  assert.equal(own.length, 19);
+  // review line 439 (Dan 4 Technical): Target kick B = 9 (not 4 credits × 2.5 = 10)
+  assert.equal(subjectOf(d4, 'technical', 'Target kick (30 sec)').points.B, 9);
+  assert.deepEqual(subjectOf(d4, 'technical', 'Target kick (30 sec)').points, { 'A+': 16, A: 14, 'B+': 12, B: 9, C: 8, D: 0 });
+  // review line 139 (Dan 1 Other): Egg test B = 11
+  assert.equal(subjectOf(d1, 'other', 'Egg test').points.B, 11);
+  assert.deepEqual(subjectOf(d1, 'other', 'Egg test').points, { 'A+': 20, A: 17.5, 'A-': 16.25, 'B+': 15, B: 11, 'B-': 10.5, C: 10, 'C-': 5, D: 0 });
+  // review line 51: 1st Dan passes at 275 (children) / 293 (adults) → brackets 17 and under / 18 and over
+  assert.deepEqual(d1.pass.brackets, [{ from: null, to: 17, pass_mark: 275 }, { from: 18, to: null, pass_mark: 293 }]);
+  // review lines 157, 265, 373: 2nd 261, 3rd 293, 4th 453, one bracket each
+  assert.deepEqual(V2.dans.slice(1).map((d) => d.pass.brackets), [
+    [{ from: null, to: null, pass_mark: 261 }], [{ from: null, to: null, pass_mark: 293 }], [{ from: null, to: null, pass_mark: 453 }]]);
+  // review line 129: One Step Sparring (1-24) [adults only] → only 18 and over
+  assert.deepEqual(subjectOf(d1, 'curriculum', 'One Step Sparring (1-24)').limited_to, [{ from: 18, to: null }]);
+  assert.equal(V2.dans.flatMap((d) => d.parts.flatMap((p) => p.subjects.filter((s) => s.limited_to !== null))).length, 1);
+  // review lines 89–93: Pull-up or hold, 2 credits, outdoor = two ways with the CP1 numbers
+  for (const d of V2.dans) {
+    const s = subjectOf(d, 'physical', 'Pull-up or hold');
+    assert.equal(s.credits, 2);
+    assert.equal(s.outdoor, true);
+    assert.equal(s.scoring, 'measured');
+    assert.deepEqual(s.ways, [
+      { name: 'Pull-up', unit: 'reps', direction: 'at_least', brackets: [
+        { from: null, to: 12, cutoffs: { 'A+': 6, A: 5, 'B+': 3, B: 2, C: 1 } },
+        { from: 13, to: null, cutoffs: { 'A+': 10, A: 8, 'B+': 6, B: 4, C: 2 } }] },
+      { name: 'Hold', unit: 'seconds', direction: 'at_least', brackets: [
+        { from: null, to: null, cutoffs: { 'A+': 31, A: 26, 'B+': 21, B: 11, C: 9 } }] },
+    ]);
+  }
+  // review lines 47–49: each Dan's grade points = the shared scales
+  for (const d of V2.dans) {
+    assert.deepEqual(partOf(d, 'physical').grade_points, { 'A+': 4, A: 3.5, 'B+': 3, B: 2.5, C: 2, D: 0 });
+    assert.deepEqual(partOf(d, 'technical').grade_points, { 'A+': 4, A: 3.5, 'A-': 3.25, 'B+': 3, B: 2.5, 'B-': 2.25, C: 2, 'C-': 1, D: 0 });
+    assert.deepEqual(partOf(d, 'curriculum').grade_points, { 'A+': 4.5, A: 4, 'A-': 3.8, 'B+': 3.5, B: 3.3, 'B-': 3, C: 2.5, 'C-': 2, D: 0 });
+    assert.deepEqual(partOf(d, 'other').grade_points, { 'A+': 4, A: 3.5, 'A-': 3.25, 'B+': 3, B: 2.5, 'B-': 2.25, C: 2, 'C-': 1, D: 0 });
+  }
+  // the unit text is copied exactly (the screens may draw ×)
+  assert.equal(subjectOf(d1, 'physical', 'Long jump').ways[0].unit, 'inches (feet x 12 + inches)');
+  // 4th Dan keeps its extra-points note
+  assert.equal(d4.extra_points.note, '4th Dan uses the 3rd Dan numbers for now');
+});
+
+// ----- rubric.js: maxima, labels, letters -----
+
+check('rubric: most points 339 / 361.5 / 343.5 / 384 / 595; Curriculum 135 (157.5 for 18 and over)', () => {
+  const young = { from: null, to: 17 };
+  const adult = { from: 18, to: null };
+  const all = { from: null, to: null };
+  assert.equal(mostPoints(danOf(V2, 1), young), 339);
+  assert.equal(mostPoints(danOf(V2, 1), adult), 361.5);
+  assert.equal(mostPoints(danOf(V2, 2), all), 343.5);
+  assert.equal(mostPoints(danOf(V2, 3), all), 384);
+  assert.equal(mostPoints(danOf(V2, 4), all), 595);
+  assert.equal(partMax(partOf(danOf(V2, 1), 'curriculum'), young), 135);
+  assert.equal(partMax(partOf(danOf(V2, 1), 'curriculum'), adult), 157.5);
+  assert.deepEqual(partMaxByBracket(danOf(V2, 1), 'curriculum'), [{ max: 135, brackets: [young] }, { max: 157.5, brackets: [adult] }]);
+  assert.deepEqual(partMaxByBracket(danOf(V2, 1), 'physical'), [{ max: 80, brackets: [young, adult] }]);
+  assert.deepEqual(partMaxByBracket(danOf(V2, 4), partOf(danOf(V2, 4), 'technical')), [{ max: 144, brackets: [all] }]);
+  // the v1 maxima of every Dan (review lines 52, 108, 122, 137 … 465)
+  assert.deepEqual(V2.dans.map((d) => d.parts.map((p) => partMax(p, d.pass.brackets[0]))), [[80, 44, 135, 80], [80, 44, 139.5, 80], [80, 44, 180, 80], [80, 144, 243, 128]]);
+  assert.equal(bracketLabel({ from: null, to: null }), 'All ages');
+  assert.equal(bracketLabel({ from: null, to: 8 }), '8 and under');
+  assert.equal(bracketLabel({ from: 13, to: null }), '13 and over');
+  assert.equal(bracketLabel({ from: 9, to: 12 }), '9–12');
+  assert.equal(bracketLabel({ from: 9, to: 9 }), '9');
+  const sparring = subjectOf(danOf(V2, 1), 'curriculum', 'One Step Sparring (1-24)');
+  assert.equal(subjectCountsFor(sparring, adult), true);
+  assert.equal(subjectCountsFor(sparring, young), false);
+  assert.deepEqual(SHORT_LETTERS, ['A+', 'A', 'B+', 'B', 'C', 'D']);
+  assert.deepEqual(LONG_LETTERS, ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C', 'C-', 'D']);
+  assert.deepEqual(CUTOFF_LETTERS, ['A+', 'A', 'B+', 'B', 'C']);
+  // worked-out points: credits × the part's grade points, exact to the cent
+  const curriculum = partOf(danOf(V2, 2), 'curriculum');
+  assert.deepEqual(workedPoints(curriculum, subjectOf(danOf(V2, 2), 'curriculum', 'Go-Ryo Poomsae')),
+    { 'A+': 13.5, A: 12, 'A-': 11.4, 'B+': 10.5, B: 9.9, 'B-': 9, C: 7.5, 'C-': 6, D: 0 }); // 3 × 3.3 = 9.9, not 9.899…
+  assert.deepEqual(workedPoints(partOf(danOf(V2, 4), 'technical'), subjectOf(danOf(V2, 4), 'technical', 'Target kick (30 sec)')),
+    { 'A+': 16, A: 14, 'B+': 12, B: 10, C: 8, D: 0 }); // a measured subject uses the six short letters
+});
+
+check('rubric: numbers — 2 decimals, whole numbers, the decimal edge cases (§1.4, §3.4)', () => {
+  assert.equal(round2(3 * 3.35), 10.05);
+  assert.equal(round2(7 * 2.15), 15.05);
+  assert.equal(round2(3 * 3.3), 9.9);
+  assert.equal(numOk(10.05, 0, 999), true);
+  assert.equal(numOk(15.05, 0, 999), true);
+  assert.equal(numOk(0.05, 0.01, 999), true);
+  assert.equal(numOk(2.555, 0, 999), false);
+  assert.equal(numOk(1.005, 0, 999), false);
+  assert.equal(numOk(1e30, 0, 999), false);
+  assert.equal(numOk('3', 0, 999), false);
+  assert.equal(numOk(null, 0, 999), false);
+  assert.equal(numOk(Number.NaN, 0, 999), false);
+  assert.equal(intOk(2.5, 1, 20), false);
+  assert.equal(intOk(1e30, 1, 20), false);
+  assert.equal(intOk(20, 1, 20), true);
+  // the name and text rules (shared helpers + 0024's extra characters)
+  const ch = (cp) => String.fromCodePoint(cp);
+  assert.equal(rubricNameOk('Long jump'), true);
+  assert.equal(rubricNameOk(' Long jump'), false); // not normalized
+  assert.equal(rubricNameOk('Long  jump'), false);
+  assert.equal(rubricNameOk('x'.repeat(61)), false);
+  assert.equal(rubricTextOk('reps', 40), true);
+  assert.equal(rubricTextOk('two\nlines', 200), false);
+  assert.equal(rubricTextOk('tab\there', 200), false);
+  assert.equal(rubricTextOk('', 200), false);
+  for (const cp of [0x202e, 0x200b, 0x07, 0x061c, 0x2028, 0x2029, 0x00ad, 0x180e, 0xe0001, 0xe007f]) {
+    assert.equal(rubricNameOk(`Long${ch(cp)}jump`), false, cp.toString(16));
+    assert.equal(rubricTextOk(`Long${ch(cp)}jump`, 200), false, cp.toString(16));
+  }
+});
+
+// ----- rubric.js: the validator against the shared test cases (contract §3.4) -----
+// Each case: { name, dan_no, base: 'default:<1-4>' (one Dan) or 'default' (the whole document,
+// through rubricProblems = bb_rubric_is_valid), ops: [{ op: 'set'|'remove', path, value }],
+// expect: [codes, sorted, unique] }. The SAME cases run through the SQL validator in PGlite.
+
+function applyOps(target, ops) {
+  const doc = JSON.parse(JSON.stringify(target));
+  let root = { v: doc };
+  for (const { op, path, value, value_json: valueJson } of ops) {
+    const keys = ['v', ...path];
+    let at = root;
+    for (const k of keys.slice(0, -1)) at = at[k];
+    const last = keys[keys.length - 1];
+    // "value_json" is the value as raw JSON text (e.g. "18.0", which the SQL side keeps as 18.0;
+    // in JavaScript it is simply the number 18)
+    if (op === 'set' && typeof valueJson === 'string') at[last] = JSON.parse(valueJson);
+    else if (op === 'set') at[last] = JSON.parse(JSON.stringify(value === undefined ? null : value));
+    else if (Array.isArray(at)) at.splice(last, 1);
+    else delete at[last];
+  }
+  return root.v;
+}
+
+function runCase(c) {
+  const [, n] = /^default(?::([1-4]))?$/.exec(c.base) ?? [];
+  if (n) {
+    const dan = applyOps(DEFAULT_RUBRIC.dans[Number(n) - 1], c.ops ?? []);
+    return problemCodes(danProblems(dan, c.dan_no ?? Number(n)));
+  }
+  return problemCodes(rubricProblems(applyOps(DEFAULT_RUBRIC, c.ops ?? [])));
+}
+
+// This file's own cases (one or more per problem code, the §3.4 required ones). The SQL twin
+// runs supabase/tests/0024_rubric_cases.json; when that file exists, it runs here too.
+const PHYS = ['parts', 0, 'subjects'];
+const TECH = ['parts', 1, 'subjects'];
+const CURR = ['parts', 2, 'subjects'];
+const OTHER = ['parts', 3, 'subjects'];
+const STRETCH_B = [...PHYS, 0, 'ways', 0, 'brackets'];
+const PULL = [...PHYS, 6];
+const ITEMS = ['extra_points', 'items'];
+const set = (path, value) => ({ op: 'set', path, value });
+const remove = (path) => ({ op: 'remove', path });
+const D1 = 'default:1';
+const JS_RUBRIC_CASES = [
+  { name: 'every Dan of the default is valid', dan_no: 1, base: D1, ops: [], expect: [] },
+  { name: 'default Dan 2', dan_no: 2, base: 'default:2', ops: [], expect: [] },
+  { name: 'default Dan 3', dan_no: 3, base: 'default:3', ops: [], expect: [] },
+  { name: 'default Dan 4', dan_no: 4, base: 'default:4', ops: [], expect: [] },
+  { name: 'the whole default', base: 'default', ops: [], expect: [] },
+  // V1 / V20b shape, dan number, stamps
+  { name: 'unknown key in a Dan', dan_no: 1, base: D1, ops: [set(['colour'], 'red')], expect: ['shape'] },
+  { name: 'Dan: missing key', dan_no: 1, base: D1, ops: [remove(['pass'])], expect: ['shape'] },
+  { name: 'Dan: wrong type (rev as text)', dan_no: 1, base: D1, ops: [set(['rev'], '1')], expect: ['shape'] },
+  { name: 'dan number', dan_no: 1, base: D1, ops: [set(['dan'], 2)], expect: ['dan_number'] },
+  { name: 'rev 1 000 001', dan_no: 1, base: D1, ops: [set(['rev'], 1000001)], expect: ['shape'] },
+  { name: 'saved_at not the pattern', dan_no: 1, base: D1, ops: [set(['saved_at'], '2026-10-21 10:00')], expect: ['shape'] },
+  { name: 'saved_by_name 61 characters', dan_no: 1, base: D1, ops: [set(['saved_by_name'], 'x'.repeat(61))], expect: ['shape'] },
+  { name: 'parts: five parts', dan_no: 1, base: D1, ops: [set(['parts', 4], DEFAULT_RUBRIC.dans[0].parts[3])], expect: ['shape'] },
+  { name: 'parts out of order', dan_no: 1, base: D1, ops: [set(['parts', 0, 'code'], 'technical')], expect: ['shape'] },
+  { name: 'Rubric: missing key (source)', base: 'default', ops: [remove(['source'])], expect: ['shape'] },
+  { name: 'Rubric: wrong type (dans an object)', base: 'default', ops: [set(['dans'], {})], expect: ['shape'] },
+  { name: 'Rubric: schema_version 1', base: 'default', ops: [set(['schema_version'], 1)], expect: ['shape'] },
+  // Pass, pass bracket
+  { name: 'Pass: missing key', dan_no: 1, base: D1, ops: [remove(['pass', 'no_d'])], expect: ['shape'] },
+  { name: 'Pass: wrong type (no_d)', dan_no: 1, base: D1, ops: [set(['pass', 'no_d'], 'yes')], expect: ['shape'] },
+  { name: 'pass bracket: missing key', dan_no: 1, base: D1, ops: [remove(['pass', 'brackets', 0, 'pass_mark'])], expect: ['shape'] },
+  { name: 'pass bracket: wrong type', dan_no: 1, base: D1, ops: [set(['pass', 'brackets', 0], 'x')], expect: ['shape'] },
+  { name: 'pass mark 0', dan_no: 1, base: D1, ops: [set(['pass', 'brackets', 0, 'pass_mark'], 0)], expect: ['pass_mark_range'] },
+  { name: 'pass mark null', dan_no: 1, base: D1, ops: [set(['pass', 'brackets', 0, 'pass_mark'], null)], expect: ['pass_mark_range'] },
+  { name: 'pass mark 10000', dan_no: 2, base: 'default:2', ops: [set(['pass', 'brackets', 0, 'pass_mark'], 10000)], expect: ['pass_mark_range'] },
+  { name: 'pass mark above the most points', dan_no: 1, base: D1, ops: [set(['pass', 'brackets', 0, 'pass_mark'], 339.01)], expect: ['pass_mark_too_high'] },
+  { name: 'pass mark = the most points', dan_no: 1, base: D1, ops: [set(['pass', 'brackets', 0, 'pass_mark'], 339)], expect: [] },
+  { name: 'make-up empty', dan_no: 1, base: D1, ops: [set(['pass', 'makeup'], '')], expect: ['makeup'] },
+  { name: 'make-up 301', dan_no: 1, base: D1, ops: [set(['pass', 'makeup'], 'x'.repeat(301))], expect: ['makeup'] },
+  { name: 'make-up null', dan_no: 1, base: D1, ops: [set(['pass', 'makeup'], null)], expect: [] },
+  { name: 'pass brackets: none', dan_no: 1, base: D1, ops: [set(['pass', 'brackets'], [])], expect: ['brackets_count'] }, // limited_to is only compared with usable pass brackets
+  { name: 'pass brackets: a gap', dan_no: 1, base: D1, ops: [set(['pass', 'brackets', 1, 'from'], 19), set([...CURR, 3, 'limited_to'], [{ from: 19, to: null }])], expect: ['brackets_gap'] },
+  { name: 'pass brackets: closed last', dan_no: 1, base: D1, ops: [set(['pass', 'brackets', 1, 'to'], 99), set([...CURR, 3, 'limited_to'], [{ from: 18, to: 99 }])], expect: ['brackets_ends'] },
+  { name: 'bracket with no subject', dan_no: 1, base: D1, ops: [
+    set([...PHYS], [{ ...subjectOf(danOf(V2, 1), 'physical', 'Stretching'), limited_to: [{ from: 18, to: null }] }]),
+    set([...TECH], [{ ...subjectOf(danOf(V2, 1), 'technical', 'Referee seminar'), limited_to: [{ from: 18, to: null }] }]),
+    set([...CURR], [subjectOf(danOf(V2, 1), 'curriculum', 'One Step Sparring (1-24)')]),
+    set([...OTHER], [{ ...subjectOf(danOf(V2, 1), 'other', 'Egg test'), limited_to: [{ from: 18, to: null }] }]),
+  ], expect: ['bracket_empty', 'pass_mark_too_high'] },
+  // Part
+  { name: 'Part: missing key', dan_no: 1, base: D1, ops: [remove(['parts', 0, 'grade_points'])], expect: ['shape'] },
+  { name: 'Part: wrong type (subjects)', dan_no: 1, base: D1, ops: [set(['parts', 1, 'subjects'], {})], expect: ['shape'] },
+  { name: 'part name empty', dan_no: 1, base: D1, ops: [set(['parts', 0, 'name'], '')], expect: ['part_name'] },
+  { name: 'part name used twice', dan_no: 1, base: D1, ops: [set(['parts', 1, 'name'], 'PHYSICAL')], expect: ['part_name_duplicate'] },
+  { name: 'grade point above 999', dan_no: 1, base: D1, ops: [set(['parts', 0, 'grade_points', 'A+'], 1000)], expect: ['grade_points_range'] },
+  { name: 'grade point going up', dan_no: 1, base: D1, ops: [set(['parts', 0, 'grade_points', 'A'], 4.5)], expect: ['grade_points_order', 'points_not_worked_out'] }, // usable numbers: the worked-out check still runs
+  { name: 'grade points: not an object', dan_no: 1, base: D1, ops: [set(['parts', 1, 'grade_points'], [])], expect: ['shape'] },
+  { name: 'grade points: a missing letter', dan_no: 1, base: D1, ops: [remove(['parts', 1, 'grade_points', 'C-'])], expect: ['grade_points_range'] },
+  { name: '0 subjects', dan_no: 1, base: D1, ops: [set([...TECH], [])], expect: ['subject_count'] },
+  { name: '31 subjects', dan_no: 1, base: D1, ops: [set([...TECH], Array.from({ length: 31 }, (_, i) => ({ ...subjectOf(danOf(V2, 1), 'technical', 'Referee seminar'), id: `s${String(i).padStart(7, '0')}`, name: `Seminar ${i}` })))], expect: ['subject_count'] },
+  // Subject
+  { name: 'Subject: missing key', dan_no: 1, base: D1, ops: [remove([...PHYS, 0, 'outdoor'])], expect: ['shape'] },
+  { name: 'Subject: wrong type (outdoor)', dan_no: 1, base: D1, ops: [set([...PHYS, 0, 'outdoor'], 'no')], expect: ['shape'] },
+  { name: 'subject id used twice', dan_no: 1, base: D1, ops: [set([...TECH, 0, 'id'], subjectOf(danOf(V2, 1), 'physical', 'Stretching').id)], expect: ['subject_id'] },
+  { name: 'subject id capitals', dan_no: 1, base: D1, ops: [set([...TECH, 0, 'id'], 'ABCDEFGH')], expect: ['subject_id'] },
+  { name: 'subject name 61 characters', dan_no: 1, base: D1, ops: [set([...PHYS, 4, 'name'], 'x'.repeat(61))], expect: ['subject_name'] },
+  { name: 'subject name not normalized', dan_no: 1, base: D1, ops: [set([...PHYS, 4, 'name'], 'Long  jump')], expect: ['subject_name'] },
+  { name: 'subject name used twice in its part', dan_no: 1, base: D1, ops: [set([...PHYS, 4, 'name'], 'STRETCHING')], expect: ['subject_name_duplicate'] },
+  { name: 'the same name in another part is fine', dan_no: 1, base: D1, ops: [set([...TECH, 0, 'name'], 'Stretching')], expect: [] },
+  { name: 'credits 2.5', dan_no: 1, base: D1, ops: [set([...PHYS, 4, 'credits'], 2.5)], expect: ['credits'] },
+  { name: 'credits 1e30', dan_no: 1, base: D1, ops: [set([...PHYS, 4, 'credits'], 1e30)], expect: ['credits'] },
+  { name: 'credits null', dan_no: 1, base: D1, ops: [set([...PHYS, 4, 'credits'], null)], expect: ['credits'] },
+  { name: 'credits 21', dan_no: 1, base: D1, ops: [set([...OTHER, 0, 'credits'], 21)], expect: ['credits'] },
+  { name: 'points above 999', dan_no: 1, base: D1, ops: [set([...OTHER, 0, 'points', 'A+'], 1000)], expect: ['points_range'] },
+  { name: 'points A+ 0', dan_no: 1, base: D1, ops: [set([...OTHER, 0, 'points'], { 'A+': 0, A: 0, 'A-': 0, 'B+': 0, B: 0, 'B-': 0, C: 0, 'C-': 0, D: 0 })], expect: ['points_order'] }, // A+ above 0 is an order rule
+  { name: 'own points going up', dan_no: 1, base: D1, ops: [set([...OTHER, 0, 'points', 'B'], 18)], expect: ['points_order'] },
+  { name: 'points: a missing letter', dan_no: 1, base: D1, ops: [remove([...OTHER, 0, 'points', 'C-'])], expect: ['points_range'] },
+  { name: 'points: not an object', dan_no: 1, base: D1, ops: [set([...OTHER, 0, 'points'], 5)], expect: ['shape'] },
+  { name: 'worked out ≠ credits × grade points', dan_no: 1, base: D1, ops: [set([...PHYS, 4, 'points', 'B'], 4.5)], expect: ['points_not_worked_out'] },
+  { name: 'credits changed, points not worked out again', dan_no: 1, base: D1, ops: [set([...PHYS, 4, 'credits'], 3)], expect: ['points_not_worked_out'] },
+  { name: '3 credits × 3.35 = 10.05', dan_no: 1, base: D1, ops: [
+    set(['parts', 3, 'grade_points', 'A-'], 3.35), set([...OTHER, 3, 'credits'], 3),
+    set([...OTHER, 3, 'points'], { 'A+': 12, A: 10.5, 'A-': 10.05, 'B+': 9, B: 7.5, 'B-': 6.75, C: 6, 'C-': 3, D: 0 })], expect: [] },
+  { name: 'graded subject with a way', dan_no: 1, base: D1, ops: [set([...TECH, 0, 'ways'], [subjectOf(danOf(V2, 1), 'physical', 'Stretching').ways[0]])], expect: ['ways_count'] },
+  { name: 'three ways', dan_no: 1, base: D1, ops: [set([...PULL, 'ways', 2], { ...subjectOf(danOf(V2, 1), 'physical', 'Pull-up or hold').ways[1], name: 'Hang' })], expect: ['ways_count'] },
+  { name: 'measured with no way', dan_no: 1, base: D1, ops: [set([...PHYS, 0, 'ways'], [])], expect: ['ways_count'] },
+  { name: 'two ways, one unnamed', dan_no: 1, base: D1, ops: [set([...PULL, 'ways', 0, 'name'], null)], expect: ['way_name'] },
+  { name: 'two ways, the same name', dan_no: 1, base: D1, ops: [set([...PULL, 'ways', 1, 'name'], 'pull-up')], expect: ['way_name'] },
+  { name: 'one way, named', dan_no: 1, base: D1, ops: [set([...PHYS, 0, 'ways', 0, 'name'], 'Sit and reach')], expect: [] },
+  { name: 'limited to a bracket that does not exist', dan_no: 1, base: D1, ops: [set([...CURR, 3, 'limited_to'], [{ from: 21, to: null }])], expect: ['limited_to'] },
+  { name: 'limited to the same bracket twice', dan_no: 1, base: D1, ops: [set([...CURR, 3, 'limited_to'], [{ from: 18, to: null }, { from: 18, to: null }])], expect: ['limited_to'] },
+  { name: 'limited to an empty list', dan_no: 1, base: D1, ops: [set([...CURR, 3, 'limited_to'], [])], expect: ['limited_to'] },
+  { name: 'note 201', dan_no: 1, base: D1, ops: [set([...PHYS, 8, 'note'], 'x'.repeat(201))], expect: ['note'] },
+  { name: 'note empty', dan_no: 1, base: D1, ops: [set([...PHYS, 8, 'note'], '')], expect: ['note'] },
+  // Way, way bracket, cut-offs
+  { name: 'Way: missing key', dan_no: 1, base: D1, ops: [remove([...PHYS, 0, 'ways', 0, 'unit'])], expect: ['shape'] },
+  { name: 'Way: wrong type', dan_no: 1, base: D1, ops: [set([...PHYS, 0, 'ways', 0], [])], expect: ['shape'] },
+  { name: 'unit empty', dan_no: 1, base: D1, ops: [set([...PHYS, 0, 'ways', 0, 'unit'], '')], expect: ['unit'] },
+  { name: 'unit 41', dan_no: 1, base: D1, ops: [set([...PHYS, 0, 'ways', 0, 'unit'], 'x'.repeat(41))], expect: ['unit'] },
+  { name: 'direction unknown', dan_no: 1, base: D1, ops: [set([...PHYS, 0, 'ways', 0, 'direction'], 'more')], expect: ['direction'] },
+  { name: 'way bracket: missing key', dan_no: 1, base: D1, ops: [remove([...STRETCH_B, 0, 'cutoffs'])], expect: ['shape'] },
+  { name: 'way bracket: wrong type', dan_no: 1, base: D1, ops: [set([...STRETCH_B, 0], 5)], expect: ['shape'] },
+  { name: 'cut-offs: missing key', dan_no: 1, base: D1, ops: [remove([...STRETCH_B, 0, 'cutoffs', 'C'])], expect: ['cutoffs_range'] },
+  { name: 'cut-offs: wrong type', dan_no: 1, base: D1, ops: [set([...STRETCH_B, 0, 'cutoffs'], [])], expect: ['shape'] },
+  { name: 'cut-off 2.555', dan_no: 1, base: D1, ops: [set([...STRETCH_B, 0, 'cutoffs', 'B'], 2.555)], expect: ['cutoffs_range'] },
+  { name: 'cut-off null', dan_no: 1, base: D1, ops: [set([...STRETCH_B, 0, 'cutoffs', 'B'], null)], expect: ['cutoffs_range'] },
+  { name: 'at-least cut-off going up', dan_no: 1, base: D1, ops: [set([...STRETCH_B, 0, 'cutoffs', 'A'], 5)], expect: ['cutoffs_order'] },
+  { name: 'at-least cut-offs equal', dan_no: 1, base: D1, ops: [set([...STRETCH_B, 0, 'cutoffs', 'A'], 4)], expect: ['cutoffs_order'] },
+  { name: 'at-most cut-off going down', dan_no: 1, base: D1, ops: [set([...PHYS, 5, 'ways', 0, 'brackets', 0, 'cutoffs', 'A'], 9)], expect: ['cutoffs_order'] },
+  { name: '7 brackets', dan_no: 1, base: D1, ops: [set([...STRETCH_B], [
+    { from: null, to: 5 }, { from: 6, to: 7 }, { from: 8, to: 9 }, { from: 10, to: 11 }, { from: 12, to: 13 }, { from: 14, to: 15 }, { from: 16, to: null },
+  ].map((b) => ({ ...b, cutoffs: { 'A+': 4, A: 3.5, 'B+': 3, B: 2.5, C: 2 } })))], expect: ['brackets_count'] },
+  { name: 'no brackets', dan_no: 1, base: D1, ops: [set([...STRETCH_B], [])], expect: ['brackets_count'] },
+  { name: 'age 100', dan_no: 1, base: D1, ops: [set([...STRETCH_B, 1, 'to'], 100)], expect: ['bracket_ages'] },
+  { name: 'from after to', dan_no: 1, base: D1, ops: [set([...STRETCH_B, 1, 'from'], 13)], expect: ['bracket_ages'] },
+  { name: 'a gap', dan_no: 1, base: D1, ops: [set([...STRETCH_B, 1, 'from'], 10)], expect: ['brackets_gap'] },
+  { name: 'an overlap', dan_no: 1, base: D1, ops: [set([...STRETCH_B, 1, 'from'], 8)], expect: ['brackets_overlap'] },
+  { name: 'the first not from the youngest', dan_no: 1, base: D1, ops: [set([...STRETCH_B, 0, 'from'], 3)], expect: ['brackets_ends'] },
+  { name: 'a closed last bracket', dan_no: 1, base: D1, ops: [set([...STRETCH_B, 2, 'to'], 99)], expect: ['brackets_ends'] },
+  { name: 'a middle bracket with to: null', dan_no: 1, base: D1, ops: [set([...STRETCH_B, 1, 'to'], null)], expect: ['brackets_overlap'] }, // the next one starts inside "9 and over"
+  { name: 'not youngest first', dan_no: 1, base: D1, ops: [set([...STRETCH_B], [2, 1, 0].map((i) => subjectOf(danOf(V2, 1), 'physical', 'Stretching').ways[0].brackets[i]))], expect: ['brackets_ends', 'brackets_order', 'brackets_overlap'] },
+  // Extra points, item, rule, step
+  { name: 'Extra: missing key', dan_no: 1, base: D1, ops: [remove(['extra_points', 'items'])], expect: ['shape'] },
+  { name: 'Extra: wrong type (to_confirm)', dan_no: 1, base: D1, ops: [set(['extra_points', 'to_confirm'], 1)], expect: ['shape'] },
+  { name: 'extra limit 0', dan_no: 1, base: D1, ops: [set(['extra_points', 'limit'], 0)], expect: ['extra_limit'] },
+  { name: 'extra limit 1000', dan_no: 1, base: D1, ops: [set(['extra_points', 'limit'], 1000)], expect: ['extra_limit'] },
+  { name: 'extra note empty', dan_no: 1, base: D1, ops: [set(['extra_points', 'note'], '')], expect: ['extra_note'] },
+  { name: '13 extra items', dan_no: 1, base: D1, ops: [set([...ITEMS], Array.from({ length: 13 }, (_, i) => ({ name: `Item ${i}`, rule: { kind: 'per_count', points_each: 1 } })))], expect: ['extra_item_count'] },
+  { name: 'no extra items is fine', dan_no: 1, base: D1, ops: [set([...ITEMS], [])], expect: [] },
+  { name: 'item: missing key', dan_no: 1, base: D1, ops: [remove([...ITEMS, 0, 'rule'])], expect: ['shape'] },
+  { name: 'item: wrong type', dan_no: 1, base: D1, ops: [set([...ITEMS, 0], 'x')], expect: ['shape'] },
+  { name: 'item name empty', dan_no: 1, base: D1, ops: [set([...ITEMS, 0, 'name'], '')], expect: ['extra_item_name'] },
+  { name: 'item name used twice', dan_no: 1, base: D1, ops: [set([...ITEMS, 1, 'name'], 'extra stripes')], expect: ['extra_item_name_duplicate'] },
+  { name: 'rule: missing key', dan_no: 1, base: D1, ops: [remove([...ITEMS, 0, 'rule', 'kind'])], expect: ['extra_rule'] }, // any rule that isn't one of the two kinds
+  { name: 'rule: wrong type', dan_no: 1, base: D1, ops: [set([...ITEMS, 0, 'rule'], 3)], expect: ['extra_rule'] },
+  { name: 'rule kind unknown', dan_no: 1, base: D1, ops: [set([...ITEMS, 0, 'rule', 'kind'], 'bonus')], expect: ['extra_rule'] },
+  { name: 'points each 0', dan_no: 1, base: D1, ops: [set([...ITEMS, 0, 'rule', 'points_each'], 0)], expect: ['extra_points_each'] },
+  { name: 'no steps', dan_no: 1, base: D1, ops: [set([...ITEMS, 2, 'rule', 'steps'], [])], expect: ['extra_steps_count'] },
+  { name: '11 steps', dan_no: 1, base: D1, ops: [set([...ITEMS, 2, 'rule', 'steps'], Array.from({ length: 11 }, (_, i) => ({ at_least: i + 1, points: i + 1 })))], expect: ['extra_steps_count'] },
+  { name: 'step: missing key', dan_no: 1, base: D1, ops: [remove([...ITEMS, 2, 'rule', 'steps', 0, 'points'])], expect: ['shape'] },
+  { name: 'step: wrong type', dan_no: 1, base: D1, ops: [set([...ITEMS, 2, 'rule', 'steps', 0], null)], expect: ['shape'] },
+  { name: 'step at least 0', dan_no: 1, base: D1, ops: [set([...ITEMS, 2, 'rule', 'steps', 0, 'at_least'], 0)], expect: ['extra_step_range'] },
+  { name: 'step points going down', dan_no: 1, base: D1, ops: [set([...ITEMS, 2, 'rule', 'steps', 1, 'points'], 2)], expect: ['extra_steps_order'] },
+  { name: 'steps of 0.05', dan_no: 1, base: D1, ops: [set([...ITEMS, 1, 'rule', 'steps'], [{ at_least: 5, points: 0.05 }, { at_least: 6, points: 0.1 }])], expect: [] },
+  // V2 far over the size cap (the JS twin measures JSON.stringify, the SQL jsonb::text)
+  { name: 'a Dan of 130 000 bytes', dan_no: 1, base: D1, ops: [set([...PHYS, 8, 'note'], 'x'.repeat(130000))], expect: ['too_big'] },
+  { name: 'a document of 300 000 bytes', base: 'default', ops: [set(['source'], 'x'.repeat(300000))], expect: ['too_big'] },
+];
+// The bad characters in EVERY text field (§3.4): U+202E, U+200B, \x07, and 0024's extras.
+const BAD_CHARS = [0x202e, 0x200b, 0x07, 0x061c, 0x2028, 0x2029, 0x00ad, 0x180e, 0xe0001].map((cp) => String.fromCodePoint(cp));
+const TEXT_FIELDS = [
+  ['part name', ['parts', 0, 'name'], 'Phys', 'part_name'],
+  ['subject name', [...PHYS, 4, 'name'], 'Long jump', 'subject_name'],
+  ['way name', [...PULL, 'ways', 0, 'name'], 'Pull-up', 'way_name'],
+  ['extra item name', [...ITEMS, 0, 'name'], 'Extra stripes', 'extra_item_name'],
+  ['unit', [...PHYS, 0, 'ways', 0, 'unit'], 'inches', 'unit'],
+  ['subject note', [...PHYS, 8, 'note'], 'A note', 'note'],
+  ['make-up', ['pass', 'makeup'], 'Made up later', 'makeup'],
+  ['extra points note', ['extra_points', 'note'], 'For now', 'extra_note'],
+];
+for (const bad of BAD_CHARS) {
+  const label = `U+${bad.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}`;
+  for (const [field, path, text, code] of TEXT_FIELDS) {
+    JS_RUBRIC_CASES.push({ name: `${label} in the ${field}`, dan_no: 1, base: D1, ops: [set(path, `${text.slice(0, 2)}${bad}${text.slice(2)}`)], expect: [code] });
+  }
+  JS_RUBRIC_CASES.push({ name: `${label} in the source`, base: 'default', ops: [set(['source'], `Fall${bad} 2026`)], expect: ['shape'] });
+}
+
+check(`rubric: the validator's own ${JS_RUBRIC_CASES.length} cases (one or more per problem code)`, () => {
+  for (const c of JS_RUBRIC_CASES) assert.deepEqual(runCase(c), c.expect, c.name);
+  // every problem code of contract §3.1 has a failing case
+  const codes = ['shape', 'dan_number', 'too_big', 'part_name', 'part_name_duplicate', 'grade_points_range', 'grade_points_order', 'subject_count',
+    'subject_id', 'subject_name', 'subject_name_duplicate', 'credits', 'points_range', 'points_order', 'points_not_worked_out', 'ways_count',
+    'way_name', 'unit', 'direction', 'brackets_count', 'bracket_ages', 'brackets_order', 'brackets_gap', 'brackets_overlap', 'brackets_ends',
+    'cutoffs_range', 'cutoffs_order', 'limited_to', 'note', 'pass_mark_range', 'pass_mark_too_high', 'makeup', 'bracket_empty', 'extra_limit',
+    'extra_note', 'extra_item_count', 'extra_item_name', 'extra_item_name_duplicate', 'extra_rule', 'extra_points_each', 'extra_steps_count',
+    'extra_steps_order', 'extra_step_range'];
+  const covered = new Set(JS_RUBRIC_CASES.flatMap((c) => c.expect));
+  assert.deepEqual(codes.filter((c) => !covered.has(c)), []);
+  // problems carry where they are; never more than 100; never throws on rubbish
+  const where = danProblems(applyOps(danOf(V2, 1), [set([...PHYS, 4, 'credits'], 2.5)]), 1);
+  assert.deepEqual(where, [{ code: 'credits', part: 'physical', subject: subjectOf(danOf(V2, 1), 'physical', 'Long jump').id }]);
+  for (const rubbish of [null, undefined, 3, 'x', [], {}, { dan: 1 }]) assert.deepEqual(problemCodes(danProblems(rubbish, 1)), ['shape']);
+  const many = applyOps(danOf(V2, 1), [set([...TECH], Array.from({ length: 30 }, (_, i) => ({ ...subjectOf(danOf(V2, 1), 'technical', 'Referee seminar'), id: 'X', name: '', credits: 0, note: '', limited_to: [] }))), set(['pass', 'brackets', 0, 'pass_mark'], 0)]);
+  assert.equal(danProblems(many, 1).length, 100);
+  assert.equal(rubricIsValid(null), false);
+});
+
+check('rubric: the shared test cases supabase/tests/0024_rubric_cases.json (when Builder A has written it)', () => {
+  let text = null;
+  try {
+    text = readFileSync(new URL('../../../supabase/tests/0024_rubric_cases.json', import.meta.url), 'utf8');
+  } catch {
+    console.log('NOTE: supabase/tests/0024_rubric_cases.json is not there yet; only this file\'s own cases ran.');
+    return;
+  }
+  const file = JSON.parse(text);
+  const cases = Array.isArray(file) ? file : file.cases;
+  assert.ok(Array.isArray(cases) && cases.length > 0, 'the file has cases');
+  // Dan cases list the exact problem codes ("expect"); whole-rubric cases (dan_no null) only
+  // say whether the rubric is valid ("expect_valid"), as the SQL's bb_rubric_is_valid does.
+  const ok = (c) => (c.dan_no == null && typeof c.expect_valid === 'boolean'
+    ? (runCase(c).length === 0) === c.expect_valid
+    : JSON.stringify(runCase(c)) === JSON.stringify(c.expect));
+  const wrong = cases.filter((c) => !ok(c))
+    .map((c) => `${c.name}: expected ${JSON.stringify(c.dan_no == null ? { valid: c.expect_valid } : c.expect)}, JS gives ${JSON.stringify(runCase(c))}`);
+  assert.deepEqual(wrong, []);
+});
+
+// ----- rubric.js: the editing helpers -----
+
+check('rubric: normalizeDan, splitBracket, removeBracket, copyFromDan, newSubjectId, stamps', () => {
+  const d1 = danOf(V2, 1);
+  // tidying: names collapsed, empty texts → null, worked-out points follow the credits
+  const messy = applyOps(d1, [set([...PHYS, 4, 'name'], '  Long   jump '), set([...PHYS, 4, 'credits'], 3), set([...PHYS, 8, 'note'], '  '),
+    set(['pass', 'makeup'], ' line one\nline two '), set([...PHYS, 0, 'ways', 0, 'name'], '  ')]);
+  const tidy = normalizeDan(messy);
+  assert.equal(tidy.parts[0].subjects[4].name, 'Long jump');
+  assert.deepEqual(tidy.parts[0].subjects[4].points, { 'A+': 12, A: 10.5, 'B+': 9, B: 7.5, C: 6, D: 0 });
+  assert.equal(tidy.parts[0].subjects[8].note, null);
+  assert.equal(tidy.pass.makeup, 'line one line two');
+  assert.equal(tidy.parts[0].subjects[0].ways[0].name, null);
+  assert.deepEqual(danProblems(tidy, 1), []);
+  assert.equal(messy.parts[0].subjects[4].name, '  Long   jump '); // the input is never changed
+  // own points are never recomputed
+  assert.deepEqual(normalizeDan(applyOps(d1, [set([...OTHER, 0, 'credits'], 6)])).parts[3].subjects[0].points, subjectOf(d1, 'other', 'Egg test').points);
+  // split 2nd Dan's one bracket at 18: both halves keep the pass mark
+  const split2 = splitBracket(danOf(V2, 2), 0, 18);
+  assert.deepEqual(split2.pass.brackets, [{ from: null, to: 17, pass_mark: 261 }, { from: 18, to: null, pass_mark: 261 }]);
+  assert.deepEqual(danProblems(split2, 2), []);
+  // split 1st Dan's 18 and over at 30: One Step Sparring is limited to both halves
+  const split1 = splitBracket(d1, 1, 30);
+  assert.deepEqual(split1.pass.brackets.map((b) => [b.from, b.to, b.pass_mark]), [[null, 17, 275], [18, 29, 293], [30, null, 293]]);
+  assert.deepEqual(subjectOf(split1, 'curriculum', 'One Step Sparring (1-24)').limited_to, [{ from: 18, to: 29 }, { from: 30, to: null }]);
+  assert.deepEqual(danProblems(split1, 1), []);
+  assert.equal(splitBracket(d1, 1, 18), null); // 18 isn't inside 18 and over (nothing below it)
+  assert.equal(splitBracket(d1, 0, 18), null);
+  assert.equal(splitBracket(d1, 5, 10), null);
+  // remove 1st Dan's 18 and over: 17 and under takes it over → All ages; One Step counts for everyone
+  const merged = removeBracket(d1, 1);
+  assert.deepEqual(merged.pass.brackets, [{ from: null, to: null, pass_mark: 275 }]);
+  assert.equal(subjectOf(merged, 'curriculum', 'One Step Sparring (1-24)').limited_to, null);
+  assert.deepEqual(danProblems(merged, 1), []);
+  assert.equal(removeBracket(danOf(V2, 2), 0), null); // the last bracket can't go
+  const back = removeBracket(split1, 2); // 18–29 takes over 30 and over → 18 and over again
+  assert.deepEqual(back.pass.brackets, d1.pass.brackets);
+  assert.deepEqual(subjectOf(back, 'curriculum', 'One Step Sparring (1-24)').limited_to, [{ from: 18, to: null }]);
+  assert.deepEqual(splitBrackets([{ from: null, to: null, cutoffs: { x: 1 } }], 0, 13), [{ from: null, to: 12, cutoffs: { x: 1 } }, { from: 13, to: null, cutoffs: { x: 1 } }]);
+  // copy from another Dan: renumbered, ids kept, the target's rev kept
+  const target = { ...danOf(V2, 2), rev: 7 };
+  const copy = copyFromDan(d1, 2, target);
+  assert.equal(copy.dan, 2);
+  assert.equal(copy.rev, 7);
+  assert.deepEqual(copy.parts.map((p) => p.subjects.map((s) => s.id)), d1.parts.map((p) => p.subjects.map((s) => s.id)));
+  assert.deepEqual(danProblems(copy, 2), []);
+  assert.equal(d1.dan, 1); // the source is never changed
+  // a new subject id: 8 characters a–z 0–9, not used in the Dan
+  const used = new Set(d1.parts.flatMap((p) => p.subjects.map((s) => s.id)));
+  for (let i = 0; i < 50; i += 1) {
+    const id = newSubjectId(d1);
+    assert.match(id, /^[a-z0-9]{8}$/);
+    assert.ok(!used.has(id));
+  }
+  // stamps: stripped for the comparison; same content whatever the stamps and key order
+  assert.deepEqual(stripStamps({ ...d1, rev: 9, saved_at: '2026-10-21T10:00:00Z', saved_by_name: 'Sam P.' }, 3), { ...d1, rev: 3 });
+  const reordered = Object.fromEntries(Object.entries(d1).reverse());
+  assert.equal(sameDanContent({ ...reordered, rev: 4, saved_by_name: 'X' }, d1), true);
+  assert.equal(sameDanContent(tidy, d1), false);
+  assert.deepEqual(putDan(V2, 2, copy).dans[1], copy);
+  assert.deepEqual(freshCopy(V2).source, 'Default rubric');
+});
+
+check('rubric: danDiff — the change lines (R11)', () => {
+  const d1 = danOf(V2, 1);
+  assert.deepEqual(danDiff(d1, { ...d1, rev: 5, saved_by_name: 'Sam P.' }), []); // stamps don't count
+  const longJump = subjectOf(d1, 'physical', 'Long jump');
+  const edited = normalizeDan(applyOps(d1, [set([...PHYS, 4, 'credits'], 3)]));
+  assert.deepEqual(danDiff(d1, edited), ['Long jump credits 2 → 3']);
+  const more = applyOps(edited, [
+    set(['pass', 'brackets', 0, 'pass_mark'], 280),
+    remove([...TECH, 0]),
+    set([...OTHER, 0, 'points', 'B'], 12),
+    set(['extra_points', 'limit'], 20),
+  ]);
+  more.parts[1].subjects.push({ ...subjectOf(d1, 'technical', 'Korean terminology'), id: 'newsubj1', name: 'Poomsae theory' });
+  const lines = danDiff(edited, more);
+  assert.ok(lines.includes('To pass (17 and under) 275 → 280'), lines.join(' | '));
+  assert.ok(lines.includes('Removed Referee seminar (Technical)'));
+  assert.ok(lines.includes('Added Poomsae theory (Technical)'));
+  assert.ok(lines.includes('Egg test points B 11 → 12'));
+  assert.ok(lines.includes('Extra points limit — → 20'));
+  assert.equal(lines.length, 5);
+  // a reorder is one line
+  const moved = applyOps(d1, [set([...PHYS, 4], subjectOf(d1, 'physical', 'Static jump')), set([...PHYS, 3], longJump)]);
+  assert.deepEqual(danDiff(d1, moved), ['Physical subjects reordered']);
+});
+
+check('rubric: rubricPublic — the allow-list (no revs, stamps, source or unknown keys)', () => {
+  const stamped = putDan(V2, 1, { ...danOf(V2, 1), rev: 3, saved_at: '2026-10-21T10:00:00Z', saved_by_name: 'Jeffrey Berg', secret: 'x' });
+  stamped.dans[0].parts[0].subjects[0].hidden = 'y';
+  stamped.extra = 'z';
+  const pub = rubricPublic(stamped);
+  const text = JSON.stringify(pub);
+  for (const word of ['"rev"', '"saved_at"', '"saved_by_name"', '"source"', 'secret', 'hidden', '"extra"', 'Jeffrey']) assert.ok(!text.includes(word), word);
+  assert.deepEqual(Object.keys(pub), ['schema_version', 'dans']);
+  assert.deepEqual(Object.keys(pub.dans[0]).sort(), ['dan', 'extra_points', 'parts', 'pass']);
+  // everything the form draws is there, unchanged
+  assert.equal(subjectOf(pub.dans[3], 'technical', 'Target kick (30 sec)').points.B, 9);
+  assert.deepEqual(pub.dans[0].pass, danOf(V2, 1).pass);
+  assert.deepEqual(pub.dans[0].parts, danOf(V2, 1).parts.map((p) => ({ ...p, subjects: p.subjects.map((s) => ({ ...s })) })));
+  assert.deepEqual(pub.dans[3].extra_points, danOf(V2, 4).extra_points);
+  assert.equal(rubricPublic(null), null);
+});
+
+check('rules: canOpenRegistration — the first opening is admin-only (v0.930)', () => {
+  const never = { firstOpenedAt: null, autoClose: true, applicationDue: '2027-03-27' };
+  const opened = { firstOpenedAt: '2027-02-01T15:00:00.000Z', autoClose: true, applicationDue: '2027-03-27' };
+  assert.deepEqual(canOpenRegistration(never, true, '2027-02-15'), { allowed: true, reason: null });
+  assert.deepEqual(canOpenRegistration(never, false, '2027-02-15'), { allowed: false, reason: 'firstOpenNeedsAdmin' });
+  assert.deepEqual(canOpenRegistration(opened, false, '2027-02-15'), { allowed: true, reason: null });
+  assert.deepEqual(canOpenRegistration(opened, false, '2027-03-28'), { allowed: false, reason: 'reopenNeedsAdmin' });
+  assert.deepEqual(canOpenRegistration({ ...opened, autoClose: false }, false, '2027-03-28'), { allowed: true, reason: null });
+  assert.deepEqual(canOpenRegistration(opened, true, '2027-03-28'), { allowed: true, reason: null });
+  assert.deepEqual(canOpenRegistration({ first_opened_at: null }, false), { allowed: false, reason: 'firstOpenNeedsAdmin' }); // a stored row
+});
+
+// ----- the preview database: the rubric functions (contract 0024 §6–§7, U1–U12) -----
+
+const ADMIN2 = { ...ADMIN, actorName: 'Sam P.', userId: 'u3' };
+const defaultDan = (n = 1) => db().bb_default_rubric[0].sheet.dans[n - 1];
+const saveDefault = (sheet, rev, ctx = ADMIN, dan = sheet?.dan ?? 1) => call('bb_save_default_dan', { p_dan: dan, p_expected_rev: rev, p_sheet: sheet }, ctx);
+const undoDefault = (rev, ctx = ADMIN, dan = 1) => call('bb_undo_default_dan', { p_dan: dan, p_expected_rev: rev }, ctx);
+const withCredits = (dan, credits) => normalizeDan(applyOps(dan, [set([...PHYS, 4, 'credits'], credits)]));
+const STAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+
+check('store: rubric tables and who may call the rubric functions (U1, U1b)', () => {
+  backend.reset();
+  setDay('2027-02-15');
+  const sel = (table, cols, ctx = ADMIN) => backend.select(table, cols, [], [], ctx);
+  const row = sel('bb_default_rubric', 'id, sheet, version, updated_at, updated_by_name');
+  assert.equal(row.error, null);
+  assert.equal(row.data.length, 1);
+  assert.deepEqual(row.data[0].sheet, DEFAULT_RUBRIC);
+  assert.equal(row.data[0].version, 1);
+  assert.equal(sel('bb_default_rubric', 'id, sheet', STAFF).data.length, 1); // staff read it too
+  assert.deepEqual(sel('bb_default_rubric', 'id', LOCKED).data, []); // row-level security
+  for (const col of ['*', 'singleton', 'created_by', 'updated_by']) assert.equal(sel('bb_default_rubric', col).error.code, '42501', col);
+  for (const col of ['*', 'id', 'previous', 'saved_by']) assert.equal(sel('bb_rubric_undo', col).error.code, '42501', col);
+  const cycleId = randomUUID();
+  const calls = {
+    bb_save_default_dan: { p_dan: 1, p_expected_rev: 1, p_sheet: defaultDan() },
+    bb_undo_default_dan: { p_dan: 1, p_expected_rev: 1 },
+    bb_save_cycle_dan: { p_cycle_id: cycleId, p_dan: 1, p_expected_rev: 1, p_sheet: defaultDan() },
+    bb_undo_cycle_dan: { p_cycle_id: cycleId, p_dan: 1, p_expected_rev: 1 },
+    bb_undo_first_open: { p_cycle_id: cycleId, p_expected_version: 1 },
+  };
+  for (const [name, args] of Object.entries(calls)) {
+    assert.deepEqual(call(name, args, LOCKED), { status: 'no_access' }, name);
+    assert.deepEqual(call(name, args, STAFF), { status: 'not_allowed' }, name);
+    assert.ok(BB_WRITE_RPC_NAMES.includes(name) && BB_RPC_NAMES.includes(name), name);
+    assert.equal(backend.rpc(name, args, ADMIN, { get: true }).error.code, '25006', name); // writes: never a GET
+  }
+  // rubbish from a locked or staff sign-in: still no_access / not_allowed (role before input)
+  assert.deepEqual(call('bb_save_default_dan', { p_dan: 9, p_expected_rev: null, p_sheet: 'x' }, LOCKED), { status: 'no_access' });
+  assert.deepEqual(call('bb_save_default_dan', { p_dan: 9, p_expected_rev: null, p_sheet: 'x' }, STAFF), { status: 'not_allowed' });
+  for (const name of ['bb_rubric_dan_problems', 'bb_rubric_is_valid', 'bb_rubric_public', 'bb_rubric_from_v1', 'bb_default_rubric_guard']) {
+    assert.equal(backend.rpc(name, {}, ADMIN).error.code, '42501', name);
+  }
+  assert.equal(backend.rpc('bb_save_default_dan', { p_dan: 1, p_expected_rev: 1 }, ADMIN).error.code, 'PGRST202'); // a missing argument
+  assert.equal(JSON.stringify(db().bb_rubric_undo), '[]'); // nothing written
+});
+
+check('store: save / undo a Dan of the default rubric (U4, U12)', () => {
+  backend.reset();
+  setDay('2027-02-15');
+  // arguments → invalid (expected rev checked before anything adds 1 to it)
+  for (const [label, args] of Object.entries({
+    'rev 0': { p_dan: 1, p_expected_rev: 0, p_sheet: defaultDan() },
+    'rev 1 000 001': { p_dan: 1, p_expected_rev: 1000001, p_sheet: defaultDan() },
+    'rev null': { p_dan: 1, p_expected_rev: null, p_sheet: defaultDan() },
+    'Dan 5': { p_dan: 5, p_expected_rev: 1, p_sheet: { ...defaultDan(), dan: 5 } },
+    'Dan null': { p_dan: null, p_expected_rev: 1, p_sheet: defaultDan() },
+    'sheet text': { p_dan: 1, p_expected_rev: 1, p_sheet: 'x' },
+    'sheet null': { p_dan: 1, p_expected_rev: 1, p_sheet: null },
+    'sheet of another Dan': { p_dan: 1, p_expected_rev: 1, p_sheet: defaultDan(2) },
+  })) assert.deepEqual(call('bb_save_default_dan', args), { status: 'invalid' }, label);
+  // the validator: problems, nothing written
+  const bad = call('bb_save_default_dan', { p_dan: 1, p_expected_rev: 1, p_sheet: applyOps(defaultDan(), [set([...PHYS, 4, 'credits'], 2.5)]) });
+  assert.deepEqual(bad, { status: 'invalid', problems: [{ code: 'credits', part: 'physical', subject: subjectOf(defaultDan(), 'physical', 'Long jump').id }] });
+  assert.deepEqual(problemCodes(call('bb_save_default_dan', { p_dan: 1, p_expected_rev: 1, p_sheet: applyOps(defaultDan(), [set([...PHYS, 4, 'credits'], 1e30)]) }).problems), ['credits']);
+  assert.equal(db().bb_default_rubric[0].version, 1);
+  // a good save: rev + 1, stamps, the row's version + 1, the other Dans untouched, one undo slot
+  const sent = { ...withCredits(defaultDan(), 3), rev: 99, saved_at: '2020-01-01T00:00:00Z', saved_by_name: 'Somebody' }; // stamps sent are ignored
+  const ok1 = saveDefault(sent, 1);
+  assert.deepEqual(Object.keys(ok1).sort(), ['changed', 'previous_rev', 'rev', 'saved_at', 'saved_by_name', 'status', 'undo_available']);
+  assert.equal(ok1.status, 'ok');
+  assert.equal(ok1.rev, 2);
+  assert.equal(ok1.changed, true);
+  assert.equal(ok1.undo_available, true);
+  assert.equal(ok1.previous_rev, 1);
+  assert.equal(ok1.saved_by_name, 'Jeffrey Berg');
+  assert.match(ok1.saved_at, STAMP);
+  let s = db();
+  assert.equal(s.bb_default_rubric[0].version, 2);
+  assert.equal(s.bb_default_rubric[0].updated_by_name, 'Jeffrey Berg');
+  assert.deepEqual({ ...s.bb_default_rubric[0].sheet.dans[0], saved_at: null }, { ...withCredits(DEFAULT_RUBRIC.dans[0], 3), rev: 2, saved_by_name: 'Jeffrey Berg' });
+  assert.deepEqual(s.bb_default_rubric[0].sheet.dans.slice(1), DEFAULT_RUBRIC.dans.slice(1));
+  assert.equal(s.bb_default_rubric[0].sheet.source, DEFAULT_RUBRIC.source);
+  assert.deepEqual(s.bb_rubric_undo.map((x) => [x.kind, x.cycle_id, x.dan, x.after_version, x.saved_by]), [['default_dan', null, 1, 2, 'u1']]);
+  assert.deepEqual(s.bb_rubric_undo[0].previous, DEFAULT_RUBRIC.dans[0]);
+  // the same content again → changed false, nothing written, and the earlier Undo is gone
+  const same = saveDefault(withCredits(defaultDan(), 3), 2);
+  assert.deepEqual({ ...same, saved_at: null }, { status: 'ok', rev: 2, saved_at: null, saved_by_name: 'Jeffrey Berg', changed: false, undo_available: false, previous_rev: null });
+  assert.equal(db().bb_default_rubric[0].version, 2);
+  assert.deepEqual(undoDefault(2), { status: 'stale' });
+  // an old rev → stale; two saves with the same rev → the second stale (U12)
+  assert.deepEqual(saveDefault(withCredits(defaultDan(), 4), 1), { status: 'stale' });
+  assert.equal(saveDefault(withCredits(defaultDan(), 4), 2).rev, 3);
+  assert.deepEqual(saveDefault(withCredits(defaultDan(), 5), 2), { status: 'stale' });
+  // Undo by another admin → stale; by the saver → the rev-2 content back, as rev 4
+  assert.deepEqual(undoDefault(3, ADMIN2), { status: 'stale' });
+  const undone = undoDefault(3);
+  assert.equal(undone.status, 'ok');
+  assert.equal(undone.rev, 4);
+  assert.deepEqual(Object.keys(undone).sort(), ['rev', 'saved_at', 'saved_by_name', 'status']);
+  assert.equal(subjectOf(defaultDan(), 'physical', 'Long jump').credits, 3);
+  assert.equal(defaultDan().rev, 4);
+  assert.deepEqual(undoDefault(4), { status: 'stale' }); // undo twice
+  assert.deepEqual(db().bb_rubric_undo, []);
+  // save after an undo with the old rev → stale (U12)
+  assert.deepEqual(saveDefault(withCredits(defaultDan(), 6), 3), { status: 'stale' });
+  // undo after another admin's save → stale
+  assert.equal(saveDefault(withCredits(defaultDan(), 2), 4).rev, 5);
+  assert.equal(saveDefault(applyOps(defaultDan(), [set(['pass', 'brackets', 0, 'pass_mark'], 280)]), 5, ADMIN2).rev, 6);
+  assert.deepEqual(undoDefault(6), { status: 'stale' });
+  // the 15-second window: 14 s → ok; 16 s → stale
+  assert.equal(saveDefault(withCredits(defaultDan(), 3), 6).rev, 7);
+  advance(14 * 1000);
+  assert.equal(undoDefault(7).status, 'ok');
+  assert.equal(saveDefault(withCredits(defaultDan(), 4), 8).rev, 9);
+  advance(16 * 1000);
+  assert.deepEqual(undoDefault(9), { status: 'stale' });
+  // another Dan has its own rev and its own slot
+  const dan4 = saveDefault(applyOps(defaultDan(4), [set(['extra_points', 'note'], null)]), 1, ADMIN, 4);
+  assert.equal(dan4.rev, 2);
+  assert.equal(undoDefault(2, ADMIN, 4).status, 'ok');
+  assert.equal(defaultDan(4).extra_points.note, '4th Dan uses the 3rd Dan numbers for now');
+  // the "saved by" stamp: a long name is cut to 60 characters; an odd one → null
+  const long = saveDefault(withCredits(defaultDan(), 5), defaultDan().rev, { ...ADMIN, actorName: 'A'.repeat(70) });
+  assert.equal(long.saved_by_name, 'A'.repeat(60));
+  const odd = saveDefault(withCredits(defaultDan(), 6), defaultDan().rev, { ...ADMIN, actorName: `Jeff${String.fromCodePoint(7)}rey` });
+  assert.equal(odd.status, 'ok');
+  assert.equal(odd.saved_by_name, null);
+  assert.deepEqual(danProblems(defaultDan(), 1), []);
+  // the stored default is always a valid whole document
+  assert.equal(rubricIsValid(db().bb_default_rubric[0].sheet), true);
+  setDay('2027-02-15');
+});
+
+check('store: a cycle\'s copy — editable until registration first opens, then locked (U5, U7)', () => {
+  backend.reset();
+  setDay('2027-02-15');
+  // a default save first: Add cycle copies the NEW numbers
+  assert.equal(saveDefault(withCredits(defaultDan(), 3), 1).rev, 2);
+  const { id } = call('bb_add_cycle', addArgs());
+  let cycle = db().bb_cycles.find((c) => c.id === id);
+  assert.equal(cycle.registration_open, false); // always closed (v0.933)
+  assert.deepEqual(cycle.requirements, freshCopy(db().bb_default_rubric[0].sheet));
+  assert.equal(cycle.requirements.source, 'Default rubric');
+  assert.ok(cycle.requirements.dans.every((d) => d.rev === 1 && d.saved_at === null && d.saved_by_name === null));
+  assert.equal(subjectOf(cycle.requirements.dans[0], 'physical', 'Long jump').credits, 3);
+  const cdan = (n = 1) => db().bb_cycles.find((c) => c.id === id).requirements.dans[n - 1];
+  const saveC = (sheet, rev, ctx = ADMIN, cycleId = id) => call('bb_save_cycle_dan', { p_cycle_id: cycleId, p_dan: sheet.dan, p_expected_rev: rev, p_sheet: sheet }, ctx);
+  const undoC = (rev, ctx = ADMIN, dan = 1) => call('bb_undo_cycle_dan', { p_cycle_id: id, p_dan: dan, p_expected_rev: rev }, ctx);
+  assert.deepEqual(call('bb_save_cycle_dan', { p_cycle_id: null, p_dan: 1, p_expected_rev: 1, p_sheet: cdan() }), { status: 'invalid' });
+  assert.deepEqual(saveC(cdan(), 1, ADMIN, randomUUID()), { status: 'not_found' });
+  assert.equal(saveC(withCredits(cdan(), 4), 1, ADMIN, randomUUID()).status, 'not_found');
+  // a save on a never-opened cycle: ok, and the cycle's version (Edit cycle) doesn't move
+  const before = db().bb_cycles.find((c) => c.id === id);
+  const saved1 = saveC(withCredits(cdan(), 4), 1);
+  assert.equal(saved1.rev, 2);
+  assert.equal(saved1.undo_available, true);
+  cycle = db().bb_cycles.find((c) => c.id === id);
+  assert.equal(cycle.version, before.version);
+  assert.equal(cycle.updated_at, before.updated_at);
+  assert.deepEqual(db().bb_rubric_undo.filter((x) => x.cycle_id !== null).map((x) => [x.kind, x.cycle_id, x.dan]), [['cycle_dan', id, 1]]);
+  assert.equal(undoC(2).rev, 3);
+  assert.equal(subjectOf(cdan(), 'physical', 'Long jump').credits, 3);
+  assert.equal(saveC(withCredits(cdan(), 5), 3).rev, 4);
+  // a later default save never touches an existing cycle (v0.921)
+  const copyBefore = JSON.stringify(db().bb_cycles.find((c) => c.id === id).requirements);
+  assert.equal(saveDefault(withCredits(defaultDan(), 6), 2).rev, 3);
+  assert.equal(JSON.stringify(db().bb_cycles.find((c) => c.id === id).requirements), copyBefore);
+  // first opening (an admin, with the school's waiver) → locked
+  const current = db().bb_waiver_versions[0];
+  call('bb_save_waiver', { p_expected_current_id: current.id, p_body: 'The school waiver.' });
+  const opened = call('bb_set_registration', { p_cycle_id: id, p_expected_version: 1, p_open: true });
+  assert.equal(opened.first_open, true);
+  const at = db().bb_cycles.find((c) => c.id === id).first_opened_at;
+  assert.deepEqual(saveC(withCredits(cdan(), 6), 4), { status: 'locked', first_opened_at: at });
+  assert.deepEqual(saveC(withCredits(cdan(), 6), 1), { status: 'locked', first_opened_at: at }); // locked wins over stale
+  assert.deepEqual(undoC(4), { status: 'locked', first_opened_at: at });
+  // closing later doesn't unlock it (v0.929)
+  assert.equal(call('bb_set_registration', { p_cycle_id: id, p_expected_version: 2, p_open: false }, STAFF).status, 'ok');
+  assert.equal(saveC(withCredits(cdan(), 6), 4).status, 'locked');
+  // Delete cycle takes its undo slots with it
+  const two = call('bb_add_cycle', addArgs({ ...goodForm(), name: 'Two' }));
+  const twoDan = db().bb_cycles.find((c) => c.id === two.id).requirements.dans[0];
+  assert.equal(saveC(withCredits(twoDan, 4), 1, ADMIN, two.id).rev, 2);
+  assert.ok(db().bb_rubric_undo.some((x) => x.cycle_id === two.id));
+  assert.equal(call('bb_delete_cycle', { p_cycle_id: two.id, p_expected_version: 1, p_expected_candidate_count: 0 }).status, 'ok');
+  assert.ok(!db().bb_rubric_undo.some((x) => x.cycle_id === two.id));
+});
+
+check('store: first opening admin-only, its Undo, has_registrations (U6)', () => {
+  backend.reset();
+  setDay('2027-02-15');
+  const current = db().bb_waiver_versions[0];
+  call('bb_save_waiver', { p_expected_current_id: current.id, p_body: 'The school waiver.' });
+  const add = (name) => call('bb_add_cycle', addArgs({ ...goodForm(), name })).id;
+  const row = (id) => db().bb_cycles.find((c) => c.id === id);
+  const sw = (id, open, ctx = ADMIN) => call('bb_set_registration', { p_cycle_id: id, p_expected_version: row(id).version, p_open: open }, ctx);
+  const undoOpen = (id, ctx = ADMIN, version = row(id).version) => call('bb_undo_first_open', { p_cycle_id: id, p_expected_version: version }, ctx);
+  const a = add('A');
+  // staff first opening → not_allowed, nothing written
+  assert.deepEqual(sw(a, true, STAFF), { status: 'not_allowed' });
+  assert.equal(row(a).version, 1);
+  assert.deepEqual(db().bb_rubric_undo, []);
+  // an admin's first opening → first_open, the slot remembers the cycle as it was
+  const opened = sw(a, true);
+  assert.equal(opened.first_open, true);
+  assert.equal(opened.version, 2);
+  assert.deepEqual(db().bb_rubric_undo.map((x) => [x.kind, x.cycle_id, x.dan, x.after_version, x.saved_by]), [['first_open', a, null, 2, 'u1']]);
+  assert.deepEqual(db().bb_rubric_undo[0].previous, { registration_open: false, first_opened_at: null, auto_close: true });
+  // staff may close and reopen once an admin opened it (later openings are not first openings)
+  assert.equal(sw(a, false, STAFF).first_open, false);
+  const reopened = sw(a, true, STAFF);
+  assert.equal(reopened.status, 'ok');
+  assert.equal(reopened.first_open, false);
+  assert.deepEqual(db().bb_rubric_undo, []); // the close cleared the first-opening slot
+  assert.deepEqual(undoOpen(a), { status: 'stale' });
+  // Undo within 15 seconds → never opened again, the rubric editable again
+  const b = add('B');
+  sw(b, true);
+  advance(14 * 1000);
+  const back = undoOpen(b);
+  assert.equal(back.status, 'ok');
+  assert.equal(back.version, 3);
+  assert.equal(back.state.registration, 'not_open_yet');
+  assert.equal(back.state.state, 'not_open_yet');
+  assert.equal(row(b).first_opened_at, null);
+  assert.equal(row(b).registration_open, false);
+  assert.deepEqual(db().bb_rubric_undo, []);
+  const bDan = row(b).requirements.dans[0];
+  assert.equal(call('bb_save_cycle_dan', { p_cycle_id: b, p_dan: 1, p_expected_rev: 1, p_sheet: withCredits(bDan, 4) }).status, 'ok');
+  // the public form shows no rubric again
+  assert.equal(backend.publicCycle(row(b).public_code_worcester).cycle.requirements, null);
+  // stale: another admin, a wrong version, too late (16 s), already closed
+  const c = add('C');
+  sw(c, true);
+  assert.deepEqual(undoOpen(c, ADMIN2), { status: 'stale' });
+  assert.deepEqual(undoOpen(c, ADMIN, 1), { status: 'stale' });
+  advance(16 * 1000);
+  assert.deepEqual(undoOpen(c), { status: 'stale' });
+  assert.ok(row(c).first_opened_at);
+  const d = add('D');
+  sw(d, true);
+  backend.expireUndo(); // the console helper: the newest slot looks 16 seconds old
+  assert.deepEqual(undoOpen(d), { status: 'stale' });
+  // a first opening after Application due turned the automatic close off: Undo puts it back on
+  const e = add('E');
+  setDay('2027-03-28');
+  const late = sw(e, true);
+  assert.equal(late.first_open, true);
+  assert.equal(row(e).auto_close, false);
+  assert.equal(undoOpen(e).status, 'ok');
+  assert.equal(row(e).auto_close, true);
+  setDay('2027-02-15');
+  // has_registrations: a family registered through the form since it opened
+  const f = add('F');
+  sw(f, true);
+  const plan = db().bb_cycle_plans.find((p) => p.cycle_id === f).id;
+  assert.equal(backend.publicRegister(regInput(row(f).public_code_worcester, plan)).status, 'ok');
+  assert.deepEqual(undoOpen(f), { status: 'has_registrations' });
+  assert.ok(row(f).first_opened_at); // the lock stays
+  // … even when that family's candidate was deleted again (change_log still has the insert)
+  const g = add('G');
+  sw(g, true);
+  const planG = db().bb_cycle_plans.find((p) => p.cycle_id === g).id;
+  assert.equal(backend.publicRegister(regInput(row(g).public_code_shrewsbury, planG)).status, 'ok');
+  const cand = db().bb_candidates.find((x) => x.cycle_id === g);
+  assert.equal(call('bb_delete_candidate', { p_candidate_id: cand.id, p_expected_version: cand.version }).status, 'ok');
+  assert.equal(db().bb_candidates.filter((x) => x.cycle_id === g).length, 0);
+  assert.deepEqual(undoOpen(g), { status: 'has_registrations' });
+  assert.deepEqual(call('bb_undo_first_open', { p_cycle_id: null, p_expected_version: 1 }), { status: 'invalid' });
+  assert.deepEqual(call('bb_undo_first_open', { p_cycle_id: randomUUID(), p_expected_version: 1 }), { status: 'not_found' });
+});
+
+check('store: the public form sees the rubric only once registration opened, as the public view (U8)', () => {
+  backend.reset();
+  setDay('2027-02-15');
+  const current = db().bb_waiver_versions[0];
+  call('bb_save_waiver', { p_expected_current_id: current.id, p_body: 'The school waiver.' });
+  const { id } = call('bb_add_cycle', addArgs());
+  const row = () => db().bb_cycles.find((c) => c.id === id);
+  const pub = () => backend.publicCycle(row().public_code_worcester);
+  assert.equal(pub().state, 'not_open');
+  assert.equal(pub().cycle.requirements, null); // a never-opened cycle's rubric is a draft
+  // a Past, never-opened cycle ('finished') → still null
+  setDay('2027-06-06');
+  assert.equal(pub().state, 'finished');
+  assert.equal(pub().cycle.requirements, null);
+  setDay('2027-02-15');
+  call('bb_set_registration', { p_cycle_id: id, p_expected_version: 1, p_open: true });
+  const shown = pub().cycle.requirements;
+  assert.deepEqual(shown, rubricPublic(row().requirements));
+  const text = JSON.stringify(shown);
+  for (const word of ['"rev"', '"saved_at"', '"saved_by_name"', '"source"']) assert.ok(!text.includes(word), word);
+  assert.equal(subjectOf(shown.dans[3], 'technical', 'Target kick (30 sec)').points.B, 9);
+  // an unknown key planted in the stored copy never reaches the public (allow-list)
+  const s = db();
+  s.bb_cycles.find((c) => c.id === id).requirements.dans[0].secret = 'planted';
+  saved = s;
+  assert.ok(!JSON.stringify(pub()).includes('planted'));
+  // the sample: Spring 2027 (opened) shows its rubric, Fall 2027 (never opened) doesn't
+  backend.loadSample();
+  const spring = db().bb_cycles.find((c) => c.name === 'Spring 2027');
+  const fall = db().bb_cycles.find((c) => c.name === 'Fall 2027');
+  assert.equal(backend.publicCycle(spring.public_code_worcester).cycle.requirements.dans.length, 4);
+  assert.equal(backend.publicCycle(fall.public_code_worcester).cycle.requirements, null);
+  assert.deepEqual(spring.requirements, freshCopy(DEFAULT_RUBRIC));
+});
+
+check('store: console helpers for the rubric — other admin, expire undo, failNextSave, old store', () => {
+  backend.loadSample();
+  setDay('2027-02-15');
+  const spring = () => db().bb_cycles.find((c) => c.name === 'Spring 2027');
+  const fall = () => db().bb_cycles.find((c) => c.name === 'Fall 2027');
+  // my save, then "Sam P." saves 1st Dan of the default and of every never-opened cycle
+  assert.equal(saveDefault(applyOps(defaultDan(), [set(['pass', 'brackets', 0, 'pass_mark'], 280)]), 1).rev, 2);
+  const fallBefore = fall().requirements.dans[0];
+  const springBefore = JSON.stringify(spring().requirements);
+  backend.simulateOtherAdminEdit();
+  assert.equal(defaultDan().rev, 3);
+  assert.equal(defaultDan().saved_by_name, 'Sam P.');
+  assert.equal(subjectOf(defaultDan(), 'physical', 'Long jump').credits, 3);
+  assert.deepEqual(danDiff(DEFAULT_RUBRIC.dans[0], applyOps(defaultDan(), [set(['pass', 'brackets', 0, 'pass_mark'], 275)])), ['Long jump credits 2 → 3']);
+  assert.deepEqual(undoDefault(2), { status: 'stale' }); // my Undo is out of date
+  assert.deepEqual(saveDefault(defaultDan(), 2), { status: 'stale' }); // so is my open editor
+  assert.equal(fall().requirements.dans[0].rev, fallBefore.rev + 1);
+  assert.equal(fall().requirements.dans[0].saved_by_name, 'Sam P.');
+  assert.equal(JSON.stringify(spring().requirements), springBefore); // an opened cycle is locked
+  assert.deepEqual(danProblems(defaultDan(), 1), []);
+  // expireUndo: my newest slot is 16 seconds old → stale
+  advance(1000); // so my slot is the newest one
+  assert.equal(saveDefault(withCredits(defaultDan(), 4), 3).rev, 4);
+  backend.expireUndo();
+  assert.deepEqual(undoDefault(4), { status: 'stale' });
+  // failNextSave covers the rubric saves: nothing changes
+  backend.failNextSave();
+  const dropped = backend.rpc('bb_save_default_dan', { p_dan: 1, p_expected_rev: 4, p_sheet: withCredits(defaultDan(), 5) }, ADMIN);
+  assert.equal(dropped.data, null);
+  assert.match(dropped.error.message, /Failed to fetch/);
+  assert.equal(defaultDan().rev, 4);
+  // a preview store from before 0024 (schema 'bb-1', v1 sheets): upgraded on read
+  const old = db();
+  old.schema = 'bb-1';
+  delete old.bb_default_rubric;
+  delete old.bb_rubric_undo;
+  delete old.bb_register_log;
+  for (const c of old.bb_cycles) c.requirements = JSON.parse(JSON.stringify(STARTING_POINT_REQUIREMENTS));
+  saved = old;
+  const up = db();
+  assert.equal(up.schema, 'bb-2');
+  assert.deepEqual(up.bb_default_rubric[0].sheet, DEFAULT_RUBRIC);
+  assert.deepEqual(up.bb_rubric_undo, []);
+  assert.equal(up.bb_register_log.length, 6); // the sample's six form registrations
+  for (const c of up.bb_cycles) {
+    assert.deepEqual(c.requirements, rubricFromV1(STARTING_POINT_REQUIREMENTS)); // source "Fall 2026 (old Sheet)"
+    assert.equal(c.version, old.bb_cycles.find((x) => x.id === c.id).version); // no version bump
+  }
+  assert.equal(up.bb_candidates.length, 6); // nothing else lost
+  // a store we can't upgrade → the seed
+  const broken = db();
+  broken.bb_cycles[0].requirements = { schema_version: 1, dans: [] };
+  saved = { ...broken, schema: 'bb-1' };
+  assert.equal(db().bb_cycles.length, 0);
 });
 
 // ======================= the family form's preview stand-in =======================

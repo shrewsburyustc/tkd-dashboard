@@ -356,6 +356,22 @@
 //       file pass (0014, camps' 0017, 0018 and 0020 included), the
 //       bb_registrar live checks and a test cycle + registration work,
 //       and 0016's fingerprints equal step 15's.
+//   step0024. 0024 (Black Belt rubric editor, CONTRACT-0024 11.4) on the
+//       MAIN database right after step 15: the earlier fingerprints, the
+//       version-aware 0016_tests.sql before 0024, two cycles with version 1
+//       sheets (one opened), 0024; every earlier fingerprint file
+//       byte-identical except 0016's, which differs by exactly 11.3's list;
+//       every cycle converted with no number changed; 0024_tests.sql and
+//       every earlier test file; re-run safety; the default = the app's
+//       rubricDefault.js; every case of 0024_rubric_cases.json; the
+//       bb_registrar checks; time limits; on copies of the database the
+//       "Undo 0024" block of SETUP 0024f (then 0016 and 0024 again) and the
+//       "0016 re-run over 0024" detector - see step0024 below.
+//   step0024_production_order. 0024 on a fresh database built in the
+//       production order with every live migration (step0016_after_new_
+//       students' order, then 0016 and 0021): every other fingerprint file
+//       unchanged (0016's by exactly 11.3), every test file passes, 0024's
+//       fingerprints equal step0024's.
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -708,9 +724,14 @@ async function main() {
   // 15b. Black Belt testing (0016), on the main database after 0011 and
   // before 13g (the 0010 down-script must stay the last thing there)
   let after16 = null;
+  let after24 = null;   // step0024's 0024 fingerprints
   if (after11) {
     console.log('\nMigration 0016 (Black Belt testing):');
     after16 = await stepBlackBelt(db);
+    // step0024: the rubric editor (0024), right after 0016 on the main database
+    console.log('\nMigration 0024 (Black Belt rubric editor):');
+    after24 = after16 ? await step0024(db) : null;
+    if (!after16) record('0024 (Black Belt rubric editor)', false, 'skipped: 0016 could not be applied');
   } else {
     record('0016 (Black Belt testing)', false, 'skipped: 0011 could not be applied (see the lines above)');
   }
@@ -764,6 +785,10 @@ async function main() {
   // step0021: Not interested families deleted after 6 months (its own database)
   console.log('\nMigration 0021 (Not interested families deleted after 6 months):');
   const after21 = after5 ? await step0021() : null;
+
+  // step0024_production_order: 0024 on top of every live migration (its own database)
+  console.log('\nMigration 0024 on top of every live migration (production order):');
+  await step0024_production_order(after24);
 
   // step0022: camps weekly pricing and longer camps (its own database, production order)
   console.log('\nMigration 0022 (camps weekly pricing and longer camps):');
@@ -3964,6 +3989,562 @@ async function campsFinanceSpeed(icu) {
     if (db) await db.close().catch(() => {});
     if (dir) rmSync(dir, { recursive: true, force: true });
   }
+}
+
+// =====================================================================
+// step0024 / step0024_production_order: 0024 (the Black Belt rubric
+// editor, rulebook v0.921-v0.934; CONTRACT-0024.md section 11.4)
+// =====================================================================
+const MIGRATION_0024 = () => read('migrations', '0024_black_belt_rubric.sql');
+
+// Everything 0024 keeps or changes, plus the history's row count, as one
+// md5 ("re-running 0024 changed nothing").
+const snapshot24Sql = `select md5(
+     coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.bb_default_rubric x), '')
+  || coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.bb_rubric_undo x), '')
+  || coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.bb_cycles x), '')
+  || (select count(*) from public.change_log)::text)`;
+
+// The 19 functions 0024 adds (contract section 15) and the 4 it replaces.
+const FNS_0024_NEW = ['bb_save_default_dan', 'bb_undo_default_dan', 'bb_save_cycle_dan', 'bb_undo_cycle_dan', 'bb_undo_first_open',
+  'bb_rubric_num_ok', 'bb_rubric_int_ok', 'bb_rubric_letters', 'bb_rubric_brackets_problems', 'bb_rubric_dan_problems',
+  'bb_rubric_is_valid', 'bb_rubric_part_max', 'bb_rubric_most_points', 'bb_rubric_from_v1', 'bb_rubric_fresh_copy',
+  'bb_rubric_public', 'bb_rubric_put_dan', 'bb_default_rubric_guard', 'bb_rubric_undo_guard'];
+const FNS_0024_REPLACED = ['bb_add_cycle', 'bb_set_registration', 'bb_public_cycle', 'bb_cycles_rules'];
+
+// 11.3: what 0016_fingerprints.sql may print differently after 0024 -
+// exactly this, nothing looser. "before" / "after" are the printed lines
+// ("kind  item  detail"). Answers [] when the difference is exactly that,
+// else a list of what is wrong.
+function diff0016(before, after) {
+  const split = (line) => { const [kind, item, ...rest] = line.split('  '); return { kind, item, detail: rest.join('  '), line }; };
+  const b = before.map(split);
+  const a = after.map(split);
+  const key = (r) => r.kind + '  ' + r.item;
+  const bMap = new Map(b.map((r) => [key(r), r]));
+  const aMap = new Map(a.map((r) => [key(r), r]));
+  const wrong = [];
+  for (const r of b) {
+    const x = aMap.get(key(r));
+    if (!x) { wrong.push(`row gone: ${r.line.slice(0, 80)}`); continue; }
+    if (x.detail === r.detail) continue;
+    const name = r.item.split('(')[0];
+    if (r.kind === 'function' && FNS_0024_REPLACED.includes(name)) {
+      // only the md5 may change
+      const tail = (d) => d.slice(d.indexOf(' definer='));
+      if (tail(x.detail) !== tail(r.detail) || x.detail.split(' ')[0] === r.detail.split(' ')[0]) wrong.push(`${r.item}: more than the md5 changed (or not the md5)`);
+    } else if (r.kind === 'trigger' && r.item === 'bb_cycles.bb_cycles_before_write') {
+      const want = r.detail.replace("prices_from', '')", "prices_from', 'requirements')");
+      if (want === r.detail || x.detail !== want) wrong.push(`bb_cycles_before_write: not exactly the new no-bump argument (${x.detail.slice(0, 160)})`);
+    } else if (r.kind === 'constraint' && r.item === 'bb_cycles.bb_cycles_requirements_check') {
+      if (r.detail !== 'CHECK (bb_requirements_is_valid(requirements))' || x.detail !== 'CHECK (bb_rubric_is_valid(requirements))') {
+        wrong.push(`bb_cycles_requirements_check: ${r.detail} -> ${x.detail}`);
+      }
+    } else {
+      wrong.push(`changed: ${r.line.slice(0, 100)}`);
+    }
+  }
+  // the four functions must really have changed
+  for (const n of FNS_0024_REPLACED) {
+    const r = b.find((x) => x.kind === 'function' && x.item.startsWith(n + '('));
+    const x = r && aMap.get(key(r));
+    if (!r || !x || r.detail === x.detail) wrong.push(`${n}: its md5 should have changed`);
+  }
+  const added = a.filter((r) => !bMap.has(key(r)));
+  const addedNames = added.map((r) => (r.kind === 'function' ? r.item.split('(')[0] : `${r.kind} ${r.item}`)).sort();
+  if (JSON.stringify(addedNames) !== JSON.stringify([...FNS_0024_NEW].sort())) {
+    wrong.push(`added rows: ${addedNames.join(', ')} (expected exactly the 19 new functions)`);
+  }
+  return wrong;
+}
+
+// Every fingerprint file of these migrations, as {file: lines}.
+async function printsOf(db, numbers) {
+  const out = {};
+  for (const n of numbers) out[`${n}_fingerprints.sql`] = await fingerprints(db, `${n}_fingerprints.sql`);
+  return out;
+}
+
+// 4.3's comparison for one cycle: its version 1 sheet (from before 0024)
+// against what is stored now, flattened into rows by the SAME two
+// functions as 0024_tests.sql U3 (taken from that file), both "except"
+// directions empty. Answers the differing rows (empty = no number changed).
+async function flatDiff(db, v1, v2) {
+  const text = read('tests', '0024_tests.sql').replace(/\r\n/g, '\n');
+  const f1 = text.match(/create function pg_temp\.bbr_flat_v1[\s\S]*?\n {4}\$b\$;/);
+  const f2 = text.match(/create function pg_temp\.bbr_flat_v2[\s\S]*?\n {4}\$b\$;/);
+  if (!f1 || !f2) throw new Error('could not find bbr_flat_v1 / bbr_flat_v2 in 0024_tests.sql');
+  await db.exec('begin;');
+  try {
+    await db.exec(f1[0] + '\n' + f2[0]);
+    const r = await db.query(`select x from ((select pg_temp.bbr_flat_v1($1::jsonb) except select pg_temp.bbr_flat_v2($2::jsonb))
+        union all (select pg_temp.bbr_flat_v2($2::jsonb) except select pg_temp.bbr_flat_v1($1::jsonb))) as q(x)`,
+      [JSON.stringify(v1), JSON.stringify(v2)]);
+    return r.rows.map((row) => row.x);
+  } finally {
+    await db.exec('rollback;');
+  }
+}
+
+// (i) one case of 0024_rubric_cases.json through the SQL validator: the
+// changes applied to Dan <dan_no> of the stored default (or to the whole
+// document), then the sorted, de-duplicated codes / bb_rubric_is_valid.
+// (A "value_json" op is cast from its text straight to jsonb, so 18.0 stays
+// 18.0 - JSON.stringify would have written it as 18.)
+async function rubricCase(db, c) {
+  const sql = `with recursive o as (select e, n from jsonb_array_elements($1::jsonb) with ordinality as t(e, n)),
+    w(i, d) as (select 0::bigint, ${c.dan_no ? `r.sheet -> 'dans' -> ($2::int - 1)` : `r.sheet || jsonb_build_object('zz', $2::int) - 'zz'`}
+                  from public.bb_default_rubric r
+      union all select w.i + 1,
+             case when o.e ->> 'op' = 'set' then jsonb_set(w.d, array(select jsonb_array_elements_text(o.e -> 'path')),
+                    case when o.e ? 'value_json' then (o.e ->> 'value_json')::jsonb else o.e -> 'value' end, true)
+                  else w.d #- array(select jsonb_array_elements_text(o.e -> 'path')) end
+        from w join o on o.n = w.i + 1)
+    select ${c.dan_no ? `(select coalesce(jsonb_agg(distinct p ->> 'code' order by p ->> 'code'), '[]')
+                            from jsonb_array_elements(public.bb_rubric_dan_problems(d, $2::int)) p)`
+                      : 'public.bb_rubric_is_valid(d)'} as r
+      from w order by i desc limit 1`;
+  return (await db.query(sql, [JSON.stringify(c.ops), c.dan_no ?? 0])).rows[0].r;
+}
+
+// keys sorted at every level, so two JSON values compare as text
+const canon = (v) => (Array.isArray(v) ? v.map(canon)
+  : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, canon(v[k])])) : v);
+
+// An admin's call in its own transaction (rolled back unless keep = true).
+async function asBbAdmin(db, fn, keep = false) {
+  const claims = await bbAdminClaims(db);
+  await db.exec('begin;');
+  try {
+    await db.query(`select set_config('request.jwt.claims', $1, true)`, [claims]);
+    const out = await fn();
+    await db.exec(keep ? 'commit;' : 'rollback;');
+    return out;
+  } catch (error) {
+    await db.exec('rollback;').catch(() => {});
+    throw error;
+  }
+}
+
+// A valid Add cycle payload (days in the future), as seedBbTestCycle's.
+const bb24Payload = (name, first) => `jsonb_build_object(
+    'name', '${name}', 'application_due', public.testing_today() + ${first - 10},
+    'submissions_due', public.testing_today() + ${first}, 'auto_close', true,
+    'days', jsonb_build_array(
+      jsonb_build_object('name', 'Physical', 'day_date', public.testing_today() + ${first}, 'start_time', '12:30', 'end_time', '14:30',
+                         'place', jsonb_build_object('code', 'worcester'), 'second', null, 'parts', jsonb_build_array('physical')),
+      jsonb_build_object('name', 'Technical and Curriculum', 'day_date', public.testing_today() + ${first + 7}, 'start_time', '12:30',
+                         'end_time', '17:00', 'place', jsonb_build_object('code', 'shrewsbury'), 'second', null,
+                         'parts', jsonb_build_array('technical', 'curriculum'))),
+    'plans', jsonb_build_array(jsonb_build_object('name', 'In full',
+      'payments', jsonb_build_array(jsonb_build_object('due_on', public.testing_today() + ${first - 10}, 'follows_application_due', true)),
+      'amounts', jsonb_build_object('1', jsonb_build_array(87000), '2', jsonb_build_array(99000),
+                                    '3', jsonb_build_array(150000), '4', jsonb_build_array(270000)))),
+    'kukkiwon', jsonb_build_object('1', 10000, '2', 11000, '3', 14000, '4', 17000),
+    'prices_from', null)`;
+
+// =====================================================================
+// step0024 on the MAIN database, right after stepBlackBelt (contract
+// 11.4):
+//   a.  the fingerprints of every migration already there (printed)
+//   a'. the version-aware 0016_tests.sql BEFORE 0024 (its pre-0024 arms)
+//   b.  two test cycles through 0016's bb_add_cycle (version 1 sheets),
+//       one opened; every cycle's sheet and version kept as a snapshot
+//   c.  0024 applied
+//   d.  every earlier fingerprint file byte-identical, except
+//       0016_fingerprints.sql, which differs by EXACTLY 11.3's list
+//   e.  every cycle (the opened ones too): no number changed (4.3), the
+//       version unchanged, one bb_rubric_upgrade history row each
+//   f.  0024_tests.sql, then every earlier test file
+//   g.  0024 a SECOND time: no second seed or conversion, nothing logged,
+//       fingerprints identical, 0024_tests.sql again
+//   h.  the stored default = Builder B's src/lib/blackBelt/rubricDefault.js
+//   i.  every case of 0024_rubric_cases.json through the SQL validator
+//   j.  AS bb_registrar: the two new tables and the five functions
+//       refused; bb_public_cycle answers the public view
+//   m.  time limits (the rubric rule runs on every cycle update)
+//   k.  on a COPY: the "Undo 0024" block of SETUP 0024f exactly as
+//       written (refused while a cycle exists; then, without cycles, it
+//       works), 0016 again: 0016's fingerprints back to (a), its tests
+//       pass; then 0024 again
+//   l.  on a COPY: 0016 re-run over 0024 -> 0024_fingerprints' check row
+//       says RE-RUN; 0024 again -> ok
+// Returns 0024's fingerprints (or null if 0024 could not be applied).
+// =====================================================================
+async function step0024(db) {
+  const L = '[0024] ';
+  const printsText = read('tests', '0024_fingerprints.sql');
+  record(L + '0024_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)', !/delete|drop/i.test(printsText));
+
+  // a. the fingerprints of every migration on the main database now
+  const has14 = await one(db, `select to_regclass('public.testing_private') is not null`);
+  const numbers = ['0003', '0004', '0005', '0006', '0010', '0011', ...(has14 ? ['0014'] : []), '0016'];
+  const before = await printsOf(db, numbers);
+  console.log(`${L}fingerprints before 0024 (${numbers.join(', ')}):`);
+  for (const [f, lines] of Object.entries(before)) for (const line of lines) console.log(`  ${f.slice(0, 4)}  ${line}`);
+
+  // a'. the edited 0016 tests, before 0024
+  await runTestFile(db, L + "0016_tests.sql BEFORE 0024 (its pre-0024 arms)", '0016_tests.sql', 'ALL 0016 TESTS PASSED');
+
+  // b. two cycles with version 1 sheets (one opened), then the snapshot
+  try {
+    const made = await asBbAdmin(db, async () => {
+      const x = (await db.query(`select public.bb_add_cycle(${bb24Payload('PGlite 0024 closed', 60)}, null) as r`)).rows[0].r;
+      const y = (await db.query(`select public.bb_add_cycle(${bb24Payload('PGlite 0024 opened', 70)}, null) as r`)).rows[0].r;
+      const o = (await db.query(`select public.bb_set_registration($1::uuid, 1, true) as r`, [y?.id])).rows[0].r;
+      return [x, y, o];
+    }, true);
+    record(L + 'b. two cycles added through 0016 (version 1 sheets), one opened',
+      made[0]?.status === 'ok' && made[1]?.status === 'ok' && made[2]?.status === 'ok', JSON.stringify(made.map((m) => m?.status)));
+  } catch (error) {
+    record(L + 'b. two cycles added through 0016', false, error.message);
+  }
+  const snap = (await db.query(`select id, name, requirements, version, first_opened_at is not null as opened from public.bb_cycles order by id`)).rows;
+  record(L + 'b. every cycle holds a version 1 sheet before 0024', snap.length >= 2 && snap.every((c) => c.requirements?.schema_version === 1),
+    `${snap.length} cycles, ${snap.filter((c) => c.opened).length} opened`);
+  const logMark = await one(db, 'select coalesce(max(id), 0)::bigint from public.change_log');
+
+  // c. apply 0024
+  if (!(await run(db, 'apply 0024_black_belt_rubric.sql', MIGRATION_0024()))) return null;
+  const after24 = await fingerprints(db, '0024_fingerprints.sql');
+
+  // d. nothing earlier moved, except exactly 11.3 in 0016's file
+  const afterPrints = await printsOf(db, numbers);
+  const moved = numbers.filter((n) => n !== '0016' && JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(afterPrints[`${n}_fingerprints.sql`]));
+  record(`${L}d. ${numbers.filter((n) => n !== '0016').join(' / ')} fingerprints byte-identical before/after 0024`, moved.length === 0,
+    moved.length ? `moved: ${moved.join(', ')}` : `${numbers.length - 1} files`);
+  const wrong = diff0016(before['0016_fingerprints.sql'], afterPrints['0016_fingerprints.sql']);
+  record(L + 'd. 0016_fingerprints.sql differs by EXACTLY contract 11.3 (4 md5s, the trigger arguments, the rule, 19 new functions)',
+    wrong.length === 0, wrong.join(' | '));
+  record(L + "d. 0024_fingerprints.sql: check | 0016_rerun | ok", after24.includes('check  0016_rerun  ok'),
+    after24.filter((l) => l.startsWith('check')).join(' | '));
+  console.log(`${L}0016_fingerprints.sql lines that changed:`);
+  for (const line of afterPrints['0016_fingerprints.sql'].filter((l) => !before['0016_fingerprints.sql'].includes(l))) console.log('  + ' + line);
+  for (const line of before['0016_fingerprints.sql'].filter((l) => !afterPrints['0016_fingerprints.sql'].includes(l))) console.log('  - ' + line);
+
+  // e. every cycle: no number changed, version unchanged, logged once
+  const now = new Map((await db.query(`select id, requirements, version from public.bb_cycles`)).rows.map((r) => [r.id, r]));
+  const bad = [];
+  for (const c of snap) {
+    const x = now.get(c.id);
+    if (!x || x.requirements?.schema_version !== 2) { bad.push(`${c.name}: not version 2`); continue; }
+    if (x.version !== c.version) bad.push(`${c.name}: version ${c.version} -> ${x.version}`);
+    const d = await flatDiff(db, c.requirements, x.requirements);
+    if (d.length) bad.push(`${c.name}: ${d.slice(0, 3).join(' ; ')}`);
+  }
+  record(L + 'e. every cycle (opened ones too): converted to version 2, no number changed (4.3), version unchanged', bad.length === 0,
+    bad.length ? bad.join(' | ') : `${snap.length} cycles`);
+  const up = (await db.query(`select count(*)::int as n, count(distinct record_id)::int as cycles, count(*) filter (where actor_name = 'Database admin')::int as admin
+      from public.change_log where id > ${logMark} and action = 'bb_rubric_upgrade'`)).rows[0];
+  record(L + 'e. one bb_rubric_upgrade history row per converted cycle, by "Database admin"',
+    up.n === snap.length && up.cycles === snap.length && up.admin === snap.length, JSON.stringify(up));
+  const seeded = (await db.query(`select (select count(*)::int from public.bb_default_rubric) as rows,
+      (select count(*)::int from public.change_log where id > ${logMark} and action = 'bb_seed' and table_name = 'bb_default_rubric') as seed`)).rows[0];
+  record(L + 'c. the default rubric seeded once (bb_seed)', seeded.rows === 1 && seeded.seed === 1, JSON.stringify(seeded));
+
+  // f. 0024's tests, then every earlier test file (0016's version-aware one included)
+  await runTestFile(db, L + '0024_tests.sql', '0024_tests.sql', 'ALL 0024 TESTS PASSED');
+  await allTestFiles16(db, 'after 0024');
+  if (has14) await runTestFile(db, L + '0014_tests.sql (after 0024)', '0014_tests.sql', 'ALL 0014 TESTS PASSED');
+
+  // g. re-run safety
+  const data24 = await one(db, snapshot24Sql);
+  await run(db, 'apply 0024 a SECOND time (re-run safety)', MIGRATION_0024());
+  record(L + 'g. the re-run changed nothing (no second seed or conversion, nothing logged)', data24 === (await one(db, snapshot24Sql)));
+  const again = await fingerprints(db, '0024_fingerprints.sql');
+  record(L + 'g. 0024 fingerprints identical before/after the re-run', JSON.stringify(again) === JSON.stringify(after24), `${again.length} rows`);
+  const again16 = await fingerprints(db, '0016_fingerprints.sql');
+  record(L + 'g. 0016 fingerprints identical before/after the 0024 re-run', JSON.stringify(again16) === JSON.stringify(afterPrints['0016_fingerprints.sql']));
+  await runTestFile(db, L + '0024_tests.sql (after re-run)', '0024_tests.sql', 'ALL 0024 TESTS PASSED');
+
+  // h. the stored default = the app's copy (Builder B's rubricDefault.js)
+  const sheet = await one(db, 'select sheet from public.bb_default_rubric');
+  const jsFile = path.resolve(supabaseDir, '..', 'src', 'lib', 'blackBelt', 'rubricDefault.js');
+  if (!existsSync(jsFile)) {
+    record(L + 'h. bb_default_rubric.sheet deep-equals src/lib/blackBelt/rubricDefault.js', false, 'rubricDefault.js not found');
+  } else {
+    try {
+      const mod = await import(new URL('file:///' + jsFile.replace(/\\/g, '/')).href);
+      const js = Object.values(mod).find((v) => v && typeof v === 'object' && v.schema_version === 2);
+      record(L + 'h. bb_default_rubric.sheet deep-equals src/lib/blackBelt/rubricDefault.js',
+        !!js && JSON.stringify(canon(js)) === JSON.stringify(canon(sheet)), js ? '' : 'no exported rubric (schema_version 2) found');
+    } catch (error) {
+      record(L + 'h. bb_default_rubric.sheet deep-equals src/lib/blackBelt/rubricDefault.js', false, error.message);
+    }
+  }
+
+  // i. the shared validator cases
+  const { cases } = JSON.parse(read('tests', '0024_rubric_cases.json'));
+  const caseBad = [];
+  for (const c of cases) {
+    try {
+      const got = await rubricCase(db, c);
+      const want = c.dan_no ? c.expect : c.expect_valid;
+      if (JSON.stringify(got) !== JSON.stringify(want)) caseBad.push(`${c.name}: ${JSON.stringify(got)} (expected ${JSON.stringify(want)})`);
+    } catch (error) {
+      caseBad.push(`${c.name}: ${error.message}`);
+    }
+  }
+  record(L + `i. every case of 0024_rubric_cases.json gives exactly its codes in SQL`, caseBad.length === 0,
+    caseBad.length ? caseBad.slice(0, 5).join(' | ') : `${cases.length} cases`);
+
+  // j. the family form's login
+  const refused = [
+    ['read bb_default_rubric', 'select 1 from public.bb_default_rubric limit 1'],
+    ['read bb_rubric_undo', 'select 1 from public.bb_rubric_undo limit 1'],
+    ['write bb_rubric_undo', "insert into public.bb_rubric_undo (kind, previous, after_version) values ('default_dan', '{}', 1)"],
+    ['call bb_save_default_dan', 'select public.bb_save_default_dan(null::integer, null::integer, null::jsonb)'],
+    ['call bb_undo_default_dan', 'select public.bb_undo_default_dan(null::integer, null::integer)'],
+    ['call bb_save_cycle_dan', 'select public.bb_save_cycle_dan(null::uuid, null::integer, null::integer, null::jsonb)'],
+    ['call bb_undo_cycle_dan', 'select public.bb_undo_cycle_dan(null::uuid, null::integer, null::integer)'],
+    ['call bb_undo_first_open', 'select public.bb_undo_first_open(null::uuid, null::integer)'],
+    ['call bb_rubric_public', "select public.bb_rubric_public('{}'::jsonb)"]];
+  const leaks = [];
+  for (const [label, sql] of refused) {
+    try {
+      await db.exec('set role bb_registrar;');
+      await db.exec(sql);
+      leaks.push(label);
+    } catch (error) {
+      if (!/permission denied/i.test(error.message)) leaks.push(`${label} (${error.message})`);
+    } finally {
+      await db.exec('reset role;').catch(() => {});
+    }
+  }
+  record(L + 'j. AS bb_registrar: both new tables and the five new functions refused', leaks.length === 0, leaks.join('; '));
+  const opened = (await db.query(`select public_code_worcester as code, requirements from public.bb_cycles
+      where first_opened_at is not null order by created_at desc limit 1`)).rows[0];
+  try {
+    await db.exec('set role bb_registrar;');
+    const r = (await db.query('select public.bb_public_cycle($1) as r', [opened?.code])).rows[0].r;
+    await db.exec('reset role;');
+    const pub = await one(db, `select public.bb_rubric_public('${JSON.stringify(opened.requirements).replaceAll("'", "''")}'::jsonb)`);
+    const text = JSON.stringify(r?.cycle?.requirements ?? null);
+    record(L + 'j. AS bb_registrar: bb_public_cycle answers the public view (no rev, stamps or source)',
+      r?.status === 'ok' && JSON.stringify(canon(r.cycle.requirements)) === JSON.stringify(canon(pub))
+        && !/"(rev|saved_at|saved_by_name|source)":/.test(text), text.slice(0, 120));
+  } catch (error) {
+    record(L + 'j. AS bb_registrar: bb_public_cycle answers the public view', false, error.message);
+  } finally {
+    await db.exec('reset role;').catch(() => {});
+  }
+
+  // m. time limits
+  const times = [];
+  for (let i = 0; i < 5; i++) {
+    const t0 = performance.now();
+    await db.query('select public.bb_rubric_is_valid(sheet) from public.bb_default_rubric');
+    times.push(performance.now() - t0);
+  }
+  const median = times.sort((x, y) => x - y)[2];
+  record(L + 'm. bb_rubric_is_valid on the default rubric <= 50 ms', median <= 50, `${median.toFixed(1)} ms (median of 5)`);
+  // the same on a NEAR-LIMIT rubric: every Dan grown to about 37 KB (20 more
+  // graded subjects with a 200-character note in each of Technical,
+  // Curriculum and Other; the Dan limit is 50 KB, the rubric's 240 KB)
+  try {
+    const sheet = (await db.query('select sheet from public.bb_default_rubric')).rows[0].sheet;
+    const big = JSON.parse(JSON.stringify(sheet));
+    for (const d of big.dans) {
+      for (let pi = 1; pi <= 3; pi++) {
+        // a copy of the part's own first graded subject with worked-out points
+        const model = d.parts[pi].subjects.find((x) => x.scoring === 'graded' && x.points_mode === 'worked' && !x.limited_to);
+        for (let k = 0; k < 20; k++) {
+          d.parts[pi].subjects.push({ ...JSON.parse(JSON.stringify(model)), id: `z${d.dan}${pi}${String(k).padStart(5, '0')}`,
+            name: `Added subject number ${k + 1}`, note: 'x'.repeat(200) });
+        }
+      }
+    }
+    const sizes = big.dans.map((d) => Buffer.byteLength(JSON.stringify(d)));
+    const valid = (await db.query('select public.bb_rubric_is_valid($1::jsonb) as v', [JSON.stringify(big)])).rows[0].v;
+    const bigTimes = [];
+    for (let i = 0; i < 5; i++) {
+      const t0 = performance.now();
+      await db.query('select public.bb_rubric_is_valid($1::jsonb)', [JSON.stringify(big)]);
+      bigTimes.push(performance.now() - t0);
+    }
+    const bigMedian = bigTimes.sort((x, y) => x - y)[2];
+    record(L + 'm. bb_rubric_is_valid on a near-limit rubric (about 37 KB per Dan, valid) <= 250 ms', valid === true && bigMedian <= 250,
+      `${valid ? 'valid' : 'NOT valid'}, Dans ${sizes.map((n) => `${(n / 1000).toFixed(1)} KB`).join(' / ')}, ${bigMedian.toFixed(1)} ms (median of 5)`);
+  } catch (error) {
+    record(L + 'm. bb_rubric_is_valid on a near-limit rubric <= 250 ms', false, error.message);
+  }
+  try {
+    const ms = await asBbAdmin(db, async () => {
+      let v = (await db.query(`select version from public.bb_cycles where public_code_worcester = $1`, [opened.code])).rows[0].version;
+      const t0 = performance.now();
+      for (let i = 0; i < 200; i++) {
+        const r = (await db.query(`select public.bb_set_registration(id, $2, $3) as r from public.bb_cycles where public_code_worcester = $1`,
+          [opened.code, v, i % 2 === 1])).rows[0].r;
+        if (r?.status !== 'ok') throw new Error(`call ${i + 1} answered ${JSON.stringify(r)}`);
+        v = r.version;
+      }
+      return performance.now() - t0;
+    });
+    record(L + 'm. 200 open / close bb_set_registration calls <= 10 s (the rubric rule runs each time)', ms <= 10000, `${(ms / 1000).toFixed(2)} s`);
+  } catch (error) {
+    record(L + 'm. 200 open / close bb_set_registration calls <= 10 s', false, error.message);
+  }
+  try {
+    // the largest valid Dan of the fixture cases
+    let best = null;
+    for (const c of cases.filter((x) => x.dan_no && x.expect.length === 0)) {
+      const d = (await db.query(`with recursive o as (select e, n from jsonb_array_elements($1::jsonb) with ordinality as t(e, n)),
+          w(i, d) as (select 0::bigint, r.sheet -> 'dans' -> ($2::int - 1) from public.bb_default_rubric r
+            union all select w.i + 1, case when o.e ->> 'op' = 'set' then jsonb_set(w.d, array(select jsonb_array_elements_text(o.e -> 'path')),
+                                             case when o.e ? 'value_json' then (o.e ->> 'value_json')::jsonb else o.e -> 'value' end, true)
+                                           else w.d #- array(select jsonb_array_elements_text(o.e -> 'path')) end
+              from w join o on o.n = w.i + 1)
+          select d, octet_length(d::text) as n from w order by i desc limit 1`, [JSON.stringify(c.ops), c.dan_no])).rows[0];
+      if (!best || d.n > best.n) best = { ...d, dan: c.dan_no, name: c.name };
+    }
+    const ms = await asBbAdmin(db, async () => {
+      const rev = await one(db, `select (sheet -> 'dans' -> ${best.dan - 1} ->> 'rev')::int from public.bb_default_rubric`);
+      const t0 = performance.now();
+      const r = (await db.query('select public.bb_save_default_dan($1, $2, $3::jsonb) as r', [best.dan, rev, JSON.stringify(best.d)])).rows[0].r;
+      const t = performance.now() - t0;
+      if (r?.status !== 'ok') throw new Error(`the save answered ${JSON.stringify(r)}`);
+      return t;
+    });
+    record(L + 'm. a save of the largest valid fixture Dan <= 200 ms', ms <= 200, `${ms.toFixed(1)} ms ("${best.name}", ${best.n} bytes)`);
+  } catch (error) {
+    record(L + 'm. a save of the largest valid fixture Dan <= 200 ms', false, error.message);
+  }
+
+  // k. the "Undo 0024" block of SETUP 0024f, on a copy of this database
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const block = setup.slice(setup.indexOf('### 0024f.')).match(/```sql\n([\s\S]*?)```/);
+  if (!block) {
+    record('[undo 0024] find the undo script in SETUP section 0024f', false, 'no sql block after "### 0024f."');
+  } else {
+    const K = '[undo 0024] ';
+    const copy = await db.clone();
+    try {
+      const before24 = await one(copy, snapshot24Sql);
+      let refusedOk = false;
+      try {
+        await copy.exec(block[1]);
+      } catch (error) {
+        await copy.exec('rollback;').catch(() => {});
+        refusedOk = /Undo 0024 refused/.test(error.message);
+      }
+      record(K + 'with a cycle in the database the block refuses and changes nothing',
+        refusedOk && before24 === (await one(copy, snapshot24Sql)));
+      await run(copy, K + 'remove every cycle by hand (copy only)', 'delete from public.bb_cycles;');
+      if (await run(copy, K + 'the SQL block of SETUP 0024f', block[1])) {
+        if (await run(copy, K + 'paste 0016_black_belt.sql again', read('migrations', '0016_black_belt.sql'))) {
+          const p16 = await fingerprints(copy, '0016_fingerprints.sql');
+          record(K + "0016's fingerprints are back to (a) - before 0024", JSON.stringify(p16) === JSON.stringify(before['0016_fingerprints.sql']),
+            `${p16.length} rows`);
+          record(K + 'no 0024 table is left', !(await one(copy, `select to_regclass('public.bb_default_rubric') is not null or to_regclass('public.bb_rubric_undo') is not null`)));
+          await runTestFile(copy, K + '0016_tests.sql (0016 only again)', '0016_tests.sql', 'ALL 0016 TESTS PASSED');
+          if (await run(copy, K + 'apply 0024 again (redo)', MIGRATION_0024())) {
+            const p24 = await fingerprints(copy, '0024_fingerprints.sql');
+            record(K + 'after the redo 0024 fingerprints equal the first apply', JSON.stringify(p24) === JSON.stringify(after24));
+            await runTestFile(copy, K + '0024_tests.sql (after the redo)', '0024_tests.sql', 'ALL 0024 TESTS PASSED');
+          }
+        }
+      }
+    } finally {
+      await copy.close().catch(() => {});
+    }
+  }
+
+  // l. re-running 0016 over 0024 is detected, and 0024 again repairs it
+  const copy2 = await db.clone();
+  try {
+    const R = '[0016 re-run over 0024] ';
+    if (await run(copy2, R + 'paste 0016_black_belt.sql over 0024 (copy only)', read('migrations', '0016_black_belt.sql'))) {
+      const p = await fingerprints(copy2, '0024_fingerprints.sql');
+      const row = p.find((l) => l.startsWith('check  0016_rerun'));
+      record(R + "0024_fingerprints.sql's check row says RE-RUN", !!row && row.includes('0016 RE-RUN OVER 0024'), row ?? 'no check row');
+      if (await run(copy2, R + 'apply 0024 again', MIGRATION_0024())) {
+        const q = await fingerprints(copy2, '0024_fingerprints.sql');
+        record(R + 'after 0024 again: check row ok and every 0024 fingerprint as before', JSON.stringify(q) === JSON.stringify(after24),
+          q.find((l) => l.startsWith('check')) ?? '');
+      }
+    }
+  } finally {
+    await copy2.close().catch(() => {});
+  }
+
+  console.log(`${L}0024 fingerprints (kind  item  detail):`);
+  for (const line of after24) console.log('  ' + line);
+  return after24;
+}
+
+// =====================================================================
+// step0024_production_order: 0024 on a fresh database built in the
+// PRODUCTION order with every migration live at build time (the status
+// files and SETUP, 2026-10-21): 0001-0006, 0010, 0007, 0008, 0009, 0012,
+// 0015, 0011 as production got it, 0019, 0014, 0020, camps' 0013 + 0017,
+// 0018, 0016 (CP3), 0021, 0022 (camps weekly pricing, live 2026-10-21).
+// (0023 is not live yet; when it is, add it here.) Then 0024: every other
+// fingerprint file unchanged (0016's by exactly 11.3), every test file
+// passes, 0024's fingerprints equal step0024's.
+// "main24" = step0024's 0024 fingerprints (or null if it failed).
+// =====================================================================
+async function step0024_production_order(main24) {
+  const L = '[0024 production order] ';
+  const db = await buildBase(L);
+  if (!db) return;
+  for (const [label, file] of [['0003', '0003_testing_classes_ranks.sql'], ['0004', '0004_staff_accounts.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return;
+  }
+  await run(db, L + 'apply built-in seed', builtInSeedSql());
+  if (!(await run(db, L + 'apply 0005', read('migrations', '0005_testing_events.sql')))) return;
+  await seedTestEvent(db);
+  for (const [label, file] of [['0006', '0006_star_testing.sql'], ['0010 (grading results)', '0010_testing_results.sql'],
+    ['0007', '0007_schedule.sql'], ['0008', '0008_calendar.sql'], ['0009', '0009_forms.sql'], ['0012', '0012_prospects.sql'],
+    ['0015', '0015_family_history.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return;
+  }
+  const old11 = readFileSync(path.join(here, 'fixtures', '0011_as_applied_2026-10-19.sql'), 'utf8');
+  if (!(await run(db, L + 'apply 0011 as pasted on production 2026-10-19 (fixture)', old11))) return;
+  if (!(await run(db, L + 'apply today\'s 0011 over it', read('migrations', '0011_finance.sql')))) return;
+  if (!(await run(db, L + 'apply 0019', read('migrations', '0019_school_phone.sql')))) return;
+  if (!(await run(db, L + 'apply 0014 (private testing)', MIGRATION_0014()))) return;
+  if (!(await run(db, L + 'apply 0020 (current_session_id fix)', read('migrations', '0020_session_id_claims.sql')))) return;
+  const [camps13, camps17] = CAMPS_FILES();
+  if (!(await run(db, `${L}apply camps' 0013 (${path.basename(camps13)})`, CAMPS_0013()))) return;
+  if (!(await run(db, `${L}apply camps' 0017 (${path.basename(camps17)})`, CAMPS_0017()))) return;
+  if (!(await run(db, L + 'apply 0018 (private testing money in Finance)', MIGRATION_0018()))) return;
+  if (!(await run(db, L + 'apply 0016 (Black Belt testing, live since CP3)', read('migrations', '0016_black_belt.sql')))) return;
+  if (!(await run(db, L + 'apply 0021', read('migrations', '0021_prospects_not_interested_sooner.sql')))) return;
+  if (!(await run(db, L + 'apply 0022 (camps weekly pricing)', read('migrations', '0022_camps_weekly_pricing.sql')))) return;
+
+  // every fingerprint file of a live migration, before and after 0024
+  const numbers = ['0003', '0004', '0005', '0006', '0010', '0007', '0008', '0009', '0012', '0015', '0011', '0019', '0014', '0020',
+    '0013', '0017', '0018', '0016', '0021', '0022'].filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const before = await printsOf(db, numbers);
+  if (!(await run(db, L + 'apply 0024_black_belt_rubric.sql', MIGRATION_0024()))) return;
+  const after = await printsOf(db, numbers);
+  const moved = numbers.filter((n) => n !== '0016' && JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(after[`${n}_fingerprints.sql`]));
+  record(`${L}${numbers.filter((n) => n !== '0016').join(' / ')} fingerprints byte-identical before/after 0024`, moved.length === 0,
+    moved.length ? `moved: ${moved.join(', ')}` : `${numbers.length - 1} files`);
+  const wrong = diff0016(before['0016_fingerprints.sql'], after['0016_fingerprints.sql']);
+  record(L + '0016_fingerprints.sql differs by EXACTLY contract 11.3', wrong.length === 0, wrong.join(' | '));
+
+  // every test file
+  const testFiles = [['0024_tests.sql', 'ALL 0024 TESTS PASSED'], ['0016_tests.sql', 'ALL 0016 TESTS PASSED'],
+    ['verify_pin_tests.sql', 'ALL PIN TESTS PASSED'], ['0002_tests.sql', 'ALL 0002 TESTS PASSED'], ['0003_tests.sql', 'ALL 0003 TESTS PASSED'],
+    ['0004_tests.sql', 'ALL 0004 TESTS PASSED'], ['0005_tests.sql', 'ALL 0005 TESTS PASSED'], ['0006_tests.sql', 'ALL 0006 TESTS PASSED'],
+    ['0010_tests.sql', 'ALL 0010 TESTS PASSED'], ['0007_tests.sql', 'ALL 0007 TESTS PASSED'], ['0008_tests.sql', 'ALL 0008 TESTS PASSED'],
+    ['0009_tests.sql', 'ALL 0009 TESTS PASSED'], ['0012_tests.sql', 'ALL 0012 TESTS PASSED'], ['0015_tests.sql', 'ALL 0015 TESTS PASSED'],
+    ['0011_tests.sql', 'ALL 0011 TESTS PASSED'], ['0019_tests.sql', 'ALL 0019 TESTS PASSED'], ['0014_tests.sql', 'ALL 0014 TESTS PASSED'],
+    ['0020_tests.sql', 'ALL 0020 TESTS PASSED'], [CAMPS_TESTS, 'ALL 0017 TESTS PASSED'], ['0018_tests.sql', 'ALL 0018 TESTS PASSED'],
+    ['0021_tests.sql', 'ALL 0021 TESTS PASSED'], ['0022_tests.sql', 'ALL 0022 TESTS PASSED']];
+  for (const [file, ok] of testFiles) {
+    await runTestFile(db, `${L}${file} (after 0024)`, file, ok);
+  }
+  if (existsSync(path.join(supabaseDir, 'tests', '0013_tests.sql'))) {
+    await runTestFile(db, `${L}0013_tests.sql (after 0024)`, '0013_tests.sql', 'ALL 0013 TESTS PASSED');
+  }
+  await bbRegistrarLiveChecks(db);
+
+  // the same 0024 as on the main database
+  const mine = await fingerprints(db, '0024_fingerprints.sql');
+  record(L + '0024 fingerprints identical to step0024 (main database)', !!main24 && JSON.stringify(mine) === JSON.stringify(main24),
+    main24 ? `${mine.length} rows` : 'step0024 gave no fingerprints');
 }
 
 // =====================================================================

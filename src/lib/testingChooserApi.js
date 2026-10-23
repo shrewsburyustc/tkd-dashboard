@@ -1,4 +1,5 @@
-// testingChooserApi.js — the reads the Testing chooser page makes: Color Belt's and Star's next event.
+// testingChooserApi.js — the reads the Testing chooser page makes: Color Belt's and Star's next event,
+// and Black Belt's next testing day.
 // Why it exists: the chooser's "Color belt testing" row shows its next event (rulebook v0.177):
 //   one school:  that school's next event        → "Next: Jan 16 · Worcester"
 //   Both:        the earliest one of either school → "Next: Jan 9 · Shrewsbury"
@@ -75,6 +76,35 @@ export async function loadNextStarEvent() {
       status: 'ok',
       next: next ? { date: next.testing_date, whereCode: next.where_code, where: LOCATION_NAME[next.where_code] ?? '' } : null,
     };
+  } catch {
+    return ERROR;
+  }
+}
+
+// Black Belt testing's next testing day, for the chooser's "Black Belt testing" row (C2, rulebook
+// v0.937): the earliest testing day on or after today of ANY cycle (registration open or not). A
+// cycle is for both schools, so the switcher doesn't filter it. Reads one column of bb_cycle_days
+// (dates only, nothing about candidates; the database sends only the days from today on),
+// with the same has_data_access check as above. It lives here, not in lib/blackBelt/api.js, so
+// the chooser doesn't download Black Belt's whole data layer.
+//   { status: 'ok', next: { date: 'YYYY-MM-DD' } }   next null when none is coming
+//   { status: 'no_access' } · { status: 'error' }
+export async function loadNextBlackBeltDay() {
+  try {
+    if (!supabase) return ERROR;
+    const today = schoolToday();
+    const [dayRes, accessRes] = await Promise.all([
+      supabase.from('bb_cycle_days').select('day_date').gte('day_date', today).order('day_date', { ascending: true }),
+      supabase.rpc('has_data_access'),
+    ]);
+    if (!accessRes?.error && accessRes?.data === false) return { status: 'no_access' };
+    if (accessRes?.error || accessRes?.data !== true) return ERROR;
+    if (dayRes?.error || !Array.isArray(dayRes?.data)) return ERROR;
+    const next = dayRes.data
+      .map((row) => row.day_date)
+      .filter((date) => typeof date === 'string' && date >= today)
+      .sort()[0];
+    return { status: 'ok', next: next ? { date: next } : null };
   } catch {
     return ERROR;
   }

@@ -28,6 +28,11 @@
 --   It makes its own test cycles and candidates with unusual names ("zz
 --   test 1a2b3c4d ..."), so it works whatever is already in the database
 --   (run it before AND after the first real Black Belt cycle exists).
+--   It passes both BEFORE and AFTER migration 0024 (the rubric editor):
+--   where 0024 changes how something behaves, the check looks at
+--   v_has_0024 and tests the behaviour of whichever version is installed
+--   (CONTRACT-0024 section 11.2). Nothing that 0024 doesn't change is
+--   checked any less.
 --   There is no fake clock: date rules are tested by calling the internal
 --   helpers with made-up dates, and by moving test rows into the past
 --   directly (as the SQL Editor's role).
@@ -193,6 +198,13 @@ declare
     'bb_cycle_plans', 'bb_cycle_plan_amounts', 'bb_cycle_kukkiwon_fees', 'bb_cycle_plan_payments',
     'bb_candidates', 'bb_candidate_waivers', 'bb_payments'];
   v_read_tables text[];
+  -- 0024 (the rubric editor) installed? (CONTRACT-0024 11.2)
+  v_has_0024 boolean := to_regclass('public.bb_default_rubric') is not null;
+  v_rubric_fns text[] := array[
+    'bb_save_default_dan', 'bb_undo_default_dan', 'bb_save_cycle_dan', 'bb_undo_cycle_dan', 'bb_undo_first_open',
+    'bb_rubric_num_ok', 'bb_rubric_int_ok', 'bb_rubric_letters', 'bb_rubric_brackets_problems', 'bb_rubric_dan_problems',
+    'bb_rubric_is_valid', 'bb_rubric_part_max', 'bb_rubric_most_points', 'bb_rubric_from_v1', 'bb_rubric_fresh_copy',
+    'bb_rubric_public', 'bb_rubric_put_dan', 'bb_default_rubric_guard', 'bb_rubric_undo_guard'];
 begin
   v_read_tables := array(select t from unnest(v_tables) as t where t not in ('bb_candidate_waivers', 'bb_starting_point'));
 
@@ -459,7 +471,17 @@ begin
          count(*)
     into v_i, v_j, v_n, v_n2
     from public.change_log l where l.action = 'bb_seed';
-  if v_i <> 1 or v_j <> 1 or v_n <> 1 or v_n2 <> 3
+  -- (0024 seeds the default rubric with the same tag: a 4th bb_seed row,
+  -- on bb_default_rubric. The history is append-only, so that row stays
+  -- even after "Undo 0024" (SETUP 0024f). 0016's own three are counted
+  -- exactly either way.)
+  if v_i <> 1 or v_j <> 1 or v_n <> 1
+     or (select count(*) from public.change_log l where l.action = 'bb_seed' and l.table_name <> 'bb_default_rubric') <> 3
+     or (v_has_0024 and (v_n2 <> 4 or (select count(*) from public.change_log l where l.action = 'bb_seed'
+                                         and l.table_name = 'bb_default_rubric' and l.op = 'insert') <> 1))
+     or (not v_has_0024 and v_n2 not in (3, 4))
+     or (not v_has_0024 and v_n2 = 4 and (select count(*) from public.change_log l where l.action = 'bb_seed'
+                                           and l.table_name = 'bb_default_rubric' and l.op = 'insert') <> 1)
      or exists (select 1 from public.change_log l where l.action = 'bb_seed' and l.actor_name <> 'Database admin') then
     raise exception 'TEST FAILED: T3a the seed history should be 1 settings + 1 placeholder waiver + 1 starting point by Database admin (got %, %, %, % rows)',
       v_i, v_j, v_n, v_n2;
@@ -551,10 +573,12 @@ begin
     raise exception 'TEST FAILED: T4a defaults after a cycle should be its schedule, got %', v_r;
   end if;
   -- ... and Add cycle wrote: two different codes, Closed, the starting
-  -- point's requirements (no source), payments x 4 amounts per plan, 4 fees
+  -- point's requirements (no source) - after 0024: a fresh copy of the
+  -- default rubric -, payments x 4 amounts per plan, 4 fees
   if v_cm_w = v_cm_s or v_cm_w !~ '^[a-hjkmnp-z2-9]{8}$'
      or (select registration_open or first_opened_at is not null or version <> 1 from public.bb_cycles where id = v_cm)
-     or (select requirements from public.bb_cycles where id = v_cm) <> (select requirements from public.bb_starting_point)
+     or (not v_has_0024
+         and (select requirements from public.bb_cycles where id = v_cm) <> (select requirements from public.bb_starting_point))
      or (select count(*) from public.bb_cycle_plan_amounts where cycle_plan_id = v_cm_full) <> 4
      or (select count(*) from public.bb_cycle_plan_amounts where cycle_plan_id = v_cm_three) <> 12
      or (select count(*) from public.bb_cycle_plan_payments where cycle_plan_id = v_cm_three) <> 3
@@ -567,6 +591,16 @@ begin
      or (select second_place_other from public.bb_cycle_days where cycle_id = v_cm and name = 'Physical')
         <> 'Horgan Arena, 403 Oxford St N, Auburn MA 01501' then
     raise exception 'TEST FAILED: T4a Add cycle did not write the cycle as designed';
+  end if;
+  -- (Checks that name a 0024 object sit in their own "if v_has_0024 then"
+  -- block: PL/pgSQL prepares a statement's whole condition at once, so a
+  -- query on a table that doesn't exist yet must never be reached before
+  -- 0024.)
+  if v_has_0024 then
+    if (select requirements from public.bb_cycles where id = v_cm)
+       is distinct from (select public.bb_rubric_fresh_copy(r.sheet) from public.bb_default_rubric r) then
+      raise exception 'TEST FAILED: T4a (0024) Add cycle must store a fresh copy of the default rubric';
+    end if;
   end if;
 
   -- T4e (placeholder). Opening while the placeholder waiver is current ->
@@ -1151,9 +1185,18 @@ begin
   perform set_config('tkd.action', '', true);
   perform set_config('request.jwt.claims', v_c_a1, true);
   v_r := public.bb_add_cycle(pg_temp.bbt_payload(v_tag || ' From Main', v_today + 40, v_today + 30), v_cm);
-  if v_r ->> 'status' <> 'ok'
-     or (select requirements ->> 'source' from public.bb_cycles where id = (v_r ->> 'id')::uuid) <> 'zz test changed sheet' then
+  if not v_has_0024 and (v_r ->> 'status' <> 'ok'
+     or (select requirements ->> 'source' from public.bb_cycles where id = (v_r ->> 'id')::uuid) <> 'zz test changed sheet') then
     raise exception 'TEST FAILED: T4a Add cycle must copy the source cycle''s requirements, got %', v_r;
+  end if;
+  -- (after 0024: the DEFAULT rubric is copied, never the source cycle's sheet)
+  if v_has_0024 then
+    if v_r ->> 'status' <> 'ok'
+       or (select requirements from public.bb_cycles where id = (v_r ->> 'id')::uuid)
+          is distinct from (select public.bb_rubric_fresh_copy(r.sheet) from public.bb_default_rubric r)
+       or (select requirements ->> 'source' from public.bb_cycles where id = (v_r ->> 'id')::uuid) <> 'Default rubric' then
+      raise exception 'TEST FAILED: T4a (0024) Add cycle must copy the default rubric, not the source cycle''s sheet, got %', v_r;
+    end if;
   end if;
   v_cx := (v_r ->> 'id')::uuid; v_cx_w := v_r ->> 'public_code_worcester'; v_cx_s := v_r ->> 'public_code_shrewsbury';
   if v_cx_w in (v_cm_w, v_cm_s) or v_cx_s in (v_cm_w, v_cm_s) then
@@ -1422,11 +1465,38 @@ begin
   if v_r ->> 'registration' <> 'not_open_yet' or v_r ->> 'public_status' <> 'not_open' then
     raise exception 'TEST FAILED: T4e a never-opened cycle should be not_open_yet, got %', v_r;
   end if;
-  v_r := public.bb_set_registration(v_c2, v_c2v, true);
-  if v_r ->> 'status' <> 'ok' or (select first_opened_at from public.bb_cycles where id = v_c2) is distinct from now() then
-    raise exception 'TEST FAILED: T4e the first opening must set first_opened_at, got %', v_r;
+  if not v_has_0024 then
+    v_r := public.bb_set_registration(v_c2, v_c2v, true);
+    if v_r ->> 'status' <> 'ok' or (select first_opened_at from public.bb_cycles where id = v_c2) is distinct from now() then
+      raise exception 'TEST FAILED: T4e the first opening must set first_opened_at, got %', v_r;
+    end if;
+    v_c2v := (v_r ->> 'version')::integer;
+  else
+    -- (0024, v0.930) the desk's first opening -> not_allowed, nothing written
+    v_r := public.bb_set_registration(v_c2, v_c2v, true);
+    if v_r is distinct from '{"status": "not_allowed"}'::jsonb
+       or (select registration_open or first_opened_at is not null or version <> v_c2v from public.bb_cycles where id = v_c2) then
+      raise exception 'TEST FAILED: T4e (0024) the desk''s first opening must be not_allowed with nothing written, got %', v_r;
+    end if;
+    -- the admin's first opening sets first_opened_at
+    perform set_config('request.jwt.claims', v_c_a1, true);
+    v_r := public.bb_set_registration(v_c2, v_c2v, true);
+    if v_r ->> 'status' <> 'ok' or (select first_opened_at from public.bb_cycles where id = v_c2) is distinct from now() then
+      raise exception 'TEST FAILED: T4e (0024) the admin''s first opening must set first_opened_at, got %', v_r;
+    end if;
+    -- then the desk may close and reopen (staff may, once an admin opened it)
+    perform set_config('request.jwt.claims', v_c_d1, true);
+    v_r := public.bb_set_registration(v_c2, (v_r ->> 'version')::integer, false);
+    if v_r ->> 'status' <> 'ok' or v_r -> 'state' ->> 'registration' <> 'closed' then
+      raise exception 'TEST FAILED: T4e (0024) the desk''s close after an admin opened should be ok, got %', v_r;
+    end if;
+    v_r := public.bb_set_registration(v_c2, (v_r ->> 'version')::integer, true);
+    if v_r ->> 'status' <> 'ok' or v_r -> 'state' ->> 'state' <> 'open'
+       or (select first_opened_at from public.bb_cycles where id = v_c2) is distinct from now() then
+      raise exception 'TEST FAILED: T4e (0024) the desk''s reopen should be ok, got %', v_r;
+    end if;
+    v_c2v := (v_r ->> 'version')::integer;
   end if;
-  v_c2v := (v_r ->> 'version')::integer;
   -- after Application due (with auto close on): staff can't open, an admin
   -- can and auto close is turned off
   perform set_config('request.jwt.claims', '', true);
@@ -1558,9 +1628,17 @@ begin
           <> array['amounts', 'id', 'name', 'payments', 'position']
        or v_r -> 'cycle' -> 'plans' -> 1 -> 'amounts' -> '4' <> '[90000, 90000, 90000]'
        or v_r -> 'cycle' -> 'kukkiwon' <> '{"1": 10000, "2": 11000, "3": 14000, "4": 17000}'
-       or v_r -> 'cycle' -> 'requirements' <> (select requirements from public.bb_cycles where id = v_cm)
+       or (not v_has_0024 and v_r -> 'cycle' -> 'requirements' <> (select requirements from public.bb_cycles where id = v_cm))
        or v_r -> 'waiver' <> jsonb_build_object('version_name', v_wv_name, 'body', 'zz test waiver text ' || v_tag) then
       raise exception 'TEST FAILED: T5a public cycle answer for % is not as designed: %', v_txt, left(v_r::text, 600);
+    end if;
+    -- (0024) the requirements are the rubric's public view (in its own
+    -- block: the function doesn't exist before 0024)
+    if v_has_0024 then
+      if v_r -> 'cycle' -> 'requirements'
+         is distinct from (select public.bb_rubric_public(requirements) from public.bb_cycles where id = v_cm) then
+        raise exception 'TEST FAILED: T5a (0024) the public requirements must be bb_rubric_public of the cycle''s rubric';
+      end if;
     end if;
     -- no ids (except the plans'), no counts, nobody's data
     if position(v_cm::text in v_r::text) > 0
@@ -2985,13 +3063,23 @@ begin
   if (select count(*) from public.change_log where id > v_mark) <> 2 then   -- the day + the cycle's version
     raise exception 'TEST FAILED: T10 update_cycle must log exactly the changed day and the cycle';
   end if;
-  -- 5 set registration (S, the desk)
+  -- 5 set registration: an admin opens (S / A; since 0024 the first
+  --   opening is admins only), the desk closes (S) - valid with and
+  --   without 0024
+  select coalesce(max(id), 0) into v_mark from public.change_log;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_r := public.bb_set_registration(v_k2, 2, true);
+  reset role;
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST SETUP: T10 the admin''s opening answered %', v_r; end if;
+  perform pg_temp.bbt_log(v_mark, 'bb_set_registration', v_admin, v_a1, v_txt2, 'set_registration (open)');
   select coalesce(max(id), 0) into v_mark from public.change_log;
   set local role authenticated;
   perform set_config('request.jwt.claims', v_c_d1, true);
-  v_r := public.bb_set_registration(v_k2, 2, true);
+  v_r := public.bb_set_registration(v_k2, (v_r ->> 'version')::integer, false);
   reset role;
-  perform pg_temp.bbt_log(v_mark, 'bb_set_registration', v_desk, v_d1, 'Staff', 'set_registration');
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST SETUP: T10 the desk''s close answered %', v_r; end if;
+  perform pg_temp.bbt_log(v_mark, 'bb_set_registration', v_desk, v_d1, 'Staff', 'set_registration (close)');
   -- 6 add candidate (S)
   select coalesce(max(id), 0) into v_mark from public.change_log;
   set local role authenticated;
@@ -3352,11 +3440,21 @@ begin
     raise exception 'TEST FAILED: C4 expected exactly % functions from 0016 (one version each, 25 staff), found %',
       cardinality(v_staff_fns || v_public_fns || v_helper_fns), v_n;
   end if;
-  -- no other bb_ function exists (nothing left over from an old version)
+  -- no other bb_ function exists (nothing left over from an old version);
+  -- after 0024 exactly its 19 new functions are there too (CONTRACT-0024 15)
   select string_agg(p.oid::regprocedure::text, ', ') into v_txt
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-   where n.nspname = 'public' and p.proname like 'bb\_%' and not (p.proname = any (v_staff_fns || v_public_fns || v_helper_fns));
+   where n.nspname = 'public' and p.proname like 'bb\_%' and not (p.proname = any (v_staff_fns || v_public_fns || v_helper_fns))
+     and not (v_has_0024 and p.proname = any (v_rubric_fns));
   if v_txt is not null then raise exception 'TEST FAILED: C4 unexpected bb_ function(s): %', v_txt; end if;
+  if v_has_0024 and (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                      where n.nspname = 'public' and p.proname = any (v_rubric_fns)) <> 19 then
+    raise exception 'TEST FAILED: C4 (0024) expected exactly the 19 functions 0024 adds, one version each';
+  end if;
+  if not v_has_0024 and exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                                 where n.nspname = 'public' and p.proname = any (v_rubric_fns)) then
+    raise exception 'TEST FAILED: C4 a 0024 function exists without 0024''s tables';
+  end if;
   select string_agg(x.sig, ', ') into v_txt
     from unnest(array[
       'public.bb_save_waiver(uuid, text)',
@@ -3461,7 +3559,8 @@ begin
   if v_n <> 6 + 11 + 13 + 13 then raise exception 'TEST FAILED: C6 expected % triggers on the 0016 tables, found %', 6 + 11 + 13 + 13, v_n; end if;
   select string_agg(x.tbl, ', ') into v_txt
     from (values ('bb_settings', 'id,singleton', ''),
-                 ('bb_cycles', 'id,public_code_worcester,public_code_shrewsbury,prices_from', ''),
+                 ('bb_cycles', 'id,public_code_worcester,public_code_shrewsbury,prices_from',
+                  case when v_has_0024 then 'requirements' else '' end),
                  ('bb_cycle_days', 'id,cycle_id', ''),
                  ('bb_cycle_plan_payments', 'id,cycle_plan_id,payment_no', ''),
                  ('bb_candidates', 'id,cycle_id,source,reference,registered_at', 'date_of_birth,email_for_results,personal_removed_at'),
