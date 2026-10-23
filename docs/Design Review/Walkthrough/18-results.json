@@ -1,0 +1,42 @@
+{
+  "title": "Item 18 · After the testing day: results, print and CSV",
+  "subtitle": "<b>Approved in each section; one part was left for later.</b> After a testing day, Star has a Results tab with result tags, Print results, an admin-only CSV of the whole event and Email result. Color Belt types results straight into its Grading tab and prints a grading sheet as the paper backup; a printed results list was left as “a later, separate decision” (v0.189), a CSV was never discussed, and there is no email because Color Belt's form asks names only (v0.132). The words differ: Color Belt “Pass / Not passed / No show”, Star “Passed / Make-up / Not finished”. Black Belt already plans Star's shape — Candidates · Grading · Results (its plan; contract 0025 approved on its branch, not merged yet). <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/18-star-results.png",
+          "crop": [70, 96, 1190, 520],
+          "scale": 0.78,
+          "caption": "<b>1. Star's Results tab</b> (v0.143, v0.144, v0.514): result tags (“Passed”, “Make-up”, “Not finished”), Print results, Download CSV (admins only), Email result and Mark as sent.",
+          "marks": [[975, 259, 285, 40], [597, 532, 62, 28], [1095, 549, 124, 36]]
+        },
+        {
+          "src": "shots/18-colorbelt-grading.png",
+          "crop": [70, 96, 1190, 520],
+          "scale": 0.78,
+          "caption": "<b>2. Color Belt:</b> results are typed straight into Grading — “Pass / Not passed / No show” — and “Print grading sheet” is the paper backup for the day (v0.182, v0.189). After the testing: no results print, no CSV, no email.",
+          "marks": [[934, 485, 272, 34], [1085, 311, 175, 40]]
+        }
+      ]
+    },
+    {
+      "label": "Proposed (option B) · one results pattern",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/18-colorbelt-results-MOCKUP.png",
+          "crop": [70, 220, 1190, 340],
+          "scale": 0.78,
+          "caption": "<b>3. Color Belt with option B:</b> Star's Print results and Download CSV next to the class switch (Star has them next to its Dan switch), and the result button says “Passed”, Star's word. Results stay in Grading — Color Belt types them in directly, so it needs no Results tab.",
+          "marks": [[975, 267, 285, 40], [934, 485, 72, 34]]
+        }
+      ],
+      "note": "<b>One results pattern (B):</b> the same word where a result means the same (“Passed”); after any testing day each testing section can print its results (who passed to which belt, a page per class) and admins can download a CSV of the event; Email result and Mark as sent only where the form collects an email (Star, and Black Belt, whose planned Results tab is Star's shape). Picture 3 is drawn over the real Grading tab; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question: one results pattern for the testing sections?</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> after a color belt testing there is no way to print or export who passed; “Pass” and “Passed” for the same result.<br><b>B · Recommended: one results pattern (picture 3).</b> Color Belt gets Star's Print results and an admin-only Download CSV and says “Passed”; Black Belt's planned Results tab already fits; Email result only where the form collects an email. <i>+</i> after any testing the desk can print who passed to which belt, for belts and certificates; one way to do it in every section. <i>−</i> a new print layout and a CSV for Color Belt (copied from Star's); the CSV holds families' payments, so admins only.<br><b>C · Only the word:</b> Color Belt says “Passed”; no print or CSV. <i>+</i> almost no work. <i>−</i> the after-testing gap stays, and v0.189's deferred decision stays open."
+}
