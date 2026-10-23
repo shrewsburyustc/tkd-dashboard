@@ -187,4 +187,4 @@ All the items below were applied to the plan.
 
 **2026-10-23: migration 0025 reserved** (Main 3abb8a9, merged into black-belt): Black Belt grading and results. **Next:** DB plan `TKD-BlackBelt-DB-Plan-0025.md` → security review → Jeffrey’s questions one at a time → CONTRACT-0025 → build. step0025 in run.mjs, "## Migration 0025" in SETUP.md.
 
-**2026-10-23: 0025 DB plan** (`TKD-BlackBelt-DB-Plan-0025.md`) drafted + security-reviewed (4 must / 10 should applied). Questions answered: Q-G1 A (v0.948), Q-G2 A (v0.949), Q-G3 A (v0.950), Q-G4 A (v0.951), Q-G5 C (v0.952, flag: differs from v0.940), Q-G6 B (v0.953). **Next:** Jeffrey OKs smaller defaults S1–S24 → Q-G4 Dan-change dialog mockup → CONTRACT-0025 → security review → build.
+**2026-10-23: 0025 DB plan** (`TKD-BlackBelt-DB-Plan-0025.md`) drafted + security-reviewed (4 must / 10 should applied). Questions answered: Q-G1 A (v0.948), Q-G2 A (v0.949), Q-G3 A (v0.950), Q-G4 A (v0.951), Q-G5 C (v0.952, flag: differs from v0.940), Q-G6 B (v0.953). **S1–S24 OK (v0.954).** **Next:** Q-G4 Dan-change dialog mockup → CONTRACT-0025 → security review → build.
