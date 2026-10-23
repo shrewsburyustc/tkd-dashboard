@@ -180,3 +180,4 @@ All the items below were applied to the plan.
 **G6 = A (v0.943):** Grading tab = day switch (+ Other requirements), then Dan, grid of that day's subjects. **G7 asked** (measured Physical entry).
 **G7 = A (v0.944):** measured subjects take the number; grade worked out with the age bracket. **G8 asked** (where extra points are entered).
 **G8 = A (v0.945):** extra points counts in the Grading tab (Extra points in the day switch). **G9 asked** (Results tab).
+**G9 = A (v0.946):** Results tab = all of Star's (Email result + texts, printed sheet, admin CSV).
