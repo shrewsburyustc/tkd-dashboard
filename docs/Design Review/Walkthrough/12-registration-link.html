@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Item 12a · The Registration link button and box</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2000px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Item 12a · The Registration link button and box</h1>
+<p class="sub"><b>Approved in each section, plus one unclear point.</b> Every section has a Registration link box with the link and its QR code, but the buttons inside differ, and the box opens from different places: an outline button in the page header (Color Belt, Star), the page's blue button (Camps — only an icon on phones, never recorded: <b>unclear</b>), or the ⋯ menu (Black Belt). Forms calls it “Share” (it also holds kiosk mode). <span style="color:#6B6B6B">(Preview screenshots · PC size, phone 390 wide · fake data)</span></p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <div class="row"><figure style="width:319.2px">
+    <div class="shot" style="width:319.2px;height:357.7px">
+      <img src="shots/12a-colorbelt-registration-link.png" style="left:-288.4px;top:-50.4px;width:896px">
+      <div class="mark" style="left:74.39999999999999px;top:257.8px;width:170.39999999999998px;height:27.599999999999998px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>1. Color Belt:</b> Copy link · Print flyer — no way to download the QR code (Star the same, one card per school).</figcaption>
+  </figure><figure style="width:319.2px">
+    <div class="shot" style="width:319.2px;height:357.7px">
+      <img src="shots/12b-camps-registration-link.png" style="left:-288.4px;top:-50.4px;width:896px">
+      <div class="mark" style="left:60.39999999999999px;top:257.8px;width:198.39999999999998px;height:27.599999999999998px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>2. Camps:</b> Copy link · Download QR code — no flyer, as you chose (v0.232: you design camp flyers yourself). Black Belt the same, “no flyer for now”.</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:351px">
+    <div class="shot" style="width:351px;height:144px">
+      <img src="shots/12c-blackbelt-registration-links-menu.png" style="left:-792px;top:-108px;width:1152px">
+      <div class="mark" style="left:156.20000000000002px;top:67.10000000000001px;width:184.4px;height:36.8px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>3. Black Belt:</b> “Registration links” hides in the page's ⋯ menu.</figcaption>
+  </figure><figure style="width:351px">
+    <div class="shot" style="width:351px;height:162px">
+      <img src="shots/12d-camps-phone-icon-only.png" style="left:0px;top:-90px;width:351px">
+      <div class="mark" style="left:257px;top:50px;width:40.4px;height:40.4px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>4. Camps on a phone:</b> just a blue QR square — no words (unclear: never recorded).</figcaption>
+  </figure></div>
+  <div class="note">Forms' “Share” already has all three (Copy · Download · Print a sign) plus kiosk mode, so it keeps its own name.</div>
+</div>
+<div class="col after">
+  <div class="label">Proposed (option B) · one button, one box</div>
+  <div class="row"><figure style="width:431.2px">
+    <div class="shot" style="width:431.2px;height:401.79999999999995px">
+      <img src="shots/12e-star-registration-link-three-buttons-MOCKUP.png" style="left:-232.39999999999998px;top:-50.4px;width:896px">
+      <div class="mark" style="left:56.199999999999996px;top:279.5px;width:122.1px;height:26.9px;border-color:#3B8F2A"></div><div class="mark" style="left:253.59999999999997px;top:279.5px;width:121.39999999999999px;height:26.9px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>5.</b> The box everywhere: the link and QR code for each school, with Copy link · <b>Download QR code</b> · Print flyer (Camps and Black Belt keep no flyer, as decided).</figcaption>
+  </figure><figure style="width:351px">
+    <div class="shot" style="width:351px;height:50.4px">
+      <img src="shots/12f-blackbelt-header-button-MOCKUP.png" style="left:-792px;top:-108px;width:1152px">
+      <div class="mark" style="left:167px;top:5px;width:143px;height:36.8px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>6. Black Belt:</b> the same outline “Registration link” button in the page header, instead of the ⋯ item.</figcaption>
+  </figure></div>
+<figure style="width:351px">
+    <div class="shot" style="width:351px;height:162px">
+      <img src="shots/12g-camps-phone-words-MOCKUP.png" style="left:0px;top:-90px;width:351px">
+      <div class="mark" style="left:10.4px;top:119.3px;width:137.6px;height:40.4px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>7. Camps on a phone:</b> the button keeps its words, on its own line under the title, as Color Belt's does.</figcaption>
+  </figure>
+  <div class="note"><b>Copies what's already there:</b> Star's two-school box, Black Belt's and Camps' Download QR code button, and Color Belt's header button. Pictures 5–7 are drawn over the real pages; nothing in the app was changed.</div>
+</div>
+</div>
+<div class="foot"><b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> the QR code can be downloaded in some sections but not others; Black Belt's link hides in ⋯; Camps' phone button is a bare icon.<br><b>B · Recommended: one Registration link button and box.</b> The same “Registration link” button with words on every screen, in the page header (Black Belt moves it out of ⋯; Camps keeps its blue because it's that page's main button). Inside: Copy link and Download QR code everywhere; Print flyer where it is today (Color Belt, Star; Forms' Print a sign) — Camps and Black Belt stay without a flyer, as decided. <i>+</i> the same place and the same buttons everywhere; the QR image for your own flyers in every section. <i>−</i> small changes in four sections.<br><b>C · All three buttons everywhere.</b> As B, but Camps and Black Belt get Print flyer too. <i>+</i> no exceptions. <i>−</i> reverses your Camps choice (you make camp flyers yourself) and Black Belt's “no flyer for now”.</div>
+</body></html>
