@@ -6,6 +6,7 @@
 //   window.__mock10 = 'draw' and window.__menuSpec = ['Edit details', 'Set private testing', '-', …]
 //       a string is an item, '-' starts a new group (a line), and an object adds options:
 //       { label: 'Delete permanently', red: true } or { label, gray: true, reason: '…' }
+//       or { label, tag: 'Admin' } (item 10b, option C: a small gray tag at the end of the line)
 // Star's "Edit candidate" icon is used for "Edit details" when needed. Nothing in the app changes;
 // closing the menu removes it.
 // Run:   node cdp.mjs eval "$(cat mock-item10-order.js)"
@@ -52,6 +53,10 @@
     b.innerHTML = iconFor(it.label) + (it.reason
       ? `<span class="ev-menu-two"><span>${it.label}</span><span class="ev-menu-reason">${it.reason}</span></span>`
       : `<span>${it.label}</span>`);
+    if (it.tag) {
+      // The app's small gray tag look (ttag), pushed to the end of the line.
+      b.insertAdjacentHTML('beforeend', `<span class="ttag" style="margin-left:auto;font-size:11px;padding:0 6px;line-height:18px">${it.tag}</span>`);
+    }
     wrap.append(b);
     m.append(wrap);
   }
