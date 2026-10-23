@@ -52,7 +52,7 @@ import {
 } from './grading.js';
 import {
   RESULT_KINDS, STARTING_TEXTS, resultTextProblem, resultTextProblemDetail, blankValues, buildResultMessage, resultKind, mailtoFor,
-  csvFileName, csvRows, csvText, CSV_COLUMNS,
+  csvFileName, csvRows, csvText, csvCell, CSV_COLUMNS,
 } from './resultEmail.js';
 
 let count = 0;
@@ -3394,6 +3394,17 @@ check('resultEmail.js: the texts\' rules (= bb_result_text_problem), the seed, t
   assert.deepEqual(csv[0], CSV_COLUMNS);
   assert.deepEqual(csv[1], ['1st Dan', 'Lucas Ferreira', 'Worcester', '', '2015-09-12', '17 and under', 'f@example.com', '3 payments', 'No',
     'Late · $330 since May 29', '$330', '60', '', '', '', '12', '275.5', '275', 'Not finished', 'TKD project (late)', 'Not sent yet (Passed sent 2027-06-07)']);
+  // formula guard (OWASP): = + - @ tab and carriage return at the start of TEXT get a leading ';
+  // a plain number (also negative) stays a number
+  assert.equal(csvCell('+1'), "'+1");
+  assert.equal(csvCell('-cmd'), "'-cmd");
+  assert.equal(csvCell('@SUM(A1)'), "'@SUM(A1)");
+  assert.equal(csvCell('\tx'), "'\tx");
+  assert.equal(csvCell('\rx'), `"'\rx"`); // guarded, then quoted (it holds a line break)
+  assert.equal(csvCell('-12.50'), '-12.50');
+  assert.equal(csvCell('-12'), '-12');
+  assert.equal(csvCell('305.75'), '305.75');
+  assert.equal(csvCell('-12.50 x'), "'-12.50 x");
   const text = csvText([['a', 'b,c'], ['=1', 'x"y']]);
   assert.equal(text, '﻿a,"b,c"\r\n\'=1,"x""y"\r\n');
 });

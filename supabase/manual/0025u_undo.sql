@@ -33,6 +33,15 @@
 
 begin;
 
+-- 0. Hold the tables still: nobody can write a grade, a send, a download
+--    or a candidate between the check below and the removal (the locks
+--    end with this transaction). If 0025 isn't installed, the check below
+--    says so; these lines then fail on the missing tables, which also
+--    changes nothing.
+lock table public.bb_grades, public.bb_extra_counts, public.bb_makeup_subjects, public.bb_result_texts,
+           public.bb_result_sends, public.bb_downloads, public.bb_cycle_grading_started, public.bb_candidates
+  in access exclusive mode;
+
 -- 1. Refuse unless nothing real was recorded with 0025
 do $$
 declare

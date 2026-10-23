@@ -1090,7 +1090,10 @@ comment on table public.bb_cycle_grading_started is
 --    age_kept (Q-G2 A): when the purge removes a date of birth, the age on
 --    the cycle's first testing day is kept here, so the result stays
 --    exact. Set once, by the purge only; masked in the history like the
---    date of birth. No new column is granted to anyone.
+--    date of birth. No age range is checked on purpose: an odd date of
+--    birth (1900, or one after the first testing day) must never make the
+--    purge fail - the keep-age trigger (4i) already forces the exact
+--    worked-out value. No new column is granted to anyone.
 -- ---------------------------------------------------------------------
 alter table public.bb_candidates add column if not exists makeup_of_candidate_id uuid null;
 alter table public.bb_candidates add column if not exists makeup_of_cycle_name text null;
@@ -1131,7 +1134,7 @@ alter table public.bb_candidates add constraint bb_candidates_makeup_kukkiwon_ch
 
 alter table public.bb_candidates drop constraint if exists bb_candidates_age_kept_check;
 alter table public.bb_candidates add constraint bb_candidates_age_kept_check
-  check (age_kept is null or (age_kept between 0 and 120 and personal_removed_at is not null));
+  check (age_kept is null or personal_removed_at is not null);
 
 -- The reference (G 27): unique among form and desk rows only; a make-up
 -- row carries its earlier row's reference.
@@ -3763,11 +3766,13 @@ begin
            and c.personal_removed_at is null
            and not exists (select 1 from public.bb_candidates m
                             where m.makeup_of_candidate_id = c.id and m.status = 'active' and m.cycle_id <> p_cycle_id)
-           -- (a quick test that never drops a make-up: a result can be a
-           -- Make-up only with a grade typed on THIS row - kept grades are
-           -- never D, and a make-up row with nothing typed yet still has its
-           -- retests to grade, so it is "not finished")
-           and exists (select 1 from public.bb_grades g where g.candidate_id = c.id and not g.kept)
+           -- (a quick test that never drops a make-up: a form or desk row
+           -- can be a Make-up only with a grade typed on it. A make-up row
+           -- is always worked out: its retest list can be empty when the
+           -- later rubric dropped the subject, and its kept grades alone can
+           -- be below the pass mark)
+           and (c.source = 'makeup'
+                or exists (select 1 from public.bb_grades g where g.candidate_id = c.id and not g.kept))
            and not (v_purge and public.bb_purge_is_due(c.id, v_today))
          order by c.dan, case c.location_code when 'shrewsbury' then 0 else 1 end, lower(c.last_name), lower(c.first_name), c.id
       loop
@@ -4728,6 +4733,9 @@ declare
   v_constraint text;
 begin
   begin
+    if public.has_data_access() is not true then
+      return jsonb_build_object('status', 'no_access');
+    end if;
     return public.bb_update_candidate_core(p_candidate_id, p_expected_version, p_first, p_last, p_date_of_birth, p_email,
                                            p_location_code, p_dan, null, null, null);
   exception

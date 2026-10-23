@@ -1831,6 +1831,15 @@ Then **paste `supabase/migrations/0016_black_belt.sql` again** (0016b; its re-ru
    - `0024_fingerprints.sql`: the md5 of `bb_cycles_rules()`, `bb_save_cycle_dan` and `bb_undo_cycle_dan` only; its `check | 0016_rerun | ok` stays.
 3. **Security advisor:** exactly **+15** "security definer function executable by authenticated" (the 15 new staff functions; each checks access and role itself) and **+2** "RLS enabled, no policy" (`bb_downloads`, `bb_cycle_grading_started`: INFO, nobody in the app may read them). Nothing else new.
 4. **The three texts:** `select kind, md5(body) from public.bb_result_texts order by kind` = the `text` rows of step 1.
+5. **How long the "Make-up from an earlier cycle" picker takes on production** (`bb_makeup_list`; it missed its 300 ms limit in PGlite on a 6-year, 720-candidate seed — accepted, timed here instead). The function itself answers `no_access` through the connection (it needs a signed-in staff session), so this read-only query times its main work: working out the result of every active, not-purged candidate who has a typed grade, as the picker does. Read `Execution Time` at the bottom (a few ms right after the paste: no grades exist yet; run it again once real cycles are graded):
+
+```sql
+explain (analyze, timing off, summary on)
+select public.bb_candidate_result(c.id)
+  from public.bb_candidates c
+ where c.status = 'active' and c.personal_removed_at is null
+   and (c.source = 'makeup' or exists (select 1 from public.bb_grades g where g.candidate_id = c.id and not g.kept));
+```
 
 ### 0025d. Run the tests (you, in the SQL Editor)
 1. `supabase/tests/0025_tests.sql` with `<paste-admin-UID-here>` / `<paste-desk-UID-here>` replaced → **ALL 0025 TESTS PASSED**. It makes its own `zz test …` cycles and candidates, moves some into the past, turns the purge numbers on for a moment and switches one trigger off for one statement (the 10-second undo test) — everything is rolled back. Supabase may warn about destructive operations: confirm.

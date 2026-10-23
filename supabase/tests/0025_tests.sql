@@ -134,13 +134,15 @@ declare
 
   -- cycles: Spring (past), Fall and Winter (future), Old (4 years ago),
   -- ND (no testing days: no age), CD (one past day, one today, one future)
-  v_sp uuid; v_fa uuid; v_wi uuid; v_old uuid; v_nd uuid; v_cd uuid; v_del uuid; v_reg uuid;
+  v_sp uuid; v_fa uuid; v_wi uuid; v_old uuid; v_nd uuid; v_cd uuid; v_del uuid; v_reg uuid; v_aut uuid; v_lat uuid;
   v_sp_first date; v_fa_first date; v_old_first date;
   -- candidates
   v_alex uuid; v_zoe uuid; v_mia uuid; v_rina uuid; v_lucas uuid; v_sam uuid; v_teen uuid; v_wd uuid; v_dup uuid;
   v_olga uuid; v_nage uuid; v_cdk uuid; v_dk uuid; v_pay uuid;
   v_mu uuid; v_mu2 uuid; v_mu3 uuid; v_mur uuid; v_mut uuid;
   v_send uuid; v_send2 uuid;
+  v_hand_sends uuid[] := '{}';   -- sends this test writes or changes by hand (G16)
+  v_dee uuid; v_deemu uuid; v_bea uuid; v_fay uuid;
   v_alex_k text; v_zoe_ids text[];
   -- subject ids of 1st Dan (default rubric)
   v_s_fs text; v_s_ref text; v_s_kor text; v_s_tkd text; v_s_one text; v_s_basic text; v_s_power text;
@@ -512,15 +514,17 @@ begin
   --           (Curriculum)
   --   Del     for Delete cycle; G8a / G8b / G8c fresh cycles for Q-G1
   --   Reg     the family form's speed (G18)
+  --   Autumn  today + 300, its 1st Dan rubric WITHOUT "1/2 or 1 mile"; Later today + 400 (S1)
   -- Every cycle gets the original default rubric (as a hand fix).
   -- -------------------------------------------------------------------
   perform set_config('request.jwt.claims', v_c_a1, true);
-  v_list := array['Spring', 'Fall', 'Winter', 'Summer', 'Old', 'ND', 'CD', 'Del', 'G8a', 'G8b', 'G8c', 'Reg'];
+  v_list := array['Spring', 'Fall', 'Winter', 'Summer', 'Old', 'ND', 'CD', 'Del', 'G8a', 'G8b', 'G8c', 'Reg', 'Autumn', 'Later'];
   v_ok := '{}';
   foreach v_txt in array v_list loop
     v_r := public.bb_add_cycle(pg_temp.bbg_payload(v_tag || ' ' || v_txt,
                                                    v_today + case v_txt when 'Fall' then 100 when 'Winter' then 170
-                                                                        when 'Summer' then 240 else 30 end,
+                                                                        when 'Summer' then 240 when 'Autumn' then 300
+                                                                        when 'Later' then 400 else 30 end,
                                                    v_today + 20), null);
     if v_r ->> 'status' <> 'ok' then
       raise exception 'TEST SETUP: adding cycle % answered %', v_txt, v_r;
@@ -531,9 +535,13 @@ begin
   v_old := v_ok[5]::uuid; v_nd := v_ok[6]::uuid; v_cd := v_ok[7]::uuid; v_del := v_ok[8]::uuid;
   v_none := array[v_ok[9], v_ok[10], v_ok[11], v_ok[12], v_ok[4]];   -- G8a, G8b, G8c, Reg, Summer
   v_reg := v_ok[12]::uuid;
+  v_aut := v_ok[13]::uuid;
+  v_lat := v_ok[14]::uuid;
   perform set_config('request.jwt.claims', '', true);
   update public.bb_cycles y set requirements = (select r.doc from pg_temp.bbg_rubric r)
    where y.id = any (array(select x::uuid from unnest(v_ok) as x));
+  -- Autumn's 1st Dan has no "1/2 or 1 mile" (a hand fix before any grading)
+  update public.bb_cycles y set requirements = y.requirements #- '{dans,0,parts,0,subjects,8}' where y.id = v_aut;
 
   v_sp_first := v_today - 30;
   v_fa_first := v_today + 100;
@@ -556,6 +564,11 @@ begin
   v_pay   := pg_temp.bbg_add(v_sp, 'Pat', 'Paytest', pg_temp.bbg_dob(v_sp_first, 30), 'worcester', 1, v_mail || '.pay@example.com');
   v_olga  := pg_temp.bbg_add(v_old, 'Olga', 'Oldtest', pg_temp.bbg_dob(v_old_first, 40), 'worcester', 1, v_mail || '.olga@example.com');
   v_mut   := pg_temp.bbg_add(v_old, 'Pia', 'Purgetest', pg_temp.bbg_dob(v_old_first, 40), 'worcester', 1, v_mail || '.pia@example.com');
+  -- odd dates of birth for the purge (M1): born 1900-01-01, and born AFTER the first testing day
+  v_bea   := pg_temp.bbg_add(v_old, 'Bea', 'Oldesttest', date '1900-01-01', 'worcester', 1, v_mail || '.bea@example.com');
+  v_fay   := pg_temp.bbg_add(v_old, 'Fay', 'Laterdobtest', v_old_first + 400, 'worcester', 1, v_mail || '.fay@example.com');
+  -- Dee: Rina's sheet (a D in the mile + below the mark), for the S1 chain
+  v_dee   := pg_temp.bbg_add(v_sp, 'Dee', 'Droppedtest', pg_temp.bbg_dob(v_sp_first, 29), 'worcester', 1, v_mail || '.dee@example.com');
   v_nage  := pg_temp.bbg_add(v_nd, 'Nora', 'Noagetest', pg_temp.bbg_dob(v_today, 20), 'worcester', 1, v_mail || '.nora@example.com');
   v_cdk   := pg_temp.bbg_add(v_cd, 'Cody', 'Daytest', pg_temp.bbg_dob(v_today, 20), 'worcester', 1, v_mail || '.cody@example.com');
   v_dk    := pg_temp.bbg_add(v_del, 'Dora', 'Deltest', pg_temp.bbg_dob(v_today, 20), 'worcester', 1, v_mail || '.dora@example.com');
@@ -604,6 +617,7 @@ begin
   perform pg_temp.bbg_sheet(v_zoe, v_sheet_zoe);
   perform pg_temp.bbg_sheet(v_mia, v_sheet_mia);
   perform pg_temp.bbg_sheet(v_rina, v_sheet_rina);
+  perform pg_temp.bbg_sheet(v_dee, v_sheet_rina);
   perform pg_temp.bbg_sheet(v_lucas, v_sheet_lucas);
   perform pg_temp.bbg_sheet(v_sam, v_sheet_sam);
   perform pg_temp.bbg_sheet(v_dup, v_sheet_zoe);
@@ -1037,6 +1051,31 @@ begin
       end if;
     end;
   end loop;
+  -- ... and bb_payments_makeup ALONE refuses every kind (0016's own guard
+  -- switched off for these four statements; the rollback undoes it too)
+  alter table public.bb_payments disable trigger bb_payments_guard;
+  foreach v_txt in array array['payment', 'refund', 'reversal', 'returned'] loop
+    begin
+      insert into public.bb_payments (candidate_id, cycle_id, kind, amount_cents, method, paid_on, for_items, location_code,
+                                      cycle_name, recorded_by_name, reverses_payment_id)
+      values (v_mu, v_fa, v_txt, case when v_txt = 'payment' then 1000 else -1000 end,
+              case when v_txt = 'returned' then 'check' else 'cash' end, v_today,
+              case when v_txt = 'payment' then array['p1'] end, 'worcester', v_tag || ' Fall', 'zz',
+              case when v_txt in ('reversal', 'returned') then (select id from public.bb_payments where candidate_id = v_pay limit 1) end);
+      alter table public.bb_payments enable trigger bb_payments_guard;
+      perform pg_temp.bbg_fail('G5 bb_payments_makeup alone let a ' || v_txt || ' through', null);
+    exception when check_violation then
+      get stacked diagnostics v_txt2 = constraint_name;
+      if v_txt2 <> 'bb_payments_makeup' then
+        alter table public.bb_payments enable trigger bb_payments_guard;
+        perform pg_temp.bbg_fail('G5 a make-up ' || v_txt || ' must be refused by bb_payments_makeup', v_txt2);
+      end if;
+    end;
+  end loop;
+  alter table public.bb_payments enable trigger bb_payments_guard;
+  if (select tgenabled from pg_trigger where tgrelid = 'public.bb_payments'::regclass and tgname = 'bb_payments_guard') <> 'O' then
+    perform pg_temp.bbg_fail('G5 bb_payments_guard must be enabled again', null);
+  end if;
   -- the reference unique index ignores make-ups, the one-active index doesn't (the race)
   perform set_config('tkd.action', 'bb_add_makeup', true);
   begin
@@ -1144,7 +1183,9 @@ begin
   perform set_config('request.jwt.claims', '', true);
   perform set_config('tkd.action', 'bb_mark_result_sent', true);
   insert into public.bb_result_sends (candidate_id, marked_by_name, result_status, result_total, result_needs, result_key)
-  values (v_mu3, '', 'makeup', 1, '[]', md5('x'));
+  values (v_mu3, '', 'makeup', 1, '[]', md5('x'))
+  returning id into v_send;
+  v_hand_sends := v_hand_sends || v_send;
   perform set_config('tkd.action', '', true);
   perform set_config('request.jwt.claims', v_c_a1, true);
   v_r := public.bb_delete_candidate(v_mu3, (select version from public.bb_candidates where id = v_mu3));
@@ -1190,6 +1231,27 @@ begin
   -- Mia's own row: already added on THIS cycle
   if not (pg_temp.bbg_row(v_r, v_mia) ->> 'already_added')::boolean then
     perform pg_temp.bbg_fail('G7e the picker marks Mia "already added" on Fall', null);
+  end if;
+
+  -- G7f (S1). A make-up whose D subject isn't in the later rubric: Dee (D in
+  -- the mile, below the mark) into Autumn, whose 1st Dan has no mile. No
+  -- retest is left and the kept grades alone (252.5) are below 293: her
+  -- make-up row is itself a Make-up (choice needed), and the picker of an
+  -- even later cycle must list it.
+  v_r := public.bb_add_makeup(v_aut, v_dee);
+  if v_r ->> 'status' <> 'ok' or (v_r ->> 'retest_count')::integer <> 0 or (v_r ->> 'kept_count')::integer <> 25 then
+    perform pg_temp.bbg_fail('G7f Dee into Autumn (no mile): 25 kept, nothing to retest', v_r::text);
+  end if;
+  v_deemu := (v_r ->> 'id')::uuid;
+  v_x := public.bb_candidate_result(v_deemu);
+  if v_x ->> 'status' <> 'makeup' or v_x -> 'reasons' <> '["below"]' or not (v_x ->> 'complete')::boolean
+     or not (v_x ->> 'choice_needed')::boolean or (v_x ->> 'total')::numeric <> 252.5 then
+    perform pg_temp.bbg_fail('G7f Dee''s make-up row: complete, below the mark, choice needed', v_x::text);
+  end if;
+  v_x := pg_temp.bbg_row(public.bb_makeup_list(v_lat), v_deemu);
+  if v_x is null or not (v_x ->> 'choice_needed')::boolean or v_x ->> 'cycle_name' <> v_tag || ' Autumn'
+     or pg_temp.bbg_row(public.bb_makeup_list(v_lat), v_dee) is not null then
+    perform pg_temp.bbg_fail('G7f the later picker lists the make-up row with nothing typed on it (and not Dee''s first row)', v_x::text);
   end if;
 
 
@@ -1358,6 +1420,7 @@ begin
                                       undone_at, undone_by_name)
   values (v_lucas, 'Faked Name', 'passed', 1, '[]', md5('zz'), now(), 'Faked Too')
   returning id into v_send;
+  v_hand_sends := v_hand_sends || v_send;
   if (select marked_by_name from public.bb_result_sends where id = v_send) = 'Faked Name'
      or (select undone_at from public.bb_result_sends where id = v_send) is not null then
     perform pg_temp.bbg_fail('G5 a send keeps the writer''s name or undone time', null);
@@ -1647,6 +1710,7 @@ begin
     v_send := (v_r ->> 'sent_id')::uuid;
     alter table public.bb_result_sends disable trigger bb_result_sends_guard;
     update public.bb_result_sends set marked_at = now() - make_interval(secs => v_i) where id = v_send;
+    v_hand_sends := v_hand_sends || v_send;
     alter table public.bb_result_sends enable trigger bb_result_sends_guard;
     v_r := public.bb_undo_result_sent(v_send);
     if v_r is distinct from (case when v_i = 9 then '{"status": "ok"}' else '{"status": "not_allowed"}' end)::jsonb then
@@ -1865,6 +1929,25 @@ begin
      or public.bb_candidate_result(v_olga) ->> 'result_key' <> v_x ->> 'result_key'
      or public.bb_candidate_result(v_olga) -> 'age_group' <> '{"from": 18, "to": null}' then
     perform pg_temp.bbg_fail('G15 the purge removes the DOB, keeps the age (no version bump), the grades and the result', null);
+  end if;
+  -- M1: odd dates of birth never stop the purge; the kept age is the exact
+  -- worked-out one. Bea (1900) was due and purged above; Fay (born more than
+  -- a year AFTER the first day: age -1) isn't due yet, so her DOB is removed
+  -- the way the purge does it (its tag, its age rule), which must not fail.
+  perform set_config('tkd.action', 'bb_purge_due', true);
+  update public.bb_candidates c
+     set date_of_birth = null, email_for_results = null, personal_removed_at = now(),
+         age_kept = public.bb_age_on(c.date_of_birth, (select min(d.day_date) from public.bb_cycle_days d where d.cycle_id = c.cycle_id))
+   where c.id = v_fay;
+  perform set_config('tkd.action', '', true);
+  if (select count(*) from public.bb_candidates c
+       where c.id in (v_bea, v_fay) and c.personal_removed_at is not null and c.date_of_birth is null) <> 2
+     or (select age_kept from public.bb_candidates where id = v_bea) <> public.bb_age_on(date '1900-01-01', v_old_first)
+     or (select age_kept from public.bb_candidates where id = v_bea) <= 120
+     or (select age_kept from public.bb_candidates where id = v_fay) <> public.bb_age_on(v_old_first + 400, v_old_first)
+     or (select age_kept from public.bb_candidates where id = v_fay) >= 0 then
+    perform pg_temp.bbg_fail('G15 the purge with a DOB of 1900-01-01 and one after the first day',
+      (select string_agg(first_name || '=' || coalesce(age_kept::text, 'null'), ', ') from public.bb_candidates where id in (v_bea, v_fay)));
   end if;
   -- the history: age_kept only masked ("changed"), never the number
   if not exists (select 1 from public.change_log l where l.id > v_mark and l.table_name = 'bb_candidates' and l.record_id = v_olga
@@ -2201,7 +2284,7 @@ begin
               and (l.action = 'manual' or l.batch_id is null)
               and not (l.table_name = 'bb_makeup_subjects' and l.op = 'insert' and l.record_id in
                         (select m.id from public.bb_makeup_subjects m join public.bb_candidates c on c.id = m.candidate_id where c.cycle_id = v_del))
-              and not (l.table_name = 'bb_result_sends')) then
+              and not (l.table_name = 'bb_result_sends' and l.record_id = any (v_hand_sends))) then
     perform pg_temp.bbg_fail('G16 a grading write without its tag', null);
   end if;
   if exists (select 1 from public.change_log where table_name = 'bb_downloads') then

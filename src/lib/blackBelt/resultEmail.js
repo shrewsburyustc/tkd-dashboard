@@ -290,11 +290,14 @@ export function csvRows(answer, { schoolDateOf = (iso) => String(iso ?? '').slic
   return [CSV_COLUMNS, ...rows];
 }
 
-// One CSV cell: quoted when it holds a comma, a quote or a line break (quotes doubled). A cell
-// starting with = + - @ gets a leading ' so a spreadsheet never runs it as a formula.
-function csvCell(value) {
+// One CSV cell: quoted when it holds a comma, a quote or a line break (quotes doubled). A TEXT
+// cell starting with = + - @, a tab or a carriage return (OWASP's list) gets a leading ' so a
+// spreadsheet never runs it as a formula. A plain number (e.g. -12.50) is a number, not a
+// formula, so it is left as it is.
+const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
+export function csvCell(value) {
   let text = String(value ?? '');
-  if (/^[=+\-@]/.test(text)) text = `'${text}`;
+  if (!PLAIN_NUMBER.test(text) && /^[=+\-@\t\r]/.test(text)) text = `'${text}`;
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
