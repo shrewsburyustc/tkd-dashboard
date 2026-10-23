@@ -264,6 +264,15 @@ Only choices the rulebook and the approved mockups don't settle. Each will be sh
 - **Recommendation:** A.
 - **Touches:** v0.938, v0.170, G 15, R 8, R 16.
 
+## 10b. Jeffrey’s answers (2026-10-23)
+
+- **Q-G1 = A** (v0.948): the first grading row of any kind locks the cycle’s rubric.
+- **Q-G2 = A** (v0.949): the purge keeps `age_kept` with the four safeguards.
+- **Q-G3 = A** (v0.950): grades block Delete permanently and Delete cycle; withdraw instead.
+- **Q-G4 = A** (v0.951): confirm, then clear (Star v0.164); make-up rows can’t change Dan. The dialog is drawn before the build.
+- **Q-G5 = C** (v0.952): Fall 2026 (old Sheet) make-ups register again as normal Spring 2027 candidates (fee, every subject); nothing is loaded. Flagged once: differs from v0.940.
+- **Q-G6 = B** (v0.953): Email result and Mark as sent work as soon as the result is Make-up · D; **S13 changes:** the make-up picker also lists a Make-up · D result that is not complete yet (kept grades are copied at Add from what is graded then; subjects graded later on the earlier cycle are not copied — they stay retests on the later cycle). S17: Email result refuses only withdrawn, Not finished, `choice_needed` and no email.
+
 ## 11. Smaller defaults to OK together
 
 | # | Item | Proposed default | Why |
