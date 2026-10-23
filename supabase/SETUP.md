@@ -1239,6 +1239,8 @@ The 0010 undo (14e) re-runs 0005, and 0005 starts by removing **all** read right
 
 **After migration 0024, never re-run this file except as step 0024f:** it silently undoes 0024's rubric lock and copy rules (0024's fingerprints then show `0016 RE-RUN`).
 
+**After migration 0025, never re-run this file except through 0025g.**
+
 ### 0016c. Read-only checks (Claude runs these through the connection)
 
 1. The list of new objects: 13 `bb_*` tables and the sequence `bb_candidate_ref_seq`.
@@ -1722,6 +1724,7 @@ They would put back the 2-year-only clean-up (0012 also its old history triggers
 2. Supabase will warn about **destructive operations**: the words are in rules (`on delete cascade`), inside functions that run later (removing an undo slot) and in `… if exists` lines that make re-running safe. **Nothing is removed now.** Confirm.
 3. "Success." One transaction: on any error nothing is kept — copy the error to Claude. **Running it again is safe** (tested: no second seed, no second conversion, nothing logged).
 4. **Never re-run `0016_black_belt.sql` after this** (except as part of 0024f): it would silently put back 0016's Add cycle, opening and lock rules. `0024_fingerprints.sql` then shows `check | 0016_rerun | 0016 RE-RUN OVER 0024`; the fix is to paste 0024 again.
+5. **After migration 0025, never re-run this file except through 0025g.**
 
 ### 0024c. Read-only checks (Claude runs these through the connection)
 1. **`supabase/tests/0024_fingerprints.sql`**: every line equals what `supabase/tests/pglite/run.mjs` (step0024) printed, including **`check | 0016_rerun | ok`**. (A single read-only SELECT without the words the connection refuses; run.mjs checks that.)
@@ -1795,6 +1798,68 @@ commit;
 Then **paste `supabase/migrations/0016_black_belt.sql` again** (0016b; its re-run changes no row). Tested in PGlite on every run (`run.mjs` step0024 (k), this block exactly as written here, then 0016): with a cycle the block refuses and changes nothing; without one, 0016's fingerprints afterwards equal those from before 0024 and `0016_tests.sql` passes; then 0024 applies again. The history (`change_log`) keeps 0024's rows (it is append-only).
 
 ---
+
+## Migration 0025: Black Belt grading and results (rulebook v0.938–v0.955)
+
+**Status: built and tested locally (PGlite), NOT applied.** Each step below needs Jeffrey's OK for that step. Contract: `docs/Dashboard Docs/Build contracts/CONTRACT-0025.md` (approved at CP0, rulebook v0.958); the paste follows the run sheet `docs/Testing/Black Belt Testing/TKD-BlackBelt-0025-RunSheet.md` (CP2, written at CP2 prep).
+
+**What it does** (`supabase/migrations/0025_black_belt_grading.sql`):
+- **Grades** (`bb_grades`): one row per graded subject of a candidate — a letter, or a measured number with the way it was done (Pull-up or Hold). **Extra-points counts** (`bb_extra_counts`) and **make-up subjects** (`bb_makeup_subjects`: the ones an admin chose, and the ones a make-up retests).
+- **The result is never stored**: one pure function (`bb_grade_result`) works it out every time from the cycle's rubric, the age on the first testing day and the rows above (v0.938). The app has an exact twin; both are checked against `supabase/tests/0025_grading_cases.json`.
+- **Make-up candidates** (v0.941): a candidate whose result is a Make-up comes back on a later cycle as a row with `source = 'makeup'` — no plan, never a fee (the database refuses any money row for it), the same BB reference, the kept grades copied in (grayed "kept") and the rest retested.
+- **Locks that protect grades:** the cycle's rubric is locked **for good** once its first grading row is written (`bb_cycle_grading_started`, Q-G1 / v0.956); a past testing day or part with grades can't be removed or moved, and the first day can't move once grading started (S2); a candidate or cycle with real grades can't be deleted (Q-G3: withdraw instead); a Dan change asks before clearing the old Dan's grades (Q-G4).
+- **The purge keeps the result** (Q-G2): when the date of birth is removed, the age on the first testing day is kept (`bb_candidates.age_kept`, masked in the history like the DOB). A make-up row's waiver keeps the earlier row's data as long as the make-up's own (S20).
+- **Results:** the three result email texts admins edit (`bb_result_texts`, seeded word for word from R03), **Mark as sent** with its Undo (`bb_result_sends`), and the admin-only **CSV**, logged in `bb_downloads` before any row leaves the database.
+- **Replaces 15 live functions** of 0016 / 0024 (each marked `-- 0025: replaced`; their answers only gain keys, so the live app keeps working until the new screens are deployed) and the trigger `bb_candidates_before_write`. Changes nothing in Finance, Star, Color Belt or the family form.
+
+### 0025a. Before you apply (Claude, read-only through the connection)
+1. **No `bb_grades` yet** (`select to_regclass('public.bb_grades')` is empty).
+2. **`0016_fingerprints.sql` and `0024_fingerprints.sql` = the live baseline** (0024's CP2 record, with `check | 0016_rerun | ok`). Take the baseline of **every** fingerprint file (0003 … 0024) for step 0025c.
+3. **Counts:** how many cycles and candidates exist (`select count(*) from public.bb_cycles`, `… bb_candidates`), for the run sheet.
+4. **Baselines:** the security advisor's list, and the whole-database snapshot outside Black Belt (the run sheet's query).
+
+### 0025b. Apply 0025 (you, in the SQL Editor)
+1. Copy **the whole file** `supabase/migrations/0025_black_belt_grading.sql` → **SQL Editor → New query** → paste → **Run**.
+2. Supabase will warn about **destructive operations**: the words are in rules (`on delete cascade`, `on delete set null`), inside functions that run later (Clear removes a grade row), in `… if exists` lines that make re-running safe and in `alter column … drop not null`. **Nothing is removed now.** Confirm.
+3. "Success." One transaction: on any error nothing is kept — copy the error to Claude. **Running it again is safe** (tested: no second seed, nothing logged, no fingerprint change).
+4. **Never re-run `0016_black_belt.sql` or `0024_black_belt_rubric.sql` after this** (except as part of 0025g): they would silently put back their versions of the replaced functions. `0025_fingerprints.sql` then shows `check | rerun | 0016 OR 0024 RE-RUN OVER 0025 (…)`; the fix is to paste 0025 again (tested).
+
+### 0025c. Read-only checks (Claude runs these through the connection)
+1. **`supabase/tests/0025_fingerprints.sql`**: every line equals what `supabase/tests/pglite/run.mjs` (step0025) printed, including **`check | rerun | ok`**, the `column | bb_candidates.cycle_plan_id | attnotnull=false` row and the three `text` rows (the seeded texts' md5). (A single read-only SELECT without the words the connection refuses; run.mjs checks that.)
+2. **Every earlier fingerprint file** is byte-identical to the 0025a baseline, except (contract §12.3) and nothing else:
+   - `0016_fingerprints.sql`: the `function` rows of the 15 replaced functions — `bb_purge_due_on`, `bb_purge_due`, `bb_candidates_rules`, `bb_candidates_log`, `bb_update_cycle`, `bb_delete_cycle`, `bb_update_candidate`, `bb_change_plan`, `bb_restore_candidate`, `bb_delete_candidate`, `bb_cycle_roster`, `bb_candidate_detail`, `bb_cycles_rules`, `bb_save_cycle_dan`, `bb_undo_cycle_dan` — **md5 only**; the `trigger` row `bb_candidates.bb_candidates_before_write` with the new arguments (`…,makeup_of_cycle_name` / `…,makeup_of_candidate_id,age_kept`); the `constraint` row `bb_candidates.bb_candidates_source_check` (now also `'makeup'`); the `constraint` and `index` rows `bb_candidates_reference_key` **gone**; **added**: the 42 new functions, the 4 triggers `bb_payments_makeup_guard`, `bb_cycle_days_grading`, `bb_cycle_day_parts_grading`, `bb_candidates_keep_age`, the 7 rules `bb_candidates_makeup_of_fk`, `…_makeup_of_self_check`, `…_makeup_of_check`, `…_makeup_name_check`, `…_makeup_plan_check`, `…_makeup_kukkiwon_check`, `…_age_kept_check`, and the 3 indexes `bb_candidates_reference_idx`, `bb_candidates_one_active_makeup_idx`, `bb_candidates_makeup_of_idx`;
+   - `0024_fingerprints.sql`: the md5 of `bb_cycles_rules()`, `bb_save_cycle_dan` and `bb_undo_cycle_dan` only; its `check | 0016_rerun | ok` stays.
+3. **Security advisor:** exactly **+15** "security definer function executable by authenticated" (the 15 new staff functions; each checks access and role itself) and **+2** "RLS enabled, no policy" (`bb_downloads`, `bb_cycle_grading_started`: INFO, nobody in the app may read them). Nothing else new.
+4. **The three texts:** `select kind, md5(body) from public.bb_result_texts order by kind` = the `text` rows of step 1.
+
+### 0025d. Run the tests (you, in the SQL Editor)
+1. `supabase/tests/0025_tests.sql` with `<paste-admin-UID-here>` / `<paste-desk-UID-here>` replaced → **ALL 0025 TESTS PASSED**. It makes its own `zz test …` cycles and candidates, moves some into the past, turns the purge numbers on for a moment and switches one trigger off for one statement (the 10-second undo test) — everything is rolled back. Supabase may warn about destructive operations: confirm.
+2. Then `0024_tests.sql` and `0016_tests.sql` (both know about 0025 and check the new behaviour where 0025 changed it) → **ALL 0024 TESTS PASSED** / **ALL 0016 TESTS PASSED**. Put the UIDs back to the placeholders afterwards (never commit real UIDs).
+
+### 0025e. What the app needs
+Deploy the new front end (Grading and Results tabs, Result emails, Make-up from an earlier cycle, the Dan-change dialog, the "has grades" refusals) **after** the paste, with Jeffrey's OK for the push. Until then the old screens keep working: every replaced read only gains keys (tested: the version-aware `0016_tests.sql` checks the old answers' exact keys), and no grade, make-up or send exists until the new screens write one.
+
+### 0025f. Hand-fix check (Claude, read-only — after any hand fix of a locked rubric or of grading rows)
+A grade or count row that no longer fits its cycle's rubric (a subject or item that isn't there any more, a subject in another part, a way that doesn't exist) is **ignored** by the result (it counts nowhere). This lists them; each one is fixed by hand, deliberately:
+
+```sql
+select 'grade' as what, c.cycle_id, g.candidate_id, g.dan, g.part_code, g.subject_id, g.way, null::text as item_name
+  from public.bb_grades g join public.bb_candidates c on c.id = g.candidate_id join public.bb_cycles y on y.id = c.cycle_id
+ where not exists (select 1 from jsonb_array_elements(y.requirements -> 'dans' -> (g.dan - 1) -> 'parts') as p(e)
+                   cross join lateral jsonb_array_elements(p.e -> 'subjects') as s(e)
+                   where p.e ->> 'code' = g.part_code and s.e ->> 'id' = g.subject_id
+                     and (g.way is null or g.way < jsonb_array_length(s.e -> 'ways')))
+union all
+select 'count', c.cycle_id, x.candidate_id, x.dan, null, null, null, x.item_name
+  from public.bb_extra_counts x join public.bb_candidates c on c.id = x.candidate_id join public.bb_cycles y on y.id = c.cycle_id
+ where not exists (select 1 from jsonb_array_elements(y.requirements -> 'dans' -> (x.dan - 1) -> 'extra_points' -> 'items') as i(e)
+                   where i.e ->> 'name' = x.item_name);
+```
+
+Also: **removing a cycle by hand** in the SQL Editor is refused once it ever had grading (the "grading started" mark only goes with Delete cycle). To do it on purpose, run `select set_config('tkd.action', 'bb_delete_cycle', true);` first, in the same transaction.
+
+### 0025g. Undo 0025 (only with Jeffrey's OK, and only before anyone graded)
+Paste **`supabase/manual/0025u_undo.sql`** (whole file) into the SQL Editor and Run. It **refuses** (and changes nothing) while any grade, count or make-up subject, any "grading started" mark, make-up candidate, "sent" mark, CSV download row, changed result text or kept age exists — those are real records. Otherwise it removes 0025's seven tables (with their triggers), its three `bb_candidates` columns, the seven new rules, the three new indexes, the four triggers on old tables and every new function, and puts back — **from copies kept in the script, never by re-running 0016 or 0024** — `bb_candidates_before_write`'s arguments, `not null` on `cycle_plan_id`, `bb_candidates_reference_key`, the `source` rule and every replaced 0016 / 0024 function. Afterwards `0016_fingerprints.sql` and `0024_fingerprints.sql` equal 0025a's baseline and `0016_tests.sql` / `0024_tests.sql` pass. Tested in PGlite on every run (`run.mjs` step0025 (g): the refusals, then on a clean copy the script exactly as written, then 0025 again). The history (`change_log`) keeps 0025's rows (it is append-only). To redo: paste 0025 again.
 
 ## Admin: change the front-desk PIN or password
 

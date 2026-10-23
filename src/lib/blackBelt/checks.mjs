@@ -7,6 +7,12 @@
 // database test cases (0016_tests.sql T3–T8) that don't need real sign-in sessions, check that
 // startingPoint.js holds exactly the migration's seed, and check that no preview function ever
 // changes or removes a payment row (payments are append-only).
+// Migration 0025 (grading and results, contract 0025 §13.3) adds: every case of the shared
+// supabase/tests/0025_grading_cases.json through grading.js (and, when PGlite saved them, a
+// key-by-key comparison with the SQL's own answers), the mockup cast, the number formats and
+// words, resultEmail.js (the text rules, the seed, the blanks, the CSV), and the preview store's
+// new functions: one check per new status, the privacy of every read, Q-G1, S2, Q-G3, Q-G4,
+// make-ups, Mark as sent and the purge's kept age.
 // Migration 0024 (the rubric editor, contract 0024 §10.2) adds: the v1 → v2 conversion keeps every
 // number (rubricDefault.js = rubricFromV1 of the starting point, with the CP1-approved numbers
 // typed in), the maxima, the validator (rubric.js danProblems) against its own cases and the
@@ -39,6 +45,15 @@ import {
 } from './rubric.js';
 import { DEFAULT_RUBRIC } from './rubricDefault.js';
 import { canOpenRegistration } from './rules.js';
+import {
+  gradeResult, keptMatch, ageGroups, ageGroupOf, measuredLetter, extraPoints, resultKey, resultKeyInput, trimScaleText, WITHDRAWN_RESULT_KEY,
+  RESULT_KEYS, RESULT_SUBJECT_KEYS, danSubjects, subjectNames, minutesFromText, minutesText, parseMeasured, formatMeasured, feetAndInches,
+  unitShort, cutoffWords, reachedWords, startingTicks, bestCase, leftWords, notFinishedWords, MEASURED_RANGE_MESSAGE,
+} from './grading.js';
+import {
+  RESULT_KINDS, STARTING_TEXTS, resultTextProblem, resultTextProblemDetail, blankValues, buildResultMessage, resultKind, mailtoFor,
+  csvFileName, csvRows, csvText, CSV_COLUMNS,
+} from './resultEmail.js';
 
 let count = 0;
 function check(label, fn) {
@@ -511,7 +526,7 @@ check('store: the seed = 0016 section 11n', () => {
   saved = null;
   assert.ok(BB_RPC_NAMES.includes('bb_cycles_list') && BB_WRITE_RPC_NAMES.includes('bb_add_cycle'));
   assert.equal(BB_STORE_KEY, 'tkd.preview.blackBelt');
-  assert.equal(BB_TABLES.length, 15); // 0016's 13 + 0024's bb_default_rubric and bb_rubric_undo
+  assert.equal(BB_TABLES.length, 22); // 0016's 13 + 0024's bb_default_rubric and bb_rubric_undo + 0025's 7
   assert.deepEqual(s.bb_default_rubric[0].sheet, DEFAULT_RUBRIC); // 0024's seed
   assert.deepEqual(s.bb_rubric_undo, []);
 });
@@ -1492,7 +1507,8 @@ check('B2 store: the roster = 16c (Candidates 1 sample, order, money, no persona
     '2 worcester Silva', '3 shrewsbury Nguyen', '4 shrewsbury Garcia',
   ]);
   assert.deepEqual(Object.keys(answer.rows[0]).sort(), ['dan', 'duplicate_of', 'duplicate_state', 'first_name', 'has_payment_rows', 'id', 'kukkiwon',
-    'last_name', 'location_code', 'money', 'plan_id', 'plan_name', 'reference', 'registered_at', 'source', 'status', 'version', 'withdrawn_reason'].sort());
+    'last_name', 'location_code', 'money', 'plan_id', 'plan_name', 'reference', 'registered_at', 'source', 'status', 'version', 'withdrawn_reason',
+    'is_makeup', 'makeup_of_cycle_name', 'retest_names', 'has_grades'].sort()); // (the last four: 0025 §6.5)
   const byLast = (last, i = 0) => answer.rows.filter((r) => r.last_name === last)[i];
   assert.equal(byLast('Kim').money.items, undefined); // the roster's money has no item list
   const tag = (r) => [r.money.tag, r.money.balance_cents];
@@ -1533,7 +1549,7 @@ check('B2 store: the detail = 16d, the signature = 16e, the receipt = 16f', () =
   assert.deepEqual(Object.keys(d.candidate).sort(), ['age_on_first_day', 'created_at', 'created_by_name', 'cycle_id', 'cycle_plan_id', 'dan', 'date_of_birth',
     'duplicate_of', 'duplicate_state', 'email_for_results', 'first_name', 'id', 'kukkiwon', 'kukkiwon_added_on', 'last_name', 'location_code',
     'personal_removed_at', 'plan', 'reference', 'registered_at', 'source', 'status', 'under_18_on_first_day', 'updated_at', 'updated_by_name',
-    'version', 'withdrawn_at', 'withdrawn_by_name', 'withdrawn_reason'].sort());
+    'version', 'withdrawn_at', 'withdrawn_by_name', 'withdrawn_reason', 'is_makeup', 'makeup_of_cycle_name', 'retest_names', 'has_grades'].sort());
   assert.deepEqual([d.candidate.date_of_birth, d.candidate.age_on_first_day, d.candidate.under_18_on_first_day], ['2012-03-04', 15, true]);
   assert.deepEqual(d.candidate.plan, { name: '3 payments', payments_count: 3 });
   assert.deepEqual(d.waiver, {
@@ -2985,6 +3001,829 @@ check('store: console helpers for the rubric — other admin, expire undo, failN
   broken.bb_cycles[0].requirements = { schema_version: 1, dans: [] };
   saved = { ...broken, schema: 'bb-1' };
   assert.equal(db().bb_cycles.length, 0);
+});
+
+// =====================================================================================
+// ======================= Grading and results (migration 0025, contract 0025 §13) =======================
+// =====================================================================================
+// grading.js (the JS twin of bb_grade_result and friends) against the shared fixture
+// supabase/tests/0025_grading_cases.json — the SAME cases PGlite runs through the SQL — plus the
+// helpers, resultEmail.js, and the preview store's new functions (mockGrading.js): one check per
+// new status (kept, already_added, choice_needed, not_finished, no_email, has_grades), the
+// privacy of every read, Q-G1, S2, Q-G3, Q-G4, the purge's kept age, and the cast sample.
+
+const GRADING_CASES_URL = new URL('../../../supabase/tests/0025_grading_cases.json', import.meta.url);
+const CAST_URL = new URL('../../../docs/Testing/Black Belt Testing/TKD-BlackBelt-Mockup-Cast.json', import.meta.url);
+const CAST = JSON.parse(readFileSync(CAST_URL, 'utf8'));
+
+// A fixture Dan: the default rubric's Dan n with the ops applied (the 0024 runner's applyOps).
+function caseDan(base, ops) {
+  const [, n] = /^default:([1-4])$/.exec(base) ?? [];
+  assert.ok(n, `a fixture base: ${base}`);
+  return applyOps(DEFAULT_RUBRIC.dans[Number(n) - 1], ops ?? []);
+}
+// Names → ids in a Dan (subjects by part + name; items stay names).
+function caseInput(c, dan) {
+  const subjects = danSubjects(dan);
+  const idOf = (name, part = null) => {
+    const found = subjects.find((s) => s.subject.name === name && (part === null || s.part === part));
+    assert.ok(found, `${c.name ?? ''}: no subject "${name}"${part ? ` in ${part}` : ''}`);
+    return found.subject.id;
+  };
+  return {
+    grades: (c.grades ?? []).map((g) => ({
+      subject_id: idOf(g.subject, g.part), letter: g.letter ?? null, measured: g.measured ?? null, way: g.way ?? null,
+      kept: g.kept === true, kept_from_cycle_name: g.kept_from_cycle_name ?? null,
+    })),
+    counts: (c.counts ?? []).map((x) => ({ item_name: x.item, count: x.count, kept: x.kept === true })),
+    retest: (c.retest ?? []).map((name) => idOf(name)),
+    chosen: (c.chosen ?? []).map((name) => idOf(name)),
+    idOf,
+  };
+}
+function runResultCase(c) {
+  const dan = caseDan(c.base, c.ops);
+  const input = caseInput(c, dan);
+  return { dan, input, answer: gradeResult(dan, c.age, input.grades, input.counts, input.retest, input.chosen, c.today, c.submissions_due) };
+}
+// Compares one answer with a case's expect (every key expect names).
+function compareResult(c, dan, input, r) {
+  const e = c.expect;
+  const names = (ids) => subjectNames(dan, ids);
+  const label = (k) => `${c.name}: ${k}`;
+  for (const k of ['status', 'reasons', 'complete', 'total', 'maximum', 'pass_mark', 'pass_bracket', 'age_group', 'choice_needed', 'counts']) {
+    if (k in e) assert.deepEqual(r[k], e[k], label(k));
+  }
+  if ('parts' in e) assert.deepEqual(Object.fromEntries(r.parts.map((p) => [p.code, p.points])), e.parts, label('parts'));
+  if ('extra_total' in e) assert.equal(r.extra ? r.extra.total : null, e.extra_total, label('extra_total'));
+  for (const k of ['d_subjects', 'needs', 'late', 'missing']) if (k in e) assert.deepEqual(names(r[k]), e[k], label(k));
+  if ('subjects' in e) {
+    const byName = new Map(r.subjects.map((s) => [names([s.id])[0], s]));
+    assert.equal(r.subjects.length, Object.keys(e.subjects).length === 0 ? 0 : r.subjects.length);
+    for (const [name, want] of Object.entries(e.subjects)) {
+      const got = byName.get(name);
+      assert.ok(got, label(`subject ${name}`));
+      for (const [k, v] of Object.entries(want)) assert.deepEqual(got[k], v, label(`${name}.${k}`));
+    }
+  }
+  if ('result_key_input' in e) {
+    // the 4th field is written with NAMES in the file; rebuilt with the ids of expect.needs
+    const [status, reasons, total] = e.result_key_input.split('|');
+    const ids = (e.needs ?? []).map((n) => input.idOf(n));
+    const text = `${status}|${reasons}|${total}|${ids.join(',')}`;
+    assert.equal(md5Hex(text), r.result_key, label('result_key'));
+    assert.equal(resultKeyInput(r.status, r.reasons, r.total, r.needs), text, label('result_key_input'));
+  }
+}
+// The exact key sets at every level (§4.2), and no age / DOB / email / money anywhere.
+function checkResultShape(r, label) {
+  assert.deepEqual(Object.keys(r).sort(), [...RESULT_KEYS].sort(), `${label}: the result's keys`);
+  for (const s of r.subjects) assert.deepEqual(Object.keys(s).sort(), [...RESULT_SUBJECT_KEYS].sort(), `${label}: a subject's keys`);
+  for (const p of r.parts) assert.deepEqual(Object.keys(p).sort(), ['applying', 'code', 'graded', 'points'], `${label}: a part's keys`);
+  if (r.extra) {
+    assert.deepEqual(Object.keys(r.extra).sort(), ['counted', 'items', 'total']);
+    for (const i of r.extra.items) assert.deepEqual(Object.keys(i).sort(), ['count', 'kept', 'name', 'points']);
+  }
+  if (r.counts) assert.deepEqual(Object.keys(r.counts).sort(), ['applying', 'graded', 'left']);
+  if (r.pass_bracket) assert.deepEqual(Object.keys(r.pass_bracket).sort(), ['from', 'to']);
+  if (r.age_group) assert.deepEqual(Object.keys(r.age_group).sort(), ['from', 'to']);
+  assert.match(r.result_key, /^[0-9a-f]{32}$/);
+  assert.equal(r.parts.length, r.status === 'no_age' ? 0 : 4);
+}
+// Two JSON values the same, with the SAME key set at every level (the SQL-answer comparison).
+function sameJson(a, b, path = '') {
+  if (Array.isArray(a) || Array.isArray(b)) {
+    assert.ok(Array.isArray(a) && Array.isArray(b), `${path}: array vs not`);
+    assert.equal(a.length, b.length, `${path}: length`);
+    a.forEach((x, i) => sameJson(x, b[i], `${path}[${i}]`));
+    return;
+  }
+  if (a !== null && typeof a === 'object') {
+    assert.ok(b !== null && typeof b === 'object', `${path}: object vs not`);
+    assert.deepEqual(Object.keys(a).sort(), Object.keys(b).sort(), `${path}: key set`);
+    for (const k of Object.keys(a)) sameJson(a[k], b[k], `${path}.${k}`);
+    return;
+  }
+  if (typeof a === 'number' && typeof b === 'number') assert.ok(Math.abs(a - b) < 1e-9, `${path}: ${a} vs ${b}`);
+  else assert.equal(a, b, path);
+}
+
+let gradingFixture = null;
+try {
+  gradingFixture = JSON.parse(readFileSync(GRADING_CASES_URL, 'utf8'));
+} catch {
+  gradingFixture = null;
+}
+
+check('grading: every result_cases entry of 0025_grading_cases.json through grading.js = expect', () => {
+  if (!gradingFixture) {
+    console.log('NOTE: supabase/tests/0025_grading_cases.json is not there yet; only this file\'s own grading cases ran.');
+    return;
+  }
+  assert.ok(gradingFixture.result_cases.length >= 40, 'the required cases are there');
+  for (const c of gradingFixture.result_cases) {
+    const { dan, input, answer } = runResultCase(c);
+    checkResultShape(answer, c.name);
+    compareResult(c, dan, input, answer);
+  }
+});
+
+check('grading: every kept_cases entry through keptMatch = expect', () => {
+  if (!gradingFixture) return;
+  assert.ok(gradingFixture.kept_cases.length >= 8);
+  for (const k of gradingFixture.kept_cases) {
+    const earlier = runResultCase(k.earlier);
+    const laterDan = caseDan(k.later.base, k.later.ops);
+    const m = keptMatch(earlier.answer, earlier.dan, earlier.input.counts, laterDan, k.later.age);
+    assert.deepEqual(Object.keys(m).sort(), ['dropped', 'dropped_extra', 'kept', 'kept_counts', 'new', 'retest'], k.name);
+    const laterNames = (ids) => subjectNames(laterDan, ids);
+    const e = k.expect;
+    assert.deepEqual(m.kept.map((x) => ({ subject: laterNames([x.subject_id])[0], part: x.part, letter: x.letter })), e.kept, `${k.name}: kept`);
+    assert.deepEqual(laterNames(m.retest), e.retest, `${k.name}: retest`);
+    assert.deepEqual(laterNames(m.new), e.new, `${k.name}: new`);
+    assert.deepEqual(m.dropped, e.dropped, `${k.name}: dropped`);
+    assert.deepEqual(m.kept_counts, e.kept_counts, `${k.name}: kept_counts`);
+    assert.deepEqual(m.dropped_extra, e.dropped_extra, `${k.name}: dropped_extra`);
+  }
+});
+
+check('grading: grading.js = the SQL\'s full saved answers, key sets included (PGlite step0025 f, when it ran)', () => {
+  const path = process.env.BB_0025_SQL_ANSWERS;
+  if (!gradingFixture || !path) {
+    console.log('NOTE: no saved SQL answers (set BB_0025_SQL_ANSWERS to the file PGlite writes); the key-by-key comparison with the SQL was skipped.');
+    return;
+  }
+  let saved;
+  try {
+    saved = JSON.parse(readFileSync(path, 'utf8'));
+  } catch {
+    console.log(`NOTE: BB_0025_SQL_ANSWERS (${path}) can't be read yet; the key-by-key comparison with the SQL was skipped.`);
+    return;
+  }
+  // { result_cases: [{ name, answer }], kept_cases: [{ name, answer }] } or { "<case name>": answer }
+  const find = (list, name) => (Array.isArray(saved?.[list]) ? saved[list].find((x) => x.name === name)?.answer : saved?.[name]);
+  let compared = 0;
+  for (const c of gradingFixture.result_cases) {
+    const sql = find('result_cases', c.name);
+    if (sql === undefined) continue;
+    sameJson(runResultCase(c).answer, sql, c.name);
+    compared += 1;
+  }
+  for (const k of gradingFixture.kept_cases) {
+    const sql = find('kept_cases', k.name);
+    if (sql === undefined) continue;
+    const earlier = runResultCase(k.earlier);
+    sameJson(keptMatch(earlier.answer, earlier.dan, earlier.input.counts, caseDan(k.later.base, k.later.ops), k.later.age), sql, k.name);
+    compared += 1;
+  }
+  assert.ok(compared > 0, 'the saved answers name the fixture\'s cases');
+});
+
+check('grading: the cast (TKD-BlackBelt-Mockup-Cast.json) on the default rubric = its typed totals and letters', () => {
+  for (const c of CAST.candidates) {
+    const dan = DEFAULT_RUBRIC.dans[c.dan - 1];
+    const subjects = danSubjects(dan);
+    const grades = [];
+    const want = {};
+    for (const [name, text] of Object.entries(c.grades)) {
+      if (/not for this age|Late/.test(text)) continue;
+      const s = subjects.find((x) => x.subject.name === name);
+      assert.ok(s, `${c.name}: ${name}`);
+      const m = /^(?:(Pull-up|Hold) )?([\d.:]+) \S+ = (\S+)$/.exec(text);
+      if (m) {
+        grades.push({ subject_id: s.subject.id, letter: null, measured: m[2].includes(':') ? minutesFromText(m[2]) : Number(m[2]), way: m[1] === 'Hold' ? 1 : 0, kept: false, kept_from_cycle_name: null });
+        want[s.subject.id] = m[3];
+      } else {
+        grades.push({ subject_id: s.subject.id, letter: text, measured: null, way: null, kept: false, kept_from_cycle_name: null });
+        want[s.subject.id] = text;
+      }
+    }
+    const counts = Object.entries(c.extraCounts).filter(([, v]) => v).map(([k, v]) => ({ item_name: k, count: v.count, kept: false }));
+    const r = gradeResult(dan, c.age, grades, counts, [], [], '2027-06-09', '2027-05-29');
+    assert.equal(r.total, c.total, c.name);
+    assert.equal(r.maximum, c.maxBeforeExtra, c.name);
+    assert.equal(r.pass_mark, c.passMark, c.name);
+    assert.equal(r.extra.total, c.extraPoints, c.name);
+    assert.equal(r.complete, c.finished, c.name);
+    assert.equal(bracketLabel(r.age_group), c.ageGroup, c.name);
+    for (const s of r.subjects) if (want[s.id]) assert.equal(s.letter, want[s.id], `${c.name}: ${subjectNames(dan, [s.id])}`);
+    const tag = { passed: 'Passed', not_finished: 'Not finished', makeup: 'Make-up' }[r.status];
+    assert.ok(c.resultResultsTab.startsWith(tag), `${c.name}: ${r.status}`);
+  }
+});
+
+check('grading: age groups, measured letters, extra points, the key, number formats (§4.4–§4.6, §1.4, G 3, G 4)', () => {
+  const d1 = DEFAULT_RUBRIC.dans[0];
+  // 1st Dan: 8 and under · 9 · 10–12 · 13–17 · 18 and over (G 2)
+  assert.deepEqual(ageGroups(d1).map(bracketLabel), ['8 and under', '9', '10–12', '13–17', '18 and over']);
+  assert.deepEqual(ageGroupOf(d1, 9), { from: 9, to: 9 });
+  assert.equal(ageGroupOf(d1, null), null);
+  const subject = (name) => danSubjects(d1).find((s) => s.subject.name === name).subject;
+  const hold = subject('Pull-up or hold').ways[1];
+  const mile = subject('1/2 or 1 mile').ways[0];
+  const sprint = subject('Sprint 100 m').ways[0];
+  assert.equal(measuredLetter(hold, 15, 31), 'A+'); // at_least: exactly the cut-off
+  assert.equal(measuredLetter(hold, 15, 30.9), 'A');
+  assert.equal(measuredLetter(mile, 15, 8.5), 'A'); // at_most: exactly 8:30
+  assert.equal(measuredLetter(sprint, 11, 19), 'B'); // under 19 for B+: 19 is NOT under 19
+  assert.equal(measuredLetter(sprint, 11, 18.9), 'B+');
+  assert.equal(measuredLetter(sprint, 11, 99), 'D'); // none met → D (v0.944)
+  assert.equal(measuredLetter(sprint, null, 18), null);
+  assert.equal(measuredLetter(sprint, 11, null), null);
+  // extra points: per count, steps chosen by at_least (not list position), a limit, not counted
+  const extra = {
+    counts_toward_total: true, limit: 12, to_confirm: false, note: null,
+    items: [
+      { name: 'Stripes', rule: { kind: 'per_count', points_each: 1.5 } },
+      { name: 'Comps', rule: { kind: 'steps', steps: [{ at_least: 5, points: 15 }, { at_least: 1, points: 3 }, { at_least: 3, points: 7 }] } },
+    ],
+  };
+  assert.deepEqual(extraPoints(extra, [{ item_name: 'Stripes', count: 3, kept: false }, { item_name: 'Comps', count: 4, kept: true }]), {
+    counted: true, total: 11.5, items: [{ name: 'Stripes', count: 3, points: 4.5, kept: false }, { name: 'Comps', count: 4, points: 7, kept: true }],
+  });
+  assert.equal(extraPoints(extra, [{ item_name: 'Comps', count: 9, kept: false }]).total, 12); // over the limit
+  assert.deepEqual(extraPoints(extra, [{ item_name: 'Comps', count: 0, kept: false }, { item_name: 'comps', count: 5, kept: false }]).items[1],
+    { name: 'Comps', count: 0, points: 0, kept: false }); // below the first step; the name must match exactly
+  assert.equal(extraPoints({ ...extra, counts_toward_total: false }, []).counted, false);
+  // the key: trailing zeros never change it; reasons are in it
+  assert.equal(trimScaleText(263), '263');
+  assert.equal(trimScaleText(300.9), '300.9');
+  assert.equal(trimScaleText(null), '');
+  assert.equal(resultKey('makeup', ['below'], 263, []), md5Hex('makeup|below|263|'));
+  assert.equal(resultKey('makeup', ['below'], 263.0, []), resultKey('makeup', ['below'], 263, []));
+  assert.notEqual(resultKey('makeup', ['d'], 252.5, ['x']), resultKey('makeup', ['d', 'below'], 252.5, ['x']));
+  assert.equal(WITHDRAWN_RESULT_KEY, md5Hex('withdrawn|||'));
+  // m:ss in whole seconds (§1.4): 8:30 = 8.5, 8:40 = 8.6667, 8:13 = 8.2167, 12:40 = 12.6667 — and back
+  for (const [text, value] of [['8:30', 8.5], ['8:40', 8.6667], ['8:13', 8.2167], ['12:40', 12.6667]]) {
+    assert.equal(minutesFromText(text), value, text);
+    assert.equal(minutesText(value), text, text);
+    assert.deepEqual(parseMeasured('minutes', text), { status: 'ok', value });
+    assert.equal(formatMeasured('minutes', value), text);
+  }
+  // number formats per unit (G 4, OI-7)
+  assert.deepEqual(parseMeasured('inches', '70.5'), { status: 'ok', value: 70.5 });
+  assert.equal(parseMeasured('inches', '70.25').status, 'invalid');
+  assert.deepEqual(parseMeasured('seconds', '11.8'), { status: 'ok', value: 11.8 });
+  assert.equal(parseMeasured('seconds', '11.85').status, 'invalid');
+  assert.equal(parseMeasured('reps', '8.5').status, 'invalid');
+  assert.deepEqual(parseMeasured('count', ''), { status: 'ok', value: null }); // empty = Clear
+  assert.deepEqual(parseMeasured('kicks', '1000'), { status: 'invalid', reason: 'range' });
+  assert.equal(parseMeasured('laps', '2.25').status, 'ok');
+  assert.equal(parseMeasured('laps', '2.255').status, 'invalid');
+  assert.equal(MEASURED_RANGE_MESSAGE, 'Type a number from 0 to 999.');
+  assert.equal(feetAndInches(70), '70 in = 5 ft 10 in');
+  assert.deepEqual(['inches', 'count', 'seconds', 'minutes', 'kicks', 'reps', 'laps'].map(unitShort), ['in', 'count', 'sec', 'min', 'kicks', 'reps', 'laps']);
+  // the cut-off in the rubric's words (G 3): "31 sec or more", "8:30 or less", "under 19 sec"
+  assert.equal(cutoffWords(hold, { from: 13, to: 17 }, 'A+'), '31 sec or more');
+  assert.equal(cutoffWords(mile, { from: 13, to: 17 }, 'A'), '8:30 or less');
+  assert.equal(cutoffWords(sprint, { from: 10, to: 12 }, 'B+'), 'under 19 sec');
+  assert.equal(reachedWords(sprint, { from: 10, to: 12 }, 'D'), '');
+});
+
+check('grading: Choose subjects starting ticks + best case (G 21–G 23), the left / not-finished words (G 7, R 10)', () => {
+  const d1 = DEFAULT_RUBRIC.dans[0];
+  const zoe = CAST.candidates.find((c) => c.key === 'zoe');
+  const fixtureZoe = gradingFixture?.result_cases.find((c) => c.name.startsWith('cast: Zoe Martin'));
+  if (fixtureZoe) {
+    const { answer } = runResultCase(fixtureZoe);
+    assert.equal(answer.choice_needed, true);
+    const { offered, ticked } = startingTicks(answer);
+    assert.deepEqual(subjectNames(d1, ticked).sort(), [...zoe.makeupChoiceIfAdminSaves.retests].sort()); // every subject below B
+    assert.equal(offered[0].letter, 'C-'); // lowest grade first
+    assert.ok(!offered.some((s) => !s.applies)); // One Step Sparring isn't offered at 16
+    const best = bestCase(answer, d1, ticked);
+    assert.deepEqual(best, { total: zoe.makeupChoiceIfAdminSaves.bestCaseIfAllAPlus, passMark: 275, stillBelow: false });
+    assert.deepEqual(bestCase(answer, d1, []), { total: 263, passMark: 275, stillBelow: true }); // amber: even all A+ stays below
+  }
+  // no subject below B → every subject tied for the lowest grade
+  const fake = { subjects: [{ id: 'a', applies: true, letter: 'A' }, { id: 'b', applies: true, letter: 'B' }, { id: 'c', applies: true, letter: 'B' }, { id: 'd', applies: false, letter: 'C' }] };
+  assert.deepEqual(startingTicks(fake).ticked, ['b', 'c']);
+  const lucas = gradingFixture?.result_cases.find((c) => c.name.startsWith('cast: Lucas Ferreira'));
+  if (lucas) {
+    const { answer, dan } = runResultCase(lucas);
+    assert.equal(leftWords(answer, dan, '2027-05-29'), 'TKD project late (due May 29)');
+    assert.equal(notFinishedWords(answer, dan, '2027-05-29'), 'TKD project late (due May 29)');
+  }
+  const r = gradeResult(d1, 15, [], [], [], [], '2027-04-03', '2027-05-29');
+  assert.equal(leftWords(r, d1, '2027-05-29'), '25 of 25 left');
+  assert.equal(notFinishedWords(r, d1, '2027-05-29'), 'Nothing graded yet');
+  const late3 = { counts: { applying: 25, graded: 20, left: 5 }, late: ['a', 'b', 'c'], missing: ['a', 'b', 'c', 'x', 'y'] };
+  assert.equal(leftWords(late3, d1, '2027-05-29'), '3 hand-ins late (due May 29)');
+  assert.equal(notFinishedWords(late3, d1, '2027-05-29'), '3 hand-ins late (due May 29) · 2 more not graded');
+  const ids = danSubjects(d1).map((s) => s.subject.id);
+  assert.equal(notFinishedWords({ counts: { applying: 25, graded: 23, left: 2 }, late: [], missing: [ids[0], ids[1]] }, d1, null), 'Stretching and Sit-up (20 sec) not graded yet');
+  assert.equal(notFinishedWords({ counts: { applying: 25, graded: 14, left: 11 }, late: [], missing: ids.slice(0, 11) }, d1, null), '11 subjects not graded yet');
+});
+
+check('resultEmail.js: the texts\' rules (= bb_result_text_problem), the seed, the blanks, mailto, the CSV', () => {
+  // the starting texts are the contract's §2.4 seed word for word (and, once it exists, the migration's)
+  const contract = readFileSync(new URL('../../../docs/Dashboard Docs/Build contracts/CONTRACT-0025.md', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  for (const kind of RESULT_KINDS) {
+    const m = new RegExp(`^- \`${kind}\`: \`(.*)\`$`, 'm').exec(contract);
+    assert.ok(m, `the contract's ${kind} text`);
+    assert.equal(STARTING_TEXTS[kind], m[1].replace(/\\n/g, '\n'), kind);
+    assert.equal(resultTextProblem(kind, STARTING_TEXTS[kind]), null, kind);
+  }
+  let migration = null;
+  try {
+    migration = readFileSync(new URL('../../../supabase/migrations/0025_black_belt_grading.sql', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  } catch {
+    console.log('NOTE: 0025_black_belt_grading.sql is not there yet; the seeded texts were checked against the contract only.');
+  }
+  if (migration) {
+    // every seeded text appears in the migration as an E-string (line breaks as \n), md5-equal
+    for (const kind of RESULT_KINDS) {
+      const escaped = STARTING_TEXTS[kind].replace(/\\/g, '\\\\').replace(/'/g, "''").replace(/\n/g, '\\n');
+      assert.ok(migration.includes(escaped), `the migration seeds the ${kind} text word for word`);
+      assert.equal(md5Hex(escaped.replace(/\\n/g, '\n').replace(/''/g, "'")), md5Hex(STARTING_TEXTS[kind]));
+    }
+  }
+  // every rule code, in the database's order
+  const P = (kind, body) => resultTextProblem(kind, body);
+  assert.equal(P('nope', 'x'), 'kind');
+  assert.equal(P('passed', ''), 'empty');
+  assert.equal(P('passed', `{total} {pass mark}${'x'.repeat(2000)}`), 'too_long');
+  assert.equal(P('passed', `Hi​ {total} {pass mark}`), 'bad_character');
+  assert.equal(P('passed', '  \n{total} {pass mark}'), 'first_line');
+  assert.equal(P('passed', 'Hi {frist name} {total} {pass mark}'), 'unknown_blank');
+  assert.equal(resultTextProblemDetail('passed', 'Hi {frist name}').blank, 'frist name');
+  assert.equal(P('passed', 'Hi {D subjects} {total} {pass mark}'), 'blank_not_for_kind');
+  assert.equal(P('makeup_below', 'Hi {below-pass-mark note} {total} {pass mark} {subjects to work on}'), 'blank_not_for_kind');
+  assert.equal(P('passed', 'Hi { {total} {pass mark}'), 'stray_brace');
+  assert.equal(P('passed', 'Hi {total}'), 'missing_required');
+  assert.equal(P('makeup_d', 'Hi {total} {pass mark}'), 'missing_required');
+  assert.equal(P('passed', 'Hi {max} {total} {pass mark}'), 'unknown_blank'); // no {max} / {testing day} in Black Belt (R 24)
+  assert.equal(P('makeup_d', 'Hi {first name}, {total} {pass mark} {subjects to work on} {D subjects} {below-pass-mark note} {cycle} {Dan} {full name}'), null);
+  // the blanks for one candidate (R 24): Rina Patel, D + below
+  const rina = { firstName: 'Rina', lastName: 'Patel', cycleName: 'Spring 2027', dan: 1, total: 252.5, passMark: 293, reasons: ['d', 'below'], needs: ['1/2 or 1 mile'], dSubjects: ['1/2 or 1 mile'] };
+  const v = blankValues(rina);
+  assert.deepEqual([v['full name'], v.cycle, v.Dan, v.total, v['pass mark'], v['subjects to work on']], ['Rina Patel', 'Spring 2027', '1st Dan', '252.5', '293', '1/2 or 1 mile']);
+  assert.equal(v['below-pass-mark note'], 'Rina’s total is also below the pass mark; only the D subject is tested again.');
+  assert.equal(blankValues({ ...rina, reasons: ['d'] })['below-pass-mark note'], '');
+  const texts = Object.fromEntries(RESULT_KINDS.map((k) => [k, { body: STARTING_TEXTS[k] }]));
+  const msg = buildResultMessage({ texts, answer: { ...rina, kind: 'makeup_d' } });
+  assert.equal(msg.status, 'ok');
+  assert.equal(msg.subject, 'Your black belt testing result — U.S.T.C.');
+  assert.ok(msg.body.startsWith('Hello,\n\nRina Patel took the Spring 2027 Black Belt testing (1st Dan), with a total of 252.5 points.'));
+  assert.ok(!msg.body.includes('{'));
+  const noNote = buildResultMessage({ texts, answer: { ...rina, reasons: ['d'], kind: 'makeup_d' } }).body;
+  assert.ok(noNote.includes('received a D in 1/2 or 1 mile.\n\n'), 'an empty blank takes its space away too');
+  assert.deepEqual(buildResultMessage({ texts: {}, answer: { kind: 'passed' } }), { status: 'no_text' });
+  assert.deepEqual(buildResultMessage({ texts, answer: { kind: null } }), { status: 'not_finished' });
+  assert.equal(resultKind({ status: 'makeup', reasons: ['below'], needs: [], choice_needed: true }), null);
+  assert.equal(resultKind({ status: 'makeup', reasons: ['d'], needs: ['x'], choice_needed: false }), 'makeup_d');
+  assert.equal(resultKind({ status: 'not_finished', reasons: [], needs: [] }), null);
+  assert.equal(mailtoFor('mia.chen@example.com'), 'mailto:mia.chen@example.com?subject=Your%20black%20belt%20testing%20result%20%E2%80%94%20U.S.T.C.');
+  assert.equal(mailtoFor('nope'), null);
+  assert.equal(mailtoFor('a@b.com?body=x').split('?').length, 2); // an odd address can never add a body: its ? is encoded
+  // the CSV (R 45–R 49)
+  assert.equal(csvFileName('Spring 2027', '2027-06-09'), 'Spring-2027-Black-Belt-results-2027-06-09.csv');
+  assert.equal(CSV_COLUMNS.length, 21);
+  assert.deepEqual(CSV_COLUMNS, ['Dan', 'Name', 'School', 'Make-up from', 'Date of birth', 'Pass-mark bracket', 'Email', 'Plan', 'Kukkiwon',
+    'Payments', 'Balance', 'Physical', 'Technical', 'Curriculum', 'Other requirements', 'Extra points', 'Total', 'Pass mark', 'Result', 'Needs', 'Result sent']);
+  const csv = csvRows({
+    rows: [{
+      candidate_id: 'x', result_status: 'not_finished', dan: 1, first_name: 'Lucas', last_name: 'Ferreira', location_code: 'worcester', makeup_of_cycle_name: null,
+      date_of_birth: '2015-09-12', pass_bracket: { from: null, to: 17 }, email_for_results: 'f@example.com', plan_name: '3 payments', kukkiwon: false,
+      money: { tag: 'late', late_cents: 33000, late_since: '2027-05-29', balance_cents: 33000, overpaid_cents: 0 },
+      parts: [{ code: 'physical', points: 60, graded: 9, applying: 9 }, { code: 'technical', points: 0, graded: 0, applying: 5 }], extra_total: 12, total: 275.5, pass_mark: 275,
+      result: { status: 'not_finished', reasons: [], complete: false, choice_needed: false, needs: [], late: ['TKD project'], missing: ['TKD project'] },
+      sent: { sent: { marked_at: '2027-06-07T14:20:00Z', marked_by_name: 'Staff', result_status: 'passed' }, matches: false },
+    }],
+  });
+  assert.deepEqual(csv[0], CSV_COLUMNS);
+  assert.deepEqual(csv[1], ['1st Dan', 'Lucas Ferreira', 'Worcester', '', '2015-09-12', '17 and under', 'f@example.com', '3 payments', 'No',
+    'Late · $330 since May 29', '$330', '60', '', '', '', '12', '275.5', '275', 'Not finished', 'TKD project (late)', 'Not sent yet (Passed sent 2027-06-07)']);
+  const text = csvText([['a', 'b,c'], ['=1', 'x"y']]);
+  assert.equal(text, '﻿a,"b,c"\r\n\'=1,"x""y"\r\n');
+});
+
+// ----- the preview store: grading and results (mockGrading.js) -----
+
+const castCall = (name, args, ctx = ADMIN) => call(name, args, ctx);
+const GRADING_SECRET = ['"date_of_birth"', '"email_for_results"', '"money"', '"reference"', '"age"', '"makeup_of_candidate_id"', '"age_kept"', '"plan_id"'];
+const noSecrets = (answer, label, allowed = []) => {
+  const text = JSON.stringify(answer);
+  for (const k of GRADING_SECRET) if (!allowed.includes(k)) assert.ok(!text.includes(k), `${label}: no ${k}`);
+};
+const springCycle = () => db().bb_cycles.find((c) => c.name === 'Spring 2027');
+const fallCycle = () => db().bb_cycles.find((c) => c.name === 'Fall 2027');
+const castRow = (first, last, cycle = springCycle()) => db().bb_candidates.find((c) => c.first_name === first && c.last_name === last && c.cycle_id === cycle.id);
+const subjectId = (dan, name) => danSubjects(DEFAULT_RUBRIC.dans[dan - 1]).find((s) => s.subject.name === name).subject.id;
+const loadCast = () => {
+  backend.loadGradingSample(CAST);
+  setDay('2027-06-09');
+};
+
+check('grading store: the cast sample = the cast (grid, Results, the Fall make-up) and the reads keep their privacy', () => {
+  loadCast();
+  const spring = springCycle();
+  for (const dan of [1, 2, 3, 4]) {
+    const g = castCall('bb_grading_grid', { p_cycle_id: spring.id, p_dan: dan }, STAFF);
+    assert.equal(g.status, 'ok');
+    assert.deepEqual(Object.keys(g).sort(), ['cycle', 'dan_counts', 'rows', 'rubric', 'status', 'today']);
+    assert.deepEqual(Object.keys(g.cycle).sort(), ['days', 'first_day', 'id', 'name', 'submissions_due']);
+    noSecrets(g, `grid ${dan}`);
+    for (const row of g.rows) {
+      assert.deepEqual(Object.keys(row).sort(), ['first_name', 'id', 'is_makeup', 'last_name', 'location_code', 'makeup_of_cycle_name', 'result']);
+      checkResultShape(row.result, `${row.first_name} ${row.last_name}`);
+      const c = CAST.candidates.find((x) => x.name === `${row.first_name} ${row.last_name}`);
+      assert.equal(row.result.total, c.total, c.name);
+      assert.equal(row.result.pass_mark, c.passMark, c.name);
+    }
+  }
+  const g1 = castCall('bb_grading_grid', { p_cycle_id: spring.id, p_dan: 1 }, STAFF);
+  assert.deepEqual(g1.rows.map((r) => r.last_name), ['Kim', 'Martin', 'Chen', 'Ferreira', 'Patel']); // Shrewsbury, then Worcester, last name
+  assert.deepEqual(g1.dan_counts, [{ dan: 1, location_code: 'shrewsbury', count: 2 }, { dan: 1, location_code: 'worcester', count: 3 },
+    { dan: 2, location_code: 'shrewsbury', count: 1 }, { dan: 2, location_code: 'worcester', count: 2 }, { dan: 3, location_code: 'shrewsbury', count: 1 },
+    { dan: 4, location_code: 'shrewsbury', count: 1 }]);
+  assert.equal(g1.today, '2027-06-09');
+  const res = castCall('bb_cycle_results', { p_cycle_id: spring.id, p_dan: null }, STAFF);
+  assert.deepEqual(Object.keys(res).sort(), ['cycle', 'dan_counts', 'rows', 'rubrics', 'status', 'today']);
+  assert.equal(res.rows.length, 10);
+  noSecrets(res, 'results');
+  for (const row of res.rows) {
+    assert.deepEqual(Object.keys(row).sort(), ['dan', 'first_name', 'has_email', 'id', 'is_makeup', 'last_name', 'location_code', 'makeup_of_cycle_name',
+      'result', 'sent']);
+    assert.equal(row.has_email, true);
+  }
+  const alex = res.rows.find((r) => r.first_name === 'Alex');
+  assert.equal(alex.sent.sent.marked_by_name, 'Staff');
+  assert.equal(alex.sent.matches, true);
+  assert.equal(res.rows.find((r) => r.first_name === 'Zoe').result.choice_needed, true);
+  // Fall 2027: Mia Chen's make-up (kept grades + 15 kept extra; Free sparring to retest) at the end of the 1st Dan
+  const fall = fallCycle();
+  const gf = castCall('bb_grading_grid', { p_cycle_id: fall.id, p_dan: 1 }, STAFF);
+  const mia = gf.rows[gf.rows.length - 1];
+  assert.deepEqual([mia.first_name, mia.is_makeup, mia.makeup_of_cycle_name], ['Mia', true, 'Spring 2027']);
+  assert.equal(mia.result.total, CAST.laterCycle.makeup.totalBeforeRetest);
+  assert.equal(mia.result.extra.total, CAST.laterCycle.makeup.keptExtraPoints);
+  assert.ok(mia.result.extra.items.every((i) => i.kept));
+  const fs = mia.result.subjects.find((s) => s.id === subjectId(1, 'Free sparring'));
+  assert.deepEqual([fs.retest, fs.gradable, fs.kept, fs.letter], [true, true, false, null]);
+  assert.ok(mia.result.subjects.filter((s) => s.id !== fs.id && s.applies).every((s) => s.kept && !s.gradable && s.kept_from_cycle_name === 'Spring 2027'));
+  // the roster lists the make-up with no plan and the four new keys
+  const roster = castCall('bb_cycle_roster', { p_cycle_id: fall.id }, STAFF);
+  const mr = roster.rows.find((r) => r.is_makeup);
+  assert.deepEqual([mr.plan_id, mr.plan_name, mr.retest_names, mr.has_grades, mr.makeup_of_cycle_name], [null, null, ['Free sparring'], false, 'Spring 2027']);
+  assert.equal(mr.money.total_due_cents, 0);
+  const detail = castCall('bb_candidate_detail', { p_candidate_id: mr.id }, STAFF);
+  assert.equal(detail.candidate.plan, null);
+  assert.equal(detail.candidate.is_makeup, true);
+  assert.ok(!('makeup_of_candidate_id' in detail.candidate) && !('age_kept' in detail.candidate));
+  // Free sparring B+ on Fall → 333.5 Passed (the cast)
+  setDay('2027-10-30');
+  const after = castCall('bb_set_grade', { p_candidate_id: mr.id, p_dan: 1, p_subject_id: subjectId(1, 'Free sparring'), p_letter: 'B+' }, STAFF);
+  assert.equal(after.status, 'ok');
+  assert.deepEqual([after.result.total, after.result.status], [CAST.laterCycle.makeup.afterFreeSparringBPlus.total, 'passed']);
+  // the new tables can't be read; the make-up columns of bb_candidates neither; the texts can (granted columns)
+  for (const t of ['bb_grades', 'bb_extra_counts', 'bb_makeup_subjects', 'bb_result_sends', 'bb_downloads', 'bb_cycle_grading_started']) {
+    assert.equal(backend.select(t, 'id', [], [], STAFF).error.code, '42501', t);
+  }
+  for (const col of ['makeup_of_candidate_id', 'makeup_of_cycle_name', 'age_kept']) assert.equal(backend.select('bb_candidates', `id, ${col}`, [], [], STAFF).error.code, '42501');
+  const texts = backend.select('bb_result_texts', 'id, kind, body, version, created_at, updated_at, created_by_name, updated_by_name', [], [], STAFF);
+  assert.equal(texts.data.length, 3);
+  assert.equal(backend.select('bb_result_texts', 'created_by', [], [], STAFF).error.code, '42501');
+  assert.deepEqual(backend.select('bb_result_texts', 'id', [], [], LOCKED).data, []);
+  // the internal helpers are nobody's
+  for (const name of ['bb_grade_result', 'bb_kept_match', 'bb_candidate_result', 'bb_update_candidate_core']) {
+    assert.equal(backend.rpc(name, {}, ADMIN).error.code, '42501', name);
+  }
+});
+
+check('grading store: grade writes — refusals in order (invalid, not_found, withdrawn, stale, kept), Clear, the same value, measured, counts', () => {
+  loadCast();
+  const spring = springCycle();
+  const lucas = castRow('Lucas', 'Ferreira');
+  const free = subjectId(1, 'Free sparring');
+  const sprint = subjectId(1, 'Sprint 100 m');
+  const pull = subjectId(1, 'Pull-up or hold');
+  const g = (args, ctx = STAFF) => castCall('bb_set_grade', { p_candidate_id: lucas.id, p_dan: 1, p_subject_id: free, p_letter: 'A', ...args }, ctx);
+  const m = (args, ctx = STAFF) => castCall('bb_set_measured', { p_candidate_id: lucas.id, p_dan: 1, p_subject_id: sprint, p_value: 18.5, p_way: 0, ...args }, ctx);
+  assert.deepEqual(g({}, LOCKED), { status: 'no_access' });
+  assert.deepEqual(g({ p_dan: 5 }), { status: 'invalid' });
+  assert.deepEqual(g({ p_subject_id: 'BAD' }), { status: 'invalid' });
+  assert.deepEqual(g({ p_candidate_id: randomUUID() }), { status: 'not_found' });
+  assert.deepEqual(g({ p_dan: 2 }), { status: 'stale' }); // a stale tablet's old Dan
+  assert.deepEqual(g({ p_letter: 'Z' }), { status: 'invalid' });
+  assert.deepEqual(g({ p_letter: 'A-', p_subject_id: subjectId(1, 'Stretching') }), { status: 'invalid' }); // a measured subject via set_grade
+  assert.deepEqual(g({ p_subject_id: subjectId(1, 'One Step Sparring (1-24)') }), { status: 'invalid' }); // not for 10–12
+  assert.deepEqual(g({ p_subject_id: subjectId(1, 'Basic 10 Motions (1-7)'), p_letter: 'B+' }).status, 'ok');
+  assert.deepEqual(castCall('bb_set_grade', { p_candidate_id: lucas.id, p_dan: 1, p_subject_id: subjectId(1, 'Stretching'), p_letter: 'A-' }, STAFF), { status: 'invalid' });
+  // Physical letters are the short list: A- isn't one
+  const phys = castCall('bb_set_grade', { p_candidate_id: castRow('Alex', 'Kim').id, p_dan: 1, p_subject_id: subjectId(1, 'Pull-up or hold'), p_letter: 'A' }, STAFF);
+  assert.equal(phys.status, 'invalid'); // Pull-up or hold is measured
+  // a set, then the same letter again (writes nothing), then Clear
+  const ok = g({ p_letter: 'A' });
+  assert.deepEqual([ok.status, ok.letter], ['ok', 'A']);
+  const before = saves;
+  g({ p_letter: 'A' });
+  assert.equal(saves, before, 'the same letter writes nothing');
+  const cleared = g({ p_letter: null });
+  assert.equal(cleared.result.subjects.find((s) => s.id === free).letter, null);
+  // measured: ≤ 4 decimals (refused, never rounded), 0–999, way 0/1 and a real way, Clear, switching the way
+  assert.deepEqual(m({ p_value: 18.12345 }), { status: 'invalid' });
+  assert.deepEqual(m({ p_value: 1000 }), { status: 'invalid' });
+  assert.deepEqual(m({ p_value: -1 }), { status: 'invalid' });
+  assert.deepEqual(m({ p_way: 2 }), { status: 'invalid' });
+  assert.deepEqual(m({ p_way: null }), { status: 'invalid' });
+  assert.deepEqual(m({ p_way: 1 }), { status: 'invalid' }); // way 1 on a one-way subject
+  assert.deepEqual(m({ p_subject_id: free }), { status: 'invalid' }); // a graded subject via set_measured
+  assert.equal(backend.rpc('bb_set_measured', { p_candidate_id: lucas.id, p_dan: 1, p_subject_id: sprint, p_value: 'NaN', p_way: 0 }, STAFF).error.code, '22P02');
+  const sm = m({ p_value: 19 });
+  assert.deepEqual([sm.status, sm.value, sm.way, sm.result.subjects.find((s) => s.id === sprint).letter], ['ok', 19, 0, 'B']);
+  const hold = castCall('bb_set_measured', { p_candidate_id: lucas.id, p_dan: 1, p_subject_id: pull, p_value: 31, p_way: 1 }, STAFF);
+  assert.equal(hold.result.subjects.find((s) => s.id === pull).letter, 'A+');
+  const back = castCall('bb_set_measured', { p_candidate_id: lucas.id, p_dan: 1, p_subject_id: pull, p_value: null, p_way: null }, STAFF);
+  assert.equal(back.result.subjects.find((s) => s.id === pull).letter, null);
+  // counts: 0–9 999, an exact item name, Clear; no age needed
+  const cnt = (args) => castCall('bb_set_extra_count', { p_candidate_id: lucas.id, p_dan: 1, p_item_name: 'Breaking class', p_count: 20, ...args }, STAFF);
+  assert.deepEqual(cnt({ p_count: 10000 }), { status: 'invalid' });
+  assert.deepEqual(cnt({ p_item_name: 'Nope' }), { status: 'invalid' });
+  assert.deepEqual(cnt({ p_item_name: 'breaking class' }), { status: 'invalid' }); // the exact name
+  const c20 = cnt({});
+  assert.deepEqual([c20.status, c20.count, c20.result.extra.items.find((i) => i.name === 'Breaking class').points], ['ok', 20, 5]);
+  assert.equal(cnt({ p_count: null }).result.extra.items.find((i) => i.name === 'Breaking class').count, null);
+  // kept: a make-up's kept grade and kept count can't be changed
+  const miaFall = castRow('Mia', 'Chen', fallCycle());
+  assert.deepEqual(castCall('bb_set_grade', { p_candidate_id: miaFall.id, p_dan: 1, p_subject_id: subjectId(1, 'Korean terminology'), p_letter: 'A' }, STAFF), { status: 'kept' });
+  assert.deepEqual(castCall('bb_set_measured', { p_candidate_id: miaFall.id, p_dan: 1, p_subject_id: sprint, p_value: 14, p_way: 0 }, STAFF), { status: 'kept' });
+  assert.deepEqual(castCall('bb_set_extra_count', { p_candidate_id: miaFall.id, p_dan: 1, p_item_name: 'Extra stripes', p_count: 3 }, STAFF), { status: 'kept' });
+  // withdrawn
+  const w = castCall('bb_withdraw_candidate', { p_candidate_id: lucas.id, p_expected_version: db().bb_candidates.find((c) => c.id === lucas.id).version });
+  assert.equal(w.status, 'ok');
+  assert.deepEqual(g({}), { status: 'withdrawn' });
+  // no age: a purged row with no kept age can't be graded (counts can)
+  const s = db();
+  const leo = s.bb_candidates.find((c) => c.first_name === 'Leo');
+  leo.date_of_birth = null;
+  leo.personal_removed_at = '2030-01-01T00:00:00Z';
+  saved = s;
+  assert.deepEqual(castCall('bb_set_grade', { p_candidate_id: leo.id, p_dan: 4, p_subject_id: subjectId(4, 'Referee seminar'), p_letter: 'A' }, STAFF), { status: 'invalid' });
+  assert.equal(castCall('bb_set_extra_count', { p_candidate_id: leo.id, p_dan: 4, p_item_name: 'Extra stripes', p_count: 1 }, STAFF).status, 'ok');
+  assert.equal(castCall('bb_grading_grid', { p_cycle_id: spring.id, p_dan: 4 }, STAFF).rows[0].result.status, 'no_age');
+});
+
+check('grading store: Choose subjects (A) — stale, already_added, invalid; choice_needed and Add make-up', () => {
+  loadCast();
+  const zoe = castRow('Zoe', 'Martin');
+  const ids = CAST.candidates.find((c) => c.key === 'zoe').makeupChoiceIfAdminSaves.retests.map((n) => subjectId(1, n));
+  const choose = (args, ctx = ADMIN) => castCall('bb_set_makeup_subjects', { p_candidate_id: zoe.id, p_expected_ids: [], p_ids: ids, ...args }, ctx);
+  assert.deepEqual(choose({}, STAFF), { status: 'not_allowed' });
+  assert.deepEqual(choose({ p_ids: [] }), { status: 'invalid' });
+  assert.deepEqual(choose({ p_ids: [ids[0], ids[0]] }), { status: 'invalid' });
+  assert.deepEqual(choose({ p_ids: [subjectId(1, 'One Step Sparring (1-24)')] }), { status: 'invalid' }); // not for 16
+  assert.deepEqual(castCall('bb_set_makeup_subjects', { p_candidate_id: castRow('Alex', 'Kim').id, p_expected_ids: [], p_ids: [ids[0]] }), { status: 'invalid' }); // Passed
+  assert.deepEqual(choose({ p_expected_ids: [ids[0]] }), { status: 'stale' });
+  // Add make-up of a below result before any choice → choice_needed (Fall 2027, any day before its first day)
+  const fall = fallCycle();
+  setDay('2027-09-01');
+  assert.deepEqual(castCall('bb_add_makeup', { p_cycle_id: fall.id, p_earlier_candidate_id: zoe.id }, STAFF), { status: 'choice_needed' });
+  const list0 = castCall('bb_makeup_list', { p_cycle_id: fall.id }, STAFF);
+  noSecrets(list0, 'make-up list');
+  assert.deepEqual(list0.rows.map((r) => r.first_name).sort(), ['Mia', 'Rina', 'Zoe']); // every Spring make-up result (Mia's make-up is on Fall already)
+  assert.equal(list0.rows.find((r) => r.first_name === 'Mia').already_added, true);
+  const zr = list0.rows.find((r) => r.first_name === 'Zoe');
+  assert.deepEqual([zr.choice_needed, zr.already_added, zr.cycle_name, zr.age_group], [true, false, 'Spring 2027', { from: 13, to: 17 }]);
+  const chosen = choose({});
+  assert.equal(chosen.status, 'ok');
+  assert.deepEqual(chosen.ids, [subjectId(1, '1/2 or 1 mile'), subjectId(1, 'Korean terminology'), subjectId(1, 'TKD knowledge'), subjectId(1, 'Power Break')]);
+  assert.deepEqual(chosen.result.needs, chosen.ids);
+  // Add make-up: ok, then already_added (a second time, or from another cycle)
+  const added = castCall('bb_add_makeup', { p_cycle_id: fall.id, p_earlier_candidate_id: zoe.id }, STAFF);
+  assert.equal(added.status, 'ok');
+  assert.deepEqual(Object.keys(added).sort(), ['id', 'kept_count', 'reference', 'retest_count', 'status', 'version']);
+  assert.equal(added.retest_count, 4);
+  assert.equal(added.reference, zoe.reference); // the make-up keeps the earlier reference (G 27)
+  assert.deepEqual(castCall('bb_add_makeup', { p_cycle_id: fall.id, p_earlier_candidate_id: zoe.id }, STAFF), { status: 'already_added' });
+  assert.deepEqual(choose({ p_expected_ids: ids }), { status: 'already_added' }); // Choose subjects after a make-up was added
+  assert.equal(castCall('bb_makeup_list', { p_cycle_id: fall.id }, STAFF).rows.find((r) => r.first_name === 'Zoe').already_added, true);
+  // the make-up has no fee, ever: a payment of any kind is refused, and Change plan is invalid
+  const mk = db().bb_candidates.find((c) => c.id === added.id);
+  assert.deepEqual(castCall('bb_record_payment', { p_candidate_id: mk.id, p_expected_version: mk.version, p_amount_cents: 100, p_method: 'cash', p_for_items: ['p1'], p_note: null }), { status: 'invalid' });
+  assert.deepEqual(castCall('bb_change_plan', { p_candidate_id: mk.id, p_expected_version: mk.version, p_cycle_plan_id: db().bb_cycle_plans.find((p) => p.cycle_id === fall.id).id, p_kukkiwon: false }), { status: 'invalid' });
+  // Undo = Delete permanently (admins): fine with only kept / retest rows
+  assert.deepEqual(castCall('bb_delete_candidate', { p_candidate_id: mk.id, p_expected_version: mk.version }), { status: 'ok' });
+  // stale: the earlier result isn't a make-up any more (Alex passed); invalid: the same cycle
+  assert.deepEqual(castCall('bb_add_makeup', { p_cycle_id: fall.id, p_earlier_candidate_id: castRow('Alex', 'Kim').id }, STAFF), { status: 'stale' });
+  assert.deepEqual(castCall('bb_add_makeup', { p_cycle_id: springCycle().id, p_earlier_candidate_id: zoe.id }, STAFF), { status: 'finished' }); // Spring is Past on Sep 1
+  setDay('2027-12-01');
+  assert.deepEqual(castCall('bb_add_makeup', { p_cycle_id: fall.id, p_earlier_candidate_id: zoe.id }, STAFF), { status: 'finished' });
+});
+
+check('grading store: Mark as sent / Undo (10 s own, admins later), Email result, no_email, not_finished, the CSV (A, logged first)', () => {
+  loadCast();
+  const spring = springCycle();
+  const ava = castRow('Ava', 'Brooks');
+  const res = () => castCall('bb_cycle_results', { p_cycle_id: spring.id, p_dan: 2 }, STAFF).rows.find((r) => r.id === ava.id);
+  const key = res().result.result_key;
+  assert.deepEqual(castCall('bb_mark_result_sent', { p_candidate_id: ava.id, p_expected_result_key: 'f'.repeat(32) }, STAFF), { status: 'stale' });
+  const sent = castCall('bb_mark_result_sent', { p_candidate_id: ava.id, p_expected_result_key: key }, STAFF);
+  assert.deepEqual(Object.keys(sent).sort(), ['marked_at', 'sent_id', 'status']);
+  assert.equal(res().sent.matches, true);
+  // "changed since sent": a later count changes the key
+  castCall('bb_set_extra_count', { p_candidate_id: ava.id, p_dan: 2, p_item_name: 'Competitions', p_count: 1 }, STAFF);
+  assert.deepEqual([res().result.total, res().sent.matches], [303.95, false]);
+  // a text change never resets Sent
+  const t = db().bb_result_texts.find((x) => x.kind === 'passed');
+  assert.deepEqual(castCall('bb_set_result_text', { p_kind: 'passed', p_expected_version: t.version, p_body: `${t.body}!` }, STAFF), { status: 'not_allowed' });
+  assert.deepEqual(castCall('bb_set_result_text', { p_kind: 'passed', p_expected_version: t.version, p_body: 'no blanks' }), { status: 'invalid' });
+  assert.deepEqual(castCall('bb_set_result_text', { p_kind: 'passed', p_expected_version: t.version + 1, p_body: `${t.body}!` }), { status: 'stale' });
+  const saved1 = castCall('bb_set_result_text', { p_kind: 'passed', p_expected_version: t.version, p_body: `${t.body}!` });
+  assert.deepEqual([saved1.status, saved1.version], ['ok', t.version + 1]);
+  const before = saves;
+  assert.equal(castCall('bb_set_result_text', { p_kind: 'passed', p_expected_version: saved1.version, p_body: `${t.body}!` }).version, saved1.version);
+  assert.equal(saves, before, 'the same text writes nothing');
+  // undo: own within 10 s; then not_allowed for staff, ok for admins; twice → stale
+  const undoOwn = castCall('bb_undo_result_sent', { p_send_id: sent.sent_id }, STAFF);
+  assert.deepEqual(undoOwn, { status: 'ok' });
+  assert.deepEqual(castCall('bb_undo_result_sent', { p_send_id: sent.sent_id }, STAFF), { status: 'stale' });
+  const key2 = res().result.result_key;
+  const sent2 = castCall('bb_mark_result_sent', { p_candidate_id: ava.id, p_expected_result_key: key2 }, STAFF);
+  advance(11 * 1000);
+  assert.deepEqual(castCall('bb_undo_result_sent', { p_send_id: sent2.sent_id }, STAFF), { status: 'not_allowed' });
+  assert.deepEqual(castCall('bb_undo_result_sent', { p_send_id: sent2.sent_id }, ADMIN), { status: 'ok' });
+  // expireUndo ages the newest send
+  const sent3 = castCall('bb_mark_result_sent', { p_candidate_id: ava.id, p_expected_result_key: key2 }, STAFF);
+  backend.expireUndo();
+  assert.deepEqual(castCall('bb_undo_result_sent', { p_send_id: sent3.sent_id }, STAFF), { status: 'not_allowed' });
+  // not_finished: Lucas (late), Zoe (an admin chooses first); Email result the same
+  const lucas = castRow('Lucas', 'Ferreira');
+  const zoe = castRow('Zoe', 'Martin');
+  const anyKey = 'a'.repeat(32);
+  assert.deepEqual(castCall('bb_mark_result_sent', { p_candidate_id: lucas.id, p_expected_result_key: anyKey }, STAFF), { status: 'not_finished' });
+  assert.deepEqual(castCall('bb_mark_result_sent', { p_candidate_id: zoe.id, p_expected_result_key: anyKey }, STAFF), { status: 'not_finished' });
+  assert.deepEqual(castCall('bb_result_email', { p_candidate_id: lucas.id }, STAFF), { status: 'not_finished' });
+  // Email result: one candidate's email at the click (R 12)
+  const rina = castCall('bb_result_email', { p_candidate_id: castRow('Rina', 'Patel').id }, STAFF);
+  assert.deepEqual(Object.keys(rina).sort(), ['cycle_name', 'd_subjects', 'dan', 'email', 'first_name', 'kind', 'last_name', 'needs', 'pass_mark', 'reasons',
+    'result_key', 'status', 'total']);
+  assert.deepEqual([rina.kind, rina.needs, rina.d_subjects, rina.email], ['makeup_d', ['1/2 or 1 mile'], ['1/2 or 1 mile'], 'rina.patel@example.com']);
+  noSecrets(rina, 'result email', ['"email"']);
+  // no_email: on the purge day before the purge ran (keep-years 3 / 3: Rina's day is Spring's last
+  // day + 3 years; Alex is a child, kept until 3 years after 18; Mia's make-up keeps hers longer)
+  setDay('2030-06-06');
+  const after = castCall('bb_cycle_results', { p_cycle_id: spring.id, p_dan: 1 }, STAFF);
+  const rinaRow = after.rows.find((r) => r.first_name === 'Rina');
+  assert.deepEqual(after.rows.map((r) => [r.first_name, r.has_email]), [['Alex', true], ['Zoe', true], ['Mia', true], ['Lucas', true], ['Rina', false]]);
+  assert.deepEqual(castCall('bb_result_email', { p_candidate_id: rinaRow.id }, STAFF), { status: 'no_email' });
+  assert.deepEqual(castCall('bb_mark_result_sent', { p_candidate_id: rinaRow.id, p_expected_result_key: rinaRow.result.result_key }, STAFF), { status: 'no_email' });
+  // the CSV: admins only; the log row first; DOB and email null from the purge day on
+  assert.deepEqual(castCall('bb_results_csv', { p_cycle_id: spring.id }, STAFF), { status: 'not_allowed' });
+  const downloadsBefore = db().bb_downloads.length;
+  assert.deepEqual(castCall('bb_results_csv', { p_cycle_id: randomUUID() }), { status: 'not_found' });
+  assert.equal(db().bb_downloads.length, downloadsBefore, 'a refused call writes nothing');
+  const csv = castCall('bb_results_csv', { p_cycle_id: spring.id });
+  assert.equal(csv.rows.length, 10);
+  assert.equal(db().bb_downloads.length, downloadsBefore + 1);
+  assert.equal(db().bb_downloads.at(-1).row_count, 10);
+  assert.deepEqual(Object.keys(csv.rows[0]).sort(), ['candidate_id', 'date_of_birth', 'dan', 'email_for_results', 'extra_total', 'first_name', 'kukkiwon',
+    'last_name', 'location_code', 'makeup_of_cycle_name', 'money', 'parts', 'pass_bracket', 'pass_mark', 'plan_name', 'result', 'result_status', 'sent', 'total'].sort());
+  const csvRina = csv.rows.find((r) => r.first_name === 'Rina');
+  assert.deepEqual([csvRina.date_of_birth, csvRina.email_for_results], [null, null]);
+  assert.equal(csv.rows.find((r) => r.first_name === 'Alex').date_of_birth, '2012-03-04');
+  assert.equal(csv.rows[0].money.items, undefined);
+  assert.equal(csvRows(csv).length, 11);
+  setDay('2027-06-09');
+  const csv2 = castCall('bb_results_csv', { p_cycle_id: spring.id });
+  assert.equal(csv2.rows.find((r) => r.first_name === 'Rina').date_of_birth, '1997-04-30');
+});
+
+check('grading store: has_grades — Q-G1 (locked for good), Q-G3 (delete), Q-G4 (Dan change + clear), S2 (Edit cycle)', () => {
+  loadCast();
+  const spring = springCycle();
+  const fall = fallCycle();
+  // Q-G1: Fall 2027 was never opened, but its make-up's kept rows started grading → the copy is locked for good
+  const st0 = castCall('bb_cycle_grading_state', { p_cycle_id: fall.id }, STAFF);
+  assert.deepEqual(Object.keys(st0).sort(), ['first_day', 'first_day_frozen', 'grading_started_at', 'has_grading', 'parts_with_grades', 'protected_days', 'status']);
+  assert.ok(st0.grading_started_at);
+  const rev = db().bb_cycles.find((c) => c.id === fall.id).requirements.dans[0].rev;
+  const sheet = db().bb_cycles.find((c) => c.id === fall.id).requirements.dans[0];
+  const save = castCall('bb_save_cycle_dan', { p_cycle_id: fall.id, p_dan: 1, p_expected_rev: rev, p_sheet: sheet });
+  assert.deepEqual(save, { status: 'has_grades', grading_started_at: st0.grading_started_at });
+  assert.deepEqual(castCall('bb_undo_cycle_dan', { p_cycle_id: fall.id, p_dan: 1, p_expected_rev: rev }), { status: 'has_grades', grading_started_at: st0.grading_started_at });
+  // …and stays locked after the make-up's Undo (admin delete) removes every grading row
+  const mk = castRow('Mia', 'Chen', fall);
+  assert.deepEqual(castCall('bb_delete_candidate', { p_candidate_id: mk.id, p_expected_version: mk.version }), { status: 'ok' });
+  assert.equal(castCall('bb_cycle_grading_state', { p_cycle_id: fall.id }, STAFF).has_grading, false);
+  assert.equal(castCall('bb_cycle_grading_state', { p_cycle_id: fall.id }, STAFF).grading_started_at, st0.grading_started_at);
+  assert.equal(castCall('bb_save_cycle_dan', { p_cycle_id: fall.id, p_dan: 1, p_expected_rev: rev, p_sheet: sheet }).status, 'has_grades');
+  // Q-G3: Delete permanently / Delete cycle with real grades → has_grades
+  const alex = castRow('Alex', 'Kim');
+  assert.deepEqual(castCall('bb_delete_candidate', { p_candidate_id: alex.id, p_expected_version: alex.version }), { status: 'has_payments' }); // (payments first, as 0016)
+  const s = db();
+  const lucas = s.bb_candidates.find((c) => c.first_name === 'Lucas');
+  s.bb_payments = s.bb_payments.filter((p) => p.candidate_id !== lucas.id);
+  saved = s;
+  assert.deepEqual(castCall('bb_delete_candidate', { p_candidate_id: lucas.id, p_expected_version: lucas.version }), { status: 'has_grades' });
+  const roster = castCall('bb_cycle_roster', { p_cycle_id: spring.id }, STAFF);
+  assert.ok(roster.rows.filter((r) => r.status === 'active').every((r) => r.has_grades));
+  // Q-G4: a Dan change with grades → has_grades + counts, nothing written; _clear with the right counts clears
+  const ava = castRow('Ava', 'Brooks');
+  const edit = (dan, extra = {}, name = 'bb_update_candidate', ctx = ADMIN) => castCall(name, {
+    p_candidate_id: ava.id, p_expected_version: db().bb_candidates.find((c) => c.id === ava.id).version, p_first: 'Ava', p_last: 'Brooks',
+    p_date_of_birth: ava.date_of_birth, p_email: ava.email_for_results, p_location_code: ava.location_code, p_dan: dan, ...extra,
+  }, ctx);
+  const refused = edit(3);
+  assert.deepEqual(refused, { status: 'has_grades', grade_count: 27, count_count: 5, chosen_count: 0 });
+  assert.equal(db().bb_candidates.find((c) => c.id === ava.id).dan, 2, 'nothing written');
+  assert.equal(edit(2).status, 'ok'); // no Dan change: fine
+  const clr = (n) => edit(3, { p_expected_grade_count: n[0], p_expected_count_count: n[1], p_expected_chosen_count: n[2] }, 'bb_update_candidate_clear');
+  assert.deepEqual(clr([27, 5, null]), { status: 'invalid' });
+  assert.deepEqual(clr([27, -1, 0]), { status: 'invalid' });
+  assert.deepEqual(clr([26, 5, 0]), { status: 'has_grades', grade_count: 27, count_count: 5, chosen_count: 0 });
+  const done = clr([27, 5, 0]);
+  assert.deepEqual([done.status, done.cleared], ['ok', { grades: 27, counts: 5, chosen: 0 }]);
+  assert.deepEqual(Object.keys(done).sort(), ['cleared', 'needs_parent_signature', 'status', 'version']);
+  assert.equal(db().bb_candidates.find((c) => c.id === ava.id).dan, 3);
+  assert.equal(db().bb_grades.filter((g) => g.candidate_id === ava.id).length, 0);
+  assert.deepEqual(castCall('bb_set_grade', { p_candidate_id: ava.id, p_dan: 2, p_subject_id: subjectId(2, 'Referee seminar'), p_letter: 'A' }, STAFF), { status: 'stale' }); // the stale tablet
+  // a make-up row's Dan never changes; an earlier row with an active make-up → already_added
+  loadCast();
+  const mia = castRow('Mia', 'Chen');
+  const miaFall = castRow('Mia', 'Chen', fallCycle());
+  const editRow = (row, dan, name = 'bb_update_candidate', extra = {}) => castCall(name, {
+    p_candidate_id: row.id, p_expected_version: row.version, p_first: row.first_name, p_last: row.last_name, p_date_of_birth: row.date_of_birth,
+    p_email: row.email_for_results, p_location_code: row.location_code, p_dan: dan, ...extra,
+  });
+  assert.deepEqual(editRow(miaFall, 2), { status: 'invalid' });
+  assert.deepEqual(editRow(mia, 2), { status: 'already_added' });
+  assert.deepEqual(editRow(mia, 2, 'bb_update_candidate_clear', { p_expected_grade_count: 26, p_expected_count_count: 6, p_expected_chosen_count: 0 }), { status: 'already_added' });
+  // Restore of a withdrawn make-up while another is active → already_added
+  const w = castCall('bb_withdraw_candidate', { p_candidate_id: miaFall.id, p_expected_version: miaFall.version });
+  assert.equal(w.status, 'ok');
+  setDay('2027-09-01');
+  const again = castCall('bb_add_makeup', { p_cycle_id: fallCycle().id, p_earlier_candidate_id: mia.id }, STAFF);
+  assert.equal(again.status, 'ok');
+  assert.deepEqual(castCall('bb_restore_candidate', { p_candidate_id: miaFall.id, p_expected_version: w.version }), { status: 'already_added' });
+  // S2: Edit cycle can't move a past graded day, untick its part, or move the first day once grading started
+  loadCast();
+  setDay('2027-06-09');
+  const { form } = editForm(springCycle().id);
+  const original = JSON.parse(JSON.stringify(form));
+  const upd = (f) => castCall('bb_update_cycle', { p_cycle_id: springCycle().id, p_expected_version: springCycle().version, p_payload: buildUpdatePayload(f) });
+  form.days[1].date = '2027-06-12'; // Technical (May 1, graded) moved
+  assert.deepEqual(upd(form), { status: 'has_grades' });
+  const f2 = JSON.parse(JSON.stringify(original));
+  f2.days[0].date = '2027-06-19'; // the first day (graded, past) moved
+  assert.deepEqual(upd(f2), { status: 'has_grades' });
+  const f4 = JSON.parse(JSON.stringify(original));
+  f4.days[2].parts = ['curriculum', 'technical']; // a part added to a past day: fine (only removing is refused)
+  f4.days[1].parts = ['technical'];
+  assert.equal(upd(f4).status, 'ok');
+  assert.deepEqual(upd(original), { status: 'has_grades' }); // …but taking that part off a past day again is refused (technical has grades)
+  const f3 = editForm(springCycle().id).form;
+  f3.days.push({ ...JSON.parse(JSON.stringify(f3.days[0])), id: null, name: 'Make-up day', date: '2027-06-19', parts: ['technical'] });
+  assert.equal(castCall('bb_update_cycle', { p_cycle_id: springCycle().id, p_expected_version: springCycle().version, p_payload: buildUpdatePayload(f3) }).status, 'ok'); // a later new day is fine
+  const gs = castCall('bb_cycle_grading_state', { p_cycle_id: springCycle().id }, STAFF);
+  assert.deepEqual([gs.has_grading, gs.first_day, gs.first_day_frozen, gs.parts_with_grades], [true, '2027-04-03', true, ['physical', 'technical', 'curriculum', 'other']]);
+  assert.deepEqual(gs.protected_days.map((d) => d.day_date), ['2027-04-03', '2027-05-01', '2027-06-05']);
+  assert.deepEqual(castCall('bb_cycle_results', { p_cycle_id: springCycle().id, p_dan: 2 }, STAFF).rubrics.map((d) => d.dan), [2]); // the requested Dan only
+  // Delete cycle: has_grades (after has_payments / has_waivers, as 0016)
+  const fall2 = fallCycle();
+  const st = db();
+  st.bb_payments = st.bb_payments.filter((p) => p.cycle_id !== fall2.id);
+  st.bb_candidate_waivers = st.bb_candidate_waivers.filter((x) => !st.bb_candidates.some((c) => c.id === x.candidate_id && c.cycle_id === fall2.id));
+  const miaF = st.bb_candidates.find((c) => c.cycle_id === fall2.id && c.source === 'makeup');
+  st.bb_grades.push({ ...st.bb_grades.find((g) => g.candidate_id === miaF.id), id: randomUUID(), subject_id: subjectId(1, 'Free sparring'), letter: 'B', kept: false, kept_from_cycle_id: null, kept_from_cycle_name: null });
+  saved = st;
+  assert.deepEqual(castCall('bb_delete_cycle', { p_cycle_id: fall2.id, p_expected_version: fall2.version, p_expected_candidate_count: st.bb_candidates.filter((c) => c.cycle_id === fall2.id).length }), { status: 'has_grades' });
+});
+
+check('grading store: the purge keeps the age (age_kept) and the result; a purge day is the latest of the make-up chain', () => {
+  loadCast();
+  // Mia's Spring row: her own purge day is Spring's last day + 3 years; her Fall make-up's is later
+  const mia = castRow('Mia', 'Chen');
+  setDay('2030-06-10'); // after Spring's purge day (2030-06-05), before Fall's (2030-11-20)
+  const res = castCall('bb_cycle_results', { p_cycle_id: springCycle().id, p_dan: 1 }, STAFF); // a read: no purge
+  assert.equal(res.rows.find((r) => r.id === mia.id).has_email, true, "the chain keeps Mia's details as long as her make-up's");
+  castCall('bb_cycle_roster', { p_cycle_id: springCycle().id }, STAFF); // runs the purge
+  const rina = db().bb_candidates.find((c) => c.first_name === 'Rina' && c.cycle_id === springCycle().id);
+  assert.deepEqual([rina.date_of_birth, rina.email_for_results, rina.age_kept], [null, null, 29]);
+  assert.equal(db().bb_candidates.find((c) => c.id === mia.id).date_of_birth, '1995-02-11');
+  const after = castCall('bb_cycle_results', { p_cycle_id: springCycle().id, p_dan: 1 }, STAFF);
+  assert.equal(after.rows.find((r) => r.first_name === 'Rina').result.total, 252.5, 'the result stays exact');
+  assert.deepEqual(after.rows.find((r) => r.first_name === 'Rina').result.reasons, ['d', 'below']);
+  const detail = castCall('bb_candidate_detail', { p_candidate_id: rina.id }, STAFF);
+  assert.equal(detail.candidate.age_on_first_day, null); // never from age_kept
+  assert.ok(!JSON.stringify(detail).includes('age_kept'));
+});
+
+check('grading store: failNextSave covers the new writes; simulateOtherAdminEdit changes one grade', () => {
+  loadCast();
+  for (const name of ['bb_set_grade', 'bb_set_measured', 'bb_set_extra_count', 'bb_set_makeup_subjects', 'bb_add_makeup', 'bb_mark_result_sent',
+    'bb_undo_result_sent', 'bb_set_result_text', 'bb_update_candidate_clear', 'bb_results_csv']) {
+    assert.ok(BB_WRITE_RPC_NAMES.includes(name), name);
+  }
+  backend.failNextSave();
+  const lucas = castRow('Lucas', 'Ferreira');
+  const r = backend.rpc('bb_set_grade', { p_candidate_id: lucas.id, p_dan: 1, p_subject_id: subjectId(1, 'Free sparring'), p_letter: 'A' }, STAFF);
+  assert.equal(r.data, null);
+  const before = JSON.stringify(db().bb_grades.map((g) => g.letter));
+  backend.simulateOtherAdminEdit();
+  assert.notEqual(JSON.stringify(db().bb_grades.map((g) => g.letter)), before);
+  assert.equal(backend.rpc('bb_cycle_results', { p_cycle_id: springCycle().id, p_dan: null }, STAFF, { get: true }).error, null); // a read may be a GET
+  assert.equal(backend.rpc('bb_results_csv', { p_cycle_id: springCycle().id }, ADMIN, { get: true }).error.code, '25006'); // it writes
 });
 
 // ======================= the family form's preview stand-in =======================
