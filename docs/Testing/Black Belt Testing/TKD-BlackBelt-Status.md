@@ -177,3 +177,4 @@ All the items below were applied to the plan.
 **G3 = A (v0.940):** D retests the D subjects; below the mark an admin picks subjects (Star v0.130). **G4 asked** (where the make-up is graded).
 **G4 = A (v0.941):** make-ups graded at a later cycle (Add candidate → Make-up from an earlier cycle), as Star. **G5 asked** (examiners).
 **G5 = A (v0.942):** no examiner field, the log is enough. Rules questions done; next the grading screens (G6 onward).
+**G6 = A (v0.943):** Grading tab = day switch (+ Other requirements), then Dan, grid of that day's subjects. **G7 asked** (measured Physical entry).
