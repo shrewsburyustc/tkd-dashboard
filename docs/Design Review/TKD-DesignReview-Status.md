@@ -25,7 +25,7 @@
 |---|---|---|---|
 | 1 | Inventory: every screen, dialog and public page, owner, rulebook rows, paper task, "same job, different design" list | **Done 2026-10-21** — checked by a separate agent | `Phase 1 inventory/` |
 | 1b | **Walkthrough of the phase 1 findings, one item at a time, each with a today-vs-after picture** (Jeffrey, 2026-10-21: "I cannot understand it all at once") | **Done 2026-10-23** — all 20 items decided (35 decisions in `Walkthrough/Decisions.md`) | `Walkthrough/` |
-| 1c | **End-of-walkthrough review**: the change list by owner (Main's shared parts first, item 19), the rulebook rows to write (1.000–1.033), the open details | **In progress** — change list drafted 2026-10-23, checked by a separate agent (24 findings verified and fixed); Jeffrey checks it next | `End review/TKD-DesignReview-ChangeList.md` |
+| 1c | **End-of-walkthrough review**: the change list by owner (Main's shared parts first, item 19), the rulebook rows to write (1.000–1.033), the open details | **In progress** — change list drafted 2026-10-23, checked by a separate agent (24 findings verified and fixed); Jeffrey OK'd it 2026-10-23 ("The change list looks right"). Open details one at a time: **D1a shown, waiting for Jeffrey** | `End review/TKD-DesignReview-ChangeList.md` |
 | 2 | Other systems (martial arts + gym software, modern apps): comparison, sources, copy / avoid | **On hold** until the walkthrough is done (Jeffrey, 2026-10-21) | — |
 | 3 | Design review in preview mode at 1280×800, 820×1180 touch, 390×844 touch, 320 wide; Grandmaster walkthroughs | Not started | — |
 | 4 | Code review + bug hunt (all of `src/`, `functions/`, `supabase/`) + separate security review (handoff §6) | Not started | — |

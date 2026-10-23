@@ -1,0 +1,53 @@
+{
+  "title": "Open detail D1a · An “are you sure?” box while it works",
+  "subtitle": "<b>From item 8; needed before Main builds the shared confirm box (item 19).</b> Today, while a box waits for the database: <b>most show no change at all</b> — the button is marked busy for screen readers only, so it looks the same and the box can still be pressed or closed; Calendar's delete turns the red button gray with “Deleting…” (Prospects also says “Deleting…”); Forms, Color Belt private testing and Black Belt say “Saving…”; kiosk mode says “Opening…”. Every form dialog's Save already turns gray and says “Saving…” (approved detail 8). <span style=\"color:#6B6B6B\">(Tested in the preview with a 6-second slow save set to fail, so nothing was deleted · PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "../Walkthrough/shots/d1a-delete-busy.png",
+              "crop": [440, 60, 400, 270],
+              "scale": 1,
+              "caption": "<b>1. Color Belt's Delete permanently, while it deletes:</b> nothing changes — the red button looks the same, and “Keep student” still works. Most boxes are like this.",
+              "marks": [[505, 249, 296, 38]]
+            },
+            {
+              "src": "../Walkthrough/shots/d1a-calendar-deleting.png",
+              "crop": [440, 60, 400, 260],
+              "scale": 1,
+              "caption": "<b>2. Calendar's Delete type, while it deletes:</b> the red button turns gray and says “Deleting…”; Cancel can still be pressed.",
+              "marks": [[676, 237, 124, 40]]
+            }
+          ]
+        },
+        {
+          "src": "../Walkthrough/shots/d1a-form-saving.png",
+          "crop": [380, 430, 520, 100],
+          "scale": 1,
+          "caption": "<b>3. Every form dialog's Save while it saves:</b> gray “Saving…” (approved detail 8); Cancel stays.",
+          "marks": [[767, 471, 113, 40]]
+        }
+      ]
+    },
+    {
+      "label": "Proposed (option B)",
+      "tone": "after",
+      "items": [
+        {
+          "src": "../Walkthrough/shots/d1a-delete-busy-MOCKUP.png",
+          "crop": [440, 60, 400, 270],
+          "scale": 1,
+          "caption": "<b>4. Option B:</b> the pressed button grays and says what it is doing — “Deleting…”, “Undoing…”, “Withdrawing…” (the button's verb + “ing…”) — and “Keep student” grays too until it's done.",
+          "marks": [[505, 249, 296, 38]]
+        }
+      ],
+      "note": "<b>Option C</b> is picture 2's look in every box: the same gray “Deleting…”, but “Keep …” stays pressable — as in Calendar and the form dialogs today. Picture 4 is drawn over the real box; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question: what does an “are you sure?” box show while it works?</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> in most boxes nothing changes for a second or two after a tap, so a second tap is easy; the boxes that do show something use three different words.<br><b>B · Recommended: the pressed button grays and says what it is doing; “Keep …” grays too (picture 4).</b> <i>+</i> he sees it's working; nothing can be tapped twice; “Keep” can't look as if it stopped a delete that is already on its way. <i>−</i> the box can't be closed for the second or two it works.<br><b>C · Calendar's look:</b> the pressed button grays and says what it is doing; “Keep …” stays pressable. <i>+</i> the same as Calendar and the form dialogs today. <i>−</i> pressing “Keep” then closes the box but doesn't stop the delete."
+}

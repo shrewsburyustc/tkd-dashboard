@@ -248,3 +248,13 @@ Each gets one short question (with a picture where it helps) before the prompt t
 3. **The rulebook rows** (section 3): `git merge main`, write rows 1.000–1.033 and the reworded sections, show them, commit on `design-review` after Jeffrey's OK; the Main session merges.
 4. **The prompts**, ready to paste: **Main first, in two prompts** — step 1 the shared parts (M1–M11, nothing on screen changes), step 2 its own screen changes (M12–M14; M15 with Color Belt; M16 later) — then one per section (Color Belt, Star, Black Belt, Camps, Finance, new students), each asking for mockups of its visual changes before code.
 5. Then the review carries on: phase 2 (other systems, on hold), phases 3–9.
+
+---
+
+## 6. Open-detail decisions
+
+One question at a time, each with a picture in this folder; answers are recorded here (and go into the rulebook rows and the prompts).
+
+| # | Question | Decision | Date | Picture |
+|---|---|---|---|---|
+| D1a | The shared confirm box while it works (today most boxes show no change; Calendar / Prospects "Deleting…", Forms / Color Belt private / Black Belt "Saving…", kiosk "Opening…"; form dialogs' Save grays with "Saving…", approved detail 8) | **Waiting for Jeffrey: A / B / C** (recommended B: the pressed button grays and says what it is doing — the button's verb + "ing…" — and "Keep …" grays too until it's done. C: Calendar's look, "Keep …" stays pressable) | 2026-10-23 | `d1a-busy-box.png` (picture 4 drawn with `tools/mock-d1a-busy.js`) |
