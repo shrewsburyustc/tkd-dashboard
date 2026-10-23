@@ -179,3 +179,4 @@ All the items below were applied to the plan.
 **G5 = A (v0.942):** no examiner field, the log is enough. Rules questions done; next the grading screens (G6 onward).
 **G6 = A (v0.943):** Grading tab = day switch (+ Other requirements), then Dan, grid of that day's subjects. **G7 asked** (measured Physical entry).
 **G7 = A (v0.944):** measured subjects take the number; grade worked out with the age bracket. **G8 asked** (where extra points are entered).
+**G8 = A (v0.945):** extra points counts in the Grading tab (Extra points in the day switch). **G9 asked** (Results tab).
