@@ -1,0 +1,1297 @@
+/*
+  grading.css — the styles of Black Belt testing's Grading tab (contract 0025 §14.2): the day switch,
+  the Dan bar, the grid (GradeGrid.jsx), the grade dropdown (GradeCell.jsx), the measured-number
+  editor (MeasuredEditor.jsx), the count boxes, the phone card and picker, the kept note, Choose
+  subjects (MakeupSubjectsDialog.jsx) and the printed sheet (GradingSheet.jsx).
+  Why it exists: copied from Star's grading.css (src/screens/testing/star/grading/grading.css,
+  v0.512) with Black Belt's own pieces, kept in Black Belt's folder so neither section can break the
+  other. It REUSES testing.css: the dropdown list (.fa-list / .fa-option, 44px items on touch), the
+  sheet (.tsheet), the segmented switch (.segment, .ev-side), fields (.input), buttons (.btn).
+  Every class here starts with "bbg-" (screen) or "bbp-" (paper). Values come from tokens.css or the
+  4px grid; the one exception is the make-up label's text colour #8a5a00, given exactly in the
+  approved change (rulebook v0.947).
+
+  Sizes (GradeGrid's `size`, chosen in GradingTab from useMediaQuery.js):
+    pc      ≥1024px with a mouse      36px tall cells, tilted headings
+    touch   ≥1024px touch (sideways)  44px tall cells
+    narrow  640–1023px (an upright tablet): Total and Result under the name, cells ≥44px wide (G 9)
+    phones  (< 640px) one candidate at a time: the card
+  Blue: the selected cell (2px inset) and a make-up's retest cells (1px outline) are Star's named
+  exception to §1.2's 5-blue limit for the grading grid (v0.512), kept for Black Belt.
+*/
+
+/* ===== The day switch (G 1) ===== */
+.bbg-days {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.bbg-days .segment {
+  height: auto;
+  min-height: 44px;
+  min-width: 0;
+  padding: var(--space-4) var(--space-12);
+}
+
+.bbg-day {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.25;
+}
+
+.bbg-day small {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.bbg-day > span {
+  color: var(--color-text);
+  font-size: var(--text-13);
+}
+
+.bbg-dayfield {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-12);
+}
+
+.bbg-dayfield .field-label {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* Gray lines: "No testing today …", the hand-in line, the to-confirm line */
+.bbg-grayline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: 0 0 var(--space-8);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.bbg-grayline svg {
+  flex: none;
+}
+
+.bbg-school-line {
+  margin-bottom: var(--space-8);
+}
+
+/* ===== The bar: Dan switch + Print grading sheet ===== */
+.bbg-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-8) var(--space-24);
+  margin-bottom: var(--space-12);
+}
+
+.bbg-bar .ev-side {
+  margin-bottom: 0;
+}
+
+.bbg-bar--phone {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.bbg-bar--phone .ev-segmented {
+  display: flex;
+  width: 100%;
+}
+
+.bbg-bar--phone .segment {
+  flex: 1;
+  padding: 0 var(--space-8);
+}
+
+.bbg-bar--phone .bbg-print {
+  justify-content: center;
+  width: 100%;
+}
+
+.bbg-dan-switch .segment {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.bbg-dan-switch .ev-side-count {
+  margin-left: var(--space-8);
+}
+
+.bbg-dw {
+  margin-left: 0.25em; /* the space before "Dan" (a flex item's leading space would collapse) */
+}
+
+.bbg-dan-warn {
+  flex: none;
+  margin-left: var(--space-4);
+  color: var(--color-warning-text);
+}
+
+.bbg-print {
+  flex: none;
+}
+
+.bbg-empty {
+  margin-top: var(--space-4);
+}
+
+/* ===== The grid ===== */
+.bbg-grid {
+  /* When the columns don't fit (an upright tablet on a long day) the grid scrolls sideways inside
+     this box; the PAGE never does. */
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+}
+
+.bbg-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: var(--text-13);
+}
+
+.bbg-table thead th {
+  padding: var(--space-8) 2px;
+  border-bottom: 2px solid var(--color-text-secondary);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+  line-height: 1.25;
+  text-align: center;
+  vertical-align: bottom;
+}
+
+/* A day with two parts: the thin band naming the parts (G 11) */
+.bbg-table thead tr.bbg-bandhead th {
+  padding: 2px var(--space-8);
+  border-bottom: 1px solid var(--color-border);
+  border-left: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: var(--text-12);
+  font-weight: 500;
+}
+
+.bbg-table thead th.bbg-h-namecol {
+  padding-left: var(--space-12);
+  text-align: left;
+}
+
+.bbg-table thead th.bbg-h-res {
+  padding-left: var(--space-8);
+  text-align: left;
+}
+
+/* Subject names tilted 60° (Star v0.512); the unit / "outdoor" / "handed in" line stays level */
+.bbg-table thead th.bbg-h-rot {
+  height: 180px;
+  padding: 0 0 var(--space-8);
+  border-left: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.bbg-h-name {
+  width: 28px;
+  margin: 0 0 var(--space-4) 50%;
+  color: var(--color-text);
+  font-size: var(--text-13);
+  font-weight: 500;
+  text-align: left;
+  transform: rotate(-60deg);
+  transform-origin: left bottom;
+}
+
+.bbg-cr {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.bbg-h-under {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: normal;
+}
+
+/* Upright tablet: names stand straight up (G 9) */
+.bbg-grid--narrow .bbg-table thead th.bbg-h-rot {
+  height: 196px;
+}
+
+.bbg-grid--narrow .bbg-h-name {
+  width: auto;
+  margin: 0 auto var(--space-4);
+  transform: rotate(180deg);
+  transform-origin: center;
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+}
+
+/* Body rows */
+.bbg-table tbody td,
+.bbg-table tbody th {
+  height: 44px;
+  padding: 0;
+  border-top: 1px solid var(--color-border);
+  text-align: center;
+  vertical-align: middle;
+}
+
+.bbg-name {
+  padding: var(--space-8) var(--space-4) var(--space-8) var(--space-12) !important;
+  font-weight: 400;
+  text-align: left !important;
+  overflow-wrap: anywhere;
+}
+
+.bbg-name-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+  font-weight: 500;
+}
+
+.bbg-name small {
+  display: block;
+  overflow-wrap: break-word;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* Upright tablet: Total and Result under the name (G 9) */
+.bbg-name-totals {
+  display: block;
+  margin-top: var(--space-4);
+  font-size: var(--text-12);
+}
+
+.bbg-name-total {
+  display: block;
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+/* The make-up label (v0.947): an amber pill */
+.bbg-pill {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--color-warning-bg);
+  color: #8a5a00;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/* The band above the make-up rows (v0.947): #faeeda / #8a5a00, semibold */
+.bbg-table tbody tr.bbg-band td {
+  height: auto;
+  padding: var(--space-8) var(--space-12);
+  background: var(--color-warning-bg);
+  color: #8a5a00;
+  font-size: var(--text-12);
+  font-weight: 600;
+  text-align: left;
+}
+
+.bbg-cellnote {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbg-td {
+  border-left: 1px solid var(--color-border);
+}
+
+/* "—": not for this age group (G 13) */
+.bbg-td.is-na {
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+}
+
+/* One cell: fills its table cell */
+.bbg-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 36px;
+  padding: 2px;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+  user-select: none;
+}
+
+.bbg-cell:focus {
+  outline: none;
+}
+
+.bbg-cell.is-d {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+/* Late (G 17): amber, worked out from the date */
+.bbg-cell.is-late {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+}
+
+.bbg-cell-dot {
+  color: var(--color-border-strong);
+  font-weight: 400;
+}
+
+.bbg-cell.is-unsaved {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  box-shadow: inset 0 0 0 1px var(--color-warning-text);
+}
+
+.bbg-cell-warn {
+  flex: none;
+}
+
+/* A measured cell's ⚠ sits in the top-left corner (as drawn), so the number keeps its place */
+.bbg-cell-warnmark {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  color: var(--color-warning-text);
+}
+
+/* The measured cell: number on top (semibold), the database's grade under it (gray, G 3) */
+.bbg-cell-num {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.bbg-cell-way {
+  font-weight: 400;
+}
+
+.bbg-cell-letter {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+}
+
+.bbg-cell.is-d .bbg-cell-letter {
+  color: var(--color-warning-text);
+  font-weight: 500;
+}
+
+/* A make-up's retest subject: 1px blue outline (v0.947) */
+.bbg-cell.is-retest {
+  box-shadow: inset 0 0 0 1px var(--color-blue);
+}
+
+/* The selected cell (keyboard focus / list or editor open): 2px blue inset */
+.bbg-cell:focus-visible,
+.bbg-cell:focus,
+.bbg-cell.is-open {
+  box-shadow: inset 0 0 0 2px var(--color-blue);
+}
+
+/* A kept make-up grade or count: gray, "kept" under it, no list (G 14, G 36) */
+.bbg-cell.is-kept {
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.bbg-cell.is-kept small {
+  font-size: var(--text-12);
+  line-height: 1.1;
+}
+
+.bbg-list .bbg-option-d,
+.bbg-sheetlist .bbg-option-d {
+  color: var(--color-warning-text);
+}
+
+/* Clear: gray, under a line (G 12) */
+.bbg-list .bbg-option-clear,
+.bbg-sheetlist .bbg-option-clear {
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.bbg-list .fa-option {
+  justify-content: center;
+}
+
+/* ===== The measured-number editor (G 3–G 5) ===== */
+.bbg-editor {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-12);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  font-size: var(--text-13);
+  text-align: left;
+}
+
+.bbg-ways {
+  display: flex;
+  width: 100%;
+}
+
+.bbg-ways .segment {
+  flex: 1;
+  height: 36px;
+  color: var(--color-text);
+}
+
+/* the way switch is a gray view-like switch: the chosen side is gray, not blue */
+.bbg-ways .segment.is-checked {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.bbg-editor-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.bbg-editor-input {
+  width: 112px;
+  font-size: var(--text-14);
+}
+
+.bbg-editor-input.is-invalid,
+.bbg-numfield.is-invalid {
+  border-color: var(--color-warning-text);
+}
+
+.bbg-editor-unit {
+  color: var(--color-text-secondary);
+}
+
+.bbg-editor-reached,
+.bbg-editor-feet,
+.bbg-editor-error,
+.bbg-editor-hint {
+  margin: 0;
+}
+
+.bbg-editor-reached,
+.bbg-editor-feet {
+  min-height: 1.3em;
+}
+
+.bbg-editor-error {
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+}
+
+.bbg-editor-hint {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* ===== Count boxes (G 18) ===== */
+.bbg-num {
+  border-left: 1px solid var(--color-border);
+}
+
+.bbg-countwrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-4) 0;
+}
+
+.bbg-count {
+  width: 52px;
+  height: 28px;
+  padding: 0 var(--space-4);
+  text-align: center;
+}
+
+.bbg-count.is-unsaved {
+  border-color: var(--color-warning-text);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  box-shadow: 0 0 0 1px var(--color-warning-text);
+}
+
+.bbg-points {
+  color: var(--color-text);
+  font-size: var(--text-12);
+  line-height: 1.1;
+}
+
+.bbg-points.is-zero,
+.bbg-line-points.is-zero {
+  color: var(--color-text-secondary);
+}
+
+.bbg-table tbody td.bbg-extra {
+  border-left: 1px solid var(--color-border);
+  font-weight: 600;
+}
+
+/* ===== Total and Result ===== */
+.bbg-total {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.bbg-sofar {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+}
+
+.bbg-sofar.is-inline {
+  display: inline;
+}
+
+.bbg-table tbody td.bbg-res {
+  padding: var(--space-4) var(--space-8);
+  font-size: var(--text-12);
+  text-align: left;
+}
+
+.bbg-result--green {
+  color: var(--color-success-text);
+}
+
+.bbg-result--amber {
+  color: var(--color-warning-text);
+}
+
+.bbg-result--gray,
+.bbg-result-after {
+  color: var(--color-text-secondary);
+}
+
+/* "Choose subjects" / "Show both schools": a link inside a line of text */
+.bbg-inline-link {
+  position: relative;
+  font-size: inherit;
+}
+
+/* "Choose subjects" inside a picker-sheet row (the row is the button): link blue, not a link */
+.bbg-choose-text {
+  color: var(--color-blue);
+}
+
+/* ===== Sizes ===== */
+.bbg-grid--pc .bbg-table tbody td,
+.bbg-grid--pc .bbg-table tbody th {
+  height: 40px;
+}
+
+.bbg-grid--pc .bbg-cell {
+  min-height: 40px;
+}
+
+.bbg-grid--touch .bbg-cell,
+.bbg-grid--narrow .bbg-cell {
+  min-height: 52px;
+}
+
+.bbg-grid--touch .bbg-count,
+.bbg-grid--narrow .bbg-count {
+  height: var(--control-height-touch);
+  font-size: var(--text-16); /* 16px stops iPads zooming in on the field */
+}
+
+@media (pointer: coarse) {
+  .bbg-grid--touch .bbg-count,
+  .bbg-grid--narrow .bbg-count,
+  .bbg-card .bbg-linefield,
+  .bbg-card .bbg-count--line,
+  .bbg-ways .segment,
+  .bbg-dan-switch .segment {
+    height: var(--tap-size);
+  }
+
+  .bbg-editor-input {
+    height: var(--tap-size);
+    font-size: var(--text-16);
+  }
+
+  /* "Choose subjects": the words keep their line; a 44px invisible tap area around them */
+  .bbg-inline-link::after {
+    content: '';
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: 100%;
+    min-width: var(--tap-size);
+    height: var(--tap-size);
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* ===== The kept note ===== */
+.bbg-keptpop {
+  position: fixed;
+  z-index: 50;
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  font-size: var(--text-13);
+  line-height: 1.4;
+  text-align: left;
+}
+
+.bbg-keptpop b,
+.bbg-keptline b {
+  display: block;
+  font-weight: 500;
+}
+
+.bbg-keptline {
+  margin: 0 0 var(--space-8);
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-size: var(--text-12);
+  line-height: 1.4;
+}
+
+/* ===== The phone card (G 10) ===== */
+.bbg-card {
+  padding: var(--space-4) var(--space-16) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+}
+
+.bbg-card-makeup {
+  margin: var(--space-12) 0 var(--space-4);
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-size: var(--text-13);
+  line-height: 1.5;
+}
+
+.bbg-card .bbg-line,
+.bbg-card .bbg-line-wrap {
+  border-top: 1px solid var(--color-border);
+}
+
+.bbg-card .bbg-line-wrap > .bbg-line {
+  border-top: none;
+}
+
+.bbg-card > :first-child.bbg-line,
+.bbg-card > :first-child.bbg-line-wrap,
+.bbg-card > .bbg-card-makeup + .bbg-line,
+.bbg-card > .bbg-card-makeup + .bbg-line-wrap {
+  border-top: none;
+}
+
+.bbg-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-height: 56px;
+  padding: var(--space-4) 0;
+  font-size: var(--text-14);
+}
+
+.bbg-line-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.bbg-line-text small {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbg-line-outdoor {
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.bbg-ways--line {
+  display: inline-flex;
+  width: auto;
+  margin-top: var(--space-4);
+}
+
+.bbg-ways--line .segment {
+  min-width: 64px;
+  height: var(--tap-size);
+}
+
+.bbg-warn-text {
+  color: var(--color-warning-text);
+}
+
+.bbg-warn-text svg {
+  vertical-align: -1px;
+}
+
+/* The dropdown field on a line */
+.bbg-linefield {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  width: 116px;
+  height: var(--control-height-touch);
+}
+
+.bbg-linefield.is-d,
+.bbg-linefield.is-late,
+.bbg-linefield.is-unsaved {
+  border-color: var(--color-warning-text);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.bbg-linefield.is-retest {
+  border-color: var(--color-blue);
+  box-shadow: inset 0 0 0 1px var(--color-blue);
+}
+
+.bbg-linefield .bbg-cell-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bbg-linefield .bbg-cell-warn {
+  margin-right: var(--space-4);
+}
+
+.bbg-choose {
+  color: var(--color-text-secondary);
+}
+
+/* "A kept": gray, no ▾ */
+.bbg-keptfield {
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+/* The measured number on a line: a 92px field with the unit inside it, the grade next to it */
+.bbg-numfield {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  width: 92px;
+  height: var(--tap-size);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+}
+
+.bbg-numfield:focus-within {
+  border-color: var(--color-blue);
+}
+
+.bbg-numfield.is-d,
+.bbg-numfield.is-unsaved {
+  border-color: var(--color-warning-text);
+  background: var(--color-warning-bg);
+}
+
+.bbg-numfield.is-retest {
+  border-color: var(--color-blue);
+}
+
+.bbg-numfield-input {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0 0 0 var(--space-12);
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-16);
+  outline: none;
+}
+
+.bbg-numfield-unit {
+  flex: none;
+  padding-right: var(--space-8);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
+.bbg-line-letter,
+.bbg-line-points {
+  flex: none;
+  min-width: 24px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.bbg-line-letter.is-d {
+  color: var(--color-warning-text);
+}
+
+.bbg-line-points {
+  min-width: 40px;
+  font-size: var(--text-13);
+  font-weight: 400;
+}
+
+.bbg-line-na {
+  flex: none;
+  min-width: 24px;
+  color: var(--color-text-secondary);
+  text-align: right;
+}
+
+.bbg-count--line {
+  flex: none;
+  width: 92px;
+  height: var(--control-height-touch);
+  font-size: var(--text-16);
+}
+
+.bbg-card-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4) var(--space-12);
+  margin-top: var(--space-4);
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-14);
+}
+
+.bbg-card-totaltext {
+  font-weight: 600;
+}
+
+.bbg-card-total .bbg-result {
+  font-size: var(--text-13);
+  text-align: right;
+}
+
+/* ===== The phone picker: ◀ [Mia Chen · 18 and over ▾] ▶ ===== */
+.bbg-pick {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+}
+
+.bbg-pick-nav {
+  flex: none;
+  justify-content: center;
+  width: var(--tap-size);
+  height: var(--tap-size);
+  padding: 0;
+}
+
+.bbg-pick-nav[aria-disabled='true'] {
+  color: var(--color-disabled-text);
+  cursor: default;
+}
+
+.bbg-pick-sel {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  min-width: 0;
+  height: var(--tap-size);
+  font: inherit;
+  font-size: var(--text-14);
+  text-align: left;
+  cursor: pointer;
+}
+
+.bbg-pick-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bbg-sheetrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  min-height: 52px;
+  padding: var(--space-4) var(--space-16);
+  border: none;
+  border-top: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-14);
+  text-align: left;
+  cursor: pointer;
+}
+
+.bbg-sheetrow:first-child {
+  border-top: none;
+}
+
+.bbg-sheetrow.is-current {
+  background: var(--color-blue-tint);
+}
+
+.bbg-sheetrow:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+.bbg-sheetrow-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.bbg-sheetrow-name .bbg-pill {
+  margin-left: var(--space-8);
+}
+
+.bbg-sheetrow-name small {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbg-sheetrow-result {
+  flex: none;
+  max-width: 50%;
+  font-size: var(--text-12);
+  text-align: right;
+}
+
+.bbg-sheet {
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+/* 320px: the grade list as a bottom sheet (G02a) */
+.bbg-gradesheet {
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.bbg-sheetlist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bbg-sheetlist .fa-option {
+  justify-content: center;
+  min-height: var(--tap-size);
+}
+
+/* ===== Choose subjects (G 21–G 23) ===== */
+.bbg-choose-list {
+  max-height: 360px;
+  margin: var(--space-8) 0;
+  padding: 0 var(--space-8);
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.tdialog-page .bbg-choose-list {
+  max-height: none;
+}
+
+.bbg-choose-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.bbg-choose-row:first-of-type {
+  border-top: none;
+}
+
+.bbg-choose-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.bbg-choose-name small {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbg-choose-grade {
+  flex: none;
+  min-width: 32px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.bbg-choose-grade.is-d {
+  color: var(--color-warning-text);
+}
+
+.bbg-bestcase {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-13);
+}
+
+.bbg-bestcase.is-below {
+  color: var(--color-warning-text);
+}
+
+/* Phones: Save at the top, in the page's title row (G 23) */
+.bbg-page-save {
+  position: absolute;
+  top: var(--space-8);
+  right: var(--space-16);
+  z-index: 3;
+}
+
+.dialog-page:has(.bbg-page-save) .dialog-page-title {
+  padding-right: 88px;
+}
+
+/* ===== Hover — mouse only ===== */
+@media (hover: hover) and (pointer: fine) {
+  .bbg-cell:hover:not(.is-unsaved):not(.is-d):not(.is-kept):not(.is-late) {
+    background: var(--color-surface);
+  }
+
+  .bbg-sheetrow:hover {
+    background: var(--color-surface);
+  }
+}
+
+/* ===== Below 360px: the Dan switch drops the word "Dan" (Star v0.512) ===== */
+@media (max-width: 359.98px) {
+  .bbg-dw {
+    display: none;
+  }
+}
+
+/* ===== The printed grading sheet (G 33–G 35; GradingSheet.jsx) ===== */
+.bbp-print {
+  display: none;
+}
+
+@page bb-grading-sheet {
+  size: letter landscape;
+  margin: 0.5in;
+}
+
+@media print {
+  body:has(> .bbp-print) > *:not(.bbp-print) {
+    display: none !important;
+  }
+
+  body > div.bbp-print.bbp-print {
+    display: block;
+    page: bb-grading-sheet;
+    color: #000;
+    background: #fff;
+    font-family: var(--font-family);
+    font-size: 9pt;
+    line-height: 1.3;
+  }
+
+  .bbp-page {
+    display: flex;
+    flex-direction: column;
+    height: 7.4in;
+    break-inside: avoid;
+  }
+
+  .bbp-page + .bbp-page {
+    break-before: page;
+  }
+
+  .bbp-title {
+    margin: 0 0 4pt;
+    font-size: 13pt;
+    font-weight: 600;
+  }
+
+  .bbp-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 24pt;
+    margin-bottom: 4pt;
+    font-size: 9.5pt;
+  }
+
+  .bbp-judge {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4pt;
+    white-space: nowrap;
+  }
+
+  .bbp-judge-line {
+    display: inline-block;
+    width: 2.2in;
+    border-bottom: 0.75pt solid #000;
+  }
+
+  .bbp-help {
+    margin: 0 0 6pt;
+    font-size: 8.5pt;
+  }
+
+  .bbp-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .bbp-col-name {
+    width: 1.55in;
+  }
+
+  .bbp-table th,
+  .bbp-table td {
+    padding: 2pt 3pt;
+    border: 0.75pt solid #000;
+    overflow-wrap: break-word;
+  }
+
+  .bbp-table th {
+    padding: 2pt 1.5pt;
+    font-size: 7.5pt;
+    font-weight: 600;
+    text-align: center;
+    vertical-align: bottom;
+    overflow-wrap: normal;
+    hyphens: auto;
+  }
+
+  .bbp-table .bbp-th-name {
+    text-align: left;
+  }
+
+  .bbp-under {
+    display: block;
+    font-size: 6.5pt;
+    font-weight: 400;
+  }
+
+  .bbp-table td {
+    height: 26pt;
+    vertical-align: middle;
+  }
+
+  .bbp-table tr {
+    break-inside: avoid;
+  }
+
+  .bbp-name {
+    font-size: 9pt;
+    font-weight: 600;
+  }
+
+  .bbp-name small {
+    display: block;
+    color: #444;
+    font-size: 7.5pt;
+    font-weight: 400;
+  }
+
+  .bbp-pill {
+    margin-left: 4pt;
+    padding: 0 3pt;
+    border: 0.75pt solid #000;
+    border-radius: 3pt;
+    font-size: 7pt;
+  }
+
+  .bbp-table td.bbp-added {
+    color: #444;
+    font-size: 8pt;
+    font-weight: 400;
+  }
+
+  .bbp-table tr.bbp-band td {
+    height: auto;
+    background: #ddd;
+    font-size: 8.5pt;
+    font-weight: 600;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .bbp-table td.bbp-kept {
+    background: #e6e6e6;
+    color: #444;
+    font-size: 8pt;
+    text-align: center;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .bbp-table td.bbp-na {
+    text-align: center;
+  }
+
+  .bbp-table td.bbp-ways {
+    vertical-align: top;
+    color: #444;
+    font-size: 6.5pt;
+  }
+
+  .bbp-foot {
+    display: flex;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 6pt;
+    font-size: 8.5pt;
+  }
+}

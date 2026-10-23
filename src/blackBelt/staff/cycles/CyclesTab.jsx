@@ -7,7 +7,10 @@
 //   - one row per cycle: name · first testing day · candidates (active, both schools) · one tag
 //   - row click → the cycle page; Edit (admins, PC and tablet) → Edit cycle; ⋯ → Copy Worcester
 //     link · Copy Shrewsbury link · Close / Open registration · (phones, admins) Edit cycle ·
-//     Delete cycle (admins, red; grayed with its reason once a payment or a form waiver exists)
+//     Delete cycle (admins, red; grayed with its reason once a payment or a form waiver exists;
+//     0025, Q-G3 v0.950: a cycle with grades is refused too — the list doesn't know about grades,
+//     so the grading state is read when Delete is chosen and, with grades, the banner says
+//     "Grades are entered for this cycle, so it can't be deleted." instead of the confirmation)
 //   - "+ Add cycle" in the page header (admins; N on the PC)
 // Add / Edit cycle themselves live in ../cycle/useCycleEditor.jsx (the cycle page uses it too).
 //
@@ -22,6 +25,7 @@ import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { deleteCycle, loadCycle, loadCycles, schoolToday } from '../../../lib/blackBelt/api.js';
+import { loadGradingState } from '../../../lib/blackBelt/gradingApi.js';
 import { cycleTag } from '../../../lib/blackBelt/rules.js';
 import { PHONE_QUERY, TOUCH_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
@@ -204,7 +208,7 @@ export default function CyclesTab({
   // ===== Delete cycle (permanent; the count is read fresh first, contract OP-5 / OP-6) =====
   async function startDelete(cycle, anchor) {
     if (!isAdmin || !beginWrite()) return;
-    const fresh = await loadCycle({ cycleId: cycle.id });
+    const [fresh, grading] = await Promise.all([loadCycle({ cycleId: cycle.id }), loadGradingState({ cycleId: cycle.id })]);
     endWrite(fresh.status === 'not_found' ? 'ok' : fresh.status);
     if (fresh.status === 'no_access') {
       onNoAccess();
@@ -217,6 +221,11 @@ export default function CyclesTab({
     }
     if (fresh.status !== 'ok') {
       setBanner({ text: T.LOAD_FAILED });
+      return;
+    }
+    // 0025 (Q-G3): real grades block deleting (unreadable grading state → the database decides)
+    if (grading.status === 'ok' && grading.partsWithGrades.length > 0) {
+      setBanner({ text: T.CYCLE_HAS_GRADES });
       return;
     }
     const detail = fresh.cycle;
@@ -267,6 +276,7 @@ export default function CyclesTab({
       onRefreshProfile();
     } else if (status === 'has_payments') setBanner({ text: T.HAS_PAYMENTS });
     else if (status === 'has_waivers') setBanner({ text: T.HAS_WAIVERS });
+    else if (status === 'has_grades') setBanner({ text: T.CYCLE_HAS_GRADES });
     else if (status === 'not_found') setBanner({ text: T.CYCLE_DELETED });
     else setBanner({ text: T.DELETE_STALE });
     reloadQuiet();

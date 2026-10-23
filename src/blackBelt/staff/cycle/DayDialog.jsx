@@ -10,6 +10,10 @@
 // database until the cycle's own Save. Errors show as you type, amber under the field; Save is
 // gray while there is one (v0.57).
 // This file only draws; the values live in useCycleEditor.jsx (so a screen lock keeps them).
+// 0025 (S2), Edit cycle only — `lock` (useCycleEditor's dayLock): a past day with grades or the
+// frozen first day keeps its date (the field is read-only with the gray reason under it); a part
+// that already has grades on a past day stays ticked (its box is grayed, with a gray line); and
+// once grading started no day may come before the first day (an amber message, Save gray).
 import { useId } from 'react';
 import { IconCheck } from '@tabler/icons-react';
 import Notice from '../../../components/Notice.jsx';
@@ -29,9 +33,11 @@ const PLACE_CHOICES = [
 
 // The day's problems, and which ones to show now (a field shows its "missing" message once it
 // was touched or Save was pressed; every other problem shows at once).
-export function checkDay(state, { today, otherDays }) {
+export function checkDay(state, { today, otherDays, lock = null }) {
   const day = valuesToDay(state.values);
   const problems = dayProblems(day, { today, originalDate: state.originalDate ?? null });
+  // 0025 (S2): once grading started, no day before the first day (a locked date never moves)
+  if (lock?.minDate && !lock.dateLocked && !problems.date && day.date && day.date < lock.minDate) problems.date = 'beforeFirst';
   const show = (field) => {
     const code = problems[field];
     if (!code) return null;
@@ -41,15 +47,17 @@ export function checkDay(state, { today, otherDays }) {
   return { day, problems, show, valid: !hasProblems(problems), also: partsAlsoOnOtherDays(day, otherDays) };
 }
 
-export default function DayDialog({ state, cycleName, dayCount, today, otherDays, isPhone, onChange, onTouch, onSave, onCancel, onRequestClose }) {
+export default function DayDialog({ state, cycleName, dayCount, today, otherDays, lock = null, isPhone, onChange, onTouch, onSave, onCancel, onRequestClose }) {
   const id = useId();
   const v = state.values;
   const isAdd = state.index === null;
-  const check = checkDay(state, { today, otherDays });
+  const check = checkDay(state, { today, otherDays, lock });
+  const lockedParts = lock?.lockedParts ?? [];
   const err = (field) => `${id}-${field}-error`;
 
   const nameMsg = T.nameProblemText(check.show('name'), T.ENTER_DAY_NAME);
-  const dateMsg = T.dateProblemText(check.show('date'));
+  const dateCode = check.show('date');
+  const dateMsg = dateCode === 'beforeFirst' ? T.beforeFirstDay(T.weekdayMonthDay(lock.minDate)) : T.dateProblemText(dateCode);
   const startMsg = T.timeProblemText(check.show('start'));
   const endMsg = T.timeProblemText(check.show('end'));
   const placeMsg = T.placeProblemText(check.show('place'));
@@ -63,6 +71,7 @@ export default function DayDialog({ state, cycleName, dayCount, today, otherDays
     if (touched) onTouch(touched);
   }
   function togglePart(part, on) {
+    if (!on && lockedParts.includes(part)) return; // 0025 (S2): it has grades on this day
     const parts = on ? [...v.parts, part] : v.parts.filter((p) => p !== part);
     set({ parts }, 'parts');
   }
@@ -175,8 +184,20 @@ export default function DayDialog({ state, cycleName, dayCount, today, otherDays
         </div>
         <div className="field">
           <label htmlFor={`${id}-date`}>{T.DATE}</label>
-          <DateField id={`${id}-date`} value={v.date} invalid={Boolean(dateMsg)} describedBy={dateMsg ? err('date') : undefined} onChange={(value) => set({ date: value }, 'date')} />
+          <DateField
+            id={`${id}-date`}
+            value={v.date}
+            readOnly={Boolean(lock?.dateLocked)}
+            invalid={Boolean(dateMsg)}
+            describedBy={dateMsg ? err('date') : lock?.dateLocked ? `${id}-date-lock` : undefined}
+            onChange={(value) => !lock?.dateLocked && set({ date: value }, 'date')}
+          />
           {dateMsg && <Notice id={err('date')}>{dateMsg}</Notice>}
+          {lock?.dateLocked && (
+            <p id={`${id}-date-lock`} className="field-hint">
+              {lock.reason}
+            </p>
+          )}
         </div>
         <div className="bb-two">
           {timeField('start', T.START_TIME, startMsg, 'start')}
@@ -207,12 +228,20 @@ export default function DayDialog({ state, cycleName, dayCount, today, otherDays
           <div className="bb-parts" role="group" aria-labelledby={`${id}-parts-label`} aria-describedby={partsMsg ? err('parts') : undefined}>
             {T.PART_ORDER.map((part) => (
               <label key={part} className="cbrow" htmlFor={`${id}-part-${part}`}>
-                <input id={`${id}-part-${part}`} type="checkbox" className="cb" checked={v.parts.includes(part)} onChange={(event) => togglePart(part, event.target.checked)} />
+                <input
+                  id={`${id}-part-${part}`}
+                  type="checkbox"
+                  className="cb"
+                  checked={v.parts.includes(part)}
+                  disabled={lockedParts.includes(part) && v.parts.includes(part)}
+                  onChange={(event) => togglePart(part, event.target.checked)}
+                />
                 <span>{T.PART_NAMES[part]}</span>
               </label>
             ))}
           </div>
           {partsMsg && <Notice id={err('parts')}>{partsMsg}</Notice>}
+          {lockedParts.length > 0 && <p className="field-hint">{T.partsKeepGrades(lockedParts.map((part) => T.PART_NAMES[part]).join(', '))}</p>}
           {T.PART_ORDER.map((part) => {
             const others = check.also.filter((x) => x.part === part).map((x) => x.day);
             return others.length > 0 ? (

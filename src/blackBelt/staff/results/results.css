@@ -1,0 +1,894 @@
+/*
+  results.css — the look of Black Belt testing's Results tab (ResultsTab.jsx, ResultRows.jsx), its
+  printed results sheet (ResultsSheet.jsx), and the "Result emails" block + "Edit result email"
+  dialog on Rubric and prices (../rubric/ResultEmailsBlock.jsx, ../rubric/ResultTextDialog.jsx).
+  Why it exists: copied from Star testing's results.css and resultEmails.css with Black Belt's own
+  class names, so the two sections never share (or break) each other's styles, and parallel builders
+  don't edit the same stylesheet. It only loads with the Black Belt screens.
+  It REUSES testing.css (tags .ttag, buttons .btn, the list box .clist, the skeleton, .tempty,
+  .viewonly), testing-events.css (the switch's .ev-side / .ev-side-count) and blackBelt.css
+  (.bb-block). Every class here starts with "bbres-" (screen), "bbresp-" (paper), "bbrem-" (the
+  block) or "bbrt-" (the dialog). Screen values come from tokens.css or the 4px grid; the paper
+  sizes are the approved drawing's (R05: portrait Letter, 0.5-inch margins).
+
+  Sources: Results mockups R01–R06 (proposals 1–49). Layouts (proposal 9): PC (≥ 1024px) five
+  columns; the upright tablet (640–1023px) four, Email result and ⋯ together at the right; phones
+  (< 640px) stacked rows with ⋯ at the top right. Blue (§1.2): only the shared link style of
+  "Choose subjects" / "Show both schools" and the dialog's Save.
+*/
+
+/* ===== The bar: Dan switch · Print results · Download CSV (proposal 2) ===== */
+.bbres-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-8) var(--space-12);
+  margin-bottom: var(--space-12);
+}
+
+.bbres-bar .ev-side {
+  margin-bottom: 0;
+}
+
+/* Phones: the buttons on their own line under the switch */
+.bbres-bar--phone {
+  flex-direction: column;
+}
+
+.bbres-dan .segment {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.bbres-dan .ev-side-count {
+  margin-left: var(--space-8);
+}
+
+/* 320px: the switch drops the word "Dan" ("1st 5", proposal 9) */
+@media (max-width: 359.98px) {
+  .bbres-dw {
+    display: none;
+  }
+
+  .bbres-dan .segment {
+    padding-left: var(--space-8);
+    padding-right: var(--space-8);
+  }
+}
+
+.bbres-buttons {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+/* A button that can't be used now (offline, busy): grayed, still focusable (aria-disabled) */
+.bbres-panel .btn[aria-disabled='true'] {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+  cursor: default;
+}
+
+.bbres-summary {
+  margin: 0 0 var(--space-12);
+  color: var(--color-text);
+  font-size: var(--text-13);
+}
+
+.bbres-summary-dan {
+  font-weight: 500;
+}
+
+/* One gray line above the list: no grades yet (proposal 32), Hide payments (proposal 36) */
+.bbres-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin: 0 0 var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.bbres-note svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+/* Offline (proposal 35): the amber bar with ti-alert-triangle (§7) */
+.bbres-offline {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin: 0 0 var(--space-12);
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--text-13);
+}
+
+.bbres-offline svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.bbres-school-line {
+  margin: 0 0 var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.bbres-inline-link {
+  display: inline;
+  font-size: inherit;
+}
+
+/* app.css gives every touch link-button a 44px box; an inline link in a sentence (Show both
+   schools, Choose subjects) keeps its line height and gets its tap area from ::after instead */
+@media (pointer: coarse) {
+  .link-button.bbres-inline-link {
+    position: relative;
+    min-height: 0;
+    padding: 0;
+  }
+
+  .bbres-inline-link:not(.bbres-choose)::after {
+    content: '';
+    position: absolute;
+    inset: -12px -4px;
+  }
+}
+
+.bbres-empty {
+  margin-top: var(--space-4);
+}
+
+/* ===== The rows ===== */
+.bbres-list {
+  border-radius: var(--radius-control);
+}
+
+.bbres-list [role='rowgroup'] > * + * {
+  border-top: 1px solid var(--color-border);
+}
+
+/* Four columns (upright tablet) by default; five from 1024px (.is-wide) */
+.bbres-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) 88px minmax(0, 1.8fr) 172px;
+  align-items: center;
+  column-gap: var(--space-12);
+  min-height: 72px;
+  padding: 10px var(--space-8) 10px var(--space-16);
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+.bbres-list.is-wide .bbres-row {
+  grid-template-columns: minmax(0, 1.1fr) 104px minmax(0, 2.2fr) 132px 40px;
+}
+
+.bbres-head {
+  min-height: 32px;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  cursor: default;
+}
+
+.bbres-row:not(.bbres-head):hover,
+.bbres-row.is-selected {
+  background: var(--color-surface);
+}
+
+.bbres-row:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+.bbres-namecell,
+.bbres-resultcell,
+.bbres-totalcell,
+.bbres-phone-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bbres-name {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.bbres-line,
+.bbres-sent {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  overflow-wrap: break-word;
+}
+
+.bbres-total {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.bbres-sofar {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+}
+
+.bbres-tagline {
+  display: flex;
+  margin-bottom: 2px;
+}
+
+/* After Email result (proposal 14): the copied line, then the question in the normal text colour */
+.bbres-sent--asked {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--color-text);
+}
+
+.bbres-copied {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  color: var(--color-text-secondary);
+}
+
+.bbres-copied svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.bbres-ask .btn {
+  margin-left: var(--space-4);
+  vertical-align: middle;
+}
+
+.bbres-noemail {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbres-row .acts {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
+}
+
+.bbres-email {
+  flex: none;
+}
+
+/* Email result can't be used now (Hide payments, offline, no email on file, busy): grayed.
+   aria-disabled (not disabled) keeps it focusable, so screen readers still find it. */
+.bbres-email[aria-disabled='true'],
+.bbres-mark[aria-disabled='true'] {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+  cursor: default;
+}
+
+/* "Choose subjects" (admins) in the reason line: the words keep the row's look; on touch a 44px
+   tall tap area, 6px wider than the words on each side (proposal 11) */
+.bbres-choose {
+  position: relative;
+}
+
+@media (pointer: coarse) {
+  /* (the shared .link-button gets 44px height and side padding on touch; here the words stay put) */
+  .bbres-choose.link-button {
+    min-height: 0;
+    padding: 0;
+  }
+
+  .bbres-choose::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: -6px;
+    right: -6px;
+    height: var(--tap-size);
+    transform: translateY(-50%);
+  }
+}
+
+/* ----- Phones: stacked rows ----- */
+.bbres-row.is-phone {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  min-height: 0;
+  padding: 10px var(--space-4) 10px var(--space-12);
+}
+
+.bbres-row.is-phone .bbres-phone-main {
+  flex: 1;
+}
+
+.bbres-l1 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-8);
+}
+
+.bbres-school {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbres-row.is-phone .bbres-tagline {
+  margin-top: var(--space-4);
+}
+
+.bbres-acts2 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin-top: var(--space-8);
+}
+
+.bbres-row.is-phone .acts {
+  flex: none;
+}
+
+.bbres-skel-row {
+  min-height: 72px;
+}
+
+/* Touch (§2.5): Email result and Mark as sent keep their look and get a 44px tap area from an
+   invisible box around them (36px button + 4px above and below). */
+@media (pointer: coarse) {
+  .bbres-tap {
+    position: relative;
+  }
+
+  .bbres-tap::after {
+    content: '';
+    position: absolute;
+    inset: -4px 0;
+  }
+
+  .bbres-ask .bbres-tap {
+    margin-top: var(--space-4);
+  }
+}
+
+/* ===== The printed results sheet (R05, proposals 38–44; ResultsSheet.jsx) ===== */
+/* Hidden on screen; on paper only this sheet shows. */
+.bbresp-print {
+  display: none;
+}
+
+/* A NAMED page: portrait Letter, 0.5-inch margins, only for this sheet (proposal 38). */
+@page bb-results {
+  size: letter portrait;
+  margin: 0.5in;
+}
+
+@media print {
+  body:has(> .bbresp-print) > *:not(.bbresp-print) {
+    display: none !important;
+  }
+
+  /* The named page goes on html and body too: the browser takes the FIRST page's paper (and its
+     margins) from them, so without it the first page used testing-events.css's 0.75in margins. */
+  html:has(> body > .bbresp-print),
+  body:has(> .bbresp-print) {
+    page: bb-results;
+    background: #fff;
+  }
+
+  /* Written extra-specific on purpose: testing-events.css hides every page part except its own
+     print pages when printing, and this one must win (the receipt's pattern). */
+  body > div.bbresp-print.bbresp-print {
+    display: block !important;
+    page: bb-results;
+    color: #111;
+    background: #fff;
+    font-family: var(--font-family);
+    line-height: 1.25;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* One sheet page = one paper page: 10in tall inside the margins (a little less, so rounding never
+     spills a blank page), the footer pushed to the bottom. */
+  .bbresp-page {
+    display: flex;
+    flex-direction: column;
+    height: 9.9in;
+    break-inside: avoid;
+  }
+
+  .bbresp-page + .bbresp-page {
+    break-before: page;
+  }
+
+  .bbresp-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 800;
+  }
+
+  .bbresp-sub {
+    margin: 2px 0 10px;
+    color: #333;
+    font-size: 13px;
+  }
+
+  /* A dark band per Dan, with its pass mark(s) (proposal 39) */
+  .bbresp-dan {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 12px;
+    box-sizing: border-box;
+    min-height: 28px;
+    margin-top: 6px;
+    padding: 4px 12px;
+    border-radius: 4px;
+    background: #1f2a44;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 20px;
+  }
+
+  .bbresp-dan small {
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  /* The section headings — named in words, so black and white still reads (proposal 44) */
+  .bbresp-grp {
+    box-sizing: border-box;
+    height: 26px;
+    margin-top: 4px;
+    padding: 6px 0 2px;
+    border-bottom: 2px solid #111;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .bbresp-grp--makeup,
+  .bbresp-grp--not_finished {
+    padding: 5px 10px;
+    border: 2px solid #111;
+    border-radius: 3px;
+    color: #111;
+  }
+
+  .bbresp-grp--makeup {
+    background: #ff9f1c;
+  }
+
+  /* Not finished: a DASHED border (Make-up's is solid) */
+  .bbresp-grp--not_finished {
+    border-style: dashed;
+    background: #ffd400;
+  }
+
+  .bbresp-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .bbresp-table td {
+    box-sizing: border-box;
+    height: var(--bbresp-row, 38px);
+    padding: 3px 4px;
+    border-bottom: 1px solid #ccc;
+    vertical-align: middle;
+  }
+
+  .bbresp-table tr {
+    break-inside: avoid;
+  }
+
+  .bbresp-table--makeup,
+  .bbresp-table--not_finished {
+    border: 2px solid #111;
+    border-top: none;
+  }
+
+  .bbresp-table--not_finished {
+    border-style: dashed;
+  }
+
+  .bbresp-table--makeup td {
+    background: #ffe2bf;
+  }
+
+  .bbresp-table--not_finished td {
+    background: #fff3a6;
+  }
+
+  .bbresp-n {
+    width: 36%;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .bbresp-n small {
+    display: block;
+    color: #444;
+    font-size: 11px;
+    font-weight: 400;
+  }
+
+  .bbresp-sc {
+    width: 24%;
+    font-size: 24px;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .bbresp-sc small {
+    display: block;
+    margin-top: 2px;
+    color: #444;
+    font-size: 10px;
+    font-weight: 400;
+  }
+
+  .bbresp-r {
+    width: 40%;
+    font-size: 14px;
+    text-align: right;
+  }
+
+  .bbresp-pass {
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+  }
+
+  .bbresp-need {
+    display: inline-block;
+    padding: 3px 8px;
+    border: 2.5px solid #111;
+    border-radius: 4px;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    text-align: left;
+  }
+
+  .bbresp-need + .bbresp-need {
+    margin-top: 3px;
+  }
+
+  .bbresp-foot {
+    display: flex;
+    justify-content: space-between;
+    margin-top: auto;
+    color: #555;
+    font-size: 10px;
+  }
+}
+
+/* ===== The "Result emails" block on Rubric and prices (R03, proposals 21–28) ===== */
+/* Full width, like the Waiver and Keeping blocks above it (blackBelt.css caps .bb-block at 760px) */
+.bb-block.bbrem {
+  max-width: none;
+}
+
+.bbrem-sub {
+  margin-bottom: var(--space-8);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* PC: name 170px · the start of the text on one line · Edit; touch: a 48px Edit column; phone:
+   the name with up to two lines of text under it, then Edit */
+.bbrem-row {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr) 40px;
+  align-items: center;
+  column-gap: var(--space-12);
+  min-height: 40px;
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-13);
+}
+
+.bbrem-row.is-touch {
+  grid-template-columns: 170px minmax(0, 1fr) 48px;
+  min-height: 48px;
+}
+
+.bbrem-row.is-phone {
+  grid-template-columns: minmax(0, 1fr) 48px;
+  padding: 6px 0;
+}
+
+.bbrem-row.is-staff {
+  grid-template-columns: 170px minmax(0, 1fr);
+}
+
+.bbrem-row.is-phone.is-staff {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.bbrem-row.is-selected {
+  background: var(--color-surface);
+}
+
+.bbrem-row b {
+  font-weight: 500;
+}
+
+.bbrem-text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bbrem-subject {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.bbrem-muted {
+  color: var(--color-text-secondary);
+}
+
+.bbrem-main {
+  min-width: 0;
+}
+
+/* Phone: the text under the name, at most two lines (the subject three) */
+.bbrem-row.is-phone .bbrem-text {
+  display: -webkit-box;
+  margin-top: 2px;
+  font-size: var(--text-12);
+  white-space: normal;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.bbrem-row.is-phone .bbrem-text--subject {
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+.bbrem-edit {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.bbrem-foot {
+  margin-top: var(--space-8);
+  padding-top: var(--space-8);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbrem-skel {
+  border-top: 1px solid var(--color-border);
+}
+
+.bbrem-error {
+  padding: var(--space-8) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+/* ===== The "Edit result email" dialog (proposal 27) ===== */
+/* 640px on the PC and tablet (never wider than the screen) */
+.tdialog--bb-email {
+  width: 640px;
+  max-width: calc(100vw - 32px);
+}
+
+.bbrt-sub {
+  margin-bottom: var(--space-12);
+}
+
+.bbrt-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  margin-bottom: var(--space-4);
+}
+
+.bbrt-head label {
+  flex: 1;
+}
+
+/* The box: a transparent textarea over a "mirror" that paints the blanks' backgrounds. Both use
+   exactly the same font, padding, border width and wrapping, so the marks sit under the words. */
+.bbrt-box {
+  position: relative;
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+}
+
+.bbrt-mirror,
+.bbrt-area {
+  box-sizing: border-box;
+  margin: 0;
+  padding: var(--space-8) 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  font-family: var(--font-family);
+  font-size: var(--text-13);
+  letter-spacing: normal;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: normal;
+  tab-size: 8;
+}
+
+.bbrt-mirror {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  color: transparent;
+  pointer-events: none;
+}
+
+.bbrt-area {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 120px;
+  overflow: hidden;
+  border-color: var(--color-border-control);
+  background: transparent;
+  color: var(--color-text);
+  resize: none;
+}
+
+.bbrt-area:focus-visible {
+  border-color: var(--color-blue);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--color-blue);
+}
+
+.bbrt-box.is-bad .bbrt-area {
+  border-color: var(--color-warning-text);
+  box-shadow: 0 0 0 1px var(--color-warning-text);
+}
+
+.bbrt-box.is-readonly .bbrt-area {
+  color: var(--color-text-secondary);
+}
+
+/* A blank in the box: gray tint (a box-shadow, not padding, so the words never move); a blank that
+   isn't allowed here: amber with a wavy underline */
+.bbrt-blank {
+  border-radius: 3px;
+  background: var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-surface);
+  color: transparent;
+}
+
+.bbrt-blank.is-bad {
+  background: var(--color-warning-bg);
+  box-shadow: 0 0 0 1px var(--color-warning-bg);
+  text-decoration: underline wavy var(--color-warning-text);
+}
+
+.bbrt-field .notice {
+  margin-top: var(--space-8);
+}
+
+.bbrt-lbl {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bbrt-blanks {
+  margin-top: var(--space-12);
+}
+
+/* The blanks as small outline buttons (gray, never blue: the dialog's only blue is Save) */
+.bbrt-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: var(--space-4);
+}
+
+.bbrt-chip {
+  padding: 3px var(--space-8);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-tag);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--text-12);
+  line-height: 16px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.bbrt-chip:hover {
+  background: var(--color-surface);
+}
+
+.bbrt-chip:disabled {
+  color: var(--color-disabled-text);
+  cursor: default;
+}
+
+.bbrt-hint {
+  margin-top: 6px;
+}
+
+.bbrt-prev {
+  margin-top: var(--space-12);
+}
+
+.bbrt-prevline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+  min-height: 28px;
+}
+
+.bbrt-select.input {
+  width: auto;
+  max-width: 100%;
+  height: 28px;
+  padding: 0 var(--space-8);
+  font-size: var(--text-12);
+}
+
+.bbrt-prevbox {
+  margin-top: var(--space-4);
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-size: var(--text-13);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.bbrt-prevnote {
+  color: var(--color-text-secondary);
+}
+
+/* Touch: 44px tap areas for the blank buttons, the picker and Reset */
+@media (pointer: coarse) {
+  .bbrt-chip {
+    min-height: var(--tap-size);
+    padding: 0 10px;
+  }
+
+  .bbrt-select.input {
+    height: var(--tap-size);
+  }
+
+  .bbrt-head .btn-sm {
+    min-height: var(--tap-size);
+  }
+}
