@@ -1,0 +1,57 @@
+{
+  "title": "Item 20a · Finding a person: the top-bar search",
+  "subtitle": "<b>Missing — not planned.</b> Rule §3.2 (v0.12): a search bar in the top bar on every screen “once at least one section has something to search”, searching every section, results as you type. That condition is met — Prospects, Camps and Black Belt each have their own search box, in three different words — but nothing plans the top-bar search. Color Belt's and Star's rosters have no search at all. The “/” shortcut (§3.6) is waiting for it. <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/20a-topbar-today.png",
+          "crop": [52, 26, 1228, 60],
+          "scale": 0.75,
+          "caption": "<b>1. The top bar:</b> the school switch and your initials — no search."
+        },
+        {
+          "row": [
+            {
+              "src": "shots/20a-prospects-search.png",
+              "crop": [940, 220, 320, 46],
+              "scale": 0.86,
+              "caption": "<b>2. Prospects:</b> “Search name or phone”"
+            },
+            {
+              "src": "shots/17a-camps-money.png",
+              "crop": [70, 215, 380, 48],
+              "scale": 0.8,
+              "caption": "<b>3. Camps:</b> “Find a camper”"
+            },
+            {
+              "src": "shots/20a-blackbelt-search.png",
+              "crop": [70, 435, 300, 48],
+              "scale": 0.86,
+              "caption": "<b>4. Black Belt:</b> “Search candidates”"
+            }
+          ]
+        }
+      ],
+      "note": "Each box searches only its own list. Color Belt's and Star's rosters have none. To find a family today you must first know which section they are in."
+    },
+    {
+      "label": "Proposed (option B) · one people search in the top bar",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/20a-topbar-search-MOCKUP.png",
+          "crop": [52, 26, 700, 360],
+          "scale": 1,
+          "caption": "<b>5. Option B:</b> “Search people” in the top bar on every page. Typing “Ava” lists her everywhere, grouped by section — name, event and school only (no dates of birth, phones or money). A tap opens that person's summary in the section (items 9a / 9b); on the PC the “/” key jumps here (§3.6).",
+          "marks": [[76, 30, 348, 40]]
+        }
+      ],
+      "note": "<b>Scope for Main:</b> people only, across Color Belt, Star, Black Belt, Camps and Prospects (Prospects keep “Ava R.”); nothing private in the results, so Hide private details has nothing to hide; the in-list boxes stay for narrowing their own list. Picture 5 is drawn over the real page with sample people from the preview's fake data; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question: build the top-bar search?</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> the rulebook promises a search nobody plans; to find a family you must know which section to open.<br><b>B · Recommended: build it (picture 5).</b> A people search in the top bar across every section, results grouped by section, nothing private; the in-list boxes stay. <i>+</i> at the desk, one place to answer “is Ava registered / signed up?”; the rule becomes true. <i>−</i> a real build for Main (searching every section's people safely, the results list, the “/” key); it comes after the walkthrough's fixes.<br><b>C · Drop the rule:</b> §3.2 is reworded so each list keeps its own search. <i>+</i> no build. <i>−</i> no way to find a person across sections; the Grandmaster has to remember where to look."
+}
