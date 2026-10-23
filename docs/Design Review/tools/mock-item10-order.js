@@ -7,6 +7,7 @@
 //       a string is an item, '-' starts a new group (a line), and an object adds options:
 //       { label: 'Delete permanently', red: true } or { label, gray: true, reason: '…' }
 //       or { label, tag: 'Admin' } (item 10b, option C: a small gray tag at the end of the line)
+//       or { label, noIcon: true } (item 12b: the item without its icon, text kept in line with the others)
 // Star's "Edit candidate" icon is used for "Edit details" when needed. Nothing in the app changes;
 // closing the menu removes it.
 // Run:   node cdp.mjs eval "$(cat mock-item10-order.js)"
@@ -49,8 +50,10 @@
     b.tabIndex = -1;
     b.className = 'menu-item tmenu-item' + (it.red ? ' tmenu-item--danger' : '') + (it.gray ? ' is-disabled' : '');
     if (it.gray) b.setAttribute('aria-disabled', 'true');
-    if (!iconFor(it.label)) missing.push(it.label);
-    b.innerHTML = iconFor(it.label) + (it.reason
+    if (!iconFor(it.label) && !it.noIcon) missing.push(it.label);
+    // No icon: an empty 16px box keeps the words in line with the other items.
+    const icon = it.noIcon ? '<span class="menu-icon" aria-hidden="true" style="display:inline-block;width:16px;height:16px;flex:none"></span>' : iconFor(it.label);
+    b.innerHTML = icon + (it.reason
       ? `<span class="ev-menu-two"><span>${it.label}</span><span class="ev-menu-reason">${it.reason}</span></span>`
       : `<span>${it.label}</span>`);
     if (it.tag) {
