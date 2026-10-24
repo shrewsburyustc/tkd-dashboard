@@ -1,6 +1,6 @@
 # Design & Quality Review — status
 
-**Updated:** 2026-10-23 (Design Review worktree session, branch `design-review`)
+**Updated:** 2026-10-24 (Design Review worktree session, branch `design-review`)
 **Rulebook at this update:** 0.937 on `main`. Design Review rows: none yet — block **1.000–1.099**, next free **1.000** (`git merge main` before any rulebook edit).
 **Branch:** `design-review` = `main` (3abb8a9, merged in on 2026-10-23 as 72d4f85) + this folder. Never pushed. Phase 1 covers `main` up to **45a8b79**; `main` keeps moving while other sessions merge, so each phase states its cut-off commit and picks up later merges at the start of the next phase (next: dbbacc2, Star's Home "Today" card, v0.515).
 
@@ -25,7 +25,7 @@
 |---|---|---|---|
 | 1 | Inventory: every screen, dialog and public page, owner, rulebook rows, paper task, "same job, different design" list | **Done 2026-10-21** — checked by a separate agent | `Phase 1 inventory/` |
 | 1b | **Walkthrough of the phase 1 findings, one item at a time, each with a today-vs-after picture** (Jeffrey, 2026-10-21: "I cannot understand it all at once") | **Done 2026-10-23** — all 20 items decided (35 decisions in `Walkthrough/Decisions.md`) | `Walkthrough/` |
-| 1c | **End-of-walkthrough review**: the change list by owner (Main's shared parts first, item 19), the rulebook rows to write (1.000–1.033), the open details | **In progress** — change list drafted 2026-10-23, checked by a separate agent (24 findings verified and fixed); Jeffrey OK'd it 2026-10-23 ("The change list looks right"). Open details one at a time: D1a decided 2026-10-23 (B: the pressed button grays with its "-ing…" word; "Keep …" grays too); D1b decided (B: the two buttons stack, full width, only when they don't fit; §2.1 exception); **D1c shown, waiting for Jeffrey** | `End review/TKD-DesignReview-ChangeList.md` |
+| 1c | **End-of-walkthrough review**: the change list by owner (Main's shared parts first, item 19), the rulebook rows to write (1.000–1.033), the open details | **In progress** — change list drafted 2026-10-23, checked by a separate agent (24 findings verified and fixed); Jeffrey OK'd it 2026-10-23 ("The change list looks right"). Open details one at a time: D1a decided 2026-10-23 (B: the pressed button grays with its "-ing…" word; "Keep …" grays too); D1b decided (B: the two buttons stack, full width, only when they don't fit; §2.1 exception); D1c decided (B: one order everywhere; the leave warnings swap, "Leave anyway" red); D1d asked (picture `End review/d1d-safe-words.png`: the button that changes nothing in the asks that lose nothing — kiosk Open / End, Prospects' Came boxes; recommended B: it says what stays, "Stay in the dashboard", "Keep kiosk mode on", "Keep in Booked") — **waiting for Jeffrey** | `End review/TKD-DesignReview-ChangeList.md` |
 | 2 | Other systems (martial arts + gym software, modern apps): comparison, sources, copy / avoid | **On hold** until the walkthrough is done (Jeffrey, 2026-10-21) | — |
 | 3 | Design review in preview mode at 1280×800, 820×1180 touch, 390×844 touch, 320 wide; Grandmaster walkthroughs | Not started | — |
 | 4 | Code review + bug hunt (all of `src/`, `functions/`, `supabase/`) + separate security review (handoff §6) | Not started | — |
