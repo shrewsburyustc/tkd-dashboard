@@ -21,6 +21,8 @@
 //   node cdp.mjs type "<css>" "<text>"    replace the text in a field, like a person typing it
 //   node cdp.mjs key <Key>                press a key (Escape, Enter, Tab, ArrowDown …)
 //   node cdp.mjs drag x1 y1 x2 y2         press, move in steps, release (a mouse drag)
+//   node cdp.mjs move x y                 move the mouse there without clicking (e.g. off a row before a
+//                                         picture, so nothing shows its hover color)
 //   node cdp.mjs wait "<text>" [ms]       wait until that text is on the page (default 8000 ms)
 //   node cdp.mjs shot <out.png> [full]    screenshot (full = the whole page height); with
 //                                         TKD_NET_OFFLINE=1 the network is cut first (the page hears "offline")
@@ -124,8 +126,11 @@ async function clickAt(c, x, y) {
 async function main() {
   if (cmd === 'launch') {
     mkdirSync(PROFILE, { recursive: true });
+    // --window-size: between two commands Chrome drops the remembered size and shows the window's own
+    // size. Without it that is 800 px wide, where the app swaps PC-only parts (e.g. Prospects' Call
+    // button) for their tablet versions and a picture's mock-up changes are lost; 1280 px keeps the PC layout.
     const child = spawn(CHROME, ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-      '--hide-scrollbars', `--remote-debugging-port=${PORT}`, `--user-data-dir=${PROFILE}`, 'about:blank'],
+      '--hide-scrollbars', '--window-size=1280,800', `--remote-debugging-port=${PORT}`, `--user-data-dir=${PROFILE}`, 'about:blank'],
       { detached: true, stdio: 'ignore' });
     child.unref();
     await getJson('/json/version');
@@ -172,6 +177,12 @@ async function main() {
       await c.send('Input.insertText', { text: args[1] });
       await sleep(250);
       console.log(`typed into ${args[0]}`);
+    }
+    else if (cmd === 'move') {
+      const [x, y] = args.map(Number);
+      await c.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+      await sleep(200);
+      console.log(`moved to ${x},${y}`);
     }
     else if (cmd === 'drag') {
       // drag x1 y1 x2 y2 — press at one point, move there in small steps, release (like a mouse drag).
