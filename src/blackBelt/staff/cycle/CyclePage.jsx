@@ -79,12 +79,16 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
   // ----- Grading (contract 0025 §14.2): its data and ONE save engine, kept on this page -----
   const grading = useBbGrading({ cycleId, active: tab === 'grading', screenLocked, onNoAccess });
   // Results' "Open grades": that Dan and testing day on the Grading tab (app state only, §14.1).
-  const [gradingFocus, setGradingFocus] = useState(null); // { dan, dayKey, key }
-  const openGrades = useCallback(({ dan, dayKey } = {}) => {
-    setGradingFocus({ dan: dan ?? null, dayKey: dayKey ?? null, key: Date.now() });
+  const [gradingFocus, setGradingFocus] = useState(null); // { dan, dayKey, candidateId, key }
+  const openGrades = useCallback(({ dan, dayKey, candidateId } = {}) => {
+    setGradingFocus({ dan: dan ?? null, dayKey: dayKey ?? null, candidateId: candidateId ?? null, key: Date.now() });
     onTab('grading');
     window.scrollTo?.(0, 0);
   }, [onTab]);
+  // The mark goes when Grading is left (as Star's).
+  useEffect(() => {
+    if (tab !== 'grading') setGradingFocus(null);
+  }, [tab]);
 
   // ----- The leave guard: the rubric card's question (R10) and Grading's Not saved grades (G 8) -----
   // BlackBeltTesting keeps ONE guard for this page; it asks Grading first, then the rubric card.

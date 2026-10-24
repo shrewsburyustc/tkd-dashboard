@@ -7,7 +7,7 @@
 //
 // Layouts (proposal 9; the breakpoints of useMediaQuery.js):
 //   PC and the tablet held sideways (≥ 1024px): five columns
-//     Candidate (+ school, + "Make-up from Spring 2027") · Total (+ "pass 275") · Result (tag,
+//     Candidate (+ school in gray on the same line, + "Make-up from Spring 2027") · Total (+ "pass 275") · Result (tag,
 //     reason, sent line) · Email result · ⋯
 //   the upright tablet (640–1023px): four columns — Email result and ⋯ together at the right
 //   phones (< 640px): stacked rows — name + school, "Total 305.75 · pass 275", the tag, the reason,
@@ -234,8 +234,19 @@ function ResultRow({ row, ctx }) {
   return (
     <div {...rowProps}>
       <span className="bbres-namecell" role="cell">
-        <span className="bbres-name">{name}</span>
-        <span className="bbres-line">{school}</span>
+        {layout.isWide ? (
+          // PC and the sideways tablet: the school in gray on the name's line (proposal 9)
+          <span className="bbres-l1">
+            <span className="bbres-name">{name}</span>
+            <span className="bbres-school">{school}</span>
+          </span>
+        ) : (
+          // the upright tablet: the school under the name
+          <>
+            <span className="bbres-name">{name}</span>
+            <span className="bbres-line">{school}</span>
+          </>
+        )}
         {makeupLine}
       </span>
       <span className="bbres-totalcell" role="cell">

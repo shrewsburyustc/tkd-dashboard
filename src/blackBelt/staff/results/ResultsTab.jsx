@@ -266,7 +266,8 @@ export default function ResultsTab({
   // ----- Email result (proposals 12–14, 19) -----
   // Everything up to the clipboard runs straight inside the click: no waiting before the copy.
   async function emailResult(row) {
-    if (emailOff || busyRef.current) return;
+    // (Checked again here, not only on the button: a banner's Retry can call this later.)
+    if (emailOff || hiddenNowRef.current || lockedNowRef.current || !browserOnline() || busyRef.current) return;
     const current = findRow(row.id) ?? row;
     const name = nameOf(current);
     const kind = resultKind(current.result);
@@ -455,6 +456,7 @@ export default function ResultsTab({
     setBanner(null);
     const answer = await loadResults({ cycleId: id, dan: null });
     setPrintBusy(false);
+    if (lockedNowRef.current) return; // the screen locked while the results were read: never print over the lock screen
     if (answer.status === 'no_access') {
       onNoAccess();
       return;
@@ -475,6 +477,10 @@ export default function ResultsTab({
   }
   useEffect(() => {
     if (!printing) return undefined;
+    if (screenLocked) {
+      setPrinting(null); // no print window over the lock screen (and none popping up after unlocking)
+      return undefined;
+    }
     const done = () => {
       const opener = printing.opener;
       setPrinting(null);
@@ -487,7 +493,7 @@ export default function ResultsTab({
       window.removeEventListener('afterprint', done);
     };
     // (focusLater is a plain function of this component; only a new print matters here.)
-  }, [printing]);
+  }, [printing, screenLocked]);
 
   // ----- Choose subjects (admins, G 21–23 — C1's dialog) -----
   function closeChoose(changed) {
@@ -754,7 +760,7 @@ export default function ResultsTab({
           onNoAccess={onNoAccess}
         />
       )}
-      {printing && <ResultsSheet {...printing.sheet} />}
+      {printing && !screenLocked && <ResultsSheet {...printing.sheet} />}
     </>
   );
 }

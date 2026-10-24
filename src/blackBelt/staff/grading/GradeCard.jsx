@@ -152,7 +152,13 @@ function MeasuredLine({ row, col, saves, group, name }) {
         </span>
         <span className={`bbg-line-letter${letter === 'D' ? ' is-d' : ''}`}>{letter ?? ''}</span>
       </div>
-      {error && <p className="bbg-editor-error">{T.NUMBER_RANGE}</p>}
+      {error && (
+        <p className="bbg-editor-error" role="alert">
+          {/* ti-alert-triangle = a problem with the number */}
+          <IconAlertTriangle size={14} aria-hidden="true" />
+          {T.NUMBER_RANGE}
+        </p>
+      )}
       {cell.note && <p className="bbg-cellnote">{cell.note}</p>}
     </div>
   );

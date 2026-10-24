@@ -52,6 +52,8 @@ export const oneSchoolLine = (school) => `Showing ${school} candidates only`;
 export const SHOW_BOTH_SCHOOLS = 'Show both schools';
 export const emptyDanOneSchool = (school, danLabel) =>
   `No ${school} ${danLabel} candidates. Show both schools to see the rest, or add candidates on the Candidates tab.`;
+// the same line with a working "Show both schools" link (Results' pattern): [before, link, after]
+export const emptyOneSchoolParts = (school, danLabel) => [`No ${school} ${danLabel} candidates. `, SHOW_BOTH_SCHOOLS, ' to see the rest, or add candidates on the Candidates tab.'];
 export const emptyDanBoth = (danLabel) => `No ${danLabel} candidates. Add candidates on the Candidates tab.`; // Star v0.513's line for Both
 
 // ----- Print (G 33–G 35) -----
@@ -59,6 +61,7 @@ export const PRINT_SHEET = 'Print grading sheet';
 
 // ----- Loading -----
 export const LOADING_GRADES = 'Loading grades…';
+export const OFFLINE_NO_GRADES = 'You’re offline, so the grades couldn’t load. They load by themselves when the connection is back.'; // new wording, not in the mockups
 export const LOAD_GRADES_FAILED = 'Couldn’t load the grades. Check the connection, then try again.'; // Star v0.513's line
 
 // ----- Column headings (G 6) -----

@@ -29,6 +29,7 @@
 //   onCommit(value|null, way, how)   how: 'enter' | 'tab' | 'back' | 'close' | 'way'
 //   onCancel()
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { IconAlertTriangle } from '@tabler/icons-react';
 import { feetAndInches, formatMeasured, parseMeasured, reachedWords, unitKind } from '../../../lib/blackBelt/grading.js';
 import { previewLetter, unitOf, wayBracketWords, wayOf } from './model.js';
 import * as T from './text.js';
@@ -183,7 +184,9 @@ export default function MeasuredEditor({ anchor, subject, value, initialText = n
         <span className="bbg-editor-unit">{unitWord}</span>
       </div>
       {error ? (
-        <p id={`${baseId}-err`} className="bbg-editor-error">
+        <p id={`${baseId}-err`} className="bbg-editor-error" role="alert">
+          {/* ti-alert-triangle = a problem with the number */}
+          <IconAlertTriangle size={14} aria-hidden="true" />
           {T.NUMBER_RANGE}
         </p>
       ) : (

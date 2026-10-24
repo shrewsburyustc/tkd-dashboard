@@ -220,6 +220,12 @@
   font-weight: 500;
 }
 
+/* PC and tablet: the Total larger and semibold, as drawn (phones keep it in the line) */
+.bbres-totalcell .bbres-total {
+  font-size: var(--text-16);
+  font-weight: 600;
+}
+
 .bbres-sofar {
   color: var(--color-text-secondary);
   font-size: var(--text-12);
@@ -286,6 +292,7 @@
    tall tap area, 6px wider than the words on each side (proposal 11) */
 .bbres-choose {
   position: relative;
+  text-decoration: underline; /* underlined, as drawn in R01 */
 }
 
 @media (pointer: coarse) {

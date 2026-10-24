@@ -41,8 +41,12 @@ export default function DanChangeDialog({ state, isPhone, onConfirm, onCancel })
       aria-disabled={off ? 'true' : undefined}
       onClick={() => !off && onConfirm()}
     >
-      <Trash size={16} aria-hidden="true" />
-      {state.saving ? T.SAVING : T.clearGradesButton(state.counts)}
+      {/* One inline run of icon + words: when the label wraps (320px), the icon stays with the
+          first line instead of sitting beside both lines */}
+      <span>
+        <Trash size={16} aria-hidden="true" style={{ verticalAlign: '-3px', marginRight: 6 }} />
+        {state.saving ? T.SAVING : T.clearGradesButton(state.counts)}
+      </span>
     </button>
   );
 

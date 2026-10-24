@@ -34,7 +34,9 @@
 // Props:
 //   cycle        the cycle page's cycle (name)      grading   useBbGrading()'s answer
 //   isAdmin, location, onLocationChange, screenLocked, onNoAccess
-//   focus        { dan, dayKey, key } from Results' "Open grades" — that Dan and day are chosen once
+//   focus        { dan, dayKey, candidateId, key } from Results' "Open grades" — that Dan and day are
+//                chosen once, and that candidate's row is marked (Star's mark: gray tint + dark bar,
+//                scrolled into view; phones: the picker set to that candidate — R 17)
 //   onModalChange(open)   a dialog (Choose subjects) or the picker sheet is open
 //   panelId, tabId
 import { useEffect, useRef, useState } from 'react';
@@ -77,10 +79,14 @@ export default function GradingTab({ cycle, grading, isAdmin, location, onLocati
     focusSeen.add(focus.key);
     if (focus.dan) danByCycle.set(cycleId, focus.dan);
     if (focus.dayKey) dayByCycle.set(cycleId, { key: focus.dayKey, auto: false });
+    if (focus.dan && focus.candidateId) pickByCycleDan.set(`${cycleId}|${focus.dan}`, focus.candidateId);
   }
   const [danSel, setDanState] = useState(() => danByCycle.get(cycleId) ?? null);
   const [daySel, setDayState] = useState(() => dayByCycle.get(cycleId) ?? null);
-  const [pick, setPickState] = useState(null);
+  const [pick, setPickState] = useState(() => {
+    const d = danByCycle.get(cycleId);
+    return d ? pickByCycleDan.get(`${cycleId}|${d}`) ?? null : null;
+  });
   const [sheetOpen, setSheetOpen] = useState(false);
   const [choose, setChoose] = useState(null); // { row, opener }
   const [printing, setPrinting] = useState(null); // GradingSheet's props + opener
@@ -133,8 +139,12 @@ export default function GradingTab({ cycle, grading, isAdmin, location, onLocati
   useEffect(() => () => onModalChange?.(false), [onModalChange]);
 
   // ----- Print grading sheet (G 33–G 35): draw the sheet, print, remove it again -----
+  // Never while the lock screen shows (security review): the sheet goes and nothing prints.
   useEffect(() => {
-    if (!printing) return undefined;
+    if (screenLocked && printing) setPrinting(null);
+  }, [screenLocked, printing]);
+  useEffect(() => {
+    if (!printing || screenLocked) return undefined;
     const done = () => {
       const opener = printing.opener;
       setPrinting(null);
@@ -146,10 +156,10 @@ export default function GradingTab({ cycle, grading, isAdmin, location, onLocati
       window.cancelAnimationFrame(frame);
       window.removeEventListener('afterprint', done);
     };
-  }, [printing]);
+  }, [printing, screenLocked]);
 
   function printSheet(opener) {
-    if (!choice || !data) return;
+    if (!choice || !data || screenLocked) return;
     const what = choice.kind === 'day' ? choice.what : choice.kind === 'other' ? partName(rubric, 'other') : T.EXTRA_POINTS;
     let when;
     if (choice.kind === 'day') {
@@ -295,7 +305,10 @@ export default function GradingTab({ cycle, grading, isAdmin, location, onLocati
   // ----- The body -----
   const pickRef = useRef(null);
   let body;
-  if (!data && live.status === 'error') {
+  if (!data && !saves.online) {
+    // Opened while offline: nothing to show yet — say so instead of loading forever.
+    body = <ErrorBanner text={T.OFFLINE_NO_GRADES} onRetry={() => grading.reload()} />;
+  } else if (!data && live.status === 'error') {
     body = <ErrorBanner text={T.LOAD_GRADES_FAILED} onRetry={() => grading.reload()} />;
   } else if (!data) {
     body = (
@@ -309,7 +322,22 @@ export default function GradingTab({ cycle, grading, isAdmin, location, onLocati
       </div>
     );
   } else if (rows.length === 0) {
-    body = <p className="tempty bbg-empty">{oneSchool ? T.emptyDanOneSchool(schoolLabel, danName) : T.emptyDanBoth(danName)}</p>;
+    const parts = oneSchool ? T.emptyOneSchoolParts(schoolLabel, danName) : null;
+    body = (
+      <p className="tempty bbg-empty">
+        {oneSchool ? (
+          <>
+            {parts[0]}
+            <button type="button" className="link-button bbg-inline-link" onClick={() => onLocationChange('Both')}>
+              {parts[1]}
+            </button>
+            {parts[2]}
+          </>
+        ) : (
+          T.emptyDanBoth(danName)
+        )}
+      </p>
+    );
   } else if (isPhone) {
     // own candidates, then make-ups (G 14) — the grid's order
     const ordered = [...rows.filter((r) => !r.isMakeup), ...rows.filter((r) => r.isMakeup)];
@@ -338,7 +366,15 @@ export default function GradingTab({ cycle, grading, isAdmin, location, onLocati
             aria-label={T.pickerLabel(rowName(row))}
             onClick={() => setSheetOpen(true)}
           >
-            <span className="bbg-pick-name">{T.pickerText(rowName(row), groupWords(saves.resultFor(row)))}</span>
+            {/* 320px: the age group on its own line; only the name is ever shortened (G 10) */}
+            {isNarrowPhone ? (
+              <span className="bbg-pick-two">
+                <span className="bbg-pick-name">{rowName(row)}</span>
+                <small>{groupWords(saves.resultFor(row))}</small>
+              </span>
+            ) : (
+              <span className="bbg-pick-name">{T.pickerText(rowName(row), groupWords(saves.resultFor(row)))}</span>
+            )}
             {/* ti-chevron-down = open the list */}
             <IconChevronDown size={16} aria-hidden="true" className="fa-chevron" />
           </button>
@@ -392,6 +428,8 @@ export default function GradingTab({ cycle, grading, isAdmin, location, onLocati
         danLabel={danName}
         dayWords={choice ? (choice.kind === 'day' ? `${choice.top}, ${choice.what}` : choice.what) : ''}
         onChooseSubjects={onChooseSubjects}
+        markedId={focus?.candidateId && focus.dan === dan ? focus.candidateId : null}
+        markKey={focus?.key ?? null}
       />
     );
   }
@@ -417,10 +455,12 @@ export default function GradingTab({ cycle, grading, isAdmin, location, onLocati
             </button>
           </p>
         )}
-        <div className={`bbg-bar${isPhone ? ' bbg-bar--phone' : ''}`}>
-          {danSwitch}
-          {printButton}
-        </div>
+        {data && (
+          <div className={`bbg-bar${isPhone ? ' bbg-bar--phone' : ''}`}>
+            {danSwitch}
+            {printButton}
+          </div>
+        )}
         {saves.banner && <ErrorBanner text={saves.banner.text} onRetry={saves.retryAll} onDismiss={saves.dismissBanner} />}
         {grading.pageBanner && <ErrorBanner text={grading.pageBanner} onDismiss={grading.dismissPageBanner} />}
         {underLine && rows.length > 0 && <p className="bbg-grayline">{underLine}</p>}
@@ -440,7 +480,7 @@ export default function GradingTab({ cycle, grading, isAdmin, location, onLocati
           onNoAccess={onNoAccess}
         />
       )}
-      {printing && <GradingSheet {...printing} />}
+      {printing && !screenLocked && <GradingSheet {...printing} />}
     </>
   );
 }

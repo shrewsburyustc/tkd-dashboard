@@ -37,6 +37,8 @@
 //   ctx        { saves, isAdmin, rubric, submissionsDue }
 //   size, typing (true on a PC), isTouch, danLabel, dayWords
 //   onChooseSubjects(row, opener)   admins' "Choose subjects"
+//   markedId, markKey   Results' "Open grades": that row gets Star's mark (gray tint + dark bar) and
+//               is scrolled into view once per click (markKey)
 import { useEffect, useRef, useState } from 'react';
 import { IconAlertTriangle } from '@tabler/icons-react';
 import GradeCell from './GradeCell.jsx';
@@ -76,7 +78,7 @@ function typingStep(pending, key, letters) {
   return { pending: null, effects: [] };
 }
 
-export default function GradeGrid({ rows, columns, kind, bands = null, ctx, size = 'pc', typing = false, isTouch = false, danLabel, dayWords, onChooseSubjects }) {
+export default function GradeGrid({ rows, columns, kind, bands = null, ctx, size = 'pc', typing = false, isTouch = false, danLabel, dayWords, onChooseSubjects, markedId = null, markKey = null }) {
   const { saves, rubric } = ctx;
   const tableRef = useRef(null);
   const [selected, setSelected] = useState(null); // { rowId, colId } — the grid's Tab stop
@@ -85,6 +87,16 @@ export default function GradeGrid({ rows, columns, kind, bands = null, ctx, size
   const [kept, setKept] = useState(null); // { key, anchor, cycleName, value }
   const [focusAsk, setFocusAsk] = useState(null); // { key, n, openEditor }
   const typingRef = useRef({ key: null, pending: null });
+  // Results' "Open grades": scroll the marked row into view once the grid has drawn it.
+  useEffect(() => {
+    if (!markedId) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      tableRef.current?.querySelector(`[data-grade-row="${CSS.escape(markedId)}"]`)?.scrollIntoView({ block: 'center' });
+    });
+    return () => window.cancelAnimationFrame(frame);
+    // (once per click)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [markKey]);
   const isExtra = kind === 'extra';
   const colIds = columns.map((c) => c.id);
   const widths = WIDTHS[size] ?? WIDTHS.pc;
@@ -432,7 +444,7 @@ export default function GradeGrid({ rows, columns, kind, bands = null, ctx, size
     }).filter((n) => n.note);
     const extraTotal = result?.extra ? result.extra.total : null;
     return (
-      <tr key={row.id} data-grade-row={row.id} className={row.isMakeup ? 'bbg-row-makeup' : undefined}>
+      <tr key={row.id} data-grade-row={row.id} className={[row.isMakeup ? 'bbg-row-makeup' : '', row.id === markedId ? 'bbg-row-marked' : ''].filter(Boolean).join(' ') || undefined}>
         <th scope="row" className="bbg-name">
           <span className="bbg-name-text">
             {rowName(row)}
