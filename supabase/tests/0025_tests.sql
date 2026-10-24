@@ -2060,7 +2060,7 @@ begin
   -- G1a. anon and bb_registrar: nothing at all
   foreach v_role in array array['anon', 'bb_registrar'] loop
     -- First from the catalog (as 0016_tests.sql T2 does), then by really calling as that login where
-    -- the SQL Editor may switch to it. On production it isn't a member of bb_registrar, so that one
+    -- the SQL Editor may switch to it (its SET right). On production it may not switch to bb_registrar, so that one
     -- is proved from the catalog only.
       foreach v_txt in array v_ok loop
         if exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -2075,7 +2075,7 @@ begin
           raise exception 'TEST FAILED: G1a % has a right on %', v_role, v_txt;
         end if;
       end loop;
-    if not pg_has_role(current_user, v_role, 'MEMBER') then
+    if not pg_has_role(current_user, v_role, 'SET') then
       continue;
     end if;
     execute 'set local role ' || v_role;
@@ -2511,7 +2511,7 @@ begin
   v_ts := clock_timestamp();
   -- As the family form's login where the SQL Editor may switch to it (PGlite); on production the
   -- function is called directly (it checks nothing about its caller; G17 proves who may run it).
-  if pg_has_role(current_user, 'bb_registrar', 'MEMBER') then
+  if pg_has_role(current_user, 'bb_registrar', 'SET') then
     set local role bb_registrar;
   end if;
   v_r := public.bb_public_register(v_txt, v_tag || ' fast',
