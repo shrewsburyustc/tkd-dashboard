@@ -9,7 +9,7 @@ All paths are relative to the repo root (`C:\Users\jberg\projects\tkd-dashboard\
 - **S#** = `TKD-Class-Schedule-Mockups.html`
 - **C#** = `TKD-Calendar-Mockups.html`
 
-**nf** = not found in the docs. No doc in this area says what paper or old process these screens replace. Rulebook v0.233 only says the dashboard "starts handling new students (prospects) only".
+**nf** = not found in the docs. No doc in this area says what paper or old process these screens replace. Rulebook v0.233 only says the dashboard "starts handling new students (prospects) only". **Answered by Jeffrey 2026-10-24 (end review D8):** Prospects replace a **paper list or notebook** at the desk (names and phone numbers; staff called back from it); Forms replace **paper sign-up forms and waivers** filled in at the desk; Schedule replaces a **printed timetable on the wall**; Calendar replaces **no single calendar** — closures and events were **announced to families in posts and emails** only. The "nf" cells below keep their phase 1 state; read this answer for them.
 
 ## Part A — Screens, dialogs, menus and public pages
 
