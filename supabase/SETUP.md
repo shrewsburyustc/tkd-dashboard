@@ -1801,7 +1801,7 @@ Then **paste `supabase/migrations/0016_black_belt.sql` again** (0016b; its re-ru
 
 ## Migration 0025: Black Belt grading and results (rulebook v0.938–v0.955)
 
-**Status: built and tested locally (PGlite), NOT applied.** Each step below needs Jeffrey's OK for that step. Contract: `docs/Dashboard Docs/Build contracts/CONTRACT-0025.md` (approved at CP0, rulebook v0.958); the paste follows the run sheet `docs/Testing/Black Belt Testing/TKD-BlackBelt-0025-RunSheet.md` (CP2, written 2026-10-23).
+**Status: APPLIED to production on 2026-10-24 (CP2)** from commit f2cfddc (file SHA-256 `6f81c92a…15765a`): 0025's fingerprints equal the tested copy row for row, nothing outside Black Belt changed, the advisor shows only the expected +15 / +2 notices, `0025_tests.sql`, `0024_tests.sql` and `0016_tests.sql` pass on production, and the reference counter was reset to **5002** (BB-5001 was used once by a live try-out; rulebook v0.960). On production the SQL Editor login may not switch to `bb_registrar` (no SET right), so the tests check that role from the catalog there. Contract: `docs/Dashboard Docs/Build contracts/CONTRACT-0025.md` (approved at CP0, rulebook v0.958); the paste follows the run sheet `docs/Testing/Black Belt Testing/TKD-BlackBelt-0025-RunSheet.md` (CP2, written 2026-10-23).
 
 **What it does** (`supabase/migrations/0025_black_belt_grading.sql`):
 - **Grades** (`bb_grades`): one row per graded subject of a candidate — a letter, or a measured number with the way it was done (Pull-up or Hold). **Extra-points counts** (`bb_extra_counts`) and **make-up subjects** (`bb_makeup_subjects`: the ones an admin chose, and the ones a make-up retests).

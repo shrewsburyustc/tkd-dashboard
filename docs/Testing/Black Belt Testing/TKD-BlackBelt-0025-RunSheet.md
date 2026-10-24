@@ -1,5 +1,7 @@
 # Black Belt testing — run sheet: paste migration 0025 (grading and results) into production
 
+**DONE 2026-10-24 (rulebook v0.960):** pasted from f2cfddc; every after-paste check clean; the 0025, 0024 and 0016 tests pass on production; the reference counter was reset to **5002**, not 5001 (BB-5001 was used once by a live try-out on 2026-10-22).
+
 **What this is:** the steps for pasting `supabase/migrations/0025_black_belt_grading.sql` (CONTRACT-0025, CP1 → CP2), in order: who does each, what you should see, when to stop. Background and exact expected results: `supabase/SETUP.md`, section **"Migration 0025"** (0025a–0025g). It works like the 0016 and 0024 pastes: Claude pins the file and checks before and after (read-only); you paste and run the tests.
 **OK needed:** Jeffrey's OK for **this paste** (CP1). Nothing is pasted before that.
 **Do it outside desk hours.** Nothing secret goes into chat or a screenshot. The admin and desk UIDs are filled in **only on your clipboard**, never in a file.
