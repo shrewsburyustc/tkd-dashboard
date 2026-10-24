@@ -2059,6 +2059,25 @@ begin
                     from unnest(v_ok) as x);
   -- G1a. anon and bb_registrar: nothing at all
   foreach v_role in array array['anon', 'bb_registrar'] loop
+    -- First from the catalog (as 0016_tests.sql T2 does), then by really calling as that login where
+    -- the SQL Editor may switch to it. On production it isn't a member of bb_registrar, so that one
+    -- is proved from the catalog only.
+      foreach v_txt in array v_ok loop
+        if exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                    where n.nspname = 'public' and p.proname = substring(v_txt from '^public\.([a-z_0-9]+)\(')
+                      and has_function_privilege(v_role, p.oid, 'EXECUTE')) then
+          raise exception 'TEST FAILED: G1a % may run %', v_role, v_txt;
+        end if;
+      end loop;
+      foreach v_txt in array v_tables loop
+        if has_table_privilege(v_role, 'public.' || v_txt, 'SELECT, INSERT, UPDATE, DELETE')
+           or has_any_column_privilege(v_role, 'public.' || v_txt, 'SELECT, INSERT, UPDATE') then
+          raise exception 'TEST FAILED: G1a % has a right on %', v_role, v_txt;
+        end if;
+      end loop;
+    if not pg_has_role(current_user, v_role, 'MEMBER') then
+      continue;
+    end if;
     execute 'set local role ' || v_role;
     perform set_config('request.jwt.claims', v_c_anon, true);
     foreach v_txt in array v_ok loop
@@ -2490,7 +2509,11 @@ begin
   v_mu := (select id from public.bb_cycle_plans where cycle_id = v_reg limit 1);
   v_d := pg_temp.bbg_dob(v_today, 30);
   v_ts := clock_timestamp();
-  set local role bb_registrar;
+  -- As the family form's login where the SQL Editor may switch to it (PGlite); on production the
+  -- function is called directly (it checks nothing about its caller; G17 proves who may run it).
+  if pg_has_role(current_user, 'bb_registrar', 'MEMBER') then
+    set local role bb_registrar;
+  end if;
   v_r := public.bb_public_register(v_txt, v_tag || ' fast',
                                    gen_random_uuid(), 'Fast', 'Formtest', v_d, v_mail || '.fast@example.com', 1,
                                    v_mu, false, true, v_txt2,
