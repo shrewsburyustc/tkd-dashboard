@@ -44,6 +44,9 @@
 //   #testing/black-belt/rubric                its Rubric and prices tab
 //   #testing/black-belt/cycle/<id>            a cycle's page (its Candidates tab)
 //   #testing/black-belt/cycle/<id>/rubric     that cycle's Rubric tab
+//   #testing/black-belt/cycle/<id>/grading    that cycle's Grading tab (contract 0025 §14.1)
+//   #testing/black-belt/cycle/<id>/results    that cycle's Results tab (contract 0025 §14.1)
+//   (#testing/black-belt/grading or /results WITHOUT a cycle id is not an address.)
 // Old or "other switch" addresses are sent to the right one (the address bar is quietly corrected,
 // replacing the step instead of adding one), so bookmarks keep working:
 //   switch ON:  #testing/event/<id>          → #testing/color-belt/event/<id>
@@ -65,7 +68,7 @@
 //     eventTab: the tab. On a Color Belt event page 'students' | 'grading'; on a Star event page
 //               'students' (= its Candidates tab) | 'grading' (Star phase 5) | 'results' (Star phase 6); on Star's home (no
 //               event) 'events' | 'rubrics'; on Black Belt 'cycles' | 'rubric' (no cycle open) or
-//               'candidates' | 'rubric' (a cycle's page); on Finance its view 'report' | 'history' | 'settings'
+//               'candidates' | 'grading' | 'results' | 'rubric' (a cycle's page, 0025); on Finance its view 'report' | 'history' | 'settings'
 //               (a different Finance view is a different page); on the Camps list 'camps' |
 //               'templates', on a camp's page 'default' | 'checkin' | 'payments' | 'attendance'
 //               ('default' = Check in during camp week, else Payments — CampPage decides); otherwise
@@ -107,10 +110,13 @@ export const FINANCE_VIEWS = ['report', 'history', 'settings'];
 const CAMPS_HASH = new RegExp(`^#camps(?:/templates|/camp/${ID}(?:/(checkin|payments|attendance))?)?$`);
 const CAMPS_TEMPLATES_HASH = '#camps/templates';
 const CAMP_TABS = ['checkin', 'payments', 'attendance'];
-// Black Belt testing (C2, v0.937): its two tabs, and a cycle's page on one of its two tabs.
+// Black Belt testing (C2, v0.937): its two tabs, and a cycle's page on one of its four tabs
+// (Candidates has no ending; Grading and Results were added by contract 0025 §14.1).
 const BLACK_BELT_HASH = '#testing/black-belt';
-const BLACK_BELT_ADDRESS = new RegExp(`^#testing/black-belt(?:/(rubric)|/cycle/${ID}(/rubric)?)?$`);
+const BLACK_BELT_ADDRESS = new RegExp(`^#testing/black-belt(?:/(rubric)|/cycle/${ID}(/rubric|/grading|/results)?)?$`);
 const RUBRIC_SUFFIX = '/rubric';
+// The tabs of a Black Belt cycle's page that have an ending of their own in the address.
+const BLACK_BELT_CYCLE_TABS = ['rubric', 'grading', 'results'];
 const STAR_RUBRICS_HASH = '#testing/star/rubrics';
 // "(/grading|/results)?" = the Star event page's Grading tab (Star phase 5), as Color Belt's, or its
 // Results tab (Star phase 6).
@@ -127,11 +133,16 @@ export const DEFAULT_TESTING_PAGE = STAR_TESTING_ON ? 'chooser' : 'colorBelt';
 //   a Color Belt event page           'grading' when asked, otherwise 'students'
 //   a Star event page                 'grading' or 'results' when asked, otherwise 'students' (its
 //                                     Candidates tab; Star phases 5 and 6)
-//   Black Belt without a cycle        'rubric' when asked, otherwise 'cycles'
-//   a Black Belt cycle's page         'rubric' when asked, otherwise 'candidates'
+//   Black Belt without a cycle        'rubric' when asked, otherwise 'cycles' ('grading' and
+//                                     'results' need a cycle, so they fall back to 'cycles')
+//   a Black Belt cycle's page         'rubric', 'grading' or 'results' when asked, otherwise
+//                                     'candidates' (contract 0025 §14.1)
 //   anything else                     'students'
 export function normalEventTab(testingPage, eventId, tab) {
-  if (testingPage === 'blackBelt') return tab === 'rubric' ? 'rubric' : eventId ? 'candidates' : 'cycles';
+  if (testingPage === 'blackBelt') {
+    if (eventId) return BLACK_BELT_CYCLE_TABS.includes(tab) ? tab : 'candidates';
+    return tab === 'rubric' ? 'rubric' : 'cycles';
+  }
   if (testingPage === 'star' && !eventId) return tab === 'rubrics' ? 'rubrics' : 'events';
   if (testingPage === 'star' && eventId && (tab === 'grading' || tab === 'results')) return tab;
   if (testingPage === 'colorBelt' && eventId && tab === 'grading') return 'grading';
@@ -170,7 +181,8 @@ function readHash(hash) {
   // Black Belt testing (C2): the same with the switch on or off.
   match = BLACK_BELT_ADDRESS.exec(hash);
   if (match) {
-    if (match[2]) return { route: route('testing', 'blackBelt', match[2], match[3] ? 'rubric' : 'candidates'), known: true };
+    // match[3] is '/rubric', '/grading', '/results' or nothing (= Candidates)
+    if (match[2]) return { route: route('testing', 'blackBelt', match[2], match[3] ? match[3].slice(1) : 'candidates'), known: true };
     return { route: route('testing', 'blackBelt', null, match[1] ? 'rubric' : 'cycles'), known: true };
   }
   // Star testing (switch off: every Star address shows Color Belt, as in phase 1).
@@ -213,8 +225,10 @@ function hashForRoute({ section, testingPage = null, eventId = null, eventTab = 
   }
   if (section !== 'testing') return HASH_BY_PAGE[section] ?? '';
   if (testingPage === 'blackBelt') {
-    const rubricPart = eventTab === 'rubric' ? RUBRIC_SUFFIX : ''; // Cycles / Candidates have no ending
-    return eventId ? `${BLACK_BELT_HASH}/cycle/${eventId}${rubricPart}` : `${BLACK_BELT_HASH}${rubricPart}`;
+    // Cycles / Candidates have no ending. Grading and Results exist only on a cycle's page, so
+    // they only add an ending when a cycle id is set (0025 §14.1).
+    if (eventId) return `${BLACK_BELT_HASH}/cycle/${eventId}${BLACK_BELT_CYCLE_TABS.includes(eventTab) ? `/${eventTab}` : ''}`;
+    return `${BLACK_BELT_HASH}${eventTab === 'rubric' ? RUBRIC_SUFFIX : ''}`;
   }
   const tabPart = eventTab === 'grading' ? GRADING_SUFFIX : ''; // Students has no ending of its own
   if (!STAR_TESTING_ON) {

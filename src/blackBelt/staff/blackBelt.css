@@ -2905,3 +2905,156 @@
     white-space: nowrap;
   }
 }
+
+/* ===== Contract 0025 §14.5 (builder C3): make-ups, the Dan-change dialog, has-grades locks ===== */
+
+/* G 27: the make-up's gray line "Make-up from Spring 2027 · retests Free sparring" sits on its own
+   line under the name (PC: in place of "Registered Sep 14") */
+.bb-makeup-line {
+  flex-basis: 100%;
+  overflow-wrap: anywhere;
+}
+
+.bb-detail-makeup {
+  margin: 2px 0 0;
+}
+
+/* G06 "after Add": the new row glows pale amber for a moment */
+.bb-roster .bb-crow.is-flash {
+  background: var(--color-warning-bg);
+  transition: background 0.4s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bb-roster .bb-crow.is-flash {
+    transition: none;
+  }
+}
+
+/* G 24: the Add candidate menu is as wide as "Make-up from an earlier cycle…" (Star's trick: the
+   200px menu grows to its words and stays right-aligned under the button) */
+.tmenu:has(.bb-add-menu-item) {
+  width: max-content;
+  min-width: 200px;
+  max-width: calc(100vw - 16px);
+  transform: translateX(calc(200px - 100%));
+}
+
+/* ----- G 25: the make-up picker ----- */
+.bb-mk-search {
+  position: relative;
+}
+
+.bb-mk-search-icon {
+  position: absolute;
+  top: 50%;
+  left: var(--space-12);
+  display: flex;
+  color: var(--color-text-secondary);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.bb-mk-input {
+  width: 100%;
+  padding-left: 36px;
+}
+
+.bb-mk-group {
+  margin: 0 0 var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+}
+
+.bb-mk-group-title {
+  margin: 0;
+  padding: var(--space-8) var(--space-12);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+}
+
+.bb-mk-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bb-mk-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-12);
+}
+
+.bb-mk-row + .bb-mk-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.bb-mk-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bb-mk-name {
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.bb-mk-sub {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  overflow-wrap: anywhere;
+}
+
+.bb-mk-act {
+  flex: none;
+  max-width: 45%;
+  text-align: right;
+}
+
+.bb-mk-state {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bb-mk-empty {
+  margin: 0 0 var(--space-12);
+}
+
+/* ----- DC 3: the Dan-change dialog on phones — full screen, the red button on top ----- */
+.bb-dan-change-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin-top: var(--space-16);
+}
+
+/* ----- S2: a testing day that grading locks (Edit cycle) ----- */
+.bb-day-locked {
+  margin: 2px 0 0;
+}
+
+.bb-day-acts .tib[aria-disabled='true'] {
+  color: var(--color-disabled-text);
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Touch: 44px tap areas (rule 2.5) */
+@media (pointer: coarse) {
+  .bb-mk-btn {
+    min-height: var(--tap-size);
+  }
+
+  .bb-dan-change-stack .btn,
+  .bb-dan-change .btn {
+    min-height: var(--tap-size);
+  }
+}

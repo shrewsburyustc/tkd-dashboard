@@ -18,6 +18,9 @@
 //     own toast and Undo — contract 0024 OI-11). "Close automatically at the end of Application
 //     due (Sat, Mar 27)" + "11:59 PM, Massachusetts time. …" stay.
 //   - Edit: "Last changed by …"; then Cancel · Save (phones: ← and a full-width Save)
+//   - 0025 (S2): in Edit cycle, a day that grading locks (a past day with grades, or the first day
+//     once grading started) has its Delete grayed and a gray reason under it (dayLockOf, from
+//     useCycleEditor.jsx); the database's has_grades refusal shows as the note at the bottom
 // PC / tablet: a dialog that scrolls inside; phones: a full screen.
 // Errors show as you type, amber under the field; Save stays BLUE when everything is valid and
 // turns gray only while something is wrong (v0.57). This file only draws: the values live in
@@ -47,12 +50,13 @@ function dayListMessage(problems) {
 
 const NOTES = {
   UNSAVED: T.UNSAVED,
+  HAS_GRADES: T.EDIT_CYCLE_HAS_GRADES,
   STALE: T.STALE_DIALOG,
   NOT_ALLOWED: T.NOT_ALLOWED,
   INVALID: T.INVALID,
 };
 
-export default function CycleDialog({ state, check, isPhone, handlers }) {
+export default function CycleDialog({ state, check, isPhone, handlers, dayLockOf = () => null }) {
   const id = useId();
   const v = state.values;
   const isAdd = state.mode === 'add';
@@ -153,6 +157,7 @@ export default function CycleDialog({ state, check, isPhone, handlers }) {
             {v.days.length === 0 && <p className="field-hint bb-days-empty">{T.NO_DAYS_YET}</p>}
             {v.days.map((day, index) => {
               const message = dayListMessage(p.days?.[index]);
+              const lock = dayLockOf(day); // 0025 (S2): null, or what grading locks on this day
               return (
                 <div key={day.key} className="bb-day" data-day-key={day.key}>
                   <div className="bb-day-text">
@@ -160,11 +165,28 @@ export default function CycleDialog({ state, check, isPhone, handlers }) {
                     <p className="bb-day-line">{T.dayLine(day)}</p>
                     {day.second && <p className="bb-day-line">{T.secondLine(day.second)}</p>}
                     <p className="bb-day-graded">{T.gradedLine(day.parts)}</p>
+                    {lock?.reason && (
+                      <p className="field-hint bb-day-locked" id={`${id}-lock-${day.key}`}>
+                        {lock.reason}
+                      </p>
+                    )}
                     {message && <Notice>{message}</Notice>}
                   </div>
                   <span className="bb-day-acts">
                     <IconButton label={T.editDayLabel(day.name)} Icon={IconEdit} data-day-edit={day.key} onClick={(event) => !readOnly && onEditDay(index, event.currentTarget)} />
-                    <IconButton label={T.deleteDayLabel(day.name)} Icon={IconTrash} onClick={() => !readOnly && onDeleteDay(index)} />
+                    {lock?.noDelete ? (
+                      // Grayed: the reason is the gray line under the day (nothing hover-only)
+                      <IconButton
+                        label={T.deleteDayLabel(day.name)}
+                        Icon={IconTrash}
+                        className="is-unavailable"
+                        aria-disabled="true"
+                        aria-describedby={`${id}-lock-${day.key}`}
+                        onClick={() => {}}
+                      />
+                    ) : (
+                      <IconButton label={T.deleteDayLabel(day.name)} Icon={IconTrash} onClick={() => !readOnly && onDeleteDay(index)} />
+                    )}
                   </span>
                 </div>
               );

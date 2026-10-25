@@ -372,6 +372,25 @@
 //       students' order, then 0016 and 0021): every other fingerprint file
 //       unchanged (0016's by exactly 11.3), every test file passes, 0024's
 //       fingerprints equal step0024's.
+//   step0025. 0025 (Black Belt grading and results, CONTRACT-0025 12.5)
+//       on the MAIN database right after step0024: the earlier
+//       fingerprints, the version-aware 0016_tests.sql / 0024_tests.sql
+//       before 0025, 0025; every earlier fingerprint file byte-identical
+//       except 0016's and 0024's, which differ by exactly 12.3's rows;
+//       0025_tests.sql and every earlier test file; re-run safety; every
+//       case of 0025_grading_cases.json through the SQL functions (each
+//       full answer saved for src/lib/blackBelt/checks.mjs: the file named
+//       by $BB_0025_SQL_ANSWERS, else <temp>/bb0025-sql-answers.json); on
+//       copies: the undo script supabase/manual/0025u_undo.sql (refused
+//       while real records exist; then 0016 / 0024 fingerprints back, their
+//       tests pass, 0025 again) and the "0016 / 0024 re-run over 0025"
+//       detector; the time limits on a big seed (12 cycles x 60) - see
+//       step0025 below.
+//   step0025_production_order. 0025 on a fresh database in the production
+//       order with every live migration (0024's order, then 0024 and
+//       0023): every other fingerprint file unchanged (0016's and 0024's
+//       by exactly 12.3), every test file passes, 0025's fingerprints
+//       equal step0025's.
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -725,6 +744,7 @@ async function main() {
   // before 13g (the 0010 down-script must stay the last thing there)
   let after16 = null;
   let after24 = null;   // step0024's 0024 fingerprints
+  let after25 = null;   // step0025's 0025 fingerprints
   if (after11) {
     console.log('\nMigration 0016 (Black Belt testing):');
     after16 = await stepBlackBelt(db);
@@ -732,6 +752,10 @@ async function main() {
     console.log('\nMigration 0024 (Black Belt rubric editor):');
     after24 = after16 ? await step0024(db) : null;
     if (!after16) record('0024 (Black Belt rubric editor)', false, 'skipped: 0016 could not be applied');
+    // step0025: grading and results (0025), right after 0024 on the main database
+    console.log('\nMigration 0025 (Black Belt grading and results):');
+    after25 = after24 ? await step0025(db) : null;
+    if (!after24) record('0025 (Black Belt grading and results)', false, 'skipped: 0024 could not be applied');
   } else {
     record('0016 (Black Belt testing)', false, 'skipped: 0011 could not be applied (see the lines above)');
   }
@@ -789,6 +813,10 @@ async function main() {
   // step0024_production_order: 0024 on top of every live migration (its own database)
   console.log('\nMigration 0024 on top of every live migration (production order):');
   await step0024_production_order(after24);
+
+  // step0025_production_order: 0025 on top of every live migration (its own database)
+  console.log('\nMigration 0025 on top of every live migration (production order):');
+  await step0025_production_order(after25);
 
   // step0022: camps weekly pricing and longer camps (its own database, production order)
   console.log('\nMigration 0022 (camps weekly pricing and longer camps):');
@@ -854,6 +882,10 @@ async function main() {
   if (after16) {
     console.log('\n0016 fingerprints (kind  item  detail):');
     for (const line of after16) console.log('  ' + line);
+  }
+  if (after25) {
+    console.log('\n0025 fingerprints (kind  item  detail):');
+    for (const line of after25) console.log('  ' + line);
   }
   if (after18) {
     console.log('\n0018 fingerprints (kind  item  detail):');
@@ -4545,6 +4577,606 @@ async function step0024_production_order(main24) {
   const mine = await fingerprints(db, '0024_fingerprints.sql');
   record(L + '0024 fingerprints identical to step0024 (main database)', !!main24 && JSON.stringify(mine) === JSON.stringify(main24),
     main24 ? `${mine.length} rows` : 'step0024 gave no fingerprints');
+}
+
+// =====================================================================
+// step0025 / step0025_production_order: 0025 (Black Belt grading and
+// results, rulebook v0.938-v0.958; CONTRACT-0025.md section 12.5)
+// =====================================================================
+const MIGRATION_0025 = () => read('migrations', '0025_black_belt_grading.sql');
+const UNDO_0025 = () => read('manual', '0025u_undo.sql');
+
+// Everything 0025 keeps, plus the candidates and the history's row count,
+// as one md5 ("re-running 0025 changed nothing").
+const snapshot25Sql = `select md5(${['bb_grades', 'bb_extra_counts', 'bb_makeup_subjects', 'bb_result_texts', 'bb_result_sends',
+  'bb_downloads', 'bb_cycle_grading_started', 'bb_candidates', 'bb_cycles'].map((t) =>
+  `coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.${t} x), '')`).join(' || ')}
+  || (select count(*) from public.change_log)::text)`;
+
+// Contract 17: the 42 functions 0025 adds, and the 0016 / 0024 functions it replaces.
+const FNS_0025_NEW = ['bb_set_grade', 'bb_set_measured', 'bb_set_extra_count', 'bb_set_makeup_subjects', 'bb_add_makeup',
+  'bb_mark_result_sent', 'bb_undo_result_sent', 'bb_set_result_text', 'bb_update_candidate_clear', 'bb_grading_grid',
+  'bb_cycle_results', 'bb_makeup_list', 'bb_result_email', 'bb_results_csv', 'bb_cycle_grading_state', 'bb_grade_result',
+  'bb_age_groups', 'bb_measured_letter', 'bb_extra_points', 'bb_kept_match', 'bb_result_text_problem', 'bb_candidate_age',
+  'bb_candidate_grading_input', 'bb_candidate_result', 'bb_candidate_result_with', 'bb_cycle_has_grading',
+  'bb_cycle_grading_started_at', 'bb_candidate_has_grades', 'bb_sent_state', 'bb_lock_candidate_shared', 'bb_update_candidate_core',
+  'bb_note_grading_started', 'bb_cycle_grading_started_guard', 'bb_candidates_keep_age', 'bb_grades_rules', 'bb_extra_counts_rules',
+  'bb_makeup_subjects_rules', 'bb_result_sends_guard', 'bb_downloads_guard', 'bb_payments_makeup_guard', 'bb_cycle_days_grading',
+  'bb_cycle_day_parts_grading'];
+const FNS_0025_REPLACED_16 = ['bb_purge_due_on', 'bb_purge_due', 'bb_candidates_rules', 'bb_candidates_log', 'bb_update_cycle',
+  'bb_delete_cycle', 'bb_update_candidate', 'bb_change_plan', 'bb_restore_candidate', 'bb_delete_candidate', 'bb_cycle_roster',
+  'bb_candidate_detail'];
+const FNS_0025_REPLACED_24 = ['bb_cycles_rules', 'bb_save_cycle_dan', 'bb_undo_cycle_dan'];
+
+// 12.3: what 0016_fingerprints.sql may print differently after 0025 -
+// exactly this, nothing looser. Answers [] when the difference is exactly
+// that, else a list of what is wrong.
+function diff0016for25(before, after) {
+  const split = (line) => { const [kind, item, ...rest] = line.split('  '); return { kind, item, detail: rest.join('  '), line }; };
+  const b = before.map(split);
+  const a = after.map(split);
+  const key = (r) => r.kind + '  ' + r.item;
+  const bMap = new Map(b.map((r) => [key(r), r]));
+  const aMap = new Map(a.map((r) => [key(r), r]));
+  const tail = (d) => d.slice(d.indexOf(' definer='));
+  const wrong = [];
+  const replaced = [...FNS_0025_REPLACED_16, ...FNS_0025_REPLACED_24];
+  for (const r of b) {
+    const x = aMap.get(key(r));
+    if (!x) {
+      if (!['constraint  bb_candidates.bb_candidates_reference_key', 'index  bb_candidates.bb_candidates_reference_key'].includes(key(r))) {
+        wrong.push(`row gone: ${r.line.slice(0, 80)}`);
+      }
+      continue;
+    }
+    if (x.detail === r.detail) continue;
+    const name = r.item.split('(')[0];
+    if (r.kind === 'function' && replaced.includes(name)) {
+      if (tail(x.detail) !== tail(r.detail)) wrong.push(`${r.item}: more than the md5 changed`);
+    } else if (r.kind === 'trigger' && r.item === 'bb_candidates.bb_candidates_before_write') {
+      const want = r.detail.replace("'id,cycle_id,source,reference,registered_at', 'date_of_birth,email_for_results,personal_removed_at'",
+        "'id,cycle_id,source,reference,registered_at,makeup_of_cycle_name', 'date_of_birth,email_for_results,personal_removed_at,makeup_of_candidate_id,age_kept'");
+      if (want === r.detail || x.detail !== want) wrong.push(`bb_candidates_before_write: not exactly the new arguments (${x.detail.slice(0, 200)})`);
+    } else if (r.kind === 'constraint' && r.item === 'bb_candidates.bb_candidates_source_check') {
+      if (x.detail !== "CHECK ((source = ANY (ARRAY['form'::text, 'desk'::text, 'makeup'::text])))") wrong.push(`source check: ${x.detail}`);
+    } else {
+      wrong.push(`changed: ${r.line.slice(0, 100)}`);
+    }
+  }
+  for (const n of replaced) {
+    const r = b.find((x) => x.kind === 'function' && x.item.startsWith(n + '('));
+    const x = r && aMap.get(key(r));
+    if (!r || !x || r.detail === x.detail) wrong.push(`${n}: its md5 should have changed`);
+  }
+  for (const k of ['constraint  bb_candidates.bb_candidates_reference_key', 'index  bb_candidates.bb_candidates_reference_key']) {
+    if (!bMap.has(k) || aMap.has(k)) wrong.push(`${k}: should be gone after 0025`);
+  }
+  const added = a.filter((r) => !bMap.has(key(r)));
+  const addedNames = added.map((r) => (r.kind === 'function' ? r.item.split('(')[0] : `${r.kind} ${r.item}`)).sort();
+  const want = [...FNS_0025_NEW,
+    'trigger bb_payments.bb_payments_makeup_guard', 'trigger bb_cycle_days.bb_cycle_days_grading',
+    'trigger bb_cycle_day_parts.bb_cycle_day_parts_grading', 'trigger bb_candidates.bb_candidates_keep_age',
+    ...['makeup_of_fk', 'makeup_of_self_check', 'makeup_of_check', 'makeup_name_check', 'makeup_plan_check', 'makeup_kukkiwon_check',
+      'age_kept_check'].map((c) => `constraint bb_candidates.bb_candidates_${c}`),
+    'index bb_candidates.bb_candidates_reference_idx', 'index bb_candidates.bb_candidates_one_active_makeup_idx',
+    'index bb_candidates.bb_candidates_makeup_of_idx'].sort();
+  if (JSON.stringify(addedNames) !== JSON.stringify(want)) {
+    wrong.push(`added rows: ${addedNames.filter((n) => !want.includes(n)).join(', ')} | missing: ${want.filter((n) => !addedNames.includes(n)).join(', ')}`);
+  }
+  return wrong;
+}
+
+// 12.3: 0024_fingerprints.sql after 0025 - only the md5 of its three
+// replaced functions; its check row stays ok.
+function diff0024for25(before, after) {
+  const wrong = [];
+  if (before.length !== after.length) wrong.push(`${before.length} -> ${after.length} rows`);
+  const tail = (d) => d.slice(d.indexOf(' definer='));
+  for (let i = 0; i < Math.min(before.length, after.length); i++) {
+    if (before[i] === after[i]) continue;
+    const [kind, item] = before[i].split('  ');
+    const [kind2, item2] = after[i].split('  ');
+    if (kind !== 'function' || kind2 !== kind || item2 !== item || !FNS_0025_REPLACED_24.includes(item.split('(')[0])
+        || tail(before[i]) !== tail(after[i])) wrong.push(`changed: ${before[i].slice(0, 90)}`);
+  }
+  for (const n of FNS_0025_REPLACED_24) {
+    const i = before.findIndex((l) => l.startsWith(`function  ${n}(`));
+    if (i < 0 || before[i] === after[i]) wrong.push(`${n}: its md5 should have changed`);
+  }
+  if (!after.includes('check  0016_rerun  ok')) wrong.push('check | 0016_rerun is not ok');
+  return wrong;
+}
+
+// (f) one case of 0025_grading_cases.json: the base Dan of the stored
+// default with the case's changes ("value_json" cast straight to jsonb, so
+// 20.00 stays 20.00), as rubricCase does.
+async function dan25(db, base, ops) {
+  const n = Number(base.split(':')[1]);
+  return (await db.query(`with recursive o as (select e, n from jsonb_array_elements($1::jsonb) with ordinality as t(e, n)),
+      w(i, d) as (select 0::bigint, r.sheet -> 'dans' -> ($2::int - 1) from public.bb_default_rubric r
+        union all select w.i + 1,
+               case when o.e ->> 'op' = 'set' then jsonb_set(w.d, array(select jsonb_array_elements_text(o.e -> 'path')),
+                      case when o.e ? 'value_json' then (o.e ->> 'value_json')::jsonb else o.e -> 'value' end, true)
+                    else w.d #- array(select jsonb_array_elements_text(o.e -> 'path')) end
+          from w join o on o.n = w.i + 1)
+      select d::text as d from w order by i desc limit 1`, [JSON.stringify(ops), n])).rows[0].d;
+}
+function subjectsOf(dan) {
+  const out = [];
+  for (const p of dan.parts) for (const s of p.subjects) out.push({ id: s.id, name: s.name, part: p.code });
+  return out;
+}
+const idOf = (subs, name, part) => (subs.find((s) => s.name === name && (!part || s.part === part)) ?? {}).id;
+function caseInputs(danJson, c) {
+  const subs = subjectsOf(JSON.parse(danJson));
+  const grades = c.grades.map((g) => ({ subject_id: idOf(subs, g.subject, g.part), letter: g.letter ?? null, measured: g.measured ?? null,
+    way: g.way ?? null, kept: !!g.kept, kept_from_cycle_name: g.kept_from_cycle_name ?? null }));
+  const counts = c.counts.map((x) => ({ item_name: x.item, count: x.count, kept: !!x.kept }));
+  return { subs, grades, counts, retest: c.retest.map((n) => idOf(subs, n)), chosen: c.chosen.map((n) => idOf(subs, n)) };
+}
+async function gradeResult25(db, danJson, c, i) {
+  return (await db.query(`select public.bb_grade_result($1::jsonb, $2::integer, $3::jsonb, $4::jsonb, $5::text[], $6::text[], $7::date, $8::date) as r`,
+    [danJson, c.age, JSON.stringify(i.grades), JSON.stringify(i.counts), i.retest, i.chosen, c.today, c.submissions_due])).rows[0].r;
+}
+// compares a SQL answer with a result case's expect; answers the differences
+async function resultCaseBad(c, r, subs) {
+  const { createHash } = await import('node:crypto');
+  const e = c.expect;
+  const bad = [];
+  const nm = (ids) => (ids ?? []).map((id) => (subs.find((s) => s.id === id) ?? {}).name);
+  const same = (a, b) => JSON.stringify(canon(a)) === JSON.stringify(canon(b));
+  const num = (a, b) => (a === null || a === undefined ? b === null : b !== null && Number(a) === Number(b));
+  for (const k of ['status', 'reasons', 'complete', 'pass_bracket', 'age_group', 'choice_needed', 'counts']) if (!same(r[k] ?? null, e[k])) bad.push(`${k}=${JSON.stringify(r[k])}`);
+  for (const k of ['total', 'maximum', 'pass_mark']) if (!num(r[k], e[k])) bad.push(`${k}=${r[k]}`);
+  if (!num(r.extra ? r.extra.total : null, e.extra_total)) bad.push(`extra_total=${r.extra?.total}`);
+  for (const k of ['d_subjects', 'needs', 'late', 'missing']) if (!same(nm(r[k]), e[k])) bad.push(`${k}=${JSON.stringify(nm(r[k]))}`);
+  const parts = Object.fromEntries((r.parts ?? []).map((p) => [p.code, Number(p.points)]));
+  if (!same(Object.keys(parts).sort(), Object.keys(e.parts).sort()) || Object.keys(e.parts).some((k) => parts[k] !== Number(e.parts[k]))) bad.push(`parts=${JSON.stringify(parts)}`);
+  for (const [name, v] of Object.entries(e.subjects)) {
+    const s = (r.subjects ?? []).find((x) => x.id === idOf(subs, name));
+    if (!s || s.applies !== v.applies || s.gradable !== v.gradable || !num(s.points, v.points) || s.kept !== v.kept || s.retest !== v.retest) {
+      bad.push(`subject ${name}=${JSON.stringify(s)}`);
+    }
+  }
+  if (Object.keys(e.subjects).length !== (r.subjects ?? []).length) bad.push(`${(r.subjects ?? []).length} subjects in the answer`);
+  const keyIn = e.result_key_input.split('|');
+  if (keyIn.length === 4 && keyIn[3] !== '') keyIn[3] = e.needs.map((n) => idOf(subs, n)).join(',');
+  if (createHash('md5').update(keyIn.join('|')).digest('hex') !== r.result_key) bad.push('result_key');
+  return bad;
+}
+
+// (g) a desk candidate written directly (a hand fix), for the undo checks
+const handCandidate = (cycleId, reference) => `insert into public.bb_candidates (cycle_id, first_name, last_name, date_of_birth,
+    email_for_results, location_code, dan, cycle_plan_id, kukkiwon, source, reference, created_by_name, updated_by_name)
+  select '${cycleId}', 'Undo', 'Test', date '1990-01-01', 'undo@example.com', 'worcester', 1, pl.id, false, 'desk', '${reference}', '', ''
+    from public.bb_cycle_plans pl where pl.cycle_id = '${cycleId}' limit 1;`;
+
+// The "check | rerun" row of 0025_fingerprints.sql
+const rerunRow = (prints) => prints.find((l) => l.startsWith('check  rerun')) ?? 'no check row';
+
+// =====================================================================
+// step0025 on the MAIN database, right after step0024 (contract 12.5):
+//   a.  the fingerprints of every migration already there (printed)
+//   a'. the version-aware 0016_tests.sql and 0024_tests.sql BEFORE 0025
+//   b.  0025 applied
+//   c.  every earlier fingerprint file byte-identical, except 0016's and
+//       0024's, which differ by EXACTLY contract 12.3's rows
+//   d.  0025_tests.sql, then every earlier test file
+//   e.  0025 a SECOND time: no second seed, nothing logged, fingerprints
+//       identical, 0025_tests.sql again
+//   f.  every case of 0025_grading_cases.json through the SQL functions;
+//       each case's full answer is saved for src/lib/blackBelt/checks.mjs
+//       (file: $BB_0025_SQL_ANSWERS, else <temp folder>/bb0025-sql-answers.json)
+//   g.  on COPIES: supabase/manual/0025u_undo.sql exactly as written -
+//       refused while a grading row, a "grading started" mark, a make-up,
+//       a send, a download row, a changed text or a kept age exists; on a
+//       clean copy it works: 0016's and 0024's fingerprints back to (a),
+//       their tests pass; then 0025 again
+//   h.  on COPIES: 0016 (and, separately, 0024) pasted again over 0025 ->
+//       0025_fingerprints' check row says RE-RUN; 0025 again -> ok
+//   i.  on a COPY, speed with seeded volume: 12 cycles x 60 candidates (a
+//       third make-ups), every subject graded
+// Returns 0025's fingerprints (or null if 0025 could not be applied).
+// =====================================================================
+async function step0025(db) {
+  const L = '[0025] ';
+  const printsText = read('tests', '0025_fingerprints.sql');
+  record(L + '0025_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)', !/delete|drop/i.test(printsText));
+  const src = MIGRATION_0025();
+  const bodies = [...src.split('\r\n').join('\n').matchAll(/\nas \$\$\n([\s\S]*?)\n\$\$;/g)].map((m) => m[1]);
+  record(L + 'no dynamic SQL in the migration\'s functions (no execute, no format(), no clock_timestamp)',
+    bodies.length > 50 && !bodies.some((b) => /\bexecute\b|format\s*\(|clock_timestamp/i.test(b)), `${bodies.length} function bodies`);
+
+  // a. the fingerprints of every migration on the main database now
+  const has14 = await one(db, `select to_regclass('public.testing_private') is not null`);
+  const numbers = ['0003', '0004', '0005', '0006', '0010', '0011', ...(has14 ? ['0014'] : []), '0016', '0024'];
+  const before = await printsOf(db, numbers);
+
+  // a'. the edited 0016 / 0024 tests, before 0025
+  await runTestFile(db, L + '0016_tests.sql BEFORE 0025 (its pre-0025 arms)', '0016_tests.sql', 'ALL 0016 TESTS PASSED');
+  await runTestFile(db, L + '0024_tests.sql BEFORE 0025', '0024_tests.sql', 'ALL 0024 TESTS PASSED');
+
+  // b. apply 0025
+  const logMark = await one(db, 'select coalesce(max(id), 0)::bigint from public.change_log');
+  if (!(await run(db, 'apply 0025_black_belt_grading.sql', src))) return null;
+  const after25 = await fingerprints(db, '0025_fingerprints.sql');
+  record(L + 'b. 0025_fingerprints.sql: check | rerun | ok', rerunRow(after25) === 'check  rerun  ok', rerunRow(after25));
+  const seeded = (await db.query(`select (select count(*)::int from public.bb_result_texts) as texts,
+      (select count(*)::int from public.change_log where id > ${logMark} and action = 'bb_seed' and table_name = 'bb_result_texts') as seed`)).rows[0];
+  record(L + 'b. the three result texts seeded once (bb_seed)', seeded.texts === 3 && seeded.seed === 3, JSON.stringify(seeded));
+
+  // c. nothing earlier moved, except exactly 12.3 in 0016's and 0024's files
+  const afterPrints = await printsOf(db, numbers);
+  const moved = numbers.filter((n) => !['0016', '0024'].includes(n)
+    && JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(afterPrints[`${n}_fingerprints.sql`]));
+  record(`${L}c. ${numbers.filter((n) => !['0016', '0024'].includes(n)).join(' / ')} fingerprints byte-identical before/after 0025`,
+    moved.length === 0, moved.length ? `moved: ${moved.join(', ')}` : `${numbers.length - 2} files`);
+  const w16 = diff0016for25(before['0016_fingerprints.sql'], afterPrints['0016_fingerprints.sql']);
+  record(L + 'c. 0016_fingerprints.sql differs by EXACTLY contract 12.3 (15 md5s, the trigger arguments, the source rule, the reference rule, 42 functions, 4 triggers, 7 rules, 3 indexes)',
+    w16.length === 0, w16.join(' | '));
+  const w24 = diff0024for25(before['0024_fingerprints.sql'], afterPrints['0024_fingerprints.sql']);
+  record(L + 'c. 0024_fingerprints.sql differs by EXACTLY the md5 of its 3 replaced functions; its 0016_rerun row stays ok', w24.length === 0, w24.join(' | '));
+  console.log(`${L}0016_fingerprints.sql lines that changed:`);
+  for (const line of afterPrints['0016_fingerprints.sql'].filter((l) => !before['0016_fingerprints.sql'].includes(l))) console.log('  + ' + line);
+  for (const line of before['0016_fingerprints.sql'].filter((l) => !afterPrints['0016_fingerprints.sql'].includes(l))) console.log('  - ' + line);
+
+  // d. 0025's tests, then every earlier test file
+  await runTestFile(db, L + '0025_tests.sql', '0025_tests.sql', 'ALL 0025 TESTS PASSED');
+  await allTestFiles16(db, 'after 0025');
+  await runTestFile(db, L + '0024_tests.sql (after 0025)', '0024_tests.sql', 'ALL 0024 TESTS PASSED');
+  if (has14) await runTestFile(db, L + '0014_tests.sql (after 0025)', '0014_tests.sql', 'ALL 0014 TESTS PASSED');
+
+  // e. re-run safety
+  const data25 = await one(db, snapshot25Sql);
+  await run(db, 'apply 0025 a SECOND time (re-run safety)', src);
+  record(L + 'e. the re-run changed nothing (no second seed, nothing logged)', data25 === (await one(db, snapshot25Sql)));
+  const again = await fingerprints(db, '0025_fingerprints.sql');
+  record(L + 'e. 0025 fingerprints identical before/after the re-run', JSON.stringify(again) === JSON.stringify(after25), `${again.length} rows`);
+  const again16 = await fingerprints(db, '0016_fingerprints.sql');
+  record(L + 'e. 0016 fingerprints identical before/after the 0025 re-run', JSON.stringify(again16) === JSON.stringify(afterPrints['0016_fingerprints.sql']));
+  await runTestFile(db, L + '0025_tests.sql (after re-run)', '0025_tests.sql', 'ALL 0025 TESTS PASSED');
+
+  // f. the shared cases through the SQL functions; every answer saved
+  const fixture = JSON.parse(read('tests', '0025_grading_cases.json'));
+  const answers = { about: 'Generated by supabase/tests/pglite/run.mjs step0025 f: the full SQL answer of each case of 0025_grading_cases.json. Never committed.',
+    result_cases: [], kept_cases: [] };
+  const resBad = [];
+  for (const c of fixture.result_cases) {
+    try {
+      const danJson = await dan25(db, c.base, c.ops);
+      const i = caseInputs(danJson, c);
+      const r = await gradeResult25(db, danJson, c, i);
+      answers.result_cases.push({ name: c.name, answer: r });
+      const bad = await resultCaseBad(c, r, i.subs);
+      if (bad.length) resBad.push(`${c.name}: ${bad.slice(0, 4).join('; ')}`);
+    } catch (error) {
+      resBad.push(`${c.name}: ${error.message}`);
+    }
+  }
+  record(L + 'f. every result case of 0025_grading_cases.json gives exactly its expect in SQL', resBad.length === 0,
+    resBad.length ? resBad.slice(0, 4).join(' | ') : `${fixture.result_cases.length} cases`);
+  const keptBad = [];
+  for (const k of fixture.kept_cases) {
+    try {
+      const eDan = await dan25(db, k.earlier.base, k.earlier.ops);
+      const ei = caseInputs(eDan, k.earlier);
+      const er = await gradeResult25(db, eDan, k.earlier, ei);
+      const lDan = await dan25(db, k.later.base, k.later.ops);
+      const m = (await db.query('select public.bb_kept_match($1::jsonb, $2::jsonb, $3::jsonb, $4::jsonb, $5::integer) as m',
+        [JSON.stringify(er), eDan, JSON.stringify(ei.counts), lDan, k.later.age])).rows[0].m;
+      answers.kept_cases.push({ name: k.name, answer: m });
+      const ls = subjectsOf(JSON.parse(lDan));
+      const ln = (id) => (ls.find((s) => s.id === id) ?? {}).name;
+      const got = { kept: m.kept.map((x) => ({ subject: ln(x.subject_id), part: x.part, letter: x.letter })), retest: m.retest.map(ln),
+        new: m.new.map(ln), dropped: m.dropped, kept_counts: m.kept_counts, dropped_extra: m.dropped_extra };
+      if (JSON.stringify(canon(got)) !== JSON.stringify(canon(k.expect))) keptBad.push(`${k.name}: ${JSON.stringify(got).slice(0, 200)}`);
+    } catch (error) {
+      keptBad.push(`${k.name}: ${error.message}`);
+    }
+  }
+  record(L + 'f. every kept case of 0025_grading_cases.json gives exactly its expect in SQL', keptBad.length === 0,
+    keptBad.length ? keptBad.slice(0, 3).join(' | ') : `${fixture.kept_cases.length} cases`);
+  try {
+    const { writeFileSync } = await import('node:fs');
+    const os = await import('node:os');
+    const file = process.env.BB_0025_SQL_ANSWERS || path.join(os.tmpdir(), 'bb0025-sql-answers.json');
+    writeFileSync(file, JSON.stringify(answers, null, 1));
+    record(L + 'f. the SQL answers saved for checks.mjs', true, file);
+  } catch (error) {
+    record(L + 'f. the SQL answers saved for checks.mjs', false, error.message);
+  }
+
+  // g. the undo script, on copies of this database
+  const U = '[undo 0025] ';
+  const undo = UNDO_0025();
+  const claims = await bbAdminClaims(db);
+  const cycleId = await one(db, 'select id::text from public.bb_cycles order by created_at limit 1');
+  const conditions = [
+    ['a changed result text', `update public.bb_result_texts set body = body || ' ' where kind = 'passed';`],
+    ['a CSV download row', `select set_config('tkd.action', 'bb_results_csv', false);
+       insert into public.bb_downloads (cycle_id, cycle_name, row_count, downloaded_by_name) values ('${cycleId}', 'x', 0, '');
+       select set_config('tkd.action', '', false);`],
+    ['a "grading started" mark', `insert into public.bb_cycle_grading_started (cycle_id) values ('${cycleId}');`],
+    ['a grading row', `insert into public.bb_candidates (cycle_id, first_name, last_name, date_of_birth, email_for_results, location_code, dan,
+         cycle_plan_id, kukkiwon, source, reference, created_by_name, updated_by_name)
+       select '${cycleId}', 'Undo', 'Test', date '1990-01-01', 'undo@example.com', 'worcester', 1, pl.id, false, 'desk', 'BB-99001', '', ''
+         from public.bb_cycle_plans pl where pl.cycle_id = '${cycleId}' limit 1;
+       insert into public.bb_extra_counts (candidate_id, dan, item_name, count, created_by_name, updated_by_name)
+       select c.id, 1, 'Extra stripes', 1, '', '' from public.bb_candidates c where c.reference = 'BB-99001';`],
+    ['a "sent" mark', `${handCandidate(cycleId, 'BB-99002')}
+       select set_config('tkd.action', 'bb_mark_result_sent', false);
+       insert into public.bb_result_sends (candidate_id, marked_by_name, result_status, result_total, result_needs, result_key)
+       select c.id, '', 'passed', 1, '[]', md5('x') from public.bb_candidates c where c.reference = 'BB-99002';
+       select set_config('tkd.action', '', false);`],
+    ['a kept age', `${handCandidate(cycleId, 'BB-99003')}
+       select set_config('tkd.action', 'bb_purge_due', false);
+       update public.bb_candidates c set date_of_birth = null, email_for_results = null, personal_removed_at = now(),
+              age_kept = public.bb_age_on(c.date_of_birth, (select min(d.day_date) from public.bb_cycle_days d where d.cycle_id = c.cycle_id))
+        where c.reference = 'BB-99003';
+       select set_config('tkd.action', '', false);`],
+    ['a make-up candidate', `${handCandidate(cycleId, 'BB-99004')}
+       insert into public.bb_candidates (cycle_id, first_name, last_name, date_of_birth, email_for_results, location_code, dan,
+         cycle_plan_id, kukkiwon, source, reference, makeup_of_candidate_id, makeup_of_cycle_name, created_by_name, updated_by_name)
+       select y.id, 'Undo', 'Test', date '1990-01-01', 'undo@example.com', 'worcester', 1, null, false, 'makeup', 'BB-99004', c.id, 'Earlier', '', ''
+         from public.bb_candidates c, public.bb_cycles y where c.reference = 'BB-99004' and y.id <> c.cycle_id limit 1;`]];
+  for (const [label, sql] of conditions) {
+    const copy = await db.clone();
+    try {
+      await copy.exec(sql);
+      const snap = await one(copy, snapshot25Sql);
+      let refused = false;
+      try {
+        await copy.exec(undo);
+      } catch (error) {
+        await copy.exec('rollback;').catch(() => {});
+        refused = /Undo 0025 refused/.test(error.message);
+      }
+      record(`${U}refused with ${label}, and nothing changed`, refused && snap === (await one(copy, snapshot25Sql)));
+    } catch (error) {
+      record(`${U}refused with ${label}`, false, error.message);
+    } finally {
+      await copy.close().catch(() => {});
+    }
+  }
+  {
+    const copy = await db.clone();
+    try {
+      if (await run(copy, U + 'supabase/manual/0025u_undo.sql on a clean copy', undo)) {
+        const p16 = await fingerprints(copy, '0016_fingerprints.sql');
+        const p24 = await fingerprints(copy, '0024_fingerprints.sql');
+        record(U + "0016's and 0024's fingerprints are back to (a) - before 0025",
+          JSON.stringify(p16) === JSON.stringify(before['0016_fingerprints.sql']) && JSON.stringify(p24) === JSON.stringify(before['0024_fingerprints.sql']),
+          `${p16.length} + ${p24.length} rows`);
+        record(U + 'no 0025 table or column is left', !(await one(copy, `select to_regclass('public.bb_grades') is not null
+            or to_regclass('public.bb_cycle_grading_started') is not null
+            or exists (select 1 from pg_attribute where attrelid = 'public.bb_candidates'::regclass and attname = 'age_kept' and not attisdropped)`)));
+        await runTestFile(copy, U + '0016_tests.sql (without 0025)', '0016_tests.sql', 'ALL 0016 TESTS PASSED');
+        await runTestFile(copy, U + '0024_tests.sql (without 0025)', '0024_tests.sql', 'ALL 0024 TESTS PASSED');
+        if (await run(copy, U + 'apply 0025 again (redo)', src)) {
+          record(U + 'after the redo 0025 fingerprints equal the first apply',
+            JSON.stringify(await fingerprints(copy, '0025_fingerprints.sql')) === JSON.stringify(after25));
+          await runTestFile(copy, U + '0025_tests.sql (after the redo)', '0025_tests.sql', 'ALL 0025 TESTS PASSED');
+        }
+      }
+    } finally {
+      await copy.close().catch(() => {});
+    }
+  }
+
+  // h. 0016 / 0024 pasted again over 0025 is detected; 0025 again repairs it
+  for (const [n, file] of [['0016', '0016_black_belt.sql'], ['0024', '0024_black_belt_rubric.sql']]) {
+    const copy = await db.clone();
+    const R = `[${n} re-run over 0025] `;
+    try {
+      if (await run(copy, `${R}paste ${file} over 0025 (copy only)`, read('migrations', file))) {
+        const row = rerunRow(await fingerprints(copy, '0025_fingerprints.sql'));
+        record(R + "0025_fingerprints.sql's check row says RE-RUN", row.includes('0016 OR 0024 RE-RUN OVER 0025'), row);
+        if (await run(copy, R + 'apply 0025 again', src)) {
+          const q = await fingerprints(copy, '0025_fingerprints.sql');
+          record(R + 'after 0025 again: check row ok and every 0025 fingerprint as before', JSON.stringify(q) === JSON.stringify(after25), rerunRow(q));
+        }
+      }
+    } finally {
+      await copy.close().catch(() => {});
+    }
+  }
+
+  // i. speed with seeded volume (on a copy)
+  await speed0025(db, claims);
+
+  console.log(`${L}0025 fingerprints (kind  item  detail):`);
+  for (const line of after25) console.log('  ' + line);
+  return after25;
+}
+
+// (i) 12 cycles, 182 days apart (the newest one in the future), 60
+// candidates each: 40 of its own (every subject of 1st Dan graded, half
+// with a D in Free sparring) and, from the second cycle on, 20 make-ups of
+// the previous cycle's D candidates (25 kept grades, kept counts, Free
+// sparring to retest). Written directly as the SQL Editor's role (a hand
+// fix; every guard still checks every row). Then the time limits of
+// contract 12.5 (i) on the newest cycle.
+async function speed0025(main, claims) {
+  const S = '[0025 speed] ';
+  const db = await main.clone();
+  try {
+    const ids = await (async () => {
+      const out = [];
+      await db.exec('begin;');
+      await db.query(`select set_config('request.jwt.claims', $1, true)`, [claims]);
+      for (let k = 0; k < 12; k++) {
+        const r = (await db.query(`select public.bb_add_cycle(${bb24Payload(`PGlite speed ${k + 1}`, 30)}, null) as r`)).rows[0].r;
+        if (r?.status !== 'ok') throw new Error(`add cycle ${k}: ${JSON.stringify(r)}`);
+        out.push(r.id);
+      }
+      await db.exec('commit;');
+      return out;
+    })();
+    const t0 = performance.now();
+    await db.exec(`select set_config('request.jwt.claims', '', false);`);
+    for (let k = 0; k < 12; k++) {
+      const shift = -182 * (11 - k);
+      await db.exec(`
+        update public.bb_cycle_days set day_date = day_date + ${shift} where cycle_id = '${ids[k]}';
+        update public.bb_cycles set application_due = application_due + ${shift}, submissions_due = submissions_due + ${shift} where id = '${ids[k]}';
+        update public.bb_cycle_plan_payments pp set due_on = pp.due_on + ${shift} from public.bb_cycle_plans pl
+         where pl.id = pp.cycle_plan_id and pl.cycle_id = '${ids[k]}';
+        insert into public.bb_candidates (cycle_id, first_name, last_name, date_of_birth, email_for_results, location_code, dan,
+                                          cycle_plan_id, kukkiwon, source, reference, created_by_name, updated_by_name)
+        select '${ids[k]}', 'Speed', 'Own ' || ${k} || ' ' || i, date '1980-01-01' + i, 'speed' || ${k} || '.' || i || '@example.com',
+               case when i % 2 = 0 then 'worcester' else 'shrewsbury' end, 1, pl.id, false, 'desk',
+               'BB-' || nextval('public.bb_candidate_ref_seq'::regclass)::text, '', ''
+          from generate_series(1, 40) as i, (select id from public.bb_cycle_plans where cycle_id = '${ids[k]}' limit 1) as pl;
+        insert into public.bb_grades (candidate_id, dan, part_code, subject_id, letter, measured, way, created_by_name, updated_by_name)
+        select c.id, 1, p.e ->> 'code', s.e ->> 'id',
+               case when s.e ->> 'scoring' = 'graded'
+                    then case when s.e ->> 'name' = 'Free sparring' and split_part(c.last_name, ' ', 3)::int % 2 = 0 then 'D' else 'A' end end,
+               case when s.e ->> 'scoring' = 'measured' then 5 end, case when s.e ->> 'scoring' = 'measured' then 0 end, '', ''
+          from public.bb_candidates c join public.bb_cycles y on y.id = c.cycle_id
+          cross join lateral jsonb_array_elements(y.requirements -> 'dans' -> 0 -> 'parts') as p(e)
+          cross join lateral jsonb_array_elements(p.e -> 'subjects') as s(e)
+         where c.cycle_id = '${ids[k]}' and c.source = 'desk';
+        insert into public.bb_extra_counts (candidate_id, dan, item_name, count, created_by_name, updated_by_name)
+        select c.id, 1, x.item, x.n, '', ''
+          from public.bb_candidates c, (values ('Extra stripes', 2), ('Attendance (classes)', 330)) as x(item, n)
+         where c.cycle_id = '${ids[k]}' and c.source = 'desk';`);
+      if (k > 0) {
+        await db.exec(`
+          insert into public.bb_candidates (cycle_id, first_name, last_name, date_of_birth, email_for_results, location_code, dan,
+                                            cycle_plan_id, kukkiwon, source, reference, makeup_of_candidate_id, makeup_of_cycle_name,
+                                            created_by_name, updated_by_name)
+          select '${ids[k]}', c.first_name, c.last_name, c.date_of_birth, c.email_for_results, c.location_code, 1, null, false, 'makeup',
+                 c.reference, c.id, y.name, '', ''
+            from public.bb_candidates c join public.bb_cycles y on y.id = c.cycle_id
+           where c.cycle_id = '${ids[k - 1]}' and c.source = 'desk' and split_part(c.last_name, ' ', 3)::int % 2 = 0;
+          insert into public.bb_grades (candidate_id, dan, part_code, subject_id, letter, kept, kept_from_cycle_id, kept_from_cycle_name,
+                                        created_by_name, updated_by_name)
+          select m.id, 1, p.e ->> 'code', s.e ->> 'id', 'A', true, '${ids[k - 1]}', m.makeup_of_cycle_name, '', ''
+            from public.bb_candidates m join public.bb_cycles y on y.id = m.cycle_id
+            cross join lateral jsonb_array_elements(y.requirements -> 'dans' -> 0 -> 'parts') as p(e)
+            cross join lateral jsonb_array_elements(p.e -> 'subjects') as s(e)
+           where m.cycle_id = '${ids[k]}' and m.source = 'makeup' and s.e ->> 'name' <> 'Free sparring';
+          insert into public.bb_makeup_subjects (candidate_id, dan, subject_id, kind, created_by_name, updated_by_name)
+          select m.id, 1, 'f2630888', 'retest', '', '' from public.bb_candidates m where m.cycle_id = '${ids[k]}' and m.source = 'makeup';`);
+      }
+    }
+    const counts = (await db.query(`select count(*)::int as c, count(*) filter (where source = 'makeup')::int as m,
+        (select count(*)::int from public.bb_grades) as g from public.bb_candidates where cycle_id = any ($1::uuid[])`, [ids])).rows[0];
+    record(S + 'seeded 12 cycles x 60 candidates (a third make-ups), every subject graded', counts.c === 12 * 40 + 11 * 20 && counts.g > 15000,
+      `${counts.c} candidates, ${counts.m} make-ups, ${counts.g} grade rows in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+    const newest = ids[11];
+    const time = async (sql, params = []) => {
+      const t = [];
+      for (let i = 0; i < 3; i++) {
+        await db.exec('begin;');
+        await db.query(`select set_config('request.jwt.claims', $1, true)`, [claims]);
+        const s0 = performance.now();
+        const r = (await db.query(sql, params)).rows[0].r;
+        t.push(performance.now() - s0);
+        await db.exec('rollback;');
+        if (r?.status !== 'ok') throw new Error(`${sql.slice(0, 40)} answered ${JSON.stringify(r).slice(0, 120)}`);
+      }
+      return t.sort((a, b) => a - b)[1];
+    };
+    for (const [label, sql, limit] of [
+      ['bb_grading_grid (one Dan, 60 rows)', `select public.bb_grading_grid('${newest}', 1) as r`, 200],
+      ['bb_cycle_results (one Dan)', `select public.bb_cycle_results('${newest}', 1) as r`, 200],
+      ['bb_cycle_results (every Dan)', `select public.bb_cycle_results('${newest}', null) as r`, 200],
+      ['bb_makeup_list (11 earlier cycles)', `select public.bb_makeup_list('${newest}') as r`, 300],
+      ['one bb_set_grade', `select public.bb_set_grade((select id from public.bb_candidates where cycle_id = '${newest}' and source = 'desk' limit 1), 1, '88de8004', 'B') as r`, 50]]) {
+      try {
+        const ms = await time(sql);
+        record(`${S}${label} <= ${limit} ms`, ms <= limit, `${ms.toFixed(1)} ms (median of 3)`);
+      } catch (error) {
+        record(`${S}${label} <= ${limit} ms`, false, error.message);
+      }
+    }
+    try {
+      await db.exec(`update public.bb_settings set keep_years_after_last_day = 3, keep_years_after_18 = 3;`);
+      const s0 = performance.now();
+      const n = await one(db, 'select public.bb_purge_due()');
+      const ms = performance.now() - s0;
+      record(`${S}one bb_purge_due() over the whole seed <= 2 s`, ms <= 2000 && n > 0, `${n} purged in ${(ms / 1000).toFixed(2)} s`);
+    } catch (error) {
+      record(`${S}one bb_purge_due() over the whole seed <= 2 s`, false, error.message);
+    }
+  } catch (error) {
+    record(S + 'seed and time limits', false, error.message);
+  } finally {
+    await db.close().catch(() => {});
+  }
+}
+
+// =====================================================================
+// step0025_production_order: 0025 on a fresh database built in the
+// PRODUCTION order with every live migration (the status files, SETUP and
+// the rulebook, 2026-10-23): 0001-0006, 0010, 0007, 0008, 0009, 0012, 0015,
+// 0011 as production got it, 0019, 0014, 0020, camps' 0013 + 0017, 0018,
+// 0016, 0021, 0022, then 0024 and 0023 (both pasted on 2026-10-22; 0024's
+// run sheet lists 0003-0022 as "every other migration", so 0024 went
+// first - their objects don't overlap, so the order changes nothing).
+// Then 0025: every other fingerprint file unchanged (0016's and 0024's by
+// exactly 12.3), every test file passes, 0025's fingerprints equal
+// step0025's. "main25" = step0025's 0025 fingerprints (or null).
+// =====================================================================
+async function step0025_production_order(main25) {
+  const L = '[0025 production order] ';
+  const db = await buildBase(L);
+  if (!db) return;
+  for (const [label, file] of [['0003', '0003_testing_classes_ranks.sql'], ['0004', '0004_staff_accounts.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return;
+  }
+  await run(db, L + 'apply built-in seed', builtInSeedSql());
+  if (!(await run(db, L + 'apply 0005', read('migrations', '0005_testing_events.sql')))) return;
+  await seedTestEvent(db);
+  for (const [label, file] of [['0006', '0006_star_testing.sql'], ['0010 (grading results)', '0010_testing_results.sql'],
+    ['0007', '0007_schedule.sql'], ['0008', '0008_calendar.sql'], ['0009', '0009_forms.sql'], ['0012', '0012_prospects.sql'],
+    ['0015', '0015_family_history.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return;
+  }
+  if (!(await run(db, L + 'apply 0011 as pasted on production 2026-10-19 (fixture)',
+    readFileSync(path.join(here, 'fixtures', '0011_as_applied_2026-10-19.sql'), 'utf8')))) return;
+  for (const [label, file] of [['today\'s 0011 over it', '0011_finance.sql'], ['0019', '0019_school_phone.sql'],
+    ['0014 (private testing)', '0014_testing_private.sql'], ['0020 (current_session_id fix)', '0020_session_id_claims.sql'],
+    ['0013 (camps)', '0013_camps.sql'], ['0017 (camps in Finance)', '0017_finance_camps.sql'],
+    ['0018 (private testing money in Finance)', '0018_finance_private.sql'], ['0016 (Black Belt testing)', '0016_black_belt.sql'],
+    ['0021', '0021_prospects_not_interested_sooner.sql'], ['0022 (camps weekly pricing)', '0022_camps_weekly_pricing.sql'],
+    ['0024 (Black Belt rubric editor)', '0024_black_belt_rubric.sql'], ['0023 (Star result texts)', '0023_star_result_texts.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return;
+  }
+
+  const numbers = ['0003', '0004', '0005', '0006', '0010', '0007', '0008', '0009', '0012', '0015', '0011', '0019', '0014', '0020',
+    '0013', '0017', '0018', '0016', '0021', '0022', '0024', '0023'].filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const before = await printsOf(db, numbers);
+  if (!(await run(db, L + 'apply 0025_black_belt_grading.sql', MIGRATION_0025()))) return;
+  const after = await printsOf(db, numbers);
+  const moved = numbers.filter((n) => !['0016', '0024'].includes(n)
+    && JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(after[`${n}_fingerprints.sql`]));
+  record(`${L}${numbers.filter((n) => !['0016', '0024'].includes(n)).join(' / ')} fingerprints byte-identical before/after 0025`,
+    moved.length === 0, moved.length ? `moved: ${moved.join(', ')}` : `${numbers.length - 2} files`);
+  const w16 = diff0016for25(before['0016_fingerprints.sql'], after['0016_fingerprints.sql']);
+  record(L + '0016_fingerprints.sql differs by EXACTLY contract 12.3', w16.length === 0, w16.join(' | '));
+  const w24 = diff0024for25(before['0024_fingerprints.sql'], after['0024_fingerprints.sql']);
+  record(L + '0024_fingerprints.sql differs by EXACTLY contract 12.3', w24.length === 0, w24.join(' | '));
+
+  const testFiles = [['0025_tests.sql', 'ALL 0025 TESTS PASSED'], ['0024_tests.sql', 'ALL 0024 TESTS PASSED'],
+    ['0016_tests.sql', 'ALL 0016 TESTS PASSED'], ['0023_tests.sql', 'ALL 0023 TESTS PASSED'],
+    ['verify_pin_tests.sql', 'ALL PIN TESTS PASSED'], ['0002_tests.sql', 'ALL 0002 TESTS PASSED'], ['0003_tests.sql', 'ALL 0003 TESTS PASSED'],
+    ['0004_tests.sql', 'ALL 0004 TESTS PASSED'], ['0005_tests.sql', 'ALL 0005 TESTS PASSED'], ['0006_tests.sql', 'ALL 0006 TESTS PASSED'],
+    ['0010_tests.sql', 'ALL 0010 TESTS PASSED'], ['0007_tests.sql', 'ALL 0007 TESTS PASSED'], ['0008_tests.sql', 'ALL 0008 TESTS PASSED'],
+    ['0009_tests.sql', 'ALL 0009 TESTS PASSED'], ['0012_tests.sql', 'ALL 0012 TESTS PASSED'], ['0015_tests.sql', 'ALL 0015 TESTS PASSED'],
+    ['0011_tests.sql', 'ALL 0011 TESTS PASSED'], ['0019_tests.sql', 'ALL 0019 TESTS PASSED'], ['0014_tests.sql', 'ALL 0014 TESTS PASSED'],
+    ['0020_tests.sql', 'ALL 0020 TESTS PASSED'], [CAMPS_TESTS, 'ALL 0017 TESTS PASSED'], ['0018_tests.sql', 'ALL 0018 TESTS PASSED'],
+    ['0021_tests.sql', 'ALL 0021 TESTS PASSED'], ['0022_tests.sql', 'ALL 0022 TESTS PASSED'], ['0013_tests.sql', 'ALL 0013 TESTS PASSED']];
+  for (const [file, ok] of testFiles) {
+    if (existsSync(path.join(supabaseDir, 'tests', file))) await runTestFile(db, `${L}${file} (after 0025)`, file, ok);
+  }
+  await bbRegistrarLiveChecks(db);
+
+  const mine = await fingerprints(db, '0025_fingerprints.sql');
+  record(L + '0025 fingerprints identical to step0025 (main database)', !!main25 && JSON.stringify(mine) === JSON.stringify(main25),
+    main25 ? `${mine.length} rows` : 'step0025 gave no fingerprints');
+  await db.close().catch(() => {});
 }
 
 // =====================================================================

@@ -20,7 +20,8 @@
 //   onBack()           "← Testing" (App.jsx asks the unsaved-rubric question for it, through
 //                      onLeaveGuardChange — so it isn't asked here as well)
 //   cycleId            the open cycle's id, or null for the tabs
-//   tab                without a cycle 'cycles' | 'rubric'; on a cycle's page 'candidates' | 'rubric'
+//   tab                without a cycle 'cycles' | 'rubric'; on a cycle's page 'candidates' | 'grading' |
+//                      'results' | 'rubric' (contract 0025 §14.1)
 //   onTab(key)         switch tab on the same page (no new history step)
 //   onOpen({ cycleId, tab, replace })   go to another Black Belt page (a history step; replace:
 //                      true swaps the step, used when the open cycle was deleted)
@@ -43,6 +44,9 @@ import CyclePage from './cycle/CyclePage.jsx';
 import RubricTab from './rubric/RubricTab.jsx';
 import * as T from './text.js';
 import './blackBelt.css';
+
+// A cycle page's tabs besides Candidates (contract 0025 §14.1: /grading, /results, /rubric).
+const CYCLE_TABS = ['grading', 'results', 'rubric'];
 
 const TABS = [
   { key: 'cycles', label: T.TAB_CYCLES },
@@ -146,7 +150,7 @@ export default function BlackBeltTesting({ isAdmin, onBack, cycleId = null, tab:
           key={cycleId}
           cycleId={cycleId}
           isAdmin={isAdmin}
-          tab={askedTab === 'rubric' ? 'rubric' : 'candidates'}
+          tab={CYCLE_TABS.includes(askedTab) ? askedTab : 'candidates'}
           onTab={onTab}
           onBack={(options) => (options?.unguarded ? closeCycle(true) : guarded(() => closeCycle()))}
           onGoToDefaultRubric={() => guarded(goToDefaultRubric)}
