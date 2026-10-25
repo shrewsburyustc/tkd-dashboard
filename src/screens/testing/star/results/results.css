@@ -1,0 +1,460 @@
+/*
+  results.css — the styles of Star testing's Results tab (build phase 6): the bar (Dan switch, Print
+  results, Download CSV), the summary line, the rows (ResultRows.jsx) and the printed results sheet
+  (StarResultsSheet.jsx).
+  Why it exists: Results' own pieces, kept apart from star.css and grading.css so parallel work
+  doesn't edit the same lines. Imported by ResultsTab.jsx and StarResultsSheet.jsx, so it only loads
+  with Star testing's screens (never in the live build while the switch is off).
+  It REUSES: testing.css (tags .ttag, buttons .btn, the list box .clist, the skeleton), star.css
+  (.st-inline-link, .st-school-line), grading.css (.stg-bar, the Dan switch's .stg-dw).
+  Every class here starts with "str-" (screen) or "strp-" (paper). Every screen value comes from
+  tokens.css or the 4px grid; the paper sizes are the approved drawing's (R9: 816 × 1056 px page).
+
+  Sources: Results mockups (v0.138–v0.146) and the Phase 6 gap mockups R1, R2, R5, R9, R10
+  (rulebook v0.514). Layouts (proposal 6): five columns ≥ 1024px, four on the upright tablet,
+  stacked rows on phones (< 640px). Blue (§1.2): nothing here is blue except the shared link style
+  of "Choose subjects" / "Show both schools" (the 5-blue count of R2 is unchanged).
+*/
+
+/* ===== The bar: Dan switch · Print results · Download CSV (proposal 2) ===== */
+.str-buttons {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.str-summary {
+  margin: 0 0 var(--space-12);
+  color: var(--color-text);
+  font-size: var(--text-13);
+}
+
+.str-summary-dan {
+  font-weight: 500;
+}
+
+/* Hide private details on (Q4 = A): one gray line above the list */
+.str-hidden-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin: 0 0 var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.str-hidden-line svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.str-empty {
+  margin-top: var(--space-4);
+}
+
+/* ===== The rows ===== */
+.str-list {
+  border-radius: var(--radius-control);
+}
+
+.str-list [role="rowgroup"] > * + * {
+  border-top: 1px solid var(--color-border);
+}
+
+/* Four columns (upright tablet) by default; five from 1024px (.is-wide) */
+.str-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) 76px minmax(0, 1.6fr) 168px;
+  align-items: center;
+  column-gap: var(--space-12);
+  min-height: 76px;
+  padding: 10px var(--space-8) 10px var(--space-16);
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+.str-list.is-wide .str-row {
+  grid-template-columns: minmax(0, 1.1fr) 140px 90px minmax(0, 2fr) 196px;
+}
+
+.str-head {
+  min-height: 32px;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  cursor: default;
+}
+
+.str-row:not(.str-head):hover {
+  background: var(--color-surface);
+}
+
+.str-row.is-selected {
+  background: var(--color-surface);
+}
+
+.str-row:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+.str-namecell,
+.str-resultcell,
+.str-phone-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.str-name {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.str-line,
+.str-sent {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  overflow-wrap: break-word;
+}
+
+.str-total {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.str-sofar {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+}
+
+.str-tagline {
+  display: flex;
+  margin-bottom: 2px;
+}
+
+/* After Email result (proposal 10): the copied line, then the question in the normal text colour */
+.str-sent--asked {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--color-text);
+}
+
+.str-copied {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  color: var(--color-text-secondary);
+}
+
+.str-copied svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.str-ask .btn {
+  margin-left: var(--space-4);
+  vertical-align: middle;
+}
+
+.str-row .acts {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
+}
+
+.str-email {
+  flex: none;
+}
+
+/* Email result can't be used now: grayed (Q4 — Hide private details is on) or busy while the
+   family's address is being read. aria-disabled (not disabled) keeps it focusable, so screen
+   readers still find it and hear why. */
+.str-email[aria-disabled='true'] {
+  color: var(--text2);
+  border-color: var(--border);
+  background: var(--surface2, transparent);
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* ----- Phones: stacked rows ----- */
+.str-row.is-phone {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  min-height: 0;
+  padding: 10px var(--space-4) 10px var(--space-12);
+}
+
+.str-row.is-phone .str-phone-main {
+  flex: 1;
+}
+
+.str-l1 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-8);
+}
+
+.str-school {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.str-row.is-phone .str-tagline {
+  margin-top: var(--space-4);
+}
+
+.str-acts2 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin-top: var(--space-8);
+}
+
+.str-row.is-phone .acts {
+  flex: none;
+}
+
+.str-skel-row {
+  min-height: 76px;
+}
+
+/* Touch (§2.5): Email result and Mark as sent keep their look and get a 44px tap area from an
+   invisible box around them (36px button + 4px above and below). */
+@media (pointer: coarse) {
+  .str-tap {
+    position: relative;
+  }
+
+  .str-tap::after {
+    content: '';
+    position: absolute;
+    inset: -4px 0;
+  }
+
+  .str-ask .str-tap {
+    margin-top: var(--space-4);
+  }
+}
+
+/* ===== The printed results sheet (R9, proposals 34–38; StarResultsSheet.jsx) ===== */
+/* Hidden on screen. On paper, Color Belt's print rule (testing-events.css) shows only .flyer-print /
+   .grading-print; the :has() rule below does the same on its own. */
+.strp-print {
+  display: none;
+}
+
+/* A NAMED page: portrait letter, 0.5-inch margins, only for this sheet (proposal 34) — Color Belt's
+   global @page and the landscape grading sheet keep their own paper. */
+@page star-results {
+  size: letter portrait;
+  margin: 0.5in;
+}
+
+@media print {
+  body:has(> .strp-print) > *:not(.strp-print) {
+    display: none !important;
+  }
+
+  body > div.strp-print.strp-print {
+    display: block;
+    page: star-results;
+    color: #111;
+    background: #fff;
+    font-family: var(--font-family);
+    line-height: 1.25;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* One sheet page = one paper page: 10in tall inside the margins (a little less, so rounding never
+     spills a blank page), the footer pushed to the bottom. */
+  .strp-page {
+    display: flex;
+    flex-direction: column;
+    height: 9.9in;
+    break-inside: avoid;
+  }
+
+  .strp-page + .strp-page {
+    break-before: page;
+  }
+
+  .strp-title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 800;
+  }
+
+  .strp-sub {
+    margin: 2px 0 10px;
+    color: #333;
+    font-size: 13px;
+  }
+
+  .strp-body {
+    display: block;
+  }
+
+  /* A dark band per Dan */
+  .strp-dan {
+    box-sizing: border-box;
+    height: 28px;
+    margin-top: 6px;
+    padding: 4px 12px;
+    border-radius: 4px;
+    background: #1f2a44;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 20px;
+  }
+
+  /* The section headings — named in words, so black and white still reads (proposal 37) */
+  .strp-grp {
+    box-sizing: border-box;
+    height: 26px;
+    margin-top: 4px;
+    padding: 6px 0 2px;
+    border-bottom: 2px solid #111;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .strp-grp--makeup,
+  .strp-grp--not_finished {
+    padding: 5px 10px;
+    border: 2px solid #111;
+    border-radius: 3px;
+    color: #111;
+  }
+
+  .strp-grp--makeup {
+    background: #ff9f1c;
+  }
+
+  /* Not finished: a DASHED border (Make-up's is solid) */
+  .strp-grp--not_finished {
+    border-style: dashed;
+    background: #ffd400;
+  }
+
+  .strp-grp--testing_privately {
+    border-bottom-width: 1px;
+    font-weight: 700;
+  }
+
+  .strp-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .strp-table td {
+    box-sizing: border-box;
+    height: var(--strp-row, 38px);
+    padding: 3px 4px;
+    border-bottom: 1px solid #ccc;
+    vertical-align: middle;
+  }
+
+  .strp-table tr {
+    break-inside: avoid;
+  }
+
+  .strp-table--makeup,
+  .strp-table--not_finished {
+    border: 2px solid #111;
+    border-top: none;
+  }
+
+  .strp-table--not_finished {
+    border-style: dashed;
+  }
+
+  .strp-table--makeup td {
+    background: #ffe2bf;
+  }
+
+  .strp-table--not_finished td {
+    background: #fff3a6;
+  }
+
+  .strp-n {
+    width: 36%;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .strp-n small {
+    display: block;
+    color: #444;
+    font-size: 11px;
+    font-weight: 400;
+  }
+
+  .strp-sc {
+    width: 24%;
+    font-size: 24px;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .strp-sc small {
+    display: block;
+    margin-top: 2px;
+    color: #444;
+    font-size: 10px;
+    font-weight: 400;
+  }
+
+  .strp-sc--day {
+    font-size: 16px;
+  }
+
+  .strp-r {
+    width: 40%;
+    font-size: 14px;
+    text-align: right;
+  }
+
+  .strp-pass {
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+  }
+
+  .strp-need {
+    display: inline-block;
+    padding: 3px 8px;
+    border: 2.5px solid #111;
+    border-radius: 4px;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    text-align: left;
+  }
+
+  .strp-foot {
+    display: flex;
+    justify-content: space-between;
+    margin-top: auto;
+    color: #555;
+    font-size: 10px;
+  }
+}

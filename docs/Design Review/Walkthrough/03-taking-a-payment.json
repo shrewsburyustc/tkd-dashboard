@@ -1,0 +1,217 @@
+{
+  "title": "Item 3 · Taking a payment — four ways today",
+  "subtitle": "<b>Approved in each section — not a mistake.</b> Each way was signed off on its own: Star's dialog (v0.109, your point that “someone may register cash and pay by check or card”), Color Belt's one click (v0.136, which replaced a dialog you had approved earlier), Camps copying Color Belt and then moving it into a box on the “$ due” tag (v0.709, v0.715), and Black Belt's dialog for payment plans (v0.218). The question: <b>should one way be used everywhere?</b> <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data · mockup amounts)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today · four ways",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/03a-colorbelt-mark-paid.png",
+          "crop": [
+            76,
+            455,
+            1180,
+            335
+          ],
+          "scale": 0.8,
+          "caption": "<b>1. Color Belt — one click.</b> “Mark paid” records the full price with the method the family chose earlier (“Paying by”). Nothing is shown before it saves; the toast says “Ava Chen marked paid · $50 cash”. If they pay another way, staff must first use ⋯ → Change how they'll pay.",
+          "marks": [
+            [
+              77,
+              519,
+              1178,
+              40
+            ],
+            [
+              940,
+              733,
+              316,
+              42
+            ]
+          ]
+        },
+        {
+          "src": "shots/03b-camps-tag-box.png",
+          "crop": [
+            76,
+            370,
+            760,
+            140
+          ],
+          "scale": 1.0,
+          "caption": "<b>2. Camps — tap the “$245 due” tag</b>, then “Mark paid” in a small box. The box shows the amount but not how they're paying.",
+          "marks": [
+            [
+              554,
+              387,
+              68,
+              22
+            ],
+            [
+              554,
+              412,
+              197,
+              82
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/03c-star-record-payment.png",
+              "crop": [
+                460,
+                80,
+                360,
+                426
+              ],
+              "scale": 1.0,
+              "caption": "<b>3. Star — a dialog:</b> Paid by (set to the family's choice), Amount, Date paid, then Save.",
+              "marks": [
+                [
+                  484,
+                  170,
+                  312,
+                  92
+                ],
+                [
+                  484,
+                  383,
+                  312,
+                  54
+                ]
+              ]
+            },
+            {
+              "src": "shots/03d-blackbelt-record-payment.png",
+              "crop": [
+                380,
+                80,
+                520,
+                485
+              ],
+              "scale": 1.0,
+              "caption": "<b>4. Black Belt — a bigger dialog:</b> which payment of the plan (“For”), Amount, “<b>Method</b>” (a different word), a note, and “Save and record another”.",
+              "marks": [
+                [
+                  404,
+                  222,
+                  472,
+                  98
+                ],
+                [
+                  644,
+                  326,
+                  236,
+                  60
+                ]
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Proposed (option C) · one small box",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/03e-colorbelt-box-MOCKUP.png",
+          "crop": [
+            76,
+            455,
+            1180,
+            345
+          ],
+          "scale": 0.8,
+          "caption": "<b>5. Color Belt:</b> “Mark paid” opens a small box: the amount, <b>Paid by</b> already set to what the family chose (here Check), then “Mark paid $50”. Two taps; he sees what will be recorded before it's saved.",
+          "marks": [
+            [
+              1107,
+              566,
+              108,
+              26
+            ],
+            [
+              979,
+              599,
+              236,
+              202
+            ]
+          ]
+        },
+        {
+          "src": "shots/03f-camps-box-MOCKUP.png",
+          "crop": [
+            76,
+            370,
+            760,
+            250
+          ],
+          "scale": 1.0,
+          "caption": "<b>6. Camps:</b> the box it already has, plus Paid by.",
+          "marks": [
+            [
+              555,
+              413,
+              235,
+              200
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/03g-star-box-MOCKUP.png",
+              "crop": [
+                940,
+                455,
+                320,
+                260
+              ],
+              "scale": 1.0,
+              "caption": "<b>7. Star:</b> “Record payment” becomes the same “Mark paid” and box.",
+              "marks": [
+                [
+                  1109,
+                  473,
+                  106,
+                  28
+                ],
+                [
+                  979,
+                  507,
+                  236,
+                  202
+                ]
+              ]
+            },
+            {
+              "src": "shots/03h-blackbelt-dialog-words-MOCKUP.png",
+              "crop": [
+                380,
+                80,
+                520,
+                485
+              ],
+              "scale": 1.0,
+              "caption": "<b>8. Black Belt</b> keeps its dialog (payment plans need “For”), with the same word: <b>Paid by</b>.",
+              "marks": [
+                [
+                  644,
+                  326,
+                  236,
+                  26
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "note": "<b>Copies what's already there:</b> Camps' box, Star's “Paid by” buttons and hint (“They chose Check on the form.”), Color Belt's “Mark paid” button. Drawn over the real pages; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question:</b><br><b>A · Keep the four ways</b> (all approved); change only the words (“Paid by” everywhere, every toast says amount and method). <i>+</i> no rework. <i>−</i> the Grandmaster learns four ways; in Color Belt and Camps a family paying differently still needs a trip to ⋯ first.<br><b>B · One click everywhere</b> (Color Belt's way): Star's dialog and Camps' tag become a one-click “Mark paid”; Black Belt keeps its dialog. <i>+</i> fastest, 1 tap. <i>−</i> it saves without showing what; a different method still needs ⋯ first; Star loses the choice you asked for in v0.109.<br><b>C · Recommended: the same small box everywhere</b> (right side). <i>+</i> 2 taps; amount and method are shown before anything is saved, like writing the receipt; a different method is one tap in the same box; one look in Color Belt, Star and Camps. <i>−</i> one more tap than Color Belt today; a different amount or date (Star's dialog allows both now) is fixed afterwards with Edit payment by an admin.<br>In every option Black Belt keeps its dialog for payment plans. <b>Next, item 3b:</b> receipts — does the desk hand out paper receipts today?"
+}

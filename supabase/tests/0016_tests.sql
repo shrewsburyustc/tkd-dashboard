@@ -28,6 +28,11 @@
 --   It makes its own test cycles and candidates with unusual names ("zz
 --   test 1a2b3c4d ..."), so it works whatever is already in the database
 --   (run it before AND after the first real Black Belt cycle exists).
+--   It passes both BEFORE and AFTER migration 0024 (the rubric editor):
+--   where 0024 changes how something behaves, the check looks at
+--   v_has_0024 and tests the behaviour of whichever version is installed
+--   (CONTRACT-0024 section 11.2). Nothing that 0024 doesn't change is
+--   checked any less.
 --   There is no fake clock: date rules are tested by calling the internal
 --   helpers with made-up dates, and by moving test rows into the past
 --   directly (as the SQL Editor's role).
@@ -193,6 +198,27 @@ declare
     'bb_cycle_plans', 'bb_cycle_plan_amounts', 'bb_cycle_kukkiwon_fees', 'bb_cycle_plan_payments',
     'bb_candidates', 'bb_candidate_waivers', 'bb_payments'];
   v_read_tables text[];
+  -- 0024 (the rubric editor) installed? (CONTRACT-0024 11.2)
+  v_has_0024 boolean := to_regclass('public.bb_default_rubric') is not null;
+  -- 0025 (grading and results) installed? (CONTRACT-0025 12.4)
+  v_has_0025 boolean := to_regclass('public.bb_grades') is not null;
+  -- the 42 functions 0025 adds (CONTRACT-0025 17: 15 staff, 16 helpers, 11 trigger functions)
+  v_grading_fns text[] := array[
+    'bb_set_grade', 'bb_set_measured', 'bb_set_extra_count', 'bb_set_makeup_subjects', 'bb_add_makeup',
+    'bb_mark_result_sent', 'bb_undo_result_sent', 'bb_set_result_text', 'bb_update_candidate_clear',
+    'bb_grading_grid', 'bb_cycle_results', 'bb_makeup_list', 'bb_result_email', 'bb_results_csv', 'bb_cycle_grading_state',
+    'bb_grade_result', 'bb_age_groups', 'bb_measured_letter', 'bb_extra_points', 'bb_kept_match', 'bb_result_text_problem',
+    'bb_candidate_age', 'bb_candidate_grading_input', 'bb_candidate_result', 'bb_candidate_result_with',
+    'bb_cycle_has_grading', 'bb_cycle_grading_started_at', 'bb_candidate_has_grades', 'bb_sent_state',
+    'bb_lock_candidate_shared', 'bb_update_candidate_core',
+    'bb_note_grading_started', 'bb_cycle_grading_started_guard', 'bb_candidates_keep_age', 'bb_grades_rules',
+    'bb_extra_counts_rules', 'bb_makeup_subjects_rules', 'bb_result_sends_guard', 'bb_downloads_guard',
+    'bb_payments_makeup_guard', 'bb_cycle_days_grading', 'bb_cycle_day_parts_grading'];
+  v_rubric_fns text[] := array[
+    'bb_save_default_dan', 'bb_undo_default_dan', 'bb_save_cycle_dan', 'bb_undo_cycle_dan', 'bb_undo_first_open',
+    'bb_rubric_num_ok', 'bb_rubric_int_ok', 'bb_rubric_letters', 'bb_rubric_brackets_problems', 'bb_rubric_dan_problems',
+    'bb_rubric_is_valid', 'bb_rubric_part_max', 'bb_rubric_most_points', 'bb_rubric_from_v1', 'bb_rubric_fresh_copy',
+    'bb_rubric_public', 'bb_rubric_put_dan', 'bb_default_rubric_guard', 'bb_rubric_undo_guard'];
 begin
   v_read_tables := array(select t from unnest(v_tables) as t where t not in ('bb_candidate_waivers', 'bb_starting_point'));
 
@@ -459,7 +485,27 @@ begin
          count(*)
     into v_i, v_j, v_n, v_n2
     from public.change_log l where l.action = 'bb_seed';
-  if v_i <> 1 or v_j <> 1 or v_n <> 1 or v_n2 <> 3
+  -- (0024 seeds the default rubric with the same tag: a 4th bb_seed row,
+  -- on bb_default_rubric. The history is append-only, so that row stays
+  -- even after "Undo 0024" (SETUP 0024f). 0016's own three are counted
+  -- exactly either way.)
+  -- (0025 seeds the three result email texts with the same tag: three
+  -- more bb_seed rows, on bb_result_texts - kept after "Undo 0025" (SETUP
+  -- 0025g) too. Counted exactly either way, CONTRACT-0025 12.4.)
+  if v_i <> 1 or v_j <> 1 or v_n <> 1
+     or (select count(*) from public.change_log l where l.action = 'bb_seed'
+          and l.table_name not in ('bb_default_rubric', 'bb_result_texts')) <> 3
+     or (v_has_0024 and (v_n2 - (select count(*) from public.change_log l where l.action = 'bb_seed' and l.table_name = 'bb_result_texts') <> 4
+                         or (select count(*) from public.change_log l where l.action = 'bb_seed'
+                              and l.table_name = 'bb_default_rubric' and l.op = 'insert') <> 1))
+     or (not v_has_0024 and v_n2 - (select count(*) from public.change_log l where l.action = 'bb_seed' and l.table_name = 'bb_result_texts') not in (3, 4))
+     or (not v_has_0024 and v_n2 = 4 and (select count(*) from public.change_log l where l.action = 'bb_seed'
+                                           and l.table_name = 'bb_default_rubric' and l.op = 'insert') <> 1)
+     -- (3 per apply of 0025; an Undo 0025 + a redo adds 3 more - the history is append-only)
+     or (v_has_0025 and ((select count(*) from public.change_log l where l.action = 'bb_seed'
+                           and l.table_name = 'bb_result_texts' and l.op = 'insert') not in (3, 6)))
+     or (not v_has_0025 and (select count(*) from public.change_log l where l.action = 'bb_seed'
+                              and l.table_name = 'bb_result_texts') not in (0, 3, 6))
      or exists (select 1 from public.change_log l where l.action = 'bb_seed' and l.actor_name <> 'Database admin') then
     raise exception 'TEST FAILED: T3a the seed history should be 1 settings + 1 placeholder waiver + 1 starting point by Database admin (got %, %, %, % rows)',
       v_i, v_j, v_n, v_n2;
@@ -551,10 +597,12 @@ begin
     raise exception 'TEST FAILED: T4a defaults after a cycle should be its schedule, got %', v_r;
   end if;
   -- ... and Add cycle wrote: two different codes, Closed, the starting
-  -- point's requirements (no source), payments x 4 amounts per plan, 4 fees
+  -- point's requirements (no source) - after 0024: a fresh copy of the
+  -- default rubric -, payments x 4 amounts per plan, 4 fees
   if v_cm_w = v_cm_s or v_cm_w !~ '^[a-hjkmnp-z2-9]{8}$'
      or (select registration_open or first_opened_at is not null or version <> 1 from public.bb_cycles where id = v_cm)
-     or (select requirements from public.bb_cycles where id = v_cm) <> (select requirements from public.bb_starting_point)
+     or (not v_has_0024
+         and (select requirements from public.bb_cycles where id = v_cm) <> (select requirements from public.bb_starting_point))
      or (select count(*) from public.bb_cycle_plan_amounts where cycle_plan_id = v_cm_full) <> 4
      or (select count(*) from public.bb_cycle_plan_amounts where cycle_plan_id = v_cm_three) <> 12
      or (select count(*) from public.bb_cycle_plan_payments where cycle_plan_id = v_cm_three) <> 3
@@ -567,6 +615,16 @@ begin
      or (select second_place_other from public.bb_cycle_days where cycle_id = v_cm and name = 'Physical')
         <> 'Horgan Arena, 403 Oxford St N, Auburn MA 01501' then
     raise exception 'TEST FAILED: T4a Add cycle did not write the cycle as designed';
+  end if;
+  -- (Checks that name a 0024 object sit in their own "if v_has_0024 then"
+  -- block: PL/pgSQL prepares a statement's whole condition at once, so a
+  -- query on a table that doesn't exist yet must never be reached before
+  -- 0024.)
+  if v_has_0024 then
+    if (select requirements from public.bb_cycles where id = v_cm)
+       is distinct from (select public.bb_rubric_fresh_copy(r.sheet) from public.bb_default_rubric r) then
+      raise exception 'TEST FAILED: T4a (0024) Add cycle must store a fresh copy of the default rubric';
+    end if;
   end if;
 
   -- T4e (placeholder). Opening while the placeholder waiver is current ->
@@ -1151,9 +1209,18 @@ begin
   perform set_config('tkd.action', '', true);
   perform set_config('request.jwt.claims', v_c_a1, true);
   v_r := public.bb_add_cycle(pg_temp.bbt_payload(v_tag || ' From Main', v_today + 40, v_today + 30), v_cm);
-  if v_r ->> 'status' <> 'ok'
-     or (select requirements ->> 'source' from public.bb_cycles where id = (v_r ->> 'id')::uuid) <> 'zz test changed sheet' then
+  if not v_has_0024 and (v_r ->> 'status' <> 'ok'
+     or (select requirements ->> 'source' from public.bb_cycles where id = (v_r ->> 'id')::uuid) <> 'zz test changed sheet') then
     raise exception 'TEST FAILED: T4a Add cycle must copy the source cycle''s requirements, got %', v_r;
+  end if;
+  -- (after 0024: the DEFAULT rubric is copied, never the source cycle's sheet)
+  if v_has_0024 then
+    if v_r ->> 'status' <> 'ok'
+       or (select requirements from public.bb_cycles where id = (v_r ->> 'id')::uuid)
+          is distinct from (select public.bb_rubric_fresh_copy(r.sheet) from public.bb_default_rubric r)
+       or (select requirements ->> 'source' from public.bb_cycles where id = (v_r ->> 'id')::uuid) <> 'Default rubric' then
+      raise exception 'TEST FAILED: T4a (0024) Add cycle must copy the default rubric, not the source cycle''s sheet, got %', v_r;
+    end if;
   end if;
   v_cx := (v_r ->> 'id')::uuid; v_cx_w := v_r ->> 'public_code_worcester'; v_cx_s := v_r ->> 'public_code_shrewsbury';
   if v_cx_w in (v_cm_w, v_cm_s) or v_cx_s in (v_cm_w, v_cm_s) then
@@ -1422,11 +1489,38 @@ begin
   if v_r ->> 'registration' <> 'not_open_yet' or v_r ->> 'public_status' <> 'not_open' then
     raise exception 'TEST FAILED: T4e a never-opened cycle should be not_open_yet, got %', v_r;
   end if;
-  v_r := public.bb_set_registration(v_c2, v_c2v, true);
-  if v_r ->> 'status' <> 'ok' or (select first_opened_at from public.bb_cycles where id = v_c2) is distinct from now() then
-    raise exception 'TEST FAILED: T4e the first opening must set first_opened_at, got %', v_r;
+  if not v_has_0024 then
+    v_r := public.bb_set_registration(v_c2, v_c2v, true);
+    if v_r ->> 'status' <> 'ok' or (select first_opened_at from public.bb_cycles where id = v_c2) is distinct from now() then
+      raise exception 'TEST FAILED: T4e the first opening must set first_opened_at, got %', v_r;
+    end if;
+    v_c2v := (v_r ->> 'version')::integer;
+  else
+    -- (0024, v0.930) the desk's first opening -> not_allowed, nothing written
+    v_r := public.bb_set_registration(v_c2, v_c2v, true);
+    if v_r is distinct from '{"status": "not_allowed"}'::jsonb
+       or (select registration_open or first_opened_at is not null or version <> v_c2v from public.bb_cycles where id = v_c2) then
+      raise exception 'TEST FAILED: T4e (0024) the desk''s first opening must be not_allowed with nothing written, got %', v_r;
+    end if;
+    -- the admin's first opening sets first_opened_at
+    perform set_config('request.jwt.claims', v_c_a1, true);
+    v_r := public.bb_set_registration(v_c2, v_c2v, true);
+    if v_r ->> 'status' <> 'ok' or (select first_opened_at from public.bb_cycles where id = v_c2) is distinct from now() then
+      raise exception 'TEST FAILED: T4e (0024) the admin''s first opening must set first_opened_at, got %', v_r;
+    end if;
+    -- then the desk may close and reopen (staff may, once an admin opened it)
+    perform set_config('request.jwt.claims', v_c_d1, true);
+    v_r := public.bb_set_registration(v_c2, (v_r ->> 'version')::integer, false);
+    if v_r ->> 'status' <> 'ok' or v_r -> 'state' ->> 'registration' <> 'closed' then
+      raise exception 'TEST FAILED: T4e (0024) the desk''s close after an admin opened should be ok, got %', v_r;
+    end if;
+    v_r := public.bb_set_registration(v_c2, (v_r ->> 'version')::integer, true);
+    if v_r ->> 'status' <> 'ok' or v_r -> 'state' ->> 'state' <> 'open'
+       or (select first_opened_at from public.bb_cycles where id = v_c2) is distinct from now() then
+      raise exception 'TEST FAILED: T4e (0024) the desk''s reopen should be ok, got %', v_r;
+    end if;
+    v_c2v := (v_r ->> 'version')::integer;
   end if;
-  v_c2v := (v_r ->> 'version')::integer;
   -- after Application due (with auto close on): staff can't open, an admin
   -- can and auto close is turned off
   perform set_config('request.jwt.claims', '', true);
@@ -1558,9 +1652,17 @@ begin
           <> array['amounts', 'id', 'name', 'payments', 'position']
        or v_r -> 'cycle' -> 'plans' -> 1 -> 'amounts' -> '4' <> '[90000, 90000, 90000]'
        or v_r -> 'cycle' -> 'kukkiwon' <> '{"1": 10000, "2": 11000, "3": 14000, "4": 17000}'
-       or v_r -> 'cycle' -> 'requirements' <> (select requirements from public.bb_cycles where id = v_cm)
+       or (not v_has_0024 and v_r -> 'cycle' -> 'requirements' <> (select requirements from public.bb_cycles where id = v_cm))
        or v_r -> 'waiver' <> jsonb_build_object('version_name', v_wv_name, 'body', 'zz test waiver text ' || v_tag) then
       raise exception 'TEST FAILED: T5a public cycle answer for % is not as designed: %', v_txt, left(v_r::text, 600);
+    end if;
+    -- (0024) the requirements are the rubric's public view (in its own
+    -- block: the function doesn't exist before 0024)
+    if v_has_0024 then
+      if v_r -> 'cycle' -> 'requirements'
+         is distinct from (select public.bb_rubric_public(requirements) from public.bb_cycles where id = v_cm) then
+        raise exception 'TEST FAILED: T5a (0024) the public requirements must be bb_rubric_public of the cycle''s rubric';
+      end if;
     end if;
     -- no ids (except the plans'), no counts, nobody's data
     if position(v_cm::text in v_r::text) > 0
@@ -2077,7 +2179,18 @@ begin
   perform set_config('request.jwt.claims', '', true);
   v_k := pg_temp.bbt_due_candidate(v_cm, 'Gone', v_adult, v_mail_tag || '.gone@example.com', 'drawn');
   v_k2 := pg_temp.bbt_due_candidate(v_cm, 'Gone', v_adult, v_mail_tag || '.gone2@example.com', 'paper');
-  update public.bb_candidates set date_of_birth = null, email_for_results = null, personal_removed_at = now() where id = v_k;
+  if v_has_0025 then
+    -- 0025 (Q-G2): removing a DOB must keep the age, and only the purge's
+    -- tag may set it (CONTRACT-0025 12.4) - so the hand purge does both
+    perform set_config('tkd.action', 'bb_purge_due', true);
+    update public.bb_candidates
+       set date_of_birth = null, email_for_results = null, personal_removed_at = now(),
+           age_kept = public.bb_age_on(v_adult, (select min(d.day_date) from public.bb_cycle_days d where d.cycle_id = v_cm))
+     where id = v_k;
+    perform set_config('tkd.action', '', true);
+  else
+    update public.bb_candidates set date_of_birth = null, email_for_results = null, personal_removed_at = now() where id = v_k;
+  end if;
   update public.bb_candidate_waivers set signature = null, signer_name = null, removed_at = now() where candidate_id = v_k;
   update public.bb_candidates set duplicate_state = 'possible', duplicate_of = v_k where id = v_k2;
   -- the DOB can't come back, even as the SQL Editor's role
@@ -2895,10 +3008,16 @@ begin
   if v_r ->> 'status' <> 'ok'
      or (select count(*) from jsonb_array_elements(v_r -> 'rows')) <> (select count(*) from public.bb_candidates where cycle_id = v_cm)
      or exists (select 1 from jsonb_array_elements(v_r -> 'rows') as x(value) where x.value -> 'money' ? 'items')
+     -- (0025 adds exactly four keys, CONTRACT-0025 6.5 / 12.4)
      or (select array_agg(k order by k) from jsonb_object_keys(v_r -> 'rows' -> 0) as k)
-        <> array['dan', 'duplicate_of', 'duplicate_state', 'first_name', 'has_payment_rows', 'id', 'kukkiwon', 'last_name',
-                 'location_code', 'money', 'plan_id', 'plan_name', 'reference', 'registered_at', 'source', 'status',
-                 'version', 'withdrawn_reason']
+        <> (case when v_has_0025
+                then array['dan', 'duplicate_of', 'duplicate_state', 'first_name', 'has_grades', 'has_payment_rows', 'id',
+                           'is_makeup', 'kukkiwon', 'last_name', 'location_code', 'makeup_of_cycle_name', 'money', 'plan_id',
+                           'plan_name', 'reference', 'registered_at', 'retest_names', 'source', 'status', 'version',
+                           'withdrawn_reason']
+                else array['dan', 'duplicate_of', 'duplicate_state', 'first_name', 'has_payment_rows', 'id', 'kukkiwon', 'last_name',
+                           'location_code', 'money', 'plan_id', 'plan_name', 'reference', 'registered_at', 'source', 'status',
+                           'version', 'withdrawn_reason'] end)
      -- Dan first, then Shrewsbury before Worcester (names are not compared:
      -- text sorting differs between databases)
      or exists (select 1 from jsonb_array_elements(v_r -> 'rows') with ordinality as a(value, n)
@@ -2985,13 +3104,23 @@ begin
   if (select count(*) from public.change_log where id > v_mark) <> 2 then   -- the day + the cycle's version
     raise exception 'TEST FAILED: T10 update_cycle must log exactly the changed day and the cycle';
   end if;
-  -- 5 set registration (S, the desk)
+  -- 5 set registration: an admin opens (S / A; since 0024 the first
+  --   opening is admins only), the desk closes (S) - valid with and
+  --   without 0024
+  select coalesce(max(id), 0) into v_mark from public.change_log;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_r := public.bb_set_registration(v_k2, 2, true);
+  reset role;
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST SETUP: T10 the admin''s opening answered %', v_r; end if;
+  perform pg_temp.bbt_log(v_mark, 'bb_set_registration', v_admin, v_a1, v_txt2, 'set_registration (open)');
   select coalesce(max(id), 0) into v_mark from public.change_log;
   set local role authenticated;
   perform set_config('request.jwt.claims', v_c_d1, true);
-  v_r := public.bb_set_registration(v_k2, 2, true);
+  v_r := public.bb_set_registration(v_k2, (v_r ->> 'version')::integer, false);
   reset role;
-  perform pg_temp.bbt_log(v_mark, 'bb_set_registration', v_desk, v_d1, 'Staff', 'set_registration');
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST SETUP: T10 the desk''s close answered %', v_r; end if;
+  perform pg_temp.bbt_log(v_mark, 'bb_set_registration', v_desk, v_d1, 'Staff', 'set_registration (close)');
   -- 6 add candidate (S)
   select coalesce(max(id), 0) into v_mark from public.change_log;
   set local role authenticated;
@@ -3352,11 +3481,31 @@ begin
     raise exception 'TEST FAILED: C4 expected exactly % functions from 0016 (one version each, 25 staff), found %',
       cardinality(v_staff_fns || v_public_fns || v_helper_fns), v_n;
   end if;
-  -- no other bb_ function exists (nothing left over from an old version)
+  -- no other bb_ function exists (nothing left over from an old version);
+  -- after 0024 exactly its 19 new functions are there too (CONTRACT-0024 15)
   select string_agg(p.oid::regprocedure::text, ', ') into v_txt
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-   where n.nspname = 'public' and p.proname like 'bb\_%' and not (p.proname = any (v_staff_fns || v_public_fns || v_helper_fns));
+   where n.nspname = 'public' and p.proname like 'bb\_%' and not (p.proname = any (v_staff_fns || v_public_fns || v_helper_fns))
+     and not (v_has_0024 and p.proname = any (v_rubric_fns))
+     and not (v_has_0025 and p.proname = any (v_grading_fns));
   if v_txt is not null then raise exception 'TEST FAILED: C4 unexpected bb_ function(s): %', v_txt; end if;
+  -- after 0025 exactly its 42 new functions are there too, one version each (CONTRACT-0025 12.4)
+  if v_has_0025 and (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                      where n.nspname = 'public' and p.proname = any (v_grading_fns)) <> 42 then
+    raise exception 'TEST FAILED: C4 (0025) expected exactly the 42 functions 0025 adds, one version each';
+  end if;
+  if not v_has_0025 and exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                                 where n.nspname = 'public' and p.proname = any (v_grading_fns)) then
+    raise exception 'TEST FAILED: C4 a 0025 function exists without 0025''s tables';
+  end if;
+  if v_has_0024 and (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                      where n.nspname = 'public' and p.proname = any (v_rubric_fns)) <> 19 then
+    raise exception 'TEST FAILED: C4 (0024) expected exactly the 19 functions 0024 adds, one version each';
+  end if;
+  if not v_has_0024 and exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                                 where n.nspname = 'public' and p.proname = any (v_rubric_fns)) then
+    raise exception 'TEST FAILED: C4 a 0024 function exists without 0024''s tables';
+  end if;
   select string_agg(x.sig, ', ') into v_txt
     from unnest(array[
       'public.bb_save_waiver(uuid, text)',
@@ -3419,7 +3568,10 @@ begin
                       where n.nspname = 'public' and c.conname = x.con and c.contype = 'f' and c.confdeltype = x.act);
   if v_txt is not null then raise exception 'TEST FAILED: C5 missing foreign key or wrong removal rule on: %', v_txt; end if;
   if (select count(*) from pg_constraint c where c.contype = 'f' and c.conrelid = any (array(
-        select ('public.' || t)::regclass from unnest(v_tables) as t))) <> 18
+        select ('public.' || t)::regclass from unnest(v_tables) as t))) <> (case when v_has_0025 then 19 else 18 end)
+     -- (0025 adds exactly one: bb_candidates_makeup_of_fk, "set null", CONTRACT-0025 3.1)
+     or (v_has_0025 and not exists (select 1 from pg_constraint c where c.conname = 'bb_candidates_makeup_of_fk'
+                                      and c.conrelid = 'public.bb_candidates'::regclass and c.contype = 'f' and c.confdeltype = 'n'))
      or exists (select 1 from pg_constraint c where c.contype = 'f' and c.conrelid = 'public.bb_payments'::regclass
                  and c.confdeltype <> 'r') then
     raise exception 'TEST FAILED: C5 the 0016 tables must have exactly the 18 listed foreign keys (bb_payments: all restrict)';
@@ -3458,13 +3610,28 @@ begin
   if v_txt is not null then raise exception 'TEST FAILED: C6 missing / wrong / disabled trigger(s): %', v_txt; end if;
   select count(*) into v_n from pg_trigger t
    where t.tgrelid = any (array(select ('public.' || t)::regclass from unnest(v_tables) as t)) and not t.tgisinternal;
-  if v_n <> 6 + 11 + 13 + 13 then raise exception 'TEST FAILED: C6 expected % triggers on the 0016 tables, found %', 6 + 11 + 13 + 13, v_n; end if;
+  -- (0025 adds exactly four on these tables: bb_candidates_keep_age, bb_payments_makeup_guard,
+  -- bb_cycle_days_grading, bb_cycle_day_parts_grading - CONTRACT-0025 5)
+  v_i := 6 + 11 + 13 + 13 + (case when v_has_0025 then 4 else 0 end);
+  if v_n <> v_i then
+    raise exception 'TEST FAILED: C6 expected % triggers on the 0016 tables, found %', v_i, v_n;
+  end if;
+  if v_has_0025 and (select count(*) from pg_trigger t
+                      where not t.tgisinternal and t.tgenabled = 'O'
+                        and ((t.tgrelid = 'public.bb_candidates'::regclass and t.tgname = 'bb_candidates_keep_age')
+                             or (t.tgrelid = 'public.bb_payments'::regclass and t.tgname = 'bb_payments_makeup_guard')
+                             or (t.tgrelid = 'public.bb_cycle_days'::regclass and t.tgname = 'bb_cycle_days_grading')
+                             or (t.tgrelid = 'public.bb_cycle_day_parts'::regclass and t.tgname = 'bb_cycle_day_parts_grading'))) <> 4 then
+    raise exception 'TEST FAILED: C6 (0025) its four triggers on 0016 tables are not all there and enabled';
+  end if;
   select string_agg(x.tbl, ', ') into v_txt
     from (values ('bb_settings', 'id,singleton', ''),
-                 ('bb_cycles', 'id,public_code_worcester,public_code_shrewsbury,prices_from', ''),
+                 ('bb_cycles', 'id,public_code_worcester,public_code_shrewsbury,prices_from',
+                  case when v_has_0024 then 'requirements' else '' end),
                  ('bb_cycle_days', 'id,cycle_id', ''),
                  ('bb_cycle_plan_payments', 'id,cycle_plan_id,payment_no', ''),
-                 ('bb_candidates', 'id,cycle_id,source,reference,registered_at', 'date_of_birth,email_for_results,personal_removed_at'),
+                 ('bb_candidates', 'id,cycle_id,source,reference,registered_at' || (case when v_has_0025 then ',makeup_of_cycle_name' else '' end),
+                  'date_of_birth,email_for_results,personal_removed_at' || (case when v_has_0025 then ',makeup_of_candidate_id,age_kept' else '' end)),
                  ('bb_candidate_waivers', 'id,candidate_id,waiver_version_id,how,submission_id,acknowledged,signed_as_minor,ticked_by_name,signed_at',
                   'signature,signer_name,removed_at')) as x(tbl, a0, a1)
    where not exists (select 1 from pg_trigger t
@@ -3495,7 +3662,7 @@ begin
       'bb_cycle_kukkiwon_fees_amount_check', 'bb_cycle_kukkiwon_fees_cycle_dan_key', 'bb_cycle_plan_payments_follows_check',
       'bb_cycle_plan_payments_plan_payment_key', 'bb_candidates_pkey', 'bb_candidates_dob_check', 'bb_candidates_email_check',
       'bb_candidates_personal_check', 'bb_candidates_dan_check', 'bb_candidates_kukkiwon_check', 'bb_candidates_source_check',
-      'bb_candidates_reference_key', 'bb_candidates_reference_check', 'bb_candidates_status_check',
+      'bb_candidates_reference_check', 'bb_candidates_status_check',
       'bb_candidates_duplicate_state_check', 'bb_candidates_duplicate_self_check', 'bb_candidate_waivers_how_check',
       'bb_candidate_waivers_submission_id_key', 'bb_candidate_waivers_submission_check', 'bb_candidate_waivers_acknowledged_check',
       'bb_candidate_waivers_signature_check', 'bb_candidate_waivers_ticked_check', 'bb_candidate_waivers_drawn_check',
@@ -3504,6 +3671,25 @@ begin
    where not exists (select 1 from pg_constraint c join pg_namespace n on n.oid = c.connamespace
                       where n.nspname = 'public' and c.conname = x.name);
   if v_txt is not null then raise exception 'TEST FAILED: C7 missing rule(s): %', v_txt; end if;
+  -- the reference is unique: 0016's rule before 0025; after 0025 a unique
+  -- index over form and desk rows only (a make-up row carries its earlier
+  -- row's reference, CONTRACT-0025 3.2); the source rule's list; and
+  -- whether a candidate must have a plan
+  if (not v_has_0025 and not exists (select 1 from pg_constraint c where c.conname = 'bb_candidates_reference_key'
+                                       and c.conrelid = 'public.bb_candidates'::regclass and c.contype = 'u'))
+     or (not v_has_0025 and pg_get_constraintdef((select c.oid from pg_constraint c where c.conname = 'bb_candidates_source_check'
+                                                   and c.conrelid = 'public.bb_candidates'::regclass))
+                            <> 'CHECK ((source = ANY (ARRAY[''form''::text, ''desk''::text])))')
+     or (v_has_0025 and exists (select 1 from pg_constraint c where c.conname = 'bb_candidates_reference_key'))
+     or (v_has_0025 and coalesce(pg_get_indexdef(to_regclass('public.bb_candidates_reference_idx')), '')
+                        <> 'CREATE UNIQUE INDEX bb_candidates_reference_idx ON public.bb_candidates USING btree (reference) WHERE (source <> ''makeup''::text)')
+     or (v_has_0025 and pg_get_constraintdef((select c.oid from pg_constraint c where c.conname = 'bb_candidates_source_check'
+                                               and c.conrelid = 'public.bb_candidates'::regclass))
+                        <> 'CHECK ((source = ANY (ARRAY[''form''::text, ''desk''::text, ''makeup''::text])))')
+     or (select a.attnotnull from pg_attribute a where a.attrelid = 'public.bb_candidates'::regclass and a.attname = 'cycle_plan_id')
+        is distinct from (not v_has_0025) then
+    raise exception 'TEST FAILED: C7 the reference / source / plan rules of bb_candidates are not as designed for this version';
+  end if;
   select string_agg(x.name, ', ') into v_txt
     from unnest(array['bb_cycles_lower_name_idx', 'bb_waiver_versions_one_current_idx', 'bb_cycle_days_cycle_date_idx',
                       'bb_cycle_plans_cycle_lower_name_idx', 'bb_candidates_cycle_idx', 'bb_candidates_names_idx',

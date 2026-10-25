@@ -1,0 +1,46 @@
+{
+  "title": "Item 9a · Opening a person",
+  "subtitle": "<b>One pattern already, plus one missing piece.</b> Rules §1.3 and §8: tap anywhere on a row to open the person's summary, so whatever a tablet or phone leaves out of the row can still be seen. Color Belt's event roster, Star, Black Belt and Camps all open the same kind of read-only summary, with <b>Close · Edit details</b>. <b>Color Belt private testing rows don't open at all</b> — missing, not planned. (9b, the change history inside the summary, comes next.) <span style=\"color:#6B6B6B\">(Preview screenshots at tablet size, 820 wide, touch · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today · Color Belt, same tablet",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/09a-colorbelt-event-summary-tablet.png",
+          "crop": [180, 86, 460, 474],
+          "scale": 1,
+          "caption": "<b>1. Event roster:</b> tap Owen Reed's row → his summary. The tablet leaves out the “Paid on” column, but the summary shows “paid Oct 19”.",
+          "shotWidth": 820,
+          "marks": [[204, 386, 412, 38]]
+        },
+        {
+          "src": "shots/09b-colorbelt-private-rows-tablet.png",
+          "crop": [88, 430, 716, 304],
+          "scale": 1,
+          "caption": "<b>2. Private testing:</b> no “Paid on” column on the tablet either, and tapping a row opens nothing — there's no way to see when Noah Kim paid.",
+          "shotWidth": 820,
+          "marks": [[97, 656, 698, 70]]
+        }
+      ],
+      "note": "Star, Black Belt and Camps already open the same kind of summary. Their small differences were approved: Black Belt keeps Edit details in the summary's ⋯, next to Record payment; Camps opens from the camper's name (its row is full of check-in buttons). Star's ⋯ calls it “Edit candidate” (menu words are item 10)."
+    },
+    {
+      "label": "Proposed (option B) · tap a private testing row",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/09c-colorbelt-private-summary-MOCKUP.png",
+          "crop": [88, 86, 716, 650],
+          "scale": 1,
+          "caption": "<b>3.</b> The same summary as the event roster, with the private testing's own details: class, testing for, price, when it was added, paying by, and the payment with its date. Close · Edit details. Mark paid and the ⋯ stay on the row, as today.",
+          "shotWidth": 820,
+          "marks": [[190, 96, 440, 398]]
+        }
+      ],
+      "note": "<b>Copies what's already there:</b> the event roster's own summary — same frame, same kind of rows — filled with what a private testing already stores. Picture 3 is drawn over the real tablet page; nothing in the app was changed. Owner: Color Belt."
+    }
+  ],
+  "footer": "<b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> on a tablet or phone there's no way to see when a private testing was paid; it breaks rules §1.3 and §8.<br><b>B · Recommended: the same summary as the event roster (picture 3).</b> Tap anywhere on a private testing row → its summary, with Close · Edit details; Mark paid and the ⋯ stay on the row. <i>+</i> one way to open a person in every roster, nothing new to learn; what the tablet leaves out can be seen again. <i>−</i> a small build for Color Belt.<br><b>C · Only add the paid date to the row on small screens</b> (e.g. “Paid Oct 20” under the tag). <i>+</i> the smallest change. <i>−</i> rows still don't open, unlike every other roster; anything else a phone leaves out stays hidden."
+}

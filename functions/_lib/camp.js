@@ -51,9 +51,10 @@ const LIMITS = {
   token: 2048,
 };
 const MAX_CHILDREN = 3;
-const MAX_IDS = 10; // day ids per child, day ids per extra, extras per child
+const MAX_DAY_IDS = 60; // day ids per child and per extra (a camp has up to 60 days, weekly pricing R4)
+const MAX_EXTRAS = 10; // extras per child (a camp has up to 10 extras)
 const MAX_AGE = 150; // only a sanity limit; the camp's own range is checked by the database
-const MAX_TOTAL_CENTS = 600000; // 3 children × $2,000
+const MAX_TOTAL_CENTS = 3000000; // 3 children × $10,000 (weekly pricing R5; was 3 × $2,000)
 
 // A UUID like 8c0e4b1e-3f7a-4d2b-9a65-0f5b2c1d7e90.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -203,10 +204,24 @@ function signedUpCampObject(camp) {
   };
 }
 function signedUpChild(child) {
-  return {
+  const out = {
     ...pick(child, ['first_name', 'last_name', 'day_count', 'days', 'price_kind', 'base_cents', 'total_cents']),
     extras: pickList(child.extras ?? [], ['name', 'per', 'count', 'cents']),
   };
+  // Weekly pricing (migration 0022): the price of each week the child comes,
+  // [{ monday:'YYYY-MM-DD', day_count, cents }]. Passed on only when the database sends it; a list
+  // of any other shape is an answer we don't expect → unavailable.
+  if (child.weeks !== undefined) out.weeks = checkWeeks(child.weeks);
+  return out;
+}
+function checkWeeks(weeks) {
+  if (!Array.isArray(weeks)) throw new Unexpected();
+  return weeks.map((w) => {
+    if (!isObject(w) || typeof w.monday !== 'string' || !ISO_DATE.test(w.monday)) throw new Unexpected();
+    if (!Number.isInteger(w.day_count) || w.day_count < 1 || w.day_count > 7) throw new Unexpected();
+    if (w.cents !== null && !Number.isInteger(w.cents)) throw new Unexpected();
+    return pick(w, ['monday', 'day_count', 'cents']);
+  });
 }
 
 // The database's answer to a sign-up, reduced to what the page may see (§4.6, POST rows).
@@ -324,14 +339,15 @@ function readChild(child) {
   if (!isText(child.first_name, LIMITS.name) || !isText(child.last_name, LIMITS.name)) return null;
   if (!isWhole(child.age, 0, MAX_AGE)) return null;
   if (typeof child.member !== 'boolean') return null;
-  const dayIds = readIds(child.day_ids, 1, MAX_IDS);
+  const dayIds = readIds(child.day_ids, 1, MAX_DAY_IDS);
   if (!dayIds) return null;
-  if (!Array.isArray(child.extras) || child.extras.length > MAX_IDS) return null;
+  if (!Array.isArray(child.extras) || child.extras.length > MAX_EXTRAS) return null;
   const extras = [];
   for (const extra of child.extras) {
     if (!onlyKeys(extra, EXTRA_KEYS)) return null;
     if (typeof extra.extra_id !== 'string' || !UUID.test(extra.extra_id)) return null;
-    const extraDays = readIds(extra.day_ids, 0, MAX_IDS);
+    const extraDays = readIds(extra.day_ids, 0, MAX_DAY_IDS);
+
     if (!extraDays) return null;
     extras.push({ extra_id: extra.extra_id.toLowerCase(), day_ids: extraDays });
   }

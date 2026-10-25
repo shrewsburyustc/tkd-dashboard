@@ -1,0 +1,49 @@
+{
+  "title": "Item 17a · How money is written (and how names are listed)",
+  "subtitle": "<b>Approved in each section.</b> Money is written two ways: whole dollars on the rosters and in Camps (“$790”, “Paid $160”, “$375”) with cents only when there are some (Black Belt can take “$290.50”), and always with cents in Finance (“$245.00”). Five separate helpers do this; Star's would write $32.50 as “$32.5” — hidden today because Star only takes whole dollars. Names are listed three ways, each approved for a reason: testing rosters by belt, then last name; Camps' roster by first name (v0.715 — campers are called by first name); Prospects and Calendar as “Ava R.” (privacy, v0.245). Already settled in item 3: “Paid by” everywhere (Black Belt's “Method” goes); “Paying by” stays for the family's choice before paying. <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/17a-star-money.png",
+          "crop": [70, 226, 1190, 360],
+          "scale": 0.78,
+          "caption": "<b>1. Star</b> (Color Belt, Black Belt and Camps the same): whole dollars — “$790”, “Paid $160”.",
+          "marks": [[980, 271, 52, 28], [823, 540, 78, 30], [234, 511, 38, 22]]
+        },
+        {
+          "src": "shots/17a-camps-money.png",
+          "crop": [70, 96, 700, 330],
+          "scale": 0.78,
+          "caption": "<b>2. Camps:</b> “5 to collect · $375”; its roster is A–Z by first name (v0.715).",
+          "marks": [[356, 190, 36, 24]]
+        },
+        {
+          "src": "shots/17a-finance-money.png",
+          "crop": [70, 226, 1190, 300],
+          "scale": 0.78,
+          "caption": "<b>3. Finance:</b> always cents — “$245.00”, “$140.00” — amounts are counted against the drawer and line up in columns.",
+          "marks": [[85, 261, 80, 30], [1069, 407, 53, 25]]
+        }
+      ]
+    },
+    {
+      "label": "Option C drawn · option B changes nothing on screen",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/17a-star-cents-MOCKUP.png",
+          "crop": [70, 226, 1190, 360],
+          "scale": 0.78,
+          "caption": "<b>4. Option C — cents everywhere:</b> “$790.00”, “Paid $160.00” — the warning drops to a second line and roster rows get longer (worse on a phone).",
+          "marks": [[979, 267, 79, 32], [823, 536, 110, 52]]
+        }
+      ],
+      "note": "<b>Option B (recommended) changes nothing on screen.</b> It writes today's practice down as the rule — on screens, whole dollars (“$65”), cents only when there are some (“$290.50”); in Finance's report, print and export, always cents (“$65.00”). Behind the scenes the five money helpers become one, so no section can drift (Star's “$32.5”). Names stay as approved and go into the same rule: testing rosters by belt, then last name; Camps by first name; Prospects and Calendar “Ava R.”. Picture 4 is drawn over the real Star roster; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question: how should money be written?</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> no written rule, so a new screen can pick a third style; five helpers can drift (Star's “$32.5”).<br><b>B · Recommended: write today's practice down as the rule, with one shared money helper.</b> Screens: “$65”, cents only when there are some; Finance's report, print and export: “$65.00”. Names stay as they are, in the same rule. <i>+</i> nothing changes on screen; the rule stops drift. <i>−</i> a small behind-the-scenes job (one helper instead of five).<br><b>C · Cents everywhere (picture 4).</b> <i>+</i> one style, like a receipt book. <i>−</i> every roster, card and tag gets longer; warnings wrap to a second line, worse on phones."
+}

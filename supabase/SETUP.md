@@ -1237,6 +1237,10 @@ The 0010 undo (14e) re-runs 0005, and 0005 starts by removing **all** read right
 
 **Running it again is safe** (tested: a second run changes no row and no fingerprint; the seed never overwrites, and the role's attributes and password are never touched).
 
+**After migration 0024, never re-run this file except as step 0024f:** it silently undoes 0024's rubric lock and copy rules (0024's fingerprints then show `0016 RE-RUN`).
+
+**After migration 0025, never re-run this file except through 0025g.**
+
 ### 0016c. Read-only checks (Claude runs these through the connection)
 
 1. The list of new objects: 13 `bb_*` tables and the sequence `bb_candidate_ref_seq`.
@@ -1694,6 +1698,177 @@ Color Belt's CP3 (2026-10-19) left **2 test private testings** on production ("J
 ### 0021d. Never re-run 0012 or 0015 after this
 
 They would put back the 2-year-only clean-up (0012 also its old history triggers — see 0015's header). If 0015 is ever re-run, re-run 0021 straight after.
+
+## Migration 0024: Black Belt rubric editor (rulebook v0.921–v0.933)
+
+**Status: built and tested locally (PGlite), NOT applied.** Each step below needs Jeffrey's OK for that step. Contract: `docs/Dashboard Docs/Build contracts/CONTRACT-0024.md`; the paste follows the run sheet `docs/Testing/Black Belt Testing/TKD-BlackBelt-0024-RunSheet.md` (CP2).
+
+**What it does** (`supabase/migrations/0024_black_belt_rubric.sql`):
+- **The default rubric** (`bb_default_rubric`, one row): what each Dan is tested on — the four parts, subjects, how each is scored, points, pass marks, extra points. Admins edit it **one Dan at a time** (Save [Dan]); every new cycle starts from a copy of it (v0.921). Staff can read it.
+- **A cycle's own copy** (`bb_cycles.requirements`): copied from the default when the cycle is added, editable until registration **first** opens, then **locked** — by the functions and by the table itself (only a hand fix in the SQL Editor can change a locked copy).
+- **The first opening is admins only** (v0.930); its toast Undo (15 seconds, same admin, nothing changed since, no family registered) makes the cycle "never opened" again (v0.929). Closing and later reopening stay as 0016 (staff may).
+- **Undo of a save** (R11): the last save of each Dan can be undone for 15 seconds by the admin who saved, as one more save. The "undo slots" live in `bb_rubric_undo` (nobody in the app can read it).
+- **Every value is checked by the database** before it is stored (the "validator", contract §3; the screen checks the same rules while typing — both are run against `supabase/tests/0024_rubric_cases.json`).
+- **The family form** gets a *public view* of the rubric: no revision numbers, no "saved by" names, no source, and nothing at all while the cycle has never opened.
+- **One-time conversion:** every existing cycle's sheet (version 1) is converted to the new shape (version 2) **without changing any number** (tested), and the default is made from the Fall 2026 starting point (the CP1-approved numbers). The starting point itself stays as it is.
+- Changes **no object of 0001–0023** except six 0016 objects, each replaced (never by editing 0016): `bb_cycles_rules()`, the trigger `bb_cycles_before_write` (the rubric column no longer raises the cycle's version), the rule `bb_cycles_requirements_check` (now version 2 only), `bb_set_registration`, `bb_add_cycle` (copies the default) and `bb_public_cycle`.
+- **Known and accepted (contract §2.4, OI-15):** the rubric's table rule runs on *every* update of a cycle (a few milliseconds; timed in PGlite). It calls the shared character rules of 0003 / 0005: a later migration that makes those stricter must first re-check every stored rubric.
+
+### 0024a. Before you apply (Claude, read-only through the connection)
+1. **No `bb_default_rubric` yet** (`select to_regclass('public.bb_default_rubric')` is empty).
+2. **How many cycles exist, and how many hold a version 1 sheet** (`select count(*), count(*) filter (where requirements -> 'schema_version' = '1') from public.bb_cycles`). Expected on production: none. If any exist, they are converted by 0024 — report them to Jeffrey first (OI-14) and snapshot their sheets (the run sheet says how).
+3. `0016_fingerprints.sql` = the live record (0016's CP3). Take the baseline of **every** fingerprint file (0003 … 0022) for step 0024c.
+
+### 0024b. Apply 0024 (you, in the SQL Editor)
+1. Copy **the whole file** `supabase/migrations/0024_black_belt_rubric.sql` → **SQL Editor → New query** → paste → **Run**.
+2. Supabase will warn about **destructive operations**: the words are in rules (`on delete cascade`), inside functions that run later (removing an undo slot) and in `… if exists` lines that make re-running safe. **Nothing is removed now.** Confirm.
+3. "Success." One transaction: on any error nothing is kept — copy the error to Claude. **Running it again is safe** (tested: no second seed, no second conversion, nothing logged).
+4. **Never re-run `0016_black_belt.sql` after this** (except as part of 0024f): it would silently put back 0016's Add cycle, opening and lock rules. `0024_fingerprints.sql` then shows `check | 0016_rerun | 0016 RE-RUN OVER 0024`; the fix is to paste 0024 again.
+5. **After migration 0025, never re-run this file except through 0025g.**
+
+### 0024c. Read-only checks (Claude runs these through the connection)
+1. **`supabase/tests/0024_fingerprints.sql`**: every line equals what `supabase/tests/pglite/run.mjs` (step0024) printed, including **`check | 0016_rerun | ok`**. (A single read-only SELECT without the words the connection refuses; run.mjs checks that.)
+2. **Every earlier fingerprint file** is byte-identical to the 0024a baseline, **except `0016_fingerprints.sql`**, which differs by exactly this (contract §11.3) and nothing else:
+   - the `function` rows of `bb_add_cycle`, `bb_set_registration`, `bb_public_cycle` and `bb_cycles_rules()`: only the md5 changes (definer, volatility, settings, owner, rights identical);
+   - the `trigger` row `bb_cycles.bb_cycles_before_write`: its arguments end in `'requirements')` (was `'')`);
+   - the `constraint` row `bb_cycles.bb_cycles_requirements_check`: `CHECK (bb_rubric_is_valid(requirements))` (was `bb_requirements_is_valid`);
+   - 19 **added** `function` rows: `bb_save_default_dan`, `bb_undo_default_dan`, `bb_save_cycle_dan`, `bb_undo_cycle_dan`, `bb_undo_first_open` and the 14 internal ones (`bb_rubric_num_ok`, `bb_rubric_int_ok`, `bb_rubric_letters`, `bb_rubric_brackets_problems`, `bb_rubric_dan_problems`, `bb_rubric_is_valid`, `bb_rubric_part_max`, `bb_rubric_most_points`, `bb_rubric_from_v1`, `bb_rubric_fresh_copy`, `bb_rubric_public`, `bb_rubric_put_dan`, `bb_default_rubric_guard`, `bb_rubric_undo_guard`).
+3. **Security advisor:** exactly **+5** "security definer function executable by authenticated" (the five new functions; each checks access and role itself) and **+1** "RLS enabled, no policy" (`bb_rubric_undo`, INFO: nobody in the app may read it). Nothing else new.
+4. If cycles existed (0024a step 2): their converted sheets give the same numbers as their snapshots (the run sheet's comparison) and their `version` did not change.
+
+### 0024d. Run the tests (you, in the SQL Editor)
+1. `supabase/tests/0024_tests.sql` with `<paste-admin-UID-here>` / `<paste-desk-UID-here>` replaced → **ALL 0024 TESTS PASSED**. It makes its own `zz test …` cycles, saves the default and takes one rule off for a moment (U8) — everything is rolled back. Supabase may warn about destructive operations: confirm.
+2. Then `0016_tests.sql` (it knows about 0024 and checks the new behaviour where 0024 changed it) → **ALL 0016 TESTS PASSED**. Put the UIDs back to the placeholders afterwards (never commit real UIDs).
+
+### 0024e. What the app needs
+Deploy the new front end (rubric editor, the cycle's Rubric tab, admin-only first opening with its Undo, the family form's new requirements panel) **right after** the paste — with Jeffrey's OK for the push. Until then the old screens keep working: Add cycle copies the default, a staff first opening is refused (`not_allowed`), nothing old reads the new sheet shape (no cycle exists, and the family form stays off, `BB_PUBLIC_REGISTRATION=off`).
+
+### 0024f. Undo 0024 (only with Jeffrey's OK, and only while NO Black Belt cycle exists)
+Removes 0024's tables and functions and puts 0016's rule back; then **paste `0016_black_belt.sql` again** straight after — it is re-run safe and puts back its `bb_add_cycle`, `bb_set_registration`, `bb_public_cycle`, `bb_cycles_rules` and the trigger exactly. The script refuses (and changes nothing) if any cycle exists, because a cycle's sheet is version 2 by then.
+
+**Paste the two straight after each other, with nothing in between** (or put both in one SQL Editor tab, this block first and 0016 under it, and run them together). Why: between the two, the database is half-undone. 0024's versions of `bb_add_cycle`, `bb_set_registration`, `bb_public_cycle` and `bb_cycles_rules` are still in place, but the table and helper functions they use are gone, so **Add cycle, opening registration and the family form's cycle page give errors** until 0016 puts its own versions back. Nobody should be using the Black Belt screens while you do this.
+
+Paste in the SQL Editor:
+
+```sql
+-- Undo migration 0024 (the Black Belt rubric editor). Then paste 0016_black_belt.sql again.
+begin;
+
+-- refuse while any Black Belt cycle exists (its rubric is version 2 now)
+do $$
+begin
+  if exists (select 1 from public.bb_cycles) then
+    raise exception 'Undo 0024 refused: a Black Belt cycle exists. Nothing was changed. Tell Claude.';
+  end if;
+end
+$$;
+
+-- 0016's rule on the cycles' sheet back (before its 0024 function goes)
+alter table public.bb_cycles drop constraint if exists bb_cycles_requirements_check;
+alter table public.bb_cycles add constraint bb_cycles_requirements_check check (public.bb_requirements_is_valid(requirements));
+
+-- the two tables (their triggers, rules and rights go with them)
+drop table if exists public.bb_rubric_undo;
+drop table if exists public.bb_default_rubric;
+
+-- the five staff functions and 0024's internal helpers
+drop function if exists public.bb_save_default_dan(integer, integer, jsonb);
+drop function if exists public.bb_undo_default_dan(integer, integer);
+drop function if exists public.bb_save_cycle_dan(uuid, integer, integer, jsonb);
+drop function if exists public.bb_undo_cycle_dan(uuid, integer, integer);
+drop function if exists public.bb_undo_first_open(uuid, integer);
+drop function if exists public.bb_rubric_num_ok(jsonb, numeric, numeric);
+drop function if exists public.bb_rubric_int_ok(jsonb, integer, integer);
+drop function if exists public.bb_rubric_letters(text, text);
+drop function if exists public.bb_rubric_brackets_problems(jsonb, jsonb);
+drop function if exists public.bb_rubric_dan_problems(jsonb, integer);
+drop function if exists public.bb_rubric_is_valid(jsonb);
+drop function if exists public.bb_rubric_part_max(jsonb, integer, integer);
+drop function if exists public.bb_rubric_most_points(jsonb, integer, integer);
+drop function if exists public.bb_rubric_from_v1(jsonb);
+drop function if exists public.bb_rubric_fresh_copy(jsonb);
+drop function if exists public.bb_rubric_public(jsonb);
+drop function if exists public.bb_rubric_put_dan(jsonb, integer, jsonb, integer);
+drop function if exists public.bb_default_rubric_guard();
+drop function if exists public.bb_rubric_undo_guard();
+
+commit;
+```
+
+Then **paste `supabase/migrations/0016_black_belt.sql` again** (0016b; its re-run changes no row). Tested in PGlite on every run (`run.mjs` step0024 (k), this block exactly as written here, then 0016): with a cycle the block refuses and changes nothing; without one, 0016's fingerprints afterwards equal those from before 0024 and `0016_tests.sql` passes; then 0024 applies again. The history (`change_log`) keeps 0024's rows (it is append-only).
+
+---
+
+## Migration 0025: Black Belt grading and results (rulebook v0.938–v0.955)
+
+**Status: APPLIED to production on 2026-10-24 (CP2)** from commit f2cfddc (file SHA-256 `6f81c92a…15765a`): 0025's fingerprints equal the tested copy row for row, nothing outside Black Belt changed, the advisor shows only the expected +15 / +2 notices, `0025_tests.sql`, `0024_tests.sql` and `0016_tests.sql` pass on production, and the reference counter was reset to **5002** (BB-5001 was used once by a live try-out; rulebook v0.960). On production the SQL Editor login may not switch to `bb_registrar` (no SET right), so the tests check that role from the catalog there. Contract: `docs/Dashboard Docs/Build contracts/CONTRACT-0025.md` (approved at CP0, rulebook v0.958); the paste follows the run sheet `docs/Testing/Black Belt Testing/TKD-BlackBelt-0025-RunSheet.md` (CP2, written 2026-10-23).
+
+**What it does** (`supabase/migrations/0025_black_belt_grading.sql`):
+- **Grades** (`bb_grades`): one row per graded subject of a candidate — a letter, or a measured number with the way it was done (Pull-up or Hold). **Extra-points counts** (`bb_extra_counts`) and **make-up subjects** (`bb_makeup_subjects`: the ones an admin chose, and the ones a make-up retests).
+- **The result is never stored**: one pure function (`bb_grade_result`) works it out every time from the cycle's rubric, the age on the first testing day and the rows above (v0.938). The app has an exact twin; both are checked against `supabase/tests/0025_grading_cases.json`.
+- **Make-up candidates** (v0.941): a candidate whose result is a Make-up comes back on a later cycle as a row with `source = 'makeup'` — no plan, never a fee (the database refuses any money row for it), the same BB reference, the kept grades copied in (grayed "kept") and the rest retested.
+- **Locks that protect grades:** the cycle's rubric is locked **for good** once its first grading row is written (`bb_cycle_grading_started`, Q-G1 / v0.956); a past testing day or part with grades can't be removed or moved, and the first day can't move once grading started (S2); a candidate or cycle with real grades can't be deleted (Q-G3: withdraw instead); a Dan change asks before clearing the old Dan's grades (Q-G4).
+- **The purge keeps the result** (Q-G2): when the date of birth is removed, the age on the first testing day is kept (`bb_candidates.age_kept`, masked in the history like the DOB). A make-up row's waiver keeps the earlier row's data as long as the make-up's own (S20).
+- **Results:** the three result email texts admins edit (`bb_result_texts`, seeded word for word from R03), **Mark as sent** with its Undo (`bb_result_sends`), and the admin-only **CSV**, logged in `bb_downloads` before any row leaves the database.
+- **Replaces 15 live functions** of 0016 / 0024 (each marked `-- 0025: replaced`; their answers only gain keys, so the live app keeps working until the new screens are deployed) and the trigger `bb_candidates_before_write`. Changes nothing in Finance, Star, Color Belt or the family form.
+
+### 0025a. Before you apply (Claude, read-only through the connection)
+1. **No `bb_grades` yet** (`select to_regclass('public.bb_grades')` is empty).
+2. **`0016_fingerprints.sql` and `0024_fingerprints.sql` = the live baseline** (0024's CP2 record, with `check | 0016_rerun | ok`). Take the baseline of **every** fingerprint file (0003 … 0024) for step 0025c.
+3. **Counts:** how many cycles and candidates exist (`select count(*) from public.bb_cycles`, `… bb_candidates`), for the run sheet.
+4. **Baselines:** the security advisor's list, and the whole-database snapshot outside Black Belt (the run sheet's query).
+
+### 0025b. Apply 0025 (you, in the SQL Editor)
+1. Copy **the whole file** `supabase/migrations/0025_black_belt_grading.sql` → **SQL Editor → New query** → paste → **Run**.
+2. Supabase will warn about **destructive operations**: the words are in rules (`on delete cascade`, `on delete set null`), inside functions that run later (Clear removes a grade row), in `… if exists` lines that make re-running safe and in `alter column … drop not null`. **Nothing is removed now.** Confirm.
+3. "Success." One transaction: on any error nothing is kept — copy the error to Claude. **Running it again is safe** (tested: no second seed, nothing logged, no fingerprint change).
+4. **Never re-run `0016_black_belt.sql` or `0024_black_belt_rubric.sql` after this** (except as part of 0025g): they would silently put back their versions of the replaced functions. `0025_fingerprints.sql` then shows `check | rerun | 0016 OR 0024 RE-RUN OVER 0025 (…)`; the fix is to paste 0025 again (tested).
+
+### 0025c. Read-only checks (Claude runs these through the connection)
+1. **`supabase/tests/0025_fingerprints.sql`**: every line equals what `supabase/tests/pglite/run.mjs` (step0025) printed, including **`check | rerun | ok`**, the `column | bb_candidates.cycle_plan_id | attnotnull=false` row and the three `text` rows (the seeded texts' md5). (A single read-only SELECT without the words the connection refuses; run.mjs checks that.)
+2. **Every earlier fingerprint file** is byte-identical to the 0025a baseline, except (contract §12.3) and nothing else:
+   - `0016_fingerprints.sql`: the `function` rows of the 15 replaced functions — `bb_purge_due_on`, `bb_purge_due`, `bb_candidates_rules`, `bb_candidates_log`, `bb_update_cycle`, `bb_delete_cycle`, `bb_update_candidate`, `bb_change_plan`, `bb_restore_candidate`, `bb_delete_candidate`, `bb_cycle_roster`, `bb_candidate_detail`, `bb_cycles_rules`, `bb_save_cycle_dan`, `bb_undo_cycle_dan` — **md5 only**; the `trigger` row `bb_candidates.bb_candidates_before_write` with the new arguments (`…,makeup_of_cycle_name` / `…,makeup_of_candidate_id,age_kept`); the `constraint` row `bb_candidates.bb_candidates_source_check` (now also `'makeup'`); the `constraint` and `index` rows `bb_candidates_reference_key` **gone**; **added**: the 42 new functions, the 4 triggers `bb_payments_makeup_guard`, `bb_cycle_days_grading`, `bb_cycle_day_parts_grading`, `bb_candidates_keep_age`, the 7 rules `bb_candidates_makeup_of_fk`, `…_makeup_of_self_check`, `…_makeup_of_check`, `…_makeup_name_check`, `…_makeup_plan_check`, `…_makeup_kukkiwon_check`, `…_age_kept_check`, and the 3 indexes `bb_candidates_reference_idx`, `bb_candidates_one_active_makeup_idx`, `bb_candidates_makeup_of_idx`;
+   - `0024_fingerprints.sql`: the md5 of `bb_cycles_rules()`, `bb_save_cycle_dan` and `bb_undo_cycle_dan` only; its `check | 0016_rerun | ok` stays.
+3. **Security advisor:** exactly **+15** "security definer function executable by authenticated" (the 15 new staff functions; each checks access and role itself) and **+2** "RLS enabled, no policy" (`bb_downloads`, `bb_cycle_grading_started`: INFO, nobody in the app may read them). Nothing else new.
+4. **The three texts:** `select kind, md5(body) from public.bb_result_texts order by kind` = the `text` rows of step 1.
+5. **How long the "Make-up from an earlier cycle" picker takes on production** (`bb_makeup_list`; it missed its 300 ms limit in PGlite on a 6-year, 720-candidate seed — accepted, timed here instead). The function itself answers `no_access` through the connection (it needs a signed-in staff session), so this read-only query times its main work: working out the result of every active, not-purged candidate who has a typed grade, as the picker does. Read `Execution Time` at the bottom (a few ms right after the paste: no grades exist yet; run it again once real cycles are graded):
+
+```sql
+explain (analyze, timing off, summary on)
+select public.bb_candidate_result(c.id)
+  from public.bb_candidates c
+ where c.status = 'active' and c.personal_removed_at is null
+   and (c.source = 'makeup' or exists (select 1 from public.bb_grades g where g.candidate_id = c.id and not g.kept));
+```
+
+### 0025d. Run the tests (you, in the SQL Editor)
+1. `supabase/tests/0025_tests.sql` with `<paste-admin-UID-here>` / `<paste-desk-UID-here>` replaced → **ALL 0025 TESTS PASSED**. It makes its own `zz test …` cycles and candidates, moves some into the past, turns the purge numbers on for a moment and switches one trigger off for one statement (the 10-second undo test) — everything is rolled back. Supabase may warn about destructive operations: confirm.
+2. Then `0024_tests.sql` and `0016_tests.sql` (both know about 0025 and check the new behaviour where 0025 changed it) → **ALL 0024 TESTS PASSED** / **ALL 0016 TESTS PASSED**. Put the UIDs back to the placeholders afterwards (never commit real UIDs).
+
+### 0025e. What the app needs
+Deploy the new front end (Grading and Results tabs, Result emails, Make-up from an earlier cycle, the Dan-change dialog, the "has grades" refusals) **after** the paste, with Jeffrey's OK for the push. Until then the old screens keep working: every replaced read only gains keys (tested: the version-aware `0016_tests.sql` checks the old answers' exact keys), and no grade, make-up or send exists until the new screens write one.
+
+### 0025f. Hand-fix check (Claude, read-only — after any hand fix of a locked rubric or of grading rows)
+A grade or count row that no longer fits its cycle's rubric (a subject or item that isn't there any more, a subject in another part, a way that doesn't exist) is **ignored** by the result (it counts nowhere). This lists them; each one is fixed by hand, deliberately:
+
+```sql
+select 'grade' as what, c.cycle_id, g.candidate_id, g.dan, g.part_code, g.subject_id, g.way, null::text as item_name
+  from public.bb_grades g join public.bb_candidates c on c.id = g.candidate_id join public.bb_cycles y on y.id = c.cycle_id
+ where not exists (select 1 from jsonb_array_elements(y.requirements -> 'dans' -> (g.dan - 1) -> 'parts') as p(e)
+                   cross join lateral jsonb_array_elements(p.e -> 'subjects') as s(e)
+                   where p.e ->> 'code' = g.part_code and s.e ->> 'id' = g.subject_id
+                     and (g.way is null or g.way < jsonb_array_length(s.e -> 'ways')))
+union all
+select 'count', c.cycle_id, x.candidate_id, x.dan, null, null, null, x.item_name
+  from public.bb_extra_counts x join public.bb_candidates c on c.id = x.candidate_id join public.bb_cycles y on y.id = c.cycle_id
+ where not exists (select 1 from jsonb_array_elements(y.requirements -> 'dans' -> (x.dan - 1) -> 'extra_points' -> 'items') as i(e)
+                   where i.e ->> 'name' = x.item_name);
+```
+
+Also: **removing a cycle by hand** in the SQL Editor is refused once it ever had grading (the "grading started" mark only goes with Delete cycle). To do it on purpose, run `select set_config('tkd.action', 'bb_delete_cycle', true);` first, in the same transaction.
+
+### 0025g. Undo 0025 (only with Jeffrey's OK, and only before anyone graded)
+Paste **`supabase/manual/0025u_undo.sql`** (whole file) into the SQL Editor and Run. It **refuses** (and changes nothing) while any grade, count or make-up subject, any "grading started" mark, make-up candidate, "sent" mark, CSV download row, changed result text or kept age exists — those are real records. Otherwise it removes 0025's seven tables (with their triggers), its three `bb_candidates` columns, the seven new rules, the three new indexes, the four triggers on old tables and every new function, and puts back — **from copies kept in the script, never by re-running 0016 or 0024** — `bb_candidates_before_write`'s arguments, `not null` on `cycle_plan_id`, `bb_candidates_reference_key`, the `source` rule and every replaced 0016 / 0024 function. Afterwards `0016_fingerprints.sql` and `0024_fingerprints.sql` equal 0025a's baseline and `0016_tests.sql` / `0024_tests.sql` pass. Tested in PGlite on every run (`run.mjs` step0025 (g): the refusals, then on a clean copy the script exactly as written, then 0025 again). The history (`change_log`) keeps 0025's rows (it is append-only). To redo: paste 0025 again.
 
 ## Admin: change the front-desk PIN or password
 
@@ -2206,5 +2381,163 @@ Tested in PGlite on every run (both steps exactly as written here): afterwards t
 - **A new migration, not an edit of 0011:** 0011 is live; replacing its functions in a later file keeps the history clear and the undo simple (re-run 0011).
 - **The desk's school:** the money lands in the drawer that actually holds it, also for both-schools camps.
 - **Camp lines only get new keys:** the Color Belt and Star answers stay byte-for-byte the same, which run.mjs proves.
+
+---
+
+## Migration 0022: camps weekly pricing and longer camps
+
+**Status: APPLIED 2026-10-21** (Jeffrey, SQL Editor; production had no camps or templates, so section 6 changed no rows). Claude read-only: 0022 fingerprints 71/71 identical to the tested copy (md5 d849cf8b…), security advisor nothing new; Jeffrey ran 0022_tests → ALL 0022 TESTS PASSED, 0 camps left. (Built on `camps`, rulebook v0.717.) Apply it only with Jeffrey's OK, **together with the app version that knows the weekly grid** (the Camps screens, the family form and its Function change with it — see `docs/Camps/TKD-Camps-Weekly-Pricing.md`). The app before 0022 still loads after it (every old answer key is kept), but its Add / Edit camp would send a grid of the old size, which 0022 refuses.
+
+**Production order:** … 0013 + 0017 (camps, live) → 0018 → 0016 → 0021 (live) → **0022**. It needs 0013 (it stops with a clear message if 0013 is missing) and does not touch 0017's or 0018's Finance functions.
+
+**What it does** (`supabase/migrations/0022_camps_weekly_pricing.sql`, spec `docs/Camps/TKD-Camps-Weekly-Pricing.md`, rules R1–R8):
+- **Per-week prices:** a camp's days are grouped into Monday–Sunday weeks. The grid has rows 1 … **W** (W = the most camp days in one week, 1–7). A camper pays, for each week they come, the row for the number of days they come that week; the weeks add up (5 + 3 days = row 5 + row 3). Early / regular and member / non-member work as before. Prices stay snapshots.
+- **Longer camps:** 1–60 days (was 10). Extras per camp / per child stay 10; children per sign-up stay 1–3.
+- **$10,000 per camper** (was $2,000): base price, total, a payment (reversal down to −$10,000), Edit payment, and Finance's copy of a closed day (`finance_day_closing_items`, only widened).
+- **Pizza (not for all-days campers) per week:** a per-day extra can't be chosen on a day in a week the camper comes every day of; a once extra keeps the whole-camp meaning. Checked by the functions and by the table's own trigger.
+- **Templates:** `day_count` now means days in a week (1–7); Save as template stores W.
+- **Answers:** the family form's "You're signed up" (each child) and Camper detail (breakdown) get a new key `weeks`: `[{monday, day_count, cents}]`, one per week the child comes. `cents` = the camp's current grid row for that week's days, at the sign-up's early / regular and the camper's member box (`null` if that row is missing); listed earliest first. All old keys stay (`day_count` = total days, `base_cents` = the stored price).
+- How: 4 new internal helpers (`camp_week_size`, `camp_weekly_base_cents`, `camp_comes_whole_week`, `camp_weeks_breakdown` — nobody in the app can call them), **18 of 0013's functions replaced** with `create or replace` (same names, arguments, rights, security definer and `search_path`), 5 table rules replaced (`drop constraint if exists` + add). `camps_registrar` still runs only `camp_public_camp` and `camp_public_signup`; nothing goes to `anon`.
+
+**What it does to the existing data (once, logged in the history as "Migration 0022", action `0022_weekly_pricing`):**
+- A camp's grid rows **above its W are removed** and the camp's version goes up (an Edit camp screen open at that moment answers "stale"). On production that is camp **Test 2** (10 days: Oct 26–30, Nov 9–11, Nov 16–17 → W = 5): its rows 6–10 go, rows 1–5 keep their prices. Camp **Test** (1 day) keeps its one row.
+- A **template with day_count over 7** (the old "days of the camp") becomes **7 days a week** (`least(day_count, 7)`) with its grid rows 1–7. Templates of 1–7 days are kept as they are (their number now reads "days a week" — check them in Edit template).
+- **No camper's price changes** (snapshots, R8): campers who signed up under the old rule keep what they were shown. Only a later Edit details that changes their days, member box or extras re-prices them, by the new rule.
+
+### 0022a. Before you apply 0022 (Claude, read-only)
+
+Claude runs through the connection: the camps with their number of days and W, and how many grid rows each has (`select c.name, count(distinct d.id), …`), and the templates' `day_count` — so you know exactly which rows section 6 will remove. Expected on production today: Test (1 day, 1 row), Test 2 (10 days, W = 5, 10 rows → 5).
+
+### 0022b. Apply 0022 (you, in the SQL Editor; outside camp sign-up hours if you can)
+
+1. Copy **the whole file** `supabase/migrations/0022_camps_weekly_pricing.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Supabase **will** warn about destructive operations: the words are in `drop constraint if exists` lines (each rule is added again at once), inside functions copied from 0013 that run later, and in section 6, which **removes the grid rows above each camp's W** (above). Confirm.
+3. "Success." One transaction: on any error nothing is kept (e.g. "0022 needs migration 0013 (Camps) first"). Copy the error to Claude.
+
+**Running it again is safe** (tested: the second run changes no row, no history and no fingerprint). **If 0013 is ever re-run after 0022, re-run 0022 straight after it** (re-running 0013 alone puts the old functions back — that is exactly the undo's step 2).
+
+### 0022c. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0022_fingerprints.sql`. Every line must match what `run.mjs` printed ("0022 fingerprints"). The file contains neither of the words the connection refuses.
+2. `0013_fingerprints.sql`: **only** the lines of the 18 replaced functions differ from 0013e's record — expected (`run.mjs` checks exactly that list). `0011_fingerprints.sql` and `0017_fingerprints.sql`: **only** the `finance_day_closing_items_amount_check` line differs (now ±1000000). Every other migration's fingerprints: unchanged.
+3. The data: Test 2 has grid rows 1–5 (same prices as before), no template has `day_count` over 7, every camper's `base_cents` and every payment as before.
+4. **Security advisor:** nothing new (the 4 helpers are internal, `search_path = ''`, executable by nobody but the owner).
+
+### 0022d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0022_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0022 TESTS PASSED**. It makes its own `zz test …` camps (two Mon–Fri weeks, Thanksgiving, one day, 60 days, a $10,000 camp) and rolls everything back.
+2. Then `0013_tests.sql`, `0017_tests.sql`, `0011_tests.sql` and `0018_tests.sql` again — all must still pass. (`0013_tests.sql` and `0017_tests.sql` were updated where a rule changed — marked "changed by 0022, rulebook v0.717"; they pass before and after 0022.)
+3. Put the placeholders back afterwards.
+4. **Live check** (with the new app version, Jeffrey's OK): open Test 2 in Edit camp — 5 grid rows ("5 days (full week)"); a family-form sign-up of 5 + 3 days shows two "Week of …" lines and the sum.
+
+### 0022e. Undo 0022 (only if something is badly wrong)
+
+Put the app back to the version without weekly pricing first. Only possible while **no camp has more than 10 days and no camper, payment or closed-day amount is over $2,000** — step 1 checks that. The grid rows section 6 removed do **not** come back (re-enter them in Edit camp if needed); campers keep their prices. Three steps, **in this order**:
+
+1. Run this check in the SQL Editor (changes nothing; if it stops, don't go on — tell Claude):
+
+```sql
+-- Undo 0022, step 1: can it be undone? (reads only)
+do $$
+begin
+  if exists (select 1 from public.camp_days d group by d.camp_id having count(*) > 10)
+     or exists (select 1 from public.camp_campers c where c.base_cents > 200000)
+     or exists (select 1 from public.camp_payments p where abs(p.amount_cents) > 200000)
+     or exists (select 1 from public.finance_day_closing_items i where abs(i.amount_cents) > 200000) then
+    raise exception 'Undo 0022 is not possible: a camp has more than 10 days or an amount is over $2,000. Nothing was changed. Tell Claude.';
+  end if;
+end
+$$;
+```
+
+2. **Re-run the whole 0013 file** (section 0013c) — that puts back 0013's versions of the 18 functions (the old rules).
+3. Run this in the SQL Editor (one transaction; the same check again first):
+
+```sql
+-- Undo 0022, step 3 (run AFTER re-running 0013). change_log is KEPT.
+begin;
+
+do $$
+begin
+  if exists (select 1 from public.camp_days d group by d.camp_id having count(*) > 10)
+     or exists (select 1 from public.camp_campers c where c.base_cents > 200000)
+     or exists (select 1 from public.camp_payments p where abs(p.amount_cents) > 200000)
+     or exists (select 1 from public.finance_day_closing_items i where abs(i.amount_cents) > 200000) then
+    raise exception 'Undo 0022 is not possible: a camp has more than 10 days or an amount is over $2,000. Nothing was changed. Tell Claude.';
+  end if;
+end
+$$;
+
+-- the 4 helpers 0022 added (nothing uses them after 0013's re-run)
+drop function if exists public.camp_weeks_breakdown(uuid, uuid[], boolean, text);
+drop function if exists public.camp_comes_whole_week(uuid, uuid[], uuid);
+drop function if exists public.camp_weekly_base_cents(uuid, uuid[], boolean, text);
+drop function if exists public.camp_week_size(date[]);
+
+-- the table rules back to 0013's (and 0017's for Finance's snapshot)
+alter table public.camp_prices drop constraint if exists camp_prices_day_count_check;
+alter table public.camp_prices add constraint camp_prices_day_count_check check (day_count between 1 and 10);
+alter table public.camp_templates drop constraint if exists camp_templates_day_count_check;
+alter table public.camp_templates add constraint camp_templates_day_count_check check (day_count between 1 and 10);
+alter table public.camp_campers drop constraint if exists camp_campers_base_check;
+alter table public.camp_campers add constraint camp_campers_base_check check (base_cents between 0 and 200000);
+alter table public.camp_payments drop constraint if exists camp_payments_kind_check;
+alter table public.camp_payments add constraint camp_payments_kind_check
+  check ((kind = 'payment' and amount_cents between 1 and 200000 and reverses_payment_id is null)
+         or (kind = 'reversal' and amount_cents between -200000 and -1 and reverses_payment_id is not null));
+alter table public.finance_day_closing_items drop constraint if exists finance_day_closing_items_amount_check;
+alter table public.finance_day_closing_items add constraint finance_day_closing_items_amount_check
+  check (amount_cents between -200000 and 200000 and amount_cents <> 0);
+
+commit;
+```
+
+Tested in PGlite on every run (all three steps exactly as written here): afterwards the 0013, 0011, 0017 and 0018 fingerprints equal the ones before 0022, no helper is left, and `0013_tests.sql`, `0017_tests.sql` and `0011_tests.sql` pass. Undo 0022 always comes **before** Undo 0017 (0017d) and Undo 0013 (0013k).
+
+**Why:**
+- **Per week, not per camp:** the school charges by the week ("max per week"); a 2-week camp costs two weeks. W keeps the grid as small as the camp's busiest week (Thanksgiving: 2 rows).
+- **Snapshots stay:** a family is never charged differently from what the form showed them; only an Edit details that changes days / member / extras re-prices (rulebook v0.700's rule, unchanged).
+- **The old grid rows are removed, not kept:** a row above W could never be used again and would make Edit camp refuse the camp (the grid must be exactly 1 … W).
+- **A new migration, not an edit of 0013:** 0013 is live; replacing its functions in a later file keeps the history clear and the undo simple (re-run 0013).
+
+## Migration 0023: Star result email texts, registration stays closed on edit, CSV row keys
+
+**What it does** (`supabase/migrations/0023_star_result_texts.sql`, contract `docs/Dashboard Docs/Build contracts/CONTRACT-0023.md`, rulebook v0.514 and v0.504):
+- **Result email texts (R11):** a new table `star_result_texts` with the three texts Email result fills in (Passed · Make-up with a D · Make-up below the pass mark — kinds `passed`, `makeup_d`, `makeup_below`), seeded with the approved starting texts (R3). Every signed-in staff member can read them (Rubrics and prices shows them read-only to staff); only admins change them, through one function `star_set_result_text` (version check, the blank rules, every change in the history). Nothing for `anon` or the family form's login.
+- **M5:** replaces **one** 0006 function, `star_update_event`, so moving a finished event into the future (or removing / moving a passed closing date) keeps registration **closed in the same save**, instead of a second call closing it afterwards. Same arguments, answers and rights; the app needs no change.
+- **The results CSV:** replaces a second 0006 function, `star_results_csv` (admins only, still writes the download log first). Each row gains `candidate_id`, `paid_on` (the newest payment that still counts: reversed payments skipped, refunds never change it — the same rule as the Candidates tab) and, inside `sent`, `result_status` (which result that send was for). So the Results screen matches CSV rows to candidates by id, never by look-alike values. Same arguments, checks and rights; the extra keys are ignored by anything that doesn't use them.
+- Removes nothing. Supabase **will** probably warn about destructive operations: the word delete appears only in the new table's history trigger ("after insert or update or delete", so removals are logged too, as 0006 does). Nothing is removed now.
+
+**Each step needs Jeffrey's OK.** Before the Star family form goes live (M5 must be in place by then).
+
+### 0023a. Before you paste (Claude, read-only)
+
+1. Claude runs `supabase/tests/0006_fingerprints.sql` through the read-only connection and keeps the result: after 0023 **only** the `star_update_event(...)` and `star_results_csv(...)` lines may differ.
+
+### 0023b. Apply 0023 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0023_star_result_texts.sql` → **SQL Editor → New query** → paste → **Run**.
+2. Supabase may warn about **destructive operations** (the history trigger's "or delete", see above). Nothing is removed. Confirm.
+3. Expected: "Success. No rows returned." One transaction: on any error nothing is kept. If it stops with a message starting `0023:`, an earlier migration is missing — copy the message to Claude.
+4. **Running it again is safe** (tested: no fingerprint changes, and a text an admin already changed is never overwritten). **Re-running 0006 after this** puts 0006's old `star_update_event` and `star_results_csv` back → re-run 0023 straight after.
+
+### 0023c. Read-only checks (Claude, through the connection)
+
+1. **Fingerprints:** `supabase/tests/0023_fingerprints.sql` — every `function`, `table`, `policy` and `trigger` line must match what `supabase/tests/pglite/run.mjs` printed ("0023 fingerprints"); the three `seed` lines too (version 1 and the same md5) while no admin has changed a text.
+2. `supabase/tests/0006_fingerprints.sql`: **only** the `star_update_event(...)` (M5) and `star_results_csv(...)` (the CSV keys) lines differ from 0023a's — expected. Everything else unchanged.
+3. **Security advisor:** nothing new. (`star_set_result_text` is callable by `authenticated` on purpose — it checks data access and admin first; the helper `star_result_text_problem` is callable by nobody.)
+
+### 0023d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0023_tests.sql` with `<paste-admin-UID-here>` / `<paste-desk-UID-here>` replaced → **ALL 0023 TESTS PASSED**. Supabase may warn about destructive operations: the test really runs a `delete` of the Make-up below text inside its transaction (to check the `not_found` answer) and checks that emptying the table is refused. Everything is rolled back, so the text is back afterwards. Confirm. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved — run `rollback;` once on its own, then tell Claude.
+2. Then `0006_tests.sql` again — every old Edit event and CSV test must still pass. (Its CSV key check accepts 0006's keys and 0023's.)
+3. Put the placeholders back afterwards.
+
+### 0023e. Undo (only with Jeffrey's OK)
+
+1. Paste **the whole file** `supabase/manual/0023u_undo_star_update_event.sql` in the SQL Editor → **Run**. It holds only 0006's exact `star_update_event` and `star_results_csv`, each with 0006's revoke and grant (one transaction). M5 is undone (moving a finished event into the future again relies on the app's second call to close registration) and the CSV rows lose the three new keys — **put the app back to a version that doesn't need them first.**
+2. Claude checks `supabase/tests/0006_fingerprints.sql`: the `star_update_event(...)` and `star_results_csv(...)` lines must equal 0023a's again (tested in PGlite, step0023). Then run `0006_tests.sql`.
+3. **Not undone, on purpose:** the table `star_result_texts` (its rule, triggers and the three texts) and the functions `star_set_result_text` / `star_result_text_problem`. They are harmless while the app doesn't use them (staff can only read three email texts; only admins can change them). Before the Results screens use them, removing them would need its own reviewed script and Jeffrey's OK — and once the app uses them, the app must go back first.
+4. To redo: paste 0023 again (safe; tested).
 
 ---

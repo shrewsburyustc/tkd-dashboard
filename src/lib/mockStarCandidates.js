@@ -9,9 +9,15 @@
 //   writes   the 13 functions of §6.3–§6.4 (add, make-up, edit, paying by, duplicates, private,
 //            withdraw, restore, delete, record / undo / edit payment, refund)
 //   reads    star_candidate_detail, star_candidate_history, star_view_signature, star_makeup_list (§7)
+//   Home     star_home_today (§7 — phase 7: Home's "Today" cards; a POST, it runs the signature clean-up)
 //   grading  star_set_grade, star_set_count, star_set_makeup_subjects, star_event_results,
 //            star_age_groups (§6.5, §7 — phase 5): written in mockStarGrading.js and plugged in here
 //            (handlerFor), so they share this store and its change log
+//   results  star_mark_result_sent, star_undo_result_sent, star_results_csv (§6.6) and
+//            star_set_result_text (migration 0023) — phase 6: written in mockStarResults.js and
+//            plugged in the same way; the tables star_grades, star_result_emails and
+//            star_result_texts can be read (granted columns only) for the late-grade note, the CSV
+//            and the result email texts
 //   public   star_public_event, star_public_register (§8.2, §8.3 — the family form, phase 4; called
 //            only by src/lib/star/publicApi.preview.js, as publicEvent() / publicRegister())
 // It follows the SAME rules as the SQL: the same order of checks (§1.1), the same answers, the same
@@ -55,6 +61,15 @@
 //       make-ups now also show on Spring's make-up list (Fall is earlier than Spring).
 //   Spring Star Testing — UPCOMING (in 180 days), not open yet, no candidates: its make-up list shows
 //       Taylor, Drew and Avery (Grace is already a make-up in Fall, so she is left out).
+//   Phase 6 added Results states to Summer (appended at the end, so earlier ids stay the same): Morgan
+//       Hale sent by Staff then re-sent by Jeffrey ("Sent … · Jeffrey"; an admin's Undo falls back to
+//       "Sent … · Staff"), Lucas Grant Passed and not sent, Nina Ford Passed with Korean Terminology
+//       graded 3 days late, Ben Ward Not finished (Korean Terminology not graded yet), Zoe Bell
+//       testing privately in 5 days (partly graded), Ivy Cole graded on her private day 2 days after
+//       the testing day, Taylor Quinn's make-up sent ("Sent … · Staff"), Ella Moss's make-up sent and
+//       then corrected to Passed ("Not sent yet · an earlier Make-up result was sent …"). With Grace Liu / Sofia Reyes (D, Sofia also below 245), Drew Park
+//       (below, chosen) and Avery Lin (below, an admin chooses), every Results state is on Summer.
+//       Plus the three result email texts (migration 0023's seed) and an empty download log.
 // The seed is made by running this file's own functions at past times (so its History, versions and
 // signatures are exactly what the functions would have written).
 import { normalizeName, nameProblem, nameKey } from './testing/names.js';
@@ -67,6 +82,9 @@ import { starEmailIsValid, trimEmail } from './star/emailRule.js';
 import {
   createGradingHandlers, GRADING_RPC_ARGS, STAR_GRADING_RPC_NAMES, STAR_GRADING_READ_RPC_NAMES, STAR_GRADING_ADMIN_ONLY,
 } from './mockStarGrading.js';
+import {
+  createResultsHandlers, RESULTS_RPC_ARGS, STAR_RESULTS_RPC_NAMES, STAR_RESULTS_ADMIN_ONLY, seedResultTexts,
+} from './mockStarResults.js';
 
 // Raised whenever the stored shape of the candidates part changes (older data → the seed).
 export const STAR_CANDIDATES_SCHEMA = 1;
@@ -99,9 +117,22 @@ const ROSTER_COLUMNS = [
 const GRANTED = /*#__PURE__*/ (() => ({
   star_roster: ROSTER_COLUMNS,
   star_makeup_subjects: ['id', 'candidate_id', 'event_category_id', 'kind', ...HOUSE],
+  // Phase 6 (Results): the grade rows' dates (the late-grade note), the sends (the CSV's result
+  // words) and the result email texts (migration 0023) — granted columns only (§4.1, 0023 §3).
+  star_grades: ['id', 'candidate_id', 'event_category_id', 'grade', 'kept', 'kept_from_event_id', 'kept_from_event_name', ...HOUSE],
+  star_result_emails: [
+    'id', 'candidate_id', 'marked_at', 'marked_by_name', 'result_status', 'result_total', 'result_needs', 'result_key',
+    'sent_via', 'undone_at', 'undone_by_name',
+  ],
+  star_result_texts: ['id', 'kind', 'body', ...HOUSE],
 }))();
 // Columns that exist but are never granted (login ids). The roster view has no DOB / email at all.
-const HIDDEN = { star_roster: [], star_makeup_subjects: ['created_by', 'updated_by'] };
+const HIDDEN = {
+  star_roster: [], star_makeup_subjects: ['created_by', 'updated_by'], star_grades: ['created_by', 'updated_by'],
+  star_result_emails: ['marked_by', 'undone_by'], star_result_texts: ['created_by', 'updated_by'],
+};
+// Which store list answers each table (the roster view is worked out per candidate instead).
+const SELECT_LIST = { star_makeup_subjects: 'makeup_subjects', star_grades: 'candidate_grades', star_result_emails: 'result_emails', star_result_texts: 'result_texts' };
 export const STAR_CANDIDATE_TABLES = /*#__PURE__*/ Object.keys(GRANTED);
 
 // ----- The functions' argument lists (name, type) — the same names as migration 0006 -----
@@ -137,22 +168,26 @@ const RPC_ARGS = /*#__PURE__*/ (() => ({
   star_candidate_history: [['p_candidate_id', 'uuid']],
   star_view_signature: [['p_candidate_id', 'uuid']],
   star_makeup_list: [['p_event_id', 'uuid']],
+  star_home_today: [], // phase 7: Home's "Today" cards (no arguments)
   // Phase 5: the grading functions (§6.5) and the grading reads (§7) — mockStarGrading.js.
   ...GRADING_RPC_ARGS,
+  // Phase 6: Mark as sent, its Undo, the CSV (§6.6) and the result email texts (0023) — mockStarResults.js.
+  ...RESULTS_RPC_ARGS,
 }))();
 export const STAR_CANDIDATE_RPC_NAMES = /*#__PURE__*/ Object.keys(RPC_ARGS);
 // The 13 write functions (§6.3–§6.4) — failNextSave('star') targets these, not the reads. (The three
-// grading writes are listed apart, as mockStarGrading.js's STAR_GRADING_WRITE_RPC_NAMES.)
-const READS = ['star_candidate_detail', 'star_candidate_history', 'star_view_signature', 'star_makeup_list'];
+// grading writes are listed apart, as mockStarGrading.js's STAR_GRADING_WRITE_RPC_NAMES, and the four
+// results writes as mockStarResults.js's STAR_RESULTS_RPC_NAMES.)
+const READS = ['star_candidate_detail', 'star_candidate_history', 'star_view_signature', 'star_makeup_list', 'star_home_today'];
 export const STAR_CANDIDATE_WRITE_RPC_NAMES = /*#__PURE__*/ Object.keys(RPC_ARGS)
-  .filter((n) => !READS.includes(n) && !STAR_GRADING_RPC_NAMES.includes(n));
+  .filter((n) => !READS.includes(n) && !STAR_GRADING_RPC_NAMES.includes(n) && !STAR_RESULTS_RPC_NAMES.includes(n));
 // Functions that run read-only and so also work as a GET request (§7: "stable"). Every other one
-// writes something (star_makeup_list: the signature clean-up).
+// writes something (star_makeup_list and star_home_today: the signature clean-up).
 const STABLE = /*#__PURE__*/ (() => new Set(['star_candidate_detail', 'star_candidate_history', 'star_view_signature', ...STAR_GRADING_READ_RPC_NAMES]))();
 // Admin only from the start ("A" in §6.3–§6.4). star_restore_candidate and star_undo_payment have
 // mixed rules (admins, or the same staff member within 10 seconds) checked inside; star_update_candidate
 // checks "a Dan change on a paid row" inside (S8).
-const ADMIN_ONLY = /*#__PURE__*/ (() => new Set(['star_withdraw_candidate', 'star_delete_candidate', 'star_edit_payment', 'star_record_refund', ...STAR_GRADING_ADMIN_ONLY]))();
+const ADMIN_ONLY = /*#__PURE__*/ (() => new Set(['star_withdraw_candidate', 'star_delete_candidate', 'star_edit_payment', 'star_record_refund', ...STAR_GRADING_ADMIN_ONLY, ...STAR_RESULTS_ADMIN_ONLY]))();
 
 // Thrown inside this file only, turned into a { data:null, error } answer.
 class DbError extends Error {
@@ -238,8 +273,9 @@ const schoolDateOf = (stamp) => todayInSchoolTime(Date.parse(stamp));
 const LISTS = {
   star_candidates: 'candidates', star_payments: 'payments', star_candidate_signatures: 'signatures',
   star_makeup_subjects: 'makeup_subjects', star_grades: 'candidate_grades', star_result_emails: 'result_emails',
+  star_result_texts: 'result_texts',
 };
-const HOUSE_TABLES = new Set(['star_candidates', 'star_candidate_signatures', 'star_makeup_subjects', 'star_grades']);
+const HOUSE_TABLES = new Set(['star_candidates', 'star_candidate_signatures', 'star_makeup_subjects', 'star_grades', 'star_result_texts']);
 const NO_BUMP = { star_candidates: ['classes_attended', 'assistant_classes'], star_candidate_signatures: ['signature', 'signature_deleted_at'] };
 const BOOKKEEPING = ['version', 'created_at', 'updated_at', 'created_by', 'updated_by', 'created_by_name', 'updated_by_name'];
 // The child tables History finds through their insert rows (§7).
@@ -907,18 +943,52 @@ const HANDLERS = {
     purgeOldSignatures(db, env, ctx); // the last step (§5.7) — why this read is a POST
     return { status: 'ok', rows };
   },
+
+  // Phase 7 (Home's "Today" cards, v0.154, v0.155, v0.515) — the same answer as 0006's 19g:
+  // the events whose testing date is today, with the ACTIVE candidates WITHOUT a private day counted
+  // per school, and the active private testings whose day is today, by time, then last and first name.
+  // No payment, date of birth or email. The app filters by the location switcher.
+  star_home_today(db, a, { ctx, env }) {
+    const today = env.today();
+    const cmp = (x, y) => (x < y ? -1 : x > y ? 1 : 0);
+    const hhmm = (t) => String(t ?? '').slice(0, 5); // '10:00:00' → '10:00' (like left(…::text, 5))
+    const countAt = (e, code) => db.candidates.filter((c) => c.event_id === e.id && c.status === 'active'
+      && c.private_on === null && c.location_code === code).length;
+    const events = db.events
+      .filter((e) => e.testing_date === today)
+      .sort((x, y) => cmp(hhmm(x.start_time), hhmm(y.start_time)) || cmp(x.name, y.name) || cmp(x.id, y.id))
+      .map((e) => ({
+        id: e.id, name: e.name, start_time: hhmm(e.start_time), where_code: e.where_code,
+        where_name: SCHOOL_NAMES[e.where_code] ?? null,
+        counts: { worcester: countAt(e, 'worcester'), shrewsbury: countAt(e, 'shrewsbury') },
+      }));
+    const privates = db.candidates
+      .filter((c) => c.private_on === today && c.status === 'active' && findEvent(db, c.event_id))
+      .sort((x, y) => cmp(hhmm(x.private_time), hhmm(y.private_time)) || cmp(x.last_name.toLowerCase(), y.last_name.toLowerCase())
+        || cmp(x.first_name.toLowerCase(), y.first_name.toLowerCase()) || cmp(x.id, y.id))
+      .map((c) => ({
+        candidate_id: c.id, event_id: c.event_id, event_name: findEvent(db, c.event_id).name, private_time: hhmm(c.private_time),
+        first_name: c.first_name, last_name: c.last_name, location_code: c.location_code, dan: c.dan,
+        stars_from: c.stars_from, stars_to: c.stars_from + 1,
+      }));
+    purgeOldSignatures(db, env, ctx); // the last step (§5.7) — why this read is a POST
+    return { status: 'ok', today, events, private: privates };
+  },
 };
 
 // Phase 5: the grading functions (mockStarGrading.js), working on this same store with these same
 // table helpers, so every grade, count and choice is logged like the other writes.
 // (Made on first use, not at load time, so the live build — which never makes the fake — drops it.)
+// Phase 6: the results functions (mockStarResults.js), plugged in the same way.
 let gradingHandlers = null;
+let resultsHandlers = null;
 function handlerFor(name) {
   if (name in HANDLERS) return HANDLERS[name];
-  gradingHandlers ??= createGradingHandlers({
-    findCandidate, findEvent, danCopy, resultOf, sentStateOf, newMeta, insertRow, updateRow, deleteRow,
-  });
-  return gradingHandlers[name];
+  const helpers = { findCandidate, findEvent, danCopy, resultOf, sentStateOf, newMeta, insertRow, updateRow, deleteRow };
+  gradingHandlers ??= createGradingHandlers(helpers);
+  if (name in gradingHandlers) return gradingHandlers[name];
+  resultsHandlers ??= createResultsHandlers(helpers);
+  return resultsHandlers[name];
 }
 
 // Runs one function on a private copy of the data, turning a table rule into a status (§1.4).
@@ -1090,6 +1160,7 @@ export function defaultStarCandidatesData(base, { today }) {
     events_schema: STAR_EVENTS_SCHEMA, events: [], event_dans: [], event_categories: [], event_grades: [], event_assistant: [],
     candidates: [], payments: [], next_reference: 4001, candidates_schema: STAR_CANDIDATES_SCHEMA, signatures: [],
     makeup_subjects: [], candidate_grades: [], result_emails: [], change_log: [], next_log_seq: 0,
+    result_texts: [], downloads: [],
   };
   const work = { ...clone(base), ...db };
   const noon = Date.parse(`${today}T16:00:00Z`);
@@ -1294,6 +1365,61 @@ export function defaultStarCandidatesData(base, { today }) {
   // and Jordan Kim (2nd Dan) stay "Not started".
   grade(0, 'Ava', 'B+', [], null, ['White–Deputy Curriculum', 'Go-Ryo Poomse', 'Advanced Motion', 'Advance Sa-Bang Chuck']);
 
+  // ----- Phase 6: Results states on the finished Summer event (appended, so earlier ids stay) -----
+  // The three result email texts, as migration 0023 seeds them (version 1, "Database admin").
+  work.result_texts = seedResultTexts(iso(noon - 140 * DAY_MS), () => fixedId('t0', (idN += 1)));
+  // Summer's testing day is day -100. New desk rows (added before the day; none is a make-up, so the
+  // make-up lists of Fall and Spring stay as they were):
+  desk(-106, 'summer', 'Lucas', 'Grant', '2012-05-05', 'worcester', 1, 0, 'cash'); // Passed, not sent
+  desk(-106, 'summer', 'Nina', 'Ford', '2011-08-19', 'shrewsbury', 1, 1, 'check'); // Passed with a LATE grade
+  desk(-106, 'summer', 'Ben', 'Ward', '2012-11-23', 'worcester', 1, 2, 'cash'); // Not finished
+  desk(-106, 'summer', 'Zoe', 'Bell', '2013-02-14', 'shrewsbury', 1, 0, 'card'); // Testing privately, day still to come
+  desk(-106, 'summer', 'Ivy', 'Cole', '2012-06-30', 'worcester', 1, 1, 'cash'); // private testing after the day, graded then
+  pay(-105, SEED_DESK, 'Lucas', 14000, 'cash');
+  pay(-105, SEED_DESK, 'Nina', 14000, 'check');
+  call(-104, SEED_DESK, 'star_set_private', {
+    p_candidate_id: ids.Zoe, p_expected_version: versionOf('Zoe'), p_private_on: addDays(today, 5), p_private_time: '16:00',
+  });
+  call(-104, SEED_DESK, 'star_set_private', {
+    p_candidate_id: ids.Ivy, p_expected_version: versionOf('Ivy'), p_private_on: addDays(today, -98), p_private_time: '15:30',
+  });
+  pay(-104, SEED_DESK, 'Zoe', 16000, 'card');
+  grade(-100, 'Lucas', 'A', [], [24, 18]); // 280 → Passed, "Not sent yet"
+  grade(-100, 'Nina', 'A', [], [24, 18], ['White–Deputy Curriculum', 'Go-Ryo Poomse', 'Advanced Motion', 'Advance Sa-Bang Chuck',
+    'Step Sa-Bang Chuck', 'Two Step Sparring', 'Breaking', 'Appreciation Letters', 'Knowledge']); // Korean Terminology waits…
+  {
+    // …and is graded 3 days AFTER the testing day → "Earns 2nd star · Korean Terminology graded <date>"
+    const c = findCandidate(work, ids.Nina);
+    const k = work.event_categories.find((x) => x.event_id === c.event_id && x.dan === c.dan && x.name === 'Korean Terminology');
+    call(-97, SEED_ADMIN, 'star_set_grade', { p_candidate_id: c.id, p_event_category_id: k.id, p_grade: 'A' });
+  }
+  grade(-100, 'Ben', 'B+', [], [20, 16], ['White–Deputy Curriculum', 'Go-Ryo Poomse', 'Advanced Motion', 'Advance Sa-Bang Chuck',
+    'Step Sa-Bang Chuck', 'Two Step Sparring', 'Breaking', 'Appreciation Letters', 'Knowledge']); // "Korean Terminology not graded yet"
+  grade(-100, 'Zoe', 'A', [], null, ['White–Deputy Curriculum', 'Go-Ryo Poomse']); // partly graded: still "Testing privately"
+  grade(-98, 'Ivy', 'A+', [], [26, 21]); // graded on her private day → "Earns 2nd star · private testing <date>"
+  // Ella Moss: a D in Breaking on the day (a make-up), emailed and marked as sent; 4 days later an
+  // admin corrected Breaking to B+ → now Passed: "Earns 1 star · Breaking graded <date>" and "Not sent
+  // yet · an earlier Make-up result was sent <date>" (the approved R6 drawing).
+  desk(-106, 'summer', 'Ella', 'Moss', '2013-01-09', 'shrewsbury', 1, 0, 'cash');
+  pay(-105, SEED_DESK, 'Ella', 14000, 'cash');
+  grade(-100, 'Ella', 'A', ['Breaking'], [24, 18]);
+  // Mark as sent (star_mark_result_sent, as the desk would): Morgan sent by Staff, then re-sent by
+  // Jeffrey (an admin's Undo of the newer send falls back to "Sent … · Staff"); Taylor's make-up sent
+  // by Staff (still the same result: "Sent … · Staff" on a Make-up row); Ella's make-up sent.
+  const markSent = (day, who, first) => {
+    const c = findCandidate(work, ids[first]);
+    call(day, who, 'star_mark_result_sent', { p_candidate_id: c.id, p_expected_result_key: resultOf(work, c).result_key });
+  };
+  markSent(-99, SEED_DESK, 'Morgan');
+  markSent(-95, SEED_ADMIN, 'Morgan');
+  markSent(-99, SEED_DESK, 'Taylor');
+  markSent(-99, SEED_DESK, 'Ella');
+  {
+    const c = findCandidate(work, ids.Ella);
+    const k = work.event_categories.find((x) => x.event_id === c.event_id && x.dan === c.dan && x.name === 'Breaking');
+    call(-96, SEED_ADMIN, 'star_set_grade', { p_candidate_id: c.id, p_event_category_id: k.id, p_grade: 'B+' }); // → Passed
+  }
+
   return Object.fromEntries(Object.keys(db).map((k) => [k, work[k]]));
 }
 
@@ -1311,7 +1437,16 @@ export function createStarCandidatesBackend({ readBase, saveStore, now = () => D
   // candidates part is replaced by the seed and saved at once.
   function read() {
     const base = clone(readBase());
-    if (starCandidatesSeedIsCurrent(base)) return base;
+    if (starCandidatesSeedIsCurrent(base)) {
+      // A store saved before phase 6 has no result email texts or download log yet: add them (as
+      // migration 0023 adds its table) without touching anything else. resetTesting() brings the
+      // whole phase 6 seed (the Summer results states).
+      if (Array.isArray(base.result_texts) && Array.isArray(base.downloads)) return base;
+      if (!Array.isArray(base.result_texts)) base.result_texts = seedResultTexts(iso(now()), newId);
+      if (!Array.isArray(base.downloads)) base.downloads = [];
+      write(base);
+      return clone(base);
+    }
     Object.assign(base, defaultStarCandidatesData(base, { today: today() }));
     write(base);
     return clone(base);
@@ -1342,7 +1477,7 @@ export function createStarCandidatesBackend({ readBase, saveStore, now = () => D
     }
     if (!ctx.hasDataAccess) return ok([]); // row-level security hides every row
     const db = read();
-    let rows = table === 'star_roster' ? db.candidates.map((c) => rosterRow(db, env, c)).filter(Boolean) : db.makeup_subjects;
+    let rows = table === 'star_roster' ? db.candidates.map((c) => rosterRow(db, env, c)).filter(Boolean) : db[SELECT_LIST[table]] ?? [];
     rows = rows.filter((row) => filters.every((f) => (f.op === 'in'
       ? (f.value ?? []).map(String).includes(String(row[f.col]))
       : String(row[f.col]) === String(f.value))));
@@ -1454,6 +1589,87 @@ export function createStarCandidatesBackend({ readBase, saveStore, now = () => D
     return `${c.first_name} ${c.last_name} was moved to ${d.label} on "another device" (${answer.cleared_grade_count} grades cleared). The next grade saved for them on the old grid answers stale.`;
   }
 
+  // Preview helper (phase 6, __tkdPreview.simulateStarResultChange): "another device" changes one
+  // grade of the first ACTIVE candidate called firstName (the Fall seed event first, then any event),
+  // so their result_key changes — the next Mark as sent from a screen still showing the old result
+  // answers `stale`. Returns a sentence for the console.
+  function simulateResultChange(firstName = 'Noah') {
+    const db = read();
+    const named = (eventId) => db.candidates.find((x) => x.status === 'active' && x.first_name === firstName && (!eventId || x.event_id === eventId));
+    const c = named(SEED_CANDIDATE_EVENT_IDS.fall) ?? named(null);
+    if (!c) return `No active candidate called ${firstName}.`;
+    const subjects = db.event_categories
+      .filter((k) => k.event_id === c.event_id && k.dan === c.dan && !k.from_class_count)
+      .sort((x, y) => x.position - y.position);
+    const graded = subjects.find((k) => db.candidate_grades.some((g) => g.candidate_id === c.id && g.event_category_id === k.id && !g.kept));
+    const k = graded ?? subjects[0];
+    if (!k) return `${firstName} has no subjects to change.`;
+    const now = db.candidate_grades.find((g) => g.candidate_id === c.id && g.event_category_id === k.id)?.grade ?? null;
+    const grade = now === 'A' ? 'A+' : 'A';
+    const ctx = { isAdmin: true, actorName: 'Other Admin', userId: '00000000-0000-4000-8000-0000000000aa' };
+    const answer = runHandler('star_set_grade', db, { p_candidate_id: c.id, p_event_category_id: k.id, p_grade: grade }, { ctx, env });
+    if (answer.status !== 'ok') return `Couldn't change ${firstName}'s grade: ${answer.status}.`;
+    write(db);
+    return `${c.first_name} ${c.last_name}'s ${k.name} is now ${grade} (changed on "another device"). A Mark as sent for the old result now answers stale.`;
+  }
+
+  // Preview helper (phase 6, __tkdPreview.starDownloads): the CSV download log (star_downloads —
+  // the real one is read only in the SQL Editor). Newest last.
+  function downloads() {
+    return (read().downloads ?? []).map((d) => ({ ...d }));
+  }
+
+  // Preview helper (phase 7, __tkdPreview.starHomeToday): makes TODAY a Star day so Home's "Today"
+  // cards can be seen without waiting for the seed's dates. Returns a sentence for the console.
+  //   'event'    the upcoming Fall seed event's testing date becomes today (its closing date too, if
+  //              it was later) → Home shows the event card
+  //   'private'  Alex Kim (Shrewsbury) gets a private testing today at 4:00 PM and Ethan Lopez
+  //              (Worcester) one at 5:30 PM, as in the approved drawings → two private cards. Done
+  //              through star_set_private, so History shows them like a change made at the desk.
+  //   'none'     undoes both: an event dated today moves 26 days ahead (closing date 7 days before),
+  //              Ethan Lopez goes back to the testing day, any other private day today moves 17 days
+  //              ahead → no Star cards (Home shows "Nothing on Home yet" if Finance has nothing)
+  function homeToday(kind = 'event') {
+    const db = read();
+    const day = today();
+    const ctx = { isAdmin: true, actorName: 'Jeffrey Berg', userId: '00000000-0000-4000-8000-000000000001' };
+    const named = (first, last) => db.candidates.find((c) => c.event_id === SEED_CANDIDATE_EVENT_IDS.fall && c.status === 'active'
+      && c.first_name === first && c.last_name === last);
+    const setPrivate = (c, on, time) => runHandler('star_set_private', db, {
+      p_candidate_id: c.id, p_expected_version: c.version, p_private_on: on, p_private_time: time,
+    }, { ctx, env });
+    const moveEvent = (e, fields) => Object.assign(e, fields, { version: e.version + 1, updated_at: new Date(now()).toISOString(), updated_by_name: ctx.actorName });
+    if (kind === 'event') {
+      const e = findEvent(db, SEED_CANDIDATE_EVENT_IDS.fall);
+      if (!e) return 'The Fall seed event is gone — run __tkdPreview.resetTesting() first.';
+      moveEvent(e, { testing_date: day, auto_close_on: e.auto_close_on && e.auto_close_on > day ? day : e.auto_close_on });
+      write(db);
+      return `${e.name} is now today (${day}). Open Home (or wait up to a minute) to see its card.`;
+    }
+    if (kind === 'private') {
+      const done = [];
+      for (const [first, last, time] of [['Alex', 'Kim', '16:00:00'], ['Ethan', 'Lopez', '17:30:00']]) {
+        const c = named(first, last);
+        if (c && setPrivate(c, day, time).status === 'ok') done.push(`${first} ${last}`);
+      }
+      if (done.length === 0) return 'Neither Alex Kim nor Ethan Lopez is active in the Fall seed event — run __tkdPreview.resetTesting() first.';
+      write(db);
+      return `${done.join(' and ')} now test privately today (${day}). Open Home (or wait up to a minute) to see the cards.`;
+    }
+    if (kind === 'none') {
+      for (const e of db.events.filter((x) => x.testing_date === day)) {
+        moveEvent(e, { testing_date: addDays(day, 26), auto_close_on: e.auto_close_on ? addDays(day, 26 - 7) : null });
+      }
+      for (const c of db.candidates.filter((x) => x.private_on === day && x.status === 'active')) {
+        if (c.first_name === 'Ethan' && c.last_name === 'Lopez') setPrivate(c, null, null);
+        else setPrivate(c, addDays(day, 17), c.private_time);
+      }
+      write(db);
+      return 'Nothing is on today any more. Home drops its Star cards on its next ask (within a minute).';
+    }
+    return "Use starHomeToday('event'), starHomeToday('private') or starHomeToday('none').";
+  }
+
   // Back to the seed (events and candidates; the rubric template is kept).
   function reset() {
     const base = clone(readBase());
@@ -1461,5 +1677,7 @@ export function createStarCandidatesBackend({ readBase, saveStore, now = () => D
     write(base);
   }
 
-  return { select, rpc, publicEvent, publicRegister, failNextSave, simulateDanChange, reset, snapshot: read };
+  return {
+    select, rpc, publicEvent, publicRegister, failNextSave, simulateDanChange, simulateResultChange, homeToday, downloads, reset, snapshot: read,
+  };
 }

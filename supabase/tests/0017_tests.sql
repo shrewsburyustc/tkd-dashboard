@@ -362,8 +362,9 @@ begin
   end if;
   if not exists (select 1 from pg_constraint c where c.conname = 'finance_day_closing_items_source_check'
                   and pg_get_constraintdef(c.oid) like '%camp%')
+     -- (changed by 0022, rulebook v0.717: after 0022 the rule allows $10,000)
      or not exists (select 1 from pg_constraint c where c.conname = 'finance_day_closing_items_amount_check'
-                     and pg_get_constraintdef(c.oid) like '%200000%') then
+                     and (pg_get_constraintdef(c.oid) like '%200000%' or pg_get_constraintdef(c.oid) like '%1000000%')) then
     raise exception 'TEST FAILED: G7 the widened snapshot rules';
   end if;
   if not exists (select 1 from pg_indexes i where i.schemaname = 'public' and i.tablename = 'camp_payments'

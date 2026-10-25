@@ -12,6 +12,10 @@
 // The drawing is done by smaller files: DanBlock (Dan lines + category rows), SettingsBlocks
 // (grade scale, assistant-class table, fees), the five dialogs, and the shared Dialog /
 // RowMenu / ErrorBanner / DeleteDialog.
+// Build phase 6 (gap mockups R11, rulebook v0.514) adds the "Result emails" block under Fees
+// (ResultEmailsBlock) and its "Edit result email" dialog (ResultTextDialog). Its texts load with
+// their own hook (useResultTexts), so a problem reading them never hides the rubrics; they save
+// through resultsApi.setResultText with the version the dialog opened with, like the fees.
 //
 // Rules worth knowing (the same as Classes and ranks):
 //   - ONE change at a time: while a save is on its way, other changes are ignored.
@@ -71,6 +75,12 @@ import {
 } from './rubricRules.js';
 import { AssistantBlock, FeesBlock, GradeScaleBlock } from './SettingsBlocks.jsx';
 import { useRubrics } from './useRubrics.js';
+import { setResultText } from '../../../lib/star/resultsApi.js';
+import { resultTextProblem } from '../../../lib/star/resultEmail.js';
+import * as R from '../../../lib/star/resultsText.js';
+import ResultEmailsBlock from './ResultEmailsBlock.jsx';
+import ResultTextDialog from './ResultTextDialog.jsx';
+import { useResultTexts } from './useResultTexts.js';
 import * as T from './text.js';
 import { focusAfterDialog } from '../../../lib/quietFocus.js';
 
@@ -91,6 +101,7 @@ const danEditEl = (dan) => find(`[data-star-dan-edit="${dan}"]`);
 const feesEditEl = (dan) => find(`[data-star-edit-fees="${dan}"]`);
 const gradesEditEl = () => find('[data-star-edit-grades]');
 const assistantEditEl = () => find('[data-star-edit-assistant]');
+const textEditEl = (kind) => find(`[data-star-edit-text="${kind}"]`);
 // The element, if it's still on the page and visible; otherwise null.
 const usable = (element) => (element && element.isConnected && element.getClientRects().length > 0 ? element : null);
 
@@ -105,13 +116,21 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
   const rubrics = data.data; // { dans, grades, assistant } or null
   const dans = rubrics?.dans ?? [];
   const grades = rubrics?.grades ?? [];
+  // The three result email texts (R11) — their own load, see useResultTexts.js.
+  const textsData = useResultTexts({ enabled: !screenLocked });
+  // The pass mark the Result emails block names ("Make-up below 245"): the Dans' shared one, or
+  // null ("the pass mark") if they ever differ.
+  const passMarks = [...new Set(dans.map((d) => d.passMark))];
+  const sharedPassMark = passMarks.length === 1 ? passMarks[0] : null;
 
   // Newest values for callbacks that run later (after a save, from a toast's Undo, …).
   const dataRef = useRef(data);
   const rubricsRef = useRef(rubrics);
+  const textsRef = useRef(textsData);
   useLayoutEffect(() => {
     dataRef.current = data;
     rubricsRef.current = rubrics;
+    textsRef.current = textsData;
   });
   const danOf = (number) => rubricsRef.current?.dans.find((d) => d.dan === number) ?? null;
   const categoryOf = (id) => {
@@ -191,6 +210,7 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
 
   // ----- Reloading -----
   async function reloadQuiet() {
+    textsRef.current.reload(); // the result email texts too (quietly: a failure keeps the old ones)
     const result = await dataRef.current.reload();
     if (result === 'error') setBanner({ text: T.LOAD_FAILED, retry: retryLoad });
     return result;
@@ -202,8 +222,8 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
 
   // The database says this sign-in can't see data (locked on its side): lock the screen too.
   useEffect(() => {
-    if (data.status === 'noAccess') onNoAccess();
-  }, [data.status, onNoAccess]);
+    if (data.status === 'noAccess' || textsData.status === 'noAccess') onNoAccess();
+  }, [data.status, textsData.status, onNoAccess]);
 
   // Locking closes menus (they aren't brought back); focus returns to that ⋯ after unlocking.
   const menuBeforeLockRef = useRef(null);
@@ -297,6 +317,15 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
     openDialog({ type: 'assistant', values, initial: values, snapshot: a, opener });
   }
 
+  // Edit result email (R11): the text as it was when the dialog opened is the snapshot — its
+  // version goes with Save, its body comes back with Undo.
+  function openResultText(kind, opener) {
+    const record = textsRef.current.texts?.[kind];
+    if (!isAdmin || !record) return;
+    const values = { body: record.body };
+    openDialog({ type: 'resultText', kind, values, initial: values, snapshot: record, opener });
+  }
+
   function patchDialog(patch) {
     setDialog((current) => (current ? { ...current, ...patch } : current));
   }
@@ -323,6 +352,7 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
     else if (d.type === 'dan') focusLater(() => d.opener, () => danEditEl(d.dan));
     else if (d.type === 'fees') focusLater(() => d.opener, () => feesEditEl(d.dan));
     else if (d.type === 'grades') focusLater(() => d.opener, gradesEditEl);
+    else if (d.type === 'resultText') focusLater(() => d.opener, () => textEditEl(d.kind));
     else focusLater(() => d.opener, assistantEditEl);
   }
 
@@ -339,6 +369,7 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
     if (d.type === 'fees') return isFeesDirty(d);
     if (d.type === 'grades') return isGradesDirty(d);
     if (d.type === 'assistant') return isAssistantDirty(d);
+    if (d.type === 'resultText') return d.values.body !== d.initial.body;
     return false;
   }
 
@@ -523,6 +554,32 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
           { find: assistantEditEl },
         );
         focusLater(() => d.opener, assistantEditEl);
+      },
+    );
+  }
+
+  // ----- Save: one result email text (R11, proposal 51) -----
+  // The database checks the same rules as the dialog (migration 0023: invalid), the version (stale)
+  // and that it's an admin (not_allowed), and logs the change. Undo sends the old text back with
+  // the NEW version.
+  function saveResultText() {
+    const d = dialogRef.current;
+    if (!d) return;
+    const opened = d.snapshot;
+    const body = d.values.body;
+    const check = {
+      canSave: !d.blocked && resultTextProblem(d.kind, body) === null,
+      sameAsSaved: body === opened.body,
+      payload: { body },
+    };
+    runSave(
+      check,
+      (p) => setResultText({ kind: d.kind, expectedVersion: opened.version, body: p.body }),
+      (result) => {
+        toastWithUndo(R.RESULT_TEXT_SAVED, () => setResultText({ kind: d.kind, expectedVersion: result.version, body: opened.body }), {
+          find: () => textEditEl(d.kind),
+        });
+        focusLater(() => d.opener, () => textEditEl(d.kind));
       },
     );
   }
@@ -815,6 +872,18 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
           selectedDan={dialog?.type === 'fees' && !screenLocked ? dialog.dan : null}
           onEdit={openFees}
         />
+        <ResultEmailsBlock
+          status={textsData.status}
+          texts={textsData.texts}
+          passMark={sharedPassMark}
+          isAdmin={isAdmin}
+          isPhone={isPhone}
+          isTouch={isTouch}
+          // The row stays tinted while its dialog is open (as the fees rows).
+          selectedKind={dialog?.type === 'resultText' && !screenLocked ? dialog.kind : null}
+          onEdit={openResultText}
+          onRetry={() => textsRef.current.reload()}
+        />
       </>
     );
   }
@@ -860,6 +929,23 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
             )
           }
           onSave={saveAssistant}
+        />
+      );
+    } else if (dialog.type === 'resultText') {
+      dialogElement = (
+        <ResultTextDialog
+          key={dialog.key}
+          state={dialog}
+          record={textsData.texts?.[dialog.kind] ?? dialog.snapshot}
+          passMark={sharedPassMark}
+          rubrics={rubrics}
+          isPhone={isPhone}
+          isTouch={isTouch}
+          onChange={(body) => changeValues((values) => ({ ...values, body }))}
+          onSave={saveResultText}
+          onCancel={cancelDialog}
+          onRequestClose={requestClose}
+          onNoAccess={onNoAccess}
         />
       );
     } else {

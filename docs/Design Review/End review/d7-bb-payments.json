@@ -1,0 +1,128 @@
+{
+  "title": "Open detail D7 · Black Belt payments the Daily report can't see yet",
+  "subtitle": "<b>From item 1; for Finance and Black Belt.</b> Finance adds Black Belt payments to the Daily report and Close the day <b>“when Black Belt payments exist”</b> (v0.808; returned checks v0.809). They exist now: Black Belt's Record payment has been live since Oct 21, and Finance's status still lists the step as “when Black Belt payments exist” (it needs its own migration). Pictures 1–2, in the preview on a pretend Monday, Apr 26, 2027: <b>$870 cash recorded for Rina Patel at Worcester</b>; that day's Worcester Daily report says “No payments recorded today. Nothing to close.” — the $870 is in the drawer but not in the report. On the live site Black Belt's family form is still off (it is switched on at Black Belt's CP6, for Spring 2027); the staff screens are live, so a payment could be recorded once a cycle exists. <span style=\"color:#6B6B6B\">(Preview screenshots · PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "src": "../Walkthrough/shots/d7-bb-record-payment.png",
+          "crop": [
+            376,
+            76,
+            528,
+            460
+          ],
+          "scale": 0.9,
+          "caption": "<b>1. Black Belt → Record payment:</b> $870 for Rina Patel, “Counts as paid today, Mon, Apr 26”; saved as cash, her row then reads Paid in full.",
+          "marks": [
+            [
+              400,
+              430,
+              380,
+              20
+            ]
+          ]
+        },
+        {
+          "src": "../Walkthrough/shots/d7-finance-day.png",
+          "crop": [
+            68,
+            180,
+            1196,
+            232
+          ],
+          "scale": 0.78,
+          "caption": "<b>2. Finance → Daily report, Worcester, the same day:</b> “No payments recorded today. Nothing to close. Payments recorded in Testing and Camps appear here.” The $870 isn't counted, and the day can't be closed.",
+          "marks": [
+            [
+              74,
+              234,
+              1186,
+              84
+            ],
+            [
+              460,
+              346,
+              412,
+              46
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Options B and C, drawn (A has nothing on screen)",
+      "tone": "after",
+      "items": [
+        {
+          "src": "../Walkthrough/shots/d7-bb-record-payment-B-MOCKUP.png",
+          "crop": [
+            376,
+            76,
+            528,
+            556
+          ],
+          "scale": 0.9,
+          "caption": "<b>3. Option B, Record payment:</b> an amber note — “This payment won't show in Finance's Daily report yet. Keep Black Belt money apart when you close the day.”",
+          "marks": [
+            [
+              400,
+              488,
+              480,
+              60
+            ]
+          ]
+        },
+        {
+          "src": "../Walkthrough/shots/d7-finance-day-B-MOCKUP.png",
+          "crop": [
+            68,
+            180,
+            1196,
+            300
+          ],
+          "scale": 0.78,
+          "caption": "<b>4. Option B, Daily report:</b> the same note at the top — “Black Belt payments don't show in this report yet. Count Black Belt money separately when you close the day.”",
+          "marks": [
+            [
+              72,
+              230,
+              1190,
+              50
+            ]
+          ]
+        },
+        {
+          "src": "../Walkthrough/shots/d7-bb-roster-C-MOCKUP.png",
+          "crop": [
+            68,
+            430,
+            1196,
+            300
+          ],
+          "scale": 0.78,
+          "caption": "<b>5. Option C:</b> Black Belt's Record payment grays — “Record payment opens when Finance's Daily report can show Black Belt payments.”",
+          "marks": [
+            [
+              72,
+              444,
+              486,
+              26
+            ],
+            [
+              1066,
+              600,
+              154,
+              104
+            ]
+          ]
+        }
+      ],
+      "note": "<b>A in words:</b> Finance's Black Belt step (v0.808 / v0.809, its own migration) is built next and is live <b>before Black Belt's form is switched on (CP6)</b> — written into both sessions' plans and Black Belt's CP6 checklist; until then Black Belt money is taken the old way. Pictures 3–5 are drawn over the real screens; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question: what happens until Finance reads Black Belt payments?</b><br><b>A · Recommended: Finance's step first, nothing on screen.</b> <i>+</i> no temporary notes to build and remove; the order is in your hands (you switch the form on at CP6). <i>−</i> a Black Belt payment recorded before Finance's step is missing from that day's report (pictures 1–2) — so none should be recorded in the dashboard until then.<br><b>B · Temporary notes (pictures 3–4).</b> <i>+</i> anyone recording a Black Belt payment meanwhile is told what to do. <i>−</i> staff keep Black Belt cash out of the drawer count by hand; two notes to add now and remove later.<br><b>C · Record payment off until then (picture 5).</b> <i>+</i> no Black Belt payment can be missed. <i>−</i> if the form opens before Finance's step, payments can't be recorded at all; a block to remove later."
+}

@@ -76,7 +76,8 @@ export default function SignedUp({ result, campInfo, headingRef }) {
         <ul className="reg-visit__list">
           {children.map((c, i) => (
             <li key={`${i}-${c.firstName}`} className="reg-visit__row">
-              <span>{T.childPayLine(names[i], T.dayCount(c.dayCount), (c.extras ?? []).map((e) => e.name))}</span>
+              {/* "8 days in 2 weeks" when the answer's weeks (weekly pricing, migration 0022) show more than one week */}
+              <span>{T.childPayLine(names[i], Array.isArray(c.weeks) && c.weeks.length > 1 ? T.daysInWeeks(c.dayCount, c.weeks.length) : T.dayCount(c.dayCount), (c.extras ?? []).map((e) => e.name))}</span>
               <b>{formatDollars(c.totalCents)}</b>
             </li>
           ))}

@@ -115,7 +115,8 @@ export async function getCamp(code) {
 
 const isStr = (v, max) => typeof v === 'string' && v.length <= max;
 const onlyKeys = (obj, keys) => obj !== null && typeof obj === 'object' && !Array.isArray(obj) && Object.keys(obj).every((k) => keys.includes(k));
-const uuidList = (v) => Array.isArray(v) && v.length <= 10 && v.every((x) => typeof x === 'string' && UUID.test(x)) && new Set(v.map((x) => x.toLowerCase())).size === v.length;
+// Up to 60 day ids (a camp has up to 60 days, weekly pricing R4; was 10).
+const uuidList = (v) => Array.isArray(v) && v.length <= 60 && v.every((x) => typeof x === 'string' && UUID.test(x)) && new Set(v.map((x) => x.toLowerCase())).size === v.length;
 const BODY_KEYS = ['submission_id', 'children', 'parent', 'emergency', 'paying_by', 'acknowledged', 'signature', 'ack_version', 'waiver_version',
   'expected_total_cents', 'website', 'started_at', 'sent_at', 'turnstile_token'];
 const CHILD_KEYS = ['first_name', 'last_name', 'age', 'member', 'day_ids', 'extras'];
@@ -135,7 +136,8 @@ export function bodyWithinLimits(body) {
   }
   if (!isStr(body.paying_by, 20) || typeof body.acknowledged !== 'boolean' || !isStr(body.signature, 70000)) return false;
   if (!isStr(body.ack_version, 40) || !isStr(body.waiver_version, 64)) return false;
-  if (!Number.isInteger(body.expected_total_cents) || body.expected_total_cents < 0 || body.expected_total_cents > 600000) return false;
+  if (!Number.isInteger(body.expected_total_cents) || body.expected_total_cents < 0 || body.expected_total_cents > 3000000) return false; // 3 × $10,000
+
   if (!Number.isInteger(body.started_at) || !Number.isInteger(body.sent_at)) return false;
   if (body.turnstile_token !== undefined && body.turnstile_token !== null && !isStr(body.turnstile_token, 2048)) return false;
   if (body.website !== undefined && typeof body.website !== 'string') return false;

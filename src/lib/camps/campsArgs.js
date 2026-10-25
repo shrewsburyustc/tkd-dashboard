@@ -95,7 +95,8 @@ export function campArgs(input = {}, withIds) {
 }
 
 // Edit template's arguments (everything but the id and version).
-//   input = { name, locationCode, bothSchools, dayCount, startTime, endTime, opensDaysBefore,
+//   input = { name, locationCode, bothSchools, dayCount (days per week = the grid's rows, 1–7; weekly
+//             pricing v0.717), startTime, endTime, opensDaysBefore,
 //             closesDaysBefore, earlyDaysBefore, minAge, maxAge, prices, extras:[{ name, priceCents,
 //             per, notForAllDays, onlyWeekdays }], description, waiverText }
 export function templateArgs(input = {}) {

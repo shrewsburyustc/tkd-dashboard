@@ -13,8 +13,11 @@
 // Edit details turns the summary into fields (Star v0.112 / Color Belt): child (names, age 1–99,
 // member), days, extras (per-day extras ask which days), parent and emergency contact. Changing
 // days, member or extras prices the WHOLE camper again at the camp's current prices (v0.700,
-// §1.13 re-price rule), and the new total shows while editing. When every camp day is ticked,
-// "not charged to all-days campers" extras are taken off the form (with their price) before saving.
+// §1.13 re-price rule), and the new total shows while editing. "Not charged to all-days campers"
+// extras are taken off the form (with their price) where they are included: a per-day one on the
+// days of any week the child comes every camp day, a once one when the child comes every day of
+// the camp (weekly pricing R6, rulebook v0.717). With more than one week, the price shows one
+// line per week ("Week of Jul 5 · 5 days $275") above the total line.
 // A day the camper was already checked in on can't be taken off (Undo that check-in first).
 // PC / tablet: a centered dialog; phones: full screen with a back arrow.
 //
@@ -78,7 +81,9 @@ function editValues(camper, family) {
 }
 
 // The child as campRules.priceChild wants it ({ dayIds, member, extras:[{ extraId, dayIds }] }).
-// Extras not allowed for an all-days child are left out (the screen removes them, §1.14).
+// Extras not allowed where they are included are left out (the screen removes them, §1.14):
+// a once not-for-all-days extra for an all-days child; a per-day one on the days of a week the
+// child comes every day (extraDaysFor with the camp's days, weekly pricing R6).
 function childOf(values, campExtras, campDays) {
   const all = isAllDays(values.dayIds, campDays);
   const childDays = campDays.filter((d) => values.dayIds.includes(d.dayId));
@@ -86,9 +91,10 @@ function childOf(values, campExtras, campDays) {
   for (const extra of campExtras) {
     const pick = values.picks[extra.extraId];
     if (!pick?.on) continue;
-    if (extra.notForAllDays && all) continue;
-    // A per-day extra only on the child's days it is offered on (onlyOn, owner decision 2026-10-19).
-    const offered = new Set(extraDaysFor(extra, childDays).map((d) => d.dayId));
+    if (extra.notForAllDays && extra.per === 'once' && all) continue;
+    // A per-day extra only on the child's days it is offered on (onlyOn, owner decision 2026-10-19)
+    // and, for a not-for-all-days one, not in a week the child comes every day.
+    const offered = new Set(extraDaysFor(extra, childDays, campDays).map((d) => d.dayId));
     const dayIds = extra.per === 'day' ? pick.dayIds.filter((id) => offered.has(id)) : [];
     if (extra.per === 'day' && dayIds.length === 0) continue;
     extras.push({ extraId: extra.extraId, dayIds });
@@ -97,6 +103,19 @@ function childOf(values, campExtras, campDays) {
 }
 
 const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
+
+// The week lines of Camper detail's price (weekly pricing): the database's breakdown.weeks when it
+// sends them, else worked out here from the camp's grid ({ monday, dayCount, cents } each). null
+// for one week, or when the weeks don't add up to the camper's stored price (the grid changed
+// after sign-up: the stored price is a snapshot, so the one-line breakdown is shown instead).
+function weekLines(b, myDayObjs, prices) {
+  const weeks = Array.isArray(b.weeks)
+    ? b.weeks
+    : priceChild({ member: b.member === true, dayIds: myDayObjs.map((d) => d.dayId), extras: [] }, prices, [], myDayObjs, b.priceKind).weeks;
+  if (weeks.length < 2) return null;
+  if (weeks.some((w) => !Number.isInteger(w.cents)) || weeks.reduce((sum, w) => sum + w.cents, 0) !== b.baseCents) return null;
+  return weeks;
+}
 
 export default function CamperDialog({ camperId, camperName, actions = null, camp, days, prices, extras, isPhone, hidden, startInEdit, onClose, onSaved, onNoAccess, onRefreshProfile }) {
   const idBase = useId();
@@ -166,6 +185,8 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
     const family = detail.family ?? {};
     const myDays = (camper.days ?? []).map((d) => d.day).sort();
     const allDays = myDays.length === campDayIsos.length && campDayIsos.length > 0;
+    const myDayObjs = days.filter((d) => myDays.includes(d.day));
+    const weeks = weekLines(b, myDayObjs, prices);
     const owes = camper.owesCents ?? 0;
     const paid = camper.paidCents ?? 0;
     const checkins = detail.checkins ?? (camper.days ?? []).map((d) => ({ day: d.day, checkedInAt: d.checkedInAt, checkedInByName: d.checkedInByName }));
@@ -193,7 +214,17 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
                   </span>
                 ))}
           </Row>
-          {b.totalCents !== undefined && <Row label={T.DETAIL_PRICE}>{T.priceBreakdownLine(b, allDays)}</Row>}
+          {b.totalCents !== undefined && (
+            <Row label={T.DETAIL_PRICE}>
+              {weeks
+                ? [...weeks.map((w) => T.weekPriceLine(w)), T.priceBreakdownLine(b, allDays, weeks.length)].map((line) => (
+                    <span key={line} className="ev-sum-line">
+                      {line}
+                    </span>
+                  ))
+                : T.priceBreakdownLine(b, allDays)}
+            </Row>
+          )}
           <Row label={T.DETAIL_PAYING_BY}>{T.payingByText(camper.payingBy)}</Row>
           {camper.status !== 'active' && <Row label={T.DETAIL_REMOVED}>{T.removedDetail(camper)}</Row>}
         </dl>
@@ -319,8 +350,8 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
   if (values.dayIds.length === 0) errors.days = T.CHOOSE_DAY;
   for (const extra of campExtras) {
     const pick = values.picks[extra.extraId];
-    if (!pick?.on || extra.per !== 'day' || (extra.notForAllDays && allDays)) continue;
-    const offeredIds = extraDaysFor(extra, days.filter((d) => values.dayIds.includes(d.dayId))).map((d) => d.dayId);
+    if (!pick?.on || extra.per !== 'day') continue;
+    const offeredIds = extraDaysFor(extra, days.filter((d) => values.dayIds.includes(d.dayId)), days).map((d) => d.dayId);
     if (offeredIds.length > 0 && pick.dayIds.filter((id) => offeredIds.includes(id)).length === 0) errors[`extra-${extra.extraId}`] = T.CHOOSE_WHICH_DAYS;
   }
   for (const who of ['parent', 'emergency']) {
@@ -358,7 +389,7 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
   }
   function toggleExtra(extra, on) {
     // A per-day extra starts with all of the child's days (C7: "starting with the child's days").
-    const offered = extraDaysFor(extra, days.filter((d) => values.dayIds.includes(d.dayId))).map((d) => d.dayId);
+    const offered = extraDaysFor(extra, days.filter((d) => values.dayIds.includes(d.dayId)), days).map((d) => d.dayId);
     const pick = { on, dayIds: on && extra.per === 'day' ? offered : [] };
     change({ picks: { ...values.picks, [extra.extraId]: pick } });
   }
@@ -464,10 +495,12 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
     </div>
   );
   const childDayObjs = days.filter((d) => values.dayIds.includes(d.dayId));
-  // Hidden: not-for-all-days extras for an all-days child, and per-day extras offered on none of
-  // the child's days (pizza only on Wed and Fri, the child comes Mon and Tue).
+  // Hidden: a once not-for-all-days extra for an all-days child, and per-day extras offered on
+  // none of the child's days (pizza only on Wed and Fri, the child comes Mon and Tue) or — for a
+  // not-for-all-days one — only in weeks the child comes every day (included there, R6).
   const shownExtras = campExtras.filter(
-    (e) => !(e.notForAllDays && allDays) && (e.per !== 'day' || (e.onlyOn ?? []).length === 0 || extraDaysFor(e, childDayObjs).length > 0),
+    (e) => !(e.notForAllDays && e.per === 'once' && allDays)
+      && (e.per !== 'day' || ((e.onlyOn ?? []).length === 0 && !e.notForAllDays) || extraDaysFor(e, childDayObjs, days).length > 0),
   );
 
   return (
@@ -534,7 +567,8 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
                   </label>
                   {on && extra.per === 'day' && (
                     <div className="cp-chips cp-chips--small" role="group" aria-label={`${extra.name}: ${T.EXTRA_WHICH_DAYS}`}>
-                      {extraDaysFor(extra, childDayObjs).map((d) => {
+                      {extraDaysFor(extra, childDayObjs, days).map((d) => {
+
                           const dayOn = pick.dayIds.includes(d.dayId);
                           return (
                             <button key={d.dayId} type="button" className={`cp-daychip${dayOn ? ' is-picked' : ''}`} aria-pressed={dayOn ? 'true' : 'false'} onClick={() => !saving && toggleExtraDay(extra, d.dayId)}>

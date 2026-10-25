@@ -188,9 +188,16 @@ export default function CandidatesTab({
     if (screenLocked) setMenu(null);
   }, [screenLocked]);
 
-  // Hide private details switched on: no payment dialog or payment filter may stay open (G4).
+  // Hide private details switched on: no payment dialog, payment filter, money toast or row
+  // banner with a Retry may stay (G4).
   const hiddenBeforeRef = useRef(hidden);
+  // The switch as it is NOW, for answers that arrive after a save was sent: a payment saved or
+  // undone just before the switch went on must not bring money back on screen (no money banner
+  // with Retry, no "Payment recorded" toast with Undo). `hidden` itself would be the value from
+  // when the save started.
+  const hiddenNowRef = useRef(hidden);
   useEffect(() => {
+    hiddenNowRef.current = hidden;
     const switchedOn = hidden && !hiddenBeforeRef.current; // a change, not the first drawing
     hiddenBeforeRef.current = hidden;
     if (!switchedOn) return;
@@ -199,6 +206,12 @@ export default function CandidatesTab({
     setMenu(null);
     // A toast may name money ("Payment recorded", a refund) or carry its Undo: it goes too.
     clearToast();
+    // So does every banner: after a failed Record payment / Undo payment its Retry would move
+    // money, and an "already paid" banner shows paid status — neither may stay while hidden
+    // (other banners, e.g. a withdraw error, go too; the list reloads every 15 seconds anyway).
+    // The row's Not saved mark goes with it (nothing is retrying any more).
+    setBanner(null);
+    setNotSavedId(null);
     // (only when the switch changes)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hidden]);
@@ -255,6 +268,13 @@ export default function CandidatesTab({
     const msg = T.statusMessage(action, status, { name: row ? T.candidateName(row) : '' });
     if (!msg) return;
     if (status === 'error') {
+      // Private details hidden meanwhile: the message stays, but without a Retry that could move
+      // money (and no Not saved mark); the list shows the latest.
+      if (hiddenNowRef.current) {
+        setBanner({ text: msg.text });
+        reload();
+        return;
+      }
       if (row) setNotSavedId(row.id);
       setBanner({ kind: 'row', text: msg.text, retry });
       return;
@@ -491,11 +511,17 @@ export default function CandidatesTab({
       return;
     }
     if (result.status === 'error') {
+      // Private details hidden meanwhile: no money Retry (see hiddenNowRef) — just show the latest.
+      if (hiddenNowRef.current) {
+        reload();
+        return;
+      }
       setBanner({ kind: 'undo', text: T.UNDO_FAILED, retry: () => runUndo(call, focus, action, row, doneText) });
       return;
     }
     const msg = T.statusMessage(action, result.status, { name: row ? T.candidateName(row) : '' });
-    setBanner({ text: msg?.text ?? T.ROW_STALE });
+    // (While hidden, the general "changed" line instead of one that names a payment.)
+    setBanner({ text: hiddenNowRef.current ? T.ROW_STALE : (msg?.text ?? T.ROW_STALE) });
     reload();
   }
 
@@ -564,10 +590,13 @@ export default function CandidatesTab({
       const reloaded = reload();
       const paymentId = result.paymentId;
       // Staff can undo their own payment from the toast within the database's 10 seconds (v0.110).
-      showToast(T.TOAST_PAYMENT_RECORDED, {
-        icon: false,
-        action: { label: T.UNDO, onAction: () => runUndo(() => undoPayment({ paymentId }), { find: () => rowEl(row.id) }, 'undo_payment', row) },
-      });
+      // (Switched on meanwhile: no money toast - see hiddenNowRef.)
+      if (!hiddenNowRef.current) {
+        showToast(T.TOAST_PAYMENT_RECORDED, {
+          icon: false,
+          action: { label: T.UNDO, onAction: () => runUndo(() => undoPayment({ paymentId }), { find: () => rowEl(row.id) }, 'undo_payment', row) },
+        });
+      }
       focusLater(() => rowEl(row.id), null, reloaded);
       return;
     }
@@ -580,6 +609,7 @@ export default function CandidatesTab({
       }
       closeDialog(d);
       reload();
+      if (hiddenNowRef.current) return; // switched on meanwhile: no money toast
       showToast(T.TOAST_PAYMENT_SAVED, { icon: false });
       return;
     }
@@ -600,10 +630,12 @@ export default function CandidatesTab({
     closeDialog(d);
     const reloaded = reload();
     const refundId = result.paymentId;
-    showToast(T.TOAST_REFUND_RECORDED, {
-      icon: false,
-      action: { label: T.UNDO, onAction: () => runUndo(() => undoPayment({ paymentId: refundId }), { find: () => rowEl(row.id) }, 'undo_refund', row) },
-    });
+    if (!hiddenNowRef.current) { // switched on meanwhile: no money toast
+      showToast(T.TOAST_REFUND_RECORDED, {
+        icon: false,
+        action: { label: T.UNDO, onAction: () => runUndo(() => undoPayment({ paymentId: refundId }), { find: () => rowEl(row.id) }, 'undo_refund', row) },
+      });
+    }
     focusLater(() => rowEl(row.id), null, reloaded);
   }
 
@@ -636,6 +668,7 @@ export default function CandidatesTab({
     if (result.status === 'ok') {
       closeDialog(d);
       reload();
+      if (hiddenNowRef.current) return; // switched on meanwhile: no money toast
       showToast(d.type === 'undoRefund' ? T.TOAST_REFUND_UNDONE : T.paymentUndoneToast(row ? T.candidateName(row) : ''), { icon: false });
       return;
     }
@@ -688,7 +721,7 @@ export default function CandidatesTab({
     }
     rowOk(row);
     reload();
-    showToast(T.movedBackToast(T.candidateName(row), hidden ? null : result.expectedFeeCents), {
+    showToast(T.movedBackToast(T.candidateName(row), hiddenNowRef.current ? null : result.expectedFeeCents), {
       icon: false,
       action: {
         label: T.UNDO,

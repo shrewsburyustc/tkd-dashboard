@@ -1,0 +1,34 @@
+{
+  "title": "Item 20c · The accessibility target: WCAG 2.1 or 2.2",
+  "subtitle": "<b>Unclear — two documents disagree.</b> The rulebook (§4, since v0.2, 2026-10-15) targets WCAG 2.1 AA; the brief for this review asks for WCAG 2.2 AA. WCAG 2.2 is W3C's current version (a Recommendation since October 2023): it keeps everything in 2.1 and adds six checks at levels A and AA. I checked the app against them in the code; nothing in this item changes how the dashboard looks. <span style=\"color:#6B6B6B\">(Code checked 2026-10-23, after merging main)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/20c-today.png",
+          "crop": [0, 0, 930, 230],
+          "scale": 1,
+          "shotWidth": 930,
+          "caption": "<b>1. Today:</b> what rule §4 asks for."
+        }
+      ]
+    },
+    {
+      "label": "Proposed (option B) · WCAG 2.2 AA",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/20c-after.png",
+          "crop": [0, 0, 930, 560],
+          "scale": 1,
+          "shotWidth": 930,
+          "caption": "<b>2. Option B:</b> the six added checks, in plain words, and where the app stands — most are met already; three things to check in phases 3–4 (focus behind pinned bars, the PIN on touch screens, the contact line on the public pages)."
+        }
+      ]
+    }
+  ],
+  "footer": "<b>Your choice — one question: which accessibility target?</b><br><b>A · Keep WCAG 2.1 AA.</b> <i>+</i> no change. <i>−</i> an older version than the current standard and than this review's brief.<br><b>B · Recommended: WCAG 2.2 AA (picture 2).</b> §4's target becomes 2.2 AA, with the six checks written in plain words; phases 3–5 test them. <i>+</i> the current standard; little extra work, because most checks are met; the review and the rulebook agree. <i>−</i> three things to check, and maybe fix: focus behind pinned bars, the touch-screen PIN, the public pages' contact line.<br><b>C · WCAG 2.2 AA plus the AAA target size</b> (44 × 44 px for every control, on the PC too). <i>+</i> bigger targets for older eyes and hands everywhere. <i>−</i> PC screens get bulkier, against §2.1 “No large buttons”; touch screens already have 44 px."
+}

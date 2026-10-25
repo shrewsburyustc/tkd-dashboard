@@ -2627,10 +2627,15 @@ begin
                       and d.downloaded_at > now() - interval '1 minute') then
     raise exception 'TEST FAILED: T10a the whole-event CSV must return every active candidate and log one download';
   end if;
+  -- (0006's 18 keys; after migration 0023 also candidate_id and paid_on -
+  -- both versions pass, as C9 accepts 0001's and 0020's helper)
   if (select array_agg(k order by k) from jsonb_object_keys(v_r -> 'rows' -> 0) as k)
-       <> array['assistant_classes', 'classes_attended', 'dan', 'date_of_birth', 'email_for_results', 'first_name', 'is_makeup',
-                'last_name', 'location_code', 'needs', 'paid', 'paid_cents', 'paying_by', 'result_status', 'sent', 'stars_from',
-                'stars_to', 'total'] then
+       not in (array['assistant_classes', 'classes_attended', 'dan', 'date_of_birth', 'email_for_results', 'first_name', 'is_makeup',
+                     'last_name', 'location_code', 'needs', 'paid', 'paid_cents', 'paying_by', 'result_status', 'sent', 'stars_from',
+                     'stars_to', 'total'],
+               array['assistant_classes', 'candidate_id', 'classes_attended', 'dan', 'date_of_birth', 'email_for_results', 'first_name',
+                     'is_makeup', 'last_name', 'location_code', 'needs', 'paid', 'paid_cents', 'paid_on', 'paying_by', 'result_status',
+                     'sent', 'stars_from', 'stars_to', 'total']) then
     raise exception 'TEST FAILED: T10a CSV row keys are %', (select array_agg(k order by k) from jsonb_object_keys(v_r -> 'rows' -> 0) as k);
   end if;
   if not exists (select 1 from jsonb_array_elements(v_r -> 'rows') as t(x)

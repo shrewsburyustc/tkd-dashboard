@@ -229,6 +229,29 @@ export function cycleTag(summary, today) {
   }
 }
 
+// ----- Who may open registration (SQL bb_set_registration, 0016 + 0024 §6.3) -----
+
+// May this person open the cycle's registration now? → { allowed, reason }
+//   reason null               allowed
+//   'firstOpenNeedsAdmin'     the cycle was never opened, and the first opening is admin-only
+//                             (it locks the cycle's rubric, v0.930): "An admin opens it the first
+//                             time (it locks the rubric)."
+//   'reopenNeedsAdmin'        after Application due with the automatic close on, only admins
+//                             reopen (v0.210; the database then turns the automatic close off)
+// cycle: a CycleSummary / CycleDetail / bb_cycles row (firstOpenedAt, autoClose, applicationDue);
+// today: the school date (without it the Application-due rule isn't checked). The screen only
+// grays the item — the database decides.
+export function canOpenRegistration(cycle, isAdmin, today = null) {
+  if (isAdmin === true) return { allowed: true, reason: null };
+  if ((pick(cycle, 'firstOpenedAt', 'first_opened_at') ?? null) === null) return { allowed: false, reason: 'firstOpenNeedsAdmin' };
+  const autoClose = pick(cycle, 'autoClose', 'auto_close') !== false;
+  const applicationDue = pick(cycle, 'applicationDue', 'application_due') ?? null;
+  if (autoClose && typeof today === 'string' && typeof applicationDue === 'string' && today > applicationDue) {
+    return { allowed: false, reason: 'reopenNeedsAdmin' };
+  }
+  return { allowed: true, reason: null };
+}
+
 // ----- One testing day (SQL 15c / 15d day rules) -----
 
 // What's wrong with a place → null (fine) or a code:

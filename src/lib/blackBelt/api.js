@@ -1,4 +1,5 @@
-// api.js — every call the Black Belt staff screens make to the database (phases B1 and B2).
+// api.js — every call the Black Belt staff screens make to the database (phases B1 and B2, and
+// the rubric editor of migration 0024 — the last section of this file).
 // Why it exists: like src/lib/testing/eventsApi.js does for Color Belt, this keeps table names,
 // column lists and the exact argument names of the database functions (migration 0016, contract
 // 0016-B1 §1) in ONE place. Screens call friendly camelCase functions with one object argument
@@ -8,6 +9,12 @@
 //   'duplicate_name' · 'invalid' · 'part_without_day' (+ parts) · 'waiver_needed' · 'finished' ·
 //   'has_payments' · 'has_waivers' · 'confirm_needed' (+ removeCount) · 'withdrawn' ·
 //   'refund_too_large' (+ paidCents) ·
+//   rubric (0024): 'invalid' (+ problems) · 'locked' (+ firstOpenedAt) · 'has_registrations' ·
+//   grading (0025, contract 0025 §1.2): 'has_grades' (Edit details' Dan change: + gradeCount,
+//   countCount, chosenCount; a rubric save / undo: + gradingStartedAt; Delete permanently, Delete
+//   cycle and Edit cycle: alone) · 'already_added' (Restore of a make-up while another is active;
+//   a Dan change of a candidate whose make-up is on a later cycle) · 'kept' · 'choice_needed' ·
+//   'not_finished' · 'no_email' (gradingApi.js uses those) ·
 //   'error' (no connection / unexpected answer — { status:'error', error })
 // These functions NEVER throw.
 //
@@ -27,11 +34,15 @@ import { supabase, isPreview } from '../supabase.js';
 import { readStorage } from '../storage.js';
 import { todayInSchoolTime, isIsoDate, shortTime, normalizeNote, PREVIEW_TODAY_KEY } from '../testing/eventRules.js';
 import { cycleState, nextWaiverVersionName, buildAddPayload, buildUpdatePayload, PARTS, DANS } from './rules.js';
+import { normalizeDan, RUBRIC_SCHEMA_VERSION, RUBRIC_DANS } from './rubric.js';
 
 // Every status a call here can return.
 export const BB_STATUSES = [
   'ok', 'no_access', 'not_allowed', 'not_found', 'stale', 'duplicate_name', 'invalid', 'part_without_day', 'waiver_needed',
-  'finished', 'has_payments', 'has_waivers', 'confirm_needed', 'withdrawn', 'refund_too_large', 'error',
+  'finished', 'has_payments', 'has_waivers', 'confirm_needed', 'withdrawn', 'refund_too_large', 'locked', 'has_registrations',
+  // 0025 (contract 0025 §1.2)
+  'kept', 'already_added', 'choice_needed', 'not_finished', 'no_email', 'has_grades',
+  'error',
 ];
 const SERVER_STATUSES = new Set(BB_STATUSES.filter((s) => s !== 'error'));
 
@@ -52,6 +63,9 @@ const IN_CHUNK = 80;
 const failure = (error) => ({ status: 'error', error });
 const unexpected = (what) => failure(new Error(`Unexpected answer from ${what}`));
 const isText = (v) => typeof v === 'string' && v.length > 0;
+// A database id (uuid). A cycle address typed or bookmarked wrong (C2, v0.937) is "not found"
+// instead of a database error.
+const isUuid = (v) => typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 const isInt = (v) => Number.isInteger(v);
 const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
@@ -243,6 +257,7 @@ export async function loadCycles() {
 export async function loadCycle({ cycleId } = {}) {
   try {
     if (!isText(cycleId)) return failure(new Error('No cycle id'));
+    if (!isUuid(cycleId)) return { status: 'not_found' };
     if (!supabase) return failure(new Error('No connection is set up'));
     const today = schoolToday();
     const [cycleRes, dayRes, planRes, feeRes, candRes, denied] = await Promise.all([
@@ -331,7 +346,8 @@ export async function loadCycleDefaults() {
 }
 
 // Add cycle (admins). form: CycleForm; sourceCycleId: from loadCycleDefaults. The new cycle is
-// Closed — if the dialog's switch says Open, call setRegistration next (OP-4).
+// ALWAYS saved Closed, with a copy of the default rubric (0024 §6.4); opening is its own admin
+// step from the cycle's ⋯ menu (v0.933 — no follow-up setRegistration any more).
 // → { status:'ok', id, version: 1, codes: { worcester, shrewsbury } } · 'part_without_day' + parts ·
 //   'duplicate_name' · 'invalid' · 'not_allowed' · 'no_access' · 'error'
 export async function addCycle({ form, sourceCycleId = null } = {}) {
@@ -349,6 +365,8 @@ export async function addCycle({ form, sourceCycleId = null } = {}) {
 
 // Edit cycle (admins). form: CycleForm (days keep their id; every plan payment's due date is sent).
 // → { status:'ok', version } · 'stale' · 'part_without_day' + parts · 'duplicate_name' · 'invalid' ·
+//   'has_grades' (0025, S2: a past day with grades, or the first day once grading started —
+//   gradingApi.loadGradingState says which, so the form can gray them first) ·
 //   'not_found' · 'not_allowed' · 'no_access' · 'error'
 export async function updateCycle({ cycleId, expectedVersion, form } = {}) {
   let payload;
@@ -361,20 +379,35 @@ export async function updateCycle({ cycleId, expectedVersion, form } = {}) {
     (d) => (isInt(d.version) ? { version: d.version } : null));
 }
 
-// The Open / Closed switch (staff and admins; opening after Application due: admins, which also
+// The Open / Closed switch (staff and admins; the FIRST opening of a cycle: admins only, because
+// it locks the cycle's rubric (0024, v0.930); opening after Application due: admins, which also
 // turns the automatic close off).
-// → { status:'ok', version, state: CycleState } · 'finished' · 'waiver_needed' · 'not_allowed' ·
-//   'stale' · 'not_found' · 'invalid' · 'no_access' · 'error'
+// → { status:'ok', version, state: CycleState, firstOpen } · 'finished' · 'waiver_needed' ·
+//   'not_allowed' · 'stale' · 'not_found' · 'invalid' · 'no_access' · 'error'
+// firstOpen = true only when this call was the cycle's first opening: then the toast's Undo
+// calls undoFirstOpen (back to "never opened"); otherwise Undo sends the opposite switch.
 export async function setRegistration({ cycleId, expectedVersion, open } = {}) {
   return callRpc('bb_set_registration', { p_cycle_id: cycleId, p_expected_version: expectedVersion, p_open: open }, (d) => {
+    const state = toState(d.state);
+    return isInt(d.version) && state ? { version: d.version, state, firstOpen: d.first_open === true } : null;
+  });
+}
+
+// Undo of a FIRST opening (admins; the "Registration opened" toast, within 15 seconds): the cycle
+// goes back to never opened, so its rubric is editable again (v0.929).
+// → { status:'ok', version, state: CycleState } · 'stale' (too late, someone changed it, or it
+//   wasn't this admin's opening) · 'has_registrations' (a family already registered — the lock
+//   stays) · 'not_found' · 'invalid' · 'not_allowed' · 'no_access' · 'error'
+export async function undoFirstOpen({ cycleId, expectedVersion } = {}) {
+  return callRpc('bb_undo_first_open', { p_cycle_id: cycleId ?? null, p_expected_version: expectedVersion ?? null }, (d) => {
     const state = toState(d.state);
     return isInt(d.version) && state ? { version: d.version, state } : null;
   });
 }
 
 // Delete cycle (admins). expectedCandidateCount = loadCycle's candidateCountAll (withdrawn too).
-// → { status:'ok' } · 'stale' · 'has_payments' · 'has_waivers' · 'not_found' · 'not_allowed' ·
-//   'no_access' · 'error'
+// → { status:'ok' } · 'stale' · 'has_payments' · 'has_waivers' · 'has_grades' (0025, Q-G3) ·
+//   'not_found' · 'not_allowed' · 'no_access' · 'error'
 export async function deleteCycle({ cycleId, expectedVersion, expectedCandidateCount } = {}) {
   return callRpc('bb_delete_cycle', {
     p_cycle_id: cycleId, p_expected_version: expectedVersion, p_expected_candidate_count: expectedCandidateCount,
@@ -440,27 +473,6 @@ export async function setKeepYears({ expectedVersion, afterLastDay, after18, con
     (d) => (isInt(d.version) && isInt(d.removed_count) ? { version: d.version, removedCount: d.removed_count } : null),
     (status, d) => (status === 'confirm_needed' ? (isInt(d.remove_count) ? { removeCount: d.remove_count } : undefined) : null),
   );
-}
-
-// The Testing chooser's "Next: Apr 3 · both schools" line: the earliest testing day of any cycle
-// from today on. Reads only the dates (no names, and no purge from the chooser).
-// → { status:'ok', next: { date } | null } · 'no_access' · 'error'
-export async function loadNextBlackBeltDay() {
-  try {
-    if (!supabase) return failure(new Error('No connection is set up'));
-    const today = schoolToday();
-    const [dayRes, denied] = await Promise.all([
-      supabase.from('bb_cycle_days').select('day_date').gte('day_date', today).order('day_date', { ascending: true }),
-      accessCheck(),
-    ]);
-    if (denied) return denied;
-    if (dayRes?.error) return failure(dayRes.error);
-    if (!Array.isArray(dayRes.data)) return unexpected('bb_cycle_days');
-    const dates = dayRes.data.map((d) => d.day_date).filter((d) => isIsoDate(d) && d >= today).sort();
-    return { status: 'ok', next: dates.length > 0 ? { date: dates[0] } : null };
-  } catch (error) {
-    return failure(error);
-  }
 }
 
 // =====================================================================================
@@ -539,13 +551,29 @@ function toRosterRow(r) {
     version: r.version,
     hasPaymentRows: r.has_payment_rows === true,
     money,
+    // 0025: a make-up from an earlier cycle (no plan, no fee) and whether real grades exist
+    // (Delete permanently is grayed then, v0.950)
+    ...makeupFields(r),
+  };
+}
+
+// The four keys 0025 adds to every roster row and to the detail's candidate (contract 0025 §6.5).
+// A make-up row has no plan (planId / planName null): the screens show "No fee".
+function makeupFields(r) {
+  return {
+    isMakeup: r.is_makeup === true,
+    makeupOfCycleName: orNull(r.makeup_of_cycle_name),
+    retestNames: Array.isArray(r.retest_names) ? r.retest_names.filter((x) => typeof x === 'string') : [],
+    hasGrades: r.has_grades === true,
   };
 }
 
 // bb_candidate_detail's candidate object → CandidateDetail (every key of the SQL object, in
 // camelCase; DOB, email and age are null once the keeping time has passed).
 function toCandidateDetail(c) {
-  if (!c || !isText(c.id) || !isInt(c.version) || !c.plan || typeof c.plan !== 'object') return null;
+  // plan is null for a make-up row (0025: no plan, no fee); every other row has one
+  const makeup = c?.is_makeup === true;
+  if (!c || !isText(c.id) || !isInt(c.version) || (!makeup && (!c.plan || typeof c.plan !== 'object'))) return null;
   return {
     id: c.id,
     cycleId: c.cycle_id,
@@ -576,7 +604,8 @@ function toCandidateDetail(c) {
     updatedByName: c.updated_by_name,
     ageOnFirstDay: orNull(c.age_on_first_day),
     under18OnFirstDay: orNull(c.under_18_on_first_day),
-    plan: { name: c.plan.name ?? null, paymentsCount: c.plan.payments_count ?? null },
+    plan: c.plan && typeof c.plan === 'object' ? { name: c.plan.name ?? null, paymentsCount: c.plan.payments_count ?? null } : null,
+    ...makeupFields(c),
   };
 }
 
@@ -729,10 +758,20 @@ export async function addCandidate({ cycleId, first, last, dateOfBirth, email, l
 
 // Edit details. A candidate whose personal details were deleted after the keeping time sends
 // dateOfBirth: null, email: null (they can't come back). A Dan change after a payment: admins.
-// → { status:'ok', version, needsParentSignature } · 'not_allowed' · 'stale' · 'invalid' ·
-//   'not_found' · 'no_access' · 'error'
+// → { status:'ok', version, needsParentSignature } · 'not_allowed' · 'stale' · 'invalid' (also a
+//   Dan change of a make-up row) · 'not_found' · 'no_access' · 'error'
+//   0025: a Dan change while the old Dan has grades → 'has_grades' + gradeCount, countCount,
+//   chosenCount and NOTHING is saved (show the Dan-change dialog, then updateCandidateClear);
+//   'already_added' (a make-up of this candidate is on a later cycle — Undo it first, OI-4).
 export async function updateCandidate({ candidateId, expectedVersion, first, last, dateOfBirth, email, locationCode, dan } = {}) {
-  return callRpc('bb_update_candidate', {
+  return callRpc('bb_update_candidate', candidateArgs({ candidateId, expectedVersion, first, last, dateOfBirth, email, locationCode, dan }),
+    (d) => (isInt(d.version) && isBool(d.needs_parent_signature) ? { version: d.version, needsParentSignature: d.needs_parent_signature } : null),
+    hasGradesCounts);
+}
+
+// Edit details' eight arguments (bb_update_candidate and bb_update_candidate_clear share them).
+function candidateArgs({ candidateId, expectedVersion, first, last, dateOfBirth, email, locationCode, dan }) {
+  return {
     p_candidate_id: candidateId ?? null,
     p_expected_version: expectedVersion ?? null,
     p_first: first ?? null,
@@ -741,10 +780,41 @@ export async function updateCandidate({ candidateId, expectedVersion, first, las
     p_email: email || null, // '' → none, so a purged candidate's empty field is sent as null
     p_location_code: locationCode ?? null,
     p_dan: dan ?? null,
-  }, (d) => (isInt(d.version) && isBool(d.needs_parent_signature) ? { version: d.version, needsParentSignature: d.needs_parent_signature } : null));
+  };
+}
+
+// A 'has_grades' answer of a Dan change → its three counts (contract 0025 §6.4, DC 5).
+function hasGradesCounts(status, d) {
+  if (status !== 'has_grades') return null;
+  if (![d.grade_count, d.count_count, d.chosen_count].every(isInt)) return undefined;
+  return { gradeCount: d.grade_count, countCount: d.count_count, chosenCount: d.chosen_count };
+}
+
+// The confirmed Dan change (the Dan-change dialog's red button, v0.955): the same as Edit details,
+// plus the three counts the dialog showed. The old Dan's grades, counts and chosen subjects are
+// cleared in the same step (logged); kept make-up rows and sends stay.
+// → { status:'ok', version, needsParentSignature, cleared: { grades, counts, chosen } } ·
+//   'has_grades' + the NEW counts (someone graded meanwhile — ask again) · 'already_added' ·
+//   'not_allowed' · 'stale' · 'invalid' · 'not_found' · 'no_access' · 'error'
+export async function updateCandidateClear({
+  candidateId, expectedVersion, first, last, dateOfBirth, email, locationCode, dan, expectedGradeCount, expectedCountCount, expectedChosenCount,
+} = {}) {
+  return callRpc('bb_update_candidate_clear', {
+    ...candidateArgs({ candidateId, expectedVersion, first, last, dateOfBirth, email, locationCode, dan }),
+    p_expected_grade_count: expectedGradeCount ?? null,
+    p_expected_count_count: expectedCountCount ?? null,
+    p_expected_chosen_count: expectedChosenCount ?? null,
+  }, (d) => (isInt(d.version) && isBool(d.needs_parent_signature) && d.cleared && typeof d.cleared === 'object'
+    ? {
+      version: d.version,
+      needsParentSignature: d.needs_parent_signature,
+      cleared: { grades: d.cleared.grades ?? 0, counts: d.cleared.counts ?? 0, chosen: d.cleared.chosen ?? 0 },
+    }
+    : null), hasGradesCounts);
 }
 
 // Change plan or Kukkiwon (staff before a payment; admins after). The same values write nothing.
+// (0025: a make-up row has no plan → 'invalid'; the screens don't offer Change plan there.)
 // → { status:'ok', version, money: Money } · 'withdrawn' · 'not_allowed' · 'stale' · 'invalid' ·
 //   'not_found' · 'no_access' · 'error'
 export async function changePlan({ candidateId, expectedVersion, planId, kukkiwon } = {}) {
@@ -776,15 +846,17 @@ export async function withdrawCandidate({ candidateId, expectedVersion } = {}) {
 
 // Restore (admins; or staff within 10 seconds of their own "Keep this one" — the toast's Undo).
 // → { status:'ok', version } · 'stale' (not withdrawn, or the version) · 'not_allowed' ·
+//   'already_added' (0025: a make-up whose earlier candidate already has another active make-up) ·
 //   'not_found' · 'invalid' · 'no_access' · 'error'
 export async function restoreCandidate({ candidateId, expectedVersion } = {}) {
   return callRpc('bb_restore_candidate', { p_candidate_id: candidateId ?? null, p_expected_version: expectedVersion ?? null },
     (d) => (isInt(d.version) ? { version: d.version } : null));
 }
 
-// Delete permanently (admins): refused once the candidate has ANY payment row (even an undone one).
-// → { status:'ok' } · 'has_payments' · 'stale' · 'not_found' · 'invalid' · 'not_allowed' ·
-//   'no_access' · 'error'
+// Delete permanently (admins): refused once the candidate has ANY payment row (even an undone one),
+// and (0025, Q-G3) once they have real grades — "Withdraw them instead". Also the Undo of Add make-up.
+// → { status:'ok' } · 'has_payments' · 'has_grades' · 'stale' · 'not_found' · 'invalid' ·
+//   'not_allowed' · 'no_access' · 'error'
 export async function deleteCandidate({ candidateId, expectedVersion } = {}) {
   return callRpc('bb_delete_candidate', { p_candidate_id: candidateId ?? null, p_expected_version: expectedVersion ?? null }, () => ({}));
 }
@@ -867,4 +939,144 @@ export async function recordRefund({ candidateId, expectedVersion, amountCents, 
 //   'not_allowed' · 'no_access' · 'error'
 export async function markCheckReturned({ paymentId, note = null } = {}) {
   return callRpc('bb_mark_check_returned', { p_payment_id: paymentId ?? null, p_note: tidyNote(note) }, paymentAnswer);
+}
+
+// =====================================================================================
+// ----- The rubric (migration 0024, contract 0024 §10.1) -----
+// =====================================================================================
+// The rubric is ONE JSON document (rubric.js describes it) in two places: the default on Rubric
+// and prices (bb_default_rubric.sheet) and each cycle's own copy (bb_cycles.requirements). The
+// document keeps its stored snake_case keys; only these functions' own fields are camelCase.
+// An admin saves ONE Dan at a time with the rev (revision number) they loaded; a newer save by
+// someone else answers 'stale' instead of overwriting. Saves and undos are admins only.
+
+const RUBRIC_COLUMNS = 'id, sheet, version, updated_at, updated_by_name';
+const CYCLE_RUBRIC_COLUMNS = 'id, name, requirements, first_opened_at, registration_open, created_at';
+const PROBLEM_KEYS = ['code', 'part', 'subject', 'way', 'bracket', 'item', 'step', 'path'];
+
+// Is this a v2 rubric document (outer shape only — the database checked every value)?
+const isRubric = (doc) => Boolean(doc) && typeof doc === 'object' && doc.schema_version === RUBRIC_SCHEMA_VERSION
+  && Array.isArray(doc.dans) && doc.dans.length === RUBRIC_DANS.length;
+
+// The database's problem list → the same objects with only the known keys (at most 100).
+function toProblems(list) {
+  if (!Array.isArray(list)) return [];
+  return list.filter((p) => p && typeof p.code === 'string').slice(0, 100)
+    .map((p) => Object.fromEntries(PROBLEM_KEYS.filter((k) => p[k] !== undefined && p[k] !== null).map((k) => [k, p[k]])));
+}
+
+// The refusals of a rubric save / undo that carry an extra field.
+function rubricRefusal(status, d) {
+  if (status === 'invalid') return { problems: toProblems(d.problems) }; // no list = a wrong argument
+  if (status === 'locked') return isText(d.first_opened_at) ? { firstOpenedAt: d.first_opened_at } : undefined;
+  // 0025 (Q-G1, OI-2 = B): grading started on this cycle — its copy is locked for good
+  if (status === 'has_grades') return { gradingStartedAt: orNull(d.grading_started_at) };
+  return null;
+}
+
+// A save's ok answer → { rev, savedAt, savedByName, changed, undoAvailable, previousRev }.
+// undoAvailable is true only when this save wrote an undo slot: show the toast's Undo only then.
+const saveAnswer = (d) => (isInt(d.rev) && isBool(d.changed)
+  ? {
+    rev: d.rev,
+    savedAt: orNull(d.saved_at),
+    savedByName: orNull(d.saved_by_name),
+    changed: d.changed,
+    undoAvailable: d.undo_available === true,
+    previousRev: isInt(d.previous_rev) ? d.previous_rev : null,
+  }
+  : null);
+// An undo's ok answer → { rev, savedAt, savedByName } (the previous version is back, with a new rev).
+const undoAnswer = (d) => (isInt(d.rev) ? { rev: d.rev, savedAt: orNull(d.saved_at), savedByName: orNull(d.saved_by_name) } : null);
+
+// Reads one table for the rubric screens together with the has_data_access check (a locked
+// sign-in gets an empty list, which must not look like "no rubric").
+async function selectWithAccess(table, columns, filter = null) {
+  if (!supabase) return { result: failure(new Error('No connection is set up')) };
+  let query = supabase.from(table).select(columns);
+  if (filter) query = query.eq(filter.col, filter.value);
+  const [res, denied] = await Promise.all([query, accessCheck()]);
+  if (denied) return { result: denied };
+  if (res?.error) return { result: failure(res.error) };
+  if (!Array.isArray(res?.data)) return { result: unexpected(table) };
+  return { rows: res.data };
+}
+
+// The default rubric (Rubric and prices; staff read it too, view only).
+// → { status:'ok', rubric, version, updatedAt, updatedByName } · 'no_access' · 'error'
+// "Last changed by" per Dan = rubric.dans[n].saved_by_name / saved_at (null = never saved: hide it).
+export async function loadDefaultRubric() {
+  try {
+    const { result, rows } = await selectWithAccess('bb_default_rubric', RUBRIC_COLUMNS);
+    if (result) return result;
+    const row = rows[0];
+    if (!row || !isRubric(row.sheet) || !isInt(row.version)) return unexpected('bb_default_rubric');
+    return { status: 'ok', rubric: row.sheet, version: row.version, updatedAt: row.updated_at, updatedByName: row.updated_by_name };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+// One cycle's own copy of the rubric (the cycle page's Rubric tab).
+// → { status:'ok', rubric, locked, firstOpenedAt, registrationOpen, createdAt, name } · 'not_found' ·
+//   'no_access' · 'error'
+// locked = registration has opened once (first_opened_at set): the copy can't change any more.
+export async function loadCycleRubric({ cycleId } = {}) {
+  try {
+    if (!isText(cycleId)) return failure(new Error('No cycle id'));
+    const { result, rows } = await selectWithAccess('bb_cycles', CYCLE_RUBRIC_COLUMNS, { col: 'id', value: cycleId });
+    if (result) return result;
+    if (rows.length === 0) return { status: 'not_found' };
+    const row = rows[0];
+    if (!isRubric(row.requirements)) return unexpected('bb_cycles.requirements');
+    const firstOpenedAt = orNull(row.first_opened_at);
+    return {
+      status: 'ok',
+      rubric: row.requirements,
+      locked: firstOpenedAt !== null,
+      firstOpenedAt,
+      registrationOpen: row.registration_open === true,
+      createdAt: row.created_at,
+      name: row.name,
+    };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+// Save one Dan of the default rubric (admins). sheet = the whole Dan object as edited (it is
+// tidied here first — names and texts normalized, worked-out points recomputed — the same
+// tidying the editor shows). Its rev / saved_at / saved_by_name are replaced by the database.
+// → { status:'ok', rev, savedAt, savedByName, changed, undoAvailable, previousRev } ·
+//   'invalid' + problems (rubric.js danProblems codes; [] = a wrong argument) · 'stale' (another
+//   admin saved this Dan since it was loaded) · 'not_allowed' · 'no_access' · 'error'
+// changed false = the same content as saved (nothing written; undoAvailable false, previousRev null).
+export async function saveDefaultDan({ dan, expectedRev, sheet } = {}) {
+  return callRpc('bb_save_default_dan', { p_dan: dan ?? null, p_expected_rev: expectedRev ?? null, p_sheet: normalizeDan(sheet) ?? null },
+    saveAnswer, rubricRefusal);
+}
+
+// Undo of the last save of one default Dan (the admin who saved, within 15 seconds): the previous
+// version comes back as one more history entry (a new rev).
+// → { status:'ok', rev, savedAt, savedByName } · 'stale' (too late, or someone saved since) ·
+//   'invalid' · 'not_allowed' · 'no_access' · 'error'
+export async function undoDefaultDan({ dan, expectedRev } = {}) {
+  return callRpc('bb_undo_default_dan', { p_dan: dan ?? null, p_expected_rev: expectedRev ?? null }, undoAnswer, rubricRefusal);
+}
+
+// Save one Dan of a cycle's own copy (admins; only while the cycle has never been opened).
+// → as saveDefaultDan, plus 'locked' + firstOpenedAt (registration opened since — reload into
+//   the locked view), 'has_grades' + gradingStartedAt (0025: grading started — locked for good)
+//   and 'not_found'.
+export async function saveCycleDan({ cycleId, dan, expectedRev, sheet } = {}) {
+  return callRpc('bb_save_cycle_dan', {
+    p_cycle_id: cycleId ?? null, p_dan: dan ?? null, p_expected_rev: expectedRev ?? null, p_sheet: normalizeDan(sheet) ?? null,
+  }, saveAnswer, rubricRefusal);
+}
+
+// Undo of the last save of one Dan of a cycle's copy.
+// → as undoDefaultDan, plus 'locked' + firstOpenedAt, 'has_grades' + gradingStartedAt and 'not_found'.
+export async function undoCycleDan({ cycleId, dan, expectedRev } = {}) {
+  return callRpc('bb_undo_cycle_dan', { p_cycle_id: cycleId ?? null, p_dan: dan ?? null, p_expected_rev: expectedRev ?? null },
+    undoAnswer, rubricRefusal);
 }

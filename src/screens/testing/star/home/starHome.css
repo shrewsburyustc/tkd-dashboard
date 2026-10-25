@@ -1,0 +1,116 @@
+/*
+  starHome.css — the look of Star's "Today" cards on Home (Star build phase 7, rulebook v0.515).
+  Why it exists: copied from the approved drawings (TKD-StarTesting-Home-Mockups.html v0.155, the
+  Phase 7 gap mockups' .hsec and .hcard). Loaded only with the cards (StarHomeToday.jsx), so the
+  live build's CSS is unchanged while the Star testing switch is off.
+    PC (mouse)            button 28px, at the right of the text
+    Touch (pointer:coarse) button 36px; app.css's .btn::after makes the tap area 44px tall
+    Phone (< 640px) and 320px  the button drops under the text, lined up with it
+*/
+
+/* The section: below the welcome header (or Finance's amber lines, which keep their own 16px gap) */
+.sth-today {
+  margin-top: 20px; /* as the approved drawing (no 20px token) */
+}
+
+.fin-home-lines + .sth-today {
+  margin-top: 0; /* Finance's lines already leave 16px under themselves */
+}
+
+/* "TODAY" — small gray capitals (proposal 2) */
+.sth-heading {
+  margin: 0 0 var(--space-8);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sth-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One card, at most 720px wide (proposal 1). Not a link: only the button acts. */
+.sth-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 720px;
+  padding: 14px var(--space-16);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+}
+
+/* The star in a blue-tint square */
+.sth-icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-control);
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+}
+
+.sth-text {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow-wrap: anywhere; /* a long event name wraps, never cut off (320px check) */
+}
+
+.sth-title {
+  margin: 0;
+  font-weight: 500;
+}
+
+.sth-line {
+  margin: 2px 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* A small outline button: 28px with a mouse */
+.sth-btn {
+  flex: none;
+  height: 28px;
+  margin-left: auto;
+  padding: 0 var(--space-12);
+}
+
+/* Touch: 36px tall; the 44px tap area comes from app.css (.btn::after) */
+@media (pointer: coarse) {
+  .sth-btn {
+    height: var(--control-height-touch);
+  }
+}
+
+/* Phone and 320px: the button goes under the text, lined up with it (36px icon + 14px gap = 50px) */
+@media (max-width: 639.98px) {
+  .sth-card {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .sth-text {
+    flex-basis: calc(100% - 50px);
+  }
+
+  .sth-btn {
+    margin-left: 50px;
+  }
+}
+
+@media (max-width: 359.98px) {
+  .sth-card {
+    padding: var(--space-12);
+  }
+}

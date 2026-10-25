@@ -1,0 +1,57 @@
+{
+  "title": "Open detail D10b · Red “Remove” in the Calendar and Schedule",
+  "subtitle": "<b>Found by the rulebook-rows review; for the new-students prompt and §7's wording.</b> The Calendar's <b>Remove</b> (an event or a closure) and the Schedule's <b>Remove</b> (a time slot) are red, act at once and offer a <b>5-second Undo</b> (v0.233, v0.234) — after that the item is gone: <b>there is no Removed list to bring it back from</b>. Item 7 made red mean “gone for good” and kept <b>Withdraw</b> plain <b>because Restore brings the person back later</b>. The rows' new §7 sentence (“never Withdraw or other reversible removals”) reads as if these three turn plain — the question is which way to word it. Red that isn't in question (it asks first, nothing comes back): deleting an event type, a planned schedule, a prospect. <span style=\"color:#6B6B6B\">(Preview screenshots · PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today (also option A)",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "../Walkthrough/shots/d10b-calendar-event.png",
+              "crop": [420, 380, 440, 334],
+              "scale": 1.0,
+              "caption": "<b>1. Calendar → Edit event:</b> red Remove — instant, with a 5-second Undo; then the event is gone.",
+              "marks": [[440, 654, 112, 40]]
+            },
+            {
+              "src": "../Walkthrough/shots/d10b-schedule-slot.png",
+              "crop": [420, 360, 440, 293],
+              "scale": 1.0,
+              "caption": "<b>2. Schedule → Edit time slot:</b> the same red Remove.",
+              "marks": [[440, 593, 112, 40]]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Option B, drawn",
+      "tone": "after",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "../Walkthrough/shots/d10b-calendar-event-B-MOCKUP.png",
+              "crop": [420, 380, 440, 334],
+              "scale": 1.0,
+              "caption": "<b>3. Option B, Calendar:</b> Remove in the plain outline look, because it can be undone for 5 seconds.",
+              "marks": [[440, 654, 112, 40]]
+            },
+            {
+              "src": "../Walkthrough/shots/d10b-schedule-slot-B-MOCKUP.png",
+              "crop": [420, 360, 440, 293],
+              "scale": 1.0,
+              "caption": "<b>4. Option B, Schedule:</b> the same.",
+              "marks": [[440, 593, 112, 40]]
+            }
+          ]
+        }
+      ],
+      "note": "Pictures 3–4 are drawn over the real dialogs (only the Remove button's colour); nothing in the app was changed. Side finding, not part of this question: Forms' builder “Delete field” is red, acts at once and has no Undo — rule 1.4 says something that can't be undone asks first; it goes to phase 3."
+    }
+  ],
+  "footer": "<b>Your choice — one question: what does “gone for good” mean for these three Remove buttons?</b><br><b>A · Recommended: keep them red, and §7 says what “gone for good” means:</b> there is nothing to bring it back from later — the 5-second Undo is a safety net, not a way back. Withdraw stays plain because Restore brings the person back. <i>+</i> nothing changes on screen; red keeps warning where something really disappears. <i>−</i> two kinds of undo to tell apart (5 seconds vs Restore).<br><b>B · Plain, because they can be undone (pictures 3–4).</b> <i>+</i> the simplest rule: Undo means no red. <i>−</i> removing an event, a closure or a class time looks harmless, though after 5 seconds it is gone for good; the trash icon still says “delete”.<br><b>C · Red, and they ask first, like Delete permanently.</b> <i>+</i> “red always asks first” everywhere. <i>−</i> an extra step on a common admin task; the instant Undo goes (changes v0.233 / v0.234)."
+}

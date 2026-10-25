@@ -1,0 +1,61 @@
+{
+  "title": "Open detail D4 · Black Belt's “Rubric and prices” tab has no prices",
+  "subtitle": "<b>A side finding from item 15d; for Black Belt's prompt.</b> Item 15d's rule: a section's own settings stay in a <b>tab named for what's in it</b>. Black Belt's prices moved to each cycle (v0.902), so its “Rubric and prices” tab now holds the <b>waiver</b>, how long signed waivers are kept, and the <b>default rubric</b> — and its first line says “Prices are set on each cycle.” The Black Belt branch adds a fourth block there, the <b>result emails</b> (migration 0025, not merged yet), and keeps the name. Star's tab (picture 2) really holds its prices (“Fees”), next to its rubrics, grade scale, assistant-class table and result emails. <span style=\"color:#6B6B6B\">(Preview screenshots · PC size, picture 5 a 320 px phone · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "src": "../Walkthrough/shots/d4-bb-rubric-tab.png",
+          "crop": [68, 96, 640, 200],
+          "scale": 1.2,
+          "caption": "<b>1. Black Belt testing → “Rubric and prices”:</b> the first line says “Prices are set on each cycle.”; below it the waiver, the keeping rule and the default rubric.",
+          "marks": [[130, 162, 114, 44], [72, 219, 300, 22]]
+        },
+        {
+          "src": "../Walkthrough/shots/d4-star-rubrics-tab.png",
+          "crop": [68, 92, 640, 190],
+          "scale": 1.2,
+          "caption": "<b>2. For comparison — Star testing → “Rubrics and prices”:</b> rubrics per Dan, grade scale, assistant-class table, <b>Fees</b> and result emails; the name says its two biggest things.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "label": "Options B and C, drawn",
+      "tone": "after",
+      "items": [
+        {
+          "src": "../Walkthrough/shots/d4-bb-rubric-tab-B-MOCKUP.png",
+          "crop": [68, 96, 640, 200],
+          "scale": 1.2,
+          "caption": "<b>3. Option B (recommended): “Rubric and waiver”</b> — its two biggest things, rubric first like Star's; the result emails sit with them, as Star's do. The first line keeps “Prices are set on each cycle.”",
+          "marks": [[130, 162, 124, 44]]
+        },
+        {
+          "row": [
+            {
+              "src": "../Walkthrough/shots/d4-bb-rubric-tab-C-MOCKUP.png",
+              "crop": [68, 96, 640, 200],
+              "scale": 1.0,
+              "caption": "<b>4. Option C: “Rubric, waiver and emails”</b> — everything it will hold once the result emails merge.",
+              "marks": [[130, 162, 162, 44]]
+            },
+            {
+              "src": "../Walkthrough/shots/d4-bb-rubric-tab-C-320-MOCKUP.png",
+              "crop": [0, 110, 320, 180],
+              "scale": 1.0,
+              "shotWidth": 320,
+              "caption": "<b>5. C on a 320 px phone:</b> still fits beside “Cycles”.",
+              "marks": [[70, 188, 164, 46]]
+            }
+          ]
+        }
+      ],
+      "note": "Pictures 3–5 change only the tab's words, drawn over the real page; nothing in the app was changed. The waiver's placeholder text (seeded by migration 0016) mentions “Rubric and prices”; it is replaced by the school's waiver before registration opens."
+    }
+  ],
+  "footer": "<b>Your choice — one question: what should Black Belt's settings tab be called?</b><br><b>A · Keep “Rubric and prices”.</b> <i>+</i> no work; the first line says where prices went. <i>−</i> the name points to prices that aren't there, against item 15d's rule; an admin looking for prices opens the wrong tab first.<br><b>B · Recommended: “Rubric and waiver” (picture 3).</b> <i>+</i> names its two biggest things, like Star's tab; short. <i>−</i> the result emails (and the keeping rule) aren't in the name — as with Star's.<br><b>C · “Rubric, waiver and emails” (pictures 4–5).</b> <i>+</i> names everything it will hold. <i>−</i> longer, and the name changes again if a block is added; Star's tab doesn't name its result emails either."
+}

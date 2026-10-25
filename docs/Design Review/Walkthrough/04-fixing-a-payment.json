@@ -1,0 +1,89 @@
+{
+  "title": "Item 4 · Fixing a payment — undo and edit",
+  "subtitle": "<b>A mix.</b> Star and Black Belt <b>ask first</b> before undoing a payment — approved (Star v0.508; Black Belt v0.912, because the database refuses to undo an undo, so an undone payment can't be brought back). Color Belt and Camps <b>undo at once with no question and no Undo</b> — nobody decided that (<i>drift</i>), and it breaks rule 1.4 either way. After <b>Edit payment</b>, only Black Belt offers Undo. <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data · admins only: staff can't undo or edit payments)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/04a-colorbelt-menu-undo.png",
+              "crop": [840, 500, 420, 290],
+              "scale": 1.0,
+              "caption": "<b>1. Color Belt:</b> ⋯ → Undo payment…",
+              "marks": [[1048, 667, 198, 32]]
+            },
+            {
+              "src": "shots/04b-colorbelt-undone-at-once.png",
+              "crop": [840, 500, 420, 300],
+              "scale": 1.0,
+              "caption": "<b>2.</b> …happens at once: no question, and the toast has no Undo. Ava is back to Not paid. Camps works the same way.",
+              "marks": [[1050, 734, 206, 46]]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/04c-star-undo-asks.png",
+              "crop": [460, 80, 360, 183],
+              "scale": 1.0,
+              "caption": "<b>3. Star asks first:</b> “Keep payment” / “Undo payment”.",
+              "marks": [[484, 207, 312, 34]]
+            },
+            {
+              "src": "shots/04d-blackbelt-undo-asks.png",
+              "crop": [460, 80, 360, 187],
+              "scale": 1.0,
+              "caption": "<b>4. Black Belt asks too</b>, in other words: “Cancel” / “Undo payment” (and its title mixes “payment 1 + Payment 2”).",
+              "marks": [[484, 211, 312, 34]]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/04e-colorbelt-edit-toast.png",
+              "crop": [960, 720, 300, 70],
+              "scale": 1.0,
+              "caption": "<b>5.</b> After Edit payment, Color Belt, Star and Camps say “Payment saved” — no Undo.",
+              "marks": [[1146, 741, 110, 36]]
+            },
+            {
+              "src": "shots/04f-blackbelt-edit-toast.png",
+              "crop": [960, 720, 300, 70],
+              "scale": 1.0,
+              "caption": "<b>6.</b> Black Belt says “Payment changed” <b>with Undo</b>.",
+              "marks": [[1060, 736, 196, 40]]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Proposed (option B) · one rule, copied from Star and Black Belt",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/04g-colorbelt-undo-asks-MOCKUP.png",
+          "crop": [460, 80, 360, 183],
+          "scale": 1.0,
+          "caption": "<b>7.</b> Color Belt and Camps ask before undoing, like Star: what comes off, and that it stays in the history. (Which button words — “Keep payment” or “Cancel” — is item 8.)",
+          "marks": [[484, 207, 312, 34]]
+        },
+        {
+          "src": "shots/04f-blackbelt-edit-toast.png",
+          "crop": [960, 720, 300, 70],
+          "scale": 1.0,
+          "caption": "<b>8.</b> Every Edit payment ends like Black Belt's: “Payment changed” + <b>Undo</b>.",
+          "marks": [[1060, 736, 196, 40]]
+        }
+      ],
+      "note": "<b>Not part of this question — stays as approved:</b> refunds (Color Belt has none because fees aren't refundable, v0.132; Camps uses Edit payment, v0.700; Star and Black Belt have “Record refund”). Black Belt's Edit payment also asks a “Reason for the change”; the others don't — that can come up later. Picture 7 is drawn over Color Belt's real confirm box; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> the same admin action behaves two ways; Color Belt and Camps undo money with neither a question nor an Undo (nobody chose this; rule 1.4 asks for one or the other).<br><b>B · Recommended: one rule everywhere, copied from Star and Black Belt.</b> Undo payment always asks first (it can't be brought back — rule 1.4: not reversible → confirm), and Edit payment always ends with “Payment changed” + Undo (rule 1.4: edit → Undo). <i>+</i> the same everywhere, follows the rulebook, reuses approved designs. <i>−</i> one more tap when an admin undoes a payment in Color Belt or Camps.<br><b>C · The other way round:</b> undo at once everywhere, and let the toast's Undo record the payment again. <i>+</i> fastest. <i>−</i> you rejected exactly this for Black Belt (v0.912): it adds extra lines and moves the payment's date to today on the Daily report; Star and Black Belt would lose the question you approved."
+}

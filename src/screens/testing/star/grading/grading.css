@@ -177,6 +177,17 @@
   font-size: var(--text-12);
 }
 
+/* Phase 6 (proposal 29): the row Results' Open grades marked — a gray tint with a dark bar at the
+   left, not blue (the Grading screen already has its five blue elements). */
+.stg-row-marked > th,
+.stg-row-marked > td {
+  background: var(--color-surface);
+}
+
+.stg-row-marked > .stg-name {
+  box-shadow: inset 4px 0 0 var(--color-text);
+}
+
 /* "Knowledge: Changed on another device — your grade wasn't saved." (proposal 4) */
 .stg-cellnote {
   margin: 0;

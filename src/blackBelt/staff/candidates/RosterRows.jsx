@@ -15,6 +15,10 @@
 // One tag per row (§8): "⚠ Possible duplicate" (amber; opens the compare) outranks the money tag.
 // Withdrawn candidates sit in a collapsed "Removed (N)" group at the bottom, with a gray Removed /
 // Duplicate copy tag and their balance (Star v0.113, OP-B10).
+// A make-up from an earlier cycle (contract 0025 §14.5, mockup G06, proposal 27): Plan "No fee",
+// the gray "Make-up" tag in Payments, Balance "—", no Record payment, and a gray second line under
+// the name, "Make-up from Spring 2027 · retests Free sparring" (in place of "Registered Sep 14").
+// A row added a moment ago glows pale amber for a moment (ctx.flashId, G06's "after Add").
 // Keyboard (useRowArrowNav): the list is one Tab stop, ↑ ↓ move between rows, Enter opens one,
 // ← → reach the row's buttons.
 import { Fragment } from 'react';
@@ -45,6 +49,8 @@ export function RowTag({ row, onReview }) {
       </button>
     );
   }
+  // A make-up has no fee: always the gray "Make-up" tag (Star v0.116's default tag color)
+  if (row.isMakeup) return <span className="ttag">{T.TAG_MAKEUP}</span>;
   return <MoneyTag money={row.money} />;
 }
 
@@ -57,17 +63,22 @@ export function MoneyTag({ money }) {
 }
 
 function Balance({ row }) {
+  if (row.isMakeup) return <span className="bb-balance">{T.BALANCE_NONE}</span>;
   const over = row.money?.overpaidCents > 0;
   return <span className={`bb-balance${over ? ' is-over' : ''}`}>{T.balanceText(row.money)}</span>;
 }
 
-// One candidate. ctx = { layout, nav, hidden, busy, menuFor, onOpen, onMore, onRecord, onReview }
+// One candidate. ctx = { layout, nav, hidden, busy, menuFor, flashId, onOpen, onMore, onRecord, onReview }
 function CandidateRow({ row, ctx }) {
   const { layout, nav, hidden } = ctx;
   const name = T.candidateName(row);
   const removed = row.status === 'withdrawn';
   const open = ctx.menuFor === row.id;
-  const showRecord = !hidden && !removed && layout.isWide && (row.money?.balanceCents ?? 0) > 0;
+  const makeup = row.isMakeup === true;
+  const showRecord = !hidden && !removed && !makeup && layout.isWide && (row.money?.balanceCents ?? 0) > 0;
+  const plan = makeup ? T.PLAN_NO_FEE : T.planCell(row.planName, row.kukkiwon);
+  // The make-up's gray line (G 27)
+  const makeupText = makeup ? <span className="bb-cline bb-makeup-line">{T.makeupLine(row.makeupOfCycleName, row.retestNames)}</span> : null;
   const RecordIcon = ICONS.recordPayment;
 
   const record = showRecord ? (
@@ -104,7 +115,7 @@ function CandidateRow({ row, ctx }) {
   );
   const tag = hidden && row.duplicateState !== 'possible' && !removed ? null : <RowTag row={row} onReview={removed ? null : ctx.onReview} />;
   const rowProps = {
-    className: `ev-srow bb-crow${removed ? ' is-removed' : ''}${open ? ' is-selected' : ''}${layout.isPhone ? ' is-phone' : ''}`,
+    className: `ev-srow bb-crow${removed ? ' is-removed' : ''}${open ? ' is-selected' : ''}${layout.isPhone ? ' is-phone' : ''}${ctx.flashId === row.id ? ' is-flash' : ''}`,
     role: 'row',
     'aria-label': name,
     ...nav.rowProps(row.id),
@@ -116,7 +127,8 @@ function CandidateRow({ row, ctx }) {
       <div {...rowProps}>
         <span className="ev-srow-main" role="cell">
           <span className="ev-sname">{name}</span>
-          <span className="bb-cline">{T.phoneSubline(row)}</span>
+          {makeupText}
+          <span className="bb-cline">{makeup ? `${T.danSchool(row.dan, row.locationCode)} · ${T.PLAN_NO_FEE}` : T.phoneSubline(row)}</span>
           {(tag || !hidden) && (
             <span className="ev-sline-tag bb-ctagline">
               {tag}
@@ -133,9 +145,16 @@ function CandidateRow({ row, ctx }) {
 
   return (
     <div {...rowProps}>
-      <span className="ev-scell ev-sname-line" role="cell">
+      <span className={`ev-scell ev-sname-line${makeup ? ' bb-makeup-name' : ''}`} role="cell">
         <span className="ev-sname">{name}</span>
-        {layout.isWide ? <span className="ev-ssub">{T.registeredOnShort(row.registeredOn)}</span> : <span className="bb-cline bb-cline--under">{T.danSchool(row.dan, row.locationCode)}</span>}
+        {layout.isWide ? (
+          makeup ? makeupText : <span className="ev-ssub">{T.registeredOnShort(row.registeredOn)}</span>
+        ) : (
+          <>
+            {makeupText}
+            <span className="bb-cline bb-cline--under">{T.danSchool(row.dan, row.locationCode)}</span>
+          </>
+        )}
       </span>
       {layout.isWide && (
         <>
@@ -148,7 +167,7 @@ function CandidateRow({ row, ctx }) {
         </>
       )}
       <span className="ev-scell" role="cell">
-        {T.planCell(row.planName, row.kukkiwon)}
+        {plan}
       </span>
       {!hidden && (
         <>

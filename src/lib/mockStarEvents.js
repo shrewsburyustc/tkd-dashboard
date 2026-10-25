@@ -412,10 +412,15 @@ export function createStarEventsBackend({
       if (a.p_auto_close_on !== null && a.p_auto_close_on > a.p_testing_date) return st('invalid');
       const name = normalizeName(a.p_name);
       if (db.events.some((e) => e.id !== event.id && sameName(e.name, name))) return st('duplicate_name');
+      // M5 (migration 0023, v0.504): would these dates make registration open again BY THEMSELVES?
+      // (not open before, open after) → the same save also turns the switch to Closed: one write,
+      // one version step. The app's follow-up star_set_registration(false) then writes nothing.
+      const keepClosed = eventState(event, t) !== 'open'
+        && eventState({ ...event, testing_date: a.p_testing_date, auto_close_on: a.p_auto_close_on }, t) === 'open';
       // The event's copy is never touched. The Registration switch is not an argument (§11 item 7).
       updateEvent(event, {
         name, testing_date: a.p_testing_date, start_time: a.p_start_time, where_code: a.p_where_code,
-        auto_close_on: a.p_auto_close_on, note,
+        auto_close_on: a.p_auto_close_on, note, ...(keepClosed ? { registration_open: false } : {}),
       }, ctx);
       return { status: 'ok', version: event.version };
     },
@@ -587,11 +592,12 @@ export function createStarEventsBackend({
     failNext = true;
   }
 
-  // "Another admin" changes every event and candidate: open dialogs, menus and Undo go stale.
+  // "Another admin" changes every event and candidate — and the three result email texts (phase 6,
+  // R11; the same store): open dialogs, menus and Undo go stale.
   function simulateOtherAdminEdit() {
     const db = read();
     const at = stamp();
-    for (const row of [...db.events, ...db.candidates]) {
+    for (const row of [...db.events, ...db.candidates, ...(Array.isArray(db.result_texts) ? db.result_texts : [])]) {
       row.version += 1;
       row.updated_by_name = 'Other Admin';
       row.updated_at = at;

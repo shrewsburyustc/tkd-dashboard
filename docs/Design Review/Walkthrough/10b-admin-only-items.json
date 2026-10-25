@@ -1,0 +1,74 @@
+{
+  "title": "Item 10b · Admin-only items in the ⋯ menu",
+  "subtitle": "<b>Approved in each section, and almost the same already.</b> Every section hides what staff can never do — staff simply don't see those items (Star v0.110, Black Belt v0.210, Camps v0.700). The one difference: Camps also shows admins a gray <b>“Admin” heading</b> above those items (approved, v0.713). With item 10a's order that heading can't stay as it is: the admin-only items now sit in two different groups (money, and taking someone off). <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today · admin, then staff",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/10m-camps-menu-admin-heading.png",
+              "crop": [1040, 407, 216, 227],
+              "scale": 1.2,
+              "caption": "<b>1. Camps, as an admin:</b> a gray “Admin” heading over the items staff can't use.",
+              "marks": [[1049, 493, 196, 32]]
+            },
+            {
+              "src": "shots/10n-camps-menu-staff.png",
+              "crop": [1040, 407, 216, 90],
+              "scale": 1.2,
+              "caption": "<b>2. The same camper as staff:</b> those items simply aren't there — and neither is the heading."
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/10o-colorbelt-menu-staff.png",
+              "crop": [1040, 696, 216, 90],
+              "scale": 1.2,
+              "caption": "<b>3. Color Belt as staff:</b> the same rule (Star too); admins see no heading here."
+            },
+            {
+              "src": "shots/10p-blackbelt-menu-staff.png",
+              "crop": [1040, 439, 216, 153],
+              "scale": 1.2,
+              "caption": "<b>4. Black Belt as staff:</b> what staff can do, but not right now, is grayed with its reason: “$330 is already paid. Ask an admin.”",
+              "marks": [[1049, 484, 196, 63]]
+            }
+          ]
+        }
+      ],
+      "note": "Not part of this question: the account menu's “Admin” group (Staff accounts and the other admin pages). It lists pages, not actions on a person, and staff never see it (v0.70)."
+    },
+    {
+      "label": "Options B and C · Camps as an admin, in 10a's order",
+      "tone": "after",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/10q-camps-menu-no-heading-MOCKUP.png",
+              "crop": [1040, 407, 216, 236],
+              "scale": 1.2,
+              "caption": "<b>5. B · recommended:</b> no heading. Admins see the whole menu in 10a's order; staff see only what they can do, as today.",
+              "marks": [[1047, 415, 200, 220]]
+            },
+            {
+              "src": "shots/10r-camps-menu-admin-tags-MOCKUP.png",
+              "crop": [996, 407, 260, 236],
+              "scale": 1.2,
+              "caption": "<b>6. C:</b> a small “Admin” tag on each line staff can't use. The menu has to get wider.",
+              "marks": [[1185, 465, 50, 24], [1185, 497, 50, 24], [1185, 602, 50, 24]]
+            }
+          ]
+        }
+      ],
+      "note": "<b>The rule in B — the same in every menu:</b> staff don't see what they can never do (how every section works today); what they can do but not right now stays grayed, with a gray “Ask an admin” reason line (Black Belt's picture 4, and “Open registration” after the closing date; item 5). Admins see the whole menu in item 10a's order. Pictures 5–6 are drawn over the real menu; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question:</b><br><b>A · Keep Camps' “Admin” heading.</b> <i>+</i> admins see at a glance what the desk can't do. <i>−</i> it only works if Camps keeps its admin items together, which breaks item 10a's order in Camps; no other section has it.<br><b>B · Recommended: no heading anywhere — one rule (picture 5).</b> Staff don't see what they can never do; what they can do but not right now is grayed with an “Ask an admin” reason; admins see the whole menu in 10a's order. <i>+</i> one simple rule, already how every section works apart from Camps' heading; the Grandmaster's menu stays clean. <i>−</i> admins can't see at a glance which items the desk doesn't have.<br><b>C · A small “Admin” tag on each admin-only line, everywhere (picture 6).</b> <i>+</i> keeps 10a's order and still shows admins what the desk can't do. <i>−</i> every admin menu gets busier and wider; a new pattern to build in every section."
+}

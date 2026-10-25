@@ -1,0 +1,159 @@
+{
+  "title": "Open detail D3 · Finance on Both: a school's total after refunds",
+  "subtitle": "<b>A side finding from item 15c; for Finance's prompt.</b> On Both, each school's box shows its total <b>after refunds</b>, but “Cash · Check · Card” are the money that came <b>in</b>, so on a refund day they add up to more than the total and nothing says why (picture 1: Shrewsbury $675.00, yet $560 + $280 + $280 = $1,120). A day with only refunds shows “−$190.00 · 0 payments” over three zeros (picture 2). “Both schools together” has the same gap. The one-school report already explains it: its Total card says “after $445.00 refunds” (approved v0.209, picture 4). The boxes can work the refunds out from their own numbers (cash + check + card − total), so no database change is needed. <span style=\"color:#6B6B6B\">(Preview screenshots · PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "src": "../Walkthrough/shots/d3-both-oct17.png",
+          "crop": [
+            668,
+            232,
+            592,
+            168
+          ],
+          "scale": 1.4,
+          "caption": "<b>1. Saturday, Oct 17, on Both — Shrewsbury's box:</b> $675.00, but Cash + Check + Card = $1,120: $445 of refunds came off, and nothing says so. (Worcester's box that day has no refunds and adds up: $235 + $86 = $321.)",
+          "marks": [
+            [
+              683,
+              280,
+              380,
+              60
+            ]
+          ]
+        },
+        {
+          "src": "../Walkthrough/shots/d3-both-oct22.png",
+          "crop": [
+            668,
+            232,
+            592,
+            168
+          ],
+          "scale": 1.4,
+          "caption": "<b>2. Thursday, Oct 22 — Shrewsbury had only refunds:</b> “−$190.00 · 0 payments” over three zeros.",
+          "marks": [
+            [
+              683,
+              280,
+              330,
+              60
+            ]
+          ]
+        },
+        {
+          "src": "../Walkthrough/shots/d3-both-oct22.png",
+          "crop": [
+            70,
+            400,
+            470,
+            30
+          ],
+          "scale": 1.4,
+          "caption": "<b>3. Under the boxes, Oct 22:</b> “Both schools together” is after refunds too, and doesn't say so (Worcester $225 − Shrewsbury's $190 refunds = $35).",
+          "marks": []
+        },
+        {
+          "src": "../Walkthrough/shots/d3-shrewsbury-oct17.png",
+          "crop": [
+            72,
+            232,
+            294,
+            88
+          ],
+          "scale": 1.4,
+          "caption": "<b>4. The model — Shrewsbury's own report, Oct 17:</b> the Total card says “after $445.00 refunds”; its Cash, Check and Card cards show the money in (v0.209).",
+          "marks": [
+            [
+              84,
+              292,
+              152,
+              22
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Options B and C, drawn",
+      "tone": "after",
+      "items": [
+        {
+          "src": "../Walkthrough/shots/d3-both-oct17-B-MOCKUP.png",
+          "crop": [
+            668,
+            232,
+            592,
+            168
+          ],
+          "scale": 1.4,
+          "caption": "<b>5. Option B (recommended):</b> the total gets the Total card's words — “8 payments · after $445.00 refunds”. A box with no refunds stays as it is.",
+          "marks": [
+            [
+              765,
+              284,
+              212,
+              28
+            ]
+          ]
+        },
+        {
+          "src": "../Walkthrough/shots/d3-both-oct22-B-MOCKUP.png",
+          "crop": [
+            668,
+            232,
+            592,
+            168
+          ],
+          "scale": 1.4,
+          "caption": "<b>6. B on the refunds-only day:</b> “−$190.00 · 0 payments · after $190.00 refunds”.",
+          "marks": [
+            [
+              775,
+              284,
+              194,
+              28
+            ]
+          ]
+        },
+        {
+          "src": "../Walkthrough/shots/d3-both-oct22-B-MOCKUP.png",
+          "crop": [
+            70,
+            400,
+            470,
+            30
+          ],
+          "scale": 1.4,
+          "caption": "<b>7. B (and C) under the boxes:</b> “Both schools together: $35.00 · 2 payments · after $190.00 refunds”.",
+          "marks": []
+        },
+        {
+          "src": "../Walkthrough/shots/d3-both-oct17-C-MOCKUP.png",
+          "crop": [
+            668,
+            232,
+            592,
+            168
+          ],
+          "scale": 1.4,
+          "caption": "<b>8. Option C:</b> the line adds up instead — “Cash $560.00 · Check $280.00 · Card $280.00 · Refunds −$445.00”.",
+          "marks": [
+            [
+              685,
+              311,
+              380,
+              28
+            ]
+          ]
+        }
+      ],
+      "note": "Pictures 5–8 are drawn over the real boxes; nothing in the app was changed. Money keeps Finance's cents ($675.00), as item 17a decided for its report."
+    }
+  ],
+  "footer": "<b>Your choice — one question: what should a school's box say on a day with refunds?</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> the numbers don't add up and nothing says why; a refunds-only day reads “−$190.00 · 0 payments” over zeros.<br><b>B · Recommended: the Total card's words (pictures 5–7).</b> “after $X refunds” next to the total, and on “Both schools together”. <i>+</i> the same words, in the same place, as the one-school report (v0.209); small. <i>−</i> to see the arithmetic you still subtract in your head.<br><b>C · A refunds part in the line (picture 8).</b> <i>+</i> the line adds up on paper: in, minus refunds, equals the total. <i>−</i> a fourth part the one-school cards don't have; the line gets long on phones."
+}

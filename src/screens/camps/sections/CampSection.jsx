@@ -5,13 +5,13 @@
 //     Shrewsbury" appears next to it (v0.710). Neutral gray selection, not blue (C3 note).
 //   - Days: the month calendar (DayCalendar.jsx), its one-line summary
 //     ("Mon, Apr 19 – Fri, Apr 23, 2027 · 5 days") and the hint. Edit template has no days, only
-//     "Number of days" (1–10), which sets the size of the price grid.
+//     "Days per week" (1–7; weekly pricing v0.717), which sets the size of the price grid.
 // A refusal from the database ("Can't remove Wed, Dec 30: Mia Rossi and 2 more picked it …")
 // shows under Days (errors.days).
 import ChoiceGroup from '../../testing/events/ChoiceGroup.jsx';
 import Notice from '../../../components/Notice.jsx';
 import DayCalendar from './DayCalendar.jsx';
-import { MAX_DAYS } from './campForm.js';
+import { MAX_DAYS, MAX_WEEK_DAYS } from './campForm.js';
 import * as T from '../text.js';
 
 const SCHOOLS = [
@@ -68,7 +68,7 @@ export default function CampSection({ mode, values, errors, show, today, keepDay
 
       {isTemplate ? (
         <div className="field">
-          <label htmlFor={`${idBase}-count`}>{T.NUMBER_OF_DAYS}</label>
+          <label htmlFor={`${idBase}-count`}>{T.DAYS_PER_WEEK}</label>
           <select
             id={`${idBase}-count`}
             className="input cp-count"
@@ -78,7 +78,7 @@ export default function CampSection({ mode, values, errors, show, today, keepDay
             aria-invalid={daysError ? 'true' : undefined}
             onChange={(event) => onChange({ dayCount: event.target.value })}
           >
-            {Array.from({ length: MAX_DAYS }, (_, i) => String(i + 1)).map((n) => (
+            {Array.from({ length: MAX_WEEK_DAYS }, (_, i) => String(i + 1)).map((n) => (
               <option key={n} value={n}>
                 {T.daysCount(Number(n))}
               </option>

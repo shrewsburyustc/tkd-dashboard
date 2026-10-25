@@ -75,6 +75,13 @@
 //   Events saves only. Star's seed (resetTesting): a finished Summer event with make-ups owed, the
 //   upcoming Fall event (paid, not paid, overpaid, duplicate, private, withdrawn, make-up) and a later
 //   Spring event that can pick make-ups.
+// Star testing on HOME (phase 7; star_home_today in mockStarCandidates.js — Home's "Today" cards):
+//   __tkdPreview.starHomeToday('event')    the Fall seed event's testing day becomes today → its card
+//   __tkdPreview.starHomeToday('private')  Alex Kim (4:00 PM) and Ethan Lopez (5:30 PM) test privately
+//                                          today → two private cards
+//   __tkdPreview.starHomeToday('none')     undoes both → no Star cards
+//   __tkdPreview.failStarHome(true)        every star_home_today ask fails like a dropped connection
+//                                          (in memory only); failStarHome(false) → answers again
 // Star testing GRADING (phase 5; mockStarGrading.js, plugged into the candidates fake):
 //   __tkdPreview.failNextSave() or failNextSave('star')  also make the next Star grade / count save fail
 //   __tkdPreview.setStarOffline(true)     every Star grading call fails like a dropped connection and the
@@ -84,6 +91,16 @@
 //   Seed: Fall's 1st Dan grid has Passed (Chris Kim), D (Noah Chen), below 245 needing a choice (Ethan
 //   Lopez), chosen (Sam Ortiz), "7 of 11 left" (Ava Reed), Not started (Mia Patel …), a make-up with
 //   kept grades (Sofia Reyes, retests Breaking and Korean Terminology) and Alex Kim testing privately.
+// Star testing RESULTS (phase 6; mockStarResults.js, plugged into the candidates fake):
+//   __tkdPreview.failNextSave('star')     also makes the next Mark as sent / Undo / CSV / text save fail
+//   __tkdPreview.simulateStarResultChange('Noah')  "another device" changes one of Noah Chen's grades —
+//                                         a Mark as sent for the result on screen then answers stale
+//   __tkdPreview.starDownloads()          the CSV download log (star_downloads) as a table
+//   Seed (the finished Summer event; resetTesting() if your preview data is older): Sent then re-sent
+//   (Morgan Hale), Passed not sent (Lucas Grant), a late grade (Nina Ford), Not finished (Ben Ward),
+//   testing privately before the day (Zoe Bell), graded on a private day after the testing day (Ivy
+//   Cole), changed after sending (Ella Moss), a sent make-up (Taylor Quinn), D (Grace Liu), D and below 245 (Sofia Reyes), below
+//   with chosen subjects (Drew Park), below with an admin to choose (Avery Lin, 3rd Dan).
 // Staff accounts helpers (account menu → Admin → Staff accounts; mockStaff.js):
 //   __tkdPreview.failNextSave()           also makes the next Reset password / Reset PIN fail
 //   __tkdPreview.resetStaffAccounts()     the fake desk is signed in on 3 devices again
@@ -105,9 +122,11 @@
 //   __tkdPreview.resetFinance()           back to the sample closings and Star payments, reminder times Off
 // Black Belt testing helpers (contracts 0016-B1 §2.3 + 0016-B2 §2.4, src/lib/blackBelt/mockBlackBelt.js; setRole, setToday and
 // setTestingDelay cover Black Belt too; failNextSave() fails the next save of whichever section comes first):
-//   __tkdPreview.failNextSave('blackBelt') the next Black Belt save fails like a dropped connection
-//   __tkdPreview.simulateOtherAdminEdit() also bumps every Black Belt cycle, candidate and the settings, and saves a new waiver
-//   __tkdPreview.resetBlackBelt()         back to 0016's seed (no cycles, the placeholder waiver)
+//   __tkdPreview.failNextSave('blackBelt') the next Black Belt save fails like a dropped connection (rubric saves and undos too)
+//   __tkdPreview.simulateOtherAdminEdit() also bumps every Black Belt cycle, candidate and the settings, and saves a new waiver;
+//                                         and "Sam P." saves 1st Dan of the default rubric and of every never-opened cycle
+//                                         (Long jump credits 2 -> 3), so an open rubric editor / its Undo get "stale" (0024 R11)
+//   __tkdPreview.resetBlackBelt()         back to the seed (no cycles, the placeholder waiver, 0024's default rubric)
 //   __tkdPreview.bbSample()               the mockups' sample (Spring 2027 with 6 candidates, Fall 2027)
 //   __tkdPreview.bbLinks()                both family links of every cycle as LOCAL preview addresses
 //   __tkdPreview.setBlackBeltRegistration(false) the Black Belt form's kill switch ("not open" everywhere)
@@ -116,7 +135,16 @@
 //   __tkdPreview.bbSampleEdge()           bbSampleRoster + the edge cases (overpaid, Kukkiwon late, withdrawn, a
 //                                         parent's signature needed, a desk paper waiver)
 //                                         (both fill the schools' street and phone only where they are empty)
-//   __tkdPreview.bbExpireUndo()           the newest Black Belt payment looks 11 s old -> a staff Undo is "too late"
+//   __tkdPreview.loadBlackBeltGradingSample() the Grading / Results mockups' cast (contract 0025 §13.3): Spring 2027
+//                                         graded as of Jun 9, 2027 (all four Dans; Late, a D, below the mark) and Fall
+//                                         2027 with Mia Chen's make-up — then setToday('2027-06-09') (Fall: a later day)
+//                                         (simulateOtherAdminEdit also changes one grade; failNextSave('blackBelt') and
+//                                         bbExpireUndo also cover grades, Mark as sent and the result texts)
+//   __tkdPreview.bbExpireUndo()           the newest Black Belt payment looks 11 s old -> a staff Undo is "too late";
+//                                         also the newest rubric undo (a Dan save or a first opening) looks 16 s old -> its
+//                                         Undo answers stale (its message still talks about payments only)
+//   (0024 rubric rules in preview: the first opening of a cycle is admin-only and its toast Undo works for 15 s;
+//    a cycle's rubric is editable until registration first opens; Add cycle copies the default rubric, always closed)
 //   __tkdPreview.bbAddDuplicate()         a second form registration of the newest cycle's first candidate (duplicate box)
 //   (forceVerifyFailed / forceRateLimited above work on the Black Belt form too)
 import { getLastPasswordSignIn, PASSWORD_MAX_AGE_MS, decodeJwtPayload } from './session.js';
@@ -136,6 +164,7 @@ import {
   STAR_CANDIDATE_WRITE_RPC_NAMES, STAR_CANDIDATE_TABLES,
 } from './mockStarCandidates.js';
 import { STAR_GRADING_RPC_NAMES, STAR_GRADING_WRITE_RPC_NAMES } from './mockStarGrading.js';
+import { STAR_RESULTS_RPC_NAMES } from './mockStarResults.js';
 import { createCampsBackend, CAMP_RPC_NAMES, CAMP_RESTRICTED_RPC_NAMES, CAMP_READ_RPC_NAMES, CAMP_TABLES } from './mockCamps.js';
 import { publicCampHelpers } from './camps/publicApi.preview.js';
 import { createScheduleBackend, SCHEDULE_RPC_NAMES } from './mockSchedule.js';
@@ -144,6 +173,7 @@ import { createFormsBackend, FORMS_RPC_NAMES } from './mockForms.js';
 import { createFinanceBackend, FINANCE_RPC_NAMES, FINANCE_WRITE_RPC_NAMES } from './mockFinance.js';
 import { createBlackBeltBackend, BB_RPC_NAMES, BB_WRITE_RPC_NAMES, BB_TABLES, BB_STORE_KEY } from './blackBelt/mockBlackBelt.js';
 import { blackBeltPublicHelpers } from './blackBelt/publicApi.preview.js';
+import BLACK_BELT_MOCKUP_CAST from '../../docs/Testing/Black Belt Testing/TKD-BlackBelt-Mockup-Cast.json'; // 0025's sample (made-up people)
 
 const SESSION_KEY = 'tkd.preview.session'; // the fake "signed in" session
 const STAFF_STATE_KEY = 'tkd.preview.staffState'; // fake staff row: PIN, shared flag
@@ -651,6 +681,8 @@ export function createMockClient() {
   let failNextStar = false;
   // setStarOffline(true): every Star grading call fails like a dropped connection (phase 5).
   let starGradingOffline = false;
+  // failStarHome(true): every star_home_today ask fails like a dropped connection (phase 7).
+  let starHomeOffline = false;
 
   // The fake network time for Testing calls (setTestingDelay saves it so it survives a reload).
   function testingDelay() {
@@ -765,13 +797,16 @@ export function createMockClient() {
       if (starGradingOffline && STAR_GRADING_RPC_NAMES.includes(name)) {
         return { data: null, error: { message: 'Failed to fetch (preview: setStarOffline)' }, status: 0 };
       }
+      if (starHomeOffline && name === 'star_home_today') {
+        return { data: null, error: { message: 'Failed to fetch (preview: failStarHome)' }, status: 0 };
+      }
       if ((failNextStar || failNextTesting) && STAR_GRADING_WRITE_RPC_NAMES.includes(name)) {
         // failNextSave() / failNextSave('star'): the next save fails, whichever section it is in
         failNextStar = false;
         failNextTesting = false;
         starCandidates.failNextSave();
       }
-      if (failNextStar && STAR_CANDIDATE_WRITE_RPC_NAMES.includes(name)) {
+      if (failNextStar && (STAR_CANDIDATE_WRITE_RPC_NAMES.includes(name) || STAR_RESULTS_RPC_NAMES.includes(name))) {
         failNextStar = false;
         starCandidates.failNextSave(); // this one save fails like a dropped connection
       }
@@ -1034,6 +1069,26 @@ export function createMockClient() {
     simulateStarDanChange(firstName = 'Noah', dan = 2) {
       return starCandidates.simulateDanChange(firstName, dan);
     },
+    // ----- Star on Home (phase 7) -----
+    starHomeToday(kind = 'event') {
+      return starCandidates.homeToday(kind);
+    },
+    failStarHome(on = true) {
+      starHomeOffline = Boolean(on);
+      return starHomeOffline
+        ? 'Every Star "Today" ask on Home now fails like a dropped connection. Run __tkdPreview.failStarHome(false) to come back.'
+        : 'Star "Today" asks answer again (Home asks every minute, or open Home again).';
+    },
+    // ----- Star results helpers (phase 6; mockStarResults.js, plugged into the candidates fake) -----
+    simulateStarResultChange(firstName = 'Noah') {
+      return starCandidates.simulateResultChange(firstName);
+    },
+    starDownloads() {
+      const rows = starCandidates.downloads();
+      if (rows.length === 0) return 'No Star CSV downloads yet.';
+      console.table(rows.map((d) => ({ when: d.downloaded_at, who: d.downloaded_by_name, event: d.event_name, dan: d.dan ?? 'whole event', rows: d.row_count })));
+      return `${rows.length} Star CSV download${rows.length === 1 ? '' : 's'} logged (the real log is star_downloads, read in the SQL Editor only).`;
+    },
     // ----- Finance helpers (mockFinance.js) -----
     setNow(hhmm) {
       if (!finance.setNow(hhmm ?? null)) return "Use setNow('19:30') (school time, 24-hour), or setNow(null) for the real time.";
@@ -1067,6 +1122,11 @@ export function createMockClient() {
       blackBelt.loadSampleEdge();
       fillSampleSchools();
       return "Sample loaded (with the edge cases) — run __tkdPreview.setToday('2027-04-26') and reload.";
+    },
+    loadBlackBeltGradingSample() {
+      blackBelt.loadGradingSample(BLACK_BELT_MOCKUP_CAST);
+      fillSampleSchools();
+      return "Grading sample loaded — run __tkdPreview.setToday('2027-06-09') and reload (Spring 2027; for Fall 2027's make-up use a day in Oct–Nov 2027).";
     },
     bbExpireUndo() {
       const moved = blackBelt.expireUndo();

@@ -127,6 +127,8 @@ const SECTION_TITLES = {
 const TESTING_PAGE_TITLES = {
   colorBelt: 'Color belt testing · U.S. Taekwondo Center',
   star: 'Star testing · U.S. Taekwondo Center',
+  // Black Belt testing (C2, v0.937): its own title with the switch on or off.
+  blackBelt: 'Black Belt testing · U.S. Taekwondo Center',
 };
 
 // Toast texts (guidelines 8: 5 seconds, bottom-right — bottom-center on phones — no Undo for these).
@@ -240,6 +242,9 @@ export default function App() {
   // ----- Signing out (used by the menu, the lock screen, and the rules below) -----
   const signOut = useCallback(async (noticeText = null) => {
     clearOpenProspect(); // a Calendar → Prospects hand-over never carries over to the next person
+    // The same for any other hand-over that lives outside this file (e.g. Star's Home → Grade,
+    // src/lib/star/homeHandoff.js): a plain signal, so App needs no import of that code.
+    window.dispatchEvent(new Event('tkd:signed-out'));
     // Signing out on purpose (the menu's Sign out, "Not you? Sign out" — no notice) or because the
     // account has no access: the address goes back to Home, so the next person at this device
     // starts on Home and Back can't bring the previous person's page back (v0.83). An automatic
@@ -602,10 +607,13 @@ export default function App() {
   // Each change of page is a step in the browser's history (v0.83), so Back / Forward walk
   // through the pages. Clicking the page you're already on adds nothing.
   // Options (all optional):
-  //   testingPage: on Testing, which page: 'chooser' | 'colorBelt' | 'star'. Left out = Testing's
-  //                default — the chooser while the Star testing switch is on, Color Belt while off.
+  //   testingPage: on Testing, which page: 'chooser' | 'colorBelt' | 'star' | 'blackBelt'. Left out =
+  //                Testing's default — the chooser while the Star testing switch is on, Color Belt
+  //                while off. Black Belt opens with the switch on or off (C2, v0.937).
   //   eventId:     on Color Belt or Star testing, the event whose page opens (null = the tabs); on
-  //                Camps, the camp whose page opens (null = the list).
+  //                Black Belt, the cycle whose page opens (its tab: 'cycles' | 'rubric' without a
+  //                cycle, 'candidates' | 'rubric' with one); on Camps, the camp whose page opens
+  //                (null = the list).
   //   eventTab:    the event page's tab, 'students' | 'grading' ('students' unless said otherwise —
   //                opening an event lands on Students; contract 0010 §4.1); on Star testing's
   //                home, 'events' (the default) | 'rubrics'; on Finance its view, 'report' (the
@@ -630,7 +638,9 @@ export default function App() {
       // A private testing only opens on Testing, and never together with an event.
       const nextPrivate = id === 'testing' && !nextEvent && !starAskedWhileOff ? nextPrivateId : null;
       const askedPage = nextPrivate ? 'colorBelt' : nextPage;
-      const page = id === 'testing' ? (STAR_TESTING_ON ? (askedPage ?? DEFAULT_TESTING_PAGE) : 'colorBelt') : null;
+      // (Switch off: Color Belt, or Black Belt when it is asked for — C2.)
+      const offPage = askedPage === 'blackBelt' ? 'blackBelt' : 'colorBelt';
+      const page = id === 'testing' ? (STAR_TESTING_ON ? (askedPage ?? DEFAULT_TESTING_PAGE) : offPage) : null;
       const next = {
         section: id,
         testingPage: page,
@@ -704,6 +714,9 @@ export default function App() {
   // Star testing's event page (phase 2): in and out, the same way.
   const openStarEvent = useCallback((id) => navigate('testing', { testingPage: 'star', eventId: id }), [navigate]);
   const closeStarEvent = useCallback(() => guarded(() => navigate('testing', { testingPage: 'star', eventId: null })), [navigate, guarded]);
+  // Home's Star "Today" cards (Star phase 7, v0.515): Open grading opens the event on its Grading
+  // tab, Grade on its Candidates tab ('students'). A normal step, so Back returns Home.
+  const openStarEventTab = useCallback((id, tab) => navigate('testing', { testingPage: 'star', eventId: id, eventTab: tab }), [navigate]);
   // Students ↔ Grading (a Color Belt event page) and Events ↔ Rubrics and prices (Star testing's
   // home): the same page, so never guarded, and no new history step (Back still leaves the page;
   // a reload keeps the tab).
@@ -716,14 +729,43 @@ export default function App() {
       privateId: privateIdRef.current,
     };
     const nextTab = normalEventTab(route.testingPage, route.eventId, tab);
-    if (hasAddressTabs(route)) {
-      window.history.replaceState(window.history.state, '', addressForRoute({ ...route, eventTab: nextTab }));
+    const apply = () => {
+      if (hasAddressTabs(route)) {
+        window.history.replaceState(window.history.state, '', addressForRoute({ ...route, eventTab: nextTab }));
+      }
+      setEventTab(nextTab);
+    };
+    // A dialog that is closing still has its own history step on top (Dialog.jsx removes it a
+    // moment later with Back) — e.g. Black Belt's "Discard changes?" → Discard, then the tab
+    // changes (C2). Writing the new tab's address onto that step would be undone by its Back, so
+    // wait for that Back first (or 300ms, in case another dialog took the step over).
+    if (!window.history.state?.tkdDialog) {
+      apply();
+      return;
     }
-    setEventTab(nextTab);
+    let done = false;
+    const once = () => {
+      if (done) return;
+      done = true;
+      window.removeEventListener('popstate', once);
+      window.clearTimeout(timer);
+      apply();
+    };
+    window.addEventListener('popstate', once);
+    const timer = window.setTimeout(once, 300);
   }, []);
   // Moving between Testing's own pages: the chooser's rows, "← Testing", Star's back link. Guarded
   // like every other way off a Color Belt event page (the guard is only set while one is open).
   const openTestingPage = useCallback((page) => guarded(() => navigate('testing', { testingPage: page })), [navigate, guarded]);
+  // Black Belt testing's pages (C2, v0.937): a cycle's page (cycleId) or its home (null), on a tab.
+  // Opening or leaving a cycle is a history step; a tab change goes through changeEventTab instead.
+  // Black Belt asks its own unsaved-rubric question before calling this (BlackBeltTesting.jsx), so
+  // it isn't guarded here. { replace: true } = the cycle page closes itself (the cycle was deleted),
+  // so Back doesn't return to it.
+  const openBlackBelt = useCallback(
+    ({ cycleId = null, tab, replace = false } = {}) => navigate('testing', { testingPage: 'blackBelt', eventId: cycleId, eventTab: tab, replace }),
+    [navigate],
+  );
 
   // The Camps section's ways in and out (Camps.jsx → CampsTab / CampPage).
   // campSchoolFollow: the camp opened from a Finance payment ("Open in Camps"). A camp payment can be
@@ -929,7 +971,7 @@ export default function App() {
 
   // Keep the browser tab title in step with the screen (and, on the dashboard, the section).
   useEffect(() => {
-    const testingTitle = section === 'testing' && STAR_TESTING_ON ? TESTING_PAGE_TITLES[testingPage] : null;
+    const testingTitle = section === 'testing' && (STAR_TESTING_ON || testingPage === 'blackBelt') ? TESTING_PAGE_TITLES[testingPage] : null;
     document.title = phase === 'home' ? (testingTitle ?? SECTION_TITLES[section]) : PAGE_TITLES[phase];
   }, [phase, section, testingPage]);
 
@@ -1008,6 +1050,8 @@ export default function App() {
                 paymentsHidden={paymentsHidden}
                 onOpenFinance={openFinanceReport}
                 onOpenFinanceHistory={openFinanceHistory}
+                onOpenStarEvent={openStarEventTab}
+                onNoAccess={handleNoAccess}
               />
             )}
             {section === 'testing' && (
@@ -1026,6 +1070,7 @@ export default function App() {
                 onCloseEvent={closeEvent}
                 onOpenStarEvent={openStarEvent}
                 onCloseStarEvent={closeStarEvent}
+                onOpenBlackBelt={openBlackBelt}
                 // Color Belt phase 4: the private testing grading page and its ways in and out
                 privateId={privateId}
                 onOpenPrivate={openPrivate}

@@ -10,7 +10,11 @@
 //     candidate under 18: …" — while the insurer hasn't answered, "Not set: nothing is deleted
 //     until both numbers are entered." Admins edit it (KeepYearsDialog.jsx).
 //   - staff: "View only. Ask an admin to make changes." under the tabs, no Edit icons.
-// The rubric itself (parts, subjects, scoring) arrives here with grading (P7: no placeholder).
+//   - the Result emails block (migration 0025, Results mockup R03; ResultEmailsBlock.jsx): the three
+//     result email texts, between the Keeping block and the Default rubric card.
+//   - the Default rubric card (migration 0024, mockups R1–R11; DefaultRubricCard.jsx): what every
+//     new cycle starts from, below the Waiver and Keeping cards. Admins edit one Dan at a time;
+//     while a Dan has unsaved changes every way out asks first (setGuard, from BlackBeltTesting).
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconAlertTriangle, IconEdit } from '@tabler/icons-react';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
@@ -21,6 +25,8 @@ import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/us
 import KeepYearsDialog from './KeepYearsDialog.jsx';
 import ReadAllDialog from './ReadAllDialog.jsx';
 import WaiverDialog from './WaiverDialog.jsx';
+import DefaultRubricCard from './DefaultRubricCard.jsx';
+import ResultEmailsBlock from './ResultEmailsBlock.jsx';
 import * as T from '../text.js';
 
 const LIVE_KEY = 'black-belt-rubric';
@@ -32,7 +38,7 @@ function firstLines(body) {
   return text.length > 320 ? `${text.slice(0, 320).replace(/\s+\S*$/, '')} …` : text;
 }
 
-export default function RubricTab({ isAdmin, panelId, tabId, renderHeader, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange }) {
+export default function RubricTab({ isAdmin, panelId, tabId, renderHeader, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast, onModalOpenChange, setGuard }) {
   const live = useLiveLoad({ key: LIVE_KEY, enabled: !screenLocked, load, refreshMs: LIVE_REFRESH_MS });
   const liveRef = useRef(live);
   useLayoutEffect(() => {
@@ -41,12 +47,14 @@ export default function RubricTab({ isAdmin, panelId, tabId, renderHeader, scree
   const isPhone = useMediaQuery(PHONE_QUERY);
   const [dialog, setDialog] = useState(null); // { type: 'read' | 'waiver' | 'keep', opener, … }
   const [banner, setBanner] = useState(null);
+  const [rubricModal, setRubricModal] = useState(false); // the rubric card's dialogs / phone editor
+  const [textsModal, setTextsModal] = useState(false); // the Result emails block's Edit result email
 
   useEffect(() => {
     if (live.status === 'noAccess') onNoAccess();
   }, [live.status, onNoAccess]);
 
-  const modalShown = dialog !== null && !screenLocked;
+  const modalShown = (dialog !== null || rubricModal || textsModal) && !screenLocked;
   useEffect(() => {
     onModalOpenChange(modalShown);
   }, [modalShown, onModalOpenChange]);
@@ -128,6 +136,29 @@ export default function RubricTab({ isAdmin, panelId, tabId, renderHeader, scree
           <p className="field-hint">{keepSet ? T.KEEP_DELETED_AFTER : T.KEEP_WAITING}</p>
           {settings.updatedByName && <p className="tmeta">{T.lastChanged(settings.updatedByName, settings.updatedAt)}</p>}
         </section>
+
+        <ResultEmailsBlock
+          isAdmin={isAdmin}
+          isPhone={isPhone}
+          screenLocked={screenLocked}
+          onNoAccess={onNoAccess}
+          onRefreshProfile={onRefreshProfile}
+          showToast={showToast}
+          clearToast={clearToast}
+          onModalChange={setTextsModal}
+        />
+
+        <DefaultRubricCard
+          isAdmin={isAdmin}
+          isPhone={isPhone}
+          screenLocked={screenLocked}
+          onNoAccess={onNoAccess}
+          onRefreshProfile={onRefreshProfile}
+          showToast={showToast}
+          clearToast={clearToast}
+          setGuard={setGuard}
+          onModalChange={setRubricModal}
+        />
       </>
     );
   }

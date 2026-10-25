@@ -652,6 +652,10 @@
 }
 
 .cp-rcol-day {
+  /* Every day column asks for the same width, so the Camper column (the only one without a
+     width) takes the spare room — a 1-day camp still fills the screen. On a narrow screen with
+     many days the table shrinks the day columns to fit their buttons instead. */
+  width: 104px;
   text-align: center;
 }
 
@@ -713,23 +717,28 @@
   font-weight: 500;
 }
 
-/* Short camps (1–2 days in the week): the table is only as wide as it needs (review 13) */
-.cp-rtable.is-short {
-  width: auto;
+/* (The old "short camp" look — a narrow table for 1–2 days, review 13 — was removed after the
+   live test 2026-10-21: the roster always spans the whole width; see .cp-rcol-day above.) */
+
+/* "No campers yet. Families sign up with the Registration link." — a row inside the grid (or
+   in place of the phone cards), so the grid itself is always there */
+.cp-rtable td.cp-rempty {
+  height: 56px;
+  text-align: center;
 }
 
-/* …and its border box shrinks with it */
-.cp-rtable-wrap.is-short {
-  width: fit-content;
-  max-width: 100%;
+.cp-rcards .cp-rempty {
+  margin: 0;
+  padding: var(--space-16) 0;
+  text-align: center;
 }
 
-.cp-rtable.is-short .cp-rcol-name {
-  min-width: 220px;
-}
-
-.cp-rtable.is-short .cp-rcol-day {
-  width: 112px;
+/* "Updated 2:41:07 PM" at the end of the summary line: quiet gray, pushed to the right */
+.cp-updated {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-variant-numeric: tabular-nums;
 }
 
 /* The "$ due" / "Owes" / "Possible duplicate" tags are buttons (Mark paid box / compare) */
@@ -967,8 +976,10 @@ button.cp-dc:focus-visible {
     min-width: 132px;
   }
 
+  /* Only as wide as its tag, so the spare room goes to the Camper column (live test 2026-10-21) */
   .cp-rcol-paid {
-    width: auto;
+    width: 1%;
+    white-space: nowrap;
   }
 
   .cp-dc {

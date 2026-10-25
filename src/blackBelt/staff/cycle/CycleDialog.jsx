@@ -8,9 +8,19 @@
 //     "Curriculum isn't graded on any testing day. …" sits under the list (v0.918 detail 1).
 //   - Deadlines: Application due, Submissions due (+ the hand-in hint)
 //   - Prices and payment due dates, Kukkiwon certificate fee (PricesSection.jsx)
-//   - Registration: Open / Closed (Add starts Closed), "Close automatically at the end of
-//     Application due (Sat, Mar 27)" + "11:59 PM, Massachusetts time. …"
+//   - Rubric (migration 0024, mockup R14): "Copied from the default rubric when you save. Change
+//     it on the cycle's Rubric tab until registration first opens." (Edit cycle: the same before
+//     the first opening, "Locked since registration opened on Mar 1, 2027." after). Nothing to fill in.
+//   - Registration: Add cycle has NO Open / Closed switch any more — every new cycle is saved
+//     closed, with "New cycles start closed. Check the rubric, then open registration from the
+//     cycle's ⋯ menu." (v0.933). Edit cycle keeps the Open / Closed switch only for a cycle that
+//     was opened once (a never-opened cycle is opened from ⋯, so the first opening always gets its
+//     own toast and Undo — contract 0024 OI-11). "Close automatically at the end of Application
+//     due (Sat, Mar 27)" + "11:59 PM, Massachusetts time. …" stay.
 //   - Edit: "Last changed by …"; then Cancel · Save (phones: ← and a full-width Save)
+//   - 0025 (S2): in Edit cycle, a day that grading locks (a past day with grades, or the first day
+//     once grading started) has its Delete grayed and a gray reason under it (dayLockOf, from
+//     useCycleEditor.jsx); the database's has_grades refusal shows as the note at the bottom
 // PC / tablet: a dialog that scrolls inside; phones: a full screen.
 // Errors show as you type, amber under the field; Save stays BLUE when everything is valid and
 // turns gray only while something is wrong (v0.57). This file only draws: the values live in
@@ -40,12 +50,13 @@ function dayListMessage(problems) {
 
 const NOTES = {
   UNSAVED: T.UNSAVED,
+  HAS_GRADES: T.EDIT_CYCLE_HAS_GRADES,
   STALE: T.STALE_DIALOG,
   NOT_ALLOWED: T.NOT_ALLOWED,
   INVALID: T.INVALID,
 };
 
-export default function CycleDialog({ state, check, isPhone, handlers }) {
+export default function CycleDialog({ state, check, isPhone, handlers, dayLockOf = () => null }) {
   const id = useId();
   const v = state.values;
   const isAdd = state.mode === 'add';
@@ -97,6 +108,8 @@ export default function CycleDialog({ state, check, isPhone, handlers }) {
   );
 
   const from = T.fromName(v.pricesFrom);
+  // Edit cycle on a cycle whose registration was opened once: the Open / Closed switch stays.
+  const openedOnce = !isAdd && Boolean(state.original?.firstOpenedAt);
 
   return (
     <Dialog title={isAdd ? T.ADD_CYCLE_TITLE : T.EDIT_CYCLE_TITLE} size="wide" fullScreen={isPhone} onRequestClose={onRequestClose}>
@@ -144,6 +157,7 @@ export default function CycleDialog({ state, check, isPhone, handlers }) {
             {v.days.length === 0 && <p className="field-hint bb-days-empty">{T.NO_DAYS_YET}</p>}
             {v.days.map((day, index) => {
               const message = dayListMessage(p.days?.[index]);
+              const lock = dayLockOf(day); // 0025 (S2): null, or what grading locks on this day
               return (
                 <div key={day.key} className="bb-day" data-day-key={day.key}>
                   <div className="bb-day-text">
@@ -151,11 +165,28 @@ export default function CycleDialog({ state, check, isPhone, handlers }) {
                     <p className="bb-day-line">{T.dayLine(day)}</p>
                     {day.second && <p className="bb-day-line">{T.secondLine(day.second)}</p>}
                     <p className="bb-day-graded">{T.gradedLine(day.parts)}</p>
+                    {lock?.reason && (
+                      <p className="field-hint bb-day-locked" id={`${id}-lock-${day.key}`}>
+                        {lock.reason}
+                      </p>
+                    )}
                     {message && <Notice>{message}</Notice>}
                   </div>
                   <span className="bb-day-acts">
                     <IconButton label={T.editDayLabel(day.name)} Icon={IconEdit} data-day-edit={day.key} onClick={(event) => !readOnly && onEditDay(index, event.currentTarget)} />
-                    <IconButton label={T.deleteDayLabel(day.name)} Icon={IconTrash} onClick={() => !readOnly && onDeleteDay(index)} />
+                    {lock?.noDelete ? (
+                      // Grayed: the reason is the gray line under the day (nothing hover-only)
+                      <IconButton
+                        label={T.deleteDayLabel(day.name)}
+                        Icon={IconTrash}
+                        className="is-unavailable"
+                        aria-disabled="true"
+                        aria-describedby={`${id}-lock-${day.key}`}
+                        onClick={() => {}}
+                      />
+                    ) : (
+                      <IconButton label={T.deleteDayLabel(day.name)} Icon={IconTrash} onClick={() => !readOnly && onDeleteDay(index)} />
+                    )}
                   </span>
                 </div>
               );
@@ -213,20 +244,33 @@ export default function CycleDialog({ state, check, isPhone, handlers }) {
 
         <PricesSection mode={state.mode} values={v} formForRules={check.form} problems={p} triedSave={state.triedSave} isPhone={isPhone} readOnly={readOnly} {...prices} />
 
+        <section className="bb-section" aria-labelledby={`${id}-rubric`}>
+          <h3 id={`${id}-rubric`} className="bb-section-title">
+            {T.RUBRIC_SECTION}
+          </h3>
+          <p className="field-hint bb-section-hint">
+            {isAdd ? T.RUBRIC_ADD_LINE : openedOnce ? T.rubricLockedLine(T.stampDate(state.original.firstOpenedAt)) : T.RUBRIC_EDIT_LINE}
+          </p>
+        </section>
+
         <section className="bb-section" aria-labelledby={`${id}-reg`}>
           <h3 id={`${id}-reg`} className="bb-section-title">
             {T.REGISTRATION}
           </h3>
-          <Choice
-            labelId={`${id}-reg`}
-            options={[
-              { key: 'open', label: T.REG_OPEN },
-              { key: 'closed', label: T.REG_CLOSED },
-            ]}
-            value={v.registrationOpen ? 'open' : 'closed'}
-            readOnly={readOnly}
-            onChange={(key) => onChange({ registrationOpen: key === 'open' })}
-          />
+          {openedOnce ? (
+            <Choice
+              labelId={`${id}-reg`}
+              options={[
+                { key: 'open', label: T.REG_OPEN },
+                { key: 'closed', label: T.REG_CLOSED },
+              ]}
+              value={v.registrationOpen ? 'open' : 'closed'}
+              readOnly={readOnly}
+              onChange={(key) => onChange({ registrationOpen: key === 'open' })}
+            />
+          ) : (
+            <p className="field-hint bb-section-hint">{isAdd ? T.NEW_CYCLES_CLOSED : T.NOT_OPENED_YET_LINE}</p>
+          )}
           <label className="cbrow bb-auto" htmlFor={`${id}-auto`}>
             <input id={`${id}-auto`} type="checkbox" className="cb" checked={v.autoClose} disabled={readOnly} aria-describedby={`${id}-auto-hint`} onChange={(event) => onChange({ autoClose: event.target.checked })} />
             <span>{T.autoCloseLabel(v.applicationDue)}</span>

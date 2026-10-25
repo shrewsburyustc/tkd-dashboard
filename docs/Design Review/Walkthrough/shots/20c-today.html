@@ -1,0 +1,24 @@
+<!doctype html>
+<!-- 20c-today.html — Design Review item 20c, "today": what rule §4 (Accessibility) says now. Screenshot with
+     tools/shoot.mjs. -->
+<html lang="en"><head><meta charset="utf-8"><title>Item 20c today</title>
+<style>
+  body { margin: 0; padding: 16px; width: 930px; box-sizing: border-box; background: #FFFFFF; color: #1F1F1F; font: 14px/1.4 "Segoe UI", system-ui, sans-serif; }
+  .card { border: 1px solid #F3D9A6; background: #FDF6EA; border-radius: 10px; padding: 14px 16px; }
+  h3 { margin: 0 0 4px; font-size: 16px; font-weight: 600; }
+  .sub { color: #5A5A5A; font-size: 13px; margin: 0 0 10px; }
+  ul { margin: 0; padding-left: 18px; }
+  li { margin: 4px 0; font-size: 13.5px; }
+</style></head><body>
+  <div class="card">
+    <h3>Rule §4 today: “Target: WCAG 2.1 AA”</h3>
+    <p class="sub">Written in v0.2 (2026-10-15). WCAG = the web's accessibility checklist; AA = the level most laws and schools ask for.</p>
+    <ul>
+      <li>Every icon-only button has a hidden name that matches its tooltip</li>
+      <li>A visible 2px blue focus ring, never removed</li>
+      <li>Text contrast at least 4.5 : 1; icons and control borders at least 3 : 1 (v0.26)</li>
+      <li>Meaning is never shown by color alone</li>
+      <li>Plus the touch rule elsewhere: 44px tap areas on touch screens (§2.5)</li>
+    </ul>
+  </div>
+</body></html>

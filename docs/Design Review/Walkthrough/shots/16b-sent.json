@@ -1,0 +1,17 @@
+{
+  "width": 930,
+  "rowHeight": 92,
+  "meaningWidth": 200,
+  "rows": [
+    {
+      "meaning": "Sent / thank you",
+      "sub": "after a form is sent",
+      "today": [
+        { "icon": "circle-check", "size": 40, "color": "#3B6D11", "where": "staff Fill in → Sent (over the 24px limit)" },
+        { "icon": "check", "badge": true, "where": "family thank-you page (24px)" }
+      ],
+      "after": [{ "icon": "check", "badge": true, "where": "both" }],
+      "note": "The staff Sent screen copies the family page's tick: 24px, the size limit (§2.2)."
+    }
+  ]
+}
