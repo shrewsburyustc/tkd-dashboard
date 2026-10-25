@@ -1,0 +1,34 @@
+{
+  "title": "Item 19 · Behind the scenes: one design, several copies",
+  "subtitle": "<b>Drift you can't see yet.</b> The Grandmaster never sees this, but it is why designs drift: when the same thing is written four times, a fix in one copy misses the other three. It matters now because most of this walkthrough's decisions (the confirm box, Mark paid, the registration link, count cards, the time list, the money helper…) would otherwise be built once per section. Two things stay as they are: the “possible duplicate” words differ only by each section's noun (“registered twice” / “signed up twice”), which already matches 12b; and Prospects has no duplicate check by decision (v0.244). <span style=\"color:#6B6B6B\">(Code checked 2026-10-23, after merging main)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/19-today.png",
+          "crop": [0, 0, 930, 560],
+          "scale": 1,
+          "shotWidth": 930,
+          "caption": "<b>1. Today</b> — file names and line counts from the code."
+        }
+      ]
+    },
+    {
+      "label": "Proposed (option B) · one shared home, built first",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/19-after.png",
+          "crop": [0, 0, 930, 560],
+          "scale": 1,
+          "shotWidth": 930,
+          "caption": "<b>2. Option B:</b> Main builds the shared parts first; then each section's prompt says “use the shared <i>X</i>”."
+        }
+      ]
+    }
+  ],
+  "footer": "<b>Your choice — one question: build the shared parts first?</b><br><b>A · Keep as today.</b> <i>+</i> no extra step. <i>−</i> each decision from this walkthrough gets built separately in up to six sections, and the copies drift again.<br><b>B · Recommended: Main builds the shared parts first (picture 2), then each section switches to them.</b> <i>+</i> each decided pattern is built and tested once; a later fix reaches every section; Black Belt sheds its copies. <i>−</i> Main's step comes first, so the section prompts wait for it; nothing on screen changes in that step.<br><b>C · Share only what's new:</b> shared parts for the walkthrough's decisions; the existing copies (four Compare dialogs, Black Belt's parts, the misplaced helpers) stay. <i>+</i> less moving. <i>−</i> the old copies stay, and the next section copies them again."
+}

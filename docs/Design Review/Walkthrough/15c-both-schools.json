@@ -1,0 +1,68 @@
+{
+  "title": "Item 15c · “Both” in the top bar",
+  "subtitle": "<b>Approved in each section.</b> With “Both” chosen, sections show both schools in one of two ways: <b>everything, one school under the other</b> (Prospects and Schedule; Camps with a School column; Calendar with W/S letters), or <b>one summary box per school with “Open [school]”</b> (Finance, v0.198 — each school closes its own drawer). Star's and Black Belt's events are for both schools anyway. <b>Color Belt shows nothing</b> and asks you to choose a school — your own rule (v0.34/v0.35: each school's testing kept separate so staff can't change the other school's event by mistake; “may be revisited”). The words differ too: “Both schools” (Prospects, Calendar, Forms, Camps' School column) vs “Worcester and Shrewsbury” (Home, Schedule, Camps' page line). <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today · “Both” chosen",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/15m-colorbelt-both-blocked.png",
+          "crop": [70, 96, 1190, 410],
+          "scale": 0.68,
+          "caption": "<b>1. Color Belt:</b> nothing to see — “Testing is kept separate for each school. Choose a school to see its testing.” and two school buttons.",
+          "marks": [[446, 420, 440, 72]]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/15n-prospects-both.png",
+              "crop": [70, 96, 560, 130],
+              "scale": 0.8,
+              "caption": "<b>2. Prospects:</b> “Both schools”, then a Worcester group and a Shrewsbury group (Schedule the same).",
+              "marks": [[76, 126, 72, 18]]
+            },
+            {
+              "src": "shots/15o-camps-both.png",
+              "crop": [70, 96, 560, 352],
+              "scale": 0.8,
+              "caption": "<b>3. Camps:</b> “Worcester and Shrewsbury” on the page (Home and Schedule say it too), “Both schools” in its School column.",
+              "marks": [[76, 126, 144, 18], [404, 418, 84, 22]]
+            }
+          ]
+        },
+        {
+          "src": "shots/15r-finance-both.png",
+          "crop": [70, 96, 1190, 360],
+          "scale": 0.68,
+          "caption": "<b>4. Finance</b> (your v0.198): one box per school and “Open [school]”; nothing can be changed on Both, because each school closes its own drawer.",
+          "marks": [[89, 343, 159, 40], [685, 343, 167, 40]]
+        }
+      ],
+      "note": "Star's events and Black Belt's cycles are for both schools — nothing to change there."
+    },
+    {
+      "label": "Proposed · Color Belt on “Both”, two ways",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/15s-colorbelt-both-boxes-MOCKUP.png",
+          "crop": [70, 96, 1190, 310],
+          "scale": 0.68,
+          "caption": "<b>5. Option B (recommended) — Finance's boxes:</b> “Both schools” under the title, one box per school with its upcoming testing, and Open Worcester / Open Shrewsbury. Nothing can be changed on Both, so your separation rule stays.",
+          "marks": [[72, 182, 76, 19], [89, 315, 159, 40], [685, 281, 167, 40]]
+        },
+        {
+          "src": "shots/15q-colorbelt-both-list-MOCKUP.png",
+          "crop": [70, 96, 1190, 500],
+          "scale": 0.68,
+          "caption": "<b>6. Option C — Schedule's list:</b> every event, one school under the other, under Schedule's school headings; Add event would first ask “Which school?”, as Schedule does.",
+          "marks": [[72, 182, 76, 19], [72, 305, 105, 29], [72, 456, 117, 29]]
+        }
+      ],
+      "note": "<b>Both copy what's already there</b> — picture 5 is Finance's Both page, picture 6 is Schedule's. In B and C every page says <b>“Both schools”</b>, the word on the “Both” button (Home's date line and Schedule's and Camps' page lines change). Pictures 5–6 are drawn over the real Color Belt page; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question: what should Color Belt show on “Both”?</b><br><b>A · Keep as today.</b> <i>+</i> no work; your separation rule stays. <i>−</i> Color Belt is the one section that shows nothing on “Both”; the two wordings stay.<br><b>B · Recommended: Finance's boxes (picture 5).</b> One box per school with its upcoming testing events and “Open Worcester” / “Open Shrewsbury” (today's two school buttons, moved into the boxes). Nothing can be changed until a school is opened. <i>+</i> the owner sees both schools' testing at a glance; your separation rule stays; the same Both page you chose for Finance, so the two sections that hold each school's money work alike. <i>−</i> one small new view in Color Belt.<br><b>C · Schedule's list (picture 6).</b> All three Color Belt tabs show both schools, one under the other; Add event asks “Which school?”. <i>+</i> works like Prospects, Schedule and Camps. <i>−</i> reverses your v0.34/v0.35 separation rule; the biggest job in this item (three tabs need a Both view).<br>B and C also make the words the same everywhere: “Both schools”."
+}

@@ -1196,3 +1196,94 @@ export const RUBRIC_EDIT_LINE = 'Copied from the default rubric when the cycle w
 export const rubricLockedLine = (date) => `Locked since registration opened on ${date}.`;
 export const NEW_CYCLES_CLOSED = 'New cycles start closed. Check the rubric, then open registration from the cycle’s ⋯ menu.';
 export const NOT_OPENED_YET_LINE = 'Not opened yet. An admin opens registration from the cycle’s ⋯ menu.'; // Edit cycle, never opened (new wording, not in the mockups)
+
+// ===== Contract 0025 §14.5 (builder C3): make-ups, the Dan-change dialog, has-grades refusals =====
+// Mockups: TKD-BlackBelt-Grading-Mockups.html G06 (proposals 24–27) and
+// TKD-BlackBelt-DanChange-Mockup.html (DC 1–5). Lines marked "new wording" are not in a mockup.
+const countWord = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+// ----- G 24: the Add candidate menu -----
+export const NEW_CANDIDATE = 'New candidate';
+export const MAKEUP_ITEM = 'Make-up from an earlier cycle…';
+
+// ----- G 25 / G 26: the make-up picker -----
+export const MAKEUP_TITLE = 'Make-up from an earlier cycle';
+export const MAKEUP_LEAD =
+  'Candidates who owe a make-up from an earlier Black Belt cycle. Add copies their Dan, kept grades and the subjects to retest. No fee.';
+export const SEARCH_BY_NAME = 'Search by name';
+export const makeupGroupTitle = (cycleName, count) => `${cycleName} · ${count}`;
+// "1st Dan · Worcester · 18 and over" (no age group when no age is known)
+export const makeupRowLine = (row, bracket) => [DAN_LABELS[row.dan] ?? '', schoolName(row.locationCode), bracket].filter(Boolean).join(' · ');
+export const retestsLine = (names) => `Retests ${(names ?? []).join(', ')}`;
+// G05's chosen subjects. The mockup adds the day ("…, Jun 14"); the data layer doesn't send that date.
+export const SUBJECTS_CHOSEN_BY_ADMIN = 'Subjects chosen by an admin';
+export const newInCycle = (names, cycleName) => `+ ${(names ?? []).join(', ')}, new in ${cycleName}`;
+export const droppedFromCycle = (names, cycleName) => `Not in ${cycleName}’s rubric, so not copied: ${(names ?? []).join(', ')}`; // new wording, not in the mockups
+export const MAKEUP_ADD = 'Add';
+export const addMakeupLabel = (name) => `Add ${name} as a make-up`; // screen readers (new wording, not in the mockups)
+export const ALREADY_ADDED = 'Already added';
+export const CHOOSE_SUBJECTS = 'Choose subjects';
+export const chooseSubjectsLabel = (name) => `Choose subjects for ${name}`; // screen readers (new wording, not in the mockups)
+export const ADMIN_CHOOSES_FIRST = 'An admin chooses the subjects first';
+export const choiceNeededLine = (cycleName) => `Below the pass mark on ${cycleName}. The subjects to retest aren’t chosen yet.`; // new wording, not in the mockups
+export const MAKEUP_LIST_EMPTY = 'No one owes a make-up from an earlier cycle.'; // new wording, not in the mockups
+export const makeupNoMatch = (text) => `No one matches "${text}".`; // new wording, not in the mockups
+export const makeupAddedToast = (name, cycleName) => `${name} added · make-up from ${cycleName}`;
+export const makeupStale = (name, cycleName) => `${name}’s result on ${cycleName} changed just now, so the list was loaded again.`; // new wording, not in the mockups
+export const makeupInvalid = (name) => `${name} can’t be added as a make-up any more.`; // new wording, not in the mockups
+export const MAKEUP_GONE = 'This candidate or cycle was deleted, so the list was loaded again.'; // new wording, not in the mockups
+
+// ----- G 27: the make-up row (roster and detail) -----
+export const PLAN_NO_FEE = 'No fee';
+export const TAG_MAKEUP = 'Make-up';
+export const BALANCE_NONE = '—';
+// "Make-up from Spring 2027 · retests Free sparring"
+export const makeupLine = (cycleName, retestNames) =>
+  (retestNames ?? []).length > 0 ? `Make-up from ${cycleName ?? ''} · retests ${retestNames.join(', ')}` : `Make-up from ${cycleName ?? ''}`;
+export const registeredMakeup = (registeredOn, cycleName) => `${shortDate(registeredOn)} · make-up from ${cycleName ?? ''}`; // new wording, not in the mockups
+export const WAIVER_MAKEUP = 'Not needed again for a make-up'; // new wording, not in the mockups
+export const MAKEUP_NO_PAYMENTS = 'A make-up has no fee, so nothing is paid here.'; // new wording, not in the mockups
+export const danMakeupReadonly = (dan, cycleName) => `${DAN_LABELS[dan] ?? ''} (make-up from ${cycleName ?? ''})`; // new wording, not in the mockups
+export const DAN_MAKEUP_HINT = 'A make-up keeps the Dan of the earlier cycle.'; // new wording, not in the mockups
+
+// ----- Q-G3 (v0.950): grades block deleting -----
+export const hasGrades = (name) => `${name} has grades, so they can't be deleted. Withdraw them instead.`;
+export const hasGradesShort = (name) => `${name} has grades, so they can't be deleted.`; // already withdrawn (new wording, not in the mockups)
+export const CYCLE_HAS_GRADES = 'Grades are entered for this cycle, so it can’t be deleted.'; // new wording, not in the mockups
+export const restoreAlreadyAdded = (name) => `Another make-up of ${name} is already on a cycle, so this one can’t be restored.`; // new wording, not in the mockups
+export const danChangeMakeupLater = (name) => `${name}’s make-up is already on a later cycle. Undo that make-up first, then change the Dan.`; // OI-4 (new wording, not in the mockups)
+
+// ----- Q-G4 (v0.951 / v0.955): the Dan-change dialog -----
+export const changeDanTitle = (name, dan) => `Change ${name} to ${DAN_LABELS[dan] ?? ''}?`;
+// What will be cleared, counts = { gradeCount, countCount, chosenCount }:
+// "9 grades" / "9 grades and 4 extra-point counts" / "9 grades, 4 extra-point counts and 2 chosen make-up subjects"
+function clearedParts(counts, countName, chosenName) {
+  const { gradeCount = 0, countCount = 0, chosenCount = 0 } = counts ?? {};
+  const parts = [];
+  if (gradeCount > 0) parts.push(countWord(gradeCount, 'grade', 'grades'));
+  if (countCount > 0) parts.push(countWord(countCount, ...countName));
+  if (chosenCount > 0) parts.push(countWord(chosenCount, ...chosenName));
+  return parts;
+}
+// DC 1: "The 9 grades entered for 1st Dan subjects will be cleared. 2nd Dan has different subjects.
+// This can't be undone." — with counts (or chosen subjects): "… entered for 1st Dan will be cleared."
+export function changeDanBody(counts, oldDan, newDan) {
+  const parts = clearedParts(counts, ['extra-point count', 'extra-point counts'], ['chosen make-up subject', 'chosen make-up subjects']);
+  const onlyGrades = parts.length === 1 && (counts?.gradeCount ?? 0) > 0;
+  const old = DAN_LABELS[oldDan] ?? '';
+  return `The ${andList(parts)} entered for ${onlyGrades ? `${old} subjects` : old} will be cleared. ${DAN_LABELS[newDan] ?? ''} has different subjects. This can't be undone.`;
+}
+// DC 2 (red): "Change Dan and clear 9 grades" / "Change Dan and clear 9 grades, 4 counts"
+export const clearGradesButton = (counts) => `Change Dan and clear ${clearedParts(counts, ['count', 'counts'], ['chosen subject', 'chosen subjects']).join(', ')}`;
+export const gradesChanged = (name) => `${name}'s grades changed. Check the number and try again.`;
+
+// ----- S2: Edit cycle once grading started -----
+export const DAY_HAS_GRADES = 'Grades are entered for this day, so it can’t be moved or deleted.'; // new wording, not in the mockups
+export const FIRST_DAY_FROZEN = 'Grading has started, so the first day can’t be moved or deleted.'; // new wording, not in the mockups
+export const partsKeepGrades = (parts) => `${parts} already has grades on this day, so it stays ticked.`; // new wording, not in the mockups
+export const beforeFirstDay = (date) => `Grading has started, so no testing day can come before the first day (${date}).`; // new wording, not in the mockups
+export const EDIT_CYCLE_HAS_GRADES = 'Some testing days already have grades, so this change wasn’t saved. Grayed days can’t be moved or deleted.'; // new wording, not in the mockups
+
+// ----- Q-G1 / OI-2 (v0.948 / v0.956): a cycle's rubric locked by grading -----
+export const lockedByGrading = (date) => `Locked — grading started ${date}. Changes go into the default rubric for next season.`; // new wording, not in the mockups
+export const RUBRIC_LOCKED_GRADING_NOW = "Grading started, so this rubric is locked now. Your changes weren't saved."; // new wording, not in the mockups

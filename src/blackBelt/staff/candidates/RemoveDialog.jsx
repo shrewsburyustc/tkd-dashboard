@@ -4,7 +4,9 @@
 //   Withdraw            "Kept under Removed, with their payments; can be restored." — at once,
 //                       toast "Alex Kim withdrawn · Undo"
 //   Delete permanently  red; grayed while the candidate has payment records ("… can't be deleted.
-//                       Withdraw them instead.", v0.904 — payment records are never deleted);
+//                       Withdraw them instead.", v0.904 — payment records are never deleted)
+//                       and, since migration 0025, while they have grades ("Alex Kim has grades,
+//                       so they can't be deleted. Withdraw them instead.", Q-G3 v0.950);
 //                       otherwise it asks once more (DeleteConfirm): "Delete Alex Kim permanently?
 //                       Their registration and signed waiver are deleted from Spring 2027. This
 //                       can't be undone." Keep candidate · Delete permanently
@@ -31,6 +33,8 @@ export default function RemoveDialog({ state, onWithdraw, onDelete, onCancel }) 
   const off = state.saving || state.blocking;
   const Withdraw = ICONS.withdraw;
   const Trash = ICONS.deleteForever;
+  // Why Delete permanently can't be used (null = it can): payment records first, then grades
+  const blockedReason = t.hasPaymentRows ? T.hasPaymentRecords(name) : t.hasGrades ? T.hasGrades(name) : null;
   return (
     <Dialog title={T.removeTitle(name)} variant="confirm" describedBy={bodyId} onRequestClose={onCancel}>
       <div id={bodyId} className="bb-remove-choices">
@@ -46,16 +50,16 @@ export default function RemoveDialog({ state, onWithdraw, onDelete, onCancel }) 
         <div className="bb-remove-choice">
           <button
             type="button"
-            className={`btn ${t.hasPaymentRows ? 'bb-btn-gray' : 'btn-delete'}`}
-            aria-disabled={off || t.hasPaymentRows ? 'true' : undefined}
+            className={`btn ${blockedReason ? 'bb-btn-gray' : 'btn-delete'}`}
+            aria-disabled={off || blockedReason ? 'true' : undefined}
             aria-describedby={`${bodyId}-d`}
-            onClick={() => !off && !t.hasPaymentRows && onDelete()}
+            onClick={() => !off && !blockedReason && onDelete()}
           >
             <Trash size={16} aria-hidden="true" />
             {T.DELETE_PERMANENTLY}
           </button>
           <p id={`${bodyId}-d`} className="field-hint">
-            {t.hasPaymentRows ? T.hasPaymentRecords(name) : T.DELETE_HINT}
+            {blockedReason ?? T.DELETE_HINT}
           </p>
         </div>
       </div>

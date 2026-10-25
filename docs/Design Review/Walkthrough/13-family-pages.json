@@ -1,0 +1,87 @@
+{
+  "title": "Item 13 · The five family sign-up pages",
+  "subtitle": "<b>Approved in each section.</b> The pages families fill in on their phones already share one look: the school's logo, the event card, “Step 1 of 2 · Details”, <b>Continue</b>, then a <b>“Check and send”</b> page (Color Belt, Star, Black Belt: “Send registration” → “[name] is registered”; Camps: “Check and sign” → <b>“Sign up”</b> → “You're signed up”). Forms — the free-class sign-up, also used on the desk tablet — is the different one, and approved that way (v0.235): three short steps with a progress bar, <b>Next</b>, no check page, <b>Submit</b> → “Thanks, Sam!”. <span style=\"color:#6B6B6B\">(Preview screenshots at phone size, 390 wide · fake data — nothing was sent)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today · first page, then last",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/13a-colorbelt-form-phone.png",
+              "crop": [0, 40, 390, 804],
+              "scale": 0.55,
+              "shotWidth": 390,
+              "caption": "<b>1. Color Belt</b> (Star and Black Belt look the same)."
+            },
+            {
+              "src": "shots/13b-camps-form-phone.png",
+              "crop": [0, 40, 390, 804],
+              "scale": 0.55,
+              "shotWidth": 390,
+              "caption": "<b>2. Camps:</b> the same look."
+            },
+            {
+              "src": "shots/13c-forms-form-phone.png",
+              "crop": [0, 40, 390, 804],
+              "scale": 0.55,
+              "shotWidth": 390,
+              "caption": "<b>3. Forms:</b> “Step 1 of 3”, a progress bar, “Next”.",
+              "marks": [[25, 683, 340, 44]]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/13d-colorbelt-check-and-send-phone.png",
+              "crop": [0, 520, 390, 380],
+              "scale": 0.7,
+              "shotWidth": 390,
+              "caption": "<b>4. Color Belt's last page:</b> “Send registration”."
+            },
+            {
+              "src": "shots/13e-forms-last-step-phone.png",
+              "crop": [0, 464, 390, 380],
+              "scale": 0.7,
+              "shotWidth": 390,
+              "caption": "<b>5. Forms' last page:</b> “Submit”.",
+              "marks": [[106, 801, 259, 44]]
+            }
+          ]
+        }
+      ],
+      "note": "Not part of the question: the copied code behind these pages (five copies of the same parts) is item 19."
+    },
+    {
+      "label": "Proposed (option B) · same words, each page keeps its shape",
+      "tone": "after",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/13f-forms-continue-MOCKUP.png",
+              "crop": [0, 40, 390, 804],
+              "scale": 0.55,
+              "shotWidth": 390,
+              "caption": "<b>6. Forms:</b> “Continue”, like every other page (Back stays).",
+              "marks": [[25, 683, 340, 44]]
+            },
+            {
+              "src": "shots/13g-forms-send-MOCKUP.png",
+              "crop": [0, 520, 390, 420],
+              "scale": 0.7,
+              "shotWidth": 390,
+              "caption": "<b>7. Forms' last page:</b> “Send”, the plain word the other pages use.",
+              "marks": [[106, 801, 259, 44]]
+            }
+          ]
+        }
+      ],
+      "note": "<b>The rule in B:</b> each page keeps its shape — Forms stays short, the others keep their check page — and the same words do the same jobs: <b>Continue</b> to go on, <b>Back</b> to go back, and the last button says what it does: “Send registration” (testing), “Sign up” (Camps), “Send” (Forms). The done pages keep their own words. Pictures 6–7 are the real pages with two words changed; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work; every page was approved. <i>−</i> Forms says “Next” and “Submit” where the others say “Continue” and “Send”.<br><b>B · Recommended: the same words, each page keeps its shape (pictures 6–7).</b> Forms says “Continue” and “Send”; everything else stays. <i>+</i> a family who uses two of the pages sees the same words; “Send” is plainer than “Submit”. <i>−</i> two words to change in Forms.<br><b>C · Forms gets the same shape as the others:</b> one details page, then “Check and send”. <i>+</i> one shape everywhere. <i>−</i> a longer free-class sign-up on the desk tablet; reopens Forms' approved short steps (v0.235)."
+}

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Item 17b · Typing that a stray Esc throws away</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2000px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Item 17b · Typing that a stray Esc throws away</h1>
+<p class="sub"><b>Approved rule, a few gaps (drift; one planned).</b> The rule (v0.46): if someone has typed and presses Esc, clicks outside or goes back, the dialog stays open with “Unsaved changes. Save or cancel first.” — nothing typed is silently lost (phones add a “Discard changes” link, v0.56). Most dialogs follow it. Gaps found and tested in the preview: <b>Forms' Fill in and New form close on a second Esc and the answers are gone</b> — although Fill in's own note says “press Cancel to throw it away”; <b>Camps' Save as template</b> closes on the first Esc; <b>Prospects' Edit statuses</b> drops a changed status with no note; <b>Change PIN / Change password</b> close on Esc (aligning them was planned in v0.56, “to be aligned later with Jeffrey's OK”). On purpose: Finance's Close the day keeps a draft instead (v0.800); Black Belt's rubric editor has its own leave rule (v0.928). No guard needed: Prospects' one-click dialogs (Book a time, Joined, Came?) hold nothing typed. <span style="color:#6B6B6B">(Preview screenshots at PC size · fake data)</span></p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <div class="row"><figure style="width:334.8px">
+    <div class="shot" style="width:334.8px;height:342.86px">
+      <img src="shots/17b-colorbelt-guard.png" style="left:-229.4px;top:-43.4px;width:793.6px">
+      <div class="mark" style="left:34.44px;top:299.18px;width:136.96px;height:24.12px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>1. The rule working</b> (Color Belt's Edit details after two Escs): the dialog stays open with the amber note.</figcaption>
+  </figure><figure style="width:280.8px">
+    <div class="shot" style="width:280.8px;height:345.28000000000003px">
+      <img src="shots/17b-forms-fill-first-esc.png" style="left:-192.4px;top:-36.4px;width:665.6px">
+      <div class="mark" style="left:28.240000000000002px;top:276.28000000000003px;width:195.20000000000002px;height:21.52px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>2. Forms' Fill in after one Esc:</b> “This sign-up isn't sent yet. Send it or press Cancel to throw it away.”</figcaption>
+  </figure></div>
+<figure style="width:737.8px">
+    <div class="shot" style="width:737.8px;height:117.8px">
+      <img src="shots/17b-forms-fill-second-esc.png" style="left:-43.4px;top:-59.519999999999996px;width:793.6px">
+      
+    </div>
+    <figcaption><b>3. …a second Esc closes it:</b> the family's answers are gone, and reopening shows an empty form. New form does the same.</figcaption>
+  </figure>
+<div class="row"><figure style="width:266px">
+    <div class="shot" style="width:266px;height:210px">
+      <img src="shots/17b-camps-template-typed.png" style="left:-315px;top:-49px;width:896px">
+      
+    </div>
+    <figcaption><b>4. Camps' Save as template</b> with a typed name…</figcaption>
+  </figure><figure style="width:471.2px">
+    <div class="shot" style="width:471.2px;height:93px">
+      <img src="shots/17b-camps-template-esc.png" style="left:-43.4px;top:-59.519999999999996px;width:793.6px">
+      
+    </div>
+    <figcaption><b>5. …one Esc closes it</b> and the name is lost.</figcaption>
+  </figure></div>
+  <div class="note">Also: Prospects' Edit statuses drops a changed status on Esc (no note); Change PIN / Change password close on Esc. Seen in passing: Fill in's note sits above its buttons, not under them as v0.81 says.</div>
+</div>
+<div class="col after">
+  <div class="label">Proposed (option B) · the guard everywhere</div>
+  <div class="row"><figure style="width:311.59999999999997px">
+    <div class="shot" style="width:311.59999999999997px;height:280.44px">
+      <img src="shots/17b-camps-template-guard-MOCKUP.png" style="left:-369px;top:-57.4px;width:1049.6px">
+      <div class="mark" style="left:22.24px;top:219.04px;width:267.12px;height:39.16px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>6. Camps' Save as template</b> stays open with the shared note.</figcaption>
+  </figure><figure style="width:280.8px">
+    <div class="shot" style="width:280.8px;height:345.28000000000003px">
+      <img src="shots/17b-forms-fill-first-esc.png" style="left:-192.4px;top:-36.4px;width:665.6px">
+      <div class="mark" style="left:28.240000000000002px;top:276.28000000000003px;width:195.20000000000002px;height:21.52px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>7. Forms' Fill in and New form:</b> the note stays after any number of Escs, until Send / Save or Cancel.</figcaption>
+  </figure></div>
+  <div class="note"><b>What changes where:</b> Forms — Fill in and New form ignore a second Esc (phones keep the “Discard changes” link). Camps — Save as template gets the note. Prospects — Edit statuses gets the note. Main — Change PIN / Change password join the rule (the v0.56 alignment). Recorded exceptions: Finance's Close the day draft (v0.800), Black Belt's rubric editor (v0.928), one-click dialogs. Picture 6 is drawn over the real dialog; nothing in the app was changed.</div>
+</div>
+</div>
+<div class="foot"><b>Your choice — one question: should the unsaved-changes guard hold everywhere?</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> a double Esc wipes a family's sign-up typed at the desk; three more dialogs lose typing without a word.<br><b>B · Recommended: close every gap (pictures 6–7).</b> Forms' Fill in and New form keep their note until Send / Save or Cancel; Camps' Save as template and Prospects' Edit statuses get the shared note; Change PIN / Change password join the rule (the alignment planned in v0.56 — this would be your OK). <i>+</i> nothing typed is ever lost to a stray key; one behaviour in every dialog. <i>−</i> small changes in Forms, Camps, Prospects and the account dialogs.<br><b>C · Only where whole forms are typed:</b> Forms' Fill in and New form, and Prospects' Edit statuses. <i>+</i> least work for the biggest risk. <i>−</i> Camps' template name and the PIN / password dialogs still lose typing on Esc.</div>
+</body></html>

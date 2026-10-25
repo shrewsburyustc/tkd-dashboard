@@ -8,10 +8,17 @@
 //   - "+ Add candidate" (primary; N on the PC) beside the ⋯ (phones: both under the summary line)
 //     — phase B2, contract CONTRACT-0016-B2 §3.2 / §3.7. Grayed with its reason while the device's
 //     Hide payments switch is on ("Add new candidates at the desk.", OP-B7) or the cycle is past.
-//   - the tabs: Candidates (candidates/CandidatesTab.jsx, phase B2) · Rubric (this cycle's own copy
-//     of the rubric, CycleRubricTab.jsx — migration 0024, mockups R12 / R13). Grading and Results
-//     will go between them when they are built (P7: no placeholders). ← → move between the tabs;
-//     leaving the Rubric tab with unsaved changes asks first (guarded, R10).
+//   - the tabs (v0.946): Candidates (candidates/CandidatesTab.jsx, phase B2) · Grading
+//     (grading/GradingTab.jsx, migration 0025, contract 0025 §14.2) · Results (results/ResultsTab.jsx,
+//     §14.3) · Rubric (this cycle's own copy of the rubric, CycleRubricTab.jsx — migration 0024,
+//     mockups R12 / R13). ← → move between the tabs; leaving the Rubric tab with unsaved changes
+//     asks first (guarded, R10). The tab lives in the page address (C2, v0.937 / contract §14.1).
+//   - Grading's data and its ONE save engine live HERE (grading/useBbGrading.js), not in the tab, so
+//     Not saved grades keep retrying while the grader switches tabs (Star's pattern). Switching tabs
+//     never asks; leaving the cycle page with Not saved grades asks "N grades aren't saved" first
+//     (G 8) — the same leave guard as the rubric's question.
+//   - Results' "Open grades" switches to Grading on that Dan and testing day (`gradingFocus`, app
+//     state only — the address just says /grading, §14.1).
 //   - on the Rubric tab, under the tabs: "This cycle's rubric can be changed until registration
 //     first opens…" (admins), "View only…" (staff), and the lock line with "Go to the default
 //     rubric" once registration has opened.
@@ -19,8 +26,9 @@
 //     Sat, Mar 27. Ask an admin to reopen it." under the tabs (approved on Candidates 2).
 // A cycle that no longer exists (deleted elsewhere) → "This cycle was deleted." and back to the
 // Cycles tab.
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconArrowLeft, IconDots, IconEdit, IconLock, IconLockOpen, IconPlus, IconQrcode } from '@tabler/icons-react';
+import Dialog from '../../../components/Dialog.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
@@ -29,6 +37,10 @@ import { PHONE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
 import { usePaymentsHidden } from '../../../screens/finance/usePaymentsHidden.js';
 import CandidatesTab from '../candidates/CandidatesTab.jsx';
+import GradingTab from '../grading/GradingTab.jsx';
+import { useBbGrading } from '../grading/useBbGrading.js';
+import * as GT from '../grading/text.js';
+import ResultsTab from '../results/ResultsTab.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
 import { openNeedsAdmin, useCycleActions } from '../cycles/useCycleActions.js';
 import CycleRubricTab, { CycleRubricLine, useCycleRubricLoad } from './CycleRubricTab.jsx';
@@ -56,10 +68,48 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
     liveRef.current = live;
   });
   const isPhone = useMediaQuery(PHONE_QUERY);
-  // Candidates · Rubric (migration 0024). The tab lives in the page address (C2, v0.937):
-  // #testing/black-belt/cycle/<id>(/rubric) — BlackBeltTesting.jsx passes it in.
+  // Candidates · Grading · Results · Rubric (v0.946). The tab lives in the page address (C2,
+  // v0.937; contract 0025 §14.1): #testing/black-belt/cycle/<id>(/grading|/results|/rubric) —
+  // BlackBeltTesting.jsx passes it in.
   const setTab = (key) => onTab(key);
   const [rubricModal, setRubricModal] = useState(false);
+  const [gradingModal, setGradingModal] = useState(false);
+  const [resultsModal, setResultsModal] = useState(false);
+
+  // ----- Grading (contract 0025 §14.2): its data and ONE save engine, kept on this page -----
+  const grading = useBbGrading({ cycleId, active: tab === 'grading', screenLocked, onNoAccess });
+  // Results' "Open grades": that Dan and testing day on the Grading tab (app state only, §14.1).
+  const [gradingFocus, setGradingFocus] = useState(null); // { dan, dayKey, candidateId, key }
+  const openGrades = useCallback(({ dan, dayKey, candidateId } = {}) => {
+    setGradingFocus({ dan: dan ?? null, dayKey: dayKey ?? null, candidateId: candidateId ?? null, key: Date.now() });
+    onTab('grading');
+    window.scrollTo?.(0, 0);
+  }, [onTab]);
+  // The mark goes when Grading is left (as Star's).
+  useEffect(() => {
+    if (tab !== 'grading') setGradingFocus(null);
+  }, [tab]);
+
+  // ----- The leave guard: the rubric card's question (R10) and Grading's Not saved grades (G 8) -----
+  // BlackBeltTesting keeps ONE guard for this page; it asks Grading first, then the rubric card.
+  // Switching tabs inside the page asks only the rubric card (Grading's saves go on in the background).
+  const rubricGuardRef = useRef(null);
+  const setRubricGuard = useCallback((fn) => {
+    rubricGuardRef.current = fn;
+  }, []);
+  const gradingGuardRef = useRef(grading.guard);
+  useLayoutEffect(() => {
+    gradingGuardRef.current = grading.guard;
+  });
+  useEffect(() => {
+    if (!setGuard) return undefined;
+    setGuard((proceed) => gradingGuardRef.current(proceed) || (rubricGuardRef.current ? rubricGuardRef.current(proceed) : false));
+    return () => setGuard(null);
+  }, [setGuard]);
+  const guardedTab = (action) => {
+    if (rubricGuardRef.current && rubricGuardRef.current(action)) return;
+    action();
+  };
   const rubricLive = useCycleRubricLoad({ cycleId, version: cycle?.version ?? null, enabled: !screenLocked && tab === 'rubric', onNoAccess });
 
   const [menu, setMenu] = useState(null); // { anchor }
@@ -135,7 +185,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
     candidatesRef.current?.openAdd(addRef.current);
   }
 
-  const modalShown = (editor.isOpen || links !== null || candidatesModal || rubricModal) && !screenLocked;
+  const modalShown = (editor.isOpen || links !== null || candidatesModal || rubricModal || gradingModal || resultsModal || grading.leave !== null) && !screenLocked;
   useShortcutN({ enabled: Boolean(cycle) && !addBlocked && !modalShown && !screenLocked && !menu && !busy, onPress: pressAdd });
   useEffect(() => {
     onModalOpenChange(modalShown);
@@ -226,6 +276,13 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
   }
 
   const firstDay = state.firstDay ?? cycle.days?.[0]?.date ?? null;
+  // The tabs, in order (v0.946). The ids match what each tab's panel names (ResultsTab: bb-cycle-results-…).
+  const cycleTabs = [
+    { key: 'candidates', label: T.TAB_CANDIDATES, id: `bb-cycle-tab-${cycle.id}`, panel: `bb-cycle-panel-${cycle.id}` },
+    { key: 'grading', label: GT.TAB_GRADING, id: `bb-cycle-tab-grading-${cycle.id}`, panel: `bb-cycle-grading-${cycle.id}` },
+    { key: 'results', label: GT.TAB_RESULTS, id: `bb-cycle-tab-results-${cycle.id}`, panel: `bb-cycle-results-${cycle.id}` },
+    { key: 'rubric', label: T.TAB_CYCLE_RUBRIC, id: `bb-cycle-tab-rubric-${cycle.id}`, panel: `bb-cycle-rubric-${cycle.id}` },
+  ];
 
   return (
     <>
@@ -257,15 +314,13 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
         onKeyDown={(event) => {
           if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
           event.preventDefault();
-          const next = tab === 'candidates' ? 'rubric' : 'candidates';
-          guarded(() => setTab(next));
-          document.getElementById(next === 'candidates' ? `bb-cycle-tab-${cycle.id}` : `bb-cycle-tab-rubric-${cycle.id}`)?.focus();
+          const index = cycleTabs.findIndex((t) => t.key === tab);
+          const next = cycleTabs[(index + (event.key === 'ArrowRight' ? 1 : -1) + cycleTabs.length) % cycleTabs.length];
+          guardedTab(() => setTab(next.key));
+          document.getElementById(next.id)?.focus();
         }}
       >
-        {[
-          { key: 'candidates', label: T.TAB_CANDIDATES, id: `bb-cycle-tab-${cycle.id}`, panel: `bb-cycle-panel-${cycle.id}` },
-          { key: 'rubric', label: T.TAB_CYCLE_RUBRIC, id: `bb-cycle-tab-rubric-${cycle.id}`, panel: `bb-cycle-rubric-${cycle.id}` },
-        ].map((t) => (
+        {cycleTabs.map((t) => (
           <button
             key={t.key}
             type="button"
@@ -275,7 +330,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
             aria-selected={tab === t.key ? 'true' : 'false'}
             aria-controls={t.panel}
             tabIndex={tab === t.key ? 0 : -1}
-            onClick={() => tab !== t.key && guarded(() => setTab(t.key))}
+            onClick={() => tab !== t.key && guardedTab(() => setTab(t.key))}
           >
             {t.label}
           </button>
@@ -284,7 +339,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
       {tab === 'candidates' && staffLine && <p className="viewonly">{staffLine}</p>}
       {tab === 'rubric' && !isAdmin && <p className="viewonly">{T.VIEW_ONLY}</p>}
       {tab === 'rubric' && rubricLive.status === 'ready' && rubricLive.data && (
-        <CycleRubricLine locked={rubricLive.data.locked} firstOpenedAt={rubricLive.data.firstOpenedAt} onGoToDefaultRubric={onGoToDefaultRubric} />
+        <CycleRubricLine locked={rubricLive.data.locked} firstOpenedAt={rubricLive.data.firstOpenedAt} gradingStartedAt={rubricLive.data.gradingStartedAt ?? null} onGoToDefaultRubric={onGoToDefaultRubric} />
       )}
       {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />}
       {tab === 'rubric' && (
@@ -296,7 +351,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
           screenLocked={screenLocked}
           panelId={`bb-cycle-rubric-${cycle.id}`}
           tabId={`bb-cycle-tab-rubric-${cycle.id}`}
-          setGuard={setGuard}
+          setGuard={setRubricGuard}
           onModalChange={setRubricModal}
           onLockedNow={reloadQuiet}
           showToast={showToast}
@@ -305,7 +360,38 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
           onRefreshProfile={onRefreshProfile}
         />
       )}
-      {/* Candidates stays mounted (hidden) while the Rubric tab is open, so its list and the
+      {tab === 'grading' && (
+        <GradingTab
+          cycle={cycle}
+          grading={grading}
+          isAdmin={isAdmin}
+          location={location}
+          onLocationChange={onLocationChange}
+          screenLocked={screenLocked}
+          onNoAccess={onNoAccess}
+          focus={gradingFocus}
+          onModalChange={setGradingModal}
+          panelId={`bb-cycle-grading-${cycle.id}`}
+          tabId={`bb-cycle-tab-grading-${cycle.id}`}
+        />
+      )}
+      {tab === 'results' && (
+        <ResultsTab
+          cycle={cycle}
+          cycleId={cycle.id}
+          isAdmin={isAdmin}
+          location={location}
+          onLocationChange={onLocationChange}
+          screenLocked={screenLocked}
+          onNoAccess={onNoAccess}
+          onRefreshProfile={onRefreshProfile}
+          showToast={showToast}
+          clearToast={clearToast}
+          onModalOpenChange={setResultsModal}
+          onOpenGrades={openGrades}
+        />
+      )}
+      {/* Candidates stays mounted (hidden) while another tab is open, so its list and the
           header's Add candidate keep working. */}
       <div hidden={tab !== 'candidates'}>
       <CandidatesTab
@@ -342,6 +428,23 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
         />
       )}
       {!screenLocked && editor.element}
+      {grading.leave && !screenLocked && (
+        // Star's / Color Belt v0.192's box (G 8): nothing is deleted, so no red — "Stay on this page"
+        // is the blue default (Enter, Esc, backdrop, Back).
+        <Dialog key={grading.leave.key} title={grading.leave.title} variant="confirm" describedBy={`bb-leave-${cycle.id}`} onRequestClose={grading.stayOnPage}>
+          <p id={`bb-leave-${cycle.id}`} className="tdialog-sub tdialog-body">
+            {grading.leave.body}
+          </p>
+          <div className="dialog-actions">
+            <button type="button" className="btn" onClick={grading.leaveAnyway}>
+              {GT.S.LEAVE_ANYWAY}
+            </button>
+            <button type="button" className="btn btn-primary" data-autofocus onClick={grading.stayOnPage}>
+              {GT.S.STAY_ON_PAGE}
+            </button>
+          </div>
+        </Dialog>
+      )}
       {links && !screenLocked && (
         <LinksDialog
           cycle={cycle}

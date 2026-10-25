@@ -1,0 +1,43 @@
+{
+  "title": "Item 5b · When the Wi-Fi drops",
+  "subtitle": "<b>Missing — not planned.</b> Rule §3.5 asks for an offline bar on every screen; only Star's grading page has one (v0.513). Everywhere else the page keeps showing the last thing it loaded — the 15-second refresh fails quietly, which was approved for the live lists (v0.157) — so a dropped connection only shows when a save fails. Camps' camp page alone adds “Couldn't refresh the roster” after two failed refreshes (v0.718). <span style=\"color:#6B6B6B\">(Preview screenshots at PC size with the hidden browser's network cut · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today · network cut",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/05e-star-grading-offline.png",
+          "crop": [76, 95, 1180, 490],
+          "scale": 0.75,
+          "caption": "<b>1. Star grading:</b> “You're offline. 1 grade isn't saved yet. They save by themselves when the connection is back. Keep this page open.” — and the cell is marked.",
+          "marks": [[76, 103, 1180, 40], [268, 541, 61, 44], [1075, 541, 180, 44]]
+        },
+        {
+          "src": "shots/05f-colorbelt-offline-silent.png",
+          "crop": [52, 26, 1228, 330],
+          "scale": 0.72,
+          "caption": "<b>2. Color Belt (Black Belt, Finance, Prospects, Calendar… the same):</b> the same cut network, and nothing on screen says so. The Grandmaster finds out only when a Mark paid fails.",
+          "marks": [[52, 74, 1228, 40]]
+        }
+      ],
+      "note": "Camps is the one exception: after two failed refreshes in a row the camp page shows “Couldn't refresh the roster. Check the connection, then retry.” (the preview can't fake that, so it isn't pictured)."
+    },
+    {
+      "label": "Proposed (option B) · one offline bar, every page",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/05g-offline-bar-MOCKUP.png",
+          "crop": [52, 26, 1228, 330],
+          "scale": 0.72,
+          "caption": "<b>3.</b> One amber bar under the top bar, on every page, while the device is offline (or after two failed refreshes in a row, Camps' rule). It goes away by itself when the connection is back.",
+          "marks": [[52, 74, 1228, 36]]
+        }
+      ],
+      "note": "<b>Copies what's already there:</b> the shared amber bar and Star's approved offline words. Star's grading keeps its own line naming the grades not saved yet; Camps' refresh bar becomes this one. Rule §3.5 promises “changes will sync when reconnected”, but nothing waits to sync outside Star grading — so the rule's words change to match (saving check-ins while offline is item 20). Picture 3 is drawn over the real page; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> on most pages a Wi-Fi drop is invisible until something fails to save.<br><b>B · Recommended: one offline bar for the whole dashboard.</b> At the top of every page while offline (or after two failed refreshes in a row), gone by itself when the connection is back. <i>+</i> he always knows; one shared piece (Main session) instead of each section building its own. <i>−</i> a new shared part; Camps' refresh bar folds into it.<br><b>C · Camps' refresh bar on every live page only.</b> <i>+</i> reuses the newest pattern. <i>−</i> appears only after about 30 seconds, and pages without automatic refresh never warn."
+}

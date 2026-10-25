@@ -1,0 +1,82 @@
+{
+  "width": 930,
+  "rowHeight": 84,
+  "meaningWidth": 200,
+  "rows": [
+    {
+      "meaning": "Not paid",
+      "sub": "count card",
+      "today": [
+        { "icon": "clock", "where": "Color Belt · Star" },
+        { "icon": "circle-x", "where": "Black Belt" }
+      ],
+      "after": [{ "icon": "circle-x", "where": "everywhere" }],
+      "note": "The clock then means only time: the Schedule, Black Belt's “Paying on schedule”."
+    },
+    {
+      "meaning": "Change how they'll pay",
+      "today": [
+        { "icon": null, "where": "Color Belt" },
+        { "icon": "repeat", "where": "Star (also its Make-up)" },
+        { "icon": "switch-horizontal", "where": "Black Belt (Change plan)" }
+      ],
+      "after": [{ "icon": "switch-horizontal", "where": "everywhere" }],
+      "note": "Repeat then means only Make-up (Star)."
+    },
+    {
+      "meaning": "Restore",
+      "sub": "bring back someone withdrawn",
+      "today": [
+        { "icon": null, "where": "Color Belt events · Camps" },
+        { "icon": "arrow-back-up", "where": "Star · Black Belt · CB private" }
+      ],
+      "after": [{ "icon": "arrow-back-up", "where": "everywhere" }],
+      "note": "Restore undoes Withdraw, so it shares Undo's icon."
+    },
+    {
+      "meaning": "Came",
+      "today": [
+        { "icon": "user-check", "where": "Prospects · Calendar" },
+        { "icon": "check", "where": "Camps' day grid" }
+      ],
+      "after": [{ "icon": "user-check", "where": "everywhere" }]
+    },
+    {
+      "meaning": "Didn't come",
+      "sub": "no-show",
+      "today": [
+        { "icon": "user-x", "where": "Prospects" },
+        { "icon": "user-off", "where": "Color Belt results" },
+        { "icon": "x", "where": "Camps' day grid" }
+      ],
+      "after": [{ "icon": "user-x", "where": "everywhere" }]
+    },
+    {
+      "meaning": "Edit",
+      "today": [
+        { "icon": "edit", "where": "every section" },
+        { "icon": "pencil", "where": "Forms" }
+      ],
+      "after": [{ "icon": "edit", "where": "everywhere" }]
+    },
+    {
+      "meaning": "Go to today",
+      "sub": "Finance's ⋯ menu",
+      "today": [{ "icon": "calendar-event", "where": "Finance — the Event icon" }],
+      "after": [{ "icon": null, "where": "Finance" }],
+      "note": "No icon, like the Calendar's Today button; the Event icon keeps its one meaning."
+    },
+    {
+      "meaning": "✓ and ✗",
+      "today": [
+        { "icon": "check", "where": "Save · Mark paid · Paid · Pass · chosen" },
+        { "icon": "x", "where": "Close · Cancel · clear · Not passed" }
+      ],
+      "after": [
+        { "icon": "check", "where": "yes / done" },
+        { "icon": "x", "where": "no / close" }
+      ],
+      "note": "Written into the map as two broad meanings; nothing changes on screen."
+    }
+  ]
+}
