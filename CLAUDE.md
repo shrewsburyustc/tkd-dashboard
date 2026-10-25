@@ -75,7 +75,8 @@ Color Belt testing and Star testing are built at the same time in separate Claud
   | `finance` | 0.800–0.899 |
   | `black-belt` | 0.900–0.999 |
   | `design-review` (dashboard-wide design consistency; decided 2026-10-21) | 1.000–1.099 |
-  | any new branch | the next free block (1.100+) — ask Jeffrey first |
+  | `dashboard-core` (the design review's shared parts and the dashboard's own screens; decided 2026-10-25) | 1.100–1.199 |
+  | any new branch | the next free block (1.200+) — ask Jeffrey first |
 
   A new 10b row and its changelog line take the next unused number in your block; the header's `**Version:**` shows the number you just used. Before any rulebook edit in a worktree, `git merge main` first. **Rows numbered before this rule keep their numbers until that branch merges into `main`; at that merge, renumber only that branch's rows that clash with a number already on `main`, into the branch's own block** (10b row, changelog line, and any "vX.XX" mention in that branch's docs). The changelog therefore has gaps and is no longer in strict number order; the check is "no number used twice", not "1…N with no gaps". If a block runs out, ask Jeffrey for the next free block.
 - **Migration numbers:** one number per migration, reserved through the **Main session** before the file is written. Before asking, check every branch and every worktree folder (including uncommitted files and contracts/plans). Taken or reserved (checked 2026-10-19):
