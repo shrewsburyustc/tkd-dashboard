@@ -27,7 +27,6 @@ Main session — set up the dashboard-core branch for the design review's shared
      | any new branch | the next free block (1.200+) — ask Jeffrey first |
    ```
 
-   If Jeffrey OKs it on a later day, use that date.
 4. **Commit on main** with the message "CLAUDE.md: dashboard-core branch, rulebook block 1.100–1.199".
    - Show `git diff --cached --stat` first, and explain the commands.
    - **Don't push.** Pushing main deploys, so it needs Jeffrey's OK for that push.
