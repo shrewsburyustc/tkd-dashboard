@@ -1,0 +1,48 @@
+<!doctype html>
+<!-- TKD-BlackBelt-DanChange-Mockup.html — Black Belt Q-G4 (rulebook v0.951): the confirmation when a candidate's Dan
+     is changed in Edit details after grading started. Copies Star's dialog (v0.164). Amber outline = proposal. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Dan change dialog</title><style>
+:root{--bg:#fff;--surface:#f7f7f5;--border:#e5e5e2;--text:#1f1f1f;--sec:#6b6b6b;--blue:#003595;--tint:#e6ebf4;--red:#a32d2d}
+*{box-sizing:border-box}
+body{margin:0;background:#ecebe7;font-family:'Segoe UI',system-ui,sans-serif;color:var(--text);padding:24px;width:1400px}
+h1{font-size:21px;margin:0 0 6px}.lead{font-size:14px;color:#444;margin:0 0 14px;line-height:1.55;max-width:1300px}
+.notes{font-size:13px;line-height:1.55;background:#fff;border:1px solid #d6d6d0;border-radius:10px;padding:12px 16px;margin-bottom:18px;max-width:1340px}
+.notes li{margin:3px 0}.pn{display:inline-block;min-width:20px;height:20px;border-radius:10px;background:#fff3d6;border:1px dashed #e0a100;color:#8a5a00;font-size:11px;text-align:center;line-height:18px;margin-right:6px}
+.row{display:flex;gap:22px;align-items:flex-start}
+.cap{font-size:12px;color:#555;margin:0 0 6px}
+.dev{position:relative;background:#fff;border:1px solid #cfcfca;border-radius:10px;overflow:hidden}
+.shade{position:absolute;inset:0;background:rgba(31,31,31,.45)}
+.page{padding:18px 22px;font-size:13px;color:#999}
+.page h2{font-size:20px;margin:6px 0;color:#bbb}
+.dlg{position:absolute;background:#fff;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.25);padding:20px 22px;font-size:14px;line-height:1.5}
+.dlg h3{margin:0 0 8px;font-size:17px}
+.btns{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
+.b{border:1px solid #8f8f8a;border-radius:8px;padding:8px 14px;font-size:14px;background:#fff;min-height:36px}
+.b.r{background:var(--red);color:#fff;border-color:var(--red)}
+.touch .b{min-height:44px;padding:10px 16px}
+.full{inset:0;border-radius:0;box-shadow:none;padding:16px}
+.full .btns{flex-direction:column-reverse}.full .b{width:100%;text-align:center}
+.new{outline:2.5px dashed #e0a100;outline-offset:3px;border-radius:8px}
+</style></head><body>
+<h1>Black Belt · changing a candidate's Dan after grading started (Q-G4, v0.951)</h1>
+<p class="lead">In a candidate's <b>Edit details</b>, staff change Alex Kim from 1st Dan to 2nd Dan and press Save. He already has grades on the 1st Dan subjects, so the dashboard asks first. Same wording and look as Star's (v0.164); the count includes Black Belt's extra-points counts and chosen make-up subjects when there are any.</p>
+<div class="notes"><ul>
+ <li><span class="pn">1</span><b>Wording:</b> title "Change Alex Kim to 2nd Dan?" · body "The 9 grades entered for 1st Dan subjects will be cleared. 2nd Dan has different subjects. This can't be undone." When there are extra-points counts too: "The 9 grades and 4 extra-point counts entered for 1st Dan will be cleared." Chosen make-up subjects (admins) are named the same way.</li>
+ <li><span class="pn">2</span><b>Buttons:</b> Cancel (back to Edit details, nothing saved) · red "Change Dan and clear 9 grades" (red = it deletes, rule §7). The cleared grades stay in the change log.</li>
+ <li><span class="pn">3</span><b>Sizes:</b> a centred dialog on PC and tablet (44px buttons on touch); full screen on phones with the buttons stacked, the red one on top.</li>
+ <li><span class="pn">4</span><b>Only when needed:</b> no grades for the old Dan → Save just saves, no question. A make-up row has no Dan field to change (Q-G4). A date-of-birth fix never asks — the result is worked out again.</li>
+ <li><span class="pn">5</span><b>If something changed meanwhile</b> (someone graded another subject while the question was open), Save is refused with "Alex Kim's grades changed. Check the number and try again." and the question opens again with the new count.</li>
+</ul></div>
+<div class="row">
+ <div><p class="cap">PC · mouse · 1280 (shown at 560 wide)</p>
+  <div class="dev" style="width:560px;height:400px"><div class="page"><div>← Black Belt testing</div><h2>Spring 2027</h2><div>Candidates · Grading · Results · Rubric</div></div><div class="shade"></div>
+   <div class="dlg new" style="left:40px;top:95px;width:480px"><h3>Change Alex Kim to 2nd Dan?</h3>The 9 grades entered for 1st Dan subjects will be cleared. 2nd Dan has different subjects. This can't be undone.<div class="btns"><span class="b">Cancel</span><span class="b r">Change Dan and clear 9 grades</span></div></div></div></div>
+ <div><p class="cap">Tablet · touch · 820 (shown at 380 wide)</p>
+  <div class="dev touch" style="width:380px;height:400px"><div class="page"><h2>Spring 2027</h2></div><div class="shade"></div>
+   <div class="dlg new" style="left:14px;top:80px;width:352px"><h3>Change Alex Kim to 2nd Dan?</h3>The 9 grades and 4 extra-point counts entered for 1st Dan will be cleared. 2nd Dan has different subjects. This can't be undone.<div class="btns"><span class="b">Cancel</span><span class="b r">Change Dan and clear 9 grades, 4 counts</span></div></div></div></div>
+ <div><p class="cap">Phone · touch · 390</p>
+  <div class="dev touch" style="width:250px;height:400px"><div class="dlg full new"><h3>Change Alex Kim to 2nd Dan?</h3>The 9 grades entered for 1st Dan subjects will be cleared. 2nd Dan has different subjects. This can't be undone.<div class="btns"><span class="b">Cancel</span><span class="b r">Change Dan and clear 9 grades</span></div></div></div></div>
+ <div><p class="cap">Phone · 320</p>
+  <div class="dev touch" style="width:210px;height:400px"><div class="dlg full new" style="font-size:13px"><h3 style="font-size:16px">Change Alex Kim to 2nd Dan?</h3>The 9 grades entered for 1st Dan subjects will be cleared. 2nd Dan has different subjects. This can't be undone.<div class="btns"><span class="b">Cancel</span><span class="b r" style="font-size:13px">Change Dan and clear 9 grades</span></div></div></div></div>
+</div>
+</body></html>

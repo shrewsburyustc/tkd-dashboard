@@ -1,0 +1,57 @@
+{
+  "title": "Open detail D10a · Black Belt's “Discard changes?” box under the new red rule",
+  "subtitle": "<b>Found while writing the rulebook rows; for Black Belt's prompt.</b> Black Belt's rubric editor asks “Discard changes to 1st Dan?” when someone leaves with unsaved changes (v0.928). v0.932 made <b>Discard plain</b> and <b>Keep editing the blue, focused choice on the right</b>, because red then meant “delete or remove” only (old §7). The rows now say: <b>red means gone for good</b> (item 7), and every “are you sure?” box puts the button that changes nothing on the left, focused first, and the action on the right — <b>red when it loses something for good</b> (D1c). Discarding loses the typed changes for good, so this box is the same kind as the three “… isn't saved” leave warnings that D1c swapped (picture 2). <span style=\"color:#6B6B6B\">(Preview screenshots · PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "../Walkthrough/shots/d10a-bb-discard.png",
+              "crop": [456, 76, 368, 152],
+              "scale": 1.2,
+              "caption": "<b>1. Black Belt → Rubric and prices, leaving with 1 unsaved change:</b> plain Discard on the left; blue Keep editing on the right, focused first (v0.932).",
+              "marks": [[601, 164, 199, 40]]
+            },
+            {
+              "src": "../Walkthrough/shots/d1c-leave-flip-MOCKUP.png",
+              "crop": [440, 60, 400, 230],
+              "scale": 1.0,
+              "caption": "<b>2. The rule as decided for the leave warnings (D1c):</b> “Stay on this page” left and focused, “Leave anyway” right and red.",
+              "marks": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Options B and C, drawn",
+      "tone": "after",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "../Walkthrough/shots/d10a-bb-discard-B-MOCKUP.png",
+              "crop": [456, 76, 368, 152],
+              "scale": 1.2,
+              "caption": "<b>3. Option B (recommended):</b> Keep editing on the left, focused first; Discard on the right and red — the same as the leave warnings.",
+              "marks": [[601, 164, 199, 40]]
+            },
+            {
+              "src": "../Walkthrough/shots/d10a-bb-discard-C-MOCKUP.png",
+              "crop": [456, 76, 368, 152],
+              "scale": 1.2,
+              "caption": "<b>4. Option C:</b> the same order, Discard stays plain.",
+              "marks": [[601, 164, 199, 40]]
+            }
+          ]
+        }
+      ],
+      "note": "Pictures 3–4 are drawn over the real box (only its buttons' order and colours); nothing in the app was changed. The phone keeps v0.56's amber note with its “Discard changes” link (v0.928), which isn't a confirm box."
+    }
+  ],
+  "footer": "<b>Your choice — one question: does Black Belt's “Discard changes?” box follow the new rule?</b><br><b>A · Keep v0.932, written down as an exception.</b> <i>+</i> no work. <i>−</i> the one box with the safe button on the right in blue, the reverse of every other box; Discard loses work for good without the red.<br><b>B · Recommended: follow the rule (picture 3).</b> Keep editing left and focused, Discard right and red; changes v0.932. <i>+</i> one rule in every box, the same as the leave warnings. <i>−</i> Black Belt redoes one box.<br><b>C · Same order, no red (picture 4).</b> <i>+</i> the order matches every box. <i>−</i> loses work for good without looking like it — the option D1c turned down for the leave warnings."
+}

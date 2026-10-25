@@ -1,0 +1,44 @@
+<!doctype html>
+<!-- 19-after.html — Design Review item 19, "after" diagram (option B): one shared home for every pattern the
+     walkthrough decided, built once by Main, before the sections apply their changes. Screenshot with
+     tools/shoot.mjs. -->
+<html lang="en"><head><meta charset="utf-8"><title>Item 19 after</title>
+<style>
+  body { margin: 0; padding: 16px; width: 930px; box-sizing: border-box; background: #FFFFFF; color: #1F1F1F; font: 14px/1.35 "Segoe UI", system-ui, sans-serif; }
+  .group { border: 1px solid #BFDDB3; background: #F1F8EE; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+  h3 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+  .sub { color: #4A4A4A; font-size: 13px; margin: -4px 0 8px; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .part { background: #FFFFFF; border: 1px solid #CFE3C6; border-radius: 6px; padding: 6px 8px; font-size: 13px; }
+  .part span { color: #5A5A5A; font-size: 12px; }
+  .done { background: #FFFFFF; border: 1px dashed #BFDDB3; color: #5A5A5A; }
+  ol { margin: 0; padding-left: 20px; font-size: 13px; }
+  li { margin: 4px 0; }
+  code { font: 12px Consolas, monospace; background: #FFFFFF; border: 1px solid #D7E8CF; border-radius: 4px; padding: 0 4px; }
+</style></head><body>
+  <div class="group">
+    <h3>One home: <code>src/components/</code> (owner: Main)</h3>
+    <p class="sub">Each pattern you decided is built once, then every section uses it:</p>
+    <div class="grid">
+      <div class="part"><b>Compare + possible-duplicate box</b><br><span>one design today, four copies</span></div>
+      <div class="part"><b>Confirm box</b> “Keep …” / the words pressed<br><span>item 8</span></div>
+      <div class="part"><b>Mark paid box</b> with Paid by<br><span>item 3</span></div>
+      <div class="part"><b>Registration link dialog</b><br><span>item 12a</span></div>
+      <div class="part"><b>Count cards</b><br><span>items 11, 11b</span></div>
+      <div class="part"><b>History line</b> “History · N changes ›”<br><span>item 9b</span></div>
+      <div class="part"><b>Time list</b> (Star's, 5-minute steps)<br><span>item 14b</span></div>
+      <div class="part"><b>Money helper</b> (one instead of five)<br><span>item 17a</span></div>
+      <div class="part"><b>Live refresh, choice group, delete dialog, Hide private details</b><br><span>moved out of Testing's and Finance's folders</span></div>
+      <div class="part"><b>Shared words and shared styles</b><br><span>out of Testing's word file and section CSS</span></div>
+      <div class="part done"><b>Already shared:</b> dialog frame, menu, tooltip button, date picker (14a), toast, error banner, logo</div>
+    </div>
+  </div>
+  <div class="group">
+    <h3>The order of work at the end of the walkthrough</h3>
+    <ol>
+      <li><b>Main</b> builds or moves the shared parts above (nothing on screen changes yet).</li>
+      <li>Each section's prompt then says “use the shared <i>X</i>” — Black Belt drops its copies, Calendar its menu copy, and so on.</li>
+      <li>A new section starts from these parts, so it can't invent a fifth Compare dialog.</li>
+    </ol>
+  </div>
+</body></html>

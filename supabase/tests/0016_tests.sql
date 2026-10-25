@@ -200,6 +200,20 @@ declare
   v_read_tables text[];
   -- 0024 (the rubric editor) installed? (CONTRACT-0024 11.2)
   v_has_0024 boolean := to_regclass('public.bb_default_rubric') is not null;
+  -- 0025 (grading and results) installed? (CONTRACT-0025 12.4)
+  v_has_0025 boolean := to_regclass('public.bb_grades') is not null;
+  -- the 42 functions 0025 adds (CONTRACT-0025 17: 15 staff, 16 helpers, 11 trigger functions)
+  v_grading_fns text[] := array[
+    'bb_set_grade', 'bb_set_measured', 'bb_set_extra_count', 'bb_set_makeup_subjects', 'bb_add_makeup',
+    'bb_mark_result_sent', 'bb_undo_result_sent', 'bb_set_result_text', 'bb_update_candidate_clear',
+    'bb_grading_grid', 'bb_cycle_results', 'bb_makeup_list', 'bb_result_email', 'bb_results_csv', 'bb_cycle_grading_state',
+    'bb_grade_result', 'bb_age_groups', 'bb_measured_letter', 'bb_extra_points', 'bb_kept_match', 'bb_result_text_problem',
+    'bb_candidate_age', 'bb_candidate_grading_input', 'bb_candidate_result', 'bb_candidate_result_with',
+    'bb_cycle_has_grading', 'bb_cycle_grading_started_at', 'bb_candidate_has_grades', 'bb_sent_state',
+    'bb_lock_candidate_shared', 'bb_update_candidate_core',
+    'bb_note_grading_started', 'bb_cycle_grading_started_guard', 'bb_candidates_keep_age', 'bb_grades_rules',
+    'bb_extra_counts_rules', 'bb_makeup_subjects_rules', 'bb_result_sends_guard', 'bb_downloads_guard',
+    'bb_payments_makeup_guard', 'bb_cycle_days_grading', 'bb_cycle_day_parts_grading'];
   v_rubric_fns text[] := array[
     'bb_save_default_dan', 'bb_undo_default_dan', 'bb_save_cycle_dan', 'bb_undo_cycle_dan', 'bb_undo_first_open',
     'bb_rubric_num_ok', 'bb_rubric_int_ok', 'bb_rubric_letters', 'bb_rubric_brackets_problems', 'bb_rubric_dan_problems',
@@ -475,13 +489,23 @@ begin
   -- on bb_default_rubric. The history is append-only, so that row stays
   -- even after "Undo 0024" (SETUP 0024f). 0016's own three are counted
   -- exactly either way.)
+  -- (0025 seeds the three result email texts with the same tag: three
+  -- more bb_seed rows, on bb_result_texts - kept after "Undo 0025" (SETUP
+  -- 0025g) too. Counted exactly either way, CONTRACT-0025 12.4.)
   if v_i <> 1 or v_j <> 1 or v_n <> 1
-     or (select count(*) from public.change_log l where l.action = 'bb_seed' and l.table_name <> 'bb_default_rubric') <> 3
-     or (v_has_0024 and (v_n2 <> 4 or (select count(*) from public.change_log l where l.action = 'bb_seed'
-                                         and l.table_name = 'bb_default_rubric' and l.op = 'insert') <> 1))
-     or (not v_has_0024 and v_n2 not in (3, 4))
+     or (select count(*) from public.change_log l where l.action = 'bb_seed'
+          and l.table_name not in ('bb_default_rubric', 'bb_result_texts')) <> 3
+     or (v_has_0024 and (v_n2 - (select count(*) from public.change_log l where l.action = 'bb_seed' and l.table_name = 'bb_result_texts') <> 4
+                         or (select count(*) from public.change_log l where l.action = 'bb_seed'
+                              and l.table_name = 'bb_default_rubric' and l.op = 'insert') <> 1))
+     or (not v_has_0024 and v_n2 - (select count(*) from public.change_log l where l.action = 'bb_seed' and l.table_name = 'bb_result_texts') not in (3, 4))
      or (not v_has_0024 and v_n2 = 4 and (select count(*) from public.change_log l where l.action = 'bb_seed'
                                            and l.table_name = 'bb_default_rubric' and l.op = 'insert') <> 1)
+     -- (3 per apply of 0025; an Undo 0025 + a redo adds 3 more - the history is append-only)
+     or (v_has_0025 and ((select count(*) from public.change_log l where l.action = 'bb_seed'
+                           and l.table_name = 'bb_result_texts' and l.op = 'insert') not in (3, 6)))
+     or (not v_has_0025 and (select count(*) from public.change_log l where l.action = 'bb_seed'
+                              and l.table_name = 'bb_result_texts') not in (0, 3, 6))
      or exists (select 1 from public.change_log l where l.action = 'bb_seed' and l.actor_name <> 'Database admin') then
     raise exception 'TEST FAILED: T3a the seed history should be 1 settings + 1 placeholder waiver + 1 starting point by Database admin (got %, %, %, % rows)',
       v_i, v_j, v_n, v_n2;
@@ -2155,7 +2179,18 @@ begin
   perform set_config('request.jwt.claims', '', true);
   v_k := pg_temp.bbt_due_candidate(v_cm, 'Gone', v_adult, v_mail_tag || '.gone@example.com', 'drawn');
   v_k2 := pg_temp.bbt_due_candidate(v_cm, 'Gone', v_adult, v_mail_tag || '.gone2@example.com', 'paper');
-  update public.bb_candidates set date_of_birth = null, email_for_results = null, personal_removed_at = now() where id = v_k;
+  if v_has_0025 then
+    -- 0025 (Q-G2): removing a DOB must keep the age, and only the purge's
+    -- tag may set it (CONTRACT-0025 12.4) - so the hand purge does both
+    perform set_config('tkd.action', 'bb_purge_due', true);
+    update public.bb_candidates
+       set date_of_birth = null, email_for_results = null, personal_removed_at = now(),
+           age_kept = public.bb_age_on(v_adult, (select min(d.day_date) from public.bb_cycle_days d where d.cycle_id = v_cm))
+     where id = v_k;
+    perform set_config('tkd.action', '', true);
+  else
+    update public.bb_candidates set date_of_birth = null, email_for_results = null, personal_removed_at = now() where id = v_k;
+  end if;
   update public.bb_candidate_waivers set signature = null, signer_name = null, removed_at = now() where candidate_id = v_k;
   update public.bb_candidates set duplicate_state = 'possible', duplicate_of = v_k where id = v_k2;
   -- the DOB can't come back, even as the SQL Editor's role
@@ -2973,10 +3008,16 @@ begin
   if v_r ->> 'status' <> 'ok'
      or (select count(*) from jsonb_array_elements(v_r -> 'rows')) <> (select count(*) from public.bb_candidates where cycle_id = v_cm)
      or exists (select 1 from jsonb_array_elements(v_r -> 'rows') as x(value) where x.value -> 'money' ? 'items')
+     -- (0025 adds exactly four keys, CONTRACT-0025 6.5 / 12.4)
      or (select array_agg(k order by k) from jsonb_object_keys(v_r -> 'rows' -> 0) as k)
-        <> array['dan', 'duplicate_of', 'duplicate_state', 'first_name', 'has_payment_rows', 'id', 'kukkiwon', 'last_name',
-                 'location_code', 'money', 'plan_id', 'plan_name', 'reference', 'registered_at', 'source', 'status',
-                 'version', 'withdrawn_reason']
+        <> (case when v_has_0025
+                then array['dan', 'duplicate_of', 'duplicate_state', 'first_name', 'has_grades', 'has_payment_rows', 'id',
+                           'is_makeup', 'kukkiwon', 'last_name', 'location_code', 'makeup_of_cycle_name', 'money', 'plan_id',
+                           'plan_name', 'reference', 'registered_at', 'retest_names', 'source', 'status', 'version',
+                           'withdrawn_reason']
+                else array['dan', 'duplicate_of', 'duplicate_state', 'first_name', 'has_payment_rows', 'id', 'kukkiwon', 'last_name',
+                           'location_code', 'money', 'plan_id', 'plan_name', 'reference', 'registered_at', 'source', 'status',
+                           'version', 'withdrawn_reason'] end)
      -- Dan first, then Shrewsbury before Worcester (names are not compared:
      -- text sorting differs between databases)
      or exists (select 1 from jsonb_array_elements(v_r -> 'rows') with ordinality as a(value, n)
@@ -3445,8 +3486,18 @@ begin
   select string_agg(p.oid::regprocedure::text, ', ') into v_txt
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname like 'bb\_%' and not (p.proname = any (v_staff_fns || v_public_fns || v_helper_fns))
-     and not (v_has_0024 and p.proname = any (v_rubric_fns));
+     and not (v_has_0024 and p.proname = any (v_rubric_fns))
+     and not (v_has_0025 and p.proname = any (v_grading_fns));
   if v_txt is not null then raise exception 'TEST FAILED: C4 unexpected bb_ function(s): %', v_txt; end if;
+  -- after 0025 exactly its 42 new functions are there too, one version each (CONTRACT-0025 12.4)
+  if v_has_0025 and (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                      where n.nspname = 'public' and p.proname = any (v_grading_fns)) <> 42 then
+    raise exception 'TEST FAILED: C4 (0025) expected exactly the 42 functions 0025 adds, one version each';
+  end if;
+  if not v_has_0025 and exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                                 where n.nspname = 'public' and p.proname = any (v_grading_fns)) then
+    raise exception 'TEST FAILED: C4 a 0025 function exists without 0025''s tables';
+  end if;
   if v_has_0024 and (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
                       where n.nspname = 'public' and p.proname = any (v_rubric_fns)) <> 19 then
     raise exception 'TEST FAILED: C4 (0024) expected exactly the 19 functions 0024 adds, one version each';
@@ -3517,7 +3568,10 @@ begin
                       where n.nspname = 'public' and c.conname = x.con and c.contype = 'f' and c.confdeltype = x.act);
   if v_txt is not null then raise exception 'TEST FAILED: C5 missing foreign key or wrong removal rule on: %', v_txt; end if;
   if (select count(*) from pg_constraint c where c.contype = 'f' and c.conrelid = any (array(
-        select ('public.' || t)::regclass from unnest(v_tables) as t))) <> 18
+        select ('public.' || t)::regclass from unnest(v_tables) as t))) <> (case when v_has_0025 then 19 else 18 end)
+     -- (0025 adds exactly one: bb_candidates_makeup_of_fk, "set null", CONTRACT-0025 3.1)
+     or (v_has_0025 and not exists (select 1 from pg_constraint c where c.conname = 'bb_candidates_makeup_of_fk'
+                                      and c.conrelid = 'public.bb_candidates'::regclass and c.contype = 'f' and c.confdeltype = 'n'))
      or exists (select 1 from pg_constraint c where c.contype = 'f' and c.conrelid = 'public.bb_payments'::regclass
                  and c.confdeltype <> 'r') then
     raise exception 'TEST FAILED: C5 the 0016 tables must have exactly the 18 listed foreign keys (bb_payments: all restrict)';
@@ -3556,14 +3610,28 @@ begin
   if v_txt is not null then raise exception 'TEST FAILED: C6 missing / wrong / disabled trigger(s): %', v_txt; end if;
   select count(*) into v_n from pg_trigger t
    where t.tgrelid = any (array(select ('public.' || t)::regclass from unnest(v_tables) as t)) and not t.tgisinternal;
-  if v_n <> 6 + 11 + 13 + 13 then raise exception 'TEST FAILED: C6 expected % triggers on the 0016 tables, found %', 6 + 11 + 13 + 13, v_n; end if;
+  -- (0025 adds exactly four on these tables: bb_candidates_keep_age, bb_payments_makeup_guard,
+  -- bb_cycle_days_grading, bb_cycle_day_parts_grading - CONTRACT-0025 5)
+  v_i := 6 + 11 + 13 + 13 + (case when v_has_0025 then 4 else 0 end);
+  if v_n <> v_i then
+    raise exception 'TEST FAILED: C6 expected % triggers on the 0016 tables, found %', v_i, v_n;
+  end if;
+  if v_has_0025 and (select count(*) from pg_trigger t
+                      where not t.tgisinternal and t.tgenabled = 'O'
+                        and ((t.tgrelid = 'public.bb_candidates'::regclass and t.tgname = 'bb_candidates_keep_age')
+                             or (t.tgrelid = 'public.bb_payments'::regclass and t.tgname = 'bb_payments_makeup_guard')
+                             or (t.tgrelid = 'public.bb_cycle_days'::regclass and t.tgname = 'bb_cycle_days_grading')
+                             or (t.tgrelid = 'public.bb_cycle_day_parts'::regclass and t.tgname = 'bb_cycle_day_parts_grading'))) <> 4 then
+    raise exception 'TEST FAILED: C6 (0025) its four triggers on 0016 tables are not all there and enabled';
+  end if;
   select string_agg(x.tbl, ', ') into v_txt
     from (values ('bb_settings', 'id,singleton', ''),
                  ('bb_cycles', 'id,public_code_worcester,public_code_shrewsbury,prices_from',
                   case when v_has_0024 then 'requirements' else '' end),
                  ('bb_cycle_days', 'id,cycle_id', ''),
                  ('bb_cycle_plan_payments', 'id,cycle_plan_id,payment_no', ''),
-                 ('bb_candidates', 'id,cycle_id,source,reference,registered_at', 'date_of_birth,email_for_results,personal_removed_at'),
+                 ('bb_candidates', 'id,cycle_id,source,reference,registered_at' || (case when v_has_0025 then ',makeup_of_cycle_name' else '' end),
+                  'date_of_birth,email_for_results,personal_removed_at' || (case when v_has_0025 then ',makeup_of_candidate_id,age_kept' else '' end)),
                  ('bb_candidate_waivers', 'id,candidate_id,waiver_version_id,how,submission_id,acknowledged,signed_as_minor,ticked_by_name,signed_at',
                   'signature,signer_name,removed_at')) as x(tbl, a0, a1)
    where not exists (select 1 from pg_trigger t
@@ -3594,7 +3662,7 @@ begin
       'bb_cycle_kukkiwon_fees_amount_check', 'bb_cycle_kukkiwon_fees_cycle_dan_key', 'bb_cycle_plan_payments_follows_check',
       'bb_cycle_plan_payments_plan_payment_key', 'bb_candidates_pkey', 'bb_candidates_dob_check', 'bb_candidates_email_check',
       'bb_candidates_personal_check', 'bb_candidates_dan_check', 'bb_candidates_kukkiwon_check', 'bb_candidates_source_check',
-      'bb_candidates_reference_key', 'bb_candidates_reference_check', 'bb_candidates_status_check',
+      'bb_candidates_reference_check', 'bb_candidates_status_check',
       'bb_candidates_duplicate_state_check', 'bb_candidates_duplicate_self_check', 'bb_candidate_waivers_how_check',
       'bb_candidate_waivers_submission_id_key', 'bb_candidate_waivers_submission_check', 'bb_candidate_waivers_acknowledged_check',
       'bb_candidate_waivers_signature_check', 'bb_candidate_waivers_ticked_check', 'bb_candidate_waivers_drawn_check',
@@ -3603,6 +3671,25 @@ begin
    where not exists (select 1 from pg_constraint c join pg_namespace n on n.oid = c.connamespace
                       where n.nspname = 'public' and c.conname = x.name);
   if v_txt is not null then raise exception 'TEST FAILED: C7 missing rule(s): %', v_txt; end if;
+  -- the reference is unique: 0016's rule before 0025; after 0025 a unique
+  -- index over form and desk rows only (a make-up row carries its earlier
+  -- row's reference, CONTRACT-0025 3.2); the source rule's list; and
+  -- whether a candidate must have a plan
+  if (not v_has_0025 and not exists (select 1 from pg_constraint c where c.conname = 'bb_candidates_reference_key'
+                                       and c.conrelid = 'public.bb_candidates'::regclass and c.contype = 'u'))
+     or (not v_has_0025 and pg_get_constraintdef((select c.oid from pg_constraint c where c.conname = 'bb_candidates_source_check'
+                                                   and c.conrelid = 'public.bb_candidates'::regclass))
+                            <> 'CHECK ((source = ANY (ARRAY[''form''::text, ''desk''::text])))')
+     or (v_has_0025 and exists (select 1 from pg_constraint c where c.conname = 'bb_candidates_reference_key'))
+     or (v_has_0025 and coalesce(pg_get_indexdef(to_regclass('public.bb_candidates_reference_idx')), '')
+                        <> 'CREATE UNIQUE INDEX bb_candidates_reference_idx ON public.bb_candidates USING btree (reference) WHERE (source <> ''makeup''::text)')
+     or (v_has_0025 and pg_get_constraintdef((select c.oid from pg_constraint c where c.conname = 'bb_candidates_source_check'
+                                               and c.conrelid = 'public.bb_candidates'::regclass))
+                        <> 'CHECK ((source = ANY (ARRAY[''form''::text, ''desk''::text, ''makeup''::text])))')
+     or (select a.attnotnull from pg_attribute a where a.attrelid = 'public.bb_candidates'::regclass and a.attname = 'cycle_plan_id')
+        is distinct from (not v_has_0025) then
+    raise exception 'TEST FAILED: C7 the reference / source / plan rules of bb_candidates are not as designed for this version';
+  end if;
   select string_agg(x.name, ', ') into v_txt
     from unnest(array['bb_cycles_lower_name_idx', 'bb_waiver_versions_one_current_idx', 'bb_cycle_days_cycle_date_idx',
                       'bb_cycle_plans_cycle_lower_name_idx', 'bb_candidates_cycle_idx', 'bb_candidates_names_idx',

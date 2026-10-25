@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Open detail D1c · Which button goes where in an “are you sure?” box</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2000px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Open detail D1c · Which button goes where in an “are you sure?” box</h1>
+<p class="sub"><b>From item 8; for Main's shared confirm box.</b> Almost every box puts the button that changes nothing on the left (“Keep …”, focused first, so a stray Enter changes nothing) and the action on the right — red when it deletes. The three “… isn't saved” leave warnings (Color Belt's event and private grading, Star's grading; approved v0.192) do the reverse: “Leave anyway” on the left, “Stay on this page” on the right in blue, focused first (“nothing is deleted, so no red”). Forms' kiosk Open / End and Prospects' “Came?” focus the action first — they lose nothing, so that can stay. <span style="color:#6B6B6B">(Leave warning tested in the preview: one result set to fail to save, then Back · PC size · fake data)</span></p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <div class="row"><figure style="width:400px">
+    <div class="shot" style="width:400px;height:270px">
+      <img src="../Walkthrough/shots/d1a-delete-box.png" style="left:-440px;top:-60px;width:1280px">
+      <div class="mark" style="left:61px;top:185px;width:304px;height:46px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>1. Every delete box:</b> “Keep …” on the left (focused first), the red action on the right.</figcaption>
+  </figure><figure style="width:400px">
+    <div class="shot" style="width:400px;height:230px">
+      <img src="../Walkthrough/shots/d1c-leave-warning.png" style="left:-440px;top:-60px;width:1280px">
+      <div class="mark" style="left:95px;top:139px;width:269px;height:48px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>2. The three leave warnings:</b> “Leave anyway” on the left; blue “Stay on this page” on the right, focused first.</figcaption>
+  </figure></div>
+  
+</div>
+<div class="col after">
+  <div class="label">Proposed (option B) · the same order everywhere</div>
+  <figure style="width:400px">
+    <div class="shot" style="width:400px;height:230px">
+      <img src="../Walkthrough/shots/d1c-leave-flip-MOCKUP.png" style="left:-440px;top:-60px;width:1280px">
+      <div class="mark" style="left:95px;top:139px;width:269px;height:48px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>3. Option B:</b> “Stay on this page” on the left (still focused first), “Leave anyway” on the right — red, because leaving loses the unsaved results for good (item 7).</figcaption>
+  </figure>
+  <div class="note"><b>The rule in B:</b> the button that changes nothing on the left; the action on the right — red when it loses something for good, blue otherwise; the first focus on the button that changes nothing whenever the action loses something, otherwise on the action (kiosk, “Came?”, as today). Picture 3 is drawn over the real box; nothing in the app was changed.</div>
+</div>
+</div>
+<div class="foot"><b>Your choice — one question: one button order in every box?</b><br><b>A · Keep as today.</b> <i>+</i> no work; the leave warnings stay as approved (v0.192). <i>−</i> in three boxes the right-hand button means “stay” instead of “do it” — the reverse of every other box.<br><b>B · Recommended: the same order everywhere (picture 3).</b> The leave warnings swap: “Stay on this page” left and focused, “Leave anyway” right and red. <i>+</i> right always does the thing, left always leaves things as they are; red always warns that something is lost for good. <i>−</i> three boxes change; v0.192 changes.<br><b>C · The same order, without the red:</b> as B, but “Leave anyway” stays outline (v0.192's “no red”). <i>+</i> the order matches everywhere. <i>−</i> leaving loses results for good but doesn't look like it (against item 7's red rule).</div>
+</body></html>

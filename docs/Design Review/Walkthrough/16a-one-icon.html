@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Item 16a · One meaning, one icon</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2000px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Item 16a · One meaning, one icon</h1>
+<p class="sub"><b>Approved in each section, plus drift.</b> The rule (§2.3): “Same icon = same meaning everywhere … never use two icons for one meaning.” Today several meanings have two or three icons, and two icons mean two things: the <b>clock</b> is “Not paid” in Color Belt and Star but “Paying on schedule” in Black Belt (both are rows in the icon map, v0.229 and v0.914; v0.229 also names Camps, which never built that card), and Star's <b>repeat</b> icon is both “Make-up” and “Change how they'll pay”. Forms' pencil and Finance's “Today” icon were never decided (drift). Already settled: 12b removed Black Belt's lock icons and Forms' door icons. Next, 16b: icons missing from the map, Forms' own icons, and tooltips on icon-only buttons. <span style="color:#6B6B6B">(Icons drawn from the app's own Tabler set; cards are preview screenshots at PC size · fake data)</span></p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:930px">
+    <div class="shot" style="width:930px;height:674px">
+      <img src="shots/16a-board-today.png" style="left:0px;top:0px;width:930px">
+      
+    </div>
+    <figcaption><b>1. Today:</b> one meaning, two or three icons — and the clock and repeat icons each mean two things. Color Belt's own event menu even shows Restore both ways (plain; with the Undo icon when it is grayed for a student moved to private testing).</figcaption>
+  </figure>
+<figure style="width:928.2px">
+    <div class="shot" style="width:928.2px;height:68.64px">
+      <img src="shots/16a-colorbelt-cards.png" style="left:-54.6px;top:-180.96px;width:998.4000000000001px">
+      <div class="mark" style="left:464px;top:0.6799999999999997px;width:234.20000000000002px;height:67.28px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>2. Color Belt's cards</b> (Star the same): Not paid = clock.</figcaption>
+  </figure>
+<figure style="width:928.2px">
+    <div class="shot" style="width:928.2px;height:68.64px">
+      <img src="shots/16a-blackbelt-cards.png" style="left:-54.6px;top:-251.94px;width:998.4000000000001px">
+      <div class="mark" style="left:231.56px;top:0.6799999999999997px;width:234.20000000000002px;height:67.28px;border-color:#F59E0B"></div><div class="mark" style="left:696.44px;top:0.6799999999999997px;width:234.20000000000002px;height:67.28px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>3. Black Belt's cards:</b> the clock is “Paying on schedule” and Not paid is a circle-x.</figcaption>
+  </figure>
+  
+</div>
+<div class="col after">
+  <div class="label">Proposed (option B) · one icon per meaning</div>
+  <figure style="width:930px">
+    <div class="shot" style="width:930px;height:674px">
+      <img src="shots/16a-board-after.png" style="left:0px;top:0px;width:930px">
+      
+    </div>
+    <figcaption><b>4. Proposed:</b> one icon per meaning, picked from what the sections already use.</figcaption>
+  </figure>
+  <div class="note"><b>What changes where:</b> Color Belt — Not paid card, Change how they'll pay, Restore, the No-show result. Star — Not paid card, Change how they'll pay. Camps — Restore, the day grid's ✓ / ✗ become the Came / Didn't come icons, and its new To collect card (11b) takes the Not paid icon. Forms — Edit. Finance — Today loses its icon. Black Belt, Prospects and Calendar already match. The two “Not paid” rows in the icon map become one.</div>
+</div>
+</div>
+<div class="foot"><b>Your choice — one question: one icon per meaning?</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> the clock means “not paid” in one section and “paying on schedule” in the next; Star's repeat means two things; came, didn't come and Restore each look two or three ways.<br><b>B · Recommended: one icon per meaning (picture 4).</b> Each section swaps only the icons in its rows that differ (list on the right). <i>+</i> an icon means the same thing in every section, so a roster card or menu item reads the same everywhere. <i>−</i> small icon swaps in five sections.<br><b>C · Fix only what was never decided:</b> Forms' pencil, Finance's Today icon and Star's double repeat; the approved differences stay (Not paid, Restore, came / didn't come). <i>+</i> least work. <i>−</i> the clock still means two things across sections, and came / didn't come still look different.</div>
+</body></html>

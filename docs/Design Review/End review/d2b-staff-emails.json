@@ -1,0 +1,85 @@
+{
+  "title": "Open detail D2b · The staff side while “Hide private details” is on",
+  "subtitle": "<b>From item 2; for Main's prompt (Staff accounts, the account menu).</b> The rule says “email … on every screen”, but it was written for families (students, mostly minors, and their parents). Staff emails show in four places: your own in the <b>account menu</b> (anyone who opens it on that device sees it) and on the first-time Set PIN screen; every account's in <b>Staff accounts</b> (admins only) and in its Reset password / Reset PIN boxes, where the email is there “so nobody resets the wrong account” (approved mockup, screen 4). Those boxes then show the <b>new password in plain text</b> and the <b>new PIN in four boxes</b> (v0.73, v0.75; picture 4) — on a tablet where others can see the screen, that matters more than the emails. <span style=\"color:#6B6B6B\">(Preview screenshots · PC size · fake data; picture 4 from the approved mockup)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today (switch on)",
+      "tone": "today",
+      "items": [
+        {
+          "src": "../Walkthrough/shots/d2b-staff-accounts.png",
+          "crop": [68, 92, 896, 202],
+          "scale": 0.9,
+          "caption": "<b>1. Staff accounts with the switch on:</b> every account's email shows.",
+          "marks": [[234, 168, 200, 110]]
+        },
+        {
+          "row": [
+            {
+              "src": "../Walkthrough/shots/d2b-account-menu.png",
+              "crop": [1016, 74, 256, 376],
+              "scale": 0.85,
+              "caption": "<b>2. The account menu:</b> your own email under your name.",
+              "marks": [[1028, 110, 160, 21]]
+            },
+            {
+              "src": "../Walkthrough/shots/d2b-reset-pin.png",
+              "crop": [456, 76, 368, 334],
+              "scale": 0.85,
+              "caption": "<b>3. Reset PIN, step 1:</b> the line naming the account, with its email.",
+              "marks": [[564, 140, 170, 28]]
+            },
+            {
+              "src": "../Walkthrough/shots/d2b-mockup-reset-pin-step2.png",
+              "crop": [473, 429, 368, 344],
+              "scale": 0.85,
+              "caption": "<b>4. Reset PIN, step 2</b> (approved mockup, v0.75): the new PIN in four boxes; Reset password shows the new password in plain text.",
+              "marks": [[565, 600, 184, 52]]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Options B and C, drawn",
+      "tone": "after",
+      "items": [
+        {
+          "src": "../Walkthrough/shots/d2b-staff-accounts-B-MOCKUP.png",
+          "crop": [68, 92, 896, 202],
+          "scale": 0.9,
+          "caption": "<b>5. Option B:</b> every staff email reads “Hidden on this tablet”.",
+          "marks": [[234, 168, 200, 110]]
+        },
+        {
+          "row": [
+            {
+              "src": "../Walkthrough/shots/d2b-account-menu-B-MOCKUP.png",
+              "crop": [1016, 74, 256, 376],
+              "scale": 0.85,
+              "caption": "<b>6. B, the account menu:</b> the role only.",
+              "marks": [[1028, 110, 58, 21]]
+            },
+            {
+              "src": "../Walkthrough/shots/d2b-reset-pin-B-MOCKUP.png",
+              "crop": [456, 76, 368, 334],
+              "scale": 0.85,
+              "caption": "<b>7. B, Reset PIN:</b> the name only — the email that tells two accounts apart is gone on that device.",
+              "marks": [[564, 140, 170, 28]]
+            },
+            {
+              "src": "../Walkthrough/shots/d2b-account-menu-C-MOCKUP.png",
+              "crop": [1016, 74, 256, 412],
+              "scale": 0.85,
+              "caption": "<b>8. Option C (recommended):</b> Staff accounts grays — “Off while private details are hidden.” — like Star's desk-only New candidate (v0.507). Your own email stays.",
+              "marks": [[1023, 338, 242, 62]]
+            }
+          ]
+        }
+      ],
+      "note": "<b>The rule in C:</b> the switch hides a family's date of birth, email, payments and form answers on every screen (D2a) and turns off Staff accounts; one tap on the top-bar chip turns the switch off again. Staff emails stay wherever else they show (your own account menu, Set PIN). Pictures 5–8 are drawn over the real screens; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question: should “Hide private details” also cover the staff side?</b><br><b>A · No: the staff side stays as it is; the rule says “a family's …”.</b> <i>+</i> no work; the reset boxes keep the email that stops a wrong reset. <i>−</i> on a tablet with the switch on, an admin can still bring up staff emails — and a new password or PIN — where others can see.<br><b>B · Hide staff emails like families' (pictures 5–7).</b> <i>+</i> the rule read word for word. <i>−</i> the reset boxes lose the email that tells two accounts apart; a new password or PIN still shows in plain text.<br><b>C · Recommended: Staff accounts is desk-only while the switch is on (picture 8).</b> <i>+</i> no staff emails, new passwords or new PINs on a screen others can see; the reset boxes stay as approved; the same idea as Star's desk-only New candidate. <i>−</i> to reset a PIN on that tablet, an admin turns the switch off first; your own email still shows in your account menu."
+}

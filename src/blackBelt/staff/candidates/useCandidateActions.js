@@ -13,6 +13,12 @@
 // scenes and comes back (re-read from the database) when the child closes. Two dialogs on top of
 // each other would fight over the browser's Back button (Dialog.jsx adds one history step each).
 //
+// Contract 0025 §14.5 (builder C3) adds: the Dan-change dialog (child 'danChange', v0.955 — Edit
+// details answered has_grades, so nothing was saved yet; the red button calls
+// updateCandidateClear with the counts it showed), the has-grades refusal of Delete permanently
+// (v0.950), Restore's already_added (a second make-up of the same earlier candidate) and Edit
+// details' already_added (OI-4: this candidate's make-up is on a later cycle).
+//
 // Privacy (§3.1): the detail's date of birth, email and the signature live only inside `dlg`,
 // which is emptied when the dialog closes. Nothing here writes them to storage, the console, a
 // toast or the page address.
@@ -32,6 +38,7 @@ import {
   restoreCandidate,
   undoPayment,
   updateCandidate,
+  updateCandidateClear,
   withdrawCandidate,
 } from '../../../lib/blackBelt/api.js';
 import { amountInputText } from '../../../lib/blackBelt/money.js';
@@ -683,7 +690,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
               runQuick(() => deleteCandidate({ candidateId: id, expectedVersion: version }), {
                 ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
                 countChanged: true,
-                statuses: { stale: T.UNDO_STALE_CANDIDATE, has_payments: T.hasPaymentRecords(name) },
+                statuses: { stale: T.UNDO_STALE_CANDIDATE, has_payments: T.hasPaymentRecords(name), has_grades: T.hasGrades(name) },
               }),
             )
           : { icon: false },
@@ -771,6 +778,17 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
       latest.current.onRefreshProfile();
       return;
     }
+    // 0025 (Q-G4): the old Dan has grades — nothing was saved; ask first (DanChangeDialog).
+    if (result.status === 'has_grades') {
+      setEdit({ saving: false });
+      openDanChange(result);
+      return;
+    }
+    // 0025 (OI-4): a make-up of this candidate is already on a later cycle
+    if (result.status === 'already_added') {
+      setEdit({ saving: false, note: T.danChangeMakeupLater(name), blocking: true });
+      return;
+    }
     if (result.status === 'stale') {
       setEdit({ saving: false, note: T.candidateStale(name), blocking: true });
       return;
@@ -787,6 +805,65 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     setEdit({ saving: false, note: T.INVALID });
   }
 
+  // ===== The Dan-change dialog (0025 Q-G4, v0.955, mockup DC 1–5) =====
+  // counts = { gradeCount, countCount, chosenCount } from the has_grades answer. It opens from Edit
+  // details (which waits behind it with what was typed): Cancel goes back there, nothing saved.
+  function openDanChange(counts) {
+    const d = dlgRef.current?.detail;
+    if (!d?.edit) return;
+    const shown = { gradeCount: counts.gradeCount ?? 0, countCount: counts.countCount ?? 0, chosenCount: counts.chosenCount ?? 0 };
+    const opener = document.querySelector('[data-edit-save]');
+    openChild({ kind: 'danChange', candidate: d.data.candidate, editValues: d.edit.values, oldDan: d.edit.initial.dan, newDan: Number(d.edit.values.dan), counts: shown, values: null }, opener);
+  }
+  async function confirmDanChange() {
+    const c = dlgRef.current?.child;
+    const d = dlgRef.current?.detail;
+    if (!c || c.kind !== 'danChange' || c.saving || c.blocking || !d?.edit) return;
+    if (!beginWrite()) return;
+    patchChild({ saving: true, failed: false, note: null });
+    const cand = c.candidate;
+    const v = c.editValues;
+    const purged = cand.dateOfBirth === null;
+    const name = T.candidateName(cand);
+    const result = await updateCandidateClear({
+      candidateId: cand.id,
+      expectedVersion: d.edit.version,
+      first: v.first,
+      last: v.last,
+      dateOfBirth: purged ? null : v.dob,
+      email: purged ? null : trimSpaces(v.email),
+      locationCode: v.school,
+      dan: Number(v.dan),
+      expectedGradeCount: c.counts.gradeCount,
+      expectedCountCount: c.counts.countCount,
+      expectedChosenCount: c.counts.chosenCount,
+    });
+    endWrite();
+    if (result.status === 'ok') {
+      afterWrite();
+      latest.current.showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+      setDlg((x) => (x?.detail ? { detail: { ...x.detail, mode: 'view', edit: null, focusKey: 'detail-more' }, child: null } : x));
+      refreshDetail();
+      return;
+    }
+    // DC 5: someone graded meanwhile — the question stays open with the NEW counts
+    if (result.status === 'has_grades') {
+      patchChild({ saving: false, counts: { gradeCount: result.gradeCount ?? 0, countCount: result.countCount ?? 0, chosenCount: result.chosenCount ?? 0 }, note: T.gradesChanged(name) });
+      return;
+    }
+    if (result.status === 'already_added') {
+      patchChild({ saving: false, note: T.danChangeMakeupLater(name), blocking: true });
+      return;
+    }
+    if (result.status === 'not_allowed') {
+      patchChild({ saving: false, note: T.DAN_LOCKED_STAFF, blocking: true });
+      latest.current.onRefreshProfile();
+      return;
+    }
+    if (commonProblem(result.status, name)) return;
+    patchChild({ saving: false, note: T.INVALID });
+  }
+
   // The amber "needs a parent's signature" box → "Waiver signed on paper" (no Undo: rows stay).
   async function savePaperWaiver() {
     const d = dlgRef.current?.detail;
@@ -799,7 +876,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   }
 
   // ===== Remove · Withdraw / Delete permanently / Restore (v0.113) =====
-  // target: { id, firstName, lastName, version, hasPaymentRows }
+  // target: { id, firstName, lastName, version, hasPaymentRows, hasGrades }
   function openRemove(target, opener) {
     openChild({ kind: 'remove', target, values: null }, opener);
   }
@@ -822,7 +899,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
               runQuick(() => restoreCandidate({ candidateId: t.id, expectedVersion: version }), {
                 ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
                 countChanged: true,
-                statuses: { stale: T.UNDO_STALE_CANDIDATE },
+                statuses: { stale: T.UNDO_STALE_CANDIDATE, already_added: T.restoreAlreadyAdded(name) },
               }),
             )
           : { icon: false },
@@ -864,6 +941,11 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
       patchChild({ saving: false, note: T.hasPaymentRecordsShort(name), blocking: true });
       return;
     }
+    // 0025 (Q-G3, v0.950): grades block deleting
+    if (result.status === 'has_grades') {
+      patchChild({ saving: false, note: T.hasGradesShort(name), blocking: true });
+      return;
+    }
     if (commonProblem(result.status, name)) return;
     patchChild({ saving: false, note: T.INVALID });
   }
@@ -872,7 +954,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     runQuick(() => restoreCandidate({ candidateId: target.id, expectedVersion: target.version }), {
       ok: () => latest.current.showToast(T.toastRestored(name), { icon: false }),
       countChanged: true,
-      statuses: { stale: T.candidateStale(name) },
+      statuses: { stale: T.candidateStale(name), already_added: T.restoreAlreadyAdded(name) },
     });
   }
 
@@ -1013,5 +1095,6 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     openSignature,
     openReceipt,
     setDetailMenu,
+    confirmDanChange,
   };
 }

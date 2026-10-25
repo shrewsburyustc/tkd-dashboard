@@ -10,6 +10,11 @@
 //   'has_payments' · 'has_waivers' · 'confirm_needed' (+ removeCount) · 'withdrawn' ·
 //   'refund_too_large' (+ paidCents) ·
 //   rubric (0024): 'invalid' (+ problems) · 'locked' (+ firstOpenedAt) · 'has_registrations' ·
+//   grading (0025, contract 0025 §1.2): 'has_grades' (Edit details' Dan change: + gradeCount,
+//   countCount, chosenCount; a rubric save / undo: + gradingStartedAt; Delete permanently, Delete
+//   cycle and Edit cycle: alone) · 'already_added' (Restore of a make-up while another is active;
+//   a Dan change of a candidate whose make-up is on a later cycle) · 'kept' · 'choice_needed' ·
+//   'not_finished' · 'no_email' (gradingApi.js uses those) ·
 //   'error' (no connection / unexpected answer — { status:'error', error })
 // These functions NEVER throw.
 //
@@ -34,7 +39,10 @@ import { normalizeDan, RUBRIC_SCHEMA_VERSION, RUBRIC_DANS } from './rubric.js';
 // Every status a call here can return.
 export const BB_STATUSES = [
   'ok', 'no_access', 'not_allowed', 'not_found', 'stale', 'duplicate_name', 'invalid', 'part_without_day', 'waiver_needed',
-  'finished', 'has_payments', 'has_waivers', 'confirm_needed', 'withdrawn', 'refund_too_large', 'locked', 'has_registrations', 'error',
+  'finished', 'has_payments', 'has_waivers', 'confirm_needed', 'withdrawn', 'refund_too_large', 'locked', 'has_registrations',
+  // 0025 (contract 0025 §1.2)
+  'kept', 'already_added', 'choice_needed', 'not_finished', 'no_email', 'has_grades',
+  'error',
 ];
 const SERVER_STATUSES = new Set(BB_STATUSES.filter((s) => s !== 'error'));
 
@@ -357,6 +365,8 @@ export async function addCycle({ form, sourceCycleId = null } = {}) {
 
 // Edit cycle (admins). form: CycleForm (days keep their id; every plan payment's due date is sent).
 // → { status:'ok', version } · 'stale' · 'part_without_day' + parts · 'duplicate_name' · 'invalid' ·
+//   'has_grades' (0025, S2: a past day with grades, or the first day once grading started —
+//   gradingApi.loadGradingState says which, so the form can gray them first) ·
 //   'not_found' · 'not_allowed' · 'no_access' · 'error'
 export async function updateCycle({ cycleId, expectedVersion, form } = {}) {
   let payload;
@@ -396,8 +406,8 @@ export async function undoFirstOpen({ cycleId, expectedVersion } = {}) {
 }
 
 // Delete cycle (admins). expectedCandidateCount = loadCycle's candidateCountAll (withdrawn too).
-// → { status:'ok' } · 'stale' · 'has_payments' · 'has_waivers' · 'not_found' · 'not_allowed' ·
-//   'no_access' · 'error'
+// → { status:'ok' } · 'stale' · 'has_payments' · 'has_waivers' · 'has_grades' (0025, Q-G3) ·
+//   'not_found' · 'not_allowed' · 'no_access' · 'error'
 export async function deleteCycle({ cycleId, expectedVersion, expectedCandidateCount } = {}) {
   return callRpc('bb_delete_cycle', {
     p_cycle_id: cycleId, p_expected_version: expectedVersion, p_expected_candidate_count: expectedCandidateCount,
@@ -541,13 +551,29 @@ function toRosterRow(r) {
     version: r.version,
     hasPaymentRows: r.has_payment_rows === true,
     money,
+    // 0025: a make-up from an earlier cycle (no plan, no fee) and whether real grades exist
+    // (Delete permanently is grayed then, v0.950)
+    ...makeupFields(r),
+  };
+}
+
+// The four keys 0025 adds to every roster row and to the detail's candidate (contract 0025 §6.5).
+// A make-up row has no plan (planId / planName null): the screens show "No fee".
+function makeupFields(r) {
+  return {
+    isMakeup: r.is_makeup === true,
+    makeupOfCycleName: orNull(r.makeup_of_cycle_name),
+    retestNames: Array.isArray(r.retest_names) ? r.retest_names.filter((x) => typeof x === 'string') : [],
+    hasGrades: r.has_grades === true,
   };
 }
 
 // bb_candidate_detail's candidate object → CandidateDetail (every key of the SQL object, in
 // camelCase; DOB, email and age are null once the keeping time has passed).
 function toCandidateDetail(c) {
-  if (!c || !isText(c.id) || !isInt(c.version) || !c.plan || typeof c.plan !== 'object') return null;
+  // plan is null for a make-up row (0025: no plan, no fee); every other row has one
+  const makeup = c?.is_makeup === true;
+  if (!c || !isText(c.id) || !isInt(c.version) || (!makeup && (!c.plan || typeof c.plan !== 'object'))) return null;
   return {
     id: c.id,
     cycleId: c.cycle_id,
@@ -578,7 +604,8 @@ function toCandidateDetail(c) {
     updatedByName: c.updated_by_name,
     ageOnFirstDay: orNull(c.age_on_first_day),
     under18OnFirstDay: orNull(c.under_18_on_first_day),
-    plan: { name: c.plan.name ?? null, paymentsCount: c.plan.payments_count ?? null },
+    plan: c.plan && typeof c.plan === 'object' ? { name: c.plan.name ?? null, paymentsCount: c.plan.payments_count ?? null } : null,
+    ...makeupFields(c),
   };
 }
 
@@ -731,10 +758,20 @@ export async function addCandidate({ cycleId, first, last, dateOfBirth, email, l
 
 // Edit details. A candidate whose personal details were deleted after the keeping time sends
 // dateOfBirth: null, email: null (they can't come back). A Dan change after a payment: admins.
-// → { status:'ok', version, needsParentSignature } · 'not_allowed' · 'stale' · 'invalid' ·
-//   'not_found' · 'no_access' · 'error'
+// → { status:'ok', version, needsParentSignature } · 'not_allowed' · 'stale' · 'invalid' (also a
+//   Dan change of a make-up row) · 'not_found' · 'no_access' · 'error'
+//   0025: a Dan change while the old Dan has grades → 'has_grades' + gradeCount, countCount,
+//   chosenCount and NOTHING is saved (show the Dan-change dialog, then updateCandidateClear);
+//   'already_added' (a make-up of this candidate is on a later cycle — Undo it first, OI-4).
 export async function updateCandidate({ candidateId, expectedVersion, first, last, dateOfBirth, email, locationCode, dan } = {}) {
-  return callRpc('bb_update_candidate', {
+  return callRpc('bb_update_candidate', candidateArgs({ candidateId, expectedVersion, first, last, dateOfBirth, email, locationCode, dan }),
+    (d) => (isInt(d.version) && isBool(d.needs_parent_signature) ? { version: d.version, needsParentSignature: d.needs_parent_signature } : null),
+    hasGradesCounts);
+}
+
+// Edit details' eight arguments (bb_update_candidate and bb_update_candidate_clear share them).
+function candidateArgs({ candidateId, expectedVersion, first, last, dateOfBirth, email, locationCode, dan }) {
+  return {
     p_candidate_id: candidateId ?? null,
     p_expected_version: expectedVersion ?? null,
     p_first: first ?? null,
@@ -743,10 +780,41 @@ export async function updateCandidate({ candidateId, expectedVersion, first, las
     p_email: email || null, // '' → none, so a purged candidate's empty field is sent as null
     p_location_code: locationCode ?? null,
     p_dan: dan ?? null,
-  }, (d) => (isInt(d.version) && isBool(d.needs_parent_signature) ? { version: d.version, needsParentSignature: d.needs_parent_signature } : null));
+  };
+}
+
+// A 'has_grades' answer of a Dan change → its three counts (contract 0025 §6.4, DC 5).
+function hasGradesCounts(status, d) {
+  if (status !== 'has_grades') return null;
+  if (![d.grade_count, d.count_count, d.chosen_count].every(isInt)) return undefined;
+  return { gradeCount: d.grade_count, countCount: d.count_count, chosenCount: d.chosen_count };
+}
+
+// The confirmed Dan change (the Dan-change dialog's red button, v0.955): the same as Edit details,
+// plus the three counts the dialog showed. The old Dan's grades, counts and chosen subjects are
+// cleared in the same step (logged); kept make-up rows and sends stay.
+// → { status:'ok', version, needsParentSignature, cleared: { grades, counts, chosen } } ·
+//   'has_grades' + the NEW counts (someone graded meanwhile — ask again) · 'already_added' ·
+//   'not_allowed' · 'stale' · 'invalid' · 'not_found' · 'no_access' · 'error'
+export async function updateCandidateClear({
+  candidateId, expectedVersion, first, last, dateOfBirth, email, locationCode, dan, expectedGradeCount, expectedCountCount, expectedChosenCount,
+} = {}) {
+  return callRpc('bb_update_candidate_clear', {
+    ...candidateArgs({ candidateId, expectedVersion, first, last, dateOfBirth, email, locationCode, dan }),
+    p_expected_grade_count: expectedGradeCount ?? null,
+    p_expected_count_count: expectedCountCount ?? null,
+    p_expected_chosen_count: expectedChosenCount ?? null,
+  }, (d) => (isInt(d.version) && isBool(d.needs_parent_signature) && d.cleared && typeof d.cleared === 'object'
+    ? {
+      version: d.version,
+      needsParentSignature: d.needs_parent_signature,
+      cleared: { grades: d.cleared.grades ?? 0, counts: d.cleared.counts ?? 0, chosen: d.cleared.chosen ?? 0 },
+    }
+    : null), hasGradesCounts);
 }
 
 // Change plan or Kukkiwon (staff before a payment; admins after). The same values write nothing.
+// (0025: a make-up row has no plan → 'invalid'; the screens don't offer Change plan there.)
 // → { status:'ok', version, money: Money } · 'withdrawn' · 'not_allowed' · 'stale' · 'invalid' ·
 //   'not_found' · 'no_access' · 'error'
 export async function changePlan({ candidateId, expectedVersion, planId, kukkiwon } = {}) {
@@ -778,15 +846,17 @@ export async function withdrawCandidate({ candidateId, expectedVersion } = {}) {
 
 // Restore (admins; or staff within 10 seconds of their own "Keep this one" — the toast's Undo).
 // → { status:'ok', version } · 'stale' (not withdrawn, or the version) · 'not_allowed' ·
+//   'already_added' (0025: a make-up whose earlier candidate already has another active make-up) ·
 //   'not_found' · 'invalid' · 'no_access' · 'error'
 export async function restoreCandidate({ candidateId, expectedVersion } = {}) {
   return callRpc('bb_restore_candidate', { p_candidate_id: candidateId ?? null, p_expected_version: expectedVersion ?? null },
     (d) => (isInt(d.version) ? { version: d.version } : null));
 }
 
-// Delete permanently (admins): refused once the candidate has ANY payment row (even an undone one).
-// → { status:'ok' } · 'has_payments' · 'stale' · 'not_found' · 'invalid' · 'not_allowed' ·
-//   'no_access' · 'error'
+// Delete permanently (admins): refused once the candidate has ANY payment row (even an undone one),
+// and (0025, Q-G3) once they have real grades — "Withdraw them instead". Also the Undo of Add make-up.
+// → { status:'ok' } · 'has_payments' · 'has_grades' · 'stale' · 'not_found' · 'invalid' ·
+//   'not_allowed' · 'no_access' · 'error'
 export async function deleteCandidate({ candidateId, expectedVersion } = {}) {
   return callRpc('bb_delete_candidate', { p_candidate_id: candidateId ?? null, p_expected_version: expectedVersion ?? null }, () => ({}));
 }
@@ -899,6 +969,8 @@ function toProblems(list) {
 function rubricRefusal(status, d) {
   if (status === 'invalid') return { problems: toProblems(d.problems) }; // no list = a wrong argument
   if (status === 'locked') return isText(d.first_opened_at) ? { firstOpenedAt: d.first_opened_at } : undefined;
+  // 0025 (Q-G1, OI-2 = B): grading started on this cycle — its copy is locked for good
+  if (status === 'has_grades') return { gradingStartedAt: orNull(d.grading_started_at) };
   return null;
 }
 
@@ -994,7 +1066,8 @@ export async function undoDefaultDan({ dan, expectedRev } = {}) {
 
 // Save one Dan of a cycle's own copy (admins; only while the cycle has never been opened).
 // → as saveDefaultDan, plus 'locked' + firstOpenedAt (registration opened since — reload into
-//   the locked view) and 'not_found'.
+//   the locked view), 'has_grades' + gradingStartedAt (0025: grading started — locked for good)
+//   and 'not_found'.
 export async function saveCycleDan({ cycleId, dan, expectedRev, sheet } = {}) {
   return callRpc('bb_save_cycle_dan', {
     p_cycle_id: cycleId ?? null, p_dan: dan ?? null, p_expected_rev: expectedRev ?? null, p_sheet: normalizeDan(sheet) ?? null,
@@ -1002,7 +1075,7 @@ export async function saveCycleDan({ cycleId, dan, expectedRev, sheet } = {}) {
 }
 
 // Undo of the last save of one Dan of a cycle's copy.
-// → as undoDefaultDan, plus 'locked' + firstOpenedAt and 'not_found'.
+// → as undoDefaultDan, plus 'locked' + firstOpenedAt, 'has_grades' + gradingStartedAt and 'not_found'.
 export async function undoCycleDan({ cycleId, dan, expectedRev } = {}) {
   return callRpc('bb_undo_cycle_dan', { p_cycle_id: cycleId ?? null, p_dan: dan ?? null, p_expected_rev: expectedRev ?? null },
     undoAnswer, rubricRefusal);

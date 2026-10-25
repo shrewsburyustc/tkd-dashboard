@@ -1,0 +1,52 @@
+{
+  "title": "Item 14b · Picking a time",
+  "subtitle": "<b>Approved in each section, plus drift.</b> Six different time lists: Color Belt <b>5-minute</b> steps, 6 AM–10 PM (194 choices — chosen so times like 6:50 fit, v0.157); Star 15-minute, 8 AM–8 PM; Black Belt 15-minute, 6 AM–10 PM; Camps 5-minute, 6 AM–9 PM; Finance's close-the-day reminder 15-minute, 11 AM–11 PM with Off; Schedule and Calendar the browser's own time box. <b>That box is the one that saved Worcester's “4:20” class times as 4:20 AM</b> in October (fixed with SQL, v0.600). Calendar's box was never decided (drift). <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/14e-star-time-list.png",
+              "crop": [640, 252, 204, 312],
+              "scale": 1.1,
+              "caption": "<b>1. Star:</b> its own list — opens at the chosen time, big rows, 15-minute steps (no 4:20)."
+            },
+            {
+              "src": "shots/14f-schedule-browser-time-box.png",
+              "crop": [436, 418, 408, 62],
+              "scale": 1.1,
+              "caption": "<b>2. Schedule:</b> the browser's time box — hours, minutes and AM/PM typed in parts. This is what saved 4:20 as AM.",
+              "marks": [[444, 440, 190, 32], [646, 440, 190, 32]]
+            }
+          ]
+        },
+        {
+          "src": "shots/14b-colorbelt-browser-date-box.png",
+          "crop": [600, 296, 276, 92],
+          "scale": 1.3,
+          "caption": "<b>3. Color Belt:</b> the browser's plain drop-down list — 194 times in 5-minute steps (Camps the same kind, 181)."
+        }
+      ],
+      "note": "Calendar uses the same browser time box as Schedule when “All day” is off."
+    },
+    {
+      "label": "Proposed (option B) · one time list everywhere",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/14g-schedule-time-list-MOCKUP.png",
+          "crop": [436, 418, 408, 300],
+          "scale": 1.1,
+          "caption": "<b>4. Schedule with the shared list:</b> Star's list in 5-minute steps, AM/PM written on every time, opening at the chosen time — 4:40 PM can't turn into AM.",
+          "marks": [[646, 440, 190, 32], [646, 476, 190, 234]]
+        }
+      ],
+      "note": "<b>Copies what's already there:</b> Star's own list (it already opens at the chosen time) with Color Belt's 5-minute steps. The range fits the job: 6:00 AM–10:00 PM for classes, testing and camps; Finance's reminder keeps 11 AM–11 PM and “Off”. Picture 4 is drawn over the real Add time slot box; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> six different lists; Schedule and Calendar keep the box that turned 4:20 into 4:20 AM.<br><b>B · Recommended: one time list everywhere (picture 4).</b> Star's list, in 5-minute steps, with AM/PM written on every time and the list opening at the chosen time; Schedule and Calendar drop the browser's box. <i>+</i> the same way to pick a time in every section; real times like 4:20 and 6:50 fit; no AM/PM mix-ups. <i>−</i> work in every section with a time; Star's and Black Belt's lists get longer (they open at the chosen time, so it matters little).<br><b>C · Fix only the risky box:</b> Schedule and Calendar switch to a list; every other section keeps its own. <i>+</i> the least work; the AM/PM mix-up can't happen again. <i>−</i> five different lists stay."
+}

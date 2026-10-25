@@ -135,6 +135,11 @@
 //   __tkdPreview.bbSampleEdge()           bbSampleRoster + the edge cases (overpaid, Kukkiwon late, withdrawn, a
 //                                         parent's signature needed, a desk paper waiver)
 //                                         (both fill the schools' street and phone only where they are empty)
+//   __tkdPreview.loadBlackBeltGradingSample() the Grading / Results mockups' cast (contract 0025 §13.3): Spring 2027
+//                                         graded as of Jun 9, 2027 (all four Dans; Late, a D, below the mark) and Fall
+//                                         2027 with Mia Chen's make-up — then setToday('2027-06-09') (Fall: a later day)
+//                                         (simulateOtherAdminEdit also changes one grade; failNextSave('blackBelt') and
+//                                         bbExpireUndo also cover grades, Mark as sent and the result texts)
 //   __tkdPreview.bbExpireUndo()           the newest Black Belt payment looks 11 s old -> a staff Undo is "too late";
 //                                         also the newest rubric undo (a Dan save or a first opening) looks 16 s old -> its
 //                                         Undo answers stale (its message still talks about payments only)
@@ -168,6 +173,7 @@ import { createFormsBackend, FORMS_RPC_NAMES } from './mockForms.js';
 import { createFinanceBackend, FINANCE_RPC_NAMES, FINANCE_WRITE_RPC_NAMES } from './mockFinance.js';
 import { createBlackBeltBackend, BB_RPC_NAMES, BB_WRITE_RPC_NAMES, BB_TABLES, BB_STORE_KEY } from './blackBelt/mockBlackBelt.js';
 import { blackBeltPublicHelpers } from './blackBelt/publicApi.preview.js';
+import BLACK_BELT_MOCKUP_CAST from '../../docs/Testing/Black Belt Testing/TKD-BlackBelt-Mockup-Cast.json'; // 0025's sample (made-up people)
 
 const SESSION_KEY = 'tkd.preview.session'; // the fake "signed in" session
 const STAFF_STATE_KEY = 'tkd.preview.staffState'; // fake staff row: PIN, shared flag
@@ -1116,6 +1122,11 @@ export function createMockClient() {
       blackBelt.loadSampleEdge();
       fillSampleSchools();
       return "Sample loaded (with the edge cases) — run __tkdPreview.setToday('2027-04-26') and reload.";
+    },
+    loadBlackBeltGradingSample() {
+      blackBelt.loadGradingSample(BLACK_BELT_MOCKUP_CAST);
+      fillSampleSchools();
+      return "Grading sample loaded — run __tkdPreview.setToday('2027-06-09') and reload (Spring 2027; for Fall 2027's make-up use a day in Oct–Nov 2027).";
     },
     bbExpireUndo() {
       const moved = blackBelt.expireUndo();

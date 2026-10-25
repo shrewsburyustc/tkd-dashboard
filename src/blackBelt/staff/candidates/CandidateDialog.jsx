@@ -12,6 +12,11 @@
 //   - Close · Print receipt · Record payment (primary), and ⋯: Edit details · Change plan or
 //     Kukkiwon · Remove candidate / Restore / Delete permanently (admins)
 // Edit details (Star v0.112) turns the same dialog into fields with Cancel and Save.
+// A make-up from an earlier cycle (contract 0025 §14.5, G 27): the gray "Make-up" tag and the line
+// "Make-up from Spring 2027 · retests Free sparring" under the title, its earlier BB reference,
+// Plan "No fee" and no payments part; no Record payment, no Change plan, no refund; Edit details
+// shows the Dan as text, not a field (Q-G4: a make-up's Dan can't change). Delete permanently is
+// grayed while the candidate has grades (Q-G3, v0.950).
 // Privacy (§5): the date of birth and email appear only here, and with the device's Hide payments
 // switch on they read "Hidden on this device" (OP-B7); so do the payments, Edit details is grayed
 // ("Edit details at the desk.") and View signature isn't offered. The data lives in
@@ -72,6 +77,17 @@ function noteWords(line) {
 // ----- The payments part -----
 function Payments({ data, cycle, isAdmin, isPhone, today, onLineMore, menuLineId }) {
   const { candidate: c, payments, money } = data;
+  // A make-up has no plan and no fee (the database refuses any payment for it)
+  if (c.isMakeup) {
+    return (
+      <>
+        <dl className="ev-sum bb-sum">
+          <Row label={T.ROW_PLAN}>{T.PLAN_NO_FEE}</Row>
+        </dl>
+        <p className="field-hint bb-no-payments">{T.MAKEUP_NO_PAYMENTS}</p>
+      </>
+    );
+  }
   const plan = cycle.plans?.find((p) => p.id === c.cyclePlanId) ?? null;
   const amounts = plan?.amounts?.[c.dan] ?? [];
   // The plan's payment dates for THIS candidate (a late family's passed dates count from the day
@@ -195,6 +211,7 @@ function EditFields({ edit, data, isAdmin, today, onChange }) {
   const problems = detailsProblems(v, { today, purged });
   const show = (field) => (edit.triedSave ? problems[field] : null);
   const paidLive = hasLivePayment(data.payments);
+  const makeup = c.isMakeup === true;
   const danLocked = paidLive && !isAdmin;
   const danChangedAfterPay = paidLive && isAdmin && Number(v.dan) !== Number(edit.initial.dan);
   const ro = edit.saving;
@@ -244,8 +261,18 @@ function EditFields({ edit, data, isAdmin, today, onChange }) {
         <span id={`${id}-dan`} className="field-label">
           {T.TESTING_FOR}
         </span>
-        <Choice labelId={`${id}-dan`} className={`bb-segmented--fill${danLocked ? ' is-locked' : ''}`} options={DANS.map((dan) => ({ key: dan, label: T.DAN_LABELS[dan] }))} value={Number(v.dan)} readOnly={ro || danLocked} onChange={(dan) => onChange({ dan })} />
-        {danLocked && <p className="field-hint">{T.DAN_LOCKED_STAFF}</p>}
+        {makeup ? (
+          // A make-up has no Dan field (Q-G4, DC 4): it keeps the earlier cycle's Dan
+          <>
+            <p className="bb-readonly" aria-labelledby={`${id}-dan`}>
+              {T.danMakeupReadonly(c.dan, c.makeupOfCycleName)}
+            </p>
+            <p className="field-hint">{T.DAN_MAKEUP_HINT}</p>
+          </>
+        ) : (
+          <Choice labelId={`${id}-dan`} className={`bb-segmented--fill${danLocked ? ' is-locked' : ''}`} options={DANS.map((dan) => ({ key: dan, label: T.DAN_LABELS[dan] }))} value={Number(v.dan)} readOnly={ro || danLocked} onChange={(dan) => onChange({ dan })} />
+        )}
+        {danLocked && !makeup && <p className="field-hint">{T.DAN_LOCKED_STAFF}</p>}
         {danChangedAfterPay && (
           <p className="bb-amber-line">
             <ICONS.warn size={16} aria-hidden="true" />
@@ -309,7 +336,8 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
         onSelect: () => actions.startEdit(),
       },
     ];
-    if (!withdrawn) {
+    // A make-up has no plan, so no Change plan (G 27)
+    if (!withdrawn && !c.isMakeup) {
       const locked = !isAdmin && hasLivePayment(data.payments);
       const reason = hidden || data.money.paidCents <= 0 ? T.PAYMENT_RECORDED_ASK_ADMIN : T.alreadyPaidAskAdmin(data.money.paidCents);
       items.push({
@@ -320,19 +348,20 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
         onSelect: () => actions.openChangePlan(c.id, moreButtonElement()),
       });
     }
-    const target = { id: c.id, firstName: c.firstName, lastName: c.lastName, version: c.version, hasPaymentRows: data.payments.length > 0 };
+    const target = { id: c.id, firstName: c.firstName, lastName: c.lastName, version: c.version, hasPaymentRows: data.payments.length > 0, hasGrades: c.hasGrades };
     if (isAdmin && !withdrawn) items.push({ key: 'remove', label: T.REMOVE_CANDIDATE, Icon: ICONS.remove, separatorBefore: true, onSelect: () => actions.openRemove(target, moreButtonElement()) });
     if (isAdmin && withdrawn) {
       items.push({ key: 'restore', label: T.RESTORE, Icon: ICONS.restore, separatorBefore: true, disabled: actions.busy, onSelect: () => actions.restore(target) });
       // The database refuses a delete while ANY payment row exists (even an undone one); the
       // detail only sees live lines, so it may offer Delete and get has_payments back.
-      const has = data.payments.length > 0;
+      // …and (0025, Q-G3) while they have grades
+      const reason = data.payments.length > 0 ? T.hasPaymentRecordsShort(T.candidateName(c)) : c.hasGrades ? T.hasGradesShort(T.candidateName(c)) : null;
       items.push({
         key: 'delete',
-        label: has ? <TwoLines label={T.DELETE_PERMANENTLY} reason={T.hasPaymentRecordsShort(T.candidateName(c))} /> : T.DELETE_PERMANENTLY,
+        label: reason ? <TwoLines label={T.DELETE_PERMANENTLY} reason={reason} /> : T.DELETE_PERMANENTLY,
         Icon: ICONS.deleteForever,
-        danger: !has,
-        disabled: has,
+        danger: !reason,
+        disabled: Boolean(reason),
         onSelect: () => actions.openDelete(target, moreButtonElement()),
       });
     }
@@ -424,7 +453,7 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
   if (editing) {
     const e = d.edit;
     const saveButton = (
-      <button type="submit" className={`btn btn-primary${isPhone ? ' btn-block' : ''}${e.saving || e.blocking ? ' is-unavailable' : ''}`} aria-disabled={e.saving || e.blocking ? 'true' : undefined}>
+      <button type="submit" data-edit-save className={`btn btn-primary${isPhone ? ' btn-block' : ''}${e.saving || e.blocking ? ' is-unavailable' : ''}`} aria-disabled={e.saving || e.blocking ? 'true' : undefined}>
         <ICONS.save size={16} aria-hidden="true" />
         {e.saving ? T.SAVING : T.SAVE}
       </button>
@@ -487,10 +516,12 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
         <ICONS.warn size={12} aria-hidden="true" />
         {T.TAG_POSSIBLE_DUPLICATE}
       </span>
+    ) : c.isMakeup ? (
+      <span className="ttag">{T.TAG_MAKEUP}</span>
     ) : hidden ? null : (
       <MoneyTag money={data.money} />
     );
-  const showRecord = !hidden && !withdrawn;
+  const showRecord = !hidden && !withdrawn && !c.isMakeup;
   const RecordIcon = ICONS.recordPayment;
   const PrintIcon = ICONS.print;
   const recordButton = showRecord && (
@@ -512,6 +543,7 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
       <div className="bb-detail-head">
         {tag}
         <p className="tdialog-sub bb-detail-sub">{T.detailSub(cycle.name, c.dan, c.locationCode)}</p>
+        {c.isMakeup && <p className="bb-cline bb-makeup-line bb-detail-makeup">{T.makeupLine(c.makeupOfCycleName, c.retestNames)}</p>}
       </div>
 
       {data.needsParentSignature && !withdrawn && (
@@ -541,10 +573,10 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
       <section className="bb-detail-section" aria-label={T.SECTION_REGISTRATION}>
         <h3 className="bb-section-title">{T.SECTION_REGISTRATION}</h3>
         <dl className="ev-sum bb-sum">
-          <Row label={T.ROW_REGISTERED}>{T.registeredLine(c.registeredOn, c.source, c.locationCode)}</Row>
+          <Row label={T.ROW_REGISTERED}>{c.isMakeup ? T.registeredMakeup(c.registeredOn, c.makeupOfCycleName) : T.registeredLine(c.registeredOn, c.source, c.locationCode)}</Row>
           <Row label={T.ROW_REFERENCE}>{c.reference}</Row>
           <Row label={T.ROW_WAIVER}>
-            {T.waiverLine(w)}
+            {c.isMakeup && !w ? T.WAIVER_MAKEUP : T.waiverLine(w)}
             {/* Not with Hide payments on (mat-side): the signature stays at the desk. "· View
                 signature" never wraps apart, so no lone "on file ·" is left at a line's end. */}
             {isAdmin && !hidden && w && w.how === 'drawn' && !w.removedAt && (

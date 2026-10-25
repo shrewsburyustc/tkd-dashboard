@@ -1,0 +1,49 @@
+{
+  "title": "Item 17c · What an empty list shows",
+  "subtitle": "<b>Approved in each section — but the rulebook says otherwise.</b> §8 says an empty list shows one line + one action, and §1.1 says that action <i>replaces</i> the page header's button (never the same button twice). In practice every section shows the line only and keeps the header's button — each approved on its own (Classes and ranks v0.53, Star v0.92, Schedule v0.238 “Add button stays in the page header (same as Testing)”, Camps). Color Belt's Private testing does both: its box has a second blue “Add private testing” while the header still has one (drawn and approved in v0.403, though it breaks §1.1). <span style=\"color:#6B6B6B\">(Preview screenshots at PC size, Shrewsbury · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/17c-colorbelt-events-empty.png",
+          "crop": [70, 96, 1190, 272],
+          "scale": 0.78,
+          "caption": "<b>1. Most lists</b> (Color Belt's events here; Star, Black Belt, Camps, Schedule, Forms and Prospects the same): one gray line where the list goes; the header's blue button is the one way to add.",
+          "marks": [[1135, 113, 125, 40]]
+        },
+        {
+          "src": "shots/17c-colorbelt-private-empty.png",
+          "crop": [70, 96, 1190, 316],
+          "scale": 0.78,
+          "caption": "<b>2. Color Belt's Private testing:</b> a box with a line and a second blue “Add private testing” — the same button twice on one screen.",
+          "marks": [[1085, 113, 175, 40], [578, 337, 175, 40]]
+        }
+      ]
+    },
+    {
+      "label": "Option B (recommended) and option C, drawn",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/17c-private-line-MOCKUP.png",
+          "crop": [70, 96, 1190, 272],
+          "scale": 0.78,
+          "caption": "<b>3. Option B:</b> Private testing shows the same line as every other list; the header's button is the one way to add.",
+          "marks": [[1085, 113, 175, 40]]
+        },
+        {
+          "src": "shots/17c-private-box-MOCKUP.png",
+          "crop": [70, 96, 1190, 316],
+          "scale": 0.78,
+          "caption": "<b>4. Option C — §8 as written:</b> on an empty list the button moves from the header into the middle, and goes back to the header once something is added — on every list.",
+          "marks": [[578, 337, 175, 40]]
+        }
+      ],
+      "note": "Pictures 3–4 are drawn over the real Private testing tab; nothing in the app was changed. In both, staff who can't add see “… An admin adds them.” and no button (as v0.53)."
+    }
+  ],
+  "footer": "<b>Your choice — one question: what does an empty list show?</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> the rulebook (§8, §1.1) describes something no section does; Private testing shows the same blue button twice.<br><b>B · Recommended: the line, and the header button stays the one action (picture 3).</b> §8 is rewritten to match what the sections do; Private testing drops its second button. <i>+</i> the add button never moves — always top right; one rule that matches every screen. <i>−</i> one small change in Color Belt; §8 and §1.1 reworded.<br><b>C · §8 as written (picture 4).</b> On every empty list the button moves into the middle and leaves the header. <i>+</i> the next step sits where the eye lands on an empty page. <i>−</i> the button jumps between two places depending on whether the list is empty; every section changes."
+}

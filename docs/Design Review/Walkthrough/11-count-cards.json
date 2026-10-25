@@ -1,0 +1,55 @@
+{
+  "title": "Item 11 · Count cards above a roster",
+  "subtitle": "<b>Approved in each section, plus one drift.</b> Rule §8: tapping a count card opens the list behind it. Color Belt's event roster and Star do this, and Black Belt's four cards (Paid in full · Paying on schedule · Late · Not paid — they fit its payment plans) filter too. <b>Color Belt private testing's cards do nothing</b>, although its approval said “a roster like an event's Students tab” (v0.402) — drift. Approved and staying: Camps has one summary line instead of cards (v0.715); Finance's cards jump to their group (v0.207). <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/11a-colorbelt-event-card-filter.png",
+          "crop": [70, 232, 1192, 440],
+          "scale": 0.75,
+          "caption": "<b>1. Color Belt event:</b> tap “Not paid” → the card turns blue, “Showing not paid only · Show all”, and only the students who haven't paid stay (here, the three in Little Tiger + White)."
+        },
+        {
+          "src": "shots/11b-colorbelt-private-cards-inert.png",
+          "crop": [70, 256, 1192, 386],
+          "scale": 0.75,
+          "caption": "<b>2. Color Belt private testing:</b> the same four cards — tapping “Not paid” does nothing.",
+          "marks": [[672, 264, 286, 94]]
+        },
+        {
+          "src": "shots/11c-camps-summary-line.png",
+          "crop": [70, 128, 1192, 92],
+          "scale": 0.75,
+          "caption": "<b>3. Camps:</b> one summary line instead of cards (approved); its numbers can't be tapped."
+        }
+      ],
+      "note": "Seen in passing (item 16, icons): “Not paid” has a clock icon in Color Belt and Star, but in Black Belt the clock means “Paying on schedule” and “Not paid” is a crossed circle."
+    },
+    {
+      "label": "Proposed (option B) · and option C",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/11d-colorbelt-private-card-filter-MOCKUP.png",
+          "crop": [70, 256, 1192, 280],
+          "scale": 0.75,
+          "caption": "<b>4. B · recommended:</b> private testing's cards work like the event's — “Not paid” → only Liam Park, with the same “Showing … · Show all” line. “Payments recorded” stays a total, as on the event page.",
+          "marks": [[672, 264, 286, 94], [76, 366, 192, 20]]
+        },
+        {
+          "src": "shots/11e-camps-collect-filter-MOCKUP.png",
+          "crop": [70, 128, 1192, 530],
+          "scale": 0.75,
+          "caption": "<b>5. C:</b> B, and Camps' “6 to collect” can be tapped too → only the campers who still owe.",
+          "marks": [[268, 186, 132, 26], [76, 219, 196, 20]]
+        }
+      ],
+      "note": "<b>Copies what's already there:</b> the event roster's own cards, selected look and “Showing … · Show all” line. Pictures 4–5 are drawn over the real pages; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> private testing is the one roster whose cards look like the others but can't be tapped; it breaks rule §8.<br><b>B · Recommended: private testing's cards filter like the event's (picture 4).</b> Private testings = everyone, Paid, Not paid; “Payments recorded” stays a total. Everything else stays as approved. <i>+</i> one habit — tap a number to see those rows; an exact copy of the event roster. <i>−</i> a small build for Color Belt.<br><b>C · B, plus Camps' summary numbers can be tapped (picture 5).</b> “6 to collect” → only the campers who still owe; “15 coming” → only that day's campers. <i>+</i> the desk finds who still owes during a camp in one tap. <i>−</i> reopens Camps' approved summary line (v0.715); a filtered check-in list can hide a child the desk is looking for (Find a camper still finds them)."
+}

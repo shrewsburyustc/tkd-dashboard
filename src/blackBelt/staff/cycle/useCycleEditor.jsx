@@ -18,9 +18,16 @@
 //   If the second call fails, the cycle IS saved: the dialog closes and the screen behind shows
 //   "The cycle was saved, but registration didn't change: …" with Retry.
 // Status words come from text.js; the database decides, the screen only grays Save early.
+// Migration 0025 (contract §14.5, S2): Edit cycle also reads bb_cycle_grading_state. A past day
+// whose part already has grades can't be moved or deleted (nor that part unticked), and once
+// grading started the first day can't be moved or deleted and no day can come before it — those
+// days' Delete is grayed with a gray reason under the day, and the day dialog locks its date /
+// those parts (dayLock below). The database's own refusal (has_grades) says so in the dialog and
+// reads the grading state again.
 import { useLayoutEffect, useRef, useState } from 'react';
 import { nameKey, normalizeName } from '../../../lib/testing/names.js';
 import { addCycle, loadCycle, loadCycleDefaults, setRegistration, updateCycle } from '../../../lib/blackBelt/api.js';
+import { loadGradingState } from '../../../lib/blackBelt/gradingApi.js';
 import { cycleFormProblems, cycleToForm, findDuplicateCycle, followApplicationDue, hasProblems, setPaymentDueDate } from '../../../lib/blackBelt/rules.js';
 import { PHONE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import AddPlanDialog from './AddPlanDialog.jsx';
@@ -35,6 +42,25 @@ const BLOCKING = ['STALE', 'NOT_ALLOWED'];
 
 function focusSoon(find) {
   window.requestAnimationFrame(() => window.requestAnimationFrame(() => find()?.focus()));
+}
+
+// 0025 (S2): what grading locks on one day of Edit cycle.
+//   grading   loadGradingState's answer (null = not read, or nothing known: nothing is grayed)
+//   original  the cycle as loaded (its days keep their ids and saved dates)
+//   day       the day in the form (day.id = a saved day; null for a new one)
+// → { reason, dateLocked, noDelete, lockedParts, minDate } — reason = the gray words (or null)
+export function dayLock(grading, original, day) {
+  const none = { reason: null, dateLocked: false, noDelete: false, lockedParts: [], minDate: null };
+  if (!grading) return none;
+  const minDate = grading.firstDayFrozen && grading.firstDay ? grading.firstDay : null;
+  const saved = day?.id ? (original?.days ?? []).find((x) => x.id === day.id) ?? null : null;
+  if (!saved) return { ...none, minDate };
+  const protectedDay = grading.protectedDays.find((x) => x.id === day.id) ?? null;
+  if (protectedDay) return { reason: T.DAY_HAS_GRADES, dateLocked: true, noDelete: true, lockedParts: protectedDay.parts, minDate };
+  // The first day is frozen only when no other saved day shares its date (the database's rule)
+  const onFirst = (original?.days ?? []).filter((x) => x.date === grading.firstDay);
+  if (minDate && saved.date === grading.firstDay && onFirst.length === 1) return { reason: T.FIRST_DAY_FROZEN, dateLocked: true, noDelete: true, lockedParts: [], minDate };
+  return { ...none, minDate };
 }
 
 export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, setBanner, onNoAccess, onRefreshProfile, showToast, clearToast, onSaved, onClosed, onGone }) {
@@ -112,14 +138,15 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
 
   async function openEdit(cycleId, opener) {
     if (!isAdmin || dialogRef.current || !beginWrite()) return;
-    const result = await loadCycle({ cycleId });
+    const [result, grading] = await Promise.all([loadCycle({ cycleId }), loadGradingState({ cycleId })]);
     endWrite(result.status === 'ok' ? 'ok' : result.status);
     if (result.status !== 'ok') {
       handleLoadProblem(result.status);
       return;
     }
     const values = formToValues(cycleToForm(result.cycle));
-    open({ mode: 'edit', cycleId, opener, values, original: result.cycle, sourceCycleId: null });
+    // 0025: the grading state grays what grading locks (unreadable → nothing grayed; the database decides)
+    open({ mode: 'edit', cycleId, opener, values, original: result.cycle, sourceCycleId: null, grading: grading.status === 'ok' ? grading : null });
   }
 
   // ----- Closing -----
@@ -190,6 +217,12 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
         onGone?.();
       } else if (status === 'duplicate_name') {
         patch({ saving: false, duplicateName: form.name });
+      } else if (status === 'has_grades') {
+        // 0025 (S2): a graded day or the first day changed — say so and gray them from now on
+        patch({ saving: false, note: 'HAS_GRADES', noteAt: Date.now() });
+        loadGradingState({ cycleId: d.cycleId }).then((g) => {
+          if (g.status === 'ok') patch((current) => (current.cycleId === d.cycleId ? { grading: g } : {}));
+        });
       } else if (status === 'part_without_day' || status === 'invalid') {
         // part_without_day can't normally happen (Save is gray first); the list shows the parts.
         patch({ saving: false, note: 'INVALID', triedSave: true });
@@ -239,7 +272,7 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
     const day = index === null ? null : d.values.days[index];
     const originalDate = d.mode === 'edit' && day?.id ? (d.original?.days ?? []).find((x) => x.id === day.id)?.date ?? null : null;
     const values = dayToValues(day ?? { name: '', date: '', start: '', end: '', place: { code: 'worcester' }, second: null, parts: [] });
-    patch({ day: { index, values, initial: values, touched: {}, triedSave: false, note: null, originalDate, opener } });
+    patch({ day: { index, dayId: day?.id ?? null, values, initial: values, touched: {}, triedSave: false, note: null, originalDate, opener } });
   }
   function changeDay(changes) {
     patch((current) => (current.day ? { day: { ...current.day, values: { ...current.day.values, ...changes }, note: null } } : {}));
@@ -279,6 +312,7 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
     const d = dialogRef.current;
     if (!d) return;
     const removed = d.values.days[index];
+    if (d.mode === 'edit' && dayLock(d.grading, d.original, removed).noDelete) return; // grayed (0025, S2)
     changeValues((values) => ({ ...values, days: values.days.filter((_, i) => i !== index) }));
     // Focus the next day's Edit (or Add testing day when none is left).
     const next = d.values.days[index + 1] ?? d.values.days[index - 1];
@@ -357,7 +391,14 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
     const otherDays = dialog.day ? dialog.values.days.filter((_, i) => i !== dialog.day.index) : [];
     element = (
       <>
-        <CycleDialog key={dialog.key} state={dialog} check={c} isPhone={isPhone} handlers={handlers} />
+        <CycleDialog
+          key={dialog.key}
+          state={dialog}
+          check={c}
+          isPhone={isPhone}
+          handlers={handlers}
+          dayLockOf={(day) => (dialog.mode === 'edit' ? dayLock(dialog.grading, dialog.original, day) : null)}
+        />
         {dialog.day && (
           <DayDialog
             state={dialog.day}
@@ -365,6 +406,7 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
             dayCount={dialog.values.days.length}
             today={today}
             otherDays={otherDays}
+            lock={dialog.mode === 'edit' ? dayLock(dialog.grading, dialog.original, { id: dialog.day.dayId }) : null}
             isPhone={isPhone}
             onChange={changeDay}
             onTouch={touchDay}

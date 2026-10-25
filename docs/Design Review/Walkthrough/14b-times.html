@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Item 14b · Picking a time</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2000px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Item 14b · Picking a time</h1>
+<p class="sub"><b>Approved in each section, plus drift.</b> Six different time lists: Color Belt <b>5-minute</b> steps, 6 AM–10 PM (194 choices — chosen so times like 6:50 fit, v0.157); Star 15-minute, 8 AM–8 PM; Black Belt 15-minute, 6 AM–10 PM; Camps 5-minute, 6 AM–9 PM; Finance's close-the-day reminder 15-minute, 11 AM–11 PM with Off; Schedule and Calendar the browser's own time box. <b>That box is the one that saved Worcester's “4:20” class times as 4:20 AM</b> in October (fixed with SQL, v0.600). Calendar's box was never decided (drift). <span style="color:#6B6B6B">(Preview screenshots at PC size · fake data)</span></p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <div class="row"><figure style="width:224.4px">
+    <div class="shot" style="width:224.4px;height:343.20000000000005px">
+      <img src="shots/14e-star-time-list.png" style="left:-704px;top:-277.20000000000005px;width:1408px">
+      
+    </div>
+    <figcaption><b>1. Star:</b> its own list — opens at the chosen time, big rows, 15-minute steps (no 4:20).</figcaption>
+  </figure><figure style="width:448.8px">
+    <div class="shot" style="width:448.8px;height:68.2px">
+      <img src="shots/14f-schedule-browser-time-box.png" style="left:-479.6px;top:-459.8px;width:1408px">
+      <div class="mark" style="left:4.800000000000001px;top:20.200000000000003px;width:217.00000000000003px;height:43.2px;border-color:#F59E0B"></div><div class="mark" style="left:227.00000000000003px;top:20.200000000000003px;width:217.00000000000003px;height:43.2px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>2. Schedule:</b> the browser's time box — hours, minutes and AM/PM typed in parts. This is what saved 4:20 as AM.</figcaption>
+  </figure></div>
+<figure style="width:358.8px">
+    <div class="shot" style="width:358.8px;height:119.60000000000001px">
+      <img src="shots/14b-colorbelt-browser-date-box.png" style="left:-780px;top:-384.8px;width:1664px">
+      
+    </div>
+    <figcaption><b>3. Color Belt:</b> the browser's plain drop-down list — 194 times in 5-minute steps (Camps the same kind, 181).</figcaption>
+  </figure>
+  <div class="note">Calendar uses the same browser time box as Schedule when “All day” is off.</div>
+</div>
+<div class="col after">
+  <div class="label">Proposed (option B) · one time list everywhere</div>
+  <figure style="width:448.8px">
+    <div class="shot" style="width:448.8px;height:330px">
+      <img src="shots/14g-schedule-time-list-MOCKUP.png" style="left:-479.6px;top:-459.8px;width:1408px">
+      <div class="mark" style="left:227.00000000000003px;top:20.200000000000003px;width:217.00000000000003px;height:43.2px;border-color:#3B8F2A"></div><div class="mark" style="left:227.00000000000003px;top:59.800000000000004px;width:217.00000000000003px;height:265.40000000000003px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>4. Schedule with the shared list:</b> Star's list in 5-minute steps, AM/PM written on every time, opening at the chosen time — 4:40 PM can't turn into AM.</figcaption>
+  </figure>
+  <div class="note"><b>Copies what's already there:</b> Star's own list (it already opens at the chosen time) with Color Belt's 5-minute steps. The range fits the job: 6:00 AM–10:00 PM for classes, testing and camps; Finance's reminder keeps 11 AM–11 PM and “Off”. Picture 4 is drawn over the real Add time slot box; nothing in the app was changed.</div>
+</div>
+</div>
+<div class="foot"><b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> six different lists; Schedule and Calendar keep the box that turned 4:20 into 4:20 AM.<br><b>B · Recommended: one time list everywhere (picture 4).</b> Star's list, in 5-minute steps, with AM/PM written on every time and the list opening at the chosen time; Schedule and Calendar drop the browser's box. <i>+</i> the same way to pick a time in every section; real times like 4:20 and 6:50 fit; no AM/PM mix-ups. <i>−</i> work in every section with a time; Star's and Black Belt's lists get longer (they open at the chosen time, so it matters little).<br><b>C · Fix only the risky box:</b> Schedule and Calendar switch to a list; every other section keeps its own. <i>+</i> the least work; the AM/PM mix-up can't happen again. <i>−</i> five different lists stay.</div>
+</body></html>

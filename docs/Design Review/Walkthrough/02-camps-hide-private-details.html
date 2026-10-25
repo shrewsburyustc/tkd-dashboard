@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Item 2 · Camps shows money while “Hide private details” is on</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2000px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #4A4A4A; font-size: 14px; }
+</style></head><body>
+<h1>Item 2 · Camps shows money while “Hide private details” is on</h1>
+<p class="sub"><b>Missing — not planned.</b> The account-menu switch is for the mat-side tablet, where parents can see the screen. The rulebook says it hides payment details on every screen, in every section, now and in future (v0.249, v0.506). Color Belt and Star follow it; no Camps document, mockup or rulebook row mentions it. <span style="color:#6B6B6B">(Preview screenshots at tablet size, 820×1180 touch · fake data)</span></p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today · switch on</div>
+  <div class="row"><figure style="width:558px">
+    <div class="shot" style="width:558px;height:864px">
+      <img src="shots/02a-camps-roster-switch-on.png" style="left:-57px;top:-21px;width:615px">
+      <div class="mark" style="left:3.5px;top:2px;width:121.25px;height:29px;border-color:#F59E0B"></div><div class="mark" style="left:129.5px;top:139.25px;width:62.75px;height:28.25px;border-color:#F59E0B"></div><div class="mark" style="left:110.75px;top:254.75px;width:113.75px;height:613.25px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>1.</b> The top bar says “Private details hidden”, yet the camp roster still shows each family's amount due (“$245 due”, “$395 due”) and “5 to collect”.</figcaption>
+  </figure><figure style="width:330px">
+    <div class="shot" style="width:330px;height:686.25px">
+      <img src="shots/02b-camper-detail-switch-on.png" style="left:-142.5px;top:-72px;width:615px">
+      <div class="mark" style="left:14px;top:152.75px;width:302px;height:50px;border-color:#F59E0B"></div><div class="mark" style="left:14px;top:194.75px;width:302px;height:35.75px;border-color:#F59E0B"></div><div class="mark" style="left:14px;top:233.75px;width:302px;height:82.25px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>2.</b> A camper's detail still shows the price, how they'll pay and what's owed.</figcaption>
+  </figure></div>
+<figure style="width:558px">
+    <div class="shot" style="width:558px;height:375px">
+      <img src="shots/02c-colorbelt-roster-switch-on.png" style="left:-57px;top:-21px;width:615px">
+      <div class="mark" style="left:3.5px;top:2px;width:121.25px;height:29px;border-color:#F59E0B"></div><div class="mark" style="left:11px;top:170px;width:218px;height:62px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>3.</b> Same tablet, same switch, in Color Belt: only the student count shows — no payment columns, no Mark paid (rule v0.412). Star does the same.</figcaption>
+  </figure>
+  
+</div>
+<div class="col after">
+  <div class="label">After · switch on (mockup)</div>
+  <div class="row"><figure style="width:558px">
+    <div class="shot" style="width:558px;height:864px">
+      <img src="shots/02d-camps-roster-switch-on-MOCKUP.png" style="left:-57px;top:-21px;width:615px">
+      <div class="mark" style="left:11px;top:139.25px;width:113px;height:28.25px;border-color:#3B8F2A"></div><div class="mark" style="left:11px;top:254.75px;width:533px;height:32px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>4.</b> The money leaves: no Paid column, no “to collect”. Attendance, check-in and the duplicate warning stay (the warning moves next to the name).</figcaption>
+  </figure><figure style="width:330px">
+    <div class="shot" style="width:330px;height:686.25px">
+      <img src="shots/02e-camper-detail-switch-on-MOCKUP.png" style="left:-142.5px;top:-72px;width:615px">
+      <div class="mark" style="left:14px;top:152.75px;width:302px;height:68px;border-color:#3B8F2A"></div><div class="mark" style="left:14px;top:219.5px;width:302px;height:42.5px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>5.</b> The detail keeps its rows but says “Hidden on this tablet” and “Payment details are hidden on this tablet.”</figcaption>
+  </figure></div>
+  <div class="note"><b>Copies an existing pattern.</b> The words come from the shared switch code (<code>src/lib/privateDetails.js</code>) that Color Belt and Star already use. Turning the switch off shows everything again. Pictures 4 and 5 are drawn over the real page; nothing in the app was changed.</div>
+</div>
+</div>
+<div class="foot"><b>Owner:</b> Camps. <b>Same rule, also not planned:</b> the Prospects panel shows the parent's email while the switch is on (v0.506 names email). <b>Open question for later:</b> the rule names date of birth, email and payments — should it also hide parents' phone numbers and form answers in Prospects, and staff emails in Staff accounts? <b>PC and phone:</b> the same parts would hide.</div>
+</body></html>

@@ -1,0 +1,81 @@
+{
+  "title": "Item 12b · Closing and opening sign-ups: the words and icons",
+  "subtitle": "<b>Approved in each section, plus some drift.</b> Every list lets staff close sign-ups by hand and open them again — with three ways to say “open again” and two icon styles. Color Belt, Star and Black Belt: “Close registration / Open registration” (approved; Black Belt adds lock icons — approved in its mockups, but the icon map gives the locks to “Lock now” and Finance's “Reopen day”). Camps: “Close sign-up / Reopen sign-up” (approved, v0.700). Forms: “Close form” (approved) / “Open form again” with door icons (never decided — drift). <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/12k-colorbelt-close-registration.png",
+              "crop": [1040, 371, 216, 131],
+              "scale": 1.2,
+              "caption": "<b>1. Color Belt</b> (Star the same): “Close registration”, no icon."
+            },
+            {
+              "src": "shots/12c-blackbelt-registration-links-menu.png",
+              "crop": [1049, 154, 216, 122],
+              "scale": 1.2,
+              "caption": "<b>2. Black Belt:</b> the same words, with the lock icon that means “Lock now” elsewhere.",
+              "marks": [[1058, 231, 196, 32]]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/12l-camps-reopen-sign-up.png",
+              "crop": [1040, 318, 216, 163],
+              "scale": 1.2,
+              "caption": "<b>3. Camps</b>, a closed camp: “Reopen sign-up”.",
+              "marks": [[1049, 331, 196, 32]]
+            },
+            {
+              "src": "shots/12m-forms-open-form-again.png",
+              "crop": [1036, 220, 216, 195],
+              "scale": 1.2,
+              "caption": "<b>4. Forms</b>, a closed form: “Open form again”, with a door icon that isn't in the icon map.",
+              "marks": [[1045, 329, 196, 32]]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Proposed (option B) · one verb pair, no icons",
+      "tone": "after",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/12n-blackbelt-close-no-icon-MOCKUP.png",
+              "crop": [1049, 154, 216, 90],
+              "scale": 1.2,
+              "caption": "<b>5. Black Belt:</b> “Close registration” without the lock (Registration links now sits in the header, item 12a).",
+              "marks": [[1058, 199, 196, 32]]
+            },
+            {
+              "src": "shots/12o-camps-open-sign-up-MOCKUP.png",
+              "crop": [1040, 318, 216, 163],
+              "scale": 1.2,
+              "caption": "<b>6. Camps:</b> “Open sign-up”.",
+              "marks": [[1049, 331, 196, 32]]
+            },
+            {
+              "src": "shots/12p-forms-open-form-MOCKUP.png",
+              "crop": [1036, 220, 216, 195],
+              "scale": 1.2,
+              "caption": "<b>7. Forms:</b> “Open form”, no icon.",
+              "marks": [[1045, 329, 196, 32]]
+            }
+          ]
+        }
+      ],
+      "note": "<b>Copies what's already there:</b> Color Belt's and Star's “Close … / Open …” with no icon. Each section keeps its own noun: registration (testing), sign-up (camps), form (Forms). Pictures 5–7 are drawn over the real menus; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> three ways to say “open again”; Black Belt's lock icons also mean “Lock now” and Finance's “Reopen day”.<br><b>B · Recommended: one verb pair, each section's own noun, no icons.</b> “Close registration / Open registration” (Color Belt, Star, Black Belt), “Close sign-up / Open sign-up” (Camps), “Close form / Open form” (Forms); no icon on these items anywhere, as Color Belt, Star and Camps do today. <i>+</i> the same two verbs everywhere; the lock icons keep their own meanings (Lock now, Finance's day); the nouns still match what families do (register, sign up, fill in a form). <i>−</i> small rewording in Camps and Forms; Black Belt's approved lock icons go.<br><b>C · One phrase everywhere: “Close registration / Open registration”,</b> Camps and Forms included. <i>+</i> identical words in every menu (Camps' button already says “Registration link”). <i>−</i> a free-class form isn't a registration, and Camps' family pages say “sign up”."
+}
