@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Item 15d · Where settings live</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2000px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Item 15d · Where settings live</h1>
+<p class="sub"><b>Approved in each section.</b> The things you set once — prices, rubrics, templates, statuses — live in <b>8 places</b>: a tab in five sections (Color Belt, Star, Black Belt, Camps, Finance), the page's ⋯ menu in two (Prospects and Calendar — your v0.245: “like the Calendar's Event types”), and the school-wide <b>Settings</b> page (account menu → Admin), which holds only the schools' addresses and phones. <b>One home doesn't fit:</b> Classes and ranks are used by the Schedule, Calendar, Forms and Testing, but live inside Color Belt testing (v0.38). The Schedule and Forms say “Add classes in Testing → Classes and ranks” — once Star goes live that is Testing → Color belt testing → Classes and ranks. Your plan of 2026-10-17 (not decided yet): move them to a school-wide Settings once the Schedule and Calendar are built. They are now. <span style="color:#6B6B6B">(Preview screenshots at PC size · fake data)</span></p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today · 8 places</div>
+  <div class="row"><figure style="width:446.4px">
+    <div class="shot" style="width:446.4px;height:133.92px">
+      <img src="shots/15t-colorbelt-classes-ranks.png" style="left:-50.4px;top:-69.12px;width:921.5999999999999px">
+      <div class="mark" style="left:41.36px;top:55.04px;width:87.92px;height:33.92px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>1. Color Belt:</b> “Classes and ranks” tab — per school; staff view only (v0.38, v0.40).</figcaption>
+  </figure><figure style="width:446.4px">
+    <div class="shot" style="width:446.4px;height:133.92px">
+      <img src="shots/15u-star-rubrics-prices.png" style="left:-50.4px;top:-69.12px;width:921.5999999999999px">
+      <div class="mark" style="left:41.36px;top:42.08px;width:90.8px;height:33.92px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>2. Star:</b> “Rubrics and prices” tab (v0.60).</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:446.4px">
+    <div class="shot" style="width:446.4px;height:133.92px">
+      <img src="shots/15v-blackbelt-rubric-prices.png" style="left:-50.4px;top:-69.12px;width:921.5999999999999px">
+      <div class="mark" style="left:40.64px;top:46.4px;width:87.2px;height:33.92px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>3. Black Belt:</b> “Rubric and prices” tab — the waiver and the default rubric; its prices moved to each cycle (v0.902), the name stayed.</figcaption>
+  </figure><figure style="width:446.4px">
+    <div class="shot" style="width:446.4px;height:133.92px">
+      <img src="shots/15w-camps-templates.png" style="left:-50.4px;top:-69.12px;width:921.5999999999999px">
+      <div class="mark" style="left:42.8px;top:36.32px;width:56.239999999999995px;height:33.92px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>4. Camps:</b> “Templates” tab (v0.711); each camp's prices are inside the camp.</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:446.4px">
+    <div class="shot" style="width:446.4px;height:133.92px">
+      <img src="shots/15x-finance-settings.png" style="left:-50.4px;top:-69.12px;width:921.5999999999999px">
+      <div class="mark" style="left:62.959999999999994px;top:23.36px;width:48.32px;height:33.92px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>5. Finance:</b> “Settings” tab, admins only (v0.203).</figcaption>
+  </figure><figure style="width:432px">
+    <div class="shot" style="width:432px;height:100.8px">
+      <img src="shots/15y-prospects-menu.png" style="left:-475.2px;top:-60.48px;width:921.5999999999999px">
+      <div class="mark" style="left:176px;top:42.08px;width:156.32px;height:35.36px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>6. Prospects:</b> the page's ⋯ → Edit statuses (v0.245).</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:432px">
+    <div class="shot" style="width:432px;height:100.8px">
+      <img src="shots/15z-calendar-menu.png" style="left:-475.2px;top:-60.48px;width:921.5999999999999px">
+      <div class="mark" style="left:214.16px;top:42.08px;width:156.32px;height:35.36px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>7. Calendar:</b> the page's ⋯ → Event types (v0.240).</figcaption>
+  </figure><figure style="width:230.4px">
+    <div class="shot" style="width:230.4px;height:131.4px">
+      <img src="shots/15za-account-menu.png" style="left:-914.4px;top:-271.8px;width:1152px">
+      <div class="mark" style="left:-1.2999999999999998px;top:53.6px;width:233px;height:40.4px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>8. Settings</b> is under your initials (account menu → Admin), admins only (v0.135).</figcaption>
+  </figure></div>
+<figure style="width:504px">
+    <div class="shot" style="width:504px;height:167.04px">
+      <img src="shots/15zb-settings-schools.png" style="left:-50.4px;top:-69.12px;width:921.5999999999999px">
+      
+    </div>
+    <figcaption><b>9. Settings</b> has one part: Schools — each school's address and phone (hidden in this picture).</figcaption>
+  </figure>
+  
+</div>
+<div class="col after">
+  <div class="label">Proposed (option B) · one rule; Classes and ranks move to Settings</div>
+  <figure style="width:538.2px">
+    <div class="shot" style="width:538.2px;height:538.2px">
+      <img src="shots/15zd-settings-classes-MOCKUP.png" style="left:-54.6px;top:-74.88px;width:998.4000000000001px">
+      <div class="mark" style="left:-2.44px;top:176.96px;width:538.4px;height:365.24px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>10. Settings gets a second part, “Classes and ranks”</b> — the same list and editor as today, each school's classes under its own heading, with Add class. The Schedule's and Forms' hints point here.</figcaption>
+  </figure>
+<figure style="width:809.2px">
+    <div class="shot" style="width:809.2px;height:102.00000000000001px">
+      <img src="shots/15zc-colorbelt-prices-tab-MOCKUP.png" style="left:-47.6px;top:-65.28px;width:870.4000000000001px">
+      <div class="mark" style="left:38.160000000000004px;top:51.760000000000005px;width:38.6px;height:32.480000000000004px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>11. Color Belt keeps only what's testing-only</b> — the three prices, sparring gear and each class's final award — in a tab called “Prices” (the name to settle in the mockups).</figcaption>
+  </figure>
+  <div class="note"><b>The rule in B:</b> things several sections use live in <b>Settings</b> (Schools, Classes and ranks). Things one section uses live in that section: a tab named for what's in it, next to the main tab (Star, Black Belt, Camps, Finance — as today), or the page's ⋯ menu where a page has no tabs (Prospects, Calendar — as today). This is your plan of 2026-10-17, with your leaning that testing prices stay in Testing. Pictures 10–11 are drawn over the real pages; nothing in the app was changed.</div>
+</div>
+</div>
+<div class="foot"><b>Your choice — one question: where should settings live?</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> Classes and ranks stay inside Color belt testing although the Schedule, Calendar and Forms need them; no written rule, so the next section can invent a ninth place.<br><b>B · Recommended: one rule, and Classes and ranks move to Settings (pictures 10–11)</b> — your own plan. <i>+</i> adding a class for the Schedule happens where the whole school's details are; one rule for every section; nothing else moves. <i>−</i> a medium job for Color Belt and Main (the class editor splits: classes and ranks in Settings, testing prices in Color Belt); Settings is admins only, so staff no longer see the ranks list (they still see testing prices in Color Belt and class names in the Schedule); Settings sits under your initials, where the Grandmaster may not look — the Schedule's and Forms' hints would link straight to it.<br><b>C · One Settings page for everything.</b> Every section's settings move into Settings, one part each. <i>+</i> one place to look. <i>−</i> the biggest job (all six sessions); settings sit far from the work they change (a camp template is made from a camp); staff lose the view-only price tabs.</div>
+</body></html>

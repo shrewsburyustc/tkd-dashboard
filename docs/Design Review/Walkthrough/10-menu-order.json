@@ -1,0 +1,102 @@
+{
+  "title": "Item 10a · The ⋯ menu: one order everywhere",
+  "subtitle": "<b>Approved in each section, so five different orders.</b> Each section's ⋯ menu was approved on its own, and the same items sit in different places: Star moves “Edit candidate” from third to first once someone has paid; Camps puts Withdraw before the payment items; Black Belt has no payment group. Color Belt's menu — the one you picked as the model in item 4 — already keeps one order in three groups. (How admin-only items are shown — Camps' “Admin” heading — is the next question, 10b.) <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today · not paid, then paid",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/10a-colorbelt-menu-not-paid.png",
+              "crop": [1040, 589, 216, 195],
+              "scale": 1.1,
+              "caption": "<b>1. Color Belt, not paid:</b> Edit details first · its own item · Change how they'll pay — Withdraw · Delete permanently."
+            },
+            {
+              "src": "shots/04a-colorbelt-menu-undo.png",
+              "crop": [1040, 549, 216, 236],
+              "scale": 1.1,
+              "caption": "<b>2. Color Belt, paid:</b> the same order; the payment items get their own group in the middle."
+            },
+            {
+              "src": "shots/10f-blackbelt-menu.png",
+              "crop": [1040, 429, 216, 163],
+              "scale": 1.1,
+              "caption": "<b>3. Black Belt:</b> no payment group; Print receipt sits with the everyday items; one “Remove candidate”.",
+              "marks": [[1049, 506, 196, 32], [1049, 547, 196, 32]]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/10b-star-menu-not-paid.png",
+              "crop": [1040, 525, 216, 195],
+              "scale": 1.1,
+              "caption": "<b>4. Star, not paid:</b> “Edit candidate” is third…",
+              "marks": [[1049, 602, 196, 32]]
+            },
+            {
+              "src": "shots/10c-star-menu-paid.png",
+              "crop": [1040, 411, 216, 227],
+              "scale": 1.1,
+              "caption": "<b>5. Star, paid:</b> …and first here; the payment items share the first group.",
+              "marks": [[1049, 424, 196, 32], [1049, 488, 196, 64]]
+            },
+            {
+              "src": "shots/10e-camps-menu-paid.png",
+              "crop": [1040, 407, 216, 227],
+              "scale": 1.1,
+              "caption": "<b>6. Camps, paid:</b> Withdraw comes before the payment items (not paid: “Change how they'll pay” is first).",
+              "marks": [[1049, 452, 196, 32]]
+            }
+          ]
+        }
+      ],
+      "note": "Color Belt private testing already uses the same three groups (Edit details · Change day or time · Grade — Edit payment · Undo payment — Cancel private testing · Delete permanently)."
+    },
+    {
+      "label": "Proposed (option B) · Color Belt's order everywhere",
+      "tone": "after",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/10g-star-menu-not-paid-MOCKUP.png",
+              "crop": [1040, 525, 216, 195],
+              "scale": 1.1,
+              "caption": "<b>7. Star, not paid:</b> Edit details first, then its own item and Change how they'll pay.",
+              "marks": [[1049, 538, 196, 32]]
+            },
+            {
+              "src": "shots/10h-star-menu-paid-MOCKUP.png",
+              "crop": [1040, 411, 216, 268],
+              "scale": 1.1,
+              "caption": "<b>8. Star, paid:</b> the same first lines; the payment items and Print receipt (item 3b) get their own group.",
+              "marks": [[1049, 497, 196, 96]]
+            },
+            {
+              "src": "shots/10i-camps-menu-paid-MOCKUP.png",
+              "crop": [1040, 407, 216, 236],
+              "scale": 1.1,
+              "caption": "<b>9. Camps, paid:</b> Edit details — payment items — Withdraw · Delete permanently. Drawn without the “Admin” heading (10b).",
+              "marks": [[1049, 461, 196, 96]]
+            }
+          ]
+        },
+        {
+          "src": "shots/10j-blackbelt-menu-MOCKUP.png",
+          "crop": [1040, 259, 216, 333],
+          "scale": 1.1,
+          "caption": "<b>10. Black Belt</b>, with items 4 and 7 added: Edit details · Change plan or Kukkiwon — Edit payment · Undo payment · Print receipt — Withdraw · Delete permanently (grayed while there are payment records).",
+          "marks": [[1049, 345, 196, 96]]
+        }
+      ],
+      "note": "<b>The rule — three groups, always in this order:</b> (1) about the person: Edit details first, then the section's own items (Move to / Set private testing, Change plan or Kukkiwon, Change day or time, Grade), Change how they'll pay, Review possible duplicate; (2) money: Edit payment, Undo payment, refunds, Print receipt; (3) taking someone off: Withdraw (or Cancel private testing), then Delete permanently, last and red. Items that don't apply are left out; the rest never move. The same words everywhere (“Edit details”). Pictures 7–10 are drawn over the real menus; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> the same item is in a different place in each section — even on two rows of the same Star roster — so he can't learn where things are.<br><b>B · Recommended: Color Belt's order everywhere (pictures 7–10).</b> Three groups — about the person, money, taking someone off — in a fixed order; items that don't apply are left out and the rest never move; “Edit details” everywhere (Star's “Edit candidate” renamed). <i>+</i> every roster's menu looks the same: Edit details always on top, money always in the middle, Delete permanently always last and red; it's the model you picked in item 4. <i>−</i> small rework in Star and Camps; Color Belt private testing moves “Change how they'll pay” below its own items; Black Belt's menu changes anyway with items 4 and 7.<br><b>C · “Most likely first”.</b> The item he'll most likely need goes on top, so the order changes with the row — what Star and Camps do on unpaid rows today. <i>+</i> the likely next step is one line higher. <i>−</i> items move between rows, so he can't build a habit; the opposite of one fixed menu."
+}

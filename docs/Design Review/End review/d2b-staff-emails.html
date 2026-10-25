@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Open detail D2b · The staff side while “Hide private details” is on</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2000px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Open detail D2b · The staff side while “Hide private details” is on</h1>
+<p class="sub"><b>From item 2; for Main's prompt (Staff accounts, the account menu).</b> The rule says “email … on every screen”, but it was written for families (students, mostly minors, and their parents). Staff emails show in four places: your own in the <b>account menu</b> (anyone who opens it on that device sees it) and on the first-time Set PIN screen; every account's in <b>Staff accounts</b> (admins only) and in its Reset password / Reset PIN boxes, where the email is there “so nobody resets the wrong account” (approved mockup, screen 4). Those boxes then show the <b>new password in plain text</b> and the <b>new PIN in four boxes</b> (v0.73, v0.75; picture 4) — on a tablet where others can see the screen, that matters more than the emails. <span style="color:#6B6B6B">(Preview screenshots · PC size · fake data; picture 4 from the approved mockup)</span></p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today (switch on)</div>
+  <figure style="width:806.4px">
+    <div class="shot" style="width:806.4px;height:181.8px">
+      <img src="../Walkthrough/shots/d2b-staff-accounts.png" style="left:-61.2px;top:-82.8px;width:1152px">
+      <div class="mark" style="left:145.4px;top:64.4px;width:188px;height:107px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>1. Staff accounts with the switch on:</b> every account's email shows.</figcaption>
+  </figure>
+<div class="row"><figure style="width:217.6px">
+    <div class="shot" style="width:217.6px;height:319.59999999999997px">
+      <img src="../Walkthrough/shots/d2b-account-menu.png" style="left:-863.6px;top:-62.9px;width:1088px">
+      <div class="mark" style="left:6.199999999999999px;top:26.599999999999998px;width:144px;height:25.849999999999998px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>2. The account menu:</b> your own email under your name.</figcaption>
+  </figure><figure style="width:312.8px">
+    <div class="shot" style="width:312.8px;height:283.9px">
+      <img src="../Walkthrough/shots/d2b-reset-pin.png" style="left:-387.59999999999997px;top:-64.6px;width:1088px">
+      <div class="mark" style="left:87.8px;top:50.4px;width:152.5px;height:31.8px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>3. Reset PIN, step 1:</b> the line naming the account, with its email.</figcaption>
+  </figure><figure style="width:312.8px">
+    <div class="shot" style="width:312.8px;height:292.4px">
+      <img src="../Walkthrough/shots/d2b-mockup-reset-pin-step2.png" style="left:-402.05px;top:-364.65px;width:1088px">
+      <div class="mark" style="left:74.2px;top:141.35px;width:164.4px;height:52.199999999999996px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>4. Reset PIN, step 2</b> (approved mockup, v0.75): the new PIN in four boxes; Reset password shows the new password in plain text.</figcaption>
+  </figure></div>
+  
+</div>
+<div class="col after">
+  <div class="label">Options B and C, drawn</div>
+  <figure style="width:806.4px">
+    <div class="shot" style="width:806.4px;height:181.8px">
+      <img src="../Walkthrough/shots/d2b-staff-accounts-B-MOCKUP.png" style="left:-61.2px;top:-82.8px;width:1152px">
+      <div class="mark" style="left:145.4px;top:64.4px;width:188px;height:107px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>5. Option B:</b> every staff email reads “Hidden on this tablet”.</figcaption>
+  </figure>
+<div class="row"><figure style="width:217.6px">
+    <div class="shot" style="width:217.6px;height:319.59999999999997px">
+      <img src="../Walkthrough/shots/d2b-account-menu-B-MOCKUP.png" style="left:-863.6px;top:-62.9px;width:1088px">
+      <div class="mark" style="left:6.199999999999999px;top:26.599999999999998px;width:57.3px;height:25.849999999999998px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>6. B, the account menu:</b> the role only.</figcaption>
+  </figure><figure style="width:312.8px">
+    <div class="shot" style="width:312.8px;height:283.9px">
+      <img src="../Walkthrough/shots/d2b-reset-pin-B-MOCKUP.png" style="left:-387.59999999999997px;top:-64.6px;width:1088px">
+      <div class="mark" style="left:87.8px;top:50.4px;width:152.5px;height:31.8px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>7. B, Reset PIN:</b> the name only — the email that tells two accounts apart is gone on that device.</figcaption>
+  </figure><figure style="width:217.6px">
+    <div class="shot" style="width:217.6px;height:350.2px">
+      <img src="../Walkthrough/shots/d2b-account-menu-C-MOCKUP.png" style="left:-863.6px;top:-62.9px;width:1088px">
+      <div class="mark" style="left:1.9500000000000002px;top:220.4px;width:213.7px;height:60.699999999999996px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>8. Option C (recommended):</b> Staff accounts grays — “Off while private details are hidden.” — like Star's desk-only New candidate (v0.507). Your own email stays.</figcaption>
+  </figure></div>
+  <div class="note"><b>The rule in C:</b> the switch hides a family's date of birth, email, payments and form answers on every screen (D2a) and turns off Staff accounts; one tap on the top-bar chip turns the switch off again. Staff emails stay wherever else they show (your own account menu, Set PIN). Pictures 5–8 are drawn over the real screens; nothing in the app was changed.</div>
+</div>
+</div>
+<div class="foot"><b>Your choice — one question: should “Hide private details” also cover the staff side?</b><br><b>A · No: the staff side stays as it is; the rule says “a family's …”.</b> <i>+</i> no work; the reset boxes keep the email that stops a wrong reset. <i>−</i> on a tablet with the switch on, an admin can still bring up staff emails — and a new password or PIN — where others can see.<br><b>B · Hide staff emails like families' (pictures 5–7).</b> <i>+</i> the rule read word for word. <i>−</i> the reset boxes lose the email that tells two accounts apart; a new password or PIN still shows in plain text.<br><b>C · Recommended: Staff accounts is desk-only while the switch is on (picture 8).</b> <i>+</i> no staff emails, new passwords or new PINs on a screen others can see; the reset boxes stay as approved; the same idea as Star's desk-only New candidate. <i>−</i> to reset a PIN on that tablet, an admin turns the switch off first; your own email still shows in your account menu.</div>
+</body></html>

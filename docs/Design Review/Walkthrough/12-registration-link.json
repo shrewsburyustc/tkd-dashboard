@@ -1,0 +1,85 @@
+{
+  "title": "Item 12a · The Registration link button and box",
+  "subtitle": "<b>Approved in each section, plus one unclear point.</b> Every section has a Registration link box with the link and its QR code, but the buttons inside differ, and the box opens from different places: an outline button in the page header (Color Belt, Star), the page's blue button (Camps — only an icon on phones, never recorded: <b>unclear</b>), or the ⋯ menu (Black Belt). Forms calls it “Share” (it also holds kiosk mode). <span style=\"color:#6B6B6B\">(Preview screenshots · PC size, phone 390 wide · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/12a-colorbelt-registration-link.png",
+              "crop": [412, 72, 456, 511],
+              "scale": 0.7,
+              "caption": "<b>1. Color Belt:</b> Copy link · Print flyer — no way to download the QR code (Star the same, one card per school).",
+              "marks": [[524, 446, 232, 28]]
+            },
+            {
+              "src": "shots/12b-camps-registration-link.png",
+              "crop": [412, 72, 456, 511],
+              "scale": 0.7,
+              "caption": "<b>2. Camps:</b> Copy link · Download QR code — no flyer, as you chose (v0.232: you design camp flyers yourself). Black Belt the same, “no flyer for now”.",
+              "marks": [[504, 446, 272, 28]]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/12c-blackbelt-registration-links-menu.png",
+              "crop": [880, 120, 390, 160],
+              "scale": 0.9,
+              "caption": "<b>3. Black Belt:</b> “Registration links” hides in the page's ⋯ menu.",
+              "marks": [[1058, 199, 196, 32]]
+            },
+            {
+              "src": "shots/12d-camps-phone-icon-only.png",
+              "crop": [0, 100, 390, 180],
+              "scale": 0.9,
+              "shotWidth": 390,
+              "caption": "<b>4. Camps on a phone:</b> just a blue QR square — no words (unclear: never recorded).",
+              "marks": [[290, 160, 36, 36]]
+            }
+          ]
+        }
+      ],
+      "note": "Forms' “Share” already has all three (Copy · Download · Print a sign) plus kiosk mode, so it keeps its own name."
+    },
+    {
+      "label": "Proposed (option B) · one button, one box",
+      "tone": "after",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/12e-star-registration-link-three-buttons-MOCKUP.png",
+              "crop": [332, 72, 616, 574],
+              "scale": 0.7,
+              "caption": "<b>5.</b> The box everywhere: the link and QR code for each school, with Copy link · <b>Download QR code</b> · Print flyer (Camps and Black Belt keep no flyer, as decided).",
+              "marks": [[418, 477, 163, 27], [700, 477, 162, 27]]
+            },
+            {
+              "src": "shots/12f-blackbelt-header-button-MOCKUP.png",
+              "crop": [880, 120, 390, 56],
+              "scale": 0.9,
+              "caption": "<b>6. Black Belt:</b> the same outline “Registration link” button in the page header, instead of the ⋯ item.",
+              "marks": [[1070, 130, 150, 32]]
+            }
+          ]
+        },
+        {
+          "src": "shots/12g-camps-phone-words-MOCKUP.png",
+          "crop": [0, 100, 390, 180],
+          "scale": 0.9,
+          "shotWidth": 390,
+          "caption": "<b>7. Camps on a phone:</b> the button keeps its words, on its own line under the title, as Color Belt's does.",
+          "marks": [[16, 237, 144, 36]]
+        }
+      ],
+      "note": "<b>Copies what's already there:</b> Star's two-school box, Black Belt's and Camps' Download QR code button, and Color Belt's header button. Pictures 5–7 are drawn over the real pages; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> the QR code can be downloaded in some sections but not others; Black Belt's link hides in ⋯; Camps' phone button is a bare icon.<br><b>B · Recommended: one Registration link button and box.</b> The same “Registration link” button with words on every screen, in the page header (Black Belt moves it out of ⋯; Camps keeps its blue because it's that page's main button). Inside: Copy link and Download QR code everywhere; Print flyer where it is today (Color Belt, Star; Forms' Print a sign) — Camps and Black Belt stay without a flyer, as decided. <i>+</i> the same place and the same buttons everywhere; the QR image for your own flyers in every section. <i>−</i> small changes in four sections.<br><b>C · All three buttons everywhere.</b> As B, but Camps and Black Belt get Print flyer too. <i>+</i> no exceptions. <i>−</i> reverses your Camps choice (you make camp flyers yourself) and Black Belt's “no flyer for now”."
+}

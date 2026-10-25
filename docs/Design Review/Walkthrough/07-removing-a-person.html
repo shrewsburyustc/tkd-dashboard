@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Item 7 · Taking someone off a roster</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2000px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Item 7 · Taking someone off a roster</h1>
+<p class="sub"><b>Unclear, plus one drift.</b> Rule §7 (written at v0.5–v0.6) says red means delete <i>or remove</i>, “even reversible removals that offer Undo”. The approved Color Belt, Star and Camps mockups drew something else: <b>Withdraw</b> plain (it happens at once with Undo, and Restore brings the person back) and only <b>Delete permanently</b> red (it asks first). Black Belt went its own way: one <b>“Remove candidate”</b> item that opens a choice box — red in its approved mockup, built plain (drift). <span style="color:#6B6B6B">(Preview screenshots at PC size · fake data)</span></p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today · the row ⋯ menu in each roster</div>
+  <div class="row"><figure style="width:302.4px">
+    <div class="shot" style="width:302.4px;height:330.4px">
+      <img src="shots/04a-colorbelt-menu-undo.png" style="left:-1456px;top:-768.5999999999999px;width:1792px">
+      <div class="mark" style="left:8.6px;top:218.6px;width:282.4px;height:97.6px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>1. Color Belt:</b> Withdraw plain, Delete permanently red.</figcaption>
+  </figure><figure style="width:302.4px">
+    <div class="shot" style="width:302.4px;height:317.79999999999995px">
+      <img src="shots/07b-star-menu.png" style="left:-1456px;top:-575.4px;width:1792px">
+      <div class="mark" style="left:8.6px;top:206px;width:282.4px;height:97.6px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>2. Star:</b> the same pair (v0.113).</figcaption>
+  </figure><figure style="width:302.4px">
+    <div class="shot" style="width:302.4px;height:273px">
+      <img src="shots/07c-camps-menu.png" style="left:-1456px;top:-569.8px;width:1792px">
+      <div class="mark" style="left:8.6px;top:103.8px;width:282.4px;height:52.8px;border-color:#F59E0B"></div><div class="mark" style="left:8.6px;top:206px;width:282.4px;height:52.8px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>3. Camps:</b> the same pair, with Delete permanently under an “Admin” heading.</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:302.4px">
+    <div class="shot" style="width:302.4px;height:228.2px">
+      <img src="shots/07d-blackbelt-menu-remove.png" style="left:-1456px;top:-600.5999999999999px;width:1792px">
+      <div class="mark" style="left:8.6px;top:162.6px;width:282.4px;height:52.8px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>4. Black Belt:</b> one plain “Remove candidate” — its approved mockup draws it red.</figcaption>
+  </figure><figure style="width:526.4px">
+    <div class="shot" style="width:526.4px;height:414.4px">
+      <img src="shots/07e-blackbelt-remove-choice.png" style="left:-632.8px;top:-100.8px;width:1792px">
+      <div class="mark" style="left:40.8px;top:80px;width:166.2px;height:52.8px;border-color:#F59E0B"></div><div class="mark" style="left:40.8px;top:197.6px;width:247.39999999999998px;height:52.8px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>5.</b> …which opens a choice: Withdraw, or Delete permanently — grayed for Sam Lee, because Black Belt never deletes payment records (v0.904).</figcaption>
+  </figure></div>
+  <div class="note">Not part of this question: Color Belt private testing's “Cancel private testing” is <b>blue</b> and asks first, because nothing is deleted (staff can cancel; only admins can restore). Prospects' “Delete prospect” is red and asks first.</div>
+</div>
+<div class="col after">
+  <div class="label">Options B and C · drawn on Black Belt's menu</div>
+  <div class="row"><figure style="width:302.4px">
+    <div class="shot" style="width:302.4px;height:273px">
+      <img src="shots/07f-blackbelt-split-all-red-MOCKUP.png" style="left:-1456px;top:-491.4px;width:1792px">
+      <div class="mark" style="left:8.6px;top:161.2px;width:282.4px;height:97.6px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>6. Option B · rule §7 as written:</b> Withdraw is red too — in all four rosters.</figcaption>
+  </figure><figure style="width:302.4px">
+    <div class="shot" style="width:302.4px;height:273px">
+      <img src="shots/07g-blackbelt-split-MOCKUP.png" style="left:-1456px;top:-491.4px;width:1792px">
+      <div class="mark" style="left:8.6px;top:161.2px;width:282.4px;height:97.6px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>7. Option C · recommended:</b> only Delete permanently is red. Black Belt gets the same two items as the others.</figcaption>
+  </figure><figure style="width:302.4px">
+    <div class="shot" style="width:302.4px;height:364px">
+      <img src="shots/07h-blackbelt-split-grayed-MOCKUP.png" style="left:-1456px;top:-464.79999999999995px;width:1792px">
+      <div class="mark" style="left:8.6px;top:211.6px;width:282.4px;height:142.39999999999998px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>8. Option C, someone with payments:</b> Delete permanently stays grayed, with Black Belt's approved reason as a gray line under it.</figcaption>
+  </figure></div>
+  <div class="note"><b>Copies what's already there:</b> the Withdraw / Delete permanently pair Color Belt, Star and Camps already have, and the gray reason line the app already uses inside menus (e.g. Color Belt's grayed Restore). Withdraw happens at once with a 5-second Undo (rule 1.4, item 6); Delete permanently asks first and names what goes. Pictures 6–8 are drawn over Black Belt's real menu; nothing in the app was changed.</div>
+</div>
+</div>
+<div class="foot"><b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> the rule says one thing and three rosters do another; Black Belt removes people its own way, and its plain item doesn't match its own mockup.<br><b>B · Rule §7 as written: red for every removal (picture 6).</b> Withdraw turns red in all four rosters, and Black Belt gets the same two items. <i>+</i> keeps the rule's words: red = someone leaves the list. <i>−</i> the safe choice and the permanent one look the same, side by side, so the red no longer warns which one can't be undone; all four rosters' approved designs change.<br><b>C · Recommended: red means “gone for good” (pictures 7–8).</b> Withdraw stays plain everywhere (it can be undone); Delete permanently stays red and asks first. Black Belt's “Remove candidate” becomes the same two items, and its never-delete-payments rule shows as the grayed item with its reason. Rule §7 is reworded to match. <i>+</i> one pattern in all four rosters; red keeps one meaning; Withdraw is one tap with Undo; it's what Color Belt, the model since item 4, already does. <i>−</i> reopens Black Belt's approved choice box (small rework, Black Belt session); rule §7's wording changes.<br><b>D · Black Belt's choice box everywhere (picture 5).</b> One red “Remove …” item opens the choice in every roster. <i>+</i> both choices are explained on screen every time. <i>−</i> one more step for the everyday Withdraw (rule 1.4: changes that can be undone happen at once); Color Belt, Star and Camps all rework their menus.</div>
+</body></html>

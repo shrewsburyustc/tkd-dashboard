@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Item 20c · The accessibility target: WCAG 2.1 or 2.2</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2000px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Item 20c · The accessibility target: WCAG 2.1 or 2.2</h1>
+<p class="sub"><b>Unclear — two documents disagree.</b> The rulebook (§4, since v0.2, 2026-10-15) targets WCAG 2.1 AA; the brief for this review asks for WCAG 2.2 AA. WCAG 2.2 is W3C's current version (a Recommendation since October 2023): it keeps everything in 2.1 and adds six checks at levels A and AA. I checked the app against them in the code; nothing in this item changes how the dashboard looks. <span style="color:#6B6B6B">(Code checked 2026-10-23, after merging main)</span></p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:930px">
+    <div class="shot" style="width:930px;height:230px">
+      <img src="shots/20c-today.png" style="left:0px;top:0px;width:930px">
+      
+    </div>
+    <figcaption><b>1. Today:</b> what rule §4 asks for.</figcaption>
+  </figure>
+  
+</div>
+<div class="col after">
+  <div class="label">Proposed (option B) · WCAG 2.2 AA</div>
+  <figure style="width:930px">
+    <div class="shot" style="width:930px;height:560px">
+      <img src="shots/20c-after.png" style="left:0px;top:0px;width:930px">
+      
+    </div>
+    <figcaption><b>2. Option B:</b> the six added checks, in plain words, and where the app stands — most are met already; three things to check in phases 3–4 (focus behind pinned bars, the PIN on touch screens, the contact line on the public pages).</figcaption>
+  </figure>
+  
+</div>
+</div>
+<div class="foot"><b>Your choice — one question: which accessibility target?</b><br><b>A · Keep WCAG 2.1 AA.</b> <i>+</i> no change. <i>−</i> an older version than the current standard and than this review's brief.<br><b>B · Recommended: WCAG 2.2 AA (picture 2).</b> §4's target becomes 2.2 AA, with the six checks written in plain words; phases 3–5 test them. <i>+</i> the current standard; little extra work, because most checks are met; the review and the rulebook agree. <i>−</i> three things to check, and maybe fix: focus behind pinned bars, the touch-screen PIN, the public pages' contact line.<br><b>C · WCAG 2.2 AA plus the AAA target size</b> (44 × 44 px for every control, on the PC too). <i>+</i> bigger targets for older eyes and hands everywhere. <i>−</i> PC screens get bulkier, against §2.1 “No large buttons”; touch screens already have 44 px.</div>
+</body></html>

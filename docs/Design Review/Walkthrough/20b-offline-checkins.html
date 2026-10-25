@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Item 20b · Checking in when the Wi-Fi drops</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2000px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Item 20b · Checking in when the Wi-Fi drops</h1>
+<p class="sub"><b>Missing — not planned.</b> Rule §3.5 promises: “Check-ins made offline are queued and sent when the connection returns; nothing is discarded.” No section does this — Camps' roster and Prospects' / Calendar's “Came?” need the connection. Item 5b already decided the offline bar (its words stop promising “will sync”). Today a check-in that can't save fails honestly, but nothing is kept on the tablet. Precedent: for grading you chose a printed sheet over an offline queue (v0.188); Camps already has Print roster. <span style="color:#6B6B6B">(Preview screenshots at PC size · fake data; the preview's date moved into April Vacation Camp week to show Check in)</span></p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:921px">
+    <div class="shot" style="width:921px;height:300px">
+      <img src="shots/20b-camps-checkin-failed.png" style="left:-39px;top:-72px;width:960px">
+      <div class="mark" style="left:12.5px;top:35.75px;width:896px;height:41px;border-color:#F59E0B"></div><div class="mark" style="left:102.5px;top:245px;width:80px;height:28.25px;border-color:#F59E0B"></div><div class="mark" style="left:641.75px;top:248.75px;width:65px;height:35px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>1. Today, when a check-in can't save</b> (tested in the preview): “Ava Thompson wasn't checked in. Check the connection and try again.” with Retry, a “Not saved” tag, and the cell goes back to “Check in”. Nothing is kept on the tablet.</figcaption>
+  </figure>
+  <div class="note">Prospects' and Calendar's “Came?” behave the same way. Rule §3.5 still says the check-in would be kept and sent later.</div>
+</div>
+<div class="col after">
+  <div class="label">Option B (recommended) and option C, drawn</div>
+  <figure style="width:921px">
+    <div class="shot" style="width:921px;height:315px">
+      <img src="shots/20b-option-b-MOCKUP.png" style="left:-39px;top:-52.5px;width:960px">
+      <div class="mark" style="left:-2.5px;top:0.5px;width:926px;height:32px;border-color:#3B8F2A"></div><div class="mark" style="left:746.75px;top:173.75px;width:162.5px;height:38px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>2. Option B — check-ins need the connection:</b> item 5b's offline bar says so on every page; a tap that fails says so with Retry (as today); the paper backup is the camp's ⋯ → Print roster, as the printed grading sheet is for testing (v0.188).</figcaption>
+  </figure>
+<figure style="width:921px">
+    <div class="shot" style="width:921px;height:345px">
+      <img src="shots/20b-option-c-MOCKUP.png" style="left:-39px;top:-52.5px;width:960px">
+      <div class="mark" style="left:-2.5px;top:0.5px;width:926px;height:32px;border-color:#3B8F2A"></div><div class="mark" style="left:641.75px;top:284px;width:65px;height:44px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>3. Option C — the queue §3.5 promises:</b> a check-in made offline is kept on this tablet (“Not sent yet”) and sent when the connection is back.</figcaption>
+  </figure>
+  <div class="note">Pictures 2–3 are drawn over the real camp page; nothing in the app was changed. Prospects' and Calendar's “Came?” would follow the same choice.</div>
+</div>
+</div>
+<div class="foot"><b>Your choice — one question: what happens to a check-in when the Wi-Fi drops?</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> §3.5 promises a queue nobody builds.<br><b>B · Recommended: check-ins need the connection (picture 2).</b> §3.5's queue line is dropped; the offline bar (5b), the failed tap's Retry and Print roster cover a Wi-Fi drop — the same choice you made for grading (v0.188). <i>+</i> honest: nothing waits silently on one tablet; no new build. <i>−</i> at a morning drop-off with no Wi-Fi, staff tick the printed roster and type the check-ins in later.<br><b>C · Build the queue (picture 3).</b> Check-ins are kept on the tablet and sent later, in Camps and in Prospects / Calendar. <i>+</i> taps never fail at the door. <i>−</i> a real build in two sections and the app's first offline queue: two tablets can disagree, closing the page loses the kept check-ins, and a late send can land after someone else's change.</div>
+</body></html>

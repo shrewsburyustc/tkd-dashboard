@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Item 20a · Finding a person: the top-bar search</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2000px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Item 20a · Finding a person: the top-bar search</h1>
+<p class="sub"><b>Missing — not planned.</b> Rule §3.2 (v0.12): a search bar in the top bar on every screen “once at least one section has something to search”, searching every section, results as you type. That condition is met — Prospects, Camps and Black Belt each have their own search box, in three different words — but nothing plans the top-bar search. Color Belt's and Star's rosters have no search at all. The “/” shortcut (§3.6) is waiting for it. <span style="color:#6B6B6B">(Preview screenshots at PC size · fake data)</span></p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:921px">
+    <div class="shot" style="width:921px;height:45px">
+      <img src="shots/20a-topbar-today.png" style="left:-39px;top:-19.5px;width:960px">
+      
+    </div>
+    <figcaption><b>1. The top bar:</b> the school switch and your initials — no search.</figcaption>
+  </figure>
+<div class="row"><figure style="width:275.2px">
+    <div class="shot" style="width:275.2px;height:39.56px">
+      <img src="shots/20a-prospects-search.png" style="left:-808.4px;top:-189.2px;width:1100.8px">
+      
+    </div>
+    <figcaption><b>2. Prospects:</b> “Search name or phone”</figcaption>
+  </figure><figure style="width:304px">
+    <div class="shot" style="width:304px;height:38.400000000000006px">
+      <img src="shots/17a-camps-money.png" style="left:-56px;top:-172px;width:1024px">
+      
+    </div>
+    <figcaption><b>3. Camps:</b> “Find a camper”</figcaption>
+  </figure><figure style="width:258px">
+    <div class="shot" style="width:258px;height:41.28px">
+      <img src="shots/20a-blackbelt-search.png" style="left:-60.199999999999996px;top:-374.09999999999997px;width:1100.8px">
+      
+    </div>
+    <figcaption><b>4. Black Belt:</b> “Search candidates”</figcaption>
+  </figure></div>
+  <div class="note">Each box searches only its own list. Color Belt's and Star's rosters have none. To find a family today you must first know which section they are in.</div>
+</div>
+<div class="col after">
+  <div class="label">Proposed (option B) · one people search in the top bar</div>
+  <figure style="width:700px">
+    <div class="shot" style="width:700px;height:360px">
+      <img src="shots/20a-topbar-search-MOCKUP.png" style="left:-52px;top:-26px;width:1280px">
+      <div class="mark" style="left:20px;top:0px;width:356px;height:48px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>5. Option B:</b> “Search people” in the top bar on every page. Typing “Ava” lists her everywhere, grouped by section — name, event and school only (no dates of birth, phones or money). A tap opens that person's summary in the section (items 9a / 9b); on the PC the “/” key jumps here (§3.6).</figcaption>
+  </figure>
+  <div class="note"><b>Scope for Main:</b> people only, across Color Belt, Star, Black Belt, Camps and Prospects (Prospects keep “Ava R.”); nothing private in the results, so Hide private details has nothing to hide; the in-list boxes stay for narrowing their own list. Picture 5 is drawn over the real page with sample people from the preview's fake data; nothing in the app was changed.</div>
+</div>
+</div>
+<div class="foot"><b>Your choice — one question: build the top-bar search?</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> the rulebook promises a search nobody plans; to find a family you must know which section to open.<br><b>B · Recommended: build it (picture 5).</b> A people search in the top bar across every section, results grouped by section, nothing private; the in-list boxes stay. <i>+</i> at the desk, one place to answer “is Ava registered / signed up?”; the rule becomes true. <i>−</i> a real build for Main (searching every section's people safely, the results list, the “/” key); it comes after the walkthrough's fixes.<br><b>C · Drop the rule:</b> §3.2 is reworded so each list keeps its own search. <i>+</i> no build. <i>−</i> no way to find a person across sections; the Grandmaster has to remember where to look.</div>
+</body></html>

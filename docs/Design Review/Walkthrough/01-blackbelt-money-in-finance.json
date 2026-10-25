@@ -1,0 +1,57 @@
+{
+  "title": "Item 1 · Black Belt money in Finance — planned, not built yet",
+  "subtitle": "<b>Not a defect: this is planned work.</b> Finance decided on Oct 19 (rulebook v0.808) to add Black Belt payments to the Daily report “once Black Belt payments exist” — it's in Finance's status file (§8, “Later: Black Belt payments”) and Black Belt's. Black Belt's payments went live Oct 21, so until Finance's step is built, a Black Belt payment taken at the desk won't show in that day's report. <span style=\"color:#6B6B6B\">(Preview screenshots with the fake database · pretend date Mon, Apr 26, 2027 · Shrewsbury)</span>",
+  "width": 1840,
+  "columns": [
+    {
+      "label": "Today, until Finance's step is built",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/01a-blackbelt-payment-recorded.png",
+          "crop": [60, 400, 1210, 390],
+          "scale": 0.71,
+          "caption": "<b>1.</b> At the desk, Bao Nguyen pays his $500 Black Belt payment in cash. The roster takes it: “Payment recorded · $500 · Bao Nguyen”.",
+          "marks": [[77, 511, 1179, 40], [940, 737, 316, 39]]
+        },
+        {
+          "src": "shots/01b-finance-today.png",
+          "crop": [60, 180, 1210, 270],
+          "scale": 0.71,
+          "caption": "<b>2.</b> The same day in Finance: Total $15.00, Cash $0.00. Only a $15 camp card payment is listed. The $500 isn't there.",
+          "marks": [[76, 236, 286, 80], [374, 236, 286, 80]]
+        },
+        {
+          "src": "shots/01c-close-day-over.png",
+          "crop": [380, 80, 520, 480],
+          "scale": 1.0,
+          "caption": "<b>3.</b> At closing, staff count $500 in the drawer. The dashboard expected $0.00, says “Over $500.00”, and makes them type a note explaining money it should already know about.",
+          "marks": [[400, 182, 470, 42]]
+        }
+      ],
+      "note": "The payment <b>is</b> saved in Black Belt. It just doesn't reach Finance yet: not the Daily report, not History, not Close the day, not the CSV for the bookkeeper."
+    },
+    {
+      "label": "When it's built (mockup of rule v0.808)",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/01d-finance-fixed-MOCKUP.png",
+          "crop": [60, 180, 1210, 350],
+          "scale": 0.71,
+          "caption": "<b>4.</b> The payment shows in Finance as “Black Belt · Spring 2027 · Payment 2”, on the day it was taken, and the Total and Cash cards include it.",
+          "marks": [[76, 236, 286, 80], [374, 236, 286, 80], [76, 376, 1180, 64]]
+        },
+        {
+          "src": "shots/01e-close-day-fixed-MOCKUP.png",
+          "crop": [380, 80, 520, 480],
+          "scale": 1.0,
+          "caption": "<b>5.</b> At closing, the $500 counted matches what Finance expects. Nothing to explain.",
+          "marks": [[400, 182, 476, 42]]
+        }
+      ],
+      "note": "<b>Already decided.</b> Rulebook v0.808 (Oct 19): the line “Black Belt · cycle · what it's for”, counted on the day it was taken; v0.809: a bounced check gets its own “Returned checks” group. Pictures 4 and 5 are drawn over the real page; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Owner:</b> Finance (one database migration, listed in its status file §8). <b>Decision:</b> none needed — it's planned. <b>Noted for the end of the walkthrough:</b> Black Belt's payment screens went live before Finance reads them, so a Black Belt payment taken before Finance's step is built makes that day's count look over by the same amount. <b>Tablet and phone:</b> same screens, only the numbers change."
+}

@@ -1,0 +1,46 @@
+{
+  "title": "Open detail D1c · Which button goes where in an “are you sure?” box",
+  "subtitle": "<b>From item 8; for Main's shared confirm box.</b> Almost every box puts the button that changes nothing on the left (“Keep …”, focused first, so a stray Enter changes nothing) and the action on the right — red when it deletes. The three “… isn't saved” leave warnings (Color Belt's event and private grading, Star's grading; approved v0.192) do the reverse: “Leave anyway” on the left, “Stay on this page” on the right in blue, focused first (“nothing is deleted, so no red”). Forms' kiosk Open / End and Prospects' “Came?” focus the action first — they lose nothing, so that can stay. <span style=\"color:#6B6B6B\">(Leave warning tested in the preview: one result set to fail to save, then Back · PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "../Walkthrough/shots/d1a-delete-box.png",
+              "crop": [440, 60, 400, 270],
+              "scale": 1,
+              "caption": "<b>1. Every delete box:</b> “Keep …” on the left (focused first), the red action on the right.",
+              "marks": [[505, 249, 296, 38]]
+            },
+            {
+              "src": "../Walkthrough/shots/d1c-leave-warning.png",
+              "crop": [440, 60, 400, 230],
+              "scale": 1,
+              "caption": "<b>2. The three leave warnings:</b> “Leave anyway” on the left; blue “Stay on this page” on the right, focused first.",
+              "marks": [[539, 203, 261, 40]]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Proposed (option B) · the same order everywhere",
+      "tone": "after",
+      "items": [
+        {
+          "src": "../Walkthrough/shots/d1c-leave-flip-MOCKUP.png",
+          "crop": [440, 60, 400, 230],
+          "scale": 1,
+          "caption": "<b>3. Option B:</b> “Stay on this page” on the left (still focused first), “Leave anyway” on the right — red, because leaving loses the unsaved results for good (item 7).",
+          "marks": [[539, 203, 261, 40]]
+        }
+      ],
+      "note": "<b>The rule in B:</b> the button that changes nothing on the left; the action on the right — red when it loses something for good, blue otherwise; the first focus on the button that changes nothing whenever the action loses something, otherwise on the action (kiosk, “Came?”, as today). Picture 3 is drawn over the real box; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question: one button order in every box?</b><br><b>A · Keep as today.</b> <i>+</i> no work; the leave warnings stay as approved (v0.192). <i>−</i> in three boxes the right-hand button means “stay” instead of “do it” — the reverse of every other box.<br><b>B · Recommended: the same order everywhere (picture 3).</b> The leave warnings swap: “Stay on this page” left and focused, “Leave anyway” right and red. <i>+</i> right always does the thing, left always leaves things as they are; red always warns that something is lost for good. <i>−</i> three boxes change; v0.192 changes.<br><b>C · The same order, without the red:</b> as B, but “Leave anyway” stays outline (v0.192's “no red”). <i>+</i> the order matches everywhere. <i>−</i> leaving loses results for good but doesn't look like it (against item 7's red rule)."
+}

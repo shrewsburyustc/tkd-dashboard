@@ -1,0 +1,90 @@
+{
+  "title": "Item 7 · Taking someone off a roster",
+  "subtitle": "<b>Unclear, plus one drift.</b> Rule §7 (written at v0.5–v0.6) says red means delete <i>or remove</i>, “even reversible removals that offer Undo”. The approved Color Belt, Star and Camps mockups drew something else: <b>Withdraw</b> plain (it happens at once with Undo, and Restore brings the person back) and only <b>Delete permanently</b> red (it asks first). Black Belt went its own way: one <b>“Remove candidate”</b> item that opens a choice box — red in its approved mockup, built plain (drift). <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today · the row ⋯ menu in each roster",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/04a-colorbelt-menu-undo.png",
+              "crop": [1040, 549, 216, 236],
+              "scale": 1.4,
+              "caption": "<b>1. Color Belt:</b> Withdraw plain, Delete permanently red.",
+              "marks": [[1049, 708, 196, 64]]
+            },
+            {
+              "src": "shots/07b-star-menu.png",
+              "crop": [1040, 411, 216, 227],
+              "scale": 1.4,
+              "caption": "<b>2. Star:</b> the same pair (v0.113).",
+              "marks": [[1049, 561, 196, 64]]
+            },
+            {
+              "src": "shots/07c-camps-menu.png",
+              "crop": [1040, 407, 216, 195],
+              "scale": 1.4,
+              "caption": "<b>3. Camps:</b> the same pair, with Delete permanently under an “Admin” heading.",
+              "marks": [[1049, 484, 196, 32], [1049, 557, 196, 32]]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/07d-blackbelt-menu-remove.png",
+              "crop": [1040, 429, 216, 163],
+              "scale": 1.4,
+              "caption": "<b>4. Black Belt:</b> one plain “Remove candidate” — its approved mockup draws it red.",
+              "marks": [[1049, 548, 196, 32]]
+            },
+            {
+              "src": "shots/07e-blackbelt-remove-choice.png",
+              "crop": [452, 72, 376, 296],
+              "scale": 1.4,
+              "caption": "<b>5.</b> …which opens a choice: Withdraw, or Delete permanently — grayed for Sam Lee, because Black Belt never deletes payment records (v0.904).",
+              "marks": [[484, 132, 113, 32], [484, 216, 171, 32]]
+            }
+          ]
+        }
+      ],
+      "note": "Not part of this question: Color Belt private testing's “Cancel private testing” is <b>blue</b> and asks first, because nothing is deleted (staff can cancel; only admins can restore). Prospects' “Delete prospect” is red and asks first."
+    },
+    {
+      "label": "Options B and C · drawn on Black Belt's menu",
+      "tone": "after",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/07f-blackbelt-split-all-red-MOCKUP.png",
+              "crop": [1040, 351, 216, 195],
+              "scale": 1.4,
+              "caption": "<b>6. Option B · rule §7 as written:</b> Withdraw is red too — in all four rosters.",
+              "marks": [[1049, 469, 196, 64]]
+            },
+            {
+              "src": "shots/07g-blackbelt-split-MOCKUP.png",
+              "crop": [1040, 351, 216, 195],
+              "scale": 1.4,
+              "caption": "<b>7. Option C · recommended:</b> only Delete permanently is red. Black Belt gets the same two items as the others.",
+              "marks": [[1049, 469, 196, 64]]
+            },
+            {
+              "src": "shots/07h-blackbelt-split-grayed-MOCKUP.png",
+              "crop": [1040, 332, 216, 260],
+              "scale": 1.4,
+              "caption": "<b>8. Option C, someone with payments:</b> Delete permanently stays grayed, with Black Belt's approved reason as a gray line under it.",
+              "marks": [[1049, 486, 196, 96]]
+            }
+          ]
+        }
+      ],
+      "note": "<b>Copies what's already there:</b> the Withdraw / Delete permanently pair Color Belt, Star and Camps already have, and the gray reason line the app already uses inside menus (e.g. Color Belt's grayed Restore). Withdraw happens at once with a 5-second Undo (rule 1.4, item 6); Delete permanently asks first and names what goes. Pictures 6–8 are drawn over Black Belt's real menu; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> the rule says one thing and three rosters do another; Black Belt removes people its own way, and its plain item doesn't match its own mockup.<br><b>B · Rule §7 as written: red for every removal (picture 6).</b> Withdraw turns red in all four rosters, and Black Belt gets the same two items. <i>+</i> keeps the rule's words: red = someone leaves the list. <i>−</i> the safe choice and the permanent one look the same, side by side, so the red no longer warns which one can't be undone; all four rosters' approved designs change.<br><b>C · Recommended: red means “gone for good” (pictures 7–8).</b> Withdraw stays plain everywhere (it can be undone); Delete permanently stays red and asks first. Black Belt's “Remove candidate” becomes the same two items, and its never-delete-payments rule shows as the grayed item with its reason. Rule §7 is reworded to match. <i>+</i> one pattern in all four rosters; red keeps one meaning; Withdraw is one tap with Undo; it's what Color Belt, the model since item 4, already does. <i>−</i> reopens Black Belt's approved choice box (small rework, Black Belt session); rule §7's wording changes.<br><b>D · Black Belt's choice box everywhere (picture 5).</b> One red “Remove …” item opens the choice in every roster. <i>+</i> both choices are explained on screen every time. <i>−</i> one more step for the everyday Withdraw (rule 1.4: changes that can be undone happen at once); Color Belt, Star and Camps all rework their menus."
+}

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Item 5 · Problem messages that vanish</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2000px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Item 5 · Problem messages that vanish</h1>
+<p class="sub"><b>Drift in Black Belt.</b> The rulebook says a problem message never closes by itself (§3.5, §8). Color Belt, Star, Camps and Finance follow it with the amber bar that stays. Black Belt shows its refusals in the 5-second toast instead — “Too late to undo here. Ask an admin.”, “Only an admin can do that…”, “This candidate was deleted.”, and why a button is grayed. Its own plan said banners; nobody decided toasts. (Prospects' “That prospect no longer exists.” was approved as a toast, v0.615.) <span style="color:#6B6B6B">(Preview screenshots at PC size · fake data)</span></p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <div class="row"><figure style="width:560px">
+    <div class="shot" style="width:560px;height:80px">
+      <img src="shots/05a-blackbelt-reason-toast.png" style="left:-700px;top:-100px;width:1280px">
+      <div class="mark" style="left:374px;top:26px;width:150px;height:40px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>1. Black Belt:</b> with private details hidden, Add candidate is grayed…</figcaption>
+  </figure><figure style="width:300px">
+    <div class="shot" style="width:300px;height:70px">
+      <img src="shots/05a-blackbelt-reason-toast.png" style="left:-960px;top:-720px;width:1280px">
+      <div class="mark" style="left:82px;top:17px;width:218px;height:44px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>2.</b> …tapping it explains why in a toast that is gone after 5 seconds. Its “Too late to undo here” and “Only an admin can do that” messages work the same way.</figcaption>
+  </figure></div>
+<figure style="width:885px">
+    <div class="shot" style="width:885px;height:360px">
+      <img src="shots/05b-colorbelt-banner-stays.png" style="left:-57px;top:-168.75px;width:960px">
+      <div class="mark" style="left:-4px;top:7.25px;width:893px;height:38px;border-color:#F59E0B"></div><div class="mark" style="left:-3.25px;top:315.5px;width:891.5px;height:38px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>3. Color Belt (Star, Camps, Finance the same):</b> a problem stays on screen in the amber bar — “Lily Brooks wasn't marked paid. Check the connection and try again.” with Retry and ×, and the row says “Not saved”.</figcaption>
+  </figure>
+  
+</div>
+<div class="col after">
+  <div class="label">Proposed (option B) · problems stay on screen</div>
+  <figure style="width:885px">
+    <div class="shot" style="width:885px;height:150px">
+      <img src="shots/05c-blackbelt-banner-MOCKUP.png" style="left:-57px;top:-67.5px;width:960px">
+      <div class="mark" style="left:-4px;top:68px;width:893px;height:35px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>4.</b> Black Belt's refusals use the same amber bar, which stays until it's closed — here “Too late to undo here. Ask an admin to undo the payment.”</figcaption>
+  </figure>
+<figure style="width:560px">
+    <div class="shot" style="width:560px;height:100px">
+      <img src="shots/05d-blackbelt-reason-line-MOCKUP.png" style="left:-700px;top:-100px;width:1280px">
+      <div class="mark" style="left:119px;top:26px;width:405px;height:64px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>5.</b> Why a button is grayed sits right next to it in gray, as Star and Color Belt already explain things.</figcaption>
+  </figure>
+  <div class="note"><b>Copies what's already there:</b> the shared amber bar (Retry when the thing can be tried again, × to close) and Star's and Color Belt's gray explanation lines. Toasts stay for “done” messages only. Pictures 4 and 5 are drawn over the real page; nothing in the app was changed.</div>
+</div>
+</div>
+<div class="foot"><b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> the Grandmaster can miss why something didn't happen; Black Belt breaks the rule the other sections follow.<br><b>B · Recommended: problems always stay on screen.</b> Refusals and errors use the amber bar until closed (rules §3.5, §8); the reason a button is grayed is a gray line next to it; toasts only say something was done. Prospects' approved “That prospect no longer exists.” toast would move to the bar too. <i>+</i> one way everywhere; nothing important disappears. <i>−</i> small rework in Black Belt (and one Prospects message).<br><b>C · Keep the toasts, but problem toasts stay until tapped.</b> <i>+</i> less rework. <i>−</i> a third kind of message; a toast in the corner is easy to overlook on a tablet.</div>
+</body></html>

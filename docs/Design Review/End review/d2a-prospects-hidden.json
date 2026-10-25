@@ -1,0 +1,166 @@
+{
+  "title": "Open detail D2a · What “Hide private details” hides in Prospects",
+  "subtitle": "<b>From item 2; for the new-students prompt (Prospects).</b> The rule (v0.249, v0.506): while the switch is on, <b>date of birth, email and every payment detail</b> are hidden on every screen, shown as gray “Hidden on this tablet” (v0.507). Prospects doesn't follow it, and its plan doesn't mention it (missing, not planned): with the switch on, the panel's <b>Email</b> button still opens the family's address, and <b>Form answers and waiver</b> still lists every answer — a form can add its own questions, such as a date (a birthday), an email, or the event form's “Anything we should know?”, where families write health notes. The <b>phone number</b> shows too; the rule doesn't name phones. Star already does it (picture 2), and its Email result button grays with one line saying why (v0.514). Staff accounts' staff emails are the next question (D2b). <span style=\"color:#6B6B6B\">(Preview screenshots · PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "../Walkthrough/shots/d2-prospects-panel-hidden.png",
+              "crop": [
+                908,
+                262,
+                356,
+                768
+              ],
+              "scale": 1,
+              "caption": "<b>1. Prospects with the switch on</b> (the top bar says “Private details hidden”): <b>Email</b> still opens the family's address; the <b>phone</b> shows; <b>Form answers</b> list every answer.",
+              "marks": [
+                [
+                  1089,
+                  494,
+                  89,
+                  36
+                ],
+                [
+                  929,
+                  683,
+                  314,
+                  44
+                ],
+                [
+                  929,
+                  941,
+                  314,
+                  46
+                ]
+              ]
+            },
+            {
+              "src": "../Walkthrough/shots/d2-star-candidate-hidden.png",
+              "crop": [
+                420,
+                80,
+                440,
+                500
+              ],
+              "scale": 1,
+              "caption": "<b>2. The model — Star's candidate detail, switch on:</b> Date of birth and Email read “Hidden on this tablet”; “Payment details are hidden on this tablet.”; View signature stays.",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "src": "../Walkthrough/shots/d2-prospects-panel-hidden.png",
+          "crop": [
+            58,
+            30,
+            166,
+            40
+          ],
+          "scale": 1.4,
+          "caption": "<b>The switch is on</b> in pictures 1, 3 and 4: the top bar shows its chip, “Private details hidden”.",
+          "marks": []
+        }
+      ]
+    },
+    {
+      "label": "Proposed · options B and C drawn",
+      "tone": "after",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "../Walkthrough/shots/d2-prospects-B-MOCKUP.png",
+              "crop": [
+                908,
+                262,
+                356,
+                804
+              ],
+              "scale": 1,
+              "caption": "<b>3. Option B (recommended):</b> Email grays, with Star's kind of line: “Email is off while private details are hidden. Email the family at the desk.”; every answer reads “Hidden on this tablet” (the questions and Show signature stay, as in Star); Call, Text and the phone stay.",
+              "marks": [
+                [
+                  1089,
+                  494,
+                  89,
+                  36
+                ],
+                [
+                  929,
+                  534,
+                  314,
+                  44
+                ],
+                [
+                  929,
+                  977,
+                  314,
+                  46
+                ]
+              ]
+            },
+            {
+              "src": "../Walkthrough/shots/d2-prospects-C-MOCKUP.png",
+              "crop": [
+                908,
+                262,
+                356,
+                804
+              ],
+              "scale": 1,
+              "caption": "<b>4. Option C:</b> B, plus Call and Text gray (“Call, Text and Email are off … Contact the family at the desk.”) and the Phone row hidden.",
+              "marks": [
+                [
+                  929,
+                  494,
+                  314,
+                  82
+                ],
+                [
+                  929,
+                  719,
+                  314,
+                  44
+                ],
+                [
+                  929,
+                  977,
+                  314,
+                  46
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "src": "../Walkthrough/shots/02b-camper-detail-switch-on.png",
+          "crop": [
+            200,
+            745,
+            424,
+            100
+          ],
+          "scale": 1,
+          "shotWidth": 820,
+          "caption": "<b>5. With C, Camps follows</b> (one rule on every screen): the camper detail's parent and emergency phones would read “Hidden on this tablet” on the camp tablet too.",
+          "marks": [
+            [
+              206,
+              774,
+              406,
+              66
+            ]
+          ]
+        }
+      ],
+      "note": "<b>The rule in B:</b> the switch hides date of birth, email, every payment detail — and form answers, because a form can ask a birthday or an email and the dashboard can't tell which answers are private — on every screen; phone numbers stay. Pictures 3–4 are drawn over the real panel; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question: what should “Hide private details” hide in Prospects?</b><br><b>A · Only the email.</b> Email grays with the line, as in picture 3; the answers and the phone stay as in picture 1. <i>+</i> the smallest change. <i>−</i> a form question that asks a birthday or an email still shows it on that tablet, though the rule says those hide; health notes show.<br><b>B · Recommended: the email and the form answers (picture 3).</b> <i>+</i> covers everything the rule names, wherever a form puts it; health notes hidden; copies Star's approved look; calling still works. <i>−</i> on that tablet staff can't read the answers (one tap on the top-bar chip turns the switch off, or use the desk computer).<br><b>C · Also the phone (pictures 4–5).</b> The rule grows to: date of birth, email, phone, form answers, payments. <i>+</i> nothing that reaches a family shows on that tablet. <i>−</i> no calling from that device; Camps' parent and emergency phones hide on the camp tablet too; a bigger change to v0.249 / v0.506."
+}

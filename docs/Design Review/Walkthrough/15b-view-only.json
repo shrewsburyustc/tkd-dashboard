@@ -1,0 +1,76 @@
+{
+  "title": "Item 15b · The line that tells staff what they can't change",
+  "subtitle": "<b>Approved in each section, plus drift.</b> Pages staff can't change show a gray line. Most say <b>“View only. Ask an admin to make changes.”</b> (Color Belt, Star and Black Belt settings, Schedule). Calendar and Forms use a dash and a small “ask”, and <b>Forms says “View only” although staff can fill in and share forms there</b>. Pages staff can partly use already name what's left for an admin (Camps, Finance, the testing lists). Schedule's mockup drew the dash; its code already uses the full stop (drift). <span style=\"color:#6B6B6B\">(Preview screenshots at PC size, signed in as staff · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today · signed in as staff",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/15f-colorbelt-classes-view-only.png",
+          "crop": [70, 150, 620, 138],
+          "scale": 1,
+          "caption": "<b>1. Color Belt</b> Classes and ranks (Star, Black Belt, Schedule the same): “View only. Ask an admin to make changes.”",
+          "marks": [[76, 258, 300, 22]]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/15g-calendar-view-only.png",
+              "crop": [70, 96, 440, 74],
+              "scale": 1,
+              "caption": "<b>2. Calendar:</b> a dash and a small “ask”.",
+              "marks": [[76, 145, 260, 22]]
+            },
+            {
+              "src": "shots/15h-forms-view-only.png",
+              "crop": [70, 96, 440, 74],
+              "scale": 1,
+              "caption": "<b>3. Forms:</b> “View only” — but staff can fill in and share forms here.",
+              "marks": [[76, 145, 310, 22]]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/15i-camps-ask-an-admin.png",
+              "crop": [70, 96, 440, 130],
+              "scale": 1,
+              "caption": "<b>4. Camps</b> (staff run the roster): names what's left for an admin."
+            },
+            {
+              "src": "shots/15j-finance-today-only.png",
+              "crop": [70, 96, 480, 124],
+              "scale": 1,
+              "caption": "<b>5. Finance</b> (staff close today): the same idea, beside the day."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Proposed (option B) · one pattern, two forms",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/15k-calendar-view-only-MOCKUP.png",
+          "crop": [70, 96, 440, 74],
+          "scale": 1,
+          "caption": "<b>6. Calendar:</b> “View only. Ask an admin to make changes.” — the same words as most pages.",
+          "marks": [[76, 145, 250, 22]]
+        },
+        {
+          "src": "shots/15l-forms-staff-line-MOCKUP.png",
+          "crop": [70, 96, 560, 74],
+          "scale": 1,
+          "caption": "<b>7. Forms:</b> “Staff can fill in and share forms. Ask an admin to create or change forms.”",
+          "marks": [[76, 145, 470, 22]]
+        }
+      ],
+      "note": "<b>The rule in B:</b> where staff can only look — “View only. Ask an admin to [what only admins do].” Where staff can do part of the page — “[what staff can do]. Ask an admin to [the rest].” (as Camps, Finance and the testing lists already say). Full stops, a capital “Ask”, the same gray line. Pictures 6–7 are the real pages with their line reworded; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> four wordings; Forms tells staff “View only” on a page where they can fill in and share.<br><b>B · Recommended: one pattern in two forms (pictures 6–7).</b> “View only. Ask an admin to …” where staff can only look; “[what staff can do]. Ask an admin to …” where they can do part of it. Only Calendar's and Forms' lines change. <i>+</i> the line always means the same thing and never says “view only” where staff can act. <i>−</i> two small word changes (Calendar, Forms)."
+}

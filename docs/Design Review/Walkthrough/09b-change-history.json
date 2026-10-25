@@ -1,0 +1,71 @@
+{
+  "title": "Item 9b · The change history in a person's summary",
+  "subtitle": "<b>Approved in two sections, missing in two, left out on purpose in one.</b> Rule §5: every change is logged with who made it and when, “visible in the record's history”. Every section already writes each change to the change log — but only Star and Prospects show it, and in two different ways. Color Belt and Camps never decided (missing, not planned); Black Belt left it out on purpose to keep its summary short (approved, v0.900). <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/09g-star-history-block.png",
+              "crop": [432, 405, 416, 300],
+              "scale": 1,
+              "caption": "<b>1. Star:</b> the newest five changes, then “Show all (13)”, always open at the bottom of the summary.",
+              "marks": [[438, 413, 404, 290]]
+            },
+            {
+              "src": "shots/09h-prospects-history-line.png",
+              "crop": [925, 525, 322, 150],
+              "scale": 1.3,
+              "caption": "<b>2. Prospects:</b> one line, “History · 2 changes”; a tap opens the list: what changed, then when · who.",
+              "marks": [[933, 533, 306, 36]]
+            }
+          ]
+        },
+        {
+          "src": "shots/09i-colorbelt-summary-no-history.png",
+          "crop": [412, 72, 456, 466],
+          "scale": 0.85,
+          "caption": "<b>3. Color Belt</b> (Camps and Black Belt the same): the summary ends at “Signed by” — nothing on screen says who switched Owen's payment from cash to check, or when."
+        }
+      ],
+      "note": "Finance's payment detail has its own history too (not a person; not part of this question)."
+    },
+    {
+      "label": "Proposed (option B) · Prospects' one line, in every summary",
+      "tone": "after",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/09j-colorbelt-history-closed-MOCKUP.png",
+              "crop": [412, 72, 456, 506],
+              "scale": 0.85,
+              "caption": "<b>4.</b> Closed, as it opens: one line at the bottom, “History · 3 changes ›”.",
+              "marks": [[444, 449, 392, 36]]
+            },
+            {
+              "src": "shots/09k-colorbelt-history-open-MOCKUP.png",
+              "crop": [412, 72, 456, 669],
+              "scale": 0.85,
+              "caption": "<b>5.</b> One tap opens it, newest first: “Payment changed: $65 cash → $65 check · Oct 22 · Jeffrey Berg”. Drawn from Owen's real preview records.",
+              "marks": [[444, 449, 392, 200]]
+            }
+          ]
+        },
+        {
+          "src": "shots/09l-blackbelt-history-closed-MOCKUP.png",
+          "crop": [252, 420, 776, 372],
+          "scale": 0.85,
+          "caption": "<b>6. Black Belt:</b> the same one line after the totals, so its summary stays short.",
+          "marks": [[284, 663, 712, 36]]
+        }
+      ],
+      "note": "<b>Copies what's already there:</b> Prospects' own History line and list, filled from the change log each section already writes. With Hide private details on, the list leaves out amounts and paid status, as Star's already does (v0.506). Pictures 4–6 are drawn over the real summaries; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> in Color Belt, Camps and Black Belt nobody can see on screen who changed a payment or a detail, and when (rule §5); Star and Prospects show history two different ways.<br><b>B · Recommended: Prospects' one line in every summary (pictures 4–6).</b> “History · N changes ›” at the bottom of every person's summary; a tap opens the list, newest first: what changed, then when · who. Color Belt (event and private testing), Camps and Black Belt gain it; Star's five-line block becomes the same line. <i>+</i> “who changed this, and when?” is one tap away everywhere; summaries stay short, so Black Belt's reason for leaving it out goes away; one pattern. <i>−</i> work in four sections (Color Belt, Camps, Black Belt, Star); reopens Star's approved block and Black Belt's approved “no history”.<br><b>C · Star's block in every summary (picture 1).</b> The newest five changes always shown, then “Show all”. <i>+</i> the latest changes show without a tap. <i>−</i> every summary gets about five rows longer, which is why Black Belt left it out; Prospects' line changes too."
+}

@@ -1,0 +1,93 @@
+{
+  "title": "Open detail D1d · What the button that changes nothing says when nothing would be lost",
+  "subtitle": "<b>From item 8; for Main's shared confirm box.</b> Item 8 made the button that changes nothing say what stays (“Keep payment”, “Keep student” …). Four asks lose nothing even if the action goes ahead, so item 8 didn't settle them: Forms' “Open kiosk mode on this device?” and “End kiosk mode on all tablets?”, and Prospects' box when a Board card is dropped on Came (“Did … come to the free class?”, or “… 's free class is still ahead” before the class day). All four say <b>“Cancel”</b>. Two can be misread: next to “End kiosk mode”, “Cancel” can read as “cancel kiosk mode” — the same as the action; under “Maya's free class is Mon, Oct 26”, a lone “Cancel” can read as “cancel her class” (Prospects also has a real “Cancel booking” button). On phones Prospects' Came box shows only “Came” (the back arrow closes it). <span style=\"color:#6B6B6B\">(Preview screenshots · PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "../Walkthrough/shots/d1d-kiosk-open.png",
+              "crop": [432, 396, 416, 362],
+              "scale": 1,
+              "caption": "<b>1. Forms → Share → Front desk:</b> “Cancel” · “Open kiosk mode” (focused first).",
+              "marks": [[580, 699, 80, 40]]
+            },
+            {
+              "src": "../Walkthrough/shots/d1d-kiosk-end.png",
+              "crop": [432, 421, 416, 170],
+              "scale": 1,
+              "caption": "<b>2. End kiosk mode on all tablets:</b> “Cancel” can read as “cancel kiosk mode” — the same as the action.",
+              "marks": [[614, 531, 80, 40]]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "../Walkthrough/shots/d1d-came-ask.png",
+              "crop": [460, 80, 360, 144],
+              "scale": 1,
+              "caption": "<b>3. Prospects, a card dropped on Came:</b> “Cancel” · “Came” (focused first). Cancel puts the card back where it was.",
+              "marks": [[621, 164, 80, 40]]
+            },
+            {
+              "src": "../Walkthrough/shots/d1d-came-ahead.png",
+              "crop": [460, 80, 360, 163],
+              "scale": 1,
+              "caption": "<b>4. The class is still ahead:</b> the only button, “Cancel”, sits under the class date — it can read as “cancel her class”.",
+              "marks": [[720, 183, 80, 40]]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Proposed (option B) · the button says what stays",
+      "tone": "after",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "../Walkthrough/shots/d1d-kiosk-open-MOCKUP.png",
+              "crop": [432, 396, 416, 362],
+              "scale": 1,
+              "caption": "<b>5.</b> “Stay in the dashboard” — like the leave warnings' “Stay on this page”.",
+              "marks": [[493, 699, 167, 40]]
+            },
+            {
+              "src": "../Walkthrough/shots/d1d-kiosk-end-MOCKUP.png",
+              "crop": [432, 421, 416, 170],
+              "scale": 1,
+              "caption": "<b>6.</b> “Keep kiosk mode on”.",
+              "marks": [[535, 531, 159, 40]]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "../Walkthrough/shots/d1d-came-ask-MOCKUP.png",
+              "crop": [460, 80, 360, 144],
+              "scale": 1,
+              "caption": "<b>7.</b> “Keep in Booked” — the column the card came from (“Keep in New” for a card from New).",
+              "marks": [[569, 164, 132, 40]]
+            },
+            {
+              "src": "../Walkthrough/shots/d1d-came-ahead-MOCKUP.png",
+              "crop": [460, 80, 360, 163],
+              "scale": 1,
+              "caption": "<b>8.</b> “Keep in Booked” — the same words; nothing about the class changes.",
+              "marks": [[668, 183, 132, 40]]
+            }
+          ]
+        }
+      ],
+      "note": "<b>The rule in B:</b> every “are you sure?” box — including the ones that lose nothing — names what stays: “Keep …” for a thing, “Stay …” for a place. “Cancel” stays the word in form dialogs, where it throws away the typing (Cancel · Save). The first focus stays as decided in D1c: on the action in these four, since nothing is lost. Pictures 5–8 are drawn over the real boxes; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question: what should the button that changes nothing say in these four asks?</b><br><b>A · Keep “Cancel” here.</b> Item 8's “Keep …” covers only boxes where something is changed or lost; these four are written down as the exception. <i>+</i> no work; “Cancel” is the word most apps use. <i>−</i> pictures 2 and 4 can be misread; two different words for the same button across the dashboard.<br><b>B · Recommended: say what stays (pictures 5–8).</b> “Stay in the dashboard”, “Keep kiosk mode on”, “Keep in Booked” (the card's column). <i>+</i> one rule in every box; nothing to misread; matches the leave warnings' “Stay on this page”. <i>−</i> longer labels (on small phones they stack, D1b); four labels change (Forms, Prospects).<br><b>C · One plain phrase: “Go back” in all four.</b> <i>+</i> short; one phrase to learn; can't be read as cancelling something. <i>−</i> doesn't say what stays; a second pattern next to “Keep …”."
+}

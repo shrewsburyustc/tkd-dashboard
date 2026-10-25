@@ -1,0 +1,80 @@
+{
+  "title": "Item 17b · Typing that a stray Esc throws away",
+  "subtitle": "<b>Approved rule, a few gaps (drift; one planned).</b> The rule (v0.46): if someone has typed and presses Esc, clicks outside or goes back, the dialog stays open with “Unsaved changes. Save or cancel first.” — nothing typed is silently lost (phones add a “Discard changes” link, v0.56). Most dialogs follow it. Gaps found and tested in the preview: <b>Forms' Fill in and New form close on a second Esc and the answers are gone</b> — although Fill in's own note says “press Cancel to throw it away”; <b>Camps' Save as template</b> closes on the first Esc; <b>Prospects' Edit statuses</b> drops a changed status with no note; <b>Change PIN / Change password</b> close on Esc (aligning them was planned in v0.56, “to be aligned later with Jeffrey's OK”). On purpose: Finance's Close the day keeps a draft instead (v0.800); Black Belt's rubric editor has its own leave rule (v0.928). No guard needed: Prospects' one-click dialogs (Book a time, Joined, Came?) hold nothing typed. <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/17b-colorbelt-guard.png",
+              "crop": [370, 70, 540, 553],
+              "scale": 0.62,
+              "caption": "<b>1. The rule working</b> (Color Belt's Edit details after two Escs): the dialog stays open with the amber note.",
+              "marks": [[432, 559, 208, 26]]
+            },
+            {
+              "src": "shots/17b-forms-fill-first-esc.png",
+              "crop": [370, 70, 540, 664],
+              "scale": 0.52,
+              "caption": "<b>2. Forms' Fill in after one Esc:</b> “This sign-up isn't sent yet. Send it or press Cancel to throw it away.”",
+              "marks": [[432, 609, 360, 26]]
+            }
+          ]
+        },
+        {
+          "src": "shots/17b-forms-fill-second-esc.png",
+          "crop": [70, 96, 1190, 190],
+          "scale": 0.62,
+          "caption": "<b>3. …a second Esc closes it:</b> the family's answers are gone, and reopening shows an empty form. New form does the same."
+        },
+        {
+          "row": [
+            {
+              "src": "shots/17b-camps-template-typed.png",
+              "crop": [450, 70, 380, 300],
+              "scale": 0.7,
+              "caption": "<b>4. Camps' Save as template</b> with a typed name…"
+            },
+            {
+              "src": "shots/17b-camps-template-esc.png",
+              "crop": [70, 96, 760, 150],
+              "scale": 0.62,
+              "caption": "<b>5. …one Esc closes it</b> and the name is lost."
+            }
+          ]
+        }
+      ],
+      "note": "Also: Prospects' Edit statuses drops a changed status on Esc (no note); Change PIN / Change password close on Esc. Seen in passing: Fill in's note sits above its buttons, not under them as v0.81 says."
+    },
+    {
+      "label": "Proposed (option B) · the guard everywhere",
+      "tone": "after",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/17b-camps-template-guard-MOCKUP.png",
+              "crop": [450, 70, 380, 342],
+              "scale": 0.82,
+              "caption": "<b>6. Camps' Save as template</b> stays open with the shared note.",
+              "marks": [[482, 342, 316, 38]]
+            },
+            {
+              "src": "shots/17b-forms-fill-first-esc.png",
+              "crop": [370, 70, 540, 664],
+              "scale": 0.52,
+              "caption": "<b>7. Forms' Fill in and New form:</b> the note stays after any number of Escs, until Send / Save or Cancel.",
+              "marks": [[432, 609, 360, 26]]
+            }
+          ]
+        }
+      ],
+      "note": "<b>What changes where:</b> Forms — Fill in and New form ignore a second Esc (phones keep the “Discard changes” link). Camps — Save as template gets the note. Prospects — Edit statuses gets the note. Main — Change PIN / Change password join the rule (the v0.56 alignment). Recorded exceptions: Finance's Close the day draft (v0.800), Black Belt's rubric editor (v0.928), one-click dialogs. Picture 6 is drawn over the real dialog; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question: should the unsaved-changes guard hold everywhere?</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> a double Esc wipes a family's sign-up typed at the desk; three more dialogs lose typing without a word.<br><b>B · Recommended: close every gap (pictures 6–7).</b> Forms' Fill in and New form keep their note until Send / Save or Cancel; Camps' Save as template and Prospects' Edit statuses get the shared note; Change PIN / Change password join the rule (the alignment planned in v0.56 — this would be your OK). <i>+</i> nothing typed is ever lost to a stray key; one behaviour in every dialog. <i>−</i> small changes in Forms, Camps, Prospects and the account dialogs.<br><b>C · Only where whole forms are typed:</b> Forms' Fill in and New form, and Prospects' Edit statuses. <i>+</i> least work for the biggest risk. <i>−</i> Camps' template name and the PIN / password dialogs still lose typing on Esc."
+}

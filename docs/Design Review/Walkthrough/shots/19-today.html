@@ -1,0 +1,49 @@
+<!doctype html>
+<!-- 19-today.html — Design Review item 19, "today" diagram: the same design written as separate copies, and
+     shared parts kept inside one section's folder. Facts checked against the code on 2026-10-23 (after the
+     main merge 72d4f85). Screenshot with tools/shoot.mjs. -->
+<html lang="en"><head><meta charset="utf-8"><title>Item 19 today</title>
+<style>
+  body { margin: 0; padding: 16px; width: 930px; box-sizing: border-box; background: #FFFFFF; color: #1F1F1F; font: 14px/1.35 "Segoe UI", system-ui, sans-serif; }
+  .group { border: 1px solid #F3D9A6; background: #FDF6EA; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+  h3 { margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+  .sub { color: #5A5A5A; font-size: 13px; margin: -4px 0 8px; }
+  .files { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .file { background: #FFFFFF; border: 1px solid #E8D3AE; border-radius: 6px; padding: 6px 8px; font-size: 12.5px; }
+  .file b { display: block; font-size: 13px; }
+  .file code { font: 12px Consolas, monospace; color: #4A4A4A; }
+  ul { margin: 0; padding-left: 18px; font-size: 13px; }
+  li { margin: 3px 0; }
+  code { font: 12px Consolas, monospace; background: #FFFFFF; border: 1px solid #EBDDC3; border-radius: 4px; padding: 0 4px; }
+</style></head><body>
+  <div class="group">
+    <h3>1 · “Same person twice?” — one design, four copies</h3>
+    <p class="sub">The Compare dialog (“Keep this one” / “Not the same person — keep both”) looks the same everywhere, but each section has its own file:</p>
+    <div class="files">
+      <div class="file"><b>Color Belt · 122 lines</b><code>testing/event/CompareDialog.jsx</code></div>
+      <div class="file"><b>Star · 146 lines</b><code>star/candidates/StarCompareDialog.jsx</code></div>
+      <div class="file"><b>Camps · 129 lines</b><code>camps/CompareDialog.jsx</code></div>
+      <div class="file"><b>Black Belt · 135 lines</b><code>blackBelt/…/CompareDialog.jsx</code></div>
+    </div>
+    <p class="sub" style="margin:8px 0 0">The amber “possible duplicate” box is written four times too (twice inside a page, twice as <code>DuplicateBox.jsx</code>).</p>
+  </div>
+  <div class="group">
+    <h3>2 · Copies of shared parts inside a section</h3>
+    <ul>
+      <li>Black Belt: <code>InnerDialog</code> (a copy of the shared dialog), <code>DateField</code> ×2, <code>SelectField</code>, <code>Choice</code>, <code>Grip</code>, <code>ConfirmDialog</code></li>
+      <li>Calendar: <code>ShowMenu</code> (a copy of the shared menu) · Star: <code>PickerSheet</code></li>
+      <li>Count cards drawn separately in Color Belt (twice), Star and Black Belt — Camps adds its own next (11b)</li>
+      <li>Each of the five public pages (Color Belt, Star, Black Belt, Camps, Forms) draws its own header and logo</li>
+    </ul>
+  </div>
+  <div class="group">
+    <h3>3 · Shared parts kept in one section's folder</h3>
+    <ul>
+      <li><code>testing/events/useLiveLoad</code> (the 15-second refresh) — used by Black Belt, Camps, Finance and Testing</li>
+      <li><code>testing/events/ChoiceGroup</code> — Black Belt, Camps, Finance, Testing · <code>testing/DeleteDialog</code> — Prospects, Camps, Testing</li>
+      <li><code>finance/usePaymentsHidden</code> (Hide private details) — the app frame and Black Belt</li>
+      <li>The shared dialog, menu and error banner take their words (“Back”, “Cancel”, “Retry”) from Testing's word file</li>
+      <li>Shared styles sit in <code>testing.css</code>, <code>finance.css</code>, <code>prospects.css</code>, <code>staff.css</code></li>
+    </ul>
+  </div>
+</body></html>

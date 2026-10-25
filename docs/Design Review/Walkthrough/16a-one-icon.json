@@ -1,0 +1,49 @@
+{
+  "title": "Item 16a · One meaning, one icon",
+  "subtitle": "<b>Approved in each section, plus drift.</b> The rule (§2.3): “Same icon = same meaning everywhere … never use two icons for one meaning.” Today several meanings have two or three icons, and two icons mean two things: the <b>clock</b> is “Not paid” in Color Belt and Star but “Paying on schedule” in Black Belt (both are rows in the icon map, v0.229 and v0.914; v0.229 also names Camps, which never built that card), and Star's <b>repeat</b> icon is both “Make-up” and “Change how they'll pay”. Forms' pencil and Finance's “Today” icon were never decided (drift). Already settled: 12b removed Black Belt's lock icons and Forms' door icons. Next, 16b: icons missing from the map, Forms' own icons, and tooltips on icon-only buttons. <span style=\"color:#6B6B6B\">(Icons drawn from the app's own Tabler set; cards are preview screenshots at PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/16a-board-today.png",
+          "crop": [0, 0, 930, 674],
+          "scale": 1,
+          "shotWidth": 930,
+          "caption": "<b>1. Today:</b> one meaning, two or three icons — and the clock and repeat icons each mean two things. Color Belt's own event menu even shows Restore both ways (plain; with the Undo icon when it is grayed for a student moved to private testing)."
+        },
+        {
+          "src": "shots/16a-colorbelt-cards.png",
+          "crop": [70, 232, 1190, 88],
+          "scale": 0.78,
+          "caption": "<b>2. Color Belt's cards</b> (Star the same): Not paid = clock.",
+          "marks": [[670, 238, 290, 76]]
+        },
+        {
+          "src": "shots/16a-blackbelt-cards.png",
+          "crop": [70, 323, 1190, 88],
+          "scale": 0.78,
+          "caption": "<b>3. Black Belt's cards:</b> the clock is “Paying on schedule” and Not paid is a circle-x.",
+          "marks": [[372, 329, 290, 76], [968, 329, 290, 76]]
+        }
+      ]
+    },
+    {
+      "label": "Proposed (option B) · one icon per meaning",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/16a-board-after.png",
+          "crop": [0, 0, 930, 674],
+          "scale": 1,
+          "shotWidth": 930,
+          "caption": "<b>4. Proposed:</b> one icon per meaning, picked from what the sections already use."
+        }
+      ],
+      "note": "<b>What changes where:</b> Color Belt — Not paid card, Change how they'll pay, Restore, the No-show result. Star — Not paid card, Change how they'll pay. Camps — Restore, the day grid's ✓ / ✗ become the Came / Didn't come icons, and its new To collect card (11b) takes the Not paid icon. Forms — Edit. Finance — Today loses its icon. Black Belt, Prospects and Calendar already match. The two “Not paid” rows in the icon map become one."
+    }
+  ],
+  "footer": "<b>Your choice — one question: one icon per meaning?</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> the clock means “not paid” in one section and “paying on schedule” in the next; Star's repeat means two things; came, didn't come and Restore each look two or three ways.<br><b>B · Recommended: one icon per meaning (picture 4).</b> Each section swaps only the icons in its rows that differ (list on the right). <i>+</i> an icon means the same thing in every section, so a roster card or menu item reads the same everywhere. <i>−</i> small icon swaps in five sections.<br><b>C · Fix only what was never decided:</b> Forms' pencil, Finance's Today icon and Star's double repeat; the approved differences stay (Not paid, Restore, came / didn't come). <i>+</i> least work. <i>−</i> the clock still means two things across sections, and came / didn't come still look different."
+}

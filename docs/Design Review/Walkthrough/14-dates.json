@@ -1,0 +1,53 @@
+{
+  "title": "Item 14a · Picking a date",
+  "subtitle": "<b>Mixed: approved, planned, drift.</b> Star has the shared date picker: a button that shows the date in words and opens a big month calendar. Everywhere else a date is the browser's own box — numbers like “11/20/2026” with a small calendar icon — which looks different on the desk PC, the iPad and a phone. Color Belt was approved to differ (v0.502); <b>Black Belt planned to switch once Star's picker was on main — it is now</b> (v0.911); Camps' other dates, Prospects, Schedule, Calendar and Forms never decided (drift). Item 14b, the time lists, comes next. <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/14a-star-date-picker.png",
+          "crop": [430, 252, 334, 362],
+          "scale": 1,
+          "caption": "<b>1. Star:</b> the shared picker — the date in words, a big month calendar, “Past dates can't be chosen.”"
+        },
+        {
+          "row": [
+            {
+              "src": "shots/14b-colorbelt-browser-date-box.png",
+              "crop": [636, 186, 252, 82],
+              "scale": 1.4,
+              "caption": "<b>2. Color Belt:</b> the browser's box — numbers and a tiny calendar icon (with a helpful day line under it).",
+              "marks": [[646, 209, 230, 32]]
+            },
+            {
+              "src": "shots/14c-calendar-browser-date-boxes.png",
+              "crop": [432, 298, 416, 86],
+              "scale": 1.05,
+              "caption": "<b>3. Calendar:</b> the same browser boxes, no day line.",
+              "marks": [[508, 304, 328, 32], [508, 344, 328, 32]]
+            }
+          ]
+        }
+      ],
+      "note": "Browser boxes also in Black Belt (planned to switch), Camps' sign-up dates, Prospects' follow-up, Schedule, Forms and Finance's day box. Camps' calendar for choosing camp days is a different job (picking several days) and stays."
+    },
+    {
+      "label": "Proposed (option B) · Star's picker everywhere",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/14d-colorbelt-star-picker-MOCKUP.png",
+          "crop": [636, 186, 324, 362],
+          "scale": 1,
+          "caption": "<b>4. Color Belt with Star's picker:</b> the date in words; a tap opens the same big calendar on the PC, the iPad and a phone.",
+          "marks": [[646, 209, 230, 32]]
+        }
+      ],
+      "note": "<b>Copies what's already there:</b> Star's own picker, already on main. Picture 4 is drawn over the real Edit event box; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> two different ways to pick a date, and the browser's box changes from device to device.<br><b>B · Recommended: Star's date picker for every date</b> staff or families pick — Color Belt, Black Belt (its own plan), Camps' sign-up dates, Prospects, Schedule, Calendar, Forms, Finance's day box, and the family pages' date of birth. Camps' camp-days calendar stays (a different job). <i>+</i> the same big, readable calendar everywhere, the same on every device; dates read as words (“Fri, Nov 20, 2026”), not numbers. <i>−</i> work in several sections (the picker exists; each date box is swapped).<br><b>C · Only the planned switch:</b> Black Belt moves to Star's picker, as it planned; everyone else keeps the browser's box. <i>+</i> the least work. <i>−</i> two kinds of date box stay."
+}

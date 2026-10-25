@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Item 9b · The change history in a person's summary</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2000px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Item 9b · The change history in a person's summary</h1>
+<p class="sub"><b>Approved in two sections, missing in two, left out on purpose in one.</b> Rule §5: every change is logged with who made it and when, “visible in the record's history”. Every section already writes each change to the change log — but only Star and Prospects show it, and in two different ways. Color Belt and Camps never decided (missing, not planned); Black Belt left it out on purpose to keep its summary short (approved, v0.900). <span style="color:#6B6B6B">(Preview screenshots at PC size · fake data)</span></p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <div class="row"><figure style="width:416px">
+    <div class="shot" style="width:416px;height:300px">
+      <img src="shots/09g-star-history-block.png" style="left:-432px;top:-405px;width:1280px">
+      <div class="mark" style="left:2px;top:4px;width:412px;height:298px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>1. Star:</b> the newest five changes, then “Show all (13)”, always open at the bottom of the summary.</figcaption>
+  </figure><figure style="width:418.6px">
+    <div class="shot" style="width:418.6px;height:195px">
+      <img src="shots/09h-prospects-history-line.png" style="left:-1202.5px;top:-682.5px;width:1664px">
+      <div class="mark" style="left:6.4px;top:6.4px;width:405.8px;height:54.800000000000004px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>2. Prospects:</b> one line, “History · 2 changes”; a tap opens the list: what changed, then when · who.</figcaption>
+  </figure></div>
+<figure style="width:387.59999999999997px">
+    <div class="shot" style="width:387.59999999999997px;height:396.09999999999997px">
+      <img src="shots/09i-colorbelt-summary-no-history.png" style="left:-350.2px;top:-61.199999999999996px;width:1088px">
+      
+    </div>
+    <figcaption><b>3. Color Belt</b> (Camps and Black Belt the same): the summary ends at “Signed by” — nothing on screen says who switched Owen's payment from cash to check, or when.</figcaption>
+  </figure>
+  <div class="note">Finance's payment detail has its own history too (not a person; not part of this question).</div>
+</div>
+<div class="col after">
+  <div class="label">Proposed (option B) · Prospects' one line, in every summary</div>
+  <div class="row"><figure style="width:387.59999999999997px">
+    <div class="shot" style="width:387.59999999999997px;height:430.09999999999997px">
+      <img src="shots/09j-colorbelt-history-closed-MOCKUP.png" style="left:-350.2px;top:-61.199999999999996px;width:1088px">
+      <div class="mark" style="left:23.2px;top:316.45px;width:341.2px;height:38.599999999999994px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>4.</b> Closed, as it opens: one line at the bottom, “History · 3 changes ›”.</figcaption>
+  </figure><figure style="width:387.59999999999997px">
+    <div class="shot" style="width:387.59999999999997px;height:568.65px">
+      <img src="shots/09k-colorbelt-history-open-MOCKUP.png" style="left:-350.2px;top:-61.199999999999996px;width:1088px">
+      <div class="mark" style="left:23.2px;top:316.45px;width:341.2px;height:178px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>5.</b> One tap opens it, newest first: “Payment changed: $65 cash → $65 check · Oct 22 · Jeffrey Berg”. Drawn from Owen's real preview records.</figcaption>
+  </figure></div>
+<figure style="width:659.6px">
+    <div class="shot" style="width:659.6px;height:316.2px">
+      <img src="shots/09l-blackbelt-history-closed-MOCKUP.png" style="left:-214.2px;top:-357px;width:1088px">
+      <div class="mark" style="left:23.2px;top:202.54999999999998px;width:613.1999999999999px;height:38.599999999999994px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>6. Black Belt:</b> the same one line after the totals, so its summary stays short.</figcaption>
+  </figure>
+  <div class="note"><b>Copies what's already there:</b> Prospects' own History line and list, filled from the change log each section already writes. With Hide private details on, the list leaves out amounts and paid status, as Star's already does (v0.506). Pictures 4–6 are drawn over the real summaries; nothing in the app was changed.</div>
+</div>
+</div>
+<div class="foot"><b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> in Color Belt, Camps and Black Belt nobody can see on screen who changed a payment or a detail, and when (rule §5); Star and Prospects show history two different ways.<br><b>B · Recommended: Prospects' one line in every summary (pictures 4–6).</b> “History · N changes ›” at the bottom of every person's summary; a tap opens the list, newest first: what changed, then when · who. Color Belt (event and private testing), Camps and Black Belt gain it; Star's five-line block becomes the same line. <i>+</i> “who changed this, and when?” is one tap away everywhere; summaries stay short, so Black Belt's reason for leaving it out goes away; one pattern. <i>−</i> work in four sections (Color Belt, Camps, Black Belt, Star); reopens Star's approved block and Black Belt's approved “no history”.<br><b>C · Star's block in every summary (picture 1).</b> The newest five changes always shown, then “Show all”. <i>+</i> the latest changes show without a tap. <i>−</i> every summary gets about five rows longer, which is why Black Belt left it out; Prospects' line changes too.</div>
+</body></html>

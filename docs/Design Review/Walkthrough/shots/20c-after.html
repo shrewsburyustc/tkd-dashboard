@@ -1,0 +1,33 @@
+<!doctype html>
+<!-- 20c-after.html — Design Review item 20c, option B: the six checks WCAG 2.2 adds at levels A and AA (W3C
+     Recommendation, 2023), in plain words, with where the app stands (checked in the code 2026-10-23, after the
+     main merge). Screenshot with tools/shoot.mjs. -->
+<html lang="en"><head><meta charset="utf-8"><title>Item 20c after</title>
+<style>
+  body { margin: 0; padding: 16px; width: 930px; box-sizing: border-box; background: #FFFFFF; color: #1F1F1F; font: 14px/1.35 "Segoe UI", system-ui, sans-serif; }
+  .card { border: 1px solid #BFDDB3; background: #F1F8EE; border-radius: 10px; padding: 12px 14px; }
+  h3 { margin: 0 0 8px; font-size: 16px; font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; background: #FFFFFF; border-radius: 6px; overflow: hidden; }
+  th, td { text-align: left; vertical-align: top; padding: 7px 8px; border-bottom: 1px solid #E3EEDD; font-size: 12.5px; }
+  th { background: #E5F2DF; font-size: 12px; font-weight: 600; color: #2E4A22; }
+  td.what b { display: block; font-size: 13px; }
+  .tag { display: inline-block; border-radius: 4px; padding: 1px 6px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+  .ok { background: #E5F2DF; color: #2E6B1F; }
+  .check { background: #FDF0D9; color: #7A4A06; }
+  .exc { background: #EEEEEA; color: #4A4A4A; }
+  .foot { margin: 8px 2px 0; font-size: 12.5px; color: #3A3A3A; }
+</style></head><body>
+  <div class="card">
+    <h3>WCAG 2.2 AA = everything in 2.1, plus six checks</h3>
+    <table>
+      <tr><th style="width:28%">The check, in plain words</th><th style="width:16%">Where the app stands</th><th>Why</th></tr>
+      <tr><td class="what"><b>Big enough to tap (2.5.8)</b>Anything you click is at least 24×24 px, or has room around it</td><td><span class="tag ok">Meets it</span></td><td>Icon buttons are 28 px on the PC and 44 px on touch screens (§2.1, §2.5); text buttons are 32 px. Spot-check small tags used as buttons (e.g. Camps' 22 px “Possible duplicate”).</td></tr>
+      <tr><td class="what"><b>No dragging needed (2.5.7)</b>Anything you drag can also be done without dragging</td><td><span class="tag ok">Meets it</span> <span class="tag exc">1 exception</span></td><td>Reordering has Move up / Move down (v0.43); Prospects' board has the status menu (v0.245). The family forms' drawn signature is already a recorded exception: “Can't sign here? Please sign at the front desk.” (v0.107).</td></tr>
+      <tr><td class="what"><b>Focus never hidden (2.4.11)</b>What the keyboard is on is never fully covered by a sticky bar</td><td><span class="tag check">To check</span></td><td>Pinned Cancel / Save rows in dialogs, the offline bar (5b) and toasts could cover it — a keyboard walk in phase 3 at 1280×800 and 820×1180.</td></tr>
+      <tr><td class="what"><b>Sign in without a memory test (3.3.8)</b>A password manager or paste can do it for you</td><td><span class="tag ok">Sign-in meets it</span> <span class="tag check">PIN to check</span></td><td>Sign-in fields let password managers fill them. The PIN is a normal field on the PC (paste works) but keypad-only on touch screens; signing in fully may count as the alternative — phase 4.</td></tr>
+      <tr><td class="what"><b>Don't ask twice (3.3.7)</b>Nothing typed earlier in one visit has to be typed again</td><td><span class="tag ok">Meets it</span></td><td>Star's “Register another candidate” keeps the email and Paying by (v0.93); Black Belt keeps the email and plan. Check Camps' and Forms' multi-child forms in phase 3.</td></tr>
+      <tr><td class="what"><b>Help in the same place (3.2.6)</b>Contact details repeated on pages sit in the same spot</td><td><span class="tag check">To check</span></td><td>The five public pages each draw their own header (item 19 makes it one); check where the school's contact line sits on each.</td></tr>
+    </table>
+    <p class="foot">Removed in 2.2: 4.1.1 Parsing (browsers handle it) — nothing to do. The three AAA additions are not part of AA.</p>
+  </div>
+</body></html>

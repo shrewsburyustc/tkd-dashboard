@@ -1,0 +1,113 @@
+{
+  "title": "Item 15d · Where settings live",
+  "subtitle": "<b>Approved in each section.</b> The things you set once — prices, rubrics, templates, statuses — live in <b>8 places</b>: a tab in five sections (Color Belt, Star, Black Belt, Camps, Finance), the page's ⋯ menu in two (Prospects and Calendar — your v0.245: “like the Calendar's Event types”), and the school-wide <b>Settings</b> page (account menu → Admin), which holds only the schools' addresses and phones. <b>One home doesn't fit:</b> Classes and ranks are used by the Schedule, Calendar, Forms and Testing, but live inside Color Belt testing (v0.38). The Schedule and Forms say “Add classes in Testing → Classes and ranks” — once Star goes live that is Testing → Color belt testing → Classes and ranks. Your plan of 2026-10-17 (not decided yet): move them to a school-wide Settings once the Schedule and Calendar are built. They are now. <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today · 8 places",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/15t-colorbelt-classes-ranks.png",
+              "crop": [70, 96, 620, 186],
+              "scale": 0.72,
+              "caption": "<b>1. Color Belt:</b> “Classes and ranks” tab — per school; staff view only (v0.38, v0.40).",
+              "marks": [[133, 178, 111, 36]]
+            },
+            {
+              "src": "shots/15u-star-rubrics-prices.png",
+              "crop": [70, 96, 620, 186],
+              "scale": 0.72,
+              "caption": "<b>2. Star:</b> “Rubrics and prices” tab (v0.60).",
+              "marks": [[133, 160, 115, 36]]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/15v-blackbelt-rubric-prices.png",
+              "crop": [70, 96, 620, 186],
+              "scale": 0.72,
+              "caption": "<b>3. Black Belt:</b> “Rubric and prices” tab — the waiver and the default rubric; its prices moved to each cycle (v0.902), the name stayed.",
+              "marks": [[132, 166, 110, 36]]
+            },
+            {
+              "src": "shots/15w-camps-templates.png",
+              "crop": [70, 96, 620, 186],
+              "scale": 0.72,
+              "caption": "<b>4. Camps:</b> “Templates” tab (v0.711); each camp's prices are inside the camp.",
+              "marks": [[135, 152, 67, 36]]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/15x-finance-settings.png",
+              "crop": [70, 96, 620, 186],
+              "scale": 0.72,
+              "caption": "<b>5. Finance:</b> “Settings” tab, admins only (v0.203).",
+              "marks": [[163, 134, 56, 36]]
+            },
+            {
+              "src": "shots/15y-prospects-menu.png",
+              "crop": [660, 84, 600, 140],
+              "scale": 0.72,
+              "caption": "<b>6. Prospects:</b> the page's ⋯ → Edit statuses (v0.245).",
+              "marks": [[910, 148, 206, 38]]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/15z-calendar-menu.png",
+              "crop": [660, 84, 600, 140],
+              "scale": 0.72,
+              "caption": "<b>7. Calendar:</b> the page's ⋯ → Event types (v0.240).",
+              "marks": [[963, 148, 206, 38]]
+            },
+            {
+              "src": "shots/15za-account-menu.png",
+              "crop": [1016, 302, 256, 146],
+              "scale": 0.9,
+              "caption": "<b>8. Settings</b> is under your initials (account menu → Admin), admins only (v0.135).",
+              "marks": [[1019, 366, 250, 36]]
+            }
+          ]
+        },
+        {
+          "src": "shots/15zb-settings-schools.png",
+          "crop": [70, 96, 700, 232],
+          "scale": 0.72,
+          "caption": "<b>9. Settings</b> has one part: Schools — each school's address and phone (hidden in this picture)."
+        }
+      ]
+    },
+    {
+      "label": "Proposed (option B) · one rule; Classes and ranks move to Settings",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/15zd-settings-classes-MOCKUP.png",
+          "crop": [70, 96, 690, 690],
+          "scale": 0.78,
+          "caption": "<b>10. Settings gets a second part, “Classes and ranks”</b> — the same list and editor as today, each school's classes under its own heading, with Add class. The Schedule's and Forms' hints point here.",
+          "marks": [[72, 328, 680, 458]]
+        },
+        {
+          "src": "shots/15zc-colorbelt-prices-tab-MOCKUP.png",
+          "crop": [70, 96, 1190, 150],
+          "scale": 0.68,
+          "caption": "<b>11. Color Belt keeps only what's testing-only</b> — the three prices, sparring gear and each class's final award — in a tab called “Prices” (the name to settle in the mockups).",
+          "marks": [[132, 178, 45, 36]]
+        }
+      ],
+      "note": "<b>The rule in B:</b> things several sections use live in <b>Settings</b> (Schools, Classes and ranks). Things one section uses live in that section: a tab named for what's in it, next to the main tab (Star, Black Belt, Camps, Finance — as today), or the page's ⋯ menu where a page has no tabs (Prospects, Calendar — as today). This is your plan of 2026-10-17, with your leaning that testing prices stay in Testing. Pictures 10–11 are drawn over the real pages; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question: where should settings live?</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> Classes and ranks stay inside Color belt testing although the Schedule, Calendar and Forms need them; no written rule, so the next section can invent a ninth place.<br><b>B · Recommended: one rule, and Classes and ranks move to Settings (pictures 10–11)</b> — your own plan. <i>+</i> adding a class for the Schedule happens where the whole school's details are; one rule for every section; nothing else moves. <i>−</i> a medium job for Color Belt and Main (the class editor splits: classes and ranks in Settings, testing prices in Color Belt); Settings is admins only, so staff no longer see the ranks list (they still see testing prices in Color Belt and class names in the Schedule); Settings sits under your initials, where the Grandmaster may not look — the Schedule's and Forms' hints would link straight to it.<br><b>C · One Settings page for everything.</b> Every section's settings move into Settings, one part each. <i>+</i> one place to look. <i>−</i> the biggest job (all six sessions); settings sit far from the work they change (a camp template is made from a camp); staff lose the view-only price tabs."
+}

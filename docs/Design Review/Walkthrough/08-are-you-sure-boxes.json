@@ -1,0 +1,112 @@
+{
+  "title": "Item 8 · “Are you sure?” boxes: “Keep …” or “Cancel”",
+  "subtitle": "<b>Approved in each section, plus some drift.</b> Every box that asks before something can't be undone (rule 1.4) has one button that changes nothing. Its words were decided section by section, and no rule says which to use: <b>“Keep student / Keep payment / Keep candidate”</b> in most roster boxes (Color Belt, Star, Black Belt), <b>“Cancel”</b> in the settings-type boxes (Color Belt classes and ranks, Star categories, Schedule) and in Black Belt's cycle and Undo payment boxes. Prospects, Forms and Calendar use “Cancel”, and Camps “Keep camper / camp / template”, without a drawing (drift). <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today · the button that changes nothing",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/04c-star-undo-asks.png",
+              "crop": [452, 72, 376, 199],
+              "scale": 1.2,
+              "caption": "<b>1. Star · Undo payment:</b> “Keep payment”.",
+              "marks": [[528, 207, 117, 32]]
+            },
+            {
+              "src": "shots/04d-blackbelt-undo-asks.png",
+              "crop": [452, 72, 376, 203],
+              "scale": 1.2,
+              "caption": "<b>2. Black Belt · Undo payment:</b> the same box says “Cancel”. Both were approved.",
+              "marks": [[597, 211, 72, 32]]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/08c-colorbelt-delete-student-keep.png",
+              "crop": [452, 72, 376, 205],
+              "scale": 1.2,
+              "caption": "<b>3. Color Belt · Delete a student:</b> “Keep student”.",
+              "marks": [[508, 213, 109, 32]]
+            },
+            {
+              "src": "shots/08d-colorbelt-delete-class-cancel.png",
+              "crop": [452, 72, 376, 199],
+              "scale": 1.2,
+              "caption": "<b>4. Color Belt · Delete a class:</b> “Cancel” — and the red button says only “Delete”.",
+              "marks": [[621, 207, 72, 32], [701, 207, 95, 32]]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/08e-prospects-delete-cancel.png",
+              "crop": [452, 72, 376, 199],
+              "scale": 1.2,
+              "caption": "<b>5. Prospects · Delete prospect:</b> “Cancel” · “Delete” (never drawn).",
+              "marks": [[621, 207, 72, 32], [701, 207, 95, 32]]
+            },
+            {
+              "src": "shots/08f-colorbelt-private-keep-it.png",
+              "crop": [452, 72, 376, 160],
+              "scale": 1.2,
+              "caption": "<b>6. Color Belt private testing:</b> “Keep it” — the action itself is called “Cancel private testing”.",
+              "marks": [[557, 168, 73, 32]]
+            }
+          ]
+        }
+      ],
+      "note": "Same in every box pictured, and staying that way: a question naming the person or thing, a line saying exactly what happens, the button that changes nothing on the left and selected first, the other button on the right (red only when something is gone for good — item 7)."
+    },
+    {
+      "label": "Option B (recommended) · and why not C",
+      "tone": "after",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/08g-blackbelt-undo-keep-MOCKUP.png",
+              "crop": [452, 72, 376, 203],
+              "scale": 1.2,
+              "caption": "<b>7. B · Black Belt's Undo payment:</b> “Keep payment”, like Star's.",
+              "marks": [[552, 211, 117, 32]]
+            },
+            {
+              "src": "shots/08h-colorbelt-delete-class-keep-MOCKUP.png",
+              "crop": [452, 72, 376, 199],
+              "scale": 1.2,
+              "caption": "<b>8. B · Color Belt's Delete class:</b> “Keep class” · “Delete class” — the red button repeats the menu's words.",
+              "marks": [[570, 207, 226, 32]]
+            }
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "shots/08i-prospects-delete-keep-MOCKUP.png",
+              "crop": [452, 72, 376, 199],
+              "scale": 1.2,
+              "caption": "<b>9. B · Prospects:</b> “Keep prospect” · “Delete prospect”.",
+              "marks": [[523, 207, 273, 32]]
+            },
+            {
+              "src": "shots/08j-colorbelt-private-cancel-MOCKUP.png",
+              "crop": [452, 72, 376, 160],
+              "scale": 1.2,
+              "caption": "<b>10. Option C here:</b> “Cancel” right next to “Cancel private testing”. C has to keep “Keep it” as an exception.",
+              "marks": [[558, 168, 238, 32]]
+            }
+          ]
+        }
+      ],
+      "note": "<b>Copies what's already there:</b> the words most roster boxes already use. Only the button words change. Pictures 7–10 are the real boxes with their button words changed; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> the same box says “Keep payment” in Star and “Cancel” in Black Belt, and Color Belt alone uses both.<br><b>B · Recommended: “Keep …” everywhere.</b> The button that changes nothing says what stays: Keep payment, Keep student, Keep class, Keep prospect (“Keep it” where there's no short name). The other button repeats the words he pressed (“Delete class”, not just “Delete”). <i>+</i> says in his words that nothing is lost; can't be mistaken for the action, even in boxes about undoing a payment or cancelling; most roster boxes already do it. <i>−</i> the word changes from box to box; the “Cancel” boxes change (Color Belt classes and ranks, Star categories, Schedule, Black Belt's cycle and Undo payment, Prospects, Forms, Calendar).<br><b>C · “Cancel” everywhere.</b> The other button repeats the words he pressed, as in B. <i>+</i> the word every computer and phone uses; one fixed word. <i>−</i> next to money or cancelling it can read as doing the action (“Cancel” beside “Undo payment”); Color Belt private must keep “Keep it” (picture 10); the roster boxes change (Color Belt, Star, Camps, Black Belt)."
+}

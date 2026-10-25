@@ -1,0 +1,69 @@
+{
+  "title": "Item 2 · Camps shows money while “Hide private details” is on",
+  "subtitle": "<b>Missing — not planned.</b> The account-menu switch is for the mat-side tablet, where parents can see the screen. The rulebook says it hides payment details on every screen, in every section, now and in future (v0.249, v0.506). Color Belt and Star follow it; no Camps document, mockup or rulebook row mentions it. <span style=\"color:#6B6B6B\">(Preview screenshots at tablet size, 820×1180 touch · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today · switch on",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/02a-camps-roster-switch-on.png",
+              "shotWidth": 820,
+              "crop": [76, 28, 744, 1152],
+              "scale": 0.75,
+              "caption": "<b>1.</b> The top bar says “Private details hidden”, yet the camp roster still shows each family's amount due (“$245 due”, “$395 due”) and “5 to collect”.",
+              "marks": [[86, 36, 151, 28], [254, 219, 73, 27], [229, 373, 141, 807]]
+            },
+            {
+              "src": "shots/02b-camper-detail-switch-on.png",
+              "shotWidth": 820,
+              "crop": [190, 96, 440, 915],
+              "scale": 0.75,
+              "caption": "<b>2.</b> A camper's detail still shows the price, how they'll pay and what's owed.",
+              "marks": [[214, 305, 392, 56], [214, 361, 392, 37], [214, 413, 392, 99]]
+            }
+          ]
+        },
+        {
+          "src": "shots/02c-colorbelt-roster-switch-on.png",
+          "shotWidth": 820,
+          "crop": [76, 28, 744, 500],
+          "scale": 0.75,
+          "caption": "<b>3.</b> Same tablet, same switch, in Color Belt: only the student count shows — no payment columns, no Mark paid (rule v0.412). Star does the same.",
+          "marks": [[86, 36, 151, 28], [96, 260, 280, 72]]
+        }
+      ]
+    },
+    {
+      "label": "After · switch on (mockup)",
+      "tone": "after",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/02d-camps-roster-switch-on-MOCKUP.png",
+              "shotWidth": 820,
+              "crop": [76, 28, 744, 1152],
+              "scale": 0.75,
+              "caption": "<b>4.</b> The money leaves: no Paid column, no “to collect”. Attendance, check-in and the duplicate warning stay (the warning moves next to the name).",
+              "marks": [[96, 219, 140, 27], [96, 373, 700, 32]]
+            },
+            {
+              "src": "shots/02e-camper-detail-switch-on-MOCKUP.png",
+              "shotWidth": 820,
+              "crop": [190, 96, 440, 915],
+              "scale": 0.75,
+              "caption": "<b>5.</b> The detail keeps its rows but says “Hidden on this tablet” and “Payment details are hidden on this tablet.”",
+              "marks": [[214, 305, 392, 80], [214, 394, 392, 46]]
+            }
+          ]
+        }
+      ],
+      "note": "<b>Copies an existing pattern.</b> The words come from the shared switch code (<code>src/lib/privateDetails.js</code>) that Color Belt and Star already use. Turning the switch off shows everything again. Pictures 4 and 5 are drawn over the real page; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Owner:</b> Camps. <b>Same rule, also not planned:</b> the Prospects panel shows the parent's email while the switch is on (v0.506 names email). <b>Open question for later:</b> the rule names date of birth, email and payments — should it also hide parents' phone numbers and form answers in Prospects, and staff emails in Staff accounts? <b>PC and phone:</b> the same parts would hide."
+}

@@ -1,0 +1,55 @@
+{
+  "width": 930,
+  "rowHeight": 64,
+  "meaningWidth": 360,
+  "rows": [
+    {
+      "meaning": "Go to / move to",
+      "sub": "private testing · Prospects' stages · Forms' Continue",
+      "today": [{ "icon": "arrow-right", "where": "in use, no map row" }],
+      "after": [{ "icon": "arrow-right", "where": "approved v0.403, v0.246" }]
+    },
+    {
+      "meaning": "Swipe or scroll sideways",
+      "sub": "hint under Prospects' board",
+      "today": [{ "icon": "arrows-horizontal", "where": "in use, no map row" }],
+      "after": [{ "icon": "arrows-horizontal", "where": "approved v0.246" }]
+    },
+    {
+      "meaning": "Split a bracket",
+      "sub": "Black Belt's rubric editor",
+      "today": [{ "icon": "arrows-split-2", "where": "in use, no map row" }],
+      "after": [{ "icon": "arrows-split-2", "where": "approved v0.921 (mockup R6)" }]
+    },
+    {
+      "meaning": "Cancel a private testing",
+      "sub": "Color Belt",
+      "today": [{ "icon": "calendar-x", "where": "in use, no map row" }],
+      "after": [{ "icon": "calendar-x", "where": "approved v0.403" }]
+    },
+    {
+      "meaning": "Hide private details",
+      "sub": "the switch, the top-bar chip",
+      "today": [{ "icon": "currency-dollar-off", "where": "in use, no map row" }],
+      "after": [{ "icon": "currency-dollar-off", "where": "approved v0.215 (row planned, missed)" }]
+    },
+    {
+      "meaning": "Grading note",
+      "sub": "Color Belt grading",
+      "today": [{ "icon": "note", "where": "in use, no map row" }],
+      "after": [{ "icon": "note", "where": "approved v0.185, v0.190" }]
+    },
+    {
+      "meaning": "Make-up",
+      "sub": "Star (its one meaning after 16a)",
+      "today": [{ "icon": "repeat", "where": "in use, no map row" }],
+      "after": [{ "icon": "repeat", "where": "approved v0.121" }]
+    },
+    {
+      "meaning": "Take a photo of this screen",
+      "sub": "Forms' kiosk thank-you; matches its words",
+      "today": [{ "icon": "camera", "where": "in use, no map row" }],
+      "after": [{ "icon": "camera", "where": "never decided — keep it" }]
+    }
+  ]
+}

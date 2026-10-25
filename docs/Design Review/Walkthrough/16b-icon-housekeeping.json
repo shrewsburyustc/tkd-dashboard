@@ -1,0 +1,69 @@
+{
+  "title": "Item 16b · Icon housekeeping: tooltips, Forms' Sent tick, the icon map",
+  "subtitle": "<b>Approved in each section, plus drift.</b> Three loose ends of the icon rules. <b>Tooltips:</b> every icon-only button needs a tooltip with the same words as its label (§1.4, §4). Camps, Finance and the testing sections use the shared button (28px, 16px icon, tooltip); Calendar, Schedule, Prospects and Forms use a plain 44px button with a 20px icon and no tooltip — 13 buttons (the Schedule build plan said to reuse the shared one). <b>Forms' Sent screen</b> shows a 40px tick, over the 24px limit (§2.2). <b>The map:</b> §2.4 puts an icon in the map before it is used; 8 icons in use have no row — 7 were approved in their sections (Hide private details' row was planned at the Finance merge and missed) and Forms' camera was never decided. Already settled: 12b's door icons, 16a's pencil and user-off; 15a turns Forms' and Finance's back arrows into links. <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data; icon boards drawn from the app's own Tabler set)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/16b-calendar-buttons.png",
+          "crop": [70, 90, 1190, 110],
+          "scale": 0.78,
+          "caption": "<b>1. Calendar:</b> plain 44px buttons with 20px icons and no tooltip. The same in Schedule (⋯), Prospects (⋯, the panel's ✕), Forms (a field's ⋯, remove ✕) and the Edit statuses / Event types rows.",
+          "marks": [[1122, 98, 44, 44], [76, 150, 92, 44]]
+        },
+        {
+          "src": "shots/16b-colorbelt-tooltip.png",
+          "crop": [700, 262, 560, 96],
+          "scale": 1,
+          "caption": "<b>2. How the other sections do it</b> (Color Belt here; Star, Black Belt, Camps and Finance the same): a 28px button, a 16px icon, and on the PC a dark tooltip with the words a screen reader hears."
+        },
+        {
+          "src": "shots/16b-sent-today.png",
+          "crop": [0, 0, 930, 94],
+          "scale": 1,
+          "shotWidth": 930,
+          "caption": "<b>3. After a form is sent:</b> staff see a 40px tick; families see a 24px tick in a pale-green circle."
+        },
+        {
+          "src": "shots/16b-maprows-today.png",
+          "crop": [0, 0, 930, 514],
+          "scale": 1,
+          "shotWidth": 930,
+          "caption": "<b>4. Eight icons in use with no row in the icon map.</b>"
+        }
+      ]
+    },
+    {
+      "label": "Proposed (option B) · all three",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/16b-calendar-buttons-MOCKUP.png",
+          "crop": [70, 90, 1190, 110],
+          "scale": 0.78,
+          "caption": "<b>5. Calendar with the shared button:</b> ⋯ is a 28px button with its tooltip; the month arrows take Finance's bordered previous / next look.",
+          "marks": [[1136, 104, 32, 32], [74, 149, 72, 36]]
+        },
+        {
+          "src": "shots/16b-sent-after.png",
+          "crop": [0, 0, 930, 94],
+          "scale": 1,
+          "shotWidth": 930,
+          "caption": "<b>6. Sent:</b> the family page's tick on both screens."
+        },
+        {
+          "src": "shots/16b-maprows-after.png",
+          "crop": [0, 0, 930, 514],
+          "scale": 1,
+          "shotWidth": 930,
+          "caption": "<b>7. Eight new rows in the icon map</b>, written with the other rulebook rows at the end of the walkthrough."
+        }
+      ],
+      "note": "<b>What changes where:</b> new students — Calendar, Schedule, Prospects and Forms use the shared IconButton for their 13 icon-only buttons (a tooltip, a 16px icon); Forms' Sent screen uses the family page's tick. Main — the 8 map rows. Picture 5 is drawn over the real Calendar; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question: tidy up the icon rules?</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> four sections keep buttons with no tooltip, so on the PC you have to guess what ⋯ or ‹ does; 8 icons stay outside the map, so the next section can't see they are taken; Forms' tick stays over the size limit.<br><b>B · Recommended: all three (pictures 5–7).</b> <i>+</i> every icon-only button shows its name on the PC and has the same size everywhere; Forms' Sent screen matches the family page; every icon is in the map. <i>−</i> 13 button swaps in the new-students area, one icon change in Forms, 8 map rows.<br><b>C · Only the paperwork:</b> the 8 map rows; the buttons and the Sent tick stay. <i>+</i> no app work. <i>−</i> the tooltip rule (§1.4) stays broken in four sections."
+}

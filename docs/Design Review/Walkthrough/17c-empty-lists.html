@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Item 17c · What an empty list shows</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2000px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Item 17c · What an empty list shows</h1>
+<p class="sub"><b>Approved in each section — but the rulebook says otherwise.</b> §8 says an empty list shows one line + one action, and §1.1 says that action <i>replaces</i> the page header's button (never the same button twice). In practice every section shows the line only and keeps the header's button — each approved on its own (Classes and ranks v0.53, Star v0.92, Schedule v0.238 “Add button stays in the page header (same as Testing)”, Camps). Color Belt's Private testing does both: its box has a second blue “Add private testing” while the header still has one (drawn and approved in v0.403, though it breaks §1.1). <span style="color:#6B6B6B">(Preview screenshots at PC size, Shrewsbury · fake data)</span></p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:928.2px">
+    <div class="shot" style="width:928.2px;height:212.16px">
+      <img src="shots/17c-colorbelt-events-empty.png" style="left:-54.6px;top:-74.88px;width:998.4000000000001px">
+      <div class="mark" style="left:826.7px;top:9.26px;width:105.5px;height:39.2px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>1. Most lists</b> (Color Belt's events here; Star, Black Belt, Camps, Schedule, Forms and Prospects the same): one gray line where the list goes; the header's blue button is the one way to add.</figcaption>
+  </figure>
+<figure style="width:928.2px">
+    <div class="shot" style="width:928.2px;height:246.48000000000002px">
+      <img src="shots/17c-colorbelt-private-empty.png" style="left:-54.6px;top:-74.88px;width:998.4000000000001px">
+      <div class="mark" style="left:787.7px;top:9.26px;width:144.5px;height:39.2px;border-color:#F59E0B"></div><div class="mark" style="left:392.24px;top:183.98000000000002px;width:144.5px;height:39.2px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>2. Color Belt's Private testing:</b> a box with a line and a second blue “Add private testing” — the same button twice on one screen.</figcaption>
+  </figure>
+  
+</div>
+<div class="col after">
+  <div class="label">Option B (recommended) and option C, drawn</div>
+  <figure style="width:928.2px">
+    <div class="shot" style="width:928.2px;height:212.16px">
+      <img src="shots/17c-private-line-MOCKUP.png" style="left:-54.6px;top:-74.88px;width:998.4000000000001px">
+      <div class="mark" style="left:787.7px;top:9.26px;width:144.5px;height:39.2px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>3. Option B:</b> Private testing shows the same line as every other list; the header's button is the one way to add.</figcaption>
+  </figure>
+<figure style="width:928.2px">
+    <div class="shot" style="width:928.2px;height:246.48000000000002px">
+      <img src="shots/17c-private-box-MOCKUP.png" style="left:-54.6px;top:-74.88px;width:998.4000000000001px">
+      <div class="mark" style="left:392.24px;top:183.98000000000002px;width:144.5px;height:39.2px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>4. Option C — §8 as written:</b> on an empty list the button moves from the header into the middle, and goes back to the header once something is added — on every list.</figcaption>
+  </figure>
+  <div class="note">Pictures 3–4 are drawn over the real Private testing tab; nothing in the app was changed. In both, staff who can't add see “… An admin adds them.” and no button (as v0.53).</div>
+</div>
+</div>
+<div class="foot"><b>Your choice — one question: what does an empty list show?</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> the rulebook (§8, §1.1) describes something no section does; Private testing shows the same blue button twice.<br><b>B · Recommended: the line, and the header button stays the one action (picture 3).</b> §8 is rewritten to match what the sections do; Private testing drops its second button. <i>+</i> the add button never moves — always top right; one rule that matches every screen. <i>−</i> one small change in Color Belt; §8 and §1.1 reworded.<br><b>C · §8 as written (picture 4).</b> On every empty list the button moves into the middle and leaves the header. <i>+</i> the next step sits where the eye lands on an empty page. <i>−</i> the button jumps between two places depending on whether the list is empty; every section changes.</div>
+</body></html>

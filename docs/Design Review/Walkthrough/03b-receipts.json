@@ -1,0 +1,59 @@
+{
+  "title": "Item 3b · Receipts — only Black Belt prints one",
+  "subtitle": "<b>Open question — nothing is missing by rule.</b> Black Belt's receipt was your choice (v0.220: one page with the full payment history; you rejected a slip offered in the toast). Color Belt, Star and Camps have no receipt, and no rule asks for one; Star wrote “Receipts for payments” down as an open question and never asked it. <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "row": [
+            {
+              "src": "shots/03i-blackbelt-menu-print-receipt.png",
+              "crop": [700, 500, 560, 220],
+              "scale": 1.0,
+              "caption": "<b>1. Black Belt:</b> a paid candidate's ⋯ menu has <b>Print receipt</b> (also in their detail).",
+              "marks": [[1048, 628, 198, 32]]
+            }
+          ]
+        },
+        {
+          "src": "shots/03j-blackbelt-receipt.png",
+          "crop": [360, 80, 560, 638],
+          "scale": 1.0,
+          "caption": "<b>2.</b> It opens a preview of the whole page: the school's name, what was paid and how, total due, paid to date, balance, both schools' addresses, “Fees are non-refundable.” → <b>Print or save as PDF</b>."
+        },
+        {
+          "src": "shots/03k-colorbelt-menu-no-receipt.png",
+          "crop": [76, 320, 1180, 360],
+          "scale": 0.8,
+          "caption": "<b>3. Color Belt:</b> a paid student's ⋯ menu has no receipt. Star and Camps are the same — no receipt anywhere.",
+          "marks": [[1047, 418, 200, 220]]
+        }
+      ]
+    },
+    {
+      "label": "Proposed (option B) · Black Belt's receipt everywhere",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/03l-colorbelt-menu-print-receipt-MOCKUP.png",
+          "crop": [76, 320, 1180, 360],
+          "scale": 0.8,
+          "caption": "<b>4.</b> The same <b>Print receipt</b> in the ⋯ menu (and the detail) of Color Belt, Star and Camps.",
+          "marks": [[1048, 487, 198, 32]]
+        },
+        {
+          "src": "shots/03m-colorbelt-receipt-MOCKUP.png",
+          "crop": [360, 80, 560, 592],
+          "scale": 1.0,
+          "caption": "<b>5.</b> The same page, made from what was recorded — here “Color belt testing · payment receipt”, Ava Chen's $50 cash testing fee. Nothing is retyped.",
+          "marks": [[400, 186, 480, 128], [400, 356, 480, 28]]
+        }
+      ],
+      "note": "<b>Copies what you already approved</b> for Black Belt (v0.220). Taking a payment stays two taps (item 3); the receipt is printed only when a family asks. Emailed receipts come later, once the dashboard can send email — as planned for Black Belt. Pictures 4 and 5 are drawn over the real pages; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question</b> (it depends on what the desk does today):<br><b>A · No receipts outside Black Belt</b> (as today) — pick this if the desk never hands out receipts. <i>+</i> no work. <i>−</i> if a family asks, staff write one in a paper receipt book that doesn't match the app.<br><b>B · Recommended: Black Belt's “Print receipt” in every section</b> (right side) — pick this if receipts are given when a family asks. <i>+</i> one receipt everywhere, made from the recorded payment, already approved for Black Belt. <i>−</i> the desk needs a working printer (or saves a PDF until email exists).<br><b>C · B plus a Print receipt button in the Mark paid box</b>, right after saving — pick this if every family gets a receipt. <i>+</i> no trip to the ⋯ menu. <i>−</i> one more step for everyone else; close to the per-payment slip you rejected for Black Belt."
+}

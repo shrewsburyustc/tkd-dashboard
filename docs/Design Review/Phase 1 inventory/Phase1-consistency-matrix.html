@@ -1,0 +1,81 @@
+<!doctype html>
+<!-- Phase 1 consistency matrix: one row per repeated job, one column per section.
+     Within a row, the same color = the same way of doing the job. Rendered to PNG
+     with headless Chrome for Jeffrey (he reviews pictures, not HTML side panels). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Same job, different design</title>
+<style>
+  :root {
+    --text: #1F1F1F; --muted: #6B6B6B; --line: #E5E5E2;
+    --a: #E6EBF4; --b: #EAF3DE; --c: #FAEEDA; --d: #EFE7F6; --e: #E3F1F1; --f: #F7F7F5;
+  }
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: var(--text);
+         font: 14px/1.35 "Segoe UI", system-ui, sans-serif; width: 1536px; box-sizing: border-box; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 14px; }
+  .legend { display: flex; gap: 18px; align-items: center; margin: 0 0 16px; color: var(--muted); font-size: 13px; }
+  .legend span.sw { display: inline-block; width: 26px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 6px; }
+  .legend .gap { border: 1.5px dashed #9A9A95; background: #FFFFFF; }
+  table { border-collapse: separate; border-spacing: 5px; width: 100%; table-layout: fixed; }
+  th { font-size: 13px; font-weight: 600; text-align: left; padding: 6px 8px; color: var(--text); }
+  th.job { width: 170px; }
+  td { padding: 7px 9px; border-radius: 7px; vertical-align: top; font-size: 13px; height: 34px; }
+  td.job { background: none; font-weight: 600; padding-left: 4px; }
+  td.job small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+  td.a { background: var(--a); } td.b { background: var(--b); } td.c { background: var(--c); }
+  td.d { background: var(--d); } td.e { background: var(--e); } td.f { background: var(--f); }
+  td.gap { background: #FFFFFF; border: 1.5px dashed #9A9A95; color: #5E5E5A; }
+  td.plan { background: #FFFFFF; border: 1.5px dotted #8F8F8A; color: #6B6B6B; font-style: italic; }
+  td.q { background: #FFFFFF; border: 1.5px dotted #C8892B; color: #7A4A06; }
+  .legend .plan { border: 1.5px dotted #8F8F8A; background: #FFFFFF; }
+  .legend .q { border: 1.5px dotted #C8892B; background: #FFFFFF; }
+  td.na { background: none; color: #B5B5B0; text-align: center; }
+  .foot { margin-top: 14px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>Same job, different design — what each section does today</h1>
+<p class="sub">TKD Dashboard, <code>main</code> at 45a8b79, Oct 21 2026 · Design Review phase 1, checked by a separate agent · details and sources in <code>TKD-DesignReview-Inventory.md</code> · labels re-checked Oct 22 (<code>Planned-vs-missing-A/B.md</code>)</p>
+<div class="legend">
+  <span><span class="sw" style="background:var(--a)"></span><span class="sw" style="background:var(--b)"></span><span class="sw" style="background:var(--c)"></span><span class="sw" style="background:var(--d)"></span>Same color in a row = same way. Approved unless marked <i>drift</i> (nobody decided it).</span>
+  <span><span class="sw gap"></span>Missing, not planned</span>
+  <span><span class="sw plan"></span>Planned, not built yet</span>
+  <span><span class="sw q"></span>? = question for Jeffrey</span>
+  <span>· blank = the section doesn't have that job</span>
+</div>
+<table id="m"></table>
+<p class="foot">G-numbers point to the groups in TKD-DesignReview-Inventory.md §3. Not in any one section: the offline bar (§3.5) and the top-bar search (§3.2) are missing everywhere, not planned. Black Belt payments in Finance are planned (v0.808).</p>
+<script>
+const cols = ['Color Belt events', 'Color Belt private testing', 'Star testing', 'Black Belt testing', 'Camps', 'Prospects · Forms · Schedule · Calendar', 'Finance'];
+// Each row: [job, note, ...cells]; a cell is [colorClass, text] or null (section doesn't do this job).
+const rows = [
+  ['Take a payment', 'G1', ['a','“Mark paid” · 1 click'], ['a','“Mark paid” · 1 click'], ['b','“Record payment” dialog · date picker'], ['c','“Record payment” dialog · For checklist · no date'], ['d','Tap “$ due” tag → “Mark paid”'], null, ['f','Read-only report']],
+  ['Print a receipt', 'G1', ['q','? none — no rule asks; ask'], ['q','? none'], ['q','? none — Star’s own open question, never asked'], ['a','Print receipt'], ['q','? none'], null, ['b','Prints the day, not a receipt']],
+  ['Undo a payment', 'G2', ['a','At once, no question · drift'], ['a','At once, no question · drift'], ['b','Asks · “Keep payment”'], ['c','Asks · “Cancel”'], ['a','At once, no question · drift'], null, null],
+  ['Money handed back', 'G2', ['a','No refunds — fees not refundable (v0.132)'], ['a','No refunds (v0.402)'], ['b','Record refund'], ['c','Record refund + Check returned'], ['d','Through Edit payment (v0.700)'], null, ['f','Shows refunds']],
+  ['Remove a person', 'G3', ['a','Withdraw · Undo · plain (rule: red ?)'], ['b','Cancel (blue) · asks · no Undo'], ['a','Withdraw · Undo · plain (rule: red ?)'], ['c','Remove → choice · plain, mockup red · drift'], ['a','Withdraw · Undo · staff can too'], ['d','Delete · asks (Prospects)'], null],
+  ['Confirm “keep” button', 'G4', ['d','“Keep student” / “Cancel” · ?'], ['c','“Keep it”'], ['d','“Keep candidate” / “Cancel”'], ['d','“Keep candidate” / “Cancel”'], ['e','“Keep camper” · drift'], ['b','“Cancel” · drift'], null],
+  ['Open a person', 'G6', ['a','Row → summary → Edit details'], ['gap','✗ rows don’t open — not planned'], ['a','Row → summary → Edit details'], ['a','Row → summary → Edit details'], ['b','Name only → summary'], ['c','Side panel (Prospects, v0.236)'], ['a','Row → view-only detail']],
+  ['History of changes', 'G6', ['gap','✗ none — not planned'], ['gap','✗ none — not planned'], ['a','History block'], ['e','None on purpose (v0.900)'], ['gap','✗ none — not planned'], ['b','“History · n changes”'], ['a','History in payment detail']],
+  ['Count cards', 'G11', ['a','4 cards · click filters'], ['b','4 cards · click does nothing · drift'], ['a','4 cards · click filters'], ['c','4 other cards · click filters'], ['d','No cards · one line (v0.715)'], ['e','Stage bar (Prospects)'], ['b','4 cards · click scrolls (v0.207)']],
+  ['Registration link', 'G8', ['a','1 link · Print flyer'], null, ['b','2 school cards · Print flyer'], ['c','2 school cards · Download QR'], ['d','1 link · Download QR · icon-only on phone ?'], ['e','“Share” · Print a sign · kiosk'], null],
+  ['Open / close sign-up', 'G9', ['a','“Close registration” · no icon'], null, ['a','“Close registration” · no icon'], ['b','Same words + lock icons (clash with icon map)'], ['c','“Close sign-up”'], ['d','“Close form” / “Open form again” · door icons · drift'], null],
+  ['Family sign-up page', 'G10', ['a','2 steps · “Send registration”'], null, ['a','2 steps · “Send registration”'], ['a','2 steps · “Send registration” (off)'], ['b','2 steps · “Sign up”'], ['c','Page per step · “Submit” · no check page'], null],
+  ['Dates', 'G12', ['a','Browser date box (approved to differ)'], ['a','Browser date box'], ['b','Shared date picker'], ['a','Browser date box → shared picker planned'], ['c','Own calendar + browser boxes · drift'], ['a','Browser date box · drift'], ['a','Browser date box']],
+  ['Hide private details', 'G16', ['a','Follows the switch'], ['a','Follows the switch'], ['a','Follows the switch'], ['b','Follows · says “this device”'], ['gap','✗ ignores it — not planned'], ['gap','✗ parent email shows — not planned'], ['a','Leaves the rail']],
+  ['Undo after an edit', 'G13', ['a','Undo on most edits'], ['c','No Undo · drift'], ['a','Undo on most edits'], ['c','No Undo · approved'], ['c','No Undo · drift'], ['e','Mixed · drift'], ['a','Undo (settings)']],
+  ['Errors and Wi-Fi drops', 'G13', ['a','Banner + Retry · refresh silent (v0.157)'], ['a','Banner + Retry · refresh silent'], ['b','Banner + Retry · offline bar (grading only)'], ['c','Banner · some errors vanish in 5 s · drift'], ['d','Banner + Retry · warns when refresh fails'], ['e','Banner · no Retry on saves · drift'], ['f','Banner + Retry']],
+  ['Results after testing', 'G20', ['a','Pass / Not passed / No show inside Grading'], ['a','Same buttons on its own page'], ['b','Own Results tab · email · print · CSV'], ['plan','Planned (B3–B5)'], null, null, null],
+  ['Export a list (CSV)', 'G20', ['q','? results CSV — ask'], null, ['a','Results CSV · 1 click, no dialog'], null, null, null, ['b','Export dialog · date range']],
+];
+const t = document.getElementById('m');
+t.insertAdjacentHTML('beforeend', '<tr><th class="job">Job</th>' + cols.map(c => `<th>${c}</th>`).join('') + '</tr>');
+for (const [job, note, ...cells] of rows) {
+  const tds = cells.map(c => c ? `<td class="${c[0]}">${c[1]}</td>` : '<td class="na">·</td>').join('');
+  t.insertAdjacentHTML('beforeend', `<tr><td class="job">${job}<small>${note}</small></td>${tds}</tr>`);
+}
+</script>
+</body>
+</html>

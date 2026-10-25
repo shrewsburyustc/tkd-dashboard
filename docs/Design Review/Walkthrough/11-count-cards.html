@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Item 11 · Count cards above a roster</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 2000px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Item 11 · Count cards above a roster</h1>
+<p class="sub"><b>Approved in each section, plus one drift.</b> Rule §8: tapping a count card opens the list behind it. Color Belt's event roster and Star do this, and Black Belt's four cards (Paid in full · Paying on schedule · Late · Not paid — they fit its payment plans) filter too. <b>Color Belt private testing's cards do nothing</b>, although its approval said “a roster like an event's Students tab” (v0.402) — drift. Approved and staying: Camps has one summary line instead of cards (v0.715); Finance's cards jump to their group (v0.207). <span style="color:#6B6B6B">(Preview screenshots at PC size · fake data)</span></p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:894px">
+    <div class="shot" style="width:894px;height:330px">
+      <img src="shots/11a-colorbelt-event-card-filter.png" style="left:-52.5px;top:-174px;width:960px">
+      
+    </div>
+    <figcaption><b>1. Color Belt event:</b> tap “Not paid” → the card turns blue, “Showing not paid only · Show all”, and only the students who haven't paid stay (here, the three in Little Tiger + White).</figcaption>
+  </figure>
+<figure style="width:894px">
+    <div class="shot" style="width:894px;height:289.5px">
+      <img src="shots/11b-colorbelt-private-cards-inert.png" style="left:-52.5px;top:-192px;width:960px">
+      <div class="mark" style="left:447.5px;top:2px;width:222.5px;height:78.5px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>2. Color Belt private testing:</b> the same four cards — tapping “Not paid” does nothing.</figcaption>
+  </figure>
+<figure style="width:894px">
+    <div class="shot" style="width:894px;height:69px">
+      <img src="shots/11c-camps-summary-line.png" style="left:-52.5px;top:-96px;width:960px">
+      
+    </div>
+    <figcaption><b>3. Camps:</b> one summary line instead of cards (approved); its numbers can't be tapped.</figcaption>
+  </figure>
+  <div class="note">Seen in passing (item 16, icons): “Not paid” has a clock icon in Color Belt and Star, but in Black Belt the clock means “Paying on schedule” and “Not paid” is a crossed circle.</div>
+</div>
+<div class="col after">
+  <div class="label">Proposed (option B) · and option C</div>
+  <figure style="width:894px">
+    <div class="shot" style="width:894px;height:210px">
+      <img src="shots/11d-colorbelt-private-card-filter-MOCKUP.png" style="left:-52.5px;top:-192px;width:960px">
+      <div class="mark" style="left:447.5px;top:2px;width:222.5px;height:78.5px;border-color:#3B8F2A"></div><div class="mark" style="left:0.5px;top:78.5px;width:152px;height:23px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>4. B · recommended:</b> private testing's cards work like the event's — “Not paid” → only Liam Park, with the same “Showing … · Show all” line. “Payments recorded” stays a total, as on the event page.</figcaption>
+  </figure>
+<figure style="width:894px">
+    <div class="shot" style="width:894px;height:397.5px">
+      <img src="shots/11e-camps-collect-filter-MOCKUP.png" style="left:-52.5px;top:-96px;width:960px">
+      <div class="mark" style="left:144.5px;top:39.5px;width:107px;height:27.5px;border-color:#3B8F2A"></div><div class="mark" style="left:0.5px;top:64.25px;width:155px;height:23px;border-color:#3B8F2A"></div>
+    </div>
+    <figcaption><b>5. C:</b> B, and Camps' “6 to collect” can be tapped too → only the campers who still owe.</figcaption>
+  </figure>
+  <div class="note"><b>Copies what's already there:</b> the event roster's own cards, selected look and “Showing … · Show all” line. Pictures 4–5 are drawn over the real pages; nothing in the app was changed.</div>
+</div>
+</div>
+<div class="foot"><b>Your choice — one question:</b><br><b>A · Keep as today.</b> <i>+</i> no work. <i>−</i> private testing is the one roster whose cards look like the others but can't be tapped; it breaks rule §8.<br><b>B · Recommended: private testing's cards filter like the event's (picture 4).</b> Private testings = everyone, Paid, Not paid; “Payments recorded” stays a total. Everything else stays as approved. <i>+</i> one habit — tap a number to see those rows; an exact copy of the event roster. <i>−</i> a small build for Color Belt.<br><b>C · B, plus Camps' summary numbers can be tapped (picture 5).</b> “6 to collect” → only the campers who still owe; “15 coming” → only that day's campers. <i>+</i> the desk finds who still owes during a camp in one tap. <i>−</i> reopens Camps' approved summary line (v0.715); a filtered check-in list can hide a child the desk is looking for (Find a camper still finds them).</div>
+</body></html>

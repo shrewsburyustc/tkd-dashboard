@@ -1,0 +1,49 @@
+{
+  "title": "Item 11b · Which cards Camps gets",
+  "subtitle": "<b>Item 11 decided: cards everywhere.</b> Every roster gets the row of count cards, and tapping a card filters the list. Camps is the one roster without cards, so this question is which four it gets. <b>Assumed — tell me if not:</b> Black Belt keeps its own four plan cards (Paid in full · Paying on schedule · Late · Not paid) in the same look; Finance's Daily report keeps its cards as they are (a report, not a roster). <span style=\"color:#6B6B6B\">(Preview screenshots at PC size · fake data; the April camp's numbers are its real preview records)</span>",
+  "width": 2000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        {
+          "src": "shots/11c-camps-summary-line.png",
+          "crop": [70, 128, 1192, 92],
+          "scale": 0.78,
+          "caption": "<b>1. Camps:</b> one summary line — “15 coming on Mon, Apr 19 · 6 to collect · $1,355” — that can't be tapped.",
+          "marks": [[76, 184, 330, 28]]
+        },
+        {
+          "src": "shots/11a-colorbelt-event-card-filter.png",
+          "crop": [70, 232, 1192, 108],
+          "scale": 0.78,
+          "caption": "<b>2. The card row every other roster has</b> (Color Belt shown): four cards, and tapping one filters the list."
+        }
+      ],
+      "note": "The April camp today: 19 campers, 13 paid, 6 still owe $1,355 (one of them is the possible duplicate; Leo Kim paid $335 and owes $15), $3,795 recorded, 15 coming on its first day."
+    },
+    {
+      "label": "Two ways to give Camps the cards",
+      "tone": "after",
+      "items": [
+        {
+          "src": "shots/11f-camps-cards-same-four-MOCKUP.png",
+          "crop": [70, 128, 1192, 236],
+          "scale": 0.78,
+          "caption": "<b>3. A · the same four as Color Belt and Star:</b> Campers · Paid · Not paid · Payments recorded; “15 coming on Mon, Apr 19” stays as a line above.",
+          "marks": [[76, 223, 1180, 94]]
+        },
+        {
+          "src": "shots/11g-camps-cards-own-four-MOCKUP.png",
+          "crop": [70, 128, 1192, 236],
+          "scale": 0.78,
+          "caption": "<b>4. B · recommended — Camps' own four, the same cards:</b> Campers · Coming Mon, Apr 19 · To collect · Payments recorded. Tap “Coming” → only that day's campers; “To collect” → only who still owes.",
+          "marks": [[76, 214, 1180, 94]]
+        }
+      ],
+      "note": "<b>Copies what's already there:</b> the event roster's own card row and icons, filled with the camp's numbers. “Payments recorded” stays a total, as everywhere. Pictures 3–4 are drawn over the real camp page; nothing in the app was changed."
+    }
+  ],
+  "footer": "<b>Your choice — one question:</b><br><b>A · The same four cards as Color Belt and Star (picture 3).</b> <i>+</i> exactly the same card words in every roster. <i>−</i> the camp desk's two main numbers become a plain line (“15 coming”) and a “Not paid” card that also counts Leo Kim, who paid $335 and owes $15.<br><b>B · Recommended: Camps' own four, in the same cards (picture 4).</b> Campers · Coming (that day) · To collect · Payments recorded. <i>+</i> leads with what the desk needs on a camp morning, and both can be tapped; the same look and tapping as every roster, the way Black Belt's four fit its plans. <i>−</i> the card words differ from Color Belt's and Star's."
+}
