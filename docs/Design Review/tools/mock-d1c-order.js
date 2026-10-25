@@ -4,6 +4,7 @@
 // unsaved results for good (item 7: red means gone for good). Colors are the app's own (testing.css .btn and
 // .btn-delete).
 //   window.__mockD1c = 'flip'    on an open leave warning
+//   window.__mockD1c = 'order'   the same order without the red (option C; also used for D10a's Discard box)
 //   window.__mockD1c = 'clear'   puts it back
 // It only changes inline styles of the box's own button row and buttons (never adds, moves or removes React's
 // parts). A reload also removes it.
@@ -13,7 +14,7 @@
   const undo = (window.__mockD1cUndo = window.__mockD1cUndo || []);
   while (undo.length) undo.pop()();
   if (mode === 'clear') return 'cleared';
-  if (mode !== 'flip') return "set window.__mockD1c = 'flip' or 'clear'";
+  if (mode !== 'flip' && mode !== 'order') return "set window.__mockD1c = 'flip', 'order' or 'clear'";
   const box = [...document.querySelectorAll('.dialog')].find((d) => /isn.t saved|aren.t saved/.test(d.innerText));
   if (!box) return 'open a leave warning first';
   const style = (el, css) => {
@@ -25,7 +26,7 @@
   const [leave, stay] = [...row.querySelectorAll('button')];
   style(row, 'flex-direction:row-reverse;justify-content:flex-start');
   style(stay, 'border-color:var(--color-border-control);background:var(--color-surface);color:var(--color-text)');
-  style(leave, 'border-color:var(--color-delete-text);background:var(--color-delete-text);color:var(--color-on-blue)');
+  if (mode === 'flip') style(leave, 'border-color:var(--color-delete-text);background:var(--color-delete-text);color:var(--color-on-blue)');
   stay.focus();
-  return 'flipped';
+  return mode === 'flip' ? 'flipped' : 'ordered';
 })()
