@@ -11,26 +11,41 @@
 //     the default rubric for next season." and a "Go to the default rubric" link
 //   - staff always see "View only. Ask an admin to make changes." (the cycle page draws it)
 // A save answered "locked" (an admin opened registration meanwhile) reloads into the locked view.
+// Migration 0025 (contract §14.5; Q-G1 v0.948, OI-2 = B v0.956): once grading started on the cycle
+// (its first grade, extra-points count, chosen subject or copied make-up grade), the copy is locked
+// for good — even if every grade is cleared again. The line then says "Locked — grading started
+// Jun 5, 2027. …" with the lock icon (the date from bb_cycle_grading_state's grading_started_at,
+// read with the rubric). A save / undo answered has_grades (grading started meanwhile) stops the
+// editor, says so in a toast and reloads into that locked view.
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { IconLock } from '@tabler/icons-react';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import { loadCycleRubric, saveCycleDan, undoCycleDan } from '../../../lib/blackBelt/api.js';
+import { loadGradingState } from '../../../lib/blackBelt/gradingApi.js';
 import { FRESH_COPY_SOURCE } from '../../../lib/blackBelt/rubric.js';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
 import RubricCard from '../rubric/RubricCard.jsx';
 import * as T from '../text.js';
 
-const load = (cycleId) => loadCycleRubric({ cycleId });
+// The cycle's copy plus, since 0025, when grading started (null = not locked by grading). If the
+// grading state can't be read, the rubric still shows — the database refuses a save anyway.
+async function load(cycleId) {
+  const [rubric, grading] = await Promise.all([loadCycleRubric({ cycleId }), loadGradingState({ cycleId })]);
+  if (rubric.status !== 'ok') return rubric;
+  if (grading.status === 'no_access') return grading;
+  return { ...rubric, gradingStartedAt: grading.status === 'ok' ? grading.gradingStartedAt : null };
+}
 
 // The gray line under the cycle page's tabs while the Rubric tab is open (admins and staff).
-export function CycleRubricLine({ locked, firstOpenedAt, onGoToDefaultRubric }) {
-  if (locked) {
+// gradingStartedAt (0025): set once grading started — locked for good, whatever registration says.
+export function CycleRubricLine({ locked, firstOpenedAt, gradingStartedAt = null, onGoToDefaultRubric }) {
+  if (locked || gradingStartedAt) {
     return (
       <p className="viewonly bbr-locked-line">
         {/* ti-lock = locked */}
         <IconLock size={16} aria-hidden="true" />
         <span>
-          {T.lockedSince(T.stampDate(firstOpenedAt))}{' '}
+          {gradingStartedAt ? T.lockedByGrading(T.stampDate(gradingStartedAt)) : T.lockedSince(T.stampDate(firstOpenedAt))}{' '}
           <button type="button" className="link-button bbr-go-default" onClick={onGoToDefaultRubric}>
             {T.GO_TO_DEFAULT}
           </button>
@@ -81,6 +96,16 @@ export default function CycleRubricTab({
     const data = live.data;
     const added = T.stampDate(data.createdAt ?? cycle.createdAt);
     const fromDefault = data.rubric.source === FRESH_COPY_SOURCE;
+    const lockedByGrading = Boolean(data.gradingStartedAt);
+    // 0025: a has_grades answer (grading started meanwhile) — the card stops editing and reloads
+    // (it is passed on as not_found, which RubricCard answers that way without its own banner) and
+    // the toast says why.
+    const gradingGuard = (call) => async (args) => {
+      const result = await call(args);
+      if (result.status !== 'has_grades') return result;
+      showToast(T.RUBRIC_LOCKED_GRADING_NOW, { icon: false });
+      return { status: 'not_found' };
+    };
     body = (
       <RubricCard
         cardKey={cycle.id}
@@ -91,12 +116,12 @@ export default function CycleRubricTab({
         where={T.whereCycle(cycle.name)}
         phoneWhere={cycle.name}
         rubric={data.rubric}
-        canEdit={isAdmin && !data.locked}
+        canEdit={isAdmin && !data.locked && !lockedByGrading}
         isAdmin={isAdmin}
         isPhone={isPhone}
         screenLocked={screenLocked}
-        saveDan={({ dan, expectedRev, sheet }) => saveCycleDan({ cycleId: cycle.id, dan, expectedRev, sheet })}
-        undoDan={({ dan, expectedRev }) => undoCycleDan({ cycleId: cycle.id, dan, expectedRev })}
+        saveDan={gradingGuard(({ dan, expectedRev, sheet }) => saveCycleDan({ cycleId: cycle.id, dan, expectedRev, sheet }))}
+        undoDan={gradingGuard(({ dan, expectedRev }) => undoCycleDan({ cycleId: cycle.id, dan, expectedRev }))}
         reload={() => liveRef.current.reload()}
         onLocked={() => {
           liveRef.current.reload();

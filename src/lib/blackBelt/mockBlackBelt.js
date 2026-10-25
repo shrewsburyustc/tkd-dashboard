@@ -54,6 +54,17 @@
 // bb_add_cycle copies the default rubric (always closed), bb_set_registration's first opening is
 // admin-only and remembers what it replaced for 15 seconds, and bb_public_cycle shows the
 // rubric's public view — or null while the cycle has never been opened.
+// Grading and results (migration 0025, contract 0025 §13.3) live in mockGrading.js: its new tables,
+// its sixteen staff functions and the helpers below call it (createGradingPart, built at the end
+// of createBlackBeltBackend with this file's own helpers). This file's 0016 / 0024 functions are
+// changed as 0025 replaces them: the roster lists make-ups (no plan) with four new keys and so
+// does the detail; Edit details refuses a Dan change while the old Dan has grades (has_grades +
+// the counts; bb_update_candidate_clear does the confirmed change); Change plan refuses a make-up;
+// Restore refuses a second active make-up (already_added); Delete permanently and Delete cycle
+// refuse real grades (has_grades); Edit cycle keeps past graded days and, once grading started,
+// the first day (S2); a cycle's rubric save / undo answers has_grades once grading started (for
+// good); a make-up never gets a payment of any kind; the purge keeps the age (age_kept) and a
+// candidate's purge day is the latest of their make-up chain.
 // An older preview store (schema 'bb-1', v1 requirements sheets) is upgraded when it is read:
 // the default rubric is added and every v1 sheet is converted with rubricFromV1, like the
 // migration's bb_rubric_upgrade step.
@@ -73,6 +84,9 @@ import {
   intOk, REV_MAX, RUBRIC_UNDO_WINDOW_MS, CREDITS_MAX,
 } from './rubric.js';
 import { DEFAULT_RUBRIC } from './rubricDefault.js';
+import {
+  createGradingPart, GRADING_RPC_ARGS, GRADING_ADMIN_ONLY, GRADING_WRITE_RPC_NAMES, GRADING_RESTRICTED, GRADING_GRANTED, GRADING_HIDDEN,
+} from './mockGrading.js';
 
 // Its own browser-storage key, apart from Color Belt's 'tkd.preview.testing' and Star's.
 export const BB_STORE_KEY = 'tkd.preview.blackBelt';
@@ -94,7 +108,8 @@ const FORM_ACTOR = 'Family form';
 // ----- The tables the app may read, and their columns (contract 0016 §4.1, §4.2) -----
 // GRANTED = readable by a signed-in staff member; HIDDEN = exists but never granted (asking for
 // it, or for '*', is "permission denied", like the real column grants).
-const GRANTED = {
+// (0025's tables come from mockGrading.js: only bb_result_texts has readable columns.)
+const GRANTED = /* @__PURE__ */ Object.assign({
   bb_settings: ['id', 'keep_years_after_last_day', 'keep_years_after_18', 'version', 'created_at', 'updated_at', 'created_by_name', 'updated_by_name'],
   bb_waiver_versions: ['id', 'version_name', 'body', 'is_placeholder', 'superseded_at', 'created_at', 'created_by_name'],
   bb_starting_point: [],
@@ -117,8 +132,8 @@ const GRANTED = {
   // 0024 §8: the default rubric (staff and admins read it); the undo slots are never granted
   bb_default_rubric: ['id', 'sheet', 'version', 'updated_at', 'updated_by_name'],
   bb_rubric_undo: [],
-};
-const HIDDEN = {
+}, GRADING_GRANTED);
+const HIDDEN = /* @__PURE__ */ Object.assign({
   bb_settings: ['singleton', 'created_by', 'updated_by'],
   bb_waiver_versions: ['created_by'],
   bb_starting_point: ['id', 'singleton', 'schedule', 'requirements', 'created_at', 'created_by_name'],
@@ -129,14 +144,16 @@ const HIDDEN = {
   bb_cycle_plan_amounts: [],
   bb_cycle_kukkiwon_fees: [],
   bb_cycle_plan_payments: ['created_at', 'created_by', 'updated_by', 'created_by_name'],
-  bb_candidates: ['date_of_birth', 'email_for_results', 'withdrawn_by', 'created_by', 'updated_by'],
+  // (0025: the make-up columns are never granted either)
+  bb_candidates: ['date_of_birth', 'email_for_results', 'withdrawn_by', 'created_by', 'updated_by', 'makeup_of_candidate_id', 'makeup_of_cycle_name',
+    'age_kept'],
   bb_candidate_waivers: ['id', 'candidate_id', 'waiver_version_id', 'how', 'submission_id', 'acknowledged', 'signed_as_minor',
     'signer_name', 'signature', 'ticked_by_name', 'signed_at', 'removed_at', 'version', 'created_at', 'updated_at', 'created_by',
     'updated_by', 'created_by_name', 'updated_by_name'],
   bb_payments: ['recorded_by'],
   bb_default_rubric: ['singleton', 'created_at', 'created_by', 'updated_by', 'created_by_name'],
   bb_rubric_undo: ['id', 'kind', 'cycle_id', 'dan', 'previous', 'after_version', 'saved_by', 'saved_at'],
-};
+}, GRADING_HIDDEN);
 // Every Black Belt table (mockClient routes supabase.from(<one of these>) here).
 // The /* @__PURE__ */ marks tell the bundler (Vite) "this call has no side effects", so when
 // nothing uses the result — the live build, where mockClient.js is never used — it drops the call
@@ -147,7 +164,8 @@ const STORE_LISTS = /* @__PURE__ */ BB_TABLES.concat(['public_attempts', 'bb_reg
 
 // ----- The staff functions' argument lists (name, type) — exactly 0016's names -----
 const ID = (name) => [name, 'uuid'];
-const RPC_ARGS = {
+// (0025's functions come from mockGrading.js, contract §17.)
+const RPC_ARGS = /* @__PURE__ */ Object.assign({
   bb_cycles_list: [],
   bb_cycle_defaults: [],
   bb_add_cycle: [['p_payload', 'jsonb'], ID('p_source_cycle_id')],
@@ -184,29 +202,30 @@ const RPC_ARGS = {
   bb_save_cycle_dan: [ID('p_cycle_id'), ['p_dan', 'int'], ['p_expected_rev', 'int'], ['p_sheet', 'jsonb']],
   bb_undo_cycle_dan: [ID('p_cycle_id'), ['p_dan', 'int'], ['p_expected_rev', 'int']],
   bb_undo_first_open: [ID('p_cycle_id'), ['p_expected_version', 'int']],
-};
+}, GRADING_RPC_ARGS);
 // A = admins only (checked right after has_data_access). bb_cycles_list and bb_set_registration
 // are S (staff and admins); set_registration's admin-only case is inside it. Of B2's: withdraw,
 // delete, edit payment, refund, mark returned and view signature are A; undo (own row < 10 s),
 // restore (own "keep one" < 10 s), Edit details' Dan and Change plan after a payment have their
 // admin case inside the function.
-const ADMIN_ONLY = /* @__PURE__ */ new Set(['bb_cycle_defaults', 'bb_add_cycle', 'bb_update_cycle', 'bb_delete_cycle', 'bb_save_waiver', 'bb_set_keep_years',
+const ADMIN_ONLY = /* @__PURE__ */ new Set(/* @__PURE__ */ ['bb_cycle_defaults', 'bb_add_cycle', 'bb_update_cycle', 'bb_delete_cycle', 'bb_save_waiver', 'bb_set_keep_years',
   'bb_withdraw_candidate', 'bb_delete_candidate', 'bb_edit_payment', 'bb_record_refund', 'bb_mark_check_returned', 'bb_view_signature',
-  'bb_save_default_dan', 'bb_undo_default_dan', 'bb_save_cycle_dan', 'bb_undo_cycle_dan', 'bb_undo_first_open']);
+  'bb_save_default_dan', 'bb_undo_default_dan', 'bb_save_cycle_dan', 'bb_undo_cycle_dan', 'bb_undo_first_open'].concat(GRADING_ADMIN_ONLY));
 // Functions that exist but that a signed-in staff member may NOT call (only bb_registrar, or
 // nobody): the app gets "permission denied", like the real database.
-const RESTRICTED = ['bb_public_cycle', 'bb_public_register', 'bb_public_register_core', 'bb_cycle_state', 'bb_purge_due',
+const RESTRICTED = /* @__PURE__ */ ['bb_public_cycle', 'bb_public_register', 'bb_public_register_core', 'bb_cycle_state', 'bb_purge_due',
   'bb_candidate_items', 'bb_candidate_money', 'bb_public_answer', 'bb_waiver_version_ok', 'bb_age_on', 'bb_purge_due_on', 'bb_purge_is_due',
   'bb_lock_candidate', 'bb_lock_payment', 'bb_find_duplicate', 'bb_recheck_duplicate', 'bb_recheck_pointing_at',
   // 0024's internal helpers and trigger functions (§15: executable by nobody)
   'bb_rubric_num_ok', 'bb_rubric_int_ok', 'bb_rubric_letters', 'bb_rubric_brackets_problems', 'bb_rubric_dan_problems',
   'bb_rubric_is_valid', 'bb_rubric_part_max', 'bb_rubric_most_points', 'bb_rubric_from_v1', 'bb_rubric_fresh_copy',
-  'bb_rubric_public', 'bb_rubric_put_dan', 'bb_default_rubric_guard', 'bb_rubric_undo_guard'];
+  'bb_rubric_public', 'bb_rubric_put_dan', 'bb_default_rubric_guard', 'bb_rubric_undo_guard'].concat(GRADING_RESTRICTED);
 // The writes (failNextSave fails the next one of these).
-export const BB_WRITE_RPC_NAMES = ['bb_add_cycle', 'bb_update_cycle', 'bb_set_registration', 'bb_delete_cycle', 'bb_save_waiver', 'bb_set_keep_years',
+export const BB_WRITE_RPC_NAMES = /* @__PURE__ */ ['bb_add_cycle', 'bb_update_cycle', 'bb_set_registration', 'bb_delete_cycle', 'bb_save_waiver', 'bb_set_keep_years',
   'bb_add_candidate', 'bb_update_candidate', 'bb_change_plan', 'bb_resolve_duplicate', 'bb_withdraw_candidate', 'bb_restore_candidate',
   'bb_delete_candidate', 'bb_record_paper_waiver', 'bb_record_payment', 'bb_undo_payment', 'bb_edit_payment', 'bb_record_refund',
-  'bb_mark_check_returned', 'bb_save_default_dan', 'bb_undo_default_dan', 'bb_save_cycle_dan', 'bb_undo_cycle_dan', 'bb_undo_first_open'];
+  'bb_mark_check_returned', 'bb_save_default_dan', 'bb_undo_default_dan', 'bb_save_cycle_dan', 'bb_undo_cycle_dan', 'bb_undo_first_open',
+].concat(GRADING_WRITE_RPC_NAMES);
 // "volatile" functions: they write (bb_cycles_list and bb_cycle_roster run the purge), so a
 // read-only GET call is refused, as PostgREST does.
 const VOLATILE = /* @__PURE__ */ new Set(/* @__PURE__ */ ['bb_cycles_list', 'bb_cycle_roster'].concat(BB_WRITE_RPC_NAMES));
@@ -255,6 +274,12 @@ function toDbType(value, type) {
       if (value === 'true' || value === 't') return true;
       if (value === 'false' || value === 'f') return false;
       throw new DbError('22P02', `invalid input syntax for type boolean: "${value}"`);
+    case 'numeric': { // a number (0025's measured values); a numeric text is read like PostgreSQL does
+      let n = value;
+      if (typeof value === 'string' && /^\s*[+-]?(\d+(\.\d*)?|\.\d+)\s*$/.test(value)) n = Number(value);
+      if (typeof n !== 'number' || !Number.isFinite(n)) throw new DbError('22P02', `invalid input syntax for type numeric: "${value}"`);
+      return n;
+    }
     case 'jsonb':
       return JSON.parse(JSON.stringify(value)); // any JSON value; the function checks it itself
     case 'date': // 'YYYY-MM-DD' (a real calendar date)
@@ -372,6 +397,9 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       bb_cycles: [], bb_cycle_days: [], bb_cycle_day_parts: [], bb_cycle_plans: [], bb_cycle_plan_amounts: [],
       bb_cycle_kukkiwon_fees: [], bb_cycle_plan_payments: [], bb_candidates: [], bb_candidate_waivers: [], bb_payments: [],
       bb_default_rubric: [defaultRubricRow(at)], bb_rubric_undo: [], bb_register_log: [],
+      // 0025: the grading tables, and the three result texts as the migration seeds them
+      bb_grades: [], bb_extra_counts: [], bb_makeup_subjects: [], bb_result_sends: [], bb_downloads: [], bb_cycle_grading_started: [],
+      bb_result_texts: grading.seedTexts(at),
       public_attempts: [],
       ref_counter: REFERENCE_START,
     };
@@ -395,6 +423,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       store.bb_register_log = (Array.isArray(store.bb_candidates) ? store.bb_candidates : [])
         .filter((c) => c?.source === 'form').map((c) => ({ cycle_id: c.cycle_id, at: c.registered_at }));
     }
+    grading.upgradeStore(store); // 0025's lists and columns, for a store saved before 0025
     for (const c of Array.isArray(store.bb_cycles) ? store.bb_cycles : []) {
       if (c?.requirements?.schema_version === 1) {
         try {
@@ -487,6 +516,9 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
   // While either keep-years setting is empty: nothing. Otherwise every not-yet-purged candidate
   // whose purge day is today or earlier loses DOB and email (personal_removed_at set), and their
   // drawn waivers lose the signature and signer's name (removed_at set). No version bump.
+  // 0025 (§6.2): the purge day is the latest over the candidate's make-up chain (mockGrading's
+  // purgeDueChain), and the age on the first testing day is kept (age_kept, once) as the DOB goes,
+  // so the result stays exact. Grades, counts, make-up subjects and sends stay.
   function purge(db) {
     const s = settings(db);
     if (s.keep_years_after_last_day === null || s.keep_years_after_18 === null) return 0;
@@ -495,12 +527,9 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
     let n = 0;
     for (const c of [...db.bb_candidates].sort(byId)) {
       if (c.personal_removed_at !== null) continue;
-      const days = daysOf(db, c.cycle_id);
-      const due = purgeDueOn({
-        dateOfBirth: c.date_of_birth, lastDay: days.length ? days[days.length - 1].day_date : null,
-        afterLastDay: s.keep_years_after_last_day, after18: s.keep_years_after_18,
-      });
+      const due = grading.purgeDueChain(db, c);
       if (due === null || due > onDay) continue;
+      if (c.age_kept === null || c.age_kept === undefined) c.age_kept = grading.ageToKeep(db, c);
       c.date_of_birth = null;
       c.email_for_results = null;
       c.personal_removed_at = at;
@@ -703,6 +732,8 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
     db.bb_cycle_kukkiwon_fees = db.bb_cycle_kukkiwon_fees.filter((f) => f.cycle_id !== cycleId);
     db.bb_candidate_waivers = db.bb_candidate_waivers.filter((w) => !candIds.has(w.candidate_id));
     for (const c of db.bb_candidates) if (c.duplicate_of && candIds.has(c.duplicate_of)) c.duplicate_of = null; // "set null"
+    grading.cascadeCandidates(db, candIds); // 0025: grading rows and sends go; make-ups elsewhere lose the link
+    grading.cascadeCycle(db, cycleId); // …and the cycle's "grading started" row (the only way it goes)
     db.bb_candidates = db.bb_candidates.filter((c) => c.cycle_id !== cycleId);
     db.bb_rubric_undo = db.bb_rubric_undo.filter((s) => s.cycle_id !== cycleId); // 0024: the cycle's undo slots
     db.bb_register_log = db.bb_register_log.filter((x) => x.cycle_id !== cycleId);
@@ -914,6 +945,8 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       const missing = missingParts(spec.days);
       if (missing.length > 0) return { answer: { status: 'part_without_day', parts: missing } };
       if (nameTaken(db, spec.name, cycle.id)) return { answer: st('duplicate_name') };
+      // 0025 (S2): the day guards refuse the write → has_grades
+      if (grading.editCycleRefused(db, cycle, spec.days)) return { answer: st('has_grades') };
 
       const actor = ctx.actorName;
       const cycleChanged = updateRow(cycle, { name: spec.name, application_due: spec.app, submissions_due: spec.sub, auto_close: spec.auto }, actor);
@@ -1048,6 +1081,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       const cycle = findCycle(db, a.p_cycle_id);
       if (!cycle) return { answer: st('not_found') };
       if (cycle.first_opened_at !== null) return { answer: { status: 'locked', first_opened_at: cycle.first_opened_at } };
+      if (grading.gradingStartedAt(db, cycle.id) !== null) return { answer: { status: 'has_grades', grading_started_at: grading.gradingStartedAt(db, cycle.id) } };
       return saveDan(db, ctx, {
         kind: 'cycle_dan', cycleId: cycle.id, doc: cycle.requirements, dan: a.p_dan, expectedRev: a.p_expected_rev, sheet: input.sheet,
         store: (doc) => { cycle.requirements = doc; },
@@ -1060,6 +1094,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       const cycle = findCycle(db, a.p_cycle_id);
       if (!cycle) return { answer: st('not_found') };
       if (cycle.first_opened_at !== null) return { answer: { status: 'locked', first_opened_at: cycle.first_opened_at } };
+      if (grading.gradingStartedAt(db, cycle.id) !== null) return { answer: { status: 'has_grades', grading_started_at: grading.gradingStartedAt(db, cycle.id) } };
       return undoDan(db, ctx, {
         kind: 'cycle_dan', cycleId: cycle.id, doc: cycle.requirements, dan: a.p_dan, expectedRev: a.p_expected_rev,
         store: (doc) => { cycle.requirements = doc; },
@@ -1077,6 +1112,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       if (db.bb_payments.some((p) => p.cycle_id === cycle.id)) return { answer: st('has_payments') };
       const ids = new Set(candidates.map((c) => c.id));
       if (db.bb_candidate_waivers.some((w) => ids.has(w.candidate_id) && w.how === 'drawn')) return { answer: st('has_waivers') };
+      if (candidates.some((c) => grading.candidateHasGrades(db, c.id))) return { answer: st('has_grades') }; // 0025, Q-G3
       cascadeDeleteCycle(db, cycle.id);
       return { answer: st('ok'), save: true };
     },
@@ -1113,8 +1149,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       if (n1 !== null) {
         for (const c of db.bb_candidates) {
           if (c.personal_removed_at !== null) continue;
-          const days = daysOf(db, c.cycle_id);
-          const due = purgeDueOn({ dateOfBirth: c.date_of_birth, lastDay: days.length ? days[days.length - 1].day_date : null, afterLastDay: n1, after18: n2 });
+          const due = grading.purgeDueChain(db, c, n1, n2); // 0025: the latest of the make-up chain
           if (due !== null && due <= onDay) count += 1;
         }
       }
@@ -1134,15 +1169,16 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       if (!cycle) return { answer: st('not_found') };
       const onDay = today();
       const rows = candidatesOf(db, cycle.id)
-        .filter((c) => db.bb_cycle_plans.some((p) => p.id === c.cycle_plan_id)) // the SQL joins the plan
         .sort(rosterOrder)
         .map((c) => ({
           id: c.id, first_name: c.first_name, last_name: c.last_name, location_code: c.location_code, dan: c.dan,
-          plan_id: c.cycle_plan_id, plan_name: db.bb_cycle_plans.find((p) => p.id === c.cycle_plan_id).name, kukkiwon: c.kukkiwon,
+          // 0025: a LEFT join — a make-up row has no plan (plan_id / plan_name null)
+          plan_id: c.cycle_plan_id, plan_name: db.bb_cycle_plans.find((p) => p.id === c.cycle_plan_id)?.name ?? null, kukkiwon: c.kukkiwon,
           source: c.source, reference: c.reference, registered_at: c.registered_at, status: c.status,
           withdrawn_reason: c.withdrawn_reason, duplicate_state: c.duplicate_state, duplicate_of: c.duplicate_of, version: c.version,
           has_payment_rows: db.bb_payments.some((p) => p.candidate_id === c.id),
           money: moneyOf(db, c, onDay, false),
+          ...grading.candidateExtras(db, c), // is_makeup, makeup_of_cycle_name, retest_names, has_grades
         }));
       const purged = purge(db); // after the rows are built, as the SQL
       return { answer: { status: 'ok', state: stateOf(db, cycle, onDay), rows }, save: purged > 0 };
@@ -1171,7 +1207,9 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
         duplicate_of: c.duplicate_of, version: c.version, created_at: c.created_at, updated_at: c.updated_at,
         created_by_name: c.created_by_name, updated_by_name: c.updated_by_name,
         age_on_first_day: age, under_18_on_first_day: age === null ? null : age < 18,
-        plan: { name: plan?.name ?? null, payments_count: plan?.payments_count ?? null },
+        // 0025: a make-up row has no plan (null); the earlier cycle's NAME only — never its row id or a kept age
+        plan: c.source === 'makeup' ? null : { name: plan?.name ?? null, payments_count: plan?.payments_count ?? null },
+        ...grading.candidateExtras(db, c),
       };
       const waiver = w === null ? null : {
         how: w.how,
@@ -1266,7 +1304,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
         dan: a.p_dan, cycle_plan_id: a.p_cycle_plan_id, kukkiwon: a.p_kukkiwon, kukkiwon_added_on: a.p_kukkiwon ? onDay : null,
         source: 'desk', reference: `BB-${db.ref_counter}`, registered_at: at, status: 'active', withdrawn_reason: null,
         withdrawn_at: null, withdrawn_by_name: null, withdrawn_by: null, duplicate_state: dup ? 'possible' : 'none', duplicate_of: dup,
-        ...house(ctx.actorName, at),
+        makeup_of_candidate_id: null, makeup_of_cycle_name: null, age_kept: null, ...house(ctx.actorName, at),
       };
       db.ref_counter += 1;
       db.bb_candidates.push(candidate);
@@ -1284,6 +1322,23 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
     // 15h. Edit details (S; a Dan change once there is a payment: A). DOB and email are both
     // required — or both stay empty after the purge. version + 1 on purpose when anything changed.
     bb_update_candidate(db, a, ctx) {
+      // 0025 (OI-1): 0016's checks and write (updateCandidate016), then 0025's Dan-change rules
+      return grading.updateCandidateCore(db, a, ctx, updateCandidate016, null);
+    },
+
+    // 0025 §7.1: the confirmed Dan change — the same checks, plus the three counts the dialog showed;
+    // the old Dan's real grading rows are cleared in the same step.
+    bb_update_candidate_clear(db, a, ctx) {
+      const n = [a.p_expected_grade_count, a.p_expected_count_count, a.p_expected_chosen_count];
+      if (n.some((x) => x === null || x < 0)) return { answer: st('invalid') }; // step 3 (review S9)
+      return grading.updateCandidateCore(db, a, ctx, updateCandidate016, { grades: n[0], counts: n[1], chosen: n[2] });
+    },
+  };
+
+  // 15h's checks and write (0016), shared by bb_update_candidate and bb_update_candidate_clear
+  // (contract 0025 OI-1). → { answer } (a refusal) or { c, apply } — apply() writes and answers.
+  function updateCandidate016(db, a, ctx) {
+    {
       const onDay = today();
       const email = a.p_email === null ? null : trimSpaces(a.p_email);
       if (a.p_candidate_id === null || a.p_expected_version === null || !nameOk(a.p_first) || !nameOk(a.p_last)
@@ -1301,18 +1356,24 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
         first_name: normalizeName(a.p_first), last_name: normalizeName(a.p_last), date_of_birth: a.p_date_of_birth,
         email_for_results: email, location_code: a.p_location_code, dan: a.p_dan,
       };
-      const changed = Object.keys(changes).some((col) => changes[col] !== c[col]);
-      if (changed) {
-        const before = { first: c.first_name, last: c.last_name, dob: c.date_of_birth };
-        updateRow(c, changes, ctx.actorName, true);
-        if (changes.first_name !== before.first || changes.last_name !== before.last || changes.date_of_birth !== before.dob) {
-          recheckDuplicate(db, c.id);
-          if (c.duplicate_of) recheckDuplicate(db, c.duplicate_of);
-          recheckPointingAt(db, c.id);
+      const apply = () => {
+        const changed = Object.keys(changes).some((col) => changes[col] !== c[col]);
+        if (changed) {
+          const before = { first: c.first_name, last: c.last_name, dob: c.date_of_birth };
+          updateRow(c, changes, ctx.actorName, true);
+          if (changes.first_name !== before.first || changes.last_name !== before.last || changes.date_of_birth !== before.dob) {
+            recheckDuplicate(db, c.id);
+            if (c.duplicate_of) recheckDuplicate(db, c.duplicate_of);
+            recheckPointingAt(db, c.id);
+          }
         }
-      }
-      return { answer: { status: 'ok', version: c.version, needs_parent_signature: needsParentSignature(db, c) }, save: changed };
-    },
+        return { answer: { status: 'ok', version: c.version, needs_parent_signature: needsParentSignature(db, c) }, save: changed };
+      };
+      return { c, apply };
+    }
+  }
+
+  const handlers2 = {
 
     // 15i. Change plan or Kukkiwon (S before a payment; A after). Same values write nothing.
     bb_change_plan(db, a, ctx) {
@@ -1321,6 +1382,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       }
       const c = findCandidate(db, a.p_candidate_id);
       if (!c) return { answer: st('not_found') };
+      if (c.source === 'makeup') return { answer: st('invalid') }; // 0025: a make-up has no plan and no fee, ever
       if (c.version !== a.p_expected_version) return { answer: st('stale') };
       if (c.status === 'withdrawn') return { answer: st('withdrawn') };
       if (c.personal_removed_at !== null) return { answer: st('invalid') };
@@ -1395,6 +1457,8 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
         && Date.parse(c.withdrawn_at) > clock() - UNDO_WINDOW_MS;
       if (!ctx.isAdmin && !ownKeepOne) return { answer: st('not_allowed') };
       if (c.status !== 'withdrawn') return { answer: st('stale') };
+      // 0025: one active make-up per earlier candidate, anywhere
+      if (c.makeup_of_candidate_id && grading.activeMakeupsOf(db, c.makeup_of_candidate_id).some((x) => x.id !== c.id)) return { answer: st('already_added') };
       updateRow(c, { status: 'active', withdrawn_reason: null, withdrawn_at: null, withdrawn_by_name: null, withdrawn_by: null }, ctx.actorName);
       recheckDuplicate(db, c.id);
       if (c.duplicate_of) recheckDuplicate(db, c.duplicate_of);
@@ -1410,7 +1474,9 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       if (!c) return { answer: st('not_found') };
       if (c.version !== a.p_expected_version) return { answer: st('stale') };
       if (db.bb_payments.some((p) => p.candidate_id === c.id)) return { answer: st('has_payments') };
+      if (grading.candidateHasGrades(db, c.id)) return { answer: st('has_grades') }; // 0025, Q-G3 (kept / retest rows don't count)
       const pointing = db.bb_candidates.filter((x) => x.duplicate_of === c.id).sort(byId);
+      grading.cascadeCandidates(db, new Set([c.id])); // its kept / retest rows and sends; a make-up of it loses the link
       db.bb_candidate_waivers = db.bb_candidate_waivers.filter((w) => w.candidate_id !== c.id); // "on delete cascade"
       db.bb_candidates = db.bb_candidates.filter((x) => x.id !== c.id);
       for (const r of pointing) {
@@ -1708,14 +1774,14 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
     for (const c of db.bb_candidates.filter((x) => x.duplicate_of === id).sort(byId)) recheckDuplicate(db, c.id);
   }
   // 10f. Has the candidate's purge day come (today or earlier)? false when there is none.
+  // (0025: the latest day of the make-up chain.)
   function purgeIsDue(db, c, onDay = today()) {
-    const s = settings(db);
+    return grading.purgeIsDue(db, c, onDay);
+  }
+  // 0016's own date of ONE row (bb_purge_due_on before 0025), with the given keep-years numbers.
+  function purgeDueOnOwn(db, c, afterLastDay, after18) {
     const days = daysOf(db, c.cycle_id);
-    const due = purgeDueOn({
-      dateOfBirth: c.date_of_birth, lastDay: days.length ? days[days.length - 1].day_date : null,
-      afterLastDay: s.keep_years_after_last_day, after18: s.keep_years_after_18,
-    });
-    return due !== null && due <= onDay;
+    return purgeDueOn({ dateOfBirth: c.date_of_birth, lastDay: days.length ? days[days.length - 1].day_date : null, afterLastDay, after18 });
   }
   // The parent-signature warning (15h / 15n / 16d): under 18 on the cycle's first testing day,
   // and the newest waiver was signed as an adult. dob = the value to use (the detail masks it).
@@ -1762,6 +1828,8 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
   function insertPayment(db, row) {
     const refuse = (rule) => { throw new RuleError('invalid', rule); };
     const c = findCandidate(db, row.candidate_id);
+    // --- 0025's bb_payments_makeup_guard: money for a make-up row is never right (any kind) ---
+    if (c && c.source === 'makeup') refuse('bb_payments_makeup');
     // --- the guard (11l) ---
     if (!c || c.cycle_id !== row.cycle_id) refuse('bb_payments_cycle_check');
     if (Array.isArray(row.for_items) && new Set(row.for_items).size !== row.for_items.length) refuse('bb_payments_for_items_check');
@@ -1899,7 +1967,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       dan: input.dan, cycle_plan_id: plan.id, kukkiwon: input.kukkiwon, kukkiwon_added_on: input.kukkiwon ? onDay : null,
       source: 'form', reference: `BB-${db.ref_counter}`, registered_at: at, status: 'active', withdrawn_reason: null,
       withdrawn_at: null, withdrawn_by_name: null, withdrawn_by: null, duplicate_state: dup ? 'possible' : 'none', duplicate_of: dup,
-      ...house(FORM_ACTOR, at),
+      makeup_of_candidate_id: null, makeup_of_cycle_name: null, age_kept: null, ...house(FORM_ACTOR, at),
     };
     db.ref_counter += 1;
     db.bb_candidates.push(candidate);
@@ -2036,7 +2104,8 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
         store: (doc) => updateRow(row, { sheet: doc }, otherAdmin.actorName),
       });
     }
-    for (const cycle of db.bb_cycles.filter((c) => c.first_opened_at === null)) {
+    // (0025: a cycle whose grading started is locked for good, so it isn't edited)
+    for (const cycle of db.bb_cycles.filter((c) => c.first_opened_at === null && grading.gradingStartedAt(db, c.id) === null)) {
       const sheet = otherAdminDanEdit(cycle.requirements.dans[0]);
       if (!sheet) continue;
       saveDan(db, otherAdmin, {
@@ -2044,6 +2113,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
         store: (doc) => { cycle.requirements = doc; },
       });
     }
+    grading.otherAdminGradeEdit(db); // 0025: "Sam P." also changes one grade (the 15-second refresh shows it)
     const current = currentWaiver(db);
     const year = today().slice(0, 4);
     current.superseded_at = at;
@@ -2165,7 +2235,8 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
         id: newId(), cycle_id: spring.id, first_name: first, last_name: last, date_of_birth: dob, email_for_results: email,
         personal_removed_at: null, location_code: school, dan, cycle_plan_id: planId(plan), kukkiwon, kukkiwon_added_on: kukkiwon ? on : null,
         source: 'form', reference: `BB-${db.ref_counter}`, registered_at: at, status: 'active', withdrawn_reason: null, withdrawn_at: null,
-        withdrawn_by_name: null, withdrawn_by: null, duplicate_state: 'none', duplicate_of: null, ...house(FORM_ACTOR, at),
+        withdrawn_by_name: null, withdrawn_by: null, duplicate_state: 'none', duplicate_of: null, makeup_of_candidate_id: null,
+        makeup_of_cycle_name: null, age_kept: null, ...house(FORM_ACTOR, at),
       };
       db.ref_counter += 1;
       db.bb_candidates.push(c);
@@ -2187,8 +2258,11 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
   // p: { first, last, dob, email, school, dan, plan, kukkiwon, on (registered), source ('form' |
   //      'desk'), signer (drawn waivers), signedAsMinor (only to force the "signed as an adult"
   //      case), payments: [[date, method, cents, items, note?]], withdrawn: { on, by } }
+  //      0025: cycle (another sample cycle than Spring 2027, e.g. Fall 2027)
   function addSampleCandidate(base, p) {
-    const { db, spring, t, waiverId, planId } = base;
+    const { db, t, waiverId } = base;
+    const spring = p.cycle ?? base.spring; // (the cycle this row goes on)
+    const planId = (name) => db.bb_cycle_plans.find((x) => x.cycle_id === spring.id && x.name === name).id;
     const at = t(p.on, '19:15');
     const dup = findDuplicate(db, spring.id, null, p.first, p.last, p.dob);
     const c = {
@@ -2196,7 +2270,8 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       personal_removed_at: null, location_code: p.school, dan: p.dan, cycle_plan_id: planId(p.plan), kukkiwon: p.kukkiwon,
       kukkiwon_added_on: p.kukkiwon ? p.on : null, source: p.source ?? 'form', reference: `BB-${db.ref_counter}`, registered_at: at,
       status: 'active', withdrawn_reason: null, withdrawn_at: null, withdrawn_by_name: null, withdrawn_by: null,
-      duplicate_state: dup ? 'possible' : 'none', duplicate_of: dup, ...house(p.source === 'desk' ? 'Staff' : FORM_ACTOR, at),
+      duplicate_state: dup ? 'possible' : 'none', duplicate_of: dup, makeup_of_candidate_id: null, makeup_of_cycle_name: null, age_kept: null,
+      ...house(p.source === 'desk' ? 'Staff' : FORM_ACTOR, at),
     };
     db.ref_counter += 1;
     db.bb_candidates.push(c);
@@ -2291,13 +2366,13 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
   // database function can change a payment row. → { kind, amountCents } or null (no rows).
   // 0024: it also makes the newest rubric undo slot (a Dan save or a first opening) 16 seconds
   // old, so that toast's Undo answers stale ("too late").
+  // 0025: it also makes the newest Mark as sent 11 seconds old, so a staff Undo of it answers not_allowed.
   function expireUndo() {
     const db = read();
     const slot = [...db.bb_rubric_undo].sort((a, b) => cmp(b.saved_at, a.saved_at) || -byId(a, b))[0];
-    if (slot) {
-      slot.saved_at = stamp(clock() - 16 * 1000);
-      write(db);
-    }
+    if (slot) slot.saved_at = stamp(clock() - 16 * 1000);
+    const sendMoved = grading.expireNewestSend(db);
+    if (slot || sendMoved) write(db);
     const newest = db.bb_payments.filter((p) => p.kind !== 'reversal').sort((a, b) => cmp(b.recorded_at, a.recorded_at) || -byId(a, b))[0];
     if (!newest) return null;
     const at = newest.recorded_at;
@@ -2337,8 +2412,37 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
     return { name: `${copy.first_name} ${copy.last_name}`, reference: copy.reference };
   }
 
+  // 0025: the Grading and Results mockups' shared cast (docs/Testing/Black Belt Testing/
+  // TKD-BlackBelt-Mockup-Cast.json — passed in, so this file reads no files): Spring 2027 graded as
+  // of Wed, Jun 9, 2027, and Fall 2027 with Mia Chen's make-up (contract §13.3). Made-up people only.
+  // The rows' DOBs give the cast's ages on Apr 3, 2027; payments as the Candidates sample.
+  const GRADING_PEOPLE = {
+    'Lucas Ferreira': { dob: '2015-09-12', email: 'ferreira.family@example.com', plan: '3 payments', kukkiwon: false, on: '2027-03-21', signer: 'Ana Ferreira',
+      payments: [['2027-03-27', 'card', 29000, ['p1']], ['2027-04-24', 'card', 29000, ['p2']]] },
+    'Chloe Bennett': { dob: '2015-05-20', email: 'bennett.family@example.com', plan: '3 payments', kukkiwon: false, on: '2027-09-12', signer: 'Kate Bennett' },
+    'Marcus Hall': { dob: '1986-01-30', email: 'marcus.hall@example.com', plan: 'In full', kukkiwon: false, on: '2027-09-15' },
+  };
+  function loadGradingSample(cast) {
+    if (!isObj(cast) || !Array.isArray(cast.candidates)) throw new Error('loadGradingSample: no cast');
+    const base = sampleBase();
+    const people = { ...GRADING_PEOPLE };
+    for (const p of [...ROSTER_PEOPLE, ...EDGE_PEOPLE]) {
+      const name = `${p.first} ${p.last}`;
+      if (!people[name]) people[name] = { dob: p.dob, email: p.email, plan: p.plan, kukkiwon: p.kukkiwon, on: p.on, signer: p.signer, payments: p.payments, signedAsMinor: p.signedAsMinor };
+    }
+    grading.writeGradingSample(base, cast, people, addSampleCandidate);
+    write(base.db);
+  }
+
+  // ----- 0025: grading and results (mockGrading.js), sharing this file's store and helpers -----
+  const grading = createGradingPart({
+    newId, stamp, clock, today, house, updateRow, findCycle, findCandidate, daysOf, partsOf, stateOf, rosterOrder, collate,
+    recheckDuplicate, recheckPointingAt, findDuplicate, purge, moneyOf, settings, purgeDueOnOwn, SEED_ACTOR,
+  });
+  Object.assign(handlers, handlers2, grading.handlers);
+
   return {
     rpc, select, publicCycle, publicRegister, snapshot: read, reset, loadSample, failNextSave, simulateOtherAdminEdit,
-    waiverChanged, links, loadSampleRoster, loadSampleEdge, expireUndo, addDuplicate,
+    waiverChanged, links, loadSampleRoster, loadSampleEdge, expireUndo, addDuplicate, loadGradingSample,
   };
 }

@@ -16,6 +16,7 @@ import {
   IconClock, // ti-clock — Paying on schedule card
   IconDots, // ti-dots — More actions (⋯)
   IconEdit, // ti-edit — Edit details
+  IconHistory, // ti-history — Make-up from an earlier cycle… (0025, G 24)
   IconPlus, // ti-plus — Add candidate
   IconPrinter, // ti-printer — Print receipt
   IconReceiptRefund, // ti-receipt-refund — Record refund
@@ -23,6 +24,7 @@ import {
   IconSwitchHorizontal, // ti-switch-horizontal — Change plan or Kukkiwon
   IconTrash, // ti-trash — Delete permanently
   IconUserMinus, // ti-user-minus — Remove candidate / Withdraw
+  IconUserPlus, // ti-user-plus — New candidate (0025, G 24)
   IconX, // ti-x — clear the search
 } from '@tabler/icons-react';
 
@@ -49,4 +51,6 @@ export const ICONS = {
   cardOnSchedule: IconClock,
   cardLate: IconAlertTriangle,
   cardNotPaid: IconCircleX,
+  newCandidate: IconUserPlus,
+  makeup: IconHistory,
 };
