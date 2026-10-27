@@ -441,6 +441,15 @@ function record(name, ok, detail = '') {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  -  ' + detail : ''}`);
 }
 
+// Warnings: a check that is over its target but under its hard limit, where
+// Jeffrey accepted the miss. It counts as passed, but is printed again in the
+// summary so the number is seen on every run.
+const warnings = [];
+function warn(name, detail) {
+  warnings.push({ name, detail });
+  console.log(`WARN  ${name}  -  ${detail}`);
+}
+
 // Runs one SQL file / snippet; a failure is recorded instead of crashing,
 // and any half-finished transaction is rolled back so the next step starts
 // clean. Returns PGlite's result list (one entry per statement) or null.
@@ -5078,15 +5087,22 @@ async function speed0025(main, claims) {
       }
       return t.sort((a, b) => a - b)[1];
     };
-    for (const [label, sql, limit] of [
+    for (const [label, sql, limit, hardLimit] of [
       ['bb_grading_grid (one Dan, 60 rows)', `select public.bb_grading_grid('${newest}', 1) as r`, 200],
       ['bb_cycle_results (one Dan)', `select public.bb_cycle_results('${newest}', 1) as r`, 200],
       ['bb_cycle_results (every Dan)', `select public.bb_cycle_results('${newest}', null) as r`, 200],
-      ['bb_makeup_list (11 earlier cycles)', `select public.bb_makeup_list('${newest}') as r`, 300],
+      // Target 300 ms; this huge seed takes ~1.2-1.4 s. Jeffrey accepted that
+      // (rulebook v0.962): over 300 ms is a warning, over 3 s still fails.
+      ['bb_makeup_list (11 earlier cycles)', `select public.bb_makeup_list('${newest}') as r`, 300, 3000],
       ['one bb_set_grade', `select public.bb_set_grade((select id from public.bb_candidates where cycle_id = '${newest}' and source = 'desk' limit 1), 1, '88de8004', 'B') as r`, 50]]) {
       try {
         const ms = await time(sql);
-        record(`${S}${label} <= ${limit} ms`, ms <= limit, `${ms.toFixed(1)} ms (median of 3)`);
+        // Only rows with a hard limit can warn; the others pass or fail at their limit.
+        if (hardLimit && ms > limit && ms <= hardLimit) {
+          warn(`${S}${label} <= ${limit} ms`, `${ms.toFixed(1)} ms (median of 3); accepted miss, fails above ${hardLimit} ms (v0.962), re-time with real data`);
+        }
+        const max = hardLimit ?? limit;
+        record(`${S}${label} <= ${max} ms`, ms <= max, `${ms.toFixed(1)} ms (median of 3)`);
       } catch (error) {
         record(`${S}${label} <= ${limit} ms`, false, error.message);
       }
@@ -5466,7 +5482,11 @@ async function step0022() {
 
 function finish() {
   const failed = results.filter((r) => !r.ok);
-  console.log(`\n${results.length - failed.length} passed, ${failed.length} failed.`);
+  console.log(`\n${results.length - failed.length} passed, ${failed.length} failed, ${warnings.length} warning(s).`);
+  if (warnings.length) {
+    console.log('WARNINGS (accepted, not failures):');
+    for (const w of warnings) console.log(`  - ${w.name}: ${w.detail}`);
+  }
   if (failed.length) {
     console.log('FAILED:');
     for (const f of failed) console.log(`  - ${f.name}: ${f.detail}`);
