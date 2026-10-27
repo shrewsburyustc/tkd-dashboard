@@ -2544,7 +2544,7 @@ Tested in PGlite on every run (all three steps exactly as written here): afterwa
 
 ## Migration 0027: Edit camp refuses changes that break campers' extras
 
-**Status: NOT APPLIED YET.** (Built on `camps`, rulebook v0.720.) Apply it only with Jeffrey's OK, **together with the app version whose Edit camp knows the two new answers** (built on the same branch). Every old answer stays exactly as it was.
+**Status: APPLIED 2026-10-27** (Jeffrey's OK; built on `camps`, rulebook v0.720). Pre-check 0; before: `camp_update_camp` md5 `95926100fecb5ecb6fc40136ba0fdcf9` (0022's, as tested); after: `9f70638fc19aee55c562f7df01ed5edc`, rights authenticated + postgres only; advisor nothing new; `0027_tests.sql`, `0013_tests.sql`, `0017_tests.sql`, `0022_tests.sql` all passed. The app version whose Edit camp knows the two new answers is on `camps` and not deployed yet — until it is, a refused save shows the generic error (the camp is still protected).
 
 **Production order:** … 0022 (live) → 0024 → 0023 → 0025 (live) → **0027**. It needs 0022 (it stops with "0027 needs migration 0022 (camps weekly pricing) first" if 0022 is missing).
 
