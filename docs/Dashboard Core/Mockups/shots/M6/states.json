@@ -1,0 +1,26 @@
+[
+  {
+    "id": "rest",
+    "caption": "<b>As it opens</b> (Color Belt's event roster): four cards in a row — two by two on phones. Every count card is a button; <b>Payments recorded is a total</b> and can't be tapped (no button, no hover)."
+  },
+  {
+    "id": "filtered",
+    "caption": "<b>A card tapped</b>: it gets the blue edge, the list shows only those rows, and one gray line says so — <b>“Showing not paid only · Show all”</b>. Tapping the card again or <b>Show all</b> shows everyone. Screen readers hear the card as pressed."
+  },
+  {
+    "id": "camps",
+    "caption": "<b>Camps' own four</b> (v1.014) in the same look: Campers · Coming (that day) · To collect · Payments recorded. A card can carry <b>one small line under its number</b> (“$1,355”), as Star's Candidates card says “Worcester” and Payments recorded says what it includes today."
+  },
+  {
+    "id": "blackbelt",
+    "caption": "<b>Black Belt's four plan cards</b> (v1.013, BB15): the same look and tap behaviour — every card filters, there is no money total. A section can add one gray line under the row (Black Belt's duplicates note). Keyboard focus shows the usual blue ring (here on Late)."
+  },
+  {
+    "id": "hidden",
+    "caption": "<b>Hide private details on</b> (v0.506): only the first card stays — no money and no paid counts — as Color Belt and Star do today. A section whose cards are all about money shows no row at all (Black Belt hides it today)."
+  },
+  {
+    "id": "bbphone",
+    "caption": "<b>Black Belt on phones — a change to v0.219.</b> Today phones show no cards, only two pills, “Late 2” and “Not paid 1” (top). With the shared row they get the same 2×2 cards as every other roster (bottom): v1.013 says “the same look and tap behaviour”, and a pill mode would be a second look to keep. Drawn at phone sizes only. If you OK this, the row records that it changes v0.219."
+  }
+]

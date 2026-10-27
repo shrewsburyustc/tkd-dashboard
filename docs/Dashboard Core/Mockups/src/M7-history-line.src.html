@@ -1,0 +1,152 @@
+<!doctype html>
+<!--
+  M7-history-line.src.html — mockup source for the shared history line and list (design review M7).
+  Why: rulebook v1.010 — every person's summary ends with Prospects' one line, "History · N changes ›";
+  a tap opens the list, newest first: what changed, then when · who; with Hide private details on,
+  amounts and paid status are left out (as Star's, v0.506). This copies what the design review drew
+  (picture 09b: Prospects' own line and list inside a Color Belt summary), with the app's real
+  stylesheets (testing-events.css for the summary rows, prospects.css for the line and list).
+  Build: node ../tools/build-mockup.mjs src/M7-history-line.src.html M7-history-line.html
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M7 · The shared history line — mockup</title>
+<!-- css: src/styles/tokens.css src/styles/app.css src/styles/testing.css src/styles/prospects.css src/styles/testing-events.css -->
+<style>
+  body { background: #fff; }
+  .sheet-head { max-width: 1100px; margin: 0 auto; padding: 24px 16px 8px; }
+  .sheet-head h1 { font-size: 20px; margin-bottom: 4px; }
+  .sheet-head p { color: var(--color-text-secondary); font-size: 13px; }
+  .state { max-width: 1100px; margin: 0 auto; padding: 16px 16px 8px; }
+  .state > h2 { font-size: 14px; margin-bottom: 12px; }
+  .state > h2 .n { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 6px; border-radius: 10px; background: #1f1f1f; color: #fff; font-size: 12px; }
+  .is-focus { outline: 2px solid var(--color-blue); outline-offset: -2px; }
+  .marks .mark { outline: 3px solid #f59e0b; outline-offset: 4px; border-radius: 6px; }
+  .stage { display: inline-block; padding: 24px 40px; background: #a6a6a6; border-radius: 8px; }
+  .stage .dialog { position: static; margin: 0 auto; }
+  .only-phone { display: none !important; }
+  @media (max-width: 639.98px) {
+    .state { padding: 16px 0 8px; }
+    .state > h2 { padding: 0 16px; }
+    .stage { display: block; padding: 0; background: none; border-radius: 0; }
+    .only-wide { display: none !important; }
+    .only-phone { display: flex !important; }
+    .stage .dialog-page { position: static; border-top: 1px solid var(--color-border-strong); border-bottom: 1px solid var(--color-border-strong); }
+  }
+  /* ===== NEW in the shared line (the rest is Prospects' and Color Belt's CSS) ===== */
+  .hist-wait { margin-left: auto; color: var(--color-text-secondary); font-size: var(--text-12); font-weight: 400; }
+  .hist-none { display: flex; align-items: center; min-height: 36px; padding: var(--space-4) 0; border-top: 1px solid var(--color-border); font-size: var(--text-13); }
+  .hist-none .phistory-label { margin-right: var(--space-4); }
+  .hist-none span:last-child { color: var(--color-text-secondary); }
+  .hist-hidden-line { padding: var(--space-8) 0 0; border-top: 1px solid var(--color-border); }
+  .hist-error { margin-top: var(--space-8); }
+</style>
+<script>if (location.search.includes('marks')) document.documentElement.classList.add('marks');</script>
+</head>
+<body>
+<div class="sheet-head">
+  <h1>M7 · The shared history line</h1>
+  <p>Every person's summary ends with one line, <b>History · N changes ›</b> (rulebook v1.010). A tap opens the list right there, newest first: what changed, then when · who. Each section reads its own changes and words them; the line draws them the same way everywhere. Drawn with the app's own stylesheets. Fake people.</p>
+</div>
+<span hidden id="back-icon"><i data-icon="arrow-left" data-size="20"></i></span>
+<span hidden id="edit-icon"><i data-icon="edit"></i></span>
+<span hidden id="chev-right"><i data-icon="chevron-right"></i></span>
+<span hidden id="chev-down"><i data-icon="chevron-down"></i></span>
+
+<section class="state">
+  <h2><span class="n">1</span>Closed, as the summary opens</h2>
+  <div class="stage" data-state="closed" data-caption="<b>As the summary opens</b>: the last line is <b>History · 3 changes ›</b> (picture 09b, Prospects' line). It is a button: a tap or Enter opens the list in place; screen readers hear “collapsed / expanded”. (The blue ring shows how it looks with keyboard focus; the summary doesn't open with focus on it.)">
+    <template>
+      <div class="mark">{{line:History · 3 changes:closed}}</div>
+    </template>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">2</span>Open</h2>
+  <div class="stage" data-state="open" data-caption="<b>Open</b>: newest first — what changed, then <b>when · who</b> in Massachusetts time (“Oct 22 · Jeffrey Berg”). The section writes “what changed”; the line writes the date and the name the same way everywhere. A long list scrolls with the summary.">
+    <template>
+      {{line:History · 3 changes:open}}
+      <ul class="plog mark" aria-label="History">
+        <li class="plog-item"><span class="plog-text">Payment changed: $65 cash → $65 check</span><span class="plog-meta">Oct 22 · Jeffrey Berg</span></li>
+        <li class="plog-item"><span class="plog-text">Payment recorded: $65 cash</span><span class="plog-meta">Oct 19 · Staff</span></li>
+        <li class="plog-item"><span class="plog-text">Registered on the family form</span><span class="plog-meta">Oct 13 · Family form</span></li>
+      </ul>
+    </template>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">3</span>Hide private details on</h2>
+  <div class="stage" data-state="hidden" data-hidden data-caption="<b>Hide private details on</b>: changes about money are left out of the count and the list, and one gray line says so — Star's words (v0.506). The summary's payment row already reads “Hidden on this tablet”.">
+    <template>
+      {{line:History · 1 change:open}}
+      <ul class="plog" aria-label="History">
+        <li class="plog-item"><span class="plog-text">Registered on the family form</span><span class="plog-meta">Oct 13 · Family form</span></li>
+      </ul>
+      <p class="field-hint hist-hidden-line mark">Payment history is hidden on this tablet.</p>
+    </template>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">4</span>While it reads</h2>
+  <div class="stage" data-state="loading" data-caption="<b>While it reads</b> (usually a moment, while the summary opens): “History” with a gray “Loading…”, not yet a button.">
+    <template>
+      <div class="hist-none mark"><span class="phistory-label">History</span><span class="hist-wait">Loading…</span></div>
+    </template>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">5</span>If it can't read</h2>
+  <div class="stage" data-state="failed" data-caption="<b>If it can't read</b>: the shared amber bar with Retry stays under the line until it works or the summary closes (v1.004). Today Star shows “No changes recorded yet.” instead, which hides the problem.">
+    <template>
+      <div class="hist-none"><span class="phistory-label">History</span></div>
+      <div class="errbar hist-error mark" role="alert"><i data-icon="alert-triangle" class="errbar-icon"></i><span class="errbar-text">Couldn't load the history. Check the connection, then try again.</span><span class="errbar-actions"><button type="button" class="btn errbar-retry"><i data-icon="refresh"></i>Retry</button></span></div>
+    </template>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">6</span>Nothing recorded yet</h2>
+  <div class="stage" data-state="empty" data-caption="<b>Nothing recorded yet</b> (e.g. a person added before the section kept a history): the line stays, as plain text — <b>History · no changes yet</b> — with nothing to open.">
+    <template>
+      <div class="hist-none mark"><span class="phistory-label">History ·</span><span>no changes yet</span></div>
+    </template>
+  </div>
+</section>
+
+<script>
+  // Each state drawn twice from its <template>: the PC / tablet summary (Dialog.jsx, "detail" size)
+  // and the phone's full-screen page. {{line:words:closed|open}} is Prospects' button, filled in.
+  const pick = (id) => document.getElementById(id).innerHTML;
+  const line = (words, open) => `<button type="button" class="pkv pkv-btn phistory-btn${open ? '' : ' is-focus'}" aria-expanded="${open}"><span class="pkv-v phistory-label">${words}</span>${pick(open ? 'chev-down' : 'chev-right')}</button>`;
+  for (const stage of document.querySelectorAll('.stage[data-state]')) {
+    const hidden = 'hidden' in stage.dataset;
+    const content = stage.querySelector('template').innerHTML.replace(/\{\{line:([^:}]+):(open|closed)\}\}/g, (_, w, s) => line(w, s === 'open'));
+    const summary = `
+      <dl class="ev-sum">
+        <div class="ev-sum-row"><dt>Class and time</dt><dd>White · 4:00 – 5:00 PM</dd></div>
+        <div class="ev-sum-row"><dt>Paying by</dt><dd>${hidden ? '<span class="ev-hidden-value">Hidden on this tablet</span>' : 'Cash'}</dd></div>
+        <div class="ev-sum-row"><dt>Payment</dt><dd>${hidden ? '<span class="ev-hidden-value">Hidden on this tablet</span>' : '<span class="ttag ttag--ok">Paid</span> · $65 check · paid Oct 19'}</dd></div>
+        <div class="ev-sum-row"><dt>Signed by</dt><dd>Parent or guardian, on the form</dd></div>
+      </dl>
+      ${content}`;
+    stage.insertAdjacentHTML('beforeend', `
+      <div class="dialog tdialog tdialog--detail only-wide" role="dialog" aria-modal="true">
+        <h2 class="dialog-title">Owen Reed</h2>
+        <p class="tdialog-sub">November Children Testing</p>
+        ${summary}
+        <div class="dialog-actions"><button type="button" class="btn">Close</button><button type="button" class="btn btn-primary">${pick('edit-icon')}Edit details</button></div>
+      </div>
+      <div class="dialog-page tdialog-page only-phone" role="dialog" aria-modal="true">
+        <div class="dialog-page-head"><button type="button" class="icon-button" aria-label="Back">${pick('back-icon')}</button><h2 class="dialog-page-title">Owen Reed</h2></div>
+        <div class="dialog-page-body"><p class="tdialog-sub">November Children Testing</p>${summary}</div>
+      </div>`);
+  }
+</script>
+</body>
+</html>

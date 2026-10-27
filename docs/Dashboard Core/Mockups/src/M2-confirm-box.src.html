@@ -1,0 +1,202 @@
+<!doctype html>
+<!--
+  M2-confirm-box.src.html — mockup source for the shared "are you sure?" box (design review M2).
+  Why: rulebook v1.008 (with D1a–D1d, D10a) decided one box for every section; the Dashboard core
+  session builds it once (v1.030). This sheet draws every state of that box with the app's real
+  stylesheets, so what Jeffrey OKs is what the build will look like. Nothing here is app code.
+  Build the self-contained file with:  node ../tools/build-mockup.mjs src/M2-confirm-box.src.html M2-confirm-box.html
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M2 · The shared “are you sure?” box — mockup</title>
+<!-- css: src/styles/tokens.css src/styles/app.css src/styles/testing.css -->
+<style>
+  /* ===== Mockup page (not part of the design) ===== */
+  body { background: #fff; }
+  .sheet-head { max-width: 1100px; margin: 0 auto; padding: 24px 16px 8px; }
+  .sheet-head h1 { font-size: 20px; margin-bottom: 4px; }
+  .sheet-head p { color: var(--color-text-secondary); font-size: 13px; margin-bottom: 8px; }
+  .state { max-width: 1100px; margin: 0 auto; padding: 16px 16px 8px; }
+  .state > h2 { font-size: 14px; margin-bottom: 12px; }
+  .state > h2 .n { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 6px; border-radius: 10px; background: #1f1f1f; color: #fff; font-size: 12px; }
+  /* The dimmed page behind a dialog, drawn in place (the real one covers the screen). */
+  .stage { width: 520px; margin: 0; padding: 24px 80px; background: #a6a6a6; border-radius: 8px; }
+  .stage .dialog { position: static; margin: 0 auto; }
+  @media (max-width: 639.98px) {
+    .state { padding-left: 0; padding-right: 0; }
+    .state > h2 { padding: 0 16px; }
+    .stage { width: auto; padding: 24px 16px; border-radius: 0; }
+  }
+  /* A still picture can't hold keyboard focus, so the first-focus ring is drawn with a class. */
+  .is-focus { outline: 2px solid var(--color-blue); outline-offset: 2px; }
+  /* Amber outlines for the review pictures (address ends in ?marks). */
+  .marks .mark { outline: 3px solid #f59e0b; outline-offset: 6px; border-radius: 4px; }
+
+  /* ===== NEW in the shared box (what the build adds; everything else is today's CSS) ===== */
+  /* 1. A plain button's unavailable look ("Keep …" while the box works, D1a). Today only
+        .btn-primary (testing.css) and .btn-delete (calendar.css) have it; same gray, still focusable. */
+  .btn.is-unavailable,
+  .btn.is-unavailable:hover,
+  .btn.is-unavailable:active {
+    border-color: var(--color-border-strong);
+    background: var(--color-surface);
+    color: var(--color-disabled-text);
+    cursor: not-allowed;
+  }
+  /* 2. The two buttons keep their label on one line; when they don't fit side by side they stack,
+        each the full width of the box, in the row's order (D1b, §2.1's exception). */
+  .cbox .dialog-actions .btn { flex: none; white-space: nowrap; }
+  .cbox .dialog-actions.is-stacked { flex-direction: column; align-items: stretch; }
+  .cbox .dialog-actions.is-stacked .btn { width: 100%; white-space: normal; }
+  /* 3. Never the form dialogs' pinned button row, also on screens under 700px tall
+        (today's boxes pick it up there by accident — change list §4). */
+  @media (max-height: 699.98px) {
+    .tdialog--confirm.tdialog--small > .dialog-actions {
+      position: static;
+      margin: var(--space-16) 0 0;
+      padding: 0;
+      border-top: none;
+    }
+  }
+</style>
+<script>
+  if (location.search.includes('marks')) document.documentElement.classList.add('marks');
+</script>
+</head>
+<body>
+<div class="sheet-head">
+  <h1>M2 · The shared “are you sure?” box</h1>
+  <p>One box for every section (rulebook v1.008, D1a–D1d, D10a). The button that changes nothing says what stays and sits on the left; the action repeats the words pressed and sits on the right — red when it loses something for good, blue otherwise. Drawn with the app's own stylesheets. Fake names.</p>
+</div>
+
+<section class="state">
+  <h2><span class="n">1</span>Loses something for good</h2>
+  <div class="stage" data-state="forgood" data-caption="<b>Loses something for good</b> (Delete permanently): “Keep student” on the left with the <b>first focus</b> (blue ring); the action on the right in <b>red</b>, repeating the menu's words. The section writes the question, the sentence and the gray hint.">
+    <div class="dialog tdialog tdialog--small tdialog--confirm cbox" role="alertdialog" aria-modal="true">
+      <h2 class="dialog-title">Delete Owen Reed permanently?</h2>
+      <p class="tdialog-sub tdialog-body">The registration and the $65 cash payment recorded on Oct 21 are deleted from November Children Testing. The payment won’t show in Payments recorded any more. This can’t be undone.</p>
+      <p class="field-hint" style="margin-top:8px">To keep the record, use Withdraw instead.</p>
+      <div class="dialog-actions mark">
+        <button type="button" class="btn is-focus">Keep student</button>
+        <button type="button" class="btn btn-delete"><i data-icon="trash"></i>Delete permanently</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">2</span>While it works</h2>
+  <div class="stage" data-state="busy" data-caption="<b>While it works</b> (D1a): the pressed button grays and says what it is doing — its verb + “ing…” (“Deleting…”, “Undoing…”) — and <b>“Keep student” grays too</b> (new: today only blue and red buttons have this gray look). Esc, a click outside and Back wait until it's done. Both stay focusable for the keyboard. <b>The buttons never move</b>: whether they stack is decided from their usual words, so a stacked pair stays stacked (320).">
+    <div class="dialog tdialog tdialog--small tdialog--confirm cbox" role="alertdialog" aria-modal="true">
+      <h2 class="dialog-title">Delete Owen Reed permanently?</h2>
+      <p class="tdialog-sub tdialog-body">The registration and the $65 cash payment recorded on Oct 21 are deleted from November Children Testing. The payment won’t show in Payments recorded any more. This can’t be undone.</p>
+      <p class="field-hint" style="margin-top:8px">To keep the record, use Withdraw instead.</p>
+      <div class="dialog-actions mark">
+        <button type="button" class="btn is-unavailable" aria-disabled="true" data-idle="Keep student">Keep student</button>
+        <button type="button" class="btn btn-delete is-unavailable" aria-disabled="true" aria-busy="true" data-idle="Delete permanently"><i data-icon="trash"></i>Deleting…</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">3</span>If it fails</h2>
+  <div class="stage" data-state="failed" data-caption="<b>If it fails</b>: the box stays open; the section's amber note appears <b>under the buttons</b>, so they don't move (v0.81), and stays until the box closes (v1.004). Pressing the action again tries again.">
+    <div class="dialog tdialog tdialog--small tdialog--confirm cbox" role="alertdialog" aria-modal="true">
+      <h2 class="dialog-title">Delete Owen Reed permanently?</h2>
+      <p class="tdialog-sub tdialog-body">The registration and the $65 cash payment recorded on Oct 21 are deleted from November Children Testing. The payment won’t show in Payments recorded any more. This can’t be undone.</p>
+      <p class="field-hint" style="margin-top:8px">To keep the record, use Withdraw instead.</p>
+      <div class="dialog-actions">
+        <button type="button" class="btn">Keep student</button>
+        <button type="button" class="btn btn-delete is-focus"><i data-icon="trash"></i>Delete permanently</button>
+      </div>
+      <div class="tdialog-note mark">
+        <div class="notice" role="alert"><i data-icon="alert-triangle" class="notice-icon"></i><span>Couldn't delete. Check the connection, then try again.</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">4</span>Loses something, not for good</h2>
+  <div class="stage" data-state="something" data-caption="<b>Loses something, but not for good</b> (Undo payment — both stay in the history; Color Belt's Cancel private testing, which an admin can restore): the action is <b>blue</b>; the first focus stays on the button that changes nothing. (“Keep it” where there's no short name.)">
+    <div class="dialog tdialog tdialog--small tdialog--confirm cbox" role="alertdialog" aria-modal="true">
+      <h2 class="dialog-title">Undo Lily Brooks’s payment?</h2>
+      <p class="tdialog-sub tdialog-body">The $140 cash payment recorded on Oct 17 is reversed and the row goes back to Not paid. Both stay in the history.</p>
+      <div class="dialog-actions mark">
+        <button type="button" class="btn is-focus">Keep payment</button>
+        <button type="button" class="btn btn-primary"><i data-icon="arrow-back-up"></i>Undo payment</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">5</span>Loses nothing</h2>
+  <div class="stage" data-state="nothing" data-caption="<b>Loses nothing</b> (Prospects' “Came?” when a card is dropped on Came; Forms' kiosk asks): the action is blue and has the <b>first focus</b>; the other button still says what stays — “Keep in Booked”, the card's column (D1d). “Cancel” is never a confirm-box button; it stays in form dialogs.">
+    <div class="dialog tdialog tdialog--small tdialog--confirm cbox" role="alertdialog" aria-modal="true">
+      <h2 class="dialog-title">Did Maya come to the free class?</h2>
+      <p class="tdialog-sub tdialog-body">Mon, Oct 26 · 4:00 PM · Little Tiger</p>
+      <div class="dialog-actions mark">
+        <button type="button" class="btn">Keep in Booked</button>
+        <button type="button" class="btn btn-primary is-focus"><i data-icon="user-check"></i>Came</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">6</span>A leave warning</h2>
+  <div class="stage" data-state="leave" data-caption="<b>The leave warnings</b> use the same box (D1c — they swap): “Stay on this page” on the left, focused first; <b>“Leave anyway” on the right in red</b>, because leaving loses the unsaved results for good. Leaving happens at once, so there's no “…ing” step.">
+    <div class="dialog tdialog tdialog--small tdialog--confirm cbox" role="alertdialog" aria-modal="true">
+      <h2 class="dialog-title">1 result isn’t saved</h2>
+      <p class="tdialog-sub tdialog-body">Ava Chen (Little Tiger) wasn’t saved because the connection dropped. If you leave now, they’re lost. Stay, and they’ll save when the Wi-Fi is back.</p>
+      <div class="dialog-actions mark">
+        <button type="button" class="btn is-focus">Stay on this page</button>
+        <button type="button" class="btn btn-delete">Leave anyway</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">7</span>Black Belt's “Discard changes?”</h2>
+  <div class="stage" data-state="discard" data-caption="<b>Black Belt's “Discard changes?”</b> (D10a) follows the same rule: “Keep editing” on the left, focused first; <b>Discard on the right in red</b>.">
+    <div class="dialog tdialog tdialog--small tdialog--confirm cbox" role="alertdialog" aria-modal="true">
+      <h2 class="dialog-title">Discard changes to 1st Dan?</h2>
+      <p class="tdialog-sub tdialog-body">3 changes aren’t saved.</p>
+      <div class="dialog-actions mark">
+        <button type="button" class="btn is-focus">Keep editing</button>
+        <button type="button" class="btn btn-delete">Discard</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Stack the two buttons, full width, when they don't fit side by side (D1b). The build does the
+  // same with a ResizeObserver, so it also reacts when the window or the words change.
+  // (A right-aligned row that is too narrow spills out on the LEFT, which the browser doesn't
+  // count as overflow — so add up the buttons' own widths instead.)
+  // While it works the words are shorter ("Deleting…"), so the decision is made from each
+  // button's usual words (data-idle): the buttons never move between idle, busy and failed.
+  for (const row of document.querySelectorAll('.cbox .dialog-actions')) {
+    row.classList.remove('is-stacked');
+    const buttons = [...row.children];
+    const busyText = new Map();
+    for (const b of buttons) {
+      if (!b.dataset.idle) continue;
+      const label = [...b.childNodes].filter((n) => n.nodeType === 3).pop();
+      busyText.set(label, label.textContent);
+      label.textContent = b.dataset.idle;
+    }
+    const gap = parseFloat(getComputedStyle(row).columnGap) || 0;
+    const needed = buttons.reduce((sum, b) => sum + b.getBoundingClientRect().width, 0) + gap * (buttons.length - 1);
+    for (const [label, text] of busyText) label.textContent = text;
+    if (needed > row.clientWidth + 0.5) row.classList.add('is-stacked');
+  }
+</script>
+</body>
+</html>
