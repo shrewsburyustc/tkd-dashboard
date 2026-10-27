@@ -164,3 +164,14 @@ Star merged into main (2dec585), so `text.js` was free. Question 19 (`docs/Finan
 Q19 (v0.813) is live (main 09f0b95, 2026-10-21). `finance` fast-forwarded to main c632252 (design review rows v1.000–v1.034); builds and checks pass.
 - **Next: F8 — Black Belt payments in the Daily report and Close the day** (v0.808, returned checks v0.809; **v1.034 / D7**: built next, doesn't wait for Main's shared parts, **live before Black Belt's family form is switched on (Black Belt CP6)**; nothing on screen meanwhile). Black Belt's Record payment has been live since 2026-10-21, so "when Black Belt payments exist" is now. Own migration — number from Main (next free 0026), security review, Jeffrey's paste, deploy. Waiting for Jeffrey's go to start.
 - **Later (after Main's shared parts, v1.030): F1–F7** — shared date picker; shared time list for the reminder (keeps 11 AM–11 PM and Off); History's "← Back to the day" as a text link; no icon on the ⋯ Today item; shared money helper (keeps "$65.00"); helpers from their new shared places; on Both, each school's box says "after $X refunds" (v1.022 / D3, no database change).
+
+## 17. F8 — Black Belt payments (started 2026-10-25, Jeffrey: "Start F8")
+
+- Migration **0026** (`0026_finance_black_belt.sql`) reserved by Main (CLAUDE.md row merged, cf6ecaa).
+- Research: Black Belt money is one append-only table `bb_payments` (0016; 0024/0025 don't change it): kinds payment / refund / reversal / **returned**; school and cycle name stored on each row; `for_items`; edits keep the day; card refunds; a reversal can undo a returned mark. No real Black Belt payment rows yet (family form off).
+- Builds on the live 0018 Finance functions (+ 0017's finance_day / finance_export); 0019–0025 touch no Finance function.
+- **CONTRACT-0026 drafted** (`docs/Dashboard Docs/Build contracts/CONTRACT-0026.md`). PROPOSALS waiting for the mockups: returned checks stay out of Close the day entirely (expected figures, snapshot, Changed after closing, "needs closing"); an undone returned mark shows struck through on its day (v0.199).
+- Mockups **B1–B9** done and design-reviewed (`docs/Finance/TKD-Finance-BlackBelt-Mockups.html`, images `docs/Finance/images/Finance-B*.png`; dates on the right weekdays).
+- **Q20 decided 2026-10-27: B** (v0.814) — in Close the day, card refunds come off the expected card total, written like cash refunds. B2 updated.
+- **B1–B9 approved as drawn 2026-10-27** (v0.815), all proposals; the returned-check sub-line drops “· recorded by …” (Jeffrey). CONTRACT-0026 final.
+- **Next: build 0026** — generator `build_0026.py`, migration, `0026_tests.sql`, fingerprints, preapply, `step0026`, SETUP “## Migration 0026”; screens + mockFinance; security review, Black Belt session review of the `bb_payments` reading, design review; Jeffrey pastes; deploy before Black Belt CP6.
