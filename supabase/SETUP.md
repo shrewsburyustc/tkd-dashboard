@@ -2624,7 +2624,7 @@ Tested in PGlite on every run (`run.mjs` step0027: the undo file exactly as name
 
 ## Migration 0031: Class ages on the booking forms, and classes taught together as one time
 
-**Status: NOT APPLIED** (built on `claude/prospect-form-system-cd893d`, rulebook v0.619 and v0.620; needs Jeffrey's OK to apply). Apply it **before** the app version that shows and sets class ages and combined times is deployed (that app reads the new tables and keys, and sends `p_groups`).
+**Status: APPLIED 2026-10-28** (Jeffrey, SQL Editor: Success; 0031c checks matched: pre-apply true / true / true / 10 / 0, all 13 function fingerprints as tested, security advisor nothing new; 0031d: ALL 0031 TESTS PASSED). Built on `claude/prospect-form-system-cd893d`, rulebook v0.619 and v0.620. Apply it **before** the app version that shows and sets class ages and combined times is deployed (that app reads the new tables and keys, and sends `p_groups`).
 
 **Production order:** … 0025 → 0027 (live) → **0031**. It needs 0007 (Schedule), 0009 (Forms) and 0012 (Prospects) — it stops with "0031 needs migration 0007 / 0009 / 0012 … first" if one is missing.
 

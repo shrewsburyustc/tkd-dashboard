@@ -23,7 +23,7 @@ Branch `claude/prospect-form-system-cd893d`. Requested by Jeffrey on 2026-10-28,
 | Database: `supabase/migrations/0031_class_ages.sql`, tests `0031_tests.sql`, `0031_fingerprints.sql`, `0031_preapply_check.sql`, undo `supabase/manual/0031u_undo_class_ages.sql`, SETUP "## Migration 0031", run.mjs `step0031` | Built 2026-10-28 by a subagent; PGlite step0031: 68 checks pass |
 | Screens: Schedule time slot dialog (Ages · class, From / To, "Shows as"), the family form and kiosk, staff Fill in, Prospects' Book a free class; the Cloudflare function passes the ages on; preview fake data | Built 2026-10-28 |
 | Reviews | Security: no must-fix or should-fix. Design: fixed the gray typed ages, errors flashing while typing, a chatty live line, and both save failures showing |
-| Apply to the live database (Jeffrey pastes it, SETUP §0031) | Waits for Jeffrey's OK, after the merge |
+| Apply to the live database (SETUP §0031) | **Applied 2026-10-28.** Jeffrey pasted it (Success); the read-only checks matched; ALL 0031 TESTS PASSED. The app still has to be merged and pushed (Main) |
 
 ## Classes taught together (rulebook v0.620)
 
