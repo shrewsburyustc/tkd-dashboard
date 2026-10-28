@@ -19,6 +19,11 @@
 // Camper column takes the spare room); a camp with nobody signed up still shows the grid (headers,
 // week switch, legend) with "No campers yet…" as one row inside it, so a closed or past camp
 // never looks like it lost its roster; and the summary line ends with a quiet "Updated 2:41:07 PM".
+// "Hide private details" on (detailsHidden; rulebook v0.722, design review C1, as Color Belt
+// v0.412): no Paid column (PC / tablet) and no money tags on the phone cards, no "N to collect ·
+// $X" / "All paid", and the Mark paid box can't open (an open one closes). A "Possible duplicate"
+// tag isn't money: on PC / tablet it moves onto the name's line, on phones it stays on its card.
+// Check-in, "here today", Find a camper, the extra counts and "Updated …" stay.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp, IconDots, IconSearch, IconX } from '@tabler/icons-react';
@@ -245,6 +250,7 @@ export default function CampRoster({
   menuFor,
   notSavedId,
   updatedAt = null, // when the page last loaded fresh data (useLiveLoad) — shown as "Updated …"
+  detailsHidden = false, // Hide private details is on: no money on the roster (v0.722)
   handlers, // { onOpen(row, el), onMore(row, el), onMarkPaid(row), onReview(row, el), onReviewPair(pair, el), onCheckIn(row, day), onUndoCheckIn(row, day) }
 }) {
   const [popover, setPopover] = useState(null); // { rowId, anchor }
@@ -294,11 +300,28 @@ export default function CampRoster({
   const removedRows = removed.filter(match).sort(byFirstName);
 
   const popoverRow = popover ? active.find((r) => r.id === popover.rowId) : null;
-  // The camper was paid meanwhile (another device): the box closes by itself.
+  // The camper was paid meanwhile (another device), or Hide private details was switched on: the
+  // box closes by itself.
   useEffect(() => {
-    if (popover && (!popoverRow || !['not_paid', 'owes'].includes(payTag(popoverRow)))) setPopover(null);
-  }, [popover, popoverRow]);
+    if (!popover) return;
+    if (detailsHidden) {
+      // The Paid cell (and its button) went with the switch: focus moves to the same row's ⋯, else
+      // its name (focus must not fall to the page body), when focus was in the box or on its tag.
+      const hadFocus = document.activeElement === document.body || popover.anchor.contains(document.activeElement) || document.querySelector('.cp-popover')?.contains(document.activeElement);
+      setPopover(null);
+      if (hadFocus) {
+        const id = popover.rowId;
+        window.requestAnimationFrame(() => {
+          (document.querySelector(`[data-camper-more="${id}"]`) ?? document.querySelector(`[data-nav-row="${id}"]`))?.focus();
+        });
+      }
+      return;
+    }
+    if (!popoverRow || !['not_paid', 'owes'].includes(payTag(popoverRow))) setPopover(null);
+  }, [popover, popoverRow, detailsHidden]);
   const onPay = (row, anchor) => setPopover({ rowId: row.id, anchor });
+  // While hidden, the only tag an active camper keeps is "Possible duplicate" (it opens the compare).
+  const duplicateTag = (row) => (payTag(row) === 'duplicate' ? <CamperTag row={row} onReview={handlers.onReview} /> : null);
 
   // ↑ ↓ move between the names, Enter opens Camper detail (PC rule 3.6; the Tab key reaches the
   // roster's names as one stop, like every other list).
@@ -376,7 +399,8 @@ export default function CampRoster({
                     </span>
                   )}
                 </span>
-                <CamperTag row={row} onReview={handlers.onReview} onPay={onPay} />
+                {/* Hidden: no money tag; a possible duplicate keeps its tag here (picture 01). */}
+                {detailsHidden ? duplicateTag(row) : <CamperTag row={row} onReview={handlers.onReview} onPay={onPay} />}
               </div>
               {note && <span className="cp-rnote">{note}</span>}
               <div className="cp-rdays">{shownDays.map((d) => cell(row, d, true))}</div>
@@ -390,7 +414,7 @@ export default function CampRoster({
     );
   } else {
     // ----- PC and tablet: the grid -----
-    const columns = 2 + shownDays.length + (showMore ? 1 : 0);
+    const columns = 1 + (detailsHidden ? 0 : 1) + shownDays.length + (showMore ? 1 : 0);
     list = (
       // Always the full content width (Jeffrey, live test 2026-10-21: "make it fit the whole
       // screen"); with only a few days the Camper column takes the spare room (camps.css).
@@ -401,9 +425,11 @@ export default function CampRoster({
               <th scope="col" className="cp-rcol-name">
                 {T.COL_CAMPER}
               </th>
-              <th scope="col" className="cp-rcol-paid">
-                {T.COL_PAID}
-              </th>
+              {!detailsHidden && (
+                <th scope="col" className="cp-rcol-paid">
+                  {T.COL_PAID}
+                </th>
+              )}
               {shownDays.map((d) => (
                 <th key={d.dayId} scope="col" className={`cp-rcol-day${d.day === today ? ' is-today' : ''}`}>
                   {T.dayHead(d.day, today, isWide)}
@@ -424,6 +450,8 @@ export default function CampRoster({
                   <th scope="row" className="cp-rcol-name">
                     {nameButton(row)}
                     <span className="cp-age-text"> · {row.age}</span>
+                    {/* Hidden: "Possible duplicate" moves onto the name's line (picture 01). */}
+                    {detailsHidden && payTag(row) === 'duplicate' && <span className="cp-namedup">{duplicateTag(row)}</span>}
                     {notSavedId === row.id && (
                     <span className="ttag ttag--warn cp-notsaved">
                       <IconAlertTriangle size={12} aria-hidden="true" />
@@ -432,9 +460,11 @@ export default function CampRoster({
                   )}
                     {note && <span className="cp-rnote">{note}</span>}
                   </th>
-                  <td className="cp-rcol-paid">
-                    <CamperTag row={row} onReview={handlers.onReview} onPay={onPay} />
-                  </td>
+                  {!detailsHidden && (
+                    <td className="cp-rcol-paid">
+                      <CamperTag row={row} onReview={handlers.onReview} onPay={onPay} />
+                    </td>
+                  )}
                   {shownDays.map((d) => (
                     <td key={d.dayId} className={`cp-rcol-day${d.day === today ? ' is-today' : ''}`}>
                       {cell(row, d, false)}
@@ -508,7 +538,8 @@ export default function CampRoster({
       ) : (
       <p className="cp-statline">
         {first}
-        {toCollect === 0 ? (
+        {/* Hidden: neither "N to collect · $X" nor "All paid" (both say who paid). */}
+        {detailsHidden ? null : toCollect === 0 ? (
           <span className="cp-allpaid">{T.ALL_PAID}</span>
         ) : (
           <span>
@@ -546,7 +577,7 @@ export default function CampRoster({
       {list}
       {removedGroup}
       {!isPhone && active.length > 0 && <p className="field-hint cp-hint-line">{T.rosterLegend(isTouch)}</p>}
-      {popover && popoverRow && (
+      {popover && popoverRow && !detailsHidden && (
         <PaymentPopover
           row={popoverRow}
           anchor={popover.anchor}

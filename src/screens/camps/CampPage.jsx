@@ -22,10 +22,20 @@
 // (CamperRowMenu.jsx); the database enforces the same rules.
 //
 // There is no Add camper button: campers only come in through the family form (C4).
+//
+// "Hide private details" (the top-bar switch, src/lib/privateDetails.js; rulebook v0.722, design
+// review C1) — copied from Color Belt's built event page (v0.412). While it is on, Camps hides
+// money: no Paid column / "to collect" / Mark paid (CampRoster), gray "Hidden on this tablet" in
+// Camper detail, Compare and Edit details, no money items in ⋯ / "More", "any recorded payment" in
+// the delete sentences, no amounts in toasts. Turning it on closes the payment dialogs (Change how
+// they'll pay, Edit payment), the ⋯ menu, the toast and every banner (they may name money or carry
+// a Retry that records money). Camp and template prices are settings: they stay.
+// Naming: `detailsHidden` is that switch; `hidden` below means "the screen is locked".
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconArrowLeft, IconDots, IconQrcode } from '@tabler/icons-react';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
 import { LOCATION_NAME } from '../../lib/device.js';
+import { usePrivateDetailsHidden } from '../../lib/privateDetails.js';
 import IconButton from '../../components/IconButton.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
 import {
@@ -60,6 +70,8 @@ import * as T from './text.js';
 
 // The old tab addresses (v0.704): they now open the one roster (and are tidied away).
 const OLD_TABS = ['checkin', 'payments', 'attendance'];
+// The dialogs that show or change money: they close when Hide private details is switched on.
+const PAYMENT_DIALOGS = ['paying', 'payment'];
 // The chosen week and the Removed group open / closed, per camp, while the page is open.
 const weekByCamp = new Map();
 const removedOpenByCamp = new Map();
@@ -122,6 +134,7 @@ export default function CampPage({
   const isTouch = useMediaQuery(TOUCH_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
   const layout = { isPhone, isTouch, isWide };
+  const [detailsHidden] = usePrivateDetailsHidden(); // Hide private details (v0.506 / v0.722)
 
   const [dialog, setDialog] = useState(null);
   const [menu, setMenu] = useState(null); // { id, anchor, row, kind: 'camper' | 'header' }
@@ -218,6 +231,72 @@ export default function CampPage({
     setMenu(null);
   }, [live.status]);
 
+  // ===== Hide private details (as Color Belt's EventPage, v0.412) =====
+  // The open dialog RIGHT NOW: a payment dialog's save that finishes after the switch closed it
+  // must not close (or patch) whatever dialog is open by then.
+  const dialogRef = useRef(dialog);
+  dialogRef.current = dialog;
+  const stillOpen = (d) => dialogRef.current !== null && dialogRef.current.key === d.key;
+  // The switch's value RIGHT NOW (updated on every drawing). A save that was already on its way
+  // when the switch turned on reads this when its answer arrives, so its toast or banner follows
+  // the current value, not the one from when it started.
+  const hiddenNowRef = useRef(detailsHidden);
+  hiddenNowRef.current = detailsHidden;
+  // A money save's answer that arrives while hidden: the general words only — no amount, no paid
+  // status, no Retry that would record money (Mark paid / Undo payment).
+  function hiddenMoneyProblem(status) {
+    if (status === 'no_access') onNoAccess();
+    else if (status === 'not_allowed') {
+      setBanner({ text: T.ROSTER_NOT_ALLOWED });
+      onRefreshProfile();
+      reloadQuiet();
+    } else if (status === 'error') {
+      setBanner({ text: T.SAVE_FAILED });
+    } else {
+      setBanner({ text: T.ROSTER_STALE });
+      reloadQuiet();
+    }
+  }
+  // A payment dialog's save that failed AFTER the dialog was closed (the switch turned on mid-save):
+  // the dialog can't show its note any more, so the page says it (as Color Belt's EventPage).
+  function closedPaymentProblem(status) {
+    if (hiddenNowRef.current) hiddenMoneyProblem(status);
+    else if (status === 'no_access') onNoAccess();
+    else {
+      setBanner({ text: status === 'error' ? T.SAVE_FAILED : T.ROSTER_STALE });
+      if (status !== 'error') reloadQuiet();
+    }
+  }
+  // Switched on: no payment dialog, ⋯ menu, toast or banner may stay (the roster closes its own
+  // Mark paid box). Only when the switch changes, not on the first drawing.
+  const hiddenBeforeRef = useRef(detailsHidden);
+  useEffect(() => {
+    const switchedOn = detailsHidden && !hiddenBeforeRef.current;
+    hiddenBeforeRef.current = detailsHidden;
+    if (!switchedOn) return;
+    const d = dialogRef.current;
+    // (Even mid-save: the save still finishes, and its toast names no amount.)
+    if (d && PAYMENT_DIALOGS.includes(d.type)) {
+      setDialog(null);
+      if (d.opener) focusSoon(d.opener);
+    }
+    // The ⋯ menu closes; focus goes back to the button that opened it (the row's ⋯ or the header's),
+    // or to "← Camps" if that button is gone — never to the page body.
+    if (menu) {
+      const anchor = menu.anchor;
+      setMenu(null);
+      focusSoon(() => (anchor?.isConnected ? anchor : document.querySelector('.ev-back')));
+    }
+    // A toast may name money ("marked paid · $15 cash") or carry a payment Undo: it goes too.
+    clearToast();
+    // So does every banner: a failed Mark paid keeps a Retry that records money, and "already
+    // marked paid" names paid status. The row's Not saved mark goes with it.
+    setBanner(null);
+    setNotSavedId(null);
+    // (only when the switch changes)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detailsHidden]);
+
   // ===== Derived =====
   const active = roster.filter((r) => r.status === 'active').sort(byFirstName);
   const removed = roster.filter((r) => r.status !== 'active').sort(byFirstName);
@@ -240,11 +319,16 @@ export default function CampPage({
   }
 
   // ===== Undo and row problems (as Color Belt's event page) =====
+  // options.money: the Undo of a payment — while hidden on arrival, the general words, no Retry.
   async function runUndo(call, options = {}) {
     if (!begin()) return;
     const result = await call();
     end(result.status);
     const status = result.status;
+    if (options.money && hiddenNowRef.current && status !== 'ok') {
+      hiddenMoneyProblem(status);
+      return;
+    }
     if (status === 'ok') {
       setBanner((current) => (current?.kind === 'undo' ? null : current));
       showToast(T.TOAST_UNDONE, { icon: false });
@@ -260,9 +344,11 @@ export default function CampPage({
       reloadQuiet();
     }
   }
-  function rowProblem(status, row, retry) {
+  // money: Mark paid / Undo payment — while hidden on arrival, the general words, no Retry.
+  function rowProblem(status, row, retry, money = false) {
     const name = T.camperLabel(row);
-    if (status === 'no_access') onNoAccess();
+    if (money && hiddenNowRef.current) hiddenMoneyProblem(status);
+    else if (status === 'no_access') onNoAccess();
     else if (status === 'not_allowed') {
       setBanner({ text: retry.notAllowedText ?? T.ROSTER_NOT_ALLOWED });
       onRefreshProfile();
@@ -303,16 +389,19 @@ export default function CampPage({
       return;
     }
     if (result.status !== 'ok') {
-      rowProblem(result.status, row, { text: T.markPaidFailed(name), run: () => doMarkPaidAt(row, school) });
+      rowProblem(result.status, row, { text: T.markPaidFailed(name), run: () => doMarkPaidAt(row, school) }, true);
       return;
     }
     rowDone();
     reloadQuiet();
     const paymentId = result.paymentId;
-    showToast(T.markedPaidToast(name, result.amountCents, result.method), {
+    // Hide private details switched on while this was saving: "Leo Kim marked paid", no amount or
+    // method (picture 03b keeps the Undo; a failed Undo then gets the general words, no Retry).
+    const text = hiddenNowRef.current ? T.markedPaidToastHidden(name) : T.markedPaidToast(name, result.amountCents, result.method);
+    showToast(text, {
       icon: false,
       // Staff may undo their own payment within 10 seconds (§1.14); after that it's an admin's job.
-      action: { label: T.UNDO, onAction: () => runUndo(() => undoPayment(paymentId), { notAllowedText: T.UNDO_PAYMENT_TOO_LATE }) },
+      action: { label: T.UNDO, onAction: () => runUndo(() => undoPayment(paymentId), { notAllowedText: T.UNDO_PAYMENT_TOO_LATE, money: true }) },
     });
   }
 
@@ -343,12 +432,13 @@ export default function CampPage({
     const result = await undoPayment(row.lastPaymentId);
     end(result.status);
     if (result.status !== 'ok') {
-      rowProblem(result.status, row, { text: T.actionFailed, run: () => doUndoPayment(row) });
+      rowProblem(result.status, row, { text: T.actionFailed, run: () => doUndoPayment(row) }, true);
       return;
     }
     rowDone();
     reloadQuiet();
-    showToast(T.paymentUndoneToast(T.camperLabel(row)), { icon: false });
+    // Hidden now: the general words ("Payment undone" would say they had paid).
+    showToast(hiddenNowRef.current ? T.TOAST_CHANGES_SAVED : T.paymentUndoneToast(T.camperLabel(row)), { icon: false });
   }
 
   // ===== Check in / Undo check-in (any day, v0.706): a day cell of the roster =====
@@ -405,6 +495,8 @@ export default function CampPage({
       onNoAccess();
       return;
     }
+    // Hide private details was switched on while this loaded: the money dialog doesn't open.
+    if (hiddenNowRef.current) return;
     const payment = result.status === 'ok' ? activePayment(result.payments) : null;
     if (!payment) {
       setBanner({ text: result.status === 'error' ? T.LOAD_CAMPER_FAILED : T.ROSTER_STALE });
@@ -433,7 +525,9 @@ export default function CampPage({
       type: 'deleteCamper',
       name,
       title: T.deleteCamperTitle(name),
-      body: T.deleteCamperBody(camp.name, counted ? [counted] : []),
+      // The sentence is written when drawn, so it follows Hide private details even if the switch
+      // changes while the box is open.
+      counted: counted ? [counted] : [],
       args: [row.id, result.camper.version, payments.map((p) => p.id)],
       saving: false,
       failed: false,
@@ -559,8 +653,10 @@ export default function CampPage({
     }
     const row = menu.row;
     const name = T.camperLabel(row);
-    const items = camperMenuItems(row, { isAdmin, busy, anchor: menu.anchor, h: camperHandlers });
-    return { title: name, subtitle: T.camperPayLine(T.camperDaysText(row, days), row.payingBy), label: T.moreFor(name), items };
+    const items = camperMenuItems(row, { isAdmin, busy, anchor: menu.anchor, h: camperHandlers, detailsHidden });
+    // The phone sheet's subtitle: "All days · cash" — only the days while hidden (how they pay is a payment detail).
+    const daysText = T.camperDaysText(row, days);
+    return { title: name, subtitle: detailsHidden ? daysText : T.camperPayLine(daysText, row.payingBy), label: T.moreFor(name), items };
   }
 
   // ===== Drawing =====
@@ -621,12 +717,13 @@ export default function CampPage({
           extras={extras}
           isPhone={isPhone}
           hidden={hidden}
+          detailsHidden={detailsHidden}
           startInEdit={dialog.startInEdit}
           // Touch screens have no ⋯ on the roster: its items are in the detail instead (CP5).
           actions={(() => {
             if (!isTouch) return null;
             const row = roster.find((r) => r.id === dialog.camperId);
-            return row ? camperMenuItems(row, { isAdmin, busy, anchor: null, h: camperHandlers }) : null;
+            return row ? camperMenuItems(row, { isAdmin, busy, anchor: null, h: camperHandlers, detailsHidden }) : null;
           })()}
           onClose={closeDialog}
           onSaved={() => {
@@ -670,7 +767,9 @@ export default function CampPage({
           onClose={closeDialog}
         />
       );
-    } else if (!hidden && dialog.type === 'paying') {
+    } else if (!hidden && !detailsHidden && dialog.type === 'paying') {
+      // (Never while private details are hidden: switching them on closes it.)
+      const d = dialog;
       const row = dialog.row;
       dialogElement = (
         <PayingByDialog
@@ -682,20 +781,28 @@ export default function CampPage({
           onSave={async (payingBy) => {
             const result = await changePayingBy(row.id, row.version, payingBy);
             if (result.status === 'ok') {
-              closeDialog();
+              if (stillOpen(d)) closeDialog();
               reloadQuiet();
               const newVersion = result.version;
+              // Hidden meanwhile: no Undo (how they pay is a payment item, hidden while on).
+              if (hiddenNowRef.current) {
+                showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+                return result.status;
+              }
               showToast(T.TOAST_CHANGES_SAVED, {
                 icon: false,
-                action: { label: T.UNDO, onAction: () => runUndo(() => changePayingBy(row.id, newVersion, row.payingBy)) },
+                action: { label: T.UNDO, onAction: () => runUndo(() => changePayingBy(row.id, newVersion, row.payingBy), { money: true }) },
               });
-            } else if (result.status === 'no_access') onNoAccess();
+            } else if (!stillOpen(d)) closedPaymentProblem(result.status);
+            else if (result.status === 'no_access') onNoAccess();
             else if (result.status !== 'error') reloadQuiet();
             return result.status;
           }}
         />
       );
-    } else if (!hidden && dialog.type === 'payment') {
+    } else if (!hidden && !detailsHidden && dialog.type === 'payment') {
+      // (Never while private details are hidden: switching them on closes it.)
+      const d = dialog;
       dialogElement = (
         <EditPaymentDialog
           key={dialog.key}
@@ -705,13 +812,15 @@ export default function CampPage({
           isPhone={isPhone}
           onClose={closeDialog}
           onSave={async (values) => {
-            const result = await editPayment(dialog.payment.id, values);
-            if (result.status === 'invalid' && result.field === 'school') return 'invalid_school';
+            const result = await editPayment(d.payment.id, values);
+            if (result.status === 'invalid' && result.field === 'school' && stillOpen(d)) return 'invalid_school';
             if (result.status === 'ok') {
-              closeDialog();
+              if (stillOpen(d)) closeDialog();
               reloadQuiet();
-              showToast(T.TOAST_PAYMENT_SAVED, { icon: false });
-            } else if (result.status === 'no_access') onNoAccess();
+              // Hidden now: the general words ("Payment saved" would say there is a payment).
+              showToast(hiddenNowRef.current ? T.TOAST_CHANGES_SAVED : T.TOAST_PAYMENT_SAVED, { icon: false });
+            } else if (!stillOpen(d)) closedPaymentProblem(result.status);
+            else if (result.status === 'no_access') onNoAccess();
             else if (result.status === 'not_allowed') onRefreshProfile();
             return result.status;
           }}
@@ -732,6 +841,7 @@ export default function CampPage({
           failed={dialog.failed}
           // After the camp's last day, keeping one is admin-only (Color Belt v0.194).
           canKeepOne={isAdmin || last === null || today <= last}
+          detailsHidden={detailsHidden}
           onKeep={keepOne}
           onKeepBoth={keepBoth}
           onClose={closeDialog}
@@ -742,7 +852,7 @@ export default function CampPage({
         <ConfirmDeleteDialog
           key={dialog.key}
           title={dialog.title}
-          body={dialog.body}
+          body={T.deleteCamperBody(camp.name, dialog.counted, detailsHidden)}
           hint={T.DELETE_CAMPER_HINT}
           keepLabel={T.KEEP_CAMPER}
           deleteLabel={T.DELETE_PERMANENTLY}
@@ -854,6 +964,7 @@ export default function CampPage({
         menuFor={menu?.kind === 'camper' ? menu.id : null}
         notSavedId={notSavedId}
         updatedAt={live.updatedAt}
+        detailsHidden={detailsHidden}
         handlers={{
           onOpen: (row, el) => openCamper(row, el),
           onMore: (row, anchor) => openMenu('camper', row, anchor),

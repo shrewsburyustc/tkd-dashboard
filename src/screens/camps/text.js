@@ -10,6 +10,9 @@
 //     and "student" → "camper" (§7.2) — reused by import where they are the same;
 //   - lines marked  // (not in the mockups)  are new: the orchestrator shows that list to
 //     Jeffrey at checkpoint CP1 (§7.3).
+// Follows "Hide private details" (v0.506; for Camps rulebook v0.722, design review C1): its two
+// gray words come from src/lib/privateDetails.js (re-exported at the end), and the sentences that
+// can name money take a `detailsHidden` input so they never do while the switch is on.
 import * as CB from '../testing/text.js';
 
 // ----- Reused unchanged from Color Belt (same words) -----
@@ -253,9 +256,13 @@ export const COPY_FAILED = "Couldn't copy the link. Select the link and copy it 
 export const deleteCampTitle = (name) => `Delete ${name}?`;
 // "<Camp> and its <N> campers and <$X> in payments are deleted. This can't be undone." (§7.3)
 // active = the campers the list and the camp page count; removed = withdrawn ones (they go too).
-export function deleteCampBody(name, active, removed, cents) {
+// detailsHidden (Hide private details, v0.722): "any recorded payment" instead of the amount, said the
+// same way whether anything was paid or not — "April Vacation Camp, its 19 campers and 1 removed,
+// and any recorded payment are deleted. This can't be undone." (picture 03b)
+export function deleteCampBody(name, active, removed, cents, detailsHidden = false) {
   if (active + removed === 0) return `${name} is deleted. This can’t be undone.`; // (not in the mockups)
   const who = removed > 0 ? `${campersCount(active)} and ${removed} removed` : campersCount(active);
+  if (detailsHidden) return `${name}, its ${who}${removed > 0 ? ',' : ''} and any recorded payment are deleted. This can’t be undone.`;
   return `${name} and its ${who} and ${dollars(cents)} in payments are deleted. This can’t be undone.`; // (not in the mockups)
 }
 export const TOAST_CAMP_ADDED = 'Camp added'; // (not in the mockups)
@@ -529,10 +536,15 @@ export const COL_CAMPER = 'Camper';
 export const camperNameAge = (row) => `${row.firstName} ${row.lastName} · ${row.age}`;
 export const camperLabel = (row) => `${row.firstName} ${row.lastName}`;
 export const camperPayLine = (daysText, payingBy) => `${daysText} · ${payingByLower(payingBy)}`;
+// Mark paid's toast while private details are hidden: no amount, no method (v0.722, picture 03b).
+export const markedPaidToastHidden = (name) => `${name} marked paid`;
 export const duplicateBoxLine = (n) => (n === 1 ? '1 possible duplicate' : `${n} possible duplicates`);
 export const signedUpTwice = (name) => `${name} is signed up twice`;
 export const DELETE_CAMPER_BODY_NO_PAY = (camp) => `The sign-up is deleted from ${camp}. This can’t be undone.`;
-export function deleteCamperBody(campName, payments) {
+// detailsHidden (Hide private details, v0.722): one sentence for paid and not paid, no amount (as Color
+// Belt's deleteStudentBody): "The sign-up and any recorded payment are deleted from <camp>. …"
+export function deleteCamperBody(campName, payments, detailsHidden = false) {
+  if (detailsHidden) return `The sign-up and any recorded payment are deleted from ${campName}. This can’t be undone.`;
   if (payments.length === 0) return DELETE_CAMPER_BODY_NO_PAY(campName);
   const p = payments[0];
   const paid = `the ${dollars(p.amountCents)} ${payingByLower(p.method)} payment recorded on ${monthDay(p.paidOn)}`;
@@ -686,6 +698,7 @@ export const ENTER_NAME = 'Enter a name.';
 export const ENTER_PHONE = 'Enter a 10-digit phone number.';
 export const ENTER_RELATION = 'Enter the relationship.';
 export const newTotalLine = (cents) => `Total now ${dollars(cents)}`; // (not in the mockups) live price while editing
+export const TOTAL_NOW = 'Total now'; // the same line while private details are hidden: "Total now Hidden on this tablet" (v0.722)
 export const REPRICE_NOTE = 'Changing days, member or extras prices the camper at the camp’s current prices.'; // (not in the mockups)
 export const TOTAL_TOO_HIGH = 'A camper’s total can be $10,000 at most.'; // (not in the mockups) weekly pricing R5
 export const checkedInCantRemove = (day) => `This camper was checked in on ${dayLong(day)}. Undo that check-in first.`; // (§7.3, the camper's name is the dialog title)
@@ -698,3 +711,8 @@ export const AMOUNT_TOO_HIGH = 'Enter $10,000 or less.'; // (not in the mockups)
 export const REFRESH_FAILED = 'Couldn’t refresh the roster. Check the connection, then retry.';
 // The quiet time at the end of the summary line, e.g. "Updated 2:41:07 PM" (CampRoster.jsx). (not in the mockups)
 export const updatedAtLine = (ms) => `Updated ${new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}`;
+
+// ----- Hide private details (v0.506; Camps v0.722, design review C1) -----
+// "Hidden on this tablet" (a value that keeps its row, gray) and "Payment details are hidden on
+// this tablet." (a whole payment part) — the dashboard-wide words, so every section says the same.
+export { HIDDEN_ON_THIS_TABLET, PAYMENT_DETAILS_HIDDEN } from '../../lib/privateDetails.js';

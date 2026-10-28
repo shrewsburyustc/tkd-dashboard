@@ -140,5 +140,6 @@ Brief: `docs/Design Review/End review/Prompts/6-Camps.md` (Part 1 ready now; Par
 
 - **Ready now (Part 1):** C1, C4 (Edit payment toast + Undo), C5, C8, C9, C12, C13, C15, C16, C18; database half of C2 + C7 (one migration, number via Main).
 - **Waits on Dashboard core:** C2 / C7 screens, C3, C4 ask-first, C6, C10, C11, C14, C17, C20; C19 waits on its step 2.
-- **C1 — mockups approved 2026-10-28** (pictures 01, 02, 03, 03b; rulebook v0.722): Print roster follows the switch; the ⋯ menu drops Change how they'll pay with the switch on; "Total now Hidden on this tablet" kept. **Next: build C1** (its own reviewed step and commit, can merge first).
+- **C1 — mockups approved 2026-10-28** (pictures 01, 02, 03, 03b; rulebook v0.722): Print roster follows the switch; the ⋯ menu drops Change how they'll pay with the switch on; "Total now Hidden on this tablet" kept. **C1 built 2026-10-28**: code review (1 medium, 3 low) and design review at 1280 / 820 touch / 390 touch / 320 (2 low) all fixed; checks and both builds pass; committed on `camps`, ready for Main to merge (screen-only, no migration).
+- **Found by the C1 design review (older bug, not C1):** phone 390 touch — Camper detail → More → Delete permanently opens the delete box and it closes at once (the detail page's history "back" lands after the box opens; `src/components/Dialog.jsx`, `CamperDialog.jsx` More buttons). To fix as its own step.
 - **Waiting for Jeffrey's OK:** pictures 04 (C15, C16), 05 (C8, C9), 06 (C12), 07 (C4, C5), 08 (C13), 09 (C18).

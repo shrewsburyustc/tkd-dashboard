@@ -519,6 +519,11 @@
   font-weight: 500;
 }
 
+/* Hide private details on (v0.722): "Total now Hidden on this tablet" — the gray words not bold */
+.cp-newtotal .ev-hidden-value {
+  font-weight: 400;
+}
+
 /* The re-price hint: its own line, normal weight */
 .cp-newtotal .field-hint {
   display: block;
@@ -708,6 +713,12 @@
 
 /* "⚠ Not saved" next to the name; the Paid tag stays as it is (review 3) */
 .cp-notsaved {
+  margin-left: var(--space-8);
+  vertical-align: middle;
+}
+
+/* Hide private details on (v0.722): "Possible duplicate" sits on the name's line, as Not saved */
+.cp-namedup {
   margin-left: var(--space-8);
   vertical-align: middle;
 }

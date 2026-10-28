@@ -23,8 +23,16 @@
 //
 // On touch screens the roster has no ⋯, so its items (Change how they'll pay, Withdraw / Restore,
 // and for admins Edit payment, Undo payment, Delete permanently) are listed here under "More" (CP5).
+//
+// "Hide private details" on (detailsHidden; rulebook v0.722, design review C1, as Color Belt
+// v0.412): Price and Paying by keep their rows but read gray "Hidden on this tablet"; the Payments
+// part is one gray line "Payment details are hidden on this tablet."; in Edit details each
+// extra's price and the total read "Hidden on this tablet" ("Total now Hidden on this tablet").
+// The money items leave "More" too (CamperRowMenu.jsx builds the list without them).
+// (`hidden` is something else: the screen is locked — the dialog keeps its values but isn't drawn.)
+//
 // Props: camperId, camperName (shown while loading), actions (RowMenu items, touch only, or null), camp, days (Day[]), prices, extras (the camp's current ones), isPhone,
-//        hidden, startInEdit, onClose(), onSaved(), onNoAccess, onRefreshProfile
+//        hidden, detailsHidden, startInEdit, onClose(), onSaved(), onNoAccess, onRefreshProfile
 import { useEffect, useId, useState } from 'react';
 import { IconCheck, IconEdit } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
@@ -117,7 +125,7 @@ function weekLines(b, myDayObjs, prices) {
   return weeks;
 }
 
-export default function CamperDialog({ camperId, camperName, actions = null, camp, days, prices, extras, isPhone, hidden, startInEdit, onClose, onSaved, onNoAccess, onRefreshProfile }) {
+export default function CamperDialog({ camperId, camperName, actions = null, camp, days, prices, extras, isPhone, hidden, detailsHidden = false, startInEdit, onClose, onSaved, onNoAccess, onRefreshProfile }) {
   const idBase = useId();
   const [load, setLoad] = useState({ status: 'loading', detail: null });
   const [mode, setMode] = useState(startInEdit ? 'edit' : 'view');
@@ -153,6 +161,8 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
   const camper = detail?.camper ?? null;
   const name = camper ? T.camperLabel(camper) : (camperName ?? '');
   const campDayIsos = days.map((d) => d.day);
+  // A hidden value keeps its row and reads gray "Hidden on this tablet" (v0.507; .ev-hidden-value).
+  const hiddenValue = <span className="ev-hidden-value">{T.HIDDEN_ON_THIS_TABLET}</span>;
 
   // ----- Loading / failed -----
   if (load.status !== 'ready') {
@@ -216,7 +226,9 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
           </Row>
           {b.totalCents !== undefined && (
             <Row label={T.DETAIL_PRICE}>
-              {weeks
+              {detailsHidden
+                ? hiddenValue
+                : weeks
                 ? [...weeks.map((w) => T.weekPriceLine(w)), T.priceBreakdownLine(b, allDays, weeks.length)].map((line) => (
                     <span key={line} className="ev-sum-line">
                       {line}
@@ -225,11 +237,16 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
                 : T.priceBreakdownLine(b, allDays)}
             </Row>
           )}
-          <Row label={T.DETAIL_PAYING_BY}>{T.payingByText(camper.payingBy)}</Row>
+          <Row label={T.DETAIL_PAYING_BY}>{detailsHidden ? hiddenValue : T.payingByText(camper.payingBy)}</Row>
           {camper.status !== 'active' && <Row label={T.DETAIL_REMOVED}>{T.removedDetail(camper)}</Row>}
         </dl>
 
         <h3 className="cp-detail-head">{T.HEAD_PAYMENTS}</h3>
+        {detailsHidden ? (
+          // Hidden: the whole payment part is one gray line (no status tag, no list, no amounts).
+          <p className="cp-signup-line ev-hidden-value">{T.PAYMENT_DETAILS_HIDDEN}</p>
+        ) : (
+        <>
         <dl className="ev-sum">
           <Row label={T.DETAIL_STATUS}>
             <CamperTag row={camper} onReview={() => {}} />
@@ -252,6 +269,8 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
           </Row>
         </dl>
         {owes < 0 && <p className="field-hint">{T.OVERPAID_ADMIN}</p>}
+        </>
+        )}
 
         <h3 className="cp-detail-head">{T.DETAIL_CHECKINS}</h3>
         <dl className="ev-sum">
@@ -562,7 +581,7 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
                   <label className="cbrow" htmlFor={tickId}>
                     <input id={tickId} type="checkbox" className="cb" checked={on} disabled={saving} onChange={(event) => toggleExtra(extra, event.target.checked)} />
                     <span>
-                      {extra.name} <span className="cp-age-text">· {T.extraPriceText(extra.priceCents, extra.per)}</span>
+                      {extra.name} <span className="cp-age-text">· {detailsHidden ? T.HIDDEN_ON_THIS_TABLET : T.extraPriceText(extra.priceCents, extra.per)}</span>
                     </span>
                   </label>
                   {on && extra.per === 'day' && (
@@ -586,7 +605,14 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
         )}
 
         <p className={`cp-newtotal${repriced ? ' is-changed' : ''}`} role="status">
-          {T.newTotalLine(total)}
+          {/* Hidden: the line stays, so staff see a total exists ("Total now Hidden on this tablet"). */}
+          {detailsHidden ? (
+            <>
+              {T.TOTAL_NOW} {hiddenValue}
+            </>
+          ) : (
+            T.newTotalLine(total)
+          )}
           {repriced && <span className="field-hint"> {T.REPRICE_NOTE}</span>}
         </p>
         {show('total') && <Notice>{show('total')}</Notice>}
@@ -603,7 +629,8 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
           {textField('emergencyPhone', T.PHONE, { inputMode: 'tel' })}
           {textField('emergencyRelation', T.RELATIONSHIP)}
         </div>
-        <p className="field-hint">{T.PAYMENT_NOT_HERE}</p>
+        {/* Hidden: the ⋯ menu has no payment items then, so this pointer to it goes too. */}
+        {!detailsHidden && <p className="field-hint">{T.PAYMENT_NOT_HERE}</p>}
 
         {isPhone && noteBlock}
         {isPhone ? (

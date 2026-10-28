@@ -19,10 +19,13 @@
 //   actions.items(camp, days, { includeEdit, onEdit })  → the RowMenu items
 //   actions.elements   → the open dialog and the print sheet (draw them once on the page)
 //   actions.dialogOpen → true while one of its dialogs shows (the page behind goes inert)
+// "Hide private details" (rulebook v0.722): Delete camp's sentence names no amount while it is on
+// (read here, so the Camps list and the camp page both follow it); Print roster reads it itself.
 import { useEffect, useRef, useState } from 'react';
 import { IconEdit, IconPrinter, IconTemplate, IconTrash } from '@tabler/icons-react';
 import { loadCamp, setSignup } from '../../lib/camps/campsApi.js';
 import { signupState } from '../../lib/camps/campRules.js';
+import { usePrivateDetailsHidden } from '../../lib/privateDetails.js';
 import DeleteCampDialog from './DeleteCampDialog.jsx';
 import PrintRoster from './PrintRoster.jsx';
 import SaveTemplateDialog from './SaveTemplateDialog.jsx';
@@ -56,6 +59,7 @@ export function useCampActions({
   const [printing, setPrinting] = useState(null); // the loaded camp data while it prints
   const busyRef = useRef(false);
   const [busy, setBusy] = useState(false);
+  const [detailsHidden] = usePrivateDetailsHidden(); // Hide private details (v0.506 / v0.722)
 
   function begin() {
     if (busyRef.current) return false;
@@ -246,6 +250,7 @@ export function useCampActions({
           count={dialog.count}
           active={dialog.active}
           cents={dialog.cents}
+          detailsHidden={detailsHidden}
           onClose={closeDialog}
           onDeleted={() => {
             const camp = dialog.camp;

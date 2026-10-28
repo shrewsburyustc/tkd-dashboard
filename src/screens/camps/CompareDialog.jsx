@@ -11,6 +11,10 @@
 // After the camp's last day, Keep this one is admin-only (Color Belt v0.194): staff see only keep
 // both and a line saying so. No red button: removing happens by keeping the other one, and it is
 // reversible. PC / tablet: two columns; phone: full screen, one card per sign-up.
+// Follows "Hide private details" (rulebook v0.722, design review C1; as Color Belt's compare):
+// while `detailsHidden` is on, Paying by, Total and Payment keep their rows but read gray "Hidden
+// on this tablet" on both sides and are never marked different (v1.102). Signed up, Reference,
+// Days and Extras stay, so staff can still tell the two apart and keep one.
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
 import * as T from './text.js';
@@ -27,7 +31,7 @@ export function extrasShort(row) {
   return parts.length ? parts.join(' · ') : '—';
 }
 
-export default function CompareDialog({ first, second, campDays, isPhone, saving, failed, canKeepOne, onKeep, onKeepBoth, onClose }) {
+export default function CompareDialog({ first, second, campDays, isPhone, saving, failed, canKeepOne, detailsHidden = false, onKeep, onKeepBoth, onClose }) {
   const name = T.camperLabel(first);
   const payment = (row) => (row.paidCents > 0 ? `${T.TAG_PAID} ${row.paidOn ? T.monthDay(row.paidOn) : ''}`.trim() : T.TAG_NOT_PAID);
   const lines = [
@@ -35,18 +39,23 @@ export default function CompareDialog({ first, second, campDays, isPhone, saving
     { label: T.CMP_REFERENCE, a: first.reference, b: second.reference, plain: true },
     { label: T.CMP_DAYS, a: T.camperDaysText(first, campDays), b: T.camperDaysText(second, campDays) },
     { label: T.CMP_EXTRAS, a: extrasShort(first), b: extrasShort(second) },
-    { label: T.CMP_PAYING_BY, a: T.payingByText(first.payingBy), b: T.payingByText(second.payingBy) },
-    { label: T.CMP_TOTAL, a: T.dollars(first.totalCents), b: T.dollars(second.totalCents) },
-    { label: T.CMP_PAYMENT, a: payment(first), b: payment(second) },
-  ];
+    { label: T.CMP_PAYING_BY, a: T.payingByText(first.payingBy), b: T.payingByText(second.payingBy), private: true },
+    { label: T.CMP_TOTAL, a: T.dollars(first.totalCents), b: T.dollars(second.totalCents), private: true },
+    { label: T.CMP_PAYMENT, a: payment(first), b: payment(second), private: true },
+    // The money lines while hidden: same words on both sides, plain (never highlighted).
+  ].map((line) => (detailsHidden && line.private ? { ...line, a: T.HIDDEN_ON_THIS_TABLET, b: T.HIDDEN_ON_THIS_TABLET, plain: true, isHidden: true } : line));
   // The signed-up time and the reference always differ, so they are never highlighted.
   const differs = (line) => !line.plain && line.label !== T.CMP_SIGNED_UP && line.a !== line.b;
-  const value = (text, highlight) => (
-    <>
-      {text}
-      {highlight && <span className="visually-hidden"> ({T.DIFFERENT})</span>}
-    </>
-  );
+  const value = (text, highlight, isHidden = false) =>
+    isHidden ? (
+      // Gray, as every hidden value (.ev-hidden-value, testing-events.css)
+      <span className="ev-hidden-value">{text}</span>
+    ) : (
+      <>
+        {text}
+        {highlight && <span className="visually-hidden"> ({T.DIFFERENT})</span>}
+      </>
+    );
   const keepButton = (row, which) =>
     canKeepOne && (
       <button
@@ -73,7 +82,7 @@ export default function CompareDialog({ first, second, campDays, isPhone, saving
                 {lines.map((line) => (
                   <div key={line.label} className={`ev-sum-row${differs(line) ? ' is-diff' : ''}`}>
                     <dt>{line.label}</dt>
-                    <dd>{value(index === 0 ? line.a : line.b, differs(line))}</dd>
+                    <dd>{value(index === 0 ? line.a : line.b, differs(line), line.isHidden)}</dd>
                   </div>
                 ))}
               </dl>
@@ -94,8 +103,8 @@ export default function CompareDialog({ first, second, campDays, isPhone, saving
             {lines.map((line) => (
               <tr key={line.label}>
                 <th scope="row">{line.label}</th>
-                <td className={differs(line) ? 'is-diff' : ''}>{value(line.a, differs(line))}</td>
-                <td className={differs(line) ? 'is-diff' : ''}>{value(line.b, differs(line))}</td>
+                <td className={differs(line) ? 'is-diff' : ''}>{value(line.a, differs(line), line.isHidden)}</td>
+                <td className={differs(line) ? 'is-diff' : ''}>{value(line.b, differs(line), line.isHidden)}</td>
               </tr>
             ))}
             {canKeepOne && (

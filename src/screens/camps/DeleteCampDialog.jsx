@@ -8,14 +8,17 @@
 // exactly those numbers: if a family signed up meanwhile, the database answers "stale" instead of
 // deleting something the admin didn't see (§1.14 camp_delete_camp).
 //
+// While "Hide private details" is on (detailsHidden, rulebook v0.722) the sentence says "any recorded
+// payment" instead of the amount; the delete still sends the real numbers.
+//
 // Props: camp, count (every camper, withdrawn too), active (the header's count), cents (payments net of reversals),
-//        onClose, onDeleted, onProblem(status)
+//        detailsHidden, onClose, onDeleted, onProblem(status)
 import { useState } from 'react';
 import { deleteCamp } from '../../lib/camps/campsApi.js';
 import ConfirmDeleteDialog from '../testing/events/ConfirmDeleteDialog.jsx';
 import * as T from './text.js';
 
-export default function DeleteCampDialog({ camp, count, active, cents, onClose, onDeleted, onProblem }) {
+export default function DeleteCampDialog({ camp, count, active, cents, detailsHidden = false, onClose, onDeleted, onProblem }) {
   const [deleting, setDeleting] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -37,7 +40,7 @@ export default function DeleteCampDialog({ camp, count, active, cents, onClose, 
   return (
     <ConfirmDeleteDialog
       title={T.deleteCampTitle(camp.name)}
-      body={T.deleteCampBody(camp.name, active, count - active, cents)}
+      body={T.deleteCampBody(camp.name, active, count - active, cents, detailsHidden)}
       keepLabel={T.KEEP_CAMP}
       deleteLabel={T.DELETE_CAMP}
       failed={failed}

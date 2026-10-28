@@ -21,6 +21,8 @@ import { campArgs, templateArgs, toExtra, toTemplate, EXTRA_COLUMNS, TEMPLATE_CO
 import {
   createCampsBackend, defaultCampsData, md5, schoolClockToIso, DEFAULT_CAMP_CODES, CAMP_RPC_NAMES, CAMP_RESTRICTED_RPC_NAMES, CAMP_TABLES,
 } from '../mockCamps.js';
+// The Camps words (the screens' text.js): only to check the "Hide private details" sentences.
+import * as CampText from '../../screens/camps/text.js';
 
 let count = 0;
 function check(label, fn) {
@@ -1350,6 +1352,34 @@ await (async () => {
     throw error;
   }
 })();
+
+// ======================= Hide private details (rulebook v0.722, design review C1) =======================
+// While the switch is on, the delete sentences and the Mark paid toast never name an amount, a
+// method or whether anything was paid; with it off they read exactly as before.
+check('Hide private details: delete sentences and toast name no money (v0.722)', () => {
+  const T = CampText;
+  const camp = 'April Vacation Camp';
+  const pay = [{ amountCents: 33500, method: 'card', paidOn: '2027-03-25' }];
+  // Delete camper: one sentence, paid or not (picture 03b).
+  const hiddenCamper = 'The sign-up and any recorded payment are deleted from April Vacation Camp. This can’t be undone.';
+  assert.equal(T.deleteCamperBody(camp, pay, true), hiddenCamper);
+  assert.equal(T.deleteCamperBody(camp, [], true), hiddenCamper);
+  assert.equal(T.deleteCamperBody(camp, [], false), 'The sign-up is deleted from April Vacation Camp. This can’t be undone.');
+  assert.match(T.deleteCamperBody(camp, pay, false), /\$335 card payment recorded on Mar 25/);
+  // Delete camp: with and without removed campers; an empty camp has no payment to mention.
+  assert.equal(T.deleteCampBody(camp, 19, 1, 379500, true), 'April Vacation Camp, its 19 campers and 1 removed, and any recorded payment are deleted. This can’t be undone.');
+  assert.equal(T.deleteCampBody(camp, 19, 0, 0, true), 'April Vacation Camp, its 19 campers and any recorded payment are deleted. This can’t be undone.');
+  assert.equal(T.deleteCampBody(camp, 0, 0, 0, true), 'April Vacation Camp is deleted. This can’t be undone.');
+  assert.match(T.deleteCampBody(camp, 19, 1, 379500, false), /\$3,795 in payments/);
+  for (const text of [T.deleteCamperBody(camp, pay, true), T.deleteCampBody(camp, 19, 1, 379500, true), T.markedPaidToastHidden('Leo Kim')]) {
+    assert.ok(!/\$|cash|check|card|\bpaid on\b/i.test(text), text);
+  }
+  assert.equal(T.markedPaidToastHidden('Leo Kim'), 'Leo Kim marked paid');
+  // The gray words are the dashboard-wide ones (src/lib/privateDetails.js).
+  assert.equal(T.HIDDEN_ON_THIS_TABLET, 'Hidden on this tablet');
+  assert.equal(T.PAYMENT_DETAILS_HIDDEN, 'Payment details are hidden on this tablet.');
+  assert.equal(`${T.TOTAL_NOW} ${T.HIDDEN_ON_THIS_TABLET}`, 'Total now Hidden on this tablet');
+});
 
 console.log(`${count} groups of checks ran.`);
 console.log('ALL CAMPS LIB CHECKS PASSED');
