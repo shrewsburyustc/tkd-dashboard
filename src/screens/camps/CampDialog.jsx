@@ -261,7 +261,13 @@ export default function CampDialog({
     const st = result.status;
     if (st === 'not_empty') {
       // A day or an extra an active camper picked can't be removed (v0.701).
-      if (result.kind !== 'day' && result.kind !== 'extra') {
+      if (result.kind === 'extra_per' || result.kind === 'extra_included') {
+        // The change would leave campers with an extra that no longer fits (0027, v0.720).
+        const text = result.kind === 'extra_per' ? T.cantChangeExtraPer(result.extraName ?? '', result.count ?? 0) : T.cantIncludeExtra(result.extraName ?? '', result.count ?? 0);
+        setServer((current) => ({ ...current, extraError: text }));
+        setOpenSection(4);
+        scrollToSection(4);
+      } else if (result.kind !== 'day' && result.kind !== 'extra') {
         // An extra's "Only on these days" lost a day that campers chose ('extra_day', owner decision
         // 2026-10-19), or a camp day removal left an extra with none of its days.
         const text = result.kind === 'extra_day' ? T.cantRemoveExtraDay(result.day ?? '', result.extraName ?? '', result.count ?? 0) : T.extraNoDaysLeft(result.extraName ?? '');

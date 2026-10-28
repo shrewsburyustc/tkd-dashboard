@@ -812,6 +812,56 @@ check('mock: removing a day / extra only withdrawn campers picked; rate limit; f
   assert.equal(b.publicSignup(signupArgs(b, added.public_code, [{ ...kid, day_ids: [d1], extras: [] }], { expected_total_cents: 8000 })).status, 'ok');
 });
 
+check('mock: Edit camp refuses changes that break active campers\' extras (0027, v0.720)', () => {
+  const { backend: b } = makeBackend({ today: '2027-05-20' });
+  // Mon 7 – Wed 9; Pizza $5 a day, not for all-days campers; Early drop-off once (not "not for all days").
+  const extras = (pizza = {}, drop = {}) => [
+    { name: 'Early drop-off', price_cents: 1500, per: 'once', not_for_all_days: false, only_on: [], ...drop },
+    { name: 'Pizza party', price_cents: 500, per: 'day', not_for_all_days: true, only_on: [], ...pizza },
+  ];
+  const base = addCampArgs('2027-06-07', { p_signup_opens_on: '2027-05-01', p_extras: extras() });
+  const added = rpcOk(b, 'camp_add_camp', base);
+  assert.equal(added.status, 'ok');
+  const pub = b.publicCamp(added.public_code);
+  const [d1, d2] = pub.camp.days.map((x) => x.day_id);
+  const [dropId, pizzaId] = pub.camp.extras.map((e) => e.extra_id);
+  // Noah: Mon + Tue, pizza Mon, drop-off. (Sent twice: first to learn the total.)
+  const noah = { first_name: 'Noah', last_name: 'Patel', age: 9, member: true, day_ids: [d1, d2],
+    extras: [{ extra_id: pizzaId, day_ids: [d1] }, { extra_id: dropId, day_ids: [] }] };
+  const priced = b.publicSignup(signupArgs(b, added.public_code, [noah]));
+  assert.equal(priced.status, 'price_changed');
+  assert.equal(b.publicSignup(signupArgs(b, added.public_code, [noah], { expected_total_cents: priced.new_total_cents })).status, 'ok');
+  const ids = toCamel(rows(b, 'camp_extras', 'id, name', [{ col: 'camp_id', value: added.id }]));
+  const version = () => toCamel(rows(b, 'camps', 'id, version', [{ col: 'id', value: added.id }]))[0].version;
+  const edit = (days, pizza = {}, drop = {}) => ({
+    ...base, p_camp_id: added.id, p_expected_version: version(), p_days: days,
+    p_prices: days.map((_, i) => ({ day_count: i + 1, member_early_cents: 7500 * (i + 1), member_regular_cents: 8000 * (i + 1), nonmember_early_cents: 8500 * (i + 1), nonmember_regular_cents: 9000 * (i + 1) })),
+    p_extras: extras(pizza, drop).map((e, i) => ({ ...e, id: ids.find((x) => x.name === e.name)?.id ?? ids[i].id })),
+  });
+  const v0 = version();
+  // Removing Wed (nobody picked it) would make Noah an every-day camper that week → his Mon pizza
+  // would be included → refused, nothing written.
+  assert.deepEqual(rpcOk(b, 'camp_update_camp', edit(['2027-06-07', '2027-06-08'])),
+    { status: 'not_empty', kind: 'extra_included', extra_name: 'Pizza party', count: 1 });
+  assert.equal(version(), v0);
+  // Switching pizza to once while Noah has it → refused.
+  assert.deepEqual(rpcOk(b, 'camp_update_camp', edit(['2027-06-07', '2027-06-08', '2027-06-09'], { per: 'once' })),
+    { status: 'not_empty', kind: 'extra_per', extra_name: 'Pizza party', count: 1 });
+  // Marking the once drop-off "not for all-days campers" while removing Wed: Noah would come every
+  // camp day → refused, naming drop-off (pizza made "every day" not-for-all-days false here).
+  assert.deepEqual(rpcOk(b, 'camp_update_camp', edit(['2027-06-07', '2027-06-08'], { not_for_all_days: false }, { not_for_all_days: true })),
+    { status: 'not_empty', kind: 'extra_included', extra_name: 'Early drop-off', count: 1 });
+  assert.equal(version(), v0);
+  // Adding Thu is always fine; with Noah withdrawn, removing Wed is fine too.
+  assert.equal(rpcOk(b, 'camp_update_camp', edit(['2027-06-07', '2027-06-08', '2027-06-09', '2027-06-10'])).status, 'ok');
+  const row = toCamel(rows(b, 'camp_roster', ROSTER, [{ col: 'camp_id', value: added.id }])).find((x) => x.firstName === 'Noah');
+  assert.equal(rpcOk(b, 'camp_withdraw_camper', { p_camper_id: row.id, p_expected_version: row.version }, STAFF).status, 'ok');
+  assert.equal(rpcOk(b, 'camp_update_camp', edit(['2027-06-07', '2027-06-08'])).status, 'ok');
+  // …and his Mon pizza (now included) went with it, so Restore can't bring back a broken extra.
+  const left = toCamel(rows(b, 'camp_camper_extras', 'camper_id, extra_id', [{ col: 'camper_id', value: row.id }]));
+  assert.deepEqual(left.map((x) => x.extraId), [dropId]);
+});
+
 check('mock: extras only on some days (only_on) — validation, public path, templates, seed', () => {
   const { backend: b, env } = makeBackend({ today: '2027-05-20' });
   const base = addCampArgs('2027-06-07', { p_signup_opens_on: '2027-05-01' }); // Mon 7, Tue 8, Wed 9

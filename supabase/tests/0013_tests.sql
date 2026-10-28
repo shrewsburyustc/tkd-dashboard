@@ -31,6 +31,8 @@
 --     T14 templates; T14a the roster actions' roles
 --     T15 the history (change_log): action, actor, one batch per call
 --     T16 catalog: RLS, search_path, security definer, owners, rights
+--   (changed by 0027, rulebook v0.720) T10b also passes after 0027
+--   (Edit camp refuses a save that makes an extra "included").
 --   (changed by 0022, rulebook v0.717) It passes before AND after 0022
 --   (weekly pricing): where a rule changed, the check takes the rule of
 --   the database it runs on (v_w22), and the multi-day test camps that
@@ -100,6 +102,11 @@ declare
   -- (changed by 0022, rulebook v0.717) is 0022 applied? the most one
   -- camper may cost; a Monday 30-36 days from now (camp A's first day)
   v_w22   boolean := to_regprocedure('public.camp_week_size(date[])') is not null;
+  -- (changed by 0027, rulebook v0.720) is 0027 applied? (Edit camp then
+  -- refuses a save that makes an extra "included" for an active camper)
+  v_g27   boolean := exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                              where n.nspname = 'public' and p.proname = 'camp_update_camp'
+                                and p.prosrc like '%extra_included%');
   v_cap   integer := case when to_regprocedure('public.camp_week_size(date[])') is not null then 1000000 else 200000 end;
   v_mon30 date := date_trunc('week', (public.testing_today() + 36)::timestamp)::date;
   -- (weekday-proof, 2026-10-22) a Monday 8-14 days from now: camp P's two
@@ -1784,9 +1791,27 @@ begin
   perform pg_temp.st('T10b withdraw K2', public.camp_withdraw_camper(v_k2, pg_temp.cv(v_k2)), 'ok');
   perform set_config('request.jwt.claims', v_c_a1, true);
   select max(id) into v_mark from public.change_log;
+  -- (changed by 0027, rulebook v0.720) without day 3, K1 comes EVERY camp
+  -- day and has the pizza party (once, not for all-days campers): with
+  -- 0027 that save is refused ("extra_included", nothing written), so the
+  -- save below also switches the party's box off. Before 0027 the
+  -- original save is sent unchanged.
+  if v_g27 then
+    v_r := pg_temp.st('T10b remove day 3 and the pick-up (0027 refuses)', public.camp_update_camp(v_ck, v_v, 'worcester', false,
+             v_tag || ' Kill', array[v_today, v_today + 1], '09:00', '15:00', v_today - 1, v_today, v_today, 5, 12,
+             pg_temp.gw(array[v_today, v_today + 1]),
+             (select jsonb_agg(x) from jsonb_array_elements(pg_temp.xtr_ids(v_ck)) as x where x ->> 'name' <> 'Late pick-up'),
+             'Bring a lunch.', 'I agree to the camp rules.'), 'not_empty');
+    if v_r <> jsonb_build_object('status', 'not_empty', 'kind', 'extra_included', 'extra_name', 'Pizza party', 'count', 1)
+       or (select max(id) from public.change_log) <> v_mark
+       or (select c.version from public.camps c where c.id = v_ck) <> v_v then
+      raise exception 'TEST FAILED: T10b 0027 extra_included answer % (or something was written)', v_r;
+    end if;
+  end if;
   v_r := pg_temp.st('T10b remove day 3 and the pick-up', public.camp_update_camp(v_ck, v_v, 'worcester', false, v_tag || ' Kill',
            array[v_today, v_today + 1], '09:00', '15:00', v_today - 1, v_today, v_today, 5, 12, pg_temp.gw(array[v_today, v_today + 1]),
-           (select jsonb_agg(x) from jsonb_array_elements(pg_temp.xtr_ids(v_ck)) as x where x ->> 'name' <> 'Late pick-up'),
+           (select jsonb_agg(case when v_g27 and x ->> 'name' = 'Pizza party' then jsonb_set(x, '{not_for_all_days}', 'false') else x end)
+              from jsonb_array_elements(pg_temp.xtr_ids(v_ck)) as x where x ->> 'name' <> 'Late pick-up'),
            'Bring a lunch.', 'I agree to the camp rules.'), 'ok');
   if (v_r ->> 'version')::integer <> v_v + 1
      or public.camp_day_count(v_ck) <> 2
