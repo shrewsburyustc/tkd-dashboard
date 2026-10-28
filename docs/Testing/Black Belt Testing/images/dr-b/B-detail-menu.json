@@ -1,0 +1,36 @@
+{
+  "title": "Black Belt · Mockup B — the candidate detail's ⋯ (BB9 · BB6)",
+  "subtitle": "Drawn on the real preview screens (fake data, Spring 2027, admin). The detail's own ⋯ (bottom left of the detail) keeps only the person and taking-someone-off groups: <b>Edit details · Change plan or Kukkiwon — Withdraw · Delete permanently</b>. Money stays where it is today: on each payment line's ⋯ (Edit payment, Undo payment, refunds, Mark check returned) and on the Print receipt and Record payment buttons. Nothing to decide here unless something looks wrong.",
+  "width": 1500,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        { "src": "pc-today.png", "crop": [60, 470, 640, 310], "caption": "<b>PC</b>, Mia Chen (has payments): one <b>Remove candidate</b> opens a box with Withdraw or Delete.", "marks": [[113, 689, 198, 32]] },
+        { "src": "pc-rina-today.png", "crop": [60, 470, 640, 310], "caption": "<b>PC</b>, Rina Patel (no payment, no grades).", "marks": [[113, 689, 198, 32]] },
+        { "src": "tab-today.png", "shotWidth": 820, "crop": [0, 700, 560, 480], "scale": 0.8, "caption": "<b>Tablet</b> 820 touch.", "marks": [[9, 955, 198, 44]] },
+        { "row": [
+          { "src": "phone-today.png", "shotWidth": 390, "crop": [0, 420, 390, 424], "scale": 0.8, "caption": "<b>Phone</b> 390", "marks": [[0, 731, 390, 44]] },
+          { "src": "p320-today.png", "shotWidth": 320, "crop": [0, 150, 320, 418], "scale": 0.8, "caption": "<b>320 wide</b>", "marks": [[0, 455, 320, 44]] }
+        ] }
+      ],
+      "note": "Amber: what changes."
+    },
+    {
+      "label": "After",
+      "tone": "after",
+      "items": [
+        { "src": "pc-after.png", "crop": [60, 470, 640, 310], "caption": "<b>PC</b>: Withdraw (plain, at once, with Undo) · Delete permanently, grayed with \"Mia Chen has payment records, so they can't be deleted. Withdraw them instead.\" (v0.904; or \"… has grades …\", v0.950).", "marks": [[113, 592, 198, 129]] },
+        { "src": "pc-rina-after.png", "crop": [60, 470, 640, 310], "caption": "<b>PC</b>, no payment and no grades: <b>Delete permanently is red</b> and asks first (mockup D).", "marks": [[113, 657, 198, 64]] },
+        { "src": "tab-after.png", "shotWidth": 820, "crop": [0, 700, 560, 480], "scale": 0.8, "caption": "<b>Tablet</b>.", "marks": [[9, 985, 198, 141]] },
+        { "row": [
+          { "src": "phone-after.png", "shotWidth": 390, "crop": [0, 420, 390, 424], "scale": 0.8, "caption": "<b>Phone</b> 390", "marks": [[0, 668, 390, 107]] },
+          { "src": "p320-after.png", "shotWidth": 320, "crop": [0, 150, 320, 418], "scale": 0.8, "caption": "<b>320 wide</b>", "marks": [[0, 392, 320, 107]] }
+        ] }
+      ],
+      "note": "Green: what's new."
+    }
+  ],
+  "footer": "<b>A withdrawn candidate's detail is unchanged:</b> Edit details — Restore · Delete permanently already follows the order (Restore in Withdraw's place). <b>Unchanged rules:</b> admins only for Withdraw and Delete permanently; staff see Edit details · Change plan or Kukkiwon (grayed once a payment is recorded, \"… Ask an admin.\"); with Hide private details on, Edit details is grayed with \"Edit at the desk\"."
+}

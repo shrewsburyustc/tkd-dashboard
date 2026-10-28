@@ -71,6 +71,25 @@
   const deleteReason = `${name} has payment records, so they can't be deleted. Withdraw them instead.`;
   const deleteReasonShort = `${name} has payment records, so they can't be deleted.`;
   const LISTS = {
+    // ----- Mockup B: the detail's own ⋯ (money stays on each payment line's ⋯ and the Print receipt button) -----
+    detail: [
+      { label: 'Edit details', icon: 'edit' },
+      { label: 'Change plan or Kukkiwon', icon: 'plan' },
+      { label: 'Withdraw', icon: 'withdraw', sep: true },
+      { label: 'Delete permanently', icon: 'trash', reason: deleteReason },
+    ],
+    'detail-nopay': [
+      { label: 'Edit details', icon: 'edit' },
+      { label: 'Change plan or Kukkiwon', icon: 'plan' },
+      { label: 'Withdraw', icon: 'withdraw', sep: true },
+      { label: 'Delete permanently', icon: 'trash', danger: true },
+    ],
+    'detail-withdrawn': [
+      { label: 'Edit details', icon: 'edit' },
+      { label: 'Restore', icon: 'restore', sep: true },
+      { label: 'Delete permanently', icon: 'trash', reason: deleteReasonShort },
+    ],
+    // ----- Mockup A: the roster row's ⋯ -----
     // overpaid (Grace Owens): the refund sits in the money group, after Undo payment
     'admin-overpaid': [
       { label: 'Edit details', icon: 'edit' },
@@ -153,7 +172,9 @@
       at.insertAdjacentElement('afterend', el);
       at = el;
     }
-    const opener = document.querySelector(`[aria-label="${m.getAttribute('aria-label')}"]:not([role=menu])`);
+    // the ⋯ that opened it (a row and the open detail can both have one with the same name; the open one is expanded)
+    const named = [...document.querySelectorAll(`[aria-label="${m.getAttribute('aria-label')}"]:not([role=menu])`)];
+    const opener = named.find((b) => b.getAttribute('aria-expanded') === 'true') ?? named[0];
     document.getElementById('mock-a-place')?.remove();
     if (m.classList.contains('tmenu') && opener) {
       const GAP = 4;
