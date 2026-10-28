@@ -148,4 +148,5 @@ Brief: `docs/Design Review/End review/Prompts/6-Camps.md` (Part 1 ready now; Par
 - **C8 + C9 (+ Restore icon) — picture 05 approved 2026-10-28** (rulebook v0.724): Color Belt's order, no "Admin" heading, "Review possible duplicate", ⇄ icon on Change how they'll pay. **Built and reviewed 2026-10-28** (no high/medium; touch "More" lines confirmed by Jeffrey), committed.
 - **C12 — picture 06 approved 2026-10-28** (rulebook v0.725): "Open sign-up", toasts "Sign-up open (until …)", "…wasn't opened", link box "Open it from the ⋯ menu", staff reason "Ask an admin to open it." (Jeffrey's pick, B). Built with C4/C5 (below).
 - **C4 (first half) + C5 — picture 07 approved 2026-10-28** (rulebook v0.726): "Payment changed" + Undo; Undo after Edit camp, Edit template, Edit details (every time, option A) and Save as template. **C12 + C4/C5 built and reviewed 2026-10-28** (no high/medium; lows fixed: refusal words for a taken template name and a camper's details that no longer fit, one apostrophe style, Retry grayed on the Camps list), committed.
-- **Waiting for Jeffrey's OK:** pictures 08 (C13), 09 (C18).
+- **C13 — picture 08 approved 2026-10-28** (rulebook v0.727): shared DatePicker for the three sign-up dates and Date paid. Building.
+- **Waiting for Jeffrey's OK:** picture 09 (C18).
