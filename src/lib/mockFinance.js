@@ -13,6 +13,16 @@
 //     a third source 'camp' exactly like the database's camp rows: what = 'camp', the event = the
 //     camp's name, event_date = the camp's first day, school = the school whose desk took the
 //     payment (each row's own school), the same edit / undo / mis-click chain rules.
+//   - Black Belt payments (migration 0026, CONTRACT-0026 §6): READ from the Black Belt preview
+//     store ('tkd.preview.blackBelt', blackBelt/mockBlackBelt.js) — the rows its Candidates screens
+//     write (payments, edits, undos, refunds incl. card refunds, returned checks and undone
+//     marks). A fourth source 'black_belt': school and cycle name as stored on the shown row,
+//     what = 'black_belt', no event date, for_items / one_payment_plan / handed_in_on. A returned
+//     check is its own chain (the check's day never changes, v0.809) and is left out of
+//     everything Close the day uses: the expected figures, the fingerprint, the closing snapshot,
+//     "Changed after closing", "Added after closing" and whether a day needs closing (History,
+//     Home). Card refunds come off the expected card figure (v0.814). Sample rows for the preview:
+//     __tkdPreview.bbFinanceSample() (mockClient.js) records them through Black Belt's own functions.
 //   - Star payments: Star testing has no preview database in this branch, so this file keeps a
 //     few sample Star candidates and payments of its own (shown in the list below), including a
 //     cash refund, a check refund, a refund-only day, an edit, a moved edit, an undone payment
@@ -22,17 +32,18 @@
 // clock time. A few earlier Shrewsbury days start closed so History shows every tag.
 //
 // Like mockTestingEvents.js it is a "pure core": it never touches the browser by itself.
-//   const finance = createFinanceBackend({ loadStore, saveStore, readColorBelt, readCamps, now, today, newId });
+//   const finance = createFinanceBackend({ loadStore, saveStore, readColorBelt, readCamps, readBlackBelt, now, today, newId });
 //     loadStore()     → the saved finance store (missing / damaged → the default sample)
 //     saveStore(s)    → saves it
 //     readColorBelt() → the Testing preview store (events, registrations, payments)
 //     readCamps()     → the Camps preview store (camps, camp_days, camp_campers, camp_payments); optional
+//     readBlackBelt() → the Black Belt preview store (bb_payments, bb_candidates, bb_cycle_plans); optional
 //     now()           → milliseconds (timestamps, the 10-second windows)
 //     today()         → 'YYYY-MM-DD' in school time (setToday can pretend another date)
 //   finance.rpc(name, args, ctx)   ctx = { signedIn, hasDataAccess, isAdmin, actorName, userId }
 import {
   chainItems, summarize, expectedValues, closeResults, anyDifference, countsInTotals, fingerprintOf, schoolNow,
-  weekdayOf, timeToMinutes, isReminderTime, isReminderDue, monthOf, daysOfMonth, daysBetweenInclusive,
+  weekdayOf, timeToMinutes, isReminderTime, isReminderDue, monthOf, daysOfMonth, daysBetweenInclusive, isReturned,
   UNDO_CLOSE_WINDOW_MS, MAX_COUNT_CENTS, MAX_CHECKS, NOTE_MAX,
 } from './finance/financeRules.js';
 import { centsToCsvNumber } from './finance/csv.js';
@@ -41,6 +52,7 @@ import { addDays, isIsoDate, normalizeNote, SCHOOL_TIME_ZONE } from './testing/e
 const STORE_FORMAT = 2; // bump when the store's shape changes (old stores are then replaced)
 const SCHOOLS = ['worcester', 'shrewsbury']; // switcher order: Worcester, Shrewsbury
 const SCHOOL_NAMES = { worcester: 'Worcester', shrewsbury: 'Shrewsbury' };
+const SOURCES = ['color_belt', 'star', 'camp', 'black_belt']; // finance_payment_detail's p_source
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const INT_MAX = 2147483647;
 const HOUR_MS = 60 * 60 * 1000;
@@ -352,7 +364,7 @@ function storeIsUsable(s) {
 
 // ----- The backend -----
 
-export function createFinanceBackend({ loadStore, saveStore, readColorBelt, readCamps, now = () => Date.now(), today, newId }) {
+export function createFinanceBackend({ loadStore, saveStore, readColorBelt, readCamps, readBlackBelt, now = () => Date.now(), today, newId }) {
   let failNext = false; // set by failNextSave()
   const stamp = () => new Date(now()).toISOString();
   // The day the sample counts back from: the pretend date, but never later than the real date
@@ -393,6 +405,46 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
     }
     const ok = cp && ['camps', 'camp_days', 'camp_campers', 'camp_payments'].every((k) => Array.isArray(cp[k]));
     return ok ? cp : null;
+  }
+
+  // The Black Belt preview store, or null when there is none (or it can't be read).
+  function blackBeltStore() {
+    let bb = null;
+    try {
+      bb = readBlackBelt?.() ?? null;
+    } catch {
+      bb = null;
+    }
+    const ok = bb && ['bb_payments', 'bb_candidates', 'bb_cycle_plans'].every((k) => Array.isArray(bb[k]));
+    return ok ? bb : null;
+  }
+
+  // Black Belt items (contract 0026 §2.1, §6). Rows are read whole (an undo is dated the day it's
+  // made), then the chain rules run — a returned row starts a chain of its own.
+  function blackBeltItems() {
+    const bb = blackBeltStore();
+    if (!bb) return [];
+    const candidates = new Map(bb.bb_candidates.map((c) => [c.id, c]));
+    const plans = new Map(bb.bb_cycle_plans.map((p) => [p.id, p]));
+    const rowsById = new Map(bb.bb_payments.map((p) => [p.id, p]));
+    const out = [];
+    for (const it of chainItems(bb.bb_payments.map((p) => ({ ...p, source: 'black_belt' })))) {
+      const cand = candidates.get(it.owner_id);
+      const shownRow = rowsById.get(it.row_id);
+      if (!cand || !shownRow) continue;
+      // A returned row takes the items of the check it marks, and says when that check was handed in.
+      const check = it.kind === 'returned' ? rowsById.get(rowsById.get(it.payment_id)?.reverses_payment_id ?? '') ?? null : null;
+      // "In full": the candidate's CURRENT plan has one payment (the screens show its name for exactly p1).
+      const plan = plans.get(cand.cycle_plan_id ?? '') ?? null;
+      out.push({
+        ...it, school: shownRow.location_code, first_name: cand.first_name, last_name: cand.last_name,
+        what: 'black_belt', event_date: null, is_private: false, event_name: shownRow.cycle_name, event_id: shownRow.cycle_id,
+        for_items: it.kind === 'returned' ? check?.for_items ?? null : it.kind === 'payment' ? shownRow.for_items ?? null : null,
+        one_payment_plan: plan && plan.payments_count === 1 ? plan.name : null,
+        handed_in_on: it.kind === 'returned' ? check?.paid_on ?? null : null,
+      });
+    }
+    return out;
   }
 
   // Every item of all three sources, with the owner's name, school and event. Owners that no longer
@@ -469,6 +521,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
         what: 'star', event_date: cand.private_on ?? event.testing_date, is_private: cand.private_on !== null, event_name: event.name, event_id: event.id,
       });
     }
+    out.push(...blackBeltItems()); // the fourth source (0026)
     return out;
   }
 
@@ -477,6 +530,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
     let rows = [];
     if (source === 'star') rows = db.star.payments;
     else if (source === 'camp') rows = campsStore()?.camp_payments ?? [];
+    else if (source === 'black_belt') rows = (blackBeltStore()?.bb_payments ?? []).map((p) => ({ ...p, owner_id: p.candidate_id }));
     else {
       try {
         // Event payments and private testing payments (0018): a private row's owner is its private testing.
@@ -497,12 +551,15 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
   const currentClose = (db, school, day) => db.closings.find((c) => c.kind === 'close' && c.location_code === school && c.day === day && !isEnded(db, c.id)) ?? null;
 
   // Everything about one school's day that several functions need.
+  //   counted = what Close the day counts: counting items EXCEPT returned checks (0026 §2.2) — so
+  //   they never make a day need closing, never go in the closing snapshot and never flag
+  //   "Changed after closing". The totals still take them off the Total (summarize → returned).
   function dayCore(db, items, school, day) {
     const shown = items
       .filter((it) => it.school === school && it.day === day && it.state !== 'hidden')
       .sort((a, b) => byText(a.recorded_at, b.recorded_at) || byText(a.last_name, b.last_name) || byText(a.payment_id, b.payment_id));
-    const counted = shown.filter((it) => countsInTotals(it.state));
-    const { totals, refunds } = summarize(shown);
+    const counted = shown.filter((it) => countsInTotals(it.state) && !isReturned(it));
+    const { totals, refunds, returned } = summarize(shown);
     const expected = expectedValues(totals, refunds);
     const close = currentClose(db, school, day);
     let changedAfter = false;
@@ -522,7 +579,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
         || close.expected_card_cents !== expected.cardCents;
       changedAfter = changedCount > 0 || expectedDiffers;
     }
-    return { shown, counted, totals, refunds, expected, close, changedAfter, changedCount };
+    return { shown, counted, totals, refunds, returned, expected, close, changedAfter, changedCount };
   }
 
   // A close's results in the database's shape (snake_case).
@@ -547,11 +604,17 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
       was_amount_cents: it.was_amount_cents, was_method: it.was_method, moved_to: it.moved_to, moved_from: it.moved_from,
       changed_by_name: it.changed_by_name, changed_on: it.changed_on, recorded_by_name: it.recorded_by_name,
       // "Added after closing": counted on a closed day, and its chain began after the close.
-      added_after_closing: Boolean(close) && countsInTotals(it.state) && Date.parse(it.chain_started_at) > Date.parse(close.recorded_at),
+      // Never a returned check: Close the day doesn't use them (0026 §2.2).
+      added_after_closing: Boolean(close) && countsInTotals(it.state) && !isReturned(it) && Date.parse(it.chain_started_at) > Date.parse(close.recorded_at),
     };
     // Camp rows also carry the camp's name ('Camp · April Vacation Camp', v0.707). Color Belt and
     // Star rows are unchanged (their screens show the event date).
     if (it.source === 'camp') out.event_name = it.event_name;
+    // Black Belt rows (0026 §6): the stored cycle name, what it's for, the one-payment plan's name
+    // and, on a returned check, the day the check was handed in.
+    if (it.source === 'black_belt') {
+      Object.assign(out, { event_name: it.event_name, for_items: it.for_items, one_payment_plan: it.one_payment_plan, handed_in_on: it.handed_in_on });
+    }
     return withSchool ? { ...out, school: it.school } : out;
   }
 
@@ -588,7 +651,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
       const mine = close && close.recorded_by === ctx.userId && now() - Date.parse(close.recorded_at) < UNDO_CLOSE_WINDOW_MS;
       return {
         status: 'ok', day: a.p_day, school: a.p_location_code, fingerprint: fingerprintOf(core.shown),
-        totals: core.totals, refunds: core.refunds,
+        totals: core.totals, refunds: core.refunds, returned: core.returned,
         items: core.shown.map((it) => itemOut(it, { close })),
         closing: close ? {
           id: close.id, kind: close.kind, by_name: close.recorded_by_name, at: close.recorded_at,
@@ -614,12 +677,16 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
         return {
           code, name: SCHOOL_NAMES[code], count: core.totals.count, total_cents: core.totals.total_cents,
           cash_cents: core.totals.cash.cents, check_cents: core.totals.check.cents, card_cents: core.totals.card.cents,
+          returned: core.returned, // 0026 §6: so each box can name refunds and returned checks apart (B8)
           closed: Boolean(core.close),
         };
       });
       return {
         status: 'ok', day: a.p_day, schools,
         total_cents: schools.reduce((s, x) => s + x.total_cents, 0), count: schools.reduce((s, x) => s + x.count, 0),
+        returned: {
+          count: schools.reduce((s, x) => s + x.returned.count, 0), cents: schools.reduce((s, x) => s + x.returned.cents, 0),
+        },
       };
     },
 
@@ -644,7 +711,7 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
     },
 
     finance_payment_detail(db, a, ctx) {
-      if (a.p_source === null || a.p_payment_id === null || !['color_belt', 'star', 'camp'].includes(a.p_source)) return st('invalid');
+      if (a.p_source === null || a.p_payment_id === null || !SOURCES.includes(a.p_source)) return st('invalid');
       const items = allItems(db).filter((it) => it.source === a.p_source && it.payment_id === a.p_payment_id && it.state !== 'hidden');
       if (items.length === 0) return st('not_found'); // not a chain's first row (or a hidden mis-click)
       if (!ctx.isAdmin && !items.some((it) => it.day === today())) return st('not_allowed');
@@ -656,7 +723,14 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
       const ids = new Set();
       const history = [];
       const first = rows.find((r) => r.id === a.p_payment_id);
-      if (first) {
+      if (first && first.kind === 'returned') {
+        // A returned check (0026 §6, B4 / B5): the check's own "recorded" line, the mark, and its undo.
+        const check = rows.find((r) => r.id === first.reverses_payment_id);
+        if (check) history.push({ at: check.recorded_at, by_name: check.recorded_by_name, what: 'recorded', amount_cents: check.amount_cents, method: check.method, paid_on: check.paid_on });
+        history.push({ at: first.recorded_at, by_name: first.recorded_by_name, what: 'returned', amount_cents: first.amount_cents, method: first.method, paid_on: first.paid_on });
+        const undo = rows.find((r) => r.kind === 'reversal' && r.reverses_payment_id === first.id);
+        if (undo) history.push({ at: undo.recorded_at, by_name: undo.recorded_by_name, what: 'returned_undone', amount_cents: first.amount_cents, method: first.method, paid_on: undo.paid_on });
+      } else if (first) {
         history.push({ at: first.recorded_at, by_name: first.recorded_by_name, what: first.kind === 'refund' ? 'refunded' : 'recorded', amount_cents: first.amount_cents, method: first.method, paid_on: first.paid_on });
         ids.add(first.id);
         let current = first;
@@ -729,7 +803,8 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
       if (a.p_location_code === null || a.p_day === null || a.p_day > t || badDate(a.p_day) || a.p_expected_fingerprint === null || counts.includes(null)) return st('invalid');
       if (a.p_cash_cents < -MAX_COUNT_CENTS || a.p_cash_cents > MAX_COUNT_CENTS) return st('invalid');
       if (a.p_checks_count < 0 || a.p_checks_count > MAX_CHECKS) return st('invalid');
-      for (const cents of [a.p_checks_cents, a.p_card_cents]) if (cents < 0 || cents > MAX_COUNT_CENTS) return st('invalid');
+      if (a.p_checks_cents < 0 || a.p_checks_cents > MAX_COUNT_CENTS) return st('invalid');
+      if (a.p_card_cents < -MAX_COUNT_CENTS || a.p_card_cents > MAX_COUNT_CENTS) return st('invalid'); // below zero: see below
       // The note is tidied like 0005's notes (line ends -> \n, blank ends trimmed); then at most
       // 500 characters and no invisible / control characters (tab and line break are fine).
       const note = normalizeNote(a.p_note) ?? '';
@@ -740,8 +815,10 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
       if (fingerprintOf(core.shown) !== a.p_expected_fingerprint) return st('stale');
       if (core.counted.length === 0) return st('nothing_to_close');
       if (core.close) return st('already_closed');
-      // A negative cash count only when the drawer is expected to have paid money out (v0.209).
+      // A negative cash count only when the drawer is expected to have paid money out (v0.209);
+      // a negative card total only when card refunds are bigger than card payments (v0.814).
       if (a.p_cash_cents < 0 && core.expected.cashCents >= 0) return st('invalid');
+      if (a.p_card_cents < 0 && core.expected.cardCents >= 0) return st('invalid');
       const counted = { cashCents: a.p_cash_cents, checksCount: a.p_checks_count, checksCents: a.p_checks_cents, cardCents: a.p_card_cents };
       const results = closeResults(core.expected, counted);
       if (anyDifference(results) && note === '') return { status: 'note_required', results: resultsOf(results) };
@@ -785,6 +862,10 @@ export function createFinanceBackend({ loadStore, saveStore, readColorBelt, read
           counted_cents: countsInTotals(it.state) ? it.amount_cents : 0, recorded_by_name: it.recorded_by_name, state: it.state,
           note: exportNote(it),
           ...(it.source === 'camp' ? { event_name: it.event_name } : {}), // camp rows: the camp's name (not a CSV column)
+          // Black Belt rows (0026 §6): the cycle name, what it's for and, on a returned check, the handed-in day.
+          ...(it.source === 'black_belt'
+            ? { event_name: it.event_name, for_items: it.for_items, one_payment_plan: it.one_payment_plan, handed_in_on: it.handed_in_on }
+            : {}),
         }));
       db.exports.push({
         id: newId(), location_code: a.p_location_code, from_day: a.p_from, to_day: a.p_to, row_count: rows.length,

@@ -8,7 +8,12 @@
 //
 // Refunds (v0.209) follow this device's layout:
 //   'own' — a Refunds group at the end (method on each row);
-//   'in'  — inside the Cash / Check group with a gray Refund tag and a minus amount.
+//   'in'  — inside the Cash / Check / Card group with a gray Refund tag and a minus amount.
+// Black Belt payments (migration 0026, v0.815, mockup B1) sit in their method's group like any
+// payment ("Black Belt · Spring 2027 · Payment 2", no date). Black Belt's returned (bounced) checks
+// get their own Returned checks group, ALWAYS last (after Refunds, and in the "In groups" layout
+// too): −the check, a warning-style "Returned check" tag and "Returned by the bank · handed in
+// <day>". An undone mark is struck through with the Undone tag, like any undone payment (B5).
 //
 // Three layouts (rule 1.3):
 //   PC (≥1024px)   table: Time · Student · For · Amount · Recorded by
@@ -18,30 +23,50 @@
 //
 // Props: items, layout ('own' | 'in'), refunds (finance_day's refunds), wide, isPhone,
 //        onOpen(item, rowElement) — the row is where keyboard focus goes back after the detail closes
+import { IconAlertTriangle } from '@tabler/icons-react';
 import { groupItems } from '../../lib/finance/financeRules.js';
 import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
 import { money, monthDay, timeOfDay } from './format.js';
 import * as T from './text.js';
 
-const GROUP_LABEL = { cash: T.GROUP_CASH, check: T.GROUP_CHECK, card: T.GROUP_CARD, refunds: T.GROUP_REFUNDS };
+const GROUP_LABEL = { cash: T.GROUP_CASH, check: T.GROUP_CHECK, card: T.GROUP_CARD, refunds: T.GROUP_REFUNDS, returned: T.GROUP_RETURNED };
 
 // A stable key for one row (the same chain can show twice on a day only with different rows).
 export const itemKey = (item) => `${item.payment_id}:${item.row_id ?? ''}:${item.state}`;
 
 // "Color belt testing" / "Color belt testing, private" (v0.813) / "Star testing" / "Star testing, private" /
-// "Camp" (Camps v0.707)
+// "Camp" (Camps v0.707) / "Black Belt" (v0.815)
 export function whatText(item) {
   if (item.what === 'camp') return T.WHAT_CAMP;
+  if (item.what === 'black_belt') return T.WHAT_BLACK_BELT;
   if (item.what === 'star') return item.is_private ? T.WHAT_STAR_PRIVATE : T.WHAT_STAR;
   return item.is_private ? T.WHAT_COLOR_BELT_PRIVATE : T.WHAT_COLOR_BELT;
 }
 
+// What a payment is for, without the refund's method note: "Color belt testing · Oct 29",
+// "Camp · April Vacation Camp", "Black Belt · Spring 2027 · Payment 1 + Kukkiwon" (a Black Belt
+// refund: "Black Belt · Spring 2027"). Shared by the list, the printed page and the detail.
+export function forTextOf(item) {
+  if (item.what === 'black_belt') {
+    // A refund isn't for one payment, so it names only the cycle (contract 0026 §6).
+    return item.kind === 'refund'
+      ? T.blackBeltFor(item.event_name ?? '', null, null)
+      : T.blackBeltFor(item.event_name ?? '', item.for_items, item.one_payment_plan);
+  }
+  // A camp payment names the camp instead of a date: "Camp · April Vacation Camp" (v0.707).
+  // (Until a day's rows carry the camp's name, the camp's first day stands in for it.)
+  const campName = item.event_name ?? item.camp_name ?? null;
+  return item.what === 'camp' ? `${T.WHAT_CAMP} · ${campName ?? monthDay(item.event_date)}` : `${whatText(item)} · ${monthDay(item.event_date)}`;
+}
+
 // Everything a row shows, as text. Shared with the printed page (PrintPage.jsx), so paper and
 // screen always say the same thing (D8: "corrections print as on screen").
+//   tagWarn: the tag is warning-style (amber, with the warning icon) — the Returned check tag (B1)
 export function rowText(item, layout) {
   const name = `${item.first_name ?? ''} ${item.last_name ?? ''}`.trim();
   const struck = item.state === 'undone' || item.state === 'moved_out';
   const isRefund = item.kind === 'refund';
+  const isReturnedCheck = item.kind === 'returned';
   // What it was before an edit: "$70.00", "$70.00 check" (amount and method changed) or "check".
   let was = '';
   if (item.was_amount_cents !== null && item.was_amount_cents !== undefined && item.was_amount_cents !== item.amount_cents) {
@@ -52,6 +77,7 @@ export function rowText(item, layout) {
   }
   // One tag per row (rule 8), the most important first.
   let tag = null;
+  let tagWarn = false;
   let note = null;
   if (item.state === 'undone') {
     tag = T.TAG_UNDONE;
@@ -65,6 +91,12 @@ export function rowText(item, layout) {
   } else if (item.state === 'moved_in') {
     tag = T.TAG_EDITED;
     note = T.movedFromLine(item.moved_from, was, item.changed_by_name, item.changed_on);
+  } else if (isReturnedCheck) {
+    // A returned check (v0.809): its own line on the day it was returned; never "Added after
+    // closing" (Close the day doesn't use it). Who marked it is in Recorded by only (v0.815).
+    tag = T.TAG_RETURNED;
+    tagWarn = true;
+    note = item.handed_in_on ? T.returnedLine(item.handed_in_on) : null;
   } else if (item.added_after_closing) {
     tag = T.TAG_ADDED_AFTER;
     note = T.addedAfterLine(timeOfDay(item.time ?? item.recorded_at));
@@ -72,15 +104,13 @@ export function rowText(item, layout) {
     tag = T.TAG_REFUND;
   }
   // "For": testing type · event date (+ the method on a refund in its own group, #q12 B).
-  // A camp payment names the camp instead of a date: "Camp · April Vacation Camp" (v0.707).
-  // (Until a day's rows carry the camp's name, the camp's first day stands in for it.)
-  const campName = item.event_name ?? item.camp_name ?? null;
-  let forText = item.what === 'camp' ? `${T.WHAT_CAMP} · ${campName ?? monthDay(item.event_date)}` : `${whatText(item)} · ${monthDay(item.event_date)}`;
+  let forText = forTextOf(item);
   if (isRefund && layout !== 'in') forText += ` · ${T.refundMethodNote(item.method)}`;
   return {
     name,
     struck,
     tag,
+    tagWarn,
     note,
     forText,
     time: timeOfDay(item.time ?? item.recorded_at),
@@ -89,9 +119,13 @@ export function rowText(item, layout) {
   };
 }
 
-// Group header words: "Cash · 4 payments · $320.00" / "Refunds · 2 · −$30.00 (cash −$20.00, check −$10.00)"
+// Group header words: "Cash · 4 payments · $320.00" / "Refunds · 2 · −$30.00 (cash −$20.00, check −$10.00)" /
+// "Returned checks · 1 returned check · −$900.00" (B1) or "… · 0 returned checks · $0.00 (1 undone, not counted)" (B5)
 export function groupHeadText(group, refunds) {
-  if (group.key === 'refunds') return T.refundsHead(group.refundCount, group.cents, refunds?.cash_cents ?? 0, refunds?.check_cents ?? 0);
+  if (group.key === 'refunds') {
+    return T.refundsHead(group.refundCount, group.cents, refunds?.cash_cents ?? 0, refunds?.check_cents ?? 0, refunds?.card_cents ?? 0);
+  }
+  if (group.key === 'returned') return T.returnedHead(group.returnedCount, group.cents, group.undoneCount);
   return T.groupHead(group.count, group.refundCount, group.cents);
 }
 
@@ -108,8 +142,18 @@ export function cardSub(items, cards, key, layout) {
 // The id of a group's header, so a metric card can jump to it (rule 8).
 export const groupAnchorId = (key) => `fin-group-${key}`;
 
-function Tag({ text }) {
-  return text ? <span className="ttag">{text}</span> : null;
+// A row's tag: gray, or warning-style with the warning icon and words (the Returned check tag, B1).
+function Tag({ text, warn = false }) {
+  if (!text) return null;
+  if (warn) {
+    return (
+      <span className="ttag ttag--warn">
+        <IconAlertTriangle size={14} aria-hidden="true" />
+        {text}
+      </span>
+    );
+  }
+  return <span className="ttag">{text}</span>;
 }
 
 export default function PaymentsList({ items, layout, refunds, wide, isPhone, onOpen }) {
@@ -145,7 +189,7 @@ export default function PaymentsList({ items, layout, refunds, wide, isPhone, on
                   <div className="fin-pcard-main">
                     <span className="fin-name-line">
                       <span className={r.struck ? 'fin-strike' : undefined}>{r.name}</span>
-                      <Tag text={r.tag} />
+                      <Tag text={r.tag} warn={r.tagWarn} />
                     </span>
                     <span className="fin-sub">{r.forText}</span>
                     <span className="fin-sub">
@@ -193,7 +237,7 @@ export default function PaymentsList({ items, layout, refunds, wide, isPhone, on
                 <td>
                   <span className="fin-name-line">
                     <span className={r.struck ? 'fin-strike' : undefined}>{r.name}</span>
-                    <Tag text={r.tag} />
+                    <Tag text={r.tag} warn={r.tagWarn} />
                   </span>
                   {/* Tablet: For and Recorded by drop into a second line (rule 1.3). */}
                   {!wide && (

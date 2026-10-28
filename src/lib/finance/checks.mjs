@@ -5,20 +5,22 @@
 // cards, school time and the reminder, and every function's statuses. These plain `assert`
 // checks run in well under a second without a browser or a database and print
 // ALL FINANCE LIB CHECKS PASSED.
-// Camp payments (v0.707) are the third source: the last group checks them.
+// Camp payments (v0.707) are the third source: their group checks them. Black Belt payments
+// (migration 0026) are the fourth: returned checks, card refunds, the For text, the CSV rows.
 // The chain CASE TABLE below is the one the SQL tests (0011_tests.sql §2) replay on both sources.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import {
   chainItems, buildChains, summarize, expectedCash, expectedValues, cardsFor, groupItems, compareCount, closeResults,
   anyDifference, countsInTotals, schoolNow, schoolToday, weekdayOf, timeToMinutes, isReminderTime, isReminderDue,
-  REMINDER_TIME_CHOICES, monthOf, daysOfMonth, daysBetweenInclusive, fingerprintOf, toCsv as toCsvFromRules,
+  REMINDER_TIME_CHOICES, monthOf, daysOfMonth, daysBetweenInclusive, fingerprintOf, toCsv as toCsvFromRules, expectedCard,
 } from './financeRules.js';
-import { toCsv, guardFormula, quoteCell, centsToCsvNumber, csvFileName, CSV_COLUMNS, CSV_BOM } from './csv.js';
+import { toCsv, guardFormula, quoteCell, centsToCsvNumber, csvFileName, CSV_COLUMNS, CSV_BOM, blackBeltItemsText } from './csv.js';
 import { createFinanceBackend, FINANCE_RPC_NAMES, FINANCE_WRITE_RPC_NAMES } from '../mockFinance.js';
 import { addDays } from '../testing/eventRules.js';
 import { newDays, unclosedPairsFrom, monthsToLoad, keepRecent, createSeenStore, pairKey, SEEN_KEY } from './reminderAck.js';
 import * as FT from '../../screens/finance/text.js';
+import { parseMoney } from '../../screens/finance/format.js';
 
 let count = 0;
 function check(label, fn) {
@@ -219,7 +221,7 @@ check('summarize: payments by method, refunds apart, net = in + refunds', () => 
   assert.deepEqual(totals.card, { count: 1, cents: 6500 });
   assert.equal(totals.count, 5);
   assert.equal(totals.in_cents, 40500);
-  assert.deepEqual(refunds, { count: 2, cents: -17500, cash_cents: -3500, check_cents: -14000 });
+  assert.deepEqual(refunds, { count: 2, cents: -17500, cash_cents: -3500, check_cents: -14000, card_cents: 0 });
   assert.equal(totals.net_cents, 23000);
   assert.equal(totals.total_cents, 23000);
 });
@@ -236,7 +238,7 @@ check('expected: cash in − cash refunded; checks = check PAYMENTS only; may be
 check('cardsFor: own = money in, total net; in = net per method', () => {
   const { totals, refunds } = summarize(DAY);
   const own = cardsFor(totals, refunds, 'own');
-  assert.deepEqual(own.total, { cents: 23000, count: 5, sub: 'after_refunds', refundCents: 17500 });
+  assert.deepEqual(own.total, { cents: 23000, count: 5, sub: 'after_refunds', refundCents: 17500, returnedCents: 0, returnedCount: 0 });
   assert.deepEqual(own.cash, { cents: 20500, count: 2, refundCents: 3500 });
   assert.deepEqual(own.check, { cents: 13500, count: 2, refundCents: 14000 });
   assert.deepEqual(own.card, { cents: 6500, count: 1, refundCents: 0 });
@@ -482,7 +484,7 @@ check('mock: the sample day — totals, refunds, corrections, hidden mis-click, 
   // Color Belt: Mia cash 65, Lucas check 70. Star: Ava check 140, Liam cash 140, Mason cash refund −35.
   assert.deepEqual(d.totals.cash, { count: 2, cents: 20500 });
   assert.deepEqual(d.totals.check, { count: 2, cents: 21000 });
-  assert.deepEqual(d.refunds, { count: 1, cents: -3500, cash_cents: -3500, check_cents: 0 });
+  assert.deepEqual(d.refunds, { count: 1, cents: -3500, cash_cents: -3500, check_cents: 0, card_cents: 0 });
   assert.equal(d.totals.net_cents, 41500 - 3500);
   assert.ok(!d.items.some((i) => i.last_name === 'Park'), 'the 10-second mis-click is hidden');
   assert.equal(d.items.find((i) => i.last_name === 'Rossi').what, 'star');
@@ -875,6 +877,274 @@ check('mock: camp payments — Daily report per desk school, edit / undo / mis-c
   const bothPlain = without.rpc('finance_day_both', { p_day: T }, ADMIN_CTX).data;
   assert.equal(both.total_cents, bothPlain.total_cents + 16600 + 35000 + 27500);
 });
+
+// ======================= Black Belt payments: the fourth source (migration 0026) =======================
+// CONTRACT-0026 §2 / §6, rulebook v0.808, v0.809, v0.814, v0.815 (mockups B1–B9). A fixed sample at
+// Worcester: today T has Black Belt cash / check / "In full" payments, a card refund, a returned check
+// (handed in T−10), an edit and a hidden mis-click; T−3 has ONLY a returned check; T−2 has a returned
+// mark that was undone on T−1.
+{
+  const bbId = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+  const CYCLE = bbId(9001);
+  const PLAN3 = bbId(9101);
+  const FULL = bbId(9102);
+  const cand = (n, first, last, plan = PLAN3) => ({ id: bbId(8000 + n), cycle_id: CYCLE, first_name: first, last_name: last, cycle_plan_id: plan, location_code: 'worcester', date_of_birth: '1990-01-01', email_for_results: 'x@y.z' });
+  const D10 = addDays(T, -10);
+  const D12 = addDays(T, -12);
+  const D3 = addDays(T, -3);
+  const D2 = addDays(T, -2);
+  const D1 = addDays(T, -1);
+  // [n, candidate n, kind, cents, method, paid_on, recorded_at, by ('desk' | 'admin' | 'admin2'), for_items, reverses n]
+  const WHO = { desk: ['desk', 'Staff'], admin: ['admin-1', 'Jeffrey Berg'], admin2: ['admin-2', 'Sam P.'] };
+  const ROWS = [
+    [1, 1, 'payment', 105000, 'cash', T, at(T, '11:15'), 'desk', ['p1', 'kukkiwon'], null], // Grace: Payment 1 + Kukkiwon
+    [2, 2, 'payment', 90000, 'check', T, at(T, '10:30'), 'desk', ['p2'], null], // Daniel: Payment 2
+    [3, 3, 'payment', 270000, 'check', T, at(T, '16:20'), 'desk', ['p1'], null], // Henry: In full ($2,700, a one-payment plan)
+    [4, 4, 'payment', 50000, 'card', D10, at(D10, '17:00'), 'desk', ['p1'], null], // Sofia paid by card on T−10 …
+    [5, 4, 'refund', -15000, 'card', T, at(T, '14:45'), 'admin', null, null], //   … and got $150 back on the card today
+    [6, 5, 'payment', 90000, 'check', D10, at(D10, '16:05'), 'desk', ['p1'], null], // Ethan's check, handed in T−10 …
+    [7, 5, 'returned', -90000, 'check', T, at(T, '15:10'), 'admin', null, 6], //   … returned by the bank today
+    [8, 2, 'payment', 1000, 'cash', T, at(T, '12:00'), 'desk', ['p3'], null], // a mis-click …
+    [9, 2, 'reversal', -1000, 'cash', T, new Date(Date.parse(at(T, '12:00')) + 5000).toISOString(), 'desk', null, 8], // … undone 5 s later: hidden
+    [10, 7, 'payment', 33000, 'cash', T, at(T, '09:00'), 'desk', ['p2'], null], // Mia: cash …
+    [11, 7, 'reversal', -33000, 'cash', T, at(T, '09:30'), 'admin', null, 10], //   … edited by an admin to check
+    [12, 7, 'payment', 33000, 'check', T, at(T, '09:30'), 'admin', ['p2'], null],
+    [13, 6, 'payment', 90000, 'check', D12, at(D12, '17:00'), 'desk', ['p2'], null], // Noah's check (T−12) …
+    [14, 6, 'returned', -90000, 'check', D3, at(D3, '14:05'), 'admin', null, 13], //   … returned on T−3: that day has nothing else
+    [15, 8, 'payment', 40000, 'check', D12, at(D12, '17:10'), 'desk', ['p1'], null], // Liam's check (T−12) …
+    [16, 8, 'returned', -40000, 'check', D2, at(D2, '10:00'), 'admin', null, 15], //   … marked returned on T−2 …
+    [17, 8, 'reversal', 40000, 'check', D1, at(D1, '09:00'), 'admin2', null, 16], //   … and the mark undone on T−1 (the bank's mistake)
+  ];
+  const row = ([n, c, kind, cents, method, paidOn, recordedAt, who, items, reverses]) => ({
+    id: bbId(n), candidate_id: bbId(8000 + c), cycle_id: CYCLE, kind, amount_cents: cents, method, paid_on: paidOn, for_items: items,
+    note: kind === 'returned' ? 'bank letter' : null, reason: kind === 'reversal' ? 'oops' : null, location_code: 'worcester',
+    cycle_name: 'Spring 2027', recorded_at: recordedAt, recorded_by: WHO[who][0], recorded_by_name: WHO[who][1],
+    reverses_payment_id: reverses === null ? null : bbId(reverses),
+  });
+  const bbStoreOf = (rows) => ({
+    bb_cycle_plans: [{ id: PLAN3, cycle_id: CYCLE, name: '3 payments', payments_count: 3 }, { id: FULL, cycle_id: CYCLE, name: 'In full', payments_count: 1 }],
+    bb_candidates: [cand(1, 'Grace', 'Lee'), cand(2, 'Daniel', 'Okafor'), cand(3, 'Henry', 'Park', FULL), cand(4, 'Sofia', 'Alvarez'),
+      cand(5, 'Ethan', 'Brooks'), cand(6, 'Noah', 'Rivera'), cand(7, 'Mia', 'Chen'), cand(8, 'Liam', 'Walsh')],
+    bb_payments: rows.map(row),
+  });
+  const makeBB = (getStore, nowMs = Date.parse(at(T, '18:00'))) => {
+    let store = null;
+    return createFinanceBackend({
+      loadStore: () => store, saveStore: (s) => { store = JSON.parse(JSON.stringify(s)); },
+      readColorBelt: () => JSON.parse(JSON.stringify(cbStore)), readBlackBelt: getStore,
+      now: () => nowMs, today: () => T, newId: () => randomUUID(),
+    });
+  };
+  const live = { rows: [...ROWS] }; // rows can be added later (a mark after the close)
+  const bb = makeBB(() => JSON.parse(JSON.stringify(bbStoreOf(live.rows))));
+  const call2 = (b, name, args, ctx = ADMIN_CTX) => {
+    const res = b.rpc(name, args, ctx);
+    assert.equal(res.error, null, `${name}: ${res.error?.message}`);
+    return res.data;
+  };
+  const W = (day = T) => dayArgs('worcester', day);
+
+  check('black belt: For text — Payment N, Kukkiwon, the one-payment plan name, refunds name only the cycle', () => {
+    assert.equal(FT.bbItems(['p2'], null), 'Payment 2');
+    assert.equal(FT.bbItems(['p1', 'kukkiwon'], 'In full'), 'Payment 1 + Kukkiwon'); // more than p1 → never the plan name
+    assert.equal(FT.bbItems(['p1'], 'In full'), 'In full');
+    assert.equal(FT.bbItems(['p1'], null), 'Payment 1');
+    assert.equal(FT.bbItems(['p12'], null), 'Payment 12');
+    assert.equal(FT.blackBeltFor('Spring 2027', ['p2'], null), 'Black Belt · Spring 2027 · Payment 2');
+    assert.equal(FT.blackBeltFor('Spring 2027', null, null), 'Black Belt · Spring 2027'); // a refund
+    assert.equal(blackBeltItemsText(['p1', 'p2'], 'In full'), 'Payment 1 + Payment 2');
+  });
+
+  check('black belt: a returned check is its own chain — the check stays counted on its own day', () => {
+    const items = chainItems(bbStoreOf(ROWS).bb_payments.map((p) => ({ ...p, source: 'black_belt' })));
+    const ethanCheck = items.filter((i) => i.payment_id === bbId(6));
+    assert.deepEqual(ethanCheck.map((i) => [i.day, i.state, i.kind]), [[D10, 'counted', 'payment']]);
+    const mark = items.filter((i) => i.payment_id === bbId(7));
+    assert.deepEqual(mark.map((i) => [i.day, i.state, i.kind, i.amount_cents, i.method]), [[T, 'counted', 'returned', -90000, 'check']]);
+    // The undone mark: undone on the day it was marked (v0.199), not on the undo's day; Liam's check unchanged.
+    const undone = items.filter((i) => i.payment_id === bbId(16));
+    assert.deepEqual(undone.map((i) => [i.day, i.state, i.changed_by_name, i.changed_on]), [[D2, 'undone', 'Sam P.', D1]]);
+    assert.deepEqual(items.filter((i) => i.payment_id === bbId(15)).map((i) => [i.day, i.state]), [[D12, 'counted']]);
+    assert.deepEqual(items.filter((i) => i.payment_id === bbId(8)).map((i) => i.state), ['hidden']); // the mis-click
+    assert.deepEqual(items.filter((i) => i.payment_id === bbId(10)).map((i) => [i.state, i.method, i.was_method]), [['edited', 'check', 'cash']]);
+  });
+
+  check('black belt: totals — returned checks off the Total only; card refunds in the expected card figure', () => {
+    const d = call2(bb, 'finance_day', W());
+    assert.equal(d.status, 'ok');
+    assert.deepEqual(d.totals.cash, { count: 1, cents: 105000 });
+    assert.deepEqual(d.totals.check, { count: 3, cents: 393000 }); // Daniel + Henry + Mia's edited check — money IN only
+    assert.deepEqual(d.totals.card, { count: 0, cents: 0 });
+    assert.deepEqual(d.refunds, { count: 1, cents: -15000, cash_cents: 0, check_cents: 0, card_cents: -15000 });
+    assert.deepEqual(d.returned, { count: 1, cents: -90000 });
+    assert.equal(d.totals.total_cents, 105000 + 393000 - 15000 - 90000);
+    assert.equal(d.totals.net_cents, d.totals.total_cents);
+    const expected = expectedValues(d.totals, d.refunds);
+    assert.deepEqual(expected, { count: 5, cashCents: 105000, checksCount: 3, checksCents: 393000, cardCents: -15000 });
+    assert.equal(expectedCard(d.totals, d.refunds), -15000);
+    // The Total card (B1) and the In groups Card card (v0.814).
+    const own = cardsFor(d.totals, d.refunds, 'own', d.returned);
+    assert.deepEqual(own.total, { cents: 393000, count: 4, sub: 'after_refunds_returned', refundCents: 15000, returnedCents: 90000, returnedCount: 1 });
+    assert.equal(FT.totalSub(own.total), 'after $150.00 refunds and a $900.00 returned check');
+    assert.deepEqual([own.cash.cents, own.check.cents, own.card.cents], [105000, 393000, 0]);
+    const inside = cardsFor(d.totals, d.refunds, 'in', d.returned);
+    assert.equal(inside.card.cents, -15000);
+    assert.equal(inside.check.cents, 393000); // a returned check never comes off Check
+    assert.equal(FT.totalSub(cardsFor(d.totals, { count: 0, cents: 0 }, 'own', d.returned).total), 'after a $900.00 returned check');
+    assert.equal(FT.totalSub(cardsFor(d.totals, d.refunds, 'own', null).total), 'after $150.00 refunds');
+    assert.equal(FT.afterReturned(-180000, 2), 'after $1,800.00 in returned checks');
+    // The Close the day words (B2).
+    assert.equal(FT.expectedCardWithRefunds(-15000, 0, 15000), 'Expected −$150.00 ($0.00 in − $150.00 refunded) · from the machine’s day report');
+    assert.equal(FT.returnedNotInDrawer(-90000, 1, true), 'The $900.00 returned check isn’t part of today’s drawer.');
+  });
+
+  check('black belt: groups — Returned checks always last, also In groups; Refunds header names the card part', () => {
+    const d = call2(bb, 'finance_day', W());
+    const own = groupItems(d.items, 'own');
+    assert.deepEqual(own.map((g) => g.key), ['cash', 'check', 'refunds', 'returned']);
+    const ret = own.at(-1);
+    assert.deepEqual([ret.returnedCount, ret.cents, ret.undoneCount, ret.count], [1, -90000, 0, 0]);
+    assert.equal(FT.returnedHead(ret.returnedCount, ret.cents, ret.undoneCount), ' · 1 returned check · −$900.00');
+    assert.equal(FT.refundsHead(1, -15000, 0, 0, -15000), ' · 1 refund · −$150.00 (card −$150.00)');
+    const inside = groupItems(d.items, 'in');
+    assert.deepEqual(inside.map((g) => g.key), ['cash', 'check', 'card', 'returned']); // the card refund sits in Card
+    assert.ok(inside.find((g) => g.key === 'check').items.every((i) => i.kind !== 'returned'));
+    // T−2: the undone mark is listed, not counted (B5).
+    const d2 = call2(bb, 'finance_day', W(D2));
+    const r2 = groupItems(d2.items, 'own').find((g) => g.key === 'returned');
+    assert.deepEqual([r2.returnedCount, r2.cents, r2.undoneCount, r2.items.length], [0, 0, 1, 1]);
+    assert.equal(FT.returnedHead(0, 0, 1), ' · 0 returned checks · $0.00 (1 undone, not counted)');
+    assert.deepEqual(d2.returned, { count: 0, cents: 0 });
+  });
+
+  check('black belt: items carry the For fields, no date, nothing private', () => {
+    const d = call2(bb, 'finance_day', W());
+    assertClean(d, 'finance_day with Black Belt');
+    for (const it of d.items.filter((i) => i.source === 'black_belt')) {
+      assert.equal(it.what, 'black_belt');
+      assert.equal(it.event_date, null);
+      assert.equal(it.is_private, false);
+      assert.equal(it.event_name, 'Spring 2027');
+      assert.ok(!('note' in it) && !('reason' in it), 'no note or reason on an item');
+    }
+    const by = (last) => d.items.find((i) => i.last_name === last);
+    assert.equal(FT.blackBeltFor(by('Park').event_name, by('Park').for_items, by('Park').one_payment_plan), 'Black Belt · Spring 2027 · In full');
+    assert.equal(FT.blackBeltFor(by('Lee').event_name, by('Lee').for_items, by('Lee').one_payment_plan), 'Black Belt · Spring 2027 · Payment 1 + Kukkiwon');
+    const ethan = by('Brooks');
+    assert.deepEqual([ethan.kind, ethan.amount_cents, ethan.method, ethan.handed_in_on, ethan.for_items], ['returned', -90000, 'check', D10, ['p1']]);
+    assert.equal(FT.returnedLine(ethan.handed_in_on), 'Returned by the bank · handed in Wed, Oct 14');
+    assert.equal(by('Alvarez').for_items, null); // a refund isn't for one payment
+    assert.equal(ethan.added_after_closing, false);
+    // The check's own day (T−10) still shows the check, counted and unchanged.
+    const d10 = call2(bb, 'finance_day', W(D10));
+    assert.deepEqual(d10.items.filter((i) => i.last_name === 'Brooks').map((i) => [i.kind, i.state, i.amount_cents]), [['payment', 'counted', 90000]]);
+  });
+
+  check('black belt: Close the day ignores returned checks (fingerprint, can_close, snapshot, changed after closing)', () => {
+    const withMark = call2(bb, 'finance_day', W());
+    const noMarkBackend = makeBB(() => JSON.parse(JSON.stringify(bbStoreOf(ROWS.filter((r) => r[0] !== 7)))));
+    const noMark = call2(noMarkBackend, 'finance_day', W());
+    assert.equal(withMark.fingerprint, noMark.fingerprint); // the mark never makes Close the day stale
+    assert.equal(withMark.can_close, true);
+    // T−3: only a returned check → nothing to close.
+    const d3 = call2(bb, 'finance_day', W(D3));
+    assert.equal(d3.can_close, false);
+    assert.equal(d3.totals.total_cents, -90000);
+    assert.equal(call2(bb, 'finance_close_day', { p_location_code: 'worcester', p_day: D3, p_expected_fingerprint: d3.fingerprint, p_cash_cents: 0, p_checks_count: 0, p_checks_cents: 0, p_card_cents: 0, p_note: null }).status, 'nothing_to_close');
+    // Close today: the card machine's total is −$150.00 (more refunded than taken on the card).
+    const answer = call2(bb, 'finance_close_day', {
+      p_location_code: 'worcester', p_day: T, p_expected_fingerprint: withMark.fingerprint, p_cash_cents: 105000,
+      p_checks_count: 3, p_checks_cents: 393000, p_card_cents: -15000, p_note: null,
+    });
+    assert.equal(answer.status, 'ok');
+    assert.equal(answer.results.card.result, 'matches');
+    const closed = call2(bb, 'finance_day', W());
+    assert.equal(closed.closing.expected_card_cents, -15000);
+    assert.equal(closed.closing.expected_count, 5); // payments + the refund, not the returned check
+    assert.equal(closed.closing.changed_after, false);
+    // A returned mark recorded AFTER the close (Daniel's check), then its undo: neither flags the day.
+    live.rows.push([18, 2, 'returned', -90000, 'check', T, at(T, '18:30'), 'admin', null, 2]);
+    const after = call2(bb, 'finance_day', W());
+    assert.equal(after.closing.changed_after, false);
+    assert.deepEqual(after.returned, { count: 2, cents: -180000 });
+    assert.equal(after.items.find((i) => i.payment_id === bbId(18)).added_after_closing, false);
+    live.rows.push([19, 2, 'reversal', 90000, 'check', T, at(T, '18:45'), 'admin2', null, 18]);
+    assert.equal(call2(bb, 'finance_day', W()).closing.changed_after, false);
+    live.rows.splice(live.rows.length - 2, 2);
+    // A negative card count on a day whose expected card isn't negative is refused.
+    const plain = makeBB(() => JSON.parse(JSON.stringify(bbStoreOf(ROWS.filter((r) => r[0] !== 5)))));
+    const pd = call2(plain, 'finance_day', W());
+    assert.equal(call2(plain, 'finance_close_day', { p_location_code: 'worcester', p_day: T, p_expected_fingerprint: pd.fingerprint, p_cash_cents: 105000, p_checks_count: 3, p_checks_cents: 393000, p_card_cents: -1, p_note: 'x' }).status, 'invalid');
+  });
+
+  check('black belt: History and Home leave a returned-only day out of "not closed"', () => {
+    const h = call2(bb, 'finance_history', { p_location_code: 'worcester', p_month: monthOf(D3) });
+    const row3 = h.days.find((x) => x.day === D3 && x.school === 'worcester');
+    assert.deepEqual([row3.tag, row3.total_cents], ['no_payments', -90000]); // the screen shows "Nothing to close" (B7)
+    // Home: only Noah's rows → his T−12 check day counts as not closed, his T−3 returned day doesn't.
+    const only = (ns) => makeBB(() => JSON.parse(JSON.stringify(bbStoreOf(ROWS.filter((r) => ns.includes(r[0]))))));
+    const base = call2(only([]), 'finance_home', {}).earlier.by_school.worcester?.count ?? 0;
+    assert.equal(call2(only([13, 14]), 'finance_home', {}).earlier.by_school.worcester.count, base + 1);
+  });
+
+  check('black belt: payment detail — the cycle, a returned check’s history, staff today only', () => {
+    const det = call2(bb, 'finance_payment_detail', { p_source: 'black_belt', p_payment_id: bbId(7) });
+    assertClean(det, 'finance_payment_detail black belt');
+    assert.equal(det.status, 'ok');
+    assert.equal(det.event_name, 'Spring 2027');
+    assert.equal(det.event_id, CYCLE);
+    assert.deepEqual([det.item.kind, det.item.handed_in_on, det.item.school], ['returned', D10, 'worcester']);
+    assert.deepEqual(det.history.map((x) => x.what), ['returned', 'recorded']); // newest first (B4)
+    assert.deepEqual(det.history.map((x) => FT.historyLine(x, null)), ['Jeffrey Berg marked it returned by the bank', 'Staff recorded $900.00 by check']);
+    const und = call2(bb, 'finance_payment_detail', { p_source: 'black_belt', p_payment_id: bbId(16) });
+    assert.deepEqual(und.history.map((x) => FT.historyLine(x, null)), ['Sam P. undid the returned mark', 'Jeffrey Berg marked it returned by the bank', 'Staff recorded $400.00 by check']);
+    assert.equal(und.item.state, 'undone');
+    assert.equal(FT.detailTitle('Ethan Brooks', 'returned'), 'Ethan Brooks · returned check');
+    assert.equal(FT.detailForNoDate('Black Belt · Spring 2027 · Payment 2', 'Worcester'), 'Black Belt · Spring 2027 · Payment 2 (Worcester)');
+    // Staff: today's rows only.
+    assert.equal(call2(bb, 'finance_payment_detail', { p_source: 'black_belt', p_payment_id: bbId(7) }, STAFF_CTX).status, 'ok');
+    assert.equal(call2(bb, 'finance_payment_detail', { p_source: 'black_belt', p_payment_id: bbId(16) }, STAFF_CTX).status, 'not_allowed');
+    assert.equal(call2(bb, 'finance_day', W(D3), STAFF_CTX).status, 'not_allowed');
+    assert.equal(call2(bb, 'finance_payment_detail', { p_source: 'black_belt', p_payment_id: bbId(8) }).status, 'not_found'); // the hidden mis-click
+  });
+
+  check('black belt: export rows and the CSV (B6)', () => {
+    const exp = call2(bb, 'finance_export', { p_location_code: 'worcester', p_from: D2, p_to: T });
+    const rows = exp.rows.filter((r) => r.what === 'black_belt');
+    const csv = toCsv(rows);
+    assert.match(csv, /,Daniel,Okafor,Black Belt · Spring 2027 · Payment 2,,Payment,Check,900\.00,900\.00,Staff,Counted,\r\n/);
+    assert.match(csv, /,Henry,Park,Black Belt · Spring 2027 · In full,,Payment,Check,2700\.00,2700\.00,Staff,Counted,/);
+    assert.match(csv, /,Sofia,Alvarez,Black Belt · Spring 2027,,Refund,Card,-150\.00,-150\.00,Jeffrey Berg,Counted,\r\n/);
+    assert.ok(csv.includes(`,Ethan,Brooks,Black Belt · Spring 2027 · Payment 1,,Returned check,Check,-900.00,-900.00,Jeffrey Berg,Counted,Handed in ${D10}\r\n`));
+    assert.ok(csv.includes(`,Liam,Walsh,Black Belt · Spring 2027 · Payment 1,,Returned check,Check,-400.00,0.00,Jeffrey Berg,Undone,Handed in ${D12} · undone by Sam P. on ${D1}\r\n`));
+    // Summing "Counted in total" for today still gives today's Total.
+    const today = exp.rows.filter((r) => r.day === T).reduce((s, r) => s + r.counted_cents, 0);
+    assert.equal(today, call2(bb, 'finance_day', W()).totals.total_cents);
+    assert.equal(call2(bb, 'finance_export_preview', { p_location_code: 'worcester', p_from: T, p_to: T }).total_cents, today);
+  });
+
+  check('black belt: Both names refunds and returned checks apart (B8); other sources unchanged', () => {
+    const both = call2(bb, 'finance_day_both', { p_day: T });
+    const w = both.schools.find((s) => s.code === 'worcester');
+    assert.deepEqual(w.returned, { count: 1, cents: -90000 });
+    assert.deepEqual(both.returned, { count: 1, cents: -90000 });
+    assert.equal(FT.bothAfter(15000, -90000, 1), 'after $150.00 refunds and a $900.00 returned check');
+    assert.equal(FT.bothAfter(0, -90000, 1), 'after a $900.00 returned check');
+    assert.equal(FT.bothAfter(15000, 0, 0), 'after $150.00 refunds');
+    assert.equal(FT.bothAfter(0, 0, 0), '');
+    assert.deepEqual(FT.bothTogether(373000, 5, 'after $150.00 refunds'), ['Both schools together: ', '$3,730.00', ' · 5 payments · after $150.00 refunds']);
+    // No Black Belt rows → every other answer is exactly what it was.
+    const empty = makeBB(() => ({ bb_payments: [], bb_candidates: [], bb_cycle_plans: [] }));
+    const none = makeBB(undefined);
+    for (const school of ['worcester', 'shrewsbury']) {
+      for (const day of [T, D2, D10]) assert.deepEqual(call2(empty, 'finance_day', dayArgs(school, day)), call2(none, 'finance_day', dayArgs(school, day)));
+    }
+    // The card field takes a minus sign only when asked (v0.814).
+    assert.deepEqual(parseMoney('−150.00', { allowMinus: true }), { cents: -15000 });
+    assert.deepEqual(parseMoney('-150', { allowMinus: true }), { cents: -15000 });
+    assert.deepEqual(parseMoney('-150'), { problem: 'notNumber' });
+  });
+}
 
 // ======================= Home reminder "OK" (reminderAck.js, v0.811) =======================
 

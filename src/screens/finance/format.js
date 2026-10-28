@@ -27,8 +27,15 @@ export const MAX_CHECKS = 500;
 // Reads a typed amount ("300", "$300.00", "1,234.5", ".50"). Returns ONE of:
 //   { cents }  ·  { problem: 'empty' }  ·  { problem: 'notNumber' }  ·  { problem: 'tooHigh' }
 // No minus sign: cash taken out of the drawer is typed as a positive number (v0.209).
-export function parseMoney(text) {
+// { allowMinus: true } (only the card machine total on a day whose card refunds are bigger than
+// its card payments, v0.814 / mockup B2 "−150.00"): a leading - or − makes the amount negative.
+export function parseMoney(text, { allowMinus = false } = {}) {
   let s = String(text ?? '').trim();
+  let sign = 1;
+  if (allowMinus && /^[-−]/.test(s)) {
+    sign = -1;
+    s = s.slice(1).trim();
+  }
   if (s.startsWith('$')) s = s.slice(1).trim();
   s = s.replace(/,/g, '');
   if (s === '') return { problem: 'empty' };
@@ -37,7 +44,7 @@ export function parseMoney(text) {
   // Whole dollars × 100 + the cents part padded to two digits ("5" → 50 cents).
   const cents = Number(whole || '0') * 100 + Number((decimals + '00').slice(0, 2));
   if (cents > MAX_COUNT_CENTS) return { problem: 'tooHigh' };
-  return { cents };
+  return { cents: sign < 0 && cents !== 0 ? -cents : cents };
 }
 
 // Reads a typed number of checks ("2"). Same kind of answer as parseMoney, with { count }.
