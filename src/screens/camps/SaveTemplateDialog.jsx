@@ -3,10 +3,12 @@
 // everything about a camp except its dates and campers, so the next one is name + days + Save.
 // One field: the template name, starting as the camp's name and kept exactly as typed. The note
 // says what is kept. A name already used shows the amber line "A template with this name exists.
-// Choose another name." (database answer duplicate_name). Saved → toast "Template saved · <name>".
+// Choose another name." (database answer duplicate_name). Saved → toast "Template saved · <name>"
+// with Undo for 5 seconds, which deletes the new template (rulebook v0.726).
 // A small dialog on every device (the C2b phone frame: "small dialogs stay dialogs on phones").
 //
-// Props: camp, onClose, onSaved(name), onNoAccess, onRefreshProfile
+// Props: camp, onClose, onSaved(name, { id, version }) (the new template — the toast's Undo deletes
+//        it, rulebook v0.726), onNoAccess, onRefreshProfile
 import { useId, useState } from 'react';
 import { IconCheck } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
@@ -40,7 +42,7 @@ export default function SaveTemplateDialog({ camp, onClose, onSaved, onNoAccess,
     const clean = normalizeName(name);
     const result = await saveTemplate(camp.id, clean);
     setSaving(false);
-    if (result.status === 'ok') onSaved(clean);
+    if (result.status === 'ok') onSaved(clean, { id: result.id, version: result.version });
     else if (result.status === 'duplicate_name') setDuplicate(clean);
     else if (result.status === 'no_access') onNoAccess();
     else if (result.status === 'not_allowed') {

@@ -21,8 +21,11 @@ import { campArgs, templateArgs, toExtra, toTemplate, EXTRA_COLUMNS, TEMPLATE_CO
 import {
   createCampsBackend, defaultCampsData, md5, schoolClockToIso, DEFAULT_CAMP_CODES, CAMP_RPC_NAMES, CAMP_RESTRICTED_RPC_NAMES, CAMP_TABLES,
 } from '../mockCamps.js';
-// The Camps words (the screens' text.js): only to check the "Hide private details" sentences.
+// The Camps words (the screens' text.js): only to check the "Hide private details" sentences and
+// the v0.725 / v0.726 words.
 import * as CampText from '../../screens/camps/text.js';
+// The Edit camp form's pure Undo helpers (rulebook v0.726).
+import { campUndoRefusal, undoAddsPastDay, undoCampPayload } from '../../screens/camps/sections/campForm.js';
 
 let count = 0;
 function check(label, fn) {
@@ -1379,6 +1382,39 @@ check('Hide private details: delete sentences and toast name no money (v0.722)',
   assert.equal(T.HIDDEN_ON_THIS_TABLET, 'Hidden on this tablet');
   assert.equal(T.PAYMENT_DETAILS_HIDDEN, 'Payment details are hidden on this tablet.');
   assert.equal(`${T.TOTAL_NOW} ${T.HIDDEN_ON_THIS_TABLET}`, 'Total now Hidden on this tablet');
+});
+
+// ======================= Undo after Camps' saves (rulebook v0.726) and "Open sign-up" (v0.725) =======================
+// Edit camp's Undo sends the camp's OLD payload again: an extra the save removed goes without its
+// id (it no longer exists — the database would refuse the id), kept ones keep theirs, and the
+// refusal words name the reason. (The round trip itself is tried in the preview, in the browser.)
+check('Undo of Edit camp: old payload, refusal words (v0.726)', () => {
+  const T = CampText;
+  const before = { days: ['2027-04-19', '2027-04-20'], extras: [{ name: 'Pizza', extraId: 'x1' }, { name: 'Swim', extraId: 'x2' }] };
+  const saved = { days: ['2027-04-20', '2027-04-21'], extras: [{ name: 'Pizza', extraId: 'x1' }, { name: 'Art', extraId: null }] };
+  const back = undoCampPayload(before, saved);
+  assert.deepEqual(back.extras, [{ name: 'Pizza', extraId: 'x1' }, { name: 'Swim', extraId: null }]);
+  assert.deepEqual(back.days, before.days);
+  assert.equal(undoCampPayload(null, saved), null);
+  // A past day taken off can't be put back by Undo (the database refuses new past days).
+  assert.equal(undoAddsPastDay(before, saved, '2027-04-20'), true);
+  assert.equal(undoAddsPastDay(before, saved, '2027-04-19'), false);
+  assert.equal(campUndoRefusal({ status: 'invalid' }, { addsPastDay: true }), "Couldn’t undo. New days can’t be in the past.");
+  assert.equal(campUndoRefusal({ status: 'invalid' }, { addsPastDay: false }), null);
+  assert.equal(campUndoRefusal({ status: 'stale' }), null);
+  assert.equal(campUndoRefusal({ status: 'ok' }), null);
+  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'day', day: '2027-04-21', firstName: 'Mia', lastName: 'Rossi', more: 0 }), /^Couldn’t undo\. Can’t remove .*Mia Rossi picked it/);
+  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'extra', extraName: 'Art', count: 2 }), /^Couldn’t undo\. Can’t remove Art: 2 campers picked it/);
+  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'extra_per', extraName: 'Art', count: 1 }), /^Couldn’t undo\. Can’t switch Art/);
+  assert.match(campUndoRefusal({ status: 'not_empty', kind: 'extra_included', extraName: 'Art', count: 1 }), /^Couldn’t undo\. Can’t save: Art would become included/);
+  // The words (v0.725 / v0.726).
+  assert.equal(T.OPEN_SIGNUP, 'Open sign-up');
+  assert.equal(T.OPEN_NEEDS_ADMIN, 'The closing date has passed. Ask an admin to open it.');
+  assert.equal(T.TOAST_SIGNUP_OPEN, 'Sign-up open');
+  assert.equal(T.signupOpenUntil('2027-04-30'), 'Sign-up open until Apr 30');
+  assert.equal(T.signupNotOpened('April Camp'), "Sign-up for April Camp wasn't opened. Check the connection, then retry.");
+  assert.equal(T.linkDialogLine('closed', {}), 'Family sign-up is closed. Open it from the ⋯ menu to take more sign-ups.');
+  assert.equal(T.TOAST_PAYMENT_CHANGED, 'Payment changed');
 });
 
 console.log(`${count} groups of checks ran.`);

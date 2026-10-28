@@ -238,17 +238,20 @@ export const ALL_DAYS = 'All days';
 // ----- Header ⋯ / row ⋯ of a camp -----
 export const EDIT_CAMP = 'Edit camp';
 export const CLOSE_SIGNUP = 'Close sign-up';
-export const REOPEN_SIGNUP = 'Reopen sign-up';
-export const REOPEN_NEEDS_ADMIN = 'The closing date has passed. Ask an admin to reopen.';
+// "Open sign-up" (was "Reopen sign-up"; rulebook v0.725, design review C12) and its related words.
+export const OPEN_SIGNUP = 'Open sign-up';
+// Staff's grayed reason in the ⋯ menu and the matching banner (Camps' own words since v0.725;
+// Color Belt and Star still say "…to reopen." until their own reviews decide).
+export const OPEN_NEEDS_ADMIN = 'The closing date has passed. Ask an admin to open it.';
 export const SAVE_AS_TEMPLATE = 'Save as template';
 export const PRINT_ROSTER = 'Print roster';
 export const DELETE_CAMP = 'Delete camp';
 export const KEEP_CAMP = 'Keep camp'; // (not in the mockups) — like Color Belt's "Keep event"
 export const TOAST_SIGNUP_CLOSED = 'Sign-up closed'; // (not in the mockups)
-export const TOAST_SIGNUP_REOPENED = 'Sign-up reopened'; // (not in the mockups)
-export const signupReopenedUntil = (iso) => `Sign-up reopened until ${monthDay(iso)}`; // (not in the mockups) admin, after the closing date
+export const TOAST_SIGNUP_OPEN = 'Sign-up open'; // (v0.725)
+export const signupOpenUntil = (iso) => `Sign-up open until ${monthDay(iso)}`; // (v0.725) admin, after the closing date
 export const signupNotClosed = (name) => `Sign-up for ${name} wasn't closed. Check the connection, then retry.`; // (not in the mockups)
-export const signupNotReopened = (name) => `Sign-up for ${name} wasn't reopened. Check the connection, then retry.`; // (not in the mockups)
+export const signupNotOpened = (name) => `Sign-up for ${name} wasn't opened. Check the connection, then retry.`; // (v0.725)
 export const CAMP_FINISHED = 'This camp is over, so its sign-up can’t change.'; // (not in the mockups)
 export const CAMPS_NOT_ALLOWED = "Only an admin can do that. Your change wasn't saved.";
 export const COPY_FAILED = "Couldn't copy the link. Select the link and copy it by hand."; // (not in the mockups)
@@ -268,6 +271,18 @@ export function deleteCampBody(name, active, removed, cents, detailsHidden = fal
 }
 export const TOAST_CAMP_ADDED = 'Camp added'; // (not in the mockups)
 export const TOAST_CAMP_SAVED = 'Camp saved'; // (not in the mockups)
+
+// ----- Undo after Camps' saves (rulebook v0.726, design review C4 / C5) -----
+// Edit payment's toast: Black Belt's words (its TOAST_PAYMENT_CHANGED), with Undo.
+export const TOAST_PAYMENT_CHANGED = 'Payment changed';
+// An Undo the database refused for a reason it named (a family picked a newly added day, an
+// extra campers now have …): the amber bar says so. reason = one of the "Can’t …" sentences.
+// (not in the mockups)
+// (Starts like Color Belt's UNDO_STALE, "Couldn't undo. …")
+export const undoRefused = (reason) => `Couldn’t undo. ${reason}`; // curly ’ like the reasons it is joined to
+
+// A camper's Undo the database refused as 'invalid' (the old details no longer fit the camp).
+export const UNDO_DETAILS_NO_LONGER_FIT = 'The old details no longer fit the camp as it is now. Open Edit details to change them by hand.'; // (not in the mockups)
 
 // ----- C2 Templates -----
 export const COL_TEMPLATE = 'Template';
@@ -594,7 +609,7 @@ export const signedUpStamp = (stamp) => `${stampDayTime(stamp)} · family form`;
 export const linkDialogLine = (state, camp) => {
   if (state === 'open') return `Family sign-up is open until ${weekdayMonthDay(camp.signupClosesOn)}. Families choose their child’s days and extras on the form.`;
   if (state === 'not_open_yet') return `Family sign-up opens on ${weekdayMonthDay(camp.signupOpensOn)}. Families choose their child’s days and extras on the form.`; // (not in the mockups)
-  if (state === 'closed') return 'Family sign-up is closed. Reopen it from the ⋯ menu to take more sign-ups.'; // (not in the mockups)
+  if (state === 'closed') return 'Family sign-up is closed. Open it from the ⋯ menu to take more sign-ups.'; // (v0.725)
   return 'This camp is over.'; // (not in the mockups)
 };
 export const DOWNLOAD_QR = 'Download QR code';
@@ -712,6 +727,9 @@ export const TOTAL_NOW = 'Total now'; // the same line while private details are
 export const REPRICE_NOTE = 'Changing days, member or extras prices the camper at the camp’s current prices.'; // (not in the mockups)
 export const TOTAL_TOO_HIGH = 'A camper’s total can be $10,000 at most.'; // (not in the mockups) weekly pricing R5
 export const checkedInCantRemove = (day) => `This camper was checked in on ${dayLong(day)}. Undo that check-in first.`; // (§7.3, the camper's name is the dialog title)
+// The same, in the camp page's amber bar after a refused Undo of Edit details (no dialog title
+// there, so it names the camper; v0.726). (not in the mockups)
+export const checkedInCantRemoveNamed = (name, day) => `${name} was checked in on ${dayLong(day)}. Undo that check-in first.`;
 export const PAYMENT_NOT_HERE = 'Payments are changed from the roster’s ⋯ menu.'; // (not in the mockups)
 export const AMOUNT_TOO_HIGH = 'Enter $10,000 or less.'; // (not in the mockups) weekly pricing R5
 

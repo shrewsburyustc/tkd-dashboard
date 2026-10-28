@@ -442,6 +442,48 @@ export function checkForm(values, ctx) {
   return { errors, sections, firstProblem, payload };
 }
 
+// ----- Undo after Edit camp (rulebook v0.726, design review C5) -----
+// The toast's Undo sends the camp's OLD values again (the payload the dialog would have sent if
+// nothing had been changed). One fix is needed first: an extra the save REMOVED no longer exists,
+// so its old id would be refused ("an id that isn't one of this camp's extras"). Such an extra is
+// sent without its id, so the database adds it again as a new extra (no active camper had it —
+// otherwise the save itself was refused). Extras the save ADDED aren't in the old list, so the
+// Undo removes them (refused if a family picked one meanwhile — the amber bar then says so).
+//   before = the old payload (checkForm on the values the dialog loaded)
+//   saved  = the payload that was just saved
+export function undoCampPayload(before, saved) {
+  if (!before) return null;
+  const kept = new Set((saved?.extras ?? []).map((e) => e.extraId).filter(Boolean));
+  return { ...before, extras: before.extras.map((e) => (e.extraId && !kept.has(e.extraId) ? { ...e, extraId: null } : e)) };
+}
+
+// Did the save take a day off that is already in the past? Then its Undo would add a NEW past day,
+// which the database always refuses ('invalid'): the amber bar can say why.
+export function undoAddsPastDay(before, saved, today) {
+  if (!before?.days || !saved?.days) return false;
+  return before.days.some((d) => d < today && !saved.days.includes(d));
+}
+
+// The words for an Undo of Edit camp the database refused for a reason it named, or null (then
+// the page uses its general "Couldn't undo. Someone else changed this just now.").
+//   not_empty → the same sentences Edit camp's own Save shows (v0.701 / 0027 v0.720)
+//   invalid   → "New days can't be in the past." when the Undo puts back a past day
+export function campUndoRefusal(result, { addsPastDay = false } = {}) {
+  if (!result) return null;
+  if (result.status === 'not_empty') {
+    let reason;
+    if (result.kind === 'day') reason = T.cantRemoveDay(result.day, result.firstName ?? '', result.lastName ?? '', result.more ?? 0);
+    else if (result.kind === 'extra') reason = T.cantRemoveExtra(result.extraName ?? '', result.count ?? 0);
+    else if (result.kind === 'extra_day') reason = T.cantRemoveExtraDay(result.day ?? '', result.extraName ?? '', result.count ?? 0);
+    else if (result.kind === 'extra_per') reason = T.cantChangeExtraPer(result.extraName ?? '', result.count ?? 0);
+    else if (result.kind === 'extra_included') reason = T.cantIncludeExtra(result.extraName ?? '', result.count ?? 0);
+    else reason = T.extraNoDaysLeft(result.extraName ?? '');
+    return T.undoRefused(reason);
+  }
+  if (result.status === 'invalid' && !result.field && addsPastDay) return T.undoRefused(T.PAST_DAY);
+  return null;
+}
+
 // Re-exported for the section files (one import place for the form's limits).
 export { AGE_LIMITS, MAX_EXTRAS, MAX_DAYS, MAX_WEEK_DAYS };
 

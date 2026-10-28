@@ -41,7 +41,7 @@
 //
 // Props: camperId, camperName (shown while loading), actions (RowMenu items, touch only, or null;
 //        each item's onSelect closes or replaces this dialog itself), camp, days (Day[]), prices, extras (the camp's current ones), isPhone,
-//        hidden, detailsHidden, startInEdit, onClose(), onSaved(), onNoAccess, onRefreshProfile
+//        hidden, detailsHidden, startInEdit, onClose(), onSaved(undo) (undo() = save the old details again — the toast's Undo, v0.726), onNoAccess, onRefreshProfile
 import { Fragment, useEffect, useId, useState } from 'react';
 import { IconCheck, IconEdit } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
@@ -453,10 +453,48 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
       emergencyPhone: phoneDigits(values.emergencyPhone),
       emergencyRelation: normalizeName(values.emergencyRelation),
     };
+    // The OLD details in the same shape, for the toast's Undo (rulebook v0.726, option A): what the
+    // form loaded, sent as if typed again — days, member box and extras as savedChild (the same
+    // rules as `child` above), names, age and family as loaded.
+    const was = JSON.parse(initial);
+    const oldInput = {
+      firstName: normalizeName(was.firstName),
+      lastName: normalizeName(was.lastName),
+      age: Number(was.age),
+      member: savedChild.member,
+      dayIds: savedChild.dayIds,
+      extras: savedChild.extras,
+      parentName: normalizeName(was.parentName),
+      parentPhone: phoneDigits(was.parentPhone),
+      parentRelation: normalizeName(was.parentRelation),
+      emergencyName: normalizeName(was.emergencyName),
+      emergencyPhone: phoneDigits(was.emergencyPhone),
+      emergencyRelation: normalizeName(was.emergencyRelation),
+    };
     const result = await updateDetails(camperId, camper.version, camper.signupVersion, input);
     setSaving(false);
     const st = result.status;
-    if (st === 'ok') onSaved();
+    if (st === 'ok') {
+      // Undo = save the old details again on the versions this save made. If days, member or
+      // extras change back, the database prices the camper again at the camp's CURRENT prices
+      // (v0.700), so a total that changed with the camp's prices may not come back. Refusals the
+      // database names get words for the amber bar: a day put back off that was checked in
+      // meanwhile, or the camper withdrawn meanwhile. Anything else changed in between → 'stale'.
+      const { camperVersion, signupVersion } = result;
+      const undo = async () => {
+        const answer = await updateDetails(camperId, camperVersion, signupVersion, oldInput);
+        let undoText = null;
+        if (answer.status === 'checked_in') {
+          const day = days.find((d) => d.day === answer.day || d.dayId === answer.day);
+          undoText = T.undoRefused(T.checkedInCantRemoveNamed(T.camperLabel(camper), day?.day ?? answer.day));
+        } else if (answer.status === 'withdrawn') undoText = T.undoRefused(T.isWithdrawn(T.camperLabel(camper)));
+        // 'invalid': the old details no longer fit the camp — at today's prices the total would be over
+        // $10,000, or Edit camp removed an extra they had. Say so plainly instead of "someone else changed it".
+        else if (answer.status === 'invalid') undoText = T.undoRefused(T.UNDO_DETAILS_NO_LONGER_FIT);
+        return { ...answer, undoText };
+      };
+      onSaved(undo);
+    }
     else if (st === 'checked_in') {
       const day = days.find((d) => d.day === result.day || d.dayId === result.day);
       setCheckedInError(T.checkedInCantRemove(day?.day ?? result.day));

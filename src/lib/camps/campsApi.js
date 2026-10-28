@@ -236,8 +236,9 @@ export async function updateCamp(campId, expectedVersion, input) {
   return callRpc('camp_update_camp', { p_camp_id: campId, p_expected_version: expectedVersion, ...campArgs(input, true) }, hasVersion);
 }
 
-// Close (open: false) or Reopen (open: true) sign-up. → { status:'ok', version, state } ·
-// 'not_allowed' (staff reopening after the closing date) · 'finished'
+// Close (open: false) or Open (open: true) sign-up ("Open sign-up", rulebook v0.725).
+// → { status:'ok', version, state } · 'not_allowed' (staff opening it again after the closing
+// date) · 'finished'
 export async function setSignup(campId, expectedVersion, open) {
   return callRpc('camp_set_signup', { p_camp_id: campId, p_expected_version: expectedVersion, p_open: open },
     (d) => hasVersion(d) && isText(d.state));

@@ -8,7 +8,7 @@
 //   - "Both schools · held at Worcester" under a both-schools camp's name; on the switcher's Both
 //     a School column instead (phone: a line on the card)
 //   - admins: the Edit pencil (PC / tablet) and the ⋯ menu (CampRowMenu.jsx); staff: ⋯ with Close
-//     / Reopen sign-up and Print roster only
+//     / Open sign-up and Print roster only
 //   - a click on a row opens the camp's page (App.jsx gives it the #camps/camp/<id> address)
 //
 // Columns (PC and tablet): Camp · [School on Both] · Dates (all days + how many) · Campers ·

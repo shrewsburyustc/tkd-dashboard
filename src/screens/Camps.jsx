@@ -15,7 +15,8 @@
 // Add camp / Edit camp / Use template / Edit template all open the same dialog
 // (camps/CampDialog.jsx). It is kept HERE, above both tabs, because the header's + Add camp
 // button belongs to both tabs. The dialog loads what it needs and saves by itself; this file only
-// says which one is open and reloads the lists after a save.
+// says which one is open and reloads the lists after a save. Every save's toast has Undo for 5
+// seconds (rulebook v0.726); an Undo the database refuses shows why in the amber bar here.
 //
 // Props (from App.jsx):
 //   location        'Worcester' | 'Shrewsbury' | 'Both' (the top-bar switcher)
@@ -113,17 +114,57 @@ export default function Camps({
     return () => window.cancelAnimationFrame(frame);
   }, [editor, screenLocked]);
 
-  // After a save: close, reload, toast (Add camp gets Undo = delete the new, empty camp).
+  // After a save: close, reload, toast with Undo for 5 seconds (rulebook v0.726, design review C5):
+  //   Add camp      → "Camp added" · Undo = delete the new, empty camp (reports via onUndoResult)
+  //   Edit camp     → "Camp saved" · Undo = save the camp's old values again
+  //   Edit template → "Template saved" · Undo = save the template's old values again
   function handleSaved(result) {
     closeEditor();
     setRefreshKey((n) => n + 1);
     if (result.kind === 'added') {
       showToast(T.TOAST_CAMP_ADDED, { icon: false, action: result.undo ? { label: T.UNDO, onAction: result.undo } : null });
-    } else if (result.kind === 'camp') {
-      showToast(T.TOAST_CAMP_SAVED, { icon: false });
-    } else {
-      showToast(T.TOAST_TEMPLATE_SAVED_EDIT, { icon: false });
+      return;
     }
+    const text = result.kind === 'camp' ? T.TOAST_CAMP_SAVED : T.TOAST_TEMPLATE_SAVED_EDIT;
+    const undo = result.undo;
+    showToast(text, { icon: false, action: undo ? { label: T.UNDO, onAction: () => runUndo(undo) } : null });
+  }
+
+  // The Undo of Edit camp / Edit template. The toast goes away when Undo is pressed (one Undo only);
+  // the ref also stops a Retry from running twice. undo() → the database's answer + undoText.
+  const undoBusyRef = useRef(false);
+  const [undoRunning, setUndoRunning] = useState(false); // grays the bar's Retry while an Undo runs
+  async function runUndo(undo) {
+    if (undoBusyRef.current) return;
+    undoBusyRef.current = true;
+    setUndoRunning(true);
+    const result = await undo();
+    undoBusyRef.current = false;
+    setUndoRunning(false);
+    setRefreshKey((n) => n + 1);
+    const status = result.status;
+    if (status === 'ok') {
+      setBanner(null);
+      showToast(T.TOAST_UNDONE, { icon: false });
+    } else if (status === 'no_access') onNoAccess();
+    else if (status === 'not_allowed') {
+      setBanner({ text: T.CAMPS_NOT_ALLOWED });
+      onRefreshProfile();
+    } else if (status === 'error') {
+      // Didn't reach the database: the amber bar offers Retry (never silent, rule 3.5).
+      setBanner({ text: T.UNDO_FAILED, retry: () => runUndo(undo) });
+    } else {
+      // Refused: why, when the database said (a family picked a newly added day, 0027's guard …),
+      // else "Someone else changed this just now." (stale, not_found, a template name taken …).
+      setBanner({ text: result.undoText ?? T.UNDO_STALE });
+    }
+  }
+
+  // A toast and its Undo belong to the tab they were made on (as App drops them when the page
+  // changes): switching Camps ↔ Templates drops it, so an Undo never runs behind another tab.
+  function changeTab(next) {
+    if (next !== tab) clearToast();
+    onCampTab(next);
   }
 
   // ----- The header's + Add camp (admins; both tabs; N on the PC) -----
@@ -200,7 +241,7 @@ export default function Camps({
     event.preventDefault();
     const index = tabs.indexOf(tab);
     const next = tabs[(index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
-    onCampTab(next);
+    changeTab(next);
     document.getElementById(tabId(next))?.focus();
   }
 
@@ -226,7 +267,7 @@ export default function Camps({
               aria-selected={current ? 'true' : 'false'}
               aria-controls={panelId(key)}
               tabIndex={current ? 0 : -1}
-              onClick={() => onCampTab(key)}
+              onClick={() => changeTab(key)}
             >
               {key === 'camps' ? T.TAB_CAMPS : T.TAB_TEMPLATES}
             </button>
@@ -234,7 +275,7 @@ export default function Camps({
         })}
       </div>
       {!isAdmin && <p className="viewonly">{T.STAFF_LINE}</p>}
-      {banner && <ErrorBanner text={banner.text} onDismiss={() => setBanner(null)} />}
+      {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={undoRunning} onDismiss={() => setBanner(null)} />}
 
       {tab === 'templates' ? (
         <TemplatesTab

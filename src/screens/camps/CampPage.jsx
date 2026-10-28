@@ -6,7 +6,7 @@
 // still work and are tidied to the plain address. Top to bottom:
 //   - "← Camps", the camp name and its status tag, and one line: days · hours · school · campers
 //   - header buttons: Registration link (the one blue button, ti-qrcode → CampLinkDialog) and ⋯
-//     (Edit camp (admin) · Close / Reopen sign-up · Save as template (admin) · Print roster ·
+//     (Edit camp (admin) · Close / Open sign-up · Save as template (admin) · Print roster ·
 //     Delete camp (admin) — CampRowMenu.jsx)
 //   - the roster (CampRoster.jsx): summary line, Find a camper, possible duplicates, the week switch
 //     for camps longer than one calendar week, one row per child with Paid and a column per day,
@@ -18,7 +18,8 @@
 // above the roster, so the page never just looks frozen (live test 2026-10-21); the roster's
 // summary line also says when it was last updated. Every change goes to the database
 // (src/lib/camps/campsApi.js) and the page reloads after it. Reversible changes get a 5-second Undo
-// toast; permanent ones ask first (rule 1.4). Staff and admins see different ⋯ items
+// toast — since rulebook v0.726 also Edit camp, Edit details and Edit payment ("Payment changed");
+// permanent ones ask first (rule 1.4). Staff and admins see different ⋯ items
 // (CamperRowMenu.jsx); the database enforces the same rules.
 //
 // There is no Add camper button: campers only come in through the family form (C4).
@@ -320,6 +321,10 @@ export default function CampPage({
 
   // ===== Undo and row problems (as Color Belt's event page) =====
   // options.money: the Undo of a payment — while hidden on arrival, the general words, no Retry.
+  // A call may add `undoText` to its answer: the reason it was refused, in words (Edit camp's and
+  // Edit details' Undo, rulebook v0.726) — shown in the amber bar instead of "Couldn't undo.
+  // Someone else changed this just now." The toast is gone once Undo is pressed and begin() lets
+  // only one change run at a time, so a double press can't run it twice.
   async function runUndo(call, options = {}) {
     if (!begin()) return;
     const result = await call();
@@ -340,7 +345,7 @@ export default function CampPage({
     } else if (status === 'error') {
       setBanner({ kind: 'undo', text: T.UNDO_FAILED, retry: () => runUndo(call, options) });
     } else {
-      setBanner({ text: T.UNDO_STALE });
+      setBanner({ text: result.undoText ?? T.UNDO_STALE });
       reloadQuiet();
     }
   }
@@ -766,10 +771,12 @@ export default function CampPage({
             return row ? camperMenuItems(row, { isAdmin, busy, anchor: null, h: detailHandlers(dialog), detailsHidden }) : null;
           })()}
           onClose={closeDialog}
-          onSaved={() => {
+          // Undo (v0.726, option A): saves the old details again — every time, also after a
+          // change that re-priced the camper (the total then follows the camp's current prices).
+          onSaved={(undo) => {
             closeDialog();
             reloadQuiet();
-            showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+            showToast(T.TOAST_CHANGES_SAVED, { icon: false, action: undo ? { label: T.UNDO, onAction: () => runUndo(undo) } : null });
           }}
           onNoAccess={onNoAccess}
           onRefreshProfile={onRefreshProfile}
@@ -785,10 +792,12 @@ export default function CampPage({
           isPhone={isPhone}
           hidden={hidden}
           onClose={closeDialog}
-          onSaved={() => {
+          // Undo (v0.726): saves the camp's old values again; refused → why, in the amber bar.
+          onSaved={(result) => {
             closeDialog();
             reloadQuiet();
-            showToast(T.TOAST_CAMP_SAVED, { icon: false });
+            const undo = result?.undo ?? null;
+            showToast(T.TOAST_CAMP_SAVED, { icon: false, action: undo ? { label: T.UNDO, onAction: () => runUndo(undo, { notAllowedText: T.CAMPS_NOT_ALLOWED }) } : null });
           }}
           onNoAccess={onNoAccess}
           onRefreshProfile={onRefreshProfile}
@@ -857,8 +866,23 @@ export default function CampPage({
             if (result.status === 'ok') {
               if (stillOpen(d)) closeDialog();
               reloadQuiet();
-              // Hidden now: the general words ("Payment saved" would say there is a payment).
-              showToast(hiddenNowRef.current ? T.TOAST_CHANGES_SAVED : T.TOAST_PAYMENT_SAVED, { icon: false });
+              // Hidden now (switched on while this saved): the general words ("Payment changed"
+              // would say there is a payment) and no Undo — as Change how they'll pay.
+              if (hiddenNowRef.current) {
+                showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+                return result.status;
+              }
+              // "Payment changed" · Undo (v0.726, Black Belt's words and way): the save reversed the
+              // old payment and recorded a new one, so Undo runs the same edit again on the NEW one
+              // with the old way to pay, amount, date and school. Someone else editing or undoing
+              // it meanwhile → 'stale' ("Couldn't undo. Someone else changed this just now.").
+              const old = d.payment;
+              const newPaymentId = result.paymentId;
+              const back = { method: old.method, amountCents: old.amountCents, paidOn: old.paidOn, school: old.school ?? values.school };
+              showToast(T.TOAST_PAYMENT_CHANGED, {
+                icon: false,
+                action: { label: T.UNDO, onAction: () => runUndo(() => editPayment(newPaymentId, back), { money: true }) },
+              });
             } else if (!stillOpen(d)) closedPaymentProblem(result.status);
             else if (result.status === 'no_access') onNoAccess();
             else if (result.status === 'not_allowed') onRefreshProfile();
