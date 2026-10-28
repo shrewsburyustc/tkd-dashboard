@@ -21,14 +21,18 @@
 | BB17 | **"Rubric and prices" → "Rubric and waiver"**: the tab, `TAB_RUBRIC` and every mention (words and comments, about 16 files). The first line stays "Same for both schools. Prices are set on each cycle." Applied migrations keep their comments. | `staff/text.js`, `results/text.js`, `src/lib/blackBelt/startingPoint.js`, comments | S |
 
 **Database half (one migration, number through Main once designed; separate security review):**
-- **BB8** — a history reader for Black Belt's `change_log` rows (model: Star's `star_candidate_history`). It never returns what the logs mask (date of birth, email, signature), checks `has_data_access()` first, returns `{status: …}`. The preview store gets a change log too. The screen line waits for M7.
-- **BB13** — `bb_time_is_valid` (0016) widened from 15-minute to 5-minute steps (the range stays 6:00 AM–10:00 PM), with the app's copies of the rule and the tests that expect "10:10" refused. The time list itself waits for M8.
+- **BB8** — a history reader for Black Belt's `change_log` rows (model: Star's `star_candidate_history`). It never returns what the logs mask (date of birth, email, signature), checks `has_data_access()` first, returns `{status: …}`. Strips login ids (as `star_history_strip`). Its loader in the data layer throws when the status isn't ok (else the shared line would say "no changes yet" for a failure). The preview store gets a change log too. The screen line waits for M7.
+- **BB13** — `bb_time_is_valid` (0016) widened from 15-minute to 5-minute steps (the range stays 6:00 AM–10:00 PM), widened in the database and the preview store (`mockBlackBelt.js`, checked in `checks.mjs`); `0016_tests.sql`'s '10:10' becomes '10:07' (refused by both rules, so the tests pass before and after), and the run.mjs step lets 0016's `bb_time_is_valid` fingerprint line move (as `step0023` does for 0006). The app's own rule and the time list change with the screen (M8).
+
+**Migration order:** number from Main (0030 was next free on 2026-10-28). The migration is live (Jeffrey applies it; fingerprints, security advisor, tests on production) before any push that brings an app using it. Screen-only steps can merge first.
+
+**BB3 extra check:** after Edit payment and its Undo, Finance's Daily report for that day still shows the right payments (Finance reads them through 0026).
 
 **A check to run in the preview (no build unless it fails):** the walkthrough's "Black Belt keeps showing after opening Color Belt testing until a reload" (`Testing.jsx`'s old `blackBeltOpen`). It should be gone since C2.
 
 ---
 
-## 2. The screens to draw (one mockup per screen, at 1280×800, 820×1180 touch, 390×844 touch, 320 wide)
+## 2. The screens to draw (one mockup per screen, at 1280×800, 820×1180 touch, 390×844 touch, 320 wide; a self-contained HTML file plus one PNG per screen with what changes outlined in amber)
 
 | Screen | Items | Questions for Jeffrey in it |
 |---|---|---|
@@ -47,7 +51,7 @@
 1. **BB20** — the printed results sheet says "Testing days … · Worcester and Shrewsbury" (approved in R05, v0.947); v1.022's one wording is "Both schools". Change the print, or keep it?
 2. **"On this device"** — Black Belt says "Hidden on this device", "Payments are hidden on this device." and "Email result is off on this device…"; everyone else says "… on this tablet" (v0.507 asks for the same words on every screen). Switch Black Belt to "this tablet"?
 
-## 4. Order (proposed)
+## 4. Order (Jeffrey's call; the Design Review session suggests BB4, BB5, BB6, BB3 + BB9, BB11, BB12, BB17)
 
 1. Screens A–D (the ⋯ menus and their boxes: BB3, BB9, BB6), drawn and OK'd one at a time, then built and reviewed together.
 2. Screens E–F (BB4, BB5).
@@ -55,4 +59,4 @@
 4. The two questions whenever they fit.
 5. The database half alongside: design, number from Main, build, tests, security review; the paste only with Jeffrey's OK.
 
-Each step: build in preview mode, design reviewer (rulebook + the OK'd mockups, four sizes), code reviewer, `npm run build` + `build:preview-mode` + the check files, commit on `black-belt`, no push.
+Each step: build in preview mode, design reviewer (rulebook + the OK'd mockups, four sizes, §4's six WCAG 2.2 checks), code reviewer, `npm run build` + `build:preview-mode` + the check files, commit on `black-belt`, no push.
