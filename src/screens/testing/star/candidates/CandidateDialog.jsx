@@ -7,7 +7,9 @@
 //                Edit details. Date of birth and email come ONLY from loadCandidateDetail (v0.160).
 //   mode 'edit'  the same dialog as fields (name, date of birth, school, email, Dan, stars); the
 //                Registration and Payment parts stay read-only ("Payment is changed with Record
-//                payment or the ⋯ menu."). Cancel goes back to the summary.
+//                payment or the ⋯ menu."). Opened from the summary's Edit details, Cancel goes back
+//                to the summary; opened from the row's ⋯ → Edit details (DR G1, v0.517), the form
+//                opens straight away and Cancel / Esc close it (CandidatesTab's `editOnly`).
 // While "Hide private details" is on (v0.506, G6, G8): Date of birth and Email read "Hidden on this
 // tablet" (in Edit: gray boxes, with "Change the date of birth or email at the desk."; Save sends
 // the stored values unchanged); the Payment part is one line "Payment details are hidden on this
@@ -17,6 +19,7 @@
 // payment is recorded." (G2, S8). An admin changing the Dan sees the new Dan's fee and that a recorded
 // payment stays (G2); the database then asks for the grades confirmation (grades_exist).
 // The values live in CandidatesTab (`state`), so a screen lock never loses them.
+import { useEffect } from 'react';
 import { IconEdit } from '@tabler/icons-react';
 import Dialog from '../../../../components/Dialog.jsx';
 import Notice from '../../../../components/Notice.jsx';
@@ -206,6 +209,18 @@ export default function CandidateDialog({
 }) {
   const { mode } = state;
   const idBase = `star-cand-${state.key}`;
+
+  // Opened from ⋯ → Edit details, the box starts as the loading summary and turns into the form when
+  // the detail arrives (CandidatesTab `pendingEdit`). Its Close button, which had the focus, goes
+  // away then — so focus moves to First name instead of falling to the page. Only when focus is
+  // not already inside the box (back from the Dan question or the signature, the box puts it where
+  // it belongs itself).
+  useEffect(() => {
+    if (mode !== 'edit' || !state.focusFirst) return;
+    const first = document.getElementById(`${idBase}-first`);
+    const box = first?.closest('[aria-modal="true"]');
+    if (first && box && !box.contains(document.activeElement)) first.focus();
+  }, [mode, state.focusFirst, idBase]);
   const detail = state.detail; // loadCandidateDetail's answer (view / edit)
   const values = state.values;
 

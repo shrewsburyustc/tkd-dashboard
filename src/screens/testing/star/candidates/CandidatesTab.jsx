@@ -10,6 +10,9 @@
 //     History and View signature, Edit details with the Dan-change confirmation (v0.112, v0.164)
 //   - records payments, refunds and the corrections (v0.109, v0.110, v0.166, G1, G16), private
 //     testing (v0.148–v0.152) and Withdraw / Restore / Delete permanently (v0.113)
+//   - the design review's follow-ups (v0.517, DR G1–G4): one ⋯ menu order in three groups
+//     (src/lib/star/candidateMenu.js), ⋯ → Edit details opens the form straight away, Undo after
+//     Edit payment, Restore and Change how they'll pay, and the Not paid card's ti-circle-x
 //   - follows "Hide private details" (v0.506, G4–G9): no payment columns, cards or items; private
 //     values read "Hidden on this tablet"
 // The data (event, its rubric copy and the candidates) is loaded by StarEventPage with the 15-second
@@ -26,8 +29,8 @@
 //   - Fees: Record payment fills in candidate.expectedFeeCents; the screen never works out a fee.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  IconAlertTriangle, IconArrowBackUp, IconCalendar, IconCashEdit, IconCheck, IconSum, IconClock, IconEdit, IconPlus, IconReceiptRefund,
-  IconRepeat, IconSchool, IconTrash, IconUserMinus, IconUserPlus, IconUsers,
+  IconAlertTriangle, IconArrowBackUp, IconCalendar, IconCashEdit, IconCheck, IconCircleX, IconSum, IconEdit, IconPlus, IconReceiptRefund,
+  IconRepeat, IconSchool, IconSwitchHorizontal, IconTrash, IconUserMinus, IconUserPlus, IconUsers,
 } from '@tabler/icons-react';
 import ErrorBanner from '../../../../components/ErrorBanner.jsx';
 import RowMenu from '../../../../components/RowMenu.jsx';
@@ -47,6 +50,7 @@ import { ConfirmBox } from './dialogParts.jsx';
 import MakeupPickerDialog from './MakeupPickerDialog.jsx';
 import PrivateDialog, { checkPrivate, isPrivateDirty } from './PrivateDialog.jsx';
 import { takeSnapshot, writeArgs } from '../../../../lib/star/dialogSnapshot.js';
+import { candidateMenuKeys } from '../../../../lib/star/candidateMenu.js';
 import SignatureDialog from './SignatureDialog.jsx';
 import StarCompareDialog from './StarCompareDialog.jsx';
 import { checkRecordPayment, EditPaymentDialog, isRecordDirty, PayingByDialog, RecordPaymentDialog, RefundDialog } from './StarPaymentDialogs.jsx';
@@ -332,7 +336,7 @@ export default function CandidatesTab({
     const dirty = DIRTY[d.type]?.(d) ?? false;
     if (!dirty) {
       if (d.type === 'candidate' && d.mode === 'edit') {
-        backToView();
+        leaveEdit(d);
         return;
       }
       closeDialog(d);
@@ -344,7 +348,7 @@ export default function CandidatesTab({
     const d = dialogRef.current;
     if (!d || d.saving) return;
     if (d.type === 'candidate' && d.mode === 'edit') {
-      backToView();
+      leaveEdit(d);
       return;
     }
     closeDialog(d);
@@ -373,17 +377,19 @@ export default function CandidatesTab({
     setDialog((current) => {
       if (!current || current.rowId !== rowId || current.type !== 'candidate') return current;
       if (detail.status !== 'ok') return { ...current, loadFailed: true };
-      return { ...current, loadFailed: false, detail, history: history.status === 'ok' ? history.rows : [] };
+      const loaded = { ...current, loadFailed: false, detail, history: history.status === 'ok' ? history.rows : [] };
+      // Opened from ⋯ → Edit details: the box turns into the form as soon as the detail arrives
+      // (focusFirst: focus moves to First name, as the box's Close button goes away).
+      if (current.pendingEdit) return { ...loaded, ...editPatch(detail.candidate), pendingEdit: false, focusFirst: true };
+      return loaded;
     });
   }
   function openView(row, opener) {
     openDialog({ type: 'candidate', mode: 'view', rowId: row.id, detail: null, history: null, historyAll: false, opener });
     loadDetailInto(row.id);
   }
-  function startEdit() {
-    const d = dialogRef.current;
-    if (!d?.detail) return;
-    const c = d.detail.candidate;
+  // The form's starting values and the version it saves with, from a detail read.
+  function editPatch(c) {
     const values = {
       firstName: c.firstName,
       lastName: c.lastName,
@@ -395,10 +401,30 @@ export default function CandidatesTab({
     };
     // The version of the detail on screen, not the roster's newest (the 15-second refresh) — so
     // another person's change made meanwhile answers 'stale' instead of being overwritten.
-    patchDialog({ mode: 'edit', values, initial: values, source: c.source, snap: takeSnapshot(c), focusDan: false, focusSig: false, touched: {}, triedSave: false, note: null, blocked: false });
+    return { mode: 'edit', values, initial: values, source: c.source, snap: takeSnapshot(c), focusDan: false, focusSig: false, touched: {}, triedSave: false, note: null, blocked: false };
+  }
+  // The summary's own "Edit details" button: the summary turns into the form.
+  function startEdit() {
+    const d = dialogRef.current;
+    if (!d?.detail) return;
+    patchDialog(editPatch(d.detail.candidate));
+  }
+  // ⋯ → Edit details (DR G1 choice 2 = A, like Color Belt's openEdit): the box opens at once, the
+  // way a row click does (loading lines while the detail is read — the form needs the date of birth,
+  // email and the version), then turns into the form when the detail arrives (`pendingEdit`, see
+  // loadDetailInto). A failed read shows the box's own "Couldn't load" line with Retry. Cancel / Esc
+  // close it — it never drops back to the summary (`editOnly`); focus returns to the ⋯ button.
+  function openEdit(row, opener) {
+    openDialog({ type: 'candidate', mode: 'view', rowId: row.id, detail: null, history: null, historyAll: false, opener, editOnly: true, pendingEdit: true });
+    loadDetailInto(row.id);
   }
   function backToView() {
     patchDialog({ mode: 'view', note: null, blocked: false, saving: false, focusDan: false });
+  }
+  // Leaving the form without saving: back to the summary, or closed when it was opened from ⋯.
+  function leaveEdit(d) {
+    if (d.editOnly) closeDialog(d);
+    else backToView();
   }
   function openNew(opener) {
     const values = { firstName: '', lastName: '', dateOfBirth: '', locationCode: oneSchool ? schoolCode : null, email: '', dan: danSel, starsFrom: null, payingBy: 'cash' }; // Cash chosen to start, as drawn (G gap mockups, New candidate)
@@ -413,7 +439,7 @@ export default function CandidatesTab({
       return;
     }
     if (check.sameAsSaved && clearGradeCount === null) {
-      backToView();
+      leaveEdit(d);
       return;
     }
     if (!beginWrite()) return;
@@ -478,7 +504,7 @@ export default function CandidatesTab({
     setOverlay(null);
     setDialog((current) =>
       current && current.type === 'candidate'
-        ? { ...current, values: { ...current.values, dan: current.initial.dan, starsFrom: current.initial.starsFrom }, focusDan: true, saving: false }
+        ? { ...current, values: { ...current.values, dan: current.initial.dan, starsFrom: current.initial.starsFrom }, focusDan: true, focusFirst: false, saving: false }
         : current,
     );
   }
@@ -533,7 +559,9 @@ export default function CandidatesTab({
   }
   function openEditPayment(row, opener) {
     const values = { method: row.paidMethod ?? 'cash', amount: centsToInputText(row.paidCents), paidOn: row.paidOn ?? today };
-    openDialog({ type: 'editPayment', rowId: row.id, snap: takeSnapshot(row), values, initial: values, minDate: regDay(row), opener });
+    // `old`: the payment as the dialog opened on it, for the toast's Undo (DR G2).
+    const old = { method: row.paidMethod, amountCents: row.paidCents, paidOn: row.paidOn };
+    openDialog({ type: 'editPayment', rowId: row.id, snap: takeSnapshot(row), values, initial: values, old, minDate: regDay(row), opener });
   }
   function openRefund(row, opener) {
     const values = { method: 'cash', amount: centsToInputText(row.overpaidCents), paidOn: today };
@@ -564,7 +592,20 @@ export default function CandidatesTab({
       }
       closeDialog(d);
       reload();
-      showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+      // Undo for 5 seconds (DR G3, rule 1.4): the old choice back, with the version this save returned
+      // — but not once Hide private details went on during the save (how a family pays is a payment
+      // detail; the same rule as Record payment and Edit payment, see hiddenNowRef).
+      const oldPayingBy = d.initial.payingBy;
+      showToast(T.TOAST_CHANGES_SAVED, {
+        icon: false,
+        action: hiddenNowRef.current
+          ? undefined
+          : {
+              label: T.UNDO,
+              onAction: () =>
+                runUndo(() => changePayingBy({ candidateId: row.id, expectedVersion: result.version, payingBy: oldPayingBy }), { find: () => rowEl(row.id) }, 'undo_paying_by', row),
+            },
+      });
       return;
     }
     const check = checkRecordPayment(d, today, d.type === 'refund' ? d.overpaidCents : null);
@@ -610,7 +651,21 @@ export default function CandidatesTab({
       closeDialog(d);
       reload();
       if (hiddenNowRef.current) return; // switched on meanwhile: no money toast
-      showToast(T.TOAST_PAYMENT_SAVED, { icon: false });
+      // "Payment changed" + Undo (DR G2, v0.517; Black Belt's useCandidateActions does the same):
+      // Undo saves the OLD method, amount and date as one more edit, on the payment id this edit
+      // returned (an edit replaces the payment with a new one, so that id plays the part of "the
+      // version": if it was undone or edited meanwhile, the database answers 'stale'). Admins only,
+      // as Edit payment is.
+      const newPaymentId = result.paymentId;
+      const old = d.old;
+      showToast(T.TOAST_PAYMENT_CHANGED, {
+        icon: false,
+        action: {
+          label: T.UNDO,
+          onAction: () =>
+            runUndo(() => editPayment({ paymentId: newPaymentId, method: old.method, amountCents: old.amountCents, paidOn: old.paidOn }), { find: () => rowEl(row.id) }, 'undo_edit_payment', row),
+        },
+      });
       return;
     }
     // Record refund
@@ -648,9 +703,14 @@ export default function CandidatesTab({
     const detail = await loadCandidateDetail(row.id);
     endWrite(detail.status);
     if (detail.status !== 'ok') {
-      rowProblem('undo_refund', detail, row, () => openUndoRefund(row, opener));
+      // A failed READ (nothing was saved) — the same as startDelete: "Couldn't load this candidate"
+      // with Retry, no "Not saved" mark; gone meanwhile (not_found): the list just reloads.
+      if (detail.status === 'no_access') onNoAccess();
+      else if (detail.status === 'not_found') reload();
+      else setBanner({ kind: 'load', text: T.LOAD_DETAIL_FAILED, retry: () => openUndoRefund(row, opener) });
       return;
     }
+    setBanner((current) => (current?.kind === 'load' ? null : current));
     const refund = [...detail.payments].reverse().find((p) => p.kind === 'refund' && !p.reversed);
     if (!refund) {
       reload();
@@ -757,7 +817,16 @@ export default function CandidatesTab({
     }
     rowOk(row);
     const reloaded = reload();
-    showToast(T.restoredToast(T.candidateName(row)), { icon: false });
+    // Undo for 5 seconds (DR G3, rule 1.4) = withdraw again, with the version this restore returned -
+    // except for a "Duplicate copy" (G3 choice = A): withdrawing again would tag it "Removed" and lose
+    // the reason, so no Undo; the compare box (Review, then Keep this one) puts it back properly.
+    const wasDuplicateCopy = row.withdrawnReason === 'duplicate_copy';
+    showToast(T.restoredToast(T.candidateName(row)), {
+      icon: false,
+      action: wasDuplicateCopy
+        ? undefined
+        : { label: T.UNDO, onAction: () => runUndo(() => withdrawCandidate({ candidateId: row.id, expectedVersion: result.version }), { find: () => rowEl(row.id) }, 'withdraw', row) },
+    });
     focusLater(() => rowEl(row.id), null, reloaded);
   }
   async function startDelete(row, opener) {
@@ -765,9 +834,14 @@ export default function CandidatesTab({
     const detail = await loadCandidateDetail(row.id);
     endWrite(detail.status);
     if (detail.status !== 'ok') {
-      rowProblem('delete', detail, row, () => startDelete(row, opener));
+      // A failed READ (nothing was saved): "Couldn't load this candidate" with Retry — no "Not
+      // saved" mark. Gone meanwhile (not_found): the list just reloads.
+      if (detail.status === 'no_access') onNoAccess();
+      else if (detail.status === 'not_found') reload();
+      else setBanner({ kind: 'load', text: T.LOAD_DETAIL_FAILED, retry: () => startDelete(row, opener) });
       return;
     }
+    setBanner((current) => (current?.kind === 'load' ? null : current));
     const live = detail.payments.filter((p) => p.kind === 'payment' && !p.reversed);
     const payment = live.length ? live[live.length - 1] : null;
     openDialog({
@@ -805,10 +879,12 @@ export default function CandidatesTab({
   }
 
   // ----- Possible duplicates (v0.114) -----
-  async function openCompare(row) {
+  // opener: what focus returns to when the box closes (the ⋯ button when opened from the menu);
+  // left out, focus returns to the row.
+  async function openCompare(row, opener = null) {
     const pair = pairs.find((p) => p.a.id === row.id || p.b.id === row.id);
     if (!pair) return;
-    openDialog({ type: 'compare', firstId: pair.a.id, secondId: pair.b.id, details: null, loadFailed: false, rowId: row.id });
+    openDialog({ type: 'compare', firstId: pair.a.id, secondId: pair.b.id, details: null, loadFailed: false, rowId: row.id, opener });
     loadCompare(pair.a.id, pair.b.id);
   }
   async function loadCompare(firstId, secondId) {
@@ -959,59 +1035,52 @@ export default function CandidatesTab({
     const row = candidates.find((c) => c.id === menu.id);
     if (!row) return null;
     const anchor = menu.anchor;
-    const items = [];
-    if (row.status === 'withdrawn') {
-      if (!isAdmin) return null;
-      items.push({ key: 'restore', label: T.RESTORE, Icon: IconArrowBackUp, disabled: busy, onSelect: () => restore(row) });
-      items.push({ key: 'delete', label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, separatorBefore: true, disabled: busy, onSelect: () => startDelete(row, anchor) });
-      return { title: T.candidateName(row), subtitle: row.danLabel, label: T.moreForCandidate(T.candidateName(row)), items };
-    }
-    // The order of the approved drawings:
-    //   unpaid row (Private screen 2):  Set private testing (or Change private day or time · Back to the
-    //                                   testing day) · Change how they'll pay · Edit candidate
-    //   paid row (screen 5, G1):        Edit candidate · private items · Edit payment · Undo payment ·
-    //                                   Record refund / Undo refund (admins)
-    //   no payment items (make-up, or Hide private details on — G4): Edit candidate · private items
-    //   then, admins: a line, Withdraw, Delete permanently.
-    // "Edit candidate" opens the detail (screen 5: Edit candidate and a row click both open the candidate).
-    const editItem = { key: 'edit', label: T.EDIT_CANDIDATE, Icon: IconEdit, disabled: busy, onSelect: () => openView(row, anchor) };
-    const privateItems = row.privateOn
-      ? [
-          { key: 'private', label: T.CHANGE_PRIVATE, Icon: IconEdit, disabled: busy, onSelect: () => openPrivate(row, anchor) },
-          { key: 'back', label: T.backToDay(event.testingDate), Icon: IconArrowBackUp, disabled: busy, onSelect: () => backToTestingDay(row) },
-          // Phase 5 (H5, proposal 18): right after the private items, for all staff.
-          // ti-school = grade a private testing (§2.4 icon map, this one meaning)
-          ...(onGradePrivate
-            ? [{ key: 'grade', label: T.GRADE_PRIVATE, Icon: IconSchool, disabled: busy, onSelect: () => onGradePrivate(row, anchor) }]
-            : []),
-        ]
-      : [{ key: 'private', label: T.SET_PRIVATE, Icon: IconCalendar, disabled: busy, onSelect: () => openPrivate(row, anchor) }];
-    const moneyShown = !hidden && !row.isMakeup;
-    if (moneyShown && !row.paid) {
-      items.push(...privateItems);
-      items.push({ key: 'paying', label: T.CHANGE_PAYING_BY, Icon: IconRepeat, disabled: busy, onSelect: () => openPayingBy(row, anchor) });
-      items.push(editItem);
-    } else {
-      items.push(editItem, ...privateItems);
-      if (moneyShown && isAdmin) {
-        const refundStands = row.refundedCents > 0;
-        const grayed = (text) => (
-          <span className="ev-menu-two st-menu-two">
-            <span>{text}</span>
-            <span className="ev-menu-reason">{T.UNDO_REFUND_FIRST}</span>
-          </span>
-        );
-        items.push({ key: 'editpay', label: refundStands ? grayed(T.EDIT_PAYMENT) : T.EDIT_PAYMENT, Icon: IconCashEdit, disabled: busy || refundStands, onSelect: () => openEditPayment(row, anchor) });
-        items.push({ key: 'undopay', label: refundStands ? grayed(T.UNDO_PAYMENT) : T.UNDO_PAYMENT, Icon: IconArrowBackUp, disabled: busy || refundStands, onSelect: () => openUndoPayment(row, anchor) });
-        if (refundStands) items.push({ key: 'undorefund', label: T.UNDO_REFUND, Icon: IconArrowBackUp, disabled: busy, onSelect: () => openUndoRefund(row, anchor) });
-        else if (row.overpaidCents > 0) items.push({ key: 'refund', label: T.RECORD_REFUND, Icon: IconReceiptRefund, disabled: busy, onSelect: () => openRefund(row, anchor) });
-      }
-    }
-    if (isAdmin) {
-      items.push({ key: 'withdraw', label: T.WITHDRAW, Icon: IconUserMinus, separatorBefore: true, disabled: busy, onSelect: () => withdraw(row) });
-      items.push({ key: 'delete', label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, disabled: busy, onSelect: () => startDelete(row, anchor) });
-    }
-    return { title: T.candidateName(row), subtitle: `${row.danLabel} · ${T.testingFor(row)}`, label: T.moreForCandidate(T.candidateName(row)), items };
+    // Which items, in which order, with the lines between the groups: candidateMenuKeys (DR G1,
+    // v0.517) — (1) Edit details · private items · Change how they'll pay · Review possible
+    // duplicate, (2) the money items (admins), (3) Withdraw · Delete permanently (admins).
+    const keys = candidateMenuKeys(row, {
+      isAdmin,
+      hidden,
+      flagged: pairs.some((p) => p.a.id === row.id || p.b.id === row.id),
+      canGradePrivate: Boolean(onGradePrivate),
+    });
+    if (keys.length === 0) return null;
+    // While a refund stands, Edit payment and Undo payment are grayed with the reason under them.
+    const refundStands = row.refundedCents > 0;
+    const grayed = (text) => (
+      <span className="ev-menu-two st-menu-two">
+        <span>{text}</span>
+        <span className="ev-menu-reason">{T.UNDO_REFUND_FIRST}</span>
+      </span>
+    );
+    // key → the item's words, icon and action. Icons follow the one-icon-per-meaning map (§2.4, 16a).
+    const ITEM = {
+      // "Edit details" opens the form straight away (DR G1 choice 2 = A); a row click still opens
+      // the read-only summary.
+      edit: { label: T.EDIT_DETAILS, Icon: IconEdit, onSelect: () => openEdit(row, anchor) },
+      setPrivate: { label: T.SET_PRIVATE, Icon: IconCalendar, onSelect: () => openPrivate(row, anchor) },
+      changePrivate: { label: T.CHANGE_PRIVATE, Icon: IconEdit, onSelect: () => openPrivate(row, anchor) },
+      backToDay: { label: T.backToDay(event.testingDate), Icon: IconArrowBackUp, onSelect: () => backToTestingDay(row) },
+      // Phase 5 (H5, proposal 18). ti-school = grade a private testing (§2.4 icon map, this one meaning)
+      gradePrivate: { label: T.GRADE_PRIVATE, Icon: IconSchool, onSelect: () => onGradePrivate(row, anchor) },
+      // ti-switch-horizontal = change how they'll pay (S9; ti-repeat now means only Make-up)
+      payingBy: { label: T.CHANGE_PAYING_BY, Icon: IconSwitchHorizontal, onSelect: () => openPayingBy(row, anchor) },
+      // The same compare box the row's tag and the box above the cards open (DR G1 choice 1 = A)
+      reviewDuplicate: { label: T.REVIEW_DUPLICATE, Icon: IconAlertTriangle, onSelect: () => openCompare(row, anchor) },
+      editPayment: { label: refundStands ? grayed(T.EDIT_PAYMENT) : T.EDIT_PAYMENT, Icon: IconCashEdit, grayed: refundStands, onSelect: () => openEditPayment(row, anchor) },
+      undoPayment: { label: refundStands ? grayed(T.UNDO_PAYMENT) : T.UNDO_PAYMENT, Icon: IconArrowBackUp, grayed: refundStands, onSelect: () => openUndoPayment(row, anchor) },
+      undoRefund: { label: T.UNDO_REFUND, Icon: IconArrowBackUp, onSelect: () => openUndoRefund(row, anchor) },
+      recordRefund: { label: T.RECORD_REFUND, Icon: IconReceiptRefund, onSelect: () => openRefund(row, anchor) },
+      withdraw: { label: T.WITHDRAW, Icon: IconUserMinus, onSelect: () => withdraw(row) },
+      restore: { label: T.RESTORE, Icon: IconArrowBackUp, onSelect: () => restore(row) },
+      delete: { label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, onSelect: () => startDelete(row, anchor) },
+    };
+    const items = keys.map(({ key, separatorBefore }) => {
+      const { grayed: isGrayed, ...item } = ITEM[key];
+      return { key, ...item, disabled: busy || Boolean(isGrayed), ...(separatorBefore ? { separatorBefore: true } : {}) };
+    });
+    const subtitle = row.status === 'withdrawn' ? row.danLabel : `${row.danLabel} · ${T.testingFor(row)}`;
+    return { title: T.candidateName(row), subtitle, label: T.moreForCandidate(T.candidateName(row)), items };
   }
 
   // ===== Keyboard: ↑ ↓ Enter on rows =====
@@ -1059,7 +1128,7 @@ export default function CandidatesTab({
     handlers: {
       onOpen: (row) => openView(row, rowEl(row.id)),
       onMore: openMenu,
-      onReview: openCompare,
+      onReview: (row) => openCompare(row),
       onRecordPayment: openRecord,
     },
   };
@@ -1282,7 +1351,7 @@ export default function CandidatesTab({
           <div className={`ev-cards st-cards${hidden ? ' is-one' : ''}`}>
             {card(null, T.CARD_CANDIDATES, IconUsers, cards.candidates, schoolNote)}
             {!hidden && card('paid', T.CARD_PAID, IconCheck, cards.paid)}
-            {!hidden && card('notPaid', T.CARD_NOT_PAID, IconClock, cards.notPaid)}
+            {!hidden && card('notPaid', T.CARD_NOT_PAID, IconCircleX, cards.notPaid) /* ti-circle-x = not paid (S9, 16a) */}
             {!hidden && card('payments', T.CARD_PAYMENTS, IconSum, T.dollars(cards.payments)) /* ti-sum = a money total (v0.303) */}
           </div>
         )}

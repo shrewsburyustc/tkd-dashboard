@@ -70,7 +70,7 @@
 // in the Candidates tab (no date of birth or email in a list, v0.160; Hide private details, v0.506).
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { IconArrowLeft, IconQrcode } from '@tabler/icons-react';
-import Dialog from '../../../../components/Dialog.jsx';
+import ConfirmBox from '../../../../components/ConfirmBox.jsx';
 import ErrorBanner from '../../../../components/ErrorBanner.jsx';
 import { loadStarEvent } from '../../../../lib/star/eventsApi.js';
 import { loadCandidates } from '../../../../lib/star/candidatesApi.js';
@@ -940,21 +940,22 @@ export default function StarEventPage({
         {saves.announcement}
       </div>
       {leave && !screenLocked && (
-        // v0.192's box (proposal 7): nothing is deleted, so no red — "Stay on this page" is the blue
-        // default (Enter, Esc, backdrop, Back).
-        <Dialog key={leave.key} title={leave.title} variant="confirm" describedBy={`${baseId}-leave-body`} onRequestClose={stayOnPage}>
-          <p id={`${baseId}-leave-body`} className="tdialog-sub tdialog-body">
-            {leave.body}
-          </p>
-          <div className="dialog-actions">
-            <button type="button" className="btn" onClick={leaveAnyway}>
-              {G.LEAVE_ANYWAY}
-            </button>
-            <button type="button" className="btn btn-primary" data-autofocus onClick={stayOnPage}>
-              {G.STAY_ON_PAGE}
-            </button>
-          </div>
-        </Dialog>
+        // v0.192's box (proposal 7), drawn with the shared ConfirmBox (design review M2, D1c, DR G5,
+        // v0.517): the safe "Stay on this page" on the left and focused first (Enter, Esc, backdrop
+        // and Back also mean Stay); "Leave anyway" on the right and red (loses 'forGood': leaving
+        // loses the unsaved grades for good). When the two don't fit side by side (a 320 phone),
+        // ConfirmBox stacks them full width, Stay on top (D1b).
+        <ConfirmBox
+          key={leave.key}
+          title={leave.title}
+          keepLabel={G.STAY_ON_PAGE}
+          actionLabel={G.LEAVE_ANYWAY}
+          loses="forGood"
+          onKeep={stayOnPage}
+          onConfirm={leaveAnyway}
+        >
+          {leave.body}
+        </ConfirmBox>
       )}
       {printing && printing.kind === 'results' && <StarResultsSheet {...printing.sheet} />}
       {printing && printing.kind !== 'results' && <StarGradingSheet {...printing.sheet} grades={copy?.grades ?? []} />}

@@ -23,6 +23,7 @@ export const {
   ENTER_DATE_PAID, AMOUNT_ZERO, EDIT_PAYMENT_HINT, EDIT_PAYMENT_TITLE, CHANGE_PAYING_BY_TITLE, changePayingBySub,
   PAYING_BY_LABEL, KEEP_THIS_ONE, KEEP_BOTH, FIRST_REGISTRATION, SECOND_REGISTRATION, DIFFERENT, keepThisOneLabel,
   COMPARE_NOTE, DELETE_STUDENT_HINT, DELETE_PERMANENTLY, EDIT_DETAILS, ENTER_FIRST_NAME, ENTER_LAST_NAME, SHOW_ALL,
+  REVIEW_DUPLICATE,
   priceProblemText, moreFor, LOADING_EVENT,
 } = CB;
 
@@ -121,7 +122,8 @@ export const MAKEUP_ITEM = 'Make-up from an earlier testing';
 export const MAKEUP_ITEM_SUB = 'Pick from everyone who owes a make-up';
 
 // ----- ⋯ menu items (screen 5, Private 2 and 4, G1, G13, G16) -----
-export const EDIT_CANDIDATE = 'Edit candidate';
+// "Edit details" (EDIT_DETAILS, from Color Belt's words) is the first item of every ⋯ menu (DR G1,
+// v0.517; was "Edit candidate"). "Review possible duplicate" (REVIEW_DUPLICATE) too, on a flagged row.
 export const SET_PRIVATE = 'Set private testing';
 export const CHANGE_PRIVATE = 'Change private day or time';
 export const backToDay = (iso) => `Back to the testing day (${weekdayMonthDay(iso)})`;
