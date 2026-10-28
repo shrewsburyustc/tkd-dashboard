@@ -2566,3 +2566,58 @@ Tested in PGlite on every run (all three steps exactly as written here): afterwa
 4. To redo: paste 0023 again (safe; tested).
 
 ---
+
+## Migration 0027: Edit camp refuses changes that break campers' extras
+
+**Status: APPLIED 2026-10-27** (Jeffrey's OK; built on `camps`, rulebook v0.720). Pre-check 0; before: `camp_update_camp` md5 `95926100fecb5ecb6fc40136ba0fdcf9` (0022's, as tested); after: `9f70638fc19aee55c562f7df01ed5edc`, rights authenticated + postgres only; advisor nothing new; `0027_tests.sql`, `0013_tests.sql`, `0017_tests.sql`, `0022_tests.sql` all passed. The app version whose Edit camp knows the two new answers is on `camps` and not deployed yet — until it is, a refused save shows the generic error (the camp is still protected).
+
+**Production order:** … 0022 (live) → 0024 → 0023 → 0025 (live) → **0027**. It needs 0022 (it stops with "0027 needs migration 0022 (camps weekly pricing) first" if 0022 is missing).
+
+**What it does** (`supabase/migrations/0027_camps_edit_guard.sql`):
+- **The bug:** Edit camp could save a change that left an **active** camper holding an extra the camp's rules no longer allow. The camper's row stayed, but Edit details for that camper was then refused until staff removed the extra. Three ways: (1) a day nobody picked was removed, so a camper now came every camp day of that Monday–Sunday week (a per-day "not charged to all-days campers" extra like pizza that week became "included", rule R6) — or every day of the whole camp, for a once extra; (2) "not charged to all-days campers" was switched **on** for an extra such a camper already had; (3) an extra's **per** changed (once ↔ day) while campers had chosen it (a once row has no day, a per-day row needs one).
+- **The fix:** `camp_update_camp` gets two new refusals, checked after the existing ones (removed day / removed extra / extra_day) and **before anything is written** — a refused save changes nothing:
+  - `{"status":"not_empty","kind":"extra_per","extra_name":"<saved name>","count":<active campers who chose it>}` — a kept extra's per would change while active campers chose it.
+  - `{"status":"not_empty","kind":"extra_included","extra_name":"<saved name>","count":<active campers affected>}` — a kept extra that will be "not charged to all-days campers" after the save, which an active camper has on a week they would come every day of (per-day extra, judged against the **new** day list) or on a camp they would come every day of (once extra).
+  - When several extras break, the first in the camp's extras order is named. Withdrawn campers never count; a camper who comes only part of the week (or of the camp) doesn't count. Adding days is always fine.
+- **Withdrawn campers' rows are cleaned up** (security review): in the write part of the same save, **withdrawn** campers' rows of kept extras that would no longer fit are removed — logged in the history under the save's batch, the same way 0022 already removes withdrawn campers' rows of a removed day. So **Restore** can never bring back an active camper holding a broken extra. Removed: (a) every row of an extra whose per changes; (b) rows of an extra that will be "not charged to all-days campers" where the camper comes every camp day of that row's week (per-day) or of the whole camp (once), against the new days; (c) per-day rows on a day the extra's new "only on these days" list no longer offers (0022 refused that for active campers but left withdrawn campers' rows behind).
+- Replaces **only** `public.camp_update_camp` (`create or replace`, same arguments, owner, security definer, `search_path = ''`, `has_data_access()` first, then `is_admin()`; revoked from public, anon, authenticated and service_role, granted to `authenticated` only — as 0022). No table, rule, other function or data changes.
+
+### 0027a. Before you apply (Claude, read-only through the connection)
+
+1. **Pre-apply check:** Claude runs `supabase/tests/0027_preapply_check.sql` (one read-only SELECT, connector-safe). It counts **active** campers who already hold an extra row 0027 would refuse (the bug may have left some): `active_campers`, `camps`, `extra_rows`. **0 → go on.** Above 0 → staff fix those campers first (Edit details: remove the extra, or withdraw the camper; Claude lists them through the connection), because after 0027 **every** Edit camp save on such a camp is refused until they are fixed. (Tested in PGlite: 0 on a clean database, 1 / 1 / 1 with a row planted the way the bug made it.)
+2. Claude runs `supabase/tests/0027_fingerprints.sql` and keeps the result (one row: 0022's `camp_update_camp`). It must equal the `camp_update_camp` line of 0022c's record.
+
+### 0027b. Apply 0027 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0027_camps_edit_guard.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Supabase may warn about destructive operations: the words are inside the function (copied from 0022; they run only when an admin saves Edit camp). This file removes nothing. Confirm.
+3. "Success." One transaction: on any error nothing is kept. Copy the error to Claude.
+
+**Running it again is safe** (tested: no fingerprint changes). **If 0022 (or 0013) is ever re-run after 0027, re-run 0027 straight after it** — re-running 0022 puts its older `camp_update_camp` back (that is exactly what the undo does).
+
+### 0027c. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0027_fingerprints.sql` — the one line must match what `run.mjs` printed ("0027 fingerprints"): body md5 `9f70638fc19aee55c562f7df01ed5edc`, `definer=true`, `settings=search_path=""`, `rights=authenticated:EXECUTE,postgres:EXECUTE`. The file contains neither of the words the connection refuses.
+2. `0013_fingerprints.sql` and `0022_fingerprints.sql`: **only** the `camp_update_camp(...)` line differs from before (its body md5; rights, owner and settings the same). Every other migration's fingerprints: unchanged (`run.mjs` step0027 checks exactly that).
+3. **Security advisor:** nothing new.
+
+### 0027d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0027_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0027 TESTS PASSED**. It makes its own `zz test …` camps (two weeks of Mon–Wed, starting on a Monday 15–21 days from now, so it works on any weekday) and rolls everything back. Supabase may warn about destructive operations (some removals are tested to be refused, others really happen to the test camps). Confirm.
+2. Then `0013_tests.sql`, `0017_tests.sql` and `0022_tests.sql` again — all must still pass.
+3. Put the placeholders back afterwards.
+
+### 0027e. Undo 0027 (only with Jeffrey's OK)
+
+1. Paste **the whole file** `supabase/manual/0027u_undo_camp_update_camp.sql` in the SQL Editor → **Run**. It holds only 0022's exact `camp_update_camp` (0022 section 20b, word for word) with its revoke and grant (one transaction). Edit camp then no longer refuses the `extra_per` / `extra_included` cases — the bug is back. Re-running the whole 0022 file would do the same, but this touches only the one function 0027 replaced.
+2. Claude checks `supabase/tests/0027_fingerprints.sql`: the line must equal 0027a's again; `0013_fingerprints.sql` and `0022_fingerprints.sql` must match their records from before 0027. Then run `0013_tests.sql`, `0017_tests.sql` and `0022_tests.sql`.
+3. To redo: paste 0027 again (safe).
+
+Tested in PGlite on every run (`run.mjs` step0027: the undo file exactly as named here; afterwards every fingerprint file equals the one before 0027 and the camps tests pass; 0027 again gives the tested fingerprints and `0027_tests.sql` passes).
+
+**Why:**
+- **Refuse, don't clean up:** removing a family's paid extra silently would change what they were charged; the admin decides (remove the extra in Edit details, or withdraw the camper) and then saves again — the same rule as a removed day or extra (v0.701).
+- **Checked before any write:** a refused save leaves the camp exactly as it was (tested byte for byte).
+- **A new migration, not an edit of 0022:** 0022 is live; replacing one function in a later file keeps the history clear and the undo simple.
+
+---
