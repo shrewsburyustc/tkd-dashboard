@@ -38,7 +38,7 @@
 //
 //   addStarEvent({ name, testingDate, startTime, whereCode, registrationOpen, autoCloseOn, note })   admin
 //     → { status:'ok', id, version, publicCodeWorcester, publicCodeShrewsbury }
-//     refusals: not_allowed · invalid (past date, start time not 8:00 AM–8:00 PM on a 15-minute step,
+//     refusals: not_allowed · invalid (past date, start time not 6:00 AM–10:00 PM on a 5-minute step,
 //               closing date before today or after the testing date, …) · duplicate_name
 //   updateStarEvent({ eventId, expectedVersion, name, testingDate, startTime, whereCode, autoCloseOn, note })   admin
 //     → { status:'ok', version }      (details only — the switch is setStarRegistration)

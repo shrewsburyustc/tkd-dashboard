@@ -2621,3 +2621,55 @@ Tested in PGlite on every run (`run.mjs` step0027: the undo file exactly as name
 - **A new migration, not an edit of 0022:** 0022 is live; replacing one function in a later file keeps the history clear and the undo simple.
 
 ---
+
+## Migration 0028: Star start times 6:00 AM–10:00 PM every 5 minutes
+
+**Status: not applied yet** (built on `star-testing`, design-review item S12, rulebook v1.019; contract `docs/Dashboard Docs/Build contracts/CONTRACT-0028.md`).
+
+**Production order:** … 0023 → 0025 → 0027 → 0026 (live) → **0028**. It needs 0006 (it stops with "0028 needs migration 0006 (Star testing) first" if 0006 is missing). **It must be live before the app offers the new times** (the shared time list, a later step) — until then the app keeps offering 8:00 AM–8:00 PM every 15 minutes, which 0028 still accepts.
+
+**What it does** (`supabase/migrations/0028_star_start_times.sql`):
+- Star start times — an event's **start time** and a candidate's **private testing time** — were allowed from 8:00 AM to 8:00 PM on a 15-minute step. After 0028: **6:00 AM to 10:00 PM on a 5-minute step** (6:00, 6:05 … 10:00 PM), still with no seconds.
+- Replaces **only** `public.star_start_time_is_valid(p_time time)` (0006 section 1a; `create or replace`, same argument and answer type, `language sql`, `immutable`, `search_path = ''`, NULL → false, revoked from public, anon, authenticated and service_role — nobody in the app calls it). The places that use it pick up the new rule by themselves and are **not** replaced: the table rule `star_events_start_time_check`, `star_add_event`, `star_update_event` (0023's version) and `star_set_private`.
+- **Only widens the rule:** every old time (8:00 AM–8:00 PM every 15 minutes) is also a new one, so every saved event and private testing time stays valid. No table, other function or data changes. No destructive words — Supabase should not warn.
+
+**Each step needs Jeffrey's OK.**
+
+### 0028a. Apply 0028 (you, in the SQL Editor)
+
+1. **First (Claude, read-only through the connection):** `supabase/tests/0028_preapply_check.sql` (one read-only SELECT, connector-safe) must answer `body_is_0006 = true`, `body_is_0028 = false` and **0** in all four counts (`events_bad_new`, `privates_bad_new`, `events_bad_old`, `privates_bad_old`). `body_is_0006 = false` means someone changed the function since 0006 — stop and tell Claude. Claude also runs `supabase/tests/0006_fingerprints.sql` and `supabase/tests/0028_fingerprints.sql` and keeps both results (the "before" record for 0028b and the undo).
+2. Copy **the whole file** `supabase/migrations/0028_star_start_times.sql`, **SQL Editor → New query**, paste, **Run**.
+3. Expected: "Success. No rows returned." One transaction: on any error nothing is kept. Copy the error to Claude.
+4. **Running it again is safe** (tested: no fingerprint changes). **Re-running 0006 after this** puts 0006's old rule back → re-run 0028 straight after.
+
+### 0028b. Fingerprints (Claude, read-only through the connection)
+
+1. `supabase/tests/0028_fingerprints.sql` — the one line must match what `supabase/tests/pglite/run.mjs` printed ("0028 fingerprints"): body md5 `d0548ce90322fdb063bb02bd3e8b77d1`, `lang=sql volatility=i returns=boolean definer=false settings=search_path="" owner=postgres rights=postgres:EXECUTE`. The file contains neither of the words the connection refuses.
+2. `supabase/tests/0006_fingerprints.sql`: **only** the `star_start_time_is_valid(p_time time)` line differs from 0028a's record (its body md5; rights, owner and settings the same). Every other migration's fingerprints: unchanged (`run.mjs` step0028 checks exactly that).
+3. `0028_preapply_check.sql` again: `body_is_0028 = true`, all four counts still 0.
+
+### 0028c. Security advisor (Claude)
+
+1. Supabase dashboard → **Advisors → Security** (or Claude through the connection): **nothing new.** The function is not security definer, has `search_path = ''` and nobody in the app may call it.
+
+### 0028d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0028_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0028 TESTS PASSED**. It checks the rule (6:00, 6:05, 9:55 PM and 10:00 PM fine; 5:55, 10:05 PM, 6:03, 6:00:30 and empty refused; exactly 193 times a day; all 49 old times still fine), the function's settings and rights, and Add event / Edit event / Set private testing / the table rule on its own `zz test …` events. Everything is rolled back.
+2. Then `supabase/tests/0006_tests.sql` again — all must still pass (its refused times are outside both the old and the new rule, so it passes before and after 0028).
+3. Put the placeholders back afterwards. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved — run `rollback;` once on its own, then tell Claude.
+
+### 0028e. Undo 0028 (only with Jeffrey's OK)
+
+1. **Put the app back first** to a version that offers only 8:00 AM–8:00 PM every 15 minutes.
+2. Claude runs `supabase/tests/0028_preapply_check.sql`: `events_bad_old` and `privates_bad_old` must be **0**. Above 0 → events or private testings were saved with a new time (e.g. 6:05 AM, 9:30 PM, 10:10); change them in the app first. (Postgres does not re-check saved rows when the function inside a table rule changes, so such an event would stay — and every later save of it would be refused as "invalid".)
+3. Paste **the whole file** `supabase/manual/0028u_undo_star_start_time.sql` in the SQL Editor → **Run**. It first **refuses** (changing nothing, "0028 undo refused: …") while any saved time breaks 0006's rule, then puts back 0006's exact `star_start_time_is_valid` (section 1a, word for word) with its revoke (one transaction).
+4. Claude checks `supabase/tests/0006_fingerprints.sql` (must equal 0028a's record again) and `0028_preapply_check.sql` (`body_is_0006 = true`). Then run `0006_tests.sql`.
+5. To redo: paste 0028 again (safe).
+
+Tested in PGlite on every run (`run.mjs` step0028: with a 6:05 AM event planted the undo file refuses; on the clean database the undo file exactly as named here gives back every fingerprint file as it was before 0028, the Star tests pass, and 0028 again gives the tested fingerprints and `0028_tests.sql` passes).
+
+**Why:**
+- **One function, not four:** the rule lives in one place; the table rule and the three functions call it, so replacing it changes all of them together and nothing else.
+- **A new migration, not an edit of 0006:** 0006 is live; a later file keeps the history clear and the undo simple.
+
+---

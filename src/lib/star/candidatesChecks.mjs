@@ -704,7 +704,7 @@ await check('star_set_private / clear: no_access → invalid → not_found → s
   rig.lock();
   assert.equal(statusOf(await call(lily, { privateTime: null })), 'no_access');
   rig.unlock();
-  for (const over of [{ privateTime: null }, { privateOn: null }, { privateTime: '07:45' }, { privateTime: '20:15' }, { privateTime: '16:10' }, { privateTime: 'late' }]) {
+  for (const over of [{ privateTime: null }, { privateOn: null }, { privateTime: '05:55' }, { privateTime: '22:05' }, { privateTime: '16:03' }, { privateTime: 'late' }]) {
     assert.equal(statusOf(await call(lily, over)), 'invalid', JSON.stringify(over));
   }
   assert.equal(statusOf(await call(lily, { candidateId: randomUUID() })), 'not_found');

@@ -1,10 +1,12 @@
 // starEventRules.js — the small rules of a Star testing EVENT that Color Belt's rules don't cover.
 // Why it exists: the Add / Edit event dialog, the data layer (eventsCore.js) and the preview
 // database (mockStarEvents.js) must agree on which start times are allowed and which places an
-// event can be "Where". The real database (migration 0006) has the same rule in SQL
-// (star_start_time_is_valid, contract 0006 §2.2): from 8:00 AM to 8:00 PM, on a 15-minute step,
-// no seconds. Color Belt's class-time list (5-minute steps, 6 AM–10 PM) is NOT the same rule, so
-// it isn't reused.
+// event can be "Where". The real database has the same rule in SQL (star_start_time_is_valid,
+// contract 0006 §2.2, widened by migration 0028 / rulebook v1.019 S12): from 6:00 AM to 10:00 PM,
+// on a 5-minute step, no seconds (before 0028: 8:00 AM–8:00 PM on a 15-minute step).
+// The Start time DROPDOWN still offers the old list (8:00 AM–8:00 PM every 15 minutes) until the
+// shared time list replaces it (a later step, which also needs 0028 live first); every old choice
+// is also valid under the new rule.
 //
 // Everything else about an event's state (open / closed / finished, the list tag, who may flip the
 // Registration switch) is EXACTLY Color Belt's rule (contract 0006 §5.1 = 0005's), so it is
@@ -23,10 +25,17 @@
 
 import { eventState } from '../testing/eventRules.js';
 
-// The first and last allowed start time, and the step, in minutes after midnight.
-export const START_TIME_FIRST_MINUTES = 8 * 60; // 8:00 AM
-export const START_TIME_LAST_MINUTES = 20 * 60; // 8:00 PM
-export const START_TIME_STEP_MINUTES = 15;
+// The first and last allowed start time, and the step, in minutes after midnight - the database's
+// rule since migration 0028 (v1.019 S12).
+export const START_TIME_FIRST_MINUTES = 6 * 60; // 6:00 AM
+export const START_TIME_LAST_MINUTES = 22 * 60; // 10:00 PM
+export const START_TIME_STEP_MINUTES = 5;
+
+// The Start time dropdown's choices (startTimeOptions): still the pre-0028 list, 8:00 AM–8:00 PM
+// every 15 minutes, until the shared time list step changes the dropdown.
+const START_TIME_LIST_FIRST_MINUTES = 8 * 60; // 8:00 AM
+const START_TIME_LIST_LAST_MINUTES = 20 * 60; // 8:00 PM
+const START_TIME_LIST_STEP_MINUTES = 15;
 
 // A school's public code (the end of its family link): 8 characters, the letters a–z without i, l
 // and o, and the digits 2–9 (no look-alikes such as 0/o or 1/l/i). Contract 0006 §2.2; the
@@ -55,8 +64,8 @@ export function startTimeMinutes(text) {
   return Number(m[1]) * 60 + Number(m[2]);
 }
 
-// Is this a start time the database accepts? 8:00 AM–8:00 PM on a 15-minute step (v0.92).
-// Both ends count: '08:00' and '20:00' are fine; '07:45', '20:15' and '10:05' are not.
+// Is this a start time the database accepts? 6:00 AM–10:00 PM on a 5-minute step (0028, v1.019).
+// Both ends count: '06:00' and '22:00' are fine; '05:55', '22:05', '10:03' and '10:00:30' are not.
 export function startTimeIsValid(text) {
   const minutes = startTimeMinutes(text);
   return minutes !== null
@@ -87,10 +96,11 @@ export function startTimeLabel(text) {
 }
 
 // Every choice of the Start time dropdown, in order: [{ value: '08:00', label: '8:00 AM' }, …
-// { value: '20:00', label: '8:00 PM' }] — 49 choices.
+// { value: '20:00', label: '8:00 PM' }] — 49 choices (the pre-0028 list, kept until the shared
+// time list step; each one passes startTimeIsValid).
 export function startTimeOptions() {
   const options = [];
-  for (let m = START_TIME_FIRST_MINUTES; m <= START_TIME_LAST_MINUTES; m += START_TIME_STEP_MINUTES) {
+  for (let m = START_TIME_LIST_FIRST_MINUTES; m <= START_TIME_LIST_LAST_MINUTES; m += START_TIME_LIST_STEP_MINUTES) {
     options.push({ value: `${two(Math.floor(m / 60))}:${two(m % 60)}`, label: minutesLabel(m) });
   }
   return options;

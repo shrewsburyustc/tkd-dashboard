@@ -79,7 +79,7 @@
 //     (keep one: the toast's Undo = restoreCandidate on the other, by the same person within 10 s)
 //   setPrivate({ candidateId, expectedVersion, privateOn, privateTime:'16:00' })   S
 //   clearPrivate({ candidateId, expectedVersion })   S   (Back to the testing day)
-//     → { status:'ok', version, expectedFeeCents }   · invalid (time not 8:00 AM–8:00 PM on 15 min) · withdrawn
+//     → { status:'ok', version, expectedFeeCents }   · invalid (time not 6:00 AM–10:00 PM on 5 min) · withdrawn
 //   withdrawCandidate({ candidateId, expectedVersion })   A   → { version } · withdrawn
 //   restoreCandidate({ candidateId, expectedVersion })   A, or S for their own Keep-this-one within 10 s
 //     → { version } · not_allowed ("too late") · stale (not withdrawn, or another active make-up exists)

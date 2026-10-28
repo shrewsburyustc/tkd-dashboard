@@ -77,7 +77,8 @@ function asInteger(v) {
   return Number.isInteger(n) ? n : BAD;
 }
 const asDate = (v) => (v === null || v === undefined || v === '' ? null : isIsoDate(v) ? v : BAD);
-// '16:00' or '16:00:00' → '16:00:00', or null. The 15-minute rule is the database's job.
+// '16:00' or '16:00:00' → '16:00:00', or null. The time rule (6:00 AM–10:00 PM every 5 minutes,
+// 0028) is the database's job.
 const asTime = (v) => {
   if (v === null || v === undefined || v === '') return null;
   return startTimeMinutes(v) === null ? BAD : `${shortStartTime(v)}:00`;

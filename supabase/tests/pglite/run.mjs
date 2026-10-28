@@ -398,6 +398,14 @@
 //       tests (0013, 0017, 0022) after it, re-run safety, and the Undo of
 //       SETUP.md 0027e (manual/0027u) - see step0027 below. Run only this
 //       step with   node run.mjs --only-step0027
+//   step0028. 0028 (Star start times 6:00 AM - 10:00 PM every 5 minutes,
+//       v1.019 / S12) on its own database in the production order with
+//       every live migration (0025's order, then 0027 and 0026): the
+//       pre-apply check, only star_start_time_is_valid's fingerprint
+//       moves, 0028's tests and 0006's / 0023's after it, re-run safety,
+//       and the Undo of SETUP.md 0028e (manual/0028u: refused with a
+//       6:05 AM event, then back to 0006's rule) - see step0028 below.
+//       Run only this step with   node run.mjs --only-step0028
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -438,6 +446,7 @@ const useFixtureSeed = process.argv.includes('--fixture-seed');
 const onlyStep0022 = process.argv.includes('--only-step0022');
 const onlyStep0026 = process.argv.includes('--only-step0026');
 const onlyStep0027 = process.argv.includes('--only-step0027');
+const onlyStep0028 = process.argv.includes('--only-step0028');
 
 // Fixed ids for the two pretend logins (any uuid works).
 const ADMIN_UID = '11111111-1111-4111-8111-111111111111';
@@ -601,6 +610,15 @@ async function main() {
     if (prints27) {
       console.log('\n0027 fingerprints (kind  item  detail):');
       for (const line of prints27) console.log('  ' + line);
+    }
+    return finish();
+  }
+  // --only-step0028: just the Star start times step (0028)
+  if (onlyStep0028) {
+    const prints28 = await step0028();
+    if (prints28) {
+      console.log('\n0028 fingerprints (kind  item  detail):');
+      for (const line of prints28) console.log('  ' + line);
     }
     return finish();
   }
@@ -855,6 +873,9 @@ async function main() {
   // step0027: Edit camp refuses changes that break campers' extras (its own database, production order)
   console.log('\nMigration 0027 (Edit camp refuses changes that break campers\' extras):');
   const after27 = after5 ? await step0027() : null;
+  // step0028: Star start times 6:00 AM - 10:00 PM every 5 minutes (its own database, production order)
+  console.log('\nMigration 0028 (Star start times 6:00 AM - 10:00 PM every 5 minutes):');
+  const after28 = after5 ? await step0028() : null;
 
   // step0020 (named after its migration, not a number other branches use): 0020, LAST
   console.log('\nMigration 0020 (current_session_id reads only request.jwt.claims), last:');
@@ -937,6 +958,10 @@ async function main() {
   if (after27) {
     console.log('\n0027 fingerprints (kind  item  detail):');
     for (const line of after27) console.log('  ' + line);
+  }
+  if (after28) {
+    console.log('\n0028 fingerprints (kind  item  detail):');
+    for (const line of after28) console.log('  ' + line);
   }
   if (after17) {
     console.log('\n0017 fingerprints (Finance after 0017; kind  item  detail):');
@@ -6194,6 +6219,170 @@ async function step0027() {
   }
   await db.close().catch(() => {});
   return prints27;
+}
+
+// =====================================================================
+// step0028: Star start times 6:00 AM - 10:00 PM every 5 minutes (0028,
+// rulebook v1.019, design-review S12)
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order with every
+// live migration (liveOrderTo0025, then 0027 and 0026 as applied):
+//   a. 0028_fingerprints.sql and 0028_preapply_check.sql are
+//      connector-safe (no "delete" / "drop")
+//   a2. the pre-apply check (SETUP 0028a) on the clean database:
+//      body_is_0006 true, body_is_0028 false, every count 0
+//   b. apply 0028: every other fingerprint file is byte-identical, except
+//      0006's, where ONLY the star_start_time_is_valid line differs (and
+//      only in its body md5); 0028's own row: sql, immutable, boolean,
+//      not definer, search_path="", only postgres may run it
+//   c. 0028_tests.sql, then 0006_tests.sql and 0023_tests.sql again; the
+//      pre-apply check now says body_is_0028 true, counts still 0
+//   d. 0028 applied a SECOND time: no fingerprint changes
+//   e. the Undo of SETUP.md 0028e (the file it names,
+//      supabase/manual/0028u_undo_star_start_time.sql):
+//        - with a 6:05 AM event planted (in a transaction rolled back
+//          afterwards) the pre-apply check counts it and the undo
+//          refuses with its message, changing nothing
+//        - on the clean database: every fingerprint file equals the one
+//          before 0028; 0006 / 0023 tests pass; then 0028 again -> the
+//          tested fingerprints, 0028_tests.sql passes
+// Run only this step with   node run.mjs --only-step0028
+// =====================================================================
+async function step0028() {
+  const L = '[0028] ';
+  const preSql = read('tests', '0028_preapply_check.sql');
+  record(`${L}0028_fingerprints.sql and 0028_preapply_check.sql contain neither "delete" nor "drop" (connector-safe)`,
+    !/delete|drop/i.test(read('tests', '0028_fingerprints.sql')) && !/delete|drop/i.test(preSql));
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L))) return null;
+  for (const [label, file] of [['0027 (camps edit guard)', '0027_camps_edit_guard.sql'],
+    ['0026 (Finance: Black Belt payments)', '0026_finance_black_belt.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // a2. the pre-apply check on the clean database
+  const pre = async () => (await db.query(preSql)).rows[0];
+  const zero = (r) => r && r.events_bad_new === 0 && r.privates_bad_new === 0 && r.events_bad_old === 0 && r.privates_bad_old === 0;
+  const clean = await pre();
+  record(`${L}[pre-apply check] before 0028: body_is_0006, every count 0`,
+    clean.body_is_0006 === true && clean.body_is_0028 === false && zero(clean), JSON.stringify(clean));
+
+  // b. apply 0028: only star_start_time_is_valid's body may move
+  const numbers = ['0003', '0004', '0005', '0006', '0010', '0007', '0008', '0009', '0012', '0015', '0011', '0019', '0014', '0020',
+    '0013', '0017', '0018', '0016', '0021', '0022', '0024', '0023', '0025', '0027', '0026', '0028']
+    .filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const before = await printsOf(db, numbers);
+  const migration = read('migrations', '0028_star_start_times.sql');
+  if (!(await run(db, `${L}apply 0028_star_start_times.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  const isRule = (line) => /star_start_time_is_valid\(/.test(line);
+  const wrong = [];
+  for (const n of numbers) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    if (['0006', '0028'].includes(n)) {
+      if (gone.length !== 1 || added.length !== 1 || !isRule(gone[0]) || !isRule(added[0])) {
+        wrong.push(`${n}: ${JSON.stringify({ gone, added })}`);
+      } else {
+        // same line apart from the 32-character body md5 (whatever the file's layout)
+        const strip = (line) => line.replace(/[0-9a-f]{32}/, '<md5>');
+        if (strip(gone[0]) !== strip(added[0])) wrong.push(`${n}: more than the body changed`);
+      }
+    } else if (gone.length || added.length) {
+      wrong.push(`${n} moved`);
+    }
+  }
+  record(`${L}fingerprints: only star_start_time_is_valid's body moved (0006 / 0028 files), every other file byte-identical`,
+    wrong.length === 0, wrong.join('; ') || `${numbers.length} files`);
+  const prints28 = after['0028_fingerprints.sql'];
+  record(`${L}0028 fingerprints: one function, sql, immutable, boolean, not definer, search_path="", only postgres may run it`,
+    prints28.length === 1 && prints28[0].includes(' lang=sql volatility=i returns=boolean definer=false settings=search_path="" owner=postgres')
+      && prints28[0].endsWith('rights=postgres:EXECUTE'), prints28.join(' | '));
+
+  // c. the tests
+  const tests = async (label, files) => {
+    for (const [file, ok] of files) await runTestFile(db, `${L}${file} (${label})`, file, ok);
+  };
+  const starTests = [['0006_tests.sql', 'ALL 0006 TESTS PASSED'], ['0023_tests.sql', 'ALL 0023 TESTS PASSED']];
+  await tests('after 0028', [['0028_tests.sql', 'ALL 0028 TESTS PASSED'], ...starTests]);
+  const applied = await pre();
+  record(`${L}[pre-apply check] after 0028: body_is_0028, every count still 0`,
+    applied.body_is_0006 === false && applied.body_is_0028 === true && zero(applied), JSON.stringify(applied));
+
+  // d. re-run safety
+  await run(db, `${L}apply 0028 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0028 re-run: no fingerprint change`, movedAgain.length === 0, movedAgain.join(', '));
+
+  // e. Undo 0028, as SETUP.md 0028e has it: paste the undo file it names
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### 0028e\. Undo 0028/m);
+  const undoFile = 'manual/0028u_undo_star_start_time.sql';
+  const undoSql = read('manual', '0028u_undo_star_start_time.sql');
+  if (at < 0 || !setup.slice(at, at + 2000).includes(`supabase/${undoFile}`)) {
+    record(`${L}[undo 0028] SETUP.md has "### 0028e. Undo 0028" naming supabase/${undoFile}`, false, 'heading or file name missing');
+  } else {
+    // e1. a 6:05 AM event (made through star_add_event as the admin) blocks the undo;
+    // the undo file runs without its own begin / commit inside a transaction that is rolled back
+    const inner = undoSql.replace(/\r\n/g, '\n').replace(/^begin;$/m, '').replace(/^commit;$/m, '');
+    let planted = null;
+    let refusal = '';
+    try {
+      await db.exec('begin;');
+      await db.exec(`
+        do $$
+        declare
+          v_s uuid := gen_random_uuid();
+          v_r jsonb;
+        begin
+          insert into auth.sessions (id, user_id) values (v_s, '${ADMIN_UID}');
+          insert into public.session_unlock (session_id, staff_id, unlocked_until) values (v_s, '${ADMIN_UID}', now() + interval '30 minutes');
+          perform set_config('request.jwt.claims', jsonb_build_object('sub', '${ADMIN_UID}', 'role', 'authenticated', 'session_id', v_s,
+            'amr', jsonb_build_array(jsonb_build_object('method', 'password', 'timestamp', extract(epoch from now())::bigint - 60)))::text, true);
+          v_r := public.star_add_event('PGlite 0028 early event', public.testing_today() + 9, '06:05', 'worcester', false, null, null);
+          if v_r ->> 'status' is distinct from 'ok' then raise exception 'plant: star_add_event %', v_r; end if;
+          perform set_config('request.jwt.claims', '', true);
+        end
+        $$;`);
+      planted = await pre();
+      try {
+        await db.exec(inner);
+      } catch (error) {
+        refusal = error.message;
+      }
+    } catch (error) {
+      planted = { error: error.message };
+    } finally {
+      await db.exec('rollback;').catch(() => {});
+    }
+    record(`${L}[undo 0028] a planted 6:05 AM event: the pre-apply check counts it (events_bad_old = 1, events_bad_new = 0)`,
+      planted?.events_bad_old === 1 && planted?.events_bad_new === 0 && planted?.privates_bad_old === 0, JSON.stringify(planted));
+    record(`${L}[undo 0028] ... and the undo file refuses ("0028 undo refused")`, refusal.includes('0028 undo refused'), refusal || 'no error');
+    const rolledBack = await pre();
+    record(`${L}[undo 0028] the planted event was rolled back, the rule is still 0028's`,
+      rolledBack.body_is_0028 === true && zero(rolledBack), JSON.stringify(rolledBack));
+
+    // e2. the undo on the clean database
+    if (await run(db, `${L}[undo 0028] paste ${undoFile}`, undoSql)) {
+      const undone = await printsOf(db, numbers);
+      const back = numbers.filter((n) => JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(undone[`${n}_fingerprints.sql`]));
+      record(`${L}[undo 0028] every fingerprint file equals the one before 0028 (0006's star_start_time_is_valid is back)`,
+        back.length === 0, back.length ? `differ: ${back.join(', ')}` : `${numbers.length} files`);
+      const undonePre = await pre();
+      record(`${L}[undo 0028] the pre-apply check says body_is_0006 again`, undonePre.body_is_0006 === true && zero(undonePre), JSON.stringify(undonePre));
+      await tests('after the undo', starTests);
+      if (await run(db, `${L}[undo 0028] apply 0028 again (redo)`, migration)) {
+        const redo = await fingerprints(db, '0028_fingerprints.sql');
+        record(`${L}[undo 0028] after the redo the 0028 fingerprints equal the tested ones`, JSON.stringify(redo) === JSON.stringify(prints28));
+        await tests('after the redo', [['0028_tests.sql', 'ALL 0028 TESTS PASSED']]);
+      }
+    }
+  }
+  await db.close().catch(() => {});
+  return prints28;
 }
 
 function finish() {
