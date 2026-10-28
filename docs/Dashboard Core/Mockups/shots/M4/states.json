@@ -1,0 +1,26 @@
+[
+  {
+    "id": "paid",
+    "caption": "<b>Paid in full</b> (Color Belt, as picture 03b drew it): the school, what kind of receipt, the section's facts, every payment with how it was paid, then Total due · Paid to date · <b>Balance $0 · paid in full</b>, both schools' street and phone, and who printed it. Close has the first focus; <b>Print or save as PDF</b> is the one blue button."
+  },
+  {
+    "id": "balance",
+    "caption": "<b>Several payments, a refund and a balance</b> (Black Belt): a refund is a line of its own with a minus (“−$50”), the totals add up, and the section can add a word to the balance (“next due May 29”). Money is written as the shared rule says (v1.026)."
+  },
+  {
+    "id": "loading",
+    "caption": "<b>While it loads</b> (a section that reads the receipt from the database, as Black Belt does): a gray placeholder page, and <b>Print or save as PDF</b> in the gray unavailable look until the receipt is there."
+  },
+  {
+    "id": "failed",
+    "caption": "<b>If it can't load</b>: the shared amber bar with Retry takes the page's place, as Black Belt's does today, and stays until it works or the box closes (v1.004). Print stays gray."
+  },
+  {
+    "id": "hidden",
+    "caption": "<b>Hide private details on</b> (v0.506): no amounts on a screen others can see — one gray line instead of the page, and no Print button."
+  },
+  {
+    "id": "paper",
+    "caption": "<b>The printed page</b> (US Letter, as Black Belt prints it today): black on white, the school at the top, the footer at the foot of the page. The same on every device — drawn once."
+  }
+]

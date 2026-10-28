@@ -1,0 +1,80 @@
+<!doctype html>
+<!--
+  Q2-minus-sign.html — the step-1 brief's second question for Jeffrey: how the shared money helper
+  (M9) writes a minus. v1.026 set "$65" / "$290.50" on screens and "$65.00" in Finance's report,
+  but says nothing about a minus. One picture: where a minus shows today, and the options.
+  Shot as a PNG with ../tools/shoot-page.mjs.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Q2 · How a minus is written</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; width: 1400px; box-sizing: border-box; background: #fff; color: #1f1f1f; font: 15px/1.45 "Segoe UI", system-ui, sans-serif; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4a4a4a; margin: 0 0 20px; max-width: 1300px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; }
+  .col { border: 1px solid #e5e5e2; border-radius: 10px; padding: 14px 16px 16px; }
+  .col.today { background: #fffaf2; border-color: #f2d9b0; }
+  .col.pick { background: #f7fbf4; border: 2px solid #3b8f2a; }
+  .label { display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; padding: 3px 9px; border-radius: 6px; margin-bottom: 10px; }
+  .today .label { background: #fdf0d9; color: #7a4a06; }
+  .opt .label { background: #f1f1ee; color: #555; }
+  .pick .label { background: #e5f2df; color: #2e6b1f; }
+  .ex { margin: 0 0 10px; padding: 8px 10px; border: 1px solid #e5e5e2; border-radius: 8px; background: #fff; font-size: 13px; }
+  .ex .where { display: block; color: #6b6b6b; font-size: 12px; margin-bottom: 2px; }
+  .ex .money { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .bad { background: #fdf0d9; border-radius: 4px; padding: 0 3px; }
+  ul { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
+  li { margin-bottom: 4px; }
+  .plus { color: #2e6b1f; } .minus { color: #8a5a0a; }
+  .foot { margin-top: 18px; padding: 14px 16px; background: #f7f7f5; border-radius: 8px; line-height: 1.55; }
+</style>
+</head>
+<body>
+<h1>Q2 · How the shared money helper writes a minus</h1>
+<p class="sub">v1.026 set the money rule — “$65”, “$290.50” on screens, “$65.00” in Finance's report — but not the minus. A minus shows on a refund, a reversed payment and an overpaid balance. One way for the shared helper (M9); each section's look changes only when that section switches. <b>Green = my recommendation.</b></p>
+<div class="cols">
+  <div class="col today">
+    <span class="label">Today</span>
+    <p class="ex"><span class="where">Black Belt · receipt, a refund line</span>Apr 26 · Refund · Cash · <span class="money">−$50</span></p>
+    <p class="ex"><span class="where">Black Belt · balance when overpaid</span>Balance <span class="money">−$50 · overpaid</span></p>
+    <p class="ex"><span class="where">Finance · Daily report, a refund</span>Refund · Shrewsbury · <span class="money">−$190.00</span></p>
+    <p class="ex"><span class="where">Camps · camper's payments, a reversed payment</span><span class="money bad">$-335</span> cash (reversed) · Worcester · Mar 3</p>
+    <ul><li>Three ways in use; Camps' comes from Color Belt's helper, which Star's matches.</li></ul>
+  </div>
+  <div class="col opt pick">
+    <span class="label">A · real minus before $</span>
+    <p class="ex"><span class="where">Screens</span><span class="money">−$50</span> · <span class="money">−$335</span> cash (reversed)</p>
+    <p class="ex"><span class="where">Finance's report, print, export</span><span class="money">−$190.00</span></p>
+    <ul>
+      <li class="plus">+ How negative money is usually written; the true minus sign (−), as wide as the + sign.</li>
+      <li class="plus">+ Already approved: Black Belt's receipt and balance, Finance's report.</li>
+      <li class="plus">+ Screen readers say “minus 50 dollars”.</li>
+      <li class="minus">− Camps' reversed line changes from “$-335” to “−$335” when Camps switches.</li>
+    </ul>
+  </div>
+  <div class="col opt">
+    <span class="label">B · keyboard hyphen</span>
+    <p class="ex"><span class="where">Screens</span><span class="money">-$50</span> · <span class="money">-$335</span> cash (reversed)</p>
+    <p class="ex"><span class="where">Finance's report, print, export</span><span class="money">-$190.00</span></p>
+    <ul>
+      <li class="plus">+ The key on the keyboard.</li>
+      <li class="minus">− Shorter and lighter than a minus; next to “·” lines it reads like a dash.</li>
+      <li class="minus">− Changes Black Belt's and Finance's approved look.</li>
+    </ul>
+  </div>
+  <div class="col opt">
+    <span class="label">C · as Camps shows it today</span>
+    <p class="ex"><span class="where">Screens</span><span class="money">$-50</span> · <span class="money">$-335</span> cash (reversed)</p>
+    <p class="ex"><span class="where">Finance's report, print, export</span><span class="money">$-190.00</span></p>
+    <ul>
+      <li class="plus">+ No change for Camps.</li>
+      <li class="minus">− Not how money is written; reads “dollars minus 50”.</li>
+      <li class="minus">− Changes Black Belt's and Finance's approved look.</li>
+    </ul>
+  </div>
+</div>
+<div class="foot"><b>What stays either way:</b> positive money as v1.026 says (“$65”, “$290.50”, Finance “$65.00”); the CSV export keeps plain numbers (“-190.00”) for spreadsheets — it isn't screen text.</div>
+</body>
+</html>

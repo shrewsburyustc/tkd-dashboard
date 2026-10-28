@@ -5,7 +5,8 @@
 // Amber with the warning triangle and words — never red, never color alone (guidelines 7).
 //
 // Props:
-//   text       the message (from src/screens/testing/text.js)
+//   text       the message (the section's own words, e.g. from src/screens/testing/text.js);
+//              Retry and Dismiss are the shared words (src/components/text.js)
 //   onRetry    optional — shows the "Retry" button
 //   onDismiss  optional — shows the X ("Dismiss") button
 //   retrying   true while a retry is on its way (the Retry button is then unavailable)
@@ -13,7 +14,7 @@
 //              testing's "Close registration", v0.504); then it has no ti-refresh icon
 import { IconAlertTriangle, IconRefresh, IconX } from '@tabler/icons-react';
 import IconButton from './IconButton.jsx';
-import { DISMISS, RETRY } from '../screens/testing/text.js';
+import { DISMISS, RETRY } from './text.js';
 
 export default function ErrorBanner({ text, onRetry, onDismiss, retrying = false, retryLabel = null }) {
   return (

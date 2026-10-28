@@ -1,0 +1,213 @@
+<!doctype html>
+<!--
+  M5-registration-link.src.html — mockup source for the shared Registration link box (design review M5).
+  Why: rulebook v1.015 — one box everywhere: Copy link and Download QR code in every section, Print
+  flyer only where a section has one today (Color Belt, Star); one or two school links. It copies
+  what's approved: Color Belt's card (.ev-link-*), Star's two-school box (picture 12e), Camps' and
+  Black Belt's Download QR code. Drawn with the app's real stylesheets and real QR codes.
+  Build: node ../tools/build-mockup.mjs src/M5-registration-link.src.html M5-registration-link.html
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M5 · The shared Registration link box — mockup</title>
+<!-- css: src/styles/tokens.css src/styles/app.css src/styles/testing.css src/styles/testing-events.css -->
+<style>
+  body { background: #fff; }
+  .sheet-head { max-width: 1100px; margin: 0 auto; padding: 24px 16px 8px; }
+  .sheet-head h1 { font-size: 20px; margin-bottom: 4px; }
+  .sheet-head p { color: var(--color-text-secondary); font-size: 13px; }
+  .state { max-width: 1100px; margin: 0 auto; padding: 16px 16px 8px; }
+  .state > h2 { font-size: 14px; margin-bottom: 12px; }
+  .state > h2 .n { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 6px; border-radius: 10px; background: #1f1f1f; color: #fff; font-size: 12px; }
+  .is-focus { outline: 2px solid var(--color-blue); outline-offset: 2px; }
+  .marks .mark { outline: 3px solid #f59e0b; outline-offset: 5px; border-radius: 6px; }
+  /* The dimmed page behind the box (PC and tablet), drawn in place. */
+  .stage { display: inline-block; padding: 24px 40px; background: #a6a6a6; border-radius: 8px; }
+  .stage .dialog { position: static; margin: 0 auto; }
+  .only-phone { display: none !important; }
+  @media (max-width: 639.98px) {
+    .state { padding: 16px 0 8px; }
+    .state > h2 { padding: 0 16px; }
+    .stage { display: block; padding: 0; background: none; border-radius: 0; }
+    .only-wide { display: none !important; }
+    .only-phone { display: flex !important; }
+    /* The phone's full-screen page, drawn in place with the screen's edge as a line. */
+    .stage .dialog-page { position: static; border-top: 1px solid var(--color-border-strong); border-bottom: 1px solid var(--color-border-strong); }
+  }
+
+  /* ===== NEW in the shared box (the rest is today's CSS) ===== */
+  /* Two schools side by side, 600px box (Star's size, star.css); one column on phones. */
+  .tdialog.lnk-two { width: 600px; max-width: 100%; }
+  .lnk-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-12); }
+  .lnk-row .ev-link-card { min-width: 0; padding: var(--space-12); gap: var(--space-8); }
+  .lnk-row .ev-link-buttons { flex-direction: column; align-items: center; }
+  .lnk-hint { margin-top: var(--space-12); }
+  .lnk-hint code { white-space: nowrap; } /* "?dan=3" never breaks after the "?" */
+  @media (max-width: 639.98px) { .lnk-row { grid-template-columns: minmax(0, 1fr); } }
+</style>
+<script>if (location.search.includes('marks')) document.documentElement.classList.add('marks');</script>
+</head>
+<body>
+<div class="sheet-head">
+  <h1>M5 · The shared Registration link box</h1>
+  <p>Opened by the “Registration link” button in the page header (v1.015). One or two school links, each with its QR code and the link, then <b>Copy link</b> and <b>Download QR code</b> everywhere; <b>Print flyer</b> only where a section has one today. The section writes the line under the title and prints its own flyer. Drawn with the app's own stylesheets; the QR codes are real. Fake events.</p>
+</div>
+<span hidden id="back-icon"><i data-icon="arrow-left" data-size="20"></i></span>
+
+<section class="state">
+  <h2><span class="n">1</span>One school link, with a flyer</h2>
+  <div class="stage" data-state="one" data-title="Registration link" data-close="Close" data-caption="<b>One school link</b> (Color Belt): Copy link, <b>Download QR code</b> and Print flyer. Download QR code is new for Color Belt and Star: it saves the picture for your own flyers as a 1024-pixel PNG (big enough to print; Camps’ size today), named like “November Children Testing - Worcester QR code.png”. Copy link has the first focus; a copy shows the toast “Link copied”. Phones: a full-screen page with the back arrow, no Close.">
+    <template>
+      <p class="tdialog-sub ev-link-event">November Children Testing</p>
+      <p class="ev-link-line">Registration is open until Fri, Nov 13. Families choose their class and belt on the form.</p>
+      <div class="ev-link-card">
+        <p class="ev-link-school">Worcester school</p>
+        <img data-qr="https://tkd-dashboard.pages.dev/register/p4w9tdkm" class="ev-link-qr" width="128" height="128" alt="QR code for tkd-dashboard.pages.dev/register/p4w9tdkm">
+        <p class="ev-link-url">tkd-dashboard.pages.dev/<wbr>register/p4w9tdkm</p>
+        <div class="ev-link-buttons mark">
+          <button type="button" class="btn btn-sm is-focus"><i data-icon="copy"></i>Copy link</button>
+          <button type="button" class="btn btn-sm"><i data-icon="download"></i>Download QR code</button>
+          <button type="button" class="btn btn-sm"><i data-icon="printer"></i>Print flyer</button>
+        </div>
+      </div>
+    </template>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">2</span>Two school links</h2>
+  <div class="stage" data-state="two" data-title="Registration links" data-two data-close="Close" data-caption="<b>Two school links</b> (Star; Black Belt the same without Print): one card per school, side by side — one under the other on phones. Copy and Print name the school; <b>Download QR code</b> says it to screen readers (“Download Worcester QR code”), as picture 12e drew it.">
+    <template>
+      <p class="tdialog-sub ev-link-event">Fall Star Testing</p>
+      <p class="ev-link-line">Registration is open until Tue, Nov 10. Each school has its own link; the link sets the candidate’s school. Families choose their Dan on the form.</p>
+      <div class="lnk-row">
+        <div class="ev-link-card">
+          <p class="ev-link-school">Worcester school</p>
+          <img data-qr="https://tkd-dashboard.pages.dev/star/fa2kxm7p" class="ev-link-qr" width="128" height="128" alt="QR code for the Worcester link">
+          <p class="ev-link-url">tkd-dashboard.pages.dev/<wbr>star/fa2kxm7p</p>
+          <div class="ev-link-buttons mark">
+            <button type="button" class="btn btn-sm is-focus"><i data-icon="copy"></i>Copy Worcester link</button>
+            <button type="button" class="btn btn-sm"><i data-icon="download"></i>Download QR code</button>
+            <button type="button" class="btn btn-sm"><i data-icon="printer"></i>Print Worcester flyer</button>
+          </div>
+        </div>
+        <div class="ev-link-card">
+          <p class="ev-link-school">Shrewsbury school</p>
+          <img data-qr="https://tkd-dashboard.pages.dev/star/r9ectw3h" class="ev-link-qr" width="128" height="128" alt="QR code for the Shrewsbury link">
+          <p class="ev-link-url">tkd-dashboard.pages.dev/<wbr>star/r9ectw3h</p>
+          <div class="ev-link-buttons mark">
+            <button type="button" class="btn btn-sm"><i data-icon="copy"></i>Copy Shrewsbury link</button>
+            <button type="button" class="btn btn-sm"><i data-icon="download"></i>Download QR code</button>
+            <button type="button" class="btn btn-sm"><i data-icon="printer"></i>Print Shrewsbury flyer</button>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">3</span>No flyer</h2>
+  <div class="stage" data-state="noflyer" data-title="Registration link" data-close="Close" data-caption="<b>No flyer</b> (Camps — Jeffrey makes camp flyers himself, v0.232; Black Belt too): Copy link and Download QR code only. One link can serve both schools (“Both schools · held at Worcester”).">
+    <template>
+      <p class="tdialog-sub ev-link-event">April Vacation Camp</p>
+      <p class="ev-link-line">Family sign-up opens on Mon, Mar 1. Families choose their child’s days and extras on the form.</p>
+      <div class="ev-link-card">
+        <p class="ev-link-school">Both schools · held at Worcester</p>
+        <img data-qr="https://tkd-dashboard.pages.dev/camp/k7m2qp4x" class="ev-link-qr" width="128" height="128" alt="QR code for tkd-dashboard.pages.dev/camp/k7m2qp4x">
+        <p class="ev-link-url">tkd-dashboard.pages.dev/<wbr>camp/k7m2qp4x</p>
+        <div class="ev-link-buttons mark">
+          <button type="button" class="btn btn-sm is-focus"><i data-icon="copy"></i>Copy link</button>
+          <button type="button" class="btn btn-sm"><i data-icon="download"></i>Download QR code</button>
+        </div>
+      </div>
+    </template>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">4</span>Two links, no flyer, a section's own line</h2>
+  <div class="stage" data-state="bb" data-title="Registration links" data-two data-close="Close" data-caption="<b>Black Belt</b>: two links without a flyer, and one line of its own under the cards (the ?dan= hint). A section can add such a line; the box doesn't know what it says.">
+    <template>
+      <p class="tdialog-sub ev-link-event">Spring 2027 Black Belt testing</p>
+      <p class="ev-link-line">Registration is open until Sat, Mar 27. Each school has its own link; the link sets the candidate’s school. Families choose their Dan on the form.</p>
+      <div class="lnk-row">
+        <div class="ev-link-card">
+          <p class="ev-link-school">Worcester school</p>
+          <img data-qr="https://tkd-dashboard.pages.dev/black-belt/w6em58ap" class="ev-link-qr" width="128" height="128" alt="QR code for the Worcester link">
+          <p class="ev-link-url">tkd-dashboard.pages.dev/<wbr>black-belt/w6em58ap</p>
+          <div class="ev-link-buttons">
+            <button type="button" class="btn btn-sm is-focus"><i data-icon="copy"></i>Copy Worcester link</button>
+            <button type="button" class="btn btn-sm"><i data-icon="download"></i>Download QR code</button>
+          </div>
+        </div>
+        <div class="ev-link-card">
+          <p class="ev-link-school">Shrewsbury school</p>
+          <img data-qr="https://tkd-dashboard.pages.dev/black-belt/7mf5dau2" class="ev-link-qr" width="128" height="128" alt="QR code for the Shrewsbury link">
+          <p class="ev-link-url">tkd-dashboard.pages.dev/<wbr>black-belt/7mf5dau2</p>
+          <div class="ev-link-buttons">
+            <button type="button" class="btn btn-sm"><i data-icon="copy"></i>Copy Shrewsbury link</button>
+            <button type="button" class="btn btn-sm"><i data-icon="download"></i>Download QR code</button>
+          </div>
+        </div>
+      </div>
+      <p class="field-hint lnk-hint mark">To choose the Dan for a family, add <code>?dan=1</code>, <code>?dan=2</code>, <code>?dan=3</code> or <code>?dan=4</code> to the end of a link.</p>
+    </template>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">5</span>A copy or download that fails</h2>
+  <div class="stage" data-state="failed" data-title="Registration links" data-two data-close="Close" data-caption="<b>If Download QR code or Copy link fails</b>, the amber note shows <b>inside the box</b>, under the cards — where the person is looking — and stays until the box closes (v1.004). The two sentences are shared words: “Couldn't make the QR code picture. Try again.” and “Couldn't copy the link. Select the link and copy it yourself.” (Star's). Today Color Belt, Camps and Black Belt put copy failures in a bar on the page behind.">
+    <template>
+      <p class="tdialog-sub ev-link-event">Spring 2027 Black Belt testing</p>
+      <p class="ev-link-line">Registration is open until Sat, Mar 27. Each school has its own link; the link sets the candidate’s school. Families choose their Dan on the form.</p>
+      <div class="lnk-row">
+        <div class="ev-link-card">
+          <p class="ev-link-school">Worcester school</p>
+          <img data-qr="https://tkd-dashboard.pages.dev/black-belt/w6em58ap" class="ev-link-qr" width="128" height="128" alt="QR code for the Worcester link">
+          <p class="ev-link-url">tkd-dashboard.pages.dev/<wbr>black-belt/w6em58ap</p>
+          <div class="ev-link-buttons">
+            <button type="button" class="btn btn-sm"><i data-icon="copy"></i>Copy Worcester link</button>
+            <button type="button" class="btn btn-sm is-focus"><i data-icon="download"></i>Download QR code</button>
+          </div>
+        </div>
+        <div class="ev-link-card">
+          <p class="ev-link-school">Shrewsbury school</p>
+          <img data-qr="https://tkd-dashboard.pages.dev/black-belt/7mf5dau2" class="ev-link-qr" width="128" height="128" alt="QR code for the Shrewsbury link">
+          <p class="ev-link-url">tkd-dashboard.pages.dev/<wbr>black-belt/7mf5dau2</p>
+          <div class="ev-link-buttons">
+            <button type="button" class="btn btn-sm"><i data-icon="copy"></i>Copy Shrewsbury link</button>
+            <button type="button" class="btn btn-sm"><i data-icon="download"></i>Download QR code</button>
+          </div>
+        </div>
+      </div>
+      <div class="tdialog-note mark"><div class="notice" role="alert"><i data-icon="alert-triangle" class="notice-icon"></i><span>Couldn't make the QR code picture. Try again.</span></div></div>
+    </template>
+  </div>
+</section>
+
+<script>
+  // Draw each state twice from its one <template>: as the PC / tablet box (Dialog.jsx's
+  // .dialog.tdialog) and as the phone's full-screen page (.dialog-page). CSS shows the right one.
+  const back = document.getElementById('back-icon').innerHTML;
+  for (const stage of document.querySelectorAll('.stage[data-title]')) {
+    const content = stage.querySelector('template').innerHTML;
+    const { title, close } = stage.dataset;
+    const size = 'two' in stage.dataset ? 'tdialog--wide lnk-two' : 'tdialog--detail';
+    stage.insertAdjacentHTML('beforeend', `
+      <div class="dialog tdialog ${size} only-wide" role="dialog" aria-modal="true">
+        <h2 class="dialog-title">${title}</h2>
+        ${content}
+        <div class="dialog-actions"><button type="button" class="btn">${close}</button></div>
+      </div>
+      <div class="dialog-page tdialog-page only-phone" role="dialog" aria-modal="true">
+        <div class="dialog-page-head"><button type="button" class="icon-button" aria-label="Back">${back}</button><h2 class="dialog-page-title">${title}</h2></div>
+        <div class="dialog-page-body">${content.replaceAll('is-focus', '')}</div>
+      </div>`);
+  }
+</script>
+</body>
+</html>

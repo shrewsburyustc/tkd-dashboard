@@ -14,6 +14,7 @@
 //   onChanged — new PIN saved: the App closes this and shows the "PIN changed" toast
 import { useEffect, useRef, useState } from 'react';
 import AccountDialog from '../components/AccountDialog.jsx';
+import { BACK, CANCEL } from '../components/text.js';
 import Notice from '../components/Notice.jsx';
 import PinEntry from '../components/PinEntry.jsx';
 import { confirmPassword } from '../lib/confirmPassword.js';
@@ -166,7 +167,7 @@ export default function ChangePinDialog({ profile, onCancel, onChanged }) {
           ) : (
             <div className="dialog-actions">
               <button type="button" className="btn" onClick={onCancel}>
-                Cancel
+                {CANCEL}
               </button>
               <button type="submit" className="btn btn-primary" disabled={checking}>
                 {checking ? 'Checking…' : 'Continue'}
@@ -199,10 +200,10 @@ export default function ChangePinDialog({ profile, onCancel, onChanged }) {
           {!isPhone && (
             <div className="dialog-actions">
               <button type="button" className="link-button" onClick={goBack}>
-                Back
+                {BACK}
               </button>
               <button type="button" className="btn" onClick={onCancel}>
-                Cancel
+                {CANCEL}
               </button>
             </div>
           )}

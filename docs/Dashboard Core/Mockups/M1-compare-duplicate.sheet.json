@@ -1,0 +1,16 @@
+{
+  "shots": "shots/M1",
+  "title": "M1 · The shared Compare dialog and possible-duplicate box — mockup",
+  "subtitle": "One design built once for Color Belt, Star, Camps and Black Belt (rulebook v1.030); each keeps its own noun and rows. Copied from the four copies' shared look. <b>Amber outline</b> = what the shared part decides. Two details to OK: the visible “⚠ different” (3) and “Keeping…” (4).",
+  "pcOwnLine": [
+    "compare",
+    "busy",
+    "staff",
+    "hidden",
+    "loading",
+    "loadfail",
+    "blocked",
+    "failed"
+  ],
+  "out": "M1-compare-duplicate"
+}

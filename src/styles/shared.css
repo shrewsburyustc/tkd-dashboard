@@ -1,0 +1,2179 @@
+/*
+  shared.css — the styles of the dashboard's shared parts: the pieces every section's pages,
+  lists and dialogs draw the same way (rulebook v1.030, Dashboard core step 1, M11).
+  Why it exists: the shared parts in src/components/ (Dialog, RowMenu, IconButton, ErrorBanner,
+  Grip, ChoiceGroup, DeleteDialog, Select) and the pieces every section uses — the page head,
+  tabs, the amber bar, tags, list rows, the ⋯ menu, the dialog frame, fields, joined buttons, the
+  custom dropdown, the summary cards, the possible-duplicate box, Compare, the Registration link —
+  took their look from Color Belt's sheets: testing.css, and testing-events.css (which only
+  Testing and Camps load). They live here now, in one place for every section. A few small pieces
+  came from staff.css (the account menu's "Admin" label), calendar.css (the gray Delete button)
+  and prospects.css (the navigation badge).
+  The blocks were MOVED, not rewritten: the same class names, values and order, so nothing on
+  screen changed (checked with before / after pictures of every section).
+
+  ORDER MATTERS: of two rules with the same weight (specificity), the one loaded later wins.
+    - main.jsx imports this file right after app.css, in testing.css's old place, so the rules
+      that came from testing.css still load where they did. Import it ONLY from main.jsx: an
+      import from another page's code lets the build move it ahead of app.css (that happened to
+      forms.css, plan §10).
+    - Every section's own sheet loads after this one, so a section's rule still wins over these.
+    - Inside this file the blocks keep the order they had: testing.css's first (with its
+      screen-size sections), then staff.css's, calendar.css's and prospects.css's, then
+      testing-events.css's. So, for example, the green .ttag--ok still comes after .ttag, and the
+      two-line menu item after the touch-size menu item.
+    - One rule stayed behind on purpose: testing-events.css's .ev-sum (it says why).
+  New shared rules go at the end, in the marked section.
+
+  Screen-size rules used below (same as app.css):
+    Phone          (max-width: 639.98px)
+    PC             (min-width: 1024px) and (pointer: fine)  → grips, hover
+    Touch screens  (pointer: coarse)                        → 48px rows, 44px tap areas
+*/
+
+/* =============================================================================================
+   From testing.css: the page head and tabs, the amber bar, icon buttons and tooltips, the grip,
+   tags, lists and rows, the ⋯ menu and phone sheet, the dialog frame, fields, joined buttons and
+   the custom dropdown
+   ============================================================================================= */
+
+/* ===== Page head: the title (with the school under it), the page's main button on the right ===== */
+.phead {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-12);
+  margin-bottom: var(--space-8);
+}
+
+.phead-titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.ptitle {
+  font-size: var(--text-20);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.psub {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* ===== Tab bar ===== */
+.ttabs {
+  display: flex;
+  flex: none;
+  gap: var(--space-24);
+  margin-bottom: var(--space-16);
+  /* Phase 4 (contract 0014 §5.1): three tabs don't fit a 320px phone, so the bar scrolls
+     sideways instead of wrapping (the current tab is scrolled into view, Testing.jsx). The gray
+     line is an inner shadow (not a border), so the blue underline still sits on it inside the
+     scrolling box. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none; /* no scrollbar drawn; a finger or the arrow keys scroll it */
+  box-shadow: inset 0 -1px 0 var(--color-border);
+}
+
+.ttabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Phase 4 (rulebook v0.401): Private testing sits at the far right of the tab bar, out of the
+   way. margin-left: auto pushes it right when there is room; when the bar is too narrow and
+   scrolls (phones), the auto margin is simply 0 and the tabs sit side by side. */
+.ttab--end {
+  margin-left: auto;
+}
+
+.ttab {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 40px;
+  border-bottom: 2px solid transparent; /* the blue underline (current tab) covers the gray line */
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.ttab.is-current {
+  border-bottom-color: var(--color-blue);
+  color: var(--color-blue);
+  font-weight: 500;
+}
+
+.ttab:focus-visible {
+  outline-offset: -2px;
+}
+
+/* "View only. Ask an admin to make changes." under the page head (staff) */
+.viewonly {
+  margin: calc(-1 * var(--space-4)) 0 var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* ===== Error banner (ErrorBanner.jsx) — amber, never red ===== */
+.errbar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--text-13);
+}
+
+.errbar-icon {
+  flex: none;
+}
+
+.errbar-text {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-4) 0;
+}
+
+.errbar-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* ===== Small pieces shared by the list and the dialogs ===== */
+
+/* Icon button: a 28px square you can see; on touch screens the button is a 44px tap area. */
+.tib {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-secondary);
+}
+
+.tib-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-control);
+}
+
+.tib {
+  position: relative; /* anchor for the tooltip */
+}
+
+/* While its ⋯ menu is open, the button stays "pressed" (gray square) */
+.tib[aria-expanded='true'] .tib-box {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+/* Tooltip bubble (PC only, see the hover section at the bottom): the same words as the
+   button's aria-label, above the button, right edges lined up so it never runs off the page. */
+.tib-tip,
+.grip-tip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + var(--space-8));
+  z-index: 30;
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-tag);
+  background: var(--color-tooltip-bg);
+  color: var(--color-on-blue);
+  font-size: var(--text-13);
+  font-weight: 400;
+  line-height: 1.5;
+  white-space: nowrap;
+  pointer-events: none; /* the bubble never blocks clicks */
+}
+
+.tib-tip {
+  right: 0;
+}
+
+/* Small triangle under the bubble, pointing at the button */
+.tib-tip::after,
+.grip-tip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  border: 5px solid transparent;
+  border-top-color: var(--color-tooltip-bg);
+}
+
+.tib-tip::after {
+  right: 9px;
+}
+
+/* Compact outline button (e.g. "Add rank"): 28px with a mouse */
+.btn-sm {
+  height: 28px;
+  padding: 0 var(--space-12);
+}
+
+/* Tags: one per row at most. Neutral gray, or amber for "Not saved". */
+.ttag {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 2px var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-tag);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.ttag--warn {
+  border-color: var(--color-tag-warn-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+/* ===== Lists: the bordered list, and the buttons at the end of a row ===== */
+.clist {
+  flex: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.acts {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
+}
+
+/* The grip (Grip.jsx): the drag handle at the start of a row */
+.grip {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: grab;
+}
+
+/* No room above (top of the scrolling area): the bubble goes below, its triangle pointing up */
+[data-tip='below'] > .tib-tip,
+[data-tip='below'] > .grip-tip {
+  top: calc(100% + var(--space-8));
+  bottom: auto;
+}
+
+[data-tip='below'] > .tib-tip::after,
+[data-tip='below'] > .grip-tip::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: var(--color-tooltip-bg);
+}
+
+/* A finger on the grip drags the row instead of scrolling the page (v0.63). Only the grip:
+   anywhere else on the row, a finger still scrolls. */
+.grip {
+  touch-action: none;
+  -webkit-touch-callout: none; /* no long-press menu on iPhones */
+}
+
+/* The grip's tooltip goes above it, starting at its left edge (so it doesn't cover the name) */
+.grip-tip {
+  left: 0;
+}
+
+.grip-tip::after {
+  left: 7px;
+}
+
+html.is-reordering .grip-tip,
+html.is-reordering .tib-tip {
+  display: none !important; /* no tooltips while dragging */
+}
+
+/* ===== List rows: a table row on PC and tablet (Classes and ranks, Forms) ===== */
+/* Left padding lines the rank names up under the class name in Classes and ranks:
+   mouse 44px (8 + 28 chevron + 8), touch 48px (the 44px chevron tap area + 4px). With the grip
+   column (PC admin) testing.css makes it 40px + the 24px grip column + 12px gap = 76px. */
+.rrow {
+  display: grid;
+  align-items: center;
+  column-gap: var(--space-12);
+  padding: 0 var(--space-4) 0 44px;
+  border-top: 1px solid var(--color-border);
+  position: relative;
+  min-height: 40px;
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-4);
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+/* Arrow-key focus on a row: the 2px blue ring, drawn inside the row */
+.rrow:focus-visible,
+.prow:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+/* The row open in a dialog right now (blue "selected" tint, as mocked up) */
+.rrow.is-selected,
+.prow.is-selected {
+  background: var(--color-blue-tint);
+}
+
+/* ===== Phone rows (two lines: .l1, and the gray .l2 under it) ===== */
+.prow {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  padding: var(--space-4) 0 var(--space-4) var(--space-16);
+  border-top: 1px solid var(--color-border);
+  cursor: pointer;
+}
+
+.l1 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--space-8);
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.l1 > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.l2 {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.l2 span {
+  white-space: nowrap;
+}
+
+/* ===== Empty list, loading skeleton ===== */
+.tempty {
+  padding: var(--space-32) var(--space-16);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+  text-align: center;
+}
+
+.tskeleton-row {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 var(--space-16);
+}
+
+.tskeleton-row + .tskeleton-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.tskeleton-bar {
+  width: 40%;
+  height: 12px;
+  border-radius: var(--radius-tag);
+  background: var(--color-surface);
+}
+
+/* ===== ⋯ menu: dropdown (PC / tablet) ===== */
+.tmenu {
+  position: fixed;
+  z-index: 45;
+  width: 200px;
+  padding: var(--space-4) 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); /* the same subtle shadow as the account menu */
+}
+
+.tmenu-item {
+  white-space: nowrap;
+}
+
+/* Red means delete — and only delete (guidelines 7) */
+.tmenu-item--danger,
+.tmenu-item--danger .menu-icon {
+  color: var(--color-delete-text);
+}
+
+.tmenu-item--danger:focus-visible {
+  background: var(--color-delete-bg);
+}
+
+/* Unavailable (e.g. Move up on the first item): gray, still reachable for screen readers */
+.tmenu-item.is-disabled,
+.tmenu-item.is-disabled .menu-icon {
+  color: var(--color-disabled-text);
+  cursor: default;
+}
+
+/* ===== ⋯ menu: bottom sheet (phone) ===== */
+.tsheet-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+}
+
+.tsheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--color-backdrop);
+}
+
+.tsheet {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: var(--space-8) 0 calc(var(--space-16) + env(safe-area-inset-bottom));
+  border-radius: 16px 16px 0 0;
+  background: var(--color-bg);
+  overscroll-behavior: contain;
+}
+
+.tsheet .account-grab {
+  display: block;
+  width: 36px;
+  height: 4px;
+  margin: var(--space-4) auto var(--space-8);
+  border-radius: 2px;
+  background: var(--color-border-strong);
+}
+
+.tsheet-head {
+  margin-bottom: var(--space-4);
+  padding: var(--space-4) var(--space-16) var(--space-8);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tsheet-title {
+  font-size: var(--text-14);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.tsheet-sub {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.tmenu-cancel {
+  justify-content: center;
+  font-weight: 500;
+}
+
+/* ===== Dialogs (Dialog.jsx) ===== */
+.tdialog {
+  border-radius: var(--radius-dialog);
+}
+
+/* Dialog.jsx boxes sit near the top, not in the middle (v0.80): a message appearing inside only
+   pushes what's below it down. 10% of the screen height, at least 16px and at most 96px; the
+   box can still use the rest of the height and scrolls inside when it's taller. */
+.dialog-backdrop--top {
+  align-items: flex-start;
+  padding-top: max(var(--space-16), min(10vh, 96px));
+}
+
+/* Sizes (Dialog.jsx's size): 'small' is app.css's 360px .dialog; 'detail' 440px (a view-only rank) */
+.tdialog--detail {
+  width: 440px;
+}
+
+/* 'medium' 520px (Edit / Add rank on tablets: nine swatches fit one row) and 'wide' 760px
+   (Edit / Add rank on the PC, with two columns) */
+.tdialog--medium {
+  width: 520px;
+}
+
+.tdialog--wide {
+  width: 760px;
+}
+
+/* The Cancel / Save row (with any note under it, v0.81, inside .dialog-footer) stays pinned to
+   the bottom of the dialog while the middle scrolls, so it's never below the fold on a short
+   screen (e.g. a 1366×768 laptop). */
+.tdialog .dialog-footer > .dialog-actions {
+  margin: 0;
+}
+
+.tdialog .dialog-footer > .tdialog-note {
+  margin-top: var(--space-8);
+}
+
+.tdialog .dialog-footer,
+.tdialog > .dialog-actions,
+.tdialog form > .dialog-actions {
+  position: sticky;
+  bottom: calc(-1 * var(--space-24)); /* the dialog's own bottom padding */
+  z-index: 2;
+  margin: var(--space-16) calc(-1 * var(--space-24)) calc(-1 * var(--space-24));
+  padding: var(--space-12) var(--space-24) var(--space-24);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.tdialog--confirm .dialog-actions,
+.tdialog--small .dialog-footer,
+.tdialog--small > .dialog-actions,
+.tdialog--small form > .dialog-actions {
+  position: static;
+  margin: var(--space-16) 0 0;
+  padding: 0;
+  border-top: none;
+}
+
+/* Short screens (e.g. a tablet in landscape): small dialogs pin their Cancel / Save row too,
+   like the big ones above, so it never ends up below the visible part (e.g. Reset PIN with the
+   keypad at 820×600). */
+@media (max-height: 699.98px) {
+  .tdialog--small .dialog-footer,
+  .tdialog--small > .dialog-actions,
+  .tdialog--small form > .dialog-actions {
+    position: sticky;
+    margin: var(--space-16) calc(-1 * var(--space-24)) calc(-1 * var(--space-24));
+    padding: var(--space-12) var(--space-24) var(--space-24);
+    border-top: 1px solid var(--color-border);
+  }
+}
+
+/* DeleteDialog (never pinned): its note comes right after Cancel / Delete (v0.81) */
+.tdialog--confirm .dialog-actions + .tdialog-note {
+  margin-top: var(--space-8);
+}
+
+/* A message scrolled into view (Dialog.jsx) stops above the pinned Cancel / Save row, not
+   behind it */
+.tdialog .notice,
+.tdialog-page .notice {
+  scroll-margin-bottom: 96px;
+}
+
+/* Phone page: the full-width Save stays pinned to the bottom of the screen */
+.tdialog-page .dialog-page-submit {
+  position: sticky;
+  bottom: calc(-1 * (var(--space-16) + env(safe-area-inset-bottom)));
+  z-index: 2;
+  margin: var(--space-16) calc(-1 * var(--space-16)) calc(-1 * (var(--space-16) + env(safe-area-inset-bottom)));
+  padding: var(--space-12) var(--space-16) calc(var(--space-16) + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.tdialog-sub {
+  margin-bottom: var(--space-16);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.tdialog-page .tdialog-sub {
+  margin-bottom: var(--space-12);
+}
+
+.tdialog--confirm .tdialog-body {
+  margin-bottom: 0;
+}
+
+/* The small gray label above a field (testing.css's read-only .ro-label looks the same) */
+.field-label {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* Small pieces of the rank and class dialogs, named after the dialog frame */
+.tdialog-divider {
+  margin: var(--space-4) 0 var(--space-12);
+  border-top: 1px solid var(--color-border);
+}
+
+.tdialog-group {
+  margin-bottom: var(--space-8);
+}
+
+.tdialog-copied {
+  margin: calc(-1 * var(--space-4)) 0 var(--space-8);
+}
+
+.tdialog-hint {
+  margin: var(--space-4) 0 var(--space-12);
+}
+
+/* A price field with "$" in front */
+.money {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: var(--control-height);
+  padding: 0 var(--space-12);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  font-size: var(--text-13);
+}
+
+.money:focus-within {
+  border-color: var(--color-blue);
+  outline: 2px solid var(--color-blue); /* the focus ring goes round the whole field */
+  outline-offset: 2px;
+}
+
+.money-prefix {
+  margin-right: var(--space-4);
+  color: var(--color-text-secondary);
+}
+
+.money-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: inherit;
+}
+
+.money-input:focus-visible {
+  outline: none; /* drawn on .money instead */
+}
+
+/* Read-only while saving */
+.money.is-readonly,
+.tdialog input.input:read-only,
+.tdialog-page input.input:read-only {
+  background: var(--color-surface);
+}
+
+/* Checkbox (the tick is drawn with CSS: ti-check is kept for Save only) */
+.cbrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 32px;
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+.cb {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1px solid var(--color-border-control);
+  border-radius: 4px;
+  background: var(--color-bg) center / 12px 12px no-repeat;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.cb:checked {
+  border-color: var(--color-blue);
+  background-color: var(--color-blue);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-4.9' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.cb:disabled {
+  cursor: progress;
+}
+
+.tmeta {
+  margin-top: var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.tdialog-note {
+  margin-top: var(--space-12);
+}
+
+/* "Discard changes" inside the unsaved-changes note (phones, v0.56): a text link in the note's
+   own amber color — not red (nothing is deleted), not blue (no extra blue element). Drawn 32px
+   tall; the invisible ::after stretches the tap area to 44px. */
+.note-action {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 32px;
+  margin-top: var(--space-4);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+.note-action::after {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
+}
+
+/* Save drawn gray while it's unavailable (approved detail 8). Still focusable. */
+.btn-primary.is-unavailable,
+.btn-primary.is-unavailable:hover,
+.btn-primary.is-unavailable:active {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+/* The red Delete button in the confirmation (the confirmation's main button) */
+.btn-delete,
+.btn-delete:hover,
+.btn-delete:active {
+  border-color: var(--color-delete-text);
+  background: var(--color-delete-text);
+  color: var(--color-on-blue);
+}
+
+/* Joined buttons, the chosen one tinted (like the location switcher): ChoiceGroup.jsx's
+   'segmented' look, the belt picker's patterns */
+.segmented {
+  display: inline-flex;
+  max-width: 100%;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+}
+
+.segment {
+  position: relative;
+  height: 30px;
+  padding: 0 var(--space-12);
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+  white-space: nowrap;
+}
+
+.segment + .segment {
+  border-left: 1px solid var(--color-border);
+}
+
+.segment:first-child {
+  border-radius: 7px 0 0 7px;
+}
+
+.segment:last-child {
+  border-radius: 0 7px 7px 0;
+}
+
+.segment.is-checked {
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+}
+
+.segment:focus-visible {
+  z-index: 1;
+}
+
+/* ===== The custom dropdown (v0.51): FinalAwardSelect.jsx, Star's StarSelect.jsx and the shared
+   Select.jsx (src/components/) ===== */
+.fa-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  cursor: pointer;
+}
+
+.fa-field.is-open {
+  border-color: var(--color-blue);
+}
+
+.fa-field.is-readonly {
+  background: var(--color-surface);
+  cursor: progress;
+}
+
+.fa-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fa-chevron {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.fa-list {
+  position: fixed;
+  z-index: 60;
+  margin: 0;
+  padding: var(--space-4) 0;
+  overflow-y: auto;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  list-style: none;
+}
+
+.fa-list,
+.fa-group {
+  list-style: none;
+}
+
+/* An always-visible thin scroll bar: the cue that the list goes on (approved detail 11, v0.51) */
+.fa-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.fa-list::-webkit-scrollbar-thumb {
+  border: 2px solid var(--color-bg);
+  border-radius: 4px;
+  background: var(--color-border-strong);
+}
+
+.fa-list::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+
+/* Browsers without the -webkit- scroll bar styles (Firefox): the standard thin one */
+@supports not selector(::-webkit-scrollbar) {
+  .fa-list {
+    scrollbar-color: var(--color-border-strong) var(--color-bg);
+    scrollbar-width: thin;
+  }
+}
+
+.fa-group {
+  margin: 0;
+  padding: 0;
+}
+
+.fa-heading {
+  padding: var(--space-8) var(--space-12) var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.fa-option {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 var(--space-12);
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+.fa-option.is-active {
+  background: var(--color-surface);
+}
+
+/* The current choice: blue tint (selected state, guidelines 7) */
+.fa-option.is-selected {
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+}
+
+.fa-option.is-selected.is-active {
+  box-shadow: inset 0 0 0 1px var(--color-blue);
+}
+
+/* ===== Tooltips — PC (mouse) only: on hover and on keyboard focus ===== */
+@media (hover: hover) and (pointer: fine) {
+  .tib:hover .tib-tip,
+  .tib:focus-visible .tib-tip,
+  .grip:hover .grip-tip,
+  .grip:focus-visible .grip-tip {
+    display: block;
+  }
+
+  /* No tooltip on a ⋯ button whose menu is open (the menu is right there) */
+  .tib[aria-expanded='true'] .tib-tip {
+    display: none;
+  }
+}
+
+/* ===== Hover — mouse only ===== */
+@media (hover: hover) {
+  .tib:hover .tib-box {
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  .grip:hover {
+    background: var(--color-border);
+    color: var(--color-text);
+  }
+
+  .rrow:not(.is-lifted):not(.is-selected):hover,
+  .prow:not(.is-selected):hover {
+    background: var(--color-surface);
+  }
+
+  .tmenu-item--danger:hover {
+    background: var(--color-delete-bg);
+  }
+
+  .tmenu-item.is-disabled:hover {
+    background: none;
+  }
+}
+
+/* ===== Touch screens: 48px rows, 44px tap areas (guidelines 2.5) ===== */
+@media (pointer: coarse) {
+  .tib {
+    width: var(--tap-size);
+    height: var(--tap-size);
+  }
+
+  /* Joined buttons on touch: 36px with their border, and a 44px tap area */
+  .segment {
+    height: 34px;
+  }
+
+  .segment::after {
+    content: '';
+    position: absolute;
+    inset: -5px 0;
+  }
+
+  /* The grip on touch screens: 16px icon, 44×44 touch area at the left of the row (v0.63) */
+  .grip {
+    width: var(--tap-size);
+    height: var(--tap-size);
+  }
+
+  .acts {
+    gap: 0;
+  }
+
+  .btn-sm {
+    height: var(--control-height-touch);
+  }
+
+  .ttab {
+    height: var(--tap-size);
+  }
+
+  .rrow {
+    padding: 0 0 0 48px;
+    min-height: 48px;
+  }
+
+  .tskeleton-row {
+    height: 48px;
+  }
+
+  .tmenu-item.menu-item {
+    height: var(--tap-size);
+  }
+
+  .fa-option {
+    min-height: var(--tap-size);
+  }
+
+  .cbrow {
+    min-height: var(--tap-size);
+  }
+
+  .money {
+    height: var(--control-height-touch);
+    font-size: var(--text-16); /* 16px stops iPhones/iPads zooming in on the field */
+  }
+
+  .errbar {
+    flex-wrap: wrap;
+    padding: var(--space-8) var(--space-4) var(--space-4) var(--space-12);
+  }
+}
+
+/* Tablet widths (640–1023px): a little less space between columns, so the two name columns
+   (each with a belt picture) fit most names on one line */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .rrow {
+    column-gap: var(--space-8);
+  }
+}
+
+/* ===== Phones (narrower than 640px) ===== */
+@media (max-width: 639.98px) {
+  .money {
+    height: var(--control-height-touch);
+    font-size: var(--text-16);
+  }
+
+  .errbar {
+    flex-wrap: wrap;
+  }
+}
+
+/* =============================================================================================
+   From staff.css, calendar.css and prospects.css: the account menu's "Admin" label, the gray
+   Delete button, the navigation badge
+   ============================================================================================= */
+
+/* ===== Account menu: the gray "Admin" label above Staff accounts (admins only) ===== */
+.menu-group-label {
+  padding: var(--space-4) var(--space-12) var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+@media (max-width: 639.98px) {
+  /* Phones: the account sheet's rows start 16px in: the "Admin" label lines up with them */
+  .menu-group-label {
+    padding-inline: var(--space-16);
+  }
+}
+
+/* The red Delete button drawn gray while it can't be used yet — e.g. Delete event type until a
+   "Move to" type is picked (like Save, guidelines 6). Still focusable. */
+.btn-delete.is-unavailable,
+.btn-delete.is-unavailable:hover,
+.btn-delete.is-unavailable:active {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+/* ===== The navigation badge: a count on a rail or bottom-bar icon (Prospects' new sign-ups, v0.244) ===== */
+.rail-icon,
+.bottombar-icon {
+  position: relative;
+  display: inline-flex;
+}
+
+.nav-badge {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-size: var(--text-12);
+  font-weight: 500;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* =============================================================================================
+   From testing-events.css: the pieces Camps, Star and Black Belt use too
+   ============================================================================================= */
+
+/* ===== Small pieces: the tab buttons, the green tag, the ⋯ menu's two-line items ===== */
+
+/* The Testing tabs became buttons in phase 2 (Events · Classes and ranks): drawn exactly like
+   phase 1's tab, without a button's own border and background. */
+.ttabs button.ttab {
+  padding: 0;
+  border-width: 0 0 2px;
+  border-style: solid;
+  border-color: transparent;
+  border-radius: 0;
+  background: none;
+  font-family: inherit;
+}
+
+.ttabs button.ttab.is-current {
+  border-bottom-color: var(--color-blue);
+}
+
+/* A green tag ("Open until Nov 13", "Paid") — guidelines 7 Success colors */
+.ttag--ok {
+  border-color: #cfe3b8;
+  background: #eaf3de;
+  color: var(--color-success-text);
+}
+
+/* A menu item without an icon keeps its words lined up with the ones that have one */
+.ev-noicon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+}
+
+/* A grayed menu item with its reason under it ("The closing date has passed. Ask an admin to reopen.") */
+.ev-menu-two {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: normal;
+}
+
+.ev-menu-reason {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  line-height: 1.4;
+}
+
+.tmenu-item:has(.ev-menu-two) {
+  height: auto;
+  min-height: 32px;
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-4);
+}
+
+/* "Pick one" buttons (ChoiceGroup.jsx) */
+.ev-segmented {
+  max-width: 100%;
+}
+
+.ev-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.ev-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 32px;
+  padding: 0 var(--space-12);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--text-13);
+}
+
+.ev-chip.is-checked {
+  border-color: var(--color-blue);
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+  font-weight: 500;
+  box-shadow: inset 0 0 0 1px var(--color-blue); /* a 2px edge: the choice is clear without color alone */
+}
+
+/* The four summary cards (Star v0.115) */
+.ev-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-12);
+  margin-bottom: var(--space-12);
+}
+
+.ev-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: left;
+}
+
+.ev-card--button {
+  cursor: pointer;
+}
+
+/* The card whose filter is on: blue edge (Star's proposal "selected card blue") */
+.ev-card.is-selected {
+  border-color: var(--color-blue);
+  box-shadow: inset 0 0 0 1px var(--color-blue);
+}
+
+.ev-card-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.ev-card-value {
+  font-size: var(--text-20);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+/* Payments recorded: "includes $65 from removed students" under the number (R8) */
+.ev-card-note {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.ev-filter-line {
+  margin: calc(-1 * var(--space-4)) 0 var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* The amber "possible duplicate" box (Star v0.114) */
+.ev-dupbox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-tag-warn-border);
+  border-radius: var(--radius-control);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--text-13);
+}
+
+.ev-dupbox-icon {
+  flex: none;
+  margin-top: 6px;
+}
+
+.ev-dupbox-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.ev-dupbox-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+}
+
+.ev-dupbox-line strong {
+  font-weight: 500;
+}
+
+/* ===== Detail lists: a label · value row inside an .ev-sum list (the student dialogs R4, R6;
+   Compare R7). The .ev-sum rule itself stays in testing-events.css — it says why. ===== */
+.ev-sum-row {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: var(--space-12);
+  padding: var(--space-8) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.ev-sum-row:first-child {
+  border-top: none;
+}
+
+.ev-sum-row dt {
+  color: var(--color-text-secondary);
+}
+
+.ev-sum-row dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ev-sum-row.is-diff dd,
+.ev-cmp td.is-diff {
+  background: var(--color-warning-bg);
+}
+
+/* ===== Compare (R7) ===== */
+.ev-cmp {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-13);
+}
+
+.ev-cmp th,
+.ev-cmp td {
+  padding: var(--space-8);
+  border-top: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.ev-cmp thead th {
+  border-top: none;
+  font-weight: 500;
+}
+
+.ev-cmp tbody th {
+  width: 112px;
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.ev-cmp-keep td {
+  border-top: none;
+}
+
+.ev-cmp-card {
+  margin-bottom: var(--space-16);
+  padding: var(--space-8) var(--space-12) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.ev-cmp-head {
+  margin-bottom: var(--space-4);
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.ev-cmp-note {
+  margin-top: var(--space-12);
+}
+
+.ev-cmp-actions {
+  flex-wrap: wrap;
+}
+
+/* ===== Registration link (R2) ===== */
+.ev-link-event {
+  margin-bottom: var(--space-12);
+}
+
+.ev-link-line {
+  margin-bottom: var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.ev-link-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-16);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  text-align: center;
+}
+
+.ev-link-school {
+  font-size: var(--text-14);
+  font-weight: 500;
+}
+
+.ev-link-qr {
+  width: 128px;
+  height: 128px;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+}
+
+.ev-link-url {
+  max-width: 100%;
+  padding: var(--space-4) var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-tag);
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: var(--text-12);
+  overflow-wrap: anywhere;
+}
+
+.ev-link-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-8);
+}
+
+/* A second line inside a detail-view value (Result note, "Added … (admin)") */
+.ev-sum-line {
+  display: block;
+  margin-top: 2px;
+}
+
+/* ===== Hover — mouse only ===== */
+@media (hover: hover) {
+  .ev-card--button:not(.is-selected):hover {
+    background: var(--color-surface);
+    border-color: var(--color-border-strong);
+  }
+}
+
+/* ===== Touch screens: 48px rows, 44px tap areas (guidelines 2.5) ===== */
+@media (pointer: coarse) {
+  .ev-chip {
+    min-height: var(--tap-size);
+  }
+
+  .ev-dupbox-review {
+    height: var(--control-height-touch);
+  }
+}
+
+/* ===== Tablet widths ===== */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .ev-cards {
+    gap: var(--space-8);
+  }
+}
+
+/* ===== Phones (narrower than 640px) ===== */
+@media (max-width: 639.98px) {
+  /* Cards two by two */
+  .ev-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-8);
+  }
+
+  .ev-sum-row {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+
+  .ev-link-card {
+    padding: var(--space-12);
+  }
+}
+
+/* ===== Hide private details (rulebook v0.506, v0.507 Q2) =====
+   While the device switch is on, Color Belt shows no money. The same look as Star's
+   (star.css .st-cards.is-one / .st-hidden-value), written here so Color Belt doesn't depend on
+   Star's stylesheet being loaded. */
+
+/* Only the Students (or Private testings) card: one card, not four */
+.ev-cards.is-one {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 280px;
+}
+
+@media (max-width: 639.98px) {
+  .ev-cards.is-one {
+    max-width: none;
+  }
+}
+
+/* =============================================================================================
+   New in Dashboard core step 1 (rulebook v1.100): a dialog on top of a dialog, one dropdown
+   ============================================================================================= */
+
+/* A dialog opened ON TOP of another dialog (Dialog.jsx's onTop): its backdrop (or phone page) sits
+   above the dialog underneath (z-index 40, app.css) but below the ⋯ menus (45), the toast (50)
+   and the dropdown lists (60), so those still open over it. Black Belt's own copy uses 42 too
+   (.bb-inner). */
+.dialog-on-top {
+  z-index: 42;
+}
+
+/* The shared dropdown (components/Select.jsx, M8's base). It is drawn with the .fa-* look above;
+   these two rules are its own (.sel-field is its field, .sel-list its list). */
+
+/* Nothing chosen yet: the placeholder ("Choose…") in gray (Star's .st-select-empty, made shared) */
+.sel-field.is-empty .fa-value {
+  color: var(--color-text-secondary);
+}
+
+/* The row the arrow keys are on: the 2px blue focus ring, drawn inside the row (rule §4, M8 detail
+   a, rulebook v1.109). Only the shared Select's list has it: today's dropdowns keep their faint
+   gray until they switch. It must come after .fa-option.is-selected.is-active (the same weight),
+   so the chosen row gets the 2px ring too while the arrow keys are on it. */
+.sel-list .fa-option.is-active {
+  box-shadow: inset 0 0 0 2px var(--color-blue);
+}
+
+/* =============================================================================================
+   The new shared parts (M1–M8) — the next build step adds their styles BELOW this line:
+   CompareDialog, DuplicateBox, ConfirmBox (with the plain button's gray .btn.is-unavailable),
+   MarkPaidBox, Receipt, RegistrationLinkBox, CountCards, HistoryLine, TimeList.
+   Keep them after everything above: they build on it.
+   ============================================================================================= */
+
+/* ----- Shared by several of the new parts ----- */
+
+/* A plain outline button's unavailable look (M2 detail a, rulebook v1.103): the same gray as
+   .btn-primary.is-unavailable above. Still focusable (aria-disabled, never disabled). Used by
+   "Keep …" while a confirm box works (M2), every button of the Compare dialog while it works
+   (M1, "Keeping…") and "Mark paid $X" with no choice on record (M3).
+   Written for the shared parts only: Staff accounts' Reset password dialog already gives its
+   plain Generate / Copy buttons is-unavailable with no gray rule, and a page-wide .btn.is-unavailable
+   would turn them gray — a change on screen, which Dashboard core step 1 doesn't make. */
+.cmp-dialog .btn.is-unavailable,
+.cmp-dialog .btn.is-unavailable:hover,
+.cmp-dialog .btn.is-unavailable:active,
+.cfm-actions .btn.is-unavailable,
+.cfm-actions .btn.is-unavailable:hover,
+.cfm-actions .btn.is-unavailable:active,
+.mpb .btn.is-unavailable,
+.mpb .btn.is-unavailable:hover,
+.mpb .btn.is-unavailable:active {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+/* The phone page's back arrow while the dialog works (Dialog.jsx's busy, M1 detail b): it waits
+   too, so it grays. */
+.icon-button.is-unavailable {
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+/* ===== M1 — the possible-duplicate box and the Compare dialog (DuplicateBox.jsx,
+   CompareDialog.jsx; rulebook v1.102). They use the .ev-dupbox, .ev-cmp, .ev-cmp-card and
+   .ev-sum-row looks above; these are their own few rules. ===== */
+
+/* A difference says "⚠ different" in small amber words, for everyone (detail a): Black Belt's mark
+   (blackBelt.css .bb-diff-mark) made shared — never color alone (rule §4). */
+.cmp-diff {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: var(--space-8);
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+  white-space: nowrap;
+}
+
+/* Hide private details: a hidden value keeps its row and reads gray "Hidden on this tablet"
+   (testing-events.css's .ev-hidden-value, copied here so the shared part doesn't depend on a
+   section's sheet). */
+.cmp-hidden {
+  color: var(--color-text-secondary);
+}
+
+/* A phone card's list (testing-events.css's .ev-sum, copied for the same reason) */
+.cmp-sum {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-13);
+}
+
+/* The box on phones: the count on a line of its own (Camps' phone look today), and every Review
+   under its own words, so the buttons line up. */
+@media (max-width: 639.98px) {
+  .dupbox-line {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dupbox-sep {
+    display: none;
+  }
+}
+
+/* ===== M2 — the "are you sure?" box (ConfirmBox.jsx, ConfirmButtons; rulebook v1.103) ===== */
+
+/* The gray hint under the sentence ("To keep the record, use Withdraw instead.") —
+   testing-events.css's .ev-confirm-hint, copied. */
+.cfm-hint {
+  margin-top: var(--space-8);
+}
+
+/* The two buttons keep their words on one line; when they don't fit side by side they stack,
+   each the full width of the box, in the row's order (D1b, §2.1's exception). Whether they stack
+   is measured with the action at the wider of its usual and busy words (ConfirmBox.jsx), so they
+   never move while it works. */
+.cfm-actions .btn {
+  flex: none;
+  white-space: nowrap;
+}
+
+.cfm-actions.is-stacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* Only the two real buttons (">" = direct children), not the sizer's hidden copies below: the copies
+   keep measuring their own width while the pair is stacked, so it unstacks without a flicker. */
+.cfm-actions.is-stacked > .btn {
+  width: 100%;
+  white-space: normal;
+}
+
+/* The measuring copy of the two buttons (Keep's words; the action's usual and busy words):
+   invisible, off to the left of the screen (so it never adds a scroll bar), never pressed. */
+.cfm-sizer {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  display: flex;
+  gap: var(--space-8);
+  white-space: nowrap;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.cfm-sizer .btn {
+  flex: none;
+}
+
+/* The action's usual and busy words in one spot, on top of each other: the spot is as wide as the
+   wider of the two, so the sizer measures the pair at its widest. Each copy keeps its own width,
+   for measuring. */
+.cfm-sizer-action {
+  display: grid;
+  flex: none;
+  justify-items: start;
+}
+
+.cfm-sizer-action > .btn {
+  grid-area: 1 / 1;
+}
+
+/* Never the form dialogs' pinned button row, at any height (detail c): today a box on a screen
+   under 700px tall picks it up by accident (.tdialog--small > .dialog-actions above). */
+.tdialog .dialog-actions.cfm-actions {
+  position: static;
+  margin: var(--space-16) 0 0;
+  padding: 0;
+  border-top: none;
+}
+
+/* ===== M3 — the Mark paid box (MarkPaidBox.jsx, PaidByField; rulebook v1.104) =====
+   Camps' small box under its tag (camps.css .cp-popover / .cp-popover-line), copied under the
+   shared part's own names, 240px wide as drawn; placed by MarkPaidBox.jsx under its opener. */
+.mpb {
+  position: fixed;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-8);
+  width: 240px;
+  max-width: calc(100vw - 16px);
+  padding: var(--space-12);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.mpb-line {
+  margin: 0;
+  font-size: var(--text-13);
+}
+
+.mpb-name {
+  font-weight: 500;
+}
+
+/* "Paid by" above the joined Cash / Check / Card buttons */
+.mpb-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* "They chose Check on the form." sits 4px under the buttons; "Choose how they paid." under the
+   gray Mark paid $X */
+.mpb-hint {
+  margin-top: calc(-1 * var(--space-4));
+}
+
+.mpb-hint,
+.mpb-reason {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* "Mark paid $15.50" on one line (testing-events.css's .ev-markpaid, copied) */
+.mpb-go {
+  white-space: nowrap;
+}
+
+/* ===== M4 — the receipt (Receipt.jsx; rulebook v1.105) =====
+   Black Belt's receipt (blackBelt/staff/receipt/receipt.css, v0.220), copied with a neutral name
+   ("rcpt-" instead of "bbr-"); Black Belt's own file stays until Black Belt switches. Two looks of
+   ONE page: .rcpt-sheet--screen the preview in the box, .rcpt-print the printed US Letter page. */
+
+/* The box: 560px wide, as drawn (the shared 'medium' size is 520px), in every state */
+.tdialog.rcpt-dialog {
+  width: 560px;
+}
+
+/* Phones: the full-width "Print or save as PDF" pinned at the bottom of the page, like the other
+   phone pages' Save button */
+.rcpt-phone-buttons {
+  position: sticky;
+  bottom: calc(-1 * (var(--space-16) + env(safe-area-inset-bottom)));
+  z-index: 2;
+  margin: var(--space-16) calc(-1 * var(--space-16)) calc(-1 * (var(--space-16) + env(safe-area-inset-bottom)));
+  padding: var(--space-12) var(--space-16) calc(var(--space-16) + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+/* Hide private details on: "Payment details are hidden on this tablet." */
+.rcpt-hidden {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-14);
+}
+
+.rcpt-full {
+  width: 100%;
+  justify-content: center;
+}
+
+/* The page: shared by the preview and the printed copy */
+.rcpt-sheet {
+  display: flex;
+  flex-direction: column;
+  color: var(--color-text);
+  background: #fff;
+}
+
+/* The school's name. Medium (500), like the Balance line: §7 allows only 400 and 500 (rulebook
+   v1.112; M4 drew 600, which Chrome on Windows draws the same as 500 anyway). */
+.rcpt-title {
+  margin: 0;
+  font-weight: 500;
+}
+
+.rcpt-subtitle {
+  margin: 2px 0 0;
+}
+
+/* Label / value pairs: gray label column, value beside it */
+.rcpt-facts {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  margin: 0;
+}
+
+.rcpt-facts dt {
+  font-weight: 400;
+}
+
+.rcpt-facts dd {
+  margin: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere; /* a very long name never pushes the page sideways */
+}
+
+.rcpt-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rcpt-table th,
+.rcpt-table td {
+  padding: 8px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.rcpt-table th {
+  font-weight: 500;
+}
+
+/* Amounts line up on the right, with digits of equal width */
+.rcpt-table .rcpt-r {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.rcpt-date {
+  white-space: nowrap;
+}
+
+/* Total due · Paid to date · Balance, on the right */
+.rcpt-totals {
+  width: 340px;
+  max-width: 100%;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.rcpt-totals > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-16);
+  padding: 4px 0;
+}
+
+.rcpt-totals > .rcpt-balance {
+  margin-top: 4px;
+  padding-top: 8px;
+  font-weight: 500; /* medium, like the school's name (v1.112) */
+}
+
+/* The Balance label is as dark as its amount (the other two labels are gray) */
+.rcpt-sheet .rcpt-totals .rcpt-balance span {
+  color: inherit;
+}
+
+.rcpt-foot p {
+  margin: 0;
+}
+
+/* The preview (screen only) */
+@media screen {
+  /* Hidden on screen: only the print window shows the printed copy */
+  .rcpt-print {
+    display: none;
+  }
+
+  .rcpt-sheet--screen {
+    padding: var(--space-16);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-control);
+    font-size: var(--text-13);
+    line-height: 1.45;
+  }
+
+  .rcpt-sheet--screen .rcpt-title {
+    font-size: var(--text-16);
+  }
+
+  .rcpt-sheet--screen .rcpt-subtitle {
+    margin-bottom: var(--space-16);
+    color: var(--color-text-secondary);
+    font-size: var(--text-13);
+  }
+
+  .rcpt-sheet--screen .rcpt-facts {
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: var(--space-4) 10px;
+  }
+
+  .rcpt-sheet--screen .rcpt-facts dt,
+  .rcpt-sheet--screen .rcpt-table th,
+  .rcpt-sheet--screen .rcpt-totals span {
+    color: var(--color-text-secondary);
+  }
+
+  .rcpt-sheet--screen .rcpt-table {
+    margin: var(--space-16) 0 var(--space-8);
+    font-size: var(--text-12);
+  }
+
+  .rcpt-sheet--screen .rcpt-table th,
+  .rcpt-sheet--screen .rcpt-table td {
+    padding: 6px 4px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .rcpt-sheet--screen .rcpt-table th {
+    border-bottom-color: var(--color-border-control);
+  }
+
+  /* The totals sit in the right half of the page, as printed (phones: the full width) */
+  .rcpt-sheet--screen .rcpt-totals {
+    width: 50%;
+    min-width: 240px;
+  }
+
+  .rcpt-sheet--screen .rcpt-balance {
+    border-top: 1px solid var(--color-border-control);
+  }
+
+  .rcpt-sheet--screen .rcpt-foot {
+    margin-top: var(--space-16);
+    padding-top: var(--space-12);
+    border-top: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    font-size: var(--text-12);
+    line-height: 1.6;
+  }
+
+  /* The loading placeholder keeps the page's outline, with gray bars inside */
+  .rcpt-loading {
+    min-height: 320px;
+    gap: var(--space-12);
+  }
+}
+
+/* The printed page: a named page, so these paper margins apply to the receipt only. */
+@page rcpt-receipt {
+  size: letter portrait;
+  margin: 0.6in 0.7in;
+}
+
+@media print {
+  /* Only the receipt is printed. (body:has(...) = "a body that holds the receipt".) */
+  body:has(> .rcpt-print) > *:not(.rcpt-print) {
+    display: none !important;
+  }
+
+  /* The named page goes on html and body too: the browser takes the FIRST page's paper and
+     margins from them (Black Belt's results.css found this; without it the first page used
+     testing-events.css's 0.75in margins). */
+  html:has(> body > .rcpt-print),
+  body:has(> .rcpt-print) {
+    page: rcpt-receipt;
+    background: #fff;
+  }
+
+  /* Written extra-specific on purpose: testing-events.css hides every page part except its own
+     print pages when printing, and this one must win (Black Belt's receipt pattern). */
+  body > div.rcpt-print.rcpt-print {
+    display: block !important;
+    page: rcpt-receipt;
+    color: #000;
+    background: #fff;
+    font-family: var(--font-family);
+    font-size: 10.5pt;
+    line-height: 1.45;
+  }
+
+  .rcpt-print .rcpt-sheet {
+    color: #000;
+    /* One page: the footer sits at the foot of the paper (11in minus 1.2in of margins; a little
+       less, so a rounding never adds an empty second page). A longer history grows onto page 2. */
+    min-height: 9.5in;
+  }
+
+  .rcpt-print .rcpt-title {
+    font-size: 15pt;
+  }
+
+  .rcpt-print .rcpt-subtitle {
+    margin-bottom: 21pt;
+    color: #444;
+    font-size: 11pt;
+  }
+
+  .rcpt-print .rcpt-facts {
+    grid-template-columns: 1.55in minmax(0, 1fr);
+    gap: 4.5pt 12pt;
+  }
+
+  .rcpt-print .rcpt-facts dt,
+  .rcpt-print .rcpt-table th,
+  .rcpt-print .rcpt-totals span {
+    color: #444;
+  }
+
+  .rcpt-print .rcpt-table {
+    margin: 21pt 0 12pt;
+    font-size: 10.5pt;
+  }
+
+  .rcpt-print .rcpt-table th {
+    font-size: 10pt;
+    border-bottom: 1px solid #777;
+  }
+
+  .rcpt-print .rcpt-table th,
+  .rcpt-print .rcpt-table td {
+    padding: 5pt 4.5pt;
+  }
+
+  .rcpt-print .rcpt-table td {
+    border-bottom: 1px solid #ccc;
+  }
+
+  /* A line never splits across two pages */
+  .rcpt-print .rcpt-table tr {
+    break-inside: avoid;
+  }
+
+  .rcpt-print .rcpt-totals {
+    width: 3.55in;
+    margin-bottom: 18pt; /* room above the footer when the page is full */
+    break-inside: avoid;
+  }
+
+  .rcpt-print .rcpt-balance {
+    border-top: 1px solid #777;
+  }
+
+  .rcpt-print .rcpt-foot {
+    margin-top: auto;
+    padding-top: 18pt;
+    border-top: 1px solid #ccc;
+    color: #444;
+    font-size: 9pt;
+    line-height: 1.6;
+    break-inside: avoid; /* the school lines and "Printed …" stay together */
+  }
+}
+
+/* ===== M5 — the Registration link box (RegistrationLinkBox.jsx; rulebook v1.106) =====
+   One school: the .ev-link-* card above in the 440px box. Two schools: */
+
+/* The two-school box: 600px (Star's size), the cards side by side; one under the other on phones */
+.tdialog.lnk-two {
+  width: 600px;
+  max-width: 100%;
+}
+
+.lnk-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-12);
+}
+
+.lnk-row .ev-link-card {
+  min-width: 0;
+  padding: var(--space-12);
+  gap: var(--space-8);
+}
+
+.lnk-row .ev-link-buttons {
+  flex-direction: column;
+  align-items: center;
+}
+
+/* A section's own line under the cards (Black Belt's ?dan= hint) */
+.lnk-hint {
+  margin-top: var(--space-12);
+}
+
+.lnk-hint code {
+  white-space: nowrap; /* "?dan=3" never breaks after the "?" */
+}
+
+@media (max-width: 639.98px) {
+  .lnk-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ===== M6 — the count cards (CountCards.jsx; rulebook v1.107). The cards are the .ev-cards /
+   .ev-card look above; this is the optional gray line under the row (Black Belt's duplicates
+   note). ===== */
+.cards-note {
+  margin: 0 0 var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* ===== M7 — the history line and list (HistoryLine.jsx; rulebook v1.108) =====
+   Prospects' line and list (prospects.css .pkv / .pkv-btn / .phistory-btn / .phistory-label and
+   .plog / .plog-item / .plog-text / .plog-meta), copied under the shared part's own names, plus
+   the three new states (Loading…, couldn't load, no changes yet) and the hidden line. */
+.hist-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  min-height: 36px;
+  margin-top: var(--space-4);
+  padding: var(--space-4) 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-13);
+  text-align: left;
+  cursor: pointer;
+}
+
+.hist-btn:hover {
+  background: var(--color-surface);
+}
+
+.hist-btn:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+.hist-label {
+  font-weight: 500;
+}
+
+/* In the button the words take the room, the arrow sits at the right end */
+.hist-btn .hist-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.hist-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hist-item {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-8) 0;
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-13);
+}
+
+/* What changed (gray, as Prospects' automatic changes), then "Oct 22 · Jeffrey Berg" */
+.hist-text {
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+}
+
+.hist-meta {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* The line when there is nothing to open: "History · no changes yet", "History  Loading…", or
+   "History" over the amber bar */
+.hist-none {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-13);
+}
+
+.hist-none .hist-label {
+  margin-right: var(--space-4);
+}
+
+.hist-none span:last-child {
+  color: var(--color-text-secondary);
+}
+
+.hist-wait {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+}
+
+/* Hide private details on: "Payment history is hidden on this tablet." under the list */
+.hist-hidden-line {
+  padding: var(--space-8) 0 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.hist-error {
+  margin-top: var(--space-8);
+}
+
+@media (pointer: coarse) {
+  .hist-btn {
+    min-height: var(--tap-size);
+  }
+}
+
+/* ===== M8 — the time list (TimeList.jsx; rulebook v1.109) =====
+   Nothing of its own: it is the shared dropdown (Select.jsx) — the .fa-* look, the gray
+   "Choose a time" (.sel-field.is-empty) and the 2px ring on the row the arrow keys are on
+   (.sel-list .fa-option.is-active), above. */
