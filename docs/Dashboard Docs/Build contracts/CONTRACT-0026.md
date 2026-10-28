@@ -50,7 +50,8 @@ One append-only table, `public.bb_payments` (0016). Columns Finance reads: `id, 
 ### 2.3 Everything else as today
 - Edits (always the same day for Black Belt), undos, the hidden mis-click, refunds and their undos, fingerprints, v0.810's "only real money changes flag a closed day", staff-today-only, the Both summary, History, the Home reminders, the Hide-payments switch — all unchanged, now including Black Belt rows.
 - **Payment detail** accepts source `black_belt`: the item, `event_name` = the cycle name, `event_id` = the cycle id (the screen's "Open in Testing" opens that cycle's Candidates tab — the event pattern), and a history built from the chain: recorded / edited / undone / refunded as today, and for a returned row: "marked it returned by the bank" (`returned`) and "undid the returned mark" (`returned_undone`) (approved wording, mockups B4–B5). No note, reason, login id, date of birth or email.
-- **Amounts:** Black Belt rows go to $5,000: `finance_day_closing_items_amount_check` widens to ±$5,000 (500000); the source check adds `black_belt`.
+- **Amounts:** Black Belt rows go to $5,000. `finance_day_closing_items_amount_check` is left as it is: camps' 0022 already allows ±$10,000, so “widen to ±$5,000” would have narrowed it (corrected while building). The source check adds `black_belt`.
+- **Negative card count (v0.814):** `finance_day_closings_counts_check` and `finance_close_day` accept a negative counted card total only when the expected card total is negative (card refunds bigger than card money in), exactly as cash already works (v0.209); range ±$100,000.
 
 ### 2.4 Security, privacy, speed (as 0011 / 0018)
 - `has_data_access()` first; staff today only (incl. a Black Belt payment's detail); security definer only on the existing app functions, helpers executable by nobody; `search_path = ''`; fully qualified names; revokes incl. `service_role`; nothing to `anon`. No new table, no new grant. Finance reads `bb_payments`, `bb_candidates` (names, current plan id), `bb_cycle_plans` (name, payments count) only inside its functions.
@@ -59,7 +60,7 @@ One append-only table, `public.bb_payments` (0016). Columns Finance reads: `id, 
 - Matching never uses text order (production sorts with ICU en_US).
 
 ## 3. What 0026 replaces (one transaction; re-run safe; forward-only)
-- Constraints on `finance_day_closing_items`: source (+ `black_belt`), amount (±$5,000).
+- Constraints: `finance_day_closing_items` source (+ `black_belt`); `finance_day_closings_counts_check` (negative card count / expected card, as cash).
 - Functions as 0018 leaves them: `finance_chain_steps_core`, `finance_chain_items`, `finance_money_rows_core`, `finance_figures_from`, `finance_closing_changes_from`, `finance_payment_detail`; and as 0017 leaves them: `finance_day`, `finance_export`; plus any of `finance_close_day` / `finance_home` / `finance_history` / `finance_day_both` that has to leave returned rows out of "needs closing" (exact list fixed while building — the guard covers every replaced body).
 - Built the 0018 way: a generator (`supabase/tools/build_0026.py`) applies exact text replacements to the live bodies, every change inside `-- ===== source: black belt (0026) =====` … `-- ===== end black belt =====` or on a line ending `-- 0026`; every camp and private block kept byte for byte (self-checked on each build).
 - Re-running an earlier Finance file after 0026 is not supported (forward-only, as 0018); SETUP says what happens and to re-run 0026 straight after.
@@ -71,3 +72,23 @@ One append-only table, `public.bb_payments` (0016). Columns Finance reads: `id, 
 - `supabase/tests/0026_tests.sql` (prints `ALL 0026 TESTS PASSED`), using the REAL Black Belt functions (`bb_record_payment`, `bb_edit_payment`, `bb_undo_payment`, `bb_record_refund`, `bb_mark_check_returned`) wherever possible: the For fields; school as recorded after a school change; a $2,700 payment; edit; mis-click hidden; refund by card; a returned check on its own day with the check's day unchanged and still matching its close; the undo of a returned mark; a returned-only day not needing a close; a returned mark after a close not flagging it; staff today only; no forbidden keys; Color Belt, Star, camp and private answers unchanged (old-vs-new comparison on the big seeds).
 - `0026_fingerprints.sql`, `0026_preapply_check.sql` (read-only: the live bodies match the guard; Black Belt rows on closed days, if any), PGlite step `step0026` in `run.mjs` (live order incl. 0016 / 0024 / 0025, an ICU run, speed), and the SETUP section **“## Migration 0026: …”** with sub-steps 0026a–0026d.
 - Reviews: security review of 0026; the Black Belt session reviews the reading of `bb_payments`; design review of the screens at the four sizes.
+
+## 6. The interface (answers the screens read) — fixed 2026-10-27 before the build
+
+Color Belt, Star, camp and private items keep exactly their keys. Black Belt adds:
+
+**An item** (`finance_day.items[]`, `finance_payment_detail.item`, `finance_history` if it lists items, the export rows as noted):
+- `source` / `what` = `'black_belt'`; `event_date` null; `is_private` false.
+- `kind` = `'payment'`, `'refund'` or **`'returned'`** (amount negative, method `'check'`). States as today: a returned chain is `counted` or `undone` (an undone mark: `counts` false).
+- Extra keys **only on Black Belt items** (the camp pattern, `|| case when source = 'black_belt' …`): `event_name` = the stored `cycle_name`; `for_items` (text[]: the shown row's, for a returned row the check's); `one_payment_plan` (text or null: the candidate's current plan name when that plan has `payments_count = 1`); `handed_in_on` (date: the check's `paid_on`, returned rows only, else null).
+- The screens build the For text: `Black Belt · <event_name> · <items>`; items: `p1`…`p12` → "Payment N", `kukkiwon` → "Kukkiwon", joined " + "; exactly `['p1']` with a `one_payment_plan` → that plan name ("In full"). Refund: `Black Belt · <event_name>`.
+
+**`finance_day`:** `refunds` gains `card_cents` (counted card refunds, ≤ 0; every source); a new top-level `returned: {count, cents}` (counted returned rows; cents ≤ 0). `totals.total_cents` / `net_cents` include returned rows; `totals.cash|check|card` stay money in. `can_close` / `fingerprint` / the closing snapshot ignore returned rows. **Close the day expected card** (server `finance_close_day` and the screen) = `totals.card.cents + refunds.card_cents` (v0.814); the closing's `expected_card_cents` is stored that way.
+
+**`finance_day_both`:** each school's box and the together part carry the same `returned: {count, cents}` (and `refunds.card_cents` where `refunds` is sent).
+
+**`finance_payment_detail('black_belt', id)`:** `item` as above; `event_name` = cycle name, `event_id` = cycle id (Open in Testing); history `what` codes as today plus **`returned`** ("<name> marked it returned by the bank") and **`returned_undone`** ("<name> undid the returned mark"). A returned check's history also shows the check's own "recorded" line (B4). `id` may be any row of the chain (as today).
+
+**`finance_export`:** Black Belt rows with `what = 'black_belt'`, `event_name` = cycle name, `for_items` / `one_payment_plan` as items; a returned row has `kind = 'returned'` and `handed_in_on`. The CSV (`csv.js`): For "Black Belt · <cycle> · <items>", Testing date empty, Kind "Returned check", Paid by "Check", Note "Handed in <yyyy-mm-dd>" (+ the existing undone note).
+
+**History / Home:** "Not closed" and the reminders count only days with counting items other than returned rows (server side; no screen change expected).

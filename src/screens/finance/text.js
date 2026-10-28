@@ -8,7 +8,11 @@
 //
 // Anything the mockups don't show is marked  // NOT IN MOCKUPS — for CP1  so Jeffrey can check it
 // during the preview walkthrough (CP1).
+// Black Belt payments and returned checks (migration 0026): the words of mockups B1–B9
+// (docs/Finance/TKD-Finance-BlackBelt-Mockups.html, rulebook v0.814 / v0.815). Words the
+// mockups don't draw (plural forms) are marked  // NOT IN MOCKUPS (B…)
 import { money, dayShort, timeOfDay } from './format.js';
+import { blackBeltItemsText } from '../../lib/finance/csv.js';
 
 // ----- Page, tabs -----
 export const PAGE_TITLE = 'Finance';
@@ -45,6 +49,22 @@ export const paymentsCount = (n) => `${n} payment${n === 1 ? '' : 's'}`;
 export const refundsCount = (n) => `${n} refund${n === 1 ? '' : 's'}`;
 // Total card with refunds, Own group (Questions #q12 B): "after $30.00 refunds"
 export const afterRefunds = (cents) => `after ${money(Math.abs(cents))} refunds`;
+// Returned checks in the Total's sub-line (B1, B7, v0.815): "a $900.00 returned check";
+// several: "$1,800.00 in returned checks" (NOT IN MOCKUPS (B1) — the plural form)
+const returnedPart = (cents, count) =>
+  count === 1 ? `a ${money(Math.abs(cents))} returned check` : `${money(Math.abs(cents))} in returned checks`;
+// "after a $900.00 returned check" (B7: a day with only a returned check)
+export const afterReturned = (cents, count) => `after ${returnedPart(cents, count)}`;
+// "after $150.00 refunds and a $900.00 returned check" (B1; the long wording on every size, B9)
+export const afterRefundsAndReturned = (refundCents, returnedCents, count) =>
+  `after ${money(Math.abs(refundCents))} refunds and ${returnedPart(returnedCents, count)}`;
+// The Total card's sub-line from financeRules.cardsFor(…).total
+export function totalSub(total) {
+  if (total.sub === 'after_refunds_returned') return afterRefundsAndReturned(total.refundCents, total.returnedCents, total.returnedCount);
+  if (total.sub === 'after_refunds') return afterRefunds(total.refundCents);
+  if (total.sub === 'after_returned') return afterReturned(total.returnedCents, total.returnedCount);
+  return paymentsCount(total.count);
+}
 // A card's sub line in "In groups" when it holds refunds: "4 payments, 1 refund" (#q12 A)
 export const paymentsAndRefunds = (p, r) => (r > 0 ? `${paymentsCount(p)}, ${refundsCount(r)}` : paymentsCount(p));
 export const jumpToGroup = (label) => `Show the ${label} payments`; // NOT IN MOCKUPS — for CP1 (screen-reader name of a clickable card)
@@ -70,6 +90,16 @@ export const expectedCashOut = (outCents, inCents, refunded) =>
   `Expected ${money(outCents)} taken out (${money(inCents)} in − ${money(refunded)} refunded)`;
 export const expectedChecks = (count, cents) => `Expected ${count} check${count === 1 ? '' : 's'}, ${money(cents)}`;
 export const expectedCard = (cents) => `Expected ${money(cents)} · from the machine’s day report`;
+// With card refunds (Black Belt, v0.814 / mockup B2): written like cash —
+// "Expected −$150.00 ($0.00 in − $150.00 refunded) · from the machine’s day report"
+export const expectedCardWithRefunds = (expected, inCents, refunded) =>
+  `Expected ${money(expected)} (${money(inCents)} in − ${money(refunded)} refunded) · from the machine’s day report`;
+// The quiet line under the figures on a day with returned checks (B2, v0.815).
+export function returnedNotInDrawer(cents, count, isToday) {
+  const drawer = isToday ? 'today’s drawer' : 'this day’s drawer'; // "this day’s": NOT IN MOCKUPS (B2) — an admin closing an earlier day
+  if (count === 1) return `The ${money(Math.abs(cents))} returned check isn’t part of ${drawer}.`;
+  return `The ${count} returned checks (${money(Math.abs(cents))}) aren’t part of ${drawer}.`; // NOT IN MOCKUPS (B2) — several
+}
 export const NOTE_LABEL = 'Note';
 export const NOTE_NEEDED = '(needed when anything is short or over)';
 export const CLOSE_BUTTON = 'Close the day';
@@ -199,13 +229,20 @@ export const GROUP_CARD = 'Card';
 export const GROUP_REFUNDS = 'Refunds';
 // "Cash · 4 payments · $320.00"; In groups with refunds: "Cash · 4 payments, 1 refund · $300.00"
 export const groupHead = (payments, refunds, cents) => ` · ${paymentsAndRefunds(payments, refunds)} · ${money(cents)}`;
-// "Refunds · 2 · −$30.00 (cash −$20.00, check −$10.00)"
-export function refundsHead(count, cents, cashCents, checkCents) {
+// "Refunds · 2 · −$30.00 (cash −$20.00, check −$10.00)"; a card refund (Black Belt, B1): "card −$150.00"
+export function refundsHead(count, cents, cashCents, checkCents, cardCents = 0) {
   const parts = [];
   if (cashCents) parts.push(`cash ${money(cashCents)}`);
   if (checkCents) parts.push(`check ${money(checkCents)}`);
+  if (cardCents) parts.push(`card ${money(cardCents)}`);
   return ` · ${refundsCount(count)} · ${money(cents)}${parts.length ? ` (${parts.join(', ')})` : ''}`;
 }
+// Returned checks group (B1, B5): "Returned checks · 1 returned check · −$900.00";
+// with an undone mark: "Returned checks · 0 returned checks · $0.00 (1 undone, not counted)"
+export const GROUP_RETURNED = 'Returned checks';
+export const returnedCount = (n) => `${n} returned check${n === 1 ? '' : 's'}`;
+export const returnedHead = (count, cents, undone) =>
+  ` · ${returnedCount(count)} · ${money(cents)}${undone > 0 ? ` (${undone} undone, not counted)` : ''}`;
 export const WHAT_COLOR_BELT = 'Color belt testing';
 export const WHAT_STAR = 'Star testing';
 export const WHAT_STAR_PRIVATE = 'Star testing, private'; // NOT IN MOCKUPS — for CP1 (contract §1.3 is_private)
@@ -213,6 +250,18 @@ export const WHAT_STAR_PRIVATE = 'Star testing, private'; // NOT IN MOCKUPS — 
 export const WHAT_COLOR_BELT_PRIVATE = 'Color belt testing, private';
 // Camp payments (Camps v0.707): the row reads "Camp · April Vacation Camp".
 export const WHAT_CAMP = 'Camp';
+// Black Belt payments (v0.815): "Black Belt · Spring 2027 · Payment 2". No testing date: a cycle
+// has several testing days.
+export const WHAT_BLACK_BELT = 'Black Belt';
+// What a Black Belt payment is for, in Black Belt's own words: "Payment 2", "Payment 1 + Kukkiwon",
+// or the one-payment plan's name ("In full") for exactly Payment 1. The CSV uses the same builder.
+export const BB_ITEM_WORDS = { payment: 'Payment', kukkiwon: 'Kukkiwon', join: ' + ' };
+export const bbItems = (forItems, onePaymentPlan) => blackBeltItemsText(forItems, onePaymentPlan, BB_ITEM_WORDS);
+// "Black Belt · Spring 2027 · Payment 2"; a refund (no items): "Black Belt · Spring 2027"
+export function blackBeltFor(cycleName, forItems, onePaymentPlan) {
+  const items = bbItems(forItems, onePaymentPlan);
+  return [WHAT_BLACK_BELT, cycleName, items].filter((part) => part).join(' · ');
+}
 export const METHOD = { cash: 'Cash', check: 'Check', card: 'Card' };
 export const methodLower = (m) => (METHOD[m] ?? m ?? '').toLowerCase();
 
@@ -222,6 +271,7 @@ export const TAG_EDITED = 'Edited';
 export const TAG_MOVED = 'Moved'; // NOT IN MOCKUPS — for CP1 (D4 proposal shows only "Moved to <date>")
 export const TAG_ADDED_AFTER = 'Added after closing';
 export const TAG_REFUND = 'Refund'; // #q12 A
+export const TAG_RETURNED = 'Returned check'; // warning style, with the warning icon (B1)
 // Second lines
 export const undoneLine = (name, on) => `Undone by ${name} · ${dayShort(on)} · not counted`;
 export const editedLine = (wasText, name, on) => `Was ${wasText} · edited by ${name} · ${dayShort(on)}`;
@@ -230,18 +280,31 @@ export const movedToLine = (to) => `Moved to ${dayShort(to)}`; // D4 proposal
 export const movedFromLine = (from, wasText, name, on) =>
   `Moved from ${dayShort(from)}${wasText ? ` · was ${wasText}` : ''}${name ? ` · edited by ${name}` : ''}${on ? ` · ${dayShort(on)}` : ''}`;
 export const addedAfterLine = (time) => `Recorded at ${time}, after the day was closed`;
+// A returned check's second line (B1; who recorded it is only in Recorded by, v0.815)
+export const returnedLine = (handedIn) => `Returned by the bank · handed in ${dayShort(handedIn)}`;
 export const refundMethodNote = (method) => methodLower(method); // Own group: "Nov 14 · cash" (#q12 B)
 
 // ----- Empty day (D11) -----
 export const NO_PAYMENTS_TODAY = 'No payments recorded today.';
 export const NO_PAYMENTS_DAY = 'No payments recorded on this day.'; // NOT IN MOCKUPS — for CP1 (admin, earlier day)
 export const NOTHING_TO_CLOSE = 'Nothing to close. Payments recorded in Testing and Camps appear here.'; // "and Camps" (not in the mockups, Camps v0.707)
+// A day with only returned checks (B7): nothing to close.
+export const NOTHING_TO_CLOSE_RETURNED = (count) =>
+  count === 1 ? 'Nothing to close: a returned check isn’t drawer money.' : 'Nothing to close: returned checks aren’t drawer money.'; // plural NOT IN MOCKUPS (B7)
 
 // ----- Both (D6) -----
 export const NOT_CLOSED_YET = 'Not closed yet';
 export const NO_PAYMENTS = 'No payments';
 export const openSchool = (name) => `Open ${name}`;
-export const bothTogether = (cents, n) => [`Both schools together: `, money(cents), ` · ${paymentsCount(n)}`];
+// "Both schools together: $3,730.00 · 5 payments · after $150.00 refunds and a $900.00 returned check" (B8)
+export const bothTogether = (cents, n, afterText = '') => [`Both schools together: `, money(cents), ` · ${paymentsCount(n)}${afterText ? ` · ${afterText}` : ''}`];
+// A school box's "after …" (B8): refunds and returned checks named apart; neither → ''.
+export function bothAfter(refundCents, returnedCents, returnedN) {
+  if (refundCents > 0 && returnedN > 0) return afterRefundsAndReturned(refundCents, returnedCents, returnedN);
+  if (refundCents > 0) return afterRefunds(refundCents);
+  if (returnedN > 0) return afterReturned(returnedCents, returnedN);
+  return '';
+}
 export const BOTH_HINT = 'Each school closes its own drawer. Open a school to see its payments and close its day.';
 export const bothBreakdown = (cash, check, card) => `Cash ${money(cash)} · Check ${money(check)} · Card ${money(card)}`;
 
@@ -259,6 +322,7 @@ export const closedByLine = (name, at) => `Closed by ${name} · ${timeOfDay(at)}
 export const TAG_TODAY_OPEN = 'Today · open';
 export const TAG_NOT_CLOSED = 'Not closed';
 export const TAG_NO_PAYMENTS = 'No payments';
+export const TAG_NOTHING_TO_CLOSE = 'Nothing to close'; // B7: a day with only returned checks (gray)
 export const HISTORY_HINT = 'Click a day to open its report. Newest first.';
 export const HISTORY_HINT_TOUCH = 'Tap a day to open its report. Newest first.'; // NOT IN MOCKUPS — for CP1 ("Click" on a touch screen)
 // "1 day this month wasn't closed: Tue, Oct 20."
@@ -299,7 +363,9 @@ export const COUNTED_BY = 'Counted by: ______________________';
 export const DATE_LINE = 'Date: ____________';
 
 // ----- Payment detail (D12) -----
-export const detailTitle = (name, isRefund) => `${name} · ${isRefund ? 'refund' : 'payment'}`; // "refund" NOT IN MOCKUPS — for CP1
+// kind: 'payment' | 'refund' | 'returned' ("Ethan Brooks · returned check", B4)
+export const detailTitle = (name, kind) =>
+  `${name} · ${kind === 'returned' ? 'returned check' : kind === 'refund' ? 'refund' : 'payment'}`; // "refund" NOT IN MOCKUPS — for CP1
 export const D_FOR = 'For';
 export const D_PAID_BY = 'Paid by';
 export const D_REFUNDED_BY = 'Refunded by'; // NOT IN MOCKUPS — for CP1
@@ -308,6 +374,12 @@ export const D_DATE_PAID = 'Date paid';
 export const D_RECORDED = 'Recorded';
 export const D_HISTORY = 'History';
 export const detailFor = (what, eventDate, school) => `${what} · ${eventDate}${school ? ` (${school})` : ''}`;
+// Black Belt (B3): no date — "Black Belt · Spring 2027 · Payment 2 (Worcester)"
+export const detailForNoDate = (what, school) => `${what}${school ? ` (${school})` : ''}`;
+// A returned check's rows (B4): Returned check, Handed in, Returned (no Paid by, Amount or Date paid)
+export const D_RETURNED_CHECK = 'Returned check';
+export const D_HANDED_IN = 'Handed in';
+export const D_RETURNED = 'Returned';
 export const recordedAt = (whenText, name) => `${whenText} by ${name}`;
 export const DETAIL_HINT = 'Payments are changed on the event’s page in Testing, not here.';
 // A Color Belt private testing payment has no event: it is changed on the Private testing tab (v0.813).
@@ -317,6 +389,8 @@ export const OPEN_IN_TESTING = 'Open in Testing';
 export const D_CAMP_DAYS = 'Camp days'; // (not in the mockups)
 export const D_PAID_AT = 'Paid at'; // (not in the mockups) the school whose drawer has a camp payment
 export const DETAIL_HINT_CAMP = 'Payments are changed on the camp’s page in Camps, not here.'; // (not in the mockups)
+// A Black Belt payment, refund or returned check (B3, B4).
+export const DETAIL_HINT_BLACK_BELT = 'Payments are changed on the candidate’s page in Black Belt testing, not here.';
 export const OPEN_IN_CAMPS = 'Open in Camps'; // (not in the mockups)
 export const DETAIL_LOAD_FAILED = 'Couldn’t load this payment. Check the connection, then retry.'; // NOT IN MOCKUPS — for CP1
 export const DETAIL_LOADING = 'Loading…'; // NOT IN MOCKUPS — for CP1
@@ -329,6 +403,9 @@ export function historyLine(entry, previous) {
   if (entry.what === 'moved') return `${by} moved it to private testing`;
   if (entry.what === 'move_undone') return `${by} undid the move`;
   if (entry.what === 'refunded') return `${by} recorded a refund of ${money(Math.abs(entry.amount_cents))} by ${methodLower(entry.method)}`; // NOT IN MOCKUPS — for CP1
+  // A Black Belt returned check (B4, B5).
+  if (entry.what === 'returned') return `${by} marked it returned by the bank`;
+  if (entry.what === 'returned_undone') return `${by} undid the returned mark`;
   // 'edited': say what changed compared with the line before it
   const changes = [];
   if (previous && previous.amount_cents !== entry.amount_cents) {

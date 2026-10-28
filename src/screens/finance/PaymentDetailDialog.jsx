@@ -5,6 +5,13 @@
 // private details — only payment facts (rule 5; the database never sends them, contract §1.1).
 // PC / tablet: a centered dialog with Close. Phone: a full page with a back arrow (rule 6).
 //
+// Black Belt (migration 0026, v0.815, mockups B3–B5): a Black Belt payment's For row has no date
+// ("Black Belt · Spring 2027 · Payment 2 (Worcester)"), the hint names Black Belt testing, and
+// Open in Testing opens that cycle's Candidates tab. A returned check's detail is titled
+// "<name> · returned check" and shows Returned check (−amount with its tag), Handed in and
+// Returned instead of Paid by, Amount and Date paid; its history also lists the check's own
+// "recorded" line and "marked it returned by the bank" / "undid the returned mark".
+//
 // Props:
 //   item       the row that was clicked (finance_day item): shown at once while the rest loads
 //   school     the school's name (Worcester / Shrewsbury)
@@ -13,14 +20,15 @@
 //   onOpenInTesting  (eventId, source, options) => void — the answer's event_id (null until it has loaded);
 //                    for a camp payment (source 'camp', Camps v0.707) it opens the camp's page;
 //                    a Color Belt private testing payment has no event: options.privateTab = true
-//                    opens the Private testing tab (v0.813)
+//                    opens the Private testing tab (v0.813); a Black Belt one (source
+//                    'black_belt') gives the cycle's id (v0.815)
 //   onNoAccess       the database says this sign-in is locked
 import { useEffect, useState } from 'react';
 import { IconAlertTriangle, IconChevronRight } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import { financePaymentDetail } from '../../lib/finance/financeApi.js';
 import { dayAndTime, dayShort, dayShortYear, money, timeOfDay } from './format.js';
-import { whatText } from './PaymentsList.jsx';
+import { forTextOf, whatText } from './PaymentsList.jsx';
 import { LOCATION_NAME } from '../../lib/device.js';
 import * as T from './text.js';
 
@@ -46,18 +54,27 @@ export default function PaymentDetailDialog({ item, school, isPhone, onClose, on
   const shown = state.data?.item ?? item;
   const name = `${shown.first_name ?? ''} ${shown.last_name ?? ''}`.trim();
   const isRefund = shown.kind === 'refund';
+  const isReturnedCheck = shown.kind === 'returned';
   const isCamp = (shown.source ?? item.source) === 'camp' || shown.what === 'camp';
+  // A Black Belt payment, refund or returned check (v0.815): no date anywhere; changed in Black Belt testing.
+  const isBlackBelt = (shown.source ?? item.source) === 'black_belt' || shown.what === 'black_belt';
   // A camp payment: "Camp · April Vacation Camp", and the camp's days on their own line (v0.707).
   const campName = state.data?.event_name ?? shown.event_name ?? item.event_name ?? '';
   const campDays = state.data?.camp_days ?? state.data?.days ?? [];
   // A Color Belt private testing payment (migration 0018, v0.813): no event; changed on the Private testing tab.
   const isPrivateColorBelt = !isCamp && shown.what === 'color_belt' && shown.is_private === true;
-  const what = isCamp ? `${T.WHAT_CAMP} · ${campName}` : state.data?.event_name || whatText(shown);
+  let what = isCamp ? `${T.WHAT_CAMP} · ${campName}` : state.data?.event_name || whatText(shown);
+  // "Black Belt · Spring 2027 · Payment 2" — the cycle name the row stored (the answer's event_name is the same).
+  if (isBlackBelt) what = forTextOf({ ...shown, event_name: shown.event_name ?? state.data?.event_name ?? item.event_name ?? '' });
   const edited = shown.state === 'edited' || shown.state === 'moved_in';
   // Oldest first (whatever order the answer used), so each edit can be compared with the line before it.
   const history = [...(state.data?.history ?? [])].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
-  const recorded = history.find((h) => h.what === 'recorded' || h.what === 'refunded') ?? null;
+  // "Recorded": when the row was written — for a returned check, when it was marked returned (B4).
+  const recorded = isReturnedCheck
+    ? history.find((h) => h.what === 'returned') ?? null
+    : history.find((h) => h.what === 'recorded' || h.what === 'refunded') ?? null;
   const tag = shown.state === 'undone' ? T.TAG_UNDONE : edited ? T.TAG_EDITED : shown.state === 'moved_out' ? T.TAG_MOVED : null;
+  const struck = shown.state === 'undone' || shown.state === 'moved_out';
 
   const row = (label, value) => (
     <div className="fin-drow">
@@ -67,23 +84,52 @@ export default function PaymentDetailDialog({ item, school, isPhone, onClose, on
   );
 
   return (
-    <Dialog title={T.detailTitle(name, isRefund)} size="medium" fullScreen={isPhone} onRequestClose={onClose}>
+    <Dialog title={T.detailTitle(name, shown.kind)} size="medium" fullScreen={isPhone} onRequestClose={onClose}>
       <div className="fin-detail">
         <div className="fin-drows">
           {/* A camp payment: "Camp · April Vacation Camp", and "Paid at" on its own line — the school
-              whose drawer has it, which can differ from the camp's (v0.707). */}
-          {isCamp ? row(T.D_FOR, what) : row(T.D_FOR, T.detailFor(what, dayShort(shown.event_date), school))}
+              whose drawer has it, which can differ from the camp's (v0.707). A Black Belt row: no
+              date, the school as recorded in brackets (B3). */}
+          {isCamp
+            ? row(T.D_FOR, what)
+            : isBlackBelt
+              ? row(T.D_FOR, T.detailForNoDate(what, LOCATION_NAME[shown.school ?? item.school] ?? school))
+              : row(T.D_FOR, T.detailFor(what, dayShort(shown.event_date), school))}
           {isCamp && row(T.D_PAID_AT, LOCATION_NAME[shown.school ?? item.school] ?? school ?? '')}
           {isCamp && campDays.length > 0 && row(T.D_CAMP_DAYS, campDays.map((d) => dayShort(typeof d === 'string' ? d : d.day)).join(' · '))}
-          {row(isRefund ? T.D_REFUNDED_BY : T.D_PAID_BY, T.METHOD[shown.method] ?? shown.method)}
-          {row(
-            T.D_AMOUNT,
+          {isReturnedCheck ? (
             <>
-              <span className={shown.state === 'undone' || shown.state === 'moved_out' ? 'fin-strike' : undefined}>{money(shown.amount_cents)}</span>
-              {tag && <span className="ttag fin-drow-tag">{tag}</span>}
-            </>,
+              {/* B4 / B5: Returned check (with its tag, or struck through + Undone), Handed in, Returned. */}
+              {row(
+                T.D_RETURNED_CHECK,
+                <>
+                  <span className={struck ? 'fin-strike' : undefined}>{money(shown.amount_cents)}</span>
+                  {tag ? (
+                    <span className="ttag fin-drow-tag">{tag}</span>
+                  ) : (
+                    <span className="ttag ttag--warn fin-drow-tag">
+                      <IconAlertTriangle size={14} aria-hidden="true" />
+                      {T.TAG_RETURNED}
+                    </span>
+                  )}
+                </>,
+              )}
+              {row(T.D_HANDED_IN, dayShortYear(shown.handed_in_on ?? item.handed_in_on))}
+              {row(T.D_RETURNED, dayShortYear(shown.day))}
+            </>
+          ) : (
+            <>
+              {row(isRefund ? T.D_REFUNDED_BY : T.D_PAID_BY, T.METHOD[shown.method] ?? shown.method)}
+              {row(
+                T.D_AMOUNT,
+                <>
+                  <span className={struck ? 'fin-strike' : undefined}>{money(shown.amount_cents)}</span>
+                  {tag && <span className="ttag fin-drow-tag">{tag}</span>}
+                </>,
+              )}
+              {row(T.D_DATE_PAID, dayShortYear(shown.day))}
+            </>
           )}
-          {row(T.D_DATE_PAID, dayShortYear(shown.day))}
           {row(
             T.D_RECORDED,
             recorded
@@ -116,7 +162,9 @@ export default function PaymentDetailDialog({ item, school, isPhone, onClose, on
               ))}
           </ul>
         )}
-        <p className="fin-hint fin-detail-hint">{isCamp ? T.DETAIL_HINT_CAMP : isPrivateColorBelt ? T.DETAIL_HINT_PRIVATE : T.DETAIL_HINT}</p>
+        <p className="fin-hint fin-detail-hint">
+          {isCamp ? T.DETAIL_HINT_CAMP : isBlackBelt ? T.DETAIL_HINT_BLACK_BELT : isPrivateColorBelt ? T.DETAIL_HINT_PRIVATE : T.DETAIL_HINT}
+        </p>
       </div>
       <div className="dialog-actions fin-detail-actions">
         <button type="button" className={`btn${isPhone ? ' btn-block' : ''}`} onClick={() => onOpenInTesting(state.data?.event_id ?? null, shown.source ?? item.source, { privateTab: isPrivateColorBelt })}>

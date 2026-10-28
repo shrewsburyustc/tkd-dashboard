@@ -11,6 +11,9 @@
 // Close the day (v0.800): an outline "Close the day…" button in the date row (phones: in the ⋯
 // sheet), only on a day with counted payments that isn't closed, opens the counting dialog
 // (CloseDayBox.jsx). The report shows the Day closed summary once the day is closed.
+// Black Belt (migration 0026, v0.815): returned checks come off the Total only ("after $150.00
+// refunds and a $900.00 returned check"); a day with only returned checks has nothing to close
+// (mockup B7: no "Close the day…", a quiet "Nothing to close" box instead).
 //
 // Loading (like the Testing event page, v0.157): a gray skeleton only the first time; the day
 // reloads quietly when the school or the day changes, when the screen unlocks, when the browser
@@ -106,7 +109,7 @@ function RefundSwitch({ layout, onChange }) {
 
 // The four metric cards (D1). Cash / Check / Card jump to their group (rule 8).
 function Cards({ data, layout, onJump, groupsShown }) {
-  const cards = cardsFor(data.totals, data.refunds, layout);
+  const cards = cardsFor(data.totals, data.refunds, layout, data.returned);
   // In groups, a Cash / Check card says how many refunds it holds ("4 payments, 1 refund").
   const sub = (key) => cardSub(data.items ?? [], cards, key, layout);
   const list = [
@@ -127,12 +130,7 @@ function Cards({ data, layout, onJump, groupsShown }) {
   return (
     <div className="fin-cards">
       <div className="fin-card">
-        {inner(
-          IconSum,
-          T.CARD_TOTAL,
-          cards.total.cents,
-          cards.total.sub === 'after_refunds' ? T.afterRefunds(cards.total.refundCents) : T.paymentsCount(cards.total.count),
-        )}
+        {inner(IconSum, T.CARD_TOTAL, cards.total.cents, T.totalSub(cards.total))}
       </div>
       {list.map(({ key, label, Icon }) =>
         groupsShown.has(key) ? (
@@ -602,6 +600,13 @@ export default function DayReport({
     let box = null;
     if (closing) {
       box = <ClosedBox closing={closing} items={items} isAdmin={isAdmin} reopening={reopening} onReopen={reopen} />;
+    } else if (!countedSomething && (data.returned?.count ?? 0) > 0) {
+      // B7: only returned checks on this day — they aren't drawer money, so nothing to close.
+      box = (
+        <div className="fin-box fin-empty">
+          <p className="fin-empty-line">{T.NOTHING_TO_CLOSE_RETURNED(data.returned.count)}</p>
+        </div>
+      );
     } else if (!countedSomething) {
       // D11: nothing to close on a day with no payments.
       box = (
@@ -687,6 +692,7 @@ export default function DayReport({
           expected={expectedValues(data.totals, data.refunds)}
           totals={data.totals}
           refunds={data.refunds}
+          returned={data.returned}
           isToday={isToday}
           saving={saving}
           isPhone={isPhone}

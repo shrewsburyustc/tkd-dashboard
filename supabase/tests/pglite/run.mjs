@@ -429,6 +429,7 @@ const read = (...parts) => readFileSync(path.join(supabaseDir, ...parts), 'utf8'
 
 const useFixtureSeed = process.argv.includes('--fixture-seed');
 const onlyStep0022 = process.argv.includes('--only-step0022');
+const onlyStep0026 = process.argv.includes('--only-step0026');
 
 // Fixed ids for the two pretend logins (any uuid works).
 const ADMIN_UID = '11111111-1111-4111-8111-111111111111';
@@ -578,6 +579,12 @@ async function main() {
   // working on 0022); a normal run does everything below, step0022 included
   if (onlyStep0022) {
     await step0022();
+    return finish();
+  }
+  // --only-step0026: just Finance's Black Belt step (a quick check while
+  // working on 0026); a normal run does everything below, step0026 included
+  if (onlyStep0026) {
+    await step0026();
     return finish();
   }
   console.log('Starting PGlite...');
@@ -818,6 +825,10 @@ async function main() {
   console.log('\nMigration 0025 on top of every live migration (production order):');
   await step0025_production_order(after25);
 
+  // step0026: Finance - Black Belt payments in the Daily report (its own databases)
+  console.log('\nMigration 0026 (Finance: Black Belt payments in the Daily report):');
+  const after26 = after5 ? await step0026() : null;
+
   // step0022: camps weekly pricing and longer camps (its own database, production order)
   console.log('\nMigration 0022 (camps weekly pricing and longer camps):');
   const after22 = after5 ? await step0022() : null;
@@ -890,6 +901,10 @@ async function main() {
   if (after18) {
     console.log('\n0018 fingerprints (kind  item  detail):');
     for (const line of after18) console.log('  ' + line);
+  }
+  if (after26) {
+    console.log('\n0026 fingerprints (kind  item  detail):');
+    for (const line of after26) console.log('  ' + line);
   }
   if (after13) {
     console.log('\n0013 fingerprints (kind  item  detail):');
@@ -2462,7 +2477,10 @@ async function financeSpeedCheck(db, tag = '[speed]', seed = true) {
       join public.testing_registrations r on r.id = p.registration_id join public.testing_events e on e.id = r.event_id
      where e.location_code = 'worcester' and p.kind = 'payment' and p.paid_on = '${busy}'`))
     + Number(await one(db, `select count(*) from public.star_payments p join public.star_candidates c on c.id = p.candidate_id
-     where c.location_code = 'worcester' and p.kind in ('payment', 'refund') and p.paid_on = '${busy}'`));
+     where c.location_code = 'worcester' and p.kind in ('payment', 'refund') and p.paid_on = '${busy}'`))
+    // (0026: Black Belt payments, refunds and returned checks of that school and day too, when 0016 is there)
+    + ((await one(db, `select to_regclass('public.bb_payments') is not null`)) ? Number(await one(db, `select count(*) from public.bb_payments p
+     where p.location_code = 'worcester' and p.kind in ('payment', 'refund', 'returned') and p.paid_on = '${busy}'`)) : 0);
   record(`${tag} the answer for the busy day is right (items, totals add up)`,
     items.length > 0 && day.totals.count === counting.filter((i) => i.kind === 'payment').length
       && day.totals.in_cents === paySum && day.totals.total_cents === allSum && items.length <= expectedRows,
@@ -5462,6 +5480,497 @@ async function step0022() {
   }
   await db.close().catch(() => {});
   return prints22;
+}
+
+// =====================================================================
+// step0026: Finance - Black Belt payments in the Daily report (0026,
+// CONTRACT-0026; rulebook v0.808, v0.809, v0.814, v0.815)
+// ---------------------------------------------------------------------
+// Production order: ... 0018 -> 0016 -> 0021 -> 0022 -> 0024 -> 0023 ->
+// 0025 -> 0026. Three databases of its own:
+//   a. 0026_fingerprints.sql and 0026_preapply_check.sql are
+//      connector-safe; every camp block of 0026 is one of 0017's and every
+//      private block one of 0018's, byte for byte
+//   b. database 1, built in the production order with every live migration
+//      (no payments): the GUARD refuses 0026 when 0016 is missing, when
+//      0018 isn't applied, when a replaced function isn't its live version
+//      and when one of the two table rules it rebuilds is changed or
+//      missing (each inside a transaction that is rolled back; nothing
+//      changes); the pre-apply check says "ok" for all nine functions and
+//      both rules;
+//      0026 applied; every other migration's fingerprints byte-identical -
+//      0011's and 0017's move in exactly the nine functions and the two
+//      rules, 0018's in exactly its five replaced functions, 0022's in the
+//      closing items' source rule only;
+//      0026_tests.sql and EVERY earlier test file pass; 0026 a second time
+//      changes no row and no fingerprint; 0018 re-run afterwards is refused
+//      by 0018's own guard
+//   c. on a COPY of database 1 before 0026: a Black Belt payment on a day
+//      closed before 0026 -> the pre-apply check lists that day, and after
+//      0026 it shows "changed after closing"; a past day whose only item
+//      is a returned check -> History "no_payments" (total below 0), not in
+//      the Home reminder, nothing to close
+//   d. database 2, production order with the big seeds (Color Belt, Star,
+//      the chain seed, camps, private testing; no Black Belt rows): the
+//      Finance answers BEFORE and AFTER 0026 are identical (every 7th day
+//      of 5 years + every chain-seed day: items and figures with the
+//      fingerprint; ~70 payment details; finance_day both schools, the Both
+//      summary every 61st day; History for 6 months; the year's exports;
+//      Home) - 0026's new keys (refunds.card_cents, returned) taken out
+//   e. then the Black Belt seed (finance_black_belt_perf_seed.sql: 2,000
+//      candidates, ~4,000 rows with edits, card refunds, returned checks
+//      and undone marks) on database 2: no other source's item changes;
+//      0026_tests.sql passes there; every app function answers in < 2 s
+//      and the Black Belt answers are right (the busiest returned-check
+//      day closes with exactly what it expects - card after card refunds)
+//   f. a database that sorts text like production (ICU en-US): the same
+//      production order, 0026, its tests and 0011 / 0017 / 0018's, then
+//      the big seed + the Black Belt seed and the same speed checks
+// Returns 0026's fingerprints (printed at the end), or null.
+// =====================================================================
+const MIGRATION_0026 = () => read('migrations', '0026_finance_black_belt.sql');
+const BB_FINANCE_SEED = () => readFileSync(path.join(here, 'finance_black_belt_perf_seed.sql'), 'utf8');
+const PRIVATE_SEED = () => readFileSync(path.join(here, 'finance_private_perf_seed.sql'), 'utf8');
+const REPLACED_0026 = ['finance_chain_steps_core', 'finance_money_rows_core', 'finance_figures_from',
+  'finance_closing_changes_from', 'finance_payment_detail', 'finance_day', 'finance_export', 'finance_close_day', 'finance_day_both'];
+const RULES_0026 = ['finance_day_closing_items_source_check', 'finance_day_closings_counts_check'];
+const NUMBERS_0025 = ['0003', '0004', '0005', '0006', '0010', '0007', '0008', '0009', '0012', '0015', '0011', '0019', '0014', '0020',
+  '0013', '0017', '0018', '0016', '0021', '0022', '0024', '0023', '0025'];
+
+// Every migration in the production order up to 0025 (as
+// step0025_production_order), on a database made by buildBase; `seeds`
+// (SQL) goes in after 0021, before camps' 0022 (whose rules the camps
+// speed seed predates - as on production, where those camps came first).
+async function liveOrderTo0025(db, L, seeds = '') {
+  for (const [label, file] of [['0003', '0003_testing_classes_ranks.sql'], ['0004', '0004_staff_accounts.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return false;
+  }
+  await run(db, L + 'apply built-in seed', builtInSeedSql());
+  if (!(await run(db, L + 'apply 0005', read('migrations', '0005_testing_events.sql')))) return false;
+  await seedTestEvent(db);
+  for (const [label, file] of [['0006', '0006_star_testing.sql'], ['0010', '0010_testing_results.sql'],
+    ['0007', '0007_schedule.sql'], ['0008', '0008_calendar.sql'], ['0009', '0009_forms.sql'], ['0012', '0012_prospects.sql'],
+    ['0015', '0015_family_history.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return false;
+  }
+  if (!(await run(db, L + 'apply 0011 as pasted on production 2026-10-19 (fixture)', OLD_0011()))) return false;
+  for (const [label, file] of [['today\'s 0011 over it', '0011_finance.sql'], ['0019', '0019_school_phone.sql'],
+    ['0014', '0014_testing_private.sql'], ['0020', '0020_session_id_claims.sql'], ['0013', '0013_camps.sql'],
+    ['0017', '0017_finance_camps.sql'], ['0018', '0018_finance_private.sql'], ['0016', '0016_black_belt.sql'],
+    ['0021', '0021_prospects_not_interested_sooner.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return false;
+  }
+  if (seeds && !(await run(db, L + 'the big seeds', seeds))) return false;
+  for (const [label, file] of [['0022', '0022_camps_weekly_pricing.sql'], ['0024', '0024_black_belt_rubric.sql'],
+    ['0023', '0023_star_result_texts.sql'], ['0025', '0025_black_belt_grading.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return false;
+  }
+  return true;
+}
+
+// The pretend admin's login token for a session made by adminSession
+const ADMIN_CLAIMS_0026 = () => JSON.stringify({ sub: ADMIN_UID, role: 'authenticated', session_id: '44444444-4444-4444-8444-444444444444',
+  amr: [{ method: 'password', timestamp: Math.floor(Date.now() / 1000) - 60 }] });
+
+// Four Black Belt cycles for the seed ("PGlite fin26 1" .. "4"), made
+// through bb_add_cycle with the admin's token (adminSession first)
+async function bbSeedCycles(db, L) {
+  await db.query(`select set_config('request.jwt.claims', $1, false)`, [ADMIN_CLAIMS_0026()]);
+  const out = [];
+  for (let k = 1; k <= 4; k++) {
+    const r = (await db.query(`select public.bb_add_cycle(${bb24Payload(`PGlite fin26 ${k}`, 30 + 30 * k)}, null) as r`)).rows[0].r;
+    out.push(r?.status);
+  }
+  record(`${L}four Black Belt cycles for the seed (bb_add_cycle)`, out.every((x) => x === 'ok'), out.join(','));
+  return run(db, `${L}the Black Belt seed (finance_black_belt_perf_seed.sql)`, BB_FINANCE_SEED());
+}
+
+// 0026's new keys taken out of an answer (for "the same as before")
+function strip0026(answer) {
+  const c = structuredClone(answer);
+  const walk = (o) => {
+    if (Array.isArray(o)) o.forEach(walk);
+    else if (o && typeof o === 'object') {
+      delete o.returned;
+      if (o.refunds && typeof o.refunds === 'object') delete o.refunds.card_cents;
+      Object.values(o).forEach(walk);
+    }
+  };
+  walk(c);
+  return c;
+}
+
+// One timed app-function call as the signed-in admin (role authenticated)
+async function timed0026(db, tag, label, sql, params = []) {
+  try {
+    await db.exec('set role authenticated;');
+    const t = performance.now();
+    const r = await db.query(sql, params);
+    const ms = Math.round(performance.now() - t);
+    const status = r.rows[0].r?.status;
+    record(`${tag} ${label} under 2 s`, status === 'ok' && ms < 2000, `${ms} ms, ${status}`);
+    return r.rows[0].r;
+  } catch (error) {
+    record(`${tag} ${label} under 2 s`, false, error.message);
+    return null;
+  } finally {
+    await db.exec('reset role;').catch(() => {});
+  }
+}
+
+// e / f. Speed and right answers with the Black Belt seed
+async function bbFinanceSpeed(db, tag) {
+  await db.query(`select set_config('request.jwt.claims', $1, false)`, [ADMIN_CLAIMS_0026()]);
+  const rows = await one(db, `select count(*)::int from public.bb_payments`);
+  const kinds = (await db.query(`select count(*) filter (where kind = 'returned')::int as returned,
+      count(*) filter (where kind = 'reversal' and exists (select 1 from public.bb_payments t where t.id = p.reverses_payment_id and t.kind = 'returned'))::int as undone_marks,
+      count(*) filter (where kind = 'refund' and method = 'card')::int as card_refunds from public.bb_payments p`)).rows[0];
+  record(`${tag} the Black Belt seed: thousands of rows, returned checks, undone marks, card refunds`,
+    rows > 3500 && kinds.returned > 100 && kinds.undone_marks > 40 && kinds.card_refunds > 100, `${rows} rows ${JSON.stringify(kinds)}`);
+  const today = await one(db, 'select public.testing_today()::text');
+  // the Worcester day with the most counted returned checks that isn't closed yet
+  const busy = await one(db, `select p.paid_on::text from public.bb_payments p
+     where p.location_code = 'worcester' and p.kind = 'returned' and p.paid_on < public.testing_today()
+       and not exists (select 1 from public.bb_payments x where x.reverses_payment_id = p.id)
+       and not exists (select 1 from public.finance_day_closings c where c.location_code = 'worcester' and c.day = p.paid_on)
+     group by p.paid_on order by count(*) desc, p.paid_on limit 1`);
+  const ret = (await db.query(`select count(*)::int as n, coalesce(sum(p.amount_cents), 0)::int as cents from public.bb_payments p
+     where p.location_code = 'worcester' and p.kind = 'returned' and p.paid_on = $1::date
+       and not exists (select 1 from public.bb_payments x where x.reverses_payment_id = p.id)`, [busy])).rows[0];
+  const undoneRet = await one(db, `select p.id::text from public.bb_payments p where p.kind = 'returned'
+     and exists (select 1 from public.bb_payments x where x.reverses_payment_id = p.id) order by p.id limit 1`);
+  const liveRet = await one(db, `select p.id::text from public.bb_payments p where p.kind = 'returned'
+     and not exists (select 1 from public.bb_payments x where x.reverses_payment_id = p.id) order by p.id limit 1`);
+  const edited = await one(db, `select p.id::text from public.bb_payments p join public.bb_candidates c on c.id = p.candidate_id
+     where c.first_name = 'Bbperf' and c.last_name = 'Bp 14' and p.kind = 'payment' and p.recorded_by_name = 'Staff' and p.for_items = '{p1}'`);
+  const day = await timed0026(db, tag, 'finance_day (the busiest returned-check day)', `select public.finance_day('worcester', '${busy}') as r`);
+  const items = day?.items ?? [];
+  const counting = items.filter((i) => ['counted', 'edited', 'moved_in'].includes(i.state));
+  const bbItems = items.filter((i) => i.source === 'black_belt');
+  record(`${tag} that day: returned {count, cents} right, the Total adds up, every Black Belt line has its keys`,
+    !!day && day.returned.count === ret.n && day.returned.cents === ret.cents && ret.n > 0
+      && day.totals.total_cents === counting.reduce((n, i) => n + i.amount_cents, 0)
+      && bbItems.length > 0 && bbItems.every((i) => 'for_items' in i && 'one_payment_plan' in i && 'handed_in_on' in i && i.event_name)
+      && items.filter((i) => i.kind === 'returned').every((i) => i.handed_in_on && i.method === 'check' && i.amount_cents < 0),
+    `${busy}: ${items.length} items, returned ${JSON.stringify(day?.returned)} (expected ${ret.n} / ${ret.cents})`);
+  const d1 = await timed0026(db, tag, 'finance_payment_detail (an undone returned mark)', `select public.finance_payment_detail('black_belt', '${undoneRet}') as r`);
+  const d2 = await timed0026(db, tag, 'finance_payment_detail (a returned check)', `select public.finance_payment_detail('black_belt', '${liveRet}') as r`);
+  const d3 = await timed0026(db, tag, 'finance_payment_detail (an edited payment)', `select public.finance_payment_detail('black_belt', '${edited}') as r`);
+  const whats = (d) => (d?.history ?? []).map((h) => h.what).join(',');
+  record(`${tag} the histories: undone mark, returned check, edited payment`,
+    whats(d1) === 'returned_undone,returned,recorded' && d1?.item?.state === 'undone' && whats(d2) === 'returned,recorded'
+      && whats(d3) === 'edited,recorded' && d3?.item?.state === 'edited',
+    `${whats(d1)} | ${whats(d2)} | ${whats(d3)}`);
+  await timed0026(db, tag, 'finance_day_both (that day)', `select public.finance_day_both('${busy}') as r`);
+  await timed0026(db, tag, 'finance_history (both schools, that month)', `select public.finance_history(null, '${busy}') as r`);
+  await timed0026(db, tag, 'finance_home', 'select public.finance_home() as r');
+  const ex = await timed0026(db, tag, 'finance_export (366 days, Worcester)', `select public.finance_export('worcester', date '${today}' - 365, '${today}') as r`);
+  const exRows = ex?.rows ?? [];
+  record(`${tag} the year export has Black Belt rows (returned checks with handed_in_on) and only they carry the extra keys`,
+    exRows.some((r) => r.kind === 'returned' && r.handed_in_on && r.counted_cents <= 0)
+      && exRows.filter((r) => r.what === 'black_belt').every((r) => 'for_items' in r)
+      && exRows.filter((r) => r.what !== 'black_belt').every((r) => !('for_items' in r)),
+    `${exRows.length} rows, ${exRows.filter((r) => r.what === 'black_belt').length} Black Belt`);
+  // Close that day with exactly what it expects: the card total after card refunds (v0.814)
+  const c = await timed0026(db, tag, 'finance_close_day (that day, as expected)',
+    `select public.finance_close_day('worcester', '${busy}', $1, $2, $3, $4, $5, null) as r`,
+    [day?.fingerprint, day?.totals.cash.cents + day?.refunds.cash_cents, day?.totals.check.count, day?.totals.check.cents,
+      day?.totals.card.cents + day?.refunds.card_cents]);
+  record(`${tag} ... and every part matches (cash, checks, card after card refunds; returned checks left out)`,
+    c?.results?.cash?.result === 'matches' && c?.results?.checks?.result === 'matches' && c?.results?.card?.result === 'matches',
+    JSON.stringify(c?.results));
+  const after = await timed0026(db, tag, 'finance_day (that day, closed)', `select public.finance_day('worcester', '${busy}') as r`);
+  record(`${tag} ... not changed after closing`, after?.closing?.changed_after === false, JSON.stringify(after?.closing?.changed_count));
+  await db.query(`select set_config('request.jwt.claims', '', false)`);
+}
+
+async function step0026() {
+  const L = '[0026] ';
+  // a.
+  record(`${L}0026_fingerprints.sql and 0026_preapply_check.sql contain neither "delete" nor "drop" (connector-safe)`,
+    !/delete|drop/i.test(read('tests', '0026_fingerprints.sql')) && !/delete|drop/i.test(read('tests', '0026_preapply_check.sql')));
+  const blocksOf = (text, b, e) => text.replace(/\r\n/g, '\n').match(new RegExp(`${b}[\\s\\S]*?${e}`, 'g')) ?? [];
+  const m26 = MIGRATION_0026();
+  const camp26 = blocksOf(m26, '-- ===== source: camp \\(0017\\) =====', '-- ===== end camp =====');
+  const priv26 = blocksOf(m26, '-- ===== source: color belt private \\(0018\\) =====', '-- ===== end color belt private =====');
+  const camp17 = blocksOf(CAMPS_0017(), '-- ===== source: camp \\(0017\\) =====', '-- ===== end camp =====');
+  const priv18 = blocksOf(MIGRATION_0018(), '-- ===== source: color belt private \\(0018\\) =====', '-- ===== end color belt private =====');
+  record(`${L}every camp block of 0026 is one of 0017's and every private block one of 0018's, byte for byte`,
+    camp26.length > 0 && priv26.length > 0 && camp26.every((x) => camp17.includes(x)) && priv26.every((x) => priv18.includes(x))
+      && (m26.match(/-- ===== source: black belt \(0026\) =====/g) ?? []).length === (m26.match(/-- ===== end black belt =====/g) ?? []).length,
+    `${camp26.length} camp + ${priv26.length} private blocks`);
+
+  // b. database 1
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L))) return null;
+  const dayMd5 = `select md5(p.prosrc) from pg_proc p where p.proname = 'finance_day'`;
+  const guardTry = async (label, before, wanted) => {
+    const md5Before = await one(db, dayMd5);
+    let message = '';
+    try {
+      await db.exec('begin;\n' + before + '\n' + m26);
+    } catch (error) {
+      message = error.message;
+    }
+    await db.exec('rollback;').catch(() => {});
+    record(`${L}the guard refuses 0026 when ${label} (it stops, nothing changes)`,
+      message.includes(wanted) && (await one(db, dayMd5)) === md5Before
+        && (await one(db, `select to_regclass('public.bb_payments') is not null`)) === true, message || 'it ran');
+  };
+  await guardTry('0016 is missing', 'alter table public.bb_payments rename to bb_payments_gone;', 'needs migration 0016');
+  const t17 = CAMPS_0017().replace(/\r\n/g, '\n');
+  const at17 = t17.indexOf('drop function if exists public.finance_chain_steps_core(date, date, text, uuid);');
+  await guardTry('0018 is not applied (0017\'s chain helper)', t17.slice(at17, t17.indexOf('$$;', t17.indexOf('as $$', at17)) + 3),
+    "must be applied after Finance's 0018");
+  const atDay = t17.indexOf('create or replace function public.finance_day(');
+  await guardTry('a replaced function differs from its live version (finance_day)',
+    t17.slice(atDay, t17.indexOf('$$;', t17.indexOf('as $$', atDay)) + 3).replace("'status', 'no_access'", "'status', 'no_access_changed'"),
+    'rebuild 0026 first');
+  await guardTry('a table rule it rebuilds differs from the live one (finance_day_closings_counts_check)',
+    `alter table public.finance_day_closings drop constraint finance_day_closings_counts_check;
+     alter table public.finance_day_closings add constraint finance_day_closings_counts_check
+       check (cash_counted_cents is null or cash_counted_cents between -10000000 and 10000000);`,
+    'other Finance table rules than the live ones');
+  await guardTry('a table rule it rebuilds is missing (finance_day_closing_items_source_check)',
+    'alter table public.finance_day_closing_items drop constraint finance_day_closing_items_source_check;',
+    'other Finance table rules than the live ones');
+  const pre = (await db.query(read('tests', '0026_preapply_check.sql'))).rows;
+  record(`${L}the pre-apply check: all nine functions and both rules "ok: the live ...", no closed day`,
+    pre.length === 11 && pre.filter((r) => r.kind === 'function').length === 9 && pre.filter((r) => r.kind === 'rule').length === 2
+      && pre.every((r) => r.detail.startsWith('ok: the live')), JSON.stringify(pre.map((r) => r.detail.slice(0, 20))));
+
+  // c. on a copy: a Black Belt payment on a day closed before 0026; a returned-only past day
+  const copy = await db.clone();
+  try {
+    await adminSession(copy);
+    const r = (await copy.query(`select public.bb_add_cycle(${bb24Payload('PGlite fin26 closed', 60)}, null) as r`)).rows[0].r;
+    const made = await run(copy, `${L}[closed before 0026] a candidate, a check on a day closed before 0026, an empty close`, `
+      begin;
+      select set_config('request.jwt.claims', '', true);
+      select set_config('tkd.actor_label', 'PGlite fin26', true);
+      insert into public.bb_candidates (cycle_id, first_name, last_name, date_of_birth, email_for_results, location_code, dan,
+                                        cycle_plan_id, kukkiwon, source, reference, created_by_name, updated_by_name)
+      select '${r?.id}', 'Closed', 'Before', date '1980-01-01', 'closed.before@example.com', 'worcester', 1, pl.id, false, 'desk',
+             'BB-' || nextval('public.bb_candidate_ref_seq'::regclass)::text, '', ''
+        from public.bb_cycle_plans pl where pl.cycle_id = '${r?.id}' limit 1;
+      insert into public.bb_payments (candidate_id, cycle_id, kind, amount_cents, method, paid_on, for_items, location_code, cycle_name,
+                                      recorded_at, recorded_by, recorded_by_name)
+      select c.id, c.cycle_id, 'payment', 87000, 'check', public.testing_today() - 20, '{p1}', 'worcester', 'PGlite fin26 closed',
+             ((public.testing_today() - 20) + time '15:00') at time zone 'America/New_York', '${DESK_UID}', 'Staff'
+        from public.bb_candidates c where c.first_name = 'Closed';
+      insert into public.finance_day_closings (location_code, day, kind, cash_counted_cents, checks_counted, checks_counted_cents,
+        card_counted_cents, expected_count, expected_cash_cents, expected_checks, expected_checks_cents, expected_card_cents, recorded_by_name)
+      values ('worcester', public.testing_today() - 20, 'close', 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Main Admin');
+      commit;`);
+    if (made) {
+      const pre2 = (await copy.query(read('tests', '0026_preapply_check.sql'))).rows.filter((x) => x.kind === 'closed day');
+      record(`${L}[closed before 0026] the pre-apply check lists that day (1 Black Belt line)`,
+        pre2.length === 1 && pre2[0].detail.includes(': 1 Black Belt payment'), JSON.stringify(pre2));
+      if (await run(copy, `${L}[closed before 0026] apply 0026`, m26)) {
+        const today = await one(copy, 'select public.testing_today()::text');
+        const d = await asAdmin(copy, `select public.finance_day('worcester', date '${today}' - 20) as r`);
+        record(`${L}[closed before 0026] that day now shows "changed after closing"`,
+          d?.closing?.changed_after === true && d?.closing?.changed_count === 1, JSON.stringify(d?.closing?.changed_count));
+        // a returned check on the next (empty) day - written as on production it never could be
+        // (the guard dates returned rows today), so with the table's triggers off
+        await run(copy, `${L}[returned-only day] a returned check alone on a past day`, `
+          begin;
+          set local session_replication_role = replica;
+          insert into public.bb_payments (candidate_id, cycle_id, kind, amount_cents, method, paid_on, location_code, cycle_name,
+                                          recorded_at, recorded_by, recorded_by_name, reverses_payment_id)
+          select p.candidate_id, p.cycle_id, 'returned', -p.amount_cents, 'check', public.testing_today() - 19, p.location_code, p.cycle_name,
+                 ((public.testing_today() - 19) + time '10:00') at time zone 'America/New_York', '${ADMIN_UID}', 'Main Admin', p.id
+            from public.bb_payments p join public.bb_candidates c on c.id = p.candidate_id where c.first_name = 'Closed';
+          commit;`);
+        const h = await asAdmin(copy, `select public.finance_history('worcester', date '${today}' - 19) as r`);
+        const day19 = await one(copy, `select (date '${today}' - 19)::text`);
+        const hd = (h?.days ?? []).find((x) => x.day === day19);
+        const d19 = await asAdmin(copy, `select public.finance_day('worcester', date '${today}' - 19) as r`);
+        const home = await one(copy, `select public.finance_home_at(now(), true) as r`);
+        record(`${L}[returned-only day] History "no_payments" with a negative total; nothing to close; not in the Home reminder`,
+          hd?.tag === 'no_payments' && hd?.total_cents === -87000 && d19?.can_close === false
+            && d19?.returned?.count === 1 && (home?.earlier?.by_school?.worcester?.count ?? 0) === 0,
+          JSON.stringify({ tag: hd?.tag, total: hd?.total_cents, can_close: d19?.can_close, earlier: home?.earlier }));
+        const c19 = await asAdmin(copy, `select public.finance_close_day('worcester', date '${today}' - 19, $1, 0, 0, 0, 0, null) as r`, [d19?.fingerprint]);
+        record(`${L}[returned-only day] Close the day: nothing_to_close`, c19?.status === 'nothing_to_close', c19?.status);
+      }
+    }
+  } catch (error) {
+    record(`${L}[closed before 0026] the copy`, false, error.message);
+  } finally {
+    await copy.close().catch(() => {});
+  }
+
+  // b (continued). apply 0026 on database 1
+  const numbers = NUMBERS_0025.filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const before = await printsOf(db, numbers);
+  if (!(await run(db, L + 'apply 0026_finance_black_belt.sql', m26))) return null;
+  const after = await printsOf(db, numbers);
+  const nameOf = (line) => {
+    const item = line.split('  ')[1] ?? '';
+    return item.includes('(') ? item.split('(')[0] : item.split('.').pop();
+  };
+  const moved = {};
+  for (const n of numbers) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((x) => !after[f].includes(x));
+    const added = after[f].filter((x) => !before[f].includes(x));
+    if (gone.length || added.length) {
+      moved[n] = { gone: [...new Set(gone.map(nameOf))].sort(), added: [...new Set(added.map(nameOf))].sort() };
+    }
+  }
+  const all11 = [...REPLACED_0026, ...RULES_0026].sort();
+  const five18 = REPLACED_0026.filter((x) => ['finance_chain_steps_core', 'finance_money_rows_core', 'finance_figures_from',
+    'finance_closing_changes_from', 'finance_payment_detail'].includes(x)).sort();
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  record(`${L}fingerprints: 0011 / 0017 move in exactly the nine functions + two rules, 0018 in its five, 0022 in the source rule, every other file byte-identical`,
+    same(Object.keys(moved).sort(), ['0011', '0017', '0018', '0022'])
+      && same(moved['0022']?.gone, ['finance_day_closing_items_source_check']) && same(moved['0022']?.added, ['finance_day_closing_items_source_check'])
+      && same(moved['0011']?.gone, all11) && same(moved['0011']?.added, all11)
+      && same(moved['0017']?.gone, all11) && same(moved['0017']?.added, all11)
+      && same(moved['0018']?.gone, five18) && same(moved['0018']?.added, five18),
+    JSON.stringify(moved));
+  const prints26 = await fingerprints(db, '0026_fingerprints.sql');
+  const fn26 = prints26.filter((l) => l.startsWith('function'));
+  record(`${L}0026 fingerprints: nine functions (search_path "", definer + authenticated only on the five app functions) and two rules`,
+    fn26.length === 9 && prints26.length === 11 && fn26.every((l) => l.includes('settings=search_path=""'))
+      && fn26.every((l) => {
+        const app = ['finance_payment_detail', 'finance_day(', 'finance_export', 'finance_close_day', 'finance_day_both'].some((x) => l.split('  ')[1].startsWith(x));
+        return app ? l.includes('definer=true') && /rights=authenticated:EXECUTE,postgres:EXECUTE$/.test(l)
+          : l.includes('definer=false') && /rights=postgres:EXECUTE$/.test(l);
+      }),
+    `${prints26.length} rows`);
+  const testFiles = [['0026_tests.sql', 'ALL 0026 TESTS PASSED'], ['0025_tests.sql', 'ALL 0025 TESTS PASSED'],
+    ['0024_tests.sql', 'ALL 0024 TESTS PASSED'], ['0016_tests.sql', 'ALL 0016 TESTS PASSED'], ['0023_tests.sql', 'ALL 0023 TESTS PASSED'],
+    ['verify_pin_tests.sql', 'ALL PIN TESTS PASSED'], ['0002_tests.sql', 'ALL 0002 TESTS PASSED'], ['0003_tests.sql', 'ALL 0003 TESTS PASSED'],
+    ['0004_tests.sql', 'ALL 0004 TESTS PASSED'], ['0005_tests.sql', 'ALL 0005 TESTS PASSED'], ['0006_tests.sql', 'ALL 0006 TESTS PASSED'],
+    ['0010_tests.sql', 'ALL 0010 TESTS PASSED'], ['0007_tests.sql', 'ALL 0007 TESTS PASSED'], ['0008_tests.sql', 'ALL 0008 TESTS PASSED'],
+    ['0009_tests.sql', 'ALL 0009 TESTS PASSED'], ['0012_tests.sql', 'ALL 0012 TESTS PASSED'], ['0015_tests.sql', 'ALL 0015 TESTS PASSED'],
+    ['0011_tests.sql', 'ALL 0011 TESTS PASSED'], ['0019_tests.sql', 'ALL 0019 TESTS PASSED'], ['0014_tests.sql', 'ALL 0014 TESTS PASSED'],
+    ['0020_tests.sql', 'ALL 0020 TESTS PASSED'], [CAMPS_TESTS, 'ALL 0017 TESTS PASSED'], ['0018_tests.sql', 'ALL 0018 TESTS PASSED'],
+    ['0021_tests.sql', 'ALL 0021 TESTS PASSED'], ['0022_tests.sql', 'ALL 0022 TESTS PASSED'], ['0013_tests.sql', 'ALL 0013 TESTS PASSED']];
+  const t0 = Date.now();
+  for (const [file, ok] of testFiles) {
+    if (existsSync(path.join(supabaseDir, 'tests', file))) await runTestFile(db, `${L}${file} (after 0026)`, file, ok);
+  }
+  record(`${L}all test files finished in under 10 minutes`, Date.now() - t0 < 600000, `${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  const snap = `select md5(${[...FINANCE_TABLES, 'bb_payments'].map((t) =>
+    `coalesce((select string_agg(to_jsonb(x)::text, ',' order by x.id) from public.${t} x), '')`).join(' || ')}
+    || (select count(*) from public.change_log)::text)`;
+  const dataBefore = await one(db, snap);
+  await run(db, L + 'apply 0026 a SECOND time (re-run safety)', m26);
+  record(`${L}re-run: no row and no fingerprint changed`, dataBefore === (await one(db, snap))
+    && same(prints26, await fingerprints(db, '0026_fingerprints.sql')));
+  await runTestFile(db, `${L}0026_tests.sql (after the re-run)`, '0026_tests.sql', 'ALL 0026 TESTS PASSED');
+  let refused18 = '';
+  try {
+    await db.exec(MIGRATION_0018());
+  } catch (error) {
+    refused18 = error.message;
+    await db.exec('rollback;').catch(() => {});
+  }
+  record(`${L}0018 run again after 0026 is refused by its own guard (nothing changes)`,
+    refused18.includes('rebuild 0018 first') && same(prints26, await fingerprints(db, '0026_fingerprints.sql')), refused18 || 'it ran');
+  await db.close().catch(() => {});
+
+  // d. database 2: old vs new on the big seeds (no Black Belt rows)
+  const L2 = '[0026 vs 0025] ';
+  const db2 = await buildBase(L2);
+  if (!db2) return prints26;
+  if (!(await liveOrderTo0025(db2, L2, PERF_SEED() + '\n' + CHAIN_SEED() + '\n' + CAMPS_PERF_SEED() + '\n' + PRIVATE_SEED()))) return prints26;
+  await adminSession(db2);
+  const ids = (await db2.query(DETAIL_IDS_SQL + `
+    union all
+    (select 'camp', p.id::text from public.camp_payments p where p.kind = 'payment' order by p.id limit 12)
+    union all
+    (select 'color_belt', p.id::text from public.testing_private_payments p where p.kind = 'payment' order by p.id limit 12)`)).rows;
+  const today2 = await one(db2, 'select public.testing_today()::text');
+  const days2 = (await db2.query(`select (date '${today2}' - 61 * k)::text as d from generate_series(0, 29) as k`)).rows.map((x) => x.d);
+  const answers = async () => {
+    const out = [];
+    for (const { src, id } of ids) out.push(await asAdmin(db2, 'select public.finance_payment_detail($1, $2::uuid) as r', [src, id]));
+    for (const d of days2) {
+      for (const s of ['worcester', 'shrewsbury']) out.push(await asAdmin(db2, `select public.finance_day('${s}', '${d}') as r`));
+      out.push(await asAdmin(db2, `select public.finance_day_both('${d}') as r`));
+    }
+    for (let k = 0; k < 6; k++) out.push(await asAdmin(db2, `select public.finance_history(null, date '${today2}' - ${31 * k}) as r`));
+    for (const s of ['worcester', 'shrewsbury']) {
+      out.push((await asAdmin(db2, `select public.finance_export('${s}', date '${today2}' - 365, '${today2}') as r`))?.rows);
+    }
+    out.push(await asAdmin(db2, 'select public.finance_home() as r'));
+    return out.map((x) => JSON.stringify(strip0026(x)));
+  };
+  const sigBefore = (await db2.query(DAY_SIGNATURE_SQL)).rows;
+  const ansBefore = await answers();
+  if (!(await run(db2, L2 + 'apply 0026 over it', m26))) return prints26;
+  const sigAfter = (await db2.query(DAY_SIGNATURE_SQL)).rows;
+  const ansAfter = await answers();
+  const differ = sigBefore.filter((r, i) => JSON.stringify(r) !== JSON.stringify(sigAfter[i])).map((r) => r.day);
+  const items = sigBefore.reduce((n, r) => n + r.n, 0);
+  record(`${L2}the same items and figures (fingerprint included) on 5 years of days - Color Belt, Star, camps, private testing`,
+    sigBefore.length > 300 && items > 1200 && differ.length === 0,
+    `${sigBefore.length} days, ${items} items` + (differ.length ? `; DIFFER on ${differ.slice(0, 5).join(', ')}` : ''));
+  const ansDiffer = ansBefore.map((a, i) => (a === ansAfter[i] ? null : i)).filter((i) => i !== null);
+  record(`${L2}the same app answers (0026's new keys taken out): details, days, Both, History, exports, Home`,
+    ansBefore.length > 150 && ansDiffer.length === 0 && ansBefore.every((a) => a !== 'null' && a !== undefined),
+    `${ansBefore.length} answers` + (ansDiffer.length ? `; DIFFER at ${ansDiffer.slice(0, 5).join(', ')}: ${ansAfter[ansDiffer[0]].slice(0, 300)}` : ''));
+  const newKeys = await asAdmin(db2, `select public.finance_day('worcester', '${today2}') as r`);
+  record(`${L2}the new keys: refunds.card_cents 0 and returned {0, 0} without Black Belt`,
+    newKeys?.refunds?.card_cents === 0 && newKeys?.returned?.count === 0 && newKeys?.returned?.cents === 0, JSON.stringify(newKeys?.returned));
+
+  // e. the Black Belt seed on database 2
+  const L3 = '[0026 speed] ';
+  if (await bbSeedCycles(db2, L3)) {
+    const nonBb = DAY_SIGNATURE_SQL.replaceAll('from public.finance_money_rows(null, x.day, x.day) m)',
+      "from public.finance_money_rows(null, x.day, x.day) m where m.source <> 'black_belt')");
+    const sigBb = (await db2.query(nonBb)).rows;
+    const differBb = sigBefore.filter((r, i) => r.items !== sigBb[i]?.items || r.n !== sigBb[i]?.n).map((r) => r.day);
+    record(`${L3}with thousands of Black Belt rows, no other source's item moves`, differBb.length === 0,
+      differBb.length ? `DIFFER on ${differBb.slice(0, 5).join(', ')}` : `${sigBb.length} days`);
+    await db2.query(`select set_config('request.jwt.claims', '', false)`);
+    await runTestFile(db2, `${L3}0026_tests.sql (with the big seeds and Black Belt rows)`, '0026_tests.sql', 'ALL 0026 TESTS PASSED');
+    await runTestFile(db2, `${L3}0018_tests.sql (with Black Belt rows)`, '0018_tests.sql', 'ALL 0018 TESTS PASSED');
+    await financeSpeedCheck(db2, L3.trim(), false);
+    await bbFinanceSpeed(db2, L3.trim());
+  }
+  await db2.close().catch(() => {});
+
+  // f. the ICU database
+  const { mkdtempSync, rmSync } = await import('node:fs');
+  const os = await import('node:os');
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'tkd-pglite-icu-0026-'));
+  const LI = '[0026 icu] ';
+  let idb = null;
+  try {
+    const maker = new PGlite({ dataDir: dir, extensions: { pgcrypto } });
+    await maker.exec(`create database tkd_icu template template0 encoding 'UTF8' locale_provider icu icu_locale 'en-US' locale 'C'`);
+    await maker.close();
+    idb = new PGlite({ dataDir: dir, database: 'tkd_icu', extensions: { pgcrypto } });
+    const order = await idb.query(`select string_agg(x, ' ' order by x) as o from (values ('color_belt'), ('black_belt'), ('~end')) as v(x)`);
+    record(`${LI}the database sorts text like production (~end first)`, order.rows[0].o === '~end black_belt color_belt', order.rows[0].o);
+    if ((await buildBase(LI, idb)) && (await liveOrderTo0025(idb, LI)) && (await run(idb, LI + 'apply 0026', m26))) {
+      for (const [file, ok] of [['0026_tests.sql', 'ALL 0026 TESTS PASSED'], ['0018_tests.sql', 'ALL 0018 TESTS PASSED'],
+        ['0011_tests.sql', 'ALL 0011 TESTS PASSED'], [CAMPS_TESTS, 'ALL 0017 TESTS PASSED']]) {
+        await runTestFile(idb, `${LI}${file}`, file, ok);
+      }
+      if (await run(idb, LI + 'big seed (finance_perf_seed.sql)', PERF_SEED())) {
+        await adminSession(idb);
+        if (await bbSeedCycles(idb, LI)) {
+          await idb.query(`select set_config('request.jwt.claims', '', false)`);
+          await runTestFile(idb, `${LI}0026_tests.sql (with the seeds)`, '0026_tests.sql', 'ALL 0026 TESTS PASSED');
+          await financeSpeedCheck(idb, LI.trim(), false);
+          await bbFinanceSpeed(idb, LI.trim());
+        }
+      }
+    }
+  } catch (error) {
+    record(`${LI}the ICU-collation database`, false, error.message);
+  } finally {
+    if (idb) await idb.close().catch(() => {});
+    rmSync(dir, { recursive: true, force: true });
+  }
+  return prints26;
 }
 
 function finish() {
