@@ -7,11 +7,17 @@
 //              no dates; a negative number means after the first day)
 // The rules (end after start; opens ≤ closes; early ≤ closes; closes ≤ last camp day) are checked
 // in campForm.js; their messages show under the field they belong to.
+// The three dates use the dashboard's own calendar, Star's shared DatePicker (rulebook v0.727 /
+// v1.018, design review C13), instead of the browser's date box. No days are grayed here: a date
+// that breaks a rule shows the field's amber error line, as before. On phones the calendar opens in
+// the page under the field (inline), as in Star.
+import DatePicker from '../../../components/DatePicker.jsx';
 import Notice from '../../../components/Notice.jsx';
+import { yearsAround } from '../../../lib/camps/campRules.js';
 import { TIME_CHOICES } from './campForm.js';
 import * as T from '../text.js';
 
-export default function TimesSection({ mode, values, errors, show, readOnly, idBase, onChange, onDateChange }) {
+export default function TimesSection({ mode, values, errors, show, readOnly, idBase, today, isPhone, onChange, onDateChange }) {
   const err = (key) => (show ? errors[key] : null);
   // A saved time that isn't on the 5-minute list is still offered.
   const choices = (value) => (value && !TIME_CHOICES.includes(value) ? [...TIME_CHOICES, value].sort() : TIME_CHOICES);
@@ -36,18 +42,27 @@ export default function TimesSection({ mode, values, errors, show, readOnly, idB
       {err(field) && <Notice>{err(field)}</Notice>}
     </div>
   );
+  // The Year list in each calendar: this year and next, the camp's days' years and the dates
+  // already chosen (so an older camp's dates can still be shown and changed).
+  const years = yearsAround(today, [...values.days, values.opensOn, values.closesOn, values.earlyUntil]);
+  // The visible name is a plain text line (as Star's): the field is a button whose own name
+  // already says "Family sign-up opens, Monday, May 3, 2027", so a <label> would only duplicate it.
   const dateField = (field, label) => (
     <div className="field">
-      <label htmlFor={`${idBase}-${field}`}>{label}</label>
-      <input
+      <span id={`${idBase}-${field}-label`} className="field-label">
+        {label}
+      </span>
+      <DatePicker
         id={`${idBase}-${field}`}
-        className="input ev-date"
-        type="date"
-        readOnly={readOnly}
+        label={label}
         value={values[field]}
-        aria-invalid={err(field) ? true : undefined}
-        aria-describedby={err(field) ? `${idBase}-${field}-error` : undefined}
-        onChange={(event) => onDateChange({ [field]: event.target.value })}
+        today={today}
+        years={years}
+        disabled={readOnly}
+        invalid={Boolean(err(field))}
+        describedBy={err(field) ? `${idBase}-${field}-error` : undefined}
+        inline={isPhone}
+        onChange={(iso) => onDateChange({ [field]: iso })}
       />
       {err(field) && <Notice id={`${idBase}-${field}-error`}>{err(field)}</Notice>}
     </div>

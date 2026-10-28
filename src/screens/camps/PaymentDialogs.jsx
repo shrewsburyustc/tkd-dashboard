@@ -7,12 +7,14 @@
 //                     The database keeps the old one (a reversal + a new payment, §1.14).
 // The differences from Color Belt: a camper can cost up to $10,000 (not $1,000; weekly pricing v0.717, was $2,000), and the values
 // live in the dialog itself (the camp page passes what it needs and gets the answer back).
-// Small centered dialogs; full screen on phones.
+// Small centered dialogs; full screen on phones. Date paid uses the dashboard's own calendar
+// (Star's shared DatePicker, rulebook v0.727 / design review C13), not the browser's date box.
 import { useId, useState } from 'react';
 import { IconCheck } from '@tabler/icons-react';
+import DatePicker from '../../components/DatePicker.jsx';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
-import { MAX_CAMPER_CENTS, PAYING_BY, isIsoDate } from '../../lib/camps/campRules.js';
+import { MAX_CAMPER_CENTS, PAYING_BY, isIsoDate, yearsAround } from '../../lib/camps/campRules.js';
 import ChoiceGroup from '../testing/events/ChoiceGroup.jsx';
 import * as T from './text.js';
 
@@ -242,17 +244,23 @@ export function EditPaymentDialog({ name, payment, today, isPhone, onSave, onClo
           {amountError && <Notice id={`${idBase}-amount-error`}>{amountError}</Notice>}
         </div>
         <div className="field">
-          <label htmlFor={`${idBase}-date`}>{T.DATE_PAID}</label>
-          <input
+          {/* Date paid: the dashboard's own calendar (Star's shared DatePicker, rulebook v0.727).
+              Days after today are gray and can't be picked (max = today), as the old box's max did. */}
+          <span id={`${idBase}-date-label`} className="field-label">
+            {T.DATE_PAID}
+          </span>
+          <DatePicker
             id={`${idBase}-date`}
-            className="input ev-date"
-            type="date"
-            max={today || undefined}
-            readOnly={saving}
+            label={T.DATE_PAID}
             value={values.paidOn}
-            aria-invalid={dateError ? true : undefined}
-            aria-describedby={dateError ? `${idBase}-date-error` : undefined}
-            onChange={(event) => change({ paidOn: event.target.value }, 'paidOn')}
+            today={today}
+            max={today || null}
+            years={yearsAround(today, [values.paidOn, payment.paidOn], false)}
+            disabled={saving}
+            invalid={Boolean(dateError)}
+            describedBy={dateError ? `${idBase}-date-error` : undefined}
+            inline={isPhone}
+            onChange={(iso) => change({ paidOn: iso }, 'paidOn')}
           />
           {dateError && <Notice id={`${idBase}-date-error`}>{dateError}</Notice>}
         </div>

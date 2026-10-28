@@ -171,6 +171,13 @@
   border-radius: 0 0 var(--radius-control) var(--radius-control);
 }
 
+/* Phones: the shared date picker opens in the page (C13, v0.727) and pulls itself 16px wider on
+   each side to meet a full-screen dialog's edges. Inside a section card the padding is 12px, so
+   it reaches only the card's inner edges instead of poking 3px past its border. */
+.cp-fold-body .dp-pop.is-inline {
+  margin-inline: calc(-1 * var(--space-12));
+}
+
 /* School | Held at side by side (they wrap on narrow screens) */
 .cp-school-row {
   display: flex;

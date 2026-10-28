@@ -14,7 +14,7 @@ import {
   ageAllowed, phoneDigits, formatPhone, templateFromCamp, campDatesFromTemplate, gridRowsFor, campLink, toCamel, toSnake,
   childProblem, offsetsAreValid, todayInSchoolTime, campTextIsValid, normalizeCampText, extraDaysRemoved,
   gridSizeFor, comesAllWeek, MAX_WEEK_DAYS,
-  campWeeks, defaultWeekIndex, paymentSchoolFor, extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
+  yearsAround, campWeeks, defaultWeekIndex, paymentSchoolFor, extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
 } from './campRules.js';
 import { qrFileName, campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
 import { campArgs, templateArgs, toExtra, toTemplate, EXTRA_COLUMNS, TEMPLATE_COLUMNS } from './campsArgs.js';
@@ -1415,6 +1415,14 @@ check('Undo of Edit camp: old payload, refusal words (v0.726)', () => {
   assert.equal(T.signupNotOpened('April Camp'), "Sign-up for April Camp wasn't opened. Check the connection, then retry.");
   assert.equal(T.linkDialogLine('closed', {}), 'Family sign-up is closed. Open it from the ⋯ menu to take more sign-ups.');
   assert.equal(T.TOAST_PAYMENT_CHANGED, 'Payment changed');
+});
+
+check('date calendar Year list (v0.727)', () => {
+  assert.deepEqual(yearsAround('2027-04-21', ['2026-12-30', '']), [2026, 2027, 2028]);
+  assert.deepEqual(yearsAround('2027-04-21', ['2025-03-01'], false), [2025, 2026, 2027]);
+  assert.deepEqual(yearsAround('2027-04-21', [], false), [2027]);
+  assert.deepEqual(yearsAround('2027-04-21', ['2029-07-01']), [2027, 2028, 2029]);
+  assert.deepEqual(yearsAround('', ['nope']), []);
 });
 
 console.log(`${count} groups of checks ran.`);

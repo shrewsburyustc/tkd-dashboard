@@ -491,6 +491,8 @@ export default function CampDialog({
                   mode={mode}
                   {...common}
                   show={showFor(2)}
+                  today={today}
+                  isPhone={isPhone}
                   onChange={(patch) => change(2, patch, 'offsets')}
                   onDateChange={(patch) => change(2, { ...patch, datesEdited: true })}
                 />
