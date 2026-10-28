@@ -3,7 +3,8 @@
 // time. Each row: the day, its total, who closed it and when, and ONE tag (warnings first:
 // Changed after closing · Cash short / over · Not closed; then Closed; then No payments; today
 // shows "Today · open" until it is closed). An amber line at the top can count this month's days
-// that weren't closed — switched off for now (SHOW_UNCLOSED_LINE, v0.821). Clicking a row opens that day's report. ‹ › change the month.
+// that weren't closed. Both warnings are switched off for now (SHOW_UNCLOSED, v0.821, v0.822).
+// Clicking a row opens that day's report. ‹ › change the month.
 // On Both, both schools' days are listed with a School column (v0.207).
 // Address: #finance/history (App.jsx). The database refuses staff (contract §1.4).
 //
@@ -23,13 +24,13 @@ import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
 import { addMonths, dayShort, money, monthShortYear, monthStart, monthYear } from './format.js';
 import * as T from './text.js';
 
-// The amber "N days this month weren't closed: …" line above the list. Off for now (v0.821):
-// the school still closes the drawer on paper, so every day would show up here. The rows keep
-// their "Not closed" tag. To bring the line back when the school starts closing days in the
-// dashboard, set this to true.
-const SHOW_UNCLOSED_LINE = false;
+// The "weren't closed" warnings: the amber "N days this month weren't closed: …" line above the
+// list (v0.821) and each day's "Not closed" tag (v0.822). Off for now: the school still closes
+// the drawer on paper, so every day would be flagged. A day that wasn't closed then shows no
+// tag. To bring both back when the school starts closing days in the dashboard, set this to true.
+const SHOW_UNCLOSED = false;
 
-// The tag of a day row: { text, kind: 'warn' | 'ok' | 'neutral' }.
+// The tag of a day row: { text, kind: 'warn' | 'ok' | 'neutral' }, or null for no tag.
 function dayTag(row) {
   const diff = row.diff_cents ?? 0;
   // Only the number of checks was off (no cents): "Checks short".
@@ -48,7 +49,7 @@ function dayTag(row) {
     case 'over':
       return { text: part === 'cash' ? T.cashOverTag(diff) : part === 'checks' ? T.checksOverTag(diff) : part === 'card' ? T.cardOverTag(diff) : T.overTag(diff), kind: 'warn' };
     case 'not_closed':
-      return { text: T.TAG_NOT_CLOSED, kind: 'warn' };
+      return SHOW_UNCLOSED ? { text: T.TAG_NOT_CLOSED, kind: 'warn' } : null;
     case 'closed':
       return { text: T.CLOSED_TAG, kind: 'ok' };
     // A day with only Black Belt returned checks (mockup B7, v0.815): nothing to close, so not
@@ -63,6 +64,7 @@ function dayTag(row) {
 }
 
 function Tag({ tag }) {
+  if (!tag) return null;
   if (tag.kind === 'warn') {
     return (
       <span className="ttag ttag--warn">
@@ -210,7 +212,7 @@ export default function HistoryView({ location, today, month, onMonth, onBack, o
   return (
     <>
       {top}
-      {SHOW_UNCLOSED_LINE && unclosedCount > 0 && (
+      {SHOW_UNCLOSED && unclosedCount > 0 && (
         <div className="fin-banner" role="status">
           <IconAlertTriangle size={16} aria-hidden="true" />
           <span>
