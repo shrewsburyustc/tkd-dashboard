@@ -18,6 +18,7 @@ import Notice from '../../components/Notice.jsx';
 import { isVisible, MAX_CHILDREN, NO_TIME_KEY } from '../../lib/forms/fields.js';
 import { formatDate } from '../../lib/schedule/versions.js';
 import { formatTime, parseTime } from '../../lib/schedule/time.js';
+import { classWithAges } from '../../lib/schedule/ages.js';
 import { weekStart } from '../../lib/calendar/days.js';
 import SignaturePad from './SignaturePad.jsx';
 import * as T from './text.js';
@@ -243,7 +244,8 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
                   <div key={g.label} role="group" aria-label={g.label}>
                     <p className="ftday">{g.label}</p>
                     {g.times.map((t) =>
-                      slot(timeKey(t), `${formatDate(t.date, { year: false })} · ${formatTime(parseTime(t.start), true)} · ${t.className}`, t.spotsLeft),
+                      // the class's ages are only shown, never used to hide a time (v0.619)
+                      slot(timeKey(t), `${formatDate(t.date, { year: false })} · ${formatTime(parseTime(t.start), true)} · ${classWithAges(t)}`, t.spotsLeft),
                     )}
                   </div>
                 ))}

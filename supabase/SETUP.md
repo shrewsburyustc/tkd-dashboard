@@ -2621,3 +2621,59 @@ Tested in PGlite on every run (`run.mjs` step0027: the undo file exactly as name
 - **A new migration, not an edit of 0022:** 0022 is live; replacing one function in a later file keeps the history clear and the undo simple.
 
 ---
+
+## Migration 0031: Class ages on the booking forms
+
+**Status: NOT APPLIED** (built on `claude/prospect-form-system-cd893d`, rulebook v0.619; needs Jeffrey's OK to apply). Apply it **before** the app version that shows and sets class ages is deployed (that app reads the new table and the new keys).
+
+**Production order:** … 0025 → 0027 (live) → **0031**. It needs 0007 (Schedule), 0009 (Forms) and 0012 (Prospects) — it stops with "0031 needs migration 0007 / 0009 / 0012 … first" if one is missing.
+
+**What it does** (`supabase/migrations/0031_class_ages.sql`):
+- **New table `public.schedule_class_ages`** — one row per class that has an age range (no row = no ages shown): `class_id` (unique; with `location_code` it points at `testing_classes`, so a row always belongs to the class's own school; deleting the class in Testing removes the row, logged as `delete_class`), `age_from` (0–99), `age_to` (empty = "and up", else From–99), plus version and who/when. Built exactly like 0007's `schedule_class_colors`: same bookkeeping trigger, history in `change_log`, no truncate, RLS on with one SELECT policy for signed-in, unlocked staff (`has_data_access()`), read rights on the listed columns for `authenticated` only (never the login-id columns), **nothing for anon, service_role or forms_registrar**, no direct writes.
+- **New function `schedule_set_class_ages(p_class_id uuid, p_age_from integer, p_age_to integer)`** — the only way to write; admins only (`has_data_access()` first → `no_access`, then `is_admin()` → `not_allowed`). `invalid` for no class, To without From, From outside 0–99, To outside From–99; `not_found` for an unknown class. Both empty = remove the row (fine when there is none). The same values again write nothing. Answer: `{"status":"ok","class_id":…,"age_from":n|null,"age_to":n|null,"version":n|null}`. Security definer, `search_path = ''`, revoked from public, anon, authenticated and service_role, granted to `authenticated` only.
+- **Five functions replaced, word for word except the lines marked "0031"** (same names, arguments, return types, owner, security definer, `search_path = ''` and rights):
+  - `schedule_before_write()` (0007) — one line: an ages row's class can never change, like a color row's.
+  - `forms_open_times` (0009, builder preview and Fill in), `forms_public_get` (0009, the public page and kiosk), `forms_public_submit` (0009, the fresh times sent back on `time_taken`) and `prospects_open_times` (0012, Prospects → Book a free class): every time item gains **`"age_from"`** and **`"age_to"`** (whole numbers, or `null` when the class has no ages; `age_to` null with `age_from` set = "7+"). The order of the times is unchanged (the ages are looked up per item, not joined). Display only: no time is hidden or refused because of a child's age.
+- **Not changed:** `forms_times` (0009's internal list of times; its return type stays, so nothing is dropped and re-made). Nothing new is granted to anon; `forms_registrar` keeps exactly its public functions.
+
+### 0031a. Before you apply (Claude, read-only through the connection)
+
+1. **Pre-apply check:** Claude runs `supabase/tests/0031_preapply_check.sql` (one read-only SELECT, connector-safe). The answer must be `ages_table = false`, `set_function = false`, `replaced_found = 5`, `replaced_as_tested = 5` — nothing of 0031 is there yet and the five functions it replaces still have exactly the code it was tested against (0007's, 0009's and 0012's). **Anything else → stop**: a function changed since, and 0031 must be rebuilt on the newer code first (pasting it would undo that change). `true / true / 5 / 0` = already applied.
+2. Claude runs `supabase/tests/0007_fingerprints.sql`, `0009_fingerprints.sql`, `0012_fingerprints.sql` and `0031_fingerprints.sql` and keeps the results (the "before" record for 0031c and the undo).
+
+### 0031b. Apply 0031 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0031_class_ages.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Supabase may warn about destructive operations: the `drop … if exists` lines only make re-running safe, and the removals inside the functions run only later (an admin clearing a class's ages; a family sending a form). This file removes nothing. Confirm.
+3. "Success." One transaction: on any error nothing is kept. Copy the error to Claude.
+
+**Running it again is safe** (tested: no fingerprint changes). **If 0007, 0009 or 0012 is ever re-run after 0031, re-run 0031 straight after it** — re-running those puts their older functions back (the times lose their ages; 0007's older trigger function no longer protects an ages row's class).
+
+### 0031c. Read-only checks (Claude runs these through the connection)
+
+1. **Pre-apply check again:** `true / true / 5 / 0`.
+2. **Fingerprints:** `supabase/tests/0031_fingerprints.sql` must match what `run.mjs` printed ("0031 fingerprints"): the table (rls=true, columns readable by `authenticated` only), its three triggers, six constraints and one policy, and the six functions — `schedule_set_class_ages`, `forms_open_times`, `prospects_open_times` with `rights=authenticated:EXECUTE,postgres:EXECUTE`; `forms_public_get`, `forms_public_submit` with `rights=forms_registrar:EXECUTE,postgres:EXECUTE`; `schedule_before_write` with `rights=postgres:EXECUTE`. The file contains neither of the words the connection refuses.
+3. `0007_fingerprints.sql`, `0009_fingerprints.sql`, `0012_fingerprints.sql`: **only** the `function` lines of the five replaced functions differ from 0031a (their body md5; rights, owner and settings the same), and 0007's lists the new `schedule_set_class_ages` (two new lines). Every other migration's fingerprints: unchanged (`run.mjs` step0031 checks exactly that).
+4. **Security advisor:** nothing new.
+
+### 0031d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0031_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0031 TESTS PASSED**. It makes its own `zz test …` classes, a 5:00–5:45 AM Worcester time slot three days from now and a test form, and rolls everything back. Supabase may warn about destructive operations (a test class is really deleted inside the rolled-back transaction). Confirm.
+2. Then `0007_tests.sql`, `0009_tests.sql`, `0012_tests.sql`, `0015_tests.sql` and `0019_tests.sql` again — all must still pass (`0007_tests.sql` now expects 20 `schedule_*` functions once 0031 is there).
+3. Put the placeholders back afterwards.
+
+### 0031e. Undo 0031 (only with Jeffrey's OK)
+
+1. The app version that shows class ages must **not** be live (it would fail to load the Schedule's ages).
+2. Paste **the whole file** `supabase/manual/0031u_undo_class_ages.sql` in the SQL Editor → **Run**. It puts back the exact earlier `schedule_before_write` (0007), `forms_open_times`, `forms_public_get`, `forms_public_submit` (0009) and `prospects_open_times` (0012) with their rights, then removes `schedule_set_class_ages` and the table **with every age range entered** (their history rows stay in `change_log`, so they can be re-entered). One transaction. Supabase warns about destructive operations — this time they are real. Confirm only if you mean it.
+3. Claude checks: the pre-apply check answers `false / false / 5 / 5` again; `0007_fingerprints.sql`, `0009_fingerprints.sql` and `0012_fingerprints.sql` match 0031a's record. Then run `0007_tests.sql`, `0009_tests.sql`, `0012_tests.sql`, `0015_tests.sql`, `0019_tests.sql`.
+4. To redo: paste 0031 again (safe).
+
+Tested in PGlite on every run (`run.mjs` step0031: the undo file exactly as named here; afterwards every fingerprint file equals the one before 0031 and the tests pass; 0031 again gives the tested fingerprints and `0031_tests.sql` passes).
+
+**Why:**
+- **A table like the colors, not columns on Testing's classes:** Testing's tables and functions stay untouched (the same reason 0007 kept the colors apart), and deleting a class still cleans up by itself.
+- **Ages looked up next to `forms_times`, not added to it:** changing its return type would mean dropping and re-making it and every function that reads it; this way only the four functions that build the times' JSON change.
+- **Display only:** the rulebook (v0.619) says a form never hides or blocks a class because of a child's age, so no booking rule reads this table.
+
+---

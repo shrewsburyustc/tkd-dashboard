@@ -18,8 +18,17 @@ Branch `claude/prospect-form-system-cd893d`. Requested by Jeffrey on 2026-10-28,
 
 | Step | Status |
 |---|---|
-| Migration number | **0031** reserved by Main 2026-10-28 (`0031_<what>.sql`, SETUP "## Migration 0031: …", run.mjs `step0031`) |
-| Mockups: the Schedule dialog and the form's time list at PC, tablet, phone and 320 wide | Next |
-| Build: migration and pglite tests, then the screens | Waits for the number and the mockup OK |
-| Reviews: security (database) and design | — |
-| Apply to the live database (Jeffrey pastes it) | — |
+| Migration number | **0031** reserved by Main 2026-10-28 |
+| Mockups (`ClassAges-mockup-1-forms.png`, `ClassAges-mockup-2-schedule.png`) | OK'd by Jeffrey 2026-10-28 |
+| Database: `supabase/migrations/0031_class_ages.sql`, tests `0031_tests.sql`, `0031_fingerprints.sql`, `0031_preapply_check.sql`, undo `supabase/manual/0031u_undo_class_ages.sql`, SETUP "## Migration 0031", run.mjs `step0031` | Built 2026-10-28 by a subagent; PGlite step0031: 68 checks pass |
+| Screens: Schedule time slot dialog (Ages · class, From / To, "Shows as"), the family form and kiosk, staff Fill in, Prospects' Book a free class; the Cloudflare function passes the ages on; preview fake data | Built 2026-10-28 |
+| Reviews | Security: no must-fix or should-fix. Design: fixed the gray typed ages, errors flashing while typing, a chatty live line, and both save failures showing |
+| Apply to the live database (Jeffrey pastes it, SETUP §0031) | Waits for Jeffrey's OK, after the merge |
+
+**Notes:**
+
+- The table holds one age range per class, and each class belongs to one school.
+- The app reads the ages straight from the table, the same way it reads the colors.
+- Staff never open the time slot dialog, so they see neither the color nor the ages in the Schedule. They see the ages only in the booking lists. (The mockup caption said "view only"; that was wrong.)
+- When From and To are the same, the forms show "Age 7". The v0.619 row doesn't say this: Jeffrey still has to OK it.
+- The undo file drops the table along with every age range entered. The values can still be read in `change_log`.

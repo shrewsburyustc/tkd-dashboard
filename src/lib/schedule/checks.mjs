@@ -9,6 +9,7 @@ import { findOverlaps, formatRange, formatTime, hourLabel, hourRange, parseTime,
 import { addDays, classifyVersions, copySourceFor, currentOf, endsBefore, formatDate, plannedOf, weekdayOf } from './versions.js';
 import { CLASS_COLORS, colorOf, COLOR_KEYS } from './colors.js';
 import { createScheduleBackend } from '../mockSchedule.js';
+import { agesFromRow, agesLabel, agesProblem, agesToText, classWithAges, readAges } from './ages.js';
 
 let groups = 0;
 function group(name, fn) {
@@ -230,6 +231,48 @@ group('mock: colors, and a deleted class takes its slots with it', () => {
   assert.ok(slots.length < before);
   assert.ok(slots.every((s) => rows.some((r) => r.slot_id === s.id)));
   assert.deepEqual(backend.select('schedule_class_colors', 'class_id', [], [], admin).data, []);
+});
+
+group('class ages: how they are written and checked (v0.619)', () => {
+  assert.equal(agesLabel(7, 12), 'Ages 7–12');
+  assert.equal(agesLabel(7, null), 'Ages 7+');
+  assert.equal(agesLabel(7, 7), 'Age 7');
+  assert.equal(agesLabel(null, 12), '');
+  assert.equal(classWithAges({ className: 'Group A', ageFrom: 7, ageTo: 12 }), 'Group\u00a0A\u00a0·\u00a0Ages\u00a07–\u206012'); // never splits
+  assert.equal(classWithAges({ className: 'White', ageFrom: 7, ageTo: 12 }).replace(/\u00a0/g, ' ').replace(/\u2060/g, ''), 'White · Ages 7–12');
+  assert.equal(classWithAges({ className: 'Group D', ageFrom: null, ageTo: null }), 'Group D');
+  assert.equal(agesProblem('', ''), null);
+  assert.equal(agesProblem('7', ''), null);
+  assert.equal(agesProblem('', '12'), 'from_missing');
+  assert.equal(agesProblem('7.5', ''), 'not_number');
+  assert.equal(agesProblem('-1', ''), 'not_number');
+  assert.equal(agesProblem('100', ''), 'not_number'); // three digits never pass the box
+  assert.equal(agesProblem('12', '7'), 'order');
+  assert.deepEqual(readAges('7', ''), { from: 7, to: null });
+  assert.deepEqual(readAges('', ''), { from: null, to: null });
+  assert.deepEqual(agesToText({ from: 4, to: 6 }), { from: '4', to: '6' });
+  assert.deepEqual(agesToText(undefined), { from: '', to: '' });
+  assert.deepEqual(agesFromRow({ age_from: 7, age_to: 12 }), { from: 7, to: 12 });
+  assert.deepEqual(agesFromRow({ age_from: '7', age_to: 12 }), { from: null, to: null }); // odd answers = none
+  assert.deepEqual(agesFromRow({ age_from: null, age_to: 12 }), { from: null, to: null });
+});
+
+group('mock: schedule_set_class_ages (0031)', () => {
+  const ages = () => backend.select('schedule_class_ages', 'class_id, age_from, age_to', [], [], admin).data;
+  assert.equal(call('schedule_set_class_ages', { p_class_id: S1, p_age_from: 7, p_age_to: 12 }, staff).status, 'not_allowed');
+  assert.equal(call('schedule_set_class_ages', { p_class_id: S1, p_age_from: 7, p_age_to: 12 }, locked).status, 'no_access');
+  assert.equal(call('schedule_set_class_ages', { p_class_id: S1, p_age_from: 12, p_age_to: 7 }).status, 'invalid');
+  assert.equal(call('schedule_set_class_ages', { p_class_id: S1, p_age_from: null, p_age_to: 7 }).status, 'invalid');
+  assert.equal(call('schedule_set_class_ages', { p_class_id: S1, p_age_from: 100, p_age_to: null }).status, 'invalid');
+  assert.equal(call('schedule_set_class_ages', { p_class_id: randomUUID(), p_age_from: 7, p_age_to: null }).status, 'not_found');
+  const set = call('schedule_set_class_ages', { p_class_id: S1, p_age_from: 13, p_age_to: null });
+  assert.deepEqual([set.status, set.age_from, set.age_to], ['ok', 13, null]);
+  const again = call('schedule_set_class_ages', { p_class_id: S1, p_age_from: 13, p_age_to: null });
+  assert.equal(again.version, set.version); // the same ages again write nothing
+  assert.ok(ages().some((r) => r.class_id === S1 && r.age_from === 13 && r.age_to === null));
+  assert.equal(call('schedule_set_class_ages', { p_class_id: S1, p_age_from: null, p_age_to: null }).status, 'ok');
+  assert.ok(!ages().some((r) => r.class_id === S1)); // cleared
+  assert.deepEqual(backend.select('schedule_class_ages', 'class_id', [], [], locked).data, []);
 });
 
 console.log(`${groups} groups of checks ran.`);

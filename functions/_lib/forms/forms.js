@@ -124,7 +124,8 @@ const numberOrNull = (value) => (Number.isFinite(value) ? value : null);
 const isPlainObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 
 // The open free-class times, copied field by field (forms_public_get and the time_taken answer
-// both send this list): [{ class_id, class_name, date, starts_at, ends_at, spots_left }].
+// both send this list): [{ class_id, class_name, date, starts_at, ends_at, spots_left, age_from,
+// age_to }]. age_from / age_to are the class's ages, only shown (migration 0031); null = none.
 function copyTimes(times) {
   if (!Array.isArray(times)) return [];
   return times.filter(isPlainObject).map((t) => ({
@@ -134,6 +135,8 @@ function copyTimes(times) {
     starts_at: textOrNull(t.starts_at),
     ends_at: textOrNull(t.ends_at),
     spots_left: numberOrNull(t.spots_left),
+    age_from: numberOrNull(t.age_from ?? null),
+    age_to: numberOrNull(t.age_to ?? null),
   }));
 }
 

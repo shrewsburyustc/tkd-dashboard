@@ -409,7 +409,10 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
           const used = db.bookings.filter((b) => b.location_code === form.location_code && b.class_id === o.class_id && b.on_date === d
             && hhmm(b.starts_at) === hhmm(s.starts_at) && b.status === 'booked').length;
           if (lim === null || lim - used <= 0) continue;
-          out.push({ class_id: o.class_id, class_name: cls.name, date: d, starts_at: hhmm(s.starts_at), ends_at: hhmm(s.ends_at), spots_left: lim - used });
+          // the class's ages, only shown (migration 0031, v0.619)
+          const ages = (getSchedule().ages ?? []).find((x) => x.class_id === o.class_id);
+          out.push({ class_id: o.class_id, class_name: cls.name, date: d, starts_at: hhmm(s.starts_at), ends_at: hhmm(s.ends_at), spots_left: lim - used,
+            age_from: ages?.age_from ?? null, age_to: ages?.age_to ?? null });
         }
       }
     }

@@ -16,6 +16,7 @@
 //   'error'           anything else (no connection, unexpected answer) — { status:'error', error }
 // The database answers in snake_case; this file converts to camelCase.
 import { supabase } from '../supabase.js';
+import { agesFromRow } from '../schedule/ages.js';
 
 export const FORMS_STATUSES = ['ok', 'no_access', 'not_allowed', 'not_found', 'stale', 'duplicate_slug', 'not_publishable', 'invalid',
   'closed', 'form_changed', 'time_taken', 'error'];
@@ -195,7 +196,11 @@ export async function setBooking({ id, expectedVersion, offers, limits }) {
   }, readSaved);
 }
 
-const toTime = (t) => ({ classId: t.class_id, className: t.class_name, date: t.date, start: t.starts_at, end: t.ends_at, spotsLeft: t.spots_left });
+// ageFrom / ageTo: the class's ages, shown next to it (migration 0031, v0.619); null = none
+const toTime = (t) => {
+  const a = agesFromRow(t);
+  return { classId: t.class_id, className: t.class_name, date: t.date, start: t.starts_at, end: t.ends_at, spotsLeft: t.spots_left, ageFrom: a.from, ageTo: a.to };
+};
 
 // The free-class times families would see right now (Fill in, builder preview).
 export async function openTimes({ formId, from, to }) {
