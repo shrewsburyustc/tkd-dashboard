@@ -41,7 +41,7 @@ import {
   MAX_DAYS, MAX_EXTRAS, MAX_CHILDREN, AGE_LIMITS, DESCRIPTION_MAX, WAIVER_MAX, EXTRA_NAME_MAX, RELATION_MAX,
   signupState, priceKind, priceChild, childProblem, offsetsAreValid, templateFromCamp, gridSizeFor, campWeeks, baseCents,
   MAX_WEEK_DAYS,
-  extraOfferedOn, onlyOnToWeekdays, weekdaysToOnlyOn, extraDaysRemoved,
+  extraOfferedOn, onlyOnToWeekdays, weekdaysToOnlyOn, extraDaysRemoved, comesAllWeek,
   normalizeCampText, campTextIsValid, isIsoDate, addDays, todayInSchoolTime, lastDay, firstDay, SCHOOL_TIME_ZONE,
 } from './camps/campRules.js';
 
@@ -1059,6 +1059,48 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
           const choosers = new Set(db.camp_camper_extras.filter((r) => r.extra_id === e.id && r.day_id === dayId && activeIds.has(r.camper_id)).map((r) => r.camper_id));
           if (choosers.size > 0) return { status: 'not_empty', kind: 'extra_day', extra_name: e.name, day: date, count: choosers.size };
         }
+      }
+      // 0027 (rulebook v0.720): an edit must not leave an ACTIVE camper with an extra the rules
+      // no longer allow. A kept extra switched between once and per day while an active camper
+      // chose it → refused ('extra_per'); a kept extra that is (or becomes) "not charged to
+      // all-days campers" where an active camper's bought row would now be included — a per-day
+      // one on a day whose week they now come every camp day of, a once one when they now come
+      // every camp day — → refused ('extra_included'). Judged against the NEW days.
+      const newDays = v.days.map((day) => ({ dayId: day, day }));
+      const datesOf = (camperId) => db.camp_camper_days.filter((r) => r.camper_id === camperId)
+        .map((r) => current.find((d) => d.id === r.day_id)?.day).filter(Boolean);
+      // Kept extras in their SAVED order (the database's "order by e.sort"), so both name the same one.
+      const savedOrder = (list) => list.filter((x) => x.id).sort((x, y) => currentExtras.findIndex((c) => c.id === x.id) - currentExtras.findIndex((c) => c.id === y.id));
+      for (const e of savedOrder(v.extras)) {
+        const was = currentExtras.find((c) => c.id === e.id);
+        if (was.per === e.per) continue;
+        const choosers = new Set(db.camp_camper_extras.filter((r) => r.extra_id === e.id && activeIds.has(r.camper_id)).map((r) => r.camper_id));
+        if (choosers.size > 0) return { status: 'not_empty', kind: 'extra_per', extra_name: was.name, count: choosers.size };
+      }
+      for (const e of savedOrder(v.extras).filter((x) => x.not_for_all_days)) {
+        const was = currentExtras.find((c) => c.id === e.id);
+        const included = new Set(db.camp_camper_extras.filter((r) => r.extra_id === e.id && activeIds.has(r.camper_id)).filter((r) => {
+          const mine = datesOf(r.camper_id);
+          if (e.per === 'once') return v.days.every((d) => mine.includes(d));
+          const date = current.find((d) => d.id === r.day_id)?.day;
+          return comesAllWeek(mine, newDays, date);
+        }).map((r) => r.camper_id));
+        if (included.size > 0) return { status: 'not_empty', kind: 'extra_included', extra_name: was.name, count: included.size };
+      }
+      // Withdrawn campers' rows that would no longer fit go (as for a removed day), so Restore can't
+      // bring back a broken extra: every row of an extra switched once ↔ per day, and rows of a
+      // not-for-all-days extra that would now be included.
+      const notActive = (r) => !activeIds.has(r.camper_id);
+      for (const e of savedOrder(v.extras)) {
+        const was = currentExtras.find((c) => c.id === e.id);
+        db.camp_camper_extras = db.camp_camper_extras.filter((r) => {
+          if (r.extra_id !== e.id || !notActive(r)) return true;
+          if (was.per !== e.per) return false;
+          if (!e.not_for_all_days) return true;
+          const mine = datesOf(r.camper_id);
+          if (was.per === 'once') return !v.days.every((d) => mine.includes(d));
+          return !comesAllWeek(mine, newDays, current.find((d) => d.id === r.day_id)?.day);
+        });
       }
       for (const [extraId, goneIds] of narrowedRows) {
         db.camp_camper_extras = db.camp_camper_extras.filter((r) => !(r.extra_id === extraId && goneIds.has(r.day_id)));
