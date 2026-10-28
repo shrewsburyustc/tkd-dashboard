@@ -1,0 +1,85 @@
+<!doctype html>
+<!--
+  Q1-copies-not-on-the-list.html — the one question the step-1 brief asks Jeffrey: which of the
+  copies that have no shared part yet join this step (BB15 and N16 have nothing to switch to
+  without them). One picture: each copy, what it is today, what a shared part needs, its size, and
+  a recommendation. Shot as a PNG with ../tools/chrome.mjs (the review picture he sees).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Q1 · Which copies join step 1?</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; width: 1400px; box-sizing: border-box; background: #fff; color: #1f1f1f; font: 15px/1.45 "Segoe UI", system-ui, sans-serif; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4a4a4a; margin: 0 0 20px; max-width: 1300px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 13px; font-weight: 600; color: #6b6b6b; padding: 8px 12px; border-bottom: 2px solid #d9d9d4; }
+  td { vertical-align: top; padding: 14px 12px; border-bottom: 1px solid #e5e5e2; }
+  td.n { width: 28px; }
+  .n span { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 12px; background: #1f1f1f; color: #fff; font-size: 13px; }
+  .what b { display: block; font-size: 16px; margin-bottom: 2px; }
+  .what small, .needs small { color: #6b6b6b; font-size: 13px; }
+  .size { width: 70px; font-weight: 600; text-align: center; }
+  .rec { width: 300px; }
+  .yes, .later { display: inline-block; padding: 2px 10px; border-radius: 6px; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .yes { background: #e5f2df; color: #2e6b1f; }
+  .later { background: #f1f1ee; color: #555; }
+  tr.pick td { background: #fbfdf9; }
+  tr.pick td:first-child { box-shadow: inset 4px 0 0 #3b8f2a; }
+  .foot { margin-top: 18px; padding: 14px 16px; background: #f7f7f5; border-radius: 8px; line-height: 1.55; }
+</style>
+</head>
+<body>
+<h1>Step 1 · Which of these copies join the shared parts now?</h1>
+<p class="sub">These are copies the design review found but didn't put in M1–M11 (v1.030 says Black Belt drops its copies, BB15, and Calendar its menu copy, N16 — they need a shared part to switch to). Nothing on screen changes either way; it's how much is built once now. <b>Green = my recommendation.</b> Sizes: S small · M medium · L large.</p>
+<table>
+  <thead><tr><th></th><th>The copy, today</th><th>What one shared part needs</th><th>Size</th><th>Recommendation</th></tr></thead>
+  <tbody>
+    <tr class="pick">
+      <td class="n"><span>1</span></td>
+      <td class="what"><b>A dialog on top of a dialog</b>Black Belt's own frame (InnerDialog, 8 dialogs). The shared frame can't stack two: Star's “Change Dan?” box and Prospects' phone Delete already open on top of another dialog, and <i>one Back press reaches both</i>.<br><small>blackBelt/staff/parts/InnerDialog.jsx · components/Dialog.jsx</small></td>
+      <td class="needs">An “on top” mode in the shared frame: only the bottom dialog owns the Back step; Back closes the top one first.</td>
+      <td class="size">M</td>
+      <td class="rec"><span class="yes">Yes, now</span><br>M2's box and M4's receipt open on top of other dialogs (Black Belt, Star, Prospects), and it fixes that Back bug when they switch.</td>
+    </tr>
+    <tr class="pick">
+      <td class="n"><span>2</span></td>
+      <td class="what"><b>One dropdown</b>Black Belt's SelectField and Star's StarSelect — the same custom list written twice.<br><small>blackBelt/staff/parts/SelectField.jsx · testing/star/events/StarSelect.jsx</small></td>
+      <td class="needs">One Select in the shared parts.</td>
+      <td class="size">M</td>
+      <td class="rec"><span class="yes">Yes, now</span><br>It's M8's base anyway: the time list is Star's dropdown with times. Black Belt then has something to switch to.</td>
+    </tr>
+    <tr class="pick">
+      <td class="n"><span>3</span></td>
+      <td class="what"><b>The drag handle (Grip)</b>Color Belt's is already used by Calendar, Forms and Prospects from Color Belt's folder; Black Belt and Star each have their own copy; “Drag to reorder” is written 3 times.<br><small>testing/RankRows.jsx · blackBelt/staff/parts/Grip.jsx · star/DanBlock.jsx</small></td>
+      <td class="needs">Move it to the shared parts (with Black Belt's grayed form), keep a pointer at the old place.</td>
+      <td class="size">S</td>
+      <td class="rec"><span class="yes">Yes, now</span><br>Small, and it's already a misplaced helper like M10's.</td>
+    </tr>
+    <tr>
+      <td class="n"><span>4</span></td>
+      <td class="what"><b>Calendar's Show menu</b>A copy of the ⋯ menu whose tick boxes don't close it.<br><small>calendar/ShowMenu.jsx · components/RowMenu.jsx</small></td>
+      <td class="needs">The ⋯ menu gains tick-box items (its 30 users unchanged).</td>
+      <td class="size">M</td>
+      <td class="rec"><span class="later">Later</span><br>Only Calendar uses it; it can come with the new-students prompt.</td>
+    </tr>
+    <tr>
+      <td class="n"><span>5</span></td>
+      <td class="what"><b>The five family-page headers</b>The same school header drawn five times (Color Belt, Star, Black Belt, Camps, Forms); three pages are live.<br><small>register · star-register · blackBelt/form · camp · forms</small></td>
+      <td class="needs">One header each public page uses, with no dashboard code, exactly the same output.</td>
+      <td class="size">M</td>
+      <td class="rec"><span class="later">Later</span><br>Touches live family pages for no visible gain; better with phase 3's “help in the same place” check.</td>
+    </tr>
+    <tr>
+      <td class="n"><span>6</span></td>
+      <td class="what"><b>Star ↔ Black Belt grading copies</b>PickerSheet, ResultEmailsBlock and most of grading and results — thousands of lines copied from Star.</td>
+      <td class="needs">A shared grading kit.</td>
+      <td class="size">L</td>
+      <td class="rec"><span class="later">Later</span><br>A project of its own, once both sections settle.</td>
+    </tr>
+  </tbody>
+</table>
+<div class="foot"><b>Already covered, nothing to add:</b> Black Belt's own date fields (the shared date picker exists), its own Cash / Check / Card choice (→ the shared ChoiceGroup, M10) and its own confirm box (→ the shared box, M2).</div>
+</body>
+</html>

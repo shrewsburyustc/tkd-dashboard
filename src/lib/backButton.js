@@ -8,9 +8,16 @@
 //                      marked { tkdDialog: token }. When the dialog closes, its step becomes a
 //                      leftover; if Forward ever lands on a leftover step, App.jsx steps off it
 //                      again so the person never has to press Back twice for nothing.
+// And one for a dialog opened ON TOP of another dialog (Dialog.jsx's onTop, rulebook v1.100):
+//   openTopLayer(close)  the dialog on top says "Back closes me first". It adds NO history step
+//                        of its own (two dialogs would fight over one step, and one Back press
+//                        would reach both). The dialog underneath keeps its step; when Back uses
+//                        that step up, the dialog underneath calls closeTopLayer() before itself.
+//   closeTopLayer()      asks the newest dialog on top to close. true = there was one.
 
 const claims = new Set();
 const openDialogSteps = new Set();
+const topLayers = []; // the dialogs open on top of another dialog, newest last
 
 // Returns a function that gives the claim back.
 export function claimBack(close) {
@@ -31,4 +38,23 @@ export function dialogStep(token) {
 // true for a { tkdDialog } step whose dialog is no longer open.
 export function isLeftoverDialogStep(state) {
   return Boolean(state?.tkdDialog) && !openDialogSteps.has(state.tkdDialog);
+}
+
+// A dialog on top of another dialog is open. Returns "release" (call it when it closes).
+export function openTopLayer(close) {
+  const layer = { close };
+  topLayers.push(layer);
+  return () => {
+    const index = topLayers.indexOf(layer);
+    if (index !== -1) topLayers.splice(index, 1);
+  };
+}
+
+// Back reached the dialog underneath: the newest dialog on top is asked to close instead (it may
+// stay open, e.g. "Unsaved changes…"). Returns false when no dialog is on top.
+export function closeTopLayer() {
+  const layer = topLayers[topLayers.length - 1];
+  if (!layer) return false;
+  layer.close();
+  return true;
 }

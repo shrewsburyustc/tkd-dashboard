@@ -1,0 +1,158 @@
+<!doctype html>
+<!--
+  M3-mark-paid-box.src.html — mockup source for the shared Mark paid box (design review M3).
+  Why: rulebook v1.001 — the same small box everywhere: the amount, then Paid by Cash / Check /
+  Card (preset to the family's choice, hint "They chose … on the form."), then "Mark paid $X".
+  It copies what the design review drew (picture 03, option C): Camps' small box under the
+  button (.cp-popover), Star's "Paid by" choice and hint, Color Belt's "Mark paid" button.
+  Build: node ../tools/build-mockup.mjs src/M3-mark-paid-box.src.html M3-mark-paid-box.html
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M3 · The shared Mark paid box — mockup</title>
+<!-- css: src/styles/tokens.css src/styles/app.css src/styles/testing.css src/styles/testing-events.css src/styles/camps.css -->
+<style>
+  body { background: #fff; }
+  .sheet-head { max-width: 1100px; margin: 0 auto; padding: 24px 16px 8px; }
+  .sheet-head h1 { font-size: 20px; margin-bottom: 4px; }
+  .sheet-head p { color: var(--color-text-secondary); font-size: 13px; }
+  .state { max-width: 1100px; margin: 0 auto; padding: 16px 16px 8px; }
+  .state > h2 { font-size: 14px; margin-bottom: 12px; }
+  .state > h2 .n { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 6px; border-radius: 10px; background: #1f1f1f; color: #fff; font-size: 12px; }
+  .is-focus { outline: 2px solid var(--color-blue); outline-offset: 2px; }
+  .marks .mark { outline: 3px solid #f59e0b; outline-offset: 6px; border-radius: 6px; }
+
+  /* The roster row the box opens from — a simplified copy of Color Belt's row (context only). */
+  .stage { position: relative; width: 640px; padding: 8px 12px 16px; }
+  .ctx-row { display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 12px; border: 1px solid var(--color-border); border-radius: var(--radius-control); font-size: 13px; }
+  .ctx-row .who { flex: 1; min-width: 0; }
+  .ctx-row .who b { font-weight: 500; }
+  .ctx-row .meta { color: var(--color-text-secondary); }
+  .ctx-row .more { color: var(--color-text-secondary); display: inline-flex; width: 28px; justify-content: center; }
+  .ctx-anchor { position: relative; }
+  /* The box drawn in place under its button (the real one is placed by script, kept on screen). */
+  .stage .cp-popover { position: absolute; top: calc(100% + 4px); right: 0; width: 240px; max-width: 280px; }
+  /* Phones: the row is a card (name on top, tag and buttons under it); the real box is placed
+     under the button and kept 8px inside the screen — drawn here under the card. */
+  @media (max-width: 639.98px) {
+    .stage { width: auto; padding: 8px 0 16px; height: auto !important; }
+    .ctx-row { height: auto; flex-wrap: wrap; padding: 8px 12px; row-gap: 8px; }
+    .ctx-row .who { flex: 1 0 100%; }
+    .ctx-row .meta-col { display: none; }
+    .stage { padding-bottom: 236px; }
+    .ctx-anchor { margin-left: auto; }
+    .stage .cp-popover { right: -40px; }
+  }
+  /* NEW in the shared box: the parts inside Camps' box (everything else is today's CSS). */
+  .mpb-name { font-weight: 500; }
+  .mpb-field { display: flex; flex-direction: column; gap: 4px; }
+  .mpb-hint { margin-top: -4px; }
+  .mpb-hint, .mpb-reason { color: var(--color-text-secondary); font-size: var(--text-12); }
+  /* A plain button's unavailable look (the same gray as .btn-primary.is-unavailable; M2 adds it). */
+  .btn.is-unavailable, .btn.is-unavailable:hover, .btn.is-unavailable:active { border-color: var(--color-border-strong); background: var(--color-surface); color: var(--color-disabled-text); cursor: not-allowed; }
+</style>
+<script>if (location.search.includes('marks')) document.documentElement.classList.add('marks');</script>
+</head>
+<body>
+<div class="sheet-head">
+  <h1>M3 · The shared Mark paid box</h1>
+  <p>Mark paid opens a small box under the button: the amount, then <b>Paid by</b> Cash / Check / Card preset to the family's choice, then <b>Mark paid $X</b> (rulebook v1.001). Two taps; staff see what will be recorded before it saves. The amount is shown, not typed — a different amount or date is fixed afterwards with Edit payment (admins). Drawn with the app's own stylesheets. Fake names.</p>
+</div>
+
+<section class="state">
+  <h2><span class="n">1</span>As it opens</h2>
+  <div class="stage" data-state="open" style="height: 236px" data-caption="<b>As it opens</b> under the row's Mark paid: the person and the amount, <b>Paid by</b> preset to the family's choice with the hint <b>“They chose Check on the form.”</b>, and <b>Mark paid $50</b>, which has the first focus (nothing is lost, so Enter does the usual thing). Esc or a click outside closes it.">
+    <div class="ctx-row">
+      <span class="who"><b>Noah Kim</b> <span class="meta">Registered Oct 13</span></span>
+      <span class="meta meta-col">Check</span>
+      <span class="ttag">Not paid</span>
+      <span class="ctx-anchor">
+        <button type="button" class="btn btn-sm ev-markpaid"><i data-icon="check"></i>Mark paid</button>
+        <div class="cp-popover mark" role="dialog" aria-label="Mark Noah Kim paid">
+          <p class="cp-popover-line"><span class="mpb-name">Noah Kim</span> · $50</p>
+          <div class="mpb-field">
+            <span class="field-label">Paid by</span>
+            <div class="segmented ev-segmented" role="radiogroup"><button type="button" class="segment" role="radio" aria-checked="false">Cash</button><button type="button" class="segment is-checked" role="radio" aria-checked="true">Check</button><button type="button" class="segment" role="radio" aria-checked="false">Card</button></div>
+          </div>
+          <p class="mpb-hint">They chose Check on the form.</p>
+          <button type="button" class="btn btn-sm ev-markpaid is-focus"><i data-icon="check"></i>Mark paid $50</button>
+        </div>
+      </span>
+      <span class="more"><i data-icon="dots"></i></span>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">2</span>They pay another way</h2>
+  <div class="stage" data-state="other" style="height: 236px" data-caption="<b>They pay another way</b>: one tap on Card — no trip to ⋯ Change how they'll pay first. The hint still says what they chose on the form; the button keeps the amount. The section is told the chosen method and saves it (its own toast, as today).">
+    <div class="ctx-row">
+      <span class="who"><b>Noah Kim</b> <span class="meta">Registered Oct 13</span></span>
+      <span class="meta meta-col">Check</span>
+      <span class="ttag">Not paid</span>
+      <span class="ctx-anchor">
+        <button type="button" class="btn btn-sm ev-markpaid"><i data-icon="check"></i>Mark paid</button>
+        <div class="cp-popover mark" role="dialog" aria-label="Mark Noah Kim paid">
+          <p class="cp-popover-line"><span class="mpb-name">Noah Kim</span> · $50</p>
+          <div class="mpb-field">
+            <span class="field-label">Paid by</span>
+            <div class="segmented ev-segmented" role="radiogroup"><button type="button" class="segment" role="radio" aria-checked="false">Cash</button><button type="button" class="segment" role="radio" aria-checked="false">Check</button><button type="button" class="segment is-checked is-focus" role="radio" aria-checked="true">Card</button></div>
+          </div>
+          <p class="mpb-hint">They chose Check on the form.</p>
+          <button type="button" class="btn btn-sm ev-markpaid"><i data-icon="check"></i>Mark paid $50</button>
+        </div>
+      </span>
+      <span class="more"><i data-icon="dots"></i></span>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">3</span>Camps: from the tag, with cents</h2>
+  <div class="stage" data-state="owes" style="height: 236px" data-caption="<b>Camps opens the same box from its “Owes $15.50” tag</b>, as today (v1.001: tag → box). The amount is what the section gives — here what a camper still owes, with cents written as the money rule says (“$15.50”, v1.026). The box never lets the amount be typed.">
+    <div class="ctx-row">
+      <span class="who"><b>Leo Kim</b> <span class="meta">· 11</span></span>
+      <span class="ctx-anchor">
+        <button type="button" class="ttag ttag--warn ev-tag-button cp-paybtn" aria-haspopup="dialog">Owes $15.50</button>
+        <div class="cp-popover mark" role="dialog" aria-label="Mark Leo Kim paid">
+          <p class="cp-popover-line"><span class="mpb-name">Leo Kim</span> · $15.50</p>
+          <div class="mpb-field">
+            <span class="field-label">Paid by</span>
+            <div class="segmented ev-segmented" role="radiogroup"><button type="button" class="segment is-checked" role="radio" aria-checked="true">Cash</button><button type="button" class="segment" role="radio" aria-checked="false">Check</button><button type="button" class="segment" role="radio" aria-checked="false">Card</button></div>
+          </div>
+          <p class="mpb-hint">They chose Cash on the form.</p>
+          <button type="button" class="btn btn-sm ev-markpaid is-focus"><i data-icon="check"></i>Mark paid $15.50</button>
+        </div>
+      </span>
+      <span class="more"><i data-icon="dots"></i></span>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">4</span>No choice on record</h2>
+  <div class="stage" data-state="nochoice" style="height: 236px" data-caption="<b>No choice on record</b> (e.g. added at the desk without one): nothing is preset, there's no hint, and <b>Mark paid $50 stays gray</b> (the approved unavailable look, still focusable) with the gray line “Choose how they paid.” until one is picked. Here the first focus goes on Cash, the first choice.">
+    <div class="ctx-row">
+      <span class="who"><b>Mia Lopez</b> <span class="meta">Added Oct 20</span></span>
+      <span class="meta meta-col">—</span>
+      <span class="ttag">Not paid</span>
+      <span class="ctx-anchor">
+        <button type="button" class="btn btn-sm ev-markpaid"><i data-icon="check"></i>Mark paid</button>
+        <div class="cp-popover mark" role="dialog" aria-label="Mark Mia Lopez paid">
+          <p class="cp-popover-line"><span class="mpb-name">Mia Lopez</span> · $50</p>
+          <div class="mpb-field">
+            <span class="field-label">Paid by</span>
+            <div class="segmented ev-segmented" role="radiogroup"><button type="button" class="segment is-focus" role="radio" aria-checked="false">Cash</button><button type="button" class="segment" role="radio" aria-checked="false">Check</button><button type="button" class="segment" role="radio" aria-checked="false">Card</button></div>
+          </div>
+          <button type="button" class="btn btn-sm ev-markpaid is-unavailable" aria-disabled="true"><i data-icon="check"></i>Mark paid $50</button>
+          <p class="mpb-reason">Choose how they paid.</p>
+        </div>
+      </span>
+      <span class="more"><i data-icon="dots"></i></span>
+    </div>
+  </div>
+</section>
+</body>
+</html>

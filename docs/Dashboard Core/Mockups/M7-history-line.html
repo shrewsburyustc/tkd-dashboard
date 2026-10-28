@@ -1,0 +1,6340 @@
+<!doctype html>
+<!--
+  M7-history-line.src.html — mockup source for the shared history line and list (design review M7).
+  Why: rulebook v1.010 — every person's summary ends with Prospects' one line, "History · N changes ›";
+  a tap opens the list, newest first: what changed, then when · who; with Hide private details on,
+  amounts and paid status are left out (as Star's, v0.506). This copies what the design review drew
+  (picture 09b: Prospects' own line and list inside a Color Belt summary), with the app's real
+  stylesheets (testing-events.css for the summary rows, prospects.css for the line and list).
+  Build: node ../tools/build-mockup.mjs src/M7-history-line.src.html M7-history-line.html
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M7 · The shared history line — mockup</title>
+<style>
+/* ===== src/styles/tokens.css (copied from the app) ===== */
+/*
+  tokens.css — the design "tokens": every color, size and spacing value from the guidelines.
+  Why it exists: app.css uses these names (e.g. var(--color-blue)) instead of raw values,
+  so a rule change in the guidelines means changing ONE line here.
+*/
+:root {
+  /* Colors (guidelines section 7) */
+  --color-bg: #ffffff; /* page and panels */
+  --color-surface: #f7f7f5; /* light gray: hover highlights, avatar */
+  --color-border: #e5e5e2; /* hairline dividers (decorative) */
+  --color-border-strong: #cfcfca; /* menu/sheet outlines, the sheet's grab handle */
+  --color-border-control: #8F8F8A; /* outlines of things you click or type into: fields, buttons,
+                                      PIN dots, keypad keys, location switcher, initials button.
+                                      3.25:1 on white — the 3:1 accessibility minimum (decided v0.26) */
+  --color-text: #1f1f1f; /* body text */
+  --color-text-secondary: #6b6b6b; /* labels, hints */
+  --color-blue: #003595; /* school blue: primary button, selected, focus ring */
+  --color-blue-hover: #002a77; /* primary button hover/pressed */
+  --color-blue-tint: #e6ebf4; /* current section, active location */
+  --color-warning-text: #633806; /* amber: errors and warnings (never red) */
+  --color-warning-bg: #faeeda;
+  --color-tooltip-bg: #1f1f1f; /* dark label bubble on the PC rail */
+  --color-on-blue: #ffffff; /* text on a blue button */
+  --color-backdrop: rgba(0, 0, 0, 0.35); /* dims the page behind the phone menu sheet and dialogs */
+  --color-toast-bg: #1f1f1f; /* the dark "done" toast (white text) */
+  --color-toast-divider: #4a4a4a; /* thin line between a toast's text and its Undo button */
+  --color-delete-text: #a32d2d; /* red: ONLY for delete (menu item, confirmation button) */
+  --color-delete-bg: #fcebeb; /* pale red behind a delete menu item on hover */
+  --color-tag-warn-border: #f2d9b0; /* outline of an amber tag such as "Not saved" */
+  --color-disabled-text: #8a8a85; /* text on an unavailable (gray) button or menu item */
+  --color-success-text: #3b6d11; /* green "good" text, e.g. Staff accounts' "Long enough" (guidelines 7) */
+
+  /* Belt colors (Belt.jsx, decided v0.64): the REAL colors of the school's belts. Pictures of
+     belts only — never used for buttons or messages. Red is allowed here: a recorded exception
+     to the "red means delete" rule. */
+  --belt-white: #ffffff;
+  --belt-yellow: #f6c90e;
+  --belt-orange: #f28c28;
+  --belt-green: #2e8b3e;
+  --belt-blue: #1f5fbf;
+  --belt-purple: #6b3fa0;
+  --belt-red: #d0202e;
+  --belt-brown: #6f4626;
+  --belt-black: #1f1f1f;
+  --belt-gray: #9a9a96;
+  --belt-unknown: #d9d9d5; /* a color key the screen doesn't know */
+  --belt-outline: #8f8f8a; /* 1px outline round every belt (same as control borders) */
+
+  /* Font: the device's own system font (one sans-serif family) */
+  --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* The ONLY text sizes allowed (minimum 12px) */
+  --text-20: 20px; /* page title */
+  --text-16: 16px; /* section heading */
+  --text-14: 14px; /* body */
+  --text-13: 13px; /* rows, buttons */
+  --text-12: 12px; /* labels, captions */
+
+  /* Spacing grid (4px base) */
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+
+  /* Shape and sizes */
+  --radius-control: 8px; /* buttons, fields, cards */
+  --radius-tag: 6px; /* small tags, the amber message box, the label bubble */
+  --radius-dialog: 12px; /* dialogs (a recorded exception, v0.29) */
+  --control-height: 32px; /* buttons and fields with a mouse */
+  --control-height-touch: 36px; /* buttons and fields on touch screens / phones */
+  --tap-size: 44px; /* minimum finger tap area */
+  --topbar-height: 48px;
+  --rail-width: 52px; /* PC, icons only */
+  --rail-width-labeled: 72px; /* tablet, labels under icons */
+  --bottombar-height: 60px; /* phone bottom bar: 4px + 48px item + 8px (plus the iPhone home-bar space) */
+}
+
+/* ===== src/styles/app.css (copied from the app) ===== */
+/*
+  app.css — all the styles for the dashboard, grouped by screen/component.
+  Why it exists: plain CSS keeps the look in one place. Values come from tokens.css.
+
+  Screen-size rules used below (guidelines 1.3 and 2.5):
+    Phone          (max-width: 639.98px)                 → bottom bar, menu as bottom sheet
+    Tablet         (min-width: 640px)                    → 72px rail with labels
+    PC             (min-width: 1024px) and (pointer: fine) → 52px icon rail with hover label
+    Touch screens  (pointer: coarse)                     → bigger controls, 44px tap areas
+  "pointer: coarse" means the main input is a finger — true on an iPad even when it's wide.
+*/
+
+/* ===== Base ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box; /* width includes padding and border: easier to reason about */
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--text-14);
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%; /* stop phones from enlarging text on their own */
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1,
+h2,
+h3 {
+  font-size: inherit;
+  font-weight: 500; /* only 400 and 500 are allowed */
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent; /* no blue flash box on phones; we draw our own states */
+}
+
+img {
+  display: block;
+}
+
+/* The HTML `hidden` attribute must always win, even over display: flex below. */
+[hidden] {
+  display: none !important;
+}
+
+/* Focus ring (guidelines 4): 2px school blue on whatever the keyboard has selected. Never removed. */
+:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+/* Text only screen readers can hear. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ===== App frame ===== */
+.app-root {
+  height: 100vh; /* fallback for older browsers */
+  height: 100dvh; /* "dynamic" height: correct on phones whose toolbars slide in and out */
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-banner {
+  flex: none;
+  padding: var(--space-4) var(--space-12);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+  text-align: center;
+}
+
+.app-screen {
+  flex: 1;
+  min-height: 0; /* lets the inner area scroll instead of growing past the screen */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sign-in, lock, and setup screens: content centered, scrolls if the screen is short. */
+.center-screen {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  padding: var(--space-24) var(--space-16);
+}
+
+.center-screen > * {
+  margin: auto; /* centers both ways, but never cuts off the top when it must scroll */
+}
+
+/* ===== Buttons and fields ===== */
+.btn {
+  position: relative; /* anchor for the invisible touch area below */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  height: var(--control-height);
+  padding: 0 var(--space-16);
+  border: 1px solid var(--color-border-control); /* 3:1 control border (v0.26) */
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--text-13);
+}
+
+.btn-primary {
+  border-color: var(--color-blue);
+  background: var(--color-blue);
+  color: var(--color-on-blue);
+}
+
+.btn-primary:active {
+  border-color: var(--color-blue-hover);
+  background: var(--color-blue-hover);
+}
+
+.btn:disabled {
+  cursor: progress;
+}
+
+/* Full width — ONLY for the single submit button of a phone form (guidelines 2.1). */
+.btn-block {
+  width: 100%;
+}
+
+/* An icon-only button, e.g. the back arrow on a phone page. 44px tap area, icon 20px. */
+.icon-button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-size);
+  height: var(--tap-size);
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text);
+}
+
+.link-button {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-blue);
+  font-size: var(--text-13);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-12);
+}
+
+.field label {
+  font-size: var(--text-12);
+  color: var(--color-text-secondary);
+}
+
+.input {
+  width: 100%;
+  height: var(--control-height);
+  padding: 0 var(--space-12);
+  border: 1px solid var(--color-border-control); /* 3:1 control border (v0.26) */
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  font-size: var(--text-13);
+}
+
+.input::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.input:focus-visible {
+  border-color: var(--color-blue);
+}
+
+/* Last field before the buttons: no extra space under it (the buttons add their own). */
+.field.field--last {
+  margin-bottom: 0;
+}
+
+/* Gray hint under a field, e.g. "At least 12 characters". */
+.field-hint {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* The amber message box (Notice.jsx) */
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  padding: var(--space-8);
+  border-radius: var(--radius-tag);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+  text-align: left;
+}
+
+.notice-icon {
+  flex: none;
+  margin-top: 1px; /* lines the icon up with the first line of text */
+}
+
+.logo {
+  flex: none;
+  object-fit: contain; /* keeps the logo's shape inside its square */
+}
+
+/* ===== Sign-in ===== */
+.signin-card {
+  width: 320px;
+  max-width: 100%;
+  padding: var(--space-24);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.signin-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: var(--space-24);
+  text-align: center;
+}
+
+.signin-title {
+  margin-top: var(--space-12);
+  font-size: var(--text-16);
+  font-weight: 500;
+}
+
+.signin-subtitle {
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.signin-card .notice {
+  margin-bottom: var(--space-12);
+}
+
+.signin-actions {
+  margin-top: var(--space-16);
+}
+
+.notice + .signin-actions {
+  margin-top: 0; /* the message box already gives the space */
+}
+
+.signin-forgot {
+  margin-top: var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* ===== Lock screen ===== */
+.lock-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 320px;
+  max-width: 100%;
+  padding: var(--space-32) var(--space-24) var(--space-24);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  text-align: center;
+}
+
+.lock-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-16);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.lock-name {
+  margin-top: var(--space-8);
+  font-size: var(--text-16);
+  font-weight: 500;
+  overflow-wrap: anywhere; /* a very long name wraps instead of widening the screen */
+}
+
+.lock-prompt {
+  margin: var(--space-16) 0 var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.lock-card .notice {
+  max-width: 300px;
+  margin-bottom: var(--space-16);
+}
+
+.pin-dots {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-12);
+}
+
+/* ===== PIN entry (PinEntry.jsx) — shared by the lock screen, Set your PIN and Change PIN ===== */
+.pin-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* The real PIN box is invisible (see PinEntry.jsx), so when it has keyboard focus the
+   focus ring is drawn around the dots instead — guidelines section 4: the ring is never removed. */
+.pin-entry:has(.pin-input:focus) .pin-dots {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 6px;
+  border-radius: 8px;
+}
+
+.pin-dot {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--color-border-control); /* 3:1 control border (v0.26) */
+  border-radius: 50%;
+}
+
+.pin-dot.is-filled {
+  border-color: var(--color-blue);
+  background: var(--color-blue);
+}
+
+.pin-hint {
+  margin-top: var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* On-screen keypad: keys drawn 36px tall; the 8px gaps give each a 44px tap area (decided v0.16). */
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 64px);
+  justify-content: center;
+  gap: var(--space-8);
+  margin-top: var(--space-16);
+}
+
+.keypad-key {
+  position: relative;
+  height: 36px;
+  padding: 0; /* remove the browser's default button padding */
+  border: 1px solid var(--color-border-control); /* 3:1 control border (v0.26) */
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  font-size: var(--text-16);
+}
+
+.keypad-key::after {
+  content: '';
+  position: absolute;
+  inset: -4px; /* invisible: stretches the tap area 4px into each 8px gap → 44px, no overlap */
+}
+
+.keypad-key:active {
+  background: var(--color-surface);
+}
+
+.keypad-key[aria-disabled='true'] {
+  cursor: progress;
+}
+
+.keypad-key--del {
+  font-size: var(--text-14);
+}
+
+.lock-signout {
+  margin-top: var(--space-24);
+}
+
+/* ===== Set your PIN (SetPinScreen.jsx) — same card as the lock screen ===== */
+.setpin-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 320px;
+  max-width: 100%;
+  padding: var(--space-32) var(--space-24) var(--space-24);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  text-align: center;
+}
+
+.setpin-name {
+  margin-top: var(--space-8);
+  font-size: var(--text-16);
+  font-weight: 500;
+  overflow-wrap: anywhere; /* a very long name wraps instead of widening the screen */
+}
+
+.setpin-email {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  overflow-wrap: anywhere;
+}
+
+.setpin-title {
+  margin-top: var(--space-16);
+  font-size: var(--text-16);
+}
+
+.setpin-sub {
+  margin-top: var(--space-4); /* tight pairing with the title */
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* "Step 1 of 2" — also used inside the Change PIN dialog */
+.step-label {
+  margin-top: var(--space-16);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.setpin-prompt {
+  margin-top: var(--space-4);
+  font-size: var(--text-13);
+}
+
+/* Focused only so screen readers announce the step (keypad layout); not a control, no ring. */
+.setpin-prompt:focus {
+  outline: none;
+}
+
+.setpin-hint {
+  margin-top: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* Space before the dots, whether or not the hint is showing */
+.setpin-card .pin-entry {
+  margin-top: var(--space-12);
+}
+
+.setpin-card .notice {
+  max-width: 300px;
+  margin-top: var(--space-12);
+}
+
+/* "Back" and "Not you? Sign out" side by side */
+.setpin-links {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-24);
+  margin-top: var(--space-16);
+}
+
+/* ===== Shell (signed-in frame) ===== */
+.shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.shell-main {
+  flex: 1;
+  min-width: 0; /* allows this column to shrink on narrow screens (no sideways scroll) */
+  display: flex;
+  flex-direction: column;
+}
+
+.shell-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ===== Rail (left navigation) — hidden on phones ===== */
+.rail {
+  display: none;
+}
+
+/* Tablet (and any touch screen 640px+): 72px rail, labels always under the icons */
+@media (min-width: 640px) {
+  .rail {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+    width: var(--rail-width-labeled);
+    padding: var(--space-8) 0;
+    border-right: 1px solid var(--color-border);
+  }
+
+  .rail-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-4);
+    width: 64px;
+    min-height: 56px;
+    padding: var(--space-4) 0;
+    border: none;
+    border-radius: var(--radius-control);
+    background: none;
+    color: var(--color-text-secondary);
+  }
+
+  .rail-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4) var(--space-12);
+    border-radius: var(--radius-control);
+  }
+
+  .rail-item.is-current {
+    color: var(--color-blue);
+  }
+
+  .rail-item.is-current .rail-icon {
+    background: var(--color-blue-tint);
+  }
+
+  .rail-label {
+    font-size: var(--text-12);
+    line-height: 1.3;
+  }
+}
+
+/* PC (wide AND mouse): 52px icon-only rail; label bubble on hover and keyboard focus */
+@media (min-width: 1024px) and (pointer: fine) {
+  .rail {
+    gap: var(--space-8);
+    width: var(--rail-width);
+    padding: var(--space-12) 0;
+  }
+
+  .rail-item {
+    width: 36px;
+    height: 36px;
+    min-height: 0;
+    padding: 0;
+    gap: 0;
+  }
+
+  .rail-icon {
+    padding: 0;
+  }
+
+  .rail-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .rail-item.is-current {
+    background: var(--color-blue-tint);
+  }
+
+  .rail-item.is-current .rail-icon {
+    background: none;
+  }
+
+  .rail-item:hover:not(.is-current) {
+    background: var(--color-surface); /* light gray highlight; the current item keeps its tint */
+  }
+
+  /* The dark label bubble, to the right of the icon. No fade: it appears instantly. */
+  .rail-label {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: calc(100% + var(--space-8));
+    transform: translateY(-50%);
+    z-index: 30;
+    padding: var(--space-4) var(--space-8);
+    border-radius: var(--radius-tag);
+    background: var(--color-tooltip-bg);
+    color: var(--color-on-blue);
+    font-size: var(--text-13);
+    line-height: 1.5;
+    white-space: nowrap;
+    pointer-events: none; /* the bubble never blocks clicks */
+  }
+
+  /* Small triangle on the bubble's left edge, pointing at the icon */
+  .rail-label::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 100%;
+    transform: translateY(-50%);
+    border: 5px solid transparent;
+    border-right-color: var(--color-tooltip-bg);
+  }
+
+  .rail-item:hover .rail-label,
+  .rail-item:focus-visible .rail-label {
+    display: block;
+  }
+}
+
+/* ===== Bottom bar (phones only) ===== */
+.bottombar {
+  display: flex;
+  flex: none;
+  justify-content: space-around;
+  padding: var(--space-4) 0 calc(var(--space-8) + env(safe-area-inset-bottom)); /* clears the iPhone home bar */
+  border-top: 1px solid var(--color-border);
+}
+
+.bottombar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4); /* icon-to-label gap */
+  min-width: 64px;
+  min-height: 48px;
+  padding: 0; /* remove the browser's default button padding */
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.bottombar-item.is-current {
+  color: var(--color-blue);
+}
+
+@media (min-width: 640px) {
+  .bottombar {
+    display: none;
+  }
+}
+
+/* ===== Top bar ===== */
+.topbar {
+  position: relative; /* the account dropdown is positioned against this bar */
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-8);
+  height: var(--topbar-height);
+  padding: 0 var(--space-12);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.topbar-spacer {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ===== Location switcher ===== */
+.loc {
+  display: flex;
+  flex: none;
+  height: var(--control-height);
+  border: 1px solid var(--color-border-control); /* 3:1 control border (v0.26); dividers inside stay light */
+  border-radius: var(--radius-control);
+}
+
+.loc-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-12);
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  white-space: nowrap;
+}
+
+.loc-option + .loc-option {
+  border-left: 1px solid var(--color-border);
+}
+
+/* Round the outer corners (7px = the 8px outline minus its 1px border) */
+.loc-option:first-child {
+  border-radius: 7px 0 0 7px;
+}
+
+.loc-option:last-child {
+  border-radius: 0 7px 7px 0;
+}
+
+.loc-option.is-active {
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+}
+
+.loc-option:focus-visible {
+  z-index: 1; /* keep the focus ring on top of the neighbouring option */
+}
+
+/* ===== Account menu ===== */
+.avatar-button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+}
+
+.avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-border-control); /* the initials button is a control: 3:1 border (v0.26) */
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-12);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.avatar--open {
+  outline: 2px solid var(--color-blue); /* ring while the menu is open */
+  outline-offset: 2px;
+}
+
+.avatar--large {
+  width: 56px;
+  height: 56px;
+  border: none;
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+  font-size: var(--text-20);
+}
+
+.account-backdrop {
+  display: none; /* only used on phones */
+}
+
+/* PC / tablet: dropdown under the initials, right-aligned with them */
+.account-panel {
+  position: absolute;
+  top: calc(100% + var(--space-4));
+  right: var(--space-12);
+  z-index: 20;
+  width: 248px;
+  padding: var(--space-4) 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); /* the one place a subtle shadow is allowed */
+}
+
+.account-grab {
+  display: none; /* the little handle only shows on the phone sheet */
+}
+
+.account-who {
+  margin-bottom: var(--space-4);
+  padding: var(--space-8) var(--space-12);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.account-name {
+  font-size: var(--text-13);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.account-meta {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  overflow-wrap: anywhere; /* long emails wrap instead of overflowing */
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  height: var(--control-height);
+  padding: 0 var(--space-12);
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font-size: var(--text-13);
+  text-align: left;
+}
+
+.menu-item:focus-visible {
+  background: var(--color-surface);
+}
+
+/* Drawn just inside the row so the panel edge can never cut the ring off */
+.menu-item:focus-visible {
+  outline-offset: -2px;
+}
+
+.menu-icon {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.menu-value {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* Worcester / Shrewsbury under "This device": text lines up with the row label above */
+.menu-subitem {
+  padding-left: 36px; /* 12px edge + 16px icon + 8px gap */
+}
+
+.menu-check {
+  flex: none;
+  margin-left: auto;
+  color: var(--color-blue);
+}
+
+.menu-separator {
+  margin: var(--space-4) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+/* ===== Account dialogs (AccountDialog.jsx: Change PIN, Change password) ===== */
+/* PC / tablet: a box in the middle of a dimmed page. */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-16);
+  background: var(--color-backdrop);
+}
+
+.dialog {
+  width: 360px;
+  max-width: 100%;
+  max-height: 100%;
+  overflow-y: auto; /* a short screen scrolls inside the box instead of cutting it off */
+  padding: var(--space-24);
+  border-radius: 12px; /* as in the approved mockup — a recorded exception to the radius tokens */
+  background: var(--color-bg);
+}
+
+/* The dialog box / phone page can hold focus between steps; it isn't a control, so no ring. */
+.dialog:focus,
+.dialog-page:focus {
+  outline: none;
+}
+
+.dialog-title {
+  margin-bottom: var(--space-4);
+  font-size: var(--text-16);
+}
+
+/* Change password has no step line, so its title needs the space itself. */
+.dialog-form {
+  margin-top: var(--space-12);
+}
+
+/* "Step 1 of 3" under the title */
+.dialog-step {
+  margin-bottom: var(--space-16);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* "Confirm it's you" / "Choose a 4-digit PIN" */
+.dialog-step-heading {
+  font-size: var(--text-14);
+}
+
+/* Focused only so screen readers announce the step (keypad layout); not a control, no ring. */
+.dialog-step-heading:focus {
+  outline: none;
+}
+
+.dialog-step-sub {
+  margin: var(--space-4) 0 var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.dialog-step-hint {
+  margin-top: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.dialog-pin .notice {
+  margin-top: var(--space-12);
+}
+
+.dialog-pin .pin-entry {
+  margin-top: var(--space-12);
+}
+
+.dialog-form-error {
+  margin-top: var(--space-12);
+}
+
+/* Cancel + primary (or Back + Cancel), right-aligned */
+.dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-8);
+  margin-top: var(--space-16);
+}
+
+/* "Back" next to Cancel gets some room so the two are clearly separate */
+.dialog-actions .link-button {
+  margin-right: var(--space-8);
+}
+
+/* Phone: a full-screen page with a back arrow (covers the whole app, like a new screen). */
+.dialog-page {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+
+.dialog-page-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-4);
+  height: var(--topbar-height);
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dialog-page-title {
+  font-size: var(--text-16);
+}
+
+.dialog-page-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-16) var(--space-16) calc(var(--space-16) + env(safe-area-inset-bottom));
+}
+
+.dialog-page-body .dialog-form {
+  margin-top: 0;
+}
+
+.dialog-page-submit {
+  margin-top: var(--space-16);
+}
+
+/* ===== Toast (Toast.jsx) — bottom-right on PC and tablet ===== */
+.toast-region {
+  position: fixed;
+  right: var(--space-24);
+  bottom: var(--space-24);
+  z-index: 50;
+  pointer-events: none; /* never blocks clicks on what's underneath */
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--color-toast-bg);
+  color: var(--color-on-blue); /* white */
+  font-size: var(--text-13);
+}
+
+/* The toast itself takes the pointer (so hovering it pauses the 5 seconds, and Undo works). */
+.toast {
+  pointer-events: auto;
+}
+
+.toast-icon {
+  flex: none;
+}
+
+/* With an Undo button: text · thin divider · Undo (approved Testing mockup) */
+.toast--action {
+  min-height: 40px;
+  padding: 0 var(--space-4) 0 var(--space-12);
+}
+
+.toast-undo {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-4);
+  height: 32px;
+  padding: 0 var(--space-8);
+  border: none;
+  border-left: 1px solid var(--color-toast-divider);
+  background: none;
+  color: var(--color-on-blue); /* white */
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+/* A white ring: the usual blue one would hardly show on the near-black toast */
+.toast-undo:focus-visible {
+  outline-color: var(--color-on-blue);
+  outline-offset: -2px;
+}
+
+/* ===== Home ===== */
+.home {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: var(--space-24);
+}
+
+.welcome {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding-bottom: var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.welcome-title {
+  font-size: var(--text-20);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.welcome-sub {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.home-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-24);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+  text-align: center;
+}
+
+/* ===== Setup-needed message (developers only) ===== */
+.setup-card {
+  max-width: 480px;
+  padding: var(--space-24);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.setup-title {
+  margin-bottom: var(--space-8);
+  font-size: var(--text-16);
+}
+
+.setup-card p + p {
+  margin-top: var(--space-8);
+}
+
+/* ===== Hover highlights — only on devices that can really hover (a mouse) =====
+   On touch screens a "hover" style sticks after a tap, so these stay out of there. */
+@media (hover: hover) {
+  .btn:hover,
+  .keypad-key:hover,
+  .menu-item:hover,
+  .icon-button:hover {
+    background: var(--color-surface);
+  }
+
+  .btn-primary:hover {
+    border-color: var(--color-blue-hover);
+    background: var(--color-blue-hover);
+  }
+
+  .link-button:hover {
+    text-decoration: underline;
+  }
+
+  .loc-option:hover:not(.is-active) {
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+}
+
+/* ===== Touch screens: bigger controls, 44px tap areas (guidelines 2.5) ===== */
+@media (pointer: coarse) {
+  .btn {
+    height: var(--control-height-touch);
+  }
+
+  .btn::after {
+    content: '';
+    position: absolute;
+    inset: -4px 0; /* invisible: 36px button + 2 × 4px = 44px tap height */
+  }
+
+  .input {
+    height: var(--control-height-touch);
+    font-size: var(--text-16); /* 16px stops iPhones/iPads zooming in when the field is tapped */
+  }
+
+  .link-button {
+    min-height: var(--tap-size);
+    padding: 0 var(--space-8);
+  }
+
+  .loc {
+    height: var(--control-height-touch);
+  }
+
+  /* At least 44px wide too, so the short "Both" option is a full-size tap target */
+  .loc-option {
+    min-width: var(--tap-size);
+    justify-content: center;
+  }
+
+  .loc-option::after {
+    content: '';
+    position: absolute;
+    inset: -5px 0; /* invisible: 34px inside + 2 × 5px = 44px tap height */
+  }
+
+  .avatar-button {
+    width: var(--tap-size);
+    height: var(--tap-size);
+  }
+
+  .menu-item {
+    height: var(--tap-size);
+  }
+
+  .toast--action {
+    min-height: var(--tap-size);
+  }
+
+  .toast-undo {
+    height: var(--tap-size);
+  }
+
+  .signin-card {
+    width: 360px;
+  }
+
+  /* A little tighter so the keypad fits in the dialog on a tablet */
+  .dialog-step {
+    margin-bottom: var(--space-12);
+  }
+}
+
+/* ===== Phones (narrower than 640px) ===== */
+@media (max-width: 639.98px) {
+  .input {
+    height: var(--control-height-touch);
+    font-size: var(--text-16);
+  }
+
+  /* Sign-in: no card outline, the one full-width submit button is allowed here */
+  .signin-card {
+    width: 100%;
+    max-width: 400px;
+    padding: 0 var(--space-8);
+    border: none;
+  }
+
+  .signin-button {
+    width: 100%;
+  }
+
+  .signin-forgot {
+    text-align: center;
+  }
+
+  .lock-card,
+  .setpin-card {
+    padding: 0;
+    border: none;
+  }
+
+  /* Toast: bottom-center, just above the bottom navigation bar */
+  .toast-region {
+    right: var(--space-16);
+    bottom: calc(var(--bottombar-height) + var(--space-8) + env(safe-area-inset-bottom));
+    left: var(--space-16);
+    display: flex;
+    justify-content: center;
+  }
+
+  /* A long toast wraps instead of running off a narrow phone */
+  .toast {
+    max-width: 100%;
+  }
+
+  .toast-text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .home {
+    padding: var(--space-16);
+  }
+
+  .loc-option {
+    padding: 0 var(--space-8); /* keeps the top bar inside a 320px-wide phone */
+  }
+
+  /* Account menu becomes a sheet sliding up from the bottom over a dimmed page */
+  .account-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 19;
+    background: var(--color-backdrop);
+  }
+
+  .account-panel {
+    position: fixed;
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: var(--space-8) 0 calc(var(--space-16) + env(safe-area-inset-bottom));
+    border: none;
+    border-radius: 16px 16px 0 0;
+    box-shadow: none;
+    overscroll-behavior: contain; /* a drag on the sheet never scrolls or refreshes the page behind */
+  }
+
+  .account-grab {
+    display: block;
+    width: 36px;
+    height: 4px;
+    margin: var(--space-4) auto var(--space-8);
+    border-radius: 2px;
+    background: var(--color-border-strong);
+  }
+
+  .account-who {
+    padding: var(--space-8) var(--space-16) var(--space-12);
+  }
+
+  .menu-item {
+    padding: 0 var(--space-16);
+  }
+
+  .menu-subitem {
+    padding-left: 40px; /* 16px edge + 16px icon + 8px gap */
+  }
+}
+
+/* Phone sheet: after a short swipe down (not far enough to close), it slides back up.
+   No slide while the finger is still dragging it (.is-dragging), and none at all for people
+   who have asked their device for less motion (prefers-reduced-motion). */
+@media (max-width: 639.98px) and (prefers-reduced-motion: no-preference) {
+  .account-panel {
+    transition: transform 150ms ease-out;
+  }
+
+  .account-panel.is-dragging {
+    transition: none;
+  }
+}
+
+/* ===== src/styles/testing.css (copied from the app) ===== */
+/*
+  testing.css — the styles for Testing → Classes and ranks (contract 0003, approved mockup
+  docs/Testing/Color Belt Testing/TKD-Testing-Classes-Ranks-Mockups.html).
+  Why it exists: app.css holds the dashboard-wide styles; this file holds the new section's
+  own pieces, so they're easy to find. Every value comes from tokens.css or the 4px grid.
+
+  Screen-size rules used below (same as app.css):
+    Phone          (max-width: 639.98px)
+    PC             (min-width: 1024px) and (pointer: fine)  → grips, hover
+    Touch screens  (pointer: coarse)                        → 48px rows, 44px tap areas
+  The list also gets these classes from ClassesRanksTab.jsx, because a few sizes depend on
+  who is looking as well as on the device:
+    .has-grip  PC admin (the grip column)    .is-touch  touch screen    .is-staff  view only
+*/
+
+/* ===== Page frame ===== */
+.testing {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  /* Bottom: room for the toast (40px, 24px from the edge) + 16px, so it never covers the last row */
+  padding: var(--space-24) var(--space-24) calc(40px + var(--space-24) + var(--space-16));
+}
+
+/* "Scroll into view" (e.g. a newly added class) also keeps clear of the toast */
+.shell-content:has(.testing) {
+  scroll-padding-bottom: calc(40px + var(--space-24) + var(--space-16));
+}
+
+/* Header: "Testing" + the school, and the Add class button on the right */
+.phead {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-12);
+  margin-bottom: var(--space-8);
+}
+
+.phead-titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.ptitle {
+  font-size: var(--text-20);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.psub {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* Tab bar (only "Classes and ranks" until phase 2) */
+.ttabs {
+  display: flex;
+  flex: none;
+  gap: var(--space-24);
+  margin-bottom: var(--space-16);
+  /* Phase 4 (contract 0014 §5.1): three tabs don't fit a 320px phone, so the bar scrolls
+     sideways instead of wrapping (the current tab is scrolled into view, Testing.jsx). The gray
+     line is an inner shadow (not a border), so the blue underline still sits on it inside the
+     scrolling box. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none; /* no scrollbar drawn; a finger or the arrow keys scroll it */
+  box-shadow: inset 0 -1px 0 var(--color-border);
+}
+
+.ttabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Phase 4 (rulebook v0.401): Private testing sits at the far right of the tab bar, out of the
+   way. margin-left: auto pushes it right when there is room; when the bar is too narrow and
+   scrolls (phones), the auto margin is simply 0 and the tabs sit side by side. */
+.ttab--end {
+  margin-left: auto;
+}
+
+.ttab {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 40px;
+  border-bottom: 2px solid transparent; /* the blue underline (current tab) covers the gray line */
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.ttab.is-current {
+  border-bottom-color: var(--color-blue);
+  color: var(--color-blue);
+  font-weight: 500;
+}
+
+.ttab:focus-visible {
+  outline-offset: -2px;
+}
+
+.viewonly {
+  margin: calc(-1 * var(--space-4)) 0 var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* ===== Both: choose a school ===== */
+.blocked {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-16);
+  padding: var(--space-24);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+  text-align: center;
+}
+
+.blocked-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-8);
+}
+
+/* ===== Error banner (ErrorBanner.jsx) — amber, never red ===== */
+.errbar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--text-13);
+}
+
+.errbar-icon {
+  flex: none;
+}
+
+.errbar-text {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-4) 0;
+}
+
+.errbar-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* ===== Small pieces shared by the list and the dialogs ===== */
+
+/* Icon button: a 28px square you can see; on touch screens the button is a 44px tap area. */
+.tib {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-secondary);
+}
+
+.tib-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-control);
+}
+
+.tib {
+  position: relative; /* anchor for the tooltip */
+}
+
+/* While its ⋯ menu is open, the button stays "pressed" (gray square) */
+.tib[aria-expanded='true'] .tib-box {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+/* Tooltip bubble (PC only, see the hover section at the bottom): the same words as the
+   button's aria-label, above the button, right edges lined up so it never runs off the page. */
+.tib-tip,
+.grip-tip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + var(--space-8));
+  z-index: 30;
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-tag);
+  background: var(--color-tooltip-bg);
+  color: var(--color-on-blue);
+  font-size: var(--text-13);
+  font-weight: 400;
+  line-height: 1.5;
+  white-space: nowrap;
+  pointer-events: none; /* the bubble never blocks clicks */
+}
+
+.tib-tip {
+  right: 0;
+}
+
+/* Small triangle under the bubble, pointing at the button */
+.tib-tip::after,
+.grip-tip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  border: 5px solid transparent;
+  border-top-color: var(--color-tooltip-bg);
+}
+
+.tib-tip::after {
+  right: 9px;
+}
+
+/* Compact outline button ("Add rank", staff "View"): 28px with a mouse */
+.btn-sm,
+.btn-view {
+  height: 28px;
+  padding: 0 var(--space-12);
+}
+
+.tapbox {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Tags: one per row at most. Neutral gray, or amber for "Not saved". */
+.ttag {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 2px var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-tag);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.ttag--warn {
+  border-color: var(--color-tag-warn-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+/* The amber "Final award not set" reminder (icon + words, never color alone) */
+.tfwarn {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.tfwarn svg {
+  flex: none;
+}
+
+/* ===== The class list ===== */
+.clist {
+  flex: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.cblock + .cblock {
+  border-top: 1px solid var(--color-border);
+}
+
+/* Faded while it's being dragged (the lifted copy shows where it's going) */
+.cblock.is-drag-origin > .cline,
+.rrow.is-drag-origin,
+.prow.is-drag-origin {
+  opacity: 0.35;
+}
+
+/* One class line: [grip] chevron · name · count ………… Edit ⋯ */
+.cline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  height: 40px;
+  padding: 0 var(--space-4) 0 var(--space-8);
+  font-size: var(--text-13);
+}
+
+.ctoggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text);
+  text-align: left;
+}
+
+.ctoggle:focus-visible {
+  outline-offset: -2px;
+}
+
+.ctoggle-box {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.cname {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ccount {
+  flex: none;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  white-space: nowrap;
+}
+
+.ctoggle-chevron {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.acts {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
+}
+
+/* The grip handle (PC only) */
+.grip {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: grab;
+}
+
+/* No room above (top of the scrolling area): the bubble goes below, its triangle pointing up */
+[data-tip='below'] > .tib-tip,
+[data-tip='below'] > .grip-tip {
+  top: calc(100% + var(--space-8));
+  bottom: auto;
+}
+
+[data-tip='below'] > .tib-tip::after,
+[data-tip='below'] > .grip-tip::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: var(--color-tooltip-bg);
+}
+
+/* A finger on the grip drags the row instead of scrolling the page (v0.63). Only the grip:
+   anywhere else on the row, a finger still scrolls. */
+.grip {
+  touch-action: none;
+  -webkit-touch-callout: none; /* no long-press menu on iPhones */
+}
+
+/* ----- Belt pictures (Belt.jsx, v0.64) ----- */
+.belt {
+  display: inline-block;
+  flex: none;
+  vertical-align: middle;
+}
+
+/* PC/tablet: belt + name side by side */
+.rk-belt-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+/* Phone line 1: "[belt] Yellow → [belt] Orange" — two units that only break before the arrow */
+.belt-name {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.belt-name .belt {
+  margin: -2px 6px 0 0;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+/* The grip's tooltip goes above it, starting at its left edge (so it doesn't cover the name) */
+.grip-tip {
+  left: 0;
+}
+
+.grip-tip::after {
+  left: 7px;
+}
+
+html.is-reordering .grip-tip,
+html.is-reordering .tib-tip {
+  display: none !important; /* no tooltips while dragging */
+}
+
+/* ===== Rank table (PC and tablet) ===== */
+/* Left padding lines the rank names up under the class name:
+   mouse 44px (8 + 28 chevron + 8), PC admin 40px + the 24px grip column + 12px gap = 76px,
+   touch 48px (the 44px chevron tap area + 4px). */
+.rhead,
+.rrow {
+  display: grid;
+  align-items: center;
+  column-gap: var(--space-12);
+  padding: 0 var(--space-4) 0 44px;
+  border-top: 1px solid var(--color-border);
+}
+
+.has-grip .rhead,
+.has-grip .rrow {
+  padding-left: 40px;
+}
+
+.is-staff .rhead,
+.is-staff .rrow {
+  padding-right: var(--space-16);
+}
+
+.rhead {
+  height: 32px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.rrow {
+  position: relative;
+  min-height: 40px;
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-4);
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+/* Arrow-key focus on a row: the 2px blue ring, drawn inside the row */
+.rrow:focus-visible,
+.prow:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+.rcell {
+  min-width: 0;
+}
+
+.rk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+}
+
+.rk-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The rank open in a dialog right now (blue "selected" tint, as mocked up) */
+.rrow.is-selected,
+.prow.is-selected {
+  background: var(--color-blue-tint);
+}
+
+.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.rcell-acts {
+  justify-self: end;
+}
+
+/* "Add rank" under an open class, and the empty-class line */
+.addrow,
+.emptyrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-8) var(--space-8) var(--space-8) 44px;
+  border-top: 1px solid var(--color-border);
+}
+
+.has-grip .addrow,
+.has-grip .emptyrow {
+  padding-left: 76px;
+}
+
+.emptyrow {
+  padding-top: var(--space-12);
+  padding-bottom: var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* The 2px blue line where a dragged row will land (height 0, so nothing jumps) */
+.dropline {
+  position: relative;
+  z-index: 3;
+  height: 0;
+  margin: -1px 0 -1px 40px;
+  border-top: 2px solid var(--color-blue);
+}
+
+.dropline--class {
+  margin-left: 0;
+}
+
+/* The lifted row during a drag: a gray card in the list at the landing spot (or in place,
+   before it has moved), slightly set in from the left like the approved mockup. */
+.rrow.is-lifted,
+.cline.is-lifted {
+  position: relative;
+  z-index: 2;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+}
+
+/* (.clist in front: must win over the touch-screen grip padding further down) */
+.clist .rrow.is-lifted {
+  margin: var(--space-4) calc(-1 * var(--space-4)) var(--space-4) 32px;
+  padding-left: var(--space-8);
+}
+
+.cline.is-lifted {
+  margin: var(--space-4) calc(-1 * var(--space-4)) var(--space-4) var(--space-8);
+}
+
+/* While dragging: no text selection anywhere, and the grabbing hand */
+html.is-reordering,
+html.is-reordering * {
+  cursor: grabbing !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ===== Phone rank rows (two lines) ===== */
+.prow {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  padding: var(--space-4) 0 var(--space-4) var(--space-16);
+  border-top: 1px solid var(--color-border);
+  cursor: pointer;
+}
+
+.prow-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.l1 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--space-8);
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.l1 > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.l1b {
+  margin: 2px 0;
+}
+
+.l2 {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.l2 span {
+  white-space: nowrap;
+}
+
+.prow .tapbox {
+  margin-right: var(--space-8);
+}
+
+/* ===== Empty school, skeleton ===== */
+.tempty {
+  padding: var(--space-32) var(--space-16);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+  text-align: center;
+}
+
+.tskeleton-row {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 var(--space-16);
+}
+
+.tskeleton-row + .tskeleton-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.tskeleton-bar {
+  width: 40%;
+  height: 12px;
+  border-radius: var(--radius-tag);
+  background: var(--color-surface);
+}
+
+/* ===== ⋯ menu: dropdown (PC / tablet) ===== */
+.tmenu {
+  position: fixed;
+  z-index: 45;
+  width: 200px;
+  padding: var(--space-4) 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); /* the same subtle shadow as the account menu */
+}
+
+.tmenu-item {
+  white-space: nowrap;
+}
+
+/* Red means delete — and only delete (guidelines 7) */
+.tmenu-item--danger,
+.tmenu-item--danger .menu-icon {
+  color: var(--color-delete-text);
+}
+
+.tmenu-item--danger:focus-visible {
+  background: var(--color-delete-bg);
+}
+
+/* Unavailable (e.g. Move up on the first item): gray, still reachable for screen readers */
+.tmenu-item.is-disabled,
+.tmenu-item.is-disabled .menu-icon {
+  color: var(--color-disabled-text);
+  cursor: default;
+}
+
+/* ===== ⋯ menu: bottom sheet (phone) ===== */
+.tsheet-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+}
+
+.tsheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--color-backdrop);
+}
+
+.tsheet {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: var(--space-8) 0 calc(var(--space-16) + env(safe-area-inset-bottom));
+  border-radius: 16px 16px 0 0;
+  background: var(--color-bg);
+  overscroll-behavior: contain;
+}
+
+.tsheet .account-grab {
+  display: block;
+  width: 36px;
+  height: 4px;
+  margin: var(--space-4) auto var(--space-8);
+  border-radius: 2px;
+  background: var(--color-border-strong);
+}
+
+.tsheet-head {
+  margin-bottom: var(--space-4);
+  padding: var(--space-4) var(--space-16) var(--space-8);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tsheet-title {
+  font-size: var(--text-14);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.tsheet-sub {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.tmenu-cancel {
+  justify-content: center;
+  font-weight: 500;
+}
+
+/* ===== Dialogs (Dialog.jsx) ===== */
+.tdialog {
+  border-radius: var(--radius-dialog);
+}
+
+/* Dialog.jsx boxes sit near the top, not in the middle (v0.80): a message appearing inside only
+   pushes what's below it down. 10% of the screen height, at least 16px and at most 96px; the
+   box can still use the rest of the height and scrolls inside when it's taller. */
+.dialog-backdrop--top {
+  align-items: flex-start;
+  padding-top: max(var(--space-16), min(10vh, 96px));
+}
+
+.tdialog--detail {
+  width: 440px;
+}
+
+/* Edit / Add rank: 520px on tablets (nine swatches fit one row), 760px on the PC with two
+   columns — details on the left, the Belt section on the right */
+.tdialog--medium {
+  width: 520px;
+}
+
+.tdialog--wide {
+  width: 760px;
+}
+
+.rank-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-32);
+}
+
+/* The Cancel / Save row (with any note under it, v0.81, inside .dialog-footer) stays pinned to
+   the bottom of the dialog while the middle scrolls, so it's never below the fold on a short
+   screen (e.g. a 1366×768 laptop). */
+.tdialog .dialog-footer > .dialog-actions {
+  margin: 0;
+}
+
+.tdialog .dialog-footer > .tdialog-note {
+  margin-top: var(--space-8);
+}
+
+.tdialog .dialog-footer,
+.tdialog > .dialog-actions,
+.tdialog form > .dialog-actions {
+  position: sticky;
+  bottom: calc(-1 * var(--space-24)); /* the dialog's own bottom padding */
+  z-index: 2;
+  margin: var(--space-16) calc(-1 * var(--space-24)) calc(-1 * var(--space-24));
+  padding: var(--space-12) var(--space-24) var(--space-24);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+.tdialog--confirm .dialog-actions,
+.tdialog--small .dialog-footer,
+.tdialog--small > .dialog-actions,
+.tdialog--small form > .dialog-actions {
+  position: static;
+  margin: var(--space-16) 0 0;
+  padding: 0;
+  border-top: none;
+}
+
+/* Short screens (e.g. a tablet in landscape): small dialogs pin their Cancel / Save row too,
+   like the big ones above, so it never ends up below the visible part (e.g. Reset PIN with the
+   keypad at 820×600). */
+@media (max-height: 699.98px) {
+  .tdialog--small .dialog-footer,
+  .tdialog--small > .dialog-actions,
+  .tdialog--small form > .dialog-actions {
+    position: sticky;
+    margin: var(--space-16) calc(-1 * var(--space-24)) calc(-1 * var(--space-24));
+    padding: var(--space-12) var(--space-24) var(--space-24);
+    border-top: 1px solid var(--color-border);
+  }
+}
+
+/* DeleteDialog (never pinned): its note comes right after Cancel / Delete (v0.81) */
+.tdialog--confirm .dialog-actions + .tdialog-note {
+  margin-top: var(--space-8);
+}
+
+/* A message scrolled into view (Dialog.jsx) stops above the pinned Cancel / Save row, not
+   behind it */
+.tdialog .notice,
+.tdialog-page .notice {
+  scroll-margin-bottom: 96px;
+}
+
+/* Phone page: the full-width Save stays pinned to the bottom of the screen */
+.tdialog-page .dialog-page-submit {
+  position: sticky;
+  bottom: calc(-1 * (var(--space-16) + env(safe-area-inset-bottom)));
+  z-index: 2;
+  margin: var(--space-16) calc(-1 * var(--space-16)) calc(-1 * (var(--space-16) + env(safe-area-inset-bottom)));
+  padding: var(--space-12) var(--space-16) calc(var(--space-16) + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--color-border);
+  background: var(--color-bg);
+}
+
+/* "Testing for" in the dialog: the next rank's belt, then its name */
+.ro-belt-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.tdialog-sub {
+  margin-bottom: var(--space-16);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.tdialog-page .tdialog-sub {
+  margin-bottom: var(--space-12);
+}
+
+.tdialog--confirm .tdialog-body {
+  margin-bottom: 0;
+}
+
+/* Read-only lines: a gray label above, the value under it */
+.ro {
+  margin-bottom: var(--space-12);
+  font-size: var(--text-13);
+}
+
+.ro-label,
+.field-label {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.ro-value {
+  overflow-wrap: anywhere;
+}
+
+.ro-muted {
+  color: var(--color-text-secondary);
+}
+
+.ro-muted-line {
+  color: var(--color-text-secondary);
+}
+
+.tdialog-divider {
+  margin: var(--space-4) 0 var(--space-12);
+  border-top: 1px solid var(--color-border);
+}
+
+.tdialog-group {
+  margin-bottom: var(--space-8);
+}
+
+.tdialog-copied {
+  margin: calc(-1 * var(--space-4)) 0 var(--space-8);
+}
+
+/* The three prices: side by side on PC and tablet, stacked on the phone */
+.tprices,
+.ro-prices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-12);
+}
+
+.tprices .field,
+.ro-prices .ro {
+  margin-bottom: 0;
+}
+
+.tprices.is-stacked,
+.ro-prices.is-stacked {
+  display: block;
+}
+
+.tprices.is-stacked .field,
+.ro-prices.is-stacked .ro {
+  margin-bottom: var(--space-12);
+}
+
+.ro-prices.is-stacked {
+  margin-bottom: 0;
+}
+
+.tdialog-hint {
+  margin: var(--space-4) 0 var(--space-12);
+}
+
+/* A price field with "$" in front */
+.money {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: var(--control-height);
+  padding: 0 var(--space-12);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  font-size: var(--text-13);
+}
+
+.tprices.is-stacked .money {
+  width: 120px;
+}
+
+.money:focus-within {
+  border-color: var(--color-blue);
+  outline: 2px solid var(--color-blue); /* the focus ring goes round the whole field */
+  outline-offset: 2px;
+}
+
+.money-prefix {
+  margin-right: var(--space-4);
+  color: var(--color-text-secondary);
+}
+
+.money-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: inherit;
+}
+
+.money-input:focus-visible {
+  outline: none; /* drawn on .money instead */
+}
+
+/* Read-only while saving */
+.money.is-readonly,
+.tdialog input.input:read-only,
+.tdialog-page input.input:read-only {
+  background: var(--color-surface);
+}
+
+/* Checkbox (the tick is drawn with CSS: ti-check is kept for Save only) */
+.cbrow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 32px;
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+.cb {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1px solid var(--color-border-control);
+  border-radius: 4px;
+  background: var(--color-bg) center / 12px 12px no-repeat;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.cb:checked {
+  border-color: var(--color-blue);
+  background-color: var(--color-blue);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-4.9' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.cb:disabled {
+  cursor: progress;
+}
+
+.tmeta {
+  margin-top: var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.tdialog-note {
+  margin-top: var(--space-12);
+}
+
+/* "Discard changes" inside the unsaved-changes note (phones, v0.56): a text link in the note's
+   own amber color — not red (nothing is deleted), not blue (no extra blue element). Drawn 32px
+   tall; the invisible ::after stretches the tap area to 44px. */
+.note-action {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 32px;
+  margin-top: var(--space-4);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+.note-action::after {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
+}
+
+/* Save drawn gray while it's unavailable (approved detail 8). Still focusable. */
+.btn-primary.is-unavailable,
+.btn-primary.is-unavailable:hover,
+.btn-primary.is-unavailable:active {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+/* The red Delete button in the confirmation (the confirmation's main button) */
+.btn-delete,
+.btn-delete:hover,
+.btn-delete:active {
+  border-color: var(--color-delete-text);
+  background: var(--color-delete-text);
+  color: var(--color-on-blue);
+}
+
+/* "More details" in Add class */
+.more-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  height: 28px;
+  margin-bottom: var(--space-12);
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* ===== Belt section of the rank dialog (BeltPicker.jsx, v0.65) ===== */
+.belt-picker {
+  margin-bottom: var(--space-4);
+}
+
+/* The live preview (edit dialog): belt + rank name + the belt in words, on a gray card */
+.belt-preview-box {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  margin-bottom: var(--space-12);
+  padding: var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.belt-preview-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.belt-preview-name {
+  font-size: var(--text-13);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.belt-preview-desc {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.belt-row .notice {
+  margin-top: var(--space-8);
+}
+
+/* The read-only belt line (staff view): belt + rank name */
+.belt-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 24px;
+  margin-bottom: var(--space-12);
+  font-size: var(--text-13);
+}
+
+.belt-row {
+  margin-bottom: var(--space-12);
+}
+
+/* "Belt color   Yellow": the label, and the chosen color's name as text */
+.belt-row-label {
+  display: flex;
+  gap: var(--space-8);
+  margin-bottom: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.belt-row-value {
+  color: var(--color-text);
+}
+
+/* Color swatches: a 24px color square in a 32px button (44px on touch screens) */
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.swatch {
+  position: relative; /* anchor for the tooltip */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--radius-control);
+  background: none;
+}
+
+.swatch-color {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--belt-outline); /* so white shows on white */
+  border-radius: 4px;
+}
+
+/* A swatch's name tooltip sits centered above it */
+.swatch .tib-tip {
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.swatch .tib-tip::after {
+  right: auto;
+  left: calc(50% - 5px);
+}
+
+/* The chosen color: a dark ring (not blue — it doesn't count toward the 5 blue elements) */
+.swatch.is-checked {
+  border-color: var(--color-text);
+}
+
+.swatch:focus-visible {
+  outline-offset: 1px;
+}
+
+/* Pattern: three joined buttons, the chosen one tinted (like the location switcher) */
+.segmented {
+  display: inline-flex;
+  max-width: 100%;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+}
+
+.segment {
+  position: relative;
+  height: 30px;
+  padding: 0 var(--space-12);
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+  white-space: nowrap;
+}
+
+.segment + .segment {
+  border-left: 1px solid var(--color-border);
+}
+
+.segment:first-child {
+  border-radius: 7px 0 0 7px;
+}
+
+.segment:last-child {
+  border-radius: 0 7px 7px 0;
+}
+
+.segment.is-checked {
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+}
+
+.segment:focus-visible {
+  z-index: 1;
+}
+
+/* End stripes: − n + */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.stepper-btn {
+  width: 32px;
+  padding: 0;
+  font-size: var(--text-16);
+}
+
+/* The stepper's tooltip sits centered above its button */
+.stepper-btn .tib-tip {
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.stepper-btn .tib-tip::after {
+  right: auto;
+  left: calc(50% - 5px);
+}
+
+.stepper-btn[aria-disabled='true'] {
+  color: var(--color-disabled-text);
+  cursor: default;
+}
+
+.stepper-value {
+  min-width: 16px;
+  font-size: var(--text-13);
+  text-align: center;
+}
+
+/* ===== Final award dropdown (FinalAwardSelect.jsx) ===== */
+.fa-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  cursor: pointer;
+}
+
+.fa-field.is-open {
+  border-color: var(--color-blue);
+}
+
+.fa-field.is-readonly {
+  background: var(--color-surface);
+  cursor: progress;
+}
+
+.fa-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fa-chevron {
+  flex: none;
+  color: var(--color-text-secondary);
+}
+
+.fa-list {
+  position: fixed;
+  z-index: 60;
+  margin: 0;
+  padding: var(--space-4) 0;
+  overflow-y: auto;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  list-style: none;
+}
+
+.fa-list,
+.fa-group {
+  list-style: none;
+}
+
+/* An always-visible thin scroll bar: the cue that the list goes on (approved detail 11, v0.51) */
+.fa-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.fa-list::-webkit-scrollbar-thumb {
+  border: 2px solid var(--color-bg);
+  border-radius: 4px;
+  background: var(--color-border-strong);
+}
+
+.fa-list::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+
+/* Browsers without the -webkit- scroll bar styles (Firefox): the standard thin one */
+@supports not selector(::-webkit-scrollbar) {
+  .fa-list {
+    scrollbar-color: var(--color-border-strong) var(--color-bg);
+    scrollbar-width: thin;
+  }
+}
+
+.fa-group {
+  margin: 0;
+  padding: 0;
+}
+
+.fa-heading {
+  padding: var(--space-8) var(--space-12) var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.fa-option {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 var(--space-12);
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+.fa-option.is-active {
+  background: var(--color-surface);
+}
+
+/* The current choice: blue tint (selected state, guidelines 7) */
+.fa-option.is-selected {
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+}
+
+.fa-option.is-selected.is-active {
+  box-shadow: inset 0 0 0 1px var(--color-blue);
+}
+
+/* ===== Tooltips — PC (mouse) only: on hover and on keyboard focus ===== */
+@media (hover: hover) and (pointer: fine) {
+  .tib:hover .tib-tip,
+  .tib:focus-visible .tib-tip,
+  .grip:hover .grip-tip,
+  .grip:focus-visible .grip-tip,
+  .swatch:hover .tib-tip,
+  .swatch:focus-visible .tib-tip,
+  .stepper-btn:hover .tib-tip,
+  .stepper-btn:focus-visible .tib-tip {
+    display: block;
+  }
+
+  /* Pointing at one swatch hides the keyboard-focus tooltip of another (one bubble at a time) */
+  .swatches:hover .swatch:not(:hover) .tib-tip {
+    display: none;
+  }
+
+  /* No tooltip on a ⋯ button whose menu is open (the menu is right there) */
+  .tib[aria-expanded='true'] .tib-tip {
+    display: none;
+  }
+}
+
+/* ===== Hover — mouse only ===== */
+@media (hover: hover) {
+  .tib:hover .tib-box,
+  .ctoggle:hover .ctoggle-box {
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  .grip:hover {
+    background: var(--color-border);
+    color: var(--color-text);
+  }
+
+  .rrow:not(.is-lifted):not(.is-selected):hover,
+  .prow:not(.is-selected):hover {
+    background: var(--color-surface);
+  }
+
+  .tmenu-item--danger:hover {
+    background: var(--color-delete-bg);
+  }
+
+  .tmenu-item.is-disabled:hover {
+    background: none;
+  }
+
+  .more-toggle:hover {
+    color: var(--color-text);
+  }
+}
+
+/* ===== Touch screens: 48px rows, 44px tap areas (guidelines 2.5) ===== */
+@media (pointer: coarse) {
+  .tib {
+    width: var(--tap-size);
+    height: var(--tap-size);
+  }
+
+  /* Belt picker on touch: 44px swatches, 36px pattern buttons with a 44px tap area */
+  .swatch {
+    width: var(--tap-size);
+    height: var(--tap-size);
+  }
+
+  .segment {
+    height: 34px;
+  }
+
+  .segment::after {
+    content: '';
+    position: absolute;
+    inset: -5px 0;
+  }
+
+  .stepper-btn {
+    width: var(--tap-size);
+  }
+
+  /* The grip on touch screens: 16px icon, 44×44 touch area at the left of the row (v0.63) */
+  .grip {
+    width: var(--tap-size);
+    height: var(--tap-size);
+  }
+
+  .acts {
+    gap: 0;
+  }
+
+  .btn-sm,
+  .btn-view {
+    height: var(--control-height-touch);
+  }
+
+  .tapbox {
+    min-width: var(--tap-size);
+    min-height: var(--tap-size);
+  }
+
+  .ttab {
+    height: var(--tap-size);
+  }
+
+  .cline {
+    gap: var(--space-4);
+    height: 48px;
+    padding: 0;
+  }
+
+  .ctoggle {
+    gap: var(--space-4);
+  }
+
+  /* The chevron's tap area is the full 44px square */
+  .ctoggle-box {
+    width: var(--tap-size);
+    height: var(--tap-size);
+  }
+
+  .ctoggle-box + .cname {
+    margin-right: var(--space-4);
+  }
+
+  .rhead,
+  .rrow {
+    padding: 0 0 0 48px;
+  }
+
+  .is-staff .rhead,
+  .is-staff .rrow {
+    padding-right: var(--space-8);
+  }
+
+  .rrow {
+    min-height: 48px;
+  }
+
+  .addrow,
+  .emptyrow {
+    padding: var(--space-4) var(--space-4) var(--space-4) 48px;
+  }
+
+  .emptyrow {
+    padding-top: var(--space-12);
+    padding-bottom: var(--space-12);
+  }
+
+  .tskeleton-row {
+    height: 48px;
+  }
+
+  .tmenu-item.menu-item {
+    height: var(--tap-size);
+  }
+
+  .fa-option {
+    min-height: var(--tap-size);
+  }
+
+  .cbrow {
+    min-height: var(--tap-size);
+  }
+
+  .more-toggle {
+    min-height: var(--tap-size);
+  }
+
+  .money {
+    height: var(--control-height-touch);
+    font-size: var(--text-16); /* 16px stops iPhones/iPads zooming in on the field */
+  }
+
+  .errbar {
+    flex-wrap: wrap;
+    padding: var(--space-8) var(--space-4) var(--space-4) var(--space-12);
+  }
+}
+
+/* Tablet widths (640–1023px): a little less space between columns, so the two name columns
+   (each with a belt picture) fit most names on one line */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .rhead,
+  .rrow {
+    column-gap: var(--space-8);
+  }
+}
+
+/* Touch screens with grips (admins, v0.63): class line = grip 44 + chevron 44 + name, so rank
+   names line up at 96px: 40px padding + the 44px grip column + 12px gap. */
+@media (pointer: coarse) and (min-width: 640px) {
+  .has-grip .rhead,
+  .has-grip .rrow {
+    padding-left: 40px;
+  }
+
+  .has-grip .addrow,
+  .has-grip .emptyrow {
+    padding-left: 96px;
+  }
+}
+
+/* ===== Phones (narrower than 640px) ===== */
+@media (max-width: 639.98px) {
+  /* Bottom: the phone toast sits 8px above the bottom bar (44px tall) + 16px */
+  .testing {
+    padding: var(--space-16) var(--space-16) calc(44px + var(--space-8) + var(--space-16));
+  }
+
+  .shell-content:has(.testing) {
+    scroll-padding-bottom: calc(44px + var(--space-8) + var(--space-16));
+  }
+
+  /* Class names and rank rows start at the 16px gutter (approved detail 3);
+     the chevron comes after the rank count and the whole name area opens/closes the class. */
+  .cline {
+    gap: var(--space-4);
+    height: auto;
+    min-height: 48px;
+    padding: 0 0 0 var(--space-16);
+  }
+
+  .ctoggle {
+    gap: var(--space-8);
+    min-height: 48px;
+  }
+
+  /* A long class name keeps its words whole; the rank count and chevron move to a second line
+     when there's no room (320px phones with the grip) */
+  .cname {
+    min-width: auto;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
+  .ctoggle {
+    flex-wrap: wrap;
+    align-content: center;
+    row-gap: 0;
+  }
+
+  .addrow,
+  .emptyrow {
+    padding: var(--space-4) var(--space-4) var(--space-4) var(--space-16);
+  }
+
+  /* Admin phones have a grip at the far left of every line (v0.63): names start at 48px */
+  .has-grip .cline,
+  .has-grip .prow {
+    padding-left: 0;
+  }
+
+  .has-grip .addrow,
+  .has-grip .emptyrow {
+    padding: var(--space-4) var(--space-4) var(--space-4) 48px;
+  }
+
+  .has-grip .emptyrow {
+    padding-top: var(--space-12);
+    padding-bottom: var(--space-12);
+  }
+
+  /* Color swatches: a fixed grid of 5 per row (5 + 4) */
+  .swatches {
+    display: grid;
+    grid-template-columns: repeat(5, var(--tap-size));
+  }
+
+  .prow-grip {
+    display: flex;
+    flex: none;
+    margin-right: var(--space-4);
+  }
+
+  /* The lifted phone row during a drag */
+  .prow.is-lifted {
+    position: relative;
+    z-index: 2;
+    margin: var(--space-4) calc(-1 * var(--space-4)) var(--space-4) var(--space-4);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    pointer-events: none;
+  }
+
+  .emptyrow {
+    padding-top: var(--space-12);
+    padding-bottom: var(--space-12);
+  }
+
+  .money {
+    height: var(--control-height-touch);
+    font-size: var(--text-16);
+  }
+
+  .errbar {
+    flex-wrap: wrap;
+  }
+}
+
+/* ===== src/styles/prospects.css (copied from the app) ===== */
+/*
+  prospects.css — the look of the Prospects section (rulebook v0.236, approved mockup rev 3), plus
+  the navigation badge and the phone bar's More button.
+  Why it exists: the stage bar and chips, the list and the phone cards, the side panel, the note
+  composer, the timeline and the small dialogs. Buttons, fields, notes, banners, dialogs and menus
+  reuse app.css / testing.css / calendar.css / forms.css (the free-class time cards). Status colors
+  are the 8 class colors (never red); warnings are amber with an icon and words.
+  Screen sizes: phone < 640px, PC ≥ 1024px (panel beside the list), touch = 44px taps.
+*/
+
+.prospects {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: var(--space-24) var(--space-24) calc(40px + var(--space-24) + var(--space-16));
+}
+
+.shell-content:has(.prospects) {
+  scroll-padding-bottom: calc(40px + var(--space-24) + var(--space-16));
+}
+
+.prospects .phead {
+  gap: var(--space-8);
+}
+
+.psection + .psection {
+  margin-top: var(--space-32);
+}
+
+.pschool {
+  margin: 0 0 var(--space-8);
+  font-size: var(--text-16);
+  font-weight: 500;
+}
+
+/* ----- Stage bar ----- */
+.pstages {
+  display: flex;
+  margin-bottom: var(--space-8);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.pstage {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding: var(--space-8) var(--space-12);
+  border: 0;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pstage:last-child {
+  border-right: 0;
+}
+
+.pstage:hover:not(.is-on) {
+  background: var(--color-surface);
+}
+
+.pstage:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+.pstage-n {
+  font-size: var(--text-20);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.pstage-l {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pstage-bar {
+  height: 4px;
+  margin-top: var(--space-4);
+  border-radius: 2px;
+  background: var(--color-border-strong);
+}
+
+.pstage.is-on {
+  background: var(--color-blue-tint);
+}
+
+.pstage.is-on .pstage-l {
+  color: var(--color-blue);
+}
+
+.pstage.is-on .pstage-bar {
+  background: var(--color-blue);
+}
+
+.pstage.is-joined .pstage-bar {
+  background: #9cc26a; /* the green class color's edge (schedule/colors.js) */
+}
+
+.pchips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+}
+
+.pchips-gap {
+  flex: 1;
+}
+
+.pchip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  height: 28px;
+  padding: 0 var(--space-12);
+  border: 1px solid var(--color-border-control);
+  border-radius: 14px;
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--text-12);
+  cursor: pointer;
+}
+
+.pchip.is-on {
+  border-color: var(--color-blue);
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+}
+
+.pchip--today.is-on {
+  border-color: var(--color-tag-warn-border);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.pchip:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+.psearch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 240px;
+  height: var(--control-height);
+  padding: 0 var(--space-8) 0 var(--space-12);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  color: var(--color-text-secondary);
+}
+
+.psearch:focus-within {
+  border-color: var(--color-blue);
+  box-shadow: 0 0 0 1px var(--color-blue);
+}
+
+.psearch-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-13);
+}
+
+.psearch-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.psearch-clear {
+  display: inline-flex;
+  padding: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+/* Phone: tiles */
+.ptiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
+}
+
+.ptile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 52px;
+  padding: var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ptile b {
+  font-size: var(--text-16);
+  font-weight: 500;
+}
+
+.ptile span {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ptile.is-on {
+  border-color: var(--color-blue);
+  background: var(--color-blue-tint);
+}
+
+.ptile.is-on span {
+  color: var(--color-blue);
+}
+
+.ptile--today.is-on {
+  border-color: var(--color-tag-warn-border);
+  background: var(--color-warning-bg);
+}
+
+.ptile--today.is-on span,
+.ptile--today.is-on b {
+  color: var(--color-warning-text);
+}
+
+.pbar--phone .psearch {
+  width: 100%;
+  margin-bottom: var(--space-12);
+}
+
+/* ----- List ----- */
+.pbody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.pbody--side {
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.plist {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.plist-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 2fr) minmax(0, 0.9fr) 120px;
+  column-gap: var(--space-12);
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-12);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-13);
+}
+
+.plist--narrow .plist-row {
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 2fr) 112px;
+}
+
+.plist-head {
+  min-height: 32px;
+  border-top: 0;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.plist-row > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* the whole row opens the prospect (the name button covers it) */
+.plist-row:not(.plist-head) {
+  position: relative;
+}
+
+.plist-row:not(.plist-head):hover {
+  background: var(--color-surface);
+}
+
+.plist-open::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+}
+
+.plist-row.is-selected {
+  background: var(--color-blue-tint);
+}
+
+.plist-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.plist-open {
+  overflow: hidden;
+  color: var(--color-text);
+  font-weight: 500;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.is-warn {
+  color: var(--color-warning-text);
+}
+
+.plist-warn {
+  margin-right: 2px;
+  vertical-align: -2px;
+}
+
+.pdot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-blue);
+}
+
+.pstatus {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-8);
+  border: 1px solid;
+  border-radius: var(--radius-tag);
+  font-size: var(--text-12);
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.pempty {
+  margin: var(--space-8) 0;
+}
+
+/* Phone cards */
+.pcards {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pcard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  min-height: 60px;
+  padding: var(--space-4) 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pcard.is-selected {
+  background: var(--color-blue-tint);
+}
+
+.pcard-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pcard-l1 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.pcard-l2 {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.pcard-l2 .is-warn {
+  color: var(--color-warning-text);
+}
+
+/* ----- Progress track (v0.246): Signed up → Class booked → Came → Joined ----- */
+.ptrack {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ptrk {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+}
+
+.ptrk-step {
+  display: inline-flex;
+  align-items: center;
+}
+
+.ptrk-dot {
+  box-sizing: border-box;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: var(--color-bg);
+}
+
+.ptrk-dot.is-done {
+  border-color: var(--color-success-text);
+  background: var(--color-success-text);
+}
+
+.ptrk-dot.is-next {
+  border-color: var(--color-blue);
+  background: var(--color-blue-tint);
+}
+
+.ptrk-dot.is-stopped {
+  border-color: var(--color-warning-text);
+  background: var(--color-warning-text);
+}
+
+.ptrk-dot.is-off {
+  border-color: var(--color-text-secondary);
+  background: var(--color-text-secondary);
+}
+
+.ptrk-line {
+  width: 10px;
+  height: 2px;
+  background: var(--color-border-strong);
+}
+
+.ptrk-line.is-done {
+  background: var(--color-success-text);
+}
+
+.ptrack-text {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ptrack-text.is-next {
+  color: var(--color-blue);
+  font-weight: 500;
+}
+
+.ptrack-text.is-warn {
+  color: var(--color-warning-text);
+}
+
+.plist-progress {
+  display: flex;
+  align-items: center;
+}
+
+.pcard-l2 .ptrack {
+  margin-top: 2px;
+}
+
+/* the big one at the top of the panel */
+.pbigtrack {
+  margin: var(--space-12) 0;
+}
+
+.pbigtrack-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  padding: var(--space-12) var(--space-4) var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  list-style: none;
+}
+
+.pbigtrack-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  line-height: 16px;
+  text-align: center;
+}
+
+/* the line between two steps, behind the dots */
+.pbigtrack-step + .pbigtrack-step::before {
+  position: absolute;
+  top: 9px;
+  right: 50%;
+  left: -50%;
+  height: 2px;
+  background: var(--color-border-strong);
+  content: '';
+}
+
+.pbigtrack-step.is-done::before,
+.pbigtrack-step.is-next::before,
+.pbigtrack-step.is-stopped::before {
+  background: var(--color-success-text);
+}
+
+.pbigtrack-dot {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-bottom: var(--space-4);
+  border: 2px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: var(--color-bg);
+  color: #fff;
+}
+
+.is-done > .pbigtrack-dot {
+  border-color: var(--color-success-text);
+  background: var(--color-success-text);
+}
+
+.is-next > .pbigtrack-dot {
+  border-width: 3px;
+  border-color: var(--color-blue);
+}
+
+.is-stopped > .pbigtrack-dot {
+  border-color: var(--color-warning-text);
+  background: var(--color-warning-text);
+}
+
+.is-off > .pbigtrack-dot {
+  border-color: var(--color-text-secondary);
+  background: var(--color-text-secondary);
+}
+
+.pbigtrack-name,
+.pbigtrack-date {
+  overflow-wrap: anywhere;
+}
+
+.is-done > .pbigtrack-name {
+  color: var(--color-text);
+}
+
+.is-next > .pbigtrack-name {
+  color: var(--color-blue);
+  font-weight: 500;
+}
+
+.is-stopped > .pbigtrack-name {
+  color: var(--color-warning-text);
+  font-weight: 500;
+}
+
+.pbigtrack-next {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin: var(--space-8) 0 0;
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+  font-size: var(--text-13);
+}
+
+.pbigtrack-next svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.pbigtrack-next.is-warn {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+/* ----- List / Board switch (v0.246) ----- */
+.pview {
+  display: inline-flex;
+  flex: none;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+}
+
+.pview-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  height: 28px;
+  padding: 0 var(--space-12);
+  border: 0;
+  background: var(--color-bg);
+  color: var(--color-text-secondary);
+  font: inherit;
+  font-size: var(--text-12);
+  cursor: pointer;
+}
+
+.pview-btn:first-child {
+  border-radius: var(--radius-control) 0 0 var(--radius-control);
+}
+
+.pview-btn:last-child {
+  border-radius: 0 var(--radius-control) var(--radius-control) 0;
+}
+
+.pview-btn + .pview-btn {
+  border-left: 1px solid var(--color-border-control);
+}
+
+/* the selected side is gray, like the other switches (v0.89; Prospects difference B) */
+.pview-btn.is-on {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.pview-btn:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+.pchips-exits {
+  display: contents;
+}
+
+/* ----- Board ----- */
+.pboard-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.pboard {
+  display: grid;
+  grid-auto-columns: minmax(148px, 1fr);
+  grid-auto-flow: column;
+  gap: var(--space-8);
+  align-items: start;
+  overflow-x: auto;
+  padding-bottom: var(--space-4);
+}
+
+.pbcol {
+  min-width: 0;
+  min-height: 120px;
+  padding: var(--space-8);
+  border: 2px solid transparent;
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.pbcol-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-8);
+  margin: 0 0 var(--space-8);
+  padding: 0 var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 500;
+}
+
+.pbcol-head:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+.pbcol-n {
+  color: var(--color-text);
+}
+
+.pbcol-empty {
+  margin: var(--space-8) var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.pbcol-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pbcard {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-12);
+  text-align: left;
+  cursor: grab;
+  /* a long press must not select the text or open the phone's copy menu */
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+.pbcard:hover {
+  border-color: var(--color-border-control);
+}
+
+.pbcard:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+.pbcard.is-selected {
+  border-color: var(--color-blue);
+  box-shadow: 0 0 0 1px var(--color-blue);
+}
+
+/* the card being dragged stays in its place, faded */
+.pbcard.is-dragging {
+  opacity: 0.35;
+}
+
+/* a finger resting on a card: about to be draggable */
+.pbcard.is-held {
+  border-color: var(--color-blue);
+  transition: border-color 0.45s;
+}
+
+.pbcard-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.pbcard-parent {
+  color: var(--color-text-secondary);
+}
+
+.pbcard-line {
+  margin-top: 2px;
+  color: var(--color-text-secondary);
+}
+
+.pbcard-line.is-next {
+  color: var(--color-blue);
+  font-weight: 500;
+}
+
+.pbcard-line.is-warn {
+  color: var(--color-warning-text);
+}
+
+/* where a dragged card will land */
+.pbcol.is-drop-over {
+  border-color: var(--color-blue);
+  border-style: dashed;
+  background: var(--color-blue-tint);
+}
+
+.pstage.is-drop-over,
+.ptile.is-drop-over {
+  border-color: var(--color-blue);
+  border-style: dashed;
+  background: var(--color-blue-tint);
+}
+
+/* after a drop, the stage the card went to glows green for a moment (difference E) */
+.pstage.is-flash,
+.ptile.is-flash {
+  border-color: var(--color-success-text);
+  background: #e7f2d8; /* pale green, the green class color's fill (schedule/colors.js) */
+  box-shadow: 0 0 0 1px var(--color-success-text);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pstage.is-flash,
+  .ptile.is-flash {
+    transition: none;
+  }
+}
+
+/* the copy that follows the pointer */
+.pbghost {
+  position: fixed;
+  z-index: 1000;
+  box-sizing: border-box;
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-blue);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+  color: var(--color-text);
+  font-size: var(--text-13);
+  font-weight: 500;
+  pointer-events: none;
+  transform: rotate(-2deg);
+}
+
+body.is-card-dragging,
+body.is-card-dragging * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+.pboard-note {
+  margin: 0 0 var(--space-8);
+  font-size: var(--text-13);
+}
+
+.pboard-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: var(--space-8) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* phone: one column, full width */
+.pboard--phone {
+  display: block;
+  overflow: visible;
+}
+
+.pboard--phone .pbcol {
+  min-height: 160px;
+}
+
+.pboard--phone .pboard-hint {
+  justify-content: center;
+  text-align: center;
+}
+
+/* ----- Panel ----- */
+.ppanel {
+  flex: none;
+  width: 340px;
+  padding: var(--space-16);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+}
+
+.pbody:not(.pbody--side) > .ppanel {
+  width: auto;
+}
+
+.dialog-page .ppanel {
+  width: auto;
+  padding: 0;
+  border: 0;
+}
+
+.dialog-page .ppanel-name {
+  display: none; /* the full-screen page's title already says it */
+}
+
+.ppanel--loading {
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.ppanel-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+.ppanel-name:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+.pdue {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+}
+
+.pschool {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.psearch--both {
+  margin-bottom: var(--space-16);
+}
+
+.ppanel-name {
+  margin: 0;
+  font-size: var(--text-16);
+  font-weight: 500;
+}
+
+.ppanel-who {
+  margin: 2px 0 var(--space-8);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.pcontact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+}
+
+.pcontact a.btn {
+  text-decoration: none;
+}
+
+.pbignumber {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-12);
+  margin-bottom: var(--space-12);
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.pbignumber-n {
+  font-size: var(--text-20);
+  font-weight: 500;
+}
+
+.pask {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: var(--space-4) 0 var(--space-8);
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-size: var(--text-13);
+}
+
+.pask b {
+  font-weight: 500;
+}
+
+.pask-row {
+  display: flex;
+  gap: var(--space-8);
+  margin-top: var(--space-4);
+}
+
+.pkv {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  min-height: 36px;
+  padding: var(--space-4) 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-13);
+  text-align: left;
+}
+
+.pkv-k {
+  flex: none;
+  width: 88px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.pkv-v {
+  flex: 1;
+  min-width: 0;
+}
+
+.pkv-btn {
+  cursor: pointer;
+}
+
+.pkv-btn:hover {
+  background: var(--color-surface);
+}
+
+.pkv-btn:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+/* the status tag opens the status menu (P4 difference 2) */
+.pstatus-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 32px;
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.pstatus-btn:hover {
+  border-color: var(--color-border-control);
+}
+
+.pstatus-btn:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+.pdot-menu {
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* the quick follow-up choices (P4 difference 3) */
+.pfollow {
+  margin: 0 0 var(--space-8) 96px;
+}
+
+.pfollow .pwhen-item {
+  border-style: solid;
+  background: var(--color-bg);
+  font: inherit;
+  font-size: var(--text-12);
+}
+
+.pfollow-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.pkv-select {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.pkv-select .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.pkv-follow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.pkv-note {
+  margin: 0 0 var(--space-4) 96px;
+}
+
+.pwarn {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin: 0 0 var(--space-8);
+  padding: var(--space-8);
+  border-radius: var(--radius-tag);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--text-12);
+}
+
+.pwarn svg {
+  flex: none;
+}
+
+.pfree-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin: 0 0 var(--space-8);
+}
+
+.psec {
+  margin: var(--space-16) 0 var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 500;
+}
+
+.pnote {
+  min-height: 56px;
+}
+
+.pwhen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin: var(--space-8) 0;
+}
+
+.pwhen-item {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 var(--space-12);
+  border: 1px solid var(--color-border-control);
+  border-radius: 14px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  cursor: pointer;
+}
+
+.pwhen-item.is-on {
+  border-color: var(--color-blue);
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+}
+
+.pwhen-item:has(input:focus-visible) {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+.pnote-date {
+  margin-bottom: var(--space-8);
+}
+
+.pnote-acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
+}
+
+.plog {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plog-item {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-8) 0;
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-13);
+}
+
+.plog-item:not(.is-note) .plog-text {
+  color: var(--color-text-secondary);
+}
+
+/* "History · 6 changes": opens the automatic changes (v0.255) */
+.phistory-btn {
+  width: 100%;
+  margin-top: var(--space-4);
+}
+
+.phistory-label {
+  font-weight: 500;
+}
+
+.plog-text {
+  white-space: pre-wrap;
+}
+
+.plog-meta {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.panswers {
+  padding: var(--space-8) 0;
+  font-size: var(--text-13);
+}
+
+.panswers dl {
+  margin: 0 0 var(--space-8);
+}
+
+.panswer {
+  margin-bottom: var(--space-8);
+}
+
+.panswer dt {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.panswer dd {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.psig {
+  display: block;
+  max-width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: #fff;
+}
+
+.pdelete {
+  margin-top: var(--space-16);
+}
+
+/* Small dialogs */
+.paddforms {
+  margin: 0 0 var(--space-12);
+  padding: 0;
+  list-style: none;
+}
+
+.paddform {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: 100%;
+  min-height: 40px;
+  margin-bottom: var(--space-4);
+  padding: 0 var(--space-12);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-13);
+  text-align: left;
+  cursor: pointer;
+}
+
+.paddform:hover {
+  background: var(--color-surface);
+}
+
+.paddform:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+}
+
+.pkind {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* Calendar day panel: Check in */
+.cpanel-checkin {
+  margin-left: auto;
+}
+
+/* ----- Navigation badge, phone More ----- */
+.rail-icon,
+.bottombar-icon {
+  position: relative;
+  display: inline-flex;
+}
+
+.nav-badge {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-size: var(--text-12);
+  font-weight: 500;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* ----- Touch: 44px taps ----- */
+@media (pointer: coarse) {
+  .pchip,
+  .pwhen-item,
+  .pview-btn {
+    height: 36px;
+  }
+
+  .pbcard {
+    min-height: var(--tap-size);
+    padding: var(--space-12);
+  }
+
+  .pview-btn::after {
+    position: absolute;
+    inset: -5px 0; /* invisible: 36px button + 2 × 4px (+ the border) = 44px tap height */
+    content: '';
+  }
+
+  .psearch {
+    height: var(--control-height-touch);
+  }
+
+  .pstage {
+    min-height: 64px;
+  }
+
+  .pkv {
+    min-height: var(--tap-size);
+  }
+
+  .pstatus-btn {
+    min-height: var(--tap-size);
+  }
+
+  .psearch-clear {
+    position: relative;
+  }
+
+  .psearch-clear::after {
+    position: absolute;
+    inset: -13px;
+    content: '';
+  }
+
+  .plist-row:not(.plist-head) {
+    min-height: 52px;
+  }
+}
+
+/* ----- Tablet ----- */
+@media (max-width: 1023.98px) {
+  .plist-row {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.9fr) minmax(0, 2fr) minmax(0, 0.9fr) 112px;
+    column-gap: var(--space-8);
+  }
+
+  .psearch {
+    width: 200px;
+  }
+
+  /* a cancelled-class warning keeps its words (it wraps instead of being cut) */
+  .plist-row > span.is-warn {
+    white-space: normal;
+  }
+}
+
+/* ----- Phone ----- */
+@media (max-width: 639.98px) {
+  .pfollow {
+    margin-left: 0;
+  }
+
+  .prospects {
+    padding: var(--space-16) var(--space-16) calc(40px + var(--space-24) + var(--space-16));
+  }
+
+}
+
+/* ===== src/styles/testing-events.css (copied from the app) ===== */
+/*
+  testing-events.css — the styles for Color Belt testing phase 2: the Events tab, Add / Edit
+  event, the event page (Students roster with payments) and its dialogs, the registration link
+  dialog and the printed flyer (contract 0005 §6, mockups E1–E14 and R1–R8).
+  Why it exists: testing.css holds phase 1 (Classes and ranks) and the pieces both phases share
+  (.phead, .ttabs, .ttag, .clist, .tdialog, .errbar, .segmented …). This file adds only what
+  phase 2 needs, with the same tokens (tokens.css) and the 4px spacing grid. Class names start
+  with "ev-" so they never clash with phase 1.
+
+  Screen-size rules used below (same as testing.css):
+    Phone          (max-width: 639.98px)
+    PC             (min-width: 1024px)            → every column
+    Touch screens  (pointer: coarse)              → 48px rows, 44px tap areas
+*/
+
+/* ===== Shared small pieces ===== */
+
+/* The Testing tabs became buttons in phase 2 (Events · Classes and ranks): drawn exactly like
+   phase 1's tab, without a button's own border and background. */
+.ttabs button.ttab {
+  padding: 0;
+  border-width: 0 0 2px;
+  border-style: solid;
+  border-color: transparent;
+  border-radius: 0;
+  background: none;
+  font-family: inherit;
+}
+
+.ttabs button.ttab.is-current {
+  border-bottom-color: var(--color-blue);
+}
+
+/* A green tag ("Open until Nov 13", "Paid") — guidelines 7 Success colors */
+.ttag--ok {
+  border-color: #cfe3b8;
+  background: #eaf3de;
+  color: var(--color-success-text);
+}
+
+/* A menu item without an icon keeps its words lined up with the ones that have one */
+.ev-noicon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+}
+
+/* A grayed menu item with its reason under it ("The closing date has passed. Ask an admin to reopen.") */
+.ev-menu-two {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: normal;
+}
+
+.ev-menu-reason {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  line-height: 1.4;
+}
+
+.tmenu-item:has(.ev-menu-two) {
+  height: auto;
+  min-height: 32px;
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-4);
+}
+
+.ev-confirm-hint {
+  margin-top: var(--space-8);
+}
+
+/* "Pick one" buttons (ChoiceGroup.jsx) */
+.ev-segmented {
+  max-width: 100%;
+}
+
+.ev-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.ev-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 32px;
+  padding: 0 var(--space-12);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--text-13);
+}
+
+.ev-chip.is-checked {
+  border-color: var(--color-blue);
+  background: var(--color-blue-tint);
+  color: var(--color-blue);
+  font-weight: 500;
+  box-shadow: inset 0 0 0 1px var(--color-blue); /* a 2px edge: the choice is clear without color alone */
+}
+
+/* "Yellow → Orange" with the belt pictures */
+.ev-tf {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-4);
+  row-gap: 2px;
+  min-width: 0;
+}
+
+.ev-tf .belt {
+  margin-right: 2px;
+}
+
+/* One belt and its name never split across lines ("[belt] Yellow →", "[belt] Orange") */
+.ev-tf-pair {
+  display: inline-flex;
+  align-items: center;
+  column-gap: var(--space-4);
+  white-space: nowrap;
+}
+
+.ev-tf-none {
+  color: var(--color-text-secondary);
+}
+
+/* ===== Events tab (E1–E3) ===== */
+
+/* Upcoming / Past switch: the selected side is GRAY, not blue (Star v0.89) */
+.ev-side {
+  margin-bottom: var(--space-12);
+}
+
+.ev-side .segment.is-checked {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.ev-side .segment {
+  min-width: 96px;
+  text-align: left;
+}
+
+.ev-side-count {
+  margin-left: var(--space-16);
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.ev-list {
+  border-radius: var(--radius-control);
+}
+
+.ev-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 128px 72px 160px 64px;
+  align-items: center;
+  column-gap: var(--space-12);
+  min-height: 40px;
+  padding: 0 var(--space-8) 0 var(--space-12);
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+/* A line between rows (and under the header row) */
+.ev-list [role='rowgroup'] > * + *,
+.ev-roster [role='rowgroup'] > * + * {
+  border-top: 1px solid var(--color-border);
+}
+
+.ev-head,
+.ev-shead {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ev-head {
+  min-height: 32px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  cursor: default;
+}
+
+.ev-row.is-selected {
+  background: var(--color-blue-tint);
+}
+
+.ev-row:focus-visible,
+.ev-srow:focus-visible,
+.st-row:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+.ev-name {
+  min-width: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.ev-row .num {
+  text-align: right;
+}
+
+.ev-row .acts {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Sortable column headers (rule 8): plain words that are buttons */
+.ev-sort {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+}
+
+.ev-th[aria-sort='ascending'] .ev-sort,
+.ev-th[aria-sort='descending'] .ev-sort {
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.ev-th.num {
+  text-align: right;
+}
+
+/* Phone rows: name, "date · students", tag — ⋯ on the right */
+.ev-row.is-phone {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-4) var(--space-8) var(--space-16);
+}
+
+.ev-phone-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ev-phone-tag {
+  margin-top: var(--space-4);
+}
+
+.ev-empty {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+/* ===== Add / Edit event (E4–E7) ===== */
+.ev-two {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-12);
+}
+
+.ev-classes {
+  padding: var(--space-4) var(--space-12) var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.ev-crow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--space-8);
+  min-height: 40px;
+}
+
+.ev-crow + .ev-crow {
+  border-top: 1px solid var(--color-border);
+}
+
+.ev-crow-name {
+  min-width: 0;
+}
+
+.ev-crow-name span {
+  overflow-wrap: anywhere;
+}
+
+.ev-crow.is-off .ev-crow-name span {
+  color: var(--color-text-secondary);
+}
+
+.ev-crow-times {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.ev-crow-to,
+.ev-crow-off {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.ev-crow-off {
+  text-align: right;
+}
+
+.ev-crow-error {
+  grid-column: 1 / -1;
+  padding-bottom: var(--space-8);
+}
+
+.ev-time {
+  width: 112px;
+  padding-right: var(--space-4);
+  font-family: inherit; /* a select doesn't take the page font by itself (it showed Arial) */
+}
+
+.ev-classes-hint {
+  margin-top: var(--space-4);
+}
+
+.ev-closing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-left: 24px; /* lines up with the words of the tick above */
+}
+
+.ev-closing .input {
+  max-width: 240px;
+}
+
+.ev-note {
+  height: auto;
+  min-height: 72px;
+  padding: var(--space-8) var(--space-12);
+  font-family: inherit;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+/* ===== Event page (R1) ===== */
+.ev-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  align-self: flex-start;
+  min-height: 28px;
+  margin-bottom: var(--space-4);
+}
+
+.ev-phead {
+  align-items: flex-start;
+}
+
+.ev-summary {
+  color: var(--color-text);
+  font-size: var(--text-13);
+}
+
+.ev-head-buttons {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+/* The four summary cards (Star v0.115) */
+.ev-cards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-12);
+  margin-bottom: var(--space-12);
+}
+
+.ev-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: left;
+}
+
+.ev-card--button {
+  cursor: pointer;
+}
+
+/* The card whose filter is on: blue edge (Star's proposal "selected card blue") */
+.ev-card.is-selected {
+  border-color: var(--color-blue);
+  box-shadow: inset 0 0 0 1px var(--color-blue);
+}
+
+.ev-card-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.ev-card-value {
+  font-size: var(--text-20);
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+/* Payments recorded: "includes $65 from removed students" under the number (R8) */
+.ev-card-note {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.ev-filter-line {
+  margin: calc(-1 * var(--space-4)) 0 var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* The amber "possible duplicate" box (Star v0.114) */
+.ev-dupbox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-tag-warn-border);
+  border-radius: var(--radius-control);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--text-13);
+}
+
+.ev-dupbox-icon {
+  flex: none;
+  margin-top: 6px;
+}
+
+.ev-dupbox-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.ev-dupbox-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+}
+
+.ev-dupbox-line strong {
+  font-weight: 500;
+}
+
+/* Class switch: the selected class is GRAY (like Upcoming / Past), not blue */
+.ev-class-switch {
+  margin-bottom: var(--space-12);
+}
+
+.ev-class-switch .segmented {
+  flex-wrap: wrap;
+}
+
+.ev-class-switch .segment {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-12);
+}
+
+.ev-class-switch .segment.is-checked {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.ev-cs-count {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.ev-classline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-12);
+  margin-bottom: var(--space-12);
+  font-size: var(--text-13);
+}
+
+.ev-classline strong {
+  font-weight: 500;
+}
+
+/* ===== The roster (R1, R7, R8) ===== */
+.ev-roster {
+  border-radius: var(--radius-control);
+}
+
+.ev-srow {
+  display: grid;
+  /* Tablet: Student · Testing for · Paying by · Payment · actions */
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.5fr) 72px 132px 152px;
+  align-items: center;
+  column-gap: var(--space-12);
+  min-height: 40px;
+  padding: var(--space-4) var(--space-8) var(--space-4) var(--space-12);
+  font-size: var(--text-13);
+  cursor: pointer;
+}
+
+/* PC: + Paid on */
+.ev-roster.is-wide .ev-srow {
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.5fr) 72px 140px 64px 152px;
+}
+
+.ev-shead {
+  min-height: 32px;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  cursor: default;
+}
+
+.ev-srow.is-selected {
+  background: var(--color-blue-tint);
+}
+
+.ev-scell {
+  min-width: 0;
+}
+
+.ev-sname-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-8);
+}
+
+.ev-sname {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.ev-ssub {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.ev-srow .acts {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-4);
+}
+
+.ev-markpaid {
+  white-space: nowrap;
+}
+
+/* Keeps the tags lined up when a row has no ⋯ (staff on a removed row) */
+.ev-more-spacer {
+  display: inline-block;
+  flex: none;
+  width: 28px;
+}
+
+/* The amber "Possible duplicate" tag is a button that opens the compare dialog */
+.ev-tag-button {
+  position: relative;
+  cursor: pointer;
+}
+
+.ev-srow.is-removed .ev-sname,
+.ev-srow.is-removed .ev-scell {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.ev-roster-empty {
+  margin: 0;
+  padding: var(--space-24) var(--space-16);
+}
+
+/* "Removed · 1   Not in the counts" */
+.ev-removed-head {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--space-12);
+  background: var(--color-bg);
+}
+
+.ev-removed-head > span {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-12);
+}
+
+.ev-removed-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 28px;
+  padding: 0 var(--space-4);
+  border: none;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text);
+  font-size: var(--text-13);
+}
+
+.ev-removed-title {
+  font-weight: 500;
+}
+
+.ev-removed-note {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* Phone rows: stacked lines, ⋯ on the right */
+.ev-srow.is-phone {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-4) var(--space-8) var(--space-12);
+}
+
+.ev-srow-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ev-sline-tag {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  margin-top: var(--space-4);
+}
+
+/* ===== Student dialogs (R4, R6) ===== */
+.ev-sum {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-13);
+}
+
+.ev-sum-row {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: var(--space-12);
+  padding: var(--space-8) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.ev-sum-row:first-child {
+  border-top: none;
+}
+
+.ev-sum-row dt {
+  color: var(--color-text-secondary);
+}
+
+.ev-sum-row dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ev-sum-row.is-diff dd,
+.ev-cmp td.is-diff {
+  background: var(--color-warning-bg);
+}
+
+/* Edit details: the class and belt part is boxed, so the "Now testing for" line belongs to it */
+.ev-belt-box {
+  padding: var(--space-8) var(--space-12) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.ev-belt-label {
+  margin-top: var(--space-8);
+}
+
+.ev-testing-line {
+  margin-top: var(--space-4);
+  color: var(--color-text);
+  font-size: var(--text-13);
+}
+
+.ev-changed-line {
+  margin-top: var(--space-8);
+  padding: var(--space-8);
+  border-radius: var(--radius-tag);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: var(--text-13);
+}
+
+.ev-money {
+  max-width: 160px;
+}
+
+.ev-date {
+  max-width: 240px;
+}
+
+/* ===== Compare (R7) ===== */
+.ev-cmp {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-13);
+}
+
+.ev-cmp th,
+.ev-cmp td {
+  padding: var(--space-8);
+  border-top: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.ev-cmp thead th {
+  border-top: none;
+  font-weight: 500;
+}
+
+.ev-cmp tbody th {
+  width: 112px;
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.ev-cmp-keep td {
+  border-top: none;
+}
+
+.ev-cmp-card {
+  margin-bottom: var(--space-16);
+  padding: var(--space-8) var(--space-12) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.ev-cmp-head {
+  margin-bottom: var(--space-4);
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.ev-cmp-note {
+  margin-top: var(--space-12);
+}
+
+.ev-cmp-actions {
+  flex-wrap: wrap;
+}
+
+/* ===== Registration link (R2) ===== */
+.ev-link-event {
+  margin-bottom: var(--space-12);
+}
+
+.ev-link-line {
+  margin-bottom: var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.ev-link-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-16);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  text-align: center;
+}
+
+.ev-link-school {
+  font-size: var(--text-14);
+  font-weight: 500;
+}
+
+.ev-link-qr {
+  width: 128px;
+  height: 128px;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-bg);
+}
+
+.ev-link-url {
+  max-width: 100%;
+  padding: var(--space-4) var(--space-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-tag);
+  font-family: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  font-size: var(--text-12);
+  overflow-wrap: anywhere;
+}
+
+.ev-link-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-8);
+}
+
+/* ===== Phase 3: the Grading tab (contract 0010 §4, mockups G1–G8) ===== */
+
+/* Students | Grading: on phones the two tabs share the width equally (G1) */
+.ev-tabs.is-phone {
+  gap: 0;
+}
+
+.ev-tabs.is-phone .ttab {
+  flex: 1;
+  justify-content: center;
+}
+
+/* "Added Nov 21 by Jeffrey Berg (admin)" — its own line under the name (plan Q1) */
+.ev-added-after {
+  flex-basis: 100%;
+}
+
+/* A second line inside a detail-view value (Result note, "Added … (admin)") */
+.ev-sum-line {
+  display: block;
+  margin-top: 2px;
+}
+
+/* Edit details, staff after the testing day: class and belt shown but locked (G8) */
+.ev-locked .ev-chip {
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+.ev-locked .ev-chip.is-checked {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+}
+
+/* "All classes: 14 students · 6 passed · …" and the class's count line */
+.gr-allline,
+.gr-countline {
+  margin-bottom: var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* The amber triangle after a class name that has unsaved results (G5) */
+.gr-cs-warn {
+  margin-left: var(--space-4);
+  color: var(--color-warning-text);
+  vertical-align: -2px;
+}
+
+/* Class line + "Print grading sheet" on the right */
+.gr-classline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8) var(--space-12);
+  margin-bottom: var(--space-12);
+}
+
+.gr-classline .gr-classline-text {
+  margin-bottom: 0;
+}
+
+.gr-print {
+  flex: none;
+}
+
+/* "Grading opens on the testing day, …" / "The testing day is over. …" (ti-lock) */
+.gr-lockline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.gr-lockline svg {
+  flex: none;
+}
+
+/* The rows: Student · Testing for · Result · note button */
+.gr-table {
+  border-radius: var(--radius-control);
+}
+
+.gr-table [role='rowgroup'] > * + * {
+  border-top: 1px solid var(--color-border);
+}
+
+.gr-table [role='rowgroup'] + [role='rowgroup'] {
+  border-top: 1px solid var(--color-border);
+}
+
+/* v0.193: "Group B · 3 students" above each class of a testing group */
+.gr-subhead {
+  padding: var(--space-4) var(--space-12);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-12);
+  font-weight: 500;
+}
+
+.gr-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.6fr) auto 36px;
+  align-items: center;
+  column-gap: var(--space-12);
+  min-height: 40px;
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-12);
+  font-size: var(--text-13);
+}
+
+.gr-head {
+  min-height: 32px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.gr-head-result {
+  text-align: right;
+}
+
+.gr-cell {
+  min-width: 0;
+}
+
+.gr-student {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gr-result {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.gr-notecell {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.gr-name-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+  min-width: 0;
+}
+
+/* The note and the "Added … (admin)" line: 12px gray under the name */
+.gr-sub {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  overflow-wrap: anywhere;
+}
+
+.gr-notrec {
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* The note button: gray outline icon without a note, blue with one (G1) */
+.gr-note-btn.has-note .tib-box {
+  color: var(--color-blue);
+}
+
+.gr-note-spacer {
+  display: inline-block;
+  width: 28px;
+}
+
+/* The three result buttons: one joined control (G1, v0.181) */
+/* Fixed column widths with room for the chosen button's icon, so every row's control is the
+   same width and the columns line up whatever is chosen */
+.gr-res {
+  display: inline-grid;
+  grid-template-columns: 68px 104px 92px;
+  flex: none;
+  overflow: hidden;
+  height: 28px;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+}
+
+.gr-res-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 var(--space-8);
+  border: none;
+  border-radius: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: var(--text-13);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.gr-res-btn + .gr-res-btn {
+  border-left: 1px solid var(--color-border-control);
+}
+
+.gr-res-btn:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--color-blue);
+  outline-offset: -2px;
+}
+
+/* Chosen: icon + bold word on a soft color — never color alone */
+.gr-res-btn.is-chosen {
+  font-weight: 500;
+}
+
+.gr-res-pass.is-chosen {
+  background: #eaf3de;
+  color: var(--color-success-text);
+}
+
+.gr-res-not_passed.is-chosen {
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+}
+
+.gr-res-no_show.is-chosen {
+  background: var(--color-border);
+  box-shadow: inset 0 0 0 1px var(--color-text-secondary);
+  color: var(--color-text);
+}
+
+/* Before the testing day: shown but grayed */
+.gr-res.is-disabled .gr-res-btn {
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
+}
+
+/* Phone rows: name + tags + note button, Testing for, the note, then the buttons full width */
+.gr-row.is-phone {
+  display: block;
+  padding: var(--space-8) var(--space-12) var(--space-12);
+}
+
+.gr-phone-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.gr-l1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+.gr-phone-result {
+  margin-top: var(--space-4);
+}
+
+.gr-res.is-phone {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+}
+
+.gr-res.is-phone .gr-res-btn {
+  min-width: 0;
+  padding: 0 var(--space-4);
+  white-space: normal;
+  text-align: center;
+}
+
+/* G7: "No students in White. …" inside the card, on the left */
+.gr-empty {
+  margin: 0;
+  padding: var(--space-16) var(--space-12);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+/* Phone note dialog: Save pinned to the bottom of the full screen, like the Students dialogs */
+.tdialog-page .dialog-page-body:has(.gr-note-form) {
+  display: flex;
+  flex-direction: column;
+}
+
+.tdialog-page .gr-note-form {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.tdialog-page .gr-note-form .dialog-page-submit {
+  margin-top: auto;
+}
+
+.gr-note-field {
+  width: 100%;
+  height: auto;
+  min-height: 96px;
+  padding: var(--space-8) var(--space-12);
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.gr-note-under {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-12);
+  margin-top: var(--space-4);
+}
+
+.gr-note-under .field-hint {
+  margin: 0;
+}
+
+.gr-note-counter {
+  flex: none;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+/* ===== The grading sheet (G6): only on paper ===== */
+.grading-print {
+  display: none;
+}
+
+/* ===== The flyer (R3): only on paper ===== */
+.flyer-print {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: letter;
+    margin: 0.75in;
+  }
+
+  /* Only the flyer (or the grading sheet) is printed; the dashboard and the dialog are hidden. */
+  body > *:not(.flyer-print):not(.grading-print) {
+    display: none !important;
+  }
+
+  /* ----- The grading sheet (G6): black on white, one class per page ----- */
+  .grading-print {
+    display: block;
+    color: #000;
+    font-family: var(--font-family);
+    font-size: 10pt;
+  }
+
+  .gs-page + .gs-page {
+    break-before: page;
+  }
+
+  .gs-title {
+    margin: 0 0 4pt;
+    font-size: 14pt;
+    font-weight: 500;
+  }
+
+  .gs-head {
+    margin: 0 0 10pt;
+    font-size: 9pt;
+  }
+
+  .gs-class {
+    margin: 0;
+    padding-bottom: 4pt;
+    border-bottom: 1.5pt solid #000;
+    font-size: 11pt;
+    font-weight: 500;
+  }
+
+  .gs-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .gs-col-student {
+    width: 24%;
+  }
+
+  .gs-col-tf {
+    width: 22%;
+  }
+
+  .gs-col-result {
+    width: 34%;
+  }
+
+  .gs-col-note {
+    width: 20%;
+  }
+
+  .gs-table th {
+    padding: 10pt 4pt 6pt;
+    border-bottom: 0.75pt solid #000;
+    font-weight: 500;
+    text-align: left;
+  }
+
+  .gs-table td {
+    height: 30pt;
+    padding: 4pt;
+    border-bottom: 0.75pt solid #000;
+    vertical-align: middle;
+  }
+
+  .gs-table tr {
+    break-inside: avoid;
+  }
+
+  .gs-name {
+    font-weight: 500;
+  }
+
+  /* v0.193: a class heading inside a testing group's page */
+  .gs-table td.gs-subhead {
+    height: auto;
+    padding: 8pt 4pt 4pt;
+    font-weight: 500;
+  }
+
+  .gs-ticks {
+    display: inline-flex;
+    gap: 8pt;
+    white-space: nowrap;
+  }
+
+  .gs-tick {
+    display: inline-flex;
+    align-items: center;
+    gap: 3pt;
+  }
+
+  .gs-box {
+    display: inline-block;
+    width: 10pt;
+    height: 10pt;
+    border: 0.75pt solid #000;
+  }
+
+  .gs-line {
+    display: inline-block;
+    width: 100%;
+    border-bottom: 0.75pt solid #000;
+  }
+
+  .gs-added {
+    display: block;
+  }
+
+  .gs-fill {
+    display: inline-block;
+    width: 60pt;
+    border-bottom: 0.75pt solid #000;
+  }
+
+  .gs-short {
+    display: inline-block;
+    width: 24pt;
+    border-bottom: 0.75pt solid #000;
+  }
+
+  .gs-foot {
+    margin: 16pt 0 0;
+    font-size: 9pt;
+  }
+
+  .flyer-print {
+    display: block;
+  }
+
+  .flyer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12pt;
+    color: #000;
+    font-family: var(--font-family);
+    text-align: center;
+  }
+
+  .flyer .logo {
+    filter: grayscale(1); /* black and white page */
+  }
+
+  .flyer-school {
+    font-size: 16pt;
+  }
+
+  .flyer-title {
+    margin-top: 12pt;
+    font-size: 28pt;
+    font-weight: 500;
+  }
+
+  .flyer-date {
+    font-size: 18pt;
+  }
+
+  .flyer-line {
+    font-size: 14pt;
+  }
+
+  .flyer-strong {
+    font-weight: 500;
+  }
+
+  .flyer-qr {
+    width: 3in;
+    height: 3in;
+    margin: 12pt 0;
+  }
+}
+
+/* ===== Hover — mouse only ===== */
+@media (hover: hover) {
+  .ev-row:not(.ev-head):not(.is-selected):hover,
+  .ev-srow:not(.ev-shead):not(.is-selected):hover,
+  .ev-card--button:not(.is-selected):hover {
+    background: var(--color-surface);
+  }
+
+  .ev-card--button:not(.is-selected):hover {
+    border-color: var(--color-border-strong);
+  }
+
+  .ev-sort:hover,
+  .ev-removed-toggle:hover {
+    color: var(--color-text);
+  }
+}
+
+/* ===== Touch screens: 48px rows, 44px tap areas (guidelines 2.5) ===== */
+@media (pointer: coarse) {
+  .ev-row,
+  .ev-srow {
+    min-height: 48px;
+  }
+
+  .ev-head,
+  .ev-shead {
+    min-height: 36px;
+  }
+
+  .ev-chip {
+    min-height: var(--tap-size);
+  }
+
+  .ev-time {
+    height: var(--control-height-touch);
+    font-size: var(--text-16); /* 16px stops iPads zooming into the field */
+  }
+
+  .ev-back,
+  .ev-removed-toggle,
+  .ev-sort {
+    min-height: var(--tap-size);
+  }
+
+  .ev-crow {
+    min-height: 48px;
+  }
+
+  .ev-more-spacer {
+    width: var(--tap-size);
+  }
+
+  /* Small buttons stay drawn small but get a 44px tap area */
+  .ev-tag-button::after {
+    content: '';
+    position: absolute;
+    inset: -14px -4px;
+  }
+
+  .ev-dupbox-review {
+    height: var(--control-height-touch);
+  }
+}
+
+/* ===== Tablet widths ===== */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .ev-row {
+    grid-template-columns: minmax(0, 1fr) 120px 64px 148px auto;
+    column-gap: var(--space-8);
+  }
+
+  .ev-srow {
+    column-gap: var(--space-8);
+  }
+
+  .ev-cards {
+    gap: var(--space-8);
+  }
+}
+
+/* Touch tablets: the ⋯ and pencil are 44px, so the actions column is wider */
+@media (pointer: coarse) and (min-width: 640px) {
+  .ev-srow {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.5fr) 56px 124px 160px;
+  }
+
+  .ev-roster.is-wide .ev-srow {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.5fr) 56px 124px 56px 160px;
+  }
+}
+
+/* ===== Phones (narrower than 640px) ===== */
+@media (max-width: 639.98px) {
+  .ev-phead {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-8);
+  }
+
+  .ev-head-buttons .btn {
+    height: var(--control-height-touch);
+  }
+
+  .ev-two {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  /* Add / Edit event on phones: the class name on its own line, the two times under it */
+  .ev-crow,
+  .ev-crow.is-phone {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--space-4);
+    padding: var(--space-4) 0 var(--space-8);
+  }
+
+  .ev-crow-times {
+    margin-left: 24px;
+  }
+
+  .ev-crow-off {
+    margin-left: 24px;
+    text-align: left;
+  }
+
+  .ev-time {
+    width: auto;
+    min-width: 0;
+    flex: 1;
+    height: var(--control-height-touch);
+    font-size: var(--text-16);
+  }
+
+  .ev-closing {
+    margin-left: 0;
+  }
+
+  .ev-closing .input,
+  .ev-date {
+    max-width: none;
+    height: var(--control-height-touch);
+    font-size: var(--text-16);
+  }
+
+  /* Cards two by two */
+  .ev-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-8);
+  }
+
+  /* Class switch: a grid of 3 per row; long names wrap inside their box */
+  .ev-class-switch .segmented {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .ev-class-switch .segment {
+    justify-content: space-between;
+    min-height: var(--tap-size);
+    height: auto;
+    padding: var(--space-4) var(--space-8);
+    border-radius: 0;
+    white-space: normal;
+    text-align: left;
+    gap: var(--space-4);
+  }
+
+  .ev-class-switch .segment + .segment {
+    border-left: none;
+  }
+
+  .ev-class-switch .segment:not(:nth-child(3n + 1)) {
+    border-left: 1px solid var(--color-border);
+  }
+
+  .ev-class-switch .segment:nth-child(n + 4) {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .ev-cs-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .ev-side .segment {
+    min-width: 0;
+  }
+
+  .ev-sum-row {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+
+  .ev-link-card {
+    padding: var(--space-12);
+  }
+
+  .ev-money {
+    max-width: none;
+  }
+}
+
+/* ===== Phase 3 (Grading) on touch screens, tablets and phones ===== */
+/* Touch (§2.5, v0.181): rows at least 44px, every tap target 44×44 — the result buttons too. */
+@media (pointer: coarse) {
+  .gr-row {
+    min-height: 48px;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.3fr) auto 44px;
+  }
+
+  .gr-head {
+    min-height: 36px;
+  }
+
+  /* The buttons themselves are 44px tall (the 1px outline is drawn around them) */
+  .gr-res {
+    height: auto;
+  }
+
+  .gr-res-btn {
+    min-height: var(--tap-size);
+  }
+
+  .gr-note-spacer {
+    width: var(--tap-size);
+  }
+
+  .ev-tabs .ttab {
+    height: var(--tap-size);
+  }
+}
+
+/* Tablet widths: a little less room between the columns, narrower result buttons */
+@media (min-width: 640px) and (max-width: 1023.98px) {
+  .gr-row {
+    column-gap: var(--space-8);
+  }
+
+  .gr-res {
+    grid-template-columns: 60px 96px 84px;
+  }
+
+  .gr-res-btn {
+    gap: var(--space-4);
+    padding: 0 var(--space-4);
+  }
+
+  /* "Testing for" in 12px, as drawn for tablets (G1) */
+  .gr-tf {
+    font-size: var(--text-12);
+  }
+}
+
+/* Phones: "Print grading sheet" on its own line under the class line (G1) */
+@media (max-width: 639.98px) {
+  .gr-classline {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .gr-print {
+    height: var(--control-height-touch);
+  }
+
+  .gr-note-field {
+    font-size: var(--text-16); /* 16px stops phones zooming into the field */
+  }
+}
+
+/* Narrow phones (320–360px): the chosen "× Not passed" stays on one line */
+@media (max-width: 360px) {
+  .gr-res.is-phone .gr-res-btn {
+    gap: 2px;
+    padding: 0 2px;
+    white-space: nowrap;
+  }
+
+  .gr-res.is-phone .gr-res-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* ===== Hide private details (rulebook v0.506, v0.507 Q2) =====
+   While the device switch is on, Color Belt shows no money. The same look as Star's
+   (star.css .st-cards.is-one / .st-hidden-value), written here so Color Belt doesn't depend on
+   Star's stylesheet being loaded. */
+
+/* Only the Students (or Private testings) card: one card, not four */
+.ev-cards.is-one {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 280px;
+}
+
+/* A hidden value keeps its row and reads gray "Hidden on this tablet" */
+.ev-hidden-value {
+  color: var(--color-text-secondary);
+}
+
+/* The roster without Paying by, Payment, Paid on and Mark paid:
+   Student · Testing for · Status (only when a shown row has a tag) · ⋯ */
+.ev-roster.is-hidden .ev-srow:not(.is-phone),
+.ev-roster.is-hidden.is-wide .ev-srow:not(.is-phone) {
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.5fr) 148px 44px;
+}
+
+.ev-roster.is-hidden.no-status .ev-srow:not(.is-phone),
+.ev-roster.is-hidden.is-wide.no-status .ev-srow:not(.is-phone) {
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.5fr) 44px;
+}
+
+@media (max-width: 639.98px) {
+  .ev-cards.is-one {
+    max-width: none;
+  }
+}
+
+</style>
+<style>
+  body { background: #fff; }
+  .sheet-head { max-width: 1100px; margin: 0 auto; padding: 24px 16px 8px; }
+  .sheet-head h1 { font-size: 20px; margin-bottom: 4px; }
+  .sheet-head p { color: var(--color-text-secondary); font-size: 13px; }
+  .state { max-width: 1100px; margin: 0 auto; padding: 16px 16px 8px; }
+  .state > h2 { font-size: 14px; margin-bottom: 12px; }
+  .state > h2 .n { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 6px; border-radius: 10px; background: #1f1f1f; color: #fff; font-size: 12px; }
+  .is-focus { outline: 2px solid var(--color-blue); outline-offset: -2px; }
+  .marks .mark { outline: 3px solid #f59e0b; outline-offset: 4px; border-radius: 6px; }
+  .stage { display: inline-block; padding: 24px 40px; background: #a6a6a6; border-radius: 8px; }
+  .stage .dialog { position: static; margin: 0 auto; }
+  .only-phone { display: none !important; }
+  @media (max-width: 639.98px) {
+    .state { padding: 16px 0 8px; }
+    .state > h2 { padding: 0 16px; }
+    .stage { display: block; padding: 0; background: none; border-radius: 0; }
+    .only-wide { display: none !important; }
+    .only-phone { display: flex !important; }
+    .stage .dialog-page { position: static; border-top: 1px solid var(--color-border-strong); border-bottom: 1px solid var(--color-border-strong); }
+  }
+  /* ===== NEW in the shared line (the rest is Prospects' and Color Belt's CSS) ===== */
+  .hist-wait { margin-left: auto; color: var(--color-text-secondary); font-size: var(--text-12); font-weight: 400; }
+  .hist-none { display: flex; align-items: center; min-height: 36px; padding: var(--space-4) 0; border-top: 1px solid var(--color-border); font-size: var(--text-13); }
+  .hist-none .phistory-label { margin-right: var(--space-4); }
+  .hist-none span:last-child { color: var(--color-text-secondary); }
+  .hist-hidden-line { padding: var(--space-8) 0 0; border-top: 1px solid var(--color-border); }
+  .hist-error { margin-top: var(--space-8); }
+</style>
+<script>if (location.search.includes('marks')) document.documentElement.classList.add('marks');</script>
+</head>
+<body>
+<div class="sheet-head">
+  <h1>M7 · The shared history line</h1>
+  <p>Every person's summary ends with one line, <b>History · N changes ›</b> (rulebook v1.010). A tap opens the list right there, newest first: what changed, then when · who. Each section reads its own changes and words them; the line draws them the same way everywhere. Drawn with the app's own stylesheets. Fake people.</p>
+</div>
+<span hidden id="back-icon"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tabler-icon tabler-icon-arrow-left" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M5 12l14 0" /><path d="M5 12l6 6" /><path d="M5 12l6 -6" /></svg></span>
+<span hidden id="edit-icon"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tabler-icon tabler-icon-edit" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415" /><path d="M16 5l3 3" /></svg></span>
+<span hidden id="chev-right"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tabler-icon tabler-icon-chevron-right" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M9 6l6 6l-6 6" /></svg></span>
+<span hidden id="chev-down"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tabler-icon tabler-icon-chevron-down" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M6 9l6 6l6 -6" /></svg></span>
+
+<section class="state">
+  <h2><span class="n">1</span>Closed, as the summary opens</h2>
+  <div class="stage" data-state="closed" data-caption="<b>As the summary opens</b>: the last line is <b>History · 3 changes ›</b> (picture 09b, Prospects' line). It is a button: a tap or Enter opens the list in place; screen readers hear “collapsed / expanded”. (The blue ring shows how it looks with keyboard focus; the summary doesn't open with focus on it.)">
+    <template>
+      <div class="mark">{{line:History · 3 changes:closed}}</div>
+    </template>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">2</span>Open</h2>
+  <div class="stage" data-state="open" data-caption="<b>Open</b>: newest first — what changed, then <b>when · who</b> in Massachusetts time (“Oct 22 · Jeffrey Berg”). The section writes “what changed”; the line writes the date and the name the same way everywhere. A long list scrolls with the summary.">
+    <template>
+      {{line:History · 3 changes:open}}
+      <ul class="plog mark" aria-label="History">
+        <li class="plog-item"><span class="plog-text">Payment changed: $65 cash → $65 check</span><span class="plog-meta">Oct 22 · Jeffrey Berg</span></li>
+        <li class="plog-item"><span class="plog-text">Payment recorded: $65 cash</span><span class="plog-meta">Oct 19 · Staff</span></li>
+        <li class="plog-item"><span class="plog-text">Registered on the family form</span><span class="plog-meta">Oct 13 · Family form</span></li>
+      </ul>
+    </template>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">3</span>Hide private details on</h2>
+  <div class="stage" data-state="hidden" data-hidden data-caption="<b>Hide private details on</b>: changes about money are left out of the count and the list, and one gray line says so — Star's words (v0.506). The summary's payment row already reads “Hidden on this tablet”.">
+    <template>
+      {{line:History · 1 change:open}}
+      <ul class="plog" aria-label="History">
+        <li class="plog-item"><span class="plog-text">Registered on the family form</span><span class="plog-meta">Oct 13 · Family form</span></li>
+      </ul>
+      <p class="field-hint hist-hidden-line mark">Payment history is hidden on this tablet.</p>
+    </template>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">4</span>While it reads</h2>
+  <div class="stage" data-state="loading" data-caption="<b>While it reads</b> (usually a moment, while the summary opens): “History” with a gray “Loading…”, not yet a button.">
+    <template>
+      <div class="hist-none mark"><span class="phistory-label">History</span><span class="hist-wait">Loading…</span></div>
+    </template>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">5</span>If it can't read</h2>
+  <div class="stage" data-state="failed" data-caption="<b>If it can't read</b>: the shared amber bar with Retry stays under the line until it works or the summary closes (v1.004). Today Star shows “No changes recorded yet.” instead, which hides the problem.">
+    <template>
+      <div class="hist-none"><span class="phistory-label">History</span></div>
+      <div class="errbar hist-error mark" role="alert"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tabler-icon tabler-icon-alert-triangle errbar-icon" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0" /><path d="M12 16h.01" /></svg><span class="errbar-text">Couldn't load the history. Check the connection, then try again.</span><span class="errbar-actions"><button type="button" class="btn errbar-retry"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tabler-icon tabler-icon-refresh" aria-hidden="true"><path stroke="none" d="M0 0h24v24H0z" fill="none" /><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" /><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" /></svg>Retry</button></span></div>
+    </template>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">6</span>Nothing recorded yet</h2>
+  <div class="stage" data-state="empty" data-caption="<b>Nothing recorded yet</b> (e.g. a person added before the section kept a history): the line stays, as plain text — <b>History · no changes yet</b> — with nothing to open.">
+    <template>
+      <div class="hist-none mark"><span class="phistory-label">History ·</span><span>no changes yet</span></div>
+    </template>
+  </div>
+</section>
+
+<script>
+  // Each state drawn twice from its <template>: the PC / tablet summary (Dialog.jsx, "detail" size)
+  // and the phone's full-screen page. {{line:words:closed|open}} is Prospects' button, filled in.
+  const pick = (id) => document.getElementById(id).innerHTML;
+  const line = (words, open) => `<button type="button" class="pkv pkv-btn phistory-btn${open ? '' : ' is-focus'}" aria-expanded="${open}"><span class="pkv-v phistory-label">${words}</span>${pick(open ? 'chev-down' : 'chev-right')}</button>`;
+  for (const stage of document.querySelectorAll('.stage[data-state]')) {
+    const hidden = 'hidden' in stage.dataset;
+    const content = stage.querySelector('template').innerHTML.replace(/\{\{line:([^:}]+):(open|closed)\}\}/g, (_, w, s) => line(w, s === 'open'));
+    const summary = `
+      <dl class="ev-sum">
+        <div class="ev-sum-row"><dt>Class and time</dt><dd>White · 4:00 – 5:00 PM</dd></div>
+        <div class="ev-sum-row"><dt>Paying by</dt><dd>${hidden ? '<span class="ev-hidden-value">Hidden on this tablet</span>' : 'Cash'}</dd></div>
+        <div class="ev-sum-row"><dt>Payment</dt><dd>${hidden ? '<span class="ev-hidden-value">Hidden on this tablet</span>' : '<span class="ttag ttag--ok">Paid</span> · $65 check · paid Oct 19'}</dd></div>
+        <div class="ev-sum-row"><dt>Signed by</dt><dd>Parent or guardian, on the form</dd></div>
+      </dl>
+      ${content}`;
+    stage.insertAdjacentHTML('beforeend', `
+      <div class="dialog tdialog tdialog--detail only-wide" role="dialog" aria-modal="true">
+        <h2 class="dialog-title">Owen Reed</h2>
+        <p class="tdialog-sub">November Children Testing</p>
+        ${summary}
+        <div class="dialog-actions"><button type="button" class="btn">Close</button><button type="button" class="btn btn-primary">${pick('edit-icon')}Edit details</button></div>
+      </div>
+      <div class="dialog-page tdialog-page only-phone" role="dialog" aria-modal="true">
+        <div class="dialog-page-head"><button type="button" class="icon-button" aria-label="Back">${pick('back-icon')}</button><h2 class="dialog-page-title">Owen Reed</h2></div>
+        <div class="dialog-page-body"><p class="tdialog-sub">November Children Testing</p>${summary}</div>
+      </div>`);
+  }
+</script>
+</body>
+</html>

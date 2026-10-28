@@ -1,0 +1,17 @@
+{
+  "title": "M6 · The shared count cards",
+  "intro": "One row of count cards for every roster, as the design review decided (rulebook v1.013, v1.014): <b>tapping a card filters the list</b>; a money total (“Payments recorded”) stays a total and can't be tapped; the tapped card gets the blue edge; two by two on phones. Each section passes its own cards. <b>Amber outline</b> = what the shared row decides. <b>One detail to OK — Black Belt on phones (6):</b> today Black Belt's phones show two pills, “Late 2” and “Not paid 1”, instead of cards (v0.219). With the shared row they get the same 2×2 cards as every other roster — v1.013 says “the same look and tap behaviour”, and a pill mode would be a second look to keep. If you OK it, the new row records that it changes v0.219. Every state at all four sizes: <code>M6-count-cards.png</code>.",
+  "shots": "shots/M6",
+  "out": "M6-count-cards.review",
+  "width": 1120,
+  "scale": 0.8,
+  "sections": [
+    { "head": "As it opens — Color Belt's event roster", "states": ["rest"], "pics": ["rest@pc", "rest@tablet", "rest@phone", "rest@small"] },
+    { "head": "A card tapped", "states": ["filtered"], "pics": ["filtered@pc", "filtered@phone", "filtered@small"] },
+    { "head": "Camps' own four, with a small line", "states": ["camps"], "pics": ["camps@pc", "camps@phone"] },
+    { "head": "Black Belt's four plan cards", "states": ["blackbelt"], "pics": ["blackbelt@pc", "blackbelt@phone"] },
+    { "head": "Hide private details on", "states": ["hidden"], "pics": ["hidden@pc", "hidden@phone"] },
+    { "head": "The detail to OK — Black Belt on phones: cards instead of pills", "states": ["bbphone"], "pics": ["bbphone@phone", "bbphone@small"] }
+  ],
+  "footer": "<b>What changes for each section when it switches</b> (later, in its own prompt): Color Belt's private testing cards start filtering (v1.013) · Star's Payments recorded stops being tappable and its selected card gets the blue edge, not a dark one · Camps' summary line becomes its four cards (v1.014) · Black Belt's phones get the 2×2 cards (the detail above). Finance's report cards stay as they are."
+}

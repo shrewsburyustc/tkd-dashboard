@@ -1,0 +1,26 @@
+[
+  {
+    "id": "closed",
+    "caption": "<b>As the summary opens</b>: the last line is <b>History · 3 changes ›</b> (picture 09b, Prospects' line). It is a button: a tap or Enter opens the list in place; screen readers hear “collapsed / expanded”. (The blue ring shows how it looks with keyboard focus; the summary doesn't open with focus on it.)"
+  },
+  {
+    "id": "open",
+    "caption": "<b>Open</b>: newest first — what changed, then <b>when · who</b> in Massachusetts time (“Oct 22 · Jeffrey Berg”). The section writes “what changed”; the line writes the date and the name the same way everywhere. A long list scrolls with the summary."
+  },
+  {
+    "id": "hidden",
+    "caption": "<b>Hide private details on</b>: changes about money are left out of the count and the list, and one gray line says so — Star's words (v0.506). The summary's payment row already reads “Hidden on this tablet”."
+  },
+  {
+    "id": "loading",
+    "caption": "<b>While it reads</b> (usually a moment, while the summary opens): “History” with a gray “Loading…”, not yet a button."
+  },
+  {
+    "id": "failed",
+    "caption": "<b>If it can't read</b>: the shared amber bar with Retry stays under the line until it works or the summary closes (v1.004). Today Star shows “No changes recorded yet.” instead, which hides the problem."
+  },
+  {
+    "id": "empty",
+    "caption": "<b>Nothing recorded yet</b> (e.g. a person added before the section kept a history): the line stays, as plain text — <b>History · no changes yet</b> — with nothing to open."
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "shots": "shots/M6",
+  "title": "M6 · The shared count cards — mockup",
+  "subtitle": "Every roster's row of count cards (rulebook v1.013, v1.014): tapping a count card filters the list; a money total stays a total. Color Belt's look. <b>Amber outline</b> = the shared row.",
+  "pcOwnLine": [
+    "rest",
+    "filtered",
+    "camps",
+    "blackbelt",
+    "hidden"
+  ],
+  "out": "M6-count-cards"
+}

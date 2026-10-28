@@ -1,22 +1,16 @@
 /*
   staff.css — the styles for Staff accounts (StaffAccounts.jsx and screens/staff/), as in the
   approved mockup docs/Dashboard Docs/TKD-Staff-Accounts-Mockups.html (v0.76).
-  Why it exists: the page reuses the shared pieces from testing.css (page header .phead/.ptitle,
+  Why it exists: the page reuses the shared pieces from shared.css (page header .phead/.ptitle,
   the bordered list .clist, tags .ttag, icon buttons .tib, the row menu, the amber banner and the
   Testing dialog frame); this file adds only what's new. Every value comes from tokens.css or the
-  4px grid.
+  4px grid. The account menu's gray "Admin" label (.menu-group-label) is in shared.css too
+  (rulebook v1.030).
 
   Screen-size rules (same as app.css / testing.css):
     Phone          (max-width: 639.98px)
     Touch screens  (pointer: coarse)  → taller rows, 44px tap areas
 */
-
-/* ===== Account menu: the gray "Admin" label above Staff accounts (admins only) ===== */
-.menu-group-label {
-  padding: var(--space-4) var(--space-12) var(--space-4);
-  color: var(--color-text-secondary);
-  font-size: var(--text-12);
-}
 
 /* ===== Page ===== */
 .staffaccounts {
@@ -249,11 +243,6 @@
     overflow: visible;
     white-space: normal;
     overflow-wrap: break-word; /* breaks after the "@" first (EmailText) */
-  }
-
-  /* The phone sheet's rows start 16px in: the "Admin" label lines up with them */
-  .menu-group-label {
-    padding-inline: var(--space-16);
   }
 }
 

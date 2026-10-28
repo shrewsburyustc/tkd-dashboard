@@ -1,0 +1,15 @@
+{
+  "title": "M4 · The shared Print receipt",
+  "intro": "Black Belt's approved receipt (v0.220) for every section, as the design review decided (rulebook v1.002, picture 03b) — the same look, filled from a plain list any section can give: what kind of receipt, the section's facts, the payments, the totals. <b>Amber outline</b> = what differs from the plain preview. <b>Two details to OK:</b> (a) while the receipt loads or can't load, <b>Print or save as PDF</b> shows in the gray unavailable look (today Black Belt's stays blue and does nothing); (b) with Hide private details on, one gray line — “Payment details are hidden on this tablet.” — and no Print button (Black Belt's “Payments are hidden on this device.” becomes the shared words, v0.507). Every state at all four sizes: <code>M4-receipt.png</code>.",
+  "shots": "shots/M4",
+  "out": "M4-receipt.review",
+  "width": 1120,
+  "scale": 0.6,
+  "sections": [
+    { "head": "Paid in full — Color Belt's receipt, as picture 03b drew it", "states": ["paid"], "pics": ["paid@pc", "paid@tablet", "paid@phone", "paid@small"] },
+    { "head": "Several payments, a refund and a balance — Black Belt's", "states": ["balance"], "pics": ["balance@pc", "balance@phone", "balance@small"] },
+    { "head": "While it loads, if it can't load, and with Hide private details on — details (a) and (b)", "grid": ["loading@pc", "failed@pc", "hidden@pc"] },
+    { "head": "The printed page — US Letter, black on white", "states": ["paper"], "pics": ["paper@pc"] }
+  ],
+  "footer": "<b>What changes for each section when it switches</b> (later, in its own prompt): Color Belt, Star and Camps gain Print receipt — in the person's ⋯ menu and their detail (v1.002) — and fill the list from their own data; where a section has no reader for the schools' addresses yet, its prompt adds one. Black Belt's receipt moves onto the shared one with the two details above. Emailed receipts come later, once the dashboard can send email."
+}
