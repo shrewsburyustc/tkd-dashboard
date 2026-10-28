@@ -11,7 +11,9 @@
 //     a second call that sends the NEW version the save returned; Undo of Add is a delete.
 // The drawing is done by smaller files: DanBlock (Dan lines + category rows), SettingsBlocks
 // (grade scale, assistant-class table, fees), the five dialogs, and the shared Dialog /
-// RowMenu / ErrorBanner / DeleteDialog.
+// RowMenu / ErrorBanner, and the shared "are you sure?" box (ConfirmBox) for Delete category
+// (design review part 2, rulebook v0.518: "Keep category · Delete category", "Deleting…" while it
+// works; Esc, a click outside and Back wait until it is done).
 // Build phase 6 (gap mockups R11, rulebook v0.514) adds the "Result emails" block under Fees
 // (ResultEmailsBlock) and its "Edit result email" dialog (ResultTextDialog). Its texts load with
 // their own hook (useResultTexts), so a problem reading them never hides the rubrics; they save
@@ -30,6 +32,7 @@
 //     birth, no emails).
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconArrowDown, IconArrowUp, IconTrash } from '@tabler/icons-react';
+import ConfirmBox from '../../../components/ConfirmBox.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
 import { centsToInputText } from '../../../lib/money.js';
@@ -46,7 +49,6 @@ import {
 import { PHONE_QUERY, TOUCH_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
 import { useReorderDrag } from '../../../lib/useReorderDrag.js';
 import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
-import DeleteDialog from '../DeleteDialog.jsx';
 import AssistantTableDialog from './AssistantTableDialog.jsx';
 import CategoryDialog from './CategoryDialog.jsx';
 import DanBlock, { categoryColumns, danNavKey, dragGroup } from './DanBlock.jsx';
@@ -950,15 +952,21 @@ export default function RubricsTab({ isAdmin, panelId, tabId, screenLocked, onNo
       );
     } else {
       dialogElement = (
-        <DeleteDialog
+        <ConfirmBox
           key={dialog.key}
           title={dialog.title}
-          body={dialog.body}
-          failed={dialog.failed}
-          deleting={dialog.saving}
-          onDelete={confirmDelete}
-          onCancel={cancelDialog}
-        />
+          keepLabel={T.KEEP_CATEGORY}
+          actionLabel={T.DELETE_CATEGORY}
+          actionIcon={IconTrash}
+          busyLabel={T.DELETING}
+          loses="forGood"
+          busy={dialog.saving}
+          failed={dialog.failed ? T.DELETE_FAILED : null}
+          onKeep={cancelDialog}
+          onConfirm={confirmDelete}
+        >
+          {dialog.body}
+        </ConfirmBox>
       );
     }
   }

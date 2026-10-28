@@ -10,9 +10,11 @@
 // points at the real form. The address is Color Belt's PUBLIC_ORIGIN (one place for it).
 // The form itself lives at /star/<code> (CONTRACT-0006 OPEN-2), built in Star phase 4.
 //
-// The QR code is made right here in the browser by the small `qrcode-generator` library (no
-// network, nothing sent anywhere), and shown as a picture: <img src={starQrSvgDataUrl(code)} />,
-// never as innerHTML.
+// The screens no longer draw the QR code from here: since the design review's part 2 (S8, rulebook
+// v0.518) the shared Registration link box and Star's flyer use the shared src/lib/qr.js. This
+// file's own starQrSvgDataUrl stays only as the yardstick the shared checks
+// (src/lib/shared/checks.mjs, "M5 QR") compare the shared picture with; it is made in the browser
+// by the small `qrcode-generator` library (no network, nothing sent anywhere).
 //
 //   STAR_CODE_PATTERN                        /^[a-hjkmnp-z2-9]{8}$/ (contract 0006 §2.2)
 //   isStarCode('fa2kxm7p')                   → true
@@ -45,7 +47,8 @@ export function starRegistrationLink(code) {
   return isStarCode(code) ? `${PUBLIC_ORIGIN}${STAR_FORM_PATH}${code}` : '';
 }
 
-// The QR code for that link, as an SVG picture in a data URL (usable as <img src>).
+// The QR code for that link, as an SVG picture in a data URL (usable as <img src>). Used only by
+// the checks (see the top of this file).
 // Error correction 'M' (about 15% of the picture can be damaged and it still scans — fine for
 // paper); type number 0 = the library picks the smallest size that fits. margin 4 = the empty
 // "quiet zone" scanners need. The SVG is scalable: it stays sharp at any size, also printed.

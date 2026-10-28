@@ -84,7 +84,7 @@ import * as G from '../../../../lib/star/gradingText.js';
 import { usePrivateDetailsHidden } from '../../../../lib/privateDetails.js';
 import { loadSchools } from '../../../../lib/settings/schoolsApi.js';
 import { PHONE_QUERY, useMediaQuery } from '../../../../lib/useMediaQuery.js';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../../events/useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../../../lib/useLiveLoad.js';
 import CandidatesTab from '../candidates/CandidatesTab.jsx';
 import { TAB_CANDIDATES, testingFor } from '../candidates/text.js';
 import GradingTab from '../grading/GradingTab.jsx';
@@ -578,7 +578,7 @@ export default function StarEventPage({
   }
 
   const isPhone = useMediaQuery(PHONE_QUERY);
-  const [dialog, setDialog] = useState(null); // { key, opener, copyFailed } while Registration links is open
+  const [dialog, setDialog] = useState(null); // { key, opener } while Registration links is open
   const [schools, setSchools] = useState(null); // Settings → Schools, for the flyer's address
 
   useEffect(() => {
@@ -623,7 +623,7 @@ export default function StarEventPage({
 
   async function openLinks(opener) {
     clearToast();
-    setDialog({ key: Date.now(), opener, copyFailed: false });
+    setDialog({ key: Date.now(), opener });
     if (schools === null) {
       const result = await loadSchools();
       if (result.status === 'ok') setSchools(result.schools);
@@ -644,15 +644,10 @@ export default function StarEventPage({
     };
     window.requestAnimationFrame(tryFocus);
   }
-  async function copyLink(link) {
-    try {
-      if (!link || !navigator.clipboard) throw new Error('No clipboard');
-      await navigator.clipboard.writeText(link);
-      setDialog((current) => (current ? { ...current, copyFailed: false } : current));
-      showToast(T.TOAST_LINK_COPIED, { icon: false });
-    } catch {
-      setDialog((current) => (current ? { ...current, copyFailed: true } : current));
-    }
+  // The shared link box copies the link itself and shows its own note when that fails; a copy that
+  // worked gets the page's "Link copied" toast.
+  function linkCopied() {
+    showToast(T.TOAST_LINK_COPIED, { icon: false });
   }
 
   // Print grading sheet (H3, proposals 13–17). The Grading tab calls it with { dan, danLabel, opener }:
@@ -965,8 +960,7 @@ export default function StarEventPage({
           event={event}
           schools={schools}
           isPhone={isPhone}
-          copyFailed={dialog.copyFailed}
-          onCopy={copyLink}
+          onCopied={linkCopied}
           onClose={closeLinks}
         />
       )}

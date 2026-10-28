@@ -127,7 +127,10 @@ export function undoSentRefusal(status) {
 export const undoConfirmTitle = (name) => `Undo Mark as sent for ${name}?`;
 export const undoConfirmBody = (day) =>
   `This removes the ${monthDay(day)} send record. The row then shows the send before it, if there was one — otherwise “Not sent yet”. Use this only if the email wasn’t really sent.`;
-export const CANCEL = 'Cancel';
+// Its buttons (shared ConfirmBox, rulebook v0.518, Q1 A): the one that changes nothing, and the
+// action's words while it works. (Black Belt's twin box takes the same words.)
+export const KEEP_SEND_RECORD = 'Keep send record';
+export const UNDOING = 'Undoing…';
 
 // ----- Download CSV (29–33) -----
 export const csvDownloaded = (fileName, n) =>

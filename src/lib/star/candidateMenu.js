@@ -4,7 +4,8 @@
 //   (1) about the person — Edit details (always first) · the private testing items · Change how
 //       they'll pay · Review possible duplicate (only on a row flagged "Possible duplicate")
 //   (2) money — Edit payment · Undo payment · Record refund / Undo refund
-//       (admins, paid rows, not a make-up, Hide private details off)
+//       (admins, paid rows, not a make-up, Hide private details off), then Print receipt (staff
+//       and admins, a row with a payment, not while hidden; S2, v0.518)
 //   (3) taking someone off — Withdraw · Delete permanently (admins)
 // Items that don't apply are left out; the rest never move. A withdrawn row has its own short menu
 // (Restore · line · Delete permanently, admins only).
@@ -18,6 +19,13 @@
 // canGradePrivate: the page can open the private grading page (phase 5)
 // Returns [{ key, separatorBefore }] — empty when there is nothing to show (a staff member on a
 // withdrawn row).
+// Print receipt's one rule, shared by the ⋯ menu and the summary's Payment part (S2, v0.518): an
+// active row (not withdrawn) with a payment or a refund that stands, not a make-up, and never while
+// Hide private details is on (Q8 B).
+export function canPrintReceipt(row, hidden) {
+  return Boolean(row) && row.status !== 'withdrawn' && !hidden && !row.isMakeup && (row.paid || row.refundedCents > 0);
+}
+
 export function candidateMenuKeys(row, { isAdmin, hidden, flagged = false, canGradePrivate = false }) {
   const out = [];
   const add = (key, separatorBefore = false) => out.push({ key, separatorBefore });
@@ -48,6 +56,9 @@ export function candidateMenuKeys(row, { isAdmin, hidden, flagged = false, canGr
     if (row.refundedCents > 0) add('undoRefund');
     else if (row.overpaidCents > 0) add('recordRefund');
   }
+  // Print receipt (S2, DR2-P4, v0.518): staff and admins, any row with a payment (or a refund that
+  // stands), last in the money group — for staff it starts the group (it is the only item there).
+  if (canPrintReceipt(row, hidden)) add('printReceipt', !(isAdmin && row.paid));
   // (3) taking someone off
   if (isAdmin) {
     add('withdraw', true);

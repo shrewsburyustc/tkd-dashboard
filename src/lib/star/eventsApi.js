@@ -71,8 +71,8 @@
 // Pure helpers (no database):
 //   splitUpcomingPast(events) → { upcoming (soonest first), past (most recent first) }   (v0.89)
 //   latestCreatedEvent(events) → the event Add event copies Start time and Where from, or null
-// Related files: starEventRules.js (startTimeOptions, startTimeIsValid, startTimeLabel, WHERE_CODES),
-// links.js (starSchoolLinks, starRegistrationLink, starQrSvgDataUrl), eventsText.js (the words).
+// Related files: starEventRules.js (startTimeIsValid, startTimeLabel, WHERE_CODES),
+// links.js (starSchoolLinks, starRegistrationLink), eventsText.js (the words).
 // Color Belt's src/lib/testing/eventRules.js gives registrationSwitch() (to gray out Open registration
 // for staff, v0.86), defaultAutoCloseOn() (7 days before) and addDays().
 import { supabase } from '../supabase.js';

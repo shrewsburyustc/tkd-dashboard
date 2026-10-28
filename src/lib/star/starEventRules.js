@@ -4,9 +4,10 @@
 // event can be "Where". The real database has the same rule in SQL (star_start_time_is_valid,
 // contract 0006 §2.2, widened by migration 0028 / rulebook v1.019 S12): from 6:00 AM to 10:00 PM,
 // on a 5-minute step, no seconds (before 0028: 8:00 AM–8:00 PM on a 15-minute step).
-// The Start time DROPDOWN still offers the old list (8:00 AM–8:00 PM every 15 minutes) until the
-// shared time list replaces it (a later step, which also needs 0028 live first); every old choice
-// is also valid under the new rule.
+// The event's Start time field is the shared time list (components/TimeList.jsx, design review
+// S12, rulebook v0.518), whose default range is exactly this rule — and so is a private testing's
+// Time field (PrivateDialog.jsx). The old 8:00 AM–8:00 PM list every 15 minutes (startTimeOptions)
+// is gone with the last dropdown that used it.
 //
 // Everything else about an event's state (open / closed / finished, the list tag, who may flip the
 // Registration switch) is EXACTLY Color Belt's rule (contract 0006 §5.1 = 0005's), so it is
@@ -30,12 +31,6 @@ import { eventState } from '../testing/eventRules.js';
 export const START_TIME_FIRST_MINUTES = 6 * 60; // 6:00 AM
 export const START_TIME_LAST_MINUTES = 22 * 60; // 10:00 PM
 export const START_TIME_STEP_MINUTES = 5;
-
-// The Start time dropdown's choices (startTimeOptions): still the pre-0028 list, 8:00 AM–8:00 PM
-// every 15 minutes, until the shared time list step changes the dropdown.
-const START_TIME_LIST_FIRST_MINUTES = 8 * 60; // 8:00 AM
-const START_TIME_LIST_LAST_MINUTES = 20 * 60; // 8:00 PM
-const START_TIME_LIST_STEP_MINUTES = 15;
 
 // A school's public code (the end of its family link): 8 characters, the letters a–z without i, l
 // and o, and the digits 2–9 (no look-alikes such as 0/o or 1/l/i). Contract 0006 §2.2; the
@@ -93,17 +88,6 @@ function minutesLabel(minutes) {
 export function startTimeLabel(text) {
   const minutes = startTimeMinutes(text);
   return minutes === null ? '' : minutesLabel(minutes);
-}
-
-// Every choice of the Start time dropdown, in order: [{ value: '08:00', label: '8:00 AM' }, …
-// { value: '20:00', label: '8:00 PM' }] — 49 choices (the pre-0028 list, kept until the shared
-// time list step; each one passes startTimeIsValid).
-export function startTimeOptions() {
-  const options = [];
-  for (let m = START_TIME_LIST_FIRST_MINUTES; m <= START_TIME_LIST_LAST_MINUTES; m += START_TIME_LIST_STEP_MINUTES) {
-    options.push({ value: `${two(Math.floor(m / 60))}:${two(m % 60)}`, label: minutesLabel(m) });
-  }
-  return options;
 }
 
 // ----- v0.504: an Edit event save never reopens registration by itself -----

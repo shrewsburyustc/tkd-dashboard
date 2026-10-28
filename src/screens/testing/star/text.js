@@ -8,7 +8,7 @@
 // A few words come from shared pieces that Color Belt built (Dialog's "Back", ErrorBanner's
 // "Retry" / "Dismiss", RowMenu's "Cancel", the delete confirmation's buttons): those live in
 // Color Belt's text.js and are the same house wording.
-import { formatDollars } from '../../../lib/money.js';
+import { formatMoney } from '../../../lib/money.js';
 
 // ----- Page header (approved phase 1 header, Chooser mockups screen 5, v0.177) -----
 export const PAGE_TITLE = 'Star testing';
@@ -58,13 +58,17 @@ export const totalLine = (credits, max) => `Total ${creditsText(credits)} · max
 export const editCategoryLabel = (name) => `Edit ${name}`;
 export const moreFor = (name) => `More actions for ${name}`;
 export const dragToReorder = (name) => `Drag to reorder ${name}`;
-export const GRIP_TOOLTIP = 'Drag to reorder';
 export const UNDO = 'Undo';
 
 // ----- ⋯ menu (screens 4, 5) -----
 export const MOVE_UP = 'Move up';
 export const MOVE_DOWN = 'Move down';
 export const DELETE_CATEGORY = 'Delete category';
+// The "Delete …?" box (the shared ConfirmBox, rulebook v0.518): the button that changes nothing,
+// the action's words while it works, and the amber note under the buttons when it fails.
+export const KEEP_CATEGORY = 'Keep category';
+export const DELETING = 'Deleting…';
+export const DELETE_FAILED = "Couldn't delete. Check the connection, then try again.";
 export const CANT_DELETE_REASON = "Can't delete — it's the only category graded from class count";
 // Phone sheet, line 2: "1st Dan · 5 credits"
 export const sheetLine = (danLabel, credits) => `${danLabel} · ${creditsText(credits)}`;
@@ -101,9 +105,9 @@ export const COL_PRIVATE = 'Private';
 export const editFeesLabel = (label) => `Edit ${label} fees`;
 export const FEES_FOOT = 'Same day = paid on testing day. Cash or check.';
 // Phone fee row, line 2: "$140 standard · $150 same day · $160 private"
-export const phoneStandard = (cents) => `${formatDollars(cents)} standard`;
-export const phoneSameDay = (cents) => `${formatDollars(cents)} same day`;
-export const phonePrivate = (cents) => `${formatDollars(cents)} private`;
+export const phoneStandard = (cents) => `${formatMoney(cents)} standard`;
+export const phoneSameDay = (cents) => `${formatMoney(cents)} same day`;
+export const phonePrivate = (cents) => `${formatMoney(cents)} private`;
 
 // ----- Dialogs -----
 export const SAVE = 'Save';

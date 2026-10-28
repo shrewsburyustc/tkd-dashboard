@@ -21,9 +21,10 @@ import { createStarEventsBackend, STAR_EVENT_RPC_NAMES, STAR_EVENT_TABLES, SEED_
 import { createRubricsApi } from './rubricsCore.js';
 import { createStarEventsApi, STAR_EVENT_STATUSES, splitUpcomingPast, latestCreatedEvent } from './eventsCore.js';
 import {
-  startTimeIsValid, startTimeOptions, startTimeLabel, shortStartTime, STAR_CODE_PATTERN, WHERE_CODES, editWouldReopen,
+  startTimeIsValid, startTimeLabel, shortStartTime, STAR_CODE_PATTERN, WHERE_CODES, editWouldReopen,
 } from './starEventRules.js';
 import { starRegistrationLink, starQrSvgDataUrl, starSchoolLinks, isStarCode } from './links.js';
+import { timeOptions } from '../times.js';
 import { tagText, statusMessage, eventSummary, registrationStatusLine, switchOnlyHint } from './eventsText.js';
 import { eventState, stateTag, addDays, PUBLIC_ORIGIN } from '../testing/eventRules.js';
 
@@ -124,13 +125,14 @@ await check('start time: 6:00 AM to 10:00 PM on a 5-minute step, no seconds (sta
   let valid = 0;
   for (let m = 0; m < 24 * 60; m++) if (startTimeIsValid(`${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`)) valid++;
   assert.equal(valid, 193);
-  // The dropdown keeps the pre-0028 list (8:00 AM–8:00 PM every 15 minutes) until the shared time list step
-  const options = startTimeOptions();
-  assert.equal(options.length, 49); // 12 hours × 4 + the last one
-  assert.deepEqual(options[0], { value: '08:00', label: '8:00 AM' });
-  assert.deepEqual(options[16], { value: '12:00', label: '12:00 PM' });
-  assert.deepEqual(options.at(-1), { value: '20:00', label: '8:00 PM' });
-  assert.ok(options.every((o) => startTimeIsValid(o.value)));
+  // The event's Start time is the shared time list with its default range (v0.518, S12): exactly
+  // the times this rule accepts, 6:00 AM first, 10:00 PM last, so no choice can be refused.
+  const listed = timeOptions();
+  assert.equal(listed.length, 193);
+  assert.deepEqual([listed[0].value, listed.at(-1).value], ['06:00', '22:00']);
+  assert.ok(listed.every((o) => startTimeIsValid(o.value)));
+  // (A private testing's Time field is the same shared list since v0.518; the old 8:00 AM–8:00 PM
+  // list, startTimeOptions, is gone.)
   assert.equal(startTimeLabel('10:00:00'), '10:00 AM');
   assert.equal(shortStartTime('13:15:00'), '13:15');
   assert.equal(shortStartTime('nope'), null);

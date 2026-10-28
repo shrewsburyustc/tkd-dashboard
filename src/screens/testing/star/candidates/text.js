@@ -51,10 +51,9 @@ export function monthDayYear(iso) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso ?? '');
   return m ? `${MONTH_SHORT[Number(m[2]) - 1]} ${Number(m[3])}, ${m[1]}` : '';
 }
-// A timestamp → "Oct 17, 4:12 PM" / "Oct 20, 2026, 10:05 AM" (Massachusetts time)
+// A timestamp → "Oct 17, 4:12 PM" (Massachusetts time)
 export const stampTime = (stamp) => new Date(stamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
 export const stampShort = (stamp) => `${monthDay(stampDay(stamp))}, ${stampTime(stamp)}`;
-export const stampLong = (stamp) => `${monthDayYear(stampDay(stamp))}, ${stampTime(stamp)}`;
 
 // ----- Rows (Candidates screens 1–3, G4, G14, G15) -----
 export const COL_CANDIDATE = 'Candidate';
@@ -75,8 +74,9 @@ export const withdrawnLine = (c) =>
 export const payingByText = (method) => ({ cash: 'Cash', check: 'Check', card: 'Card' })[method] ?? '';
 export const NO_FEE_CELL = 'No fee';
 export const TAG_MAKEUP = 'Make-up';
-export const RECORD_PAYMENT = 'Record payment';
-export const recordPaymentLabel = (name) => `Record payment for ${name}`;
+// The row's Mark paid (S1, DR2-P3, v0.518; was "Record payment"): opens the shared Mark paid box
+export const MARK_PAID = 'Mark paid';
+export const markPaidLabel = (name) => `Mark paid for ${name}`; // PROPOSAL (approved as drawn)
 export const reviewDuplicateLabel = (name) => `Review possible duplicate: ${name}`;
 // "Make-up · retests Breaking, Korean Terminology" (+ " (below 245)" for chosen subjects, G14)
 export function makeupLine(names, belowPassMark) {
@@ -144,15 +144,22 @@ export const TOAST_PRIVATE_SET = 'Private testing set'; // PROPOSAL (Set / Chang
 export const deletedToast = (name) => `${name} deleted`; // PROPOSAL (Color Belt's live wording)
 export const TOAST_REFUND_UNDONE = 'Refund undone'; // PROPOSAL
 
-// ----- Record payment / Edit payment / Record refund / Change how they'll pay (screen 4, G1, G15, G16) -----
-export const RECORD_PAYMENT_TITLE = 'Record payment';
+// ----- The "are you sure?" boxes (shared ConfirmBox, DR2-P1, v0.518): busy words and failure notes -----
+export const UNDOING = 'Undoing…';
+export const DELETING = 'Deleting…';
+export const CHANGING = 'Changing…';
+export const UNDO_BOX_FAILED = "Couldn't undo. Check the connection, then try again."; // Undo payment, Undo refund (Q2 B)
+export const DELETE_BOX_FAILED = "Couldn't delete. Check the connection, then try again."; // Delete permanently (Q2 B)
+// (the Dan-change box keeps DIALOG_FAILED, "Couldn't save. …")
+
+// ----- Print receipt (S2, DR2-P4, v0.518; the receipt's own words are in candidatesText.js) -----
+export const PRINT_RECEIPT = 'Print receipt';
+export const THIS_CANDIDATE = 'This candidate'; // the receipt's not-found line when the row is gone too
+export const receiptSub = (name, eventName) => `${name} · ${eventName}`;
+export const receiptNotFound = (name) => `${name} was deleted on another device, so there is no receipt.`; // Results' and Black Belt's wording
+
+// ----- Edit payment / Record refund / Change how they'll pay (G1, G16) -----
 export const RECORD_REFUND_TITLE = 'Record refund';
-export const dialogSubLine = (c) => `${candidateName(c)} · ${c.danLabel} · ${testingFor(c)} · ${schoolName(c.locationCode)}`;
-export const choseOnForm = (method) => `They chose ${payingByText(method)} on the form. Change it if they paid another way.`;
-export const choseAtDesk = (method) => `They chose ${payingByText(method)} at the desk. Change it if they paid another way.`; // PROPOSAL (desk rows)
-export const feeHintStandard = (sameDayCents) => `Price before the testing day. On the testing day it fills in ${dollars(sameDayCents)}.`;
-export const FEE_HINT_SAME_DAY = 'Price on the testing day.'; // PROPOSAL
-export const feeHintPrivate = (danLabel) => `Private fee (${danLabel}).`;
 export const AMOUNT_TOO_HIGH = 'Use $1,000 or less.'; // PROPOSAL (the database's 100 000-cent cap)
 export const DATE_REFUNDED = 'Date refunded';
 export const REFUNDED_BY = 'Refunded by';
@@ -160,7 +167,6 @@ export const refundSub = (name, paidCents, overpaidCents) => `${name} · paid ${
 export const refundUpTo = (cents) => `Up to ${dollars(cents)}, the amount overpaid.`;
 export const refundDateHint = (registeredIso) => `Not before ${monthDay(registeredIso)} (registered) or after today.`;
 export const refundAfter = (paidCents, afterCents) => `The ${dollars(paidCents)} payment stays in the history. Afterwards the row reads “${paidAmount(afterCents)}”.`;
-export const paidDateHint = (registeredIso) => `Not before ${monthDay(registeredIso)} (registered) or after today.`; // PROPOSAL (Record / Edit payment)
 
 // ----- Undo payment / Undo refund confirmations (G16) -----
 export const undoPaymentTitle = (name) => `Undo ${name}’s payment?`;
@@ -199,8 +205,8 @@ export const privateFeeLine = (privateCents, wasCents) => `Fee becomes the priva
 export const privateFeeKept = (privateCents) => `The private fee is ${dollars(privateCents)}.`; // PROPOSAL (Change: already private)
 export const PRIVATE_FEE_HIDDEN = 'The private fee applies. Fees are hidden on this tablet.';
 export const PRIVATE_DAY_HINT = 'Past dates can’t be chosen.'; // PROPOSAL (as the event dates)
-export const CHOOSE_DAY = 'Choose the day.'; // PROPOSAL
-export const CHOOSE_TIME = 'Choose the time.'; // PROPOSAL
+export const CHOOSE_DAY = 'Choose a day.'; // as Color Belt and Black Belt
+export const CHOOSE_TIME = 'Choose a time.'; // as the time list's "Choose a time", Color Belt and Black Belt
 export const CHOOSE = 'Choose…';
 
 // ----- New candidate / Edit details / the detail view (screens 6, 8, 9; G5–G8) -----
@@ -220,7 +226,7 @@ export const EMAIL = 'Email for results';
 export const CURRENT_DAN = 'Current Dan';
 export const STARS_NOW = 'Stars now';
 export const testingForHint = (starsTo) => `Testing for ${starsText(starsTo)}.`;
-export const PAYING_BY_HINT = 'Record the payment from the row once they pay.';
+export const PAYING_BY_HINT = 'Mark them paid from the row once they pay.'; // (was "Record the payment …"; S1 renamed the button)
 export const ENTER_EMAIL = 'Enter an email for results.'; // PROPOSAL
 export const EMAIL_PROBLEM = 'Enter a full email address, like name@example.com.'; // the family form's wording
 export const CHOOSE_SCHOOL = 'Choose the school.'; // PROPOSAL
@@ -232,11 +238,10 @@ export const HIDDEN_EDIT_HINT = 'Change the date of birth or email at the desk.'
 export const DAN_AT_DESK_HINT = 'Change the Dan at the desk.';
 export const danFeeLine = (danLabel, feeCents, paidCents) =>
   `${danLabel} fee is ${dollars(feeCents)}.${paidCents > 0 ? ` The ${dollars(paidCents)} payment already recorded stays as it is.` : ''}`;
-export const PAYMENT_EDIT_NOTE = 'Payment is changed with Record payment or the ⋯ menu.';
+export const PAYMENT_EDIT_NOTE = 'Payment is changed with Mark paid or the ⋯ menu.'; // (was "Record payment"; S1)
 export const SECTION_CANDIDATE = 'Candidate';
 export const SECTION_REGISTRATION = 'Registration';
 export const SECTION_PAYMENT = 'Payment';
-export const SECTION_HISTORY = 'History';
 export const NAME = 'Name';
 export const ageText = (age) => (Number.isInteger(age) ? ` (age ${age})` : '');
 export const testingForLong = (c) => `${c.danLabel} · ${testingFor(c)}`;
@@ -262,8 +267,6 @@ export const makeupDetail = (eventName, names) => `From ${eventName} · retests 
 export const PRIVATE = 'Private testing';
 export const privateDetail = (day, time) => `${fullDate(day)}, ${startTimeLabel(time)}`; // PROPOSAL
 export const LOAD_DETAIL_FAILED = "Couldn't load this candidate. Check the connection, then retry."; // PROPOSAL
-export const HISTORY_EMPTY = 'No changes recorded yet.'; // PROPOSAL
-export const showAllCount = (n) => `Show all (${n})`;
 
 // ----- View signature (G5) -----
 export const SIGNATURE_TITLE = 'Signature';
@@ -300,10 +303,39 @@ export const danLabelOf = (dan) => DAN_LABELS[dan] ?? `${dan}th Dan`;
 // "Spring 2026 Star Testing" → "Spring 2026" (the earlier testing's short name in the list)
 export const shortEventName = (name) => (name ?? '').replace(/\s+Star Testing$/i, '');
 
-// ----- History (G5, G6) -----
-export const historyHead = (stamp, actor) => `${stampLong(stamp)} · ${actor || 'Staff'}`;
-export const HISTORY_PAYMENTS_HIDDEN = 'Payment history is hidden on this tablet.';
+// ----- History (G5, G6; the shared one-line History since S6, v0.518) -----
+// The line itself ("History · 15 changes", "Oct 20 · Dana Ross", the loading / failed / hidden
+// lines) is the shared part's (components/HistoryLine.jsx); these are Star's words for each change.
+export const HISTORY_STAFF = 'Staff'; // the actor when the log has no name
 export const hiddenFieldChanged = (label) => `${label} changed · details hidden on this tablet`;
+export const historyPayment = (cents, method, iso) => `Payment recorded: ${dollars(cents)} ${payingByText(method).toLowerCase()}, paid ${monthDay(iso)}`;
+export const historyRefund = (cents, method, iso) => `Refund recorded: ${dollars(cents)} ${payingByText(method).toLowerCase()}, ${monthDay(iso)}`;
+export const historyPaymentUndone = (cents) => `Payment undone: ${dollars(cents)}`;
+export const historyRefundUndone = (cents) => `Refund undone: ${dollars(cents)}`;
+export const HISTORY_PAYMENT_CHANGED = 'Payment changed';
+// Results tab's Mark as sent (Q3 A, v0.518): "Result email marked sent (Passed)" / "(Make-up)"
+export const historyResultSent = (status) => `Result email marked sent${status === 'passed' ? ' (Passed)' : status === 'makeup' ? ' (Make-up)' : ''}`;
+export const HISTORY_RESULT_SENT_UNDONE = 'Mark as sent undone';
+export const HISTORY_SIGNED = 'Signed the acknowledgment on the family form';
+export const HISTORY_SIGNATURE_REMOVED = 'Signature removed (90 days after the testing day)';
+export const HISTORY_SIGNATURE_CHANGED = 'Signature changed';
+export const HISTORY_GRADE_CLEARED = 'Grade cleared';
+export const HISTORY_GRADE_CHANGED = 'Grade changed';
+export const HISTORY_MAKEUP_SUBJECT_ADDED = 'Make-up subject added';
+export const HISTORY_MAKEUP_SUBJECT_CHANGED = 'Make-up subject changed';
+export const HISTORY_CHANGED = 'Changed';
+export const historyAddedMakeup = (fromEventName) => `Added as a make-up${fromEventName ? ` from ${fromEventName}` : ''}`;
+export const HISTORY_REGISTERED_FORM = 'Registered on the family form';
+export const HISTORY_ADDED_DESK = 'Added at the desk';
+export const HISTORY_DELETED = 'Deleted';
+export const HISTORY_WITHDRAWN = 'Withdrawn';
+export const HISTORY_DUPLICATE_COPY = 'Moved to Removed as a duplicate copy';
+export const HISTORY_RESTORED = 'Restored';
+export const HISTORY_KEPT_BOTH = 'Possible duplicate: kept both registrations';
+export const HISTORY_KEPT_THIS = 'Possible duplicate: kept this registration';
+export const HISTORY_DUPLICATE_FOUND = 'Possible duplicate found';
+export const HISTORY_BACK_TO_DAY = 'Back to the testing day';
+export const historyPrivate = (dayText, timeText) => `${PRIVATE}: ${dayText}, ${timeText}`;
 
 // ----- Loading -----
 export const LOAD_LIST_FAILED = "Couldn't load the make-up list. Check the connection, then retry."; // PROPOSAL

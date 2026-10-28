@@ -110,12 +110,14 @@ export function sortBeltOrder(candidates) {
 export const danChangeNeedsAdmin = (candidate, isAdmin) => Boolean(candidate?.paid) && !isAdmin;
 
 // What a History row touches, so the screens can hide it while "Hide private details" is on (G6):
-//   payment        a payment / refund / undo row, or a change of "Paying by"
+//   payment        a payment / refund / undo row, or a CHANGE of "Paying by" (an update). The row
+//                  that adds the candidate sets paying_by too, but its line ("Registered on the
+//                  family form" / "Added at the desk") shows no money, so it stays (Q4 A, v0.518).
 //   privateFields  the date of birth / email columns this row changes ([] when none)
 export function historyPrivacy(row) {
   const keys = new Set([...Object.keys(row?.before ?? {}), ...Object.keys(row?.after ?? {})]);
   return {
-    payment: row?.tableName === 'star_payments' || (row?.tableName === 'star_candidates' && keys.has('paying_by')),
+    payment: row?.tableName === 'star_payments' || (row?.tableName === 'star_candidates' && row?.op === 'update' && keys.has('paying_by')),
     privateFields: ['date_of_birth', 'email_for_results'].filter((k) => row?.tableName === 'star_candidates' && keys.has(k)),
   };
 }

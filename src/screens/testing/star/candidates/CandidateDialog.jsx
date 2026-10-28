@@ -3,8 +3,11 @@
 //   mode 'new'   New candidate at the desk: First / Last name, Date of birth (optional — the dashboard
 //                calendar with the family form's look), School, Email for results (required),
 //                Current Dan, Stars now ("Testing for 2 stars."), Paying by. No "Paid now" (OPEN-19).
-//   mode 'view'  a read-only summary: Candidate · Registration · Payment · History, with Close and
-//                Edit details. Date of birth and email come ONLY from loadCandidateDetail (v0.160).
+//   mode 'view'  a read-only summary: Candidate · Registration · Payment, then the shared one-line
+//                History ("History · 15 changes ›", S6, v0.518), with Close and Edit details. Date of
+//                birth and email come ONLY from loadCandidateDetail (v0.160). On a row with a payment
+//                the Payment part ends with an outline "Print receipt" (S2, v0.518; staff and admins,
+//                not while Hide private details is on) — the receipt opens on top of the summary.
 //   mode 'edit'  the same dialog as fields (name, date of birth, school, email, Dan, stars); the
 //                Registration and Payment parts stay read-only ("Payment is changed with Record
 //                payment or the ⋯ menu."). Opened from the summary's Edit details, Cancel goes back
@@ -18,18 +21,22 @@
 // Staff on a paid row (switch off): Current Dan grayed with "Only an admin can change the Dan after a
 // payment is recorded." (G2, S8). An admin changing the Dan sees the new Dan's fee and that a recorded
 // payment stays (G2); the database then asks for the grades confirmation (grades_exist).
+// The dropdowns (School, Current Dan, Stars now) are the shared Select (v1.100; the 2px blue ring on
+// the row the arrow keys are on, v1.109).
 // The values live in CandidatesTab (`state`), so a screen lock never loses them.
 import { useEffect } from 'react';
-import { IconEdit } from '@tabler/icons-react';
+import { IconEdit, IconPrinter } from '@tabler/icons-react';
 import Dialog from '../../../../components/Dialog.jsx';
 import Notice from '../../../../components/Notice.jsx';
 import DatePicker from '../../../../components/DatePicker.jsx';
 import { nameProblem, normalizeName } from '../../../../lib/testing/names.js';
 import { isIsoDate } from '../../../../lib/testing/eventRules.js';
 import { starEmailIsValid, trimEmail } from '../../../../lib/star/candidatesApi.js';
+// Print receipt's one rule, the same as the ⋯ menu's (withdrawn rows, make-ups and hidden: none)
+import { canPrintReceipt } from '../../../../lib/star/candidateMenu.js';
 import { yearRange } from '../../../../lib/star/eventDateRules.js';
-import ChoiceGroup from '../../events/ChoiceGroup.jsx';
-import StarSelect from '../events/StarSelect.jsx';
+import ChoiceGroup from '../../../../components/ChoiceGroup.jsx';
+import Select from '../../../../components/Select.jsx';
 import CandidateHistory from './CandidateHistory.jsx';
 import { Footer, NoteBlock } from './dialogParts.jsx';
 import * as T from './text.js';
@@ -167,7 +174,7 @@ function RegistrationPart({ detail, onViewSignature, focusLink = false }) {
   );
 }
 
-function PaymentPart({ detail, row, hidden }) {
+function PaymentPart({ detail, row, hidden, onPrintReceipt = null }) {
   return (
     <section className="st-detail-part">
       <h3 className="st-detail-head">{T.SECTION_PAYMENT}</h3>
@@ -181,6 +188,13 @@ function PaymentPart({ detail, row, hidden }) {
           {!row.isMakeup && row.payingBy && <Row label={T.PAYING_BY}>{T.payingByDetail(row.payingBy, row.source)}</Row>}
           <Row label={T.PAYMENT}>{paymentText(detail, row)}</Row>
         </dl>
+      )}
+      {onPrintReceipt && canPrintReceipt(row, hidden) && (
+        <button type="button" className="btn btn-sm st-print-receipt" onClick={(event) => onPrintReceipt(event.currentTarget)}>
+          {/* ti-printer = print */}
+          <IconPrinter size={16} aria-hidden="true" />
+          {T.PRINT_RECEIPT}
+        </button>
       )}
     </section>
   );
@@ -204,7 +218,8 @@ export default function CandidateDialog({
   onRequestClose,
   onEdit,
   onViewSignature,
-  onShowAllHistory,
+  onPrintReceipt, // (opener) => the receipt, on top of the summary (S2)
+  onNoAccess, // the History reader's no_access (the lock screen)
   onRetryDetail,
 }) {
   const { mode } = state;
@@ -258,10 +273,11 @@ export default function CandidateDialog({
             </dl>
           </section>
           <RegistrationPart detail={detail} onViewSignature={onViewSignature} focusLink={Boolean(state.focusSig)} />
-          <PaymentPart detail={detail} row={row} hidden={hidden} />
+          <PaymentPart detail={detail} row={row} hidden={hidden} onPrintReceipt={onPrintReceipt} />
+          {/* The shared one-line History at the end of the summary (S6, v1.108); it reads the
+              history itself when it appears. */}
           <section className="st-detail-part">
-            <h3 className="st-detail-head">{T.SECTION_HISTORY}</h3>
-            <CandidateHistory rows={state.history} hidden={hidden} showAll={state.historyAll} onShowAll={onShowAllHistory} />
+            <CandidateHistory candidateId={c.id} hidden={hidden} onNoAccess={onNoAccess} />
           </section>
         </>
       );
@@ -422,7 +438,7 @@ export default function CandidateDialog({
           {field(
             `${idBase}-school`,
             labelSpan(`${idBase}-school`, T.SCHOOL_LABEL),
-            <StarSelect
+            <Select
               id={`${idBase}-school`}
               labelId={`${idBase}-school-label`}
               value={values.locationCode}
@@ -452,7 +468,7 @@ export default function CandidateDialog({
           {field(
             `${idBase}-dan`,
             labelSpan(`${idBase}-dan`, T.CURRENT_DAN),
-            <StarSelect
+            <Select
               id={`${idBase}-dan`}
               labelId={`${idBase}-dan-label`}
               value={values.dan}
@@ -476,7 +492,7 @@ export default function CandidateDialog({
           {field(
             `${idBase}-stars`,
             labelSpan(`${idBase}-stars`, T.STARS_NOW),
-            <StarSelect
+            <Select
               id={`${idBase}-stars`}
               labelId={`${idBase}-stars-label`}
               value={values.starsFrom}

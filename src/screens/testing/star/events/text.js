@@ -44,7 +44,6 @@ export const NO_PAST = 'No past events yet.';
 // Phone rows: "Sat, Nov 14, 2026 · 23 candidates" (screen 1)
 export const eventPhoneLine = (dateIso, count) => `${CB.shortDate(dateIso)} · ${count === 1 ? '1 candidate' : `${count} candidates`}`;
 export const copySchoolLink = (school) => `Copy ${school} link`;
-export const printSchoolFlyer = (school) => `Print ${school} flyer`;
 
 // ----- Add / Edit event (screens 4–7, G4, G5) -----
 export const ADD_EVENT_SUB = 'Both schools test together. Rubrics and prices are copied from the Rubrics and prices tab when you save.';
@@ -80,6 +79,7 @@ export const CHOOSE_WHERE = 'Choose where testing takes place.'; // PROPOSAL (Sa
 
 // ----- Delete event (screen 13, v0.91) -----
 export const deleteEventTitle = (name) => `Delete ${name}?`;
+export const DELETING = 'Deleting…'; // the Delete event box while it works (rulebook v0.518)
 // "Its 23 candidates and their registrations, payments and grades are deleted too. This can't be
 // undone." / "It has no candidates. This can't be undone."
 // withdrawnCount: PROPOSAL — withdrawn candidates are named apart, like Color Belt's "(plus 1 removed)".
@@ -97,13 +97,11 @@ export function deleteEventBody({ activeCount, withdrawnCount }) {
 export const BACK_TO_STAR = 'Star testing'; // drawn as "← Star testing"
 export const BACK_TO_STAR_LABEL = 'Back to Star testing';
 
-// ----- Registration links dialog (screen 11 as updated by v0.99 / v0.107) -----
+// ----- Registration links dialog (screen 11 as updated by v0.99 / v0.107; since v0.518 the shared
+// link box draws it and holds its button words, src/components/text.js) -----
 export const LINKS_TITLE = 'Registration links';
 export const DAN_ON_FORM = 'Families choose their Dan on the form.';
-export const schoolHeading = (school) => `${school} school`;
 export const qrAlt = (school, shortLink) => `QR code for the ${school} link, ${shortLink}`;
-export const NO_LINK = "This school's link isn't available. Reload the page and try again."; // PROPOSAL (a damaged code)
-export const COPY_FAILED_IN_DIALOG = "Couldn't copy the link. Select the link and copy it yourself."; // PROPOSAL
 
 // ----- The flyer (screen 12, v0.99, v0.107) -----
 export const FLYER_SCHOOL = CB.FLYER_SCHOOL;
