@@ -76,7 +76,7 @@ import Forms from './screens/Forms.jsx';
 import Prospects from './screens/Prospects.jsx';
 import Finance from './screens/Finance.jsx';
 import { showToday, showMonthOf } from './screens/finance/financeState.js';
-import { usePaymentsHidden } from './screens/finance/usePaymentsHidden.js';
+import { usePrivateDetailsHidden } from './lib/privateDetails.js';
 import { showFinanceInNav } from './components/navItems.js';
 import StaffAccounts from './screens/StaffAccounts.jsx';
 import Settings from './screens/Settings.jsx';
@@ -205,7 +205,7 @@ export default function App() {
   const [settingsModalOpen, setSettingsModalOpen] = useState(false); // a Settings dialog is showing
   const [financeModalOpen, setFinanceModalOpen] = useState(false); // a Finance dialog is showing
   // This device's "Hide private details" switch (v0.215, renamed v0.506): Finance leaves the rail and its addresses go Home.
-  const [paymentsHidden] = usePaymentsHidden();
+  const [paymentsHidden] = usePrivateDetailsHidden();
   const [toast, setToast] = useState(null); // { id, text, action, icon } or null
 
   // Focus memory for the lock screen (see "Locking and unlocking" below).

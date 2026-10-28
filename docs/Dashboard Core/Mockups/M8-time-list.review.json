@@ -1,0 +1,17 @@
+{
+  "title": "M8 · The shared time list",
+  "intro": "One time list for every section, as the design review decided (rulebook v1.019, picture 14b): Star's list, <b>every 5 minutes</b>, <b>AM/PM on every time</b>, opening with the chosen time in the middle; 6:00 AM–10:00 PM for classes, testing and camps; Finance's reminder keeps Off and 11 AM–11 PM. The same list on every device — not the phone's own picker (v0.51). It is built on the shared dropdown (Star's, made shared, v1.100). <b>Amber outline</b> = what the shared list decides. <b>Two details to OK:</b> (a) the row the arrow keys are on gets the <b>blue focus ring</b> (3) — today's dropdowns show only a faint gray there; (b) <b>typing a number jumps to that hour</b> — “6” → 6:00 AM, “6” again → 6:00 PM (2). Every state at all four sizes: <code>M8-time-list.png</code>.",
+  "shots": "shots/M8",
+  "out": "M8-time-list.review",
+  "width": 1120,
+  "scale": 0.85,
+  "sections": [
+    { "head": "Closed", "states": ["closed"], "pics": ["closed@pc", "closed@tablet", "closed@phone", "closed@small"] },
+    { "head": "Open at the chosen time — detail (b): type a number to jump", "states": ["open"], "pics": ["open@pc", "open@phone", "open@small"] },
+    { "head": "Moving with the keyboard — detail (a): the blue focus ring", "states": ["keys"], "pics": ["keys@pc", "keys@phone", "keys@small"] },
+    { "head": "Nothing chosen yet, and Finance's Off", "states": ["empty"], "pics": ["empty@pc", "empty@phone", "empty@small"] },
+    { "head": "While the dialog saves", "states": ["saving"], "pics": ["saving@pc", "saving@phone"] },
+    { "head": "With a problem", "states": ["problem"], "pics": ["problem@pc", "problem@phone", "problem@small"] }
+  ],
+  "footer": "<b>What changes for each section when it switches</b> (later, in its own prompt): Color Belt, Camps and Finance swap the browser's own list for this one, and Schedule and Calendar drop the browser's time box (v1.019) · Star's and Black Belt's lists go from 15 to 5 minutes, and Star's range from 8 AM–8 PM to 6 AM–10 PM · the database checks that still accept only 15-minute steps (Star, Black Belt, Finance) are widened in those sections' prompts — none in this step."
+}

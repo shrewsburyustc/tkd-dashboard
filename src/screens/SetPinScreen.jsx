@@ -17,6 +17,7 @@
 import { useEffect, useRef } from 'react';
 import Avatar from '../components/Avatar.jsx';
 import Notice from '../components/Notice.jsx';
+import { BACK } from '../components/text.js';
 import PinEntry from '../components/PinEntry.jsx';
 import { saveMyPin } from '../lib/myPin.js';
 import { KEYPAD_QUERY, useMediaQuery } from '../lib/useMediaQuery.js';
@@ -106,7 +107,7 @@ export default function SetPinScreen({ profile, onDone, onPasswordRequired, onSi
           {/* Step 1 has no Back: there's nowhere to go back to. */}
           {isConfirm && (
             <button type="button" className="link-button" onClick={pin.backToChoose}>
-              Back
+              {BACK}
             </button>
           )}
           <button type="button" className="link-button" onClick={onSignOut}>

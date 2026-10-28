@@ -1,0 +1,181 @@
+<!doctype html>
+<!--
+  M4-receipt.src.html — mockup source for the shared Print receipt (design review M4).
+  Why: rulebook v1.002 — Black Belt's "Print receipt" (v0.220) in every section: the same preview
+  (school name, what was paid and how, total due, paid to date, balance, both schools' street and
+  phone, "Printed … by …. Fees are non-refundable.") → Print or save as PDF. This copies Black
+  Belt's approved receipt exactly (its receipt.css), filled from a plain data shape any section can
+  give. Drawn with the app's real stylesheets. Fake people.
+  Build: node ../tools/build-mockup.mjs src/M4-receipt.src.html M4-receipt.html
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M4 · The shared Print receipt — mockup</title>
+<!-- css: src/styles/tokens.css src/styles/app.css src/styles/testing.css src/blackBelt/staff/receipt/receipt.css -->
+<style>
+  body { background: #fff; }
+  .sheet-head { max-width: 1100px; margin: 0 auto; padding: 24px 16px 8px; }
+  .sheet-head h1 { font-size: 20px; margin-bottom: 4px; }
+  .sheet-head p { color: var(--color-text-secondary); font-size: 13px; }
+  .state { max-width: 1100px; margin: 0 auto; padding: 16px 16px 8px; }
+  .state > h2 { font-size: 14px; margin-bottom: 12px; }
+  .state > h2 .n { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 6px; border-radius: 10px; background: #1f1f1f; color: #fff; font-size: 12px; }
+  .is-focus { outline: 2px solid var(--color-blue); outline-offset: 2px; }
+  .marks .mark { outline: 3px solid #f59e0b; outline-offset: 5px; border-radius: 6px; }
+  .stage { display: inline-block; padding: 24px 40px; background: #a6a6a6; border-radius: 8px; }
+  .stage .dialog { position: static; margin: 0 auto; }
+  .only-phone { display: none !important; }
+  @media (max-width: 639.98px) {
+    .state { padding: 16px 0 8px; }
+    .state > h2 { padding: 0 16px; }
+    .stage { display: block; padding: 0; background: none; border-radius: 0; }
+    .only-wide { display: none !important; }
+    .only-phone { display: flex !important; }
+    .stage .dialog-page { position: static; border-top: 1px solid var(--color-border-strong); border-bottom: 1px solid var(--color-border-strong); }
+    .stage .bbr-phone-buttons { position: static; }
+  }
+  /* The printed page, drawn on screen: the print rules of receipt.css on a US Letter sheet
+     (8.5 × 11 in at 96 px per inch), so the paper can be judged too. */
+  .paper { width: 8.5in; min-height: 11in; padding: 0.6in 0.7in; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.25); font-size: 10.5pt; line-height: 1.45; color: #000; }
+  .paper .bbr-sheet { color: #000; min-height: 9.5in; }
+  .paper .bbr-title { font-size: 15pt; }
+  .paper .bbr-subtitle { margin-bottom: 21pt; color: #444; font-size: 11pt; }
+  .paper .bbr-facts { grid-template-columns: 1.55in minmax(0, 1fr); gap: 4.5pt 12pt; }
+  .paper .bbr-facts dt, .paper .bbr-table th, .paper .bbr-totals span { color: #444; }
+  .paper .bbr-table { margin: 21pt 0 12pt; font-size: 10.5pt; }
+  .paper .bbr-table th { font-size: 10pt; border-bottom: 1px solid #777; }
+  .paper .bbr-table th, .paper .bbr-table td { padding: 5pt 4.5pt; }
+  .paper .bbr-table td { border-bottom: 1px solid #ccc; }
+  .paper .bbr-totals { width: 3.55in; margin-bottom: 18pt; }
+  .paper .bbr-balance { border-top: 1px solid #777; }
+  .paper .bbr-foot { margin-top: auto; padding-top: 18pt; border-top: 1px solid #ccc; color: #444; font-size: 9pt; line-height: 1.6; }
+  .paper-stage { display: inline-block; padding: 24px; background: #e9e9e6; border-radius: 8px; }
+  @media (max-width: 1023.98px) { .paper-wrap { display: none; } }
+</style>
+<script>if (location.search.includes('marks')) document.documentElement.classList.add('marks');</script>
+</head>
+<body>
+<div class="sheet-head">
+  <h1>M4 · The shared Print receipt</h1>
+  <p>Black Belt's receipt (v0.220) for every section (v1.002): the ⋯ menu's or the detail's <b>Print receipt</b> opens this preview, then <b>Print or save as PDF</b>. Printed only when a family asks. The section gives the facts and the payment lines; the receipt draws them the same way everywhere. Drawn with the app's own stylesheets. Fake people; the schools' streets and phones come from Settings → Schools.</p>
+</div>
+<span hidden id="back-icon"><i data-icon="arrow-left" data-size="20"></i></span>
+<span hidden id="print-icon"><i data-icon="printer"></i></span>
+
+<section class="state">
+  <h2><span class="n">1</span>Paid in full</h2>
+  <div class="stage" data-state="paid" data-sub="Ava Chen · November Children Testing" data-caption="<b>Paid in full</b> (Color Belt, as picture 03b drew it): the school, what kind of receipt, the section's facts, every payment with how it was paid, then Total due · Paid to date · <b>Balance $0 · paid in full</b>, both schools' street and phone, and who printed it. Close has the first focus; <b>Print or save as PDF</b> is the one blue button.">
+    <template>
+      <section class="bbr-preview" aria-label="Receipt page">
+        <div class="bbr-sheet bbr-sheet--screen">
+          <p class="bbr-title">Jae H. Jeong’s U.S. Taekwondo Center</p>
+          <p class="bbr-subtitle">Color belt testing · payment receipt</p>
+          <dl class="bbr-facts"><dt>Student</dt><dd>Ava Chen · LT White → LT Yellow</dd><dt>Event</dt><dd>November Children Testing · Fri, Nov 20, 2026</dd><dt>School</dt><dd>Worcester</dd></dl>
+          <table class="bbr-table"><thead><tr><th scope="col">Date</th><th scope="col">For</th><th scope="col">How paid</th><th scope="col" class="bbr-r">Amount</th></tr></thead>
+            <tbody><tr><td class="bbr-date">Oct 22</td><td>Testing fee (early price)</td><td>Cash</td><td class="bbr-r">$50</td></tr></tbody></table>
+          <div class="bbr-totals"><div><span>Total due</span>$50</div><div><span>Paid to date</span>$50</div><div class="bbr-balance"><span>Balance</span>$0 · paid in full</div></div>
+          <div class="bbr-foot"><p>Worcester · 1141 Main St · (508) 767-1717</p><p>Shrewsbury · 370 Boston Turnpike · (508) 792-5534</p><p>Printed Oct 22, 2026 by Jeffrey Berg. Fees are non-refundable.</p></div>
+        </div>
+      </section>
+    </template>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">2</span>Several payments, a refund and a balance</h2>
+  <div class="stage" data-state="balance" data-sub="Alex Kim · Spring 2027" data-caption="<b>Several payments, a refund and a balance</b> (Black Belt): a refund is a line of its own with a minus (“−$50”), the totals add up, and the section can add a word to the balance (“next due May 29”). Money is written as the shared rule says (v1.026).">
+    <template>
+      <section class="bbr-preview" aria-label="Receipt page">
+        <div class="bbr-sheet bbr-sheet--screen">
+          <p class="bbr-title">Jae H. Jeong’s U.S. Taekwondo Center</p>
+          <p class="bbr-subtitle">Black Belt testing · payment receipt</p>
+          <dl class="bbr-facts"><dt>Candidate</dt><dd>Alex Kim · 1st Dan</dd><dt>Cycle</dt><dd>Spring 2027 · first testing day Sat, Apr 3, 2027</dd><dt>Reference</dt><dd>BB-5007</dd><dt>School</dt><dd>Shrewsbury</dd><dt>Plan</dt><dd>3 payments of $290 + Kukkiwon certificate ($100, with payment 1)</dd></dl>
+          <table class="bbr-table"><thead><tr><th scope="col">Date</th><th scope="col">For</th><th scope="col">How paid</th><th scope="col" class="bbr-r">Amount</th></tr></thead>
+            <tbody>
+              <tr><td class="bbr-date">Mar 27</td><td>Payment 1 + Kukkiwon certificate</td><td>Card</td><td class="bbr-r">$390</td></tr>
+              <tr><td class="bbr-date">Apr 24</td><td>Payment 2</td><td>Check</td><td class="bbr-r">$290</td></tr>
+              <tr class="bbr-neg"><td class="bbr-date">Apr 26</td><td>Refund</td><td>Cash</td><td class="bbr-r">−$50</td></tr>
+            </tbody></table>
+          <div class="bbr-totals"><div><span>Total due</span>$970</div><div><span>Paid to date</span>$630</div><div class="bbr-balance mark"><span>Balance</span>$340 · next due May 29</div></div>
+          <div class="bbr-foot"><p>Worcester · 1141 Main St · (508) 767-1717</p><p>Shrewsbury · 370 Boston Turnpike · (508) 792-5534</p><p>Printed Apr 26, 2027 by Jeffrey Berg. Fees are non-refundable.</p></div>
+        </div>
+      </section>
+    </template>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">3</span>While it loads</h2>
+  <div class="stage" data-state="loading" data-sub="Leo Kim · April Vacation Camp" data-printgray data-caption="<b>While it loads</b> (a section that reads the receipt from the database, as Black Belt does): a gray placeholder page, and <b>Print or save as PDF</b> in the gray unavailable look until the receipt is there.">
+    <template>
+      <div class="bbr-sheet bbr-sheet--screen bbr-loading tskeleton mark" aria-busy="true" aria-label="Loading the receipt">
+        <div class="tskeleton-row" aria-hidden="true"><span class="tskeleton-bar"></span></div><div class="tskeleton-row" aria-hidden="true"><span class="tskeleton-bar"></span></div><div class="tskeleton-row" aria-hidden="true"><span class="tskeleton-bar"></span></div><div class="tskeleton-row" aria-hidden="true"><span class="tskeleton-bar"></span></div>
+      </div>
+    </template>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">4</span>If it can't load</h2>
+  <div class="stage" data-state="failed" data-sub="Leo Kim · April Vacation Camp" data-printgray data-caption="<b>If it can't load</b>: the shared amber bar with Retry takes the page's place, as Black Belt's does today, and stays until it works or the box closes (v1.004). Print stays gray.">
+    <template>
+      <div class="errbar mark" role="alert"><i data-icon="alert-triangle" class="errbar-icon"></i><span class="errbar-text">Couldn't load the receipt. Check the connection, then try again.</span><span class="errbar-actions"><button type="button" class="btn errbar-retry"><i data-icon="refresh"></i>Retry</button></span></div>
+    </template>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">5</span>Hide private details on</h2>
+  <div class="stage" data-state="hidden" data-sub="Ava Chen · November Children Testing" data-noprint data-caption="<b>Hide private details on</b> (v0.506): no amounts on a screen others can see — one gray line instead of the page, and no Print button.">
+    <template>
+      <p class="bbr-hidden mark">Payment details are hidden on this tablet.</p>
+    </template>
+  </div>
+</section>
+
+<section class="state paper-wrap">
+  <h2><span class="n">6</span>The printed page</h2>
+  <div class="paper-stage" data-state="paper" data-caption="<b>The printed page</b> (US Letter, as Black Belt prints it today): black on white, the school at the top, the footer at the foot of the page. The same on every device — drawn once.">
+    <div class="paper">
+      <div class="bbr-sheet">
+        <p class="bbr-title">Jae H. Jeong’s U.S. Taekwondo Center</p>
+        <p class="bbr-subtitle">Color belt testing · payment receipt</p>
+        <dl class="bbr-facts"><dt>Student</dt><dd>Ava Chen · LT White → LT Yellow</dd><dt>Event</dt><dd>November Children Testing · Fri, Nov 20, 2026</dd><dt>School</dt><dd>Worcester</dd></dl>
+        <table class="bbr-table"><thead><tr><th scope="col">Date</th><th scope="col">For</th><th scope="col">How paid</th><th scope="col" class="bbr-r">Amount</th></tr></thead>
+          <tbody><tr><td class="bbr-date">Oct 22</td><td>Testing fee (early price)</td><td>Cash</td><td class="bbr-r">$50</td></tr></tbody></table>
+        <div class="bbr-totals"><div><span>Total due</span>$50</div><div><span>Paid to date</span>$50</div><div class="bbr-balance"><span>Balance</span>$0 · paid in full</div></div>
+        <div class="bbr-foot"><p>Worcester · 1141 Main St · (508) 767-1717</p><p>Shrewsbury · 370 Boston Turnpike · (508) 792-5534</p><p>Printed Oct 22, 2026 by Jeffrey Berg. Fees are non-refundable.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Each state drawn twice from its <template>: the PC / tablet box (Dialog.jsx, size "medium",
+  // 560px as Black Belt draws it) and the phone's full-screen page with the pinned print button.
+  const back = document.getElementById('back-icon').innerHTML;
+  const printer = document.getElementById('print-icon').innerHTML;
+  for (const stage of document.querySelectorAll('.stage[data-sub]')) {
+    const content = stage.querySelector('template').innerHTML;
+    const canPrint = !('noprint' in stage.dataset);
+    // While there's no receipt yet (loading, or it couldn't load), Print is drawn in the approved
+    // gray unavailable look (still focusable).
+    const gray = 'printgray' in stage.dataset ? ' is-unavailable" aria-disabled="true' : '';
+    const printBtn = (extra) => `<button type="button" class="btn btn-primary${extra}${gray}">${printer}Print or save as PDF</button>`;
+    stage.insertAdjacentHTML('beforeend', `
+      <div class="dialog tdialog tdialog--medium only-wide" role="dialog" aria-modal="true" style="width:560px">
+        <h2 class="dialog-title">Receipt</h2>
+        <p class="tdialog-sub">${stage.dataset.sub}</p>
+        ${content}
+        <div class="dialog-actions"><button type="button" class="btn is-focus">Close</button>${canPrint ? printBtn('') : ''}</div>
+      </div>
+      <div class="dialog-page tdialog-page only-phone" role="dialog" aria-modal="true">
+        <div class="dialog-page-head"><button type="button" class="icon-button" aria-label="Back">${back}</button><h2 class="dialog-page-title">Receipt</h2></div>
+        <div class="dialog-page-body">${content}${canPrint ? `<div class="bbr-phone-buttons">${printBtn(' bbr-full')}</div>` : ''}</div>
+      </div>`);
+  }
+</script>
+</body>
+</html>

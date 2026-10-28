@@ -20,6 +20,7 @@
 //   onChanged — saved: the App closes this and shows the "Password changed" toast
 import { useRef, useState } from 'react';
 import AccountDialog from '../components/AccountDialog.jsx';
+import { CANCEL } from '../components/text.js';
 import Notice from '../components/Notice.jsx';
 import { confirmPassword } from '../lib/confirmPassword.js';
 import { supabase } from '../lib/supabase.js';
@@ -238,7 +239,7 @@ export default function ChangePasswordDialog({ profile, onCancel, onChanged }) {
         ) : (
           <div className="dialog-actions">
             <button type="button" className="btn" onClick={onCancel}>
-              Cancel
+              {CANCEL}
             </button>
             <button type="submit" className="btn btn-primary" disabled={busy}>
               {busy ? 'Changing password…' : 'Change password'}

@@ -6,6 +6,9 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/tokens.css';
 import './styles/app.css';
+// The shared parts' styles (rulebook v1.030): right after app.css and before every section's
+// sheet, in the place testing.css's shared blocks had. Import it only here (see its header).
+import './styles/shared.css';
 import './styles/testing.css'; // Testing → Classes and ranks (contract 0003)
 import './styles/staff.css'; // Staff accounts (rulebook v0.70–v0.76)
 import './styles/schedule.css'; // Schedule (rulebook v0.233)

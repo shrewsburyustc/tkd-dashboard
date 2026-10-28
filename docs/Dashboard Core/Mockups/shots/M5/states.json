@@ -1,0 +1,22 @@
+[
+  {
+    "id": "one",
+    "caption": "<b>One school link</b> (Color Belt): Copy link, <b>Download QR code</b> and Print flyer. Download QR code is new for Color Belt and Star: it saves the picture for your own flyers as a 1024-pixel PNG (big enough to print; Camps’ size today), named like “November Children Testing - Worcester QR code.png”. Copy link has the first focus; a copy shows the toast “Link copied”. Phones: a full-screen page with the back arrow, no Close."
+  },
+  {
+    "id": "two",
+    "caption": "<b>Two school links</b> (Star; Black Belt the same without Print): one card per school, side by side — one under the other on phones. Copy and Print name the school; <b>Download QR code</b> says it to screen readers (“Download Worcester QR code”), as picture 12e drew it."
+  },
+  {
+    "id": "noflyer",
+    "caption": "<b>No flyer</b> (Camps — Jeffrey makes camp flyers himself, v0.232; Black Belt too): Copy link and Download QR code only. One link can serve both schools (“Both schools · held at Worcester”)."
+  },
+  {
+    "id": "bb",
+    "caption": "<b>Black Belt</b>: two links without a flyer, and one line of its own under the cards (the ?dan= hint). A section can add such a line; the box doesn't know what it says."
+  },
+  {
+    "id": "failed",
+    "caption": "<b>If Download QR code or Copy link fails</b>, the amber note shows <b>inside the box</b>, under the cards — where the person is looking — and stays until the box closes (v1.004). The two sentences are shared words: “Couldn't make the QR code picture. Try again.” and “Couldn't copy the link. Select the link and copy it yourself.” (Star's). Today Color Belt, Camps and Black Belt put copy failures in a bar on the page behind."
+  }
+]
