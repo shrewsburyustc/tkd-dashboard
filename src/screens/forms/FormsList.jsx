@@ -14,7 +14,9 @@ function StatusTag({ status }) {
   return <span className={`ttag${status === 'live' ? ' ftag--live' : ''}`}>{T.STATUS[status]}</span>;
 }
 
-export default function FormsList({ forms, monthCounts, both, isAdmin, isPhone, busy, onOpen, onShare, onFillIn, onMore }) {
+// fillAtDesk: this device hides private details, so Fill in is desk-only (v0.616): the button
+// grays (still focusable, pressing it does nothing) and points at the page's line that says why.
+export default function FormsList({ forms, monthCounts, both, isAdmin, isPhone, busy, fillAtDesk, onOpen, onShare, onFillIn, onMore }) {
   if (forms.length === 0) {
     return <p className="tempty">{isAdmin ? T.NO_FORMS_ADMIN : T.NO_FORMS}</p>;
   }
@@ -24,7 +26,17 @@ export default function FormsList({ forms, monthCounts, both, isAdmin, isPhone, 
   const actions = (f) => (
     <span className="flist-acts">
       {!isAdmin && !isPhone && (
-        <button type="button" className="btn btn-sm" disabled={f.status !== 'live'} title={f.status !== 'live' ? T.DRAFT_NO_FILL : undefined} onClick={(e) => onFillIn(f, e.currentTarget)}>
+        <button
+          type="button"
+          // every row's Fill in grays while desk-only, as the approved mockup draws it (a draft's stays
+          // natively disabled too, with its own "publish first" title)
+          className={`btn btn-sm${fillAtDesk ? ' is-unavailable' : ''}`}
+          disabled={f.status !== 'live'}
+          title={f.status !== 'live' ? T.DRAFT_NO_FILL : undefined}
+          aria-disabled={fillAtDesk && f.status === 'live' ? 'true' : undefined}
+          aria-describedby={fillAtDesk && f.status === 'live' ? 'forms-fill-at-desk' : undefined}
+          onClick={(e) => !fillAtDesk && onFillIn(f, e.currentTarget)}
+        >
           {T.FILL_IN}
         </button>
       )}

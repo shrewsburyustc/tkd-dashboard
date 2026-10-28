@@ -1,5 +1,7 @@
 # Calendar — status
 
+**Design review changes (N1–N17):** see `STATUS-DesignReview.md`.
+
 Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Calendar-Build-Plan.md` (approved 2026-10-17). Rulebook v0.234 (design) and v0.239 (plan answers). Approved mockup: `TKD-Calendar-Mockups.html` rev 1.
 
 **Database live, app not yet.** Migration 0008 is applied to the live Supabase database. Jeffrey pasted it into the Supabase SQL Editor on 2026-10-19 (order 0007 → 0008 → 0009 → 0012, after 0001–0006 and Color Belt's 0010). For each: the live fingerprints equal the PGlite live-order copy exactly (row count + one hash over every row), the security advisor showed only the expected entries (signed-in users may run the checked write functions; internal tables have RLS on and no read rule on purpose), and the tests file passed (run with the real admin and front-desk IDs, rolled back). Nothing has been pushed: the live dashboard has no Calendar screen until this branch is merged into main and pushed.
@@ -107,3 +109,5 @@ This branch is on `main` and live (the push included `0ccf776`; live `main` = `c
 - Design review: no must-fix; 3 should-fix applied (quieter blue chip edge, bigger darker ring, menu heading hidden from screen readers). Security review: no must-fix; 3 should-fix applied (hand-over expires after 1 min and clears at sign-out, one shared empty list, loader can't hang).
 - Screens: `Calendar-show-built-PC.png`, `Calendar-show-built-tablet-phone.png`.
 - Next: Jeffrey tries it in preview -> commit on this branch -> Main merges -> Jeffrey OKs deploy. Later: a Testing line in the menu once Testing events load into the Calendar.
+- **Deployed 2026-10-21** (main 09f0b95, live 09:53 UTC). Left for Jeffrey: on the live site, check the Calendar's follow-ups match Prospects' "Follow up today".
+- **Live check passed 2026-10-21 (Jeffrey):** the Calendar's follow-ups match Prospects' "Follow up today", and tapping one opens the child. Done.
