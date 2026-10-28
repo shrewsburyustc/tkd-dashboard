@@ -780,11 +780,11 @@ export const PAYMENT_GONE = 'This payment was already undone or changed.';
 
 // Undo payment asks first, then a toast WITHOUT Undo (OP-B1). The box names the person and the
 // payment (v0.964, mockup C option A): the title is Star's shape with the amount and how, never
-// built from the installments; the second line says when it was recorded and what it was for.
+// built from the installments; the second line says when it was paid and what it was for (v0.965).
 // "Undo Mia Chen’s $870 card payment?"
 export const undoPaymentTitle = (name, cents, method) => `Undo ${name}’s ${money(cents)} ${methodName(method).toLowerCase()} payment?`;
-// What a payment was for, inside a sentence (v0.964): "payment 1", "payments 1, 2 and 3",
-// "in full" (a one-payment plan's only payment), "the Kukkiwon certificate", "payment 2 and the
+// What a payment was for, inside a sentence (v0.964, v0.965): "payment 1", "payments 1, 2 and 3",
+// "the full fee" (a one-payment plan's only payment), "the Kukkiwon certificate", "payment 2 and the
 // Kukkiwon certificate", "payments 1, 2 and the Kukkiwon certificate". '' when nothing is known.
 // paymentsCount: the number of payments in the candidate's plan (the detail's candidate.plan).
 export function forSentence(items, { paymentsCount = null } = {}) {
@@ -792,16 +792,17 @@ export function forSentence(items, { paymentsCount = null } = {}) {
   const kukkiwon = list.includes('kukkiwon');
   const nos = list.filter((x) => x !== 'kukkiwon').map((x) => Number(String(x).slice(1))).sort((a, b) => a - b);
   let pays = '';
-  if (paymentsCount === 1 && nos.length === 1 && nos[0] === 1) pays = 'in full';
+  if (paymentsCount === 1 && nos.length === 1 && nos[0] === 1) pays = 'the full fee';
   else if (nos.length === 1) pays = `payment ${nos[0]}`;
   // "payments 1, 2 and 3" — with the Kukkiwon certificate too: "payments 1 and 2 and the Kukkiwon certificate"
   else if (nos.length > 1) pays = `payments ${andList(nos.map(String))}`;
   if (!kukkiwon) return pays;
   return pays ? `${pays} and the Kukkiwon certificate` : 'the Kukkiwon certificate';
 }
-// "Recorded on Mar 20 for payments 1, 2 and 3. It comes off the balance; the history keeps it."
+// "Paid on Mar 20 for payments 1, 2 and 3. It comes off the balance; the history keeps it."
+// The date is the day the family paid (line.paidOn), not the day it was typed in.
 export const undoPaymentBody = (paidOn, what) =>
-  `Recorded on ${monthDay(paidOn)}${what ? ` for ${what}` : ''}. It comes off the balance; the history keeps it.`;
+  `Paid on ${monthDay(paidOn)}${what ? ` for ${what}` : ''}. It comes off the balance; the history keeps it.`;
 export const UNDO_PAYMENT_CONFIRM = 'Undo payment';
 // The toast after it: "Payment undone · $870 card · Mia Chen"
 export const toastPaymentUndone = (cents, method, name) => `Payment undone · ${money(cents)} ${methodName(method).toLowerCase()} · ${name}`;

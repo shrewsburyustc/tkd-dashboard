@@ -5,7 +5,7 @@
 // undo (a reversal can't be reversed, SQL 15p), and rule 1.4 says an action that can't be undone
 // is confirmed first. So it asks once, then shows a toast WITHOUT Undo. A payment's words are
 // v0.964 (mockup C, option A): the title names the person, the amount and how; the second line
-// "Recorded on Mar 20 for payments 1, 2 and 3. It comes off the balance; the history keeps it."
+// "Paid on Mar 20 for payments 1, 2 and 3. It comes off the balance; the history keeps it."
 // Undo refund and Undo returned mark keep their own words. All words are in text.js.
 // The same small box on every device (Dialog variant 'confirm'); focus starts on Cancel.
 import { useId } from 'react';
