@@ -16,6 +16,7 @@
 // after midnight (time.js).
 import { supabase } from '../supabase.js';
 import { parseTime, toTimeText } from './time.js';
+import { agesFromRow } from './ages.js';
 
 export const SCHEDULE_STATUSES = [
   'ok', 'no_access', 'not_allowed', 'not_found', 'stale', 'duplicate_date', 'invalid', 'error',
@@ -29,6 +30,8 @@ const SLOT_COLUMNS = 'id, version_id, location_code, weekday, starts_at, ends_at
 // Which class(es) each slot is for — one, or several taught together (v0.237).
 const SLOT_CLASS_COLUMNS = 'slot_id, class_id, position';
 const COLOR_COLUMNS = 'id, class_id, location_code, color, version';
+// A class's age range, shown on the booking forms (migration 0031, rulebook v0.619).
+const AGE_COLUMNS = 'id, class_id, location_code, age_from, age_to, version';
 const CLASS_COLUMNS = 'id, name, position';
 
 const failure = (error) => ({ status: 'error', error });
@@ -62,31 +65,34 @@ function toSlot(row, classIds) {
 
 // ----- Reading -----
 
-// Loads one school's schedules, time slots, class colors, the school's classes (from Testing)
+// Loads one school's schedules, time slots, class colors and ages, the school's classes (from Testing)
 // and "today" (Massachusetts) — all at the same time. Like Testing, has_data_access tells a
 // locked sign-in (which gets EMPTY lists) apart from a school that has no schedule yet.
 export async function loadSchedule(locationCode) {
   try {
     if (!KNOWN_LOCATIONS.has(locationCode)) return failure(new Error(`Unknown school: ${locationCode}`));
     if (!supabase) return failure(new Error('No connection is set up'));
-    const [versionRes, slotRes, slotClassRes, colorRes, classRes, todayRes, accessRes] = await Promise.all([
+    const [versionRes, slotRes, slotClassRes, colorRes, ageRes, classRes, todayRes, accessRes] = await Promise.all([
       supabase.from('schedule_versions').select(VERSION_COLUMNS).eq('location_code', locationCode).order('starts_on', { ascending: true }),
       supabase.from('schedule_slots').select(SLOT_COLUMNS).eq('location_code', locationCode).order('starts_at', { ascending: true }),
       supabase.from('schedule_slot_classes').select(SLOT_CLASS_COLUMNS).eq('location_code', locationCode).order('position', { ascending: true }),
       supabase.from('schedule_class_colors').select(COLOR_COLUMNS).eq('location_code', locationCode),
+      supabase.from('schedule_class_ages').select(AGE_COLUMNS).eq('location_code', locationCode),
       supabase.from('testing_classes').select(CLASS_COLUMNS).eq('location_code', locationCode).order('position', { ascending: true }),
       supabase.rpc('schedule_today'),
       supabase.rpc('has_data_access'),
     ]);
     if (!accessRes?.error && accessRes?.data === false) return { status: 'no_access' };
-    for (const res of [accessRes, versionRes, slotRes, slotClassRes, colorRes, classRes, todayRes]) {
+    for (const res of [accessRes, versionRes, slotRes, slotClassRes, colorRes, ageRes, classRes, todayRes]) {
       if (res?.error) return failure(res.error);
     }
     if (accessRes?.data !== true) return unexpected('has_data_access');
-    if (![versionRes, slotRes, slotClassRes, colorRes, classRes].every((r) => Array.isArray(r?.data))) return unexpected('the schedule tables');
+    if (![versionRes, slotRes, slotClassRes, colorRes, ageRes, classRes].every((r) => Array.isArray(r?.data))) return unexpected('the schedule tables');
     if (typeof todayRes?.data !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(todayRes.data)) return unexpected('schedule_today');
 
     const colors = Object.fromEntries(colorRes.data.map((row) => [row.class_id, row.color]));
+    // classId → { from, to } (a class with no row has no ages)
+    const ages = Object.fromEntries(ageRes.data.map((row) => [row.class_id, agesFromRow(row)]).filter(([, a]) => a.from !== null));
     const classesBySlot = new Map();
     for (const row of [...slotClassRes.data].sort((a, b) => a.position - b.position)) {
       if (!classesBySlot.has(row.slot_id)) classesBySlot.set(row.slot_id, []);
@@ -102,6 +108,7 @@ export async function loadSchedule(locationCode) {
         .filter((s) => s.start !== null && s.end !== null && s.classIds.length > 0),
       classes: classRes.data.map((row) => ({ id: row.id, name: row.name, position: row.position })),
       colors,
+      ages,
     };
   } catch (error) {
     return failure(error);
@@ -220,6 +227,13 @@ export async function deleteVersion({ versionId, expectedVersion, expectedSlotCo
     'schedule_delete_version',
     { p_version_id: versionId, p_expected_version: expectedVersion, p_expected_slot_count: expectedSlotCount },
     (d) => (isInt(d.removed_slot_count) ? { removedSlotCount: d.removed_slot_count } : null),
+  );
+}
+
+// A class's ages (admins; rulebook v0.619). from = null (and to = null) removes them.
+export async function setClassAges({ classId, from, to }) {
+  return callRpc('schedule_set_class_ages', { p_class_id: classId, p_age_from: from, p_age_to: to }, (d) =>
+    isText(d.class_id) ? { classId: d.class_id, ...agesFromRow(d) } : null,
   );
 }
 

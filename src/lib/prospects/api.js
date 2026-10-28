@@ -13,6 +13,7 @@
 //   'error'           anything else (no connection, unexpected answer) — { status:'error', error }
 // The database answers in snake_case; this file converts to camelCase.
 import { supabase } from '../supabase.js';
+import { agesFromRow } from '../schedule/ages.js';
 
 export const PROSPECTS_STATUSES = ['ok', 'no_access', 'not_allowed', 'not_found', 'stale', 'duplicate_name', 'time_taken', 'invalid', 'error'];
 const SERVER_STATUSES = new Set(PROSPECTS_STATUSES.filter((s) => s !== 'error'));
@@ -146,7 +147,8 @@ export async function undoCheckIn({ id, expectedVersion, previousStatusId, previ
 
 export async function openTimesFor({ id, from, to }) {
   return callRpc('prospects_open_times', { p_prospect_id: id, p_from: from, p_to: to }, (d) => (Array.isArray(d.times)
-    ? { times: d.times.map((t) => ({ formId: t.form_id, classId: t.class_id, className: t.class_name, date: t.date, start: t.starts_at, end: t.ends_at, spotsLeft: t.spots_left })) }
+    // ageFrom / ageTo: the class's ages, only shown (migration 0031, v0.619)
+    ? { times: d.times.map((t) => ({ formId: t.form_id, classId: t.class_id, className: t.class_name, date: t.date, start: t.starts_at, end: t.ends_at, spotsLeft: t.spots_left, ageFrom: agesFromRow(t).from, ageTo: agesFromRow(t).to })) }
     : null));
 }
 

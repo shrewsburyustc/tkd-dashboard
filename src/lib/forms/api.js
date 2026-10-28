@@ -16,6 +16,7 @@
 //   'error'           anything else (no connection, unexpected answer) — { status:'error', error }
 // The database answers in snake_case; this file converts to camelCase.
 import { supabase } from '../supabase.js';
+import { agesFromRow } from '../schedule/ages.js';
 
 export const FORMS_STATUSES = ['ok', 'no_access', 'not_allowed', 'not_found', 'stale', 'duplicate_slug', 'not_publishable', 'invalid',
   'closed', 'form_changed', 'time_taken', 'error'];
@@ -25,6 +26,8 @@ const SERVER_STATUSES = new Set(FORMS_STATUSES.filter((s) => s !== 'error'));
 const FORM_COLUMNS = 'id, location_code, name, slug, kind, status, draft, published, published_version, published_at, settings, version, updated_at, updated_by_name';
 const OFFER_COLUMNS = 'id, form_id, class_id, default_limit, days_ahead, min_hours_ahead';
 const LIMIT_COLUMNS = 'id, form_id, class_id, weekday, starts_at, spot_limit';
+// classes taught together: one spot number for the combined time (migration 0031, v0.620)
+const GROUP_LIMIT_COLUMNS = 'id, form_id, class_ids, weekday, starts_at, spot_limit';
 const SUBMISSION_COLUMNS = 'id, form_id, location_code, published_version, fields, answers, parent_name, parent_phone, parent_email, children, signed_at, entered_by, source, created_at';
 
 const failure = (error) => ({ status: 'error', error });
@@ -53,6 +56,7 @@ function toForm(row) {
 
 const toOffer = (r) => ({ id: r.id, classId: r.class_id, defaultLimit: r.default_limit, daysAhead: r.days_ahead, minHoursAhead: r.min_hours_ahead });
 const toLimit = (r) => ({ id: r.id, classId: r.class_id, weekday: r.weekday, start: String(r.starts_at).slice(0, 5), spotLimit: r.spot_limit });
+const toGroupLimit = (r) => ({ id: r.id, classIds: Array.isArray(r.class_ids) ? [...r.class_ids].sort() : [], weekday: r.weekday, start: String(r.starts_at).slice(0, 5), spotLimit: r.spot_limit });
 
 function toSubmission(row) {
   return {
@@ -109,15 +113,22 @@ export async function loadForm(formId) {
     if (!supabase) return failure(new Error('No connection is set up'));
     const denied = await access();
     if (denied) return denied;
-    const [formRes, offerRes, limitRes] = await Promise.all([
+    const [formRes, offerRes, limitRes, groupRes] = await Promise.all([
       supabase.from('forms').select(FORM_COLUMNS).eq('id', formId),
       supabase.from('form_booking_offers').select(OFFER_COLUMNS).eq('form_id', formId),
       supabase.from('form_booking_limits').select(LIMIT_COLUMNS).eq('form_id', formId),
+      supabase.from('form_booking_group_limits').select(GROUP_LIMIT_COLUMNS).eq('form_id', formId),
     ]);
-    for (const res of [formRes, offerRes, limitRes]) if (res?.error) return failure(res.error);
-    if (![formRes, offerRes, limitRes].every((r) => Array.isArray(r?.data))) return unexpected('the forms tables');
+    for (const res of [formRes, offerRes, limitRes, groupRes]) if (res?.error) return failure(res.error);
+    if (![formRes, offerRes, limitRes, groupRes].every((r) => Array.isArray(r?.data))) return unexpected('the forms tables');
     if (formRes.data.length === 0) return { status: 'not_found' };
-    return { status: 'ok', form: toForm(formRes.data[0]), offers: offerRes.data.map(toOffer), limits: limitRes.data.map(toLimit) };
+    return {
+      status: 'ok',
+      form: toForm(formRes.data[0]),
+      offers: offerRes.data.map(toOffer),
+      limits: limitRes.data.map(toLimit),
+      groupLimits: groupRes.data.map(toGroupLimit),
+    };
   } catch (error) {
     return failure(error);
   }
@@ -185,17 +196,23 @@ export async function deleteForm({ id, expectedVersion }) {
 
 // offers: [{ classId, defaultLimit, daysAhead, minHoursAhead }]
 // limits: [{ classId, weekday, start 'HH:MM', spotLimit }]   (0 = this time isn't offered)
+// groups: [{ classIds, weekday, start 'HH:MM', spotLimit }]   classes taught together (0031, v0.620)
 // Takes effect right away, also on a Live form (rulebook v0.242).
-export async function setBooking({ id, expectedVersion, offers, limits }) {
+export async function setBooking({ id, expectedVersion, offers, limits, groups = [] }) {
   return callRpc('forms_set_booking', {
     p_form_id: id,
     p_expected_version: expectedVersion,
     p_offers: offers.map((o) => ({ class_id: o.classId, default_limit: o.defaultLimit, days_ahead: o.daysAhead, min_hours_ahead: o.minHoursAhead })),
     p_limits: limits.map((l) => ({ class_id: l.classId, weekday: l.weekday, starts_at: l.start, spot_limit: l.spotLimit })),
+    p_groups: groups.map((g) => ({ class_ids: g.classIds, weekday: g.weekday, starts_at: g.start, spot_limit: g.spotLimit })),
   }, readSaved);
 }
 
-const toTime = (t) => ({ classId: t.class_id, className: t.class_name, date: t.date, start: t.starts_at, end: t.ends_at, spotsLeft: t.spots_left });
+// ageFrom / ageTo: the class's ages, shown next to it (migration 0031, v0.619); null = none
+const toTime = (t) => {
+  const a = agesFromRow(t);
+  return { classId: t.class_id, className: t.class_name, date: t.date, start: t.starts_at, end: t.ends_at, spotsLeft: t.spots_left, ageFrom: a.from, ageTo: a.to };
+};
 
 // The free-class times families would see right now (Fill in, builder preview).
 export async function openTimes({ formId, from, to }) {

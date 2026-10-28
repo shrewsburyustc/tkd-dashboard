@@ -776,7 +776,8 @@ begin
     end if;
     v_bool := has_function_privilege('authenticated', v_fn.oid, 'execute');
     if v_fn.proname in ('schedule_add_slots', 'schedule_update_slot', 'schedule_remove_slot', 'schedule_plan_version',
-                        'schedule_update_version', 'schedule_delete_version', 'schedule_set_class_color', 'schedule_today') then
+                        'schedule_update_version', 'schedule_delete_version', 'schedule_set_class_color', 'schedule_today',
+                        'schedule_set_class_ages') then   -- 0031 (class ages) adds this one
       if not v_bool then raise exception 'TEST FAILED: C6 the app can''t call %', v_fn.proname; end if;
       if v_fn.proname <> 'schedule_today' and not v_fn.prosecdef then
         raise exception 'TEST FAILED: C7 % should be security definer', v_fn.proname;
@@ -785,9 +786,11 @@ begin
       raise exception 'TEST FAILED: C8 the app can call internal helper %', v_fn.proname;
     end if;
   end loop;
+  -- 19 from 0007, plus schedule_set_class_ages once 0031 (class ages) is applied
   if (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-       where n.nspname = 'public' and p.proname like 'schedule\_%') <> 19 then
-    raise exception 'TEST FAILED: C9 expected 19 schedule_* functions, found %',
+       where n.nspname = 'public' and p.proname like 'schedule\_%')
+     <> 19 + (case when to_regclass('public.schedule_class_ages') is null then 0 else 1 end) then
+    raise exception 'TEST FAILED: C9 expected 19 (20 after 0031) schedule_* functions, found %',
       (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
         where n.nspname = 'public' and p.proname like 'schedule\_%');
   end if;
