@@ -38,11 +38,13 @@ const GRANTED_COLUMNS = {
     'version', 'created_at', 'updated_at', 'created_by_name', 'updated_by_name'],
   form_booking_offers: ['id', 'form_id', 'location_code', 'class_id', 'default_limit', 'days_ahead', 'min_hours_ahead', 'version'],
   form_booking_limits: ['id', 'form_id', 'location_code', 'class_id', 'weekday', 'starts_at', 'spot_limit', 'version'],
+  // classes taught together: one spot number for the combined time (migration 0031, v0.620)
+  form_booking_group_limits: ['id', 'form_id', 'location_code', 'class_ids', 'weekday', 'starts_at', 'spot_limit', 'version'],
   form_submissions: ['id', 'form_id', 'location_code', 'published_version', 'fields', 'answers', 'parent_name', 'parent_phone', 'parent_email',
     'children', 'signed_at', 'entered_by', 'source', 'created_at', 'created_by_name'],
 };
 GRANTED_COLUMNS.prospect_statuses = ['id', 'location_code', 'name', 'kind', 'position', 'color', 'builtin', 'version'];
-const TABLE_KEY = { forms: 'forms', form_booking_offers: 'offers', form_booking_limits: 'limits', form_submissions: 'submissions', prospect_statuses: 'statuses' };
+const TABLE_KEY = { forms: 'forms', form_booking_offers: 'offers', form_booking_limits: 'limits', form_booking_group_limits: 'groupLimits', form_submissions: 'submissions', prospect_statuses: 'statuses' };
 const HIDDEN = ['created_by', 'updated_by', 'booking_key', 'signature', 'submission_key'];
 
 const RPC_ARGS = {
@@ -52,7 +54,7 @@ const RPC_ARGS = {
   forms_set_status: [['p_form_id', 'uuid'], ['p_expected_version', 'int'], ['p_status', 'text']],
   forms_duplicate: [['p_form_id', 'uuid']],
   forms_delete: [['p_form_id', 'uuid'], ['p_expected_version', 'int']],
-  forms_set_booking: [['p_form_id', 'uuid'], ['p_expected_version', 'int'], ['p_offers', 'jsonb'], ['p_limits', 'jsonb']],
+  forms_set_booking: [['p_form_id', 'uuid'], ['p_expected_version', 'int'], ['p_offers', 'jsonb'], ['p_limits', 'jsonb'], ['p_groups', 'jsonb']],
   forms_staff_submit: [['p_form_id', 'uuid'], ['p_submission_key', 'uuid'], ['p_published_version', 'int'], ['p_answers', 'jsonb'], ['p_children', 'jsonb'], ['p_bookings', 'jsonb'], ['p_signature', 'text']],
   forms_open_times: [['p_form_id', 'uuid'], ['p_from', 'date'], ['p_to', 'date']],
   forms_bookings_between: [['p_location_code', 'text'], ['p_from', 'date'], ['p_to', 'date']],
@@ -106,11 +108,16 @@ function toDbType(value, type) {
   }
 }
 
+// Arguments with a default in the real function (may be left out; 0031's p_groups defaults to []).
+const OPTIONAL_ARGS = { forms_set_booking: { p_groups: [] } };
+
 function readArgs(name, args) {
   const spec = RPC_ARGS[name];
   const sent = Object.keys(args ?? {}).filter((key) => args[key] !== undefined);
   const known = new Set(spec.map(([key]) => key));
-  if (spec.some(([key]) => !sent.includes(key)) || sent.some((key) => !known.has(key))) {
+  const optional = OPTIONAL_ARGS[name] ?? {};
+  for (const [key, value] of Object.entries(optional)) if (!sent.includes(key)) args = { ...args, [key]: value };
+  if (spec.some(([key]) => !sent.includes(key) && !(key in optional)) || sent.some((key) => !known.has(key))) {
     throw new DbError('PGRST202', `Could not find the function public.${name}(${[...sent].sort().join(', ')}) in the schema cache`, 404);
   }
   return Object.fromEntries(spec.map(([key, type]) => [key, toDbType(args[key], type)]));
@@ -329,6 +336,7 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
       store = null;
     }
     const db = isUsableStore(store) ? clone(store) : fresh();
+    if (!Array.isArray(db.groupLimits)) db.groupLimits = []; // stores saved before 0031
     if (!isUsableStore(store)) saveStore?.(db);
     return db;
   }
@@ -389,11 +397,45 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
     return Math.min(mine, ...others);
   }
 
+  // The ages of a list of classes joined (v0.620): youngest to oldest; no top age if any class with
+  // ages has none; none at all if no class has ages.
+  function joinedAges(classIds) {
+    const rows = classIds.map((id) => (getSchedule().ages ?? []).find((x) => x.class_id === id)).filter(Boolean);
+    if (rows.length === 0) return { age_from: null, age_to: null };
+    return { age_from: Math.min(...rows.map((r) => r.age_from)), age_to: rows.some((r) => r.age_to === null) ? null : Math.max(...rows.map((r) => r.age_to)) };
+  }
+  // The classes of a schedule slot this form offers, in the slot's own order.
+  const offeredIn = (db, formId, slot) => slot.class_ids.filter((id) => db.offers.some((o) => o.form_id === formId && o.class_id === id));
+
   function times(db, formId, from, to) {
     const form = db.forms.find((f) => f.id === formId);
     if (!form) return [];
     const classes = getClasses();
     const out = [];
+    // Classes taught together (v0.620): a slot with 2+ offered classes is ONE time with its own spots.
+    for (const o of db.offers.filter((x) => x.form_id === formId)) {
+      const first = from > today() ? from : today();
+      const lastWindow = addDays(today(), o.days_ahead - 1);
+      const last = to < lastWindow ? to : lastWindow;
+      const earliest = localStamp(now() + o.min_hours_ahead * 3600000);
+      for (let d = first; d <= last; d = addDays(d, 1)) {
+        for (const s of slotsOn(form.location_code, d)) {
+          const together = offeredIn(db, formId, s);
+          if (together.length < 2 || together[0] !== o.class_id) continue; // the group's first class speaks for it
+          if (`${d} ${hhmm(s.starts_at)}` < earliest) continue;
+          const sorted = [...together].sort();
+          const row = db.groupLimits.find((g) => g.form_id === formId && g.weekday === weekdayOf(d) && hhmm(g.starts_at) === hhmm(s.starts_at)
+            && JSON.stringify(g.class_ids) === JSON.stringify(sorted));
+          const lim = row ? row.spot_limit : Math.max(...together.map((id) => db.offers.find((x) => x.form_id === formId && x.class_id === id).default_limit));
+          const used = db.bookings.filter((b) => b.location_code === form.location_code && together.includes(b.class_id) && b.on_date === d
+            && hhmm(b.starts_at) === hhmm(s.starts_at) && b.status === 'booked').length;
+          if (lim - used <= 0) continue;
+          const names = together.map((id) => classes.find((c) => c.id === id)?.name).filter(Boolean);
+          out.push({ class_id: o.class_id, class_ids: together, class_name: names.join(' + '), date: d, starts_at: hhmm(s.starts_at), ends_at: hhmm(s.ends_at),
+            spots_left: lim - used, ...joinedAges(together) });
+        }
+      }
+    }
     for (const o of db.offers.filter((x) => x.form_id === formId)) {
       const cls = classes.find((c) => c.id === o.class_id);
       if (!cls) continue;
@@ -404,6 +446,7 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
       for (let d = first; d <= last; d = addDays(d, 1)) {
         for (const s of slotsOn(form.location_code, d)) {
           if (!s.class_ids.includes(o.class_id)) continue;
+          if (offeredIn(db, formId, s).length >= 2) continue; // shown once, as the combined time above
           if (`${d} ${hhmm(s.starts_at)}` < earliest) continue;
           const lim = spotLimit(db, formId, form.location_code, o.class_id, d, s.starts_at);
           const used = db.bookings.filter((b) => b.location_code === form.location_code && b.class_id === o.class_id && b.on_date === d
@@ -411,7 +454,7 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
           if (lim === null || lim - used <= 0) continue;
           // the class's ages, only shown (migration 0031, v0.619)
           const ages = (getSchedule().ages ?? []).find((x) => x.class_id === o.class_id);
-          out.push({ class_id: o.class_id, class_name: cls.name, date: d, starts_at: hhmm(s.starts_at), ends_at: hhmm(s.ends_at), spots_left: lim - used,
+          out.push({ class_id: o.class_id, class_ids: [o.class_id], class_name: cls.name, date: d, starts_at: hhmm(s.starts_at), ends_at: hhmm(s.ends_at), spots_left: lim - used,
             age_from: ages?.age_from ?? null, age_to: ages?.age_to ?? null });
         }
       }
@@ -553,6 +596,7 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
       }, ctx);
       for (const o of db.offers.filter((x) => x.form_id === row.id)) insertRow(db.offers, { ...clone(o), id: newId(), form_id: copy.id }, ctx);
       for (const l of db.limits.filter((x) => x.form_id === row.id)) insertRow(db.limits, { ...clone(l), id: newId(), form_id: copy.id }, ctx);
+      for (const g of db.groupLimits.filter((x) => x.form_id === row.id)) insertRow(db.groupLimits, { ...clone(g), id: newId(), form_id: copy.id }, ctx);
       return { status: 'ok', id: copy.id, version: copy.version, slug };
     },
 
@@ -565,6 +609,7 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
       db.forms = db.forms.filter((f) => f.id !== row.id);
       db.offers = db.offers.filter((o) => o.form_id !== row.id);
       db.limits = db.limits.filter((l) => l.form_id !== row.id);
+      db.groupLimits = db.groupLimits.filter((g) => g.form_id !== row.id);
       db.kioskTokens = db.kioskTokens.filter((t) => t.form_id !== row.id);
       return st('ok');
     },
@@ -572,6 +617,7 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
     forms_set_booking(db, a, ctx) {
       const offers = a.p_offers;
       const limits = a.p_limits;
+      const groups = a.p_groups ?? [];
       const intIn = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
       const badOffer = (o) => !isObject(o) || Object.keys(o).some((k) => !['class_id', 'default_limit', 'days_ahead', 'min_hours_ahead'].includes(k))
         || typeof o.class_id !== 'string' || !UUID_PATTERN.test(o.class_id) || !intIn(o.default_limit, 1, 20) || !intIn(o.days_ahead, 1, 60) || !intIn(o.min_hours_ahead, 0, 72);
@@ -580,16 +626,25 @@ export function createFormsBackend({ loadStore, saveStore, now = () => Date.now(
       if (a.p_form_id === null || a.p_expected_version === null || !Array.isArray(offers) || offers.length > 30 || !Array.isArray(limits) || limits.length > 200
         || offers.some(badOffer) || new Set(offers.map((o) => o.class_id)).size !== offers.length
         || limits.some(badLimit) || new Set(limits.map((l) => `${l.class_id}${l.weekday}${l.starts_at}`)).size !== limits.length) return st('invalid');
+      // classes taught together (0031): 2+ different offered classes, a weekday, a start, 0–20 spots
+      const badGroup = (g) => !isObject(g) || Object.keys(g).some((k) => !['class_ids', 'weekday', 'starts_at', 'spot_limit'].includes(k))
+        || !Array.isArray(g.class_ids) || g.class_ids.length < 2 || new Set(g.class_ids).size !== g.class_ids.length
+        || g.class_ids.some((id) => !offers.some((o) => o.class_id === id)) || !intIn(g.weekday, 1, 7)
+        || typeof g.starts_at !== 'string' || !HHMM.test(g.starts_at) || !intIn(g.spot_limit, 0, 20);
+      if (!Array.isArray(groups) || groups.length > 100 || groups.some(badGroup)
+        || new Set(groups.map((g) => `${[...g.class_ids].sort()}${g.weekday}${g.starts_at}`)).size !== groups.length) return st('invalid');
       const row = findForm(db, a.p_form_id);
       if (!row) return st('not_found');
       if (row.version !== a.p_expected_version) return st('stale');
       const classes = getClasses();
       if (offers.some((o) => !classes.some((c) => c.id === o.class_id && c.location_code === row.location_code))) return st('invalid');
       db.limits = db.limits.filter((l) => l.form_id !== row.id);
+      db.groupLimits = db.groupLimits.filter((g) => g.form_id !== row.id);
       db.offers = db.offers.filter((o) => o.form_id !== row.id);
       for (const o of offers) insertRow(db.offers, { id: newId(), form_id: row.id, location_code: row.location_code, ...o }, ctx);
       for (const l of limits) insertRow(db.limits, { id: newId(), form_id: row.id, location_code: row.location_code, ...l, starts_at: `${l.starts_at}:00` }, ctx);
-      updateRow(row, { booking_key: JSON.stringify([offers, limits]) }, ctx);
+      for (const g of groups) insertRow(db.groupLimits, { id: newId(), form_id: row.id, location_code: row.location_code, ...g, class_ids: [...g.class_ids].sort(), starts_at: `${g.starts_at}:00` }, ctx);
+      updateRow(row, { booking_key: JSON.stringify([offers, limits, groups]) }, ctx);
       return { status: 'ok', id: row.id, version: row.version };
     },
 

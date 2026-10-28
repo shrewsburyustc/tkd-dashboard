@@ -158,6 +158,11 @@ export const BOOK_A_CLASS = 'Book a class';
 export const CLASSES_OFFERED = 'Classes offered';
 export const NO_CLASSES = 'This school has no classes yet (Testing → Classes and ranks).';
 export const timesAndSpots = (name) => `Times and spots · ${name}`;
+// classes taught together (rulebook v0.620)
+export const TOGETHER_TITLE = 'Taught together · times and spots';
+export const togetherHint = (example) =>
+  `One spot number for the whole time${example ? `. On the forms: “${example}”` : ''}. These times aren’t in the classes’ own lists; to offer one to a single class, untick the other class above.`;
+export const togetherTime = (weekdayTimeText, names) => `${weekdayTimeText} · ${names}`;
 export const SPOTS_HINT = 'Spots = free-class students per class. Untick a time to hide it.';
 export const NO_TIMES = 'This class isn\'t on the schedule yet.';
 export const SHOW_NEXT = 'Show the next';

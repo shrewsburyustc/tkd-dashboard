@@ -9,7 +9,7 @@ import { findOverlaps, formatRange, formatTime, hourLabel, hourRange, parseTime,
 import { addDays, classifyVersions, copySourceFor, currentOf, endsBefore, formatDate, plannedOf, weekdayOf } from './versions.js';
 import { CLASS_COLORS, colorOf, COLOR_KEYS } from './colors.js';
 import { createScheduleBackend } from '../mockSchedule.js';
-import { agesFromRow, agesLabel, agesProblem, agesToText, classWithAges, readAges } from './ages.js';
+import { agesFromRow, agesLabel, agesProblem, agesToText, classWithAges, joinAges, readAges } from './ages.js';
 
 let groups = 0;
 function group(name, fn) {
@@ -255,6 +255,11 @@ group('class ages: how they are written and checked (v0.619)', () => {
   assert.deepEqual(agesFromRow({ age_from: 7, age_to: 12 }), { from: 7, to: 12 });
   assert.deepEqual(agesFromRow({ age_from: '7', age_to: 12 }), { from: null, to: null }); // odd answers = none
   assert.deepEqual(agesFromRow({ age_from: null, age_to: 12 }), { from: null, to: null });
+  // classes taught together (v0.620): youngest to oldest
+  assert.deepEqual(joinAges([{ from: 3, to: 5 }, { from: 6, to: 12 }]), { from: 3, to: 12 });
+  assert.deepEqual(joinAges([{ from: 3, to: 5 }, { from: 13, to: null }]), { from: 3, to: null });
+  assert.deepEqual(joinAges([{ from: 3, to: 5 }, { from: null, to: null }]), { from: 3, to: 5 });
+  assert.deepEqual(joinAges([{ from: null, to: null }, { from: null, to: null }]), { from: null, to: null });
 });
 
 group('mock: schedule_set_class_ages (0031)', () => {

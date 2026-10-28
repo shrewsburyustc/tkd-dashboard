@@ -30,12 +30,28 @@
 --         carries them too, in 0012's order
 --     T8  deleting the class in Testing removes its ages row (logged as
 --         Testing's delete_class)
+--     T9  classes taught together (v0.620): forms_set_booking's groups
+--         (admin only: front desk not_allowed, shut-out no_access; anon
+--         can't read the table or call it; invalid groups - 1 class, a
+--         class not offered, another school's, a class twice, bad
+--         weekday / time / limit, unknown key, the same group twice);
+--         a call without p_groups still works; a slot whose classes the
+--         form offers 2 of is ONE time (first class's id, class_ids, the
+--         joined name, the joined ages, spots = the largest default, then
+--         its own group row; 0 hides it); a form offering only one is an
+--         ordinary single time; booking it (public, staff Fill in,
+--         Prospects) saves the joined name and counts over the group,
+--         also bookings made on another form; a member's own time is
+--         time_taken; full -> time_taken; history rows; Duplicate copies
+--         the group rows, Delete removes them
 --     C   catalog: RLS on, one SELECT policy using has_data_access(),
 --         grants (nothing to anon / service_role / forms_registrar),
 --         schedule_set_class_ages is security definer with
 --         search_path = '' and only authenticated may run it; the three
 --         replaced form functions keep their rights (public ones:
---         forms_registrar only; forms_open_times: authenticated only)
+--         forms_registrar only; forms_open_times: authenticated only);
+--         the group table's RLS / grants / policy / no truncate, and the
+--         rights of the functions part 2 made or replaced
 --   It makes its own test classes, time slot and form named
 --   "zz test ...", so it works whatever is already in the database.
 --
@@ -53,7 +69,7 @@
 --   owner, so the answers are the same as for forms_registrar).
 --
 -- BEFORE YOU RUN IT
---   1. 0007, 0009 and 0031 are applied. You need TWO existing, ACTIVE
+--   1. 0007, 0009, 0012 and 0031 are applied. You need TWO existing, ACTIVE
 --      staff rows: an admin and the shared front desk (role staff).
 --   2. Replace <paste-admin-UID-here> and <paste-desk-UID-here> below with
 --      their UIDs from Authentication -> Users.
@@ -114,6 +130,23 @@ declare
   v_cs1 uuid;   -- Shrewsbury, ages set then the class is deleted
   v_prospect uuid;
   v_fn  record;
+  -- T9 (classes taught together)
+  v_wd    integer;
+  v_cg1   uuid;   -- "Little Tiger", ages 3-5   } one 9:00 slot, in this order
+  v_cg2   uuid;   -- "White", ages 6-12         }
+  v_cg3   uuid;   -- in the slot, not offered   }
+  v_cs2   uuid;   -- Shrewsbury
+  v_slug2 text;
+  v_slug3 text;
+  v_f2    uuid;   -- offers Little Tiger + White
+  v_f2_v  integer;
+  v_f3    uuid;   -- offers White only
+  v_f4    uuid;   -- F2's copy
+  v_pub2  integer;
+  v_pub3  integer;
+  v_offers jsonb;
+  v_g     jsonb;
+  v_pver  integer;
 begin
   -- -------------------------------------------------------------------
   -- Setup (as the "postgres" role the SQL Editor uses)
@@ -144,8 +177,10 @@ begin
   v_c_a2 := jsonb_build_object('sub', v_admin, 'role', 'authenticated', 'session_id', v_a2, 'amr', v_amr)::text;
   v_c_d1 := jsonb_build_object('sub', v_desk,  'role', 'authenticated', 'session_id', v_d1, 'amr', v_amr)::text;
 
-  -- Test classes and one Worcester time slot for w1 + w2 + w3 on v_day,
-  -- made the normal way (Testing's and the Schedule's functions, as A1)
+  -- Test classes and three Worcester time slots on v_day, one class each
+  -- (w1 5:00, w2 6:00, w3 7:00 - in ONE slot they would be one combined
+  -- time, T9), made the normal way (Testing's and the Schedule's
+  -- functions, as A1)
   set local role authenticated;
   perform set_config('request.jwt.claims', v_c_a1, true);
   if public.has_data_access() is not true or public.is_admin() is not true then
@@ -163,9 +198,13 @@ begin
   if v_vw is null and exists (select 1 from public.schedule_versions v where v.location_code = 'worcester') then
     raise exception 'TEST SETUP: Worcester has schedules, but none in effect on %', v_day;
   end if;
-  v_r := public.schedule_add_slots('worcester', v_vw, array[v_cw1, v_cw2, v_cw3], array[extract(isodow from v_day)::smallint],
-                                   '05:00', '05:45');
+  v_r := public.schedule_add_slots('worcester', v_vw, array[v_cw1], array[extract(isodow from v_day)::smallint], '05:00', '05:45');
   if v_r ->> 'status' <> 'ok' then raise exception 'TEST SETUP: slot: %', v_r; end if;
+  v_vw := (v_r ->> 'version_id')::uuid;
+  v_r := public.schedule_add_slots('worcester', v_vw, array[v_cw2], array[extract(isodow from v_day)::smallint], '06:00', '06:45');
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST SETUP: slot 2: %', v_r; end if;
+  v_r := public.schedule_add_slots('worcester', v_vw, array[v_cw3], array[extract(isodow from v_day)::smallint], '07:00', '07:45');
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST SETUP: slot 3: %', v_r; end if;
   reset role;
 
   -- -------------------------------------------------------------------
@@ -387,9 +426,12 @@ begin
   end if;
   if exists (select 1 from jsonb_array_elements(v_r -> 'times') t
               where (select array_agg(k order by k) from jsonb_object_keys(t) k)
-                    <> array['age_from', 'age_to', 'class_id', 'class_name', 'date', 'ends_at', 'spots_left', 'starts_at']
+                    <> array['age_from', 'age_to', 'class_id', 'class_ids', 'class_name', 'date', 'ends_at', 'spots_left', 'starts_at']
                  or not (t ? 'age_from') or not (t ? 'age_to')) then
-    raise exception 'TEST FAILED: T7c each time should have exactly 0009''s keys plus age_from / age_to: %', v_r -> 'times';
+    raise exception 'TEST FAILED: T7c each time should have exactly 0009''s keys plus class_ids / age_from / age_to: %', v_r -> 'times';
+  end if;
+  if exists (select 1 from jsonb_array_elements(v_r -> 'times') t where t -> 'class_ids' <> jsonb_build_array(t -> 'class_id')) then
+    raise exception 'TEST FAILED: T7c2 a single class''s class_ids should be [its class_id]: %', v_r -> 'times';
   end if;
   -- the order of the times is still 0009's (date, start, class name)
   if (select string_agg(t ->> 'class_name', ',' order by o) from jsonb_array_elements(v_r -> 'times') with ordinality as x(t, o))
@@ -416,8 +458,8 @@ begin
   end if;
   if exists (select 1 from jsonb_array_elements(v_r -> 'times') t
               where (select array_agg(k order by k) from jsonb_object_keys(t) k)
-                    <> array['age_from', 'age_to', 'class_id', 'class_name', 'date', 'ends_at', 'spots_left', 'starts_at']) then
-    raise exception 'TEST FAILED: T7h each public time should have exactly 0009''s keys plus age_from / age_to';
+                    <> array['age_from', 'age_to', 'class_id', 'class_ids', 'class_name', 'date', 'ends_at', 'spots_left', 'starts_at']) then
+    raise exception 'TEST FAILED: T7h each public time should have exactly 0009''s keys plus class_ids / age_from / age_to';
   end if;
 
   -- forms_public_submit: w1 (1 spot) is taken, the next family gets
@@ -450,8 +492,8 @@ begin
   end if;
   if exists (select 1 from jsonb_array_elements(v_r -> 'times') t
               where (select array_agg(k order by k) from jsonb_object_keys(t) k)
-                    <> array['age_from', 'age_to', 'class_id', 'class_name', 'date', 'ends_at', 'form_id', 'spots_left', 'starts_at']) then
-    raise exception 'TEST FAILED: T7p3 each prospects time should have exactly 0012''s keys plus age_from / age_to: %', v_r -> 'times';
+                    <> array['age_from', 'age_to', 'class_id', 'class_ids', 'class_name', 'date', 'ends_at', 'form_id', 'spots_left', 'starts_at']) then
+    raise exception 'TEST FAILED: T7p3 each prospects time should have exactly 0012''s keys plus class_ids / age_from / age_to: %', v_r -> 'times';
   end if;
   if exists (select 1 from jsonb_array_elements(v_r -> 'times') t
               where t ->> 'class_id' in (v_cw1::text, v_cw2::text, v_cw3::text) and t ->> 'form_id' <> v_f1::text) then
@@ -493,6 +535,339 @@ begin
   if not exists (select 1 from public.change_log l where l.id > v_mark2 and l.table_name = 'schedule_class_ages'
                     and l.op = 'delete' and l.action = 'delete_class' and l.location_code = 'shrewsbury') then
     raise exception 'TEST FAILED: T8b the removal should be in change_log as delete_class';
+  end if;
+
+  -- -------------------------------------------------------------------
+  -- T9: classes taught together (v0.620). One 9:00 slot for g1 ("Little
+  --     Tiger", 3-5) + g2 ("White", 6-12) + g3 (not offered). Form F2
+  --     offers g1 (default 2) and g2 (default 4): ONE time. Form F3
+  --     offers only g2: an ordinary single time.
+  -- -------------------------------------------------------------------
+  v_wd := extract(isodow from v_day)::integer;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_cg1 := (public.testing_add_class('worcester',  v_tag || ' Little Tiger', null, false) ->> 'id')::uuid;
+  v_cg2 := (public.testing_add_class('worcester',  v_tag || ' White', null, false) ->> 'id')::uuid;
+  v_cg3 := (public.testing_add_class('worcester',  v_tag || ' g3', null, false) ->> 'id')::uuid;
+  v_cs2 := (public.testing_add_class('shrewsbury', v_tag || ' s2', null, false) ->> 'id')::uuid;
+  if v_cg1 is null or v_cg2 is null or v_cg3 is null or v_cs2 is null then raise exception 'TEST SETUP: T9 classes'; end if;
+  v_r := public.schedule_add_slots('worcester', v_vw, array[v_cg1, v_cg2, v_cg3], array[v_wd::smallint], '09:00', '09:45');
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST SETUP: T9 slot: %', v_r; end if;
+  if public.schedule_set_class_ages(v_cg1, 3, 5) ->> 'status' <> 'ok'
+     or public.schedule_set_class_ages(v_cg2, 6, 12) ->> 'status' <> 'ok' then
+    raise exception 'TEST SETUP: T9 ages';
+  end if;
+  -- F2 and F3, published
+  v_slug2 := 'zz-' || left(replace(gen_random_uuid()::text, '-', ''), 10);
+  v_slug3 := 'zz-' || left(replace(gen_random_uuid()::text, '-', ''), 10);
+  v_r := public.forms_create('worcester', 'free_class', v_tag || ' together', v_slug2);
+  v_f2 := (v_r ->> 'id')::uuid;
+  v_r := public.forms_save_draft(v_f2, (v_r ->> 'version')::integer, v_tag || ' together', v_slug2, v_fields,
+                                 '{"thank_you":"Thanks!","alert_email":"desk@example.com","confirm_email":true,"add_to_calendar":true}');
+  v_r := public.forms_publish(v_f2, (v_r ->> 'version')::integer);
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST SETUP: T9 F2 publish: %', v_r; end if;
+  v_f2_v := (v_r ->> 'version')::integer;
+  v_r := public.forms_create('worcester', 'free_class', v_tag || ' white only', v_slug3);
+  v_f3 := (v_r ->> 'id')::uuid;
+  v_r := public.forms_save_draft(v_f3, (v_r ->> 'version')::integer, v_tag || ' white only', v_slug3, v_fields,
+                                 '{"thank_you":"Thanks!","alert_email":"desk@example.com","confirm_email":true,"add_to_calendar":true}');
+  v_r := public.forms_publish(v_f3, (v_r ->> 'version')::integer);
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST SETUP: T9 F3 publish: %', v_r; end if;
+  v_r := public.forms_set_booking(v_f3, (v_r ->> 'version')::integer, jsonb_build_array(
+           jsonb_build_object('class_id', v_cg2, 'default_limit', 5, 'days_ahead', 14, 'min_hours_ahead', 0)), '[]');
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST SETUP: T9 F3 booking: %', v_r; end if;
+  v_offers := jsonb_build_array(
+    jsonb_build_object('class_id', v_cg1, 'default_limit', 2, 'days_ahead', 14, 'min_hours_ahead', 0),
+    jsonb_build_object('class_id', v_cg2, 'default_limit', 4, 'days_ahead', 14, 'min_hours_ahead', 0));
+  -- an OLD call (4 arguments, no p_groups) still works
+  v_r := public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]');
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: T9a a call without p_groups gave %', v_r; end if;
+  v_f2_v := (v_r ->> 'version')::integer;
+  reset role;
+  select f.published_version into v_pub2 from public.forms f where f.id = v_f2;
+  select f.published_version into v_pub3 from public.forms f where f.id = v_f3;
+
+  -- T9b: invalid groups - each refused, nothing written
+  v_g := jsonb_build_object('class_ids', jsonb_build_array(v_cg2, v_cg1), 'weekday', v_wd, 'starts_at', '09:00', 'spot_limit', 3);
+  select coalesce(max(l.id), 0) into v_mark2 from public.change_log l;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_txt := concat_ws(',',
+    public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array(v_g || jsonb_build_object('class_ids', jsonb_build_array(v_cg1)))) ->> 'status',          -- 1 class
+    public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array(v_g || jsonb_build_object('class_ids', jsonb_build_array(v_cg1, v_cg3)))) ->> 'status',  -- g3 not offered
+    public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array(v_g || jsonb_build_object('class_ids', jsonb_build_array(v_cg1, v_cs2)))) ->> 'status',  -- other school
+    public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array(v_g || jsonb_build_object('class_ids', jsonb_build_array(v_cg1, v_cg1)))) ->> 'status',  -- a class twice
+    public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array(v_g || jsonb_build_object('class_ids', v_cg1::text))) ->> 'status',                     -- not a list
+    public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array(v_g || jsonb_build_object('class_ids', jsonb_build_array(v_cg1, 'x')))) ->> 'status',     -- not an id
+    public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array(v_g || jsonb_build_object('weekday', 0))) ->> 'status',
+    public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array(v_g || jsonb_build_object('weekday', 8))) ->> 'status',
+    public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array(v_g || jsonb_build_object('starts_at', '9:00'))) ->> 'status',
+    public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array(v_g || jsonb_build_object('spot_limit', 21))) ->> 'status',
+    public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array(v_g || jsonb_build_object('spot_limit', -1))) ->> 'status',
+    public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array(v_g || jsonb_build_object('spot_limit', 'x'))) ->> 'status',
+    public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array(v_g || jsonb_build_object('extra', 1))) ->> 'status',
+    public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array(v_g, v_g || jsonb_build_object('class_ids', jsonb_build_array(v_cg1, v_cg2)))) ->> 'status', -- the same group twice (other order)
+    public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array('"x"'::jsonb)) ->> 'status',
+    public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', '{}'::jsonb) ->> 'status',
+    public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', null) ->> 'status');
+  reset role;
+  if v_txt <> 'invalid,invalid,invalid,invalid,invalid,invalid,invalid,invalid,invalid,invalid,invalid,invalid,invalid,invalid,invalid,invalid,invalid' then
+    raise exception 'TEST FAILED: T9b invalid groups gave %', v_txt;
+  end if;
+  if exists (select 1 from public.form_booking_group_limits g where g.form_id = v_f2)
+     or exists (select 1 from public.change_log l where l.id > v_mark2)
+     or (select f.version from public.forms f where f.id = v_f2) <> v_f2_v then
+    raise exception 'TEST FAILED: T9c a refused call wrote something';
+  end if;
+
+  -- T9d: who may: the front desk -> not_allowed, a shut-out session -> no_access
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  v_txt := public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array(v_g)) ->> 'status';
+  perform set_config('request.jwt.claims', v_c_a2, true);
+  v_txt := v_txt || ',' || (public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array(v_g)) ->> 'status');
+  reset role;
+  if v_txt <> 'not_allowed,no_access' or exists (select 1 from public.form_booking_group_limits g where g.form_id = v_f2) then
+    raise exception 'TEST FAILED: T9d the front desk / a shut-out session gave % (or wrote)', v_txt;
+  end if;
+
+  -- T9e: nobody signed in can read the table or call forms_set_booking;
+  -- a signed-in browser can't write the table directly
+  set local role anon;
+  perform set_config('request.jwt.claims', v_c_anon, true);
+  begin perform 1 from public.form_booking_group_limits;
+        raise exception 'TEST FAILED: T9e1 anon read form_booking_group_limits'; exception when insufficient_privilege then null; end;
+  begin perform public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', '[]');
+        raise exception 'TEST FAILED: T9e2 anon called forms_set_booking'; exception when insufficient_privilege then null; end;
+  reset role;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  begin insert into public.form_booking_group_limits (form_id, location_code, class_ids, weekday, starts_at, spot_limit)
+        values (v_f2, 'worcester', array[v_cg1, v_cg2], 1, '09:00', 3);
+        raise exception 'TEST FAILED: T9e3 admin inserted a group row directly'; exception when insufficient_privilege then null; end;
+  begin perform g.created_by from public.form_booking_group_limits g;
+        raise exception 'TEST FAILED: T9e4 created_by is readable'; exception when insufficient_privilege then null; end;
+  reset role;
+
+  -- T9f: no group row yet -> ONE time, spots = the LARGEST default (4)
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  v_r := public.forms_open_times(v_f2, v_day, v_day);
+  reset role;
+  select jsonb_agg(t) into v_t from jsonb_array_elements(v_r -> 'times') t where t ->> 'starts_at' = '09:00';
+  if v_r ->> 'status' <> 'ok' or jsonb_array_length(coalesce(v_t, '[]')) <> 1 then
+    raise exception 'TEST FAILED: T9f1 the 9:00 slot should be ONE time on F2: %', v_r;
+  end if;
+  v_t := v_t -> 0;
+  if v_t ->> 'class_id' <> v_cg1::text
+     or v_t -> 'class_ids' <> jsonb_build_array(v_cg1, v_cg2)
+     or v_t ->> 'class_name' <> v_tag || ' Little Tiger + ' || v_tag || ' White'
+     or (v_t ->> 'age_from')::int <> 3 or (v_t ->> 'age_to')::int <> 12
+     or (v_t ->> 'spots_left')::int <> 4
+     or v_t ->> 'ends_at' <> '09:45' then
+    raise exception 'TEST FAILED: T9f2 the combined time is wrong: %', v_t;
+  end if;
+  -- the public page shows the same one time
+  v_r := public.forms_public_get(v_slug2);
+  if (select count(*) from jsonb_array_elements(v_r -> 'times') t where t ->> 'date' = v_day::text and t ->> 'starts_at' = '09:00') <> 1
+     or not exists (select 1 from jsonb_array_elements(v_r -> 'times') t
+                     where t ->> 'date' = v_day::text and t ->> 'starts_at' = '09:00'
+                       and t -> 'class_ids' = jsonb_build_array(v_cg1, v_cg2) and (t ->> 'spots_left')::int = 4) then
+    raise exception 'TEST FAILED: T9f3 forms_public_get should show the one combined time: %', v_r -> 'times';
+  end if;
+  -- "+" when one class has no top age: age_to empty
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  perform public.schedule_set_class_ages(v_cg2, 6, null);
+  v_r := public.forms_open_times(v_f2, v_day, v_day);
+  perform public.schedule_set_class_ages(v_cg2, 6, 12);
+  reset role;
+  select t into v_t from jsonb_array_elements(v_r -> 'times') t where t ->> 'starts_at' = '09:00';
+  if (v_t ->> 'age_from')::int <> 3 or v_t -> 'age_to' <> 'null'::jsonb then
+    raise exception 'TEST FAILED: T9f4 Little Tiger 3-5 + White 6+ should be 3 / null: %', v_t;
+  end if;
+  -- F3 offers only White: an ordinary single time, class_ids = [White].
+  -- Its spots follow 0009's rule for a single class (the lowest limit
+  -- of every live form offering it): F3 says 5, F2 offers White with a
+  -- default of 4 -> 4.
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  v_r := public.forms_open_times(v_f3, v_day, v_day);
+  reset role;
+  select jsonb_agg(t) into v_t from jsonb_array_elements(v_r -> 'times') t where t ->> 'starts_at' = '09:00';
+  if jsonb_array_length(coalesce(v_t, '[]')) <> 1 or v_t -> 0 ->> 'class_id' <> v_cg2::text
+     or v_t -> 0 -> 'class_ids' <> jsonb_build_array(v_cg2) or v_t -> 0 ->> 'class_name' <> v_tag || ' White'
+     or (v_t -> 0 ->> 'age_from')::int <> 6 or (v_t -> 0 ->> 'age_to')::int <> 12 or (v_t -> 0 ->> 'spots_left')::int <> 4 then
+    raise exception 'TEST FAILED: T9f5 F3 should show White alone: %', v_t;
+  end if;
+
+  -- T9g: the combined time's own spot number (3), stored sorted, logged
+  select coalesce(max(l.id), 0) into v_mark2 from public.change_log l;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_r := public.forms_set_booking(p_form_id => v_f2, p_expected_version => v_f2_v, p_offers => v_offers, p_limits => '[]',
+                                  p_groups => jsonb_build_array(v_g));
+  reset role;
+  if v_r ->> 'status' <> 'ok' or (v_r ->> 'version')::int <> v_f2_v + 1 then raise exception 'TEST FAILED: T9g1 set a group gave %', v_r; end if;
+  v_f2_v := (v_r ->> 'version')::integer;
+  if (select count(*) from public.form_booking_group_limits g
+       where g.form_id = v_f2 and g.location_code = 'worcester' and g.weekday = v_wd and g.starts_at = '09:00' and g.spot_limit = 3
+         and g.version = 1 and g.class_ids = (select array_agg(x order by x) from unnest(array[v_cg1, v_cg2]) as x)) <> 1 then
+    raise exception 'TEST FAILED: T9g2 the group row should be saved once, its classes sorted';
+  end if;
+  if not exists (select 1 from public.change_log l where l.id > v_mark2 and l.table_name = 'form_booking_group_limits' and l.op = 'insert'
+                    and l.action = 'forms_set_booking' and l.actor_id = v_admin and l.batch_id is not null and l.location_code = 'worcester') then
+    raise exception 'TEST FAILED: T9g3 the new group row should be in change_log';
+  end if;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  if (select count(*) from public.form_booking_group_limits g where g.form_id = v_f2) <> 1 then
+    raise exception 'TEST FAILED: T9g4 the front desk should read the group row';
+  end if;
+  v_r := public.forms_open_times(v_f2, v_day, v_day);
+  perform set_config('request.jwt.claims', v_c_a2, true);
+  if (select count(*) from public.form_booking_group_limits) <> 0 then raise exception 'TEST FAILED: T9g5 a shut-out session read group rows'; end if;
+  reset role;
+  if (select (t ->> 'spots_left')::int from jsonb_array_elements(v_r -> 'times') t where t ->> 'starts_at' = '09:00') <> 3 then
+    raise exception 'TEST FAILED: T9g6 the combined time should have its own 3 spots: %', v_r -> 'times';
+  end if;
+  -- 0 = don't offer the combined time
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_r := public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array(v_g || jsonb_build_object('spot_limit', 0)));
+  v_f2_v := (v_r ->> 'version')::integer;
+  v_t := public.forms_open_times(v_f2, v_day, v_day);
+  v_r := public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array(v_g));
+  v_f2_v := (v_r ->> 'version')::integer;
+  reset role;
+  if exists (select 1 from jsonb_array_elements(v_t -> 'times') t where t ->> 'starts_at' = '09:00') then
+    raise exception 'TEST FAILED: T9g7 a group limit of 0 should hide the combined time (and not show its classes alone): %', v_t;
+  end if;
+  if (select string_agg(l.op, ',' order by l.id) from public.change_log l
+       where l.id > v_mark2 and l.table_name = 'form_booking_group_limits') <> 'insert,delete,insert,delete,insert' then
+    raise exception 'TEST FAILED: T9g8 group history should be insert,delete,insert,delete,insert';
+  end if;
+
+  -- T9h: booking the combined time (public page): saved with the joined
+  -- name, counted over the whole group; a member's own time is "time_taken"
+  v_book := jsonb_build_array(jsonb_build_object('child', 0, 'class_id', v_cg1, 'date', v_day, 'starts_at', '09:00'));
+  v_r := public.forms_public_submit(v_slug2, 'zz-0031-g1', gen_random_uuid(), v_pub2, v_ans, v_kids, v_book, v_sig, null);
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: T9h1 booking the combined time: %', v_r; end if;
+  if (select b.class_name || '|' || b.class_id from public.class_bookings b where b.submission_id = (v_r ->> 'id')::uuid)
+     <> v_tag || ' Little Tiger + ' || v_tag || ' White|' || v_cg1 then
+    raise exception 'TEST FAILED: T9h2 the booking should be saved as the joined name under the first class';
+  end if;
+  v_r := public.forms_public_submit(v_slug2, 'zz-0031-g2', gen_random_uuid(), v_pub2, v_ans, v_kids,
+                                    jsonb_build_array(jsonb_build_object('child', 0, 'class_id', v_cg2, 'date', v_day, 'starts_at', '09:00')), v_sig, null);
+  if v_r ->> 'status' <> 'time_taken'
+     or not exists (select 1 from jsonb_array_elements(v_r -> 'times') t
+                     where t ->> 'date' = v_day::text and t ->> 'starts_at' = '09:00' and t -> 'class_ids' = jsonb_build_array(v_cg1, v_cg2)
+                       and (t ->> 'spots_left')::int = 2 and (t ->> 'age_from')::int = 3) then
+    raise exception 'TEST FAILED: T9h3 booking White''s own time on F2 should be time_taken (fresh times with the group, 2 left): %', v_r;
+  end if;
+  -- a White booking on F3 counts against the group too
+  v_r := public.forms_public_submit(v_slug3, 'zz-0031-g3', gen_random_uuid(), v_pub3, v_ans, v_kids,
+                                    jsonb_build_array(jsonb_build_object('child', 0, 'class_id', v_cg2, 'date', v_day, 'starts_at', '09:00')), v_sig, null);
+  if v_r ->> 'status' <> 'ok'
+     or (select b.class_name from public.class_bookings b where b.submission_id = (v_r ->> 'id')::uuid) <> v_tag || ' White' then
+    raise exception 'TEST FAILED: T9h4 booking White alone on F3: %', v_r;
+  end if;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  v_r := public.forms_open_times(v_f2, v_day, v_day);
+  v_t := public.forms_open_times(v_f3, v_day, v_day);
+  reset role;
+  if (select (t ->> 'spots_left')::int from jsonb_array_elements(v_r -> 'times') t where t ->> 'starts_at' = '09:00') <> 1
+     or (select (t ->> 'spots_left')::int from jsonb_array_elements(v_t -> 'times') t where t ->> 'starts_at' = '09:00') <> 3 then
+    raise exception 'TEST FAILED: T9h5 group 3 - 2 booked = 1 left; White alone 4 - 1 (White bookings only) = 3 left: % / %', v_r -> 'times', v_t -> 'times';
+  end if;
+  -- staff "Fill in" takes the last spot; then the group is full
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  v_r := public.forms_staff_submit(v_f2, gen_random_uuid(), v_pub2, v_ans, v_kids, v_book, v_sig);
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: T9h6 staff Fill in on the combined time: %', v_r; end if;
+  v_r := public.forms_staff_submit(v_f2, gen_random_uuid(), v_pub2, v_ans, v_kids, v_book, v_sig);
+  reset role;
+  if v_r ->> 'status' <> 'time_taken' then raise exception 'TEST FAILED: T9h7 staff on a full group: %', v_r; end if;
+  v_r := public.forms_public_submit(v_slug2, 'zz-0031-g4', gen_random_uuid(), v_pub2, v_ans, v_kids, v_book, v_sig, null);
+  if v_r ->> 'status' <> 'time_taken'
+     or exists (select 1 from jsonb_array_elements(v_r -> 'times') t where t ->> 'date' = v_day::text and t ->> 'starts_at' = '09:00') then
+    raise exception 'TEST FAILED: T9h8 a full group should be time_taken and gone from the times: %', v_r;
+  end if;
+  -- the lock row: the slot's first class (Little Tiger) for every booking of the slot
+  if exists (select 1 from public.class_booking_slots s where s.class_id in (v_cg2, v_cg3) and s.on_date = v_day)
+     or not exists (select 1 from public.class_booking_slots s where s.class_id = v_cg1 and s.on_date = v_day and s.starts_at = '09:00') then
+    raise exception 'TEST FAILED: T9h9 every booking of the 9:00 slot should lock Little Tiger''s row';
+  end if;
+
+  -- T9i: Prospects -> Book a free class on a combined time
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_r := public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]', jsonb_build_array(v_g || jsonb_build_object('spot_limit', 10)));
+  v_f2_v := (v_r ->> 'version')::integer;
+  reset role;
+  v_r := public.forms_public_submit(v_slug2, 'zz-0031-g5', gen_random_uuid(), v_pub2, v_ans, v_kids, '[]', v_sig, null);
+  select p.id, p.version into v_prospect, v_pver from public.prospects p where p.submission_id = (v_r ->> 'id')::uuid and p.child_index = 0;
+  if v_prospect is null then raise exception 'TEST SETUP: T9i no prospect'; end if;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_d1, true);
+  v_r := public.prospects_open_times(v_prospect, v_day, v_day);
+  if (select count(*) from jsonb_array_elements(v_r -> 'times') t
+       where t ->> 'starts_at' = '09:00' and t ->> 'form_id' = v_f2::text and t -> 'class_ids' = jsonb_build_array(v_cg1, v_cg2)
+         and (t ->> 'spots_left')::int = 7) <> 1
+     or (select count(*) from jsonb_array_elements(v_r -> 'times') t
+          where t ->> 'starts_at' = '09:00' and t ->> 'form_id' = v_f3::text and t -> 'class_ids' = jsonb_build_array(v_cg2)) <> 1 then
+    raise exception 'TEST FAILED: T9i1 prospects should see the combined time (F2, 7 left) and White alone (F3): %', v_r -> 'times';
+  end if;
+  v_txt := public.prospects_book_time(v_prospect, v_pver, v_f2, v_cg2, v_day, '09:00') ->> 'status';
+  if v_txt <> 'time_taken' then raise exception 'TEST FAILED: T9i2 booking White''s own time on F2 from Prospects gave %', v_txt; end if;
+  v_r := public.prospects_book_time(v_prospect, v_pver, v_f2, v_cg1, v_day, '09:00');
+  reset role;
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: T9i3 Prospects booking the combined time: %', v_r; end if;
+  if (select b.class_name from public.class_bookings b join public.prospects p on p.submission_id = b.submission_id and p.child_index = b.child_index
+       where p.id = v_prospect) <> v_tag || ' Little Tiger + ' || v_tag || ' White' then
+    raise exception 'TEST FAILED: T9i4 the Prospects booking should have the joined name';
+  end if;
+
+  -- T9j: Duplicate copies the group rows; Delete removes them (logged)
+  select coalesce(max(l.id), 0) into v_mark2 from public.change_log l;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_r := public.forms_duplicate(v_f2);
+  reset role;
+  if v_r ->> 'status' <> 'ok' then raise exception 'TEST FAILED: T9j1 duplicate: %', v_r; end if;
+  v_f4 := (v_r ->> 'id')::uuid;
+  if (select string_agg(g.class_ids::text || g.weekday || g.starts_at || g.spot_limit, ',') from public.form_booking_group_limits g where g.form_id = v_f4)
+     is distinct from (select string_agg(g.class_ids::text || g.weekday || g.starts_at || g.spot_limit, ',') from public.form_booking_group_limits g where g.form_id = v_f2) then
+    raise exception 'TEST FAILED: T9j2 the copy should have the same group rows';
+  end if;
+  if not exists (select 1 from public.change_log l where l.id > v_mark2 and l.table_name = 'form_booking_group_limits'
+                    and l.op = 'insert' and l.action = 'forms_duplicate' and (l.after ->> 'form_id')::uuid = v_f4) then
+    raise exception 'TEST FAILED: T9j3 the copied group row should be in change_log as forms_duplicate';
+  end if;
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_r := public.forms_delete(v_f4, (v_r ->> 'version')::integer);
+  reset role;
+  if v_r ->> 'status' <> 'ok' or exists (select 1 from public.form_booking_group_limits g where g.form_id = v_f4) then
+    raise exception 'TEST FAILED: T9j4 deleting the copy should remove its group rows: %', v_r;
+  end if;
+  if not exists (select 1 from public.change_log l where l.id > v_mark2 and l.table_name = 'form_booking_group_limits'
+                    and l.op = 'delete' and l.action = 'forms_delete' and (l.before ->> 'form_id')::uuid = v_f4) then
+    raise exception 'TEST FAILED: T9j5 the removed group row should be in change_log as forms_delete';
+  end if;
+
+  -- T9k: a call without p_groups (the app before 0031) removes the group
+  -- rows (the same as an empty limits list removes the limits)
+  set local role authenticated;
+  perform set_config('request.jwt.claims', v_c_a1, true);
+  v_r := public.forms_set_booking(v_f2, v_f2_v, v_offers, '[]');
+  reset role;
+  if v_r ->> 'status' <> 'ok' or exists (select 1 from public.form_booking_group_limits g where g.form_id = v_f2) then
+    raise exception 'TEST FAILED: T9k a call without p_groups should leave no group rows: %', v_r;
+  end if;
+  if coalesce(current_setting('tkd.action', true), '') <> '' or coalesce(current_setting('tkd.batch_id', true), '') <> '' then
+    raise exception 'TEST FAILED: T9l tags left set';
   end if;
 
   -- -------------------------------------------------------------------
@@ -565,6 +940,67 @@ begin
          and p.proname in ('schedule_set_class_ages', 'forms_open_times', 'forms_public_get', 'forms_public_submit', 'schedule_before_write',
                          'prospects_open_times')) <> 6 then
     raise exception 'TEST FAILED: C11 expected exactly one of each of the 6 functions (no leftover overloads)';
+  end if;
+  -- C12-C16: the group table and the functions part 2 made or replaced
+  if not (select c.relrowsecurity from pg_class c where c.oid = 'public.form_booking_group_limits'::regclass) then
+    raise exception 'TEST FAILED: C12 RLS is off on form_booking_group_limits';
+  end if;
+  if has_table_privilege('anon', 'public.form_booking_group_limits', 'select')
+     or has_any_column_privilege('anon', 'public.form_booking_group_limits', 'select')
+     or has_table_privilege('service_role', 'public.form_booking_group_limits', 'select')
+     or has_any_column_privilege('service_role', 'public.form_booking_group_limits', 'select')
+     or has_any_column_privilege('forms_registrar', 'public.form_booking_group_limits', 'select')
+     or has_table_privilege('authenticated', 'public.form_booking_group_limits', 'insert')
+     or has_table_privilege('authenticated', 'public.form_booking_group_limits', 'update')
+     or has_table_privilege('authenticated', 'public.form_booking_group_limits', 'delete')
+     or has_table_privilege('authenticated', 'public.form_booking_group_limits', 'truncate')
+     or has_column_privilege('authenticated', 'public.form_booking_group_limits', 'created_by', 'select')
+     or has_column_privilege('authenticated', 'public.form_booking_group_limits', 'updated_by', 'select')
+     or not has_column_privilege('authenticated', 'public.form_booking_group_limits', 'class_ids', 'select')
+     or not has_column_privilege('authenticated', 'public.form_booking_group_limits', 'spot_limit', 'select') then
+    raise exception 'TEST FAILED: C13 wrong grants on form_booking_group_limits';
+  end if;
+  if (select count(*) from pg_policies p where p.schemaname = 'public' and p.tablename = 'form_booking_group_limits') <> 1
+     or (select p.cmd || ' ' || p.roles::text from pg_policies p where p.schemaname = 'public' and p.tablename = 'form_booking_group_limits')
+        <> 'SELECT {authenticated}'
+     or (select p.qual from pg_policies p where p.schemaname = 'public' and p.tablename = 'form_booking_group_limits') not like '%has_data_access()%' then
+    raise exception 'TEST FAILED: C14 the group table''s policy should be one SELECT for authenticated using has_data_access()';
+  end if;
+  begin
+    truncate public.form_booking_group_limits;
+    raise exception 'TEST FAILED: C15 truncate of the group table should be refused';
+  exception when raise_exception then
+    if sqlerrm like 'TEST FAILED%' then raise; end if;
+  end;
+  for v_fn in
+    select p.proname, p.oid, p.prosecdef, p.proconfig, p.proacl
+      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public'
+       and p.proname in ('forms_set_booking', 'forms_duplicate', 'prospects_book_time', 'forms_times', 'forms_submit_core',
+                         'forms_booking_lock_class', 'forms_group_class_ids_ok')
+  loop
+    if v_fn.proconfig is distinct from array['search_path=""'] then
+      raise exception 'TEST FAILED: C16a % settings are %', v_fn.proname, v_fn.proconfig;
+    end if;
+    if has_function_privilege('anon', v_fn.oid, 'EXECUTE') or has_function_privilege('forms_registrar', v_fn.oid, 'EXECUTE')
+       or exists (select 1 from aclexplode(coalesce(v_fn.proacl, acldefault('f', 10))) as a where a.grantee = 0)
+       or exists (select 1 from aclexplode(coalesce(v_fn.proacl, acldefault('f', 10))) as a where a.grantee = 'service_role'::regrole) then
+      raise exception 'TEST FAILED: C16b % can be run by anon, PUBLIC, service_role or forms_registrar', v_fn.proname;
+    end if;
+    if v_fn.proname in ('forms_set_booking', 'forms_duplicate', 'prospects_book_time') then
+      if not has_function_privilege('authenticated', v_fn.oid, 'EXECUTE') or v_fn.prosecdef is not true then
+        raise exception 'TEST FAILED: C16c % should be security definer, for authenticated', v_fn.proname;
+      end if;
+    elsif has_function_privilege('authenticated', v_fn.oid, 'EXECUTE') or v_fn.prosecdef then
+      raise exception 'TEST FAILED: C16d the internal % should be security invoker and not callable by the app', v_fn.proname;
+    end if;
+  end loop;
+  if (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public'
+         and p.proname in ('forms_set_booking', 'forms_duplicate', 'prospects_book_time', 'forms_times', 'forms_submit_core',
+                           'forms_booking_lock_class', 'forms_group_class_ids_ok')) <> 7
+     or to_regprocedure('public.forms_set_booking(uuid, integer, jsonb, jsonb, jsonb)') is null then
+    raise exception 'TEST FAILED: C16e expected exactly one of each of the 7 functions (forms_set_booking with 5 arguments only)';
   end if;
 end;
 $$;

@@ -39,14 +39,27 @@ export function agesProblem(fromText, toText) {
 
 // A class time's class with its ages, as the booking lists show it: "White · Ages 7–12"
 // (just "White" when the class has no ages). time = { className, ageFrom, ageTo }.
-// "Group A · Ages 7–12" never splits: its spaces don't break (\u00a0) and nothing breaks after
-// the dash (\u2060), so on a narrow phone the class and its ages move to the next line together
-// instead of ending up as "Group" / "A · Ages 7–" / "12".
+// Each class name and its "· Ages 7–12" never split: their spaces don't break (\u00a0) and nothing
+// breaks after the dash (\u2060). Classes taught together ("White + Little Tiger", v0.620) may
+// break only after a "+", so a long line wraps between the classes, never inside a word.
 const NBSP = '\u00a0';
 const keepTogether = (text) => text.replace(/ /g, NBSP).replace(/–/g, '–\u2060');
 export function classWithAges(time) {
   const label = agesLabel(time?.ageFrom ?? null, time?.ageTo ?? null);
-  return label ? keepTogether(`${time.className} · ${label}`) : time?.className ?? '';
+  if (!label) return time?.className ?? '';
+  const names = String(time.className).split(' + ').map(keepTogether).join(' + ');
+  return `${names}${keepTogether(` · ${label}`)}`;
+}
+
+// Classes taught together (v0.620): their ages joined, youngest to oldest. No top age when one
+// class with ages has none; no ages when none of them has any.
+//   joinAges([{ from: 3, to: 5 }, { from: 6, to: 12 }]) → { from: 3, to: 12 }
+export function joinAges(list) {
+  const set = list.filter((a) => Number.isInteger(a?.from));
+  if (set.length === 0) return { from: null, to: null };
+  const from = Math.min(...set.map((a) => a.from));
+  const to = set.some((a) => !Number.isInteger(a.to)) ? null : Math.max(...set.map((a) => a.to));
+  return { from, to };
 }
 
 // The typed boxes as numbers for the database ({ from: null, to: null } = no ages).

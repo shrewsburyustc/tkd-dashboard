@@ -25,7 +25,36 @@ Branch `claude/prospect-form-system-cd893d`. Requested by Jeffrey on 2026-10-28,
 | Reviews | Security: no must-fix or should-fix. Design: fixed the gray typed ages, errors flashing while typing, a chatty live line, and both save failures showing |
 | Apply to the live database (Jeffrey pastes it, SETUP §0031) | Waits for Jeffrey's OK, after the merge |
 
-**Notes:**
+## Classes taught together (rulebook v0.620)
+
+Jeffrey chose B on 2026-10-28: one line on the forms, with the classes' ages joined and its own spot number. Mockup OK'd (`ClassAges-mockup-3-taught-together.png`).
+
+**Built 2026-10-28**, inside migration 0031:
+
+- **Database:**
+  - a new table, `form_booking_group_limits`;
+  - `forms_set_booking` gains `p_groups`;
+  - the time lists and the bookings treat a combined time as one, counted across its classes.
+  - PGlite step0031: 69/69.
+- **Screens:**
+  - the booking settings get a "Taught together" block;
+  - the forms show one line ("White + Little Tiger · Ages 4–12 · 10 spots left");
+  - a booking is saved as "White + Little Tiger".
+- **Checked in the preview:**
+  - the settings block;
+  - the family form on PC, phone and 320 wide;
+  - a staff booking (10 → 9 spots).
+- **Reviews:**
+  - Security: nothing must be fixed.
+  - Design: fixed the 320 line breaking mid-word, the example hint shown when there are several combined times, keeping each class's own number on save, and the "untick the other class" line.
+
+**Notes for Jeffrey:**
+
+- **Spots are counted per form.** A combined time's bookings count against its own number only. If another form offers one of those classes on its own, that form counts its single times separately.
+- **Leftover rows after a class is deleted.** Deleting a class in Testing leaves its combined-time rows behind. They do nothing, and the next settings save replaces them.
+- **Go-live order.** Apply 0031 first, then deploy the app. An app from before 0031 clears the combined times when it saves booking settings.
+
+**Notes (class ages):**
 
 - The table holds one age range per class, and each class belongs to one school.
 - The app reads the ages straight from the table, the same way it reads the colors.

@@ -3,18 +3,23 @@
 -- ---------------------------------------------------------------------
 -- WHAT THIS FILE IS
 --   One query listing everything migration 0031 (class ages on the
---   booking forms, rulebook v0.619) made or replaced, one row each:
---     function       the new schedule_set_class_ages and the five it
---                    replaced (schedule_before_write, forms_open_times,
---                    forms_public_get, forms_public_submit,
---                    prospects_open_times): body_md5 (an md5 of its code
+--   booking forms, rulebook v0.619; classes taught together, v0.620)
+--   made or replaced, one row each:
+--     function       the three new ones (schedule_set_class_ages,
+--                    forms_booking_lock_class, forms_group_class_ids_ok)
+--                    and the ten it replaced (schedule_before_write,
+--                    forms_open_times, forms_public_get,
+--                    forms_public_submit, prospects_open_times,
+--                    forms_times, forms_set_booking, forms_duplicate,
+--                    forms_submit_core, prospects_book_time): body_md5 (an md5 of its code
 --                    without comments and spaces), security definer,
 --                    settings (must say search_path=""), owner, and who
 --                    may call it (role:EXECUTE, sorted; "-" would mean
 --                    PUBLIC)
---     function-kind  the same six: volatility and return type
---     table          schedule_class_ages: RLS on, table and column rights
---     trigger / constraint / policy   on schedule_class_ages
+--     function-kind  the same thirteen: volatility and return type
+--     table          schedule_class_ages and form_booking_group_limits:
+--                    RLS on, table and column rights
+--     trigger / constraint / policy   on those two tables
 --
 -- WHY
 --   Same idea as 0027_fingerprints.sql: supabase/tests/pglite/run.mjs
@@ -22,7 +27,7 @@
 --   the SQL Editor, Claude runs this on production through the read-only
 --   connection and the rows must match. That proves production has
 --   exactly the code and rights that passed the tests. (Before 0031 it
---   lists only the five older functions: compare those with the 0007 /
+--   lists only the ten older functions: compare those with the 0007 /
 --   0009 / 0012 records.)
 --
 -- CONNECTOR-SAFE: a single read-only SELECT, and none of its text uses
@@ -42,7 +47,9 @@ select 'function' as kind,
   join pg_namespace n on n.oid = p.pronamespace
  where n.nspname = 'public'
    and p.proname in ('schedule_set_class_ages', 'schedule_before_write', 'forms_open_times', 'forms_public_get',
-                     'forms_public_submit', 'prospects_open_times')
+                     'forms_public_submit', 'prospects_open_times',
+                     'forms_times', 'forms_set_booking', 'forms_duplicate', 'forms_submit_core', 'prospects_book_time',
+                     'forms_booking_lock_class', 'forms_group_class_ids_ok')
 union all
 select 'function-kind',
        p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')',
@@ -51,7 +58,9 @@ select 'function-kind',
   join pg_namespace n on n.oid = p.pronamespace
  where n.nspname = 'public'
    and p.proname in ('schedule_set_class_ages', 'schedule_before_write', 'forms_open_times', 'forms_public_get',
-                     'forms_public_submit', 'prospects_open_times')
+                     'forms_public_submit', 'prospects_open_times',
+                     'forms_times', 'forms_set_booking', 'forms_duplicate', 'forms_submit_core', 'prospects_book_time',
+                     'forms_booking_lock_class', 'forms_group_class_ids_ok')
 union all
 select 'table',
        c.relname,
@@ -66,7 +75,7 @@ select 'table',
   from pg_class c
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public'
-   and c.relname = 'schedule_class_ages'
+   and c.relname in ('schedule_class_ages', 'form_booking_group_limits')
 union all
 select 'trigger',
        t.tgrelid::regclass::text || '.' || t.tgname,
@@ -75,7 +84,7 @@ select 'trigger',
   join pg_class c on c.oid = t.tgrelid
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public'
-   and c.relname = 'schedule_class_ages'
+   and c.relname in ('schedule_class_ages', 'form_booking_group_limits')
    and not t.tgisinternal
 union all
 select 'constraint',
@@ -85,12 +94,12 @@ select 'constraint',
   join pg_class c on c.oid = k.conrelid
   join pg_namespace n on n.oid = c.relnamespace
  where n.nspname = 'public'
-   and c.relname = 'schedule_class_ages'
+   and c.relname in ('schedule_class_ages', 'form_booking_group_limits')
 union all
 select 'policy',
        p.tablename || '.' || p.policyname,
        p.cmd || ' roles=' || p.roles::text || ' using=' || coalesce(p.qual, '') || ' check=' || coalesce(p.with_check, '')
   from pg_policies p
  where p.schemaname = 'public'
-   and p.tablename = 'schedule_class_ages'
+   and p.tablename in ('schedule_class_ages', 'form_booking_group_limits')
  order by 1, 2;
