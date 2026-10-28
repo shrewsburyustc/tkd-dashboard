@@ -648,3 +648,21 @@ Already covered without a new part: Black Belt's `DateField` copies (the shared 
 - **Pictures:** at the four sizes, and the side-by-side `Proof/parts/DP-built-vs-F1.png` (Finance's option B frames next to the built option).
 
 Where it stands: the status file.
+
+## 12. After step 1: a count card's note of two lines (Star's v0.518, Q5 B)
+
+**Asked** by Star through the Main session, 2026-10-28. Jeffrey decided it in Star's Part 2 questions: **Q5 B**, the Candidates card on Both keeps its two school lines ("Shrewsbury 5" / "Worcester 8"), and **Q5b A**, Dashboard core changes the shared part. Star recorded both in v0.518 (branch `star-testing`, not on `main` yet); then Jeffrey said "Yes, build it". It changes v1.107's "one small line" under the number: rulebook v1.115.
+
+**The change** (in the shared `src/components/CountCards.jsx`):
+- **A card's `note`** is one line (a string, as before) or two (an array: `['Shrewsbury 5', 'Worcester 8']`). Each line is its own small gray line, and the card is a column, so the second sits under the first. That is the markup and style Star draws today, so no CSS changes. A blank note or line draws nothing, as before.
+- **The row:** the cards beside it grow to its height (on phones, the other card of its pair). With Hide private details on, Star passes only the Candidates card, and the one card keeps its two lines.
+- **Screen readers** hear the card as one button: "Candidates 13 Shrewsbury 5 Worcester 8". Left as it is: Star's own card reads the same today, and a pause after the number would change how every count card reads (raised by the review; Jeffrey OK'd the commit without it).
+- **Nothing else changes:** one-line notes (Camps' "$1,355") stay one line, and all 24 M6 pictures are byte-identical.
+- **Star's card switches** in Star's own work once this is on `main`. Until then Star keeps its own count cards (v0.518).
+
+**Proof:** parts page `M6`.
+- **Samples:** two extra states, `twolines` (Star's four cards on Both) and `twolines-hidden` (the Candidates card alone, Hide private details on). No M6 mockup draws them, so the parts page lists them apart.
+- **Checks:** 8 behaviour checks in `check-parts.mjs`: at the four sizes, the two lines in order, the second under the first with the same left edge, inside the card, the cards in a row equally tall and no sideways scroll; the one card's width on PC and phone; the name screen readers hear; Camps' note still one line.
+- **Pictures:** the side-by-side `Proof/parts/M6-two-lines-vs-Q5.png`, Star's Q5 B next to the built card at the four sizes, plus the one card on PC and phone. The lines are 18 px tall, so the card is about 4 px taller than in Q5, the same as Star's screen today.
+
+Where it stands: the status file.

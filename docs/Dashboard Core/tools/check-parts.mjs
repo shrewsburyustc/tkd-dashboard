@@ -13,7 +13,8 @@
 //     than the usual ones, at the four sizes) and failure notes inside the boxes; the Compare
 //     dialog's busy button is heard as "Keeping…";
 //   - the Mark paid box's keys, first focus and Tab out (also inside a dialog); the count cards'
-//     pressed state; the history line;
+//     pressed state and their two-line note (v1.115: each line under the one before, at the four
+//     sizes, heard after the number); the history line;
 //   - Download QR code's hidden name: with two schools its own words first, then the school
 //     ("Download QR code, Worcester", v1.111); with one school none;
 //   - a real Download QR code: the file's name and that it is 1024 × 1024 pixels.
@@ -518,6 +519,69 @@ await withChrome(async (tab) => {
     await click('.ev-card', 'Paid6');
     await click('.ev-filter-line button', 'Show all');
     assert.equal(await ev(`Boolean(document.querySelector('.ev-card.is-selected'))`), false);
+  });
+
+  // The two-line note (v1.115, Star's school counts on Both): each line under the one before, at the
+  // four sizes, and heard after the number; a one-line note (Camps' "$1,355") stays one line.
+  const twoLines = () => ev(`(() => {
+    const cards = [...document.querySelectorAll('.ev-card')].map((c) => {
+      const b = c.getBoundingClientRect();
+      const pad = parseFloat(getComputedStyle(c).paddingRight);
+      const lines = [...c.querySelectorAll('.ev-card-note')].map((n) => {
+        const r = n.getBoundingClientRect();
+        return { text: n.textContent, left: r.left, top: r.top, bottom: r.bottom, inside: r.right <= b.right - pad + 0.5 && n.scrollWidth <= n.clientWidth };
+      });
+      return { top: Math.round(b.top), height: Math.round(b.height), width: Math.round(b.width), lines };
+    });
+    const row = Math.round(document.querySelector('.ev-cards').getBoundingClientRect().width);
+    return { cards, row, pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+  })()`);
+  for (const size of FOUR_SIZES) {
+    await tab.size({ w: size.w, h: size.h, touch: size.touch, scale: 1 });
+    await open('M6/twolines', 500);
+    await check(`M6 two-line note at ${size.label}: "Worcester 8" under "Shrewsbury 5", same left edge, inside the card; the cards beside it as tall`, async () => {
+      const { cards, pageOverflow } = await twoLines();
+      const [first] = cards;
+      assert.deepEqual(first.lines.map((l) => l.text), ['Shrewsbury 5', 'Worcester 8']);
+      const [a, b] = first.lines;
+      assert.ok(b.top >= a.bottom, `the second line starts at ${b.top}, above the first one's bottom (${a.bottom})`);
+      assert.ok(Math.abs(a.left - b.left) < 0.5, 'the two lines start at different left edges');
+      assert.ok(first.lines.every((l) => l.inside), 'a line sticks out of the card');
+      const sameRow = cards.filter((c) => c.top === first.top);
+      assert.ok(sameRow.length > 1, 'no other card in its row');
+      assert.ok(sameRow.every((c) => c.height === first.height), `heights in its row: ${sameRow.map((c) => c.height).join(', ')}`);
+      assert.equal(pageOverflow, 0);
+    });
+  }
+  // Hide private details on: Star passes only the Candidates card, which keeps its two lines.
+  for (const size of [FOUR_SIZES[0], FOUR_SIZES[2]]) {
+    await tab.size({ w: size.w, h: size.h, touch: size.touch, scale: 1 });
+    await open('M6/twolines-hidden', 500);
+    await check(`M6 two-line note with Hide private details on, at ${size.label}: the one card keeps both lines (280 px wide on PC, the whole row on phones)`, async () => {
+      const { cards, row, pageOverflow } = await twoLines();
+      assert.equal(cards.length, 1);
+      const [card] = cards;
+      assert.deepEqual(card.lines.map((l) => l.text), ['Shrewsbury 5', 'Worcester 8']);
+      assert.ok(card.lines[1].top >= card.lines[0].bottom, 'the second line is not under the first');
+      assert.ok(card.lines.every((l) => l.inside), 'a line sticks out of the card');
+      assert.equal(card.width, size.touch ? row : 280);
+      assert.equal(pageOverflow, 0);
+    });
+  }
+  await tab.size({ w: 1280, h: 800, touch: false, scale: 1 });
+  await open('M6/twolines', 500);
+  await check('M6 two-line note: a screen reader hears both lines after the number ("Candidates 13 Shrewsbury 5 Worcester 8")', async () => {
+    await tab.cdp('Accessibility.enable', {});
+    const { result } = await tab.cdp('Runtime.evaluate', { expression: `document.querySelector('.ev-card')` });
+    const { nodes } = await tab.cdp('Accessibility.getPartialAXTree', { objectId: result.objectId, fetchRelatives: false });
+    const node = nodes.find((n) => !n.ignored);
+    assert.deepEqual([node?.role?.value, node?.name?.value], ['button', 'Candidates 13 Shrewsbury 5 Worcester 8']);
+  });
+  await open('M6/camps', 500);
+  await check('M6: a one-line note (Camps’ "$1,355" under To collect) is still one line', async () => {
+    // Each note as its words, marked when it takes more than one line on screen.
+    const notes = await ev(`[...document.querySelectorAll('.ev-card')].map((c) => [...c.querySelectorAll('.ev-card-note')].map((n) => n.textContent + (n.getBoundingClientRect().height > parseFloat(getComputedStyle(n).lineHeight) + 0.5 ? ' (more than one line)' : '')))`);
+    assert.deepEqual(notes, [[], [], ['$1,355'], []]);
   });
   await open('M7/closed');
   await check('M7: the line is a button heard as collapsed/expanded; Enter opens the list newest first, "Oct 22 · Jeffrey Berg"', async () => {
