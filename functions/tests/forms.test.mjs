@@ -111,7 +111,7 @@ async function run(handler, ctx, deps) {
   return { http: response.status, json: JSON.parse(text), text, response };
 }
 
-const TIME = { class_id: CLASS_ID, class_name: 'Little Tigers', date: '2026-11-03', starts_at: '16:00', ends_at: '16:40', spots_left: 2 };
+const TIME = { class_id: CLASS_ID, class_name: 'Little Tigers', date: '2026-11-03', starts_at: '16:00', ends_at: '16:40', spots_left: 2, age_from: 4, age_to: 6 };
 
 // What forms_public_get answers for a Live form (+ one extra field that must NOT be passed on).
 const okGet = {
@@ -144,6 +144,14 @@ test('GET: kill switch off or missing → not_open, database never opened', asyn
     assert.deepEqual(r.json, { status: 'not_open' }, String(value));
     assert.equal(db.log.opened, 0);
   }
+});
+
+test('GET: a class with no ages → age_from / age_to null; odd ages dropped (migration 0031)', async () => {
+  const { age_from: _f, age_to: _t, ...noAges } = TIME;
+  const r = await run(handleGet, context({ method: 'GET' }), {
+    openDatabase: fakeDb({ get: { ...okGet, times: [noAges, { ...TIME, age_from: '7', age_to: { x: 1 } }] } }).openDatabase,
+  });
+  assert.deepEqual(r.json.times, [{ ...noAges, age_from: null, age_to: null }, { ...TIME, age_from: null, age_to: null }]);
 });
 
 test('GET: a missing binding or setting → not_open (fail closed)', async () => {

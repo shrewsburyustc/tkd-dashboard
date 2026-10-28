@@ -277,3 +277,4 @@ export const deleteBody = (name, siblings) => (siblings
 export const DELETE = 'Delete';
 export const DELETING = 'Deleting…';
 export const UNDO = 'Undo';
+export const UNDONE = 'Undone'; // after an Undo worked (v0.618), as the other sections say
