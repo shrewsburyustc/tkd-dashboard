@@ -240,6 +240,17 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
   }
   const statusOfDetail = () => schools.find((s) => s.code === ref.current.selected?.code)?.statusById;
 
+  // Undo for a status change (v1.006, N2; Joined too, v0.617): puts the old status back — and the
+  // old joined date when the child was Joined before, otherwise none. Like the Board drop's Undo.
+  function statusUndo(p, wasJoined, savedVersion) {
+    return async () => {
+      if (ref.current.busy) return;
+      setBusy(true);
+      const u = await setStatus({ id: p.id, expectedVersion: savedVersion, statusId: p.statusId, joinedOn: wasJoined ? p.joinedOn : null });
+      afterWrite(u);
+    };
+  }
+
   async function changeStatus(statusId) {
     const d = ref.current.detail;
     if (!d || busy || statusId === d.statusId) return;
@@ -248,9 +259,10 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
       setDialog({ type: 'joined', key: Date.now(), name: d.childFirstName, statusId, date: today, saving: false, note: null });
       return;
     }
+    const wasJoined = statusOfDetail()?.get(d.statusId)?.builtin === 'joined'; // before the save (the panel may change school)
     setBusy(true);
     const r = await setStatus({ id: d.id, expectedVersion: d.version, statusId, joinedOn: null });
-    afterWrite(r, T.STATUS_SAVED(st?.name ?? ''));
+    afterWrite(r, T.STATUS_SAVED(st?.name ?? ''), statusUndo(d, wasJoined, r.version));
   }
   async function saveJoined() {
     const g = ref.current.dialog;
@@ -259,7 +271,10 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     setDialog({ ...g, saving: true });
     const r = await setStatus({ id: d.id, expectedVersion: d.version, statusId: g.statusId, joinedOn: g.date });
     setDialog(null);
-    if ((await afterWrite(r, T.STATUS_SAVED(T.JOINED_TITLE))) && g.dropCode) flashStage(g.dropCode, g.statusId);
+    // the status it had before: from the dropped card's school on the Board, else the open panel's
+    const before = g.dropCode ? schools.find((s) => s.code === g.dropCode)?.statusById : statusOfDetail();
+    const wasJoined = before?.get(d.statusId)?.builtin === 'joined';
+    if ((await afterWrite(r, T.STATUS_SAVED(T.JOINED_TITLE), statusUndo(d, wasJoined, r.version))) && g.dropCode) flashStage(g.dropCode, g.statusId);
   }
   async function changeFollowUp(date) {
     const d = ref.current.detail;
@@ -428,9 +443,11 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     // CameDialog only offers Cancel then)
     setDialog({ ...g, saving: true });
     setBusy(true);
+    const wasJoined = schools.find((s) => s.code === g.dropCode)?.statusById?.get(d.statusId)?.builtin === 'joined';
     const r = await setStatus({ id: d.id, expectedVersion: d.version, statusId: g.statusId, joinedOn: null });
     setDialog(null);
-    if (await afterWrite(r, T.MOVED(d.childFirstName, T.STEP_CAME))) flashStage(g.dropCode, g.statusId);
+    // Undo like every other Board drop (v1.006)
+    if (await afterWrite(r, T.MOVED(d.childFirstName, T.STEP_CAME), statusUndo(d, wasJoined, r.version))) flashStage(g.dropCode, g.statusId);
   }
   const drag = useCardDrag({ enabled: view === 'board' && !busy && !dialog && !screenLocked && !fill.isOpen, resetKey: location, onDrop: dropCard });
 
