@@ -30,5 +30,5 @@ Branch `claude/prospect-form-system-cd893d`. Requested by Jeffrey on 2026-10-28,
 - The table holds one age range per class, and each class belongs to one school.
 - The app reads the ages straight from the table, the same way it reads the colors.
 - Staff never open the time slot dialog, so they see neither the color nor the ages in the Schedule. They see the ages only in the booking lists. (The mockup caption said "view only"; that was wrong.)
-- When From and To are the same, the forms show "Age 7". The v0.619 row doesn't say this: Jeffrey still has to OK it.
+- When From and To are the same, the forms show "Age 7". Jeffrey OK'd this on 2026-10-28, and it's now in the v0.619 row.
 - The undo file drops the table along with every age range entered. The values can still be read in `change_log`.
