@@ -13,7 +13,18 @@ export const PAGE_TITLE = 'Testing';
 export const ADD_CLASS = 'Add class';
 export const TAB_CLASSES_RANKS = 'Classes and ranks';
 export const VIEW_ONLY_LINE = 'View only. Ask an admin to make changes.';
-export const BLOCKED_ON_BOTH = 'Testing is kept separate for each school. Choose a school to see its testing.';
+
+// ----- Both: one box per school (CB13, rulebook v1.022 / v0.415 — testing/BothSummary.jsx) -----
+export const BOTH_SCHOOLS = 'Both schools'; // the line under the title (one wording everywhere, v1.022)
+export const BOTH_NO_EVENTS = 'No upcoming events.';
+export const BOTH_PRIVATE_HEADING = 'Private testings';
+export const BOTH_NO_PRIVATE = 'No upcoming private testings.';
+// "3 upcoming · next Tue, Dec 1, 4:00 PM" (no names, no money on Both)
+export const bothPrivateLine = (count, dateIso, hhmm) => `${count} upcoming · next ${weekdayMonthDay(dateIso)}, ${timeLabel(hhmm)}`;
+export const bothOpenSchool = (school) => `Open ${school}`;
+export const BOTH_HINT = 'Each school’s testing is kept separate. Open a school to see all its events, students and payments.';
+export const BOTH_LOADING = 'Loading both schools’ testing'; // heard by screen readers only
+export const BOTH_LOAD_FAILED = 'Couldn’t load the schools’ testing. Check the connection, then retry.'; // NOT IN MOCKUPS
 export const LOADING = 'Loading Classes and ranks';
 
 export const emptySchoolAdmin = (school) => `No classes yet at ${school}.`;
@@ -267,6 +278,11 @@ export const undoNotEmpty = (className) => `Couldn't undo. ${className} has rank
 export const undoAward = (rankName, className) =>
   `Couldn't undo. ${rankName} is now ${className}'s final award. Use ⋯ → Delete rank instead.`;
 export const UNDO_FAILED = "Undo didn't save. Check the connection, then retry.";
+// Undo of Edit details / Change day or time when a result (or No show) was recorded in the
+// meantime — undoing could clear it. NOT IN MOCKUPS.
+export const UNDO_HAS_RESULT = "Couldn't undo. A result was recorded just now.";
+// Undo of Change day or time when the old day has passed since. NOT IN MOCKUPS.
+export const UNDO_PAST_DAY = "Couldn't undo. That day has passed, so it can't be put back.";
 
 export const TOAST_RANK_SAVED = 'Rank saved';
 export const TOAST_RANK_ADDED = 'Rank added';
@@ -447,6 +463,14 @@ export const CLOSE_AUTOMATICALLY = 'Close automatically at the end of';
 export const CLOSE_AUTOMATICALLY_LABEL = 'Close automatically at the end of the closing date';
 export const CLOSING_DATE_LABEL = 'Closing date';
 export const CLOSE_AUTOMATICALLY_HINT = '11:59 PM, Massachusetts time. You can open or close registration yourself at any time.';
+// The calendar (Star's date picker, v1.018 / v0.414 — words copied from Star's v0.503)
+export const CHOOSE = 'Choose…'; // an empty date field
+export const PAST_DATES_HINT = "Past dates can’t be chosen."; // under the days: testing date, private day
+export const MARKED_TESTING_DATE = 'Testing date.'; // after the dot, while the testing date's month is on show
+export const MARKED_TESTING_DATE_SR = 'testing date'; // what a screen reader adds to that day
+export const closingRangeHint = (testingDate) => `The closing date can be from today up to ${weekdayMonthDay(testingDate)}.`;
+export const CLOSING_PASSED_HINT = 'The testing day has passed, so a new closing date can’t be chosen. Move the testing date first.';
+export const CHOOSE_TESTING_DATE_FIRST = 'Choose the testing date first.';
 export const NOTE_FOR_FAMILIES = 'Note for families (optional)';
 export const NOTE_HINT = 'Shown on the registration form.';
 export const NO_CLASSES_YET = 'This school has no classes yet. Add them in Classes and ranks first.';
@@ -601,7 +625,9 @@ export const withdrawnToast = (name) => `${name} withdrawn`;
 export const restoredToast = (name) => `${name} restored`;
 export const studentAddedToast = (name) => `${name} added`;
 export const TOAST_CHANGES_SAVED = 'Changes saved';
-export const TOAST_PAYMENT_SAVED = 'Payment saved';
+export const TOAST_PAYMENT_SAVED = 'Payment saved'; // not used by Color Belt now; Camps reuses it (camps/text.js)
+// After Edit payment, with Undo for 5 seconds (v1.003, CB3 — Black Belt's words)
+export const TOAST_PAYMENT_CHANGED = 'Payment changed';
 export const paymentUndoneToast = (name) => `Payment undone for ${name}`;
 export const duplicateRemovedToast = (name) => `${name}’s extra copy moved to Removed`;
 export const TOAST_KEPT_BOTH = 'Kept both registrations';
@@ -707,6 +733,11 @@ export const PAID_BY = 'Paid by';
 export const AMOUNT = 'Amount';
 export const DATE_PAID = 'Date paid';
 export const ENTER_DATE_PAID = 'Enter the date paid.';
+// Under the date paid calendar's days (v0.414, Star's paidDateHint). why: 'registered' (an event
+// registration from the family form), 'added' (one staff added, or a private testing) or null
+// (the saved date is earlier: no reason given).
+export const paidDateHint = (minIso, why) =>
+  `Not before ${monthDay(minIso)}${why ? ` (${why})` : ''} or after today.`;
 export const AMOUNT_ZERO = 'Enter more than $0. To remove the payment, use ⋯ → Undo payment.';
 export const EDIT_PAYMENT_HINT = 'The old payment is kept in the history and replaced by this one.';
 
@@ -792,7 +823,7 @@ export const PRINT_GRADING_SHEET = 'Print grading sheet';
 export const COL_RESULT = 'Result';
 
 // The three result buttons
-export const RESULT_PASS = 'Pass';
+export const RESULT_PASS = 'Passed'; // was "Pass" (CB18, v1.029)
 export const RESULT_NOT_PASSED = 'Not passed';
 export const RESULT_NO_SHOW = 'No show';
 const RESULT_BUTTON_TEXT = { pass: RESULT_PASS, not_passed: RESULT_NOT_PASSED, no_show: RESULT_NO_SHOW };
@@ -866,6 +897,26 @@ export const SHEET_COL_RESULT = 'Result (tick one)';
 export const SHEET_COL_NOTE = 'Note';
 export const SHEET_ADDED_ON_DAY = 'Added on the day:';
 export const SHEET_FOOTER = 'Type the results into the Grading tab the same day.';
+
+// CB18 (v1.029, v0.416): Print results — the printed results sheet (event/ResultsSheet.jsx),
+// a page per class, only the students who passed.
+export const PRINT_RESULTS = 'Print results';
+export const resultsSheetTitle = (eventName) => `${eventName} — Results`;
+// "Friday, November 20, 2026 · Worcester school"
+export const resultsSheetSub = (dateIso, school) => `${longDate(dateIso)} · ${schoolName(school)}`;
+export const RESULTS_SHEET_CONTINUED = '(continued)';
+export const RESULTS_PASSED_HEADING = 'PASSED — CONGRATULATIONS!';
+export const RESULTS_NEW_BELT = 'New belt';
+export const RESULTS_PASSED_BOX = 'PASSED';
+// Printed only when no student in the whole event has passed yet (each class with nobody passed
+// is left off the sheet).
+export const RESULTS_NONE_PASSED = 'No passed results recorded yet.';
+// "November Children Testing — Results · printed Fri, Nov 20, 2026, 8:15 PM"
+export const resultsSheetFoot = (eventName, printedAt) =>
+  `${resultsSheetTitle(eventName)} · printed ${printedAt.toLocaleString('en-US', {
+    timeZone: SCHOOL_TZ, weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
+  })}`;
+export const resultsSheetPage = (page, pages) => `Page ${page} of ${pages}`;
 
 // G8: the Students tab
 export const DETAIL_RESULT = 'Result';
@@ -1058,6 +1109,22 @@ export const restoreMovedReason = (firstName) => `Not available: ${firstName} is
 export const RESTORE_MOVED = restoreMovedReason; // CP1: the banner after a refused Restore says the same
 export const moveHasResult = (firstName) => `${firstName} already has a result for this testing day, so they can’t be moved.`; // CP1
 export const UNDO_MOVE_TOO_LATE = 'Too late to undo here. The private testing stays on the Private testing tab.'; // CP1
+
+// ----- A private testing's read-only summary (v1.009, CB6) -----
+// "Private testing · Tue, Dec 1 · 4:00 PM"
+export const privateSummarySub = (dateIso, hhmm) => `Private testing · ${privateDayTime(dateIso, hhmm)}`;
+export const DETAIL_PRICE = 'Price';
+export const DETAIL_ADDED = 'Added';
+// The summary's row for a cancelled private testing: "Cancelled · Cancelled Oct 27" reads twice,
+// so the label is "Status" — NOT IN MOCKUPS (rulebook §8: every status is listed in the detail view).
+export const DETAIL_STATUS = 'Status';
+// "Cancelled Oct 27 by Jeffrey Berg" (as the roster's "Withdrawn Oct 27 by …"). NOT IN MOCKUPS.
+export const cancelledDetail = (stamp, name) => `${cancelledTag(stamp)}${name ? ` by ${name}` : ''}`;
+// "Oct 21, 2:15 PM · moved from November Children Testing" (the second part only when moved)
+export const privateAddedDetail = (stamp, movedFromEventName) =>
+  movedFromEventName ? `${stampDayTime(stamp)} · moved from ${movedFromEventName}` : stampDayTime(stamp);
+// After the payment: "$20 more to collect"
+export const moreToCollect = (cents) => `${dollars(cents)} more to collect`;
 
 // ----- The grading page (P6) -----
 export const BACK_TO_PRIVATE = 'Private testing';

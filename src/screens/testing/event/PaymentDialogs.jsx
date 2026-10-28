@@ -9,10 +9,16 @@
 //                     payment, §1.6). No check number (v0.120).
 // Both are small centered dialogs (full screen on phones) with Cancel / Save. The values live in
 // EventPage (`state`), like every other dialog, so a screen lock never loses them.
+// Date paid is the dashboard's own calendar (components/DatePicker.jsx), copied from Star's Edit
+// payment (v1.018, v0.414): not before the day the student registered (a private testing: the day
+// it was added) and not after today, with "Not before Oct 18 (registered) or after today." under
+// the days. The Private testing tab uses this same dialog.
 import { IconCheck } from '@tabler/icons-react';
 import Dialog from '../../../components/Dialog.jsx';
 import Notice from '../../../components/Notice.jsx';
-import { isIsoDate, MAX_PAYMENT_CENTS } from '../../../lib/testing/eventRules.js';
+import DatePicker from '../../../components/DatePicker.jsx';
+import { isIsoDate, MAX_PAYMENT_CENTS, todayInSchoolTime } from '../../../lib/testing/eventRules.js';
+import { yearRange } from '../../../lib/star/eventDateRules.js';
 import { parseDollars } from '../../../lib/money.js';
 import ChoiceGroup from '../events/ChoiceGroup.jsx';
 import * as T from '../text.js';
@@ -121,8 +127,34 @@ export function isEditPaymentDirty(state) {
   return a.method !== b.method || a.amount !== b.amount || a.paidOn !== b.paidOn;
 }
 
-export function checkEditPayment(state) {
+// The earliest date paid (v0.414) and why, from the row the dialog was opened on (state.snapshot):
+//   an event registration → the day it was registered (registeredAt), why 'registered' when the
+//                           family form made it, 'added' when staff added it (source, as the
+//                           roster's "Registered Nov 2" / "Added Nov 2" line, RosterRows.jsx)
+//   a private testing     → the day it was added (createdAt), why 'added'
+// A timestamp becomes the school's day (Massachusetts time). The payment's saved date is never
+// refused: a payment that came with a Move to private testing keeps its event date, which can be
+// before the private testing was added — then that date is the earliest, with no reason given.
+// → { minDate: 'YYYY-MM-DD' | null, why: 'registered' | 'added' | null }
+export function paidDateFloor(state) {
+  const row = state.snapshot ?? {};
+  const isRegistration = Boolean(row.registeredAt);
+  const stamp = isRegistration ? row.registeredAt : row.createdAt;
+  const time = stamp ? new Date(stamp) : null;
+  const rowDay = time && !Number.isNaN(time.getTime()) ? todayInSchoolTime(time) : null;
+  const saved = isIsoDate(state.initial?.paidOn) ? state.initial.paidOn : null;
+  if (!rowDay) return { minDate: saved, why: null };
+  if (saved && saved < rowDay) return { minDate: saved, why: null };
+  return { minDate: rowDay, why: isRegistration && row.source === 'form' ? 'registered' : 'added' };
+}
+
+// today (optional): 'YYYY-MM-DD'. With it, a date paid after today or before the earliest day
+// (paidDateFloor) is not a valid date (the calendar can't pick one; this is the safety net).
+export function checkEditPayment(state, today = null) {
   const { values, touched, triedSave } = state;
+  const { minDate } = paidDateFloor(state);
+  const dateInRange =
+    isIsoDate(values.paidOn) && (!today || values.paidOn <= today) && (!minDate || values.paidOn >= minDate);
   const parsed = parseDollars(values.amount);
   let amountError = null;
   if (parsed.problem) {
@@ -130,8 +162,8 @@ export function checkEditPayment(state) {
   } else if (parsed.cents <= 0) amountError = T.AMOUNT_ZERO;
   else if (parsed.cents > MAX_PAYMENT_CENTS) amountError = T.priceProblemText('tooHigh');
   let dateError = null;
-  if (!isIsoDate(values.paidOn)) dateError = touched.paidOn || triedSave ? T.ENTER_DATE_PAID : null;
-  const valid = !parsed.problem && parsed.cents > 0 && parsed.cents <= MAX_PAYMENT_CENTS && isIsoDate(values.paidOn);
+  if (!dateInRange) dateError = touched.paidOn || triedSave ? T.ENTER_DATE_PAID : null;
+  const valid = !parsed.problem && parsed.cents > 0 && parsed.cents <= MAX_PAYMENT_CENTS && dateInRange;
   return {
     amountError,
     dateError,
@@ -143,10 +175,14 @@ export function checkEditPayment(state) {
 
 // subtitle (phase 4, optional): with two or more payments the Private testing tab names them all
 // and the one being edited ("Ava Chen · $65 cash Nov 2 + $20 card Dec 1 — editing the $20").
-export function EditPaymentDialog({ state, name, subtitle = null, isPhone, onChange, onTouch, onSave, onCancel, onRequestClose }) {
+// today: the school's today ('YYYY-MM-DD') from the screen that opens the dialog — the last day
+// the calendar lets you pick.
+const yearOf = (iso) => Number(String(iso).slice(0, 4));
+export function EditPaymentDialog({ state, name, subtitle = null, today, isPhone, onChange, onTouch, onSave, onCancel, onRequestClose }) {
   const idBase = `payment-dialog-${state.key}`;
-  const check = checkEditPayment(state);
+  const check = checkEditPayment(state, today);
   const readOnly = state.saving;
+  const { minDate, why } = paidDateFloor(state);
   return (
     <Dialog title={T.EDIT_PAYMENT_TITLE} fullScreen={isPhone} onRequestClose={onRequestClose}>
       <p className="tdialog-sub">{subtitle ?? T.editPaymentSub(name)}</p>
@@ -197,17 +233,26 @@ export function EditPaymentDialog({ state, name, subtitle = null, isPhone, onCha
           {check.amountError && <Notice id={`${idBase}-amount-error`}>{check.amountError}</Notice>}
         </div>
         <div className="field">
-          <label htmlFor={`${idBase}-date`}>{T.DATE_PAID}</label>
-          <input
+          <span id={`${idBase}-date-label`} className="field-label">
+            {T.DATE_PAID}
+          </span>
+          {/* Star's calendar (Star's DateField): from the earliest day up to today */}
+          <DatePicker
             id={`${idBase}-date`}
-            className="input ev-date"
-            type="date"
-            readOnly={readOnly}
+            label={T.DATE_PAID}
             value={state.values.paidOn}
-            aria-invalid={check.dateError ? true : undefined}
-            aria-describedby={check.dateError ? `${idBase}-date-error` : undefined}
-            onChange={(event) => {
-              onChange({ paidOn: event.target.value });
+            today={today}
+            min={minDate}
+            max={today || null}
+            years={yearRange(yearOf(minDate || today), yearOf(today || minDate))}
+            hint={minDate ? T.paidDateHint(minDate, why) : null}
+            placeholder={T.CHOOSE}
+            disabled={readOnly}
+            invalid={Boolean(check.dateError)}
+            describedBy={check.dateError ? `${idBase}-date-error` : undefined}
+            inline={isPhone}
+            onChange={(paidOn) => {
+              onChange({ paidOn });
               onTouch('paidOn');
             }}
           />

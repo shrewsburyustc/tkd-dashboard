@@ -10,6 +10,10 @@
 //   - More details (collapsed): Note for families (optional, shown on the registration form)
 // Prices are never typed here: an event copies them from Classes and ranks when it's saved
 // (plan answer 5).
+// Both dates use the dashboard's own calendar, components/DatePicker.jsx, exactly as Star's Add /
+// Edit event does (v1.018, v0.414): testing date today or later; closing date today up to the
+// testing date, which is marked with a dot. The calendar writes the weekday in the field
+// ("Fri, Nov 20, 2026"), so there is no weekday line under the fields any more.
 //
 // Like phase 1's dialogs, this only DRAWS the form. Its values live in EventsTab (the `state`
 // prop), so a screen lock hides the dialog and brings it back with everything still filled in.
@@ -19,6 +23,8 @@ import Dialog from '../../../components/Dialog.jsx';
 import Notice from '../../../components/Notice.jsx';
 import { nameKey, nameProblem, normalizeName } from '../../../lib/testing/names.js';
 import { NOTE_MAX, isIsoDate, validateClassTimes } from '../../../lib/testing/eventRules.js';
+import { closingDateLimits, closingYears, testingDateLimits, testingYears } from '../../../lib/star/eventDateRules.js';
+import DatePicker from '../../../components/DatePicker.jsx';
 import ChoiceGroup from './ChoiceGroup.jsx';
 import * as T from '../text.js';
 
@@ -228,6 +234,9 @@ export default function EventDialog({
   const readOnly = state.saving;
   const idBase = `event-dialog-${state.key}`;
   const values = state.values;
+  // Which days each calendar lets you pick (Star's rules, src/lib/star/eventDateRules.js)
+  const testingLimits = testingDateLimits(today);
+  const closingLimits = closingDateLimits(values.testingDate, today);
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -299,27 +308,30 @@ export default function EventDialog({
             {check.nameError && <Notice id={`${idBase}-name-error`}>{check.nameError}</Notice>}
           </div>
           <div className="field">
-            <label htmlFor={`${idBase}-date`}>{T.TESTING_DATE}</label>
-            <input
+            <span id={`${idBase}-date-label`} className="field-label">
+              {T.TESTING_DATE}
+            </span>
+            {/* Star's calendar (v1.018): today or later; opens on the chosen month, or this month */}
+            <DatePicker
               id={`${idBase}-date`}
-              className="input"
-              type="date"
-              readOnly={readOnly}
+              label={T.TESTING_DATE}
               value={values.testingDate}
-              aria-invalid={check.dateError ? true : undefined}
-              aria-describedby={check.dateError ? `${idBase}-date-error` : isIsoDate(values.testingDate) ? `${idBase}-date-day` : undefined}
-              onChange={(event) => {
-                onChange({ testingDate: event.target.value });
+              today={today}
+              min={testingLimits.min}
+              max={testingLimits.max}
+              years={testingYears(today, record?.testingDate)}
+              hint={T.PAST_DATES_HINT}
+              placeholder={T.CHOOSE}
+              disabled={readOnly}
+              invalid={Boolean(check.dateError)}
+              describedBy={check.dateError ? `${idBase}-date-error` : undefined}
+              inline={isPhone}
+              onChange={(testingDate) => {
+                onChange({ testingDate });
                 onTouch('testingDate');
               }}
             />
             {check.dateError && <Notice id={`${idBase}-date-error`}>{check.dateError}</Notice>}
-            {/* The day written out, so a wrong weekday is easy to spot (CP1 item 6). */}
-            {!check.dateError && isIsoDate(values.testingDate) && (
-              <p id={`${idBase}-date-day`} className="field-hint">
-                {T.longDate(values.testingDate)}
-              </p>
-            )}
           </div>
         </div>
 
@@ -381,25 +393,35 @@ export default function EventDialog({
           </label>
           {values.autoClose && (
             <div className="ev-closing">
-              <input
-                className="input"
-                type="date"
-                aria-label={T.CLOSING_DATE_LABEL}
-                readOnly={readOnly}
+              <DatePicker
+                id={`${idBase}-closing`}
+                label={T.CLOSING_DATE_LABEL}
                 value={values.closingDate}
-                aria-invalid={check.closingError ? true : undefined}
-                aria-describedby={`${idBase}-closing-hint${check.closingError ? ` ${idBase}-closing-error` : ''}`}
-                onChange={(event) => {
-                  onChange({ closingDate: event.target.value, closingEdited: true });
+                today={today}
+                min={closingLimits.min}
+                max={closingLimits.max}
+                years={closingYears(today, values.testingDate, values.closingDate)}
+                hint={closingLimits.passed ? T.CLOSING_PASSED_HINT : T.closingRangeHint(values.testingDate)}
+                marked={isIsoDate(values.testingDate) ? { date: values.testingDate, hintLabel: T.MARKED_TESTING_DATE, srLabel: T.MARKED_TESTING_DATE_SR } : null}
+                placeholder={T.CHOOSE}
+                // Add event: can't be opened until a testing date is chosen (Star v0.503 item 2)
+                disabled={readOnly || !isIsoDate(values.testingDate)}
+                invalid={Boolean(check.closingError)}
+                // the error while there is one, else the "11:59 PM…" line (only one is on screen)
+                describedBy={check.closingError ? `${idBase}-closing-error` : `${idBase}-closing-hint`}
+                inline={isPhone}
+                onChange={(closingDate) => {
+                  onChange({ closingDate, closingEdited: true });
                   onTouch('closingDate');
                 }}
               />
               {check.closingError && <Notice id={`${idBase}-closing-error`}>{check.closingError}</Notice>}
+              {/* The weekday line is gone (the field says the day, v0.414); "11:59 PM..." stays. */}
               {!check.closingError && (
                 <p id={`${idBase}-closing-hint`} className="field-hint">
-                  {isIsoDate(values.closingDate) && (
+                  {!isIsoDate(values.testingDate) && (
                     <>
-                      {T.longDate(values.closingDate)}
+                      {T.CHOOSE_TESTING_DATE_FIRST}
                       <br />
                     </>
                   )}

@@ -915,8 +915,10 @@
     table-layout: fixed;
   }
 
+  /* The tick column fits "☐ Passed ☐ Not passed ☐ No show" on one line (CB18: "Pass" became
+     "Passed"; about 179pt at 10pt Segoe UI, the column's inside is 38% of 7in minus padding = 183pt). */
   .gs-col-student {
-    width: 24%;
+    width: 22%;
   }
 
   .gs-col-tf {
@@ -924,11 +926,11 @@
   }
 
   .gs-col-result {
-    width: 34%;
+    width: 38%;
   }
 
   .gs-col-note {
-    width: 20%;
+    width: 18%;
   }
 
   .gs-table th {

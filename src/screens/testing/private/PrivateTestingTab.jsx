@@ -10,9 +10,16 @@
 //     cards over the side shown (count, Paid + "1 owes more", Not paid, Payments recorded +
 //     "includes $85 from cancelled") and the rows (PrivateRows.jsx)
 //   - Add private testing (all staff, the header button), Mark paid with a 5-second Undo, and the
-//     ⋯ menu: Edit details · Change how they'll pay · Change day or time · Grade | Edit payment ·
-//     Undo payment (admins) | Cancel private testing · Delete permanently (admins); a cancelled
-//     row: Restore · Delete permanently (admins only)
+//     ⋯ menu: Edit details · Change day or time · Grade · Change how they'll pay (v1.011) | Edit
+//     payment · Undo payment (admins) | Cancel private testing · Delete permanently (admins); a
+//     cancelled row: Restore · Delete permanently (admins only)
+//   - tapping a row opens its read-only summary (PrivateSummaryDialog.jsx, v1.009), with
+//     Close · Edit details
+//   - Undo for 5 seconds (v1.006, v0.413, v1.003) after Edit details ("Changes saved", not when the
+//     change cleared a result or the old rank's price / class changed since), Change day or time
+//     ("Changes saved", same), Restore, Change how they'll pay ("Changes saved") and Edit payment
+//     ("Payment changed"). An Undo of Edit details / Change day or time is refused when a result
+//     was recorded in the meantime (refuseUndoIfGraded).
 // Rules (as the Events tab, contract 0003 §8): one change at a time; dialog saves wait for the
 // database; the dialog's values live HERE, so a screen lock hides the dialog and brings it back;
 // "stale" = someone else changed it — nothing is overwritten, the person is told, the list reloads.
@@ -29,11 +36,12 @@ import {
   IconCalendarX,
   IconCashEdit,
   IconCheck,
-  IconClock,
+  IconCircleX,
   IconEdit,
   IconPlus,
   IconSchool,
   IconSum,
+  IconSwitchHorizontal,
   IconTrash,
   IconUsers,
 } from '@tabler/icons-react';
@@ -60,15 +68,16 @@ import {
 } from '../../../lib/testing/privateApi.js';
 import { privateCards, privateMenu, splitPrivate } from '../../../lib/testing/privateRules.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../lib/useMediaQuery.js';
+import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
 import ChoiceGroup from '../events/ChoiceGroup.jsx';
 import ConfirmDeleteDialog from '../events/ConfirmDeleteDialog.jsx';
-import { NoIcon } from '../events/EventsTab.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../events/useLiveLoad.js';
 import { EditPaymentDialog, PayingByDialog, checkEditPayment, isEditPaymentDirty, isPayingByDirty } from '../event/PaymentDialogs.jsx';
 import CancelPrivateDialog from './CancelPrivateDialog.jsx';
 import ChangeDayDialog, { checkChangeDay, isChangeDayDirty } from './ChangeDayDialog.jsx';
 import PrivateDialog, { COPIED, checkPrivateForm, isPrivateFormDirty } from './PrivateDialog.jsx';
 import PrivateRows from './PrivateRows.jsx';
+import PrivateSummaryDialog from './PrivateSummaryDialog.jsx';
 import * as T from '../text.js';
 import '../../../styles/testing-private.css';
 
@@ -95,6 +104,21 @@ function livePaymentsOf(payments, privateId) {
     .sort((a, b) => (a.recordedAt < b.recordedAt ? -1 : a.recordedAt > b.recordedAt ? 1 : 0));
 }
 const partsOf = (live) => live.map((p) => ({ cents: p.amountCents, method: p.method, paidOn: p.paidOn }));
+
+// Edit details' Undo after a belt change sends the old rank id back, and the database then copies
+// that rank's CURRENT private price, class and "testing for". So the Undo only puts things back as
+// they were when the old rank (in the Classes and ranks loaded for the dialog) still has exactly
+// what the record stored. Unknown (classes not loaded, rank gone) = not unchanged.
+function oldRankUnchanged(record, classes) {
+  for (const cls of classes ?? []) {
+    const rank = cls.ranks.find((r) => r.id === record.rankId);
+    if (!rank) continue;
+    const storedFor = record.testingFor?.kind === 'rank' ? record.testingFor.name : null;
+    const currentFor = rank.testingFor?.name ?? null;
+    return rank.privateCents === record.privateCents && cls.name === record.className && currentFor === storedFor;
+  }
+  return false;
+}
 
 export default function PrivateTestingTab({
   school,
@@ -304,6 +328,17 @@ export default function PrivateTestingTab({
     const list = await readClasses();
     if (list) setClasses(list);
   }
+  // The read-only summary (v1.009): tapping a row, or Enter on it.
+  function openView(row, opener) {
+    openDialog({ type: 'view', rowId: row.id, snapshot: row, opener });
+  }
+  // Its Edit details button: the summary closes and Edit details opens in its place.
+  function editFromView() {
+    const d = dialogRef.current;
+    if (!d || d.type !== 'view') return;
+    const row = rows.find((r) => r.id === d.rowId) ?? d.snapshot;
+    openEdit(row, d.opener ?? rowEl(d.rowId));
+  }
   function openChangeDay(row, opener) {
     const values = { day: row.privateDate, time: row.privateTime };
     openDialog({ type: 'changeDay', rowId: row.id, snapshot: row, values, initial: values, opener });
@@ -317,7 +352,9 @@ export default function PrivateTestingTab({
     const payment = liveList[liveList.length - 1];
     if (!payment) return;
     const values = { method: payment.method, amount: centsToInputText(payment.amountCents), paidOn: payment.paidOn };
-    openDialog({ type: 'payment', rowId: row.id, snapshot: row, paymentId: payment.id, parts: partsOf(liveList), editingCents: payment.amountCents, values, initial: values, opener });
+    // undoTo: the payment as it is now, so the toast's Undo can put it back (v1.003)
+    const undoTo = { method: payment.method, amountCents: payment.amountCents, paidOn: payment.paidOn };
+    openDialog({ type: 'payment', rowId: row.id, snapshot: row, paymentId: payment.id, parts: partsOf(liveList), editingCents: payment.amountCents, undoTo, values, initial: values, opener });
   }
   function openCancel(row, opener) {
     const liveList = livePaymentsOf(payments, row.id);
@@ -344,6 +381,7 @@ export default function PrivateTestingTab({
   function focusAfterClose(d) {
     if (d.type === 'private' && d.mode === 'add') focusLater(() => d.opener, addEl);
     else if (d.type === 'delete' || d.type === 'cancel') focusLater(() => moreEl(d.rowId), addEl);
+    else if (d.type === 'view') focusLater(() => rowEl(d.rowId), addEl); // back to the row it opened from
     else focusLater(() => moreEl(d.rowId), () => d.opener ?? rowEl(d.rowId));
   }
   function cancelDialog() {
@@ -457,8 +495,32 @@ export default function PrivateTestingTab({
     }
     setDialog(null);
     const reloaded = reloadQuiet();
-    showToast(T.TOAST_CHANGES_SAVED, { icon: false });
     focusLater(() => moreEl(d.rowId), () => d.opener, reloaded);
+    // The belt change cleared the result, or the old belt isn't known any more (no rank id to send
+    // back), or the belt changed and the old rank's price / class / testing-for aren't what this
+    // record stored any more: no Undo — it couldn't put things back as they were (as the event
+    // roster, v1.006). (Re-picking the old rank copies that rank's CURRENT price and class, so an
+    // Undo after a Classes and ranks edit would quietly change them.)
+    if (result.resultCleared || !record.rankId || (p.rankId !== record.rankId && !oldRankUnchanged(record, classes))) {
+      showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+      return;
+    }
+    // "Changes saved" + Undo for 5 seconds (v1.006): the same Edit details function puts the old
+    // names and belt back (the old rank id is sent as it was stored).
+    const savedVersion = result.version;
+    showToast(T.TOAST_CHANGES_SAVED, {
+      icon: false,
+      action: {
+        label: T.UNDO,
+        onAction: () => {
+          if (refuseUndoIfGraded(d.rowId, record.result)) return;
+          runUndo(
+            () => updatePrivate({ privateId: d.rowId, expectedVersion: savedVersion, firstName: record.firstName, lastName: record.lastName, rankId: record.rankId }),
+            () => rowEl(d.rowId),
+          );
+        },
+      },
+    });
   }
 
   // ----- Save: Change day or time -----
@@ -477,10 +539,36 @@ export default function PrivateTestingTab({
       handleDialogProblem(result, d);
       return;
     }
-    // No toast (P4): the row shows the new day at once.
     setDialog(null);
     const reloaded = reloadQuiet();
     focusLater(() => moreEl(d.rowId), () => rowEl(d.rowId), reloaded);
+    // v0.413 (adds to v1.006): "Changes saved" + Undo for 5 seconds. It shows while Hide private
+    // details is on too (a day and time aren't money).
+    const back = { day: d.snapshot.privateDate, time: d.snapshot.privateTime };
+    // The same day and time: nothing was written, so there is nothing to say or undo (as before).
+    if (result.privateDate === back.day && result.privateTime === back.time) return;
+    // The move cleared a No show: no Undo — it couldn't bring the No show back (as Edit details).
+    if (result.resultCleared) {
+      showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+      return;
+    }
+    // The Undo puts the old day and time back with the same Change day function; the database
+    // refuses it as usual if that slot isn't allowed any more (a day now past, say), and the
+    // usual note says so.
+    const savedVersion = result.version;
+    showToast(T.TOAST_CHANGES_SAVED, {
+      icon: false,
+      action: {
+        label: T.UNDO,
+        onAction: () => {
+          if (refuseUndoIfGraded(d.rowId, d.snapshot.result)) return;
+          runUndo(
+            () => changePrivateDay({ privateId: d.rowId, expectedVersion: savedVersion, privateDate: back.day, privateTime: back.time }),
+            () => rowEl(d.rowId),
+          );
+        },
+      },
+    });
   }
 
   // ----- Save: Change how they'll pay -----
@@ -525,7 +613,7 @@ export default function PrivateTestingTab({
   async function savePayment(canSave) {
     const d = dialogRef.current;
     if (!d || d.saving) return;
-    const check = checkEditPayment(d);
+    const check = checkEditPayment(d, today);
     if (!canSave || !check.canSave) {
       patchDialog({ triedSave: true });
       return;
@@ -547,9 +635,30 @@ export default function PrivateTestingTab({
     }
     if (open) setDialog(null);
     const reloaded = reloadQuiet();
-    // Hidden now: the general words ("Payment saved" would say there is a payment).
-    showToast(hiddenNowRef.current ? T.TOAST_CHANGES_SAVED : T.TOAST_PAYMENT_SAVED, { icon: false });
     focusLater(() => moreEl(d.rowId), () => rowEl(d.rowId), reloaded);
+    // Hidden now: the general words ("Payment changed" would say there is a payment) and no Undo.
+    if (hiddenNowRef.current) {
+      showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+      return;
+    }
+    // "Payment changed" + Undo (v1.003, Black Belt's words). Edit payment reverses the old payment
+    // and records a new one; the Undo edits that NEW payment (its id came back from the database)
+    // back to the old way to pay, amount and date — the same function, nothing new in the database.
+    const newPaymentId = result.paymentId;
+    const back = d.undoTo;
+    showToast(T.TOAST_PAYMENT_CHANGED, {
+      icon: false,
+      action: {
+        label: T.UNDO,
+        onAction: () =>
+          runUndo(
+            () => editPrivatePayment({ paymentId: newPaymentId, method: back.method, amountCents: back.amountCents, paidOn: back.paidOn }),
+            () => rowEl(d.rowId),
+            T.ROSTER_NOT_ALLOWED,
+            true, // a payment's Undo: while hidden on arrival, the general words, no Retry
+          ),
+      },
+    });
   }
 
   // ===== Hide private details: a money save's answer that arrives while hidden =====
@@ -595,11 +704,29 @@ export default function PrivateTestingTab({
       setBanner({ text: notAllowedText });
       onRefreshProfile();
     } else if (status === 'error') {
-      setBanner({ kind: 'undo', text: T.UNDO_FAILED, retry: () => runUndo(call, findFocus, notAllowedText) });
+      setBanner({ kind: 'undo', text: T.UNDO_FAILED, retry: () => runUndo(call, findFocus, notAllowedText, money) });
+    } else if (status === 'past_day') {
+      // Change day or time's Undo: the old day is past now (rowProblem handles the same statuses).
+      setBanner({ text: T.UNDO_PAST_DAY });
+      reloadQuiet();
+    } else if (status === 'graded') {
+      setBanner({ text: T.PRIVATE_GRADED });
+      reloadQuiet();
     } else {
       setBanner({ text: status === 'cancelled' ? T.PRIVATE_IS_CANCELLED : T.UNDO_STALE });
       reloadQuiet();
     }
+  }
+
+  // Edit details / Change day or time: a result (or No show) saved during the 5 seconds doesn't
+  // change the row's version, so the database wouldn't stop an Undo that clears it. So look at the
+  // latest loaded row first; if it has a result now that it didn't have before the change
+  // (resultBefore), say so and don't undo. true = refused.
+  function refuseUndoIfGraded(rowId, resultBefore = null) {
+    const fresh = (liveRef.current.data?.rows ?? []).find((r) => r.id === rowId);
+    if (!fresh?.result || fresh.result === (resultBefore ?? null)) return false;
+    setBanner({ text: T.UNDO_HAS_RESULT });
+    return true;
   }
 
   // A row action the database didn't accept (§5.7, the second row).
@@ -713,7 +840,13 @@ export default function PrivateTestingTab({
     }
     rowDone();
     const reloaded = reloadQuiet();
-    showToast(T.restoredToast(T.studentLabel(row)), { icon: false });
+    // Undo for 5 seconds (v1.006): the same Cancel function cancels it again (payments stay, as
+    // with any Cancel).
+    const savedVersion = result.version;
+    showToast(T.restoredToast(T.studentLabel(row)), {
+      icon: false,
+      action: { label: T.UNDO, onAction: () => runUndo(() => cancelPrivate({ privateId: row.id, expectedVersion: savedVersion }), () => moreEl(row.id)) },
+    });
     focusLater(() => moreEl(row.id), addEl, reloaded);
   }
 
@@ -774,11 +907,13 @@ export default function PrivateTestingTab({
     if (row.status === 'cancelled') {
       if (can.restore) groups[2].push({ key: 'restore', label: T.RESTORE, Icon: IconArrowBackUp, disabled: busy, onSelect: () => doRestore(row) });
     } else {
+      // Order (v1.011): Edit details · Change day or time · Grade · Change how they'll pay
       if (can.editDetails) groups[0].push({ key: 'edit', label: T.EDIT_DETAILS, Icon: IconEdit, onSelect: () => openEdit(row, anchor) });
-      if (can.changePayingBy) groups[0].push({ key: 'paying', label: T.CHANGE_PAYING_BY, Icon: NoIcon, onSelect: () => openPayingBy(row, anchor) });
       // ti-calendar = change the day; ti-school = grade
       if (can.changeDay) groups[0].push({ key: 'day', label: T.CHANGE_DAY_TIME, Icon: IconCalendar, onSelect: () => openChangeDay(row, anchor) });
       if (can.grade) groups[0].push({ key: 'grade', label: T.GRADE, Icon: IconSchool, onSelect: () => onOpenPrivate?.(row.id) });
+      // ti-switch-horizontal = switch how they'll pay (v1.024)
+      if (can.changePayingBy) groups[0].push({ key: 'paying', label: T.CHANGE_PAYING_BY, Icon: IconSwitchHorizontal, onSelect: () => openPayingBy(row, anchor) });
       if (can.editPayment) groups[1].push({ key: 'editpay', label: T.EDIT_PAYMENT, Icon: IconCashEdit, onSelect: () => openEditPayment(row, anchor) });
       if (can.undoPayment) groups[1].push({ key: 'undopay', label: T.UNDO_PAYMENT, Icon: IconArrowBackUp, disabled: busy, onSelect: () => doUndoPayment(row) });
       // ti-calendar-x = cancel the private testing (blue, not red: nothing is deleted)
@@ -805,14 +940,30 @@ export default function PrivateTestingTab({
     </button>
   );
 
+  // Keyboard on the rows, as the event roster (useRowArrowNav): Enter opens the summary.
+  const nav = useRowArrowNav({
+    rowKeys: shown.map((r) => r.id),
+    onOpen: (id) => {
+      const row = shown.find((r) => r.id === id);
+      if (row) openView(row, rowEl(id));
+    },
+  });
+
   const ctx = {
     layout,
     busy,
     isAdmin,
     menuFor: menu?.id ?? null,
+    // The row whose dialog is open stays highlighted (as the event roster)
+    selectedId: dialog && !screenLocked && dialog.rowId ? dialog.rowId : null,
     notSavedId,
     hidden,
-    handlers: { onMore: (row, anchor) => openMenu(row, anchor), onMarkPaid: (row) => doMarkPaid(row) },
+    nav,
+    handlers: {
+      onOpen: (row) => openView(row, rowEl(row.id)),
+      onMore: (row, anchor) => openMenu(row, anchor),
+      onMarkPaid: (row) => doMarkPaid(row),
+    },
   };
 
   let body;
@@ -835,7 +986,7 @@ export default function PrivateTestingTab({
     const allCards = [
       { key: 'count', label: T.CARD_PRIVATE, Icon: IconUsers, value: cards.count },
       { key: 'paid', label: T.CARD_PAID, Icon: IconCheck, value: cards.paid, note: cards.owesMore > 0 ? T.owesMoreCount(cards.owesMore) : null, warn: true },
-      { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconClock, value: cards.notPaid },
+      { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconCircleX, value: cards.notPaid }, // ti-circle-x = not paid (v1.024)
       { key: 'money', label: T.CARD_PAYMENTS, Icon: IconSum, value: T.dollars(cards.paymentsCents), note: cards.cancelledCents > 0 ? T.includesCancelled(cards.cancelledCents) : null }, // ti-sum = a money total (v0.303)
     ];
     // Hide private details: only the Private testings card (as Star's G4).
@@ -843,16 +994,9 @@ export default function PrivateTestingTab({
     const sideLabelId = `${panelId}-side`;
     let list;
     if (rows.length === 0) {
-      // P1 (tablet, empty): one line and the Add button in a box
-      list = (
-        <div className="clist pv-empty">
-          <p className="pv-empty-text">{T.NO_PRIVATE_TESTINGS}</p>
-          <button type="button" className="btn btn-primary" onClick={(event) => openAdd(event.currentTarget)}>
-            <IconPlus size={16} aria-hidden="true" />
-            {T.ADD_PRIVATE}
-          </button>
-        </div>
-      );
+      // No private testings at all: the one plain line every list uses (v1.028); the header's
+      // Add private testing is the one way to add.
+      list = <p className="tempty">{T.NO_PRIVATE_TESTINGS}</p>;
     } else if (shown.length === 0) {
       list = <p className="tempty ev-empty">{side === 'past' ? T.NO_PAST_PRIVATE : T.NO_UPCOMING_PRIVATE}</p>;
     } else {
@@ -932,6 +1076,22 @@ export default function PrivateTestingTab({
           {...common}
         />
       );
+    } else if (dialog.type === 'view') {
+      // The summary follows the live row (it reloads every 15 seconds); Edit details only when
+      // the ⋯ menu would offer it.
+      const can = privateMenu(record, { today, isAdmin, hidden });
+      dialogElement = (
+        <PrivateSummaryDialog
+          key={dialog.key}
+          record={record}
+          isPhone={isPhone}
+          canEdit={Boolean(can.editDetails)}
+          hidden={hidden}
+          onEdit={editFromView}
+          onCancel={cancelDialog}
+          onRequestClose={requestClose}
+        />
+      );
     } else if (dialog.type === 'changeDay') {
       dialogElement = <ChangeDayDialog key={dialog.key} state={dialog} record={dialog.snapshot} today={today} hidden={hidden} onTouch={touch} onSave={saveChangeDay} {...common} />;
     } else if (dialog.type === 'paying' && !hidden) {
@@ -950,7 +1110,7 @@ export default function PrivateTestingTab({
     } else if (dialog.type === 'payment' && !hidden) {
       const name = T.studentLabel(dialog.snapshot);
       const subtitle = dialog.parts.length > 1 ? T.editPaymentSubTopUp(name, dialog.parts, dialog.editingCents) : null;
-      dialogElement = <EditPaymentDialog key={dialog.key} state={dialog} name={name} subtitle={subtitle} onTouch={touch} onSave={savePayment} {...common} />;
+      dialogElement = <EditPaymentDialog key={dialog.key} state={dialog} name={name} subtitle={subtitle} today={today} onTouch={touch} onSave={savePayment} {...common} />;
     } else if (dialog.type === 'cancel') {
       dialogElement = (
         <CancelPrivateDialog

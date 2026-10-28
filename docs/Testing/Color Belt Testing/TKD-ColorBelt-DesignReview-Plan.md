@@ -18,7 +18,11 @@ Build checks from the reviewed brief (Part 1): after Edit payment and its Undo, 
 still shows the right payments. CB18's CSV button waits for the migration; the screen-only steps can merge first.
 Mockup 1 (private testing tab) is in `Design Review mockups/screen1/` — waiting for Jeffrey's OK.
 
-## Database half — one migration (number via Main), planned now, separate security review
+## Database half — migration 0030 (reserved by Main 2026-10-28), separate security review
+
+SETUP section "## Migration 0030: …", PGlite step `step0030`. Check while designing CB1: the new way-to-pay
+value must land where Finance's read functions (0018, 0026) read how a Color Belt payment was paid — or tell Finance.
+
 
 - CB18 part 2: admin-only results CSV (model `star_results_csv` + download log). Columns shown to Jeffrey first.
 - CB7: history readers for registrations and private testings (model `star_candidate_history`).

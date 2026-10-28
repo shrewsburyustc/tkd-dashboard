@@ -15,6 +15,9 @@
 // Follows "Hide private details" (v0.506), as Star's CandidateRows: while ctx.hidden is on there is
 // no price, Paying by, Payment or Paid on column, no Paid / Not paid tag, no amber owed line and no
 // Mark paid (PC: Day · time · Student · Testing for · ⋯). The gray "Moved from …" line stays.
+// v1.009 (CB6): tapping anywhere on a row (but not on Mark paid or ⋯) opens the read-only summary
+// (PrivateSummaryDialog.jsx). The keyboard works as on the event roster (useRowArrowNav): the
+// list is one Tab stop, ↑ ↓ move between rows, Enter opens the summary, ← → reach the buttons.
 import { IconAlertTriangle, IconArrowRight, IconCheck, IconDots } from '@tabler/icons-react';
 import IconButton from '../../../components/IconButton.jsx';
 import { showMarkPaid } from '../../../lib/testing/privateRules.js';
@@ -41,12 +44,14 @@ function NotSavedTag() {
   );
 }
 
-// One private testing. ctx = { layout, busy, isAdmin, menuFor, notSavedId, handlers }
+// One private testing. ctx = { layout, busy, isAdmin, menuFor, selectedId, notSavedId, hidden, nav, handlers }
 function PrivateRow({ row, ctx }) {
-  const { layout, handlers, hidden } = ctx;
+  const { layout, handlers, hidden, nav } = ctx;
   const name = T.studentLabel(row);
   const cancelled = row.status === 'cancelled';
   const open = ctx.menuFor === row.id;
+  // Highlighted while its ⋯ menu or one of its dialogs (the summary, say) is open
+  const selected = open || ctx.selectedId === row.id;
   const showMenu = !cancelled || ctx.isAdmin;
 
   // On Past (and on a cancelled row): the result tag, or the gray "Cancelled Nov 28" tag.
@@ -96,7 +101,9 @@ function PrivateRow({ row, ctx }) {
       className="btn btn-sm ev-markpaid"
       aria-label={T.markPaidLabel(name)}
       aria-disabled={ctx.busy ? 'true' : undefined}
-      onClick={() => {
+      tabIndex={nav.itemTabIndex(row.id)}
+      onClick={(event) => {
+        event.stopPropagation(); // the row's own click opens the summary; this button doesn't
         if (!ctx.busy) handlers.onMarkPaid(row);
       }}
     >
@@ -112,18 +119,30 @@ function PrivateRow({ row, ctx }) {
       aria-haspopup="menu"
       aria-expanded={open ? 'true' : 'false'}
       data-private-more={row.id}
-      onClick={(event) => handlers.onMore(row, event.currentTarget)}
+      tabIndex={nav.itemTabIndex(row.id)}
+      onClick={(event) => {
+        event.stopPropagation();
+        handlers.onMore(row, event.currentTarget);
+      }}
     />
   ) : (
     <span className="ev-more-spacer" aria-hidden="true" />
   );
 
-  const rowClass = `pv-row${cancelled ? ' is-cancelled' : ''}${open ? ' is-selected' : ''}${layout.isPhone ? ' is-phone' : ''}`;
+  // The row's own props: its look, its keyboard place (nav) and the click that opens the summary.
+  const rowProps = {
+    className: `pv-row${cancelled ? ' is-cancelled' : ''}${selected ? ' is-selected' : ''}${layout.isPhone ? ' is-phone' : ''}`,
+    role: 'row',
+    'aria-label': name,
+    'data-private-row': row.id,
+    ...nav.rowProps(row.id),
+    onClick: () => handlers.onOpen(row),
+  };
 
   if (layout.isPhone) {
     const payLine = hidden ? null : row.paid ? T.paidOnPhone(row.paidMethod, row.paidOn) : T.payingByText(row.payingBy);
     return (
-      <div className={rowClass} role="row" aria-label={name} data-private-row={row.id}>
+      <div {...rowProps}>
         <span className="pv-phone-main" role="cell">
           <span className="pv-name-line">
             <span className="ev-sname">{name}</span>
@@ -164,7 +183,7 @@ function PrivateRow({ row, ctx }) {
     </span>
   );
   return (
-    <div className={rowClass} role="row" aria-label={name} data-private-row={row.id}>
+    <div {...rowProps}>
       {layout.isWide && (
         <span className="pv-day" role="cell">
           <span className="pv-day-date">{T.weekdayMonthDay(row.privateDate)}</span>
@@ -196,7 +215,7 @@ function PrivateRow({ row, ctx }) {
 
 // rows: one side's private testings, already sorted (privateRules.splitPrivate)
 export default function PrivateRows({ rows, label, ctx }) {
-  const { layout, hidden } = ctx;
+  const { layout, hidden, nav } = ctx;
   return (
     <div
       className={`clist pv-list${layout.isWide ? ' is-wide' : ''}${layout.isPhone ? ' is-phone' : ''}${layout.isTouch ? ' is-touch' : ''}${hidden ? ' is-hidden' : ''}`}
@@ -214,7 +233,7 @@ export default function PrivateRows({ rows, label, ctx }) {
           <span role="columnheader" aria-label={T.ACTIONS_COL} />
         </div>
       )}
-      <div role="rowgroup">
+      <div role="rowgroup" {...nav.containerProps}>
         {rows.map((row) => (
           <PrivateRow key={row.id} row={row} ctx={ctx} />
         ))}

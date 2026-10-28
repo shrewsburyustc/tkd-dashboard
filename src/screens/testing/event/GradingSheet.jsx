@@ -35,7 +35,7 @@ import * as T from '../text.js';
 export const SHEET_ROWS_PER_PAGE = 16;
 const BLANK_ROWS = 2;
 
-// One empty tick box with its word ("☐ Pass"). The box is drawn with CSS, not a font character.
+// One empty tick box with its word ("☐ Passed"). The box is drawn with CSS, not a font character.
 function Tick({ label }) {
   return (
     <span className="gs-tick">

@@ -51,10 +51,11 @@ import {
   IconSum,
   IconCashEdit,
   IconCheck,
-  IconClock,
+  IconCircleX,
   IconEdit,
   IconPlus,
   IconQrcode,
+  IconSwitchHorizontal,
   IconTrash,
   IconUserMinus,
   IconUsers,
@@ -97,7 +98,6 @@ import { useRowArrowNav } from '../../../lib/useRowArrowNav.js';
 import { useShortcutN } from '../../../lib/useShortcutN.js';
 import ChoiceGroup from '../events/ChoiceGroup.jsx';
 import ConfirmDeleteDialog from '../events/ConfirmDeleteDialog.jsx';
-import { NoIcon } from '../events/EventsTab.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../events/useLiveLoad.js';
 import CompareDialog from './CompareDialog.jsx';
 import GradingSheet from './GradingSheet.jsx';
@@ -595,7 +595,9 @@ export default function EventPage({
     const payment = activePaymentOf(payments, row.id);
     if (!payment) return;
     const values = { method: payment.method, amount: centsToInputText(payment.amountCents), paidOn: payment.paidOn };
-    openDialog({ type: 'payment', rowId: row.id, snapshot: row, paymentId: payment.id, values, initial: values, opener });
+    // undoTo: the payment as it is now, so the toast's Undo can put it back (v1.003)
+    const undoTo = { method: payment.method, amountCents: payment.amountCents, paidOn: payment.paidOn };
+    openDialog({ type: 'payment', rowId: row.id, snapshot: row, paymentId: payment.id, undoTo, values, initial: values, opener });
   }
   function openCompare(pair, opener) {
     openDialog({ type: 'compare', firstId: pair.first.id, secondId: pair.second.id, pair, opener });
@@ -845,11 +847,20 @@ export default function EventPage({
       icon: false,
       action: {
         label: T.UNDO,
-        onAction: () =>
+        onAction: () => {
+          // A result saved during the 5 seconds doesn't change the row's version, and putting the
+          // old belt back would clear it. So when the Undo changes the belt, look at the latest
+          // loaded row first; if it has a result now, say so and don't undo.
+          const fresh = (liveRef.current.data?.roster ?? []).find((r) => r.id === d.rowId);
+          if (p.eventRankId !== snap.eventRankId && fresh?.result) {
+            setBanner({ text: T.UNDO_HAS_RESULT });
+            return;
+          }
           runUndo(
             () => updateStudent({ registrationId: d.rowId, expectedVersion: savedVersion, firstName: snap.firstName, lastName: snap.lastName, eventRankId: snap.eventRankId }),
             { find: () => rowEl(d.rowId) },
-          ),
+          );
+        },
       },
     });
     focusLater(() => rowEl(d.rowId), () => d.opener, reloaded);
@@ -897,7 +908,7 @@ export default function EventPage({
   async function savePayment(canSave) {
     const d = dialogRef.current;
     if (!d || d.saving) return;
-    const check = checkEditPayment(d);
+    const check = checkEditPayment(d, today);
     if (!canSave || !check.canSave) {
       patchDialog({ triedSave: true });
       return;
@@ -919,9 +930,29 @@ export default function EventPage({
     }
     if (open) setDialog(null);
     const reloaded = reloadQuiet();
-    // Hidden now: the general words ("Payment saved" would say there is a payment).
-    showToast(hiddenNowRef.current ? T.TOAST_CHANGES_SAVED : T.TOAST_PAYMENT_SAVED, { icon: false });
     focusLater(() => d.opener, () => rowEl(d.rowId), reloaded);
+    // Hidden now: the general words ("Payment changed" would say there is a payment) and no Undo.
+    if (hiddenNowRef.current) {
+      showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+      return;
+    }
+    // "Payment changed" + Undo (v1.003, Black Belt's words). Edit payment reverses the old payment
+    // and records a new one; the Undo edits that NEW payment (its id came back from the database)
+    // back to the old way to pay, amount and date — the same function, nothing new in the database.
+    const newPaymentId = result.paymentId;
+    const back = d.undoTo;
+    showToast(T.TOAST_PAYMENT_CHANGED, {
+      icon: false,
+      action: {
+        label: T.UNDO,
+        onAction: () =>
+          runUndo(
+            () => editPayment({ paymentId: newPaymentId, method: back.method, amountCents: back.amountCents, paidOn: back.paidOn }),
+            { find: () => rowEl(d.rowId) },
+            { money: true },
+          ),
+      },
+    });
   }
 
   // ----- Save: the grading note (G2, contract 0010 §4.5) -----
@@ -1315,7 +1346,8 @@ export default function EventPage({
       items.push({ key: 'edit', label: T.EDIT_DETAILS, Icon: IconEdit, onSelect: () => openEdit(row, anchor) });
       // Phase 4: right after Edit details, all staff (P5)
       if (canMoveToPrivate(row)) items.push({ key: 'move', label: T.MOVE_TO_PRIVATE, Icon: IconArrowRight, onSelect: () => openMove(row, anchor) });
-      if (moneyShown && !row.paid) items.push({ key: 'paying', label: T.CHANGE_PAYING_BY, Icon: NoIcon, onSelect: () => openPayingBy(row, anchor) });
+      // ti-switch-horizontal = switch how they'll pay (v1.024)
+      if (moneyShown && !row.paid) items.push({ key: 'paying', label: T.CHANGE_PAYING_BY, Icon: IconSwitchHorizontal, onSelect: () => openPayingBy(row, anchor) });
       if (row.duplicateState === 'possible') items.push({ key: 'review', label: T.REVIEW_DUPLICATE, Icon: IconAlertTriangle, onSelect: () => openCompareFor(row, anchor) });
       if (moneyShown && isAdmin && row.paid) {
         items.push({ key: 'editpay', label: T.EDIT_PAYMENT, Icon: IconCashEdit, separatorBefore: groupStart(), onSelect: () => openEditPayment(row, anchor) });
@@ -1326,7 +1358,8 @@ export default function EventPage({
       if (row.status === 'active') {
         items.push({ key: 'withdraw', label: T.WITHDRAW, Icon: IconUserMinus, separatorBefore: groupStart(), disabled: busy, onSelect: () => doWithdraw(row) });
       } else {
-        items.push({ key: 'restore', label: T.RESTORE, Icon: NoIcon, separatorBefore: groupStart(), disabled: busy, onSelect: () => doWithdraw(row, true) });
+        // ti-arrow-back-up = bring back (v1.024)
+        items.push({ key: 'restore', label: T.RESTORE, Icon: IconArrowBackUp, separatorBefore: groupStart(), disabled: busy, onSelect: () => doWithdraw(row, true) });
       }
       items.push({ key: 'delete', label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, disabled: busy, onSelect: () => startDelete(row, anchor) });
     }
@@ -1410,7 +1443,7 @@ export default function EventPage({
   const allCards = [
     { key: null, label: T.CARD_STUDENTS, Icon: IconUsers, value: active.length },
     { key: 'paid', label: T.CARD_PAID, Icon: IconCheck, value: paidCount },
-    { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconClock, value: active.length - paidCount },
+    { key: 'notPaid', label: T.CARD_NOT_PAID, Icon: IconCircleX, value: active.length - paidCount }, // ti-circle-x = not paid (v1.024)
     { key: 'money', label: T.CARD_PAYMENTS, Icon: IconSum, value: T.dollars(paymentsTotal) }, // ti-sum = a money total (v0.303)
   ];
   // Hide private details: only the Students card (as Star's G4).
@@ -1471,7 +1504,7 @@ export default function EventPage({
     } else if (dialog.type === 'paying' && !hidden) {
       dialogElement = <PayingByDialog key={dialog.key} state={dialog} name={T.studentLabel(dialog.snapshot)} onSave={savePayingBy} {...common} />;
     } else if (dialog.type === 'payment' && !hidden) {
-      dialogElement = <EditPaymentDialog key={dialog.key} state={dialog} name={T.studentLabel(dialog.snapshot)} onTouch={touch} onSave={savePayment} {...common} />;
+      dialogElement = <EditPaymentDialog key={dialog.key} state={dialog} name={T.studentLabel(dialog.snapshot)} today={today} onTouch={touch} onSave={savePayment} {...common} />;
     } else if (dialog.type === 'move') {
       const rank = rankById.get(dialog.snapshot.eventRankId);
       dialogElement = (
