@@ -457,10 +457,10 @@ export default function CampPage({
       icon: false,
       action: { label: T.UNDO, onAction: () => runUndo(() => undoCheckIn(row.id, day.dayId)) },
     });
-    // Keyboard: stay on the same day cell (it turns from Check in into ✓ time).
+    // Keyboard: stay on the same day cell (it turns from Check in into the came icon + time).
     focusSoon(() => document.querySelector(`[data-day-cell="${row.id}:${day.dayId}"]`));
   }
-  // Tapping a ✓ undoes that check-in at once, with an Undo toast that checks the child in again.
+  // Tapping a came cell (user-check icon + time) undoes that check-in at once, with an Undo toast that checks the child in again.
   async function doUndoCheckIn(row, day) {
     if (!day || !begin()) return;
     const result = await undoCheckIn(row.id, day.dayId);
@@ -487,7 +487,22 @@ export default function CampPage({
     const pair = pairs.find((p) => p.first.id === row.id || p.second.id === row.id);
     if (pair) openDialog({ type: 'compare', pair, saving: false, failed: false, opener });
   }
-  async function startEditPayment(row, opener) {
+  // Edit payment and Delete permanently read the camper fresh first. `from` = the open Camper
+  // detail when they were pressed under its "More" (touch screens), else null (the ⋯ menu). The
+  // detail stays open while this loads, and the new dialog then takes its place in ONE drawing:
+  // Dialog.jsx hands the detail's browser Back step straight to it. (Closing the detail first let
+  // its Back step land after the new dialog had opened, which closed that one at once — phones.)
+  // Closed meanwhile (back arrow, Esc): nothing opens. Loading failed: the detail closes, so the
+  // banner isn't hidden behind it.
+  function detailGone(from) {
+    return from !== null && !stillOpen(from);
+  }
+  function leaveDetail(from) {
+    if (from === null || !stillOpen(from)) return;
+    setDialog(null);
+    if (from.opener) focusSoon(from.opener);
+  }
+  async function startEditPayment(row, opener, from = null) {
     if (!isAdmin || !begin()) return;
     const result = await loadCamperDetail(row.id);
     end(result.status === 'ok' ? 'ok' : result.status);
@@ -495,17 +510,19 @@ export default function CampPage({
       onNoAccess();
       return;
     }
+    if (detailGone(from)) return;
     // Hide private details was switched on while this loaded: the money dialog doesn't open.
     if (hiddenNowRef.current) return;
     const payment = result.status === 'ok' ? activePayment(result.payments) : null;
     if (!payment) {
+      leaveDetail(from);
       setBanner({ text: result.status === 'error' ? T.LOAD_CAMPER_FAILED : T.ROSTER_STALE });
       reloadQuiet();
       return;
     }
     openDialog({ type: 'payment', row, payment, opener });
   }
-  async function startDeleteCamper(row, opener) {
+  async function startDeleteCamper(row, opener, from = null) {
     if (!isAdmin || !begin()) return;
     const result = await loadCamperDetail(row.id);
     end(result.status === 'ok' ? 'ok' : result.status);
@@ -513,7 +530,9 @@ export default function CampPage({
       onNoAccess();
       return;
     }
+    if (detailGone(from)) return;
     if (result.status !== 'ok') {
+      leaveDetail(from);
       setBanner({ text: result.status === 'error' ? T.LOAD_CAMPER_FAILED : T.ROSTER_STALE });
       reloadQuiet();
       return;
@@ -636,6 +655,27 @@ export default function CampPage({
     onUndoPayment: (row) => doUndoPayment(row),
     onDelete: (row, anchor) => startDeleteCamper(row, anchor),
   };
+  // The same items under Camper detail's "More" (touch screens, CP5; `from` = that open detail).
+  // An item with a dialog of its own opens it in the detail's place in one step (openDialog swaps
+  // them, so the detail's Back step goes straight to the new dialog); the others close the detail
+  // and make their change. Focus comes back to the name that opened the detail.
+  function detailHandlers(from) {
+    const opener = from.opener ?? null;
+    const closeThen = (change) => (row) => {
+      leaveDetail(from);
+      change(row);
+    };
+    return {
+      onPayingBy: (row) => camperHandlers.onPayingBy(row, opener),
+      onEdit: (row) => camperHandlers.onEdit(row, opener),
+      onReview: (row) => camperHandlers.onReview(row, opener),
+      onWithdraw: closeThen((row) => doWithdraw(row)),
+      onRestore: closeThen((row) => doWithdraw(row, true)),
+      onUndoPayment: closeThen((row) => doUndoPayment(row)),
+      onEditPayment: (row) => startEditPayment(row, opener, from),
+      onDelete: (row) => startDeleteCamper(row, opener, from),
+    };
+  }
   function menuContent() {
     if (!menu || screenLocked || !camp) return null;
     if (menu.kind === 'header') {
@@ -723,7 +763,7 @@ export default function CampPage({
           actions={(() => {
             if (!isTouch) return null;
             const row = roster.find((r) => r.id === dialog.camperId);
-            return row ? camperMenuItems(row, { isAdmin, busy, anchor: null, h: camperHandlers, detailsHidden }) : null;
+            return row ? camperMenuItems(row, { isAdmin, busy, anchor: null, h: detailHandlers(dialog), detailsHidden }) : null;
           })()}
           onClose={closeDialog}
           onSaved={() => {

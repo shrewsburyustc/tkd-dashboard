@@ -23,6 +23,10 @@
 //
 // On touch screens the roster has no ⋯, so its items (Change how they'll pay, Withdraw / Restore,
 // and for admins Edit payment, Undo payment, Delete permanently) are listed here under "More" (CP5).
+// Pressing one does NOT close this dialog first: the camp page does that (CampPage.jsx). An item
+// with a dialog of its own (Delete permanently, Edit payment, …) takes this dialog's place in one
+// step, so the browser's Back step passes straight to it; closing first and opening the next
+// dialog a moment later let that Back step close the new dialog at once (design review, phones).
 //
 // "Hide private details" on (detailsHidden; rulebook v0.722, design review C1, as Color Belt
 // v0.412): Price and Paying by keep their rows but read gray "Hidden on this tablet"; the Payments
@@ -31,7 +35,8 @@
 // The money items leave "More" too (CamperRowMenu.jsx builds the list without them).
 // (`hidden` is something else: the screen is locked — the dialog keeps its values but isn't drawn.)
 //
-// Props: camperId, camperName (shown while loading), actions (RowMenu items, touch only, or null), camp, days (Day[]), prices, extras (the camp's current ones), isPhone,
+// Props: camperId, camperName (shown while loading), actions (RowMenu items, touch only, or null;
+//        each item's onSelect closes or replaces this dialog itself), camp, days (Day[]), prices, extras (the camp's current ones), isPhone,
 //        hidden, detailsHidden, startInEdit, onClose(), onSaved(), onNoAccess, onRefreshProfile
 import { useEffect, useId, useState } from 'react';
 import { IconCheck, IconEdit } from '@tabler/icons-react';
@@ -290,8 +295,10 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
         <h3 className="cp-detail-head">{T.HEAD_SIGNUP}</h3>
         <p className="cp-signup-line">{T.signupLine(camper)}</p>
 
-        {/* Touch screens: the roster row's ⋯ items (Edit details is the button below). */}
-        {actions && actions.some((item) => item.key !== 'edit' && !item.disabled) && (
+        {/* Touch screens: the roster row's ⋯ items (Edit details is the button below). Shown whenever
+            there is a real item (not just the Admin label) — even while one is loading and the items
+            are grayed, so the section (and the button that has focus) never vanishes mid-load. */}
+        {actions && actions.some((item) => item.key !== 'edit' && item.key !== 'admin-heading') && (
           <>
             <h3 className="cp-detail-head">{T.MORE_ACTIONS_HEAD}</h3>
             <div className="cp-detail-actions">
@@ -311,9 +318,11 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
                     // the blue Edit details (review 8; red only for delete).
                     className={`btn btn-sm${item.danger ? ' cp-btn-danger' : ''}`}
                     aria-disabled={item.disabled ? 'true' : undefined}
+                    // The page closes this dialog itself, or swaps it for the item's own dialog in
+                    // one step (CampPage.jsx detailHandlers) — closing it here first would let the
+                    // browser's Back step of this dialog close the next one too (phones).
                     onClick={() => {
                       if (item.disabled) return;
-                      onClose();
                       item.onSelect();
                     }}
                   >
