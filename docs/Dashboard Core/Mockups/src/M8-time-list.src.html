@@ -1,0 +1,161 @@
+<!doctype html>
+<!--
+  M8-time-list.src.html — mockup source for the shared time list (design review M8).
+  Why: rulebook v1.019 — one time list everywhere: Star's list, in 5-minute steps, AM/PM on every
+  time, opening at the chosen time; the range fits the job (6:00 AM–10:00 PM for classes, testing
+  and camps; Finance's reminder keeps 11 AM–11 PM and Off). This copies Star's own list (StarSelect,
+  the .fa-* look from testing.css, opening with the chosen time in the middle) as the design review
+  drew it (picture 14b, the Schedule's Add time slot). Drawn with the app's real stylesheets.
+  Build: node ../tools/build-mockup.mjs src/M8-time-list.src.html M8-time-list.html
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M8 · The shared time list — mockup</title>
+<!-- css: src/styles/tokens.css src/styles/app.css src/styles/testing.css -->
+<style>
+  body { background: #fff; }
+  .sheet-head { max-width: 1100px; margin: 0 auto; padding: 24px 16px 8px; }
+  .sheet-head h1 { font-size: 20px; margin-bottom: 4px; }
+  .sheet-head p { color: var(--color-text-secondary); font-size: 13px; }
+  .state { max-width: 1100px; margin: 0 auto; padding: 16px 16px 8px; }
+  .state > h2 { font-size: 14px; margin-bottom: 12px; }
+  .state > h2 .n { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 6px; border-radius: 10px; background: #1f1f1f; color: #fff; font-size: 12px; }
+  .is-focus { outline: 2px solid var(--color-blue); outline-offset: 2px; }
+  .marks .mark { outline: 3px solid #f59e0b; outline-offset: 4px; border-radius: 8px; }
+  /* A piece of a dialog: the two time fields side by side, as in the Schedule's Add time slot. */
+  .frame { width: 440px; padding: 16px 24px 24px; border: 1px solid var(--color-border); border-radius: var(--radius-dialog); }
+  .frame.tall { padding-bottom: 268px; } /* room for an open list */
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-12); }
+  .pair .field { margin-bottom: 0; }
+  .fa-select { position: relative; }
+  /* The real list is placed by script under its field (position: fixed); drawn in place here. */
+  .fa-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; max-height: 244px; }
+  @media (max-width: 639.98px) {
+    .state { padding: 16px 0 8px; }
+    .state > h2 { padding: 0 16px; }
+    .frame { width: auto; border-radius: 0; border-left: none; border-right: none; padding: 16px; }
+    .frame.tall { padding-bottom: 268px; }
+  }
+  /* ===== NEW in the shared list (the rest is today's CSS) ===== */
+  .tl-empty .fa-value { color: var(--color-text-secondary); } /* Star's .st-select-empty, made shared */
+  /* The row the arrow keys are on: the 2px blue focus ring (rule §4), inside the row. Today the
+     dropdowns mark it with a faint gray only; this is the shared list's look. */
+  .fa-list .fa-option.is-active { box-shadow: inset 0 0 0 2px var(--color-blue); }
+</style>
+<script>if (location.search.includes('marks')) document.documentElement.classList.add('marks');</script>
+</head>
+<body>
+<div class="sheet-head">
+  <h1>M8 · The shared time list</h1>
+  <p>One time list for every section (rulebook v1.019): Star's list, every 5 minutes, AM/PM written on every time, opening with the chosen time in the middle. The range is a setting: 6:00 AM–10:00 PM for classes, testing and camps; Finance's reminder keeps Off and 11 AM–11 PM. The same list on every device — not the phone's own picker (as v0.51 decided for dropdowns). Drawn with the app's own stylesheets.</p>
+</div>
+<span hidden id="chev"><i data-icon="chevron-down" class="fa-chevron"></i></span>
+
+<section class="state">
+  <h2><span class="n">1</span>Closed</h2>
+  <div class="frame" data-state="closed" data-caption="<b>Closed</b>: the field shows the chosen time with AM/PM (“4:40 PM” can't be read as 4:40 in the morning). One Tab stop; ↓, Enter or Space opens it.">
+    <div class="pair mark">
+      <div class="field"><span class="field-label">Starts</span>{{field:16:00}}</div>
+      <div class="field"><span class="field-label">Ends</span>{{field:16:40}}</div>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">2</span>Open at the chosen time</h2>
+  <div class="frame tall" data-state="open" data-caption="<b>Open</b>: the list opens with the chosen time in the middle, tinted blue (Star's list). Every 5 minutes, so 4:20 and 6:50 fit. ↑ ↓ move, Enter chooses, Esc closes the list only; typing a number jumps to that hour (“6” → 6:00 AM, “6” again → 6:00 PM). A thin scroll bar shows there's more.">
+    <div class="pair">
+      <div class="field"><span class="field-label">Starts</span>{{field:16:00}}</div>
+      <div class="field"><span class="field-label">Ends</span>{{list:16:40:16:40:06:00:22:00:5}}</div>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">3</span>Moving with the keyboard</h2>
+  <div class="frame tall" data-state="keys" data-caption="<b>Moving with the keyboard</b>: the row the arrow keys are on gets the <b>blue focus ring</b> (rule §4 — today's dropdowns show only a faint gray there); the tinted row stays the current choice until Enter. Screen readers hear each time as it is reached.">
+    <div class="pair">
+      <div class="field"><span class="field-label">Starts</span>{{field:16:00}}</div>
+      <div class="field"><span class="field-label">Ends</span>{{list:16:40:16:50:06:00:22:00:5}}</div>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">4</span>Nothing chosen yet, and Finance's Off</h2>
+  <div class="frame tall" data-state="empty" data-caption="<b>Nothing chosen yet</b>: a gray “Choose a time”; the list opens at its first time. <b>Finance's reminder</b> (right, set to Off and open): <b>Off</b> first, then 11:00 AM–11:00 PM every 5 minutes — its own range, the same list (v1.019, v0.207). Finance's prompt widens its database check, which accepts 15-minute steps today.">
+    <div class="pair">
+      <div class="field"><span class="field-label">Start time</span>{{field:}}</div>
+      <div class="field"><span class="field-label">Monday reminder</span>{{list:off:off:11:00:23:00:5:off}}</div>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">5</span>While the dialog saves</h2>
+  <div class="frame" data-state="saving" data-caption="<b>While the dialog saves</b>, both fields are gray and can't open (the app's read-only look).">
+    <div class="pair mark">
+      <div class="field"><span class="field-label">Starts</span>{{field:16:00:readonly}}</div>
+      <div class="field"><span class="field-label">Ends</span>{{field:16:40:readonly}}</div>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">6</span>With a problem</h2>
+  <div class="frame" data-state="problem" data-caption="<b>With a problem</b>, the section's amber words sit under the field (“The end time must be after the start time.”, today's words) and screen readers hear the field as invalid — never red, never color alone.">
+    <div class="pair">
+      <div class="field"><span class="field-label">Starts</span>{{field:16:00}}</div>
+      <div class="field"><span class="field-label">Ends</span>{{field:15:30}}
+        <div class="notice mark" role="alert" style="margin-top:4px"><i data-icon="alert-triangle" class="notice-icon"></i><span>The end time must be after the start time.</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Builds the fields and lists. {{field:HH:MM[:readonly]}} → a closed field ('' = nothing chosen).
+  // {{list:value:active:from:to:step[:off]}} → an open field with its list, scrolled so the
+  // chosen time is in the middle (as Star's list does when it opens).
+  const chev = document.getElementById('chev').innerHTML;
+  const label = (hhmm) => {
+    if (!hhmm) return '';
+    const [h, m] = hhmm.split(':').map(Number);
+    return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+  };
+  const field = (value, readOnly, open) => `<div class="input fa-field${open ? ' is-open' : ''}${readOnly ? ' is-readonly' : ''}${value ? '' : ' tl-empty'}" role="combobox" aria-expanded="${open}" tabindex="0"><span class="fa-value">${value ? label(value) : 'Choose a time'}</span>${chev}</div>`;
+  const times = (from, to, step) => {
+    const out = [];
+    const [fh, fm] = from.split(':').map(Number);
+    const [th, tm] = to.split(':').map(Number);
+    for (let t = fh * 60 + fm; t <= th * 60 + tm; t += step) out.push(`${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`);
+    return out;
+  };
+  for (const frame of document.querySelectorAll('.frame')) {
+    frame.innerHTML = frame.innerHTML
+      .replace(/\{\{field:([0-9:]*?)(:readonly)?\}\}/g, (_, v, ro) => `<div class="fa-select">${field(v, Boolean(ro), false)}</div>`)
+      .replace(/\{\{list:(off|\d\d:\d\d):(off|\d\d:\d\d):(\d\d:\d\d):(\d\d:\d\d):(\d+)(:off)?\}\}/g, (_, v0, a0, from, to, step, off) => {
+        // "off" = the Off choice (an empty value), first in Finance's list.
+        const v = v0 === 'off' ? '' : v0;
+        const active = a0 === 'off' ? '' : a0;
+        const values = [...(off ? [''] : []), ...times(from, to, Number(step))];
+        const options = values.map((t) => `<li role="option" aria-selected="${t === v}" data-t="${t}" class="fa-option${t === v ? ' is-selected' : ''}${t === active ? ' is-active' : ''}">${t ? label(t) : 'Off'}</li>`).join('');
+        const shown = off && !v ? field('', false, true).replace('Choose a time', 'Off').replace(' tl-empty', '') : field(v, false, true);
+        return `<div class="fa-select">${shown}<ul class="fa-list mark" role="listbox">${options}</ul></div>`;
+      });
+  }
+  for (const list of document.querySelectorAll('.fa-list')) {
+    const chosen = list.querySelector('.is-selected');
+    if (chosen) list.scrollTop = chosen.offsetTop - (list.clientHeight - chosen.offsetHeight) / 2;
+    // The list's thin scroll bar (testing.css .fa-list::-webkit-scrollbar), drawn by hand: screenshots
+    // from a hidden Chrome leave scroll bars out. Same place and size as the real thumb.
+    const thumb = document.createElement('span');
+    const track = list.clientHeight;
+    thumb.style.cssText = `position:absolute;z-index:61;right:3px;width:4px;border-radius:4px;background:var(--color-border-strong);top:${list.offsetTop + 2 + (list.scrollTop / list.scrollHeight) * track}px;height:${Math.max(24, (track * track) / list.scrollHeight)}px`;
+    list.parentElement.append(thumb);
+  }
+</script>
+</body>
+</html>

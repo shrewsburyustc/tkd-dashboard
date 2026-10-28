@@ -3,6 +3,10 @@
   docs/Testing/Color Belt Testing/TKD-Testing-Classes-Ranks-Mockups.html).
   Why it exists: app.css holds the dashboard-wide styles; this file holds the new section's
   own pieces, so they're easy to find. Every value comes from tokens.css or the 4px grid.
+  The pieces every section uses — the page head, tabs, the amber bar, icon buttons and their
+  tooltips, the grip, tags, list rows, the ⋯ menu and phone sheet, the dialog frame, fields,
+  joined buttons and the custom dropdown — moved to shared.css (rulebook v1.030, Dashboard core
+  step 1). shared.css loads right before this file, so they still come first.
 
   Screen-size rules used below (same as app.css):
     Phone          (max-width: 639.98px)
@@ -27,85 +31,6 @@
   scroll-padding-bottom: calc(40px + var(--space-24) + var(--space-16));
 }
 
-/* Header: "Testing" + the school, and the Add class button on the right */
-.phead {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: var(--space-12);
-  margin-bottom: var(--space-8);
-}
-
-.phead-titles {
-  flex: 1;
-  min-width: 0;
-}
-
-.ptitle {
-  font-size: var(--text-20);
-  font-weight: 500;
-  line-height: 1.3;
-}
-
-.psub {
-  color: var(--color-text-secondary);
-  font-size: var(--text-12);
-}
-
-/* Tab bar (only "Classes and ranks" until phase 2) */
-.ttabs {
-  display: flex;
-  flex: none;
-  gap: var(--space-24);
-  margin-bottom: var(--space-16);
-  /* Phase 4 (contract 0014 §5.1): three tabs don't fit a 320px phone, so the bar scrolls
-     sideways instead of wrapping (the current tab is scrolled into view, Testing.jsx). The gray
-     line is an inner shadow (not a border), so the blue underline still sits on it inside the
-     scrolling box. */
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none; /* no scrollbar drawn; a finger or the arrow keys scroll it */
-  box-shadow: inset 0 -1px 0 var(--color-border);
-}
-
-.ttabs::-webkit-scrollbar {
-  display: none;
-}
-
-/* Phase 4 (rulebook v0.401): Private testing sits at the far right of the tab bar, out of the
-   way. margin-left: auto pushes it right when there is room; when the bar is too narrow and
-   scrolls (phones), the auto margin is simply 0 and the tabs sit side by side. */
-.ttab--end {
-  margin-left: auto;
-}
-
-.ttab {
-  display: flex;
-  flex: none;
-  align-items: center;
-  height: 40px;
-  border-bottom: 2px solid transparent; /* the blue underline (current tab) covers the gray line */
-  white-space: nowrap;
-  color: var(--color-text-secondary);
-  font-size: var(--text-13);
-}
-
-.ttab.is-current {
-  border-bottom-color: var(--color-blue);
-  color: var(--color-blue);
-  font-weight: 500;
-}
-
-.ttab:focus-visible {
-  outline-offset: -2px;
-}
-
-.viewonly {
-  margin: calc(-1 * var(--space-4)) 0 var(--space-12);
-  color: var(--color-text-secondary);
-  font-size: var(--text-13);
-}
-
 /* ===== Both: choose a school ===== */
 .blocked {
   flex: 1;
@@ -127,112 +52,7 @@
   gap: var(--space-8);
 }
 
-/* ===== Error banner (ErrorBanner.jsx) — amber, never red ===== */
-.errbar {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: var(--space-8);
-  margin-bottom: var(--space-12);
-  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-12);
-  border-radius: var(--radius-control);
-  background: var(--color-warning-bg);
-  color: var(--color-warning-text);
-  font-size: var(--text-13);
-}
-
-.errbar-icon {
-  flex: none;
-}
-
-.errbar-text {
-  flex: 1;
-  min-width: 0;
-  padding: var(--space-4) 0;
-}
-
-.errbar-actions {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: var(--space-4);
-}
-
-/* ===== Small pieces shared by the list and the dialogs ===== */
-
-/* Icon button: a 28px square you can see; on touch screens the button is a 44px tap area. */
-.tib {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: var(--radius-control);
-  background: none;
-  color: var(--color-text-secondary);
-}
-
-.tib-box {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-control);
-}
-
-.tib {
-  position: relative; /* anchor for the tooltip */
-}
-
-/* While its ⋯ menu is open, the button stays "pressed" (gray square) */
-.tib[aria-expanded='true'] .tib-box {
-  background: var(--color-surface);
-  color: var(--color-text);
-}
-
-/* Tooltip bubble (PC only, see the hover section at the bottom): the same words as the
-   button's aria-label, above the button, right edges lined up so it never runs off the page. */
-.tib-tip,
-.grip-tip {
-  display: none;
-  position: absolute;
-  bottom: calc(100% + var(--space-8));
-  z-index: 30;
-  padding: var(--space-4) var(--space-8);
-  border-radius: var(--radius-tag);
-  background: var(--color-tooltip-bg);
-  color: var(--color-on-blue);
-  font-size: var(--text-13);
-  font-weight: 400;
-  line-height: 1.5;
-  white-space: nowrap;
-  pointer-events: none; /* the bubble never blocks clicks */
-}
-
-.tib-tip {
-  right: 0;
-}
-
-/* Small triangle under the bubble, pointing at the button */
-.tib-tip::after,
-.grip-tip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  border: 5px solid transparent;
-  border-top-color: var(--color-tooltip-bg);
-}
-
-.tib-tip::after {
-  right: 9px;
-}
-
-/* Compact outline button ("Add rank", staff "View"): 28px with a mouse */
-.btn-sm,
+/* Staff's "View" button: 28px with a mouse, the same size as the compact .btn-sm (shared.css) */
 .btn-view {
   height: 28px;
   padding: 0 var(--space-12);
@@ -243,29 +63,6 @@
   flex: none;
   align-items: center;
   justify-content: center;
-}
-
-/* Tags: one per row at most. Neutral gray, or amber for "Not saved". */
-.ttag {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: var(--space-4);
-  padding: 2px var(--space-8);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-tag);
-  background: var(--color-surface);
-  color: var(--color-text-secondary);
-  font-size: var(--text-12);
-  font-weight: 400;
-  line-height: 16px;
-  white-space: nowrap;
-}
-
-.ttag--warn {
-  border-color: var(--color-tag-warn-border);
-  background: var(--color-warning-bg);
-  color: var(--color-warning-text);
 }
 
 /* The amber "Final award not set" reminder (icon + words, never color alone) */
@@ -283,13 +80,7 @@
   flex: none;
 }
 
-/* ===== The class list ===== */
-.clist {
-  flex: none;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-control);
-}
-
+/* ===== The class list (the bordered list itself, .clist, is in shared.css) ===== */
 .cblock + .cblock {
   border-top: 1px solid var(--color-border);
 }
@@ -355,53 +146,6 @@
   color: var(--color-text-secondary);
 }
 
-.acts {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-4);
-}
-
-/* The grip handle (PC only) */
-.grip {
-  position: relative;
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: var(--radius-control);
-  background: none;
-  color: var(--color-text-secondary);
-  cursor: grab;
-}
-
-/* No room above (top of the scrolling area): the bubble goes below, its triangle pointing up */
-[data-tip='below'] > .tib-tip,
-[data-tip='below'] > .grip-tip {
-  top: calc(100% + var(--space-8));
-  bottom: auto;
-}
-
-[data-tip='below'] > .tib-tip::after,
-[data-tip='below'] > .grip-tip::after {
-  top: auto;
-  bottom: 100%;
-  border-top-color: transparent;
-  border-bottom-color: var(--color-tooltip-bg);
-}
-
-/* A finger on the grip drags the row instead of scrolling the page (v0.63). Only the grip:
-   anywhere else on the row, a finger still scrolls. */
-.grip {
-  touch-action: none;
-  -webkit-touch-callout: none; /* no long-press menu on iPhones */
-}
-
 /* ----- Belt pictures (Belt.jsx, v0.64) ----- */
 .belt {
   display: inline-block;
@@ -431,26 +175,11 @@
   white-space: nowrap;
 }
 
-/* The grip's tooltip goes above it, starting at its left edge (so it doesn't cover the name) */
-.grip-tip {
-  left: 0;
-}
-
-.grip-tip::after {
-  left: 7px;
-}
-
-html.is-reordering .grip-tip,
-html.is-reordering .tib-tip {
-  display: none !important; /* no tooltips while dragging */
-}
-
 /* ===== Rank table (PC and tablet) ===== */
 /* Left padding lines the rank names up under the class name:
    mouse 44px (8 + 28 chevron + 8), PC admin 40px + the 24px grip column + 12px gap = 76px,
    touch 48px (the 44px chevron tap area + 4px). */
-.rhead,
-.rrow {
+.rhead {
   display: grid;
   align-items: center;
   column-gap: var(--space-12);
@@ -475,22 +204,6 @@ html.is-reordering .tib-tip {
   font-size: var(--text-12);
 }
 
-.rrow {
-  position: relative;
-  min-height: 40px;
-  padding-top: var(--space-4);
-  padding-bottom: var(--space-4);
-  font-size: var(--text-13);
-  cursor: pointer;
-}
-
-/* Arrow-key focus on a row: the 2px blue ring, drawn inside the row */
-.rrow:focus-visible,
-.prow:focus-visible {
-  outline: 2px solid var(--color-blue);
-  outline-offset: -2px;
-}
-
 .rcell {
   min-width: 0;
 }
@@ -505,12 +218,6 @@ html.is-reordering .tib-tip {
 .rk-name {
   min-width: 0;
   overflow-wrap: anywhere;
-}
-
-/* The rank open in a dialog right now (blue "selected" tint, as mocked up) */
-.rrow.is-selected,
-.prow.is-selected {
-  background: var(--color-blue-tint);
 }
 
 .num {
@@ -589,269 +296,26 @@ html.is-reordering * {
   -webkit-user-select: none;
 }
 
-/* ===== Phone rank rows (two lines) ===== */
-.prow {
-  display: flex;
-  align-items: center;
-  min-height: 56px;
-  padding: var(--space-4) 0 var(--space-4) var(--space-16);
-  border-top: 1px solid var(--color-border);
-  cursor: pointer;
-}
-
+/* ===== Phone rank rows (two lines; the row itself — .prow, .l1, .l2 — is in shared.css) ===== */
 .prow-main {
   flex: 1;
   min-width: 0;
-}
-
-.l1 {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 2px var(--space-8);
-  font-size: var(--text-13);
-  font-weight: 500;
-}
-
-.l1 > span:first-child {
-  min-width: 0;
-  overflow-wrap: anywhere;
 }
 
 .l1b {
   margin: 2px 0;
 }
 
-.l2 {
-  color: var(--color-text-secondary);
-  font-size: var(--text-12);
-}
-
-.l2 span {
-  white-space: nowrap;
-}
-
 .prow .tapbox {
   margin-right: var(--space-8);
 }
 
-/* ===== Empty school, skeleton ===== */
-.tempty {
-  padding: var(--space-32) var(--space-16);
-  color: var(--color-text-secondary);
-  font-size: var(--text-13);
-  text-align: center;
-}
-
-.tskeleton-row {
-  display: flex;
-  align-items: center;
-  height: 40px;
-  padding: 0 var(--space-16);
-}
-
-.tskeleton-row + .tskeleton-row {
-  border-top: 1px solid var(--color-border);
-}
-
-.tskeleton-bar {
-  width: 40%;
-  height: 12px;
-  border-radius: var(--radius-tag);
-  background: var(--color-surface);
-}
-
-/* ===== ⋯ menu: dropdown (PC / tablet) ===== */
-.tmenu {
-  position: fixed;
-  z-index: 45;
-  width: 200px;
-  padding: var(--space-4) 0;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-control);
-  background: var(--color-bg);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); /* the same subtle shadow as the account menu */
-}
-
-.tmenu-item {
-  white-space: nowrap;
-}
-
-/* Red means delete — and only delete (guidelines 7) */
-.tmenu-item--danger,
-.tmenu-item--danger .menu-icon {
-  color: var(--color-delete-text);
-}
-
-.tmenu-item--danger:focus-visible {
-  background: var(--color-delete-bg);
-}
-
-/* Unavailable (e.g. Move up on the first item): gray, still reachable for screen readers */
-.tmenu-item.is-disabled,
-.tmenu-item.is-disabled .menu-icon {
-  color: var(--color-disabled-text);
-  cursor: default;
-}
-
-/* ===== ⋯ menu: bottom sheet (phone) ===== */
-.tsheet-wrap {
-  position: fixed;
-  inset: 0;
-  z-index: 45;
-}
-
-.tsheet-backdrop {
-  position: absolute;
-  inset: 0;
-  background: var(--color-backdrop);
-}
-
-.tsheet {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  max-height: 85vh;
-  overflow-y: auto;
-  padding: var(--space-8) 0 calc(var(--space-16) + env(safe-area-inset-bottom));
-  border-radius: 16px 16px 0 0;
-  background: var(--color-bg);
-  overscroll-behavior: contain;
-}
-
-.tsheet .account-grab {
-  display: block;
-  width: 36px;
-  height: 4px;
-  margin: var(--space-4) auto var(--space-8);
-  border-radius: 2px;
-  background: var(--color-border-strong);
-}
-
-.tsheet-head {
-  margin-bottom: var(--space-4);
-  padding: var(--space-4) var(--space-16) var(--space-8);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.tsheet-title {
-  font-size: var(--text-14);
-  font-weight: 500;
-  overflow-wrap: anywhere;
-}
-
-.tsheet-sub {
-  color: var(--color-text-secondary);
-  font-size: var(--text-12);
-}
-
-.tmenu-cancel {
-  justify-content: center;
-  font-weight: 500;
-}
-
-/* ===== Dialogs (Dialog.jsx) ===== */
-.tdialog {
-  border-radius: var(--radius-dialog);
-}
-
-/* Dialog.jsx boxes sit near the top, not in the middle (v0.80): a message appearing inside only
-   pushes what's below it down. 10% of the screen height, at least 16px and at most 96px; the
-   box can still use the rest of the height and scrolls inside when it's taller. */
-.dialog-backdrop--top {
-  align-items: flex-start;
-  padding-top: max(var(--space-16), min(10vh, 96px));
-}
-
-.tdialog--detail {
-  width: 440px;
-}
-
-/* Edit / Add rank: 520px on tablets (nine swatches fit one row), 760px on the PC with two
-   columns — details on the left, the Belt section on the right */
-.tdialog--medium {
-  width: 520px;
-}
-
-.tdialog--wide {
-  width: 760px;
-}
-
+/* ===== The rank and class dialogs (the dialog frame, .tdialog…, is in shared.css) ===== */
+/* Edit / Add rank on the PC: two columns — details on the left, the Belt section on the right */
 .rank-cols {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: var(--space-32);
-}
-
-/* The Cancel / Save row (with any note under it, v0.81, inside .dialog-footer) stays pinned to
-   the bottom of the dialog while the middle scrolls, so it's never below the fold on a short
-   screen (e.g. a 1366×768 laptop). */
-.tdialog .dialog-footer > .dialog-actions {
-  margin: 0;
-}
-
-.tdialog .dialog-footer > .tdialog-note {
-  margin-top: var(--space-8);
-}
-
-.tdialog .dialog-footer,
-.tdialog > .dialog-actions,
-.tdialog form > .dialog-actions {
-  position: sticky;
-  bottom: calc(-1 * var(--space-24)); /* the dialog's own bottom padding */
-  z-index: 2;
-  margin: var(--space-16) calc(-1 * var(--space-24)) calc(-1 * var(--space-24));
-  padding: var(--space-12) var(--space-24) var(--space-24);
-  border-top: 1px solid var(--color-border);
-  background: var(--color-bg);
-}
-
-.tdialog--confirm .dialog-actions,
-.tdialog--small .dialog-footer,
-.tdialog--small > .dialog-actions,
-.tdialog--small form > .dialog-actions {
-  position: static;
-  margin: var(--space-16) 0 0;
-  padding: 0;
-  border-top: none;
-}
-
-/* Short screens (e.g. a tablet in landscape): small dialogs pin their Cancel / Save row too,
-   like the big ones above, so it never ends up below the visible part (e.g. Reset PIN with the
-   keypad at 820×600). */
-@media (max-height: 699.98px) {
-  .tdialog--small .dialog-footer,
-  .tdialog--small > .dialog-actions,
-  .tdialog--small form > .dialog-actions {
-    position: sticky;
-    margin: var(--space-16) calc(-1 * var(--space-24)) calc(-1 * var(--space-24));
-    padding: var(--space-12) var(--space-24) var(--space-24);
-    border-top: 1px solid var(--color-border);
-  }
-}
-
-/* DeleteDialog (never pinned): its note comes right after Cancel / Delete (v0.81) */
-.tdialog--confirm .dialog-actions + .tdialog-note {
-  margin-top: var(--space-8);
-}
-
-/* A message scrolled into view (Dialog.jsx) stops above the pinned Cancel / Save row, not
-   behind it */
-.tdialog .notice,
-.tdialog-page .notice {
-  scroll-margin-bottom: 96px;
-}
-
-/* Phone page: the full-width Save stays pinned to the bottom of the screen */
-.tdialog-page .dialog-page-submit {
-  position: sticky;
-  bottom: calc(-1 * (var(--space-16) + env(safe-area-inset-bottom)));
-  z-index: 2;
-  margin: var(--space-16) calc(-1 * var(--space-16)) calc(-1 * (var(--space-16) + env(safe-area-inset-bottom)));
-  padding: var(--space-12) var(--space-16) calc(var(--space-16) + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--color-border);
-  background: var(--color-bg);
 }
 
 /* "Testing for" in the dialog: the next rank's belt, then its name */
@@ -861,28 +325,13 @@ html.is-reordering * {
   gap: var(--space-8);
 }
 
-.tdialog-sub {
-  margin-bottom: var(--space-16);
-  color: var(--color-text-secondary);
-  font-size: var(--text-13);
-}
-
-.tdialog-page .tdialog-sub {
-  margin-bottom: var(--space-12);
-}
-
-.tdialog--confirm .tdialog-body {
-  margin-bottom: 0;
-}
-
 /* Read-only lines: a gray label above, the value under it */
 .ro {
   margin-bottom: var(--space-12);
   font-size: var(--text-13);
 }
 
-.ro-label,
-.field-label {
+.ro-label {
   color: var(--color-text-secondary);
   font-size: var(--text-12);
 }
@@ -897,19 +346,6 @@ html.is-reordering * {
 
 .ro-muted-line {
   color: var(--color-text-secondary);
-}
-
-.tdialog-divider {
-  margin: var(--space-4) 0 var(--space-12);
-  border-top: 1px solid var(--color-border);
-}
-
-.tdialog-group {
-  margin-bottom: var(--space-8);
-}
-
-.tdialog-copied {
-  margin: calc(-1 * var(--space-4)) 0 var(--space-8);
 }
 
 /* The three prices: side by side on PC and tablet, stacked on the phone */
@@ -939,143 +375,9 @@ html.is-reordering * {
   margin-bottom: 0;
 }
 
-.tdialog-hint {
-  margin: var(--space-4) 0 var(--space-12);
-}
-
-/* A price field with "$" in front */
-.money {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  height: var(--control-height);
-  padding: 0 var(--space-12);
-  border: 1px solid var(--color-border-control);
-  border-radius: var(--radius-control);
-  background: var(--color-bg);
-  font-size: var(--text-13);
-}
-
+/* A stacked price field (phones) is 120px wide */
 .tprices.is-stacked .money {
   width: 120px;
-}
-
-.money:focus-within {
-  border-color: var(--color-blue);
-  outline: 2px solid var(--color-blue); /* the focus ring goes round the whole field */
-  outline-offset: 2px;
-}
-
-.money-prefix {
-  margin-right: var(--space-4);
-  color: var(--color-text-secondary);
-}
-
-.money-input {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
-  padding: 0;
-  border: none;
-  background: none;
-  font-size: inherit;
-}
-
-.money-input:focus-visible {
-  outline: none; /* drawn on .money instead */
-}
-
-/* Read-only while saving */
-.money.is-readonly,
-.tdialog input.input:read-only,
-.tdialog-page input.input:read-only {
-  background: var(--color-surface);
-}
-
-/* Checkbox (the tick is drawn with CSS: ti-check is kept for Save only) */
-.cbrow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  min-height: 32px;
-  font-size: var(--text-13);
-  cursor: pointer;
-}
-
-.cb {
-  flex: none;
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  border: 1px solid var(--color-border-control);
-  border-radius: 4px;
-  background: var(--color-bg) center / 12px 12px no-repeat;
-  appearance: none;
-  -webkit-appearance: none;
-  cursor: pointer;
-}
-
-.cb:checked {
-  border-color: var(--color-blue);
-  background-color: var(--color-blue);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-4.9' fill='none' stroke='%23fff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-}
-
-.cb:disabled {
-  cursor: progress;
-}
-
-.tmeta {
-  margin-top: var(--space-12);
-  color: var(--color-text-secondary);
-  font-size: var(--text-12);
-}
-
-.tdialog-note {
-  margin-top: var(--space-12);
-}
-
-/* "Discard changes" inside the unsaved-changes note (phones, v0.56): a text link in the note's
-   own amber color — not red (nothing is deleted), not blue (no extra blue element). Drawn 32px
-   tall; the invisible ::after stretches the tap area to 44px. */
-.note-action {
-  position: relative;
-  display: flex;
-  align-items: center;
-  height: 32px;
-  margin-top: var(--space-4);
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--color-warning-text);
-  font-size: var(--text-12);
-  font-weight: 500;
-  text-decoration: underline;
-}
-
-.note-action::after {
-  content: '';
-  position: absolute;
-  inset: -6px 0;
-}
-
-/* Save drawn gray while it's unavailable (approved detail 8). Still focusable. */
-.btn-primary.is-unavailable,
-.btn-primary.is-unavailable:hover,
-.btn-primary.is-unavailable:active {
-  border-color: var(--color-border-strong);
-  background: var(--color-surface);
-  color: var(--color-disabled-text);
-  cursor: not-allowed;
-}
-
-/* The red Delete button in the confirmation (the confirmation's main button) */
-.btn-delete,
-.btn-delete:hover,
-.btn-delete:active {
-  border-color: var(--color-delete-text);
-  background: var(--color-delete-text);
-  color: var(--color-on-blue);
 }
 
 /* "More details" in Add class */
@@ -1205,46 +507,6 @@ html.is-reordering * {
   outline-offset: 1px;
 }
 
-/* Pattern: three joined buttons, the chosen one tinted (like the location switcher) */
-.segmented {
-  display: inline-flex;
-  max-width: 100%;
-  border: 1px solid var(--color-border-control);
-  border-radius: var(--radius-control);
-}
-
-.segment {
-  position: relative;
-  height: 30px;
-  padding: 0 var(--space-12);
-  border: none;
-  background: none;
-  color: var(--color-text-secondary);
-  font-size: var(--text-13);
-  white-space: nowrap;
-}
-
-.segment + .segment {
-  border-left: 1px solid var(--color-border);
-}
-
-.segment:first-child {
-  border-radius: 7px 0 0 7px;
-}
-
-.segment:last-child {
-  border-radius: 0 7px 7px 0;
-}
-
-.segment.is-checked {
-  background: var(--color-blue-tint);
-  color: var(--color-blue);
-}
-
-.segment:focus-visible {
-  z-index: 1;
-}
-
 /* End stripes: − n + */
 .stepper {
   display: inline-flex;
@@ -1281,117 +543,8 @@ html.is-reordering * {
   text-align: center;
 }
 
-/* ===== Final award dropdown (FinalAwardSelect.jsx) ===== */
-.fa-field {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-8);
-  cursor: pointer;
-}
-
-.fa-field.is-open {
-  border-color: var(--color-blue);
-}
-
-.fa-field.is-readonly {
-  background: var(--color-surface);
-  cursor: progress;
-}
-
-.fa-value {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.fa-chevron {
-  flex: none;
-  color: var(--color-text-secondary);
-}
-
-.fa-list {
-  position: fixed;
-  z-index: 60;
-  margin: 0;
-  padding: var(--space-4) 0;
-  overflow-y: auto;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-control);
-  background: var(--color-bg);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  list-style: none;
-}
-
-.fa-list,
-.fa-group {
-  list-style: none;
-}
-
-/* An always-visible thin scroll bar: the cue that the list goes on (approved detail 11, v0.51) */
-.fa-list::-webkit-scrollbar {
-  width: 8px;
-}
-
-.fa-list::-webkit-scrollbar-thumb {
-  border: 2px solid var(--color-bg);
-  border-radius: 4px;
-  background: var(--color-border-strong);
-}
-
-.fa-list::-webkit-scrollbar-track {
-  background: var(--color-bg);
-}
-
-/* Browsers without the -webkit- scroll bar styles (Firefox): the standard thin one */
-@supports not selector(::-webkit-scrollbar) {
-  .fa-list {
-    scrollbar-color: var(--color-border-strong) var(--color-bg);
-    scrollbar-width: thin;
-  }
-}
-
-.fa-group {
-  margin: 0;
-  padding: 0;
-}
-
-.fa-heading {
-  padding: var(--space-8) var(--space-12) var(--space-4);
-  color: var(--color-text-secondary);
-  font-size: var(--text-12);
-}
-
-.fa-option {
-  display: flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 var(--space-12);
-  font-size: var(--text-13);
-  cursor: pointer;
-}
-
-.fa-option.is-active {
-  background: var(--color-surface);
-}
-
-/* The current choice: blue tint (selected state, guidelines 7) */
-.fa-option.is-selected {
-  background: var(--color-blue-tint);
-  color: var(--color-blue);
-}
-
-.fa-option.is-selected.is-active {
-  box-shadow: inset 0 0 0 1px var(--color-blue);
-}
-
 /* ===== Tooltips — PC (mouse) only: on hover and on keyboard focus ===== */
 @media (hover: hover) and (pointer: fine) {
-  .tib:hover .tib-tip,
-  .tib:focus-visible .tib-tip,
-  .grip:hover .grip-tip,
-  .grip:focus-visible .grip-tip,
   .swatch:hover .tib-tip,
   .swatch:focus-visible .tib-tip,
   .stepper-btn:hover .tib-tip,
@@ -1403,37 +556,13 @@ html.is-reordering * {
   .swatches:hover .swatch:not(:hover) .tib-tip {
     display: none;
   }
-
-  /* No tooltip on a ⋯ button whose menu is open (the menu is right there) */
-  .tib[aria-expanded='true'] .tib-tip {
-    display: none;
-  }
 }
 
 /* ===== Hover — mouse only ===== */
 @media (hover: hover) {
-  .tib:hover .tib-box,
   .ctoggle:hover .ctoggle-box {
     background: var(--color-surface);
     color: var(--color-text);
-  }
-
-  .grip:hover {
-    background: var(--color-border);
-    color: var(--color-text);
-  }
-
-  .rrow:not(.is-lifted):not(.is-selected):hover,
-  .prow:not(.is-selected):hover {
-    background: var(--color-surface);
-  }
-
-  .tmenu-item--danger:hover {
-    background: var(--color-delete-bg);
-  }
-
-  .tmenu-item.is-disabled:hover {
-    background: none;
   }
 
   .more-toggle:hover {
@@ -1443,42 +572,16 @@ html.is-reordering * {
 
 /* ===== Touch screens: 48px rows, 44px tap areas (guidelines 2.5) ===== */
 @media (pointer: coarse) {
-  .tib {
-    width: var(--tap-size);
-    height: var(--tap-size);
-  }
-
-  /* Belt picker on touch: 44px swatches, 36px pattern buttons with a 44px tap area */
+  /* Belt picker on touch: 44px swatches (its 36px pattern buttons, .segment, are in shared.css) */
   .swatch {
     width: var(--tap-size);
     height: var(--tap-size);
-  }
-
-  .segment {
-    height: 34px;
-  }
-
-  .segment::after {
-    content: '';
-    position: absolute;
-    inset: -5px 0;
   }
 
   .stepper-btn {
     width: var(--tap-size);
   }
 
-  /* The grip on touch screens: 16px icon, 44×44 touch area at the left of the row (v0.63) */
-  .grip {
-    width: var(--tap-size);
-    height: var(--tap-size);
-  }
-
-  .acts {
-    gap: 0;
-  }
-
-  .btn-sm,
   .btn-view {
     height: var(--control-height-touch);
   }
@@ -1486,10 +589,6 @@ html.is-reordering * {
   .tapbox {
     min-width: var(--tap-size);
     min-height: var(--tap-size);
-  }
-
-  .ttab {
-    height: var(--tap-size);
   }
 
   .cline {
@@ -1512,18 +611,13 @@ html.is-reordering * {
     margin-right: var(--space-4);
   }
 
-  .rhead,
-  .rrow {
+  .rhead {
     padding: 0 0 0 48px;
   }
 
   .is-staff .rhead,
   .is-staff .rrow {
     padding-right: var(--space-8);
-  }
-
-  .rrow {
-    min-height: 48px;
   }
 
   .addrow,
@@ -1536,42 +630,15 @@ html.is-reordering * {
     padding-bottom: var(--space-12);
   }
 
-  .tskeleton-row {
-    height: 48px;
-  }
-
-  .tmenu-item.menu-item {
-    height: var(--tap-size);
-  }
-
-  .fa-option {
-    min-height: var(--tap-size);
-  }
-
-  .cbrow {
-    min-height: var(--tap-size);
-  }
-
   .more-toggle {
     min-height: var(--tap-size);
-  }
-
-  .money {
-    height: var(--control-height-touch);
-    font-size: var(--text-16); /* 16px stops iPhones/iPads zooming in on the field */
-  }
-
-  .errbar {
-    flex-wrap: wrap;
-    padding: var(--space-8) var(--space-4) var(--space-4) var(--space-12);
   }
 }
 
 /* Tablet widths (640–1023px): a little less space between columns, so the two name columns
    (each with a belt picture) fit most names on one line */
 @media (min-width: 640px) and (max-width: 1023.98px) {
-  .rhead,
-  .rrow {
+  .rhead {
     column-gap: var(--space-8);
   }
 }
@@ -1677,14 +744,5 @@ html.is-reordering * {
   .emptyrow {
     padding-top: var(--space-12);
     padding-bottom: var(--space-12);
-  }
-
-  .money {
-    height: var(--control-height-touch);
-    font-size: var(--text-16);
-  }
-
-  .errbar {
-    flex-wrap: wrap;
   }
 }

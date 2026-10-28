@@ -1,0 +1,18 @@
+[
+  {
+    "id": "open",
+    "caption": "<b>As it opens</b> under the row's Mark paid: the person and the amount, <b>Paid by</b> preset to the family's choice with the hint <b>“They chose Check on the form.”</b>, and <b>Mark paid $50</b>, which has the first focus (nothing is lost, so Enter does the usual thing). Esc or a click outside closes it."
+  },
+  {
+    "id": "other",
+    "caption": "<b>They pay another way</b>: one tap on Card — no trip to ⋯ Change how they'll pay first. The hint still says what they chose on the form; the button keeps the amount. The section is told the chosen method and saves it (its own toast, as today)."
+  },
+  {
+    "id": "owes",
+    "caption": "<b>Camps opens the same box from its “Owes $15.50” tag</b>, as today (v1.001: tag → box). The amount is what the section gives — here what a camper still owes, with cents written as the money rule says (“$15.50”, v1.026). The box never lets the amount be typed."
+  },
+  {
+    "id": "nochoice",
+    "caption": "<b>No choice on record</b> (e.g. added at the desk without one): nothing is preset, there's no hint, and <b>Mark paid $50 stays gray</b> (the approved unavailable look, still focusable) with the gray line “Choose how they paid.” until one is picked. Here the first focus goes on Cash, the first choice."
+  }
+]
