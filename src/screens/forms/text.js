@@ -50,6 +50,7 @@ export const duplicated = (name) => `Copied as "${name}" (a Draft).`;
 export const closedToast = (name) => `${name} is closed — the link now says so.`;
 export const reopenedToast = (name) => `${name} is taking sign-ups again.`;
 export const UNDO = 'Undo'; // on the Close / Open toasts (v1.006, N2)
+export const UNDONE = 'Undone'; // after an Undo worked (v0.618)
 export const UNDO_STALE = "Couldn't undo. Someone else changed this form just now."; // like Schedule's and Star's
 export const deletedToast = (name) => `${name} was deleted.`;
 export const DELETE_TITLE = 'Delete this form?';

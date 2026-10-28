@@ -324,7 +324,8 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
       onReload();
     } else setBanner({ kind: 'save', text: T.SAVE_FAILED_BAR });
   }
-  // The "Accepting sign-ups (Live)" switch. `quiet` = the Undo of an earlier flip: no new toast.
+  // The "Accepting sign-ups (Live)" switch. `quiet` = the Undo of an earlier flip: no Undo again,
+  // just "Undone".
   async function setAccepting(on, quiet = false) {
     setStatusBusy(true);
     await saveNow();
@@ -337,6 +338,7 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
     if (res.status === 'ok') {
       // Undo for 5 seconds (v1.006, N2): flips the switch back
       if (!quiet) showToast(on ? T.reopenedToast(cleanText(name)) : T.closedToast(cleanText(name)), { icon: false, action: { label: T.UNDO, onAction: () => setAccepting(!on, true) } });
+      else showToast(T.UNDONE, { icon: false }); // the Undo worked (v0.618)
       onReload();
     } else if (res.status === 'no_access') onNoAccess();
     else if (res.status === 'stale') {

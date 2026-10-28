@@ -238,6 +238,11 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     else setBanner({ text: T.SAVE_FAILED });
     return false;
   }
+  // The end of every Undo: the same checks as any save, then a short "Undone" when it worked
+  // (v0.618 — no tick, no button, like Calendar, Schedule and the Testing sections).
+  async function afterUndo(result) {
+    if (await afterWrite(result)) showToast(T.UNDONE, { icon: false });
+  }
   const statusOfDetail = () => schools.find((s) => s.code === ref.current.selected?.code)?.statusById;
 
   // Undo for a status change (v1.006, N2; Joined too, v0.617): puts the old status back — and the
@@ -247,7 +252,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
       if (ref.current.busy) return;
       setBusy(true);
       const u = await setStatus({ id: p.id, expectedVersion: savedVersion, statusId: p.statusId, joinedOn: wasJoined ? p.joinedOn : null });
-      afterWrite(u);
+      afterUndo(u);
     };
   }
 
@@ -299,7 +304,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     const r = await checkIn({ id: d.id, expectedVersion: d.version, came, afterClass });
     return afterWrite(r, came ? T.CHECKED_IN(d.childFirstName) : T.MARKED_NOSHOW(d.childFirstName), async () => {
       const u = await undoCheckIn({ id: d.id, expectedVersion: r.version, previousStatusId: r.previousStatusId, previousFollowUpOn: r.previousFollowUpOn });
-      afterWrite(u);
+      afterUndo(u);
     });
   }
 
@@ -345,7 +350,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     afterWrite(r, T.CANCELLED_BOOKING(d.childFirstName), async () => {
       const c = r.cancelled;
       const again = await bookTime({ id: d.id, expectedVersion: r.version, formId: c.formId, classId: c.classId, date: c.date, start: c.start });
-      afterWrite(again.status === 'time_taken' ? { status: 'stale' } : again);
+      afterUndo(again.status === 'time_taken' ? { status: 'stale' } : again);
     });
   }
 
@@ -424,7 +429,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
       if (ref.current.busy) return;
       setBusy(true);
       const u = await setStatus({ id: p.id, expectedVersion: r.version, statusId: p.statusId, joinedOn: from?.builtin === 'joined' ? p.joinedOn : null });
-      afterWrite(u);
+      afterUndo(u);
     });
   }
   // "Came": check the child in when there is a class to check in to, otherwise save the status

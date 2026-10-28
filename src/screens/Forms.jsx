@@ -190,8 +190,10 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
         setBusy(true);
         const u = await setFormStatus({ id: form.id, expectedVersion: res.version, status: form.status });
         setBusy(false);
-        if (u.status === 'ok') list.reload();
-        else if (u.status === 'no_access') onNoAccess();
+        if (u.status === 'ok') {
+          list.reload();
+          showToast(T.UNDONE, { icon: false }); // v0.618
+        } else if (u.status === 'no_access') onNoAccess();
         else if (u.status === 'stale') {
           list.reload();
           setBanner({ text: T.UNDO_STALE });
