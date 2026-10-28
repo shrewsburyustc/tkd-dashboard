@@ -2,8 +2,8 @@
 // Why it exists: an overview so a day nobody closed is found at once, instead of one day at a
 // time. Each row: the day, its total, who closed it and when, and ONE tag (warnings first:
 // Changed after closing · Cash short / over · Not closed; then Closed; then No payments; today
-// shows "Today · open" until it is closed). An amber line at the top counts this month's days
-// that weren't closed. Clicking a row opens that day's report. ‹ › change the month.
+// shows "Today · open" until it is closed). An amber line at the top can count this month's days
+// that weren't closed — switched off for now (SHOW_UNCLOSED_LINE, v0.821). Clicking a row opens that day's report. ‹ › change the month.
 // On Both, both schools' days are listed with a School column (v0.207).
 // Address: #finance/history (App.jsx). The database refuses staff (contract §1.4).
 //
@@ -22,6 +22,12 @@ import { useLiveLoad } from '../../lib/useLiveLoad.js';
 import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
 import { addMonths, dayShort, money, monthShortYear, monthStart, monthYear } from './format.js';
 import * as T from './text.js';
+
+// The amber "N days this month weren't closed: …" line above the list. Off for now (v0.821):
+// the school still closes the drawer on paper, so every day would show up here. The rows keep
+// their "Not closed" tag. To bring the line back when the school starts closing days in the
+// dashboard, set this to true.
+const SHOW_UNCLOSED_LINE = false;
 
 // The tag of a day row: { text, kind: 'warn' | 'ok' | 'neutral' }.
 function dayTag(row) {
@@ -204,7 +210,7 @@ export default function HistoryView({ location, today, month, onMonth, onBack, o
   return (
     <>
       {top}
-      {unclosedCount > 0 && (
+      {SHOW_UNCLOSED_LINE && unclosedCount > 0 && (
         <div className="fin-banner" role="status">
           <IconAlertTriangle size={16} aria-hidden="true" />
           <span>
