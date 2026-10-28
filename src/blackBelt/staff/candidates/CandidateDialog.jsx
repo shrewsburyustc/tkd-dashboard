@@ -10,7 +10,8 @@
 //   - Payments: Plan · Kukkiwon certificate · every payment (Date · For · How · Amount · Note ·
 //     Recorded by; phones: two lines each) with a ⋯ per line for admins · the totals
 //   - Close · Print receipt · Record payment (primary), and ⋯: Edit details · Change plan or
-//     Kukkiwon · Remove candidate / Restore / Delete permanently (admins)
+//     Kukkiwon — (admins) Withdraw · Delete permanently, or on a withdrawn candidate Restore ·
+//     Delete permanently (v1.007 / v0.963: no "Remove candidate" choice box any more)
 // Edit details (Star v0.112) turns the same dialog into fields with Cancel and Save.
 // A make-up from an earlier cycle (contract 0025 §14.5, G 27): the gray "Make-up" tag and the line
 // "Make-up from Spring 2027 · retests Free sparring" under the title, its earlier BB reference,
@@ -323,7 +324,7 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
     clearFocusKey();
   }, [focusKey, hasData, clearFocusKey]);
 
-  // ----- The detail's ⋯ (Edit details · Change plan · Remove / Restore / Delete) -----
+  // ----- The detail's ⋯ (Edit details · Change plan — Withdraw or Restore · Delete permanently) -----
   function detailItems() {
     // Hide payments on (mat-side): Edit details would show the date of birth and email, so it is
     // grayed with its reason, like Add candidate.
@@ -349,13 +350,18 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
       });
     }
     const target = { id: c.id, firstName: c.firstName, lastName: c.lastName, version: c.version, hasPaymentRows: data.payments.length > 0, hasGrades: c.hasGrades };
-    if (isAdmin && !withdrawn) items.push({ key: 'remove', label: T.REMOVE_CANDIDATE, Icon: ICONS.remove, separatorBefore: true, onSelect: () => actions.openRemove(target, moreButtonElement()) });
-    if (isAdmin && withdrawn) {
-      items.push({ key: 'restore', label: T.RESTORE, Icon: ICONS.restore, separatorBefore: true, disabled: actions.busy, onSelect: () => actions.restore(target) });
-      // The database refuses a delete while ANY payment row exists (even an undone one); the
-      // detail only sees live lines, so it may offer Delete and get has_payments back.
-      // …and (0025, Q-G3) while they have grades
-      const reason = data.payments.length > 0 ? T.hasPaymentRecordsShort(T.candidateName(c)) : c.hasGrades ? T.hasGradesShort(T.candidateName(c)) : null;
+    if (isAdmin) {
+      // The last group (v1.007): Withdraw (plain, at once, with Undo) or Restore, then Delete
+      // permanently — red and it asks first. The database refuses a delete while ANY payment row
+      // exists (even an undone one); the detail only sees live lines, so it may offer Delete and
+      // get has_payments back. …and (0025, Q-G3) while they have grades. An active candidate's
+      // reason says what to do instead (v0.904); a withdrawn one's only why.
+      const name = T.candidateName(c);
+      if (withdrawn) items.push({ key: 'restore', label: T.RESTORE, Icon: ICONS.restore, separatorBefore: true, disabled: actions.busy, onSelect: () => actions.restore(target) });
+      else items.push({ key: 'withdraw', label: T.WITHDRAW, Icon: ICONS.withdraw, separatorBefore: true, disabled: actions.busy, onSelect: () => actions.withdraw(target, moreButtonElement()) });
+      const reason = data.payments.length > 0
+        ? (withdrawn ? T.hasPaymentRecordsShort(name) : T.hasPaymentRecords(name))
+        : c.hasGrades ? (withdrawn ? T.hasGradesShort(name) : T.hasGrades(name)) : null;
       items.push({
         key: 'delete',
         label: reason ? <TwoLines label={T.DELETE_PERMANENTLY} reason={reason} /> : T.DELETE_PERMANENTLY,

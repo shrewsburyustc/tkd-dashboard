@@ -8,7 +8,7 @@
 //   dlg.detail   the candidate detail (Candidates 3), or null
 //   dlg.child    a dialog opened from the detail or from a row (Record payment, Edit payment,
 //                Undo payment, Record refund, Mark check returned, Change plan, Add candidate,
-//                Remove, Delete, Compare, View signature, Receipt), or null
+//                Delete permanently, Compare, View signature, Receipt), or null
 // Only ONE of them is on screen at a time: while a child is open the detail waits behind the
 // scenes and comes back (re-read from the database) when the child closes. Two dialogs on top of
 // each other would fight over the browser's Back button (Dialog.jsx adds one history step each).
@@ -136,6 +136,24 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
       return;
     }
     use(data);
+  }
+  // The roster row's ⋯ for an admin (v0.963): Edit payment and Undo payment act on the candidate's
+  // LATEST payment, which the row doesn't carry — so the candidate is read first, exactly as the
+  // detail is, and `use(data)` opens the menu with it. While it loads the tab is busy (a second
+  // press does nothing); a problem is shown the usual way (lock screen, toast or banner) and no
+  // menu opens. Nothing opens either if a dialog came up meanwhile.
+  // Privacy (§3.1): the menu keeps only what Edit / Undo payment need — the name, version and
+  // plan, the payment lines and the money — never the date of birth, the email or the waiver.
+  function loadForMenu(candidateId, use) {
+    return withCandidate(candidateId, (data) => {
+      if (dlgRef.current) return;
+      const c = data.candidate;
+      use({
+        candidate: { id: c.id, firstName: c.firstName, lastName: c.lastName, version: c.version, plan: c.plan ?? null, isMakeup: c.isMakeup === true },
+        payments: data.payments ?? [],
+        money: data.money,
+      });
+    });
   }
 
   // ----- The detail (Candidates 3) -----
@@ -396,12 +414,20 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     const known = new Set((money?.items ?? []).map((x) => x.item));
     return (codes ?? []).filter((code) => known.has(code));
   };
-  function openEditPayment(line, opener) {
+  // Which candidate's data a payment dialog uses: the open detail's when it is the same candidate
+  // (a payment line's ⋯), else the data the roster row's ⋯ just read (loadForMenu) — as openRefund.
+  function paymentData(loaded) {
     const d = dlgRef.current?.detail;
-    if (!d?.data) return;
-    const ticks = stillInPlan(line.forItems, d.data.money);
+    if (d?.data && (!loaded || d.candidateId === loaded.candidate.id)) return d.data;
+    return loaded ?? null;
+  }
+  // loaded: from the roster row's ⋯ only (its line is the candidate's latest payment, v0.963)
+  function openEditPayment(line, opener, loaded = null) {
+    const data = paymentData(loaded);
+    if (!data) return;
+    const ticks = stillInPlan(line.forItems, data.money);
     const values = { ticks, amount: amountInputText(line.amountCents), amountTyped: true, method: line.method, note: line.note ?? '', reason: '' };
-    openChild({ kind: 'editPayment', candidateId: d.candidateId, data: d.data, line, values, itemGone: ticks.length === 0 }, opener);
+    openChild({ kind: 'editPayment', candidateId: data.candidate.id, data, line, values, itemGone: ticks.length === 0 }, opener);
   }
   async function saveEditPayment() {
     const c = dlgRef.current?.child;
@@ -456,11 +482,12 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     patchChild({ saving: false, note: T.INVALID });
   }
 
-  // OP-B1 working default: a short confirmation, then a toast WITHOUT Undo (an undo can't be undone).
-  function openUndoPayment(line, what, opener) {
-    const d = dlgRef.current?.detail;
-    if (!d?.data) return;
-    openChild({ kind: 'undo', candidateId: d.candidateId, data: d.data, line, what, values: null }, opener);
+  // OP-B1: a short confirmation, then a toast WITHOUT Undo (an undo can't be undone).
+  // loaded: from the roster row's ⋯ only (as openEditPayment)
+  function openUndoPayment(line, what, opener, loaded = null) {
+    const data = paymentData(loaded);
+    if (!data) return;
+    openChild({ kind: 'undo', candidateId: data.candidate.id, data, line, what, values: null }, opener);
   }
   async function confirmUndoPayment() {
     const c = dlgRef.current?.child;
@@ -479,7 +506,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
           ? T.toastRefundUndone(cents, name)
           : line.kind === 'returned'
             ? T.toastReturnedUndone(cents, name)
-            : T.toastPaymentUndone(c.what ?? T.FOR_REFUND, cents, name);
+            : T.toastPaymentUndone(cents, line.method, name);
       latest.current.showToast(text, { icon: false });
       patchChild({ saving: false });
       closeChild();
@@ -875,28 +902,27 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     });
   }
 
-  // ===== Remove · Withdraw / Delete permanently / Restore (v0.113) =====
+  // ===== Withdraw / Delete permanently / Restore (v0.113; v1.007 / v0.963) =====
   // target: { id, firstName, lastName, version, hasPaymentRows, hasGrades }
-  function openRemove(target, opener) {
-    openChild({ kind: 'remove', target, values: null }, opener);
-  }
-  async function withdraw() {
-    const c = dlgRef.current?.child;
-    if (!c || c.saving || c.blocking) return;
+  // Withdraw is a menu item (the row's ⋯ or the detail's ⋯) that acts AT ONCE — no box first —
+  // with "Alex Kim withdrawn · Undo" (Undo = Restore). No dialog is open to hold a note, so a
+  // lost connection shows the banner with Retry and any other problem a toast (as runQuick).
+  // opener: the ⋯ that was used; focus goes back to it when it is still on screen.
+  async function withdraw(target, opener = null) {
+    const a = latest.current;
     if (!beginWrite()) return;
-    patchChild({ saving: true, failed: false, note: null });
-    const t = c.target;
-    const name = T.candidateName(t);
-    const result = await withdrawCandidate({ candidateId: t.id, expectedVersion: t.version });
+    const name = T.candidateName(target);
+    const result = await withdrawCandidate({ candidateId: target.id, expectedVersion: target.version });
     endWrite();
+    const inDetail = Boolean(dlgRef.current?.detail);
     if (result.status === 'ok' || result.status === 'withdrawn') {
       afterWrite({ countChanged: true });
       const version = result.version;
-      latest.current.showToast(
+      a.showToast(
         T.toastWithdrawn(name),
         result.status === 'ok'
           ? undoAction(() =>
-              runQuick(() => restoreCandidate({ candidateId: t.id, expectedVersion: version }), {
+              runQuick(() => restoreCandidate({ candidateId: target.id, expectedVersion: version }), {
                 ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
                 countChanged: true,
                 statuses: { stale: T.UNDO_STALE_CANDIDATE, already_added: T.restoreAlreadyAdded(name) },
@@ -904,17 +930,31 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
             )
           : { icon: false },
       );
-      patchChild({ saving: false });
-      closeChild();
+      if (inDetail) {
+        patchDetail({ focusKey: 'detail-more' }); // back to the detail's ⋯ (its data-focus-key)
+        refreshDetail();
+      } else focusSoon(opener);
       return;
     }
-    if (commonProblem(result.status, name)) return;
-    patchChild({ saving: false, note: T.INVALID });
-  }
-  function askDelete() {
-    const c = dlgRef.current?.child;
-    if (!c || c.saving) return;
-    patchChild({ kind: 'deleteConfirm', note: null, blocking: false, failed: false });
+    if (result.status === 'no_access') {
+      a.onNoAccess();
+      return;
+    }
+    a.clearToast();
+    if (result.status === 'error') {
+      a.setBanner({ text: T.ACTION_FAILED, retry: () => withdraw(target, opener) });
+      return;
+    }
+    if (result.status === 'not_found') {
+      if (inDetail) closeAll();
+      loadProblem('not_found');
+      return;
+    }
+    if (result.status === 'not_allowed') a.onRefreshProfile();
+    const words = result.status === 'not_allowed' ? T.NOT_ALLOWED : result.status === 'stale' ? T.candidateStale(name) : T.INVALID;
+    a.showToast(words, { icon: false });
+    afterWrite();
+    if (inDetail) refreshDetail();
   }
   function openDelete(target, opener) {
     openChild({ kind: 'deleteConfirm', target, values: null }, opener);
@@ -1084,12 +1124,11 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     cancelEdit,
     saveEdit,
     savePaperWaiver,
-    openRemove,
     withdraw,
-    askDelete,
     openDelete,
     confirmDelete,
     restore,
+    loadForMenu,
     openCompare,
     resolve,
     openSignature,

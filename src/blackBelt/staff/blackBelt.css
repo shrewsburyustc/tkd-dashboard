@@ -1463,30 +1463,21 @@
   white-space: nowrap;
 }
 
-/* ----- Remove: Withdraw / Delete permanently ----- */
-.bb-remove-choices {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-12);
+/* ----- The roster row's ⋯: "Record refund · $50 overpaid" fits (v0.963) -----
+   The shared menu is 200 px wide (shared.css, not changed here) and that item was 2 px too wide.
+   Inside Black Belt only: its right padding is 4 px smaller (it fits on one line) and, for a
+   bigger amount ("$1,250 overpaid"), the words may wrap to a second line instead of being cut. */
+.tmenu .tmenu-item:has(.bb-menu-fit) {
+  height: auto;
+  min-height: var(--control-height);
+  padding-top: var(--space-4);
+  padding-right: var(--space-8);
+  padding-bottom: var(--space-4);
+  white-space: normal;
 }
-
-.bb-remove-choice {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-4);
-}
-
-.bb-remove-choice .field-hint {
-  margin: 0;
-}
-
-.bb-btn-gray,
-.bb-btn-gray:hover {
-  border-color: var(--color-border-strong);
-  background: var(--color-surface);
-  color: var(--color-disabled-text);
-  cursor: not-allowed;
+/* when it does wrap, "· $50 overpaid" moves down together (no lone "overpaid" on the second line) */
+.bb-menu-keep {
+  white-space: nowrap;
 }
 
 /* ----- View signature ----- */

@@ -571,8 +571,9 @@ export const alreadyPaidAskAdmin = (cents) => `${money(cents)} is already paid. 
 export const PAYMENT_RECORDED_ASK_ADMIN = 'A payment is recorded. Ask an admin.';
 export const RECORD_REFUND = 'Record refund';
 export const recordRefundOverpaid = (cents) => `Record refund · ${money(cents)} overpaid`;
+// The same item in two parts, so the row ⋯ can keep "· $50 overpaid" together when it wraps
+export const overpaidPart = (cents) => `· ${money(cents)} overpaid`;
 export const PRINT_RECEIPT = 'Print receipt';
-export const REMOVE_CANDIDATE = 'Remove candidate';
 export const RESTORE = 'Restore';
 export const DELETE_PERMANENTLY = 'Delete permanently';
 
@@ -777,13 +778,33 @@ export const TOAST_PAYMENT_CHANGED = 'Payment changed';
 export const UNDO_EDIT_REASON = 'Undo of the change just made'; // (not in the mockups)
 export const PAYMENT_GONE = 'This payment was already undone or changed.';
 
-// OP-B1 (working default): Undo payment asks first, then a toast WITHOUT Undo — kept here so the
-// wording can follow Jeffrey's choice at CP2.
-export const undoPaymentTitle = (what) => (/^Payment /.test(what) ? `Undo p${what.slice(1)}?` : 'Undo this payment?');
-export const undoPaymentBody = (cents, method, paidOn, name) =>
-  `${money(cents)} ${methodName(method).toLowerCase()} from ${monthDay(paidOn)} comes off ${name}'s balance. The history keeps it.`;
+// Undo payment asks first, then a toast WITHOUT Undo (OP-B1). The box names the person and the
+// payment (v0.964, mockup C option A): the title is Star's shape with the amount and how, never
+// built from the installments; the second line says when it was recorded and what it was for.
+// "Undo Mia Chen’s $870 card payment?"
+export const undoPaymentTitle = (name, cents, method) => `Undo ${name}’s ${money(cents)} ${methodName(method).toLowerCase()} payment?`;
+// What a payment was for, inside a sentence (v0.964): "payment 1", "payments 1, 2 and 3",
+// "in full" (a one-payment plan's only payment), "the Kukkiwon certificate", "payment 2 and the
+// Kukkiwon certificate", "payments 1, 2 and the Kukkiwon certificate". '' when nothing is known.
+// paymentsCount: the number of payments in the candidate's plan (the detail's candidate.plan).
+export function forSentence(items, { paymentsCount = null } = {}) {
+  const list = Array.isArray(items) ? items : [];
+  const kukkiwon = list.includes('kukkiwon');
+  const nos = list.filter((x) => x !== 'kukkiwon').map((x) => Number(String(x).slice(1))).sort((a, b) => a - b);
+  let pays = '';
+  if (paymentsCount === 1 && nos.length === 1 && nos[0] === 1) pays = 'in full';
+  else if (nos.length === 1) pays = `payment ${nos[0]}`;
+  // "payments 1, 2 and 3" — with the Kukkiwon certificate too: "payments 1 and 2 and the Kukkiwon certificate"
+  else if (nos.length > 1) pays = `payments ${andList(nos.map(String))}`;
+  if (!kukkiwon) return pays;
+  return pays ? `${pays} and the Kukkiwon certificate` : 'the Kukkiwon certificate';
+}
+// "Recorded on Mar 20 for payments 1, 2 and 3. It comes off the balance; the history keeps it."
+export const undoPaymentBody = (paidOn, what) =>
+  `Recorded on ${monthDay(paidOn)}${what ? ` for ${what}` : ''}. It comes off the balance; the history keeps it.`;
 export const UNDO_PAYMENT_CONFIRM = 'Undo payment';
-export const toastPaymentUndone = (what, cents, name) => `${what} undone · ${money(cents)} · ${name}`;
+// The toast after it: "Payment undone · $870 card · Mia Chen"
+export const toastPaymentUndone = (cents, method, name) => `Payment undone · ${money(cents)} ${methodName(method).toLowerCase()} · ${name}`;
 export const UNDO_REFUND_TITLE = 'Undo the refund?'; // (not in the mockups)
 export const undoRefundBody = (cents, paidOn, name) => `The ${money(cents)} refund of ${monthDay(paidOn)} comes off ${name}'s history. The change log keeps it.`; // (not in the mockups)
 export const toastRefundUndone = (cents, name) => `Refund undone · ${money(cents)} · ${name}`; // (not in the mockups)
@@ -915,11 +936,8 @@ export const toastKeptOne = (name) => `Kept one ${name} · the other is under Re
 export const TOAST_BOTH_KEPT = 'Both kept';
 export const DUPLICATE_CHANGED = 'These registrations changed just now. Close and open them again.';
 
-// ----- Remove (v0.113) -----
-export const removeTitle = (name) => `Remove ${name}?`;
+// ----- Withdraw / Delete permanently (v0.113; two menu items since v1.007 / v0.963) -----
 export const WITHDRAW = 'Withdraw';
-export const WITHDRAW_HINT = 'Kept under Removed, with their payments; can be restored.';
-export const DELETE_HINT = "Deletes the registration and its signed waiver. This can't be undone."; // (not in the mockups)
 export const hasPaymentRecords = (name) => `${name} has payment records, so they can't be deleted. Withdraw them instead.`;
 export const hasPaymentRecordsShort = (name) => `${name} has payment records, so they can't be deleted.`; // a candidate already withdrawn (not in the mockups)
 export const deleteTitle = (name) => `Delete ${name} permanently?`;
