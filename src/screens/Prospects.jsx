@@ -200,7 +200,8 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     }
   }
   // A follow-up tapped in the Calendar (v0.615): once the list has loaded, open that child. If it
-  // was deleted meanwhile (e.g. by the automatic clean-up), say so instead of an empty panel.
+  // was deleted meanwhile (e.g. by the automatic clean-up), say so instead of an empty panel —
+  // in the amber bar, which stays until closed (v1.004: a problem never goes in a toast; N1).
   // (The request is taken only once the list is ready, so it is used exactly once.)
   useEffect(() => {
     if (pros.status !== 'ready' || !pros.data) return;
@@ -209,7 +210,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     const code = codes.find((c) => (pros.data.lists[c] ?? []).some((p) => p.id === wanted));
     const item = code ? pros.data.lists[code].find((p) => p.id === wanted) : null;
     if (item) openProspect(item, code);
-    else showToast(T.PROSPECT_GONE);
+    else setBanner({ text: T.PROSPECT_GONE });
   }, [pros.status, pros.data]);
   function closePanel() {
     if (noteInTheWay(null)) return;
