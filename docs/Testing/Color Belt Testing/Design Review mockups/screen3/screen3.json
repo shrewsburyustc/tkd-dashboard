@@ -1,0 +1,133 @@
+{
+ "title": "Color Belt · Screen 3 · “Both” in the top bar (CB13)",
+ "subtitle": "<b>Already decided</b> (v1.022): on Both, Color Belt shows one box per school, the way Finance does (v0.198): “Both schools” under the title, each school's upcoming testing, and <b>Open Worcester / Open Shrewsbury</b> (they switch the whole dashboard, as today's buttons do). Nothing can be changed on Both (v0.34 / v0.35 stay). <b>Settled by copying Finance:</b> phones stack the boxes; a school with nothing says “No upcoming events.” <b>One question at the bottom.</b> <span style=\"color:#6B6B6B\">(Preview screenshots, fake data; the “after” is drawn on the real page.)</span>",
+ "width": 2700,
+ "columns": [
+  {
+   "label": "Today",
+   "tone": "today",
+   "items": [
+    {
+     "src": "both-today.png",
+     "crop": [
+      52,
+      74,
+      1228,
+      420
+     ],
+     "scale": 0.62,
+     "caption": "<b>Today:</b> one line and two school buttons — nothing about either school is shown.",
+     "marks": [
+      [
+       440,
+       400,
+       452,
+       82
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "label": "After · A · upcoming events only",
+   "tone": "after",
+   "items": [
+    {
+     "src": "both-A.png",
+     "crop": [
+      52,
+      74,
+      1228,
+      380
+     ],
+     "scale": 0.62,
+     "caption": "<b>A.</b> Each box: the school's upcoming events (name, date, students, status) and Open [school].",
+     "marks": [
+      [
+       76,
+       176,
+       1180,
+       160
+      ]
+     ]
+    }
+   ]
+  },
+  {
+   "label": "After · B · events + private testings (recommended)",
+   "tone": "after",
+   "items": [
+    {
+     "src": "both-B.png",
+     "crop": [
+      52,
+      74,
+      1228,
+      380
+     ],
+     "scale": 0.62,
+     "caption": "<b>B.</b> The same, plus one line for private testings: “3 upcoming · next Tue, Dec 1, 4:00 PM”, or “No upcoming private testings.”",
+     "marks": [
+      [
+       93,
+       287,
+       550,
+       50
+      ],
+      [
+       689,
+       253,
+       550,
+       50
+      ]
+     ]
+    },
+    {
+     "row": [
+      {
+       "src": "both-B-w820.png",
+       "crop": [
+        0,
+        0,
+        820,
+        700
+       ],
+       "scale": 0.45,
+       "shotWidth": 820,
+       "caption": "Tablet: two boxes side by side.",
+       "marks": []
+      },
+      {
+       "src": "both-B-w390.png",
+       "crop": [
+        0,
+        0,
+        390,
+        844
+       ],
+       "scale": 0.45,
+       "shotWidth": 390,
+       "caption": "Phone: stacked.",
+       "marks": []
+      },
+      {
+       "src": "both-B-w320.png",
+       "crop": [
+        0,
+        0,
+        320,
+        640
+       ],
+       "scale": 0.55,
+       "shotWidth": 320,
+       "caption": "320 wide: stacked.",
+       "marks": []
+      }
+     ]
+    }
+   ],
+   "note": "No names, no money on Both — counts and dates only. Each school is read the same way its own page reads it; no database change."
+  }
+ ],
+ "footer": "<b>One question — private testings in the boxes?</b><br><b>A · Events only.</b> <i>+</i> the smallest box; matches the change list's wording. <i>−</i> the desk can't see a private testing coming up at the other school without switching.<br><b>B · Recommended: events + one private-testing line</b> (count and the next one). <i>+</i> everything Color Belt has coming at each school on one page; one short line, no names. <i>−</i> a second read per school, so the page loads a little more."
+}
