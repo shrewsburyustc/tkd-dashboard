@@ -49,7 +49,7 @@ import Notice from '../../components/Notice.jsx';
 import { loadCamperDetail, updateDetails } from '../../lib/camps/campsApi.js';
 import { AGE_LIMITS, MAX_CAMPER_CENTS, RELATION_MAX, extraDaysFor, formatPhone, isAllDays, phoneDigits, priceChild } from '../../lib/camps/campRules.js';
 import { nameProblem, normalizeName } from '../../lib/testing/names.js';
-import ChoiceGroup from '../testing/events/ChoiceGroup.jsx';
+import ChoiceGroup from '../../components/ChoiceGroup.jsx';
 import { CamperTag } from './CampRoster.jsx';
 import * as T from './text.js';
 

@@ -15,7 +15,8 @@
 // Above the table: the summary line ("9 of 15 here today  5 to collect · $1,040  Pizza party
 // today: 11"), Find a camper, and — only when the camp's days cross more than one calendar week —
 // the week switch ("Week 1 · Jul 6–10 | Week 2 · Jul 13–17"; each week shows only its own days,
-// Paid and "to collect" stay whole-camp). Below it: the possible-duplicate box, then "Removed".
+// Paid and "to collect" stay whole-camp). Below it: the possible-duplicate box (the shared
+// components/DuplicateBox.jsx since rulebook v0.729), then "Removed".
 // Phones: one card per child — name + Paid on top, the week's day buttons underneath (today
 // outlined), 44px targets. The page (CampPage.jsx) does every write; this file only draws.
 // Live-test fixes (2026-10-21): the grid always spans the full width, even for a 1-day camp (the
@@ -33,8 +34,8 @@ import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp, IconDots,
 import IconButton from '../../components/IconButton.jsx';
 import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
 import { extraCountOnDay, extraOfferedOn, missingExtraOnDay, payTag, toCollectCents } from '../../lib/camps/campRules.js';
-import ChoiceGroup from '../testing/events/ChoiceGroup.jsx';
-import DuplicateBox from './DuplicateBox.jsx';
+import ChoiceGroup from '../../components/ChoiceGroup.jsx';
+import DuplicateBox from '../../components/DuplicateBox.jsx';
 import * as T from './text.js';
 
 // A–Z by first name, then last name (as drawn in the mockup).
@@ -592,7 +593,16 @@ export default function CampRoster({
         />
       </div>
       )}
-      <DuplicateBox pairs={pairs} onReview={handlers.onReviewPair} />
+      {/* The shared possible-duplicate box (rulebook v0.729 / v1.102): Camps' count line and one
+          "<name> is signed up twice" line per pair, each with Review (opens the compare). */}
+      <DuplicateBox
+        countText={T.duplicateBoxLine(pairs.length)}
+        pairs={pairs.map((pair) => ({
+          key: pair.first.id,
+          text: T.signedUpTwice(T.camperLabel(pair.first)),
+          onReview: (opener) => handlers.onReviewPair(pair, opener),
+        }))}
+      />
       {weekSwitch}
       {list}
       {removedGroup}

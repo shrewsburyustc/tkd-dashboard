@@ -15,7 +15,7 @@ import DatePicker from '../../components/DatePicker.jsx';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
 import { MAX_CAMPER_CENTS, PAYING_BY, isIsoDate, yearsAround } from '../../lib/camps/campRules.js';
-import ChoiceGroup from '../testing/events/ChoiceGroup.jsx';
+import ChoiceGroup from '../../components/ChoiceGroup.jsx';
 import * as T from './text.js';
 
 const NOTES = {

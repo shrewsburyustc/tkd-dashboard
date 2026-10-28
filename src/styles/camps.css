@@ -1,8 +1,10 @@
 /*
   camps.css — the styles for the Camps section (contract 0013 §6, mockups C1–C6, option A).
   Why it exists: Camps reuses Color Belt's built pieces and their styles (testing.css for .phead,
-  .ttabs, .ttag, .clist, .tdialog …; testing-events.css for the event list, the roster rows, the
-  compare dialog and the link dialog). This file adds only what Camps needs on top, with the same
+  .ttabs, .ttag, .clist, .tdialog …; testing-events.css for the event list, the roster rows and
+  the link dialog). The delete boxes, the possible-duplicate box and the compare dialog are the
+  dashboard's shared parts, styled by shared.css (rulebook v0.729; Camps' own duplicate-box phone
+  rules went with them). This file adds only what Camps needs on top, with the same
   tokens (tokens.css) and the 4px spacing grid. Class names start with "cp-" (camps) so they never
   clash with Color Belt's "ev-" and "gr-" classes.
 
@@ -1088,15 +1090,6 @@ button.cp-dc:focus-visible {
 
   .cp-search {
     max-width: none;
-  }
-
-  /* The duplicate box on phones: the count on its own line, no leading "·" */
-  .cp-dup-count {
-    display: block;
-  }
-
-  .cp-dup-sep {
-    display: none;
   }
 }
 

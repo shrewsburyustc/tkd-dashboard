@@ -16,6 +16,8 @@
 import * as CB from '../testing/text.js';
 
 // ----- Reused unchanged from Color Belt (same words) -----
+// (Review, Keep this one, "Not the same person — keep both", "different" and the compare's Close
+// now come with the shared DuplicateBox / CompareDialog, src/components/text.js; rulebook v0.729.)
 export const {
   UNDO,
   CANCEL,
@@ -58,7 +60,6 @@ export const {
   removedGroup,
   NOT_IN_COUNTS,
   removedBy,
-  REVIEW, // the Review button in the possible-duplicate box
   REVIEW_DUPLICATE, // 'Review possible duplicate' — the camper ⋯ menu item, as Color Belt's menu (v0.724, C8)
   CHANGE_PAYING_BY,
   EDIT_DETAILS,
@@ -67,10 +68,6 @@ export const {
   WITHDRAW,
   RESTORE,
   DELETE_PERMANENTLY,
-  KEEP_THIS_ONE,
-  keepThisOneLabel,
-  KEEP_BOTH,
-  DIFFERENT,
   CHANGE_PAYING_BY_TITLE,
   changePayingBySub,
   ALREADY_PAID_DIALOG,
@@ -247,6 +244,9 @@ export const SAVE_AS_TEMPLATE = 'Save as template';
 export const PRINT_ROSTER = 'Print roster';
 export const DELETE_CAMP = 'Delete camp';
 export const KEEP_CAMP = 'Keep camp'; // (not in the mockups) — like Color Belt's "Keep event"
+// The red button of every Camps delete box while it works (Delete camp, Delete template, Delete
+// camper permanently; the shared ConfirmBox, rulebook v0.729 / v1.103).
+export const DELETING = 'Deleting…';
 export const TOAST_SIGNUP_CLOSED = 'Sign-up closed'; // (not in the mockups)
 export const TOAST_SIGNUP_OPEN = 'Sign-up open'; // (v0.725)
 export const signupOpenUntil = (iso) => `Sign-up open until ${monthDay(iso)}`; // (v0.725) admin, after the closing date

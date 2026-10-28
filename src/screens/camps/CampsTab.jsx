@@ -22,8 +22,8 @@ import { loadCamps, campToday } from '../../lib/camps/campsApi.js';
 import { campTag, firstDay } from '../../lib/camps/campRules.js';
 import { PHONE_QUERY, TOUCH_QUERY, useMediaQuery } from '../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
-import ChoiceGroup from '../testing/events/ChoiceGroup.jsx';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../testing/events/useLiveLoad.js';
+import ChoiceGroup from '../../components/ChoiceGroup.jsx';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../lib/useLiveLoad.js';
 import { useCampActions } from './CampRowMenu.jsx';
 import * as T from './text.js';
 

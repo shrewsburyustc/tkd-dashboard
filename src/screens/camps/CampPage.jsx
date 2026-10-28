@@ -32,8 +32,13 @@
 // they'll pay, Edit payment), the ⋯ menu, the toast and every banner (they may name money or carry
 // a Retry that records money). Camp and template prices are settings: they stay.
 // Naming: `detailsHidden` is that switch; `hidden` below means "the screen is locked".
+// The delete box (Delete permanently) and the possible-duplicate compare are the dashboard's shared
+// parts (components/ConfirmBox.jsx, components/CompareDialog.jsx; rulebook v0.729, design review
+// C6 / C20). This page keeps their state, words and rows (duplicates.js) and does the writes.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { IconArrowLeft, IconDots, IconQrcode } from '@tabler/icons-react';
+import { IconArrowLeft, IconDots, IconQrcode, IconTrash } from '@tabler/icons-react';
+import CompareDialog from '../../components/CompareDialog.jsx';
+import ConfirmBox from '../../components/ConfirmBox.jsx';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
 import { LOCATION_NAME } from '../../lib/device.js';
 import { usePrivateDetailsHidden } from '../../lib/privateDetails.js';
@@ -56,16 +61,14 @@ import {
 } from '../../lib/camps/campsApi.js';
 import { campTag, campWeeks, defaultWeekIndex, lastDay, paymentSchoolFor, signupState } from '../../lib/camps/campRules.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../lib/useMediaQuery.js';
-import ConfirmDeleteDialog from '../testing/events/ConfirmDeleteDialog.jsx';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../testing/events/useLiveLoad.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../lib/useLiveLoad.js';
 import CampDialog from './CampDialog.jsx';
 import CampLinkDialog from './CampLinkDialog.jsx';
 import CampRoster, { byFirstName } from './CampRoster.jsx';
 import CamperDialog from './CamperDialog.jsx';
 import { camperMenuItems } from './CamperRowMenu.jsx';
 import { useCampActions } from './CampRowMenu.jsx';
-import CompareDialog from './CompareDialog.jsx';
-import { findPairs } from './DuplicateBox.jsx';
+import { compareRows, findPairs } from './duplicates.js';
 import { EditPaymentDialog, PayingByDialog } from './PaymentDialogs.jsx';
 import * as T from './text.js';
 
@@ -580,10 +583,13 @@ export default function CampPage({
   }
 
   // ===== Possible duplicate: keep one / keep both (C4b) =====
-  async function keepOne(keep, other) {
+  // `pressed` is the shared Compare dialog's busy value ('keep-first' / 'keep-second'): that
+  // button says "Keeping…" while it works (v1.102). The compare's `saving` holds it (false =
+  // nothing working), and keep both's is 'keep-both'.
+  async function keepOne(keep, other, pressed) {
     const d = dialog;
     if (!d || d.saving || !begin()) return;
-    setDialog({ ...d, saving: true, failed: false });
+    setDialog({ ...d, saving: pressed, failed: false });
     const result = await resolveDuplicate({ keepId: keep.id, keepVersion: keep.version, otherId: other.id, otherVersion: other.version, keepBoth: false });
     end(result.status);
     if (result.status === 'error') {
@@ -610,7 +616,7 @@ export default function CampPage({
     const d = dialog;
     if (!d || d.saving || !begin()) return;
     const { first, second } = d.pair;
-    setDialog({ ...d, saving: true, failed: false });
+    setDialog({ ...d, saving: 'keep-both', failed: false });
     const result = await resolveDuplicate({ keepId: first.id, keepVersion: first.version, otherId: second.id, otherVersion: second.version, keepBoth: true });
     end(result.status);
     if (result.status === 'error') {
@@ -894,37 +900,48 @@ export default function CampPage({
       const first = roster.find((r) => r.id === dialog.pair.first.id) ?? dialog.pair.first;
       const second = roster.find((r) => r.id === dialog.pair.second.id) ?? dialog.pair.second;
       const last = lastDay(days);
+      // After the camp's last day, keeping one is admin-only (Color Belt v0.194).
+      const canKeepOne = isAdmin || last === null || today <= last;
       dialogElement = (
+        // The shared Compare dialog (rulebook v0.729 / v1.102) with Camps' own rows, words and
+        // order (duplicates.js compareRows; C1's "Hidden on this tablet" rows while hidden).
         <CompareDialog
           key={dialog.key}
-          first={first}
-          second={second}
-          campDays={days}
+          title={T.compareTitle(T.camperLabel(first))}
+          sub={T.COMPARE_SUB}
+          heads={[T.FIRST_SIGNUP, T.SECOND_SIGNUP]}
+          rows={compareRows(first, second, days, detailsHidden)}
+          canKeepOne={canKeepOne}
+          note={canKeepOne ? T.COMPARE_NOTE : T.KEEP_ONE_ADMIN_ONLY}
           isPhone={isPhone}
-          saving={dialog.saving}
-          failed={dialog.failed}
-          // After the camp's last day, keeping one is admin-only (Color Belt v0.194).
-          canKeepOne={isAdmin || last === null || today <= last}
-          detailsHidden={detailsHidden}
-          onKeep={keepOne}
+          busy={dialog.saving || null}
+          failed={dialog.failed ? T.SAVE_FAILED : null}
+          onKeep={(index) => (index === 0 ? keepOne(first, second, 'keep-first') : keepOne(second, first, 'keep-second'))}
           onKeepBoth={keepBoth}
           onClose={closeDialog}
         />
       );
     } else if (!hidden && dialog.type === 'deleteCamper') {
       dialogElement = (
-        <ConfirmDeleteDialog
+        // The shared "are you sure?" box (rulebook v0.729): "Keep camper" · red "Delete
+        // permanently", "Deleting…" while it works. It draws through the shared Dialog like the
+        // camper detail, so from the phone's More it takes the detail's place in one update.
+        <ConfirmBox
           key={dialog.key}
           title={dialog.title}
-          body={T.deleteCamperBody(camp.name, dialog.counted, detailsHidden)}
           hint={T.DELETE_CAMPER_HINT}
           keepLabel={T.KEEP_CAMPER}
-          deleteLabel={T.DELETE_PERMANENTLY}
-          failed={dialog.failed}
-          deleting={dialog.saving}
-          onDelete={confirmDeleteCamper}
-          onCancel={() => !dialog.saving && closeDialog()}
-        />
+          actionLabel={T.DELETE_PERMANENTLY}
+          actionIcon={IconTrash} // ti-trash = delete (red: deleting only)
+          busyLabel={T.DELETING}
+          loses="forGood"
+          busy={dialog.saving}
+          failed={dialog.failed ? T.DELETE_FAILED : null}
+          onConfirm={confirmDeleteCamper}
+          onKeep={closeDialog} // ConfirmBox ignores it while the delete works
+        >
+          {T.deleteCamperBody(camp.name, dialog.counted, detailsHidden)}
+        </ConfirmBox>
       );
     }
   }
