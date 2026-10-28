@@ -31,8 +31,12 @@ function group(name, fn) {
 group('publicApi: answers are read field by field', () => {
   const good = { class_id: 'c1', class_name: 'White', date: '2027-01-13', starts_at: '16:00', ends_at: '16:40', spots_left: 1 };
   assert.deepEqual(toTimes([good, { ...good, spots_left: null }, 'x', null]), [
-    { classId: 'c1', className: 'White', date: '2027-01-13', start: '16:00', end: '16:40', spotsLeft: 1 },
+    { classId: 'c1', className: 'White', date: '2027-01-13', start: '16:00', end: '16:40', spotsLeft: 1, ageFrom: null, ageTo: null },
   ]);
+  // the class's ages (migration 0031, v0.619): whole numbers pass, anything else means none
+  assert.deepEqual(toTimes([{ ...good, age_from: 7, age_to: 12 }]).map((t) => [t.ageFrom, t.ageTo]), [[7, 12]]);
+  assert.deepEqual(toTimes([{ ...good, age_from: 13, age_to: null }]).map((t) => [t.ageFrom, t.ageTo]), [[13, null]]);
+  assert.deepEqual(toTimes([{ ...good, age_from: '7', age_to: 12 }]).map((t) => [t.ageFrom, t.ageTo]), [[null, null]]);
   const form = readForm({ status: 'ok', form_name: 'Free class', fields: template('blank'), published_version: 2, school_name: 'Worcester', school_phone: null,
     thank_you: 'Hi {parent}', add_to_calendar: true, times: [good], turnstile_site_key: 'key' });
   assert.equal(form.status, 'ok');

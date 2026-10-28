@@ -52,6 +52,11 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
   // its form always asks the parent's email and shows every answer as it is typed. Preview stays.
   const [privateHidden] = usePrivateDetailsHidden();
   const [busy, setBusy] = useState(false);
+  // the latest busy for an Undo pressed later (a toast's button keeps the function it was given)
+  const busyRef = useRef(false);
+  useLayoutEffect(() => {
+    busyRef.current = busy;
+  });
   const dialogRef = useRef(dialog);
   useLayoutEffect(() => {
     dialogRef.current = dialog;
@@ -98,6 +103,7 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
   }
   function closeBuilder() {
     const id = builder?.formId;
+    clearToast(); // the builder's Undo (Close / Open) can't outlive the builder
     setBuilder(null);
     list.reload();
     focusBack(document.querySelector(`[data-form-row="${id}"]`), '[data-forms-new]');
@@ -178,7 +184,22 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
     setBusy(false);
     if (res.status === 'ok') {
       await list.reload();
-      showToast(form.status === 'live' ? T.closedToast(form.name) : T.reopenedToast(form.name));
+      // Undo for 5 seconds (v1.006, N2): sets the form back to how it was
+      const undo = async () => {
+        if (busyRef.current) return;
+        setBusy(true);
+        const u = await setFormStatus({ id: form.id, expectedVersion: res.version, status: form.status });
+        setBusy(false);
+        if (u.status === 'ok') {
+          list.reload();
+          showToast(T.UNDONE, { icon: false }); // v0.618
+        } else if (u.status === 'no_access') onNoAccess();
+        else if (u.status === 'stale') {
+          list.reload();
+          setBanner({ text: T.UNDO_STALE });
+        } else setBanner({ text: T.SAVE_FAILED_BAR });
+      };
+      showToast(form.status === 'live' ? T.closedToast(form.name) : T.reopenedToast(form.name), { icon: false, action: { label: T.UNDO, onAction: undo } });
     } else if (res.status === 'no_access') onNoAccess();
     else if (res.status === 'stale') {
       list.reload();

@@ -25,6 +25,8 @@
 //            bookings: [{ child, class_id, date, starts_at }], signature, website (honeypot),
 //            started_at, sent_at, turnstile_token, kiosk_token (only from the front-desk kiosk) }
 
+import { agesFromRow } from '../lib/schedule/ages.js';
+
 const apiPath = (slug) => `/api/forms/${encodeURIComponent(slug)}`;
 const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const text = (v) => (typeof v === 'string' ? v : null);
@@ -45,7 +47,9 @@ function toTime(t) {
   if (!isObject(t)) return null;
   const ok = typeof t.class_id === 'string' && typeof t.class_name === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.date ?? '')
     && /^\d{2}:\d{2}$/.test(t.starts_at ?? '') && /^\d{2}:\d{2}$/.test(t.ends_at ?? '') && Number.isInteger(t.spots_left);
-  return ok ? { classId: t.class_id, className: t.class_name, date: t.date, start: t.starts_at, end: t.ends_at, spotsLeft: t.spots_left } : null;
+  // the class's ages are only shown (v0.619); anything that isn't a whole number means "none"
+  const a = agesFromRow(t);
+  return ok ? { classId: t.class_id, className: t.class_name, date: t.date, start: t.starts_at, end: t.ends_at, spotsLeft: t.spots_left, ageFrom: a.from, ageTo: a.to } : null;
 }
 export const toTimes = (list) => (Array.isArray(list) ? list.map(toTime).filter(Boolean) : []);
 
