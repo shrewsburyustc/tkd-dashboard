@@ -2624,7 +2624,7 @@ Tested in PGlite on every run (`run.mjs` step0027: the undo file exactly as name
 
 ## Migration 0028: Star start times 6:00 AM–10:00 PM every 5 minutes
 
-**Status: not applied yet** (built on `star-testing`, design-review item S12, rulebook v1.019; contract `docs/Dashboard Docs/Build contracts/CONTRACT-0028.md`).
+**Status: applied 2026-10-28** (pasted by Jeffrey; 0028b fingerprint `d0548ce9…` matches, the other 142 Star fingerprints unchanged, security advisor nothing new, `0028_tests.sql` and `0006_tests.sql` pass). Built on `star-testing`, design-review item S12, rulebook v1.019; contract `docs/Dashboard Docs/Build contracts/CONTRACT-0028.md`).
 
 **Production order:** … 0023 → 0025 → 0027 → 0026 (live) → **0028**. It needs 0006 (it stops with "0028 needs migration 0006 (Star testing) first" if 0006 is missing). **It must be live before the app offers the new times** (the shared time list, a later step) — until then the app keeps offering 8:00 AM–8:00 PM every 15 minutes, which 0028 still accepts.
 
