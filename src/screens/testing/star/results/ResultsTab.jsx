@@ -55,6 +55,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   IconArrowBackUp, IconCurrencyDollarOff, IconDownload, IconMailCheck, IconPlus, IconPrinter, IconSchool,
 } from '@tabler/icons-react';
+import ChoiceGroup from '../../../../components/ChoiceGroup.jsx';
+import ConfirmBox from '../../../../components/ConfirmBox.jsx';
 import ErrorBanner from '../../../../components/ErrorBanner.jsx';
 import RowMenu from '../../../../components/RowMenu.jsx';
 import { LOCATION_CODE, LOCATION_NAME } from '../../../../lib/device.js';
@@ -65,9 +67,7 @@ import {
 import { buildResultMessage, mailtoFor } from '../../../../lib/star/resultEmail.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../../lib/useRowArrowNav.js';
-import ChoiceGroup from '../../events/ChoiceGroup.jsx';
 import { ADD_CANDIDATE } from '../candidates/text.js';
-import { ConfirmBox } from '../candidates/dialogParts.jsx';
 import MakeupChoiceDialog from '../grading/MakeupChoiceDialog.jsx';
 import { oneSchoolLine, SHOW_BOTH_SCHOOLS } from '../grading/text.js';
 import ResultRows from './ResultRows.jsx';
@@ -352,8 +352,12 @@ export default function ResultsTab({
     if (!s) return;
     setConfirm({ row, sentId: s.id, day: s.markedAt, saving: false, failed: false, opener });
   }
+  // "Keep send record", Esc, a click outside and Back. Never while the undo is on its way (the
+  // shared ConfirmBox also waits; this guard keeps a stray call from closing it mid-save, which
+  // the old box did).
   function closeConfirm() {
-    const opener = confirm?.opener;
+    if (!confirm || confirm.saving) return;
+    const opener = confirm.opener;
     setConfirm(null);
     focusLater(() => (opener?.isConnected ? opener : null));
   }
@@ -372,7 +376,8 @@ export default function ResultsTab({
       setConfirm({ ...d, saving: false, failed: true });
       return;
     }
-    closeConfirm();
+    setConfirm(null);
+    focusLater(() => (d.opener?.isConnected ? d.opener : null));
     if (answer.status !== 'ok') setBanner({ text: R.undoSentRefusal(answer.status) });
     reload();
   }
@@ -630,17 +635,22 @@ export default function ResultsTab({
       </div>
       {content && <RowMenu anchor={menu.anchor} isSheet={isPhone} title={content.title} subtitle={content.subtitle} label={content.label} items={content.items} onClose={closeMenu} />}
       {confirm && !screenLocked && (
+        // The shared "are you sure?" box (rulebook v0.518): blue, as it only reverses; "Undoing…"
+        // while it works, and it stays open until the database answers.
         <ConfirmBox
           title={R.undoConfirmTitle(nameOf(confirm.row))}
-          body={R.undoConfirmBody(schoolDateOf(confirm.day))}
-          keepLabel={R.CANCEL}
-          goLabel={T.UNDO_CONFIRM_GO}
-          tone="undo"
+          keepLabel={R.KEEP_SEND_RECORD}
+          actionLabel={T.UNDO_CONFIRM_GO}
+          actionIcon={IconArrowBackUp}
+          busyLabel={R.UNDOING}
+          loses="something"
           busy={confirm.saving}
-          failedText={confirm.failed ? R.undoSentRefusal('error') : null}
-          onGo={confirmUndo}
-          onCancel={closeConfirm}
-        />
+          failed={confirm.failed ? R.undoSentRefusal('error') : null}
+          onKeep={closeConfirm}
+          onConfirm={confirmUndo}
+        >
+          {R.undoConfirmBody(schoolDateOf(confirm.day))}
+        </ConfirmBox>
       )}
       {choose && chooseRow && !screenLocked && (
         <MakeupChoiceDialog row={chooseRow} result={chooseRow.result} letters={gradeLetters(copy)} isPhone={isPhone} onClose={closeChoose} onNoAccess={onNoAccess} />

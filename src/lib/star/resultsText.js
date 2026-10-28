@@ -94,7 +94,7 @@ export const EMAIL_OFF_WHILE_HIDDEN = 'Email result is off while private details
 
 // ----- Email result's banners (R4: 17–19) -----
 export const COPY_BLOCKED = 'Couldn’t copy the message, so the email opened empty. Close it and try Email result again.';
-export const noEmailOnFile = (name) => `${name} has no email for results. Add it with Edit candidate on the Candidates tab, then try again.`;
+export const noEmailOnFile = (name) => `${name} has no email for results. Add it with Edit details on the Candidates tab, then try again.`;
 export const addressFailed = (name) => `Couldn’t get ${name}’s email address. Check the connection, then try again.`; // + Retry
 // The email text wasn't loaded / the row changed so it gets no email (not in the mockups)
 export const MESSAGE_NOT_READY = 'Couldn’t build the message. Check the connection, then try again.';
@@ -127,7 +127,10 @@ export function undoSentRefusal(status) {
 export const undoConfirmTitle = (name) => `Undo Mark as sent for ${name}?`;
 export const undoConfirmBody = (day) =>
   `This removes the ${monthDay(day)} send record. The row then shows the send before it, if there was one — otherwise “Not sent yet”. Use this only if the email wasn’t really sent.`;
-export const CANCEL = 'Cancel';
+// Its buttons (shared ConfirmBox, rulebook v0.518, Q1 A): the one that changes nothing, and the
+// action's words while it works. (Black Belt's twin box takes the same words.)
+export const KEEP_SEND_RECORD = 'Keep send record';
+export const UNDOING = 'Undoing…';
 
 // ----- Download CSV (29–33) -----
 export const csvDownloaded = (fileName, n) =>

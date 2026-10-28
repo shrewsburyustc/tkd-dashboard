@@ -6,11 +6,9 @@
 // the note instead (v0.56). Writing it once keeps every dialog the same (Color Belt's pattern,
 // src/screens/testing/event/PaymentDialogs.jsx, copied rather than shared).
 //   note: { text, discard } | null — discard = the phone note gets the "Discard changes" link
-// Also: ConfirmBox, the small confirmation used for Undo payment / Undo refund / Delete permanently
-// and the Dan-change question (the same small box on every device, phones included).
-import { useId } from 'react';
-import { IconArrowBackUp, IconCheck, IconTrash } from '@tabler/icons-react';
-import Dialog from '../../../../components/Dialog.jsx';
+// (The "are you sure?" boxes are the shared components/ConfirmBox.jsx since the design review's part 2,
+// rulebook v0.518; Star's own copy that lived here is gone.)
+import { IconCheck } from '@tabler/icons-react';
 import Notice from '../../../../components/Notice.jsx';
 import * as T from './text.js';
 
@@ -61,43 +59,5 @@ export function Footer({ saving, canSave, note, isPhone, onCancel, saveLabel = T
       </div>
       <NoteBlock note={note} isPhone={false} onCancel={onCancel} />
     </div>
-  );
-}
-
-// A small confirmation. tone: 'danger' (red, ti-trash), 'undo' (blue primary, ti-arrow-back-up —
-// nothing is deleted, G16) or 'dan' (red, no icon — the decided v0.164 drawing).
-export function ConfirmBox({ title, body, hint, keepLabel, goLabel, tone = 'danger', busy, failedText, onGo, onCancel }) {
-  const bodyId = useId();
-  const goClass = tone === 'undo' ? 'btn btn-primary' : 'btn btn-delete';
-  return (
-    <Dialog title={title} variant="confirm" describedBy={bodyId} onRequestClose={onCancel}>
-      <p id={bodyId} className="tdialog-sub tdialog-body">
-        {body}
-      </p>
-      {hint && <p className="field-hint ev-confirm-hint">{hint}</p>}
-      <div className="dialog-actions">
-        {/* Focus starts on the safe choice. */}
-        <button type="button" className="btn" data-autofocus onClick={onCancel}>
-          {keepLabel}
-        </button>
-        <button
-          type="button"
-          className={goClass}
-          aria-disabled={busy ? 'true' : undefined}
-          onClick={() => {
-            if (!busy) onGo();
-          }}
-        >
-          {tone === 'danger' && <IconTrash size={16} aria-hidden="true" />}
-          {tone === 'undo' && <IconArrowBackUp size={16} aria-hidden="true" />}
-          {goLabel}
-        </button>
-      </div>
-      {failedText && (
-        <div className="tdialog-note">
-          <Notice>{failedText}</Notice>
-        </div>
-      )}
-    </Dialog>
   );
 }
