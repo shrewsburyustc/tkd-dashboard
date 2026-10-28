@@ -98,7 +98,7 @@ export const CARD_PAID = 'Paid';
 export const CARD_NOT_PAID = 'Not paid';
 export const CARD_PAYMENTS = 'Payments recorded';
 export const DAN_SWITCH_LABEL = 'Dan';
-export const FILTER_LINE = { paid: 'Showing paid only', notPaid: 'Showing not paid only', payments: 'Showing paid only' };
+export const FILTER_LINE = { paid: 'Showing paid only', notPaid: 'Showing not paid only' }; // Payments recorded is a total, not a filter (v0.518)
 export const SHOW_ALL_LINK = 'Show all';
 export const oneSchoolLine = (school) => `Showing ${school} candidates only`;
 export const SHOW_BOTH_SCHOOLS = 'Show both schools';

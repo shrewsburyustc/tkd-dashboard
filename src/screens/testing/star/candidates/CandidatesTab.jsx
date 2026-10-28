@@ -21,6 +21,8 @@
 //     with the shared Mark paid box (S1: the fee, today, Paid by preset; a failed save shows the
 //     row bar with Retry and "Not saved"), Print receipt with the shared receipt (S2: ⋯ money group
 //     and the summary, on top of it), the one-line History (S6) and formatMoney (S10)
+//   - the shared count cards (S11, v0.518 / v1.115): blue selected edge, 16 px icons, Payments
+//     recorded a plain total (no longer a filter), the Candidates card's two school lines on Both
 // The data (event, its rubric copy and the candidates) is loaded by StarEventPage with the 15-second
 // quiet refresh (v0.507 Q3); this tab reloads through `reload()` after every change.
 //
@@ -42,6 +44,7 @@ import {
 import ChoiceGroup from '../../../../components/ChoiceGroup.jsx';
 import CompareDialog from '../../../../components/CompareDialog.jsx';
 import ConfirmBox from '../../../../components/ConfirmBox.jsx';
+import CountCards from '../../../../components/CountCards.jsx';
 import DuplicateBox from '../../../../components/DuplicateBox.jsx';
 import ErrorBanner from '../../../../components/ErrorBanner.jsx';
 import MarkPaidBox from '../../../../components/MarkPaidBox.jsx';
@@ -112,7 +115,7 @@ export default function CandidatesTab({
 
   const dans = copy?.dans ?? [];
   const [danSel, setDanSelState] = useState(() => danByEvent.get(eventId) ?? dans[0]?.dan ?? 1);
-  const [filter, setFilter] = useState(null); // null | 'paid' | 'notPaid' | 'payments' (G12)
+  const [filter, setFilter] = useState(null); // null | 'paid' | 'notPaid' (G12; Payments recorded is a total, v0.518)
   const [removedOpen, setRemovedOpenState] = useState(() => removedOpenByEvent.get(eventId) ?? false);
   const [dialog, setDialog] = useState(null);
   const [overlay, setOverlay] = useState(null); // a second, small dialog over `dialog` (Dan confirm, signature)
@@ -265,7 +268,7 @@ export default function CandidatesTab({
   const belowPassMark = (row) => ((row.makeupSubjects ?? []).some((s) => s.kind === 'chosen') ? passFor(row.dan) : null);
 
   let shown = active.filter((c) => c.dan === danSel);
-  if (filter === 'paid' || filter === 'payments') shown = shown.filter((c) => !c.isMakeup && c.paid);
+  if (filter === 'paid') shown = shown.filter((c) => !c.isMakeup && c.paid);
   if (filter === 'notPaid') shown = shown.filter((c) => !c.isMakeup && !c.paid && c.feeKind !== 'none');
   const removedRows = removedAll.filter((c) => c.dan === danSel);
   const rowsInView = [...shown, ...(removedOpen ? removedRows : [])];
@@ -1217,35 +1220,6 @@ export default function CandidatesTab({
     },
   };
 
-  const card = (key, label, Icon, value, note = null) => {
-    const selected = key && filter === key;
-    const content = (
-      <>
-        <span className="ev-card-label">
-          <Icon size={14} aria-hidden="true" />
-          {label}
-        </span>
-        <span className="ev-card-value">{value}</span>
-        {/* a note may be several lines (the Candidates card's school counts, stacked as drawn) */}
-        {(Array.isArray(note) ? note : note ? [note] : []).map((line) => (
-          <span key={line} className="ev-card-note">
-            {line}
-          </span>
-        ))}
-      </>
-    );
-    return (
-      <button
-        key={label}
-        type="button"
-        className={`ev-card ev-card--button${selected ? ' is-selected st-card-selected' : ''}`}
-        aria-pressed={key ? (selected ? 'true' : 'false') : undefined}
-        onClick={() => setFilter(!key || selected ? null : key)}
-      >
-        {content}
-      </button>
-    );
-  };
   const schoolNote = oneSchool ? T.schoolName(schoolCode) : cards.bySchool.map((s) => `${T.schoolName(s.code)} ${s.n}`); // one line each (screen 1)
   const hasAny = candidates.some(inSchool);
   const danLabelId = `${panelId}-dan`;
@@ -1509,21 +1483,26 @@ export default function CandidatesTab({
             onReview: (opener) => openCompare(pair.a, opener),
           }))}
         />
+        {/* The shared count cards (v1.013 / v1.115): Candidates shows everyone, Paid and Not paid
+            filter the list, Payments recorded is a plain total (v0.518). Hide private details
+            keeps only the Candidates card (G4). */}
         {hasAny && (
-          <div className={`ev-cards st-cards${hidden ? ' is-one' : ''}`}>
-            {card(null, T.CARD_CANDIDATES, IconUsers, cards.candidates, schoolNote)}
-            {!hidden && card('paid', T.CARD_PAID, IconCheck, cards.paid)}
-            {!hidden && card('notPaid', T.CARD_NOT_PAID, IconCircleX, cards.notPaid) /* ti-circle-x = not paid (S9, 16a) */}
-            {!hidden && card('payments', T.CARD_PAYMENTS, IconSum, formatMoney(cards.payments)) /* ti-sum = a money total (v0.303) */}
-          </div>
-        )}
-        {filter && (
-          <p className="ev-filter-line">
-            {T.FILTER_LINE[filter]} ·{' '}
-            <button type="button" className="link-button st-inline-link" onClick={() => setFilter(null)}>
-              {T.SHOW_ALL_LINK}
-            </button>
-          </p>
+          <CountCards
+            cards={[
+              { key: 'all', Icon: IconUsers, label: T.CARD_CANDIDATES, value: cards.candidates, note: schoolNote, kind: 'all' },
+              ...(hidden
+                ? []
+                : [
+                    { key: 'paid', Icon: IconCheck, label: T.CARD_PAID, value: cards.paid, kind: 'filter' },
+                    { key: 'notPaid', Icon: IconCircleX, label: T.CARD_NOT_PAID, value: cards.notPaid, kind: 'filter' }, // ti-circle-x = not paid (S9, 16a)
+                    { key: 'payments', Icon: IconSum, label: T.CARD_PAYMENTS, value: formatMoney(cards.payments), kind: 'total' }, // ti-sum = a money total (v0.303)
+                  ]),
+            ]}
+            selected={filter}
+            onSelect={setFilter}
+            showingText={filter ? T.FILTER_LINE[filter] : ''}
+            showAllLabel={T.SHOW_ALL_LINK}
+          />
         )}
         {oneSchool && (
           <p className="ev-filter-line st-school-line">
