@@ -57,6 +57,23 @@ revoke from public/anon/authenticated/service_role then grant to authenticated, 
 
 ## Questions for Jeffrey (one at a time, with pictures)
 
+Answers so far (go into one rulebook row when all five are answered):
+- Q1 (2026-10-28): **A** — refuse with `price_changed`, the box stays open with the new amount and an amber note.
+- Q2 (2026-10-28): **B** — "If they change how they pay the dashboard should reflect that": Mark paid by a different way
+  also sets `paying_by` to it (logged). Undo payment must then put `paying_by` back to what it was (build this in 0030:
+  the new functions remember the old value, e.g. in the change log batch, and the Undo path restores it).
+- Q3 (2026-10-28): **B** — the CSV includes the grader's note (column "Grader's note", after Result). Columns:
+  Reference, First name, Last name, Class, Class time, Belt, Testing for, Result, Grader's note, Paying by, Paid,
+  Amount paid, Paid on, Paid by (plus the registration id). Removed / duplicates / moved-to-private left out; never
+  signatures, login ids or staff names; each download logged; button hidden while Hide private details is on.
+  Note: the file now carries free-text remarks about children — admins only, logged; the CSV must neutralize
+  cells starting with = + - @ (spreadsheet formula injection), which matters more now that free text is in it.
+- Q4 (2026-10-28): **A** — a moved private testing's History shows only its own rows, starting at the move; the move
+  row names the event. The earlier rows stay on the event registration (Removed list); nothing shown twice.
+- Q5 (2026-10-28): **A** — names as listed: `testing_mark_paid_by`, `testing_private_mark_paid_by`,
+  `testing_registration_history`, `testing_private_history`, `testing_history_strip`, `testing_results_csv`,
+  table `testing_downloads`. All five answered → rulebook v0.418.
+
 1. Price changed at midnight: refuse and show the box again with the new price (recommended), or keep the shown price?
 2. When the desk picks a different way than the family chose: keep `paying_by` as "what they chose" (recommended) or
    change it too?
