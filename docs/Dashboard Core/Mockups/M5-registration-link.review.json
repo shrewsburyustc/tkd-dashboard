@@ -1,0 +1,16 @@
+{
+  "title": "M5 · The shared Registration link box",
+  "intro": "One box everywhere, as the design review decided (rulebook v1.015, picture 12): <b>Copy link</b> and <b>Download QR code</b> in every section (new for Color Belt and Star), <b>Print flyer</b> where a section has one today; one or two school links. Real QR codes. <b>Amber outline</b> = what the shared box decides. <b>Two details to OK:</b> (a) a failed copy or download shows its amber note <b>inside the box</b>, where the person is looking (5) — today Color Belt, Camps and Black Belt put it in a bar on the page behind; (b) Download QR code saves a <b>1024-pixel PNG</b> (big enough to print; Camps' size today) named like “November Children Testing - Worcester QR code.png” in every section. Every state at all four sizes: <code>M5-registration-link.png</code>.",
+  "shots": "shots/M5",
+  "out": "M5-registration-link.review",
+  "width": 1120,
+  "scale": 0.6,
+  "sections": [
+    { "head": "One school link — Color Belt", "states": ["one"], "pics": ["one@pc", "one@tablet", "one@phone", "one@small"] },
+    { "head": "Two school links — Star", "states": ["two"], "pics": ["two@pc", "two@phone", "two@small"] },
+    { "head": "No flyer — Camps", "states": ["noflyer"], "pics": ["noflyer@pc", "noflyer@phone", "noflyer@small"] },
+    { "head": "Black Belt — two links, no flyer, a line of its own", "states": ["bb"], "pics": ["bb@pc", "bb@phone"] },
+    { "head": "If Download or Copy fails — detail (a): the note inside the box", "states": ["failed"], "pics": ["failed@pc", "failed@phone", "failed@small"] }
+  ],
+  "footer": "<b>What changes for each section when it switches</b> (later, in its own prompt): Color Belt and Star gain Download QR code (v1.015) · Color Belt, Camps and Black Belt show a failed copy inside the box, not in a bar behind it · Black Belt's QR picture grows from about 450 to 1024 pixels, and Camps' file name (“april-vacation-camp-qr.png” today) takes the shared form · the QR code itself is made exactly as today. Forms keeps its own Share box (it also holds kiosk mode, v1.015)."
+}

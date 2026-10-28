@@ -1,0 +1,15 @@
+{
+  "title": "M7 · The shared history line",
+  "intro": "Every person's summary ends with one line, <b>History · N changes ›</b>, as the design review decided (rulebook v1.010, picture 09b): a tap opens the list in place, newest first — what changed, then when · who. Each section reads its own history and writes its own “what changed”; the line writes the date and the name the same way everywhere (“Oct 22 · Jeffrey Berg”, Massachusetts time). <b>Amber outline</b> = what the shared line decides. <b>Two details to OK:</b> (a) the arrow points right (›) while closed and down while open — the icon list keeps › for “go to a page”, so the new row records this one use; (b) the states the design review's drawing didn't show (4–6): “Loading…” while it reads; the amber bar with Retry if it can't read (today Star shows “No changes recorded yet.”, which hides the problem); “History · no changes yet” as plain text when there is nothing. Every state at all four sizes: <code>M7-history-line.png</code>.",
+  "shots": "shots/M7",
+  "out": "M7-history-line.review",
+  "width": 1120,
+  "scale": 0.75,
+  "sections": [
+    { "head": "As the summary opens — detail (a): the arrow points right (›)", "states": ["closed"], "pics": ["closed@pc", "closed@tablet", "closed@phone", "closed@small"] },
+    { "head": "Open — detail (a): the arrow points down", "states": ["open"], "pics": ["open@pc", "open@phone", "open@small"] },
+    { "head": "Hide private details on", "states": ["hidden"], "pics": ["hidden@pc", "hidden@phone", "hidden@small"] },
+    { "head": "Detail (b): while it reads, if it can't read, and nothing yet (PC; every size is on the full sheet)", "grid": ["loading@pc", "failed@pc", "empty@pc"] }
+  ],
+  "footer": "<b>What changes for each section when it switches</b> (later, in its own prompt): Color Belt (event and private testing), Camps and Black Belt gain the line — each first needs a database reader for its own history, with a security review (v1.010) · Star's five-row block becomes the line, and <b>its dates lose the year and the time of day</b> (today “Oct 22, 2026, 4:05 PM”; the approved drawing writes “Oct 22”) · Prospects keeps its own (v1.010); its dates are taken in UTC today, a small bug for Prospects' prompt."
+}

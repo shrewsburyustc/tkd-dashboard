@@ -1,0 +1,25 @@
+<!doctype html>
+<!--
+  parts.html — the shared parts page (Dashboard core step 1, plan §4): every shared part (design
+  review M1–M8) in every state, with sample data. Preview only.
+  Why it exists: the shared parts are built before any section uses them (rulebook v1.030), so they
+  are checked here — by Jeffrey, by the design reviewer, and by the picture tool
+  (docs/Dashboard Core/tools/shoot-parts.mjs). Open it with `npm run dev:preview-mode`:
+  http://localhost:<port>/parts.html (the list) or /parts.html#M2/busy (one state).
+  It is NOT one of the build's pages (vite.config.js lists them; this one isn't there), so
+  `npm run build` never includes it, and src/parts/main.jsx refuses to draw outside preview mode.
+  It reads and saves nothing: no database, no supabase, no section's api file.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <title>Shared parts</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/parts/main.jsx"></script>
+  </body>
+</html>

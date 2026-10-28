@@ -9,6 +9,7 @@
 //
 // It is pure (no React, no browser), so Node can import it (checks.mjs) and so can the public
 // family form.
+import { formatMoney } from '../money.js';
 
 export const PRICE_MIN_DOLLARS = 1;
 export const PRICE_MAX_DOLLARS = 5000;
@@ -88,13 +89,11 @@ export function parseAmount(text) {
 // Cents → money as the screens show it: 29000 → "$290", 29050 → "$290.50", 270000 → "$2,700",
 // -29000 → "−$290" (a real minus sign, U+2212, as the mockups draw it). Whole dollars show no
 // ".00". Not a whole number → ''.
+// Since Dashboard core step 1 this is the dashboard's shared helper, formatMoney in
+// src/lib/money.js (rulebook v1.026, v1.101): the same output for every value. The name stays so
+// Black Belt's screens keep working; they switch to formatMoney in Black Belt's own prompt.
 export function formatCents(cents) {
-  if (!Number.isInteger(cents)) return '';
-  const sign = cents < 0 ? '\u2212' : '';
-  const abs = Math.abs(cents);
-  const dollars = Math.floor(abs / 100).toLocaleString('en-US'); // "2,700"
-  const rest = abs % 100;
-  return `${sign}$${dollars}${rest === 0 ? '' : `.${String(rest).padStart(2, '0')}`}`;
+  return formatMoney(cents);
 }
 
 // Cents → the text an Amount box starts with: 29000 → "290", 29050 → "290.50" (no $, no commas,

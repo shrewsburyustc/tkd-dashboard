@@ -1,0 +1,42 @@
+[
+  {
+    "id": "box1",
+    "caption": "<b>The box above the roster</b>, one pair: the count, then the person with <b>Review</b> (it opens the compare). Each section's noun — here Camps' “signed up twice”; the others say “registered twice”."
+  },
+  {
+    "id": "box",
+    "caption": "<b>Two pairs</b>: the count on the first line only (Star repeats it on every line today), then one line per pair, each with its own Review. On phones the count has its own line and each Review sits under its words."
+  },
+  {
+    "id": "compare",
+    "caption": "<b>Compare</b>: both registrations side by side (one after the other on phones). A difference is amber <b>and says “different”</b> — Black Belt's mark, for everyone (rule §4: never color alone; today three sections say it to screen readers only). <b>Keep this one</b> under each; the gray line says what happens. Close has the first focus."
+  },
+  {
+    "id": "busy",
+    "caption": "<b>While it works</b> (here after Keep this one): the pressed button says <b>“Keeping…”</b> (“Keeping both…” after keep both) and every button grays until it's done — the confirm boxes' rule (D1a). Esc, a click outside and Back wait, so the phone's back arrow is gray too. Today nothing changes on screen."
+  },
+  {
+    "id": "staff",
+    "caption": "<b>After the testing day, for staff</b> (Color Belt and Camps today): no Keep buttons; the gray line says an admin can do it. “Not the same person — keep both” stays."
+  },
+  {
+    "id": "hidden",
+    "caption": "<b>Hide private details on</b>: Paying by and Payment read gray “Hidden on this tablet” on both sides and are never marked different (as Color Belt and Star today; Camps gains it, and Black Belt's “Hidden on this device” becomes the same words)."
+  },
+  {
+    "id": "loading",
+    "caption": "<b>While the two records load</b> (Star reads them when Review is pressed): gray placeholder rows; keep both waits (gray) until both are there."
+  },
+  {
+    "id": "loadfail",
+    "caption": "<b>If they can't load</b>: the shared amber bar with Retry takes the table's place (v1.004) — Star's words. Keep both stays gray; Close works."
+  },
+  {
+    "id": "blocked",
+    "caption": "<b>Changed on another device</b> (Black Belt today): the section's amber note under the buttons — “These registrations changed just now. Close and open them again.” — and every button but Close grays, so nothing is kept from an old copy."
+  },
+  {
+    "id": "failed",
+    "caption": "<b>If saving fails</b>: the amber note under the buttons, which don't move (v0.81) — in the dialog's bottom area with them, so it is never hidden under the pinned buttons (today's four copies hide its top half there). It stays until the dialog closes (v1.004)."
+  }
+]
