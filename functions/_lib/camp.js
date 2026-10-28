@@ -55,6 +55,10 @@ const MAX_DAY_IDS = 60; // day ids per child and per extra (a camp has up to 60 
 const MAX_EXTRAS = 10; // extras per child (a camp has up to 10 extras)
 const MAX_AGE = 150; // only a sanity limit; the camp's own range is checked by the database
 const MAX_TOTAL_CENTS = 3000000; // 3 children × $10,000 (weekly pricing R5; was 3 × $2,000)
+// The biggest sign-up the rules allow (3 children × 60 days × 10 extras on every day, a 70 000-
+// character signature) is about 149 KB, so the shared 100 KB limit of http.js would refuse it.
+// Camps alone read up to 256 KB (security follow-up, 2026-10-27). Still small for a Function.
+export const MAX_CAMP_BODY_BYTES = 256 * 1024;
 
 // A UUID like 8c0e4b1e-3f7a-4d2b-9a65-0f5b2c1d7e90.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -430,8 +434,8 @@ async function postAnswer(context, deps) {
   if (gate.answer) return gate.answer;
   const { clientKey, ip } = gate;
 
-  // 5. At most 100 KB, checked before and while reading.
-  const text = await readBodyLimited(request);
+  // 5. At most 256 KB (MAX_CAMP_BODY_BYTES), checked before and while reading.
+  const text = await readBodyLimited(request, MAX_CAMP_BODY_BYTES);
   if (text === null) return { status: 'bad_request' };
   let body;
   try {

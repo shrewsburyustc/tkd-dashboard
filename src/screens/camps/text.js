@@ -413,6 +413,11 @@ export const extraSummaryPart = (name, cents, per) => `${name} ${dollars(cents)}
 // refusal not_empty, kind 'extra_day'): "Can't remove Wed from Pizza party: 3 campers chose it …"
 export const cantRemoveExtraDay = (day, extraName, n) => `Can’t remove ${weekdayShort(day)} from ${extraName}: ${campersCount(n)} chose it. Change their ${extraName.charAt(0).toLowerCase()}${extraName.slice(1)} days first.`; // (not in the mockups)
 export const cantRemoveExtra = (name, n) => `Can’t remove ${name}: ${campersCount(n)} picked it. Change their extras first.`; // (§7.3)
+// Edit camp refusals added by 0027 (rulebook v0.720; not in the mockups):
+// once ↔ per day switched while campers chose it…
+export const cantChangeExtraPer = (name, n) => `Can’t switch ${name} between once and per day: ${campersCount(n)} picked it. Change their extras first.`;
+// …or the change would make an extra campers paid for "included" (they'd now come every day of that week).
+export const cantIncludeExtra = (name, n) => `Can’t save: ${name} would become included for ${campersCount(n)} who paid for it (they’d come every camp day that week). Change their extras first.`;
 
 // Family form
 export const AGES_ACCEPTED = 'Ages accepted';
