@@ -3,6 +3,8 @@
 // Why: Dashboard core step 1's proof (plan §4): the parts are checked against mockups M1–M8 at
 // 1280×800, 820×1180 touch, 390×844 touch and 320×640 touch. The state ids are the mockups' own
 // (Mockups/shots/M#/states.json), so every built picture has a mockup picture with the same name.
+// A part with no mockup of its own (DP, the date picker opened from a button, v0.817) takes its
+// states from the parts page's list instead.
 // How: a hidden Chrome (chrome.mjs) opens parts.html#M#/<state> fresh for every picture (a blank
 // page first, so nothing is left over), waits for the page's own scripted presses to finish, then
 //   - a dialog state:   the box with a margin of dimmed page around it (24 px above and below, 40 px
@@ -21,10 +23,11 @@
 //
 // Usage: node shoot-parts.mjs <preview address, e.g. http://localhost:5190/> <outdir> [M1 M2 …]
 //   saves <outdir>/<M#>/<state>@<pc|tablet|phone|small>.png (and -full.png when needed) and
-//   <outdir>/<M#>/states.json (the mockup's ids and captions, for compose-parts-review.mjs).
+//   <outdir>/<M#>/states.json (the mockup's ids and captions, for compose-parts-review.mjs; for DP
+//   the parts page's ids and titles).
 // Only ever point it at `npm run dev:preview-mode`: the parts page refuses to draw otherwise.
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { withChrome, SIZES } from './chrome.mjs';
@@ -36,7 +39,7 @@ if (!base || !outArg) {
 }
 const outdir = resolve(outArg);
 const mockShots = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'Mockups', 'shots');
-const PARTS = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8'].filter((id) => only.length === 0 || only.includes(id));
+const PARTS = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'DP'].filter((id) => only.length === 0 || only.includes(id));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const LETTER = { w: 816, h: 1056 }; // 8.5 × 11 in at 96 px per inch
 
@@ -68,7 +71,9 @@ const MEASURE = `(() => {
   const shot = document.querySelector('[data-shot]');
   if (!shot) return { error: 'no [data-shot]' };
   let r = rect(shot);
-  for (const extra of document.querySelectorAll('.mpb, .fa-list:not([hidden])')) {
+  // Anything the part opened over the page: the Mark paid box, an open time list, the date picker's
+  // floating calendar and its Month / Year list.
+  for (const extra of document.querySelectorAll('.mpb, .fa-list:not([hidden]), .dp-pop, .dp-list:not([hidden])')) {
     const e = rect(extra);
     if (e.w < 1 || e.h < 1) continue;
     const x0 = Math.min(r.x, e.x), y0 = Math.min(r.y, e.y);
@@ -77,6 +82,13 @@ const MEASURE = `(() => {
   }
   return { kind, clip: { x: Math.max(0, Math.floor(r.x)), y: Math.max(0, Math.floor(r.y)), w: Math.ceil(r.w), h: Math.ceil(r.h) } };
 })()`;
+
+// A part with no mockup (DP): its states as the parts page lists them (not the extra ones).
+async function pageStates(tab, part) {
+  await tab.open('about:blank', 0);
+  await tab.open(`${base}parts.html`, 1500);
+  return tab.evaluate(`[...document.querySelectorAll('.parts-links li:not(.parts-extra) a[href^="#${part}/"]')].map((a) => ({ id: a.getAttribute('href').split('/')[1], caption: a.textContent.trim().replace(/^\\S+\\s+/, '') }))`);
+}
 
 async function openState(tab, part, state) {
   await tab.open('about:blank', 0);
@@ -100,7 +112,9 @@ const problems = [];
 await withChrome(async (tab) => {
   await tab.cdp('Emulation.setFocusEmulationEnabled', { enabled: true });
   for (const part of PARTS) {
-    const states = JSON.parse(readFileSync(join(mockShots, part, 'states.json'), 'utf8'));
+    const mockStates = join(mockShots, part, 'states.json');
+    const states = existsSync(mockStates) ? JSON.parse(readFileSync(mockStates, 'utf8')) : await pageStates(tab, part);
+    if (states.length === 0) problems.push(`${part}: no states found`);
     mkdirSync(join(outdir, part), { recursive: true });
     writeFileSync(join(outdir, part, 'states.json'), JSON.stringify(states, null, 2));
     for (const size of SIZES) {

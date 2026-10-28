@@ -53,6 +53,25 @@
 //                    the Month list instead of a day (a birthday is never near today)
 //   yearsNewestFirst true: the Year list runs from the newest year down (1926 at the bottom)
 //   formatValue(iso) the words in the field ("Mar 4, 2012"); default shortDate ("Sat, Nov 14, 2026")
+// Opened from the section's own button, with no field (rulebook v0.817: Finance's Daily report
+// calendar button, design review F1 / v1.018; Prospects' follow-up date may use it too):
+//   opener           a ref to the section's own button, from useRef (the same object on every
+//                    render). With it no field is drawn: the calendar opens under that button on PC
+//                    and tablet (above it when there's no room below)
+//   open             true while the calendar is open: the section's own state, so the section
+//                    decides when it opens
+//   onOpenChange(next)  the calendar asks the section to close it (false): after a pick, Esc or a
+//                    click outside, or when it can't open (disabled, nothing to open on)
+// Spread datePickerOpener(open, onOpenChange, { disabled }) on the button: it says the button opens
+// a dialog and whether that is open, opens or closes the calendar on a click, opens it with Alt+↓ as
+// the field does, and closes it on Esc while the button has the focus. Its click and key handlers
+// take the place of the button's own.
+// With an opener, `inline` (phones) draws the calendar wherever the section puts this element (under
+// its row, edge to edge). Whenever the calendar closes, focus goes back to the button, unless the
+// person put it elsewhere: a click or tap outside on another control leaves it there (a field they
+// clicked keeps it). `today` is needed (where the calendar opens); id, placeholder, describedBy,
+// invalid and formatValue belong to the field and do nothing here; `label` still names the calendar
+// ("Choose day").
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { IconChevronDown, IconChevronUp } from '@tabler/icons-react';
@@ -239,6 +258,54 @@ function DpSelect({ label, value, options, onChange, fieldRef, onOpenChange }) {
   );
 }
 
+// The section's own button, in the opener mode: spread this on it (with ref={opener}). It says the
+// button opens a dialog and whether that is open, opens or closes the calendar on a click, opens it
+// with Alt+↓ as the field does, and closes it on Esc while the button has the focus. With
+// { disabled: true } a click or a key does nothing (the section grays its button itself).
+export function datePickerOpener(open, onOpenChange, { disabled = false } = {}) {
+  return {
+    'aria-haspopup': 'dialog',
+    'aria-expanded': open ? 'true' : 'false',
+    onClick: () => {
+      if (!disabled) onOpenChange(!open);
+    },
+    onKeyDown: (event) => {
+      if (disabled) return;
+      if (event.altKey && event.key === 'ArrowDown' && !open) {
+        event.preventDefault();
+        onOpenChange(true);
+      } else if (event.key === 'Escape' && open) {
+        event.preventDefault();
+        event.stopPropagation(); // one step at a time: the calendar first, a dialog around it next
+        onOpenChange(false);
+      }
+    },
+  };
+}
+
+// A click or tap on one of these leaves the focus where it put it (a field the person clicked keeps
+// it); anywhere else, the opener mode gives the focus back to the section's button.
+const CONTROLS =
+  'a[href], button, input, select, textarea, label, summary, iframe, [contenteditable=""], [contenteditable="true"], ' +
+  '[tabindex]:not([tabindex="-1"]), [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], ' +
+  '[role="tab"], [role="combobox"], [role="menuitem"], [role="option"]';
+const isControl = (node) => node instanceof Element && node.matches(CONTROLS) && !node.matches(':disabled');
+
+// Focus back on the section's button once a click or tap outside is over: after its `click`, because
+// a tap moves the focus late (its mouse events come after the touch). A press that never becomes a
+// click (a scroll, a drag) is forgotten at the next press.
+function refocusAfterClick(anchorRef) {
+  function refocus() {
+    document.removeEventListener('pointerdown', forget, true);
+    window.setTimeout(() => anchorRef.current?.focus({ preventScroll: true }), 0);
+  }
+  function forget() {
+    document.removeEventListener('click', refocus, true);
+  }
+  document.addEventListener('click', refocus, { capture: true, once: true });
+  window.setTimeout(() => document.addEventListener('pointerdown', forget, { capture: true, once: true }), 0);
+}
+
 // ===== The date field and its calendar =====
 export default function DatePicker({
   id,
@@ -259,6 +326,9 @@ export default function DatePicker({
   emptyFocus = 'day',
   yearsNewestFirst = false,
   formatValue = shortDate,
+  opener = null,
+  open: openProp = false,
+  onOpenChange,
 }) {
   const baseId = useId();
   const fieldRef = useRef(null);
@@ -268,8 +338,14 @@ export default function DatePicker({
   const gridRef = useRef(null);
   const chosen = isIso(value) ? value : null;
   const start = chosen ?? (isIso(today) ? today : null);
+  // What the calendar sits under and gives focus back to: the field, or the section's own button.
+  const anchorRef = opener ?? fieldRef;
 
-  const [open, setOpen] = useState(false);
+  // Open or closed: the field keeps its own state; with an opener the section's `open` decides, as
+  // long as the calendar can open (not disabled, and a day to open on).
+  const fromButton = Boolean(opener);
+  const [openState, setOpenState] = useState(false);
+  const open = fromButton ? Boolean(openProp) && !disabled && Boolean(start) : openState;
   const [focusDate, setFocusDate] = useState(start); // the day with the Tab stop (keyboard focus)
   const [place, setPlace] = useState(null); // { top, left } of the floating box (PC / tablet)
   const focusDayRef = useRef(false); // move DOM focus to the focus day after the next render
@@ -278,6 +354,7 @@ export default function DatePicker({
   // The month on show. Without a value or `today` there is nothing to open on (the calendar
   // can't open then), so no guess from this computer's clock is ever made.
   const view = parseIso(focusDate ?? start);
+  const shownMonth = view ? toIso(view.year, view.month, 1) : null; // its first day: the box's height goes with it
 
   const allowed = (iso) => Boolean(iso) && (!min || iso >= min) && (!max || iso <= max);
 
@@ -287,25 +364,55 @@ export default function DatePicker({
     setFocusDate(start);
     if (emptyFocus === 'month' && !chosen) focusMonthRef.current = true;
     else focusDayRef.current = true;
-    setOpen(true);
+    setOpenState(true);
   }
   function closeCalendar(refocus) {
-    setOpen(false);
+    if (fromButton) onOpenChange?.(false);
+    else setOpenState(false);
     setPlace(null);
-    if (refocus) fieldRef.current?.focus();
+    if (refocus) anchorRef.current?.focus();
   }
+
+  // With an opener the section opens it (`open` turns true). The opening starts in this render
+  // itself (React's "adjusting state while rendering"), so the calendar's very first drawing shows
+  // the right month, on the chosen day (or today); a closing clears the box's place, so the next
+  // opening waits for its new one.
+  const [shownOpen, setShownOpen] = useState(false);
+  if (fromButton && open !== shownOpen) {
+    setShownOpen(open);
+    if (open) setFocusDate(start);
+    else setPlace(null);
+  }
+  // …then, before the focus effects below run: focus to that day (or the Month list) on opening. On
+  // closing with the focus inside the calendar (gone with it, e.g. the section closed it), focus back
+  // on the section's button.
+  const wasOpenRef = useRef(false);
+  useLayoutEffect(() => {
+    if (fromButton && open && !wasOpenRef.current) {
+      if (emptyFocus === 'month' && !chosen) focusMonthRef.current = true;
+      else focusDayRef.current = true;
+    }
+    if (fromButton && !open && wasOpenRef.current) {
+      const now = document.activeElement;
+      if (!now || now === document.body) anchorRef.current?.focus({ preventScroll: true });
+    }
+    wasOpenRef.current = open;
+  });
   function pick(iso) {
     if (!allowed(iso)) return; // gray: nothing happens
     if (iso !== value) onChange(iso);
     closeCalendar(true);
   }
 
-  // PC / tablet: place the box under the field (above it when there's no room below), keep it
-  // there while the dialog scrolls or the window changes size.
+  // PC / tablet: place the box under the field or the section's button (above it when there's no
+  // room below), keep it there while the dialog scrolls or the window changes size, and place it
+  // again when the box itself changes height (a month of 5 or 6 weeks, the hint's dot line), so a
+  // box above its field or button never grows over it: before the screen is drawn when the month
+  // changes (this effect runs again), and on any other size change (the ResizeObserver).
   useLayoutEffect(() => {
     if (!open || inline) return undefined;
     function placeBox() {
-      const field = fieldRef.current;
+      const field = anchorRef.current;
       const box = popRef.current;
       if (!field || !box) return;
       const rect = field.getBoundingClientRect();
@@ -314,16 +421,20 @@ export default function DatePicker({
       const below = window.innerHeight - rect.bottom - 8;
       const up = below < height && rect.top - 8 > below;
       const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
-      setPlace({ top: up ? rect.top - 4 - height : rect.bottom + 4, left });
+      const top = up ? rect.top - 4 - height : rect.bottom + 4;
+      setPlace((was) => (was && was.top === top && was.left === left ? was : { top, left }));
     }
     placeBox();
+    const resize = typeof ResizeObserver === 'function' ? new ResizeObserver(placeBox) : null;
+    if (popRef.current) resize?.observe(popRef.current);
     window.addEventListener('resize', placeBox);
     window.addEventListener('scroll', placeBox, true);
     return () => {
+      resize?.disconnect();
       window.removeEventListener('resize', placeBox);
       window.removeEventListener('scroll', placeBox, true);
     };
-  }, [open, inline]);
+  }, [open, inline, anchorRef, shownMonth]);
 
   // Phones: scroll the page so the whole calendar is in view (C2, phone).
   useEffect(() => {
@@ -346,13 +457,16 @@ export default function DatePicker({
     gridRef.current?.querySelector(`[data-date="${focusDate}"]`)?.focus();
   });
 
-  // A click or tap outside the field and the calendar closes it without changing anything.
+  // A click or tap outside the field (or the section's button) and the calendar closes it without
+  // changing anything. With an opener, focus then goes back to the button once the click or tap is
+  // over, unless it landed on another control (decided by where it landed, not by timing).
   useEffect(() => {
     if (!open) return undefined;
     function handlePointerDown(event) {
       const path = event.composedPath();
-      if (path.includes(fieldRef.current) || path.includes(popRef.current)) return;
+      if (path.includes(anchorRef.current) || path.includes(popRef.current)) return;
       closeCalendar(false);
+      if (fromButton && !path.some(isControl)) refocusAfterClick(anchorRef);
     }
     document.addEventListener('pointerdown', handlePointerDown, true);
     return () => document.removeEventListener('pointerdown', handlePointerDown, true);
@@ -361,6 +475,12 @@ export default function DatePicker({
   // The field can't be used any more (e.g. the testing date was cleared): close.
   useEffect(() => {
     if (disabled && open) closeCalendar(false);
+  });
+
+  // With an opener: the section opened it, but it can't open (disabled, nothing to open on), so it
+  // stays closed (nothing is drawn or scrolled) and asks the section to close it too.
+  useEffect(() => {
+    if (fromButton && openProp && !open) onOpenChange?.(false);
   });
 
   // ----- Moving around (the days) -----
@@ -526,29 +646,32 @@ export default function DatePicker({
 
   return (
     <>
-      <button
-        ref={fieldRef}
-        id={id}
-        type="button"
-        className={`input dp-field${open ? ' is-open' : ''}${chosen ? '' : ' is-empty'}${disabled ? ' is-disabled' : ''}`}
-        aria-label={fieldName}
-        aria-haspopup="dialog"
-        aria-expanded={open ? 'true' : 'false'}
-        aria-disabled={disabled ? 'true' : undefined}
-        aria-describedby={describedBy}
-        aria-invalid={invalid ? 'true' : undefined}
-        onClick={() => (open ? closeCalendar(false) : openCalendar())}
-        onKeyDown={(event) => {
-          if (event.altKey && event.key === 'ArrowDown') {
-            event.preventDefault();
-            openCalendar();
-          }
-        }}
-      >
-        <span className="dp-value">{chosen ? formatValue(chosen) : placeholder}</span>
-        {/* ti-chevron-down / ti-chevron-up = closed / open */}
-        {open ? <IconChevronUp size={16} aria-hidden="true" /> : <IconChevronDown size={16} aria-hidden="true" />}
-      </button>
+      {/* The field (not with an opener: the section's own button opens the calendar then) */}
+      {!fromButton && (
+        <button
+          ref={fieldRef}
+          id={id}
+          type="button"
+          className={`input dp-field${open ? ' is-open' : ''}${chosen ? '' : ' is-empty'}${disabled ? ' is-disabled' : ''}`}
+          aria-label={fieldName}
+          aria-haspopup="dialog"
+          aria-expanded={open ? 'true' : 'false'}
+          aria-disabled={disabled ? 'true' : undefined}
+          aria-describedby={describedBy}
+          aria-invalid={invalid ? 'true' : undefined}
+          onClick={() => (open ? closeCalendar(false) : openCalendar())}
+          onKeyDown={(event) => {
+            if (event.altKey && event.key === 'ArrowDown') {
+              event.preventDefault();
+              openCalendar();
+            }
+          }}
+        >
+          <span className="dp-value">{chosen ? formatValue(chosen) : placeholder}</span>
+          {/* ti-chevron-down / ti-chevron-up = closed / open */}
+          {open ? <IconChevronUp size={16} aria-hidden="true" /> : <IconChevronDown size={16} aria-hidden="true" />}
+        </button>
+      )}
       {inline ? calendar : calendar && createPortal(calendar, document.body)}
     </>
   );

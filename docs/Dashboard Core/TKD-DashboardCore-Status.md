@@ -1,8 +1,8 @@
 # Dashboard core — status
 
 **Updated:** 2026-10-28 (Dashboard core worktree session, branch `dashboard-core`)
-**Rulebook at this update:** 0.816 on `main`; **1.113** on this branch. Dashboard core rows: **v1.100** (Q1), **v1.101** (Q2), **v1.102** (M1), **v1.103** (M2), **v1.104** (M3), **v1.105** (M4), **v1.106** (M5), **v1.107** (M6), **v1.108** (M7), **v1.109** (M8), **v1.110** (proof pictures in git), all 2026-10-27; **v1.111** (D4), **v1.112** (D6) and **v1.113** (housekeeping: rows v1.100 and v1.104 corrected), all 2026-10-28 — block **1.100–1.199**, next free **1.114** (`git merge main` before any rulebook edit).
-**Branch:** `dashboard-core`, started from `main` ffcdc92; `main` merged in up to ec733b7 (2026-10-27, fast-forward), then up to ddfc848 (2026-10-28, merge commit **524bd6b**: camps' 0027 and rulebook v0.720), then up to 6d140e4 (2026-10-28, merge commit **6626920**: Finance's F8 with migration 0026, rulebook v0.814–v0.816 and CLAUDE.md's 0026 notes), then up to ca02305 (2026-10-28, merge commits **93fca25** and **eff1fe4**: CLAUDE.md notes and the Design Review's six section prompts; no conflicts). Committed: **712e3a6** — the approved docs (2026-10-27); **2a9b8bc** — step 1: the shared parts, the parts page, the tools, the proof sheets and rulebook v1.110–v1.112 (2026-10-28); then the fact fixes (v1.113). Never pushed.
+**Rulebook at this update:** 0.616 on `main`; **1.114** on this branch. Dashboard core rows: **v1.100** (Q1), **v1.101** (Q2), **v1.102** (M1), **v1.103** (M2), **v1.104** (M3), **v1.105** (M4), **v1.106** (M5), **v1.107** (M6), **v1.108** (M7), **v1.109** (M8), **v1.110** (proof pictures in git), all 2026-10-27; **v1.111** (D4), **v1.112** (D6), **v1.113** (housekeeping: rows v1.100 and v1.104 corrected) and **v1.114** (the date picker opened from a button), all 2026-10-28 — block **1.100–1.199**, next free **1.115** (`git merge main` before any rulebook edit).
+**Branch:** `dashboard-core`, started from `main` ffcdc92; `main` merged in up to ec733b7 (2026-10-27, fast-forward), then up to ddfc848 (2026-10-28, merge commit **524bd6b**: camps' 0027 and rulebook v0.720), then up to 6d140e4 (2026-10-28, merge commit **6626920**: Finance's F8 with migration 0026, rulebook v0.814–v0.816 and CLAUDE.md's 0026 notes), then up to ca02305 (2026-10-28, merge commits **93fca25** and **eff1fe4**: CLAUDE.md notes and the Design Review's six section prompts; no conflicts). Committed: **712e3a6** — the approved docs (2026-10-27); **2a9b8bc** — step 1: the shared parts, the parts page, the tools, the proof sheets and rulebook v1.110–v1.112 (2026-10-28); **fc3bea6** — the fact fixes (v1.113). **Merged into `main` as 95a9601** (2026-10-28, the Main session); this branch then moved forward to `main` 4c15146, and later to a3ff7ca (both fast-forwards; the second brought New students' N17 merge, rulebook v0.616). Then the date picker opener option (v1.114, committed). Never pushed.
 
 > Read `CLAUDE.md` first. This file says where the Dashboard core work stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -57,6 +57,7 @@
 7. ~~D6 — M4's 600 weights vs §7~~ — **decided 2026-10-28: A, weight 500, as §7 says** (rulebook v1.112). Nothing changes in Chrome on Windows; on Apple devices the two lines are a shade lighter.
 8. ~~The step 1 commit~~ — **done 2026-10-28** on `dashboard-core` (Jeffrey: "Yes, commit"): 83 files, **2a9b8bc**. Not pushed.
 9. ~~The fact fixes from the Design Review session~~ — **made and committed 2026-10-28** (plan, status, rulebook v1.113; Jeffrey: "Yes, commit"). Not pushed.
+10. ~~Merge into `main`~~ — **done 2026-10-28: 95a9601**, by the Main session. Step 1 is on `main` (not pushed).
 
 ## 3. Log
 
@@ -349,6 +350,43 @@
   - **`git merge main` first**, twice, because main moved during the work: **93fca25** (the Design Review's section prompts, CLAUDE.md) and **eff1fe4** (CLAUDE.md: 0029 live). No conflicts.
   - Recorded as rulebook **v1.113**, a housekeeping change like v0.31 and v0.304: the two rows corrected in place (each marked "corrected v1.113"), a changelog line and the header. No new 10b row, since nothing new is decided. CRLF kept: 0 LF-only lines (1,327 lines); no changelog number used twice.
   - No code, mockup or question page stated these facts, so nothing else changes. No checks to re-run: only docs changed.
+- **2026-10-28 — step 1 is on `main`: 95a9601.** The Main session merged `dashboard-core` with `--no-ff` (no conflicts, not pushed) and added `src/styles/shared.css` and `src/components/text.js` to CLAUDE.md's shared-files list (4c15146).
+  - Main's checks: both builds pass, the live bundle has no fake-database or parts-page code, run-checks 19 of 19, database function tests 172 passed and 0 failed.
+  - Checked here: 95a9601's parents are ca02305 and fc3bea6, and its files are exactly this branch's. This branch then moved forward to `main` (4c15146) with `git merge --ff-only main`: no new commit.
+- **2026-10-28 — Finance → Dashboard core: the date picker opened from a button** (Jeffrey's message; Finance's v0.817 on branch `finance`; design review F1 / v1.018). Plan §11.
+  - **Asked:** a new option in the shared `src/components/DatePicker.jsx`: the calendar opens from the section's own button, with no field.
+    - The same calendar, with `max`, `today` and the hint "Days after today can't be chosen.".
+    - A pick calls `onChange` and closes; Esc or a click outside closes, with focus back on the button; the keyboard as today.
+    - Phones: in the page under the row.
+    - For Finance's Daily report day row; Prospects' follow-up date may use it too (check with the Prospects session). Export's From / To keep the field.
+  - **Built (not committed):** `opener` + `open` / `onOpenChange`, and `datePickerOpener()` for the button.
+    - The builder's choice: after a click outside, focus goes back to the button unless the click put it on another control.
+    - The field mode is unchanged.
+  - **Parts page `DP`:** `src/parts/DP.jsx` (registered in `PartsPage.jsx`, styles in `parts.css`).
+    - `shoot-parts.mjs` takes DP's states from the page and crops the floating calendar.
+    - `check-parts.mjs` gained 23 DP checks (16, then 7 for the review's cases), and its key helper gained ← →, Page Up / Down and Alt; four check-only states (`panel-in-box`, `panel-low`, `row-disabled`, `row-autoclose`).
+  - **Proof so far:**
+    - `check-parts.mjs` 71 of 71 (the 48 and 23 new);
+    - the check files 19 of 19. Two runs showed 1 failure: `src/forms/checks.mjs` reads `dist/` and fails when that holds a preview-mode build (`npm run build:preview-mode` writes there too); after a real build it passes. Confirmed both ways; the runs had come right after a preview-mode build. Noted in `run-checks.mjs`'s header: run the real build last;
+    - both builds pass with no parts-page words;
+    - DP pictured at the four sizes, and the side-by-side `Proof/parts/DP-built-vs-F1.png`;
+    - M1–M8 re-shot after the tool and `parts.css` changes: every picture matches `Proof/parts`;
+    - a real mouse click opens with no keyboard ring on the day, and the keyboard shows it (the ring in the pictures comes from the script's press).
+  - **Design and code review** (a separate reviewer agent, 2026-10-28; it reproduced each problem on the running preview):
+    - must-fix: on phones, after ‹ › the calendar opened with focus on the old day, and across a month the focus was lost (Esc and the arrow keys then did nothing). The calendar's first drawing still showed the old month;
+    - should-fix: opened above its button, a month with a 6th week grew over the button (Star's fields have it too);
+    - should-fix: "focus back on the button" after a click outside failed on touch and inside a box that can take the focus (the shared Dialog's box);
+    - minor: a disabled picker scrolled the phone page; the help text promised more than the code did.
+    - **All fixed:** the opening starts while drawing (React's "adjusting state while rendering"); the box is placed again whenever its size changes (a ResizeObserver; Star's fields get it too); after a click or tap outside, the target decides (another control keeps the focus, anywhere else the button gets it back once the click is over); focus goes back to the button whenever the calendar closes with the focus lost; a disabled picker never draws (and `datePickerOpener` takes `{ disabled }`); Esc on the button closes it; the help text rewritten.
+    - The review also confirmed: the field mode unchanged line by line, Esc one step at a time inside a real Dialog, no React warnings, the placement and look as F1.
+    - For Jeffrey: while open, the calendar button has the app's gray "pressed" look (the ⋯ menus' rule), which F1 doesn't draw.
+    - **Re-check by the same reviewer:** every finding fixed (its probes re-run, also under React's StrictMode); no new problem (no leaking refocus listener, no ResizeObserver loop). Its one leftover is fixed too: a box above its button covered it for 1–2 frames when a 6th week appeared. The box is now placed again before the screen is drawn when the month changes; its frame-by-frame probe measures a 4px gap on every frame, in both modes.
+    - **Final:** `check-parts.mjs` 71 of 71, the check files 19 of 19 (the real build last), both builds pass, no parts-page words. The DP pictures and `DP-built-vs-F1.png` were taken after the review's fixes (the last change only moves a box when the month changes, which no picture shows).
+  - **The Prospects check:** the message to the Prospects session was held there and expired undelivered (the two sessions run in different permission modes). Jeffrey has the text to paste.
+- **2026-10-28 — Jeffrey: the date picker option is OK** ("OK: record and commit").
+  - `git merge main` first: a fast-forward to a3ff7ca (New students' N17 merge with rulebook v0.616, and CLAUDE.md notes; nothing overlaps this work).
+  - Recorded as rulebook **v1.114**: a 10b row above the v0.26 row, a pointer at the start of the v1.018 row, a changelog line, the header. CRLF kept: 0 LF-only lines (1,331 lines); no changelog number used twice.
+  - Committed on `dashboard-core` (the hash is in `git log`): the picker, the parts page's DP sample, the tools, the plan and this file, the rulebook, and the side-by-side `Proof/parts/DP-built-vs-F1.png`. The single DP pictures and the sheet's `.html` stay on this PC (v1.110). Not pushed.
 
 ## 4. Next
 
@@ -359,4 +397,6 @@
    Every design review point is now settled.
 2. ~~**Commit on `dashboard-core`**~~ — **done 2026-10-28**, not pushed. Shared files touched: `src/App.jsx`, and the rulebook (v1.110, v1.111, v1.112; v1.100–v1.109 were in 712e3a6). The merge commits 524bd6b and 6626920 hold only main's work.
 3. ~~**Commit the fact fixes** (v1.113)~~ — **done 2026-10-28**, not pushed.
-4. **A ready-to-paste prompt for the Main session**, to merge `dashboard-core` into `main` when Jeffrey asks. It also adds `src/styles/shared.css` and `src/components/text.js` to CLAUDE.md's shared-files list (code review N6).
+4. ~~**Merge `dashboard-core` into `main`**~~ — **done 2026-10-28: 95a9601** (the Main session, `--no-ff`, no conflicts, not pushed). The request was sent on Jeffrey's "Send it to Main"; it queued without reaching Main until Jeffrey pointed Main to it. CLAUDE.md's shared-files list gained `src/styles/shared.css` and `src/components/text.js` (4c15146, code review N6).
+5. **The date picker opener option** (§11, Finance's v0.817): ~~Jeffrey reviews `Proof/parts/DP-built-vs-F1.png`~~ **OK'd 2026-10-28** ("OK: record and commit"), rulebook **v1.114**, committed on `dashboard-core` (not pushed). Next: the merge into `main` through the Main session; once it is on `main`, a note to the Finance session ("Daily report finance tab") and to the Star session (its date fields get the re-placement fix).
+6. **Step 2 — the dashboard's own screens** (`docs/Design Review/End review/Prompts/2-DashboardCore-step2-main-screens.md`): the top bar, Home, the account dialogs and menu, Staff accounts and Settings (design review M12–M14, M17; M15 with Color Belt; M16 later). Waits on: Jeffrey pasting its starter here. `git merge main` first; rulebook rows continue from **1.114**.
