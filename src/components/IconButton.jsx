@@ -3,7 +3,7 @@
 // square (44×44 tap area on touch screens), and EVERY icon-only button has:
 //   - an aria-label (the name a screen reader reads), and
 //   - on the PC, a dark tooltip bubble with exactly the same words, shown on mouse hover and on
-//     keyboard focus (testing.css, ".tib-tip").
+//     keyboard focus (shared.css, ".tib-tip").
 // Writing it once here means no icon button can forget either.
 //
 // The bubble normally sits ABOVE the button. If there's no room above (the row is at the top of
@@ -25,7 +25,7 @@ function clippingParent(element) {
 }
 
 // Called when the pointer enters or keyboard focus arrives: is there room for the bubble above?
-// Marks the button data-tip="below" when there isn't (testing.css draws it underneath then).
+// Marks the button data-tip="below" when there isn't (shared.css draws it underneath then).
 export function placeTip(event) {
   const button = event.currentTarget;
   const tip = button.querySelector('.tib-tip, .grip-tip');

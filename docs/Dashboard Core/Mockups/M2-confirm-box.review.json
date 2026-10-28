@@ -1,0 +1,18 @@
+{
+  "title": "M2 · The shared “are you sure?” box",
+  "intro": "One box for every section's “are you sure?” asks — 39 of them today, drawn four different ways. The words, colors and button order were decided in the design review (rulebook v1.008, D1a–D1d, D10a); this is the shared box drawing them. <b>Amber outline</b> = what the shared box decides. <b>Three details to OK:</b> (a) while it works, “Keep …” grays too — a new gray look for plain buttons (2); (b) on a narrow phone the buttons stack, decided from their usual words so they never jump while it works (320 pictures); (c) never the pinned button row — today a box on a screen under 700 px tall picks it up by accident. The tablet looks like the PC (shown once). Every state at all four sizes: <code>M2-confirm-box.png</code>.",
+  "shots": "shots/M2",
+  "out": "M2-confirm-box.review",
+  "width": 1100,
+  "scale": 0.8,
+  "sections": [
+    { "head": "Loses something for good — red action, first focus on “Keep …”", "states": ["forgood"], "pics": ["forgood@pc", "forgood@tablet", "forgood@phone", "forgood@small"] },
+    { "head": "While it works — detail (a): “Keep student” grays too", "states": ["busy"], "pics": ["busy@pc", "busy@phone", "busy@small"] },
+    { "head": "If it fails — the note under the buttons", "states": ["failed"], "pics": ["failed@pc", "failed@phone", "failed@small"] },
+    { "head": "Loses something, but not for good — blue action", "states": ["something"], "pics": ["something@pc", "something@phone", "something@small"] },
+    { "head": "Loses nothing — blue action with the first focus", "states": ["nothing"], "pics": ["nothing@pc", "nothing@phone", "nothing@small"] },
+    { "head": "Leave warnings — the same box", "states": ["leave"], "pics": ["leave@pc", "leave@phone", "leave@small"] },
+    { "head": "Black Belt's “Discard changes?” — the same rule", "states": ["discard"], "pics": ["discard@pc", "discard@phone", "discard@small"] }
+  ],
+  "footer": "<b>What changes for each section when it switches</b> (later, in its own prompt): every box shows it's working and waits for Esc and Back (today most show nothing, and nine close while they work) · “Cancel” becomes “Keep …” / “Stay …” · red only when something is lost for good · every box gets a first focus · no box takes the pinned button row."
+}

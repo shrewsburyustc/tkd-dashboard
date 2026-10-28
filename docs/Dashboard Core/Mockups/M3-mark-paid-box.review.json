@@ -1,0 +1,15 @@
+{
+  "title": "M3 · The shared Mark paid box",
+  "intro": "The same small box everywhere, as the design review decided (rulebook v1.001, picture 03, option C): the amount, <b>Paid by</b> preset to the family's choice with “They chose … on the form.”, then <b>Mark paid $X</b>. v1.001 asked for full PC / tablet / phone mockups before it is built — these are they. <b>Amber outline</b> = the shared box. <b>Two details to OK:</b> (a) “Mark paid $X” has the first focus, so Enter marks it paid with the preset choice (1); (b) with no choice on record nothing is preset, and the button stays gray with “Choose how they paid.” until one is picked (4). On phones it is the same small box under the button. Every state at all four sizes: <code>M3-mark-paid-box.png</code>.",
+  "shots": "shots/M3",
+  "out": "M3-mark-paid-box.review",
+  "width": 1100,
+  "scale": 0.75,
+  "sections": [
+    { "head": "As it opens — detail (a): the first focus on “Mark paid $50”", "states": ["open"], "pics": ["open@pc", "open@tablet", "open@phone", "open@small"] },
+    { "head": "They pay another way — one tap", "states": ["other"], "pics": ["other@pc", "other@phone", "other@small"] },
+    { "head": "Camps opens the same box from its “Owes” tag", "states": ["owes"], "pics": ["owes@pc", "owes@phone", "owes@small"] },
+    { "head": "No choice on record — detail (b): the button waits for a choice", "states": ["nochoice"], "pics": ["nochoice@pc", "nochoice@phone", "nochoice@small"] }
+  ],
+  "footer": "<b>What changes for each section when it switches</b> (later, in its own prompt): Color Belt's one-click Mark paid opens this box · Star's Record payment dialog becomes this box (a different amount or date is fixed afterwards with Edit payment, admins — v1.001) · Camps' box gains Paid by · Black Belt keeps its own dialog and uses only the Paid by field. The box only hands the section the chosen way to pay; saving it is each section's job, and Color Belt, Camps and Star each need a small database change for that in their own prompt — none in this step."
+}

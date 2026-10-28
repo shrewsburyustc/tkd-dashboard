@@ -21,7 +21,7 @@
 //   onClose   (reason) => void — reason 'escape' | 'outside' | 'select' | 'tab'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CANCEL } from '../screens/testing/text.js';
+import { CANCEL } from './text.js';
 
 const MENU_WIDTH = 200; // px, as mocked up
 const GAP = 4; // px between the ⋯ button and the dropdown

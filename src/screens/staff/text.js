@@ -33,8 +33,8 @@ export const CONFIRM_SUB = 'Enter the password you sign in with.';
 export const YOUR_PASSWORD = 'Your password';
 export const CONTINUE = 'Continue';
 export const CHECKING = 'Checking…';
-export const CANCEL = 'Cancel';
-export const BACK = 'Back';
+// The shared words (src/components/text.js, rulebook v1.030), re-exported with the same values.
+export { CANCEL, BACK } from '../../components/text.js';
 export const OWN_PASSWORD_ERRORS = {
   empty: 'Enter your password to continue.',
   credentials: "That password doesn't match. Try again.",

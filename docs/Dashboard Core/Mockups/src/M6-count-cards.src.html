@@ -1,0 +1,125 @@
+<!doctype html>
+<!--
+  M6-count-cards.src.html — mockup source for the shared count cards (design review M6).
+  Why: rulebook v1.013 / v1.014 — every roster has the row of count cards, and tapping a card
+  filters the list below it; a money total stays a total. Today the cards are drawn separately in
+  Color Belt (twice), Star and Black Belt. This sheet draws the one shared row in all its states
+  with the app's real stylesheets (the cards copy Color Belt's / Star's look, testing-events.css).
+  Build: node ../tools/build-mockup.mjs src/M6-count-cards.src.html M6-count-cards.html
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M6 · Count cards — mockup</title>
+<!-- css: src/styles/tokens.css src/styles/app.css src/styles/testing.css src/styles/testing-events.css -->
+<style>
+  body { background: #fff; }
+  .sheet-head { max-width: 1232px; margin: 0 auto; padding: 24px 24px 8px; }
+  .sheet-head h1 { font-size: 20px; margin-bottom: 4px; }
+  .sheet-head p { color: var(--color-text-secondary); font-size: 13px; }
+  .state { max-width: 1232px; margin: 0 auto; padding: 16px 12px 8px; }
+  .state > h2 { font-size: 14px; margin-bottom: 12px; }
+  .state > h2 .n { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 6px; border-radius: 10px; background: #1f1f1f; color: #fff; font-size: 12px; }
+  .frame { padding: 16px 12px 8px; } /* room for the amber outlines */
+  @media (max-width: 639.98px) { .state { padding: 16px 4px 8px; } }
+  .is-focus { outline: 2px solid var(--color-blue); outline-offset: 2px; }
+  .marks .mark { outline: 3px solid #f59e0b; outline-offset: 6px; border-radius: 6px; }
+  /* A faint roster under the cards, so the filter line has its context (not part of the design). */
+  .ghost-rows { border: 1px solid var(--color-border); border-radius: var(--radius-control); }
+  .ghost-rows div { height: 40px; border-top: 1px solid var(--color-border); display: flex; align-items: center; padding: 0 12px; font-size: 13px; color: var(--color-text-secondary); }
+  .ghost-rows div:first-child { border-top: none; background: var(--color-surface); font-size: 12px; }
+  /* Black Belt's phone pills today (blackBelt.css, v0.219) — drawn only to compare. */
+  .bb-pills { display: flex; flex-wrap: wrap; gap: var(--space-8); margin-bottom: var(--space-8); }
+  .bb-pill { position: relative; display: inline-flex; align-items: center; gap: var(--space-8); height: var(--control-height-touch); padding: 0 var(--space-12); border: 1px solid var(--color-border-control); border-radius: 999px; background: var(--color-bg); color: var(--color-text); font-size: var(--text-13); }
+  .bb-pill-count { font-weight: 500; }
+  .today-tag { display: inline-block; margin: 0 0 8px; padding: 2px 8px; border-radius: 6px; background: #fdf0d9; color: #7a4a06; font-size: 12px; font-weight: 600; }
+  .after-tag { display: inline-block; margin: 0 0 8px; padding: 2px 8px; border-radius: 6px; background: #e5f2df; color: #2e6b1f; font-size: 12px; font-weight: 600; }
+  /* NEW in the shared row: an optional gray line under it (Black Belt's duplicates note). */
+  .cards-note { margin: 0 0 var(--space-12); color: var(--color-text-secondary); font-size: var(--text-13); }
+  .phone-only-state { display: none; }
+  @media (max-width: 639.98px) { .phone-only-state { display: block; } }
+</style>
+<script>if (location.search.includes('marks')) document.documentElement.classList.add('marks');</script>
+</head>
+<body>
+<div class="sheet-head">
+  <h1>M6 · Count cards</h1>
+  <p>One row of up to four cards above a roster (rulebook v1.013, v1.014, §8 Metric cards). Tapping a count card filters the list below it; a money total stays a total. The section gives the cards (icon, words, number, which ones filter). Drawn with the app's own stylesheets. Fake numbers.</p>
+</div>
+
+<section class="state">
+  <h2><span class="n">1</span>As it opens</h2>
+  <div class="frame" data-state="rest" data-caption="<b>As it opens</b> (Color Belt's event roster): four cards in a row — two by two on phones. Every count card is a button; <b>Payments recorded is a total</b> and can't be tapped (no button, no hover).">
+    <div class="ev-cards mark">
+      <button type="button" class="ev-card ev-card--button"><span class="ev-card-label"><i data-icon="users"></i>Students · all classes</span><span class="ev-card-value">15</span></button>
+      <button type="button" class="ev-card ev-card--button" aria-pressed="false"><span class="ev-card-label"><i data-icon="check"></i>Paid</span><span class="ev-card-value">6</span></button>
+      <button type="button" class="ev-card ev-card--button" aria-pressed="false"><span class="ev-card-label"><i data-icon="circle-x"></i>Not paid</span><span class="ev-card-value">9</span></button>
+      <div class="ev-card"><span class="ev-card-label"><i data-icon="sum"></i>Payments recorded</span><span class="ev-card-value">$410</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">2</span>A card tapped</h2>
+  <div class="frame" data-state="filtered" data-caption="<b>A card tapped</b>: it gets the blue edge, the list shows only those rows, and one gray line says so — <b>“Showing not paid only · Show all”</b>. Tapping the card again or <b>Show all</b> shows everyone. Screen readers hear the card as pressed.">
+    <div class="ev-cards">
+      <button type="button" class="ev-card ev-card--button"><span class="ev-card-label"><i data-icon="users"></i>Students · all classes</span><span class="ev-card-value">15</span></button>
+      <button type="button" class="ev-card ev-card--button" aria-pressed="false"><span class="ev-card-label"><i data-icon="check"></i>Paid</span><span class="ev-card-value">6</span></button>
+      <button type="button" class="ev-card ev-card--button is-selected mark" aria-pressed="true"><span class="ev-card-label"><i data-icon="circle-x"></i>Not paid</span><span class="ev-card-value">9</span></button>
+      <div class="ev-card"><span class="ev-card-label"><i data-icon="sum"></i>Payments recorded</span><span class="ev-card-value">$410</span></div>
+    </div>
+    <p class="ev-filter-line mark">Showing not paid only · <button type="button" class="link-button">Show all</button></p>
+    <div class="ghost-rows"><div>Student</div><div>Ava Chen</div><div>Noah Kim</div></div>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">3</span>Camps' four cards</h2>
+  <div class="frame" data-state="camps" data-caption="<b>Camps' own four</b> (v1.014) in the same look: Campers · Coming (that day) · To collect · Payments recorded. A card can carry <b>one small line under its number</b> (“$1,355”), as Star's Candidates card says “Worcester” and Payments recorded says what it includes today.">
+    <div class="ev-cards mark">
+      <button type="button" class="ev-card ev-card--button"><span class="ev-card-label"><i data-icon="users"></i>Campers</span><span class="ev-card-value">19</span></button>
+      <button type="button" class="ev-card ev-card--button" aria-pressed="false"><span class="ev-card-label"><i data-icon="calendar"></i>Coming Mon, Apr 19</span><span class="ev-card-value">15</span></button>
+      <button type="button" class="ev-card ev-card--button" aria-pressed="false"><span class="ev-card-label"><i data-icon="circle-x"></i>To collect</span><span class="ev-card-value">6</span><span class="ev-card-note">$1,355</span></button>
+      <div class="ev-card"><span class="ev-card-label"><i data-icon="sum"></i>Payments recorded</span><span class="ev-card-value">$3,795</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">4</span>Black Belt's four plan cards</h2>
+  <div class="frame" data-state="blackbelt" data-caption="<b>Black Belt's four plan cards</b> (v1.013, BB15): the same look and tap behaviour — every card filters, there is no money total. A section can add one gray line under the row (Black Belt's duplicates note). Keyboard focus shows the usual blue ring (here on Late).">
+    <div class="ev-cards mark">
+      <button type="button" class="ev-card ev-card--button" aria-pressed="false"><span class="ev-card-label"><i data-icon="check"></i>Paid in full</span><span class="ev-card-value">1</span></button>
+      <button type="button" class="ev-card ev-card--button" aria-pressed="false"><span class="ev-card-label"><i data-icon="clock"></i>Paying on schedule</span><span class="ev-card-value">2</span></button>
+      <button type="button" class="ev-card ev-card--button is-focus" aria-pressed="false"><span class="ev-card-label"><i data-icon="alert-triangle"></i>Late</span><span class="ev-card-value">1</span></button>
+      <button type="button" class="ev-card ev-card--button" aria-pressed="false"><span class="ev-card-label"><i data-icon="circle-x"></i>Not paid</span><span class="ev-card-value">0</span></button>
+    </div>
+    <p class="cards-note">The possible duplicate row isn't counted in the cards until it's resolved.</p>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">5</span>Hide private details on</h2>
+  <div class="frame" data-state="hidden" data-caption="<b>Hide private details on</b> (v0.506): only the first card stays — no money and no paid counts — as Color Belt and Star do today. A section whose cards are all about money shows no row at all (Black Belt hides it today).">
+    <div class="ev-cards is-one mark">
+      <button type="button" class="ev-card ev-card--button"><span class="ev-card-label"><i data-icon="users"></i>Students · all classes</span><span class="ev-card-value">15</span></button>
+    </div>
+  </div>
+</section>
+<section class="state phone-only-state">
+  <h2><span class="n">6</span>Black Belt on phones: today and with the shared row</h2>
+  <div class="frame" data-state="bbphone" data-caption="<b>Black Belt on phones — a change to v0.219.</b> Today phones show no cards, only two pills, “Late 2” and “Not paid 1” (top). With the shared row they get the same 2×2 cards as every other roster (bottom): v1.013 says “the same look and tap behaviour”, and a pill mode would be a second look to keep. Drawn at phone sizes only. If you OK this, the row records that it changes v0.219.">
+    <span class="today-tag">Today (v0.219)</span>
+    <div class="bb-pills"><button type="button" class="bb-pill" aria-pressed="false"><span>Late</span><span class="bb-pill-count">2</span></button><button type="button" class="bb-pill" aria-pressed="false"><span>Not paid</span><span class="bb-pill-count">1</span></button></div>
+    <span class="after-tag">With the shared row</span>
+    <div class="ev-cards mark">
+      <button type="button" class="ev-card ev-card--button" aria-pressed="false"><span class="ev-card-label"><i data-icon="check"></i>Paid in full</span><span class="ev-card-value">1</span></button>
+      <button type="button" class="ev-card ev-card--button" aria-pressed="false"><span class="ev-card-label"><i data-icon="clock"></i>Paying on schedule</span><span class="ev-card-value">2</span></button>
+      <button type="button" class="ev-card ev-card--button" aria-pressed="false"><span class="ev-card-label"><i data-icon="alert-triangle"></i>Late</span><span class="ev-card-value">2</span></button>
+      <button type="button" class="ev-card ev-card--button" aria-pressed="false"><span class="ev-card-label"><i data-icon="circle-x"></i>Not paid</span><span class="ev-card-value">1</span></button>
+    </div>
+  </div>
+</section>
+</body>
+</html>
