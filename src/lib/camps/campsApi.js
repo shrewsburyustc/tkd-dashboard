@@ -229,7 +229,9 @@ export async function addCamp(input) {
 // → { status:'ok', version } · 'not_empty' + { kind:'day', day, firstName, lastName, more } (an
 //   active camper picked a removed day) or + { kind:'extra', extraName, count } (a removed extra) or
 //   + { kind:'extra_day', extraName, day, count } (an extra's "only on" days narrowed while an
-//   active camper chose a removed day) · 'invalid' + field:'extras' · 'stale' …
+//   active camper chose a removed day) or + { kind:'extra_per' | 'extra_included', extraName, count }
+//   (0027: an extra switched once ↔ per day, or made "included", while active campers have it) ·
+//   'invalid' + field:'extras' · 'stale' …
 export async function updateCamp(campId, expectedVersion, input) {
   return callRpc('camp_update_camp', { p_camp_id: campId, p_expected_version: expectedVersion, ...campArgs(input, true) }, hasVersion);
 }

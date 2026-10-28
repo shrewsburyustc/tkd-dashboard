@@ -391,6 +391,13 @@
 //       0023): every other fingerprint file unchanged (0016's and 0024's
 //       by exactly 12.3), every test file passes, 0025's fingerprints
 //       equal step0025's.
+//   step0027. 0027 (Edit camp refuses changes that break campers'
+//       extras, v0.720) on its own database in the production order with
+//       every live migration (0025's order, then 0025): only
+//       camp_update_camp's fingerprint moves, 0027's tests and the camps
+//       tests (0013, 0017, 0022) after it, re-run safety, and the Undo of
+//       SETUP.md 0027e (manual/0027u) - see step0027 below. Run only this
+//       step with   node run.mjs --only-step0027
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -429,6 +436,7 @@ const read = (...parts) => readFileSync(path.join(supabaseDir, ...parts), 'utf8'
 
 const useFixtureSeed = process.argv.includes('--fixture-seed');
 const onlyStep0022 = process.argv.includes('--only-step0022');
+const onlyStep0027 = process.argv.includes('--only-step0027');
 
 // Fixed ids for the two pretend logins (any uuid works).
 const ADMIN_UID = '11111111-1111-4111-8111-111111111111';
@@ -578,6 +586,15 @@ async function main() {
   // working on 0022); a normal run does everything below, step0022 included
   if (onlyStep0022) {
     await step0022();
+    return finish();
+  }
+  // --only-step0027: just the Edit camp guard step (0027)
+  if (onlyStep0027) {
+    const prints27 = await step0027();
+    if (prints27) {
+      console.log('\n0027 fingerprints (kind  item  detail):');
+      for (const line of prints27) console.log('  ' + line);
+    }
     return finish();
   }
   console.log('Starting PGlite...');
@@ -824,6 +841,9 @@ async function main() {
   // step0023: Star result email texts + M5 (its own database)
   console.log('\nMigration 0023 (Star result email texts + registration stays closed on edit):');
   const after23 = after5 ? await step0023() : null;
+  // step0027: Edit camp refuses changes that break campers' extras (its own database, production order)
+  console.log('\nMigration 0027 (Edit camp refuses changes that break campers\' extras):');
+  const after27 = after5 ? await step0027() : null;
 
   // step0020 (named after its migration, not a number other branches use): 0020, LAST
   console.log('\nMigration 0020 (current_session_id reads only request.jwt.claims), last:');
@@ -898,6 +918,10 @@ async function main() {
   if (after22) {
     console.log('\n0022 fingerprints (kind  item  detail):');
     for (const line of after22) console.log('  ' + line);
+  }
+  if (after27) {
+    console.log('\n0027 fingerprints (kind  item  detail):');
+    for (const line of after27) console.log('  ' + line);
   }
   if (after17) {
     console.log('\n0017 fingerprints (Finance after 0017; kind  item  detail):');
@@ -5462,6 +5486,205 @@ async function step0022() {
   }
   await db.close().catch(() => {});
   return prints22;
+}
+
+// =====================================================================
+// step0027: Edit camp refuses changes that break campers' extras (0027,
+// rulebook v0.720)
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order with every
+// live migration (step0025_production_order's order, then 0025):
+//   a. 0027_fingerprints.sql is connector-safe (no "delete" / "drop")
+//   a2. 0027_preapply_check.sql (SETUP 0027a) is connector-safe, answers
+//      0 on the clean database and 1 camper / 1 camp / 1 row with a broken
+//      row planted through 0022's Edit camp (rolled back afterwards)
+//   b. apply 0027: every other fingerprint file is byte-identical, except
+//      0013's and 0022's, where ONLY the camp_update_camp line differs
+//      (its rights, owner, definer and settings stay); 0027's own row
+//      keeps everything but the body md5
+//   c. 0027_tests.sql, then 0013's, 0017's and 0022's tests again
+//   d. 0027 applied a SECOND time: no fingerprint changes
+//   e. the Undo of SETUP.md 0027e (the file it names,
+//      supabase/manual/0027u_undo_camp_update_camp.sql): every fingerprint
+//      file equals the one before 0027; 0013 / 0017 / 0022 tests pass;
+//      then 0027 again -> the tested fingerprints, 0027_tests.sql passes
+// Run only this step with   node run.mjs --only-step0027
+// =====================================================================
+async function step0027() {
+  const L = '[0027] ';
+  record(`${L}0027_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)`,
+    !/delete|drop/i.test(read('tests', '0027_fingerprints.sql')));
+  const db = await buildBase(L);
+  if (!db) return null;
+  for (const [label, file] of [['0003', '0003_testing_classes_ranks.sql'], ['0004', '0004_staff_accounts.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+  await run(db, L + 'apply built-in seed', builtInSeedSql());
+  if (!(await run(db, L + 'apply 0005', read('migrations', '0005_testing_events.sql')))) return null;
+  await seedTestEvent(db);
+  for (const [label, file] of [['0006', '0006_star_testing.sql'], ['0010 (grading results)', '0010_testing_results.sql'],
+    ['0007', '0007_schedule.sql'], ['0008', '0008_calendar.sql'], ['0009', '0009_forms.sql'], ['0012', '0012_prospects.sql'],
+    ['0015', '0015_family_history.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+  if (!(await run(db, L + 'apply 0011 as pasted on production 2026-10-19 (fixture)',
+    readFileSync(path.join(here, 'fixtures', '0011_as_applied_2026-10-19.sql'), 'utf8')))) return null;
+  for (const [label, file] of [['today\'s 0011 over it', '0011_finance.sql'], ['0019', '0019_school_phone.sql'],
+    ['0014 (private testing)', '0014_testing_private.sql'], ['0020 (current_session_id fix)', '0020_session_id_claims.sql'],
+    ['0013 (camps)', '0013_camps.sql'], ['0017 (camps in Finance)', '0017_finance_camps.sql'],
+    ['0018 (private testing money in Finance)', '0018_finance_private.sql'], ['0016 (Black Belt testing)', '0016_black_belt.sql'],
+    ['0021', '0021_prospects_not_interested_sooner.sql'], ['0022 (camps weekly pricing)', '0022_camps_weekly_pricing.sql'],
+    ['0024 (Black Belt rubric editor)', '0024_black_belt_rubric.sql'], ['0023 (Star result texts)', '0023_star_result_texts.sql'],
+    ['0025 (Black Belt grading and results)', '0025_black_belt_grading.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // b. apply 0027: only camp_update_camp may move
+  const numbers = ['0003', '0004', '0005', '0006', '0010', '0007', '0008', '0009', '0012', '0015', '0011', '0019', '0014', '0020',
+    '0013', '0017', '0018', '0016', '0021', '0022', '0024', '0023', '0025', '0027']
+    .filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const before = await printsOf(db, numbers);
+
+  // a2. the pre-apply check (SETUP 0027a): connector-safe; 0 on this clean
+  // database; above 0 with a broken row planted the way the bug made them
+  // (0022's Edit camp switches "not for all-days campers" on for an extra
+  // an every-day camper has), inside a transaction that is rolled back
+  const preSql = read('tests', '0027_preapply_check.sql');
+  record(`${L}0027_preapply_check.sql contains neither "delete" nor "drop" (connector-safe)`, !/delete|drop/i.test(preSql));
+  const pre = async () => (await db.query(preSql)).rows[0];
+  const clean = await pre();
+  record(`${L}[pre-apply check] 0 on a clean database`,
+    clean.active_campers === 0 && clean.camps === 0 && clean.extra_rows === 0, JSON.stringify(clean));
+  const grid = JSON.stringify([1, 2, 3].map((k) => ({ day_count: k, member_early_cents: 7500 * k, member_regular_cents: 8000 * k,
+    nonmember_early_cents: 8500 * k, nonmember_regular_cents: 9000 * k })));
+  let planted = null;
+  try {
+    await db.exec('begin;');
+    await db.exec(`
+      do $$
+      declare
+        v_s     uuid := gen_random_uuid();
+        v_mon   date := date_trunc('week', (public.testing_today() + 14)::timestamp)::date + 7;
+        v_days  date[];
+        v_claim text;
+        v_r     jsonb;
+        v_camp  uuid;
+        v_total integer := 0;
+        v_try   integer;
+        v_child jsonb;
+      begin
+        insert into auth.sessions (id, user_id) values (v_s, '${ADMIN_UID}');
+        insert into public.session_unlock (session_id, staff_id, unlocked_until) values (v_s, '${ADMIN_UID}', now() + interval '30 minutes');
+        v_claim := jsonb_build_object('sub', '${ADMIN_UID}', 'role', 'authenticated', 'session_id', v_s,
+                     'amr', jsonb_build_array(jsonb_build_object('method', 'password', 'timestamp', extract(epoch from now())::bigint - 60)))::text;
+        v_days := array[v_mon, v_mon + 1, v_mon + 2];
+        perform set_config('request.jwt.claims', v_claim, true);
+        v_r := public.camp_add_camp('worcester', false, 'PGlite 0027 broken row', v_days, '09:00', '15:00', public.testing_today() - 3,
+                 public.testing_today() + 5, public.testing_today() + 5, 5, 12, '${grid}'::jsonb,
+                 '[{"name": "Lunch", "price_cents": 700, "per": "day", "not_for_all_days": false}]'::jsonb, null, 'I agree.');
+        if v_r ->> 'status' is distinct from 'ok' then raise exception 'plant: camp_add_camp %', v_r; end if;
+        v_camp := (v_r ->> 'id')::uuid;
+        -- a child on all 3 days with lunch on day 1 (the family form, as its owner)
+        perform set_config('request.jwt.claims', '', true);
+        v_child := jsonb_build_array(jsonb_build_object('first_name', 'Broken', 'last_name', 'Row', 'age', 8, 'member', true,
+                     'day_ids', (select jsonb_agg(d.id order by d.day) from public.camp_days d where d.camp_id = v_camp),
+                     'extras', jsonb_build_array(jsonb_build_object('extra_id', (select e.id from public.camp_extras e where e.camp_id = v_camp),
+                       'day_ids', (select jsonb_agg(d.id) from public.camp_days d where d.camp_id = v_camp and d.day = v_mon)))));
+        for v_try in 1 .. 2 loop
+          select public.camp_public_signup(c.public_code, 'pglite-0027-plant', gen_random_uuid(), v_child, 'Test Parent', '5085550100',
+                   'Parent', 'Test Contact', '5085550101', 'Friend', 'cash', true, '${TEST_SIGNATURE}', 'camp-2026-10-18',
+                   md5(c.waiver_text), v_total) into v_r
+            from public.camps c where c.id = v_camp;
+          exit when v_r ->> 'status' = 'ok';
+          v_total := (v_r ->> 'new_total_cents')::integer;
+        end loop;
+        if v_r ->> 'status' is distinct from 'ok' then raise exception 'plant: sign-up %', v_r; end if;
+        -- 0022's Edit camp: lunch becomes "not for all-days campers" (the bug: allowed)
+        perform set_config('request.jwt.claims', v_claim, true);
+        select public.camp_update_camp(c.id, c.version, c.location_code, c.both_schools, c.name, v_days, c.start_time, c.end_time,
+                 c.signup_opens_on, c.signup_closes_on, c.early_until, c.min_age, c.max_age, '${grid}'::jsonb,
+                 (select jsonb_agg(jsonb_build_object('id', e.id, 'name', e.name, 'price_cents', e.price_cents, 'per', e.per,
+                                                      'not_for_all_days', true))
+                    from public.camp_extras e where e.camp_id = v_camp),
+                 c.description, c.waiver_text) into v_r
+          from public.camps c where c.id = v_camp;
+        if v_r ->> 'status' is distinct from 'ok' then raise exception 'plant: 0022 Edit camp %', v_r; end if;
+        perform set_config('request.jwt.claims', '', true);
+      end
+      $$;`);
+    planted = await pre();
+  } catch (error) {
+    planted = { error: error.message };
+  } finally {
+    await db.exec('rollback;').catch(() => {});
+  }
+  record(`${L}[pre-apply check] above 0 with a planted broken row (1 camper, 1 camp, 1 row)`,
+    planted?.active_campers === 1 && planted?.camps === 1 && planted?.extra_rows === 1, JSON.stringify(planted));
+  const cleanAgain = await pre();
+  record(`${L}[pre-apply check] the planted row was rolled back (0 again)`, cleanAgain.active_campers === 0, JSON.stringify(cleanAgain));
+
+  const migration = read('migrations', '0027_camps_edit_guard.sql');
+  if (!(await run(db, `${L}apply 0027_camps_edit_guard.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  const isUpdateCamp = (line) => /^function {2}camp_update_camp\(/.test(line);
+  const wrong = [];
+  for (const n of numbers) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    if (['0013', '0022', '0027'].includes(n)) {
+      if (gone.length !== 1 || added.length !== 1 || !isUpdateCamp(gone[0]) || !isUpdateCamp(added[0])) {
+        wrong.push(`${n}: ${JSON.stringify({ gone, added })}`);
+      } else {
+        // same item, same definer / settings / owner / rights - only the body md5 (first 32 characters) differs
+        const [g, a] = [gone[0].split('  '), added[0].split('  ')];
+        if (g[1] !== a[1] || g[2].slice(32) !== a[2].slice(32)) wrong.push(`${n}: more than the body changed`);
+      }
+    } else if (gone.length || added.length) {
+      wrong.push(`${n} moved`);
+    }
+  }
+  record(`${L}fingerprints: only camp_update_camp's body moved (0013 / 0022 / 0027 files), every other file byte-identical`,
+    wrong.length === 0, wrong.join('; ') || `${numbers.length} files`);
+  const prints27 = after['0027_fingerprints.sql'];
+  record(`${L}0027 fingerprints: one function, security definer, search_path="", only postgres and authenticated may run it`,
+    prints27.length === 1 && prints27[0].includes('definer=true') && prints27[0].includes('settings=search_path=""')
+      && prints27[0].endsWith('rights=authenticated:EXECUTE,postgres:EXECUTE'), prints27.join(' | '));
+
+  // c. the tests
+  const tests = async (label, files) => {
+    for (const [file, ok] of files) await runTestFile(db, `${L}${file} (${label})`, file, ok);
+  };
+  const campTests = [['0013_tests.sql', 'ALL 0013 TESTS PASSED'], [CAMPS_TESTS, 'ALL 0017 TESTS PASSED'],
+    ['0022_tests.sql', 'ALL 0022 TESTS PASSED']];
+  await tests('after 0027', [['0027_tests.sql', 'ALL 0027 TESTS PASSED'], ...campTests]);
+
+  // d. re-run safety
+  await run(db, `${L}apply 0027 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0027 re-run: no fingerprint change`, movedAgain.length === 0, movedAgain.join(', '));
+
+  // e. Undo 0027, as SETUP.md 0027e has it: paste the undo file it names
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### 0027e\. Undo 0027/m);
+  const undoFile = 'manual/0027u_undo_camp_update_camp.sql';
+  if (at < 0 || !setup.slice(at, at + 2000).includes(`supabase/${undoFile}`)) {
+    record(`${L}[undo 0027] SETUP.md has "### 0027e. Undo 0027" naming supabase/${undoFile}`, false, 'heading or file name missing');
+  } else if (await run(db, `${L}[undo 0027] paste ${undoFile}`, read('manual', '0027u_undo_camp_update_camp.sql'))) {
+    const undone = await printsOf(db, numbers);
+    const back = numbers.filter((n) => JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(undone[`${n}_fingerprints.sql`]));
+    record(`${L}[undo 0027] every fingerprint file equals the one before 0027 (0022's camp_update_camp is back)`,
+      back.length === 0, back.length ? `differ: ${back.join(', ')}` : `${numbers.length} files`);
+    await tests('after the undo', campTests);
+    if (await run(db, `${L}[undo 0027] apply 0027 again (redo)`, migration)) {
+      const redo = await fingerprints(db, '0027_fingerprints.sql');
+      record(`${L}[undo 0027] after the redo the 0027 fingerprints equal the tested ones`, JSON.stringify(redo) === JSON.stringify(prints27));
+      await tests('after the redo', [['0027_tests.sql', 'ALL 0027 TESTS PASSED']]);
+    }
+  }
+  await db.close().catch(() => {});
+  return prints27;
 }
 
 function finish() {
