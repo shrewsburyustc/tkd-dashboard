@@ -344,12 +344,14 @@ check('school time: America/New_York, DST, ISO weekday', () => {
   assert.equal(timeToMinutes('24:00'), null);
 });
 
-check('reminder times: 11:00–23:00 in 15-minute steps', () => {
+check('reminder times: 11:00–23:00 in 5-minute steps (0029)', () => {
   assert.equal(REMINDER_TIME_CHOICES[0], '11:00');
   assert.equal(REMINDER_TIME_CHOICES.at(-1), '23:00');
-  assert.equal(REMINDER_TIME_CHOICES.length, 49);
+  assert.equal(REMINDER_TIME_CHOICES.length, 145);
   assert.ok(isReminderTime('19:45'));
-  assert.ok(!isReminderTime('19:40'));
+  assert.ok(isReminderTime('19:40'));
+  assert.ok(!isReminderTime('19:31'));
+  assert.ok(!isReminderTime('19:30:30'));
   assert.ok(!isReminderTime('10:45'));
   assert.ok(!isReminderTime('23:15'));
 });
