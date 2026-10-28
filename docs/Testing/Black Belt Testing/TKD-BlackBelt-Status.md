@@ -211,3 +211,5 @@ All the items below were applied to the plan.
 1. **Finance's F8 (migration 0026) live and its screens deployed** — **met 2026-10-28** (0026 applied, finance merged into main 56308ff, deployed).
 2. Until CP6: no Black Belt cycle's registration is opened (the public form switch is on, v0.961). D7's other condition (no Black Belt payment recorded in the dashboard until F8) ended with item 1.
 3. Then CONTRACT-0016 §13 CP6: the test registration through the real page on a test cycle, then the real cycle.
+
+**2026-10-28: mockup A (roster row ⋯) OK'd, option 2 (v0.963).** Drawn on the preview (`tools/mock-a-rowmenu.js`, pictures `images/dr-a/`), design-reviewed (2 must-fixes fixed: Restore before Delete on withdrawn rows; the active-row delete reason ends "Withdraw them instead."). Merged main (Dashboard core step 1, 95a9601) as 39ac475. **Next:** mockup B (detail ⋯), then C (Undo payment box), D (Delete permanently box); BB3 / BB9 / BB6 are built together after D.

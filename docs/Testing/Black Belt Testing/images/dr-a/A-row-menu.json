@@ -1,0 +1,56 @@
+{
+  "title": "Black Belt · Mockup A — the roster row ⋯ (BB3 · BB9 · BB6)",
+  "subtitle": "Drawn on the real preview screens (fake data, Spring 2027, admin). <b>What changes:</b> the row ⋯ gets <b>Edit payment</b> and <b>Undo payment</b> for the <b>latest</b> payment (BB3); one order in three groups — the person · the money · taking someone off (BB9, Color Belt's order, v1.011); <b>Remove candidate</b> becomes two items, <b>Withdraw</b> and <b>Delete permanently</b> (BB6, v1.007). <b>One question:</b> on tablets and phones, where does <b>Record payment</b> go? (On a PC it is a button on the row, so it isn't in the ⋯.)",
+  "width": 1840,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        { "src": "pc-today.png", "crop": [760, 370, 520, 380], "caption": "<b>PC</b>, Mia Chen (paid in full, one $870 card payment). No Edit / Undo payment; one <b>Remove candidate</b> opens a box with Withdraw or Delete.", "marks": [[1048, 525, 198, 32]] },
+        { "src": "pc-grace-today.png", "crop": [760, 160, 520, 520], "caption": "<b>PC</b>, Grace Owens ($50 overpaid).", "marks": [[1048, 623, 198, 32]] },
+        { "src": "pc-rina-today.png", "crop": [760, 440, 520, 240], "caption": "<b>PC</b>, Rina Patel (no payment, no grades).", "marks": [[1048, 591, 198, 32]] },
+        { "src": "pc-withdrawn-today.png", "crop": [760, 440, 520, 260], "caption": "<b>PC</b>, a withdrawn row (Owen Price): Restore first.", "marks": [[1048, 491, 198, 32]] },
+        { "src": "tab-today.png", "shotWidth": 820, "crop": [330, 290, 490, 730], "scale": 0.75, "caption": "<b>Tablet</b> 820 touch, Sam Lee ($660 still due). Record payment is the first item.", "marks": [[588, 768, 198, 44], [588, 953, 198, 44]] },
+        { "row": [
+          { "src": "phone-today.png", "shotWidth": 390, "crop": [0, 280, 390, 564], "scale": 0.7, "caption": "<b>Phone</b> 390", "marks": [[0, 546, 390, 44], [0, 731, 390, 44]] },
+          { "src": "p320-today.png", "shotWidth": 320, "crop": [0, 60, 320, 508], "scale": 0.7, "caption": "<b>320 wide</b>", "marks": [[0, 270, 320, 44], [0, 455, 320, 44]] }
+        ] }
+      ],
+      "note": "Amber: what changes."
+    },
+    {
+      "label": "Option 1 · Record payment stays first",
+      "tone": "after",
+      "items": [
+        { "src": "pc-after.png", "crop": [760, 370, 520, 380], "caption": "<b>PC</b> (the four PC menus are the same in both options). Edit payment · Undo payment act on the latest payment. Delete permanently is grayed with its reason while there are payment records (v0.904) or grades (v0.950).", "marks": [[1048, 493, 198, 64], [1048, 598, 198, 129]] },
+        { "src": "pc-grace-after.png", "crop": [760, 160, 520, 520], "caption": "<b>PC</b>, overpaid: Record refund in the money group, after Undo payment. (The menu opens above the row when there's no room below, as today.) Found: “Record refund · $50 overpaid” is 2 px wider than the 200 px menu, today too; the build makes it fit.", "marks": [[1048, 174, 198, 96], [1048, 311, 198, 129]] },
+        { "src": "pc-rina-after.png", "crop": [760, 440, 520, 240], "caption": "<b>PC</b>, no payment and no grades: nothing to edit or undo, so no Edit / Undo payment; <b>Delete permanently is red</b> and asks first (mockup D).", "marks": [[1048, 600, 198, 64]] },
+        { "src": "pc-withdrawn-after.png", "crop": [760, 440, 520, 260], "caption": "<b>PC</b>, withdrawn: Record refund · Print receipt — <b>Restore</b> · Delete permanently. Restore takes Withdraw's place in the last group (Color Belt's roster does the same).", "marks": [[1048, 564, 198, 112]] },
+        { "src": "tab-rec1.png", "shotWidth": 820, "crop": [330, 290, 490, 730], "scale": 0.75, "caption": "<b>Tablet</b>: Record payment first in the whole menu, as today, with a line under it; the money group below.", "marks": [[588, 339, 198, 44], [588, 489, 198, 88], [588, 630, 198, 141]] },
+        { "row": [
+          { "src": "phone-rec1.png", "shotWidth": 390, "crop": [0, 280, 390, 564], "scale": 0.7, "caption": "<b>Phone</b> 390", "marks": [[0, 377, 390, 44], [0, 527, 390, 88], [0, 668, 390, 107]] },
+          { "src": "p320-rec1.png", "shotWidth": 320, "crop": [0, 60, 320, 508], "scale": 0.7, "caption": "<b>320</b>: the sheet scrolls for Delete and Cancel", "marks": [[0, 165, 320, 44], [0, 315, 320, 88], [0, 456, 320, 107]] }
+        ] }
+      ],
+      "note": "Green: what's new. <b>Pro:</b> the most-used item stays where staff find it today, the top. <b>Con:</b> the money is split — Record payment alone at the top, Edit / Undo / receipt in the middle — so touch screens get a fourth group and an exception to the one order (v1.011)."
+    },
+    {
+      "label": "Option 2 · first in the money group (recommended)",
+      "tone": "after",
+      "items": [
+        { "src": "pc-after.png", "crop": [760, 370, 520, 380], "caption": "<b>PC</b> (same in both options).", "marks": [[1048, 493, 198, 64], [1048, 598, 198, 129]] },
+        { "src": "pc-grace-after.png", "crop": [760, 160, 520, 520], "caption": "<b>PC</b>, overpaid (same in both options).", "marks": [[1048, 174, 198, 96], [1048, 311, 198, 129]] },
+        { "src": "pc-rina-after.png", "crop": [760, 440, 520, 240], "caption": "<b>PC</b>, no payment, no grades (same in both options).", "marks": [[1048, 600, 198, 64]] },
+        { "src": "pc-withdrawn-after.png", "crop": [760, 440, 520, 260], "caption": "<b>PC</b>, withdrawn (same in both options).", "marks": [[1048, 564, 198, 112]] },
+        { "src": "tab-rec2.png", "shotWidth": 820, "crop": [330, 290, 490, 730], "scale": 0.75, "caption": "<b>Tablet</b>: Record payment opens the money group: Record · Edit · Undo · Print receipt.", "marks": [[588, 404, 198, 132], [588, 589, 198, 141]] },
+        { "row": [
+          { "src": "phone-rec2.png", "shotWidth": 390, "crop": [0, 280, 390, 564], "scale": 0.7, "caption": "<b>Phone</b> 390", "marks": [[0, 483, 390, 132], [0, 668, 390, 107]] },
+          { "src": "p320-rec2.png", "shotWidth": 320, "crop": [0, 60, 320, 508], "scale": 0.7, "caption": "<b>320</b>: the sheet scrolls for Delete and Cancel", "marks": [[0, 262, 320, 132], [0, 447, 320, 107]] }
+        ] }
+      ],
+      "note": "Green: what's new. <b>Pro:</b> every money item in one place and the same three groups on every screen size (v1.011); Edit details first, as on the PC. <b>Con:</b> on tablets and phones Record payment moves down two places (1st → 3rd), so staff used to tapping the top item have to look once."
+    }
+  ],
+  "footer": "<b>Who sees what (unchanged rules):</b> Edit payment, Undo payment, refunds, Withdraw and Delete permanently are admins only. Staff see Edit details · Change plan or Kukkiwon (grayed once a payment is recorded, \"… Ask an admin.\") — Print receipt, plus Record payment in the money group on tablets and phones (on a PC it's the row's button). With Hide private details on, the money items are left out. <b>Edit / Undo payment on the row</b> always act on the candidate's <b>latest</b> payment; older payments stay on each payment line's ⋯ in the detail. They gray with the detail's reasons: \"Undo the returned-check mark first.\" or \"A refund is recorded. Undo the refund first.\" Undo payment asks first and names the payment (mockup C). Delete permanently's other gray reason: \"… has grades, so they can't be deleted. Withdraw them instead.\" The detail's own ⋯ is mockup B."
+}
