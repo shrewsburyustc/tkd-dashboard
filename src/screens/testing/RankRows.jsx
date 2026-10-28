@@ -31,9 +31,10 @@
 // it will land, under a 2px blue line; the original row stays where it was, faded (approved
 // mockup screen 6).
 import { Fragment } from 'react';
-import { IconAlertTriangle, IconDots, IconEdit, IconGripVertical } from '@tabler/icons-react';
+import { IconAlertTriangle, IconDots, IconEdit } from '@tabler/icons-react';
 import Belt from '../../components/Belt.jsx';
-import IconButton, { placeTip } from '../../components/IconButton.jsx';
+import Grip from '../../components/Grip.jsx';
+import IconButton from '../../components/IconButton.jsx';
 import { formatDollars } from '../../lib/money.js';
 import * as T from './text.js';
 
@@ -75,25 +76,9 @@ function AwardReminder({ isAdmin }) {
   );
 }
 
-// The grip handle: focusable for its tooltip, but dragging is mouse-only (keyboard: ⋯ menu).
-export function Grip({ label, gripProps, tabIndex }) {
-  return (
-    <button
-      type="button"
-      className="grip"
-      aria-label={label}
-      tabIndex={tabIndex}
-      onPointerEnter={placeTip}
-      onFocus={placeTip}
-      {...gripProps}
-    >
-      <IconGripVertical size={16} aria-hidden="true" />
-      <span className="grip-tip" aria-hidden="true">
-        {T.GRIP_TOOLTIP}
-      </span>
-    </button>
-  );
-}
+// The grip handle: the shared one (src/components/Grip.jsx) since Dashboard core step 1. This
+// export keeps the imports of Calendar, Forms and Prospects (and ClassBlock) working.
+export { Grip };
 
 // Phone line 1 is two units: "[belt] Rank" and "→ [belt] Next rank". Each unit is an
 // inline-block, so the line breaks only BEFORE the arrow — unless one unit alone is wider than

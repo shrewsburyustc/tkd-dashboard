@@ -1,9 +1,10 @@
 /*
   prospects.css — the look of the Prospects section (rulebook v0.236, approved mockup rev 3), plus
-  the navigation badge and the phone bar's More button.
+  the phone bar's More button. (The navigation badge — .rail-icon, .bottombar-icon, .nav-badge —
+  is in shared.css since rulebook v1.030.)
   Why it exists: the stage bar and chips, the list and the phone cards, the side panel, the note
   composer, the timeline and the small dialogs. Buttons, fields, notes, banners, dialogs and menus
-  reuse app.css / testing.css / calendar.css / forms.css (the free-class time cards). Status colors
+  reuse app.css / shared.css / calendar.css / forms.css (the free-class time cards). Status colors
   are the 8 class colors (never red); warnings are amber with an icon and words.
   Screen sizes: phone < 640px, PC ≥ 1024px (panel beside the list), touch = 44px taps.
 */
@@ -1314,29 +1315,6 @@ body.is-card-dragging * {
 /* Calendar day panel: Check in */
 .cpanel-checkin {
   margin-left: auto;
-}
-
-/* ----- Navigation badge, phone More ----- */
-.rail-icon,
-.bottombar-icon {
-  position: relative;
-  display: inline-flex;
-}
-
-.nav-badge {
-  position: absolute;
-  top: -6px;
-  right: -10px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 8px;
-  background: var(--color-text);
-  color: var(--color-bg);
-  font-size: var(--text-12);
-  font-weight: 500;
-  line-height: 16px;
-  text-align: center;
 }
 
 /* ----- Touch: 44px taps ----- */

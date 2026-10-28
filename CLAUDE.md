@@ -62,7 +62,7 @@ Color Belt testing and Star testing are built at the same time in separate Claud
 - **Preview in a worktree:** run `npm run dev:preview-mode` from the worktree folder and give Jeffrey the address. Vite takes the next free port (5173, 5174, …), and each port keeps its own fake data.
 - **Commit on your own branch** when a step is reviewed and done. Never edit files in the main folder or another worktree (Claude Code blocks it anyway).
 - **Merging:** when a worktree finishes a reviewed step, Jeffrey asks the **Main** session to `git merge <branch>` into `main` (explain the merge and any conflict before resolving it). The main folder must be clean first (`git status` shows nothing). Then each other worktree session commits its own work and runs `git merge main` on its own branch to stay current. Merge small and often.
-- **Shared files** — the rulebook, `README.md`, `docs/README.md`, `src/App.jsx`, `src/components/navItems.js`, `src/lib/mockClient.js`, `src/styles/tokens.css`, `src/screens/Testing.jsx`: change only what your project needs and list every shared file you touched in your summary. These are where merge conflicts happen.
+- **Shared files** — the rulebook, `README.md`, `docs/README.md`, `src/App.jsx`, `src/components/navItems.js`, `src/lib/mockClient.js`, `src/styles/tokens.css`, `src/styles/shared.css`, `src/components/text.js`, `src/screens/Testing.jsx`: change only what your project needs and list every shared file you touched in your summary. These are where merge conflicts happen.
 - **Rulebook versions: one fixed block per branch** (decided 2026-10-19, rulebook v0.300). Use **only numbers from your own block**, in order, so two branches never pick the same number:
 
   | Branch / session | Block |

@@ -1,0 +1,205 @@
+<!doctype html>
+<!--
+  M1-compare-duplicate.src.html — mockup source for the shared Compare dialog and possible-duplicate
+  box (design review M1). Why: rulebook v1.030 — one design, four copies today (Color Belt, Star,
+  Camps, Black Belt), built once. This copies their shared look (testing-events.css: .ev-dupbox,
+  .ev-cmp, .ev-sum) with two details to OK: differences marked with words as well as amber (Black
+  Belt's "⚠ different"), and a visible "Keeping…" while it works (the confirm boxes' rule, D1a).
+  Build: node ../tools/build-mockup.mjs src/M1-compare-duplicate.src.html M1-compare-duplicate.html
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M1 · The shared Compare dialog and possible-duplicate box — mockup</title>
+<!-- css: src/styles/tokens.css src/styles/app.css src/styles/testing.css src/styles/testing-events.css -->
+<style>
+  body { background: #fff; }
+  .sheet-head { max-width: 1100px; margin: 0 auto; padding: 24px 16px 8px; }
+  .sheet-head h1 { font-size: 20px; margin-bottom: 4px; }
+  .sheet-head p { color: var(--color-text-secondary); font-size: 13px; }
+  .state { max-width: 1100px; margin: 0 auto; padding: 16px 16px 8px; }
+  .state > h2 { font-size: 14px; margin-bottom: 12px; }
+  .state > h2 .n { display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 6px; border-radius: 10px; background: #1f1f1f; color: #fff; font-size: 12px; }
+  .is-focus { outline: 2px solid var(--color-blue); outline-offset: 2px; }
+  .marks .mark { outline: 3px solid #f59e0b; outline-offset: 3px; border-radius: 6px; }
+  .roster { width: 900px; padding: 12px 12px 4px; }
+  .stage { display: inline-block; padding: 24px 40px; background: #a6a6a6; border-radius: 8px; }
+  .stage .dialog { position: static; margin: 0 auto; }
+  .only-phone { display: none !important; }
+  @media (max-width: 1023.98px) { .roster { width: auto; } }
+  @media (max-width: 639.98px) {
+    .state { padding: 16px 0 8px; }
+    .state > h2 { padding: 0 16px; }
+    .roster { padding: 12px 16px 4px; }
+    .stage { display: block; padding: 0; background: none; border-radius: 0; }
+    .only-wide { display: none !important; }
+    .only-phone { display: flex !important; }
+    .stage .dialog-page { position: static; border-top: 1px solid var(--color-border-strong); border-bottom: 1px solid var(--color-border-strong); }
+  }
+
+  /* ===== The box above the roster (testing-events.css .ev-dupbox) ===== */
+  .ev-dupbox-line { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4) var(--space-8); }
+  .ev-dupbox .btn { height: 28px; padding: 0 var(--space-12); }
+  @media (pointer: coarse) { .ev-dupbox .btn { height: var(--control-height-touch); } }
+  /* Phones: the count on a line of its own (Camps' phone look today), and every Review under its
+     own line, so the buttons line up (one beside its words and one under them looked broken). */
+  @media (max-width: 639.98px) {
+    .ev-dupbox-line { flex-direction: column; align-items: flex-start; }
+    .ev-dupbox-line .dup-sep { display: none; }
+  }
+
+  /* ===== NEW in the shared parts (the rest is today's CSS) ===== */
+  /* Black Belt's visible mark (blackBelt.css .bb-diff-mark), made shared: never color alone (§4). */
+  .cmp-diff { display: inline-flex; align-items: center; gap: 2px; margin-left: var(--space-8); color: var(--color-warning-text); font-size: var(--text-12); white-space: nowrap; }
+  /* The plain button's unavailable look (M2), for "Keeping…"; the phone's back arrow waits too. */
+  .btn.is-unavailable, .btn.is-unavailable:hover, .btn.is-unavailable:active { border-color: var(--color-border-strong); background: var(--color-surface); color: var(--color-disabled-text); cursor: not-allowed; }
+  .icon-button.is-unavailable { color: var(--color-disabled-text); cursor: not-allowed; }
+  /* The buttons and a note under them share the dialog's bottom area (.dialog-footer, v0.81), so a
+     note is never hidden under the pinned buttons. */
+  .tdialog .dialog-footer > .dialog-actions { margin: 0; }
+</style>
+<script>if (location.search.includes('marks')) document.documentElement.classList.add('marks');</script>
+</head>
+<body>
+<div class="sheet-head">
+  <h1>M1 · The shared Compare dialog and possible-duplicate box</h1>
+  <p>When the same person is registered twice, an amber box above the roster says so, with <b>Review</b>; Review opens the two registrations side by side (rulebook v1.030; Star v0.114 first). Each section keeps its own noun — “registered twice” / “signed up twice” — and its own rows. Drawn with the app's own stylesheets. Fake people.</p>
+</div>
+<span hidden id="back-icon"><i data-icon="arrow-left" data-size="20"></i></span>
+<span hidden id="warn-12"><i data-icon="alert-triangle" data-size="12"></i></span>
+<span hidden id="warn-16"><i data-icon="alert-triangle" class="notice-icon"></i></span>
+<span hidden id="warn-bar"><i data-icon="alert-triangle" class="errbar-icon"></i></span>
+<span hidden id="refresh"><i data-icon="refresh"></i></span>
+
+<section class="state">
+  <h2><span class="n">1</span>The possible-duplicate box, one pair</h2>
+  <div class="roster" data-state="box1" data-caption="<b>The box above the roster</b>, one pair: the count, then the person with <b>Review</b> (it opens the compare). Each section's noun — here Camps' “signed up twice”; the others say “registered twice”.">
+    <div class="ev-dupbox mark" role="status">
+      <i data-icon="alert-triangle" class="ev-dupbox-icon"></i>
+      <div class="ev-dupbox-lines">
+        <div class="ev-dupbox-line"><strong class="dup-count">1 possible duplicate</strong><span class="dup-sep">·</span><span>Ava Thompson is signed up twice</span><button type="button" class="btn">Review</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">2</span>The box with two pairs</h2>
+  <div class="roster" data-state="box" data-caption="<b>Two pairs</b>: the count on the first line only (Star repeats it on every line today), then one line per pair, each with its own Review. On phones the count has its own line and each Review sits under its words.">
+    <div class="ev-dupbox mark" role="status">
+      <i data-icon="alert-triangle" class="ev-dupbox-icon"></i>
+      <div class="ev-dupbox-lines">
+        <div class="ev-dupbox-line"><strong class="dup-count">2 possible duplicates</strong><span class="dup-sep">·</span><span>Mia Lopez (Group A) is registered twice</span><button type="button" class="btn">Review</button></div>
+        <div class="ev-dupbox-line"><span>Noah Kim (Little Tiger) is registered twice</span><button type="button" class="btn">Review</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">3</span>Compare, with differences</h2>
+  <div class="stage" data-state="compare" data-rows="diff" data-caption="<b>Compare</b>: both registrations side by side (one after the other on phones). A difference is amber <b>and says “different”</b> — Black Belt's mark, for everyone (rule §4: never color alone; today three sections say it to screen readers only). <b>Keep this one</b> under each; the gray line says what happens. Close has the first focus.">
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">4</span>While it works</h2>
+  <div class="stage" data-state="busy" data-rows="diff" data-busy data-caption="<b>While it works</b> (here after Keep this one): the pressed button says <b>“Keeping…”</b> (“Keeping both…” after keep both) and every button grays until it's done — the confirm boxes' rule (D1a). Esc, a click outside and Back wait, so the phone's back arrow is gray too. Today nothing changes on screen.">
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">5</span>Only an admin can keep one now</h2>
+  <div class="stage" data-state="staff" data-rows="diff" data-nokeep data-caption="<b>After the testing day, for staff</b> (Color Belt and Camps today): no Keep buttons; the gray line says an admin can do it. “Not the same person — keep both” stays.">
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">6</span>Hide private details on</h2>
+  <div class="stage" data-state="hidden" data-rows="hidden" data-caption="<b>Hide private details on</b>: Paying by and Payment read gray “Hidden on this tablet” on both sides and are never marked different (as Color Belt and Star today; Camps gains it, and Black Belt's “Hidden on this device” becomes the same words).">
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">7</span>While the two records load</h2>
+  <div class="stage" data-state="loading" data-rows="diff" data-loading data-caption="<b>While the two records load</b> (Star reads them when Review is pressed): gray placeholder rows; keep both waits (gray) until both are there.">
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">8</span>If they can't load</h2>
+  <div class="stage" data-state="loadfail" data-rows="diff" data-loadfail data-caption="<b>If they can't load</b>: the shared amber bar with Retry takes the table's place (v1.004) — Star's words. Keep both stays gray; Close works.">
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">9</span>Changed on another device</h2>
+  <div class="stage" data-state="blocked" data-rows="diff" data-blocked data-caption="<b>Changed on another device</b> (Black Belt today): the section's amber note under the buttons — “These registrations changed just now. Close and open them again.” — and every button but Close grays, so nothing is kept from an old copy.">
+  </div>
+</section>
+
+<section class="state">
+  <h2><span class="n">10</span>If saving fails</h2>
+  <div class="stage" data-state="failed" data-rows="diff" data-failed data-caption="<b>If saving fails</b>: the amber note under the buttons, which don't move (v0.81) — in the dialog's bottom area with them, so it is never hidden under the pinned buttons (today's four copies hide its top half there). It stays until the dialog closes (v1.004).">
+  </div>
+</section>
+
+<script>
+  // Draws each compare state as the PC / tablet dialog (Dialog.jsx "wide": a table) and as the
+  // phone's full-screen page (one card per registration), the same markup the four copies use.
+  const pick = (id) => document.getElementById(id).innerHTML;
+  const mark = `<span class="cmp-diff">${pick('warn-12')}different</span>`;
+  const HIDDEN = '<span class="ev-hidden-value">Hidden on this tablet</span>';
+  const rows = (kind) => [
+    { label: 'Registered', a: 'Oct 14, 6:05 PM · family form', b: 'Oct 16, 8:12 AM · family form', plain: true },
+    { label: 'Reference', a: 'CB-3110', b: 'CB-3117', plain: true },
+    { label: 'Testing for', a: 'Yellow → Orange', b: 'Yellow → Orange' },
+    { label: 'Paying by', a: kind === 'hidden' ? HIDDEN : 'Cash', b: kind === 'hidden' ? HIDDEN : 'Check', plain: kind === 'hidden' },
+    { label: 'Payment', a: kind === 'hidden' ? HIDDEN : 'Paid Oct 17', b: kind === 'hidden' ? HIDDEN : 'Not paid', plain: kind === 'hidden' },
+  ];
+  const differs = (r) => !r.plain && r.a !== r.b;
+  const skeleton = `<div class="tskeleton" aria-busy="true">${[0, 1, 2].map(() => '<div class="tskeleton-row" aria-hidden="true"><span class="tskeleton-bar"></span></div>').join('')}</div>`;
+  const loadBar = `<div class="errbar mark" role="alert">${pick('warn-bar')}<span class="errbar-text">Couldn't load this candidate. Check the connection, then retry.</span><span class="errbar-actions"><button type="button" class="btn errbar-retry">${pick('refresh')}Retry</button></span></div>`;
+  const notice = (text) => `<div class="tdialog-note mark"><div class="notice" role="alert">${pick('warn-16')}<span>${text}</span></div></div>`;
+  for (const stage of document.querySelectorAll('.stage[data-rows]')) {
+    const d = stage.dataset;
+    const list = rows(d.rows);
+    const busy = 'busy' in d;
+    const loading = 'loading' in d;
+    const loadFail = 'loadfail' in d;
+    const blocked = 'blocked' in d;
+    const keepOne = !('nokeep' in d) && !loading && !loadFail;
+    const gray = ' is-unavailable" aria-disabled="true';
+    const off = busy || blocked ? gray : '';
+    const keep = (i) => (keepOne ? `<button type="button" class="btn btn-sm${off}">${busy && i === 0 ? 'Keeping…' : 'Keep this one'}</button>` : '');
+    const cell = (r, v) => `${v}${differs(r) ? mark : ''}`;
+    const note = 'nokeep' in d
+      ? 'The testing day is over. Only an admin can keep one registration and remove the other now.'
+      : 'Keeping one moves the other to Removed as “Duplicate copy” (Undo for 5 seconds; admins can Restore). Both are logged.';
+    const message = 'failed' in d ? notice("Couldn't save. Check the connection, then try again.") : blocked ? notice('These registrations changed just now. Close and open them again.') : '';
+    const table = `<table class="ev-cmp${d.state === 'compare' ? ' mark' : ''}"><thead><tr><td></td><th scope="col">First registration</th><th scope="col">Second registration</th></tr></thead><tbody>
+      ${list.map((r) => `<tr><th scope="row">${r.label}</th><td class="${differs(r) ? 'is-diff' : ''}">${cell(r, r.a)}</td><td class="${differs(r) ? 'is-diff' : ''}">${cell(r, r.b)}</td></tr>`).join('')}
+      ${keepOne ? `<tr class="ev-cmp-keep"><td></td><td>${keep(0)}</td><td>${keep(1)}</td></tr>` : ''}</tbody></table>`;
+    const cards = ['First registration', 'Second registration'].map((which, i) => `<section class="ev-cmp-card"><h3 class="ev-cmp-head">${which}</h3><dl class="ev-sum">
+      ${list.map((r) => `<div class="ev-sum-row${differs(r) ? ' is-diff' : ''}"><dt>${r.label}</dt><dd>${cell(r, i === 0 ? r.a : r.b)}</dd></div>`).join('')}</dl>${keep(i)}</section>`).join('');
+    const content = (phone) => (loading ? skeleton : loadFail ? loadBar : phone ? cards : table);
+    const bothOff = busy || blocked || loading || loadFail ? gray : '';
+    const actions = (phone) => `<div class="dialog-actions ev-cmp-actions${busy ? ' mark' : ''}"><button type="button" class="btn${bothOff}">Not the same person — keep both</button>${phone ? '' : `<button type="button" class="btn${busy ? gray : ' is-focus'}">Close</button>`}</div>`;
+    const lines = `${loading || loadFail ? '' : `<p class="field-hint ev-cmp-note">${note}</p>`}`;
+    stage.insertAdjacentHTML('beforeend', `
+      <div class="dialog tdialog tdialog--wide only-wide" role="dialog" aria-modal="true">
+        <h2 class="dialog-title">Mia Lopez is registered twice</h2>
+        <p class="tdialog-sub">Same name in the same class. Differences are highlighted.</p>
+        ${content(false)}
+        ${lines}
+        <div class="dialog-footer">${actions(false)}${message}</div>
+      </div>
+      <div class="dialog-page tdialog-page only-phone" role="dialog" aria-modal="true">
+        <div class="dialog-page-head"><button type="button" class="icon-button${busy ? ' is-unavailable" aria-disabled="true' : ''}" aria-label="Back">${pick('back-icon')}</button><h2 class="dialog-page-title">Mia Lopez is registered twice</h2></div>
+        <div class="dialog-page-body"><p class="tdialog-sub">Same name in the same class. Differences are highlighted.</p>${content(true)}${lines}${actions(true)}${message}</div>
+      </div>`);
+  }
+</script>
+</body>
+</html>

@@ -22,6 +22,7 @@
 import { useEffect, useId, useRef } from 'react';
 import { IconArrowLeft } from '@tabler/icons-react';
 import { dialogStep } from '../lib/backButton.js';
+import { BACK } from './text.js';
 
 // Everything a person can Tab to. (A disabled button or a tabIndex="-1" element can't be.)
 const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
@@ -116,7 +117,7 @@ export default function AccountDialog({ title, fullScreen, onCancel, onBack, chi
       // tabIndex={-1}: the page itself can hold focus (e.g. between steps) but isn't a Tab stop.
       <div ref={boxRef} className="dialog-page" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
         <div className="dialog-page-head">
-          <button type="button" className="icon-button" aria-label="Back" onClick={onBack ?? onCancel}>
+          <button type="button" className="icon-button" aria-label={BACK} onClick={onBack ?? onCancel}>
             <IconArrowLeft size={20} aria-hidden="true" />
           </button>
           <h2 id={titleId} className="dialog-page-title">
@@ -131,7 +132,7 @@ export default function AccountDialog({ title, fullScreen, onCancel, onBack, chi
   return (
     // The dimmed backdrop. Clicking it does nothing on purpose: Cancel is the one way out,
     // so a stray click can't throw away what was typed. "--top": the box sits near the top of the
-    // screen, like every other dialog (v0.82; the class lives in testing.css with v0.80).
+    // screen, like every other dialog (v0.82; the class lives in shared.css with v0.80).
     <div className="dialog-backdrop dialog-backdrop--top">
       <div ref={boxRef} className="dialog" role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
         <h2 id={titleId} className="dialog-title">
