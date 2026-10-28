@@ -396,6 +396,15 @@
   margin-top: var(--space-12);
 }
 
+/* Close the day on a day with Black Belt returned checks (mockup B2): one quiet line with a
+   receipt icon, saying the returned check isn’t part of the drawer. */
+.fin-close-returned {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin-top: var(--space-12);
+}
+
 [data-day-closed]:focus {
   outline: none;
 }

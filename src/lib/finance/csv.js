@@ -14,6 +14,9 @@
 //      into text and break sums).
 //   4. The file starts with a UTF-8 "byte-order mark" (BOM, the invisible character U+FEFF).
 //      Without it Excel guesses an old Windows encoding and shows "José" as "JosÃ©".
+// Black Belt rows (migration 0026, rulebook v0.815, mockup B6): For "Black Belt · <cycle> ·
+// <what it's for>", Testing date empty (a cycle has several testing days), a returned check is
+// Kind "Returned check" with the Note "Handed in <yyyy-mm-dd>" (+ the usual undone note).
 // It is PURE (no browser), so Node can test it.
 
 // The columns of the file, in order: [key in the export row, how the cell is written].
@@ -46,11 +49,33 @@ export const DEFAULT_CSV_HEADERS = {
 };
 export const DEFAULT_CSV_LABELS = {
   school: { worcester: 'Worcester', shrewsbury: 'Shrewsbury' },
-  what: { color_belt: 'Color belt testing', star: 'Star testing', camp: 'Camp' }, // Camp: v0.707
-  kind: { payment: 'Payment', refund: 'Refund' },
+  what: { color_belt: 'Color belt testing', star: 'Star testing', camp: 'Camp', black_belt: 'Black Belt' }, // Camp: v0.707; Black Belt: v0.815
+  kind: { payment: 'Payment', refund: 'Refund', returned: 'Returned check' },
   method: { cash: 'Cash', check: 'Check', card: 'Card' },
   state: { counted: 'Counted', undone: 'Undone', edited: 'Edited', moved_out: 'Moved out', moved_in: 'Moved in' },
+  // What a Black Belt payment is for (Black Belt's own words): p1…p12 → "Payment N", kukkiwon → "Kukkiwon".
+  bb_items: { payment: 'Payment', kukkiwon: 'Kukkiwon', join: ' + ' },
+  // A returned check's note: "Handed in 2027-04-14"
+  handed_in: 'Handed in',
 };
+
+// What a Black Belt payment is for, as Black Belt's own screens write it (contract 0026 §6):
+//   ['p2'] → "Payment 2", ['p1', 'kukkiwon'] → "Payment 1 + Kukkiwon",
+//   exactly ['p1'] when the candidate's plan has one payment → that plan's name ("In full").
+// Unknown codes are written as they are. No items → ''. The screens use this too (text.js),
+// with the same words, so the CSV and the screen always agree.
+export function blackBeltItemsText(forItems, onePaymentPlan, words = DEFAULT_CSV_LABELS.bb_items) {
+  const items = Array.isArray(forItems) ? forItems : [];
+  if (items.length === 1 && items[0] === 'p1' && typeof onePaymentPlan === 'string' && onePaymentPlan !== '') return onePaymentPlan;
+  return items
+    .map((code) => {
+      const n = /^p(\d{1,2})$/.exec(String(code));
+      if (n) return `${words.payment} ${Number(n[1])}`;
+      if (code === 'kukkiwon') return words.kukkiwon;
+      return String(code);
+    })
+    .join(words.join);
+}
 
 // The characters that make a spreadsheet treat a cell as a formula (or that hide one): a tab or
 // carriage return first, or = + - @ (or their full-width forms) after any spaces.
@@ -88,7 +113,23 @@ function cellText(row, key, type, labels) {
   if (key === 'what' && value === 'camp' && typeof row.event_name === 'string' && row.event_name !== '') {
     shown = `${shown} · ${row.event_name}`;
   }
+  // A Black Belt row: "Black Belt · Spring 2027 · Payment 2" (a refund: just "Black Belt · Spring 2027").
+  if (key === 'what' && value === 'black_belt') {
+    if (typeof row.event_name === 'string' && row.event_name !== '') shown = `${shown} · ${row.event_name}`;
+    const items = row.kind === 'refund' ? '' : blackBeltItemsText(row.for_items, row.one_payment_plan, labels.bb_items);
+    if (items) shown = `${shown} · ${items}`;
+  }
   return quoteCell(guardFormula(shown));
+}
+
+// The Note cell: a returned check starts with the day the check was handed in ("Handed in
+// 2027-04-14"), then the database's own note, if any ("… · undone by Jeffrey Berg on 2027-04-29").
+function noteOf(row, labels) {
+  const note = row?.note ?? null;
+  if (row?.kind !== 'returned' || !row.handed_in_on) return note;
+  const handed = `${labels.handed_in} ${row.handed_in_on}`;
+  if (note === null || note === undefined || note === '') return handed;
+  return String(note).startsWith(handed) ? String(note) : `${handed} · ${note}`;
 }
 
 // The whole file: a byte-order mark, a header line, then one line per row, every line ending with CRLF.
@@ -99,9 +140,15 @@ function cellText(row, key, type, labels) {
 // rows that don't add up: undone and moved-out lines).
 export function toCsv(rows, { headers = {}, labels = {} } = {}) {
   const head = { ...DEFAULT_CSV_HEADERS, ...headers };
-  const words = Object.fromEntries(Object.keys(DEFAULT_CSV_LABELS).map((k) => [k, { ...DEFAULT_CSV_LABELS[k], ...(labels[k] ?? {}) }]));
+  const words = Object.fromEntries(Object.keys(DEFAULT_CSV_LABELS).map((k) => {
+    const base = DEFAULT_CSV_LABELS[k];
+    return [k, typeof base === 'string' ? (labels[k] ?? base) : { ...base, ...(labels[k] ?? {}) }];
+  }));
   const lines = [CSV_COLUMNS.map(([key]) => quoteCell(guardFormula(String(head[key] ?? key)))).join(',')];
-  for (const row of rows ?? []) lines.push(CSV_COLUMNS.map(([key, type]) => cellText(row, key, type, words)).join(','));
+  for (const row of rows ?? []) {
+    const withNote = row?.kind === 'returned' ? { ...row, note: noteOf(row, words) } : row;
+    lines.push(CSV_COLUMNS.map(([key, type]) => cellText(withNote, key, type, words)).join(','));
+  }
   return `${CSV_BOM}${lines.join('\r\n')}\r\n`;
 }
 

@@ -120,6 +120,12 @@
 // failNextSave makes the next Finance save fail, e.g. Close the day):
 //   __tkdPreview.setNow('19:30')          pretend the school clock says 7:30 PM (Home reminder); null = real time
 //   __tkdPreview.resetFinance()           back to the sample closings and Star payments, reminder times Off
+//   __tkdPreview.bbFinanceSample()        Black Belt money for the Daily report (migration 0026, mockups B1–B9):
+//                                         bbSampleEdge + setToday('2027-04-26'), then — through Black Belt's own
+//                                         functions — today's payments (Payment 2 by check, Payment 1 + Kukkiwon in
+//                                         cash, In full edited check → cash), a $150 card refund, two returned
+//                                         checks (Worcester and Shrewsbury), a returned mark undone by a 2nd admin
+//                                         and a 10-second mis-click (hidden). Reload, open Finance.
 // Black Belt testing helpers (contracts 0016-B1 §2.3 + 0016-B2 §2.4, src/lib/blackBelt/mockBlackBelt.js; setRole, setToday and
 // setTestingDelay cover Black Belt too; failNextSave() fails the next save of whichever section comes first):
 //   __tkdPreview.failNextSave('blackBelt') the next Black Belt save fails like a dropped connection (rubric saves and undos too)
@@ -150,6 +156,7 @@
 import { getLastPasswordSignIn, PASSWORD_MAX_AGE_MS, decodeJwtPayload } from './session.js';
 import { setLockedFlag } from './useIdleLock.js';
 import { readStorage, writeStorage, removeStorage } from './storage.js';
+import { PREVIEW_TODAY_KEY } from './testing/eventRules.js';
 import { isFourDigits, isPinTooEasy } from './pinRules.js';
 import { createTestingBackend, TESTING_RPC_NAMES } from './mockTesting.js';
 import { createEventsBackend, EVENT_RPC_NAMES, EVENT_RESTRICTED_RPC_NAMES, EVENT_TABLES } from './mockTestingEvents.js';
@@ -765,6 +772,7 @@ export function createMockClient() {
     saveStore: (store) => writeStorage(FINANCE_KEY, JSON.stringify(store)),
     readColorBelt: () => events.snapshot(),
     readCamps: () => camps.snapshot(), // camp payments are Finance's third source (v0.707)
+    readBlackBelt: () => blackBelt.snapshot(), // Black Belt payments are the fourth (migration 0026)
     now: () => Date.now(),
     today: previewToday, // the real school date, or the one set with setToday
     newId: newUuid,
@@ -1097,6 +1105,51 @@ export function createMockClient() {
     resetFinance() {
       finance.reset();
       return 'Finance is back to the sample: a few closed Shrewsbury days, the sample Star payments and refunds, reminder times Off, no exports. Reload to see it.';
+    },
+    // Black Belt money in the Daily report (migration 0026). Everything goes through Black Belt's
+    // own preview functions (the same rules as its Candidates screens), so Finance reads exactly
+    // what those screens would have written. Made-up people from bbSampleEdge.
+    bbFinanceSample() {
+      blackBelt.loadSampleEdge();
+      fillSampleSchools();
+      writeStorage(PREVIEW_TODAY_KEY, '2027-04-26'); // the sample's "today" (a Monday)
+      const who = (isAdmin, actorName, userId) => ({ signedIn: true, hasDataAccess: true, isAdmin, actorName, userId });
+      const desk = who(false, 'Staff', '00000000-0000-4000-8000-0000000000d1');
+      const admin = who(true, FAKE_STAFF.full_name, FAKE_STAFF.id);
+      const admin2 = who(true, 'Sam P.', '00000000-0000-4000-8000-0000000000a2'); // a second admin (made up)
+      const problems = [];
+      const run = (label, name, args, ctx) => {
+        const res = blackBelt.rpc(name, args, ctx);
+        if (res.error || res.data?.status !== 'ok') problems.push(`${label}: ${res.error?.message ?? res.data?.status}`);
+        return res.data ?? {};
+      };
+      const db = () => blackBelt.snapshot();
+      const person = (first, last, extra = () => true) => db().bb_candidates.find((c) => c.first_name === first && c.last_name === last && extra(c));
+      const checkOf = (c, paidOn) => db().bb_payments.find((p) => p.candidate_id === c.id && p.kind === 'payment' && p.method === 'check' && p.paid_on === paidOn);
+      const pay = (label, c, cents, method, items, ctx = desk) => run(label, 'bb_record_payment', {
+        p_candidate_id: c.id, p_expected_version: person(c.first_name, c.last_name, (x) => x.id === c.id).version,
+        p_amount_cents: cents, p_method: method, p_for_items: items, p_note: null,
+      }, ctx);
+      // Worcester
+      const sam = person('Sam', 'Lee');
+      pay('Sam Lee Payment 2', sam, 33000, 'check', ['p2']);
+      pay('Noah Silva Payment 1 + Kukkiwon', person('Noah', 'Silva', (c) => c.kukkiwon), 44000, 'cash', ['p1', 'kukkiwon']);
+      const rina = pay('Rina Patel In full', person('Rina', 'Patel'), 87000, 'check', ['p1']);
+      run('Rina Patel edit', 'bb_edit_payment', {
+        p_payment_id: rina.payment_id, p_amount_cents: 87000, p_method: 'cash', p_for_items: ['p1'], p_note: null, p_reason: 'Paid in cash, not by check',
+      }, admin);
+      const tom = person('Tom', 'Reyes');
+      run('Tom Reyes card refund', 'bb_record_refund', { p_candidate_id: tom.id, p_expected_version: tom.version, p_amount_cents: 15000, p_method: 'card', p_note: null }, admin);
+      run('Grace Owens returned check', 'bb_mark_check_returned', { p_payment_id: checkOf(person('Grace', 'Owens'), '2027-03-20')?.id ?? null, p_note: null }, admin);
+      const mark = run('Sam Lee returned check', 'bb_mark_check_returned', { p_payment_id: checkOf(sam, '2027-03-27')?.id ?? null, p_note: null }, admin);
+      run('Sam Lee mark undone', 'bb_undo_payment', { p_payment_id: mark.payment_id ?? null }, admin2);
+      const slip = pay('Noah Silva mis-click', person('Noah', 'Silva', (c) => !c.kukkiwon), 33000, 'cash', ['p1']);
+      run('Noah Silva mis-click undo', 'bb_undo_payment', { p_payment_id: slip.payment_id ?? null }, desk);
+      // Shrewsbury
+      pay('Ava Brooks Payment 3', person('Ava', 'Brooks'), 33000, 'cash', ['p3']);
+      run('Bao Nguyen returned check', 'bb_mark_check_returned', { p_payment_id: checkOf(person('Bao', 'Nguyen'), '2027-03-27')?.id ?? null, p_note: null }, admin);
+      if (problems.length > 0) return `Sample loaded with problems:\n${problems.join('\n')}`;
+      return 'Black Belt money sample loaded and today set to Mon, Apr 26, 2027. Reload and open Finance → Daily report (Worcester; Shrewsbury and Both too). Earlier days: Mar 20, Mar 27, Apr 20, Apr 24.';
     },
     // ----- Black Belt testing helpers (mockBlackBelt.js, blackBelt/publicApi.preview.js) -----
     resetBlackBelt() {
