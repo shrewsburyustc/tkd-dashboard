@@ -688,8 +688,17 @@
   flex-direction: column;
 }
 
-.fin-date-input.input {
-  width: 160px;
+/* From / To: the shared date picker's field (components/DatePicker.jsx, v0.818), wide enough for
+   the longest date ("Mon, May 13, 2024", 110px at 13px) and its chevron. Touch screens: wider,
+   see the touch block below */
+.fin-date-field .dp-field {
+  width: 168px;
+}
+
+/* Phones: while a calendar is open in the page, its date takes the whole row, so the calendar
+   runs edge to edge under it and To moves down below the calendar (v0.818) */
+.fin-date-field:has(.dp-pop.is-inline) {
+  flex-basis: 100%;
 }
 
 .fin-export-school {
@@ -948,6 +957,14 @@
 
 /* ===== Touch screens: 36px controls, 44px tap areas, 48px rows (guidelines 2.5) ===== */
 @media (pointer: coarse) {
+  /* Export's From / To: every field has 16px text on touch (app.css), so the longest date
+     (135px) plus the chevron needs a wider field. Two of these don't fit side by side on a 390
+     phone, so there they stack (as at 320; Jeffrey's choice, v0.818). 200px leaves room for an
+     iPhone's slightly wider font */
+  .fin-date-field .dp-field {
+    width: 200px;
+  }
+
   .fin-ibtn.tib {
     width: var(--tap-size);
     height: var(--tap-size);
@@ -1064,10 +1081,6 @@
 
   .fin-drow {
     grid-template-columns: 110px minmax(0, 1fr);
-  }
-
-  .fin-date-input.input {
-    width: 150px;
   }
 
   /* The chip shows its icon only (its name is still read out and shown as a tooltip) */

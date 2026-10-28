@@ -79,7 +79,6 @@ export const monthDayYear = (day) => fmt(day, { month: 'short', day: 'numeric', 
 export const monthYear = (day) => fmt(day, { month: 'long', year: 'numeric' }); // October 2026
 export const monthShortYear = (day) => fmt(day, { month: 'short', year: 'numeric' }); // Oct 2026 (phones)
 export const weekdayShort = (day) => fmt(day, { weekday: 'short' }); // Sat
-export const weekdayLong = (day) => fmt(day, { weekday: 'long' }); // Saturday
 
 // 'YYYY-MM-DD' of a Date, in the school's time zone ('en-CA' writes dates as YYYY-MM-DD).
 export function schoolDayOf(date) {

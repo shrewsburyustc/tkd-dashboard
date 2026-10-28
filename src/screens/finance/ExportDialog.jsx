@@ -8,19 +8,28 @@
 // The count line comes from finance_export_preview (count + total only, nothing logged), asked
 // 300 ms after the dates stop changing — so just LOOKING at the dialog never writes a log row;
 // only Download does.
-// Dates: the browser's own date fields, with the weekday written under each (as v0.147).
-// PC / tablet: a centered dialog. Phone: a full page with a back arrow; Download is full width.
+// Dates: the dashboard's own calendar, components/DatePicker.jsx (Star's, used as it is — v0.818,
+// which carries out v1.018 for Export). The field shows the date in words ("Thu, Oct 1, 2026"),
+// so the gray weekday line that used to sit under each box is gone. Days after today are gray and
+// the calendar's gray line says so. To's calendar does NOT gray the days before From: picking one
+// shows the error line "To must be on or after From." instead (as before).
+// PC / tablet: a centered dialog; the calendar floats under the field. Phone: a full page with a
+// back arrow; Download is full width; From and To stack on touch phones (their 16 px dates in
+// words don't fit side by side; Jeffrey's choice, v0.818) and side by side with a mouse, and
+// the calendar opens in the page under the field, edge to edge.
 //
 // Props: school (name), locationCode, today ('YYYY-MM-DD'), isPhone, onClose, onDone(), onNoAccess
 import { useEffect, useId, useState } from 'react';
 import { IconAlertTriangle, IconDownload } from '@tabler/icons-react';
+import DatePicker from '../../components/DatePicker.jsx';
 import Dialog from '../../components/Dialog.jsx';
 import { csvFileName, toCsv } from '../../lib/finance/csv.js';
 import { financeExport, financeExportPreview } from '../../lib/finance/financeApi.js';
-import { daysBetween, monthStart, weekdayLong } from './format.js';
+import { daysBetween, monthStart } from './format.js';
+import * as T from './text.js';
 
 const PREVIEW_DELAY_MS = 300; // wait this long after the last date change before asking
-import * as T from './text.js';
+const YEARS_BACK = 2; // the calendar's Year list: this year and the two before it
 
 // What's wrong with the two dates, if anything: { from, to } messages (or null).
 function checkDates(from, to, today) {
@@ -52,6 +61,17 @@ export default function ExportDialog({ school, locationCode, today, isPhone, onC
 
   const errors = checkDates(from, to, today);
   const datesOk = !errors.from && !errors.to;
+
+  // The Year list in each calendar (the picker itself adds the year on show).
+  const thisYear = Number(today.slice(0, 4));
+  const years = Array.from({ length: YEARS_BACK + 1 }, (_, i) => thisYear - YEARS_BACK + i);
+
+  // Opening: keyboard focus on From. (The picker's field is drawn by the shared part, which has no
+  // data-autofocus prop, so this screen moves focus there itself. It runs after the Dialog's own
+  // "focus the box" step, because a parent's effects run after its children's.)
+  useEffect(() => {
+    document.getElementById(`${id}-from`)?.focus();
+  }, [id]);
 
   // The count line: one preview call, once the dates have been still for 300 ms.
   useEffect(() => {
@@ -100,27 +120,28 @@ export default function ExportDialog({ school, locationCode, today, isPhone, onC
     onDone();
   }
 
+  // One date: its small label, the picker's field (and, on phones, its calendar in the page),
+  // then the error line when there is one.
   const dateField = (key, label, value, onChange) => {
     const error = tried || value ? errors[key] : null;
     return (
       <div className="fin-date-field">
-        <label className="fin-lbl" htmlFor={`${id}-${key}`}>
+        <span className="fin-lbl" aria-hidden="true">
           {label}
-        </label>
-        <input
-          id={`${id}-${key}`}
-          className="input fin-date-input"
-          type="date"
-          max={today}
-          value={value}
-          data-autofocus={key === 'from' ? true : undefined}
-          aria-invalid={error ? 'true' : undefined}
-          aria-describedby={`${id}-${key}-wd${error ? ` ${id}-${key}-err` : ''}`}
-          onChange={(event) => onChange(event.target.value)}
-        />
-        <span id={`${id}-${key}-wd`} className="fin-hint">
-          {value ? weekdayLong(value) : ''}
         </span>
+        <DatePicker
+          id={`${id}-${key}`}
+          label={label}
+          value={value}
+          today={today}
+          max={today}
+          years={years}
+          hint={T.DAYS_AFTER_TODAY}
+          invalid={Boolean(error)}
+          describedBy={error ? `${id}-${key}-err` : undefined}
+          inline={isPhone}
+          onChange={onChange}
+        />
         {error && (
           <p id={`${id}-${key}-err`} className="fin-field-error">
             <IconAlertTriangle size={14} aria-hidden="true" />
