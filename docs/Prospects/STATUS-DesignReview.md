@@ -2,7 +2,7 @@
 
 Branch `claude/prospect-form-system-cd893d`. Source: the Design Review change list §2.7 (`docs/Design Review/End review/TKD-DesignReview-ChangeList.md`), rulebook rows v1.000–v1.034, and the step prompt `8-NewStudents.md` (Design Review session, received 2026-10-28). Part 1 needs no new shared part; Part 2 waits for Dashboard core's step 1 to be merged into main.
 
-Order: **N17 first**, as its own reviewed step and commit. Then N1, N2, N4, N5, N6, N8, N9, N10, N12, N13, N14, N15, then the "(now)" points. Mockups (PC 1280, tablet 820 touch, phone 390 touch, 320 wide) are OK'd by Jeffrey one screen at a time before code.
+**Jeffrey 2026-10-28: the class-ages change (rulebook v0.619, `STATUS-ClassAges.md`) goes before the rest of this list.** Order: **N17 first**, as its own reviewed step and commit. Then N1, N2, N4, N5, N6, N8, N9, N10, N12, N13, N14, N15, then the "(now)" points. Mockups (PC 1280, tablet 820 touch, phone 390 touch, 320 wide) are OK'd by Jeffrey one screen at a time before code.
 
 | # | Change | Part | Status |
 |---|---|---|---|
@@ -12,7 +12,7 @@ Order: **N17 first**, as its own reviewed step and commit. Then N1, N2, N4, N5, 
 | N2 | Undo for 5 s: Prospects' panel status; Forms' Close / Open | 1 | **Done 2026-10-28.** Mockup OK'd; Joined: A, Undo too (rulebook v0.617). Built in `Prospects.jsx` (panel, Joined from panel and Board, and the Board's Came drop without a check-in), `Forms.jsx` and `forms/Builder.jsx`; every Undo checked in the preview. Reviews: leaving the builder clears its toast; the old status is read before saving; a stale Undo says "Couldn't undo. Someone else changed this form just now.". "Undone" after an Undo: **Jeffrey chose A (rulebook v0.618), not built yet** — after the age-range change (Jeffrey: that goes first). Not covered by v1.006 (flag only): follow-up date and booking a free class have no Undo. Committed, not pushed |
 | N4 | "Open form again" → "Open form"; door icons go | 1 | Not started |
 | N5 | Family page "Next" → "Continue", "Submit" → "Send" (to settle: staff Fill in) | 1 | Not started |
-| N6 | Shared date picker in four sections (to settle: Date question years; follow-up needs a DatePicker change → ask) | 1 | Not started |
+| N6 | Shared date picker in four sections (to settle: Date question years; follow-up needs a DatePicker change → ask) | 1 | Not started Dashboard core (2026-10-28): DatePicker can now open from our own button (`datePickerOpener`, rulebook v1.114), for the follow-up's "Set date" and the note's date; on main after the dashboard-core merge 1bb2683 (not there yet on 2026-10-28) |
 | N8 | Builder "← Forms" (ask: copy `.tc-back` or share it) | 1 | Not started |
 | N9 | Staff lines in Calendar and Forms (to settle: Calendar dialogs) | 1 | Not started |
 | N10 | Schedule on Both says "Both schools" (confirm the page line) | 1 | Not started |
