@@ -1,5 +1,7 @@
 # Prospects — status
 
+**Design review changes (N1–N17):** see `STATUS-DesignReview.md`.
+
 Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Prospects-Build-Plan.md` (approved 2026-10-18). Rulebook v0.236 (design) and v0.244 (plan answers). Mockup: `TKD-Prospects-Mockups.html` rev 3.
 
 **Database live, app not yet.** Migration 0012 is applied to the live Supabase database (2026-10-19), with the 7 starting statuses per school and 0 prospects. Jeffrey pasted it into the Supabase SQL Editor on 2026-10-19 (order 0007 → 0008 → 0009 → 0012, after 0001–0006 and Color Belt's 0010). For each: the live fingerprints equal the PGlite live-order copy exactly (row count + one hash over every row), the security advisor showed only the expected entries (signed-in users may run the checked write functions; internal tables have RLS on and no read rule on purpose), and the tests file passed (run with the real admin and front-desk IDs, rolled back). Nothing has been pushed. 0012 goes live after 0007 → 0008 → 0009, and Prospects goes live together with the Forms public page (v0.241 answer 1).

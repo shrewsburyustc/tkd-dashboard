@@ -15,11 +15,14 @@
 //     closed "History · 6 changes" dropdown (v0.255)
 //   - Form answers and waiver: every answer as the form was, and the signature picture while it
 //     is kept (each look recorded), then "signed on <date>" (v0.242)
+//   - While this device's "Hide private details" switch is on (v1.000, D2a): Email grays with one
+//     line saying why, and every form answer reads "Hidden on this tablet"; Call, Text and the
+//     phone number stay (N17)
 // PC: a column beside the list; tablet upright: under the list; phone: a full-screen page
 // (Prospects.jsx wraps it in a Dialog). The note being typed lives in Prospects.jsx.
 import { useState } from 'react';
 import {
-  IconAlertTriangle, IconCalendarPlus, IconCheck, IconChevronDown, IconChevronRight, IconClockEdit, IconClockHour4, IconCopy, IconMail, IconMessage,
+  IconAlertTriangle, IconCalendarPlus, IconCheck, IconChevronDown, IconChevronRight, IconClockEdit, IconClockHour4, IconCopy, IconCurrencyDollarOff, IconMail, IconMessage,
   IconPhone, IconTrash, IconUserCheck, IconUserX, IconX,
 } from '@tabler/icons-react';
 import Notice from '../../components/Notice.jsx';
@@ -31,6 +34,7 @@ import { loadSignature } from '../../lib/forms/api.js';
 import { StatusTag } from './ProspectList.jsx';
 import { BigTrack } from './Progress.jsx';
 import { localDay, progressOf } from './progress.js';
+import { HIDDEN_ON_THIS_TABLET, usePrivateDetailsHidden } from '../../lib/privateDetails.js';
 import * as T from './text.js';
 
 const telOf = (phone) => `tel:${String(phone).replace(/[^0-9+]/g, '')}`;
@@ -56,6 +60,8 @@ export default function ProspectPanel({
   onNote, onSaveNote, onStatus, onFollowUp, onCheckIn, onBook, onCancelBooking, onOpenSibling, onDelete, onClose, noteWarning,
 }) {
   const p = detail;
+  // This device's "Hide private details" switch (v0.506; what it hides here: v1.000); updates live.
+  const [hidden] = usePrivateDetailsHidden();
   const [showNumber, setShowNumber] = useState(false);
   const [copied, setCopied] = useState(false);
   const [openAnswers, setOpenAnswers] = useState(false);
@@ -131,11 +137,28 @@ export default function ProspectPanel({
           <IconMessage size={16} aria-hidden="true" />
           {T.TEXT}
         </a>
-        <a className="btn btn-sm" href={`mailto:${p.parentEmail}`}>
-          <IconMail size={16} aria-hidden="true" />
-          {T.EMAIL}
-        </a>
+        {hidden ? (
+          // Private details hidden (v1.000 / D2a): a grayed button that does nothing — never a
+          // mailto: link, so the family's address isn't in the page at all (a link shows it on hover).
+          // aria-disabled (not disabled) keeps it reachable with Tab, so the reason can be read.
+          <button type="button" className="btn btn-sm pemail-off" aria-disabled="true" aria-describedby={`${idBase}-email-off`}>
+            <IconMail size={16} aria-hidden="true" />
+            {T.EMAIL}
+          </button>
+        ) : (
+          <a className="btn btn-sm" href={`mailto:${p.parentEmail}`}>
+            <IconMail size={16} aria-hidden="true" />
+            {T.EMAIL}
+          </a>
+        )}
       </div>
+      {hidden && (
+        <p className="phidden-line" id={`${idBase}-email-off`}>
+          {/* ti-currency-dollar-off = private details hidden (the top bar's chip) */}
+          <IconCurrencyDollarOff size={16} aria-hidden="true" />
+          {T.EMAIL_OFF_WHILE_HIDDEN}
+        </p>
+      )}
       {isPc && showNumber && (
         <div className="pbignumber">
           <span className="pbignumber-n">{p.parentPhone}</span>
@@ -408,7 +431,8 @@ export default function ProspectPanel({
             {answers.map((f) => (
               <div key={f.id} className="panswer">
                 <dt>{f.label}</dt>
-                <dd>{answerText(f, p.answers[f.id])}</dd>
+                {/* hidden: every answer, because a form can ask a birthday, an email or health notes (v1.000) */}
+                <dd className={hidden ? 'panswer-hidden' : undefined}>{hidden ? HIDDEN_ON_THIS_TABLET : answerText(f, p.answers[f.id])}</dd>
               </div>
             ))}
           </dl>
