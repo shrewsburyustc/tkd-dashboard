@@ -15,6 +15,7 @@
 //
 // Props: isPhone, location, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast
 import { useEffect, useId, useRef, useState } from 'react';
+import ChoiceGroup from '../../components/ChoiceGroup.jsx';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
 import { LOCATION_CODE, LOCATION_NAME } from '../../lib/device.js';
 import {
@@ -23,8 +24,7 @@ import {
   financeSetReminderTime,
   financeSettingsGet,
 } from '../../lib/finance/financeApi.js';
-import ChoiceGroup from '../testing/events/ChoiceGroup.jsx';
-import { useLiveLoad } from '../testing/events/useLiveLoad.js';
+import { useLiveLoad } from '../../lib/useLiveLoad.js';
 import { REMINDER_TIMES, shortTime } from './format.js';
 import * as T from './text.js';
 

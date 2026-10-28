@@ -40,6 +40,7 @@ import {
   IconReceiptRefund,
   IconSum,
 } from '@tabler/icons-react';
+import ChoiceGroup from '../../components/ChoiceGroup.jsx';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
 import IconButton from '../../components/IconButton.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
@@ -53,9 +54,8 @@ import {
   financeUndoClose,
 } from '../../lib/finance/financeApi.js';
 import { cardsFor, expectedValues, groupItems } from '../../lib/finance/financeRules.js';
+import { useLiveLoad } from '../../lib/useLiveLoad.js';
 import { PHONE_QUERY, WIDE_QUERY, useMediaQuery } from '../../lib/useMediaQuery.js';
-import ChoiceGroup from '../testing/events/ChoiceGroup.jsx';
-import { useLiveLoad } from '../testing/events/useLiveLoad.js';
 import BothSummary from './BothSummary.jsx';
 import CloseDayBox, { checkDraft } from './CloseDayBox.jsx';
 import ClosedBox from './ClosedBox.jsx';

@@ -18,8 +18,8 @@ import ErrorBanner from '../../components/ErrorBanner.jsx';
 import IconButton from '../../components/IconButton.jsx';
 import { LOCATION_CODE, LOCATION_NAME } from '../../lib/device.js';
 import { financeHistory } from '../../lib/finance/financeApi.js';
+import { useLiveLoad } from '../../lib/useLiveLoad.js';
 import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
-import { useLiveLoad } from '../testing/events/useLiveLoad.js';
 import { addMonths, dayShort, money, monthShortYear, monthStart, monthYear } from './format.js';
 import * as T from './text.js';
 

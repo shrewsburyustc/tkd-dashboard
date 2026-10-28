@@ -20,7 +20,7 @@ import { createFinanceBackend, FINANCE_RPC_NAMES, FINANCE_WRITE_RPC_NAMES } from
 import { addDays } from '../testing/eventRules.js';
 import { newDays, unclosedPairsFrom, monthsToLoad, keepRecent, createSeenStore, pairKey, SEEN_KEY } from './reminderAck.js';
 import * as FT from '../../screens/finance/text.js';
-import { parseMoney } from '../../screens/finance/format.js';
+import { parseMoney, money } from '../../screens/finance/format.js';
 
 let count = 0;
 function check(label, fn) {
@@ -1277,5 +1277,17 @@ check('private testing: words; preview move = one counted private line, credited
   assert.deepEqual(det.history.map((h) => FT.historyLine(h, null)), ['Jeffrey Berg moved it to private testing', 'Staff recorded $65.00 by card']);
 });
 
+// money() is a thin wrapper of the shared formatMoneyWithCents (design review F5, v1.026);
+// Finance's report, print and dialogs must keep writing exactly the same text.
+check('money(): Finance keeps $65.00 through the shared helper (F5)', () => {
+  assert.equal(money(6500), '$65.00');
+  assert.equal(money(123456), '$1,234.56');
+  assert.equal(money(-2000), '−$20.00');
+  assert.equal(money(0), '$0.00');
+  assert.equal(money(-0), '$0.00');
+  assert.equal(money(290.5), ''); // not whole cents: nothing (callers always pass whole cents)
+});
+
 console.log(`${count} groups of checks ran.`);
 console.log('ALL FINANCE LIB CHECKS PASSED');
+

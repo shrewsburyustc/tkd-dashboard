@@ -8,16 +8,18 @@
 // browser's own time zone.
 // Times: the school's clock is America/New_York (contract 0011 §1.1), whatever the device says.
 
+import { formatMoneyWithCents } from '../../lib/money.js';
+
 export const SCHOOL_TIME_ZONE = 'America/New_York';
 
 // ----- Money -----
-const DOLLARS = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
 // 6500 → "$65.00", 123456 → "$1,234.56", -2000 → "−$20.00" (a real minus sign, as mocked up).
+// Since F5 (rulebook v1.026, v1.101) this is only Finance's short name for the dashboard's one
+// money rule, formatMoneyWithCents in src/lib/money.js, so Finance writes money exactly like
+// every other section. It takes whole CENTS; anything else (null, text, 290.5) gives ''.
+// (The CSV file is not this: src/lib/finance/csv.js keeps plain numbers, "-190.00".)
 export function money(cents) {
-  if (typeof cents !== 'number' || !Number.isFinite(cents)) return '';
-  const text = `$${DOLLARS.format(Math.abs(cents) / 100)}`;
-  return cents < 0 ? `−${text}` : text;
+  return formatMoneyWithCents(cents);
 }
 
 // The biggest count the database accepts: $100,000.00 (contract §1.2: ≤ 10 000 000 cents).
