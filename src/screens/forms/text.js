@@ -41,7 +41,7 @@ export const FILL_IN_AT_DESK = 'Fill in forms at the desk. Email and form answer
 export const SHARE = 'Share';
 export const DUPLICATE = 'Duplicate';
 export const CLOSE_FORM = 'Close form';
-export const REOPEN_FORM = 'Open form again';
+export const OPEN_FORM = 'Open form';
 export const DELETE_FORM = 'Delete';
 export const shareLabel = (name) => `Share ${name}`;
 export const moreLabel = (name) => `More actions for ${name}`;
