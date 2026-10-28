@@ -9,6 +9,8 @@
 // <thead>, and browsers repeat a table's head at the top of every printed page.
 // Corrections print as on screen (struck through, "Was $70.00", …) — the row text comes from
 // the same rowText() the screen uses. Refunds follow the layout chosen on this device (v0.209).
+// Black Belt rows and the Returned checks group (migration 0026, v0.815) print as on screen too:
+// the same groups, the same "For" words, the same Total sub-line.
 //
 // Props: data (finance_day's answer), school (name), layout, printedAt (Date), printedBy (name)
 import { createPortal } from 'react-dom';
@@ -19,10 +21,10 @@ import { cardSub, groupHeadText, groupLabel, rowText } from './PaymentsList.jsx'
 import * as T from './text.js';
 
 export default function PrintPage({ data, school, layout, printedAt, printedBy }) {
-  const cards = cardsFor(data.totals, data.refunds, layout);
+  const cards = cardsFor(data.totals, data.refunds, layout, data.returned);
   const groups = groupItems(data.items ?? [], layout);
   const closing = data.closing?.kind === 'close' || (data.closing && !data.closing.kind) ? data.closing : null;
-  const totalSub = cards.total.sub === 'after_refunds' ? T.afterRefunds(cards.total.refundCents) : T.paymentsCount(cards.total.count);
+  const totalSub = T.totalSub(cards.total);
   const cell = (label, c, sub) => (
     <div className="fp-card">
       {label}

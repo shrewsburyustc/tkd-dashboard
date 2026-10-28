@@ -338,7 +338,9 @@ declare
     'schools', 'code', 'name', 'closed', 'month', 'unclosed_count', 'days', 'tag', 'diff_part',
     'closed_by_name', 'closed_at', 'item', 'event_name', 'event_id', 'history', 'paid_on', 'today', 'earlier', 'first_day',
     'closing_id', 'from', 'to', 'rows', 'counted_cents', 'reminder_on', 'version', 'times', 'weekday', 'remind_at',
-    'by_school', 'worcester', 'shrewsbury'];
+    'by_school', 'worcester', 'shrewsbury',
+    -- 0026 (Black Belt in Finance) added these keys to the answers
+    'returned', 'for_items', 'one_payment_plan', 'handed_in_on'];
   v_app_fns text[] := array['finance_day', 'finance_day_both', 'finance_history', 'finance_payment_detail',
     'finance_home', 'finance_close_day', 'finance_undo_close', 'finance_reopen_day', 'finance_export',
     'finance_settings_get', 'finance_set_reminder_on', 'finance_set_reminder_time', 'finance_copy_monday',
@@ -709,7 +711,8 @@ begin
                        'cash', jsonb_build_object('count', 3, 'cents', 17500),
                        'check', jsonb_build_object('count', 2, 'cents', 15500),
                        'card', jsonb_build_object('count', 1, 'cents', 9000))::text);
-  perform pg_temp.t_eq('F3 refunds', (v_r -> 'refunds')::text,
+  -- (0026 added refunds.card_cents - 0 here, no card refund - checked by 0026_tests.sql)
+  perform pg_temp.t_eq('F3 refunds', ((v_r -> 'refunds') - 'card_cents')::text,
     jsonb_build_object('count', 2, 'cents', -1500, 'cash_cents', -1000, 'check_cents', -500)::text);
   perform pg_temp.t_eq('F3 items (9: 8 counted + 1 undone)', jsonb_array_length(v_r -> 'items')::text, '9');
   perform pg_temp.t_eq('F3 can_close', (v_r ->> 'can_close'), 'true');
@@ -1257,7 +1260,8 @@ begin
     format('public.finance_history(%L, %L)', 'boston', v_hm)) ->> 'status', 'not_found');
   -- Both summary of one day
   v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.finance_day_both(%L)', v_hm + 3));
-  perform pg_temp.t_eq('F8 day_both', (v_r -> 'schools')::text || '|' || (v_r ->> 'total_cents') || '|' || (v_r ->> 'count'),
+  -- (0026 added each school's returned checks - none here; checked by 0026_tests.sql)
+  perform pg_temp.t_eq('F8 day_both', (select jsonb_agg(e - 'returned' order by n) from jsonb_array_elements(v_r -> 'schools') with ordinality as x(e, n))::text || '|' || (v_r ->> 'total_cents') || '|' || (v_r ->> 'count'),
     jsonb_build_array(
       jsonb_build_object('code', 'worcester', 'name', 'Worcester', 'count', 1, 'total_cents', 7000, 'cash_cents', 7000,
                          'check_cents', 0, 'card_cents', 0, 'closed', false),
