@@ -1,0 +1,44 @@
+{
+  "title": "Camps C4 (Edit payment) + C5 — Undo for 5 seconds after Camps’ saves",
+  "subtitle": "Rule v1.006 (rule 1.4): every change that can be reversed shows <b>Undo</b> for 5 seconds. Rule v1.003: <b>Edit payment ends with “Payment changed” + Undo</b> — the words and look of Black Belt’s built Edit payment toast (<code>TOAST_PAYMENT_CHANGED</code>). The shared Toast, unchanged: bottom-right on PC and tablet, bottom-center above the bottom bar on phones; the 5 seconds pause while the pointer or focus is on it. PC 1280×800. Amber = what changes. (“Undo payment asks first” is the other half of C4 — it waits for the shared confirm box.)",
+  "width": 1840,
+  "columns": [
+    { "label": "Today", "tone": "today", "items": [
+      { "src": "shots/c5-pay-today.png", "crop": [880, 716, 400, 80], "scale": 1.1, "marks": [],
+        "caption": "<b>Edit payment</b> (admin, from the ⋯): “Payment saved”, no Undo." },
+      { "src": "shots/c5-camp-today.png", "crop": [880, 716, 400, 80], "scale": 1.1, "marks": [],
+        "caption": "<b>Edit camp</b> (Camps list pencil, camp page header): “Camp saved”, no Undo." },
+      { "src": "shots/c5-tpl-today.png", "crop": [880, 716, 400, 80], "scale": 1.1, "marks": [],
+        "caption": "<b>Edit template</b> (Templates tab): “Template saved”, no Undo." },
+      { "src": "shots/c5-camper-today.png", "crop": [880, 716, 400, 80], "scale": 1.1, "marks": [],
+        "caption": "<b>Edit details</b> (a camper): “Changes saved”, no Undo." },
+      { "src": "shots/c5-savetpl-today.png", "crop": [880, 716, 400, 80], "scale": 1.1, "marks": [],
+        "caption": "<b>Save as template</b> (camp ⋯): “Template saved · April Vacation Camp”, no Undo." },
+      { "row": [
+        { "src": "shots/c5-withdraw-real.png", "crop": [1000, 716, 280, 80], "scale": 1.1, "marks": [],
+          "caption": "<b>Already have Undo</b> (real screenshots): Withdraw …" },
+        { "src": "shots/c5-restore-real.png", "crop": [1000, 716, 280, 80], "scale": 1.1, "marks": [],
+          "caption": "… and <b>Restore</b>. Also Change how they’ll pay, Close / Reopen sign-up, check-ins." }
+      ] }
+    ] },
+    { "label": "After (mockup)", "tone": "after", "items": [
+      { "src": "shots/c5-pay-after.png", "crop": [880, 716, 400, 80], "scale": 1.1, "marks": [[1060, 736, 196, 40]],
+        "caption": "<b>“Payment changed” · Undo</b> (Black Belt’s words). Undo saves the old amount / way / date again on the new payment record, as Black Belt does (no database change)." },
+      { "src": "shots/c5-camp-after.png", "crop": [880, 716, 400, 80], "scale": 1.1, "marks": [[1093, 736, 163, 40]],
+        "caption": "<b>“Camp saved” · Undo</b> — saves the camp’s old values again. Can be refused (a family picked a newly added day, v0.701; or 0027’s edit guard): then the amber bar says why." },
+      { "src": "shots/c5-tpl-after.png", "crop": [880, 716, 400, 80], "scale": 1.1, "marks": [[1074, 736, 182, 40]],
+        "caption": "<b>“Template saved” · Undo</b> — saves the template’s old values again." },
+      { "src": "shots/c5-camper-after.png", "crop": [880, 716, 400, 80], "scale": 1.1, "marks": [[1077, 736, 179, 40]],
+        "caption": "<b>“Changes saved” · Undo</b> — saves the camper’s old details again. <b>See the question below.</b>" },
+      { "src": "shots/c5-savetpl-after.png", "crop": [880, 716, 400, 80], "scale": 1.1, "marks": [[948, 736, 308, 40]],
+        "caption": "<b>“Template saved · April Vacation Camp” · Undo</b> — deletes the new template (as Add camp’s Undo deletes the new camp)." },
+      { "row": [
+        { "src": "shots/c5-pay-tab-after.png", "crop": [560, 1090, 260, 90], "scale": 1.1, "shotWidth": 820, "marks": [[600, 1112, 196, 44]],
+          "caption": "<b>Tablet 820×1180:</b> bottom-right." },
+        { "src": "shots/c5-camper-ph-after.png", "crop": [0, 700, 390, 144], "scale": 1, "shotWidth": 390, "marks": [[105, 732, 179, 44]],
+          "caption": "<b>Phone 390×844:</b> bottom-center, above the bottom bar." }
+      ] }
+    ] }
+  ],
+  "footer": "<b>Question for Jeffrey — what a camper’s Undo can’t bring back:</b> if Edit details changed the days, the member box or the extras, the database prices the whole camper again at the camp’s <b>current</b> prices (rule v0.700; <code>camp_update_details</code>, <code>0022_camps_weekly_pricing.sql</code> lines 1419–1423). Undo saves the old details, which prices the camper again too — so if the camp’s prices changed since the sign-up, the old total may not come back (the child’s days and extras do). Options: (a) Undo as drawn, and the Camper detail shows the new total; (b) Undo only for changes that don’t re-price (names, age, family), none after days / member / extras changes. Recommendation: (a) — it is what a person re-typing the old values would get today. <b>Other toasts checked, not changed:</b> “Kept both sign-ups” (no Undo today; not in v1.006’s list), “Payment undone for X” (C4’s other half), Close / Open sign-up’s words (picture 6: “Sign-up open”, proposal). <b>Script:</b> <code>mock-c05-toast.js</code>."
+}

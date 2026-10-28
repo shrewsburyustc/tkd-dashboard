@@ -133,3 +133,12 @@ Details settled from precedent while drawing the additions (2026-10-19, design r
 - **2026-10-21/22 — deployed** main 45a8b79 (0022 live + app, 10:59 UTC). 2026-10-22: Main found 0013_tests T11a failing on Thursdays (today-relative camp dates crossing a Sun→Mon week); fixed tests-only in 3194e56 (checked on 14 fake dates incl. a year end; 1055/1055). **Next:** Jeffrey's live retest (2-week camp, phone QR, sign-up, check-in) → delete TEST camps.
 - **2026-10-22 — live retest PASSED:** 2-week camp, phone QR sign-up CP-4061 priced per week (5 days + 2 days = row 5 + row 2), signature saved and not in change_log, check-in + undo logged, camp deleted (0 sign-ups/campers/payments). One 'Test Camp' (6n3vzgfk, no sign-ups) still live — Jeffrey to delete or keep. **Left before the first real camp:** real waiver in templates, This device on desk devices, insurer 3-year retention, keep CAMPS_REGISTRATION on.
 - **2026-10-22 — production clean:** Test Camp (Shrewsbury) deleted too; 0 camps, days, grid rows, extras, sign-ups, campers, payments, templates (read-only check).
+
+## Design review C1–C20 (from 2026-10-28)
+
+Brief: `docs/Design Review/End review/Prompts/6-Camps.md` (Part 1 ready now; Part 2 after Dashboard core's step 1). Mockups: `docs/Camps/Design review mockups/` (record page `Camps-DesignReview-Mockups.html`; raw screenshots in `shots/` not committed).
+
+- **Ready now (Part 1):** C1, C4 (Edit payment toast + Undo), C5, C8, C9, C12, C13, C15, C16, C18; database half of C2 + C7 (one migration, number via Main).
+- **Waits on Dashboard core:** C2 / C7 screens, C3, C4 ask-first, C6, C10, C11, C14, C17, C20; C19 waits on its step 2.
+- **C1 — mockups approved 2026-10-28** (pictures 01, 02, 03, 03b; rulebook v0.722): Print roster follows the switch; the ⋯ menu drops Change how they'll pay with the switch on; "Total now Hidden on this tablet" kept. **Next: build C1** (its own reviewed step and commit, can merge first).
+- **Waiting for Jeffrey's OK:** pictures 04 (C15, C16), 05 (C8, C9), 06 (C12), 07 (C4, C5), 08 (C13), 09 (C18).

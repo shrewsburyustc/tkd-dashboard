@@ -1,0 +1,205 @@
+{
+ "title": "Camps C1 · 1 of 3 — the roster while “Hide private details” is on",
+ "subtitle": "Rule v1.000 (design review item 2): Camps hides money while the switch is on, as Color Belt (v0.412) and Star already do. The roster loses the Paid column and “N to collect · $X”; attendance, check-in, Find a camper, “here today”, the pizza count, “Updated …” and the duplicate warning stay. Preview screenshots (fake data, Wed Apr 21 2027 of the April Vacation Camp); amber = what changes. Drawn over the real page — nothing in the app was changed.",
+ "columns": [
+  {
+   "label": "Today · switch on",
+   "tone": "today",
+   "items": [
+    {
+     "src": "shots/c1-roster-pc-today.png",
+     "crop": [
+      52,
+      26,
+      1228,
+      774
+     ],
+     "scale": 0.7,
+     "marks": [
+      [
+       212,
+       186,
+       135,
+       28
+      ],
+      [
+       545,
+       328,
+       152,
+       472
+      ]
+     ],
+     "caption": "<b>PC 1280×800.</b> The top bar says “Private details hidden”, yet the roster shows the Paid column (Paid · $245 due · Owes $15) and “6 to collect · $1,355”."
+    },
+    {
+     "row": [
+      {
+       "src": "shots/c1-roster-tab-today.png",
+       "crop": [
+        72,
+        26,
+        748,
+        1154
+       ],
+       "scale": 0.42,
+       "shotWidth": 820,
+       "marks": [
+        [
+         236,
+         222,
+         82,
+         30
+        ],
+        [
+         228,
+         375,
+         140,
+         805
+        ]
+       ],
+       "caption": "<b>Tablet 820×1180 touch.</b> Same Paid column and “6 to collect” (no amount on narrower screens)."
+      },
+      {
+       "src": "shots/c1-roster-ph-today.png",
+       "crop": [
+        0,
+        0,
+        390,
+        790
+       ],
+       "scale": 0.62,
+       "shotWidth": 390,
+       "marks": [
+        [
+         104,
+         250,
+         92,
+         30
+        ],
+        [
+         330,
+         472,
+         48,
+         22
+        ],
+        [
+         330,
+         752,
+         48,
+         22
+        ]
+       ],
+       "caption": "<b>Phone 390×844.</b> “6 to collect”, and each card has its money tag (“Paid”, “$245 due”)."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "After · switch on (mockup)",
+   "tone": "after",
+   "items": [
+    {
+     "src": "shots/c1-roster-pc-after.png",
+     "crop": [
+      52,
+      26,
+      1228,
+      774
+     ],
+     "scale": 0.7,
+     "marks": [
+      [
+       72,
+       184,
+       440,
+       32
+      ],
+      [
+       76,
+       326,
+       1180,
+       32
+      ],
+      [
+       190,
+       408,
+       140,
+       28
+      ]
+     ],
+     "caption": "<b>PC.</b> No Paid column, no “to collect”. The “Possible duplicate” tag isn’t money, so it moves onto the name’s line (as in the walkthrough’s picture 4). Check-in buttons and times stay."
+    },
+    {
+     "row": [
+      {
+       "src": "shots/c1-roster-tab-after.png",
+       "crop": [
+        72,
+        26,
+        748,
+        1154
+       ],
+       "scale": 0.42,
+       "shotWidth": 820,
+       "marks": [
+        [
+         92,
+         220,
+         390,
+         32
+        ],
+        [
+         96,
+         375,
+         700,
+         30
+        ],
+        [
+         108,
+         476,
+         136,
+         28
+        ]
+       ],
+       "caption": "<b>Tablet.</b> Same; the day columns get the width."
+      },
+      {
+       "src": "shots/c1-roster-ph-after.png",
+       "crop": [
+        0,
+        0,
+        390,
+        790
+       ],
+       "scale": 0.62,
+       "shotWidth": 390,
+       "marks": [
+        [
+         12,
+         250,
+         366,
+         30
+        ],
+        [
+         300,
+         472,
+         78,
+         22
+        ],
+        [
+         242,
+         612,
+         136,
+         24
+        ]
+       ],
+       "caption": "<b>Phone.</b> Money tags go; “Possible duplicate” stays on its card. (320 wide checked: no sideways scroll.)"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "footer": "<b>Words</b> come from the shared switch code (<code>src/lib/privateDetails.js</code>). Turning the switch off shows everything again. 320 wide checked: no sideways scroll. <b>Not drawn here:</b> the Mark paid box can’t open (its “$X due” tag is gone with the column). <b>Script:</b> <code>mock-c01-roster-hidden.js</code>."
+}
