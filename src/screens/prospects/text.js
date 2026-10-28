@@ -125,6 +125,7 @@ export const UNSAVED_NOTE = 'Unsaved note. Save it or cancel first.';
 export const CALL = 'Call';
 export const TEXT = 'Text';
 export const EMAIL = 'Email';
+export const EMAIL_OFF_WHILE_HIDDEN = 'Email is off while private details are hidden. Email the family at the desk.'; // v1.000 (D2a)
 export const COPY_NUMBER = 'Copy number';
 export const COPIED = 'Copied';
 export const callTitle = (name) => `Call ${name}`;

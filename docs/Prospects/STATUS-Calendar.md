@@ -1,5 +1,7 @@
 # Calendar — status
 
+**Design review changes (N1–N17):** see `STATUS-DesignReview.md`.
+
 Branch `claude/prospect-form-system-cd893d`. Plan: `TKD-Calendar-Build-Plan.md` (approved 2026-10-17). Rulebook v0.234 (design) and v0.239 (plan answers). Approved mockup: `TKD-Calendar-Mockups.html` rev 1.
 
 **Database live, app not yet.** Migration 0008 is applied to the live Supabase database. Jeffrey pasted it into the Supabase SQL Editor on 2026-10-19 (order 0007 → 0008 → 0009 → 0012, after 0001–0006 and Color Belt's 0010). For each: the live fingerprints equal the PGlite live-order copy exactly (row count + one hash over every row), the security advisor showed only the expected entries (signed-in users may run the checked write functions; internal tables have RLS on and no read rule on purpose), and the tests file passed (run with the real admin and front-desk IDs, rolled back). Nothing has been pushed: the live dashboard has no Calendar screen until this branch is merged into main and pushed.
