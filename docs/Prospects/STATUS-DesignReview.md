@@ -7,7 +7,7 @@ Order: **N17 first**, as its own reviewed step and commit. Then N1, N2, N4, N5, 
 | # | Change | Part | Status |
 |---|---|---|---|
 | N17 | Hide private details in Prospects: Email grays (no `mailto:` left), one gray line; answers "Hidden on this tablet" | 1 | **Done 2026-10-28.** Mockup OK'd by Jeffrey; built in `ProspectPanel.jsx`, `prospects/text.js`, `prospects.css`. Design and code reviews: the gray button first used colour names that don't exist (copied from Star's `results.css`); fixed to Black Belt's approved unavailable look. Committed on the branch, not merged or pushed |
-| N17-Q | Fill in / + Add prospect while the switch is on: desk-only (like Star's New candidate) or unchanged? | 1 | Asked 2026-10-28 (`DesignReview-Q-fill-in-private-details.png`; A desk-only recommended / B unchanged) — waiting for Jeffrey |
+| N17-Q | Fill in / + Add prospect while the switch is on | 1 | **Decided 2026-10-28: A, desk-only** (rulebook v0.616, uncommitted). Mockups at four sizes sent (`DesignReview-v0616-prospects-mockup.png`, `DesignReview-v0616-forms-mockup.png`), waiting for Jeffrey's OK |
 | N1 | "That prospect no longer exists." → the amber bar | 1 | Not started |
 | N2 | Undo for 5 s: Prospects' panel status; Forms' Close / Open (to settle: Joined) | 1 | Not started |
 | N4 | "Open form again" → "Open form"; door icons go | 1 | Not started |
