@@ -10,9 +10,11 @@
 // It returns CODES, never words (the screens' text.js owns all wording).
 //
 // Words used:
-//   row      one stored row of testing_payments (Color Belt) or star_payments (Star): kind
-//            'payment' | 'refund' (Star only) | 'reversal' (a correction pointing at another row)
-//   owner    the registration (Color Belt) or candidate (Star) a row belongs to
+//   row      one stored row of testing_payments (Color Belt), star_payments (Star), camp_payments
+//            or bb_payments (Black Belt, migration 0026): kind 'payment' | 'refund' | 'reversal' (a
+//            correction pointing at another row) | 'returned' (Black Belt only: a check the bank
+//            returned, rulebook v0.809 — it points at the check but is NOT a correction of it)
+//   owner    the registration (Color Belt), candidate (Star, Black Belt) or camper a row belongs to
 //   chain    a first payment / refund followed through its edits to the row that is true now
 //   item     one line of the report: a chain shown on one day, with a state:
 //            'counted' · 'edited' · 'moved_in' · 'moved_out' · 'undone' · 'hidden'
@@ -32,6 +34,11 @@ export const ITEM_STATES = ['counted', 'edited', 'moved_in', 'moved_out', 'undon
 const COUNTING_STATES = new Set(['counted', 'edited', 'moved_in']);
 // Payment methods, in drawer order (the order of the groups on the report).
 export const METHODS = ['cash', 'check', 'card'];
+// Black Belt's returned (bounced) checks (v0.809, v0.815): their own group, always LAST — after
+// Refunds, and in the "In groups" layout too (they are never mixed into Check).
+export const RETURNED_GROUP = 'returned';
+// Is this item a returned check? Close the day leaves these out of everything it uses (v0.809).
+export const isReturned = (item) => item?.kind === 'returned';
 // Refund layouts (v0.209): 'own' = a Refunds group at the end; 'in' = inside Cash / Check.
 export const REFUND_LAYOUTS = ['own', 'in'];
 // History tags, most important first (finance_history).
@@ -53,7 +60,8 @@ const msOf = (iso) => Date.parse(iso);
 const sameLogin = (a, b) => a !== null && a !== undefined && a === b;
 
 // Reads one stored row into the shape the chain rules use. Color Belt rows name their owner
-// registration_id, Star rows candidate_id, Camp rows camper_id (v0.707); any may be given as owner_id instead.
+// registration_id, Star and Black Belt rows candidate_id, Camp rows camper_id (v0.707); any may be
+// given as owner_id instead.
 function normalizeRow(row) {
   return {
     ...row,
@@ -71,6 +79,8 @@ function normalizeRow(row) {
 export function buildChains(rows) {
   const list = (rows ?? []).map(normalizeRow);
   // Which reversal points at each row (a row is reversed at most once — 0005 / 0006 guards).
+  // Only kind 'reversal' counts: a Black Belt 'returned' row also points at its check, but it is
+  // NOT a correction of the check (v0.809: the check's own day stays exactly as counted).
   const reversalOf = new Map();
   for (const r of list) if (r.kind === 'reversal' && r.reverses_payment_id) reversalOf.set(r.reverses_payment_id, r);
 
@@ -90,10 +100,12 @@ export function buildChains(rows) {
     }
   }
 
-  // Rule 1 — a chain starts at a payment or refund that is not the new row of an edit.
+  // Rule 1 — a chain starts at a payment or refund that is not the new row of an edit. A Black
+  // Belt returned row is a chain of its own (contract 0026 §2.2): undoing the mark is a reversal
+  // of the returned row, so the returned chain shows "undone" like any other undo (v0.199).
   const chains = [];
   for (const first of list) {
-    if ((first.kind !== 'payment' && first.kind !== 'refund') || isEditRow.has(first.id)) continue;
+    if (!['payment', 'refund', 'returned'].includes(first.kind) || isEditRow.has(first.id)) continue;
     const chainRows = [first];
     const edits = [];
     let current = first;
@@ -178,19 +190,27 @@ export function chainItems(rows) {
 // ----- Totals and expected values (§1.4, "Refunds and the drawer" v0.209) -----
 
 // The day's totals from its (non-hidden) items, in finance_day's shape:
-//   totals:  { count (counted PAYMENTS), total_cents (= net_cents), in_cents (payments),
-//              net_cents (payments + refunds), cash/check/card: { count, cents } (payments only) }
-//   refunds: { count, cents, cash_cents, check_cents }  (cents are negative, like the rows)
+//   totals:   { count (counted PAYMENTS), total_cents (= net_cents), in_cents (payments),
+//               net_cents (payments + refunds + returned checks), cash/check/card: { count, cents }
+//               (payments only — money IN) }
+//   refunds:  { count, cents, cash_cents, check_cents, card_cents }  (cents are negative, like the rows)
+//   returned: { count, cents }  counted Black Belt returned checks (cents negative; contract 0026 §6).
+//             They come off the day's Total (v0.809) but never off Cash / Check / Card.
 export function summarize(items) {
   const totals = { count: 0, total_cents: 0, in_cents: 0, net_cents: 0, cash: { count: 0, cents: 0 }, check: { count: 0, cents: 0 }, card: { count: 0, cents: 0 } };
-  const refunds = { count: 0, cents: 0, cash_cents: 0, check_cents: 0 };
+  const refunds = { count: 0, cents: 0, cash_cents: 0, check_cents: 0, card_cents: 0 };
+  const returned = { count: 0, cents: 0 };
   for (const item of items ?? []) {
     if (!countsInTotals(item.state)) continue;
-    if (item.kind === 'refund') {
+    if (item.kind === 'returned') {
+      returned.count += 1;
+      returned.cents += item.amount_cents;
+    } else if (item.kind === 'refund') {
       refunds.count += 1;
       refunds.cents += item.amount_cents;
       if (item.method === 'cash') refunds.cash_cents += item.amount_cents;
       if (item.method === 'check') refunds.check_cents += item.amount_cents;
+      if (item.method === 'card') refunds.card_cents += item.amount_cents; // Black Belt refunds to a card (v0.814)
     } else {
       totals.count += 1;
       totals.in_cents += item.amount_cents;
@@ -200,9 +220,9 @@ export function summarize(items) {
       }
     }
   }
-  totals.net_cents = totals.in_cents + refunds.cents;
+  totals.net_cents = totals.in_cents + refunds.cents + returned.cents;
   totals.total_cents = totals.net_cents;
-  return { totals, refunds };
+  return { totals, refunds, returned };
 }
 
 // What the drawer should hold in cash: cash payments − cash refunded (may be negative).
@@ -210,39 +230,61 @@ export function expectedCash(totals, refunds) {
   return (totals?.cash?.cents ?? 0) + (refunds?.cash_cents ?? 0);
 }
 
+// What the card machine's day total should be: card payments − card refunds (v0.814, question
+// 20 B: most card terminals' day total is after refunds). May be negative.
+export function expectedCard(totals, refunds) {
+  return (totals?.card?.cents ?? 0) + (refunds?.card_cents ?? 0);
+}
+
 // Everything Close the day compares against. Checks count PAYMENTS only — a check refund is
-// the school's own check and never sits in the drawer. Card = card payments.
-//   → { count (every counted item), cashCents, checksCount, checksCents, cardCents }
+// the school's own check and never sits in the drawer. Card = card payments − card refunds.
+// Returned checks are never part of it (v0.809): finance_day sends them apart, in `returned`.
+//   → { count (every counted payment and refund), cashCents, checksCount, checksCents, cardCents }
 export function expectedValues(totals, refunds) {
   return {
     count: (totals?.count ?? 0) + (refunds?.count ?? 0),
     cashCents: expectedCash(totals, refunds),
     checksCount: totals?.check?.count ?? 0,
     checksCents: totals?.check?.cents ?? 0,
-    cardCents: totals?.card?.cents ?? 0,
+    cardCents: expectedCard(totals, refunds),
   };
 }
 
 // The four cards at the top of the report for a refund layout (v0.209):
 //   'own' → Cash / Check / Card show money IN; Total is net, its sub-line says "after $X refunds".
-//   'in'  → Cash / Check show net (refunds taken off); Total is net.
-// → { total: { cents, count, sub: 'payments' | 'after_refunds', refundCents },
-//     cash / check / card: { cents, count, refundCents } }   refundCents are positive amounts.
-export function cardsFor(totals, refunds, layout = 'own') {
+//   'in'  → Cash / Check / Card show net (their refunds taken off — card too, v0.814); Total is net.
+// Returned checks (v0.809, v0.815) come off the Total only, never off a method card; the Total's
+// sub-line then names them too ("after $150.00 refunds and a $900.00 returned check").
+//   returned = finance_day's `returned` ({ count, cents }); left out → none.
+// → { total: { cents, count, sub, refundCents, returnedCents, returnedCount },
+//     cash / check / card: { cents, count, refundCents } }   refundCents / returnedCents are positive.
+//   sub = 'payments' | 'after_refunds' | 'after_returned' | 'after_refunds_returned'
+export function cardsFor(totals, refunds, layout = 'own', returned = null) {
   const inGroups = layout === 'in';
-  const refundOf = { cash: -(refunds?.cash_cents ?? 0), check: -(refunds?.check_cents ?? 0), card: 0 };
+  // (0 - x rather than -x: -0 would print and compare as "minus zero")
+  const refundOf = { cash: 0 - (refunds?.cash_cents ?? 0), check: 0 - (refunds?.check_cents ?? 0), card: 0 - (refunds?.card_cents ?? 0) };
   const card = (method) => ({
     cents: (totals?.[method]?.cents ?? 0) - (inGroups ? refundOf[method] : 0),
     count: totals?.[method]?.count ?? 0,
     refundCents: refundOf[method],
   });
-  const refundCents = -(refunds?.cents ?? 0);
+  const refundCents = 0 - (refunds?.cents ?? 0);
+  const returnedCents = 0 - (returned?.cents ?? 0);
+  const returnedCount = returned?.count ?? 0;
+  const hasRefunds = (refunds?.count ?? 0) > 0;
+  const hasReturned = returnedCount > 0;
+  let sub = 'payments';
+  if (hasRefunds && hasReturned) sub = 'after_refunds_returned';
+  else if (hasRefunds) sub = 'after_refunds';
+  else if (hasReturned) sub = 'after_returned';
   return {
     total: {
-      cents: (totals?.in_cents ?? 0) - refundCents,
+      cents: (totals?.in_cents ?? 0) - refundCents - returnedCents,
       count: totals?.count ?? 0,
-      sub: (refunds?.count ?? 0) > 0 ? 'after_refunds' : 'payments',
+      sub,
       refundCents,
+      returnedCents,
+      returnedCount,
     },
     cash: card('cash'),
     check: card('check'),
@@ -251,22 +293,30 @@ export function cardsFor(totals, refunds, layout = 'own') {
 }
 
 // The payment list's groups in drawer order: Cash, Check, Card (and, in the 'own' layout,
-// Refunds at the end). Groups with no items at all are dropped; a group whose items are all
-// undone still shows (its rows are struck through). Items keep the order they came in.
-// → [{ key: 'cash' | 'check' | 'card' | 'refunds', items, count, cents, refundCount }]
-//   count = counted payments, refundCount = counted refunds, cents = counted net total.
+// Refunds at the end), then Returned checks LAST in both layouts (v0.815). Groups with no items
+// at all are dropped; a group whose items are all undone still shows (its rows are struck
+// through). Items keep the order they came in.
+// → [{ key: 'cash' | 'check' | 'card' | 'refunds' | 'returned', items, count, cents, refundCount,
+//      returnedCount, undoneCount }]
+//   count = counted payments, refundCount = counted refunds, returnedCount = counted returned
+//   checks, undoneCount = undone rows (the Returned checks header says "(1 undone, not counted)"),
+//   cents = counted net total.
 export function groupItems(items, layout = 'own') {
-  const keys = layout === 'in' ? METHODS : [...METHODS, 'refunds'];
-  const groups = Object.fromEntries(keys.map((key) => [key, { key, items: [], count: 0, cents: 0, refundCount: 0 }]));
+  const keys = layout === 'in' ? [...METHODS, RETURNED_GROUP] : [...METHODS, 'refunds', RETURNED_GROUP];
+  const groups = Object.fromEntries(keys.map((key) => [key, { key, items: [], count: 0, cents: 0, refundCount: 0, returnedCount: 0, undoneCount: 0 }]));
   for (const item of items ?? []) {
     if (item.state === 'hidden') continue;
-    const key = item.kind === 'refund' && layout !== 'in' ? 'refunds' : item.method;
+    let key = item.method;
+    if (item.kind === 'returned') key = RETURNED_GROUP;
+    else if (item.kind === 'refund' && layout !== 'in') key = 'refunds';
     const group = groups[key];
     if (!group) continue;
     group.items.push(item);
+    if (item.state === 'undone') group.undoneCount += 1;
     if (!countsInTotals(item.state)) continue;
     group.cents += item.amount_cents;
     if (item.kind === 'refund') group.refundCount += 1;
+    else if (item.kind === 'returned') group.returnedCount += 1;
     else group.count += 1;
   }
   return keys.map((key) => groups[key]).filter((g) => g.items.length > 0);
@@ -400,9 +450,11 @@ export function daysBetweenInclusive(from, to) {
 // sorted. finance_day returns it; finance_close_day answers 'stale' when it no longer matches, so
 // even a method-only edit between loading and closing is caught. The real database uses md5;
 // this preview uses a smaller hash — a fingerprint is only ever compared with one from the same place.
+// Returned checks are left out (contract 0026 §6): marking a check returned (or undoing the mark)
+// never makes an open Close the day dialog "stale", because Close the day doesn't use them.
 export function fingerprintOf(items) {
   const text = (items ?? [])
-    .filter((i) => i.state !== 'hidden')
+    .filter((i) => i.state !== 'hidden' && !isReturned(i))
     .map((i) => `${i.row_id}|${i.amount_cents}|${i.method}|${i.state}`)
     .sort()
     .join(',');
