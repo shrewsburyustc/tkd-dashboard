@@ -1,0 +1,50 @@
+{
+  "title": "Black Belt · Mockup C — the Undo payment box names the payment (BB3)",
+  "subtitle": "Drawn on the real preview box (fake data). Today the title is built from the plan's installments, so one $870 card payment that paid all three reads <b>\"Undo payment 1 + Payment 2 + Payment 3?\"</b>. Now that the roster row's ⋯ opens this box too (mockup A), it must say clearly <b>which person and which payment</b>: amount, how, when. <b>One question: which title?</b> The buttons stay as today here; Part 2 (BB7, the shared box) makes them <b>Keep payment · Undo payment</b>.",
+  "width": 1640,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        { "src": "pc-today.png", "crop": [440, 60, 400, 230], "caption": "<b>PC</b>, Mia Chen: one card payment for payments 1–3.", "marks": [[460, 80, 360, 127]] },
+        { "src": "pc-sam-today.png", "crop": [440, 60, 400, 230], "caption": "<b>PC</b>, Sam Lee: one check for payment 1 — \"Undo payment 1?\" says nothing about the money.", "marks": [[460, 80, 360, 103]] },
+        { "src": "tab-today.png", "shotWidth": 820, "crop": [210, 76, 400, 235], "caption": "<b>Tablet</b> 820 touch", "marks": [[230, 96, 360, 131]] },
+        { "row": [
+          { "src": "phone-today.png", "shotWidth": 390, "crop": [0, 64, 390, 235], "scale": 0.6, "caption": "<b>Phone</b> 390", "marks": [[16, 84, 358, 131]] },
+          { "src": "p320-today.png", "shotWidth": 320, "crop": [0, 37, 320, 288], "scale": 0.6, "caption": "<b>320</b>", "marks": [[16, 57, 288, 144]] }
+        ] }
+      ],
+      "note": "Amber: the words that change."
+    },
+    {
+      "label": "A · the person and the payment (recommended)",
+      "tone": "after",
+      "items": [
+        { "src": "pc-A.png", "crop": [440, 60, 400, 230], "caption": "<b>\"Undo Mia Chen’s $870 card payment?\"</b> — Recorded on Mar 20 for payments 1, 2 and 3. It comes off the balance; the history keeps it.", "marks": [[460, 80, 360, 103]] },
+        { "src": "pc-sam-A.png", "crop": [440, 60, 400, 230], "caption": "\"Undo Sam Lee’s $330 check payment?\" — Recorded on Mar 27 for payment 1.", "marks": [[460, 80, 360, 103]] },
+        { "src": "tab-A.png", "shotWidth": 820, "crop": [210, 76, 400, 235], "caption": "<b>Tablet</b>", "marks": [[230, 96, 360, 107]] },
+        { "row": [
+          { "src": "phone-A.png", "shotWidth": 390, "crop": [0, 64, 390, 235], "scale": 0.6, "caption": "<b>Phone</b> 390", "marks": [[16, 84, 358, 107]] },
+          { "src": "p320-A.png", "shotWidth": 320, "crop": [0, 37, 320, 288], "scale": 0.6, "caption": "<b>320</b>", "marks": [[16, 57, 288, 164]] }
+        ] }
+      ],
+      "note": "Green: the new words. <b>Pro:</b> Star's own shape (\"Undo Mia Chen’s payment?\", G16) with the amount and how added, so the sections read alike; the name in the title catches a tap on the wrong roster row — the new risk once the row's ⋯ can undo. <b>Con:</b> the date is in the second line, not the title."
+    },
+    {
+      "label": "B · the payment first",
+      "tone": "after",
+      "items": [
+        { "src": "pc-B.png", "crop": [440, 60, 400, 230], "caption": "<b>\"Undo the $870 card payment from Mar 20?\"</b> — It was for payments 1, 2 and 3. It comes off Mia Chen’s balance; the history keeps it.", "marks": [[460, 80, 360, 127]] },
+        { "src": "pc-sam-B.png", "crop": [440, 60, 400, 230], "caption": "\"Undo the $330 check payment from Mar 27?\" — It was for payment 1.", "marks": [[460, 80, 360, 127]] },
+        { "src": "tab-B.png", "shotWidth": 820, "crop": [210, 76, 400, 235], "caption": "<b>Tablet</b>", "marks": [[230, 96, 360, 131]] },
+        { "row": [
+          { "src": "phone-B.png", "shotWidth": 390, "crop": [0, 64, 390, 235], "scale": 0.6, "caption": "<b>Phone</b> 390", "marks": [[16, 84, 358, 131]] },
+          { "src": "p320-B.png", "shotWidth": 320, "crop": [0, 37, 320, 288], "scale": 0.6, "caption": "<b>320</b>", "marks": [[16, 57, 288, 164]] }
+        ] }
+      ],
+      "note": "Green: the new words. <b>Pro:</b> amount, how and when all in the title — the most exact name for the payment. <b>Con:</b> the person is only in the second line, and it no longer matches Star's box."
+    }
+  ],
+  "footer": "<b>Same for both options:</b> \"for payments 1, 2 and 3\" / \"for payment 1\" / \"in full\" / \"for the Kukkiwon certificate\" follow what the payment was for (the detail's \"For\" column). How: cash · check · card payment. Undo refund and Undo returned mark keep their own titles (Part 2, BB7). After Undo, the toast stays as today: \"Payment 1 + Payment 2 + Payment 3 undone · $870 · Mia Chen\" (its words follow the chosen title in the build)."
+}

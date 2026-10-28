@@ -215,3 +215,5 @@ All the items below were applied to the plan.
 **2026-10-28: mockup A (roster row ⋯) OK'd, option 2 (v0.963).** Drawn on the preview (`tools/mock-a-rowmenu.js`, pictures `images/dr-a/`), design-reviewed (2 must-fixes fixed: Restore before Delete on withdrawn rows; the active-row delete reason ends "Withdraw them instead."). Merged main (Dashboard core step 1, 95a9601) as 39ac475. **Next:** mockup B (detail ⋯), then C (Undo payment box), D (Delete permanently box); BB3 / BB9 / BB6 are built together after D.
 
 **2026-10-28: mockup B (detail ⋯) OK'd as drawn** (no new row; follows v1.011 / v0.963): Edit details · Change plan or Kukkiwon — Withdraw · Delete permanently; money stays on the payment lines and buttons; a withdrawn detail is unchanged. Picture `images/dr-b/B-detail-menu.png`. **Next:** mockup C (Undo payment box, its title naming the payment).
+
+**2026-10-28: mockup C (Undo payment box) OK'd, option A (v0.964).** Title "Undo Mia Chen's $870 card payment?", second line "Recorded on Mar 20 for payments 1, 2 and 3. It comes off the balance; the history keeps it." (`tools/mock-c-undobox.js`, `images/dr-c/`).
