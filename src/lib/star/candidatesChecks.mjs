@@ -14,7 +14,8 @@
 // duplicates (§5.6) · make-ups: kept / retest rows, OPEN-8 / OPEN-10 / OPEN-11, already_added ·
 // "no DOB or email in any list read" (the column lists, the view, the make-up list) · History and
 // View signature incl. the 90-day removal · the make-up list is a POST · the Events tab's counts and
-// Delete event after the takeover · the console helpers · words for every status.
+// Delete event after the takeover · the console helpers · words for every status · the ⋯ menu's one
+// order in three groups (candidateMenu.js, DR G1) · the toasts' Undo calls (DR G2 / G3).
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { createStarBackend } from '../mockStarTesting.js';
@@ -30,6 +31,8 @@ import { candidateResult, assistantGrade, ageGroupOf, ageOn } from './resultRule
 import { statusMessage, refundTooLarge, NOTHING_OVERPAID, UNDO_PAYMENT_TOO_LATE, UNDO_REFUND_FIRST, DAN_NEEDS_ADMIN, choiceNeededLine } from './candidatesText.js';
 import { addDays } from '../testing/eventRules.js';
 import { takeSnapshot, writeArgs } from './dialogSnapshot.js';
+import { candidateMenuKeys, canPrintReceipt } from './candidateMenu.js';
+import { buildStarReceipt } from './candidatesReceipt.js';
 
 let count = 0;
 async function check(label, fn) {
@@ -437,7 +440,10 @@ await check('History (v0.169): this candidate and its own child rows, newest fir
   const payRow = h.rows.find((r) => r.tableName === 'star_payments');
   assert.deepEqual(historyPrivacy(payRow), { payment: true, privateFields: [] });
   assert.deepEqual(historyPrivacy(insert).privateFields, ['date_of_birth', 'email_for_results']);
-  assert.equal(historyPrivacy(insert).payment, true); // the insert sets paying_by too
+  // the insert sets paying_by too, but its line ("Registered on the family form") shows no money:
+  // it stays while hidden (Q4 A, v0.518); a later CHANGE of Paying by is a payment row
+  assert.equal(historyPrivacy(insert).payment, false);
+  assert.equal(historyPrivacy({ tableName: 'star_candidates', op: 'update', before: { paying_by: 'cash' }, after: { paying_by: 'check' } }).payment, true);
   // a duplicate link pointing at a candidate doesn't bring the other's rows in
   const [ava1, ava2] = [await cand(rig, 'fall', 'Ava', 0), await cand(rig, 'fall', 'Ava', 1)];
   const h1 = await rig.api.loadCandidateHistory(ava1.id);
@@ -704,7 +710,7 @@ await check('star_set_private / clear: no_access → invalid → not_found → s
   rig.lock();
   assert.equal(statusOf(await call(lily, { privateTime: null })), 'no_access');
   rig.unlock();
-  for (const over of [{ privateTime: null }, { privateOn: null }, { privateTime: '07:45' }, { privateTime: '20:15' }, { privateTime: '16:10' }, { privateTime: 'late' }]) {
+  for (const over of [{ privateTime: null }, { privateOn: null }, { privateTime: '05:55' }, { privateTime: '22:05' }, { privateTime: '16:03' }, { privateTime: 'late' }]) {
     assert.equal(statusOf(await call(lily, over)), 'invalid', JSON.stringify(over));
   }
   assert.equal(statusOf(await call(lily, { candidateId: randomUUID() })), 'not_found');
@@ -1134,7 +1140,7 @@ await check('the data layer sends exactly the migration\'s argument names', asyn
 // =====================================================================================
 
 await check('words: every status of every action has a message (ok and no_access have none)', async () => {
-  const actions = ['withdraw', 'restore', 'undo_duplicate', 'undo_payment', 'admin_undo_payment', 'undo_refund', 'duplicate', 'add',
+  const actions = ['withdraw', 'restore', 'undo_duplicate', 'undo_payment', 'admin_undo_payment', 'undo_refund', 'duplicate', 'undo_edit_payment', 'undo_paying_by', 'add',
     'edit', 'paying_by', 'private', 'record_payment', 'edit_payment', 'refund', 'delete', 'add_makeup'];
   for (const action of actions) {
     for (const status of STAR_CANDIDATE_STATUSES) {
@@ -1156,6 +1162,149 @@ await check('words: every status of every action has a message (ok and no_access
   assert.ok(statusMessage('edit', 'stale', { phone: true }).text.includes('Discard changes'));
   assert.equal(statusMessage('withdraw', 'error').text, "That didn't save. Check the connection, then retry.");
   assert.equal(statusMessage('record_payment', 'error').text, "Couldn't save. Check the connection, then try again.");
+});
+
+// =====================================================================================
+// 7. The ⋯ menu's order (candidateMenu.js, DR G1, v0.517)
+// =====================================================================================
+
+// "key|key" with a "/" before each item that starts a new group (the line in the menu)
+const menuOf = (row, opts) => candidateMenuKeys(row, opts).map((k) => `${k.separatorBefore ? '/' : ''}${k.key}`).join(' ');
+const baseRow = { status: 'active', privateOn: null, paid: false, isMakeup: false, refundedCents: 0, overpaidCents: 0 };
+
+await check('menu: not paid row, staff (a) — Edit details first, no money items, no group 3', () => {
+  assert.equal(menuOf(baseRow, { isAdmin: false, hidden: false }), 'edit setPrivate payingBy');
+});
+await check('menu: not paid row with a private testing, admin (b)', () => {
+  const row = { ...baseRow, privateOn: '2026-11-18' };
+  assert.equal(menuOf(row, { isAdmin: true, hidden: false, canGradePrivate: true }), 'edit changePrivate backToDay gradePrivate payingBy /withdraw delete');
+  assert.equal(menuOf(row, { isAdmin: true, hidden: false }), 'edit changePrivate backToDay payingBy /withdraw delete');
+});
+await check('menu: paid and overpaid, admin (c) — the money group between two lines', () => {
+  const row = { ...baseRow, paid: true, overpaidCents: 2000 };
+  assert.equal(menuOf(row, { isAdmin: true, hidden: false }), 'edit setPrivate /editPayment undoPayment recordRefund printReceipt /withdraw delete');
+  assert.equal(menuOf({ ...row, overpaidCents: 0 }, { isAdmin: true, hidden: false }), 'edit setPrivate /editPayment undoPayment printReceipt /withdraw delete');
+});
+await check('menu: paid row, staff (d) — only Print receipt in the money group (S2, v0.518)', () => {
+  assert.equal(menuOf({ ...baseRow, paid: true }, { isAdmin: false, hidden: false }), 'edit setPrivate /printReceipt');
+  assert.equal(menuOf({ ...baseRow, paid: true }, { isAdmin: false, hidden: true }), 'edit setPrivate'); // hidden: no Print receipt (Q8 B)
+  assert.equal(menuOf({ ...baseRow, paid: true, status: 'withdrawn' }, { isAdmin: true, hidden: false }), 'restore /delete');
+  // the summary uses the same rule (canPrintReceipt): no Print receipt on a withdrawn, make-up or hidden row
+  assert.equal(canPrintReceipt({ ...baseRow, paid: true }, false), true);
+  assert.equal(canPrintReceipt({ ...baseRow, paid: true, status: 'withdrawn' }, false), false);
+  assert.equal(canPrintReceipt({ ...baseRow, paid: true, isMakeup: true }, false), false);
+  assert.equal(canPrintReceipt({ ...baseRow, paid: true }, true), false);
+  assert.equal(canPrintReceipt({ ...baseRow, refundedCents: 2000 }, false), true);
+});
+await check('menu: withdrawn row (e) — Restore · line · Delete permanently; nothing for staff', () => {
+  const row = { ...baseRow, status: 'withdrawn' };
+  assert.equal(menuOf(row, { isAdmin: true, hidden: false }), 'restore /delete');
+  assert.equal(menuOf(row, { isAdmin: false, hidden: false }), '');
+});
+await check('menu: a refund stands (f) — Undo refund takes Record refund’s place', () => {
+  const row = { ...baseRow, paid: true, overpaidCents: 0, refundedCents: 2000 };
+  assert.equal(menuOf(row, { isAdmin: true, hidden: false }), 'edit setPrivate /editPayment undoPayment undoRefund printReceipt /withdraw delete');
+});
+await check('menu: make-up row, or Hide private details on (g) — no money items', () => {
+  assert.equal(menuOf({ ...baseRow, isMakeup: true }, { isAdmin: true, hidden: false }), 'edit setPrivate /withdraw delete');
+  assert.equal(menuOf({ ...baseRow, paid: true }, { isAdmin: true, hidden: true }), 'edit setPrivate /withdraw delete');
+  assert.equal(menuOf(baseRow, { isAdmin: false, hidden: true }), 'edit setPrivate');
+});
+await check('menu: a flagged "Possible duplicate" row — Review possible duplicate after Change how they’ll pay', () => {
+  assert.equal(menuOf(baseRow, { isAdmin: true, hidden: false, flagged: true }), 'edit setPrivate payingBy reviewDuplicate /withdraw delete');
+  assert.equal(menuOf(baseRow, { isAdmin: false, hidden: true, flagged: true }), 'edit setPrivate reviewDuplicate');
+  assert.equal(menuOf({ ...baseRow, paid: true }, { isAdmin: true, hidden: false, flagged: true }), 'edit setPrivate reviewDuplicate /editPayment undoPayment printReceipt /withdraw delete');
+});
+
+// =====================================================================================
+// 7b. The payment receipt (candidatesReceipt.js, S2, DR2-P4, v0.518)
+// =====================================================================================
+
+await check('receipt: facts, lines oldest first without undone payments and their reversals, a refund with a minus, totals, schools, printed by', async () => {
+  const rig = makeRig();
+  const lily = await cand(rig, 'fall', 'Lily');
+  // a payment that is undone (left out with its reversal), then a payment of $160 (paid before the
+  // testing day), then a $20 refund
+  const p1 = await rig.api.recordPayment({ candidateId: lily.id, expectedVersion: lily.version, method: 'cash', amountCents: 14000, paidOn: TODAY });
+  assert.equal(p1.status, 'ok');
+  assert.equal((await rig.api.undoPayment({ paymentId: p1.paymentId })).status, 'ok');
+  rig.later(60000);
+  const again = await cand(rig, 'fall', 'Lily');
+  const p2 = await rig.api.recordPayment({ candidateId: again.id, expectedVersion: again.version, method: 'check', amountCents: 16000, paidOn: TODAY });
+  assert.equal(p2.status, 'ok');
+  rig.later(60000); // a minute later (the payments are in the order they were recorded)
+  const paid = await cand(rig, 'fall', 'Lily');
+  const refund = await rig.api.recordRefund({ candidateId: paid.id, expectedVersion: paid.version, method: 'cash', amountCents: 2000, refundedOn: TODAY });
+  assert.equal(refund.status, 'ok');
+  const detail = await rig.api.loadCandidateDetail(lily.id);
+  const schools = [
+    { name: 'Worcester', address: { street: '1141 Main St' }, phone: '(508) 767-1717' },
+    { name: 'Shrewsbury', address: null, phone: null },
+  ];
+  const r = buildStarReceipt({ detail, eventName: 'Fall Star Testing', schools, printedOn: TODAY, printedByName: ' Jeffrey Berg ' });
+  assert.equal(r.kindLine, 'Star testing · payment receipt');
+  assert.deepEqual(r.facts.map(([label]) => label), ['Candidate', 'Event', 'School']);
+  assert.match(r.facts[0][1], /^Lily \S+ · \d(st|nd|rd|th) Dan · \d stars? → \d stars?$/);
+  assert.match(r.facts[1][1], /^Fall Star Testing · [A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2}, 2026$/);
+  assert.deepEqual(r.lines.map((l) => [l.forText, l.how, l.amountCents]), [['Testing fee', 'check', 16000], ['Refund', 'cash', -2000]]);
+  assert.equal(r.paidCents, detail.paidCents);
+  assert.equal(r.totalDueCents, detail.expectedFeeCents);
+  assert.deepEqual(r.schools, [{ name: 'Worcester', street: '1141 Main St', phone: '(508) 767-1717' }, { name: 'Shrewsbury', street: '', phone: '' }]);
+  assert.equal(r.printedByName, 'Jeffrey Berg');
+  assert.equal(buildStarReceipt({ detail, eventName: 'X', printedOn: TODAY, printedByName: null }).printedByName, null);
+  // never a date of birth or an email
+  const text = JSON.stringify(r);
+  for (const value of [detail.candidate.dateOfBirth, detail.candidate.emailForResults].filter(Boolean)) assert.equal(text.includes(value), false, value);
+  // a private testing: the extra fact; a payment line still reads the neutral "Testing fee" (a payment
+  // row doesn't say which fee it paid — it may predate the private testing)
+  const priv = { ...detail, candidate: { ...detail.candidate, privateOn: '2026-12-10', privateTime: '16:00' } };
+  const rp = buildStarReceipt({ detail: priv, eventName: 'Fall Star Testing', printedOn: TODAY });
+  assert.deepEqual(rp.facts[3], ['Private testing', 'Thu, Dec 10, 4:00 PM']);
+  assert.equal(rp.lines[0].forText, 'Testing fee');
+});
+
+// =====================================================================================
+// 8. The toasts' Undo calls (CandidatesTab, DR G2 / G3, v0.517) — the same arguments the screen sends
+// =====================================================================================
+
+await check('Undo after Edit payment: editPayment on the NEW payment id with the old method, amount and date → old values back; a second Undo → stale', async () => {
+  const rig = makeRig();
+  const mia = await cand(rig, 'fall', 'Mia');
+  // what openEditPayment keeps as `old`, before the edit
+  const old = { method: mia.paidMethod, amountCents: mia.paidCents, paidOn: mia.paidOn };
+  const r = await rig.api.editPayment({ paymentId: mia.lastPaymentId, method: old.method === 'cash' ? 'check' : 'cash', amountCents: old.amountCents - 1000, paidOn: '2026-10-15' });
+  assert.equal(r.status, 'ok');
+  const undo = () => rig.api.editPayment({ paymentId: r.paymentId, method: old.method, amountCents: old.amountCents, paidOn: old.paidOn });
+  const u = await undo();
+  assert.equal(u.status, 'ok');
+  const m = await cand(rig, 'fall', 'Mia');
+  assert.deepEqual([m.paidMethod, m.paidCents, m.paidOn, m.paid], [old.method, old.amountCents, old.paidOn, true]);
+  assert.equal(m.lastPaymentId, u.paymentId);
+  assert.equal(statusOf(await undo()), 'stale'); // the edited payment is already replaced
+});
+
+await check('Undo after Restore: withdrawCandidate with the version the restore returned → withdrawn again; the roster’s older version → stale', async () => {
+  const rig = makeRig();
+  const owen = await cand(rig, 'fall', 'Owen');
+  assert.equal(owen.status, 'withdrawn');
+  const r = await rig.api.restoreCandidate({ candidateId: owen.id, expectedVersion: owen.version });
+  assert.equal(r.status, 'ok');
+  assert.equal(statusOf(await rig.api.withdrawCandidate({ candidateId: owen.id, expectedVersion: owen.version })), 'stale');
+  assert.equal(statusOf(await rig.api.withdrawCandidate({ candidateId: owen.id, expectedVersion: r.version })), 'ok');
+  const o = await cand(rig, 'fall', 'Owen');
+  assert.deepEqual([o.status, o.withdrawnReason], ['withdrawn', 'withdrawn']);
+});
+
+await check('Undo after Change how they’ll pay: changePayingBy back to the old choice with the version the save returned', async () => {
+  const rig = makeRig();
+  const lily = await cand(rig, 'fall', 'Lily');
+  const oldPayingBy = lily.payingBy;
+  const next = oldPayingBy === 'card' ? 'cash' : 'card';
+  const r = await rig.api.changePayingBy({ candidateId: lily.id, expectedVersion: lily.version, payingBy: next });
+  assert.equal(r.status, 'ok');
+  assert.equal((await cand(rig, 'fall', 'Lily')).payingBy, next);
+  assert.equal(statusOf(await rig.api.changePayingBy({ candidateId: lily.id, expectedVersion: r.version, payingBy: oldPayingBy })), 'ok');
+  assert.equal((await cand(rig, 'fall', 'Lily')).payingBy, oldPayingBy);
 });
 
 console.log(`ALL STAR CANDIDATE CHECKS PASSED (${count} checks)`);

@@ -3,7 +3,8 @@
 // again after, with the results noted. The check files are small Node scripts next to the code
 // they test; each exits with 0 when every check passes.
 // Which: src/lib/*/checks.mjs, src/lib/star/*Checks.mjs, src/forms/checks.mjs (it reads dist/, so
-// run `npm run build` first), src/screens/prospects/progress.checks.mjs — and any other
+// run `npm run build` first — the real build: `npm run build:preview-mode` writes dist/ too, and
+// this check fails on that build), src/screens/prospects/progress.checks.mjs — and any other
 // *checks.mjs / *Checks.mjs under src/ (e.g. src/lib/shared/checks.mjs once step 1 adds it).
 //
 // Usage (from the project folder): node "docs/Dashboard Core/tools/run-checks.mjs"

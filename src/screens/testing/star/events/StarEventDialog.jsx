@@ -2,11 +2,13 @@
 // Why it exists: approved Events mockups screens 4–7 (v0.85–v0.87, v0.92) and gap mockups G4–G5
 // (v0.500). The form, top to bottom:
 //   - Event name
-//   - Testing date | Start time            (Start time: 15-minute steps, 8:00 AM–8:00 PM; the
-//     testing date uses the dashboard's own calendar, components/DatePicker.jsx, v0.502/v0.503)
-//   - Where (Worcester school / Shrewsbury school) + its hint; in Add event, the line
-//     "Start time and Where copied from <last event>. Change if needed." (nothing to copy for the
-//     very first event: both start on "Choose…", screen 4)
+//   - Testing date | Start time            (Start time: the shared time list, components/TimeList.jsx,
+//     6:00 AM–10:00 PM every 5 minutes, "Choose a time" while empty — design review S12, rulebook
+//     v0.518 / v1.109; the testing date uses the dashboard's own calendar, components/DatePicker.jsx,
+//     v0.502/v0.503)
+//   - Where (Worcester school / Shrewsbury school; the shared dropdown, components/Select.jsx,
+//     v1.100) + its hint; in Add event, the line "Start time and Where copied from <last event>.
+//     Change if needed." (nothing to copy for the very first event: both start empty, screen 4)
 //   - Registration: Open / Closed (new events start Closed, v0.85), and "Close automatically at the
 //     end of <date>" — ticked by default, 7 days before the testing date, picked with the same
 //     calendar (from today up to the testing date, which has a dot). It can't be used until a
@@ -27,16 +29,18 @@ import Dialog from '../../../../components/Dialog.jsx';
 import Notice from '../../../../components/Notice.jsx';
 import { nameKey, nameProblem, normalizeName } from '../../../../lib/testing/names.js';
 import { NOTE_MAX, isIsoDate } from '../../../../lib/testing/eventRules.js';
-import { editWouldReopen, startTimeIsValid, startTimeOptions, WHERE_CODES } from '../../../../lib/star/starEventRules.js';
+import { editWouldReopen, startTimeIsValid, WHERE_CODES } from '../../../../lib/star/starEventRules.js';
 import { eventState } from '../../../../lib/testing/eventRules.js';
 import { closingBoxBlocked, closingDateLimits, closingYears, testingDateLimits, testingYears } from '../../../../lib/star/eventDateRules.js';
 import DatePicker from '../../../../components/DatePicker.jsx';
-import ChoiceGroup from '../../events/ChoiceGroup.jsx';
-import StarSelect from './StarSelect.jsx';
+import ChoiceGroup from '../../../../components/ChoiceGroup.jsx';
+import Select from '../../../../components/Select.jsx';
+import TimeList from '../../../../components/TimeList.jsx';
 import * as T from './text.js';
 
-// The two dropdowns' choices (made once; they never change).
-const START_TIME_CHOICES = startTimeOptions(); // [{ value:'08:00', label:'8:00 AM' } … '20:00']
+// Where's choices (made once; they never change). The Start time list makes its own: TimeList's
+// default range, 6:00 AM–10:00 PM every 5 minutes, is exactly the database's rule since migration
+// 0028 (startTimeIsValid in starEventRules.js; checked in eventsChecks.mjs).
 const WHERE_CHOICES = WHERE_CODES.map((code) => ({ value: code, label: T.whereText(code) }));
 
 // Did anything change since the dialog opened? (Esc / backdrop / back arrow close only if not.)
@@ -284,13 +288,11 @@ export default function StarEventDialog({
             <span id={`${ids.time}-label`} className="field-label">
               {T.START_TIME}
             </span>
-            <StarSelect
+            <TimeList
               id={ids.time}
               labelId={`${ids.time}-label`}
               describedBy={check.timeError ? `${ids.time}-error` : undefined}
               value={values.startTime}
-              options={START_TIME_CHOICES}
-              placeholder={T.CHOOSE}
               readOnly={readOnly}
               invalid={Boolean(check.timeError)}
               onChange={(startTime) => onChange({ startTime })}
@@ -303,7 +305,7 @@ export default function StarEventDialog({
           <span id={`${ids.where}-label`} className="field-label">
             {T.WHERE}
           </span>
-          <StarSelect
+          <Select
             id={ids.where}
             labelId={`${ids.where}-label`}
             describedBy={`${ids.where}-hint${check.whereError ? ` ${ids.where}-error` : ''}`}

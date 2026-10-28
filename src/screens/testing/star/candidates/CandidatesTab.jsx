@@ -10,8 +10,19 @@
 //     History and View signature, Edit details with the Dan-change confirmation (v0.112, v0.164)
 //   - records payments, refunds and the corrections (v0.109, v0.110, v0.166, G1, G16), private
 //     testing (v0.148–v0.152) and Withdraw / Restore / Delete permanently (v0.113)
+//   - the design review's follow-ups (v0.517, DR G1–G4): one ⋯ menu order in three groups
+//     (src/lib/star/candidateMenu.js), ⋯ → Edit details opens the form straight away, Undo after
+//     Edit payment, Restore and Change how they'll pay, and the Not paid card's ti-circle-x
 //   - follows "Hide private details" (v0.506, G4–G9): no payment columns, cards or items; private
 //     values read "Hidden on this tablet"
+//   - the design review's part 2 (rulebook v0.518, DR2-P1–P8): the shared parts — ConfirmBox for
+//     Undo payment / Undo refund / Delete permanently / the Dan change (busy words, failure notes,
+//     Esc and Back wait while it works), CompareDialog and DuplicateBox, the row's "✓ Mark paid"
+//     with the shared Mark paid box (S1: the fee, today, Paid by preset; a failed save shows the
+//     row bar with Retry and "Not saved"), Print receipt with the shared receipt (S2: ⋯ money group
+//     and the summary, on top of it), the one-line History (S6) and formatMoney (S10)
+//   - the shared count cards (S11, v0.518 / v1.115): blue selected edge, 16 px icons, Payments
+//     recorded a plain total (no longer a filter), the Candidates card's two school lines on Both
 // The data (event, its rubric copy and the candidates) is loaded by StarEventPage with the 15-second
 // quiet refresh (v0.507 Q3); this tab reloads through `reload()` after every change.
 //
@@ -23,40 +34,48 @@
 //     the list reloads. For that to work, every dialog saves with the version / payment id it OPENED
 //     with (dialogSnapshot.js), never the roster's newest one from the 15-second refresh.
 //   - Admin vs staff only changes what is SHOWN — the database enforces who may do what (v0.110).
-//   - Fees: Record payment fills in candidate.expectedFeeCents; the screen never works out a fee.
+//   - Fees: Mark paid records candidate.expectedFeeCents (the database's fee, as shown in the box when
+//     it opened); the screen never works out a fee. A different amount: an admin's Edit payment.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  IconAlertTriangle, IconArrowBackUp, IconCalendar, IconCashEdit, IconCheck, IconSum, IconClock, IconEdit, IconPlus, IconReceiptRefund,
-  IconRepeat, IconSchool, IconTrash, IconUserMinus, IconUserPlus, IconUsers,
+  IconAlertTriangle, IconArrowBackUp, IconCalendar, IconCashEdit, IconCheck, IconCircleX, IconSum, IconEdit, IconPlus, IconPrinter, IconReceiptRefund,
+  IconRepeat, IconSchool, IconSwitchHorizontal, IconTrash, IconUserMinus, IconUserPlus, IconUsers,
 } from '@tabler/icons-react';
+import ChoiceGroup from '../../../../components/ChoiceGroup.jsx';
+import CompareDialog from '../../../../components/CompareDialog.jsx';
+import ConfirmBox from '../../../../components/ConfirmBox.jsx';
+import CountCards from '../../../../components/CountCards.jsx';
+import DuplicateBox from '../../../../components/DuplicateBox.jsx';
 import ErrorBanner from '../../../../components/ErrorBanner.jsx';
+import MarkPaidBox from '../../../../components/MarkPaidBox.jsx';
+import ReceiptDialog from '../../../../components/Receipt.jsx';
 import RowMenu from '../../../../components/RowMenu.jsx';
-import { centsToInputText } from '../../../../lib/money.js';
+import { centsToInputText, formatMoney } from '../../../../lib/money.js';
+import { loadSchools } from '../../../../lib/settings/schoolsApi.js';
+import { buildStarReceipt } from '../../../../lib/star/candidatesReceipt.js';
 import { LOCATION_CODE, LOCATION_NAME } from '../../../../lib/device.js';
 import {
-  addCandidate, addMakeup, changePayingBy, clearPrivate, deleteCandidate, editPayment, loadCandidateDetail, loadCandidateHistory,
+  addCandidate, addMakeup, changePayingBy, clearPrivate, deleteCandidate, editPayment, loadCandidateDetail, loadMyName,
   loadMakeupList, recordPayment, recordRefund, resolveDuplicate, restoreCandidate, setPrivate, undoPayment, updateCandidate,
   viewSignature, withdrawCandidate,
 } from '../../../../lib/star/candidatesApi.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../../../lib/useMediaQuery.js';
 import { useRowArrowNav } from '../../../../lib/useRowArrowNav.js';
-import ChoiceGroup from '../../events/ChoiceGroup.jsx';
 import CandidateDialog, { checkCandidateForm, isCandidateDirty } from './CandidateDialog.jsx';
 import CandidateRows, { statusTagKind } from './CandidateRows.jsx';
-import { ConfirmBox } from './dialogParts.jsx';
 import MakeupPickerDialog from './MakeupPickerDialog.jsx';
 import PrivateDialog, { checkPrivate, isPrivateDirty } from './PrivateDialog.jsx';
 import { takeSnapshot, writeArgs } from '../../../../lib/star/dialogSnapshot.js';
+import { candidateMenuKeys } from '../../../../lib/star/candidateMenu.js';
 import SignatureDialog from './SignatureDialog.jsx';
-import StarCompareDialog from './StarCompareDialog.jsx';
-import { checkRecordPayment, EditPaymentDialog, isRecordDirty, PayingByDialog, RecordPaymentDialog, RefundDialog } from './StarPaymentDialogs.jsx';
+import { checkRecordPayment, EditPaymentDialog, isRecordDirty, PayingByDialog, RefundDialog } from './StarPaymentDialogs.jsx';
 import * as T from './text.js';
 
 // Kept while the page is open: the chosen Dan and the Removed group's open state, per event.
 const danByEvent = new Map();
 const removedOpenByEvent = new Map();
 
-const PAYMENT_DIALOGS = ['record', 'editPayment', 'refund', 'payingBy', 'undoPayment', 'undoRefund'];
+const PAYMENT_DIALOGS = ['editPayment', 'refund', 'payingBy', 'undoPayment', 'undoRefund'];
 const BLOCKING = ['stale', 'not_found', 'not_allowed', 'withdrawn', 'finished'];
 
 const find = (selector) => document.querySelector(selector);
@@ -96,7 +115,7 @@ export default function CandidatesTab({
 
   const dans = copy?.dans ?? [];
   const [danSel, setDanSelState] = useState(() => danByEvent.get(eventId) ?? dans[0]?.dan ?? 1);
-  const [filter, setFilter] = useState(null); // null | 'paid' | 'notPaid' | 'payments' (G12)
+  const [filter, setFilter] = useState(null); // null | 'paid' | 'notPaid' (G12; Payments recorded is a total, v0.518)
   const [removedOpen, setRemovedOpenState] = useState(() => removedOpenByEvent.get(eventId) ?? false);
   const [dialog, setDialog] = useState(null);
   const [overlay, setOverlay] = useState(null); // a second, small dialog over `dialog` (Dan confirm, signature)
@@ -104,6 +123,13 @@ export default function CandidatesTab({
   const [banner, setBanner] = useState(null); // { text, retry?, kind? }
   const [busy, setBusy] = useState(false);
   const [notSavedId, setNotSavedId] = useState(null);
+  // The shared Mark paid box under a row's Mark paid (S1): { rowId, anchor, snap } or null. `snap`
+  // keeps the version and the fee shown when it opened (dialogSnapshot.js), which is what it saves.
+  const [markPaid, setMarkPaid] = useState(null);
+  // The receipt (S2): { key, rowId, opener, onTop, data, failed, notFound } or null. onTop = opened
+  // from the summary, drawn on top of it (Dialog onTop, v1.100); from ⋯ it opens on its own.
+  const [receipt, setReceipt] = useState(null);
+  const schoolsRef = useRef(null); // both schools (the receipt's footer), read once
   const busyRef = useRef(false);
   const dialogRef = useRef(dialog);
   const candidatesRef = useRef(candidates);
@@ -177,7 +203,7 @@ export default function CandidatesTab({
     return undefined;
   });
 
-  const modalShown = (dialog !== null || overlay !== null) && !screenLocked;
+  const modalShown = (dialog !== null || overlay !== null || receipt !== null) && !screenLocked;
   useEffect(() => {
     onModalOpenChange(modalShown);
   }, [modalShown, onModalOpenChange]);
@@ -185,7 +211,10 @@ export default function CandidatesTab({
 
   // Locking closes the ⋯ menu (dialogs only hide).
   useEffect(() => {
-    if (screenLocked) setMenu(null);
+    if (screenLocked) {
+      setMenu(null);
+      setMarkPaid(null); // the Mark paid box is a pop-up like the menu
+    }
   }, [screenLocked]);
 
   // Hide private details switched on: no payment dialog, payment filter, money toast or row
@@ -204,6 +233,7 @@ export default function CandidatesTab({
     if (dialog && PAYMENT_DIALOGS.includes(dialog.type)) setDialog(null);
     if (filter) setFilter(null);
     setMenu(null);
+    setMarkPaid(null); // no Mark paid while hidden
     // A toast may name money ("Payment recorded", a refund) or carry its Undo: it goes too.
     clearToast();
     // So does every banner: after a failed Record payment / Undo payment its Retry would move
@@ -238,7 +268,7 @@ export default function CandidatesTab({
   const belowPassMark = (row) => ((row.makeupSubjects ?? []).some((s) => s.kind === 'chosen') ? passFor(row.dan) : null);
 
   let shown = active.filter((c) => c.dan === danSel);
-  if (filter === 'paid' || filter === 'payments') shown = shown.filter((c) => !c.isMakeup && c.paid);
+  if (filter === 'paid') shown = shown.filter((c) => !c.isMakeup && c.paid);
   if (filter === 'notPaid') shown = shown.filter((c) => !c.isMakeup && !c.paid && c.feeKind !== 'none');
   const removedRows = removedAll.filter((c) => c.dan === danSel);
   const rowsInView = [...shown, ...(removedOpen ? removedRows : [])];
@@ -320,7 +350,6 @@ export default function CandidatesTab({
   }
   const DIRTY = {
     candidate: (d) => (d.mode === 'view' ? false : isCandidateDirty(d)),
-    record: isRecordDirty,
     editPayment: isRecordDirty,
     refund: isRecordDirty,
     payingBy: (d) => d.values.payingBy !== d.initial.payingBy,
@@ -332,7 +361,7 @@ export default function CandidatesTab({
     const dirty = DIRTY[d.type]?.(d) ?? false;
     if (!dirty) {
       if (d.type === 'candidate' && d.mode === 'edit') {
-        backToView();
+        leaveEdit(d);
         return;
       }
       closeDialog(d);
@@ -344,7 +373,7 @@ export default function CandidatesTab({
     const d = dialogRef.current;
     if (!d || d.saving) return;
     if (d.type === 'candidate' && d.mode === 'edit') {
-      backToView();
+      leaveEdit(d);
       return;
     }
     closeDialog(d);
@@ -365,25 +394,28 @@ export default function CandidatesTab({
 
   // ----- The detail view, Edit details, New candidate -----
   async function loadDetailInto(rowId) {
-    const [detail, history] = await Promise.all([loadCandidateDetail(rowId), loadCandidateHistory(rowId)]);
-    if (detail.status === 'no_access' || history.status === 'no_access') {
+    // (The History line at the end of the summary reads the history itself, CandidateHistory.jsx.)
+    const detail = await loadCandidateDetail(rowId);
+    if (detail.status === 'no_access') {
       onNoAccess();
       return;
     }
     setDialog((current) => {
       if (!current || current.rowId !== rowId || current.type !== 'candidate') return current;
       if (detail.status !== 'ok') return { ...current, loadFailed: true };
-      return { ...current, loadFailed: false, detail, history: history.status === 'ok' ? history.rows : [] };
+      const loaded = { ...current, loadFailed: false, detail };
+      // Opened from ⋯ → Edit details: the box turns into the form as soon as the detail arrives
+      // (focusFirst: focus moves to First name, as the box's Close button goes away).
+      if (current.pendingEdit) return { ...loaded, ...editPatch(detail.candidate), pendingEdit: false, focusFirst: true };
+      return loaded;
     });
   }
   function openView(row, opener) {
-    openDialog({ type: 'candidate', mode: 'view', rowId: row.id, detail: null, history: null, historyAll: false, opener });
+    openDialog({ type: 'candidate', mode: 'view', rowId: row.id, detail: null, opener });
     loadDetailInto(row.id);
   }
-  function startEdit() {
-    const d = dialogRef.current;
-    if (!d?.detail) return;
-    const c = d.detail.candidate;
+  // The form's starting values and the version it saves with, from a detail read.
+  function editPatch(c) {
     const values = {
       firstName: c.firstName,
       lastName: c.lastName,
@@ -395,10 +427,30 @@ export default function CandidatesTab({
     };
     // The version of the detail on screen, not the roster's newest (the 15-second refresh) — so
     // another person's change made meanwhile answers 'stale' instead of being overwritten.
-    patchDialog({ mode: 'edit', values, initial: values, source: c.source, snap: takeSnapshot(c), focusDan: false, focusSig: false, touched: {}, triedSave: false, note: null, blocked: false });
+    return { mode: 'edit', values, initial: values, source: c.source, snap: takeSnapshot(c), focusDan: false, focusSig: false, touched: {}, triedSave: false, note: null, blocked: false };
+  }
+  // The summary's own "Edit details" button: the summary turns into the form.
+  function startEdit() {
+    const d = dialogRef.current;
+    if (!d?.detail) return;
+    patchDialog(editPatch(d.detail.candidate));
+  }
+  // ⋯ → Edit details (DR G1 choice 2 = A, like Color Belt's openEdit): the box opens at once, the
+  // way a row click does (loading lines while the detail is read — the form needs the date of birth,
+  // email and the version), then turns into the form when the detail arrives (`pendingEdit`, see
+  // loadDetailInto). A failed read shows the box's own "Couldn't load" line with Retry. Cancel / Esc
+  // close it — it never drops back to the summary (`editOnly`); focus returns to the ⋯ button.
+  function openEdit(row, opener) {
+    openDialog({ type: 'candidate', mode: 'view', rowId: row.id, detail: null, opener, editOnly: true, pendingEdit: true });
+    loadDetailInto(row.id);
   }
   function backToView() {
     patchDialog({ mode: 'view', note: null, blocked: false, saving: false, focusDan: false });
+  }
+  // Leaving the form without saving: back to the summary, or closed when it was opened from ⋯.
+  function leaveEdit(d) {
+    if (d.editOnly) closeDialog(d);
+    else backToView();
   }
   function openNew(opener) {
     const values = { firstName: '', lastName: '', dateOfBirth: '', locationCode: oneSchool ? schoolCode : null, email: '', dan: danSel, starsFrom: null, payingBy: 'cash' }; // Cash chosen to start, as drawn (G gap mockups, New candidate)
@@ -413,7 +465,7 @@ export default function CandidatesTab({
       return;
     }
     if (check.sameAsSaved && clearGradeCount === null) {
-      backToView();
+      leaveEdit(d);
       return;
     }
     if (!beginWrite()) return;
@@ -449,7 +501,14 @@ export default function CandidatesTab({
     if (result.status === 'grades_exist') {
       // The Dan-change confirmation (G2, v0.164), with the number the database counted.
       patchDialog({ saving: false });
-      setOverlay({ type: 'danConfirm', gradeCount: result.gradeCount, name, oldDan: row?.danLabel ?? '', newDan: T.danLabelOf(p.dan) });
+      setOverlay({ type: 'danConfirm', gradeCount: result.gradeCount, name, oldDan: row?.danLabel ?? '', newDan: T.danLabelOf(p.dan), failed: false });
+      return;
+    }
+    if (result.status === 'error' && clearGradeCount !== null) {
+      // Sent from the Dan-change box: it stays open with "Couldn't save. …" under its buttons
+      // (DR2-P1); pressing Change Dan again tries again.
+      patchDialog({ saving: false });
+      setOverlay((current) => (current?.type === 'danConfirm' ? { ...current, failed: true } : current));
       return;
     }
     setOverlay(null);
@@ -475,10 +534,13 @@ export default function CandidatesTab({
   // "Keep 1st Dan" on the Dan-change confirmation (G2): the form goes back to the SAVED Dan and stars
   // (the other edits stay), and focus lands on Current Dan.
   function keepSavedDan() {
+    // Never while the change is on its way (the shared box already ignores Esc, a click outside and
+    // Back then; this closes the gap for good, DR2-P1).
+    if (dialogRef.current?.saving) return;
     setOverlay(null);
     setDialog((current) =>
       current && current.type === 'candidate'
-        ? { ...current, values: { ...current.values, dan: current.initial.dan, starsFrom: current.initial.starsFrom }, focusDan: true, saving: false }
+        ? { ...current, values: { ...current.values, dan: current.initial.dan, starsFrom: current.initial.starsFrom }, focusDan: true, focusFirst: false, saving: false }
         : current,
     );
   }
@@ -525,15 +587,83 @@ export default function CandidatesTab({
     reload();
   }
 
-  // ----- Record payment / Edit payment / Refund / Change how they'll pay -----
-  const regDay = (row) => T.stampDay(row.registeredAt);
-  function openRecord(row, opener) {
-    const values = { method: row.payingBy ?? 'cash', amount: centsToInputText(row.expectedFeeCents), paidOn: today };
-    openDialog({ type: 'record', rowId: row.id, snap: takeSnapshot(row), values, initial: values, minDate: regDay(row), opener });
+  // ----- Mark paid (S1, DR2-P3, v0.518) -----
+  // The row's Mark paid opens the shared Mark paid box under it (a second press closes it): the
+  // name and the fee, Paid by preset to how they said they'd pay, then "Mark paid $140". It
+  // records the fee the database worked out (row.expectedFeeCents, kept from when the box opened)
+  // with today's date; staff no longer type another amount (Q6 A — an admin's Edit payment fixes
+  // a different one). The box closes when pressed, so a failure shows as Star's row pattern: the
+  // amber bar with Retry and the row's "Not saved" tag; a refusal in the same bar without Retry.
+  function openMarkPaid(row, anchor) {
+    clearToast();
+    setMenu(null);
+    setMarkPaid((current) => (current?.rowId === row.id ? null : { rowId: row.id, anchor, snap: takeSnapshot(row) }));
   }
+  async function saveMarkPaid(rowId, snap, method) {
+    const row = rowOf(rowId);
+    if (!row || !beginWrite()) return;
+    const result = await recordPayment(writeArgs('record', snap, { method, amountCents: snap.expectedFeeCents, paidOn: today }));
+    endWrite(result.status);
+    if (result.status !== 'ok') {
+      rowProblem('mark_paid', result, row, () => saveMarkPaid(rowId, snap, method));
+      return;
+    }
+    rowOk(row);
+    const reloaded = reload();
+    const paymentId = result.paymentId;
+    // Staff can undo their own payment from the toast within the database's 10 seconds (v0.110).
+    // (Switched on meanwhile: no money toast - see hiddenNowRef.)
+    if (!hiddenNowRef.current) {
+      showToast(T.TOAST_PAYMENT_RECORDED, {
+        icon: false,
+        action: { label: T.UNDO, onAction: () => runUndo(() => undoPayment({ paymentId }), { find: () => rowEl(rowId) }, 'undo_payment', row) },
+      });
+    }
+    // The Mark paid button goes away with the payment: focus moves to the row.
+    focusLater(() => rowEl(rowId), null, reloaded);
+  }
+
+  // ----- Print receipt (S2, DR2-P4, v0.518) -----
+  // The shared receipt, filled from star_candidate_detail + both schools + the reader's name
+  // (get_my_profile, called when it opens; a failed call just leaves the name out — Q7 A).
+  // From the summary it opens on top of it (onTop); from ⋯ on its own.
+  function openReceipt(row, opener, onTop) {
+    setMenu(null);
+    const key = Date.now();
+    setReceipt({ key, rowId: row.id, opener, onTop, data: null, failed: false, notFound: false });
+    readReceipt(row.id, key);
+  }
+  async function readReceipt(rowId, key) {
+    const schoolsRead = schoolsRef.current ? Promise.resolve({ status: 'ok', schools: schoolsRef.current }) : loadSchools();
+    const [detail, schools, name] = await Promise.all([loadCandidateDetail(rowId), schoolsRead, loadMyName()]);
+    if (detail.status === 'no_access') {
+      onNoAccess();
+      return;
+    }
+    if (schools.status === 'ok') schoolsRef.current = schools.schools;
+    setReceipt((current) => {
+      if (!current || current.key !== key) return current;
+      if (detail.status === 'not_found') return { ...current, notFound: true };
+      if (detail.status !== 'ok') return { ...current, failed: true };
+      // Offline for the schools only: the receipt shows without the schools' lines.
+      const data = buildStarReceipt({ detail, eventName: event.name, schools: schools.status === 'ok' ? schools.schools : [], printedOn: today, printedByName: name });
+      return { ...current, data };
+    });
+  }
+  function closeReceipt() {
+    const r = receipt;
+    setReceipt(null);
+    // On top of the summary, the shared dialog puts focus back on its opener (returnFocusTo).
+    if (r && !r.onTop) focusLater(() => r.opener, () => rowEl(r.rowId));
+  }
+
+  // ----- Edit payment / Refund / Change how they'll pay -----
+  const regDay = (row) => T.stampDay(row.registeredAt);
   function openEditPayment(row, opener) {
     const values = { method: row.paidMethod ?? 'cash', amount: centsToInputText(row.paidCents), paidOn: row.paidOn ?? today };
-    openDialog({ type: 'editPayment', rowId: row.id, snap: takeSnapshot(row), values, initial: values, minDate: regDay(row), opener });
+    // `old`: the payment as the dialog opened on it, for the toast's Undo (DR G2).
+    const old = { method: row.paidMethod, amountCents: row.paidCents, paidOn: row.paidOn };
+    openDialog({ type: 'editPayment', rowId: row.id, snap: takeSnapshot(row), values, initial: values, old, minDate: regDay(row), opener });
   }
   function openRefund(row, opener) {
     const values = { method: 'cash', amount: centsToInputText(row.overpaidCents), paidOn: today };
@@ -564,7 +694,20 @@ export default function CandidatesTab({
       }
       closeDialog(d);
       reload();
-      showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+      // Undo for 5 seconds (DR G3, rule 1.4): the old choice back, with the version this save returned
+      // — but not once Hide private details went on during the save (how a family pays is a payment
+      // detail; the same rule as Record payment and Edit payment, see hiddenNowRef).
+      const oldPayingBy = d.initial.payingBy;
+      showToast(T.TOAST_CHANGES_SAVED, {
+        icon: false,
+        action: hiddenNowRef.current
+          ? undefined
+          : {
+              label: T.UNDO,
+              onAction: () =>
+                runUndo(() => changePayingBy({ candidateId: row.id, expectedVersion: result.version, payingBy: oldPayingBy }), { find: () => rowEl(row.id) }, 'undo_paying_by', row),
+            },
+      });
       return;
     }
     const check = checkRecordPayment(d, today, d.type === 'refund' ? d.overpaidCents : null);
@@ -579,27 +722,6 @@ export default function CandidatesTab({
     if (!beginWrite()) return;
     patchDialog({ saving: true, note: null });
     const p = check.payload;
-    if (d.type === 'record') {
-      const result = await recordPayment(writeArgs('record', d.snap, p));
-      endWrite(result.status);
-      if (result.status !== 'ok') {
-        dialogProblem('record_payment', result.status, name);
-        return;
-      }
-      closeDialog(d);
-      const reloaded = reload();
-      const paymentId = result.paymentId;
-      // Staff can undo their own payment from the toast within the database's 10 seconds (v0.110).
-      // (Switched on meanwhile: no money toast - see hiddenNowRef.)
-      if (!hiddenNowRef.current) {
-        showToast(T.TOAST_PAYMENT_RECORDED, {
-          icon: false,
-          action: { label: T.UNDO, onAction: () => runUndo(() => undoPayment({ paymentId }), { find: () => rowEl(row.id) }, 'undo_payment', row) },
-        });
-      }
-      focusLater(() => rowEl(row.id), null, reloaded);
-      return;
-    }
     if (d.type === 'editPayment') {
       const result = await editPayment(writeArgs('editPayment', d.snap, p));
       endWrite(result.status);
@@ -610,7 +732,21 @@ export default function CandidatesTab({
       closeDialog(d);
       reload();
       if (hiddenNowRef.current) return; // switched on meanwhile: no money toast
-      showToast(T.TOAST_PAYMENT_SAVED, { icon: false });
+      // "Payment changed" + Undo (DR G2, v0.517; Black Belt's useCandidateActions does the same):
+      // Undo saves the OLD method, amount and date as one more edit, on the payment id this edit
+      // returned (an edit replaces the payment with a new one, so that id plays the part of "the
+      // version": if it was undone or edited meanwhile, the database answers 'stale'). Admins only,
+      // as Edit payment is.
+      const newPaymentId = result.paymentId;
+      const old = d.old;
+      showToast(T.TOAST_PAYMENT_CHANGED, {
+        icon: false,
+        action: {
+          label: T.UNDO,
+          onAction: () =>
+            runUndo(() => editPayment({ paymentId: newPaymentId, method: old.method, amountCents: old.amountCents, paidOn: old.paidOn }), { find: () => rowEl(row.id) }, 'undo_edit_payment', row),
+        },
+      });
       return;
     }
     // Record refund
@@ -648,9 +784,14 @@ export default function CandidatesTab({
     const detail = await loadCandidateDetail(row.id);
     endWrite(detail.status);
     if (detail.status !== 'ok') {
-      rowProblem('undo_refund', detail, row, () => openUndoRefund(row, opener));
+      // A failed READ (nothing was saved) — the same as startDelete: "Couldn't load this candidate"
+      // with Retry, no "Not saved" mark; gone meanwhile (not_found): the list just reloads.
+      if (detail.status === 'no_access') onNoAccess();
+      else if (detail.status === 'not_found') reload();
+      else setBanner({ kind: 'load', text: T.LOAD_DETAIL_FAILED, retry: () => openUndoRefund(row, opener) });
       return;
     }
+    setBanner((current) => (current?.kind === 'load' ? null : current));
     const refund = [...detail.payments].reverse().find((p) => p.kind === 'refund' && !p.reversed);
     if (!refund) {
       reload();
@@ -757,7 +898,16 @@ export default function CandidatesTab({
     }
     rowOk(row);
     const reloaded = reload();
-    showToast(T.restoredToast(T.candidateName(row)), { icon: false });
+    // Undo for 5 seconds (DR G3, rule 1.4) = withdraw again, with the version this restore returned -
+    // except for a "Duplicate copy" (G3 choice = A): withdrawing again would tag it "Removed" and lose
+    // the reason, so no Undo; the compare box (Review, then Keep this one) puts it back properly.
+    const wasDuplicateCopy = row.withdrawnReason === 'duplicate_copy';
+    showToast(T.restoredToast(T.candidateName(row)), {
+      icon: false,
+      action: wasDuplicateCopy
+        ? undefined
+        : { label: T.UNDO, onAction: () => runUndo(() => withdrawCandidate({ candidateId: row.id, expectedVersion: result.version }), { find: () => rowEl(row.id) }, 'withdraw', row) },
+    });
     focusLater(() => rowEl(row.id), null, reloaded);
   }
   async function startDelete(row, opener) {
@@ -765,9 +915,14 @@ export default function CandidatesTab({
     const detail = await loadCandidateDetail(row.id);
     endWrite(detail.status);
     if (detail.status !== 'ok') {
-      rowProblem('delete', detail, row, () => startDelete(row, opener));
+      // A failed READ (nothing was saved): "Couldn't load this candidate" with Retry — no "Not
+      // saved" mark. Gone meanwhile (not_found): the list just reloads.
+      if (detail.status === 'no_access') onNoAccess();
+      else if (detail.status === 'not_found') reload();
+      else setBanner({ kind: 'load', text: T.LOAD_DETAIL_FAILED, retry: () => startDelete(row, opener) });
       return;
     }
+    setBanner((current) => (current?.kind === 'load' ? null : current));
     const live = detail.payments.filter((p) => p.kind === 'payment' && !p.reversed);
     const payment = live.length ? live[live.length - 1] : null;
     openDialog({
@@ -805,10 +960,12 @@ export default function CandidatesTab({
   }
 
   // ----- Possible duplicates (v0.114) -----
-  async function openCompare(row) {
+  // opener: what focus returns to when the box closes (the ⋯ button when opened from the menu);
+  // left out, focus returns to the row.
+  async function openCompare(row, opener = null) {
     const pair = pairs.find((p) => p.a.id === row.id || p.b.id === row.id);
     if (!pair) return;
-    openDialog({ type: 'compare', firstId: pair.a.id, secondId: pair.b.id, details: null, loadFailed: false, rowId: row.id });
+    openDialog({ type: 'compare', firstId: pair.a.id, secondId: pair.b.id, details: null, loadFailed: false, rowId: row.id, opener });
     loadCompare(pair.a.id, pair.b.id);
   }
   async function loadCompare(firstId, secondId) {
@@ -826,10 +983,11 @@ export default function CandidatesTab({
   // The versions the compare dialog SHOWED (its two detail reads), not the roster's newest — a change
   // made meanwhile answers 'stale' (the same rule as dialogSnapshot.js).
   const shownVersion = (d, id) => d.details?.find((x) => x.candidate.id === id)?.candidate.version ?? null;
-  async function keepOne(keep, other) {
+  // busyKey: 'keep-first' | 'keep-second' — the shared compare's "Keeping…" goes on that button.
+  async function keepOne(keep, other, busyKey) {
     const d = dialogRef.current;
     if (!d || d.saving || !d.details || !beginWrite()) return;
-    patchDialog({ saving: true, failed: false });
+    patchDialog({ saving: true, failed: false, busyKey });
     const result = await resolveDuplicate({ keepId: keep.id, keepVersion: shownVersion(d, keep.id), otherId: other.id, otherVersion: shownVersion(d, other.id), keepBoth: false });
     endWrite(result.status);
     if (result.status === 'ok') {
@@ -854,7 +1012,7 @@ export default function CandidatesTab({
     const first = rowOf(d?.firstId);
     const second = rowOf(d?.secondId);
     if (!d || d.saving || !first || !second || !d.details || !beginWrite()) return;
-    patchDialog({ saving: true, failed: false });
+    patchDialog({ saving: true, failed: false, busyKey: 'keep-both' });
     const result = await resolveDuplicate({ keepId: first.id, keepVersion: shownVersion(d, first.id), otherId: second.id, otherVersion: shownVersion(d, second.id), keepBoth: true });
     endWrite(result.status);
     if (result.status === 'ok') {
@@ -914,6 +1072,7 @@ export default function CandidatesTab({
 
   // ===== The ⋯ menus =====
   function openMenu(row, anchor) {
+    setMarkPaid(null);
     setMenu((current) => (current && current.id === row.id ? null : { id: row.id, anchor }));
   }
   function closeMenu(reason) {
@@ -959,59 +1118,55 @@ export default function CandidatesTab({
     const row = candidates.find((c) => c.id === menu.id);
     if (!row) return null;
     const anchor = menu.anchor;
-    const items = [];
-    if (row.status === 'withdrawn') {
-      if (!isAdmin) return null;
-      items.push({ key: 'restore', label: T.RESTORE, Icon: IconArrowBackUp, disabled: busy, onSelect: () => restore(row) });
-      items.push({ key: 'delete', label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, separatorBefore: true, disabled: busy, onSelect: () => startDelete(row, anchor) });
-      return { title: T.candidateName(row), subtitle: row.danLabel, label: T.moreForCandidate(T.candidateName(row)), items };
-    }
-    // The order of the approved drawings:
-    //   unpaid row (Private screen 2):  Set private testing (or Change private day or time · Back to the
-    //                                   testing day) · Change how they'll pay · Edit candidate
-    //   paid row (screen 5, G1):        Edit candidate · private items · Edit payment · Undo payment ·
-    //                                   Record refund / Undo refund (admins)
-    //   no payment items (make-up, or Hide private details on — G4): Edit candidate · private items
-    //   then, admins: a line, Withdraw, Delete permanently.
-    // "Edit candidate" opens the detail (screen 5: Edit candidate and a row click both open the candidate).
-    const editItem = { key: 'edit', label: T.EDIT_CANDIDATE, Icon: IconEdit, disabled: busy, onSelect: () => openView(row, anchor) };
-    const privateItems = row.privateOn
-      ? [
-          { key: 'private', label: T.CHANGE_PRIVATE, Icon: IconEdit, disabled: busy, onSelect: () => openPrivate(row, anchor) },
-          { key: 'back', label: T.backToDay(event.testingDate), Icon: IconArrowBackUp, disabled: busy, onSelect: () => backToTestingDay(row) },
-          // Phase 5 (H5, proposal 18): right after the private items, for all staff.
-          // ti-school = grade a private testing (§2.4 icon map, this one meaning)
-          ...(onGradePrivate
-            ? [{ key: 'grade', label: T.GRADE_PRIVATE, Icon: IconSchool, disabled: busy, onSelect: () => onGradePrivate(row, anchor) }]
-            : []),
-        ]
-      : [{ key: 'private', label: T.SET_PRIVATE, Icon: IconCalendar, disabled: busy, onSelect: () => openPrivate(row, anchor) }];
-    const moneyShown = !hidden && !row.isMakeup;
-    if (moneyShown && !row.paid) {
-      items.push(...privateItems);
-      items.push({ key: 'paying', label: T.CHANGE_PAYING_BY, Icon: IconRepeat, disabled: busy, onSelect: () => openPayingBy(row, anchor) });
-      items.push(editItem);
-    } else {
-      items.push(editItem, ...privateItems);
-      if (moneyShown && isAdmin) {
-        const refundStands = row.refundedCents > 0;
-        const grayed = (text) => (
-          <span className="ev-menu-two st-menu-two">
-            <span>{text}</span>
-            <span className="ev-menu-reason">{T.UNDO_REFUND_FIRST}</span>
-          </span>
-        );
-        items.push({ key: 'editpay', label: refundStands ? grayed(T.EDIT_PAYMENT) : T.EDIT_PAYMENT, Icon: IconCashEdit, disabled: busy || refundStands, onSelect: () => openEditPayment(row, anchor) });
-        items.push({ key: 'undopay', label: refundStands ? grayed(T.UNDO_PAYMENT) : T.UNDO_PAYMENT, Icon: IconArrowBackUp, disabled: busy || refundStands, onSelect: () => openUndoPayment(row, anchor) });
-        if (refundStands) items.push({ key: 'undorefund', label: T.UNDO_REFUND, Icon: IconArrowBackUp, disabled: busy, onSelect: () => openUndoRefund(row, anchor) });
-        else if (row.overpaidCents > 0) items.push({ key: 'refund', label: T.RECORD_REFUND, Icon: IconReceiptRefund, disabled: busy, onSelect: () => openRefund(row, anchor) });
-      }
-    }
-    if (isAdmin) {
-      items.push({ key: 'withdraw', label: T.WITHDRAW, Icon: IconUserMinus, separatorBefore: true, disabled: busy, onSelect: () => withdraw(row) });
-      items.push({ key: 'delete', label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, disabled: busy, onSelect: () => startDelete(row, anchor) });
-    }
-    return { title: T.candidateName(row), subtitle: `${row.danLabel} · ${T.testingFor(row)}`, label: T.moreForCandidate(T.candidateName(row)), items };
+    // Which items, in which order, with the lines between the groups: candidateMenuKeys (DR G1,
+    // v0.517) — (1) Edit details · private items · Change how they'll pay · Review possible
+    // duplicate, (2) the money items (admins) and Print receipt (everyone), (3) Withdraw · Delete
+    // permanently (admins).
+    const keys = candidateMenuKeys(row, {
+      isAdmin,
+      hidden,
+      flagged: pairs.some((p) => p.a.id === row.id || p.b.id === row.id),
+      canGradePrivate: Boolean(onGradePrivate),
+    });
+    if (keys.length === 0) return null;
+    // While a refund stands, Edit payment and Undo payment are grayed with the reason under them.
+    const refundStands = row.refundedCents > 0;
+    const grayed = (text) => (
+      <span className="ev-menu-two st-menu-two">
+        <span>{text}</span>
+        <span className="ev-menu-reason">{T.UNDO_REFUND_FIRST}</span>
+      </span>
+    );
+    // key → the item's words, icon and action. Icons follow the one-icon-per-meaning map (§2.4, 16a).
+    const ITEM = {
+      // "Edit details" opens the form straight away (DR G1 choice 2 = A); a row click still opens
+      // the read-only summary.
+      edit: { label: T.EDIT_DETAILS, Icon: IconEdit, onSelect: () => openEdit(row, anchor) },
+      setPrivate: { label: T.SET_PRIVATE, Icon: IconCalendar, onSelect: () => openPrivate(row, anchor) },
+      changePrivate: { label: T.CHANGE_PRIVATE, Icon: IconEdit, onSelect: () => openPrivate(row, anchor) },
+      backToDay: { label: T.backToDay(event.testingDate), Icon: IconArrowBackUp, onSelect: () => backToTestingDay(row) },
+      // Phase 5 (H5, proposal 18). ti-school = grade a private testing (§2.4 icon map, this one meaning)
+      gradePrivate: { label: T.GRADE_PRIVATE, Icon: IconSchool, onSelect: () => onGradePrivate(row, anchor) },
+      // ti-switch-horizontal = change how they'll pay (S9; ti-repeat now means only Make-up)
+      payingBy: { label: T.CHANGE_PAYING_BY, Icon: IconSwitchHorizontal, onSelect: () => openPayingBy(row, anchor) },
+      // The same compare box the row's tag and the box above the cards open (DR G1 choice 1 = A)
+      reviewDuplicate: { label: T.REVIEW_DUPLICATE, Icon: IconAlertTriangle, onSelect: () => openCompare(row, anchor) },
+      editPayment: { label: refundStands ? grayed(T.EDIT_PAYMENT) : T.EDIT_PAYMENT, Icon: IconCashEdit, grayed: refundStands, onSelect: () => openEditPayment(row, anchor) },
+      undoPayment: { label: refundStands ? grayed(T.UNDO_PAYMENT) : T.UNDO_PAYMENT, Icon: IconArrowBackUp, grayed: refundStands, onSelect: () => openUndoPayment(row, anchor) },
+      undoRefund: { label: T.UNDO_REFUND, Icon: IconArrowBackUp, onSelect: () => openUndoRefund(row, anchor) },
+      recordRefund: { label: T.RECORD_REFUND, Icon: IconReceiptRefund, onSelect: () => openRefund(row, anchor) },
+      // ti-printer = print (S2): last in the money group, staff and admins
+      printReceipt: { label: T.PRINT_RECEIPT, Icon: IconPrinter, onSelect: () => openReceipt(row, anchor, false) },
+      withdraw: { label: T.WITHDRAW, Icon: IconUserMinus, onSelect: () => withdraw(row) },
+      restore: { label: T.RESTORE, Icon: IconArrowBackUp, onSelect: () => restore(row) },
+      delete: { label: T.DELETE_PERMANENTLY, Icon: IconTrash, danger: true, onSelect: () => startDelete(row, anchor) },
+    };
+    const items = keys.map(({ key, separatorBefore }) => {
+      const { grayed: isGrayed, ...item } = ITEM[key];
+      return { key, ...item, disabled: busy || Boolean(isGrayed), ...(separatorBefore ? { separatorBefore: true } : {}) };
+    });
+    const subtitle = row.status === 'withdrawn' ? row.danLabel : `${row.danLabel} · ${T.testingFor(row)}`;
+    return { title: T.candidateName(row), subtitle, label: T.moreForCandidate(T.candidateName(row)), items };
   }
 
   // ===== Keyboard: ↑ ↓ Enter on rows =====
@@ -1050,6 +1205,7 @@ export default function CandidatesTab({
     isAdmin,
     busy,
     menuFor: menu?.id ?? null,
+    markPaidFor: markPaid?.rowId ?? null,
     selectedId: dialog && !screenLocked ? (dialog.rowId ?? null) : null,
     notSavedId,
     showStatusCol,
@@ -1059,40 +1215,11 @@ export default function CandidatesTab({
     handlers: {
       onOpen: (row) => openView(row, rowEl(row.id)),
       onMore: openMenu,
-      onReview: openCompare,
-      onRecordPayment: openRecord,
+      onReview: (row, opener) => openCompare(row, opener), // the tag passes itself, so focus returns there
+      onMarkPaid: openMarkPaid,
     },
   };
 
-  const card = (key, label, Icon, value, note = null) => {
-    const selected = key && filter === key;
-    const content = (
-      <>
-        <span className="ev-card-label">
-          <Icon size={14} aria-hidden="true" />
-          {label}
-        </span>
-        <span className="ev-card-value">{value}</span>
-        {/* a note may be several lines (the Candidates card's school counts, stacked as drawn) */}
-        {(Array.isArray(note) ? note : note ? [note] : []).map((line) => (
-          <span key={line} className="ev-card-note">
-            {line}
-          </span>
-        ))}
-      </>
-    );
-    return (
-      <button
-        key={label}
-        type="button"
-        className={`ev-card ev-card--button${selected ? ' is-selected st-card-selected' : ''}`}
-        aria-pressed={key ? (selected ? 'true' : 'false') : undefined}
-        onClick={() => setFilter(!key || selected ? null : key)}
-      >
-        {content}
-      </button>
-    );
-  };
   const schoolNote = oneSchool ? T.schoolName(schoolCode) : cards.bySchool.map((s) => `${T.schoolName(s.code)} ${s.n}`); // one line each (screen 1)
   const hasAny = candidates.some(inSchool);
   const danLabelId = `${panelId}-dan`;
@@ -1118,15 +1245,14 @@ export default function CandidatesTab({
           onSave={() => saveCandidate(null)}
           onEdit={startEdit}
           onViewSignature={openSignature}
-          onShowAllHistory={() => patchDialog({ historyAll: true })}
+          onPrintReceipt={(opener) => row && openReceipt(row, opener, true)}
+          onNoAccess={onNoAccess}
           onRetryDetail={() => {
             patchDialog({ loadFailed: false });
             loadDetailInto(dialog.rowId);
           }}
         />
       );
-    } else if (dialog.type === 'record' && row) {
-      dialogElement = <RecordPaymentDialog {...common} candidate={row} today={today} onSave={savePayment} />;
     } else if (dialog.type === 'editPayment' && row) {
       dialogElement = <EditPaymentDialog {...common} candidate={row} today={today} onSave={savePayment} />;
     } else if (dialog.type === 'refund' && row) {
@@ -1139,66 +1265,96 @@ export default function CandidatesTab({
       dialogElement = (
         <ConfirmBox
           title={T.undoPaymentTitle(T.candidateName(row))}
-          body={T.undoPaymentBody(row.paidCents, row.paidMethod, row.paidOn)}
           keepLabel={T.KEEP_PAYMENT}
-          goLabel={T.UNDO_PAYMENT}
-          tone="undo"
+          actionLabel={T.UNDO_PAYMENT}
+          actionIcon={IconArrowBackUp}
+          busyLabel={T.UNDOING}
+          loses="something"
           busy={dialog.saving}
-          failedText={dialog.failed ? T.DIALOG_FAILED : null}
-          onGo={confirmUndo}
-          onCancel={cancelDialog}
-        />
+          failed={dialog.failed ? T.UNDO_BOX_FAILED : null}
+          onConfirm={confirmUndo}
+          onKeep={cancelDialog}
+        >
+          {T.undoPaymentBody(row.paidCents, row.paidMethod, row.paidOn)}
+        </ConfirmBox>
       );
     } else if (dialog.type === 'undoRefund' && row) {
       dialogElement = (
         <ConfirmBox
           title={T.undoRefundTitle(T.candidateName(row))}
-          body={T.undoRefundBody(Math.abs(dialog.refund.amountCents), dialog.refund.method, dialog.refund.paidOn)}
           keepLabel={T.KEEP_REFUND}
-          goLabel={T.UNDO_REFUND}
-          tone="undo"
+          actionLabel={T.UNDO_REFUND}
+          actionIcon={IconArrowBackUp}
+          busyLabel={T.UNDOING}
+          loses="something"
           busy={dialog.saving}
-          failedText={dialog.failed ? T.DIALOG_FAILED : null}
-          onGo={confirmUndo}
-          onCancel={cancelDialog}
-        />
+          failed={dialog.failed ? T.UNDO_BOX_FAILED : null}
+          onConfirm={confirmUndo}
+          onKeep={cancelDialog}
+        >
+          {T.undoRefundBody(Math.abs(dialog.refund.amountCents), dialog.refund.method, dialog.refund.paidOn)}
+        </ConfirmBox>
       );
     } else if (dialog.type === 'delete') {
       dialogElement = (
         <ConfirmBox
           title={T.deleteTitle(dialog.name)}
-          body={T.deleteBody({ eventName: event.name, payment: dialog.payment, gradeCount: dialog.gradeCount, hidden })}
           hint={T.DELETE_STUDENT_HINT}
           keepLabel={T.KEEP_CANDIDATE}
-          goLabel={T.DELETE_PERMANENTLY}
-          tone="danger"
+          actionLabel={T.DELETE_PERMANENTLY}
+          actionIcon={IconTrash}
+          busyLabel={T.DELETING}
+          loses="forGood"
           busy={dialog.saving}
-          failedText={dialog.failed ? T.DIALOG_FAILED : null}
-          onGo={confirmDelete}
-          onCancel={cancelDialog}
-        />
+          failed={dialog.failed ? T.DELETE_BOX_FAILED : null}
+          onConfirm={confirmDelete}
+          onKeep={cancelDialog}
+        >
+          {T.deleteBody({ eventName: event.name, payment: dialog.payment, gradeCount: dialog.gradeCount, hidden })}
+        </ConfirmBox>
       );
     } else if (dialog.type === 'compare') {
       const first = rowOf(dialog.firstId);
       const second = rowOf(dialog.secondId);
       if (first && second) {
+        // The shared compare (v1.102): Star's rows, words and order. Date of birth and email come
+        // from the two detail reads (the API's rule, v0.160); with Hide private details on they and
+        // the payment rows read "Hidden on this tablet" and are never marked different (G9).
+        const name = T.candidateName(first);
+        const d1 = dialog.details?.[0]?.candidate ?? null;
+        const d2 = dialog.details?.[1]?.candidate ?? null;
+        const payment = (c) => (c.paid ? `${T.TAG_PAID} ${T.monthDay(c.paidOn)}` : c.isMakeup ? T.NO_FEE_CELL : T.TAG_NOT_PAID);
+        const rows = [
+          { key: 'registered', label: T.COMPARE_REGISTERED, first: T.compareRegistered(first.registeredAt, first.source), second: T.compareRegistered(second.registeredAt, second.source), plain: true },
+          { key: 'reference', label: T.REFERENCE, first: first.reference ?? T.NO_REFERENCE, second: second.reference ?? T.NO_REFERENCE, plain: true },
+          { key: 'dob', label: T.DOB, first: d1?.dateOfBirth ? T.monthDayYear(d1.dateOfBirth) : '—', second: d2?.dateOfBirth ? T.monthDayYear(d2.dateOfBirth) : '—', hidden },
+          { key: 'email', label: T.EMAIL, first: d1?.emailForResults ?? '—', second: d2?.emailForResults ?? '—', hidden },
+          { key: 'for', label: T.COL_TESTING_FOR, first: T.testingForLong(first), second: T.testingForLong(second) },
+          { key: 'paying', label: T.PAYING_BY, first: T.payingByText(first.payingBy), second: T.payingByText(second.payingBy), hidden },
+          { key: 'payment', label: T.PAYMENT, first: payment(first), second: payment(second), hidden },
+        ];
+        let sub = hidden ? T.COMPARE_SUB_HIDDEN : T.COMPARE_SUB;
+        if (isPhone) sub = hidden ? `${name} · ${T.COMPARE_SUB_HIDDEN.toLowerCase()}` : T.comparePhoneSub(name);
         dialogElement = (
-          <StarCompareDialog
-            first={first}
-            second={second}
-            details={dialog.details}
-            loadFailed={dialog.loadFailed}
-            hidden={hidden}
-            isPhone={isPhone}
-            saving={dialog.saving}
-            failedText={dialog.failed ? T.DIALOG_FAILED : null}
-            onKeep={keepOne}
-            onKeepBoth={keepBoth}
+          <CompareDialog
+            title={isPhone ? T.COMPARE_PHONE_TITLE : T.compareTitle(name)}
+            sub={sub}
+            heads={[T.FIRST_REGISTRATION, T.SECOND_REGISTRATION]}
+            rows={rows}
+            note={hidden ? `${T.COMPARE_HIDDEN_NOTE} ${T.COMPARE_NOTE_STAR}` : T.COMPARE_NOTE_STAR}
+            keepLabel={T.keepThisOneLabel}
+            loading={!dialog.details && !dialog.loadFailed}
+            loadError={dialog.loadFailed ? T.LOAD_DETAIL_FAILED : null}
             onRetry={() => {
               patchDialog({ loadFailed: false });
               loadCompare(first.id, second.id);
             }}
+            busy={dialog.saving ? (dialog.busyKey ?? null) : null}
+            failed={dialog.failed ? T.DIALOG_FAILED : null}
+            onKeep={(index) => (index === 0 ? keepOne(first, second, 'keep-first') : keepOne(second, first, 'keep-second'))}
+            onKeepBoth={keepBoth}
             onClose={() => closeDialog(dialog)}
+            isPhone={isPhone}
           />
         );
       }
@@ -1224,16 +1380,21 @@ export default function CandidatesTab({
   if (overlay && dialog && !screenLocked) {
     if (overlay.type === 'danConfirm') {
       overlayElement = (
+        // Red, no icon (the decided v0.164 drawing); "Changing…" while it saves, and Esc, a click
+        // outside and Back wait (DR2-P1); a connection failure keeps it open with its note.
         <ConfirmBox
           title={T.changeDanTitle(overlay.name, overlay.newDan)}
-          body={T.changeDanBody(overlay.gradeCount, overlay.oldDan, overlay.newDan)}
           keepLabel={T.keepDanButton(overlay.oldDan)}
-          goLabel={T.clearGradesButton(overlay.gradeCount)}
-          tone="dan"
+          actionLabel={T.clearGradesButton(overlay.gradeCount)}
+          busyLabel={T.CHANGING}
+          loses="forGood"
           busy={dialog.saving}
-          onGo={() => saveCandidate(overlay.gradeCount)}
-          onCancel={keepSavedDan}
-        />
+          failed={overlay.failed ? T.DIALOG_FAILED : null}
+          onConfirm={() => saveCandidate(overlay.gradeCount)}
+          onKeep={keepSavedDan}
+        >
+          {T.changeDanBody(overlay.gradeCount, overlay.oldDan, overlay.newDan)}
+        </ConfirmBox>
       );
     } else if (overlay.type === 'signature') {
       const row = rowOf(dialog.rowId);
@@ -1252,6 +1413,57 @@ export default function CandidatesTab({
     }
   }
 
+  // The receipt (S2): on its own (from ⋯) or on top of the summary (from its Print receipt).
+  let receiptElement = null;
+  if (receipt && !screenLocked) {
+    const row = rowOf(receipt.rowId);
+    receiptElement = (
+      <ReceiptDialog
+        receipt={receipt.data}
+        sub={row ? T.receiptSub(T.candidateName(row), event.name) : event.name}
+        loadError={receipt.failed}
+        onRetry={() => {
+          setReceipt((current) => (current ? { ...current, failed: false } : current));
+          readReceipt(receipt.rowId, receipt.key);
+        }}
+        notFound={receipt.notFound ? T.receiptNotFound(row ? T.candidateName(row) : T.THIS_CANDIDATE) : null}
+        hidden={hidden}
+        onClose={closeReceipt}
+        isPhone={isPhone}
+        onTop={receipt.onTop && Boolean(dialog)}
+        returnFocusTo={receipt.onTop ? receipt.opener : null}
+      />
+    );
+  }
+
+  // The Mark paid box (S1): only while its row still shows Mark paid (a refresh that brought in a
+  // payment, or a row that left the view, closes it — see the effect below).
+  const markPaidRow = markPaid && !screenLocked && !hidden ? rowOf(markPaid.rowId) : null;
+  const markPaidOpen = Boolean(markPaidRow && !markPaidRow.paid && markPaidRow.status === 'active' && markPaid.anchor?.isConnected);
+  // A box that can no longer show is forgotten (after drawing — never while drawing).
+  const markPaidGone = markPaid !== null && !markPaidOpen;
+  useEffect(() => {
+    if (markPaidGone) setMarkPaid(null);
+  }, [markPaidGone]);
+  let markPaidElement = null;
+  if (markPaidOpen) {
+    const { rowId, snap, anchor } = markPaid;
+    markPaidElement = (
+      <MarkPaidBox
+        anchor={anchor}
+        name={T.candidateName(markPaidRow)}
+        amountCents={snap.expectedFeeCents}
+        familyChoice={markPaidRow.payingBy}
+        choiceWhere={markPaidRow.source === 'form' ? 'form' : 'desk'}
+        onMarkPaid={(method) => saveMarkPaid(rowId, snap, method)}
+        onClose={(restoreFocus) => {
+          setMarkPaid(null);
+          if (restoreFocus) anchor.focus();
+        }}
+      />
+    );
+  }
+
   const content = menu && !screenLocked ? menuContent() : null;
 
   return (
@@ -1261,38 +1473,36 @@ export default function CandidatesTab({
         {banner && (
           <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />
         )}
-        {pairs.length > 0 && (
-          <div className="ev-dupbox" role="status">
-            <IconAlertTriangle size={16} aria-hidden="true" className="ev-dupbox-icon" />
-            <div className="ev-dupbox-lines">
-              {pairs.map((pair) => (
-                <div key={pair.a.id} className="ev-dupbox-line">
-                  <span>
-                    <strong>{T.dupCount(1)}</strong> · {T.dupLine(T.candidateName(pair.a), pair.a.danLabel)}
-                  </span>
-                  <button type="button" className="btn btn-sm ev-dupbox-review" onClick={() => openCompare(pair.a)}>
-                    {T.REVIEW}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* The shared duplicate box (v1.102): the count on the first line only; each Review passes
+            itself, so focus returns to it when the compare closes. */}
+        <DuplicateBox
+          countText={T.dupCount(pairs.length)}
+          pairs={pairs.map((pair) => ({
+            key: pair.a.id,
+            text: T.dupLine(T.candidateName(pair.a), pair.a.danLabel),
+            onReview: (opener) => openCompare(pair.a, opener),
+          }))}
+        />
+        {/* The shared count cards (v1.013 / v1.115): Candidates shows everyone, Paid and Not paid
+            filter the list, Payments recorded is a plain total (v0.518). Hide private details
+            keeps only the Candidates card (G4). */}
         {hasAny && (
-          <div className={`ev-cards st-cards${hidden ? ' is-one' : ''}`}>
-            {card(null, T.CARD_CANDIDATES, IconUsers, cards.candidates, schoolNote)}
-            {!hidden && card('paid', T.CARD_PAID, IconCheck, cards.paid)}
-            {!hidden && card('notPaid', T.CARD_NOT_PAID, IconClock, cards.notPaid)}
-            {!hidden && card('payments', T.CARD_PAYMENTS, IconSum, T.dollars(cards.payments)) /* ti-sum = a money total (v0.303) */}
-          </div>
-        )}
-        {filter && (
-          <p className="ev-filter-line">
-            {T.FILTER_LINE[filter]} ·{' '}
-            <button type="button" className="link-button st-inline-link" onClick={() => setFilter(null)}>
-              {T.SHOW_ALL_LINK}
-            </button>
-          </p>
+          <CountCards
+            cards={[
+              { key: 'all', Icon: IconUsers, label: T.CARD_CANDIDATES, value: cards.candidates, note: schoolNote, kind: 'all' },
+              ...(hidden
+                ? []
+                : [
+                    { key: 'paid', Icon: IconCheck, label: T.CARD_PAID, value: cards.paid, kind: 'filter' },
+                    { key: 'notPaid', Icon: IconCircleX, label: T.CARD_NOT_PAID, value: cards.notPaid, kind: 'filter' }, // ti-circle-x = not paid (S9, 16a)
+                    { key: 'payments', Icon: IconSum, label: T.CARD_PAYMENTS, value: formatMoney(cards.payments), kind: 'total' }, // ti-sum = a money total (v0.303)
+                  ]),
+            ]}
+            selected={filter}
+            onSelect={setFilter}
+            showingText={filter ? T.FILTER_LINE[filter] : ''}
+            showAllLabel={T.SHOW_ALL_LINK}
+          />
         )}
         {oneSchool && (
           <p className="ev-filter-line st-school-line">
@@ -1341,6 +1551,9 @@ export default function CandidatesTab({
           step, and two open at once would make closing the top one also close the one under it.
           The first dialog's values live in this tab's state, so it comes back exactly as it was. */}
       {overlayElement ?? dialogElement}
+      {receiptElement}
+      {markPaidElement}
     </>
   );
 }
+

@@ -11,7 +11,8 @@
 //   - opens Add event / Edit event (admins), the ⋯ menu (Copy Worcester link, Copy Shrewsbury link,
 //     Close / Open registration with a 5-second Undo, Edit event on phones, Delete event for admins)
 //   - opens an event's page when a row is clicked (App.jsx gives it #testing/star/event/<id>)
-// The form lives in StarEventDialog.jsx, the delete confirmation in StarDeleteEventDialog.jsx.
+// The form lives in StarEventDialog.jsx; the delete confirmation is the shared ConfirmBox (design
+// review part 2, rulebook v0.518: "Keep event · Delete event", "Deleting…" while it works).
 //
 // Rules worth knowing (the same as Color Belt's tab):
 //   - ONE change at a time: while a save is on its way, other changes are ignored.
@@ -24,6 +25,8 @@
 // From phase 3 it also reloads quietly every 15 seconds (v0.507 Q3: Star adopts Color Belt's v0.157).
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconAlertTriangle, IconCopy, IconDots, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
+import ChoiceGroup from '../../../../components/ChoiceGroup.jsx';
+import ConfirmBox from '../../../../components/ConfirmBox.jsx';
 import ErrorBanner from '../../../../components/ErrorBanner.jsx';
 import IconButton from '../../../../components/IconButton.jsx';
 import RowMenu from '../../../../components/RowMenu.jsx';
@@ -43,11 +46,9 @@ import { registrationSwitch } from '../../../../lib/testing/eventRules.js';
 import { closingAfterTestingChange, suggestedClosingDate } from '../../../../lib/star/eventDateRules.js';
 import { starSchoolLinks } from '../../../../lib/star/links.js';
 import { PHONE_QUERY, TOUCH_QUERY, useMediaQuery } from '../../../../lib/useMediaQuery.js';
+import { LIVE_REFRESH_MS, useLiveLoad } from '../../../../lib/useLiveLoad.js';
 import { useRowArrowNav } from '../../../../lib/useRowArrowNav.js';
 import { useShortcutN } from '../../../../lib/useShortcutN.js';
-import ChoiceGroup from '../../events/ChoiceGroup.jsx';
-import { LIVE_REFRESH_MS, useLiveLoad } from '../../events/useLiveLoad.js';
-import StarDeleteEventDialog from './StarDeleteEventDialog.jsx';
 import StarEventDialog, { checkStarEventForm, isStarEventFormDirty } from './StarEventDialog.jsx';
 import * as T from './text.js';
 
@@ -940,16 +941,25 @@ export default function StarEventsTab({
       );
     } else {
       dialogElement = (
-        <StarDeleteEventDialog
+        // The numbers come from the event re-read just before this opens (startDelete), and the
+        // delete sends exactly what was counted: if anything changed meanwhile the database
+        // answers "stale" instead of deleting something the person didn't see. The sentence names
+        // no money amount, so nothing here needs hiding on a mat-side tablet (v0.249).
+        <ConfirmBox
           key={dialog.key}
-          name={dialog.name}
-          activeCount={dialog.activeCount}
-          withdrawnCount={dialog.withdrawnCount}
-          failed={dialog.failed}
-          deleting={dialog.saving}
-          onDelete={confirmDelete}
-          onCancel={cancelDialog}
-        />
+          title={T.deleteEventTitle(dialog.name)}
+          keepLabel={T.KEEP_EVENT}
+          actionLabel={T.DELETE_EVENT}
+          actionIcon={IconTrash}
+          busyLabel={T.DELETING}
+          loses="forGood"
+          busy={dialog.saving}
+          failed={dialog.failed ? T.DELETE_FAILED : null}
+          onKeep={cancelDialog}
+          onConfirm={confirmDelete}
+        >
+          {T.deleteEventBody({ activeCount: dialog.activeCount, withdrawnCount: dialog.withdrawnCount })}
+        </ConfirmBox>
       );
     }
   }

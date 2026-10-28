@@ -13,7 +13,8 @@
 //     than the usual ones, at the four sizes) and failure notes inside the boxes; the Compare
 //     dialog's busy button is heard as "Keeping…";
 //   - the Mark paid box's keys, first focus and Tab out (also inside a dialog); the count cards'
-//     pressed state; the history line;
+//     pressed state and their two-line note (v1.115: each line under the one before, at the four
+//     sizes, heard after the number); the history line;
 //   - Download QR code's hidden name: with two schools its own words first, then the school
 //     ("Download QR code, Worcester", v1.111); with one school none;
 //   - a real Download QR code: the file's name and that it is 1024 × 1024 pixels.
@@ -46,7 +47,8 @@ async function check(label, fn) {
 }
 
 const KEYS = {
-  ArrowDown: 40, ArrowUp: 38, Enter: 13, Escape: 27, Tab: 9, Home: 36, End: 35, ' ': 32,
+  ArrowDown: 40, ArrowUp: 38, ArrowLeft: 37, ArrowRight: 39, Enter: 13, Escape: 27, Tab: 9, Home: 36, End: 35, ' ': 32,
+  PageUp: 33, PageDown: 34,
 };
 
 await withChrome(async (tab) => {
@@ -64,11 +66,11 @@ await withChrome(async (tab) => {
     }
     await sleep(settle);
   }
-  async function key(name, { shift = false } = {}) {
+  async function key(name, { shift = false, alt = false } = {}) {
     const code = KEYS[name] ?? name.toUpperCase().charCodeAt(0);
     // Enter carries a carriage-return text, as a real keyboard does: that is what presses a focused button.
     const text = name.length === 1 ? name : name === 'Enter' ? String.fromCharCode(13) : undefined;
-    const common = { key: name, code: name.length === 1 ? (/\d/.test(name) ? `Digit${name}` : `Key${name.toUpperCase()}`) : name, windowsVirtualKeyCode: code, modifiers: shift ? 8 : 0 };
+    const common = { key: name, code: name.length === 1 ? (/\d/.test(name) ? `Digit${name}` : `Key${name.toUpperCase()}`) : name, windowsVirtualKeyCode: code, modifiers: (alt ? 1 : 0) | (shift ? 8 : 0) };
     await tab.cdp('Input.dispatchKeyEvent', { type: text ? 'keyDown' : 'rawKeyDown', ...common, ...(text ? { text } : {}) });
     await tab.cdp('Input.dispatchKeyEvent', { type: 'keyUp', ...common });
     await sleep(120);
@@ -518,6 +520,69 @@ await withChrome(async (tab) => {
     await click('.ev-filter-line button', 'Show all');
     assert.equal(await ev(`Boolean(document.querySelector('.ev-card.is-selected'))`), false);
   });
+
+  // The two-line note (v1.115, Star's school counts on Both): each line under the one before, at the
+  // four sizes, and heard after the number; a one-line note (Camps' "$1,355") stays one line.
+  const twoLines = () => ev(`(() => {
+    const cards = [...document.querySelectorAll('.ev-card')].map((c) => {
+      const b = c.getBoundingClientRect();
+      const pad = parseFloat(getComputedStyle(c).paddingRight);
+      const lines = [...c.querySelectorAll('.ev-card-note')].map((n) => {
+        const r = n.getBoundingClientRect();
+        return { text: n.textContent, left: r.left, top: r.top, bottom: r.bottom, inside: r.right <= b.right - pad + 0.5 && n.scrollWidth <= n.clientWidth };
+      });
+      return { top: Math.round(b.top), height: Math.round(b.height), width: Math.round(b.width), lines };
+    });
+    const row = Math.round(document.querySelector('.ev-cards').getBoundingClientRect().width);
+    return { cards, row, pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+  })()`);
+  for (const size of FOUR_SIZES) {
+    await tab.size({ w: size.w, h: size.h, touch: size.touch, scale: 1 });
+    await open('M6/twolines', 500);
+    await check(`M6 two-line note at ${size.label}: "Worcester 8" under "Shrewsbury 5", same left edge, inside the card; the cards beside it as tall`, async () => {
+      const { cards, pageOverflow } = await twoLines();
+      const [first] = cards;
+      assert.deepEqual(first.lines.map((l) => l.text), ['Shrewsbury 5', 'Worcester 8']);
+      const [a, b] = first.lines;
+      assert.ok(b.top >= a.bottom, `the second line starts at ${b.top}, above the first one's bottom (${a.bottom})`);
+      assert.ok(Math.abs(a.left - b.left) < 0.5, 'the two lines start at different left edges');
+      assert.ok(first.lines.every((l) => l.inside), 'a line sticks out of the card');
+      const sameRow = cards.filter((c) => c.top === first.top);
+      assert.ok(sameRow.length > 1, 'no other card in its row');
+      assert.ok(sameRow.every((c) => c.height === first.height), `heights in its row: ${sameRow.map((c) => c.height).join(', ')}`);
+      assert.equal(pageOverflow, 0);
+    });
+  }
+  // Hide private details on: Star passes only the Candidates card, which keeps its two lines.
+  for (const size of [FOUR_SIZES[0], FOUR_SIZES[2]]) {
+    await tab.size({ w: size.w, h: size.h, touch: size.touch, scale: 1 });
+    await open('M6/twolines-hidden', 500);
+    await check(`M6 two-line note with Hide private details on, at ${size.label}: the one card keeps both lines (280 px wide on PC, the whole row on phones)`, async () => {
+      const { cards, row, pageOverflow } = await twoLines();
+      assert.equal(cards.length, 1);
+      const [card] = cards;
+      assert.deepEqual(card.lines.map((l) => l.text), ['Shrewsbury 5', 'Worcester 8']);
+      assert.ok(card.lines[1].top >= card.lines[0].bottom, 'the second line is not under the first');
+      assert.ok(card.lines.every((l) => l.inside), 'a line sticks out of the card');
+      assert.equal(card.width, size.touch ? row : 280);
+      assert.equal(pageOverflow, 0);
+    });
+  }
+  await tab.size({ w: 1280, h: 800, touch: false, scale: 1 });
+  await open('M6/twolines', 500);
+  await check('M6 two-line note: a screen reader hears both lines after the number ("Candidates 13 Shrewsbury 5 Worcester 8")', async () => {
+    await tab.cdp('Accessibility.enable', {});
+    const { result } = await tab.cdp('Runtime.evaluate', { expression: `document.querySelector('.ev-card')` });
+    const { nodes } = await tab.cdp('Accessibility.getPartialAXTree', { objectId: result.objectId, fetchRelatives: false });
+    const node = nodes.find((n) => !n.ignored);
+    assert.deepEqual([node?.role?.value, node?.name?.value], ['button', 'Candidates 13 Shrewsbury 5 Worcester 8']);
+  });
+  await open('M6/camps', 500);
+  await check('M6: a one-line note (Camps’ "$1,355" under To collect) is still one line', async () => {
+    // Each note as its words, marked when it takes more than one line on screen.
+    const notes = await ev(`[...document.querySelectorAll('.ev-card')].map((c) => [...c.querySelectorAll('.ev-card-note')].map((n) => n.textContent + (n.getBoundingClientRect().height > parseFloat(getComputedStyle(n).lineHeight) + 0.5 ? ' (more than one line)' : '')))`);
+    assert.deepEqual(notes, [[], [], ['$1,355'], []]);
+  });
   await open('M7/closed');
   await check('M7: the line is a button heard as collapsed/expanded; Enter opens the list newest first, "Oct 22 · Jeffrey Berg"', async () => {
     assert.equal(await ev(`document.querySelector('.hist-btn').getAttribute('aria-expanded')`), 'false');
@@ -543,6 +608,227 @@ await withChrome(async (tab) => {
     assert.deepEqual(files, ['November Children Testing - Worcester QR code.png']);
     const png = readFileSync(join(downloads, files[0]));
     assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [1024, 1024]);
+  });
+
+  // ===================== DP — the date picker opened from a button (v0.817) =====================
+  // The section's own button opens the calendar (no field); `opener` here is that button.
+  const dp = () => ev(`(() => {
+    const pop = document.querySelector('.dp-pop');
+    const opener = document.querySelector('.parts-dp [aria-haspopup="dialog"]');
+    const box = (el) => { if (!el) return null; const b = el.getBoundingClientRect(); return { x: Math.round(b.left), y: Math.round(b.top), w: Math.round(b.width), bottom: Math.round(b.bottom) }; };
+    const a = document.activeElement;
+    const sample = document.querySelector('.parts-dp');
+    return {
+      open: Boolean(pop), inline: Boolean(pop?.classList.contains('is-inline')), inBody: pop?.parentElement === document.body,
+      haspopup: opener?.getAttribute('aria-haspopup'), expanded: opener?.getAttribute('aria-expanded'),
+      fields: document.querySelectorAll('.parts-dp .dp-field').length,
+      pop: box(pop), opener: box(opener), row: box(document.querySelector('.parts-dayrow')), cards: box(document.querySelector('.parts-cards')),
+      focus: a === opener ? 'opener' : a === document.body || !a ? 'body' : a.dataset.date ?? (a.getAttribute('aria-label') || a.textContent.trim()),
+      name: pop?.getAttribute('aria-label') ?? null,
+      hint: pop?.querySelector('.dp-hint')?.textContent.trim() ?? null,
+      value: sample?.dataset.day ?? sample?.dataset.date ?? null,
+    };
+  })()`);
+  const cells = (dates) => ev(`${JSON.stringify(dates)}.map((d) => { const td = document.querySelector('.dp-pop td[data-date="' + d + '"]'); return td ? [d, td.getAttribute('aria-selected'), td.getAttribute('aria-current'), td.getAttribute('aria-disabled')] : [d, 'missing']; })`);
+  const pressOpener = () => click('.parts-dp [aria-haspopup="dialog"]');
+
+  await tab.size({ w: 1280, h: 800, touch: false, scale: 1 });
+  await open('DP/row-closed', 600);
+  await check('DP: no field is drawn; the calendar button says it opens a dialog, closed', async () => {
+    const s = await dp();
+    assert.deepEqual([s.fields, s.open, s.haspopup, s.expanded], [0, false, 'dialog', 'false']);
+  });
+  await check('DP: a click on the calendar button opens the calendar under it (PC), focus on the chosen day', async () => {
+    await pressOpener();
+    const s = await dp();
+    assert.deepEqual([s.open, s.inBody, s.expanded, s.focus, s.name], [true, true, 'true', '2026-10-26', 'Choose day']);
+    assert.ok(Math.abs(s.pop.y - (s.opener.bottom + 4)) <= 1, `calendar top ${s.pop.y}, button bottom ${s.opener.bottom}`);
+    assert.ok(Math.abs(s.pop.x - s.opener.x) <= 1, `calendar left ${s.pop.x}, button left ${s.opener.x}`);
+  });
+  await check("DP: the same calendar: Finance's line, days after today unavailable, today outlined, the chosen day selected", async () => {
+    assert.equal((await dp()).hint, "Days after today can't be chosen.");
+    assert.deepEqual(await cells(['2026-10-26', '2026-10-28', '2026-10-29']), [
+      ['2026-10-26', 'true', null, null],
+      ['2026-10-28', 'false', 'date', null],
+      ['2026-10-29', 'false', null, 'true'],
+    ]);
+  });
+  await check("DP: a gray day can't be picked: a click on Oct 30 does nothing, the calendar stays open", async () => {
+    await click('.dp-pop td[data-date="2026-10-30"]');
+    const s = await dp();
+    assert.deepEqual([s.open, s.value], [true, '2026-10-26']);
+  });
+  await check('DP: Esc closes it; focus back on the calendar button', async () => {
+    await key('Escape');
+    const s = await dp();
+    assert.deepEqual([s.open, s.expanded, s.focus], [false, 'false', 'opener']);
+  });
+  await check('DP: the keyboard: Enter on the button opens it on Oct 26; ← then Enter picks Oct 25, closes, focus back on the button', async () => {
+    await key('Enter');
+    await sleep(200);
+    assert.equal((await dp()).focus, '2026-10-26');
+    await key('ArrowLeft');
+    assert.equal((await dp()).focus, '2026-10-25');
+    await key('Enter');
+    const s = await dp();
+    assert.deepEqual([s.open, s.value, s.focus], [false, '2026-10-25', 'opener']);
+  });
+  await check('DP: Alt+↓ on the button opens it too', async () => {
+    await key('ArrowDown', { alt: true });
+    await sleep(200);
+    const s = await dp();
+    assert.deepEqual([s.open, s.focus], [true, '2026-10-25']);
+    await key('Escape');
+  });
+  await check('DP: a click on the page outside closes it; focus back on the calendar button', async () => {
+    await pressOpener();
+    assert.equal((await dp()).open, true);
+    await clickAt(1200, 760); // empty page, far from the calendar
+    await sleep(100);
+    const s = await dp();
+    assert.deepEqual([s.open, s.focus], [false, 'opener']);
+  });
+  await check('DP: a click on another control (History) closes it, and that control keeps the focus', async () => {
+    await pressOpener();
+    await click('.parts-dayrow button', 'History');
+    await sleep(100);
+    const s = await dp();
+    assert.deepEqual([s.open, s.focus], [false, 'History']);
+  });
+  await check("DP: a click on the calendar button while it's open closes it (it doesn't open again)", async () => {
+    await pressOpener();
+    assert.equal((await dp()).open, true);
+    await pressOpener();
+    const s = await dp();
+    assert.deepEqual([s.open, s.expanded], [false, 'false']);
+  });
+
+  await open('DP/panel', 600);
+  await check("DP panel: a text button opens it on today (nothing chosen), past days unavailable, the picker's line", async () => {
+    await pressOpener();
+    const s = await dp();
+    assert.deepEqual([s.open, s.focus, s.hint, s.name], [true, '2026-10-28', "Past dates can't be chosen.", 'Choose follow-up date']);
+    assert.deepEqual(await cells(['2026-10-27', '2026-10-28']), [
+      ['2026-10-27', 'false', null, 'true'],
+      ['2026-10-28', 'false', 'date', null],
+    ]);
+  });
+  await check('DP panel: a click on Oct 30 picks it, closes, focus back on the button', async () => {
+    await click('.dp-pop td[data-date="2026-10-30"]');
+    const s = await dp();
+    assert.deepEqual([s.open, s.value, s.focus], [false, '2026-10-30', 'opener']);
+  });
+
+  await tab.size({ w: 390, h: 844, touch: true, scale: 1 });
+  await open('DP/row-closed', 600);
+  await check('DP (phone 390): the calendar opens in the page under the row, edge to edge, and pushes the cards down', async () => {
+    await pressOpener();
+    const s = await dp();
+    assert.deepEqual([s.open, s.inline, s.inBody], [true, true, false]);
+    assert.ok(s.pop.y >= s.row.bottom, `calendar top ${s.pop.y}, row bottom ${s.row.bottom}`);
+    assert.deepEqual([s.pop.x, s.pop.w], [0, 390]);
+    assert.ok(s.cards.y >= s.pop.bottom, `cards top ${s.cards.y}, calendar bottom ${s.pop.bottom}`);
+  });
+  await check('DP (phone 390): picking a day closes it; focus back on the button', async () => {
+    await click('.dp-pop td[data-date="2026-10-27"]');
+    const s = await dp();
+    assert.deepEqual([s.open, s.value, s.focus], [false, '2026-10-27', 'opener']);
+  });
+  await tab.size({ w: 1280, h: 800, touch: false, scale: 1 });
+
+  // The field mode is unchanged: it still draws its field, gives focus back to it on Esc, and a
+  // click outside still leaves the focus where the click put it (v0.503).
+  await open('DP/field', 600);
+  await check('DP field mode, unchanged: the field opens the calendar under it; Esc gives focus back to the field', async () => {
+    await click('.parts-dp .dp-field');
+    let s = await dp();
+    assert.deepEqual([s.fields, s.open, s.inBody, s.expanded, s.focus], [1, true, true, 'true', '2026-10-26']);
+    await key('Escape');
+    s = await dp();
+    assert.deepEqual([s.open, s.focus], [false, 'opener']);
+  });
+  await check('DP field mode, unchanged: a click outside closes it and leaves the focus off the field', async () => {
+    await click('.parts-dp .dp-field');
+    await clickAt(1200, 760);
+    await sleep(100);
+    const s = await dp();
+    assert.deepEqual([s.open, s.focus], [false, 'body']);
+  });
+
+  // The design review's cases (2026-10-28): the day moved while the calendar was closed (phones),
+  // a real tap outside, a box that can take the focus, a box opened above its button that grows, a
+  // disabled button, and the section closing the calendar itself.
+  const centerOf = (selector) => ev(`(() => { const r = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+  async function tapAt(x, y) {
+    await tab.cdp('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    await sleep(80);
+    await tab.cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await sleep(500);
+  }
+  await tab.size({ w: 390, h: 844, touch: true, scale: 1 });
+  await open('DP/row-closed', 600);
+  await check('DP (phone): ‹ then the calendar button: it opens on the new day (Oct 25), with focus on it', async () => {
+    await click('[aria-label="Previous day"]');
+    await pressOpener();
+    const s = await dp();
+    assert.deepEqual([s.open, s.value, s.focus], [true, '2026-10-25', '2026-10-25']);
+    await key('Escape');
+  });
+  await check('DP (phone): moved into another month (‹ to Sep 30), it opens on Sep 30, and Esc still closes it', async () => {
+    for (let i = 0; i < 25; i += 1) await click('[aria-label="Previous day"]');
+    assert.equal((await dp()).value, '2026-09-30');
+    await pressOpener();
+    let s = await dp();
+    assert.deepEqual([s.open, s.focus], [true, '2026-09-30']);
+    await key('Escape');
+    s = await dp();
+    assert.deepEqual([s.open, s.focus], [false, 'opener']);
+  });
+  await check('DP (phone): a real tap outside (on the day heading) closes it; focus back on the button once the tap is over', async () => {
+    await pressOpener();
+    assert.equal((await dp()).open, true);
+    const at = await centerOf('.parts-day');
+    await tapAt(at.x, at.y);
+    const s = await dp();
+    assert.deepEqual([s.open, s.focus], [false, 'opener']);
+  });
+  await open('DP/row-disabled', 600);
+  await check("DP (phone): a disabled button does nothing: no calendar, no scrolling, aria-expanded stays false", async () => {
+    const before = await ev('scrollY');
+    await pressOpener();
+    const s = await dp();
+    assert.deepEqual([s.open, s.expanded, await ev('scrollY')], [false, 'false', before]);
+  });
+
+  await tab.size({ w: 1280, h: 800, touch: false, scale: 1 });
+  await open('DP/panel-in-box', 600);
+  await check('DP: a click inside a box that can take the focus (tabindex -1, as the dialog box) gives the focus back to the button', async () => {
+    await pressOpener();
+    assert.equal((await dp()).open, true);
+    const spot = await ev(`(() => { const r = document.querySelector('.parts-focusbox').getBoundingClientRect(); return { x: r.right - 12, y: r.top + 12 }; })()`);
+    await clickAt(spot.x, spot.y);
+    await sleep(100);
+    const s = await dp();
+    assert.deepEqual([s.open, s.focus], [false, 'opener']);
+  });
+  await open('DP/panel-low', 600);
+  await check('DP: opened above its button, the calendar stays above it when the month gets a 6th week (Oct → Jan, Page Down ×3)', async () => {
+    await pressOpener();
+    let s = await dp();
+    assert.ok(Math.abs(s.pop.bottom - (s.opener.y - 4)) <= 1, `opens above: calendar bottom ${s.pop.bottom}, button top ${s.opener.y}`);
+    for (let i = 0; i < 3; i += 1) await key('PageDown');
+    await sleep(150);
+    s = await dp();
+    assert.equal(s.focus, '2027-01-28');
+    assert.ok(Math.abs(s.pop.bottom - (s.opener.y - 4)) <= 1, `after Jan: calendar bottom ${s.pop.bottom}, button top ${s.opener.y}`);
+  });
+  await open('DP/row-autoclose', 600);
+  await check('DP: when the section closes the calendar itself (focus inside it), focus goes back to the button', async () => {
+    await pressOpener();
+    assert.equal((await dp()).focus, '2026-10-26');
+    await sleep(1300); // the sample closes it 1 s after it opens
+    const s = await dp();
+    assert.deepEqual([s.open, s.focus], [false, 'opener']);
   });
 });
 

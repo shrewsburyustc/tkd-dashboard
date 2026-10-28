@@ -241,7 +241,7 @@ await check('summary line (3) and the small wording rules', async () => {
   assert.equal(T.markSentRefusal('error', 'Noah Chen'), 'Couldn’t mark Noah Chen as sent. Check the connection, then try again.');
   assert.equal(T.undoSentRefusal('stale'), 'That was already undone.');
   assert.equal(T.undoSentRefusal('not_allowed'), 'Too late to undo here. Ask an admin to undo Mark as sent.');
-  assert.equal(T.noEmailOnFile('Noah Chen'), 'Noah Chen has no email for results. Add it with Edit candidate on the Candidates tab, then try again.');
+  assert.equal(T.noEmailOnFile('Noah Chen'), 'Noah Chen has no email for results. Add it with Edit details on the Candidates tab, then try again.');
   assert.equal(T.addressFailed('Noah Chen'), 'Couldn’t get Noah Chen’s email address. Check the connection, then try again.');
   assert.equal(T.csvDownloaded('Fall-2026-Star-Testing-results-2026-11-16.csv', 11),
     'Downloaded Fall-2026-Star-Testing-results-2026-11-16.csv (11 candidates). It has dates of birth, emails and payments — keep it private.');
