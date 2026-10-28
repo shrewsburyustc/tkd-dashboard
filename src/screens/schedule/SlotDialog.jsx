@@ -5,6 +5,8 @@
 //            are taught together ("White + Little Tiger", v0.237)
 //   Color  — belongs to each CLASS (one row per ticked class): changing it recolors every slot
 //            of that class
+//   Ages   — also belongs to each class (v0.619): From / To, shown next to the class on the
+//            booking forms ("Ages 7–12", "Ages 7+"); both empty = none
 //   Days / Day, Starts, Ends — checked as you type (5-minute steps, 15 min – 4 h)
 // Overlapping another class is allowed (two mats); an amber note says so, Save still works.
 //
@@ -14,6 +16,7 @@ import { IconCheck, IconTrash } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
 import { CLASS_COLORS } from '../../lib/schedule/colors.js';
+import { agesLabel, agesProblem, readAges } from '../../lib/schedule/ages.js';
 import { findOverlaps, parseTime, timeProblem } from '../../lib/schedule/time.js';
 import { WEEKDAYS } from '../../lib/schedule/time.js';
 import * as T from './text.js';
@@ -33,17 +36,34 @@ export function checkSlotForm(state, versionSlots) {
   const problem = timeProblem(start, end);
   // "missing" only shows once someone has typed in a time box; the others show right away.
   const timeError = problem && (problem !== 'missing' || touched.start || touched.end) ? T.timeProblemText(problem) : null;
-  const valid = values.classIds.length > 0 && days.length > 0 && problem === null;
+  // each ticked class's ages: a problem blocks Save at once, but its words show under that
+  // class's boxes only after one of them was left (or Save pressed) — not while typing "12"
+  const agesProblems = values.classIds
+    .map((id) => [id, agesProblem(values.ages?.[id]?.from, values.ages?.[id]?.to)])
+    .filter(([, p]) => p !== null);
+  const ageErrors = Object.fromEntries(agesProblems.filter(([id]) => touched[`ages-${id}`]).map(([id, p]) => [id, T.AGES_PROBLEM[p]]));
+  const agesOk = agesProblems.length === 0;
+  const valid = values.classIds.length > 0 && days.length > 0 && problem === null && agesOk;
   const overlapList = valid ? findOverlaps(versionSlots, days, start, end, state.slotId ?? null) : [];
   const sameAsSaved = state.mode === 'edit' && !isSlotFormDirty(state);
   return {
     classError,
+    ageErrors,
     dayError,
     timeError,
     overlapList,
     canSave: valid && !state.saving && !state.blocked,
     sameAsSaved,
-    payload: valid ? { classIds: values.classIds, colors: values.colors, days, start, end } : null,
+    payload: valid
+      ? {
+          classIds: values.classIds,
+          colors: values.colors,
+          ages: Object.fromEntries(values.classIds.map((id) => [id, readAges(values.ages?.[id]?.from, values.ages?.[id]?.to)])),
+          days,
+          start,
+          end,
+        }
+      : null,
   };
 }
 
@@ -56,6 +76,7 @@ const NOTES = {
   INVALID_DIALOG: T.INVALID_DIALOG,
   SAVE_FAILED: T.SAVE_FAILED,
   COLOR_FAILED: T.COLOR_FAILED,
+  AGES_FAILED: T.AGES_FAILED,
 };
 
 export default function SlotDialog({
@@ -81,7 +102,7 @@ export default function SlotDialog({
   function handleSubmit(event) {
     event.preventDefault();
     if (check.canSave) onSave();
-    else onTouch(['classIds', 'days', 'start', 'end']);
+    else onTouch(['classIds', 'days', 'start', 'end', ...state.values.classIds.map((id) => `ages-${id}`)]);
   }
 
   const saveButton = (
@@ -181,6 +202,64 @@ export default function SlotDialog({
                 </p>
               </fieldset>
             ))}
+
+            {/* Each ticked class's ages (v0.619): two whole-number boxes and what the forms will show */}
+            {state.values.classIds.map((classId) => {
+              const typed = state.values.ages?.[classId] ?? { from: '', to: '' };
+              const setAge = (patch) => onChange({ ages: { ...state.values.ages, [classId]: { ...typed, ...patch } } });
+              const error = check.ageErrors[classId] ?? null;
+              const shown = agesProblem(typed.from, typed.to) ? '' : agesLabel(readAges(typed.from, typed.to).from, readAges(typed.from, typed.to).to);
+              const hintId = `${idBase}-ages-hint-${classId}`;
+              const errorId = `${idBase}-ages-error-${classId}`;
+              const showsId = `${idBase}-ages-shows-${classId}`;
+              // read with the boxes: the problem, what the forms will show, then the hint
+              const described = [error ? errorId : null, shown ? showsId : null, hintId].filter(Boolean).join(' ');
+              const leave = () => onTouch([`ages-${classId}`]);
+              return (
+                <fieldset key={`ages-${classId}`} className="field sdialog-fieldset">
+                  <legend className="field-label">{T.agesFor(nameOf(classId))}</legend>
+                  <div className="sages">
+                    <label className="sages-box">
+                      <span className="sages-label">{T.AGE_FROM}</span>
+                      <input
+                        className="input sages-input"
+                        inputMode="numeric"
+                        maxLength={2}
+                        value={typed.from}
+                        readOnly={readOnly}
+                        aria-invalid={error ? 'true' : undefined}
+                        aria-describedby={described}
+                        onBlur={leave}
+                        onChange={(e) => setAge({ from: e.target.value.replace(/[^0-9]/g, '') })}
+                      />
+                    </label>
+                    <label className="sages-box">
+                      <span className="sages-label">{T.AGE_TO}</span>
+                      <input
+                        className="input sages-input"
+                        inputMode="numeric"
+                        maxLength={2}
+                        value={typed.to}
+                        readOnly={readOnly}
+                        aria-invalid={error ? 'true' : undefined}
+                        aria-describedby={described}
+                        onBlur={leave}
+                        onChange={(e) => setAge({ to: e.target.value.replace(/[^0-9]/g, '') })}
+                      />
+                    </label>
+                    {shown && (
+                      <span id={showsId} className="sages-shows">
+                        {T.agesShowsAs(shown)}
+                      </span>
+                    )}
+                  </div>
+                  {error && <Notice id={errorId}>{error}</Notice>}
+                  <p id={hintId} className="field-hint">
+                    {T.agesHint(nameOf(classId), typed.from)}
+                  </p>
+                </fieldset>
+              );
+            })}
 
             {isAdd ? (
               <fieldset className="field sdialog-fieldset">
