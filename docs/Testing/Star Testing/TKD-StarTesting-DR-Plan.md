@@ -20,10 +20,10 @@ Order: 0028 can be applied any time (it only widens the rule). The screen steps 
 ## Questions for Jeffrey (one at a time, each with a picture)
 
 From the mockups:
-1. What "Edit details" opens — **decided 2026-10-28: A, the edit form straight away** (as Color Belt and Camps).
-2. "Review possible duplicate" in a flagged row's ⋯ menu (A add it / B tag only).
-3. Undo after restoring a "Duplicate copy" (A no Undo / B Undo, comes back as "Removed").
-4. Undo after Edit payment: any limit besides the toast's 5 seconds?
+1. What "Edit details" opens — **decided: A, the edit form straight away** (v0.517).
+2. "Review possible duplicate" in a flagged row's ⋯ menu — **decided: A, add it** (v0.517).
+3. Undo after restoring a "Duplicate copy" — **decided: A, no Undo** (v0.517).
+4. Undo after Edit payment — **decided: as long as the toast, no other limit** (G2 OK, v0.517).
 5. "Back to the testing day" shares `ti-arrow-back-up` with Undo and Restore — OK under one-icon-per-meaning?
 
 From the brief (they feed part 2):

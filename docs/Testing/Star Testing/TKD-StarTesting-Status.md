@@ -1,7 +1,7 @@
 # Star Testing — status and next steps
 
 **Updated:** 2026-10-28 (Star testing worktree session — all seven build phases on `main` and live for staff; **Design Review changes S1–S12 started**: plan `TKD-StarTesting-DR-Plan.md`; part 1 mockups `TKD-StarTesting-DR-Gap-Mockups.html` (G1–G5, design-reviewed) being shown to Jeffrey; migration 0028 written, in security review, not applied)
-**Rulebook at this update:** v0.516 (Star testing rows: v0.58–v0.61, v0.63, v0.66–v0.130, v0.137–v0.146, v0.148–v0.156, v0.158–v0.177, v0.222–v0.223, v0.248–v0.253, v0.500–v0.516 (Star's block is 0.500–0.599 since v0.300; v0.224 is Black Belt's, v0.225–v0.228 Color Belt's, v0.229–v0.237 Camps', v0.233–v0.247 Prospects' working copy — Star's uncommitted R3–R4b rows were renumbered twice, last from 0.229–0.232); v0.147 and v0.157 are Color Belt's) · **Inventory of the old prototype:** `TKD-StarTesting-Inventory.md` (this folder) · **Mockups:** `TKD-StarTesting-Rubrics-Mockups.html`, `TKD-StarTesting-Events-Mockups.html`, `TKD-StarTesting-Form-Mockups.html`, `TKD-StarTesting-Candidates-Mockups.html`, `TKD-StarTesting-Grading-Mockups.html`, `TKD-StarTesting-Results-Mockups.html`, `TKD-StarTesting-Private-Mockups.html`, `TKD-StarTesting-Home-Mockups.html` (this folder)
+**Rulebook at this update:** v0.517 (Star testing rows: v0.58–v0.61, v0.63, v0.66–v0.130, v0.137–v0.146, v0.148–v0.156, v0.158–v0.177, v0.222–v0.223, v0.248–v0.253, v0.500–v0.517 (Star's block is 0.500–0.599 since v0.300; v0.224 is Black Belt's, v0.225–v0.228 Color Belt's, v0.229–v0.237 Camps', v0.233–v0.247 Prospects' working copy — Star's uncommitted R3–R4b rows were renumbered twice, last from 0.229–0.232); v0.147 and v0.157 are Color Belt's) · **Inventory of the old prototype:** `TKD-StarTesting-Inventory.md` (this folder) · **Mockups:** `TKD-StarTesting-Rubrics-Mockups.html`, `TKD-StarTesting-Events-Mockups.html`, `TKD-StarTesting-Form-Mockups.html`, `TKD-StarTesting-Candidates-Mockups.html`, `TKD-StarTesting-Grading-Mockups.html`, `TKD-StarTesting-Results-Mockups.html`, `TKD-StarTesting-Private-Mockups.html`, `TKD-StarTesting-Home-Mockups.html` (this folder)
 
 > Read `CLAUDE.md` (repo root) first. This file says where Star testing stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -19,7 +19,7 @@ Nothing blocking. **All 13 registration form questions answered (v0.93–v0.106)
 
 **Design Review changes (S1–S12), started 2026-10-28** — plan and question list in `TKD-StarTesting-DR-Plan.md`.
 - **Part 1 (ready now):** S3 (Edit payment toast + Undo), S4 (Undo after Restore and Change how they'll pay), S7 (⋯ order, "Edit details"), S9 (icons), S5's grading leave warning, and S12's database half = **migration 0028** (start times 6:00 AM–10:00 PM every 5 minutes; written and PGlite-tested, security review running; Jeffrey pastes it). Mockups G1–G5 drawn and design-reviewed (no must-fix); being shown one at a time.
-- **Decided so far:** "Edit details" in the ⋯ menu opens the edit form straight away (A, 2026-10-28; rulebook row to write).
+- **Part 1 mockups approved 2026-10-28 (v0.517):** G1–G5 as drawn; Edit details opens the edit form (A); Review possible duplicate in a flagged row's ⋯ (A); no Undo after restoring a Duplicate copy (A); Undo after Edit payment lasts as long as the toast. Next: build part 1, design + code reviews, Jeffrey tries it in the preview.
 - **Part 2 (waits for Dashboard core's step 1 merge):** S1, S2, S5's other boxes, S6, S8, S10, S11, S12's screen.
 
 
