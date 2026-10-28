@@ -10,7 +10,7 @@
 
 ## The brief (both parts)
 
-The design review decided 17 changes for your four sections: Prospects, Forms (with its family page and the kiosk), Schedule and Calendar (N1–N17). The decisions are already rulebook rows **v1.000–v1.034**. **Part 1** is everything that needs no new shared part: start it now. **Part 2** switches to the shared parts the Dashboard core session built and Jeffrey approved (rows **v1.100–v1.111**); they reach main with its step 1, which is built but not yet merged. Each item keeps its change-list ID (N3, N17 …) in your plan, mockups, status and commits, so Jeffrey can trace it.
+The design review decided 17 changes for your four sections: Prospects, Forms (with its family page and the kiosk), Schedule and Calendar (N1–N17). The decisions are already rulebook rows **v1.000–v1.034**. **Part 1** is everything that needs no new shared part: start it now. **Part 2** switches to the shared parts the Dashboard core session built and Jeffrey approved (rows **v1.100–v1.113**); they are on main since 2026-10-28 (95a9601). Each item keeps its change-list ID (N3, N17 …) in your plan, mockups, status and commits, so Jeffrey can trace it.
 
 ### Rules
 - Follow CLAUDE.md.
@@ -158,7 +158,7 @@ The Calendar's and Schedule's red **Remove** (`calendar/EventDialog.jsx:112`, `C
 
 `git merge main` first, and check that `src/components/ConfirmBox.jsx` exists; if not, stop and tell Jeffrey.
 
-Rows v1.102–v1.109 (and v1.111) approved each shared part as drawn: switching to one needs no new mockup of the part itself. Draw your screens with the parts wherever your own layout changes (e.g. Prospects' Came box stops being a full-screen page on phones).
+Rows v1.102–v1.109 (and v1.111–v1.112) approved each shared part as drawn: switching to one needs no new mockup of the part itself. Draw your screens with the parts wherever your own layout changes (e.g. Prospects' Came box stops being a full-screen page on phones).
 
 Check each shared part in three places before you use it: its own header comment (the built version; it wins where the plan differs), the plan `docs/Dashboard Core/TKD-DashboardCore-Plan.md`, and the parts page `/parts.html` (preview mode only; each state has its own address, e.g. `parts.html#M2/busy`). In the plan, read §2 (M2, M8), §2b, §3 (M10, M11), §6, §8, §9 rows 31–39 (yours) and §10; its approved pictures are `docs/Dashboard Core/Mockups/M2-confirm-box.review.png` and `M8-time-list.review.png`.
 
@@ -238,7 +238,7 @@ From Dashboard core's plan §10 and from writing this prompt. Confirm each point
 - **(now) Edit statuses' ⋯ "Delete status"** (`StatusesDialog.jsx:101`) is grayed with no reason line (v1.004) for staff, who can never delete a status (v0.244 (5); §8: staff don't see what they can never do), and for the built-in ones. Ask Jeffrey.
 - **(Part 2) The Share dialog doesn't wait** while a kiosk ask works (`ShareDialog.jsx:141`: its Esc / Back isn't held while `busy`): fix it with boxes 36–37.
 - **The ⋯ menu sometimes opens in the top-left corner on PC** (`RowMenu.jsx`, Dashboard core's file): tell Jeffrey if you see it; don't fix it here.
-- **Weight 600 breaks §7** (400 and 500 only): `calendar.css:227`, `:937`, `:1051` and `forms-public.css:396`. Ask Jeffrey after his answer to Dashboard core's D6 (the receipt's font weights).
+- **Weight 600 breaks §7** (400 and 500 only): `calendar.css:227`, `:937`, `:1051` and `forms-public.css:396`. Dashboard core's D6 is decided: the shared receipt uses 500, as §7 says (v1.112). Your own 600s are a separate question: ask Jeffrey once whether they go to 500 too (in Chrome on Windows the two look the same).
 
 ### Done when
 
