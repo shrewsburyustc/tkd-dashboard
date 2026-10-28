@@ -5,9 +5,12 @@
 //          "Late pick-up … today", "No pizza party") ·
 //   Paid   (Paid green · "$219 due" gray · "Owes $15" amber — tapping one that isn't Paid opens
 //          the small Mark paid box: one click, this device's school, Undo) ·
-//   one column per camp day (today's column tinted): ✓ 7:42 = checked in (tap → undo, with an Undo
-//          toast) · Check in = signed up, tap to check in (any day, v0.706) · ✗ = a past day not
-//          checked in (still tappable, to fix a missed one) · — = not signed up that day ·
+//   one column per camp day (today's column tinted): [user-check] 7:42 = checked in (tap → undo,
+//          with an Undo toast) · Check in = signed up, tap to check in (any day, v0.706) ·
+//          [user-x] = a past day not checked in (still tappable, to fix a missed one) · — = not
+//          signed up that day. The two icons are ti-user-check / ti-user-x since v0.723 (design
+//          review C16: one icon per meaning, as Prospects and the Calendar; was ti-check / ti-x).
+//          The printed roster (PrintRoster.jsx) still prints ✓ / ✗ ·
 //   ⋯     (mouse only; on touch screens the ⋯ items live in Camper detail).
 // Above the table: the summary line ("9 of 15 here today  5 to collect · $1,040  Pizza party
 // today: 11"), Find a camper, and — only when the camp's days cross more than one calendar week —
@@ -26,7 +29,7 @@
 // Check-in, "here today", Find a camper, the extra counts and "Updated …" stay.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp, IconDots, IconSearch, IconX } from '@tabler/icons-react';
+import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp, IconDots, IconSearch, IconUserCheck, IconUserX } from '@tabler/icons-react';
 import IconButton from '../../components/IconButton.jsx';
 import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
 import { extraCountOnDay, extraOfferedOn, missingExtraOnDay, payTag, toCollectCents } from '../../lib/camps/campRules.js';
@@ -175,7 +178,7 @@ function todayNote(row, todayDay, extras, days) {
   return mine ? T.extraShort(mine.name) : null;
 }
 
-// One day of one child: ✓ time / Check in / ✗ / —.  compact = phone card (weekday letter on top).
+// One day of one child: [user-check] time / Check in / [user-x] / —.  compact = phone card (weekday letter on top).
 function DayCell({ row, day, today, busy, compact, onCheckIn, onUndoCheckIn }) {
   const mine = (row.days ?? []).find((d) => d.dayId === day.dayId);
   const name = T.camperLabel(row);
@@ -207,7 +210,7 @@ function DayCell({ row, day, today, busy, compact, onCheckIn, onUndoCheckIn }) {
       >
         {letter}
         <span className="cp-dc-val">
-          <IconCheck size={14} aria-hidden="true" />
+          <IconUserCheck size={14} aria-hidden="true" />
           {T.clockShort(mine.checkedInAt)}
         </span>
       </button>
@@ -225,8 +228,25 @@ function DayCell({ row, day, today, busy, compact, onCheckIn, onUndoCheckIn }) {
       }}
     >
       {letter}
-      <span className="cp-dc-val">{missed ? <IconX size={14} aria-hidden="true" /> : T.CHECK_IN}</span>
+      <span className="cp-dc-val">{missed ? <IconUserX size={14} aria-hidden="true" /> : T.CHECK_IN}</span>
     </button>
+  );
+}
+
+// The legend under the grid (v0.723, design review C16): the same two icons as the day cells, in front
+// of their words. The icons are hidden from screen readers: the words already say "came" and
+// "didn't come", so nothing is read twice.
+function RosterLegend({ touch }) {
+  const parts = T.rosterLegendParts(touch);
+  return (
+    <p className="field-hint cp-hint-line">
+      <IconUserCheck size={14} aria-hidden="true" className="cp-legend-icon" />
+      {parts.came}
+      {parts.checkIn}
+      <IconUserX size={14} aria-hidden="true" className="cp-legend-icon" />
+      {parts.missed}
+      {parts.rest}
+    </p>
   );
 }
 
@@ -576,7 +596,7 @@ export default function CampRoster({
       {weekSwitch}
       {list}
       {removedGroup}
-      {!isPhone && active.length > 0 && <p className="field-hint cp-hint-line">{T.rosterLegend(isTouch)}</p>}
+      {!isPhone && active.length > 0 && <RosterLegend touch={isTouch} />}
       {popover && popoverRow && !detailsHidden && (
         <PaymentPopover
           row={popoverRow}

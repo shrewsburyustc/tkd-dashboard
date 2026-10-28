@@ -107,7 +107,6 @@ export const TAB_CAMPS = 'Camps';
 export const TAB_TEMPLATES = 'Templates';
 export const ADD_CAMP = 'Add camp';
 export const STAFF_LINE = 'Ask an admin to add or change camps.';
-export const BOTH_SCHOOLS_SUB = 'Worcester and Shrewsbury'; // the school line on Both (as Home)
 export const SCHOOL_NAMES = { worcester: 'Worcester', shrewsbury: 'Shrewsbury' };
 export const schoolName = (code) => SCHOOL_NAMES[code] ?? '';
 
@@ -120,6 +119,7 @@ export const COL_SCHOOL = 'School';
 export const COL_DATES = 'Dates';
 export const COL_CAMPERS = 'Campers';
 export const COL_STATUS = 'Status';
+// Also the school line under the page title on Both (v0.723, design review C15; was "Worcester and Shrewsbury").
 export const BOTH_SCHOOLS = 'Both schools';
 // "Both schools · held at Worcester" (the line under a both-schools camp's name)
 export const heldAtLine = (code) => `Both schools · held at ${schoolName(code)}`;
@@ -507,8 +507,16 @@ export function weekLabel(index, week, short) {
   const range = first === last ? monthDay(first) : sameMonth ? `${monthDay(first)}–${Number(last.slice(8))}` : `${monthDay(first)}–${monthDay(last)}`;
   return `Week ${index + 1} · ${range}`;
 }
-// The legend under the grid (as in the mockup); "click" with a mouse, "tap" on touch. (not in the mockups)
-export const rosterLegend = (touch) => `✓ came (check-in time) · Check in: signed up — ${touch ? 'tap' : 'click'} to check in · ✗ didn’t come · — not signed up that day`;
+// The legend under the grid; "click" with a mouse, "tap" on touch. Since v0.723 (design review C16) the
+// screen draws the came / didn't-come ICONS in front of these words (CampRoster.jsx), so the words
+// themselves carry no ✓ / ✗ and a screen reader reads "came (check-in time) · …". The PRINTED
+// roster keeps its own ✓ / ✗ line (PRINT_LEGEND below).
+export const rosterLegendParts = (touch) => ({
+  came: 'came (check-in time)',
+  checkIn: ` · Check in: signed up — ${touch ? 'tap' : 'click'} to check in · `,
+  missed: 'didn’t come',
+  rest: ' · — not signed up that day',
+});
 // A finished camp's summary: "Came 142 of 150 days"; nothing owed: "All paid". (not in the mockups)
 export const CAME_WORD = 'Came';
 export const ofDays = (n) => ` of ${n} ${n === 1 ? 'day' : 'days'}`;
@@ -557,7 +565,9 @@ export const duplicateRemovedToast = (name) => `${name}’s extra copy moved to 
 // The printed roster (the attendance grid, all weeks)
 export const COL_CAME = 'Came';
 export const cameText = (came, soFar) => `${came} of ${soFar}`;
-export const PRINT_LEGEND = '✓ came (check-in time) · ✗ didn’t come · blank: still to come · — not signed up that day'; // (not in the mockups)
+// Paper keeps the ✓ / ✗ characters (v0.723: they print reliably in any printer font; only the screen
+// uses the icons). (not in the mockups)
+export const PRINT_LEGEND = '✓ came (check-in time) · ✗ didn’t come · blank: still to come · — not signed up that day';
 
 // Print roster
 export const printedOn = (stamp) => `Printed ${stampDayTime(stamp)}`; // (not in the mockups)

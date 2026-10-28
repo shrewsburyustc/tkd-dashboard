@@ -142,4 +142,8 @@ Brief: `docs/Design Review/End review/Prompts/6-Camps.md` (Part 1 ready now; Par
 - **Waits on Dashboard core:** C2 / C7 screens, C3, C4 ask-first, C6, C10, C11, C14, C17, C20; C19 waits on its step 2.
 - **C1 — mockups approved 2026-10-28** (pictures 01, 02, 03, 03b; rulebook v0.722): Print roster follows the switch; the ⋯ menu drops Change how they'll pay with the switch on; "Total now Hidden on this tablet" kept. **C1 built 2026-10-28**: code review (1 medium, 3 low) and design review at 1280 / 820 touch / 390 touch / 320 (2 low) all fixed; checks and both builds pass; committed on `camps`, ready for Main to merge (screen-only, no migration).
 - **Found by the C1 design review (older bug, not C1):** phone 390 touch — Camper detail → More → Delete permanently opens the delete box and it closes at once (the detail page's history "back" lands after the box opens; `src/components/Dialog.jsx`, `CamperDialog.jsx` More buttons). To fix as its own step.
-- **Waiting for Jeffrey's OK:** pictures 04 (C15, C16), 05 (C8, C9), 06 (C12), 07 (C4, C5), 08 (C13), 09 (C18).
+- **C15 + C16 — picture 04 approved 2026-10-28** (rulebook v0.723): "Both schools" on the Camps page; day grid + legend use `ti-user-check` / `ti-user-x`; the printed roster keeps ✓ / ✗. **Built and reviewed 2026-10-28** (review: no high/medium; stale comments fixed), committed on `camps`.
+- **Phone More → Delete fix:** Jeffrey said go (2026-10-28); building with Dialog.jsx's on-top mode (v1.100).
+- **Part 2:** Jeffrey said start when ready (2026-10-28); mockups first, one screen at a time.
+- **C8 + C9 (+ Restore icon) — picture 05 approved 2026-10-28** (rulebook v0.724): Color Belt's order, no "Admin" heading, "Review possible duplicate", ⇄ icon on Change how they'll pay. Builds after the Delete fix (same files).
+- **Waiting for Jeffrey's OK:** pictures 06 (C12), 07 (C4, C5), 08 (C13), 09 (C18).

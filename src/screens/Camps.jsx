@@ -2,7 +2,8 @@
 // Why it exists: school-vacation camps (one or more days, a price grid, extras, a family sign-up
 // form, check-in at the door and payments) get their own section after Testing. This file draws
 // the frame of the section and decides which part shows:
-//   - the page header: "Camps", the school under it, and + Add camp for admins (N on the PC)
+//   - the page header: "Camps", the school under it ("Both schools" on Both: rulebook v0.723,
+//     design review C15), and + Add camp for admins (N on the PC)
 //   - the tab bar: Camps · Templates (Templates is admin-only: staff don't see the tab at all)
 //   - for staff, the gray line "Ask an admin to add or change camps."
 //   - an open camp (address #camps/camp/<id>): that camp's page (camps/CampPage.jsx) instead
@@ -208,7 +209,7 @@ export default function Camps({
       <div className="phead">
         <div className="phead-titles">
           <h1 className="ptitle">{T.PAGE_TITLE}</h1>
-          <p className="psub">{location === 'Both' ? T.BOTH_SCHOOLS_SUB : location}</p>
+          <p className="psub">{location === 'Both' ? T.BOTH_SCHOOLS : location}</p>
         </div>
         {addButton}
       </div>

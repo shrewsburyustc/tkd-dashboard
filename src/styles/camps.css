@@ -77,6 +77,12 @@
   margin-top: var(--space-12);
 }
 
+/* The roster legend's two icons (v0.723, C16): sit on the text line, a hair of space before their word. */
+.cp-legend-icon {
+  vertical-align: -2px;
+  margin-right: 2px;
+}
+
 .cp-empty-box {
   padding: var(--space-32) var(--space-16);
   text-align: center;
@@ -757,7 +763,7 @@
   cursor: pointer;
 }
 
-/* One day of one child: ✓ time · Check in · ✗ · — */
+/* One day of one child: came (user-check icon + time) · Check in · didn't come (user-x icon) · — */
 .cp-dc {
   position: relative;
   display: inline-flex;
