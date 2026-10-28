@@ -149,4 +149,5 @@ Brief: `docs/Design Review/End review/Prompts/6-Camps.md` (Part 1 ready now; Par
 - **C12 — picture 06 approved 2026-10-28** (rulebook v0.725): "Open sign-up", toasts "Sign-up open (until …)", "…wasn't opened", link box "Open it from the ⋯ menu", staff reason "Ask an admin to open it." (Jeffrey's pick, B). Built with C4/C5 (below).
 - **C4 (first half) + C5 — picture 07 approved 2026-10-28** (rulebook v0.726): "Payment changed" + Undo; Undo after Edit camp, Edit template, Edit details (every time, option A) and Save as template. **C12 + C4/C5 built and reviewed 2026-10-28** (no high/medium; lows fixed: refusal words for a taken template name and a camper's details that no longer fit, one apostrophe style, Retry grayed on the Camps list), committed.
 - **C13 — picture 08 approved 2026-10-28** (rulebook v0.727): shared DatePicker for the three sign-up dates and Date paid. **Built and reviewed 2026-10-28** (no high/medium; checked in Los Angeles and Auckland time zones; low fixed: phone calendar no longer pokes past the Times card), committed.
-- **Waiting for Jeffrey's OK:** picture 09 (C18).
+- **C18 — picture 09 approved 2026-10-28** (rulebook v0.728): Save as template keeps your typing (unsaved-changes note, "Discard changes" on phones). Building.
+- **Part 1 pictures all approved.** Next: Part 2, mockups first, one screen at a time.
