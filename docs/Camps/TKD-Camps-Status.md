@@ -146,4 +146,5 @@ Brief: `docs/Design Review/End review/Prompts/6-Camps.md` (Part 1 ready now; Par
 - **Phone More → Delete fix — built, reviewed, committed 2026-10-28:** Camper detail's More items no longer close the detail first; Delete permanently and Edit payment take the detail's place in the same update (Dialog.jsx hands its Back step over), so the phone's late Back no longer closes them. Review: no high/medium; low fixed (More stays visible, grayed, while loading). Keep camper returns to the roster (as before); returning to the detail needs Camps' delete box on the shared ConfirmBox (onTop) — later.
 - **Part 2:** Jeffrey said start when ready (2026-10-28); mockups first, one screen at a time.
 - **C8 + C9 (+ Restore icon) — picture 05 approved 2026-10-28** (rulebook v0.724): Color Belt's order, no "Admin" heading, "Review possible duplicate", ⇄ icon on Change how they'll pay. Builds after the Delete fix (same files).
-- **Waiting for Jeffrey's OK:** pictures 06 (C12), 07 (C4, C5), 08 (C13), 09 (C18).
+- **C12 — picture 06 approved 2026-10-28** (rulebook v0.725): "Open sign-up", toasts "Sign-up open (until …)", "…wasn't opened", link box "Open it from the ⋯ menu", staff reason "Ask an admin to open it." (Jeffrey's pick, B). Builds after C8/C9 (shares text.js).
+- **Waiting for Jeffrey's OK:** pictures 07 (C4, C5), 08 (C13), 09 (C18).

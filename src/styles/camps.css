@@ -88,12 +88,6 @@
   text-align: center;
 }
 
-/* A gray heading inside a ⋯ menu ("Admin"): not a choice */
-.cp-menu-heading {
-  color: var(--color-text-secondary);
-  font-size: var(--text-12);
-}
-
 /* ===== C3 Add / Edit camp: folded sections ===== */
 
 /* Lists (<select>) use the page font, not the browser's default Arial */
@@ -935,11 +929,12 @@ button.cp-dc:focus-visible {
   margin-bottom: var(--space-8);
 }
 
-.cp-detail-sublabel {
+/* A line between two groups of those buttons (money; taking someone off), like the ⋯ menu's
+   line (rulebook v0.724): full width, so the next group starts on a new row. */
+.cp-detail-break {
   flex-basis: 100%;
-  margin: var(--space-4) 0 0;
-  color: var(--color-text-secondary);
-  font-size: var(--text-12);
+  height: 0;
+  border-top: 1px solid var(--color-border);
 }
 
 /* Red only for delete: red words and outline, not a filled red button (review 8) */

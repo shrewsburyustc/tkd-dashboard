@@ -21,8 +21,12 @@
 // A day the camper was already checked in on can't be taken off (Undo that check-in first).
 // PC / tablet: a centered dialog; phones: full screen with a back arrow.
 //
-// On touch screens the roster has no ⋯, so its items (Change how they'll pay, Withdraw / Restore,
-// and for admins Edit payment, Undo payment, Delete permanently) are listed here under "More" (CP5).
+// On touch screens the roster has no ⋯, so its items are listed here under "More" (CP5), in the
+// ⋯ menu's own order and groups (CamperRowMenu.jsx; rulebook v0.724, design review C8 / C9):
+// Change how they'll pay, Review possible duplicate — for admins Edit payment, Undo payment —
+// Withdraw / Restore, and for admins Delete permanently. Edit details is left out (it is the blue
+// button at the bottom). A thin full-width line starts each later group, like the menu's line;
+// there is no "Admin" label.
 // Pressing one does NOT close this dialog first: the camp page does that (CampPage.jsx). An item
 // with a dialog of its own (Delete permanently, Edit payment, …) takes this dialog's place in one
 // step, so the browser's Back step passes straight to it; closing first and opening the next
@@ -38,7 +42,7 @@
 // Props: camperId, camperName (shown while loading), actions (RowMenu items, touch only, or null;
 //        each item's onSelect closes or replaces this dialog itself), camp, days (Day[]), prices, extras (the camp's current ones), isPhone,
 //        hidden, detailsHidden, startInEdit, onClose(), onSaved(), onNoAccess, onRefreshProfile
-import { useEffect, useId, useState } from 'react';
+import { Fragment, useEffect, useId, useState } from 'react';
 import { IconCheck, IconEdit } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
@@ -47,7 +51,6 @@ import { AGE_LIMITS, MAX_CAMPER_CENTS, RELATION_MAX, extraDaysFor, formatPhone, 
 import { nameProblem, normalizeName } from '../../lib/testing/names.js';
 import ChoiceGroup from '../testing/events/ChoiceGroup.jsx';
 import { CamperTag } from './CampRoster.jsx';
-import { NoIcon } from './CampRowMenu.jsx';
 import * as T from './text.js';
 
 const NOTES = {
@@ -296,41 +299,39 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
         <p className="cp-signup-line">{T.signupLine(camper)}</p>
 
         {/* Touch screens: the roster row's ⋯ items (Edit details is the button below). Shown whenever
-            there is a real item (not just the Admin label) — even while one is loading and the items
-            are grayed, so the section (and the button that has focus) never vanishes mid-load. */}
-        {actions && actions.some((item) => item.key !== 'edit' && item.key !== 'admin-heading') && (
+            there is an item besides Edit details — even while one is loading and the items are
+            grayed, so the section (and the button that has focus) never vanishes mid-load. */}
+        {actions && actions.some((item) => item.key !== 'edit') && (
           <>
             <h3 className="cp-detail-head">{T.MORE_ACTIONS_HEAD}</h3>
             <div className="cp-detail-actions">
               {actions
                 .filter((item) => item.key !== 'edit')
-                .map((item) =>
-                  // "Admin": a small label over the admin-only items (review 8)
-                  item.key === 'admin-heading' ? (
-                    <p key={item.key} className="cp-detail-sublabel">
-                      {T.ADMIN_GROUP}
-                    </p>
-                  ) : (
-                  <button
-                    key={item.key}
-                    type="button"
-                    // Delete permanently: red words and outline, never a filled red button next to
-                    // the blue Edit details (review 8; red only for delete).
-                    className={`btn btn-sm${item.danger ? ' cp-btn-danger' : ''}`}
-                    aria-disabled={item.disabled ? 'true' : undefined}
-                    // The page closes this dialog itself, or swaps it for the item's own dialog in
-                    // one step (CampPage.jsx detailHandlers) — closing it here first would let the
-                    // browser's Back step of this dialog close the next one too (phones).
-                    onClick={() => {
-                      if (item.disabled) return;
-                      item.onSelect();
-                    }}
-                  >
-                    {item.Icon && item.Icon !== NoIcon && <item.Icon size={16} aria-hidden="true" className="menu-icon" />}
-                    {item.label}
-                  </button>
-                  ),
-                )}
+                .map((item, index) => (
+                  <Fragment key={item.key}>
+                    {/* A new group (money, or taking someone off): a thin line across the whole row,
+                        as the ⋯ menu's line (v0.724). Never above the first button here — that one
+                        may start a group only because Edit details was left out above it. */}
+                    {item.separatorBefore && index > 0 && <span role="separator" className="cp-detail-break" />}
+                    <button
+                      type="button"
+                      // Delete permanently: red words and outline, never a filled red button next to
+                      // the blue Edit details (review 8; red only for delete).
+                      className={`btn btn-sm${item.danger ? ' cp-btn-danger' : ''}`}
+                      aria-disabled={item.disabled ? 'true' : undefined}
+                      // The page closes this dialog itself, or swaps it for the item's own dialog in
+                      // one step (CampPage.jsx detailHandlers) — closing it here first would let the
+                      // browser's Back step of this dialog close the next one too (phones).
+                      onClick={() => {
+                        if (item.disabled) return;
+                        item.onSelect();
+                      }}
+                    >
+                      {item.Icon && <item.Icon size={16} aria-hidden="true" className="menu-icon" />}
+                      {item.label}
+                    </button>
+                  </Fragment>
+                ))}
             </div>
           </>
         )}

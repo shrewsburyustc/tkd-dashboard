@@ -58,7 +58,8 @@ export const {
   removedGroup,
   NOT_IN_COUNTS,
   removedBy,
-  REVIEW,
+  REVIEW, // the Review button in the possible-duplicate box
+  REVIEW_DUPLICATE, // 'Review possible duplicate' — the camper ⋯ menu item, as Color Belt's menu (v0.724, C8)
   CHANGE_PAYING_BY,
   EDIT_DETAILS,
   EDIT_PAYMENT,
@@ -537,7 +538,6 @@ export const PAYMENT_NOTE_LABEL = (name) => `Payment for ${name}`; // (not in th
 export const tagOwes = (cents) => `Owes ${dollars(cents)}`;
 export const markPaidAmount = (cents) => `Mark paid ${dollars(cents)}`;
 export const reviewDuplicateLabel = (name) => `Possible duplicate: review ${name}`;
-export const ADMIN_GROUP = 'Admin';
 export const SCHOOL_REFUSED = 'Pick the school where it was paid.'; // (not in the mockups) database: invalid, field school
 export const PAID_AT = 'Paid at'; // (not in the mockups) Edit payment's school choice
 export const COL_CAMPER = 'Camper';
