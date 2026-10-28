@@ -1,0 +1,80 @@
+<!doctype html>
+<!--
+  D4-download-button-name.src.html — the design review's point D4 for Jeffrey: the hidden name
+  (what screen readers say and voice control listens for) of the two-school "Download QR code"
+  button in the shared Registration link box (M5, rulebook v1.106). One picture: the box as built,
+  and the three options. {{A}} and {{C}} are filled with the two pictures (taken from the parts page,
+  parts.html#M5/two, at 1280×800) to make the self-contained D4-download-button-name.html, which
+  ../tools/shoot-page.mjs turns into the PNG.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>D4 · The two-school Download button's hidden name</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; width: 1500px; box-sizing: border-box; background: #fff; color: #1f1f1f; font: 15px/1.45 "Segoe UI", system-ui, sans-serif; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4a4a4a; margin: 0 0 20px; max-width: 1400px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+  .col { border: 1px solid #e5e5e2; border-radius: 10px; padding: 14px 16px 16px; }
+  .col.pick { background: #f7fbf4; border: 2px solid #3b8f2a; }
+  .label { display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; padding: 3px 9px; border-radius: 6px; margin-bottom: 8px; background: #f1f1ee; color: #555; }
+  .pick .label { background: #e5f2df; color: #2e6b1f; }
+  h2 { font-size: 18px; font-weight: 600; margin: 0 0 10px; }
+  img { width: 100%; border-radius: 8px; border: 1px solid #e5e5e2; display: block; margin-bottom: 12px; }
+  .row { margin: 0 0 8px; font-size: 14px; }
+  .row b { display: block; font-size: 12px; color: #6b6b6b; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+  .say { font-weight: 600; }
+  .bad { background: #fdf0d9; border-radius: 4px; padding: 0 3px; }
+  ul { margin: 10px 0 0; padding-left: 18px; font-size: 14px; }
+  li { margin: 3px 0; }
+  .plus { color: #2e6b1f; }
+  .minus { color: #8a3b12; }
+  .rec { margin-top: 18px; padding: 12px 16px; border-radius: 10px; background: #f7fbf4; border: 1px solid #cfe5c4; font-size: 15px; }
+</style>
+</head>
+<body>
+<h1>D4 · The two-school “Download QR code” button: its hidden name</h1>
+<p class="sub">In the Registration link box with two schools, each card has its own <b>Download QR code</b> (outlined in amber). Besides the words on screen, every button has a hidden name: screen readers say it, and voice control listens for it. M5 (v1.106) set it to “Download Worcester QR code”. The design review found that this breaks <b>WCAG rule 2.5.3, “label in name”</b> (level A; the rulebook aims for WCAG 2.2 AA, §4): the hidden name must contain the button's words <b>in the same order</b>, so a person using voice control can say what they see.</p>
+<div class="cols">
+  <div class="col pick">
+    <span class="label">A · Recommended</span>
+    <h2>The button's words first, then the school</h2>
+    <img src="{{A}}" alt="">
+    <p class="row"><b>On screen</b>“Download QR code”, as approved (no change)</p>
+    <p class="row"><b>Screen reader says</b><span class="say">“Download QR code, Worcester”</span></p>
+    <p class="row"><b>Voice control</b>Saying “Click Download QR code” works; it asks which of the two</p>
+    <ul>
+      <li class="plus">Nothing you approved on screen changes</li>
+      <li class="plus">Meets rule 2.5.3</li>
+      <li class="minus">Sounds a little less natural than B</li>
+    </ul>
+  </div>
+  <div class="col">
+    <span class="label">B · As approved (v1.106)</span>
+    <h2>The school in the middle</h2>
+    <img src="{{A}}" alt="">
+    <p class="row"><b>On screen</b>“Download QR code” (the same as A)</p>
+    <p class="row"><b>Screen reader says</b><span class="say">“Download <span class="bad">Worcester</span> QR code”</span></p>
+    <p class="row"><b>Voice control</b>“Click Download QR code” may find nothing: the school sits between the words the person sees</p>
+    <ul>
+      <li class="plus">Sounds the most natural</li>
+      <li class="minus">Breaks rule 2.5.3 (level A), which the rulebook aims to meet</li>
+    </ul>
+  </div>
+  <div class="col">
+    <span class="label">C</span>
+    <h2>Show the school on the button</h2>
+    <img src="{{C}}" alt="">
+    <p class="row"><b>On screen</b>“Download Worcester QR code”, like “Copy Worcester link” and “Print Worcester flyer” next to it</p>
+    <p class="row"><b>Screen reader and voice control</b>The same words as on screen</p>
+    <ul>
+      <li class="plus">All three buttons name the school the same way</li>
+      <li class="plus">Meets rule 2.5.3</li>
+      <li class="minus">Changes the approved look: a longer button (it still fits on one line at 320 wide)</li>
+    </ul>
+  </div>
+</div>
+<p class="rec"><b>Recommendation: A.</b> It fixes the accessibility rule and changes nothing you approved on screen. With one school, nothing changes in any option: the button is just “Download QR code”.</p>
+</body>
+</html>

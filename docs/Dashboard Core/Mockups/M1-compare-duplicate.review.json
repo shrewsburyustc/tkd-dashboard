@@ -1,0 +1,16 @@
+{
+  "title": "M1 · The shared Compare dialog and possible-duplicate box",
+  "intro": "One design, built once, for Color Belt, Star, Camps and Black Belt (rulebook v1.030), copied from the look the four share today. Each section keeps its own noun and words. <b>Amber outline</b> = what the shared part decides. <b>Two details to OK:</b> the visible “⚠ different” (3) and “Keeping…” while it works (4). Nothing changes on screen until each section switches. Every state at all four sizes: <code>M1-compare-duplicate.png</code>.",
+  "shots": "shots/M1",
+  "out": "M1-compare-duplicate.review",
+  "width": 1100,
+  "scale": 0.6,
+  "sections": [
+    { "head": "The box above the roster", "states": ["box1", "box"], "pics": ["box1@pc", "box@pc", "box@tablet", "box@phone", "box@small"] },
+    { "head": "Compare — detail (a) to OK: a difference says “⚠ different”", "states": ["compare"], "pics": ["compare@pc", "compare@tablet", "compare@phone", "compare@small"] },
+    { "head": "While it works — detail (b) to OK: “Keeping…”", "states": ["busy"], "pics": ["busy@pc", "busy@phone"] },
+    { "head": "The other states (PC; every size is on the full sheet)", "grid": ["staff@pc", "hidden@pc", "loading@pc", "loadfail@pc", "blocked@pc"] },
+    { "head": "If saving fails — the note is never hidden", "states": ["failed"], "pics": ["failed@pc", "failed@phone"] }
+  ],
+  "footer": "<b>What changes for each section when it switches</b> (later, in its own prompt): Color Belt, Star and Camps gain the visible “⚠ different” (today only screen readers hear it) · every section gains “Keeping…” and gray buttons while it works · the failure note moves into the dialog's bottom area (today it can hide under the pinned buttons on short screens) · Camps gains Hide private details · Star's count stops repeating on every line."
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "closed",
+    "caption": "<b>Closed</b>: the field shows the chosen time with AM/PM (“4:40 PM” can't be read as 4:40 in the morning). One Tab stop; ↓, Enter or Space opens it."
+  },
+  {
+    "id": "open",
+    "caption": "<b>Open</b>: the list opens with the chosen time in the middle, tinted blue (Star's list). Every 5 minutes, so 4:20 and 6:50 fit. ↑ ↓ move, Enter chooses, Esc closes the list only; typing a number jumps to that hour (“6” → 6:00 AM, “6” again → 6:00 PM). A thin scroll bar shows there's more."
+  },
+  {
+    "id": "keys",
+    "caption": "<b>Moving with the keyboard</b>: the row the arrow keys are on gets the <b>blue focus ring</b> (rule §4 — today's dropdowns show only a faint gray there); the tinted row stays the current choice until Enter. Screen readers hear each time as it is reached."
+  },
+  {
+    "id": "empty",
+    "caption": "<b>Nothing chosen yet</b>: a gray “Choose a time”; the list opens at its first time. <b>Finance's reminder</b> (right, set to Off and open): <b>Off</b> first, then 11:00 AM–11:00 PM every 5 minutes — its own range, the same list (v1.019, v0.207). Finance's prompt widens its database check, which accepts 15-minute steps today."
+  },
+  {
+    "id": "saving",
+    "caption": "<b>While the dialog saves</b>, both fields are gray and can't open (the app's read-only look)."
+  },
+  {
+    "id": "problem",
+    "caption": "<b>With a problem</b>, the section's amber words sit under the field (“The end time must be after the start time.”, today's words) and screen readers hear the field as invalid — never red, never color alone."
+  }
+]
