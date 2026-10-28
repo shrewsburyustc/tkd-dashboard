@@ -45,7 +45,13 @@ function dayTag(row) {
       return { text: T.TAG_NOT_CLOSED, kind: 'warn' };
     case 'closed':
       return { text: T.CLOSED_TAG, kind: 'ok' };
+    // A day with only Black Belt returned checks (mockup B7, v0.815): nothing to close, so not
+    // "Not closed". The database sends it as a day with no closable payments ('no_payments')
+    // whose total isn't zero — or as 'nothing_to_close', if it names it.
+    case 'nothing_to_close':
+      return { text: T.TAG_NOTHING_TO_CLOSE, kind: 'neutral' };
     default:
+      if ((row.total_cents ?? 0) !== 0) return { text: T.TAG_NOTHING_TO_CLOSE, kind: 'neutral' };
       return { text: T.TAG_NO_PAYMENTS, kind: 'neutral' };
   }
 }
