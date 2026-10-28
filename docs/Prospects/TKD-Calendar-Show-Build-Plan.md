@@ -89,7 +89,7 @@ A new function, `prospects_follow_ups(school, from, to)`, returns only the open 
 10. **Opening a child from the Calendar** (review):
     - The Calendar hands the child's id to Prospects in memory, the same way Finance's reminder opens a month. Nothing goes into the web address or browser history.
     - Prospects waits for its list to load, then opens that child's panel. That counts as "opened" and refreshes the badge.
-    - If the child was deleted in the meantime, the toast says "That prospect no longer exists" and no empty panel opens.
+    - If the child was deleted in the meantime, the toast says "That prospect no longer exists" (changed by v1.004 / N1: the amber bar, until closed) and no empty panel opens.
     - Calendar and Prospects follow the same school switcher, so the child's school is always the one loaded.
 
 ## 4. Build steps

@@ -398,6 +398,14 @@
 //       tests (0013, 0017, 0022) after it, re-run safety, and the Undo of
 //       SETUP.md 0027e (manual/0027u) - see step0027 below. Run only this
 //       step with   node run.mjs --only-step0027
+//   step0031. 0031 (class ages on the booking forms, v0.619; classes
+//       taught together as one time, v0.620) on its own database in the
+//       production order with every live migration (step0027's order,
+//       then 0027): the pre-apply check, only the ten replaced functions
+//       move as planned and only 0031's new functions are added, 0031's
+//       tests and the Schedule / Forms / Prospects tests,
+//       re-run safety, and the Undo of SETUP.md 0031e (manual/0031u) - see
+//       step0031 below. Run only this step with   node run.mjs --only-step0031
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -438,6 +446,7 @@ const useFixtureSeed = process.argv.includes('--fixture-seed');
 const onlyStep0022 = process.argv.includes('--only-step0022');
 const onlyStep0026 = process.argv.includes('--only-step0026');
 const onlyStep0027 = process.argv.includes('--only-step0027');
+const onlyStep0031 = process.argv.includes('--only-step0031');
 
 // Fixed ids for the two pretend logins (any uuid works).
 const ADMIN_UID = '11111111-1111-4111-8111-111111111111';
@@ -601,6 +610,15 @@ async function main() {
     if (prints27) {
       console.log('\n0027 fingerprints (kind  item  detail):');
       for (const line of prints27) console.log('  ' + line);
+    }
+    return finish();
+  }
+  // --only-step0031: just the class ages step (0031)
+  if (onlyStep0031) {
+    const prints31 = await step0031();
+    if (prints31) {
+      console.log('\n0031 fingerprints (kind  item  detail):');
+      for (const line of prints31) console.log('  ' + line);
     }
     return finish();
   }
@@ -855,6 +873,9 @@ async function main() {
   // step0027: Edit camp refuses changes that break campers' extras (its own database, production order)
   console.log('\nMigration 0027 (Edit camp refuses changes that break campers\' extras):');
   const after27 = after5 ? await step0027() : null;
+  // step0031: class ages on the booking forms (its own database, production order)
+  console.log('\nMigration 0031 (class ages on the booking forms):');
+  const after31 = after5 ? await step0031() : null;
 
   // step0020 (named after its migration, not a number other branches use): 0020, LAST
   console.log('\nMigration 0020 (current_session_id reads only request.jwt.claims), last:');
@@ -937,6 +958,10 @@ async function main() {
   if (after27) {
     console.log('\n0027 fingerprints (kind  item  detail):');
     for (const line of after27) console.log('  ' + line);
+  }
+  if (after31) {
+    console.log('\n0031 fingerprints (kind  item  detail):');
+    for (const line of after31) console.log('  ' + line);
   }
   if (after17) {
     console.log('\n0017 fingerprints (Finance after 0017; kind  item  detail):');
@@ -6194,6 +6219,188 @@ async function step0027() {
   }
   await db.close().catch(() => {});
   return prints27;
+}
+
+// =====================================================================
+// step0031: class ages on the booking forms (0031, rulebook v0.619) and
+// classes taught together as one time (v0.620)
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order with every
+// live migration (step0027's order, then 0027):
+//   a. 0031_fingerprints.sql and 0031_preapply_check.sql are
+//      connector-safe (no "delete" / "drop"); the pre-apply check (SETUP
+//      0031a) answers "not applied, the ten functions as tested" before
+//      0031 and "applied" after it
+//   b. the Schedule / Forms / Prospects tests (0007, 0009, 0012, 0015,
+//      0019) pass BEFORE 0031 (the baseline)
+//   c. apply 0031: in every other fingerprint file ONLY these lines move:
+//      the "function" lines of the nine functions replaced in place (body
+//      md5 only - rights, owner, definer and settings stay); forms_times'
+//      "function-kind" line (its three new columns); forms_set_booking's
+//      4-argument lines become 5-argument ones with the same rights and
+//      kind; and only schedule_set_class_ages, forms_booking_lock_class
+//      and forms_group_class_ids_ok are added
+//   d. 0031_tests.sql, then the baseline tests again
+//   e. 0031 applied a SECOND time: no fingerprint changes
+//   f. the Undo of SETUP.md 0031e (the file it names,
+//      supabase/manual/0031u_undo_class_ages.sql): every fingerprint file
+//      equals the one before 0031; the baseline tests pass; then 0031
+//      again -> the tested fingerprints, 0031_tests.sql passes
+// Run only this step with   node run.mjs --only-step0031
+// =====================================================================
+async function step0031() {
+  const L = '[0031] ';
+  record(`${L}0031_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)`,
+    !/delete|drop/i.test(read('tests', '0031_fingerprints.sql')));
+  const db = await buildBase(L);
+  if (!db) return null;
+  for (const [label, file] of [['0003', '0003_testing_classes_ranks.sql'], ['0004', '0004_staff_accounts.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+  await run(db, L + 'apply built-in seed', builtInSeedSql());
+  if (!(await run(db, L + 'apply 0005', read('migrations', '0005_testing_events.sql')))) return null;
+  await seedTestEvent(db);
+  for (const [label, file] of [['0006', '0006_star_testing.sql'], ['0010 (grading results)', '0010_testing_results.sql'],
+    ['0007', '0007_schedule.sql'], ['0008', '0008_calendar.sql'], ['0009', '0009_forms.sql'], ['0012', '0012_prospects.sql'],
+    ['0015', '0015_family_history.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+  if (!(await run(db, L + 'apply 0011 as pasted on production 2026-10-19 (fixture)',
+    readFileSync(path.join(here, 'fixtures', '0011_as_applied_2026-10-19.sql'), 'utf8')))) return null;
+  for (const [label, file] of [['today\'s 0011 over it', '0011_finance.sql'], ['0019', '0019_school_phone.sql'],
+    ['0014 (private testing)', '0014_testing_private.sql'], ['0020 (current_session_id fix)', '0020_session_id_claims.sql'],
+    ['0013 (camps)', '0013_camps.sql'], ['0017 (camps in Finance)', '0017_finance_camps.sql'],
+    ['0018 (private testing money in Finance)', '0018_finance_private.sql'], ['0016 (Black Belt testing)', '0016_black_belt.sql'],
+    ['0021', '0021_prospects_not_interested_sooner.sql'], ['0022 (camps weekly pricing)', '0022_camps_weekly_pricing.sql'],
+    ['0024 (Black Belt rubric editor)', '0024_black_belt_rubric.sql'], ['0023 (Star result texts)', '0023_star_result_texts.sql'],
+    ['0025 (Black Belt grading and results)', '0025_black_belt_grading.sql'], ['0027 (Edit camp guard)', '0027_camps_edit_guard.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // a. the pre-apply check (SETUP 0031a)
+  const preSql = read('tests', '0031_preapply_check.sql');
+  record(`${L}0031_preapply_check.sql contains neither "delete" nor "drop" (connector-safe)`, !/delete|drop/i.test(preSql));
+  const pre = async () => (await db.query(preSql)).rows[0];
+  const ready = await pre();
+  record(`${L}[pre-apply check] before 0031: no tables, no function, the 10 functions found and as tested`,
+    ready.ages_table === false && ready.set_function === false && ready.groups_table === false
+      && ready.replaced_found === 10 && ready.replaced_as_tested === 10,
+    JSON.stringify(ready));
+
+  // b. the baseline tests
+  const baseline = [['0007_tests.sql', 'ALL 0007 TESTS PASSED'], ['0009_tests.sql', 'ALL 0009 TESTS PASSED'],
+    ['0012_tests.sql', 'ALL 0012 TESTS PASSED'], ['0015_tests.sql', 'ALL 0015 TESTS PASSED'], ['0019_tests.sql', 'ALL 0019 TESTS PASSED']];
+  const tests = async (label, files) => {
+    for (const [file, ok] of files) await runTestFile(db, `${L}${file} (${label})`, file, ok);
+  };
+  await tests('before 0031', baseline);
+
+  // c. apply 0031
+  const numbers = ['0003', '0004', '0005', '0006', '0010', '0007', '0008', '0009', '0012', '0015', '0011', '0019', '0014', '0020',
+    '0013', '0017', '0018', '0016', '0021', '0022', '0024', '0023', '0025', '0027', '0031']
+    .filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const before = await printsOf(db, numbers);
+  const migration = read('migrations', '0031_class_ages.sql');
+  if (!(await run(db, `${L}apply 0031_class_ages.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  // replaced in place (same arguments): only the body md5 may move
+  const replaced = ['schedule_before_write(', 'forms_open_times(', 'forms_public_get(', 'forms_public_submit(', 'prospects_open_times(',
+    'forms_times(', 'forms_submit_core(', 'forms_duplicate(', 'prospects_book_time('];
+  const newFns = ['schedule_set_class_ages(', 'forms_booking_lock_class(', 'forms_group_class_ids_ok('];
+  const isSetBooking5 = (item) => item.startsWith('forms_set_booking(') && item.includes('p_groups jsonb');
+  const parts = (line) => line.split('  ');
+  const wrong = [];
+  for (const n of numbers.filter((x) => x !== '0031')) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    for (const g of gone) {
+      const [kind, item, detail] = parts(g);
+      const twin = added.find((a) => parts(a)[0] === kind && parts(a)[1] === item);
+      if (item.startsWith('forms_set_booking(') && !isSetBooking5(item)) {
+        // 0009's 4-argument version -> 0031's 5-argument one: same rights, owner, definer, settings and kind
+        const five = added.find((a) => parts(a)[0] === kind && isSetBooking5(parts(a)[1]));
+        if (!five) wrong.push(`${n}: ${g} (no 5-argument forms_set_booking)`);
+        else if (kind === 'function' && parts(five)[2].slice(32) !== detail.slice(32)) wrong.push(`${n}: forms_set_booking rights or settings changed`);
+        else if (kind === 'function-kind' && parts(five)[2] !== detail) wrong.push(`${n}: forms_set_booking kind changed`);
+        else if (kind !== 'function' && kind !== 'function-kind') wrong.push(`${n}: ${g}`);
+        continue;
+      }
+      if (kind === 'function-kind' && item.startsWith('forms_times(') && twin) {
+        // forms_times: same volatility, three more columns
+        if (!parts(twin)[2].startsWith(detail.slice(0, detail.length - 1))
+            || !parts(twin)[2].endsWith(', class_ids uuid[], age_from integer, age_to integer)')) wrong.push(`${n}: forms_times kind: ${parts(twin)[2]}`);
+        continue;
+      }
+      if (kind !== 'function' || !replaced.some((r) => item.startsWith(r)) || !twin) wrong.push(`${n}: ${g}`);
+      else if (parts(twin)[2].slice(32) !== detail.slice(32)) wrong.push(`${n}: more than the body changed: ${item}`);
+    }
+    for (const a of added) {
+      const [kind, item] = parts(a);
+      const isTwin = gone.some((g) => parts(g)[0] === kind && parts(g)[1] === item);
+      if (!isTwin && !newFns.some((x) => item.startsWith(x)) && !isSetBooking5(item)) wrong.push(`${n}: added ${a}`);
+    }
+  }
+  record(`${L}fingerprints: only the 10 replaced functions moved as planned and only 0031's 3 new functions were added; everything else byte-identical`,
+    wrong.length === 0, wrong.join('; ') || `${numbers.length} files`);
+  const prints31 = after['0031_fingerprints.sql'];
+  const fn = (name) => prints31.find((l) => l.startsWith(`function  ${name}(`)) || '';
+  record(`${L}0031 fingerprints: schedule_set_class_ages is security definer, search_path="", only postgres and authenticated may run it`,
+    fn('schedule_set_class_ages').includes('definer=true') && fn('schedule_set_class_ages').includes('settings=search_path=""')
+      && fn('schedule_set_class_ages').endsWith('rights=authenticated:EXECUTE,postgres:EXECUTE'), fn('schedule_set_class_ages'));
+  record(`${L}0031 fingerprints: the public form functions stay forms_registrar-only, the staff ones authenticated-only`,
+    fn('forms_public_get').endsWith('rights=forms_registrar:EXECUTE,postgres:EXECUTE')
+      && fn('forms_public_submit').endsWith('rights=forms_registrar:EXECUTE,postgres:EXECUTE')
+      && fn('forms_open_times').endsWith('rights=authenticated:EXECUTE,postgres:EXECUTE')
+      && fn('prospects_open_times').endsWith('rights=authenticated:EXECUTE,postgres:EXECUTE'),
+    ['forms_public_get', 'forms_public_submit', 'forms_open_times', 'prospects_open_times'].map(fn).join(' | '));
+  record(`${L}0031 fingerprints: forms_set_booking (5 arguments), forms_duplicate, prospects_book_time are security definer, authenticated-only; forms_times, forms_submit_core and the 2 helpers are for nobody`,
+    fn('forms_set_booking').includes('p_groups jsonb') && fn('forms_set_booking').includes('definer=true')
+      && fn('forms_set_booking').endsWith('rights=authenticated:EXECUTE,postgres:EXECUTE')
+      && fn('forms_duplicate').includes('definer=true') && fn('forms_duplicate').endsWith('rights=authenticated:EXECUTE,postgres:EXECUTE')
+      && fn('prospects_book_time').includes('definer=true') && fn('prospects_book_time').endsWith('rights=authenticated:EXECUTE,postgres:EXECUTE')
+      && ['forms_times', 'forms_submit_core', 'forms_booking_lock_class', 'forms_group_class_ids_ok']
+        .every((x) => fn(x).includes('definer=false') && fn(x).includes('settings=search_path=""') && fn(x).endsWith('rights=postgres:EXECUTE')),
+    ['forms_set_booking', 'forms_duplicate', 'prospects_book_time', 'forms_times', 'forms_submit_core', 'forms_booking_lock_class',
+      'forms_group_class_ids_ok'].map(fn).join(' | '));
+  const applied = await pre();
+  record(`${L}[pre-apply check] after 0031: tables and function there, the 10 functions found, none as before`,
+    applied.ages_table === true && applied.set_function === true && applied.groups_table === true
+      && applied.replaced_found === 10 && applied.replaced_as_tested === 0,
+    JSON.stringify(applied));
+
+  // d. the tests
+  await tests('after 0031', [['0031_tests.sql', 'ALL 0031 TESTS PASSED'], ...baseline]);
+
+  // e. re-run safety
+  await run(db, `${L}apply 0031 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0031 re-run: no fingerprint change`, movedAgain.length === 0, movedAgain.join(', '));
+
+  // f. Undo 0031, as SETUP.md 0031e has it: paste the undo file it names
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### 0031e\. Undo 0031/m);
+  const undoFile = 'manual/0031u_undo_class_ages.sql';
+  if (at < 0 || !setup.slice(at, at + 2000).includes(`supabase/${undoFile}`)) {
+    record(`${L}[undo 0031] SETUP.md has "### 0031e. Undo 0031" naming supabase/${undoFile}`, false, 'heading or file name missing');
+  } else if (await run(db, `${L}[undo 0031] paste ${undoFile}`, read('manual', '0031u_undo_class_ages.sql'))) {
+    const undone = await printsOf(db, numbers);
+    const back = numbers.filter((n) => JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(undone[`${n}_fingerprints.sql`]));
+    record(`${L}[undo 0031] every fingerprint file equals the one before 0031`,
+      back.length === 0, back.length ? `differ: ${back.join(', ')}` : `${numbers.length} files`);
+    const undonePre = await pre();
+    record(`${L}[undo 0031] the pre-apply check answers as before 0031`, JSON.stringify(undonePre) === JSON.stringify(ready),
+      JSON.stringify(undonePre));
+    await tests('after the undo', baseline);
+    if (await run(db, `${L}[undo 0031] apply 0031 again (redo)`, migration)) {
+      const redo = await fingerprints(db, '0031_fingerprints.sql');
+      record(`${L}[undo 0031] after the redo the 0031 fingerprints equal the tested ones`, JSON.stringify(redo) === JSON.stringify(prints31));
+      await tests('after the redo', [['0031_tests.sql', 'ALL 0031 TESTS PASSED']]);
+    }
+  }
+  await db.close().catch(() => {});
+  return prints31;
 }
 
 function finish() {

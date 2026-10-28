@@ -13,6 +13,7 @@ import Notice from '../../components/Notice.jsx';
 import { weekStart } from '../../lib/calendar/days.js';
 import { addDays } from '../../lib/schedule/versions.js';
 import { formatTime, parseTime } from '../../lib/schedule/time.js';
+import { classWithAges } from '../../lib/schedule/ages.js';
 import * as T from './text.js';
 
 export const timeKey = (t) => `${t.formId}|${t.classId}|${t.date}|${t.start}`;
@@ -63,7 +64,7 @@ export function BookTimeDialog({ state, today, isPhone, onPick, onSave, onCancel
                   <label key={key} className={`ftslot${state.pick === key ? ' is-on' : ''}`}>
                     <input type="radio" name={`book-${state.key}`} checked={state.pick === key} disabled={state.saving} onChange={() => onPick(key)} />
                     <span className="ftslot-text">
-                      {T.shortDate(t.date)} · {formatTime(parseTime(t.start), true)} · {t.className}
+                      {T.shortDate(t.date)} · {formatTime(parseTime(t.start), true)} · {classWithAges(t) /* with its ages, v0.619 */}
                     </span>
                     <span className={`ftslot-right${t.spotsLeft === 1 ? ' is-last' : ''}`}>{T.spotsLeft(t.spotsLeft)}</span>
                   </label>
