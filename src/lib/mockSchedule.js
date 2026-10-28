@@ -12,6 +12,8 @@
 //
 // A slot is for one class or several taught together (v0.237): the store keeps them as the slot's
 // class_ids list; the app reads them as rows of schedule_slot_classes, like the real table.
+// Class ages (migration 0031, rulebook v0.619) live here too: the fake schedule_class_ages table
+// and schedule_set_class_ages, with the same checks as the real function.
 // Deleting a class in Testing removes it from its slots and drops its color in the real database
 // ("on delete cascade"; a slot left with no class goes too). Here the two fake databases are
 // separate, so the same thing happens on every read and write.
@@ -31,8 +33,9 @@ const GRANTED_COLUMNS = {
   schedule_slots: ['id', 'version_id', 'location_code', 'weekday', 'starts_at', 'ends_at', 'version', 'created_at', 'updated_at', 'created_by_name', 'updated_by_name'],
   schedule_slot_classes: ['id', 'slot_id', 'location_code', 'class_id', 'position', 'version', 'created_at', 'updated_at', 'created_by_name', 'updated_by_name'],
   schedule_class_colors: ['id', 'class_id', 'location_code', 'color', 'version', 'created_at', 'updated_at', 'created_by_name', 'updated_by_name'],
+  schedule_class_ages: ['id', 'class_id', 'location_code', 'age_from', 'age_to', 'version', 'created_at', 'updated_at', 'created_by_name', 'updated_by_name'],
 };
-const TABLE_KEY = { schedule_versions: 'versions', schedule_slots: 'slots', schedule_class_colors: 'colors' };
+const TABLE_KEY = { schedule_versions: 'versions', schedule_slots: 'slots', schedule_class_colors: 'colors', schedule_class_ages: 'ages' };
 // Columns that exist but the app may not read (like the real grants).
 const HIDDEN = ['created_by', 'updated_by', 'class_set', 'class_ids', 'class_key'];
 
@@ -45,6 +48,7 @@ const RPC_ARGS = {
   schedule_update_version: [['p_version_id', 'uuid'], ['p_expected_version', 'int'], ['p_name', 'text'], ['p_starts_on', 'date']],
   schedule_delete_version: [['p_version_id', 'uuid'], ['p_expected_version', 'int'], ['p_expected_slot_count', 'int']],
   schedule_set_class_color: [['p_class_id', 'uuid'], ['p_color', 'text']],
+  schedule_set_class_ages: [['p_class_id', 'uuid'], ['p_age_from', 'int'], ['p_age_to', 'int']],
 };
 export const SCHEDULE_RPC_NAMES = [...Object.keys(RPC_ARGS), 'schedule_today'];
 
@@ -143,10 +147,24 @@ const SAMPLE_WEEK = [
   ['Teen/Adult', [5], '18:00', '19:00'],
 ];
 const SAMPLE_COLORS = { 'Little Tiger': 'pink', White: 'gray', 'Group A': 'yellow', 'Group B': 'green', 'Group C': 'sky', 'Group D': 'teal', 'Teen/Adult': 'purple' };
+// Sample ages (v0.619). Group D has none, so a class without ages shows too.
+const SAMPLE_AGES = { 'Little Tiger': [4, 6], White: [7, 12], 'Group A': [7, 12], 'Group B': [7, 12], 'Group C': [8, 13], 'Teen/Adult': [13, null] };
+function sampleAges(classes, newId, book) {
+  const out = [];
+  for (const code of LOCATION_CODES) {
+    const byName = new Map(classes.filter((c) => c.location_code === code).map((c) => [c.name, c]));
+    for (const [name, [from, to]] of Object.entries(SAMPLE_AGES)) {
+      const cls = byName.get(name);
+      if (cls) out.push(book({ id: newId(), class_id: cls.id, location_code: code, age_from: from, age_to: to }));
+    }
+  }
+  return out;
+}
 
 export function defaultScheduleData({ classes, today, newId, stamp, actorName = 'Preview' }) {
-  const db = { schema: SCHEDULE_STORE_SCHEMA, versions: [], slots: [], colors: [] };
+  const db = { schema: SCHEDULE_STORE_SCHEMA, versions: [], slots: [], colors: [], ages: [] };
   const book = (row) => ({ ...row, version: 1, created_at: stamp, updated_at: stamp, created_by_name: actorName, updated_by_name: actorName });
+  db.ages = sampleAges(classes, newId, book);
   // The current schedule started 6 weeks ago; "Winter" is planned for the first Monday 3+ weeks out.
   const currentStart = addDays(today, -42);
   let winterStart = addDays(today, 21);
@@ -206,7 +224,15 @@ export function createScheduleBackend({ loadStore, saveStore, now = () => Date.n
     for (const slot of db.slots) slot.class_ids = slot.class_ids.filter((id) => classIds.has(id));
     db.slots = db.slots.filter((s) => s.class_ids.length > 0); // a slot with no class left goes
     db.colors = db.colors.filter((c) => classIds.has(c.class_id));
-    if (!isUsableStore(store)) saveStore?.(db); // keep the generated ids stable
+    // A store saved before ages existed gets the sample ages once (then they're kept).
+    let addedAges = false;
+    if (!Array.isArray(db.ages)) {
+      const at = stamp();
+      db.ages = sampleAges(classes, newId, (row) => ({ ...row, version: 1, created_at: at, updated_at: at, created_by_name: 'Preview', updated_by_name: 'Preview' }));
+      addedAges = true;
+    }
+    db.ages = db.ages.filter((a) => classIds.has(a.class_id));
+    if (!isUsableStore(store) || addedAges) saveStore?.(db); // keep the generated ids stable
     return db;
   }
   const write = (db) => saveStore?.(db);
@@ -378,6 +404,25 @@ export function createScheduleBackend({ loadStore, saveStore, now = () => Date.n
       if (row) updateRow(row, { color: a.p_color }, ctx);
       else row = insertRow(db.colors, { id: newId(), class_id: cls.id, location_code: cls.location_code, color: a.p_color }, ctx);
       return { status: 'ok', class_id: cls.id, color: row.color, version: row.version };
+    },
+
+    // The class's ages (0031): whole years 0–99, To empty or not below From; both empty removes them.
+    schedule_set_class_ages(db, a, ctx) {
+      const from = a.p_age_from;
+      const to = a.p_age_to;
+      const bad = (n) => !Number.isInteger(n) || n < 0 || n > 99;
+      if (a.p_class_id === null || (from === null && to !== null) || (from !== null && bad(from)) || (to !== null && (bad(to) || to < from))) return st('invalid');
+      const cls = classById(a.p_class_id);
+      if (!cls) return st('not_found');
+      let row = db.ages.find((x) => x.class_id === cls.id);
+      if (from === null) {
+        db.ages = db.ages.filter((x) => x.class_id !== cls.id);
+        return { status: 'ok', class_id: cls.id, age_from: null, age_to: null, version: null };
+      }
+      if (row) {
+        if (row.age_from !== from || row.age_to !== to) updateRow(row, { age_from: from, age_to: to }, ctx);
+      } else row = insertRow(db.ages, { id: newId(), class_id: cls.id, location_code: cls.location_code, age_from: from, age_to: to }, ctx);
+      return { status: 'ok', class_id: cls.id, age_from: row.age_from, age_to: row.age_to, version: row.version };
     },
   };
 

@@ -6,21 +6,36 @@
 // fields, which save as you go and wait for Publish — they have their own Save button and say
 // "Changes here go live right away". Closures and full times never show to families.
 //
-// draft = { offered: [classId], times: { 'classId|weekday|HH:MM': { on, spots } }, daysAhead, minHoursAhead }
+// draft = { offered: [classId], times: { 'classId|weekday|HH:MM': { on, spots } },
+//           groups: { 'weekday|HH:MM|id,id': { on, spots } }, daysAhead, minHoursAhead }
+// Classes taught together (v0.620): a time of a Schedule slot with 2+ offered classes is listed ONCE,
+// under "Taught together", with one spot number for the whole time; it leaves the classes' own lists.
 import { IconCheck } from '@tabler/icons-react';
 import Notice from '../../components/Notice.jsx';
+import { agesLabel, joinAges } from '../../lib/schedule/ages.js';
 import * as T from './text.js';
 
 export const timeSlotKey = (classId, weekday, start) => `${classId}|${weekday}|${start}`;
+// a combined time: its weekday, start and classes (sorted, so the order of ticking doesn't matter)
+export const groupSlotKey = (classIds, weekday, start) => `${weekday}|${start}|${[...classIds].sort().join(',')}`;
 
 export function bookingProblem(draft) {
   const intIn = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
   if (!intIn(draft.daysAhead, 1, 60) || !intIn(draft.minHoursAhead, 0, 72)) return true;
-  return Object.values(draft.times).some((t) => t.on && !intIn(t.spots, 1, 20));
+  return [...Object.values(draft.times), ...Object.values(draft.groups ?? {})].some((t) => t.on && !intIn(t.spots, 1, 20));
 }
 
-export default function BookingSettings({ draft, dirty, classes, timesFor, readOnly, saving, note, idBase, onChange, onSave }) {
+// groups = [{ key, classIds, weekday, start, end }] (Builder works them out from today's schedule);
+// groupDefault(classIds) = the number a combined time starts with; agesOf(classId) = { from, to }.
+export default function BookingSettings({ draft, dirty, classes, timesFor, groups = [], groupDefault, agesOf, readOnly, saving, note, idBase, onChange, onSave }) {
   const bad = bookingProblem(draft);
+  // What the forms show for a combined time: its classes and their joined ages (v0.620).
+  const exampleOf = (classIds) => {
+    const names = classIds.map((id) => classes.find((c) => c.id === id)?.name ?? '').join(' + ');
+    const a = joinAges(classIds.map((id) => agesOf?.(id) ?? { from: null, to: null }));
+    const label = agesLabel(a.from, a.to);
+    return label ? `${names} · ${label}` : names;
+  };
   // A time with no row of its own yet uses the class's usual number of spots.
   const usual = (classId) => ({ on: true, spots: draft.defaults?.[classId] ?? 3 });
   const setTime = (key, classId, patch) => onChange({ times: { ...draft.times, [key]: { ...(draft.times[key] ?? usual(classId)), ...patch } } });
@@ -45,6 +60,38 @@ export default function BookingSettings({ draft, dirty, classes, timesFor, readO
           </label>
         ))}
       </fieldset>
+      {groups.length > 0 && (
+        <fieldset className="field cfieldset">
+          <legend className="field-label">{T.TOGETHER_TITLE}</legend>
+          {groups.map((g) => {
+            const names = g.classIds.map((id) => classes.find((c) => c.id === id)?.name ?? '').join(' + ');
+            const v = draft.groups?.[g.key] ?? { on: true, spots: groupDefault ? groupDefault(g.classIds) : 3 };
+            const setGroup = (patch) => onChange({ groups: { ...(draft.groups ?? {}), [g.key]: { ...v, ...patch } } });
+            const label = T.togetherTime(T.weekdayTime(g.weekday, g.start, g.end), names);
+            return (
+              <div key={g.key} className="fslotrow">
+                <label className="cbox">
+                  <input type="checkbox" checked={v.on} disabled={readOnly} aria-label={T.offerTime(label)} onChange={(e) => setGroup({ on: e.target.checked })} />
+                  <span>{label}</span>
+                </label>
+                <input
+                  className="input fslot-spots"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={20}
+                  aria-label={T.spotsFor(label)}
+                  disabled={readOnly || !v.on}
+                  value={v.spots ?? ''}
+                  onChange={(e) => setGroup({ spots: num(e.target.value) })}
+                />
+              </div>
+            );
+          })}
+          {/* e.g. "White + Little Tiger · Ages 3–12": what the forms will show for the first combined time */}
+          <p className="field-hint">{T.togetherHint(groups.length === 1 ? exampleOf(groups[0].classIds) : '')}</p>
+        </fieldset>
+      )}
       {draft.offered.map((classId) => {
         const cls = classes.find((c) => c.id === classId);
         if (!cls) return null;

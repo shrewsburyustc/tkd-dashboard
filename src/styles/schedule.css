@@ -253,6 +253,33 @@ button.sslot {
   padding: 0;
 }
 
+/* A class's ages (v0.619): two small whole-number boxes, From and To, then what the forms show.
+   On a narrow phone "Shows as …" drops under the boxes. */
+.sages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-8) var(--space-12);
+}
+
+.sages-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  font-size: var(--text-13);
+}
+
+.sages-input {
+  width: 80px;
+  color: var(--color-text); /* the typed ages in normal text, not the label's gray */
+}
+
+.sages-shows {
+  padding-bottom: 10px; /* lines the words up with the boxes' text */
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
 /* Color swatches: real radio buttons, drawn as round chips. */
 .sswatches {
   display: flex;
