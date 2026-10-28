@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { handleGet, handlePost, handleOther, CAMP_TURNSTILE_ACTION } from '../_lib/camp.js';
+import { handleGet, handlePost, handleOther, CAMP_TURNSTILE_ACTION, MAX_CAMP_BODY_BYTES } from '../_lib/camp.js';
 import { MemoryRateLimiter } from '../_lib/rateLimit.js';
 import { verifyTurnstile } from '../_lib/turnstile.js';
 
@@ -324,12 +324,26 @@ test('POST: wrong Origin / Content-Type → bad_request (HTTP 400)', async () =>
   await expectRefused(context({ headers: { 'Content-Type': 'text/plain' } }), { status: 'bad_request' });
 });
 
+test('POST: the biggest sign-up the rules allow (about 149 KB) gets through the size check', async () => {
+  // 3 children × 60 days × 10 extras on every day + a 70 000-character signature (security
+  // follow-up 2026-10-27: the shared 100 KB limit refused it; camps read up to 256 KB).
+  const ids = (n, tag) => Array.from({ length: n }, (_, i) => `${String(i).padStart(8, '0')}-${tag}-4111-8111-111111111111`);
+  const days = ids(60, '1111');
+  const extras = ids(10, '2222').map((extraId) => ({ extra_id: extraId, day_ids: days }));
+  const child = goodChild({ first_name: 'M'.repeat(60), last_name: 'R'.repeat(60), day_ids: days, extras });
+  const signature = 'data:image/png;base64,' + 'A'.repeat(70000 - 22);
+  const body = JSON.stringify(goodBody({ children: [child, child, child], signature, turnstile_token: 't'.repeat(2048) }));
+  assert.ok(body.length > 140 * 1024 && body.length < MAX_CAMP_BODY_BYTES, `size ${body.length}`);
+  const r = await run(handlePost, context({ body }), { openDatabase: fakeDb({ signup: dbSignupOk }).openDatabase, fetchImpl: fakeTurnstile().fetchImpl });
+  assert.equal(r.json.status, 'ok');
+});
+
 test('POST: malformed code → not_found before anything else', async () => {
   await expectRefused(context({ code: 'nope!' }), { status: 'not_found' });
 });
 
-test('POST: body over 100 KB (declared or real) / not JSON / not an object → bad_request', async () => {
-  const big = JSON.stringify(goodBody({ signature: 'data:image/png;base64,' + 'A'.repeat(110 * 1024) }));
+test('POST: body over 256 KB (declared or real) / not JSON / not an object → bad_request', async () => {
+  const big = JSON.stringify(goodBody({ signature: 'data:image/png;base64,' + 'A'.repeat(260 * 1024) }));
   await expectRefused(context({ body: big }), { status: 'bad_request' });
   await expectRefused(context({ body: big, headers: { 'Content-Length': '100' } }), { status: 'bad_request' });
   await expectRefused(context({ body: '{not json' }), { status: 'bad_request' });
