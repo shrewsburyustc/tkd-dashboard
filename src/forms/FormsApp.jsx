@@ -351,7 +351,7 @@ export default function FormsApp({ kiosk = null }) {
               </button>
             )}
             <button type="submit" className="btn btn-primary fp-btn fp-btn--main" aria-disabled={sending ? 'true' : undefined}>
-              {last ? (sending ? T.SENDING : T.SUBMIT) : T.NEXT}
+              {last ? (sending ? T.SENDING : T.SEND) : T.CONTINUE}
             </button>
           </div>
           {last && <p className="fp-privacy">{T.PRIVACY}</p>}

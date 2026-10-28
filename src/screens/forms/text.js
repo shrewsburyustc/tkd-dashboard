@@ -20,7 +20,7 @@ export const CLOSE = 'Close';
 export const SAVE = 'Save';
 export const SAVING = 'Saving…';
 export const BACK = 'Back';
-export const NEXT = 'Next';
+export const CONTINUE = 'Continue'; // Fill in uses the family page's words (rulebook v0.622)
 export const MORE_ACTIONS = 'More actions';
 
 // ----- List -----
@@ -256,7 +256,7 @@ export const AGREE = 'I have read and agree to the waiver';
 export const SIGN_HERE = 'Signature';
 export const SIGN_HINT = 'Sign with a finger, pen or mouse.';
 export const CLEAR = 'Clear';
-export const SUBMIT = 'Submit';
+export const SEND = 'Send';
 export const SUBMITTING = 'Sending…';
 export const PICK = 'Choose…';
 export const FIELD_PROBLEM = {
@@ -281,7 +281,7 @@ export const ANOTHER = 'Fill in another';
 export const TIME_TAKEN = 'A picked time just filled up or was cancelled. Pick another time.';
 export const FORM_CHANGED = 'The form was published again while you were filling it in. It was reloaded — check the answers and send again.';
 export const FORM_CLOSED = 'This form was closed meanwhile, so it can\'t take sign-ups.';
-export const SEND_FAILED = "It wasn't sent. Check the connection and press Submit again (it won't be saved twice).";
+export const SEND_FAILED = "It wasn't sent. Check the connection and press Send again (it won't be saved twice).";
 export const SEND_INVALID = 'Some answers were refused. Check them and send again.';
 export const timeOption = (t) => `${formatDate(t.date, { year: false })} · ${formatTime(parseTime(t.start), true)} · ${t.className}`;
 export const UNSAVED = 'Unsaved changes. Save or cancel first.';

@@ -137,7 +137,7 @@ export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmi
             {!(preview && last) && (
               <button type="submit" className="btn btn-primary" aria-disabled={state.saving ? 'true' : undefined}>
                 {last ? <IconCheck size={16} aria-hidden="true" /> : <IconArrowRight size={16} aria-hidden="true" />}
-                {last ? (state.saving ? T.SUBMITTING : T.SUBMIT) : T.NEXT}
+                {last ? (state.saving ? T.SUBMITTING : T.SEND) : T.CONTINUE}
               </button>
             )}
           </span>

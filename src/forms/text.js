@@ -14,22 +14,22 @@ export const LOADING = 'Loading the form…';
 // ----- Steps -----
 export const stepOf = (n, total) => `Step ${n} of ${total}`;
 export const progressLabel = (n, total) => `Step ${n} of ${total}`;
-export const NEXT = 'Next';
+export const CONTINUE = 'Continue'; // the same words on every family page (rulebook v1.017)
 export const BACK = 'Back';
-export const SUBMIT = 'Submit';
+export const SEND = 'Send';
 export const SENDING = 'Sending…';
 export const FIX_ABOVE = 'Please check the answers marked above.';
 // Shown in the booking step when no time is open (rulebook v0.235 wording, mockup screen 8).
 export const NO_OPEN_TIMES = "No free-class times are open right now. Leave your details and we'll call you to set one up.";
 export const PRIVACY = 'The school uses these details to contact you about classes. They are not shared or sold.'; // like Color Belt's form
 
-// ----- Messages over the step (after Submit) -----
+// ----- Messages over the step (after Send) -----
 export const TIME_TAKEN = 'Sorry — a time you picked just filled up. The open times are updated: please pick another one.';
 export const FORM_CHANGED = 'The school just updated this form. Please check your answers (what you typed is kept) and send again.';
 export const RATE_LIMITED = 'Too many tries from this connection. Please wait a few minutes and try again.';
-export const VERIFY_FAILED = "We couldn't check this browser. Press Submit again, or call the school.";
-export const SEND_FAILED = "It wasn't sent — check the connection and press Submit again. Nothing you typed is lost, and it won't be saved twice.";
-export const SEND_INVALID = 'Some answers were refused. Please check them and press Submit again.';
+export const VERIFY_FAILED = "We couldn't check this browser. Press Send again, or call the school.";
+export const SEND_FAILED = "It wasn't sent — check the connection and press Send again. Nothing you typed is lost, and it won't be saved twice.";
+export const SEND_INVALID = 'Some answers were refused. Please check them and press Send again.';
 export const CLOSED_NOW = 'This form just stopped taking sign-ups.';
 
 // ----- Thank-you screen -----
