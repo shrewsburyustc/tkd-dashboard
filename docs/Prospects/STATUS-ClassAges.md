@@ -18,7 +18,7 @@ Branch `claude/prospect-form-system-cd893d`. Requested by Jeffrey on 2026-10-28,
 
 | Step | Status |
 |---|---|
-| Migration number | Requested from Main 2026-10-28 (next free 0031) |
+| Migration number | **0031** reserved by Main 2026-10-28 (`0031_<what>.sql`, SETUP "## Migration 0031: …", run.mjs `step0031`) |
 | Mockups: the Schedule dialog and the form's time list at PC, tablet, phone and 320 wide | Next |
 | Build: migration and pglite tests, then the screens | Waits for the number and the mockup OK |
 | Reviews: security (database) and design | — |
