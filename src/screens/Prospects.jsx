@@ -16,7 +16,7 @@
 //     Cancel a free class, Joined date, Delete (admins only)
 // Admin vs staff only changes what is SHOWN — the database enforces who may change what.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { IconDots, IconEdit, IconMapPin, IconPlus, IconSearch, IconX } from '@tabler/icons-react';
+import { IconCurrencyDollarOff, IconDots, IconEdit, IconMapPin, IconPlus, IconSearch, IconX } from '@tabler/icons-react';
 import Dialog from '../components/Dialog.jsx';
 import ErrorBanner from '../components/ErrorBanner.jsx';
 import RowMenu from '../components/RowMenu.jsx';
@@ -29,6 +29,7 @@ import { loadForms } from '../lib/forms/api.js';
 import { useProspects } from '../lib/prospects/useProspects.js';
 import { isDueToday, lastInitial } from '../lib/prospects/followUps.js';
 import { takeOpenProspect } from '../lib/prospects/openRequest.js';
+import { usePrivateDetailsHidden } from '../lib/privateDetails.js';
 import {
   addNote, addStatus, bookTime, cancelTime, checkIn, deleteProspect, deleteStatus, getProspect, markOpened, openTimesFor, reorderStatuses,
   searchProspects, setFollowUp, setStatus, undoCheckIn, updateStatus,
@@ -67,6 +68,13 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
   const [view, setViewState] = useState(() => savedView(staffId));
   const [boardCols, setBoardCols] = useState({}); // phone Board: code -> the stage shown
   const [search, setSearch] = useState('');
+  // This device's "Hide private details" switch: while on, + Add prospect is desk-only (v0.616),
+  // because its form always asks the parent's email and shows every answer as it is typed.
+  const [privateHidden] = usePrivateDetailsHidden();
+  // If the switch goes on (from another tab) while Add prospect's form chooser is open, close it.
+  useEffect(() => {
+    if (privateHidden) setDialog((d) => (d?.type === 'add' ? null : d));
+  }, [privateHidden]);
   const [found, setFound] = useState(null); // code -> Set of ids, while searching
   const [selected, setSelected] = useState(null); // { id, code, opener }
   const [detail, setDetail] = useState(null); // the panel's prospect
@@ -444,6 +452,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
 
   // ----- Add prospect -----
   async function openAdd(opener) {
+    if (privateHidden) return; // desk-only while private details are hidden (v0.616)
     clearToast();
     const school = both ? 'worcester' : codes[0];
     setDialog({ type: 'add', key: Date.now(), both, school, forms: null, allForms: null, opener });
@@ -453,6 +462,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
   }
   function pickAddForm(form, opener) {
     setDialog(null);
+    if (privateHidden) return; // the switch went on while the form chooser was open (another tab)
     fill.open(form, opener ?? document.querySelector('[data-prospects-add]'), { mode: 'fill' });
   }
 
@@ -512,7 +522,7 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
     else setDialog((x) => (x ? { ...x, saving: false, note: r.status === 'not_allowed' ? 'NOT_ALLOWED' : r.status === 'stale' ? 'STALE' : 'SAVE_FAILED' } : x));
   }
 
-  useShortcutN({ enabled: !dialog && !selected && !screenLocked && pros.status === 'ready' && !fill.isOpen, onPress: () => openAdd(document.querySelector('[data-prospects-add]')) });
+  useShortcutN({ enabled: !privateHidden && !dialog && !selected && !screenLocked && pros.status === 'ready' && !fill.isOpen, onPress: () => openAdd(document.querySelector('[data-prospects-add]')) });
 
   // ===== What is on screen =====
   const stagesOf = (school) => school.statuses.filter((s) => s.kind === 'stage');
@@ -723,11 +733,26 @@ export default function Prospects({ location, staffId, isAdmin, screenLocked, on
         <button type="button" className="icon-button" aria-label={T.MORE_ACTIONS} aria-haspopup="menu" onClick={(e) => setMenu(menu ? null : { anchor: e.currentTarget })}>
           <IconDots size={20} aria-hidden="true" />
         </button>
-        <button type="button" className="btn btn-primary" data-prospects-add onClick={(e) => openAdd(e.currentTarget)}>
+        {/* grayed but still focusable while private details are hidden (v0.616); the line below says why */}
+        <button
+          type="button"
+          className={`btn btn-primary${privateHidden ? ' is-unavailable' : ''}`}
+          data-prospects-add
+          aria-disabled={privateHidden ? 'true' : undefined}
+          aria-describedby={privateHidden ? 'prospects-add-at-desk' : undefined}
+          onClick={(e) => openAdd(e.currentTarget)}
+        >
           <IconPlus size={16} aria-hidden="true" />
           {isPhone ? T.ADD_SHORT : T.ADD_PROSPECT}
         </button>
       </div>
+      {privateHidden && (
+        <p className="phidden-line pdesk-line" id="prospects-add-at-desk">
+          {/* ti-currency-dollar-off = private details hidden (the top bar's chip) */}
+          <IconCurrencyDollarOff size={16} aria-hidden="true" />
+          {T.ADD_AT_DESK}
+        </p>
+      )}
       {banner && <ErrorBanner text={banner.text} onDismiss={() => setBanner(null)} />}
       {both && data && (
         // On Both, ONE search for the two schools (each section shows its own matches)
