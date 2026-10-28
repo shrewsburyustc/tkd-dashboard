@@ -38,3 +38,18 @@ A check (not a question): the Dan-change box takes the candidate dialog's place 
 ## Part 2 — waits for Dashboard core's step 1 (shared parts M1–M11)
 
 S1 (Mark paid box), S2 (Print receipt), S5 (the other confirm boxes), S6 (History line), S8 (Registration link box + QR), S10 (money helper), S11 (switch to the shared parts), S12's screen (shared time list 6:00 AM–10:00 PM). The brief's part 2 arrives after that merge.
+
+## Part 2 decisions (2026-10-28, recorded here as they come; rulebook row after the last one)
+
+- Q1: Undo Mark as sent box says **"Keep send record"** (A).
+- Q2: failure words say the verb (B): "Couldn't undo. …" in Undo payment / Undo refund, "Couldn't delete. …" in Delete candidate; Dan change keeps "Couldn't save. …".
+- Q3: History result-email rows (A): "Result email marked sent (Passed)" / "(Make-up)"; undo = "Mark as sent undone".
+- Q4: History keeps the "Registered on the family form" / "Added at the desk" line while Hide private details is on (A).
+- Q5: the Candidates card on Both keeps the two-line school note (B) — needs a change to the shared CountCards part (who makes it: Q5b).
+- Q5b: the Dashboard core session makes the CountCards change (A); Star's card switch waits for its merge; the rest of Part 2 goes ahead.
+- Q6: staff lose v0.110's "type another amount" (A): Mark paid records the fee; an admin fixes a different amount with Edit payment (changes v0.110).
+- Q7: the receipt gets the name by calling get_my_profile when it opens (A); a failed call drops the name from the line; no shared files.
+- Q8: Print receipt is hidden while Hide private details is on (B), in the ⋯ menu and the summary, like Black Belt and Star's money group.
+- P1 OK as drawn (busy words Deleting… / Undoing… / Changing…; Dan change box stays open with its failure note).
+- P2 OK as drawn.
+- P3–P8 OK as drawn (Jeffrey: "I already went through these"); P5 open choice taken as drawn A (one entry, fields joined with "; ").
