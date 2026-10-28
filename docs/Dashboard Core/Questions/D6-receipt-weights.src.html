@@ -1,0 +1,93 @@
+<!doctype html>
+<!--
+  D6-receipt-weights.src.html — the design review's point D6 for Jeffrey: the weight of the shared
+  receipt's school line and Balance line (M4, rulebook v1.105): 600 as drawn and built (copied from
+  Black Belt's receipt) or 500, as §7 allows. One picture: the printed receipt with the two lines
+  outlined, the two lines cut out at both weights, and the two options. {{PAPER}}, {{T600}}, {{B600}},
+  {{T500}} and {{B500}} are filled with pictures of the parts page (parts.html#M4/paper, printed on
+  US Letter, taken on this PC) to make the self-contained D6-receipt-weights.html, which
+  ../tools/shoot-page.mjs turns into the PNG.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>D6 · The receipt's two heavier lines: weight 600 or 500</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; width: 1500px; box-sizing: border-box; background: #fff; color: #1f1f1f; font: 15px/1.45 "Segoe UI", system-ui, sans-serif; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4a4a4a; margin: 0 0 20px; max-width: 1420px; }
+  .layout { display: grid; grid-template-columns: 500px 1fr; gap: 24px; align-items: start; }
+  figure { margin: 0; }
+  .paper img { width: 100%; display: block; border: 1px solid #e5e5e2; border-radius: 8px; }
+  figcaption { font-size: 13px; color: #555; margin-top: 8px; }
+  .opts { display: grid; gap: 16px; }
+  .col { border: 1px solid #e5e5e2; border-radius: 10px; padding: 14px 16px 16px; display: grid; grid-template-columns: 450px 1fr; gap: 4px 22px; align-items: start; }
+  .col.pick { background: #f7fbf4; border: 2px solid #3b8f2a; }
+  .head { grid-column: 1 / -1; }
+  .label { display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; padding: 3px 9px; border-radius: 6px; margin-bottom: 8px; background: #f1f1ee; color: #555; }
+  .pick .label { background: #e5f2df; color: #2e6b1f; }
+  h2 { font-size: 18px; font-weight: 600; margin: 0 0 10px; }
+  .crops img { display: block; width: 450px; background: #fff; border: 1px solid #e5e5e2; border-radius: 6px; margin-bottom: 8px; }
+  .crops p { margin: 0 0 4px; font-size: 12px; color: #6b6b6b; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+  .row { margin: 0 0 8px; font-size: 14px; }
+  .row b { display: block; font-size: 12px; color: #6b6b6b; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+  ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; }
+  li { margin: 3px 0; }
+  .plus { color: #2e6b1f; }
+  .minus { color: #8a3b12; }
+  .measured { margin: 0; padding: 12px 16px; border-radius: 10px; background: #f6f6f3; border: 1px solid #e5e5e2; font-size: 14px; }
+  .rec { margin-top: 18px; padding: 12px 16px; border-radius: 10px; background: #f7fbf4; border: 1px solid #cfe5c4; font-size: 15px; }
+  .note { margin: 12px 0 0; font-size: 13px; color: #555; }
+</style>
+</head>
+<body>
+<h1>D6 · The receipt's school line and Balance line: weight 600 or 500</h1>
+<p class="sub">The shared receipt (M4, v1.105) draws two lines heavier than its other words: the school's name at the top and the <b>Balance</b> line (outlined in amber). As drawn and as built they are weight <b>600</b> (“semibold”), copied from Black Belt's receipt. <b>§7 of the rulebook allows only 400 (regular) and 500 (medium).</b> The design review flagged the mismatch. The receipt's other dark words (the student and event details, the table headings) are already 500.</p>
+<div class="layout">
+  <figure class="paper">
+    <img src="{{PAPER}}" alt="">
+    <figcaption>The receipt as it prints (US Letter), as built, the two lines outlined. At 500 it prints exactly this on this PC: the pictures are pixel-identical.</figcaption>
+  </figure>
+  <div class="opts">
+    <div class="col pick">
+      <div class="head"><span class="label">A · Recommended</span><h2>500, as §7 says</h2></div>
+      <div class="crops">
+        <p>The two lines at 500, printed, 4× enlarged</p>
+        <img src="{{T500}}" alt="">
+        <img src="{{B500}}" alt="">
+      </div>
+      <div>
+        <p class="row"><b>Windows PCs in Chrome, on screen and on paper</b>Exactly as it is now: Chrome draws 500 like 600 there</p>
+        <p class="row"><b>iPads, iPhones, Macs</b>The two lines a shade lighter: the same weight as the receipt's other dark words</p>
+        <p class="row"><b>Rulebook</b>No exception: the shared receipt follows §7</p>
+        <ul>
+          <li class="plus">Follows the rulebook</li>
+          <li class="plus">Nothing changes in Chrome on the school PCs that print receipts</li>
+          <li class="minus">On Apple devices the two lines stand out a little less than drawn</li>
+        </ul>
+      </div>
+    </div>
+    <div class="col">
+      <div class="head"><span class="label">B · As drawn (v1.105)</span><h2>600, with an exception written into §7</h2></div>
+      <div class="crops">
+        <p>The two lines at 600, printed, 4× enlarged</p>
+        <img src="{{T600}}" alt="">
+        <img src="{{B600}}" alt="">
+      </div>
+      <div>
+        <p class="row"><b>Windows PCs in Chrome, on screen and on paper</b>The same as A</p>
+        <p class="row"><b>iPads, iPhones, Macs</b>The two lines a shade heavier than the receipt's other dark words, as drawn</p>
+        <p class="row"><b>Rulebook</b>§7 gets one exception: the receipt's school line and Balance line are 600</p>
+        <ul>
+          <li class="plus">As drawn on every device; the same as Black Belt's receipt today</li>
+          <li class="minus">An exception to §7, which 600 already breaks in 33 other places</li>
+        </ul>
+      </div>
+    </div>
+    <p class="measured"><b>Measured on this PC</b> (Windows 11, Chrome, the app's own font list): Segoe UI has no medium style, so Chrome draws 500 with its semibold, the same as 600. The receipt at 500 and at 600 is pixel-identical: the printed page, the box on screen and both lines, compared pixel by pixel. Apple's font has a real medium, so there 500 is a shade lighter. That can't be pictured from this PC, and other browsers (Firefox) weren't measured.</p>
+  </div>
+</div>
+<p class="rec"><b>Recommendation: A.</b> It follows the rulebook, and receipts printed from Chrome on the school PCs don't change at all.</p>
+<p class="note">Not part of this question: weight 600 already appears 33 more times in 10 other style files (24 in Black Belt's screens; also Calendar, Camps and the public sign-up pages). On the school PCs they look like 500 too. Tidying those is a separate question for later; it's noted in the plan.</p>
+</body>
+</html>

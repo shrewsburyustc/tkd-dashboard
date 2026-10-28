@@ -239,7 +239,7 @@ Mockup drafted: `Mockups/M3-mark-paid-box.html`.
 **Behaviour:**
 - Copy link has the first focus.
 - **A failed copy or download shows its amber note inside the box**, under the cards — a detail for the mockup OK: today three sections use a bar behind the box. The two sentences are shared words: "Couldn't copy the link. Select the link and copy it yourself." (Star's) and "Couldn't make the QR code picture. Try again." (Black Belt's).
-- Download QR code saves a 1024 px PNG (big enough to print; Camps' size today), named with a plain hyphen like Black Belt's: "November Children Testing - Worcester QR code.png" — a detail for the mockup OK. With two schools its screen-reader name says the school ("Download Worcester QR code").
+- Download QR code saves a 1024 px PNG (big enough to print; Camps' size today), named with a plain hyphen like Black Belt's: "November Children Testing - Worcester QR code.png" — a detail for the mockup OK. With two schools its screen-reader name says the school after the button's words ("Download QR code, Worcester"; v1.111 changed it from "Download Worcester QR code", WCAG 2.5.3).
 - A section's own line under the cards (Black Belt's `?dan=` hint) keeps its code format.
 - Close on PC/tablet; full screen with the back arrow on phones.
 
@@ -617,5 +617,11 @@ Already covered without a new part: Black Belt's `DateField` copies (the shared 
 - **Color Belt:** EventDialog's comment says "15-minute list" for a 5-minute list.
 - **Forms, live site only** (the real build loads forms.css before app.css; the preview doesn't):
   - the free-class spots field is full width instead of 64 px (`.fslot-spots`);
-  - the waiver text box is 88 px tall instead of 160 px (`.fwaiver-edit`).
+  - the waiver text box is 88 px tall instead of 160 px (`.fwaiver-edit`);
+  - the forms list's **Live** tag is gray instead of green: `.ftag--live` (forms.css) loses to `.ttag`, which loads later. Seen 2026-10-28 in real builds of both `main` and this branch (the preview shows it green).
 - **The kiosk's stylesheet** (`forms-public.css`) re-declares `.btn`, `.input`, `.field` and other base classes for the whole page while kiosk mode is open (the page reloads when it ends).
+- **Found while building (2026-10-27):**
+  - **The ⋯ menu sometimes opens in the top-left corner on PC** right after a page opens, instead of under its ⋯ button. It shows in the "before" pictures too, so it was already there; the picture tool's press hits it in about half its takes. A real person may hit it if they press ⋯ just as the page finishes loading; not confirmed. `RowMenu.jsx` is a shared part, this session's, so it goes to step 2 or a small fix of its own.
+  - **Staff accounts' Reset password dialog:** its plain Generate and Copy buttons carry `is-unavailable` but nothing grays them, so they look pressable while they're not. A page-wide `.btn.is-unavailable` (M2's gray, written only for the new parts in step 1) fixes it in step 2.
+- **Found while asking D6 (2026-10-28):**
+  - **Weight 600 is used 33 times in 10 style files**, against §7's "400 and 500 only": Black Belt 24 (`grading.css` 13, `blackBelt.css` 6, `form.css` 2, `receipt.css` 2, `results.css` 1), `calendar.css` 3, `register.css` 3, `camp.css` 1, `camps.css` 1, `forms-public.css` 1 (the shared receipt's own 2 were question D6: now 500, v1.112). In Chrome on Windows they look the same as 500: Segoe UI has no medium style, so Chrome draws 500 with its semibold (measured on this PC). They differ only on Apple devices and in browsers that weren't measured. Tidying them is its own question, for step 2 or each section's own prompt.

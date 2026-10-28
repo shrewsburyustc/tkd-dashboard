@@ -2,7 +2,7 @@
   calendar.css — the look of the Calendar section (rulebook v0.234, approved mockup rev 1).
   Why it exists: the month grid with its day boxes and chips, the day panel, the phone's small
   month with dots, the week view's "All day" row and striped closed hours, and a few dialog bits.
-  Page header, buttons, fields, notes, banners and dialogs reuse app.css / testing.css; the week
+  Page header, buttons, fields, notes, banners and dialogs reuse app.css / shared.css; the week
   grid reuses schedule.css (sgrid / sslot). Colors come from tokens.css, except the 8 class /
   event-type colors, which each chip receives as --chip-fill / --chip-edge / --chip-text
   (the same recorded exception as the Schedule, v0.233). Closures are amber (a warning).
@@ -824,15 +824,7 @@ button.cchip--btn:focus-visible {
   font-size: var(--text-13);
 }
 
-/* Delete event type: gray until a "Move to" type is picked (like Save, guidelines 6). */
-.btn-delete.is-unavailable,
-.btn-delete.is-unavailable:hover,
-.btn-delete.is-unavailable:active {
-  border-color: var(--color-border-strong);
-  background: var(--color-surface);
-  color: var(--color-disabled-text);
-  cursor: not-allowed;
-}
+/* (Delete event type's gray Delete button, .btn-delete.is-unavailable, is in shared.css.) */
 
 /* Week view: the closed hours of a "some classes" closure (detail 3: striped amber). */
 .cweek-closedband {

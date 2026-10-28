@@ -31,7 +31,7 @@ export const ZIP = 'ZIP code';
 export const addressHint = (name) =>
   `Shown to families on registration pages and printed flyers, e.g. “Location: ${schoolName(name)}, 100 Example Street, ${name}, MA 01600”.`;
 export const CLEAR_HINT = 'Leave all four empty to show just the school name.';
-export const CANCEL = 'Cancel';
+export { CANCEL } from '../../components/text.js'; // 'Cancel', a shared word (rulebook v1.030)
 export const SAVE = 'Save';
 export const SAVING = 'Saving…';
 export const TOAST_SAVED = 'School saved';

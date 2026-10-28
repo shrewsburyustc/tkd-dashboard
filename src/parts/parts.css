@@ -1,0 +1,316 @@
+/*
+  parts.css — the look of the preview-only shared parts page itself (parts.html): its list of
+  parts, the heading line of a state, and the SAMPLE CONTEXT drawn around a part (a roster row, a
+  piece of a dialog, a person's summary list) — as the approved mockups draw that context.
+  Why it exists: the shared parts' own styles are all in src/styles/shared.css; nothing in this file
+  is part of a shared part, and none of it is ever built (the page isn't in vite.config.js). Class
+  names start with "parts-" so they can't touch anything else.
+  Screen sizes as in app.css: phone (max-width: 639.98px), tablet (max-width: 1023.98px).
+*/
+
+body {
+  background: var(--color-bg);
+}
+
+.parts-refuse {
+  padding: var(--space-32) var(--space-16);
+  font-size: var(--text-16);
+}
+
+/* ===== The page ===== */
+.parts-page {
+  max-width: 1232px;
+  margin: 0 auto;
+  padding: var(--space-16);
+}
+
+.parts-h1 {
+  margin-bottom: var(--space-4);
+  font-size: var(--text-20);
+}
+
+.parts-intro {
+  max-width: 760px;
+  margin-bottom: var(--space-16);
+  color: var(--color-text-secondary);
+  font-size: var(--text-13);
+}
+
+.parts-part {
+  padding: var(--space-12) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.parts-h2 {
+  margin-bottom: var(--space-8);
+  font-size: var(--text-16);
+}
+
+.parts-file {
+  margin-left: var(--space-8);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+  font-weight: 400;
+}
+
+.parts-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-16);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-13);
+}
+
+.parts-links a {
+  color: var(--color-blue);
+}
+
+.parts-extra a {
+  color: var(--color-text-secondary);
+}
+
+/* The heading line of one state: "All parts · M2 · While it works #M2/busy" */
+.parts-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-4) var(--space-12);
+  margin-bottom: var(--space-8);
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.parts-head a {
+  color: var(--color-blue);
+}
+
+.parts-title {
+  color: var(--color-text);
+  font-size: var(--text-14);
+  font-weight: 500;
+}
+
+/* While a dialog is open the heading line hides: it would only show, dimmed, around the box. */
+body:has(> .dialog-backdrop, > .dialog-page) .parts-head {
+  visibility: hidden;
+}
+
+.parts-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  margin: var(--space-8) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-12);
+}
+
+.parts-toast {
+  color: var(--color-success-text);
+}
+
+.parts-dialog-text {
+  font-size: var(--text-13);
+}
+
+/* ===== Sample context (as the mockups draw it) ===== */
+
+/* M1: the roster the duplicate box sits above (mockup .roster) */
+.parts-roster {
+  width: 900px;
+  max-width: 100%;
+  padding: 12px 12px 4px;
+}
+
+/* M3: a simplified roster row, with room under it for the box (mockup .stage / .ctx-row) */
+.parts-row-stage {
+  position: relative;
+  width: 640px;
+  max-width: 100%;
+  height: 236px;
+  padding: 8px 12px 16px;
+}
+
+.parts-ctx-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  font-size: 13px;
+}
+
+.parts-ctx-who {
+  flex: 1;
+  min-width: 0;
+}
+
+.parts-ctx-who b {
+  font-weight: 500;
+}
+
+.parts-ctx-meta {
+  color: var(--color-text-secondary);
+}
+
+.parts-ctx-more {
+  display: inline-flex;
+  justify-content: center;
+  width: 28px;
+  color: var(--color-text-secondary);
+}
+
+/* Camps' "Owes $15.50" tag is a button (camps.css .cp-paybtn / testing-events.css .ev-tag-button) */
+.parts-tag-button {
+  position: relative;
+  cursor: pointer;
+}
+
+/* M6: room around the cards (mockup .frame), and a faint roster under a filtered row. The -4px
+   sides give the cards the mockup's width (its page had 12px sides, this one 16px). */
+.parts-frame {
+  margin: 0 -4px;
+  padding: 16px 12px 8px;
+}
+
+.parts-ghost {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.parts-ghost div {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 12px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+.parts-ghost div:first-child {
+  border-top: none;
+  background: var(--color-surface);
+  font-size: 12px;
+}
+
+/* M7: the person's summary list (testing-events.css .ev-sum) and a hidden value */
+.parts-sum {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-13);
+}
+
+.parts-hidden {
+  color: var(--color-text-secondary);
+}
+
+/* M8: a piece of a dialog with two time fields side by side (mockup .frame / .pair) */
+.parts-tframe {
+  width: 440px;
+  max-width: 100%;
+  padding: 16px 24px 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-dialog);
+}
+
+.parts-tframe.is-tall {
+  padding-bottom: 268px; /* room for an open list (the real list is placed over the page) */
+}
+
+.parts-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-12);
+}
+
+.parts-pair .field {
+  margin-bottom: 0;
+}
+
+.parts-problem {
+  margin-top: 4px;
+}
+
+@media (max-width: 1023.98px) {
+  .parts-roster {
+    width: auto;
+  }
+}
+
+@media (max-width: 639.98px) {
+  .parts-page {
+    padding: var(--space-16) 0;
+  }
+
+  .parts-page > .parts-head,
+  .parts-page > .parts-note,
+  .parts-h1,
+  .parts-intro,
+  .parts-part {
+    margin-left: var(--space-16);
+    margin-right: var(--space-16);
+  }
+
+  .parts-roster {
+    padding: 12px 16px 4px;
+  }
+
+  /* The row is a card on phones (name on top, tag and buttons under it), and the box is placed
+     under the button, so the stage grows instead of having a fixed height. */
+  .parts-row-stage {
+    width: auto;
+    height: auto;
+    margin: 0 16px;
+    padding: 8px 0 236px;
+  }
+
+  .parts-ctx-row {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 8px 12px;
+    row-gap: 8px;
+  }
+
+  .parts-ctx-who {
+    flex: 1 0 100%;
+  }
+
+  .parts-ctx-col {
+    display: none;
+  }
+
+  .parts-ctx-anchor {
+    margin-left: auto;
+  }
+
+  .parts-frame {
+    margin: 0 4px;
+  }
+
+  .parts-tframe {
+    width: auto;
+    padding: 16px;
+    border-left: none;
+    border-right: none;
+    border-radius: 0;
+  }
+
+  .parts-tframe.is-tall {
+    padding-bottom: 268px;
+  }
+}
+
+/* M4 "The printed page": the picture tool pretends to print at US Letter size (8.5 × 11 in); the
+   paper's margins (the receipt's @page rcpt-receipt: 0.6in 0.7in) don't apply to a picture of the
+   screen, so the body gets them — but ONLY while the tool takes that picture (it sets
+   data-parts-shot on <html>). A real Ctrl+P from this page uses @page alone: one page, the right
+   margins. */
+@media print {
+  html[data-parts-shot] body.parts-paper {
+    padding: 0.6in 0.7in;
+  }
+}

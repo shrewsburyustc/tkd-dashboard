@@ -66,10 +66,10 @@ export const dragToReorder = (name) => `Drag to reorder ${name}`;
 export const editRankLabel = (name) => `Edit ${name}`;
 export const viewRankLabel = (name) => `View ${name}`;
 export const VIEW = 'View';
-export const GRIP_TOOLTIP = 'Drag to reorder';
-export const RETRY = 'Retry';
-export const DISMISS = 'Dismiss';
-export const BACK = 'Back';
+// The shared parts' words (GRIP_TOOLTIP 'Drag to reorder', RETRY, DISMISS, BACK, and CANCEL
+// below) live in src/components/text.js since Dashboard core step 1 (rulebook v1.030); they are
+// re-exported here with the same names and values, so every T.… import keeps working.
+export { GRIP_TOOLTIP, RETRY, DISMISS, BACK } from '../../components/text.js';
 export const UNDO = 'Undo';
 
 // ----- 7.3 Menus -----
@@ -77,7 +77,7 @@ export const MOVE_UP = 'Move up';
 export const MOVE_DOWN = 'Move down';
 export const DELETE_RANK = 'Delete rank';
 export const DELETE_CLASS = 'Delete class';
-export const CANCEL = 'Cancel';
+export { CANCEL } from '../../components/text.js'; // 'Cancel' — a shared word (see 7.2 above)
 
 // Second line of the phone sheet header for a rank.
 export function rankSheetLine(className, rankView) {

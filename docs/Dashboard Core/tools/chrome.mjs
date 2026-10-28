@@ -94,14 +94,23 @@ export async function withChrome(work) {
       async evaluate(expression) {
         return (await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true })).result.value;
       },
+      // Any other DevTools Protocol command, for a tool that needs one this file doesn't wrap
+      // (e.g. shoot-parts.mjs: Emulation.setFocusEmulationEnabled, print media, real key presses).
+      async cdp(method, params = {}) {
+        return send(method, params);
+      },
       // The page's full height in CSS pixels.
       async height() {
         const { cssContentSize } = await send('Page.getLayoutMetrics');
         return Math.ceil(cssContentSize.height);
       },
       // A PNG of part of the page (CSS pixels); the picture is `scale` times larger.
-      async shot(clip) {
-        const r = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { ...clip, scale: 1 } });
+      // beyond: true (the default) can picture parts of the page below the screen — but while it
+      // does, Chrome takes the keyboard focus off the page, so no focus ring is drawn. A picture
+      // that fits on the screen and must show the focus ring passes { beyond: false }
+      // (shoot-parts.mjs, 2026-10-27).
+      async shot(clip, { beyond = true } = {}) {
+        const r = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: beyond, clip: { ...clip, scale: 1 } });
         return Buffer.from(r.data, 'base64');
       },
       get scale() { return scale; },
