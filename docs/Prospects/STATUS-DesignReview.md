@@ -7,7 +7,7 @@ Order: **N17 first**, as its own reviewed step and commit. Then N1, N2, N4, N5, 
 | # | Change | Part | Status |
 |---|---|---|---|
 | N17 | Hide private details in Prospects: Email grays (no `mailto:` left), one gray line; answers "Hidden on this tablet" | 1 | **Done 2026-10-28.** Mockup OK'd by Jeffrey; built in `ProspectPanel.jsx`, `prospects/text.js`, `prospects.css`. Design and code reviews: the gray button first used colour names that don't exist (copied from Star's `results.css`); fixed to Black Belt's approved unavailable look. Committed on the branch, not merged or pushed |
-| N17-Q | Fill in / + Add prospect while the switch is on | 1 | **Decided 2026-10-28: A, desk-only** (rulebook v0.616, uncommitted). Mockups at four sizes sent (`DesignReview-v0616-prospects-mockup.png`, `DesignReview-v0616-forms-mockup.png`), waiting for Jeffrey's OK |
+| N17-Q | Fill in / + Add prospect while the switch is on | 1 | **Done 2026-10-28.** Jeffrey chose A, desk-only (rulebook v0.616); mockups OK'd; built in `Prospects.jsx`, `Forms.jsx`, `forms/FormsList.jsx`, both `text.js`, `prospects.css`. Reviews: code (a second-tab flip with the form chooser open could still reach Fill in, now blocked and the chooser closes; draft/closed menu items keep their own reason) and design (Draft row's Fill in grays too, as drawn). Left as is: a Fill in already open stays open if the switch flips in another tab (started at the desk; closing it would lose the typing). N17's Email now uses the v1.103 plain-button gray. Committed, not pushed |
 | N1 | "That prospect no longer exists." → the amber bar | 1 | Not started |
 | N2 | Undo for 5 s: Prospects' panel status; Forms' Close / Open (to settle: Joined) | 1 | Not started |
 | N4 | "Open form again" → "Open form"; door icons go | 1 | Not started |
@@ -26,4 +26,4 @@ Order: **N17 first**, as its own reviewed step and commit. Then N1, N2, N4, N5, 
 | N11 | Hints point to Settings → Classes and ranks | 2 | Waits for M15 / CB14 |
 | D10b | Calendar / Schedule red Remove stay red | — | No change |
 
-"(now)" points found on the way (not decided; ask Jeffrey where a fix changes the screen): dates taken in UTC; Forms' spots and waiver boxes on the live site; the kiosk's `forms-public.css`; builder "Delete field" without Undo; Prospects' search clear ✕; Edit statuses' grayed "Delete status".
+Open question for Jeffrey (found by the v0.616 design review): with the switch OFF, a Draft form's staff Fill in is disabled but drawn in the normal look; should it gray? "(now)" points found on the way (not decided; ask Jeffrey where a fix changes the screen): dates taken in UTC; Forms' spots and waiver boxes on the live site; the kiosk's `forms-public.css`; builder "Delete field" without Undo; Prospects' search clear ✕; Edit statuses' grayed "Delete status".

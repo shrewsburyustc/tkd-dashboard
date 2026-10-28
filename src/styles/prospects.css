@@ -973,17 +973,17 @@ body.is-card-dragging * {
   text-decoration: none;
 }
 
-/* Email while "Hide private details" is on (v1.000): the approved unavailable look, as Black
-   Belt's Email result (blackBelt/staff/results/results.css). Still focusable; pressing it does
-   nothing. Main has no shared gray for a plain button yet (Dashboard core's step 2 adds one), so
-   it lives here for now. */
+/* Email while "Hide private details" is on (v1.000): the approved unavailable look for a plain
+   button (v1.103: the same gray as .btn-primary.is-unavailable). Still focusable; pressing it does
+   nothing. shared.css has this gray only inside its own parts (a page-wide one comes with
+   Dashboard core's step 2), so it lives here for now. */
 .pcontact .pemail-off,
 .pcontact .pemail-off:hover,
 .pcontact .pemail-off:active {
-  border-color: var(--color-border);
+  border-color: var(--color-border-strong);
   background: var(--color-surface);
   color: var(--color-disabled-text);
-  cursor: default;
+  cursor: not-allowed;
 }
 
 /* the one gray line under Call · Text · Email that says why Email is off */
@@ -999,6 +999,26 @@ body.is-card-dragging * {
 .phidden-line svg {
   flex: none;
   margin-top: 1px;
+}
+
+/* the same kind of line under a page title: + Add prospect / Fill in are desk-only (v0.616).
+   Prospects and Forms both use it (this file is loaded for the whole dashboard). A page-wide
+   part like this belongs in shared.css: move it there with Dashboard core's step 2. */
+.phidden-line.pdesk-line {
+  margin: var(--space-4) 0 var(--space-12);
+}
+
+/* Forms' staff "Fill in" buttons while desk-only (v0.616): the same plain-button gray as Email
+   above. Kept here, not in forms.css: forms.css loads before app.css in the real build (it is
+   shared with the family page), so a rule there would lose to .btn:hover. When Dashboard core's
+   step 2 adds a page-wide .btn.is-unavailable to shared.css, this rule (and Email's) can go. */
+.flist-acts .btn.is-unavailable,
+.flist-acts .btn.is-unavailable:hover,
+.flist-acts .btn.is-unavailable:active {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
+  cursor: not-allowed;
 }
 
 /* a hidden form answer: gray "Hidden on this tablet" (v0.507) */
