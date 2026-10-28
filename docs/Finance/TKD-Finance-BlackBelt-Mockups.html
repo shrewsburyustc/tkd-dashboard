@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Black Belt payments mockups</title>
+<!--
+  Finance → Daily report: Black Belt testing payments and returned checks (mockups B1–B6).
+  Why it exists: Black Belt payments reach the Daily report before Black Belt's family form
+  opens (rulebook v0.808 Black Belt money, v0.809 returned checks, v1.034 build order). These
+  pictures show how they look BEFORE any code is written (rule "show before building").
+  Built on the approved Daily report mockups (TKD-Finance-DailyReport-Mockups.html, D1–D14):
+  same CSS, same app shell, same row layouts, updated to what the live preview does now
+  (Close the day… opens a dialog, v0.800; Refunds switch next to Print, v0.209; Camps on the rail).
+  Every screen is drawn at PC 1280 wide, tablet 820 wide (touch) and phone 390 wide (touch),
+  except where a screen says otherwise. The dashed gray line marks the bottom of the real screen.
+  AMBER SOLID OUTLINE (#d97706) + amber note = NEW. Everything without an outline exists today.
+  Amber text marked PROPOSAL = wording or behaviour to confirm.
+  Open with #B1 … #B6 at the end of the address to see one screen alone.
+  Sample data only: made-up students, Worcester, Wednesday Apr 28, 2027.
+  Self-contained (icons inlined) so it opens offline.
+-->
+<style>
+:root{--control-border:#8F8F8A;--page:#EFEFEC;--bg:#FFFFFF;--surface:#F7F7F5;--border:#E5E5E2;--border-strong:#CFCFCA;--text:#1F1F1F;--text2:#6B6B6B;--blue:#003595;--blue-tint:#E6EBF4;--ok:#3B6D11;--ok-tint:#EAF3DE;--warn:#633806;--warn-tint:#FAEEDA;--warn-border:#F2D9B0;--amber:#EF9F27;--toast:#1F1F1F;--backdrop:rgba(0,0,0,.35)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1360px;margin:0 auto;padding:24px 16px 48px}
+h1.doc{font-size:20px;font-weight:500;margin:0 0 4px}
+h2.scr{font-size:18px;font-weight:500;margin:40px 0 8px;padding-top:16px;border-top:1px solid var(--border-strong)}
+h2.scr:first-of-type{margin-top:16px}
+b{font-weight:500}
+.lead{color:var(--text2);font-size:14px;margin:0 0 12px;max-width:1100px}
+.explain{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:16px;max-width:1280px}
+.explain h3{font-size:13px;font-weight:500;margin:8px 0 2px}.explain h3:first-child{margin-top:0}
+.explain ul{margin:0;padding-left:18px}.explain li{margin:2px 0}
+.prop{color:var(--warn)}
+.cap{font-size:12px;color:var(--text2);margin:0 0 6px}
+.row2{display:flex;gap:24px;align-items:flex-start;margin-top:24px}
+/* device frames: fixed width, height grows; .fold marks the real screen bottom */
+.dev{background:var(--bg);border:1px solid var(--border-strong);position:relative;flex:none;overflow:hidden}
+.d-pc{width:1282px;border-radius:10px}
+.d-tab{width:832px;border-radius:18px;border:6px solid #2B2B2B}
+.d-ph{width:402px;border-radius:28px;border:6px solid #2B2B2B}
+.fold{position:absolute;left:0;right:0;border-top:2px dashed #B5B5B0;z-index:5;pointer-events:none}
+.fold span{position:absolute;right:8px;top:-18px;font-size:11px;color:#8A8A85;background:var(--bg);padding:0 4px}
+/* app shell */
+.app{display:flex;background:var(--bg);min-height:inherit}
+.app-col{flex:1;min-width:0;display:flex;flex-direction:column;position:relative}
+.rail{width:52px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 0;flex:none}
+.rail a{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;color:var(--text2)}
+.rail a i{font-size:18px}.rail a.on{background:var(--blue-tint);color:var(--blue)}
+.rail-t{width:72px;border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;flex:none}
+.rail-t a{display:flex;flex-direction:column;align-items:center;justify-content:center;width:64px;min-height:56px;border-radius:8px;color:var(--text2);font-size:12px;gap:2px}
+.rail-t a i{font-size:20px}.rail-t a.on{color:var(--blue)}.rail-t a.on i{background:var(--blue-tint);border-radius:8px;padding:4px 10px;box-sizing:content-box}
+.topbar{height:48px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 12px;flex:none}
+.grow{flex:1}
+.loc{display:flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;font-size:12px;height:32px}
+.touch .loc{height:36px}
+.loc span{display:flex;align-items:center;gap:4px;padding:0 12px;color:var(--text2)}
+.loc span.on{background:var(--blue-tint);color:var(--blue)}
+.loc span+span{border-left:1px solid var(--border)}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--surface);border:1px solid var(--control-border);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;flex:none}
+.content{padding:24px;flex:1}
+.d-ph .content{padding:16px}
+.phshell{display:flex;flex-direction:column;min-height:inherit}
+.phbar{border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:4px 0 10px;background:var(--bg);flex:none}
+.phbar a{display:flex;flex-direction:column;align-items:center;min-width:64px;min-height:48px;justify-content:center;font-size:12px;color:var(--text2);gap:2px}
+.phbar a i{font-size:20px}.phbar a.on{color:var(--blue)}
+/* page header + tabs (as Testing: .ptitle, .ttabs) */
+.ptitle{font-size:20px;font-weight:500;margin:0 0 8px}
+.ttabs{display:flex;gap:24px;border-bottom:1px solid var(--border);margin-bottom:16px}
+.ttab{height:40px;display:flex;align-items:center;font-size:13px;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px}
+.touch .ttab{height:44px}
+.ttab.on{color:var(--blue);border-bottom-color:var(--blue);font-weight:500}
+/* controls */
+.btn{height:32px;padding:0 14px;border-radius:8px;font-size:13px;display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--control-border);background:var(--bg);color:var(--text);white-space:nowrap;flex:none}
+.btn i{font-size:16px}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.touch .btn{height:36px}
+.ibtn{width:32px;height:32px;border:1px solid var(--control-border);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;flex:none;color:var(--text)}
+.ibtn i{font-size:16px}
+.touch .ibtn{width:36px;height:36px}
+.ibtn.plain{border-color:transparent}
+.input{height:32px;border:1px solid var(--control-border);border-radius:8px;padding:0 10px;display:inline-flex;align-items:center;font-size:13px;background:var(--bg);color:var(--text)}
+.touch .input{height:36px;font-size:14px}
+.input.ph{color:#8A8A85}
+.input.focus{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+.input.bad{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn)}
+.caret{display:inline-block;width:1px;height:16px;background:var(--text);margin-left:1px}
+textarea.input,.ta{height:auto;min-height:56px;align-items:flex-start;padding:6px 10px}
+.hint{font-size:12px;color:var(--text2)}
+.err{display:flex;gap:6px;align-items:flex-start;font-size:12px;color:var(--warn);margin-top:4px}
+.err i{font-size:14px;margin-top:2px}
+.lbl{font-size:12px;color:var(--text2);margin-bottom:4px}
+/* day row */
+.dayrow{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.day{font-size:16px;font-weight:500}
+.chip{font-size:12px;border:1px solid var(--control-border);border-radius:8px;padding:0 10px;height:32px;display:inline-flex;align-items:center}
+.touch .chip{height:36px}
+/* metric cards (rule 8) */
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.d-ph .cards{grid-template-columns:1fr 1fr;gap:8px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.card .l{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px}
+.card .l i{font-size:16px}
+.card .n{font-size:20px;font-weight:500;line-height:1.3}
+.card .s{font-size:12px;color:var(--text2)}
+/* tags */
+.tag{font-size:12px;border-radius:6px;padding:1px 8px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.tag i{font-size:14px}
+.tag.ok{background:var(--ok-tint);color:var(--ok)}
+.tag.warn{background:var(--warn-tint);color:var(--warn);border:1px solid var(--warn-border)}
+.tag.neutral{background:var(--surface);color:var(--text2);border:1px solid var(--border)}
+/* close-the-day box */
+.box{border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px}
+.d-ph .box{padding:12px}
+.box h4{font-size:16px;font-weight:500;margin:0 0 4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.box h4 i{font-size:18px;color:var(--text2)}
+.crow{display:grid;grid-template-columns:200px 130px 1fr;gap:12px;align-items:center;padding:6px 0;font-size:13px}
+.crow .exp{font-size:12px;color:var(--text2)}
+.d-ph .crow{grid-template-columns:1fr auto;gap:4px 8px}
+.d-ph .crow .k{grid-column:1/-1}
+.boxfoot{display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+/* payments table / cards */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-weight:500;font-size:12px;color:var(--text2);text-align:left;background:var(--surface);padding:0 8px;height:32px;border-bottom:1px solid var(--border)}
+td{padding:0 8px;border-bottom:1px solid var(--border);height:40px}
+.touch td{height:48px}
+td.r,th.r{text-align:right}
+.sub{color:var(--text2)}
+.small{font-size:12px}
+tr.grp td{background:var(--bg);font-weight:500;height:36px;border-bottom:1px solid var(--border-strong);padding-top:12px}
+.strike{text-decoration:line-through;color:var(--text2)}
+.pc{border-bottom:1px solid var(--border);padding:8px 0;min-height:44px;font-size:13px;display:flex;justify-content:space-between;gap:8px}
+.pc .r{text-align:right;white-space:nowrap}
+.pgrp{font-size:13px;font-weight:500;padding:12px 0 6px;border-bottom:1px solid var(--border-strong)}
+.pgrp span{font-weight:400;color:var(--text2)}
+/* the part this screen is about */
+.q{outline:3px dashed var(--amber);outline-offset:4px;border-radius:6px}
+/* toast (rule 8): bottom-right on PC/tablet, bottom-center above the bar on phones */
+.toast{position:absolute;background:var(--toast);color:#fff;border-radius:8px;padding:8px 12px;font-size:13px;display:flex;align-items:center;gap:10px;z-index:6}
+.toast .div{width:1px;align-self:stretch;background:#4A4A4A}
+.toast u{text-decoration:none;font-weight:500}
+/* banner */
+.banner{background:var(--warn-tint);color:var(--warn);border:1px solid var(--warn-border);border-radius:8px;padding:8px 12px;font-size:13px;display:flex;gap:8px;align-items:center;margin-bottom:16px}
+.banner i{font-size:16px}
+/* dialog */
+.dim{position:absolute;inset:0;background:var(--backdrop);z-index:7}
+.dlg{position:absolute;background:var(--bg);border-radius:12px;z-index:8;padding:20px 24px;box-shadow:0 8px 24px rgba(0,0,0,.15)}
+.dlg h3{font-size:16px;font-weight:500;margin:0;display:flex;align-items:center;gap:8px}
+.dlgfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.drow{display:grid;grid-template-columns:130px 1fr;gap:8px;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border)}
+.drow .k{color:var(--text2)}
+/* switch */
+.sw{display:inline-flex;align-items:center;gap:8px;font-size:13px}
+.sw .t{width:36px;height:20px;border-radius:10px;background:var(--blue);position:relative}
+.sw .t::after{content:"";position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:#fff}
+/* history list */
+.hrow td{cursor:pointer}
+/*ICONS*/
+.ti{display:inline-flex;align-items:center;justify-content:center;font-style:normal;line-height:1;flex:none;vertical-align:-0.125em}
+.ti::before{content:"";display:block;width:1em;height:1em;background-color:currentColor;-webkit-mask:var(--i) center/contain no-repeat;mask:var(--i) center/contain no-repeat}
+.ti-address-book{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M20 6v12a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2%22 /%3E %3Cpath d=%22M10 16h6%22 /%3E %3Cpath d=%22M11 11a2 2 0 1 0 4 0a2 2 0 1 0 -4 0%22 /%3E %3Cpath d=%22M4 8h3%22 /%3E %3Cpath d=%22M4 12h3%22 /%3E %3Cpath d=%22M4 16h3%22 /%3E %3C/svg%3E")}
+.ti-alert-triangle{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M12 9v4%22 /%3E %3Cpath d=%22M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0%22 /%3E %3Cpath d=%22M12 16h.01%22 /%3E %3C/svg%3E")}
+.ti-arrow-left{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M5 12l14 0%22 /%3E %3Cpath d=%22M5 12l6 6%22 /%3E %3Cpath d=%22M5 12l6 -6%22 /%3E %3C/svg%3E")}
+.ti-calendar{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12%22 /%3E %3Cpath d=%22M16 3v4%22 /%3E %3Cpath d=%22M8 3v4%22 /%3E %3Cpath d=%22M4 11h16%22 /%3E %3Cpath d=%22M11 15h1%22 /%3E %3Cpath d=%22M12 15v3%22 /%3E %3C/svg%3E")}
+.ti-calendar-event{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2l0 -12%22 /%3E %3Cpath d=%22M16 3l0 4%22 /%3E %3Cpath d=%22M8 3l0 4%22 /%3E %3Cpath d=%22M4 11l16 0%22 /%3E %3Cpath d=%22M8 15h2v2h-2l0 -2%22 /%3E %3C/svg%3E")}
+.ti-calendar-month{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12%22 /%3E %3Cpath d=%22M16 3v4%22 /%3E %3Cpath d=%22M8 3v4%22 /%3E %3Cpath d=%22M4 11h16%22 /%3E %3Cpath d=%22M8 14v4%22 /%3E %3Cpath d=%22M12 14v4%22 /%3E %3Cpath d=%22M16 14v4%22 /%3E %3C/svg%3E")}
+.ti-cash{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M7 15h-3a1 1 0 0 1 -1 -1v-8a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v3%22 /%3E %3Cpath d=%22M7 10a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v8a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1l0 -8%22 /%3E %3Cpath d=%22M12 14a2 2 0 1 0 4 0a2 2 0 0 0 -4 0%22 /%3E %3C/svg%3E")}
+.ti-cash-register{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M21 15h-2.5c-.398 0 -.779 .158 -1.061 .439c-.281 .281 -.439 .663 -.439 1.061c0 .398 .158 .779 .439 1.061c.281 .281 .663 .439 1.061 .439h1c.398 0 .779 .158 1.061 .439c.281 .281 .439 .663 .439 1.061c0 .398 -.158 .779 -.439 1.061c-.281 .281 -.663 .439 -1.061 .439h-2.5%22 /%3E %3Cpath d=%22M19 21v1m0 -8v1%22 /%3E %3Cpath d=%22M13 21h-7c-.53 0 -1.039 -.211 -1.414 -.586c-.375 -.375 -.586 -.884 -.586 -1.414v-10c0 -.53 .211 -1.039 .586 -1.414c.375 -.375 .884 -.586 1.414 -.586h2m12 3.12v-1.12c0 -.53 -.211 -1.039 -.586 -1.414c-.375 -.375 -.884 -.586 -1.414 -.586h-2%22 /%3E %3Cpath d=%22M16 10v-6c0 -.53 -.211 -1.039 -.586 -1.414c-.375 -.375 -.884 -.586 -1.414 -.586h-4c-.53 0 -1.039 .211 -1.414 .586c-.375 .375 -.586 .884 -.586 1.414v6m8 0h-8m8 0h1m-9 0h-1%22 /%3E %3Cpath d=%22M8 14v.01%22 /%3E %3Cpath d=%22M8 17v.01%22 /%3E %3Cpath d=%22M12 13.99v.01%22 /%3E %3Cpath d=%22M12 17v.01%22 /%3E %3C/svg%3E")}
+.ti-certificate{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M12 15a3 3 0 1 0 6 0a3 3 0 1 0 -6 0%22 /%3E %3Cpath d=%22M13 17.5v4.5l2 -1.5l2 1.5v-4.5%22 /%3E %3Cpath d=%22M10 19h-5a2 2 0 0 1 -2 -2v-10c0 -1.1 .9 -2 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -1 1.73%22 /%3E %3Cpath d=%22M6 9l12 0%22 /%3E %3Cpath d=%22M6 12l3 0%22 /%3E %3Cpath d=%22M6 15l2 0%22 /%3E %3C/svg%3E")}
+.ti-check{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M5 12l5 5l10 -10%22 /%3E %3C/svg%3E")}
+.ti-chevron-down{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M6 9l6 6l6 -6%22 /%3E %3C/svg%3E")}
+.ti-chevron-left{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M15 6l-6 6l6 6%22 /%3E %3C/svg%3E")}
+.ti-chevron-right{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M9 6l6 6l-6 6%22 /%3E %3C/svg%3E")}
+.ti-clipboard-text{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2%22 /%3E %3Cpath d=%22M9 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2%22 /%3E %3Cpath d=%22M9 12h6%22 /%3E %3Cpath d=%22M9 16h6%22 /%3E %3C/svg%3E")}
+.ti-clock{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0%22 /%3E %3Cpath d=%22M12 7v5l3 3%22 /%3E %3C/svg%3E")}
+.ti-credit-card{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M3 8a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3l0 -8%22 /%3E %3Cpath d=%22M3 10l18 0%22 /%3E %3Cpath d=%22M7 15l.01 0%22 /%3E %3Cpath d=%22M11 15l2 0%22 /%3E %3C/svg%3E")}
+.ti-dots{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M4 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E %3Cpath d=%22M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E %3Cpath d=%22M18 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E %3C/svg%3E")}
+.ti-download{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2%22 /%3E %3Cpath d=%22M7 11l5 5l5 -5%22 /%3E %3Cpath d=%22M12 4l0 12%22 /%3E %3C/svg%3E")}
+.ti-history{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M12 8l0 4l2 2%22 /%3E %3Cpath d=%22M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5%22 /%3E %3C/svg%3E")}
+.ti-home{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M5 12l-2 0l9 -9l9 9l-2 0%22 /%3E %3Cpath d=%22M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7%22 /%3E %3Cpath d=%22M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6%22 /%3E %3C/svg%3E")}
+.ti-lock{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6%22 /%3E %3Cpath d=%22M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0%22 /%3E %3Cpath d=%22M8 11v-4a4 4 0 1 1 8 0v4%22 /%3E %3C/svg%3E")}
+.ti-lock-check{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M11.5 21h-4.5a2 2 0 0 1 -2 -2v-6a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v.5%22 /%3E %3Cpath d=%22M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0%22 /%3E %3Cpath d=%22M8 11v-4a4 4 0 1 1 8 0v4%22 /%3E %3Cpath d=%22M15 19l2 2l4 -4%22 /%3E %3C/svg%3E")}
+.ti-lock-open{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2l0 -6%22 /%3E %3Cpath d=%22M11 16a1 1 0 1 0 2 0a1 1 0 1 0 -2 0%22 /%3E %3Cpath d=%22M8 11v-5a4 4 0 0 1 8 0%22 /%3E %3C/svg%3E")}
+.ti-map-pin{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0%22 /%3E %3Cpath d=%22M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0%22 /%3E %3C/svg%3E")}
+.ti-menu-2{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M4 6l16 0%22 /%3E %3Cpath d=%22M4 12l16 0%22 /%3E %3Cpath d=%22M4 18l16 0%22 /%3E %3C/svg%3E")}
+.ti-printer{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2%22 /%3E %3Cpath d=%22M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4%22 /%3E %3Cpath d=%22M7 15a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2l0 -4%22 /%3E %3C/svg%3E")}
+.ti-receipt{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2m4 -14h6m-6 4h6m-2 4h2%22 /%3E %3C/svg%3E")}
+.ti-refresh{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4%22 /%3E %3Cpath d=%22M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4%22 /%3E %3C/svg%3E")}
+.ti-report-money{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2%22 /%3E %3Cpath d=%22M9 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2%22 /%3E %3Cpath d=%22M14 11h-2.5a1.5 1.5 0 0 0 0 3h1a1.5 1.5 0 0 1 0 3h-2.5%22 /%3E %3Cpath d=%22M12 17v1m0 -8v1%22 /%3E %3C/svg%3E")}
+.ti-sum{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M18 16v2a1 1 0 0 1 -1 1h-11l6 -7l-6 -7h11a1 1 0 0 1 1 1v2%22 /%3E %3C/svg%3E")}
+.ti-x{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 %3E %3Cpath d=%22M18 6l-12 12%22 /%3E %3Cpath d=%22M6 6l12 12%22 /%3E %3C/svg%3E")}
+/*END-ICONS*/
+/* ===== Black Belt mockups: what is NEW ===== */
+:root{--new:#d97706;--new-tint:#FFF7ED;--new-text:#92400E}
+.new{outline:2px solid var(--new);outline-offset:3px;border-radius:6px;position:relative}
+.nn{display:inline-block;background:var(--new-tint);color:var(--new-text);border:1px solid var(--new);border-radius:4px;font-size:11px;line-height:16px;padding:0 6px;font-weight:500;white-space:nowrap;vertical-align:1px}
+.nnote{display:block;color:var(--new-text);background:var(--new-tint);border-left:3px solid var(--new);font-size:11.5px;line-height:1.4;padding:3px 8px;margin-top:4px;border-radius:0 4px 4px 0;white-space:normal;font-weight:400}
+.ntop{position:absolute;top:-11px;right:8px;z-index:4}
+tr.new{outline:none}
+tr.new td{box-shadow:inset 0 2px 0 var(--new),inset 0 -2px 0 var(--new)}
+tr.new td:first-child{box-shadow:inset 2px 2px 0 var(--new),inset 0 -2px 0 var(--new)}
+tr.new td:last-child{box-shadow:inset -2px 2px 0 var(--new),inset 0 -2px 0 var(--new)}
+tr.new td:only-child{box-shadow:inset 0 0 0 2px var(--new)}
+tbody.newgrp tr td{background:#FFFCF7}
+.pc.new{outline-offset:1px;padding-left:6px;padding-right:6px}
+/* Refunds switch (v0.209): chosen side gray */
+.rsw{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)}
+.seg{display:inline-flex;border:1px solid var(--control-border);border-radius:8px;overflow:hidden;height:32px}
+.touch .seg{height:36px}
+.seg span{display:flex;align-items:center;padding:0 10px;font-size:12px;color:var(--text2)}
+.seg span+span{border-left:1px solid var(--border)}
+.seg span.on{background:var(--surface);color:var(--text);font-weight:500}
+.acts{display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;margin-left:auto}
+.money{display:inline-flex;align-items:center;border:1px solid var(--control-border);border-radius:8px;height:32px;background:var(--bg);font-size:13px;overflow:hidden}
+.touch .money{height:36px;font-size:14px}
+.money .p{padding:0 6px 0 10px;color:var(--text2)}
+.money .v{padding-right:10px}
+.fexp{font-size:12px;color:var(--text2);margin-top:2px}
+.ccrow{display:grid;grid-template-columns:1fr auto 110px;gap:12px;align-items:center;padding:8px 0;font-size:13px;border-bottom:1px solid var(--border)}
+.d-ph .ccrow,.phdlg .ccrow{grid-template-columns:1fr auto;gap:6px 8px}
+.d-ph .ccrow .k,.phdlg .ccrow .k{grid-column:1/-1}
+.drow .tag{margin-left:6px}
+.hist{list-style:none;margin:0;padding:0;font-size:13px;line-height:1.7}
+.csvwrap{background:var(--bg);border:1px solid var(--border-strong);border-radius:10px;padding:16px;overflow:hidden;width:1282px}
+.csv td,.csv th{height:auto;padding:5px 6px;font-size:11px;white-space:nowrap;border:1px solid var(--border)}
+.csv td.num{text-align:right;font-variant-numeric:tabular-nums}
+.csv tr.new td{background:#FFFCF7}
+.stand{background:var(--bg);border:1px solid var(--border-strong);border-radius:12px;padding:20px 24px;box-shadow:0 8px 24px rgba(0,0,0,.08);width:540px}
+.d-320{width:332px}
+.stand h3{font-size:16px;font-weight:500;margin:0;display:flex;align-items:center;gap:8px}
+.ti-tent{--i:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22 class=%22icon icon-tabler icons-tabler-outline icon-tabler-tent%22 %3E %3Cpath stroke=%22none%22 d=%22M0 0h24v24H0z%22 fill=%22none%22 /%3E %3Cpath d=%22M11 14l4 6h6l-9 -16l-9 16h6l4 -6%22 /%3E %3C/svg%3E")}
+
+</style>
+</head>
+<body>
+<main>
+<h1 class="doc">Finance → Daily report · Black Belt payments and returned checks (6 screens)</h1>
+<p class="lead">Rules already decided: v0.808 (Black Belt money in the Daily report), v0.809 (returned checks), v1.034 (built next). Existing pieces follow v0.199 (corrections on the original day), v0.209 (refunds), v0.800 (Close the day in a dialog). Each screen is shown at PC (1280), tablet (820, touch) and phone (390, touch) unless it says otherwise. <b style="color:var(--new-text)">Amber solid outline + amber note = new.</b> No outline = exists today. <b style="color:var(--new-text)">PROPOSAL</b> = wording or behaviour for you to confirm. Sample day: Worcester, Wednesday Apr 28, 2027.</p>
+<div id="screens"></div>
+</main>
+
+<script>
+// ===== Sample data (Worcester, Wed Apr 28, 2027) =====
+const money = (n) => (n < 0 ? '−$' : '$') + Math.abs(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+const H = { pc: 800, tab: 1180, ph: 844 }; // real screen heights
+const NEWCHIP = '<span class="nn">NEW</span>';
+
+// Payments by group, in time order. bb = a Black Belt row (new in Finance).
+const CASH = [
+  { t: '10:04 AM', name: 'Mia Chen', what: 'Color belt testing', rest: 'May 2', amt: 65, by: 'Staff' },
+  { t: '11:15 AM', name: 'Grace Lee', what: 'Black Belt', rest: 'Spring 2027 · Payment 1 + Kukkiwon', amt: 1050, by: 'Staff', bb: 1 },
+];
+const CHECK = [
+  { t: '10:30 AM', name: 'Daniel Okafor', what: 'Black Belt', rest: 'Spring 2027 · Payment 2', amt: 900, by: 'Staff', bb: 1 },
+  { t: '4:20 PM', name: 'Henry Park', what: 'Black Belt', rest: 'Spring 2027 · In full', amt: 2700, by: 'Staff', bb: 1 },
+];
+const REFUNDS = [
+  { t: '2:45 PM', name: 'Sofia Alvarez', what: 'Black Belt', rest: 'Spring 2027 · card', amt: -150, by: 'Jeffrey Berg', bb: 1 },
+];
+const RETURNED = { t: '3:10 PM', name: 'Ethan Brooks', what: 'Black Belt', rest: 'Spring 2027 · Payment 1', amt: -900, by: 'Jeffrey Berg' };
+
+// ===== Shell (as D mockups; rail now has Camps, navItems.js) =====
+function shell(d, o) {
+  const { role = 'admin', loc = 'Worcester', body = '', overlay = '' } = o;
+  const av = role === 'admin' ? 'JB' : 'S';
+  const nav = [['home', 'Home'], ['certificate', 'Testing'], ['tent', 'Camps'], ['clock', 'Schedule'], ['calendar-month', 'Calendar'], ['clipboard-text', 'Forms'], ['address-book', 'Prospects'], ['report-money', 'Finance']];
+  const locs = d === 'ph' ? [['Worcester', 'Worc.'], ['Shrewsbury', 'Shrew.'], ['Both', 'Both']] : [['Worcester', 'Worcester'], ['Shrewsbury', 'Shrewsbury'], ['Both', 'Both']];
+  const locHtml = `<div class="loc">${locs.map(([k, l], i) => `<span class="${k === loc ? 'on' : ''}">${i === 0 && d !== 'ph' ? '<i class="ti ti-map-pin"></i>' : ''}${l}</span>`).join('')}</div>`;
+  const page = `<h1 class="ptitle">Finance</h1><div class="ttabs"><span class="ttab on">Daily report</span>${role === 'admin' ? '<span class="ttab">Settings</span>' : ''}</div>` + body;
+  if (d === 'ph') {
+    const phNav = [['home', 'Home'], ['calendar-month', 'Calendar'], ['address-book', 'Prospects'], ['menu-2', 'More']];
+    return `<div class="phshell" style="min-height:${H.ph - 12}px"><div class="topbar">${locHtml}<span class="grow"></span><span class="avatar">${av}</span></div>
+      <div class="content" style="position:relative">${page}</div>
+      <div class="phbar">${phNav.map(([i, l]) => `<a class="${l === 'More' ? 'on' : ''}"><i class="ti ti-${i}"></i>${l}</a>`).join('')}</div>${overlay}</div>`;
+  }
+  const rail = d === 'pc'
+    ? `<nav class="rail">${nav.map(([i, l]) => `<a class="${l === 'Finance' ? 'on' : ''}"><i class="ti ti-${i}"></i></a>`).join('')}</nav>`
+    : `<nav class="rail-t">${nav.map(([i, l]) => `<a class="${l === 'Finance' ? 'on' : ''}"><i class="ti ti-${i}"></i>${l}</a>`).join('')}</nav>`;
+  return `<div class="app" style="min-height:${H[d] - (d === 'pc' ? 2 : 12)}px">${rail}<div class="app-col"><div class="topbar"><span class="grow"></span>${locHtml}<span class="avatar">${av}</span></div><div class="content">${page}</div>${overlay}</div></div>`;
+}
+
+// Admin date row on an earlier day (v0.197, v0.200, v0.209 switch, v0.800 Close the day…).
+function dayRow(d, o = {}) {
+  const dt = o.date ?? { pc: 'Wednesday, April 28, 2027', tab: 'Wed, Apr 28, 2027', ph: 'Wed, Apr 28' };
+  if (d === 'ph') {
+    return `<div class="dayrow"><span class="ibtn"><i class="ti ti-chevron-left"></i></span><span class="day">${dt.ph}</span><span class="ibtn"><i class="ti ti-chevron-right"></i></span><span class="ibtn"><i class="ti ti-calendar"></i></span><span class="grow"></span><span class="ibtn plain" aria-label="More actions"><i class="ti ti-dots"></i></span></div>`;
+  }
+  const date = dt[d];
+  const sw = o.noRefunds || o.both ? '' : '<span class="rsw">Refunds<span class="seg"><span class="on">Own group</span><span>In groups</span></span></span>';
+  const close = o.noClose || o.both ? '' : '<span class="btn"><i class="ti ti-cash-register"></i>Close the day…</span>';
+  const pe = o.both ? '' : '<span class="btn"><i class="ti ti-printer"></i>Print</span><span class="btn"><i class="ti ti-download"></i>Export…</span>';
+  return `<div class="dayrow"><span class="ibtn"><i class="ti ti-chevron-left"></i></span><span class="day">${date}</span><span class="ibtn"><i class="ti ti-chevron-right"></i></span><span class="ibtn"><i class="ti ti-calendar"></i></span><span class="chip">Today</span><span class="btn"><i class="ti ti-history"></i>History</span>
+    <span class="acts">${sw}${close}${pe}</span></div>`;
+}
+
+// The four cards. undone = B5 (the returned mark was undone: Total no longer subtracts it).
+function cards(d, o = {}) {
+  const only = o.returnedOnly;
+  const total = only ? -900 : o.undone ? 4565 : 3665;
+  let sub = only ? 'after a $900.00 returned check' : o.undone ? 'after $150.00 refunds' : 'after $150.00 refunds and a $900.00 returned check';
+  if (o.short) sub = 'after refunds and a returned check <span class="nn">PROPOSAL</span>';
+  const noteText = only ? 'PROPOSAL (CONTRACT-0026 §2.2): a day with only a returned check. The Total is negative and its sub-line names only the returned check.'
+    : o.undone ? 'Undone mark: back to “after $X refunds” (v0.199: totals count what is true now)'
+    : o.short ? 'PROPOSAL, phones only: a shorter sub-line. The amounts are in the groups below.'
+    : 'NEW: Total also takes off the returned check (v0.809). Sub-line wording from your spec.';
+  const totalCard = `<div class="card new"><div class="l"><i class="ti ti-sum"></i>Total</div><div class="n">${money(total)}</div><div class="s">${sub}</div>
+    ${o.noNote ? '' : `<span class="nnote">${noteText}</span>`}</div>`;
+  const c = only ? ['$0.00', '0 payments', '$0.00', '0 payments'] : ['$1,115.00', '2 payments', '$3,600.00', '2 payments'];
+  return `<div class="cards">${totalCard}
+    <div class="card"><div class="l"><i class="ti ti-cash"></i>Cash</div><div class="n">${c[0]}</div><div class="s">${c[1]}</div></div>
+    <div class="card"><div class="l"><i class="ti ti-receipt"></i>Check</div><div class="n">${c[2]}</div><div class="s">${c[3]}</div></div>
+    <div class="card"><div class="l"><i class="ti ti-credit-card"></i>Card</div><div class="n">$0.00</div><div class="s">0 payments</div></div></div>
+    ${o.undone || only || o.noNote ? '' : `<div class="hint" style="margin:-8px 0 16px;color:var(--new-text)">Cash / Check / Card count money <b>in</b>, as today (Own group, v0.209). The returned check changes none of them: Close the day is not affected (v0.809).</div>`}`;
+}
+
+// The payments list. o.undone = B5. o.only = 'tail' shows only Refunds + Returned checks (B5).
+function list(d, o = {}) {
+  const base = o.ret ?? RETURNED;
+  const ret = o.undone
+    ? { ...base, strike: true, tag: '<span class="tag neutral">Undone</span>', note: 'Undone by Jeffrey Berg · Thu, Apr 29 · not counted' }
+    : { ...base, tag: '<span class="tag warn"><i class="ti ti-alert-triangle"></i>Returned check</span>', note: `Returned by the bank · handed in ${base.handedIn ?? 'Wed, Apr 14'}` };
+  const retHead = o.undone
+    ? `Returned checks <span>· 0 returned checks · $0.00 <span class="nn" style="font-weight:400">PROPOSAL</span> (1 undone, not counted)</span>`
+    : `Returned checks <span>· 1 returned check · −$900.00</span>`;
+  const groups = [
+    { key: 'cash', head: 'Cash <span>· 2 payments · $1,115.00</span>', rows: CASH },
+    { key: 'check', head: 'Check <span>· 2 payments · $3,600.00</span>', rows: CHECK },
+    { key: 'refunds', head: `Refunds <span>· 1 refund · −$150.00 <span class="nn" style="font-weight:400">NEW</span> (card −$150.00)</span>`, rows: REFUNDS },
+    { key: 'returned', head: retHead, rows: [ret], isNew: true },
+  ].filter(g => o.only === 'returned' ? g.key === 'returned' : o.only !== 'tail' || g.key === 'refunds' || g.key === 'returned');
+
+  const nameCell = (r) => `<span class="${r.strike ? 'strike' : ''}">${r.name}</span>${r.tag ? ' ' + r.tag : ''}${r.bb && !o.only ? ' ' + NEWCHIP : ''}`;
+  const isNewRow = (r) => r.bb && !o.only;
+  const groupNote = {
+    returned: o.undone
+      ? '<span class="nnote">PROPOSAL (v0.199): the undone mark shows on the day it was returned, struck through, not counted. Close the day stays unaffected, so no “Changed after closing”.</span>'
+      : o.ret ? '<span class="nnote">PROPOSAL: the only group on this day.</span>'
+      : `<span class="nnote">NEW group (v0.809), always last, after Refunds. One row per returned check. Time = when the return was recorded. Header shape copied from Refunds (<code>refundsHead</code>: “· 1 refund · −$150.00”).</span>`,
+    refunds: o.only ? '' : '<span class="nnote">NEW: Black Belt allows card refunds. Today the header lists only cash and check refunds; “card −$150.00” is added the same way.</span>',
+  };
+
+  if (d === 'ph') {
+    return groups.map(g => `<div class="${g.isNew ? 'new' : ''}" style="${g.isNew ? 'margin-top:14px;padding:0 4px 4px' : ''}"><div class="pgrp">${g.head}</div>${groupNote[g.key] || ''}` +
+      g.rows.map(r => `<div class="pc ${isNewRow(r) ? 'new' : ''}"><div><span class="fin-name">${nameCell(r)}</span><div class="sub small">${r.what} · ${r.rest}</div><div class="sub small">${r.t} · ${r.by}</div>${r.note ? `<div class="sub small">${r.note}</div>` : ''}</div><div class="r"><span class="${r.strike ? 'strike' : ''}">${money(r.amt)}</span></div></div>`).join('') + '</div>').join('');
+  }
+  const wide = d === 'pc';
+  const cols = wide ? 5 : 3;
+  const head = wide
+    ? '<tr><th style="width:96px">Time</th><th>Student</th><th>For</th><th class="r" style="width:110px">Amount</th><th style="width:130px">Recorded by</th></tr>'
+    : '<tr><th style="width:90px">Time</th><th>Student</th><th class="r">Amount</th></tr>';
+  const body = groups.map(g => `<tbody class="${g.isNew ? 'newgrp' : ''}"><tr class="grp ${g.isNew ? 'new' : ''}"><td colspan="${cols}">${g.head.replace('<span>', '<span class="sub" style="font-weight:400">')}${groupNote[g.key] || ''}</td></tr>` +
+    g.rows.map(r => `<tr class="${isNewRow(r) || g.isNew ? 'new' : ''}"><td class="sub">${r.t}</td><td>${nameCell(r)}${wide ? '' : `<div class="sub small">${r.what} · ${r.rest} · ${r.by}</div>`}${r.note ? `<div class="sub small">${r.note}</div>` : ''}</td>${wide ? `<td>${r.what} <span class="sub">· ${r.rest}</span></td>` : ''}<td class="r"><span class="${r.strike ? 'strike' : ''}">${money(r.amt)}</span></td>${wide ? `<td class="sub">${r.by}</td>` : ''}</tr>`).join('') + '</tbody>').join('');
+  return `<table><thead>${head}</thead>${body}</table>`;
+}
+
+// ===== Dialogs =====
+const drow = (k, v, isNew) => `<div class="drow ${isNew ? 'new' : ''}" style="${isNew ? 'margin:4px 0' : ''}"><span class="k">${k}</span><span>${v}</span></div>`;
+function dlgWrap(d, title, inner, foot, width = 540) {
+  const ph = d === 'ph';
+  const style = ph ? 'left:0;right:0;top:0;bottom:0;border-radius:0;padding:16px' : `left:50%;top:${d === 'pc' ? 70 : 110}px;transform:translateX(-50%);width:${width}px`;
+  return `<div class="dim"></div><div class="dlg ${ph ? 'phdlg' : ''}" style="${style}"><h3>${ph ? '<i class="ti ti-arrow-left"></i>' : ''}${title}<span class="grow"></span>${ph ? '' : '<i class="ti ti-x"></i>'}</h3>${inner}
+    <div class="dlgfoot" style="${ph ? 'flex-direction:column-reverse' : ''}">${foot}</div></div>`;
+}
+
+// B2: Close the day for Apr 28 (filled in, everything matches).
+function closeDlg(d) {
+  const ph = d === 'ph';
+  const mf = (v, w = 120) => `<span class="money" style="width:${w}px"><span class="p">$</span><span class="v">${v}</span></span>`;
+  const ok = '<span class="tag ok">Matches</span>';
+  const row = (k, exp, field, tag, extra = '') => `<div class="ccrow"><span class="k">${k}<div class="fexp">${exp}</div></span><span>${field}</span><span>${tag}</span>${extra ? `<div style="grid-column:1/-1;margin-top:-4px">${extra}</div>` : ''}</div>`;
+  const inner = `<div class="hint" style="margin:4px 0 8px">Count the drawer and type what you find. The dashboard compares it with this day’s payments.</div>
+    ${row('Cash counted in the drawer', 'Expected $1,115.00', mf('1,115.00'), ok)}
+    ${row('Checks in the drawer', 'Expected 2 checks, $3,600.00', `<span style="display:inline-flex;gap:8px"><span><div class="lbl">How many</div><span class="input" style="width:56px">2</span></span><span><div class="lbl">Total</div>${mf('3,600.00', 110)}</span></span>`, ok)}
+    <div class="new" style="padding:0 4px"><span class="nn ntop">NEW (Q20 B)</span>${row('Card machine total', 'Expected −$150.00 ($0.00 in − $150.00 refunded) · from the machine’s day report', mf('−150.00'), ok,
+      '<span class="nnote">Q20 B: card refunds come off the expected card total, written the same way as cash refunds (v0.209). This day had no card payments, so the machine’s total is −$150.00.</span>')}</div>
+    <div class="new" style="margin:12px 0 4px;padding:6px 8px"><span class="nn ntop">PROPOSAL</span><span class="hint" style="font-size:13px"><i class="ti ti-receipt" style="margin-right:6px"></i>The $900.00 returned check isn’t part of today’s drawer.</span></div>
+    <div style="margin-top:12px"><div class="lbl">Note <span>(needed when anything is short or over)</span></div><div class="input ta" style="width:100%;min-height:56px"></div></div>
+    <div class="hint" style="margin-top:8px">Saves the count with your name.</div>`;
+  const foot = `${ph ? '' : '<span class="btn">Cancel</span>'}<span class="btn btn-primary" style="${ph ? 'width:100%' : ''}"><i class="ti ti-lock-check"></i>Close the day</span>`;
+  return dlgWrap(d, 'Close the day', inner, foot, 600);
+}
+
+const HINT_BB = 'Payments are changed on the candidate’s page in Black Belt testing, not here.';
+const openBtn = (ph) => `<span class="btn new" style="${ph ? 'width:100%' : ''}">Open in Testing<i class="ti ti-chevron-right"></i></span>`;
+const hintNew = `<div class="new" style="margin-top:14px;padding:4px 6px"><span class="nn ntop">NEW wording</span><span class="hint">${HINT_BB}</span></div>`;
+const btnNote = '<div class="nnote" style="margin-top:10px">NEW: “Open in Testing ›” opens Black Belt testing on this cycle’s Candidates tab (Spring 2027, Worcester).</div>';
+
+// B3: a Black Belt payment's detail.
+function detailPay(d) {
+  const ph = d === 'ph';
+  const inner = `<div style="margin:12px 0">${drow('For', 'Black Belt · Spring 2027 · Payment 2 (Worcester)<span class="nnote">NEW: as <code>detailFor</code> (“what · date (school)”) but with no date: a cycle has several testing days.</span>', true)}${drow('Paid by', 'Check')}${drow('Amount', '$900.00')}${drow('Date paid', 'Wed, Apr 28, 2027')}${drow('Recorded', 'Wed, Apr 28, 10:30 AM by Staff')}</div>
+    <div class="lbl">History</div><ul class="hist"><li>Wed, Apr 28, 10:30 AM · Staff recorded $900.00 by check</li></ul>${hintNew}${btnNote}`;
+  return dlgWrap(d, 'Daniel Okafor · payment', inner, `${openBtn(ph)}${ph ? '' : '<span class="btn">Close</span>'}`);
+}
+
+// B4: the returned check's detail. undone = B5's version.
+function detailReturned(d, undone = false) {
+  const ph = d === 'ph';
+  const amt = undone ? '<span class="strike">−$900.00</span><span class="tag neutral">Undone</span>' : '−$900.00<span class="tag warn"><i class="ti ti-alert-triangle"></i>Returned check</span>';
+  const histNew = undone ? '<li class="new" style="padding:0 4px;margin:4px 0">Thu, Apr 29, 9:00 AM · Jeffrey Berg undid the returned mark <span class="nn">PROPOSAL</span></li>' : '';
+  const inner = `<div style="margin:12px 0">${drow('For', 'Black Belt · Spring 2027 · Payment 1 (Worcester)')}${drow('Returned check', amt, !undone)}${drow('Handed in', 'Wed, Apr 14, 2027' + (undone ? '' : ' <span class="nn">PROPOSAL</span>'), !undone)}${drow('Returned', 'Wed, Apr 28, 2027' + (undone ? '' : ' <span class="nn">PROPOSAL</span>'), !undone)}${drow('Recorded', 'Wed, Apr 28, 3:10 PM by Jeffrey Berg')}</div>
+    ${undone ? '' : '<div class="nnote" style="margin:-4px 0 10px">PROPOSAL: the title “· returned check”, the rows “Returned check” (instead of Paid by + Amount), “Handed in” and “Returned”, and the history words “marked it returned by the bank”. No “Date paid”.</div>'}
+    <div class="lbl">History</div><ul class="hist">${histNew}<li class="${undone ? '' : 'new'}" style="${undone ? '' : 'padding:0 4px;margin:4px 0'}">Wed, Apr 28, 3:10 PM · Jeffrey Berg marked it returned by the bank${undone ? '' : ' <span class="nn">PROPOSAL</span>'}</li><li>Wed, Apr 14, 4:05 PM · Staff recorded $900.00 by check</li></ul>
+    ${undone ? '' : hintNew + btnNote}`;
+  return { inner, foot: `${openBtn(ph)}${ph ? '' : '<span class="btn">Close</span>'}`, title: undone ? 'Ethan Brooks · returned check' : 'Ethan Brooks · <span class="new" style="padding:0 4px;font-weight:500">returned check</span> <span class="nn">PROPOSAL</span>' };
+}
+
+// ===== Screens =====
+const SCREENS = [];
+const S = (id, title, explain, render, sizes = ['pc', 'tab', 'ph']) => SCREENS.push({ id, title, explain, render, sizes });
+const report = (d, o = {}) => dayRow(d) + cards(d, o) + list(d, o);
+
+S('B1', 'Daily report with Black Belt payments and a returned check (admin, Worcester, Wed Apr 28, 2027)', `
+  <h3>What it shows</h3><ul>
+  <li><b>Black Belt rows</b> sit in their method’s group like any payment (v0.808). “For” = <b>Black Belt · &lt;cycle&gt; · &lt;what it’s for&gt;</b>, with no testing date. Amounts over $1,000 fit the Amount column.</li>
+  <li>“In full” is the one-payment plan’s name, shown only when the payment is for exactly Payment 1 (CONTRACT-0026 §2.1). “Payment 1 + Kukkiwon” is a payment for Payment 1 plus the Kukkiwon fee.</li>
+  <li><b>Refunds</b> group (v0.209, Own group): Sofia Alvarez’s <b>card</b> refund. The header adds “card −$150.00”, as it already does for cash and check.</li>
+  <li><b>Returned checks</b> group (new, v0.809), last, after Refunds: −$900.00, a warning-style <b>Returned check</b> tag and “Returned by the bank · handed in Wed, Apr 14” (who recorded it is in the Recorded by column). Wed, Apr 14 (the handed-in day) is <b>not shown here and does not change</b>: it stays counted and closed.</li>
+  <li><b>Total</b> = $65 + $1,050 + $900 + $2,700 − $150 − $900 = <b>$3,665.00</b>, “after $150.00 refunds and a $900.00 returned check”. <b>Cash</b> $1,115.00 (2) · <b>Check</b> $3,600.00 (2) · <b>Card</b> $0.00 (0): money in only, the same as today.</li></ul>
+  <h3 class="prop">Proposals to confirm</h3><ul class="prop"><li>The returned-check row’s Time column shows when the return was recorded (3:10 PM).</li><li>The Returned checks header reads “Returned checks · 1 returned check · −$900.00”, the same shape as Refunds (“· 1 refund · −$150.00”).</li></ul>`,
+  (d) => shell(d, { body: report(d) }));
+
+S('B2', 'Close the day for Wed, Apr 28', `
+  <h3>What it shows</h3><ul>
+  <li>The existing dialog (v0.800), counts typed in and all matching. <b>Cash</b> expected $1,115.00 ($65 + $1,050; the refund was by card, so cash isn’t touched). <b>Checks</b> 2, $3,600.00. <b>Card</b> expected −$150.00 ($0.00 in − $150.00 refunded): card refunds come off the card total, like cash (Q20 B).</li>
+  <li>The returned check changes nothing here (v0.809: Close the day is not affected on either day).</li></ul>
+  <h3 class="prop">Proposals to confirm</h3><ul class="prop">
+  <li>One quiet line under the figures: “The $900.00 returned check isn’t part of today’s drawer.” Only on days with a returned check.</li>
+</ul>`,
+  (d) => shell(d, { body: d === 'ph' ? '' : report(d), overlay: closeDlg(d) }));
+
+S('B3', 'A Black Belt payment’s details (Daniel Okafor, $900.00 check)', `
+  <h3>What it shows</h3><ul><li>The existing view-only detail (D12): For, Paid by, Amount, Date paid, Recorded, then History.</li>
+  <li><b>For</b>: “Black Belt · Spring 2027 · Payment 2 (Worcester)”, like <code>detailFor</code> but without a date. The school is the school <b>as recorded</b> (v0.808).</li>
+  <li><b>New hint</b>: “${HINT_BB}” <b>Open in Testing ›</b> opens Black Belt testing on that cycle’s <b>Candidates</b> tab.</li></ul>
+  <h3>Sizes</h3><ul><li>PC dialog and the phone full page, as asked. The tablet is the same dialog as PC.</li></ul>`,
+  (d) => shell(d, { body: d === 'ph' ? '' : report(d), overlay: detailPay(d) }), ['pc', 'ph']);
+
+S('B4', 'The returned check’s details (Ethan Brooks)', `
+  <h3>What it shows</h3><ul><li>Title “Ethan Brooks · returned check”. Rows: For · <b>Returned check</b> −$900.00 (with the tag) · <b>Handed in</b> Wed, Apr 14, 2027 · <b>Returned</b> Wed, Apr 28, 2027 · Recorded.</li>
+  <li>History, newest first: “Jeffrey Berg marked it returned by the bank”, then the original “Staff recorded $900.00 by check”.</li>
+  <li>The same hint and Open in Testing › as B3.</li></ul>
+  <h3 class="prop">Proposals to confirm</h3><ul class="prop"><li>The title “· returned check”, the rows Handed in and Returned, and the history words “marked it returned by the bank”.</li></ul>`,
+  (d) => { const x = detailReturned(d); return shell(d, { body: d === 'ph' ? '' : report(d), overlay: dlgWrap(d, x.title, x.inner, x.foot) }); }, ['pc', 'ph']);
+
+S('B5', 'PROPOSAL · a returned mark that was undone', `
+  <h3>What it shows</h3><ul><li>On Thu, Apr 29 Jeffrey undoes the “returned” mark (the bank had made a mistake). By v0.199 the correction shows on the <b>original day</b>, Wed, Apr 28: the row stays, <b>struck through</b>, with the existing gray <b>Undone</b> tag and “Undone by Jeffrey Berg · Thu, Apr 29 · not counted”.</li>
+  <li>The Total stops subtracting it: <b>$4,565.00</b>, “after $150.00 refunds”. The group header says nothing is counted.</li>
+  <li>The detail’s History gets “Thu, Apr 29, 9:00 AM · Jeffrey Berg undid the returned mark” on top.</li></ul>
+  <h3 class="prop">Proposals to confirm</h3><ul class="prop"><li>Group header: “Returned checks · 0 · $0.00 (1 undone, not counted)”. The “(1 undone, not counted)” part is invented wording.</li><li>No “Changed after closing” on Apr 28 for this, since a returned check never touches the drawer count (v0.809).</li></ul>
+  <h3>Sizes</h3><ul><li>PC and phone (the group only, below the cards), plus the detail dialog’s History.</li></ul>`,
+  (d) => shell(d, { body: dayRow(d) + cards(d, { undone: true }) + '<div class="hint" style="margin:0 0 8px">Cash and Check groups as in B1 (not repeated).</div>' + list(d, { undone: true, only: 'tail' }) }), ['pc', 'ph']);
+
+S('B6', 'Export (CSV): the new rows', `
+  <h3>What it shows</h3><ul><li>The same 14 columns as today (<code>csv.js</code>). This is a picture of the file in a spreadsheet, not a screen.</li>
+  <li>A Black Belt payment: For “Black Belt · Spring 2027 · Payment 2”, <b>Testing date empty</b> (a cycle has no single date).</li>
+  <li>The returned check is <b>its own row</b> (v0.809): Kind “Returned check”, Amount −900.00, Counted in total −900.00. Summing “Counted in total” still gives the day’s Total ($3,665.00).</li></ul>
+  <h3 class="prop">Proposals to confirm</h3><ul class="prop"><li>Paid by on the returned-check row = Check. Note = “Handed in 2027-04-14” (invented wording).</li><li>The last row shows the B5 case: Status “Undone”, Counted 0.00, and the Note keeps today’s undone note (<code>exportNote</code>: “undone by &lt;name&gt; on &lt;date&gt;”) after the handed-in date: “Handed in 2027-04-14 · undone by Jeffrey Berg on 2027-04-29”.</li><li>The card refund row is already exported as Kind “Refund”, Paid by “Card”.</li></ul>`,
+  'csv');
+
+// ===== B7: a day with ONLY a returned check (CONTRACT-0026 §2.2, all PROPOSAL) =====
+H.ph320 = 568; // a small phone's screen height (320 × 568)
+const MAY = { pc: 'Wednesday, May 12, 2027', tab: 'Wed, May 12, 2027', ph: 'Wed, May 12' };
+const RET_MAY = { t: '2:05 PM', name: 'Noah Rivera', what: 'Black Belt', rest: 'Spring 2027 · Payment 2', amt: -900, by: 'Jeffrey Berg', handedIn: 'Fri, Apr 30' };
+function onlyReturnedDay(d) {
+  const quiet = `<div class="box new" style="margin:4px 0 16px"><span class="nn ntop">PROPOSAL</span><div style="font-size:14px">Nothing to close: a returned check isn’t drawer money.</div>
+    <span class="nnote">No “Close the day…” button on this day (and none under ⋯ on phones). The box takes the place of D11’s “Nothing to close” box.</span></div>`;
+  return dayRow(d, { date: MAY, noRefunds: true, noClose: true }) + cards(d, { returnedOnly: true }) + quiet + list(d, { only: 'returned', ret: RET_MAY });
+}
+const MAYDAYS = [
+  ['Fri, May 14', 420, '—', ['neutral', 'Today · open']],
+  ['Thu, May 13', 135, 'Staff · 8:51 PM', ['ok', 'Closed']],
+  ['Wed, May 12', -900, '—', ['neutral', 'Nothing to close'], true],
+  ['Tue, May 11', 280, 'Staff · 8:40 PM', ['ok', 'Closed']],
+  ['Mon, May 10', 0, '—', ['neutral', 'No payments']],
+  ['Sun, May 9', 665, 'Staff · 1:42 PM', ['ok', 'Closed']],
+  ['Sat, May 8', 70, 'Jeffrey · 9:02 PM', ['ok', 'Closed']],
+];
+const tagH = ([k, t]) => `<span class="tag ${k}">${k === 'warn' ? '<i class="ti ti-alert-triangle"></i>' : ''}${t}</span>`;
+function historyMay(d) {
+  const ph = d === 'ph';
+  const top = `<div class="dayrow"><span class="${ph ? 'ibtn' : 'btn'}"><i class="ti ti-arrow-left"></i>${ph ? '' : 'Back to the day'}</span><span class="day">History</span><span class="grow"></span><span class="ibtn"><i class="ti ti-chevron-left"></i></span><b style="font-size:13px">${ph ? 'May 2027' : 'May 2027'}</b><span class="ibtn"><i class="ti ti-chevron-right"></i></span></div>
+    <div class="nnote" style="margin:0 0 12px">PROPOSAL: no amber “days this month weren’t closed” line. May 12 had only a returned check, so it isn’t counted as a day that needed closing. The Home reminder “earlier days weren’t closed” doesn’t count it either.</div>`;
+  const tagCell = (r) => r[4] ? `${tagH(r[3])} <span class="nn">PROPOSAL</span>` : tagH(r[3]);
+  if (ph) return top + MAYDAYS.map(r => `<div class="pc ${r[4] ? 'new' : ''}"><div>${r[0]}<div class="sub small">${r[2] === '—' ? '' : 'Closed by ' + r[2]}</div></div><div class="r">${money(r[1])}<div>${tagCell(r)}</div></div></div>`).join('');
+  return top + `<table><thead><tr><th>Day</th><th class="r">Total</th><th>Closed by</th><th>Status</th><th style="width:40px"></th></tr></thead><tbody>${MAYDAYS.map(r => `<tr class="${r[4] ? 'new' : ''}"><td>${r[0]}</td><td class="r">${money(r[1])}</td><td class="sub">${r[2]}</td><td>${tagCell(r)}</td><td class="r sub"><i class="ti ti-chevron-right"></i></td></tr>`).join('')}</tbody></table><div class="hint" style="margin-top:8px">Click a day to open its report. Newest first.</div>`;
+}
+S('B7', 'PROPOSAL · a day with only a returned check (Worcester, Wed May 12, 2027)', `
+  <h3>What it shows</h3><ul>
+  <li>Noah Rivera’s $900.00 check (handed in Fri, Apr 30) comes back from the bank and is marked returned on May 12. Nobody else paid that day.</li>
+  <li><b>Daily report:</b> only the Returned checks group. Total <b>−$900.00</b>, “after a $900.00 returned check”. Cash, Check and Card are all $0.00.</li>
+  <li><b>No “Close the day…”</b>: returned checks aren’t drawer money (v0.809), so this day has nothing to close. A quiet line says so.</li>
+  <li><b>History, May 2027:</b> May 12 shows its −$900.00 total with a neutral tag instead of the amber “Not closed”, and the month’s “days weren’t closed” line doesn’t count it.</li>
+  <li><b>Home:</b> the admin reminder “earlier days weren’t closed” doesn’t count May 12 either.</li></ul>
+  <h3 class="prop">Proposals to confirm</h3><ul class="prop"><li>All of this screen (CONTRACT-0026 §2.2).</li><li>The History tag for such a day: “Nothing to close” (gray, invented wording). The other choice is no tag at all.</li></ul>`,
+  null, ['pc', 'ph']);
+SCREENS[SCREENS.length - 1].custom = () =>
+  `${frame('pc', shell('pc', { body: onlyReturnedDay('pc') }), 'Daily report')}<div class="row2">${frame('ph', shell('ph', { body: onlyReturnedDay('ph') }), 'Daily report')}${frame('ph', shell('ph', { body: historyMay('ph') }), 'History')}</div>
+   <div class="row2">${frame('pc', shell('pc', { body: historyMay('pc') }), 'History')}</div>`;
+
+// ===== B8: Both schools (BothSummary.jsx; v1.022 / D3 "after $X refunds") =====
+function bothBoxes(d) {
+  const ph = d === 'ph';
+  const sc = (name, tot, n, cash, chk, card, after) => `<div class="box ${after ? 'new' : ''}" style="margin:0">${after ? '<span class="nn ntop">PROPOSAL</span>' : ''}<h4><i class="ti ti-map-pin"></i>${name}<span class="grow"></span><span class="tag neutral">Not closed yet</span></h4>
+    <div style="font-size:20px;font-weight:500;margin-top:4px">${tot} <span class="hint" style="font-weight:400">${n}${after ? ' · ' + after : ''}</span></div>
+    <div style="font-size:13px;margin:4px 0 12px">Cash ${cash} · Check ${chk} · Card ${card}</div><span class="btn">Open ${name}<i class="ti ti-chevron-right"></i></span></div>`;
+  return dayRow(d, { both: true }) +
+    `<div style="display:grid;grid-template-columns:${ph ? '1fr' : '1fr 1fr'};gap:16px;padding:2px">${sc('Worcester', '$3,665.00', '4 payments', '$1,115.00', '$3,600.00', '$0.00', 'after $150.00 refunds and a $900.00 returned check')}${sc('Shrewsbury', '$65.00', '1 payment', '$65.00', '$0.00', '$0.00', '')}</div>
+    <div class="new" style="font-size:13px;margin-top:16px;padding:4px 6px">Both schools together: <b>$3,730.00</b> · 5 payments · after $150.00 refunds and a $900.00 returned check <span class="nn">PROPOSAL</span></div>
+    <div class="hint" style="margin-top:8px">Each school closes its own drawer. Open a school to see its payments and close its day.</div>
+    <div class="nnote" style="margin-top:12px">Why: v1.022 works out “after $X refunds” as cash + check + card − total. Here that is $4,715.00 − $3,665.00 = $1,050.00, so it would wrongly say “after $1,050.00 refunds”, counting the $900.00 returned check as a refund. PROPOSAL: the Both answer sends the returned-check amount on its own, and each box (and the together line) names both: “after $150.00 refunds and a $900.00 returned check”. Only refunds → “after $X refunds”. Only a returned check → “after a $X returned check”.</div>`;
+}
+S('B8', 'PROPOSAL · Both schools, with a returned check (Wed Apr 28, 2027)', `
+  <h3>What it shows</h3><ul>
+  <li>The Both view (D6, <code>BothSummary.jsx</code>): one box per school and the two together. <b>Worcester</b> = B1’s day: $3,665.00, 4 payments, Cash $1,115.00 · Check $3,600.00 · Card $0.00. <b>Shrewsbury</b>: one $65.00 Color Belt cash payment.</li>
+  <li>Together: $3,665.00 + $65.00 = <b>$3,730.00</b>, 5 payments.</li></ul>
+  <h3 class="prop">Proposals to confirm</h3><ul class="prop"><li>Each box, and the together line, says “after $150.00 refunds and a $900.00 returned check” instead of v1.022’s single “after $X refunds”, which would call the returned check a refund ($1,050.00).</li><li>Shrewsbury has neither, so it shows no “after …” at all.</li></ul>`,
+  (d) => shell(d, { loc: 'Both', body: bothBoxes(d) }), ['pc', 'ph']);
+
+// ===== B9: B1 at 320 wide (touch): cards + Returned checks =====
+const small = (o) => shell('ph', { body: dayRow('ph') + cards('ph', o) + list('ph', { only: 'returned' }) });
+S('B9', 'B1 on a 320-wide phone: the cards and the Returned checks group', `
+  <h3>What it shows</h3><ul><li>The smallest screen the dashboard supports. The cards are two per row (about 140px each), so the Total’s long sub-line wraps.</li>
+  <li><b>Left:</b> the wording from B1, “after $150.00 refunds and a $900.00 returned check”: it wraps to 3 lines and stays readable. The Total card is a little taller than Cash next to it.</li>
+  <li><b>Right (optional):</b> a shorter phone wording, “after refunds and a returned check” (2 lines). The exact amounts stay in the Refunds and Returned checks group headers.</li></ul>
+  <h3 class="prop">Proposals to confirm</h3><ul class="prop"><li>Recommended: keep the long wording everywhere (left), since it reads fine at 320. The short wording (right, invented) is there only if you prefer equal-height cards.</li></ul>`,
+  null);
+SCREENS[SCREENS.length - 1].custom = () =>
+  `<div class="row2" style="margin-top:0">${frame('ph320', small({ noNote: true }), 'As B1')}${frame('ph320', small({ short: true, noNote: true }), 'PROPOSAL: shorter wording')}</div>`;
+
+function csvTable() {
+  const cols = ['Date', 'School', 'Time', 'First name', 'Last name', 'For', 'Testing date', 'Kind', 'Paid by', 'Amount', 'Counted in total', 'Recorded by', 'Status', 'Note'];
+  const R = (cls, c) => `<tr class="${cls}">${c.map((v, i) => `<td class="${i === 9 || i === 10 ? 'num' : ''}">${v}</td>`).join('')}</tr>`;
+  const rows = [
+    R('', ['2027-04-28', 'Worcester', '10:04', 'Mia', 'Chen', 'Color belt testing', '2027-05-02', 'Payment', 'Cash', '65.00', '65.00', 'Staff', 'Counted', '']),
+    R('new', ['2027-04-28', 'Worcester', '10:30', 'Daniel', 'Okafor', 'Black Belt · Spring 2027 · Payment 2', '', 'Payment', 'Check', '900.00', '900.00', 'Staff', 'Counted', '']),
+    R('new', ['2027-04-28', 'Worcester', '11:15', 'Grace', 'Lee', 'Black Belt · Spring 2027 · Payment 1 + Kukkiwon', '', 'Payment', 'Cash', '1050.00', '1050.00', 'Staff', 'Counted', '']),
+    R('new', ['2027-04-28', 'Worcester', '14:45', 'Sofia', 'Alvarez', 'Black Belt · Spring 2027', '', 'Refund', 'Card', '-150.00', '-150.00', 'Jeffrey Berg', 'Counted', '']),
+    R('new', ['2027-04-28', 'Worcester', '15:10', 'Ethan', 'Brooks', 'Black Belt · Spring 2027 · Payment 1', '', '<b>Returned check</b>', 'Check', '-900.00', '-900.00', 'Jeffrey Berg', 'Counted', 'Handed in 2027-04-14 <span class="nn">PROPOSAL</span>']),
+    R('new', ['2027-04-28', 'Worcester', '16:20', 'Henry', 'Park', 'Black Belt · Spring 2027 · In full', '', 'Payment', 'Check', '2700.00', '2700.00', 'Staff', 'Counted', '']),
+    `<tr><td colspan="14" class="sub" style="background:var(--surface)">B5 case, the same returned check after Jeffrey undid the mark on Apr 29 (shown on its original row’s day, v0.199):</td></tr>`,
+    R('new', ['2027-04-28', 'Worcester', '15:10', 'Ethan', 'Brooks', 'Black Belt · Spring 2027 · Payment 1', '', 'Returned check', 'Check', '-900.00', '0.00', 'Jeffrey Berg', 'Undone', 'Handed in 2027-04-14 · undone by Jeffrey Berg on 2027-04-29 <span class="nn">PROPOSAL</span>']),
+  ].join('');
+  return `<div class="csvwrap"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px"><i class="ti ti-download"></i><b>Worcester-2027-04-28-to-2027-04-28.csv</b><span class="sub">(opened in a spreadsheet)</span></div>
+    <table class="csv"><thead><tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
+    <div class="nnote" style="margin-top:10px">NEW: Black Belt rows (amber). “For” = “Black Belt · &lt;cycle&gt; · &lt;what it’s for&gt;”, built the way Camp rows add the camp’s name. Kind gets a new label, “Returned check”. Sum of “Counted in total” for Apr 28 = 3665.00. The refund row’s For has no “what it’s for” (a refund isn’t one payment).</div></div>`;
+}
+
+// ===== Render =====
+function frame(d, html, who) {
+  const cls = { pc: 'd-pc', tab: 'd-tab touch', ph: 'd-ph touch', ph320: 'd-ph d-320 touch' }[d];
+  const cap = (who ? who + ' · ' : '') + { pc: 'PC · 1280 wide, mouse', tab: 'Tablet · 820 wide, touch', ph: 'Phone · 390 wide, touch', ph320: 'Small phone · 320 wide, touch' }[d];
+  const foldTop = H[d] - (d === 'pc' ? 2 : 12);
+  return `<div><div class="cap">${cap}</div><div class="dev ${cls}" style="min-height:${H[d]}px">${html}<div class="fold" style="top:${foldTop}px"><span>screen bottom</span></div></div></div>`;
+}
+function renderScreen(s) {
+  if (s.render === 'csv') return csvTable();
+  if (s.custom) return s.custom();
+  if (s.id === 'B5') {
+    const x = detailReturned('pc', true);
+    return `<div class="row2" style="margin-top:0">${frame('pc', s.render('pc'))}</div><div class="row2">${frame('ph', s.render('ph'))}<div><div class="cap">Detail dialog (PC), History after the undo</div><div class="stand"><h3>${x.title}<span class="grow"></span><i class="ti ti-x"></i></h3>${x.inner}<div class="dlgfoot">${x.foot}</div></div></div></div>`;
+  }
+  const pc = s.sizes.includes('pc') ? frame('pc', s.render('pc')) : '';
+  const rest = s.sizes.filter(z => z !== 'pc').map(z => frame(z, s.render(z))).join('');
+  return `${pc}<div class="row2">${rest}</div>`;
+}
+const only = location.hash.replace('#', '');
+document.getElementById('screens').innerHTML = SCREENS.filter(s => !only || s.id === only).map(s => `
+  <section id="${s.id}"><h2 class="scr">${s.id} · ${s.title}</h2><div class="explain">${s.explain}</div>${renderScreen(s)}</section>`).join('');
+if (only) document.querySelector('h1.doc').style.display = document.querySelector('.lead').style.display = 'none';
+</script>
+</body>
+</html>

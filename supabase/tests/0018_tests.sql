@@ -325,7 +325,9 @@ declare
     'first_day', 'by_school', 'worcester', 'shrewsbury', 'closing_id', 'from', 'to', 'rows', 'counted_cents',
     'reminder_on', 'version', 'times', 'weekday', 'remind_at',
     -- 0014's own answers (its functions are called through t_call too)
-    'private_id', 'registration_version', 'amount_due_cents', 'result_cleared', 'registration_id'];
+    'private_id', 'registration_version', 'amount_due_cents', 'result_cleared', 'registration_id',
+    -- 0026 (Black Belt in Finance) added these keys to the answers
+    'returned', 'for_items', 'one_payment_plan', 'handed_in_on'];
   v_replaced text[] := array['finance_chain_steps_core', 'finance_chain_items', 'finance_money_rows_core',
                              'finance_figures_from', 'finance_closing_changes_from', 'finance_payment_detail'];
 begin

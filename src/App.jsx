@@ -944,6 +944,12 @@ export default function App() {
         return;
       }
       if (school && school !== 'Both' && school !== location) changeLocation(school);
+      // A Black Belt payment or returned check (Finance v0.815): Black Belt testing, on that cycle's
+      // Candidates tab (which follows the switcher, so it lists the payment's school).
+      if (source === 'black_belt') {
+        openBlackBelt({ cycleId: eventId ?? null, tab: eventId ? 'candidates' : undefined });
+        return;
+      }
       if (source === 'color_belt' && eventId) navigate('testing', { testingPage: 'colorBelt', eventId });
       // A Color Belt private testing payment has no event: Color belt testing's Private testing tab
       // (rulebook v0.813).
@@ -952,7 +958,7 @@ export default function App() {
         navigate('testing', { testingPage: 'colorBelt' });
       } else navigate('testing');
     },
-    [location, changeLocation, navigate],
+    [location, changeLocation, navigate, openBlackBelt],
   );
   const isAdminNow = profile?.role === 'admin';
   // Who may be where: private details hidden → no Finance at all (Home instead); staff → no History or

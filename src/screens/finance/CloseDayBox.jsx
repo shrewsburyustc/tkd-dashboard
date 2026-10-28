@@ -19,6 +19,12 @@
 // Refunds (v0.209): the cash expected is cash in − cash refunded, and the Expected line says so.
 // When more cash went out than came in, the cash line asks "Cash taken out of the drawer"
 // instead (a positive number, sent to the database as a minus amount).
+// Card refunds (Black Belt, v0.814 / mockup B2): the card machine total expected is card in −
+// card refunded, written the same way ("Expected −$150.00 ($0.00 in − $150.00 refunded) · from
+// the machine’s day report"). When that is below zero the card field accepts a minus sign
+// ("−150.00", as B2 draws it), because the machine's own day total is then negative.
+// Returned checks (v0.809) are never part of the drawer: on a day with some, one quiet line says
+// so ("The $900.00 returned check isn’t part of today’s drawer.", B2).
 //
 // If saving fails (D13) the dialog keeps everything typed, shows a Not saved tag and the error
 // INSIDE the dialog right above the button, and the button becomes "Retry close the day".
@@ -29,7 +35,8 @@
 //   draft          { cash, count, checks, card, note, tried, failed } — what is typed (strings)
 //   onDraftChange  (patch) => void
 //   expected       financeRules.expectedValues(totals, refunds)
-//   totals, refunds  from finance_day (for the Expected cash breakdown)
+//   totals, refunds  from finance_day (for the Expected cash and card breakdowns)
+//   returned       finance_day's returned ({ count, cents }) — the quiet line (B2); may be missing
 //   isToday        the hint says "today's payments" on today
 //   saving         true while the close is on its way
 //   isPhone        full-width button (the single submit button of a phone form, rule 2.1)
@@ -37,7 +44,7 @@
 //   onCancel       () => void — Cancel / Esc / back arrow (the draft is kept)
 //   notice         an amber line to show inside the dialog (e.g. "Someone else changed this…"), or null
 import { useId } from 'react';
-import { IconAlertTriangle, IconLockCheck, IconRefresh } from '@tabler/icons-react';
+import { IconAlertTriangle, IconLockCheck, IconReceipt, IconRefresh } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import { closeResults, compareCount, anyDifference } from '../../lib/finance/financeRules.js';
 import { parseCount, parseMoney } from './format.js';
@@ -50,7 +57,8 @@ export function checkDraft(draft, expected) {
   const cash = parseMoney(draft.cash);
   const count = parseCount(draft.count);
   const checks = parseMoney(draft.checks);
-  const card = parseMoney(draft.card);
+  // A minus sign only when the machine's total is expected below zero (card refunds > card in).
+  const card = parseMoney(draft.card, { allowMinus: expected.cardCents < 0 });
   const filled = [cash, count, checks, card].every((p) => p.problem !== 'empty');
   const moneyError = (p) => (p.problem === 'notNumber' ? T.FIELD_NOT_NUMBER : p.problem === 'tooHigh' ? T.FIELD_TOO_HIGH : null);
   const countError = (p) => (p.problem === 'notNumber' ? T.FIELD_COUNT_NOT_NUMBER : p.problem === 'tooHigh' ? T.FIELD_COUNT_TOO_HIGH : null);
@@ -112,7 +120,10 @@ function checksTag(r) {
 }
 
 // One money field with a "$" in front (the same look as Testing's price fields).
-function MoneyField({ id, value, onChange, invalid, describedBy, className = '', autoFocus = false }) {
+// allowMinus: the phone keyboard must offer a minus key. A "decimal" keypad (iPhone) has
+// none, so a field that may need "−150.00" (card refunds bigger than card money in,
+// v0.814) asks for the full keyboard instead.
+function MoneyField({ id, value, onChange, invalid, describedBy, className = '', autoFocus = false, allowMinus = false }) {
   return (
     <span className={`money fin-money ${className}`.trim()}>
       <span className="money-prefix" aria-hidden="true">
@@ -122,7 +133,7 @@ function MoneyField({ id, value, onChange, invalid, describedBy, className = '',
         id={id}
         className="money-input"
         type="text"
-        inputMode="decimal"
+        inputMode={allowMinus ? 'text' : 'decimal'}
         autoComplete="off"
         placeholder="0.00"
         value={value}
@@ -135,7 +146,7 @@ function MoneyField({ id, value, onChange, invalid, describedBy, className = '',
   );
 }
 
-export default function CloseDayBox({ draft, onDraftChange, expected, totals, refunds, isToday, saving, isPhone, onCloseDay, onCancel, notice }) {
+export default function CloseDayBox({ draft, onDraftChange, expected, totals, refunds, returned = null, isToday, saving, isPhone, onCloseDay, onCancel, notice }) {
   const id = useId();
   const check = checkDraft(draft, expected);
   const results = check.results;
@@ -148,10 +159,17 @@ export default function CloseDayBox({ draft, onDraftChange, expected, totals, re
   if (cashOut) cashExpected = T.expectedCashOut(-expected.cashCents, cashIn, cashRefunded);
   else if (cashRefunded > 0) cashExpected = T.expectedCashWithRefunds(expected.cashCents, cashIn, cashRefunded);
   else cashExpected = T.expectedCash(expected.cashCents);
+  // Card (v0.814): with card refunds, "Expected $X ($Y in − $Z refunded) · from the machine’s day report".
+  const cardRefunded = -(refunds?.card_cents ?? 0); // a positive amount
+  const cardExpected = cardRefunded > 0
+    ? T.expectedCardWithRefunds(expected.cardCents, totals?.card?.cents ?? 0, cardRefunded)
+    : T.expectedCard(expected.cardCents);
+  // Returned checks on this day: one quiet line (B2). They never change any figure here.
+  const returnedCount = returned?.count ?? 0;
 
   // A field's tag shows once that field holds a valid number (the preview, as people type).
   const cashParsed = parseMoney(draft.cash);
-  const cardParsed = parseMoney(draft.card);
+  const cardParsed = parseMoney(draft.card, { allowMinus: expected.cardCents < 0 });
   const cashTag = cashParsed.cents !== undefined
     ? moneyTag(compareCount(expected.cashCents, cashOut ? -cashParsed.cents : cashParsed.cents))
     : null;
@@ -268,12 +286,13 @@ export default function CloseDayBox({ draft, onDraftChange, expected, totals, re
         <div className="fin-crow-label">
           <label htmlFor={`${id}-card`}>{T.CARD_LABEL}</label>
           <p id={`${id}-card-exp`} className="fin-exp">
-            {T.expectedCard(expected.cardCents)}
+            {cardExpected}
           </p>
         </div>
         <div className="fin-crow-field">
           <MoneyField
             id={`${id}-card`}
+            allowMinus={expected.cardCents < 0}
             value={draft.card}
             invalid={Boolean(showError('card'))}
             describedBy={`${id}-card-exp${showError('card') ? ` ${id}-card-err` : ''}`}
@@ -285,6 +304,13 @@ export default function CloseDayBox({ draft, onDraftChange, expected, totals, re
           {cardTag && <ResultTag {...cardTag} />}
         </div>
       </div>
+
+      {returnedCount > 0 && (
+        <p className="fin-hint fin-close-returned">
+          <IconReceipt size={16} aria-hidden="true" />
+          {T.returnedNotInDrawer(returned.cents, returnedCount, isToday)}
+        </p>
+      )}
 
       {/* The note appears once all three counts are filled in (D2). */}
       {ready && (
