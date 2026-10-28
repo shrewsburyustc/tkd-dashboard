@@ -1480,11 +1480,18 @@ check('events mock: who may call each function (A / S splits)', () => {
     testing_private_set_result_note: { p_private_id: anyId, p_note: 'x' },
     testing_move_to_private: { p_registration_id: anyId, p_expected_version: 1, p_private_date: '2026-12-01', p_private_time: '16:00' },
     testing_private_undo_move: { p_private_id: anyId, p_expected_version: 1 },
+    // 0030 (S unless marked A).
+    testing_mark_paid_by: { p_registration_id: anyId, p_expected_version: 1, p_method: 'card', p_expected_cents: 6500 },
+    testing_private_mark_paid_by: { p_private_id: anyId, p_expected_version: 1, p_method: 'card', p_expected_cents: 8500 },
+    testing_registration_history: { p_registration_id: anyId },
+    testing_private_history: { p_private_id: anyId },
+    testing_results_csv: { p_event_id: anyId }, // A
   };
   assert.deepEqual(Object.keys(sample).sort(), [...EVENT_RPC_NAMES].sort());
   // testing_restore_student checks who inside (staff: their own "keep one" for 10 seconds).
   const adminOnly = ['testing_add_event', 'testing_update_event', 'testing_delete_event', 'testing_edit_payment', 'testing_withdraw_student', 'testing_delete_student', 'settings_update_school_address', 'settings_update_school_contact',
-    'testing_private_edit_payment', 'testing_private_restore', 'testing_private_delete']; // the last three: phase 4
+    'testing_private_edit_payment', 'testing_private_restore', 'testing_private_delete', // phase 4
+    'testing_results_csv']; // 0030
   assert.deepEqual([...EVENT_ADMIN_ONLY_RPCS].sort(), [...adminOnly].sort());
   const before = JSON.stringify(evDb());
   for (const name of EVENT_RPC_NAMES) {

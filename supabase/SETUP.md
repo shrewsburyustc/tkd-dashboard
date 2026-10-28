@@ -2686,3 +2686,61 @@ Tested in PGlite on every run (`run.mjs` step0031: the undo file exactly as name
 - **Display only:** the rulebook (v0.619) says a form never hides or blocks a class because of a child's age, so no booking rule reads this table.
 
 ---
+
+## Migration 0030: Color Belt — Mark paid with a way to pay, History, results CSV
+
+**Status: NOT APPLIED** (built on `color-belt`, rulebook v0.418; plan `docs/Testing/Color Belt Testing/TKD-ColorBelt-0030-Plan.md`). Needs Jeffrey's OK and a separate security review before it is pasted. Apply it **before** the app version with the new Mark paid box, History line and CSV button is deployed. The live site keeps working after it: the old 2-argument Mark paid functions are not changed, and Undo payment answers exactly as before.
+
+**Production order:** … 0025 → 0027 → 0026 → 0029 → 0031 (all live) → **0030**. It needs 0005, 0010, 0014 and 0018 — it stops with "0030 needs migrations 0005, 0010 and 0014 (Color Belt testing) first" or "0030 needs migration 0018 … first" if one is missing.
+
+**What it does** (`supabase/migrations/0030_color_belt_review.sql`):
+- **CB1 — Mark paid with a way to pay** (new names; the old `testing_mark_paid` / `testing_private_mark_paid` stay until a later small migration removes them):
+  - `testing_mark_paid_by(p_registration_id uuid, p_expected_version integer, p_method text, p_expected_cents integer)` and `testing_private_mark_paid_by(p_private_id uuid, p_expected_version integer, p_method text, p_expected_cents integer)` — the old bodies (the database works out the amount: early / testing-day price; for a private testing what is still owed, so a part payment is "topped up"), plus: `p_method` must be `cash` / `check` / `card`; if the worked-out amount is not `p_expected_cents` (the amount the box showed — e.g. the testing-day price started at midnight) **nothing is written** and the answer is `{"status":"price_changed","amount_cents":n}` (Q1); the payment's `method` is `p_method` (Finance's Cash / Check / Card totals read only that).
+  - **"Paying by" follows the way they paid (Q2):** if `p_method` is not the student's `paying_by`, `paying_by` becomes `p_method` in the same update and batch (logged as `mark_paid` / `private_mark_paid`), and the payment row remembers the old value in a new column **`paying_by_before`** (text, null; on `testing_payments` and `testing_private_payments`; check rule: only on a payment, cash / check / card, never equal to the method). The payment tables stay append-only, so the value can't change later. Read rights follow each table's own rule: not readable on `testing_payments` (0005 lists its columns), readable by `authenticated` on `testing_private_payments` (0014: every column but the login ids). Finance names its columns, so nothing there changes.
+  - Statuses, in order: `no_access`, `invalid`, `not_found`, `stale` (also a double click), `withdrawn` / `cancelled`, `already_paid`, `price_changed`, `ok` `{"status","payment_id","amount_cents","method","paid_on","paying_by","version"}`.
+- **Undo payment puts "Paying by" back — two functions REPLACED in place** (same names, arguments and rights): `testing_undo_payment(uuid)` and `testing_private_undo_payment(uuid)`, their live bodies plus one thing: if the undone payment has `paying_by_before` **and** the student's `paying_by` is still the payment's method, `paying_by` goes back to `paying_by_before` (same update and batch, logged as `undo_payment` / `private_undo_payment`). Payments made by the old functions: nothing extra. Their answer stays `{"status":"ok","version":n}`. **Their fingerprints change** (see 0030c).
+- **CB7 — History:** `testing_registration_history(p_registration_id uuid)` and `testing_private_history(p_private_id uuid)` — the change-log rows of the registration / private testing, its result and its payments (payments found through their insert rows, then matched by table + id, as Star's `star_candidate_history`), newest first, at most 500, only `occurred_at, actor_name, action, table_name, op, before, after`. A private testing moved from an event shows **only its own rows** (Q4: its insert row names the event; the earlier rows stay on the registration). Login ids are removed by the helper `testing_history_strip(jsonb)` (`created_by`, `updated_by`, `withdrawn_by`, `recorded_by`, `cancelled_by`, `submission_id`; a signature only as "on file"), which nobody in the app may call. Statuses `no_access`, `invalid`, `not_found`, `ok` `{"rows":[…]}`.
+- **CB18 — results CSV:** table **`public.testing_downloads`** (who, when, which event, how many rows; RLS on, no rights, no read rules — SQL Editor only; insert only through the CSV function, update / delete refused by the guard `testing_downloads_guard`, truncate refused; not in `change_log`) and **`testing_results_csv(p_event_id uuid)`**: `has_data_access()` first (`no_access`), then admins only (`not_allowed`), `invalid`, `not_found`; writes the download row **first**, then returns `{"status":"ok","event":{id,name,testing_date,location_code,location_name},"rows":[{registration_id, reference, first_name, last_name, class_name, start_time, end_time, current_belt, testing_for, result, note, paying_by, paid, paid_cents, paid_on, paid_method}]}` — one row per **active** student (removed, duplicate copies and moved-to-private left out), in class / belt / name order. Never signatures, login ids or staff names. **The app must make cells that start with = + - @ safe when it writes the file** (the grader's note is free text).
+- Every app function: security definer, `search_path = ''`, `has_data_access()` first, no argument defaults, revoked from public, anon, authenticated and service_role, granted to `authenticated` only. Nothing for anon or `testing_registrar`.
+
+### 0030a. Before you apply (Claude, read-only through the connection)
+
+1. Claude runs `supabase/tests/0003_fingerprints.sql`, `0005_fingerprints.sql`, `0014_fingerprints.sql` and `0030_fingerprints.sql` and keeps the results (the "before" record for 0030c and the undo). Before 0030, `0030_fingerprints.sql` shows only the two live Undo payment functions; their lines must equal the ones `run.mjs` prints for the tested copy before 0030 (0005's `testing_undo_payment` md5 `d55d54b4e0f42a181fc09e5b42387f42`, 0014's `testing_private_undo_payment` md5 `66410dd1e308471a10afe41e7395bdad`). **Different → stop**: the live function changed since and 0030 must be rebuilt on the newer code first.
+
+### 0030b. Apply 0030 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0030_color_belt_review.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Supabase may warn about destructive operations: the words are only in `drop trigger if exists` lines (re-run safety) and in the download guard's refusal text. Nothing is removed. Confirm.
+3. "Success." One transaction: on any error nothing is kept. Copy the error to Claude.
+
+**Running it again is safe** (tested: no fingerprint changes). **If 0005 or 0014 is ever re-run after 0030, re-run 0030 straight after it** — they put back the Undo payment that doesn't restore "Paying by", and 0014 resets the private payments' column rights.
+
+### 0030c. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0030_fingerprints.sql` must match what `run.mjs` printed ("0030 fingerprints"): 18 lines — the 9 functions (the 7 app functions `rights=authenticated:EXECUTE,postgres:EXECUTE`, `definer=true`; `testing_history_strip` and `testing_downloads_guard` `rights=postgres:EXECUTE`, `definer=false`; all `settings=search_path=""`), `testing_downloads` (`rls=true … rights= columns= policies=`), its 2 triggers and 2 rules, the 2 `paying_by_before` columns and their 2 rules. Tested body md5s: `testing_undo_payment` `288ea3ca644ad5301e584cf060ff40c9`, `testing_private_undo_payment` `8aaf68d52f2f65a05e0e9aa65666cfae`, `testing_mark_paid_by` `d43f4bab7a1fdf970eed5a7851a4b326`, `testing_private_mark_paid_by` `fb09eddf5771f5adfa3919164770f0d2`, `testing_registration_history` `ef77ef0f19dd45bab94d36a1f249d72d`, `testing_private_history` `8802789c36fe27b3bbbd42fe125ee75b`, `testing_results_csv` `fa0383b25d1a71fb0aaa966f99e107b0`, `testing_history_strip` `71a85b80f7804246d62e4a6c2db3d281`, `testing_downloads_guard` `407b4928f4c28bfb8cf2a9dab73a2336`. The file contains neither of the words the connection refuses.
+2. Compared with 0030a: `0003_fingerprints.sql` differs **only** in the `testing_undo_payment` and `testing_private_undo_payment` lines (body md5; rights, owner, settings the same) and the 7 new `testing_*` lines; `0005_fingerprints.sql` **only** in `testing_undo_payment`'s line (body md5); `0014_fingerprints.sql` **only** in `testing_private_undo_payment`'s line (body md5), the `testing_private_payments` table line (one more column right: `paying_by_before>authenticated:SELECT`) and one new rule line (`testing_private_payments_paying_by_before_check`). Every other migration's fingerprints: unchanged (`run.mjs` step0030 checks exactly that).
+3. **Security advisor:** nothing new.
+
+### 0030d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0030_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0030 TESTS PASSED**. It makes its own `zz cb30 …` class and two Worcester events (today and in 5 days) and rolls everything back. Supabase may warn about destructive operations (removals of the download log are tested to be refused). Confirm.
+2. Then `0005_tests.sql`, `0010_tests.sql`, `0014_tests.sql`, `0018_tests.sql` and `0026_tests.sql` again — all must still pass.
+3. Put the placeholders back afterwards.
+
+### 0030e. Undo 0030 (only with Jeffrey's OK)
+
+1. **Roll the app back first:** the app version with the new Mark paid box, History line and CSV button must **not** be live (it would call functions that are gone).
+2. Paste **the whole file** `supabase/manual/0030u_undo_color_belt_review.sql` in the SQL Editor → **Run**. It puts back the exact live `testing_undo_payment` (0005 section 14k) and `testing_private_undo_payment` (0014 section 8f) with their rights, removes the six new functions, removes `paying_by_before` (and its rules) from both payment tables (payments, amounts, methods and "Paying by" values stay as they are), and removes `testing_downloads` and its guard **only if the log is empty** — if anyone downloaded a CSV, the log is kept and a notice says so. One transaction. Supabase warns about destructive operations — this time they are real. Confirm only if you mean it.
+3. Claude checks: `0003_fingerprints.sql`, `0005_fingerprints.sql`, `0014_fingerprints.sql` and `0030_fingerprints.sql` match 0030a's record (if the log was kept, `0003_fingerprints.sql` and `0030_fingerprints.sql` still show `testing_downloads_guard` and the table). Then run `0005_tests.sql`, `0010_tests.sql`, `0014_tests.sql`, `0018_tests.sql`, `0026_tests.sql`.
+4. To redo: paste 0030 again (safe).
+
+Tested in PGlite on every run (`run.mjs` step0030: the undo file exactly as named here; afterwards every fingerprint file equals the one before 0030 and the tests pass; a log with rows is kept; 0030 again gives the tested fingerprints and `0030_tests.sql` passes).
+
+**Why:**
+- **New Mark paid names, old ones kept:** the live site calls the 2-argument functions; replacing them would break it until the new app is deployed. A later small migration removes them.
+- **A column, not the history, remembers the old "Paying by":** the payment row is the one thing Undo already has in hand, and it can never change (append-only). Looking it up in the change log would depend on log details. A nullable column with no default rewrites nothing, and no trigger, guard or Finance function reads the payment tables with `*`.
+- **Undo restores only if nobody changed "Paying by" since:** a later deliberate change wins over the automatic one.
+- **Undo's answer unchanged:** the live app and 0005's tests read exactly `{"status","version"}`; the app reloads the row to show "Paying by".
+- **The CSV log is written first, in the same call:** a download can't happen without its log row, and a failed call leaves neither.
+
+---

@@ -406,6 +406,15 @@
 //       tests and the Schedule / Forms / Prospects tests,
 //       re-run safety, and the Undo of SETUP.md 0031e (manual/0031u) - see
 //       step0031 below. Run only this step with   node run.mjs --only-step0031
+//   step0030. 0030 (Color Belt design review, database half, v0.418:
+//       Mark paid with a way to pay, History, results CSV) on its own
+//       database in the production order with every live migration
+//       (step0031's order with 0026, then 0031): only the two Undo
+//       payment bodies move and only 0030's new functions / rule are
+//       added, 0030's tests and the Color Belt + Finance tests (0005,
+//       0010, 0014, 0018, 0026) before and after, re-run safety, and the
+//       Undo of SETUP.md 0030e (manual/0030u) - see step0030 below. Run
+//       only this step with   node run.mjs --only-step0030
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -447,6 +456,7 @@ const onlyStep0022 = process.argv.includes('--only-step0022');
 const onlyStep0026 = process.argv.includes('--only-step0026');
 const onlyStep0027 = process.argv.includes('--only-step0027');
 const onlyStep0031 = process.argv.includes('--only-step0031');
+const onlyStep0030 = process.argv.includes('--only-step0030');
 
 // Fixed ids for the two pretend logins (any uuid works).
 const ADMIN_UID = '11111111-1111-4111-8111-111111111111';
@@ -619,6 +629,15 @@ async function main() {
     if (prints31) {
       console.log('\n0031 fingerprints (kind  item  detail):');
       for (const line of prints31) console.log('  ' + line);
+    }
+    return finish();
+  }
+  // --only-step0030: just the Color Belt review step (0030)
+  if (onlyStep0030) {
+    const prints30 = await step0030();
+    if (prints30) {
+      console.log('\n0030 fingerprints (kind  item  detail):');
+      for (const line of prints30) console.log('  ' + line);
     }
     return finish();
   }
@@ -876,6 +895,9 @@ async function main() {
   // step0031: class ages on the booking forms (its own database, production order)
   console.log('\nMigration 0031 (class ages on the booking forms):');
   const after31 = after5 ? await step0031() : null;
+  // step0030: Color Belt review - Mark paid with a way to pay, History, results CSV (its own database, production order)
+  console.log('\nMigration 0030 (Color Belt: Mark paid with a way to pay, History, results CSV):');
+  const after30 = after5 ? await step0030() : null;
 
   // step0020 (named after its migration, not a number other branches use): 0020, LAST
   console.log('\nMigration 0020 (current_session_id reads only request.jwt.claims), last:');
@@ -962,6 +984,10 @@ async function main() {
   if (after31) {
     console.log('\n0031 fingerprints (kind  item  detail):');
     for (const line of after31) console.log('  ' + line);
+  }
+  if (after30) {
+    console.log('\n0030 fingerprints (kind  item  detail):');
+    for (const line of after30) console.log('  ' + line);
   }
   if (after17) {
     console.log('\n0017 fingerprints (Finance after 0017; kind  item  detail):');
@@ -6401,6 +6427,202 @@ async function step0031() {
   }
   await db.close().catch(() => {});
   return prints31;
+}
+
+// =====================================================================
+// step0030: Color Belt design review, database half (0030, rulebook
+// v0.418) - Mark paid with a way to pay, History, results CSV
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order with every
+// live migration (step0031's order, then 0031):
+//   a. 0030_fingerprints.sql is connector-safe (no "delete" / "drop")
+//   b. the Color Belt and Finance tests pass BEFORE 0030 (the baseline:
+//      0005, 0010, 0014, 0018, 0026)
+//   c. apply 0030: in every other fingerprint file ONLY these lines move:
+//      testing_undo_payment and testing_private_undo_payment (body md5
+//      only - rights, owner, definer and settings stay) in 0003's and
+//      0005's / 0014's files; 0003's list gains exactly the 7 new
+//      testing_* functions; 0014's file gains exactly the new
+//      testing_private_payments_paying_by_before_check rule line
+//   d. 0030_tests.sql, then the baseline tests again
+//   e. 0030 applied a SECOND time: no fingerprint changes
+//   f. the Undo of SETUP.md 0030e (the file it names,
+//      supabase/manual/0030u_undo_color_belt_review.sql): every
+//      fingerprint file equals the one before 0030; the baseline tests
+//      pass; then 0030 again -> the tested fingerprints, 0030_tests.sql
+//      passes
+// Run only this step with   node run.mjs --only-step0030
+// =====================================================================
+async function step0030() {
+  const L = '[0030] ';
+  record(`${L}0030_fingerprints.sql contains neither "delete" nor "drop" (connector-safe)`,
+    !/delete|drop/i.test(read('tests', '0030_fingerprints.sql')));
+  const db = await buildBase(L);
+  if (!db) return null;
+  for (const [label, file] of [['0003', '0003_testing_classes_ranks.sql'], ['0004', '0004_staff_accounts.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+  await run(db, L + 'apply built-in seed', builtInSeedSql());
+  if (!(await run(db, L + 'apply 0005', read('migrations', '0005_testing_events.sql')))) return null;
+  await seedTestEvent(db);
+  for (const [label, file] of [['0006', '0006_star_testing.sql'], ['0010 (grading results)', '0010_testing_results.sql'],
+    ['0007', '0007_schedule.sql'], ['0008', '0008_calendar.sql'], ['0009', '0009_forms.sql'], ['0012', '0012_prospects.sql'],
+    ['0015', '0015_family_history.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+  if (!(await run(db, L + 'apply 0011 as pasted on production 2026-10-19 (fixture)',
+    readFileSync(path.join(here, 'fixtures', '0011_as_applied_2026-10-19.sql'), 'utf8')))) return null;
+  for (const [label, file] of [['today\'s 0011 over it', '0011_finance.sql'], ['0019', '0019_school_phone.sql'],
+    ['0014 (private testing)', '0014_testing_private.sql'], ['0020 (current_session_id fix)', '0020_session_id_claims.sql'],
+    ['0013 (camps)', '0013_camps.sql'], ['0017 (camps in Finance)', '0017_finance_camps.sql'],
+    ['0018 (private testing money in Finance)', '0018_finance_private.sql'], ['0016 (Black Belt testing)', '0016_black_belt.sql'],
+    ['0021', '0021_prospects_not_interested_sooner.sql'], ['0022 (camps weekly pricing)', '0022_camps_weekly_pricing.sql'],
+    ['0024 (Black Belt rubric editor)', '0024_black_belt_rubric.sql'], ['0023 (Star result texts)', '0023_star_result_texts.sql'],
+    ['0025 (Black Belt grading and results)', '0025_black_belt_grading.sql'], ['0026 (Black Belt in Finance)', '0026_finance_black_belt.sql'],
+    ['0027 (Edit camp guard)', '0027_camps_edit_guard.sql'], ['0031 (class ages)', '0031_class_ages.sql']]) {
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // b. the baseline tests
+  const baseline = [['0005_tests.sql', 'ALL 0005 TESTS PASSED'], ['0010_tests.sql', 'ALL 0010 TESTS PASSED'],
+    ['0014_tests.sql', 'ALL 0014 TESTS PASSED'], ['0018_tests.sql', 'ALL 0018 TESTS PASSED'],
+    ['0026_tests.sql', 'ALL 0026 TESTS PASSED']];
+  const tests = async (label, files) => {
+    for (const [file, ok] of files) await runTestFile(db, `${L}${file} (${label})`, file, ok);
+  };
+  await tests('before 0030', baseline);
+
+  // c. apply 0030
+  const numbers = ['0003', '0004', '0005', '0006', '0010', '0007', '0008', '0009', '0012', '0015', '0011', '0019', '0014', '0020',
+    '0013', '0017', '0018', '0016', '0021', '0022', '0024', '0023', '0025', '0026', '0027', '0031', '0030']
+    .filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const before = await printsOf(db, numbers);
+  const migration = read('migrations', '0030_color_belt_review.sql');
+  if (!(await run(db, `${L}apply 0030_color_belt_review.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  const undoFns = ['testing_undo_payment', 'testing_private_undo_payment'];
+  const newFns = ['testing_mark_paid_by', 'testing_private_mark_paid_by', 'testing_history_strip', 'testing_registration_history',
+    'testing_private_history', 'testing_downloads_guard', 'testing_results_csv'];
+  const parts = (line) => line.split('  ');
+  const wrong = [];
+  for (const n of numbers.filter((x) => x !== '0030')) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    if (n === '0003') {
+      // 0003's list: proname  arguments  body_md5  definer  settings  owner  rights
+      for (const g of gone) {
+        const twin = added.find((a) => parts(a)[0] === parts(g)[0] && parts(a)[1] === parts(g)[1]);
+        if (!undoFns.includes(parts(g)[0]) || !twin || parts(twin).slice(3).join('|') !== parts(g).slice(3).join('|')) wrong.push(`0003: ${g}`);
+      }
+      for (const a of added) {
+        const isTwin = gone.some((g) => parts(g)[0] === parts(a)[0] && parts(g)[1] === parts(a)[1]);
+        if (!isTwin && !newFns.includes(parts(a)[0])) wrong.push(`0003: added ${a}`);
+      }
+      const addedNew = added.filter((a) => newFns.includes(parts(a)[0])).length;
+      if (addedNew !== newFns.length) wrong.push(`0003: ${addedNew} new functions instead of ${newFns.length}`);
+      continue;
+    }
+    // the other files: kind  item  detail
+    for (const g of gone) {
+      const [kind, item, detail] = parts(g);
+      const twin = added.find((a) => parts(a)[0] === kind && parts(a)[1] === item);
+      const replacedHere = (n === '0005' && item === 'testing_undo_payment(p_payment_id uuid)')
+        || (n === '0014' && item === 'testing_private_undo_payment(p_payment_id uuid)');
+      // 0014's table line for testing_private_payments: only the one new column right
+      // (0014's rule: every column but the login ids is readable by authenticated)
+      const privateTable = n === '0014' && kind === 'table' && item === 'testing_private_payments';
+      if (privateTable && twin) {
+        const want = detail.replace('paid_on>authenticated:SELECT,', 'paid_on>authenticated:SELECT,paying_by_before>authenticated:SELECT,');
+        if (want === detail || parts(twin)[2] !== want) wrong.push(`${n}: testing_private_payments table line: ${parts(twin)[2]}`);
+        continue;
+      }
+      if (kind !== 'function' || !replacedHere || !twin) wrong.push(`${n}: ${g}`);
+      else if (parts(twin)[2].slice(32) !== detail.slice(32)) wrong.push(`${n}: more than the body changed: ${item}`);
+    }
+    for (const a of added) {
+      const [kind, item] = parts(a);
+      const isTwin = gone.some((g) => parts(g)[0] === kind && parts(g)[1] === item);
+      const newRule = n === '0014' && kind === 'constraint'
+        && item === 'testing_private_payments.testing_private_payments_paying_by_before_check';
+      if (!isTwin && !newRule) wrong.push(`${n}: added ${a}`);
+    }
+  }
+  record(`${L}fingerprints: only the 2 Undo payment bodies and the private payments' column rights (+ paying_by_before) moved, only 0030's 7 functions (0003's list) and 1 private payment rule (0014's file) were added; everything else byte-identical`,
+    wrong.length === 0, wrong.join('; ') || `${numbers.length - 1} files`);
+  const prints30 = after['0030_fingerprints.sql'];
+  const fn = (name) => prints30.find((l) => l.startsWith(`function  ${name}(`)) || '';
+  const appFns = ['testing_mark_paid_by', 'testing_private_mark_paid_by', 'testing_undo_payment', 'testing_private_undo_payment',
+    'testing_registration_history', 'testing_private_history', 'testing_results_csv'];
+  record(`${L}0030 fingerprints: the 7 app functions are security definer, search_path="", only postgres and authenticated may run them`,
+    appFns.every((x) => fn(x).includes('definer=true') && fn(x).includes('settings=search_path=""')
+      && fn(x).endsWith('rights=authenticated:EXECUTE,postgres:EXECUTE')), appFns.map(fn).join(' | '));
+  record(`${L}0030 fingerprints: testing_history_strip and testing_downloads_guard are for nobody`,
+    ['testing_history_strip', 'testing_downloads_guard'].every((x) => fn(x).includes('definer=false')
+      && fn(x).includes('settings=search_path=""') && fn(x).endsWith('rights=postgres:EXECUTE')),
+    ['testing_history_strip', 'testing_downloads_guard'].map(fn).join(' | '));
+  const tbl = prints30.find((l) => l.startsWith('table  testing_downloads  ')) || '';
+  record(`${L}0030 fingerprints: testing_downloads has RLS on, no rights, no column rights, no read rules`,
+    tbl.endsWith('rls=true owner=postgres rights= columns= policies='), tbl);
+  const cols = prints30.filter((l) => l.startsWith('column  '));
+  record(`${L}0030 fingerprints: the two paying_by_before columns are text, nullable; readable by nobody on testing_payments, by authenticated on testing_private_payments`,
+    cols.length === 2 && cols.some((l) => l === 'column  testing_payments.paying_by_before  text notnull=false rights=')
+      && cols.some((l) => l === 'column  testing_private_payments.paying_by_before  text notnull=false rights=authenticated:SELECT'),
+    cols.join(' | '));
+  record(`${L}0030 fingerprints: ${prints30.length} lines (9 functions, 1 table, 2 columns, 2 triggers, 4 rules)`,
+    prints30.length === 18, String(prints30.length));
+
+  // d. the tests
+  await tests('after 0030', [['0030_tests.sql', 'ALL 0030 TESTS PASSED'], ...baseline]);
+
+  // e. re-run safety
+  await run(db, `${L}apply 0030 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0030 re-run: no fingerprint change`, movedAgain.length === 0, movedAgain.join(', '));
+
+  // f. Undo 0030, as SETUP.md 0030e has it: paste the undo file it names
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### 0030e\. Undo 0030/m);
+  const undoFile = 'manual/0030u_undo_color_belt_review.sql';
+  if (at < 0 || !setup.slice(at, at + 2500).includes(`supabase/${undoFile}`)) {
+    record(`${L}[undo 0030] SETUP.md has "### 0030e. Undo 0030" naming supabase/${undoFile}`, false, 'heading or file name missing');
+  } else if (await run(db, `${L}[undo 0030] paste ${undoFile}`, read('manual', '0030u_undo_color_belt_review.sql'))) {
+    const undone = await printsOf(db, numbers);
+    const back = numbers.filter((n) => n !== '0030'
+      && JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(undone[`${n}_fingerprints.sql`]));
+    record(`${L}[undo 0030] every fingerprint file equals the one before 0030`,
+      back.length === 0, back.length ? `differ: ${back.join(', ')}` : `${numbers.length - 1} files`);
+    record(`${L}[undo 0030] 0030's own fingerprints are back to "before" (only the 2 old Undo payment functions)`,
+      JSON.stringify(undone['0030_fingerprints.sql']) === JSON.stringify(before['0030_fingerprints.sql']),
+      undone['0030_fingerprints.sql'].join(' | '));
+    await tests('after the undo', baseline);
+    if (await run(db, `${L}[undo 0030] apply 0030 again (redo)`, migration)) {
+      const redo = await fingerprints(db, '0030_fingerprints.sql');
+      record(`${L}[undo 0030] after the redo the 0030 fingerprints equal the tested ones`, JSON.stringify(redo) === JSON.stringify(prints30));
+      await tests('after the redo', [['0030_tests.sql', 'ALL 0030 TESTS PASSED']]);
+    }
+  }
+  // the undo keeps a log that has rows (a record of who downloaded) - checked on a copy of the state, rolled back
+  try {
+    await db.exec('begin;');
+    await db.exec(`select set_config('tkd.action', 'testing_results_csv', true);
+      insert into public.testing_downloads (event_id, event_name, row_count, downloaded_by_name) values (gen_random_uuid(), 'kept', 0, '');
+      select set_config('tkd.action', '', true);`);
+    const undo = read('manual', '0030u_undo_color_belt_review.sql').replace(/^begin;\s*$/m, '').replace(/^commit;\s*$/m, '');
+    await db.exec(undo);
+    const kept = await one(db, `select count(*)::integer from public.testing_downloads`);
+    const guard = await one(db, `select count(*)::integer from pg_proc where proname = 'testing_downloads_guard'`);
+    const gone = await one(db, `select count(*)::integer from pg_proc where proname = 'testing_mark_paid_by'`);
+    record(`${L}[undo 0030] a download log with rows is KEPT (with its guard); the rest is undone`,
+      kept === 1 && guard === 1 && gone === 0, JSON.stringify({ kept, guard, gone }));
+  } catch (error) {
+    record(`${L}[undo 0030] a download log with rows is KEPT`, false, error.message);
+  } finally {
+    await db.exec('rollback;').catch(() => {});
+  }
+  await db.close().catch(() => {});
+  return prints30;
 }
 
 function finish() {
