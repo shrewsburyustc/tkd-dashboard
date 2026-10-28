@@ -183,3 +183,11 @@ Q19 (v0.813) is live (main 09f0b95, 2026-10-21). `finance` fast-forwarded to mai
 - **0026d done 2026-10-28** (Jeffrey, SQL Editor): ALL 0026 TESTS PASSED; 0011, 0017 and 0018 tests all pass again with 0026.
 - **F8 DONE — deployed 2026-10-28:** Main merged `finance` into `main` (56308ff), pushed with Jeffrey's OK (main 6d140e4), Cloudflare deploy succeeded; CLAUDE.md marks 0026 live. `finance` fast-forwarded to main 6d140e4.
 - **Left for Finance:** F1–F7 after Main's shared parts (v1.030); design nits from the F8 review ("Payment 2" wraps on print, B7 box centred, History infers "Nothing to close"); four wordings not in the mockups, marked in `text.js`, for Jeffrey to OK.
+
+## 18. Design-review items (started 2026-10-28, Jeffrey via Main: "start the items that are ready now")
+
+- Source: `docs/Design Review/End review/TKD-DesignReview-ChangeList.md` §2.6 (F1–F8), rulebook v1.000–v1.034; design review session's brief `End review/Prompts/7-Finance.md` (draft).
+- **Ready now:** F1 shared date picker (Daily report calendar + Export From / To; the shared picker can't be opened from another button today — settle in the mockup, any picker change goes through Jeffrey + Dashboard core), F3 History back link (v0.59 / v1.020), F4 phone ⋯ "Today" item without icon (v1.024), F7 Both "after $X refunds" (expected already built with F8 / v0.815 — check against `d3-both-refunds.png` pictures 5–7).
+- **F2 database half:** migration **0029** `0029_finance_reminder_5min.sql` (reserved by Main 2026-10-28) — `finance_reminder_time_is_valid` accepts 5-minute steps; must be live before Dashboard core's Settings time list; needs a security review.
+- **Waits for Dashboard core step 1:** F2's screen (M8 time list), F5 (M9 money helper), F6 (M10 helpers). finance.css's three Main blocks stay (Dashboard core step 2 moves them).
+- Mockups in progress: `docs/Finance/TKD-Finance-DesignReview-Mockups.html`, images `docs/Finance/images/Finance-DR-F*.png`.
