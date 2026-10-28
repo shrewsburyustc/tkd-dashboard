@@ -93,7 +93,7 @@ The full list, with the words, focus and busy behaviour of each, is in §9.
 - Color Belt's Cancel private testing uses native `disabled` (keyboard focus falls out).
 - Prospects' Delete status gets no first focus.
 - Confirm boxes under 700 px tall pick up the form dialogs' pinned button row (testing.css:823 overrides :810).
-- Two boxes open on top of another dialog with `Dialog.jsx` (Star's Dan change, Prospects' delete on phones). One Back press then reaches both (see §8, InnerDialog).
+- One box opens on top of another dialog with `Dialog.jsx`: Prospects' delete on phones. One Back press then reaches both (see §8, InnerDialog). Star's Dan-change box takes the candidate dialog's place instead, so it has no such bug (corrected 2026-10-28).
 
 **Shared part:** `src/components/ConfirmBox.jsx`, plus `ConfirmButtons` (the button row alone, for an ask drawn inside another dialog, like Forms' kiosk asks in its Share dialog).
 
@@ -156,7 +156,7 @@ Mockup drafted: `Mockups/M2-confirm-box.html`.
 - Esc or a click outside closes the box. It sits under the button and is kept on screen.
 
 **Later:**
-- Whether a section's database function takes a method is that section's job: Color Belt records "the family's choice" today, so it needs `p_method` (a migration in Color Belt's prompt), and so do Camps (`camp_mark_paid`) and Star.
+- Whether a section's database function takes a method is that section's job. Color Belt records "the family's choice" today, so its `testing_mark_paid` (0005) and `testing_private_mark_paid` (0014) need `p_method` (a migration in Color Belt's prompt), and so does Camps' `camp_mark_paid` (0013). Star's `star_record_payment` (0006) already takes the way to pay (corrected 2026-10-28).
 - Black Belt keeps its own dialog with "Paid by".
 
 **States to draw:**
@@ -232,7 +232,7 @@ Mockup drafted: `Mockups/M3-mark-paid-box.html`.
 
 **Props:**
 - `title` ("Registration link" / "Registration links"), `eventName`, `intro` (the section's line);
-- `links` `[{ school, url, shortUrl, copyLabel, flyer?: () => element }]` (one or two);
+- `links` `[{ url, school?, heading?, shortUrl?, flyer?: () => element }]` (one or two). `heading` is the card's heading (default "<school> school"; Camps' "Both schools · held at Worcester"). There is no `copyLabel`: the Copy button's words come from the shared words ("Copy Worcester link" with two schools, "Copy link" with one). As built in `RegistrationLinkBox.jsx` (corrected 2026-10-28);
 - `fileBase` (for the PNG name), `footnote` (Black Belt's ?dan= line);
 - `onCopied` (the section's "Link copied" toast), `onClose`, `isPhone`.
 
@@ -309,7 +309,7 @@ Mockup drafted: `Mockups/M6-count-cards.html`.
 
 **Props:**
 - `load()` — the section's reader; it returns rows;
-- `describe(row, { hidden })` — the section's words; returns `{ text }`, `{ hiddenPayment: true }` or null to skip;
+- `describe(row, { hidden })` — the section's words; returns `{ text, at, who }` (what changed; when, as a timestamp or a school date; who), `{ hiddenPayment: true }` or null to skip. As built in `HistoryLine.jsx` (corrected 2026-10-28);
 - `hidden`;
 - the words for the hidden line come from the shared privacy words.
 
@@ -386,7 +386,7 @@ None of them changes a look, so they have no mockup of their own. The dropdown i
 
 **Today:**
 - Every `Dialog.jsx` adds its own browser-history step and its own Back listener.
-- With two open at once, the second replaces the first's step, and one Back press reaches both. This already happens with Star's Dan-change box and Prospects' Delete on phones.
+- With two open at once, the second replaces the first's step, and one Back press reaches both. This already happens with Prospects' Delete on phones. Star's and Black Belt's Dan-change boxes don't stack: each takes the candidate dialog's place while open (Star's `CandidatesTab.jsx` draws `overlayElement ?? dialogElement`; corrected 2026-10-28).
 - Black Belt avoids it with its own copy, `InnerDialog` (8 dialogs), which has no history code.
 
 **Shared:**
@@ -396,7 +396,7 @@ None of them changes a look, so they have no mockup of their own. The dropdown i
 - A z-index class for the top layer goes in shared.css (Black Belt's `.bb-inner` uses 42).
 - Focus returns to the dialog underneath when the top one closes.
 
-**Nothing changes for today's dialogs:** the mode is off unless a screen asks for it. Black Belt's 8 `InnerDialog` users, Star's Dan-change box and Prospects' phone Delete switch in their own prompts.
+**Nothing changes for today's dialogs:** the mode is off unless a screen asks for it. Black Belt's 8 `InnerDialog` users and Prospects' phone Delete switch in their own prompts.
 
 ### One dropdown — `src/components/Select.jsx`
 
@@ -545,7 +545,7 @@ The checks:
 
 | Copy | Today | What a shared part needs | Size | Recommendation |
 |---|---|---|---|---|
-| **InnerDialog** — a dialog on top of a dialog (Black Belt, 8 users) | `Dialog.jsx` owns one browser-history step per dialog. Two at once confuse Back: Star's Dan-change box and Prospects' delete on phones already open that way, and one Back reaches both. | `Dialog.jsx` gains an "on top" mode: only the bottom dialog owns the Back step; Back closes the top one first. Plus a z-index class in the shared stylesheet. | M | **Yes** — M2's box and M4's receipt open on top of other dialogs (Black Belt, Star, Prospects), and it fixes that Back bug when they switch. |
+| **InnerDialog** — a dialog on top of a dialog (Black Belt, 8 users) | `Dialog.jsx` owns one browser-history step per dialog. Two at once confuse Back: Prospects' delete on phones already opens that way, and one Back reaches both (Star's Dan-change box takes the candidate dialog's place instead; corrected 2026-10-28). | `Dialog.jsx` gains an "on top" mode: only the bottom dialog owns the Back step; Back closes the top one first. Plus a z-index class in the shared stylesheet. | M | **Yes** — M2's box and M4's receipt open on top of other dialogs (Black Belt, Prospects), and it fixes that Back bug when they switch. |
 | **SelectField (Black Belt) / StarSelect (Star)** | Two copies of one custom dropdown (+ cousins: FinalAwardSelect, the date picker's month list) | One `Select` in `src/components/` | M | **Yes — it is M8's base** (the time list is that dropdown with times), so Black Belt's SelectField gets something to switch to at no extra cost. |
 | **Grip** (drag handle) | Color Belt's `Grip` (`RankRows.jsx:79`) is already imported by Calendar, Forms and Prospects; Black Belt and Star have their own copies; "Drag to reorder" is written 3 times | Move it to `src/components/Grip.jsx` (with Black Belt's `disabled`), a re-export at the old path, one shared tooltip word | S | **Yes** — small, and it's already a misplaced helper (like M10). |
 | **Calendar's ShowMenu** | A copy of RowMenu with tick boxes that don't close the menu | RowMenu gains a second kind of item (tick and stay open), a width, an optional heading and a "Done" end on phones; its 30 users unchanged | M | **Later** — only Calendar uses it; it can come with the new-students prompt (N16) as a step 1b. |
@@ -568,7 +568,7 @@ Already covered without a new part: Black Belt's `DateField` copies (the shared 
 | 10 | Star · delete event (`StarDeleteEventDialog.jsx`) | own copy | Keep event · Delete event (red) | Keep | no visible change |
 | 11–12 | Star · undo payment / refund | Star ConfirmBox | Keep payment · Undo payment (blue) | Keep | no visible change |
 | 13 | Star · delete candidate | Star ConfirmBox | Keep candidate · Delete permanently (red) | Keep | no visible change |
-| 14 | Star · Dan change (on top of the candidate dialog) | Star ConfirmBox | Keep 1st Dan · Change Dan and clear 4 grades (red) | Keep | **closes while it works** |
+| 14 | Star · Dan change (in the candidate dialog's place) | Star ConfirmBox | Keep 1st Dan · Change Dan and clear 4 grades (red) | Keep | **closes while it works** |
 | 15 | Star · undo Mark as sent | Star ConfirmBox | Cancel · Undo Mark as sent (blue) | Cancel | **closes while it works** |
 | 16 | Star · leave warning | own | Leave anyway · Stay on this page (blue) | Stay | — |
 | 17 | Black Belt · delete cycle | BB ConfirmDialog | Cancel · Delete cycle (red) | Cancel | no visible change |
@@ -608,7 +608,7 @@ Already covered without a new part: Black Belt's `DateField` copies (the shared 
   - history dates are taken in UTC (after 8 PM a change shows the next day);
   - Delete status gets no first focus.
 - **Several confirm boxes close on Esc / Back while they work** (§9: Star 14–15, Black Belt 21–25, Prospects 32, Forms 36–37).
-- **Two dialogs open at once without InnerDialog** (Star 14, Prospects 31 on phones): one Back press reaches both.
+- **Two dialogs open at once without InnerDialog** (Prospects 31 on phones): one Back press reaches both. Star 14 takes the candidate dialog's place, so it doesn't (corrected 2026-10-28).
 - **A failure note hidden under the pinned buttons** (found by the mockups' design review). The pinned button row has a −24 px bottom margin, so a note placed right after it slides under it. This hits:
   - the four Compare dialogs (Color Belt, Star, Camps, Black Belt) at every size;
   - DeleteDialog-based confirm boxes on screens under 700 px tall, where they pick up the pinned row by accident.

@@ -1,8 +1,8 @@
 # Dashboard core — status
 
 **Updated:** 2026-10-28 (Dashboard core worktree session, branch `dashboard-core`)
-**Rulebook at this update:** 0.816 on `main`; **1.112** on this branch. Dashboard core rows: **v1.100** (Q1), **v1.101** (Q2), **v1.102** (M1), **v1.103** (M2), **v1.104** (M3), **v1.105** (M4), **v1.106** (M5), **v1.107** (M6), **v1.108** (M7), **v1.109** (M8), **v1.110** (proof pictures in git), all 2026-10-27; **v1.111** (D4) and **v1.112** (D6), both 2026-10-28 — block **1.100–1.199**, next free **1.113** (`git merge main` before any rulebook edit).
-**Branch:** `dashboard-core`, started from `main` ffcdc92; `main` merged in up to ec733b7 (2026-10-27, fast-forward), then up to ddfc848 (2026-10-28, merge commit **524bd6b**: camps' 0027 and rulebook v0.720), then up to 6d140e4 (2026-10-28, merge commit **6626920**: Finance's F8 with migration 0026, rulebook v0.814–v0.816 and CLAUDE.md's 0026 notes). Committed: **712e3a6** — the approved docs (2026-10-27); **the step 1 commit** — the shared parts, the parts page, the tools, the proof sheets and rulebook v1.110–v1.112 (2026-10-28; its hash is in `git log`). Never pushed.
+**Rulebook at this update:** 0.816 on `main`; **1.113** on this branch. Dashboard core rows: **v1.100** (Q1), **v1.101** (Q2), **v1.102** (M1), **v1.103** (M2), **v1.104** (M3), **v1.105** (M4), **v1.106** (M5), **v1.107** (M6), **v1.108** (M7), **v1.109** (M8), **v1.110** (proof pictures in git), all 2026-10-27; **v1.111** (D4), **v1.112** (D6) and **v1.113** (housekeeping: rows v1.100 and v1.104 corrected), all 2026-10-28 — block **1.100–1.199**, next free **1.114** (`git merge main` before any rulebook edit).
+**Branch:** `dashboard-core`, started from `main` ffcdc92; `main` merged in up to ec733b7 (2026-10-27, fast-forward), then up to ddfc848 (2026-10-28, merge commit **524bd6b**: camps' 0027 and rulebook v0.720), then up to 6d140e4 (2026-10-28, merge commit **6626920**: Finance's F8 with migration 0026, rulebook v0.814–v0.816 and CLAUDE.md's 0026 notes), then up to ca02305 (2026-10-28, merge commits **93fca25** and **eff1fe4**: CLAUDE.md notes and the Design Review's six section prompts; no conflicts). Committed: **712e3a6** — the approved docs (2026-10-27); **2a9b8bc** — step 1: the shared parts, the parts page, the tools, the proof sheets and rulebook v1.110–v1.112 (2026-10-28); then the fact fixes (v1.113). Never pushed.
 
 > Read `CLAUDE.md` first. This file says where the Dashboard core work stands and what comes next. Keep it current: update it in the same turn a step finishes or a decision is made.
 
@@ -55,7 +55,8 @@
 5. ~~Which proof pictures go into the commit~~ — **decided 2026-10-27: A, only the 8 side-by-side sheets** (rulebook v1.110). Next free rulebook number: 1.111.
 6. ~~D4 — M5's two-school download name (WCAG 2.5.3)~~ — **decided 2026-10-27: A, "Download QR code, Worcester"** (rulebook v1.111). Nothing on screen changes.
 7. ~~D6 — M4's 600 weights vs §7~~ — **decided 2026-10-28: A, weight 500, as §7 says** (rulebook v1.112). Nothing changes in Chrome on Windows; on Apple devices the two lines are a shade lighter.
-8. ~~The step 1 commit~~ — **done 2026-10-28** on `dashboard-core` (Jeffrey: "Yes, commit"): 83 files. Not pushed.
+8. ~~The step 1 commit~~ — **done 2026-10-28** on `dashboard-core` (Jeffrey: "Yes, commit"): 83 files, **2a9b8bc**. Not pushed.
+9. ~~The fact fixes from the Design Review session~~ — **made and committed 2026-10-28** (plan, status, rulebook v1.113; Jeffrey: "Yes, commit"). Not pushed.
 
 ## 3. Log
 
@@ -79,7 +80,7 @@
   - 39 confirm boxes in 20 files on four frames. Most show nothing while they work; nine close on Esc / Back while they work. Under 700 px tall they pick up the pinned button row by accident.
   - Star's time list is a custom dropdown (StarSelect), so the time list is built on a shared dropdown.
   - Of the money helpers, only Black Belt's `formatCents` writes exactly the rule. It becomes a wrapper; Finance's `money` matches too, but Finance is left alone for now.
-  - Two dialogs stacked with `Dialog.jsx` already happen (Star's Dan change, Prospects' phone delete), and one Back reaches both.
+  - Two dialogs stacked with `Dialog.jsx` already happen (Star's Dan change, Prospects' phone delete), and one Back reaches both. *(Corrected 2026-10-28, v1.113: Star's Dan-change box takes the candidate dialog's place, so only Prospects' phone delete stacks.)*
   - The real build loads forms.css before app.css. That causes two live-only Forms differences.
 - **2026-10-27 — plan drafted** (`TKD-DashboardCore-Plan.md`).
 - **2026-10-27 — mockups drafted for M1–M8**, in `Mockups/`:
@@ -341,6 +342,13 @@
 - **2026-10-28 — Jeffrey: commit step 1** ("Yes, commit"). Committed on `dashboard-core`: 83 files.
   - What's in it: the code, the parts page, the tools, the plan and this file, the D4 and D6 questions, the 8 side-by-side proof sheets and the rulebook (v1.110–v1.112). The other proof pictures stay untracked on this PC (v1.110).
   - Not pushed. Main had 3 more commits, all CLAUDE.md migration reservations; nothing to merge for them first.
+- **2026-10-28 — three facts corrected** (found by the Design Review session while writing the section prompts; passed on by Jeffrey). Each was checked against the code here first:
+  - **Star's Dan-change box takes the candidate dialog's place** while open (`src/screens/testing/star/candidates/CandidatesTab.jsx` draws `overlayElement ?? dialogElement`), so Star has no one-Back-closes-both bug. Black Belt's takes the dialog's place too (its `Dialogs` shows one child or the detail). Prospects' phone Delete really does open on top of the full-screen panel `Dialog` (checked in `Prospects.jsx`), so the "on top" mode still serves it and Black Belt's 8 `InnerDialog` boxes. Fixed in plan §2b, §8's InnerDialog row, §9 row 14, §10, the M2 notes and row v1.100.
+  - **Star's `star_record_payment` (0006) already takes the way to pay** (`p_method text`). Only Color Belt's `testing_mark_paid` (0005) and `testing_private_mark_paid` (0014) and Camps' `camp_mark_paid` (0013) lack it; no later migration replaces them. Fixed in plan M3 "Later" and row v1.104.
+  - **The plan's M5 and M7 props were older than the built parts:** `links` takes `{ url, school?, heading?, shortUrl?, flyer? }` (no `copyLabel`; Copy's words come from the shared words), and `describe` returns `{ text, at, who }`. Fixed in plan M5 and M7.
+  - **`git merge main` first**, twice, because main moved during the work: **93fca25** (the Design Review's section prompts, CLAUDE.md) and **eff1fe4** (CLAUDE.md: 0029 live). No conflicts.
+  - Recorded as rulebook **v1.113**, a housekeeping change like v0.31 and v0.304: the two rows corrected in place (each marked "corrected v1.113"), a changelog line and the header. No new 10b row, since nothing new is decided. CRLF kept: 0 LF-only lines (1,327 lines); no changelog number used twice.
+  - No code, mockup or question page stated these facts, so nothing else changes. No checks to re-run: only docs changed.
 
 ## 4. Next
 
@@ -350,4 +358,5 @@
    - ~~D6 (M4's 600 weights vs §7)~~ — **decided: A, 500, v1.112**.
    Every design review point is now settled.
 2. ~~**Commit on `dashboard-core`**~~ — **done 2026-10-28**, not pushed. Shared files touched: `src/App.jsx`, and the rulebook (v1.110, v1.111, v1.112; v1.100–v1.109 were in 712e3a6). The merge commits 524bd6b and 6626920 hold only main's work.
-3. **A ready-to-paste prompt for the Main session**, to merge `dashboard-core` into `main` when Jeffrey asks. It also adds `src/styles/shared.css` and `src/components/text.js` to CLAUDE.md's shared-files list (code review N6).
+3. ~~**Commit the fact fixes** (v1.113)~~ — **done 2026-10-28**, not pushed.
+4. **A ready-to-paste prompt for the Main session**, to merge `dashboard-core` into `main` when Jeffrey asks. It also adds `src/styles/shared.css` and `src/components/text.js` to CLAUDE.md's shared-files list (code review N6).
