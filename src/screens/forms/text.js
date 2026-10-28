@@ -36,6 +36,8 @@ export const NO_FORMS = 'No forms yet.';
 export const NO_FORMS_ADMIN = 'No forms yet. Start one with "New form".';
 export const FILL_IN = 'Fill in';
 export const FILL_IN_ITEM = 'Fill in for a family';
+// while Hide private details is on, Fill in is desk-only (v0.616): the page line and the menu item's reason
+export const FILL_IN_AT_DESK = 'Fill in forms at the desk. Email and form answers are hidden on this tablet.';
 export const SHARE = 'Share';
 export const DUPLICATE = 'Duplicate';
 export const CLOSE_FORM = 'Close form';
