@@ -7,7 +7,8 @@ import { formatDate } from '../../lib/schedule/versions.js';
 import { formatTime, parseTime } from '../../lib/schedule/time.js';
 
 export const PAGE_TITLE = 'Forms';
-export const VIEW_ONLY_LINE = 'View only — ask an admin to create or change forms.';
+// Staff can fill in and share forms, so the line says what they can do first (the second pattern in v1.021).
+export const VIEW_ONLY_LINE = 'Staff can fill in and share forms. Ask an admin to create or change forms.';
 export const NEW_FORM = 'New form';
 export const NEW_SHORT = 'New';
 export const LOADING = 'Loading forms';
