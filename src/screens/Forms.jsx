@@ -4,7 +4,7 @@
 // section, like Calendar.jsx. It:
 //   - loads the forms (useForms) and shows the list (FormsList), filtered by the school switcher
 //   - admins: "New form" (NewFormDialog) → the builder (Builder.jsx); ⋯ → Fill in, Duplicate,
-//     Close form / Open form again, Delete (only without sign-ups)
+//     Close form / Open form, Delete (only without sign-ups)
 //   - staff: no building; a row opens a read-only Preview; "Fill in" and Share on each row
 //   - opens Share (ShareDialog), Fill in and Preview (FillInDialog, through useFillIn — shared with Prospects)
 //
@@ -12,7 +12,7 @@
 // address (rulebook v0.242). Admin vs staff only changes what is SHOWN — the database enforces
 // who may change what.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { IconCopy, IconCurrencyDollarOff, IconDoorExit, IconDoorEnter, IconPencil, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconCopy, IconCurrencyDollarOff, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
 import Dialog from '../components/Dialog.jsx';
 import ErrorBanner from '../components/ErrorBanner.jsx';
 import RowMenu from '../components/RowMenu.jsx';
@@ -31,6 +31,12 @@ import Builder from './forms/Builder.jsx';
 import ShareDialog from './forms/ShareDialog.jsx';
 import { useFillIn } from './forms/useFillIn.js';
 import * as T from './forms/text.js';
+
+// A menu item with no icon (Close form / Open form, rulebook v1.016 and v0.621), as in Star's, Color Belt's
+// and Camps' menus: a blank spot keeps the label lined up with the items that have an icon.
+function NoIcon() {
+  return <span className="menu-icon ev-noicon" aria-hidden="true" />;
+}
 
 const usable = (el) => (el && el.isConnected && el.getClientRects().length > 0 ? el : null);
 
@@ -253,13 +259,13 @@ export default function Forms({ location, profile, isAdmin, screenLocked, onNoAc
     ? []
     : isAdmin
       ? [
-          { key: 'edit', label: T.EDIT_FIELD, Icon: IconPencil, onSelect: () => openBuilder(menu.form.id) },
+          { key: 'edit', label: T.EDIT_FIELD, Icon: IconEdit, onSelect: () => openBuilder(menu.form.id) },
           fillItem(menu),
           { key: 'dup', label: T.DUPLICATE, Icon: IconCopy, disabled: busy, onSelect: () => duplicate(menu.form) },
           menu.form.status !== 'draft' && {
             key: 'close',
-            label: menu.form.status === 'live' ? T.CLOSE_FORM : T.REOPEN_FORM,
-            Icon: menu.form.status === 'live' ? IconDoorExit : IconDoorEnter,
+            label: menu.form.status === 'live' ? T.CLOSE_FORM : T.OPEN_FORM,
+            Icon: NoIcon,
             disabled: busy,
             onSelect: () => toggleClosed(menu.form),
           },

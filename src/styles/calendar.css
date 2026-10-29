@@ -804,8 +804,27 @@ button.cchip--btn:focus-visible {
     border-radius: 0;
   }
 
+  /* Add / Edit event on phones (design review N6): the date field is the dashboard's calendar,
+     too wide to share the row with the time, so the time sits under the date, and an open
+     calendar sits between them, edge to edge (it is a grid item of its own: DatePicker draws it
+     right after the field). */
   .ctimes-row {
-    grid-template-columns: 48px minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .ctimes-row > .dp-pop.is-inline {
+    grid-column: 1 / -1;
+    margin-bottom: 0;
+  }
+
+  .ctimes-row > input[type='time'] {
+    grid-column: 2;
+  }
+
+  /* Add / Edit closure on phones: From over To, so each calendar can open full width */
+  .cdates {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
   }
 
   .cseg {

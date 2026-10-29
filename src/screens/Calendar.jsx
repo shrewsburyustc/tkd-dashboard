@@ -746,7 +746,7 @@ export default function Calendar({ location, staffId, isAdmin, screenLocked, onN
   // ----- The open dialog (hidden while locked; comes back after unlocking) -----
   let dialogElement = null;
   if (dialog && !screenLocked && loaded) {
-    const common = { isPhone, onCancel: cancelDialog, onRequestClose: requestClose, onChange: changeValues, onTouch: touch };
+    const common = { today, isPhone, onCancel: cancelDialog, onRequestClose: requestClose, onChange: changeValues, onTouch: touch };
     if (dialog.type === 'event') {
       dialogElement = <EventDialog key={dialog.key} state={dialog} types={types} onSave={saveEvent} onRemove={removeEventFromDialog} {...common} />;
     } else if (dialog.type === 'closure') {
