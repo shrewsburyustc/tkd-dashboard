@@ -1,7 +1,9 @@
 // EventDialog.jsx — "Add event", "Edit event" and the staff's read-only view (mockup screens 3, 7).
 // Why it exists: one form for an event:
 //   Title, Type (sets the color — types are set up under ⋯ → Event types), All day (untick it
-//   to set times), Starts / Ends (a later end date = a several-day event, at most 31 days),
+//   to set times), Starts / Ends (a later end date = a several-day event, at most 31 days;
+//   the dates use the dashboard's own calendar, components/DatePicker.jsx, design review N6 /
+//   v1.018, and the end can't be before the start; the times stay the browser's time box),
 //   School (Worcester, Shrewsbury or Both — starts with the school in the switcher), and notes
 //   under "More details". Save stays gray until there's a title, a type and good dates.
 // Edit has Remove (instant, with Undo — no confirmation, v0.234).
@@ -9,12 +11,20 @@
 // Like the Schedule's dialogs, the typed values live in the parent (Calendar.jsx) so they
 // survive the screen locking while the dialog is open.
 import { IconCheck, IconChevronDown, IconChevronRight, IconTrash } from '@tabler/icons-react';
+import DatePicker from '../../components/DatePicker.jsx';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
 import { colorOf } from '../../lib/schedule/colors.js';
 import { parseTime } from '../../lib/schedule/time.js';
 import { cleanNotes, cleanText, eventTimesProblem, notesProblem, textProblem, TITLE_MAX } from '../../lib/calendar/rules.js';
 import * as T from './text.js';
+
+// The Year list of a Calendar date field: this year and the next two (DatePicker adds the year of
+// the date on show, so an older event's year is there too). Closures use it as well.
+export function pickerYears(today) {
+  const year = Number(String(today).slice(0, 4));
+  return Number.isFinite(year) ? [year, year + 1, year + 2] : [];
+}
 
 export const isEventFormDirty = (state) => JSON.stringify({ ...state.values, showNotes: 0 }) !== JSON.stringify({ ...state.initial, showNotes: 0 });
 
@@ -81,7 +91,7 @@ export function SchoolPicker({ idBase, value, disabled, onChange }) {
   );
 }
 
-export default function EventDialog({ state, types, isPhone, onChange, onTouch, onSave, onRemove, onCancel, onRequestClose }) {
+export default function EventDialog({ state, types, today, isPhone, onChange, onTouch, onSave, onRemove, onCancel, onRequestClose }) {
   const view = state.mode === 'view';
   const isAdd = state.mode === 'add';
   const check = checkEventForm(state);
@@ -183,14 +193,18 @@ export default function EventDialog({ state, types, isPhone, onChange, onTouch, 
         <div className={`ctimes${v.allDay ? ' is-allday' : ''}`}>
           <div className="ctimes-row">
             <span className="field-label ctimes-label">{T.STARTS}</span>
-            <input
-              className="input"
-              type="date"
-              aria-label={T.startDate}
-              readOnly={readOnly}
+            {/* The row's "Starts" is what you see; the field names itself "Start date" */}
+            <DatePicker
+              id={`${idBase}-starts-on`}
+              label={T.startDate}
               value={v.startsOn}
-              onChange={(e) => {
-                const startsOn = e.target.value;
+              today={today}
+              years={pickerYears(today)}
+              placeholder={T.CHOOSE}
+              disabled={readOnly}
+              invalid={Boolean(check.timeError)}
+              inline={isPhone}
+              onChange={(startsOn) => {
                 // Moving the start past the end moves the end along (a one-day event stays one day).
                 const endsOn = !v.endsOn || v.endsOn < startsOn || v.endsOn === v.startsOn ? startsOn : v.endsOn;
                 onChange({ startsOn, endsOn });
@@ -214,14 +228,20 @@ export default function EventDialog({ state, types, isPhone, onChange, onTouch, 
           </div>
           <div className="ctimes-row">
             <span className="field-label ctimes-label">{T.ENDS}</span>
-            <input
-              className="input"
-              type="date"
-              aria-label={T.endDate}
-              readOnly={readOnly}
+            <DatePicker
+              id={`${idBase}-ends-on`}
+              label={T.endDate}
               value={v.endsOn}
-              onChange={(e) => {
-                onChange({ endsOn: e.target.value });
+              today={today}
+              min={v.startsOn || null}
+              years={pickerYears(today)}
+              hint={v.startsOn ? T.END_DATE_HINT : ''}
+              placeholder={T.CHOOSE}
+              disabled={readOnly}
+              invalid={Boolean(check.timeError)}
+              inline={isPhone}
+              onChange={(endsOn) => {
+                onChange({ endsOn });
                 onTouch(['dates']);
               }}
             />

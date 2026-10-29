@@ -148,6 +148,9 @@ export const startDate = 'Start date';
 export const endDate = 'End date';
 export const startTime = 'Start time';
 export const endTime = 'End time';
+// The dashboard's own calendar (components/DatePicker.jsx, design review N6 / v1.018)
+export const CHOOSE = 'Choose…'; // an empty date field
+export const END_DATE_HINT = 'Days before the start can’t be chosen.';
 export const SCHOOL = 'School';
 export const BOTH = 'Both';
 export const MORE_DETAILS = 'More details (notes)';
@@ -165,6 +168,7 @@ export const REASON = 'Reason';
 export const REASON_HINT = 'Shown on the calendar, e.g. "Snow storm", "Thanksgiving"';
 export const FROM = 'From';
 export const TO = 'To';
+export const TO_HINT = 'Days before From can’t be chosen.'; // the To calendar's gray line
 export const WHATS_CANCELLED = "What's cancelled";
 export const ALL_CLASSES = 'All classes';
 export const SOME_CLASSES = 'Some classes';
