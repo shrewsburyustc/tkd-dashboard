@@ -79,7 +79,7 @@
 //     (keep one: the toast's Undo = restoreCandidate on the other, by the same person within 10 s)
 //   setPrivate({ candidateId, expectedVersion, privateOn, privateTime:'16:00' })   S
 //   clearPrivate({ candidateId, expectedVersion })   S   (Back to the testing day)
-//     → { status:'ok', version, expectedFeeCents }   · invalid (time not 8:00 AM–8:00 PM on 15 min) · withdrawn
+//     → { status:'ok', version, expectedFeeCents }   · invalid (time not 6:00 AM–10:00 PM on 5 min) · withdrawn
 //   withdrawCandidate({ candidateId, expectedVersion })   A   → { version } · withdrawn
 //   restoreCandidate({ candidateId, expectedVersion })   A, or S for their own Keep-this-one within 10 s
 //     → { version } · not_allowed ("too late") · stale (not withdrawn, or another active make-up exists)
@@ -130,3 +130,20 @@ export const recordPayment = api.recordPayment;
 export const undoPayment = api.undoPayment;
 export const editPayment = api.editPayment;
 export const recordRefund = api.recordRefund;
+
+// The signed-in person's full name, for the receipt's "Printed … by [name]" (S2, Q7 A, v0.518):
+// the existing get_my_profile (App.jsx calls it at sign-in; the preview database answers it too),
+// called when a receipt opens. Never throws: any failure gives null, and the receipt's line then
+// reads "Printed Oct 28, 2026. Fees are non-refundable." without a name.
+export async function loadMyName() {
+  try {
+    if (!supabase) return null;
+    const { data, error } = await supabase.rpc('get_my_profile');
+    if (error) return null;
+    const row = Array.isArray(data) ? data[0] : data; // the function returns 0 or 1 rows
+    const name = row?.full_name;
+    return typeof name === 'string' && name.trim() !== '' ? name.trim() : null;
+  } catch {
+    return null;
+  }
+}

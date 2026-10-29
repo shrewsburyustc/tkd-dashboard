@@ -9,10 +9,14 @@
 // Lines marked "not drawn" are not in any approved mockup: they follow the same pattern, and are
 // proposals for the design review.
 
+import { formatMoney } from '../money.js';
+
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-const DOLLARS = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 0 });
-// 2000 → "$20", 14050 → "$140.50" (payments may have cents: a typed discount, v0.110).
-export const dollars = (cents) => (Number.isFinite(cents) ? `$${DOLLARS.format(cents / 100)}` : '');
+// Money is written with the dashboard's one helper, formatMoney (src/lib/money.js; rulebook v1.026,
+// v1.101; Star's switch S10, v0.518): 2000 → "$20", 13050 → "$130.50" — cents only when there are
+// some (an admin's Edit payment can set them). `dollars` stays as its other name, so the Candidates
+// words that already say dollars(…) keep working.
+export const dollars = formatMoney;
 
 // ----- Banners for row actions (G11; Color Belt's live lines) -----
 export const ROW_STALE = "Someone else changed this just now. Your change wasn't saved.";
@@ -61,10 +65,19 @@ export const choiceNeededLine = (earlierEventName, passMark) =>
 
 export const DUPLICATE_NAME = 'That name is already used here. Change it, then save again.'; // PROPOSAL (not expected from a candidate function)
 
+// ----- The payment receipt (S2, DR2-P4, v0.518; candidatesReceipt.js) -----
+export const RECEIPT_KIND = 'Star testing · payment receipt';
+export const RECEIPT_CANDIDATE = 'Candidate';
+export const RECEIPT_EVENT = 'Event';
+export const RECEIPT_SCHOOL_LABEL = 'School';
+export const RECEIPT_PRIVATE = 'Private testing';
+export const RECEIPT_FOR_FEE = 'Testing fee';
+export const RECEIPT_FOR_REFUND = 'Refund';
+
 // ----- Toasts -----
 export const candidateAddedToast = (name) => `${name} added`; // + Undo (G7)
 export const TOAST_CHANGES_SAVED = 'Changes saved';
-export const TOAST_PAYMENT_SAVED = 'Payment saved'; // Edit payment (G16)
+export const TOAST_PAYMENT_CHANGED = 'Payment changed'; // Edit payment (G16) + Undo, admins (DR G2, v0.517)
 export const TOAST_REFUND_RECORDED = 'Refund recorded'; // + Undo (G1)
 export const paymentUndoneToast = (name) => `Payment undone for ${name}`; // admin, no Undo (G16)
 export const withdrawnToast = (name) => `${name} withdrawn`;
@@ -79,15 +92,18 @@ export const TOAST_KEPT_BOTH = 'Kept both registrations';
 //   { row, text }            no banner: the row itself changes (the make-up list's "Already added")
 //   { confirm, gradeCount }  grades_exist: open the Dan-change confirmation with that number
 // action — where the answer came from:
-//   row actions (banner): 'withdraw' · 'restore' · 'undo_duplicate' (the toast's Undo of Keep this
-//     one) · 'undo_payment' (the toast's Undo) · 'admin_undo_payment' · 'undo_refund' · 'duplicate'
+//   row actions (banner): 'mark_paid' (the row's Mark paid, S1, v0.518 — the box has closed, so a
+//     failure shows in the row bar with Retry and the row's "Not saved" tag) · 'withdraw' · 'restore' · 'undo_duplicate' (the toast's Undo of Keep this
+//     one) · 'undo_payment' (the toast's Undo) · 'admin_undo_payment' · 'undo_refund' · 'duplicate' ·
+//     'undo_edit_payment' and 'undo_paying_by' (the toasts' Undo after Edit payment and Change how
+//     they'll pay, DR G2 / G3, v0.517)
 //   dialogs (note under the buttons): 'add' · 'edit' · 'paying_by' · 'private' · 'record_payment' ·
 //     'edit_payment' · 'refund' · 'delete'
 //   the make-up list: 'add_makeup'
 // options: name (the candidate's name), phone (full-screen dialog, no Cancel), overpaidCents.
 export function statusMessage(action, status, { name = '', phone = false, overpaidCents = 0, gradeCount = 0 } = {}) {
   if (status === 'ok' || status === 'no_access') return null;
-  const rowAction = ['withdraw', 'restore', 'undo_duplicate', 'undo_payment', 'admin_undo_payment', 'undo_refund', 'duplicate', 'add_makeup'].includes(action);
+  const rowAction = ['withdraw', 'restore', 'undo_duplicate', 'undo_payment', 'admin_undo_payment', 'undo_refund', 'duplicate', 'add_makeup', 'undo_edit_payment', 'undo_paying_by', 'mark_paid'].includes(action);
   const stale = rowAction ? { text: ROW_STALE } : { text: phone ? DIALOG_STALE_PHONE : DIALOG_STALE };
   switch (status) {
     case 'stale':
