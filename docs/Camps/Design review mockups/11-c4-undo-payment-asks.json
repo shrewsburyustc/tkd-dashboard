@@ -1,0 +1,53 @@
+{
+  "title": "Camps C4, second half — Undo payment asks first",
+  "subtitle": "Rule v1.003 (“Undo payment always asks first”) and v1.103 (the shared <code>components/ConfirmBox.jsx</code>). Today Camps’ <b>Undo payment</b> (admin: camper ⋯, or Camper detail → More on touch screens) takes the money off at once. After: it opens the shared box with <code>loses: 'something'</code>: the question names the camper, the sentence names the payment (amount, way, date) and what is owed afterwards; the action is <b>blue</b> (nothing is lost for good: the history keeps both), and <b>“Keep payment” has the first focus</b>. While it works the action says “Undoing…” and both buttons gray; if it fails the box stays open with an amber note. After a successful Undo, today’s toast stays (“Payment undone for Chloe Martin”, no Undo). Words: Star’s, adapted (see footer). Amber = what changes.",
+  "columns": [
+    { "label": "Today", "tone": "today", "items": [
+      { "row": [
+        { "src": "shots/c04-pc-today-menu.png", "crop": [880, 370, 400, 250], "scale": 0.95, "marks": [[1050, 495, 194, 28]],
+          "caption": "<b>PC 1280×800.</b> Chloe Martin’s ⋯ → <b>Undo payment</b>." },
+        { "src": "shots/c04-pc-today-toast.png", "crop": [540, 370, 740, 430], "scale": 0.6, "marks": [[554, 387, 68, 20], [1038, 741, 218, 36]],
+          "caption": "One click and it’s done: no question. The tag is “$315 due”; the toast has no Undo." }
+      ] },
+      { "row": [
+        { "src": "shots/c04-tab-today-more.png", "crop": [190, 880, 440, 180], "scale": 0.62, "shotWidth": 820, "marks": [[348, 944, 135, 36]],
+          "caption": "<b>Tablet 820×1180 touch.</b> Camper detail → More → Undo payment." },
+        { "src": "shots/c04-tab-today-toast.png", "crop": [96, 480, 724, 700], "scale": 0.5, "shotWidth": 820, "marks": [[235, 507, 68, 22], [578, 1121, 218, 36]],
+          "caption": "The detail closes; the payment is already gone." }
+      ] },
+      { "row": [
+        { "src": "shots/c04-ph-today-more.png", "crop": [0, 560, 390, 284], "scale": 0.6, "shotWidth": 390, "marks": [[150, 673, 136, 36]],
+          "caption": "<b>Phone 390×844 touch.</b> Camper detail → More." },
+        { "src": "shots/c04-ph-today-toast.png", "crop": [0, 440, 390, 404], "scale": 0.55, "shotWidth": 390, "marks": [[307, 457, 67, 22], [86, 742, 218, 34]],
+          "caption": "Same: done at once." },
+        { "src": "shots/c04-320-today-more.png", "crop": [0, 500, 320, 200], "scale": 0.6, "shotWidth": 320, "marks": [[150, 530, 136, 36]],
+          "caption": "<b>320 wide.</b> Same button." }
+      ] }
+    ] },
+    { "label": "After (mockup)", "tone": "after", "items": [
+      { "row": [
+        { "src": "shots/c04-pc-after.png", "crop": [450, 70, 380, 200], "scale": 0.8, "marks": [[484, 100, 312, 92], [528, 207, 268, 32]],
+          "caption": "<b>PC, at rest.</b> Names the payment; blue <b>Undo payment</b>; first focus on <b>Keep payment</b> (ring drawn as the keyboard sees it)." },
+        { "src": "shots/c04-pc-after-busy.png", "crop": [450, 70, 380, 200], "scale": 0.8, "marks": [[528, 207, 268, 32]],
+          "caption": "<b>While it works:</b> “Undoing…”, both gray; nothing moves. Esc, a click outside and Back wait." }
+      ] },
+      { "row": [
+        { "src": "shots/c04-pc-after-failed.png", "crop": [450, 70, 380, 260], "scale": 0.8, "marks": [[484, 247, 312, 52]],
+          "caption": "<b>If it fails:</b> the box stays open, amber note under the buttons; pressing Undo payment again tries again." },
+        { "src": "shots/c04-tab-after.png", "crop": [220, 86, 380, 206], "scale": 0.8, "shotWidth": 820, "marks": [[297, 223, 270, 36]],
+          "caption": "<b>Tablet touch</b> (from Camper detail → More: the box takes the detail’s place, as Delete permanently does today)." }
+      ] },
+      { "row": [
+        { "src": "shots/c04-ph-after.png", "crop": [0, 74, 390, 266], "scale": 0.6, "shotWidth": 390, "marks": [[82, 211, 268, 36]],
+          "caption": "<b>Phone 390 touch</b>, at rest: the same small box, side by side." },
+        { "src": "shots/c04-ph-after-failed.png", "crop": [0, 74, 390, 266], "scale": 0.6, "shotWidth": 390, "marks": [[40, 255, 310, 52]],
+          "caption": "Phone, failed." },
+        { "src": "shots/c04-320-after.png", "crop": [0, 60, 320, 250], "scale": 0.6, "shotWidth": 320, "marks": [[40, 197, 240, 80]],
+          "caption": "<b>320 wide:</b> they stack, each full width, Keep on top." },
+        { "src": "shots/c04-320-after-busy.png", "crop": [0, 60, 320, 250], "scale": 0.6, "shotWidth": 320, "marks": [[40, 197, 240, 80]],
+          "caption": "320, while it works: stays stacked." }
+      ] }
+    ] }
+  ],
+  "footer": "<b>Words to approve</b> (proposal: Star’s <code>star/candidates/text.js:164–167</code>, approved v0.508, adapted to Camps). Title “Undo Chloe Martin’s payment?” (Star’s, unchanged). Sentence “The $315 check payment recorded on Mar 11 is reversed, so $315 is owed again. Both stay in the history.” (Star’s first and last parts; Star’s middle, “the row goes back to Not paid”, is replaced because a Camps camper can still owe part, e.g. Leo Kim “Owes $15” would owe $350 after the Undo — the amount is what is owed <i>after</i>). “Keep payment” (Star’s KEEP_PAYMENT). “Undo payment” with the ↶ icon (today’s menu words and icon; also the parts page’s M2 sample). “Undoing…” (the parts page’s M2 busy words for this case). Failure: “Couldn’t undo. Check the connection, then try again.” (new; Camps’ DELETE_FAILED pattern + its “Couldn’t undo.” start). Toast after: unchanged. <b>Drawn:</b> the After boxes are Camps’ real Delete permanently box (already the shared ConfirmBox, v0.729) with the words swapped, the action’s class turned to the blue <code>btn-primary</code> that ConfirmBox uses for “something”, and the busy look / amber note in ConfirmBox’s own markup; the focus ring is drawn. <b>Script:</b> <code>mock-c04-undo-asks.js</code>."
+}
