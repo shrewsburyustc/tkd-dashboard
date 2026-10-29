@@ -2741,7 +2741,7 @@ Tested in PGlite on every run (`run.mjs` step0031: the undo file exactly as name
 
 ## Migration 0030: Color Belt — Mark paid with a way to pay, History, results CSV
 
-**Status: NOT APPLIED** (built on `color-belt`, rulebook v0.418 and v0.419; plan `docs/Testing/Color Belt Testing/TKD-ColorBelt-0030-Plan.md`). Needs Jeffrey's OK and a separate security review before it is pasted. Apply it **before** the app version with the new Mark paid box, History line and CSV button is deployed. The live site keeps working after it: the old 2-argument Mark paid functions are not changed, and Undo payment, Edit payment, Move to private and Undo move answer exactly as before.
+**Status: APPLIED 2026-10-29** (built on `color-belt`, rulebook v0.418 and v0.419; plan `docs/Testing/Color Belt Testing/TKD-ColorBelt-0030-Plan.md`; two security reviews; 0030a–0030d done: fingerprints match, nothing else changed, advisor nothing new, 0030 / 0005 / 0010 / 0014 / 0018 / 0026 tests passed). Apply it **before** the app version with the new Mark paid box, History line and CSV button is deployed. The live site keeps working after it: the old 2-argument Mark paid functions are not changed, and Undo payment, Edit payment, Move to private and Undo move answer exactly as before.
 
 **Production order:** … 0025 → 0027 → 0026 → 0029 → 0031 (all live) → **0030**. It needs 0005, 0010, 0014 and 0018 — it stops with "0030 needs migrations 0005, 0010 and 0014 (Color Belt testing) first" or "0030 needs migration 0018 … first" if one is missing.
 

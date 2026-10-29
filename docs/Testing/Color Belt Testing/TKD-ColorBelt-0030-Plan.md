@@ -1,4 +1,4 @@
-# Migration 0030 — Color Belt design review database half: plan (draft, not reviewed)
+# Migration 0030 — Color Belt design review database half: plan (built, reviewed, applied 2026-10-29)
 
 What: the design for migration 0030 (reserved by Main 2026-10-28): CB1 Mark paid with a way to pay, CB7 history
 readers, CB18 the admin-only results CSV. Why: the shared Mark paid box and History line (Part 2) and the CSV button
