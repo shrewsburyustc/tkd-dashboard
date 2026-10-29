@@ -12,8 +12,11 @@
 //   idBase      unique prefix for ids
 //   noTimesText optional: the words when no free-class time is open (the public page says it to
 //               the family; staff see the staff wording by default)
+//   inlineDates true: a Date question's calendar opens IN the page under its field (the family
+//               page and the kiosk, like Star's date of birth; staff Fill in: only on phones)
 //   onAnswer(fieldId, value)  onChildren(list)  onBooking(childIndex, timeKey | '')  onSignature(dataUrl | null)
 import { IconPlus, IconTrash } from '@tabler/icons-react';
+import DatePicker from '../../components/DatePicker.jsx';
 import Notice from '../../components/Notice.jsx';
 import { isVisible, MAX_CHILDREN, NO_TIME_KEY } from '../../lib/forms/fields.js';
 import { formatDate } from '../../lib/schedule/versions.js';
@@ -25,6 +28,15 @@ import * as T from './text.js';
 
 export const timeKey = (t) => `${t.classId}|${t.date}|${t.start}`;
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+// A Date question can be a birthday or a day ahead (design review N6), so its calendar offers
+// any day: the Year list runs from 2 years ahead back 100 years, newest first, and with nothing
+// chosen it opens on this month with focus on the Month list (as Star's date of birth does).
+const dateYears = (todayIso) => {
+  const year = Number(todayIso.slice(0, 4));
+  const list = [];
+  for (let y = year + 2; y >= year - 100; y -= 1) list.push(y);
+  return list;
+};
 const nextWeek = (monday) => {
   const d = new Date(`${monday}T12:00:00Z`);
   d.setUTCDate(d.getUTCDate() + 7);
@@ -38,7 +50,7 @@ function Problem({ id, code }) {
 
 // noAutofill (the front-desk kiosk): the browser must not offer the previous family's name, phone
 // or email on a shared tablet (kiosk plan), so every box says autocomplete="off".
-export default function FormFields({ fields, values, problems, times, readOnly, idBase, noTimesText, noAutofill = false, onAnswer, onChildren, onBooking, onSignature }) {
+export default function FormFields({ fields, values, problems, times, readOnly, idBase, noTimesText, noAutofill = false, inlineDates = false, onAnswer, onChildren, onBooking, onSignature }) {
   const off = noAutofill ? 'off' : undefined;
   // (on the kiosk the keyboard's spell-check and word suggestions are off too: they would learn
   // and offer one family's names and emails to the next — security review L4)
@@ -120,7 +132,24 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
         );
         break;
       case 'date':
-        control = <input {...common} type="date" value={v ?? ''} onChange={(e) => onAnswer(f.id, e.target.value || undefined)} />;
+        // the dashboard's own calendar (rulebook v1.018), not the browser's date box
+        control = (
+          <DatePicker
+            id={id}
+            label={required ? f.label : `${f.label} (optional)`}
+            value={v ?? ''}
+            today={today()}
+            years={dateYears(today())}
+            yearsNewestFirst
+            emptyFocus="month"
+            placeholder={T.PICK}
+            disabled={readOnly}
+            invalid={Boolean(code)}
+            describedBy={aria['aria-describedby']}
+            inline={inlineDates}
+            onChange={(iso) => onAnswer(f.id, iso || undefined)}
+          />
+        );
         break;
       default: {
         const type = ['phone', 'parent_phone'].includes(f.type) ? 'tel' : ['email', 'parent_email'].includes(f.type) ? 'email' : 'text';
@@ -130,7 +159,8 @@ export default function FormFields({ fields, values, problems, times, readOnly, 
     }
     return (
       <div key={f.id} className="field">
-        <label htmlFor={id}>{label}</label>
+        {/* a Date question's name is plain text: a <label> would open its calendar when clicked (as Star's) */}
+        {f.type === 'date' ? <span className="field-label">{label}</span> : <label htmlFor={id}>{label}</label>}
         {control}
         {help}
         <Problem id={errId} code={code} />
