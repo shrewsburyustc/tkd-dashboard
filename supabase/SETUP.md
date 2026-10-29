@@ -2622,6 +2622,45 @@ Tested in PGlite on every run (`run.mjs` step0027: the undo file exactly as name
 
 ---
 
+## Migration 0029: Finance — close-the-day reminder in 5-minute steps
+
+**What it does** (`supabase/migrations/0029_finance_reminder_5min.sql`; design-review F2 / M8, item 14b): the Home "close the day" reminder time may be any **5-minute** step from 11:00 AM to 11:00 PM (11:00, 11:05 … 22:55, 23:00), no seconds; **Off** stays NULL. Until now only 15-minute steps were allowed. It replaces **one** function from 0011, `finance_reminder_time_is_valid(time)` — the rule used by Settings' save (`finance_set_reminder_time`) and by the table rule `finance_reminder_times_time_check`. The only change in its text is `% 15` → `% 5`; name, argument, `language sql immutable`, `search_path = ''`, owner and rights stay as 0011 made them (revoked from public, anon, authenticated and service_role; granted to nobody — only the database itself calls it). No table, table rule, other function, right or row changes.
+
+**Existing times stay valid:** every time saved today is on a 15-minute step, which is also a 5-minute step. (Replacing a function that a table rule uses does not make Postgres re-check the rows already stored — fine here, because the new rule only allows *more*.)
+
+**Order:** after 0011 (live). Nothing later (0017, 0018, 0026 …) replaces or calls this function. It must be live **before** Dashboard core's new Settings time list (5-minute steps) is deployed — until then the screen still offers only the 15-minute list, so nothing visible changes. A **guard** at the top stops it — and changes nothing — if 0011 is missing or if the live function is not exactly 0011's text (or 0029's, on a re-run), compared by the md5 of its code without comments and white space. **Forward-only** — no undo file (going back would need a new migration that first moves any 5-minute times saved meanwhile). Each step needs Jeffrey's OK.
+
+### 0029a. Before you apply 0029 (Claude, read-only through the connection)
+
+1. Claude runs `supabase/tests/0029_fingerprints.sql` and keeps the result (3 rows). The `function` line's md5 must be **`893a4a82cd923c9e81c0a35f48de403f`** (0011's text — the one the guard accepts); `definer=false`, `settings=search_path=""`, `rights=postgres:EXECUTE`. A different md5: stop — 0029 must be rebuilt (the guard would refuse it anyway).
+
+### 0029b. Apply 0029 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0029_finance_reminder_5min.sql`, **SQL Editor → New query**, paste, **Run**.
+2. This file removes nothing, so Supabase should not show a destructive-operations warning.
+3. "Success." One transaction: on any error nothing is kept. Copy the error to Claude. **Running it again is safe** (tested: no fingerprint or row changes).
+4. Don't re-run 0011 after this (it would put the 15-minute rule back; since 0026 a 0011 re-run is refused anyway — see 0026b). If it ever runs, re-run 0029 straight after.
+
+### 0029c. Read-only checks (Claude runs these through the connection)
+
+1. **Fingerprints:** `supabase/tests/0029_fingerprints.sql` must match what `run.mjs` printed ("0029 fingerprints"): the `function` line md5 **`956cf7ae3a12ff432ead67bafd2631c0`** with `definer=false settings=search_path="" owner=postgres rights=postgres:EXECUTE`; `function-kind` `volatility=i language=sql returns=boolean`; the `rule` line unchanged (`CHECK (((remind_at IS NULL) OR finance_reminder_time_is_valid(remind_at)))`). The file contains neither of the words the connection refuses.
+2. `0011_fingerprints.sql` and camps' `0017_fingerprints.sql` (both list every `finance_` function): **only** the `finance_reminder_time_is_valid(...)` line differs from before — its body md5, `893a4a82…` → `956cf7ae…`; rights, owner and settings the same. Every other migration's fingerprints: unchanged (`run.mjs` step0029 checks exactly that).
+3. **Security advisor:** nothing new (no new function or table; this one can't be called from the app).
+
+### 0029d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0029_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** (a second) → **ALL 0029 TESTS PASSED**. It checks the rule (11:00, 11:05, 22:55, 23:00 allowed; 10:55, 23:05, 11:07, 11:05:30 and NULL refused; exactly 145 allowed times a day), that nobody but the owner can call the function, Settings' save as an admin (11:05 and 22:55 saved, 11:07 / 23:05 / 10:55 / 11:05:30 refused and nothing saved) and as the front desk (refused), and the table rule (13:35 and Off stored, 13:37 refused). It changes Worcester's and Shrewsbury's **Monday** reminder times inside the test only — everything is rolled back.
+2. Then `0011_tests.sql` again — it must still pass.
+3. Put the placeholders back afterwards.
+
+Tested in PGlite on every run (`run.mjs` step0029, or `node run.mjs --only-step0029`): a database built in the production order with every live migration (… 0025 → 0027 → 0026), the guard refusing a changed function, a 15-minute time stored before 0029 still valid after it, the fingerprint comparison above, `0029_tests.sql` then `0011_tests.sql`, camps' `0017_tests.sql`, `0018_tests.sql` and `0026_tests.sql`, and a second run of 0029.
+
+**Why:**
+- **The database first:** it is what really enforces the rule; the screen's new 5-minute list would be refused ("invalid") until this is live.
+- **A new migration, not an edit of 0011:** 0011 is live; replacing one function in a later file keeps the history clear.
+
+---
+
 ## Migration 0028: Star start times 6:00 AM–10:00 PM every 5 minutes
 
 **Status: applied 2026-10-28** (pasted by Jeffrey; 0028b fingerprint `d0548ce9…` matches, the other 142 Star fingerprints unchanged, security advisor nothing new, `0028_tests.sql` and `0006_tests.sql` pass). Built on `star-testing`, design-review item S12, rulebook v1.019; contract `docs/Dashboard Docs/Build contracts/CONTRACT-0028.md`).
