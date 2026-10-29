@@ -125,6 +125,9 @@ export const NAME_OPTIONAL = 'Name (optional)';
 export const NAME_PLACEHOLDER = 'Winter';
 export const STARTS_ON = 'Starts on';
 export const STARTS_ON_HINT = 'Must be after today. Until then, the current schedule is used.';
+// The Starts on calendar (components/DatePicker.jsx, design review N6 / v1.018)
+export const CHOOSE = 'Choose…'; // the empty field
+export const STARTS_ON_PICKER_HINT = 'Today and earlier days can’t be chosen.'; // the calendar's gray line
 export const START_FROM = 'Start from';
 export const copyOf = (label, count) => `Copy of ${label} (${count === 1 ? '1 time slot' : `${count} time slots`})`;
 export const COPY_NOTHING = 'Copy (nothing to copy yet)';
