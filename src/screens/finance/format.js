@@ -92,6 +92,13 @@ export function addDays(day, n) {
   return date.toISOString().slice(0, 10);
 }
 
+// The Year list in Finance's calendars (Daily report, Export): this year and the two before it.
+// (The picker itself adds the year on show.)
+export function calendarYears(today) {
+  const thisYear = Number(String(today).slice(0, 4));
+  return [thisYear - 2, thisYear - 1, thisYear];
+}
+
 // The first day of the month a day is in: '2026-10-24' → '2026-10-01'.
 export const monthStart = (day) => `${String(day).slice(0, 7)}-01`;
 

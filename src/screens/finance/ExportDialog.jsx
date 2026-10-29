@@ -25,11 +25,10 @@ import DatePicker from '../../components/DatePicker.jsx';
 import Dialog from '../../components/Dialog.jsx';
 import { csvFileName, toCsv } from '../../lib/finance/csv.js';
 import { financeExport, financeExportPreview } from '../../lib/finance/financeApi.js';
-import { daysBetween, monthStart } from './format.js';
+import { calendarYears, daysBetween, monthStart } from './format.js';
 import * as T from './text.js';
 
 const PREVIEW_DELAY_MS = 300; // wait this long after the last date change before asking
-const YEARS_BACK = 2; // the calendar's Year list: this year and the two before it
 
 // What's wrong with the two dates, if anything: { from, to } messages (or null).
 function checkDates(from, to, today) {
@@ -62,9 +61,7 @@ export default function ExportDialog({ school, locationCode, today, isPhone, onC
   const errors = checkDates(from, to, today);
   const datesOk = !errors.from && !errors.to;
 
-  // The Year list in each calendar (the picker itself adds the year on show).
-  const thisYear = Number(today.slice(0, 4));
-  const years = Array.from({ length: YEARS_BACK + 1 }, (_, i) => thisYear - YEARS_BACK + i);
+  const years = calendarYears(today); // the Year list in each calendar
 
   // Opening: keyboard focus on From. (The picker's field is drawn by the shared part, which has no
   // data-autofocus prop, so this screen moves focus there itself. It runs after the Dialog's own

@@ -6,6 +6,9 @@
 // Who sees what (v0.806, enforced by the database):
 //   staff  — today only ("Staff see today only. Ask an admin for other days."), Close the day, Print
 //   admins — any day: ‹ › arrows, a calendar, Today, History, Print, Export…, Reopen day
+// The calendar button opens the dashboard's own date picker (components/DatePicker.jsx, opened
+// from the button, v0.817 / v1.114): under the button on PC and tablet, in the page under the
+// row on phones; days after today are gray ("Days after today can't be chosen.").
 // On Both: one summary box per school instead (BothSummary.jsx, D6); no Print or Export there.
 // Phones: the buttons of the date row sit under ⋯ (a sheet from the bottom, D14).
 // Close the day (v0.800): an outline "Close the day…" button in the date row (phones: in the ⋯
@@ -26,7 +29,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   IconCalendar,
-  IconCalendarEvent,
   IconCash,
   IconCashRegister,
   IconChevronLeft,
@@ -41,6 +43,7 @@ import {
   IconSum,
 } from '@tabler/icons-react';
 import ChoiceGroup from '../../components/ChoiceGroup.jsx';
+import DatePicker, { datePickerOpener } from '../../components/DatePicker.jsx';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
 import IconButton from '../../components/IconButton.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
@@ -64,8 +67,13 @@ import PaymentDetailDialog from './PaymentDetailDialog.jsx';
 import PaymentsList, { cardSub, groupAnchorId } from './PaymentsList.jsx';
 import PrintPage from './PrintPage.jsx';
 import { financeState } from './financeState.js';
-import { addDays, dayLong, dayLongNoYear, dayShort, dayShortYear, money } from './format.js';
+import { addDays, calendarYears, dayLong, dayLongNoYear, dayShort, dayShortYear, money } from './format.js';
 import * as T from './text.js';
+
+// A menu item with no icon (v0.819): keeps its words lined up with the items that have one.
+function NoIcon() {
+  return <span className="menu-icon ev-noicon" aria-hidden="true" />;
+}
 
 // What people typed in Close the day, per school and day, kept in memory while the dashboard is
 // open — so closing the dialog early, switching school or tab, or a failed save (D13) never loses
@@ -438,18 +446,9 @@ export default function DayReport({
     target.focus({ preventScroll: true });
   }
 
-  // ----- Calendar (admins): the browser's own date picker -----
-  const dateInputRef = useRef(null);
-  function openCalendar() {
-    const input = dateInputRef.current;
-    if (!input) return;
-    try {
-      input.showPicker(); // opens the date picker (modern browsers)
-    } catch {
-      input.focus();
-      input.click();
-    }
-  }
+  // ----- Calendar (admins): the dashboard's own date picker, opened from the calendar button -----
+  const calendarButtonRef = useRef(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   // ----- The date row -----
   const hasRefunds = !isBoth && (data?.refunds?.count ?? 0) > 0;
@@ -464,7 +463,8 @@ export default function DayReport({
 
   // The phone ⋯ sheet items (D14): staff Print; admins Today, History, Print, Export… (Both: History).
   const menuItems = [];
-  if (isAdmin && !isToday) menuItems.push({ key: 'today', label: T.TODAY, Icon: IconCalendarEvent, onSelect: () => onDay(null) });
+  // Today has no icon (v0.819): a blank slot keeps its words lined up with the others.
+  if (isAdmin && !isToday) menuItems.push({ key: 'today', label: T.TODAY, Icon: NoIcon, onSelect: () => onDay(null) });
   if (isAdmin) menuItems.push({ key: 'history', label: T.HISTORY, Icon: IconHistory, onSelect: onOpenHistory });
   if (canPrint) menuItems.push({ key: 'print', label: T.PRINT, Icon: IconPrinter, onSelect: () => setPrinting({ printedAt: new Date() }) });
   // (Export from the sheet: focus comes back to the ⋯ button afterwards.)
@@ -496,23 +496,13 @@ export default function DayReport({
               if (!isToday) onDay(addDays(day, 1) >= today ? null : addDays(day, 1));
             }}
           />
-          <span className="fin-cal">
-            <IconButton label={T.PICK_DATE} Icon={IconCalendar} className="fin-ibtn" onClick={openCalendar} />
-            {/* The real date field, invisible, under the calendar button: showPicker() opens it. */}
-            <input
-              ref={dateInputRef}
-              className="fin-cal-input"
-              type="date"
-              tabIndex={-1}
-              aria-hidden="true"
-              max={today}
-              value={day}
-              onChange={(event) => {
-                const picked = event.target.value;
-                if (picked) onDay(picked >= today ? null : picked);
-              }}
-            />
-          </span>
+          <IconButton
+            ref={calendarButtonRef}
+            label={T.PICK_DATE}
+            Icon={IconCalendar}
+            className="fin-ibtn"
+            {...datePickerOpener(calendarOpen, setCalendarOpen)}
+          />
           {!isPhone && !isToday && (
             <button type="button" className="btn" onClick={() => onDay(null)}>
               {T.TODAY}
@@ -632,6 +622,21 @@ export default function DayReport({
   return (
     <>
       {dayRow}
+      {isAdmin && (
+        <DatePicker
+          opener={calendarButtonRef}
+          open={calendarOpen}
+          onOpenChange={setCalendarOpen}
+          label={T.PICK_DATE}
+          value={day}
+          today={today}
+          max={today}
+          years={calendarYears(today)}
+          hint={T.DAYS_AFTER_TODAY}
+          inline={isPhone}
+          onChange={(picked) => onDay(picked >= today ? null : picked)}
+        />
+      )}
       {!isAdmin && isPhone && <p className="fin-hint fin-staff-hint">{T.STAFF_HINT}</p>}
       {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ?? undefined} retrying={reopening} onDismiss={() => setBanner(null)} />}
       {body}

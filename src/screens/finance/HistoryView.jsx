@@ -9,7 +9,8 @@
 // Address: #finance/history (App.jsx). The database refuses staff (contract §1.4).
 //
 // Layouts: PC table (Day · Total · Closed by · Status) · tablet (Closed by under the day) ·
-// phone stacked rows with a back arrow.
+// phone stacked rows. On every size "← Back to the day" is a text link above the heading
+// (v0.820, the back link the Testing and Camps pages use).
 //
 // Props: location, today, month ('YYYY-MM-01'), onMonth(month), onBack(), onOpenDay(day, schoolName),
 //        screenLocked, onNoAccess, wide, isPhone, isTouch
@@ -105,32 +106,29 @@ export default function HistoryView({ location, today, month, onMonth, onBack, o
   const unclosedCount = live.data?.unclosed_count ?? unclosed.length;
 
   const top = (
-    <div className="fin-dayrow">
-      {isPhone ? (
-        <button type="button" className="icon-button fin-back" aria-label={T.BACK_TO_DAY} onClick={onBack}>
-          <IconArrowLeft size={20} aria-hidden="true" />
-        </button>
-      ) : (
-        <button type="button" className="btn" onClick={onBack}>
-          <IconArrowLeft size={16} aria-hidden="true" />
-          {T.BACK_TO_DAY}
-        </button>
-      )}
-      <h2 className="fin-day">{T.HISTORY}</h2>
-      <span className="fin-grow" />
-      <IconButton label={T.PREVIOUS_MONTH} Icon={IconChevronLeft} className="fin-ibtn" onClick={() => onMonth(addMonths(month, -1))} />
-      {/* Phones: "Oct 2026", so the row fits on one line at 320px */}
-      <strong className="fin-month">{isPhone ? monthShortYear(month) : monthYear(month)}</strong>
-      <IconButton
-        label={T.NEXT_MONTH}
-        Icon={IconChevronRight}
-        className={`fin-ibtn${atThisMonth ? ' is-unavailable' : ''}`}
-        aria-disabled={atThisMonth ? 'true' : undefined}
-        onClick={() => {
-          if (!atThisMonth) onMonth(addMonths(month, 1));
-        }}
-      />
-    </div>
+    <>
+      <button type="button" className="link-button fin-back-link" onClick={onBack}>
+        {/* ti-arrow-left = back */}
+        <IconArrowLeft size={16} aria-hidden="true" />
+        {T.BACK_TO_DAY}
+      </button>
+      <div className="fin-dayrow">
+        <h2 className="fin-day">{T.HISTORY}</h2>
+        <span className="fin-grow" />
+        <IconButton label={T.PREVIOUS_MONTH} Icon={IconChevronLeft} className="fin-ibtn" onClick={() => onMonth(addMonths(month, -1))} />
+        {/* Phones: "Oct 2026", so the row fits on one line at 320px */}
+        <strong className="fin-month">{isPhone ? monthShortYear(month) : monthYear(month)}</strong>
+        <IconButton
+          label={T.NEXT_MONTH}
+          Icon={IconChevronRight}
+          className={`fin-ibtn${atThisMonth ? ' is-unavailable' : ''}`}
+          aria-disabled={atThisMonth ? 'true' : undefined}
+          onClick={() => {
+            if (!atThisMonth) onMonth(addMonths(month, 1));
+          }}
+        />
+      </div>
+    </>
   );
 
   let body;

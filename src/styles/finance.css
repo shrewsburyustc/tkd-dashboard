@@ -94,6 +94,17 @@
 }
 
 /* ===== Date row (D1, D4, D14) ===== */
+/* History's "← Back to the day" (v0.820): the shared link-button look (app.css: blue text, 44px
+   tap height on touch), laid out like the Testing and Camps pages' back link (.ev-back). */
+.fin-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  align-self: flex-start;
+  min-height: 28px;
+  margin-bottom: var(--space-4);
+}
+
 .fin-dayrow {
   display: flex;
   flex-wrap: wrap;
@@ -148,24 +159,6 @@
 
 .fin-ibtn.is-unavailable .tib-box {
   border-color: var(--color-border-strong);
-}
-
-/* The real date field sits invisibly under the calendar button; showPicker() opens it. */
-.fin-cal {
-  position: relative;
-  display: inline-flex;
-}
-
-.fin-cal-input {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  border: 0;
-  opacity: 0;
-  pointer-events: none;
 }
 
 /* The first button of the date row: its tooltip opens to the right, so it isn't cut off */
@@ -957,6 +950,11 @@
 
 /* ===== Touch screens: 36px controls, 44px tap areas, 48px rows (guidelines 2.5) ===== */
 @media (pointer: coarse) {
+  /* History's back link: a 44px tap height, like .ev-back (testing-events.css) */
+  .fin-back-link {
+    min-height: var(--tap-size);
+  }
+
   /* Export's From / To: every field has 16px text on touch (app.css), so the longest date
      (135px) plus the chevron needs a wider field. Two of these don't fit side by side on a 390
      phone, so there they stack (as at 320; Jeffrey's choice, v0.818). 200px leaves room for an
