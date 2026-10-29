@@ -541,3 +541,47 @@ h1:focus,
     align-items: center;
   }
 }
+
+/* ---------- a Date question's calendar: in the page under the field (design review N6) ----------
+   The same set-up as Star's date of birth (star-register.css, F6). PC and tablet: a bordered box
+   in the card, not floating. */
+.fp-card .dp-pop.is-inline {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-12);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.fp-card .dp-pop.is-inline .dp-top,
+.fp-card .dp-pop.is-inline .dp-hint {
+  padding-right: 0;
+  padding-left: 0;
+}
+.fp-card .dp-pop.is-inline .dp-day {
+  height: 36px;
+  font-size: var(--text-14);
+}
+/* every touch device, tablets included: 44px days */
+@media (pointer: coarse) {
+  .fp-card .dp-pop.is-inline .dp-day {
+    height: var(--tap-size);
+    font-size: var(--text-16);
+  }
+}
+/* phones: edge to edge of the screen (out of the card's padding and the page gutter; the card is
+   centred, so half the screen minus half the field on each side) */
+@media (max-width: 599px) {
+  .fp-card .dp-pop.is-inline {
+    margin: var(--space-4) calc(50% - 50vw) var(--space-12);
+    padding: var(--space-12) 0;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .fp-card .dp-pop.is-inline .dp-top,
+  .fp-card .dp-pop.is-inline .dp-hint {
+    padding-right: var(--space-16);
+    padding-left: var(--space-16);
+  }
+}

@@ -1149,12 +1149,6 @@ body.is-card-dragging * {
   font-size: var(--text-12);
 }
 
-.pfollow-pick {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-8);
-}
 
 .pkv-select {
   display: flex;

@@ -3,7 +3,10 @@
 // (v0.233). A new one starts as a copy of the schedule running just before its date, or blank.
 // Editing a planned one changes its name and/or start date (the ⋯ menu's Change start date
 // and Rename open this same dialog).
+// Starts on uses the dashboard's own calendar (components/DatePicker.jsx, design review N6 /
+// v1.018) instead of the browser's date box: tomorrow or later.
 import { IconCheck } from '@tabler/icons-react';
+import DatePicker from '../../components/DatePicker.jsx';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
 import { nameProblem, normalizeName } from '../../lib/testing/names.js';
@@ -38,6 +41,12 @@ export function checkPlanForm(state, versions, today) {
     sameAsSaved: state.mode === 'edit' && !isPlanFormDirty(state),
     payload: valid ? { name: typed === '' ? null : typed, startsOn: values.startsOn, copy: values.copy } : null,
   };
+}
+
+// The Year list: this year and the next two (DatePicker adds the year of the date on show).
+function planYears(today) {
+  const year = Number(String(today).slice(0, 4));
+  return Number.isFinite(year) ? [year, year + 1, year + 2] : [];
 }
 
 const NOTES = {
@@ -107,18 +116,24 @@ export default function PlanDialog({ state, school, versions, today, copySource,
         </div>
 
         <div className="field">
-          <label htmlFor={`${idBase}-date`}>{T.STARTS_ON}</label>
-          <input
+          {/* Plain text, not a <label>: the field is a button that names itself, and a
+              <label> would open it when clicked */}
+          <span className="field-label">{T.STARTS_ON}</span>
+          <DatePicker
             id={`${idBase}-date`}
-            className="input"
-            type="date"
-            min={addDays(today, 1)}
-            readOnly={readOnly}
+            label={T.STARTS_ON}
             value={state.values.startsOn}
-            aria-invalid={check.dateError ? true : undefined}
-            aria-describedby={check.dateError ? `${idBase}-date-error` : `${idBase}-date-hint`}
-            onChange={(e) => {
-              onChange({ startsOn: e.target.value });
+            today={today}
+            min={addDays(today, 1)}
+            years={planYears(today)}
+            hint={T.STARTS_ON_PICKER_HINT}
+            placeholder={T.CHOOSE}
+            disabled={readOnly}
+            invalid={Boolean(check.dateError)}
+            describedBy={check.dateError ? `${idBase}-date-error` : `${idBase}-date-hint`}
+            inline={isPhone}
+            onChange={(startsOn) => {
+              onChange({ startsOn });
               onTouch(['startsOn']);
             }}
           />

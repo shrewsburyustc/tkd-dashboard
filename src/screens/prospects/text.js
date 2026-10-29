@@ -164,7 +164,6 @@ export const classLine = (b) => `${formatDate(b.date, { year: false })} · ${for
 export const checkedIn = (name, at) => `Checked in by ${name} · ${new Date(at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
 export const DELETE_PROSPECT = 'Delete prospect';
 export const NO_FOLLOW_UP = 'No follow-up';
-export const SET_DATE = 'Set date';
 export const CURRENT = '(now)';
 export const EDIT_STATUSES = 'Edit statuses';
 export const signedLine = (signedAt, hasPicture) => (signedAt
@@ -226,6 +225,8 @@ export const INVALID = 'That was refused. Check the values and try again.';
 export const JOINED_TITLE = 'Joined';
 export const JOINED_DATE = 'Date joined';
 export const JOINED_HINT = 'Joined families are kept until a Students section exists.';
+export const JOINED_DATE_HINT = 'Days after today can’t be chosen.'; // the Joined calendar's gray line (N6)
+export const PAST_DAYS_HINT = 'Past days can’t be chosen.'; // the follow-up and note calendars' gray line (N6)
 
 // ----- Book a time -----
 export const bookTitle = (name, change) => (change ? `Change ${name}'s free class` : `Book a free class for ${name}`);

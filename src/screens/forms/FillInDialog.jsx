@@ -44,8 +44,8 @@ export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmi
     const id = window.requestAnimationFrame(() => {
       const root = formRef.current;
       if (!root) return;
-      const target = (problemKey && root.querySelector('[aria-invalid="true"], .notice')?.closest('.field, fieldset, .fchildren, .fwaiver')?.querySelector('input:not([disabled]), select, textarea'))
-        || root.querySelector('input:not([type="hidden"]), select, textarea');
+      const target = (problemKey && root.querySelector('[aria-invalid="true"], .notice')?.closest('.field, fieldset, .fchildren, .fwaiver')?.querySelector('input:not([disabled]), select, textarea, button.dp-field:not([aria-disabled="true"])'))
+        || root.querySelector('input:not([type="hidden"]), select, textarea, button.dp-field:not([aria-disabled="true"])');
       target?.focus();
     });
     return () => window.cancelAnimationFrame(id);
@@ -105,6 +105,7 @@ export default function FillInDialog({ state, isPhone, onChange, onStep, onSubmi
       <h3 className="fstep-title">{T.stepOf(step + 1, steps.length, current.label)}</h3>
       <form ref={formRef} onSubmit={next} noValidate>
         <FormFields
+          inlineDates={isPhone}
           fields={current.fields}
           values={v}
           problems={state.problems}
