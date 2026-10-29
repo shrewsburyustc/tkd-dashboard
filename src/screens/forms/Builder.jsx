@@ -5,6 +5,7 @@
 //           change it, drag it by its grip to move it; click empty space for the form settings
 //   right   the chosen field's settings (FieldEditor, plus BookingSettings for Book a class),
 //           or the form's settings (FormSettings)
+// Header: "← Forms" above the form's name on every device (the back link of v0.59 / v1.020).
 // Tablet: the left panel becomes an "+ Add field" button. Phone: a list of fields; tap one to
 // change it full screen; ⋯ → Move up / Move down / Delete field.
 //
@@ -379,13 +380,16 @@ export default function Builder({ detail, school, isPhone, isWide, screenLocked,
   const line = T.statusLine(form, { dirty: unpublished, saving: saveState.saving || saveState.pending, failed: saveState.failed });
   const header = (
     <div className="fhead">
-      <button type="button" className="icon-button" aria-label={T.BACK_TO_FORMS} data-builder-back onClick={async () => {
-        await saveNow();
-        onBack();
-      }}>
-        <IconArrowLeft size={20} aria-hidden="true" />
-      </button>
       <div className="fhead-titles">
+        {/* "← Forms": saves the draft first, then goes back to the list (v1.020, v0.624) */}
+        <button type="button" className="link-button fb-back" aria-label={T.BACK_TO_FORMS} data-builder-back onClick={async () => {
+          await saveNow();
+          onBack();
+        }}>
+          {/* ti-arrow-left = back */}
+          <IconArrowLeft size={16} aria-hidden="true" />
+          {T.FORMS_LINK}
+        </button>
         <h1 className="ptitle">{cleanText(name) || form.name}</h1>
         <p className="psub" aria-live="polite">
           {line.text}

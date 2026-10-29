@@ -76,7 +76,8 @@ export const NAME_TOO_LONG = 'Keep the name to 80 characters or fewer.';
 export const NAME_BAD = 'The name has a character that can\'t be used. Retype it.';
 
 // ----- Builder -----
-export const BACK_TO_FORMS = 'Back to Forms';
+export const BACK_TO_FORMS = 'Back to Forms'; // the back link's name for screen readers
+export const FORMS_LINK = 'Forms'; // the back link's visible words: "← Forms" (v1.020, v0.624)
 export const PREVIEW = 'Preview';
 export const PUBLISH = 'Publish';
 export const PUBLISHING = 'Publishing…';
