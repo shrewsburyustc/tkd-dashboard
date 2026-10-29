@@ -38,7 +38,7 @@
 //
 //   addStarEvent({ name, testingDate, startTime, whereCode, registrationOpen, autoCloseOn, note })   admin
 //     → { status:'ok', id, version, publicCodeWorcester, publicCodeShrewsbury }
-//     refusals: not_allowed · invalid (past date, start time not 8:00 AM–8:00 PM on a 15-minute step,
+//     refusals: not_allowed · invalid (past date, start time not 6:00 AM–10:00 PM on a 5-minute step,
 //               closing date before today or after the testing date, …) · duplicate_name
 //   updateStarEvent({ eventId, expectedVersion, name, testingDate, startTime, whereCode, autoCloseOn, note })   admin
 //     → { status:'ok', version }      (details only — the switch is setStarRegistration)
@@ -71,8 +71,8 @@
 // Pure helpers (no database):
 //   splitUpcomingPast(events) → { upcoming (soonest first), past (most recent first) }   (v0.89)
 //   latestCreatedEvent(events) → the event Add event copies Start time and Where from, or null
-// Related files: starEventRules.js (startTimeOptions, startTimeIsValid, startTimeLabel, WHERE_CODES),
-// links.js (starSchoolLinks, starRegistrationLink, starQrSvgDataUrl), eventsText.js (the words).
+// Related files: starEventRules.js (startTimeIsValid, startTimeLabel, WHERE_CODES),
+// links.js (starSchoolLinks, starRegistrationLink), eventsText.js (the words).
 // Color Belt's src/lib/testing/eventRules.js gives registrationSwitch() (to gray out Open registration
 // for staff, v0.86), defaultAutoCloseOn() (7 days before) and addDays().
 import { supabase } from '../supabase.js';

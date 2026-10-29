@@ -21,9 +21,10 @@ import { createStarEventsBackend, STAR_EVENT_RPC_NAMES, STAR_EVENT_TABLES, SEED_
 import { createRubricsApi } from './rubricsCore.js';
 import { createStarEventsApi, STAR_EVENT_STATUSES, splitUpcomingPast, latestCreatedEvent } from './eventsCore.js';
 import {
-  startTimeIsValid, startTimeOptions, startTimeLabel, shortStartTime, STAR_CODE_PATTERN, WHERE_CODES, editWouldReopen,
+  startTimeIsValid, startTimeLabel, shortStartTime, STAR_CODE_PATTERN, WHERE_CODES, editWouldReopen,
 } from './starEventRules.js';
 import { starRegistrationLink, starQrSvgDataUrl, starSchoolLinks, isStarCode } from './links.js';
+import { timeOptions } from '../times.js';
 import { tagText, statusMessage, eventSummary, registrationStatusLine, switchOnlyHint } from './eventsText.js';
 import { eventState, stateTag, addDays, PUBLIC_ORIGIN } from '../testing/eventRules.js';
 
@@ -113,17 +114,25 @@ async function loaded(rig, name) {
 // 1. The pure rules: start times, links, tags
 // =====================================================================================
 
-await check('start time: 8:00 AM to 8:00 PM on a 15-minute step, no seconds (star_start_time_is_valid)', async () => {
-  for (const ok of ['08:00', '08:15', '10:00', '12:45', '19:45', '20:00', '10:00:00']) assert.equal(startTimeIsValid(ok), true, ok);
-  for (const bad of ['07:45', '07:59', '20:15', '20:01', '10:05', '10:10', '10:00:30', '24:00', '8:00', 'abc', '', null, undefined, 1000]) {
+await check('start time: 6:00 AM to 10:00 PM on a 5-minute step, no seconds (star_start_time_is_valid, 0028)', async () => {
+  for (const ok of ['06:00', '06:05', '07:45', '08:00', '10:05', '10:10', '12:45', '20:15', '21:55', '22:00', '10:00:00']) {
+    assert.equal(startTimeIsValid(ok), true, ok);
+  }
+  for (const bad of ['05:55', '05:59', '00:00', '22:01', '22:05', '23:55', '06:03', '10:02', '10:00:30', '24:00', '8:00', 'abc', '', null, undefined, 1000]) {
     assert.equal(startTimeIsValid(bad), false, String(bad));
   }
-  const options = startTimeOptions();
-  assert.equal(options.length, 49); // 12 hours × 4 + the last one
-  assert.deepEqual(options[0], { value: '08:00', label: '8:00 AM' });
-  assert.deepEqual(options[16], { value: '12:00', label: '12:00 PM' });
-  assert.deepEqual(options.at(-1), { value: '20:00', label: '8:00 PM' });
-  assert.ok(options.every((o) => startTimeIsValid(o.value)));
+  // exactly 193 whole minutes of the day pass (16 hours × 12 + the last one), as 0028_tests.sql S1
+  let valid = 0;
+  for (let m = 0; m < 24 * 60; m++) if (startTimeIsValid(`${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`)) valid++;
+  assert.equal(valid, 193);
+  // The event's Start time is the shared time list with its default range (v0.518, S12): exactly
+  // the times this rule accepts, 6:00 AM first, 10:00 PM last, so no choice can be refused.
+  const listed = timeOptions();
+  assert.equal(listed.length, 193);
+  assert.deepEqual([listed[0].value, listed.at(-1).value], ['06:00', '22:00']);
+  assert.ok(listed.every((o) => startTimeIsValid(o.value)));
+  // (A private testing's Time field is the same shared list since v0.518; the old 8:00 AM–8:00 PM
+  // list, startTimeOptions, is gone.)
   assert.equal(startTimeLabel('10:00:00'), '10:00 AM');
   assert.equal(shortStartTime('13:15:00'), '13:15');
   assert.equal(shortStartTime('nope'), null);
@@ -333,7 +342,7 @@ await check('star_add_event: invalid values (name, date, start time steps, where
   const bad = [
     { name: '' }, { name: '   ' }, { name: 'x'.repeat(61) }, { name: null },
     { testingDate: null }, { testingDate: '2026-10-18' }, { testingDate: 'soon' }, { testingDate: '2026-02-30' },
-    { startTime: null }, { startTime: '07:45' }, { startTime: '20:15' }, { startTime: '10:05' }, { startTime: '10:00:30' }, { startTime: 'ten' },
+    { startTime: null }, { startTime: '05:55' }, { startTime: '22:05' }, { startTime: '10:03' }, { startTime: '10:00:30' }, { startTime: 'ten' },
     { whereCode: null }, { whereCode: 'boston' }, { whereCode: 'Worcester' },
     { registrationOpen: null }, { registrationOpen: 'yes' },
     { autoCloseOn: '2026-12-13' }, // after the testing date
@@ -346,7 +355,8 @@ await check('star_add_event: invalid values (name, date, start time steps, where
   // both ends of the start-time range, no note / an empty note.
   const fine = [
     { testingDate: TODAY, autoCloseOn: TODAY }, { autoCloseOn: '2026-12-12' }, { autoCloseOn: null },
-    { startTime: '08:00' }, { startTime: '20:00' }, { startTime: '13:45:00' }, { note: '' }, { note: 'x'.repeat(600) },
+    { startTime: '06:00' }, { startTime: '22:00' }, { startTime: '06:05' }, { startTime: '08:00' }, { startTime: '20:00' }, { startTime: '13:45:00' },
+    { note: '' }, { note: 'x'.repeat(600) },
     { whereCode: 'shrewsbury' },
   ];
   for (const [i, over] of fine.entries()) assert.equal(statusOf(await rig.api.addStarEvent(newEvent({ name: `Fine ${i}`, ...over }))), 'ok', JSON.stringify(over));
@@ -405,7 +415,7 @@ await check('star_update_event: status check order no_access → not_allowed →
   rig.admin();
   assert.equal(statusOf(await rig.api.updateStarEvent(editOf(fall, { eventId: null }))), 'invalid');
   assert.equal(statusOf(await rig.api.updateStarEvent(editOf(fall, { expectedVersion: null }))), 'invalid');
-  assert.equal(statusOf(await rig.api.updateStarEvent(editOf(fall, { eventId: randomUUID(), startTime: '10:05' }))), 'invalid'); // invalid before not_found
+  assert.equal(statusOf(await rig.api.updateStarEvent(editOf(fall, { eventId: randomUUID(), startTime: '10:03' }))), 'invalid'); // invalid before not_found
   assert.equal(statusOf(await rig.api.updateStarEvent(editOf(fall, { eventId: randomUUID() }))), 'not_found');
   assert.equal(statusOf(await rig.api.updateStarEvent(editOf(fall, { expectedVersion: 9, testingDate: '2026-10-01' }))), 'stale'); // stale before the date rule
   assert.equal(statusOf(await rig.api.updateStarEvent(editOf(fall, { testingDate: '2026-10-01', name: 'Winter Star Testing' }))), 'invalid'); // date rule before duplicate
@@ -835,7 +845,7 @@ await check('reset / a damaged store: back to the seed; only an ok answer is sav
   assert.equal((await rig.api.loadStarEvents()).events.length, 3);
   const before = JSON.stringify(rig.events.snapshot());
   assert.equal(statusOf(await rig.api.addStarEvent(newEvent({ name: 'Fall Star Testing' }))), 'duplicate_name');
-  assert.equal(statusOf(await rig.api.addStarEvent(newEvent({ startTime: '10:05' }))), 'invalid');
+  assert.equal(statusOf(await rig.api.addStarEvent(newEvent({ startTime: '10:03' }))), 'invalid');
   assert.equal(JSON.stringify(rig.events.snapshot()), before);
   // The seed is made relative to "today": with another today the dates move along.
   const later = makeRig();

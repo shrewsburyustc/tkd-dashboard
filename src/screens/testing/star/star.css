@@ -717,11 +717,6 @@
    always loads) so both testing sections look the same (v0.501). Only Star's own pieces are here.
    ===================================================================================== */
 
-/* Start time / Where with nothing chosen yet ("Choose…", screen 4): the gray placeholder look */
-.st-select-empty .fa-value {
-  color: var(--color-text-secondary);
-}
-
 /* ----- The event page header (screen 11) ----- */
 .st-event-head {
   align-items: center;
@@ -777,45 +772,8 @@
   text-align: left;
 }
 
-/* ----- Registration links (screen 11 as updated by v0.99 / v0.107) ----- */
-/* The dialog is 600px wide (as drawn), a size between Dialog.jsx's 'medium' and 'wide' */
-.tdialog--wide:has(.st-links) {
-  width: 600px;
-}
-
-.st-links .tdialog-sub {
-  margin-bottom: var(--space-4);
-}
-
-.st-links-line {
-  margin-bottom: var(--space-12);
-  color: var(--color-text-secondary);
-  font-size: var(--text-13);
-}
-
-/* Both schools side by side (stacked on phones, below) */
-.st-links-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--space-12);
-}
-
-.st-link-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-8);
-  min-width: 0;
-  padding: var(--space-12);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-control);
-  text-align: center;
-}
-
-.st-link-school {
-  font-size: 15px;
-  font-weight: 500;
-}
+/* ----- Registration links: since rulebook v0.518 (S8) the shared RegistrationLinkBox draws it,
+   with the shared styles (shared.css .ev-link-*, .lnk-*). ----- */
 
 /* ----- Focus (Star phase 1's ring: 2px blue) on the new buttons ----- */
 .st-page .st-back:focus-visible,
@@ -841,10 +799,6 @@
     flex-direction: column;
     align-items: stretch;
     gap: var(--space-8);
-  }
-
-  .st-links-row {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -918,15 +872,6 @@
     font-size: 12pt;
     line-height: 1.5;
   }
-}
-
-/* The Registration links' link: wraps only between its two parts (StarLinksDialog splitLink) */
-.st-link-url {
-  overflow-wrap: normal;
-}
-
-.st-nowrap {
-  white-space: nowrap;
 }
 
 /* The Events list: the "Candidates" header is longer than Color Belt's "Students", and the sorted
@@ -1079,18 +1024,6 @@
   padding: var(--space-8) var(--space-4) var(--space-8) var(--space-12);
 }
 
-/* ----- Cards: the selected card gets a dark neutral border, not blue (G12, 5-blue rule) ----- */
-.st-cards .ev-card.st-card-selected {
-  border-color: var(--color-text);
-  box-shadow: inset 0 0 0 1px var(--color-text);
-}
-
-/* Hide private details: only the Candidates card (G4) */
-.st-cards.is-one {
-  grid-template-columns: minmax(0, 1fr);
-  max-width: 280px;
-}
-
 /* The inline links ("Show all", "Show both schools", "View signature", "Show all (6)") */
 .st-inline-link {
   display: inline;
@@ -1132,38 +1065,16 @@
   margin-top: var(--space-12);
 }
 
+/* The summary's outline "Print receipt" under the Payment lines (S2, DR2-P4, v0.518): a little
+   room above it, so it doesn't sit on the last line's divider (12px in all, as drawn) */
+.st-print-receipt {
+  margin-top: var(--space-8);
+}
+
 .st-detail-head {
   margin-bottom: var(--space-4);
   font-size: var(--text-13);
   font-weight: 500;
-}
-
-.st-history-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.st-history-item {
-  display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
-  column-gap: var(--space-12);
-  padding: var(--space-4) 0;
-  border-top: 1px solid var(--color-border);
-  font-size: var(--text-13);
-}
-
-.st-history-item:first-child {
-  border-top: none;
-}
-
-.st-history-head {
-  color: var(--color-text-secondary);
-}
-
-.st-history-line {
-  grid-column: 2;
-  overflow-wrap: anywhere;
 }
 
 .st-view-actions {
@@ -1309,21 +1220,6 @@ body:has(.st-event-head) > .tmenu {
 
   .st-record {
     height: var(--control-height-touch);
-  }
-}
-
-/* ----- Phones ----- */
-@media (max-width: 639.98px) {
-  .st-history-item {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .st-history-line {
-    grid-column: 1;
-  }
-
-  .st-cards.is-one {
-    max-width: none;
   }
 }
 

@@ -2,12 +2,14 @@
 // Why it exists: four short dialogs that belong together:
 //   BookTimeDialog    Book a free class / Change time (v0.244 answer 2): the open times of the
 //                     school's Live booking forms, grouped by week, as cards (like Fill in)
-//   JoinedDialog      choosing Joined asks the date joined (default today, v0.236)
+//   JoinedDialog      choosing Joined asks the date joined (default today, v0.236), picked in the
+//                     dashboard's own calendar (DatePicker, design review N6), today or earlier
 //   CameDialog        a Board card dropped on Came asks "Did … come?" first (v0.246)
 //   AddProspectDialog "+ Add prospect" asks which Live form to fill in for the family (v0.236)
 //   DeleteDialog      delete a prospect — admins only, with a confirmation
 // The values being typed live in Prospects.jsx (so a lock while one is open loses nothing).
 import { IconCheck, IconClipboardText, IconTrash, IconUserCheck } from '@tabler/icons-react';
+import DatePicker from '../../components/DatePicker.jsx';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
 import { weekStart } from '../../lib/calendar/days.js';
@@ -95,8 +97,24 @@ export function JoinedDialog({ state, today, isPhone, onChange, onSave, onCancel
     <Dialog title={T.JOINED_TITLE} size="small" fullScreen={isPhone} onRequestClose={onCancel}>
       <p className="tdialog-sub">{state.name}</p>
       <div className="field">
-        <label htmlFor={`joined-${state.key}`}>{T.JOINED_DATE}</label>
-        <input id={`joined-${state.key}`} className="input" type="date" data-autofocus max={today} value={state.date} onChange={(e) => onChange(e.target.value)} />
+        {/* plain text, not a <label>: a label would open the calendar when clicked (as Star's fields) */}
+        <span className="field-label">{T.JOINED_DATE}</span>
+        {/* The dashboard's own calendar (N6): today or earlier, last year and this year in the Year
+            list; on phones it opens in the page under the field. DatePicker takes no extra props, so
+            its field can't carry data-autofocus: the Dialog then puts the focus on its own box, and
+            the first Tab reaches this field. */}
+        <DatePicker
+          id={`joined-${state.key}`}
+          label={T.JOINED_DATE}
+          value={state.date}
+          today={today}
+          max={today}
+          years={[Number(today.slice(0, 4)) - 1, Number(today.slice(0, 4))]}
+          hint={T.JOINED_DATE_HINT}
+          placeholder={T.CHOOSE}
+          inline={isPhone}
+          onChange={onChange}
+        />
         <p className="field-hint">{T.JOINED_HINT}</p>
       </div>
       {state.note && <Notice>{NOTES[state.note] ?? state.note}</Notice>}

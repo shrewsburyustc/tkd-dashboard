@@ -10,7 +10,7 @@
 //   'ok'             it worked (plus the result fields)
 //   'no_access'      this sign-in can't see data right now (locked, password too old …)
 //   'not_allowed'    only an admin may do that (or: staff reopening after the closing date)
-//   'invalid'        the values were refused (a past date, a start time off the 15-minute steps …)
+//   'invalid'        the values were refused (a past date, a start time off the 5-minute steps …)
 //   'not_found'      the event no longer exists
 //   'stale'          someone else changed it since this screen loaded it
 //   'duplicate_name' another Star event already has that name
@@ -76,7 +76,7 @@ function asInteger(v) {
 }
 // 'YYYY-MM-DD' (a real calendar date) or null.
 const asDate = (v) => (v === null || v === undefined || v === '' ? null : isIsoDate(v) ? v : BAD);
-// '10:00' or '10:00:00' → '10:00:00' (the database's time format), or null. The 15-minute rule
+// '10:00' or '10:00:00' → '10:00:00' (the database's time format), or null. The 5-minute rule
 // itself is the database's job (it answers 'invalid'); only "not a time at all" is caught here.
 const asTime = (v) => {
   if (v === null || v === undefined || v === '') return null;

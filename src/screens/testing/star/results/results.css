@@ -177,13 +177,13 @@
 
 /* Email result can't be used now: grayed (Q4 — Hide private details is on) or busy while the
    family's address is being read. aria-disabled (not disabled) keeps it focusable, so screen
-   readers still find it and hear why. */
+   readers still find it and hear why. The approved gray "unavailable" look, with the same tokens
+   as Black Belt's Email result (no opacity: the colors themselves are the gray). */
 .str-email[aria-disabled='true'] {
-  color: var(--text2);
-  border-color: var(--border);
-  background: var(--surface2, transparent);
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-disabled-text);
   cursor: default;
-  opacity: 0.6;
 }
 
 /* ----- Phones: stacked rows ----- */

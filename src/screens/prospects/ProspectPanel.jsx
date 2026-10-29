@@ -7,10 +7,13 @@
 //     and a "Next:" line (v0.246)
 //   - Status: the colored tag with a chevron opens a menu (stages, then side exits; P4 difference 2)
 //   - Follow up: the date as words ("Today", "Overdue · Oct 16") with a clock; click for the quick
-//     choices Tomorrow / In 3 days / Next week / Pick a date / No follow-up (P4 difference 3)
+//     choices Tomorrow / In 3 days / Next week / Pick a date / No follow-up (P4 difference 3).
+//     "Pick a date" opens the dashboard's own calendar (DatePicker's opener mode, design review N6);
+//     picking a day saves it at once, as the quick choices do
 //   - Free class: the time, amber "Class cancelled — call the family" when it no longer runs,
 //     Book a free class / Change time / Cancel booking (v0.244 answer 2)
-//   - Siblings (same sign-up), Notes and calls (a note + one-tap follow-up); the notes people
+//   - Siblings (same sign-up), Notes and calls (a note + one-tap follow-up; its "Pick a date" shows
+//     a DatePicker field, N6); the notes people
 //     typed always show, the automatic changes (status, follow-up, booking, sign-up) sit in a
 //     closed "History · 6 changes" dropdown (v0.255)
 //   - Form answers and waiver: every answer as the form was, and the signature picture while it
@@ -20,11 +23,12 @@
 //     phone number stay (N17)
 // PC: a column beside the list; tablet upright: under the list; phone: a full-screen page
 // (Prospects.jsx wraps it in a Dialog). The note being typed lives in Prospects.jsx.
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   IconAlertTriangle, IconCalendarPlus, IconCheck, IconChevronDown, IconChevronRight, IconClockEdit, IconClockHour4, IconCopy, IconCurrencyDollarOff, IconMail, IconMessage,
   IconPhone, IconTrash, IconUserCheck, IconUserX, IconX,
 } from '@tabler/icons-react';
+import DatePicker, { datePickerOpener } from '../../components/DatePicker.jsx';
 import Notice from '../../components/Notice.jsx';
 import RowMenu from '../../components/RowMenu.jsx';
 import { colorOf } from '../../lib/schedule/colors.js';
@@ -68,7 +72,8 @@ export default function ProspectPanel({
   const [sig, setSig] = useState(null); // { loading } | { signature, signedAt } | { error }
   const [statusMenu, setStatusMenu] = useState(null); // the ⋯-style menu under the status tag
   const [followOpen, setFollowOpen] = useState(false); // the quick follow-up choices
-  const [followPick, setFollowPick] = useState('');
+  const [followCal, setFollowCal] = useState(false); // the follow-up calendar ("Pick a date") is open
+  const followPickRef = useRef(null); // the "Pick a date" button the calendar opens from
   const [historyOpen, setHistoryOpen] = useState(false); // the automatic changes start closed (v0.255)
   const status = statusById.get(p.statusId);
   const builtin = status?.builtin ?? null;
@@ -80,6 +85,9 @@ export default function ProspectPanel({
   const exits = statuses.filter((s) => s.kind === 'exit');
   const answers = p.fields.filter((f) => !['heading', 'step', 'children', 'booking', 'waiver', 'parent_name', 'parent_phone', 'parent_email'].includes(f.type));
   const noteProblem = note.body.trim() ? longTextProblem(note.body.trim(), 1000) : null;
+  // The Year lists of the follow-up and note calendars: this year and next (past days are gray).
+  const thisYear = Number(today.slice(0, 4));
+  const followYears = [thisYear, thisYear + 1];
   const canSaveNote = note.body.trim() !== '' && !noteProblem && !busy && (note.when !== 'pick' || Boolean(note.picked));
 
   async function copyNumber() {
@@ -246,7 +254,10 @@ export default function ProspectPanel({
         aria-expanded={followOpen}
         aria-controls={`${idBase}-follow`}
         disabled={busy}
-        onClick={() => setFollowOpen((x) => !x)}
+        onClick={() => {
+          setFollowOpen((x) => !x);
+          setFollowCal(false);
+        }}
       >
         <span className="pkv-k">{T.FOLLOW_UP}</span>
         {(() => {
@@ -277,22 +288,37 @@ export default function ProspectPanel({
                 {label}
               </button>
             ))}
-          </div>
-          <span className="pfollow-pick">
-            <input className="input" type="date" aria-label={T.PICK_DATE} min={today} value={followPick} onChange={(e) => setFollowPick(e.target.value)} />
+            {/* "Pick a date" opens the dashboard's calendar (N6) under itself (on phones: in the page,
+                under these choices). Picking a day saves it straight away, like the choices beside
+                it — the old date box needed a second click on "Set date". */}
             <button
+              ref={followPickRef}
               type="button"
-              className="btn btn-sm"
-              disabled={busy || !followPick}
-              onClick={() => {
-                setFollowOpen(false);
-                onFollowUp(followPick);
-                setFollowPick('');
-              }}
+              className="pwhen-item"
+              disabled={busy}
+              {...datePickerOpener(followCal, setFollowCal, { disabled: busy })}
             >
-              {T.SET_DATE}
+              {T.WHEN_OPTIONS.find(([key]) => key === 'pick')[1]}
             </button>
-          </span>
+          </div>
+          <DatePicker
+            opener={followPickRef}
+            open={followCal}
+            onOpenChange={setFollowCal}
+            label={T.PICK_DATE}
+            value={p.followUpOn ?? null}
+            today={today}
+            min={today}
+            years={followYears}
+            hint={T.PAST_DAYS_HINT}
+            inline={isPhone}
+            disabled={busy}
+            onChange={(date) => {
+              setFollowCal(false);
+              setFollowOpen(false);
+              onFollowUp(date);
+            }}
+          />
         </div>
       )}
 
@@ -369,7 +395,21 @@ export default function ProspectPanel({
             ))}
           </div>
           {note.when === 'pick' && (
-            <input className="input pnote-date" type="date" aria-label={T.PICK_DATE} min={today} value={note.picked ?? ''} onChange={(e) => onNote({ picked: e.target.value })} />
+            // The dashboard's own calendar (N6), today or later. The wrapper keeps the old box's gap below.
+            <div className="pnote-date">
+              <DatePicker
+                id={`${idBase}-note-date`}
+                label={T.PICK_DATE}
+                value={note.picked ?? null}
+                today={today}
+                min={today}
+                years={followYears}
+                hint={T.PAST_DAYS_HINT}
+                placeholder={T.CHOOSE}
+                inline={isPhone}
+                onChange={(picked) => onNote({ picked })}
+              />
+            </div>
           )}
           {noteProblem && <Notice>{T.NOTE_BAD}</Notice>}
           {noteWarning && <Notice>{T.UNSAVED_NOTE}</Notice>}
