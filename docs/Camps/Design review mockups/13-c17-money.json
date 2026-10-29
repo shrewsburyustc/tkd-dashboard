@@ -1,0 +1,19 @@
+{
+  "title": "Camps C17 — money through the shared helper",
+  "subtitle": "Rule v1.026 (one money helper) and v1.101 (a minus amount is written “−$50”, real minus sign before the dollar sign). Camps’ <code>text.js</code> stops borrowing Color Belt’s <code>dollars</code> and uses the shared <code>formatMoney</code> (<code>src/lib/money.js</code>); Camps gets its own <code>markedPaidToast</code>. <b>Only one thing on screen changes:</b> a reversed payment in Camper detail’s Payments, “$-335 card (reversed)” → “−$335 card (reversed)”. Everything else Camps shows (“$1,355” to collect, “$350 due”, “Owes $15”, prices, totals, toasts, Compare, Print, Delete camp’s payments total) is spelled the same by both helpers. Amber = what changes.",
+  "columns": [
+    { "label": "Today", "tone": "today", "items": [
+      { "src": "shots/c17-pc-today.png", "crop": [420, 370, 440, 150], "scale": 1, "marks": [[568, 451, 126, 18]],
+        "caption": "<b>PC 1280×800.</b> Leo Kim’s Camper detail after an admin’s Undo payment: the reversal reads “$-335” (Color Belt’s helper puts the hyphen after the $)." },
+      { "src": "shots/c17-ph-today.png", "crop": [0, 300, 390, 150], "scale": 1, "shotWidth": 390, "marks": [[124, 379, 122, 18]],
+        "caption": "<b>Phone 390×844 touch.</b> Same line, full-screen detail." }
+    ] },
+    { "label": "After (mockup)", "tone": "after", "items": [
+      { "src": "shots/c17-pc-after.png", "crop": [420, 370, 440, 150], "scale": 1, "marks": [[568, 451, 126, 18]],
+        "caption": "<b>PC.</b> “−$335 card (reversed)”: a real minus sign (−, U+2212) <i>before</i> the $, as Black Belt’s receipt and Finance’s report already write it. The line below and the “$350 due” tag don’t change." },
+      { "src": "shots/c17-ph-after.png", "crop": [0, 300, 390, 150], "scale": 1, "shotWidth": 390, "marks": [[124, 379, 122, 18]],
+        "caption": "<b>Phone.</b> Same; the line wraps the same way." }
+    ] }
+  ],
+  "footer": "<b>Every difference between the two helpers</b> (read side by side: Color Belt’s <code>dollars</code>, <code>screens/testing/text.js:341</code>, vs <code>formatMoney</code>, <code>src/lib/money.js</code>): <b>(1) minus amounts</b> — “$-335” → “−$335”: the only one Camps can show, and only on a reversal (the preview and the database store a reversal as minus cents; every other Camps amount is 0 or more: to collect uses <code>max(0, owes)</code>, “Paid $75 more than the total” passes a plus amount). <b>(2) thousands commas</b> — the same: both write “$1,355”, “$10,000”. <b>(3) zero</b> — the same: “$0”. <b>(4) cents</b> — the same for whole cents (“$290.50”); Camps can’t have cents anyway (whole dollars only: price fields and Edit payment refuse cents). <b>(5) not a whole number of cents</b> (e.g. 29050.5) — <code>dollars</code> rounds it, <code>formatMoney</code> shows nothing; can’t happen (the database stores whole cents). <b>(6) not a number</b> (null, text) — both show nothing. <b>(7) minus zero</b> — <code>dollars</code> could write “$-0”, <code>formatMoney</code> “$0”; can’t happen. Not switched in this round: <code>formatDollars</code> on the public family pages (<code>src/register/</code>, the camp form), as the brief says. <b>Data:</b> the preview’s Leo Kim (paid $335 by card), Undo payment pressed to make the reversal (the brief’s example said “cash”; the preview’s camper pays by card — same amount, same change). <b>Drawn:</b> nothing by hand — the After line is the real page with the one amount re-written by the real <code>formatMoney</code>, imported from the running app. <b>Script:</b> <code>mock-c17-money.js</code>."
+}

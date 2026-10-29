@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Camps C17 — money through the shared helper</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 1840px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Camps C17 — money through the shared helper</h1>
+<p class="sub">Rule v1.026 (one money helper) and v1.101 (a minus amount is written “−$50”, real minus sign before the dollar sign). Camps’ <code>text.js</code> stops borrowing Color Belt’s <code>dollars</code> and uses the shared <code>formatMoney</code> (<code>src/lib/money.js</code>); Camps gets its own <code>markedPaidToast</code>. <b>Only one thing on screen changes:</b> a reversed payment in Camper detail’s Payments, “$-335 card (reversed)” → “−$335 card (reversed)”. Everything else Camps shows (“$1,355” to collect, “$350 due”, “Owes $15”, prices, totals, toasts, Compare, Print, Delete camp’s payments total) is spelled the same by both helpers. Amber = what changes.</p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:440px">
+    <div class="shot" style="width:440px;height:150px">
+      <img src="shots/c17-pc-today.png" style="left:-420px;top:-370px;width:1280px">
+      <div class="mark" style="left:144px;top:77px;width:134px;height:26px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>PC 1280×800.</b> Leo Kim’s Camper detail after an admin’s Undo payment: the reversal reads “$-335” (Color Belt’s helper puts the hyphen after the $).</figcaption>
+  </figure>
+<figure style="width:390px">
+    <div class="shot" style="width:390px;height:150px">
+      <img src="shots/c17-ph-today.png" style="left:0px;top:-300px;width:390px">
+      <div class="mark" style="left:120px;top:75px;width:130px;height:26px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Phone 390×844 touch.</b> Same line, full-screen detail.</figcaption>
+  </figure>
+  
+</div>
+<div class="col after">
+  <div class="label">After (mockup)</div>
+  <figure style="width:440px">
+    <div class="shot" style="width:440px;height:150px">
+      <img src="shots/c17-pc-after.png" style="left:-420px;top:-370px;width:1280px">
+      <div class="mark" style="left:144px;top:77px;width:134px;height:26px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>PC.</b> “−$335 card (reversed)”: a real minus sign (−, U+2212) <i>before</i> the $, as Black Belt’s receipt and Finance’s report already write it. The line below and the “$350 due” tag don’t change.</figcaption>
+  </figure>
+<figure style="width:390px">
+    <div class="shot" style="width:390px;height:150px">
+      <img src="shots/c17-ph-after.png" style="left:0px;top:-300px;width:390px">
+      <div class="mark" style="left:120px;top:75px;width:130px;height:26px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Phone.</b> Same; the line wraps the same way.</figcaption>
+  </figure>
+  
+</div>
+</div>
+<div class="foot"><b>Every difference between the two helpers</b> (read side by side: Color Belt’s <code>dollars</code>, <code>screens/testing/text.js:341</code>, vs <code>formatMoney</code>, <code>src/lib/money.js</code>): <b>(1) minus amounts</b> — “$-335” → “−$335”: the only one Camps can show, and only on a reversal (the preview and the database store a reversal as minus cents; every other Camps amount is 0 or more: to collect uses <code>max(0, owes)</code>, “Paid $75 more than the total” passes a plus amount). <b>(2) thousands commas</b> — the same: both write “$1,355”, “$10,000”. <b>(3) zero</b> — the same: “$0”. <b>(4) cents</b> — the same for whole cents (“$290.50”); Camps can’t have cents anyway (whole dollars only: price fields and Edit payment refuse cents). <b>(5) not a whole number of cents</b> (e.g. 29050.5) — <code>dollars</code> rounds it, <code>formatMoney</code> shows nothing; can’t happen (the database stores whole cents). <b>(6) not a number</b> (null, text) — both show nothing. <b>(7) minus zero</b> — <code>dollars</code> could write “$-0”, <code>formatMoney</code> “$0”; can’t happen. Not switched in this round: <code>formatDollars</code> on the public family pages (<code>src/register/</code>, the camp form), as the brief says. <b>Data:</b> the preview’s Leo Kim (paid $335 by card), Undo payment pressed to make the reversal (the brief’s example said “cash”; the preview’s camper pays by card — same amount, same change). <b>Drawn:</b> nothing by hand — the After line is the real page with the one amount re-written by the real <code>formatMoney</code>, imported from the running app. <b>Script:</b> <code>mock-c17-money.js</code>.</div>
+</body></html>
