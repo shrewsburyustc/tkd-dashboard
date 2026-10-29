@@ -15,6 +15,7 @@
 //   cycle and Edit cycle: alone) · 'already_added' (Restore of a make-up while another is active;
 //   a Dan change of a candidate whose make-up is on a later cycle) · 'kept' · 'choice_needed' ·
 //   'not_finished' · 'no_email' (gradingApi.js uses those) ·
+//   'registered' (0032: Edit cycle's Undo, a family registered after the save) ·
 //   'error' (no connection / unexpected answer — { status:'error', error })
 // These functions NEVER throw.
 //
@@ -42,6 +43,8 @@ export const BB_STATUSES = [
   'finished', 'has_payments', 'has_waivers', 'confirm_needed', 'withdrawn', 'refund_too_large', 'locked', 'has_registrations',
   // 0025 (contract 0025 §1.2)
   'kept', 'already_added', 'choice_needed', 'not_finished', 'no_email', 'has_grades',
+  // 0032: Edit cycle's Undo refused because a family registered after the save
+  'registered',
   'error',
 ];
 const SERVER_STATUSES = new Set(BB_STATUSES.filter((s) => s !== 'error'));
@@ -186,6 +189,20 @@ function payloadToForm(p) {
     })),
     kukkiwon: danMap(p.kukkiwon, (c) => (isInt(c) ? c : null)),
     pricesFrom: p.prices_from ?? null,
+  };
+}
+
+// One history row (bb_candidate_history) → HistoryRow. null if it isn't one.
+function toHistoryRow(r) {
+  if (!r || typeof r !== 'object' || typeof r.table_name !== 'string' || typeof r.op !== 'string') return null;
+  return {
+    occurredAt: r.occurred_at,
+    actorName: r.actor_name, // "Family form" for the family form
+    action: r.action, // the function's name, e.g. 'bb_record_payment'
+    tableName: r.table_name,
+    op: r.op, // 'insert' | 'update' | 'delete'
+    before: r.before ?? null,
+    after: r.after ?? null,
   };
 }
 
@@ -391,6 +408,32 @@ export async function setRegistration({ cycleId, expectedVersion, open } = {}) {
     const state = toState(d.state);
     return isInt(d.version) && state ? { version: d.version, state, firstOpen: d.first_open === true } : null;
   });
+}
+
+// "Changes saved · Undo" of Edit cycle (admins; migration 0032, bb_undo_cycle_edit): the database
+// puts the old values back - and the registration switch, when the save changed it - in ONE
+// transaction, after locking the cycle. If either part is refused, neither happens.
+//   expectedVersion  the version the save returned
+//   form             the old values as a CycleForm (sent exactly like updateCycle sends one)
+//   open             the switch to put back (true / false), or null when the save didn't change it
+//   knownIds         the ids of every candidate the roster showed just BEFORE the save
+// → { status:'ok', version } · 'registered' (a family registered after the save: nothing was
+//   done) · 'stale' · 'not_found' · 'has_grades' · 'duplicate_name' · 'invalid' ·
+//   'part_without_day' + parts · 'finished' · 'waiver_needed' · 'not_allowed' · 'no_access' · 'error'
+export async function undoCycleEdit({ cycleId, expectedVersion, form, open = null, knownIds } = {}) {
+  let payload;
+  try {
+    payload = buildUpdatePayload(form);
+  } catch (error) {
+    return failure(error);
+  }
+  return callRpc('bb_undo_cycle_edit', {
+    p_cycle_id: cycleId ?? null,
+    p_expected_version: expectedVersion ?? null,
+    p_payload: payload,
+    p_open: typeof open === 'boolean' ? open : null,
+    p_known_ids: Array.isArray(knownIds) ? knownIds : null,
+  }, (d) => (isInt(d.version) ? { version: d.version } : null));
 }
 
 // Undo of a FIRST opening (admins; the "Registration opened" toast, within 15 seconds): the cycle
@@ -670,6 +713,22 @@ export async function loadCandidate({ candidateId } = {}) {
     const payments = d.payments.map(toPaymentLine);
     if (!payments.every(Boolean)) return null;
     return { candidate, waiver, needsParentSignature: d.needs_parent_signature === true, payments, money };
+  });
+}
+
+// A candidate's History line (migration 0032, bb_candidate_history; any staff with data access):
+// the change-log rows of the candidate and of its payments, waivers, grades, counts, make-up
+// subjects and "sent" marks, newest first, at most 500. The database has already taken out every
+// login id and shows a date of birth, email, signature or signer's name only as "on file" /
+// "changed". (history.js wraps this for the shared History line.)
+// → { status:'ok', rows: HistoryRow[] } · 'not_found' · 'invalid' · 'no_access' · 'error'
+//   HistoryRow = { occurredAt, actorName, action, tableName, op, before, after } — before / after
+//   are the changed columns with their database names (snake_case), or null.
+export async function loadCandidateHistory({ candidateId } = {}) {
+  return callRpc('bb_candidate_history', { p_candidate_id: candidateId ?? null }, (d) => {
+    if (!Array.isArray(d.rows)) return null;
+    const rows = d.rows.map(toHistoryRow);
+    return rows.every(Boolean) ? { rows } : null;
   });
 }
 

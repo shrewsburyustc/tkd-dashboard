@@ -18,6 +18,10 @@
 // typed in), the maxima, the validator (rubric.js danProblems) against its own cases and the
 // shared supabase/tests/0024_rubric_cases.json, the editing helpers, and the preview store's
 // rubric rules (saves, 15-second undos, the lock at first opening, first opening admin-only).
+// Migration 0032 adds: the store's 5-minute time rule, bb_candidate_history (the history rows the
+// preview writes like the real log triggers: masks, own rows only, newest first, who may read it)
+// and bb_undo_cycle_edit (its refusals, 'registered' after a family registration, and the switch
+// and the values together or not at all).
 import assert from 'node:assert/strict';
 import { randomUUID, createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -720,7 +724,7 @@ check('store: add cycle input rules (T4b) → invalid; part on no day → part_w
     'end before start': (p) => { p.days[1].end_time = '12:00'; },
     '07:45 ok': null,
     '22:15': (p) => { p.days[1].end_time = '22:15'; },
-    '10:10': (p) => { p.days[1].start_time = '10:10'; },
+    '10:07': (p) => { p.days[1].start_time = '10:07'; }, // 0032: off the 5-minute step (the screens still offer 15)
     'two places': (p) => { p.days[1].place = { code: 'worcester', other: 'Gym' }; },
     'unknown school': (p) => { p.days[1].place = { code: 'boston' }; },
     'other place over 100': (p) => { p.days[1].place = { other: 'x'.repeat(101) }; },
@@ -757,6 +761,10 @@ check('store: add cycle input rules (T4b) → invalid; part on no day → part_w
     assert.equal(bad(change), 'invalid', label);
   }
   assert.equal(bad((p) => { p.days[1].start_time = '07:45'; }), 'ok'); // 07:45 is a good time
+  // 0032 (BB13): the database takes every 5 minutes; a second part too
+  assert.equal(bad((p) => { p.name = 'Five A'; p.days[1].start_time = '10:05'; }), 'ok');
+  assert.equal(bad((p) => { p.name = 'Five B'; p.days[0].second = { start: '14:35', end: '15:05', place: { code: 'worcester' } }; }), 'ok');
+  assert.equal(bad((p) => { p.days[0].second = { start: '14:35', end: '15:07', place: { code: 'worcester' } }; }), 'invalid');
   backend.reset();
   const missing = call('bb_add_cycle', addArgs({ ...goodForm(), submissionsDue: '2027-04-03', days: goodForm().days.slice(0, 1) }));
   assert.deepEqual(missing, { status: 'part_without_day', parts: ['technical', 'curriculum'] });
@@ -3896,6 +3904,195 @@ check('grading store: failNextSave covers the new writes; simulateOtherAdminEdit
   assert.notEqual(JSON.stringify(db().bb_grades.map((g) => g.letter)), before);
   assert.equal(backend.rpc('bb_cycle_results', { p_cycle_id: springCycle().id, p_dan: null }, STAFF, { get: true }).error, null); // a read may be a GET
   assert.equal(backend.rpc('bb_results_csv', { p_cycle_id: springCycle().id }, ADMIN, { get: true }).error.code, '25006'); // it writes
+});
+
+// =====================================================================================
+// ======================= Migration 0032: history and Edit cycle's Undo in one call =======================
+// =====================================================================================
+
+// No login id, send id or earlier-row id key anywhere in a text (bb_history_strip's list + the
+// change_log columns the reader never answers).
+const HISTORY_SECRET_KEYS = /"(created_by|updated_by|withdrawn_by|recorded_by|marked_by|undone_by|submission_id|makeup_of_candidate_id|actor_id|session_id|batch_id)"/;
+
+check('0032 store: bb_candidate_history — masks, own rows only, newest first, who may read it', () => {
+  backend.loadSample();
+  setDay('2027-02-15');
+  const spring = db().bb_cycles.find((c) => c.name === 'Spring 2027');
+  const full = db().bb_cycle_plans.find((p) => p.cycle_id === spring.id && p.name === 'In full').id;
+  // a desk candidate with a date of birth, an email and a paper waiver; a date-of-birth change;
+  // a payment and its undo
+  const added = call('bb_add_candidate', {
+    p_cycle_id: spring.id, p_first: 'Kim', p_last: 'Zzhistory', p_date_of_birth: '1990-01-01', p_email: 'kim.zz@example.com',
+    p_location_code: 'worcester', p_dan: 1, p_cycle_plan_id: full, p_kukkiwon: false, p_paper_waiver: true,
+  }, STAFF);
+  assert.equal(added.status, 'ok');
+  const kim = added.id;
+  const kimVersion = () => db().bb_candidates.find((c) => c.id === kim).version;
+  assert.equal(call('bb_update_candidate', {
+    p_candidate_id: kim, p_expected_version: kimVersion(), p_first: 'Kim', p_last: 'Zzhistory', p_date_of_birth: '1989-03-03',
+    p_email: 'kim.zz@example.com', p_location_code: 'worcester', p_dan: 1,
+  }).status, 'ok');
+  const paid = call('bb_record_payment', { p_candidate_id: kim, p_expected_version: kimVersion(), p_amount_cents: 1000, p_method: 'cash', p_for_items: ['p1'], p_note: null }, STAFF);
+  assert.equal(paid.status, 'ok');
+  assert.equal(call('bb_undo_payment', { p_payment_id: paid.payment_id }, STAFF).status, 'ok');
+  // a family registers through the form (drawn waiver)
+  const fam = backend.publicRegister(regInput(spring.public_code_worcester, full, { first: 'Fay', last: 'Zzfamily', email: 'fay.zz@example.com' }));
+  assert.equal(fam.status, 'ok');
+  const fay = db().bb_candidates.find((c) => c.reference === fam.reference).id;
+
+  const h = call('bb_candidate_history', { p_candidate_id: kim }, STAFF);
+  assert.equal(h.status, 'ok');
+  assert.deepEqual(Object.keys(h).sort(), ['rows', 'status']);
+  for (const row of h.rows) assert.deepEqual(Object.keys(row).sort(), ['action', 'actor_name', 'after', 'before', 'occurred_at', 'op', 'table_name']);
+  const text = JSON.stringify(h);
+  for (const secret of ['1990-01-01', '1989-03-03', 'kim.zz@example.com', 'Zzfamily', fay, 'u1', 'u2']) assert.ok(!text.includes(secret), secret);
+  assert.ok(!HISTORY_SECRET_KEYS.test(text), 'a removed key in the history');
+  // exactly Kim's own rows: her insert and update(s), the waiver, the payment and its reversal
+  const tables = new Set(h.rows.map((r) => r.table_name));
+  assert.deepEqual([...tables].sort(), ['bb_candidate_waivers', 'bb_candidates', 'bb_payments']);
+  const own = db().change_log.filter((l) => (l.table_name === 'bb_candidates' && l.record_id === kim)
+    || (l.table_name !== 'bb_candidates' && [...db().bb_payments, ...db().bb_candidate_waivers].some((x) => x.id === l.record_id && x.candidate_id === kim)));
+  assert.equal(h.rows.length, own.length);
+  assert.ok(h.rows.some((r) => r.table_name === 'bb_payments' && r.after?.reverses_payment_id === paid.payment_id), 'the reversal row');
+  // the date-of-birth change: "on file" → "changed"; the insert: the names, the email "on file"
+  assert.ok(h.rows.some((r) => r.op === 'update' && r.before?.date_of_birth === 'on file' && r.after?.date_of_birth === 'changed'));
+  const insert = h.rows[h.rows.length - 1];
+  assert.deepEqual([insert.table_name, insert.op, insert.after.first_name, insert.after.email_for_results, insert.actor_name, insert.action],
+    ['bb_candidates', 'insert', 'Kim', 'on file', 'Staff', 'bb_add_candidate']);
+  // newest first (same moment → the later row first)
+  assert.equal(h.rows[0].table_name, 'bb_payments');
+  assert.equal(h.rows[0].action, 'bb_undo_payment');
+  // the family: the drawn waiver "on file", no signature, signer or send id; "Family form"
+  const hf = call('bb_candidate_history', { p_candidate_id: fay }, ADMIN);
+  const ftext = JSON.stringify(hf);
+  for (const secret of ['data:image', 'Jordan Testparent', 'fay.zz@example.com', '2010-05-01', kim]) assert.ok(!ftext.includes(secret), secret);
+  assert.ok(!HISTORY_SECRET_KEYS.test(ftext));
+  assert.ok(hf.rows.some((r) => r.table_name === 'bb_candidate_waivers' && r.op === 'insert' && r.after.signature === 'on file'
+    && r.after.signer_name === 'on file' && r.after.how === 'drawn' && r.actor_name === 'Family form'));
+  // the samples' own candidates have their insert rows too
+  const alex = db().bb_candidates.find((c) => c.first_name === 'Alex' && c.last_name === 'Kim').id;
+  const ha = call('bb_candidate_history', { p_candidate_id: alex });
+  assert.ok(ha.rows.some((r) => r.table_name === 'bb_candidates' && r.op === 'insert'));
+  assert.ok(!JSON.stringify(ha).includes('alex.kim@example.com') && !JSON.stringify(ha).includes('1990-06-12'));
+  // who may read it, and the order of the checks
+  assert.deepEqual(call('bb_candidate_history', { p_candidate_id: kim }, LOCKED), { status: 'no_access' });
+  assert.deepEqual(call('bb_candidate_history', { p_candidate_id: null }, LOCKED), { status: 'no_access' });
+  assert.deepEqual(call('bb_candidate_history', { p_candidate_id: null }, STAFF), { status: 'invalid' });
+  assert.deepEqual(call('bb_candidate_history', { p_candidate_id: randomUUID() }, STAFF), { status: 'not_found' });
+  assert.equal(backend.rpc('bb_history_strip', { p_row: {} }, ADMIN).error.code, '42501'); // nobody may call the helper
+  assert.equal(backend.rpc('bb_candidate_history', { p_candidate_id: kim }, ADMIN, { get: true }).error, null); // a read may be a GET
+  // a candidate removed for good → not_found
+  const zed = call('bb_add_candidate', {
+    p_cycle_id: spring.id, p_first: 'Zed', p_last: 'Zzremoved', p_date_of_birth: '1990-01-01', p_email: 'zed.zz@example.com',
+    p_location_code: 'worcester', p_dan: 1, p_cycle_plan_id: full, p_kukkiwon: false, p_paper_waiver: true,
+  }, ADMIN).id;
+  assert.equal(call('bb_delete_candidate', { p_candidate_id: zed, p_expected_version: 1 }).status, 'ok');
+  assert.deepEqual(call('bb_candidate_history', { p_candidate_id: zed }), { status: 'not_found' });
+  // the change log is never readable as a table
+  assert.ok(!BB_TABLES.includes('change_log'));
+});
+
+check('0032 store: the purge inside a read logs its own rows as bb_purge_due (as the real database), once', () => {
+  backend.loadSample(); // keep 3 years after the last day / 3 years after 18
+  setDay('2040-01-02'); // long past every purge day
+  const before = db().change_log.length;
+  assert.equal(call('bb_cycles_list', {}, STAFF).status, 'ok');
+  const rows = db().change_log.slice(before);
+  assert.ok(rows.length > 0, 'the purge wrote history rows');
+  assert.ok(rows.every((r) => r.action === 'bb_purge_due' && r.actor_name === 'Staff'), JSON.stringify(rows.map((r) => r.action)));
+  // each purged row once: the call's own comparison doesn't repeat it
+  const keys = rows.map((r) => `${r.table_name}|${r.record_id}`);
+  assert.equal(new Set(keys).size, keys.length);
+  assert.ok(rows.some((r) => r.table_name === 'bb_candidates' && r.before?.date_of_birth === 'on file' && r.after?.date_of_birth === null));
+  assert.ok(rows.some((r) => r.table_name === 'bb_candidate_waivers' && r.before?.signature === 'on file' && r.after?.signature === null));
+  assert.ok(!JSON.stringify(rows).includes('data:image') && !JSON.stringify(rows).includes('@example.com'));
+  // a second read finds nothing more to purge, so it writes nothing
+  const after = db().change_log.length;
+  call('bb_cycles_list', {}, STAFF);
+  assert.equal(db().change_log.length, after);
+  setDay('2027-02-15');
+});
+
+check('0032 store: bb_undo_cycle_edit — refusals, a family after the save, the switch and the values together', () => {
+  backend.loadSample();
+  setDay('2027-02-15');
+  const springNow = () => db().bb_cycles.find((c) => c.name.startsWith('Spring 2027'));
+  const id = springNow().id;
+  const full = db().bb_cycle_plans.find((p) => p.cycle_id === id && p.name === 'In full').id;
+  const rosterIds = () => db().bb_candidates.filter((c) => c.cycle_id === id).map((c) => c.id);
+  assert.ok(BB_WRITE_RPC_NAMES.includes('bb_undo_cycle_edit') && BB_RPC_NAMES.includes('bb_candidate_history'));
+
+  // Save 1: rename and close (as Edit cycle does: values, then the switch)
+  let known = rosterIds();
+  const old = editForm(id);
+  const saved = call('bb_update_cycle', { p_cycle_id: id, p_expected_version: old.version, p_payload: buildUpdatePayload({ ...old.form, name: 'Spring 2027 renamed' }) });
+  assert.equal(saved.status, 'ok');
+  const closed = call('bb_set_registration', { p_cycle_id: id, p_expected_version: saved.version, p_open: false });
+  assert.equal(closed.status, 'ok');
+  const args = (over = {}) => ({ p_cycle_id: id, p_expected_version: closed.version, p_payload: buildUpdatePayload(old.form), p_open: true, p_known_ids: known, ...over });
+
+  // refusals: nothing changes
+  let snapshot = JSON.stringify(db());
+  assert.deepEqual(call('bb_undo_cycle_edit', args(), LOCKED), { status: 'no_access' });
+  assert.deepEqual(call('bb_undo_cycle_edit', args(), STAFF), { status: 'not_allowed' });
+  for (const over of [{ p_cycle_id: null }, { p_expected_version: null }, { p_known_ids: null }, { p_known_ids: [...known, null] },
+    { p_known_ids: Array.from({ length: 2001 }, () => randomUUID()) }, { p_payload: { name: 5 } }, { p_payload: null }]) {
+    assert.deepEqual(call('bb_undo_cycle_edit', args(over)), { status: 'invalid' }, JSON.stringify(over).slice(0, 80));
+  }
+  assert.equal(backend.rpc('bb_undo_cycle_edit', args({ p_known_ids: ['not an id'] }), ADMIN).error.code, '22P02');
+  assert.deepEqual(call('bb_undo_cycle_edit', args({ p_cycle_id: randomUUID() })), { status: 'not_found' });
+  assert.deepEqual(call('bb_undo_cycle_edit', args({ p_expected_version: closed.version - 1 })), { status: 'stale' });
+  assert.equal(JSON.stringify(db()), snapshot);
+
+  // the rollback: the switch goes through, the values are refused (Fall 2027's name) → duplicate_name,
+  // and the switch is back as the save left it (closed), with the same version
+  assert.deepEqual(call('bb_undo_cycle_edit', args({ p_payload: buildUpdatePayload({ ...old.form, name: 'Fall 2027' }) })), { status: 'duplicate_name' });
+  assert.equal(JSON.stringify(db()), snapshot);
+  assert.deepEqual([springNow().registration_open, springNow().version], [false, closed.version]);
+  // part_without_day keeps its parts
+  const oneDay = { ...old.form, days: old.form.days.slice(0, 1), submissionsDue: old.form.days[0].date };
+  assert.deepEqual(call('bb_undo_cycle_edit', args({ p_payload: buildUpdatePayload(oneDay) })), { status: 'part_without_day', parts: ['technical', 'curriculum'] });
+  // a lost connection (failNextSave) changes nothing either
+  backend.failNextSave();
+  assert.equal(backend.rpc('bb_undo_cycle_edit', args(), ADMIN).data, null);
+  assert.equal(JSON.stringify(db()), snapshot);
+
+  // the Undo with the switch: open again, the old name back, one new version
+  const undone = call('bb_undo_cycle_edit', args());
+  assert.equal(undone.status, 'ok');
+  assert.deepEqual(Object.keys(undone).sort(), ['status', 'version']);
+  assert.deepEqual([springNow().name, springNow().registration_open, springNow().version], ['Spring 2027', true, undone.version]);
+
+  // Save 2: rename only; a DESK candidate added after it doesn't block the Undo (p_open null)
+  known = rosterIds();
+  const before2 = editForm(id);
+  const saved2 = call('bb_update_cycle', { p_cycle_id: id, p_expected_version: before2.version, p_payload: buildUpdatePayload({ ...before2.form, name: 'Spring 2027 two' }) });
+  assert.equal(call('bb_add_candidate', {
+    p_cycle_id: id, p_first: 'Dee', p_last: 'Zzdesk', p_date_of_birth: '1990-01-01', p_email: 'dee.zz@example.com',
+    p_location_code: 'worcester', p_dan: 1, p_cycle_plan_id: full, p_kukkiwon: false, p_paper_waiver: true,
+  }, STAFF).status, 'ok');
+  const undone2 = call('bb_undo_cycle_edit', { p_cycle_id: id, p_expected_version: saved2.version, p_payload: buildUpdatePayload(before2.form), p_open: null, p_known_ids: known });
+  assert.equal(undone2.status, 'ok');
+  assert.deepEqual([springNow().name, springNow().registration_open], ['Spring 2027', true]);
+
+  // Save 3: rename only; a FAMILY registers before the Undo → registered, nothing changes
+  known = rosterIds();
+  const before3 = editForm(id);
+  const saved3 = call('bb_update_cycle', { p_cycle_id: id, p_expected_version: before3.version, p_payload: buildUpdatePayload({ ...before3.form, name: 'Spring 2027 three' }) });
+  const fam = backend.publicRegister(regInput(springNow().public_code_shrewsbury, full, { first: 'Lou', last: 'Zzlate' }));
+  assert.equal(fam.status, 'ok');
+  const lou = db().bb_candidates.find((c) => c.reference === fam.reference).id;
+  const undo3 = (over = {}) => call('bb_undo_cycle_edit', { p_cycle_id: id, p_expected_version: saved3.version, p_payload: buildUpdatePayload(before3.form), p_open: null, p_known_ids: known, ...over });
+  snapshot = JSON.stringify(db());
+  assert.deepEqual(undo3(), { status: 'registered' });
+  assert.deepEqual(undo3({ p_open: false }), { status: 'registered' });
+  assert.equal(JSON.stringify(db()), snapshot);
+  assert.equal(springNow().name, 'Spring 2027 three');
+  // withdrawn, the family still counts; once the list names them, the Undo goes through
+  assert.equal(call('bb_withdraw_candidate', { p_candidate_id: lou, p_expected_version: db().bb_candidates.find((c) => c.id === lou).version }).status, 'ok');
+  assert.deepEqual(undo3(), { status: 'registered' });
+  assert.equal(undo3({ p_known_ids: [...known, lou] }).status, 'ok');
+  assert.equal(springNow().name, 'Spring 2027');
 });
 
 // ======================= the family form's preview stand-in =======================

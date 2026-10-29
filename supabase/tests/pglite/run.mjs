@@ -422,6 +422,17 @@
 //       tests and the Schedule / Forms / Prospects tests,
 //       re-run safety, and the Undo of SETUP.md 0031e (manual/0031u) - see
 //       step0031 below. Run only this step with   node run.mjs --only-step0031
+//   step0032. 0032 (Black Belt: testing times every 5 minutes, BB13 /
+//       v1.019; the candidate History reader, BB8; Edit cycle's Undo in
+//       one call, refused when a family registered after the save) on its
+//       own database in the production order with every live migration
+//       (0025's order, then 0027, 0026, 0028, 0029, 0031): the pre-apply
+//       check, only bb_time_is_valid's fingerprint moves and only the 3
+//       new functions are added, 0032's tests and the Black Belt tests
+//       (0016, 0024, 0025, 0026) after it, re-run safety, and the Undo of
+//       SETUP.md 0032e (manual/0032u: refused with a 12:05 testing day,
+//       then back to 0016's rule) - see step0032 below. Run only this
+//       step with   node run.mjs --only-step0032
 //
 // 0003_tests.sql AFTER 0005: its catalog checks (C1c, C3, C5) look only at
 //   the columns and functions 0003 itself makes (by name), so 0005's new
@@ -465,6 +476,7 @@ const onlyStep0027 = process.argv.includes('--only-step0027');
 const onlyStep0029 = process.argv.includes('--only-step0029');
 const onlyStep0028 = process.argv.includes('--only-step0028');
 const onlyStep0031 = process.argv.includes('--only-step0031');
+const onlyStep0032 = process.argv.includes('--only-step0032');
 
 // Fixed ids for the two pretend logins (any uuid works).
 const ADMIN_UID = '11111111-1111-4111-8111-111111111111';
@@ -664,6 +676,15 @@ async function main() {
     if (prints31) {
       console.log('\n0031 fingerprints (kind  item  detail):');
       for (const line of prints31) console.log('  ' + line);
+    }
+    return finish();
+  }
+  // --only-step0032: just Black Belt's design-review database step (0032)
+  if (onlyStep0032) {
+    const prints32 = await step0032();
+    if (prints32) {
+      console.log('\n0032 fingerprints (kind  item  detail):');
+      for (const line of prints32) console.log('  ' + line);
     }
     return finish();
   }
@@ -927,6 +948,9 @@ async function main() {
   // step0031: class ages on the booking forms (its own database, production order)
   console.log('\nMigration 0031 (class ages on the booking forms):');
   const after31 = after5 ? await step0031() : null;
+  // step0032: Black Belt's design-review database half (its own database, production order)
+  console.log('\nMigration 0032 (Black Belt: 5-minute times, candidate history, Edit cycle Undo in one call):');
+  const after32 = after5 ? await step0032() : null;
 
   // step0020 (named after its migration, not a number other branches use): 0020, LAST
   console.log('\nMigration 0020 (current_session_id reads only request.jwt.claims), last:');
@@ -1021,6 +1045,10 @@ async function main() {
   if (after31) {
     console.log('\n0031 fingerprints (kind  item  detail):');
     for (const line of after31) console.log('  ' + line);
+  }
+  if (after32) {
+    console.log('\n0032 fingerprints (kind  item  detail):');
+    for (const line of after32) console.log('  ' + line);
   }
   if (after17) {
     console.log('\n0017 fingerprints (Finance after 0017; kind  item  detail):');
@@ -6754,6 +6782,333 @@ async function step0031() {
   }
   await db.close().catch(() => {});
   return prints31;
+}
+
+// step0032's speed check (security review should-fix): the History line on a big shared
+// change_log. Inside one transaction that is rolled back afterwards: a test cycle and candidate
+// ("Speedy") made through the functions, then rows written straight into change_log —
+//   20 000 rows of other sections (some with a "candidate_id" of their own),
+//   27 000 rows of 300 other Black Belt candidates (30 grades each: an insert and two changes),
+//   Speedy's own: 30 grades x 20 rows (an insert and 19 changes) and 5 payments,
+// then ANALYZE. Checks: the reader's answer is exactly the first draft's query (newest first, at
+// most 500, stripped) — so the rewrite changed nothing but the speed; it answers in <= 300 ms
+// (median of 3; WARN above, FAIL above 3 s, as the bb_makeup_list check); and the plan of the
+// same query uses change_log_table_record_idx and change_log_bb_candidate_child_idx. The first
+// draft's "own rows OR in a list" query is timed too, for the comparison.
+const HISTORY_CHILDREN_0032 = `('bb_payments', 'bb_candidate_waivers', 'bb_grades', 'bb_extra_counts', 'bb_makeup_subjects', 'bb_result_sends')`;
+const HISTORY_ROW_0032 = `jsonb_build_object('occurred_at', h.occurred_at, 'actor_name', h.actor_name, 'action', h.action,
+    'table_name', h.table_name, 'op', h.op, 'before', public.bb_history_strip(h.before), 'after', public.bb_history_strip(h.after))`;
+// the reader's query, word for word as 0032's bb_candidate_history runs it ($1 = the candidate)
+const HISTORY_NEW_0032 = `select coalesce(jsonb_agg(${HISTORY_ROW_0032} order by h.occurred_at desc, h.id desc), '[]'::jsonb) as r
+  from (select x.id, x.occurred_at, x.actor_name, x.action, x.table_name, x.op, x.before, x.after
+          from (select l.id, l.occurred_at, l.actor_name, l.action, l.table_name, l.op, l.before, l.after
+                  from public.change_log l
+                 where l.table_name = 'bb_candidates' and l.record_id = $1::uuid
+                union all
+                select l.id, l.occurred_at, l.actor_name, l.action, l.table_name, l.op, l.before, l.after
+                  from (select distinct i.table_name, i.record_id from public.change_log i
+                         where (i.after ->> 'candidate_id') = $1::uuid::text
+                           and i.table_name in ${HISTORY_CHILDREN_0032} and i.op = 'insert') as k
+                  join public.change_log l on l.table_name = k.table_name and l.record_id = k.record_id) as x
+         order by x.occurred_at desc, x.id desc limit 500) as h`;
+// the first draft's query (one "own rows OR in a list" filter), for the comparison
+const HISTORY_OLD_0032 = `select coalesce(jsonb_agg(${HISTORY_ROW_0032} order by h.occurred_at desc, h.id desc), '[]'::jsonb) as r
+  from (select l.id, l.occurred_at, l.actor_name, l.action, l.table_name, l.op, l.before, l.after
+          from public.change_log l
+         where (l.table_name = 'bb_candidates' and l.record_id = $1::uuid)
+            or (l.table_name, l.record_id) in
+               (select i.table_name, i.record_id from public.change_log i
+                 where i.table_name in ${HISTORY_CHILDREN_0032} and i.op = 'insert' and i.after ->> 'candidate_id' = $1::uuid::text)
+         order by l.occurred_at desc, l.id desc limit 500) as h`;
+
+async function historySpeed0032(db, L) {
+  const S = `${L}[speed] `;
+  const claims = await bbAdminClaims(db);
+  await db.exec('begin;');
+  try {
+    await db.query(`select set_config('request.jwt.claims', $1, true)`, [claims]);
+    const cycle = (await db.query(`select public.bb_add_cycle(${bb24Payload('PGlite 0032 speed', 90)}, null) as r`)).rows[0].r;
+    const plan = (await db.query('select id from public.bb_cycle_plans where cycle_id = $1 limit 1', [cycle?.id])).rows[0]?.id;
+    const added = (await db.query(`select public.bb_add_candidate($1, 'Speedy', 'Zzhistory', current_date - 9000, 'speedy@example.com',
+        'worcester', 1, $2, false, true) as r`, [cycle?.id, plan])).rows[0].r;
+    const kim = added?.id;
+    if (!kim) throw new Error(`no test candidate: ${JSON.stringify([cycle, added])}`);
+    const t0 = performance.now();
+    await db.query(`
+      insert into public.change_log (actor_name, action, table_name, record_id, op, before, after)
+      select 'Seed', 'seed', (array['testing_registrations', 'star_candidates', 'camp_campers', 'prospects', 'star_payments'])[1 + g % 5],
+             gen_random_uuid(), case when g % 3 = 0 then 'insert' else 'update' end, null,
+             jsonb_build_object('candidate_id', gen_random_uuid(), 'note', 'seed ' || g)
+        from generate_series(1, 20000) as g`);
+    await db.query(`
+      insert into public.change_log (actor_name, action, table_name, record_id, op, before, after)
+      select 'Seed', 'bb_set_grade', 'bb_grades', md5('grade ' || c || ' ' || s)::uuid, case when e = 1 then 'insert' else 'update' end,
+             case when e = 1 then null else jsonb_build_object('letter', 'B') end,
+             case when e = 1 then jsonb_build_object('candidate_id', md5('cand ' || c)::uuid, 'letter', 'A', 'created_by', gen_random_uuid())
+                  else jsonb_build_object('letter', 'A') end
+        from generate_series(1, 300) as c, generate_series(1, 30) as s, generate_series(1, 3) as e`);
+    await db.query(`
+      insert into public.change_log (actor_name, action, table_name, record_id, op, before, after)
+      select 'Seed', 'bb_set_grade', 'bb_grades', md5('speedy ' || s)::uuid, case when e = 1 then 'insert' else 'update' end,
+             case when e = 1 then null else jsonb_build_object('letter', 'B') end,
+             case when e = 1 then jsonb_build_object('candidate_id', $1::uuid, 'letter', 'A', 'updated_by', gen_random_uuid())
+                  else jsonb_build_object('letter', 'A', 'updated_by', gen_random_uuid()) end
+        from generate_series(1, 30) as s, generate_series(1, 20) as e
+      union all
+      select 'Seed', 'bb_record_payment', 'bb_payments', md5('speedy pay ' || p)::uuid, 'insert', null,
+             jsonb_build_object('candidate_id', $1::uuid, 'amount_cents', 1000 * p, 'recorded_by', gen_random_uuid())
+        from generate_series(1, 5) as p`, [kim]);
+    await db.exec('analyze public.change_log;');
+    const total = await one(db, 'select count(*)::int from public.change_log');
+    record(`${S}seeded change_log: other sections, 300 other Black Belt candidates, and Speedy (30 grades x 20 rows, 5 payments)`,
+      total > 47000, `${total} rows in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+
+    // the answer: the reader = its query written out = the first draft's query; 500 rows, newest first
+    const fn = (await db.query('select public.bb_candidate_history($1) as r', [kim])).rows[0].r;
+    const inline = (await db.query(HISTORY_NEW_0032, [kim])).rows[0].r;
+    const old = (await db.query(HISTORY_OLD_0032, [kim])).rows[0].r;
+    const own = await one(db, `select count(*)::int from public.change_log l
+       where (l.table_name = 'bb_candidates' and l.record_id = '${kim}')
+          or (l.table_name in ('bb_grades', 'bb_payments', 'bb_candidate_waivers') and l.record_id in
+              (select i.record_id from public.change_log i where i.op = 'insert' and i.after ->> 'candidate_id' = '${kim}'))`);
+    const text = JSON.stringify(fn);
+    record(`${S}the reader's answer equals the first draft's query (500 of Speedy's ${own} rows, newest first, stripped)`,
+      fn?.status === 'ok' && JSON.stringify(fn.rows) === JSON.stringify(inline) && JSON.stringify(inline) === JSON.stringify(old)
+        && fn.rows.length === 500 && own > 500 && !/"(updated_by|recorded_by|created_by)"/.test(text)
+        && fn.rows.every((r, i) => i === 0 || r.occurred_at <= fn.rows[i - 1].occurred_at),
+      `${fn?.rows?.length} rows; own ${own}`);
+
+    // the time (median of 3), and the first draft's for the comparison
+    const median = async (sql, params) => {
+      const t = [];
+      for (let i = 0; i < 3; i++) {
+        const s0 = performance.now();
+        await db.query(sql, params);
+        t.push(performance.now() - s0);
+      }
+      return t.sort((a, b) => a - b)[1];
+    };
+    const msNew = await median('select public.bb_candidate_history($1) as r', [kim]);
+    const msOld = await median(HISTORY_OLD_0032, [kim]);
+    // ... and both again without the new index (as the first draft ran: its only index was 0003's)
+    await db.exec('savepoint no_index; drop index public.change_log_bb_candidate_child_idx;');
+    const msOldBare = await median(HISTORY_OLD_0032, [kim]);
+    const msNewBare = await median('select public.bb_candidate_history($1) as r', [kim]);
+    await db.exec('rollback to savepoint no_index;');
+    const detail = `${msNew.toFixed(1)} ms (median of 3); the first draft's query: ${msOld.toFixed(1)} ms with the new index, `
+      + `${msOldBare.toFixed(1)} ms without it (the reader without it: ${msNewBare.toFixed(1)} ms)`;
+    if (msNew <= 300) record(`${S}bb_candidate_history on the big change_log <= 300 ms`, true, detail);
+    else if (msNew <= 3000) warn(`${S}bb_candidate_history on the big change_log <= 300 ms`, `${detail}; fails above 3000 ms`);
+    else record(`${S}bb_candidate_history on the big change_log <= 3000 ms`, false, detail);
+
+    // the plan of the reader's query uses both indexes
+    const planText = (await db.query(`explain ${HISTORY_NEW_0032.replaceAll('$1::uuid', `'${kim}'::uuid`)}`)).rows
+      .map((r) => Object.values(r)[0]).join('\n');
+    record(`${S}the plan uses change_log_table_record_idx and change_log_bb_candidate_child_idx (no full read of change_log)`,
+      planText.includes('change_log_table_record_idx') && planText.includes('change_log_bb_candidate_child_idx')
+        && !/Seq Scan on change_log/.test(planText), planText.split('\n').filter((l) => /Scan/.test(l)).map((l) => l.trim()).join(' | '));
+  } catch (error) {
+    record(`${S}the History line speed check`, false, error.message);
+  } finally {
+    await db.exec('rollback;').catch(() => {});
+  }
+}
+
+// =====================================================================
+// step0032: Black Belt's design-review database half (0032): testing
+// times every 5 minutes (BB13, v1.019), the candidate History reader
+// (BB8, v1.010) and Edit cycle's Undo in one call (the Undo race)
+// ---------------------------------------------------------------------
+// On its OWN fresh database built in the production order with every
+// live migration (liveOrderTo0025, then 0027, 0026, 0028, 0029 and 0031):
+//   a. 0032's migration, tests, fingerprints and pre-apply check are
+//      connector-safe (no "delete" / "drop"); the pre-apply check (SETUP
+//      0032a) on the clean database: body_is_0016 true, no new function,
+//      every count 0
+//   b. apply 0032: every other fingerprint file is byte-identical, except
+//      0016's (which lists every bb_ function), where ONLY the
+//      bb_time_is_valid line differs (and only in its body md5) and
+//      exactly the 3 new functions' lines are added (the new index on
+//      change_log is in no other file); 0032's own rows:
+//      language, volatility, return type, definer, search_path="", owner
+//      and rights as designed (the two helpers: nobody; the two staff
+//      functions: authenticated only)
+//   c. 0032_tests.sql, then 0016's, 0024's, 0025's and 0026's tests; the
+//      History line's speed on a big change_log (historySpeed0032 above);
+//      the pre-apply check now says body_is_0032, 3 new functions, the
+//      index, counts 0
+//   d. 0032 applied a SECOND time: no fingerprint changes
+//   e. the Undo of SETUP.md 0032e (the file it names,
+//      supabase/manual/0032u_undo.sql):
+//        - with a 12:05 testing day planted (in a transaction rolled back
+//          afterwards) the pre-apply check counts it and the undo refuses
+//          with its message, changing nothing
+//        - on the clean database: every fingerprint file equals the one
+//          before 0032; the pre-apply check answers as before 0032; the
+//          Black Belt tests pass; then 0032 again -> the tested
+//          fingerprints, 0032_tests.sql passes
+// Run only this step with   node run.mjs --only-step0032
+// =====================================================================
+async function step0032() {
+  const L = '[0032] ';
+  const preSql = read('tests', '0032_preapply_check.sql');
+  const migration = read('migrations', '0032_black_belt_review.sql');
+  const unsafe = [['migrations', '0032_black_belt_review.sql'], ['tests', '0032_tests.sql'], ['tests', '0032_fingerprints.sql'],
+    ['tests', '0032_preapply_check.sql']].filter(([dir, file]) => /delete|drop/i.test(read(dir, file))).map(([, file]) => file);
+  record(`${L}0032's migration, tests, fingerprints and pre-apply check contain neither "delete" nor "drop" (connector-safe)`,
+    unsafe.length === 0, unsafe.join(', '));
+  const db = await buildBase(L);
+  if (!db) return null;
+  if (!(await liveOrderTo0025(db, L))) return null;
+  for (const [label, file] of [['0027 (camps edit guard)', '0027_camps_edit_guard.sql'],
+    ['0026 (Finance: Black Belt payments)', '0026_finance_black_belt.sql'], ['0028 (Star start times)', '0028_star_start_times.sql'],
+    ['0029 (Finance reminder every 5 minutes)', '0029_finance_reminder_5min.sql'], ['0031 (class ages)', '0031_class_ages.sql']]) {
+    if (!existsSync(path.join(supabaseDir, 'migrations', file))) continue;
+    if (!(await run(db, `${L}apply ${label}`, read('migrations', file)))) return null;
+  }
+
+  // a. the pre-apply check on the clean database
+  const pre = async () => (await db.query(preSql)).rows[0];
+  const zero = (r) => r && r.times_bad_new === 0 && r.times_bad_old === 0;
+  const clean = await pre();
+  record(`${L}[pre-apply check] before 0032: body_is_0016, no new function, no index, every count 0`,
+    clean.body_is_0016 === true && clean.body_is_0032 === false && clean.new_functions === 0 && clean.history_index === false && zero(clean),
+    JSON.stringify(clean));
+
+  // b. apply 0032: only bb_time_is_valid's body moves; 0016's file gains the 3 new functions
+  const numbers = [...NUMBERS_0025, '0027', '0026', '0028', '0029', '0031', '0032']
+    .filter((n) => existsSync(path.join(supabaseDir, 'tests', `${n}_fingerprints.sql`)));
+  const others = numbers.filter((n) => n !== '0032');
+  const before = await printsOf(db, others);
+  if (!(await run(db, `${L}apply 0032_black_belt_review.sql`, migration))) return null;
+  const after = await printsOf(db, numbers);
+  const isRule = (line) => /^function {2}bb_time_is_valid\(/.test(line);
+  const NEW = ['bb_history_strip(', 'bb_candidate_history(', 'bb_undo_cycle_edit('];
+  const md5Out = (line) => line.replace(/[0-9a-f]{32}/, '<md5>');
+  const wrong = [];
+  for (const n of others) {
+    const f = `${n}_fingerprints.sql`;
+    const gone = before[f].filter((line) => !after[f].includes(line));
+    const added = after[f].filter((line) => !before[f].includes(line));
+    if (n === '0016') {
+      const twin = added.filter(isRule);
+      const extra = added.filter((line) => !isRule(line));
+      if (gone.length !== 1 || !isRule(gone[0]) || twin.length !== 1 || md5Out(gone[0]) !== md5Out(twin[0]) || gone[0] === twin[0]) {
+        wrong.push(`0016: bb_time_is_valid ${JSON.stringify({ gone, twin })}`);
+      }
+      if (extra.length !== 3 || !NEW.every((name) => extra.some((line) => line.startsWith(`function  ${name}`)))) {
+        wrong.push(`0016: added ${JSON.stringify(extra)}`);
+      }
+    } else if (gone.length || added.length) {
+      wrong.push(`${n} moved: ${JSON.stringify({ gone, added })}`);
+    }
+  }
+  record(`${L}fingerprints: only bb_time_is_valid's body moved and only the 3 new functions were added (0016's file), every other file byte-identical`,
+    wrong.length === 0, wrong.join('; ') || `${others.length} files`);
+  const prints32 = after['0032_fingerprints.sql'];
+  const fn = (name) => prints32.find((l) => l.startsWith(`function  ${name}(`)) || '';
+  const tail = (lang, vol, ret, definer, rights) =>
+    ` lang=${lang} volatility=${vol} returns=${ret} definer=${definer} settings=search_path="" owner=postgres rights=${rights}`;
+  const indexLine = prints32.find((l) => l.startsWith('index  change_log.change_log_bb_candidate_child_idx')) || '';
+  record(`${L}0032 fingerprints: 4 functions; the 2 helpers sql immutable for nobody, the 2 staff functions security definer for authenticated only; the partial index on change_log`,
+    prints32.length === 5
+      && indexLine.includes("ON public.change_log USING btree (((after ->> 'candidate_id'::text)))")
+      && indexLine.includes("WHERE ((table_name = ANY (ARRAY['bb_payments'::text, 'bb_candidate_waivers'::text, 'bb_grades'::text, 'bb_extra_counts'::text, 'bb_makeup_subjects'::text, 'bb_result_sends'::text])) AND (op = 'insert'::text))")
+      && fn('bb_time_is_valid').endsWith(tail('sql', 'i', 'boolean', false, 'postgres:EXECUTE'))
+      && fn('bb_history_strip').endsWith(tail('sql', 'i', 'jsonb', false, 'postgres:EXECUTE'))
+      && fn('bb_candidate_history').endsWith(tail('plpgsql', 's', 'jsonb', true, 'authenticated:EXECUTE,postgres:EXECUTE'))
+      && fn('bb_undo_cycle_edit').endsWith(tail('plpgsql', 'v', 'jsonb', true, 'authenticated:EXECUTE,postgres:EXECUTE')),
+    prints32.join(' | '));
+
+  // c. the tests
+  const tests = async (label, files) => {
+    for (const [file, ok] of files) await runTestFile(db, `${L}${file} (${label})`, file, ok);
+  };
+  const bbTests = [['0016_tests.sql', 'ALL 0016 TESTS PASSED'], ['0024_tests.sql', 'ALL 0024 TESTS PASSED'],
+    ['0025_tests.sql', 'ALL 0025 TESTS PASSED'], ['0026_tests.sql', 'ALL 0026 TESTS PASSED']];
+  await tests('after 0032', [['0032_tests.sql', 'ALL 0032 TESTS PASSED'], ...bbTests]);
+  // c2. the History line on a big change_log (rolled back afterwards)
+  await historySpeed0032(db, L);
+  const applied = await pre();
+  record(`${L}[pre-apply check] after 0032: body_is_0032, the 3 new functions, every count still 0`,
+    applied.body_is_0016 === false && applied.body_is_0032 === true && applied.new_functions === 3 && applied.history_index === true && zero(applied),
+    JSON.stringify(applied));
+
+  // d. re-run safety
+  await run(db, `${L}apply 0032 a SECOND time (re-run safety)`, migration);
+  const again = await printsOf(db, numbers);
+  const movedAgain = numbers.filter((n) => JSON.stringify(after[`${n}_fingerprints.sql`]) !== JSON.stringify(again[`${n}_fingerprints.sql`]));
+  record(`${L}0032 re-run: no fingerprint change`, movedAgain.length === 0, movedAgain.join(', '));
+
+  // e. Undo 0032, as SETUP.md 0032e has it: paste the undo file it names
+  const setup = read('SETUP.md').replace(/\r\n/g, '\n');
+  const at = setup.search(/^### 0032e\. Undo 0032/m);
+  const undoFile = 'manual/0032u_undo.sql';
+  const undoSql = read('manual', '0032u_undo.sql');
+  if (at < 0 || !setup.slice(at, at + 2000).includes(`supabase/${undoFile}`)) {
+    record(`${L}[undo 0032] SETUP.md has "### 0032e. Undo 0032" naming supabase/${undoFile}`, false, 'heading or file name missing');
+  } else {
+    // e1. a 12:05 testing day (made through bb_add_cycle as the admin) blocks the undo;
+    // the undo file runs without its own begin / commit inside a transaction that is rolled back
+    const inner = undoSql.replace(/\r\n/g, '\n').replace(/^begin;$/m, '').replace(/^commit;$/m, '');
+    const early = bb24Payload('PGlite 0032 early day', 60)
+      .replace("'start_time', '12:30', 'end_time', '14:30'", "'start_time', '12:05', 'end_time', '14:30'");
+    let planted = null;
+    let refusal = '';
+    try {
+      await db.exec('begin;');
+      await db.exec(`
+        do $$
+        declare
+          v_s uuid := gen_random_uuid();
+          v_r jsonb;
+        begin
+          insert into auth.sessions (id, user_id) values (v_s, '${ADMIN_UID}');
+          insert into public.session_unlock (session_id, staff_id, unlocked_until) values (v_s, '${ADMIN_UID}', now() + interval '30 minutes');
+          perform set_config('request.jwt.claims', jsonb_build_object('sub', '${ADMIN_UID}', 'role', 'authenticated', 'session_id', v_s,
+            'amr', jsonb_build_array(jsonb_build_object('method', 'password', 'timestamp', extract(epoch from now())::bigint - 60)))::text, true);
+          v_r := public.bb_add_cycle(${early}, null);
+          if v_r ->> 'status' is distinct from 'ok' then raise exception 'plant: bb_add_cycle %', v_r; end if;
+          perform set_config('request.jwt.claims', '', true);
+        end
+        $$;`);
+      planted = await pre();
+      try {
+        await db.exec(inner);
+      } catch (error) {
+        refusal = error.message;
+      }
+    } catch (error) {
+      planted = { error: error.message };
+    } finally {
+      await db.exec('rollback;').catch(() => {});
+    }
+    record(`${L}[undo 0032] a planted 12:05 testing day: the pre-apply check counts it (times_bad_old = 1, times_bad_new = 0)`,
+      planted?.times_bad_old === 1 && planted?.times_bad_new === 0, JSON.stringify(planted));
+    record(`${L}[undo 0032] ... and the undo file refuses ("0032 undo refused")`, refusal.includes('0032 undo refused'), refusal || 'no error');
+    const rolledBack = await pre();
+    record(`${L}[undo 0032] the planted day was rolled back, the rule is still 0032's`,
+      rolledBack.body_is_0032 === true && rolledBack.new_functions === 3 && zero(rolledBack), JSON.stringify(rolledBack));
+
+    // e2. the undo on the clean database
+    if (await run(db, `${L}[undo 0032] paste ${undoFile}`, undoSql)) {
+      const undone = await printsOf(db, others);
+      const back = others.filter((n) => JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(undone[`${n}_fingerprints.sql`]));
+      record(`${L}[undo 0032] every fingerprint file equals the one before 0032 (0016's bb_time_is_valid is back, the 3 functions gone)`,
+        back.length === 0, back.length ? `differ: ${back.join(', ')}` : `${others.length} files`);
+      const undonePre = await pre();
+      record(`${L}[undo 0032] the pre-apply check answers as before 0032`, JSON.stringify(undonePre) === JSON.stringify(clean),
+        JSON.stringify(undonePre));
+      await tests('after the undo', bbTests);
+      if (await run(db, `${L}[undo 0032] apply 0032 again (redo)`, migration)) {
+        const redo = await fingerprints(db, '0032_fingerprints.sql');
+        record(`${L}[undo 0032] after the redo the 0032 fingerprints equal the tested ones`, JSON.stringify(redo) === JSON.stringify(prints32));
+        await tests('after the redo', [['0032_tests.sql', 'ALL 0032 TESTS PASSED']]);
+      }
+    }
+  }
+  await db.close().catch(() => {});
+  return prints32;
 }
 
 function finish() {

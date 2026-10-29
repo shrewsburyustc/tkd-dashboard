@@ -65,6 +65,12 @@
 // the first day (S2); a cycle's rubric save / undo answers has_grades once grading started (for
 // good); a make-up never gets a payment of any kind; the purge keeps the age (age_kept) and a
 // candidate's purge day is the latest of their make-up chain.
+// Migration 0032 (Black Belt's design-review database half) adds: testing-day times on a 5-minute
+// step (bbTimeOk), the history (change_log: the rows the real log triggers write for the candidate
+// tables, filled in centrally — see "The history" below — and read by bb_candidate_history, with
+// bb_history_strip's rules), and bb_undo_cycle_edit (Edit cycle's Undo in one call: refused with
+// 'registered' when a family registered after the save; the switch and the values together or not
+// at all).
 // An older preview store (schema 'bb-1', v1 requirements sheets) is upgraded when it is read:
 // the default rubric is added and every v1 sheet is converted with rubricFromV1, like the
 // migration's bb_rubric_upgrade step.
@@ -160,7 +166,8 @@ const HIDDEN = /* @__PURE__ */ Object.assign({
 // AND the lists it reads. Without them the table, column and function names below ended up in the
 // live dashboard's JavaScript (security review B1, item 14).
 export const BB_TABLES = /* @__PURE__ */ Object.keys(GRANTED);
-const STORE_LISTS = /* @__PURE__ */ BB_TABLES.concat(['public_attempts', 'bb_register_log']);
+// change_log (0032): the preview's history rows — never readable through select(), like the real one.
+const STORE_LISTS = /* @__PURE__ */ BB_TABLES.concat(['public_attempts', 'bb_register_log', 'change_log']);
 
 // ----- The staff functions' argument lists (name, type) — exactly 0016's names -----
 const ID = (name) => [name, 'uuid'];
@@ -202,6 +209,9 @@ const RPC_ARGS = /* @__PURE__ */ Object.assign({
   bb_save_cycle_dan: [ID('p_cycle_id'), ['p_dan', 'int'], ['p_expected_rev', 'int'], ['p_sheet', 'jsonb']],
   bb_undo_cycle_dan: [ID('p_cycle_id'), ['p_dan', 'int'], ['p_expected_rev', 'int']],
   bb_undo_first_open: [ID('p_cycle_id'), ['p_expected_version', 'int']],
+  // 0032: History (S) and Edit cycle's Undo in one call (A)
+  bb_candidate_history: [ID('p_candidate_id')],
+  bb_undo_cycle_edit: [ID('p_cycle_id'), ['p_expected_version', 'int'], ['p_payload', 'jsonb'], ['p_open', 'bool'], ['p_known_ids', 'uuid[]']],
 }, GRADING_RPC_ARGS);
 // A = admins only (checked right after has_data_access). bb_cycles_list and bb_set_registration
 // are S (staff and admins); set_registration's admin-only case is inside it. Of B2's: withdraw,
@@ -210,7 +220,8 @@ const RPC_ARGS = /* @__PURE__ */ Object.assign({
 // admin case inside the function.
 const ADMIN_ONLY = /* @__PURE__ */ new Set(/* @__PURE__ */ ['bb_cycle_defaults', 'bb_add_cycle', 'bb_update_cycle', 'bb_delete_cycle', 'bb_save_waiver', 'bb_set_keep_years',
   'bb_withdraw_candidate', 'bb_delete_candidate', 'bb_edit_payment', 'bb_record_refund', 'bb_mark_check_returned', 'bb_view_signature',
-  'bb_save_default_dan', 'bb_undo_default_dan', 'bb_save_cycle_dan', 'bb_undo_cycle_dan', 'bb_undo_first_open'].concat(GRADING_ADMIN_ONLY));
+  'bb_save_default_dan', 'bb_undo_default_dan', 'bb_save_cycle_dan', 'bb_undo_cycle_dan', 'bb_undo_first_open',
+  'bb_undo_cycle_edit'].concat(GRADING_ADMIN_ONLY));
 // Functions that exist but that a signed-in staff member may NOT call (only bb_registrar, or
 // nobody): the app gets "permission denied", like the real database.
 const RESTRICTED = /* @__PURE__ */ ['bb_public_cycle', 'bb_public_register', 'bb_public_register_core', 'bb_cycle_state', 'bb_purge_due',
@@ -219,12 +230,15 @@ const RESTRICTED = /* @__PURE__ */ ['bb_public_cycle', 'bb_public_register', 'bb
   // 0024's internal helpers and trigger functions (§15: executable by nobody)
   'bb_rubric_num_ok', 'bb_rubric_int_ok', 'bb_rubric_letters', 'bb_rubric_brackets_problems', 'bb_rubric_dan_problems',
   'bb_rubric_is_valid', 'bb_rubric_part_max', 'bb_rubric_most_points', 'bb_rubric_from_v1', 'bb_rubric_fresh_copy',
-  'bb_rubric_public', 'bb_rubric_put_dan', 'bb_default_rubric_guard', 'bb_rubric_undo_guard'].concat(GRADING_RESTRICTED);
+  'bb_rubric_public', 'bb_rubric_put_dan', 'bb_default_rubric_guard', 'bb_rubric_undo_guard',
+  // 0032's helper (nobody may call it)
+  'bb_history_strip'].concat(GRADING_RESTRICTED);
 // The writes (failNextSave fails the next one of these).
 export const BB_WRITE_RPC_NAMES = /* @__PURE__ */ ['bb_add_cycle', 'bb_update_cycle', 'bb_set_registration', 'bb_delete_cycle', 'bb_save_waiver', 'bb_set_keep_years',
   'bb_add_candidate', 'bb_update_candidate', 'bb_change_plan', 'bb_resolve_duplicate', 'bb_withdraw_candidate', 'bb_restore_candidate',
   'bb_delete_candidate', 'bb_record_paper_waiver', 'bb_record_payment', 'bb_undo_payment', 'bb_edit_payment', 'bb_record_refund',
   'bb_mark_check_returned', 'bb_save_default_dan', 'bb_undo_default_dan', 'bb_save_cycle_dan', 'bb_undo_cycle_dan', 'bb_undo_first_open',
+  'bb_undo_cycle_edit',
 ].concat(GRADING_WRITE_RPC_NAMES);
 // "volatile" functions: they write (bb_cycles_list and bb_cycle_roster run the purge), so a
 // read-only GET call is refused, as PostgREST does.
@@ -285,6 +299,11 @@ function toDbType(value, type) {
     case 'date': // 'YYYY-MM-DD' (a real calendar date)
       if (typeof value === 'string' && isIsoDate(value)) return value;
       throw new DbError('22007', `invalid input syntax for type date: "${value}"`);
+    case 'uuid[]': // a flat list of ids (0032's p_known_ids); a null entry is allowed here (the function refuses it)
+      if (Array.isArray(value) && value.every((x) => x === null || (typeof x === 'string' && UUID_PATTERN.test(x)))) {
+        return value.map((x) => (x === null ? null : x.toLowerCase()));
+      }
+      throw new DbError('22P02', `malformed array literal: "${JSON.stringify(value)}"`);
     case 'text[]': // a flat list of texts; a null entry is allowed here (the function refuses it)
       if (Array.isArray(value) && value.every((x) => x === null || typeof x === 'string')) return [...value];
       throw new DbError('22P02', `malformed array literal: "${JSON.stringify(value)}"`);
@@ -324,8 +343,37 @@ function parseTime(text) {
   if (h > 23 || min > 59 || s > 59) return null;
   return { db: `${String(h).padStart(2, '0')}:${m[2]}:${String(s).padStart(2, '0')}`, minutes: h * 60 + min, seconds: s };
 }
-// bb_time_is_valid: 06:00–22:00 on a 15-minute step, no seconds.
-const bbTimeOk = (t) => t !== null && t.seconds === 0 && t.minutes >= 360 && t.minutes <= 1320 && t.minutes % 15 === 0;
+// bb_time_is_valid: 06:00–22:00 on a 5-minute step, no seconds (0032; 0016 had a 15-minute step).
+// (The screens still offer every 15 minutes — rules.js TIME_STEP_MINUTES — until the shared time
+// list arrives; the database only got wider.)
+const bbTimeOk = (t) => t !== null && t.seconds === 0 && t.minutes >= 360 && t.minutes <= 1320 && t.minutes % 5 === 0;
+
+// ----- The history (0032) -----
+// The candidate tables whose changes the real log triggers write to change_log (0016 11i-11k,
+// 0025 5b and its generic log triggers), and what bb_candidate_history reads back.
+const LOGGED_TABLES = ['bb_candidates', 'bb_candidate_waivers', 'bb_payments', 'bb_grades', 'bb_extra_counts', 'bb_makeup_subjects',
+  'bb_result_sends'];
+const HISTORY_CHILD_TABLES = LOGGED_TABLES.slice(1);
+// bb_candidates_log masks these (never the value itself in the log)
+const CANDIDATE_SECRETS = ['date_of_birth', 'email_for_results', 'age_kept'];
+// bb_history_strip: removed keys, and the private values shown only as "on file" / "changed"
+const HISTORY_REMOVED = ['created_by', 'updated_by', 'withdrawn_by', 'recorded_by', 'marked_by', 'undone_by', 'submission_id',
+  'makeup_of_candidate_id'];
+const HISTORY_PRIVATE = ['date_of_birth', 'email_for_results', 'age_kept', 'signature', 'signer_name'];
+const HISTORY_MAX_ROWS = 500; // what one reader call answers
+const HISTORY_KEEP = 1000; // the preview keeps only the newest rows (browser storage is small and shared; a failed save there is silent)
+
+// bb_history_strip(row): the same rules as the SQL helper. null / not an object → null.
+function historyStrip(row) {
+  if (row === null || typeof row !== 'object' || Array.isArray(row)) return null;
+  const out = {};
+  for (const [key, value] of Object.entries(row)) {
+    if (HISTORY_REMOVED.includes(key)) continue;
+    if (HISTORY_PRIVATE.includes(key) && value !== null && value !== 'on file' && value !== 'changed') out[key] = 'on file';
+    else out[key] = value;
+  }
+  return out;
+}
 // The database's time → 'HH:MM' (bb_cycle_defaults / bb_public_cycle use left(time, 5)).
 const short = (dbTime) => (typeof dbTime === 'string' ? dbTime.slice(0, 5) : null);
 
@@ -397,6 +445,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       bb_cycles: [], bb_cycle_days: [], bb_cycle_day_parts: [], bb_cycle_plans: [], bb_cycle_plan_amounts: [],
       bb_cycle_kukkiwon_fees: [], bb_cycle_plan_payments: [], bb_candidates: [], bb_candidate_waivers: [], bb_payments: [],
       bb_default_rubric: [defaultRubricRow(at)], bb_rubric_undo: [], bb_register_log: [],
+      change_log: [], // 0032: the history rows
       // 0025: the grading tables, and the three result texts as the migration seeds them
       bb_grades: [], bb_extra_counts: [], bb_makeup_subjects: [], bb_result_sends: [], bb_downloads: [], bb_cycle_grading_started: [],
       bb_result_texts: grading.seedTexts(at),
@@ -424,6 +473,8 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
         .filter((c) => c?.source === 'form').map((c) => ({ cycle_id: c.cycle_id, at: c.registered_at }));
     }
     grading.upgradeStore(store); // 0025's lists and columns, for a store saved before 0025
+    // 0032: a store saved before the history starts with an empty one (its rows were never logged)
+    if (isObj(store) && !Array.isArray(store.change_log)) store.change_log = [];
     for (const c of Array.isArray(store.bb_cycles) ? store.bb_cycles : []) {
       if (c?.requirements?.schema_version === 1) {
         try {
@@ -524,6 +575,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
     if (s.keep_years_after_last_day === null || s.keep_years_after_18 === null) return 0;
     const onDay = today();
     const at = stamp();
+    const pre = activeLog ? loggedSnapshot(db) : null; // 0032: for its own history rows
     let n = 0;
     for (const c of [...db.bb_candidates].sort(byId)) {
       if (c.personal_removed_at !== null) continue;
@@ -542,6 +594,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       }
       n += 1;
     }
+    if (pre && n > 0) logPurge(pre, db);
     return n;
   }
 
@@ -1047,6 +1100,49 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       updateRow(cycle, { registration_open: false, first_opened_at: null, auto_close: slot.previous.auto_close }, ctx.actorName, true);
       dropSlot(db, 'first_open', cycle.id, null);
       return { answer: { status: 'ok', version: cycle.version, state: stateOf(db, cycle) }, save: true };
+    },
+
+    // 0032 §4a. Edit cycle's "Changes saved · Undo" in one call (A). The cycle first; a family
+    // registration (source 'form') not in the app's list from before the save → registered,
+    // nothing written. Then the switch back (only when p_open isn't null) and the old values,
+    // through the two functions' own handlers: a refusal of either is answered as it came and
+    // NOTHING is kept (the private copy is dropped — the database's inner block does the same).
+    bb_undo_cycle_edit(db, a, ctx) {
+      if (a.p_cycle_id === null || a.p_expected_version === null || a.p_known_ids === null
+        || a.p_known_ids.length > 2000 || a.p_known_ids.some((x) => x === null)) return { answer: st('invalid') };
+      const cycle = findCycle(db, a.p_cycle_id);
+      if (!cycle) return { answer: st('not_found') };
+      const known = new Set(a.p_known_ids);
+      if (candidatesOf(db, cycle.id).some((c) => c.source === 'form' && !known.has(c.id))) return { answer: st('registered') };
+      let version = a.p_expected_version;
+      if (a.p_open !== null) {
+        const switched = handlers.bb_set_registration(db, { p_cycle_id: cycle.id, p_expected_version: version, p_open: a.p_open }, ctx);
+        if (switched.answer.status !== 'ok') return { answer: switched.answer };
+        version = switched.answer.version;
+      }
+      const back = handlers.bb_update_cycle(db, { p_cycle_id: cycle.id, p_expected_version: version, p_payload: a.p_payload }, ctx);
+      if (back.answer.status !== 'ok') return { answer: back.answer };
+      return { answer: { status: 'ok', version: back.answer.version }, save: true };
+    },
+
+    // 0032 §3b. A candidate's history (S): the rows of the candidate and of its own child rows
+    // (found through their insert rows, then matched by table + id), newest first, at most 500,
+    // each through bb_history_strip. No actor id, session or batch.
+    bb_candidate_history(db, a) {
+      if (a.p_candidate_id === null) return { answer: st('invalid') };
+      if (!findCandidate(db, a.p_candidate_id)) return { answer: st('not_found') };
+      const pairs = new Set(db.change_log
+        .filter((l) => l.op === 'insert' && HISTORY_CHILD_TABLES.includes(l.table_name) && l.after?.candidate_id === a.p_candidate_id)
+        .map((l) => `${l.table_name}|${l.record_id}`));
+      const rows = db.change_log
+        .filter((l) => (l.table_name === 'bb_candidates' && l.record_id === a.p_candidate_id) || pairs.has(`${l.table_name}|${l.record_id}`))
+        .sort((x, y) => cmp(y.occurred_at, x.occurred_at) || y.id - x.id)
+        .slice(0, HISTORY_MAX_ROWS)
+        .map((l) => ({
+          occurred_at: l.occurred_at, actor_name: l.actor_name, action: l.action, table_name: l.table_name, op: l.op,
+          before: historyStrip(l.before), after: historyStrip(l.after),
+        }));
+      return { answer: { status: 'ok', rows } };
     },
 
     // 0024 §6.1. Save one Dan of the default rubric (A).
@@ -1982,6 +2078,88 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
     return { answer: publicAnswer(db, candidate), cycleId };
   }
 
+  // ----- The history rows (0032): what the real log triggers would write -----
+  // loggedSnapshot(db) copies the candidate tables before a write; logChanges(before, db, actorOf,
+  // action) then compares and adds one change_log row per inserted, changed or removed row — with
+  // the triggers' masks: a candidate's date of birth, email and kept age as "on file" / "changed"
+  // (only when they changed), a waiver's signature and signer's name as "on file", no
+  // submission_id; an update row holds only the changed columns. actorOf(row) = the name.
+  const loggedSnapshot = (db) => Object.fromEntries(LOGGED_TABLES.map((t) => [t, new Map((db[t] ?? []).map((r) => [r.id, clone(r)]))]));
+  const NOTHING_LOGGED = Object.fromEntries(LOGGED_TABLES.map((t) => [t, new Map()]));
+  const same = (x, y) => JSON.stringify(x ?? null) === JSON.stringify(y ?? null);
+  function logView(table, row) {
+    if (table === 'bb_candidate_waivers') {
+      const { submission_id: _sent, ...rest } = row;
+      return { ...rest, signature: row.signature == null ? null : 'on file', signer_name: row.signer_name == null ? null : 'on file' };
+    }
+    if (table === 'bb_candidates') {
+      const out = { ...row };
+      for (const key of CANDIDATE_SECRETS) out[key] = row[key] == null ? null : 'on file';
+      return out;
+    }
+    return { ...row };
+  }
+  function changedView(table, oldRow, newRow) {
+    const secrets = table === 'bb_candidates' ? CANDIDATE_SECRETS : [];
+    const o = table === 'bb_candidate_waivers' ? logView(table, oldRow) : oldRow;
+    const n = table === 'bb_candidate_waivers' ? logView(table, newRow) : newRow;
+    const before = {};
+    const after = {};
+    for (const key of new Set([...Object.keys(o), ...Object.keys(n)])) {
+      if (same(o[key], n[key])) continue;
+      if (secrets.includes(key)) {
+        before[key] = o[key] == null ? null : 'on file';
+        after[key] = n[key] == null ? null : 'changed';
+      } else {
+        before[key] = o[key] ?? null;
+        after[key] = n[key] ?? null;
+      }
+    }
+    return Object.keys(after).length > 0 ? { before, after } : null;
+  }
+  function logChanges(before, db, actorOf, action) {
+    if (!Array.isArray(db.change_log)) db.change_log = [];
+    let seq = db.change_log.reduce((m, l) => Math.max(m, l.id ?? 0), 0);
+    const at = stamp();
+    const add = (table, row, op, b, a) => {
+      seq += 1;
+      db.change_log.push({ id: seq, occurred_at: at, actor_name: actorOf(row) ?? SEED_ACTOR, action, table_name: table, record_id: row.id, op,
+        before: b, after: a });
+    };
+    for (const table of LOGGED_TABLES) {
+      const old = before[table];
+      const now = new Map((db[table] ?? []).map((r) => [r.id, r]));
+      for (const [id, row] of now) {
+        const prev = old.get(id);
+        if (!prev) add(table, row, 'insert', null, clone(logView(table, row)));
+        else {
+          const diff = changedView(table, prev, row);
+          if (diff) add(table, row, 'update', clone(diff.before), clone(diff.after));
+        }
+      }
+      for (const [id, prev] of old) if (!now.has(id)) add(table, prev, 'delete', clone(logView(table, prev)), null);
+    }
+    if (db.change_log.length > HISTORY_KEEP) db.change_log = db.change_log.slice(db.change_log.length - HISTORY_KEEP);
+  }
+  // The purge that runs inside a call (the lists, the roster ...) writes its own history rows,
+  // tagged bb_purge_due like the real database's (0016's bb_purge_due sets its own action), by the
+  // name of whoever made the call. What it changed is then folded into the call's "before" copy,
+  // so the call's own rows don't repeat it.
+  let activeLog = null; // { before, actor } while one rpc call runs
+  function logPurge(pre, db) {
+    logChanges(pre, db, () => activeLog.actor, 'bb_purge_due');
+    for (const table of ['bb_candidates', 'bb_candidate_waivers']) {
+      for (const row of db[table]) {
+        const old = pre[table].get(row.id);
+        const base = activeLog.before[table].get(row.id);
+        if (!old || !base) continue;
+        for (const key of Object.keys(row)) if (!same(old[key], row[key])) base[key] = clone(row[key]);
+      }
+    }
+  }
+  // A sample's rows, logged as if each was written by the name on it.
+  const sampleActor = (row) => row.updated_by_name ?? row.recorded_by_name ?? row.marked_by_name ?? SEED_ACTOR;
+
   // 17c. The wrapper: removes rate-limit rows older than 2 days, runs the core, THEN writes this
   // call's attempts row ('bb:<status>') — whatever the answer, so every call counts. No purge.
   function publicRegister(input = {}, { forceRateLimited = false } = {}) {
@@ -1990,6 +2168,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
     db.public_attempts = db.public_attempts.filter((x) => Date.parse(x.at) >= cutoff);
     const work = clone(db); // the core's own changes are kept only if it finished
     const { answer, cycleId } = registerCore(work, input, { forceRateLimited });
+    if (answer.status === 'ok') logChanges(loggedSnapshot(db), work, () => FORM_ACTOR, 'bb_public_register');
     const keep = answer.status === 'ok' ? work : db;
     keep.public_attempts.push({
       id: newId(), client_key: typeof input.clientKey === 'string' ? input.clientKey.slice(0, 200) : '',
@@ -2065,15 +2244,22 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
     if (!ctx.hasDataAccess) return ok(st('no_access'));
     if (ADMIN_ONLY.has(name) && !ctx.isAdmin) return ok(st('not_allowed'));
     const db = read(); // a private copy = a transaction: kept only when the function says so
+    const before = loggedSnapshot(db); // 0032: for the history rows of what this call changes
+    activeLog = { before, actor: ctx.actorName ?? SEED_ACTOR };
     let result;
     try {
       result = handlers[name](db, parsed, { actorName: ctx.actorName ?? SEED_ACTOR, userId: ctx.userId ?? null, isAdmin: Boolean(ctx.isAdmin) });
     } catch (error) {
+      activeLog = null;
       // a table rule said no: nothing this call did is kept (the private copy is dropped)
       if (error instanceof RuleError) return ok(st(error.status));
       throw error;
     }
-    if (result.save) write(db);
+    activeLog = null;
+    if (result.save) {
+      logChanges(before, db, () => ctx.actorName ?? SEED_ACTOR, name);
+      write(db);
+    }
     return ok(result.answer);
   }
 
@@ -2089,6 +2275,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
   // gets 'stale' on Save and the toast's Undo of an earlier save gets 'stale' too.
   function simulateOtherAdminEdit() {
     const db = read();
+    const logged = loggedSnapshot(db);
     const at = stamp();
     for (const row of [...db.bb_cycles, ...db.bb_candidates, ...db.bb_settings]) {
       row.version += 1;
@@ -2122,6 +2309,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       body: `${current.body}\n\n(Changed by another admin in preview.)`, is_placeholder: false, superseded_at: null,
       created_at: at, created_by: null, created_by_name: 'Other Admin',
     });
+    logChanges(logged, db, (row) => row.updated_by_name ?? 'Other Admin', 'manual');
     write(db);
   }
 
@@ -2247,6 +2435,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
         removed_at: null, ...house(FORM_ACTOR, at),
       });
     }
+    logChanges(NOTHING_LOGGED, db, sampleActor, 'bb_sample');
     write(db);
   }
 
@@ -2351,6 +2540,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
   function loadPeopleSample(people) {
     const base = sampleBase();
     for (const p of [...people].sort((x, y) => cmp(x.on, y.on))) addSampleCandidate(base, p);
+    logChanges(NOTHING_LOGGED, base.db, sampleActor, 'bb_sample');
     write(base.db);
   }
   function loadSampleRoster() {
@@ -2387,6 +2577,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
   // → { name, reference } (never the date of birth) or null (no candidate to copy).
   function addDuplicate() {
     const db = read();
+    const logged = loggedSnapshot(db);
     const cycle = [...db.bb_cycles].sort((a, b) => cmp(b.created_at, a.created_at) || -byId(a, b))[0];
     if (!cycle) return null;
     const source = candidatesOf(db, cycle.id).filter((c) => c.status === 'active' && c.date_of_birth !== null).sort(rosterOrder)[0];
@@ -2408,6 +2599,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       ticked_by_name: null, signed_at: at, removed_at: null, ...house(FORM_ACTOR, at),
     });
     if (dup) recheckDuplicate(db, dup);
+    logChanges(logged, db, () => FORM_ACTOR, 'bb_public_register');
     write(db);
     return { name: `${copy.first_name} ${copy.last_name}`, reference: copy.reference };
   }
@@ -2431,6 +2623,7 @@ export function createBlackBeltBackend({ loadStore, saveStore, now = () => Date.
       if (!people[name]) people[name] = { dob: p.dob, email: p.email, plan: p.plan, kukkiwon: p.kukkiwon, on: p.on, signer: p.signer, payments: p.payments, signedAsMinor: p.signedAsMinor };
     }
     grading.writeGradingSample(base, cast, people, addSampleCandidate);
+    logChanges(NOTHING_LOGGED, base.db, sampleActor, 'bb_sample');
     write(base.db);
   }
 

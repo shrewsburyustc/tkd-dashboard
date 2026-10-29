@@ -2777,3 +2777,60 @@ Tested in PGlite on every run (`run.mjs` step0031: the undo file exactly as name
 - **Display only:** the rulebook (v0.619) says a form never hides or blocks a class because of a child's age, so no booking rule reads this table.
 
 ---
+
+## Migration 0032: Black Belt — testing times every 5 minutes, candidate history, Edit cycle Undo in one call
+
+**Status: not applied yet.** Built on `black-belt`, design-review items BB13 (rulebook v1.019 / S12), BB8 (v1.010, the History line) and the Edit cycle Undo race (BB5, v0.967).
+
+**Production order:** … 0025 → 0027 → 0026 → 0028 → 0029 → 0031 (live) → **0032**. It needs 0016, 0024 and 0025 (it stops with "0032 needs migration 0016 / 0024 / 0025 … first" if one is missing). **It must be live before the app version that calls `bb_candidate_history` or `bb_undo_cycle_edit`, or offers 5-minute testing times.** The app that is live today keeps working unchanged after it.
+
+**What it does** (`supabase/migrations/0032_black_belt_review.sql`):
+- **Testing-day times every 5 minutes (BB13).** Replaces **only** `public.bb_time_is_valid(p_time time)` (0016 section 1c; `create or replace`, same argument and answer type, `language sql`, `immutable`, `search_path = ''`, NULL → false, revoked from public, anon, authenticated and service_role). A testing day's start and end (and its second part's) were allowed 6:00 AM–10:00 PM every 15 minutes; after 0032 every **5** minutes, still no seconds. The table rules `bb_cycle_days_times_check` / `bb_cycle_days_second_times_check`, Add cycle and Edit cycle use it and are **not** replaced. **Only widens the rule:** every saved day stays valid.
+- **New `bb_history_strip(row jsonb)`** — internal helper (sql, immutable, `search_path = ''`, nobody may call it): takes every login-id key out of a history row (`created_by`, `updated_by`, `withdrawn_by`, `recorded_by`, `marked_by`, `undone_by`), plus `submission_id` and `makeup_of_candidate_id`; a date of birth, email, kept age, signature or signer's name that is not null shows as "on file" (the log triggers already write "on file" / "changed"; this is the second line of defence).
+- **New `bb_candidate_history(p_candidate_id uuid)`** (BB8) — the History line of one candidate: the change-log rows of the candidate and of its own payments, waivers, grades, extra-point counts, make-up subjects and "sent" marks, newest first, at most 500; each row only `occurred_at, actor_name, action, table_name, op, before, after`, with before / after through `bb_history_strip`. Any staff with data access. `no_access` → `invalid` (no id) → `not_found`. Security definer, `search_path = ''`, `authenticated` only. Written as two parts (the candidate's own rows, then its child rows) so each can use an index instead of reading the whole shared `change_log`.
+- **New index on the shared `change_log`:** `change_log_bb_candidate_child_idx` on `((after ->> 'candidate_id'))`, **partial** — only rows `where table_name in ('bb_payments', 'bb_candidate_waivers', 'bb_grades', 'bb_extra_counts', 'bb_makeup_subjects', 'bb_result_sends') and op = 'insert'`. It finds a candidate's child rows for the History line; the candidate's own rows use 0003's `change_log_table_record_idx`. Because it is partial it stays small and changes nothing for other sections (no other section's fingerprints or tests list `change_log`'s indexes). Building it holds writes to `change_log` for a moment (a few seconds at most on the school's data) — every section waits, nothing fails.
+- **New `bb_undo_cycle_edit(p_cycle_id, p_expected_version, p_payload, p_open, p_known_ids uuid[])`** — Edit cycle's "Changes saved · Undo" in one transaction. Admins only (`no_access` → `not_allowed` → `invalid`). It locks the cycle first; a candidate who came through the **family form** and isn't in `p_known_ids` (the roster the app read before the save) → `registered`, nothing written. Otherwise the switch back (`bb_set_registration`, only when `p_open` isn't empty) and then the old values (`bb_update_cycle`); if either refuses, both are undone and that refusal is answered as it came (`stale`, `has_grades`, `duplicate_name`, `invalid`, `part_without_day`, `finished`, `waiver_needed` …). Writes no history row of its own. Security definer, `search_path = ''`, `authenticated` only.
+- No table column, rule or data changes (one new index, above). Nothing is granted to anon. No destructive words — Supabase should not warn.
+
+**Each step needs Jeffrey's OK.**
+
+### 0032a. Before you apply (Claude, read-only through the connection)
+
+1. `supabase/tests/0032_preapply_check.sql` (one read-only SELECT, connector-safe) must answer `body_is_0016 = true`, `body_is_0032 = false`, `new_functions = 0`, `history_index = false`, `times_bad_new = 0`, `times_bad_old = 0`. `body_is_0016 = false` with `body_is_0032 = false` means someone changed the function since 0016 — stop and tell Claude.
+2. Claude runs `supabase/tests/0016_fingerprints.sql` and keeps the result (the "before" record for 0032c and the undo).
+
+### 0032b. Apply 0032 (you, in the SQL Editor)
+
+1. Copy **the whole file** `supabase/migrations/0032_black_belt_review.sql`, **SQL Editor → New query**, paste, **Run**.
+2. Expected: "Success. No rows returned." One transaction: on any error nothing is kept. Copy the error to Claude.
+3. **Running it again is safe** (tested: no fingerprint changes). **Re-running 0016 after this** puts 0016's 15-minute rule back → re-run 0032 straight after (0025's warning about re-running 0016 applies anyway).
+
+### 0032c. Read-only checks (Claude, through the connection)
+
+1. `supabase/tests/0032_fingerprints.sql` — the five lines must match what `supabase/tests/pglite/run.mjs` printed ("0032 fingerprints"): `bb_time_is_valid` and `bb_history_strip` with `lang=sql volatility=i … definer=false settings=search_path="" owner=postgres rights=postgres:EXECUTE`; `bb_candidate_history` (`volatility=s`) and `bb_undo_cycle_edit` (`volatility=v`) with `lang=plpgsql … returns=jsonb definer=true settings=search_path="" owner=postgres rights=authenticated:EXECUTE,postgres:EXECUTE`; and the `index  change_log.change_log_bb_candidate_child_idx` line with its full definition. The file contains neither of the words the connection refuses.
+2. `supabase/tests/0016_fingerprints.sql`: **only** the `bb_time_is_valid(p_time time)` line differs from 0032a's record (its body md5), and the three new functions' lines are added. Every other migration's fingerprints: unchanged (`run.mjs` step0032 checks exactly that).
+3. `0032_preapply_check.sql` again: `body_is_0032 = true`, `new_functions = 3`, `history_index = true`, both counts 0.
+4. **Security advisor:** nothing new.
+
+### 0032d. Run the tests (you, in the SQL Editor)
+
+1. `supabase/tests/0032_tests.sql`: replace `<paste-admin-UID-here>` and `<paste-desk-UID-here>`, paste, **Run** → **ALL 0032 TESTS PASSED**. It checks the time rule (and through Add cycle, Edit cycle and the table rules), who may read the history and what it shows (no date of birth, email, signature, signer's name or login id anywhere; exactly the candidate's own rows, newest first), and the Undo (every refusal; a family that registered after the save → `registered` with nothing changed; the switch and the values back together, or neither). It makes its own `zz test …` cycles and candidates (and saves a test waiver if the current one is still the placeholder) and rolls everything back.
+2. Then `0016_tests.sql`, `0024_tests.sql`, `0025_tests.sql` and `0026_tests.sql` again — all must still pass.
+3. Put the placeholders back afterwards. A failure shows `TEST FAILED:` / `TEST SETUP:`; nothing is saved — run `rollback;` once on its own, then tell Claude.
+
+### 0032e. Undo 0032 (only with Jeffrey's OK)
+
+1. **Put the app back first** to a version that calls neither `bb_candidate_history` nor `bb_undo_cycle_edit` and offers testing times only every 15 minutes.
+2. Claude runs `supabase/tests/0032_preapply_check.sql`: `times_bad_old` must be **0**. Above 0 → testing days were saved with a 5-minute time (e.g. 12:05); change them in the app first. (Postgres does not re-check saved rows when the function inside a table rule changes, so such a day would stay — and every later save of its cycle would be refused as "invalid".)
+3. Paste **the whole file** `supabase/manual/0032u_undo.sql` in the SQL Editor → **Run**. It first **refuses** (changing nothing, "0032 undo refused: …") while any saved time breaks 0016's rule, then puts back 0016's exact `bb_time_is_valid` (section 1c, word for word) with its revoke and removes `bb_undo_cycle_edit`, `bb_candidate_history`, `bb_history_strip` and the index `change_log_bb_candidate_child_idx` (they hold no data; the history rows stay in `change_log`). One transaction. Supabase warns about destructive operations (the three functions and the index are really removed). Confirm only if you mean it. If it reports a **deadlock** (a staff save hit the same tables at that moment), nothing was changed: run it again.
+4. Claude checks `supabase/tests/0016_fingerprints.sql` (must equal 0032a's record again) and `0032_preapply_check.sql` (`body_is_0016 = true`, `new_functions = 0`, `history_index = false`). Then run `0016_tests.sql`, `0024_tests.sql`, `0025_tests.sql`, `0026_tests.sql`.
+5. To redo: paste 0032 again (safe).
+
+Tested in PGlite on every run (`run.mjs` step0032: the History line on a seeded `change_log` of tens of thousands of rows answers within its time limit and its plan uses both indexes; with a 12:05 testing day planted the undo file refuses; on the clean database the undo file exactly as named here gives back every fingerprint file as it was before 0032, the Black Belt tests pass, and 0032 again gives the tested fingerprints and `0032_tests.sql` passes).
+
+**Why:**
+- **The Undo in the database, not in the app:** a registration doesn't change the cycle's version, so the app could only compare rosters — and a family could register between that read and the writes. Locking the cycle first means a family registers either before the Undo (refused) or after it. One transaction also means an Undo never stops halfway.
+- **A new function, not a 4th argument on `bb_update_cycle`:** an argument with a default would make the web API's choice between two versions of `bb_update_cycle` ambiguous.
+- **The history through a reader, never the table:** `change_log` stays unreadable for the app; the reader decides what leaves the database (names, never login ids or private values).
+
+---
