@@ -1,9 +1,10 @@
 // CountCards.jsx — the row of count cards above a roster (design review M6, rulebook v1.013 /
-// v1.014 / v1.107; §8 Metric cards).
+// v1.014 / v1.107 / v1.115; §8 Metric cards).
 // Why it exists: Color Belt (twice), Star and Black Belt each drew their own cards; Camps had a
 // summary line. Every roster gets this one row:
 //   - up to four cards in a row, two by two on phones: a small icon and label on top, the number
-//     under it, and optionally one small line under the number (Camps' "$1,355" under To collect);
+//     under it, and optionally one small line under the number (Camps' "$1,355" under To collect)
+//     or two, each under the one before (Star's "Shrewsbury 5" / "Worcester 8" on Both, v1.115);
 //   - a count card is a button that filters the list below (screen readers hear it as pressed);
 //     the tapped card gets the blue edge and one gray line says so — "Showing not paid only ·
 //     Show all" (the section's words); tapping it again or Show all shows everyone;
@@ -19,13 +20,18 @@
 //   cards         [{ key, Icon, label, value, note?, kind: 'all' | 'filter' | 'total' }]
 //                   Icon   a Tabler icon component (16px, beside the label)
 //                   value  the number as shown (the section formats money: "$410")
-//                   note   optional small line under the number
+//                   note   optional small line under the number; two lines as an array
+//                          (['Shrewsbury 5', 'Worcester 8']), each line under the one before
 //   selected      the key of the filter card that is on, or null
 //   onSelect      (key | null) => void
 //   showingText   the section's words for the gray line while a filter is on ("Showing not paid only")
 //   showAllLabel  optional; default "Show all"
 //   note          optional gray line under the row
 import { SHOW_ALL } from './text.js';
+
+// A card's note as a list of lines: one line (a string) or two (an array; the rulebook allows two,
+// v1.115). A blank note or line (null, '', 0, false) draws nothing.
+const noteLines = (note) => (Array.isArray(note) ? note : [note]).filter(Boolean);
 
 export default function CountCards({ cards, selected = null, onSelect, showingText, showAllLabel = SHOW_ALL, note = null }) {
   if (!cards || cards.length === 0) return null;
@@ -42,7 +48,13 @@ export default function CountCards({ cards, selected = null, onSelect, showingTe
                 {card.label}
               </span>
               <span className="ev-card-value">{card.value}</span>
-              {card.note && <span className="ev-card-note">{card.note}</span>}
+              {/* Each line of the note is its own small gray line; the card is a column, so the
+                  second sits under the first (as Star draws its school counts, v1.115). */}
+              {noteLines(card.note).map((line, index) => (
+                <span key={index} className="ev-card-note">
+                  {line}
+                </span>
+              ))}
             </>
           );
           if (card.kind === 'total') {

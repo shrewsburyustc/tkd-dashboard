@@ -3,6 +3,8 @@
 // Why it exists: the parts page (plan §4) shows every state with fake numbers (no database). A
 // sample roster keeps the chosen filter, as a section would; "A card tapped" taps Not paid the way a
 // finger does. Under the filtered row a few faint sample rows give the gray line its context.
+// After step 1: Star's four cards on Both schools, whose Candidates card has a two-line note
+// (rulebook v1.115; Star's Q5 picture, option B). No M6 mockup draws it, so it is listed apart.
 import { useState } from 'react';
 import { IconAlertTriangle, IconCalendar, IconCheck, IconCircleX, IconClock, IconSum, IconUsers } from '@tabler/icons-react';
 import CountCards from '../components/CountCards.jsx';
@@ -30,6 +32,14 @@ const blackBelt = (late, notPaid) => [
   { key: 'notPaid', Icon: IconCircleX, label: 'Not paid', value: notPaid, kind: 'filter' },
 ];
 const BB_NOTE = 'The possible duplicate row isn’t counted in the cards until it’s resolved.';
+
+// Star's four on Both schools: the Candidates card's note is two lines, one school each (v1.115)
+const STAR_BOTH = [
+  { key: 'all', Icon: IconUsers, label: 'Candidates', value: 13, note: ['Shrewsbury 5', 'Worcester 8'], kind: 'all' },
+  { key: 'paid', Icon: IconCheck, label: 'Paid', value: 6, kind: 'filter' },
+  { key: 'notPaid', Icon: IconCircleX, label: 'Not paid', value: 5, kind: 'filter' },
+  { key: 'money', Icon: IconSum, label: 'Payments recorded', value: '$930', kind: 'total' },
+];
 
 // A sample roster: the cards and the filter they set (plus faint rows, when `rows`).
 function SampleCards({ cards, showing = SHOWING, note = null, rows = false }) {
@@ -70,5 +80,9 @@ export const PART = {
     { id: 'blackbelt', title: 'Black Belt’s four plan cards', render: () => <BlackBeltState /> },
     { id: 'hidden', title: 'Hide private details on', render: () => <SampleCards cards={COLOR_BELT.slice(0, 1)} /> },
     { id: 'bbphone', title: 'Black Belt on phones (2×2)', render: () => <SampleCards cards={blackBelt(2, 1)} /> },
+  ],
+  extra: [
+    { id: 'twolines', title: 'Star on Both schools: a two-line note (v1.115)', render: () => <SampleCards cards={STAR_BOTH} /> },
+    { id: 'twolines-hidden', title: 'The same with Hide private details on (one card)', render: () => <SampleCards cards={STAR_BOTH.slice(0, 1)} /> },
   ],
 };

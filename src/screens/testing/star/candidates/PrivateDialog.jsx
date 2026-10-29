@@ -3,7 +3,9 @@
 // Why it exists: a student who can't make the testing day tests privately on their own day and time,
 // stays a candidate in the event and pays the private fee (v0.148). Staff set it from the row's ⋯:
 //   Day   the dashboard calendar (today or later — PROPOSAL; the database decides what it accepts)
-//   Time  15-minute steps, 8:00 AM–8:00 PM (the same list as an event's Start time)
+//   Time  the shared time list (components/TimeList.jsx, S12, v1.109 / v0.518): its default range,
+//         6:00 AM–10:00 PM every 5 minutes, "Choose a time" while empty; typing a number jumps to
+//         that hour. The database's rule is the same since migration 0028 (startTimeIsValid).
 //   a gray line saying the fee becomes the private fee ("$160 (was $140)") — while "Hide private
 //   details" is on: "The private fee applies. Fees are hidden on this tablet." (G9)
 // The fees shown are the event's own prices for this Dan (privateCents from the roster) and the fee
@@ -12,13 +14,11 @@ import Dialog from '../../../../components/Dialog.jsx';
 import Notice from '../../../../components/Notice.jsx';
 import DatePicker from '../../../../components/DatePicker.jsx';
 import { isIsoDate } from '../../../../lib/testing/eventRules.js';
-import { startTimeIsValid, startTimeOptions } from '../../../../lib/star/starEventRules.js';
+import TimeList from '../../../../components/TimeList.jsx';
+import { startTimeIsValid } from '../../../../lib/star/starEventRules.js';
 import { yearRange } from '../../../../lib/star/eventDateRules.js';
-import StarSelect from '../events/StarSelect.jsx';
 import { Footer } from './dialogParts.jsx';
 import * as T from './text.js';
-
-const TIME_CHOICES = startTimeOptions();
 
 export function isPrivateDirty(state) {
   return state.values.day !== state.initial.day || state.values.time !== state.initial.time;
@@ -82,13 +82,11 @@ export default function PrivateDialog({ state, candidate, testingDate, today, hi
           <span id={`${idBase}-time-label`} className="field-label">
             {T.TIME}
           </span>
-          <StarSelect
+          <TimeList
             id={`${idBase}-time`}
             labelId={`${idBase}-time-label`}
             describedBy={check.timeError ? `${idBase}-time-error` : undefined}
             value={state.values.time}
-            options={TIME_CHOICES}
-            placeholder={T.CHOOSE}
             readOnly={readOnly}
             invalid={Boolean(check.timeError)}
             onChange={(time) => onChange({ time })}

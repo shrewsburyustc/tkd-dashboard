@@ -1,10 +1,8 @@
 // StarPaymentDialogs.jsx — the payment dialogs of the Star testing Candidates tab.
-// Why it exists: the approved Record payment (Candidates screen 4, v0.109–v0.110, v0.120; Private
-// screen 3), Record refund (gap mockup G1, v0.166) and the corrections of G16 (Edit payment, Change
-// how they'll pay). They are small centered dialogs (full screen on phones) with Cancel / Save:
-//   RecordPaymentDialog  Paid by Cash | Check | Card (starting on the family's choice), Amount filled
-//                        in from candidate.expectedFeeCents (the DATABASE's fee — a screen never works
-//                        one out), Date paid = today in the dashboard calendar. No check number (v0.120).
+// Why it exists: Record refund (gap mockup G1, v0.166) and the corrections of G16 (Edit payment,
+// Change how they'll pay). They are small centered dialogs (full screen on phones) with Cancel / Save.
+// (Taking a payment is the row's Mark paid with the shared Mark paid box since S1, v0.518 — the old
+// Record payment dialog is gone; a different amount or date is fixed with an admin's Edit payment.)
 //   EditPaymentDialog    admins: the recorded payment's method, amount and date; the old one is kept
 //                        in the history (a reversal + a new payment).
 //   RefundDialog         admins, an overpaid row only: Refunded by Cash | Check (no Card), Amount =
@@ -19,7 +17,7 @@ import DatePicker from '../../../../components/DatePicker.jsx';
 import { parseDollars } from '../../../../lib/money.js';
 import { isIsoDate, MAX_PAYMENT_CENTS } from '../../../../lib/testing/eventRules.js';
 import { yearRange } from '../../../../lib/star/eventDateRules.js';
-import ChoiceGroup from '../../events/ChoiceGroup.jsx';
+import ChoiceGroup from '../../../../components/ChoiceGroup.jsx';
 import { Footer } from './dialogParts.jsx';
 import * as T from './text.js';
 
@@ -123,7 +121,7 @@ function DateField({ id, label, value, today, min, readOnly, error, hint, isPhon
   );
 }
 
-// ===== Record payment =====
+// ===== The amount / date check (Edit payment, Record refund) =====
 export function isRecordDirty(state) {
   const a = state.values;
   const b = state.initial;
@@ -142,63 +140,6 @@ export function checkRecordPayment(state, today, cap = null) {
     sameAsSaved: valid && !isRecordDirty(state),
     payload: valid ? { method: values.method, amountCents: amount.cents, paidOn: values.paidOn } : null,
   };
-}
-
-// The Amount hint: which price was filled in (screen 4, G15).
-function feeHint(c) {
-  if (c.feeKind === 'private') return T.feeHintPrivate(c.danLabel);
-  if (c.feeKind === 'same_day') return T.FEE_HINT_SAME_DAY;
-  if (c.feeKind === 'standard') return T.feeHintStandard(c.sameDayCents);
-  return null;
-}
-
-export function RecordPaymentDialog({ state, candidate, today, isPhone, onChange, onTouch, onSave, onCancel, onRequestClose }) {
-  const idBase = `star-pay-${state.key}`;
-  const check = checkRecordPayment(state, today);
-  const readOnly = state.saving;
-  const methodHint = candidate.payingBy ? (candidate.source === 'form' ? T.choseOnForm(candidate.payingBy) : T.choseAtDesk(candidate.payingBy)) : null;
-  return (
-    <Dialog title={T.RECORD_PAYMENT_TITLE} fullScreen={isPhone} onRequestClose={onRequestClose}>
-      <p className="tdialog-sub">{T.dialogSubLine(candidate)}</p>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSave();
-        }}
-        noValidate
-      >
-        <MethodField id={`${idBase}-method`} label={T.PAID_BY} value={state.values.method} methods={METHODS} readOnly={readOnly} hint={methodHint} autoFocus onChange={(method) => onChange({ method })} />
-        <MoneyField
-          id={`${idBase}-amount`}
-          label={T.AMOUNT}
-          value={state.values.amount}
-          readOnly={readOnly}
-          error={check.amountError}
-          hint={feeHint(candidate)}
-          onChange={(amount) => {
-            onChange({ amount });
-            onTouch('amount');
-          }}
-        />
-        <DateField
-          id={`${idBase}-date`}
-          label={T.DATE_PAID}
-          value={state.values.paidOn}
-          today={today}
-          min={state.minDate}
-          readOnly={readOnly}
-          error={check.dateError}
-          hint={T.paidDateHint(state.minDate)}
-          isPhone={isPhone}
-          onChange={(paidOn) => {
-            onChange({ paidOn });
-            onTouch('paidOn');
-          }}
-        />
-        <Footer saving={state.saving} canSave={check.canSave} note={state.note} isPhone={isPhone} onCancel={onCancel} />
-      </form>
-    </Dialog>
-  );
 }
 
 // ===== Edit payment (admins, G16) =====

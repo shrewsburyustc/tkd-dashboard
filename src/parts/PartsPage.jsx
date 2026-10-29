@@ -4,6 +4,8 @@
 // state, with sample data and sample actions, no database. The design reviewer compares it with the
 // approved mockups at the four sizes; the picture tool (docs/Dashboard Core/tools/shoot-parts.mjs)
 // photographs it.
+// After step 1, DP: the shared date picker opened from a section's own button (rulebook v0.817,
+// Finance's Daily report), which has no mockup of its own (Finance's F1 picture draws it).
 // Addresses: parts.html            → the list of every part and state (links)
 //            parts.html#M2/busy    → that one state on its own (dialogs open as real dialogs)
 // The state ids are the mockups' own (Mockups/shots/M#/states.json). A few extra states exist only
@@ -19,8 +21,9 @@ import { PART as M5 } from './M5.jsx';
 import { PART as M6 } from './M6.jsx';
 import { PART as M7 } from './M7.jsx';
 import { PART as M8 } from './M8.jsx';
+import { PART as DP } from './DP.jsx';
 
-const PARTS = [M1, M2, M3, M4, M5, M6, M7, M8];
+const PARTS = [M1, M2, M3, M4, M5, M6, M7, M8, DP];
 
 // "#M2/busy" → { part, state } (either may be missing)
 function readAddress() {
@@ -35,8 +38,8 @@ function Index() {
     <main className="parts-page">
       <h1 className="parts-h1">Shared parts</h1>
       <p className="parts-intro">
-        Dashboard core step 1: the eight shared parts approved as mockups M1–M8 (rulebook v1.102–v1.109), each in every state, with sample data. Preview only; nothing here
-        reads or saves anything. Each link opens one state on its own.
+        Dashboard core step 1: the eight shared parts approved as mockups M1–M8 (rulebook v1.102–v1.109), each in every state, with sample data. Then DP: the date
+        picker opened from a section's own button (v0.817). Preview only; nothing here reads or saves anything. Each link opens one state on its own.
       </p>
       {PARTS.map((part) => (
         <section key={part.id} className="parts-part">

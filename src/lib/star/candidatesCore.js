@@ -77,7 +77,8 @@ function asInteger(v) {
   return Number.isInteger(n) ? n : BAD;
 }
 const asDate = (v) => (v === null || v === undefined || v === '' ? null : isIsoDate(v) ? v : BAD);
-// '16:00' or '16:00:00' → '16:00:00', or null. The 15-minute rule is the database's job.
+// '16:00' or '16:00:00' → '16:00:00', or null. The time rule (6:00 AM–10:00 PM every 5 minutes,
+// 0028) is the database's job.
 const asTime = (v) => {
   if (v === null || v === undefined || v === '') return null;
   return startTimeMinutes(v) === null ? BAD : `${shortStartTime(v)}:00`;
@@ -109,12 +110,14 @@ export function sortBeltOrder(candidates) {
 export const danChangeNeedsAdmin = (candidate, isAdmin) => Boolean(candidate?.paid) && !isAdmin;
 
 // What a History row touches, so the screens can hide it while "Hide private details" is on (G6):
-//   payment        a payment / refund / undo row, or a change of "Paying by"
+//   payment        a payment / refund / undo row, or a CHANGE of "Paying by" (an update). The row
+//                  that adds the candidate sets paying_by too, but its line ("Registered on the
+//                  family form" / "Added at the desk") shows no money, so it stays (Q4 A, v0.518).
 //   privateFields  the date of birth / email columns this row changes ([] when none)
 export function historyPrivacy(row) {
   const keys = new Set([...Object.keys(row?.before ?? {}), ...Object.keys(row?.after ?? {})]);
   return {
-    payment: row?.tableName === 'star_payments' || (row?.tableName === 'star_candidates' && keys.has('paying_by')),
+    payment: row?.tableName === 'star_payments' || (row?.tableName === 'star_candidates' && row?.op === 'update' && keys.has('paying_by')),
     privateFields: ['date_of_birth', 'email_for_results'].filter((k) => row?.tableName === 'star_candidates' && keys.has(k)),
   };
 }
