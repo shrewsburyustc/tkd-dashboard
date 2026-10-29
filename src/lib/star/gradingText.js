@@ -110,8 +110,8 @@ export function leaveBody(people) {
   const who = joinNames(people.map((p) => `${p.name} (${p.items.join(', ')})`));
   return `${who} ${total === 1 ? 'wasn’t' : 'weren’t'} saved because the connection dropped. If you leave now, they’re lost. Stay, and they’ll save when the Wi-Fi is back.`;
 }
-export const LEAVE_ANYWAY = 'Leave anyway';
-export const STAY_ON_PAGE = 'Stay on this page'; // blue, the default (Enter, Esc, backdrop, Back)
+export const LEAVE_ANYWAY = 'Leave anyway'; // right, red (D1c, DR G5)
+export const STAY_ON_PAGE = 'Stay on this page'; // left, plain, the default (Enter, Esc, backdrop, Back)
 export const COUNT_CLASSES_ATTENDED = 'Classes attended';
 export const COUNT_ASSISTANT_CLASSES = 'Assistant classes';
 

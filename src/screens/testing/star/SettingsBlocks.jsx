@@ -9,10 +9,11 @@
 //   - Assistant-class table: Grade · 12 and under · 13 and up; A+ "15 or more", A "19 or 18"
 //     (a range from the grade above), … D "under 10"; and how age is counted.
 //   - Fees: Dan · Standard · Same day · Private (PC / tablet); phone: one line of three prices
-//     per Dan, so nothing scrolls sideways.
+//     per Dan, so nothing scrolls sideways. Prices show through the dashboard's one money helper,
+//     formatMoney ("$140"; cents only when there are some), rulebook v1.026 / v0.518 S10.
 import { IconEdit } from '@tabler/icons-react';
 import IconButton from '../../../components/IconButton.jsx';
-import { formatDollars } from '../../../lib/money.js';
+import { formatMoney } from '../../../lib/money.js';
 import { assistantColumn } from './rubricRules.js';
 import * as T from './text.js';
 
@@ -132,13 +133,13 @@ export function FeesBlock({ dans, isAdmin, isPhone, isTouch, selectedDan, onEdit
           <div key={dan.dan} role="row" className={`st-trow ${grid}${selectedDan === dan.dan ? ' is-selected' : ''}`}>
             <span role="rowheader">{dan.label}</span>
             <span role="cell" className="num">
-              {formatDollars(dan.standardCents)}
+              {formatMoney(dan.standardCents)}
             </span>
             <span role="cell" className="num">
-              {formatDollars(dan.sameDayCents)}
+              {formatMoney(dan.sameDayCents)}
             </span>
             <span role="cell" className="num">
-              {formatDollars(dan.privateCents)}
+              {formatMoney(dan.privateCents)}
             </span>
             {isAdmin && (
               <span role="cell" className="st-cacts">
