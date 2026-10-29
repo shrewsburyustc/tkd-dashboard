@@ -4,8 +4,10 @@
 // than a weekday's. "Copy each school's Monday to Tue–Fri" fills the weekdays in one click
 // (phones: only the school shown, as approved in D9).
 // There is no Save button: each change saves at once and shows a toast with a 5-second Undo,
-// and the database logs it. With the reminder Off the times stay but are grayed out.
-// Times are Off, then every 15 minutes from 11:00 AM to 11:00 PM.
+// and the database logs it. With the reminder Off the times stay but are grayed out and can't be
+// opened or reached with Tab (the shared list's `disabled`, v0.823).
+// Each time is the shared time list (components/TimeList.jsx, design review F2, v1.019 / v1.109):
+// Off, then every 5 minutes from 11:00 AM to 11:00 PM, the same list on every device.
 // PC / tablet: a small table (Day · Shrewsbury · Worcester). Phone: one school at a time with a
 // Shrewsbury / Worcester switch (gray selected side, as v0.89).
 // Address: #finance/settings (App.jsx sends staff to #finance; the database refuses them too).
@@ -15,7 +17,9 @@
 //
 // Props: isPhone, location, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast
 import { useEffect, useId, useRef, useState } from 'react';
+import ChoiceGroup from '../../components/ChoiceGroup.jsx';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
+import TimeList from '../../components/TimeList.jsx';
 import { LOCATION_CODE, LOCATION_NAME } from '../../lib/device.js';
 import {
   financeCopyMonday,
@@ -23,14 +27,12 @@ import {
   financeSetReminderTime,
   financeSettingsGet,
 } from '../../lib/finance/financeApi.js';
-import ChoiceGroup from '../testing/events/ChoiceGroup.jsx';
-import { useLiveLoad } from '../testing/events/useLiveLoad.js';
-import { REMINDER_TIMES, shortTime } from './format.js';
+import { useLiveLoad } from '../../lib/useLiveLoad.js';
+import { shortTime } from './format.js';
 import * as T from './text.js';
 
 // Column order as drawn in D9.
 const SCHOOL_CODES = ['shrewsbury', 'worcester'];
-const OFF_VALUE = ''; // the dropdown's value for Off (the database gets null)
 
 export default function SettingsTab({ isPhone, location, screenLocked, onNoAccess, onRefreshProfile, showToast, clearToast }) {
   const id = useId();
@@ -120,9 +122,9 @@ export default function SettingsTab({ isPhone, location, screenLocked, onNoAcces
     );
   }
 
-  function changeTime(school, weekday, value) {
+  // time: 'HH:MM', or null for Off.
+  function changeTime(school, weekday, time) {
     const before = timeOf(school, weekday);
-    const time = value === OFF_VALUE ? null : value;
     save(
       (version) => financeSetReminderTime({ locationCode: school, weekday, time, expectedVersion: version }),
       T.timeSavedToast(T.WEEKDAYS[weekday - 1], LOCATION_NAME[school]),
@@ -156,25 +158,30 @@ export default function SettingsTab({ isPhone, location, screenLocked, onNoAcces
   if (!data) return <ErrorBanner text={T.LOAD_SETTINGS_FAILED} onRetry={() => live.reload()} />;
 
   const on = Boolean(data.reminder_on);
-  const select = (school, weekday) => (
-    <select
-      className={`input fin-select${on ? '' : ' is-off'}`}
-      aria-label={T.timeFor(T.WEEKDAYS[weekday - 1], LOCATION_NAME[school])}
-      value={timeOf(school, weekday) ?? OFF_VALUE}
-      disabled={!on}
-      aria-disabled={busy ? 'true' : undefined}
-      onChange={(event) => {
-        if (!busy) changeTime(school, weekday, event.target.value);
-      }}
-    >
-      <option value={OFF_VALUE}>{T.OFF}</option>
-      {REMINDER_TIMES.map((t) => (
-        <option key={t.value} value={t.value}>
-          {t.label}
-        </option>
-      ))}
-    </select>
-  );
+  // One day's time at one school. Its screen-reader name ("Monday reminder time at Shrewsbury")
+  // is a hidden label, because the shared list is named by a label's id, not by aria-label.
+  const select = (school, weekday) => {
+    const labelId = `${id}-${school}-${weekday}`;
+    return (
+      <div className="fin-time">
+        <span id={labelId} className="visually-hidden">
+          {T.timeFor(T.WEEKDAYS[weekday - 1], LOCATION_NAME[school])}
+        </span>
+        <TimeList
+          labelId={labelId}
+          value={timeOf(school, weekday)}
+          from="11:00"
+          to="23:00"
+          offLabel={T.OFF}
+          disabled={!on}
+          readOnly={busy} // the shared "saving" look: gray and closed for a moment while a change saves
+          onChange={(time) => {
+            if (!busy) changeTime(school, weekday, time);
+          }}
+        />
+      </div>
+    );
+  };
 
   return (
     <div className="fin-settings">
