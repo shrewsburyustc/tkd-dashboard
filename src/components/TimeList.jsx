@@ -12,7 +12,9 @@
 //   - a saved time that isn't on the list (another step, or outside the range) is still shown,
 //     added in its place;
 //   - gray and closed while the dialog saves (readOnly); with a problem, the section draws its amber
-//     words under the field and passes `invalid` + `describedBy`, so screen readers hear it too.
+//     words under the field and passes `invalid` + `describedBy`, so screen readers hear it too;
+//   - turned off (disabled, rulebook v1.116 / v0.823 — Finance's reminder times while the reminder
+//     is Off): gray words and chevron, skipped by Tab, heard as "unavailable", never opens.
 // The same list on every device, not the phone's own picker (v0.51). Nothing switches to it in
 // Dashboard core step 1; each section does, in its own prompt.
 //
@@ -23,7 +25,8 @@
 //   step         minutes between times; default 5
 //   offLabel     optional: a first choice that means "no time" (Finance's "Off")
 //   placeholder  the gray words when nothing is chosen; default "Choose a time"
-//   id, labelId, describedBy, invalid, readOnly, autoFocus   as Select.jsx
+//   id, labelId, describedBy, invalid, readOnly, disabled, autoFocus   as Select.jsx (disabled ≠
+//                readOnly: turned off vs busy saving; default false)
 import { useMemo } from 'react';
 import Select from './Select.jsx';
 import { CHOOSE_A_TIME } from './text.js';
@@ -42,6 +45,7 @@ export default function TimeList({
   describedBy,
   invalid = false,
   readOnly = false,
+  disabled = false,
   autoFocus = false,
 }) {
   // The choices; a saved time that isn't on the list is added in its place.
@@ -57,6 +61,7 @@ export default function TimeList({
       placeholder={placeholder}
       onChange={(chosen) => onChange(chosen === OFF_VALUE ? null : chosen)}
       readOnly={readOnly}
+      disabled={disabled}
       invalid={invalid}
       autoFocus={autoFocus}
       matcher={hourJump}
