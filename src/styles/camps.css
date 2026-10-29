@@ -545,16 +545,19 @@
   font-size: var(--text-13);
 }
 
-/* Phone camp page: name and the two header buttons on one row, one short line under it */
+/* Phone camp page: the name and one short line under it, then the two header buttons on their
+   own line — the blue "Registration link" with its words, ⋯ beside it (rulebook v0.733, design
+   review C11; they used to sit beside the name, the blue one an icon-only square) */
 .cp-phone-head {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: stretch;
   gap: var(--space-8);
   margin-bottom: var(--space-8);
 }
 
+/* The header is a column on phones (v0.733), so the titles just keep long words from overflowing. */
 .cp-phone-head .phead-titles {
-  flex: 1;
   min-width: 0;
 }
 
@@ -579,12 +582,6 @@
   flex: none;
   align-items: center;
   gap: var(--space-4);
-}
-
-.cp-link-icon {
-  width: var(--control-height-touch);
-  padding: 0;
-  justify-content: center;
 }
 
 /* ===== The one roster (CP5, 2026-10-21: Camps-one-roster.html, multi-week option A) ===== */

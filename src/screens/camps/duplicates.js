@@ -11,6 +11,8 @@
 //     keep their rows but are `hidden`: the shared part shows gray "Hidden on this tablet" on both
 //     sides and never marks them different. Signed up, Reference, Days and Extras stay, so staff can
 //     still tell the two apart and keep one.
+// Money (the Total row) is written by the shared formatMoney (src/lib/money.js; rulebook v0.732, C17).
+import { formatMoney } from '../../lib/money.js';
 import * as T from './text.js';
 
 // Pairs { first, second } (first = the older sign-up), each pair once.
@@ -53,7 +55,7 @@ export function compareRows(first, second, campDays, detailsHidden = false) {
     { key: 'days', label: T.CMP_DAYS, first: T.camperDaysText(first, campDays), second: T.camperDaysText(second, campDays) },
     { key: 'extras', label: T.CMP_EXTRAS, first: extrasShort(first), second: extrasShort(second) },
     { key: 'payingBy', label: T.CMP_PAYING_BY, first: T.payingByText(first.payingBy), second: T.payingByText(second.payingBy), hidden: detailsHidden },
-    { key: 'total', label: T.CMP_TOTAL, first: T.dollars(first.totalCents), second: T.dollars(second.totalCents), hidden: detailsHidden },
+    { key: 'total', label: T.CMP_TOTAL, first: formatMoney(first.totalCents), second: formatMoney(second.totalCents), hidden: detailsHidden },
     { key: 'payment', label: T.CMP_PAYMENT, first: paymentText(first), second: paymentText(second), hidden: detailsHidden },
   ];
 }

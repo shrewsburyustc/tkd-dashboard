@@ -5,7 +5,9 @@
 // browser Back returns to the Camps list; the old tab addresses (…/checkin, /payments, /attendance)
 // still work and are tidied to the plain address. Top to bottom:
 //   - "← Camps", the camp name and its status tag, and one line: days · hours · school · campers
-//   - header buttons: Registration link (the one blue button, ti-qrcode → CampLinkDialog) and ⋯
+//   - header buttons: Registration link (the one blue button, ti-qrcode → the dashboard's shared
+//     Registration link box, components/RegistrationLinkBox.jsx, rulebook v0.733 / design review
+//     C11) and ⋯ (on phones the button keeps its words and sits on its own line under the name)
 //     (Edit camp (admin) · Close / Open sign-up · Save as template (admin) · Print roster ·
 //     Delete camp (admin) — CampRowMenu.jsx)
 //   - the roster (CampRoster.jsx): summary line, Find a camper, possible duplicates, the week switch
@@ -39,6 +41,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { IconArrowBackUp, IconArrowLeft, IconDots, IconQrcode, IconTrash } from '@tabler/icons-react';
 import CompareDialog from '../../components/CompareDialog.jsx';
 import ConfirmBox from '../../components/ConfirmBox.jsx';
+import RegistrationLinkBox from '../../components/RegistrationLinkBox.jsx';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
 import { LOCATION_NAME } from '../../lib/device.js';
 import { usePrivateDetailsHidden } from '../../lib/privateDetails.js';
@@ -59,11 +62,10 @@ import {
   withdrawCamper,
   campToday,
 } from '../../lib/camps/campsApi.js';
-import { campTag, campWeeks, defaultWeekIndex, lastDay, paymentSchoolFor, signupState } from '../../lib/camps/campRules.js';
+import { campLink, campTag, campWeeks, defaultWeekIndex, lastDay, paymentSchoolFor, signupState } from '../../lib/camps/campRules.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../lib/useMediaQuery.js';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../lib/useLiveLoad.js';
 import CampDialog from './CampDialog.jsx';
-import CampLinkDialog from './CampLinkDialog.jsx';
 import CampRoster, { byFirstName } from './CampRoster.jsx';
 import CamperDialog from './CamperDialog.jsx';
 import { camperMenuItems } from './CamperRowMenu.jsx';
@@ -688,17 +690,6 @@ export default function CampPage({
     showToast(T.TOAST_KEPT_BOTH, { icon: false });
   }
 
-  // ===== Copy link =====
-  async function copyLink(link) {
-    try {
-      if (!link || !navigator.clipboard) throw new Error('No clipboard');
-      await navigator.clipboard.writeText(link);
-      showToast(T.TOAST_LINK_COPIED, { icon: false });
-    } catch {
-      setBanner({ text: T.COPY_FAILED });
-    }
-  }
-
   // ===== Menus =====
   function openMenu(kind, row, anchor) {
     // A phone sheet covers the bottom of the screen: the toast would float over it (review item 9).
@@ -865,15 +856,24 @@ export default function CampPage({
         />
       );
     } else if (!hidden && dialog.type === 'link') {
+      // Registration link (rulebook v0.733, design review C11): the dashboard's shared box with
+      // Camps' parts — the camp's name, Camps' line (can families sign up now?), ONE link for the
+      // camp with Camps' heading ("Both schools · held at Worcester", or just "Worcester" for a
+      // one-school camp), no flyer. The box copies the link and saves the QR picture itself: a
+      // failure shows its amber note INSIDE the box (shared words), and the PNG is named
+      // "April Vacation Camp QR code.png" (both schools) or "Veterans Day Camp - Worcester QR
+      // code.png" (one school: the box adds the school when `school` is set — option B).
+      const url = campLink(camp.publicCode); // '' for a damaged code: then no card is offered
       dialogElement = (
-        <CampLinkDialog
+        <RegistrationLinkBox
           key={dialog.key}
-          camp={camp}
-          state={state}
-          isPhone={isPhone}
-          onCopy={copyLink}
-          onDownloadFailed={() => setBanner({ text: T.DOWNLOAD_FAILED })}
+          title={T.REGISTRATION_LINK}
+          eventName={camp.name}
+          intro={T.linkDialogLine(state, camp)}
+          links={url ? [{ url, school: camp.bothSchools ? null : T.schoolName(camp.locationCode), heading: T.campSchoolLine(camp) }] : []}
+          onCopied={() => showToast(T.TOAST_LINK_COPIED, { icon: false })}
           onClose={closeDialog}
+          isPhone={isPhone}
         />
       );
     } else if (!hidden && !detailsHidden && dialog.type === 'paying') {
@@ -1028,8 +1028,10 @@ export default function CampPage({
     <>
       {backLink}
       {isPhone ? (
-        // Phones (option A's phone frame): the name with Registration link and ⋯ beside it, and one
-        // short line (days · hours · tag), so the check-in list starts without scrolling.
+        // Phones (option A's phone frame): the name and one short line (days · hours · tag), then the
+        // blue Registration link button WITH its words on its own line, ⋯ beside it (rulebook v0.733,
+        // design review C11, picture 14; it was an icon-only square beside the name). The check-in
+        // list still starts without scrolling.
         <div className="cp-phone-head">
           <div className="phead-titles">
             <h1 className="ptitle">{camp.name}</h1>
@@ -1039,16 +1041,10 @@ export default function CampPage({
             </p>
           </div>
           <div className="cp-phone-buttons">
-            {/* The one blue button, icon only on phones (its name is read out and shown as a tooltip). */}
-            <button
-              type="button"
-              className="btn btn-primary cp-link-icon"
-              aria-label={T.REGISTRATION_LINK}
-              title={T.REGISTRATION_LINK}
-              data-camp-link
-              onClick={(event) => openDialog({ type: 'link', opener: event.currentTarget })}
-            >
+            {/* The one blue button, with its words as on PC (ti-qrcode = registration link / QR code). */}
+            <button type="button" className="btn btn-primary" data-camp-link onClick={(event) => openDialog({ type: 'link', opener: event.currentTarget })}>
               <IconQrcode size={16} aria-hidden="true" />
+              {T.REGISTRATION_LINK}
             </button>
             <IconButton
               label={T.MORE_CAMP_ACTIONS}

@@ -28,6 +28,8 @@
 // $X" / "All paid", and the Mark paid box can't open (an open one closes). A "Possible duplicate"
 // tag isn't money: on PC / tablet it moves onto the name's line, on phones it stays on its card.
 // Check-in, "here today", Find a camper, the extra counts and "Updated …" stay.
+// Money ("to collect · $1,040", the tags) is written by the shared formatMoney (src/lib/money.js;
+// rulebook v0.732, design review C17), as every section does.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp, IconDots, IconSearch, IconUserCheck, IconUserX } from '@tabler/icons-react';
@@ -35,6 +37,7 @@ import IconButton from '../../components/IconButton.jsx';
 import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
 import { extraCountOnDay, extraOfferedOn, missingExtraOnDay, payTag, toCollectCents } from '../../lib/camps/campRules.js';
 import ChoiceGroup from '../../components/ChoiceGroup.jsx';
+import { formatMoney } from '../../lib/money.js';
 import DuplicateBox from '../../components/DuplicateBox.jsx';
 import * as T from './text.js';
 
@@ -566,7 +569,7 @@ export default function CampRoster({
           <span>
             <span className="cp-big">{toCollect}</span>
             {T.toCollectShort}
-            {isWide && ` · ${T.dollars(toCollectCents(active))}`}
+            {isWide && ` · ${formatMoney(toCollectCents(active))}`}
           </span>
         )}
         {dayExtras.map((extra) => (

@@ -13,6 +13,13 @@
 // Follows "Hide private details" (v0.506; for Camps rulebook v0.722, design review C1): its two
 // gray words come from src/lib/privateDetails.js (re-exported at the end), and the sentences that
 // can name money take a `detailsHidden` input so they never do while the switch is on.
+// Money is written by the dashboard's shared `formatMoney` (src/lib/money.js; rulebook v0.732,
+// design review C17), no longer by Color Belt's `dollars`: "$1,355", "$350 due", "$0" read as
+// before (Camps' amounts are whole dollars), and a minus amount gets a real minus sign before the
+// dollar sign ("−$335 card (reversed)" in Camper detail, where it used to say "$-335").
+// The Registration link box's words (Copy link, Download QR code, the failure notes) come with the
+// shared box, src/components/text.js (rulebook v0.733, design review C11).
+import { formatMoney } from '../../lib/money.js';
 import * as CB from '../testing/text.js';
 
 // ----- Reused unchanged from Color Belt (same words) -----
@@ -47,7 +54,6 @@ export const {
   paymentUndoneToast,
   withdrawnToast,
   restoredToast,
-  markedPaidToast,
   alreadyPaid,
   markPaidFailed,
   TAG_NOT_SAVED,
@@ -82,11 +88,8 @@ export const {
   EDIT_PAYMENT_HINT,
   priceProblemText,
   REGISTRATION_LINK,
-  COPY_LINK,
-  qrAlt,
   ACTIONS_COL,
   sortBy,
-  dollars,
   payingByText,
   payingByLower,
   shortDate,
@@ -123,7 +126,7 @@ export const BOTH_SCHOOLS = 'Both schools';
 export const heldAtLine = (code) => `Both schools · held at ${schoolName(code)}`;
 // The School column on Both: "Worcester", "Shrewsbury" or "Both schools"
 export const schoolColumn = (camp) => (camp.bothSchools ? BOTH_SCHOOLS : schoolName(camp.locationCode));
-// The camp's school wherever one line is shown (link dialog, camp page)
+// The camp's school wherever one line is shown (the Registration link box's card heading, the camp page)
 export const campSchoolLine = (camp) => (camp.bothSchools ? heldAtLine(camp.locationCode) : schoolName(camp.locationCode));
 export const NO_CAMPS_ADMIN = 'No camps yet. Add one with Add camp.'; // (not in the mockups)
 export const NO_CAMPS_STAFF = 'No camps yet.'; // (not in the mockups)
@@ -254,7 +257,6 @@ export const signupNotClosed = (name) => `Sign-up for ${name} wasn't closed. Che
 export const signupNotOpened = (name) => `Sign-up for ${name} wasn't opened. Check the connection, then retry.`; // (v0.725)
 export const CAMP_FINISHED = 'This camp is over, so its sign-up can’t change.'; // (not in the mockups)
 export const CAMPS_NOT_ALLOWED = "Only an admin can do that. Your change wasn't saved.";
-export const COPY_FAILED = "Couldn't copy the link. Select the link and copy it by hand."; // (not in the mockups)
 
 // ----- Delete camp -----
 export const deleteCampTitle = (name) => `Delete ${name}?`;
@@ -267,7 +269,7 @@ export function deleteCampBody(name, active, removed, cents, detailsHidden = fal
   if (active + removed === 0) return `${name} is deleted. This can’t be undone.`; // (not in the mockups)
   const who = removed > 0 ? `${campersCount(active)} and ${removed} removed` : campersCount(active);
   if (detailsHidden) return `${name}, its ${who}${removed > 0 ? ',' : ''} and any recorded payment are deleted. This can’t be undone.`;
-  return `${name} and its ${who} and ${dollars(cents)} in payments are deleted. This can’t be undone.`; // (not in the mockups)
+  return `${name} and its ${who} and ${formatMoney(cents)} in payments are deleted. This can’t be undone.`; // (not in the mockups)
 }
 export const TOAST_CAMP_ADDED = 'Camp added'; // (not in the mockups)
 export const TOAST_CAMP_SAVED = 'Camp saved'; // (not in the mockups)
@@ -303,8 +305,8 @@ export const TOAST_TEMPLATE_SAVED_EDIT = 'Template saved'; // (not in the mockup
 // A template's dayCount is its "days per week" (weekly pricing, v0.717):
 // "1 day a week · $70 (member early)" / "5 days a week · from $75 (1 day, member early)"
 export function templateDaysPrice(dayCount, oneDayMemberEarlyCents) {
-  if (dayCount === 1) return `1 day · ${dollars(oneDayMemberEarlyCents)} (member early)`;
-  return `${daysCount(dayCount)} · from ${dollars(oneDayMemberEarlyCents)} (1 day, member early)`;
+  if (dayCount === 1) return `1 day · ${formatMoney(oneDayMemberEarlyCents)} (member early)`;
+  return `${daysCount(dayCount)} · from ${formatMoney(oneDayMemberEarlyCents)} (1 day, member early)`;
 }
 export const extrasCount = (n) => (n === 0 ? 'No extras' : n === 1 ? '1 extra' : `${n} extras`);
 
@@ -396,8 +398,8 @@ export function pricesSummary(rows) {
   if (rows.length === 0) return PICK_DAYS_FIRST;
   const first = rows[0];
   const last = rows[rows.length - 1];
-  if (rows.length === 1) return `1 row · 1 day ${dollars(first.memberEarlyCents)} (member early)`;
-  return `${rows.length} rows · 1 day ${dollars(first.memberEarlyCents)} … full week ${dollars(last.memberEarlyCents)} (member early)`;
+  if (rows.length === 1) return `1 row · 1 day ${formatMoney(first.memberEarlyCents)} (member early)`;
+  return `${rows.length} rows · 1 day ${formatMoney(first.memberEarlyCents)} … full week ${formatMoney(last.memberEarlyCents)} (member early)`;
 }
 
 // Extras
@@ -416,7 +418,7 @@ export const ISO_WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; /
 export const extraNoDaysLeft = (name) => `${name || 'This extra'} has none of the camp's days left. Pick its days again, or clear them for every day.`; // (not in the mockups)
 export const extraNoDaysSummary = (n) => (n === 1 ? '1 extra has no days left' : `${n} extras have no days left`); // (not in the mockups)
 // "Pizza party $5 · Wed, Fri"
-export const extraOnlySummary = (name, cents, dayLabels) => `${name} ${dollars(cents)} · ${dayLabels.join(', ')}`;
+export const extraOnlySummary = (name, cents, dayLabels) => `${name} ${formatMoney(cents)} · ${dayLabels.join(', ')}`;
 // Short labels for camp dates: weekday names, or "Mon 19" when a weekday repeats.
 export function shortDayLabels(isoDays) {
   const names = isoDays.map(weekdayShort);
@@ -431,7 +433,7 @@ export const EXTRAS_SAME_NAME = 'Two extras have the same name'; // (not in the 
 export const ENTER_EXTRA_NAME = 'Enter a name.'; // (not in the mockups)
 export const SAME_EXTRA_NAME = 'Another extra has this name.'; // (not in the mockups)
 // "Early drop-off $15/day · Late pick-up $8/day · Pizza party (Fri) $5"
-export const extraSummaryPart = (name, cents, per) => `${name} ${dollars(cents)}${per === 'day' ? '/day' : ''}`;
+export const extraSummaryPart = (name, cents, per) => `${name} ${formatMoney(cents)}${per === 'day' ? '/day' : ''}`;
 // Removing a day from an extra's "Only on these days" that campers chose (database / mock
 // refusal not_empty, kind 'extra_day'): "Can't remove Wed from Pizza party: 3 campers chose it …"
 export const cantRemoveExtraDay = (day, extraName, n) => `Can’t remove ${weekdayShort(day)} from ${extraName}: ${campersCount(n)} chose it. Change their ${extraName.charAt(0).toLowerCase()}${extraName.slice(1)} days first.`; // (not in the mockups)
@@ -496,7 +498,7 @@ export const comingOnDay = (day) => `coming on ${dayLong(day)}`; // (not in the 
 export const toCollectShort = 'to collect';
 export const ROSTER_LABEL = 'Campers'; // (not in the mockups) screen readers: the roster table
 export const COL_PAID = 'Paid';
-export const dueTag = (cents) => `${dollars(cents)} due`;
+export const dueTag = (cents) => `${formatMoney(cents)} due`;
 export const dayHead = (iso, today, wide) => (wide ? `${dayChip(iso)}${iso === today ? ' · today' : ''}` : weekdayShort(iso));
 export const weekdayLetter = (iso) => ({ Mon: 'M', Tue: 'T', Wed: 'W', Thu: 'Th', Fri: 'F', Sat: 'Sa', Sun: 'Su' })[weekdayShort(iso)] ?? weekdayShort(iso);
 // The note under a name, today only — short, one line (review: less clutter): the extra's name
@@ -546,12 +548,12 @@ export const undoCheckInFailed = (name) => `${name}'s check-in wasn't undone. Ch
 export const isWithdrawn = (name) => `${name} was withdrawn. Restore them first.`; // (§7.2, "an admin can" dropped: staff restore too)
 // "Pizza party today: 15" — the number is drawn big. Another day: "Pizza party: 12" (not in the mockups).
 export const extraTodayLine = (name, isToday = true) => (isToday ? `${name} today:` : `${name}:`);
-export const notePopoverLine = (name, kind, cents) => (kind === 'owes' ? `${name} owes ${dollars(cents)}` : `${name} · not paid · ${dollars(cents)}`); // (not in the mockups)
+export const notePopoverLine = (name, kind, cents) => (kind === 'owes' ? `${name} owes ${formatMoney(cents)}` : `${name} · not paid · ${formatMoney(cents)}`); // (not in the mockups)
 export const PAYMENT_NOTE_LABEL = (name) => `Payment for ${name}`; // (not in the mockups) screen readers
 
 // Paid tags, Mark paid, the camper menu
-export const tagOwes = (cents) => `Owes ${dollars(cents)}`;
-export const markPaidAmount = (cents) => `Mark paid ${dollars(cents)}`;
+export const tagOwes = (cents) => `Owes ${formatMoney(cents)}`;
+export const markPaidAmount = (cents) => `Mark paid ${formatMoney(cents)}`;
 export const reviewDuplicateLabel = (name) => `Possible duplicate: review ${name}`;
 export const SCHOOL_REFUSED = 'Pick the school where it was paid.'; // (not in the mockups) database: invalid, field school
 export const PAID_AT = 'Paid at'; // (not in the mockups) Edit payment's school choice
@@ -559,6 +561,9 @@ export const COL_CAMPER = 'Camper';
 export const camperNameAge = (row) => `${row.firstName} ${row.lastName} · ${row.age}`;
 export const camperLabel = (row) => `${row.firstName} ${row.lastName}`;
 export const camperPayLine = (daysText, payingBy) => `${daysText} · ${payingByLower(payingBy)}`;
+// Mark paid's toast: "Leo Kim marked paid · $350 cash" — the same words as Color Belt's, Camps' own
+// copy since v0.732 (C17) so it writes the amount with the shared formatMoney.
+export const markedPaidToast = (name, cents, method) => `${name} marked paid · ${formatMoney(cents)} ${payingByLower(method)}`;
 // Mark paid's toast while private details are hidden: no amount, no method (v0.722, picture 03b).
 export const markedPaidToastHidden = (name) => `${name} marked paid`;
 export const duplicateBoxLine = (n) => (n === 1 ? '1 possible duplicate' : `${n} possible duplicates`);
@@ -570,7 +575,7 @@ export function deleteCamperBody(campName, payments, detailsHidden = false) {
   if (detailsHidden) return `The sign-up and any recorded payment are deleted from ${campName}. This can’t be undone.`;
   if (payments.length === 0) return DELETE_CAMPER_BODY_NO_PAY(campName);
   const p = payments[0];
-  const paid = `the ${dollars(p.amountCents)} ${payingByLower(p.method)} payment recorded on ${monthDay(p.paidOn)}`;
+  const paid = `the ${formatMoney(p.amountCents)} ${payingByLower(p.method)} payment recorded on ${monthDay(p.paidOn)}`;
   return `The sign-up and ${paid} are deleted from ${campName}. This can’t be undone.`;
 }
 export const KEEP_CAMPER = 'Keep camper';
@@ -580,10 +585,10 @@ export const KEEP_CAMPER = 'Keep camper';
 // AFTER the Undo, because a camper can still owe part (Owes $15 → $350 owed after the Undo).
 export const undoPaymentTitle = (name) => `Undo ${name}’s payment?`;
 export function undoPaymentBody(p, owedAfterCents) {
-  const paid = `The ${dollars(p.amountCents)} ${payingByLower(p.method)} payment recorded on ${monthDay(p.paidOn)} is reversed`;
+  const paid = `The ${formatMoney(p.amountCents)} ${payingByLower(p.method)} payment recorded on ${monthDay(p.paidOn)} is reversed`;
   // (not in the mockups) Nothing owed even after the Undo (paid twice, say): no "$0 is owed again".
   if (owedAfterCents <= 0) return `${paid}. Both stay in the history.`;
-  return `${paid}, so ${dollars(owedAfterCents)} is owed again. Both stay in the history.`;
+  return `${paid}, so ${formatMoney(owedAfterCents)} is owed again. Both stay in the history.`;
 }
 export const KEEP_PAYMENT = 'Keep payment';
 export const UNDOING = 'Undoing…';
@@ -619,15 +624,13 @@ export const CMP_TOTAL = 'Total';
 export const CMP_PAYMENT = 'Payment';
 export const signedUpStamp = (stamp) => `${stampDayTime(stamp)} · family form`;
 
-// ----- C5 Registration link -----
+// ----- C5 Registration link (the line under the camp name in the shared box; rulebook v0.733) -----
 export const linkDialogLine = (state, camp) => {
   if (state === 'open') return `Family sign-up is open until ${weekdayMonthDay(camp.signupClosesOn)}. Families choose their child’s days and extras on the form.`;
   if (state === 'not_open_yet') return `Family sign-up opens on ${weekdayMonthDay(camp.signupOpensOn)}. Families choose their child’s days and extras on the form.`; // (not in the mockups)
   if (state === 'closed') return 'Family sign-up is closed. Open it from the ⋯ menu to take more sign-ups.'; // (v0.725)
   return 'This camp is over.'; // (not in the mockups)
 };
-export const DOWNLOAD_QR = 'Download QR code';
-export const DOWNLOAD_FAILED = "Couldn't make the QR code file. Try again."; // (not in the mockups)
 
 // ----- C6 Camper detail -----
 export const ageLine = (age, member) => `Age ${age} · ${member ? 'member' : 'non-member'}`;
@@ -676,28 +679,28 @@ export const NO_EXTRAS_DETAIL = 'None'; // (not in the mockups)
 // An extra offered only on some days, with the child's days: "Pizza party — Wed" (owner decision 2026-10-19)
 export const detailExtraOnlyLine = (name, isoDays) => `${name} — ${shortDayLabels([...isoDays].sort()).join(', ')}`;
 // One line per week a camper comes (weekly pricing, more than one week): "Week of Jul 5 · 5 days $275"
-export const weekPriceLine = (w) => `Week of ${monthDay(w.monday)} · ${daysCount(w.dayCount)} ${dollars(w.cents)}`;
+export const weekPriceLine = (w) => `Week of ${monthDay(w.monday)} · ${daysCount(w.dayCount)} ${formatMoney(w.cents)}`;
 // "Early price, 2 days $150 + late pick-up × 2 $16 = $166"; more than one week (weekly pricing,
 // shown under the week lines): "Early price, 2 weeks $470 + late pick-up × 2 $16 = $486"
 export function priceBreakdownLine(b, allDays, weekCount = 1) {
   const kind = b.priceKind === 'early' ? 'Early price' : 'Regular price';
   const days = weekCount > 1 ? `${weekCount} weeks` : allDays ? 'all days' : daysCount(b.dayCount);
-  const parts = [`${kind}, ${days} ${dollars(b.baseCents)}`];
+  const parts = [`${kind}, ${days} ${formatMoney(b.baseCents)}`];
   for (const extra of b.extras ?? []) {
     const count = extra.per === 'day' ? (extra.days ?? []).length : 1;
     const label = extra.name.charAt(0).toLowerCase() + extra.name.slice(1);
-    parts.push(`${label}${extra.per === 'day' ? ` × ${count}` : ''} ${dollars(extra.cents)}`);
+    parts.push(`${label}${extra.per === 'day' ? ` × ${count}` : ''} ${formatMoney(extra.cents)}`);
   }
-  return `${parts.join(' + ')} = ${dollars(b.totalCents)}`;
+  return `${parts.join(' + ')} = ${formatMoney(b.totalCents)}`;
 }
 // "Apr 19, 8:52 AM  $166  Cash  Staff"
 // "$166 cash · Shrewsbury · Mar 3 · Jeffrey" — with the school whose drawer has it (v0.707)
 export const paymentLine = (p) =>
-  [`${dollars(p.amountCents)} ${payingByLower(p.method)}${p.kind === 'reversal' ? ' (reversed)' : ''}`, schoolName(p.school), monthDay(p.paidOn), p.recordedByName].filter(Boolean).join(' · ');
-export const overpaidLine = (total, paid) => `Total now ${dollars(total)} · paid ${dollars(paid)} · `;
-export const overpaidAmber = (cents) => `Paid ${dollars(cents)} more than the total`;
+  [`${formatMoney(p.amountCents)} ${payingByLower(p.method)}${p.kind === 'reversal' ? ' (reversed)' : ''}`, schoolName(p.school), monthDay(p.paidOn), p.recordedByName].filter(Boolean).join(' · ');
+export const overpaidLine = (total, paid) => `Total now ${formatMoney(total)} · paid ${formatMoney(paid)} · `;
+export const overpaidAmber = (cents) => `Paid ${formatMoney(cents)} more than the total`;
 export const OVERPAID_ADMIN = 'An admin can change the payment from the roster’s ⋯ → Edit payment if money is handed back.';
-export const owesLine = (total, paid, owes) => `Total now ${dollars(total)} · paid ${dollars(paid)} · owes ${dollars(owes)}`; // (not in the mockups)
+export const owesLine = (total, paid, owes) => `Total now ${formatMoney(total)} · paid ${formatMoney(paid)} · owes ${formatMoney(owes)}`; // (not in the mockups)
 export const contactLine = (name, relation, phone) => `${name} · ${relation} · ${phone}`;
 export function signupLine(row) {
   const signed = row.signatureDeletedAt ? 'signature deleted after 3 years' : 'waiver signed on the form';
@@ -720,7 +723,7 @@ export const YES = 'Yes';
 export const NO = 'No';
 export const WHICH_DAYS = 'Which days?';
 export const EXTRAS = 'Extras';
-export const extraPriceText = (cents, per) => (per === 'day' ? `${dollars(cents)} a day` : dollars(cents));
+export const extraPriceText = (cents, per) => (per === 'day' ? `${formatMoney(cents)} a day` : formatMoney(cents));
 export const EXTRA_WHICH_DAYS = 'which days?';
 export const PARENT = 'Parent or guardian';
 export const EMERGENCY = 'Emergency contact';
@@ -736,7 +739,7 @@ export const CHOOSE_WHICH_DAYS = 'Choose which days.';
 export const ENTER_NAME = 'Enter a name.';
 export const ENTER_PHONE = 'Enter a 10-digit phone number.';
 export const ENTER_RELATION = 'Enter the relationship.';
-export const newTotalLine = (cents) => `Total now ${dollars(cents)}`; // (not in the mockups) live price while editing
+export const newTotalLine = (cents) => `Total now ${formatMoney(cents)}`; // (not in the mockups) live price while editing
 export const TOTAL_NOW = 'Total now'; // the same line while private details are hidden: "Total now Hidden on this tablet" (v0.722)
 export const REPRICE_NOTE = 'Changing days, member or extras prices the camper at the camp’s current prices.'; // (not in the mockups)
 export const TOTAL_TOO_HIGH = 'A camper’s total can be $10,000 at most.'; // (not in the mockups) weekly pricing R5

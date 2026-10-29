@@ -16,7 +16,9 @@ import {
   gridSizeFor, comesAllWeek, MAX_WEEK_DAYS,
   yearsAround, campWeeks, defaultWeekIndex, paymentSchoolFor, extraDaysFor, extraOfferedOn, extraCountOnDay, missingExtraOnDay, onlyOnToWeekdays, weekdaysToOnlyOn, isoWeekday,
 } from './campRules.js';
-import { qrFileName, campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
+import { campQrSvgDataUrl, campLink as qrCampLink } from './qr.js';
+// The shared QR file name the Registration link box uses (rulebook v0.733, C11 option B).
+import { qrFileName } from '../qr.js';
 import { campArgs, templateArgs, toExtra, toTemplate, EXTRA_COLUMNS, TEMPLATE_COLUMNS } from './campsArgs.js';
 import {
   createCampsBackend, defaultCampsData, md5, schoolClockToIso, DEFAULT_CAMP_CODES, CAMP_RPC_NAMES, CAMP_RESTRICTED_RPC_NAMES, CAMP_TABLES,
@@ -293,14 +295,15 @@ check('toCamel on a sample roster row, toSnake back', () => {
 
 // ======================= qr.js =======================
 
-check('qrFileName, campLink and the QR picture', () => {
-  assert.equal(qrFileName('April Vacation Camp'), 'april-vacation-camp-qr.png');
-  assert.equal(qrFileName('  Thanksgiving Camp!! (2026) '), 'thanksgiving-camp-2026-qr.png');
-  assert.equal(qrFileName('Été'), 't-qr.png'); // only a–z and 0–9 are kept
-  assert.equal(qrFileName(''), 'camp-qr.png');
-  assert.equal(qrFileName('!!!'), 'camp-qr.png');
-  assert.equal(qrFileName(null), 'camp-qr.png');
-  assert.equal(qrFileName('x'.repeat(50)), `${'x'.repeat(40)}-qr.png`);
+check('the QR file name (shared, v0.733 option B), campLink and the QR picture', () => {
+  // The camp page passes school null for a both-schools camp and the school's name for a
+  // one-school camp; the shared box names the file with the shared qrFileName.
+  assert.equal(qrFileName('April Vacation Camp', null), 'April Vacation Camp QR code.png');
+  assert.equal(qrFileName('Veterans Day Camp', 'Worcester'), 'Veterans Day Camp - Worcester QR code.png');
+  assert.equal(CampText.schoolName('worcester'), 'Worcester'); // the school the camp page passes
+  // The card's heading: Camps' words, not the shared default "Worcester school".
+  assert.equal(CampText.campSchoolLine({ bothSchools: true, locationCode: 'worcester' }), 'Both schools · held at Worcester');
+  assert.equal(CampText.campSchoolLine({ bothSchools: false, locationCode: 'worcester' }), 'Worcester');
   assert.equal(campLink('k7m2qp4x'), 'https://tkd-dashboard.pages.dev/camp/k7m2qp4x');
   assert.equal(qrCampLink, campLink); // the one definition
   assert.equal(campLink('k7m2qp'), ''); // 6 characters: not a code
@@ -1423,6 +1426,21 @@ check('date calendar Year list (v0.727)', () => {
   assert.deepEqual(yearsAround('2027-04-21', [], false), [2027]);
   assert.deepEqual(yearsAround('2027-04-21', ['2029-07-01']), [2027, 2028, 2029]);
   assert.deepEqual(yearsAround('', ['nope']), []);
+});
+
+// ======================= money words (rulebook v0.732, design review C17) =======================
+check('Camps writes money with the shared formatMoney: whole dollars as before, a real minus sign', () => {
+  const T = CampText;
+  assert.equal(T.dueTag(35000), '$350 due');
+  assert.equal(T.tagOwes(1500), 'Owes $15');
+  assert.equal(T.markPaidAmount(135500), 'Mark paid $1,355');
+  assert.equal(T.newTotalLine(0), 'Total now $0');
+  assert.equal(T.markedPaidToast('Leo Kim', 35000, 'cash'), 'Leo Kim marked paid · $350 cash'); // Camps' own copy
+  const pay = { amountCents: 33500, method: 'card', kind: 'payment', school: 'worcester', paidOn: '2027-04-19', recordedByName: 'Jeffrey' };
+  assert.equal(T.paymentLine(pay), '$335 card · Worcester · Apr 19 · Jeffrey');
+  // The one visible change: a reversed payment reads "−$335" (U+2212 before the $), not "$-335".
+  assert.equal(T.paymentLine({ ...pay, amountCents: -33500, kind: 'reversal' }), '\u2212$335 card (reversed) · Worcester · Apr 19 · Jeffrey');
+  assert.equal('dollars' in T, false); // Color Belt's helper is no longer re-exported
 });
 
 console.log(`${count} groups of checks ran.`);
