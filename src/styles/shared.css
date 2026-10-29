@@ -825,6 +825,36 @@ html.is-reordering .tib-tip {
   cursor: progress;
 }
 
+/* Turned off (Select.jsx's `disabled`, rulebook v1.116 / v0.823 — e.g. Finance's reminder times
+   while the reminder is Off): Finance's picture C — gray words and chevron on the light gray box, at
+   full strength (a browser's own disabled dropdown is drawn at 70 %, a shade lighter), and the plain
+   cursor (readOnly's busy cursor means "saving"). Here, next to .is-readonly and not at the end of
+   the file, as Finance asked: the two states belong together. After .is-readonly, so it wins when
+   both are on; the .is-empty line outweighs the gray placeholder rule further down (.sel-field). */
+.fa-field.is-disabled {
+  background: var(--color-surface);
+  cursor: default;
+}
+
+.fa-field.is-disabled .fa-value,
+.fa-field.is-disabled.is-empty .fa-value,
+.fa-field.is-disabled .fa-chevron {
+  color: var(--color-disabled-text);
+}
+
+/* Windows High Contrast (forced colors): the browser swaps the colours above for the theme's own,
+   and a turned-off field would look like one that works. The browser's own disabled dropdown uses
+   the theme's GrayText for its words and border there, so this one does too. */
+@media (forced-colors: active) {
+  .fa-field.is-disabled,
+  .fa-field.is-disabled .fa-value,
+  .fa-field.is-disabled.is-empty .fa-value,
+  .fa-field.is-disabled .fa-chevron {
+    border-color: GrayText;
+    color: GrayText;
+  }
+}
+
 .fa-value {
   min-width: 0;
   overflow: hidden;
@@ -2176,4 +2206,5 @@ html.is-reordering .tib-tip {
 /* ===== M8 — the time list (TimeList.jsx; rulebook v1.109) =====
    Nothing of its own: it is the shared dropdown (Select.jsx) — the .fa-* look, the gray
    "Choose a time" (.sel-field.is-empty) and the 2px ring on the row the arrow keys are on
-   (.sel-list .fa-option.is-active), above. */
+   (.sel-list .fa-option.is-active), above. Turned off (v1.116): .fa-field.is-disabled, next to
+   .fa-field.is-readonly near the top. */

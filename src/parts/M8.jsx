@@ -4,6 +4,8 @@
 // side by side, as in the Schedule's Add time slot; sample context, parts.css). The open states are
 // reached the way a person gets there: a press on the field opens the list (with the chosen time in
 // the middle), and in "Moving with the keyboard" the ↓ key is pressed twice.
+// After step 1: "Turned off" (the `disabled` prop, rulebook v1.116 / v0.823), Finance's reminder
+// times while the reminder is Off, with a sample switch that turns them on and off.
 import { useId, useRef, useState } from 'react';
 import Dialog from '../components/Dialog.jsx';
 import Notice from '../components/Notice.jsx';
@@ -56,6 +58,50 @@ function SamplePair({ fields, open = null, keys = [] }) {
 const STARTS = { label: 'Starts', value: '16:00' };
 const ENDS = { label: 'Ends', value: '16:40' };
 
+// Finance's reminder times (11:00 AM–11:00 PM, with Off first). The first one has autoFocus (a dialog
+// would put the focus there when it opens), which a turned-off field must ignore.
+const REMINDER = { from: '11:00', to: '23:00', offLabel: 'Off' };
+const OFF_FIELDS = [
+  { label: 'Monday · Shrewsbury', value: '20:45', autoFocus: true, ...REMINDER },
+  { label: 'Monday · Worcester', value: '21:00', ...REMINDER },
+];
+
+// Turned off (rulebook v1.116 / v0.823; Finance's F2 picture draws it, there is no mockup of its
+// own): gray, skipped by Tab, they never open. Sample context: a switch before the fields turns them
+// on and off (as Finance's reminder switch), and a button after them is where Tab lands from the
+// switch while they are off.
+// `closeCheck` (a behaviour check, not a picture): they start on, a press opens the second field's
+// list, then the sample turns them off — as when another admin turns the reminder Off and the screen
+// redraws. The list must close.
+function OffState({ closeCheck = false }) {
+  const [on, setOn] = useState(closeCheck);
+  const pairRef = useRef(null);
+  useLater(() => {
+    if (!closeCheck) return;
+    pairRef.current?.querySelectorAll('[role=combobox]')[1]?.click();
+    window.setTimeout(() => setOn(false), 1000);
+  }, 200);
+  return (
+    <div className={`parts-tframe${closeCheck ? ' is-tall' : ''}`} data-shot>
+      <p className="parts-note">
+        <button type="button" className="btn btn-sm" role="switch" aria-checked={on ? 'true' : 'false'} onClick={() => setOn(!on)}>
+          Reminder: {on ? 'On' : 'Off'}
+        </button>
+      </p>
+      <div className="parts-pair" ref={pairRef}>
+        {OFF_FIELDS.map((field) => (
+          <TimeField key={field.label} {...field} disabled={!on} />
+        ))}
+      </div>
+      <p className="parts-note">
+        <button type="button" className="btn btn-sm">
+          Copy Monday to Tue–Fri
+        </button>
+      </p>
+    </div>
+  );
+}
+
 // Not a mockup state: the two fields inside a real dialog, for the behaviour check "Esc closes the
 // list only" (the dialog stays; a second Esc closes the dialog).
 function InDialogState() {
@@ -107,6 +153,11 @@ export const PART = {
       render: () => <SamplePair fields={[STARTS, { label: 'Ends', value: '15:30', problem: 'The end time must be after the start time.' }]} />,
     },
   ],
-  // Not a mockup state: for the behaviour checks only.
-  extra: [{ id: 'indialog', title: 'Inside a dialog (behaviour check)', dialog: true, render: () => <InDialogState /> }],
+  // Not mockup states, so listed apart: "Turned off" (v1.116; Finance's F2 picture draws it), and two
+  // for the behaviour checks only.
+  extra: [
+    { id: 'off', title: 'Turned off (Finance’s reminder is Off; v1.116)', render: () => <OffState /> },
+    { id: 'indialog', title: 'Inside a dialog (behaviour check)', dialog: true, render: () => <InDialogState /> },
+    { id: 'offwhileopen', title: 'Turned off while its list is open (behaviour check)', render: () => <OffState closeCheck /> },
+  ],
 };
