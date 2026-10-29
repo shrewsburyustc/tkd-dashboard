@@ -666,3 +666,40 @@ Where it stands: the status file.
 - **Pictures:** the side-by-side `Proof/parts/M6-two-lines-vs-Q5.png`, Star's Q5 B next to the built card at the four sizes, plus the one card on PC and phone. The lines are 18 px tall, so the card is about 4 px taller than in Q5, the same as Star's screen today.
 
 Where it stands: the status file.
+
+## 13. After step 1: a turned-off state for the dropdown and time list (Finance's v0.823)
+
+**Asked** by Finance, 2026-10-29. Jeffrey answered Finance's F2 question with **"C, via Dashboard core"** (Finance's v0.823; picture `docs/Finance/images/Finance-DR-F2-Settings-Off.png` on branch `finance`, option C). While Finance → Settings' reminder switch is Off, its 14 time boxes (7 days × 2 schools) must stay as they are today: gray, they can't open, and Tab skips them. F2 switches those boxes to the shared time list, which until now had only `readOnly` ("busy saving": still a Tab stop, with the busy cursor).
+
+**The change** (shared `src/components/Select.jsx`, passed on by `src/components/TimeList.jsx`):
+- **`disabled`** defaults to false, so every current use is unchanged. When it is on, the field is turned off:
+  - it is not a Tab stop (tabIndex -1, no `data-autofocus`);
+  - a click or tap doesn't move the focus there either (its `mousedown` is cancelled, as a browser's disabled dropdown);
+  - it has `aria-disabled="true"`, so Chrome's accessibility tree says "disabled" and screen readers say "unavailable" / "dimmed";
+  - no click, tap or key opens it;
+  - if its list is open when it is turned off, the list closes before the screen is painted.
+- **The look** is `.fa-field.is-disabled` in `shared.css`, right after `.is-readonly`:
+  - background `--color-surface`;
+  - words and chevron in `--color-disabled-text`, including the gray "Choose a time";
+  - the plain cursor, and the usual border.
+  That is Finance's picture C exactly. Today's real boxes look a shade lighter only because the browser draws a disabled dropdown at 70 %.
+- **In Windows High Contrast** (forced colors), the words, the chevron and the border use the theme's GrayText, as the browser's own disabled dropdown does. Without it, the theme's colours made a turned-off field look like one that works (found by the review).
+- **When both are on** (saving while turned off), turned off wins: its CSS comes after `.is-readonly`, and `aria-readonly` is left off.
+- **It follows existing patterns.** The shared `ChoiceGroup.jsx` handles `disabled` the same way. The dialog's Tab wrap (`Dialog.jsx`) already skips tabindex -1, so a turned-off field inside a dialog is skipped too.
+
+**Proof:** parts page `M8`.
+- **Samples:**
+  - `off`, listed apart because no M8 mockup draws it: a sample "Reminder: Off / On" switch, Monday's two times turned off (the first has autoFocus, which a turned-off field must ignore) and a sample button after them;
+  - `offwhileopen`, a behaviour check: it opens the second list, then turns both fields off a second later.
+- **Checks:** 8 new behaviour checks in `check-parts.mjs`. Each "does nothing" check sits next to the same press opening an enabled field.
+  - Tab and Shift+Tab skip both fields.
+  - The attributes and Chrome's accessibility tree: combobox, its name, disabled.
+  - A click opens nothing and leaves the focus on the switch; no key opens it.
+  - The look's colours and cursor, also with nothing chosen.
+  - In Windows High Contrast, GrayText as the browser's own disabled dropdown; a field that works keeps its colours.
+  - Turned on again, it is a Tab stop and its autoFocus is back; every key that did nothing while off opens it, and a click opens it and takes the focus.
+  - A real tap at 390 opens nothing, while the same tap on an enabled field opens it and takes the focus.
+  - Turned off while open, the list closes.
+- **Pictures:** `Proof/parts/M8-off-vs-F2.png`, the built state at the four sizes next to Finance's picture C and today's boxes, plus Windows High Contrast. The parts picture tool (`shoot-parts.mjs`) photographs only states with a mockup, so these were taken with a scratch script.
+
+Where it stands: the status file.

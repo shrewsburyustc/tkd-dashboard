@@ -16,6 +16,10 @@
 //   - Open: ↓ ↑ move (no wrap), Home / End, PageUp / PageDown move 8, Enter or Tab choose and
 //     close, Esc closes without changing anything (and does NOT close the dialog), typing jumps.
 //   - Mouse / finger: click a choice; click anywhere else to close.
+//   - Turned off (`disabled`, rulebook v1.116 / v0.823): as a browser's disabled dropdown — not a
+//     Tab stop (tabIndex -1; a click doesn't move the focus there either), aria-disabled="true"
+//     (screen readers say "unavailable" / "dimmed"), and no click, tap or key opens it. If the list
+//     is open when it is turned off, it closes.
 // With nothing chosen yet the field shows the placeholder (e.g. "Choose…") in gray and the list
 // opens at the top. With a choice, the list opens with that choice in the middle of the list
 // (a long list of times opened at its top would hide the chosen time).
@@ -28,9 +32,14 @@
 //   options        [{ value, label }]
 //   placeholder    shown when value is null ("Choose…")
 //   onChange       (value) => void
-//   readOnly       true while saving
+//   readOnly       true while saving ("busy"): gray, the busy cursor, it doesn't open; still a Tab stop
+//   disabled       true when the field is turned off, e.g. Finance's reminder times while the
+//                  reminder is Off (rulebook v1.116 / v0.823): gray words and chevron on the light
+//                  gray box, the plain cursor, skipped by Tab, never opens. Not the same as readOnly
+//                  ("busy saving"); when both are true, disabled wins. Default false.
 //   invalid        true when an error is shown under the field
-//   autoFocus      true: the dialog puts keyboard focus here when it opens (data-autofocus)
+//   autoFocus      true: the dialog puts keyboard focus here when it opens (data-autofocus); never
+//                  while disabled
 //   matcher        optional: its own way of finding the choice to jump to while typing, instead of
 //                  "starts with what was typed" — (typed, fromIndex, options, startIndex) => index
 //                  | null. `typed` is everything typed in the last half second ("1", then "10");
@@ -45,7 +54,7 @@ const PAGE_STEP = 8;
 const TYPE_AHEAD_MS = 500;
 const LIST_MAX_HEIGHT = 244; // px — the same as FinalAwardSelect: the last visible row is cut in half (the cue there's more)
 
-export default function Select({ id, labelId, describedBy, value, options, placeholder, onChange, readOnly = false, invalid = false, autoFocus = false, matcher = null }) {
+export default function Select({ id, labelId, describedBy, value, options, placeholder, onChange, readOnly = false, disabled = false, invalid = false, autoFocus = false, matcher = null }) {
   const baseId = useId();
   const listId = `${baseId}-list`;
   const optionId = (index) => `${baseId}-o${index}`;
@@ -63,7 +72,7 @@ export default function Select({ id, labelId, describedBy, value, options, place
   const typedRef = useRef({ text: '', at: 0, from: -1 });
 
   function openList(activeIndex) {
-    if (readOnly) return;
+    if (readOnly || disabled) return;
     setActive(Math.max(0, activeIndex));
     setOpen(true);
   }
@@ -77,6 +86,14 @@ export default function Select({ id, labelId, describedBy, value, options, place
     if (option && option.value !== value) onChange(option.value);
     closeList();
   }
+
+  // Turned off while the list is open (e.g. another admin turns Finance's reminder Off and the
+  // screen redraws): the list closes before the screen is painted, so it never shows on a gray field.
+  useLayoutEffect(() => {
+    if (disabled) closeList();
+    // Only when `disabled` changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disabled]);
 
   // Under the field, as wide as it; above it when there's no room below.
   useLayoutEffect(() => {
@@ -160,7 +177,7 @@ export default function Select({ id, labelId, describedBy, value, options, place
   }
 
   function handleKeyDown(event) {
-    if (readOnly) return;
+    if (readOnly || disabled) return;
     const { key, altKey } = event;
     const typing = Date.now() - typedRef.current.at <= TYPE_AHEAD_MS && typedRef.current.text !== '';
     const printable = key.length === 1 && !event.ctrlKey && !event.metaKey && !altKey && (key !== ' ' || typing);
@@ -228,18 +245,21 @@ export default function Select({ id, labelId, describedBy, value, options, place
         ref={fieldRef}
         id={id}
         role="combobox"
-        tabIndex={0}
-        data-autofocus={autoFocus ? true : undefined}
-        className={`input fa-field sel-field${open ? ' is-open' : ''}${readOnly ? ' is-readonly' : ''}${currentIndex < 0 ? ' is-empty' : ''}`}
+        tabIndex={disabled ? -1 : 0}
+        data-autofocus={autoFocus && !disabled ? true : undefined}
+        className={`input fa-field sel-field${open ? ' is-open' : ''}${readOnly ? ' is-readonly' : ''}${disabled ? ' is-disabled' : ''}${currentIndex < 0 ? ' is-empty' : ''}`}
         aria-labelledby={labelId}
         aria-describedby={describedBy}
         aria-haspopup="listbox"
         aria-expanded={open ? 'true' : 'false'}
         aria-controls={listId}
         aria-activedescendant={open ? optionId(active) : undefined}
-        aria-readonly={readOnly ? 'true' : undefined}
+        aria-readonly={readOnly && !disabled ? 'true' : undefined}
+        aria-disabled={disabled ? 'true' : undefined}
         aria-invalid={invalid ? 'true' : undefined}
         onKeyDown={handleKeyDown}
+        // Turned off: a click or tap doesn't move the focus here (as a browser's disabled dropdown)
+        onMouseDown={disabled ? (event) => event.preventDefault() : undefined}
         onClick={() => (open ? closeList() : openList(currentIndex))}
       >
         <span className="fa-value">{currentLabel}</span>
