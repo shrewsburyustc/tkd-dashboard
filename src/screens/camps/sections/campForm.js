@@ -42,15 +42,6 @@ import * as T from '../text.js';
 export const PRICE_KEYS = ['memberEarlyCents', 'memberRegularCents', 'nonmemberEarlyCents', 'nonmemberRegularCents'];
 export const PRICE_LABELS = [T.COL_MEMBER_EARLY, T.COL_MEMBER_REGULAR, T.COL_NONMEMBER_EARLY, T.COL_NONMEMBER_REGULAR];
 
-// Camp hours in 5-minute steps (C3: "camp hours in 5-minute steps"), 6:00 AM to 9:00 PM.
-export const TIME_CHOICES = (() => {
-  const list = [];
-  for (let minutes = 6 * 60; minutes <= 21 * 60; minutes += 5) {
-    list.push(`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`);
-  }
-  return list;
-})();
-
 // "09:00:00" (database) → "09:00"
 const hhmm = (time) => (typeof time === 'string' ? time.slice(0, 5) : '');
 // The bigger / smaller of two ISO dates (text compares correctly for 'YYYY-MM-DD').

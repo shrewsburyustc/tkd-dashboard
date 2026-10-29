@@ -6,7 +6,7 @@
 // with a line between two groups that both have items (never a line above the first item):
 //   1. About the person — Edit details (always first), Change how they'll pay (ti-switch-horizontal,
 //      while they still owe), Review possible duplicate (when flagged)
-//   2. Money — admins only, when something is paid: Edit payment, Undo payment
+//   2. Money — admins only, when something is paid: Edit payment, Undo payment (asks first, v0.730)
 //   3. Taking someone off — Withdraw (ti-user-minus, instant with Undo), then for admins Delete
 //      permanently (red, asks first, always last)
 //   Removed camper — Restore (ti-arrow-back-up, C16; staff and admins for an ordinary withdrawal,
@@ -35,7 +35,7 @@ export function camperMenuItems(row, { isAdmin, busy, anchor, h, detailsHidden =
     // 2. Money — admins only, and only when there is a payment to fix
     if (isAdmin && !detailsHidden && (row.paidCents ?? 0) > 0 && row.lastPaymentId) {
       items.push({ key: 'editpay', label: T.EDIT_PAYMENT, Icon: IconCashEdit, separatorBefore: groupStart(), onSelect: () => h.onEditPayment(row, anchor) });
-      items.push({ key: 'undopay', label: T.UNDO_PAYMENT, Icon: IconArrowBackUp, disabled: busy, onSelect: () => h.onUndoPayment(row) });
+      items.push({ key: 'undopay', label: T.UNDO_PAYMENT, Icon: IconArrowBackUp, disabled: busy, onSelect: () => h.onUndoPayment(row, anchor) });
     }
     // 3. Taking someone off — Delete permanently always last
     items.push({ key: 'withdraw', label: T.WITHDRAW, Icon: IconUserMinus, separatorBefore: groupStart(), disabled: busy, onSelect: () => h.onWithdraw(row) });

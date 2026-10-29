@@ -19,7 +19,7 @@
 // summary line also says when it was last updated. Every change goes to the database
 // (src/lib/camps/campsApi.js) and the page reloads after it. Reversible changes get a 5-second Undo
 // toast — since rulebook v0.726 also Edit camp, Edit details and Edit payment ("Payment changed");
-// permanent ones ask first (rule 1.4). Staff and admins see different ⋯ items
+// permanent ones ask first (rule 1.4), and so does Undo payment (rulebook v0.730). Staff and admins see different ⋯ items
 // (CamperRowMenu.jsx); the database enforces the same rules.
 //
 // There is no Add camper button: campers only come in through the family form (C4).
@@ -29,14 +29,14 @@
 // money: no Paid column / "to collect" / Mark paid (CampRoster), gray "Hidden on this tablet" in
 // Camper detail, Compare and Edit details, no money items in ⋯ / "More", "any recorded payment" in
 // the delete sentences, no amounts in toasts. Turning it on closes the payment dialogs (Change how
-// they'll pay, Edit payment), the ⋯ menu, the toast and every banner (they may name money or carry
+// they'll pay, Edit payment, the Undo payment box), the ⋯ menu, the toast and every banner (they may name money or carry
 // a Retry that records money). Camp and template prices are settings: they stay.
 // Naming: `detailsHidden` is that switch; `hidden` below means "the screen is locked".
-// The delete box (Delete permanently) and the possible-duplicate compare are the dashboard's shared
+// The delete box (Delete permanently), the Undo payment box (v0.730) and the possible-duplicate compare are the dashboard's shared
 // parts (components/ConfirmBox.jsx, components/CompareDialog.jsx; rulebook v0.729, design review
 // C6 / C20). This page keeps their state, words and rows (duplicates.js) and does the writes.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { IconArrowLeft, IconDots, IconQrcode, IconTrash } from '@tabler/icons-react';
+import { IconArrowBackUp, IconArrowLeft, IconDots, IconQrcode, IconTrash } from '@tabler/icons-react';
 import CompareDialog from '../../components/CompareDialog.jsx';
 import ConfirmBox from '../../components/ConfirmBox.jsx';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
@@ -74,8 +74,9 @@ import * as T from './text.js';
 
 // The old tab addresses (v0.704): they now open the one roster (and are tidied away).
 const OLD_TABS = ['checkin', 'payments', 'attendance'];
-// The dialogs that show or change money: they close when Hide private details is switched on.
-const PAYMENT_DIALOGS = ['paying', 'payment'];
+// The dialogs that show or change money: they close when Hide private details is switched on
+// (the Undo payment box names the payment's amount, v0.730).
+const PAYMENT_DIALOGS = ['paying', 'payment', 'undoPayment'];
 // The chosen week and the Removed group open / closed, per camp, while the page is open.
 const weekByCamp = new Map();
 const removedOpenByCamp = new Map();
@@ -434,19 +435,72 @@ export default function CampPage({
     });
   }
 
-  // ===== Undo payment from ⋯ (admins, any time) =====
-  async function doUndoPayment(row) {
+  // ===== Undo payment from ⋯ (admins, any time): asks first (rulebook v0.730, v1.003) =====
+  // The box names the payment it reverses — amount, way to pay and date — and what is owed after.
+  // The roster row knows only WHICH payment (lastPaymentId: the latest one not reversed), not its
+  // amount, so Camper detail (camp_camper_detail) is read first, as Edit payment and Delete
+  // permanently do; the payment undone is the one that counts right now in that fresh read
+  // (activePayment — the same rule as the row's lastPaymentId), so the box names exactly the
+  // payment that is reversed. From Camper detail (`from`) the box takes the detail's place in one
+  // update, as Delete permanently does.
+  async function startUndoPayment(row, opener, from = null) {
     if (!row.lastPaymentId || !begin()) return;
-    const result = await undoPayment(row.lastPaymentId);
+    const result = await loadCamperDetail(row.id);
+    end(result.status === 'ok' ? 'ok' : result.status);
+    if (result.status === 'no_access') {
+      onNoAccess();
+      return;
+    }
+    if (detailGone(from)) return;
+    // Hide private details was switched on while this loaded: the box (it names money) doesn't open.
+    if (hiddenNowRef.current) return;
+    const payment = result.status === 'ok' ? activePayment(result.payments) : null;
+    if (!payment) {
+      leaveDetail(from);
+      setBanner({ text: result.status === 'error' ? T.LOAD_CAMPER_FAILED : T.ROSTER_STALE });
+      reloadQuiet();
+      return;
+    }
+    openDialog({
+      type: 'undoPayment',
+      row,
+      name: T.camperLabel(result.camper),
+      payment,
+      // What the camper owes once this payment is reversed.
+      owedAfterCents: (result.breakdown.owesCents ?? 0) + payment.amountCents,
+      saving: false,
+      failed: false,
+      opener,
+    });
+  }
+  async function confirmUndoPayment() {
+    const d = dialog;
+    if (!d || d.saving || !begin()) return;
+    setDialog({ ...d, saving: true, failed: false });
+    const result = await undoPayment(d.payment.id);
     end(result.status);
+    // Closed meanwhile (Hide private details switched on mid-save): the page says how it went.
+    const open = stillOpen(d);
+    if (result.status === 'error' && open) {
+      // Didn't reach the database: the box stays open with its amber note; pressing again retries.
+      setDialog((current) => (current ? { ...current, saving: false, failed: true } : current));
+      return;
+    }
+    if (open) {
+      setDialog(null);
+      if (d.opener) focusSoon(d.opener);
+    }
     if (result.status !== 'ok') {
-      rowProblem(result.status, row, { text: T.actionFailed, run: () => doUndoPayment(row) }, true);
+      // Other refusals: today's handling (amber bar, reload; the general words while hidden). No
+      // Retry: 'error' (the only status that offers one) was handled above, inside the box.
+      if (open) rowProblem(result.status, d.row, { text: T.actionFailed }, true);
+      else closedPaymentProblem(result.status);
       return;
     }
     rowDone();
     reloadQuiet();
-    // Hidden now: the general words ("Payment undone" would say they had paid).
-    showToast(hiddenNowRef.current ? T.TOAST_CHANGES_SAVED : T.paymentUndoneToast(T.camperLabel(row)), { icon: false });
+    // Today's toast, no Undo. Hidden now: the general words ("Payment undone" would say they had paid).
+    showToast(hiddenNowRef.current ? T.TOAST_CHANGES_SAVED : T.paymentUndoneToast(d.name), { icon: false });
   }
 
   // ===== Check in / Undo check-in (any day, v0.706): a day cell of the roster =====
@@ -663,7 +717,7 @@ export default function CampPage({
     onWithdraw: (row) => doWithdraw(row),
     onRestore: (row) => doWithdraw(row, true),
     onEditPayment: (row, anchor) => startEditPayment(row, anchor),
-    onUndoPayment: (row) => doUndoPayment(row),
+    onUndoPayment: (row, anchor) => startUndoPayment(row, anchor),
     onDelete: (row, anchor) => startDeleteCamper(row, anchor),
   };
   // The same items under Camper detail's "More" (touch screens, CP5; `from` = that open detail).
@@ -682,7 +736,7 @@ export default function CampPage({
       onReview: (row) => camperHandlers.onReview(row, opener),
       onWithdraw: closeThen((row) => doWithdraw(row)),
       onRestore: closeThen((row) => doWithdraw(row, true)),
-      onUndoPayment: closeThen((row) => doUndoPayment(row)),
+      onUndoPayment: (row) => startUndoPayment(row, opener, from),
       onEditPayment: (row) => startEditPayment(row, opener, from),
       onDelete: (row) => startDeleteCamper(row, opener, from),
     };
@@ -941,6 +995,28 @@ export default function CampPage({
           onKeep={closeDialog} // ConfirmBox ignores it while the delete works
         >
           {T.deleteCamperBody(camp.name, dialog.counted, detailsHidden)}
+        </ConfirmBox>
+      );
+    } else if (!hidden && !detailsHidden && dialog.type === 'undoPayment') {
+      dialogElement = (
+        // Undo payment asks first (rulebook v0.730): the shared "are you sure?" box with loses
+        // 'something' — blue action (the history keeps both lines), first focus on "Keep
+        // payment", "Undoing…" while it works; a failure keeps the box open with its amber note.
+        // From the phone's More it takes the detail's place in one update, as Delete does.
+        <ConfirmBox
+          key={dialog.key}
+          title={T.undoPaymentTitle(dialog.name)}
+          keepLabel={T.KEEP_PAYMENT}
+          actionLabel={T.UNDO_PAYMENT}
+          actionIcon={IconArrowBackUp} // ti-arrow-back-up, the menu item's icon
+          busyLabel={T.UNDOING}
+          loses="something"
+          busy={dialog.saving}
+          failed={dialog.failed ? T.UNDO_PAYMENT_FAILED : null}
+          onConfirm={confirmUndoPayment}
+          onKeep={closeDialog} // ConfirmBox ignores it while the Undo works
+        >
+          {T.undoPaymentBody(dialog.payment, dialog.owedAfterCents)}
         </ConfirmBox>
       );
     }

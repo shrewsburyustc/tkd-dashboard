@@ -574,6 +574,20 @@ export function deleteCamperBody(campName, payments, detailsHidden = false) {
   return `The sign-up and ${paid} are deleted from ${campName}. This can’t be undone.`;
 }
 export const KEEP_CAMPER = 'Keep camper';
+
+// ----- Undo payment asks first (rulebook v0.730, v1.003; design review C4, picture 11) -----
+// Star's words (v0.508), with its middle "the row goes back to Not paid" replaced by what is owed
+// AFTER the Undo, because a camper can still owe part (Owes $15 → $350 owed after the Undo).
+export const undoPaymentTitle = (name) => `Undo ${name}’s payment?`;
+export function undoPaymentBody(p, owedAfterCents) {
+  const paid = `The ${dollars(p.amountCents)} ${payingByLower(p.method)} payment recorded on ${monthDay(p.paidOn)} is reversed`;
+  // (not in the mockups) Nothing owed even after the Undo (paid twice, say): no "$0 is owed again".
+  if (owedAfterCents <= 0) return `${paid}. Both stay in the history.`;
+  return `${paid}, so ${dollars(owedAfterCents)} is owed again. Both stay in the history.`;
+}
+export const KEEP_PAYMENT = 'Keep payment';
+export const UNDOING = 'Undoing…';
+export const UNDO_PAYMENT_FAILED = "Couldn't undo. Check the connection, then try again.";
 export const TOAST_KEPT_BOTH = 'Kept both sign-ups';
 export const duplicateRemovedToast = (name) => `${name}’s extra copy moved to Removed`;
 
