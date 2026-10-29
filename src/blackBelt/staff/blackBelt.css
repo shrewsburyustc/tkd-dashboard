@@ -1,6 +1,6 @@
 /*
   blackBelt.css — the styles for the Black Belt testing staff screens (Cycles tab, Add / Edit
-  cycle, testing day, Rubric and prices, Registration links, cycle page — contract
+  cycle, testing day, Rubric and waiver, Registration links, cycle page — contract
   CONTRACT-0016-B1 §3, mockups Cycles 2–8) and, since phase B2, the cycle page's Candidates tab
   with its dialogs (contract CONTRACT-0016-B2 §3, mockups Candidates 1–7 and 9).
   Why it exists: the screens reuse Color Belt's shared pieces (testing.css and testing-events.css:
@@ -76,7 +76,7 @@
 }
 
 .bb-select[aria-invalid='true'],
-.bb-date[aria-invalid='true'],
+.bb-date > .dp-field[aria-invalid='true'],
 .bb-cycle-form .input[aria-invalid='true'],
 .money.is-invalid {
   border-color: var(--color-warning-text);
@@ -154,9 +154,19 @@
   gap: var(--space-12);
 }
 
+/* A date field: the dashboard's calendar (staff/parts/DateField.jsx, v1.018). Its wrapper takes no
+   room, so the field fills its column (as Star's) and a phone's calendar sits in the layout itself */
 .bb-date {
-  max-width: 240px;
-  font-family: inherit;
+  display: contents;
+}
+
+/* Phones: when a date's calendar opens in the page it scrolls into view (DatePicker), and must end
+   up wholly ABOVE the full-screen dialog's pinned bottom bar — the chosen or focused day, the last
+   row and the hint. The scroll padding tells the dialog's scrolling body that its bottom part is
+   covered by that bar (12px + 36px button + 16px + 1px line = 65px, plus 8px of air and the
+   iPhone home-bar space). Only in Black Belt dialogs that have a date field. */
+.dialog-page-body:has(.bb-date) {
+  scroll-padding-bottom: calc(73px + env(safe-area-inset-bottom));
 }
 
 /* Testing days: one line per day with Edit and Delete */
@@ -316,10 +326,6 @@
   width: 160px;
 }
 
-.bb-grid-due .bb-date {
-  width: 152px;
-}
-
 .bb-grid .num {
   text-align: right;
 }
@@ -407,8 +413,15 @@
   font-size: var(--text-13);
 }
 
-.bb-due-row .bb-date {
-  max-width: none;
+/* Phones: a due date's calendar opens under its row across the whole row (not squeezed into the
+   narrow date cell, v1.018, picture H1b's flag), and edge to edge of the screen like every other
+   phone calendar, so its days stay 44px wide even at 320: out of the plan box's padding (12px left,
+   8px right on phones), its 1px border and the dialog's 16px gutter. The Month / Year row and the
+   hint keep DatePicker's own 16px gutter. */
+.bb-due-row .dp-pop.is-inline {
+  grid-column: 1 / -1;
+  margin: var(--space-4) calc(-1 * (var(--space-8) + 1px + var(--space-16))) var(--space-8)
+    calc(-1 * (var(--space-12) + 1px + var(--space-16)));
 }
 
 .bb-grid--phone th[scope='row'],
@@ -501,7 +514,7 @@
   padding-top: var(--space-16);
 }
 
-/* ===== Rubric and prices ===== */
+/* ===== Rubric and waiver ===== */
 .bb-rubric-line {
   margin-bottom: var(--space-12);
   color: var(--color-text-secondary);
@@ -681,9 +694,11 @@
     font-size: var(--text-16);
   }
 
-  .bb-date {
-    height: var(--control-height-touch);
-    font-size: var(--text-16);
+  /* Touch: the due date's text is 16px, so the Due column is wider and "Sat, Sep 25, 2027" isn't
+     cut (v1.018, picture H1b's tablet flag) */
+  .bb-grid-due,
+  .bb-grid:not(.bb-grid--phone) thead th:nth-child(2) {
+    width: 200px;
   }
 
   .bb-read-all {
@@ -728,8 +743,7 @@
     gap: 0;
   }
 
-  .bb-name-input,
-  .bb-date {
+  .bb-name-input {
     max-width: none;
   }
 

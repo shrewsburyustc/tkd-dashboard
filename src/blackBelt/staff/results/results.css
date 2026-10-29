@@ -1,7 +1,7 @@
 /*
   results.css — the look of Black Belt testing's Results tab (ResultsTab.jsx, ResultRows.jsx), its
   printed results sheet (ResultsSheet.jsx), and the "Result emails" block + "Edit result email"
-  dialog on Rubric and prices (../rubric/ResultEmailsBlock.jsx, ../rubric/ResultTextDialog.jsx).
+  dialog on Rubric and waiver (../rubric/ResultEmailsBlock.jsx, ../rubric/ResultTextDialog.jsx).
   Why it exists: copied from Star testing's results.css and resultEmails.css with Black Belt's own
   class names, so the two sections never share (or break) each other's styles, and parallel builders
   don't edit the same stylesheet. It only loads with the Black Belt screens.
@@ -594,7 +594,7 @@
   }
 }
 
-/* ===== The "Result emails" block on Rubric and prices (R03, proposals 21–28) ===== */
+/* ===== The "Result emails" block on Rubric and waiver (R03, proposals 21–28) ===== */
 /* Full width, like the Waiver and Keeping blocks above it (blackBelt.css caps .bb-block at 760px) */
 .bb-block.bbrem {
   max-width: none;

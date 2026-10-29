@@ -72,10 +72,10 @@ export const DISCARD_CHANGES = 'Discard changes'; // phones: the link inside the
 // ===== Statuses from the data layer (contract §1.2 "Status → what the staff screens say") =====
 export const NOT_ALLOWED = "Only an admin can do that. Your change wasn't saved.";
 export const STALE_DIALOG = 'Someone else changed this cycle just now. Close and open it again to see their change.';
-export const STALE_SETTINGS = 'Someone else changed this just now. Close and open it again to see their change.'; // Rubric and prices (not in the mockups)
+export const STALE_SETTINGS = 'Someone else changed this just now. Close and open it again to see their change.'; // Rubric and waiver (not in the mockups)
 export const SWITCH_STALE = "Couldn't change registration. Someone else changed this cycle just now.";
 export const duplicateCycle = (name) => `There's already a cycle called ${name}. Try another name.`;
-export const WAIVER_NEEDED = "Save the school's waiver on Rubric and prices first.";
+export const WAIVER_NEEDED = "Save the school's waiver on the Rubric and waiver tab first.";
 export const FINISHED = "This cycle is finished, so registration can't change."; // (not in the mockups)
 export const HAS_PAYMENTS = 'Payments are recorded for this cycle.';
 export const HAS_WAIVERS = 'Families signed waivers on the form for this cycle.'; // (not in the mockups, OP-6)
@@ -121,7 +121,7 @@ export const BACK_TO_TESTING = 'Testing';
 export const PAGE_TITLE = 'Black Belt testing';
 export const ADD_CYCLE = 'Add cycle';
 export const TAB_CYCLES = 'Cycles';
-export const TAB_RUBRIC = 'Rubric and prices';
+export const TAB_RUBRIC = 'Rubric and waiver';
 export const STAFF_CYCLES_LINE =
   'Staff can open or close registration from ⋯ until the application date. Ask an admin to add or change cycles.';
 export const VIEW_ONLY = 'View only. Ask an admin to make changes.';
@@ -327,6 +327,9 @@ export const addDaySub = (cycleName, index) => `${cycleName || 'New cycle'} · d
 export const DAY_NAME = 'Name';
 export const DAY_NAME_HINT = 'Shown to families on the form and the confirmation page.';
 export const DATE = 'Date';
+// Every Black Belt date field is the dashboard's calendar (v1.018, design review BB12):
+export const CHOOSE_DATE = 'Choose…'; // an empty date field (as Star's)
+export const PAST_DATES_HINT = 'Past dates can’t be chosen.'; // the testing day's and the payment due dates' calendars
 export const START_TIME = 'Start time';
 export const END_TIME = 'End time';
 export const PLACE = 'Place';
@@ -360,9 +363,9 @@ export const dayLine = (day) => `${shortDate(day.date)} · ${timeRange(day.start
 // "Second part · 2:30–3:30 PM · Horgan Arena, Auburn"
 export const secondLine = (second) => `${SECOND_PART} · ${timeRange(second.start, second.end)} · ${placeText(second.place)}`;
 
-// ===== Cycles 6 · Rubric and prices =====
+// ===== Cycles 6 · Rubric and waiver =====
 export const RUBRIC_LINE = 'Same for both schools. Prices are set on each cycle.';
-export const LOADING_RUBRIC = 'Loading Rubric and prices';
+export const LOADING_RUBRIC = 'Loading Rubric and waiver';
 export const WAIVER = 'Waiver';
 export const versionLabel = (v) => `Version ${v}`;
 export const READ_ALL = 'Read all';
@@ -895,6 +898,8 @@ export const addSub = (cycleName) => `${cycleName} · for walk-ins and late fami
 export const addClosedSub = (date) => `Registration closed on ${weekdayMonthDay(date)}; staff can still add here.`;
 export const SCHOOL = 'School';
 export const DOB = 'Date of birth';
+// The date of birth's calendar (v1.018, design review BB12): Star's staff birthday wording.
+export const DOB_CALENDAR_HINT = 'Pick the month and year first, then tap the day. Future dates can’t be chosen.';
 export const TESTING_FOR = 'Testing for';
 export const HOW_THEY_PAY = 'How they’ll pay';
 export const AMOUNTS_AFTER_DAN = 'Amounts show once you choose a Dan.';
@@ -964,7 +969,7 @@ export const signatureDeleted = (stamp) => `The signature and signer's name were
 export const LOADING_SIGNATURE = 'Loading the signature'; // (not in the mockups)
 export const UNDO_STALE_CANDIDATE = "Couldn't undo. Someone else changed this candidate just now."; // (not in the mockups)
 
-// ===== The rubric: Rubric and prices' Default rubric card, and a cycle's Rubric tab =====
+// ===== The rubric: Rubric and waiver's Default rubric card, and a cycle's Rubric tab =====
 // (CONTRACT-0024 §10.3, mockups TKD-BlackBelt-Rubric-Mockups.html R1–R14, rulebook v0.921–v0.935.)
 // Wording not in those mockups is marked "new wording, not in the mockups".
 

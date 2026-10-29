@@ -30,7 +30,7 @@
 // A cycle that no longer exists (deleted elsewhere) → "This cycle was deleted." and back to the
 // Cycles tab.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { IconArrowLeft, IconCurrencyDollarOff, IconDots, IconEdit, IconLock, IconLockOpen, IconPlus, IconQrcode } from '@tabler/icons-react';
+import { IconArrowLeft, IconCurrencyDollarOff, IconDots, IconEdit, IconPlus, IconQrcode } from '@tabler/icons-react';
 import Dialog from '../../../components/Dialog.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
@@ -47,6 +47,7 @@ import ResultsTab from '../results/ResultsTab.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
 import { showOnCyclesList } from '../cycles/CyclesTab.jsx';
 import { focusCurrentTab } from '../parts/focusCurrentTab.js';
+import NoIcon from '../parts/NoIcon.jsx';
 import { openNeedsAdmin, useCycleActions } from '../cycles/useCycleActions.js';
 import CycleRubricTab, { CycleRubricLine, useCycleRubricLoad } from './CycleRubricTab.jsx';
 import LinksDialog from './LinksDialog.jsx';
@@ -293,7 +294,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
     items.push({ key: 'links', label: T.REGISTRATION_LINKS, Icon: IconQrcode, onSelect: () => setLinks({ opener: moreRef.current }) });
     if (!isPast) {
       if (state.registration === 'open') {
-        items.push({ key: 'close', label: T.CLOSE_REGISTRATION, Icon: IconLock, disabled: busy, onSelect: () => actions.switchRegistration(cycle, false) });
+        items.push({ key: 'close', label: T.CLOSE_REGISTRATION, Icon: NoIcon, disabled: busy, onSelect: () => actions.switchRegistration(cycle, false) });
       } else {
         // Grayed with its reason for staff: the first opening (it locks the rubric, v0.930) and
         // reopening after the application date are admin-only.
@@ -301,7 +302,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
         items.push({
           key: 'open',
           label: blocked ? <TwoLines label={T.OPEN_REGISTRATION} reason={blocked} /> : T.OPEN_REGISTRATION,
-          Icon: IconLockOpen,
+          Icon: NoIcon, // no lock icon (v1.016): an empty slot keeps the words lined up
           disabled: busy || Boolean(blocked),
           onSelect: () => actions.switchRegistration(cycle, true),
         });

@@ -8,7 +8,9 @@
   Sizes: PC (mouse) — a centered 560px column, 36px buttons, 32px fields (Star v0.106).
   Touch screens — 36px fields. Phones (under 600px wide) — the recorded v0.106 exceptions:
   44px buttons and 16px field text (so phones don't zoom in while typing).
-  Every class starts with "bbf-" (Black Belt form) so nothing here can affect any other page.
+  Every class starts with "bbf-" (Black Belt form) so nothing here can affect any other page —
+  except the date-of-birth calendar's rules, which style the dashboard's calendar (DatePicker,
+  "dp-" classes, ".input") but only inside .bbf-main, this page's column.
   Colors and sizes come from tokens.css. A copy, not an import, of Color Belt's register.css
   patterns: Black Belt changes can never alter Color Belt's form.
 */
@@ -191,12 +193,6 @@ h2:focus,
   width: 100%;
   min-width: 0;
 }
-.bbf-input--date {
-  appearance: none;
-  -webkit-appearance: none;
-  display: flex;
-  align-items: center;
-}
 .bbf-input:focus {
   outline: none;
   border-color: var(--color-blue);
@@ -215,6 +211,74 @@ h2:focus,
 }
 .bbf-indent {
   margin-left: 30px;
+}
+
+/* ---------- the date-of-birth calendar (v1.018, design review BB12) ----------
+   The date of birth is the dashboard's calendar (components/DatePicker.jsx, with its own
+   DatePicker.css), set up as Star's family page sets it up. This page doesn't load the
+   dashboard's styles, so — like Star's star-register.css — it adds the few rules the calendar
+   needs: the dashboard's field look (.input: the date field and the Month / Year lists, sized
+   like this form's own fields), the "read by screen readers only" rule (.visually-hidden; without
+   it the weekday names show twice, "SuSunday"), and the calendar as a bordered box under the
+   field on PC and tablet, edge to edge on phones (further down). Only inside .bbf-main. */
+.bbf-main .input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--control-height);
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-control);
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: var(--text-13);
+  text-align: left;
+  color: inherit;
+  background: var(--color-bg);
+  width: 100%;
+  min-width: 0;
+}
+.bbf-main .input:focus-visible {
+  outline: none;
+  border-color: var(--color-blue);
+  box-shadow: 0 0 0 1px var(--color-blue);
+}
+.bbf-main .input[aria-invalid='true'] {
+  border-color: var(--color-warning-text);
+  box-shadow: 0 0 0 1px var(--color-warning-text);
+}
+.bbf-main .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+/* PC and tablet: a bordered box in the page under the field (not floating) */
+.bbf-main .dp-pop.is-inline {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-12);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+.bbf-main .dp-pop.is-inline .dp-top,
+.bbf-main .dp-pop.is-inline .dp-hint {
+  padding-right: 0;
+  padding-left: 0;
+}
+.bbf-main .dp-pop.is-inline .dp-day {
+  height: 36px;
+  font-size: var(--text-14);
+}
+/* While the calendar is open its own hint replaces "Opens a calendar.", and the field's error
+   waits until it closes (so it never sits under the calendar, away from its field) — Star's rule */
+.bbf-dob:has(.dp-pop) ~ .bbf-hint,
+.bbf-dob:has(.dp-pop) ~ .bbf-ferr {
+  display: none;
 }
 
 /* amber message under a field (Form 4, 6) */
@@ -1037,9 +1101,15 @@ section.bbf-card .bbf-review {
 
 /* ---------- touch screens (tablets): dashboard touch sizes ---------- */
 @media (pointer: coarse) {
-  .bbf-input {
+  .bbf-input,
+  .bbf-main .input {
     height: var(--control-height-touch);
     font-size: var(--text-14);
+  }
+  /* the calendar's days: big enough for a finger */
+  .bbf-main .dp-pop.is-inline .dp-day {
+    height: var(--tap-size);
+    font-size: var(--text-16);
   }
   .bbf-label {
     font-size: var(--text-13);
@@ -1069,9 +1139,30 @@ section.bbf-card .bbf-review {
   .bbf-main {
     padding: 16px 16px 32px;
   }
-  .bbf-input {
+  .bbf-input,
+  .bbf-main .input {
     height: 40px;
     font-size: 16px; /* 16px stops phones zooming in while typing */
+  }
+  /* The date-of-birth calendar edge to edge of the screen: out of the card's padding and border
+     and the page gutter (the column is centred, so half the screen minus half the field on each
+     side) — Star's rule */
+  .bbf-main .dp-pop.is-inline {
+    margin: var(--space-4) calc(50% - 50vw) var(--space-12);
+    padding: var(--space-12) 0;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .bbf-main .dp-pop.is-inline .dp-top,
+  .bbf-main .dp-pop.is-inline .dp-hint {
+    padding-right: var(--space-16);
+    padding-left: var(--space-16);
+  }
+  .bbf-main .dp-pop.is-inline .dp-day {
+    height: var(--tap-size);
+    font-size: var(--text-16);
   }
   .bbf-label {
     font-size: var(--text-13);

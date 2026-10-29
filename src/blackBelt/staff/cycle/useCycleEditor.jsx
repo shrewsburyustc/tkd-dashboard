@@ -597,6 +597,7 @@ export function useCycleEditor({ isAdmin, today, cycles, beginWrite, endWrite, s
           key={dialog.key}
           state={dialog}
           check={c}
+          today={today}
           isPhone={isPhone}
           handlers={handlers}
           dayLockOf={(day) => (dialog.mode === 'edit' ? dayLock(dialog.grading, dialog.original, day) : null)}

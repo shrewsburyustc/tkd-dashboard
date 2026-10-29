@@ -1,4 +1,4 @@
-// RubricTab.jsx — the "Rubric and prices" tab of Black Belt testing.
+// RubricTab.jsx — the "Rubric and waiver" tab of Black Belt testing.
 // Why it exists: approved mockup Cycles 6 with the v0.902 redraw (prices moved to each cycle), and
 // contract CONTRACT-0016-B1 §3, OP-3, OP-8, OP-9. For now it holds:
 //   - "Same for both schools. Prices are set on each cycle."

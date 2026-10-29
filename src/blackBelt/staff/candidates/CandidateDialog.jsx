@@ -34,6 +34,7 @@ import { formatCents } from '../../../lib/blackBelt/money.js';
 import { dueNowItems, hasLivePayment } from '../../../lib/blackBelt/rules.js';
 import Choice from '../parts/Choice.jsx';
 import DateField from '../parts/DateField.jsx';
+import { dobYears } from '../../../lib/blackBelt/dateLimits.js';
 import { detailsProblems } from './checks.js';
 import { ICONS } from './icons.js';
 import { MoneyTag } from './RosterRows.jsx';
@@ -204,7 +205,7 @@ function Payments({ data, cycle, isAdmin, isPhone, today, onLineMore, menuLineId
 }
 
 // ----- Edit details -----
-function EditFields({ edit, data, isAdmin, today, onChange }) {
+function EditFields({ edit, data, isAdmin, today, isPhone, onChange }) {
   const id = useId();
   const v = edit.values;
   const c = data.candidate;
@@ -235,11 +236,31 @@ function EditFields({ edit, data, isAdmin, today, onChange }) {
         {lastMsg ? <Notice id={err('last')}>{lastMsg}</Notice> : <p id={`${id}-last-hint`} className="field-hint">{T.LAST_NAME_HINT}</p>}
       </div>
       <div className="field">
-        <label htmlFor={`${id}-dob`}>{T.DOB}</label>
         {purged ? (
-          <p id={`${id}-dob`} className="bb-readonly">{T.DELETED_AFTER_KEEPING}</p>
+          <>
+            <label htmlFor={`${id}-dob`}>{T.DOB}</label>
+            <p id={`${id}-dob`} className="bb-readonly">{T.DELETED_AFTER_KEEPING}</p>
+          </>
         ) : (
-          <DateField id={`${id}-dob`} value={v.dob} readOnly={ro} invalid={Boolean(dobMsg)} describedBy={dobMsg ? err('dob') : undefined} onChange={(dob) => onChange({ dob })} />
+          <>
+            {/* A span, not a <label>: the field is a button (the calendar), named by its own label */}
+            <span className="field-label">{T.DOB}</span>
+            {/* Star's staff birthday field (v1.018): future days gray, the Year list back 80 years */}
+            <DateField
+              id={`${id}-dob`}
+              label={T.DOB}
+              value={v.dob}
+              today={today}
+              max={today}
+              years={dobYears(today)}
+              hint={T.DOB_CALENDAR_HINT}
+              isPhone={isPhone}
+              disabled={ro}
+              invalid={Boolean(dobMsg)}
+              describedBy={dobMsg ? err('dob') : undefined}
+              onChange={(dob) => onChange({ dob })}
+            />
+          </>
         )}
         {dobMsg && <Notice id={err('dob')}>{dobMsg}</Notice>}
       </div>
@@ -561,7 +582,7 @@ export default function CandidateDialog({ actions, cycle, isAdmin, isPhone, hidd
           }}
         >
           {e.failed && <ErrorBanner text={T.SAVE_FAILED} onRetry={() => actions.saveEdit()} retrying={e.saving} />}
-          <EditFields edit={e} data={data} isAdmin={isAdmin} today={today} onChange={actions.changeEdit} />
+          <EditFields edit={e} data={data} isAdmin={isAdmin} today={today} isPhone={isPhone} onChange={actions.changeEdit} />
           {isPhone ? (
             <>
               {note}

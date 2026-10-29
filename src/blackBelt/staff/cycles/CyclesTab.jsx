@@ -20,7 +20,7 @@
 //     the person is told, and the list reloads.
 //   - Admin vs staff only changes what is SHOWN — the database enforces who may do what.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { IconCopy, IconDots, IconEdit, IconLock, IconLockOpen, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconCopy, IconDots, IconEdit, IconPlus, IconTrash } from '@tabler/icons-react';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import RowMenu from '../../../components/RowMenu.jsx';
@@ -36,6 +36,7 @@ import ConfirmDialog from '../parts/ConfirmDialog.jsx';
 import { useCycleEditor } from '../cycle/useCycleEditor.jsx';
 import { useCycleActions } from './useCycleActions.js';
 import { focusCurrentTab } from '../parts/focusCurrentTab.js';
+import NoIcon from '../parts/NoIcon.jsx';
 import * as T from '../text.js';
 
 // The one thing this tab loads (Black Belt is joint, so there is no school in the key).
@@ -338,7 +339,7 @@ export default function CyclesTab({
     ];
     if (!isPast(cycle)) {
       if (cycle.state?.registration === 'open') {
-        items.push({ key: 'close', label: T.CLOSE_REGISTRATION, Icon: IconLock, disabled: busy, onSelect: () => actions.switchRegistration(cycle, false) });
+        items.push({ key: 'close', label: T.CLOSE_REGISTRATION, Icon: NoIcon, disabled: busy, onSelect: () => actions.switchRegistration(cycle, false) });
       } else {
         // Grayed with its reason for staff: the first opening (it locks the rubric, v0.930) and
         // reopening after the application date are admin-only.
@@ -346,7 +347,7 @@ export default function CyclesTab({
         items.push({
           key: 'open',
           label: blocked ? <TwoLines label={T.OPEN_REGISTRATION} reason={blocked} /> : T.OPEN_REGISTRATION,
-          Icon: IconLockOpen,
+          Icon: NoIcon, // no lock icon (v1.016): an empty slot keeps the words lined up
           disabled: busy || Boolean(blocked),
           onSelect: () => actions.switchRegistration(cycle, true),
         });
