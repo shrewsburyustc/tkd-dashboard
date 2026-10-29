@@ -34,6 +34,14 @@
 // they'll pay, Edit payment, the Undo payment box), the ⋯ menu, the toast and every banner (they may name money or carry
 // a Retry that records money). Camp and template prices are settings: they stay.
 // Naming: `detailsHidden` is that switch; `hidden` below means "the screen is locked".
+// Print receipt (design review C3, rulebook v0.734; Star's build, v0.518, is the model): the camper's
+// ⋯ (last in the money group), Camper detail's button (PC / tablet without touch) and "More" (touch)
+// open the dashboard's shared receipt (components/Receipt.jsx). It reads camp_camper_detail, both
+// schools (Settings → Schools: street and phone) and the reader's name (get_my_profile) when it
+// opens, and campReceipt.js turns them into the plain receipt. From Camper detail it opens on top of
+// it (v1.100) and focus goes back to the button; from ⋯ on its own. While it loads, can't load
+// (amber bar with Retry) or the camper was deleted meanwhile, the shared box shows that. A receipt
+// already open when Hide private details turns on stays open and shows only the gray line, no Print.
 // The delete box (Delete permanently), the Undo payment box (v0.730) and the possible-duplicate compare are the dashboard's shared
 // parts (components/ConfirmBox.jsx, components/CompareDialog.jsx; rulebook v0.729, design review
 // C6 / C20). This page keeps their state, words and rows (duplicates.js) and does the writes.
@@ -42,6 +50,7 @@ import { IconArrowBackUp, IconArrowLeft, IconDots, IconQrcode, IconTrash } from 
 import CompareDialog from '../../components/CompareDialog.jsx';
 import ConfirmBox from '../../components/ConfirmBox.jsx';
 import RegistrationLinkBox from '../../components/RegistrationLinkBox.jsx';
+import ReceiptDialog from '../../components/Receipt.jsx';
 import ErrorBanner from '../../components/ErrorBanner.jsx';
 import { LOCATION_NAME } from '../../lib/device.js';
 import { usePrivateDetailsHidden } from '../../lib/privateDetails.js';
@@ -54,6 +63,7 @@ import {
   editPayment,
   loadCamp,
   loadCamperDetail,
+  loadMyName,
   markPaid,
   resolveDuplicate,
   restoreCamper,
@@ -63,6 +73,8 @@ import {
   campToday,
 } from '../../lib/camps/campsApi.js';
 import { campLink, campTag, campWeeks, defaultWeekIndex, lastDay, paymentSchoolFor, signupState } from '../../lib/camps/campRules.js';
+import { buildCampReceipt } from '../../lib/camps/campReceipt.js';
+import { loadSchools } from '../../lib/settings/schoolsApi.js';
 import { PHONE_QUERY, TOUCH_QUERY, WIDE_QUERY, useMediaQuery } from '../../lib/useMediaQuery.js';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../lib/useLiveLoad.js';
 import CampDialog from './CampDialog.jsx';
@@ -153,6 +165,10 @@ export default function CampPage({
   const [chosenWeek, setChosenWeekState] = useState(() => weekByCamp.get(campId) ?? null); // null = the default week
   const busyRef = useRef(false);
   const [refreshing, setRefreshing] = useState(false); // the "Couldn't refresh" bar's Retry is on its way
+  // The receipt (C3, v0.734): { key, camperId, opener, onTop, data, failed, notFound } or null.
+  // onTop = opened from Camper detail, drawn on top of it (Dialog onTop, v1.100); from ⋯ on its own.
+  const [receipt, setReceipt] = useState(null);
+  const schoolsRef = useRef(null); // both schools (the receipt's footer), read once
 
   function setRemovedOpen(open) {
     removedOpenByCamp.set(campId, open);
@@ -226,7 +242,7 @@ export default function CampPage({
   useEffect(() => {
     if (screenLocked) setMenu(null);
   }, [screenLocked]);
-  const modalShown = (dialog !== null || actions.dialogOpen) && !screenLocked;
+  const modalShown = (dialog !== null || receipt !== null || actions.dialogOpen) && !screenLocked;
   useEffect(() => {
     onModalOpenChange(modalShown);
   }, [modalShown, onModalOpenChange]);
@@ -236,6 +252,7 @@ export default function CampPage({
     if (live.status !== 'notFound') return;
     setDialog(null);
     setMenu(null);
+    setReceipt(null);
   }, [live.status]);
 
   // ===== Hide private details (as Color Belt's EventPage, v0.412) =====
@@ -690,6 +707,50 @@ export default function CampPage({
     showToast(T.TOAST_KEPT_BOTH, { icon: false });
   }
 
+  // ===== Print receipt (design review C3, rulebook v0.734; Star's openReceipt, v0.518) =====
+  // The shared receipt, filled from camp_camper_detail + both schools + the reader's name
+  // (get_my_profile, called when it opens; a failed call just leaves the name out — Star's Q7 A).
+  function openReceipt(camperId, opener, onTop) {
+    setMenu(null);
+    const key = Date.now();
+    setReceipt({ key, camperId, opener, onTop, data: null, failed: false, notFound: false });
+    readReceipt(camperId, key);
+  }
+  async function readReceipt(camperId, key) {
+    const schoolsRead = schoolsRef.current ? Promise.resolve({ status: 'ok', schools: schoolsRef.current }) : loadSchools();
+    const [detail, schools, name] = await Promise.all([loadCamperDetail(camperId), schoolsRead, loadMyName()]);
+    if (detail.status === 'no_access') {
+      onNoAccess();
+      return;
+    }
+    if (schools.status === 'ok') schoolsRef.current = schools.schools;
+    // The camp as the page has it now (read from the live load, so a reload since opening counts).
+    const current = liveRef.current.data;
+    setReceipt((open) => {
+      if (!open || open.key !== key) return open; // closed, or another receipt opened meanwhile
+      if (detail.status === 'not_found') return { ...open, notFound: true };
+      if (detail.status !== 'ok' || !current?.camp) return { ...open, failed: true };
+      // Offline for the schools only: the receipt shows without the schools' lines (as Star).
+      const data = buildCampReceipt({
+        detail,
+        camp: current.camp,
+        campDays: current.days ?? [],
+        campExtras: current.extras ?? [],
+        schools: schools.status === 'ok' ? schools.schools : [],
+        printedOn: campToday(), // today at the school
+        printedByName: name,
+      });
+      return { ...open, data };
+    });
+  }
+  function closeReceipt() {
+    const r = receipt;
+    setReceipt(null);
+    // On top of Camper detail, the shared dialog puts focus back on its opener (returnFocusTo).
+    // From ⋯: back to the row's ⋯ (or the "← Camps" link, if that ⋯ is gone).
+    if (r && !r.onTop) focusSoon(() => (r.opener?.isConnected ? r.opener : document.querySelector('.ev-back')));
+  }
+
   // ===== Menus =====
   function openMenu(kind, row, anchor) {
     // A phone sheet covers the bottom of the screen: the toast would float over it (review item 9).
@@ -709,6 +770,7 @@ export default function CampPage({
     onRestore: (row) => doWithdraw(row, true),
     onEditPayment: (row, anchor) => startEditPayment(row, anchor),
     onUndoPayment: (row, anchor) => startUndoPayment(row, anchor),
+    onPrintReceipt: (row, anchor) => openReceipt(row.id, anchor, false),
     onDelete: (row, anchor) => startDeleteCamper(row, anchor),
   };
   // The same items under Camper detail's "More" (touch screens, CP5; `from` = that open detail).
@@ -729,6 +791,9 @@ export default function CampPage({
       onRestore: closeThen((row) => doWithdraw(row, true)),
       onUndoPayment: (row) => startUndoPayment(row, opener, from),
       onEditPayment: (row) => startEditPayment(row, opener, from),
+      // Print receipt opens ON TOP of the detail (v1.100), which stays open; focus goes back to the
+      // pressed "More" button when the receipt closes.
+      onPrintReceipt: (row, button) => openReceipt(row.id, button ?? null, true),
       onDelete: (row) => startDeleteCamper(row, opener, from),
     };
   }
@@ -821,6 +886,9 @@ export default function CampPage({
             const row = roster.find((r) => r.id === dialog.camperId);
             return row ? camperMenuItems(row, { isAdmin, busy, anchor: null, h: detailHandlers(dialog), detailsHidden }) : null;
           })()}
+          // PC / tablet without touch: the Print receipt button at the end of Payments (v0.734);
+          // on touch it is only in "More" (the actions above), never twice.
+          onPrintReceipt={isTouch ? null : (opener) => openReceipt(dialog.camperId, opener, true)}
           onClose={closeDialog}
           // Undo (v0.726, option A): saves the old details again — every time, also after a
           // change that re-priced the camper (the total then follows the camp's current prices).
@@ -1024,6 +1092,32 @@ export default function CampPage({
 
   const content = menuContent();
 
+  // The receipt (C3): on its own (from ⋯) or on top of Camper detail. Never while locked (it comes
+  // back after the PIN, as the dialogs do). `hidden` = Hide private details: the shared box then
+  // shows the one gray line and no Print (v1.105).
+  let receiptElement = null;
+  if (receipt && !screenLocked) {
+    const row = roster.find((r) => r.id === receipt.camperId) ?? null;
+    const name = row ? T.camperLabel(row) : null;
+    receiptElement = (
+      <ReceiptDialog
+        receipt={receipt.data}
+        sub={name ? T.receiptSub(name, camp.name) : camp.name}
+        loadError={receipt.failed}
+        onRetry={() => {
+          setReceipt((open) => (open ? { ...open, failed: false } : open));
+          readReceipt(receipt.camperId, receipt.key);
+        }}
+        notFound={receipt.notFound ? T.receiptNotFound(name ?? T.THIS_CAMPER) : null}
+        hidden={detailsHidden}
+        onClose={closeReceipt}
+        isPhone={isPhone}
+        onTop={receipt.onTop && dialog?.type === 'camper'}
+        returnFocusTo={receipt.onTop ? receipt.opener : null}
+      />
+    );
+  }
+
   return (
     <>
       {backLink}
@@ -1131,6 +1225,7 @@ export default function CampPage({
 
       {content && <RowMenu anchor={menu.anchor} isSheet={isPhone} title={content.title} subtitle={content.subtitle} label={content.label} items={content.items} onClose={closeMenu} />}
       {dialogElement}
+      {receiptElement}
       {actions.elements}
     </>
   );

@@ -926,6 +926,12 @@ button.cp-dc:focus-visible {
   font-weight: 400;
 }
 
+/* Camper detail's outline "Print receipt" at the end of Payments (PC / tablet without touch;
+   design review C3, rulebook v0.734) — Star's spacing (.st-print-receipt) */
+.cp-print-receipt {
+  margin-top: var(--space-8);
+}
+
 /* Camper detail on touch screens: the roster's ⋯ items as buttons */
 .cp-detail-actions {
   display: flex;

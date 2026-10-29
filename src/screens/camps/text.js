@@ -712,6 +712,24 @@ export const LOADING_CAMPER = 'Loading…'; // (not in the mockups)
 export const LOAD_CAMPER_FAILED = "Couldn't load this camper. Check the connection, then retry."; // (not in the mockups)
 export const RETRY = CB.RETRY;
 
+// ----- Print receipt (design review C3, rulebook v0.734; Star's words, v0.518) -----
+// The ⋯ item and Camper detail's button; the receipt itself is the shared one (components/Receipt.jsx,
+// whose own words are in components/text.js). The plain receipt is built in lib/camps/campReceipt.js.
+export const PRINT_RECEIPT = 'Print receipt';
+export const RECEIPT_KIND = 'Camp · payment receipt';
+export const RECEIPT_CAMPER = 'Camper';
+export const RECEIPT_CAMP = 'Camp';
+export const RECEIPT_SCHOOL_LABEL = 'School';
+export const RECEIPT_DAYS = 'Days';
+export const RECEIPT_EXTRAS = 'Extras';
+export const RECEIPT_REFERENCE = 'Reference';
+export const RECEIPT_FOR_FEE = 'Camp fee';
+// The gray line under the box's title: "Jack Rivera · Thanksgiving Camp"
+export const receiptSub = (name, campName) => `${name} · ${campName}`;
+// The camper was deleted on another device while the receipt opened (Star's and Black Belt's words)
+export const THIS_CAMPER = 'This camper';
+export const receiptNotFound = (name) => `${name} was deleted on another device, so there is no receipt.`;
+
 // Edit details
 export const EDIT_DETAILS_TITLE = 'Edit details';
 export const editDetailsSub = (name, camp) => `${name} · ${camp}`; // (not in the mockups) — as Color Belt

@@ -37,16 +37,25 @@
 // part is one gray line "Payment details are hidden on this tablet."; in Edit details each
 // extra's price and the total read "Hidden on this tablet" ("Total now Hidden on this tablet").
 // The money items leave "More" too (CamperRowMenu.jsx builds the list without them).
+//
+// Print receipt (design review C3, rulebook v0.734): on PC / tablet without touch, an outline
+// "Print receipt" button at the end of the Payments part (Star's place, v0.518), for an active
+// camper with money paid that still stands, never while Hide private details is on. On touch
+// screens it is only in "More" (rule 1.1: Camps' More list mirrors the ⋯ list), never twice. Either
+// way the shared receipt opens ON TOP of this dialog (v1.100) and focus goes back to the button.
 // (`hidden` is something else: the screen is locked — the dialog keeps its values but isn't drawn.)
 //
 // Props: camperId, camperName (shown while loading), actions (RowMenu items, touch only, or null;
 //        each item's onSelect closes or replaces this dialog itself), camp, days (Day[]), prices, extras (the camp's current ones), isPhone,
-//        hidden, detailsHidden, startInEdit, onClose(), onSaved(undo) (undo() = save the old details again — the toast's Undo, v0.726), onNoAccess, onRefreshProfile
+//        hidden, detailsHidden, startInEdit, onClose(), onSaved(undo) (undo() = save the old details again — the toast's Undo, v0.726), onNoAccess, onRefreshProfile,
+//        onPrintReceipt(opener) (PC / tablet without touch only, else null — v0.734)
 import { Fragment, useEffect, useId, useState } from 'react';
-import { IconCheck, IconEdit } from '@tabler/icons-react';
+import { IconCheck, IconEdit, IconPrinter } from '@tabler/icons-react';
 import Dialog from '../../components/Dialog.jsx';
 import Notice from '../../components/Notice.jsx';
 import { loadCamperDetail, updateDetails } from '../../lib/camps/campsApi.js';
+// Print receipt's one rule, the same as the ⋯ menu's (v0.734)
+import { canPrintReceipt } from '../../lib/camps/campReceipt.js';
 import { AGE_LIMITS, MAX_CAMPER_CENTS, RELATION_MAX, extraDaysFor, formatPhone, isAllDays, phoneDigits, priceChild } from '../../lib/camps/campRules.js';
 import { nameProblem, normalizeName } from '../../lib/testing/names.js';
 import ChoiceGroup from '../../components/ChoiceGroup.jsx';
@@ -133,7 +142,7 @@ function weekLines(b, myDayObjs, prices) {
   return weeks;
 }
 
-export default function CamperDialog({ camperId, camperName, actions = null, camp, days, prices, extras, isPhone, hidden, detailsHidden = false, startInEdit, onClose, onSaved, onNoAccess, onRefreshProfile }) {
+export default function CamperDialog({ camperId, camperName, actions = null, camp, days, prices, extras, isPhone, hidden, detailsHidden = false, startInEdit, onClose, onSaved, onNoAccess, onRefreshProfile, onPrintReceipt = null }) {
   const idBase = useId();
   const [load, setLoad] = useState({ status: 'loading', detail: null });
   const [mode, setMode] = useState(startInEdit ? 'edit' : 'view');
@@ -277,6 +286,14 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
           </Row>
         </dl>
         {owes < 0 && <p className="field-hint">{T.OVERPAID_ADMIN}</p>}
+        {/* PC / tablet without touch: Print receipt ends the Payments part (v0.734); it opens on top. */}
+        {onPrintReceipt && canPrintReceipt(camper, detailsHidden) && (
+          <button type="button" className="btn btn-sm cp-print-receipt" onClick={(event) => onPrintReceipt(event.currentTarget)}>
+            {/* ti-printer = print */}
+            <IconPrinter size={16} aria-hidden="true" />
+            {T.PRINT_RECEIPT}
+          </button>
+        )}
         </>
         )}
 
@@ -322,9 +339,11 @@ export default function CamperDialog({ camperId, camperName, actions = null, cam
                       // The page closes this dialog itself, or swaps it for the item's own dialog in
                       // one step (CampPage.jsx detailHandlers) — closing it here first would let the
                       // browser's Back step of this dialog close the next one too (phones).
-                      onClick={() => {
+                      // The pressed button goes along: Print receipt opens on top of this dialog and
+                      // sends focus back to it when the receipt closes (v0.734); the others ignore it.
+                      onClick={(event) => {
                         if (item.disabled) return;
-                        item.onSelect();
+                        item.onSelect(event.currentTarget);
                       }}
                     >
                       {item.Icon && <item.Icon size={16} aria-hidden="true" className="menu-icon" />}
