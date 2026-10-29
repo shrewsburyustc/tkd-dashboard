@@ -90,6 +90,7 @@ figcaption{font-size:17px;margin-top:6px;max-width:100%}
   <h3>Today</h3><ul><li>Switch Off → the times are kept but the boxes are <b>disabled</b>: gray background, gray words and arrow (#8A8A85), can’t open, <b>skipped by Tab</b>, heard by screen readers as “dimmed / unavailable”. A truly disabled control is exempt from the 4.5:1 text-contrast rule (WCAG 1.4.3).</li></ul>
   <h3>What the shared list can do today (checked in <code>TimeList.jsx</code> / <code>Select.jsx</code>)</h3><ul>
   <li><b>No <code>disabled</code>.</b> Only <b><code>readOnly</code></b> (“gray and closed while the dialog saves”): the list won’t open, the box keeps its Tab stop and is heard as “read only”. A read-only box is still an active control, so its words need <b>4.5:1</b>. Its look: light gray background (#F7F7F5), black words, and on PC the <b>busy cursor</b> (<code>cursor: progress</code>, meant for “saving…”).</li></ul>
+  <p class="prop"><b>Decided 2026-10-29 (rulebook v0.823): option C</b> — a real <code>disabled</code> on the shared list, built by Dashboard core. Options A and B below were rejected; don’t build them.</p>
   <h3 class="prop">Option A · <code>readOnly</code> exactly as the shared part draws it</h3><ul class="prop">
   <li><b>+</b> Can be built now; no shared change, no Finance-only look.</li>
   <li><b>+</b> Keyboard and screen-reader users can Tab to each box and hear its time (“Monday reminder time at Worcester, 9:00 PM, read only”). Black words: 15:1.</li>

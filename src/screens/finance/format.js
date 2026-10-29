@@ -149,17 +149,5 @@ export function printedWhen(date) {
   return `${monthDayYear(schoolDayOf(date))}, ${timeOfDay(date.toISOString())}`;
 }
 
-// The reminder times: Off, then every 15 minutes from 11:00 AM to 11:00 PM (v0.207 / D9).
-// Values are 'HH:MM' (what the data layer sends to the database), labels "7:30 PM".
-export const REMINDER_TIMES = (() => {
-  const list = [];
-  for (let minutes = 11 * 60; minutes <= 23 * 60; minutes += 15) {
-    const hh = String(Math.floor(minutes / 60)).padStart(2, '0');
-    const mm = String(minutes % 60).padStart(2, '0');
-    list.push({ value: `${hh}:${mm}`, label: timeOfDay(`${hh}:${mm}`) });
-  }
-  return list;
-})();
-
-// '19:30:00' or '19:30' → '19:30' (the dropdown's value); null stays null (Off).
+// '19:30:00' or '19:30' → '19:30' (the Settings time list's value); null stays null (Off).
 export const shortTime = (value) => (value ? String(value).slice(0, 5) : null);

@@ -777,15 +777,11 @@
   height: 44px;
 }
 
-.fin-select.input {
+/* A Settings time: the shared time list (TimeList.jsx), as wide as the old dropdown. Its look,
+   Off's gray included, is the shared dropdown's (shared.css .fa-field; Off = its `disabled`,
+   v0.823 / v1.116). */
+.fin-time {
   width: 140px;
-  padding: 0 var(--space-8);
-  font: inherit; /* the page's font, not the browser's own for dropdowns */
-}
-
-.fin-select.is-off {
-  background: var(--color-surface);
-  color: var(--color-disabled-text);
 }
 
 .fin-set-row {
@@ -983,11 +979,6 @@
 
   .fin-table td {
     height: 48px;
-  }
-
-  .fin-select.input {
-    height: var(--control-height-touch);
-    font-size: var(--text-16); /* stops iPhones / iPads zooming in when the dropdown is tapped */
   }
 
   .fin-switch {
