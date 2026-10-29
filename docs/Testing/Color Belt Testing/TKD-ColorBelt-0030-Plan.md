@@ -73,6 +73,11 @@ Answers so far (go into one rulebook row when all five are answered):
 - Q5 (2026-10-28): **A** — names as listed: `testing_mark_paid_by`, `testing_private_mark_paid_by`,
   `testing_registration_history`, `testing_private_history`, `testing_history_strip`, `testing_results_csv`,
   table `testing_downloads`. All five answered → rulebook v0.418.
+- Q6 (2026-10-29): **A** — "A: follows too" (rulebook v0.419): an admin's Edit payment that changes the way also
+  changes `paying_by` (logged); the new payment keeps the family's choice in `paying_by_before`, so Undo payment puts
+  it back; Move to private and Undo move copy `paying_by_before` with the payments. 0030 replaces
+  `testing_edit_payment`, `testing_private_edit_payment`, `testing_move_to_private` and `testing_private_undo_move`
+  in place (their fingerprints move). Exact rule: migration section 4b.
 
 1. Price changed at midnight: refuse and show the box again with the new price (recommended), or keep the shown price?
 2. When the desk picks a different way than the family chose: keep `paying_by` as "what they chose" (recommended) or

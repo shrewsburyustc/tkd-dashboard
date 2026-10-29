@@ -5,9 +5,11 @@
 --   One query listing everything migration 0030 (Color Belt: Mark paid
 --   with a way to pay, History, results CSV) adds or replaces, each with
 --   a "fingerprint":
---     function   the 6 new app functions, the helper
+--     function   the 5 new app functions, the helper
 --                testing_history_strip, the guard testing_downloads_guard
---                and the 2 REPLACED Undo payment functions: body_md5 (an
+--                and the 6 REPLACED live functions (the 2 Undo payment,
+--                the 2 Edit payment, Move to private and Undo move -
+--                v0.418 / v0.419): body_md5 (an
 --                md5 of the code without comments and spaces), security
 --                definer, settings (must say search_path=""), owner, and
 --                who may call it (role:EXECUTE, sorted)
@@ -26,9 +28,9 @@
 --   connection and every line must match. That proves production has
 --   exactly the code, rights and rules that passed the tests.
 --   (0003_, 0005_ and 0014_fingerprints.sql then differ from before 0030
---   ONLY as SETUP.md 0030c says: the two Undo payment lines, the new
---   testing_* function lines in 0003's list, and 0014's two new
---   paying_by_before rule lines.)
+--   ONLY as SETUP.md 0030c says: the six replaced function lines, the new
+--   testing_* function lines in 0003's list, and in 0014's file the new
+--   paying_by_before rule line and column right.)
 --
 -- CONNECTOR-SAFE: a single read-only SELECT, and none of its text uses
 -- the words the Supabase connection refuses (run.mjs checks this).
@@ -37,6 +39,8 @@
 with fns(name) as (
   values ('testing_mark_paid_by'), ('testing_private_mark_paid_by'),
          ('testing_undo_payment'), ('testing_private_undo_payment'),
+         ('testing_edit_payment'), ('testing_private_edit_payment'),
+         ('testing_move_to_private'), ('testing_private_undo_move'),
          ('testing_history_strip'), ('testing_registration_history'), ('testing_private_history'),
          ('testing_downloads_guard'), ('testing_results_csv')
 ),

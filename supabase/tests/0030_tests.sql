@@ -3,8 +3,8 @@
 -- ---------------------------------------------------------------------
 -- WHAT THIS FILE IS
 --   A manual test script for migrations/0030_color_belt_review.sql (Color
---   Belt design review, database half - rulebook v0.418). It checks, in
---   this order:
+--   Belt design review, database half - rulebook v0.418 and v0.419). It
+--   checks, in this order:
 --     W1  who may call what: anon may run none of the new functions;
 --         a session without data access gets no_access from every one;
 --         the desk gets not_allowed from the CSV
@@ -28,6 +28,23 @@
 --         own rows, no login ids (signature only "on file"), at most 500
 --         rows, invalid / not_found; a moved private testing shows only
 --         its own rows (the move row names the event)
+--     E1  Edit payment (event + private, v0.419): a changed way changes
+--         "Paying by" (logged, one batch, the version up once); edit then
+--         undo gets back to the family's choice; Mark paid by another way,
+--         then edit, then undo; edited to the family's own way; the same
+--         way leaves "Paying by" alone (the choice carried); an old-style
+--         payment is unaffected; a "Paying by" chosen since wins; Finance
+--         moves by exactly the edit
+--     V1  Move to private and Undo move carry paying_by_before: Undo
+--         payment on the private testing puts the family's choice back;
+--         Undo move brings it back to the event payment; an old-style
+--         payment moves with nothing kept; Finance totals unchanged by
+--         the move
+--     E2  more orders: edit, edit again, undo; a private edit with a
+--         top-up (the known low case: newest-first undo gets back to the
+--         family's choice, the other order does not); edit of a moved-in
+--         payment then undo; Undo move after an edit -> stale, nothing
+--         changed
 --     C1  results CSV: admins only, one download row per call (who, how
 --         many), exact keys, removed / duplicate / moved students left
 --         out, class + belt order; the download log can't be changed,
@@ -235,6 +252,11 @@ declare
   v_before jsonb;
   v_after  jsonb;
   v_fn    record;
+  v_ea    uuid;  v_eb  uuid;  v_ec  uuid;  v_ed  uuid;  v_ee  uuid;  v_ef  uuid;   -- E1's students
+  v_pa    uuid;                                                                  -- E1's private testing
+  v_ma    uuid;  v_mb  uuid;  v_mc  uuid;  v_pb  uuid;                           -- V1's students / private testing
+  v_old   uuid;  v_new uuid;                                                     -- the edited / the new payment
+  v_ra    uuid;  v_p1  uuid;  v_p2  uuid;                                        -- E2's student / private payments
   v_bad   text[] := array['created_by', 'updated_by', 'withdrawn_by', 'recorded_by', 'cancelled_by', 'submission_id',
                           'actor_id', 'session_id', 'batch_id', 'downloaded_by'];
 begin
@@ -295,7 +317,11 @@ begin
                           ('testing_private_mark_paid_by(uuid, integer, text, integer)'),
                           ('testing_registration_history(uuid)'), ('testing_private_history(uuid)'),
                           ('testing_results_csv(uuid)'), ('testing_undo_payment(uuid)'),
-                          ('testing_private_undo_payment(uuid)')) as f(sig)
+                          ('testing_private_undo_payment(uuid)'),
+                          ('testing_edit_payment(uuid, text, integer, date)'),
+                          ('testing_private_edit_payment(uuid, text, integer, date)'),
+                          ('testing_move_to_private(uuid, integer, date, time)'),
+                          ('testing_private_undo_move(uuid, integer)')) as f(sig)
   loop
     perform pg_temp.t_eq('W1 anon may not run ' || v_fn.sig,
       has_function_privilege('anon', 'public.' || v_fn.sig, 'execute')::text, 'false');
@@ -671,6 +697,337 @@ begin
 
 
   -- ===================================================================
+  -- E1. Edit payment makes "Paying by" follow too (v0.419)
+  -- ===================================================================
+  -- (a) an old-style cash payment (the old Mark paid) edited to card by an
+  --     admin: "Paying by" becomes card in the same batch, the version goes
+  --     up once, the new payment keeps the family's choice (cash), and
+  --     Finance moves by exactly the edit
+  v_ea := pg_temp.t_reg(v_e2, v_e2k1, 'Cb30', 'Edit old', 'cash');
+  v_r := pg_temp.t_call('authenticated', v_c_d1, format('public.testing_mark_paid(%L, 1)', v_ea));
+  perform pg_temp.t_eq('E1 setup: an old-style cash payment', (v_r ->> 'status') || ':' || (v_r ->> 'method'), 'ok:cash');
+  v_old := (v_r ->> 'payment_id')::uuid;
+  v_v := pg_temp.t_ver(v_ea);
+  v_before := pg_temp.t_call('authenticated', v_c_d1, format('public.finance_day(%L, %L)', 'worcester', v_today));
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_edit_payment(%L, %L, 6500, %L)', v_old, 'card', v_today));
+  perform pg_temp.t_eq('E1 edit to card: ok, the same answer keys as before 0030',
+    (v_r ->> 'status') || ':' || (select string_agg(k, ',' order by k collate "C") from jsonb_object_keys(v_r) k),
+    'ok:payment_id,status,version');
+  v_new := (v_r ->> 'payment_id')::uuid;
+  perform pg_temp.t_eq('E1 edit to card: the version goes up exactly once, paying by is card',
+    ((v_r ->> 'version')::integer - v_v) || ':' || (pg_temp.t_ver(v_ea) - v_v) || ':' || pg_temp.t_paying(v_ea), '1:1:card');
+  perform pg_temp.t_eq('E1 edit to card: the new payment is card and keeps the family''s choice (cash)',
+    (select p.kind || ':' || p.method || ':' || p.amount_cents || ':' || coalesce(p.paying_by_before, '-')
+       from public.testing_payments p where p.id = v_new), 'payment:card:6500:cash');
+  select i.batch_id into v_batch from public.change_log i where i.table_name = 'testing_payments' and i.record_id = v_new;
+  perform pg_temp.t_eq('E1 edit to card: one batch - the reversal, the new payment and the registration (cash -> card), all edit_payment',
+    (select string_agg(l.table_name || ':' || l.action || ':' || coalesce((l.before ->> 'paying_by') || '>' || (l.after ->> 'paying_by'), '-'),
+                       ',' order by l.table_name, l.id)
+       from public.change_log l where l.batch_id = v_batch),
+    'testing_payments:edit_payment:-,testing_payments:edit_payment:-,testing_registrations:edit_payment:cash>card');
+  v_after := pg_temp.t_call('authenticated', v_c_d1, format('public.finance_day(%L, %L)', 'worcester', v_today));
+  perform pg_temp.t_eq('E1 Finance: card +65.00, cash -65.00, check unchanged (exactly the edit)',
+    (pg_temp.t_cents(v_after, 'card') - pg_temp.t_cents(v_before, 'card')) || ':'
+      || (pg_temp.t_cents(v_after, 'cash') - pg_temp.t_cents(v_before, 'cash')) || ':'
+      || (pg_temp.t_cents(v_after, 'check') - pg_temp.t_cents(v_before, 'check')), '6500:-6500:0');
+  -- (b) edit, then Undo payment: back to the family's choice
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_undo_payment(%L)', v_new));
+  perform pg_temp.t_eq('E1 edit then undo: paying by back to cash, not paid',
+    (v_r ->> 'status') || ':' || pg_temp.t_paying(v_ea) || ':'
+      || (select sum(p.amount_cents) from public.testing_payments p where p.registration_id = v_ea), 'ok:cash:0');
+  v_after := pg_temp.t_call('authenticated', v_c_d1, format('public.finance_day(%L, %L)', 'worcester', v_today));
+  perform pg_temp.t_eq('E1 Finance after the undo: card back to before, cash -65.00 (the first payment is undone too), check unchanged',
+    (pg_temp.t_cents(v_after, 'card') - pg_temp.t_cents(v_before, 'card')) || ':'
+      || (pg_temp.t_cents(v_after, 'cash') - pg_temp.t_cents(v_before, 'cash')) || ':'
+      || (pg_temp.t_cents(v_after, 'check') - pg_temp.t_cents(v_before, 'check')), '0:-6500:0');
+
+  -- (c) Mark paid by card for a "cash" family, then edit to check, then
+  --     undo: paying by card -> check -> cash (the family's choice)
+  v_eb := pg_temp.t_reg(v_e2, v_e2k1, 'Cb30', 'Edit card', 'cash');
+  v_r := pg_temp.t_call('authenticated', v_c_d1, format('public.testing_mark_paid_by(%L, 1, %L, 6500)', v_eb, 'card'));
+  perform pg_temp.t_eq('E1 setup: paid by card, cash remembered', (v_r ->> 'status') || ':' || pg_temp.t_paying(v_eb), 'ok:card');
+  v_old := (v_r ->> 'payment_id')::uuid;
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_edit_payment(%L, %L, 6500, %L)', v_old, 'check', v_today));
+  v_new := (v_r ->> 'payment_id')::uuid;
+  perform pg_temp.t_eq('E1 mark paid by card, edit to check: paying by check, the new payment keeps cash',
+    (v_r ->> 'status') || ':' || pg_temp.t_paying(v_eb) || ':'
+      || (select p.method || ':' || p.paying_by_before from public.testing_payments p where p.id = v_new), 'ok:check:check:cash');
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_undo_payment(%L)', v_new));
+  perform pg_temp.t_eq('E1 mark paid by card, edit, undo: paying by back to cash', (v_r ->> 'status') || ':' || pg_temp.t_paying(v_eb), 'ok:cash');
+
+  -- (d) paid by card for a "cash" family, edited to cash (the family's own
+  --     way): paying by cash, nothing kept (never the payment's own way);
+  --     the undo leaves cash
+  v_ec := pg_temp.t_reg(v_e2, v_e2k1, 'Cb30', 'Edit back', 'cash');
+  v_old := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_mark_paid_by(%L, 1, %L, 6500)', v_ec, 'card')) ->> 'payment_id')::uuid;
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_edit_payment(%L, %L, 6500, %L)', v_old, 'cash', v_today));
+  v_new := (v_r ->> 'payment_id')::uuid;
+  perform pg_temp.t_eq('E1 edited to the family''s way: paying by cash, nothing kept',
+    (v_r ->> 'status') || ':' || pg_temp.t_paying(v_ec) || ':'
+      || (select coalesce(p.paying_by_before, '-') from public.testing_payments p where p.id = v_new), 'ok:cash:-');
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_undo_payment(%L)', v_new));
+  perform pg_temp.t_eq('E1 ... then undo: paying by stays cash', (v_r ->> 'status') || ':' || pg_temp.t_paying(v_ec), 'ok:cash');
+
+  -- (e) the same way (only the amount changes): paying by is left alone;
+  --     the family's choice is carried to the new payment, so the undo
+  --     still puts it back
+  v_ed := pg_temp.t_reg(v_e2, v_e2k1, 'Cb30', 'Edit amount', 'cash');
+  v_old := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_mark_paid_by(%L, 1, %L, 6500)', v_ed, 'card')) ->> 'payment_id')::uuid;
+  v_v := pg_temp.t_ver(v_ed);
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_edit_payment(%L, %L, 6000, %L)', v_old, 'card', v_today));
+  v_new := (v_r ->> 'payment_id')::uuid;
+  perform pg_temp.t_eq('E1 same way, new amount: paying by stays card, the version up once, cash carried',
+    (v_r ->> 'status') || ':' || pg_temp.t_paying(v_ed) || ':' || (pg_temp.t_ver(v_ed) - v_v) || ':'
+      || (select p.amount_cents || ':' || p.paying_by_before from public.testing_payments p where p.id = v_new), 'ok:card:1:6000:cash');
+  select i.batch_id into v_batch from public.change_log i where i.table_name = 'testing_payments' and i.record_id = v_new;
+  perform pg_temp.t_eq('E1 same way: the registration''s log row of the edit does not touch paying by',
+    (select (l.after ? 'paying_by')::text from public.change_log l where l.batch_id = v_batch and l.table_name = 'testing_registrations'), 'false');
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_undo_payment(%L)', v_new));
+  perform pg_temp.t_eq('E1 same way, then undo: paying by back to cash', (v_r ->> 'status') || ':' || pg_temp.t_paying(v_ed), 'ok:cash');
+
+  -- (f) old-style payments are unaffected when the way stays: a check
+  --     payment made by the old Mark paid (the way = "Paying by") edited
+  --     to another amount -> nothing kept, paying by stays; its undo
+  --     changes nothing extra
+  v_ee := pg_temp.t_reg(v_e2, v_e2k1, 'Cb30', 'Edit plain', 'check');
+  v_old := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_mark_paid(%L, 1)', v_ee)) ->> 'payment_id')::uuid;
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_edit_payment(%L, %L, 6000, %L)', v_old, 'check', v_today));
+  v_new := (v_r ->> 'payment_id')::uuid;
+  perform pg_temp.t_eq('E1 old-style, same way: paying by check, nothing kept',
+    (v_r ->> 'status') || ':' || pg_temp.t_paying(v_ee) || ':'
+      || (select coalesce(p.paying_by_before, '-') from public.testing_payments p where p.id = v_new), 'ok:check:-');
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_undo_payment(%L)', v_new));
+  perform pg_temp.t_eq('E1 old-style, then undo: paying by stays check', (v_r ->> 'status') || ':' || pg_temp.t_paying(v_ee), 'ok:check');
+
+  -- (g) a "Paying by" chosen since the payment wins (as in Undo payment):
+  --     paid by card for a "cash" family, then "Paying by" set to check
+  --     (here by hand, in the SQL Editor - the app's own
+  --     testing_change_paying_by refuses a paid student with already_paid,
+  --     so a change "since" can only come from a direct table write), then
+  --     edited to cash -> paying by cash, the new payment keeps check; the
+  --     undo puts check back
+  v_ef := pg_temp.t_reg(v_e2, v_e2k1, 'Cb30', 'Edit since', 'cash');
+  v_old := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_mark_paid_by(%L, 1, %L, 6500)', v_ef, 'card')) ->> 'payment_id')::uuid;
+  update public.testing_registrations set paying_by = 'check' where id = v_ef;
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_edit_payment(%L, %L, 6500, %L)', v_old, 'cash', v_today));
+  v_new := (v_r ->> 'payment_id')::uuid;
+  perform pg_temp.t_eq('E1 chosen since: paying by cash, the new payment keeps check',
+    (v_r ->> 'status') || ':' || pg_temp.t_paying(v_ef) || ':'
+      || (select p.paying_by_before from public.testing_payments p where p.id = v_new), 'ok:cash:check');
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_undo_payment(%L)', v_new));
+  perform pg_temp.t_eq('E1 chosen since, then undo: paying by back to check', (v_r ->> 'status') || ':' || pg_temp.t_paying(v_ef), 'ok:check');
+  -- the old refusals still answer the same
+  perform pg_temp.t_eq('E1 the desk may not edit a payment', pg_temp.t_call('authenticated', v_c_d1,
+    format('public.testing_edit_payment(%L, %L, 6500, %L)', v_new, 'cash', v_today)) ->> 'status', 'not_allowed');
+  perform pg_temp.t_eq('E1 edit of a reversed payment -> stale', pg_temp.t_call('authenticated', v_c_a1,
+    format('public.testing_edit_payment(%L, %L, 6500, %L)', v_new, 'cash', v_today)) ->> 'status', 'stale');
+
+  -- (h) private Edit payment: the same rule
+  v_pa := (pg_temp.t_call('authenticated', v_c_a1, format('public.testing_private_add(%L, %L, %L, %L, true, %L, %L, %L)',
+    'worcester', 'Cb30', 'Edit private', v_rk1, 'cash', v_today + 3, '17:00')) ->> 'id')::uuid;
+  v_old := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_private_mark_paid_by(%L, 1, %L, 8500)', v_pa, 'card')) ->> 'payment_id')::uuid;
+  v_v := pg_temp.t_pver(v_pa);
+  v_before := pg_temp.t_call('authenticated', v_c_d1, format('public.finance_day(%L, %L)', 'worcester', v_today));
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_private_edit_payment(%L, %L, 8500, %L)', v_old, 'check', v_today));
+  v_new := (v_r ->> 'payment_id')::uuid;
+  perform pg_temp.t_eq('E1 private edit card -> check: ok, same keys, version up once, paying by check, cash kept',
+    (v_r ->> 'status') || ':' || (select string_agg(k, ',' order by k collate "C") from jsonb_object_keys(v_r) k) || ':'
+      || ((v_r ->> 'version')::integer - v_v) || ':' || pg_temp.t_ppaying(v_pa) || ':'
+      || (select p.method || ':' || p.paying_by_before from public.testing_private_payments p where p.id = v_new),
+    'ok:payment_id,status,version:1:check:check:cash');
+  select i.batch_id into v_batch from public.change_log i where i.table_name = 'testing_private_payments' and i.record_id = v_new;
+  perform pg_temp.t_eq('E1 private edit: the private row card -> check in the same batch, private_edit_payment',
+    (select (l.before ->> 'paying_by') || '>' || (l.after ->> 'paying_by') || ':' || l.action
+       from public.change_log l where l.batch_id = v_batch and l.table_name = 'testing_private'), 'card>check:private_edit_payment');
+  v_after := pg_temp.t_call('authenticated', v_c_d1, format('public.finance_day(%L, %L)', 'worcester', v_today));
+  perform pg_temp.t_eq('E1 private edit, Finance: check +85.00, card -85.00, cash unchanged',
+    (pg_temp.t_cents(v_after, 'check') - pg_temp.t_cents(v_before, 'check')) || ':'
+      || (pg_temp.t_cents(v_after, 'card') - pg_temp.t_cents(v_before, 'card')) || ':'
+      || (pg_temp.t_cents(v_after, 'cash') - pg_temp.t_cents(v_before, 'cash')), '8500:-8500:0');
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_private_undo_payment(%L)', v_new));
+  perform pg_temp.t_eq('E1 private edit then undo: paying by back to cash, 85.00 owed',
+    (v_r ->> 'status') || ':' || pg_temp.t_ppaying(v_pa) || ':' || public.testing_private_amount_due(v_pa), 'ok:cash:8500');
+  -- private, the same way (only the amount): paying by left alone, cash carried, undo puts it back
+  v_old := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_private_mark_paid_by(%L, %s, %L, 8500)', v_pa,
+    pg_temp.t_pver(v_pa), 'card')) ->> 'payment_id')::uuid;
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_private_edit_payment(%L, %L, 8000, %L)', v_old, 'card', v_today));
+  v_new := (v_r ->> 'payment_id')::uuid;
+  perform pg_temp.t_eq('E1 private same way: paying by card, cash carried, 5.00 owed',
+    (v_r ->> 'status') || ':' || pg_temp.t_ppaying(v_pa) || ':'
+      || (select p.paying_by_before from public.testing_private_payments p where p.id = v_new) || ':'
+      || public.testing_private_amount_due(v_pa), 'ok:card:cash:500');
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_private_undo_payment(%L)', v_new));
+  perform pg_temp.t_eq('E1 private same way, then undo: paying by cash', (v_r ->> 'status') || ':' || pg_temp.t_ppaying(v_pa), 'ok:cash');
+
+
+  -- ===================================================================
+  -- V1. Move to private and Undo move carry the family's choice (v0.419)
+  -- ===================================================================
+  -- (a) paid by card for a "cash" family, then moved: the private testing
+  --     is paying by card, its moved-in payment keeps cash; an admin's Undo
+  --     payment on the private testing puts cash back. Finance: the move
+  --     changes no total (a transfer)
+  v_ma := pg_temp.t_reg(v_e2, v_e2k1, 'Cb30', 'Move card', 'cash');
+  perform pg_temp.t_eq('V1 setup: paid by card', pg_temp.t_call('authenticated', v_c_d1,
+    format('public.testing_mark_paid_by(%L, 1, %L, 6500)', v_ma, 'card')) ->> 'status', 'ok');
+  v_before := pg_temp.t_call('authenticated', v_c_d1, format('public.finance_day(%L, %L)', 'worcester', v_today));
+  v_r := pg_temp.t_call('authenticated', v_c_d1, format('public.testing_move_to_private(%L, 2, %L, %L)', v_ma, v_today + 4, '18:00'));
+  perform pg_temp.t_eq('V1 move: ok, the same answer keys as before 0030',
+    (v_r ->> 'status') || ':' || (select string_agg(k, ',' order by k collate "C") from jsonb_object_keys(v_r) k),
+    'ok:amount_due_cents,private_id,registration_version,result_cleared,status,version');
+  v_pb := (v_r ->> 'private_id')::uuid;
+  perform pg_temp.t_eq('V1 move: the private testing pays by card; its payment is card, moved, keeps cash',
+    pg_temp.t_ppaying(v_pb) || ':'
+      || (select string_agg(p.kind || ':' || p.method || ':' || (p.moved_from_payment_id is not null) || ':' || coalesce(p.paying_by_before, '-'), ',')
+            from public.testing_private_payments p where p.private_id = v_pb), 'card:payment:card:true:cash');
+  v_after := pg_temp.t_call('authenticated', v_c_d1, format('public.finance_day(%L, %L)', 'worcester', v_today));
+  perform pg_temp.t_eq('V1 move: Finance totals unchanged (cash, check, card)',
+    (pg_temp.t_cents(v_after, 'cash') - pg_temp.t_cents(v_before, 'cash')) || ':'
+      || (pg_temp.t_cents(v_after, 'check') - pg_temp.t_cents(v_before, 'check')) || ':'
+      || (pg_temp.t_cents(v_after, 'card') - pg_temp.t_cents(v_before, 'card')), '0:0:0');
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_private_undo_payment(%L)',
+    (select p.id from public.testing_private_payments p where p.private_id = v_pb)));
+  perform pg_temp.t_eq('V1 moved, then Undo payment on the private testing: paying by back to cash',
+    (v_r ->> 'status') || ':' || pg_temp.t_ppaying(v_pb), 'ok:cash');
+
+  -- (b) Undo move carries the kept choice back to the event payment; an
+  --     admin's Undo payment there then puts cash back
+  v_mb := pg_temp.t_reg(v_e2, v_e2k1, 'Cb30', 'Move back', 'cash');
+  perform pg_temp.t_eq('V1 setup: paid by card', pg_temp.t_call('authenticated', v_c_d1,
+    format('public.testing_mark_paid_by(%L, 1, %L, 6500)', v_mb, 'card')) ->> 'status', 'ok');
+  v_pb := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_move_to_private(%L, 2, %L, %L)', v_mb, v_today + 4, '18:00')) ->> 'private_id')::uuid;
+  v_r := pg_temp.t_call('authenticated', v_c_d1, format('public.testing_private_undo_move(%L, 1)', v_pb));
+  perform pg_temp.t_eq('V1 undo move: ok, the same answer keys as before 0030, the registration pays by card',
+    (v_r ->> 'status') || ':' || (select string_agg(k, ',' order by k collate "C") from jsonb_object_keys(v_r) k) || ':' || pg_temp.t_paying(v_mb),
+    'ok:registration_id,registration_version,status:card');
+  select p.id into v_new from public.testing_payments p
+   where p.registration_id = v_mb and p.kind = 'payment'
+     and not exists (select 1 from public.testing_payments x where x.reverses_payment_id = p.id);
+  perform pg_temp.t_eq('V1 undo move: the event payment again is card, keeps cash, no "recorded by" login',
+    (select p.method || ':' || p.paying_by_before || ':' || (p.recorded_by is null) from public.testing_payments p where p.id = v_new),
+    'card:cash:true');
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_undo_payment(%L)', v_new));
+  perform pg_temp.t_eq('V1 undo move, then Undo payment: paying by back to cash', (v_r ->> 'status') || ':' || pg_temp.t_paying(v_mb), 'ok:cash');
+
+  -- (c) an old-style payment moves (and comes back) with nothing kept
+  v_mc := pg_temp.t_reg(v_e2, v_e2k1, 'Cb30', 'Move plain', 'check');
+  perform pg_temp.t_eq('V1 setup: old-style check payment', pg_temp.t_call('authenticated', v_c_d1,
+    format('public.testing_mark_paid(%L, 1)', v_mc)) ->> 'status', 'ok');
+  v_pb := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_move_to_private(%L, 2, %L, %L)', v_mc, v_today + 4, '18:00')) ->> 'private_id')::uuid;
+  perform pg_temp.t_eq('V1 old-style moved: paying by check, nothing kept',
+    pg_temp.t_ppaying(v_pb) || ':' || (select string_agg(coalesce(p.paying_by_before, '-'), ',') from public.testing_private_payments p where p.private_id = v_pb),
+    'check:-');
+  perform pg_temp.t_eq('V1 old-style: undo move ok', pg_temp.t_call('authenticated', v_c_d1,
+    format('public.testing_private_undo_move(%L, 1)', v_pb)) ->> 'status', 'ok');
+  perform pg_temp.t_eq('V1 old-style back: nothing kept on the event payment, paying by check',
+    (select string_agg(coalesce(p.paying_by_before, '-'), ',') from public.testing_payments p
+      where p.registration_id = v_mc and p.kind = 'payment'
+        and not exists (select 1 from public.testing_payments x where x.reverses_payment_id = p.id)) || ':' || pg_temp.t_paying(v_mc),
+    '-:check');
+
+
+  -- ===================================================================
+  -- E2. More Edit payment orders (the v0.419 security review's follow-ups)
+  -- ===================================================================
+  -- (a) event: Mark paid by card (family: cash), edit to check, edit again
+  --     to cash, then undo the newest payment
+  v_ra := pg_temp.t_reg(v_e2, v_e2k1, 'Cb30', 'Edit twice', 'cash');
+  v_old := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_mark_paid_by(%L, 1, %L, 6500)', v_ra, 'card')) ->> 'payment_id')::uuid;
+  perform pg_temp.t_eq('E2a step 1 Mark paid by card: paying by card, the payment keeps cash',
+    pg_temp.t_paying(v_ra) || ':' || (select p.paying_by_before from public.testing_payments p where p.id = v_old), 'card:cash');
+  v_new := (pg_temp.t_call('authenticated', v_c_a1, format('public.testing_edit_payment(%L, %L, 6500, %L)', v_old, 'check', v_today)) ->> 'payment_id')::uuid;
+  perform pg_temp.t_eq('E2a step 2 edit to check: paying by check, the new payment keeps cash',
+    pg_temp.t_paying(v_ra) || ':' || (select p.method || ':' || p.paying_by_before from public.testing_payments p where p.id = v_new), 'check:check:cash');
+  v_old := v_new;
+  v_new := (pg_temp.t_call('authenticated', v_c_a1, format('public.testing_edit_payment(%L, %L, 6500, %L)', v_old, 'cash', v_today)) ->> 'payment_id')::uuid;
+  perform pg_temp.t_eq('E2a step 3 edit again to cash (the family''s way): paying by cash, nothing kept',
+    pg_temp.t_paying(v_ra) || ':' || (select p.method || ':' || coalesce(p.paying_by_before, '-') from public.testing_payments p where p.id = v_new),
+    'cash:cash:-');
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_undo_payment(%L)', v_new));
+  perform pg_temp.t_eq('E2a step 4 undo the newest: paying by stays cash (the family''s choice), not paid',
+    (v_r ->> 'status') || ':' || pg_temp.t_paying(v_ra) || ':'
+      || (select sum(p.amount_cents) from public.testing_payments p where p.registration_id = v_ra), 'ok:cash:0');
+
+  -- (b) private, an edit with a top-up - THE KNOWN LOW CASE (SETUP 0030,
+  --     "Not fixed"): family cash; P1 85.00 cash (the old Mark paid); the
+  --     price goes up to 90.00, so the 5.00 top-up P2 is paid by card
+  --     (paying by card, P2 keeps cash); then an admin edits P1 cash ->
+  --     check. Today: paying by check, the new P1' keeps card (the family's
+  --     choice as far as P1 can tell: "Paying by" was card). Undo newest
+  --     first (P1', then P2) gets back to cash; the other order ends on
+  --     card - the family's choice is lost and an admin sets it by hand.
+  v_pa := (pg_temp.t_call('authenticated', v_c_a1, format('public.testing_private_add(%L, %L, %L, %L, true, %L, %L, %L)',
+    'worcester', 'Cb30', 'Top-up edit', v_rk1, 'cash', v_today + 3, '17:00')) ->> 'id')::uuid;
+  v_p1 := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_private_mark_paid(%L, 1)', v_pa)) ->> 'payment_id')::uuid;
+  update public.testing_private set private_cents = 9000 where id = v_pa;   -- the price goes up (as the SQL Editor)
+  v_r := pg_temp.t_call('authenticated', v_c_d1, format('public.testing_private_mark_paid_by(%L, %s, %L, 500)', v_pa, pg_temp.t_pver(v_pa), 'card'));
+  v_p2 := (v_r ->> 'payment_id')::uuid;
+  perform pg_temp.t_eq('E2b top-up 5.00 by card: paying by card, P2 keeps cash',
+    (v_r ->> 'status') || ':' || pg_temp.t_ppaying(v_pa) || ':'
+      || (select p.amount_cents || ':' || p.paying_by_before from public.testing_private_payments p where p.id = v_p2), 'ok:card:500:cash');
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_private_edit_payment(%L, %L, 8500, %L)', v_p1, 'check', v_today));
+  v_new := (v_r ->> 'payment_id')::uuid;
+  perform pg_temp.t_eq('E2b (known low case) edit P1 cash -> check: paying by check, P1'' keeps card, nothing owed',
+    (v_r ->> 'status') || ':' || pg_temp.t_ppaying(v_pa) || ':'
+      || (select p.paying_by_before from public.testing_private_payments p where p.id = v_new) || ':'
+      || public.testing_private_amount_due(v_pa), 'ok:check:card:0');
+  -- the other order first, inside a block that is rolled back: P2 first, then P1'
+  begin
+    perform pg_temp.t_eq('E2b other order: undo P2 first -> paying by stays check',
+      (pg_temp.t_call('authenticated', v_c_a1, format('public.testing_private_undo_payment(%L)', v_p2)) ->> 'status') || ':' || pg_temp.t_ppaying(v_pa),
+      'ok:check');
+    perform pg_temp.t_eq('E2b other order: then undo P1'' -> card (the family''s cash is lost - the known low case)',
+      (pg_temp.t_call('authenticated', v_c_a1, format('public.testing_private_undo_payment(%L)', v_new)) ->> 'status') || ':' || pg_temp.t_ppaying(v_pa),
+      'ok:card');
+    raise exception 'E2b roll back';
+  exception when raise_exception then
+    if sqlerrm <> 'E2b roll back' then raise; end if;
+  end;
+  perform pg_temp.t_eq('E2b the other order was rolled back', pg_temp.t_ppaying(v_pa) || ':' || public.testing_private_amount_due(v_pa), 'check:0');
+  -- newest first: P1', then P2 -> cash
+  perform pg_temp.t_eq('E2b newest first: undo P1'' -> paying by card',
+    (pg_temp.t_call('authenticated', v_c_a1, format('public.testing_private_undo_payment(%L)', v_new)) ->> 'status') || ':' || pg_temp.t_ppaying(v_pa),
+    'ok:card');
+  -- (the call is its own statement: testing_private_amount_due is "stable", so in the same
+  -- statement it would still see the rows from before the undo)
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_private_undo_payment(%L)', v_p2));
+  perform pg_temp.t_eq('E2b newest first: then undo P2 -> paying by cash (the family''s choice), 90.00 owed',
+    (v_r ->> 'status') || ':' || pg_temp.t_ppaying(v_pa) || ':' || public.testing_private_amount_due(v_pa), 'ok:cash:9000');
+
+  -- (c) private: edit a moved-in payment, then Undo payment -> the family's choice
+  v_ma := pg_temp.t_reg(v_e2, v_e2k1, 'Cb30', 'Move edit', 'cash');
+  perform pg_temp.t_eq('E2c setup: paid by card', pg_temp.t_call('authenticated', v_c_d1,
+    format('public.testing_mark_paid_by(%L, 1, %L, 6500)', v_ma, 'card')) ->> 'status', 'ok');
+  v_pb := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_move_to_private(%L, 2, %L, %L)', v_ma, v_today + 4, '18:00')) ->> 'private_id')::uuid;
+  v_old := (select p.id from public.testing_private_payments p where p.private_id = v_pb);
+  v_r := pg_temp.t_call('authenticated', v_c_a1, format('public.testing_private_edit_payment(%L, %L, 6500, %L)', v_old, 'check', v_today));
+  v_new := (v_r ->> 'payment_id')::uuid;
+  perform pg_temp.t_eq('E2c edit the moved-in card payment to check: paying by check, the new payment keeps cash',
+    (v_r ->> 'status') || ':' || pg_temp.t_ppaying(v_pb) || ':'
+      || (select p.paying_by_before from public.testing_private_payments p where p.id = v_new), 'ok:check:cash');
+  perform pg_temp.t_eq('E2c then Undo payment: paying by back to cash',
+    (pg_temp.t_call('authenticated', v_c_a1, format('public.testing_private_undo_payment(%L)', v_new)) ->> 'status') || ':' || pg_temp.t_ppaying(v_pb),
+    'ok:cash');
+
+  -- (d) Undo move after an edit: stale (0014 9b: a payment recorded here
+  --     or a reversal), and nothing changes
+  v_mb := pg_temp.t_reg(v_e2, v_e2k1, 'Cb30', 'Move edit undo', 'cash');
+  perform pg_temp.t_eq('E2d setup: paid by card', pg_temp.t_call('authenticated', v_c_d1,
+    format('public.testing_mark_paid_by(%L, 1, %L, 6500)', v_mb, 'card')) ->> 'status', 'ok');
+  v_pb := (pg_temp.t_call('authenticated', v_c_d1, format('public.testing_move_to_private(%L, 2, %L, %L)', v_mb, v_today + 4, '18:00')) ->> 'private_id')::uuid;
+  perform pg_temp.t_eq('E2d setup: an admin edits the moved-in payment', pg_temp.t_call('authenticated', v_c_a1,
+    format('public.testing_private_edit_payment(%L, %L, 6500, %L)', (select p.id from public.testing_private_payments p where p.private_id = v_pb),
+           'check', v_today)) ->> 'status', 'ok');
+  v_s := pg_temp.t_state();
+  -- the current version (so the "anything changed since" check is the one that answers)
+  perform pg_temp.t_eq('E2d undo move after the edit -> stale', pg_temp.t_call('authenticated', v_c_d1,
+    format('public.testing_private_undo_move(%L, %s)', v_pb, pg_temp.t_pver(v_pb))) ->> 'status', 'stale');
+  perform pg_temp.t_eq('E2d ... and nothing changed', pg_temp.t_state(), v_s);
+  perform pg_temp.t_eq('E2d the private testing is still there, paying by check, the registration still withdrawn',
+    pg_temp.t_ppaying(v_pb) || ':' || (select r.status from public.testing_registrations r where r.id = v_mb), 'check:withdrawn');
+
+
+  -- ===================================================================
   -- C1. The results CSV (event E1, today)
   -- ===================================================================
   -- E1 already has "Cb30 Today" (Yellow, paid 75.00 by check). Add:
@@ -780,6 +1137,7 @@ begin
       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public'
        and p.proname in ('testing_mark_paid_by', 'testing_private_mark_paid_by', 'testing_undo_payment', 'testing_private_undo_payment',
+                         'testing_edit_payment', 'testing_private_edit_payment', 'testing_move_to_private', 'testing_private_undo_move',
                          'testing_registration_history', 'testing_private_history', 'testing_results_csv',
                          'testing_history_strip', 'testing_downloads_guard', 'testing_mark_paid', 'testing_private_mark_paid')
   loop
@@ -794,12 +1152,13 @@ begin
       raise exception 'TEST FAILED: K1 % (definer %, rights "%")', v_fn.proname, v_fn.prosecdef, v_fn.rights;
     end if;
   end loop;
-  perform pg_temp.t_eq('K1 each function once (the old Mark paid functions still there)',
+  perform pg_temp.t_eq('K1 each function once (the old Mark paid functions still there; the replaced ones not doubled)',
     (select count(*)::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public'
         and p.proname in ('testing_mark_paid_by', 'testing_private_mark_paid_by', 'testing_undo_payment', 'testing_private_undo_payment',
+                          'testing_edit_payment', 'testing_private_edit_payment', 'testing_move_to_private', 'testing_private_undo_move',
                           'testing_registration_history', 'testing_private_history', 'testing_results_csv',
-                          'testing_history_strip', 'testing_downloads_guard', 'testing_mark_paid', 'testing_private_mark_paid')), '11');
+                          'testing_history_strip', 'testing_downloads_guard', 'testing_mark_paid', 'testing_private_mark_paid')), '15');
   perform pg_temp.t_eq('K1 the history readers are stable, the writers volatile',
     (select string_agg(p.proname || '=' || p.provolatile::text, ',' order by p.proname collate "C") from pg_proc p
        join pg_namespace n on n.oid = p.pronamespace

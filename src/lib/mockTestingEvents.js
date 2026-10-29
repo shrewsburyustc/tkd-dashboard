@@ -52,6 +52,10 @@
 //     remembers the old one (paying_by_before) so Undo payment can put it back.
 //   testing_undo_payment / testing_private_undo_payment: the same answer as before, plus that
 //     "put it back" (only while "Paying by" is still the payment's way).
+//   testing_edit_payment / testing_private_edit_payment (v0.419): an edit that changes the way
+//     changes "Paying by" too, and the new payment keeps the family's choice, so Undo payment
+//     still puts it back (editPayingBy). testing_move_to_private / testing_private_undo_move copy
+//     paying_by_before with the payments they copy. Answers unchanged.
 //   testing_registration_history / testing_private_history (CB7): the History line, read from
 //     the preview's change_log. Since 0030 EVERY ok write here keeps history rows with their
 //     before / after (worked out by comparing the data before and after the call, like the
@@ -982,6 +986,24 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
   const payingByBack = (row, payment) => ((payment.paying_by_before ?? null) !== null && row.paying_by === payment.method
     ? { paying_by: payment.paying_by_before } : {});
 
+  // 0030 (v0.419): Edit payment's "Paying by" rule (the migration's section 4b), for the event and
+  // the private Edit payment alike. row = the registration / private testing, payment = the one
+  // being edited, method = the edit's way. → { changes, before }:
+  //   the family's choice = what Undo of the old payment would leave (its paying_by_before while
+  //     "Paying by" is still its way, otherwise "Paying by" itself — a choice made since wins);
+  //   changes  = { paying_by: method } only when the edit CHANGES the way (an amount / day edit
+  //              leaves "Paying by" alone);
+  //   before   = the new payment's paying_by_before: the family's choice, but only when "Paying
+  //              by" will equal the new way and the choice is a different way (else null).
+  const editPayingBy = (row, payment, method) => {
+    const choice = (payment.paying_by_before ?? null) !== null && row.paying_by === payment.method ? payment.paying_by_before : row.paying_by;
+    const after = method !== payment.method ? method : row.paying_by;
+    return {
+      changes: after !== row.paying_by ? { paying_by: after } : {},
+      before: after === method && choice !== method ? choice : null,
+    };
+  };
+
   // ----- 0030: History (testing_registration_history / testing_private_history) -----
   // What History shows of before / after: no login ids, and a signature only as "on file"
   // (0030's testing_history_strip).
@@ -1358,6 +1380,8 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
     },
 
     // Edit payment (admins): the old payment is reversed and a new one recorded.
+    // 0030 (v0.419): a changed way changes "Paying by" too, and the new payment keeps the
+    // family's choice (editPayingBy). The answer is unchanged.
     testing_private_edit_payment(db, a, ctx) {
       if (a.p_payment_id === null || !PAYING_BY.includes(a.p_method) || a.p_paid_on === null || a.p_paid_on > today()) return st('invalid');
       if (a.p_amount_cents === null || a.p_amount_cents <= 0 || a.p_amount_cents > MAX_PAYMENT_CENTS) return st('invalid');
@@ -1371,8 +1395,11 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       const reversal = newPrivatePayment(db, {
         private_id: row.id, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(), reverses_payment_id: payment.id,
       }, ctx);
-      const replacement = newPrivatePayment(db, { private_id: row.id, amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on }, ctx);
-      updatePrivate(row, {}, ctx, true);
+      const follow = editPayingBy(row, payment, a.p_method);
+      const replacement = newPrivatePayment(db, {
+        private_id: row.id, amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on, paying_by_before: follow.before,
+      }, ctx);
+      updatePrivate(row, follow.changes, ctx, true);
       for (const p of [reversal, replacement]) logChange(db, batchId, 'private_edit_payment', 'testing_private_payments', 'insert', p.id, ctx);
       logChange(db, batchId, 'private_edit_payment', 'testing_private', 'update', row.id, ctx);
       return { status: 'ok', payment_id: replacement.id, version: row.version };
@@ -1501,7 +1528,11 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       // (d) one private payment per moved payment (same amount, method and day).
       for (const p of live) {
         // recorded_at stays the ORIGINAL payment's, so "the most recent payment" stays the same one (M1).
-        const moved = newPrivatePayment(db, { private_id: row.id, amount_cents: p.amount_cents, method: p.method, paid_on: p.paid_on, moved_from_payment_id: p.id, recorded_at: p.recorded_at }, ctx);
+        // 0030 (v0.419): the family's choice (paying_by_before) moves with the payment.
+        const moved = newPrivatePayment(db, {
+          private_id: row.id, amount_cents: p.amount_cents, method: p.method, paid_on: p.paid_on, moved_from_payment_id: p.id, recorded_at: p.recorded_at,
+          paying_by_before: p.paying_by_before ?? null,
+        }, ctx);
         logChange(db, batchId, 'move_to_private', 'testing_private_payments', 'insert', moved.id, ctx);
       }
       // (e) a testing-day No show (and its note) is removed.
@@ -1536,6 +1567,7 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
         const back = {
           id: newId(), registration_id: reg.id, kind: 'payment', amount_cents: p.amount_cents, method: p.method, paid_on: p.paid_on,
           recorded_at: p.recorded_at, recorded_by: null, recorded_by_name: ctx.actorName, reverses_payment_id: null, // its original moment (M1)
+          paying_by_before: p.paying_by_before ?? null, // 0030 (v0.419): the family's choice comes back with it
         };
         db.payments.push(back);
         logChange(db, batchId, 'undo_move_to_private', 'testing_payments', 'insert', back.id, ctx);
@@ -1860,9 +1892,14 @@ export function createEventsBackend({ readBase, saveStore, now = () => Date.now(
       const at = stamp();
       const common = { registration_id: reg.id, recorded_at: at, recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName };
       db.payments.push({ id: newId(), ...common, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(), reverses_payment_id: payment.id });
-      const replacement = { id: newId(), ...common, kind: 'payment', amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on, reverses_payment_id: null };
+      // 0030 (v0.419): a changed way changes "Paying by" too; the new payment keeps the family's choice.
+      const follow = editPayingBy(reg, payment, a.p_method);
+      const replacement = {
+        id: newId(), ...common, kind: 'payment', amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on, reverses_payment_id: null,
+        paying_by_before: follow.before,
+      };
       db.payments.push(replacement);
-      updateRow(reg, {}, ctx, true);
+      updateRow(reg, follow.changes, ctx, true);
       return { status: 'ok', payment_id: replacement.id, version: reg.version };
     },
 

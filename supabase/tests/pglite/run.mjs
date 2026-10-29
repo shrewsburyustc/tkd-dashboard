@@ -417,8 +417,9 @@
 //   step0030. 0030 (Color Belt design review, database half, v0.418:
 //       Mark paid with a way to pay, History, results CSV) on its own
 //       database in the production order with every live migration
-//       (step0031's order with 0026, then 0031): only the two Undo
-//       payment bodies move and only 0030's new functions / rule are
+//       (step0031's order with 0026, then 0031): only the six replaced
+//       bodies move (Undo payment, Edit payment, Move to private, Undo
+//       move - v0.418 / v0.419) and only 0030's new functions / rule are
 //       added, 0030's tests and the Color Belt + Finance tests (0005,
 //       0010, 0014, 0018, 0026) before and after, re-run safety, and the
 //       Undo of SETUP.md 0030e (manual/0030u) - see step0030 below. Run
@@ -6628,7 +6629,9 @@ async function step0031() {
 //   b. the Color Belt and Finance tests pass BEFORE 0030 (the baseline:
 //      0005, 0010, 0014, 0018, 0026)
 //   c. apply 0030: in every other fingerprint file ONLY these lines move:
-//      testing_undo_payment and testing_private_undo_payment (body md5
+//      testing_undo_payment, testing_private_undo_payment,
+//      testing_edit_payment, testing_private_edit_payment,
+//      testing_move_to_private and testing_private_undo_move (body md5
 //      only - rights, owner, definer and settings stay) in 0003's and
 //      0005's / 0014's files; 0003's list gains exactly the 7 new
 //      testing_* functions; 0014's file gains exactly the new
@@ -6689,7 +6692,11 @@ async function step0030() {
   const migration = read('migrations', '0030_color_belt_review.sql');
   if (!(await run(db, `${L}apply 0030_color_belt_review.sql`, migration))) return null;
   const after = await printsOf(db, numbers);
-  const undoFns = ['testing_undo_payment', 'testing_private_undo_payment'];
+  // the six live functions 0030 replaces in place (v0.418: Undo payment; v0.419: Edit payment, Move, Undo move)
+  const undoFns = ['testing_undo_payment', 'testing_private_undo_payment', 'testing_edit_payment', 'testing_private_edit_payment',
+    'testing_move_to_private', 'testing_private_undo_move'];
+  const replacedIn = { '0005': ['testing_undo_payment', 'testing_edit_payment'],
+    '0014': ['testing_private_undo_payment', 'testing_private_edit_payment', 'testing_move_to_private', 'testing_private_undo_move'] };
   const newFns = ['testing_mark_paid_by', 'testing_private_mark_paid_by', 'testing_history_strip', 'testing_registration_history',
     'testing_private_history', 'testing_downloads_guard', 'testing_results_csv'];
   const parts = (line) => line.split('  ');
@@ -6716,8 +6723,7 @@ async function step0030() {
     for (const g of gone) {
       const [kind, item, detail] = parts(g);
       const twin = added.find((a) => parts(a)[0] === kind && parts(a)[1] === item);
-      const replacedHere = (n === '0005' && item === 'testing_undo_payment(p_payment_id uuid)')
-        || (n === '0014' && item === 'testing_private_undo_payment(p_payment_id uuid)');
+      const replacedHere = (replacedIn[n] || []).includes(item.split('(')[0]);
       // 0014's table line for testing_private_payments: only the one new column right
       // (0014's rule: every column but the login ids is readable by authenticated)
       const privateTable = n === '0014' && kind === 'table' && item === 'testing_private_payments';
@@ -6737,13 +6743,14 @@ async function step0030() {
       if (!isTwin && !newRule) wrong.push(`${n}: added ${a}`);
     }
   }
-  record(`${L}fingerprints: only the 2 Undo payment bodies and the private payments' column rights (+ paying_by_before) moved, only 0030's 7 functions (0003's list) and 1 private payment rule (0014's file) were added; everything else byte-identical`,
+  record(`${L}fingerprints: only the 6 replaced bodies (Undo payment, Edit payment, Move, Undo move) and the private payments' column rights (+ paying_by_before) moved, only 0030's 7 functions (0003's list) and 1 private payment rule (0014's file) were added; everything else byte-identical`,
     wrong.length === 0, wrong.join('; ') || `${numbers.length - 1} files`);
   const prints30 = after['0030_fingerprints.sql'];
   const fn = (name) => prints30.find((l) => l.startsWith(`function  ${name}(`)) || '';
   const appFns = ['testing_mark_paid_by', 'testing_private_mark_paid_by', 'testing_undo_payment', 'testing_private_undo_payment',
+    'testing_edit_payment', 'testing_private_edit_payment', 'testing_move_to_private', 'testing_private_undo_move',
     'testing_registration_history', 'testing_private_history', 'testing_results_csv'];
-  record(`${L}0030 fingerprints: the 7 app functions are security definer, search_path="", only postgres and authenticated may run them`,
+  record(`${L}0030 fingerprints: the 11 app functions are security definer, search_path="", only postgres and authenticated may run them`,
     appFns.every((x) => fn(x).includes('definer=true') && fn(x).includes('settings=search_path=""')
       && fn(x).endsWith('rights=authenticated:EXECUTE,postgres:EXECUTE')), appFns.map(fn).join(' | '));
   record(`${L}0030 fingerprints: testing_history_strip and testing_downloads_guard are for nobody`,
@@ -6758,8 +6765,8 @@ async function step0030() {
     cols.length === 2 && cols.some((l) => l === 'column  testing_payments.paying_by_before  text notnull=false rights=')
       && cols.some((l) => l === 'column  testing_private_payments.paying_by_before  text notnull=false rights=authenticated:SELECT'),
     cols.join(' | '));
-  record(`${L}0030 fingerprints: ${prints30.length} lines (9 functions, 1 table, 2 columns, 2 triggers, 4 rules)`,
-    prints30.length === 18, String(prints30.length));
+  record(`${L}0030 fingerprints: ${prints30.length} lines (13 functions, 1 table, 2 columns, 2 triggers, 4 rules)`,
+    prints30.length === 22, String(prints30.length));
 
   // d. the tests
   await tests('after 0030', [['0030_tests.sql', 'ALL 0030 TESTS PASSED'], ...baseline]);
@@ -6782,7 +6789,7 @@ async function step0030() {
       && JSON.stringify(before[`${n}_fingerprints.sql`]) !== JSON.stringify(undone[`${n}_fingerprints.sql`]));
     record(`${L}[undo 0030] every fingerprint file equals the one before 0030`,
       back.length === 0, back.length ? `differ: ${back.join(', ')}` : `${numbers.length - 1} files`);
-    record(`${L}[undo 0030] 0030's own fingerprints are back to "before" (only the 2 old Undo payment functions)`,
+    record(`${L}[undo 0030] 0030's own fingerprints are back to "before" (only the 6 old replaced functions)`,
       JSON.stringify(undone['0030_fingerprints.sql']) === JSON.stringify(before['0030_fingerprints.sql']),
       undone['0030_fingerprints.sql'].join(' | '));
     await tests('after the undo', baseline);

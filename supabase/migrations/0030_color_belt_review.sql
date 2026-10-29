@@ -2,11 +2,11 @@
 -- 0030_color_belt_review.sql
 -- ---------------------------------------------------------------------
 -- WHAT THIS FILE IS
---   The database half of the Color Belt design review (rulebook v0.418;
---   plan: docs/Testing/Color Belt Testing/TKD-ColorBelt-0030-Plan.md,
---   Jeffrey's answers Q1-Q5). It runs after 0005, 0010, 0014 and 0018
---   (all live) and stops with a clear message if something it needs is
---   missing.
+--   The database half of the Color Belt design review (rulebook v0.418
+--   and v0.419; plan: docs/Testing/Color Belt Testing/
+--   TKD-ColorBelt-0030-Plan.md, Jeffrey's answers Q1-Q6). It runs after
+--   0005, 0010, 0014 and 0018 (all live) and stops with a clear message
+--   if something it needs is missing.
 --
 -- WHY IT EXISTS
 --   The reviewed screens need three things the database can't do yet:
@@ -19,10 +19,12 @@
 --   1. one new column on each of the two payment tables:
 --      testing_payments.paying_by_before and
 --      testing_private_payments.paying_by_before (text, NULL). Set ONLY
---      when Mark paid by a different way also changed the student's
---      "Paying by" - it remembers the old value, so Undo payment can put
---      it back (Q2). The payment tables stay append-only (their guards
---      refuse every update), so the value can never change later. Read
+--      when Mark paid by a different way (or an admin's Edit payment to
+--      a different way, v0.419) also changed the student's "Paying by" -
+--      it remembers the family's choice, so Undo payment can put it back
+--      (Q2); Move to private and Undo move copy it with the payment.
+--      The payment tables stay append-only (their guards refuse every
+--      update), so the value can never change later. Read
 --      rights follow each table's own rule (section 2): not readable on
 --      testing_payments, readable on testing_private_payments. Finance
 --      never reads it (Finance names its columns one by one).
@@ -41,11 +43,27 @@
 --      (in the same batch, so it is logged with the undo). For payments
 --      made by the old functions (paying_by_before NULL) nothing extra
 --      happens. Their answer stays {"status":"ok","version":n}.
+--   3b. FOUR MORE REPLACED live functions (v0.419, "A: follows too"; same
+--      names, same arguments, same rights, same statuses and answers):
+--        testing_edit_payment (0005 14l) and testing_private_edit_payment
+--          (0014 8g): an admin's Edit payment that changes the way it was
+--          paid also changes "Paying by" to the new way (same update and
+--          batch, logged), and the new payment keeps the family's choice
+--          in paying_by_before, so Undo payment still puts back what the
+--          family chose (the exact rule: section 4b).
+--        testing_move_to_private (0014 9a) and testing_private_undo_move
+--          (0014 9b): the payments they copy also copy paying_by_before
+--          (section 4c). Nothing else in them changes.
+--      None of the six is replaced by any later migration (0018, 0026
+--      and the rest only read the payment tables), so their live bodies
+--      are 0005's / 0014's.
 --      THEIR FINGERPRINTS CHANGE: in 0003_, 0005_ and
---      0014_fingerprints.sql these two function lines move (body md5
---      only); 0014's file also shows the new rule line and the new column
---      right on testing_private_payments (section 2); 0003's list gains
---      the new testing_* functions. Nothing else moves.
+--      0014_fingerprints.sql these six function lines move (body md5
+--      only: testing_undo_payment and testing_edit_payment in 0005's
+--      file, the other four in 0014's, all six in 0003's list); 0014's
+--      file also shows the new rule line and the new column right on
+--      testing_private_payments (section 2); 0003's list gains the new
+--      testing_* functions. Nothing else moves.
 --   4. CB7 - testing_history_strip (helper, nobody in the app may call
 --      it), testing_registration_history and testing_private_history.
 --   5. CB18 - table public.testing_downloads (the CSV download log),
@@ -71,8 +89,8 @@
 --   Safe to run again (tested in PGlite: a second run changes no
 --   fingerprint).
 --   RE-RUN ORDER: re-running 0005 or 0014 after this file puts back the
---   old Undo payment (which does not restore "Paying by") - re-run 0030
---   straight after it.
+--   old Undo payment, Edit payment and (0014) Move / Undo move, which do
+--   not keep or restore "Paying by" - re-run 0030 straight after it.
 --   Undo: supabase/SETUP.md, "Migration 0030", 0030e.
 --
 -- WORDS USED BELOW
@@ -86,7 +104,9 @@
 --   * statuses: ok, no_access, not_allowed, not_found, stale, invalid,
 --     withdrawn, cancelled, already_paid, price_changed (new).
 --   * tkd.action names: the old ones - mark_paid, private_mark_paid,
---     undo_payment, private_undo_payment - and testing_results_csv (only
+--     undo_payment, private_undo_payment, edit_payment,
+--     private_edit_payment, move_to_private, undo_move_to_private,
+--     clear_result - and testing_results_csv (only
 --     for the download log row, which is not in change_log).
 -- =====================================================================
 
@@ -118,11 +138,18 @@ begin
      or to_regprocedure('public.testing_rank_testing_for(uuid)') is null
      or to_regprocedure('public.testing_mark_paid(uuid, integer)') is null
      or to_regprocedure('public.testing_undo_payment(uuid)') is null
+     or to_regprocedure('public.testing_edit_payment(uuid, text, integer, date)') is null
      or to_regprocedure('public.testing_private_lock(uuid)') is null
      or to_regprocedure('public.testing_private_lock_payment(uuid)') is null
      or to_regprocedure('public.testing_private_amount_due(uuid)') is null
      or to_regprocedure('public.testing_private_mark_paid(uuid, integer)') is null
-     or to_regprocedure('public.testing_private_undo_payment(uuid)') is null then
+     or to_regprocedure('public.testing_private_undo_payment(uuid)') is null
+     or to_regprocedure('public.testing_private_edit_payment(uuid, text, integer, date)') is null
+     or to_regprocedure('public.testing_move_to_private(uuid, integer, date, time)') is null
+     or to_regprocedure('public.testing_private_undo_move(uuid, integer)') is null
+     or to_regprocedure('public.testing_private_time_is_valid(time)') is null
+     or to_regprocedure('public.testing_recheck_pointing_at(uuid)') is null
+     or to_regprocedure('public.testing_recheck_duplicate(uuid)') is null then
     raise exception '0030 needs migrations 0005, 0010 and 0014 (Color Belt testing) first';
   end if;
   if to_regclass('public.finance_testing_private_payments_paid_on_idx') is null then
@@ -136,7 +163,10 @@ $$;
 -- 2. "Paying by before" on the two payment tables (Q2)
 --   * NULL for every payment except one made by Mark paid by a different
 --     way than the student's "Paying by": then it holds the OLD "Paying
---     by" (Mark paid changed it to the payment's method).
+--     by" (Mark paid changed it to the payment's method). Since v0.419
+--     also the new payment of an Edit payment that changed the way (the
+--     family's choice, section 4b), and the copies Move to private / Undo
+--     move make of such payments (section 4c).
 --   * the rule: only on a payment (never a reversal), one of cash / check
 --     / card, and never the same as the payment's method (it only exists
 --     when the two differed).
@@ -179,9 +209,9 @@ $$;
 grant select (paying_by_before) on public.testing_private_payments to authenticated;
 
 comment on column public.testing_payments.paying_by_before is
-  'Set only when Mark paid (testing_mark_paid_by) also changed the registration''s paying_by to this payment''s method: the OLD paying_by, so Undo payment can put it back. Not in the app''s column rights (0005 lists them one by one).';
+  'Set only when Mark paid (testing_mark_paid_by) or Edit payment (testing_edit_payment) also changed the registration''s paying_by to this payment''s method: the family''s choice, so Undo payment can put it back; Undo move copies it back. Not in the app''s column rights (0005 lists them one by one).';
 comment on column public.testing_private_payments.paying_by_before is
-  'Set only when Mark paid (testing_private_mark_paid_by) also changed the private testing''s paying_by to this payment''s method: the OLD paying_by, so Undo payment can put it back. Readable by authenticated (0014: every column but the login ids).';
+  'Set only when Mark paid (testing_private_mark_paid_by) or Edit payment (testing_private_edit_payment) also changed the private testing''s paying_by to this payment''s method: the family''s choice, so Undo payment can put it back; Move to private copies it here. Readable by authenticated (0014: every column but the login ids).';
 
 
 -- ---------------------------------------------------------------------
@@ -612,6 +642,608 @@ $$;
 
 revoke execute on function public.testing_private_undo_payment(uuid) from public, anon, authenticated, service_role;
 grant  execute on function public.testing_private_undo_payment(uuid) to authenticated;
+
+
+-- ---------------------------------------------------------------------
+-- 4b. Edit payment makes "Paying by" follow too (v0.419) - REPLACED
+--     (same names, same arguments, same rights, same statuses and
+--     answers). Every line is 0005's (14l) / 0014's (8g) except the ones
+--     marked "0030".
+--   The rule (o = the payment being edited, "Paying by" = the student's
+--   paying_by right now):
+--   * the family's choice = what Undo payment of o would leave: o's
+--     paying_by_before if it has one AND "Paying by" is still o's method
+--     (Mark paid's change still stands); otherwise "Paying by" itself
+--     (someone chose a way since - that choice wins, as in Undo).
+--   * the edit CHANGES the way (p_method is not o's method): "Paying by"
+--     becomes p_method, in the same update as the version bump and in the
+--     same batch, so it is logged with the edit. The trigger raises the
+--     version exactly once (0005 9c / 0014's private trigger), as before.
+--   * the edit keeps the way (only the amount or the day): "Paying by"
+--     is left alone.
+--   * the NEW payment's paying_by_before = the family's choice, but only
+--     when "Paying by" equals the new payment's method after the edit and
+--     the choice is a different way (the column's rule: never the
+--     payment's own method). Otherwise NULL: Undo has nothing to put back
+--     (e.g. edited to the way the family chose - "Paying by" already is
+--     that way).
+--   So an edit that changes the way = Undo of o + Mark paid by the new
+--   way, and Undo payment of the new payment (its own rule: only while
+--   "Paying by" is still that payment's method) puts the family's choice
+--   back. A payment made before 0030 (no paying_by_before) works the same:
+--   its family's choice is "Paying by".
+-- ---------------------------------------------------------------------
+
+-- 14l. testing_edit_payment(p_payment_id, p_method, p_amount_cents,
+--        p_paid_on)   A
+-- Edit payment = a reversal of the old payment + a new payment with the
+-- new method / amount (1 cent to $1,000) / date (not in the future).
+-- Already reversed -> stale; a reversal can't be edited (invalid).
+-- (0030) "Paying by" follows the edit - the rule of section 4b above:
+-- a changed way makes paying_by the new way (same update and batch,
+-- logged as 'edit_payment'); the new payment keeps the family's choice
+-- in paying_by_before so Undo payment can put it back.
+-- Ok: {"status":"ok","payment_id":<the new payment>,"version":n}  (the
+-- same answer as before 0030)
+create or replace function public.testing_edit_payment(
+  p_payment_id   uuid,
+  p_method       text,
+  p_amount_cents integer,
+  p_paid_on      date
+)
+returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_p          public.testing_payments;
+  v_new_id     uuid;
+  v_version    integer;
+  v_constraint text;
+  v_paying_by  text;   -- 0030: "Paying by" now
+  v_choice     text;   -- 0030: the family's choice (what Undo of the old payment would leave)
+  v_after      text;   -- 0030: "Paying by" after the edit
+  v_before     text;   -- 0030: the new payment's paying_by_before
+begin
+  begin
+    if public.has_data_access() is not true then
+      return jsonb_build_object('status', 'no_access');
+    end if;
+    if public.is_admin() is not true then
+      return jsonb_build_object('status', 'not_allowed');
+    end if;
+
+    if p_payment_id is null
+       or p_method is null or p_method not in ('cash', 'check', 'card')
+       or p_amount_cents is null or p_amount_cents not between 1 and 100000
+       or p_paid_on is null or p_paid_on > public.testing_today() then
+      return jsonb_build_object('status', 'invalid');
+    end if;
+
+    v_p := public.testing_lock_payment(p_payment_id);
+    if v_p.id is null then
+      return jsonb_build_object('status', 'not_found');
+    end if;
+    if v_p.kind <> 'payment' then
+      return jsonb_build_object('status', 'invalid');
+    end if;
+    if exists (select 1 from public.testing_payments x where x.reverses_payment_id = p_payment_id) then
+      return jsonb_build_object('status', 'stale');
+    end if;
+
+    -- 0030: "Paying by" follows the edit (v0.419). The registration is
+    -- already locked (testing_lock_payment locks it before the payment).
+    select r.paying_by into v_paying_by from public.testing_registrations r where r.id = v_p.registration_id;
+    v_choice := case when v_p.paying_by_before is not null and v_paying_by = v_p.method
+                     then v_p.paying_by_before else v_paying_by end;
+    v_after  := case when p_method <> v_p.method then p_method else v_paying_by end;
+    v_before := case when v_after = p_method and v_choice <> p_method then v_choice end;
+
+    perform set_config('tkd.action', 'edit_payment', true);
+    perform set_config('tkd.batch_id', gen_random_uuid()::text, true);
+
+    insert into public.testing_payments
+      (registration_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by, recorded_by_name,
+       reverses_payment_id)
+    values
+      (v_p.registration_id, 'reversal', -v_p.amount_cents, v_p.method, public.testing_today(), now(), auth.uid(),
+       public.change_log_actor_name(), v_p.id);
+
+    insert into public.testing_payments
+      (registration_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by, recorded_by_name,
+       paying_by_before)   -- 0030
+    values
+      (v_p.registration_id, 'payment', p_amount_cents, p_method, p_paid_on, now(), auth.uid(),
+       public.change_log_actor_name(), v_before)   -- 0030
+    returning id into v_new_id;
+
+    update public.testing_registrations r
+       set version   = r.version + 1,
+           paying_by = v_after   -- 0030: the new way, if the edit changed the way
+     where r.id = v_p.registration_id
+    returning r.version into v_version;
+
+    perform set_config('tkd.action', '', true);
+    perform set_config('tkd.batch_id', '', true);
+
+    return jsonb_build_object('status', 'ok', 'payment_id', v_new_id, 'version', v_version);
+  exception
+    when unique_violation then
+      return jsonb_build_object('status', 'stale');
+    when foreign_key_violation then
+      return jsonb_build_object('status', 'invalid');
+    when check_violation or not_null_violation then
+      return jsonb_build_object('status', 'invalid');
+    when deadlock_detected or serialization_failure or lock_not_available then
+      return jsonb_build_object('status', 'stale');
+  end;
+end;
+$$;
+
+revoke execute on function public.testing_edit_payment(uuid, text, integer, date) from public, anon, authenticated, service_role;
+grant  execute on function public.testing_edit_payment(uuid, text, integer, date) to authenticated;
+
+-- 8g. testing_private_edit_payment(p_payment_id, p_method,
+--       p_amount_cents, p_paid_on)   A
+-- Edit payment = a reversal of the old payment + a new payment with the
+-- new method / amount (1 cent to $1,000) / date (not in the future), as
+-- 0005's testing_edit_payment. A cancelled private testing -> cancelled.
+-- (0030) "Paying by" follows the edit exactly as in testing_edit_payment
+-- above (logged as 'private_edit_payment').
+-- Ok: {"status":"ok","payment_id":<the new payment>,"version":n}  (the
+-- same answer as before 0030)
+create or replace function public.testing_private_edit_payment(
+  p_payment_id   uuid,
+  p_method       text,
+  p_amount_cents integer,
+  p_paid_on      date
+)
+returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_pay        public.testing_private_payments;
+  v_new_id     uuid;
+  v_version    integer;
+  v_constraint text;
+  v_paying_by  text;   -- 0030: "Paying by" now
+  v_choice     text;   -- 0030: the family's choice (what Undo of the old payment would leave)
+  v_after      text;   -- 0030: "Paying by" after the edit
+  v_before     text;   -- 0030: the new payment's paying_by_before
+begin
+  begin
+    if public.has_data_access() is not true then
+      return jsonb_build_object('status', 'no_access');
+    end if;
+    if public.is_admin() is not true then
+      return jsonb_build_object('status', 'not_allowed');
+    end if;
+
+    if p_payment_id is null
+       or p_method is null or p_method not in ('cash', 'check', 'card')
+       or p_amount_cents is null or p_amount_cents not between 1 and 100000
+       or p_paid_on is null or p_paid_on > public.testing_today() then
+      return jsonb_build_object('status', 'invalid');
+    end if;
+
+    v_pay := public.testing_private_lock_payment(p_payment_id);
+    if v_pay.id is null then
+      return jsonb_build_object('status', 'not_found');
+    end if;
+    if v_pay.kind <> 'payment' then
+      return jsonb_build_object('status', 'invalid');
+    end if;
+    if exists (select 1 from public.testing_private_payments x where x.reverses_payment_id = p_payment_id) then
+      return jsonb_build_object('status', 'stale');
+    end if;
+    -- a cancelled private testing: no payment changes (after the 0005-style checks, as the data layer)
+    if exists (select 1 from public.testing_private p where p.id = v_pay.private_id and p.status = 'cancelled') then
+      return jsonb_build_object('status', 'cancelled');
+    end if;
+
+    -- 0030: "Paying by" follows the edit (v0.419). The private testing is
+    -- already locked (testing_private_lock_payment locks it first).
+    select p.paying_by into v_paying_by from public.testing_private p where p.id = v_pay.private_id;
+    v_choice := case when v_pay.paying_by_before is not null and v_paying_by = v_pay.method
+                     then v_pay.paying_by_before else v_paying_by end;
+    v_after  := case when p_method <> v_pay.method then p_method else v_paying_by end;
+    v_before := case when v_after = p_method and v_choice <> p_method then v_choice end;
+
+    perform set_config('tkd.action', 'private_edit_payment', true);
+    perform set_config('tkd.batch_id', gen_random_uuid()::text, true);
+
+    insert into public.testing_private_payments
+      (private_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by, recorded_by_name,
+       reverses_payment_id)
+    values
+      (v_pay.private_id, 'reversal', -v_pay.amount_cents, v_pay.method, public.testing_today(), now(), auth.uid(),
+       public.change_log_actor_name(), v_pay.id);
+
+    insert into public.testing_private_payments
+      (private_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by, recorded_by_name,
+       paying_by_before)   -- 0030
+    values
+      (v_pay.private_id, 'payment', p_amount_cents, p_method, p_paid_on, now(), auth.uid(),
+       public.change_log_actor_name(), v_before)   -- 0030
+    returning id into v_new_id;
+
+    update public.testing_private p
+       set version   = p.version + 1,
+           paying_by = v_after   -- 0030: the new way, if the edit changed the way
+     where p.id = v_pay.private_id
+    returning p.version into v_version;
+
+    perform set_config('tkd.action', '', true);
+    perform set_config('tkd.batch_id', '', true);
+
+    return jsonb_build_object('status', 'ok', 'payment_id', v_new_id, 'version', v_version);
+  exception
+    when unique_violation then
+      return jsonb_build_object('status', 'stale');
+    when foreign_key_violation then
+      return jsonb_build_object('status', 'invalid');
+    when check_violation or not_null_violation then
+      return jsonb_build_object('status', 'invalid');
+    when deadlock_detected or serialization_failure or lock_not_available then
+      return jsonb_build_object('status', 'stale');
+  end;
+end;
+$$;
+
+revoke execute on function public.testing_private_edit_payment(uuid, text, integer, date) from public, anon, authenticated, service_role;
+grant  execute on function public.testing_private_edit_payment(uuid, text, integer, date) to authenticated;
+
+
+-- ---------------------------------------------------------------------
+-- 4c. Move to private and its Undo carry the family's choice (v0.419) -
+--     REPLACED (same names, same arguments, same rights, same statuses
+--     and answers). Every line is 0014's (9a, 9b) except the ones marked
+--     "0030": the copied payments also copy paying_by_before. The
+--     private testing takes the registration's "Paying by" (as before),
+--     so Undo payment on the private testing works the same as on the
+--     event. Finance reads only the method / amount / day of these rows,
+--     so its totals are unchanged.
+-- ---------------------------------------------------------------------
+
+-- 9a. testing_move_to_private(p_registration_id, p_expected_version,
+--       p_private_date, p_private_time)   S (all staff, any time - v0.404)
+-- The student leaves the event and becomes a private testing; their money
+-- moves with them. One transaction, one batch (contract §2.5.1):
+--   refused: withdrawn; a testing-day Pass / Not passed (has_result);
+--   a testing-day No show is removed with its note (clear_result); a note
+--   alone stays with the event registration.
+--   copied from the EVENT copy: class, rank, belt, what they test for;
+--   the private price = TODAY's private price of that rank in Classes and
+--   ranks (the event copy's private price only if the rank is gone there).
+--   the money, append-only, net preserved: for every LIVE event payment
+--   (not reversed), oldest first, an event reversal dated on the ORIGINAL
+--   day, and a matching private payment (same amount, method and day,
+--   moved_from_payment_id = the event payment's id). A transfer, not a
+--   refund: a pair that was already reversed stays where it is.
+--   the registration becomes withdrawn (as Withdraw does); it is known as
+--   "moved" because a private testing points at it.
+-- (0030) each moved private payment also carries the event payment's
+-- paying_by_before (the family's choice), so Undo payment on the private
+-- testing puts it back the same way. Nothing else changes.
+-- Ok: {"status":"ok","private_id":...,"version":1,"registration_version":n,
+--      "amount_due_cents":n,"result_cleared":bool}
+create or replace function public.testing_move_to_private(
+  p_registration_id  uuid,
+  p_expected_version integer,
+  p_private_date     date,
+  p_private_time     time
+)
+returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_r           public.testing_registrations;
+  v_e           public.testing_events;
+  v_k           public.testing_event_ranks;
+  v_c           public.testing_event_classes;
+  v_to          jsonb;
+  v_cents       integer;
+  v_today       date;
+  v_res         public.testing_results;
+  v_clear       boolean := false;
+  v_pay         record;
+  v_moved       uuid[] := '{}';
+  v_reg_version integer;
+  v_private_id  uuid;
+  v_constraint  text;
+begin
+  begin
+    -- 1. access
+    if public.has_data_access() is not true then
+      return jsonb_build_object('status', 'no_access');
+    end if;
+
+    -- 2. input
+    if p_registration_id is null or p_expected_version is null
+       or p_private_date is null or p_private_time is null
+       or not public.testing_private_time_is_valid(p_private_time) then
+      return jsonb_build_object('status', 'invalid');
+    end if;
+
+    -- 3. lock school -> event -> registration, and look it up
+    v_r := public.testing_lock_registration(p_registration_id);
+    if v_r.id is null then
+      return jsonb_build_object('status', 'not_found');
+    end if;
+    -- 4. did the screen see the latest version?
+    if v_r.version <> p_expected_version then
+      return jsonb_build_object('status', 'stale');
+    end if;
+    -- 5. withdrawn (also: already moved)
+    if v_r.status = 'withdrawn' then
+      return jsonb_build_object('status', 'withdrawn');
+    end if;
+
+    -- 6. the day rule
+    v_today := public.testing_today();
+    if p_private_date < v_today then
+      return jsonb_build_object('status', 'past_day');
+    end if;
+    if p_private_date > v_today + interval '1 year' then
+      return jsonb_build_object('status', 'invalid');
+    end if;
+
+    -- 7. lock the registration's testing-day result row
+    select * into v_res from public.testing_results x where x.registration_id = p_registration_id for update;
+    if v_res.result in ('pass', 'not_passed') then
+      return jsonb_build_object('status', 'has_result');
+    end if;
+    v_clear := v_res.result is not distinct from 'no_show';
+
+    -- 8. the copy: from the event copy; the price from today's Classes and ranks
+    select * into v_e from public.testing_events e where e.id = v_r.event_id;
+    select * into v_k from public.testing_event_ranks k where k.id = v_r.event_rank_id;
+    select * into v_c from public.testing_event_classes c where c.id = v_k.event_class_id;
+    v_to := public.testing_rank_testing_for(v_r.event_rank_id);
+    select r.private_cents into v_cents from public.testing_ranks r where r.id = v_k.rank_id;
+    if not found then
+      v_cents := v_k.private_cents;   -- the rank is gone from Classes and ranks: the event's copy
+    end if;
+
+    -- 9. write, one batch
+    perform set_config('tkd.action', 'move_to_private', true);
+    perform set_config('tkd.batch_id', gen_random_uuid()::text, true);
+
+    -- (a) an event reversal for every live event payment, oldest first,
+    --     dated on the original day
+    for v_pay in select p.id, p.amount_cents, p.method, p.paid_on, p.recorded_at
+                   from public.testing_payments p
+                  where p.registration_id = p_registration_id
+                    and p.kind = 'payment'
+                    and not exists (select 1 from public.testing_payments x where x.reverses_payment_id = p.id)
+                  order by p.recorded_at, p.id loop
+      insert into public.testing_payments
+        (registration_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by, recorded_by_name,
+         reverses_payment_id)
+      values
+        (p_registration_id, 'reversal', -v_pay.amount_cents, v_pay.method, v_pay.paid_on, now(), auth.uid(),
+         public.change_log_actor_name(), v_pay.id);
+      v_moved := v_moved || v_pay.id;
+    end loop;
+
+    -- (b) the registration leaves the event (as Withdraw does)
+    update public.testing_registrations r
+       set status            = 'withdrawn',
+           withdrawn_reason  = 'withdrawn',
+           withdrawn_at      = now(),
+           withdrawn_by_name = public.change_log_actor_name(),
+           withdrawn_by      = auth.uid(),
+           duplicate_state   = 'none',
+           duplicate_of      = null
+     where r.id = p_registration_id;
+    perform public.testing_recheck_pointing_at(p_registration_id);
+    select r.version into v_reg_version from public.testing_registrations r where r.id = p_registration_id;
+
+    -- (c) the private testing (version 1)
+    insert into public.testing_private
+      (location_code, first_name, last_name, class_id, class_name, rank_id, rank_name,
+       belt_pattern, belt_color, belt_color_2, belt_end_stripes, belt_end_stripe_color,
+       to_kind, to_name, to_belt_pattern, to_belt_color, to_belt_color_2, to_belt_end_stripes,
+       to_belt_end_stripe_color, private_cents, paying_by, stripes_confirmed, private_date, private_time,
+       moved_from_event_id, moved_from_registration_id, moved_from_event_name, moved_cleared_no_show,
+       moved_registration_version)
+    values
+      (v_e.location_code, v_r.first_name, v_r.last_name, v_c.class_id, v_c.class_name, v_k.rank_id, v_k.name,
+       v_k.belt_pattern, v_k.belt_color, v_k.belt_color_2, v_k.belt_end_stripes, v_k.belt_end_stripe_color,
+       case when v_to is null then 'none' else 'rank' end,
+       v_to ->> 'name', v_to ->> 'belt_pattern', v_to ->> 'belt_color', v_to ->> 'belt_color_2',
+       (v_to ->> 'belt_end_stripes')::integer, v_to ->> 'belt_end_stripe_color',
+       v_cents, v_r.paying_by, true, p_private_date, p_private_time,
+       v_e.id, v_r.id, v_e.name, v_clear, v_reg_version)
+    returning id into v_private_id;
+
+    -- (d) one private payment per moved event payment (same amount, method,
+    --     day and recording time - the order of the payments is kept)
+    insert into public.testing_private_payments
+      (private_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by, recorded_by_name,
+       moved_from_payment_id, paying_by_before)   -- 0030: + paying_by_before
+    select v_private_id, 'payment', p.amount_cents, p.method, p.paid_on,
+           p.recorded_at,   -- the ORIGINAL recording time, so "the most recent payment" stays the same one
+           auth.uid(), public.change_log_actor_name(), p.id,
+           p.paying_by_before   -- 0030: the family's choice moves with the payment
+      from public.testing_payments p
+      join unnest(v_moved) with ordinality as m(id, n) on m.id = p.id
+     order by m.n;
+
+    -- (e) a testing-day No show is removed (with its note)
+    if v_clear then
+      perform set_config('tkd.action', 'clear_result', true);
+      delete from public.testing_results x where x.registration_id = p_registration_id;
+    end if;
+
+    perform set_config('tkd.action', '', true);
+    perform set_config('tkd.batch_id', '', true);
+
+    -- 10. answer
+    return jsonb_build_object('status', 'ok', 'private_id', v_private_id, 'version', 1,
+                              'registration_version', v_reg_version,
+                              'amount_due_cents', public.testing_private_amount_due(v_private_id),
+                              'result_cleared', v_clear);
+  exception
+    when unique_violation then
+      return jsonb_build_object('status', 'stale');
+    when foreign_key_violation then
+      return jsonb_build_object('status', 'invalid');
+    when check_violation or not_null_violation then
+      return jsonb_build_object('status', 'invalid');
+    when deadlock_detected or serialization_failure or lock_not_available then
+      return jsonb_build_object('status', 'stale');
+  end;
+end;
+$$;
+
+revoke execute on function public.testing_move_to_private(uuid, integer, date, time) from public, anon, authenticated, service_role;
+grant  execute on function public.testing_move_to_private(uuid, integer, date, time) to authenticated;
+
+-- 9b. testing_private_undo_move(p_private_id, p_expected_version)
+--       S (only the person who moved it, within 10 seconds)
+-- The toast's Undo (contract §2.5.2). Who and when are read from the
+-- event registration (withdrawn_by / withdrawn_at):
+--   not the mover, or 10 seconds or more ago -> not_allowed (admins too)
+--   the move cleared a No show -> not_allowed (it can't come back)
+--   anything changed since (the registration isn't withdrawn or was
+--   edited, the private testing has a result, a payment recorded here or
+--   a reversal) -> stale
+--   not moved / the registration is gone -> not_found
+-- Then, one batch: the event payments are recorded again (same amount,
+-- method and day, with NO "recorded by" login, so the live 10-second
+-- own-Undo can never reverse them), the registration is active again with
+-- its duplicate check re-run (as testing_restore_student), and the private
+-- testing is removed (with its payments).
+-- (0030) each event payment recorded again also carries the private
+-- payment's paying_by_before back. Nothing else changes.
+-- Ok: {"status":"ok","registration_id":...,"registration_version":n}
+create or replace function public.testing_private_undo_move(
+  p_private_id       uuid,
+  p_expected_version integer
+)
+returns jsonb
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_reg_id     uuid;
+  v_r          public.testing_registrations;
+  v_p          public.testing_private;
+  v_of         uuid;
+  v_version    integer;
+  v_constraint text;
+begin
+  begin
+    if public.has_data_access() is not true then
+      return jsonb_build_object('status', 'no_access');
+    end if;
+
+    if p_private_id is null or p_expected_version is null then
+      return jsonb_build_object('status', 'invalid');
+    end if;
+
+    -- lock school -> event -> the registration -> the private testing
+    select p.moved_from_registration_id into v_reg_id from public.testing_private p where p.id = p_private_id;
+    if v_reg_id is null then
+      return jsonb_build_object('status', 'not_found');   -- missing, or not moved
+    end if;
+    v_r := public.testing_lock_registration(v_reg_id);
+    if v_r.id is null then
+      return jsonb_build_object('status', 'not_found');   -- the registration (or its event) is gone
+    end if;
+    v_p := public.testing_private_lock(p_private_id);
+    if v_p.id is null then
+      return jsonb_build_object('status', 'not_found');
+    end if;
+
+    if v_p.version <> p_expected_version then
+      return jsonb_build_object('status', 'stale');
+    end if;
+    -- only the mover, within 10 seconds (admins too)
+    if v_r.withdrawn_by is distinct from auth.uid()
+       or coalesce(v_r.withdrawn_at <= now() - interval '10 seconds', true) then
+      return jsonb_build_object('status', 'not_allowed');
+    end if;
+    -- a cleared No show can't come back
+    if v_p.moved_cleared_no_show then
+      return jsonb_build_object('status', 'not_allowed');
+    end if;
+    -- anything changed since the move?
+    if v_r.status <> 'withdrawn'
+       or v_r.version <> v_p.moved_registration_version
+       or exists (select 1 from public.testing_private_results x where x.private_id = p_private_id)
+       or exists (select 1 from public.testing_private_payments x
+                   where x.private_id = p_private_id
+                     and (x.moved_from_payment_id is null or x.kind <> 'payment')) then
+      return jsonb_build_object('status', 'stale');
+    end if;
+
+    perform set_config('tkd.action', 'undo_move_to_private', true);
+    perform set_config('tkd.batch_id', gen_random_uuid()::text, true);
+
+    -- the event payments again (no "recorded by" login; the original
+    -- day and recording time)
+    insert into public.testing_payments
+      (registration_id, kind, amount_cents, method, paid_on, recorded_at, recorded_by, recorded_by_name,
+       paying_by_before)   -- 0030
+    select v_r.id, 'payment', x.amount_cents, x.method, x.paid_on,
+           x.recorded_at,   -- the original recording time again (the order is kept)
+           null, public.change_log_actor_name(),
+           x.paying_by_before   -- 0030: the family's choice comes back with the payment
+      from public.testing_private_payments x
+     where x.private_id = p_private_id
+     order by x.recorded_at, x.id;
+
+    -- the registration back to active, with testing_restore_student's
+    -- three duplicate re-check lines
+    update public.testing_registrations r
+       set status            = 'active',
+           withdrawn_reason  = null,
+           withdrawn_at      = null,
+           withdrawn_by_name = null,
+           withdrawn_by      = null
+     where r.id = v_r.id;
+    perform public.testing_recheck_duplicate(v_r.id);
+    select r.duplicate_of into v_of from public.testing_registrations r where r.id = v_r.id;
+    if v_of is not null then
+      perform public.testing_recheck_duplicate(v_of);
+    end if;
+    perform public.testing_recheck_pointing_at(v_r.id);
+
+    -- the private testing goes (its payments with it)
+    delete from public.testing_private p where p.id = p_private_id;
+
+    perform set_config('tkd.action', '', true);
+    perform set_config('tkd.batch_id', '', true);
+
+    select r.version into v_version from public.testing_registrations r where r.id = v_r.id;
+    return jsonb_build_object('status', 'ok', 'registration_id', v_r.id, 'registration_version', v_version);
+  exception
+    when unique_violation then
+      return jsonb_build_object('status', 'stale');
+    when foreign_key_violation then
+      return jsonb_build_object('status', 'invalid');
+    when check_violation or not_null_violation then
+      return jsonb_build_object('status', 'invalid');
+    when deadlock_detected or serialization_failure or lock_not_available then
+      return jsonb_build_object('status', 'stale');
+  end;
+end;
+$$;
+
+revoke execute on function public.testing_private_undo_move(uuid, integer) from public, anon, authenticated, service_role;
+grant  execute on function public.testing_private_undo_move(uuid, integer) to authenticated;
 
 
 -- ---------------------------------------------------------------------
