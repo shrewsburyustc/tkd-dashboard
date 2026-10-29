@@ -94,6 +94,17 @@
 }
 
 /* ===== Date row (D1, D4, D14) ===== */
+/* History's "← Back to the day" (v0.820): the shared link-button look (app.css: blue text, 44px
+   tap height on touch), laid out like the Testing and Camps pages' back link (.ev-back). */
+.fin-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  align-self: flex-start;
+  min-height: 28px;
+  margin-bottom: var(--space-4);
+}
+
 .fin-dayrow {
   display: flex;
   flex-wrap: wrap;
@@ -148,24 +159,6 @@
 
 .fin-ibtn.is-unavailable .tib-box {
   border-color: var(--color-border-strong);
-}
-
-/* The real date field sits invisibly under the calendar button; showPicker() opens it. */
-.fin-cal {
-  position: relative;
-  display: inline-flex;
-}
-
-.fin-cal-input {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  border: 0;
-  opacity: 0;
-  pointer-events: none;
 }
 
 /* The first button of the date row: its tooltip opens to the right, so it isn't cut off */
@@ -688,8 +681,17 @@
   flex-direction: column;
 }
 
-.fin-date-input.input {
-  width: 160px;
+/* From / To: the shared date picker's field (components/DatePicker.jsx, v0.818), wide enough for
+   the longest date ("Mon, May 13, 2024", 110px at 13px) and its chevron. Touch screens: wider,
+   see the touch block below */
+.fin-date-field .dp-field {
+  width: 168px;
+}
+
+/* Phones: while a calendar is open in the page, its date takes the whole row, so the calendar
+   runs edge to edge under it and To moves down below the calendar (v0.818) */
+.fin-date-field:has(.dp-pop.is-inline) {
+  flex-basis: 100%;
 }
 
 .fin-export-school {
@@ -775,15 +777,11 @@
   height: 44px;
 }
 
-.fin-select.input {
+/* A Settings time: the shared time list (TimeList.jsx), as wide as the old dropdown. Its look,
+   Off's gray included, is the shared dropdown's (shared.css .fa-field; Off = its `disabled`,
+   v0.823 / v1.116). */
+.fin-time {
   width: 140px;
-  padding: 0 var(--space-8);
-  font: inherit; /* the page's font, not the browser's own for dropdowns */
-}
-
-.fin-select.is-off {
-  background: var(--color-surface);
-  color: var(--color-disabled-text);
 }
 
 .fin-set-row {
@@ -948,6 +946,19 @@
 
 /* ===== Touch screens: 36px controls, 44px tap areas, 48px rows (guidelines 2.5) ===== */
 @media (pointer: coarse) {
+  /* History's back link: a 44px tap height, like .ev-back (testing-events.css) */
+  .fin-back-link {
+    min-height: var(--tap-size);
+  }
+
+  /* Export's From / To: every field has 16px text on touch (app.css), so the longest date
+     (135px) plus the chevron needs a wider field. Two of these don't fit side by side on a 390
+     phone, so there they stack (as at 320; Jeffrey's choice, v0.818). 200px leaves room for an
+     iPhone's slightly wider font */
+  .fin-date-field .dp-field {
+    width: 200px;
+  }
+
   .fin-ibtn.tib {
     width: var(--tap-size);
     height: var(--tap-size);
@@ -968,11 +979,6 @@
 
   .fin-table td {
     height: 48px;
-  }
-
-  .fin-select.input {
-    height: var(--control-height-touch);
-    font-size: var(--text-16); /* stops iPhones / iPads zooming in when the dropdown is tapped */
   }
 
   .fin-switch {
@@ -1064,10 +1070,6 @@
 
   .fin-drow {
     grid-template-columns: 110px minmax(0, 1fr);
-  }
-
-  .fin-date-input.input {
-    width: 150px;
   }
 
   /* The chip shows its icon only (its name is still read out and shown as a tooltip) */

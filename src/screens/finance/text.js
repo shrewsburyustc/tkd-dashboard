@@ -340,6 +340,7 @@ export const EXPORT_HINT =
   'Downloads a CSV file (opens in Excel or Google Sheets). It holds students’ names and amounts, so each download is logged.';
 export const FROM = 'From';
 export const TO = 'To';
+export const DAYS_AFTER_TODAY = 'Days after today can’t be chosen.'; // the calendar's gray line (v0.817, v0.818)
 export const SCHOOL = 'School';
 export const FROM_TOP_BAR = '(from the top bar)';
 export const exportSummary = (count, cents) => `${paymentsCount(count)} · ${money(cents)}`;
