@@ -19,6 +19,10 @@
 // (v0.950), Restore's already_added (a second make-up of the same earlier candidate) and Edit
 // details' already_added (OI-4: this candidate's make-up is on a later cycle).
 //
+// Design review BB4 (v0.966): no problem is a toast any more — refusals and failures go in the
+// shared amber bar (report(): inside the open detail, else the Candidates tab's bar). BB5 (v0.967):
+// Edit details and Restore get "· Undo" for 5 seconds (not a Dan change that cleared grades).
+//
 // Privacy (§3.1): the detail's date of birth, email and the signature live only inside `dlg`,
 // which is emptied when the dialog closes. Nothing here writes them to storage, the console, a
 // toast or the page address.
@@ -105,21 +109,52 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     setDlg((d) => (d?.detail ? { ...d, detail: { ...d.detail, ...(typeof changes === 'function' ? changes(d.detail) : changes) } } : d));
 
   // After any saved change: the roster again (and the cycle's candidate count when it moved).
+  // Returns the roster's reload, so a refusal can wait until the other person's change is shown.
   function afterWrite({ countChanged = false } = {}) {
-    latest.current.reloadRoster();
+    const reloaded = latest.current.reloadRoster();
     if (countChanged) latest.current.onCandidatesChanged();
+    return reloaded;
+  }
+
+  // ----- Problems stay on screen (v0.966, BB4) -----
+  // A refusal or a failure goes in the shared amber bar, never in a toast. Which bar:
+  //   - while the candidate detail is open: the bar INSIDE the detail (dlg.detail.banner), so it is
+  //     never hidden behind the dialog; it goes away with the detail
+  //   - otherwise the Candidates tab's bar (setBanner, from the tab)
+  // banner = { text, retry? } — retry only for a connection failure (a true refusal has only ×).
+  // One bar at a time: a new problem replaces the old one.
+  //   from     the props as they were when the action STARTED (latest.current then): the tab's
+  //            bar setter belongs to the tab that was open, so an answer that arrives after a tab
+  //            change is dropped instead of showing on the new tab (CyclePage.jsx).
+  //   opener   the ⋯ the action came from: focus goes back to it (v0.966 review: never the page
+  //            body). Inside an open detail, to the detail's ⋯ when that one is gone.
+  function report(banner, { from = latest.current, opener = null } = {}) {
+    if (dlgRef.current?.detail) {
+      const inside = opener?.isConnected && opener.closest('[role="dialog"]');
+      patchDetail({ banner, focusKey: inside ? null : 'detail-more' });
+      if (inside) focusSoon(opener);
+    } else {
+      from.setBanner(banner);
+      if (opener?.isConnected) focusSoon(opener);
+    }
+  }
+  // × on the detail's bar: the bar goes and focus moves to the detail's ⋯ (the shared ErrorBanner
+  // would leave it on the page body).
+  function dismissDetailBanner() {
+    patchDetail({ banner: null, focusKey: 'detail-more' });
   }
 
   // ----- Loading one candidate (the detail and every dialog that needs the money items) -----
   // → the detail's data { candidate, waiver, needsParentSignature, payments, money } or null
-  // (the problem is already shown: lock screen, banner or toast).
+  // (the problem is already shown: lock screen or the amber bar).
   function loadProblem(status) {
     const a = latest.current;
     if (status === 'no_access') a.onNoAccess();
     else if (status === 'not_found') {
-      a.showToast(T.CANDIDATE_GONE, { icon: false });
+      // "This candidate was deleted." goes in the Candidates tab's bar: the detail closes (v0.966).
+      a.setBanner({ text: T.CANDIDATE_GONE });
       a.reloadRoster();
-    } else a.setBanner({ text: T.LOAD_FAILED });
+    } else report({ text: T.LOAD_FAILED });
   }
   async function fetchCandidate(candidateId) {
     const result = await loadCandidate({ candidateId });
@@ -140,7 +175,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   // The roster row's ⋯ for an admin (v0.963): Edit payment and Undo payment act on the candidate's
   // LATEST payment, which the row doesn't carry — so the candidate is read first, exactly as the
   // detail is, and `use(data)` opens the menu with it. While it loads the tab is busy (a second
-  // press does nothing); a problem is shown the usual way (lock screen, toast or banner) and no
+  // press does nothing); a problem is shown the usual way (lock screen or the amber bar) and no
   // menu opens. Nothing opens either if a dialog came up meanwhile.
   // Privacy (§3.1): the menu keeps only what Edit / Undo payment need — the name, version and
   // plan, the payment lines and the money — never the date of birth, the email or the waiver.
@@ -284,7 +319,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
       return true;
     }
     if (status === 'stale') {
-      patchChild({ saving: false, note: T.candidateStale(name), blocking: true });
+      patchChild({ saving: false, note: T.candidateStaleInDialog(name), blocking: true });
       return true;
     }
     if (status === 'not_found') {
@@ -299,9 +334,11 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     return false;
   }
 
-  // A toast's Undo (or a one-click action): its own small write, with a banner + Retry if the
-  // connection drops.
-  async function runQuick(call, { ok, statuses = {}, countChanged = false, retryLabel = null }) {
+  // A toast's Undo (or a one-click action): its own small write. A lost connection → the amber
+  // bar with Retry (retryLabel = its words); a refusal → the amber bar with × only, shown once the
+  // list (and the open detail) has been read again, so "Their change is shown" is true (v0.966).
+  // opener: the ⋯ a menu item came from (focus goes back there after a problem), or null.
+  async function runQuick(call, { ok, statuses = {}, countChanged = false, retryLabel = null, opener = null }) {
     const a = latest.current;
     if (!beginWrite()) return;
     const result = await call();
@@ -318,14 +355,18 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     }
     a.clearToast();
     if (result.status === 'error') {
-      a.setBanner({ text: retryLabel ?? T.ACTION_FAILED, retry: () => runQuick(call, { ok, statuses, countChanged, retryLabel }) });
+      report({ text: retryLabel ?? T.ACTION_FAILED, retry: () => runQuick(call, { ok, statuses, countChanged, retryLabel, opener }) }, { from: a, opener });
+      return;
+    }
+    if (result.status === 'not_found' && !statuses.not_found) {
+      if (dlgRef.current?.detail) closeAll();
+      loadProblem('not_found');
       return;
     }
     if (result.status === 'not_allowed') a.onRefreshProfile();
     const words = statuses[result.status] ?? (result.status === 'not_allowed' ? T.NOT_ALLOWED : T.INVALID);
-    a.showToast(words, { icon: false });
-    afterWrite({ countChanged });
-    if (dlgRef.current?.detail) refreshDetail();
+    await Promise.all([afterWrite({ countChanged }), dlgRef.current?.detail ? refreshDetail() : null]);
+    report({ text: words }, { from: a, opener });
   }
   const undoAction = (onAction) => ({ action: { label: T.UNDO, onAction }, icon: false });
 
@@ -790,7 +831,42 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     const setEdit = (changes) => patchDetail((x) => (x.edit ? { edit: { ...x.edit, ...changes } } : {}));
     if (result.status === 'ok') {
       afterWrite();
-      latest.current.showToast(T.TOAST_CHANGES_SAVED, { icon: false });
+      // BB5 (v0.967): "Changes saved · Undo" for 5 seconds. Undo saves the values from before
+      // back, with the version this save returned (someone else's change since → stale, refused
+      // in the amber bar). It never opens the Dan-change box: if grades were entered for the new
+      // Dan meanwhile the database answers has_grades and the bar says so.
+      const old = e.initial;
+      const savedName = T.candidateName({ firstName: normalizeName(e.values.first), lastName: normalizeName(e.values.last) });
+      const candidateId = c.id;
+      const newVersion = result.version;
+      latest.current.showToast(
+        T.TOAST_CHANGES_SAVED,
+        undoAction(() =>
+          runQuick(
+            () =>
+              updateCandidate({
+                candidateId,
+                expectedVersion: newVersion,
+                first: old.first,
+                last: old.last,
+                dateOfBirth: purged ? null : old.dob,
+                email: purged ? null : trimSpaces(old.email),
+                locationCode: old.school,
+                dan: Number(old.dan),
+              }),
+            {
+              ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
+              retryLabel: T.UNDO_FAILED,
+              statuses: {
+                stale: T.candidateStale(savedName),
+                has_grades: T.undoDanHasGrades(savedName),
+                already_added: T.danChangeMakeupLater(savedName),
+                not_allowed: T.DAN_LOCKED_STAFF,
+              },
+            },
+          ),
+        ),
+      );
       patchDetail({ mode: 'view', edit: null });
       refreshDetail();
       return;
@@ -817,7 +893,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
       return;
     }
     if (result.status === 'stale') {
-      setEdit({ saving: false, note: T.candidateStale(name), blocking: true });
+      setEdit({ saving: false, note: T.candidateStaleInDialog(name), blocking: true });
       return;
     }
     if (result.status === 'not_found') {
@@ -906,7 +982,7 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
   // target: { id, firstName, lastName, version, hasPaymentRows, hasGrades }
   // Withdraw is a menu item (the row's ⋯ or the detail's ⋯) that acts AT ONCE — no box first —
   // with "Alex Kim withdrawn · Undo" (Undo = Restore). No dialog is open to hold a note, so a
-  // lost connection shows the banner with Retry and any other problem a toast (as runQuick).
+  // lost connection shows the amber bar with Retry and any other problem the bar with × (as runQuick).
   // opener: the ⋯ that was used; focus goes back to it when it is still on screen.
   async function withdraw(target, opener = null) {
     const a = latest.current;
@@ -941,8 +1017,9 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
       return;
     }
     a.clearToast();
+    // Problems go in the amber bar — inside the detail when it is open (v0.966), never behind it.
     if (result.status === 'error') {
-      a.setBanner({ text: T.ACTION_FAILED, retry: () => withdraw(target, opener) });
+      report({ text: T.ACTION_FAILED, retry: () => withdraw(target, opener) }, { from: a, opener });
       return;
     }
     if (result.status === 'not_found') {
@@ -952,9 +1029,9 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     }
     if (result.status === 'not_allowed') a.onRefreshProfile();
     const words = result.status === 'not_allowed' ? T.NOT_ALLOWED : result.status === 'stale' ? T.candidateStale(name) : T.INVALID;
-    a.showToast(words, { icon: false });
-    afterWrite();
-    if (inDetail) refreshDetail();
+    // read again first, so "Their change is shown" is true when the bar appears
+    await Promise.all([afterWrite(), inDetail ? refreshDetail() : null]);
+    report({ text: words }, { from: a, opener });
   }
   function openDelete(target, opener) {
     openChild({ kind: 'deleteConfirm', target, values: null }, opener);
@@ -989,10 +1066,26 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     if (commonProblem(result.status, name)) return;
     patchChild({ saving: false, note: T.INVALID });
   }
-  function restore(target) {
+  // Restore → "[Name] restored · Undo" (BB5, v0.967). Undo withdraws them again, with the version
+  // Restore returned; it is refused in the amber bar the same ways Withdraw is.
+  // opener: the ⋯ Restore was chosen from (focus goes back there after a problem).
+  function restore(target, opener = null) {
     const name = T.candidateName(target);
     runQuick(() => restoreCandidate({ candidateId: target.id, expectedVersion: target.version }), {
-      ok: () => latest.current.showToast(T.toastRestored(name), { icon: false }),
+      opener,
+      ok: (result) =>
+        latest.current.showToast(
+          T.toastRestored(name),
+          undoAction(() =>
+            runQuick(() => withdrawCandidate({ candidateId: target.id, expectedVersion: result.version }), {
+              ok: () => latest.current.showToast(T.TOAST_UNDONE, { icon: false }),
+              countChanged: true,
+              retryLabel: T.UNDO_FAILED,
+              // 'withdrawn' = someone else withdrew them meanwhile: nothing was done here either
+              statuses: { stale: T.candidateStale(name), withdrawn: T.candidateStale(name) },
+            }),
+          ),
+        ),
       countChanged: true,
       statuses: { stale: T.candidateStale(name), already_added: T.restoreAlreadyAdded(name) },
     });
@@ -1135,5 +1228,6 @@ export function useCandidateActions({ cycle, isAdmin, today, paymentsHidden, rel
     openReceipt,
     setDetailMenu,
     confirmDanChange,
+    dismissDetailBanner,
   };
 }

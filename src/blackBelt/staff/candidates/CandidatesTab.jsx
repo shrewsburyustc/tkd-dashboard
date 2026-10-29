@@ -104,6 +104,7 @@ export default function CandidatesTab({
   clearToast,
   onModalChange,
   onCandidatesChanged,
+  setPageBanner,
   actionsRef,
   panelId,
   tabId,
@@ -121,7 +122,14 @@ export default function CandidatesTab({
   const [card, setCard] = useState(null);
   const [removedOpen, setRemovedOpen] = useState(false);
   const [menu, setMenu] = useState(null); // { row, anchor, data } — data: the candidate as read for an admin's ⋯, else null
-  const [banner, setBanner] = useState(null);
+  // The amber bar (v0.966, BB4) is the cycle page's ONE bar (CyclePage.jsx draws it above the tab):
+  // one bar at a time, and changing tabs or cycles clears it. While the candidate detail is open,
+  // useCandidateActions puts its problems inside the detail instead. Retry clears the bar first and
+  // a retry that fails puts it back, so only × or a Retry that works closes it.
+  const setBanner = useCallback(
+    (next) => setPageBanner(next && typeof next === 'object' && next.retry ? { ...next, retry: () => { setPageBanner(null); next.retry(); } } : next),
+    [setPageBanner],
+  );
   // Whether the screen is locked right now, for an answer that arrives later (the row ⋯'s read)
   const lockedRef = useRef(screenLocked);
   useLayoutEffect(() => {
@@ -153,7 +161,7 @@ export default function CandidatesTab({
     setFlashId(id);
     flashTimer.current = window.setTimeout(() => setFlashId(null), FLASH_MS);
   }, []);
-  const picker = useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, onAdded: flash });
+  const picker = useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, onAdded: flash, setBanner });
 
   // The page header's "+ Add candidate" (and N) open the Add candidate menu (G 24) through this.
   const schoolCode = SCHOOL_CODE[location] ?? null;
@@ -237,7 +245,7 @@ export default function CandidatesTab({
       if (isAdmin && !hidden && !makeup && m.paidCents > 0) money.push({ key: 'refund', label: T.RECORD_REFUND, Icon: ICONS.refund, onSelect: () => actions.openRefund(row.id, anchor) });
       if (!hidden) money.push({ key: 'print', label: T.PRINT_RECEIPT, Icon: ICONS.print, onSelect: () => actions.openReceipt(row.id, anchor) });
       if (isAdmin) {
-        off.push({ key: 'restore', label: T.RESTORE, Icon: ICONS.restore, disabled: actions.busy, onSelect: () => actions.restore(target) });
+        off.push({ key: 'restore', label: T.RESTORE, Icon: ICONS.restore, disabled: actions.busy, onSelect: () => actions.restore(target, anchor) });
         // Payment records, and (0025, Q-G3 v0.950) grades, block deleting (the short reason: they
         // are already withdrawn)
         const reason = row.hasPaymentRows ? T.hasPaymentRecordsShort(name) : row.hasGrades ? T.hasGradesShort(name) : null;
@@ -406,7 +414,6 @@ export default function CandidatesTab({
 
   return (
     <div id={panelId} role="tabpanel" aria-labelledby={tabId} className="tpanel bb-candidates">
-      {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => { setBanner(null); banner.retry(); } : undefined} retrying={actions.busy} onDismiss={() => setBanner(null)} />}
       {schoolCode && (
         <p className="bb-school-line">
           {T.showingSchoolOnly(location)} ·{' '}

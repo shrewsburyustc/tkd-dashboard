@@ -35,6 +35,7 @@ import Choice from '../parts/Choice.jsx';
 import ConfirmDialog from '../parts/ConfirmDialog.jsx';
 import { useCycleEditor } from '../cycle/useCycleEditor.jsx';
 import { useCycleActions } from './useCycleActions.js';
+import { focusCurrentTab } from '../parts/focusCurrentTab.js';
 import * as T from '../text.js';
 
 // The one thing this tab loads (Black Belt is joint, so there is no school in the key).
@@ -43,6 +44,14 @@ const load = () => loadCycles();
 
 // Upcoming / Past, kept while the dashboard is open.
 let lastSide = 'upcoming';
+
+// A problem to show at the top of the list when the Cycles tab opens next (v0.966, BB4): the
+// cycle page that was open found its cycle deleted, went back here and says "This cycle was
+// deleted." in this tab's amber bar (it can't use its own bar: that page is gone).
+let pendingBanner = null;
+export function showOnCyclesList(banner) {
+  pendingBanner = banner;
+}
 
 const find = (selector) => document.querySelector(selector);
 const rowEl = (id) => find(`[data-nav-row="${id}"]`);
@@ -95,7 +104,12 @@ export default function CyclesTab({
   const [side, setSideState] = useState(lastSide);
   const [sort, setSort] = useState(null); // { key, dir } or null (the side's own order)
   const [menu, setMenu] = useState(null); // { id, anchor }
-  const [banner, setBanner] = useState(null); // { text, retry?, kind? }
+  const [banner, setBanner] = useState(() => pendingBanner); // { text, retry?, kind? }
+  // The waiting problem is shown once (cleared after the first paint, not inside useState: React's
+  // development mode calls that twice).
+  useEffect(() => {
+    pendingBanner = null;
+  }, []);
   const [confirm, setConfirm] = useState(null); // the Delete cycle confirmation
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
@@ -158,6 +172,7 @@ export default function CyclesTab({
     },
     onClosed: ({ opener }) => focusLater(() => opener, addEl),
     onGone: () => reloadQuiet(),
+    reload: () => reloadQuiet(),
   });
 
   const modalShown = (editor.isOpen || confirm !== null) && !screenLocked;
@@ -507,7 +522,7 @@ export default function CyclesTab({
     <>
       {renderHeader(addButton, staffLine)}
       <div role="tabpanel" id={panelId} aria-labelledby={tabId} className="tpanel">
-        {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />}
+        {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => { setBanner(null); focusCurrentTab(); }} />}
         {live.status === 'ready' && (
           <div className="ev-side">
             <span id={sideLabelId} className="visually-hidden">

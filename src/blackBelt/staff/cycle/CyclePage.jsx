@@ -7,7 +7,10 @@
 //     registration (staff: Open grayed after the application date, with the reason)
 //   - "+ Add candidate" (primary; N on the PC) beside the ⋯ (phones: both under the summary line)
 //     — phase B2, contract CONTRACT-0016-B2 §3.2 / §3.7. Grayed with its reason while the device's
-//     Hide payments switch is on ("Add new candidates at the desk.", OP-B7) or the cycle is past.
+//     Hide payments switch is on ("Add new candidates at the desk.", OP-B7) or the cycle is past;
+//     the reason is one gray line under the page title (v0.966, BB4), and pressing it does nothing.
+//   - ONE amber bar for the page (v0.966): the ⋯ actions', Edit cycle's, the Candidates tab's and
+//     the Rubric tab's problems; switching tabs clears it.
 //   - the tabs (v0.946): Candidates (candidates/CandidatesTab.jsx, phase B2) · Grading
 //     (grading/GradingTab.jsx, migration 0025, contract 0025 §14.2) · Results (results/ResultsTab.jsx,
 //     §14.3) · Rubric (this cycle's own copy of the rubric, CycleRubricTab.jsx — migration 0024,
@@ -26,8 +29,8 @@
 //     Sat, Mar 27. Ask an admin to reopen it." under the tabs (approved on Candidates 2).
 // A cycle that no longer exists (deleted elsewhere) → "This cycle was deleted." and back to the
 // Cycles tab.
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { IconArrowLeft, IconDots, IconEdit, IconLock, IconLockOpen, IconPlus, IconQrcode } from '@tabler/icons-react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { IconArrowLeft, IconCurrencyDollarOff, IconDots, IconEdit, IconLock, IconLockOpen, IconPlus, IconQrcode } from '@tabler/icons-react';
 import Dialog from '../../../components/Dialog.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
@@ -42,6 +45,8 @@ import { useBbGrading } from '../grading/useBbGrading.js';
 import * as GT from '../grading/text.js';
 import ResultsTab from '../results/ResultsTab.jsx';
 import { LIVE_REFRESH_MS, useLiveLoad } from '../../../screens/testing/events/useLiveLoad.js';
+import { showOnCyclesList } from '../cycles/CyclesTab.jsx';
+import { focusCurrentTab } from '../parts/focusCurrentTab.js';
 import { openNeedsAdmin, useCycleActions } from '../cycles/useCycleActions.js';
 import CycleRubricTab, { CycleRubricLine, useCycleRubricLoad } from './CycleRubricTab.jsx';
 import LinksDialog from './LinksDialog.jsx';
@@ -136,18 +141,44 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
 
   // Deleted (here or elsewhere), or an address with a wrong id: go back to the Cycles tab and say
   // so. In this order: going back is a page change, and a page change clears the toast (App.jsx).
+  // The words go in the Cycles list's amber bar, at the top of the list (v0.966, BB4).
   useEffect(() => {
     if (live.status !== 'notFound') return;
+    showOnCyclesList({ text: T.CYCLE_DELETED });
     onBack({ unguarded: true });
-    showToast(T.CYCLE_DELETED, { icon: false });
-  }, [live.status, onBack, showToast]);
+  }, [live.status, onBack]);
+
+  // The amber bar belongs to the tab it came from (v0.966): switching tabs clears it. (A new cycle
+  // is a new page — BlackBeltTesting keys this page by the cycle — so that clears it too.)
+  useEffect(() => {
+    setBanner(null);
+  }, [tab]);
+  // Each tab gets its OWN bar setter (tabBanner): an action captures the setter of the tab it
+  // started on, so an answer that arrives after a tab change (e.g. an Undo still running) is
+  // dropped instead of showing its bar on the new tab.
+  const tabRef = useRef(tab);
+  useLayoutEffect(() => {
+    tabRef.current = tab;
+  });
+  const tabBanner = useMemo(
+    () => (next) => {
+      if (tabRef.current === tab) setBanner(next);
+    },
+    [tab],
+  );
+  // × on the bar: the bar goes and focus moves to the current tab's own tab button (the shared
+  // ErrorBanner would leave it on the page body).
+  function dismissBanner() {
+    setBanner(null);
+    focusCurrentTab();
+  }
 
   useEffect(() => {
     if (screenLocked) setMenu(null);
   }, [screenLocked]);
 
   const moreRef = useRef(null);
-  const actions = useCycleActions({ isAdmin, today, beginWrite, endWrite, reload: reloadQuiet, setBanner, showToast, clearToast, onNoAccess, onRefreshProfile });
+  const actions = useCycleActions({ isAdmin, today, beginWrite, endWrite, reload: reloadQuiet, setBanner: tabBanner, showToast, clearToast, onNoAccess, onRefreshProfile });
   const editor = useCycleEditor({
     isAdmin,
     today,
@@ -155,7 +186,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
     screenLocked,
     beginWrite,
     endWrite,
-    setBanner,
+    setBanner: tabBanner,
     onNoAccess,
     onRefreshProfile,
     showToast,
@@ -166,6 +197,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
     },
     onClosed: () => window.requestAnimationFrame(() => moreRef.current?.querySelector('button')?.focus()),
     onGone: () => reloadQuiet(),
+    reload: () => reloadQuiet(),
   });
 
   // The Candidates tab (B2): its dialogs count as "a dialog is open" too, and its Add candidate
@@ -175,13 +207,11 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
   const [candidatesModal, setCandidatesModal] = useState(false);
   const [paymentsHidden] = usePaymentsHidden();
   const cyclePast = cycle ? cycle.state?.state === 'past' || cycle.state?.past === true : false;
-  // Why Add candidate is grayed (null = it can be used).
+  // Why Add candidate is grayed (null = it can be used). The reason is the gray line under the
+  // page title (v0.966, BB4); pressing the grayed button (or N) does nothing — no toast.
   const addBlocked = paymentsHidden ? T.ADD_AT_DESK : cyclePast ? T.CANDIDATE_FINISHED : null;
   function pressAdd() {
-    if (addBlocked) {
-      showToast(addBlocked, { icon: false });
-      return;
-    }
+    if (addBlocked) return;
     candidatesRef.current?.openAdd(addRef.current);
   }
 
@@ -241,13 +271,18 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
         <IconPlus size={16} aria-hidden="true" />
         {T.ADD_CANDIDATE}
       </button>
-      {/* The reason, read with the button (outside it, so it isn't part of the button's name) */}
-      {addBlocked && (
-        <span id={`bb-add-reason-${cycle.id}`} className="visually-hidden">
-          {addBlocked}
-        </span>
-      )}
     </>
+  );
+  // Why it is grayed: one gray line under the page title, Prospects' place and look (v0.616 /
+  // v0.966 option A) — on phones between the summary line and the full-width button. With Hide
+  // private details on it carries the top bar's "private details hidden" icon. The button points
+  // at it (aria-describedby), so a screen reader reads the reason with the button.
+  const addReasonLine = addBlocked && (
+    <p className="phidden-line pdesk-line bb-add-reason" id={`bb-add-reason-${cycle.id}`}>
+      {/* ti-currency-dollar-off = private details hidden (the top bar's chip) */}
+      {paymentsHidden && <IconCurrencyDollarOff size={16} aria-hidden="true" />}
+      {addBlocked}
+    </p>
   );
   // Staff, after registration closed by its date (only an admin can reopen then).
   const staffLine = !isAdmin && !isPast && state.registration !== 'open' && openNeedsAdmin(cycle, today) ? T.registrationClosedStaff(cycle.applicationDue) : null;
@@ -306,9 +341,10 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
           />
         </span>
       </div>
+      {addReasonLine}
       {isPhone && <div className="bb-phone-add">{addButton}</div>}
       <div
-        className="ttabs ev-tabs"
+        className="ttabs ev-tabs bb-cycle-tabs"
         role="tablist"
         aria-label={cycle.name}
         onKeyDown={(event) => {
@@ -341,7 +377,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
       {tab === 'rubric' && rubricLive.status === 'ready' && rubricLive.data && (
         <CycleRubricLine locked={rubricLive.data.locked} firstOpenedAt={rubricLive.data.firstOpenedAt} gradingStartedAt={rubricLive.data.gradingStartedAt ?? null} onGoToDefaultRubric={onGoToDefaultRubric} />
       )}
-      {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={() => setBanner(null)} />}
+      {banner && <ErrorBanner text={banner.text} onRetry={banner.retry ? () => banner.retry() : undefined} retrying={busy} onDismiss={dismissBanner} />}
       {tab === 'rubric' && (
         <CycleRubricTab
           cycle={cycle}
@@ -354,6 +390,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
           setGuard={setRubricGuard}
           onModalChange={setRubricModal}
           onLockedNow={reloadQuiet}
+          setBanner={tabBanner}
           showToast={showToast}
           clearToast={clearToast}
           onNoAccess={onNoAccess}
@@ -406,6 +443,7 @@ export default function CyclePage({ cycleId, isAdmin, tab = 'candidates', onTab,
         clearToast={clearToast}
         onModalChange={setCandidatesModal}
         onCandidatesChanged={reloadQuiet}
+        setPageBanner={tabBanner}
         actionsRef={candidatesRef}
         panelId={`bb-cycle-panel-${cycle.id}`}
         tabId={`bb-cycle-tab-${cycle.id}`}

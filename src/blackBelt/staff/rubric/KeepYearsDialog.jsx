@@ -9,7 +9,8 @@
 //   1. setKeepYears(confirmCount: null) → 'confirm_needed' + how many candidates it would remove
 //   2. 0 → saved straight away; more than 0 → "Saving deletes the signature, signer's name, date of
 //      birth and email of N candidates now. This can't be undone." · Save and delete (red)
-// Toast "Keeping time saved".
+// Toast "Keeping time saved · Undo" (BB5, v0.967; RubricTab.jsx runs the Undo) — without Undo when
+// the save went through "Save and delete" (it already deleted details).
 import { useId, useState } from 'react';
 import { IconCheck } from '@tabler/icons-react';
 import Dialog from '../../../components/Dialog.jsx';
@@ -69,12 +70,17 @@ export default function KeepYearsDialog({ settings, isPhone, onClose, onSaved, o
     else setFailed(true);
   }
 
+  // BB5 (v0.967): what the toast's Undo needs to put the old numbers back — but ONLY when this save
+  // deleted nothing. After the red "This can't be undone" box (count > 0) there is no Undo.
+  const undoFor = (result, count) =>
+    count === 0 && (result.removedCount ?? 0) === 0 ? { version: result.version, afterLastDay: settings.afterLastDay ?? null, after18: settings.after18 ?? null } : null;
+
   async function secondStep(count) {
     setSaving(true);
     const result = await setKeepYears({ expectedVersion: settings.version, afterLastDay: a, after18: b, confirmCount: count });
     setSaving(false);
     setConfirm(null);
-    if (result.status === 'ok') onSaved(T.TOAST_KEEPING_SAVED);
+    if (result.status === 'ok') onSaved(T.TOAST_KEEPING_SAVED, undoFor(result, count));
     else handleProblem(result.status);
   }
 
@@ -95,7 +101,7 @@ export default function KeepYearsDialog({ settings, isPhone, onClose, onSaved, o
       return;
     }
     if (first.status === 'ok') {
-      onSaved(T.TOAST_KEEPING_SAVED);
+      onSaved(T.TOAST_KEEPING_SAVED, undoFor(first, first.removedCount ?? 0));
       return;
     }
     handleProblem(first.status);

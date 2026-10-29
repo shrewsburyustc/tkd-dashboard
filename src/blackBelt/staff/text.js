@@ -578,7 +578,14 @@ export const RESTORE = 'Restore';
 export const DELETE_PERMANENTLY = 'Delete permanently';
 
 // Statuses → words (B returns codes only)
-export const candidateStale = (name) => `Someone else changed ${name} just now. Close and open them again to see the change.`;
+// The someone-else-changed refusal (v0.966). Used where the screen has already reloaded, so
+// "Their change is shown" is true: a row's refusal, the detail's, a toast Undo of BB5 (v0.967).
+// The name can be a candidate's or a cycle's ("Someone else changed Spring 2027 …").
+export const candidateStale = (name) => `Someone else changed ${name} just now, so nothing was done. Their change is shown.`;
+// The same refusal as a NOTE inside an open dialog (Record payment, Edit details …): the dialog
+// still shows what was typed, not the other person's change, so it keeps the old words (v0.966:
+// "inside the open box these stay a note, as today").
+export const candidateStaleInDialog = (name) => `Someone else changed ${name} just now. Close and open them again to see the change.`;
 export const CANDIDATE_GONE = 'This candidate was deleted.'; // (not in the mockups)
 export const CANDIDATE_FINISHED = "This cycle is finished, so candidates can't be added.";
 export const PAPER_WAIVER_FINISHED = "This cycle is finished, so the waiver can't be recorded here."; // (not in the mockups)
@@ -1205,6 +1212,15 @@ export const lockedSince = (date) => `Locked since registration opened on ${date
 export const GO_TO_DEFAULT = 'Go to the default rubric';
 export const FIRST_OPEN_ADMIN = 'An admin opens it the first time (it locks the rubric).';
 export const CANT_UNDO_REGISTERED = "Can't undo: a family has already registered."; // (new wording, not in the mockups)
+// BB5 (v0.967): the refusals of the new Undos (Edit details, Add / Edit cycle, Keeping time)
+export const undoDanHasGrades = (name) => `Can't undo: grades were already entered for ${name}'s new Dan.`; // (new wording, not in the mockups)
+export const UNDO_CYCLE_HAS_GRADES = "Can't undo: grades were already entered on a testing day this save changed."; // (new wording, not in the mockups)
+export const UNDO_CYCLE_INVALID = "Can't undo this save any more (a date may be in the past now). Use Edit cycle to change it back."; // (new wording, not in the mockups)
+// Edit cycle's Undo put the registration switch back, then the other changes were refused and the
+// switch couldn't be set back either: says plainly what state the cycle is in (Retry = the rest of the Undo).
+export const undoHalfway = (open) => `Undo stopped halfway: registration is ${open ? 'open' : 'closed'} again, but the other changes are still saved. Check the cycle.`; // (new wording, not in the mockups)
+export const UNDO_KEEP_STALE = 'Someone else changed the keeping time just now, so nothing was done. Their change is shown.'; // (new wording, not in the mockups)
+export const UNDO_KEEP_DELETES = "Can't undo: the old numbers would delete personal details now. Use the Edit button to change them."; // (new wording, not in the mockups)
 export const UNDO_OPEN_TOO_LATE = "Couldn't undo: it's too late, or someone else changed this cycle just now."; // (new wording, not in the mockups)
 
 // ----- R14: Add cycle / Edit cycle -----

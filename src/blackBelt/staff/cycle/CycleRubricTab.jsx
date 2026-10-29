@@ -16,7 +16,8 @@
 // for good — even if every grade is cleared again. The line then says "Locked — grading started
 // Jun 5, 2027. …" with the lock icon (the date from bb_cycle_grading_state's grading_started_at,
 // read with the rubric). A save / undo answered has_grades (grading started meanwhile) stops the
-// editor, says so in a toast and reloads into that locked view.
+// editor, says so in the cycle page's amber bar (under the lock line, v0.966) and reloads into
+// that locked view.
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { IconLock } from '@tabler/icons-react';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
@@ -68,6 +69,7 @@ export default function CycleRubricTab({
   setGuard,
   onModalChange,
   onLockedNow, // reload the cycle page (registration opened meanwhile)
+  setBanner, // the cycle page's amber bar (drawn under the lock line)
   showToast,
   clearToast,
   onNoAccess,
@@ -99,11 +101,11 @@ export default function CycleRubricTab({
     const lockedByGrading = Boolean(data.gradingStartedAt);
     // 0025: a has_grades answer (grading started meanwhile) — the card stops editing and reloads
     // (it is passed on as not_found, which RubricCard answers that way without its own banner) and
-    // the toast says why.
+    // the amber bar says why.
     const gradingGuard = (call) => async (args) => {
       const result = await call(args);
       if (result.status !== 'has_grades') return result;
-      showToast(T.RUBRIC_LOCKED_GRADING_NOW, { icon: false });
+      setBanner({ text: T.RUBRIC_LOCKED_GRADING_NOW });
       return { status: 'not_found' };
     };
     body = (
