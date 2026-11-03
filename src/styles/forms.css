@@ -181,7 +181,7 @@
 .fhead {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end; /* the buttons line up with the bottom of the name and status line, not with "← Forms" above */
   gap: var(--space-8);
   margin-bottom: var(--space-16);
 }
@@ -189,6 +189,24 @@
 .fhead-titles {
   flex: 1;
   min-width: 0;
+}
+
+/* "← Forms" above the form's name (v1.020, v0.624): a copy of Testing's "← Testing" link
+   (chooser.css .tc-back), as Finance's History back link is (.fin-back-link, finance branch). */
+.fb-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 24px;
+  margin-bottom: 2px;
+}
+
+/* Touch: a 44px tall tap area, pulled back with negative margins so the name doesn't move down. */
+@media (pointer: coarse) {
+  .fb-back {
+    min-height: var(--tap-size);
+    margin: -10px 0 -8px;
+  }
 }
 
 .fhead-titles .ptitle {

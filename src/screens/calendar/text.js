@@ -7,7 +7,8 @@ import { formatDate } from '../../lib/schedule/versions.js';
 import { formatTime } from '../../lib/schedule/time.js';
 
 export const PAGE_TITLE = 'Calendar';
-export const VIEW_ONLY_LINE = 'View only — ask an admin to make changes.';
+// The same words as Schedule and Testing (v1.021).
+export const VIEW_ONLY_LINE = 'View only. Ask an admin to make changes.';
 export const ADD = 'Add';
 export const ADD_EVENT = 'Event';
 export const ADD_CLOSURE = 'Closure';
@@ -158,7 +159,8 @@ export const NOTES = 'Notes';
 export const NOTES_HINT = "Don't put student details here (names, health, phone numbers). Notes are kept in the change history.";
 export const NO_TYPES = 'Add an event type first: ⋯ → Event types.';
 export const CHOOSE_TYPE = 'Choose a type';
-export const VIEW_ONLY_DIALOG = 'View only — ask an admin to change this.';
+// Inside an event or closure box, "this" means that one event or closure (v0.625).
+export const VIEW_ONLY_DIALOG = 'View only. Ask an admin to change this.';
 
 // ----- Closure dialog -----
 export const ADD_CLOSURE_TITLE = 'Add closure';
