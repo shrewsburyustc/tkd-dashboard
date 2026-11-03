@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Camps C7 — the history line in Camper detail</title>
+<style>
+  body { margin: 0; padding: 28px 32px 32px; background: #FFFFFF; color: #1F1F1F; font: 15px/1.4 "Segoe UI", system-ui, sans-serif; width: 1840px; box-sizing: border-box; }
+  h1 { font-size: 24px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: #4A4A4A; margin: 0 0 20px; max-width: 1500px; }
+  .cols { display: flex; gap: 36px; align-items: flex-start; }
+  .col { flex: 1; min-width: 0; }
+  .label { display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; margin: 0 0 14px; }
+  .today .label { background: #FDF0D9; color: #7A4A06; }
+  .after .label { background: #E5F2DF; color: #2E6B1F; }
+  figure { margin: 0 0 22px; }
+  .row { display: flex; gap: 16px; align-items: flex-start; }
+  .row figure { flex: 0 0 auto; }
+  .row figcaption { max-width: 100%; }
+  .shot { position: relative; overflow: hidden; border: 1px solid #D9D9D4; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .shot img { position: absolute; max-width: none; }
+  .mark { position: absolute; border: 3px solid; border-radius: 8px; box-sizing: border-box; }
+  figcaption { margin-top: 8px; font-size: 15px; }
+  figcaption b { font-weight: 600; }
+  .note { border-radius: 8px; padding: 12px 16px; font-size: 15px; margin-top: 4px; }
+  .today .note { background: #FDF6EA; }
+  .after .note { background: #F1F8EE; }
+  .foot { margin-top: 8px; padding-top: 14px; border-top: 1px solid #E5E5E2; color: #3A3A3A; font-size: 15px; line-height: 1.55; }
+</style></head><body>
+<h1>Camps C7 — the history line in Camper detail</h1>
+<p class="sub">Rules v1.010 (every person’s summary ends with one line, “History · N changes ›”) and v1.108 (the shared line, <code>components/HistoryLine.jsx</code>, approved as M7). Model: Star’s build (<code>CandidateHistory.jsx</code>, v0.518). Today Camper detail has <b>no history</b>: who changed the days, the phone or the way to pay can only be found in the database. After: <b>History · 5 changes ›</b> after the Sign-up part; a tap opens the list right there, newest first, each change in plain words, then “date · who”. On touch screens it sits just above <b>More</b> (More stays last: it is the actions, History is part of the summary). Sample: Jack Rivera, Thanksgiving Camp — the rows are a <b>made-up sample</b> in the proposed words (Camps has no history reader until C7’s migration), matching his preview data (signed up Oct 9, one $186 check on Oct 13). Amber = what changes.</p>
+<div class="cols">
+<div class="col today">
+  <div class="label">Today</div>
+  <figure style="width:272.8px">
+    <div class="shot" style="width:272.8px;height:436.48px">
+      <img src="shots/c07-pc-today.png" style="left:-260.4px;top:-49.6px;width:793.6px">
+      <div class="mark" style="left:10.879999999999999px;top:318.4px;width:251.04px;height:57.6px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>PC 1280×800.</b> Camper detail ends with Sign-up. No history.</figcaption>
+  </figure>
+<figure style="width:264px">
+    <div class="shot" style="width:264px;height:372px">
+      <img src="shots/c07-tab-today.png" style="left:-114px;top:-336px;width:492px">
+      
+    </div>
+    <figcaption><b>Tablet 820×1180 touch.</b> Sign-up, then More.</figcaption>
+  </figure>
+<div class="row"><figure style="width:163.79999999999998px">
+    <div class="shot" style="width:163.79999999999998px;height:354.47999999999996px">
+      <img src="shots/c07-ph-today.png" style="left:0px;top:0px;width:163.79999999999998px">
+      
+    </div>
+    <figcaption><b>Phone 390×844 touch.</b></figcaption>
+  </figure><figure style="width:160px">
+    <div class="shot" style="width:160px;height:350px">
+      <img src="shots/c07-320-today.png" style="left:0px;top:0px;width:160px">
+      
+    </div>
+    <figcaption><b>320 wide.</b></figcaption>
+  </figure></div>
+  
+</div>
+<div class="col after">
+  <div class="label">After (mockup)</div>
+  <div class="row"><figure style="width:220px">
+    <div class="shot" style="width:220px;height:352px">
+      <img src="shots/c07-pc-after.png" style="left:-210px;top:-40px;width:640px">
+      <div class="mark" style="left:8px;top:287.5px;width:204px;height:26px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>PC, closed.</b> The line after Sign-up.</figcaption>
+  </figure><figure style="width:220px">
+    <div class="shot" style="width:220px;height:352px">
+      <img src="shots/c07-pc-after-open.png" style="left:-210px;top:-40px;width:640px">
+      <div class="mark" style="left:8px;top:151px;width:204px;height:162.5px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Open</b> (a tap): newest first; “date · who”; a family-form change says “Family form”.</figcaption>
+  </figure><figure style="width:220px">
+    <div class="shot" style="width:220px;height:352px">
+      <img src="shots/c07-pc-after-hidden.png" style="left:-210px;top:-40px;width:640px">
+      <div class="mark" style="left:8px;top:192px;width:204px;height:121.5px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Hide private details on:</b> money changes left out (3 of 5 counted) and the gray line “Payment history is hidden on this tablet.” (Star’s words).</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:220px">
+    <div class="shot" style="width:220px;height:80px">
+      <img src="shots/c07-pc-after-empty.png" style="left:-210px;top:-280px;width:640px">
+      <div class="mark" style="left:8px;top:47.5px;width:204px;height:26px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>Nothing recorded: plain “History · no changes yet”.</figcaption>
+  </figure><figure style="width:220px">
+    <div class="shot" style="width:220px;height:310px">
+      <img src="shots/c07-tab-after.png" style="left:-95px;top:-280px;width:410px">
+      <div class="mark" style="left:8px;top:142px;width:204px;height:30px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Tablet touch:</b> just above More.</figcaption>
+  </figure><figure style="width:184.79999999999998px">
+    <div class="shot" style="width:184.79999999999998px;height:369.59999999999997px">
+      <img src="shots/c07-tab-after-open.png" style="left:-79.8px;top:-126px;width:344.4px">
+      <div class="mark" style="left:6.08px;top:116.11999999999999px;width:172.64px;height:141.14px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>Open; More follows the list.</figcaption>
+  </figure></div>
+<div class="row"><figure style="width:163.79999999999998px">
+    <div class="shot" style="width:163.79999999999998px;height:354.47999999999996px">
+      <img src="shots/c07-ph-after.png" style="left:0px;top:0px;width:163.79999999999998px">
+      <div class="mark" style="left:2.7199999999999998px;top:225.73999999999998px;width:158.35999999999999px;height:26.48px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>Phone.</b></figcaption>
+  </figure><figure style="width:163.79999999999998px">
+    <div class="shot" style="width:163.79999999999998px;height:354.47999999999996px">
+      <img src="shots/c07-ph-after-open.png" style="left:0px;top:0px;width:163.79999999999998px">
+      <div class="mark" style="left:2.7199999999999998px;top:103.1px;width:158.35999999999999px;height:149.12px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>Open.</figcaption>
+  </figure><figure style="width:160px">
+    <div class="shot" style="width:160px;height:350px">
+      <img src="shots/c07-320-after.png" style="left:0px;top:0px;width:160px">
+      <div class="mark" style="left:4px;top:197px;width:152px;height:30px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption><b>320.</b></figcaption>
+  </figure><figure style="width:160px">
+    <div class="shot" style="width:160px;height:350px">
+      <img src="shots/c07-320-after-open.png" style="left:0px;top:0px;width:160px">
+      <div class="mark" style="left:4px;top:51px;width:152px;height:176px;border-color:#F59E0B"></div>
+    </div>
+    <figcaption>Open; long lines wrap.</figcaption>
+  </figure></div>
+  
+</div>
+</div>
+<div class="foot"><b>Proposed words (copying Star’s style, v0.518 — “what: before → after”):</b> “Signed up on the family form · CP-4409” · “Days: Wed, Nov 25 → Wed, Nov 25 · Fri, Nov 27” · “Pizza party added” / “Late pick-up removed” · “Age: 10 → 11”, “Member: No → Yes”, name changes the same way · “Paying by: Cash → Check” · “Marked paid $186 check” · “Payment undone: $186 check” · “Payment changed: $186 check → $100 cash” · “Withdrawn” / “Restored” · “Possible duplicate found” / “Kept both” / “Removed as a duplicate copy” · “Parent: …”, “Parent phone: … → …”, “Emergency contact …” · “Signature deleted (3 years after the camp)”. One Edit details save that changes several things is <b>one entry</b>, joined with “; ” (Star’s DR2-P5 A). Who: the staff member’s name, or “Family form”. <b>Settled by copying (no question):</b> <b>(a)</b> Newest first, at most 500 rows, no login ids, a signature only ever “on file” (Color Belt v0.418, Star’s <code>star_history_strip</code>). <b>(b)</b> While Hide private details is on, every money change (payments, undo, edit, Paying by) is left out and counted for the gray line (Star v0.506). <b>(c)</b> <b>Check-ins are left out</b>: Camper detail’s Check-in part already shows each day’s time and who (rule 1.1, nothing twice); a 10-day camp would otherwise bury the real changes under check-ins. <b>(d)</b> A failed read shows the shared amber bar with Retry, never “no changes yet” (the reader throws, as Star’s). <b>(e)</b> Place: after Sign-up; on touch above More. <b>Question for Jeffrey (one):</b> brothers and sisters signed up on one form share the family part (parent, emergency contact, signature). When staff change the parent’s phone from Jack’s Edit details, it changes for his sister too. Where does that change show? <b>A</b> — in <b>every</b> child’s history from that form, with “(whole family)” at the end (drawn). The sister’s detail shows the new phone, and her history says why. <b>B</b> — only in the history of the child it was edited from. Shorter lists, but the sister’s phone changed with no line saying who or when. <b>Recommend A</b>: the history should explain every value Camper detail shows. <b>Database (with C2, one migration):</b> <code>camp_camper_history(p_camper_id)</code> — staff and admins, reads <code>change_log</code> for the camper, their days and extras (no check-in edits), their payments and their sign-up; strips login ids. <b>Script:</b> <code>mock-c07-history.js</code> mounts the <b>real</b> shared line with the sample rows.</div>
+</body></html>
