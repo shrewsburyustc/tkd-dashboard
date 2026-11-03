@@ -4,9 +4,10 @@
 //   - one school: the page header ("Schedule", the school, Plan a change, + Add time slot) and
 //     that school's schedule (schedule/ScheduleSchool.jsx does the rest)
 //   - "Both": the two schools one above the other, each with its own heading and schedule picker
-//     (decided v0.233 — schedules are never mixed into one grid). The page header keeps ONE
-//     "Plan a change" and ONE blue "+ Add time slot"; they first ask which school (mockup
-//     screen 8), then that school opens its dialog.
+//     (decided v0.233 — schedules are never mixed into one grid). The page header says "Both
+//     schools" under the title (v1.022) and keeps ONE "Plan a change" and ONE blue
+//     "+ Add time slot"; they first ask which school (mockup screen 8), then that school opens
+//     its dialog.
 //   - for staff, the line "View only. Ask an admin to make changes."
 //
 // Props (from App.jsx), the same as Testing's:
@@ -126,7 +127,7 @@ export default function Schedule({ location, isAdmin, onModalOpenChange, ...rest
 
     return (
       <div className="schedule">
-        <PageHeader buttons={buttons} />
+        <PageHeader subtitle={T.BOTH_SCHOOLS} buttons={buttons} />
         {!isAdmin && <p className="viewonly">{T.VIEW_ONLY_LINE}</p>}
         {LOCATIONS.map((school) => (
           <ScheduleSchool
