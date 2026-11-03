@@ -4,9 +4,9 @@
 // never asks to choose a school. This file draws the frame:
 //   - "← Testing", the page title "Black Belt testing" and, for admins on the Cycles tab,
 //     "+ Add cycle" in the page header (v0.45)
-//   - the tabs Cycles · Rubric and prices (← → move between them)
+//   - the tabs Cycles · Rubric and waiver (← → move between them)
 //   - the gray line under the tabs: for staff on Cycles (when there are cycles) the "Staff can
-//     open or close registration…" line; for staff on Rubric and prices "View only…"
+//     open or close registration…" line; for staff on Rubric and waiver "View only…"
 //   - when a cycle is open: that cycle's page instead (CyclePage.jsx)
 // Everything inside a tab lives in cycles/CyclesTab.jsx and rubric/RubricTab.jsx.
 //
@@ -125,7 +125,7 @@ export default function BlackBeltTesting({ isAdmin, onBack, cycleId = null, tab:
     return () => onLeaveGuardChange(null);
   }, [onLeaveGuardChange, appGuard]);
   const ids = { tab: (key) => `${baseId}-tab-${key}`, panel: (key) => `${baseId}-panel-${key}` };
-  // The page's tab (without a cycle: Cycles unless Rubric and prices was asked for).
+  // The page's tab (without a cycle: Cycles unless Rubric and waiver was asked for).
   const tab = askedTab === 'rubric' ? 'rubric' : 'cycles';
   const setTab = (key) => onTab(key);
   function openCycle(id) {

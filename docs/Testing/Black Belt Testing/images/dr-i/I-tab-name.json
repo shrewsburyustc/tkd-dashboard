@@ -1,0 +1,30 @@
+{
+  "title": "Black Belt · I — the tab becomes “Rubric and waiver”",
+  "subtitle": "Prices are set on each cycle now, so the tab holds the rubric, the waiver and the result emails. Its name changes from <b>Rubric and prices</b> to <b>Rubric and waiver</b>, here and in every message that names the tab. The first line stays: “Same for both schools. Prices are set on each cycle.” Nothing to decide: this was approved in the design review (v1.023). OK to build?",
+  "width": 1000,
+  "columns": [
+    {
+      "label": "Today",
+      "tone": "today",
+      "items": [
+        { "src": "rub-pc-today.png", "crop": [60, 95, 440, 150], "scale": 1, "caption": "<b>PC</b>", "marks": [[130, 166, 114, 36]] },
+        { "src": "rub-tab-today.png", "shotWidth": 820, "crop": [80, 110, 440, 160], "scale": 1, "caption": "<b>Tablet 820</b>", "marks": [[150, 182, 114, 40]] },
+        { "src": "rub-phone-today.png", "shotWidth": 390, "crop": [0, 120, 390, 165], "scale": 1, "caption": "<b>Phone 390</b>", "marks": [[70, 192, 114, 40]] },
+        { "src": "rub-p320-today.png", "shotWidth": 320, "crop": [0, 120, 320, 185], "scale": 1, "caption": "<b>320</b>", "marks": [[70, 192, 114, 40]] }
+      ],
+      "note": "Amber: the tab's name."
+    },
+    {
+      "label": "After",
+      "tone": "after",
+      "items": [
+        { "src": "rub-pc-after.png", "crop": [60, 95, 440, 150], "scale": 1, "caption": "<b>PC</b>: same place, new name; the first line is unchanged", "marks": [[130, 166, 117, 36]] },
+        { "src": "rub-tab-after.png", "shotWidth": 820, "crop": [80, 110, 440, 160], "scale": 1, "caption": "<b>Tablet 820</b>", "marks": [[150, 182, 117, 40]] },
+        { "src": "rub-phone-after.png", "shotWidth": 390, "crop": [0, 120, 390, 165], "scale": 1, "caption": "<b>Phone 390</b>", "marks": [[70, 192, 117, 40]] },
+        { "src": "rub-p320-after.png", "shotWidth": 320, "crop": [0, 120, 320, 185], "scale": 1, "caption": "<b>320</b>: still fits on one line next to Cycles", "marks": [[70, 192, 117, 40]] }
+      ],
+      "note": "Green: the new name. It is 3 px wider, so nothing moves."
+    }
+  ],
+  "footer": "<b>The same words change in the messages that name the tab</b> (not shown, they only appear when something goes wrong): “Save the school's waiver on Rubric and waiver first.” (opening registration without a saved waiver), “Only an admin can change Rubric and waiver. Your change wasn’t saved.” (result emails), the screen reader's “Loading Rubric and waiver”, and the preview's placeholder waiver. Drawn on the real preview (fake data) by swapping the words; nothing in the app changed."
+}

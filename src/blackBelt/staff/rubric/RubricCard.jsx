@@ -1,6 +1,6 @@
 // RubricCard.jsx — a rubric card: the read view of one Dan with its Dan switcher, and the editor
 // when an admin presses "Edit 1st Dan". Used twice:
-//   - the Default rubric card on Rubric and prices (DefaultRubricCard.jsx; mockups R1–R11)
+//   - the Default rubric card on Rubric and waiver (DefaultRubricCard.jsx; mockups R1–R11)
 //   - a cycle's own copy on the cycle page's Rubric tab (cycle/CycleRubricTab.jsx; R12, R13)
 // Why it exists: CONTRACT-0024 §10.3 — "the same read view and editor on the cycle copy". The
 // two places differ only in their words and in which save / undo they call, so this file takes

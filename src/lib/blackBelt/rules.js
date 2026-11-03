@@ -33,6 +33,7 @@
 import { nameProblem, nameKey } from '../testing/names.js';
 import { isIsoDate, normalizeNote, noteIsValid } from '../testing/eventRules.js';
 import { priceIsValid } from './money.js';
+import { dueKey, savedDueDates } from './dateLimits.js';
 
 // ----- Constants (the same numbers as migration 0016) -----
 
@@ -396,10 +397,8 @@ export function cycleFormProblems(form, { today, mode = 'add', original = null }
   }
 
   const plans = Array.isArray(form?.plans) ? form.plans : [];
-  const originalDue = new Map();
-  for (const plan of original?.plans ?? []) {
-    for (const pay of plan.payments ?? []) originalDue.set(`${plan.id}|${pay.paymentNo}`, pay.dueOn);
-  }
+  // The saved due dates (Edit cycle): the same map the due date's calendar uses (dateLimits.js)
+  const originalDue = savedDueDates(original?.plans);
 
   if (mode === 'add') {
     if (plans.length === 0) problems.plansList = 'none';
@@ -426,7 +425,7 @@ export function cycleFormProblems(form, { today, mode = 'add', original = null }
       const due = effectiveDueOn({ ...pay, paymentNo: pay?.paymentNo ?? i + 1 }, form?.applicationDue);
       if (!isIsoDate(due)) x.dueOn = 'missing';
       else if (today && due < today) {
-        const saved = mode === 'edit' ? originalDue.get(`${plan?.id}|${pay?.paymentNo ?? i + 1}`) : undefined;
+        const saved = mode === 'edit' ? originalDue.get(dueKey(plan?.id, pay?.paymentNo ?? i + 1)) : undefined;
         if (due !== saved) x.dueOn = 'past';
       }
       return x;

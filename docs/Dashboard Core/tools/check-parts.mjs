@@ -18,7 +18,9 @@
 //     dialog's busy button is heard as "Keeping…";
 //   - the Mark paid box's keys, first focus and Tab out (also inside a dialog); the count cards'
 //     pressed state and their two-line note (v1.115: each line under the one before, at the four
-//     sizes, heard after the number); the history line;
+//     sizes, heard after the number); Show all inside the gray line (v1.117, option a: on touch as
+//     tall as on PC and right after the dot, with an invisible box of exactly 44 px that a finger
+//     finds, covering neither the cards above nor the control under the line); the history line;
 //   - Download QR code's hidden name: with two schools its own words first, then the school
 //     ("Download QR code, Worcester", v1.111); with one school none;
 //   - a real Download QR code: the file's name and that it is 1024 × 1024 pixels.
@@ -725,6 +727,111 @@ await withChrome(async (tab) => {
     const notes = await ev(`[...document.querySelectorAll('.ev-card')].map((c) => [...c.querySelectorAll('.ev-card-note')].map((n) => n.textContent + (n.getBoundingClientRect().height > parseFloat(getComputedStyle(n).lineHeight) + 0.5 ? ' (more than one line)' : '')))`);
     assert.deepEqual(notes, [[], [], ['$1,355'], []]);
   });
+  // Show all inside the gray line (v1.117, option a): on touch the line is as tall as on PC and the
+  // words sit as close after the dot; its invisible box is exactly 44 px tall; a finger finds the
+  // link in a 44×44 area at least (stepping out from its middle in 1/8 px steps until another
+  // element is there, so a covered part of the box doesn't count); and the box takes no taps from
+  // another control (guidelines 2.5: tap areas don't overlap):
+  //   - no point inside a card above, or inside the class switch under the line (the sample's real
+  //     control), finds Show all;
+  //   - the neighbours' own tap areas, invisible boxes included, are untouched: in the columns of
+  //     Show all's box (its left edge + 1, its middle, its right edge − 1), the card above and the
+  //     switch's button under it are exactly as tall for a finger with Show all's box as without it.
+  const showAll = () => ev(`(() => {
+    const line = document.querySelector('.ev-filter-line');
+    line.scrollIntoView({ block: 'center' });
+    const link = line.querySelector('button');
+    const text = [...line.childNodes].find((n) => n.nodeType === 3 && n.textContent.includes('·'));
+    const at = text.textContent.indexOf('·');
+    const dot = document.createRange();
+    dot.setStart(text, at);
+    dot.setEnd(text, at + 1);
+    const words = document.createRange();
+    words.selectNodeContents(link);
+    const b = link.getBoundingClientRect();
+    const s = 0.125;
+    // How tall an element is for a finger at (x, y): up and down until another element is there.
+    const fingerHeight = (el, x, y, reach = 60) => {
+      const on = (yy) => el.contains(document.elementFromPoint(x, yy));
+      let [top, bottom] = [y, y];
+      while (on(top - s) && top > y - reach) top -= s;
+      while (on(bottom + s) && bottom < y + reach) bottom += s;
+      return bottom - top + s;
+    };
+    const cx = (b.left + b.right) / 2;
+    const cy = (b.top + b.bottom) / 2;
+    const hits = (x, y) => link.contains(document.elementFromPoint(x, y));
+    let [left, right] = [cx, cx];
+    while (hits(left - s, cy) && left > cx - 200) left -= s;
+    while (hits(right + s, cy) && right < cx + 200) right += s;
+    // Points inside another control (a card, a button of the class switch) where Show all is found.
+    const others = [...document.querySelectorAll('button, [role=radio], a[href]')].filter((e) => e !== link);
+    const taken = new Set();
+    for (let y = b.top - 30; y <= b.bottom + 30; y += 0.5) {
+      for (let x = b.left - 30; x <= b.right + 30; x += 0.5) {
+        if (!hits(x, y)) continue;
+        for (const o of others) {
+          const r = o.getBoundingClientRect();
+          if (x >= r.left && x < r.right && y >= r.top && y < r.bottom) taken.add(o.textContent.trim());
+        }
+      }
+    }
+    const after = getComputedStyle(link, '::after');
+    const hasBox = after.content !== 'none';
+    // The neighbours in the columns of Show all's box: the nearest control above the link and the
+    // nearest under it, each measured for a finger from its own middle (cards are tall: reach 150).
+    const boxLeft = b.left - (hasBox ? -parseFloat(after.left) : 0);
+    const boxRight = b.right + (hasBox ? -parseFloat(after.right) : 0);
+    const columns = [boxLeft + 1, cx, boxRight - 1];
+    const neighbourTaps = () => columns.flatMap((x) => {
+      const inColumn = others.map((e) => ({ e, r: e.getBoundingClientRect() })).filter(({ r }) => r.width > 0 && r.left <= x && r.right > x);
+      const above = inColumn.filter(({ r }) => r.bottom <= b.top).sort((p, q) => q.r.bottom - p.r.bottom)[0];
+      const below = inColumn.filter(({ r }) => r.top >= b.bottom).sort((p, q) => p.r.top - q.r.top)[0];
+      return [above, below].filter(Boolean).map(({ e, r }) => ({ name: e.textContent.trim(), x: Math.round(x), height: fingerHeight(e, x, (r.top + r.bottom) / 2, 150) }));
+    });
+    const withBox = neighbourTaps();
+    const noBox = document.createElement('style'); // Show all's box away for a moment
+    noBox.textContent = '.inline-link::after { content: none !important; }';
+    document.head.append(noBox);
+    const withoutBox = neighbourTaps();
+    noBox.remove();
+    return {
+      line: Math.round(line.getBoundingClientRect().height),
+      gap: Math.round(words.getBoundingClientRect().left - dot.getBoundingClientRect().right),
+      box: hasBox ? parseFloat(after.height) : null,
+      tap: [right - left + s, fingerHeight(link, cx, cy)],
+      taken: [...taken],
+      neighbours: { withBox, withoutBox },
+    };
+  })()`);
+  let showAllOnPc = null;
+  for (const size of FOUR_SIZES) {
+    await tab.size({ w: size.w, h: size.h, touch: size.touch, scale: 1 });
+    await open('M6/filtered', 0);
+    // The sample taps Not paid a moment after it opens: wait for the gray line, then one more frame.
+    for (let i = 0; i < 60 && !(await ev(`Boolean(document.querySelector('.ev-filter-line'))`)); i += 1) await sleep(50);
+    await sleep(100);
+    await check(`M6 Show all at ${size.label}: in the gray line, right after the dot${size.touch ? ', as tall as on PC; its invisible box 44 px; a finger finds it in 44×44 at least; it covers neither the cards nor the class switch under the line' : ''}`, async () => {
+      const found = await showAll();
+      assert.deepEqual(found.taken, [], `Show all takes taps from: ${found.taken.join(', ')}`);
+      if (!size.touch) {
+        showAllOnPc = found;
+        assert.ok(found.line <= 24, `the line is ${found.line} px tall`);
+        assert.ok(found.gap <= 6, `${found.gap} px after the dot`);
+        return;
+      }
+      assert.equal(found.line, showAllOnPc.line, `the line is ${found.line} px tall (on PC ${showAllOnPc.line})`);
+      assert.ok(Math.abs(found.gap - showAllOnPc.gap) <= 1, `${found.gap} px after the dot (on PC ${showAllOnPc.gap})`);
+      assert.equal(found.box, 44, `its invisible box is ${found.box} px tall`);
+      // 1/8 px steps can come up to 2 steps short of the true edge, so 43.75 means "44".
+      assert.ok(found.tap[0] >= 44 && found.tap[1] >= 43.75, `a finger finds it in ${found.tap.join('×')}`);
+      const { withBox, withoutBox } = found.neighbours;
+      assert.ok(withBox.some((n) => /Students|Paid|Not paid|Payments/.test(n.name)), `no card above Show all: ${JSON.stringify(withBox)}`);
+      assert.ok(withBox.some((n) => /All classes|Little Tigers|Group A/.test(n.name)), `no class switch button under Show all: ${JSON.stringify(withBox)}`);
+      assert.deepEqual(withBox, withoutBox, 'Show all’s box takes tap area from a neighbour (with the box, then without it)');
+    });
+  }
+  await tab.size({ w: 1280, h: 800, touch: false, scale: 1 });
   await open('M7/closed');
   await check('M7: the line is a button heard as collapsed/expanded; Enter opens the list newest first, "Oct 22 · Jeffrey Berg"', async () => {
     assert.equal(await ev(`document.querySelector('.hist-btn').getAttribute('aria-expanded')`), 'false');

@@ -4,7 +4,7 @@
 // screen lock can hide the dialog and bring it back exactly as it was.
 //
 //   const picker = useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChanged, showToast,
-//                                    clearToast, onNoAccess, onRefreshProfile, onAdded });
+//                                    clearToast, onNoAccess, onRefreshProfile, onAdded, setBanner });
 //   picker.open(opener) · picker.state (null = closed) · picker.close() · picker.setSearch(text)
 //   picker.add(row) · picker.retry() · picker.openChoose(row) · picker.closeChoose({ saved })
 //
@@ -27,7 +27,7 @@ import { deleteCandidate } from '../../../lib/blackBelt/api.js';
 import { addMakeup, loadMakeupList, loadResults } from '../../../lib/blackBelt/gradingApi.js';
 import * as T from '../text.js';
 
-export function useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, onAdded }) {
+export function useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, onAdded, setBanner }) {
   const [state, setStateRaw] = useState(null);
   const stateRef = useRef(null);
   const setState = (next) => {
@@ -39,7 +39,7 @@ export function useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChan
   // The newest props for the answers that arrive later
   const latest = useRef({});
   useLayoutEffect(() => {
-    latest.current = { cycle, isAdmin, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, onAdded };
+    latest.current = { cycle, isAdmin, reloadRoster, onCandidatesChanged, showToast, clearToast, onNoAccess, onRefreshProfile, onAdded, setBanner };
   });
   const undoBusy = useRef(false);
 
@@ -140,17 +140,27 @@ export function useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChan
   async function undoAdd(id, version, name) {
     if (undoBusy.current) return;
     undoBusy.current = true;
+    // The props as they were when Undo was pressed: an answer after a tab change is dropped
+    // instead of showing its bar on the new tab (CyclePage.jsx).
+    const a = latest.current;
     const result = await deleteCandidate({ candidateId: id, expectedVersion: version });
     undoBusy.current = false;
-    const a = latest.current;
     if (result.status === 'no_access') {
       a.onNoAccess();
       return;
     }
-    a.reloadRoster();
+    const reloaded = a.reloadRoster();
     a.onCandidatesChanged?.();
     if (result.status === 'ok') {
       a.showToast(T.TOAST_UNDONE, { icon: false });
+      return;
+    }
+    // v0.966 (BB4): the picker is closed by now, so a problem goes in the Candidates tab's amber
+    // bar — a lost connection with Retry (the same Undo again), a refusal with × only, shown once
+    // the list has been read again. Any toast goes first (no toast Undo next to the bar).
+    a.clearToast();
+    if (result.status === 'error') {
+      a.setBanner({ text: T.UNDO_FAILED, retry: () => undoAdd(id, version, name) });
       return;
     }
     if (result.status === 'not_allowed') a.onRefreshProfile();
@@ -160,8 +170,9 @@ export function useMakeupPicker({ cycle, isAdmin, reloadRoster, onCandidatesChan
       has_payments: T.hasPaymentRecords(name),
       not_allowed: T.NOT_ALLOWED,
       not_found: T.CANDIDATE_GONE,
-    }[result.status] ?? T.ACTION_FAILED;
-    a.showToast(words, { icon: false });
+    }[result.status] ?? T.INVALID;
+    await reloaded;
+    a.setBanner({ text: words });
   }
 
   // ----- Choose subjects (admins) for a choice-needed row -----

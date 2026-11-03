@@ -6,7 +6,8 @@
 //   - Testing days: one line per day (name; date · time · place; the second part; "Graded: …")
 //     with Edit and Delete, then "+ Add testing day" (DayDialog.jsx, opened on top). The error
 //     "Curriculum isn't graded on any testing day. …" sits under the list (v0.918 detail 1).
-//   - Deadlines: Application due, Submissions due (+ the hand-in hint)
+//   - Deadlines: Application due, Submissions due (+ the hand-in hint). Both are the dashboard's
+//     calendar (v1.018): any day up to the last testing day (the save rule's own limit)
 //   - Prices and payment due dates, Kukkiwon certificate fee (PricesSection.jsx)
 //   - Rubric (migration 0024, mockup R14): "Copied from the default rubric when you save. Change
 //     it on the cycle's Rubric tab until registration first opens." (Edit cycle: the same before
@@ -31,6 +32,7 @@ import Dialog from '../../../components/Dialog.jsx';
 import ErrorBanner from '../../../components/ErrorBanner.jsx';
 import IconButton from '../../../components/IconButton.jsx';
 import Notice from '../../../components/Notice.jsx';
+import { cycleDateYears, dueKey, lastTestingDay, notBeforeToday, savedDueDates } from '../../../lib/blackBelt/dateLimits.js';
 import Choice from '../parts/Choice.jsx';
 import DateField from '../parts/DateField.jsx';
 import PricesSection from './PricesSection.jsx';
@@ -56,7 +58,7 @@ const NOTES = {
   INVALID: T.INVALID,
 };
 
-export default function CycleDialog({ state, check, isPhone, handlers, dayLockOf = () => null }) {
+export default function CycleDialog({ state, check, today, isPhone, handlers, dayLockOf = () => null }) {
   const id = useId();
   const v = state.values;
   const isAdd = state.mode === 'add';
@@ -73,6 +75,12 @@ export default function CycleDialog({ state, check, isPhone, handlers, dayLockOf
     prices,
   } = handlers;
   const p = check.problems;
+  // Application due and Submissions due: up to the last testing day (no earliest day).
+  const lastDay = lastTestingDay(v.days);
+  // A payment's saved due date (Edit cycle) stays choosable even when it's past — the same map
+  // the save rule uses (rules.cycleFormProblems), so the calendar and the rule always agree.
+  const savedDue = savedDueDates(state.original?.plans);
+  const dueMin = (planId, paymentNo) => notBeforeToday(today, planId ? savedDue.get(dueKey(planId, paymentNo)) ?? null : null);
   const err = (field) => `${id}-${field}-error`;
 
   // "Unsaved changes…" may appear far below where the admin is looking: scroll it into view.
@@ -207,11 +215,17 @@ export default function CycleDialog({ state, check, isPhone, handlers, dayLockOf
           </h3>
           <div className="bb-two">
             <div className="field">
-              <label htmlFor={`${id}-app`}>{T.APPLICATION_DUE}</label>
+              {/* A span, not a <label>: the field is a button (the calendar), named by its own label */}
+              <span className="field-label">{T.APPLICATION_DUE}</span>
               <DateField
                 id={`${id}-app`}
+                label={T.APPLICATION_DUE}
                 value={v.applicationDue}
-                readOnly={readOnly}
+                today={today}
+                max={lastDay}
+                years={cycleDateYears(today, { max: lastDay, value: v.applicationDue })}
+                isPhone={isPhone}
+                disabled={readOnly}
                 invalid={Boolean(appMsg)}
                 describedBy={appMsg ? err('app') : undefined}
                 onChange={(date) => {
@@ -222,11 +236,16 @@ export default function CycleDialog({ state, check, isPhone, handlers, dayLockOf
               {appMsg && <Notice id={err('app')}>{appMsg}</Notice>}
             </div>
             <div className="field">
-              <label htmlFor={`${id}-sub`}>{T.SUBMISSIONS_DUE}</label>
+              <span className="field-label">{T.SUBMISSIONS_DUE}</span>
               <DateField
                 id={`${id}-sub`}
+                label={T.SUBMISSIONS_DUE}
                 value={v.submissionsDue}
-                readOnly={readOnly}
+                today={today}
+                max={lastDay}
+                years={cycleDateYears(today, { max: lastDay, value: v.submissionsDue })}
+                isPhone={isPhone}
+                disabled={readOnly}
                 invalid={Boolean(subMsg)}
                 describedBy={subMsg ? err('sub') : `${id}-sub-hint`}
                 onChange={(date) => {
@@ -242,7 +261,7 @@ export default function CycleDialog({ state, check, isPhone, handlers, dayLockOf
           </p>
         </section>
 
-        <PricesSection mode={state.mode} values={v} formForRules={check.form} problems={p} triedSave={state.triedSave} isPhone={isPhone} readOnly={readOnly} {...prices} />
+        <PricesSection mode={state.mode} values={v} formForRules={check.form} problems={p} triedSave={state.triedSave} isPhone={isPhone} readOnly={readOnly} today={today} dueMin={dueMin} {...prices} />
 
         <section className="bb-section" aria-labelledby={`${id}-rubric`}>
           <h3 id={`${id}-rubric`} className="bb-section-title">

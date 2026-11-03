@@ -30,6 +30,9 @@ export const LAST_NAME = 'Last name';
 export const LAST_NAME_HINT = 'Spell it exactly as it should be printed on the black belt and certificate.';
 export const DOB = 'Date of birth';
 export const DOB_HINT = 'Opens a calendar.';
+// The date-of-birth calendar (v1.018): Star's family birthday wording
+export const DOB_CALENDAR_HINT = 'Pick the month and year first, then tap the day. Future dates can’t be chosen.';
+export const CHOOSE = 'Choose…'; // the empty date field
 export const TESTING_FOR = 'Testing for';
 export const DAN = { 1: '1st Dan', 2: '2nd Dan', 3: '3rd Dan', 4: '4th Dan' };
 export const KUKKIWON = 'Kukkiwon Dan certificate (optional)';

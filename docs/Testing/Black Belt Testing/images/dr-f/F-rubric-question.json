@@ -1,0 +1,505 @@
+{
+  "title": "Black Belt · Mockup F — should the waiver and keeping-time saves get Undo too? (BB5)",
+  "subtitle": "The <b>Rubric and prices</b> tab has four kinds of save. Two already show Undo (a Dan of the default rubric, a result email text). Two don’t: <b>Edit waiver</b> and <b>Keeping signed waivers</b>. The database never changes or removes a waiver version (only marks it superseded), so a waiver Undo can’t take 2027-2 away. <b>One question: A, B or C?</b>",
+  "width": 3000,
+  "columns": [
+    {
+      "label": "A · no Undo on either (today)",
+      "tone": "today",
+      "items": [
+        {
+          "src": "pc-rw-A.png",
+          "shotWidth": 1280,
+          "crop": [
+            68,
+            90,
+            1188,
+            710
+          ],
+          "scale": 0.8,
+          "caption": "<b>Edit waiver → Save:</b> \"Waiver saved · version 2027-2\", no Undo.",
+          "marks": [
+            [
+              1062,
+              741,
+              194,
+              36
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "tab-rw-A.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                90,
+                820,
+                1090
+              ],
+              "scale": 0.6,
+              "caption": "<b>Tablet 820 touch</b>",
+              "marks": [
+                [
+                  602,
+                  1121,
+                  194,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "phone-rw-A.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                90,
+                390,
+                754
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone 390</b>",
+              "marks": [
+                [
+                  98,
+                  741,
+                  194,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "p320-rw-A.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                90,
+                320,
+                550
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  63,
+                  537,
+                  194,
+                  36
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "src": "pc-rk-A.png",
+          "shotWidth": 1280,
+          "crop": [
+            68,
+            90,
+            1188,
+            710
+          ],
+          "scale": 0.8,
+          "caption": "<b>Keeping signed waivers → Save:</b> \"Keeping time saved\", no Undo.",
+          "marks": [
+            [
+              1120,
+              741,
+              136,
+              36
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "tab-rk-A.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                90,
+                820,
+                1090
+              ],
+              "scale": 0.6,
+              "caption": "<b>Tablet 820 touch</b>",
+              "marks": [
+                [
+                  660,
+                  1121,
+                  136,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "phone-rk-A.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                90,
+                390,
+                754
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone 390</b>",
+              "marks": [
+                [
+                  127,
+                  741,
+                  136,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "p320-rk-A.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                90,
+                320,
+                754
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  92,
+                  741,
+                  136,
+                  36
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "note": "Amber: the toast. <b>Pro:</b> nothing to build. <b>Con:</b> the tab has saves with and without Undo."
+    },
+    {
+      "label": "B · Undo on both",
+      "tone": "after",
+      "items": [
+        {
+          "src": "pc-rw-B.png",
+          "shotWidth": 1280,
+          "crop": [
+            68,
+            90,
+            1188,
+            710
+          ],
+          "scale": 0.8,
+          "caption": "<b>\"Waiver saved · version 2027-2 · Undo\"</b> — Undo saves 2027-1’s text again as a <b>new</b> version 2027-3; 2027-2 stays in the list for good.",
+          "marks": [
+            [
+              992,
+              736,
+              264,
+              40
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "tab-rw-B.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                90,
+                820,
+                1090
+              ],
+              "scale": 0.6,
+              "caption": "<b>Tablet 820 touch</b>",
+              "marks": [
+                [
+                  532,
+                  1112,
+                  264,
+                  44
+                ]
+              ]
+            },
+            {
+              "src": "phone-rw-B.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                90,
+                390,
+                754
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone 390</b>",
+              "marks": [
+                [
+                  63,
+                  732,
+                  264,
+                  44
+                ]
+              ]
+            },
+            {
+              "src": "p320-rw-B.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                90,
+                320,
+                550
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  28,
+                  528,
+                  264,
+                  44
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "src": "pc-rk-B.png",
+          "shotWidth": 1280,
+          "crop": [
+            68,
+            90,
+            1188,
+            710
+          ],
+          "scale": 0.8,
+          "caption": "<b>\"Keeping time saved · Undo\"</b> — Undo puts the old numbers back.",
+          "marks": [
+            [
+              1050,
+              736,
+              206,
+              40
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "tab-rk-B.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                90,
+                820,
+                1090
+              ],
+              "scale": 0.6,
+              "caption": "<b>Tablet 820 touch</b>",
+              "marks": [
+                [
+                  590,
+                  1112,
+                  206,
+                  44
+                ]
+              ]
+            },
+            {
+              "src": "phone-rk-B.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                90,
+                390,
+                754
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone 390</b>",
+              "marks": [
+                [
+                  92,
+                  732,
+                  206,
+                  44
+                ]
+              ]
+            },
+            {
+              "src": "p320-rk-B.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                90,
+                320,
+                754
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  57,
+                  732,
+                  206,
+                  44
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "note": "Green: the toast with Undo. The <b>waiver</b> Undo makes 2027-3 with 2027-1’s text; anyone who signed 2027-2 keeps 2027-2. The <b>keeping time</b> gets no Undo when its save already deleted details (the red \"This can’t be undone\" box). <b>Pro:</b> every save on the tab has Undo. <b>Con:</b> a waiver \"Undo\" that makes a new version is surprising, and the version list grows."
+    },
+    {
+      "label": "C · Undo on keeping time only (recommended)",
+      "tone": "after",
+      "items": [
+        {
+          "src": "pc-rw-A.png",
+          "shotWidth": 1280,
+          "crop": [
+            68,
+            90,
+            1188,
+            710
+          ],
+          "scale": 0.8,
+          "caption": "<b>\"Waiver saved · version 2027-2\"</b>, no Undo, as today. To fix a mistake: Edit waiver again.",
+          "marks": []
+        },
+        {
+          "row": [
+            {
+              "src": "tab-rw-A.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                90,
+                820,
+                1090
+              ],
+              "scale": 0.6,
+              "caption": "<b>Tablet 820 touch</b>",
+              "marks": []
+            },
+            {
+              "src": "phone-rw-A.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                90,
+                390,
+                754
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone 390</b>",
+              "marks": []
+            },
+            {
+              "src": "p320-rw-A.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                90,
+                320,
+                550
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": []
+            }
+          ]
+        },
+        {
+          "src": "pc-rk-B.png",
+          "shotWidth": 1280,
+          "crop": [
+            68,
+            90,
+            1188,
+            710
+          ],
+          "scale": 0.8,
+          "caption": "<b>\"Keeping time saved · Undo\"</b> — Undo puts the old numbers back.",
+          "marks": [
+            [
+              1050,
+              736,
+              206,
+              40
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "tab-rk-B.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                90,
+                820,
+                1090
+              ],
+              "scale": 0.6,
+              "caption": "<b>Tablet 820 touch</b>",
+              "marks": [
+                [
+                  590,
+                  1112,
+                  206,
+                  44
+                ]
+              ]
+            },
+            {
+              "src": "phone-rk-B.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                90,
+                390,
+                754
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone 390</b>",
+              "marks": [
+                [
+                  92,
+                  732,
+                  206,
+                  44
+                ]
+              ]
+            },
+            {
+              "src": "p320-rk-B.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                90,
+                320,
+                754
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  57,
+                  732,
+                  206,
+                  44
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "note": "Green: the keeping-time toast with Undo; the waiver toast is unchanged (no outline). Keeping time behaves like the other plain saves (no Undo after a save that deleted details, as in B). The waiver stays as today: a waiver version is a legal record that is never removed, and Edit waiver again is already the fix. <b>Con:</b> the waiver toast has no Undo while the tab’s other saves do."
+    }
+  ],
+  "footer": "<b>Drawn, nothing saved:</b> the toast, the version tag (2027-1 → 2027-2) and \"Last changed … Apr 26, 2027\" as they would read after the save. Undo → \"Undone\"; another admin’s save in those seconds → refused in the amber bar, as the rubric’s Undo already does."
+}

@@ -22,6 +22,7 @@ import Notice from '../../../components/Notice.jsx';
 import { ageOn, scheduleFor } from '../../../lib/blackBelt/rules.js';
 import Choice from '../parts/Choice.jsx';
 import DateField from '../parts/DateField.jsx';
+import { dobYears } from '../../../lib/blackBelt/dateLimits.js';
 import { addProblems, dobProblem } from './checks.js';
 import { PlanCards } from './ChangePlanDialog.jsx';
 import { FailedBanner, Footer, PrimaryButton } from './dialogParts.jsx';
@@ -103,8 +104,23 @@ export default function AddCandidateDialog({ state, cycle, isPhone, hidden = fal
         </div>
         <p id={`${id}-last-hint`} className="field-hint bb-name-hint">{T.LAST_NAME_HINT}</p>
         <div className="field">
-          <label htmlFor={`${id}-dob`}>{T.DOB}</label>
-          <DateField id={`${id}-dob`} value={v.dob} readOnly={ro} invalid={Boolean(messages.dob)} describedBy={messages.dob ? err('dob') : dobHint ? `${id}-dob-hint` : undefined} onChange={(dob) => onChange({ dob })} />
+          {/* A span, not a <label>: the field is a button (the calendar), named by its own label */}
+          <span className="field-label">{T.DOB}</span>
+          {/* Star's staff birthday field (v1.018): future days gray, the Year list back 80 years */}
+          <DateField
+            id={`${id}-dob`}
+            label={T.DOB}
+            value={v.dob}
+            today={today}
+            max={today}
+            years={dobYears(today)}
+            hint={T.DOB_CALENDAR_HINT}
+            isPhone={isPhone}
+            disabled={ro}
+            invalid={Boolean(messages.dob)}
+            describedBy={messages.dob ? err('dob') : dobHint ? `${id}-dob-hint` : undefined}
+            onChange={(dob) => onChange({ dob })}
+          />
           {messages.dob ? <Notice id={err('dob')}>{messages.dob}</Notice> : dobHint && <p id={`${id}-dob-hint`} className="field-hint">{dobHint}</p>}
         </div>
         <div className="field">

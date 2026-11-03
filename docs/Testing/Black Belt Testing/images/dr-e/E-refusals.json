@@ -1,0 +1,729 @@
+{
+  "title": "Black Belt · Mockup E — refusals stay on screen in the amber bar (BB4)",
+  "subtitle": "Drawn on the real preview screens (fake data, Spring 2027, admin). <b>What changes (rule v1.004):</b> when the database refuses something, Black Belt stops showing a toast that disappears after a few seconds. The words go in the <b>shared amber bar</b> (the one a failed save already uses) and stay until <b>×</b> closes it. Toasts stay only for “it's done”. A true refusal has <b>no Retry, only ×</b>: there is nothing to try again. A connection failure (“Couldn't save…”, “That didn't work. Check the connection…”) <b>always has Retry</b>, in the same bar. <b>One wording change:</b> the “someone else changed” refusal no longer says “Close and open them again” (nothing is open on a row, and the detail already shows the change). Now: “Someone else changed Rina Patel just now, so nothing was done. Their change is shown.” (inner green outline). <b>No question here.</b>",
+  "width": 1840,
+  "columns": [
+    {
+      "label": "Today · a toast that vanishes",
+      "tone": "today",
+      "items": [
+        {
+          "src": "s1-pc-today.png",
+          "crop": [
+            52,
+            74,
+            1228,
+            726
+          ],
+          "scale": 0.7,
+          "caption": "<b>1 · Candidates tab, PC.</b> Row ⋯ → Withdraw on Rina Patel just after another admin changed her: the refusal is a toast in the corner, gone after a few seconds.",
+          "marks": [
+            [
+              716,
+              741,
+              541,
+              36
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "s1-tab-today.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                74,
+                820,
+                1106
+              ],
+              "scale": 0.4,
+              "caption": "<b>Tablet</b> 820",
+              "marks": [
+                [
+                  255,
+                  1121,
+                  541,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "s1-phone-today.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                44,
+                390,
+                800
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone</b> 390",
+              "marks": [
+                [
+                  16,
+                  721,
+                  358,
+                  55
+                ]
+              ]
+            },
+            {
+              "src": "s1-p320-today.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                44,
+                320,
+                596
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  16,
+                  498,
+                  288,
+                  75
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "src": "s2-pc-today.png",
+          "crop": [
+            52,
+            74,
+            1228,
+            726
+          ],
+          "scale": 0.7,
+          "caption": "<b>2 · Candidate detail open, PC.</b> Same refusal from the detail's ⋯ → Withdraw. The toast covers the detail's own buttons.",
+          "marks": [
+            [
+              715,
+              741,
+              541,
+              36
+            ]
+          ]
+        },
+        {
+          "src": "s2-pc-gap-today.png",
+          "crop": [
+            52,
+            74,
+            1228,
+            726
+          ],
+          "scale": 0.7,
+          "caption": "<b>The known gap, PC:</b> when the Withdraw fails (connection), the tab's amber bar appears <b>behind the dialog</b>, where nobody sees it.",
+          "marks": [
+            [
+              76,
+              242,
+              1180,
+              40
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "s2-tab-today.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                74,
+                820,
+                1106
+              ],
+              "scale": 0.4,
+              "caption": "<b>Tablet</b>",
+              "marks": [
+                [
+                  255,
+                  1121,
+                  541,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "s2-phone-today.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                0,
+                390,
+                800
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone</b> (the detail is a full page)",
+              "marks": [
+                [
+                  16,
+                  721,
+                  358,
+                  55
+                ]
+              ]
+            },
+            {
+              "src": "s2-p320-today.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                0,
+                320,
+                596
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  16,
+                  498,
+                  288,
+                  75
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "src": "s3-pc-today.png",
+          "crop": [
+            52,
+            74,
+            1228,
+            726
+          ],
+          "scale": 0.7,
+          "caption": "<b>3 · Rubric tab, PC.</b> An admin saves the cycle's rubric just as grading starts: the editor closes and a toast says why.",
+          "marks": [
+            [
+              813,
+              741,
+              443,
+              36
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "s3-tab-today.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                74,
+                820,
+                1106
+              ],
+              "scale": 0.4,
+              "caption": "<b>Tablet</b>",
+              "marks": [
+                [
+                  353,
+                  1121,
+                  443,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "s3-phone-today.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                44,
+                390,
+                800
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone</b>",
+              "marks": [
+                [
+                  16,
+                  721,
+                  358,
+                  55
+                ]
+              ]
+            },
+            {
+              "src": "s3-p320-today.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                44,
+                320,
+                596
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  16,
+                  517,
+                  288,
+                  55
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "src": "s4-pc-today.png",
+          "crop": [
+            52,
+            74,
+            1228,
+            726
+          ],
+          "scale": 0.7,
+          "caption": "<b>4 · Cycles list, PC.</b> The open cycle was deleted elsewhere. The page goes back to the list and a small toast says so.",
+          "marks": [
+            [
+              1103,
+              741,
+              153,
+              36
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "s4-tab-today.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                74,
+                820,
+                1106
+              ],
+              "scale": 0.4,
+              "caption": "<b>Tablet</b>",
+              "marks": [
+                [
+                  643,
+                  1121,
+                  153,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "s4-phone-today.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                44,
+                390,
+                800
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone</b>",
+              "marks": [
+                [
+                  118,
+                  741,
+                  153,
+                  36
+                ]
+              ]
+            },
+            {
+              "src": "s4-p320-today.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                44,
+                320,
+                596
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  83,
+                  537,
+                  153,
+                  36
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "note": "Amber: today's toasts, plus the bar hidden behind the dialog. 1, 2 and 4 are real refusals from the preview. 3 is drawn: the preview sample can't make grading start while a cycle's rubric is still editable."
+    },
+    {
+      "label": "After · the shared amber bar",
+      "tone": "after",
+      "items": [
+        {
+          "src": "s1-pc-after.png",
+          "crop": [
+            52,
+            74,
+            1228,
+            726
+          ],
+          "scale": 0.7,
+          "caption": "<b>1 · Candidates tab.</b> The bar sits at the top of the tab, where a failed save's bar already goes: × and no Retry. New words (inner outline): “…, so nothing was done. Their change is shown.” The roster has already reloaded.",
+          "marks": [
+            [
+              76,
+              242,
+              1180,
+              36
+            ],
+            [
+              363,
+              251,
+              256,
+              17
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "s1-tab-after.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                74,
+                820,
+                1106
+              ],
+              "scale": 0.4,
+              "caption": "<b>Tablet</b>",
+              "marks": [
+                [
+                  96,
+                  262,
+                  700,
+                  56
+                ],
+                [
+                  383,
+                  283,
+                  256,
+                  17
+                ]
+              ]
+            },
+            {
+              "src": "s1-phone-after.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                44,
+                390,
+                800
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone</b>",
+              "marks": [
+                [
+                  16,
+                  335,
+                  358,
+                  59
+                ]
+              ]
+            },
+            {
+              "src": "s1-p320-after.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                44,
+                320,
+                596
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  16,
+                  335,
+                  288,
+                  79
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "src": "s2-pc-after.png",
+          "crop": [
+            52,
+            74,
+            1228,
+            726
+          ],
+          "scale": 0.7,
+          "caption": "<b>2 · Detail open.</b> The bar goes <b>inside the dialog</b>, under its header and above “Candidate”, until × or the dialog closes. The detail has already reloaded, so “Their change is shown.” is true. A failed Withdraw or Restore (with Retry) goes here too, never behind the dialog.",
+          "marks": [
+            [
+              284,
+              158,
+              712,
+              36
+            ],
+            [
+              571,
+              167,
+              256,
+              17
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "s2-tab-after.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                74,
+                820,
+                1106
+              ],
+              "scale": 0.4,
+              "caption": "<b>Tablet</b>",
+              "marks": [
+                [
+                  54,
+                  174,
+                  712,
+                  56
+                ],
+                [
+                  341,
+                  195,
+                  256,
+                  17
+                ]
+              ]
+            },
+            {
+              "src": "s2-phone-after.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                0,
+                390,
+                800
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone</b>: at the top of the page",
+              "marks": [
+                [
+                  16,
+                  108,
+                  358,
+                  59
+                ]
+              ]
+            },
+            {
+              "src": "s2-p320-after.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                0,
+                320,
+                596
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  16,
+                  108,
+                  288,
+                  79
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "src": "s3-pc-after.png",
+          "crop": [
+            52,
+            74,
+            1228,
+            726
+          ],
+          "scale": 0.7,
+          "caption": "<b>3 · Rubric tab.</b> The bar goes where the cycle page's bar already goes: under the lock line (now “Locked — grading started Apr 26, 2027.”), above the rubric.",
+          "marks": [
+            [
+              76,
+              269,
+              1180,
+              36
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "s3-tab-after.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                74,
+                820,
+                1106
+              ],
+              "scale": 0.4,
+              "caption": "<b>Tablet</b>",
+              "marks": [
+                [
+                  96,
+                  289,
+                  700,
+                  56
+                ]
+              ]
+            },
+            {
+              "src": "s3-phone-after.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                44,
+                390,
+                800
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone</b>",
+              "marks": [
+                [
+                  16,
+                  402,
+                  358,
+                  59
+                ]
+              ]
+            },
+            {
+              "src": "s3-p320-after.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                44,
+                320,
+                596
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  16,
+                  402,
+                  288,
+                  79
+                ]
+              ]
+            }
+          ]
+        },
+        {
+          "src": "s4-pc-after.png",
+          "crop": [
+            52,
+            74,
+            1228,
+            726
+          ],
+          "scale": 0.7,
+          "caption": "<b>4 · Cycles list.</b> After going back, the bar sits at the top of the list: “This cycle was deleted.”",
+          "marks": [
+            [
+              76,
+              226,
+              1180,
+              36
+            ]
+          ]
+        },
+        {
+          "row": [
+            {
+              "src": "s4-tab-after.png",
+              "shotWidth": 820,
+              "crop": [
+                0,
+                74,
+                820,
+                1106
+              ],
+              "scale": 0.4,
+              "caption": "<b>Tablet</b>",
+              "marks": [
+                [
+                  96,
+                  250,
+                  700,
+                  56
+                ]
+              ]
+            },
+            {
+              "src": "s4-phone-after.png",
+              "shotWidth": 390,
+              "crop": [
+                0,
+                44,
+                390,
+                800
+              ],
+              "scale": 0.6,
+              "caption": "<b>Phone</b>",
+              "marks": [
+                [
+                  16,
+                  260,
+                  358,
+                  56
+                ]
+              ]
+            },
+            {
+              "src": "s4-p320-after.png",
+              "shotWidth": 320,
+              "crop": [
+                0,
+                44,
+                320,
+                596
+              ],
+              "scale": 0.6,
+              "caption": "<b>320</b>",
+              "marks": [
+                [
+                  16,
+                  260,
+                  288,
+                  56
+                ]
+              ]
+            }
+          ]
+        }
+      ],
+      "note": "Green: the new bar (outer) and the changed words (inner, on PC and tablet; on phones the same words wrap). The bar is the shared ErrorBanner (amber, triangle, words, ×, plus Retry for a connection failure), the same piece as a failed save's bar. Only its place changes per screen."
+    }
+  ],
+  "footer": "<b>The bar belongs to the tab it came from:</b> changing tabs or cycles clears it; a later successful action does <b>not</b> clear it; only × (or a Retry that works) does. One bar at a time: a new problem replaces the old one.<br><b>The same bar for the other refusals:</b> Restore: “Someone else changed Rina Patel just now, so nothing was done. Their change is shown.” and “Another make-up of Rina Patel is already on a cycle, so this one can’t be restored.” Delete permanently and the make-up's Undo: “Rina Patel has grades / payment records, so they can't be deleted. Withdraw them instead.” (inside the open Delete box these stay a note, as today). A refused toast Undo: “Couldn't undo. Someone else changed this candidate just now.” And “This candidate was deleted.” (in the Candidates tab's bar; the detail closes). The make-up picker's refusal comes from the toast's <b>Undo</b> after adding a make-up, when the picker is already closed, so it uses the Candidates tab's bar.<br><b>Connection failures get Retry, Undo's own included:</b> today the make-up's Undo (useMakeupPicker's undoAdd) shows “That didn't work. Check the connection, then try again.” as a toast with no Retry; it becomes the bar with Retry. <b>Toasts keep only “done”:</b> “Rina Patel withdrawn · Undo”, “Undone”, “Changes saved”."
+}

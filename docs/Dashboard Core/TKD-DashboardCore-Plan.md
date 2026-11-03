@@ -703,3 +703,46 @@ Where it stands: the status file.
 - **Pictures:** `Proof/parts/M8-off-vs-F2.png`, the built state at the four sizes next to Finance's picture C and today's boxes, plus Windows High Contrast. The parts picture tool (`shoot-parts.mjs`) photographs only states with a mockup, so these were taken with a scratch script.
 
 Where it stands: the status file.
+
+## 14. After step 1: "Show all" inside its gray line on touch screens (v1.117)
+
+**Asked** by Star's design reviewer through the Main session, 2026-10-28, as a SHOULD for the shared part.
+- On touch screens, the shared count cards' "Showing not paid only · Show all" drew Show all as a plain touch link button. `app.css` gives every touch link button a visible 44 px box with 8 px of side padding, so Show all sat 12 px after the dot and its line was 44 px tall.
+- Star's own "… · Show both schools" just under it (`.st-inline-link`) has a 20 px line with 4 px after the dot.
+- The approved M6 mockup draws the same as the built part, so Jeffrey was asked first. Picture: `Questions/M6-show-all-on-touch.png`, Star's Candidates tab today next to the fix put on the page.
+- Jeffrey, 2026-10-29: **A, inline**.
+
+**The first build didn't fit.** It made the invisible box 12 px above and below the words, but the room around the line is only 8 px above, the ~20 px line and 12 px below.
+- The box took a 4.5 px strip off the card above: a tap on the bottom edge of "Not paid" cleared the filter.
+- On Star's Both view, the Dan switch under the line cut Show all to 39.5 px for a finger. §2.5 requires at least 44×44, and tap areas don't overlap.
+
+Jeffrey chose **(a), room for the box** (2026-10-29; picture `Questions/M6-show-all-tap-area.png`, left column), over (b) a tall line with no gap and (c) a named exception in §2.5.
+
+**The change (option a):**
+- `CountCards.jsx`: Show all has the class `inline-link`. Its gray line also has `cards-showing`, so only the shared part's line gets the room; Star's and Color Belt's own `.ev-filter-line` lines don't change.
+- `shared.css`, M6 section:
+  - `.inline-link` is copied from Star's `.st-inline-link`, with `position: relative` on the link itself. On touch, Show all keeps the line's height (20 px) and sits 4 px after the dot, as on PC.
+  - On touch, the invisible box is exactly 44 px tall (`--tap-size`), starts 11 px above the words, and is 4 px wider at each side. Star's own box is the same idea but 43.5 px, with no room made for it.
+  - The touch rules work only inside the shared line (`.cards-showing .inline-link`). Anywhere else, a link button keeps app.css's own 44 px touch box, so reusing the class can't bring the overlap back.
+  - On touch, `.ev-filter-line.cards-showing` has no −4 px pull-up toward the cards (so it sits 12 px from them) and 24 px under it. The box starts in the gap above the line and ends inside the space under it.
+  - What comes under the line sits 16 px lower than in the first build, and 8 px higher than before the change (when the line itself was 44 px tall).
+  - PC is unchanged.
+- Color Belt's own line keeps its gap until Color Belt moves to the shared cards in its own prompt; at that point, check what sits under its line (its class switch).
+- Star's "Show both schools" keeps its own class. Its tap area measures 118×39, which is Star's code.
+
+**Proof:**
+- **Sample:** M6's `filtered` state has a real control under the line: a class switch (the shared segmented ChoiceGroup), as Color Belt's and Star's rosters have one there.
+- **Checks:** 4 in `check-parts.mjs`, at 1280 and the three touch sizes. They wait for the gray line rather than a fixed time.
+  - At every size, Show all takes no taps from another control: no point inside a card or a button of the class switch finds it.
+  - On touch:
+    - the line's height and the gap after the dot match PC;
+    - the invisible box is exactly 44 px;
+    - a finger finds Show all in at least 44×44, measured in 1/8 px steps;
+    - the neighbours' own tap areas, their invisible boxes included, are untouched. In the columns of Show all's box (its left edge + 1, its middle, its right edge − 1), the card above and the switch's button under it measure the same for a finger with Show all's box as without it.
+  - With broken CSS put on the page, they fail at every touch size:
+    - the first build's layout: a 43.5 px box, a 39.5 px finger height, taps taken from "Not paid", and the card's area cut;
+    - a 48 px box and a 56 px box;
+    - a 44 px box moved down and drawn above the switch: the switch's buttons lose 3/8 px.
+- **Pictures:** Star's real Candidates tab with the built code (Both at tablet, phone and 320; one school at phone) is pixel-identical to option (a) in Jeffrey's picture. Side by side: `Proof/parts/M6-show-all-built-vs-a.png`.
+
+Where it stands: the status file.

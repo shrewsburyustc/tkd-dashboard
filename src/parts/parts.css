@@ -177,6 +177,11 @@ body:has(> .dialog-backdrop, > .dialog-page) .parts-head {
   padding: 16px 12px 8px;
 }
 
+/* A sample control right under the count cards' gray line (M6 "A card tapped", v1.117) */
+.parts-under {
+  margin-bottom: 12px;
+}
+
 .parts-ghost {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-control);

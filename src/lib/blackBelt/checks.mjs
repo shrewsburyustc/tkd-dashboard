@@ -44,6 +44,7 @@ import {
   SHORT_LETTERS, LONG_LETTERS, CUTOFF_LETTERS, RUBRIC_PART_CODES, RUBRIC_UNDO_WINDOW_MS,
 } from './rubric.js';
 import { DEFAULT_RUBRIC } from './rubricDefault.js';
+import { cycleDateYears, dobYears, dueKey, formDobYears, lastTestingDay, notBeforeToday, pastHint, savedDueDates, testingDayMin, yearRange } from './dateLimits.js';
 import { canOpenRegistration } from './rules.js';
 import {
   gradeResult, keptMatch, ageGroups, ageGroupOf, measuredLetter, extraPoints, resultKey, resultKeyInput, trimScaleText, WITHDRAWN_RESULT_KEY,
@@ -76,7 +77,11 @@ check('startingPoint.js = the $bbjson$ and $bbwaiver$ blocks of 0016_black_belt.
   assert.deepEqual(STARTING_POINT_REQUIREMENTS, blocks[1]);
   const waiver = /\$bbwaiver\$([\s\S]*?)\$bbwaiver\$/.exec(sql);
   assert.ok(waiver, 'the migration has the $bbwaiver$ block');
-  assert.equal(SEED_WAIVER_BODY, waiver[1]);
+  // The tab "Rubric and prices" is now "Rubric and waiver" (v1.023, design review BB17). The applied
+  // migration's placeholder waiver keeps the old tab name (applied migrations aren't changed); the
+  // preview's copy names the new tab. Otherwise the two texts are the same.
+  assert.ok(SEED_WAIVER_BODY.includes('saved on Rubric and waiver'));
+  assert.equal(SEED_WAIVER_BODY.replace('Rubric and waiver', 'Rubric and prices'), waiver[1]);
   assert.ok(sql.includes(`select '${SEED_WAIVER_VERSION_NAME}', $bbwaiver$`));
   assert.ok(SEED_WAIVER_BODY.startsWith('PLACEHOLDER'));
   assert.ok(sql.includes(`'prices_from', '${STARTING_POINT_NAME}'`), 'bb_cycle_defaults names the starting point the same');
@@ -93,6 +98,62 @@ check('startingPoint.js = the $bbjson$ and $bbwaiver$ blocks of 0016_black_belt.
 });
 
 // ======================= money.js =======================
+
+// ======================= dateLimits.js: the calendars' limits (v1.018, BB12) =======================
+
+check('dateLimits: each date calendar grays only what its save rule refuses', () => {
+  const today = '2027-04-26';
+  // today or later; a saved past date stays choosable (the earlier of the two)
+  assert.equal(notBeforeToday(today), today);
+  assert.equal(notBeforeToday(today, '2027-03-01'), '2027-03-01');
+  assert.equal(notBeforeToday(today, '2027-05-01'), today);
+  assert.equal(notBeforeToday(today, ''), today);
+  // the testing day: + not before the first day once grading started (unless the date is locked)
+  assert.equal(testingDayMin(today), today);
+  assert.equal(testingDayMin(today, '2027-04-01'), '2027-04-01');
+  assert.equal(testingDayMin(today, null, { minDate: '2027-05-08', dateLocked: false }), '2027-05-08');
+  assert.equal(testingDayMin(today, null, { minDate: '2027-04-10', dateLocked: false }), today);
+  assert.equal(testingDayMin(today, '2027-04-01', { minDate: '2027-04-10', dateLocked: true }), '2027-04-01');
+  // Application due / Submissions due: up to the last testing day
+  assert.equal(lastTestingDay([{ date: '2027-06-05' }, { date: '' }, { date: '2027-05-08' }]), '2027-06-05');
+  assert.equal(lastTestingDay([]), null);
+  assert.equal(lastTestingDay(undefined), null);
+  // the hint only while the first day really is today or later
+  assert.equal(pastHint(today, today, 'H'), 'H');
+  assert.equal(pastHint(today, '2027-05-08', 'H'), 'H');
+  assert.equal(pastHint(today, '2027-03-27', 'H'), '');
+  // the saved due dates: one map for the calendar and the save rule (a payment without a number
+  // counts by its place, as cycleFormProblems does)
+  const saved = savedDueDates([
+    { id: 'p1', payments: [{ paymentNo: 1, dueOn: '2027-03-27' }, { paymentNo: 2, dueOn: '2027-04-24' }] },
+    { id: 'p2', payments: [{ dueOn: '2027-03-01' }, { dueOn: '2027-05-29' }] },
+  ]);
+  assert.equal(saved.get(dueKey('p1', 2)), '2027-04-24');
+  assert.equal(saved.get(dueKey('p2', 1)), '2027-03-01');
+  assert.equal(saved.get(dueKey('p2', 2)), '2027-05-29');
+  assert.equal(savedDueDates(null).size, 0);
+  // …and the save rule agrees with it: the saved past date passes, another past date doesn't
+  const editForm = (due) => ({
+    name: 'X', applicationDue: '2027-03-27', submissionsDue: '2027-05-29', days: [],
+    plans: [{ id: 'p2', name: 'Two', amounts: {}, payments: [{ dueOn: due }, { dueOn: '2027-05-29' }] }],
+  });
+  const original = { plans: [{ id: 'p2', payments: [{ dueOn: '2027-03-01' }, { dueOn: '2027-05-29' }] }] };
+  const dueCode = (due) => cycleFormProblems(editForm(due), { today, mode: 'edit', original }).plans?.[0]?.payments?.[0]?.dueOn ?? null;
+  assert.equal(dueCode('2027-03-01'), null);
+  assert.equal(dueCode('2027-03-02'), 'past');
+  // Year lists
+  assert.deepEqual(yearRange(2026, 2028, [2030, 2027, null]), [2026, 2027, 2028, 2030]);
+  assert.deepEqual(cycleDateYears(today), [2027, 2028, 2029]);
+  assert.deepEqual(cycleDateYears(today, { max: '2027-06-05' }), [2027]);
+  assert.deepEqual(cycleDateYears(today, { min: '2026-11-01', value: '2026-11-03' }), [2026, 2027, 2028, 2029]);
+  assert.deepEqual(cycleDateYears(null), []);
+  const staffYears = dobYears(today);
+  assert.equal(staffYears.length, 81);
+  assert.deepEqual([staffYears[0], staffYears.at(-1)], [1947, 2027]);
+  const formYears = formDobYears(today);
+  assert.equal(formYears.length, 101);
+  assert.deepEqual([formYears[0], formYears.at(-1)], [1927, 2027]);
+});
 
 check('money: parsePrice ($1–$5,000, whole dollars)', () => {
   assert.equal(PRICE_MIN_CENTS, 100);
