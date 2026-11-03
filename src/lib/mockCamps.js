@@ -24,16 +24,31 @@
 // The store is RE-READ ON EVERY CALL (no copy is kept in memory), so the staff tab and the family
 // page open in another tab always see each other's changes.
 //
-// Store (schema version 4 — version 2 added the extras' only_on / only_weekdays, owner decision
+// Store (schema version 5 — version 2 added the extras' only_on / only_weekdays, owner decision
 // 2026-10-19 "pizza on Wed and Fri"; version 3 the payments' school, v0.707; version 4 weekly
 // pricing, rulebook v0.717: a camp's price grid has rows 1…W, W = the most camp days in one
-// Monday–Sunday week, and a template's day_count means "days per week" 1–7. A saved version-3
-// store is UPGRADED (grids cut to 1…W, see upgradeStore); anything older is replaced by the
-// default data), column
+// Monday–Sunday week, and a template's day_count means "days per week" 1–7; version 5 migration
+// 0033 (rulebook v0.735 / v0.736): the camper's paying_by_on_form, the payment's paying_by_before
+// and the change log the history reads. A saved version-3 or version-4 store is UPGRADED (see
+// upgradeStore); anything older is replaced by the default data), column
 // names are the database's (snake_case):
 //   camps, camp_days, camp_prices, camp_extras, camp_templates, camp_signups, camp_campers,
 //   camp_camper_days, camp_camper_extras, camp_payments, camp_public_attempts,
+//   camp_change_log (what the database's change_log holds for these camper tables),
 //   next_reference (the CP- number sequence), next_attempt_id
+//
+// Migration 0033 in the preview (plan docs/Camps/TKD-Camps-0033-Plan.md §1):
+//   - camp_mark_paid takes an optional 4th input, p_method (left out = the camper's Paying by). A
+//     different way also changes the camper's Paying by in the same save, and the payment keeps the
+//     old one in paying_by_before; Undo payment puts it back while Paying by is still that
+//     payment's way (nobody changed it since). Edit payment follows Color Belt's 0030 rule (4b).
+//   - paying_by_on_form: the way the family chose on the form; set when the camper is added and
+//     never changed after (the database's trigger). The roster shows it.
+//   - camp_camper_history(p_camper_id): the change log of the camper, their days and extras (not
+//     check-ins), their payments and their sign-up (shared by brothers and sisters), newest
+//     first, at most 500 rows, without login ids. Every write here logs the way the database's
+//     triggers do: the rows a save inserted, changed (only the changed columns) or deleted, with
+//     one batch id per save (see snapshotLogged / writeLog).
 import { normalizeName, nameProblem, nameKey } from './testing/names.js';
 import { signatureIsValid } from './testing/eventRules.js';
 import {
@@ -45,7 +60,7 @@ import {
   normalizeCampText, campTextIsValid, isIsoDate, addDays, todayInSchoolTime, lastDay, firstDay, SCHOOL_TIME_ZONE,
 } from './camps/campRules.js';
 
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 const LOCATION_CODES = ['worcester', 'shrewsbury'];
 const REFERENCE_START = 4001; // CP-4001 is the first reference the database makes (§1.7)
 const ATTEMPT_KEEP_MS = 2 * 24 * 60 * 60 * 1000; // rate-limit rows older than 2 days are removed
@@ -198,6 +213,16 @@ const DEFAULT_CAMPS = [
 // options]. options: paid { cents?, on, at, desk } (cents left out = the full total), checkins
 // { dayIndex: 'HH:MM' }, family [parent, relation, phone, contact, relation, phone],
 // duplicateOfRef, withdrawn [date, time].
+// For the history (migration 0033, rulebook v0.736) a few campers also tell what happened after
+// the form, so the preview's change log has every kind of entry:
+//   siblingOfRef   on the same sign-up as that reference (brothers and sisters share one form)
+//   form           what the form said where it differs from today: { age, member, payingBy,
+//                  dayIdx } (dayIdx = the days at sign-up; the later days come from an event)
+//   signupForm     the sign-up's values on the form where they differ: { parent_phone }
+//   events         later saves, oldest first: { at: [date, time], who, action, camper: { column:
+//                  [before, after] }, signup: { column: [before, after] }, addDays: day indexes }
+//   payments       instead of `paid`: [{ method, cents?, on, rec: [date, time], desk,
+//                  payingByBefore?, reverses? (the index of the payment it undoes) }]
 const D = (...list) => list; // a short way to write a list of day indexes
 const DEFAULT_CAMPERS = {
   april: [
@@ -261,10 +286,42 @@ const DEFAULT_CAMPERS = {
     ['Mia', 'Rossi', 9, false, 'all', [[1, 'all']], 'cash', ['2026-10-17', '20:45'], 4421,
       { family: ['Laura Rossi', 'Mother', '5085550142', 'Paul Rossi', 'Uncle', '5085550187'] }],
     ['Ethan', 'Wu', 8, true, 'all', [], 'check', ['2026-10-06', '19:10'], 4402, { paid: { on: '2026-10-08', at: '17:10', desk: true } }],
-    ['Lily', 'Brooks', 6, true, D(0), [], 'cash', ['2026-10-06', '20:30'], 4403, { paid: { on: '2026-10-09', at: '16:45', desk: true } }],
-    ['Owen', 'Reed', 10, false, 'all', [[0, 'all']], 'cash', ['2026-10-07', '18:05'], 4405, {}],
+    // History samples (v0.736): Lily's cash payment was changed to check by an admin (Paying by follows).
+    ['Lily', 'Brooks', 6, true, D(0), [], 'check', ['2026-10-06', '20:30'], 4403, {
+      form: { payingBy: 'cash' },
+      payments: [
+        { method: 'cash', on: '2026-10-09', rec: ['2026-10-09', '16:45'], desk: true },
+        { reverses: 0, rec: ['2026-10-10', '11:00'], desk: false },
+        { method: 'check', on: '2026-10-09', rec: ['2026-10-10', '11:00'], desk: false, payingByBefore: 'cash' },
+      ],
+    }],
+    // Owen: age and member changed, withdrawn and restored, paid by card at the desk and undone.
+    ['Owen', 'Reed', 10, false, 'all', [[0, 'all']], 'cash', ['2026-10-07', '18:05'], 4405, {
+      form: { age: 9, member: true },
+      events: [
+        { at: ['2026-10-08', '17:30'], who: 'Dana Ross', action: 'camp_update_details', camper: { age: [9, 10], member: [true, false] } },
+        { at: ['2026-10-09', '10:00'], who: 'Jeffrey Berg', action: 'camp_withdraw_camper', camper: { status: ['active', 'withdrawn'], withdrawn_reason: [null, 'withdrawn'] } },
+        { at: ['2026-10-09', '10:02'], who: 'Jeffrey Berg', action: 'camp_restore_camper', camper: { status: ['withdrawn', 'active'], withdrawn_reason: ['withdrawn', null] } },
+      ],
+      payments: [
+        { method: 'card', on: '2026-10-10', rec: ['2026-10-10', '16:30'], desk: true, payingByBefore: 'cash' },
+        { reverses: 0, rec: ['2026-10-10', '16:34'], desk: false },
+      ],
+    }],
     ['Zoe', 'Park', 9, true, D(1), [[1, D(1)]], 'card', ['2026-10-08', '21:15'], 4407, { paid: { on: '2026-10-12', at: '17:30', desk: true } }],
-    ['Jack', 'Rivera', 11, true, 'all', [[0, 'all'], [1, 'all']], 'check', ['2026-10-09', '12:00'], 4409, { paid: { on: '2026-10-13', at: '16:55', desk: false } }],
+    // Picture 17's sample: Jack signed up for Wed, Dana added Fri, Jeffrey changed the family's phone
+    // (his sister Sofia's history shows it too) and Paying by, then marked him paid.
+    ['Jack', 'Rivera', 11, true, 'all', [[0, 'all'], [1, 'all']], 'check', ['2026-10-09', '12:00'], 4409, {
+      paid: { on: '2026-10-13', at: '16:55', desk: false },
+      form: { payingBy: 'cash', dayIdx: D(0) },
+      signupForm: { parent_phone: '5085550141' },
+      events: [
+        { at: ['2026-10-11', '10:20'], who: 'Dana Ross', action: 'camp_update_details', addDays: D(1) },
+        { at: ['2026-10-12', '09:15'], who: 'Jeffrey Berg', action: 'camp_update_details', signup: { parent_phone: ['5085550141', '5085550109'] } },
+        { at: ['2026-10-13', '16:50'], who: 'Jeffrey Berg', action: 'camp_change_paying_by', camper: { paying_by: ['cash', 'check'] } },
+      ],
+    }],
+    ['Sofia', 'Rivera', 8, true, D(0), [], 'cash', ['2026-10-09', '12:00'], 4409, { siblingOfRef: 4409 }],
     ['Maya', 'Singh', 7, true, 'all', [], 'cash', ['2026-10-11', '19:40'], 4411, {}],
     ['Sam', 'Diaz', 12, false, D(0), [], 'cash', ['2026-10-12', '20:20'], 4412, {}],
     ['Chloe', 'Nguyen', 5, true, 'all', [[1, D(0)]], 'cash', ['2026-10-13', '18:35'], 4413, { paid: { on: '2026-10-15', at: '17:15', desk: true } }],
@@ -305,9 +362,10 @@ export function defaultCampsData({ today = todayInSchoolTime(new Date()) } = {})
   const db = {
     schema: SCHEMA_VERSION,
     camps: [], camp_days: [], camp_prices: [], camp_extras: [], camp_templates: [], camp_signups: [], camp_campers: [],
-    camp_camper_days: [], camp_camper_extras: [], camp_payments: [], camp_public_attempts: [],
+    camp_camper_days: [], camp_camper_extras: [], camp_payments: [], camp_public_attempts: [], camp_change_log: [],
     next_reference: 0, next_attempt_id: 1,
   };
+  const scripts = new Map(); // camper id → what happened after the form (history samples)
   const n = {}; // counters per id kind
   const id = (kind) => fixedId(kind, (n[kind] = (n[kind] ?? 0) + 1));
   const stamps = (at, by, byId = null) => ({ version: 1, created_at: at, created_by: byId, created_by_name: by, updated_at: at, updated_by: byId, updated_by_name: by });
@@ -338,23 +396,30 @@ export function defaultCampsData({ today = todayInSchoolTime(new Date()) } = {})
       const camperDays = dayIdx === 'all' ? days : dayIdx.map((i) => days[i]);
       const family = opt.family ?? [`${['Anna', 'Maria', 'Sarah', 'Kate', 'Julie', 'Lisa'][ref % 6]} ${last}`, 'Mother', `50855501${String(ref % 100).padStart(2, '0')}`,
         `${['Tom', 'Mark', 'Dan', 'Joe', 'Chris', 'Mike'][ref % 6]} ${last}`, ['Father', 'Uncle', 'Grandfather', 'Aunt'][ref % 4], `50855502${String(ref % 100).padStart(2, '0')}`];
-      const signup = {
-        id: id('c5'), camp_id: camp.id, reference: `CP-${ref}`, submission_id: id('ca'),
-        parent_name: family[0], parent_relation: family[1], parent_phone: family[2],
-        emergency_name: family[3], emergency_relation: family[4], emergency_phone: family[5],
-        price_kind: kind, signed_up_on: signed[0], signature: SAMPLE_SIGNATURE, signed_at: signedAt, signature_deleted_at: null,
-        waiver_text_signed: WAIVER, ack_version: CAMP_ACK_VERSION, ...stamps(signedAt, FAMILY_FORM),
-      };
-      db.camp_signups.push(signup);
-      maxRef = Math.max(maxRef, ref);
+      // A brother or sister joins the sign-up of that reference (one form, several children).
+      let signup = opt.siblingOfRef ? db.camp_signups.find((s) => s.reference === `CP-${opt.siblingOfRef}`) : null;
+      if (!signup) {
+        signup = {
+          id: id('c5'), camp_id: camp.id, reference: `CP-${ref}`, submission_id: id('ca'),
+          parent_name: family[0], parent_relation: family[1], parent_phone: family[2],
+          emergency_name: family[3], emergency_relation: family[4], emergency_phone: family[5],
+          price_kind: kind, signed_up_on: signed[0], signature: SAMPLE_SIGNATURE, signed_at: signedAt, signature_deleted_at: null,
+          waiver_text_signed: WAIVER, ack_version: CAMP_ACK_VERSION, ...stamps(signedAt, FAMILY_FORM),
+        };
+        db.camp_signups.push(signup);
+        maxRef = Math.max(maxRef, ref);
+      }
+      const position = db.camp_campers.filter((c) => c.signup_id === signup.id).length + 1;
+      const form = opt.form ?? {};
       // Weekly pricing (R3): each week the child comes is priced by its own grid row, weeks add up.
       const base = priceChild({ member, dayIds: camperDays.map((d) => d.id), extras: [] }, grid.map((g) => ({
         dayCount: g.day_count, memberEarlyCents: g.member_early_cents, memberRegularCents: g.member_regular_cents,
         nonmemberEarlyCents: g.nonmember_early_cents, nonmemberRegularCents: g.nonmember_regular_cents,
       })), [], days.map((d) => ({ dayId: d.id, day: d.day })), kind).baseCents;
       const camper = {
-        id: id('c6'), signup_id: signup.id, camp_id: camp.id, position: 1, first_name: first, last_name: last, age, member,
-        paying_by: payingBy, base_cents: base, status: 'active', withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null,
+        id: id('c6'), signup_id: signup.id, camp_id: camp.id, position, first_name: first, last_name: last, age, member,
+        // paying_by_on_form (0033): the family's choice on the form — today's Paying by unless staff changed it
+        paying_by: payingBy, paying_by_on_form: form.payingBy ?? payingBy, base_cents: base, status: 'active', withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null,
         withdrawn_by_name: null, duplicate_state: 'none', duplicate_of: null, ...stamps(signedAt, FAMILY_FORM),
       };
       db.camp_campers.push(camper);
@@ -384,8 +449,41 @@ export function defaultCampsData({ today = todayInSchoolTime(new Date()) } = {})
           paid_on: opt.paid.on, recorded_at: paidAt, recorded_by: opt.paid.desk ? DESK_USER_ID : ADMIN_USER_ID,
           recorded_by_name: opt.paid.desk ? 'Staff' : 'Jeffrey Berg', reverses_payment_id: null,
           school: opt.paid.school ?? def.location, // the desk that took it (default: the camp's school)
+          paying_by_before: null,
         });
         bump(camper, paidAt, opt.paid.desk ? 'Staff' : 'Jeffrey Berg'); // Mark paid bumps the version
+      }
+      // A list of payments and undos (history samples). A reversal copies the payment it undoes.
+      const made = [];
+      for (const p of opt.payments ?? []) {
+        const at = schoolClockToIso(...p.rec);
+        const of = p.reverses === undefined ? null : made[p.reverses];
+        const row = {
+          id: id('c9'), camper_id: camper.id, kind: of ? 'reversal' : 'payment', amount_cents: of ? -of.amount_cents : (p.cents ?? total),
+          method: of ? of.method : p.method, paid_on: of ? p.rec[0] : p.on, recorded_at: at,
+          recorded_by: p.desk ? DESK_USER_ID : ADMIN_USER_ID, recorded_by_name: p.desk ? 'Staff' : 'Jeffrey Berg',
+          reverses_payment_id: of ? of.id : null, school: of ? of.school : def.location, paying_by_before: p.payingByBefore ?? null,
+        };
+        made.push(row);
+        db.camp_payments.push(row);
+        bump(camper, at, row.recorded_by_name);
+      }
+      // What the history needs to know about the time before today's values (seedChangeLog).
+      if (opt.form || opt.signupForm || opt.events) {
+        const dayIdOf = (i) => days[i].id;
+        scripts.set(camper.id, {
+          formCamper: {
+            ...(form.age !== undefined ? { age: form.age } : {}),
+            ...(form.member !== undefined ? { member: form.member } : {}),
+            ...(form.payingBy !== undefined ? { paying_by: form.payingBy } : {}),
+          },
+          laterDayIds: form.dayIdx ? camperDays.map((d) => d.id).filter((dayId) => !form.dayIdx.map(dayIdOf).includes(dayId)) : [],
+          signupForm: opt.signupForm ?? {},
+          events: (opt.events ?? []).map((e) => ({
+            at: schoolClockToIso(...e.at), who: e.who, action: e.action, camper: e.camper ?? null, signup: e.signup ?? null,
+            addDayIds: (e.addDays ?? []).map(dayIdOf),
+          })),
+        });
       }
       if (opt.duplicateOfRef) {
         const twinSignup = db.camp_signups.find((s) => s.reference === `CP-${opt.duplicateOfRef}`);
@@ -422,7 +520,98 @@ export function defaultCampsData({ today = todayInSchoolTime(new Date()) } = {})
     });
   });
   db.next_reference = maxRef + 1;
+  db.camp_change_log = seedChangeLog(db, scripts, () => id('cb'));
   return db;
+}
+
+// ----- The change log of the default data (what the database's triggers would have written) -----
+// The camper tables as change_log keeps them: a sign-up without its submission id and waiver copy,
+// its signature only ever "on file" (0013's camp_signups_log); every other row as it is.
+export const LOGGED_TABLES = ['camp_signups', 'camp_campers', 'camp_camper_days', 'camp_camper_extras', 'camp_payments'];
+function logShape(table, row) {
+  if (table !== 'camp_signups') return row;
+  const { submission_id: _s, waiver_text_signed: _w, ...rest } = row;
+  return { ...rest, signature: row.signature === null || row.signature === undefined ? null : 'on file' };
+}
+
+// Builds the log of a store from its tables: one sign-up save per form (the sign-up, its children,
+// their days and extras, by "Family form"), each payment save (a Mark paid, an Undo, an Edit
+// payment = an undo and a new payment at the same moment; a payment that changed Paying by changes
+// it in the same save, and its undo puts it back), each withdrawal still in place, and the
+// `scripts` (camper id → { formCamper, laterDayIds, signupForm, events }) of the history samples.
+// makeId() gives the batch ids. Check-ins are not logged here (the history leaves them out).
+function seedChangeLog(db, scripts, makeId) {
+  const log = [];
+  const batch = (at, who, action) => ({ id: makeId(), at, who, action });
+  const push = (b, table, op, recordId, before, after) => log.push({
+    occurred_at: b.at, actor_id: null, actor_name: b.who, batch_id: b.id, action: b.action, table_name: table, record_id: recordId, op, before, after,
+  });
+  const camperDays = (camperId) => db.camp_camper_days.filter((r) => r.camper_id === camperId);
+  const camperExtras = (camperId) => db.camp_camper_extras.filter((r) => r.camper_id === camperId);
+  const noCheckIn = (r) => ({ ...r, checked_in_at: null, checked_in_by: null, checked_in_by_name: null });
+
+  // The sign-ups (one save each, by the family form)
+  for (const signup of db.camp_signups) {
+    const campers = db.camp_campers.filter((c) => c.signup_id === signup.id).sort((a, b) => a.position - b.position);
+    const b = batch(signup.created_at, signup.created_by_name ?? FAMILY_FORM, 'camp_public_signup');
+    const formSignup = Object.assign({}, ...campers.map((c) => scripts.get(c.id)?.signupForm ?? {}));
+    push(b, 'camp_signups', 'insert', signup.id, null, { ...logShape('camp_signups', signup), ...formSignup, signature: 'on file', signature_deleted_at: null, version: 1 });
+    for (const c of campers) {
+      const s = scripts.get(c.id) ?? {};
+      const later = new Set(s.laterDayIds ?? []);
+      push(b, 'camp_campers', 'insert', c.id, null, {
+        ...c, ...(s.formCamper ?? {}), status: 'active', withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null, withdrawn_by_name: null,
+        version: 1, updated_at: c.created_at, updated_by: c.created_by ?? null, updated_by_name: c.created_by_name,
+      });
+      for (const r of camperDays(c.id).filter((x) => !later.has(x.day_id))) push(b, 'camp_camper_days', 'insert', r.id, null, noCheckIn(r));
+      for (const r of camperExtras(c.id).filter((x) => !later.has(x.day_id))) push(b, 'camp_camper_extras', 'insert', r.id, null, { ...r });
+    }
+  }
+
+  // The history samples' later saves
+  for (const [camperId, s] of scripts) {
+    const camper = db.camp_campers.find((c) => c.id === camperId);
+    for (const e of s.events ?? []) {
+      const b = batch(e.at, e.who, e.action);
+      const split = (changes, side) => Object.fromEntries(Object.entries(changes).map(([k, pair]) => [k, pair[side]]));
+      if (e.camper) push(b, 'camp_campers', 'update', camperId, split(e.camper, 0), split(e.camper, 1));
+      for (const r of camperDays(camperId).filter((x) => e.addDayIds.includes(x.day_id))) push(b, 'camp_camper_days', 'insert', r.id, null, noCheckIn(r));
+      for (const r of camperExtras(camperId).filter((x) => e.addDayIds.includes(x.day_id))) push(b, 'camp_camper_extras', 'insert', r.id, null, { ...r });
+      if (e.signup) push(b, 'camp_signups', 'update', camper.signup_id, split(e.signup, 0), split(e.signup, 1));
+    }
+  }
+
+  // The payment saves: the rows of one camper recorded at the same moment are one save.
+  const groups = new Map();
+  for (const p of [...db.camp_payments].sort((x, y) => (x.recorded_at < y.recorded_at ? -1 : x.recorded_at > y.recorded_at ? 1 : 0))) {
+    const key = `${p.camper_id}|${p.recorded_at}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(p);
+  }
+  for (const rows of groups.values()) {
+    const payment = rows.find((p) => p.kind === 'payment') ?? null;
+    const reversal = rows.find((p) => p.kind === 'reversal') ?? null;
+    const action = payment && reversal ? 'camp_edit_payment' : reversal ? 'camp_undo_payment' : 'camp_mark_paid';
+    const b = batch(rows[0].recorded_at, rows[0].recorded_by_name, action);
+    for (const p of rows) push(b, 'camp_payments', 'insert', p.id, null, { ...p });
+    // Paying by: a payment that changed it, or the undo of one (put back).
+    if (payment?.paying_by_before) {
+      push(b, 'camp_campers', 'update', payment.camper_id, { paying_by: payment.paying_by_before }, { paying_by: payment.method });
+    } else if (reversal && !payment) {
+      const undone = db.camp_payments.find((p) => p.id === reversal.reverses_payment_id);
+      if (undone?.paying_by_before) push(b, 'camp_campers', 'update', undone.camper_id, { paying_by: undone.method }, { paying_by: undone.paying_by_before });
+    }
+  }
+
+  // Withdrawals still in place
+  for (const c of db.camp_campers.filter((x) => x.status === 'withdrawn' && x.withdrawn_at)) {
+    const b = batch(c.withdrawn_at, c.withdrawn_by_name, c.withdrawn_reason === 'duplicate_copy' ? 'camp_resolve_duplicate' : 'camp_withdraw_camper');
+    push(b, 'camp_campers', 'update', c.id,
+      { status: 'active', withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null, withdrawn_by_name: null },
+      { status: c.status, withdrawn_reason: c.withdrawn_reason, withdrawn_at: c.withdrawn_at, withdrawn_by: c.withdrawn_by, withdrawn_by_name: c.withdrawn_by_name });
+  }
+  // Oldest first, like the real table (the reader turns it around).
+  return log.sort((x, y) => (x.occurred_at < y.occurred_at ? -1 : x.occurred_at > y.occurred_at ? 1 : 0));
 }
 
 // A saved version-3 store (before weekly pricing) → version 4, the way migration 0022 leaves the
@@ -447,9 +636,23 @@ function upgradeStore(store) {
   return store;
 }
 
+// A saved version-4 store → version 5, the way migration 0033 leaves the real tables: every camper's
+// paying_by_on_form is filled from their Paying by, payments get an empty paying_by_before, and the
+// change log is built from the tables (sign-ups, payments, withdrawals — earlier edits are unknown).
+let upgradeIds = 0;
+function upgradeStore5(store) {
+  if (!store || typeof store !== 'object' || store.schema !== 4) return store;
+  if (!Array.isArray(store.camp_campers) || !Array.isArray(store.camp_payments) || !Array.isArray(store.camp_signups)) return store;
+  for (const c of store.camp_campers) if (!c.paying_by_on_form) c.paying_by_on_form = c.paying_by;
+  for (const p of store.camp_payments) if (p.paying_by_before === undefined) p.paying_by_before = null;
+  store.camp_change_log = seedChangeLog(store, new Map(), () => fixedId('cb', 900000 + (upgradeIds += 1)));
+  store.schema = 5;
+  return store;
+}
+
 // Is a loaded store usable? (Missing, damaged or another schema version → the default data.)
 const LISTS = ['camps', 'camp_days', 'camp_prices', 'camp_extras', 'camp_templates', 'camp_signups', 'camp_campers',
-  'camp_camper_days', 'camp_camper_extras', 'camp_payments', 'camp_public_attempts'];
+  'camp_camper_days', 'camp_camper_extras', 'camp_payments', 'camp_public_attempts', 'camp_change_log'];
 function storeIsUsable(store) {
   if (!store || typeof store !== 'object' || store.schema !== SCHEMA_VERSION) return false;
   if (LISTS.some((key) => !Array.isArray(store[key]))) return false;
@@ -466,12 +669,13 @@ const CAMP_COLS = ['id', 'location_code', 'both_schools', 'name', 'start_time', 
   'closed_by_hand', 'min_age', 'max_age', 'description', 'waiver_text', 'public_code', ...STAMP_COLS];
 const TEMPLATE_COLS = ['id', 'name', 'location_code', 'both_schools', 'day_count', 'start_time', 'end_time', 'opens_days_before', 'closes_days_before',
   'early_days_before', 'min_age', 'max_age', 'description', 'waiver_text', 'prices', 'extras', ...STAMP_COLS];
-const CAMPER_COLS = ['id', 'signup_id', 'camp_id', 'position', 'first_name', 'last_name', 'age', 'member', 'paying_by', 'base_cents', 'status',
+const CAMPER_COLS = ['id', 'signup_id', 'camp_id', 'position', 'first_name', 'last_name', 'age', 'member', 'paying_by', 'paying_by_on_form', 'base_cents', 'status',
   'withdrawn_reason', 'withdrawn_at', 'withdrawn_by_name', 'duplicate_state', 'duplicate_of', ...STAMP_COLS];
 const ROSTER_COLS = ['id', 'camp_id', 'signup_id', 'position', 'first_name', 'last_name', 'age', 'member', 'paying_by', 'status', 'withdrawn_reason',
   'withdrawn_at', 'withdrawn_by_name', 'duplicate_state', 'duplicate_of', 'version', 'created_at', 'signup_version', 'reference', 'price_kind',
   'signed_up_on', 'signed', 'signature_deleted_at', 'base_cents', 'days', 'extras', 'total_cents', 'paid_cents', 'owes_cents',
-  'paid_on', 'paid_method', 'last_payment_id', 'last_payment_recorded_at', 'paid_school'];
+  'paid_on', 'paid_method', 'last_payment_id', 'last_payment_recorded_at', 'paid_school',
+  'paying_by_on_form']; // 0033: added at the end of the view (create or replace view can only add columns there)
 const GRANTED = {
   camps: CAMP_COLS,
   camp_days: ['id', 'camp_id', 'day'],
@@ -496,7 +700,7 @@ const HIDDEN = {
     'signature', 'waiver_text_signed', 'ack_version', 'created_at', 'created_by', 'created_by_name', 'updated_at', 'updated_by', 'updated_by_name'],
   camp_camper_days: ['checked_in_by'],
   camp_camper_extras: [],
-  camp_payments: ['recorded_by'],
+  camp_payments: ['recorded_by', 'paying_by_before'], // paying_by_before (0033) is not granted to the app
 };
 // The tables and the view the app may read (never camp_public_attempts: no grant at all).
 export const CAMP_TABLES = Object.keys(GRANTED);
@@ -521,7 +725,8 @@ const RPC_ARGS = {
     ['p_age', 'int'], ['p_member', 'bool'], ['p_day_ids', 'uuid[]'], ['p_extras', 'jsonb'], ['p_parent_name', 'text'], ['p_parent_phone', 'text'],
     ['p_parent_relation', 'text'], ['p_emergency_name', 'text'], ['p_emergency_phone', 'text'], ['p_emergency_relation', 'text']],
   camp_change_paying_by: [ID('p_camper_id'), ['p_expected_version', 'int'], ['p_paying_by', 'text']],
-  camp_mark_paid: [ID('p_camper_id'), ['p_expected_version', 'int'], ['p_school', 'text']],
+  // p_method (0033) has a default (null = the camper's Paying by): a call without it still works.
+  camp_mark_paid: [ID('p_camper_id'), ['p_expected_version', 'int'], ['p_school', 'text'], ['p_method', 'text', 'optional']],
   camp_undo_payment: [ID('p_payment_id')],
   camp_edit_payment: [ID('p_payment_id'), ['p_method', 'text'], ['p_amount_cents', 'int'], ['p_paid_on', 'date'], ['p_school', 'text']],
   camp_resolve_duplicate: [ID('p_keep_id'), ['p_keep_version', 'int'], ID('p_other_id'), ['p_other_version', 'int'], ['p_keep_both', 'bool']],
@@ -531,16 +736,17 @@ const RPC_ARGS = {
   camp_check_in: [ID('p_camper_id'), ID('p_day_id')],
   camp_undo_check_in: [ID('p_camper_id'), ID('p_day_id')],
   camp_camper_detail: [ID('p_camper_id')],
+  camp_camper_history: [ID('p_camper_id')], // 0033 (C7)
 };
 // A = admins only (the others are S = staff and admins, some with a rule inside — see each one).
 const ADMIN_ONLY = new Set([
   'camp_add_camp', 'camp_update_camp', 'camp_delete_camp', 'camp_save_template', 'camp_update_template', 'camp_delete_template',
   'camp_edit_payment', 'camp_delete_camper',
 ]);
-// The staff functions + camp_camper_detail (the app may call these).
+// The staff functions + camp_camper_detail and camp_camper_history (the app may call these).
 export const CAMP_RPC_NAMES = Object.keys(RPC_ARGS);
 // Functions that only reads (failNextSave doesn't fail them).
-export const CAMP_READ_RPC_NAMES = ['camp_camper_detail'];
+export const CAMP_READ_RPC_NAMES = ['camp_camper_detail', 'camp_camper_history'];
 // Functions that exist but a signed-in staff member may NOT call (only camps_registrar, or
 // nobody): the app gets "permission denied", exactly like EVENT_RESTRICTED_RPC_NAMES.
 export const CAMP_RESTRICTED_RPC_NAMES = ['camp_public_camp', 'camp_public_signup', 'camp_public_signup_core', 'camp_purge_old_signatures'];
@@ -598,15 +804,16 @@ function toDbType(value, type) {
   }
 }
 
-// Matches the call's argument names to the function (all required — no defaults) and converts them.
+// Matches the call's argument names to the function and converts them. Every argument is required
+// except one marked 'optional' (a database default): left out, it is null.
 function readArgs(name, args) {
   const spec = RPC_ARGS[name];
   const sent = Object.keys(args ?? {}).filter((key) => args[key] !== undefined);
   const known = new Set(spec.map(([key]) => key));
-  if (spec.some(([key]) => !sent.includes(key)) || sent.some((key) => !known.has(key))) {
+  if (spec.some(([key, , optional]) => !optional && !sent.includes(key)) || sent.some((key) => !known.has(key))) {
     throw new DbError('PGRST202', `Could not find the function public.${name}(${[...sent].sort().join(', ')}) in the schema cache`, 404);
   }
-  return Object.fromEntries(spec.map(([key, type]) => [key, toDbType(args[key], type)]));
+  return Object.fromEntries(spec.map(([key, type]) => [key, sent.includes(key) ? toDbType(args[key], type) : null]));
 }
 
 // ----- Small helpers and the argument-shape checks (the SQL helpers of §1.1) -----
@@ -731,7 +938,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
   function read() {
     let store = null;
     try {
-      store = upgradeStore(clone(loadStore()));
+      store = upgradeStore5(upgradeStore(clone(loadStore())));
     } catch {
       store = null;
     }
@@ -849,6 +1056,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       total_cents: total, paid_cents: paid, owes_cents: owes,
       paid_on: last?.paid_on ?? null, paid_method: last?.method ?? null, last_payment_id: last?.id ?? null, last_payment_recorded_at: last?.recorded_at ?? null,
       paid_school: last?.school ?? null, // mock-only extra column (campsApi doesn't ask for it)
+      paying_by_on_form: c.paying_by_on_form ?? c.paying_by, // 0033: the family's choice on the form
     };
   }
 
@@ -1281,6 +1489,8 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
     camp_mark_paid(db, a, ctx) {
       if (a.p_camper_id === null || a.p_expected_version === null) return st('invalid');
       if (!LOCATION_CODES.includes(a.p_school)) return { status: 'invalid', field: 'school' }; // the desk's school (v0.707)
+      // The way it was paid (0033, v0.735): left out = the camper's Paying by.
+      if (a.p_method !== null && !PAYING_BY.includes(a.p_method)) return { status: 'invalid', field: 'method' };
       const camper = findCamper(db, a.p_camper_id);
       if (!camper) return st('not_found');
       if (camper.version !== a.p_expected_version) return st('stale');
@@ -1288,15 +1498,22 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       const { owes } = money(db, camper);
       if (owes <= 0) return st('already_paid');
       if (owes > MAX_PAYMENT_CENTS) return st('invalid');
+      const method = a.p_method ?? camper.paying_by;
+      // Another way than Paying by: Paying by becomes that way in the same save, and the payment
+      // remembers the old one so Undo payment can put it back.
+      const before = method !== camper.paying_by ? camper.paying_by : null;
       const payment = {
-        id: newId(), camper_id: camper.id, kind: 'payment', amount_cents: owes, method: camper.paying_by, paid_on: today(),
+        id: newId(), camper_id: camper.id, kind: 'payment', amount_cents: owes, method, paid_on: today(),
         recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName, reverses_payment_id: null,
-        school: a.p_school,
+        school: a.p_school, paying_by_before: before,
       };
       db.camp_payments.push(payment);
-      updateRow(camper, {}, ctx, true); // a double click with the old version now gets 'stale'
+      updateRow(camper, { paying_by: method }, ctx, true); // a double click with the old version now gets 'stale'
       purgeOldSignatures(db); // the last step
-      return { status: 'ok', payment_id: payment.id, amount_cents: owes, method: payment.method, version: camper.version, school: payment.school };
+      return {
+        status: 'ok', payment_id: payment.id, amount_cents: owes, method: payment.method, version: camper.version, school: payment.school,
+        paying_by: camper.paying_by,
+      };
     },
 
     camp_undo_payment(db, a, ctx) {
@@ -1311,8 +1528,11 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
         id: newId(), camper_id: camper.id, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(),
         recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName, reverses_payment_id: payment.id,
         school: payment.school, // an undo lands in the same drawer as the payment
+        paying_by_before: null,
       });
-      updateRow(camper, {}, ctx, true);
+      // 0033: the payment changed Paying by, and nobody changed it since → it goes back.
+      const back = payment.paying_by_before && camper.paying_by === payment.method ? { paying_by: payment.paying_by_before } : {};
+      updateRow(camper, back, ctx, true);
       return { status: 'ok', version: camper.version };
     },
 
@@ -1325,11 +1545,19 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       if (payment.kind !== 'payment' || isReversed(db, payment.id)) return st('stale');
       const camper = findCamper(db, payment.camper_id);
       const common = { camper_id: camper.id, recorded_at: stamp(), recorded_by: ctx.userId ?? null, recorded_by_name: ctx.actorName };
-      db.camp_payments.push({ id: newId(), ...common, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(), reverses_payment_id: payment.id, school: payment.school });
+      db.camp_payments.push({ id: newId(), ...common, kind: 'reversal', amount_cents: -payment.amount_cents, method: payment.method, paid_on: today(), reverses_payment_id: payment.id, school: payment.school, paying_by_before: null });
+      // Paying by follows the edit (0033 §1c = Color Belt 0030 §4b): the family's choice is what Undo
+      // of the old payment would leave; a changed way makes Paying by the new way; the new payment
+      // remembers the family's choice when Paying by is now its way and the choice was another.
+      const familyChoice = payment.paying_by_before && camper.paying_by === payment.method ? payment.paying_by_before : camper.paying_by;
+      const payingBy = a.p_method !== payment.method ? a.p_method : camper.paying_by;
       // The new row may correct the school (the reversal stays with the old one's school).
-      const replacement = { id: newId(), ...common, kind: 'payment', amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on, reverses_payment_id: null, school: a.p_school };
+      const replacement = {
+        id: newId(), ...common, kind: 'payment', amount_cents: a.p_amount_cents, method: a.p_method, paid_on: a.p_paid_on, reverses_payment_id: null, school: a.p_school,
+        paying_by_before: payingBy === a.p_method && familyChoice !== a.p_method ? familyChoice : null,
+      };
       db.camp_payments.push(replacement);
-      updateRow(camper, {}, ctx, true);
+      updateRow(camper, { paying_by: payingBy }, ctx, true);
       return { status: 'ok', payment_id: replacement.id, version: camper.version };
     },
 
@@ -1469,7 +1697,68 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
         checkins: row.days.map((d) => ({ day: d.day, checked_in_at: d.checked_in_at, checked_in_by_name: d.checked_in_by_name })),
       };
     },
+
+    // The camper's history (0033 §1f, C7; stable, read only): the change log of the camper, their
+    // days and extras (check-ins left out), their payments and their sign-up (shared by brothers
+    // and sisters), newest first, at most 500 rows, no login ids.
+    camp_camper_history(db, a) {
+      const camper = a.p_camper_id === null ? null : findCamper(db, a.p_camper_id);
+      if (!camper) return st('not_found');
+      const camperOf = (r) => r.after?.camper_id ?? r.before?.camper_id ?? null;
+      const CHECK_IN_KEYS = ['checked_in_at', 'checked_in_by', 'checked_in_by_name'];
+      const onlyCheckIn = (r) => r.op === 'update' && [...Object.keys(r.before ?? {}), ...Object.keys(r.after ?? {})].every((k) => CHECK_IN_KEYS.includes(k));
+      const mine = (r) => (r.table_name === 'camp_campers' && r.record_id === camper.id)
+        || (r.table_name === 'camp_signups' && r.record_id === camper.signup_id)
+        || (['camp_camper_days', 'camp_camper_extras', 'camp_payments'].includes(r.table_name) && camperOf(r) === camper.id
+          && !(r.table_name === 'camp_camper_days' && onlyCheckIn(r)));
+      const rows = db.camp_change_log.map((r, seq) => ({ r, seq })).filter(({ r }) => mine(r))
+        .sort((x, y) => (x.r.occurred_at < y.r.occurred_at ? 1 : x.r.occurred_at > y.r.occurred_at ? -1 : y.seq - x.seq))
+        .slice(0, 500)
+        .map(({ r }) => ({
+          occurred_at: r.occurred_at, actor_name: r.actor_name, table_name: r.table_name, op: r.op, batch_id: r.batch_id, action: r.action,
+          before: stripLoginIds(r.before), after: stripLoginIds(r.after),
+        }));
+      return { status: 'ok', rows };
+    },
   };
+  // Login ids never leave the history (0033 §1f): the uuid "who" columns go; their *_by_name stay.
+  // (paying_by is not one: it is the way to pay.)
+  const LOGIN_ID_KEYS = ['created_by', 'updated_by', 'recorded_by', 'withdrawn_by', 'checked_in_by', 'actor_id', 'session_id'];
+  function stripLoginIds(obj) {
+    if (!isObj(obj)) return obj ?? null;
+    return Object.fromEntries(Object.entries(obj).filter(([k]) => !LOGIN_ID_KEYS.includes(k)));
+  }
+
+  // ----- The change log: what the database's triggers write (0003 change_log_write, 0013's
+  // camp_signups_log) for the camper tables. Before a save, snapshotLogged takes each row as the
+  // log would show it; after an ok save, writeLog compares and writes one row per inserted,
+  // changed (only the columns that changed) or deleted row, all with one batch id. -----
+  function snapshotLogged(db) {
+    return Object.fromEntries(LOGGED_TABLES.map((t) => [t, new Map(db[t].map((r) => [r.id, JSON.stringify(logShape(t, r))]))]));
+  }
+  function writeLog(db, snap, action, ctx) {
+    const at = stamp();
+    const batchId = newId();
+    const add = (table, op, recordId, before, after) => db.camp_change_log.push({
+      occurred_at: at, actor_id: ctx.userId ?? null, actor_name: ctx.actorName, batch_id: batchId, action, table_name: table, record_id: recordId, op, before, after,
+    });
+    for (const table of LOGGED_TABLES) {
+      const was = snap[table];
+      const seen = new Set();
+      for (const row of db[table]) {
+        seen.add(row.id);
+        const now_ = logShape(table, row);
+        const old = was.get(row.id);
+        if (old === undefined) add(table, 'insert', row.id, null, clone(now_));
+        else if (old !== JSON.stringify(now_)) {
+          const prev = JSON.parse(old);
+          const keys = [...new Set([...Object.keys(prev), ...Object.keys(now_)])].filter((k) => JSON.stringify(prev[k] ?? null) !== JSON.stringify(now_[k] ?? null));
+          if (keys.length > 0) add(table, 'update', row.id, Object.fromEntries(keys.map((k) => [k, prev[k] ?? null])), clone(Object.fromEntries(keys.map((k) => [k, now_[k] ?? null]))));
+        }
+      }
+      for (const [rowId, text] of was) if (!seen.has(rowId)) add(table, 'delete', rowId, JSON.parse(text), null);
+    }
+  }
   const READ_ONLY = new Set(CAMP_READ_RPC_NAMES);
 
   // ----- The public functions (only camps_registrar may call them, §1.16) -----
@@ -1613,6 +1902,7 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       const camper = insertRow(db.camp_campers, {
         id: newId(), signup_id: signup.id, camp_id: campId, position: i + 1, first_name: normalizeName(input.first_name),
         last_name: normalizeName(input.last_name), age: input.age, member: input.member, paying_by: args.paying_by,
+        paying_by_on_form: args.paying_by, // 0033's trigger: copied on insert, never changed after
         base_cents: priced[i].baseCents, status: 'active', withdrawn_reason: null, withdrawn_at: null, withdrawn_by: null, withdrawn_by_name: null,
         ...duplicateFlagsFor(db, campId, input.first_name, input.last_name), // flagged silently — the family isn't told
       }, ctx);
@@ -1647,8 +1937,12 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
       }
     }
     const work = clone(db);
+    const snap = snapshotLogged(work);
     const { answer, campId } = signupCore(work, args, flags);
-    if (answer.status === 'ok') db = work; // anything else: everything the core did is undone
+    if (answer.status === 'ok') {
+      writeLog(work, snap, 'camp_public_signup', { actorName: FAMILY_FORM, userId: null }); // by "Family form"
+      db = work; // anything else: everything the core did is undone
+    }
     const key = typeof args.client_key === 'string' ? args.client_key : '';
     db.camp_public_attempts.push({ id: db.next_attempt_id++, client_key: key.slice(0, 200), camp_id: campId, at: new Date(nowMs).toISOString(), outcome: answer.status });
     write(db);
@@ -1718,10 +2012,14 @@ export function createCampsBackend({ loadStore, saveStore, now = () => Date.now(
     if (!ctx.hasDataAccess) return ok(st('no_access'));
     if (ADMIN_ONLY.has(name) && !ctx.isAdmin) return ok(st('not_allowed'));
     const db = read(); // a private copy = a transaction: only an 'ok' is saved
-    const answer = handlers[name](db, parsed, {
-      actorName: ctx.actorName ?? 'Database admin', userId: ctx.userId ?? null, isAdmin: Boolean(ctx.isAdmin),
-    });
-    if (answer.status === 'ok' && !READ_ONLY.has(name)) write(db);
+    const writes = !READ_ONLY.has(name);
+    const snap = writes ? snapshotLogged(db) : null;
+    const who = { actorName: ctx.actorName ?? 'Database admin', userId: ctx.userId ?? null, isAdmin: Boolean(ctx.isAdmin) };
+    const answer = handlers[name](db, parsed, who);
+    if (answer.status === 'ok' && writes) {
+      writeLog(db, snap, name, who); // the triggers' change log, one batch per save
+      write(db);
+    }
     return ok(answer);
   }
 

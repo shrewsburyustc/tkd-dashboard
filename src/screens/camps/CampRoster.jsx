@@ -4,7 +4,10 @@
 //   Camper (A–Z; click → Camper detail; a small amber note under the name only for TODAY:
 //          "Late pick-up … today", "No pizza party") ·
 //   Paid   (Paid green · "$219 due" gray · "Owes $15" amber — tapping one that isn't Paid opens
-//          the small Mark paid box: one click, this device's school, Undo) ·
+//          the shared Mark paid box (components/MarkPaidBox.jsx; design review C2, rulebook
+//          v0.735): the name and the amount, Paid by Cash / Check / Card preset to Paying by with
+//          the hint "They chose Cash on the form." (or "… at the desk." once staff changed it),
+//          then Mark paid $X — this device's school, Undo) ·
 //   one column per camp day (today's column tinted): [user-check] 7:42 = checked in (tap → undo,
 //          with an Undo toast) · Check in = signed up, tap to check in (any day, v0.706) ·
 //          [user-x] = a past day not checked in (still tappable, to fix a missed one) · — = not
@@ -30,12 +33,13 @@
 // Check-in, "here today", Find a camper, the extra counts and "Updated …" stay.
 // Money ("to collect · $1,040", the tags) is written by the shared formatMoney (src/lib/money.js;
 // rulebook v0.732, design review C17), as every section does.
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { IconAlertTriangle, IconCheck, IconChevronDown, IconChevronUp, IconDots, IconSearch, IconUserCheck, IconUserX } from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
+import { IconAlertTriangle, IconChevronDown, IconChevronUp, IconDots, IconSearch, IconUserCheck, IconUserX } from '@tabler/icons-react';
 import IconButton from '../../components/IconButton.jsx';
+// The shared Mark paid box (design review C2, rulebook v0.735) under the "$X due" / "Owes $X" tag
+import MarkPaidBox from '../../components/MarkPaidBox.jsx';
 import { useRowArrowNav } from '../../lib/useRowArrowNav.js';
-import { extraCountOnDay, extraOfferedOn, missingExtraOnDay, payTag, toCollectCents } from '../../lib/camps/campRules.js';
+import { extraCountOnDay, extraOfferedOn, missingExtraOnDay, payTag, payingByChoiceWhere, toCollectCents } from '../../lib/camps/campRules.js';
 import ChoiceGroup from '../../components/ChoiceGroup.jsx';
 import { formatMoney } from '../../lib/money.js';
 import DuplicateBox from '../../components/DuplicateBox.jsx';
@@ -47,7 +51,10 @@ export const byFirstName = (a, b) =>
 
 // ----- The Paid tag (also used by Camper detail) -----
 // A possible duplicate opens the compare; "$X due" / "Owes $X" open the Mark paid box; Paid is plain.
-export function CamperTag({ row, onReview, onPay }) {
+// busy: another save is running — the tag is grayed (aria-disabled, still focusable) and doesn't
+// open the box, the way the roster's day buttons wait (and the old box's gray Mark paid did).
+// data-pay-tag lets the page put focus back on it after Mark paid when the camper still owes.
+export function CamperTag({ row, onReview, onPay, busy = false }) {
   if (row.status !== 'active') return <span className="ttag">{row.withdrawnReason === 'duplicate_copy' ? T.TAG_DUPLICATE_COPY : T.TAG_REMOVED}</span>;
   const tag = payTag(row);
   const name = T.camperLabel(row);
@@ -78,93 +85,15 @@ export function CamperTag({ row, onReview, onPay }) {
       className={`${className} ev-tag-button cp-paybtn`}
       aria-haspopup="dialog"
       aria-label={T.payTagLabel(name, text)}
+      aria-disabled={busy ? 'true' : undefined}
+      data-pay-tag={row.id}
       onClick={(event) => {
         event.stopPropagation();
-        onPay(row, event.currentTarget);
+        if (!busy) onPay(row, event.currentTarget);
       }}
     >
       {text}
     </button>
-  );
-}
-
-// ----- The small Mark paid box under a "$X due" / "Owes $X" tag -----
-function PaymentPopover({ row, anchor, busy, onMarkPaid, onClose }) {
-  const boxRef = useRef(null);
-  const [position, setPosition] = useState(null);
-  const onCloseRef = useRef(onClose);
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  });
-  // Under the tag, kept on screen; above it when there's no room below.
-  useLayoutEffect(() => {
-    function place() {
-      const rect = anchor.getBoundingClientRect();
-      const box = boxRef.current;
-      const width = box?.offsetWidth ?? 240;
-      const height = box?.offsetHeight ?? 80;
-      let top = rect.bottom + 4;
-      if (top + height > window.innerHeight - 8) top = Math.max(8, rect.top - 4 - height);
-      const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
-      setPosition({ top, left });
-    }
-    place();
-    window.addEventListener('scroll', place, true);
-    window.addEventListener('resize', place);
-    return () => {
-      window.removeEventListener('scroll', place, true);
-      window.removeEventListener('resize', place);
-    };
-  }, [anchor]);
-  // Focus goes into the box; a click outside or Esc closes it.
-  const placed = position !== null;
-  useEffect(() => {
-    if (placed) boxRef.current?.querySelector('button')?.focus();
-  }, [placed]);
-  useEffect(() => {
-    function outside(event) {
-      const path = event.composedPath();
-      if (path.includes(boxRef.current) || path.includes(anchor)) return;
-      onCloseRef.current(false);
-    }
-    document.addEventListener('pointerdown', outside, true);
-    return () => document.removeEventListener('pointerdown', outside, true);
-  }, [anchor]);
-
-  const owes = payTag(row) === 'owes';
-  return createPortal(
-    <div
-      ref={boxRef}
-      className="cp-popover"
-      role="dialog"
-      aria-label={T.PAYMENT_NOTE_LABEL(T.camperLabel(row))}
-      style={position ? { top: position.top, left: position.left } : { top: -9999, left: -9999 }}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') {
-          event.preventDefault();
-          event.stopPropagation();
-          onClose(true);
-        }
-      }}
-      onClick={(event) => event.stopPropagation()}
-    >
-      <p className="cp-popover-line">{T.notePopoverLine(T.camperLabel(row), owes ? 'owes' : 'not_paid', row.owesCents)}</p>
-      <button
-        type="button"
-        className="btn btn-sm ev-markpaid"
-        aria-disabled={busy ? 'true' : undefined}
-        onClick={() => {
-          if (busy) return;
-          onClose(true);
-          onMarkPaid(row);
-        }}
-      >
-        {/* ti-check: Color Belt's built Mark paid button */}
-        <IconCheck size={16} aria-hidden="true" />
-        {owes ? T.markPaidAmount(row.owesCents) : T.MARK_PAID}
-      </button>
-    </div>,
-    document.body,
   );
 }
 
@@ -275,7 +204,7 @@ export default function CampRoster({
   notSavedId,
   updatedAt = null, // when the page last loaded fresh data (useLiveLoad) — shown as "Updated …"
   detailsHidden = false, // Hide private details is on: no money on the roster (v0.722)
-  handlers, // { onOpen(row, el), onMore(row, el), onMarkPaid(row), onReview(row, el), onReviewPair(pair, el), onCheckIn(row, day), onUndoCheckIn(row, day) }
+  handlers, // { onOpen(row, el), onMore(row, el), onMarkPaid(row, method), onReview(row, el), onReviewPair(pair, el), onCheckIn(row, day), onUndoCheckIn(row, day) }
 }) {
   const [popover, setPopover] = useState(null); // { rowId, anchor }
   const { isPhone, isTouch, isWide } = layout;
@@ -331,7 +260,7 @@ export default function CampRoster({
     if (detailsHidden) {
       // The Paid cell (and its button) went with the switch: focus moves to the same row's ⋯, else
       // its name (focus must not fall to the page body), when focus was in the box or on its tag.
-      const hadFocus = document.activeElement === document.body || popover.anchor.contains(document.activeElement) || document.querySelector('.cp-popover')?.contains(document.activeElement);
+      const hadFocus = document.activeElement === document.body || popover.anchor.contains(document.activeElement) || document.querySelector('.mpb')?.contains(document.activeElement);
       setPopover(null);
       if (hadFocus) {
         const id = popover.rowId;
@@ -341,8 +270,19 @@ export default function CampRoster({
       }
       return;
     }
+    // Another save started while the box was open (e.g. a check-in, or the toast's Undo): the box
+    // can't save until it ends, so it closes rather than take a press it would have to drop, and
+    // focus goes back to its tag (grayed until the save ends, like the day buttons). Mark paid of
+    // this box closes the box itself before its own save starts.
+    if (busy) {
+      const hadFocus = document.querySelector('.mpb')?.contains(document.activeElement);
+      const anchor = popover.anchor;
+      setPopover(null);
+      if (hadFocus && anchor?.isConnected) anchor.focus();
+      return;
+    }
     if (!popoverRow || !['not_paid', 'owes'].includes(payTag(popoverRow))) setPopover(null);
-  }, [popover, popoverRow, detailsHidden]);
+  }, [popover, popoverRow, detailsHidden, busy]);
   const onPay = (row, anchor) => setPopover({ rowId: row.id, anchor });
   // While hidden, the only tag an active camper keeps is "Possible duplicate" (it opens the compare).
   const duplicateTag = (row) => (payTag(row) === 'duplicate' ? <CamperTag row={row} onReview={handlers.onReview} /> : null);
@@ -424,7 +364,7 @@ export default function CampRoster({
                   )}
                 </span>
                 {/* Hidden: no money tag; a possible duplicate keeps its tag here (picture 01). */}
-                {detailsHidden ? duplicateTag(row) : <CamperTag row={row} onReview={handlers.onReview} onPay={onPay} />}
+                {detailsHidden ? duplicateTag(row) : <CamperTag row={row} onReview={handlers.onReview} onPay={onPay} busy={busy} />}
               </div>
               {note && <span className="cp-rnote">{note}</span>}
               <div className="cp-rdays">{shownDays.map((d) => cell(row, d, true))}</div>
@@ -486,7 +426,7 @@ export default function CampRoster({
                   </th>
                   {!detailsHidden && (
                     <td className="cp-rcol-paid">
-                      <CamperTag row={row} onReview={handlers.onReview} onPay={onPay} />
+                      <CamperTag row={row} onReview={handlers.onReview} onPay={onPay} busy={busy} />
                     </td>
                   )}
                   {shownDays.map((d) => (
@@ -611,11 +551,19 @@ export default function CampRoster({
       {removedGroup}
       {!isPhone && active.length > 0 && <RosterLegend touch={isTouch} />}
       {popover && popoverRow && !detailsHidden && (
-        <PaymentPopover
-          row={popoverRow}
+        // The shared box (v0.735): the amount owed now, shown and never typed; Paid by preset to
+        // Paying by; the hint says where that choice was made — "on the form", or "at the desk"
+        // once staff changed it (Paying by no longer the form's choice).
+        <MarkPaidBox
           anchor={popover.anchor}
-          busy={busy}
-          onMarkPaid={handlers.onMarkPaid}
+          name={T.camperLabel(popoverRow)}
+          amountCents={popoverRow.owesCents}
+          familyChoice={popoverRow.payingBy}
+          choiceWhere={payingByChoiceWhere(popoverRow)}
+          // The box is never open while another save runs (it closes when one starts, and the tag
+          // is grayed meanwhile), so this press is never dropped. After the save the page moves
+          // focus (CampPage's doMarkPaidAt): the tag goes away with the payment.
+          onMarkPaid={(method) => handlers.onMarkPaid(popoverRow, method)}
           onClose={(refocus) => {
             const anchor = popover.anchor;
             setPopover(null);

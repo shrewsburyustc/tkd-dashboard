@@ -459,6 +459,15 @@ export function paymentSchoolFor(deviceLocation) {
   return SCHOOLS.includes(code) ? code : null;
 }
 
+// Where the family chose the way the Mark paid box's hint names (migration 0033, rulebook v0.735
+// option B): 'form' while Paying by is still the form's choice (paying_by_on_form), 'desk' once
+// staff changed it (Change how they'll pay, or Mark paid with another way). A row without
+// paying_by_on_form (a database from before 0033) says 'form', as before.
+export function payingByChoiceWhere(row) {
+  if (row?.payingByOnForm === null || row?.payingByOnForm === undefined) return 'form';
+  return row.payingBy === row.payingByOnForm ? 'form' : 'desk';
+}
+
 // ----- Check-in (§1.13 check-in day rule, v0.704) -----
 
 // May this person check a camper in (or undo it) on `day`? Owner decision 2026-10-19 (CP1):

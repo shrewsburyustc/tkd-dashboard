@@ -2617,6 +2617,13 @@ begin
   if v_w22 then
     v_helper_fns := v_helper_fns || array['camp_week_size', 'camp_weekly_base_cents', 'camp_comes_whole_week', 'camp_weeks_breakdown'];
   end if;
+  --       (changed by 0033, rulebook v0.735 / v0.736: after 0033 the
+  --       history reader is a staff function, its strip helper and the
+  --       trigger function that keeps the form's choice are helpers)
+  if to_regprocedure('public.camp_camper_history(uuid)') is not null then
+    v_staff_fns  := v_staff_fns || array['camp_camper_history'];
+    v_helper_fns := v_helper_fns || array['camp_history_strip', 'camp_campers_keep_form_choice'];
+  end if;
   select string_agg(p.oid::regprocedure::text, ', ') into v_txt
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and (p.proname like 'camp\_%' or p.proname like 'camps\_%')
