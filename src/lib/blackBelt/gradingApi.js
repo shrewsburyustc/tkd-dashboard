@@ -404,7 +404,7 @@ export async function downloadCsv({ cycleId } = {}) {
   });
 }
 
-// ----- The three result email texts (Rubric and prices, R 21–R 29) -----
+// ----- The three result email texts (Rubric and waiver, R 21–R 29) -----
 
 // → { status:'ok', texts: { passed|makeup_d|makeup_below: { id, kind, body, version, updatedAt,
 //     updatedByName } } } · 'no_access' · 'error'

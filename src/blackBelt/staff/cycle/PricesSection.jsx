@@ -9,7 +9,11 @@
 //   - Edit cycle: the same section READ-ONLY with "Prices are set when the cycle is saved. Due
 //     dates can still change." — only the due dates can be changed.
 //   - Phones: one card per plan — its due dates first, then one row per Dan ("Pay 1 · Pay 2 …").
-// Payment 1 "follows Application due" until someone types its date (rules.setPaymentDueDate).
+// Payment 1 "follows Application due" until someone picks its date (rules.setPaymentDueDate).
+// Each due date is the dashboard's calendar (v1.018): today or later (a saved past date stays
+// choosable, dueMin from CycleDialog). On phones its calendar opens under the row across the whole
+// plan box (not squeezed into the narrow date cell); on tablets the Due column is wider so
+// "Sat, Sep 25, 2027" fits (blackBelt.css).
 // A plan's name is plain text, as drawn: it is typed (and checked — empty, same as another plan)
 // only in the Add plan dialog, and plans are not renamed afterwards (the drawing has no rename).
 // This file only draws; the values live in useCycleEditor.jsx.
@@ -21,6 +25,7 @@ import RowMenu from '../../../components/RowMenu.jsx';
 import { formatDollars } from '../../../lib/money.js';
 import { effectiveDueOn, planTotals } from '../../../lib/blackBelt/rules.js';
 import { useReorderDrag } from '../../../lib/useReorderDrag.js';
+import { cycleDateYears, pastHint } from '../../../lib/blackBelt/dateLimits.js';
 import DateField from '../parts/DateField.jsx';
 import Grip from '../parts/Grip.jsx';
 import { DANS, priceTextProblem } from './formValues.js';
@@ -67,7 +72,7 @@ const dollarsText = (text) => {
   return Number.isFinite(cents) && String(text).trim() !== '' ? formatDollars(cents) : '';
 };
 
-export default function PricesSection({ mode, values, formForRules, problems, triedSave, isPhone, readOnly, onAmount, onDueDate, onKukkiwon, onRemove, onMove, onReorder, onAddPlan }) {
+export default function PricesSection({ mode, values, formForRules, problems, triedSave, isPhone, readOnly, today, dueMin = () => today, onAmount, onDueDate, onKukkiwon, onRemove, onMove, onReorder, onAddPlan }) {
   const id = useId();
   const isAdd = mode === 'add';
   const [menu, setMenu] = useState(null); // { key, anchor } — a plan's ⋯
@@ -98,15 +103,26 @@ export default function PricesSection({ mode, values, formForRules, problems, tr
     const dragging = drag.state?.id === plan.key;
     const dueOf = (pay) => effectiveDueOn(pay, values.applicationDue) ?? '';
 
-    const dueField = (pay, i) => (
-      <DateField
-        value={dueOf(pay)}
-        label={T.dueDateLabel(plan.name, pay.paymentNo)}
-        invalid={Boolean(dueShown[i])}
-        readOnly={readOnly}
-        onChange={(date) => onDueDate(plan.key, pay.paymentNo, date)}
-      />
-    );
+    // The due date has no visible label of its own (the row says "Payment 1", the column "Due"),
+    // so the calendar's field is named in full: "In full, payment 1 due date".
+    const dueField = (pay, i) => {
+      const min = dueMin(plan.id ?? null, pay.paymentNo);
+      return (
+        <DateField
+          id={`${id}-due-${plan.key}-${pay.paymentNo}`}
+          label={T.dueDateLabel(plan.name, pay.paymentNo)}
+          value={dueOf(pay)}
+          today={today}
+          min={min}
+          years={cycleDateYears(today, { min, value: dueOf(pay) })}
+          hint={pastHint(today, min, T.PAST_DATES_HINT)}
+          isPhone={isPhone}
+          disabled={readOnly}
+          invalid={Boolean(dueShown[i])}
+          onChange={(date) => onDueDate(plan.key, pay.paymentNo, date)}
+        />
+      );
+    };
     const amountCell = (dan, i) =>
       isAdd ? (
         <PriceInput

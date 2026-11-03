@@ -1,4 +1,4 @@
-// DefaultRubricCard.jsx — the "Default rubric" card on Rubric and prices (mockups R1–R11).
+// DefaultRubricCard.jsx — the "Default rubric" card on Rubric and waiver (mockups R1–R11).
 // Why it exists: CONTRACT-0024 §10.3, rulebook v0.921: the default rubric is what every new
 // cycle starts from. Admins edit it any time (one Dan at a time); staff see it read-only. This
 // file loads it (and keeps it fresh every 15 seconds, so another admin's save shows up) and

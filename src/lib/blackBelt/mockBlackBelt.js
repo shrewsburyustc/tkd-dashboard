@@ -1,7 +1,7 @@
 // mockBlackBelt.js — the PREVIEW (fake) database for Black Belt testing, phases B1 and B2.
 // Why it exists: preview mode (npm run dev:preview-mode) runs without Supabase. This file pretends
 // to be what migration 0016 adds (contracts 0016-B1 §2 and 0016-B2 §2): the tables, the staff
-// functions behind the Cycles, Rubric and prices, and Candidates screens (candidates, payments,
+// functions behind the Cycles, Rubric and waiver, and Candidates screens (candidates, payments,
 // refunds, returned checks, the receipt), and the two public functions the family form
 // uses (through publicApi.preview.js) — with the SAME order of checks, the same status codes, the
 // same staff/admin splits, the purge and the 24-hour waiver rule. What you see in preview is what

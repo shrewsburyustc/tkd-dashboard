@@ -414,7 +414,7 @@ export async function deleteCycle({ cycleId, expectedVersion, expectedCandidateC
   }, () => ({}));
 }
 
-// Rubric and prices: the keep-years settings and every waiver version (newest first).
+// Rubric and waiver: the keep-years settings and every waiver version (newest first).
 // → { status:'ok', settings: { id, afterLastDay, after18, version, updatedAt, updatedByName },
 //     current: Waiver, versions: Waiver[], nextVersionName } · 'no_access' · 'error'
 // nextVersionName = the name the next save makes (the year of today + that year's count + 1).
@@ -429,11 +429,11 @@ export async function loadRubric() {
     if (denied) return denied;
     if (settingsRes?.error) return failure(settingsRes.error);
     if (waiverRes?.error) return failure(waiverRes.error);
-    if (!Array.isArray(settingsRes.data) || !Array.isArray(waiverRes.data)) return unexpected('Rubric and prices');
+    if (!Array.isArray(settingsRes.data) || !Array.isArray(waiverRes.data)) return unexpected('Rubric and waiver');
     const s = settingsRes.data[0];
     const versions = waiverRes.data.map(toWaiver).sort((a, b) => cmp(b.createdAt, a.createdAt) || cmp(b.versionName, a.versionName));
     const current = versions.find((v) => v.supersededAt === null) ?? null;
-    if (!s || !current) return unexpected('Rubric and prices');
+    if (!s || !current) return unexpected('Rubric and waiver');
     return {
       status: 'ok',
       settings: {
@@ -1002,7 +1002,7 @@ async function selectWithAccess(table, columns, filter = null) {
   return { rows: res.data };
 }
 
-// The default rubric (Rubric and prices; staff read it too, view only).
+// The default rubric (Rubric and waiver; staff read it too, view only).
 // → { status:'ok', rubric, version, updatedAt, updatedByName } · 'no_access' · 'error'
 // "Last changed by" per Dan = rubric.dans[n].saved_by_name / saved_at (null = never saved: hide it).
 export async function loadDefaultRubric() {
